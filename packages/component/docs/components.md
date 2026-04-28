@@ -4,16 +4,16 @@ All components follow a consistent two-phase structure.
 
 ## Component Structure
 
-1. **Setup Phase** - Runs once when the component is first created
+1. **Component Phase** - Runs once when the component is first created
 2. **Render Phase** - Runs on initial render and every update afterward
 
 ```tsx
-function MyComponent(handle: Handle, setup: SetupType) {
-  // Setup phase: runs once
-  let state = initializeState(setup)
+function MyComponent(handle: Handle<Props>) {
+  // Component phase: runs once
+  let state = initializeState(handle.props)
 
   // Return render function: runs on every update
-  return (props: Props) => {
+  return () => {
     return <div>{/* render content */}</div>
   }
 }
@@ -25,17 +25,16 @@ When a component is rendered:
 
 1. **First Render**:
 
-   - The component function is called with `handle` and the `setup` prop
+   - The component function is called with `handle`
    - The returned render function is stored
-   - The render function is called with regular props
+   - The render function is called after `handle.props` is populated
    - Any tasks queued via `handle.queueTask()` are executed after rendering
 
 2. **Subsequent Updates**:
 
    - Only the render function is called
-   - Setup phase is skipped, setup closure persists for the lifetime of the component instance
-   - Props are passed to the render function
-   - The `setup` prop is stripped from props
+   - Component phase is skipped, and the closure persists for the lifetime of the component instance
+   - `handle.props` is updated before the render function is called
    - Tasks queued during the update are executed after rendering
 
 3. **Component Removal**:
@@ -43,27 +42,25 @@ When a component is rendered:
    - All event listeners registered via `addEventListeners()` are automatically cleaned up
    - Any queued tasks are executed with an aborted signal
 
-## Setup vs Props
+## Props On The Handle
 
-The `setup` prop is special—it's only available in the setup phase and is automatically excluded from props. This prevents accidental stale captures:
+Props are available on `handle.props`. The object is stable, and its values are updated before each render:
 
 ```tsx
-function Counter(handle: Handle, setup: number) {
-  // setup prop (e.g., initialCount) only available here
-  let count = setup
+function Counter(handle: Handle<{ initialCount: number; label: string }>) {
+  let count = handle.props.initialCount
 
-  return (props: { label: string }) => {
-    // props only receives { label } - setup is excluded
+  return () => {
     return (
       <div>
-        {props.label}: {count}
+        {handle.props.label}: {count}
       </div>
     )
   }
 }
 
 // Usage
-let element = <Counter setup={10} label="Count" />
+let element = <Counter initialCount={10} label="Count" />
 ```
 
 ## Basic Rendering
@@ -71,8 +68,8 @@ let element = <Counter setup={10} label="Count" />
 The simplest component just returns JSX:
 
 ```tsx
-function Greeting() {
-  return (props: { name: string }) => <div>Hello, {props.name}!</div>
+function Greeting(handle: Handle<{ name: string }>) {
+  return () => <div>Hello, {handle.props.name}!</div>
 }
 
 let el = <Greeting name="World" />

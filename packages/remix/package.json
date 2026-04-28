@@ -1,7 +1,7 @@
 {
   "name": "remix",
   "version": "3.0.0-alpha.5",
-  "description": "Remix Web Framework",
+  "description": "The Remix web framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -83,6 +83,20 @@
     "./tar-parser": "./src/tar-parser.ts",
     "./terminal": "./src/terminal.ts",
     "./test": "./src/test.ts",
+    "./ui/accordion": "./src/ui/accordion.ts",
+    "./ui/anchor": "./src/ui/anchor.ts",
+    "./ui/breadcrumbs": "./src/ui/breadcrumbs.ts",
+    "./ui/button": "./src/ui/button.ts",
+    "./ui/combobox": "./src/ui/combobox.ts",
+    "./ui/glyph": "./src/ui/glyph.ts",
+    "./ui/listbox": "./src/ui/listbox.ts",
+    "./ui/menu": "./src/ui/menu.ts",
+    "./ui/on-outside-pointer-down": "./src/ui/on-outside-pointer-down.ts",
+    "./ui/popover": "./src/ui/popover.ts",
+    "./ui/scroll-lock": "./src/ui/scroll-lock.ts",
+    "./ui/select": "./src/ui/select.ts",
+    "./ui/separator": "./src/ui/separator.ts",
+    "./ui/theme": "./src/ui/theme.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -347,6 +361,62 @@
         "types": "./dist/test.d.ts",
         "default": "./dist/test.js"
       },
+      "./ui/accordion": {
+        "types": "./dist/ui/accordion.d.ts",
+        "default": "./dist/ui/accordion.js"
+      },
+      "./ui/anchor": {
+        "types": "./dist/ui/anchor.d.ts",
+        "default": "./dist/ui/anchor.js"
+      },
+      "./ui/breadcrumbs": {
+        "types": "./dist/ui/breadcrumbs.d.ts",
+        "default": "./dist/ui/breadcrumbs.js"
+      },
+      "./ui/button": {
+        "types": "./dist/ui/button.d.ts",
+        "default": "./dist/ui/button.js"
+      },
+      "./ui/combobox": {
+        "types": "./dist/ui/combobox.d.ts",
+        "default": "./dist/ui/combobox.js"
+      },
+      "./ui/glyph": {
+        "types": "./dist/ui/glyph.d.ts",
+        "default": "./dist/ui/glyph.js"
+      },
+      "./ui/listbox": {
+        "types": "./dist/ui/listbox.d.ts",
+        "default": "./dist/ui/listbox.js"
+      },
+      "./ui/menu": {
+        "types": "./dist/ui/menu.d.ts",
+        "default": "./dist/ui/menu.js"
+      },
+      "./ui/on-outside-pointer-down": {
+        "types": "./dist/ui/on-outside-pointer-down.d.ts",
+        "default": "./dist/ui/on-outside-pointer-down.js"
+      },
+      "./ui/popover": {
+        "types": "./dist/ui/popover.d.ts",
+        "default": "./dist/ui/popover.js"
+      },
+      "./ui/scroll-lock": {
+        "types": "./dist/ui/scroll-lock.d.ts",
+        "default": "./dist/ui/scroll-lock.js"
+      },
+      "./ui/select": {
+        "types": "./dist/ui/select.d.ts",
+        "default": "./dist/ui/select.js"
+      },
+      "./ui/separator": {
+        "types": "./dist/ui/separator.d.ts",
+        "default": "./dist/ui/separator.js"
+      },
+      "./ui/theme": {
+        "types": "./dist/ui/theme.d.ts",
+        "default": "./dist/ui/theme.js"
+      },
       "./package.json": "./package.json"
     },
     "bin": {
@@ -398,7 +468,8 @@
     "@remix-run/tar-parser": "workspace:^",
     "@remix-run/assert": "workspace:^",
     "@remix-run/test": "workspace:^",
-    "@remix-run/terminal": "workspace:^"
+    "@remix-run/terminal": "workspace:^",
+    "@remix-run/ui": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

@@ -5,6 +5,7 @@ reference/
 .coverage/
 .tmp/
 /demos/tmp/
+/packages/ui/demo/.artifacts/
 *.db
 *.db-*
 *.sqlite

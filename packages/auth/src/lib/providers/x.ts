@@ -1,10 +1,12 @@
-import type { OAuthAccount, OAuthProvider, OAuthResult } from '../provider.ts'
+import type { OAuthAccount, OAuthProvider, OAuthResult, OAuthTokens } from '../provider.ts'
 import {
   createAuthorizationURL,
   createOAuthProvider,
   exchangeAuthorizationCode,
+  exchangeRefreshToken,
   fetchJson,
   getAuthorizationCode,
+  mergeRefreshedTokens,
 } from '../provider.ts'
 import { createCodeChallenge } from '../utils.ts'
 
@@ -105,6 +107,21 @@ export function createXAuthProvider(
         profile,
         tokens,
       }
+    },
+    async refreshTokens(currentTokens): Promise<OAuthTokens> {
+      if (currentTokens.refreshToken == null || currentTokens.refreshToken.length === 0) {
+        throw new Error('X provider did not receive a refresh token.')
+      }
+
+      let refreshedTokens = await exchangeRefreshToken({
+        tokenEndpoint: X_TOKEN_ENDPOINT,
+        clientId: options.clientId,
+        clientSecret: options.clientSecret,
+        refreshToken: currentTokens.refreshToken,
+        clientAuthentication: 'basic',
+      })
+
+      return mergeRefreshedTokens(currentTokens, refreshedTokens)
     },
   })
 }

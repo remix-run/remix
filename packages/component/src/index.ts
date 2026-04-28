@@ -57,6 +57,7 @@ export { ref } from './lib/mixins/ref-mixin.ts'
 export type { RefCallback } from './lib/mixins/ref-mixin.ts'
 export { attrs } from './lib/mixins/attrs-mixin.ts'
 export { css } from './lib/mixins/css-mixin.ts'
+export type { CSSMixinDescriptor } from './lib/mixins/css-mixin.ts'
 export { animateEntrance, animateExit } from './lib/mixins/animate-mixins.ts'
 export { animateLayout } from './lib/mixins/animate-layout-mixin.ts'
 

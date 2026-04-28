@@ -21,41 +21,50 @@ import {
 } from './resolve.ts'
 import type { ResolveArgs, ResolvedModule } from './resolve.ts'
 import type { CompiledRoutes } from '../routes.ts'
-import type { ScriptsTarget } from '../asset-server.ts'
-import { createModuleStore } from './store.ts'
-import type { FileSnapshot, ModuleRecord, ModuleSnapshot } from './store.ts'
+import type { ResolvedScriptTarget } from '../target.ts'
+import { createModuleStore } from '../module-store.ts'
+import type {
+  FileSnapshot,
+  ModuleRecord,
+  ModuleSnapshot,
+  ModuleStore,
+  ModuleWatchEvent,
+} from '../module-store.ts'
 import { createTsconfigTransformOptionsResolver, transformModule } from './transform.ts'
 import type { ResolveModuleResult, TransformArgs, TransformedModule } from './transform.ts'
 import { ResolverFactory } from 'oxc-resolver'
 import type { EmittedAsset, EmittedModule } from './emit.ts'
 
-type ModuleCompileResult = {
+type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
+type ScriptStore = ModuleStore<TransformedModule, ResolvedModule, EmittedModule>
+
+type ScriptCompileResult = {
   code: EmittedAsset
   fingerprint: string | null
   sourceMap: EmittedAsset | null
 }
 
-type ModuleGetResult =
+type ScriptGetResult =
   | {
-      type: 'module'
-      module: ModuleCompileResult
+      script: ScriptCompileResult
+      type: 'script'
     }
   | {
       type: 'not-modified'
       etag: string
     }
 
-type ModuleGetOptions = {
+type ScriptGetOptions = {
   ifNoneMatch: string | null
   isSourceMapRequest: boolean
   requestedFingerprint: string | null
 }
 
-type ModuleCompilerOptions = {
+type ScriptCompilerOptions = {
   buildId?: string
   define?: Record<string, string>
   external: string[]
-  fingerprintModules: boolean
+  fingerprintAssets: boolean
   isAllowed(absolutePath: string): boolean
   minify: boolean
   onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
@@ -63,16 +72,14 @@ type ModuleCompilerOptions = {
   routes: CompiledRoutes
   sourceMapSourcePaths: 'absolute' | 'url'
   sourceMaps?: 'external' | 'inline'
-  target?: ScriptsTarget
+  target?: ResolvedScriptTarget
   watchIgnore?: readonly string[]
   watchMode: boolean
 }
 
-type ModuleWatchEvent = 'add' | 'change' | 'unlink'
-
-type ModuleCompiler = {
-  getModule(filePath: string, options: ModuleGetOptions): Promise<ModuleGetResult>
-  getPreloadUrls(filePath: string | readonly string[]): Promise<string[]>
+type ScriptCompiler = {
+  getScript(filePath: string, options: ScriptGetOptions): Promise<ScriptGetResult>
+  getPreloadLayers(filePath: string | readonly string[]): Promise<string[][]>
   getHref(filePath: string): Promise<string>
   handleFileEvent(filePath: string, event: ModuleWatchEvent): Promise<void>
   parseRequestPathname(pathname: string): ParsedRequestPathname | null
@@ -88,7 +95,7 @@ type ParsedRequestPathname = {
 const supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
 const preloadConcurrency = Math.max(1, Math.min(8, os.availableParallelism() - 1))
 
-export function createModuleCompiler(options: ModuleCompilerOptions): ModuleCompiler {
+export function createScriptCompiler(options: ScriptCompilerOptions): ScriptCompiler {
   let resolvedOptions = {
     ...options,
     externalSet: new Set(options.external),
@@ -96,7 +103,11 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       createFileMatcher(pattern, options.rootDir),
     ),
   }
-  let store = createModuleStore({
+  let scriptStore: ScriptStore = createModuleStore<
+    TransformedModule,
+    ResolvedModule,
+    EmittedModule
+  >({
     onWatchDirectoriesChange: options.onWatchDirectoriesChange,
   })
   let tsconfigTransformOptionsResolver = createTsconfigTransformOptionsResolver()
@@ -133,25 +144,25 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   }
 
   return {
-    async getModule(filePath, getOptions) {
-      let resolvedModule = resolveServedModuleOrThrow(resolveInputFilePath(filePath))
-      let record = store.get(resolvedModule.identityPath)
-      let notModified = getNotModifiedModule(record, getOptions)
+    async getScript(filePath, getOptions) {
+      let resolvedModule = resolveServedScriptOrThrow(resolveInputFilePath(filePath))
+      let record = scriptStore.get(resolvedModule.identityPath)
+      let notModified = getNotModifiedScript(record, getOptions)
       if (notModified) return notModified
 
-      let emitted = await getOrCreateEmittedModule(record)
+      let emitted = await getOrCreateEmittedScript(record)
       return {
-        type: 'module',
-        module: toModuleCompileResult(emitted),
+        script: toScriptCompileResult(emitted),
+        type: 'script',
       }
     },
 
-    async getPreloadUrls(filePath) {
+    async getPreloadLayers(filePath) {
       let resolvedEntries: string[] = []
       let seen = new Set<string>()
 
       for (let resolvedModule of (Array.isArray(filePath) ? filePath : [filePath]).map((nextPath) =>
-        resolveServedModuleOrThrow(resolveInputFilePath(nextPath)),
+        resolveServedScriptOrThrow(resolveInputFilePath(nextPath)),
       )) {
         if (seen.has(resolvedModule.identityPath)) continue
         seen.add(resolvedModule.identityPath)
@@ -160,17 +171,18 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
       let visited = new Set(resolvedEntries)
       let queue = [...resolvedEntries]
-      let urls: string[] = []
+      let layers: string[][] = []
 
       while (queue.length > 0) {
         let frontier = queue
         queue = []
-        let resolvedModules = await getOrCreateResolvedModules(
-          frontier.map((identityPath) => store.get(identityPath)),
+        let resolvedModules = await getOrCreateResolvedScripts(
+          frontier.map((identityPath) => scriptStore.get(identityPath)),
         )
+        let layer: string[] = []
 
         for (let resolvedModule of resolvedModules) {
-          urls.push(getServedUrlForResolvedModule(resolvedModule))
+          layer.push(getServedUrlForResolvedScript(resolvedModule))
 
           for (let dep of resolvedModule.deps) {
             if (visited.has(dep)) continue
@@ -178,13 +190,15 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
             queue.push(dep)
           }
         }
+
+        layers.push(layer)
       }
 
-      return urls
+      return layers
     },
 
     async getHref(filePath) {
-      let resolvedModule = resolveServedModuleOrThrow(resolveInputFilePath(filePath))
+      let resolvedModule = resolveServedScriptOrThrow(resolveInputFilePath(filePath))
       return getServedUrl(resolvedModule.identityPath)
     },
 
@@ -198,23 +212,23 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
       if (isTsconfigPath(normalizedFilePath)) {
         tsconfigTransformOptionsResolver.clear()
-        store.invalidateAll()
+        scriptStore.invalidateAll()
         return
       }
 
       if (isPackageJsonPath(normalizedFilePath)) {
-        store.invalidateAll()
+        scriptStore.invalidateAll()
         return
       }
 
-      store.invalidateForFileEvent(normalizedFilePath, event)
+      scriptStore.invalidateForFileEvent(normalizedFilePath, event)
     },
 
     parseRequestPathname(pathname) {
       let parsedPathname = parseServedPathname(pathname)
       let filePath = resolvedOptions.routes.resolveUrlPathname(parsedPathname.stablePathname)
       if (!filePath) return null
-      if (resolvedOptions.fingerprintModules && parsedPathname.requestedFingerprint === null)
+      if (resolvedOptions.fingerprintAssets && parsedPathname.requestedFingerprint === null)
         return null
 
       return {
@@ -238,19 +252,19 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     return resolveFilePath(resolvedOptions.rootDir, filePath)
   }
 
-  function resolveServedModuleOrThrow(absolutePath: string): ResolveModuleResult {
+  function resolveServedScriptOrThrow(absolutePath: string): ResolveModuleResult {
     let resolvedModule = resolveModulePath(absolutePath)
     if (!resolvedModule) {
-      throw createAssetServerCompilationError(`Module not found: ${absolutePath}`, {
-        code: 'MODULE_NOT_FOUND',
+      throw createAssetServerCompilationError(`File not found: ${absolutePath}`, {
+        code: 'FILE_NOT_FOUND',
       })
     }
 
     if (!resolvedOptions.isAllowed(resolvedModule.identityPath)) {
       throw createAssetServerCompilationError(
-        `Module is not allowed: ${resolvedModule.identityPath}`,
+        `File is not allowed: ${resolvedModule.identityPath}`,
         {
-          code: 'MODULE_NOT_ALLOWED',
+          code: 'FILE_NOT_ALLOWED',
         },
       )
     }
@@ -258,10 +272,10 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     return resolvedModule
   }
 
-  function getNotModifiedModule(
-    record: ModuleRecord,
-    options: ModuleGetOptions,
-  ): ModuleGetResult | null {
+  function getNotModifiedScript(
+    record: ScriptRecord,
+    options: ScriptGetOptions,
+  ): ScriptGetResult | null {
     let current = getNotModifiedResult(record.emitted, options)
     if (current) return current
 
@@ -272,13 +286,13 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     return getNotModifiedResult(record.staleEmitted, options)
   }
 
-  async function getOrCreateResolvedModules(records: ModuleRecord[]): Promise<ResolvedModule[]> {
+  async function getOrCreateResolvedScripts(records: ScriptRecord[]): Promise<ResolvedModule[]> {
     return mapWithConcurrency(records, preloadConcurrency, (record) =>
-      getOrCreateResolvedModule(record),
+      getOrCreateResolvedScript(record),
     )
   }
 
-  async function getOrCreateResolvedModule(record: ModuleRecord): Promise<ResolvedModule> {
+  async function getOrCreateResolvedScript(record: ScriptRecord): Promise<ResolvedModule> {
     if (record.resolved) return record.resolved
 
     let cacheKey = getRecordCacheKey(record)
@@ -287,7 +301,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
     let promise = (async () => {
       let startedVersion = record.invalidationVersion
-      let transformedModule = await getOrCreateTransformedModule(record)
+      let transformedModule = await getOrCreateTransformedScript(record)
       if (
         resolvedOptions.watchMode &&
         transformedModule.unresolvedImports.some((unresolved) =>
@@ -300,13 +314,15 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
       if (!resolveModuleResult.ok) {
         if (isFresh(record, startedVersion)) {
-          store.setResolveFailure(record.identityPath, resolveModuleResult.tracking)
+          scriptStore.clearResolved(record.identityPath, [resolveModuleResult.tracking])
         }
         throw resolveModuleResult.error
       }
 
       if (isFresh(record, startedVersion)) {
-        store.setResolved(record.identityPath, resolveModuleResult.value)
+        scriptStore.setResolved(record.identityPath, resolveModuleResult.value, [
+          resolveModuleResult.tracking,
+        ])
       }
 
       return resolveModuleResult.value
@@ -323,7 +339,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
     }
   }
 
-  async function getOrCreateTransformedModule(record: ModuleRecord): Promise<TransformedModule> {
+  async function getOrCreateTransformedScript(record: ScriptRecord): Promise<TransformedModule> {
     if (record.transformed) return record.transformed
 
     let startedVersion = record.invalidationVersion
@@ -331,21 +347,21 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
     if (!transformModuleResult.ok) {
       if (isFresh(record, startedVersion)) {
-        store.setTransformFailure(record.identityPath, {
-          trackedFiles: transformModuleResult.trackedFiles,
-        })
+        scriptStore.clearTransformed(record.identityPath, [transformModuleResult.tracking])
       }
       throw transformModuleResult.error
     }
 
     if (isFresh(record, startedVersion)) {
-      store.setTransformed(record.identityPath, transformModuleResult.value)
+      scriptStore.setTransformed(record.identityPath, transformModuleResult.value, [
+        transformModuleResult.tracking,
+      ])
     }
 
     return transformModuleResult.value
   }
 
-  async function getOrCreateEmittedModule(record: ModuleRecord): Promise<EmittedModule> {
+  async function getOrCreateEmittedScript(record: ScriptRecord): Promise<EmittedModule> {
     if (record.emitted) return record.emitted
 
     let cacheKey = getRecordCacheKey(record)
@@ -354,7 +370,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
 
     let promise = (async () => {
       let startedVersion = record.invalidationVersion
-      let resolvedModule = await getOrCreateResolvedModule(record)
+      let resolvedModule = await getOrCreateResolvedScript(record)
       let emitResolvedModuleResult = await emitResolvedModule(resolvedModule, {
         getServedUrl,
         sourceMaps: resolvedOptions.sourceMaps,
@@ -365,7 +381,7 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
       }
 
       if (isFresh(record, startedVersion)) {
-        store.setEmitted(
+        scriptStore.setEmitted(
           record.identityPath,
           emitResolvedModuleResult.value,
           createModuleSnapshot(resolvedModule.trackedFiles),
@@ -387,13 +403,15 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   }
 
   async function getServedUrl(identityPath: string): Promise<string> {
-    return getServedUrlForResolvedModule(await getOrCreateResolvedModule(store.get(identityPath)))
+    return getServedUrlForResolvedScript(
+      await getOrCreateResolvedScript(scriptStore.get(identityPath)),
+    )
   }
 
-  function getServedUrlForResolvedModule(resolvedModule: ResolvedModule): string {
+  function getServedUrlForResolvedScript(resolvedModule: ResolvedModule): string {
     return formatFingerprintedPathname(
       resolvedModule.stableUrlPathname,
-      resolvedOptions.fingerprintModules ? resolvedModule.fingerprint : null,
+      resolvedOptions.fingerprintAssets ? resolvedModule.fingerprint : null,
     )
   }
 
@@ -402,18 +420,18 @@ export function createModuleCompiler(options: ModuleCompilerOptions): ModuleComp
   }
 }
 
-function getRecordCacheKey(record: ModuleRecord): string {
+function getRecordCacheKey(record: ScriptRecord): string {
   return `${record.identityPath}\0${record.invalidationVersion}`
 }
 
-function isFresh(record: ModuleRecord, version: number): boolean {
+function isFresh(record: ScriptRecord, version: number): boolean {
   return record.invalidationVersion === version
 }
 
 function getNotModifiedResult(
   emittedModule: EmittedModule | undefined,
-  options: ModuleGetOptions,
-): ModuleGetResult | null {
+  options: ScriptGetOptions,
+): ScriptGetResult | null {
   if (!emittedModule || options.ifNoneMatch === null) return null
 
   if (
@@ -510,7 +528,7 @@ async function mapWithConcurrency<item, result>(
   return results
 }
 
-function toModuleCompileResult(emittedModule: EmittedModule): ModuleCompileResult {
+function toScriptCompileResult(emittedModule: EmittedModule): ScriptCompileResult {
   return {
     code: emittedModule.code,
     fingerprint: emittedModule.fingerprint,
@@ -582,8 +600,8 @@ function isNoEntityError(
   )
 }
 
-export function createResponseForModule(
-  result: ModuleCompileResult,
+export function createResponseForScript(
+  result: ScriptCompileResult,
   options: {
     cacheControl: string
     ifNoneMatch: string | null

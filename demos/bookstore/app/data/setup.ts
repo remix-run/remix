@@ -37,6 +37,12 @@ export async function initializeBookstoreDatabase(): Promise<void> {
   await initializePromise
 }
 
+export function closeBookstoreDatabase(): void {
+  if (sqlite.open) {
+    sqlite.close()
+  }
+}
+
 async function initialize(): Promise<void> {
   let migrations = await loadMigrations(migrationsDirectoryPath)
   let migrationRunner = createMigrationRunner(adapter, migrations)

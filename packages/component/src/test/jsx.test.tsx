@@ -59,13 +59,17 @@ describe('jsx', () => {
   })
 
   describe('library managed attributes', () => {
-    it('infers component setup and props', () => {
-      function Counter(handle: Handle, setup: number) {
-        let count = setup
+    it('infers component props', () => {
+      interface CounterProps {
+        initialCount: number
+        label: string
+      }
 
-        return (props: { label: string }) => {
-          // no `props.setup`
-          type componentProps = Assert<Equal<typeof props, { label: string }>>
+      function Counter(handle: Handle<CounterProps>) {
+        let count = handle.props.initialCount
+
+        return () => {
+          type componentProps = Assert<Equal<typeof handle.props, CounterProps>>
           return (
             <button
               mix={[
@@ -75,25 +79,29 @@ describe('jsx', () => {
                 }),
               ]}
             >
-              {props.label} {count}
+              {handle.props.label} {count}
             </button>
           )
         }
       }
 
-      let good = <Counter setup={10} label="Count" />
+      let good = <Counter initialCount={10} label="Count" />
       // @ts-expect-error - wrong type
-      let bad = <Counter setup={{ initial: 10 }} label={10} />
+      let bad = <Counter initialCount={{ initial: 10 }} label={10} />
     })
 
-    it('infers component setup and props with context', () => {
-      function Counter(handle: Handle<number>, setup: number) {
-        let count = setup
+    it('infers component props with context', () => {
+      interface CounterProps {
+        initialCount: number
+        label: string
+      }
 
-        return (props: { label: string }) => {
+      function Counter(handle: Handle<CounterProps, number>) {
+        let count = handle.props.initialCount
+
+        return () => {
           handle.context.set(count)
-          // no `props.setup`
-          type componentProps = Assert<Equal<typeof props, { label: string }>>
+          type componentProps = Assert<Equal<typeof handle.props, CounterProps>>
           return (
             <button
               mix={[
@@ -103,24 +111,24 @@ describe('jsx', () => {
                 }),
               ]}
             >
-              {props.label} {count}
+              {handle.props.label} {count}
             </button>
           )
         }
       }
 
-      let good = <Counter setup={10} label="Count" />
+      let good = <Counter initialCount={10} label="Count" />
     })
 
     it('accepts single or array mix values for component JSX while render props see arrays', () => {
       let passthrough = createMixin((handle) => {})
 
-      function Button() {
-        return (props: Props<'button'>) => {
+      function Button(handle: Handle<Props<'button'>>) {
+        return () => {
           type normalizedMix = Assert<
-            Equal<typeof props.mix, NormalizedMix<JSX.IntrinsicElements['button']['mix']>>
+            Equal<typeof handle.props.mix, NormalizedMix<JSX.IntrinsicElements['button']['mix']>>
           >
-          return <button {...props} />
+          return <button {...handle.props} />
         }
       }
 
@@ -223,11 +231,9 @@ describe('jsx', () => {
     })
 
     it('infers context.get types on mixin handles', () => {
-      function Provider(handle: Handle<{ value: number }>) {
-        return ({ children }: { children?: RemixNode }) => {
-          handle.context.set({ value: 1 })
-          return <div>{children}</div>
-        }
+      function Provider(handle: Handle<{ children?: RemixNode }, { value: number }>) {
+        handle.context.set({ value: 1 })
+        return () => <div>{handle.props.children}</div>
       }
 
       let withContext = createMixin<HTMLDivElement, [], Props<'div'>>((handle) => {

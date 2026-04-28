@@ -113,10 +113,10 @@ function toEmitError(error: unknown, identityPath: string): AssetServerCompilati
   if (isAssetServerCompilationError(error)) return error
 
   return createAssetServerCompilationError(
-    `Failed to emit module ${identityPath}. ${error instanceof Error ? error.message : String(error)}`,
+    `Failed to emit script ${identityPath}. ${error instanceof Error ? error.message : String(error)}`,
     {
       cause: error,
-      code: 'MODULE_EMIT_FAILED',
+      code: 'EMIT_FAILED',
     },
   )
 }

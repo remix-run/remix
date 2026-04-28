@@ -55,10 +55,8 @@
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
     "@remix-run/test": "workspace:*",
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
-    "better-sqlite3": "^12.4.1"
+    "@typescript/native-preview": "catalog:"
   },
   "dependencies": {},
   "scripts": {
@@ -66,6 +64,7 @@
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix-test",
+    "test:bun": "bun x --bun remix-test",
     "test:coverage": "remix-test --coverage",
     "typecheck": "tsgo --noEmit"
   },

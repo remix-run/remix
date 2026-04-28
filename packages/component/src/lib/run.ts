@@ -1,6 +1,6 @@
 import { createFrame, type Frame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
-import { defaultStyleManager } from './diff-props.ts'
+import { createStyleManager } from './style/index.ts'
 import type { FrameHandle } from './component.ts'
 import { createComponentErrorEvent } from './error-event.ts'
 import type { ComponentErrorEvent } from './error-event.ts'
@@ -61,7 +61,7 @@ export function getNamedFrame(name: string): FrameHandle {
  * @returns The running application runtime.
  */
 export function run(init: RunInit): AppRuntime {
-  let styleManager = defaultStyleManager
+  let styleManager = createStyleManager()
   let errorTarget = new TypedEventTarget<AppRuntimeEventMap>()
   let scheduler = createScheduler(document, errorTarget, styleManager)
 

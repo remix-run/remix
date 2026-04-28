@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 import { css } from 'remix/component'
 
 import { frames, routes } from '../../routes.ts'
@@ -50,22 +50,25 @@ const settingsItems = [
   },
 ]
 
-export function SettingsLayout() {
-  return ({ activeItem, children }: SettingsLayoutProps) => (
-    <section mix={contentShellStyle}>
-      <aside mix={secondarySidebarStyle}>
-        <p mix={secondarySidebarTitleStyle}>Settings</p>
-        <nav mix={secondaryNavStyle}>
-          {settingsItems.map((item) => (
-            <NavLink route={item.route} target={frames.settings} active={activeItem === item.id}>
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-      </aside>
-      <section mix={secondaryContentStyle}>{children}</section>
-    </section>
-  )
+export function SettingsLayout(handle: Handle<SettingsLayoutProps>) {
+  return () => {
+    let { activeItem, children } = handle.props
+    return (
+      <section mix={contentShellStyle}>
+        <aside mix={secondarySidebarStyle}>
+          <p mix={secondarySidebarTitleStyle}>Settings</p>
+          <nav mix={secondaryNavStyle}>
+            {settingsItems.map((item) => (
+              <NavLink route={item.route} target={frames.settings} active={activeItem === item.id}>
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+        </aside>
+        <section mix={secondaryContentStyle}>{children}</section>
+      </section>
+    )
+  }
 }
 
 const contentShellStyle = css({

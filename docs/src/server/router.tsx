@@ -76,12 +76,10 @@ export function createRouter(versions: ServerContext['versions']) {
         return await respond.document(
           request,
           <ServerPage
-            setup={{
-              docFiles,
-              versions,
-              slug: params.slug,
-              activeVersion: params.version,
-            }}
+            docFiles={docFiles}
+            versions={versions}
+            slug={params.slug}
+            activeVersion={params.version}
           >
             {node}
           </ServerPage>,
@@ -90,7 +88,7 @@ export function createRouter(versions: ServerContext['versions']) {
       async home({ request, params }) {
         return respond.document(
           request,
-          <ServerPage setup={{ docFiles, versions, activeVersion: params.version }}>
+          <ServerPage docFiles={docFiles} versions={versions} activeVersion={params.version}>
             <Home />
           </ServerPage>,
         )

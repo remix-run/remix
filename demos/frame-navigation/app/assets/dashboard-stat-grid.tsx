@@ -12,10 +12,10 @@ type DashboardStatGridProps = {
 
 export const DashboardStatGrid = clientEntry(
   '/assets/dashboard-stat-grid.js#DashboardStatGrid',
-  function DashboardStatGrid(_handle: Handle) {
-    return ({ cards }: DashboardStatGridProps) => (
+  function DashboardStatGrid(handle: Handle<DashboardStatGridProps>) {
+    return () => (
       <div mix={statsGridStyle}>
-        {cards.map((card) => (
+        {handle.props.cards.map((card) => (
           <article mix={[statCardStyle, link(card.href)]}>
             <p mix={statLabelStyle}>{card.label}</p>
             <p mix={statValueStyle}>{card.value}</p>

@@ -1,14 +1,16 @@
 import * as assert from 'remix/assert'
 import { createTestServer } from 'remix/node-fetch-server/test'
-import { describe, it } from 'remix/test'
+import { afterAll, describe, it } from 'remix/test'
 import { createBookstoreRouter } from './router.ts'
 import { books } from './data/schema.ts'
-import { db, initializeBookstoreDatabase } from './data/setup.ts'
+import { closeBookstoreDatabase, db, initializeBookstoreDatabase } from './data/setup.ts'
 
 const router = createBookstoreRouter()
 
 // Initialize DB for this worker thread
 await initializeBookstoreDatabase()
+
+afterAll(() => closeBookstoreDatabase())
 
 describe('e2e', () => {
   it('adds to cart', async (t) => {

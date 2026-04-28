@@ -1,7 +1,6 @@
-import BetterSqlite3, { type Database as BetterSqliteDatabase } from 'better-sqlite3'
-
 import type { DatabaseAdapter } from '../src/lib/adapter.ts'
 import { createSqliteDatabaseAdapter } from './sqlite-adapter.ts'
+import { createNativeSqliteDatabase, type NativeSqliteDatabase } from './native-sqlite.ts'
 
 export type SqliteTestSeed = Record<string, Array<Record<string, unknown>>>
 
@@ -18,7 +17,7 @@ export function createSqliteTestAdapter(
   adapter: DatabaseAdapter
   close(): void
 } {
-  let sqlite = new BetterSqlite3(':memory:')
+  let sqlite = createNativeSqliteDatabase()
   initializeSchema(sqlite)
   seedDatabase(sqlite, seed)
   let adapter = createSqliteDatabaseAdapter(sqlite)
@@ -43,7 +42,7 @@ export function createSqliteTestAdapter(
   }
 }
 
-function initializeSchema(database: BetterSqliteDatabase): void {
+function initializeSchema(database: NativeSqliteDatabase): void {
   database.exec(
     [
       'create table accounts (',
@@ -107,7 +106,7 @@ function initializeSchema(database: BetterSqliteDatabase): void {
   )
 }
 
-function seedDatabase(database: BetterSqliteDatabase, seed: SqliteTestSeed): void {
+function seedDatabase(database: NativeSqliteDatabase, seed: SqliteTestSeed): void {
   for (let tableName in seed) {
     if (!Object.prototype.hasOwnProperty.call(seed, tableName)) {
       continue

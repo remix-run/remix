@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { createRoot } from '../lib/vdom.ts'
 import { invariant } from '../lib/invariant.ts'
+import type { Handle } from '../lib/component.ts'
 
 describe('vnode rendering', () => {
   describe('type<-->type updates', () => {
@@ -70,11 +71,11 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
 
       let setupCalls = 0
-      function App() {
+      function App(handle: Handle<{ title: string }>) {
         let state = ++setupCalls
-        return ({ title }: { title: string }) => (
+        return () => (
           <div>
-            {title} {state}
+            {handle.props.title} {state}
           </div>
         )
       }
@@ -90,11 +91,11 @@ describe('vnode rendering', () => {
       let container = document.createElement('div')
 
       let setupCalls = 0
-      function App() {
+      function App(handle: Handle<{ title: string }>) {
         let state = ++setupCalls
-        return ({ title }: { title: string }) => (
+        return () => (
           <>
-            <span>{title}</span>
+            <span>{handle.props.title}</span>
             <span>{state}</span>
           </>
         )
@@ -106,6 +107,32 @@ describe('vnode rendering', () => {
 
       root.render(<App title="Goodbye" />)
       expect(container.innerHTML).toBe('<span>Goodbye</span><span>1</span>')
+    })
+
+    it('updates a stable destructured component props object', () => {
+      let container = document.createElement('div')
+      let capturedProps: { title: string; description?: string } | undefined
+
+      function App(handle: Handle<{ title: string; description?: string }>) {
+        let { props } = handle
+        capturedProps = props
+        return () => (
+          <div>
+            {props.title}
+            {props.description ? ` ${props.description}` : ''}
+          </div>
+        )
+      }
+
+      let root = createRoot(container)
+      root.render(<App title="Hello" description="World" />)
+      let firstProps = capturedProps
+      expect(container.innerHTML).toBe('<div>Hello World</div>')
+
+      root.render(<App title="Goodbye" />)
+      expect(capturedProps).toBe(firstProps)
+      expect(capturedProps).toEqual({ title: 'Goodbye' })
+      expect(container.innerHTML).toBe('<div>Goodbye</div>')
     })
   })
 

@@ -39,7 +39,7 @@ function App() {
       </head>
       <body>
         <h1>Hello</h1>
-        <Counter setup={0} label="Clicks" />
+        <Counter initialCount={0} label="Clicks" />
         <Frame src="/sidebar" fallback={<div>Loading...</div>} />
       </body>
     </html>
@@ -70,13 +70,13 @@ import { clientEntry, on, type Handle } from 'remix/component'
 
 export let Counter = clientEntry(
   '/assets/counter.js#Counter',
-  function Counter(handle: Handle, setup: number) {
-    let count = setup
+  function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
+    let count = handle.props.initialCount ?? 0
 
-    return (props: { label: string }) => (
+    return () => (
       <div>
         <span>
-          {props.label}: {count}
+          {handle.props.label}: {count}
         </span>
         <button
           mix={[
@@ -175,17 +175,17 @@ When a frame reloads, its server HTML is re-fetched and diffed into the page. Cl
 
 ## Components
 
-All components return a render function. The setup function runs **once** when the component is first created, and the returned render function runs on the first render and **every update** afterward:
+All components receive a handle and return a render function. The component function runs **once** when the component is first created, and the returned render function runs on the first render and **every update** afterward:
 
 ```tsx
-function Counter(handle: Handle, setup: number) {
-  // Setup phase: runs once
-  let count = setup
+function Counter(handle: Handle<{ initialCount?: number; label?: string }>) {
+  // Component function: runs once
+  let count = handle.props.initialCount ?? 0
 
   // Return render function: runs on every update
-  return (props: { label?: string }) => (
+  return () => (
     <div>
-      {props.label || 'Count'}: {count}
+      {handle.props.label || 'Count'}: {count}
       <button
         mix={[
           on('click', () => {
@@ -201,36 +201,26 @@ function Counter(handle: Handle, setup: number) {
 }
 ```
 
-### Setup Prop vs Props
+### Props On The Handle
 
-When a component returns a function, it has two phases:
+Props are available on `handle.props` in both the component function and the render function:
 
-1. **Setup phase** - The component function receives the `setup` prop and runs once. Use this for initialization.
-2. **Render phase** - The returned function receives props and runs on initial render and every update afterward. Use this for rendering.
+1. **Component function** - Runs once and can initialize state from `handle.props`.
+2. **Render phase** - The returned function runs on initial render and every update afterward, reading the latest values from `handle.props`.
 
-The `setup` prop is separate from regular props. Only the `setup` prop is passed to the setup function, and only props are passed to the render function.
-
-- `setup` prop for values that initialize state (e.g., `initial`, `defaultValue`)
-- Regular props for values that change over time (e.g., `label`, `disabled`)
+`handle.props` is a stable object. Its identity stays the same across updates while its property values are updated before each render.
 
 ```tsx
-// Usage: setup prop goes to setup function, regular props go to render function
-let el = <Counter setup={5} label="Total" />
+let el = <Counter initialCount={5} label="Total" />
 
-function Counter(
-  handle: Handle,
-  setup: number, // receives 5 (the setup prop value)
-) {
-  let count = setup // use setup for initialization
+function Counter(handle: Handle<{ initialCount: number; label?: string }>) {
+  let count = handle.props.initialCount
 
-  return (props: { label?: string }) => {
-    // props only receives { label: "Total" } - not the setup prop
-    return (
-      <div>
-        {props.label}: {count}
-      </div>
-    )
-  }
+  return () => (
+    <div>
+      {handle.props.label}: {count}
+    </div>
+  )
 }
 ```
 

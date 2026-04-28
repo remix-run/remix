@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/test",
   "version": "0.1.0",
-  "description": "A browser-based test framework for Remix components",
+  "description": "A test framework for JavaScript and TypeScript projects",
   "author": "Shopify Inc.",
   "license": "MIT",
   "repository": {

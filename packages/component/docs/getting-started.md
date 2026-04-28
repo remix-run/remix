@@ -94,7 +94,7 @@ function App() {
       </head>
       <body>
         <h1>Hello</h1>
-        <Counter setup={0} label="Clicks" />
+        <Counter initialCount={0} label="Clicks" />
         <Frame src="/sidebar" fallback={<div>Loading...</div>} />
       </body>
     </html>
@@ -138,13 +138,13 @@ import { clientEntry, on, type Handle } from 'remix/component'
 
 export let Counter = clientEntry(
   '/assets/counter.js#Counter',
-  function Counter(handle: Handle, setup: number) {
-    let count = setup
+  function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
+    let count = handle.props.initialCount ?? 0
 
-    return (props: { label: string }) => (
+    return () => (
       <div>
         <span>
-          {props.label}: {count}
+          {handle.props.label}: {count}
         </span>
         <button
           mix={[

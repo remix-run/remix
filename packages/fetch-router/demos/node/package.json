@@ -4,6 +4,7 @@
   "type": "module",
   "dependencies": {
     "@remix-run/cookie": "workspace:*",
+    "@remix-run/data-schema": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/form-data-middleware": "workspace:*",
     "@remix-run/html-template": "workspace:*",

@@ -4,8 +4,8 @@ import { routes } from '../routes.ts'
 
 export const MessageStream = clientEntry(
   routes.assets.href({ path: 'message-stream.js#MessageStream' }),
-  function MessageStream(handle: Handle, setup: { limit: number | null }) {
-    let { limit } = setup
+  function MessageStream(handle: Handle<{ limit: number | null }>) {
+    let { limit } = handle.props
     let messages: Array<{ count: number; message: string }> = []
     let connected = false
 

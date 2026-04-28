@@ -16,6 +16,7 @@ words:
   - braillelabel
   - brailleroledescription
   - closedby
+  - closeend
   - closerequest
   - colcount
   - colindex

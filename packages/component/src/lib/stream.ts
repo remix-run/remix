@@ -79,6 +79,7 @@ interface RenderContext {
   onError: (error: unknown) => void
   parentVNode?: VNode
   styleCache: Map<string, { selector: string; css: string }>
+  emittedStyles: Set<string>
   resolveFrame: (
     src: string,
     target?: string,
@@ -129,6 +130,12 @@ const SELF_CLOSING_TAGS = new Set([
   'track',
   'wbr',
 ])
+
+const DEFAULT_STYLE_LAYER = 'rmx'
+
+function getStyleLayerName(selector: string, layer: string = DEFAULT_STYLE_LAYER): string {
+  return `${layer}.${selector}`
+}
 
 const NUMERIC_CSS_PROPS = new Set([
   'z-index',
@@ -200,6 +207,7 @@ export function renderToStream(
     onError,
     resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
     styleCache: new Map(),
+    emittedStyles: new Set(),
     pendingFrames: [],
     hydrationData: new Map(),
     unresolvedHydrationData: new Map(),
@@ -605,15 +613,15 @@ function createSsrMixinHandle(
   context: RenderContext,
   frameState: SsrFrameState,
 ) {
-  let element = ((_: { update(): Promise<AbortSignal> }, __: unknown) => (props: ElementProps) => ({
+  let element = ((handle: { props: ElementProps; update(): Promise<AbortSignal> }) => () => ({
     $rmx: true as const,
     type: hostType,
     key: null,
-    props,
-  })) as ((
-    handle: { update(): Promise<AbortSignal> },
-    setup: unknown,
-  ) => (props: ElementProps) => RemixElement) & {
+    props: handle.props,
+  })) as ((handle: {
+    props: ElementProps
+    update(): Promise<AbortSignal>
+  }) => () => RemixElement) & {
     __rmxMixinElementType: string
   }
   element.__rmxMixinElementType = hostType
@@ -1069,9 +1077,9 @@ function transformAttributeName(name: string, isSvg: boolean): string {
 function finalizeHtml(html: string, context: RenderContext): string {
   let hasHtmlRoot = html.trimStart().toLowerCase().startsWith('<html')
 
-  let css = collectAllStyles(context)
-  if (css) {
-    let headContent = `<style data-rmx-styles>${css}</style>`
+  let styles = collectStyleTags(context)
+  if (styles) {
+    let headContent = styles
     if (hasHtmlRoot) {
       // For HTML root, inject into existing head or create one
       let headCloseIndex = html.indexOf('</head>')
@@ -1092,6 +1100,8 @@ function finalizeHtml(html: string, context: RenderContext): string {
       html = `<head>${headContent}</head>${html}`
     }
   }
+
+  html = dedupeServerStyleTagsInHtml(html, context.emittedStyles)
 
   // Append aggregated hydration/frame data script at the end
   let rmxData = buildRmxDataScript(context)
@@ -1135,14 +1145,52 @@ function processStyleProps(props: any): any {
   return processedProps
 }
 
-function collectAllStyles(context: RenderContext): string {
+function collectStyleTags(context: RenderContext): string {
   if (context.styleCache.size === 0) return ''
 
-  let allCss = ''
-  for (let { css } of context.styleCache.values()) {
-    allCss += css + '\n'
+  let tags: string[] = []
+  for (let { selector, css } of context.styleCache.values()) {
+    let tag = renderStyleTag(selector, css)
+    if (tag) tags.push(tag)
   }
-  return `@layer rmx { ${allCss.trim()} }`
+  return tags.join('')
+}
+
+function wrapStyleForLayer(
+  selector: string,
+  css: string,
+  layer: string = DEFAULT_STYLE_LAYER,
+): string {
+  let trimmed = css.trim()
+  if (!trimmed) return ''
+  return `@layer ${getStyleLayerName(selector, layer)} { ${trimmed} }`
+}
+
+function renderStyleTag(
+  selector: string,
+  css: string,
+  layer: string = DEFAULT_STYLE_LAYER,
+): string {
+  let wrappedCss = wrapStyleForLayer(selector, css, layer)
+  if (!wrappedCss) return ''
+  return `<style data-rmx="${escapeHtml(selector)}">${wrappedCss}</style>`
+}
+
+function readStyleTagAttribute(attrs: string, name: string): string | null {
+  let match = attrs.match(new RegExp(`\\b${name}=(?:"([^"]*)"|'([^']*)')`))
+  if (!match) return null
+  return match[1] ?? match[2] ?? null
+}
+
+function dedupeServerStyleTagsInHtml(html: string, seenStyles: Set<string>): string {
+  return html.replace(/<style\b([^>]*)>[\s\S]*?<\/style>/gi, (match, attrs) => {
+    let selector = readStyleTagAttribute(attrs, 'data-rmx')
+    if (!selector) return match
+
+    if (seenStyles.has(selector)) return ''
+    seenStyles.add(selector)
+    return match
+  })
 }
 
 function buildRmxDataScript(context: RenderContext): string {
@@ -1203,7 +1251,7 @@ function serializeStyleObject(style: Record<string, any>): string {
 }
 
 // Frame styles work end-to-end when frame handlers use their own `renderToStream`:
-// the handler's `finalizeHtml` emits `<style data-rmx-styles>` in its HTML, and on the client,
+// the handler's `finalizeHtml` emits selector-addressed `<style>` tags in its HTML, and on the client,
 // the `adoptServerStyleTag` MutationObserver (stylesheet.ts) picks it up anywhere in the
 // document and adopts the CSS into an adopted stylesheet.
 async function streamPendingFrames(
@@ -1222,6 +1270,7 @@ async function streamPendingFrames(
         processedFrames.add(frameId)
         try {
           let { html, tail } = await promise
+          html = dedupeServerStyleTagsInHtml(html, context.emittedStyles)
 
           // Stream as a template element (first chunk only)
           let templateHtml = `<template id="${frameId}">${escapeTemplateContent(html)}</template>`

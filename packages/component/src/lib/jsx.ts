@@ -69,6 +69,17 @@ type ExpandMixProp<props> = props extends { mix?: infer mix }
     }
   : props
 
+type MixinElementType = ((
+  handle: { update(): Promise<AbortSignal> },
+  setup: unknown,
+) => (props: any) => RemixElement) & {
+  __rmxMixinElementType: string
+}
+
+type MergeComponentProps<handleProps, renderProps> = [handleProps] extends [Record<string, never>]
+  ? renderProps
+  : handleProps & renderProps
+
 /**
  * Get the props for a specific element type.
  *
@@ -108,7 +119,9 @@ declare global {
       // host elements
       | keyof IntrinsicElements
       // Factory component
-      | ((handle: Handle<any>, setup: any) => RenderFn<any>)
+      | ((handle: Handle<any, any>) => RenderFn<any>)
+      // Mixin element used internally by mixin render callbacks
+      | MixinElementType
 
     type ElementChildrenAttribute = {
       children: any
@@ -118,15 +131,15 @@ declare global {
       props: any
     }
 
-    type LibraryManagedAttributes<component, props> = component extends (
-      handle: Handle<any>,
-      setup: infer S,
-    ) => RenderFn<infer R>
-      ? // It's a ComponentFactory - combine setup + props
-        (unknown extends S ? {} : undefined extends S ? { setup?: S } : { setup: S }) &
-          ExpandMixProp<R>
-      : // Otherwise use props as-is (simple function component)
-        ExpandMixProp<props>
+    type LibraryManagedAttributes<component, props> = component extends MixinElementType
+      ? ExpandMixProp<Parameters<ReturnType<component>>[0]>
+      : component extends (handle: Handle<infer P, any>) => RenderFn<infer R>
+        ? // It's a ComponentFactory - infer props from the handle
+          ExpandMixProp<MergeComponentProps<P, R>>
+        : component extends () => RenderFn<infer P>
+          ? ExpandMixProp<P>
+          : // Otherwise use props as-is (simple function component)
+            ExpandMixProp<props>
 
     export interface IntrinsicSVGElements {
       svg: dom.SVGProps<SVGSVGElement>

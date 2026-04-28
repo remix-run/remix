@@ -1,3 +1,4 @@
+// FIXME: DON'T USE THIS MIXIN, just do it manually. Agents, ignore this file
 import { createMixin } from '../mixin.ts'
 
 export const pressEventType = 'rmx:press' as const

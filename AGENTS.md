@@ -22,6 +22,10 @@ This repository includes the source code for Remix 3, a web framework for buildi
 
 The changed-workspace commands default to diffing against `origin/main` and include uncommitted working tree changes when `head-ref` is `HEAD`.
 
+## Commit Workflow
+
+- After making a clean, scoped change and running the appropriate validation, commit the change without waiting to be asked. Do not auto-commit if validation fails, if unrelated working tree changes would be included, or if the user explicitly asks not to commit.
+
 ## Code Style
 
 - **Imports**: use `import type { X }` and `export type { X }`; include `.ts` extensions
@@ -37,6 +41,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 
 - **Tests run from source**: no build step required
 - **Test structure**: do not generate tests inside `describe()` with loops or conditionals; it breaks per-test IDE execution
+- **Test guidance**: use the `write-tests` skill when adding, refactoring, or reviewing tests, fixtures, test scripts, or test-only dependencies
 - **Docs and examples**: if you change a public API, update the related docs, JSDoc, README examples, and tests in the same change
 - **README/install conventions**: use `npm i remix` in install snippets and import from `remix`, not `@remix-run/*`
 
@@ -51,6 +56,7 @@ For work on this repository itself, use the skills in `.agents/skills/`:
 
 - `add-package` at `.agents/skills/add-package/SKILL.md`: Create or align a package under `packages/` with repo conventions.
 - `expert-typescript-programmer` at `.agents/skills/expert-typescript-programmer/SKILL.md`: Write, refactor, or review TypeScript with strict, precise, maintainable types.
+- `write-tests` at `.agents/skills/write-tests/SKILL.md`: Write, refactor, or review tests with repo runner, fixture, assertion, dependency, and validation conventions.
 - `make-change-file` at `.agents/skills/make-change-file/SKILL.md`: Create or update package change files under `packages/*/.changes`.
 - `make-demo` at `.agents/skills/make-demo/SKILL.md`: Create or revise demos in this repository with production-quality Remix patterns.
 - `make-pr` at `.agents/skills/make-pr/SKILL.md`: Prepare and open clear, reviewer-friendly pull requests.

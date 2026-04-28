@@ -1,5 +1,5 @@
-import * as assert from '@remix-run/assert'
-import { describe, it } from '@remix-run/test'
+import * as assert from 'node:assert/strict'
+import { describe, it } from 'node:test'
 
 import type * as http from 'node:http'
 import * as stream from 'node:stream'

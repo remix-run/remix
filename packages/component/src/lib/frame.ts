@@ -7,7 +7,7 @@ import type { FrameHandle } from './component.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffNodes } from './diff-dom.ts'
-import type { StyleManager } from './style/index.ts'
+import { createStyleManager, type StyleManager } from './style/index.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -115,7 +115,7 @@ type FrameInit = {
   resolveFrame: ResolveFrame
   pendingClientEntries: PendingClientEntries
   scheduler: Scheduler
-  styleManager: StyleManager
+  styleManager?: StyleManager
   marker?: FrameMarkerData
   data: RmxData
   moduleCache: Map<string, Function>
@@ -143,11 +143,12 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let subscriptions: Array<() => void> = []
   let contentRoot: VirtualRoot | undefined
   let reloadController: AbortController | undefined
+  let styleManager = init.styleManager ?? createStyleManager()
 
   // Merge any rmx-data found in the current document once at startup.
   mergeRmxDataFromDocument(init.data, container.doc)
 
-  let runtime = createFrameRuntime(init)
+  let runtime = createFrameRuntime({ ...init, styleManager })
 
   let frame = createFrameHandle({
     src: init.src,
@@ -191,7 +192,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     pendingClientEntries: init.pendingClientEntries,
     scheduler: init.scheduler,
     frame,
-    styleManager: init.styleManager,
+    styleManager,
     data: init.data,
     moduleCache: init.moduleCache,
     moduleLoads: init.moduleLoads,
@@ -245,6 +246,10 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       disposeSubFrames(previousBodyNodes, context)
       let parsed = new DOMParser().parseFromString(content, 'text/html')
       mergeRmxDataFromDocument(context.data, parsed)
+      context.styleManager.reset()
+      context.styleManager.adoptServerStyles(
+        collectFrameServerStyleTags(createElementContainer(parsed)),
+      )
 
       syncElementAttributes(container.doc.documentElement, parsed.documentElement)
       syncElementAttributes(container.doc.head, parsed.head)
@@ -270,7 +275,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       typeof content === 'string' ? createFragmentFromString(container.doc, content) : content
-    moveServerStylesToHead(container.doc, fragment)
+    context.styleManager.reset()
+    context.styleManager.adoptServerStyles(
+      collectFrameServerStyleTags(createElementContainer(fragment)),
+    )
+    removeEmptyHeads(fragment)
     mergeRmxDataFromFragment(context.data, fragment)
 
     let nextContainer = createContainer(fragment)
@@ -328,6 +337,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   async function hydrateInitial(): Promise<void> {
     let initialHydrationTracker = createInitialHydrationTracker()
 
+    context.styleManager.reset()
+    context.styleManager.adoptServerStyles(collectFrameServerStyleTags(container))
     createSubFrames(container.childNodes, context)
     scheduleHydrationInContainer(container, context, initialHydrationTracker)
 
@@ -335,15 +346,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       let markerId = init.marker.id
       let early = consumeFrameTemplate(markerId) ?? getEarlyFrameContent(markerId)
       if (early) {
-        moveServerStylesToHead(container.doc, early)
-        mergeRmxDataFromFragment(context.data, early)
         await render(early, { initialHydrationTracker })
       } else {
         let observer = setupTemplateObserver()
         let unsubscribe = subscribeFrameTemplate(markerId, async (fragment) => {
           unsubscribe()
-          moveServerStylesToHead(container.doc, fragment)
-          mergeRmxDataFromFragment(context.data, fragment)
           await render(fragment)
           observer.disconnect()
         })
@@ -351,8 +358,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         let buffered = consumeFrameTemplate(markerId)
         if (buffered) {
           unsubscribe()
-          moveServerStylesToHead(container.doc, buffered)
-          mergeRmxDataFromFragment(context.data, buffered)
           await render(buffered)
           observer.disconnect()
         }
@@ -385,6 +390,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     // Dispose sub-frames recursively.
     disposeSubFrames(container.childNodes, context)
+    context.styleManager.dispose()
 
     if (frameName) {
       if (init.namedFrames.get(frameName) === frame) {
@@ -495,21 +501,43 @@ function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): vo
   }
 }
 
-function moveServerStylesToHead(doc: Document, fragment: DocumentFragment): void {
-  let target = doc.head
-  if (!target) return
-
-  let styles = Array.from(fragment.querySelectorAll('style[data-rmx-styles]'))
-  for (let style of styles) {
-    if (style instanceof HTMLStyleElement) {
-      target.appendChild(style)
-    }
-  }
-
+function removeEmptyHeads(fragment: DocumentFragment): void {
   let heads = Array.from(fragment.querySelectorAll('head'))
   for (let head of heads) {
     if (!head.childNodes.length) {
       head.remove()
+    }
+  }
+}
+
+function collectFrameServerStyleTags(container: FrameContainer): HTMLStyleElement[] {
+  let styles: HTMLStyleElement[] = []
+  let nodes =
+    container.root instanceof Document
+      ? [...Array.from(container.doc.head.childNodes), ...Array.from(container.doc.body.childNodes)]
+      : container.childNodes
+
+  collectOwnedServerStyleTags(nodes, styles)
+  return styles
+}
+
+function collectOwnedServerStyleTags(nodes: Node[], styles: HTMLStyleElement[]): void {
+  for (let i = 0; i < nodes.length; i++) {
+    let node = nodes[i]
+
+    if (isFrameStart(node)) {
+      let end = findEndMarker(node, isFrameStart, isFrameEnd)
+      i = nodes.indexOf(end)
+      continue
+    }
+
+    if (node instanceof HTMLStyleElement && node.matches('style[data-rmx]')) {
+      styles.push(node)
+      continue
+    }
+
+    if (node instanceof Element || node instanceof Document || node instanceof DocumentFragment) {
+      collectOwnedServerStyleTags(Array.from(node.childNodes), styles)
     }
   }
 }
@@ -716,7 +744,6 @@ function createSubFrames(nodes: Node[], context: FrameContext) {
             resolveFrame: context.resolveFrame,
             pendingClientEntries: context.pendingClientEntries,
             scheduler: context.scheduler,
-            styleManager: context.styleManager,
             data: context.data,
             moduleCache: context.moduleCache,
             moduleLoads: context.moduleLoads,

@@ -5,8 +5,8 @@ import { on, type Handle } from '@remix-run/component'
 import { render } from '@remix-run/component/test'
 
 describe('Counter', () => {
-  function Counter(handle: Handle, setup?: number) {
-    let count = setup ?? 0
+  function Counter(handle: Handle<{ count?: number }>) {
+    let count = handle.props.count ?? 0
     return () => (
       <div>
         <h3>Counter</h3>
@@ -50,8 +50,8 @@ describe('Counter', () => {
     assert.equal(Number($('[data-testid="count"]')!.textContent), 0)
   })
 
-  it('renders with a setup-prop provided initial count', (t) => {
-    let { $, cleanup } = render(<Counter setup={5} />)
+  it('renders with a provided initial count', (t) => {
+    let { $, cleanup } = render(<Counter count={5} />)
     t.after(cleanup)
     assert.equal(Number($('[data-testid="count"]')!.textContent), 5)
   })
@@ -61,31 +61,21 @@ describe('Counter', () => {
     t.after(cleanup)
     await act(() => $('[data-action="increment"]')?.click())
     assert.equal(Number($('[data-testid="count"]')!.textContent), 1)
-  })
-
-  it('decrements the count', async (t) => {
-    let { $, act, cleanup } = render(<Counter />)
-    t.after(cleanup)
-    await act(() => $('[data-action="decrement"]')?.click())
-    assert.equal(Number($('[data-testid="count"]')!.textContent), -1)
-  })
-
-  it('increments multiple times', async (t) => {
-    let { $, act, cleanup } = render(<Counter />)
-    t.after(cleanup)
     await act(() => $('[data-action="increment"]')?.click())
-    await act(() => $('[data-action="increment"]')?.click())
+    assert.equal(Number($('[data-testid="count"]')!.textContent), 2)
     await act(() => $('[data-action="increment"]')?.click())
     assert.equal(Number($('[data-testid="count"]')!.textContent), 3)
   })
 
-  it('increments and decrements', async (t) => {
-    let { $, act, cleanup } = render(<Counter />)
+  it('decrements the count', async (t) => {
+    let { $, act, cleanup } = render(<Counter count={3} />)
     t.after(cleanup)
-    await act(() => $('[data-action="increment"]')?.click())
-    await act(() => $('[data-action="increment"]')?.click())
+    await act(() => $('[data-action="decrement"]')?.click())
+    assert.equal(Number($('[data-testid="count"]')!.textContent), 2)
     await act(() => $('[data-action="decrement"]')?.click())
     assert.equal(Number($('[data-testid="count"]')!.textContent), 1)
+    await act(() => $('[data-action="decrement"]')?.click())
+    assert.equal(Number($('[data-testid="count"]')!.textContent), 0)
   })
 })
 

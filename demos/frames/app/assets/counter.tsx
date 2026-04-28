@@ -2,12 +2,12 @@ import { clientEntry, css, on, type Handle } from 'remix/component'
 
 export const Counter = clientEntry(
   '/assets/counter.js#Counter',
-  function Counter(handle: Handle, setup: number) {
-    let count = setup
+  function Counter(handle: Handle<{ initialCount: number; label: string }>) {
+    let count = handle.props.initialCount
 
-    return (props: { label: string }) => (
+    return () => (
       <div mix={css({ display: 'flex', gap: 12, alignItems: 'center' })}>
-        <strong mix={css({ width: 72 })}>{props.label}</strong>
+        <strong mix={css({ width: 72 })}>{handle.props.label}</strong>
         <button
           type="button"
           mix={[

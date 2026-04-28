@@ -1,5 +1,5 @@
 import type { Controller } from 'remix/fetch-router'
-import type { RemixNode } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/component'
 import { Frame } from 'remix/component'
 import { getContext } from 'remix/async-context-middleware'
 
@@ -52,8 +52,9 @@ function renderSettingsPage(activeItem: SettingsNavItem, content: RemixNode, ini
   )
 }
 
-function SettingsShellOrFragment() {
-  return ({ activeItem, children }: SettingsPageProps) => {
+function SettingsShellOrFragment(handle: Handle<SettingsPageProps>) {
+  return () => {
+    let { activeItem, children } = handle.props
     if (isFrameRequest()) {
       return <SettingsLayout activeItem={activeItem}>{children}</SettingsLayout>
     }

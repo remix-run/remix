@@ -117,29 +117,29 @@ function Toggle(handle: Handle) {
 }
 ```
 
-## Setup Scope Use Cases
+## Component Scope Use Cases
 
-The setup scope is perfect for one-time initialization:
+The component scope is perfect for one-time initialization:
 
 ### Initializing Instances
 
 ```tsx
-function CacheExample(handle: Handle, setup: { cacheSize: number }) {
+function CacheExample(handle: Handle<{ cacheSize: number; key: string; value: any }>) {
   // Initialize cache once
   let cache = new Map<string, any>()
-  let maxSize = setup.cacheSize
+  let maxSize = handle.props.cacheSize
 
-  return (props: { key: string; value: any }) => {
+  return () => {
     // Use cache in render
-    if (cache.has(props.key)) {
-      return <div>Cached: {cache.get(props.key)}</div>
+    if (cache.has(handle.props.key)) {
+      return <div>Cached: {cache.get(handle.props.key)}</div>
     }
-    cache.set(props.key, props.value)
+    cache.set(handle.props.key, handle.props.value)
     if (cache.size > maxSize) {
       let firstKey = cache.keys().next().value
       cache.delete(firstKey)
     }
-    return <div>New: {props.value}</div>
+    return <div>New: {handle.props.value}</div>
   }
 }
 ```
@@ -147,18 +147,18 @@ function CacheExample(handle: Handle, setup: { cacheSize: number }) {
 ### Third-Party SDKs
 
 ```tsx
-function Analytics(handle: Handle, setup: { apiKey: string }) {
+function Analytics(handle: Handle<{ apiKey: string; event: string; data?: any }>) {
   // Initialize SDK once
-  let analytics = new AnalyticsSDK(setup.apiKey)
+  let analytics = new AnalyticsSDK(handle.props.apiKey)
 
   // Cleanup on disconnect
   handle.signal.addEventListener('abort', () => {
     analytics.disconnect()
   })
 
-  return (props: { event: string; data?: any }) => {
+  return () => {
     // SDK is ready to use
-    return <div>Tracking: {props.event}</div>
+    return <div>Tracking: {handle.props.event}</div>
   }
 }
 ```
@@ -180,9 +180,9 @@ class DataEmitter extends TypedEventTarget<{ data: DataEvent }> {
   }
 }
 
-function EventListener(handle: Handle, setup: DataEmitter) {
+function EventListener(handle: Handle<{ emitter: DataEmitter }>) {
   // Set up listeners once with automatic cleanup
-  addEventListeners(setup, handle.signal, {
+  addEventListeners(handle.props.emitter, handle.signal, {
     data(event) {
       // Handle data
       handle.update()
@@ -220,9 +220,9 @@ function WindowResizeTracker(handle: Handle) {
 ### Initializing State from Props
 
 ```tsx
-function Timer(handle: Handle, setup: { initialSeconds: number }) {
-  // Initialize from setup prop
-  let seconds = setup.initialSeconds
+function Timer(handle: Handle<{ initialSeconds: number; paused?: boolean }>) {
+  // Initialize from props
+  let seconds = handle.props.initialSeconds
   let interval: number | null = null
 
   function start() {
@@ -246,10 +246,10 @@ function Timer(handle: Handle, setup: { initialSeconds: number }) {
   // Cleanup on disconnect
   handle.signal.addEventListener('abort', stop)
 
-  return (props: { paused?: boolean }) => {
-    if (!props.paused && !interval) {
+  return () => {
+    if (!handle.props.paused && !interval) {
       start()
-    } else if (props.paused && interval) {
+    } else if (handle.props.paused && interval) {
       stop()
     }
 
@@ -491,19 +491,19 @@ function SearchInput(handle: Handle) {
 Use `handle.queueTask()` in the render function for reactive data loading that responds to prop changes:
 
 ```tsx
-function DataLoader(handle: Handle) {
+function DataLoader(handle: Handle<{ url: string }>) {
   let data: any = null
   let loading = false
   let error: Error | null = null
 
-  return (props: { url: string }) => {
+  return () => {
     // Queue data loading task that responds to prop changes
     handle.queueTask(async (signal) => {
       loading = true
       error = null
       handle.update()
 
-      let response = await fetch(props.url, { signal })
+      let response = await fetch(handle.props.url, { signal })
       let json = await response.json()
       if (signal.aborted) return
       data = json
@@ -520,18 +520,18 @@ function DataLoader(handle: Handle) {
 }
 ```
 
-### Using Setup Scope for Initial Data
+### Using Component Scope for Initial Data
 
-Load initial data in the setup scope:
+Load initial data in the component scope:
 
 ```tsx
-function UserProfile(handle: Handle, setup: { userId: string }) {
+function UserProfile(handle: Handle<{ userId: string; showEmail?: boolean }>) {
   let user: User | null = null
   let loading = true
 
-  // Load initial data in setup scope using queueTask
+  // Load initial data in component scope using queueTask
   handle.queueTask(async (signal) => {
-    let response = await fetch(`/api/users/${setup.userId}`, { signal })
+    let response = await fetch(`/api/users/${handle.props.userId}`, { signal })
     let data = await response.json()
     if (signal.aborted) return
     user = data
@@ -539,23 +539,23 @@ function UserProfile(handle: Handle, setup: { userId: string }) {
     handle.update()
   })
 
-  return (props: { showEmail?: boolean }) => {
+  return () => {
     if (loading) return <div>Loading user...</div>
 
     return (
       <div>
         <h1>{user.name}</h1>
-        {props.showEmail && <p>{user.email}</p>}
+        {handle.props.showEmail && <p>{user.email}</p>}
       </div>
     )
   }
 }
 ```
 
-Note that by fetching this data in the setup scope any parent updates that change `setup.userId` will have no effect.
+Note that by fetching this data in the component scope, parent updates that change `userId` will not restart the request unless you add that behavior yourself.
 
 ## See Also
 
 - [Handle API](./handle.md) - `handle.queueTask()` and `handle.signal`
 - [Events](./events.md) - Event handler signals
-- [Components](./components.md) - Setup vs render phases
+- [Components](./components.md) - Component vs render phases

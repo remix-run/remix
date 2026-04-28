@@ -28,7 +28,7 @@ npm i pg
 # or
 npm i mysql2
 # or
-npm i better-sqlite3
+# use the SQLite client built into your runtime
 ```
 
 ## Setup

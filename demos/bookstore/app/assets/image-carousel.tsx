@@ -2,8 +2,8 @@ import { css, type Handle, clientEntry, on } from 'remix/component'
 
 export const ImageCarousel = clientEntry(
   import.meta.url,
-  function ImageCarousel(handle: Handle, setup?: { startIndex?: number }) {
-    let index = setup?.startIndex ?? 0
+  function ImageCarousel(handle: Handle<{ images: string[]; startIndex?: number }>) {
+    let index = handle.props.startIndex ?? 0
 
     let goPrev = () => {
       if (index <= 0) return
@@ -17,8 +17,8 @@ export const ImageCarousel = clientEntry(
       handle.update()
     }
 
-    return ({ images }: { images: string[] }) => {
-      let total = images.length
+    return () => {
+      let total = handle.props.images.length
       if (total === 0) return null
       if (index > total - 1) index = total - 1
       if (index < 0) index = 0
@@ -45,7 +45,7 @@ export const ImageCarousel = clientEntry(
               transform: `translateX(-${index * 100}%)`,
             }}
           >
-            {images.map((src, i) => (
+            {handle.props.images.map((src, i) => (
               <div
                 key={src + i}
                 mix={css({

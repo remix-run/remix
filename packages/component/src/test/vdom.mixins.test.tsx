@@ -97,9 +97,9 @@ describe('vnode mixins', () => {
       expect(container.querySelector('div')?.dataset.mode).toBe('children')
       expect(container.querySelector('div')?.textContent).toBe('safe')
       expect(errorSpy).toHaveBeenCalledTimes(1)
-      expect((errorSpy.mock.calls[0]?.[0] as Error).message).toBe(
-        'mixin elements must not receive children',
-      )
+      let error = errorSpy.mock.calls[0]?.[0]
+      invariant(error instanceof Error)
+      expect(error.message).toBe('mixin elements must not receive children')
     } finally {
       errorSpy.mockRestore()
     }
@@ -121,9 +121,9 @@ describe('vnode mixins', () => {
       expect(container.querySelector('div')?.dataset.mode).toBe('innerHTML')
       expect(container.querySelector('div')?.textContent).toBe('safe')
       expect(errorSpy).toHaveBeenCalledTimes(1)
-      expect((errorSpy.mock.calls[0]?.[0] as Error).message).toBe(
-        'mixins must not return children or innerHTML',
-      )
+      let error = errorSpy.mock.calls[0]?.[0]
+      invariant(error instanceof Error)
+      expect(error.message).toBe('mixins must not return children or innerHTML')
     } finally {
       errorSpy.mockRestore()
     }
@@ -157,10 +157,10 @@ describe('vnode mixins', () => {
       <handle.element {...props} title={`${props.title ?? ''}${suffix}`} />
     ))
 
-    function Button() {
-      return ({ children, mix, ...props }: Props<'button'>) => (
-        <button {...props} mix={[withTitle('base'), ...(mix ?? [])]}>
-          {children}
+    function Button(handle: Handle<Props<'button'>>) {
+      return () => (
+        <button {...handle.props} mix={[withTitle('base'), ...(handle.props.mix ?? [])]}>
+          {handle.props.children}
         </button>
       )
     }
@@ -199,11 +199,9 @@ describe('vnode mixins', () => {
   })
 
   it('reads ancestor component context from mixins', () => {
-    function Provider(handle: Handle<{ value: string }>) {
-      return ({ children }: { children?: RemixNode }) => {
-        handle.context.set({ value: 'from-context' })
-        return <section>{children}</section>
-      }
+    function Provider(handle: Handle<{ children?: RemixNode }, { value: string }>) {
+      handle.context.set({ value: 'from-context' })
+      return () => <section>{handle.props.children}</section>
     }
 
     let withContextValue = createMixin((handle) => (props: { ['data-value']?: string }) => {
