@@ -1,4 +1,4 @@
-## Animating Elements (`remix/component`)
+## Animating Elements (`remix/ui`)
 
 Use this reference when building animations in app code.
 
@@ -8,7 +8,7 @@ authoring reusable animation mixins instead of applying built-in mixins in app c
 ## Quick Start
 
 ```tsx
-import { animateEntrance, animateExit, animateLayout, spring } from 'remix/component'
+import { animateEntrance, animateExit, animateLayout, spring } from 'remix/ui/animation'
 
 let el = (
   <div
@@ -75,7 +75,9 @@ let el = (
 ### Shared-layout swap
 
 ```tsx
-import { animateEntrance, animateExit, css } from 'remix/component'
+import { css } from 'remix/ui'
+
+import { animateEntrance, animateExit } from 'remix/ui/animation'
 ;<div
   mix={[
     css({

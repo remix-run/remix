@@ -1,5 +1,5 @@
 import type { Controller } from 'remix/fetch-router'
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../../../routes.ts'

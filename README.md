@@ -1,3 +1,16 @@
+<br />
+<br />
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/remix-wordmark-racing-darkmode.svg">
+    <img alt="Remix" src="docs/public/remix-wordmark-racing-lightmode.svg" width="400">
+  </picture>
+</p>
+
+<br />
+<br />
+
 # Welcome to Remix 3!
 
 This is the source repository for Remix 3. It is under active development.
@@ -41,7 +54,7 @@ Remix is composed of lots of small, focused sub-packages that are composed toget
 - [async-context-middleware](packages/async-context-middleware): Middleware for storing request context in AsyncLocalStorage
 - [auth](packages/auth): Browser login, OAuth, and OIDC helpers for Remix
 - [auth-middleware](packages/auth-middleware): Pluggable authentication middleware for Remix
-- [component](packages/component): UI components for Remix
+- [ui](packages/ui): UI runtime, components, theme tokens, and mixins for Remix
 - [compression-middleware](packages/compression-middleware): Middleware for compressing HTTP responses
 - [cop-middleware](packages/cop-middleware): Middleware for tokenless cross-origin protection in Fetch API servers
 - [cors-middleware](packages/cors-middleware): Middleware for handling CORS in Fetch API servers
@@ -84,6 +97,12 @@ To try the current Remix alpha, install the `next` dist-tag:
 
 ```sh
 npm install remix@next
+```
+
+To create a new Remix app with the CLI, use `npx remix@next new`:
+
+```sh
+npx remix@next new my-remix-app
 ```
 
 If you want to play around with the bleeding edge, we also build the latest `main` branch into a `preview/main` branch which can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):

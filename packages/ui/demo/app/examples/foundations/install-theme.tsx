@@ -1,6 +1,6 @@
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 import { Button } from '@remix-run/ui/button'
-import type { RemixNode } from 'remix/component'
+import type { RemixNode } from 'remix/ui'
 import { Glyph } from '@remix-run/ui/glyph'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
 

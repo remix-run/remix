@@ -1,6 +1,5 @@
 Added `package.json` `exports`:
 
-- `remix/component/test` to re-export APIs from `@remix-run/component/test`
 - `remix/node-fetch-server/test` to re-export APIs from `@remix-run/node-fetch-server/test`
 - `remix/terminal` to re-export APIs from `@remix-run/terminal`
 - `remix/ui/accordion` to re-export APIs from `@remix-run/ui/accordion`
@@ -17,3 +16,4 @@ Added `package.json` `exports`:
 - `remix/ui/select` to re-export APIs from `@remix-run/ui/select`
 - `remix/ui/separator` to re-export APIs from `@remix-run/ui/separator`
 - `remix/ui/theme` to re-export APIs from `@remix-run/ui/theme`
+- `remix/ui/test` to re-export APIs from `@remix-run/ui/test`

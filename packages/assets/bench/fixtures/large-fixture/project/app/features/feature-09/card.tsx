@@ -1,4 +1,4 @@
-import { css } from '@remix-run/component'
+import { css } from '@remix-run/ui'
 import { lookupCatalogItem } from '#packages/catalog/index'
 import { formatPrice } from '#packages/pricing/index'
 import { Badge } from '#packages/ui/badge'

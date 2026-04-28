@@ -1,4 +1,4 @@
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 import { Option, Select } from '@remix-run/ui/select'
 import { theme } from '@remix-run/ui/theme'
 let selectExampleCss = css({

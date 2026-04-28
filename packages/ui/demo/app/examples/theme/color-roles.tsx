@@ -1,4 +1,4 @@
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 import { theme } from '@remix-run/ui/theme'
 export default function Example() {
   return () => (

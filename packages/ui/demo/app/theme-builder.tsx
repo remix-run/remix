@@ -1,4 +1,4 @@
-import { css, on, type Handle, type RemixNode } from 'remix/component'
+import { css, on, type Handle, type RemixNode } from 'remix/ui'
 import {
   Accordion,
   AccordionContent,

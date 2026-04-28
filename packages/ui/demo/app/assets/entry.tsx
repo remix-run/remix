@@ -1,5 +1,5 @@
-import type { FrameContent } from 'remix/component'
-import { run } from 'remix/component'
+import type { FrameContent } from 'remix/ui'
+import { run } from 'remix/ui'
 
 run({
   async loadModule(moduleUrl, exportName) {

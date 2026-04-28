@@ -62,7 +62,7 @@ function Row(handle: Handle) {
   )
 }
 
-import { type Handle, on } from 'remix/component'
+import { type Handle, on } from 'remix/ui'
 import { ui, Glyph } from 'remix/ui'
 import { tooltip } from 'remix/ui/tooltip'
 

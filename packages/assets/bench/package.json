@@ -4,7 +4,7 @@
   "type": "module",
   "dependencies": {
     "@remix-run/assets": "workspace:*",
-    "@remix-run/component": "workspace:*"
+    "@remix-run/ui": "workspace:*"
   },
   "devDependencies": {
     "@types/dom-navigation": "^1.0.7",

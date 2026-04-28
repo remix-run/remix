@@ -1,8 +1,8 @@
 import decamelize from 'decamelize'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { on, type Handle } from '@remix-run/component'
-import { render } from '@remix-run/component/test'
+import { on, type Handle } from '@remix-run/ui'
+import { render } from '@remix-run/ui/test'
 
 describe('Counter', () => {
   function Counter(handle: Handle<{ count?: number }>) {

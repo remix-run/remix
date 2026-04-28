@@ -47,7 +47,7 @@ pnpm -C packages/ui/demo screenshot:card
 ## Key APIs
 
 - `@remix-run/ui` entrypoints for `RMX_01`, `theme`, `button`, and component primitives
-- `remix/component/server` for server rendering
+- `remix/ui/server` for server rendering
 - `remix/fetch-router` for request handling
 
 ## License

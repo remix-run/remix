@@ -1,4 +1,4 @@
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 
 import type { Book } from '../../data/schema.ts'
 import type { Cart } from '../../utils/cart.ts'

@@ -166,12 +166,12 @@ importers:
 
   demos/sse:
     dependencies:
-      '@remix-run/component':
-        specifier: workspace:*
-        version: link:../../packages/component
       '@remix-run/events':
         specifier: jam
         version: 0.0.0-experimental-remix-jam.5
+      '@remix-run/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
@@ -323,9 +323,9 @@ importers:
       '@remix-run/assets':
         specifier: workspace:*
         version: link:..
-      '@remix-run/component':
+      '@remix-run/ui':
         specifier: workspace:*
-        version: link:../../component
+        version: link:../../ui
     devDependencies:
       '@types/dom-navigation':
         specifier: ^1.0.7
@@ -421,139 +421,159 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
-  packages/component:
+  packages/cli:
     dependencies:
-      '@types/dom-navigation':
-        specifier: 1.0.6
-        version: 1.0.6
-    devDependencies:
-      '@vitest/browser':
-        specifier: ^3.2.4
-        version: 3.2.4(playwright@1.59.0)(vite@7.3.0(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2))(vitest@3.2.4)
-      '@vitest/coverage-v8':
-        specifier: ^3.2.4
-        version: 3.2.4(@vitest/browser@3.2.4)(vitest@3.2.4)
-      esbuild:
-        specifier: ^0.25.5
-        version: 0.25.12
-      playwright:
-        specifier: 'catalog:'
-        version: 1.59.0
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-      vitest:
-        specifier: ^3.2.4
-        version: 3.2.4(@types/node@24.10.4)(@vitest/browser@3.2.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2)
-
-  packages/component/bench:
-    dependencies:
-      '@remix-run/fetch-router':
-        specifier: workspace:*
-        version: link:../../fetch-router
-      '@remix-run/node-fetch-server':
-        specifier: workspace:*
-        version: link:../../node-fetch-server
-      '@remix-run/static-middleware':
-        specifier: workspace:*
-        version: link:../../static-middleware
-    devDependencies:
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      playwright:
-        specifier: ^1.49.1
-        version: 1.59.0
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
-
-  packages/component/bench/frameworks/preact:
-    dependencies:
-      esbuild:
-        specifier: ^0.27.1
-        version: 0.27.1
-      preact:
-        specifier: ^10.28.0
-        version: 10.28.0
-
-  packages/component/bench/frameworks/preact-signals:
-    dependencies:
-      '@preact/signals':
-        specifier: ^2.0.4
-        version: 2.5.1(preact@10.28.0)
-      esbuild:
-        specifier: ^0.27.1
-        version: 0.27.1
-      preact:
-        specifier: ^10.28.0
-        version: 10.28.0
-
-  packages/component/bench/frameworks/react:
-    dependencies:
-      esbuild:
-        specifier: ^0.27.1
-        version: 0.27.1
-      react:
-        specifier: ^19.2.1
-        version: 19.2.3
-      react-dom:
-        specifier: ^19.2.1
-        version: 19.2.3(react@19.2.3)
-    devDependencies:
-      '@types/react':
-        specifier: ^19.2.7
-        version: 19.2.7
-      '@types/react-dom':
-        specifier: ^19.2.3
-        version: 19.2.3(@types/react@19.2.7)
-
-  packages/component/bench/frameworks/remix:
-    dependencies:
-      '@remix-run/component':
+      '@remix-run/tar-parser':
         specifier: workspace:^
-        version: link:../../..
-      esbuild:
-        specifier: ^0.27.1
-        version: 0.27.1
-
-  packages/component/bench/frameworks/solid:
-    dependencies:
-      esbuild:
-        specifier: ^0.27.1
-        version: 0.27.1
-      solid-js:
-        specifier: ^1.9.3
-        version: 1.9.10
+        version: link:../tar-parser
+      '@remix-run/terminal':
+        specifier: workspace:^
+        version: link:../terminal
+      '@remix-run/test':
+        specifier: workspace:^
+        version: link:../test
+      semver:
+        specifier: ^7.7.4
+        version: 7.7.4
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      esbuild-plugin-solid:
-        specifier: ^0.6.0
-        version: 0.6.0(esbuild@0.27.1)(solid-js@1.9.10)
+      '@types/semver':
+        specifier: ^7.5.8
+        version: 7.5.8
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
 
-  packages/component/demos:
+  packages/cli/bootstrap:
     dependencies:
-      motion:
-        specifier: ^12.28.1
-        version: 12.28.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       remix:
         specifier: workspace:^
         version: link:../../remix
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
     devDependencies:
-      '@types/dom-navigation':
-        specifier: ^1.0.7
-        version: 1.0.7
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      concurrently:
-        specifier: ^9.2.1
-        version: 9.2.1
-      esbuild:
-        specifier: ^0.25.11
-        version: 0.25.12
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  packages/cli/test/fixtures/doctor-ambiguous:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-camel-case-keys:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-clean:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-duplicate-owner:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-env-missing-remix-dependency: {}
+
+  packages/cli/test/fixtures/doctor-generic-buckets:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-incomplete-controller:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-missing:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-orphan-route-local-file:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-orphans:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-promotion-drift:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-route-names:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-wrong-kind:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-basic:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-import-error:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-invalid-value:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-missing:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-no-export:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-tree:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
 
   packages/compression-middleware:
     dependencies:
@@ -1335,9 +1355,9 @@ importers:
       '@remix-run/auth-middleware':
         specifier: workspace:^
         version: link:../auth-middleware
-      '@remix-run/component':
+      '@remix-run/cli':
         specifier: workspace:^
-        version: link:../component
+        version: link:../cli
       '@remix-run/compression-middleware':
         specifier: workspace:^
         version: link:../compression-middleware
@@ -1756,12 +1776,12 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
-      '@remix-run/component':
-        specifier: workspace:*
-        version: link:../component
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../node-fetch-server
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../ui
       '@types/dom-navigation':
         specifier: 1.0.6
         version: 1.0.6
@@ -1789,13 +1809,10 @@ importers:
 
   packages/ui:
     dependencies:
-      '@remix-run/component':
-        specifier: workspace:^
-        version: link:../component
-    devDependencies:
       '@types/dom-navigation':
         specifier: ^1.0.7
         version: 1.0.7
+    devDependencies:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1817,6 +1834,93 @@ importers:
       vitest:
         specifier: ^3.2.4
         version: 3.2.4(@types/node@24.10.4)(@vitest/browser@3.2.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2)
+
+  packages/ui/bench:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:*
+        version: link:../../fetch-router
+      '@remix-run/node-fetch-server':
+        specifier: workspace:*
+        version: link:../../node-fetch-server
+      '@remix-run/static-middleware':
+        specifier: workspace:*
+        version: link:../../static-middleware
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      playwright:
+        specifier: ^1.49.1
+        version: 1.59.0
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+
+  packages/ui/bench/frameworks/preact:
+    dependencies:
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.1
+      preact:
+        specifier: ^10.28.0
+        version: 10.28.0
+
+  packages/ui/bench/frameworks/preact-signals:
+    dependencies:
+      '@preact/signals':
+        specifier: ^2.0.4
+        version: 2.5.1(preact@10.28.0)
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.1
+      preact:
+        specifier: ^10.28.0
+        version: 10.28.0
+
+  packages/ui/bench/frameworks/react:
+    dependencies:
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.1
+      react:
+        specifier: ^19.2.1
+        version: 19.2.3
+      react-dom:
+        specifier: ^19.2.1
+        version: 19.2.3(react@19.2.3)
+    devDependencies:
+      '@types/react':
+        specifier: ^19.2.7
+        version: 19.2.7
+      '@types/react-dom':
+        specifier: ^19.2.3
+        version: 19.2.3(@types/react@19.2.7)
+
+  packages/ui/bench/frameworks/remix:
+    dependencies:
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../../..
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.1
+
+  packages/ui/bench/frameworks/solid:
+    dependencies:
+      esbuild:
+        specifier: ^0.27.1
+        version: 0.27.1
+      solid-js:
+        specifier: ^1.9.3
+        version: 1.9.10
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      esbuild-plugin-solid:
+        specifier: ^0.6.0
+        version: 0.6.0(esbuild@0.27.1)(solid-js@1.9.10)
 
   packages/ui/demo:
     dependencies:
@@ -1846,6 +1950,28 @@ importers:
         specifier: 'catalog:'
         version: 4.21.0
 
+  packages/ui/demos:
+    dependencies:
+      motion:
+        specifier: ^12.28.1
+        version: 12.28.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
+      remix:
+        specifier: workspace:^
+        version: link:../../remix
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      concurrently:
+        specifier: ^9.2.1
+        version: 9.2.1
+      esbuild:
+        specifier: ^0.25.11
+        version: 0.25.12
+
   scripts:
     dependencies:
       '@octokit/request':
@@ -1863,6 +1989,9 @@ importers:
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
       semver:
         specifier: ^7.6.3
         version: 7.6.3
@@ -5197,6 +5326,11 @@ packages:
 
   semver@7.7.3:
     resolution: {integrity: sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q==}
+    engines: {node: '>=10'}
+    hasBin: true
+
+  semver@7.7.4:
+    resolution: {integrity: sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -8713,6 +8847,8 @@ snapshots:
   semver@7.6.3: {}
 
   semver@7.7.3: {}
+
+  semver@7.7.4: {}
 
   send@0.18.0:
     dependencies:

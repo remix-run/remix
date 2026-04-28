@@ -3,7 +3,7 @@
 For component unit tests, use `createRoot(...)` and `root.flush()`.
 
 ```tsx
-import { createRoot } from 'remix/component'
+import { createRoot } from 'remix/ui'
 
 let container = document.createElement('div')
 let root = createRoot(container)

@@ -1,4 +1,4 @@
-import { Frame } from 'remix/component'
+import { Frame } from 'remix/ui'
 
 import { routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'

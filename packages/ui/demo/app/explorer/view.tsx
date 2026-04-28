@@ -1,5 +1,5 @@
-import { css } from 'remix/component'
-import type { Handle } from 'remix/component'
+import { css } from 'remix/ui'
+import type { Handle } from 'remix/ui'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
 import { NAV_SECTIONS, PAGES, type ShowcasePageDefinition, isPageActive } from './registry.tsx'
 import { bodyTextCss, eyebrowTextCss } from './page-primitives.tsx'

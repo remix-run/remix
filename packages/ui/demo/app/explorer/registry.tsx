@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/component'
+import type { RemixNode } from 'remix/ui'
 
 import { renderComponentAccordionPage } from './pages/component-accordion.tsx'
 import { renderComponentButtonPage } from './pages/component-button.tsx'

@@ -1,4 +1,4 @@
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 import * as popover from '@remix-run/ui/popover'
 import { theme } from '@remix-run/ui/theme'
 export default function Example() {

@@ -1,4 +1,4 @@
-import { css, on, type Handle } from 'remix/component'
+import { css, on, type Handle } from 'remix/ui'
 import { Button } from '@remix-run/ui/button'
 import { Glyph } from '@remix-run/ui/glyph'
 import * as popover from '@remix-run/ui/popover'

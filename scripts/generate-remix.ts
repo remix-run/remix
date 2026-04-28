@@ -19,7 +19,9 @@ const remixDir = path.join(packagesDir, 'remix')
 const remixChangesDir = path.join(remixDir, '.changes')
 const remixPackageJsonPath = path.join(remixDir, 'package.json')
 
+const CLI_PACKAGE_NAME = '@remix-run/cli'
 const SOURCE_FOLDER = 'src'
+const REMIX_CLI_ENTRY_FILE = 'cli-entry.ts'
 
 type RemixRunPackage = {
   name: string
@@ -32,7 +34,7 @@ type RemixRunPackage = {
 type BinEntry = {
   // The bin command name: "remix-test"
   command: string
-  // The export subpath derived from the bin file stem: "cli" (from "./src/cli.ts")
+  // The export subpath derived from the bin file stem: "cli-entry" (from "./src/cli-entry.ts")
   sourceExport: string
 }
 
@@ -114,11 +116,19 @@ async function getRemixRunPackages() {
 
         if (exportPath === '.') {
           // Main export
-          remixRunPackage.exports.push({
-            sourceFile: `${shortName}.ts`,
-            exportPath: `./${shortName}`,
-            reExportFrom: packageName,
-          })
+          if (packageName === CLI_PACKAGE_NAME) {
+            remixRunPackage.exports.push({
+              sourceFile: 'cli.ts',
+              exportPath: './cli',
+              reExportFrom: packageName,
+            })
+          } else {
+            remixRunPackage.exports.push({
+              sourceFile: `${shortName}.ts`,
+              exportPath: `./${shortName}`,
+              reExportFrom: packageName,
+            })
+          }
         } else {
           // Sub-export (e.g., "./cookie-storage")
           let subExport = exportPath.replace('./', '')
@@ -169,18 +179,25 @@ async function updateRemixPackage() {
     // Create subdirectory if needed
     let sourceFileDir = path.dirname(sourceFilePath)
     await fs.mkdir(sourceFileDir, { recursive: true })
-    let content = [
-      `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
-      `export * from '${entry.reExportFrom}'\n`,
-    ].join('\n')
+    let content = createExportSource(entry)
     await fs.writeFile(sourceFilePath, content, 'utf-8')
   }
 
   // Run linter against generated code with --fix (before bin wrappers, which must keep their shebang)
   logAndExec(`pnpm exec oxlint packages/remix/ -A all --fix --quiet`)
 
+  if (allExports.some((entry) => entry.exportPath === './cli')) {
+    let cliEntryPath = path.join(remixDir, SOURCE_FOLDER, REMIX_CLI_ENTRY_FILE)
+    await fs.writeFile(cliEntryPath, createCliEntrySource(), 'utf-8')
+    await fs.chmod(cliEntryPath, 0o755)
+  }
+
   // Generate bin wrapper files and update sub-package exports
   for (let bin of allBins) {
+    if (isRemixCliBin(bin) || isRemixTestBin(bin)) {
+      continue
+    }
+
     // Create wrapper file in remix/src/
     let wrapperPath = path.join(remixDir, SOURCE_FOLDER, `${bin.command}.ts`)
     let content = [
@@ -218,11 +235,20 @@ async function updateRemixPackage() {
 
   remixPackageJson.exports['./package.json'] = './package.json'
   remixPackageJson.publishConfig.exports['./package.json'] = './package.json'
-
-  if (allBins.length > 0) {
+  if (allBins.length > 0 || allExports.some((entry) => entry.exportPath === './cli')) {
     remixPackageJson.bin = {}
     remixPackageJson.publishConfig.bin = {}
+
+    if (allExports.some((entry) => entry.exportPath === './cli')) {
+      remixPackageJson.bin.remix = `./${SOURCE_FOLDER}/${REMIX_CLI_ENTRY_FILE}`
+      remixPackageJson.publishConfig.bin.remix = './dist/cli-entry.js'
+    }
+
     for (let bin of allBins) {
+      if (isRemixCliBin(bin) || isRemixTestBin(bin)) {
+        continue
+      }
+
       remixPackageJson.bin[bin.command] = `./${SOURCE_FOLDER}/${bin.command}.ts`
       remixPackageJson.publishConfig.bin[bin.command] = `./dist/${bin.command}.js`
     }
@@ -240,6 +266,38 @@ async function updateRemixPackage() {
     JSON.stringify(remixPackageJson, null, 2) + '\n',
     'utf-8',
   )
+}
+
+function isRemixCliBin(bin: { command: string; packageName: string }): boolean {
+  return bin.packageName === CLI_PACKAGE_NAME && bin.command === 'remix'
+}
+
+function isRemixTestBin(bin: { command: string; packageName: string }): boolean {
+  return bin.packageName === '@remix-run/test' && bin.command === 'remix-test'
+}
+
+function createExportSource(entry: ExportEntry): string {
+  return [
+    `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
+    `export * from '${entry.reExportFrom}'\n`,
+  ].join('\n')
+}
+
+function createCliEntrySource(): string {
+  return `#!/usr/bin/env node
+// IMPORTANT: This file is auto-generated, please do not edit manually.
+import * as process from 'node:process'
+
+import { runRemix } from './cli.ts'
+
+try {
+  let exitCode = await runRemix(process.argv.slice(2))
+  process.exit(exitCode)
+} catch (error) {
+  console.error(error)
+  process.exit(1)
+}
+`
 }
 
 // Build exports change summary

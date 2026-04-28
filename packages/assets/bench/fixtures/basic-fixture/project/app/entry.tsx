@@ -1,4 +1,4 @@
-import { css } from '@remix-run/component'
+import { css } from '@remix-run/ui'
 import { stableLabel } from '#packages/shared/strings'
 import { GridPanel } from '@bench/ui/panel'
 import { summarizeBasicFixture } from './summary.ts'

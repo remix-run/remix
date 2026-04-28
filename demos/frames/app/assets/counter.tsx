@@ -1,4 +1,4 @@
-import { clientEntry, css, on, type Handle } from 'remix/component'
+import { clientEntry, css, on, type Handle } from 'remix/ui'
 
 export const Counter = clientEntry(
   '/assets/counter.js#Counter',

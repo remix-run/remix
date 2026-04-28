@@ -1,0 +1,1 @@
+Export `runRemixTest` from `@remix-run/test/cli` so other tools can run the Remix test runner programmatically without exiting the host process. The function returns an exit code so callers can decide how to terminate. The `remix-test` executable now declares Node.js 24.3.0 or later in package metadata.

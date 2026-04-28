@@ -1,4 +1,4 @@
-import { clientEntry, Frame, css, on, type Handle } from 'remix/component'
+import { clientEntry, Frame, css, on, type Handle } from 'remix/ui'
 
 export const ClientFrameExample = clientEntry(
   '/assets/client-frame-example.js#ClientFrameExample',
