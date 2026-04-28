@@ -1,8 +1,8 @@
-import * as assert from '@remix-run/assert'
 import * as process from 'node:process'
+import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { runRemix as run } from '../../index.ts'
+import { runRemix } from '../../index.ts'
 
 const COMPLETION_COMMAND_HELP_TEXT = [
   'Usage:',
@@ -28,7 +28,7 @@ const UNKNOWN_COMPLETION_SHELL_ERROR_TEXT = [
 
 describe('completion command', () => {
   it('prints completion command help', async () => {
-    let result = await captureOutput(() => run(['completion', '--help']))
+    let result = await captureOutput(() => runRemix(['completion', '--help']))
 
     assert.equal(result.exitCode, 0)
     assert.equal(result.stdout, COMPLETION_COMMAND_HELP_TEXT)
@@ -36,8 +36,8 @@ describe('completion command', () => {
   })
 
   it('prints the same wrapper for bash and zsh', async () => {
-    let bashResult = await captureOutput(() => run(['completion', 'bash']))
-    let zshResult = await captureOutput(() => run(['completion', 'zsh']))
+    let bashResult = await captureOutput(() => runRemix(['completion', 'bash']))
+    let zshResult = await captureOutput(() => runRemix(['completion', 'zsh']))
 
     assert.equal(bashResult.exitCode, 0)
     assert.equal(zshResult.exitCode, 0)
@@ -49,7 +49,7 @@ describe('completion command', () => {
   })
 
   it('fails for unsupported shells', async () => {
-    let result = await captureOutput(() => run(['completion', 'fish']))
+    let result = await captureOutput(() => runRemix(['completion', 'fish']))
 
     assert.equal(result.exitCode, 1)
     assert.equal(result.stdout, '')
@@ -57,7 +57,9 @@ describe('completion command', () => {
   })
 
   it('returns machine-readable completions in plumbing mode', async () => {
-    let result = await captureOutput(() => run(['completion', '--', '2', 'remix', 'skills', '']))
+    let result = await captureOutput(() =>
+      runRemix(['completion', '--', '2', 'remix', 'skills', '']),
+    )
 
     assert.equal(result.exitCode, 0)
     assert.equal(result.stdout, 'mode:values\ninstall\nlist\n-h\n--help\n--no-color\n')

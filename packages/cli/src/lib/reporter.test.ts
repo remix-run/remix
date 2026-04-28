@@ -1,8 +1,8 @@
-import * as assert from '@remix-run/assert'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createCommandReporter } from './reporter.ts'

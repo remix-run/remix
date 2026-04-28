@@ -1,5 +1,5 @@
-import * as assert from '@remix-run/assert'
 import * as path from 'node:path'
+import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { resolveContainedPath } from './contained-path.ts'

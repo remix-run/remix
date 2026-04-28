@@ -1,12 +1,12 @@
-import * as assert from '@remix-run/assert'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { runRemix as run } from '../../index.ts'
+import { runRemix } from '../../index.ts'
 import { getTestCommandHelpText } from './test.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
@@ -15,7 +15,7 @@ const TEST_COMMAND_HELP_TEXT = getTestCommandHelpText()
 
 describe('test command', () => {
   it('prints test command help', async () => {
-    let result = await captureOutput(() => run(['test', '--help']))
+    let result = await captureOutput(() => runRemix(['test', '--help']))
 
     assert.equal(result.exitCode, 0)
     assert.equal(result.stdout, TEST_COMMAND_HELP_TEXT)
@@ -29,7 +29,7 @@ describe('test command', () => {
       await writeTestProject(projectDir)
 
       let result = await captureOutput(() =>
-        run(['test', '--concurrency', '1', '--reporter', 'spec', '--type', 'server'], {
+        runRemix(['test', '--concurrency', '1', '--reporter', 'spec', '--type', 'server'], {
           cwd: projectDir,
         }),
       )
@@ -51,7 +51,7 @@ describe('test command', () => {
       await writeTestProject(projectDir, { leaveHandleOpen: true })
 
       let result = await captureOutput(() =>
-        run(['test', '--concurrency', '1', '--reporter', 'spec', '--type', 'server'], {
+        runRemix(['test', '--concurrency', '1', '--reporter', 'spec', '--type', 'server'], {
           cwd: projectDir,
         }),
       )
@@ -74,7 +74,7 @@ describe('test command', () => {
       )
 
       let result = await captureOutput(() =>
-        run(['test', '--watch', '--glob.test', 'missing/**/*.test.ts'], {
+        runRemix(['test', '--watch', '--glob.test', 'missing/**/*.test.ts'], {
           cwd: projectDir,
         }),
       )

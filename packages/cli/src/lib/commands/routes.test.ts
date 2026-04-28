@@ -1,12 +1,12 @@
-import * as assert from '@remix-run/assert'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { runRemix as run } from '../../index.ts'
+import { runRemix } from '../../index.ts'
 import { getFixturePath } from '../../../test/fixtures.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
@@ -286,7 +286,7 @@ function findRouteNode(tree: RouteTreeNode[], name: string): RouteTreeNode | und
 }
 
 async function runRoutesCommand(args: string[], cwd: string) {
-  return await captureOutput(() => run(['routes', ...args], { cwd }))
+  return await captureOutput(() => runRemix(['routes', ...args], { cwd }))
 }
 
 async function captureOutput(

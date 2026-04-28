@@ -1,10 +1,10 @@
-import * as assert from '@remix-run/assert'
 import { createHash } from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as process from 'node:process'
 import { gzipSync } from 'node:zlib'
+import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { runRemix } from '../../index.ts'
