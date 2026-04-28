@@ -1774,10 +1774,10 @@ importers:
         version: 9.3.0
     devDependencies:
       '@remix-run/assert':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../assert
       '@remix-run/node-fetch-server':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../node-fetch-server
       '@remix-run/ui':
         specifier: workspace:^
