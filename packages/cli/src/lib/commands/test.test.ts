@@ -40,7 +40,7 @@ describe('test command', () => {
       )
 
       assert.equal(result.exitCode, 0, result.stderr)
-      assert.match(result.stdout, /Found 1 test file\(s\) \(1 server, 0 e2e\)/)
+      assert.match(result.stdout, /Found 1 test file\(s\) \(1 server, 0 browser, 0 e2e\)/)
       assert.match(result.stdout, /✓ passes/)
       assert.match(result.stdout, /ℹ pass 1/)
       assert.equal(result.stderr, '')

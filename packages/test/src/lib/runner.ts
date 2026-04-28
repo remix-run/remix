@@ -2,21 +2,21 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
+import { IS_RUNNING_FROM_SRC } from './config.ts'
 import {
-  collectE2ECoverageMap,
+  collectCoverageMapFromPlaywright,
   collectServerCoverageMap,
   type CoverageConfig,
   type CoverageMap,
   type V8CoverageEntry,
 } from './coverage.ts'
-import type { TestResults } from './executor.ts'
 import { type PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
-import type { Counts } from './utils.ts'
+import type { Counts, TestResults } from './reporters/results.ts'
 
 // Ensure we load the right file whether we're running in the monorepo (TS) or
 // from a published package (JS)
-const ext = path.extname(import.meta.url)
+const ext = IS_RUNNING_FROM_SRC ? '.ts' : '.js'
 const workerUrl = new URL(`./worker${ext}`, import.meta.url)
 const workerE2EUrl = new URL(`./worker-e2e${ext}`, import.meta.url)
 
@@ -74,7 +74,12 @@ export async function runServerTests(
     )
 
     if (options.coverage && allBrowserCoverageEntries.length > 0) {
-      coverageMap = await collectE2ECoverageMap(allBrowserCoverageEntries, cwd, new Set(files))
+      coverageMap = await collectCoverageMapFromPlaywright(
+        allBrowserCoverageEntries.flatMap((e) => e.entries),
+        cwd,
+        new Set(files),
+        async (urlPath) => (urlPath.startsWith('/') ? urlPath.slice(1) : urlPath),
+      )
     }
   } else {
     let coverageDataDir: string | undefined

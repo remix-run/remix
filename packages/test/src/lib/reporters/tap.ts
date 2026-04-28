@@ -1,6 +1,6 @@
-import { normalizeLine, type Counts } from '../utils.ts'
-import type { TestResults } from '../executor.ts'
+import { normalizeLine } from '../normalize.ts'
 import type { Reporter } from './index.ts'
+import type { Counts, TestResults } from './results.ts'
 
 export class TapReporter implements Reporter {
   #counter = 0

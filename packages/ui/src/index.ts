@@ -63,7 +63,7 @@ export type { Dispatched } from './runtime/mixins/on-mixin.ts'
 export { link } from './runtime/mixins/link-mixin.ts'
 export { ref } from './runtime/mixins/ref-mixin.ts'
 export type { RefCallback } from './runtime/mixins/ref-mixin.ts'
-export { attrs } from './runtime/mixins/attrs-mixin.tsx'
+export { attrs } from './runtime/mixins/attrs-mixin.ts'
 export { css } from './style/css-mixin.ts'
 export type { CSSMixinDescriptor } from './style/css-mixin.ts'
 

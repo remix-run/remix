@@ -1,6 +1,7 @@
 import * as assert from 'node:assert/strict'
 import type { RemixNode } from '@remix-run/ui/jsx-runtime'
 import { renderToString } from '@remix-run/ui/server'
+import { createTestServer } from '@remix-run/node-fetch-server/test'
 import { describe, it } from '../lib/framework.ts'
 import type { Handle } from '../../../ui/src/runtime/component.ts'
 
@@ -22,7 +23,7 @@ describe('e2e tests', () => {
       )
     }
 
-    let page = await t.serve(async (request) => {
+    let handler = (request: Request) => {
       let url = new URL(request.url)
 
       if (url.pathname === '/') {
@@ -43,8 +44,9 @@ describe('e2e tests', () => {
       }
 
       return new Response('Not found', { status: 404 })
-    })
+    }
 
+    let page = await t.serve(await createTestServer(handler))
     await page.goto('/')
     assert.equal(await page.locator('h1').textContent(), 'Hello Remix')
     await page.click('[href="/about"]')

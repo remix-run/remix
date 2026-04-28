@@ -1,5 +1,5 @@
 import * as nodeAssert from 'node:assert/strict'
-import { describe, it } from '@remix-run/test'
+import { describe, it } from 'node:test'
 
 import * as assert from './assert.ts'
 

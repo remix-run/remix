@@ -1,12 +1,12 @@
 import { workerData, parentPort } from 'node:worker_threads'
-import { createServer } from './e2e-server.ts'
-import { runTests, type TestResults } from './executor.ts'
+import { runTests } from './executor.ts'
 import { importModule } from './import-module.ts'
 import {
   getBrowserLauncher,
   getPlaywrightLaunchOptions,
   getPlaywrightPageOptions,
 } from './playwright.ts'
+import type { TestResults } from './reporters/results.ts'
 
 try {
   await importModule(workerData.file, import.meta)
@@ -17,7 +17,6 @@ try {
   try {
     let results = await runTests({
       browser,
-      createServer,
       open: workerData.open,
       playwrightPageOptions: getPlaywrightPageOptions(workerData.playwrightUseOpts),
       coverage: workerData.coverage,

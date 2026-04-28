@@ -85,6 +85,10 @@
       "types": "./src/server/stream.ts",
       "default": "./src/server/stream.ts"
     },
+    "./test": {
+      "types": "./src/test.ts",
+      "default": "./src/test.ts"
+    },
     "./theme": {
       "types": "./src/theme/theme.ts",
       "default": "./src/theme/theme.ts"
@@ -160,6 +164,10 @@
       "./server": {
         "types": "./dist/server/stream.d.ts",
         "default": "./dist/server/stream.js"
+      },
+      "./test": {
+        "types": "./dist/test.d.ts",
+        "default": "./dist/test.js"
       },
       "./theme": {
         "types": "./dist/theme/theme.d.ts",

@@ -259,9 +259,6 @@ importers:
 
   packages/assert:
     devDependencies:
-      '@remix-run/test':
-        specifier: workspace:*
-        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1742,15 +1739,18 @@ importers:
 
   packages/test:
     dependencies:
-      '@remix-run/node-fetch-server':
-        specifier: workspace:^
-        version: link:../node-fetch-server
       '@remix-run/terminal':
         specifier: workspace:^
         version: link:../terminal
+      es-module-lexer:
+        specifier: ^2.0.0
+        version: 2.0.0
       esbuild:
         specifier: ^0.27.1
         version: 0.27.1
+      get-tsconfig:
+        specifier: ^4.13.6
+        version: 4.13.6
       istanbul-lib-coverage:
         specifier: ^3.2.2
         version: 3.2.2
@@ -1760,6 +1760,12 @@ importers:
       istanbul-reports:
         specifier: ^3.2.0
         version: 3.2.0
+      magic-string:
+        specifier: ^0.30.21
+        version: 0.30.21
+      source-map-js:
+        specifier: ^1.2.1
+        version: 1.2.1
       tsx:
         specifier: ^4.21.0
         version: 4.21.0
@@ -1767,9 +1773,18 @@ importers:
         specifier: ^9.3.0
         version: 9.3.0
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
+      '@remix-run/node-fetch-server':
+        specifier: workspace:^
+        version: link:../node-fetch-server
       '@remix-run/ui':
         specifier: workspace:^
         version: link:../ui
+      '@types/dom-navigation':
+        specifier: 1.0.6
+        version: 1.0.6
       '@types/istanbul-lib-coverage':
         specifier: ^2.0.6
         version: 2.0.6
@@ -1785,6 +1800,9 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      decamelize:
+        specifier: ^6.0.1
+        version: 6.0.1
       playwright:
         specifier: 'catalog:'
         version: 1.59.0
@@ -3759,6 +3777,9 @@ packages:
   '@types/deep-eql@4.0.2':
     resolution: {integrity: sha512-c9h9dVVMigMPc4bwTvC5dxqtqJZwQPePsWjPlpSOnojbor6pGqdk541lfA7AqFQr5pB1BRdq0juY9db81BwyFw==}
 
+  '@types/dom-navigation@1.0.6':
+    resolution: {integrity: sha512-4srBpebg8rFDm0LafYuWhZMgLoSr5J4gx4q1uaTqOXwVk00y+CkTdJ4SC57sR1cMhP0ZRjApMRdHVcFYOvPGTw==}
+
   '@types/dom-navigation@1.0.7':
     resolution: {integrity: sha512-Di4W+i2faYquHUnyWUg3bBQp5pTNvjDDA7mIYfD/1WlLgan6sKkeVjGbdL78K0CuNEk5Pfc/c0rfelwkz10mnQ==}
 
@@ -4268,6 +4289,10 @@ packages:
     peerDependenciesMeta:
       supports-color:
         optional: true
+
+  decamelize@6.0.1:
+    resolution: {integrity: sha512-G7Cqgaelq68XHJNGlZ7lrNQyhZGsFqpwtGFexqUv4IQdjKoSYF7ipZ9UuTJZUSQXFj/XaoBLuEVIVqr8EJngEQ==}
+    engines: {node: ^12.20.0 || ^14.13.1 || >=16.0.0}
 
   decompress-response@6.0.0:
     resolution: {integrity: sha512-aW35yZM6Bb/4oJlZncMH2LCoZtJXTRxES17vE3hoRiowU2kWHaJKFkSBDnDR+cm9J+9QhXmREyIfv0pji9ejCQ==}
@@ -7093,6 +7118,8 @@ snapshots:
 
   '@types/deep-eql@4.0.2': {}
 
+  '@types/dom-navigation@1.0.6': {}
+
   '@types/dom-navigation@1.0.7': {}
 
   '@types/estree@1.0.8': {}
@@ -7655,6 +7682,8 @@ snapshots:
   debug@4.4.3:
     dependencies:
       ms: 2.1.3
+
+  decamelize@6.0.1: {}
 
   decompress-response@6.0.0:
     dependencies:

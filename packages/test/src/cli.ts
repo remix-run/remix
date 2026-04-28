@@ -1,14 +1,22 @@
 import * as fsp from 'node:fs/promises'
+import type * as http from 'node:http'
 import * as path from 'node:path'
-import { isMainThread } from 'node:worker_threads'
+import {
+  getRemixTestHelpText,
+  IS_RUNNING_FROM_SRC,
+  loadConfig,
+  type ResolvedRemixTestConfig,
+} from './lib/config.ts'
 import { generateCombinedCoverageReport } from './lib/coverage.ts'
-import { getRemixTestHelpText, loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
-import { importModule } from './lib/import-module.ts'
 import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
 import { createReporter } from './lib/reporters/index.ts'
+import { runBrowserTests } from './lib/runner-browser.ts'
 import { runServerTests } from './lib/runner.ts'
-import { IS_BUN, type Counts } from './lib/utils.ts'
 import { createWatcher } from './lib/watcher.ts'
+import { importModule } from './lib/import-module.ts'
+import type { Counts } from './lib/reporters/results.ts'
+import { IS_BUN } from './lib/runtime.ts'
+import { isMainThread } from 'node:worker_threads'
 
 export { getRemixTestHelpText }
 
@@ -20,6 +28,7 @@ export interface RunRemixTestOptions {
 interface DiscoveredTests {
   files: string[]
   serverFiles: string[]
+  browserFiles: string[]
   e2eFiles: string[]
 }
 
@@ -53,6 +62,9 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
   let running = false
   let queued = false
   let rerunTimer: NodeJS.Timeout | undefined
+  let browserServer: http.Server | undefined
+  let browserServerFilesKey: string | undefined
+  let browserPort: number | undefined
   let resolveRun: ((exitCode: number) => void) | undefined
 
   let runPromise = new Promise<number>((resolve) => {
@@ -63,6 +75,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
     if (hasExited) return
     hasExited = true
     watcher?.close()
+    browserServer?.close()
     clearTimeout(rerunTimer)
     process.off('SIGINT', handleInterrupt)
     process.off('SIGTERM', handleInterrupt)
@@ -70,6 +83,17 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
   }
 
   let handleInterrupt = () => cleanupAndExit(latestExitCode)
+
+  let closeBrowserServer = async () => {
+    if (!browserServer) return
+    let server = browserServer
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve())),
+    )
+    browserServer = undefined
+    browserServerFilesKey = undefined
+    browserPort = undefined
+  }
 
   let queueRerun = (reason: string) => {
     if (!config.watch || hasExited) return
@@ -109,11 +133,28 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
         return
       }
 
-      let { files, serverFiles, e2eFiles } = discoveredTests
+      let { files, serverFiles, browserFiles, e2eFiles } = discoveredTests
 
       if (config.watch) {
         watcher ??= createWatcher((file) => queueRerun(file))
         watcher.update(files)
+      }
+
+      let browserFilesKey = browserFiles.join('\0')
+      if (browserServer && browserFiles.length === 0) {
+        await closeBrowserServer()
+      } else if (
+        browserFiles.length > 0 &&
+        (!browserServer || browserServerFilesKey !== browserFilesKey)
+      ) {
+        await closeBrowserServer()
+        let { startServer } = IS_RUNNING_FROM_SRC
+          ? await importModule('./app/server.ts', import.meta)
+          : await import(`./app/server.js`)
+        let result = await startServer(browserFiles)
+        browserServer = result.server
+        browserServerFilesKey = browserFilesKey
+        browserPort = result.port
       }
 
       let playwrightConfig =
@@ -151,7 +192,8 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
         allCoverageMaps.push(serverResult.coverageMap)
       }
 
-      if (e2eFiles.length > 0) {
+      // Run browser/e2e tests for all browsers configured by the user
+      if (browserFiles.length > 0 || e2eFiles.length > 0) {
         let projects = resolveProjects(playwrightConfig)
         if (config.project) {
           let projectNames = config.project.split(',').map((project) => project.trim())
@@ -162,6 +204,8 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
             throw new Error(`No playwright projects found with name(s) "${config.project}"`)
           }
         }
+
+        let lastBrowserResult: Awaited<ReturnType<typeof runBrowserTests>> | null = null
 
         for (let project of projects) {
           reporter.onSectionStart(`\nRunning tests for project \`${project.name}\`:`)
@@ -177,22 +221,52 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
             }
           }
 
-          let e2eResult =
+          let [browserResult, e2eResult] = await Promise.all([
+            browserFiles.length > 0
+              ? runBrowserTests({
+                  baseUrl: `http://localhost:${browserPort}`,
+                  console: config.browser?.echo,
+                  coverage: !!config.coverage,
+                  open: config.browser?.open,
+                  playwrightUseOpts: project.playwrightUseOpts,
+                  projectName: project.name,
+                  reporter,
+                  testFiles: browserFiles,
+                })
+              : null,
             e2eFiles.length > 0
-              ? await runServerTests(e2eFiles, reporter, config.concurrency, 'e2e', {
+              ? runServerTests(e2eFiles, reporter, config.concurrency, 'e2e', {
                   open: config.browser?.open,
                   playwrightUseOpts: project.playwrightUseOpts,
                   projectName: project.name,
                   coverage: config.coverage,
                   cwd,
                 })
-              : null
+              : null,
+          ])
 
-          counts.passed += e2eResult?.passed ?? 0
-          counts.failed += e2eResult?.failed ?? 0
-          counts.skipped += e2eResult?.skipped ?? 0
-          counts.todo += e2eResult?.todo ?? 0
+          counts.passed += (browserResult?.results.passed ?? 0) + (e2eResult?.passed ?? 0)
+          counts.failed += (browserResult?.results.failed ?? 0) + (e2eResult?.failed ?? 0)
+          counts.skipped += (browserResult?.results.skipped ?? 0) + (e2eResult?.skipped ?? 0)
+          counts.todo += (browserResult?.results.todo ?? 0) + (e2eResult?.todo ?? 0)
+          allCoverageMaps.push(browserResult?.coverageMap)
           allCoverageMaps.push(e2eResult?.coverageMap)
+
+          if (browserResult) {
+            lastBrowserResult = browserResult
+          }
+        }
+
+        if (config.browser?.open && lastBrowserResult) {
+          console.log('\nBrowser is open. Press Ctrl+C to close.')
+          await Promise.race([
+            lastBrowserResult.disconnected,
+            new Promise<void>((resolve) => {
+              process.once('SIGINT', resolve)
+              process.once('SIGTERM', resolve)
+            }),
+          ])
+          await lastBrowserResult.close()
         }
       }
 
@@ -257,13 +331,15 @@ async function discoverTests(
     return null
   }
 
+  let browserSet = new Set(await findFiles(config.glob.browser, config.glob.exclude, cwd))
   let e2eSet = new Set(await findFiles(config.glob.e2e, config.glob.exclude, cwd))
-
   let types = new Set(config.type.split(','))
+  let browserFiles = types.has('browser') ? files.filter((f) => browserSet.has(f)) : []
   let e2eFiles = types.has('e2e') ? files.filter((file) => e2eSet.has(file)) : []
-  let serverFiles = types.has('server') ? files.filter((file) => !e2eSet.has(file)) : []
-
-  let totalFiles = serverFiles.length + e2eFiles.length
+  let serverFiles = types.has('server')
+    ? files.filter((file) => !browserSet.has(file) && !e2eSet.has(file))
+    : []
+  let totalFiles = browserFiles.length + serverFiles.length + e2eFiles.length
 
   if (totalFiles === 0) {
     console.log(`No test files remain after filtering for type ${config.type}`)
@@ -271,12 +347,13 @@ async function discoverTests(
   }
 
   console.log(
-    `Found ${totalFiles} test file(s) (${serverFiles.length} server, ${e2eFiles.length} e2e)`,
+    `Found ${totalFiles} test file(s) (${serverFiles.length} server, ${browserFiles.length} browser, ${e2eFiles.length} e2e)`,
   )
 
   return {
     files,
     serverFiles,
+    browserFiles,
     e2eFiles,
   }
 }

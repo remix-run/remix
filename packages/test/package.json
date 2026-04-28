@@ -51,16 +51,19 @@
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node src/cli-entry.ts",
-    "test:bun": "bun --bun src/cli-entry.ts --glob.test 'src/**/*.test.{ts,tsx}' --glob.e2e 'src/**/*.test.e2e.{ts,tsx}' --type server",
+    "test:bun": "bun --bun src/cli-entry.ts --type server",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
-    "@remix-run/node-fetch-server": "workspace:^",
     "@remix-run/terminal": "workspace:^",
+    "es-module-lexer": "^2.0.0",
     "esbuild": "^0.27.1",
+    "get-tsconfig": "^4.13.6",
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-report": "^3.0.1",
     "istanbul-reports": "^3.2.0",
+    "magic-string": "^0.30.21",
+    "source-map-js": "^1.2.1",
     "tsx": "^4.21.0",
     "v8-to-istanbul": "^9.3.0"
   },
@@ -73,12 +76,16 @@
     }
   },
   "devDependencies": {
+    "@remix-run/assert": "workspace:^",
+    "@remix-run/node-fetch-server": "workspace:^",
     "@remix-run/ui": "workspace:^",
+    "@types/dom-navigation": "1.0.6",
     "@types/istanbul-lib-coverage": "^2.0.6",
     "@types/istanbul-lib-report": "^3.0.3",
     "@types/istanbul-reports": "^3.0.4",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
+    "decamelize": "^6.0.1",
     "playwright": "catalog:"
   },
   "keywords": [

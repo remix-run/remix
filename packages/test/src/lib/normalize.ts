@@ -1,28 +1,3 @@
-import { createStyles } from '@remix-run/terminal'
-
-export type Counts = {
-  passed: number
-  failed: number
-  skipped: number
-  todo: number
-}
-
-// https://bun.com/docs/guides/util/detect-bun
-export const IS_BUN = typeof process.versions.bun === 'string'
-
-const terminalStyles = createStyles()
-
-export const colors = {
-  reset: terminalStyles.reset,
-  dim: terminalStyles.dim,
-  green: terminalStyles.green,
-  red: terminalStyles.red,
-  cyan: terminalStyles.cyan,
-  yellow(value: string): string {
-    return terminalStyles.format(value, 'dim', 'yellow')
-  },
-}
-
 function normalizeFilePath(path: string): string {
   let locSuffix = path.match(/(:\d+:\d+)$/)?.[0] || ''
   let normalized =

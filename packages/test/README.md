@@ -7,6 +7,7 @@ A test framework for JavaScript and TypeScript projects.
 - `describe`/`it` test structure with `before`/`after`/`beforeEach`/`afterEach` hooks
 - Server-side unit testing
 - Playwright E2E testing via `t.serve`
+- In-browser component testing (pair with `render` from `remix/ui/test`)
 - Mock functions and method spies via `t.mock.fn` / `t.mock.method`
 - Unified code coverage reporting across unit and E2E tests
 - Watch mode
@@ -92,10 +93,12 @@ export default {
   },
 
   glob: {
-    // Glob pattern identifying all test files (default: "**/*.test{,.e2e}.{ts,tsx}")
-    test: '**/*.test{,.e2e}.{ts,tsx}',
-    // Glob pattern identifying the subset of E2E test files
-    e2e: '**/*.test.e2e.{ts,tsx}',
+    // Glob pattern identifying all test files (default: "**/*.test{,.browser,.e2e}.{ts,tsx}")
+    test: '**/*.test{,.browser,.e2e}.ts',
+    // Glob pattern identifying browser test files (default: "**/*.test.browser.{ts,tsx}")
+    browser: '**/*.test.browser.ts',
+    // Glob pattern identifying E2E test files (default: "**/*.test.e2e.{ts,tsx}")
+    e2e: '**/*.test.e2e.ts',
   },
 
   // Playwright configuration for E2E tests, or string path to an existing
@@ -120,8 +123,8 @@ export default {
   // Path to a setup module (see Setup section below)
   setup: './test/setup.ts',
 
-  // Comma-separated list of test types to run ("server", "e2e")
-  type: 'server,e2e',
+  // Comma-separated list of test types to run ("server", "browser", "e2e")
+  type: 'server,browser,e2e',
 
   // Watch for file changes and re-run
   watch: false,
@@ -152,6 +155,7 @@ You may also specify any config field as a CLI flag which will take precedence o
 | `--coverage.branches`       |       |
 | `--coverage.functions`      |       |
 | `--glob.test`               |       |
+| `--glob.browser`            |       |
 | `--glob.e2e`                |       |
 | `--playwrightConfig <path>` |       |
 | `--project <name>`          | `-p`  |
@@ -227,6 +231,7 @@ cannot keep the CLI alive.
 Each test callback receives a `TestContext` (`t`) as its first argument with helpful test utilities.
 
 ```ts
+// from 'remix/test'
 interface TestContext {
   // Register a cleanup function to run after the test completes
   after(fn: () => void): void
@@ -244,8 +249,11 @@ interface TestContext {
     ): MockFunction
   }
 
-  // E2E only: start a server with the given request handler, returns a Playwright Page
-  serve(handler: (req: Request) => Promise<Response>): Promise<Page>
+  // Replace global timer functions with controllable fakes
+  useFakeTimers(): FakeTimers
+
+  // E2E only: connect a running test server to a Playwright Page
+  serve(server: { baseUrl: string; close(): Promise<void> }): Promise<Page>
 }
 ```
 
@@ -280,14 +288,40 @@ it('cleanup', (t) => {
 })
 ```
 
-#### E2E
+#### Fake Timers
 
-In E2E test files, `t.serve()` starts an HTTP server and returns a Playwright `Page`. See [E2E Testing](#e2e-testing) for details.
+`t.useFakeTimers()` replaces the global timer functions (`setTimeout`, `setInterval`, etc.) with controllable fakes that are automatically restored after the test. It works in any test environment — server unit tests, browser tests, or E2E setup code.
 
 ```ts
+it('debounces a callback', (t) => {
+  let timers = t.useFakeTimers()
+  let calls = 0
+  let debounced = debounce(() => calls++, 300)
+
+  debounced()
+  timers.advance(299)
+  assert.equal(calls, 0)
+  timers.advance(1)
+  assert.equal(calls, 1)
+})
+```
+
+| Method        | Description                                                                 |
+| ------------- | --------------------------------------------------------------------------- |
+| `advance(ms)` | Advance the clock by `ms` milliseconds, firing any elapsed timers           |
+| `restore()`   | Restore the original timer functions (called automatically after each test) |
+
+#### E2E
+
+In E2E test files, `t.serve()` connects a running test server to a Playwright `Page`. See [E2E Testing](#e2e-testing) for details.
+
+```ts
+import { createTestServer } from 'remix/node-fetch-server/test'
+
 it('navigates to home', async (t) => {
   let router = createRouter()
-  let page = await t.serve(router.fetch)
+  let server = await createTestServer(router.fetch)
+  let page = await t.serve(server)
   await page.goto('/')
 })
 ```
@@ -304,21 +338,60 @@ let spy = mock.method(console, 'log')
 spy.mock.restore?.()
 ```
 
+### Browser Testing
+
+Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests. Each in-browser test suite runs in an isolated `iframe` so it has access to its own `document` instance.
+
+#### `render()`
+
+`render`, exported from `remix/ui/test`, mounts a component into the DOM and returns a `RenderResult`:
+
+```ts
+import * as assert from 'remix/assert'
+import { describe, it } from 'remix/test'
+import { render } from 'remix/ui/test'
+import { Counter } from './counter.tsx'
+
+describe('Counter', () => {
+  it('increments on click', async (t) => {
+    let { $, act, cleanup } = render(<Counter />)
+    t.after(cleanup)
+
+    assert.equal($('[data-count]')?.textContent, '0')
+    await act(() => $('[data-action="increment"]')?.click())
+    assert.equal($('[data-count]')?.textContent, '1')
+  })
+})
+```
+
+`RenderResult` provides:
+
+| Property/Method | Description                                                             |
+| --------------- | ----------------------------------------------------------------------- |
+| `container`     | The `HTMLElement` the component is mounted into                         |
+| `root`          | The Remix `VirtualRoot` the component is rendered in                    |
+| `$(selector)`   | Alias for `container.querySelector()`                                   |
+| `$$(selector)`  | Alias for `container.querySelectorAll()`                                |
+| `act(fn)`       | Runs `fn` and flushes pending component updates                         |
+| `cleanup()`     | Unmounts and removes the container (pass to `t.after` for auto-cleanup) |
+
 ### E2E Testing
 
 End-to-end (E2E) tests use [Playwright](https://playwright.dev) and are discovered by the `**/*.test.e2e.{ts,tsx}` glob pattern (configurable via `glob.e2e`). They use the same `describe`/`it` API as unit tests.
 
-E2E tests receive `t.serve()` on the test context, which starts an HTTP server with the given request handler and returns a Playwright [`Page`](https://playwright.dev/docs/api/class-page). The server and page are automatically closed after each test.
+E2E tests receive `t.serve()` on the test context, which accepts a running test server and returns a Playwright [`Page`](https://playwright.dev/docs/api/class-page) whose `baseURL` points at that server. The server and page are automatically closed after each test.
 
 ```ts
 import * as assert from 'remix/assert'
+import { createTestServer } from 'remix/node-fetch-server/test'
 import { describe, it } from 'remix/test'
 import { createRouter } from './router.ts'
 
 describe('checkout', () => {
   it('adds an item to the cart', async (t) => {
     let router = createRouter()
-    let page = await t.serve(router.fetch)
+    let server = await createTestServer(router.fetch)
+    let page = await t.serve(server)
 
     await page.goto('/')
     await page.getByRole('button', { name: 'Add to Cart' }).click()

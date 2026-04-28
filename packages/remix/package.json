@@ -64,6 +64,7 @@
     "./multipart-parser": "./src/multipart-parser.ts",
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
+    "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
     "./response/compress": "./src/response/compress.ts",
     "./response/file": "./src/response/file.ts",
     "./response/html": "./src/response/html.ts",
@@ -99,6 +100,7 @@
     "./ui/select": "./src/ui/select.ts",
     "./ui/separator": "./src/ui/separator.ts",
     "./ui/server": "./src/ui/server.ts",
+    "./ui/test": "./src/ui/test.ts",
     "./ui/theme": "./src/ui/theme.ts",
     "./package.json": "./package.json"
   },
@@ -276,6 +278,10 @@
         "types": "./dist/node-fetch-server.d.ts",
         "default": "./dist/node-fetch-server.js"
       },
+      "./node-fetch-server/test": {
+        "types": "./dist/node-fetch-server/test.d.ts",
+        "default": "./dist/node-fetch-server/test.js"
+      },
       "./response/compress": {
         "types": "./dist/response/compress.d.ts",
         "default": "./dist/response/compress.js"
@@ -415,6 +421,10 @@
       "./ui/server": {
         "types": "./dist/ui/server.d.ts",
         "default": "./dist/ui/server.js"
+      },
+      "./ui/test": {
+        "types": "./dist/ui/test.d.ts",
+        "default": "./dist/ui/test.js"
       },
       "./ui/theme": {
         "types": "./dist/ui/theme.d.ts",
