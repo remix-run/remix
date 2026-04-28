@@ -1,20 +1,20 @@
-import * as fs from 'node:fs'
-import * as path from 'node:path'
-import { fileURLToPath } from 'node:url'
+import * as fs from 'node:fs/promises'
 
-export function readDevRemixVersion(): string | undefined {
-  let packageJsonPath = path.resolve(
-    path.dirname(fileURLToPath(import.meta.url)),
-    '../../../remix/package.json',
-  )
+export async function readDevRemixVersion(): Promise<string | undefined> {
+  return await readPackageVersion(new URL('../../../remix/package.json', import.meta.url), 'remix')
+}
 
+async function readPackageVersion(
+  packageJsonUrl: URL,
+  packageName: string,
+): Promise<string | undefined> {
   try {
-    let packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8')) as {
+    let packageJson = JSON.parse(await fs.readFile(packageJsonUrl, 'utf8')) as {
       name?: string
       version?: string
     }
 
-    if (packageJson.name !== 'remix') {
+    if (packageJson.name !== packageName) {
       return undefined
     }
 

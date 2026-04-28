@@ -4,7 +4,7 @@ import { readDevRemixVersion } from './lib/dev-remix-version.ts'
 import { renderCliError } from './lib/errors.ts'
 
 if (import.meta.main) {
-  void run(undefined, { remixVersion: readDevRemixVersion() }).then(
+  void runMain().then(
     (exitCode) => {
       setExitCode(exitCode)
     },
@@ -13,6 +13,10 @@ if (import.meta.main) {
       setExitCode(1)
     },
   )
+}
+
+async function runMain(): Promise<number> {
+  return await run(undefined, { remixVersion: await readDevRemixVersion() })
 }
 
 function setExitCode(exitCode: number) {
