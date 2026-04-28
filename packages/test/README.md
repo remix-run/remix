@@ -37,16 +37,24 @@ describe('My Test Suite', () => {
 Run tests with the CLI:
 
 ```sh
-remix-test
+remix test
 ```
 
-By default, `remix-test` discovers all files matching `**/*.test.{ts,tsx}`. Pass a glob as the first positional argument to override:
+By default, `remix test` discovers all files matching `**/*.test.{ts,tsx}`. Pass a glob as the first positional argument to override:
 
 ```sh
-remix-test "src/**/*.test.ts"
+remix test "src/**/*.test.ts"
 ```
 
 Or, you may control via the `glob.test` config field/CLI arg.
+
+If you install `@remix-run/test` directly instead of the umbrella `remix` package, the same
+runner is available as `remix-test`:
+
+```sh
+npm i @remix-run/test
+remix-test
+```
 
 ### Config File
 
@@ -126,7 +134,7 @@ export default {
 You can point to a different config file location with the `--config` flag:
 
 ```sh
-remix-test --config ./tests/config.ts
+remix test --config ./tests/config.ts
 ```
 
 You may also specify any config field as a CLI flag which will take precedence over config file values:
@@ -196,6 +204,23 @@ suite('My Test Suite', () => {
   test('tests something', () => {})
 })
 ```
+
+### Programmatic runner
+
+`@remix-run/test/cli` exports `runRemixTest()` for tools that want to run the test runner without
+exiting the current process:
+
+```ts
+import { runRemixTest } from '@remix-run/test/cli'
+
+let exitCode = await runRemixTest({
+  argv: ['--type', 'server'],
+  cwd: process.cwd(),
+})
+```
+
+The `remix test` and `remix-test` command-line entrypoints exit the process when the run finishes
+so open workers, browsers, or project handles cannot keep the CLI alive.
 
 ### Test Context
 

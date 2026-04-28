@@ -1,9 +1,9 @@
-import { getRemixTestHelpText, runRemixTest } from '@remix-run/test/cli'
+import { getRemixTestHelpText, runRemixTest, runRemixTestCli } from '@remix-run/test/cli'
 import * as process from 'node:process'
 
 import { renderCliError, toCliError } from '../errors.ts'
 import { formatHelpText } from '../help-text.ts'
-import { getRuntimeCwd } from '../runtime-context.ts'
+import { getRuntimeCwd, shouldExitProcess } from '../runtime-context.ts'
 
 export async function runTestCommand(argv: string[]): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
@@ -12,6 +12,10 @@ export async function runTestCommand(argv: string[]): Promise<number> {
   }
 
   try {
+    if (shouldExitProcess()) {
+      await runRemixTestCli({ argv, cwd: getRuntimeCwd() })
+    }
+
     return await runRemixTest({ argv, cwd: getRuntimeCwd() })
   } catch (error) {
     process.stderr.write(

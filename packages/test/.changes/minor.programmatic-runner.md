@@ -1,1 +1,1 @@
-Export `runRemixTest` from `@remix-run/test/cli` so other tools can run the Remix test runner programmatically.
+Export `runRemixTest` from `@remix-run/test/cli` so other tools can run the Remix test runner programmatically without exiting the host process. The package also exports `runRemixTestCli` for command-line entrypoints that should terminate the process after the run completes.

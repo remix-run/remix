@@ -16,7 +16,10 @@ if (import.meta.main) {
 }
 
 async function runMain(): Promise<number> {
-  return await run(undefined, { remixVersion: await readDevRemixVersion() })
+  return await run(undefined, {
+    remixVersion: await readDevRemixVersion(),
+    shouldExitProcess: true,
+  })
 }
 
 function setExitCode(exitCode: number) {

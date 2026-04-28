@@ -23,6 +23,7 @@ try {
 
   let results = await runTests()
   parentPort!.postMessage(results)
+  process.exit(0)
 } catch (e) {
   let results: TestResults = {
     passed: 0,
@@ -43,4 +44,5 @@ try {
     ],
   }
   parentPort!.postMessage(results)
+  process.exit(0)
 }

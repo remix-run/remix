@@ -3,6 +3,7 @@ import * as process from 'node:process'
 export interface CliRuntimeContext {
   cwd?: string
   remixVersion?: string
+  shouldExitProcess?: boolean
 }
 
 let currentContext: CliRuntimeContext = {}
@@ -19,6 +20,10 @@ export function getRuntimeRemixVersion(): string | undefined {
 export function getRuntimeCwd(): string {
   let cwd = currentContext.cwd?.trim()
   return cwd && cwd.length > 0 ? cwd : process.cwd()
+}
+
+export function shouldExitProcess(): boolean {
+  return currentContext.shouldExitProcess === true
 }
 
 export function setCliRuntimeContext(context: CliRuntimeContext): CliRuntimeContext {

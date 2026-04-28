@@ -25,15 +25,7 @@ interface DiscoveredTests {
 }
 
 if (import.meta.main) {
-  void runRemixTest().then(
-    (exitCode) => {
-      process.exitCode = exitCode
-    },
-    (error: unknown) => {
-      console.error('Error running tests:', error)
-      process.exitCode = 1
-    },
-  )
+  void runRemixTestCli()
 }
 
 export async function runRemixTest(options: RunRemixTestOptions = {}): Promise<number> {
@@ -50,6 +42,15 @@ export async function runRemixTest(options: RunRemixTestOptions = {}): Promise<n
     return await runRemixTestInCwd(argv, cwd)
   } finally {
     process.chdir(previousCwd)
+  }
+}
+
+export async function runRemixTestCli(options: RunRemixTestOptions = {}): Promise<never> {
+  try {
+    process.exit(await runRemixTest(options))
+  } catch (error) {
+    console.error('Error running tests:', error)
+    process.exit(1)
   }
 }
 
