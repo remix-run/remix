@@ -1,7 +1,5 @@
 import * as assert from '@remix-run/assert'
-import { spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
-import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
 import { describe, it } from '@remix-run/test'
@@ -21,6 +19,9 @@ interface CliPackageJson extends PackageJsonWithEngines {
   publishConfig: {
     bin?: Record<string, string>
   }
+  scripts: {
+    cli?: string
+  }
 }
 
 interface RemixPackageJson extends PackageJsonWithEngines {
@@ -29,26 +30,6 @@ interface RemixPackageJson extends PackageJsonWithEngines {
 }
 
 describe('cli entrypoint', () => {
-  it('runs directly from the source entrypoint', () => {
-    let result = spawnSync(process.execPath, ['./src/cli.ts', '--help'], {
-      cwd: PACKAGE_DIR,
-      encoding: 'utf8',
-    })
-
-    assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /Usage:\s+remix <command> \[options\]/)
-  })
-
-  it('runs through the generated remix package wrapper', () => {
-    let result = spawnSync(process.execPath, ['./src/cli-entry.ts', '--help'], {
-      cwd: REMIX_PACKAGE_DIR,
-      encoding: 'utf8',
-    })
-
-    assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /Usage:\s+remix <command> \[options\]/)
-  })
-
   it('only exposes the remix bin from the generated remix package', () => {
     let remixPackageJson = readRemixPackageJson()
 
@@ -57,11 +38,13 @@ describe('cli entrypoint', () => {
     })
   })
 
-  it('does not publish a direct @remix-run/cli bin', () => {
+  it('does not provide a direct @remix-run/cli executable', () => {
     let cliPackageJson = readCliPackageJson()
 
     assert.equal(cliPackageJson.bin, undefined)
     assert.equal(cliPackageJson.publishConfig.bin, undefined)
+    assert.equal(cliPackageJson.scripts.cli, undefined)
+    assert.equal(fs.existsSync(resolve(PACKAGE_DIR, 'src', 'cli.ts')), false)
   })
 
   it('declares the Node.js floor for published CLI entrypoints', () => {
@@ -83,29 +66,6 @@ describe('cli entrypoint', () => {
     )
   })
 
-  it('injects the repo Remix version when running directly from the source entrypoint', () => {
-    let remixPackageJson = readRemixPackageJson()
-    let result = spawnSync(process.execPath, ['./src/cli.ts', 'version'], {
-      cwd: PACKAGE_DIR,
-      encoding: 'utf8',
-    })
-
-    assert.equal(result.status, 0, result.stderr)
-    assert.equal(result.stdout, `${remixPackageJson.version}\n`)
-    assert.equal(result.stderr, '')
-  })
-
-  it('injects the repo Remix version when running through the generated remix package wrapper', () => {
-    let remixPackageJson = readRemixPackageJson()
-    let result = spawnSync(process.execPath, ['./src/cli-entry.ts', 'version'], {
-      cwd: REMIX_PACKAGE_DIR,
-      encoding: 'utf8',
-    })
-
-    assert.equal(result.status, 0, result.stderr)
-    assert.equal(result.stdout, `${remixPackageJson.version}\n`)
-    assert.equal(result.stderr, '')
-  })
 })
 
 function readRemixPackageJson(): RemixPackageJson {

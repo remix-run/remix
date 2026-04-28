@@ -50,7 +50,6 @@
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
-    "cli": "tsx ./src/cli.ts",
     "prepublishOnly": "pnpm run build",
     "test": "remix-test --concurrency 1",
     "typecheck": "tsgo --noEmit"
