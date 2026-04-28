@@ -562,6 +562,7 @@ describe('queries', () => {
       async migrate() {
         return {}
       },
+      async executeScript() {},
       async beginTransaction() {
         return { id: 'tx_1' }
       },
@@ -626,6 +627,7 @@ describe('queries', () => {
       async migrate() {
         return {}
       },
+      async executeScript() {},
       async beginTransaction() {
         return { id: 'tx_1' }
       },
@@ -883,6 +885,7 @@ describe('queries', () => {
       async migrate() {
         return {}
       },
+      async executeScript() {},
       async beginTransaction() {
         return { id: 'tx_1' }
       },
@@ -1182,6 +1185,7 @@ describe('writes and validation', () => {
       async migrate() {
         return {}
       },
+      async executeScript() {},
       async beginTransaction() {
         return { id: 'tx' }
       },
@@ -2132,6 +2136,7 @@ describe('adapter errors', () => {
       async migrate() {
         return {}
       },
+      async executeScript() {},
       async beginTransaction() {
         tokens += 1
         return { id: 'tx_' + String(tokens) }

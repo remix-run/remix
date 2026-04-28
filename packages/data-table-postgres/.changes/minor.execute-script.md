@@ -1,0 +1,1 @@
+Added `executeScript(sql, transaction?)` to satisfy the `DatabaseAdapter` contract introduced for SQL-file migrations. The adapter forwards the script to `client.query(sql)` without a parameter array, which postgres treats as a multi-statement script.

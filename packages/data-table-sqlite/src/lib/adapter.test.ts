@@ -936,4 +936,22 @@ describe('sqlite adapter', () => {
     assert.equal(rows[0]['account.email'], 'a@example.com')
     sqlite.close()
   })
+
+  it('executeScript runs multi-statement SQL natively', async () => {
+    let sqlite = createNativeSqliteDatabase()
+    let adapter = createSqliteDatabaseAdapter(sqlite)
+
+    await adapter.executeScript(
+      'create table widgets (id integer primary key); insert into widgets values (1); insert into widgets values (2);',
+    )
+
+    let rows = sqlite.prepare('select id from widgets order by id asc').all() as Array<{
+      id: number
+    }>
+    assert.deepEqual(
+      rows.map((row) => row.id),
+      [1, 2],
+    )
+    sqlite.close()
+  })
 })

@@ -1,11 +1,7 @@
-import { createDatabase, createDatabaseWithTransaction } from '../database.ts'
-import type { Database } from '../database.ts'
 import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
-import type { SqlStatement } from '../sql.ts'
 import type {
   MigrateOptions,
   MigrateResult,
-  MigrationContext,
   MigrationDescriptor,
   MigrationDirection,
   MigrationJournalRow,
@@ -14,8 +10,10 @@ import type {
   MigrationRunnerOptions,
   MigrationStatus,
   MigrationStatusEntry,
+  MigrationTransactionMode,
 } from '../migrations.ts'
 
+import { parseTransactionDirective } from './directive.ts'
 import {
   deleteJournalRow,
   ensureMigrationJournal,
@@ -26,7 +24,6 @@ import {
   normalizeChecksum,
 } from './journal-store.ts'
 import { resolveMigrations } from './registry.ts'
-import { createMigrationSchema } from './schema-api.ts'
 
 type RunMigrationsInput = {
   adapter: DatabaseAdapter
@@ -93,34 +90,18 @@ function assertNoMigrationDrift(
   }
 }
 
-function createDryRunDatabase(adapter: DatabaseAdapter): Database {
-  let error = new Error('Cannot execute data operations while running migrations with dryRun')
-  let throwDryRunError = async (): Promise<never> => {
-    throw error
-  }
-  let dryRunAdapter: DatabaseAdapter = {
-    dialect: adapter.dialect,
-    capabilities: adapter.capabilities,
-    compileSql(operation) {
-      return adapter.compileSql(operation)
-    },
-    async hasTable(table) {
-      return adapter.hasTable(table)
-    },
-    async hasColumn(table, column) {
-      return adapter.hasColumn(table, column)
-    },
-    execute: throwDryRunError,
-    migrate: throwDryRunError,
-    beginTransaction: throwDryRunError,
-    commitTransaction: throwDryRunError,
-    rollbackTransaction: throwDryRunError,
-    createSavepoint: throwDryRunError,
-    rollbackToSavepoint: throwDryRunError,
-    releaseSavepoint: throwDryRunError,
+function resolveTransactionMode(migration: MigrationDescriptor): MigrationTransactionMode {
+  if (migration.transaction) {
+    return migration.transaction
   }
 
-  return createDatabase(dryRunAdapter)
+  let directive = parseTransactionDirective(migration.up)
+
+  if (directive) {
+    return directive
+  }
+
+  return 'auto'
 }
 
 async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> {
@@ -135,7 +116,7 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
   assertStepOption(step)
   assertTargetOption(migrations, target)
 
-  let sql: SqlStatement[] = []
+  let sql: string[] = []
 
   await adapter.acquireMigrationLock?.()
 
@@ -187,15 +168,23 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
       toRun = appliedMigrations
     }
 
+    if (input.direction === 'down') {
+      for (let migration of toRun) {
+        if (migration.down === undefined) {
+          throw new Error('Migration "' + migration.id + '" has no down script')
+        }
+      }
+    }
+
     let applied: MigrationStatusEntry[] = []
     let reverted: MigrationStatusEntry[] = []
     let batch = getBatch(journal)
 
     for (let migration of toRun) {
-      if (
-        migration.migration.transaction === 'required' &&
-        !adapter.capabilities.transactionalDdl
-      ) {
+      let script = (input.direction === 'up' ? migration.up : migration.down) as string
+      let mode = resolveTransactionMode(migration)
+
+      if (mode === 'required' && !adapter.capabilities.transactionalDdl) {
         throw new Error(
           'Migration "' +
             migration.id +
@@ -203,43 +192,23 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
         )
       }
 
-      let shouldUseTransaction =
-        !dryRun &&
-        migration.migration.transaction !== 'none' &&
-        adapter.capabilities.transactionalDdl
+      let shouldUseTransaction = !dryRun && mode !== 'none' && adapter.capabilities.transactionalDdl
       let token: TransactionToken | undefined
 
       if (shouldUseTransaction) {
         token = await adapter.beginTransaction()
       }
 
-      let db = dryRun
-        ? createDryRunDatabase(adapter)
-        : token
-          ? createDatabaseWithTransaction(adapter, token)
-          : createDatabase(adapter)
-
-      let schema = createMigrationSchema(
-        db,
-        async (operation) => {
-          let compiled = adapter.compileSql(operation)
-          sql.push(...compiled)
-
-          if (!dryRun) {
-            await adapter.migrate({ operation, transaction: token })
-          }
-        },
-        { transaction: token },
-      )
-      let context: MigrationContext = {
-        db,
-        schema,
-      }
+      sql.push(script)
 
       try {
-        if (input.direction === 'up') {
-          await migration.migration.up(context)
+        if (!dryRun) {
+          if (script.trim().length > 0) {
+            await adapter.executeScript(script, token)
+          }
+        }
 
+        if (input.direction === 'up') {
           if (!dryRun) {
             await insertJournalRow(
               adapter,
@@ -260,8 +229,6 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
             status: 'applied',
           })
         } else {
-          await migration.migration.down(context)
-
           if (!dryRun) {
             await deleteJournalRow(adapter, journalTable, migration.id, token)
           }
@@ -296,8 +263,8 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
 }
 
 /**
- * Creates a migration runner for applying/reverting migrations against an adapter.
- * @param adapter Database adapter used to compile and execute migration operations.
+ * Creates a migration runner for applying/reverting SQL migrations against an adapter.
+ * @param adapter Database adapter used to execute migration scripts.
  * @param migrations Migration descriptors or registry.
  * @param options Optional runner configuration.
  * @returns A migration runner instance.
