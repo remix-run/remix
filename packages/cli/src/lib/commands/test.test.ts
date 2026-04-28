@@ -7,7 +7,7 @@ import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from '@remix-run/test'
 
-import { run } from '../../index.ts'
+import { runRemix as run } from '../../index.ts'
 import { getTestCommandHelpText } from './test.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')

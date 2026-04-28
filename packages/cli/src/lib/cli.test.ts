@@ -6,7 +6,7 @@ import * as process from 'node:process'
 import { describe, it } from '@remix-run/test'
 
 import { getFixturePath } from '../../test/fixtures.ts'
-import { run as runCli } from '../index.ts'
+import { runRemix } from '../index.ts'
 import { getTestCommandHelpText } from './commands/test.ts'
 import type { CliRuntimeContext } from './runtime-context.ts'
 
@@ -16,7 +16,7 @@ const REMIX_GITHUB_TREE_URL =
 let testCwd: string | undefined
 
 function run(argv: string[], context: CliRuntimeContext = {}): Promise<number> {
-  return runCli(argv, { cwd: testCwd, ...context })
+  return runRemix(argv, { cwd: testCwd, ...context })
 }
 
 const ROOT_HELP_TEXT = [

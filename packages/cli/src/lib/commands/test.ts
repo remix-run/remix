@@ -1,4 +1,4 @@
-import { getRemixTestHelpText, runRemixTestCli } from '@remix-run/test/cli'
+import { getRemixTestHelpText, runRemixTest } from '@remix-run/test/cli'
 import * as process from 'node:process'
 
 import { renderCliError, toCliError } from '../errors.ts'
@@ -12,7 +12,7 @@ export async function runTestCommand(argv: string[]): Promise<number> {
   }
 
   try {
-    return await runRemixTestCli({ argv, cwd: getRuntimeCwd() })
+    return await runRemixTest({ argv, cwd: getRuntimeCwd() })
   } catch (error) {
     process.stderr.write(
       renderCliError(toCliError(error), { helpText: getTestCommandHelpText(process.stderr) }),

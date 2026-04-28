@@ -7,7 +7,7 @@ import * as process from 'node:process'
 import { gzipSync } from 'node:zlib'
 import { describe, it } from '@remix-run/test'
 
-import { run as runCli } from '../../index.ts'
+import { runRemix } from '../../index.ts'
 import type { CliRuntimeContext } from '../runtime-context.ts'
 import { getSkillsCacheFilePath } from '../skills-cache.ts'
 
@@ -19,7 +19,7 @@ const REMIX_GITHUB_ARCHIVE_URL =
 let testCwd: string | undefined
 
 function run(argv: string[], context: CliRuntimeContext = {}): Promise<number> {
-  return runCli(argv, { cwd: testCwd, ...context })
+  return runRemix(argv, { cwd: testCwd, ...context })
 }
 
 const SKILLS_COMMAND_HELP_TEXT = [

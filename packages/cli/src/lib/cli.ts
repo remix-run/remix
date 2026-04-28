@@ -12,7 +12,7 @@ import { renderCliError, unknownCommand } from './errors.ts'
 import { setCliRuntimeContext, type CliRuntimeContext } from './runtime-context.ts'
 import { configureColors, restoreTerminalFormatting } from './terminal.ts'
 
-export async function run(
+export async function runRemix(
   argv: string[] = process.argv.slice(2),
   context: CliRuntimeContext = {},
 ): Promise<number> {

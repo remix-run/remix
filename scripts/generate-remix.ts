@@ -297,27 +297,26 @@ function createCliWrapperSource(reExportFrom: string): string {
 import * as fs from 'node:fs/promises'
 import * as process from 'node:process'
 
-import { run as runCli } from '${reExportFrom}'
+import { runRemix as runRemixCli } from '${reExportFrom}'
 
-export async function run(argv?: string[]): Promise<number> {
-  return await runCli(argv, { remixVersion: await readRemixVersion() })
+export async function runRemix(argv?: string[]): Promise<number> {
+  return await runRemixCli(argv, { remixVersion: await readRemixVersion() })
 }
 
 if (import.meta.main) {
-  void run().then(
+  void runRemix().then(
     (exitCode) => {
-      setExitCode(exitCode)
+      exitProcess(exitCode)
     },
     (error: unknown) => {
       console.error(error)
-      setExitCode(1)
+      exitProcess(1)
     },
   )
 }
 
-function setExitCode(exitCode: number) {
-  let runtimeProcess = process
-  Reflect.set(runtimeProcess, 'exitCode', exitCode)
+function exitProcess(exitCode: number): never {
+  process.exit(exitCode)
 }
 
 async function readRemixVersion(): Promise<string> {
