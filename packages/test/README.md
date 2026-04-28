@@ -48,8 +48,7 @@ remix test "src/**/*.test.ts"
 
 Or, you may control via the `glob.test` config field/CLI arg.
 
-If you install `@remix-run/test` directly instead of the umbrella `remix` package, the same
-runner is available as `remix-test`:
+If you install `@remix-run/test` directly instead of the umbrella `remix` package, the same runner is available as `remix-test`:
 
 ```sh
 npm i @remix-run/test
@@ -306,7 +305,7 @@ spy.mock.restore?.()
 
 ### E2E Testing
 
-E2E tests use [Playwright](https://playwright.dev) and are discovered by the `**/*.test.e2e.{ts,tsx}` glob pattern (configurable via `glob.e2e`). They use the same `describe`/`it` API as unit tests.
+End-to-end (E2E) tests use [Playwright](https://playwright.dev) and are discovered by the `**/*.test.e2e.{ts,tsx}` glob pattern (configurable via `glob.e2e`). They use the same `describe`/`it` API as unit tests.
 
 E2E tests receive `t.serve()` on the test context, which starts an HTTP server with the given request handler and returns a Playwright [`Page`](https://playwright.dev/docs/api/class-page). The server and page are automatically closed after each test.
 
