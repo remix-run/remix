@@ -6,7 +6,12 @@ export type { AppRuntime, AppRuntimeEventMap, RunInit } from './runtime/run.ts'
 export type { ComponentErrorEvent } from './runtime/error-event.ts'
 
 export { createRoot, createRangeRoot, createScheduler } from './runtime/vdom.ts'
-export type { VirtualRoot, VirtualRootEventMap, VirtualRootOptions, Scheduler } from './runtime/vdom.ts'
+export type {
+  VirtualRoot,
+  VirtualRootEventMap,
+  VirtualRootOptions,
+  Scheduler,
+} from './runtime/vdom.ts'
 
 // -- Client Entries --
 export { clientEntry } from './runtime/client-entries.ts'
@@ -44,7 +49,13 @@ export type {
 } from './runtime/jsx.ts'
 export type { HostProps, LayoutAnimationConfig } from './runtime/dom.ts'
 export { createMixin } from './runtime/mixins/mixin.ts'
-export type { MixinDescriptor, MixinHandle, MixinType, MixInput, MixValue } from './runtime/mixins/mixin.ts'
+export type {
+  MixinDescriptor,
+  MixinHandle,
+  MixinType,
+  MixInput,
+  MixValue,
+} from './runtime/mixins/mixin.ts'
 export { TypedEventTarget } from './runtime/typed-event-target.ts'
 export { addEventListeners } from './runtime/event-listeners.ts'
 export { on } from './runtime/mixins/on-mixin.ts'
