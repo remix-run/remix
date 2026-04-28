@@ -8,12 +8,8 @@ try {
     argv: process.argv.slice(2),
     cwd: process.cwd(),
   })
-  exitProcess(exitCode)
+  process.exit(exitCode)
 } catch (error) {
   console.error('Error running tests:', error)
-  exitProcess(1)
-}
-
-function exitProcess(exitCode: number): never {
-  process.exit(exitCode)
+  process.exit(1)
 }

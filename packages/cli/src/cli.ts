@@ -9,12 +9,8 @@ try {
   let exitCode = await runRemix(process.argv.slice(2), {
     remixVersion: await readDevRemixVersion(),
   })
-  exitProcess(exitCode)
+  process.exit(exitCode)
 } catch (error) {
   process.stderr.write(renderCliError(error))
-  exitProcess(1)
-}
-
-function exitProcess(exitCode: number): never {
-  process.exit(exitCode)
+  process.exit(1)
 }

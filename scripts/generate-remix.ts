@@ -293,14 +293,10 @@ import { runRemix } from './cli.ts'
 
 try {
   let exitCode = await runRemix(process.argv.slice(2), { remixVersion: await readRemixVersion() })
-  exitProcess(exitCode)
+  process.exit(exitCode)
 } catch (error) {
   console.error(error)
-  exitProcess(1)
-}
-
-function exitProcess(exitCode: number): never {
-  process.exit(exitCode)
+  process.exit(1)
 }
 
 async function readRemixVersion(): Promise<string> {
