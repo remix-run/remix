@@ -7,6 +7,7 @@ import { describe, it } from '@remix-run/test'
 
 import { getFixturePath } from '../../test/fixtures.ts'
 import { run as runCli } from '../index.ts'
+import { getTestCommandHelpText } from './commands/test.ts'
 import type { CliRuntimeContext } from './runtime-context.ts'
 
 const REMIX_GITHUB_TREE_URL =
@@ -186,19 +187,7 @@ const SKILLS_LIST_COMMAND_HELP_TEXT = [
   '',
 ].join('\n')
 
-const TEST_COMMAND_HELP_TEXT = [
-  'Usage:',
-  '  remix test [glob] [options]',
-  '',
-  'Run tests for the current project.',
-  '',
-  'Examples:',
-  '  remix test',
-  '  remix test --watch',
-  '  remix test --coverage',
-  '  remix test --glob.test "src/**/*.test.ts"',
-  '',
-].join('\n')
+const TEST_COMMAND_HELP_TEXT = getTestCommandHelpText()
 
 const VERSION_COMMAND_HELP_TEXT = [
   'Usage:',

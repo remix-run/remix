@@ -79,7 +79,7 @@ export async function runServerTests(
   } else {
     let coverageDataDir: string | undefined
     if (options.coverage) {
-      coverageDataDir = path.resolve(options.coverage.dir)
+      coverageDataDir = path.resolve(cwd, options.coverage.dir)
       await fsp.mkdir(coverageDataDir, { recursive: true })
       process.env.NODE_V8_COVERAGE = coverageDataDir
     }

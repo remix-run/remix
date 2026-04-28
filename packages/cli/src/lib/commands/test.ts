@@ -1,4 +1,4 @@
-import { runRemixTest } from '@remix-run/test/cli'
+import { getRemixTestHelpText, runRemixTest } from '@remix-run/test/cli'
 import * as process from 'node:process'
 
 import { renderCliError, toCliError } from '../errors.ts'
@@ -22,7 +22,7 @@ export async function runTestCommand(argv: string[]): Promise<number> {
 }
 
 export function getTestCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
-  return formatHelpText(
+  let commandHelpText = formatHelpText(
     {
       description: 'Run tests for the current project.',
       examples: [
@@ -35,4 +35,9 @@ export function getTestCommandHelpText(target: NodeJS.WriteStream = process.stdo
     },
     target,
   )
+  let runnerHelpText = getRemixTestHelpText().replace(
+    /^Usage: remix-test \[glob\] \[options\]\n\n/,
+    '',
+  )
+  return `${commandHelpText}\n${runnerHelpText}\n`
 }

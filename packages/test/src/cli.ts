@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
+import { isMainThread } from 'node:worker_threads'
 import { runServerTests } from './lib/runner.ts'
 import { createReporter } from './lib/reporters/index.ts'
 import { generateCombinedCoverageReport } from './lib/coverage.ts'
@@ -9,6 +10,8 @@ import { importModule } from './lib/import-module.ts'
 import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
 import { getRemixTestHelpText, loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
 import { IS_BUN, type Counts } from './lib/utils.ts'
+
+export { getRemixTestHelpText } from './lib/config.ts'
 
 export interface RunRemixTestOptions {
   argv?: string[]
@@ -35,8 +38,22 @@ if (import.meta.main) {
 
 export async function runRemixTest(options: RunRemixTestOptions = {}): Promise<number> {
   let argv = options.argv ?? process.argv.slice(2)
-  let cwd = options.cwd ?? process.cwd()
+  let cwd = await resolveCwd(options.cwd ?? process.cwd())
+  let previousCwd = process.cwd()
 
+  if (!isMainThread) {
+    return await runRemixTestInCwd(argv, cwd)
+  }
+
+  try {
+    process.chdir(cwd)
+    return await runRemixTestInCwd(argv, cwd)
+  } finally {
+    process.chdir(previousCwd)
+  }
+}
+
+async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
   if (argv.includes('--help') || argv.includes('-h')) {
     console.log(getRemixTestHelpText())
     return 0
@@ -101,6 +118,7 @@ export async function runRemixTest(options: RunRemixTestOptions = {}): Promise<n
       let discoveredTests = await discoverTests(config, cwd)
       if (discoveredTests == null) {
         latestExitCode = 1
+        cleanupAndExit(latestExitCode)
         return
       }
 
@@ -223,7 +241,7 @@ export async function runRemixTest(options: RunRemixTestOptions = {}): Promise<n
   try {
     await executeRun()
 
-    if (config.watch) {
+    if (config.watch && !hasExited) {
       console.log('Watching for changes. Press Ctrl+C to stop.')
     }
   } catch {
@@ -231,6 +249,14 @@ export async function runRemixTest(options: RunRemixTestOptions = {}): Promise<n
   }
 
   return await runPromise
+}
+
+async function resolveCwd(cwd: string): Promise<string> {
+  try {
+    return await fsp.realpath(cwd)
+  } catch {
+    return path.resolve(cwd)
+  }
 }
 
 async function discoverTests(
