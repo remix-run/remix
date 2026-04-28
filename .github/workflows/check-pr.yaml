@@ -168,6 +168,7 @@ jobs:
       - name: Cache Playwright Browsers
         id: cache-browsers
         uses: actions/cache@v5
+        continue-on-error: true
         with:
           path: |
             ~/.cache/ms-playwright
@@ -219,6 +220,7 @@ jobs:
       - name: Cache Playwright Browsers
         id: cache-browsers
         uses: actions/cache@v5
+        continue-on-error: true
         with:
           path: ~/AppData/Local/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
