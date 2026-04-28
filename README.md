@@ -1,3 +1,16 @@
+<br />
+<br />
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/remix-wordmark-racing-darkmode.svg">
+    <img alt="Remix" src="docs/public/remix-wordmark-racing-lightmode.svg" width="400">
+  </picture>
+</p>
+
+<br />
+<br />
+
 # Welcome to Remix 3!
 
 This is the source repository for Remix 3. It is under active development.
