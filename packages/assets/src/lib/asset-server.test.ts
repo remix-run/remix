@@ -1155,7 +1155,7 @@ describe('asset-server', () => {
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
     let body = await response.text()
-    assert.match(body, /from "@remix-run\/component"/)
+    assert.match(body, /from "@remix-run\/ui"/)
   })
 
   it('leaves data and http(s) URL imports unchanged', async () => {
