@@ -15,7 +15,7 @@ npm i remix
 Create a new app with the CLI:
 
 ```sh
-npx remix new my-remix-app
+npx remix@next new my-remix-app
 ```
 
 After installing `remix`, the equivalent local command and the rest of the CLI are available through `remix`:

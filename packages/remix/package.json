@@ -17,6 +17,9 @@
     "src"
   ],
   "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
   "exports": {
     "./assert": "./src/assert.ts",
     "./assets": "./src/assets.ts",

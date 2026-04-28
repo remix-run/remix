@@ -19,14 +19,14 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
-    "bin": {
-      "remix": "./dist/cli.js"
-    },
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
@@ -34,9 +34,6 @@
       },
       "./package.json": "./package.json"
     }
-  },
-  "bin": {
-    "remix": "./src/cli.ts"
   },
   "dependencies": {
     "@remix-run/test": "workspace:^",

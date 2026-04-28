@@ -19,6 +19,9 @@
     "!src/**/*.test.*"
   ],
   "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
   "bin": {
     "remix-test": "./src/cli-entry.ts"
   },

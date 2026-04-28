@@ -8,6 +8,25 @@ import { describe, it } from '@remix-run/test'
 
 const PACKAGE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const REMIX_PACKAGE_DIR = resolve(PACKAGE_DIR, '../remix')
+const TEST_PACKAGE_DIR = resolve(PACKAGE_DIR, '../test')
+
+interface PackageJsonWithEngines {
+  engines: {
+    node: string
+  }
+}
+
+interface CliPackageJson extends PackageJsonWithEngines {
+  bin?: Record<string, string>
+  publishConfig: {
+    bin?: Record<string, string>
+  }
+}
+
+interface RemixPackageJson extends PackageJsonWithEngines {
+  bin?: Record<string, string>
+  version: string
+}
 
 describe('cli entrypoint', () => {
   it('runs directly from the source entrypoint', () => {
@@ -36,6 +55,19 @@ describe('cli entrypoint', () => {
     assert.deepEqual(remixPackageJson.bin, {
       remix: './src/cli-entry.ts',
     })
+  })
+
+  it('does not publish a direct @remix-run/cli bin', () => {
+    let cliPackageJson = readCliPackageJson()
+
+    assert.equal(cliPackageJson.bin, undefined)
+    assert.equal(cliPackageJson.publishConfig.bin, undefined)
+  })
+
+  it('declares the Node.js floor for published CLI entrypoints', () => {
+    assert.equal(readCliPackageJson().engines.node, '>=24.3.0')
+    assert.equal(readRemixPackageJson().engines.node, '>=24.3.0')
+    assert.equal(readTestPackageJson().engines.node, '>=24.3.0')
   })
 
   it('generates remix/cli as a regular package re-export', () => {
@@ -76,9 +108,20 @@ describe('cli entrypoint', () => {
   })
 })
 
-function readRemixPackageJson(): { bin?: Record<string, string>; version: string } {
-  return JSON.parse(fs.readFileSync(resolve(REMIX_PACKAGE_DIR, 'package.json'), 'utf8')) as {
-    bin?: Record<string, string>
-    version: string
-  }
+function readRemixPackageJson(): RemixPackageJson {
+  return JSON.parse(
+    fs.readFileSync(resolve(REMIX_PACKAGE_DIR, 'package.json'), 'utf8'),
+  ) as RemixPackageJson
+}
+
+function readCliPackageJson(): CliPackageJson {
+  return JSON.parse(
+    fs.readFileSync(resolve(PACKAGE_DIR, 'package.json'), 'utf8'),
+  ) as CliPackageJson
+}
+
+function readTestPackageJson(): PackageJsonWithEngines {
+  return JSON.parse(
+    fs.readFileSync(resolve(TEST_PACKAGE_DIR, 'package.json'), 'utf8'),
+  ) as PackageJsonWithEngines
 }
