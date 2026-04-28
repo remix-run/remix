@@ -26,7 +26,9 @@ interface CliPackageJson extends PackageJsonWithEngines {
 
 interface RemixPackageJson extends PackageJsonWithEngines {
   bin?: Record<string, string>
-  version: string
+  exports: {
+    './cli'?: string
+  }
 }
 
 describe('cli entrypoint', () => {
@@ -53,21 +55,11 @@ describe('cli entrypoint', () => {
     assert.equal(readTestPackageJson().engines.node, '>=24.3.0')
   })
 
-  it('generates remix/cli as a regular package re-export', () => {
-    let source = fs
-      .readFileSync(resolve(REMIX_PACKAGE_DIR, 'src', 'cli.ts'), 'utf8')
-      .replaceAll('\r\n', '\n')
+  it('exposes remix/cli from the generated remix package', () => {
+    let remixPackageJson = readRemixPackageJson()
 
-    assert.equal(
-      source,
-      [
-        '// IMPORTANT: This file is auto-generated, please do not edit manually.',
-        "export * from '@remix-run/cli'",
-        '',
-      ].join('\n'),
-    )
+    assert.equal(remixPackageJson.exports['./cli'], './src/cli.ts')
   })
-
 })
 
 function readRemixPackageJson(): RemixPackageJson {
