@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createRoot, on, type Handle, type RemixNode } from '@remix-run/component'
+import { createRoot, on, type Handle, type RemixNode } from '@remix-run/ui'
 
 import * as popover from '../popover/popover.ts'
 import { onSelectChange, Option, Select, SelectChangeEvent } from './select.tsx'

@@ -1,5 +1,5 @@
-import { createElement } from '@remix-run/component'
-import type { RemixNode } from '@remix-run/component'
+import { createElement } from '@remix-run/ui'
+import type { RemixNode } from '@remix-run/ui'
 
 import type { GlyphValues } from '../theme/glyph-contract.ts'
 

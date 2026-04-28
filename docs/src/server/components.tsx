@@ -1,7 +1,7 @@
-import type { RemixNode } from 'remix/component/jsx-runtime'
+import type { RemixNode } from 'remix/ui/jsx-runtime'
 import type { DocFile } from './markdown.ts'
 import { routes } from './routes.ts'
-import type { Handle } from 'remix/component'
+import type { Handle } from 'remix/ui'
 
 export function Home() {
   return () => {

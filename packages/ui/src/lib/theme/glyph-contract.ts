@@ -1,4 +1,4 @@
-import type { RemixElement } from '@remix-run/component'
+import type { RemixElement } from '@remix-run/ui'
 
 export const glyphNames = [
   'add',

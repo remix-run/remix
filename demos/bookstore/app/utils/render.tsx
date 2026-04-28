@@ -1,6 +1,6 @@
 import * as path from 'node:path'
-import type { RemixNode } from 'remix/component'
-import { renderToStream } from 'remix/component/server'
+import type { RemixNode } from 'remix/ui'
+import { renderToStream } from 'remix/ui/server'
 import { getContext } from 'remix/async-context-middleware'
 import type { RequestContext, Router } from 'remix/fetch-router'
 

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createRoot, type RemixNode } from '@remix-run/component'
+import { createRoot, type RemixNode } from '@remix-run/ui'
 
 import {
   hiddenTypeahead,

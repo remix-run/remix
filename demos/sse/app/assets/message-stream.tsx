@@ -1,4 +1,4 @@
-import { addEventListeners, clientEntry, css, type Handle } from 'remix/component'
+import { addEventListeners, clientEntry, css, type Handle } from 'remix/ui'
 
 import { routes } from '../routes.ts'
 

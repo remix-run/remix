@@ -10,7 +10,7 @@ import {
   type Handle,
   type Props,
   type RemixNode,
-} from '@remix-run/component'
+} from '@remix-run/ui'
 import { Glyph } from '../glyph/glyph.tsx'
 import { theme } from '../theme/theme.ts'
 

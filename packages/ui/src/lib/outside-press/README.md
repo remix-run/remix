@@ -9,7 +9,7 @@ Use it to dismiss custom transient UI like floating panels, inspectors, or inlin
 Apply `onOutsidePress(...)` to the element that defines the inside boundary. When a primary outside press starts, close the UI and re-render.
 
 ```tsx
-import { css, on, type Handle } from 'remix/component'
+import { css, on, type Handle } from 'remix/ui'
 import { Button } from '@remix-run/ui/button'
 import { onOutsidePress } from '@remix-run/ui/on-outside-pointer-down'
 

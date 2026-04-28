@@ -150,7 +150,7 @@ function Layout(props: { children: RemixNode }) {
 Consume the shared token contract from app code and first-party components:
 
 ```tsx
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 import { theme } from 'remix/ui'
 
 let card = css({
@@ -168,7 +168,7 @@ let card = css({
 Render shared glyphs separately from the theme styles:
 
 ```tsx
-import type { RemixNode } from 'remix/component'
+import type { RemixNode } from 'remix/ui'
 import { Button } from '@remix-run/ui/button'
 import { Glyph } from '@remix-run/ui/glyph'
 import { RMX_01, RMX_01_GLYPHS } from '@remix-run/ui/theme'

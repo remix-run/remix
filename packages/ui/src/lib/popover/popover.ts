@@ -6,7 +6,7 @@ import {
   type CSSMixinDescriptor,
   type Handle,
   type RemixNode,
-} from '@remix-run/component'
+} from '@remix-run/ui'
 import { anchor as positionAnchor, type AnchorOptions } from '../anchor/anchor.ts'
 import { onOutsideClick } from '../outside-click/outside-click-mixin.ts'
 import { theme } from '../theme/theme.ts'

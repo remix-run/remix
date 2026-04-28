@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { renderToString } from '@remix-run/component/server'
+import { renderToString } from '@remix-run/ui/server'
 
 import { glyphContract, RMX_01_GLYPHS, type GlyphName } from '../theme/theme.ts'
 import { createGlyphSheet, Glyph } from './glyph.tsx'

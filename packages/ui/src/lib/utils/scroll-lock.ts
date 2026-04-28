@@ -1,4 +1,4 @@
-import { createMixin, on, type ElementProps } from '@remix-run/component'
+import { createMixin, on, type ElementProps } from '@remix-run/ui'
 
 type ScrollLockState = {
   count: number

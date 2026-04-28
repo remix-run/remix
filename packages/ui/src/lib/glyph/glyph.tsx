@@ -1,5 +1,5 @@
-import { createElement } from '@remix-run/component'
-import type { Handle, Props, RemixElement } from '@remix-run/component'
+import { createElement } from '@remix-run/ui'
+import type { Handle, Props, RemixElement } from '@remix-run/ui'
 
 import {
   glyphContract,

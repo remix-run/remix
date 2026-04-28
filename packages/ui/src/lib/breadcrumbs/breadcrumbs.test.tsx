@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { renderToString } from '@remix-run/component/server'
+import { renderToString } from '@remix-run/ui/server'
 
 import { Breadcrumbs } from './breadcrumbs.tsx'
 

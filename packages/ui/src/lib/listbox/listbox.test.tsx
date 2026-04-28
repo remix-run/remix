@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
+import { createRoot, type Handle, type RemixNode } from '@remix-run/ui'
 
 import * as listbox from './listbox.ts'
 import type { ListboxOption, ListboxRef, ListboxValue } from './listbox.ts'

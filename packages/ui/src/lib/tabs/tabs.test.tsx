@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { createRoot, css, type Handle, type RemixNode } from '@remix-run/component'
-import { renderToString } from '@remix-run/component/server'
+import { createRoot, css, type Handle, type RemixNode } from '@remix-run/ui'
+import { renderToString } from '@remix-run/ui/server'
 
 import {
   onTabsChange,

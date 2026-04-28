@@ -55,6 +55,6 @@ client behavior.
   Use when authoring or reviewing reusable mixins, touching `createMixin(...)`, using
   `handle.addEventListener('insert' | 'remove', ...)`, or reasoning about mixin lifecycle
   semantics and type flow.
-- [packages/component/docs](https://github.com/remix-run/remix/tree/main/packages/component/docs)
+- [packages/ui/docs](https://github.com/remix-run/remix/tree/main/packages/ui/docs)
   Use as the general upstream docs directory when the local references here are not enough and you
   need to choose the most relevant Component docs to open.

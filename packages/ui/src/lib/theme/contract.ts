@@ -1,4 +1,4 @@
-import type { css, Handle, MixinDescriptor, RemixElement } from '@remix-run/component'
+import type { css, Handle, MixinDescriptor, RemixElement } from '@remix-run/ui'
 
 export interface ThemeVariableTree {
   [key: string]: string | ThemeVariableTree

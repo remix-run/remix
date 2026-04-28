@@ -1,5 +1,5 @@
-import type { MixValue, RemixNode } from 'remix/component'
-import { css } from 'remix/component'
+import type { MixValue, RemixNode } from 'remix/ui'
+import { css } from 'remix/ui'
 
 import * as styles from './styles.ts'
 

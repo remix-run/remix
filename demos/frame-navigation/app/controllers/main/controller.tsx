@@ -1,5 +1,5 @@
 import type { Controller } from 'remix/fetch-router'
-import type { RemixNode } from 'remix/component'
+import type { RemixNode } from 'remix/ui'
 
 import { requireAuth } from '../../middleware/auth.ts'
 import type { routes } from '../../routes.ts'

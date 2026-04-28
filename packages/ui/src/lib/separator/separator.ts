@@ -1,4 +1,4 @@
-import { css, type CSSMixinDescriptor } from '@remix-run/component'
+import { css, type CSSMixinDescriptor } from '@remix-run/ui'
 
 import { theme } from '../theme/theme.ts'
 

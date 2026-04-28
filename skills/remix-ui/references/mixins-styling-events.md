@@ -2,7 +2,7 @@
 
 For host elements, compose behavior with `mix`, not legacy host props.
 
-Common mixins exported from `remix/component`:
+Common mixins exported from `remix/ui`:
 
 - `on(...)`
 - `ref(...)`

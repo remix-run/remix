@@ -15,11 +15,16 @@
     "README.md",
     "dist",
     "src",
-    "!src/**/*.test.ts"
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx"
   ],
   "type": "module",
   "sideEffects": false,
   "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
     "./accordion": {
       "types": "./src/accordion.ts",
       "default": "./src/accordion.ts"
@@ -39,6 +44,14 @@
     "./combobox": {
       "types": "./src/combobox.ts",
       "default": "./src/combobox.ts"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./src/jsx-dev-runtime.ts",
+      "default": "./src/jsx-dev-runtime.ts"
+    },
+    "./jsx-runtime": {
+      "types": "./src/jsx-runtime.ts",
+      "default": "./src/jsx-runtime.ts"
     },
     "./glyph": {
       "types": "./src/lib/glyph/glyph.tsx",
@@ -64,6 +77,10 @@
       "types": "./src/separator.ts",
       "default": "./src/separator.ts"
     },
+    "./server": {
+      "types": "./src/server.ts",
+      "default": "./src/server.ts"
+    },
     "./theme": {
       "types": "./src/lib/theme/theme.ts",
       "default": "./src/lib/theme/theme.ts"
@@ -80,6 +97,10 @@
   },
   "publishConfig": {
     "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
       "./accordion": {
         "types": "./dist/accordion.d.ts",
         "default": "./dist/accordion.js"
@@ -99,6 +120,14 @@
       "./combobox": {
         "types": "./dist/combobox.d.ts",
         "default": "./dist/combobox.js"
+      },
+      "./jsx-dev-runtime": {
+        "types": "./dist/jsx-dev-runtime.d.ts",
+        "default": "./dist/jsx-dev-runtime.js"
+      },
+      "./jsx-runtime": {
+        "types": "./dist/jsx-runtime.d.ts",
+        "default": "./dist/jsx-runtime.js"
       },
       "./glyph": {
         "types": "./dist/lib/glyph/glyph.d.ts",
@@ -124,6 +153,10 @@
         "types": "./dist/separator.d.ts",
         "default": "./dist/separator.js"
       },
+      "./server": {
+        "types": "./dist/server.d.ts",
+        "default": "./dist/server.js"
+      },
       "./theme": {
         "types": "./dist/lib/theme/theme.d.ts",
         "default": "./dist/lib/theme/theme.js"
@@ -140,9 +173,7 @@
     }
   },
   "devDependencies": {
-    "@remix-run/component": "workspace:*",
     "@types/node": "catalog:",
-    "@types/dom-navigation": "^1.0.7",
     "@vitest/browser": "^3.2.4",
     "@vitest/coverage-v8": "^3.2.4",
     "@typescript/native-preview": "catalog:",
@@ -151,7 +182,7 @@
     "vitest": "^3.2.4"
   },
   "dependencies": {
-    "@remix-run/component": "workspace:^"
+    "@types/dom-navigation": "^1.0.7"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -160,6 +191,8 @@
     "lint:fix": "pnpm -w exec oxlint packages/ui -A all --fix --quiet",
     "prepublishOnly": "pnpm run build",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [

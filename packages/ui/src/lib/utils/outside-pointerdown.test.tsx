@@ -3,7 +3,7 @@
 
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { createRoot, createElement, on, type Handle } from '@remix-run/component'
+import { createRoot, createElement, on, type Handle } from '@remix-run/ui'
 
 import { onOutsidePointerDown } from './outside-pointerdown.ts'
 

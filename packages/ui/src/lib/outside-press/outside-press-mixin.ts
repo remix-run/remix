@@ -1,4 +1,4 @@
-import { createMixin, type ElementProps } from '@remix-run/component'
+import { createMixin, type ElementProps } from '@remix-run/ui'
 
 export type OutsidePressEvent = PointerEvent & { currentTarget: HTMLElement }
 export type OutsidePressHandler = (event: OutsidePressEvent) => void

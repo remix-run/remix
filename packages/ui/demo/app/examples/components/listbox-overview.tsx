@@ -1,4 +1,4 @@
-import { css, on, type Handle } from 'remix/component'
+import { css, on, type Handle } from 'remix/ui'
 import { Glyph } from '@remix-run/ui/glyph'
 import * as listbox from '@remix-run/ui/listbox'
 import type { ListboxValue } from '@remix-run/ui/listbox'

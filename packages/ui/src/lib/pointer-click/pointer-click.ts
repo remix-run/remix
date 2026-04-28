@@ -1,4 +1,4 @@
-import { createMixin, on } from '@remix-run/component'
+import { createMixin, on } from '@remix-run/ui'
 
 type PointerClickEvent = PointerEvent | MouseEvent
 type PointerClickHandler = (event: PointerClickEvent) => void

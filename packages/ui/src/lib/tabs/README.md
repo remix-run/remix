@@ -7,7 +7,7 @@ Use it when you need a tablist, tab triggers, and tab panels. `tabs.listStyle` a
 ## Usage
 
 ```tsx
-import { css, type Handle } from 'remix/component'
+import { css, type Handle } from 'remix/ui'
 import { Tab, Tabs, TabsList, TabsPanel } from 'remix/ui/tabs'
 
 let panel = css({

@@ -1,5 +1,5 @@
-import { Frame, css } from 'remix/component'
-import type { Handle } from 'remix/component'
+import { Frame, css } from 'remix/ui'
+import type { Handle } from 'remix/ui'
 import { RMX_01, RMX_01_GLYPHS } from '@remix-run/ui/theme'
 
 import {

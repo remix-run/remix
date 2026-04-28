@@ -1,4 +1,4 @@
-import { clientEntry } from 'remix/component'
+import { clientEntry } from 'remix/ui'
 import type { Controller } from 'remix/fetch-router'
 
 import { render } from '../../config/render.tsx'

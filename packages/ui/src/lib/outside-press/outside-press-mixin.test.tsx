@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { createRoot, on, type Handle } from '@remix-run/component'
+import { createRoot, on, type Handle } from '@remix-run/ui'
 
 import { onOutsidePress, type OutsidePressEvent } from './outside-press-mixin.ts'
 

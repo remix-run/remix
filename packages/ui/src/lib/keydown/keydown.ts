@@ -1,4 +1,4 @@
-import { createMixin, on } from '@remix-run/component'
+import { createMixin, on } from '@remix-run/ui'
 
 export const onKeyDown = createMixin<
   HTMLElement,

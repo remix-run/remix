@@ -13,7 +13,7 @@ import {
   type MixinHandle,
   type Props,
   type RemixNode,
-} from '@remix-run/component'
+} from '@remix-run/ui'
 import * as button from '../button/button.tsx'
 import { Glyph } from '../glyph/glyph.tsx'
 import * as listbox from '../listbox/listbox.ts'

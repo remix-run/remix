@@ -1,6 +1,6 @@
 // @jsxRuntime classic
 // @jsx createElement
-import { createElement, createMixin, on, type ElementProps } from '@remix-run/component'
+import { createElement, createMixin, on, type ElementProps } from '@remix-run/ui'
 
 type FilterTextHandler = (text: string) => void
 

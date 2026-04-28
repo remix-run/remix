@@ -1,4 +1,4 @@
-import { clientEntry, css } from 'remix/component'
+import { clientEntry, css } from 'remix/ui'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
 
 import { ThemeBuilder } from './theme-builder.tsx'

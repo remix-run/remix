@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { createRoot, on } from '@remix-run/component'
+import { createRoot, on } from '@remix-run/ui'
 
 import { onPointerDownClick, onPointerUpClick } from './pointer-click.ts'
 

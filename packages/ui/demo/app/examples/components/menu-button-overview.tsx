@@ -1,4 +1,4 @@
-import { type Handle } from 'remix/component'
+import { type Handle } from 'remix/ui'
 import { Menu, MenuItem, onMenuSelect, Submenu } from '@remix-run/ui/menu'
 import { separatorStyle } from '@remix-run/ui/separator'
 

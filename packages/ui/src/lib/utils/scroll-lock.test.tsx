@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createRoot, type Handle } from '@remix-run/component'
+import { createRoot, type Handle } from '@remix-run/ui'
 
 import { lockScroll, lockScrollOnToggle } from './scroll-lock.ts'
 

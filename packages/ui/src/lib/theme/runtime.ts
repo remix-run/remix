@@ -1,4 +1,4 @@
-import { createElement, type Handle } from '@remix-run/component'
+import { createElement, type Handle } from '@remix-run/ui'
 
 import {
   theme,

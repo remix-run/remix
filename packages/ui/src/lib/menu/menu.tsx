@@ -12,7 +12,7 @@ import {
   type Handle,
   type Props,
   type RemixNode,
-} from '@remix-run/component'
+} from '@remix-run/ui'
 import { type AnchorOptions } from '../anchor/anchor.ts'
 import * as button from '../button/button.tsx'
 import { Glyph } from '../glyph/glyph.tsx'

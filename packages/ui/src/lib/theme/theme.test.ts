@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
-import { createElement } from '@remix-run/component'
-import { renderToString } from '@remix-run/component/server'
+import { createElement } from '@remix-run/ui'
+import { renderToString } from '@remix-run/ui/server'
 
 import * as accordion from '../accordion/accordion.tsx'
 import * as button from '../button/button.tsx'

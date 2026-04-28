@@ -1,7 +1,7 @@
 // @jsxRuntime classic
 // @jsx createElement
-import { createElement } from '@remix-run/component'
-import { renderToString } from '@remix-run/component/server'
+import { createElement } from '@remix-run/ui'
+import { renderToString } from '@remix-run/ui/server'
 import { describe, expect, it } from 'vitest'
 
 import { Glyph } from '../glyph/glyph.tsx'

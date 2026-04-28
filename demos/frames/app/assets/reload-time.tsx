@@ -1,4 +1,4 @@
-import { clientEntry, css, on, type Handle } from 'remix/component'
+import { clientEntry, css, on, type Handle } from 'remix/ui'
 
 export const ReloadTime = clientEntry(
   '/assets/reload-time.js#ReloadTime',

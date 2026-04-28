@@ -1,4 +1,4 @@
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 
 import { EmailIcon } from '../../../ui/icons.tsx'
 import { TextField } from '../../../ui/form-field.tsx'

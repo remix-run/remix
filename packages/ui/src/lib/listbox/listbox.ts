@@ -6,7 +6,7 @@ import {
   type CSSMixinDescriptor,
   type Handle,
   type RemixNode,
-} from '@remix-run/component'
+} from '@remix-run/ui'
 import { theme } from '../theme/theme.ts'
 import {
   hiddenTypeahead,

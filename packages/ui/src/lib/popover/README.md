@@ -7,7 +7,7 @@ Use it for custom surfaces like filters, inspectors, and view options. Higher-le
 ## Usage
 
 ```tsx
-import { css, on, type Handle } from 'remix/component'
+import { css, on, type Handle } from 'remix/ui'
 import { Button } from '@remix-run/ui/button'
 import { Glyph } from '@remix-run/ui/glyph'
 import { popover } from '@remix-run/ui/popover'

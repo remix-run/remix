@@ -1,4 +1,4 @@
-import { createMixin } from '@remix-run/component'
+import { createMixin } from '@remix-run/ui'
 
 type OutsidePointerDownEvent = PointerEvent | MouseEvent
 type OutsidePointerDownHandler = (event: OutsidePointerDownEvent) => void
