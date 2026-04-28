@@ -1,4 +1,4 @@
-# **RMX_APP_DISPLAY_NAME**
+# %%RMX_APP_DISPLAY_NAME%%
 
 A minimal Remix application starter with a home page and an auth page.
 
