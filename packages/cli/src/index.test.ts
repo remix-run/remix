@@ -54,7 +54,9 @@ describe('cli entrypoint', () => {
   })
 
   it('generates remix/cli as a regular package re-export', () => {
-    let source = fs.readFileSync(resolve(REMIX_PACKAGE_DIR, 'src', 'cli.ts'), 'utf8')
+    let source = fs
+      .readFileSync(resolve(REMIX_PACKAGE_DIR, 'src', 'cli.ts'), 'utf8')
+      .replaceAll('\r\n', '\n')
 
     assert.equal(
       source,
