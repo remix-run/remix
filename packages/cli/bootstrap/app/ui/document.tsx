@@ -5,7 +5,7 @@ export interface DocumentProps {
   title?: string
 }
 
-const DEFAULT_TITLE = decodeURIComponent('__RMX_APP_DISPLAY_NAME_URI_COMPONENT__')
+const DEFAULT_TITLE = decodeURIComponent('%%RMX_APP_DISPLAY_NAME_URI_COMPONENT%%')
 
 export function Document() {
   return ({ title = DEFAULT_TITLE, children }: DocumentProps) => (

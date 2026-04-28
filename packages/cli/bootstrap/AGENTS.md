@@ -1,4 +1,4 @@
-# **RMX_APP_DISPLAY_NAME** Agent Guide
+# %%RMX_APP_DISPLAY_NAME%% Agent Guide
 
 This app was scaffolded with `remix new`. Use these conventions when continuing to build it out.
 
