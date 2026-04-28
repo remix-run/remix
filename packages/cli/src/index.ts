@@ -6,11 +6,11 @@ import { renderCliError } from './lib/errors.ts'
 if (import.meta.main) {
   void runMain().then(
     (exitCode) => {
-      setExitCode(exitCode)
+      exitProcess(exitCode)
     },
     (error: unknown) => {
       process.stderr.write(renderCliError(error))
-      setExitCode(1)
+      exitProcess(1)
     },
   )
 }
@@ -18,12 +18,11 @@ if (import.meta.main) {
 async function runMain(): Promise<number> {
   return await run(undefined, {
     remixVersion: await readDevRemixVersion(),
-    shouldExitProcess: true,
   })
 }
 
-function setExitCode(exitCode: number) {
-  globalThis.process.exitCode = exitCode
+function exitProcess(exitCode: number): never {
+  globalThis.process.exit(exitCode)
 }
 
 export { run }
