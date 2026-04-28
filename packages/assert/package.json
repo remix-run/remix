@@ -36,7 +36,7 @@
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "node --test",
-    "test:bun": "bun --test",
+    "test:bun": "bun test",
     "typecheck": "tsgo --noEmit"
   },
   "devDependencies": {
