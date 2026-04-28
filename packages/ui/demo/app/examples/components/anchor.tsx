@@ -1,4 +1,4 @@
-import { css, ref } from 'remix/component'
+import { css, ref } from 'remix/ui'
 import { anchor } from '@remix-run/ui/anchor'
 import { theme } from '@remix-run/ui/theme'
 type Placement =

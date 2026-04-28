@@ -1,4 +1,4 @@
-import { css } from '@remix-run/component'
+import { css } from '@remix-run/ui'
 
 const badgeStyles = css({
   display: 'inline-flex',

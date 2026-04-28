@@ -80,7 +80,7 @@ export type MiddlewareContext<middleware extends readonly AnyMiddleware[]> = App
  * @returns A response to short-circuit the chain, or `undefined`/`void` to continue
  */
 export interface Middleware<
-  method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
+  _method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   params extends Record<string, any> = {},
   transform extends MiddlewareContextTransform = IdentityContextTransform,
 > {
@@ -106,7 +106,7 @@ export interface Middleware<
 export type NextFunction = () => Promise<Response>
 
 export function runMiddleware<
-  method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
+  _method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   params extends Record<string, any> = {},
 >(
   middleware: AnyMiddleware[],

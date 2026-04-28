@@ -1,4 +1,4 @@
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 
 import { designSystem } from '../../ui/design-system.ts'
 import { formatProviderLabel, renderProviderIcon } from '../../ui/provider-presentation.tsx'

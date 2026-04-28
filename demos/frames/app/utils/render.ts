@@ -1,5 +1,5 @@
-import type { RemixNode } from 'remix/component'
-import { renderToStream } from 'remix/component/server'
+import type { RemixNode } from 'remix/ui'
+import { renderToStream } from 'remix/ui/server'
 import type { Router } from 'remix/fetch-router'
 
 type RenderOptions = {

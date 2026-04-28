@@ -10,7 +10,7 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "@remix-run/component"
+    "jsxImportSource": "@remix-run/ui"
   },
-  "exclude": ["dist"]
+  "exclude": ["bench", "demo", "demos", "dist"]
 }

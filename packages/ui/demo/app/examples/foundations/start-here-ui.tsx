@@ -1,4 +1,4 @@
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 import { Button } from '@remix-run/ui/button'
 import { Glyph } from '@remix-run/ui/glyph'
 import { theme } from '@remix-run/ui/theme'

@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/component'
+import type { RemixNode } from 'remix/ui'
 
 import * as styles from './styles.ts'
 

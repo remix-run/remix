@@ -1,5 +1,5 @@
-import { css } from '@remix-run/component'
-import type { RemixNode } from '@remix-run/component'
+import { css } from '@remix-run/ui'
+import type { RemixNode } from '@remix-run/ui'
 
 const panelStyles = css({
   display: 'grid',

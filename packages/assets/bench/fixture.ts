@@ -55,12 +55,12 @@ async function readBasicFixture(): Promise<BenchFixture> {
       '/assets/app/summary.@',
       '/assets/bench-packages/shared/strings.@',
       '/assets/bench-packages/ui/panel.@',
-      '/assets/packages/component/',
+      '/assets/packages/ui/',
     ],
     expectedPreloadUrlSubstrings: [
       '/assets/bench-packages/shared/strings.@',
       '/assets/bench-packages/ui/panel.@',
-      '/assets/packages/component/',
+      '/assets/packages/ui/',
     ],
     createStats: async () => [
       { label: 'app', value: await countSourceModules(projectRoot) },
@@ -84,7 +84,7 @@ async function readDeepGraphFixture(): Promise<BenchFixture> {
     entryPointFile: 'app/entry.tsx',
     entryPointUrl: '/assets/app/entry.tsx',
     expectedEntryUrlSubstrings: [],
-    expectedPreloadUrlSubstrings: ['/assets/bench-packages/ui/', '/assets/packages/component/'],
+    expectedPreloadUrlSubstrings: ['/assets/bench-packages/ui/', '/assets/packages/ui/'],
     createStats: async () => [
       { label: 'app', value: await countSourceModules(projectRoot) },
       { label: 'benchPackages', value: await countSourceModules(packagesRoot) },

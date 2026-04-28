@@ -1,4 +1,4 @@
-import type { Props } from 'remix/component'
+import type { Props } from 'remix/ui'
 
 export interface RestfulFormProps extends Props<'form'> {
   /**

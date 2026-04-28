@@ -1,4 +1,4 @@
-import type { Handle, RemixNode } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/ui'
 import type { Route } from 'remix/fetch-router/routes'
 
 type NavLinkProps = {

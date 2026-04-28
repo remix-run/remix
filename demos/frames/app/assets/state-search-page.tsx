@@ -1,4 +1,4 @@
-import { clientEntry, Frame, css, on, ref, type Handle } from 'remix/component'
+import { clientEntry, Frame, css, on, ref, type Handle } from 'remix/ui'
 import { routes } from '../routes.ts'
 
 const moduleUrl = '/assets/state-search-page.js#StateSearchPage'

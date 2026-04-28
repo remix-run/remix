@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/component'
+import type { RemixNode } from 'remix/ui'
 
 import type { AuthMethod } from '../utils/auth-session.ts'
 import type { ExternalProviderName } from '../utils/external-auth.ts'

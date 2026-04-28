@@ -1,4 +1,4 @@
-import { Frame, type Handle } from 'remix/component'
+import { Frame, type Handle } from 'remix/ui'
 import type { BuildAction } from 'remix/fetch-router'
 
 import { routes } from '../routes.ts'

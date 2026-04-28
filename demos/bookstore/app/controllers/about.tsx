@@ -1,5 +1,5 @@
 import type { BuildAction } from 'remix/fetch-router'
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 
 import { routes } from '../routes.ts'
 import { render } from '../utils/render.tsx'

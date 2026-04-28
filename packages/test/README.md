@@ -353,24 +353,6 @@ export default {
 
 Set `browser.open: true` to keep the browser open after tests finish — useful for debugging failures.
 
-### Assertions
-
-`remix/test` re-exports `remix/assert`. See the [`@remix-run/assert` README](../assert/README.md) for full API documentation.
-
-```ts
-import * as assert from 'remix/assert'
-
-assert.ok(value)
-assert.equal(actual, expected)
-assert.notEqual(actual, expected)
-assert.deepEqual(actual, expected)
-assert.notDeepEqual(actual, expected)
-assert.match(string, regexp)
-assert.throws(fn)
-await assert.rejects(asyncFn)
-assert.fail('message')
-```
-
 ## License
 
 See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

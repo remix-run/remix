@@ -1,5 +1,5 @@
-import { Frame } from 'remix/component'
-import type { Handle } from 'remix/component'
+import { Frame } from 'remix/ui'
+import type { Handle } from 'remix/ui'
 
 import type { ExampleEntry } from '../examples/index.tsx'
 import { getExampleContentHref } from '../examples/index.tsx'

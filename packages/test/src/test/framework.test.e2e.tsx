@@ -1,8 +1,8 @@
 import * as assert from 'node:assert/strict'
-import type { RemixNode } from '@remix-run/component/jsx-runtime'
-import { renderToString } from '@remix-run/component/server'
+import type { RemixNode } from '@remix-run/ui/jsx-runtime'
+import { renderToString } from '@remix-run/ui/server'
 import { describe, it } from '../lib/framework.ts'
-import type { Handle } from '../../../component/src/lib/component.ts'
+import type { Handle } from '../../../ui/src/runtime/component.ts'
 
 const html = async (n: RemixNode) =>
   new Response(await renderToString(n), {

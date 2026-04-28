@@ -61,9 +61,9 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 
 - Add `remix/cors-middleware` to re-export the CORS middleware APIs from `@remix-run/cors-middleware`.
 
-- Update `remix/component` and `remix/component/server` to re-export the latest `@remix-run/component` frame-navigation APIs.
+- Update `remix/ui` and `remix/ui/server` to re-export the latest `@remix-run/ui` frame-navigation APIs.
 
-  `remix/component` now exposes `navigate(href, { src, target, history })`, `link(href, { src, target, history })`, `run({ loadModule, resolveFrame })`, and the `handle.frames.top` and `handle.frames.get(name)` helpers, while `remix/component/server` re-exports the SSR frame source APIs including `frameSrc`, `topFrameSrc`, and `ResolveFrameContext`.
+  `remix/ui` now exposes `navigate(href, { src, target, history })`, `link(href, { src, target, history })`, `run({ loadModule, resolveFrame })`, and the `handle.frames.top` and `handle.frames.get(name)` helpers, while `remix/ui/server` re-exports the SSR frame source APIs including `frameSrc`, `topFrameSrc`, and `ResolveFrameContext`.
 
 - Add browser-origin and CSRF protection middleware APIs to `remix`.
 
@@ -117,7 +117,7 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   - `remix/session-storage-memcache` to re-export APIs from `@remix-run/session-storage-memcache`
   - `remix/session-storage-redis` to re-export APIs from `@remix-run/session-storage-redis`
 
-- Remove the root export from the `remix` package so you will no longer import anything from `remix` and will instead always import from a sub-path such as `remix/fetch-router` or `remix/component`
+- Remove the root export from the `remix` package so you will no longer import anything from `remix` and will instead always import from a sub-path such as `remix/fetch-router` or `remix/ui`
 
 - Bumped `@remix-run/*` dependencies:
   - [`async-context-middleware@0.1.3`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.1.3)

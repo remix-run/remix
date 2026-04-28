@@ -6,7 +6,7 @@ Every component has two phases:
 2. Render phase: returned function runs on initial render and every update
 
 ```tsx
-import { on, type Handle } from 'remix/component'
+import { on, type Handle } from 'remix/ui'
 
 function Counter(handle: Handle, initialCount = 0) {
   let count = initialCount
@@ -55,7 +55,7 @@ function Counter(handle: Handle, initialCount = 0) {
 Prefer:
 
 ```tsx
-import { addEventListeners, type Handle } from 'remix/component'
+import { addEventListeners, type Handle } from 'remix/ui'
 
 function ResizeTracker(handle: Handle) {
   let width = window.innerWidth

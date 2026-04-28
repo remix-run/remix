@@ -1,6 +1,6 @@
 import type { Controller } from 'remix/fetch-router'
-import type { Handle, RemixNode } from 'remix/component'
-import { Frame } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/ui'
+import { Frame } from 'remix/ui'
 import { getContext } from 'remix/async-context-middleware'
 
 import { requireAuth } from '../../middleware/auth.ts'

@@ -1,4 +1,4 @@
-import { on } from 'remix/component'
+import { on } from 'remix/ui'
 import { Menu, MenuItem, onMenuSelect } from '@remix-run/ui/menu'
 export default function example() {
   return () => (

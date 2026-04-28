@@ -56,7 +56,7 @@ If you configure the external providers locally, use these callback URLs:
 - module-scope provider configuration with a boot-time provider registry
 - form parsing with `remix/data-schema/form-data`
 - local persistence with `remix/data-table` and SQLite
-- rendering pages with `remix/component`
+- rendering pages with `remix/ui`
 
 ## Data Storage
 

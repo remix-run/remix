@@ -3,7 +3,7 @@
 Use `clientEntry()` to mark interactive islands and `run()` to hydrate them.
 
 ```tsx
-import { clientEntry, on, run, type Handle } from 'remix/component'
+import { clientEntry, on, run, type Handle } from 'remix/ui'
 
 export let Counter = clientEntry('/assets/entry.js#Counter', (handle: Handle) => {
   let count = 0
@@ -55,7 +55,7 @@ Rules:
 Use `<Frame>` for server-rendered regions that should load or reload independently.
 
 ```tsx
-import { renderToStream } from 'remix/component/server'
+import { renderToStream } from 'remix/ui/server'
 
 let stream = renderToStream(<App />, {
   frameSrc: request.url,
