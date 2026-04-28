@@ -5,7 +5,6 @@ import { createRequire } from 'node:module'
 import * as semver from 'semver'
 
 import { MINIMUM_SUPPORTED_NODE_VERSION } from '../bootstrap-project.ts'
-import { getRuntimeRemixVersion } from '../runtime-context.ts'
 import {
   createDoctorSuite,
   type DoctorFinding,
@@ -119,7 +118,10 @@ export async function checkEnvironment(
   }
 }
 
-export function getEnvironmentFixPlans(result: EnvironmentDoctorResult): DoctorFixPlan[] {
+export function getEnvironmentFixPlans(
+  result: EnvironmentDoctorResult,
+  remixVersion: string | undefined,
+): DoctorFixPlan[] {
   if (result.projectRoot == null || result.packageJson == null || result.packageJsonPath == null) {
     return []
   }
@@ -146,7 +148,7 @@ export function getEnvironmentFixPlans(result: EnvironmentDoctorResult): DoctorF
   if (result.suite.findings.some((finding) => finding.code === 'remix-dependency-missing')) {
     packageJson.dependencies = {
       ...packageJson.dependencies,
-      remix: getRuntimeRemixVersion() ?? 'latest',
+      remix: remixVersion ?? 'latest',
     }
     changed = true
   }

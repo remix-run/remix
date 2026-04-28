@@ -1,16 +1,16 @@
 import * as process from 'node:process'
 
+import type { CliContext } from '../cli-context.ts'
 import { invalidFlagCombination, renderCliError, toCliError } from '../errors.ts'
 import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
 import { createCommandReporter, type TextChannel } from '../reporter.ts'
 import { loadRouteMap, type LoadedRouteMap, type RouteTreeNode } from '../route-map.ts'
-import { getRuntimeCwd } from '../runtime-context.ts'
 import { lightRed } from '../terminal.ts'
 
 const CONTROLLERS_PATH_PREFIX = 'app/controllers/'
 
-export async function runRoutesCommand(argv: string[]): Promise<number> {
+export async function runRoutesCommand(argv: string[], context: CliContext): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
     process.stdout.write(getRoutesCommandHelpText())
     return 0
@@ -18,8 +18,8 @@ export async function runRoutesCommand(argv: string[]): Promise<number> {
 
   try {
     let options = parseRoutesCommandArgs(argv)
-    let routeMap = await loadRouteMap(getRuntimeCwd())
-    let reporter = createCommandReporter()
+    let routeMap = await loadRouteMap(context.cwd)
+    let reporter = createCommandReporter({ remixVersion: context.remixVersion })
 
     if (options.json) {
       process.stdout.write(`${JSON.stringify(routeMap, null, 2)}\n`)

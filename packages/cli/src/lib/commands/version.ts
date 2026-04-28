@@ -1,11 +1,11 @@
 import * as process from 'node:process'
 
-import { readRemixVersion } from '../remix-version.ts'
-import { renderCliError, toCliError } from '../errors.ts'
+import type { CliContext } from '../cli-context.ts'
+import { remixVersionUnavailable, renderCliError, toCliError } from '../errors.ts'
 import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
 
-export async function runVersionCommand(argv: string[]): Promise<number> {
+export async function runVersionCommand(argv: string[], context: CliContext): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
     process.stdout.write(getVersionCommandHelpText())
     return 0
@@ -13,8 +13,11 @@ export async function runVersionCommand(argv: string[]): Promise<number> {
 
   try {
     parseArgs(argv, {}, { maxPositionals: 0 })
+    if (context.remixVersion == null) {
+      throw remixVersionUnavailable()
+    }
 
-    process.stdout.write(`${readRemixVersion()}\n`)
+    process.stdout.write(`${context.remixVersion}\n`)
     return 0
   } catch (error) {
     process.stderr.write(

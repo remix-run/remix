@@ -1,6 +1,5 @@
 import * as process from 'node:process'
 
-import { readRemixVersion } from './remix-version.ts'
 import {
   bold,
   canUseAnsi,
@@ -62,6 +61,7 @@ export interface LabelOptions {
 }
 
 export interface CreateCommandReporterOptions {
+  remixVersion?: string
   stderr?: NodeJS.WriteStream
   statusFrameIntervalMs?: number
   stdout?: NodeJS.WriteStream
@@ -102,6 +102,7 @@ export function createCommandReporter(options: CreateCommandReporterOptions = {}
       stderr,
       getState(stderr),
       options.statusFrameIntervalMs ?? DEFAULT_STATUS_FRAME_INTERVAL_MS,
+      options.remixVersion,
     ),
   }
 }
@@ -283,21 +284,27 @@ class ReporterStatusChannel extends ReporterTextChannel implements StatusChannel
   #frameIntervalMs: number
   #hasRenderedStep = false
   #hasWrittenSummaryGap = false
+  #remixVersion: string | undefined
 
-  constructor(stream: NodeJS.WriteStream, state: ReporterStreamState, frameIntervalMs: number) {
+  constructor(
+    stream: NodeJS.WriteStream,
+    state: ReporterStreamState,
+    frameIntervalMs: number,
+    remixVersion: string | undefined,
+  ) {
     super(stream, state)
     this.#frameIntervalMs = frameIntervalMs
+    this.#remixVersion = remixVersion
   }
 
   async commandHeader(commandLabel: string): Promise<void> {
-    if (!this.getStream().isTTY) {
+    if (!this.getStream().isTTY || this.#remixVersion == null) {
       return
     }
 
-    try {
-      let version = readRemixVersion()
-      this.writeImmediate(`${remixWordmark(this.getStream())} v${version} - ${commandLabel}\n\n`)
-    } catch {}
+    this.writeImmediate(
+      `${remixWordmark(this.getStream())} v${this.#remixVersion} - ${commandLabel}\n\n`,
+    )
   }
 
   failStep(label = this.#activeLabel ?? ''): void {

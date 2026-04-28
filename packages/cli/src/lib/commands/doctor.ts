@@ -2,6 +2,7 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 
 import { checkControllerConventions } from '../doctor/controllers.ts'
+import type { CliContext } from '../cli-context.ts'
 import { checkEnvironment, getEnvironmentFixPlans } from '../doctor/environment.ts'
 import { applyDoctorFixPlans } from '../doctor/fixes.ts'
 import { checkProject, getProjectFixPlans } from '../doctor/project.ts'
@@ -23,7 +24,6 @@ import {
   type CommandReporter,
   type StepProgressReporter,
 } from '../reporter.ts'
-import { getRuntimeCwd } from '../runtime-context.ts'
 
 const DOCTOR_SUITE_LABELS = {
   controllers: {
@@ -46,7 +46,7 @@ interface DoctorCommandOptions {
   strict: boolean
 }
 
-export async function runDoctorCommand(argv: string[]): Promise<number> {
+export async function runDoctorCommand(argv: string[], context: CliContext): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
     process.stdout.write(getDoctorCommandHelpText())
     return 0
@@ -58,14 +58,23 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
   try {
     let options = parseDoctorCommandArgs(argv)
     reporter = options.json
-      ? createCommandReporter()
-      : createCommandReporter({ stderr: process.stdout, stdout: process.stdout })
+      ? createCommandReporter({ remixVersion: context.remixVersion })
+      : createCommandReporter({
+          remixVersion: context.remixVersion,
+          stderr: process.stdout,
+          stdout: process.stdout,
+        })
     progress = options.json ? null : createDoctorProgressReporter(reporter)
     if (!options.json) {
       await reporter.status.commandHeader('doctor')
     }
 
-    let report = await collectDoctorReport(progress, options, options.json ? null : reporter)
+    let report = await collectDoctorReport(
+      progress,
+      options,
+      options.json ? null : reporter,
+      context,
+    )
 
     if (options.json) {
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
@@ -135,8 +144,9 @@ async function collectDoctorReport(
   progress: StepProgressReporter<DoctorSuiteName> | null,
   options: DoctorCommandOptions,
   reporter: CommandReporter | null,
+  context: CliContext,
 ): Promise<DoctorReport> {
-  let cwd = getRuntimeCwd()
+  let cwd = context.cwd
   let appliedFixes: DoctorAppliedFix[] = []
   let environment = await runDoctorSuite(progress, 'environment', async () => {
     let result = await checkEnvironment(cwd)
@@ -144,7 +154,7 @@ async function collectDoctorReport(
     let finalResult = result
 
     if (options.fix && result.projectRoot != null) {
-      let fixPlans = getEnvironmentFixPlans(result)
+      let fixPlans = getEnvironmentFixPlans(result, context.remixVersion)
       if (fixPlans.length > 0) {
         suiteAppliedFixes = await applyDoctorFixPlans(result.projectRoot, fixPlans)
         finalResult = await checkEnvironment(result.projectRoot)

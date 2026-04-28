@@ -1,1 +1,1 @@
-export { runRemix } from './lib/cli.ts'
+export { runRemix, type RunRemixOptions } from './lib/cli.ts'

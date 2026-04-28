@@ -7,8 +7,7 @@ import { gzipSync } from 'node:zlib'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { runRemix } from '../../index.ts'
-import type { CliRuntimeContext } from '../runtime-context.ts'
+import { runRemix, type RunRemixOptions } from '../../index.ts'
 import { getSkillsCacheFilePath } from '../skills-cache.ts'
 
 const REMIX_GITHUB_TREE_URL =
@@ -18,7 +17,7 @@ const REMIX_GITHUB_ARCHIVE_URL =
 
 let testCwd: string | undefined
 
-function run(argv: string[], context: CliRuntimeContext = {}): Promise<number> {
+function run(argv: string[], context: RunRemixOptions = {}): Promise<number> {
   return runRemix(argv, { cwd: testCwd, ...context })
 }
 

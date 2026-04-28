@@ -4,21 +4,9 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-import { remixVersionUnavailable } from './errors.ts'
-import { getRuntimeRemixVersion } from './runtime-context.ts'
-
 interface RemixPackageJson {
   name?: unknown
   version?: unknown
-}
-
-export function readRemixVersion(): string {
-  let remixVersion = getRuntimeRemixVersion()
-  if (remixVersion == null) {
-    throw remixVersionUnavailable()
-  }
-
-  return remixVersion
 }
 
 export async function resolveDefaultRemixVersion(

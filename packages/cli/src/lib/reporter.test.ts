@@ -6,7 +6,6 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createCommandReporter } from './reporter.ts'
-import { setCliRuntimeContext } from './runtime-context.ts'
 import { configureColors } from './terminal.ts'
 
 describe('reporter', () => {
@@ -157,25 +156,23 @@ describe('reporter', () => {
   })
 
   it('writes the progress command header to stderr and never stdout', async () => {
-    await withRuntimeContext({ remixVersion: '9.9.9' }, async () =>
-      withEnv('NO_COLOR', undefined, async () =>
-        withEnv('FORCE_COLOR', '1', async () =>
-          withEnv('TERM', 'xterm-256color', async () =>
-            withTTY(process.stderr, true, async () =>
-              withCapturedWrites(process.stdout, async (stdoutWrites) =>
-                withCapturedWrites(process.stderr, async (stderrWrites) => {
-                  configureColors({ disabled: false })
-                  let reporter = createCommandReporter()
+    await withEnv('NO_COLOR', undefined, async () =>
+      withEnv('FORCE_COLOR', '1', async () =>
+        withEnv('TERM', 'xterm-256color', async () =>
+          withTTY(process.stderr, true, async () =>
+            withCapturedWrites(process.stdout, async (stdoutWrites) =>
+              withCapturedWrites(process.stderr, async (stderrWrites) => {
+                configureColors({ disabled: false })
+                let reporter = createCommandReporter({ remixVersion: '9.9.9' })
 
-                  await reporter.status.commandHeader('doctor')
+                await reporter.status.commandHeader('doctor')
 
-                  assert.deepEqual(stdoutWrites, [])
-                  assert.deepEqual(stderrWrites, [
-                    '\n',
-                    '\u001B[94mR\u001B[0m\u001B[92mE\u001B[0m\u001B[93mM\u001B[0m\u001B[95mI\u001B[0m\u001B[91mX\u001B[0m v9.9.9 - doctor\n\n',
-                  ])
-                }),
-              ),
+                assert.deepEqual(stdoutWrites, [])
+                assert.deepEqual(stderrWrites, [
+                  '\n',
+                  '\u001B[94mR\u001B[0m\u001B[92mE\u001B[0m\u001B[93mM\u001B[0m\u001B[95mI\u001B[0m\u001B[91mX\u001B[0m v9.9.9 - doctor\n\n',
+                ])
+              }),
             ),
           ),
         ),
@@ -268,19 +265,6 @@ async function withEnv<T>(
     }
 
     configureColors({ disabled: false })
-  }
-}
-
-async function withRuntimeContext<T>(
-  context: { remixVersion?: string },
-  callback: () => Promise<T> | T,
-): Promise<T> {
-  let previousContext = setCliRuntimeContext(context)
-
-  try {
-    return await callback()
-  } finally {
-    setCliRuntimeContext(previousContext)
   }
 }
 

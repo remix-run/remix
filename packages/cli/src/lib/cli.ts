@@ -8,21 +8,20 @@ import { runRoutesCommand } from './commands/routes.ts'
 import { runSkillsCommand } from './commands/skills.ts'
 import { runTestCommand } from './commands/test.ts'
 import { runVersionCommand } from './commands/version.ts'
+import { resolveCliContext, type CliContext } from './cli-context.ts'
 import { renderCliError, unknownCommand } from './errors.ts'
-import { resolveDefaultRemixVersion } from './remix-version.ts'
-import { setCliRuntimeContext, type CliRuntimeContext } from './runtime-context.ts'
 import { configureColors, restoreTerminalFormatting } from './terminal.ts'
+
+export interface RunRemixOptions {
+  cwd?: string
+  remixVersion?: string
+}
 
 export async function runRemix(
   argv: string[] = process.argv.slice(2),
-  context: CliRuntimeContext = {},
+  options: RunRemixOptions = {},
 ): Promise<number> {
-  let cwd = context.cwd ?? process.cwd()
-  let previousContext = setCliRuntimeContext({
-    cwd,
-    ...context,
-    remixVersion: context.remixVersion ?? (await resolveDefaultRemixVersion(cwd)),
-  })
+  let context = await resolveCliContext(options)
 
   try {
     while (argv[0] === '--') {
@@ -45,24 +44,23 @@ export async function runRemix(
       return 0
     }
 
-    return await runCommand(command, rest)
+    return await runCommand(command, rest, context)
   } finally {
-    setCliRuntimeContext(previousContext)
     restoreTerminalFormatting()
   }
 }
 
-async function runCommand(command: string, argv: string[]): Promise<number> {
+async function runCommand(command: string, argv: string[], context: CliContext): Promise<number> {
   if (command === 'help') {
     return runHelpCommand(argv)
   }
 
   if (command === '-v' || command === '--version') {
-    return runVersionCommand([])
+    return runVersionCommand([], context)
   }
 
   if (command === 'new') {
-    return runNewCommand(argv)
+    return runNewCommand(argv, context)
   }
 
   if (command === 'completion') {
@@ -70,23 +68,23 @@ async function runCommand(command: string, argv: string[]): Promise<number> {
   }
 
   if (command === 'doctor') {
-    return runDoctorCommand(argv)
+    return runDoctorCommand(argv, context)
   }
 
   if (command === 'skills') {
-    return runSkillsCommand(argv)
+    return runSkillsCommand(argv, context)
   }
 
   if (command === 'routes') {
-    return runRoutesCommand(argv)
+    return runRoutesCommand(argv, context)
   }
 
   if (command === 'test') {
-    return runTestCommand(argv)
+    return runTestCommand(argv, context)
   }
 
   if (command === 'version') {
-    return runVersionCommand(argv)
+    return runVersionCommand(argv, context)
   }
 
   process.stderr.write(

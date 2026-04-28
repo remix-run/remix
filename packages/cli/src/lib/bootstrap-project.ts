@@ -10,7 +10,6 @@ import {
   targetDirectoryNotEmpty,
   targetPathNotDirectory,
 } from './errors.ts'
-import { getRuntimeRemixVersion } from './runtime-context.ts'
 import { runProgressStep, type StepProgressReporter } from './reporter.ts'
 
 const BOOTSTRAP_DIRECTORY = path.resolve(
@@ -22,7 +21,9 @@ export const MINIMUM_SUPPORTED_NODE_VERSION = '24.3.0'
 
 export interface BootstrapProjectOptions {
   appName: string | null
+  cwd?: string
   force: boolean
+  remixVersion?: string
   targetDir: string
 }
 
@@ -50,7 +51,8 @@ export async function bootstrapProject(
   options: BootstrapProjectOptions,
   progress?: BootstrapProgressReporter,
 ): Promise<BootstrappedProject> {
-  let targetDir = path.resolve(options.targetDir)
+  let cwd = options.cwd ?? process.cwd()
+  let targetDir = path.resolve(cwd, options.targetDir)
   let rawAppName = options.appName ?? path.basename(targetDir)
   if (rawAppName.length === 0) {
     throw appNameUnavailable(targetDir)
@@ -59,7 +61,7 @@ export async function bootstrapProject(
   let config = {
     appDisplayName: options.appName ?? humanizeName(rawAppName),
     packageName: toPackageName(rawAppName),
-    remixVersion: readDefaultRemixVersion(),
+    remixVersion: readDefaultRemixVersion(options.remixVersion),
   } satisfies BootstrapConfig
 
   await runProgressStep(progress, 'prepare-target-directory', () =>
@@ -82,13 +84,12 @@ export async function bootstrapProject(
   }
 }
 
-function readDefaultRemixVersion(): string {
+function readDefaultRemixVersion(runtimeVersion: string | undefined): string {
   let overriddenVersion = process.env.REMIX_VERSION?.trim()
   if (overriddenVersion) {
     return overriddenVersion
   }
 
-  let runtimeVersion = getRuntimeRemixVersion()
   if (runtimeVersion == null) {
     return 'latest'
   }

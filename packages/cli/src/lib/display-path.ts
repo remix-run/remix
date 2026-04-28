@@ -1,8 +1,7 @@
 import * as path from 'node:path'
+import * as process from 'node:process'
 
-import { getRuntimeCwd } from './runtime-context.ts'
-
-export function getDisplayPath(filePath: string, cwd: string = getRuntimeCwd()): string {
+export function getDisplayPath(filePath: string, cwd: string = process.cwd()): string {
   let relativePath = path.relative(path.resolve(cwd), path.resolve(filePath))
 
   if (relativePath.length === 0) {

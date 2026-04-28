@@ -7,9 +7,8 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { getFixturePath } from '../../test/fixtures.ts'
-import { runRemix } from '../index.ts'
+import { runRemix, type RunRemixOptions } from '../index.ts'
 import { getTestCommandHelpText } from './commands/test.ts'
-import type { CliRuntimeContext } from './runtime-context.ts'
 
 const REMIX_GITHUB_TREE_URL =
   'https://api.github.com/repos/remix-run/remix/git/trees/main?recursive=1'
@@ -18,7 +17,7 @@ const REMIX_PACKAGE_JSON_PATH = path.join(ROOT_DIR, 'packages', 'remix', 'packag
 
 let testCwd: string | undefined
 
-function run(argv: string[], context: CliRuntimeContext = {}): Promise<number> {
+function run(argv: string[], context: RunRemixOptions = {}): Promise<number> {
   return runRemix(argv, { cwd: testCwd, ...context })
 }
 
@@ -538,6 +537,41 @@ describe('run', () => {
       await assertPathMissing(path.join(appDir, 'app', 'controllers', 'about.tsx'))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('resolves relative scaffold targets from the configured cwd', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-cwd-'))
+    let targetDir = `${path.basename(tmpDir)}-app`
+    let appDir = path.join(tmpDir, targetDir)
+    let strayDir = path.resolve(targetDir)
+
+    try {
+      let result = await captureOutput(() =>
+        run(['new', targetDir, '--app-name', 'Configured Cwd App'], {
+          cwd: tmpDir,
+          remixVersion: '4.5.6',
+        }),
+      )
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.match(
+        result.stdout,
+        new RegExp(`Created Configured Cwd App at ${escapeRegExp(targetDir)}`),
+      )
+      assert.ok(!result.stdout.includes(tmpDir))
+      await assertPathExists(path.join(appDir, 'package.json'))
+
+      let packageJson = JSON.parse(
+        await fs.readFile(path.join(appDir, 'package.json'), 'utf8'),
+      ) as {
+        dependencies: Record<string, string>
+      }
+      assert.equal(packageJson.dependencies.remix, '^4.5.6')
+      await assertPathMissing(path.join(strayDir, 'package.json'))
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+      await fs.rm(strayDir, { recursive: true, force: true })
     }
   })
 

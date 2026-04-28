@@ -6,6 +6,7 @@ import type {
   BootstrapProgressReporter,
 } from '../bootstrap-project.ts'
 import { bootstrapProject } from '../bootstrap-project.ts'
+import type { CliContext } from '../cli-context.ts'
 import { renderCliError, missingTargetDirectory, toCliError } from '../errors.ts'
 import { getDisplayPath } from '../display-path.ts'
 import { formatHelpText } from '../help-text.ts'
@@ -22,7 +23,7 @@ const NEW_PROGRESS_LABELS = {
   'prepare-target-directory': 'Prepare target directory',
 } satisfies Record<BootstrapProjectPhase, string>
 
-export async function runNewCommand(argv: string[]): Promise<number> {
+export async function runNewCommand(argv: string[], context: CliContext): Promise<number> {
   if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
     process.stdout.write(getNewCommandHelpText())
     return 0
@@ -33,13 +34,22 @@ export async function runNewCommand(argv: string[]): Promise<number> {
 
   try {
     let options = parseNewCommandArgs(argv)
-    reporter = createCommandReporter()
+    reporter = createCommandReporter({ remixVersion: context.remixVersion })
     progress = createNewProgressReporter(reporter)
 
     await reporter.status.commandHeader('new')
-    let result = await bootstrapProject(options, progress)
+    let result = await bootstrapProject(
+      {
+        ...options,
+        cwd: context.cwd,
+        remixVersion: context.remixVersion,
+      },
+      progress,
+    )
     progress.writeSummaryGap()
-    reporter.out.line(`Created ${result.appDisplayName} at ${getDisplayPath(result.targetDir)}`)
+    reporter.out.line(
+      `Created ${result.appDisplayName} at ${getDisplayPath(result.targetDir, context.cwd)}`,
+    )
     reporter.finish()
     return 0
   } catch (error) {

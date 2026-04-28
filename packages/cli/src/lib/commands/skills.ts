@@ -1,5 +1,6 @@
 import * as process from 'node:process'
 
+import type { CliContext } from '../cli-context.ts'
 import { getDisplayPath } from '../display-path.ts'
 import { renderCliError, toCliError, unknownSkillsCommand } from '../errors.ts'
 import { formatHelpText } from '../help-text.ts'
@@ -11,7 +12,6 @@ import {
   createStepProgressReporter,
   type CommandReporter,
 } from '../reporter.ts'
-import { getRuntimeCwd } from '../runtime-context.ts'
 
 const SKILLS_PROGRESS_LABELS = {
   'compare-local-skills': 'Compare local skills',
@@ -22,7 +22,7 @@ const SKILLS_PROGRESS_LABELS = {
   'write-updated-skills': 'Write updated skills',
 } satisfies Record<SkillsInstallPhase, string>
 
-export async function runSkillsCommand(argv: string[]): Promise<number> {
+export async function runSkillsCommand(argv: string[], context: CliContext): Promise<number> {
   if (argv.length === 0 || argv[0] === '-h' || argv[0] === '--help') {
     process.stdout.write(getSkillsCommandHelpText())
     return 0
@@ -32,11 +32,11 @@ export async function runSkillsCommand(argv: string[]): Promise<number> {
 
   try {
     if (subcommand === 'install') {
-      return await runSkillsInstallCommand(rest)
+      return await runSkillsInstallCommand(rest, context)
     }
 
     if (subcommand === 'list') {
-      return await runSkillsListCommand(rest)
+      return await runSkillsListCommand(rest, context)
     }
 
     throw unknownSkillsCommand(subcommand)
@@ -116,7 +116,7 @@ export function getSkillsListCommandHelpText(target: NodeJS.WriteStream = proces
   )
 }
 
-async function runSkillsInstallCommand(argv: string[]): Promise<number> {
+async function runSkillsInstallCommand(argv: string[], context: CliContext): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
     process.stdout.write(getSkillsInstallCommandHelpText())
     return 0
@@ -127,9 +127,9 @@ async function runSkillsInstallCommand(argv: string[]): Promise<number> {
 
   try {
     let options = parseSkillsInstallCommandArgs(argv)
-    reporter = createCommandReporter()
+    reporter = createCommandReporter({ remixVersion: context.remixVersion })
     progress = createSkillsProgressReporter(reporter)
-    let cwd = getRuntimeCwd()
+    let cwd = context.cwd
 
     await reporter.status.commandHeader('skills install')
     let result = await installRemixSkills(cwd, globalThis.fetch, {
@@ -160,7 +160,7 @@ async function runSkillsInstallCommand(argv: string[]): Promise<number> {
   }
 }
 
-async function runSkillsListCommand(argv: string[]): Promise<number> {
+async function runSkillsListCommand(argv: string[], context: CliContext): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
     process.stdout.write(getSkillsListCommandHelpText())
     return 0
@@ -171,8 +171,8 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
 
   try {
     let options = parseSkillsDirArgs(argv, { allowJson: true })
-    let cwd = getRuntimeCwd()
-    reporter = options.json ? null : createCommandReporter()
+    let cwd = context.cwd
+    reporter = options.json ? null : createCommandReporter({ remixVersion: context.remixVersion })
     if (reporter != null) {
       progress = createSkillsProgressReporter(reporter)
       await reporter.status.commandHeader('skills list')
