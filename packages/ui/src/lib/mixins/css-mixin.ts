@@ -10,6 +10,7 @@ type StyleCache = Map<string, StyleEntry>
 type StyleManagerLike = {
   insert(className: string, rule: string): void
   remove(className: string): void
+  getGeneration?(): number
 }
 
 export type CSSMixinDescriptor = MixinDescriptor<Element, [styles: CSSProps], ElementProps>
@@ -21,6 +22,7 @@ const clientStyleCache: StyleCache = new Map()
  */
 export const css = createMixin<Element, [styles: CSSProps], ElementProps>((handle) => {
   let activeSelector = ''
+  let activeGeneration = -1
   let currentStyles: CSSProps = {}
 
   handle.addEventListener('remove', () => {
@@ -33,6 +35,7 @@ export const css = createMixin<Element, [styles: CSSProps], ElementProps>((handl
     let styleTarget = resolveStyleTarget(runtime)
     styleTarget.styleManager?.remove(activeSelector)
     activeSelector = ''
+    activeGeneration = -1
   })
 
   return (styles, props) => {
@@ -44,15 +47,17 @@ export const css = createMixin<Element, [styles: CSSProps], ElementProps>((handl
     invariant(runtime, 'css mixin requires frame runtime')
     let styleTarget = resolveStyleTarget(runtime)
     let { selector, css: cssText } = processStyleClass(currentStyles, styleTarget.styleCache)
+    let styleGeneration = styleTarget.styleManager?.getGeneration?.() ?? 0
 
     if (styleTarget.styleManager) {
       if (activeSelector && activeSelector !== selector) {
         styleTarget.styleManager.remove(activeSelector)
       }
-      if (selector && activeSelector !== selector) {
+      if (selector && (activeSelector !== selector || activeGeneration !== styleGeneration)) {
         styleTarget.styleManager.insert(selector, cssText)
       }
       activeSelector = selector
+      activeGeneration = selector ? styleGeneration : -1
     }
 
     if (!selector) {

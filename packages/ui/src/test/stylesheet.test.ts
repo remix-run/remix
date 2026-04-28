@@ -342,4 +342,18 @@ describe('createStyleManager', () => {
 
     mgr.dispose()
   })
+
+  it('tracks manager generations when stylesheet state is cleared', () => {
+    let mgr = createStyleManager('rmx-test')
+    let initialGeneration = mgr.getGeneration()
+
+    mgr.insert('rmx-a', '.rmx-a { color: red; }')
+    expect(mgr.getGeneration()).toBe(initialGeneration)
+
+    mgr.reset()
+    expect(mgr.getGeneration()).toBe(initialGeneration + 1)
+
+    mgr.dispose()
+    expect(mgr.getGeneration()).toBe(initialGeneration + 2)
+  })
 })

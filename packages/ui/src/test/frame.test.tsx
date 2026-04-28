@@ -1104,6 +1104,188 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
+  it('keeps shared css rules when a frame reload removes one keyed item', async () => {
+    type Item = {
+      id: string
+      label: string
+    }
+
+    let items: Item[] = [
+      { id: 'a', label: 'Ash & Smoke' },
+      { id: 'b', label: 'Heavy Metal Guitar Riffs' },
+    ]
+    let reload: undefined | (() => Promise<AbortSignal>)
+
+    let CartItems = clientEntry(
+      '/assets/cart-items-css.js#CartItemsCss',
+      function CartItemsCss(handle: Handle) {
+        reload = () => handle.frame.reload()
+
+        return (props: { items: Item[] }) => (
+          <section>
+            {props.items.map((item) => (
+              <form
+                key={item.id}
+                data-row={item.id}
+                mix={[css({ display: 'inline-flex', gap: '4px', alignItems: 'center' })]}
+              >
+                <span mix={[css({ color: 'rgb(10, 20, 30)' })]}>{item.label}</span>
+                <input
+                  aria-label={`${item.label} quantity`}
+                  defaultValue="1"
+                  mix={[css({ width: '70px' })]}
+                />
+                <button
+                  type="button"
+                  mix={[
+                    css({
+                      color: 'rgb(255, 255, 255)',
+                      backgroundColor: 'rgb(1, 2, 3)',
+                    }),
+                  ]}
+                >
+                  Update
+                </button>
+              </form>
+            ))}
+          </section>
+        )
+      },
+    )
+
+    async function renderCartItems(): Promise<string> {
+      return await drain(renderToStream(<CartItems items={items} />))
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/cart-items-css" />
+        </main>,
+        { resolveFrame: renderCartItems },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/cart-items-css.js' && exportName === 'CartItemsCss') {
+          return CartItems
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/cart-items-css') return renderCartItems()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let survivingRow = document.querySelector('[data-row="b"]')
+    invariant(survivingRow instanceof HTMLFormElement)
+    let survivingLabel = survivingRow.querySelector('span')
+    let survivingInput = survivingRow.querySelector('input')
+    let survivingButton = survivingRow.querySelector('button')
+    invariant(survivingLabel && survivingInput && survivingButton)
+
+    expect(getComputedStyle(survivingLabel).color).toBe('rgb(10, 20, 30)')
+    expect(getComputedStyle(survivingInput).width).toBe('70px')
+    expect(getComputedStyle(survivingButton).backgroundColor).toBe('rgb(1, 2, 3)')
+
+    items = [{ id: 'b', label: 'Heavy Metal Guitar Riffs' }]
+    invariant(reload)
+    await reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.querySelector('[data-row="a"]')).toBeNull()
+    expect(document.querySelector('[data-row="b"]')).toBe(survivingRow)
+    expect(getComputedStyle(survivingLabel).color).toBe('rgb(10, 20, 30)')
+    expect(getComputedStyle(survivingInput).width).toBe('70px')
+    expect(getComputedStyle(survivingButton).backgroundColor).toBe('rgb(1, 2, 3)')
+
+    app.dispose()
+  })
+
+  it('keeps client-only css rules across a frame reload that omits them from server HTML', async () => {
+    let itemCount = 2
+    let startPendingReload: undefined | (() => Promise<AbortSignal>)
+
+    let CartSummary = clientEntry(
+      '/assets/cart-summary-css.js#CartSummaryCss',
+      function CartSummaryCss(handle: Handle) {
+        let pending = false
+
+        startPendingReload = async () => {
+          pending = true
+          await handle.update()
+          return await handle.frame.reload()
+        }
+
+        return (props: { itemCount: number }) => (
+          <section>
+            {pending ? (
+              <p id="pending-message" mix={[css({ color: 'rgb(200, 0, 0)' })]}>
+                Updating your cart...
+              </p>
+            ) : null}
+            <p id="item-count" mix={[css({ color: 'rgb(0, 0, 200)' })]}>
+              Items: {props.itemCount}
+            </p>
+          </section>
+        )
+      },
+    )
+
+    async function renderCartSummary(): Promise<string> {
+      return await drain(renderToStream(<CartSummary itemCount={itemCount} />))
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/cart-summary-css" />
+        </main>,
+        { resolveFrame: renderCartSummary },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/cart-summary-css.js' && exportName === 'CartSummaryCss') {
+          return CartSummary
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/cart-summary-css') return renderCartSummary()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('pending-message')).toBeNull()
+    expect(getComputedStyle(document.getElementById('item-count')!).color).toBe('rgb(0, 0, 200)')
+
+    itemCount = 1
+    invariant(startPendingReload)
+    await startPendingReload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let pendingMessage = document.getElementById('pending-message')
+    invariant(pendingMessage)
+    expect(pendingMessage.textContent).toBe('Updating your cart...')
+    expect(getComputedStyle(pendingMessage).color).toBe('rgb(200, 0, 0)')
+    expect(document.getElementById('item-count')?.textContent).toBe('Items: 1')
+    expect(getComputedStyle(document.getElementById('item-count')!).color).toBe('rgb(0, 0, 200)')
+
+    app.dispose()
+  })
+
   it('dispatches reload rejections to app error listeners', async () => {
     let reload: undefined | (() => Promise<AbortSignal>)
     let reloadError = new TypeError('Failed to fetch')

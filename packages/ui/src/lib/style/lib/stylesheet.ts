@@ -69,6 +69,7 @@ function getStyleSelector(styleEl: HTMLStyleElement): string | null {
 
 export function createStyleManager(layer: string = 'rmx') {
   let stylesheet: CSSStyleSheet | null = null
+  let generation = 0
 
   // Track usage count and rule index per className
   // Using an object to track both count and index together
@@ -128,6 +129,10 @@ export function createStyleManager(layer: string = 'rmx') {
     return entry !== undefined && entry.count > 0
   }
 
+  function getGeneration() {
+    return generation
+  }
+
   function insert(className: string, rule: string) {
     let entry = ruleMap.get(className)
 
@@ -148,6 +153,7 @@ export function createStyleManager(layer: string = 'rmx') {
 
   function remove(className: string) {
     let entry = ruleMap.get(className)
+
     if (!entry) return
 
     // Decrement count
@@ -181,10 +187,12 @@ export function createStyleManager(layer: string = 'rmx') {
     clearStylesheet()
     ruleMap.clear()
     removeStylesheet()
+    generation++
   }
 
   function adoptServerStyles(source: ServerStyleSource) {
     let styles = collectServerStyleTags(source)
+
     for (let styleEl of styles) {
       adoptServerStyleTag(styleEl)
     }
@@ -194,7 +202,8 @@ export function createStyleManager(layer: string = 'rmx') {
     removeStylesheet()
     // Clear internal state
     ruleMap.clear()
+    generation++
   }
 
-  return { insert, remove, has, reset, adoptServerStyles, dispose }
+  return { insert, remove, has, getGeneration, reset, adoptServerStyles, dispose }
 }
