@@ -246,7 +246,8 @@ what it exports. Open the linked reference file when you need full examples.
   responses
 - `remix/route-pattern` — low-level URL matching and generation. Use when working with raw
   patterns outside the router (custom matchers, scripts)
-- `remix/fetch-proxy` — Fetch-based HTTP proxying. Use to forward a request to another origin
+- `remix/fetch-proxy` — Fetch-based HTTP proxying. Use to forward a request to another origin; pass
+  `xForwardedHeaders` when the upstream needs forwarded proto, host, and port
 
 ### Data, Validation, and Persistence
 
