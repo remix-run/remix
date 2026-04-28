@@ -123,7 +123,7 @@ export default {
   // Path to a setup module (see Setup section below)
   setup: './test/setup.ts',
 
-  // Comma-separated list of test types to run ("server", "e2e")
+  // Comma-separated list of test types to run ("server", "browser", "e2e")
   type: 'server,browser,e2e',
 
   // Watch for file changes and re-run
@@ -252,8 +252,8 @@ interface TestContext {
   // Replace global timer functions with controllable fakes
   useFakeTimers(): FakeTimers
 
-  // E2E only: start a server with the given request handler, returns a Playwright Page
-  serve(handler: (req: Request) => Promise<Response>): Promise<Page>
+  // E2E only: connect a running test server to a Playwright Page
+  serve(server: { baseUrl: string; close(): Promise<void> }): Promise<Page>
 }
 ```
 
@@ -313,12 +313,15 @@ it('debounces a callback', (t) => {
 
 #### E2E
 
-In E2E test files, `t.serve()` starts an HTTP server and returns a Playwright `Page`. See [E2E Testing](#e2e-testing) for details.
+In E2E test files, `t.serve()` connects a running test server to a Playwright `Page`. See [E2E Testing](#e2e-testing) for details.
 
 ```ts
+import { createTestServer } from 'remix/node-fetch-server/test'
+
 it('navigates to home', async (t) => {
   let router = createRouter()
-  let page = await t.serve(router.fetch)
+  let server = await createTestServer(router.fetch)
+  let page = await t.serve(server)
   await page.goto('/')
 })
 ```
@@ -376,17 +379,19 @@ describe('Counter', () => {
 
 End-to-end (E2E) tests use [Playwright](https://playwright.dev) and are discovered by the `**/*.test.e2e.{ts,tsx}` glob pattern (configurable via `glob.e2e`). They use the same `describe`/`it` API as unit tests.
 
-E2E tests receive `t.serve()` on the test context, which starts an HTTP server with the given request handler and returns a Playwright [`Page`](https://playwright.dev/docs/api/class-page). The server and page are automatically closed after each test.
+E2E tests receive `t.serve()` on the test context, which accepts a running test server and returns a Playwright [`Page`](https://playwright.dev/docs/api/class-page) whose `baseURL` points at that server. The server and page are automatically closed after each test.
 
 ```ts
 import * as assert from 'remix/assert'
+import { createTestServer } from 'remix/node-fetch-server/test'
 import { describe, it } from 'remix/test'
 import { createRouter } from './router.ts'
 
 describe('checkout', () => {
   it('adds an item to the cart', async (t) => {
     let router = createRouter()
-    let page = await t.serve(router.fetch)
+    let server = await createTestServer(router.fetch)
+    let page = await t.serve(server)
 
     await page.goto('/')
     await page.getByRole('button', { name: 'Add to Cart' }).click()

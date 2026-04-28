@@ -25,7 +25,6 @@ Added `package.json` `exports` for the consolidated UI runtime:
 - `remix/ui/glyph` to re-export APIs from `@remix-run/ui/glyph`
 - `remix/ui/listbox` to re-export APIs from `@remix-run/ui/listbox`
 - `remix/ui/menu` to re-export APIs from `@remix-run/ui/menu`
-- `remix/ui/on-outside-pointer-down` to re-export APIs from `@remix-run/ui/on-outside-pointer-down`
 - `remix/ui/popover` to re-export APIs from `@remix-run/ui/popover`
 - `remix/ui/scroll-lock` to re-export APIs from `@remix-run/ui/scroll-lock`
 - `remix/ui/select` to re-export APIs from `@remix-run/ui/select`
