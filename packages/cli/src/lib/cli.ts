@@ -9,6 +9,7 @@ import { runSkillsCommand } from './commands/skills.ts'
 import { runTestCommand } from './commands/test.ts'
 import { runVersionCommand } from './commands/version.ts'
 import { renderCliError, unknownCommand } from './errors.ts'
+import { resolveDefaultRemixVersion } from './remix-version.ts'
 import { setCliRuntimeContext, type CliRuntimeContext } from './runtime-context.ts'
 import { configureColors, restoreTerminalFormatting } from './terminal.ts'
 
@@ -16,9 +17,11 @@ export async function runRemix(
   argv: string[] = process.argv.slice(2),
   context: CliRuntimeContext = {},
 ): Promise<number> {
+  let cwd = context.cwd ?? process.cwd()
   let previousContext = setCliRuntimeContext({
-    cwd: process.cwd(),
+    cwd,
     ...context,
+    remixVersion: context.remixVersion ?? (await resolveDefaultRemixVersion(cwd)),
   })
 
   try {

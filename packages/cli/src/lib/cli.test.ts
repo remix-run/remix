@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as process from 'node:process'
+import { fileURLToPath } from 'node:url'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
@@ -12,6 +13,8 @@ import type { CliRuntimeContext } from './runtime-context.ts'
 
 const REMIX_GITHUB_TREE_URL =
   'https://api.github.com/repos/remix-run/remix/git/trees/main?recursive=1'
+const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
+const REMIX_PACKAGE_JSON_PATH = path.join(ROOT_DIR, 'packages', 'remix', 'package.json')
 
 let testCwd: string | undefined
 
@@ -262,6 +265,36 @@ describe('run', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('resolves the current Remix package version by default', async () => {
+    let remixVersion = await readRepoRemixVersion()
+    let result = await captureOutput(() => run(['version']))
+
+    assert.equal(result.exitCode, 0)
+    assert.equal(result.stdout, `${remixVersion}\n`)
+    assert.equal(result.stderr, '')
+  })
+
+  it('resolves the current Remix package version from the runtime cwd', async () => {
+    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-version-'))
+
+    try {
+      await fs.mkdir(path.join(projectDir, 'node_modules', 'remix'), { recursive: true })
+      await fs.writeFile(
+        path.join(projectDir, 'node_modules', 'remix', 'package.json'),
+        `${JSON.stringify({ name: 'remix', version: '1.2.3' }, null, 2)}\n`,
+        'utf8',
+      )
+
+      let result = await captureOutput(() => run(['version'], { cwd: projectDir }))
+
+      assert.equal(result.exitCode, 0)
+      assert.equal(result.stdout, '1.2.3\n')
+      assert.equal(result.stderr, '')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('smoke tests every top-level command', async () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-smoke-'))
 
@@ -487,7 +520,7 @@ describe('run', () => {
       let readme = await fs.readFile(path.join(appDir, 'README.md'), 'utf8')
 
       assert.equal(packageJson.name, 'my-app')
-      assert.equal(packageJson.dependencies.remix, 'latest')
+      assert.equal(packageJson.dependencies.remix, `^${await readRepoRemixVersion()}`)
       assert.equal(packageJson.dependencies.tsx, 'latest')
       assert.equal(packageJson.devDependencies['@types/node'], 'latest')
       assert.equal(packageJson.devDependencies.typescript, 'latest')
@@ -705,6 +738,13 @@ async function withFetchMock<T>(fetchMock: typeof fetch, callback: () => Promise
   } finally {
     globalThis.fetch = originalFetch
   }
+}
+
+async function readRepoRemixVersion(): Promise<string> {
+  let packageJson = JSON.parse(await fs.readFile(REMIX_PACKAGE_JSON_PATH, 'utf8')) as {
+    version: string
+  }
+  return packageJson.version
 }
 
 function createSkillsMetadataFetchMock(): typeof fetch {
