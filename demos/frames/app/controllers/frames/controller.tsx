@@ -1,4 +1,4 @@
-import { Frame } from 'remix/component'
+import { Frame } from 'remix/ui'
 import type { Controller } from 'remix/fetch-router'
 
 import { Counter } from '../../assets/counter.tsx'

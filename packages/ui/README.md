@@ -1,15 +1,15 @@
 # ui
 
-A theme contract for Remix apps and first-party Remix components built on CSS custom properties.
+Runtime UI primitives for Remix apps, including the component runtime, server rendering, frame hydration, reusable mixins, first-party components, and theme tokens.
 
 ## Features
 
+- Component runtime APIs for rendering, hydration, frame navigation, and JSX
+- Server rendering APIs for streaming Remix UI trees and frames
+- `mix` composition with event, ref, CSS, and animation helpers
+- First-party components such as buttons, menus, listboxes, popovers, and selects
 - Fixed typed `theme` contract whose leaves resolve to `var(--rmx-...)`
-- `createTheme()` utility for rendering theme variables into a `<style>` tag
-- `createGlyphSheet()` utility for rendering a hidden SVG sprite sheet in the body
-- `<Glyph />` component for shared icon usage through sprite references
-- Typed `theme` values plus first-party styling entrypoints like `button.*Style`
-- Works with Remix component `mix` composition and server rendering
+- `createTheme()` and `createGlyphSheet()` utilities for shared app styling and glyphs
 
 ## Installation
 
@@ -150,7 +150,7 @@ function Layout(props: { children: RemixNode }) {
 Consume the shared token contract from app code and first-party components:
 
 ```tsx
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 import { theme } from 'remix/ui'
 
 let card = css({
@@ -168,7 +168,7 @@ let card = css({
 Render shared glyphs separately from the theme styles:
 
 ```tsx
-import type { RemixNode } from 'remix/component'
+import type { RemixNode } from 'remix/ui'
 import { Button } from '@remix-run/ui/button'
 import { Glyph } from '@remix-run/ui/glyph'
 import { RMX_01, RMX_01_GLYPHS } from '@remix-run/ui/theme'

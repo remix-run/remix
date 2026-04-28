@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/component'
+import type { RemixNode } from 'remix/ui'
 
 import { getAssetEntry } from '../middleware/asset-entry.ts'
 

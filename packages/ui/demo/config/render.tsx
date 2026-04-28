@@ -1,5 +1,5 @@
-import type { RemixNode } from 'remix/component'
-import { renderToStream, type ResolveFrameContext } from 'remix/component/server'
+import type { RemixNode } from 'remix/ui'
+import { renderToStream, type ResolveFrameContext } from 'remix/ui/server'
 import type { RequestContext, Router } from 'remix/fetch-router'
 
 export function render(context: RequestContext, node: RemixNode, init?: ResponseInit) {

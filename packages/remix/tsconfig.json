@@ -6,7 +6,7 @@
     "moduleResolution": "Bundler",
     "target": "ESNext",
     "jsx": "react-jsx",
-    "jsxImportSource": "@remix-run/component",
+    "jsxImportSource": "@remix-run/ui",
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true

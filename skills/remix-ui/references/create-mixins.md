@@ -1,9 +1,9 @@
-## Creating Mixins (`remix/component`)
+## Creating Mixins (`remix/ui`)
 
 Use this reference when authoring new reusable mixins.
 
 Use this reference both for app-level reusable mixins and for framework-level mixin authoring in
-`packages/component`.
+`packages/ui`.
 
 The key principle: model the real runtime contract first, then write the smallest code that matches
 it.

@@ -10,11 +10,11 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "remix/component",
+    "jsxImportSource": "remix/ui",
     "paths": {
       "*": ["./*"],
-      "remix/component/jsx-runtime": ["../../remix/src/component/jsx-runtime.ts"],
-      "remix/component/jsx-dev-runtime": ["../../remix/src/component/jsx-dev-runtime.ts"]
+      "remix/ui/jsx-runtime": ["../../remix/src/ui/jsx-runtime.ts"],
+      "remix/ui/jsx-dev-runtime": ["../../remix/src/ui/jsx-dev-runtime.ts"]
     }
   }
 }

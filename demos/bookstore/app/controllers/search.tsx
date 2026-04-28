@@ -1,5 +1,5 @@
 import type { BuildAction } from 'remix/fetch-router'
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 import { Database, ilike, or } from 'remix/data-table'
 
 import type { Book } from '../data/schema.ts'

@@ -1,4 +1,4 @@
-import { Frame } from 'remix/component'
+import { Frame } from 'remix/ui'
 import type { BuildAction } from 'remix/fetch-router'
 
 import { ClientFrameExample } from '../assets/client-frame-example.tsx'
@@ -19,7 +19,7 @@ function HomePage() {
       <h1 style={{ margin: 0, letterSpacing: '-0.02em' }}>Full-stack Frames</h1>
       <p style={{ marginTop: 8, color: '#b9c6ff' }}>
         Server routes are handled by <code>remix/fetch-router</code>; UI is streamed with{' '}
-        <code>remix/component</code> Frames and client entries.
+        <code>remix/ui</code> Frames and client entries.
       </p>
       <p style={{ marginTop: 0, marginBottom: 16 }}>
         <a href={routes.time.href()} style={{ color: '#b9c6ff', textDecoration: 'underline' }}>

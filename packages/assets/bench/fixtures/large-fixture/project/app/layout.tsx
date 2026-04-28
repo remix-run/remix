@@ -1,4 +1,4 @@
-import { css } from '@remix-run/component'
+import { css } from '@remix-run/ui'
 import { GridPanel } from '#packages/ui/panel'
 import { palette } from './theme.ts'
 

@@ -1,5 +1,5 @@
-import type { Handle, RemixNode } from 'remix/component'
-import { css } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/ui'
+import { css } from 'remix/ui'
 
 import { frames, routes } from '../../routes.ts'
 import { NavLink } from '../../ui/nav-link.tsx'

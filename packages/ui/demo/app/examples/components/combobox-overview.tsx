@@ -1,4 +1,4 @@
-import { css, type Handle } from 'remix/component'
+import { css, type Handle } from 'remix/ui'
 import { Combobox, ComboboxOption, onComboboxChange } from '@remix-run/ui/combobox'
 import { theme } from '@remix-run/ui/theme'
 import { airportOptions } from './combobox-airport-options.ts'

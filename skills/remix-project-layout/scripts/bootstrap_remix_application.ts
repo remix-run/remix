@@ -333,7 +333,7 @@ function createTsconfig(): string {
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "remix/component",
+    "jsxImportSource": "remix/ui",
     "preserveSymlinks": true,
     "noEmit": true
   },
@@ -443,8 +443,8 @@ router.map(routes.cart, cartController)
 }
 
 function createRenderFile(): string {
-  return `import type { RemixNode } from 'remix/component'
-import { renderToStream } from 'remix/component/server'
+  return `import type { RemixNode } from 'remix/ui'
+import { renderToStream } from 'remix/ui/server'
 
 export function render(node: RemixNode, init?: ResponseInit) {
   let headers = new Headers(init?.headers)
@@ -458,7 +458,7 @@ export function render(node: RemixNode, init?: ResponseInit) {
 }
 
 function createDocumentFile(config: BootstrapConfig): string {
-  return `import type { RemixNode } from 'remix/component'
+  return `import type { RemixNode } from 'remix/ui'
 
 export interface DocumentProps {
   children?: RemixNode
@@ -481,7 +481,7 @@ export function Document() {
 }
 
 function createLayoutFile(): string {
-  return `import type { RemixNode } from 'remix/component'
+  return `import type { RemixNode } from 'remix/ui'
 
 import { routes } from '../routes.ts'
 import { Document } from './document.tsx'

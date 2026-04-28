@@ -10,22 +10,22 @@ import type { WorkspaceInfo } from './workspaces.ts'
 test('getChangedWorkspaceDirs prefers the most specific nested workspace', () => {
   let workspaces: WorkspaceInfo[] = [
     {
-      dir: 'packages/component',
-      name: '@remix-run/component',
+      dir: 'packages/ui',
+      name: '@remix-run/ui',
       dependencies: [],
       scripts: ['test', 'typecheck'],
     },
     {
-      dir: 'packages/component/demos',
-      name: 'component-demos',
-      dependencies: ['@remix-run/component'],
+      dir: 'packages/ui/demos',
+      name: 'ui-demos',
+      dependencies: ['@remix-run/ui'],
       scripts: ['typecheck'],
     },
   ]
 
   assert.deepEqual(
-    [...getChangedWorkspaceDirs(['packages/component/demos/app/root.tsx'], workspaces)],
-    ['packages/component/demos'],
+    [...getChangedWorkspaceDirs(['packages/ui/demos/app/root.tsx'], workspaces)],
+    ['packages/ui/demos'],
   )
 })
 

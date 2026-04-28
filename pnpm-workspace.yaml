@@ -14,9 +14,9 @@ packages:
   - packages/assets/bench
   - packages/fetch-router/demos/*
   - packages/form-data-parser/demos/*
-  - packages/component/demos
-  - packages/component/bench
-  - packages/component/bench/frameworks/*
+  - packages/ui/demos
+  - packages/ui/bench
+  - packages/ui/bench/frameworks/*
   - packages/lazy-file/scripts
   - packages/multipart-parser/bench
   - packages/multipart-parser/demos/*

@@ -1,5 +1,5 @@
 import type { BuildAction } from 'remix/fetch-router'
-import type { Handle } from 'remix/component'
+import type { Handle } from 'remix/ui'
 
 import { StateSearchPage } from '../assets/state-search-page.tsx'
 import { routes } from '../routes.ts'
