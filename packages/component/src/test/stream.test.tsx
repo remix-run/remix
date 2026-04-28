@@ -477,9 +477,9 @@ describe('stream', () => {
 
         expect(html).toBe('<div data-mode="children">safe</div>')
         expect(errorSpy).toHaveBeenCalledTimes(1)
-        expect((errorSpy.mock.calls[0]?.[0] as Error).message).toBe(
-          'mixin elements must not receive children',
-        )
+        let error = errorSpy.mock.calls[0]?.[0]
+        invariant(error instanceof Error)
+        expect(error.message).toBe('mixin elements must not receive children')
       } finally {
         errorSpy.mockRestore()
       }
@@ -496,9 +496,9 @@ describe('stream', () => {
 
         expect(html).toBe('<div data-mode="innerHTML">safe</div>')
         expect(errorSpy).toHaveBeenCalledTimes(1)
-        expect((errorSpy.mock.calls[0]?.[0] as Error).message).toBe(
-          'mixins must not return children or innerHTML',
-        )
+        let error = errorSpy.mock.calls[0]?.[0]
+        invariant(error instanceof Error)
+        expect(error.message).toBe('mixins must not return children or innerHTML')
       } finally {
         errorSpy.mockRestore()
       }

@@ -1,5 +1,5 @@
 import type { Context, FrameHandle } from './component.ts'
-import type { ElementProps, ElementType, RemixElement } from './jsx.ts'
+import type { ElementProps, RemixElement } from './jsx.ts'
 import type { Scheduler } from './scheduler.ts'
 import type { SchedulerPhaseEvent } from './scheduler.ts'
 import { jsx } from './jsx.ts'

@@ -97,9 +97,9 @@ describe('vnode mixins', () => {
       expect(container.querySelector('div')?.dataset.mode).toBe('children')
       expect(container.querySelector('div')?.textContent).toBe('safe')
       expect(errorSpy).toHaveBeenCalledTimes(1)
-      expect((errorSpy.mock.calls[0]?.[0] as Error).message).toBe(
-        'mixin elements must not receive children',
-      )
+      let error = errorSpy.mock.calls[0]?.[0]
+      invariant(error instanceof Error)
+      expect(error.message).toBe('mixin elements must not receive children')
     } finally {
       errorSpy.mockRestore()
     }
@@ -121,9 +121,9 @@ describe('vnode mixins', () => {
       expect(container.querySelector('div')?.dataset.mode).toBe('innerHTML')
       expect(container.querySelector('div')?.textContent).toBe('safe')
       expect(errorSpy).toHaveBeenCalledTimes(1)
-      expect((errorSpy.mock.calls[0]?.[0] as Error).message).toBe(
-        'mixins must not return children or innerHTML',
-      )
+      let error = errorSpy.mock.calls[0]?.[0]
+      invariant(error instanceof Error)
+      expect(error.message).toBe('mixins must not return children or innerHTML')
     } finally {
       errorSpy.mockRestore()
     }
