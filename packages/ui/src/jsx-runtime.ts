@@ -1,2 +1,2 @@
-export * from './lib/jsx.ts'
-export { Fragment } from './lib/component.ts'
+export * from './runtime/jsx.ts'
+export { Fragment } from './runtime/component.ts'

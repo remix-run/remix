@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import type { Assert, Equal } from './utils'
-import type { Handle, RemixNode } from '../lib/component'
-import { animateLayout, createMixin, on, ref } from '../index.ts'
+import type { Handle, RemixNode } from '../runtime/component.ts'
+import { createMixin, on, ref } from '../index.ts'
+
+import { animateLayout } from '../animation/index.ts'
 import type { Dispatched, MixinHandle, Props } from '../index.ts'
 
 type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? MixLeaf<descriptor> : mix

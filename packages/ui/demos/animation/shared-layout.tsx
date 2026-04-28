@@ -1,4 +1,5 @@
-import { animateEntrance, animateExit, css, on, type Handle, type RemixNode } from 'remix/ui'
+import { css, on, type Handle, type RemixNode } from 'remix/ui'
+import { animateEntrance, animateExit } from 'remix/ui/animation'
 
 const ease = 'cubic-bezier(0.26, 0.02, 0.23, 0.94)'
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createRoot } from '../lib/vdom.ts'
+import { createRoot } from '../runtime/vdom.ts'
 import { on } from '../index.ts'
-import type { Handle } from '../lib/component.ts'
+import type { Handle } from '../runtime/component.ts'
 
 describe('vdom error handling', () => {
   describe('root event forwarding', () => {

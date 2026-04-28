@@ -1,5 +1,7 @@
 import type { Handle } from 'remix/ui'
-import { css, spring } from 'remix/ui'
+import { css } from 'remix/ui'
+
+import { spring } from 'remix/ui/animation'
 
 export function HTMLContent(handle: Handle) {
   let count = 0

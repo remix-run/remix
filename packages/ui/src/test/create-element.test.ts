@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { createElement } from '../lib/create-element.ts'
+import { createElement } from '../runtime/create-element.ts'
 import { createMixin } from '../index.ts'
 
 describe('createElement', () => {

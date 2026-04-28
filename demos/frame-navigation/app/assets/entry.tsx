@@ -1,5 +1,7 @@
 import type { FrameContent, Handle, RemixNode } from 'remix/ui'
-import { animateEntrance, createRoot, css, on, run, spring } from 'remix/ui'
+import { createRoot, css, on, run } from 'remix/ui'
+
+import { animateEntrance, spring } from 'remix/ui/animation'
 
 import { routes } from '../routes.ts'
 

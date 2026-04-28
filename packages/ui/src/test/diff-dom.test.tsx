@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { invariant } from '../lib/invariant.ts'
-import { diffNodes } from '../lib/diff-dom.ts'
+import { invariant } from '../runtime/invariant.ts'
+import { diffNodes } from '../runtime/diff-dom.ts'
 
 function diffDom(container: HTMLElement, next: string) {
   let template = document.createElement('template')

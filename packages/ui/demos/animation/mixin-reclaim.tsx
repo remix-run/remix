@@ -1,5 +1,7 @@
 import type { Handle } from 'remix/ui'
-import { animateEntrance, animateExit, css, on } from 'remix/ui'
+import { css, on } from 'remix/ui'
+
+import { animateEntrance, animateExit } from 'remix/ui/animation'
 
 export function MixinReclaim(handle: Handle) {
   let visible = true

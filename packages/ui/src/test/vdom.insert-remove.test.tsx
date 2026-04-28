@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createRoot } from '../lib/vdom.ts'
+import { createRoot } from '../runtime/vdom.ts'
 
 describe('vnode rendering', () => {
   describe('inserts', () => {

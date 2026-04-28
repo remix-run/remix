@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import type { Handle } from '../lib/component.ts'
-import { clientEntry, isEntry } from '../lib/client-entries.ts'
+import type { Handle } from '../runtime/component.ts'
+import { clientEntry, isEntry } from '../runtime/client-entries.ts'
 
 describe('clientEntry', () => {
   /* oxlint-disable eslint/no-unused-vars */

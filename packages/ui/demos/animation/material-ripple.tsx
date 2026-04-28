@@ -1,5 +1,7 @@
 import type { Handle } from 'remix/ui'
-import { animateEntrance, animateExit, css, on, ref } from 'remix/ui'
+import { css, on, ref } from 'remix/ui'
+
+import { animateEntrance, animateExit } from 'remix/ui/animation'
 
 type Ripple = {
   id: number

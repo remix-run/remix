@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { link } from '../index.ts'
-import { createRoot } from '../lib/vdom.ts'
-import { renderToString } from '../lib/stream.ts'
-import { invariant } from '../lib/invariant.ts'
+import { createRoot } from '../runtime/vdom.ts'
+import { renderToString } from '../server/stream.ts'
+import { invariant } from '../runtime/invariant.ts'
 
 describe('hydration', () => {
   let container: HTMLDivElement

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { processStyleClass } from '../lib/style/lib/style.ts'
+import { processStyleClass } from '../style/style.ts'
 
 describe('processStyleClass', () => {
   it('returns class selectors and css text', () => {

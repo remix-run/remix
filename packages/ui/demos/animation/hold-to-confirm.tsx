@@ -1,4 +1,5 @@
-import { animateEntrance, animateExit, createMixin, css, on, spring, type Handle } from 'remix/ui'
+import { createMixin, css, on, type Handle } from 'remix/ui'
+import { animateEntrance, animateExit, spring } from 'remix/ui/animation'
 
 // Demo
 const buttonExitAnimation = {

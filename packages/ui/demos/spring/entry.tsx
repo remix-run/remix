@@ -1,7 +1,7 @@
 import { addEventListeners, createRoot, css, on, ref, type Handle } from 'remix/ui'
 
 import { dragVelocityEvents } from './drag-release.ts'
-import { spring, type SpringPreset } from 'remix/ui'
+import { spring, type SpringPreset } from 'remix/ui/animation'
 
 interface TrailPoint {
   x: number

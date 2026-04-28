@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { userEvent } from '@vitest/browser/context'
-import type { Handle } from '../lib/component.ts'
-import { createRoot } from '../lib/vdom.ts'
+import type { Handle } from '../runtime/component.ts'
+import { createRoot } from '../runtime/vdom.ts'
 import { on } from '../index.ts'
 
 describe('vdom controlled props', () => {

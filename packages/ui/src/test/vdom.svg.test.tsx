@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
-import { createRoot } from '../lib/vdom.ts'
-import { invariant } from '../lib/invariant.ts'
+import { createRoot } from '../runtime/vdom.ts'
+import { invariant } from '../runtime/invariant.ts'
 import { on } from '../index.ts'
-import type { Handle, RemixNode } from '../lib/component.ts'
+import type { Handle, RemixNode } from '../runtime/component.ts'
 
 describe('vnode rendering', () => {
   describe('svg', () => {

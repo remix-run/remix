@@ -1,4 +1,5 @@
-import { animateEntrance, animateLayout, css, on, type Handle } from 'remix/ui'
+import { css, on, type Handle } from 'remix/ui'
+import { animateEntrance, animateLayout } from 'remix/ui/animation'
 
 let nextId = 1
 function createItem() {

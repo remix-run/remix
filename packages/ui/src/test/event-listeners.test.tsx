@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { addEventListeners, TypedEventTarget, createRoot } from '../index.ts'
-import type { Dispatched } from '../lib/event-listeners.ts'
+import type { Dispatched } from '../runtime/event-listeners.ts'
 import type { Assert, Equal } from './utils.ts'
-import type { Handle } from '../lib/component.ts'
+import type { Handle } from '../runtime/component.ts'
 
 describe('addEventListeners', () => {
   it('adds listeners to an event target', () => {

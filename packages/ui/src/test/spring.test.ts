@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 
-import { spring } from '../lib/spring.ts'
+import { spring } from '../animation/spring.ts'
 
 describe('spring', () => {
   describe('interface', () => {

@@ -1,6 +1,8 @@
 import type { Handle } from 'remix/ui'
-import { animateEntrance, animateExit, css, on, ref } from 'remix/ui'
-import { spring } from '../../src/lib/spring.ts'
+import { css, on, ref } from 'remix/ui'
+
+import { animateEntrance, animateExit } from 'remix/ui/animation'
+import { spring } from 'remix/ui/animation'
 
 const STATES = {
   idle: 'Start',

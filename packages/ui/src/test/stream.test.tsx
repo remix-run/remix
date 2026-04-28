@@ -1,13 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
-import type { Handle, RemixNode } from '../lib/component.ts'
+import type { Handle, RemixNode } from '../runtime/component.ts'
 import { createMixin, css, on } from '../index.ts'
-import { createElement } from '../lib/create-element.ts'
+import { createElement } from '../runtime/create-element.ts'
 
-import { renderToStream, renderToString } from '../lib/stream.ts'
-import { clientEntry } from '../lib/client-entries.ts'
+import { renderToStream, renderToString } from '../server/stream.ts'
+import { clientEntry } from '../runtime/client-entries.ts'
 import { drain, readChunks, withResolvers } from './utils.ts'
-import { Frame } from '../lib/component.ts'
-import { invariant } from '../lib/invariant.ts'
+import { Frame } from '../runtime/component.ts'
+import { invariant } from '../runtime/invariant.ts'
 
 const rmxDataScriptSelector = 'script[type="application/json"]#rmx-data'
 

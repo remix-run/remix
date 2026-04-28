@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
-import { createRoot } from '../lib/vdom.ts'
-import { invariant } from '../lib/invariant.ts'
-import { Fragment, type Handle } from '../lib/component.ts'
+import { createRoot } from '../runtime/vdom.ts'
+import { invariant } from '../runtime/invariant.ts'
+import { Fragment, type Handle } from '../runtime/component.ts'
 
 describe('vnode rendering (keys)', () => {
   describe('keyed list with non-keyed sibling', () => {

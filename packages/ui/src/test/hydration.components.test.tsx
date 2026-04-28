@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import type { Handle } from '../lib/component.ts'
-import { createRoot } from '../lib/vdom.ts'
-import { renderToString } from '../lib/stream.ts'
-import { clientEntry } from '../lib/client-entries.ts'
-import { invariant } from '../lib/invariant.ts'
+import type { Handle } from '../runtime/component.ts'
+import { createRoot } from '../runtime/vdom.ts'
+import { renderToString } from '../server/stream.ts'
+import { clientEntry } from '../runtime/client-entries.ts'
+import { invariant } from '../runtime/invariant.ts'
 import { on, ref } from '../index.ts'
 
 describe('hydration', () => {

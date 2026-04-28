@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
-import { createRoot, resetStyleState } from '../lib/vdom.ts'
-import { renderToString } from '../lib/stream.ts'
-import { invariant } from '../lib/invariant.ts'
+import { createRoot, resetStyleState } from '../runtime/vdom.ts'
+import { renderToString } from '../server/stream.ts'
+import { invariant } from '../runtime/invariant.ts'
 import { css } from '../index.ts'
 
 describe('hydration', () => {

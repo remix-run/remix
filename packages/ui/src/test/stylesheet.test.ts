@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createStyleManager } from '../lib/style/lib/stylesheet.ts'
+import { createStyleManager } from '../style/stylesheet.ts'
 
 describe('createStyleManager', () => {
   it('does not adopt an empty stylesheet until styles are inserted', () => {

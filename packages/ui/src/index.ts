@@ -1,15 +1,15 @@
 /// <reference types="dom-navigation" preserve="true" />
 
 // -- Roots --
-export { run } from './lib/run.ts'
-export type { AppRuntime, AppRuntimeEventMap, RunInit } from './lib/run.ts'
-export type { ComponentErrorEvent } from './lib/error-event.ts'
+export { run } from './runtime/run.ts'
+export type { AppRuntime, AppRuntimeEventMap, RunInit } from './runtime/run.ts'
+export type { ComponentErrorEvent } from './runtime/error-event.ts'
 
-export { createRoot, createRangeRoot, createScheduler } from './lib/vdom.ts'
-export type { VirtualRoot, VirtualRootEventMap, VirtualRootOptions, Scheduler } from './lib/vdom.ts'
+export { createRoot, createRangeRoot, createScheduler } from './runtime/vdom.ts'
+export type { VirtualRoot, VirtualRootEventMap, VirtualRootOptions, Scheduler } from './runtime/vdom.ts'
 
 // -- Client Entries --
-export { clientEntry } from './lib/client-entries.ts'
+export { clientEntry } from './runtime/client-entries.ts'
 export type {
   SerializablePrimitive,
   SerializableObject,
@@ -17,10 +17,10 @@ export type {
   SerializableValue,
   SerializableProps,
   EntryComponent,
-} from './lib/client-entries.ts'
+} from './runtime/client-entries.ts'
 
 // -- Components --
-export { Fragment, Frame } from './lib/component.ts'
+export { Fragment, Frame } from './runtime/component.ts'
 export type {
   Task,
   Handle,
@@ -29,11 +29,11 @@ export type {
   FrameContent,
   FrameHandle,
   FrameProps,
-} from './lib/component.ts'
-export type { LoadModule, ResolveFrame } from './lib/frame.ts'
+} from './runtime/component.ts'
+export type { LoadModule, ResolveFrame } from './runtime/frame.ts'
 
 // -- Elements/JSX/Props --
-export { createElement } from './lib/create-element.ts'
+export { createElement } from './runtime/create-element.ts'
 export type {
   ElementType,
   ElementProps,
@@ -41,30 +41,21 @@ export type {
   Renderable,
   RemixNode,
   Props,
-} from './lib/jsx.ts'
-export type { HostProps, LayoutAnimationConfig } from './lib/dom.ts'
-export { createMixin } from './lib/mixin.ts'
-export type { MixinDescriptor, MixinHandle, MixinType, MixInput, MixValue } from './lib/mixin.ts'
-export { TypedEventTarget } from './lib/typed-event-target.ts'
-export { addEventListeners } from './lib/event-listeners.ts'
-export { on } from './lib/mixins/on-mixin.ts'
-export type { Dispatched } from './lib/mixins/on-mixin.ts'
-export { link } from './lib/mixins/link-mixin.ts'
-export { ref } from './lib/mixins/ref-mixin.ts'
-export type { RefCallback } from './lib/mixins/ref-mixin.ts'
-export { attrs } from './lib/mixins/attrs-mixin.tsx'
-export { css } from './lib/mixins/css-mixin.ts'
-export type { CSSMixinDescriptor } from './lib/mixins/css-mixin.ts'
-export { animateEntrance, animateExit } from './lib/mixins/animate-mixins.ts'
-export { animateLayout } from './lib/mixins/animate-layout-mixin.ts'
-
-// -- Animation --
-export { spring } from './lib/spring.ts'
-export type { SpringIterator, SpringPreset, SpringOptions } from './lib/spring.ts'
-
-export { tween, easings } from './lib/tween.ts'
-export type { TweenOptions, BezierCurve } from './lib/tween.ts'
+} from './runtime/jsx.ts'
+export type { HostProps, LayoutAnimationConfig } from './runtime/dom.ts'
+export { createMixin } from './runtime/mixins/mixin.ts'
+export type { MixinDescriptor, MixinHandle, MixinType, MixInput, MixValue } from './runtime/mixins/mixin.ts'
+export { TypedEventTarget } from './runtime/typed-event-target.ts'
+export { addEventListeners } from './runtime/event-listeners.ts'
+export { on } from './runtime/mixins/on-mixin.ts'
+export type { Dispatched } from './runtime/mixins/on-mixin.ts'
+export { link } from './runtime/mixins/link-mixin.ts'
+export { ref } from './runtime/mixins/ref-mixin.ts'
+export type { RefCallback } from './runtime/mixins/ref-mixin.ts'
+export { attrs } from './runtime/mixins/attrs-mixin.tsx'
+export { css } from './style/css-mixin.ts'
+export type { CSSMixinDescriptor } from './style/css-mixin.ts'
 
 // -- Navigation --
-export { navigate } from './lib/navigation.ts'
-export type { NavigationOptions } from './lib/navigation.ts'
+export { navigate } from './runtime/navigation.ts'
+export type { NavigationOptions } from './runtime/navigation.ts'

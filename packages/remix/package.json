@@ -80,6 +80,7 @@
     "./ui": "./src/ui.ts",
     "./ui/accordion": "./src/ui/accordion.ts",
     "./ui/anchor": "./src/ui/anchor.ts",
+    "./ui/animation": "./src/ui/animation.ts",
     "./ui/breadcrumbs": "./src/ui/breadcrumbs.ts",
     "./ui/button": "./src/ui/button.ts",
     "./ui/combobox": "./src/ui/combobox.ts",
@@ -88,7 +89,6 @@
     "./ui/jsx-runtime": "./src/ui/jsx-runtime.ts",
     "./ui/listbox": "./src/ui/listbox.ts",
     "./ui/menu": "./src/ui/menu.ts",
-    "./ui/on-outside-pointer-down": "./src/ui/on-outside-pointer-down.ts",
     "./ui/popover": "./src/ui/popover.ts",
     "./ui/scroll-lock": "./src/ui/scroll-lock.ts",
     "./ui/select": "./src/ui/select.ts",
@@ -347,6 +347,10 @@
         "types": "./dist/ui/anchor.d.ts",
         "default": "./dist/ui/anchor.js"
       },
+      "./ui/animation": {
+        "types": "./dist/ui/animation.d.ts",
+        "default": "./dist/ui/animation.js"
+      },
       "./ui/breadcrumbs": {
         "types": "./dist/ui/breadcrumbs.d.ts",
         "default": "./dist/ui/breadcrumbs.js"
@@ -378,10 +382,6 @@
       "./ui/menu": {
         "types": "./dist/ui/menu.d.ts",
         "default": "./dist/ui/menu.js"
-      },
-      "./ui/on-outside-pointer-down": {
-        "types": "./dist/ui/on-outside-pointer-down.d.ts",
-        "default": "./dist/ui/on-outside-pointer-down.js"
       },
       "./ui/popover": {
         "types": "./dist/ui/popover.d.ts",

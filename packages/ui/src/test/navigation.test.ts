@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('../lib/run.ts', () => ({
+vi.mock('../runtime/run.ts', () => ({
   getTopFrame() {
     return {
       src: '',
@@ -15,7 +15,7 @@ vi.mock('../lib/run.ts', () => ({
   },
 }))
 
-import { navigate, startNavigationListener } from '../lib/navigation.ts'
+import { navigate, startNavigationListener } from '../runtime/navigation.ts'
 
 describe('navigate', () => {
   afterEach(() => {

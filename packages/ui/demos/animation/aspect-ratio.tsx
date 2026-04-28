@@ -1,5 +1,7 @@
 import { type Handle } from 'remix/ui'
-import { css, on, spring } from 'remix/ui'
+import { css, on } from 'remix/ui'
+
+import { spring } from 'remix/ui/animation'
 
 export function AspectRatio(handle: Handle) {
   let aspectRatio = 1
