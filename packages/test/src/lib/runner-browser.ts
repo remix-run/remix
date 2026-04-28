@@ -1,6 +1,5 @@
 import * as path from 'node:path'
 import type { Browser, Page, Request } from 'playwright'
-import { routes } from '../app/client/routes.ts'
 import { colors } from './colors.ts'
 import { getBrowserTestRootDir } from './config.ts'
 import { collectBrowserCoverageMap, type CoverageMap, type V8CoverageEntry } from './coverage.ts'
@@ -92,10 +91,8 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     // Fail the tests if any /scripts/ request fails (harness scripts, test
     // modules, or their transitive imports — all served via the same prefix).
     let errorPromise = new Promise((_, reject) => {
-      let isScriptRequest = (request: Request) => {
-        let match = routes.scripts.match(new URL(request.url()))
-        return match != null
-      }
+      let isScriptRequest = (request: Request) =>
+        new URL(request.url()).pathname.startsWith('/scripts/')
       page!.on('response', (response) => {
         if (!response.ok() && isScriptRequest(response.request())) {
           reject(new Error(`Failed to load script: ${response.request().url()}`))
