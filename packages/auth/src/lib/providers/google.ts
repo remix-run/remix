@@ -1,4 +1,4 @@
-import type { OAuthProvider } from '../provider.ts'
+import type { OAuthProvider, OAuthStandardTokens } from '../provider.ts'
 
 import {
   createOIDCAuthProvider,
@@ -48,7 +48,7 @@ export interface GoogleAuthProfile extends OIDCAuthProfile {}
  */
 export function createGoogleAuthProvider(
   options: GoogleAuthProviderOptions,
-): OAuthProvider<GoogleAuthProfile, 'google'> {
+): OAuthProvider<GoogleAuthProfile, 'google', OAuthStandardTokens> {
   return createOIDCAuthProvider({
     ...options,
     name: 'google',

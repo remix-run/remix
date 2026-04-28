@@ -61,6 +61,8 @@
     "authentication",
     "oauth",
     "oidc",
+    "atproto",
+    "bluesky",
     "google",
     "github",
     "facebook",

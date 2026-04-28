@@ -1,8 +1,10 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import type { OAuthTokens } from './provider.ts'
+import type { OAuthStandardTokens } from './provider.ts'
 import { refreshExternalAuth } from './refresh-external-auth.ts'
+import type { AtmosphereOAuthTokens } from './providers/atmosphere.ts'
+import { createAtmosphereAuthProvider } from './providers/atmosphere.ts'
 import { createGitHubAuthProvider } from './providers/github.ts'
 import { createGoogleAuthProvider } from './providers/google.ts'
 import { createXAuthProvider } from './providers/x.ts'
@@ -38,7 +40,7 @@ describe('refreshExternalAuth()', () => {
     })
 
     try {
-      let currentTokens: OAuthTokens = {
+      let currentTokens: OAuthStandardTokens = {
         accessToken: 'google-access-token-1',
         refreshToken: 'google-refresh-token',
         tokenType: 'Bearer',
@@ -88,7 +90,7 @@ describe('refreshExternalAuth()', () => {
     })
 
     try {
-      let currentTokens: OAuthTokens = {
+      let currentTokens: OAuthStandardTokens = {
         accessToken: 'x-access-token-1',
         refreshToken: 'x-refresh-token',
         tokenType: 'bearer',
@@ -101,6 +103,84 @@ describe('refreshExternalAuth()', () => {
       assert.equal(result.tokens.refreshToken, 'x-refresh-token-2')
       assert.equal(result.tokens.tokenType, 'bearer')
       assert.deepEqual(result.tokens.scope, ['tweet.read', 'users.read', 'offline.access'])
+    } finally {
+      restoreFetch()
+    }
+  })
+
+  it('refreshes Atmosphere DPoP tokens and updates the nonce', async () => {
+    let restoreFetch = mockFetch(async (input, init) => {
+      let url = toRequestUrl(input)
+
+      if (url.href === 'https://auth.example.com/oauth/token') {
+        let body = new URLSearchParams(String(init?.body ?? ''))
+        let proof = decodeJwt(new Headers(init?.headers).get('DPoP')!)
+
+        assert.equal(body.get('grant_type'), 'refresh_token')
+        assert.equal(body.get('refresh_token'), 'atmosphere-refresh-token')
+        assert.equal(
+          body.get('client_id'),
+          'http://localhost/?redirect_uri=http%3A%2F%2F127.0.0.1%3A44100%2Fauth%2Fatmosphere%2Fcallback&scope=atproto',
+        )
+        assert.equal(proof.payload.nonce, 'old-atmosphere-nonce')
+
+        return Response.json(
+          {
+            access_token: 'atmosphere-access-token-2',
+            token_type: 'DPoP',
+            scope: 'atproto',
+            sub: 'did:plc:alice',
+          },
+          {
+            headers: {
+              'DPoP-Nonce': 'new-atmosphere-nonce',
+            },
+          },
+        )
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let atmosphereProvider = createAtmosphereAuthProvider({
+        clientId: 'http://localhost',
+        redirectUri: 'http://127.0.0.1:44100/auth/atmosphere/callback',
+        sessionSecret: 'atmosphere-session-secret',
+      })
+      let dpopKeyPair = (await crypto.subtle.generateKey(
+        { name: 'ECDSA', namedCurve: 'P-256' },
+        true,
+        ['sign', 'verify'],
+      )) as CryptoKeyPair
+      let currentTokens: AtmosphereOAuthTokens = {
+        accessToken: 'atmosphere-access-token-1',
+        refreshToken: 'atmosphere-refresh-token',
+        tokenType: 'DPoP',
+        scope: ['atproto'],
+        did: 'did:plc:alice',
+        authorizationServer: {
+          issuer: 'https://auth.example.com',
+          tokenEndpoint: 'https://auth.example.com/oauth/token',
+        },
+        dpop: {
+          publicJwk: (await crypto.subtle.exportKey('jwk', dpopKeyPair.publicKey)) as JsonWebKey,
+          privateJwk: (await crypto.subtle.exportKey('jwk', dpopKeyPair.privateKey)) as JsonWebKey,
+          nonce: 'old-atmosphere-nonce',
+        },
+      }
+      let result = await refreshExternalAuth(atmosphereProvider, currentTokens)
+
+      assert.equal(result.provider, 'atmosphere')
+      assert.equal(result.tokens.accessToken, 'atmosphere-access-token-2')
+      assert.equal(result.tokens.refreshToken, 'atmosphere-refresh-token')
+      assert.equal(result.tokens.did, 'did:plc:alice')
+      assert.deepEqual(result.tokens.authorizationServer, {
+        issuer: 'https://auth.example.com',
+        tokenEndpoint: 'https://auth.example.com/oauth/token',
+      })
+      assert.equal(result.tokens.dpop.nonce, 'new-atmosphere-nonce')
+      assert.deepEqual(result.tokens.scope, ['atproto'])
     } finally {
       restoreFetch()
     }
@@ -134,4 +214,20 @@ function toRequestUrl(input: RequestInfo | URL): URL {
   }
 
   return new URL(input.url)
+}
+
+function decodeJwt(token: string): {
+  payload: Record<string, unknown>
+} {
+  let [, payload] = token.split('.')
+  return {
+    payload: JSON.parse(decodeBase64Url(payload)),
+  }
+}
+
+function decodeBase64Url(value: string): string {
+  let padding = value.length % 4 === 0 ? '' : '='.repeat(4 - (value.length % 4))
+  let base64 = value.replace(/-/g, '+').replace(/_/g, '/') + padding
+  let bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
+  return new TextDecoder().decode(bytes)
 }

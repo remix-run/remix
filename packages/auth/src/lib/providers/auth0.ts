@@ -1,4 +1,4 @@
-import type { OAuthProvider } from '../provider.ts'
+import type { OAuthProvider, OAuthStandardTokens } from '../provider.ts'
 
 import {
   createOIDCAuthProvider,
@@ -33,7 +33,7 @@ export interface Auth0AuthProviderOptions
  */
 export function createAuth0AuthProvider(
   options: Auth0AuthProviderOptions,
-): OAuthProvider<Auth0AuthProfile, 'auth0'> {
+): OAuthProvider<Auth0AuthProfile, 'auth0', OAuthStandardTokens> {
   let issuer = createAuth0Issuer(options.domain)
 
   return createOIDCAuthProvider({
