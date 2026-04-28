@@ -29,6 +29,7 @@ const ROOT_HELP_TEXT = [
   '  doctor          Check project health for the current project',
   '  routes          Show the route tree for the current project',
   '  skills          Manage Remix skills for the current project',
+  '  test [glob]     Run tests for the current project',
   '  version         Show the current Remix version',
   '',
   'Options:',
@@ -47,6 +48,7 @@ const ROOT_HELP_TEXT = [
   '  remix new my-remix-app --app-name "My Remix App"',
   '  remix routes',
   '  remix skills install',
+  '  remix test',
   '  remix version',
   '',
 ].join('\n')
@@ -95,6 +97,7 @@ const HELP_COMMAND_HELP_TEXT = [
   '  remix help new',
   '  remix help routes',
   '  remix help skills install',
+  '  remix help test',
   '  remix help version',
   '',
 ].join('\n')
@@ -180,6 +183,20 @@ const SKILLS_LIST_COMMAND_HELP_TEXT = [
   '  remix skills list',
   '  remix skills list --dir custom/skills',
   '  remix skills list --json',
+  '',
+].join('\n')
+
+const TEST_COMMAND_HELP_TEXT = [
+  'Usage:',
+  '  remix test [glob] [options]',
+  '',
+  'Run tests for the current project.',
+  '',
+  'Examples:',
+  '  remix test',
+  '  remix test --watch',
+  '  remix test --coverage',
+  '  remix test --glob.test "src/**/*.test.ts"',
   '',
 ].join('\n')
 
@@ -320,6 +337,11 @@ describe('run', () => {
         entries: Array<{ name: string; state: string }>
       }
       assert.deepEqual(skillsReport.entries, [{ name: 'remix-ui', state: 'missing' }])
+
+      let test = await captureOutput(() => run(['test', '--help']))
+      assert.equal(test.exitCode, 0)
+      assert.equal(test.stdout, TEST_COMMAND_HELP_TEXT)
+      assert.equal(test.stderr, '')
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -350,6 +372,7 @@ describe('run', () => {
     let skillsHelp = await captureOutput(() => run(['help', 'skills']))
     let skillsInstallHelp = await captureOutput(() => run(['help', 'skills', 'install']))
     let skillsListHelp = await captureOutput(() => run(['help', 'skills', 'list']))
+    let testHelp = await captureOutput(() => run(['help', 'test']))
     let versionHelp = await captureOutput(() => run(['help', 'version']))
 
     assert.equal(doctorHelp.exitCode, 0)
@@ -376,6 +399,9 @@ describe('run', () => {
     assert.equal(skillsListHelp.exitCode, 0)
     assert.equal(skillsListHelp.stdout, SKILLS_LIST_COMMAND_HELP_TEXT)
     assert.equal(skillsListHelp.stderr, '')
+    assert.equal(testHelp.exitCode, 0)
+    assert.equal(testHelp.stdout, TEST_COMMAND_HELP_TEXT)
+    assert.equal(testHelp.stderr, '')
     assert.equal(versionHelp.exitCode, 0)
     assert.equal(versionHelp.stdout, VERSION_COMMAND_HELP_TEXT)
     assert.equal(versionHelp.stderr, '')

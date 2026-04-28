@@ -219,19 +219,14 @@ export interface ResolvedRemixTestConfig {
   watch: boolean
 }
 
-export async function loadConfig() {
-  if (process.argv.includes('--help') || process.argv.includes('-h')) {
-    console.log(generateHelp())
-    process.exit(0)
-  }
-
-  let parsed = parseCliArgs()
-  let fileConfig = await loadConfigFile(parsed.values.config)
+export async function loadConfig(args: string[] = process.argv.slice(2), cwd = process.cwd()) {
+  let parsed = parseCliArgs(args)
+  let fileConfig = await loadConfigFile(parsed.values.config, cwd)
   let config = resolveConfig(fileConfig, parsed)
   return config
 }
 
-function generateHelp(): string {
+export function getRemixTestHelpText(): string {
   let lines = [
     'Usage: remix-test [glob] [options]',
     '',
@@ -252,7 +247,7 @@ function generateHelp(): string {
   return lines.join('\n')
 }
 
-function parseCliArgs(args = process.argv.slice(2)) {
+function parseCliArgs(args: string[]) {
   return util.parseArgs({ args, options: cliOptions, allowPositionals: true })
 }
 
@@ -326,13 +321,13 @@ function resolveConfig(
   }
 }
 
-async function loadConfigFile(configPath?: string): Promise<RemixTestConfig> {
+async function loadConfigFile(
+  configPath: string | undefined,
+  cwd: string,
+): Promise<RemixTestConfig> {
   let candidates = configPath
-    ? [path.resolve(process.cwd(), configPath)]
-    : [
-        path.join(process.cwd(), 'remix-test.config.ts'),
-        path.join(process.cwd(), 'remix-test.config.js'),
-      ]
+    ? [path.resolve(cwd, configPath)]
+    : [path.join(cwd, 'remix-test.config.ts'), path.join(cwd, 'remix-test.config.js')]
 
   for (let candidate of candidates) {
     try {

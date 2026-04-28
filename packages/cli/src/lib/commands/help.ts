@@ -11,6 +11,7 @@ import {
   getSkillsInstallCommandHelpText,
   getSkillsListCommandHelpText,
 } from './skills.ts'
+import { getTestCommandHelpText } from './test.ts'
 import { getVersionCommandHelpText } from './version.ts'
 
 export async function runHelpCommand(argv: string[]): Promise<number> {
@@ -38,6 +39,7 @@ export function getCliHelpText(target: NodeJS.WriteStream = process.stdout): str
         { description: 'Check project health for the current project', label: 'doctor' },
         { description: 'Show the route tree for the current project', label: 'routes' },
         { description: 'Manage Remix skills for the current project', label: 'skills' },
+        { description: 'Run tests for the current project', label: 'test [glob]' },
         { description: 'Show the current Remix version', label: 'version' },
       ],
       examples: [
@@ -51,6 +53,7 @@ export function getCliHelpText(target: NodeJS.WriteStream = process.stdout): str
         'remix new my-remix-app --app-name "My Remix App"',
         'remix routes',
         'remix skills install',
+        'remix test',
         'remix version',
       ],
       options: [
@@ -75,6 +78,7 @@ export function getHelpCommandHelpText(target: NodeJS.WriteStream = process.stdo
         'remix help new',
         'remix help routes',
         'remix help skills install',
+        'remix help test',
         'remix help version',
       ],
       usage: ['remix help [command]'],
@@ -112,6 +116,10 @@ function getCommandHelpText(argv: string[]): string {
 
   if (command === 'skills') {
     return getSkillsHelpText(rest)
+  }
+
+  if (command === 'test' && rest.length === 0) {
+    return getTestCommandHelpText()
   }
 
   if (command === 'version' && rest.length === 0) {

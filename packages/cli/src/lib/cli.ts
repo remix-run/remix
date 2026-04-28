@@ -6,6 +6,7 @@ import { getCliHelpText, runHelpCommand } from './commands/help.ts'
 import { runNewCommand } from './commands/new.ts'
 import { runRoutesCommand } from './commands/routes.ts'
 import { runSkillsCommand } from './commands/skills.ts'
+import { runTestCommand } from './commands/test.ts'
 import { runVersionCommand } from './commands/version.ts'
 import { renderCliError, unknownCommand } from './errors.ts'
 import { setCliRuntimeContext, type CliRuntimeContext } from './runtime-context.ts'
@@ -75,6 +76,10 @@ async function runCommand(command: string, argv: string[]): Promise<number> {
 
   if (command === 'routes') {
     return runRoutesCommand(argv)
+  }
+
+  if (command === 'test') {
+    return runTestCommand(argv)
   }
 
   if (command === 'version') {

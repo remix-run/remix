@@ -9,13 +9,11 @@ export type PlaywrightUseOpts = PlaywrightTestConfig['use']
 
 export async function loadPlaywrightConfig(
   input: string | undefined,
+  cwd = process.cwd(),
 ): Promise<PlaywrightTestConfig | undefined> {
   let candidates = input
-    ? [path.resolve(process.cwd(), input)]
-    : [
-        path.join(process.cwd(), 'playwright.config.ts'),
-        path.join(process.cwd(), 'playwright.config.js'),
-      ]
+    ? [path.resolve(cwd, input)]
+    : [path.join(cwd, 'playwright.config.ts'), path.join(cwd, 'playwright.config.js')]
 
   for (let configPath of candidates) {
     try {

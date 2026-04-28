@@ -4,8 +4,26 @@ export interface CompletionResult {
 }
 
 const COMPLETION_SHELLS = ['bash', 'zsh'] as const
-const HELP_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'skills', 'version'] as const
-const ROOT_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'skills', 'version'] as const
+const HELP_COMMANDS = [
+  'completion',
+  'doctor',
+  'help',
+  'new',
+  'routes',
+  'skills',
+  'test',
+  'version',
+] as const
+const ROOT_COMMANDS = [
+  'completion',
+  'doctor',
+  'help',
+  'new',
+  'routes',
+  'skills',
+  'test',
+  'version',
+] as const
 const SKILLS_COMMANDS = ['install', 'list'] as const
 
 export type CompletionShell = (typeof COMPLETION_SHELLS)[number]
@@ -173,6 +191,14 @@ function completeCommand(
     return completeSimpleFlags(tokens, currentWord, usedGlobalFlags, [])
   }
 
+  if (command === 'test') {
+    return completeSimpleFlags(tokens, currentWord, usedGlobalFlags, [
+      '--coverage',
+      '--watch',
+      '--help',
+    ])
+  }
+
   if (command === 'completion') {
     return completeCompletionCommand(tokens, currentWord, usedGlobalFlags)
   }
@@ -255,10 +281,7 @@ function completeNew(
   }
 
   let flags = withHelpFlags(
-    [
-      ...(!hasAppName ? ['--app-name'] : []),
-      ...(!hasForce ? ['--force'] : []),
-    ],
+    [...(!hasAppName ? ['--app-name'] : []), ...(!hasForce ? ['--force'] : [])],
     usedGlobalFlags,
   )
 
@@ -430,10 +453,7 @@ function completeSkillsDirectoryCommand(
 
   return completeValues(
     withHelpFlags(
-      [
-        ...(!hasDir ? ['--dir'] : []),
-        ...(!hasJson ? ['--json'] : []),
-      ],
+      [...(!hasDir ? ['--dir'] : []), ...(!hasJson ? ['--json'] : [])],
       usedGlobalFlags,
     ),
     currentWord,

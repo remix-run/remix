@@ -26,6 +26,7 @@ export async function runServerTests(
   concurrency: number,
   type: 'server' | 'e2e',
   options: {
+    cwd?: string
     open?: boolean
     playwrightUseOpts?: PlaywrightUseOpts
     projectName?: string
@@ -34,6 +35,7 @@ export async function runServerTests(
 ): Promise<Counts & { coverageMap: CoverageMap | null }> {
   let counts: Counts = { passed: 0, failed: 0, skipped: 0, todo: 0 }
   let coverageMap: CoverageMap | null = null
+  let cwd = options.cwd ?? process.cwd()
   let envLabel = options.projectName ? `${type}:${options.projectName}` : type
 
   function accumulate(results: TestResults, file: string) {
@@ -72,11 +74,7 @@ export async function runServerTests(
     )
 
     if (options.coverage && allBrowserCoverageEntries.length > 0) {
-      coverageMap = await collectE2ECoverageMap(
-        allBrowserCoverageEntries,
-        process.cwd(),
-        new Set(files),
-      )
+      coverageMap = await collectE2ECoverageMap(allBrowserCoverageEntries, cwd, new Set(files))
     }
   } else {
     let coverageDataDir: string | undefined
@@ -95,7 +93,7 @@ export async function runServerTests(
 
     if (coverageDataDir) {
       delete process.env.NODE_V8_COVERAGE
-      let serverMap = await collectServerCoverageMap(coverageDataDir, process.cwd(), new Set(files))
+      let serverMap = await collectServerCoverageMap(coverageDataDir, cwd, new Set(files))
       coverageMap = serverMap
     }
   }
@@ -151,6 +149,7 @@ function runFileInWorker(
   type: 'server' | 'e2e',
   onResults: (results: TestResults) => void,
   options: {
+    cwd?: string
     coverage?: CoverageConfig
     open?: boolean
     playwrightUseOpts?: PlaywrightUseOpts
