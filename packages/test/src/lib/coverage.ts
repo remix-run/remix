@@ -243,7 +243,7 @@ export async function collectServerCoverageMap(
   }
 
   // Clean up raw V8 coverage JSON files now that we've processed them
-  await Promise.all(files.map((f) => fsp.rm(path.join(coverageDataDir, f), { force: true })))
+  //await Promise.all(files.map((f) => fsp.rm(path.join(coverageDataDir, f), { force: true })))
 
   return converted > 0 ? coverageMap : null
 }

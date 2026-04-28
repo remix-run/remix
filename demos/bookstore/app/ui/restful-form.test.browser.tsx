@@ -1,5 +1,5 @@
 import * as assert from 'remix/assert'
-import { render } from 'remix/component/test'
+import { render } from 'remix/ui/test'
 import { describe, it } from 'remix/test'
 import { RestfulForm } from './restful-form.tsx'
 

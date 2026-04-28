@@ -453,7 +453,7 @@ jobs:
             - Formatting uses single quotes, no semicolons, and spaces instead of tabs.
             - Missing tests, docs, or change files matter when a published package changes.
             - Use repository-local semantics over generic React assumptions.
-            - `remix/component` code in this repository intentionally uses components that return functions.
+            - `remix/ui` code in this repository intentionally uses components that return functions.
             - The bootstrap controller and render utility examples from the review examples file are reference examples for that pattern.
             - Before flagging a framework-level JSX or component-runtime bug, compare the PR code against the review examples and search for the same pattern in the owning package. Treat those examples as evidence of current local conventions, not as proof that every use is correct.
 

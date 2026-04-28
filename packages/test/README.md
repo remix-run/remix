@@ -7,7 +7,7 @@ A test framework for JavaScript and TypeScript projects.
 - `describe`/`it` test structure with `before`/`after`/`beforeEach`/`afterEach` hooks
 - Server-side unit testing
 - Playwright E2E testing via `t.serve`
-- In-browser component testing (pair with `render` from `remix/component/test`)
+- In-browser component testing (pair with `render` from `remix/ui/test`)
 - Mock functions and method spies via `t.mock.fn` / `t.mock.method`
 - Unified code coverage reporting across unit and E2E tests
 - Watch mode
@@ -341,12 +341,12 @@ Browser tests run components in an actual browser environment via Playwright and
 
 #### `render()`
 
-`render`, exported from `remix/component/test`, mounts a component into the DOM and returns a `RenderResult`:
+`render`, exported from `remix/ui/test`, mounts a component into the DOM and returns a `RenderResult`:
 
 ```ts
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
-import { render } from 'remix/component/test'
+import { render } from 'remix/ui/test'
 import { Counter } from './counter.tsx'
 
 describe('Counter', () => {
