@@ -1,15 +1,22 @@
-import * as assert from 'node:assert/strict'
+import * as assert from '@remix-run/assert'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as process from 'node:process'
-import { describe, it } from 'node:test'
+import { describe, it } from '@remix-run/test'
 
 import { getFixturePath } from '../../test/fixtures.ts'
-import { run } from '../index.ts'
+import { run as runCli } from '../index.ts'
+import type { CliRuntimeContext } from './runtime-context.ts'
 
 const REMIX_GITHUB_TREE_URL =
   'https://api.github.com/repos/remix-run/remix/git/trees/main?recursive=1'
+
+let testCwd: string | undefined
+
+function run(argv: string[], context: CliRuntimeContext = {}): Promise<number> {
+  return runCli(argv, { cwd: testCwd, ...context })
+}
 
 const ROOT_HELP_TEXT = [
   'Usage:',
@@ -621,13 +628,13 @@ async function withEnv<T>(name: string, value: string, callback: () => Promise<T
 }
 
 async function withCwd<T>(cwd: string, callback: () => Promise<T>): Promise<T> {
-  let previousCwd = process.cwd()
-  process.chdir(cwd)
+  let previousCwd = testCwd
+  testCwd = cwd
 
   try {
     return await callback()
   } finally {
-    process.chdir(previousCwd)
+    testCwd = previousCwd
   }
 }
 

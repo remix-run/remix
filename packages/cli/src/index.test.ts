@@ -1,10 +1,10 @@
-import * as assert from 'node:assert/strict'
+import * as assert from '@remix-run/assert'
 import { spawnSync } from 'node:child_process'
 import * as fs from 'node:fs'
 import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import { dirname, resolve } from 'node:path'
-import { describe, it } from 'node:test'
+import { describe, it } from '@remix-run/test'
 
 const PACKAGE_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const REMIX_PACKAGE_DIR = resolve(PACKAGE_DIR, '../remix')

@@ -11,6 +11,7 @@ import {
   createStepProgressReporter,
   type CommandReporter,
 } from '../reporter.ts'
+import { getRuntimeCwd } from '../runtime-context.ts'
 
 const SKILLS_PROGRESS_LABELS = {
   'compare-local-skills': 'Compare local skills',
@@ -135,7 +136,7 @@ async function runSkillsInstallCommand(argv: string[]): Promise<number> {
 
   let reporter = createCommandReporter()
   let progress = createSkillsProgressReporter(reporter)
-  let cwd = process.cwd()
+  let cwd = getRuntimeCwd()
 
   try {
     await reporter.status.commandHeader('skills install')
@@ -183,7 +184,7 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
     return 1
   }
 
-  let cwd = process.cwd()
+  let cwd = getRuntimeCwd()
   let reporter = createCommandReporter()
   let progress: SkillsProgressReporter | null = null
   try {

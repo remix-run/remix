@@ -1,6 +1,6 @@
-import * as assert from 'node:assert/strict'
+import * as assert from '@remix-run/assert'
 import * as process from 'node:process'
-import { describe, it } from 'node:test'
+import { describe, it } from '@remix-run/test'
 
 import {
   bold,

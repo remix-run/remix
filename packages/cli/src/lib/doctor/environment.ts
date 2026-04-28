@@ -101,7 +101,7 @@ export async function checkEnvironment(
     })
   }
 
-  if (!canResolveRemix(projectRoot)) {
+  if (!(await canResolveRemix(projectRoot))) {
     findings.push({
       actualPath: 'package.json',
       code: 'remix-install-missing',
@@ -243,7 +243,11 @@ function getEnvironmentFixCode(findings: DoctorFinding[]): DoctorFixPlan['code']
   return fixableFinding?.code ?? null
 }
 
-function canResolveRemix(projectRoot: string): boolean {
+async function canResolveRemix(projectRoot: string): Promise<boolean> {
+  if (!(await pathExists(path.join(projectRoot, 'node_modules', 'remix', 'package.json')))) {
+    return false
+  }
+
   try {
     let require = createRequire(path.join(projectRoot, 'package.json'))
     require.resolve('remix/package.json')

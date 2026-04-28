@@ -41,6 +41,8 @@
     "semver": "^7.7.4"
   },
   "devDependencies": {
+    "@remix-run/assert": "workspace:^",
+    "@remix-run/test": "workspace:^",
     "@types/node": "catalog:",
     "@types/semver": "^7.5.8",
     "@typescript/native-preview": "catalog:"
@@ -50,7 +52,7 @@
     "clean": "git clean -fdX",
     "cli": "tsx ./src/index.ts",
     "prepublishOnly": "pnpm run build",
-    "test": "node --test './src/**/*.test.ts'",
+    "test": "remix-test --concurrency 1",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

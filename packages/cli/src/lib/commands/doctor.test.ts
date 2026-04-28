@@ -1,11 +1,11 @@
-import * as assert from 'node:assert/strict'
+import * as assert from '@remix-run/assert'
 import { spawnSync } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
-import { describe, it } from 'node:test'
+import { describe, it } from '@remix-run/test'
 
 import { getFixturePath } from '../../../test/fixtures.ts'
 

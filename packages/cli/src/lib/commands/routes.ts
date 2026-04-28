@@ -5,6 +5,7 @@ import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
 import { createCommandReporter, type TextChannel } from '../reporter.ts'
 import { loadRouteMap, type LoadedRouteMap, type RouteTreeNode } from '../route-map.ts'
+import { getRuntimeCwd } from '../runtime-context.ts'
 import { lightRed } from '../terminal.ts'
 
 const CONTROLLERS_PATH_PREFIX = 'app/controllers/'
@@ -17,7 +18,7 @@ export async function runRoutesCommand(argv: string[]): Promise<number> {
 
   try {
     let options = parseRoutesCommandArgs(argv)
-    let routeMap = await loadRouteMap()
+    let routeMap = await loadRouteMap(getRuntimeCwd())
     let reporter = createCommandReporter()
 
     if (options.json) {

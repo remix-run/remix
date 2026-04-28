@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 
 import { getCompletionResult, getCompletionScript } from './completion.ts'
 
@@ -82,7 +82,13 @@ describe('completion engine', () => {
     assert.deepEqual(jsonResult.values, ['-h', '--help', '--no-color'])
 
     assert.equal(tableResult.mode, 'values')
-    assert.deepEqual(tableResult.values, ['--no-headers', '--verbose', '-h', '--help', '--no-color'])
+    assert.deepEqual(tableResult.values, [
+      '--no-headers',
+      '--verbose',
+      '-h',
+      '--help',
+      '--no-color',
+    ])
   })
 
   it('keeps --no-color available until it is used', () => {

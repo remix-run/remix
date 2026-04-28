@@ -436,6 +436,12 @@ importers:
         specifier: ^7.7.4
         version: 7.7.4
     devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:^
+        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4

@@ -81,7 +81,14 @@ function getSkillsCacheDir(): string {
   }
 
   if (process.platform === 'darwin') {
-    return path.join(os.homedir(), 'Library', 'Caches', 'remix', 'cli', 'skills')
+    return path.join(
+      process.env.HOME ?? os.homedir(),
+      'Library',
+      'Caches',
+      'remix',
+      'cli',
+      'skills',
+    )
   }
 
   let xdgCacheHome = process.env.XDG_CACHE_HOME ?? path.join(os.homedir(), '.cache')

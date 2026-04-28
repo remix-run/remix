@@ -1,8 +1,8 @@
-import assert from 'node:assert/strict'
+import * as assert from '@remix-run/assert'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { describe, it } from 'node:test'
+import { describe, it } from '@remix-run/test'
 
 import { applyDoctorFixPlans } from './fixes.ts'
 

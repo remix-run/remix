@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 
 import {
   invalidPackageName,
@@ -37,6 +37,9 @@ describe('errors', () => {
 
     assert.match(output, /Error \[RMX_INVALID_PACKAGE_NAME\] Could not derive a valid package name/)
     assert.match(output, /Could not derive a valid package name from "My Remix App"\./)
-    assert.match(output, /Try:\n  Choose an app name that can be normalized into a valid npm package name\./)
+    assert.match(
+      output,
+      /Try:\n  Choose an app name that can be normalized into a valid npm package name\./,
+    )
   })
 })

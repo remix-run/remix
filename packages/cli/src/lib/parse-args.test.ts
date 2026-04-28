@@ -1,5 +1,5 @@
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 
 import { parseArgs } from './parse-args.ts'
 
@@ -71,8 +71,7 @@ describe('parseArgs', () => {
 
   it('throws for extra positionals beyond the configured maximum', () => {
     assert.throws(
-      () =>
-        parseArgs(['first', 'second'], {}, { maxPositionals: 1 }),
+      () => parseArgs(['first', 'second'], {}, { maxPositionals: 1 }),
       /Unexpected extra argument: second/,
     )
   })

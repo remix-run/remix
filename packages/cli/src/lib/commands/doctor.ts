@@ -23,6 +23,7 @@ import {
   type CommandReporter,
   type StepProgressReporter,
 } from '../reporter.ts'
+import { getRuntimeCwd } from '../runtime-context.ts'
 import { lightRed } from '../terminal.ts'
 
 const DOCTOR_SUITE_LABELS = {
@@ -141,9 +142,10 @@ async function collectDoctorReport(
   options: DoctorCommandOptions,
   reporter: CommandReporter | null,
 ): Promise<DoctorReport> {
+  let cwd = getRuntimeCwd()
   let appliedFixes: DoctorAppliedFix[] = []
   let environment = await runDoctorSuite(progress, 'environment', async () => {
-    let result = await checkEnvironment()
+    let result = await checkEnvironment(cwd)
     let suiteAppliedFixes: DoctorAppliedFix[] = []
     let finalResult = result
 
