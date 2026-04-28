@@ -38,6 +38,19 @@ describe('cli entrypoint', () => {
     })
   })
 
+  it('generates remix/cli as a regular package re-export', () => {
+    let source = fs.readFileSync(resolve(REMIX_PACKAGE_DIR, 'src', 'cli.ts'), 'utf8')
+
+    assert.equal(
+      source,
+      [
+        '// IMPORTANT: This file is auto-generated, please do not edit manually.',
+        "export * from '@remix-run/cli'",
+        '',
+      ].join('\n'),
+    )
+  })
+
   it('injects the repo Remix version when running directly from the source entrypoint', () => {
     let remixPackageJson = readRemixPackageJson()
     let result = spawnSync(process.execPath, ['./src/cli.ts', 'version'], {

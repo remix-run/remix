@@ -45,8 +45,6 @@ type ExportEntry = {
   exportPath: string
   // The package/sub-export to re-export from: `@remix-run/headers`, `@remix-run/headers/cookie-storage`
   reExportFrom: string
-  // Whether this export is a straight re-export or a generated wrapper.
-  sourceKind: 'cli-wrapper' | 'reexport'
 }
 
 const { remixRunPackages, allExports, allBins } = await getRemixRunPackages()
@@ -123,14 +121,12 @@ async function getRemixRunPackages() {
               sourceFile: 'cli.ts',
               exportPath: './cli',
               reExportFrom: packageName,
-              sourceKind: 'cli-wrapper',
             })
           } else {
             remixRunPackage.exports.push({
               sourceFile: `${shortName}.ts`,
               exportPath: `./${shortName}`,
               reExportFrom: packageName,
-              sourceKind: 'reexport',
             })
           }
         } else {
@@ -140,7 +136,6 @@ async function getRemixRunPackages() {
             sourceFile: `${shortName}/${subExport}.ts`,
             exportPath: `./${shortName}/${subExport}`,
             reExportFrom: `${packageName}/${subExport}`,
-            sourceKind: 'reexport',
           })
         }
       }
@@ -282,24 +277,30 @@ function isRemixTestBin(bin: { command: string; packageName: string }): boolean 
 }
 
 function createExportSource(entry: ExportEntry): string {
-  if (entry.sourceKind === 'cli-wrapper') {
-    return createCliWrapperSource(entry.reExportFrom)
-  }
-
   return [
     `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
     `export * from '${entry.reExportFrom}'\n`,
   ].join('\n')
 }
 
-function createCliWrapperSource(reExportFrom: string): string {
-  return `// IMPORTANT: This file is auto-generated, please do not edit manually.
+function createCliEntrySource(): string {
+  return `#!/usr/bin/env node
+// IMPORTANT: This file is auto-generated, please do not edit manually.
 import * as fs from 'node:fs/promises'
+import * as process from 'node:process'
 
-import { runRemix as runRemixCli } from '${reExportFrom}'
+import { runRemix } from './cli.ts'
 
-export async function runRemix(argv?: string[]): Promise<number> {
-  return await runRemixCli(argv, { remixVersion: await readRemixVersion() })
+try {
+  let exitCode = await runRemix(process.argv.slice(2), { remixVersion: await readRemixVersion() })
+  exitProcess(exitCode)
+} catch (error) {
+  console.error(error)
+  exitProcess(1)
+}
+
+function exitProcess(exitCode: number): never {
+  process.exit(exitCode)
 }
 
 async function readRemixVersion(): Promise<string> {
@@ -319,28 +320,6 @@ async function readRemixVersion(): Promise<string> {
   }
 
   return packageJson.version.trim()
-}
-
-`
-}
-
-function createCliEntrySource(): string {
-  return `#!/usr/bin/env node
-// IMPORTANT: This file is auto-generated, please do not edit manually.
-import * as process from 'node:process'
-
-import { runRemix } from './cli.ts'
-
-try {
-  let exitCode = await runRemix(process.argv.slice(2))
-  exitProcess(exitCode)
-} catch (error) {
-  console.error(error)
-  exitProcess(1)
-}
-
-function exitProcess(exitCode: number): never {
-  process.exit(exitCode)
 }
 `
 }
