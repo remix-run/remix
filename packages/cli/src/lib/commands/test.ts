@@ -20,6 +20,6 @@ export async function runTestCommand(argv: string[], context: CliContext): Promi
   }
 }
 
-export function getTestCommandHelpText(_target: NodeJS.WriteStream = process.stdout): string {
-  return getRemixTestHelpText()
+export function getTestCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
+  return getRemixTestHelpText(target)
 }

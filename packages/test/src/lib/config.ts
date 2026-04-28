@@ -226,7 +226,7 @@ export async function loadConfig(args: string[] = process.argv.slice(2), cwd = p
   return config
 }
 
-export function getRemixTestHelpText(): string {
+export function getRemixTestHelpText(_target: NodeJS.WriteStream = process.stdout): string {
   let lines = [
     'Usage: remix-test [glob] [options]',
     '',
