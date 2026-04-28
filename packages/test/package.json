@@ -72,8 +72,8 @@
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
     "@remix-run/component": "workspace:*",
-    "@remix-run/fetch-router": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*",
+    "@types/dom-navigation": "1.0.6",
     "@types/istanbul-lib-coverage": "^2.0.6",
     "@types/istanbul-lib-report": "^3.0.3",
     "@types/istanbul-reports": "^3.0.4",
