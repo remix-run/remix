@@ -140,9 +140,7 @@ async function serveScript(
   let isTs = TS_EXTS.has(ext)
   let isJs = JS_EXTS.has(ext)
   if (!isTs && !isJs) {
-    let body = await fsp.readFile(filePath)
-    res.writeHead(200)
-    res.end(body)
+    sendText(res, 400, `Unsupported script extension "${ext}" for ${urlPath}`)
     return
   }
 
