@@ -87,10 +87,16 @@ export interface OAuthResult<
 export interface OAuthProvider<
   _profile,
   provider extends string = string,
-  _tokens extends OAuthTokens = OAuthTokens,
+  tokens extends OAuthTokens = OAuthTokens,
 > {
   /** Provider name used for routing, callbacks, and persisted transactions. */
   name: provider
+  /**
+   * Phantom token marker used to preserve provider-specific token types.
+   *
+   * @internal
+   */
+  readonly [oauthProviderTokens]?: (tokens: tokens) => tokens
 }
 
 export interface OAuthTransaction {
@@ -115,6 +121,7 @@ export interface OAuthProviderRuntime<
 }
 
 export const oauthProviderRuntime = Symbol('oauth-provider-runtime')
+const oauthProviderTokens = Symbol('oauth-provider-tokens')
 
 export type InternalOAuthProvider<
   profile,

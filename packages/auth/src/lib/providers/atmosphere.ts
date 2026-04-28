@@ -793,12 +793,12 @@ async function resolveHandleToDid(handle: string): Promise<string> {
     return dnsResult.value
   }
 
-  if (dnsResult.status === 'rejected') {
-    throw dnsResult.reason
-  }
-
   if (httpsResult.status === 'fulfilled' && httpsResult.value != null) {
     return httpsResult.value
+  }
+
+  if (dnsResult.status === 'rejected') {
+    throw dnsResult.reason
   }
 
   if (httpsResult.status === 'rejected') {
@@ -900,17 +900,32 @@ async function resolveDidDocument(did: string): Promise<AtmosphereDidDocument> {
 }
 
 function createDidWebDocumentUrl(did: string): string {
-  let host = decodeURIComponent(did.slice('did:web:'.length))
+  let [encodedHost, ...encodedPath] = did.slice('did:web:'.length).split(':')
+  let host = decodeURIComponent(encodedHost ?? '')
 
   if (host.length === 0 || host.includes('/')) {
     throw new Error(`Unsupported did:web identifier "${did}".`)
   }
 
-  if (host.startsWith('localhost')) {
-    return `http://${host}/.well-known/did.json`
+  let url = new URL(`${host.startsWith('localhost') ? 'http' : 'https'}://${host}`)
+
+  if (encodedPath.length === 0) {
+    url.pathname = '/.well-known/did.json'
+    return url.toString()
   }
 
-  return `https://${host}/.well-known/did.json`
+  let path = encodedPath.map((segment) => decodeURIComponent(segment))
+  if (
+    path.some(
+      (segment) =>
+        segment.length === 0 || segment.includes('/') || segment === '.' || segment === '..',
+    )
+  ) {
+    throw new Error(`Unsupported did:web identifier "${did}".`)
+  }
+
+  url.pathname = `/${path.join('/')}/did.json`
+  return url.toString()
 }
 
 function getClaimedHandle(document: AtmosphereDidDocument): string | undefined {

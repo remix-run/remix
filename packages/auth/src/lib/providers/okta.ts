@@ -1,4 +1,4 @@
-import type { OAuthProvider } from '../provider.ts'
+import type { OAuthProvider, OAuthStandardTokens } from '../provider.ts'
 
 import {
   createOIDCAuthProvider,
@@ -25,7 +25,7 @@ export interface OktaAuthProviderOptions
  */
 export function createOktaAuthProvider(
   options: OktaAuthProviderOptions,
-): OAuthProvider<OktaAuthProfile, 'okta'> {
+): OAuthProvider<OktaAuthProfile, 'okta', OAuthStandardTokens> {
   return createOIDCAuthProvider({
     ...options,
     name: 'okta',

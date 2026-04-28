@@ -392,6 +392,158 @@ describe('atmosphere provider', () => {
     }
   })
 
+  it('falls back to HTTPS handle resolution when DNS resolution fails', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let sessionStorage = createMemorySessionStorage()
+    let httpsHandleRequests = 0
+    let restoreFetch = mockFetch(async (input) => {
+      let url = toRequestUrl(input)
+
+      if (url.origin === 'https://1.1.1.1' && url.pathname === '/dns-query') {
+        throw new Error('DNS-over-HTTPS unavailable')
+      }
+
+      if (url.toString() === 'https://carol.example.com/.well-known/atproto-did') {
+        httpsHandleRequests += 1
+        return new Response('did:plc:carol')
+      }
+
+      if (url.toString() === 'https://plc.directory/did%3Aplc%3Acarol') {
+        return Response.json({
+          id: 'did:plc:carol',
+          alsoKnownAs: ['at://carol.example.com'],
+          service: [
+            {
+              id: '#atproto_pds',
+              type: 'AtprotoPersonalDataServer',
+              serviceEndpoint: 'https://pds.example.com',
+            },
+          ],
+        })
+      }
+
+      if (url.toString() === 'https://pds.example.com/.well-known/oauth-protected-resource') {
+        return Response.json({
+          authorization_servers: ['https://auth.example.com'],
+        })
+      }
+
+      if (url.toString() === 'https://auth.example.com/.well-known/oauth-authorization-server') {
+        return Response.json(
+          createAtmosphereAuthorizationServerMetadata('https://auth.example.com'),
+        )
+      }
+
+      if (url.toString() === 'https://auth.example.com/oauth/par') {
+        return Response.json({
+          request_uri: 'urn:ietf:params:oauth:request_uri:par-https-fallback',
+        })
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let atmosphereProvider = createAtmosphereAuthProvider({
+        clientId: 'https://app.example.com/oauth/client-metadata.json',
+        redirectUri: 'https://app.example.com/auth/atmosphere/callback',
+        sessionSecret: 'atmosphere-session-secret',
+      })
+      let router = createRouter({
+        middleware: [sessionMiddleware(cookie, sessionStorage)],
+      })
+
+      router.get('/login/atmosphere', async (context) => {
+        let provider = await atmosphereProvider.prepare('carol.example.com')
+        return startExternalAuth(provider, context)
+      })
+
+      let response = await router.fetch('https://app.example.com/login/atmosphere')
+      let location = new URL(response.headers.get('Location')!)
+
+      assert.equal(response.status, 302)
+      assert.equal(httpsHandleRequests, 1)
+      assert.equal(
+        location.searchParams.get('request_uri'),
+        'urn:ietf:params:oauth:request_uri:par-https-fallback',
+      )
+    } finally {
+      restoreFetch()
+    }
+  })
+
+  it('resolves path-based did:web documents', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let sessionStorage = createMemorySessionStorage()
+    let didWebDocumentRequests = 0
+    let restoreFetch = mockFetch(async (input) => {
+      let url = toRequestUrl(input)
+
+      if (url.toString() === 'https://example.com/users/alice/did.json') {
+        didWebDocumentRequests += 1
+        return Response.json({
+          id: 'did:web:example.com:users:alice',
+          alsoKnownAs: ['at://alice.example.com'],
+          service: [
+            {
+              id: '#atproto_pds',
+              type: 'AtprotoPersonalDataServer',
+              serviceEndpoint: 'https://pds.example.com',
+            },
+          ],
+        })
+      }
+
+      if (url.toString() === 'https://pds.example.com/.well-known/oauth-protected-resource') {
+        return Response.json({
+          authorization_servers: ['https://auth.example.com'],
+        })
+      }
+
+      if (url.toString() === 'https://auth.example.com/.well-known/oauth-authorization-server') {
+        return Response.json(
+          createAtmosphereAuthorizationServerMetadata('https://auth.example.com'),
+        )
+      }
+
+      if (url.toString() === 'https://auth.example.com/oauth/par') {
+        return Response.json({
+          request_uri: 'urn:ietf:params:oauth:request_uri:par-did-web',
+        })
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let atmosphereProvider = createAtmosphereAuthProvider({
+        clientId: 'https://app.example.com/oauth/client-metadata.json',
+        redirectUri: 'https://app.example.com/auth/atmosphere/callback',
+        sessionSecret: 'atmosphere-session-secret',
+      })
+      let router = createRouter({
+        middleware: [sessionMiddleware(cookie, sessionStorage)],
+      })
+
+      router.get('/login/atmosphere', async (context) => {
+        let provider = await atmosphereProvider.prepare('did:web:example.com:users:alice')
+        return startExternalAuth(provider, context)
+      })
+
+      let response = await router.fetch('https://app.example.com/login/atmosphere')
+      let location = new URL(response.headers.get('Location')!)
+
+      assert.equal(response.status, 302)
+      assert.equal(didWebDocumentRequests, 1)
+      assert.equal(
+        location.searchParams.get('request_uri'),
+        'urn:ietf:params:oauth:request_uri:par-did-web',
+      )
+    } finally {
+      restoreFetch()
+    }
+  })
+
   it('requires prepare before starting auth', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let sessionStorage = createMemorySessionStorage()
