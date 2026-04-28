@@ -36,20 +36,23 @@
     "@remix-run/route-pattern": "workspace:*",
     "chokidar": "^5.0.0",
     "es-module-lexer": "^2.0.0",
+    "esbuild": "^0.27.1",
     "get-tsconfig": "^4.13.6",
     "lightningcss": "^1.32.0",
     "magic-string": "^0.30.21",
     "oxc-minify": "^0.121.0",
     "oxc-parser": "^0.121.0",
     "oxc-resolver": "^11.19.1",
-    "oxc-transform": "^0.121.0",
     "picomatch": "^4.0.4",
     "source-map-js": "^1.2.1"
   },
   "devDependencies": {
+    "@types/istanbul-lib-coverage": "^2.0.6",
     "@types/node": "catalog:",
     "@types/picomatch": "^4.0.3",
-    "@typescript/native-preview": "catalog:"
+    "@typescript/native-preview": "catalog:",
+    "istanbul-lib-coverage": "^3.2.2",
+    "v8-to-istanbul": "^9.3.0"
   },
   "scripts": {
     "bench": "pnpm --dir ./bench run bench",

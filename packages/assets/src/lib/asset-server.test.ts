@@ -2,10 +2,14 @@ import { after, before, describe, it, mock } from 'node:test'
 import assert from 'node:assert/strict'
 import * as nodeFs from 'node:fs'
 import * as fs from 'node:fs/promises'
+import * as inspector from 'node:inspector'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { pathToFileURL } from 'node:url'
+import coverageLib from 'istanbul-lib-coverage'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
+import v8ToIstanbul from 'v8-to-istanbul'
 import { isAssetServerCompilationError } from './compilation-error.ts'
 import { normalizeWindowsPath } from './paths.ts'
 import {
@@ -16,6 +20,35 @@ import {
 import type { AssetServerOptions } from './asset-server.ts'
 
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
+
+type V8FunctionCoverage = {
+  functionName: string
+  isBlockCoverage: boolean
+  ranges: Array<{ startOffset: number; endOffset: number; count: number }>
+}
+
+type V8PreciseCoverageEntry = {
+  url: string
+  functions: V8FunctionCoverage[]
+}
+
+type V8PreciseCoverageResult = {
+  result: V8PreciseCoverageEntry[]
+}
+
+type CoverageMetricSummary = {
+  total: number
+  covered: number
+  skipped: number
+  pct: number
+}
+
+type CoverageSummary = {
+  lines: CoverageMetricSummary
+  functions: CoverageMetricSummary
+  statements: CoverageMetricSummary
+  branches: CoverageMetricSummary
+}
 
 function createAssetServerForTest(
   options: Parameters<typeof createAssetServer>[0],
@@ -216,6 +249,77 @@ async function withTsconfigTransformCase(
     }
 
     await fs.rm(caseDir, { recursive: true, force: true })
+  }
+}
+
+function postInspector<response extends Record<string, unknown>>(
+  session: inspector.Session,
+  method: string,
+  params: Record<string, unknown> = {},
+): Promise<response> {
+  return new Promise((resolve, reject) => {
+    session.post(method, params, (error, result) => {
+      if (error) {
+        reject(error)
+        return
+      }
+
+      resolve((result ?? {}) as response)
+    })
+  })
+}
+
+function normalizeFileUrl(url: string): string {
+  return url.replace('file:///private/', 'file:///').replace(/\?.*$/, '')
+}
+
+async function collectCoverageSummaryForCompiledModule(
+  compiledCode: string,
+  sourceFilePath: string,
+): Promise<CoverageSummary> {
+  let compiledFilePath = path.join(
+    path.dirname(sourceFilePath),
+    `compiled-${Date.now()}-${Math.random().toString(36).slice(2)}.mjs`,
+  )
+  let compiledFileUrl = pathToFileURL(compiledFilePath).href
+  let session = new inspector.Session()
+
+  await fs.writeFile(compiledFilePath, compiledCode, 'utf-8')
+  session.connect()
+
+  try {
+    await postInspector(session, 'Profiler.enable')
+    await postInspector(session, 'Profiler.startPreciseCoverage', {
+      callCount: true,
+      detailed: true,
+    })
+
+    await import(`${compiledFileUrl}?t=${Date.now()}`)
+
+    let { result } = await postInspector<V8PreciseCoverageResult>(
+      session,
+      'Profiler.takePreciseCoverage',
+    )
+    let preciseCoverage = result.find((entry) => normalizeFileUrl(entry.url) === compiledFileUrl)
+    assert.ok(preciseCoverage, `Expected precise coverage entry for ${compiledFileUrl}`)
+
+    let converter = v8ToIstanbul(sourceFilePath, undefined, { source: compiledCode })
+    await converter.load()
+    converter.applyCoverage(preciseCoverage.functions)
+
+    let coverageMap = coverageLib.createCoverageMap({})
+    coverageMap.merge(converter.toIstanbul())
+
+    let [coveredFilePath] = coverageMap.files()
+    assert.ok(coveredFilePath, 'Expected Istanbul coverage output for compiled module')
+
+    return coverageMap.fileCoverageFor(coveredFilePath).toSummary() as CoverageSummary
+  } finally {
+    try {
+      await postInspector(session, 'Profiler.stopPreciseCoverage')
+    } catch {}
+    session.disconnect()
+    await fs.rm(compiledFilePath, { force: true })
   }
 }
 
@@ -1125,6 +1229,51 @@ describe('asset-server', () => {
 
   it('keeps source map mappings character-accurate with minify enabled', async () => {
     await assertCharacterAccurateImportRewriteSourceMap(dir)
+  })
+
+  it('preserves function and branch coverage through v8-to-istanbul', async () => {
+    let entryPath = await write(
+      dir,
+      'app/entry.ts',
+      [
+        'export function calledFunction() {',
+        "  return classify('hit')",
+        '}',
+        '',
+        'export function uncalledFunction() {',
+        "  return classify('miss')",
+        '}',
+        '',
+        'function classify(value: string) {',
+        "  if (value === 'hit') {",
+        "    return 'hit'",
+        '  }',
+        "  return 'miss'",
+        '}',
+        '',
+        'calledFunction()',
+      ].join('\n'),
+    )
+    let assetServer = createTestServer(dir, {
+      sourceMaps: 'inline',
+    })
+
+    try {
+      let response = await getByFile(assetServer, 'app/entry.ts')
+      assert.ok(response)
+
+      let coverageSummary = await collectCoverageSummaryForCompiledModule(
+        await response.text(),
+        entryPath,
+      )
+
+      assert.equal(coverageSummary.functions.total, 3)
+      assert.equal(coverageSummary.functions.covered, 2)
+      assert.equal(coverageSummary.branches.total, 3)
+      assert.equal(coverageSummary.branches.covered, 2)
+    } finally {
+      await assetServer.close()
+    }
   })
 
   it('supports HEAD requests for source map URLs', async () => {
@@ -3431,7 +3580,7 @@ describe('asset-server', () => {
       )
     })
 
-    it('passes experimentalDecorators through to Oxc', async () => {
+    it('passes experimentalDecorators through to the transform step', async () => {
       let source =
         'function applyExampleDecorator(value) { return value }\n' +
         '@applyExampleDecorator\n' +
@@ -3483,7 +3632,7 @@ describe('asset-server', () => {
       )
     })
 
-    it('emits decorator metadata only when tsconfig enables it', async () => {
+    it('rejects emitDecoratorMetadata because esbuild does not support it', async () => {
       let source = [
         'function dec(value) { return value }',
         'function meta(...args) { return args }',
@@ -3494,9 +3643,8 @@ describe('asset-server', () => {
         '}',
       ].join('\n')
       let withoutMetadataBody = ''
-      let withMetadataBody = ''
+      let receivedError: unknown
       let decorateHelperSpecifier = '@oxc-project/runtime/helpers/decorate'
-      let decorateMetadataHelperSpecifier = '@oxc-project/runtime/helpers/decorateMetadata'
 
       await withTsconfigTransformCase(
         {
@@ -3515,7 +3663,7 @@ describe('asset-server', () => {
         },
         {
           scripts: {
-            external: [decorateHelperSpecifier, decorateMetadataHelperSpecifier],
+            external: [decorateHelperSpecifier],
           },
         },
       )
@@ -3533,12 +3681,14 @@ describe('asset-server', () => {
         async ({ assetServer }) => {
           let response = await get(assetServer, '/assets/app/entry.ts')
           assert.ok(response)
-          assert.equal(response.status, 200)
-          withMetadataBody = await response.text()
+          await assertInternalServerError(response)
         },
         {
+          onError(error) {
+            receivedError = error
+          },
           scripts: {
-            external: [decorateHelperSpecifier, decorateMetadataHelperSpecifier],
+            external: [decorateHelperSpecifier],
           },
         },
       )
@@ -3546,9 +3696,9 @@ describe('asset-server', () => {
       assert.doesNotMatch(withoutMetadataBody, /design:type/)
       assert.doesNotMatch(withoutMetadataBody, /design:paramtypes/)
       assert.doesNotMatch(withoutMetadataBody, /design:returntype/)
-      assert.match(withMetadataBody, /design:type/)
-      assert.match(withMetadataBody, /design:paramtypes/)
-      assert.match(withMetadataBody, /design:returntype/)
+      assert.ok(isAssetServerCompilationError(receivedError))
+      assert.equal(receivedError.code, 'TRANSFORM_FAILED')
+      assert.match(receivedError.message, /emitDecoratorMetadata = true/)
     })
 
     it('supports useDefineForClassFields false when lowering class fields', async () => {

@@ -54,18 +54,18 @@ export function resolveScriptTarget(
   let resolvedTarget = normalizeScriptTargetObject(target, 'target')
   if (!resolvedTarget) return undefined
 
-  let oxcTarget: ResolvedScriptTarget = []
+  let esbuildTarget: ResolvedScriptTarget = []
   if (resolvedTarget.es) {
-    oxcTarget.push(resolvedTarget.es)
+    esbuildTarget.push(resolvedTarget.es)
   }
 
   for (let browserTargetName of browserTargetNames) {
     let version = resolvedTarget[browserTargetName]
     if (version == null) continue
-    oxcTarget.push(`${browserTargetName}${version}`)
+    esbuildTarget.push(`${browserTargetName}${version}`)
   }
 
-  return oxcTarget
+  return esbuildTarget
 }
 
 export function resolveStyleTarget(

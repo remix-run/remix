@@ -1,12 +1,13 @@
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
+import { transform as esbuildTransform } from 'esbuild'
 import { getTsconfig } from 'get-tsconfig'
 import { minify } from 'oxc-minify'
-import { transform as oxcTransform } from 'oxc-transform'
+import { parseSync, visitorKeys } from 'oxc-parser'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
+import type { Loader, TransformOptions as EsbuildTransformOptions } from 'esbuild'
 import type { Cache, TsConfigJsonResolved } from 'get-tsconfig'
-import type { TransformOptions as OxcTransformOptions } from 'oxc-transform'
 
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
 import {
@@ -61,6 +62,11 @@ type UnresolvedImport = {
   quote?: '"' | "'" | '`'
   specifier: string
   start: number
+}
+
+type AstNode = {
+  type: string
+  [key: string]: unknown
 }
 
 export type TransformedModule = {
@@ -306,14 +312,14 @@ async function analyzeModuleSource(
     target?: ResolvedScriptTarget
   },
 ) {
-  let transformResult: { code: string; errors?: Array<{ message?: string }>; map?: unknown }
+  validateTransformSupport(sourceText, resolvedPath, transformOptions.tsconfigRaw?.compilerOptions)
+
+  let transformResult: { code: string; map?: string }
   try {
-    transformResult = await oxcTransform(
-      resolvedPath,
+    transformResult = await esbuildTransform(
       sourceText,
       getTransformOptions(resolvedPath, transformOptions, options),
     )
-    assertNoCompilerErrors(transformResult.errors, resolvedPath, 'transform')
   } catch (error) {
     if (isAssetServerCompilationError(error)) throw error
     throw createAssetServerCompilationError(
@@ -382,70 +388,48 @@ function getTransformOptions(
     sourceMaps?: 'external' | 'inline'
     target?: ResolvedScriptTarget
   },
-): OxcTransformOptions {
+): EsbuildTransformOptions {
   let compilerOptions = transformOptions.tsconfigRaw?.compilerOptions as
     | Record<string, unknown>
     | undefined
-  let useDefineForClassFields = getBooleanOption(
-    compilerOptions,
-    supportedTsconfigTransformCompilerOptions.useDefineForClassFields,
-  )
-  let jsxFactory = getStringOption(
-    compilerOptions,
-    supportedTsconfigTransformCompilerOptions.jsxFactory,
-  )
-  let jsxFragmentFactory = getStringOption(
-    compilerOptions,
-    supportedTsconfigTransformCompilerOptions.jsxFragmentFactory,
-  )
+  assertSupportedJsxCompilerOption(resolvedPath, compilerOptions)
 
   return {
-    assumptions:
-      useDefineForClassFields === false
-        ? {
-            setPublicClassFields: true,
-          }
-        : undefined,
-    decorator: getDecoratorOptions(compilerOptions),
     define: options.define,
-    jsx: getJsxOptions(resolvedPath, compilerOptions),
-    lang: getSourceLanguageForPath(resolvedPath),
-    sourceType: 'module' as const,
-    sourcemap: options.sourceMaps != null,
+    format: 'esm',
+    jsx: getJsxMode(compilerOptions),
+    jsxDev:
+      getStringOption(compilerOptions, supportedTsconfigTransformCompilerOptions.jsx) ===
+      'react-jsxdev',
+    jsxFactory: getStringOption(
+      compilerOptions,
+      supportedTsconfigTransformCompilerOptions.jsxFactory,
+    ),
+    jsxFragment: getStringOption(
+      compilerOptions,
+      supportedTsconfigTransformCompilerOptions.jsxFragmentFactory,
+    ),
+    jsxImportSource: getStringOption(
+      compilerOptions,
+      supportedTsconfigTransformCompilerOptions.jsxImportSource,
+    ),
+    loader: getSourceLanguageForPath(resolvedPath) as Loader,
+    sourcefile: resolvedPath,
+    sourcemap: options.sourceMaps != null ? 'external' : false,
+    sourcesContent: true,
     target: options.target,
-    typescript: {
-      allowNamespaces: getBooleanOption(
-        compilerOptions,
-        supportedTsconfigTransformCompilerOptions.allowNamespaces,
-      ),
-      jsxPragma: jsxFactory,
-      jsxPragmaFrag: jsxFragmentFactory,
-      removeClassFieldsWithoutInitializer: useDefineForClassFields === false ? true : undefined,
-    },
+    tsconfigRaw: getEsbuildTsconfigRaw(compilerOptions),
   }
 }
 
-function getJsxOptions(
+function assertSupportedJsxCompilerOption(
   resolvedPath: string,
   compilerOptions?: Record<string, unknown>,
-): OxcTransformOptions['jsx'] | undefined {
+): void {
   let language = getSourceLanguageForPath(resolvedPath)
-  if (language !== 'jsx' && language !== 'tsx') return undefined
+  if (language !== 'jsx' && language !== 'tsx') return
 
   let jsx = getStringOption(compilerOptions, supportedTsconfigTransformCompilerOptions.jsx)
-  let importSource = getStringOption(
-    compilerOptions,
-    supportedTsconfigTransformCompilerOptions.jsxImportSource,
-  )
-  let pragma = getStringOption(
-    compilerOptions,
-    supportedTsconfigTransformCompilerOptions.jsxFactory,
-  )
-  let pragmaFrag = getStringOption(
-    compilerOptions,
-    supportedTsconfigTransformCompilerOptions.jsxFragmentFactory,
-  )
-
   if (jsx === 'preserve' || jsx === 'react-native') {
     throw createAssetServerCompilationError(
       `Unsupported tsconfig compilerOptions.jsx = "${jsx}" for ${resolvedPath}. ` +
@@ -455,40 +439,97 @@ function getJsxOptions(
       },
     )
   }
+}
 
+function getJsxMode(
+  compilerOptions?: Record<string, unknown>,
+): EsbuildTransformOptions['jsx'] | undefined {
+  let jsx = getStringOption(compilerOptions, supportedTsconfigTransformCompilerOptions.jsx)
   if (jsx === 'react-jsx' || jsx === 'react-jsxdev') {
-    return {
-      development: jsx === 'react-jsxdev',
-      importSource,
-      runtime: 'automatic',
-    }
+    return 'automatic'
+  }
+  return 'transform'
+}
+
+function validateTransformSupport(
+  sourceText: string,
+  resolvedPath: string,
+  compilerOptions: unknown,
+): void {
+  let typedCompilerOptions =
+    compilerOptions && typeof compilerOptions === 'object'
+      ? (compilerOptions as Record<string, unknown>)
+      : undefined
+
+  if (
+    getBooleanOption(
+      typedCompilerOptions,
+      supportedTsconfigTransformCompilerOptions.emitDecoratorMetadata,
+    )
+  ) {
+    throw createAssetServerCompilationError(
+      `Unsupported tsconfig compilerOptions.emitDecoratorMetadata = true for ${resolvedPath}. ` +
+        `The asset server transform uses esbuild, which does not emit decorator metadata.`,
+      {
+        code: 'TRANSFORM_FAILED',
+      },
+    )
   }
 
-  return {
-    pragma,
-    pragmaFrag,
-    runtime: 'classic',
+  if (
+    getBooleanOption(
+      typedCompilerOptions,
+      supportedTsconfigTransformCompilerOptions.allowNamespaces,
+    ) === false &&
+    containsTypeScriptNamespace(sourceText, resolvedPath)
+  ) {
+    throw createAssetServerCompilationError(
+      `Unsupported TypeScript namespace syntax for ${resolvedPath} because ` +
+        `tsconfig compilerOptions.allowNamespaces is false.`,
+      {
+        code: 'TRANSFORM_FAILED',
+      },
+    )
   }
 }
 
-function getDecoratorOptions(
+function getEsbuildTsconfigRaw(
   compilerOptions?: Record<string, unknown>,
-): OxcTransformOptions['decorator'] | undefined {
-  let legacy = getBooleanOption(
+): { compilerOptions: Record<string, string | boolean> } | undefined {
+  let allowNamespaces = getBooleanOption(
     compilerOptions,
-    supportedTsconfigTransformCompilerOptions.experimentalDecorators,
+    supportedTsconfigTransformCompilerOptions.allowNamespaces,
   )
   let emitDecoratorMetadata = getBooleanOption(
     compilerOptions,
     supportedTsconfigTransformCompilerOptions.emitDecoratorMetadata,
   )
+  let experimentalDecorators = getBooleanOption(
+    compilerOptions,
+    supportedTsconfigTransformCompilerOptions.experimentalDecorators,
+  )
+  let useDefineForClassFields = getBooleanOption(
+    compilerOptions,
+    supportedTsconfigTransformCompilerOptions.useDefineForClassFields,
+  )
+  let tsconfigCompilerOptions: Record<string, string | boolean> = {}
 
-  if (legacy !== true && emitDecoratorMetadata !== true) return undefined
-
-  return {
-    emitDecoratorMetadata,
-    legacy,
+  if (allowNamespaces !== undefined) {
+    tsconfigCompilerOptions.allowNamespaces = allowNamespaces
   }
+  if (emitDecoratorMetadata !== undefined) {
+    tsconfigCompilerOptions.emitDecoratorMetadata = emitDecoratorMetadata
+  }
+  if (experimentalDecorators !== undefined) {
+    tsconfigCompilerOptions.experimentalDecorators = experimentalDecorators
+  }
+  if (useDefineForClassFields !== undefined) {
+    tsconfigCompilerOptions.useDefineForClassFields = useDefineForClassFields
+  }
+
+  return Object.keys(tsconfigCompilerOptions).length > 0
+    ? { compilerOptions: tsconfigCompilerOptions }
+    : undefined
 }
 
 function getBooleanOption(
@@ -505,6 +546,43 @@ function getStringOption(
 ): string | undefined {
   let value = compilerOptions?.[key]
   return typeof value === 'string' ? value : undefined
+}
+
+function containsTypeScriptNamespace(sourceText: string, resolvedPath: string): boolean {
+  try {
+    let result = parseSync(resolvedPath, sourceText, {
+      lang: getSourceLanguageForPath(resolvedPath),
+      sourceType: 'module',
+    })
+    if (result.errors.length > 0) return false
+    return walkAstForNodeType(result.program as unknown as AstNode, 'TSModuleDeclaration')
+  } catch {
+    return false
+  }
+}
+
+function walkAstForNodeType(node: AstNode, targetType: string): boolean {
+  if (node.type === targetType) return true
+
+  for (let key of visitorKeys[node.type] ?? []) {
+    let value = node[key]
+    if (Array.isArray(value)) {
+      for (let item of value) {
+        if (isAstNode(item) && walkAstForNodeType(item, targetType)) return true
+      }
+      continue
+    }
+
+    if (isAstNode(value) && walkAstForNodeType(value, targetType)) {
+      return true
+    }
+  }
+
+  return false
+}
+
+function isAstNode(value: unknown): value is AstNode {
+  return !!value && typeof value === 'object' && 'type' in value && typeof value.type === 'string'
 }
 
 function assertNoCompilerErrors(

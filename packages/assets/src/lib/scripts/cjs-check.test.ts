@@ -1,10 +1,16 @@
 import { describe, it } from 'node:test'
 import assert from 'node:assert/strict'
-import { transformSync } from 'oxc-transform'
+import { transformSync } from 'esbuild'
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
 
 function compile(source: string, loader: 'js' | 'ts' | 'tsx' = 'js'): string {
-  let result = transformSync(`test.${loader}`, source, { lang: loader, sourceType: 'module' })
+  if (loader === 'js') return source.trim()
+
+  let result = transformSync(source, {
+    format: 'esm',
+    loader,
+    sourcefile: `test.${loader}`,
+  })
 
   return result.code.trim()
 }

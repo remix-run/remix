@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { transformSync } from 'oxc-transform'
+import { transformSync } from 'esbuild'
 
 import { resolveScriptTarget, resolveStyleTarget } from './target.ts'
 import type { AssetTarget } from './target.ts'
@@ -24,20 +24,19 @@ describe('resolveScriptTarget', () => {
     assert.deepEqual(target, ['es2020'])
   })
 
-  it('returns supported script targets that can be passed to transforms', () => {
+  it('returns supported script targets that can be passed to esbuild', () => {
     let result = transformSync(
-      'entry.ts',
       'const data: { nested?: number } | null = { nested: 1 }\nexport let value = data?.nested ?? 0\n',
       {
-        lang: 'ts',
-        sourceType: 'module',
+        format: 'esm',
+        loader: 'ts',
+        sourcefile: 'entry.ts',
         target: resolveScriptTarget({
           chrome: '79',
         }),
       },
     )
 
-    assert.deepEqual(result.errors, [])
     assert.doesNotMatch(result.code, /\?\?|\?\./)
   })
 
