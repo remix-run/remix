@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createRoot, type Handle, type RemixNode } from '@remix-run/component'
+import { createRoot, type RemixNode } from '@remix-run/component'
 
 import {
   Combobox,

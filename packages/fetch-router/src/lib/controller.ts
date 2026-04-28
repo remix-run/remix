@@ -87,7 +87,7 @@ export type ControllerInput<
  * Actions can be plain handler functions or action objects with optional inline middleware.
  */
 export type Action<
-  method extends RequestMethod | 'ANY',
+  _method extends RequestMethod | 'ANY',
   pattern extends string,
   context extends RequestContext<any, any> = RequestContext,
 > = ActionInput<Params<pattern>, WithParams<context, Params<pattern>>, readonly AnyMiddleware[]>

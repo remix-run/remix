@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { createRoot, css, on, type Handle, type RemixNode } from '@remix-run/component'
+import { createRoot, css, type Handle, type RemixNode } from '@remix-run/component'
 import { renderToString } from '@remix-run/component/server'
 
 import {

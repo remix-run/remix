@@ -42,11 +42,6 @@ type ThemeTokenGroup = {
 
 const DEFAULT_THEME_VALUES = RMX_01.values
 const THEME_TOKEN_GROUPS = createThemeTokenGroups(DEFAULT_THEME_VALUES)
-const DEFAULT_OPEN_TOKEN_GROUPS = THEME_TOKEN_GROUPS.slice(0, 1).map((group) => group.id)
-const THEME_TOKEN_COUNT = THEME_TOKEN_GROUPS.reduce(
-  (count, group) => count + group.tokens.length,
-  0,
-)
 
 const AIRPORT_OPTIONS = [
   { label: 'Austin Bergstrom', searchValue: ['aus', 'austin'], value: 'aus' },
@@ -823,29 +818,6 @@ const previewPanelCss = css({
   '@media (max-width: 760px)': {
     padding: theme.space.lg,
   },
-})
-
-const previewHeaderCss = css({
-  display: 'grid',
-  gap: theme.space.xs,
-  marginBottom: theme.space.xl,
-})
-
-const previewPageTitleCss = css({
-  margin: 0,
-  color: theme.colors.text.primary,
-  fontSize: 'clamp(24px, 3vw, 36px)',
-  fontWeight: theme.fontWeight.semibold,
-  letterSpacing: theme.letterSpacing.tight,
-  lineHeight: theme.lineHeight.tight,
-})
-
-const previewPageDescriptionCss = css({
-  margin: 0,
-  maxWidth: '56ch',
-  color: theme.colors.text.secondary,
-  fontSize: theme.fontSize.sm,
-  lineHeight: theme.lineHeight.relaxed,
 })
 
 const previewStackCss = css({
