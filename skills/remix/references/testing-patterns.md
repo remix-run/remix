@@ -8,6 +8,7 @@ the task involves:
 - Driving the router with `router.fetch(new Request(...))` and asserting on the returned `Response`
 - Building a fresh router per test for session, storage, or database isolation
 - Rendering components into a real DOM with `createRoot` and synchronizing with `root.flush()`
+- Configuring `remix-test` discovery, excludes, and coverage
 - Choosing which layer to test for a given behavior
 
 For session and auth test setup, see `auth-and-sessions.md`. For component lifecycle, see
@@ -61,6 +62,33 @@ let router = createBookstoreRouter({
   sessionStorage: createMemorySessionStorage(),
 })
 ```
+
+## Test Runner Config
+
+Configure discovery and coverage in `remix-test.config.ts` or with CLI flags:
+
+```ts
+export default {
+  glob: {
+    test: '**/*.test{,.e2e}.{ts,tsx}',
+    e2e: '**/*.test.e2e.{ts,tsx}',
+    exclude: 'node_modules/**',
+  },
+  coverage: {
+    dir: '.coverage',
+    include: ['app/**/*.{ts,tsx}'],
+    exclude: ['app/**/*.test.{ts,tsx}'],
+    statements: 80,
+    lines: 80,
+    branches: 70,
+    functions: 80,
+  },
+}
+```
+
+Use `remix-test --coverage` to enable coverage with defaults. Use `glob.exclude` when discovery
+would otherwise enter generated output, symlinked workspaces, or other paths that should not
+produce tests.
 
 ## Component Tests
 

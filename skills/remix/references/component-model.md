@@ -5,9 +5,10 @@
 How a Remix Component is shaped and how its state, lifecycle, and updates behave. Read this when
 the task involves:
 
-- Writing a component (setup function plus render function)
+- Writing a component (`handle` plus render function)
 - Managing component-local state, derived values, or post-render DOM work
-- Using `handle.update()`, `handle.queueTask()`, `handle.signal`, `handle.id`, or `handle.context`
+- Using `handle.props`, `handle.update()`, `handle.queueTask()`, `handle.signal`, `handle.id`, or
+  `handle.context`
 - Listening to global events with cleanup tied to the component lifecycle
 
 For host-element behavior (event handlers, styles, refs, animations), see
@@ -24,10 +25,10 @@ A component has two phases:
 ```tsx
 import { on, type Handle } from 'remix/component'
 
-function Counter(handle: Handle, initialCount = 0) {
-  let count = initialCount
+function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
+  let count = handle.props.initialCount ?? 0
 
-  return (props: { label: string }) => (
+  return () => (
     <button
       mix={[
         on('click', () => {
@@ -36,28 +37,34 @@ function Counter(handle: Handle, initialCount = 0) {
         }),
       ]}
     >
-      {props.label}: {count}
+      {handle.props.label}: {count}
     </button>
   )
 }
 ```
 
-## Setup vs Props
+## Props
 
-The `setup` prop is special — it's only available in the setup phase and is automatically excluded
-from render props. This prevents accidental stale captures:
+Components receive all JSX props through `handle.props`. The object identity is stable for the
+component lifetime, and its values are updated before each render. Do not use a second setup
+argument or rely on render callback props; put initialization inputs on normal JSX props and read
+them from `handle.props`:
 
 ```tsx
-function Timer(handle: Handle, setup: { initialSeconds: number }) {
-  let seconds = setup.initialSeconds
+function Timer(handle: Handle<{ initialSeconds: number; paused?: boolean }>) {
+  let seconds = handle.props.initialSeconds
 
-  return (props: { paused?: boolean }) => (
+  return () => (
     <div>Time remaining: {seconds}s</div>
   )
 }
 
-// Usage: <Timer setup={{ initialSeconds: 60 }} paused={false} />
+// Usage: <Timer initialSeconds={60} paused={false} />
 ```
+
+Because `handle.props` is stable, destructuring `let { props } = handle` is safe when helpers need
+to read current values later. Destructuring individual prop values is only a snapshot; prefer
+`handle.props.name` inside callbacks and render output when values can change.
 
 ## State Rules
 
@@ -114,9 +121,9 @@ on('click', () => {
 })
 
 // Reactive data loading keyed by props.url
-return (props: { url: string }) => {
-  if (requestedUrl !== props.url) {
-    let nextUrl = props.url
+return () => {
+  if (requestedUrl !== handle.props.url) {
+    let nextUrl = handle.props.url
     requestedUrl = nextUrl
     data = null
 
@@ -194,11 +201,11 @@ Use `handle.context.set()` to provide values and `handle.context.get(Provider)` 
 `set()` does **not** trigger updates — call `handle.update()` if the tree needs to rerender.
 
 ```tsx
-function ThemeProvider(handle: Handle<{ theme: 'light' | 'dark' }>) {
+function ThemeProvider(handle: Handle<{ children?: RemixNode }, { theme: 'light' | 'dark' }>) {
   let theme: 'light' | 'dark' = 'light'
   handle.context.set({ theme })
 
-  return (props: { children: RemixNode }) => (
+  return () => (
     <div>
       <button mix={[on('click', () => {
         theme = theme === 'light' ? 'dark' : 'light'
@@ -207,7 +214,7 @@ function ThemeProvider(handle: Handle<{ theme: 'light' | 'dark' }>) {
       })]}>
         Toggle
       </button>
-      {props.children}
+      {handle.props.children}
     </div>
   )
 }
@@ -232,16 +239,16 @@ class Theme extends TypedEventTarget<{ change: Event }> {
   }
 }
 
-function ThemeProvider(handle: Handle<Theme>) {
+function ThemeProvider(handle: Handle<{ children?: RemixNode }, Theme>) {
   let theme = new Theme()
   handle.context.set(theme)
 
-  return (props: { children: RemixNode }) => (
+  return () => (
     <div>
       <button mix={[on('click', () => theme.setValue(theme.value === 'light' ? 'dark' : 'light'))]}>
         Toggle
       </button>
-      {props.children}
+      {handle.props.children}
     </div>
   )
 }

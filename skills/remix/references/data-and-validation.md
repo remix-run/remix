@@ -117,6 +117,10 @@ let adapter = createSqliteDatabaseAdapter(sqlite)
 export let db = createDatabase(adapter)
 ```
 
+`createSqliteDatabaseAdapter` accepts synchronous SQLite clients with a shared `prepare`/`exec`
+surface, including Node's `node:sqlite`, Bun's `bun:sqlite`, and compatible clients. Use whichever
+client fits the runtime instead of assuming `better-sqlite3` is required.
+
 ### Database middleware
 
 ```typescript
@@ -308,6 +312,26 @@ let { name, email, password } = result.value
 
 Returning a `Response` for validation failures keeps the route contract honest: the same action
 returns 200 on success, 400 with errors on bad input, no out-of-band exception flow.
+
+### Transforming validated output
+
+Use `.transform(...)` when a schema should validate one shape but return another value or output
+type. Transforms run after validation and compose with `.pipe(...)` and `.refine(...)`:
+
+```typescript
+import * as coerce from 'remix/data-schema/coerce'
+
+let slugSchema = s.string()
+  .pipe(minLength(1))
+  .transform((value) => value.trim().toLowerCase().replace(/\s+/g, '-'))
+
+let pageSchema = f.object({
+  page: f.field(s.defaulted(coerce.coerceNumber(), 1).refine(Number.isInteger)),
+  q: f.field(s.defaulted(s.string(), '').transform((value) => value.trim())),
+})
+
+let { page, q } = s.parse(pageSchema, formData)
+```
 
 ### Anti-patterns
 

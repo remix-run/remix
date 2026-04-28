@@ -55,7 +55,7 @@ let router = createRouter({ middleware })
 |-----------|--------|----------|-------|
 | `staticFiles(dir, opts?)` | `remix/static-middleware` | Serve files from `public/` or another directory exactly as they exist on disk | Fast exit; usually near the top |
 | `compression()` | `remix/compression-middleware` | Compress text-like responses | Usually global |
-| `logger()` | `remix/logger-middleware` | Log requests and responses | Often development-only |
+| `logger()` | `remix/logger-middleware` | Log requests and responses | Often development-only; `colors` can force color output on/off |
 | `cors(opts?)` | `remix/cors-middleware` | Endpoints must serve cross-origin browsers or preflight `OPTIONS` requests | Usually early so preflights can short-circuit |
 | `cop(opts?)` | `remix/cop-middleware` | Reject unsafe cross-origin browser requests without synchronizer tokens | Put before session or CSRF when used |
 | `formData(opts?)` | `remix/form-data-middleware` | Parse `FormData` bodies, especially forms and uploads | Needed for `_csrf` form field extraction |
@@ -114,6 +114,9 @@ formData({
   },
 })
 ```
+
+Errors thrown or rejected by `uploadHandler` propagate directly. Catch domain-specific upload
+errors at the route boundary when they should become user-facing `Response` objects.
 
 ## Writing Custom Middleware
 

@@ -268,6 +268,7 @@ import {
   startExternalAuth,
   finishExternalAuth,
   completeAuth,
+  refreshExternalAuth,
 } from 'remix/auth'
 
 let googleProvider = createGoogleAuthProvider({
@@ -313,6 +314,26 @@ export default {
     },
   },
 } satisfies Controller<typeof routes.auth.google>
+```
+
+### Refresh stored provider tokens
+
+Use `refreshExternalAuth(provider, tokens)` when an app has stored OAuth/OIDC tokens and needs a
+fresh access token from a refresh token. Built-in OIDC providers and X support refresh-token
+exchange. If the provider does not rotate the refresh token, the refreshed bundle preserves the
+current one.
+
+```typescript
+async function refreshGoogleTokens({ get }) {
+  let db = get(Database)
+  let account = await db.findOne(authAccounts, { where: { provider: 'google' } })
+  if (!account) return null
+
+  let refreshed = await refreshExternalAuth(googleProvider, account.tokens)
+  await db.update(authAccounts, account.id, { tokens: refreshed.tokens })
+
+  return refreshed.tokens
+}
 ```
 
 ## Protecting Routes

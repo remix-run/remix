@@ -2,12 +2,11 @@
 
 ## What This Covers
 
-How to serve browser JavaScript and TypeScript modules from source. Read this when the task
-involves:
+How to serve browser scripts and styles from source. Read this when the task involves:
 
-- Configuring `createAssetServer` (`fileMap`, `allow`, `deny`, fingerprinting)
+- Configuring `createAssetServer` (`fileMap`, `allow`, `deny`, fingerprinting, compiler options)
 - Choosing between `staticFiles()` for already-built files and `createAssetServer()` for source
-  modules that need import rewriting, preloads, or fingerprinted URLs
+  assets that need import rewriting, preloads, or fingerprinted URLs
 - Generating script URLs or `<link rel="modulepreload">` tags for a client entry
 - Keeping server-only files out of the browser via `deny` rules
 
@@ -16,13 +15,13 @@ hydration, see `hydration-frames-navigation.md`.
 
 ## When To Reach For It
 
-Use `remix/assets` when the app serves browser JavaScript or TypeScript modules from source files.
-This is the right tool for client entrypoints, browser-only helpers under `app/assets/`, and
-monorepo code that should be compiled and served under a public URL namespace.
+Use `remix/assets` when the app serves browser JavaScript, TypeScript, or CSS from source files.
+This is the right tool for client entrypoints, browser-only helpers, styles under `app/assets/`,
+and monorepo code that should be compiled and served under a public URL namespace.
 
 Use `staticFiles()` for files that already exist on disk exactly as they should be served. Use
-`createAssetServer()` for source modules that need rewriting, dependency scanning, preloads,
-sourcemaps, or fingerprinted URLs.
+`createAssetServer()` for source scripts or styles that need rewriting, dependency scanning,
+preloads, sourcemaps, or fingerprinted URLs.
 
 ## Default Pattern
 
@@ -40,6 +39,14 @@ let assetServer = createAssetServer({
   },
   allow: ['app/assets/**', '../packages/**'],
   deny: ['app/**/*.server.*'],
+  target: { es: '2020', chrome: '109', safari: '16.4' },
+  sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
+  minify: process.env.NODE_ENV === 'production',
+  scripts: {
+    define: {
+      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'development'),
+    },
+  },
 })
 
 let router = createRouter()
@@ -59,6 +66,8 @@ router.get('/assets/*path', ({ request }) => {
   `route-pattern` syntax on both sides.
 - Keep the same wildcard params on both sides of a `fileMap` entry so import rewriting can map
   source files back to public URLs.
+- CSS files are compiled and served alongside scripts. Local CSS `@import` rules are rewritten and
+  fingerprinted with the same asset server routing rules.
 
 ## Rendering HTML
 
@@ -89,13 +98,18 @@ In deployment:
 
 Fingerprinting assumes files on disk are stable and requires `watch: false`.
 
-## Useful Script Options
+## Useful Compiler Options
 
-- `scripts.minify` for production minification
-- `scripts.sourceMaps` for `'external'` or `'inline'` source maps
-- `scripts.target` to lower emitted syntax
+- `minify` for production minification of scripts and styles
+- `sourceMaps` for `'external'` or `'inline'` source maps for scripts and styles
+- `sourceMapSourcePaths` for `'url'` or `'absolute'` source map paths
+- `target` as an object for shared browser targets and script-only ECMAScript output, such as
+  `{ es: '2020', chrome: '109', safari: '16.4' }`
 - `scripts.define` to replace globals such as `process.env.NODE_ENV`
-- `scripts.external` to leave specific imports untouched
+- `scripts.external` to leave specific script imports untouched
+
+Do not nest shared compiler options under `scripts`. Use top-level `minify`, `sourceMaps`,
+`sourceMapSourcePaths`, and `target` so they apply to styles as well as scripts.
 
 ## Lifecycle
 
@@ -104,9 +118,12 @@ when shutting down dev servers or disposing tests.
 
 ## Common Mistakes
 
-- Using `staticFiles()` for modules that should be compiled and import-rewritten by `remix/assets`
+- Using `staticFiles()` for source scripts or styles that should be compiled and import-rewritten by
+  `remix/assets`
 - Forgetting to restrict the `allow` list
 - Forgetting `deny` rules for server-only files
 - Omitting `rootDir` in a monorepo and accidentally resolving from the wrong directory
 - Using fingerprinting while leaving `watch` enabled
-- Hardcoding script URLs instead of using `getHref()` or `getPreloads()`
+- Hardcoding asset URLs instead of using `getHref()` or `getPreloads()`
+- Using old `scripts.target`, `scripts.minify`, or `scripts.sourceMaps` options instead of the
+  current top-level compiler options

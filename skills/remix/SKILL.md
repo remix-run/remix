@@ -20,8 +20,8 @@ A Remix app has four main pieces:
 - **Controllers and actions** implement that contract and return `Response` objects.
 - **Middleware** composes request lifecycle behavior and populates typed context via
   `context.set(Key, value)`.
-- **Components** render UI with `remix/component`. This is not React. A component is a setup
-  function that returns a render function.
+- **Components** render UI with `remix/component`. This is not React. A component receives a
+  `handle`, reads current props from `handle.props`, and returns a render function.
 
 ## When To Use This Skill
 
@@ -159,8 +159,9 @@ When code could live in multiple places:
   need the harness
 - Outside actions and controllers, only use `getContext()` when `asyncContext()` is in the
   middleware stack
-- Remix Component is not React: keep state in setup-scope variables, call `handle.update()`
-  explicitly, and do DOM-sensitive work in event handlers or `queueTask(...)`, not in render
+- Remix Component is not React: read props from `handle.props`, keep state in setup-scope
+  variables, call `handle.update()` explicitly, and do DOM-sensitive work in event handlers or
+  `queueTask(...)`, not in render
 - Prefer host-element mixins via `mix={[...]}` for behavior and styling instead of inventing custom
   host prop conventions
 - Hydrated `clientEntry(...)` props must be serializable. Do not pass functions, class instances, or
@@ -230,8 +231,9 @@ what it exports. Open the linked reference file when you need full examples.
   `del`, `form`, `resources` when defining `app/routes.ts`
 - `remix/node-fetch-server` — adapter from Node's `http` module to a Fetch-style router. Use for
   `createRequestListener` in `server.ts`
-- `remix/assets` — browser module server. Use for `createAssetServer` when serving compiled
-  client modules, getting public hrefs, and emitting preloads
+- `remix/assets` — browser asset server. Use for `createAssetServer` when serving compiled
+  scripts and styles, getting public hrefs, and emitting preloads. Shared compiler options such as
+  `target`, `sourceMaps`, `sourceMapSourcePaths`, and `minify` live at the top level
 - `remix/headers` — typed header parsers and builders. Use when reading `Accept`, `Cookie`, or
   setting `CacheControl`, `Vary`, etc., instead of hand-formatting strings
 - `remix/response/redirect` — `redirect(href, status?)`. Use for the canonical "POST then redirect"
@@ -249,7 +251,8 @@ what it exports. Open the linked reference file when you need full examples.
 ### Data, Validation, and Persistence
 
 - `remix/data-schema` — schema builders for runtime validation. Use for `parse` and `parseSafe`
-  to validate any input that crosses a trust boundary
+  to validate any input that crosses a trust boundary, and `.transform(...)` when validated output
+  should map to a different value or type
 - `remix/data-schema/checks` — common check helpers (`email`, `minLength`, `maxLength`, etc.).
   Use to compose into a schema
 - `remix/data-schema/coerce` — coercion helpers for strings, numbers, booleans, dates, and ids.
@@ -259,7 +262,8 @@ what it exports. Open the linked reference file when you need full examples.
 - `remix/data-table` — typed tables and a `Database` interface. Use for `table`, `column`,
   `createDatabase` when modeling persisted data
 - `remix/data-table-sqlite`, `remix/data-table-postgres`, `remix/data-table-mysql` — adapters.
-  Use to back `createDatabase` with a real engine
+  Use to back `createDatabase` with a real engine. SQLite accepts Node, Bun, and compatible
+  synchronous clients with the shared `prepare`/`exec` surface
 - `remix/data-table/migrations` — migration authoring and runners. Use for `createMigration`,
   `createMigrationRunner`
 - `remix/data-table/migrations/node` — `loadMigrations` from disk. Use in startup scripts that
@@ -283,7 +287,9 @@ what it exports. Open the linked reference file when you need full examples.
 - `remix/cookie` — `createCookie` for plain signed/unsigned cookies. Use for non-sensitive
   preferences where the client is allowed to control the value (theme, locale, dismissed banner).
   For state where tampering matters, prefer `remix/session`
-- `remix/auth` — credentials, OAuth, and OIDC providers. Use to define how identity is verified
+- `remix/auth` — credentials, OAuth, and OIDC providers. Use to define how identity is verified,
+  start/finish external login, and refresh stored OAuth/OIDC token bundles with
+  `refreshExternalAuth(...)`
 - `remix/auth-middleware` — `auth({ schemes })`, `requireAuth`, the `Auth` context key. Use to
   resolve identity into the request context and to gate routes
 
@@ -291,6 +297,8 @@ what it exports. Open the linked reference file when you need full examples.
 
 - `remix/component` — the component model: components, mixins, `clientEntry`, `run`, `<Frame>`,
   navigation helpers. Use for everything UI
+- `remix/ui/<primitive>` — UI primitives, mixins, glyphs, and theme helpers. Import from
+  `remix/ui/accordion`, `remix/ui/button`, `remix/ui/select`, etc.
 - `remix/component/server` — server rendering: `renderToStream`, `renderToString`. Use in the
   `render(...)` helper that returns HTML responses
 - `remix/component/jsx-runtime` — JSX transform target. Configured in `tsconfig.json`, rarely
@@ -309,9 +317,13 @@ what it exports. Open the linked reference file when you need full examples.
 - `remix/form-data-middleware` — `formData()`. Use to parse `FormData` once and expose it via
   `get(FormData)` instead of calling `await request.formData()` in each action
 - `remix/form-data-parser` — lower-level `parseFormData`, `FileUpload`. Use when implementing
-  custom upload handlers
+  custom upload handlers. Upload handler errors propagate directly
+- `remix/multipart-parser` and `remix/multipart-parser/node` — low-level multipart stream parsing.
+  `MultipartPart.headers` is a plain object keyed by lower-case header name, so use
+  `part.headers['content-type']` instead of `part.headers.get(...)`
 - `remix/compression-middleware` — `compression()`. Use globally for text-like responses
-- `remix/logger-middleware` — `logger()`. Use in development for request logs
+- `remix/logger-middleware` — `logger()`. Use in development for request logs; pass `colors` to
+  force terminal color output on or off
 - `remix/method-override-middleware` — `methodOverride()`. Use when HTML forms need `PUT`,
   `PATCH`, or `DELETE`
 - `remix/async-context-middleware` — `asyncContext()`, `getContext()`. Use when helpers outside
@@ -325,9 +337,11 @@ what it exports. Open the linked reference file when you need full examples.
 ### Test
 
 - `remix/test` — `remix-test` runner plus `describe`, `it`, lifecycle hooks. Use as the test
-  framework
+  framework. Supports `glob.exclude` and coverage via `--coverage` or `coverage` config
 - `remix/assert` — assertion helpers. Use in place of `node:assert` so messages render cleanly
   in the runner
+- `remix/terminal` — ANSI styles, color detection, style factories, and testable terminal streams.
+  Use for CLIs and terminal output instead of hand-rolled escape sequences
 
 ## Canonical Patterns
 
@@ -456,15 +470,15 @@ export default {
 This shape works without JavaScript, returns a `Response` for every outcome, and is ready for
 `clientEntry(...)` interactivity when the UI needs it.
 
-### Build UI as setup plus render
+### Build UI from handle props plus render
 
 ```tsx
 import { on, type Handle } from 'remix/component'
 
-function Counter(handle: Handle, initialCount = 0) {
-  let count = initialCount
+function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
+  let count = handle.props.initialCount ?? 0
 
-  return (props: { label: string }) => (
+  return () => (
     <button
       mix={[
         on('click', () => {
@@ -473,7 +487,7 @@ function Counter(handle: Handle, initialCount = 0) {
         }),
       ]}
     >
-      {props.label}: {count}
+      {handle.props.label}: {count}
     </button>
   )
 }
