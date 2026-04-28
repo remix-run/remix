@@ -73,9 +73,8 @@ function key(target: HTMLElement, key: string) {
   target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }))
 }
 
-function press(target: HTMLElement, key: 'Enter' | ' ') {
-  target.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }))
-  target.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key }))
+function activate(target: HTMLElement) {
+  target.click()
 }
 
 describe('Tabs', () => {
@@ -125,7 +124,7 @@ describe('Tabs', () => {
     let { container, root } = renderApp(<App />)
     let reports = getTabByText(container, 'Reports')
 
-    press(reports, 'Enter')
+    activate(reports)
     root.flush()
 
     expect(changes).toEqual(['reports'])
@@ -219,7 +218,7 @@ describe('Tabs', () => {
 
     let reports = getTabByText(container, 'Reports')
 
-    press(reports, 'Enter')
+    activate(reports)
     root.flush()
 
     let changeEvent = captured as TabsChangeEvent | null

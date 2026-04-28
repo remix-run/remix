@@ -4,7 +4,6 @@ import {
   css,
   createElement,
   on,
-  pressEvents,
   ref,
   spring,
   type CSSMixinDescriptor,
@@ -477,6 +476,13 @@ export function AccordionTrigger(handle: Handle<AccordionTriggerProps>) {
     let headingTag = `h${item.headingLevel}` as keyof JSX.IntrinsicElements
     let { children, indicator, mix, type, ...buttonProps } = handle.props
     let disabled = item.disabled || handle.props.disabled === true
+    let toggleItem = () => {
+      if (disabled || item.lockedOpen) {
+        return
+      }
+
+      accordion.toggleItem(item.value)
+    }
 
     let button = (
       <button
@@ -489,17 +495,10 @@ export function AccordionTrigger(handle: Handle<AccordionTriggerProps>) {
         id={item.triggerId}
         mix={[
           triggerStyle,
-          pressEvents(),
           ref((node) => {
             item.setTriggerNode(node as HTMLButtonElement)
           }),
-          on(pressEvents.press, () => {
-            if (disabled || item.lockedOpen) {
-              return
-            }
-
-            accordion.toggleItem(item.value)
-          }),
+          on('click', toggleItem),
           on('keydown', (event) => {
             switch (event.key) {
               case 'ArrowDown':
@@ -520,7 +519,7 @@ export function AccordionTrigger(handle: Handle<AccordionTriggerProps>) {
                 break
             }
           }),
-          ...(mix ?? []),
+          mix,
         ]}
         type={type ?? 'button'}
       >

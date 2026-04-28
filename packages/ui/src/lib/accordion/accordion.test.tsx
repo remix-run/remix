@@ -50,9 +50,8 @@ function renderApp(node: RemixNode) {
   return { container, root }
 }
 
-function press(button: HTMLButtonElement, key: 'Enter' | ' ') {
-  button.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key }))
-  button.dispatchEvent(new KeyboardEvent('keyup', { bubbles: true, key }))
+function activate(button: HTMLButtonElement) {
+  button.click()
 }
 
 describe('Accordion', () => {
@@ -63,7 +62,7 @@ describe('Accordion', () => {
     expect(buttons[0].getAttribute('aria-expanded')).toBe('true')
     expect(buttons[2].getAttribute('aria-expanded')).toBe('false')
 
-    press(buttons[2], 'Enter')
+    activate(buttons[2])
     root.flush()
 
     expect(buttons[0].getAttribute('aria-expanded')).toBe('false')
@@ -84,7 +83,7 @@ describe('Accordion', () => {
 
     expect(button.getAttribute('aria-disabled')).toBe(null)
 
-    press(button, 'Enter')
+    activate(button)
     root.flush()
 
     expect(button.getAttribute('aria-expanded')).toBe('false')
@@ -120,7 +119,7 @@ describe('Accordion', () => {
     let { container, root } = renderApp(<App />)
     let buttons = [...container.querySelectorAll('button')] as HTMLButtonElement[]
 
-    press(buttons[1], 'Enter')
+    activate(buttons[1])
     root.flush()
 
     expect(changes).toEqual(['billing'])
@@ -149,7 +148,7 @@ describe('Accordion', () => {
 
     expect(button.getAttribute('aria-disabled')).toBe('true')
 
-    press(button, 'Enter')
+    activate(button)
     root.flush()
 
     expect(button.getAttribute('aria-expanded')).toBe('true')
@@ -172,13 +171,13 @@ describe('Accordion', () => {
 
     let buttons = [...container.querySelectorAll('button')] as HTMLButtonElement[]
 
-    press(buttons[1], 'Enter')
+    activate(buttons[1])
     root.flush()
 
     expect(buttons[0].getAttribute('aria-expanded')).toBe('true')
     expect(buttons[1].getAttribute('aria-expanded')).toBe('true')
 
-    press(buttons[0], 'Enter')
+    activate(buttons[0])
     root.flush()
 
     expect(buttons[0].getAttribute('aria-expanded')).toBe('false')
@@ -216,7 +215,7 @@ describe('Accordion', () => {
     let { container, root } = renderApp(<App />)
     let buttons = [...container.querySelectorAll('button')] as HTMLButtonElement[]
 
-    press(buttons[1], 'Enter')
+    activate(buttons[1])
     root.flush()
 
     expect(changes).toEqual([['account', 'billing']])
@@ -285,7 +284,7 @@ describe('Accordion', () => {
 
     let button = container.querySelectorAll('button')[1] as HTMLButtonElement
 
-    press(button, 'Enter')
+    activate(button)
     root.flush()
 
     expect(captured).toBeInstanceOf(AccordionChangeEvent)

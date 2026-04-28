@@ -8,16 +8,12 @@ Common mixins exported from `remix/component`:
 - `ref(...)`
 - `css(...)`
 - `link(...)`
-- `pressEvents(...)`
-- `keysEvents(...)`
 - `animateEntrance(...)`
 - `animateExit(...)`
 - `animateLayout(...)`
 
 Prefer these built-ins before custom normalization code:
 
-- `keysEvents()` for key-specific host events
-- `pressEvents()` when you need one interaction path across pointer and keyboard input
 - `link(href, options)` when a non-anchor element should behave like a Remix navigation link
 
 ## Events

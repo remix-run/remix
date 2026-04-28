@@ -1,7 +1,14 @@
-import { css, on, pressEvents, spring, type Handle } from 'remix/component'
+import { createMixin, css, on, spring, type Handle } from 'remix/component'
 
 export function Press(handle: Handle) {
   let pressed = false
+
+  function setPressed(nextPressed: boolean) {
+    if (pressed === nextPressed) return
+    pressed = nextPressed
+    handle.update()
+  }
+
   return () => (
     <div
       tabIndex={0}
@@ -24,16 +31,40 @@ export function Press(handle: Handle) {
           //   transform: 'scale(0.8)',
           // },
         }),
-        pressEvents(),
-        on(pressEvents.down, () => {
-          pressed = true
-          handle.update()
+        onPressDown(() => {
+          setPressed(true)
         }),
-        on(pressEvents.up, () => {
-          pressed = false
-          handle.update()
+        onPressUp(() => {
+          setPressed(false)
         }),
       ]}
     />
   )
 }
+
+const onPressDown = createMixin<HTMLElement, [handler: () => void]>(() => {
+  return (handler) => [
+    on('pointerdown', (event) => {
+      if (event.isPrimary === false) return
+      handler()
+    }),
+    on('keydown', (event) => {
+      if (!(event.key === 'Enter' || event.key === ' ') || event.repeat) return
+      event.preventDefault()
+      handler()
+    }),
+  ]
+})
+
+const onPressUp = createMixin<HTMLElement, [handler: () => void]>(() => {
+  return (handler) => [
+    on('pointerup', handler),
+    on('pointerleave', handler),
+    on('keyup', (event) => {
+      if (!(event.key === 'Enter' || event.key === ' ')) return
+      event.preventDefault()
+      handler()
+    }),
+    on('blur', handler),
+  ]
+})

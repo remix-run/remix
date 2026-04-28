@@ -241,24 +241,15 @@ function KeyboardTracker(handle: Handle) {
 
 ## Best Practices
 
-### Prefer Press Events Over Click
+### Prefer Native Activation
 
-For interactive elements, prefer `press` events over `click`. Press events provide better cross-device behavior:
-
-- Fire on both mouse and touch interactions
-- Handle keyboard activation (Enter/Space) automatically
-- Prevent ghost clicks on touch devices
-- Support press-and-hold patterns
+For button-like actions, prefer native interactive elements and listen for `click`. Buttons already handle pointer, touch, Enter, and Space activation consistently.
 
 ```tsx
-// ❌ Avoid: click doesn't handle all interaction modes well
 <button mix={[on('click', () => { doAction() })]}>Action</button>
-
-// ✅ Prefer: press handles mouse, touch, and keyboard uniformly
-<button mix={[pressEvents(), on('press', () => { doAction() })]}>Action</button>
 ```
 
-Use `click` only when you specifically need mouse-click behavior (e.g., detecting right-clicks or modifier keys).
+For custom non-button controls, add explicit keyboard handling for the activation keys your control supports.
 
 ### Do Work in Event Handlers
 

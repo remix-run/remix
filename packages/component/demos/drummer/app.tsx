@@ -1,4 +1,4 @@
-import { css, addEventListeners, on, pressEvents, ref, type Handle } from 'remix/component'
+import { css, addEventListeners, createMixin, on, ref, type Handle } from 'remix/component'
 import { Drummer } from './drummer.ts'
 import { tempoEvents } from './tempo-interaction.tsx'
 import {
@@ -13,6 +13,20 @@ import {
   TempoLayout,
 } from './components.tsx'
 import { createVoiceLooper } from './voice-looper.ts'
+
+const onPressDown = createMixin<HTMLElement, [action: () => void]>(() => {
+  return (action) => [
+    on('pointerdown', (event) => {
+      if (event.isPrimary === false) return
+      action()
+    }),
+    on('keydown', (event) => {
+      if (!(event.key === 'Enter' || event.key === ' ') || event.repeat) return
+      event.preventDefault()
+      action()
+    }),
+  ]
+})
 
 export function App(handle: Handle<{}, Drummer>) {
   let drummer = new Drummer(80)
@@ -132,8 +146,7 @@ function DrumControls(handle: Handle) {
         disabled={!drummer.isPlaying}
         mix={[
           ref((node: HTMLButtonElement) => (stop = node)),
-          pressEvents(),
-          on(pressEvents.down, () => {
+          onPressDown(() => {
             drummer.stop()
             handle.queueTask(() => {
               play.focus()
@@ -157,8 +170,7 @@ function TempoDisplay(handle: Handle) {
           orientation="up"
           mix={[
             css({ borderTopRightRadius: '18px' }),
-            pressEvents(),
-            on(pressEvents.down, () => {
+            onPressDown(() => {
               drummer.setTempo(drummer.bpm + 1)
             }),
           ]}
@@ -166,8 +178,7 @@ function TempoDisplay(handle: Handle) {
         <TempoButton
           mix={[
             css({ borderBottomRightRadius: '18px' }),
-            pressEvents(),
-            on(pressEvents.down, () => {
+            onPressDown(() => {
               drummer.setTempo(drummer.bpm - 1)
             }),
           ]}

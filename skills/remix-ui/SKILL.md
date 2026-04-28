@@ -30,8 +30,6 @@ client behavior.
    - `mix={[on(...)]}`
    - `mix={[css(...)]}`
    - `mix={[ref(...)]}`
-   - `mix={[keysEvents()]}`
-   - `mix={[pressEvents()]}`
    - `mix={[link(href, options)]}`
 4. Use `addEventListeners(target, handle.signal, listeners)` for global listeners.
 5. Use `queueTask(...)` for post-render DOM work, reactive effects, or hydration-sensitive setup.

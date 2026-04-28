@@ -6,7 +6,6 @@ import {
   createElement,
   createMixin,
   on,
-  pressEvents,
   type CSSMixinDescriptor,
   type ElementProps,
   type Handle,
@@ -370,9 +369,8 @@ const triggerMixin = createMixin<HTMLElement, [options: TabsTriggerOptions], Ele
           'data-orientation': context.orientation,
           'data-selected': context.value === options.value ? 'true' : 'false',
         }),
-        pressEvents(),
         !disabled && [
-          on(pressEvents.press, () => {
+          on('click', () => {
             context.select(options.value)
           }),
           on('keydown', (event) => {

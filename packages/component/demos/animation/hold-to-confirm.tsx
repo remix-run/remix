@@ -4,7 +4,6 @@ import {
   createMixin,
   css,
   on,
-  pressEvents,
   spring,
   type Handle,
 } from 'remix/component'
@@ -245,6 +244,7 @@ declare global {
 
 const baseConfirmPress = createMixin<HTMLElement>((handle) => {
   let timer = 0
+  let pressing = false
 
   let clearTimer = () => {
     if (timer) {
@@ -253,32 +253,58 @@ const baseConfirmPress = createMixin<HTMLElement>((handle) => {
     }
   }
 
-  handle.addEventListener('remove', clearTimer)
+  let start = (target: Element) => {
+    clearTimer()
+    pressing = true
+    target.dispatchEvent(new Event(pressConfirmStartEventType, { bubbles: true }))
+    timer = window.setTimeout(() => {
+      timer = 0
+      pressing = false
+      target.dispatchEvent(new Event(pressConfirmEndEventType, { bubbles: true }))
+    }, PRESS_CONFIRM_TIME)
+  }
+
+  let cancel = (target: Element) => {
+    if (!pressing) return
+    clearTimer()
+    pressing = false
+    target.dispatchEvent(new Event(pressConfirmCancelEventType, { bubbles: true }))
+  }
+
+  handle.addEventListener('remove', () => {
+    clearTimer()
+    pressing = false
+  })
 
   return (props) => (
     <handle.element
       {...props}
       mix={[
-        pressEvents(),
-        on(pressEvents.down, (event) => {
-          let target = event.currentTarget
-          clearTimer()
-          target.dispatchEvent(new Event(pressConfirmStartEventType, { bubbles: true }))
-          timer = window.setTimeout(() => {
-            target.dispatchEvent(new Event(pressConfirmEndEventType, { bubbles: true }))
-          }, PRESS_CONFIRM_TIME)
+        on('pointerdown', (event) => {
+          if (event.isPrimary === false) return
+          start(event.currentTarget)
         }),
-        on(pressEvents.up, (event) => {
-          clearTimer()
-          event.currentTarget.dispatchEvent(
-            new Event(pressConfirmCancelEventType, { bubbles: true }),
-          )
+        on('pointerup', (event) => {
+          cancel(event.currentTarget)
         }),
-        on(pressEvents.cancel, (event) => {
-          clearTimer()
-          event.currentTarget.dispatchEvent(
-            new Event(pressConfirmCancelEventType, { bubbles: true }),
-          )
+        on('pointercancel', (event) => {
+          cancel(event.currentTarget)
+        }),
+        on('pointerleave', (event) => {
+          cancel(event.currentTarget)
+        }),
+        on('keydown', (event) => {
+          if (!(event.key === 'Enter' || event.key === ' ') || event.repeat) return
+          event.preventDefault()
+          start(event.currentTarget)
+        }),
+        on('keyup', (event) => {
+          if (!(event.key === 'Enter' || event.key === ' ')) return
+          event.preventDefault()
+          cancel(event.currentTarget)
+        }),
+        on('blur', (event) => {
+          cancel(event.currentTarget)
         }),
       ]}
     />

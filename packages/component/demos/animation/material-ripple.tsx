@@ -1,5 +1,5 @@
 import type { Handle } from 'remix/component'
-import { animateEntrance, animateExit, css, on, pressEvents, ref } from 'remix/component'
+import { animateEntrance, animateExit, css, on, ref } from 'remix/component'
 
 type Ripple = {
   id: number
@@ -36,6 +36,12 @@ export function MaterialRipple(handle: Handle) {
     }
   }
 
+  function createCenteredRipple() {
+    if (!buttonEl) return
+    let rect = buttonEl.getBoundingClientRect()
+    createRipple(rect.left + rect.width / 2, rect.top + rect.height / 2)
+  }
+
   return () => (
     <button
       mix={[
@@ -68,16 +74,24 @@ export function MaterialRipple(handle: Handle) {
             outlineOffset: 2,
           },
         }),
-        pressEvents(),
-        on(pressEvents.down, (event) => {
-          if (!buttonEl) return
-          let rect = buttonEl.getBoundingClientRect()
-          let x = event.clientX || rect.left + rect.width / 2
-          let y = event.clientY || rect.top + rect.height / 2
-          createRipple(x, y)
+        on('pointerdown', (event) => {
+          if (event.isPrimary === false) return
+          createRipple(event.clientX, event.clientY)
         }),
-        on(pressEvents.up, removeAllRipples),
-        on(pressEvents.cancel, removeAllRipples),
+        on('pointerup', removeAllRipples),
+        on('pointercancel', removeAllRipples),
+        on('pointerleave', removeAllRipples),
+        on('keydown', (event) => {
+          if (!(event.key === 'Enter' || event.key === ' ') || event.repeat) return
+          event.preventDefault()
+          createCenteredRipple()
+        }),
+        on('keyup', (event) => {
+          if (!(event.key === 'Enter' || event.key === ' ')) return
+          event.preventDefault()
+          removeAllRipples()
+        }),
+        on('blur', removeAllRipples),
       ]}
     >
       Click me

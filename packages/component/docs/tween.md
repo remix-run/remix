@@ -110,8 +110,7 @@ function AnimatedValue(handle: Handle) {
       <div style={{ transform: `translateX(${value}px)` }}>Moving</div>
       <button
         mix={[
-          pressEvents(),
-          on('press', () => {
+          on('click', () => {
             animateTo(200)
           }),
         ]}
