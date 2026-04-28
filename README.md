@@ -86,6 +86,12 @@ To try the current Remix alpha, install the `next` dist-tag:
 npm install remix@next
 ```
 
+To create a new Remix app with the CLI, use `npx remix@next new`:
+
+```sh
+npx remix@next new my-remix-app
+```
+
 If you want to play around with the bleeding edge, we also build the latest `main` branch into a `preview/main` branch which can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):
 
 ```sh

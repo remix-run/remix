@@ -1,0 +1,11 @@
+{
+  "name": "doctor-orphan-route-local-file-fixture",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "dependencies": {
+    "remix": "workspace:*"
+  }
+}

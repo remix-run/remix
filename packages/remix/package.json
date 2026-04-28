@@ -17,12 +17,16 @@
     "src"
   ],
   "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
   "exports": {
     "./assert": "./src/assert.ts",
     "./assets": "./src/assets.ts",
     "./async-context-middleware": "./src/async-context-middleware.ts",
     "./auth": "./src/auth.ts",
     "./auth-middleware": "./src/auth-middleware.ts",
+    "./cli": "./src/cli.ts",
     "./compression-middleware": "./src/compression-middleware.ts",
     "./cookie": "./src/cookie.ts",
     "./cop-middleware": "./src/cop-middleware.ts",
@@ -77,6 +81,7 @@
     "./tar-parser": "./src/tar-parser.ts",
     "./terminal": "./src/terminal.ts",
     "./test": "./src/test.ts",
+    "./test/cli": "./src/test/cli.ts",
     "./ui": "./src/ui.ts",
     "./ui/accordion": "./src/ui/accordion.ts",
     "./ui/anchor": "./src/ui/anchor.ts",
@@ -118,6 +123,10 @@
       "./auth-middleware": {
         "types": "./dist/auth-middleware.d.ts",
         "default": "./dist/auth-middleware.js"
+      },
+      "./cli": {
+        "types": "./dist/cli.d.ts",
+        "default": "./dist/cli.js"
       },
       "./compression-middleware": {
         "types": "./dist/compression-middleware.d.ts",
@@ -335,6 +344,10 @@
         "types": "./dist/test.d.ts",
         "default": "./dist/test.js"
       },
+      "./test/cli": {
+        "types": "./dist/test/cli.d.ts",
+        "default": "./dist/test/cli.js"
+      },
       "./ui": {
         "types": "./dist/ui.d.ts",
         "default": "./dist/ui.js"
@@ -410,7 +423,7 @@
       "./package.json": "./package.json"
     },
     "bin": {
-      "remix-test": "./dist/remix-test.js"
+      "remix": "./dist/cli-entry.js"
     }
   },
   "devDependencies": {
@@ -458,6 +471,7 @@
     "@remix-run/static-middleware": "workspace:^",
     "@remix-run/tar-parser": "workspace:^",
     "@remix-run/assert": "workspace:^",
+    "@remix-run/cli": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@remix-run/terminal": "workspace:^"
   },
@@ -469,6 +483,6 @@
     "typecheck": "tsc --noEmit"
   },
   "bin": {
-    "remix-test": "./src/remix-test.ts"
+    "remix": "./src/cli-entry.ts"
   }
 }

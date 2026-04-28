@@ -1,0 +1,11 @@
+{
+  "name": "routes-invalid-value-fixture",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "dependencies": {
+    "remix": "workspace:*"
+  }
+}

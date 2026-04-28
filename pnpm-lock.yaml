@@ -424,6 +424,160 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/cli:
+    dependencies:
+      '@remix-run/tar-parser':
+        specifier: workspace:^
+        version: link:../tar-parser
+      '@remix-run/terminal':
+        specifier: workspace:^
+        version: link:../terminal
+      '@remix-run/test':
+        specifier: workspace:^
+        version: link:../test
+      semver:
+        specifier: ^7.7.4
+        version: 7.7.4
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@types/semver':
+        specifier: ^7.5.8
+        version: 7.5.8
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
+  packages/cli/bootstrap:
+    dependencies:
+      remix:
+        specifier: workspace:^
+        version: link:../../remix
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  packages/cli/test/fixtures/doctor-ambiguous:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-camel-case-keys:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-clean:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-duplicate-owner:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-env-missing-remix-dependency: {}
+
+  packages/cli/test/fixtures/doctor-generic-buckets:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-incomplete-controller:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-missing:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-orphan-route-local-file:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-orphans:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-promotion-drift:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-route-names:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/doctor-wrong-kind:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-basic:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-import-error:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-invalid-value:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-missing:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-no-export:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
+  packages/cli/test/fixtures/routes-tree:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../../../remix
+
   packages/compression-middleware:
     dependencies:
       '@remix-run/fetch-router':
@@ -1204,6 +1358,9 @@ importers:
       '@remix-run/auth-middleware':
         specifier: workspace:^
         version: link:../auth-middleware
+      '@remix-run/cli':
+        specifier: workspace:^
+        version: link:../cli
       '@remix-run/compression-middleware':
         specifier: workspace:^
         version: link:../compression-middleware
@@ -1814,6 +1971,9 @@ importers:
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
       semver:
         specifier: ^7.6.3
         version: 7.6.3
@@ -5141,6 +5301,11 @@ packages:
 
   semver@7.7.3:
     resolution: {integrity: sha512-SdsKMrI9TdgjdweUSR9MweHA4EJ8YxHn8DFaDisvhVlUOe4BF1tLD7GAj0lIqWVl+dPb/rExr0Btby5loQm20Q==}
+    engines: {node: '>=10'}
+    hasBin: true
+
+  semver@7.7.4:
+    resolution: {integrity: sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -8653,6 +8818,8 @@ snapshots:
   semver@7.6.3: {}
 
   semver@7.7.3: {}
+
+  semver@7.7.4: {}
 
   send@0.18.0:
     dependencies:

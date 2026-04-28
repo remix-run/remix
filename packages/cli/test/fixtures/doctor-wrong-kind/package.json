@@ -1,0 +1,11 @@
+{
+  "name": "doctor-wrong-kind-fixture",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "dependencies": {
+    "remix": "workspace:*"
+  }
+}

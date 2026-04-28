@@ -2,9 +2,10 @@
  * Publishes packages to npm and creates tags/releases for what was published.
  *
  * This script uses pnpm publish with --report-summary, reads the summary file,
- * and creates Git tags + GitHub releases. When the remix package is in prerelease
- * mode (has .changes/config.json with prereleaseChannel), it publishes in two phases:
- * all other packages as "latest", then remix with the "next" tag.
+ * and creates Git tags + GitHub releases. When one or more packages are in
+ * prerelease mode (have .changes/config.json with prereleaseChannel), it publishes
+ * in two phases: all other packages as "latest", then prerelease packages with
+ * the "next" tag.
  *
  * This script is designed for CI use. For previewing releases, use `pnpm changes:preview`.
  *
@@ -64,6 +65,11 @@ interface LocalPackage {
   localVersion: string
 }
 
+interface PrereleasePackage {
+  dirName: string
+  channel: string
+}
+
 interface TagPlan {
   pkg: PublishedPackage
   targetCommit: string
@@ -115,6 +121,37 @@ function getLocalPackages(): LocalPackage[] {
   }
 
   return localPackages
+}
+
+function getPrereleasePackages(): PrereleasePackage[] {
+  let prereleasePackages: PrereleasePackage[] = []
+
+  for (let packageDirName of getAllPackageDirNames()) {
+    let changesConfig = readChangesConfig(packageDirName)
+    if (!changesConfig.exists) {
+      continue
+    }
+
+    if (!changesConfig.valid) {
+      throw new Error(`Error reading ${packageDirName} changes config: ${changesConfig.error}`)
+    }
+
+    let prereleaseChannel = changesConfig.config.prereleaseChannel
+    if (prereleaseChannel) {
+      prereleasePackages.push({
+        dirName: packageDirName,
+        channel: prereleaseChannel,
+      })
+    }
+  }
+
+  prereleasePackages.sort((a, b) => {
+    if (a.dirName === 'remix') return -1
+    if (b.dirName === 'remix') return 1
+    return a.dirName.localeCompare(b.dirName)
+  })
+
+  return prereleasePackages
 }
 
 /**
@@ -396,20 +433,24 @@ async function main() {
     console.log('🔍 DRY RUN MODE - No packages will be published\n')
   }
 
-  // Check if remix is in prerelease mode
-  let remixChangesConfig = readChangesConfig('remix')
-  let remixPrereleaseChannel: string | null = null
+  let prereleasePackages: PrereleasePackage[] = []
+  try {
+    prereleasePackages = getPrereleasePackages()
+  } catch (error) {
+    let message = error instanceof Error ? error.message : String(error)
+    console.error(message)
+    process.exit(1)
+  }
 
-  if (remixChangesConfig.exists) {
-    if (!remixChangesConfig.valid) {
-      console.error('Error reading remix changes config:', remixChangesConfig.error)
-      process.exit(1)
+  if (prereleasePackages.length > 0) {
+    console.log('Packages in prerelease mode:')
+    for (let pkg of prereleasePackages) {
+      console.log(`  • ${pkg.dirName} (${pkg.channel})`)
     }
-    remixPrereleaseChannel = remixChangesConfig.config.prereleaseChannel || null
-    if (remixPrereleaseChannel) {
-      console.log(`Remix is in prerelease mode (channel: ${remixPrereleaseChannel})`)
-      console.log('Publishing in two phases: other packages as "latest", then remix as "next"\n')
-    }
+    console.log()
+    console.log(
+      'Publishing in two phases: other packages as "latest", then prerelease packages as "next"\n',
+    )
   }
 
   // Publish packages to npm
@@ -417,12 +458,25 @@ async function main() {
 
   let published: PublishedPackage[] = []
 
-  if (remixPrereleaseChannel) {
+  if (prereleasePackages.length > 0) {
     let publishCommands = [
-      // Phase 1: Publish everything in `packages` except remix (with --report-summary so we know what was published)
-      'pnpm publish --recursive --filter "./packages/*" --filter "!remix" --access public --no-git-checks --report-summary',
-      // Phase 2: Publish remix with "next" tag (with --report-summary so we know if remix was published)
-      'pnpm publish --filter remix --tag next --access public --no-git-checks --report-summary',
+      [
+        'pnpm publish --recursive',
+        '--filter "./packages/*"',
+        ...prereleasePackages.map((pkg) => `--filter "!${pkg.dirName}"`),
+        '--access public',
+        '--no-git-checks',
+        '--report-summary',
+      ].join(' '),
+      ...prereleasePackages.map((pkg) =>
+        [
+          `pnpm publish --filter ${pkg.dirName}`,
+          '--tag next',
+          '--access public',
+          '--no-git-checks',
+          '--report-summary',
+        ].join(' '),
+      ),
     ]
 
     if (dryRun) {
