@@ -430,6 +430,8 @@ jobs:
         uses: openai/codex-action@v1
         with:
           openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          model: gpt-5.5
+          effort: xhigh
           prompt: |
             You are reviewing a GitHub pull request for `remix-run/remix`.
 
