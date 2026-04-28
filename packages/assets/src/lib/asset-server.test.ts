@@ -92,10 +92,6 @@ async function getByFile(
   return get(assetServer, await assetServer.getHref(filePath), headers)
 }
 
-async function headByFile(assetServer: ReturnType<typeof createAssetServer>, filePath: string) {
-  return head(assetServer, await assetServer.getHref(filePath))
-}
-
 function post(assetServer: ReturnType<typeof createAssetServer>, pathname: string) {
   return assetServer.fetch(new Request(`http://localhost${pathname}`, { method: 'POST' }))
 }
@@ -3939,10 +3935,11 @@ describe('asset-server', () => {
         chokidarWatcher.emit('error', watchError)
 
         assert.equal(onError.mock.calls.length, 0)
-        assert.equal(
-          (consoleError.mock.calls.at(-1)?.arguments[1] as { code?: string }).code,
-          'EMFILE',
-        )
+        let lastConsoleError = consoleError.mock.calls.at(-1)
+        assert.ok(lastConsoleError)
+        let error = lastConsoleError.arguments[1]
+        assert.ok(error && typeof error === 'object' && 'code' in error)
+        assert.equal(error.code, 'EMFILE')
       } finally {
         consoleError.mock.restore?.()
         await assetServer.close()

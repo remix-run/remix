@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createRoot, on, type RemixNode } from '@remix-run/component'
+import { createRoot, type RemixNode } from '@remix-run/component'
 
 import { Menu, MenuItem, onMenuSelect, Submenu, type MenuSelectEvent } from './menu.tsx'
 

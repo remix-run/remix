@@ -45,7 +45,7 @@ export interface OAuthResult<profile, provider extends string = string> {
 /**
  * Public shape for an OAuth or OIDC provider used by external auth request handlers.
  */
-export interface OAuthProvider<profile, provider extends string = string> {
+export interface OAuthProvider<_profile, provider extends string = string> {
   /** Provider name used for routing, callbacks, and persisted transactions. */
   name: provider
 }
