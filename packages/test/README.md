@@ -7,7 +7,7 @@ A test framework for Remix applications
 - `describe`/`it` test structure with `before`/`after`/`beforeEach`/`afterEach` hooks
 - Server-side unit testing
 - Playwright E2E testing via `t.serve`
-- In-browser component testing via `t.render()`
+- In-browser component testing (pair with `render` from `remix/component/test`)
 - Mock functions and method spies via `t.mock.fn` / `t.mock.method`
 - Unified code coverage reporting across unit and E2E tests
 - Watch mode
@@ -232,16 +232,6 @@ interface TestContext {
 }
 ```
 
-For browser tests, import `describe`/`it`/etc. from `remix/test/dom` instead of `remix/test`. The DOM context extends the base `TestContext` with a `render` method:
-
-```ts
-// from 'remix/test/dom'
-interface DomTestContext extends TestContext {
-  // Render a component into the DOM
-  render(node: RemixNode, opts?: RenderOptions): RenderResult
-}
-```
-
 #### Mocks and Spies
 
 Use `t.mock.fn()`/`t.mock.method()` to set up mocks and method spies. This is preferred over the standalone `mock` import because TestContext method mocks are automatically restored after the test runs.
@@ -270,20 +260,6 @@ it('cleanup', (t) => {
   let conn = db.connect()
   t.after(() => conn.close())
   // ...
-})
-```
-
-#### Browser Testing (`render`)
-
-In browser test files, `t.render()` mounts a component into the DOM and returns scoped utilities for querying and interacting with it. The rendered component is automatically removed from the DOM after the test. To get `t.render` on the test context, import `describe`/`it` from `remix/test/dom` (not `remix/test`). See [Browser Testing](#browser-testing) for details.
-
-```ts
-import { describe, it } from 'remix/test/dom'
-
-it('increments on click', async (t) => {
-  let { $, act } = t.render(<Counter />)
-  await act(() => $('[data-action="increment"]')?.click())
-  assert.equal($('[data-count]')?.textContent, '1')
 })
 ```
 
@@ -336,20 +312,22 @@ spy.mock.restore?.()
 
 ### Browser Testing
 
-Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests, but **must be imported from `remix/test/dom`** so the test context is typed with `t.render`. Each in-browser test suite runs in an isolated `iframe` so it has access to its own `document` instance.
+Browser tests run components in an actual browser environment via Playwright and are discovered by the `**/*.test.browser.{ts,tsx}` glob pattern (configurable via `glob.browser`). They use the same `describe`/`it` API as unit tests. Each in-browser test suite runs in an isolated `iframe` so it has access to its own `document` instance.
 
-#### `t.render()`
+#### `render()`
 
-Mounts a component into the DOM and returns a `RenderContext`:
+`render`, exported from `remix/component/test`, mounts a component into the DOM and returns a `RenderResult`:
 
 ```ts
 import * as assert from 'remix/assert'
-import { describe, it } from 'remix/test/dom'
+import { describe, it } from 'remix/test'
+import { render } from 'remix/component/test'
 import { Counter } from './counter.tsx'
 
 describe('Counter', () => {
   it('increments on click', async (t) => {
-    let { $, act } = t.render(<Counter />)
+    let { $, act, cleanup } = render(<Counter />)
+    t.after(cleanup)
 
     assert.equal($('[data-count]')?.textContent, '0')
     await act(() => $('[data-action="increment"]')?.click())
@@ -358,18 +336,16 @@ describe('Counter', () => {
 })
 ```
 
-`RenderContext` provides:
+`RenderResult` provides:
 
-| Property/Method | Description                                                               |
-| --------------- | ------------------------------------------------------------------------- |
-| `container`     | The `HTMLElement` the component is mounted into                           |
-| `root`          | The Remix `VirtualRoot` the component is rendered in                      |
-| `$(selector)`   | Alias for `container.querySelector()`                                     |
-| `$$(selector)`  | Alias for `container.querySelectorAll()`                                  |
-| `act(fn)`       | Runs `fn` and flushes pending component updates                           |
-| `cleanup()`     | Unmounts and removes the container (called automatically after each test) |
-
-`t.useFakeTimers()` is also available inside browser tests — see [Fake Timers](#fake-timers).
+| Property/Method | Description                                                             |
+| --------------- | ----------------------------------------------------------------------- |
+| `container`     | The `HTMLElement` the component is mounted into                         |
+| `root`          | The Remix `VirtualRoot` the component is rendered in                    |
+| `$(selector)`   | Alias for `container.querySelector()`                                   |
+| `$$(selector)`  | Alias for `container.querySelectorAll()`                                |
+| `act(fn)`       | Runs `fn` and flushes pending component updates                         |
+| `cleanup()`     | Unmounts and removes the container (pass to `t.after` for auto-cleanup) |
 
 ### E2E Testing
 

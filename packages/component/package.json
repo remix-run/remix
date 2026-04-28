@@ -21,6 +21,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./server": "./src/server.ts",
+    "./test": "./src/test.ts",
     "./jsx-runtime": "./src/jsx-runtime.ts",
     "./jsx-dev-runtime": "./src/jsx-dev-runtime.ts",
     "./package.json": "./package.json"
@@ -34,6 +35,10 @@
       "./server": {
         "types": "./dist/server.d.ts",
         "default": "./dist/server.js"
+      },
+      "./test": {
+        "types": "./dist/test.d.ts",
+        "default": "./dist/test.js"
       },
       "./jsx-runtime": {
         "types": "./dist/jsx-runtime.d.ts",

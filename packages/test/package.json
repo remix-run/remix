@@ -24,7 +24,6 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./dom": "./src/dom.ts",
     "./package.json": "./package.json",
     "./cli": "./src/cli.ts"
   },
@@ -36,10 +35,6 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
-      },
-      "./dom": {
-        "types": "./dist/dom.d.ts",
-        "default": "./dist/dom.js"
       },
       "./package.json": "./package.json",
       "./cli": "./dist/cli.js"

@@ -83,14 +83,10 @@ export interface CreateTestContextOptions {
   addE2ECoverageEntries?: (value: { entries: V8CoverageEntry[]; baseUrl: string }) => void
 }
 
-export interface TestContextFactoryResult<T extends TestContext = TestContext> {
-  testContext: T
+export function createTestContext(options: CreateTestContextOptions): {
+  testContext: TestContext
   cleanup(): Promise<void>
-}
-
-export function createTestContext(
-  options: CreateTestContextOptions,
-): TestContextFactoryResult {
+} {
   let cleanups: Array<() => void | Promise<void>> = []
 
   let testContext: TestContext = {
