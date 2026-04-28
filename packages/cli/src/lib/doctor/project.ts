@@ -372,7 +372,7 @@ function renderDefaultHomeAction(entryPath: string): string {
 
   if (extension === '.jsx') {
     return [
-      `import { renderToStream } from 'remix/component/server'`,
+      `import { renderToStream } from 'remix/ui/server'`,
       `import { createHtmlResponse } from 'remix/response/html'`,
       '',
       'export const home = {',
@@ -403,7 +403,7 @@ function renderDefaultHomeAction(entryPath: string): string {
 
   return [
     `import type { BuildAction } from 'remix/fetch-router'`,
-    `import { renderToStream } from 'remix/component/server'`,
+    `import { renderToStream } from 'remix/ui/server'`,
     `import { createHtmlResponse } from 'remix/response/html'`,
     '',
     `import type { routes } from '../routes.ts'`,

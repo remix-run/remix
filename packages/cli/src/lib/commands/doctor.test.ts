@@ -797,7 +797,7 @@ describe('doctor command', () => {
         'utf8',
       )
 
-      assert.match(homeSource, /import \{ renderToStream \} from 'remix\/component\/server'/)
+      assert.match(homeSource, /import \{ renderToStream \} from 'remix\/ui\/server'/)
       assert.match(homeSource, /import \{ createHtmlResponse \} from 'remix\/response\/html'/)
       assert.match(homeSource, /let page = <HomePage \/>/)
       assert.match(homeSource, /return createHtmlResponse\(renderToStream\(page\)\)/)
