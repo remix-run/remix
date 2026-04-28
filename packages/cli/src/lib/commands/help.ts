@@ -1,7 +1,7 @@
 import * as process from 'node:process'
 
 import { getCompletionCommandHelpText } from './completion.ts'
-import { renderCliError, unknownHelpTopic } from '../errors.ts'
+import { renderCliError, toCliError, unknownHelpTopic } from '../errors.ts'
 import { formatHelpText } from '../help-text.ts'
 import { getDoctorCommandHelpText } from './doctor.ts'
 import { getNewCommandHelpText } from './new.ts'
@@ -24,7 +24,9 @@ export async function runHelpCommand(argv: string[]): Promise<number> {
     process.stdout.write(getCommandHelpText(argv))
     return 0
   } catch (error) {
-    process.stderr.write(renderCliError(error, { helpText: getCliHelpText(process.stderr) }))
+    process.stderr.write(
+      renderCliError(toCliError(error), { helpText: getCliHelpText(process.stderr) }),
+    )
     return 1
   }
 }

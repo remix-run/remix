@@ -28,11 +28,14 @@ export async function runNewCommand(argv: string[]): Promise<number> {
     return 0
   }
 
-  let reporter = createCommandReporter()
-  let progress = createNewProgressReporter(reporter)
+  let reporter: CommandReporter | null = null
+  let progress: BootstrapProgressReporter | null = null
 
   try {
     let options = parseNewCommandArgs(argv)
+    reporter = createCommandReporter()
+    progress = createNewProgressReporter(reporter)
+
     await reporter.status.commandHeader('new')
     let result = await bootstrapProject(options, progress)
     progress.writeSummaryGap()
@@ -40,11 +43,11 @@ export async function runNewCommand(argv: string[]): Promise<number> {
     reporter.finish()
     return 0
   } catch (error) {
-    progress.writeSummaryGap()
+    progress?.writeSummaryGap()
     process.stderr.write(
       renderCliError(toCliError(error), { helpText: getNewCommandHelpText(process.stderr) }),
     )
-    reporter.finish()
+    reporter?.finish()
     return 1
   }
 }

@@ -24,7 +24,6 @@ import {
   type StepProgressReporter,
 } from '../reporter.ts'
 import { getRuntimeCwd } from '../runtime-context.ts'
-import { lightRed } from '../terminal.ts'
 
 const DOCTOR_SUITE_LABELS = {
   controllers: {
@@ -53,7 +52,7 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     return 0
   }
 
-  let reporter = createCommandReporter({ stderr: process.stdout, stdout: process.stdout })
+  let reporter: CommandReporter | null = null
   let progress: StepProgressReporter<DoctorSuiteName> | null = null
 
   try {
@@ -81,15 +80,11 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
 
     return 0
   } catch (error) {
-    let cliError = toCliError(error)
     progress?.writeSummaryGap()
     process.stderr.write(
-      lightRed(
-        renderCliError(cliError, { helpText: getDoctorCommandHelpText(process.stderr) }),
-        process.stderr,
-      ),
+      renderCliError(toCliError(error), { helpText: getDoctorCommandHelpText(process.stderr) }),
     )
-    reporter.finish()
+    reporter?.finish()
     return 1
   }
 }

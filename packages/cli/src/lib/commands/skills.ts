@@ -32,11 +32,11 @@ export async function runSkillsCommand(argv: string[]): Promise<number> {
 
   try {
     if (subcommand === 'install') {
-      return runSkillsInstallCommand(rest)
+      return await runSkillsInstallCommand(rest)
     }
 
     if (subcommand === 'list') {
-      return runSkillsListCommand(rest)
+      return await runSkillsListCommand(rest)
     }
 
     throw unknownSkillsCommand(subcommand)
@@ -122,23 +122,15 @@ async function runSkillsInstallCommand(argv: string[]): Promise<number> {
     return 0
   }
 
-  let options: { dir: string | null }
-  try {
-    options = parseSkillsInstallCommandArgs(argv)
-  } catch (error) {
-    process.stderr.write(
-      renderCliError(toCliError(error), {
-        helpText: getSkillsInstallCommandHelpText(process.stderr),
-      }),
-    )
-    return 1
-  }
-
-  let reporter = createCommandReporter()
-  let progress = createSkillsProgressReporter(reporter)
-  let cwd = getRuntimeCwd()
+  let reporter: CommandReporter | null = null
+  let progress: SkillsProgressReporter | null = null
 
   try {
+    let options = parseSkillsInstallCommandArgs(argv)
+    reporter = createCommandReporter()
+    progress = createSkillsProgressReporter(reporter)
+    let cwd = getRuntimeCwd()
+
     await reporter.status.commandHeader('skills install')
     let result = await installRemixSkills(cwd, globalThis.fetch, {
       progress,
@@ -157,13 +149,13 @@ async function runSkillsInstallCommand(argv: string[]): Promise<number> {
     reporter.finish()
     return 0
   } catch (error) {
-    progress.writeSummaryGap()
+    progress?.writeSummaryGap()
     process.stderr.write(
       renderCliError(toCliError(error), {
         helpText: getSkillsInstallCommandHelpText(process.stderr),
       }),
     )
-    reporter.finish()
+    reporter?.finish()
     return 1
   }
 }
@@ -174,22 +166,15 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
     return 0
   }
 
-  let options: { dir: string | null; json: boolean }
-  try {
-    options = parseSkillsDirArgs(argv, { allowJson: true })
-  } catch (error) {
-    process.stderr.write(
-      renderCliError(toCliError(error), { helpText: getSkillsListCommandHelpText(process.stderr) }),
-    )
-    return 1
-  }
-
-  let cwd = getRuntimeCwd()
-  let reporter = createCommandReporter()
+  let reporter: CommandReporter | null = null
   let progress: SkillsProgressReporter | null = null
+
   try {
-    progress = options.json ? null : createSkillsProgressReporter(reporter)
-    if (progress != null) {
+    let options = parseSkillsDirArgs(argv, { allowJson: true })
+    let cwd = getRuntimeCwd()
+    reporter = options.json ? null : createCommandReporter()
+    if (reporter != null) {
+      progress = createSkillsProgressReporter(reporter)
       await reporter.status.commandHeader('skills list')
     }
 
@@ -214,18 +199,25 @@ async function runSkillsListCommand(argv: string[]): Promise<number> {
     }
 
     progress?.writeSummaryGap()
-    reporter.out.line(
+    if (reporter == null) {
+      return 0
+    }
+
+    let listReporter = reporter
+    listReporter.out.line(
       formatSkillsListSummary(result.entries, getDisplayPath(result.skillsDir, cwd)),
     )
-    reporter.out.bullets(result.entries.map((entry) => formatSkillListEntry(reporter, entry)))
-    reporter.finish()
+    listReporter.out.bullets(
+      result.entries.map((entry) => formatSkillListEntry(listReporter, entry)),
+    )
+    listReporter.finish()
     return 0
   } catch (error) {
     progress?.writeSummaryGap()
     process.stderr.write(
       renderCliError(toCliError(error), { helpText: getSkillsListCommandHelpText(process.stderr) }),
     )
-    reporter.finish()
+    reporter?.finish()
     return 1
   }
 }
