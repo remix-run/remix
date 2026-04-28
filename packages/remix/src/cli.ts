@@ -44,3 +44,4 @@ async function readRemixVersion(): Promise<string> {
 
   return packageJson.version.trim()
 }
+
