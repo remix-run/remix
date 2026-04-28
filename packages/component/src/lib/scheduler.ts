@@ -133,7 +133,7 @@ export function createScheduler(
             // Needed for fragment self-updates that add children - without this, new children
             // would be appended after siblings. The keyed diff has placement logic, but unkeyed
             // diff relies on anchor for correct positioning.
-            let anchor = findNextSiblingDomAnchor(vnode, vParent) || undefined
+            let anchor = findNextSiblingDomAnchor(vnode) || undefined
             try {
               let updateStyles = getFrameStyleManager(vnode)
               renderComponent(

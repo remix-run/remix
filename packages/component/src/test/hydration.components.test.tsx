@@ -4,7 +4,7 @@ import { createRoot } from '../lib/vdom.ts'
 import { renderToString } from '../lib/stream.ts'
 import { clientEntry } from '../lib/client-entries.ts'
 import { invariant } from '../lib/invariant.ts'
-import { on, ref } from '../index.ts'
+import { on, ref, type Renderable } from '../index.ts'
 
 describe('hydration', () => {
   let container: HTMLDivElement
@@ -161,6 +161,48 @@ describe('hydration', () => {
       root.flush()
 
       expect(existingButton.textContent).toBe('Count: 6')
+    })
+
+    it('hydrates with null elements without breaking the ordering of siblings', async () => {
+      let secondElement: Renderable = null
+      let NullChanging = clientEntry('/with-null.js#WithNull', function WithNull(handle: Handle) {
+        return () => (
+          <div>
+            <span>First</span>
+            {secondElement}
+            <span>Second</span>
+          </div>
+        )
+      })
+
+      let html = await renderToString(<NullChanging />)
+      container.innerHTML = html
+
+      let existingSpans = container.querySelectorAll('span')
+      expect(existingSpans).toHaveLength(2)
+      invariant(existingSpans[0] && existingSpans[1])
+      expect(existingSpans[0].textContent).toBe('First')
+      expect(existingSpans[1].textContent).toBe('Second')
+
+      let root = createRoot(container)
+      root.render(<NullChanging />)
+      root.flush()
+
+      let hydratedSpans = container.querySelectorAll('span')
+      expect(hydratedSpans).toHaveLength(2)
+      expect(hydratedSpans[0]).toBe(existingSpans[0])
+      expect(hydratedSpans[1]).toBe(existingSpans[1])
+
+      // Now update to a version without the null to ensure ordering is preserved
+      secondElement = <span>after First</span>
+      root.render(<NullChanging />)
+      root.flush()
+
+      let updatedSpans = container.querySelectorAll('span')
+      expect(updatedSpans).toHaveLength(3)
+      expect(updatedSpans[0]).toBe(existingSpans[0])
+      expect(updatedSpans[1].textContent).toBe('after First')
+      expect(updatedSpans[2]).toBe(existingSpans[1])
     })
   })
 
