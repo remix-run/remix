@@ -76,16 +76,16 @@ function normalizeRouteGroup(
         } satisfies RawRouteTreeNode
       }
 
-      throw new Error(`Invalid route map value at "${name}". Expected a route or nested route object.`)
+      throw new Error(
+        `Invalid route map value at "${name}". Expected a route or nested route object.`,
+      )
     })
   } finally {
     seen.delete(value)
   }
 }
 
-function isRouteLeaf(
-  value: unknown,
-): value is { method: string; pattern: { source: string } } {
+function isRouteLeaf(value: unknown): value is { method: string; pattern: { source: string } } {
   return (
     typeof value === 'object' &&
     value != null &&

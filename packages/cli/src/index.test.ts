@@ -69,9 +69,7 @@ function readRemixPackageJson(): RemixPackageJson {
 }
 
 function readCliPackageJson(): CliPackageJson {
-  return JSON.parse(
-    fs.readFileSync(resolve(PACKAGE_DIR, 'package.json'), 'utf8'),
-  ) as CliPackageJson
+  return JSON.parse(fs.readFileSync(resolve(PACKAGE_DIR, 'package.json'), 'utf8')) as CliPackageJson
 }
 
 function readTestPackageJson(): PackageJsonWithEngines {

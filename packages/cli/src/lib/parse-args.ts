@@ -19,7 +19,9 @@ export interface ParseArgsOptions {
 }
 
 export type ParsedArgsValues<definitions extends ParseArgsOptionDefinitions> = {
-  [key in keyof definitions]: definitions[key]['type'] extends 'boolean' ? boolean : string | undefined
+  [key in keyof definitions]: definitions[key]['type'] extends 'boolean'
+    ? boolean
+    : string | undefined
 }
 
 export interface ParsedArgsResult<definitions extends ParseArgsOptionDefinitions> {
@@ -36,8 +38,12 @@ export function parseArgs<const definitions extends ParseArgsOptionDefinitions>(
   let specsByFlag = new Map<string, { key: keyof definitions; spec: ParseArgsOptionSpec }>()
   let positionals: string[] = []
 
-  for (let [key, spec] of Object.entries(definitions) as Array<[keyof definitions, ParseArgsOptionSpec]>) {
-    values[key] = (spec.type === 'boolean' ? false : undefined) as ParsedArgsValues<definitions>[typeof key]
+  for (let [key, spec] of Object.entries(definitions) as Array<
+    [keyof definitions, ParseArgsOptionSpec]
+  >) {
+    values[key] = (
+      spec.type === 'boolean' ? false : undefined
+    ) as ParsedArgsValues<definitions>[typeof key]
     specsByFlag.set(spec.flag, { key, spec })
   }
 

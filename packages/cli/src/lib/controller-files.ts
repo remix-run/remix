@@ -5,17 +5,13 @@ export type OwnerFileExtension = (typeof OWNER_FILE_EXTENSIONS)[number]
 
 export function getActionOwnerCandidates(segments: string[]): string[] {
   return OWNER_FILE_EXTENSIONS.map((extension) =>
-    normalizeRelativePath(
-      path.join('app', 'controllers', `${path.join(...segments)}${extension}`),
-    ),
+    normalizeRelativePath(path.join('app', 'controllers', `${path.join(...segments)}${extension}`)),
   )
 }
 
 export function getControllerOwnerCandidates(segments: string[]): string[] {
   return OWNER_FILE_EXTENSIONS.map((extension) =>
-    normalizeRelativePath(
-      path.join('app', 'controllers', ...segments, `controller${extension}`),
-    ),
+    normalizeRelativePath(path.join('app', 'controllers', ...segments, `controller${extension}`)),
   )
 }
 
