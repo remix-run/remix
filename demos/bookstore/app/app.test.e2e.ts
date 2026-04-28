@@ -1,4 +1,5 @@
 import * as assert from 'remix/assert'
+import { createTestServer } from 'remix/node-fetch-server/test'
 import { describe, it } from 'remix/test'
 import { createBookstoreRouter } from './router.ts'
 import { books } from './data/schema.ts'
@@ -11,7 +12,7 @@ await initializeBookstoreDatabase()
 
 describe('e2e', () => {
   it('adds to cart', async (t) => {
-    let page = await t.serve(router.fetch)
+    let page = await t.serve(await createTestServer(router.fetch))
 
     // Load the homepage
     await page.goto('/', { waitUntil: 'networkidle' })

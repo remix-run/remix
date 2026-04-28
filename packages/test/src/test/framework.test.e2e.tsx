@@ -3,6 +3,7 @@ import type { RemixNode } from '@remix-run/component/jsx-runtime'
 import { renderToString } from '@remix-run/component/server'
 import { createRouter } from '@remix-run/fetch-router'
 import { route } from '@remix-run/fetch-router/routes'
+import { createTestServer } from '@remix-run/node-fetch-server/test'
 import { describe, it } from '../lib/framework.ts'
 
 const html = async (n: RemixNode) =>
@@ -41,7 +42,7 @@ describe('e2e tests', () => {
       ),
     )
 
-    let page = await t.serve(router.fetch)
+    let page = await t.serve(await createTestServer(router.fetch))
     await page.goto('/')
     assert.equal(await page.locator('h1').textContent(), 'Hello Remix')
     await page.click('[href="/about"]')

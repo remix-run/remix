@@ -65,6 +65,7 @@
     "./multipart-parser": "./src/multipart-parser.ts",
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
+    "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
     "./response/compress": "./src/response/compress.ts",
     "./response/file": "./src/response/file.ts",
     "./response/html": "./src/response/html.ts",
@@ -273,6 +274,10 @@
       "./node-fetch-server": {
         "types": "./dist/node-fetch-server.d.ts",
         "default": "./dist/node-fetch-server.js"
+      },
+      "./node-fetch-server/test": {
+        "types": "./dist/node-fetch-server/test.d.ts",
+        "default": "./dist/node-fetch-server/test.js"
       },
       "./response/compress": {
         "types": "./dist/response/compress.d.ts",

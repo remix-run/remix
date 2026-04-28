@@ -1,9 +1,18 @@
 import type { Browser, Page } from 'playwright'
 import type { V8CoverageEntry } from './coverage.ts'
-import type { CreateServerFunction } from './e2e-server.ts'
 import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
 import { mock, type MockCall, type MockContext, type MockFunction } from './mock.ts'
 import type { getPlaywrightPageOptions } from './playwright.ts'
+
+/**
+ * The shape `t.serve()` consumes. Matches the result of `createTestServer`
+ * from `@remix-run/node-fetch-server/test`, but any object with a `baseUrl`
+ * and async `close()` works.
+ */
+export interface TestServer {
+  baseUrl: string
+  close(): Promise<void>
+}
 
 /**
  * Test Context providing utilities for testing via remix-test.  The context is
@@ -66,18 +75,20 @@ export interface TestContext {
   useFakeTimers(): FakeTimers
 
   /**
-   * Starts a test server with the provided request handler.
+   * Wires a running test server up to a Playwright page so the test can drive
+   * it. The server is closed automatically when the test ends. Pair with
+   * `createTestServer` from `@remix-run/node-fetch-server/test` (or any other
+   * source of a `{ baseUrl, close }` handle) to spin up the server first.
    *
-   * @param {(req: Request) => Promise<Response>} handler - Function handling incoming requests
-   * @returns {Promise<Page>} A promise resolving to a page instance for the server
+   * @param server - The running server the page should target
+   * @returns A `Page` whose `baseURL` is set to `server.baseUrl`.
    */
-  serve(handler: (req: Request) => Promise<Response>): Promise<Page>
+  serve(server: TestServer): Promise<Page>
 }
 
 export interface CreateTestContextOptions {
   addE2ECoverageEntries: (value: { entries: V8CoverageEntry[]; baseUrl: string }) => void
   browser: Browser
-  createServer: CreateServerFunction
   coverage: boolean
   open: boolean
   playwrightPageOptions: ReturnType<typeof getPlaywrightPageOptions>
@@ -106,12 +117,11 @@ export function createTestContext(options?: CreateTestContextOptions): {
       cleanups.push(timers.restore)
       return timers
     },
-    async serve(handler) {
-      if (!options || !options.createServer || !options.browser) {
+    async serve(server) {
+      if (!options || !options.browser) {
         throw new Error('t.serve() is only available in E2E test suites')
       }
 
-      let server = await options.createServer(handler)
       let page = await options.browser.newPage({
         ...options.playwrightPageOptions,
         baseURL: server.baseUrl,

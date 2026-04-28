@@ -1,4 +1,5 @@
 import * as assert from '@remix-run/assert'
+import { createTestServer } from '@remix-run/node-fetch-server/test'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { describe, it } from '../../lib/framework.ts'
@@ -18,34 +19,35 @@ describe('e2e coverage fixture', () => {
     let fixtureSource = await fsp.readFile(fixturePath, 'utf-8')
     let { code: fixtureJs } = await transformTypeScript(fixtureSource, fixturePath)
 
-    let page = await t.serve(async (req) => {
+    let handler: (request: Request) => Response = (req) => {
       let url = new URL(req.url)
 
       if (url.pathname === '/') {
         return new Response(
-          `<!doctype html>
-<html>
-<body>
-  <div id="result"></div>
-  <script type="module">
-    import { add, classify, greet } from '/src/test/coverage/fixture.ts'
-
-    // Exercise the same paths as the server fixture test:
-    // - add: fully covered
-    // - classify: only positive branch
-    // - greet: only with a name
-    // - uncalledFunction: never imported
-    let results = [
-      add(2, 3),
-      add(-1, 1),
-      classify(42),
-      classify(1),
-      greet('World'),
-    ]
-    document.getElementById('result').textContent = results.join(',')
-  </script>
-</body>
-</html>`,
+          [
+            `<!doctype html>`,
+            `<html>`,
+            `<body>`,
+            `  <div id="result"></div>`,
+            `  <script type="module">`,
+            `    import { add, classify, greet } from '/src/test/coverage/fixture.ts'`,
+            `    // Exercise the same paths as the server fixture test:`,
+            `    // - add: fully covered`,
+            `    // - classify: only positive branch`,
+            `    // - greet: only with a name`,
+            `    // - uncalledFunction: never imported`,
+            `    let results = [`,
+            `      add(2, 3),`,
+            `      add(-1, 1),`,
+            `      classify(42),`,
+            `      classify(1),`,
+            `      greet('World'),`,
+            `    ]`,
+            `    document.getElementById('result').textContent = results.join(',')`,
+            `  </script>`,
+            `</body>`,
+            `</html>`,
+          ].join('\n'),
           { headers: { 'Content-Type': 'text/html' } },
         )
       }
@@ -58,7 +60,8 @@ describe('e2e coverage fixture', () => {
       }
 
       return new Response('Not found', { status: 404 })
-    })
+    }
+    let page = await t.serve(await createTestServer(handler))
 
     await page.goto('/')
     let result = await page.locator('#result').textContent()
