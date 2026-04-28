@@ -11,7 +11,7 @@ const REMIX_PACKAGE_DIR = resolve(PACKAGE_DIR, '../remix')
 
 describe('cli entrypoint', () => {
   it('runs directly from the source entrypoint', () => {
-    let result = spawnSync(process.execPath, ['./src/index.ts', '--help'], {
+    let result = spawnSync(process.execPath, ['./src/cli.ts', '--help'], {
       cwd: PACKAGE_DIR,
       encoding: 'utf8',
     })
@@ -21,7 +21,7 @@ describe('cli entrypoint', () => {
   })
 
   it('runs through the generated remix package wrapper', () => {
-    let result = spawnSync(process.execPath, ['./src/cli.ts', '--help'], {
+    let result = spawnSync(process.execPath, ['./src/cli-entry.ts', '--help'], {
       cwd: REMIX_PACKAGE_DIR,
       encoding: 'utf8',
     })
@@ -34,13 +34,13 @@ describe('cli entrypoint', () => {
     let remixPackageJson = readRemixPackageJson()
 
     assert.deepEqual(remixPackageJson.bin, {
-      remix: './src/cli.ts',
+      remix: './src/cli-entry.ts',
     })
   })
 
   it('injects the repo Remix version when running directly from the source entrypoint', () => {
     let remixPackageJson = readRemixPackageJson()
-    let result = spawnSync(process.execPath, ['./src/index.ts', 'version'], {
+    let result = spawnSync(process.execPath, ['./src/cli.ts', 'version'], {
       cwd: PACKAGE_DIR,
       encoding: 'utf8',
     })
@@ -52,7 +52,7 @@ describe('cli entrypoint', () => {
 
   it('injects the repo Remix version when running through the generated remix package wrapper', () => {
     let remixPackageJson = readRemixPackageJson()
-    let result = spawnSync(process.execPath, ['./src/cli.ts', 'version'], {
+    let result = spawnSync(process.execPath, ['./src/cli-entry.ts', 'version'], {
       cwd: REMIX_PACKAGE_DIR,
       encoding: 'utf8',
     })

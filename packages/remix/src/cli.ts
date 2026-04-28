@@ -1,28 +1,10 @@
-#!/usr/bin/env node
 // IMPORTANT: This file is auto-generated, please do not edit manually.
 import * as fs from 'node:fs/promises'
-import * as process from 'node:process'
 
 import { runRemix as runRemixCli } from '@remix-run/cli'
 
 export async function runRemix(argv?: string[]): Promise<number> {
   return await runRemixCli(argv, { remixVersion: await readRemixVersion() })
-}
-
-if (import.meta.main) {
-  void runRemix().then(
-    (exitCode) => {
-      exitProcess(exitCode)
-    },
-    (error: unknown) => {
-      console.error(error)
-      exitProcess(1)
-    },
-  )
-}
-
-function exitProcess(exitCode: number): never {
-  process.exit(exitCode)
 }
 
 async function readRemixVersion(): Promise<string> {

@@ -82,6 +82,7 @@
     "./tar-parser": "./src/tar-parser.ts",
     "./terminal": "./src/terminal.ts",
     "./test": "./src/test.ts",
+    "./test/cli": "./src/test/cli.ts",
     "./ui/accordion": "./src/ui/accordion.ts",
     "./ui/anchor": "./src/ui/anchor.ts",
     "./ui/breadcrumbs": "./src/ui/breadcrumbs.ts",
@@ -356,6 +357,10 @@
         "types": "./dist/test.d.ts",
         "default": "./dist/test.js"
       },
+      "./test/cli": {
+        "types": "./dist/test/cli.d.ts",
+        "default": "./dist/test/cli.js"
+      },
       "./ui/accordion": {
         "types": "./dist/ui/accordion.d.ts",
         "default": "./dist/ui/accordion.js"
@@ -415,7 +420,7 @@
       "./package.json": "./package.json"
     },
     "bin": {
-      "remix": "./dist/cli.js"
+      "remix": "./dist/cli-entry.js"
     }
   },
   "devDependencies": {
@@ -476,6 +481,6 @@
     "typecheck": "tsc --noEmit"
   },
   "bin": {
-    "remix": "./src/cli.ts"
+    "remix": "./src/cli-entry.ts"
   }
 }

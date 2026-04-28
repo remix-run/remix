@@ -24,6 +24,9 @@
     "./package.json": "./package.json"
   },
   "publishConfig": {
+    "bin": {
+      "remix": "./dist/cli.js"
+    },
     "exports": {
       ".": {
         "types": "./dist/index.d.ts",
@@ -33,7 +36,7 @@
     }
   },
   "bin": {
-    "remix": "./dist/index.js"
+    "remix": "./src/cli.ts"
   },
   "dependencies": {
     "@remix-run/test": "workspace:^",
@@ -50,7 +53,7 @@
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
-    "cli": "tsx ./src/index.ts",
+    "cli": "tsx ./src/cli.ts",
     "prepublishOnly": "pnpm run build",
     "test": "remix-test --concurrency 1",
     "typecheck": "tsgo --noEmit"

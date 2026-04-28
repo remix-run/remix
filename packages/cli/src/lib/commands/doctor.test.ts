@@ -10,7 +10,7 @@ import { describe, it } from '@remix-run/test'
 import { getFixturePath } from '../../../test/fixtures.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
-const CLI_ENTRY_PATH = path.join(ROOT_DIR, 'packages', 'cli', 'src', 'index.ts')
+const CLI_ENTRY_PATH = path.join(ROOT_DIR, 'packages', 'cli', 'src', 'cli.ts')
 const REMIX_PACKAGE_JSON_PATH = path.join(ROOT_DIR, 'packages', 'remix', 'package.json')
 
 const DOCTOR_COMMAND_HELP_TEXT = [

@@ -11,7 +11,7 @@ import { runRemix as run } from '../../index.ts'
 import { getTestCommandHelpText } from './test.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
-const CLI_ENTRY_PATH = path.join(ROOT_DIR, 'packages', 'cli', 'src', 'index.ts')
+const CLI_ENTRY_PATH = path.join(ROOT_DIR, 'packages', 'cli', 'src', 'cli.ts')
 
 const TEST_COMMAND_HELP_TEXT = getTestCommandHelpText()
 
