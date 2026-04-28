@@ -58,37 +58,39 @@ describe('reporter', () => {
 
   it('renders tables with bold headers and optional omitted headers', async () => {
     await withEnv('NO_COLOR', undefined, async () =>
-      withEnv('TERM', 'xterm-256color', async () =>
-        withTTY(process.stdout, true, async () =>
-          withCapturedWrites(process.stdout, async (writes) => {
-            configureColors({ disabled: false })
-            let reporter = createCommandReporter()
+      withEnv('FORCE_COLOR', '1', async () =>
+        withEnv('TERM', 'xterm-256color', async () =>
+          withTTY(process.stdout, true, async () =>
+            withCapturedWrites(process.stdout, async (writes) => {
+              configureColors({ disabled: false })
+              let reporter = createCommandReporter()
 
-            reporter.out.table({
-              headers: ['Route', 'Method'],
-              rows: [
-                ['home', 'ANY'],
-                ['auth.login.action', 'POST'],
-              ],
-            })
-            reporter.out.blank()
-            reporter.out.table({
-              headers: ['Route', 'Method'],
-              noHeaders: true,
-              rows: [['home', 'ANY']],
-            })
-            reporter.finish()
+              reporter.out.table({
+                headers: ['Route', 'Method'],
+                rows: [
+                  ['home', 'ANY'],
+                  ['auth.login.action', 'POST'],
+                ],
+              })
+              reporter.out.blank()
+              reporter.out.table({
+                headers: ['Route', 'Method'],
+                noHeaders: true,
+                rows: [['home', 'ANY']],
+              })
+              reporter.finish()
 
-            assert.deepEqual(writes, [
-              '\n',
-              '\u001B[1mRoute            \u001B[0m  \u001B[1mMethod\u001B[0m\n',
-              'home               ANY   \n',
-              'auth.login.action  POST  \n',
-              '\n',
-              'home   ANY   \n',
-              '\n',
-            ])
-          }),
+              assert.deepEqual(writes, [
+                '\n',
+                '\u001B[1mRoute            \u001B[0m  \u001B[1mMethod\u001B[0m\n',
+                'home               ANY   \n',
+                'auth.login.action  POST  \n',
+                '\n',
+                'home   ANY   \n',
+                '\n',
+              ])
+            }),
+          ),
         ),
       ),
     )
@@ -96,31 +98,33 @@ describe('reporter', () => {
 
   it('renders progress to stderr with live tty updates', async () => {
     await withEnv('NO_COLOR', undefined, async () =>
-      withEnv('TERM', 'xterm-256color', async () =>
-        withTTY(process.stderr, true, async () =>
-          withCapturedWrites(process.stderr, async (writes) => {
-            configureColors({ disabled: false })
-            let reporter = createCommandReporter({ statusFrameIntervalMs: 5 })
+      withEnv('FORCE_COLOR', '1', async () =>
+        withEnv('TERM', 'xterm-256color', async () =>
+          withTTY(process.stderr, true, async () =>
+            withCapturedWrites(process.stderr, async (writes) => {
+              configureColors({ disabled: false })
+              let reporter = createCommandReporter({ statusFrameIntervalMs: 5 })
 
-            reporter.status.startStep('Checking environment')
-            await wait(25)
-            reporter.status.succeedStep()
-            reporter.status.summaryGap()
+              reporter.status.startStep('Checking environment')
+              await wait(25)
+              reporter.status.succeedStep()
+              reporter.status.summaryGap()
 
-            assert.equal(writes[0], '\n')
-            assert.equal(writes[1], '\r\u001B[2K\u001B[90m• Checking environment.\u001B[0m')
-            assert.ok(
-              writes.some(
-                (write) =>
-                  write === '\r\u001B[2K\u001B[90m• Checking environment..\u001B[0m' ||
-                  write === '\r\u001B[2K\u001B[90m• Checking environment...\u001B[0m',
-              ),
-            )
-            assert.deepEqual(writes.slice(-2), [
-              '\r\u001B[2K\u001B[92m✓\u001B[0m \u001B[90mChecking environment\u001B[0m\n',
-              '\n',
-            ])
-          }),
+              assert.equal(writes[0], '\n')
+              assert.equal(writes[1], '\r\u001B[2K\u001B[90m• Checking environment.\u001B[0m')
+              assert.ok(
+                writes.some(
+                  (write) =>
+                    write === '\r\u001B[2K\u001B[90m• Checking environment..\u001B[0m' ||
+                    write === '\r\u001B[2K\u001B[90m• Checking environment...\u001B[0m',
+                ),
+              )
+              assert.deepEqual(writes.slice(-2), [
+                '\r\u001B[2K\u001B[92m✓\u001B[0m \u001B[90mChecking environment\u001B[0m\n',
+                '\n',
+              ])
+            }),
+          ),
         ),
       ),
     )
@@ -155,21 +159,23 @@ describe('reporter', () => {
   it('writes the progress command header to stderr and never stdout', async () => {
     await withRuntimeContext({ remixVersion: '9.9.9' }, async () =>
       withEnv('NO_COLOR', undefined, async () =>
-        withEnv('TERM', 'xterm-256color', async () =>
-          withTTY(process.stderr, true, async () =>
-            withCapturedWrites(process.stdout, async (stdoutWrites) =>
-              withCapturedWrites(process.stderr, async (stderrWrites) => {
-                configureColors({ disabled: false })
-                let reporter = createCommandReporter()
+        withEnv('FORCE_COLOR', '1', async () =>
+          withEnv('TERM', 'xterm-256color', async () =>
+            withTTY(process.stderr, true, async () =>
+              withCapturedWrites(process.stdout, async (stdoutWrites) =>
+                withCapturedWrites(process.stderr, async (stderrWrites) => {
+                  configureColors({ disabled: false })
+                  let reporter = createCommandReporter()
 
-                await reporter.status.commandHeader('doctor')
+                  await reporter.status.commandHeader('doctor')
 
-                assert.deepEqual(stdoutWrites, [])
-                assert.deepEqual(stderrWrites, [
-                  '\n',
-                  '\u001B[94mR\u001B[0m\u001B[92mE\u001B[0m\u001B[93mM\u001B[0m\u001B[95mI\u001B[0m\u001B[91mX\u001B[0m v9.9.9 - doctor\n\n',
-                ])
-              }),
+                  assert.deepEqual(stdoutWrites, [])
+                  assert.deepEqual(stderrWrites, [
+                    '\n',
+                    '\u001B[94mR\u001B[0m\u001B[92mE\u001B[0m\u001B[93mM\u001B[0m\u001B[95mI\u001B[0m\u001B[91mX\u001B[0m v9.9.9 - doctor\n\n',
+                  ])
+                }),
+              ),
             ),
           ),
         ),

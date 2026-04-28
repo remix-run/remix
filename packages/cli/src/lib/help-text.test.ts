@@ -45,19 +45,21 @@ describe('help text', () => {
 
   it('colors headings and syntax tokens when ansi is enabled', () => {
     let output = withEnv('NO_COLOR', undefined, () =>
-      withEnv('TERM', 'xterm-256color', () =>
-        withTTY(process.stdout, true, () => {
-          configureColors({ disabled: false })
+      withEnv('FORCE_COLOR', '1', () =>
+        withEnv('TERM', 'xterm-256color', () =>
+          withTTY(process.stdout, true, () => {
+            configureColors({ disabled: false })
 
-          return formatHelpText(
-            {
-              examples: ['remix demo --json'],
-              options: [{ description: 'Print JSON output', label: '--dir <path>' }],
-              usage: ['remix demo [options]'],
-            },
-            process.stdout,
-          )
-        }),
+            return formatHelpText(
+              {
+                examples: ['remix demo --json'],
+                options: [{ description: 'Print JSON output', label: '--dir <path>' }],
+                usage: ['remix demo [options]'],
+              },
+              process.stdout,
+            )
+          }),
+        ),
       ),
     )
 
@@ -69,18 +71,20 @@ describe('help text', () => {
 
   it('colors help for stderr independently of stdout capability', () => {
     let output = withEnv('NO_COLOR', undefined, () =>
-      withEnv('TERM', 'xterm-256color', () =>
-        withTTY(process.stdout, false, () =>
-          withTTY(process.stderr, true, () => {
-            configureColors({ disabled: false })
+      withEnv('FORCE_COLOR', '1', () =>
+        withEnv('TERM', 'xterm-256color', () =>
+          withTTY(process.stdout, false, () =>
+            withTTY(process.stderr, true, () => {
+              configureColors({ disabled: false })
 
-            return formatHelpText(
-              {
-                usage: ['remix demo <path>'],
-              },
-              process.stderr,
-            )
-          }),
+              return formatHelpText(
+                {
+                  usage: ['remix demo <path>'],
+                },
+                process.stderr,
+              )
+            }),
+          ),
         ),
       ),
     )

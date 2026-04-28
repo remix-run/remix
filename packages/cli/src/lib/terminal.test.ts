@@ -18,29 +18,33 @@ import {
 describe('terminal', () => {
   it('styles stdout when stdout is a tty', async () => {
     withEnv('NO_COLOR', undefined, () =>
-      withEnv('TERM', 'xterm-256color', () =>
-        withTTY(process.stdout, true, () => {
-          configureColors({ disabled: false })
+      withEnv('FORCE_COLOR', '1', () =>
+        withEnv('TERM', 'xterm-256color', () =>
+          withTTY(process.stdout, true, () => {
+            configureColors({ disabled: false })
 
-          assert.equal(bold('ok'), '\u001B[1mok\u001B[0m')
-          assert.equal(lightBlue('hi'), '\u001B[94mhi\u001B[0m')
-          assert.equal(lightGreen('yes'), '\u001B[92myes\u001B[0m')
-          assert.equal(lightMagenta('wow'), '\u001B[95mwow\u001B[0m')
-          assert.equal(reset(process.stdout), '\u001B[0m')
-        }),
+            assert.equal(bold('ok'), '\u001B[1mok\u001B[0m')
+            assert.equal(lightBlue('hi'), '\u001B[94mhi\u001B[0m')
+            assert.equal(lightGreen('yes'), '\u001B[92myes\u001B[0m')
+            assert.equal(lightMagenta('wow'), '\u001B[95mwow\u001B[0m')
+            assert.equal(reset(process.stdout), '\u001B[0m')
+          }),
+        ),
       ),
     )
   })
 
   it('colors stderr when stderr is a tty', async () => {
     withEnv('NO_COLOR', undefined, () =>
-      withEnv('TERM', 'xterm-256color', () =>
-        withTTY(process.stderr, true, () => {
-          configureColors({ disabled: false })
+      withEnv('FORCE_COLOR', '1', () =>
+        withEnv('TERM', 'xterm-256color', () =>
+          withTTY(process.stderr, true, () => {
+            configureColors({ disabled: false })
 
-          assert.equal(lightRed('nope', process.stderr), '\u001B[91mnope\u001B[0m')
-          assert.equal(reset(process.stderr), '\u001B[0m')
-        }),
+            assert.equal(lightRed('nope', process.stderr), '\u001B[91mnope\u001B[0m')
+            assert.equal(reset(process.stderr), '\u001B[0m')
+          }),
+        ),
       ),
     )
   })
@@ -153,15 +157,17 @@ describe('terminal', () => {
 
   it('renders the Remix wordmark with one color per letter when colors are enabled', async () => {
     withEnv('NO_COLOR', undefined, () =>
-      withEnv('TERM', 'xterm-256color', () =>
-        withTTY(process.stdout, true, () => {
-          configureColors({ disabled: false })
+      withEnv('FORCE_COLOR', '1', () =>
+        withEnv('TERM', 'xterm-256color', () =>
+          withTTY(process.stdout, true, () => {
+            configureColors({ disabled: false })
 
-          assert.equal(
-            remixWordmark(),
-            '\u001B[94mR\u001B[0m\u001B[92mE\u001B[0m\u001B[93mM\u001B[0m\u001B[95mI\u001B[0m\u001B[91mX\u001B[0m',
-          )
-        }),
+            assert.equal(
+              remixWordmark(),
+              '\u001B[94mR\u001B[0m\u001B[92mE\u001B[0m\u001B[93mM\u001B[0m\u001B[95mI\u001B[0m\u001B[91mX\u001B[0m',
+            )
+          }),
+        ),
       ),
     )
   })

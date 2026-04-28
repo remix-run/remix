@@ -40,7 +40,9 @@ describe('test command', () => {
       await writeTestProject(projectDir)
 
       let result = await captureOutput(() =>
-        run(['test', '--concurrency', '1', '--type', 'server'], { cwd: projectDir }),
+        run(['test', '--concurrency', '1', '--reporter', 'spec', '--type', 'server'], {
+          cwd: projectDir,
+        }),
       )
 
       assert.equal(result.exitCode, 0, result.stderr)

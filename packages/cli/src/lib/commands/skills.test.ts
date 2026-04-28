@@ -1093,6 +1093,7 @@ async function withTtyState<T>(
   let originalStderrIsTTY = Object.getOwnPropertyDescriptor(process.stderr, 'isTTY')
   let originalTerm = process.env.TERM
   let originalNoColor = process.env.NO_COLOR
+  let originalForceColor = process.env.FORCE_COLOR
 
   Object.defineProperty(process.stdout, 'isTTY', {
     configurable: true,
@@ -1103,6 +1104,7 @@ async function withTtyState<T>(
     value: options.stderr ?? false,
   })
   process.env.TERM = 'xterm-256color'
+  process.env.FORCE_COLOR = '1'
   delete process.env.NO_COLOR
 
   try {
@@ -1130,6 +1132,12 @@ async function withTtyState<T>(
       delete process.env.NO_COLOR
     } else {
       process.env.NO_COLOR = originalNoColor
+    }
+
+    if (originalForceColor == null) {
+      delete process.env.FORCE_COLOR
+    } else {
+      process.env.FORCE_COLOR = originalForceColor
     }
   }
 }
