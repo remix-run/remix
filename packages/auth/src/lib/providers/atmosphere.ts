@@ -97,9 +97,41 @@ export interface AtmosphereAuthProviderMapProfileInput {
   /** Authorization server metadata resolved for the authenticated account. */
   authorizationServer: AtmosphereAuthorizationServerMetadata
   /** OAuth tokens returned by the atproto authorization server. */
-  tokens: OAuthDpopTokens
+  tokens: AtmosphereOAuthTokens
   /** Request context for the callback currently being processed. */
   context: RequestContext
+}
+
+/**
+ * Authorization server details stored with Atmosphere DPoP-bound tokens for refresh.
+ */
+export interface AtmosphereTokenAuthorizationServer {
+  /** Issuer origin for the authorization server that issued the token bundle. */
+  issuer: string
+  /** Token endpoint used for refresh-token exchanges. */
+  tokenEndpoint: string
+}
+
+/**
+ * DPoP-bound token bundle returned by the built-in Atmosphere auth provider.
+ */
+export interface AtmosphereOAuthTokens extends OAuthDpopTokens {
+  /** DID that the authorization server bound to this token bundle. */
+  did: string
+  /** Authorization server metadata needed to refresh without account discovery. */
+  authorizationServer: AtmosphereTokenAuthorizationServer
+}
+
+/**
+ * Built-in Atmosphere auth provider.
+ */
+export interface AtmosphereAuthProvider<
+  profile extends AtmosphereAuthProfile = AtmosphereAuthProfile,
+> extends OAuthProvider<profile, 'atmosphere', AtmosphereOAuthTokens> {
+  /**
+   * Resolves a request-time handle or DID into a prepared provider for `startExternalAuth()`.
+   */
+  prepare(handleOrDid: string): Promise<OAuthProvider<profile, 'atmosphere', AtmosphereOAuthTokens>>
 }
 
 /**
@@ -157,7 +189,7 @@ interface AtmosphereSessionState {
   did: string
   handle?: string
   pdsUrl: string
-  authorizationServer: string
+  authorizationServer: AtmosphereAuthorizationServerMetadata
   publicJwk: JsonWebKey
   privateJwk: JsonWebKey
   authorizationServerNonce?: string
@@ -177,217 +209,240 @@ interface AtmosphereTokenResponse {
 }
 
 /**
- * Creates an Atmosphere auth provider factory with shared client options.
+ * Creates an Atmosphere auth provider with shared client options.
  *
- * Because atproto discovery is account-specific, apps should create the factory
- * once with shared options, then call it with the request-time handle or DID.
+ * Because atproto discovery is account-specific, call `prepare(handleOrDid)`
+ * before passing this provider to `startExternalAuth()`.
  *
  * @param options Atmosphere client configuration, session encryption secret, and optional profile mapping hooks.
- * @returns A function that resolves a handle or DID into a provider for `startExternalAuth()` and `finishExternalAuth()`.
+ * @returns A provider that can be prepared for `startExternalAuth()` and passed directly to `finishExternalAuth()` and `refreshExternalAuth()`.
  */
 export function createAtmosphereAuthProvider<
   profile extends AtmosphereAuthProfile = AtmosphereAuthProfile,
->(
-  options: AtmosphereAuthProviderOptions<profile>,
-): (handleOrDid: string) => Promise<OAuthProvider<profile, 'atmosphere', OAuthDpopTokens>> {
+>(options: AtmosphereAuthProviderOptions<profile>): AtmosphereAuthProvider<profile> {
   let scopes = normalizeAtmosphereScopes(options.scopes)
   let sessionSecret = normalizeAtmosphereSessionSecret(options.sessionSecret)
   let client = normalizeAtmosphereClientConfiguration(options.clientId, options.redirectUri, scopes)
 
-  return async function createProviderForIdentifier(
-    handleOrDid: string,
-  ): Promise<OAuthProvider<profile, 'atmosphere', OAuthDpopTokens>> {
-    let identifier = normalizeAtmosphereIdentifier(handleOrDid)
-    let identity = await resolveAtmosphereIdentity(identifier)
-    let authorizationServer = await discoverAuthorizationServer(
-      identity.pdsUrl,
-      options.clientAuthentication != null,
-    )
+  async function handleCallback(
+    context: RequestContext,
+    transaction: OAuthTransaction,
+  ): Promise<OAuthResult<profile, 'atmosphere', AtmosphereOAuthTokens>> {
+    let callbackIssuer = getRequiredSearchParam(context, 'iss')
+    let sessionState = await readAtmosphereSessionState(sessionSecret, transaction)
+    let authorizationServer = sessionState.authorizationServer
 
-    return createOAuthProvider(ATMOSPHERE_PROVIDER_NAME, {
-      async createAuthorizationURL(transaction) {
-        let challenge = await createCodeChallenge(transaction.codeVerifier)
-        let dpopKeyPair = await generateDpopKeyPair()
-        let stateFile: AtmosphereSessionState = {
-          identifier: identifier.input,
-          did: identity.did,
-          handle: identity.handle,
-          pdsUrl: identity.pdsUrl,
-          authorizationServer: authorizationServer.issuer,
-          publicJwk: dpopKeyPair.publicJwk,
-          privateJwk: dpopKeyPair.privateJwk,
-        }
-        let params = new URLSearchParams()
+    if (
+      callbackIssuer !== authorizationServer.issuer ||
+      sessionState.authorizationServer.issuer !== callbackIssuer
+    ) {
+      throw new Error('Atmosphere callback issuer did not match the resolved authorization server.')
+    }
 
-        for (let [key, value] of Object.entries(options.authorizationParams ?? {})) {
-          if (value != null) {
-            params.set(key, value)
-          }
-        }
-
-        params.set('client_id', client.clientId)
-        params.set('redirect_uri', client.redirectUri)
-        params.set('response_type', 'code')
-        params.set('scope', scopes.join(' '))
-        params.set('state', transaction.state)
-        params.set('code_challenge', challenge)
-        params.set('code_challenge_method', 'S256')
-        params.set('login_hint', identifier.input)
-
-        if (options.clientAuthentication != null) {
-          params.set(
-            'client_assertion_type',
-            'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
-          )
-          params.set(
-            'client_assertion',
-            await createClientAssertion(
-              client.clientId,
-              authorizationServer.issuer,
-              options.clientAuthentication,
-            ),
-          )
-        }
-
-        let parResponse = await sendDpopFormRequest<AtmosphereParResponse>({
-          endpoint: authorizationServer.pushed_authorization_request_endpoint,
-          body: params,
-          dpopKeyPair,
-          fallbackError: 'Atmosphere pushed authorization request failed.',
-        })
-
-        if (
-          typeof parResponse.json.request_uri !== 'string' ||
-          parResponse.json.request_uri.length === 0
-        ) {
-          throw new Error('Atmosphere PAR response did not include a request_uri.')
-        }
-
-        stateFile.authorizationServerNonce = parResponse.nonce
-        transaction.providerState = await writeAtmosphereSessionState(
-          sessionSecret,
-          transaction.state,
-          stateFile,
-        )
-
-        return createAuthorizationURL(authorizationServer.authorization_endpoint, {
-          client_id: client.clientId,
-          request_uri: parResponse.json.request_uri,
-        })
+    let tokenResponse = await sendDpopFormRequest<AtmosphereTokenResponse>({
+      endpoint: authorizationServer.token_endpoint,
+      body: await createAtmosphereTokenRequestBody({
+        clientId: client.clientId,
+        redirectUri: client.redirectUri,
+        code: getAuthorizationCode(context),
+        codeVerifier: transaction.codeVerifier,
+        clientAuthentication: options.clientAuthentication,
+        issuer: authorizationServer.issuer,
+      }),
+      dpopKeyPair: {
+        publicJwk: sessionState.publicJwk,
+        privateJwk: sessionState.privateJwk,
       },
-      async handleCallback(
-        context,
-        transaction,
-      ): Promise<OAuthResult<profile, 'atmosphere', OAuthDpopTokens>> {
-        let callbackIssuer = getRequiredSearchParam(context, 'iss')
-        let sessionState = await readAtmosphereSessionState(sessionSecret, transaction)
-
-        if (sessionState.did !== identity.did || sessionState.identifier !== identifier.input) {
-          throw new Error(
-            'Atmosphere callback must recreate the provider with the same handle or DID used to start the flow.',
-          )
-        }
-
-        if (
-          callbackIssuer !== authorizationServer.issuer ||
-          sessionState.authorizationServer !== callbackIssuer
-        ) {
-          throw new Error(
-            'Atmosphere callback issuer did not match the resolved authorization server.',
-          )
-        }
-
-        let tokenResponse = await sendDpopFormRequest<AtmosphereTokenResponse>({
-          endpoint: authorizationServer.token_endpoint,
-          body: await createAtmosphereTokenRequestBody({
-            clientId: client.clientId,
-            redirectUri: client.redirectUri,
-            code: getAuthorizationCode(context),
-            codeVerifier: transaction.codeVerifier,
-            clientAuthentication: options.clientAuthentication,
-            issuer: authorizationServer.issuer,
-          }),
-          dpopKeyPair: {
-            publicJwk: sessionState.publicJwk,
-            privateJwk: sessionState.privateJwk,
-          },
-          fallbackError: 'Atmosphere token exchange failed.',
-          nonce: sessionState.authorizationServerNonce,
-        })
-        let tokens = {
-          ...normalizeAtmosphereTokenResponse(tokenResponse.json),
-          dpop: {
-            publicJwk: sessionState.publicJwk,
-            privateJwk: sessionState.privateJwk,
-            nonce: tokenResponse.nonce,
-          },
-        } satisfies OAuthDpopTokens
-
-        if (tokenResponse.json.sub !== sessionState.did) {
-          throw new Error('Atmosphere token response did not match the resolved account DID.')
-        }
-
-        let profile = await mapAtmosphereProfile(options, {
-          identifier: sessionState.identifier,
-          did: sessionState.did,
-          handle: sessionState.handle,
-          pdsUrl: sessionState.pdsUrl,
-          authorizationServer,
-          tokens,
-          context,
-        })
-
-        return {
-          provider: ATMOSPHERE_PROVIDER_NAME,
-          account: {
-            provider: ATMOSPHERE_PROVIDER_NAME,
-            providerAccountId: sessionState.did,
-          },
-          profile,
-          tokens,
-        }
-      },
-      async refreshTokens(currentTokens): Promise<OAuthDpopTokens> {
-        if (currentTokens.refreshToken == null || currentTokens.refreshToken.length === 0) {
-          throw new Error('Atmosphere provider did not receive a refresh token.')
-        }
-
-        let tokenResponse = await sendDpopFormRequest<AtmosphereTokenResponse>({
-          endpoint: authorizationServer.token_endpoint,
-          body: await createAtmosphereRefreshTokenRequestBody({
-            clientId: client.clientId,
-            refreshToken: currentTokens.refreshToken,
-            clientAuthentication: options.clientAuthentication,
-            issuer: authorizationServer.issuer,
-          }),
-          dpopKeyPair: {
-            publicJwk: currentTokens.dpop.publicJwk,
-            privateJwk: currentTokens.dpop.privateJwk,
-          },
-          fallbackError: 'Atmosphere refresh token exchange failed.',
-          nonce: currentTokens.dpop.nonce,
-        })
-        let refreshedTokens = normalizeAtmosphereTokenResponse(tokenResponse.json)
-
-        if (tokenResponse.json.sub !== identity.did) {
-          throw new Error('Atmosphere token response did not match the resolved account DID.')
-        }
-
-        return {
-          ...currentTokens,
-          ...refreshedTokens,
-          refreshToken: refreshedTokens.refreshToken ?? currentTokens.refreshToken,
-          expiresAt: refreshedTokens.expiresAt ?? currentTokens.expiresAt,
-          scope: refreshedTokens.scope ?? currentTokens.scope,
-          dpop: {
-            publicJwk: currentTokens.dpop.publicJwk,
-            privateJwk: currentTokens.dpop.privateJwk,
-            nonce: tokenResponse.nonce ?? currentTokens.dpop.nonce,
-          },
-        }
-      },
+      fallbackError: 'Atmosphere token exchange failed.',
+      nonce: sessionState.authorizationServerNonce,
     })
+    let tokens = {
+      ...normalizeAtmosphereTokenResponse(tokenResponse.json),
+      did: sessionState.did,
+      authorizationServer: {
+        issuer: authorizationServer.issuer,
+        tokenEndpoint: authorizationServer.token_endpoint,
+      },
+      dpop: {
+        publicJwk: sessionState.publicJwk,
+        privateJwk: sessionState.privateJwk,
+        nonce: tokenResponse.nonce,
+      },
+    } satisfies AtmosphereOAuthTokens
+
+    if (tokenResponse.json.sub !== sessionState.did) {
+      throw new Error('Atmosphere token response did not match the resolved account DID.')
+    }
+
+    let profile = await mapAtmosphereProfile(options, {
+      identifier: sessionState.identifier,
+      did: sessionState.did,
+      handle: sessionState.handle,
+      pdsUrl: sessionState.pdsUrl,
+      authorizationServer,
+      tokens,
+      context,
+    })
+
+    return {
+      provider: ATMOSPHERE_PROVIDER_NAME,
+      account: {
+        provider: ATMOSPHERE_PROVIDER_NAME,
+        providerAccountId: sessionState.did,
+      },
+      profile,
+      tokens,
+    }
   }
+
+  async function refreshTokens(
+    currentTokens: AtmosphereOAuthTokens,
+  ): Promise<AtmosphereOAuthTokens> {
+    if (currentTokens.refreshToken == null || currentTokens.refreshToken.length === 0) {
+      throw new Error('Atmosphere provider did not receive a refresh token.')
+    }
+
+    let authorizationServer = validateAtmosphereTokenAuthorizationServer(
+      currentTokens.authorizationServer,
+    )
+    let tokenResponse = await sendDpopFormRequest<AtmosphereTokenResponse>({
+      endpoint: authorizationServer.tokenEndpoint,
+      body: await createAtmosphereRefreshTokenRequestBody({
+        clientId: client.clientId,
+        refreshToken: currentTokens.refreshToken,
+        clientAuthentication: options.clientAuthentication,
+        issuer: authorizationServer.issuer,
+      }),
+      dpopKeyPair: {
+        publicJwk: currentTokens.dpop.publicJwk,
+        privateJwk: currentTokens.dpop.privateJwk,
+      },
+      fallbackError: 'Atmosphere refresh token exchange failed.',
+      nonce: currentTokens.dpop.nonce,
+    })
+    let refreshedTokens = normalizeAtmosphereTokenResponse(tokenResponse.json)
+
+    if (tokenResponse.json.sub !== currentTokens.did) {
+      throw new Error('Atmosphere token response did not match the resolved account DID.')
+    }
+
+    return {
+      ...currentTokens,
+      ...refreshedTokens,
+      refreshToken: refreshedTokens.refreshToken ?? currentTokens.refreshToken,
+      expiresAt: refreshedTokens.expiresAt ?? currentTokens.expiresAt,
+      scope: refreshedTokens.scope ?? currentTokens.scope,
+      dpop: {
+        publicJwk: currentTokens.dpop.publicJwk,
+        privateJwk: currentTokens.dpop.privateJwk,
+        nonce: tokenResponse.nonce ?? currentTokens.dpop.nonce,
+      },
+    }
+  }
+
+  let provider = createOAuthProvider<profile, 'atmosphere', AtmosphereOAuthTokens>(
+    ATMOSPHERE_PROVIDER_NAME,
+    {
+      createAuthorizationURL() {
+        throw new Error(
+          'Atmosphere auth must be prepared with provider.prepare(handleOrDid) before starting the flow.',
+        )
+      },
+      handleCallback,
+      refreshTokens,
+    },
+  )
+
+  return Object.assign(provider, {
+    async prepare(
+      handleOrDid: string,
+    ): Promise<OAuthProvider<profile, 'atmosphere', AtmosphereOAuthTokens>> {
+      let identifier = normalizeAtmosphereIdentifier(handleOrDid)
+      let identity = await resolveAtmosphereIdentity(identifier)
+      let authorizationServer = await discoverAuthorizationServer(
+        identity.pdsUrl,
+        options.clientAuthentication != null,
+      )
+
+      return createOAuthProvider<profile, 'atmosphere', AtmosphereOAuthTokens>(
+        ATMOSPHERE_PROVIDER_NAME,
+        {
+          async createAuthorizationURL(transaction) {
+            let challenge = await createCodeChallenge(transaction.codeVerifier)
+            let dpopKeyPair = await generateDpopKeyPair()
+            let stateFile: AtmosphereSessionState = {
+              identifier: identifier.input,
+              did: identity.did,
+              handle: identity.handle,
+              pdsUrl: identity.pdsUrl,
+              authorizationServer,
+              publicJwk: dpopKeyPair.publicJwk,
+              privateJwk: dpopKeyPair.privateJwk,
+            }
+            let params = new URLSearchParams()
+
+            for (let [key, value] of Object.entries(options.authorizationParams ?? {})) {
+              if (value != null) {
+                params.set(key, value)
+              }
+            }
+
+            params.set('client_id', client.clientId)
+            params.set('redirect_uri', client.redirectUri)
+            params.set('response_type', 'code')
+            params.set('scope', scopes.join(' '))
+            params.set('state', transaction.state)
+            params.set('code_challenge', challenge)
+            params.set('code_challenge_method', 'S256')
+            params.set('login_hint', identifier.input)
+
+            if (options.clientAuthentication != null) {
+              params.set(
+                'client_assertion_type',
+                'urn:ietf:params:oauth:client-assertion-type:jwt-bearer',
+              )
+              params.set(
+                'client_assertion',
+                await createClientAssertion(
+                  client.clientId,
+                  authorizationServer.issuer,
+                  options.clientAuthentication,
+                ),
+              )
+            }
+
+            let parResponse = await sendDpopFormRequest<AtmosphereParResponse>({
+              endpoint: authorizationServer.pushed_authorization_request_endpoint,
+              body: params,
+              dpopKeyPair,
+              fallbackError: 'Atmosphere pushed authorization request failed.',
+            })
+
+            if (
+              typeof parResponse.json.request_uri !== 'string' ||
+              parResponse.json.request_uri.length === 0
+            ) {
+              throw new Error('Atmosphere PAR response did not include a request_uri.')
+            }
+
+            stateFile.authorizationServerNonce = parResponse.nonce
+            transaction.providerState = await writeAtmosphereSessionState(
+              sessionSecret,
+              transaction.state,
+              stateFile,
+            )
+
+            return createAuthorizationURL(authorizationServer.authorization_endpoint, {
+              client_id: client.clientId,
+              request_uri: parResponse.json.request_uri,
+            })
+          },
+          handleCallback,
+          refreshTokens,
+        },
+      )
+    },
+  })
 }
 
 async function mapAtmosphereProfile<profile extends AtmosphereAuthProfile>(
@@ -610,7 +665,7 @@ function toPublicEcJwk(jwk: JsonWebKey): JsonWebKey {
 
 function normalizeAtmosphereTokenResponse(
   json: AtmosphereTokenResponse,
-): Omit<OAuthDpopTokens, 'dpop'> {
+): Omit<AtmosphereOAuthTokens, 'authorizationServer' | 'did' | 'dpop'> {
   if (typeof json.access_token !== 'string' || json.access_token.length === 0) {
     throw new Error('Atmosphere token response did not include an access token.')
   }
@@ -637,6 +692,35 @@ function normalizeAtmosphereTokenResponse(
         ? new Date(Date.now() + json.expires_in * 1000)
         : undefined,
     scope,
+  }
+}
+
+function validateAtmosphereTokenAuthorizationServer(
+  value: unknown,
+): AtmosphereTokenAuthorizationServer {
+  if (typeof value !== 'object' || value == null || Array.isArray(value)) {
+    throw new Error('Atmosphere tokens are missing authorization server metadata.')
+  }
+
+  let authorizationServer = value as Record<string, unknown>
+  if (
+    typeof authorizationServer.issuer !== 'string' ||
+    authorizationServer.issuer.length === 0 ||
+    typeof authorizationServer.tokenEndpoint !== 'string' ||
+    authorizationServer.tokenEndpoint.length === 0
+  ) {
+    throw new Error('Atmosphere tokens are missing authorization server metadata.')
+  }
+
+  let issuer = validateAuthorizationServerOrigin(authorizationServer.issuer)
+
+  return {
+    issuer,
+    tokenEndpoint: ensureUrl(
+      authorizationServer.tokenEndpoint,
+      issuer,
+      'Atmosphere token endpoint',
+    ),
   }
 }
 
@@ -1133,7 +1217,7 @@ function normalizeHttpsOrigin(value: string, label: string): string {
   return url.origin
 }
 
-function ensureUrl(value: string, issuer: string | undefined, label: string): void {
+function ensureUrl(value: string, issuer: string | undefined, label: string): string {
   let url = new URL(value)
 
   if (url.protocol !== 'https:') {
@@ -1143,6 +1227,8 @@ function ensureUrl(value: string, issuer: string | undefined, label: string): vo
   if (issuer != null && url.origin !== issuer) {
     throw new Error(`${label} must use the resolved authorization server origin.`)
   }
+
+  return url.toString()
 }
 
 function ensureIncludes(

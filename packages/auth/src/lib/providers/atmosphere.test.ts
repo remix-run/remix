@@ -20,6 +20,12 @@ describe('atmosphere provider', () => {
     let dnsRequests = 0
     let parRequests = 0
     let tokenRequests = 0
+    let atmosphereProvider = createAtmosphereAuthProvider({
+      clientId: 'https://app.example.com/oauth/client-metadata.json',
+      redirectUri: 'https://app.example.com/auth/atmosphere/callback',
+      sessionSecret: 'atmosphere-session-secret',
+      scopes: ['atproto', 'transition:generic'],
+    })
     let restoreFetch = mockFetch(async (input, init) => {
       let url = toRequestUrl(input)
 
@@ -141,12 +147,7 @@ describe('atmosphere provider', () => {
     })
 
     try {
-      let atmosphereProvider = createAtmosphereAuthProvider({
-        clientId: 'https://app.example.com/oauth/client-metadata.json',
-        redirectUri: 'https://app.example.com/auth/atmosphere/callback',
-        sessionSecret: 'atmosphere-session-secret',
-        scopes: ['atproto', 'transition:generic'],
-      })
+      assert.equal(dnsRequests, 0)
       let router = createRouter({
         middleware: [sessionMiddleware(cookie, sessionStorage)],
       })
@@ -156,17 +157,14 @@ describe('atmosphere provider', () => {
         if (identifier == null) {
           throw new Error('Missing atmosphere account identifier')
         }
-        context.get(Session).set('atmosphere-account', identifier)
 
-        let provider = await atmosphereProvider(identifier)
+        let provider = await atmosphereProvider.prepare(identifier)
 
         return startExternalAuth(provider, context)
       })
       router.get('/inspect', ({ get }) => Response.json(get(Session).get('__auth')))
       router.get('/auth/atmosphere/callback', async (context) => {
-        let identifier = context.get(Session).get('atmosphere-account') as string
-        let provider = await atmosphereProvider(identifier)
-        let { result } = await finishExternalAuth(provider, context)
+        let { result } = await finishExternalAuth(atmosphereProvider, context)
         return Response.json(result)
       })
 
@@ -225,6 +223,8 @@ describe('atmosphere provider', () => {
             refreshToken: callbackBody.tokens.refreshToken,
             tokenType: callbackBody.tokens.tokenType,
             scope: callbackBody.tokens.scope,
+            did: callbackBody.tokens.did,
+            authorizationServer: callbackBody.tokens.authorizationServer,
           },
         },
         {
@@ -244,6 +244,11 @@ describe('atmosphere provider', () => {
             refreshToken: 'atmosphere-refresh-token',
             tokenType: 'DPoP',
             scope: ['atproto', 'transition:generic'],
+            did: 'did:plc:alice',
+            authorizationServer: {
+              issuer: 'https://auth.example.com',
+              tokenEndpoint: 'https://auth.example.com/oauth/token',
+            },
           },
         },
       )
@@ -349,7 +354,7 @@ describe('atmosphere provider', () => {
           throw new Error('Missing atmosphere account identifier')
         }
 
-        let provider = await atmosphereProvider(identifier)
+        let provider = await atmosphereProvider.prepare(identifier)
 
         return startExternalAuth(provider, context)
       })
@@ -378,6 +383,26 @@ describe('atmosphere provider', () => {
     } finally {
       restoreFetch()
     }
+  })
+
+  it('requires prepare before starting auth', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let sessionStorage = createMemorySessionStorage()
+    let atmosphereProvider = createAtmosphereAuthProvider({
+      clientId: 'http://localhost',
+      redirectUri: 'http://127.0.0.1:43123/callback',
+      sessionSecret: 'atmosphere-session-secret',
+    })
+    let router = createRouter({
+      middleware: [sessionMiddleware(cookie, sessionStorage)],
+    })
+
+    router.get('/login/atmosphere', (context) => startExternalAuth(atmosphereProvider, context))
+
+    await assert.rejects(
+      () => router.fetch('https://app.example.com/login/atmosphere'),
+      /provider\.prepare\(handleOrDid\)/,
+    )
   })
 
   it('rejects localhost loopback redirect URIs', async () => {

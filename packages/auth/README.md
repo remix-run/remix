@@ -273,7 +273,7 @@ router.get(routes.app.dashboard, {
 
 A typical external auth flow looks like this:
 
-1. Create the provider once at module scope, or for Atmosphere create the shared factory once and call it with the request-time handle or DID.
+1. Create the provider once at module scope. For Atmosphere, call `provider.prepare(handleOrDid)` only when starting the login flow.
 2. Call `startExternalAuth()` from the login route.
 3. Call `finishExternalAuth()` from the callback route.
 4. Persist any provider tokens you want to reuse later.
@@ -358,7 +358,8 @@ Notes:
 - `createMicrosoftAuthProvider()` adds the `tenant` option and builds the issuer from it
 - `createOktaAuthProvider()` expects the full Okta issuer URL, usually something like `https://example.okta.com/oauth2/default`
 - `createAuth0AuthProvider()` expects your Auth0 domain and derives the issuer URL for you
-- `createAtmosphereAuthProvider()` returns a factory so apps can share options globally and resolve a handle or DID at request time with `await atmosphereProvider(handleOrDid)`
+- `createAtmosphereAuthProvider()` returns a module-scope provider with `prepare(handleOrDid)` for request-time atproto account discovery before `startExternalAuth()`
+- Atmosphere callback routes pass the module-scope provider directly to `finishExternalAuth()`; the original handle or DID is stored in the sealed OAuth transaction state
 - `createAtmosphereAuthProvider()` requires `sessionSecret` and seals the in-flight DPoP state into the existing OAuth transaction stored in your app session, so you do not need a separate file or database store for the redirect step
 - `createAtmosphereAuthProvider()` returns DPoP-bound token material in `result.tokens`, including `accessToken`, `refreshToken`, and `dpop` JWK state for follow-up DPoP-signed requests
 - `refreshExternalAuth()` supports built-in OIDC providers, X, and Atmosphere when the stored token bundle includes a refresh token

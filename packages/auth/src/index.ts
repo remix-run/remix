@@ -18,10 +18,13 @@ export type { CredentialsAuthProviderOptions } from './lib/providers/credentials
 export type { Auth0AuthProviderOptions, Auth0AuthProfile } from './lib/providers/auth0.ts'
 export type {
   AtmosphereAuthProfile,
+  AtmosphereAuthProvider,
   AtmosphereAuthProviderMapProfileInput,
   AtmosphereAuthProviderOptions,
   AtmosphereAuthorizationServerMetadata,
   AtmosphereClientAuthentication,
+  AtmosphereOAuthTokens,
+  AtmosphereTokenAuthorizationServer,
 } from './lib/providers/atmosphere.ts'
 export type {
   FacebookAuthProviderOptions,
