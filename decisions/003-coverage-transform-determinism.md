@@ -51,7 +51,7 @@ Server-test flow:
 1. The worker boots and registers `coverage-loader.ts` as Node's ESM loader
    hook.
 2. The test file is imported. The hook calls `transformTypeScript(source,
-   filePath)` and returns the resulting JS to Node.
+filePath)` and returns the resulting JS to Node.
 3. V8 executes that JS. It records coverage as byte offsets in **that exact
    string**.
 4. The worker exits. V8 dumps the coverage data to the directory in
@@ -85,7 +85,7 @@ Browser-test flow:
 The browser path doesn't have the "JS is gone" problem — Playwright preserved
 it — but we still go through the same shared collector, and the only way that
 works is if the harness's served bytes match what `transformTypeScript`
-produces. Which they do, because the harness *is* `transformTypeScript`.
+produces. Which they do, because the harness _is_ `transformTypeScript`.
 
 ## Why this matters concretely
 
