@@ -2,8 +2,9 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
+import { IS_RUNNING_FROM_SRC } from './config.ts'
 import {
-  collectE2ECoverageMap,
+  collectCoverageMapFromPlaywright,
   collectServerCoverageMap,
   type CoverageConfig,
   type CoverageMap,
@@ -12,7 +13,6 @@ import {
 import { type PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
 import type { Counts, TestResults } from './reporters/results.ts'
-import { IS_RUNNING_FROM_SRC } from './config.ts'
 
 // Ensure we load the right file whether we're running in the monorepo (TS) or
 // from a published package (JS)
@@ -72,10 +72,11 @@ export async function runServerTests(
     )
 
     if (options.coverage && allBrowserCoverageEntries.length > 0) {
-      coverageMap = await collectE2ECoverageMap(
-        allBrowserCoverageEntries,
+      coverageMap = await collectCoverageMapFromPlaywright(
+        allBrowserCoverageEntries.flatMap((e) => e.entries),
         process.cwd(),
         new Set(files),
+        async (urlPath) => (urlPath.startsWith('/') ? urlPath.slice(1) : urlPath),
       )
     }
   } else {

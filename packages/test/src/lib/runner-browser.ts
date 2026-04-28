@@ -2,7 +2,11 @@ import * as path from 'node:path'
 import type { Browser, Page, Request } from 'playwright'
 import { colors } from './colors.ts'
 import { getBrowserTestRootDir } from './config.ts'
-import { collectBrowserCoverageMap, type CoverageMap, type V8CoverageEntry } from './coverage.ts'
+import {
+  collectCoverageMapFromPlaywright,
+  type CoverageMap,
+  type V8CoverageEntry,
+} from './coverage.ts'
 import {
   getBrowserLauncher,
   getPlaywrightLaunchOptions,
@@ -114,10 +118,12 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     if (coverageEnabled) {
       let entries = (await page.coverage.stopJSCoverage()) as unknown as V8CoverageEntry[]
       if (entries.length > 0) {
-        coverageMap = await collectBrowserCoverageMap(
+        coverageMap = await collectCoverageMapFromPlaywright(
           entries,
           getBrowserTestRootDir(),
           new Set(options.testFiles ?? []),
+          async (urlPath) =>
+            urlPath.startsWith('/scripts/') ? urlPath.slice('/scripts/'.length) : null,
         )
       }
     }
