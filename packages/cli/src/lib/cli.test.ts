@@ -540,7 +540,7 @@ describe('run', () => {
     }
   })
 
-  it('uses the runtime Remix version as the default scaffold version', async () => {
+  it('uses a caret range of the runtime Remix version as the default scaffold version', async () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-'))
     try {
       let appDir = path.join(tmpDir, 'my-app')
@@ -554,7 +554,7 @@ describe('run', () => {
         dependencies: Record<string, string>
       }
 
-      assert.equal(packageJson.dependencies.remix, '4.5.6')
+      assert.equal(packageJson.dependencies.remix, '^4.5.6')
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }

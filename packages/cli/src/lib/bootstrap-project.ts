@@ -2,6 +2,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
+import semver from 'semver'
 
 import {
   appNameUnavailable,
@@ -87,7 +88,13 @@ function readDefaultRemixVersion(): string {
     return overriddenVersion
   }
 
-  return getRuntimeRemixVersion() ?? 'latest'
+  let runtimeVersion = getRuntimeRemixVersion()
+  if (runtimeVersion == null) {
+    return 'latest'
+  }
+
+  let validRuntimeVersion = semver.valid(runtimeVersion)
+  return validRuntimeVersion == null ? runtimeVersion : `^${validRuntimeVersion}`
 }
 
 function createTemplateValues(config: BootstrapConfig): TemplateValues {
