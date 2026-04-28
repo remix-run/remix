@@ -26,3 +26,4 @@ function setExitCode(exitCode: number) {
   let runtimeProcess = process
   Reflect.set(runtimeProcess, 'exitCode', exitCode)
 }
+
