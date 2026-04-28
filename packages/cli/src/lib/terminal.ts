@@ -1,15 +1,6 @@
 import * as process from 'node:process'
 
-const ANSI_RESET = '\u001B[0m'
-const ANSI_BOLD = '\u001B[1m'
-const ANSI_CLEAR_LINE = '\u001B[2K'
-const ANSI_CURSOR_TO_START = '\r'
-const ANSI_LIGHT_BLUE = '\u001B[94m'
-const ANSI_LIGHT_GREEN = '\u001B[92m'
-const ANSI_LIGHT_GRAY = '\u001B[90m'
-const ANSI_LIGHT_MAGENTA = '\u001B[95m'
-const ANSI_LIGHT_RED = '\u001B[91m'
-const ANSI_LIGHT_YELLOW = '\u001B[93m'
+import { ansi, createTerminal, shouldUseColors } from '@remix-run/terminal'
 
 let colorDisabledByFlag = false
 
@@ -18,39 +9,39 @@ export function configureColors(options: { disabled: boolean }): void {
 }
 
 export function bold(text: string, target: NodeJS.WriteStream = process.stdout): string {
-  return paint(text, ANSI_BOLD, target)
+  return paint(text, ansi.bold, target)
 }
 
 export function lightGreen(text: string, target: NodeJS.WriteStream = process.stdout): string {
-  return paint(text, ANSI_LIGHT_GREEN, target)
+  return paint(text, ansi.greenBright, target)
 }
 
 export function lightBlue(text: string, target: NodeJS.WriteStream = process.stdout): string {
-  return paint(text, ANSI_LIGHT_BLUE, target)
+  return paint(text, ansi.blueBright, target)
 }
 
 export function boldLightBlue(text: string, target: NodeJS.WriteStream = process.stdout): string {
-  return isColorDisabled(target) ? text : `${ANSI_BOLD}${ANSI_LIGHT_BLUE}${text}${ANSI_RESET}`
+  return isColorDisabled(target) ? text : `${ansi.bold}${ansi.blueBright}${text}${ansi.reset}`
 }
 
 export function lightGray(text: string, target: NodeJS.WriteStream = process.stdout): string {
-  return paint(text, ANSI_LIGHT_GRAY, target)
+  return paint(text, ansi.gray, target)
 }
 
 export function lightMagenta(text: string, target: NodeJS.WriteStream = process.stdout): string {
-  return paint(text, ANSI_LIGHT_MAGENTA, target)
+  return paint(text, ansi.magentaBright, target)
 }
 
 export function lightRed(text: string, target: NodeJS.WriteStream = process.stdout): string {
-  return paint(text, ANSI_LIGHT_RED, target)
+  return paint(text, ansi.redBright, target)
 }
 
 export function lightYellow(text: string, target: NodeJS.WriteStream = process.stdout): string {
-  return paint(text, ANSI_LIGHT_YELLOW, target)
+  return paint(text, ansi.yellowBright, target)
 }
 
 export function reset(target: NodeJS.WriteStream): string {
-  return isColorDisabled(target) ? '' : ANSI_RESET
+  return isColorDisabled(target) ? '' : ansi.reset
 }
 
 export function remixWordmark(target: NodeJS.WriteStream = process.stdout): string {
@@ -59,37 +50,37 @@ export function remixWordmark(target: NodeJS.WriteStream = process.stdout): stri
   }
 
   return [
-    paint('R', ANSI_LIGHT_BLUE, target),
-    paint('E', ANSI_LIGHT_GREEN, target),
-    paint('M', ANSI_LIGHT_YELLOW, target),
-    paint('I', ANSI_LIGHT_MAGENTA, target),
-    paint('X', ANSI_LIGHT_RED, target),
+    paint('R', ansi.blueBright, target),
+    paint('E', ansi.greenBright, target),
+    paint('M', ansi.yellowBright, target),
+    paint('I', ansi.magentaBright, target),
+    paint('X', ansi.redBright, target),
   ].join('')
 }
 
 export function clearCurrentLine(): string {
-  return `${ANSI_CURSOR_TO_START}${ANSI_CLEAR_LINE}`
+  return `\r${ansi.clearLine}`
 }
 
 export function restoreTerminalFormatting(): void {
   if (canUseAnsi(process.stdout)) {
-    process.stdout.write(ANSI_RESET)
+    createTerminal({ stdout: process.stdout }).write(ansi.reset)
     return
   }
 
   if (canUseAnsi(process.stderr)) {
-    process.stderr.write(ANSI_RESET)
+    createTerminal({ stderr: process.stderr }).error(ansi.reset)
   }
 }
 
 function paint(text: string, colorCode: string, target: NodeJS.WriteStream): string {
-  return isColorDisabled(target) ? text : `${colorCode}${text}${ANSI_RESET}`
+  return isColorDisabled(target) ? text : `${colorCode}${text}${ansi.reset}`
 }
 
 function isColorDisabled(target: NodeJS.WriteStream): boolean {
-  return colorDisabledByFlag || process.env.NO_COLOR != null || !canUseAnsi(target)
+  return colorDisabledByFlag || !shouldUseColors({ stream: target })
 }
 
 export function canUseAnsi(target: NodeJS.WriteStream): boolean {
-  return process.env.TERM !== 'dumb' && target.isTTY
+  return process.env.TERM !== 'dumb' && target.isTTY === true
 }

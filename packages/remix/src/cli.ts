@@ -4,7 +4,7 @@ import * as process from 'node:process'
 
 import { run as runCli } from '@remix-run/cli'
 
-const remixVersion = "3.0.0-alpha.4"
+const remixVersion = "3.0.0-alpha.5"
 
 export async function run(argv?: string[]): Promise<number> {
   return await runCli(argv, { remixVersion })
@@ -26,4 +26,3 @@ function setExitCode(exitCode: number) {
   let runtimeProcess = process
   Reflect.set(runtimeProcess, 'exitCode', exitCode)
 }
-

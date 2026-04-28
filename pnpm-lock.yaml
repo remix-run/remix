@@ -429,6 +429,9 @@ importers:
       '@remix-run/tar-parser':
         specifier: workspace:^
         version: link:../tar-parser
+      '@remix-run/terminal':
+        specifier: workspace:^
+        version: link:../terminal
       semver:
         specifier: ^7.7.4
         version: 7.7.4
