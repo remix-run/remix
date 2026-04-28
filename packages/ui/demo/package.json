@@ -7,6 +7,7 @@
     "@remix-run/ui": "workspace:*"
   },
   "devDependencies": {
+    "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "esbuild": "^0.25.10",

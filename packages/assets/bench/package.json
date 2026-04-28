@@ -7,6 +7,7 @@
     "@remix-run/component": "workspace:*"
   },
   "devDependencies": {
+    "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
     "typescript": "catalog:"
   },
