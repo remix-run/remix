@@ -53,13 +53,14 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
     return 0
   }
 
-  let options = parseDoctorCommandArgs(argv)
-  let reporter = options.json
-    ? createCommandReporter()
-    : createCommandReporter({ stderr: process.stdout, stdout: process.stdout })
+  let reporter = createCommandReporter({ stderr: process.stdout, stdout: process.stdout })
   let progress: StepProgressReporter<DoctorSuiteName> | null = null
 
   try {
+    let options = parseDoctorCommandArgs(argv)
+    reporter = options.json
+      ? createCommandReporter()
+      : createCommandReporter({ stderr: process.stdout, stdout: process.stdout })
     progress = options.json ? null : createDoctorProgressReporter(reporter)
     if (!options.json) {
       await reporter.status.commandHeader('doctor')
@@ -88,9 +89,7 @@ export async function runDoctorCommand(argv: string[]): Promise<number> {
         process.stderr,
       ),
     )
-    if (!options.json) {
-      reporter.finish()
-    }
+    reporter.finish()
     return 1
   }
 }

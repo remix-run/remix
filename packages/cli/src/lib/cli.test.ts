@@ -446,6 +446,16 @@ describe('run', () => {
     assert.equal(result.stderr, UNKNOWN_HELP_TOPIC_ERROR_TEXT)
   })
 
+  it('renders doctor usage errors without rejecting', async () => {
+    let result = await captureOutput(() => run(['doctor', '--bad-flag']))
+
+    assert.equal(result.exitCode, 1)
+    assert.equal(result.stdout, '')
+    assert.match(result.stderr, /Error \[RMX_UNKNOWN_ARGUMENT\] Unknown argument/)
+    assert.match(result.stderr, /Unknown argument: --bad-flag/)
+    assert.match(result.stderr, /Usage:\n  remix doctor/)
+  })
+
   it('creates the expected scaffold', async () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-'))
     try {
