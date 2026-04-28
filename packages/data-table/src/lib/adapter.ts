@@ -630,6 +630,13 @@ export interface DatabaseAdapter {
   execute(request: DataManipulationRequest): Promise<DataManipulationResult>
   /** Executes a migration request. */
   migrate(request: DataMigrationRequest): Promise<DataMigrationResult>
+  /**
+   * Executes a raw SQL script that may contain multiple statements.
+   *
+   * Drivers must be configured to accept multi-statement scripts where required
+   * (for example, mysql2 needs `multipleStatements: true`).
+   */
+  executeScript(sql: string, transaction?: TransactionToken): Promise<void>
   /** Checks whether a table exists. */
   hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean>
   /** Checks whether a column exists on a table. */

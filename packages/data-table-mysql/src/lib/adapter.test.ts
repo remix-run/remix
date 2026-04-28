@@ -1031,4 +1031,21 @@ describe('mysql adapter', () => {
       assert.ok(compiled.length > 0, operation.kind)
     }
   })
+
+  it('executeScript forwards the script through query()', async () => {
+    let calls: Array<{ text: string; values: unknown[] | undefined }> = []
+    let connection = {
+      async query(text: string, values?: unknown[]) {
+        calls.push({ text, values })
+        return [[], []]
+      },
+    }
+
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+    await adapter.executeScript('create table widgets (id int); insert into widgets values (1);')
+
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].text, 'create table widgets (id int); insert into widgets values (1);')
+    assert.equal(calls[0].values, undefined)
+  })
 })

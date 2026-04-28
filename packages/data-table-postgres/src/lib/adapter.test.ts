@@ -1149,4 +1149,21 @@ describe('postgres adapter', () => {
       assert.ok(compiled.length > 0, operation.kind)
     }
   })
+
+  it('executeScript forwards the script as an unparameterized query', async () => {
+    let calls: Array<{ text: string; values: unknown[] | undefined }> = []
+    let client = {
+      async query(text: string, values?: unknown[]) {
+        calls.push({ text, values })
+        return { rows: [], rowCount: 0 }
+      },
+    }
+
+    let adapter = createPostgresDatabaseAdapter(client as never)
+    await adapter.executeScript('create table widgets (id int); insert into widgets values (1);')
+
+    assert.equal(calls.length, 1)
+    assert.equal(calls[0].text, 'create table widgets (id int); insert into widgets values (1);')
+    assert.equal(calls[0].values, undefined)
+  })
 })

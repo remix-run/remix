@@ -107,6 +107,20 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   }
 
   /**
+   * Executes a multi-statement postgres SQL script.
+   *
+   * Postgres natively supports multi-statement scripts when `query` is called
+   * without a parameter array.
+   * @param sql SQL script to execute.
+   * @param transaction Optional transaction token.
+   * @returns A promise that resolves once execution completes.
+   */
+  async executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
+    let client = this.#resolveClient(transaction)
+    await client.query(sql)
+  }
+
+  /**
    * Executes postgres migration operations.
    * @param request Migration request to execute.
    * @returns Migration result.

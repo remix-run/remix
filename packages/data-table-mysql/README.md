@@ -48,6 +48,21 @@ Import any driver-specific types you need directly from `mysql2/promise`.
 
 ## Advanced Usage
 
+### Multi-Statement Migrations
+
+`remix/data-table/migrations` sends each migration to the adapter as a single multi-statement SQL
+script. mysql2 only accepts multi-statement scripts when the connection is created with
+`multipleStatements: true`:
+
+```ts
+import { createPool } from 'mysql2/promise'
+
+let pool = createPool({
+  uri: process.env.DATABASE_URL,
+  multipleStatements: true,
+})
+```
+
 ### `returning` On MySQL
 
 MySQL does not natively support SQL `RETURNING`. In this adapter, using `returning` on write

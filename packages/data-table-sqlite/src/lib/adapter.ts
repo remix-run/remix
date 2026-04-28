@@ -136,6 +136,20 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
   }
 
   /**
+   * Executes a multi-statement sqlite SQL script.
+   * @param sql SQL script to execute.
+   * @param transaction Optional transaction token (asserted when present).
+   * @returns A promise that resolves once execution completes.
+   */
+  async executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
+    if (transaction) {
+      this.#assertTransaction(transaction)
+    }
+
+    this.#database.exec(sql)
+  }
+
+  /**
    * Executes sqlite migration operations.
    * @param request Migration request to execute.
    * @returns Migration result.

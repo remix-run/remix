@@ -122,6 +122,20 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
   }
 
   /**
+   * Executes a multi-statement mysql SQL script.
+   *
+   * mysql2 only accepts multi-statement scripts when the underlying connection
+   * was created with `multipleStatements: true`.
+   * @param sql SQL script to execute.
+   * @param transaction Optional transaction token.
+   * @returns A promise that resolves once execution completes.
+   */
+  async executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
+    let client = this.#resolveClient(transaction)
+    await client.query(sql)
+  }
+
+  /**
    * Executes mysql migration operations.
    * @param request Migration request to execute.
    * @returns Migration result.
