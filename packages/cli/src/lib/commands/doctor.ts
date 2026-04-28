@@ -58,27 +58,22 @@ export async function runDoctorCommand(argv: string[], context: CliContext): Pro
   try {
     let options = parseDoctorCommandArgs(argv)
     reporter = options.json
-      ? createCommandReporter({ remixVersion: context.remixVersion })
+      ? null
       : createCommandReporter({
           remixVersion: context.remixVersion,
           stderr: process.stdout,
           stdout: process.stdout,
         })
-    progress = options.json ? null : createDoctorProgressReporter(reporter)
-    if (!options.json) {
+    progress = reporter == null ? null : createDoctorProgressReporter(reporter)
+    if (reporter != null) {
       await reporter.status.commandHeader('doctor')
     }
 
-    let report = await collectDoctorReport(
-      progress,
-      options,
-      options.json ? null : reporter,
-      context,
-    )
+    let report = await collectDoctorReport(progress, options, reporter, context)
 
     if (options.json) {
       process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
-    } else {
+    } else if (reporter != null) {
       writeDoctorReport(reporter, report)
       reporter.finish()
     }

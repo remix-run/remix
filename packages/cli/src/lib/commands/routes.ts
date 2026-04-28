@@ -19,11 +19,11 @@ export async function runRoutesCommand(argv: string[], context: CliContext): Pro
   try {
     let options = parseRoutesCommandArgs(argv)
     let routeMap = await loadRouteMap(context.cwd)
-    let reporter = createCommandReporter({ remixVersion: context.remixVersion })
 
     if (options.json) {
       process.stdout.write(`${JSON.stringify(routeMap, null, 2)}\n`)
     } else {
+      let reporter = createCommandReporter({ remixVersion: context.remixVersion })
       writeRouteMap(reporter.out, routeMap, options)
       reporter.finish()
     }

@@ -361,7 +361,7 @@ describe('run', () => {
 
       let test = await captureOutput(() => run(['test', '--help']))
       assert.equal(test.exitCode, 0)
-      assert.equal(test.stdout, TEST_COMMAND_HELP_TEXT)
+      assert.equal(test.stdout, `${TEST_COMMAND_HELP_TEXT}\n`)
       assert.equal(test.stderr, '')
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })

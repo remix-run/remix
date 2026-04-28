@@ -5,6 +5,7 @@ import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
+import { runRemixTest } from '@remix-run/test/cli'
 
 import { runRemix } from '../../index.ts'
 import { getTestCommandHelpText } from './test.ts'
@@ -16,10 +17,14 @@ const TEST_COMMAND_HELP_TEXT = getTestCommandHelpText()
 describe('test command', () => {
   it('prints test command help', async () => {
     let result = await captureOutput(() => runRemix(['test', '--help']))
+    let directResult = await captureOutput(() => runRemixTest({ argv: ['--help'], cwd: ROOT_DIR }))
 
     assert.equal(result.exitCode, 0)
-    assert.equal(result.stdout, TEST_COMMAND_HELP_TEXT)
+    assert.equal(result.stdout, `${TEST_COMMAND_HELP_TEXT}\n`)
+    assert.equal(result.stdout, directResult.stdout)
     assert.equal(result.stderr, '')
+    assert.equal(directResult.exitCode, 0)
+    assert.equal(directResult.stderr, '')
   })
 
   it('runs remix-test in the current project', async () => {

@@ -34,7 +34,7 @@ const ROUTES_COMMAND_HELP_TEXT = [
 
 describe('routes command', () => {
   it('prints routes command help', async () => {
-    let result = await runRoutesCommand(['--help'], ROOT_DIR)
+    let result = await runRoutes(['--help'], ROOT_DIR)
 
     assert.equal(result.status, 0, result.stderr)
     assert.equal(result.stdout, ROUTES_COMMAND_HELP_TEXT)
@@ -42,7 +42,7 @@ describe('routes command', () => {
   })
 
   it('prints a compact tree for a basic fixture app', async () => {
-    let result = await runRoutesCommand([], getFixturePath('routes-basic'))
+    let result = await runRoutes([], getFixturePath('routes-basic'))
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /home\s+ANY\s+\/\s+-> home\.tsx/)
@@ -51,7 +51,7 @@ describe('routes command', () => {
   })
 
   it('does not print color when output is not a tty', async () => {
-    let result = await runRoutesCommand([], getFixturePath('routes-basic'))
+    let result = await runRoutes([], getFixturePath('routes-basic'))
 
     assert.equal(result.status, 0, result.stderr)
     assert.doesNotMatch(result.stdout, /\u001B\[/)
@@ -59,7 +59,7 @@ describe('routes command', () => {
 
   it('works from a nested directory inside an app', async () => {
     let nestedDir = path.join(getFixturePath('routes-tree'), 'app', 'controllers', 'admin')
-    let result = await runRoutesCommand([], nestedDir)
+    let result = await runRoutes([], nestedDir)
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /auth -> auth\/controller\.tsx/)
@@ -70,7 +70,7 @@ describe('routes command', () => {
   })
 
   it('prints a verbose tree with full owner paths on every route', async () => {
-    let result = await runRoutesCommand(['--verbose'], getFixturePath('routes-tree'))
+    let result = await runRoutes(['--verbose'], getFixturePath('routes-tree'))
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /auth -> app\/controllers\/auth\/controller\.tsx/)
@@ -87,7 +87,7 @@ describe('routes command', () => {
   })
 
   it('prints a flat table of routes', async () => {
-    let result = await runRoutesCommand(['--table'], getFixturePath('routes-tree'))
+    let result = await runRoutes(['--table'], getFixturePath('routes-tree'))
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /Route\s+Method\s+Path\s+Owner/)
@@ -104,7 +104,7 @@ describe('routes command', () => {
   })
 
   it('omits the table header row with --no-headers', async () => {
-    let result = await runRoutesCommand(['--table', '--no-headers'], getFixturePath('routes-tree'))
+    let result = await runRoutes(['--table', '--no-headers'], getFixturePath('routes-tree'))
 
     assert.equal(result.status, 0, result.stderr)
     assert.doesNotMatch(result.stdout, /Route\s+Method\s+Path\s+Owner/)
@@ -117,14 +117,14 @@ describe('routes command', () => {
   })
 
   it('accepts the global no-color flag', async () => {
-    let result = await runRoutesCommand(['--no-color'], getFixturePath('routes-missing'))
+    let result = await runRoutes(['--no-color'], getFixturePath('routes-missing'))
 
     assert.equal(result.status, 0, result.stderr)
     assert.doesNotMatch(result.stdout, /\u001B\[/)
   })
 
   it('resolves owner files with js, jsx, and ts extensions', async () => {
-    let result = await runRoutesCommand([], getFixturePath('doctor-clean'))
+    let result = await runRoutes([], getFixturePath('doctor-clean'))
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /home\s+ANY\s+\/\s+-> home\.js/)
@@ -134,7 +134,7 @@ describe('routes command', () => {
   })
 
   it('maps camelCase route keys to kebab-case owner paths', async () => {
-    let result = await runRoutesCommand([], getFixturePath('doctor-camel-case-keys'))
+    let result = await runRoutes([], getFixturePath('doctor-camel-case-keys'))
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /userSettings\s+ANY\s+\/user-settings\s+-> user-settings\.tsx/)
@@ -145,7 +145,7 @@ describe('routes command', () => {
 
   it('prints normalized JSON with owner metadata', async () => {
     let fixtureDir = getFixturePath('routes-tree')
-    let result = await runRoutesCommand(['--json'], fixtureDir)
+    let result = await runRoutes(['--json'], fixtureDir)
 
     assert.equal(result.status, 0, result.stderr)
     assert.equal(result.stderr, '')
@@ -204,7 +204,7 @@ describe('routes command', () => {
   })
 
   it('annotates missing owners without failing the command', async () => {
-    let result = await runRoutesCommand([], getFixturePath('routes-missing'))
+    let result = await runRoutes([], getFixturePath('routes-missing'))
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /home\s+ANY\s+\/\s+-> home\.tsx \[missing\]/)
@@ -215,21 +215,21 @@ describe('routes command', () => {
   })
 
   it('rejects --json when combined with table formatting', async () => {
-    let result = await runRoutesCommand(['--json', '--table'], getFixturePath('routes-basic'))
+    let result = await runRoutes(['--json', '--table'], getFixturePath('routes-basic'))
 
     assert.equal(result.status, 1)
     assert.match(result.stderr, /Cannot combine --json with --table/)
   })
 
   it('rejects --json when combined with verbose formatting', async () => {
-    let result = await runRoutesCommand(['--json', '--verbose'], getFixturePath('routes-basic'))
+    let result = await runRoutes(['--json', '--verbose'], getFixturePath('routes-basic'))
 
     assert.equal(result.status, 1)
     assert.match(result.stderr, /Cannot combine --json with --verbose/)
   })
 
   it('rejects --no-headers without table formatting', async () => {
-    let result = await runRoutesCommand(['--no-headers'], getFixturePath('routes-basic'))
+    let result = await runRoutes(['--no-headers'], getFixturePath('routes-basic'))
 
     assert.equal(result.status, 1)
     assert.match(result.stderr, /Cannot use --no-headers without --table/)
@@ -239,7 +239,7 @@ describe('routes command', () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-routes-'))
 
     try {
-      let result = await runRoutesCommand([], tmpDir)
+      let result = await runRoutes([], tmpDir)
 
       assert.equal(result.status, 1)
       assert.match(result.stderr, /Could not find app\/routes\.ts/)
@@ -249,21 +249,21 @@ describe('routes command', () => {
   })
 
   it('fails when the route module does not export routes', async () => {
-    let result = await runRoutesCommand([], getFixturePath('routes-no-export'))
+    let result = await runRoutes([], getFixturePath('routes-no-export'))
 
     assert.equal(result.status, 1)
     assert.match(result.stderr, /must export a named "routes" value/)
   })
 
   it('fails when the route map contains invalid values', async () => {
-    let result = await runRoutesCommand([], getFixturePath('routes-invalid-value'))
+    let result = await runRoutes([], getFixturePath('routes-invalid-value'))
 
     assert.equal(result.status, 1)
     assert.match(result.stderr, /Invalid route map value at "broken"/)
   })
 
   it('fails when importing the route module throws', async () => {
-    let result = await runRoutesCommand([], getFixturePath('routes-import-error'))
+    let result = await runRoutes([], getFixturePath('routes-import-error'))
 
     assert.equal(result.status, 1)
     assert.match(result.stderr, /boom from routes fixture/)
@@ -285,7 +285,7 @@ function findRouteNode(tree: RouteTreeNode[], name: string): RouteTreeNode | und
   return undefined
 }
 
-async function runRoutesCommand(args: string[], cwd: string) {
+async function runRoutes(args: string[], cwd: string) {
   return await captureOutput(() => runRemix(['routes', ...args], { cwd }))
 }
 
