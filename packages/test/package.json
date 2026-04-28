@@ -49,12 +49,12 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
-    "@remix-run/component": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*",
     "@remix-run/terminal": "workspace:^",
     "es-module-lexer": "^2.0.0",
     "esbuild": "^0.27.1",
+    "get-tsconfig": "^4.13.6",
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-report": "^3.0.1",
     "istanbul-reports": "^3.2.0",
@@ -73,6 +73,7 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
+    "@remix-run/component": "workspace:*",
     "@types/istanbul-lib-coverage": "^2.0.6",
     "@types/istanbul-lib-report": "^3.0.3",
     "@types/istanbul-reports": "^3.0.4",

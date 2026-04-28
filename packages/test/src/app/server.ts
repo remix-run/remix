@@ -1,5 +1,3 @@
-import type { RemixNode } from '@remix-run/component/jsx-runtime'
-import { renderToString } from '@remix-run/component/server'
 import { createRouter } from '@remix-run/fetch-router'
 import { createRequestListener } from '@remix-run/node-fetch-server'
 import { init as initEsModuleLexer, parse as parseEsModule } from 'es-module-lexer'
@@ -12,7 +10,6 @@ import { fileURLToPath } from 'node:url'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
 import { getBrowserTestRootDir, IS_RUNNING_FROM_SRC } from '../lib/config.ts'
 import { transformTypeScript } from '../lib/ts-transform.ts'
-import { Tests } from './client/components.tsx'
 import { routes } from './client/routes.ts'
 
 export async function startServer(
@@ -78,22 +75,18 @@ function getRouter(browserFiles: string[]) {
     }
   })
 
-  router.get(routes.home, async () =>
-    html(
-      <Doc title="Tests">
-        <Tests setup={{ testPaths, baseDir: process.cwd() }} />
-        <script type="module" src={entryUrl} />
-      </Doc>,
-    ),
-  )
+  router.get(routes.home, async () => {
+    let setupJson = JSON.stringify({ testPaths, baseDir: process.cwd() })
+    let body =
+      `<script type="application/json" id="test-setup">${escapeJsonForScript(setupJson)}</script>` +
+      `<div id="test-root"></div>` +
+      `<script type="module" src="${entryUrl}"></script>`
+    return html('Tests', body)
+  })
 
   router.get(routes.iframe, async ({ request }) => {
     let test = decodeURIComponent(new URL(request.url).searchParams.get('file') || '')
-    return html(
-      <Doc title={`Test: ${test}`}>
-        <script type="module" src={iframeUrl} />
-      </Doc>,
-    )
+    return html(`Test: ${test}`, `<script type="module" src="${iframeUrl}"></script>`)
   })
 
   return router
@@ -283,20 +276,31 @@ function resolveSpecifier(spec: string, importerFile: string, rootDir: string): 
   return filePathToUrl(resolvedPath, rootDir)
 }
 
-async function html(node: RemixNode) {
-  return new Response(`<!DOCTYPE html>` + (await renderToString(node)), {
-    headers: { 'Content-Type': 'text/html' },
-  })
+function html(title: string, body: string): Response {
+  let doc =
+    `<!DOCTYPE html>` +
+    `<html>` +
+    `<head>` +
+    `<meta charset="utf-8">` +
+    `<title>${escapeHtml(title)}</title>` +
+    `</head>` +
+    `<body>${body}</body>` +
+    `</html>`
+  return new Response(doc, { headers: { 'Content-Type': 'text/html' } })
 }
 
-function Doc() {
-  return ({ title, children }: { title: string; children: RemixNode }) => (
-    <html>
-      <head>
-        <meta charset="utf-8" />
-        <title>{title}</title>
-      </head>
-      <body>{children}</body>
-    </html>
-  )
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+}
+
+// Prevent the embedded JSON from terminating the surrounding <script> element
+// or being interpreted as HTML. Only `</` needs escaping inside an
+// `application/json` block; the leading `<` is preserved as `<` in the
+// emitted JSON so JSON.parse round-trips it unchanged.
+function escapeJsonForScript(json: string): string {
+  return json.replace(/</g, '\\u003c')
 }

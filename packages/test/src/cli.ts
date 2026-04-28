@@ -2,7 +2,6 @@
 import * as fsp from 'node:fs/promises'
 import type * as http from 'node:http'
 import * as path from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { IS_RUNNING_FROM_SRC, loadConfig, type ResolvedRemixTestConfig } from './lib/config.ts'
 import { generateCombinedCoverageReport } from './lib/coverage.ts'
 import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
@@ -62,10 +61,7 @@ async function executeRun() {
 
     if (browserFiles.length > 0 && !browserServer) {
       let { startServer } = IS_RUNNING_FROM_SRC
-        ? await importModule('./app/server.tsx', import.meta, {
-            // Needed for remix/component JSX runtime
-            tsconfig: fileURLToPath(new URL('../tsconfig.json', import.meta.url)),
-          })
+        ? await importModule('./app/server.ts', import.meta)
         : await import(`./app/server.js`)
       let result = await startServer(browserFiles)
       browserServer = result.server

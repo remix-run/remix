@@ -1,4 +1,8 @@
-import { transform } from 'esbuild'
+import { transform, type TsconfigRaw } from 'esbuild'
+import { getTsconfig, type TsConfigResult } from 'get-tsconfig'
+import * as path from 'node:path'
+
+const tsconfigCache = new Map<string, TsConfigResult | null>()
 
 /*
  * Transform a TypeScript file to JavaScript using esbuild with an inline
@@ -8,19 +12,25 @@ import { transform } from 'esbuild'
  * server (so the bytes V8 sees in the browser match what the collector
  * re-derives). Identical inputs must produce identical outputs across all
  * call sites or coverage offsets won't line up.
+ *
+ * Compiler options (notably JSX) are taken from the nearest `tsconfig.json`
+ * walking up from the file's directory, so each project picks up its own
+ * `jsxImportSource` etc. Discovery results are cached by directory.
  */
 export async function transformTypeScript(
   source: string,
   filePath: string,
 ): Promise<{ code: string }> {
-  let loader: 'ts' | 'tsx' = filePath.endsWith('.tsx') ? 'tsx' : ('ts' as const)
+  let loader: 'ts' | 'tsx' = filePath.endsWith('.tsx') ? 'tsx' : 'ts'
+
+  let tsConfig = getTsconfig(path.dirname(filePath), 'tsconfig.json', tsconfigCache)
+
   let result = await transform(source, {
     loader,
     sourcemap: 'inline',
     sourcesContent: true,
     sourcefile: filePath,
-    jsx: 'automatic',
-    jsxImportSource: '@remix-run/component',
+    tsconfigRaw: { compilerOptions: tsConfig?.config.compilerOptions ?? {} },
   })
   return { code: result.code }
 }

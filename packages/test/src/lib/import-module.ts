@@ -16,11 +16,7 @@ function hasImportMetaResolve(meta: ImportMeta): meta is ImportMetaWithResolve {
  * @param meta The caller's `import.meta`, used as the context for resolution.
  * @returns The imported module namespace.
  */
-export async function importModule(
-  specifier: string,
-  meta: ImportMeta,
-  { tsconfig }: { tsconfig?: string } = {},
-): Promise<any> {
+export async function importModule(specifier: string, meta: ImportMeta): Promise<any> {
   if (IS_BUN) {
     if (!hasImportMetaResolve(meta)) {
       throw new Error('importModule() requires import.meta.resolve() in Bun')
@@ -29,8 +25,5 @@ export async function importModule(
     return import(meta.resolve(specifier, meta.url))
   }
 
-  return tsImport(specifier, {
-    parentURL: meta.url,
-    tsconfig,
-  })
+  return tsImport(specifier, meta.url)
 }
