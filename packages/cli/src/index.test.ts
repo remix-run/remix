@@ -30,6 +30,14 @@ describe('cli entrypoint', () => {
     assert.match(result.stdout, /Usage:\s+remix <command> \[options\]/)
   })
 
+  it('only exposes the remix bin from the generated remix package', () => {
+    let remixPackageJson = readRemixPackageJson()
+
+    assert.deepEqual(remixPackageJson.bin, {
+      remix: './src/cli.ts',
+    })
+  })
+
   it('injects the repo Remix version when running directly from the source entrypoint', () => {
     let remixPackageJson = readRemixPackageJson()
     let result = spawnSync(process.execPath, ['./src/index.ts', 'version'], {
@@ -55,8 +63,9 @@ describe('cli entrypoint', () => {
   })
 })
 
-function readRemixPackageJson(): { version: string } {
+function readRemixPackageJson(): { bin?: Record<string, string>; version: string } {
   return JSON.parse(fs.readFileSync(resolve(REMIX_PACKAGE_DIR, 'package.json'), 'utf8')) as {
+    bin?: Record<string, string>
     version: string
   }
 }

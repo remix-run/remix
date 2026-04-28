@@ -100,7 +100,7 @@ function readDefaultRemixVersion(): string {
 function createTemplateValues(config: BootstrapConfig): TemplateValues {
   return {
     __RMX_APP_DISPLAY_NAME__: config.appDisplayName,
-    __RMX_APP_DISPLAY_NAME_REGEX__: escapeRegExp(config.appDisplayName),
+    __RMX_APP_DISPLAY_NAME_JSON__: JSON.stringify(config.appDisplayName),
   }
 }
 
@@ -218,8 +218,4 @@ function toPackageName(value: string): string {
   }
 
   return packageName
-}
-
-function escapeRegExp(value: string): string {
-  return value.replace(/[|\\{}()[\]^$+*?.-]/g, '\\$&')
 }

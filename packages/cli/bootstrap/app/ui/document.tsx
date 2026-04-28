@@ -6,7 +6,7 @@ export interface DocumentProps {
 }
 
 export function Document() {
-  return ({ title = '__RMX_APP_DISPLAY_NAME__', children }: DocumentProps) => (
+  return ({ title = __RMX_APP_DISPLAY_NAME_JSON__, children }: DocumentProps) => (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />

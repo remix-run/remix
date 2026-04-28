@@ -415,8 +415,7 @@
       "./package.json": "./package.json"
     },
     "bin": {
-      "remix": "./dist/cli.js",
-      "remix-test": "./dist/remix-test.js"
+      "remix": "./dist/cli.js"
     }
   },
   "devDependencies": {
@@ -477,7 +476,6 @@
     "typecheck": "tsc --noEmit"
   },
   "bin": {
-    "remix": "./src/cli.ts",
-    "remix-test": "./src/remix-test.ts"
+    "remix": "./src/cli.ts"
   }
 }

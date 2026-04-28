@@ -1,8 +1,6 @@
 Added `package.json` `exports`:
 
-- `remix/assert` to re-export APIs from `@remix-run/assert`
-- `remix/cli` to re-export APIs from `@remix-run/cli`
-- `remix/test` to re-export APIs from `@remix-run/test`
+- `remix/cli` to expose the Remix CLI programmatic API
 - `remix/ui/accordion` to re-export APIs from `@remix-run/ui/accordion`
 - `remix/ui/anchor` to re-export APIs from `@remix-run/ui/anchor`
 - `remix/ui/breadcrumbs` to re-export APIs from `@remix-run/ui/breadcrumbs`
@@ -18,7 +16,4 @@ Added `package.json` `exports`:
 - `remix/ui/separator` to re-export APIs from `@remix-run/ui/separator`
 - `remix/ui/theme` to re-export APIs from `@remix-run/ui/theme`
 
-Added `package.json` `bin` commands:
-
-- `remix` delegating to `@remix-run/cli`
-- `remix-test` delegating to `@remix-run/test`
+Added a `remix` `package.json` `bin` command that delegates to `@remix-run/cli`.

@@ -508,6 +508,29 @@ describe('run', () => {
     }
   })
 
+  it('escapes scaffold app names in generated TSX string literals', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-'))
+    try {
+      let appDir = path.join(tmpDir, 'quoted-app')
+      let appName = `Bob's \\ "App"`
+      let result = await captureOutput(() => run(['new', appDir, '--app-name', appName]))
+
+      assert.equal(result.exitCode, 0)
+
+      let documentSource = await fs.readFile(path.join(appDir, 'app', 'ui', 'document.tsx'), 'utf8')
+      let homeSource = await fs.readFile(
+        path.join(appDir, 'app', 'controllers', 'home.tsx'),
+        'utf8',
+      )
+      let appNameLiteral = JSON.stringify(appName)
+
+      assert.match(documentSource, new RegExp(`title = ${escapeRegExp(appNameLiteral)}`))
+      assert.match(homeSource, new RegExp(`<h1>{${escapeRegExp(appNameLiteral)}}</h1>`))
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
   it('rejects non-empty target directories without --force', async () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-'))
     try {

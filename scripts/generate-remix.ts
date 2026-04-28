@@ -198,7 +198,7 @@ async function updateRemixPackage() {
 
   // Generate bin wrapper files and update sub-package exports
   for (let bin of allBins) {
-    if (isRemixCliBin(bin)) {
+    if (isRemixCliBin(bin) || isRemixTestBin(bin)) {
       continue
     }
 
@@ -249,7 +249,7 @@ async function updateRemixPackage() {
     }
 
     for (let bin of allBins) {
-      if (isRemixCliBin(bin)) {
+      if (isRemixCliBin(bin) || isRemixTestBin(bin)) {
         continue
       }
 
@@ -274,6 +274,10 @@ async function updateRemixPackage() {
 
 function isRemixCliBin(bin: { command: string; packageName: string }): boolean {
   return bin.packageName === CLI_PACKAGE_NAME && bin.command === 'remix'
+}
+
+function isRemixTestBin(bin: { command: string; packageName: string }): boolean {
+  return bin.packageName === '@remix-run/test' && bin.command === 'remix-test'
 }
 
 function createExportSource(entry: ExportEntry): string {
