@@ -5,8 +5,10 @@ export interface DocumentProps {
   title?: string
 }
 
+const DEFAULT_TITLE = decodeURIComponent('__RMX_APP_DISPLAY_NAME_URI_COMPONENT__')
+
 export function Document() {
-  return ({ title = __RMX_APP_DISPLAY_NAME_JSON__, children }: DocumentProps) => (
+  return ({ title = DEFAULT_TITLE, children }: DocumentProps) => (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />

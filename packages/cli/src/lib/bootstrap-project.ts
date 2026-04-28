@@ -100,7 +100,7 @@ function readDefaultRemixVersion(): string {
 function createTemplateValues(config: BootstrapConfig): TemplateValues {
   return {
     __RMX_APP_DISPLAY_NAME__: config.appDisplayName,
-    __RMX_APP_DISPLAY_NAME_JSON__: JSON.stringify(config.appDisplayName),
+    __RMX_APP_DISPLAY_NAME_URI_COMPONENT__: encodeURIComponent(config.appDisplayName),
   }
 }
 

@@ -522,10 +522,20 @@ describe('run', () => {
         path.join(appDir, 'app', 'controllers', 'home.tsx'),
         'utf8',
       )
-      let appNameLiteral = JSON.stringify(appName)
+      let encodedAppName = encodeURIComponent(appName)
 
-      assert.match(documentSource, new RegExp(`title = ${escapeRegExp(appNameLiteral)}`))
-      assert.match(homeSource, new RegExp(`<h1>{${escapeRegExp(appNameLiteral)}}</h1>`))
+      assert.match(
+        documentSource,
+        new RegExp(
+          `const DEFAULT_TITLE = decodeURIComponent\\('${escapeRegExp(encodedAppName)}'\\)`,
+        ),
+      )
+      assert.match(
+        homeSource,
+        new RegExp(
+          `const APP_DISPLAY_NAME = decodeURIComponent\\('${escapeRegExp(encodedAppName)}'\\)`,
+        ),
+      )
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
