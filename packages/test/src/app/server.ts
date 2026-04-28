@@ -1,3 +1,4 @@
+import { createRequestListener } from '@remix-run/node-fetch-server'
 import { init as initEsModuleLexer, parse as parseEsModule } from 'es-module-lexer'
 import MagicString from 'magic-string'
 import * as fsp from 'node:fs/promises'
@@ -12,21 +13,13 @@ import { transformTypeScript } from '../lib/ts-transform.ts'
 export async function startServer(
   browserFiles: string[],
 ): Promise<{ server: http.Server; port: number }> {
-  let handle = createRequestHandler(browserFiles)
+  let handler = createRequestListener(createFetchHandler(browserFiles))
   let port = 44101
 
   let lastError: unknown
   for (let i = 0; i < 5; i++) {
     try {
-      let server = http.createServer((req, res) => {
-        handle(req, res).catch((error) => {
-          console.error(`[remix-test] Unhandled error for ${req.url}:`, error)
-          if (!res.headersSent) {
-            res.writeHead(500, { 'Content-Type': 'text/plain' })
-          }
-          if (!res.writableEnded) res.end()
-        })
-      })
+      let server = http.createServer(handler)
       await new Promise<void>((resolve, reject) => {
         server.once('error', reject)
         server.listen(port, () => {
@@ -47,9 +40,7 @@ export async function startServer(
   throw lastError
 }
 
-function createRequestHandler(
-  browserFiles: string[],
-): (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void> {
+function createFetchHandler(browserFiles: string[]): (request: Request) => Promise<Response> {
   let rootDir = getBrowserTestRootDir()
   let srcDir = IS_RUNNING_FROM_SRC
     ? // Up one directory from src/app/
@@ -66,12 +57,11 @@ function createRequestHandler(
 
   let testPaths = browserFiles.map((f) => filePathToUrl(f, rootDir)!)
 
-  return async (req, res) => {
-    let url = new URL(req.url ?? '/', 'http://localhost')
+  return async (request) => {
+    let url = new URL(request.url)
 
-    if (req.method !== 'GET') {
-      sendText(res, 405, 'Method Not Allowed')
-      return
+    if (request.method !== 'GET') {
+      return new Response('Method Not Allowed', { status: 405 })
     }
 
     if (url.pathname === '/') {
@@ -82,31 +72,27 @@ function createRequestHandler(
         `</script>` +
         `<div id="test-root"></div>` +
         `<script type="module" src="${entryUrl}"></script>`
-      sendHtml(res, 'Tests', body)
-      return
+      return html('Tests', body)
     }
 
     if (url.pathname === '/iframe') {
       let test = decodeURIComponent(url.searchParams.get('file') || '')
-      sendHtml(res, `Test: ${test}`, `<script type="module" src="${iframeUrl}"></script>`)
-      return
+      return html(`Test: ${test}`, `<script type="module" src="${iframeUrl}"></script>`)
     }
 
     if (url.pathname.startsWith('/scripts/')) {
       let filePath = urlPathToFilePath(url.pathname, rootDir)
       if (filePath) {
         try {
-          await serveScript(res, filePath, url.pathname, rootDir)
-          return
+          return await serveScript(filePath, url.pathname, rootDir)
         } catch (error) {
           console.error(`[remix-test] Error serving ${url.pathname}:`, error)
-          sendText(res, 500, String(error))
-          return
+          return new Response(String(error), { status: 500 })
         }
       }
     }
 
-    sendText(res, 404, 'Not found')
+    return new Response('Not found', { status: 404 })
   }
 }
 
@@ -130,20 +116,13 @@ function urlPathToFilePath(urlPath: string, rootDir: string): string | null {
 const TS_EXTS = new Set(['.ts', '.tsx', '.mts', '.cts'])
 const JS_EXTS = new Set(['.js', '.mjs', '.cjs', '.jsx'])
 
-async function serveScript(
-  res: http.ServerResponse,
-  filePath: string,
-  urlPath: string,
-  rootDir: string,
-): Promise<void> {
+async function serveScript(filePath: string, urlPath: string, rootDir: string): Promise<Response> {
   let ext = path.extname(filePath)
   let isTs = TS_EXTS.has(ext)
   let isJs = JS_EXTS.has(ext)
   if (!isTs && !isJs) {
     let body = await fsp.readFile(filePath)
-    res.writeHead(200)
-    res.end(body)
-    return
+    return new Response(body)
   }
 
   let source = await fsp.readFile(filePath, 'utf-8')
@@ -155,8 +134,7 @@ async function serveScript(
     } catch (error) {
       let msg = error instanceof Error ? error.message : String(error)
       console.error(`[remix-test] Failed to transform ${urlPath}: ${msg}`)
-      sendText(res, 500, msg)
-      return
+      return new Response(msg, { status: 500 })
     }
   } else {
     code = source
@@ -167,12 +145,12 @@ async function serveScript(
   } catch (error) {
     let msg = error instanceof Error ? error.message : String(error)
     console.error(`[remix-test] Failed to rewrite imports for ${urlPath}: ${msg}`)
-    sendText(res, 500, msg)
-    return
+    return new Response(msg, { status: 500 })
   }
 
-  res.writeHead(200, { 'Content-Type': 'application/javascript' })
-  res.end(code)
+  return new Response(code, {
+    headers: { 'Content-Type': 'application/javascript' },
+  })
 }
 
 // Rewrite every import/export specifier in the (already-transformed) source so
@@ -302,7 +280,7 @@ function resolveSpecifier(spec: string, importerFile: string, rootDir: string): 
   return filePathToUrl(resolvedPath, rootDir)
 }
 
-function sendHtml(res: http.ServerResponse, title: string, body: string): void {
+function html(title: string, body: string): Response {
   let doc =
     `<!DOCTYPE html>` +
     `<html>` +
@@ -312,13 +290,7 @@ function sendHtml(res: http.ServerResponse, title: string, body: string): void {
     `</head>` +
     `<body>${body}</body>` +
     `</html>`
-  res.writeHead(200, { 'Content-Type': 'text/html' })
-  res.end(doc)
-}
-
-function sendText(res: http.ServerResponse, status: number, body: string): void {
-  res.writeHead(status, { 'Content-Type': 'text/plain' })
-  res.end(body)
+  return new Response(doc, { headers: { 'Content-Type': 'text/html' } })
 }
 
 function escapeHtml(s: string): string {

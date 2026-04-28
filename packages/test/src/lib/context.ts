@@ -75,15 +75,15 @@ export interface TestContext {
 }
 
 export interface CreateTestContextOptions {
-  createServer?: CreateServerFunction
-  browser?: Browser
-  open?: boolean
-  playwrightPageOptions?: ReturnType<typeof getPlaywrightPageOptions>
-  coverage?: boolean
-  addE2ECoverageEntries?: (value: { entries: V8CoverageEntry[]; baseUrl: string }) => void
+  addE2ECoverageEntries: (value: { entries: V8CoverageEntry[]; baseUrl: string }) => void
+  browser: Browser
+  createServer: CreateServerFunction
+  coverage: boolean
+  open: boolean
+  playwrightPageOptions: ReturnType<typeof getPlaywrightPageOptions>
 }
 
-export function createTestContext(options: CreateTestContextOptions): {
+export function createTestContext(options?: CreateTestContextOptions): {
   testContext: TestContext
   cleanup(): Promise<void>
 } {
@@ -107,7 +107,7 @@ export function createTestContext(options: CreateTestContextOptions): {
       return timers
     },
     async serve(handler) {
-      if (!options.createServer || !options.browser) {
+      if (!options || !options.createServer || !options.browser) {
         throw new Error('t.serve() is only available in E2E test suites')
       }
 

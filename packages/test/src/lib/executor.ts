@@ -1,16 +1,10 @@
-import type { Browser, BrowserContextOptions } from 'playwright'
-import { createTestContext } from './context.ts'
+import { createTestContext, type CreateTestContextOptions } from './context.ts'
 import type { V8CoverageEntry } from './coverage.ts'
-import type { CreateServerFunction } from './e2e-server.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
 
-export async function runTests(options?: {
-  createServer?: CreateServerFunction
-  browser?: Browser
-  open?: boolean
-  playwrightPageOptions?: BrowserContextOptions
-  coverage?: boolean
-}): Promise<TestResults> {
+export async function runTests(
+  options?: Omit<CreateTestContextOptions, 'addE2ECoverageEntries'>,
+): Promise<TestResults> {
   let suites = (globalThis as any).__testSuites || []
   let e2eCoverageEntries: Array<{ entries: V8CoverageEntry[]; baseUrl: string }> = []
   let results: TestResults = {
@@ -91,14 +85,13 @@ export async function runTests(options?: {
         duration: 0,
       }
 
-      let { testContext, cleanup } = createTestContext({
-        createServer: options?.createServer,
-        browser: options?.browser,
-        open: options?.open,
-        playwrightPageOptions: options?.playwrightPageOptions,
-        coverage: options?.coverage,
-        addE2ECoverageEntries: (e) => e2eCoverageEntries.push(e),
-      })
+      let contextOpts: CreateTestContextOptions | undefined = options
+        ? {
+            ...options,
+            addE2ECoverageEntries: (e) => e2eCoverageEntries.push(e),
+          }
+        : undefined
+      let { testContext, cleanup } = createTestContext(contextOpts)
 
       try {
         if (suite.beforeEach) {
