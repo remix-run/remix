@@ -360,8 +360,8 @@ Notes:
 - `createAuth0AuthProvider()` expects your Auth0 domain and derives the issuer URL for you
 - `createAtmosphereAuthProvider()` returns a module-scope provider with `prepare(handleOrDid)` for request-time atproto account discovery before `startExternalAuth()`
 - Atmosphere callback routes pass the module-scope provider directly to `finishExternalAuth()`; the original handle or DID is stored in the sealed OAuth transaction state
-- `createAtmosphereAuthProvider()` requires `sessionSecret` and seals the in-flight DPoP state into the existing OAuth transaction stored in your app session, so you do not need a separate file or database store for the redirect step
-- `createAtmosphereAuthProvider()` returns DPoP-bound token material in `result.tokens`, including `accessToken`, `refreshToken`, and `dpop` JWK state for follow-up DPoP-signed requests
+- `createAtmosphereAuthProvider()` requires `sessionSecret` and seals the in-flight account, authorization server, nonce, and DPoP key state into the existing OAuth transaction stored in your app session, so you do not need a separate file or database store for the redirect step
+- `createAtmosphereAuthProvider()` returns DPoP-bound token material in `result.tokens`, including `accessToken`, `refreshToken`, authorization server refresh details, and `dpop` JWK state for follow-up DPoP-signed requests
 - `refreshExternalAuth()` supports built-in OIDC providers, X, and Atmosphere when the stored token bundle includes a refresh token
 - Providers only return refresh tokens when configured to request offline access, such as `authorizationParams: { access_type: 'offline' }` for Google or adding `offline.access` to X scopes
 - Use `mapProfile()` with `createOIDCAuthProvider()` when you want `result.profile` to have an app-specific type before it reaches your route code

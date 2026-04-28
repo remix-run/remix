@@ -94,8 +94,8 @@ export interface AtmosphereAuthProviderMapProfileInput {
   handle?: string
   /** Personal Data Server URL declared in the DID document. */
   pdsUrl: string
-  /** Authorization server metadata resolved for the authenticated account. */
-  authorizationServer: AtmosphereAuthorizationServerMetadata
+  /** Authorization server details retained for the authenticated account. */
+  authorizationServer: AtmosphereTokenAuthorizationServer
   /** OAuth tokens returned by the atproto authorization server. */
   tokens: AtmosphereOAuthTokens
   /** Request context for the callback currently being processed. */
@@ -189,7 +189,7 @@ interface AtmosphereSessionState {
   did: string
   handle?: string
   pdsUrl: string
-  authorizationServer: AtmosphereAuthorizationServerMetadata
+  authorizationServer: AtmosphereTokenAuthorizationServer
   publicJwk: JsonWebKey
   privateJwk: JsonWebKey
   authorizationServerNonce?: string
@@ -240,7 +240,7 @@ export function createAtmosphereAuthProvider<
     }
 
     let tokenResponse = await sendDpopFormRequest<AtmosphereTokenResponse>({
-      endpoint: authorizationServer.token_endpoint,
+      endpoint: authorizationServer.tokenEndpoint,
       body: await createAtmosphereTokenRequestBody({
         clientId: client.clientId,
         redirectUri: client.redirectUri,
@@ -261,7 +261,7 @@ export function createAtmosphereAuthProvider<
       did: sessionState.did,
       authorizationServer: {
         issuer: authorizationServer.issuer,
-        tokenEndpoint: authorizationServer.token_endpoint,
+        tokenEndpoint: authorizationServer.tokenEndpoint,
       },
       dpop: {
         publicJwk: sessionState.publicJwk,
@@ -375,7 +375,10 @@ export function createAtmosphereAuthProvider<
               did: identity.did,
               handle: identity.handle,
               pdsUrl: identity.pdsUrl,
-              authorizationServer,
+              authorizationServer: {
+                issuer: authorizationServer.issuer,
+                tokenEndpoint: authorizationServer.token_endpoint,
+              },
               publicJwk: dpopKeyPair.publicJwk,
               privateJwk: dpopKeyPair.privateJwk,
             }
