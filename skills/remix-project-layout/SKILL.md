@@ -151,10 +151,11 @@ Do not invent one-off naming schemes when an existing convention already fits.
 
 ## Bootstrap
 
-When the user wants this layout scaffolded into a new directory, run:
+When the user wants this layout scaffolded into a new directory, run this from the Remix
+repository root:
 
 ```sh
-pnpm --filter @remix-run/cli run cli -- new <target-dir>
+node packages/remix/src/cli-entry.ts new <target-dir>
 ```
 
 Optional flags:

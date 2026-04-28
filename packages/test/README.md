@@ -40,7 +40,7 @@ Run tests with the CLI:
 remix test
 ```
 
-By default, `remix test` discovers all files matching `**/*.test.{ts,tsx}`. Pass a glob as the first positional argument to override:
+By default, `remix test` discovers all files matching `**/*.test{,.e2e}.{ts,tsx}`. Pass a glob as the first positional argument to override:
 
 ```sh
 remix test "src/**/*.test.ts"
@@ -92,10 +92,10 @@ export default {
   },
 
   glob: {
-    // Glob pattern identifying all test files (default: "**/*.test?(.e2e).{ts,tsx}")
-    test: '**/*.test?(.e2e).ts',
-    // Global pattern identifying the subset of E2E test files{ts,tsx}")
-    e2e: '**/*.test.e2e.ts',
+    // Glob pattern identifying all test files (default: "**/*.test{,.e2e}.{ts,tsx}")
+    test: '**/*.test{,.e2e}.{ts,tsx}',
+    // Glob pattern identifying the subset of E2E test files
+    e2e: '**/*.test.e2e.{ts,tsx}',
   },
 
   // Playwright configuration for E2E tests, or string path to an existing
