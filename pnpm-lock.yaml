@@ -1806,9 +1806,6 @@ importers:
         specifier: workspace:*
         version: link:../../remix
     devDependencies:
-      '@types/dom-navigation':
-        specifier: ^1.0.7
-        version: 1.0.7
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
