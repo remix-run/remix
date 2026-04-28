@@ -75,7 +75,8 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
     let totalPassed = 0
     let totalFailed = 0
-    let testFileUrls = new Set<string>()
+    let totalSkipped = 0
+    let totalTodo = 0
     let rootDir = getBrowserTestRootDir()
 
     await page.route('**/file-results', async (route) => {
@@ -86,9 +87,8 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       options.reporter.onResult(results, envLabel)
       totalPassed += results.passed
       totalFailed += results.failed
-      for (let test of results.tests) {
-        if (test.filePath) testFileUrls.add(test.filePath)
-      }
+      totalSkipped += results.skipped
+      totalTodo += results.todo
       await route.fulfill({ status: 200 })
     })
 
@@ -131,8 +131,8 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     results = {
       passed: totalPassed,
       failed: totalFailed,
-      skipped: 0,
-      todo: 0,
+      skipped: totalSkipped,
+      todo: totalTodo,
       tests: [],
     }
   } catch (error) {

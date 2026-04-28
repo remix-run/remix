@@ -131,6 +131,17 @@ describe('FakeTimers#advance — setInterval', () => {
       assert.equal(fired, 4)
     })
   })
+
+  it('does not loop forever when an interval has no delay', () => {
+    withFakeTimers((timers) => {
+      let fired = 0
+      setInterval(() => fired++)
+      timers.advance(0)
+      assert.equal(fired, 1)
+      timers.advance(1)
+      assert.equal(fired, 2)
+    })
+  })
 })
 
 describe('FakeTimers#advance — clearInterval', () => {

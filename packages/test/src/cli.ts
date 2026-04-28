@@ -63,6 +63,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
   let queued = false
   let rerunTimer: NodeJS.Timeout | undefined
   let browserServer: http.Server | undefined
+  let browserServerFilesKey: string | undefined
   let browserPort: number | undefined
   let resolveRun: ((exitCode: number) => void) | undefined
 
@@ -82,6 +83,17 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
   }
 
   let handleInterrupt = () => cleanupAndExit(latestExitCode)
+
+  let closeBrowserServer = async () => {
+    if (!browserServer) return
+    let server = browserServer
+    await new Promise<void>((resolve, reject) =>
+      server.close((error) => (error ? reject(error) : resolve())),
+    )
+    browserServer = undefined
+    browserServerFilesKey = undefined
+    browserPort = undefined
+  }
 
   let queueRerun = (reason: string) => {
     if (!config.watch || hasExited) return
@@ -128,12 +140,20 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
         watcher.update(files)
       }
 
-      if (browserFiles.length > 0 && !browserServer) {
+      let browserFilesKey = browserFiles.join('\0')
+      if (browserServer && browserFiles.length === 0) {
+        await closeBrowserServer()
+      } else if (
+        browserFiles.length > 0 &&
+        (!browserServer || browserServerFilesKey !== browserFilesKey)
+      ) {
+        await closeBrowserServer()
         let { startServer } = IS_RUNNING_FROM_SRC
           ? await importModule('./app/server.ts', import.meta)
           : await import(`./app/server.js`)
         let result = await startServer(browserFiles)
         browserServer = result.server
+        browserServerFilesKey = browserFilesKey
         browserPort = result.port
       }
 

@@ -20,22 +20,15 @@ export function createFakeTimers(): FakeTimers {
     pending = pending.filter((t) => t.id !== id)
   }
 
-  let setTimeoutMock = mock.method(
-    globalThis,
-    'setTimeout',
-    ((fn: () => void, delay = 0) => schedule(fn, delay)) as unknown as typeof setTimeout,
-  )
+  let setTimeoutMock = mock.method(globalThis, 'setTimeout', ((fn: () => void, delay = 0) =>
+    schedule(fn, delay)) as unknown as typeof setTimeout)
   let clearTimeoutMock = mock.method(
     globalThis,
     'clearTimeout',
     cancel as unknown as typeof clearTimeout,
   )
-  let setIntervalMock = mock.method(
-    globalThis,
-    'setInterval',
-    ((fn: () => void, delay = 0) =>
-      schedule(fn, delay, Math.max(0, delay))) as unknown as typeof setInterval,
-  )
+  let setIntervalMock = mock.method(globalThis, 'setInterval', ((fn: () => void, delay = 0) =>
+    schedule(fn, delay, Math.max(0, delay))) as unknown as typeof setInterval)
   let clearIntervalMock = mock.method(
     globalThis,
     'clearInterval',
@@ -46,16 +39,14 @@ export function createFakeTimers(): FakeTimers {
     advance(ms: number) {
       let targetTime = currentTime + ms
       while (true) {
-        let next = pending
-          .filter((t) => t.time <= targetTime)
-          .sort((a, b) => a.time - b.time)[0]
+        let next = pending.filter((t) => t.time <= targetTime).sort((a, b) => a.time - b.time)[0]
         if (!next) break
         currentTime = next.time
         pending = pending.filter((t) => t.id !== next.id)
         // Requeue intervals before running the callback so that calling
         // clearInterval(id) from inside the callback can cancel the next firing.
         if (next.repeatMs !== undefined) {
-          pending.push({ ...next, time: next.time + next.repeatMs })
+          pending.push({ ...next, time: next.time + Math.max(1, next.repeatMs) })
         }
         next.fn()
       }
