@@ -1,1 +1,1 @@
-Improve request throughput by avoiding an extra URL object allocation when creating Fetch API requests and by skipping request/client construction for handlers that declare no parameters.
+Improve request throughput by avoiding an extra URL object allocation when creating Fetch API requests, skipping request/client construction for handlers that declare no parameters, and lazily materializing `Request` objects for request handlers that only inspect cheap request metadata like `method`.
