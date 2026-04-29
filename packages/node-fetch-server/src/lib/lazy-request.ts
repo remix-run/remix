@@ -292,7 +292,8 @@ function requestMethodCanHaveBody(method: string): boolean {
 
 function readRequestBody(req: IncomingRequest): Promise<Buffer> {
   return new Promise((resolve, reject) => {
-    let chunks: Buffer[] = []
+    let firstChunk: Buffer | undefined
+    let chunks: Buffer[] | undefined
     let length = 0
 
     function cleanup() {
@@ -303,16 +304,22 @@ function readRequestBody(req: IncomingRequest): Promise<Buffer> {
 
     function onData(chunk: unknown) {
       let buffer = toBuffer(chunk)
-      chunks.push(buffer)
       length += buffer.byteLength
+
+      if (firstChunk == null) {
+        firstChunk = buffer
+      } else {
+        chunks ??= [firstChunk]
+        chunks.push(buffer)
+      }
     }
 
     function onEnd() {
       cleanup()
-      if (chunks.length === 0) {
+      if (firstChunk == null) {
         resolve(Buffer.alloc(0))
-      } else if (chunks.length === 1) {
-        resolve(chunks[0])
+      } else if (chunks == null) {
+        resolve(firstChunk)
       } else {
         resolve(Buffer.concat(chunks, length))
       }
