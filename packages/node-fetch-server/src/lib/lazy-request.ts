@@ -316,8 +316,7 @@ function readRequestBody(req: IncomingRequest): Promise<Buffer> {
       req.off('error', onError)
     }
 
-    function onData(chunk: unknown) {
-      let buffer = toBuffer(chunk)
+    function onData(buffer: Buffer) {
       length += buffer.byteLength
 
       if (firstChunk == null) {
@@ -362,8 +361,7 @@ function readRequestText(req: IncomingRequest): Promise<string> {
       req.off('error', onError)
     }
 
-    function onData(chunk: unknown) {
-      let buffer = toBuffer(chunk)
+    function onData(buffer: Buffer) {
       length += buffer.byteLength
 
       if (firstChunk == null) {
@@ -394,16 +392,6 @@ function readRequestText(req: IncomingRequest): Promise<string> {
     req.once('end', onEnd)
     req.once('error', onError)
   })
-}
-
-function toBuffer(chunk: unknown): Buffer {
-  if (Buffer.isBuffer(chunk)) return chunk
-  if (typeof chunk === 'string') return Buffer.from(chunk)
-  if (chunk instanceof Uint8Array) {
-    return Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength)
-  }
-
-  return Buffer.from(String(chunk))
 }
 
 function bufferToArrayBuffer(buffer: Buffer): ArrayBuffer {
