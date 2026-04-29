@@ -22,163 +22,82 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./accordion": {
-      "types": "./src/components/accordion/accordion.tsx",
-      "default": "./src/components/accordion/accordion.tsx"
+      "types": "./dist/components/accordion/accordion.d.ts",
+      "default": "./dist/components/accordion/accordion.js"
     },
     "./animation": {
-      "types": "./src/animation/index.ts",
-      "default": "./src/animation/index.ts"
+      "types": "./dist/animation/index.d.ts",
+      "default": "./dist/animation/index.js"
     },
     "./anchor": {
-      "types": "./src/components/anchor/anchor.ts",
-      "default": "./src/components/anchor/anchor.ts"
+      "types": "./dist/components/anchor/anchor.d.ts",
+      "default": "./dist/components/anchor/anchor.js"
     },
     "./breadcrumbs": {
-      "types": "./src/components/breadcrumbs/breadcrumbs.tsx",
-      "default": "./src/components/breadcrumbs/breadcrumbs.tsx"
+      "types": "./dist/components/breadcrumbs/breadcrumbs.d.ts",
+      "default": "./dist/components/breadcrumbs/breadcrumbs.js"
     },
     "./button": {
-      "types": "./src/components/button/button.tsx",
-      "default": "./src/components/button/button.tsx"
+      "types": "./dist/components/button/button.d.ts",
+      "default": "./dist/components/button/button.js"
     },
     "./combobox": {
-      "types": "./src/components/combobox/combobox.tsx",
-      "default": "./src/components/combobox/combobox.tsx"
+      "types": "./dist/components/combobox/combobox.d.ts",
+      "default": "./dist/components/combobox/combobox.js"
     },
     "./jsx-dev-runtime": {
-      "types": "./src/jsx-runtime.ts",
-      "default": "./src/jsx-runtime.ts"
+      "types": "./dist/jsx-runtime.d.ts",
+      "default": "./dist/jsx-runtime.js"
     },
     "./jsx-runtime": {
-      "types": "./src/jsx-runtime.ts",
-      "default": "./src/jsx-runtime.ts"
+      "types": "./dist/jsx-runtime.d.ts",
+      "default": "./dist/jsx-runtime.js"
     },
     "./glyph": {
-      "types": "./src/components/glyph/glyph.tsx",
-      "default": "./src/components/glyph/glyph.tsx"
+      "types": "./dist/components/glyph/glyph.d.ts",
+      "default": "./dist/components/glyph/glyph.js"
     },
     "./listbox": {
-      "types": "./src/components/listbox/listbox.ts",
-      "default": "./src/components/listbox/listbox.ts"
+      "types": "./dist/components/listbox/listbox.d.ts",
+      "default": "./dist/components/listbox/listbox.js"
     },
     "./menu": {
-      "types": "./src/components/menu/menu.tsx",
-      "default": "./src/components/menu/menu.tsx"
+      "types": "./dist/components/menu/menu.d.ts",
+      "default": "./dist/components/menu/menu.js"
     },
     "./popover": {
-      "types": "./src/components/popover/popover.ts",
-      "default": "./src/components/popover/popover.ts"
+      "types": "./dist/components/popover/popover.d.ts",
+      "default": "./dist/components/popover/popover.js"
     },
     "./select": {
-      "types": "./src/components/select/select.tsx",
-      "default": "./src/components/select/select.tsx"
+      "types": "./dist/components/select/select.d.ts",
+      "default": "./dist/components/select/select.js"
     },
     "./separator": {
-      "types": "./src/components/separator/separator.ts",
-      "default": "./src/components/separator/separator.ts"
+      "types": "./dist/components/separator/separator.d.ts",
+      "default": "./dist/components/separator/separator.js"
     },
     "./server": {
-      "types": "./src/server/stream.ts",
-      "default": "./src/server/stream.ts"
+      "types": "./dist/server/stream.d.ts",
+      "default": "./dist/server/stream.js"
     },
     "./test": {
-      "types": "./src/test.ts",
-      "default": "./src/test.ts"
+      "types": "./dist/test.d.ts",
+      "default": "./dist/test.js"
     },
     "./theme": {
-      "types": "./src/theme/theme.ts",
-      "default": "./src/theme/theme.ts"
+      "types": "./dist/theme/theme.d.ts",
+      "default": "./dist/theme/theme.js"
     },
     "./scroll-lock": {
-      "types": "./src/utils/scroll-lock.ts",
-      "default": "./src/utils/scroll-lock.ts"
+      "types": "./dist/utils/scroll-lock.d.ts",
+      "default": "./dist/utils/scroll-lock.js"
     },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./accordion": {
-        "types": "./dist/components/accordion/accordion.d.ts",
-        "default": "./dist/components/accordion/accordion.js"
-      },
-      "./animation": {
-        "types": "./dist/animation/index.d.ts",
-        "default": "./dist/animation/index.js"
-      },
-      "./anchor": {
-        "types": "./dist/components/anchor/anchor.d.ts",
-        "default": "./dist/components/anchor/anchor.js"
-      },
-      "./breadcrumbs": {
-        "types": "./dist/components/breadcrumbs/breadcrumbs.d.ts",
-        "default": "./dist/components/breadcrumbs/breadcrumbs.js"
-      },
-      "./button": {
-        "types": "./dist/components/button/button.d.ts",
-        "default": "./dist/components/button/button.js"
-      },
-      "./combobox": {
-        "types": "./dist/components/combobox/combobox.d.ts",
-        "default": "./dist/components/combobox/combobox.js"
-      },
-      "./jsx-dev-runtime": {
-        "types": "./dist/jsx-runtime.d.ts",
-        "default": "./dist/jsx-runtime.js"
-      },
-      "./jsx-runtime": {
-        "types": "./dist/jsx-runtime.d.ts",
-        "default": "./dist/jsx-runtime.js"
-      },
-      "./glyph": {
-        "types": "./dist/components/glyph/glyph.d.ts",
-        "default": "./dist/components/glyph/glyph.js"
-      },
-      "./listbox": {
-        "types": "./dist/components/listbox/listbox.d.ts",
-        "default": "./dist/components/listbox/listbox.js"
-      },
-      "./menu": {
-        "types": "./dist/components/menu/menu.d.ts",
-        "default": "./dist/components/menu/menu.js"
-      },
-      "./popover": {
-        "types": "./dist/components/popover/popover.d.ts",
-        "default": "./dist/components/popover/popover.js"
-      },
-      "./select": {
-        "types": "./dist/components/select/select.d.ts",
-        "default": "./dist/components/select/select.js"
-      },
-      "./separator": {
-        "types": "./dist/components/separator/separator.d.ts",
-        "default": "./dist/components/separator/separator.js"
-      },
-      "./server": {
-        "types": "./dist/server/stream.d.ts",
-        "default": "./dist/server/stream.js"
-      },
-      "./test": {
-        "types": "./dist/test.d.ts",
-        "default": "./dist/test.js"
-      },
-      "./theme": {
-        "types": "./dist/theme/theme.d.ts",
-        "default": "./dist/theme/theme.js"
-      },
-      "./scroll-lock": {
-        "types": "./dist/utils/scroll-lock.d.ts",
-        "default": "./dist/utils/scroll-lock.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@types/node": "catalog:",

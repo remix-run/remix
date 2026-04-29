@@ -1,0 +1,87 @@
+import * as process from 'node:process';
+import { runCompletionCommand } from "./commands/completion.js";
+import { runDoctorCommand } from "./commands/doctor.js";
+import { getCliHelpText, runHelpCommand } from "./commands/help.js";
+import { runNewCommand } from "./commands/new.js";
+import { runRoutesCommand } from "./commands/routes.js";
+import { runSkillsCommand } from "./commands/skills.js";
+import { runTestCommand } from "./commands/test.js";
+import { runVersionCommand } from "./commands/version.js";
+import { resolveCliContext } from "./cli-context.js";
+import { renderCliError, unknownCommand } from "./errors.js";
+import { configureColors, restoreTerminalFormatting } from "./terminal.js";
+export async function runRemix(argv = process.argv.slice(2), options = {}) {
+    let context = await resolveCliContext(options);
+    try {
+        while (argv[0] === '--') {
+            argv = argv.slice(1);
+        }
+        let globalOptions = extractGlobalOptions(argv);
+        argv = globalOptions.argv;
+        configureColors({ disabled: globalOptions.noColor });
+        if (argv.length === 0) {
+            process.stdout.write(getCliHelpText());
+            return 0;
+        }
+        let [command, ...rest] = argv;
+        if (command === '-h' || command === '--help') {
+            process.stdout.write(getCliHelpText());
+            return 0;
+        }
+        return await runCommand(command, rest, context);
+    }
+    finally {
+        restoreTerminalFormatting();
+    }
+}
+async function runCommand(command, argv, context) {
+    if (command === 'help') {
+        return runHelpCommand(argv);
+    }
+    if (command === '-v' || command === '--version') {
+        return runVersionCommand([], context);
+    }
+    if (command === 'new') {
+        return runNewCommand(argv, context);
+    }
+    if (command === 'completion') {
+        return runCompletionCommand(argv);
+    }
+    if (command === 'doctor') {
+        return runDoctorCommand(argv, context);
+    }
+    if (command === 'skills') {
+        return runSkillsCommand(argv, context);
+    }
+    if (command === 'routes') {
+        return runRoutesCommand(argv, context);
+    }
+    if (command === 'test') {
+        return runTestCommand(argv, context);
+    }
+    if (command === 'version') {
+        return runVersionCommand(argv, context);
+    }
+    process.stderr.write(renderCliError(unknownCommand(command), { helpText: getCliHelpText(process.stderr) }));
+    return 1;
+}
+function extractGlobalOptions(argv) {
+    let filteredArgv = [];
+    let noColor = false;
+    for (let index = 0; index < argv.length; index++) {
+        let arg = argv[index];
+        if (arg === '--') {
+            filteredArgv.push(...argv.slice(index));
+            break;
+        }
+        if (arg === '--no-color') {
+            noColor = true;
+            continue;
+        }
+        filteredArgv.push(arg);
+    }
+    return {
+        argv: filteredArgv,
+        noColor,
+    };
+}
