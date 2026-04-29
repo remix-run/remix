@@ -199,82 +199,121 @@ function createLazyRequest(
   res: http.ServerResponse | http2.Http2ServerResponse,
   options?: RequestOptions,
 ): Request {
-  let request: Request | undefined
-  let method = req.method ?? 'GET'
-
-  function materialize(): Request {
-    return (request ??= createRequest(req, res, options))
-  }
-
-  let lazyRequest = {
-    get body() {
-      return materialize().body
-    },
-    get bodyUsed() {
-      return materialize().bodyUsed
-    },
-    get cache() {
-      return materialize().cache
-    },
-    get credentials() {
-      return materialize().credentials
-    },
-    get destination() {
-      return materialize().destination
-    },
-    get headers() {
-      return materialize().headers
-    },
-    get integrity() {
-      return materialize().integrity
-    },
-    get keepalive() {
-      return materialize().keepalive
-    },
-    get method() {
-      return method
-    },
-    get mode() {
-      return materialize().mode
-    },
-    get redirect() {
-      return materialize().redirect
-    },
-    get referrer() {
-      return materialize().referrer
-    },
-    get referrerPolicy() {
-      return materialize().referrerPolicy
-    },
-    get signal() {
-      return materialize().signal
-    },
-    get url() {
-      return materialize().url
-    },
-    arrayBuffer() {
-      return materialize().arrayBuffer()
-    },
-    blob() {
-      return materialize().blob()
-    },
-    clone() {
-      return materialize().clone()
-    },
-    formData() {
-      return materialize().formData()
-    },
-    json() {
-      return materialize().json()
-    },
-    text() {
-      return materialize().text()
-    },
-  }
-
-  Object.setPrototypeOf(lazyRequest, Request.prototype)
-  return lazyRequest as Request
+  return new LazyRequest(req, res, options) as unknown as Request
 }
+
+class LazyRequest {
+  #request: Request | undefined
+  #req: http.IncomingMessage | http2.Http2ServerRequest
+  #res: http.ServerResponse | http2.Http2ServerResponse
+  #options: RequestOptions | undefined
+  #method: string
+
+  constructor(
+    req: http.IncomingMessage | http2.Http2ServerRequest,
+    res: http.ServerResponse | http2.Http2ServerResponse,
+    options?: RequestOptions,
+  ) {
+    this.#req = req
+    this.#res = res
+    this.#options = options
+    this.#method = req.method ?? 'GET'
+  }
+
+  #materialize(): Request {
+    return (this.#request ??= createRequest(this.#req, this.#res, this.#options))
+  }
+
+  get body() {
+    return this.#materialize().body
+  }
+
+  get bodyUsed() {
+    return this.#materialize().bodyUsed
+  }
+
+  get cache() {
+    return this.#materialize().cache
+  }
+
+  get credentials() {
+    return this.#materialize().credentials
+  }
+
+  get destination() {
+    return this.#materialize().destination
+  }
+
+  get headers() {
+    return this.#materialize().headers
+  }
+
+  get integrity() {
+    return this.#materialize().integrity
+  }
+
+  get keepalive() {
+    return this.#materialize().keepalive
+  }
+
+  get method() {
+    return this.#method
+  }
+
+  get mode() {
+    return this.#materialize().mode
+  }
+
+  get redirect() {
+    return this.#materialize().redirect
+  }
+
+  get referrer() {
+    return this.#materialize().referrer
+  }
+
+  get referrerPolicy() {
+    return this.#materialize().referrerPolicy
+  }
+
+  get signal() {
+    return this.#materialize().signal
+  }
+
+  get url() {
+    return this.#materialize().url
+  }
+
+  arrayBuffer() {
+    return this.#materialize().arrayBuffer()
+  }
+
+  blob() {
+    return this.#materialize().blob()
+  }
+
+  bytes() {
+    return this.#materialize().bytes()
+  }
+
+  clone() {
+    return this.#materialize().clone()
+  }
+
+  formData() {
+    return this.#materialize().formData()
+  }
+
+  json() {
+    return this.#materialize().json()
+  }
+
+  text() {
+    return this.#materialize().text()
+  }
+}
+
+Object.setPrototypeOf(LazyRequest.prototype, Request.prototype)
 
 /**
  * Creates a [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) object from the headers in a Node.js
