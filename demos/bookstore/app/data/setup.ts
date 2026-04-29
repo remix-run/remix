@@ -43,6 +43,12 @@ export async function initializeBookstoreDatabase(): Promise<void> {
 }
 
 export function closeBookstoreDatabase(): void {
+  if (process.env.NODE_ENV === 'test' && process.platform === 'win32') {
+    // DatabaseSync.close() can crash during Windows test process shutdown.
+    // Each test file runs in its own process, and the runner discards temp files.
+    return
+  }
+
   if (sqlite.isOpen) {
     sqlite.close()
   }
