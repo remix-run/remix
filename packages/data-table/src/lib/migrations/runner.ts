@@ -153,22 +153,16 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
         toRun = toRun.slice(0, step)
       }
     } else {
-      let appliedMigrations = migrations
-        .filter((migration) => appliedMap.has(migration.id))
-        .reverse()
+      toRun = migrations.filter((migration) => appliedMap.has(migration.id)).reverse()
 
       if (target) {
-        appliedMigrations = appliedMigrations.filter((migration) => migration.id >= target)
+        toRun = toRun.filter((migration) => migration.id >= target)
       }
 
       if (step !== undefined) {
-        appliedMigrations = appliedMigrations.slice(0, step)
+        toRun = toRun.slice(0, step)
       }
 
-      toRun = appliedMigrations
-    }
-
-    if (input.direction === 'down') {
       for (let migration of toRun) {
         if (migration.down === undefined) {
           throw new Error('Migration "' + migration.id + '" has no down script')
