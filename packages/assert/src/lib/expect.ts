@@ -1,7 +1,27 @@
 import { AssertionError } from './assert.ts'
 
+// Sentinel used by `expect.objectContaining(...)` so `toEqual` can recognize
+// an asymmetric (partial) match instead of a full deep equality check.
+const PARTIAL_MATCHER = Symbol.for('@remix-run/assert/partialMatcher')
+
+interface PartialMatcher {
+  [PARTIAL_MATCHER]: true
+  expected: object
+}
+
+function isPartialMatcher(value: unknown): value is PartialMatcher {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (value as Record<symbol, unknown>)[PARTIAL_MATCHER] === true
+  )
+}
+
 // Strict deep equality — uses === at primitive leaves (no type coercion).
+// `b` may be a partial matcher (from `expect.objectContaining`), in which case
+// only the keys it specifies are required to match.
 function isDeepEqual(a: any, b: any): boolean {
+  if (isPartialMatcher(b)) return matchesPartial(a, b.expected)
   if (a === b) return true
   if (a == null || b == null) return false
   if (typeof a !== typeof b) return false
@@ -18,6 +38,24 @@ function isDeepEqual(a: any, b: any): boolean {
   }
 
   return false
+}
+
+// Recursive partial match: every key in `expected` must match in `actual`,
+// but `actual` is allowed to have additional keys. Used by both
+// `expect.objectContaining` and `toMatchObject`.
+function matchesPartial(actual: any, expected: any): boolean {
+  if (actual === expected) return true
+  if (actual == null || expected == null) return false
+  if (typeof expected !== 'object') return Object.is(actual, expected)
+  if (typeof actual !== 'object') return false
+
+  if (Array.isArray(expected)) {
+    if (!Array.isArray(actual)) return false
+    if (actual.length !== expected.length) return false
+    return expected.every((value, index) => matchesPartial(actual[index], value))
+  }
+
+  return Object.keys(expected).every((key) => matchesPartial(actual[key], expected[key]))
 }
 
 interface MockShape {
@@ -96,6 +134,7 @@ interface Matchers {
   toMatch(re: RegExp | string): void
   toHaveLength(n: number): void
   toHaveProperty(key: string, value?: unknown): void
+  toMatchObject(expected: object): void
   toThrow(expected?: unknown): void
   toHaveBeenCalled(): void
   toHaveBeenCalledTimes(n: number): void
@@ -120,6 +159,7 @@ interface AsyncMatchers {
   toMatch(re: RegExp | string): Promise<void>
   toHaveLength(n: number): Promise<void>
   toHaveProperty(key: string, value?: unknown): Promise<void>
+  toMatchObject(expected: object): Promise<void>
   toThrow(expected?: unknown): Promise<void>
 }
 
@@ -292,6 +332,14 @@ function createMatchers(received: unknown, negated: boolean): Matchers {
         'toHaveProperty',
       )
     },
+    toMatchObject(expected) {
+      check(
+        matchesPartial(received, expected),
+        () => `${stringify(received)} to recursively match ${stringify(expected)}`,
+        expected,
+        'toMatchObject',
+      )
+    },
     toThrow(expected) {
       if (typeof received !== 'function') {
         throw new AssertionError({
@@ -439,6 +487,7 @@ function createAsyncMatchers(
     toMatch: buildMatcher('toMatch'),
     toHaveLength: buildMatcher('toHaveLength'),
     toHaveProperty: buildMatcher('toHaveProperty'),
+    toMatchObject: buildMatcher('toMatchObject'),
     toThrow: buildMatcher('toThrow'),
   } as AsyncMatchers
 }
@@ -474,7 +523,7 @@ function stringify(value: unknown): string {
  *
  * @param received - The value or function or promise to assert against.
  */
-export function expect(received: unknown): Expectation {
+function expectImpl(received: unknown): Expectation {
   return {
     ...createMatchers(received, false),
     not: createMatchers(received, true),
@@ -482,3 +531,17 @@ export function expect(received: unknown): Expectation {
     resolves: createAsyncMatchers(received as any, 'resolves', false),
   }
 }
+
+/**
+ * Asymmetric matcher used as the `expected` value in `toEqual`. The actual
+ * value passes if it has at least the keys in `expected` (with matching
+ * values) — extra keys are allowed.
+ *
+ * @example
+ * expect({ a: 1, b: 2 }).toEqual(expect.objectContaining({ a: 1 }))
+ */
+function objectContaining<T extends object>(expected: T): T {
+  return { [PARTIAL_MATCHER]: true, expected } as unknown as T
+}
+
+export const expect = Object.assign(expectImpl, { objectContaining })
