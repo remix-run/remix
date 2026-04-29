@@ -39,3 +39,24 @@ test('serve handles fetch requests with the uWebSockets.js transport', async () 
     server.close()
   }
 })
+
+test('serve uses the host option to override the incoming Host header', async () => {
+  let server = serve(
+    async (request) => {
+      assert.equal(request.url, 'http://remix.run/test?value=1')
+      return new Response('ok')
+    },
+    { host: 'remix.run', port: 0 },
+  )
+
+  await server.ready
+
+  try {
+    let response = await fetch(`http://127.0.0.1:${server.port}/test?value=1`)
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'ok')
+  } finally {
+    server.close()
+  }
+})

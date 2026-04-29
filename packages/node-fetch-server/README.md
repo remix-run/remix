@@ -199,24 +199,36 @@ async function handler(request: Request) {
 
 ### Custom Hostname Configuration
 
-Configure custom hostnames for deployment on VPS or custom environments:
+Configure custom hostnames for deployment on VPS or custom environments. Both the uWS and
+`node:http` adapters use the `host` option when constructing `request.url`.
 
 ```ts
-import * as http from 'node:http'
-import { createRequestListener } from 'remix/node-fetch-server'
+import { serve } from 'remix/node-fetch-server/uws'
 
 // Use a custom hostname (e.g., from environment variable)
 let hostname = process.env.HOST || 'api.example.com'
 
 async function handler(request: Request) {
   // request.url will now use your custom hostname
-  console.log(request.url) // https://api.example.com/path
+  console.log(request.url) // http://api.example.com/path
 
   return Response.json({
     message: 'Hello from custom domain!',
     url: request.url,
   })
 }
+
+let server = serve(handler, { host: hostname, port: 3000 })
+
+await server.ready
+```
+
+Using the same `hostname` and `handler` with a standard Node.js server, pass the same option to
+`createRequestListener()`:
+
+```ts
+import * as http from 'node:http'
+import { createRequestListener } from 'remix/node-fetch-server'
 
 let server = http.createServer(createRequestListener(handler, { host: hostname }))
 
