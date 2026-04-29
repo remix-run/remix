@@ -1,5 +1,6 @@
 import type { BuildAction } from 'remix/fetch-router'
 import { css } from 'remix/ui'
+import type { RemixNode } from 'remix/ui'
 
 import type { routes } from '../routes.ts'
 import { render } from '../utils/render.tsx'
@@ -24,7 +25,7 @@ function HomePage() {
         <meta name="color-scheme" content="light dark" />
         <title>Welcome to {APP_DISPLAY_NAME}</title>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
@@ -222,7 +223,7 @@ function CodingWithAiCard() {
 }
 
 function CardLink() {
-  return ({ href, icon, label }: { href: string; icon: unknown; label: string }) => (
+  return ({ href, icon, label }: { href: string; icon: RemixNode; label: string }) => (
     <a
       href={href}
       mix={[
@@ -302,7 +303,7 @@ function PromptButton() {
 }
 
 function IconSlot() {
-  return ({ children, rotated = false }: { children: unknown; rotated?: boolean }) => (
+  return ({ children, rotated = false }: { children: RemixNode; rotated?: boolean }) => (
     <span
       aria-hidden="true"
       mix={[
