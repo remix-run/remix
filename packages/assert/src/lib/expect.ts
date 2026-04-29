@@ -174,7 +174,12 @@ function fail(operator: string, message: string, actual: unknown, expected: unkn
 }
 
 function createMatchers(received: unknown, negated: boolean): Matchers {
-  function check(condition: boolean, makeMessage: () => string, expected: unknown, operator: string) {
+  function check(
+    condition: boolean,
+    makeMessage: () => string,
+    expected: unknown,
+    operator: string,
+  ) {
     let pass = negated ? !condition : condition
     if (!pass) {
       let prefix = negated ? 'expected not ' : 'expected '
@@ -498,7 +503,8 @@ function escapeRegex(str: string): string {
 
 function stringify(value: unknown): string {
   if (value === undefined) return 'undefined'
-  if (typeof value === 'function') return `[Function${(value as Function).name ? ': ' + (value as Function).name : ''}]`
+  if (typeof value === 'function')
+    return `[Function${(value as Function).name ? ': ' + (value as Function).name : ''}]`
   if (value instanceof Error) return `${value.name}: ${value.message}`
   try {
     return JSON.stringify(value)
@@ -508,7 +514,7 @@ function stringify(value: unknown): string {
 }
 
 /**
- * vitest-style expect API. Returns an object of matchers that throw
+ * jest/vitest-style expect API. Returns an object of matchers that throw
  * {@link AssertionError} on failure. Supports `.not` for negation and
  * `.rejects` / `.resolves` for asserting on promises.
  *

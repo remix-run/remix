@@ -15,4 +15,12 @@ export default {
     // Same glob - all test files are browser test files
     browser: '**/*.test.{ts,tsx}',
   },
+  playwrightConfig: {
+    projects: [
+      {
+        name: 'chromium',
+        use: { browserName: 'chromium' },
+      },
+    ],
+  },
 } satisfies RemixTestConfig
