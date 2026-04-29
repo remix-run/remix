@@ -106,3 +106,15 @@ jobs:
               event_type: 'update-docs',
               client_payload: { tag: '${{ needs.publish.outputs.tag }}' }
             });
+
+      - name: Trigger remix-ui-docs
+        uses: actions/github-script@v8
+        with:
+          github-token: ${{ secrets.REMIX_API_DOCS_PAT }}
+          script: |
+            await github.rest.repos.createDispatchEvent({
+              owner: 'remix-run',
+              repo: 'remix-ui-docs',
+              event_type: 'update-docs',
+              client_payload: { tag: '${{ needs.publish.outputs.tag }}' }
+            });
