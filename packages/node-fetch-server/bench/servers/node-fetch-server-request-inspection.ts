@@ -4,10 +4,14 @@ import { createRequestListener } from '@remix-run/node-fetch-server'
 const PORT = process.env.PORT || 3000
 
 let server = http.createServer(
-  createRequestListener((request) => {
+  createRequestListener(async (request) => {
+    console.log(`method: ${request.method}`)
+
     for (let [key, value] of request.headers) {
       console.log(`${key}: ${value}`)
     }
+
+    console.log(`body: ${await request.text()}`)
 
     let stream = new ReadableStream({
       start(controller) {

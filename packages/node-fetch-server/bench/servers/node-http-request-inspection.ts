@@ -3,7 +3,9 @@ import * as stream from 'node:stream'
 
 const PORT = process.env.PORT || 3000
 
-let server = http.createServer((req, res) => {
+let server = http.createServer(async (req, res) => {
+  console.log(`method: ${req.method ?? 'GET'}`)
+
   for (let [key, value] of Object.entries(req.headers)) {
     if (Array.isArray(value)) {
       for (let item of value) {
@@ -13,6 +15,12 @@ let server = http.createServer((req, res) => {
       console.log(`${key}: ${value}`)
     }
   }
+
+  let chunks: Buffer[] = []
+  for await (let chunk of req) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk))
+  }
+  console.log(`body: ${Buffer.concat(chunks).toString()}`)
 
   res.writeHead(200, { 'Content-Type': 'text/html' })
 

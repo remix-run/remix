@@ -6,6 +6,7 @@ pushd "$SCRIPT_DIR" > /dev/null
 run_benchmark() {
     local server_name=$1
     local start_command=$2
+    local wrk_options=("${@:3}")
 
     export PORT=3000
 
@@ -18,7 +19,7 @@ run_benchmark() {
     # Wait for the server to start
     sleep 2
 
-    wrk -t12 -c400 -d30s http://127.0.0.1:3000/
+    wrk -t12 -c400 -d30s "${wrk_options[@]}" http://127.0.0.1:3000/
 
     kill -SIGINT $server_pid
 
@@ -32,19 +33,22 @@ echo $(node -e 'console.log(`Date: ${new Date().toLocaleString()}`)')
 NODE_VERSION=$(node -e 'console.log(process.version.slice(1))')
 run_benchmark "node:http@$NODE_VERSION" \
   "node ./servers/node-http.ts"
-run_benchmark "node:http-request-headers@$NODE_VERSION" \
-  "node ./servers/node-http-request-headers.ts"
+run_benchmark "node:http-request-inspection@$NODE_VERSION" \
+  "node ./servers/node-http-request-inspection.ts" \
+  -s ./request-inspection.lua
 
 NODE_FETCH_SERVER_VERSION=$(node -e 'console.log(require("../package.json").version)')
 run_benchmark "node-fetch-server@$NODE_FETCH_SERVER_VERSION" \
   "node ./servers/node-fetch-server.ts"
-run_benchmark "node-fetch-server-request@$NODE_FETCH_SERVER_VERSION" \
-  "node ./servers/node-fetch-server-request.ts"
-run_benchmark "node-fetch-server-request-headers@$NODE_FETCH_SERVER_VERSION" \
-  "node ./servers/node-fetch-server-request-headers.ts"
+run_benchmark "node-fetch-server-request-inspection@$NODE_FETCH_SERVER_VERSION" \
+  "node ./servers/node-fetch-server-request-inspection.ts" \
+  -s ./request-inspection.lua
 
 EXPRESS_VERSION=$(node -e 'console.log(require("express/package.json").version)')
 run_benchmark "express@$EXPRESS_VERSION" \
   "node ./servers/express.ts"
+run_benchmark "express-request-inspection@$EXPRESS_VERSION" \
+  "node ./servers/express-request-inspection.ts" \
+  -s ./request-inspection.lua
 
 popd > /dev/null
