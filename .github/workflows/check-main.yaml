@@ -210,7 +210,10 @@ jobs:
         run: pnpm --filter @remix-run/ui exec playwright install --with-deps
 
       - name: Run tests
-        run: pnpm --parallel --filter "!remix-the-web" run test
+        run: |
+          # node:sqlite currently crashes in the bookstore demo on Windows under
+          # the full workspace test load. Ubuntu keeps bookstore coverage.
+          pnpm --parallel --filter "!bookstore-demo" --filter "!remix-the-web" run test
 
   lint:
     name: Lint
