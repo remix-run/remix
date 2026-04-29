@@ -528,6 +528,8 @@ function stringify(value: unknown): string {
  * await expect(loadModule()).resolves.toBeUndefined()
  *
  * @param received - The value or function or promise to assert against.
+ * @returns An {@link Expectation} object exposing matchers, `.not`,
+ *          `.rejects`, and `.resolves`.
  */
 function expectImpl(received: unknown): Expectation {
   return {
@@ -545,6 +547,9 @@ function expectImpl(received: unknown): Expectation {
  *
  * @example
  * expect({ a: 1, b: 2 }).toEqual(expect.objectContaining({ a: 1 }))
+ *
+ * @param expected - Subset of keys (and values) the actual value must contain.
+ * @returns A sentinel-tagged object `toEqual` recognizes as a partial matcher.
  */
 function objectContaining<T extends object>(expected: T): T {
   return { [PARTIAL_MATCHER]: true, expected } as unknown as T

@@ -6,12 +6,12 @@ import type { FrameHandle } from '../runtime/component.ts'
 // Stand-in frame the navigation handler can call without dragging in the
 // full app runtime from ./run.ts. Only `src` and `reload` are touched on
 // the path under test.
-let stubFrame = {
+const stubFrame = {
   src: '',
   reload: async () => {},
 } as unknown as FrameHandle
 
-let stubFrames = {
+const stubFrames = {
   getTopFrame: () => stubFrame,
   getNamedFrame: () => stubFrame,
 }
