@@ -162,8 +162,8 @@ When code could live in multiple places:
 - Remix Component is not React: read props from `handle.props`, keep state in setup-scope
   variables, call `handle.update()` explicitly, and do DOM-sensitive work in event handlers or
   `queueTask(...)`, not in render
-- Prefer host-element mixins via `mix={[...]}` for behavior and styling instead of inventing custom
-  host prop conventions
+- Prefer host-element mixins via `mix={mixin(...)}` for behavior and styling instead of inventing
+  custom host prop conventions. Use `mix={[...]}` only when composing multiple mixins
 - Hydrated `clientEntry(...)` props must be serializable. Do not pass functions, class instances, or
   opaque runtime objects
 
@@ -486,12 +486,10 @@ function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
 
   return () => (
     <button
-      mix={[
-        on('click', () => {
-          count++
-          handle.update()
-        }),
-      ]}
+      mix={on('click', () => {
+        count++
+        handle.update()
+      })}
     >
       {handle.props.label}: {count}
     </button>

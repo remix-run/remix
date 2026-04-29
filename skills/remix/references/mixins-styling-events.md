@@ -2,8 +2,8 @@
 
 ## What This Covers
 
-How to attach behavior, styles, and DOM-aware setup to host elements with `mix={[...]}`. Read this
-when the task involves:
+How to attach behavior, styles, and DOM-aware setup to host elements with `mix`. Read this when the
+task involves:
 
 - DOM event handling with `on(...)`
 - Static styling with `css(...)` and dynamic styling with `style`
@@ -16,8 +16,9 @@ For richer animation work (springs, tweens, layout transitions), see `animate-el
 authoring custom mixins, see `create-mixins.md`. For component lifecycle and updates, see
 `component-model.md`.
 
-Compose behavior on host elements with `mix`. Core mixins are imported from `remix/ui`; animation
-mixins are imported from `remix/ui/animation`.
+Compose behavior on host elements with `mix`. Pass a single mixin directly (`mix={on(...)}`), or
+an array when composing multiple mixins (`mix={[css(...), on(...)]}`). Core mixins are imported
+from `remix/ui`; animation mixins are imported from `remix/ui/animation`.
 
 ## `on(type, handler, capture?)`
 
@@ -26,21 +27,19 @@ when the handler is re-entered or the component is removed — this prevents rac
 
 ```tsx
 <input
-  mix={[
-    on('input', async (event, signal) => {
-      let query = event.currentTarget.value
-      loading = true
-      handle.update()
+  mix={on('input', async (event, signal) => {
+    let query = event.currentTarget.value
+    loading = true
+    handle.update()
 
-      let response = await fetch(`/search?q=${query}`, { signal })
-      let data = await response.json()
-      if (signal.aborted) return
+    let response = await fetch(`/search?q=${query}`, { signal })
+    let data = await response.json()
+    if (signal.aborted) return
 
-      results = data.results
-      loading = false
-      handle.update()
-    }),
-  ]}
+    results = data.results
+    loading = false
+    handle.update()
+  })}
 />
 ```
 
@@ -48,12 +47,10 @@ Multiple events on the same element:
 
 ```tsx
 <form
-  mix={[
-    on('submit', (event) => {
+  mix={on('submit', (event) => {
       event.preventDefault()
       let formData = new FormData(event.currentTarget)
-    }),
-  ]}
+    })}
 >
 ```
 
@@ -65,21 +62,19 @@ media queries using `&` to reference the current element:
 
 ```tsx
 <button
-  mix={[
-    css({
-      color: 'white',
-      backgroundColor: 'blue',
-      padding: '12px 24px',
-      borderRadius: '4px',
-      border: 'none',
-      cursor: 'pointer',
-      '&:hover': { backgroundColor: 'darkblue' },
-      '&:active': { transform: 'scale(0.98)' },
-      '&:disabled': { opacity: 0.5, cursor: 'not-allowed' },
-      '& .title': { fontSize: '20px', fontWeight: 'bold' },
-      '@media (max-width: 768px)': { width: '100%' },
-    }),
-  ]}
+  mix={css({
+    color: 'white',
+    backgroundColor: 'blue',
+    padding: '12px 24px',
+    borderRadius: '4px',
+    border: 'none',
+    cursor: 'pointer',
+    '&:hover': { backgroundColor: 'darkblue' },
+    '&:active': { transform: 'scale(0.98)' },
+    '&:disabled': { opacity: 0.5, cursor: 'not-allowed' },
+    '& .title': { fontSize: '20px', fontWeight: 'bold' },
+    '@media (max-width: 768px)': { width: '100%' },
+  })}
 />
 ```
 
@@ -91,12 +86,10 @@ state in JavaScript:
 
 ```tsx
 <div
-  mix={[
-    css({
-      backgroundColor: 'blue', // static
-      '&:hover': { '& .title': { color: 'blue' } }, // parent hover → child
-    }),
-  ]}
+  mix={css({
+    backgroundColor: 'blue', // static
+    '&:hover': { '& .title': { color: 'blue' } }, // parent hover → child
+  })}
   style={{ width: `${progress}%` }} // dynamic
 />
 ```
@@ -107,16 +100,16 @@ Calls a callback when an element is inserted. The callback receives the DOM node
 `AbortSignal` that aborts when the element is removed:
 
 ```tsx
-<input mix={[ref((node) => node.focus())]} />
+<input mix={ref((node) => node.focus())} />
 
-<div mix={[ref((node, signal) => {
+<div mix={ref((node, signal) => {
   let observer = new ResizeObserver((entries) => {
     dimensions.width = Math.round(entries[0].contentRect.width)
     handle.update()
   })
   observer.observe(node)
   signal.addEventListener('abort', () => observer.disconnect())
-})]} />
+})} />
 ```
 
 The `ref` callback runs once when the element is first rendered, not on every update.
@@ -127,7 +120,7 @@ Adds client-side navigation behavior to any element. Makes non-anchor elements b
 navigation links:
 
 ```tsx
-<article mix={[link('/courses/intro')]}>
+<article mix={link('/courses/intro')}>
   <h3>Introduction</h3>
 </article>
 ```
@@ -141,7 +134,7 @@ Use native DOM events directly with `on(...)`. For buttons and links, `click` al
 keyboard activation when the element has the right semantics:
 
 ```tsx
-<button mix={[on('click', () => doAction())]}>Action</button>
+<button mix={on('click', () => doAction())}>Action</button>
 ```
 
 For gesture-specific behavior, compose the pointer or keyboard events the interaction actually
@@ -161,12 +154,10 @@ needs:
 
 <div
   tabIndex={0}
-  mix={[
-    on('keydown', (event) => {
+  mix={on('keydown', (event) => {
       if (event.key === 'Escape') close()
       if (event.key === 'Enter' || event.key === ' ') doAction()
-    }),
-  ]}
+    })}
 />
 ```
 
@@ -181,7 +172,7 @@ Sets HTML attributes through the mixin system.
 Animates an element when it is inserted into the DOM. Config specifies the **starting** style:
 
 ```tsx
-<div mix={[animateEntrance({ opacity: 0, transform: 'translateY(8px)', duration: 180 })]} />
+<div mix={animateEntrance({ opacity: 0, transform: 'translateY(8px)', duration: 180 })} />
 ```
 
 ### `animateExit(config)`
@@ -210,7 +201,7 @@ Animates layout changes (position/size) using FLIP-style transforms:
 ```tsx
 {
   items.map((item) => (
-    <li key={item.id} mix={[animateLayout({ duration: 220, easing: 'ease-out' })]} />
+    <li key={item.id} mix={animateLayout({ duration: 220, easing: 'ease-out' })} />
   ))
 }
 ```

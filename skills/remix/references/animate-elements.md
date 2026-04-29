@@ -22,13 +22,11 @@ Animates an element when inserted. Config specifies the **starting** style the e
 
 ```tsx
 <div
-  mix={[
-    animateEntrance({
-      opacity: 0,
-      transform: 'translateY(8px)',
-      ...spring('smooth'),
-    }),
-  ]}
+  mix={animateEntrance({
+    opacity: 0,
+    transform: 'translateY(8px)',
+    ...spring('smooth'),
+  })}
 />
 ```
 
@@ -58,7 +56,7 @@ Animates layout changes (position/size) using FLIP-style transforms:
 ```tsx
 {
   items.map((item) => (
-    <li key={item.id} mix={[animateLayout({ ...spring({ duration: 500, bounce: 0.2 }) })]} />
+    <li key={item.id} mix={animateLayout({ ...spring({ duration: 500, bounce: 0.2 }) })} />
   ))
 }
 ```
@@ -82,7 +80,7 @@ include scale projection for size changes).
 ### Shared-layout swap
 
 ```tsx
-<div mix={[css({ display: 'grid', '& > *': { gridArea: '1 / 1' } })]}>
+<div mix={css({ display: 'grid', '& > *': { gridArea: '1 / 1' } })}>
   {stateA ? (
     <div key="a" mix={[animateEntrance({ opacity: 0 }), animateExit({ opacity: 0 })]} />
   ) : (

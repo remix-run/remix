@@ -30,12 +30,10 @@ function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
 
   return () => (
     <button
-      mix={[
-        on('click', () => {
-          count++
-          handle.update()
-        }),
-      ]}
+      mix={on('click', () => {
+        count++
+        handle.update()
+      })}
     >
       {handle.props.label}: {count}
     </button>
@@ -180,7 +178,7 @@ Frame-aware behavior for client entries rendered inside frames:
 
 ```tsx
 function RefreshButton(handle: Handle) {
-  return () => <button mix={[on('click', () => handle.frame.reload())]}>Refresh</button>
+  return () => <button mix={on('click', () => handle.frame.reload())}>Refresh</button>
 }
 ```
 
@@ -201,13 +199,11 @@ function ThemeProvider(handle: Handle<{ children?: RemixNode }, { theme: 'light'
   return () => (
     <div>
       <button
-        mix={[
-          on('click', () => {
-            theme = theme === 'light' ? 'dark' : 'light'
-            handle.context.set({ theme })
-            handle.update()
-          }),
-        ]}
+        mix={on('click', () => {
+          theme = theme === 'light' ? 'dark' : 'light'
+          handle.context.set({ theme })
+          handle.update()
+        })}
       >
         Toggle
       </button>
@@ -244,7 +240,7 @@ function ThemeProvider(handle: Handle<{ children?: RemixNode }, Theme>) {
 
   return () => (
     <div>
-      <button mix={[on('click', () => theme.setValue(theme.value === 'light' ? 'dark' : 'light'))]}>
+      <button mix={on('click', () => theme.setValue(theme.value === 'light' ? 'dark' : 'light'))}>
         Toggle
       </button>
       {handle.props.children}
