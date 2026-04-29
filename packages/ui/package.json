@@ -197,7 +197,7 @@
     "lint": "pnpm -w exec oxlint packages/ui -A all --quiet",
     "lint:fix": "pnpm -w exec oxlint packages/ui -A all --fix --quiet",
     "prepublishOnly": "pnpm run build",
-    "test": "REMIX_TEST_DEBUG_DISCOVERY=1 remix-test",
+    "test": "remix-test",
     "test:coverage": "remix-test --coverage",
     "test:watch": "remix-test --watch",
     "typecheck": "tsc --noEmit"
