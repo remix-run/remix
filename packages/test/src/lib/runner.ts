@@ -161,6 +161,7 @@ function runFileInWorker(
   } = {},
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    let didSettle = false
     let worker =
       type === 'e2e'
         ? new Worker(workerE2EUrl, {
@@ -179,11 +180,36 @@ function runFileInWorker(
               coverage: options.coverage,
             },
           })
-    worker.once('message', (msg: TestResults) => onResults(msg))
-    worker.once('error', reject)
+    worker.once('message', async (msg: TestResults) => {
+      onResults(msg)
+
+      try {
+        // Explicitly terminate workers to avoid hanging on leaked handles.
+        await worker.terminate()
+      } catch (error) {
+        if (!didSettle) {
+          didSettle = true
+          reject(error)
+        }
+        return
+      }
+
+      if (!didSettle) {
+        didSettle = true
+        resolve()
+      }
+    })
+    worker.once('error', (error) => {
+      if (!didSettle) {
+        didSettle = true
+        reject(error)
+      }
+    })
     worker.once('exit', (code) => {
-      if (code !== 0) reject(new Error(`Worker exited with code ${code}`))
-      else resolve()
+      if (!didSettle && code !== 0) {
+        didSettle = true
+        reject(new Error(`Worker exited with code ${code}`))
+      }
     })
   })
 }
