@@ -371,3 +371,6 @@ function checkError(error: any, expectedError: any, operator: string): void {
     }
   }
 }
+
+/** Alias for {@link ok}. */
+export const assert = ok
