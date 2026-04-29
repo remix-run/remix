@@ -58,6 +58,11 @@ type FrameTemplateListener = (fragment: DocumentFragment) => void
 
 const bufferedFrameTemplates = new Map<string, DocumentFragment[]>()
 const frameTemplateListeners = new Map<string, Set<FrameTemplateListener>>()
+const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
+
+function stripDoctypeMarkup(html: string): string {
+  return html.replace(DOCTYPE_PATTERN, '')
+}
 
 function syncElementAttributes(target: Element, source: Element) {
   for (let attribute of Array.from(target.attributes)) {
@@ -232,19 +237,21 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       contentRoot = undefined
     }
 
+    let htmlContent = typeof content === 'string' ? stripDoctypeMarkup(content) : undefined
+
     let isFullDocumentReload =
       container.root instanceof Document &&
-      typeof content === 'string' &&
-      isFullDocumentHtml(content)
+      htmlContent !== undefined &&
+      isFullDocumentHtml(htmlContent)
 
-    if (isFullDocumentReload && typeof content === 'string') {
+    if (isFullDocumentReload && htmlContent !== undefined) {
       // Full-document reload should tear down existing hydrated roots and subframes
       // before diffing fresh HTML, otherwise stale component instances can survive
       // on detached DOM nodes.
       let previousBodyNodes = Array.from(container.doc.body.childNodes)
       removeVirtualRoots(previousBodyNodes)
       disposeSubFrames(previousBodyNodes, context)
-      let parsed = new DOMParser().parseFromString(content, 'text/html')
+      let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
       mergeRmxDataFromDocument(context.data, parsed)
       context.styleManager.reset()
       context.styleManager.adoptServerStyles(
@@ -274,7 +281,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     }
 
     let fragment =
-      typeof content === 'string' ? createFragmentFromString(container.doc, content) : content
+      htmlContent !== undefined ? createFragmentFromString(container.doc, htmlContent) : content
     context.styleManager.reset()
     context.styleManager.adoptServerStyles(
       collectFrameServerStyleTags(createElementContainer(fragment)),
@@ -1085,7 +1092,7 @@ function createCommentContainer([start, end]: [Comment, Comment]): FrameContaine
 
 function createFragmentFromString(doc: Document, content: string): DocumentFragment {
   let template = doc.createElement('template')
-  template.innerHTML = content.trim()
+  template.innerHTML = stripDoctypeMarkup(content).trim()
   return template.content
 }
 

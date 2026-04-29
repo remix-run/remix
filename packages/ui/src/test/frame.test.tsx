@@ -2138,6 +2138,28 @@ describe('run', () => {
     )
   })
 
+  it('strips doctype markup from client resolveFrame content', async () => {
+    let rootContainer = document.createElement('div')
+    document.body.appendChild(rootContainer)
+
+    let root = createRoot(rootContainer, {
+      frameInit: {
+        async resolveFrame() {
+          return '<!DOCTYPE html><section id="resolved-frame">Resolved</section>'
+        },
+      },
+    })
+
+    root.render(<Frame src="/doctype-frame" fallback={<p>Loading…</p>} />)
+    root.flush()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(rootContainer.querySelector('#resolved-frame')?.textContent).toBe('Resolved')
+    expect(rootContainer.textContent).not.toContain('DOCTYPE')
+
+    root.dispose()
+  })
+
   it('logs a clear error when hydrating client entries without loadModule', async () => {
     let Counter = clientEntry(
       '/js/counter.js#Counter',
