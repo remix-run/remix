@@ -23,7 +23,8 @@ describe('createRequestListener', () => {
         chunks.push(chunk)
       })
 
-      t.mock.method(res, 'end', () => {
+      t.mock.method(res, 'end', (chunk?: Uint8Array) => {
+        if (chunk != null) chunks.push(chunk)
         let body = Buffer.concat(chunks).toString()
         assert.equal(body, 'Hello, world!')
         resolve()
@@ -151,7 +152,8 @@ describe('createRequestListener', () => {
         chunks.push(chunk)
       })
 
-      t.mock.method(res, 'end', () => {
+      t.mock.method(res, 'end', (chunk?: Uint8Array) => {
+        if (chunk != null) chunks.push(chunk)
         assert.equal(status, 500)
         let body = Buffer.concat(chunks).toString()
         assert.equal(body, 'Internal Server Error')

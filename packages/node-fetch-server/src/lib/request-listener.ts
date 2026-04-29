@@ -3,7 +3,6 @@ import type * as http2 from 'node:http2'
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
 import { createLazyRequest } from './lazy-request.ts'
-import { readStream } from './read-stream.ts'
 
 /**
  * Options for creating a Node.js request listener.
@@ -303,13 +302,45 @@ export async function sendResponse(
   }
 
   if (response.body != null && res.req.method !== 'HEAD') {
-    for await (let chunk of readStream(response.body)) {
-      // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
-      if (res.write(chunk) === false) {
-        await new Promise<void>((resolve) => {
-          res.once('drain', resolve)
-        })
+    let reader = response.body.getReader()
+
+    try {
+      let first = await reader.read()
+      if (!first.done) {
+        let second = await reader.read()
+        if (second.done) {
+          res.end(first.value)
+          return
+        }
+
+        // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
+        if (res.write(first.value) === false) {
+          await new Promise<void>((resolve) => {
+            res.once('drain', resolve)
+          })
+        }
+
+        // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
+        if (res.write(second.value) === false) {
+          await new Promise<void>((resolve) => {
+            res.once('drain', resolve)
+          })
+        }
       }
+
+      while (true) {
+        let result = await reader.read()
+        if (result.done) break
+
+        // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
+        if (res.write(result.value) === false) {
+          await new Promise<void>((resolve) => {
+            res.once('drain', resolve)
+          })
+        }
+      }
+    } finally {
+      reader.releaseLock()
     }
   }
 
