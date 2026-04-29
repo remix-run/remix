@@ -384,8 +384,7 @@ pnpm run bench:update-readme
 ```
 
 <!-- benchmarks:start -->
-
-Last updated: 2026-04-29T07:04:28.909Z
+Last updated: 2026-04-29T07:17:24.525Z
 
 Environment: Darwin 25.3.0, Apple M1 Pro, Node.js v24.15.0
 
@@ -395,24 +394,23 @@ Command: `wrk -t12 -c400 -d30s`
 
 Simple HTML response benchmarks without inspecting the incoming request.
 
-| Server                  |   Version | Requests/sec | Avg latency | Transfer/sec |
-| ----------------------- | --------: | -----------: | ----------: | -----------: |
-| `node-fetch-server-uws` |  `0.13.0` |  `62,591.17` |    `6.32ms` |     `9.91MB` |
-| `node:http`             | `24.15.0` |  `48,080.54` |   `10.71ms` |     `9.86MB` |
-| `node-fetch-server`     |  `0.13.0` |  `44,786.66` |   `11.49ms` |     `9.10MB` |
-| `express`               |  `4.19.2` |  `39,615.72` |   `13.52ms` |     `9.56MB` |
+| Server | Version | Requests/sec | Avg latency | Transfer/sec |
+|---|---:|---:|---:|---:|
+| `node-fetch-server-uws` | `0.13.0` | `62,169.97` | `6.37ms` | `9.84MB` |
+| `node:http` | `24.15.0` | `48,513.85` | `10.61ms` | `9.95MB` |
+| `node-fetch-server` | `0.13.0` | `44,886.75` | `11.57ms` | `9.12MB` |
+| `express` | `5.2.1` | `40,475.71` | `13.09ms` | `9.77MB` |
 
 ### Request Inspection
 
 POST benchmarks that read the request method, headers, and body.
 
-| Server                                     |   Version | Requests/sec | Avg latency | Transfer/sec |
-| ------------------------------------------ | --------: | -----------: | ----------: | -----------: |
-| `node-fetch-server-uws-request-inspection` |  `0.13.0` |  `32,342.27` |   `12.21ms` |     `5.12MB` |
-| `node-fetch-server-request-inspection`     |  `0.13.0` |  `26,673.91` |   `21.47ms` |     `5.42MB` |
-| `node:http-request-inspection`             | `24.15.0` |  `26,025.90` |   `22.14ms` |     `5.34MB` |
-| `express-request-inspection`               |  `4.19.2` |  `23,535.84` |   `25.61ms` |     `5.68MB` |
-
+| Server | Version | Requests/sec | Avg latency | Transfer/sec |
+|---|---:|---:|---:|---:|
+| `node-fetch-server-uws-request-inspection` | `0.13.0` | `31,369.44` | `12.60ms` | `4.97MB` |
+| `node-fetch-server-request-inspection` | `0.13.0` | `26,196.04` | `21.93ms` | `5.32MB` |
+| `node:http-request-inspection` | `24.15.0` | `25,662.42` | `22.31ms` | `5.26MB` |
+| `express-request-inspection` | `5.2.1` | `23,745.73` | `25.28ms` | `5.73MB` |
 <!-- benchmarks:end -->
 
 ## License
