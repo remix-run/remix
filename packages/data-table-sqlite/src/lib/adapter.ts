@@ -25,7 +25,7 @@ import { compileSqliteOperation } from './sql-compiler.ts'
  * Synchronous SQLite database client accepted by the sqlite adapter.
  *
  * This matches the shared surface of Node's `node:sqlite` `DatabaseSync`, Bun's `bun:sqlite`
- * `Database`, and `better-sqlite3` database instances.
+ * `Database`, and compatible synchronous SQLite clients.
  */
 export interface SqliteDatabase {
   prepare(sql: string): SqliteStatement
@@ -48,7 +48,7 @@ export interface SqliteStatement {
  * SQLite write execution metadata.
  */
 export interface SqliteRunResult {
-  changes: number
+  changes: number | bigint
   lastInsertRowid: unknown
 }
 
@@ -111,9 +111,10 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
 
     let statement = this.compileSql(request.operation)[0]
     let prepared = this.#database.prepare(statement.text)
+    let values = normalizeStatementValues(statement.values)
 
     if (shouldReadStatement(request.operation, prepared)) {
-      let rows = normalizeRows(prepared.all(...statement.values))
+      let rows = normalizeRows(prepared.all(...values))
 
       if (request.operation.kind === 'count' || request.operation.kind === 'exists') {
         rows = normalizeCountRows(rows)
@@ -126,7 +127,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
       }
     }
 
-    let result = prepared.run(...statement.values)
+    let result = prepared.run(...values)
 
     return {
       affectedRows: normalizeAffectedRowsForRun(request.operation.kind, result),
@@ -144,7 +145,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
 
     for (let statement of statements) {
       let prepared = this.#database.prepare(statement.text)
-      prepared.run(...statement.values)
+      prepared.run(...normalizeStatementValues(statement.values))
     }
 
     return {
@@ -308,6 +309,10 @@ function normalizeRows(rows: unknown[]): Record<string, unknown>[] {
   })
 }
 
+function normalizeStatementValues(values: unknown[]): unknown[] {
+  return values.map((value) => (value === undefined ? null : value))
+}
+
 function normalizeCountRows(rows: Record<string, unknown>[]): Record<string, unknown>[] {
   return rows.map((row) => {
     let count = row.count
@@ -374,7 +379,7 @@ function normalizeAffectedRowsForRun(
     return undefined
   }
 
-  return result.changes
+  return Number(result.changes)
 }
 
 function normalizeInsertIdForRun(

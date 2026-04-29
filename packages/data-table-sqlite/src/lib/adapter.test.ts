@@ -5,7 +5,7 @@ import { column, createDatabase, table, eq } from '@remix-run/data-table'
 
 import { createNativeSqliteDatabase } from '../../../data-table/test/native-sqlite.ts'
 
-import { createSqliteDatabaseAdapter } from './adapter.ts'
+import { createSqliteDatabaseAdapter, type SqliteDatabase } from './adapter.ts'
 
 const accounts = table({
   name: 'accounts',
@@ -373,6 +373,86 @@ describe('sqlite adapter', () => {
 
     assert.equal(result.affectedRows, 1)
     assert.equal(result.insertId, undefined)
+  })
+
+  it('normalizes bigint changes from native sqlite clients', async () => {
+    let sqlite = {
+      prepare() {
+        return {
+          reader: false,
+          all() {
+            return []
+          },
+          get() {
+            return undefined
+          },
+          run() {
+            return { changes: 2n, lastInsertRowid: 99n }
+          },
+        }
+      },
+      exec() {},
+    } satisfies SqliteDatabase
+
+    let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
+    let result = await db.updateMany(accounts, { status: 'inactive' }, { where: { id: 1 } })
+
+    assert.equal(result.affectedRows, 2)
+    assert.equal(result.insertId, undefined)
+  })
+
+  it('normalizes undefined statement values to null for native sqlite clients', async () => {
+    let boundValues: unknown[][] = []
+    let sqlite = {
+      prepare() {
+        return {
+          reader: false,
+          all(...values: unknown[]) {
+            boundValues.push(values)
+            return [{ id: 1, email: null, status: 'active' }]
+          },
+          get() {
+            return undefined
+          },
+          run(...values: unknown[]) {
+            boundValues.push(values)
+            return { changes: 1, lastInsertRowid: 1 }
+          },
+        }
+      },
+      exec() {},
+    } satisfies SqliteDatabase
+
+    let adapter = createSqliteDatabaseAdapter(sqlite)
+
+    await adapter.execute({
+      operation: {
+        kind: 'insert',
+        table: accounts,
+        values: {
+          email: undefined,
+          status: 'active',
+        },
+        returning: ['id', 'email', 'status'],
+      },
+      transaction: undefined,
+    })
+    await adapter.execute({
+      operation: {
+        kind: 'insert',
+        table: accounts,
+        values: {
+          email: undefined,
+          status: 'active',
+        },
+      },
+      transaction: undefined,
+    })
+
+    assert.deepEqual(boundValues, [
+      [null, 'active'],
+      [null, 'active'],
+    ])
   })
 
   it('executes migrate operations', async () => {
