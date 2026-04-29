@@ -88,7 +88,7 @@ export function createRequestListener(
   }
 
   return async (req, res) => {
-    let request = createRequest(req, res, options)
+    let request = createLazyRequest(req, res, options)
     let client = {
       address: req.socket.remoteAddress!,
       family: req.socket.remoteFamily! as ClientAddress['family'],
@@ -192,6 +192,88 @@ export function createRequest(
   }
 
   return new Request(url, init)
+}
+
+function createLazyRequest(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  options?: RequestOptions,
+): Request {
+  let request: Request | undefined
+  let method = req.method ?? 'GET'
+
+  function materialize(): Request {
+    return (request ??= createRequest(req, res, options))
+  }
+
+  let lazyRequest = {
+    get body() {
+      return materialize().body
+    },
+    get bodyUsed() {
+      return materialize().bodyUsed
+    },
+    get cache() {
+      return materialize().cache
+    },
+    get credentials() {
+      return materialize().credentials
+    },
+    get destination() {
+      return materialize().destination
+    },
+    get headers() {
+      return materialize().headers
+    },
+    get integrity() {
+      return materialize().integrity
+    },
+    get keepalive() {
+      return materialize().keepalive
+    },
+    get method() {
+      return method
+    },
+    get mode() {
+      return materialize().mode
+    },
+    get redirect() {
+      return materialize().redirect
+    },
+    get referrer() {
+      return materialize().referrer
+    },
+    get referrerPolicy() {
+      return materialize().referrerPolicy
+    },
+    get signal() {
+      return materialize().signal
+    },
+    get url() {
+      return materialize().url
+    },
+    arrayBuffer() {
+      return materialize().arrayBuffer()
+    },
+    blob() {
+      return materialize().blob()
+    },
+    clone() {
+      return materialize().clone()
+    },
+    formData() {
+      return materialize().formData()
+    },
+    json() {
+      return materialize().json()
+    },
+    text() {
+      return materialize().text()
+    },
+  }
+
+  Object.setPrototypeOf(lazyRequest, Request.prototype)
+  return lazyRequest as Request
 }
 
 /**

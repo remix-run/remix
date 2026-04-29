@@ -165,6 +165,7 @@ describe('createRequestListener', () => {
   it('uses the `Host` header to construct the URL by default', async () => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async (request) => {
+        assert.ok(request instanceof Request)
         assert.equal(request.url, 'http://example.com/')
         return new Response('Hello, world!')
       }
