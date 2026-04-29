@@ -95,28 +95,26 @@ function toPosixPath(file: string): string {
 function runBookstoreTest(test: BookstoreTest) {
   console.log(`\nRunning bookstore ${test.type} test: ${test.file}`)
 
-  let result = cp.spawnSync(
-    'pnpm',
-    [
-      '--filter',
-      'bookstore-demo',
-      'exec',
-      'node',
-      '../../packages/remix/src/cli-entry.ts',
-      'test',
-      test.file,
-      '--type',
-      test.type,
-      '--concurrency',
-      '1',
-    ],
-    {
-      cwd: repoRoot,
-      env: { ...process.env, NODE_ENV: 'test' },
-      stdio: 'inherit',
-      shell: process.platform === 'win32',
-    },
-  )
+  let commandArgs =
+    test.type === 'server'
+      ? ['node', '../../scripts/run-bookstore-server-test-file.ts', test.file]
+      : [
+          'node',
+          '../../packages/remix/src/cli-entry.ts',
+          'test',
+          test.file,
+          '--type',
+          test.type,
+          '--concurrency',
+          '1',
+        ]
+
+  let result = cp.spawnSync('pnpm', ['--filter', 'bookstore-demo', 'exec', ...commandArgs], {
+    cwd: repoRoot,
+    env: { ...process.env, NODE_ENV: 'test' },
+    stdio: 'inherit',
+    shell: process.platform === 'win32',
+  })
 
   if (result.status !== 0) {
     process.exit(result.status ?? 1)
