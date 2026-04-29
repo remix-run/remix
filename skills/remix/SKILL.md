@@ -20,7 +20,7 @@ A Remix app has four main pieces:
 - **Controllers and actions** implement that contract and return `Response` objects.
 - **Middleware** composes request lifecycle behavior and populates typed context via
   `context.set(Key, value)`.
-- **Components** render UI with `remix/component`. This is not React. A component receives a
+- **Components** render UI with `remix/ui`. This is not React. A component receives a
   `handle`, reads current props from `handle.props`, and returns a render function.
 
 ## When To Use This Skill
@@ -42,19 +42,19 @@ the file is relevant before reading the rest.
 Use the table below to find candidates. Loading more than two or three files at once is usually a
 sign that the task hasn't been narrowed enough yet.
 
-| Task involves... | Start with |
-| --- | --- |
-| Defining URLs, writing controllers and actions, returning responses | `references/routing-and-controllers.md` |
-| Composing the request lifecycle, ordering middleware, bridging to a server | `references/middleware-and-server.md` |
-| Compiling and serving browser modules, asset URL namespaces, preloads | `references/assets-and-browser-modules.md` |
-| Parsing input, validating with schemas, defining tables, querying, migrations | `references/data-and-validation.md` |
-| Per-browser state, login flows, route protection, identity | `references/auth-and-sessions.md` |
-| Component setup, state, lifecycle, updates, `queueTask`, context | `references/component-model.md` |
-| Event handlers, styles, refs, press and key helpers, simple animations | `references/mixins-styling-events.md` |
-| `clientEntry`, `run`, `<Frame>`, navigation, `<head>` | `references/hydration-frames-navigation.md` |
-| Router tests, component tests, test isolation | `references/testing-patterns.md` |
-| Spring physics, tweens, layout transitions | `references/animate-elements.md` |
-| Authoring custom reusable mixins | `references/create-mixins.md` |
+| Task involves...                                                              | Start with                                  |
+| ----------------------------------------------------------------------------- | ------------------------------------------- |
+| Defining URLs, writing controllers and actions, returning responses           | `references/routing-and-controllers.md`     |
+| Composing the request lifecycle, ordering middleware, bridging to a server    | `references/middleware-and-server.md`       |
+| Compiling and serving browser modules, asset URL namespaces, preloads         | `references/assets-and-browser-modules.md`  |
+| Parsing input, validating with schemas, defining tables, querying, migrations | `references/data-and-validation.md`         |
+| Per-browser state, login flows, route protection, identity                    | `references/auth-and-sessions.md`           |
+| Component setup, state, lifecycle, updates, `queueTask`, context              | `references/component-model.md`             |
+| Event handlers, styles, refs, click/key behavior, simple animations           | `references/mixins-styling-events.md`       |
+| `clientEntry`, `run`, `<Frame>`, navigation, `<head>`                         | `references/hydration-frames-navigation.md` |
+| Router tests, component tests, test isolation                                 | `references/testing-patterns.md`            |
+| Spring physics, tweens, layout transitions                                    | `references/animate-elements.md`            |
+| Authoring custom reusable mixins                                              | `references/create-mixins.md`               |
 
 Common bundles:
 
@@ -239,7 +239,7 @@ what it exports. Open the linked reference file when you need full examples.
 - `remix/response/redirect` — `redirect(href, status?)`. Use for the canonical "POST then redirect"
   pattern and other location changes
 - `remix/response/html` — `createHtmlResponse`. Use when you need an HTML `Response` from a string
-  or stream without rendering through `remix/component`
+  or stream without rendering through `remix/ui`
 - `remix/response/compress` — `compressResponse`. Use when compressing one-off responses outside
   the global `compression()` middleware
 - `remix/response/file` — file-download responses. Use for `Content-Disposition: attachment`
@@ -288,21 +288,24 @@ what it exports. Open the linked reference file when you need full examples.
 - `remix/cookie` — `createCookie` for plain signed/unsigned cookies. Use for non-sensitive
   preferences where the client is allowed to control the value (theme, locale, dismissed banner).
   For state where tampering matters, prefer `remix/session`
-- `remix/auth` — credentials, OAuth, and OIDC providers. Use to define how identity is verified,
-  start/finish external login, and refresh stored OAuth/OIDC token bundles with
+- `remix/auth` — credentials, OAuth, OIDC, and Atmosphere providers. Use to define how identity is
+  verified, start/finish external login, and refresh stored OAuth/OIDC token bundles with
   `refreshExternalAuth(...)`
 - `remix/auth-middleware` — `auth({ schemes })`, `requireAuth`, the `Auth` context key. Use to
   resolve identity into the request context and to gate routes
 
 ### UI, Hydration, and Browser Behavior
 
-- `remix/component` — the component model: components, mixins, `clientEntry`, `run`, `<Frame>`,
-  navigation helpers. Use for everything UI
+- `remix/ui` — the component runtime: components, core mixins, `clientEntry`, `run`, `<Frame>`,
+  navigation helpers, and `createRoot`. Use for app UI behavior
+- `remix/ui/server` — server rendering: `renderToStream`, `renderToString`. Use in the
+  `render(...)` helper that returns HTML responses
+- `remix/ui/animation` — animation APIs: `animateEntrance`, `animateExit`, `animateLayout`,
+  `spring`, `tween`, and `easings`
 - `remix/ui/<primitive>` — UI primitives, mixins, glyphs, and theme helpers. Import from
   `remix/ui/accordion`, `remix/ui/button`, `remix/ui/select`, etc.
-- `remix/component/server` — server rendering: `renderToStream`, `renderToString`. Use in the
-  `render(...)` helper that returns HTML responses
-- `remix/component/jsx-runtime` — JSX transform target. Configured in `tsconfig.json`, rarely
+- `remix/ui/test` — component test rendering helpers such as `render`
+- `remix/ui/jsx-runtime` — JSX transform target. Configured in `tsconfig.json`, rarely
   imported directly
 - `remix/html-template` — escaped HTML template literals. Use when generating HTML outside the
   component system (RSS feeds, email bodies, error pages)
@@ -320,8 +323,8 @@ what it exports. Open the linked reference file when you need full examples.
 - `remix/form-data-parser` — lower-level `parseFormData`, `FileUpload`. Use when implementing
   custom upload handlers. Upload handler errors propagate directly
 - `remix/multipart-parser` and `remix/multipart-parser/node` — low-level multipart stream parsing.
-  `MultipartPart.headers` is a plain object keyed by lower-case header name, so use
-  `part.headers['content-type']` instead of `part.headers.get(...)`
+  `MultipartPart.headers` is a plain object keyed by lower-case header name; read values with
+  bracket notation such as `part.headers['content-type']`
 - `remix/compression-middleware` — `compression()`. Use globally for text-like responses
 - `remix/logger-middleware` — `logger()`. Use in development for request logs; pass `colors` to
   force terminal color output on or off
@@ -337,8 +340,10 @@ what it exports. Open the linked reference file when you need full examples.
 
 ### Test
 
-- `remix/test` — `remix-test` runner plus `describe`, `it`, lifecycle hooks. Use as the test
-  framework. Supports `glob.exclude` and coverage via `--coverage` or `coverage` config
+- `remix/test` — `describe`, `it`, and lifecycle hooks. Use as the test framework
+- `remix/test/cli` — programmatic test runner APIs such as `runRemixTest`
+- `remix/cli` — programmatic Remix CLI API. Use the `remix` executable for project commands such
+  as `remix test`, `remix routes`, `remix skills`, and `remix doctor`
 - `remix/assert` — assertion helpers. Use in place of `node:assert` so messages render cleanly
   in the runner
 - `remix/terminal` — ANSI styles, color detection, style factories, and testable terminal streams.
@@ -474,7 +479,7 @@ This shape works without JavaScript, returns a `Response` for every outcome, and
 ### Build UI from handle props plus render
 
 ```tsx
-import { on, type Handle } from 'remix/component'
+import { on, type Handle } from 'remix/ui'
 
 function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
   let count = handle.props.initialCount ?? 0
@@ -496,4 +501,3 @@ function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
 
 Only add `clientEntry(...)` and `run(...)` when the component needs browser interactivity or
 browser-only APIs.
-

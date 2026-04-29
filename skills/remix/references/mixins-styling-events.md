@@ -9,14 +9,15 @@ when the task involves:
 - Static styling with `css(...)` and dynamic styling with `style`
 - Imperative DOM access via `ref(...)`
 - Navigation behavior on non-anchor elements with `link(...)`
-- Press, key, or attribute helpers (`pressEvents`, `keysEvents`, `attrs`)
-- Element-level animation mixins (`animateEntrance`, `animateExit`, `animateLayout`)
+- Native click, pointer, and keyboard behavior with `on(...)`, plus attributes with `attrs(...)`
+- Element-level animation mixins from `remix/ui/animation`
 
 For richer animation work (springs, tweens, layout transitions), see `animate-elements.md`. For
 authoring custom mixins, see `create-mixins.md`. For component lifecycle and updates, see
 `component-model.md`.
 
-Compose behavior on host elements with `mix`. All mixins are imported from `remix/component`.
+Compose behavior on host elements with `mix`. Core mixins are imported from `remix/ui`; animation
+mixins are imported from `remix/ui/animation`.
 
 ## `on(type, handler, capture?)`
 
@@ -92,11 +93,11 @@ state in JavaScript:
 <div
   mix={[
     css({
-      backgroundColor: 'blue',         // static
-      '&:hover': { '& .title': { color: 'blue' } },  // parent hover → child
+      backgroundColor: 'blue', // static
+      '&:hover': { '& .title': { color: 'blue' } }, // parent hover → child
     }),
   ]}
-  style={{ width: `${progress}%` }}   // dynamic
+  style={{ width: `${progress}%` }} // dynamic
 />
 ```
 
@@ -134,33 +135,40 @@ navigation links:
 Options match `NavigationOptions`: `src`, `target`, `history` (`'push' | 'replace'`),
 `resetScroll`.
 
-## `pressEvents()`
+## Native press and keyboard interactions
 
-Normalizes pointer and keyboard input into press lifecycle events. Fires on mouse, touch, and
-keyboard (Enter/Space). Prefer over `click` for interactive elements:
-
-```tsx
-<button mix={[pressEvents(), on('press', () => doAction())]}>Action</button>
-```
-
-Event type constants for `on(...)`:
-
-- `pressEvents.press` — full press (down + up)
-- `pressEvents.down` — press start
-- `pressEvents.up` — press end
-- `pressEvents.long` — long press
-- `pressEvents.cancel` — press cancelled
-
-## `keysEvents()`
-
-Normalizes common keyboard keys into custom key-specific DOM events:
+Use native DOM events directly with `on(...)`. For buttons and links, `click` already includes
+keyboard activation when the element has the right semantics:
 
 ```tsx
-<div tabIndex={0} mix={[keysEvents(), on(keysEvents.escape, () => close())]}>
+<button mix={[on('click', () => doAction())]}>Action</button>
 ```
 
-Event type constants: `keysEvents.escape`, `.enter`, `.space`, `.backspace`, `.del`, `.arrowLeft`,
-`.arrowRight`, `.arrowUp`, `.arrowDown`, `.home`, `.end`, `.pageUp`, `.pageDown`.
+For gesture-specific behavior, compose the pointer or keyboard events the interaction actually
+needs:
+
+```tsx
+<button
+  mix={[
+    on('pointerdown', (event) => {
+      event.currentTarget.setPointerCapture(event.pointerId)
+    }),
+    on('pointerup', () => doAction()),
+  ]}
+>
+  Action
+</button>
+
+<div
+  tabIndex={0}
+  mix={[
+    on('keydown', (event) => {
+      if (event.key === 'Escape') close()
+      if (event.key === 'Enter' || event.key === ' ') doAction()
+    }),
+  ]}
+/>
+```
 
 ## `attrs()`
 
@@ -182,15 +190,17 @@ Animates an element when it is removed. Config specifies the **ending** style. T
 in the DOM until the animation completes:
 
 ```tsx
-{isVisible && (
-  <div
-    key="panel"
-    mix={[
-      animateEntrance({ opacity: 0, transform: 'scale(0.98)', ...spring('smooth') }),
-      animateExit({ opacity: 0, duration: 120, easing: 'ease-in' }),
-    ]}
-  />
-)}
+{
+  isVisible && (
+    <div
+      key="panel"
+      mix={[
+        animateEntrance({ opacity: 0, transform: 'scale(0.98)', ...spring('smooth') }),
+        animateExit({ opacity: 0, duration: 120, easing: 'ease-in' }),
+      ]}
+    />
+  )
+}
 ```
 
 ### `animateLayout(config?)`
@@ -198,9 +208,11 @@ in the DOM until the animation completes:
 Animates layout changes (position/size) using FLIP-style transforms:
 
 ```tsx
-{items.map((item) => (
-  <li key={item.id} mix={[animateLayout({ duration: 220, easing: 'ease-out' })]} />
-))}
+{
+  items.map((item) => (
+    <li key={item.id} mix={[animateLayout({ duration: 220, easing: 'ease-out' })]} />
+  ))
+}
 ```
 
 Options: `duration` (default 200ms), `easing` (default spring snappy), `size` (boolean, default

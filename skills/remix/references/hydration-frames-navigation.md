@@ -44,7 +44,7 @@ Use `clientEntry` to mark a component for client-side hydration. The first argum
 URL and export name in the form `moduleUrl#ExportName`:
 
 ```tsx
-import { clientEntry, on, type Handle } from 'remix/component'
+import { clientEntry, on, type Handle } from 'remix/ui'
 
 export let Counter = clientEntry(
   '/assets/counter.js#Counter',
@@ -53,8 +53,19 @@ export let Counter = clientEntry(
 
     return () => (
       <div>
-        <span>{handle.props.label}: {count}</span>
-        <button mix={[on('click', () => { count++; handle.update() })]}>+</button>
+        <span>
+          {handle.props.label}: {count}
+        </span>
+        <button
+          mix={[
+            on('click', () => {
+              count++
+              handle.update()
+            }),
+          ]}
+        >
+          +
+        </button>
       </div>
     )
   },
@@ -88,7 +99,7 @@ Use `run` to start the client runtime. It scans the document for client entry ma
 modules, and hydrates each one:
 
 ```tsx
-import { run } from 'remix/component'
+import { run } from 'remix/ui'
 
 let app = run({
   async loadModule(moduleUrl, exportName) {
@@ -131,7 +142,7 @@ A `<Frame>` renders server content into the page. Frames stream after the initia
 other frames, contain client entries, and can be reloaded without full page navigation.
 
 ```tsx
-import { Frame } from 'remix/component'
+import { Frame } from 'remix/ui'
 
 function App() {
   return () => (
@@ -189,7 +200,7 @@ Renders a component tree to a `ReadableStream<Uint8Array>`. Sends initial HTML i
 streams frame content as it resolves:
 
 ```tsx
-import { renderToStream } from 'remix/component/server'
+import { renderToStream } from 'remix/ui/server'
 
 let stream = renderToStream(<App />, {
   frameSrc: request.url,
@@ -222,7 +233,7 @@ Options:
 Renders a component tree to a complete HTML string. Use for static pages or embedding HTML:
 
 ```tsx
-import { renderToString } from 'remix/component/server'
+import { renderToString } from 'remix/ui/server'
 let html = await renderToString(<App />)
 ```
 
@@ -239,7 +250,7 @@ Use real anchors for normal document navigation. For app-driven navigation:
 - `link(href, options?)` mixin — makes any element behave like a navigation link
 
 ```tsx
-import { navigate } from 'remix/component'
+import { navigate } from 'remix/ui'
 navigate('/dashboard', { history: 'replace' })
 ```
 
@@ -260,7 +271,9 @@ function App() {
         <meta name="description" content="Team dashboard" />
         <link rel="stylesheet" href="/styles/app.css" />
       </head>
-      <body><main>...</main></body>
+      <body>
+        <main>...</main>
+      </body>
     </html>
   )
 }

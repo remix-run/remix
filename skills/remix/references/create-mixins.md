@@ -12,11 +12,11 @@ involves:
 
 For the built-in mixins most code should use, see `mixins-styling-events.md`.
 
-Use `createMixin` from `remix/component` to author reusable host-element behavior.
+Use `createMixin` from `remix/ui` to author reusable host-element behavior.
 
-Most app code should use built-in mixins (`on`, `css`, `ref`, `link`, `pressEvents`, `keysEvents`,
-`animateEntrance`, `animateExit`, `animateLayout`). Create custom mixins when combining multiple
-low-level events into one semantic event, or when the pattern is reused across components.
+Most app code should use built-in core mixins (`on`, `css`, `ref`, `link`, `attrs`) and animation
+mixins from `remix/ui/animation`. Create custom mixins when combining multiple low-level events
+into one semantic event, or when the pattern is reused across components.
 
 ## Core Semantics
 
@@ -28,7 +28,7 @@ low-level events into one semantic event, or when the pattern is reused across c
    work.
 
 ```tsx
-import { createMixin } from 'remix/component'
+import { createMixin } from 'remix/ui'
 
 let myMixin = createMixin<HTMLElement>((handle) => {
   handle.addEventListener('insert', (event) => {
@@ -80,7 +80,7 @@ is reused across components.
 4. Dispatch from the host node inside the mixin.
 
 ```tsx
-import { createMixin, on } from 'remix/component'
+import { createMixin, on } from 'remix/ui'
 
 export let dragReleaseType = 'myapp:drag-release' as const
 
@@ -147,7 +147,12 @@ export let dragRelease = createMixin<HTMLElement>((handle) => {
 Consume it:
 
 ```tsx
-<div mix={[dragRelease(), on(dragReleaseType, (event) => {
-  console.log('velocity:', event.velocityX, event.velocityY)
-})]} />
+<div
+  mix={[
+    dragRelease(),
+    on(dragReleaseType, (event) => {
+      console.log('velocity:', event.velocityX, event.velocityY)
+    }),
+  ]}
+/>
 ```

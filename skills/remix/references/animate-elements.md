@@ -10,8 +10,8 @@ involves:
 - Coordinating CSS transitions with the same easing as JS animations
 - Imperative animation loops via `requestAnimationFrame`
 
-For the smaller set of animation helpers that show up alongside other mixins, see
-`mixins-styling-events.md`.
+Import animation APIs from `remix/ui/animation`. For the smaller set of animation helpers that
+show up alongside other mixins, see `mixins-styling-events.md`.
 
 ## Animation Mixins
 
@@ -38,15 +38,17 @@ Animates an element when removed. Config specifies the **ending** style the elem
 **to**. The element stays in the DOM until the animation completes:
 
 ```tsx
-{isVisible && (
-  <div
-    key="panel"
-    mix={[
-      animateEntrance({ opacity: 0, transform: 'scale(0.98)', ...spring('smooth') }),
-      animateExit({ opacity: 0, duration: 120, easing: 'ease-in' }),
-    ]}
-  />
-)}
+{
+  isVisible && (
+    <div
+      key="panel"
+      mix={[
+        animateEntrance({ opacity: 0, transform: 'scale(0.98)', ...spring('smooth') }),
+        animateExit({ opacity: 0, duration: 120, easing: 'ease-in' }),
+      ]}
+    />
+  )
+}
 ```
 
 ### `animateLayout(config?)`
@@ -54,9 +56,11 @@ Animates an element when removed. Config specifies the **ending** style the elem
 Animates layout changes (position/size) using FLIP-style transforms:
 
 ```tsx
-{items.map((item) => (
-  <li key={item.id} mix={[animateLayout({ ...spring({ duration: 500, bounce: 0.2 }) })]} />
-))}
+{
+  items.map((item) => (
+    <li key={item.id} mix={[animateLayout({ ...spring({ duration: 500, bounce: 0.2 }) })]} />
+  ))
+}
 ```
 
 Options: `duration` (default 200ms), `easing` (default spring snappy), `size` (default true —
@@ -162,7 +166,7 @@ mixins or CSS transitions with `spring` for most UI work. Use `tween` for impera
 `requestAnimationFrame` loops, canvas/WebGL, or non-CSS properties.
 
 ```tsx
-import { tween, easings } from 'remix/component'
+import { tween, easings } from 'remix/ui/animation'
 
 let animation = tween({
   from: 0,

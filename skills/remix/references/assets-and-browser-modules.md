@@ -58,7 +58,7 @@ router.get('/assets/*path', ({ request }) => {
 
 ## Rules
 
-- Always provide an `allow` list. Treat it as a security boundary, not just a convenience filter.
+- Treat `allow` and `deny` as the security boundary for browser-reachable source files.
 - Add a `deny` list for server-only modules such as `*.server.*`, private config, or other files
   that should never be exposed.
 - Set `rootDir` explicitly in monorepos so relative paths resolve from the intended project root.
@@ -115,15 +115,3 @@ Do not nest shared compiler options under `scripts`. Use top-level `minify`, `so
 
 If the asset server is long-lived and watching the file system, call `await assetServer.close()`
 when shutting down dev servers or disposing tests.
-
-## Common Mistakes
-
-- Using `staticFiles()` for source scripts or styles that should be compiled and import-rewritten by
-  `remix/assets`
-- Forgetting to restrict the `allow` list
-- Forgetting `deny` rules for server-only files
-- Omitting `rootDir` in a monorepo and accidentally resolving from the wrong directory
-- Using fingerprinting while leaving `watch` enabled
-- Hardcoding asset URLs instead of using `getHref()` or `getPreloads()`
-- Using old `scripts.target`, `scripts.minify`, or `scripts.sourceMaps` options instead of the
-  current top-level compiler options

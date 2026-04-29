@@ -7,8 +7,8 @@ the task involves:
 
 - Driving the router with `router.fetch(new Request(...))` and asserting on the returned `Response`
 - Building a fresh router per test for session, storage, or database isolation
-- Rendering components into a real DOM with `createRoot` and synchronizing with `root.flush()`
-- Configuring `remix-test` discovery, excludes, and coverage
+- Rendering components into a real DOM with `render(...)` or `createRoot(...)`
+- Configuring `remix test` discovery, excludes, and coverage
 - Choosing which layer to test for a given behavior
 
 For session and auth test setup, see `auth-and-sessions.md`. For component lifecycle, see
@@ -16,13 +16,13 @@ For session and auth test setup, see `auth-and-sessions.md`. For component lifec
 
 ## Two Shapes
 
-Remix tests run with the `remix-test` CLI (from `remix/test`) and use `remix/assert` for
-assertions. Two main shapes:
+Remix tests run with `remix test`, use `remix/test` for the test framework, and use
+`remix/assert` for assertions. Two main shapes:
 
 - **Server / router tests** — drive the router with `router.fetch(new Request(...))` and assert
   on the returned `Response`. No DOM, no browser harness.
-- **Component tests** — render a component into a real DOM `Element` with `createRoot`, then call
-  `root.flush()` between interactions.
+- **Component tests** — render a component into a real DOM `Element` with `render(...)`, or use
+  `createRoot(...)` directly when you need lower-level root control.
 
 ## Server / Router Tests
 
@@ -86,35 +86,33 @@ export default {
 }
 ```
 
-Use `remix-test --coverage` to enable coverage with defaults. Use `glob.exclude` when discovery
+Use `remix test --coverage` to enable coverage with defaults. Use `glob.exclude` when discovery
 would otherwise enter generated output, symlinked workspaces, or other paths that should not
 produce tests.
 
 ## Component Tests
 
-Use `createRoot(container)` and `root.flush()`. `flush()` synchronously executes all pending
-updates and tasks, ensuring the DOM and component state are fully synchronized before assertions.
+Use `render(...)` from `remix/ui/test` for most component tests. It creates a real DOM container,
+flushes the initial render, and returns `act(...)` so interactions can flush pending updates before
+assertions. Use `createRoot(container)` from `remix/ui` directly when a test needs explicit control
+over root rendering, flushing, or disposal.
 
 ### Basic pattern
 
 ```tsx
 import * as assert from 'remix/assert'
-import { createRoot } from 'remix/component'
+import { render } from 'remix/ui/test'
 
-let container = document.createElement('div')
-let root = createRoot(container)
+let result = render(<Counter />)
 
-root.render(<Counter />)
-root.flush()
+let button = result.$('button')!
+await result.act(() => button.click())
 
-let button = container.querySelector('button')!
-button.click()
-root.flush()
-
-assert.match(container.textContent ?? '', /1/)
+assert.match(result.container.textContent ?? '', /1/)
+result.cleanup()
 ```
 
-### Why flush
+### Why act / flush
 
 - **After initial render** — ensures event listeners are attached and the DOM is ready for
   interaction.
@@ -123,33 +121,31 @@ assert.match(container.textContent ?? '', /1/)
 
 ### Async operations
 
-For components with async operations in `queueTask`, flush after each step:
+For components with async operations in `queueTask`, use `act(...)` after each async step:
 
 ```tsx
-let root = createRoot(container)
-root.render(<AsyncLoader />)
-root.flush()
+let result = render(<AsyncLoader />)
 
-assert.equal(container.textContent, 'Loading...')
+assert.equal(result.container.textContent, 'Loading...')
 
 await waitForFetch()
-root.flush()
+await result.act(() => {})
 
-assert.equal(container.textContent, 'Expected data')
+assert.equal(result.container.textContent, 'Expected data')
 ```
 
 ### Component removal
 
-Use `root.dispose()` to remove the component tree and verify cleanup behavior:
+Use `result.cleanup()` or `root.dispose()` to remove the component tree and verify cleanup
+behavior:
 
 ```tsx
-root.render(<MyComponent />)
-root.flush()
+let result = render(<MyComponent />)
 
-assert.ok(container.querySelector('.content'))
+assert.ok(result.$('.content'))
 
-root.dispose()
-assert.equal(container.innerHTML, '')
+result.cleanup()
+assert.throws(() => result.$('.content'), /cleaned up/)
 ```
 
 ### Guidelines

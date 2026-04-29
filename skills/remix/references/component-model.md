@@ -23,7 +23,7 @@ A component has two phases:
 2. **Render phase** — returned function runs on initial render and every update
 
 ```tsx
-import { on, type Handle } from 'remix/component'
+import { on, type Handle } from 'remix/ui'
 
 function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
   let count = handle.props.initialCount ?? 0
@@ -46,17 +46,14 @@ function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
 ## Props
 
 Components receive all JSX props through `handle.props`. The object identity is stable for the
-component lifetime, and its values are updated before each render. Do not use a second setup
-argument or rely on render callback props; put initialization inputs on normal JSX props and read
-them from `handle.props`:
+component lifetime, and its values are updated before each render. Put initialization inputs on
+normal JSX props and read them from `handle.props`:
 
 ```tsx
 function Timer(handle: Handle<{ initialSeconds: number; paused?: boolean }>) {
   let seconds = handle.props.initialSeconds
 
-  return () => (
-    <div>Time remaining: {seconds}s</div>
-  )
+  return () => <div>Time remaining: {seconds}s</div>
 }
 
 // Usage: <Timer initialSeconds={60} paused={false} />
@@ -183,11 +180,7 @@ Frame-aware behavior for client entries rendered inside frames:
 
 ```tsx
 function RefreshButton(handle: Handle) {
-  return () => (
-    <button mix={[on('click', () => handle.frame.reload())]}>
-      Refresh
-    </button>
-  )
+  return () => <button mix={[on('click', () => handle.frame.reload())]}>Refresh</button>
 }
 ```
 
@@ -207,11 +200,15 @@ function ThemeProvider(handle: Handle<{ children?: RemixNode }, { theme: 'light'
 
   return () => (
     <div>
-      <button mix={[on('click', () => {
-        theme = theme === 'light' ? 'dark' : 'light'
-        handle.context.set({ theme })
-        handle.update()
-      })]}>
+      <button
+        mix={[
+          on('click', () => {
+            theme = theme === 'light' ? 'dark' : 'light'
+            handle.context.set({ theme })
+            handle.update()
+          }),
+        ]}
+      >
         Toggle
       </button>
       {handle.props.children}
@@ -228,11 +225,13 @@ function ThemedContent(handle: Handle) {
 For granular updates without re-rendering the full subtree, use `TypedEventTarget`:
 
 ```tsx
-import { TypedEventTarget, addEventListeners } from 'remix/component'
+import { TypedEventTarget, addEventListeners } from 'remix/ui'
 
 class Theme extends TypedEventTarget<{ change: Event }> {
   #value: 'light' | 'dark' = 'light'
-  get value() { return this.#value }
+  get value() {
+    return this.#value
+  }
   setValue(value: 'light' | 'dark') {
     this.#value = value
     this.dispatchEvent(new Event('change'))
@@ -256,7 +255,9 @@ function ThemeProvider(handle: Handle<{ children?: RemixNode }, Theme>) {
 function ThemedContent(handle: Handle) {
   let theme = handle.context.get(ThemeProvider)
   addEventListeners(theme, handle.signal, {
-    change() { handle.update() },
+    change() {
+      handle.update()
+    },
   })
   return () => <div>Theme: {theme.value}</div>
 }
@@ -268,7 +269,7 @@ Use `addEventListeners(target, handle.signal, listeners)` to listen to global ta
 automatic cleanup when the component disconnects:
 
 ```tsx
-import { addEventListeners, type Handle } from 'remix/component'
+import { addEventListeners, type Handle } from 'remix/ui'
 
 function ResizeTracker(handle: Handle) {
   let width = window.innerWidth

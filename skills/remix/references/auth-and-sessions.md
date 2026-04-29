@@ -31,12 +31,12 @@ lifecycle, reach for a session.
 
 ### Quick chooser
 
-| Need | Best fit | Why |
-| --- | --- | --- |
-| Theme, locale, dismissed banner | `remix/cookie` | Browser-controlled preference |
-| Small signed hint with minimal lifecycle | `remix/cookie` | One value, no `Session` helpers needed |
+| Need                                                                | Best fit        | Why                                                |
+| ------------------------------------------------------------------- | --------------- | -------------------------------------------------- |
+| Theme, locale, dismissed banner                                     | `remix/cookie`  | Browser-controlled preference                      |
+| Small signed hint with minimal lifecycle                            | `remix/cookie`  | One value, no `Session` helpers needed             |
 | "This browser already submitted", cart, flash messages, login state | `remix/session` | Tamper-sensitive, server-managed per-browser state |
-| "One real person only", ownership, durable identity | account/auth | Cookies or sessions alone do not prove personhood |
+| "One real person only", ownership, durable identity                 | account/auth    | Cookies or sessions alone do not prove personhood  |
 
 ## Session Setup
 
@@ -263,6 +263,7 @@ function logout(context) {
 
 ```typescript
 import {
+  createAtmosphereAuthProvider,
   createGoogleAuthProvider,
   createGitHubAuthProvider,
   startExternalAuth,
@@ -282,7 +283,22 @@ let githubProvider = createGitHubAuthProvider({
   clientSecret: process.env.GITHUB_CLIENT_SECRET,
   redirectUri: new URL(routes.auth.github.callback.href(), origin),
 })
+
+let atmosphereSessionSecret = process.env.ATMOSPHERE_SESSION_SECRET
+if (!atmosphereSessionSecret && process.env.NODE_ENV !== 'test') {
+  throw new Error('ATMOSPHERE_SESSION_SECRET is required')
+}
+
+let atmosphereProvider = createAtmosphereAuthProvider({
+  clientId: 'https://app.example.com/oauth/client-metadata.json',
+  redirectUri: new URL(routes.auth.atmosphere.callback.href(), origin),
+  sessionSecret: atmosphereSessionSecret ?? 'test-only-secret',
+})
 ```
+
+For Atmosphere-compatible atproto OAuth, create the provider once, call
+`atmosphereProvider.prepare(handleOrDid)` before `startExternalAuth(...)`, then pass the same
+module-scope provider to `finishExternalAuth(...)` and `refreshExternalAuth(...)`.
 
 ### OAuth controller
 
@@ -319,9 +335,9 @@ export default {
 ### Refresh stored provider tokens
 
 Use `refreshExternalAuth(provider, tokens)` when an app has stored OAuth/OIDC tokens and needs a
-fresh access token from a refresh token. Built-in OIDC providers and X support refresh-token
-exchange. If the provider does not rotate the refresh token, the refreshed bundle preserves the
-current one.
+fresh access token from a refresh token. Built-in OIDC providers, X, and Atmosphere support
+refresh-token exchange. If the provider does not rotate the refresh token, the refreshed bundle
+preserves the current one.
 
 ```typescript
 async function refreshGoogleTokens({ get }) {
@@ -348,7 +364,9 @@ import { requireAuth } from 'remix/auth-middleware'
 export default {
   middleware: [requireAuth()],
   actions: {
-    index() { /* guaranteed authenticated */ },
+    index() {
+      /* guaranteed authenticated */
+    },
     settings: settingsController,
   },
 } satisfies Controller<typeof routes.account>
@@ -362,7 +380,9 @@ Combine auth checks with role checks:
 export default {
   middleware: [requireAuth(), requireAdmin()],
   actions: {
-    index() { /* requires auth + admin */ },
+    index() {
+      /* requires auth + admin */
+    },
   },
 } satisfies Controller<typeof routes.admin>
 ```
