@@ -273,7 +273,7 @@ function writeResponseStart(
   res.cork(() => {
     if (state.aborted) return
 
-    res.writeStatus(createStatusLine(response))
+    writeStatus(res, response)
     for (let [key, value] of response.headers) {
       res.writeHeader(key, value)
     }
@@ -291,7 +291,7 @@ function endUwsResponse(
   res.cork(() => {
     if (state.aborted) return
 
-    res.writeStatus(createStatusLine(response))
+    writeStatus(res, response)
     for (let [key, value] of response.headers) {
       res.writeHeader(key, value)
     }
@@ -379,6 +379,12 @@ function createClientAddress(res: uWS.HttpResponse): ClientAddress {
     address,
     family: address.includes(':') ? 'IPv6' : 'IPv4',
     port: res.getRemotePort(),
+  }
+}
+
+function writeStatus(res: uWS.HttpResponse, response: Response): void {
+  if (response.status !== 200 || response.statusText !== '') {
+    res.writeStatus(createStatusLine(response))
   }
 }
 
