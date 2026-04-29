@@ -1,6 +1,7 @@
+import { fork } from 'node:child_process'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
 import { IS_RUNNING_FROM_SRC } from './config.ts'
 import {
@@ -31,6 +32,7 @@ export async function runServerTests(
     playwrightUseOpts?: PlaywrightUseOpts
     projectName?: string
     coverage?: CoverageConfig
+    pool?: 'threads' | 'forks'
   } = {},
 ): Promise<Counts & { coverageMap: CoverageMap | null }> {
   let counts: Counts = { passed: 0, failed: 0, skipped: 0, todo: 0 }
@@ -56,7 +58,7 @@ export async function runServerTests(
       files,
       concurrency,
       (file) =>
-        runFileInWorker(
+        runFileInWorkerOrThread(
           file,
           type,
           (results) => {
@@ -92,7 +94,8 @@ export async function runServerTests(
     await runInConcurrentWorkers(
       files,
       concurrency,
-      (file) => runFileInWorker(file, type, (results) => accumulate(results, file), options),
+      (file) =>
+        runFileInWorkerOrThread(file, type, (results) => accumulate(results, file), options),
       () => counts.failed++,
     )
 
@@ -149,7 +152,18 @@ async function runInConcurrentWorkers(
   })
 }
 
-function runFileInWorker(
+type WorkerPayload = {
+  file: string
+  type: 'server' | 'e2e'
+  coverage: CoverageConfig | undefined
+}
+
+type E2EWorkerPayload = WorkerPayload & {
+  open: boolean
+  playwrightUseOpts: PlaywrightUseOpts
+}
+
+function runFileInWorkerOrThread(
   file: string,
   type: 'server' | 'e2e',
   onResults: (results: TestResults) => void,
@@ -158,32 +172,67 @@ function runFileInWorker(
     coverage?: CoverageConfig
     open?: boolean
     playwrightUseOpts?: PlaywrightUseOpts
+    pool?: 'threads' | 'forks'
   } = {},
 ): Promise<void> {
+  let url = type === 'e2e' ? workerE2EUrl : workerUrl
+  let payload: WorkerPayload | E2EWorkerPayload = {
+    file: pathToFileURL(file).href,
+    type,
+    coverage: options.coverage,
+    ...(type === 'e2e'
+      ? {
+          open: options.open,
+          playwrightUseOpts: options.playwrightUseOpts,
+        }
+      : null),
+  }
+
+  return options.pool === 'forks'
+    ? runFileInForkedProcess(url, payload, onResults)
+    : runFileInWorkerThread(url, payload, onResults)
+}
+
+function runFileInWorkerThread(
+  workerScript: URL,
+  workerData: WorkerPayload | E2EWorkerPayload,
+  onResults: (results: TestResults) => void,
+): Promise<void> {
   return new Promise((resolve, reject) => {
-    let worker =
-      type === 'e2e'
-        ? new Worker(workerE2EUrl, {
-            workerData: {
-              file: pathToFileURL(file).href,
-              type,
-              coverage: options.coverage,
-              open: options.open,
-              playwrightUseOpts: options.playwrightUseOpts,
-            },
-          })
-        : new Worker(workerUrl, {
-            workerData: {
-              file: pathToFileURL(file).href,
-              type,
-              coverage: options.coverage,
-            },
-          })
+    let worker = new Worker(workerScript, { workerData })
     worker.once('message', (msg: TestResults) => onResults(msg))
     worker.once('error', reject)
     worker.once('exit', (code) => {
       if (code !== 0) reject(new Error(`Worker exited with code ${code}`))
       else resolve()
+    })
+  })
+}
+
+function runFileInForkedProcess(
+  workerScript: URL,
+  payload: WorkerPayload | E2EWorkerPayload,
+  onResults: (results: TestResults) => void,
+): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // child_process.fork inherits `execArgv` from the parent by default, so any
+    // TypeScript loader hooks (e.g. tsx, Node's strip-types) keep working in
+    // the child. The IPC channel carries the workerData payload as the first
+    // message and the test results as the reply.
+    let child = fork(fileURLToPath(workerScript), [], {
+      stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+    })
+
+    child.once('message', (msg) => onResults(msg as TestResults))
+    child.once('error', reject)
+    child.once('exit', (code, signal) => {
+      if (code === 0) resolve()
+      else if (signal) reject(new Error(`Worker killed by signal ${signal}`))
+      else reject(new Error(`Worker exited with code ${code}`))
+    })
+
+    child.send(payload, (err) => {
+      if (err) reject(err)
     })
   })
 }

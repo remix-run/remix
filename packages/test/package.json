@@ -50,8 +50,12 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node src/cli-entry.ts",
-    "test:bun": "bun --bun src/cli-entry.ts --type server",
+    "test": "pnpm test:threads && pnpm test:forks",
+    "test:threads": "node src/cli-entry.ts",
+    "test:forks": "node src/cli-entry.ts --pool forks",
+    "test:bun": "pnpm test:bun:threads && pnpm test:bun:forks",
+    "test:bun:threads": "bun --bun src/cli-entry.ts --type server",
+    "test:bun:forks": "bun --bun src/cli-entry.ts --type server --pool forks",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {

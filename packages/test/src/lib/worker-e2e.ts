@@ -1,12 +1,23 @@
-import { workerData, parentPort } from 'node:worker_threads'
 import { runTests } from './executor.ts'
 import { importModule } from './import-module.ts'
 import {
   getBrowserLauncher,
   getPlaywrightLaunchOptions,
   getPlaywrightPageOptions,
+  type PlaywrightUseOpts,
 } from './playwright.ts'
 import type { TestResults } from './reporters/results.ts'
+import { receiveWorkerData, sendResults } from './worker-channel.ts'
+
+interface E2EWorkerData {
+  file: string
+  type: 'e2e'
+  coverage: boolean
+  open?: boolean
+  playwrightUseOpts?: PlaywrightUseOpts
+}
+
+const workerData = await receiveWorkerData<E2EWorkerData>()
 
 try {
   await importModule(workerData.file, import.meta)
@@ -17,11 +28,11 @@ try {
   try {
     let results = await runTests({
       browser,
-      open: workerData.open,
+      open: workerData.open ?? false,
       playwrightPageOptions: getPlaywrightPageOptions(workerData.playwrightUseOpts),
       coverage: workerData.coverage,
     })
-    parentPort!.postMessage(results)
+    sendResults(results)
     if (workerData.open) {
       console.log('\nBrowser is open. Press Ctrl+C to close.')
       await new Promise<void>((resolve) => browser.on('disconnected', () => resolve()))
@@ -49,6 +60,6 @@ try {
       },
     ],
   }
-  parentPort!.postMessage(results)
+  sendResults(results)
   process.exit(0)
 }

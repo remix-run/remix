@@ -135,6 +135,18 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
 
       let { files, serverFiles, browserFiles, e2eFiles } = discoveredTests
 
+      if (serverFiles.length > 0 || e2eFiles.length > 0) {
+        let isPlural = config.concurrency !== 1
+        let concurrencyLabel =
+          config.concurrency > 1 ? `${config.concurrency} concurrent` : 'a single'
+        let workerLabel =
+          config.pool === 'forks'
+            ? `forked process${isPlural ? 'es' : ''}`
+            : `worker thread${isPlural ? 's' : ''}`
+
+        console.log(`Running tests in ${concurrencyLabel} ${workerLabel}`)
+      }
+
       if (config.watch) {
         watcher ??= createWatcher((file) => queueRerun(file))
         watcher.update(files)
@@ -183,6 +195,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
           {
             coverage: config.coverage,
             cwd,
+            pool: config.pool,
           },
         )
         counts.failed += serverResult.failed
@@ -241,6 +254,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
                   projectName: project.name,
                   coverage: config.coverage,
                   cwd,
+                  pool: config.pool,
                 })
               : null,
           ])

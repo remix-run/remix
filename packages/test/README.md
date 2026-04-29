@@ -114,6 +114,12 @@ export default {
     },
   },
 
+  // Worker pool implementation: "threads" (default, runs each test file in a
+  // `worker_threads.Worker`) or "forks" (runs each test file in a
+  // `child_process.fork` subprocess for full process-level isolation, at the
+  // cost of higher per-file startup overhead)
+  pool: 'threads',
+
   // Comma-separated list of playwright projects to run E2E tests for
   project: 'chromium',
 
@@ -158,6 +164,7 @@ You may also specify any config field as a CLI flag which will take precedence o
 | `--glob.browser`            |       |
 | `--glob.e2e`                |       |
 | `--playwrightConfig <path>` |       |
+| `--pool <name>`             |       |
 | `--project <name>`          | `-p`  |
 | `--reporter <name>`         | `-r`  |
 | `--setup <path>`            | `-s`  |

@@ -1,11 +1,19 @@
 import * as mod from 'node:module'
-import * as path from 'node:path'
-import { parentPort, workerData } from 'node:worker_threads'
+import type { CoverageConfig } from './coverage.ts'
 import { runTests } from './executor.ts'
 import { importModule } from './import-module.ts'
 import type { TestResults } from './reporters/results.ts'
 import { IS_BUN } from './runtime.ts'
 import { IS_RUNNING_FROM_SRC } from './config.ts'
+import { receiveWorkerData, sendResults } from './worker-channel.ts'
+
+interface ServerWorkerData {
+  file: string
+  type: 'server'
+  coverage?: CoverageConfig
+}
+
+const workerData = await receiveWorkerData<ServerWorkerData>()
 
 try {
   // When coverage is enabled in Node, we use a coverage-friendly TypeScript loader which
@@ -24,7 +32,7 @@ try {
   }
 
   let results = await runTests()
-  parentPort!.postMessage(results)
+  sendResults(results)
   process.exit(0)
 } catch (e) {
   let results: TestResults = {
@@ -45,6 +53,6 @@ try {
       },
     ],
   }
-  parentPort!.postMessage(results)
+  sendResults(results)
   process.exit(0)
 }
