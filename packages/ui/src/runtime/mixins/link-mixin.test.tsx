@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, describe, it, type TestContext } from '@remix-run/test'
 
 import { createRoot } from '../vdom.ts'
 import { invariant } from '../invariant.ts'
@@ -14,10 +15,13 @@ function render(node: RemixNode) {
   return { container, root }
 }
 
+function stubGlobal(t: TestContext, api: string, method: string, impl: any) {
+  return t.mock.method((globalThis as any)[api], method, impl)
+}
+
 describe('link mixin', () => {
   afterEach(() => {
     document.body.innerHTML = ''
-    vi.unstubAllGlobals()
   })
 
   it('adds href and runtime attributes to anchors', () => {
@@ -65,9 +69,10 @@ describe('link mixin', () => {
     expect(anchor.getAttribute('rmx-src')).toBeNull()
   })
 
-  it('navigates on plain click for non-anchor hosts', () => {
-    let navigateMock = vi.fn(() => ({ finished: Promise.resolve() }))
-    vi.stubGlobal('navigation', { navigate: navigateMock })
+  it('navigates on plain click for non-anchor hosts', (t) => {
+    let navigateMock = stubGlobal(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
 
     let { container } = render(<button mix={link('/login', { target: 'auth' })}>Login</button>)
 
@@ -81,9 +86,10 @@ describe('link mixin', () => {
     })
   })
 
-  it('passes history options through for non-anchor navigation', () => {
-    let navigateMock = vi.fn(() => ({ finished: Promise.resolve() }))
-    vi.stubGlobal('navigation', { navigate: navigateMock })
+  it('passes history options through for non-anchor navigation', (t) => {
+    let navigateMock = stubGlobal(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
 
     let { container } = render(<button mix={link('/login', { history: 'replace' })}>Login</button>)
 
@@ -97,9 +103,10 @@ describe('link mixin', () => {
     })
   })
 
-  it('passes resetScroll=false through for non-anchor navigation', () => {
-    let navigateMock = vi.fn(() => ({ finished: Promise.resolve() }))
-    vi.stubGlobal('navigation', { navigate: navigateMock })
+  it('passes resetScroll=false through for non-anchor navigation', (t) => {
+    let navigateMock = stubGlobal(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
 
     let { container } = render(<button mix={link('/login', { resetScroll: false })}>Login</button>)
 
@@ -113,9 +120,10 @@ describe('link mixin', () => {
     })
   })
 
-  it('activates link buttons on Enter and suppresses keyboard clicks from Enter and Space', () => {
-    let navigateMock = vi.fn(() => ({ finished: Promise.resolve() }))
-    vi.stubGlobal('navigation', { navigate: navigateMock })
+  it('activates link buttons on Enter and suppresses keyboard clicks from Enter and Space', (t) => {
+    let navigateMock = stubGlobal(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
 
     let { container } = render(<button mix={link('/login')}>Login</button>)
 
@@ -138,9 +146,10 @@ describe('link mixin', () => {
     expect(navigateMock).toHaveBeenCalledTimes(1)
   })
 
-  it('activates generic link elements on Enter', () => {
-    let navigateMock = vi.fn(() => ({ finished: Promise.resolve() }))
-    vi.stubGlobal('navigation', { navigate: navigateMock })
+  it('activates generic link elements on Enter', (t) => {
+    let navigateMock = stubGlobal(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
 
     let { container } = render(<li mix={link('/login')}>Login</li>)
 
@@ -157,11 +166,11 @@ describe('link mixin', () => {
     })
   })
 
-  it('opens a new tab for meta-click, ctrl-click, and middle-click on non-anchor hosts', () => {
-    let navigateMock = vi.fn(() => ({ finished: Promise.resolve() }))
-    let openMock = vi.fn()
-    vi.stubGlobal('navigation', { navigate: navigateMock })
-    vi.stubGlobal('open', openMock)
+  it('opens a new tab for meta-click, ctrl-click, and middle-click on non-anchor hosts', (t) => {
+    let navigateMock = stubGlobal(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
+    let openMock = stubGlobal(t, 'globalThis', 'open', () => null)
 
     let { container } = render(<button mix={link('/login')}>Login</button>)
 
@@ -182,9 +191,10 @@ describe('link mixin', () => {
     expect(navigateMock).not.toHaveBeenCalled()
   })
 
-  it('does not navigate disabled or aria-disabled link hosts', () => {
-    let navigateMock = vi.fn(() => ({ finished: Promise.resolve() }))
-    vi.stubGlobal('navigation', { navigate: navigateMock })
+  it('does not navigate disabled or aria-disabled link hosts', (t) => {
+    let navigateMock = stubGlobal(t, 'navigation', 'navigate', () => ({
+      finished: Promise.resolve(),
+    }))
 
     let { container } = render(
       <div>

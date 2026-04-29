@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -98,7 +99,7 @@ describe('hydration', () => {
   })
 
   describe('type mismatch handling', () => {
-    it('advances cursor once on type mismatch to find our element', async () => {
+    it('advances cursor once on type mismatch to find our element', async (t) => {
       let html = await renderToString(
         <div>
           <span>Our content</span>
@@ -117,7 +118,7 @@ describe('hydration', () => {
       existingDiv.insertBefore(injected, existingSpan)
 
       // Suppress console.error for expected hydration mismatch log
-      let errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      t.mock.method(console, 'error', () => {})
 
       let root = createRoot(container)
       root.render(
@@ -127,13 +128,11 @@ describe('hydration', () => {
       )
       root.flush()
 
-      errorSpy.mockRestore()
-
       // Our span should be adopted after advancing past injected div
       expect(container.querySelector('span')).toBe(existingSpan)
     })
 
-    it('recreates element if retry also fails', async () => {
+    it('recreates element if retry also fails', async (t) => {
       let html = await renderToString(
         <div>
           <span>Original</span>
@@ -149,7 +148,7 @@ describe('hydration', () => {
       // Replace span with completely different structure
       existingDiv.innerHTML = '<div>Wrong</div><p>Also wrong</p>'
 
-      let errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      t.mock.method(console, 'error', () => {})
 
       let root = createRoot(container)
       root.render(
@@ -159,15 +158,13 @@ describe('hydration', () => {
       )
       root.flush()
 
-      errorSpy.mockRestore()
-
       // Should have created a new span since no match found
       let newSpan = container.querySelector('span')
       expect(newSpan).not.toBe(existingSpan)
       expect(newSpan?.textContent).toBe('Original')
     })
 
-    it('leaves skipped nodes in place', async () => {
+    it('leaves skipped nodes in place', async (t) => {
       let html = await renderToString(
         <div>
           <span>Our content</span>
@@ -186,7 +183,7 @@ describe('hydration', () => {
       skipped.textContent = 'Extension content'
       existingDiv.insertBefore(skipped, existingSpan)
 
-      let errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+      t.mock.method(console, 'error', () => {})
 
       let root = createRoot(container)
       root.render(
@@ -195,8 +192,6 @@ describe('hydration', () => {
         </div>,
       )
       root.flush()
-
-      errorSpy.mockRestore()
 
       // Skipped element should still be in the DOM
       expect(existingDiv.querySelector('#skipped')).toBe(skipped)

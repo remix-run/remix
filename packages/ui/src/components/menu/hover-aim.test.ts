@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, describe, it } from '@remix-run/test'
 
 import { createHoverAim } from './hover-aim.ts'
 
@@ -47,12 +48,7 @@ function pointerEvent(type: string, x: number, y: number) {
   return event
 }
 
-beforeEach(() => {
-  vi.useFakeTimers()
-})
-
 afterEach(() => {
-  vi.useRealTimers()
   document.body.innerHTML = ''
 })
 
@@ -103,19 +99,21 @@ describe('createHoverAim', () => {
     expect(hoverAim.accepts(pointerEvent('pointermove', 80, 100))).toBe(true)
   })
 
-  it('stops suppressing after pointer movement stalls', () => {
+  it('stops suppressing after pointer movement stalls', (t) => {
+    let timers = t.useFakeTimers()
     let hoverAim = createHoverAim()
     let { source, target } = createSourceAndTarget()
     hoverAim.start(source, target, pointerEvent('pointerleave', 40, 80))
 
     expect(hoverAim.accepts(pointerEvent('pointermove', 80, 80))).toBe(false)
 
-    vi.advanceTimersByTime(121)
+    timers.advance(121)
 
     expect(hoverAim.accepts(pointerEvent('pointermove', 90, 80))).toBe(true)
   })
 
-  it('calls onExpire when the stall timeout clears the session', () => {
+  it('calls onExpire when the stall timeout clears the session', (t) => {
+    let timers = t.useFakeTimers()
     let hoverAim = createHoverAim()
     let { source, target } = createSourceAndTarget()
     let expired = false
@@ -123,7 +121,7 @@ describe('createHoverAim', () => {
       expired = true
     })
 
-    vi.advanceTimersByTime(121)
+    timers.advance(121)
 
     expect(expired).toBe(true)
   })
