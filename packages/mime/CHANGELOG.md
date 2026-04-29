@@ -2,6 +2,12 @@
 
 This is the changelog for [`mime`](https://github.com/remix-run/remix/tree/main/packages/mime). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.1
+
+### Patch Changes
+
+- Prefer `video/mp4` for `.mp4` files and `image/x-icon` for `.ico` files.
+
 ## v0.4.0
 
 ### Minor Changes

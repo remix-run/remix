@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/terminal",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Terminal output utilities for JavaScript libraries and CLIs",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

@@ -1,1 +1,0 @@
-Widened `createSqliteDatabaseAdapter` to accept synchronous SQLite clients that match the shared `prepare`/`exec` surface used by Node's `node:sqlite`, Bun's `bun:sqlite`, and compatible clients. The package no longer requires `better-sqlite3` as an optional peer dependency.
