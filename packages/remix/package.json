@@ -83,6 +83,7 @@
     "./terminal": "./src/terminal.ts",
     "./test": "./src/test.ts",
     "./test/cli": "./src/test/cli.ts",
+    "./test/dom": "./src/test/dom.ts",
     "./ui": "./src/ui.ts",
     "./ui/accordion": "./src/ui/accordion.ts",
     "./ui/anchor": "./src/ui/anchor.ts",
@@ -353,6 +354,10 @@
       "./test/cli": {
         "types": "./dist/test/cli.d.ts",
         "default": "./dist/test/cli.js"
+      },
+      "./test/dom": {
+        "types": "./dist/test/dom.d.ts",
+        "default": "./dist/test/dom.js"
       },
       "./ui": {
         "types": "./dist/ui.d.ts",
