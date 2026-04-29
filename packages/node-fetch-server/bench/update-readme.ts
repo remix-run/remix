@@ -64,7 +64,11 @@ async function main(): Promise<void> {
       name: 'Raw Throughput',
       description: 'Simple HTML response benchmarks without inspecting the incoming request.',
       benchmarks: [
-        { name: 'node:http', version: nodeVersion, server: './raw-throughput/servers/node-http.ts' },
+        {
+          name: 'node:http',
+          version: nodeVersion,
+          server: './raw-throughput/servers/node-http.ts',
+        },
         {
           name: 'remix/node-fetch-server',
           version: nodeFetchServerVersion,
@@ -80,7 +84,8 @@ async function main(): Promise<void> {
     },
     {
       name: 'Small Body',
-      description: 'POST benchmarks that read and print the request method, headers, and a small body.',
+      description:
+        'POST benchmarks that read and print the request method, headers, and a small body.',
       wrkScript: './small-body/request.lua',
       benchmarks: [
         {
@@ -107,7 +112,8 @@ async function main(): Promise<void> {
     },
     {
       name: 'Large Body',
-      description: 'POST benchmarks that read and print the request method, headers, and a 1 MB body.',
+      description:
+        'POST benchmarks that read and print the request method, headers, and a 1 MB body.',
       wrkScript: './large-body/request.lua',
       benchmarks: [
         {
@@ -221,7 +227,7 @@ function renderBenchmarkSection(groups: BenchmarkGroupResult[]): string {
 
     for (let result of sortBenchmarkResults(group.results)) {
       lines.push(
-        `| \`${result.name}\` | \`${result.version}\` | \`${formatNumber(result.requestsPerSecond)}\` | \`${result.averageLatency}\` | \`${result.transferPerSecond.trim()}\` |`,
+        `| \`${result.name}\` | \`${result.version}\` | \`${formatRequestsPerSecond(result.requestsPerSecond)}\` | \`${result.averageLatency}\` | \`${result.transferPerSecond.trim()}\` |`,
       )
     }
 
@@ -323,10 +329,9 @@ function delay(ms: number): Promise<void> {
   })
 }
 
-function formatNumber(value: string): string {
+function formatRequestsPerSecond(value: string): string {
   return Number(value).toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    maximumFractionDigits: 0,
   })
 }
 

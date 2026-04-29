@@ -322,10 +322,10 @@ Simple HTML response benchmarks without inspecting the incoming request.
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `remix/node-serve`        |   `0.0.0` |  `62,224.72` |    `6.45ms` |     `9.85MB` |
-| `node:http`               | `24.15.0` |  `47,110.35` |   `10.66ms` |     `9.66MB` |
-| `remix/node-fetch-server` |  `0.13.0` |  `43,317.24` |   `11.69ms` |     `8.80MB` |
-| `express`                 |   `5.2.1` |  `39,751.90` |   `13.69ms` |     `9.59MB` |
+| `remix/node-serve`        |   `0.0.0` |     `62,225` |    `6.45ms` |     `9.85MB` |
+| `node:http`               | `24.15.0` |     `47,110` |   `10.66ms` |     `9.66MB` |
+| `remix/node-fetch-server` |  `0.13.0` |     `43,317` |   `11.69ms` |     `8.80MB` |
+| `express`                 |   `5.2.1` |     `39,752` |   `13.69ms` |     `9.59MB` |
 
 ### Small Body
 
@@ -333,10 +333,10 @@ POST benchmarks that read and print the request method, headers, and a small bod
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `remix/node-serve`        |   `0.0.0` |  `31,212.82` |   `12.75ms` |     `4.94MB` |
-| `remix/node-fetch-server` |  `0.13.0` |  `25,430.33` |   `24.25ms` |     `5.17MB` |
-| `node:http`               | `24.15.0` |  `25,087.56` |   `23.89ms` |     `5.14MB` |
-| `express`                 |   `5.2.1` |  `22,845.31` |   `27.16ms` |     `5.51MB` |
+| `remix/node-serve`        |   `0.0.0` |     `31,213` |   `12.75ms` |     `4.94MB` |
+| `remix/node-fetch-server` |  `0.13.0` |     `25,430` |   `24.25ms` |     `5.17MB` |
+| `node:http`               | `24.15.0` |     `25,088` |   `23.89ms` |     `5.14MB` |
+| `express`                 |   `5.2.1` |     `22,845` |   `27.16ms` |     `5.51MB` |
 
 ### Large Body
 
@@ -344,10 +344,10 @@ POST benchmarks that read and print the request method, headers, and a 1 MB body
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `remix/node-serve`        |   `0.0.0` |   `1,147.54` |  `327.72ms` |   `186.03KB` |
-| `remix/node-fetch-server` |  `0.13.0` |   `1,085.87` |  `217.69ms` |   `225.87KB` |
-| `node:http`               | `24.15.0` |   `1,078.96` |  `198.67ms` |   `226.54KB` |
-| `express`                 |   `5.2.1` |   `1,022.02` |  `216.07ms` |   `252.51KB` |
+| `remix/node-serve`        |   `0.0.0` |      `1,148` |  `327.72ms` |   `186.03KB` |
+| `remix/node-fetch-server` |  `0.13.0` |      `1,086` |  `217.69ms` |   `225.87KB` |
+| `node:http`               | `24.15.0` |      `1,079` |  `198.67ms` |   `226.54KB` |
+| `express`                 |   `5.2.1` |      `1,022` |  `216.07ms` |   `252.51KB` |
 
 <!-- benchmarks:end -->
 
