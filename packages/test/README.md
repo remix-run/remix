@@ -114,11 +114,11 @@ export default {
     },
   },
 
-  // Worker pool implementation: "threads" (default, runs each test file in a
-  // `worker_threads.Worker`) or "forks" (runs each test file in a
-  // `child_process.fork` subprocess for full process-level isolation, at the
-  // cost of higher per-file startup overhead)
-  pool: 'threads',
+  // Worker pool implementation: "forks" (default, runs each test file in a
+  // `child_process.fork` subprocess for full process-level isolation) or
+  // "threads" (runs each test file in a `worker_threads.Worker`, which has
+  // lower per-file startup overhead but shares the host process)
+  pool: 'forks',
 
   // Comma-separated list of playwright projects to run E2E tests for
   project: 'chromium',

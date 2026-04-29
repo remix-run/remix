@@ -112,7 +112,7 @@ const cliOptions = {
   },
   pool: {
     type: 'string',
-    description: 'Worker pool implementation: threads (default) or forks',
+    description: 'Worker pool implementation: forks (default) or threads',
   },
   project: {
     type: 'string',
@@ -217,9 +217,10 @@ export interface RemixTestConfig {
    */
   playwrightConfig?: string | PlaywrightTestConfig
   /**
-   * Worker pool implementation (--pool). `threads` (default) runs each test file in
-   * a `worker_threads.Worker`; `forks` runs each test file in a `child_process.fork`
-   * subprocess for full process-level isolation at the cost of slower startup.
+   * Worker pool implementation (--pool). `forks` (default) runs each test file in
+   * a `child_process.fork` subprocess for full process-level isolation; `threads`
+   * runs each test file in a `worker_threads.Worker`, which has lower per-file
+   * startup overhead but shares the host process.
    */
   pool?: 'threads' | 'forks'
   /** Filter tests to a specific playwright project or comma-separated list of projects (--project) */
