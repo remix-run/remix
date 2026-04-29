@@ -1,10 +1,11 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { serve } from '../index.ts'
+const describeUws = process.platform === 'win32' ? describe.skip : describe
 
-describe('serve', () => {
+describeUws('serve', () => {
   it('handles fetch requests with the uWebSockets.js transport', async () => {
+    let { serve } = await import('../index.ts')
     let server = serve(
       async (request) => {
         assert.equal(request.method, 'POST')
@@ -42,6 +43,7 @@ describe('serve', () => {
   })
 
   it('uses the host option to override the incoming Host header', async () => {
+    let { serve } = await import('../index.ts')
     let server = serve(
       async (request) => {
         assert.equal(request.url, 'http://remix.run/test?value=1')
