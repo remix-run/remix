@@ -67,6 +67,25 @@ export function createRequestListener(
   options?: RequestListenerOptions,
 ): http.RequestListener {
   let onError = options?.onError ?? defaultErrorHandler
+  if (handler.length === 0) {
+    let handlerWithoutArgs = handler as () => Response | Promise<Response>
+
+    return async (_req, res) => {
+      let response: Response
+      try {
+        response = await handlerWithoutArgs()
+      } catch (error) {
+        try {
+          response = (await onError(error)) ?? internalServerError()
+        } catch (error) {
+          console.error(`There was an error in the error handler: ${error}`)
+          response = internalServerError()
+        }
+      }
+
+      await sendResponse(res, response)
+    }
+  }
 
   return async (req, res) => {
     let request = createRequest(req, res, options)
