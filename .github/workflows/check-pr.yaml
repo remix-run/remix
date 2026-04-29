@@ -236,6 +236,23 @@ jobs:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: node ./scripts/detect-changed-packages.ts "$PR_BASE_SHA" "$PR_HEAD_SHA"
 
+      - name: Detect bookstore test changes
+        id: bookstore-tests
+        shell: bash
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if git diff --name-only "$PR_BASE_SHA" "$PR_HEAD_SHA" | grep -Eq '^(\.github/workflows/(check-main|check-pr|test)\.yaml|demos/bookstore/)'; then
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Run bookstore tests
+        if: steps.bookstore-tests.outputs.run == 'true'
+        run: node ./scripts/run-bookstore-tests-serially.ts
+
   lint:
     name: Lint
     runs-on: ubuntu-latest

@@ -19,9 +19,9 @@ if (platform !== 'win32') {
 export default {
   ...(platform === 'win32'
     ? {
-        // node:sqlite crashes after the bookstore e2e worker exits on Windows.
-        // Keep Windows coverage on concurrent server/browser tests until that stabilizes.
-        type: 'server,browser',
+        // node:sqlite currently crashes on Windows when this demo opens SQLite
+        // databases across multiple test workers concurrently.
+        concurrency: 1,
       }
     : {}),
   playwrightConfig: {
