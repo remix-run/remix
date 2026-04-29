@@ -1,1 +1,1 @@
-Improve request throughput by avoiding an extra URL object allocation when creating Fetch API requests, skipping request/client construction for handlers that declare no parameters, and lazily materializing `Request` objects for request handlers that only inspect cheap request metadata like `method`.
+Improve request throughput by lazily materializing `Request` and `Headers` objects, specializing handlers by declared arity, avoiding unnecessary client/request work on hot paths, and sending single-chunk response bodies with less Web stream overhead.
