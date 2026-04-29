@@ -65,7 +65,7 @@
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
     "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
-    "./node-fetch-server/uws": "./src/node-fetch-server/uws.ts",
+    "./node-serve": "./src/node-serve.ts",
     "./response/compress": "./src/response/compress.ts",
     "./response/file": "./src/response/file.ts",
     "./response/html": "./src/response/html.ts",
@@ -283,9 +283,9 @@
         "types": "./dist/node-fetch-server/test.d.ts",
         "default": "./dist/node-fetch-server/test.js"
       },
-      "./node-fetch-server/uws": {
-        "types": "./dist/node-fetch-server/uws.d.ts",
-        "default": "./dist/node-fetch-server/uws.js"
+      "./node-serve": {
+        "types": "./dist/node-serve.d.ts",
+        "default": "./dist/node-serve.js"
       },
       "./response/compress": {
         "types": "./dist/response/compress.d.ts",
@@ -488,7 +488,8 @@
     "@remix-run/assert": "workspace:^",
     "@remix-run/cli": "workspace:^",
     "@remix-run/test": "workspace:^",
-    "@remix-run/terminal": "workspace:^"
+    "@remix-run/terminal": "workspace:^",
+    "@remix-run/node-serve": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

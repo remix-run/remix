@@ -8,6 +8,10 @@ const benchDir = path.dirname(fileURLToPath(import.meta.url))
 const packageDir = path.resolve(benchDir, '..')
 const readmePath = path.join(packageDir, 'README.md')
 const packageJsonPath = path.join(packageDir, 'package.json')
+const nodeServePackageJsonPath = path.join(
+  benchDir,
+  'node_modules/@remix-run/node-serve/package.json',
+)
 const expressPackageJsonPath = path.join(benchDir, 'node_modules/express/package.json')
 
 const benchmarkStart = '<!-- benchmarks:start -->'
@@ -51,6 +55,7 @@ main().catch((error: unknown) => {
 
 async function main(): Promise<void> {
   let nodeFetchServerVersion = await readPackageVersion(packageJsonPath)
+  let nodeServeVersion = await readPackageVersion(nodeServePackageJsonPath)
   let expressVersion = await readPackageVersion(expressPackageJsonPath)
   let nodeVersion = process.version.slice(1)
 
@@ -66,9 +71,9 @@ async function main(): Promise<void> {
           server: './servers/node-fetch-server.ts',
         },
         {
-          name: 'node-fetch-server-uws',
-          version: nodeFetchServerVersion,
-          server: './servers/node-fetch-server-uws.ts',
+          name: 'node-serve',
+          version: nodeServeVersion,
+          server: './servers/node-serve.ts',
         },
         { name: 'express', version: expressVersion, server: './servers/express.ts' },
       ],
@@ -89,9 +94,9 @@ async function main(): Promise<void> {
           server: './servers/node-fetch-server-request-inspection.ts',
         },
         {
-          name: 'node-fetch-server-uws-request-inspection',
-          version: nodeFetchServerVersion,
-          server: './servers/node-fetch-server-uws-request-inspection.ts',
+          name: 'node-serve-request-inspection',
+          version: nodeServeVersion,
+          server: './servers/node-serve-request-inspection.ts',
         },
         {
           name: 'express-request-inspection',
@@ -122,10 +127,7 @@ async function main(): Promise<void> {
   console.log(`\nUpdated ${path.relative(process.cwd(), readmePath)}`)
 }
 
-async function runBenchmark(
-  benchmark: Benchmark,
-  group: BenchmarkGroup,
-): Promise<BenchmarkResult> {
+async function runBenchmark(benchmark: Benchmark, group: BenchmarkGroup): Promise<BenchmarkResult> {
   let server = spawn(process.execPath, [benchmark.server], {
     cwd: benchDir,
     env: { ...process.env, PORT: port },
@@ -162,10 +164,7 @@ async function runBenchmark(
   }
 }
 
-function parseWrkOutput(output: string): Omit<
-  BenchmarkResult,
-  'name' | 'version' | 'server'
-> {
+function parseWrkOutput(output: string): Omit<BenchmarkResult, 'name' | 'version' | 'server'> {
   return {
     requestsPerSecond: readMatch(output, /Requests\/sec:\s+([0-9.]+)/, 'Requests/sec'),
     averageLatency: readMatch(output, /Latency\s+([^\s]+)/, 'Latency'),

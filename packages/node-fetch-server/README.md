@@ -5,7 +5,6 @@ Build Node.js servers with web-standard Fetch API primitives. `node-fetch-server
 ## Features
 
 - **Web Standards** - Standard [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) APIs
-- **uWebSockets.js Transport** - Optional native transport for high-throughput Node.js servers
 - **Node.js HTTP Integration** - Works directly with `node:http`, `node:https`, and `node:http2`
 - **Streaming Support** - Response support with `ReadableStream`
 - **Custom Hostname** - Configuration for deployment flexibility
@@ -18,53 +17,7 @@ Build Node.js servers with web-standard Fetch API primitives. `node-fetch-server
 npm i remix
 ```
 
-The `remix/node-fetch-server/uws` export uses [`uWebSockets.js`](https://github.com/uNetworking/uWebSockets.js), which is installed as an optional dependency. Standard installs include optional dependencies; if your install disables them, enable optional dependencies before using the uWS export.
-
 ## Usage
-
-For high-throughput Node.js servers, use the `serve()` method from the `remix/node-fetch-server/uws` export:
-
-```ts
-import { serve } from 'remix/node-fetch-server/uws'
-
-let users = new Map([
-  ['1', { id: '1', name: 'Alice', email: 'alice@example.com' }],
-  ['2', { id: '2', name: 'Bob', email: 'bob@example.com' }],
-])
-
-async function handler(request: Request) {
-  let url = new URL(request.url)
-
-  // GET / - Home page
-  if (url.pathname === '/' && request.method === 'GET') {
-    return new Response('Welcome to the User API! Try GET /api/users')
-  }
-
-  // GET /api/users - List all users
-  if (url.pathname === '/api/users' && request.method === 'GET') {
-    return Response.json(Array.from(users.values()))
-  }
-
-  // GET /api/users/:id - Get specific user
-  let userMatch = url.pathname.match(/^\/api\/users\/(\w+)$/)
-  if (userMatch && request.method === 'GET') {
-    let user = users.get(userMatch[1])
-    if (user) {
-      return Response.json(user)
-    }
-    return new Response('User not found', { status: 404 })
-  }
-
-  return new Response('Not Found', { status: 404 })
-}
-
-let server = serve(handler, { port: 3000 })
-
-await server.ready
-console.log(`Server running at http://localhost:${server.port}`)
-```
-
-### Node.js HTTP Server
 
 Use `createRequestListener()` when you want to plug a fetch handler into a standard Node.js server:
 
@@ -93,34 +46,6 @@ let server = http.createServer(createRequestListener(handler))
 
 server.listen(3000, () => {
   console.log('Server running at http://localhost:3000')
-})
-```
-
-### Existing uWebSockets.js Apps
-
-Use `createUwsRequestHandler()` when you already have a uWebSockets.js app and want to route only part of it to a fetch handler:
-
-This example assumes `uWebSockets.js` is also a direct dependency of your app.
-
-```ts
-import { App } from 'uWebSockets.js'
-import { createUwsRequestHandler } from 'remix/node-fetch-server/uws'
-
-let app = App()
-
-async function handler(request: Request) {
-  let url = new URL(request.url)
-  return Response.json({ path: url.pathname })
-}
-
-app.get('/health', (res) => {
-  res.end('ok')
-})
-
-app.any('/api/*', createUwsRequestHandler(handler))
-
-app.listen(3000, (socket) => {
-  if (!socket) throw new Error('Could not listen on port 3000')
 })
 ```
 
@@ -199,17 +124,16 @@ async function handler(request: Request) {
 
 ### Custom Hostname Configuration
 
-Configure custom hostnames for deployment on VPS or custom environments. Both the uWS and
-`node:http` adapters use the `host` option when constructing `request.url`.
+Configure custom hostnames for deployment on VPS or custom environments. `node-fetch-server` uses
+the `host` option when constructing `request.url`.
 
 ```ts
-import { serve } from 'remix/node-fetch-server/uws'
+import * as http from 'node:http'
+import { createRequestListener } from 'remix/node-fetch-server'
 
-// Use a custom hostname (e.g., from environment variable)
 let hostname = process.env.HOST || 'api.example.com'
 
 async function handler(request: Request) {
-  // request.url will now use your custom hostname
   console.log(request.url) // http://api.example.com/path
 
   return Response.json({
@@ -217,18 +141,6 @@ async function handler(request: Request) {
     url: request.url,
   })
 }
-
-let server = serve(handler, { host: hostname, port: 3000 })
-
-await server.ready
-```
-
-Using the same `hostname` and `handler` with a standard Node.js server, pass the same option to
-`createRequestListener()`:
-
-```ts
-import * as http from 'node:http'
-import { createRequestListener } from 'remix/node-fetch-server'
 
 let server = http.createServer(createRequestListener(handler, { host: hostname }))
 
@@ -379,6 +291,7 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/no
 
 ## Related Packages
 
+- [`node-serve`](https://github.com/remix-run/remix/tree/main/packages/node-serve) - Run Fetch API handlers on a managed uWebSockets.js server for high-throughput Node.js deployments
 - [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
 
 ## Benchmarks
@@ -396,6 +309,7 @@ pnpm run bench:update-readme
 ```
 
 <!-- benchmarks:start -->
+
 Last updated: 2026-04-29T07:17:24.525Z
 
 Environment: Darwin 25.3.0, Apple M1 Pro, Node.js v24.15.0
@@ -406,23 +320,24 @@ Command: `wrk -t12 -c400 -d30s`
 
 Simple HTML response benchmarks without inspecting the incoming request.
 
-| Server | Version | Requests/sec | Avg latency | Transfer/sec |
-|---|---:|---:|---:|---:|
-| `node-fetch-server-uws` | `0.13.0` | `62,169.97` | `6.37ms` | `9.84MB` |
-| `node:http` | `24.15.0` | `48,513.85` | `10.61ms` | `9.95MB` |
-| `node-fetch-server` | `0.13.0` | `44,886.75` | `11.57ms` | `9.12MB` |
-| `express` | `5.2.1` | `40,475.71` | `13.09ms` | `9.77MB` |
+| Server              |   Version | Requests/sec | Avg latency | Transfer/sec |
+| ------------------- | --------: | -----------: | ----------: | -----------: |
+| `node-serve`        |   `0.0.0` |  `62,169.97` |    `6.37ms` |     `9.84MB` |
+| `node:http`         | `24.15.0` |  `48,513.85` |   `10.61ms` |     `9.95MB` |
+| `node-fetch-server` |  `0.13.0` |  `44,886.75` |   `11.57ms` |     `9.12MB` |
+| `express`           |   `5.2.1` |  `40,475.71` |   `13.09ms` |     `9.77MB` |
 
 ### Request Inspection
 
 POST benchmarks that read the request method, headers, and body.
 
-| Server | Version | Requests/sec | Avg latency | Transfer/sec |
-|---|---:|---:|---:|---:|
-| `node-fetch-server-uws-request-inspection` | `0.13.0` | `31,369.44` | `12.60ms` | `4.97MB` |
-| `node-fetch-server-request-inspection` | `0.13.0` | `26,196.04` | `21.93ms` | `5.32MB` |
-| `node:http-request-inspection` | `24.15.0` | `25,662.42` | `22.31ms` | `5.26MB` |
-| `express-request-inspection` | `5.2.1` | `23,745.73` | `25.28ms` | `5.73MB` |
+| Server                                 |   Version | Requests/sec | Avg latency | Transfer/sec |
+| -------------------------------------- | --------: | -----------: | ----------: | -----------: |
+| `node-serve-request-inspection`        |   `0.0.0` |  `31,369.44` |   `12.60ms` |     `4.97MB` |
+| `node-fetch-server-request-inspection` |  `0.13.0` |  `26,196.04` |   `21.93ms` |     `5.32MB` |
+| `node:http-request-inspection`         | `24.15.0` |  `25,662.42` |   `22.31ms` |     `5.26MB` |
+| `express-request-inspection`           |   `5.2.1` |  `23,745.73` |   `25.28ms` |     `5.73MB` |
+
 <!-- benchmarks:end -->
 
 ## License

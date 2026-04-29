@@ -38,15 +38,16 @@ run_benchmark "node:http-request-inspection@$NODE_VERSION" \
   -s ./request-inspection.lua
 
 NODE_FETCH_SERVER_VERSION=$(node -e 'console.log(require("../package.json").version)')
+NODE_SERVE_VERSION=$(node -e 'console.log(require("./node_modules/@remix-run/node-serve/package.json").version)')
 run_benchmark "node-fetch-server@$NODE_FETCH_SERVER_VERSION" \
   "node ./servers/node-fetch-server.ts"
-run_benchmark "node-fetch-server-uws@$NODE_FETCH_SERVER_VERSION" \
-  "node ./servers/node-fetch-server-uws.ts"
+run_benchmark "node-serve@$NODE_SERVE_VERSION" \
+  "node ./servers/node-serve.ts"
 run_benchmark "node-fetch-server-request-inspection@$NODE_FETCH_SERVER_VERSION" \
   "node ./servers/node-fetch-server-request-inspection.ts" \
   -s ./request-inspection.lua
-run_benchmark "node-fetch-server-uws-request-inspection@$NODE_FETCH_SERVER_VERSION" \
-  "node ./servers/node-fetch-server-uws-request-inspection.ts" \
+run_benchmark "node-serve-request-inspection@$NODE_SERVE_VERSION" \
+  "node ./servers/node-serve-request-inspection.ts" \
   -s ./request-inspection.lua
 
 EXPRESS_VERSION=$(node -e 'console.log(require("express/package.json").version)')

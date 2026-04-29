@@ -18,7 +18,7 @@ export interface UwsRequestHandler {
   (res: uWS.HttpResponse, req: uWS.HttpRequest): void
 }
 
-export interface UwsServeOptions extends UwsRequestHandlerOptions {
+export interface ServeOptions extends UwsRequestHandlerOptions {
   /**
    * The hostname or IP address to listen on. By default uWebSockets.js listens on all interfaces.
    */
@@ -29,7 +29,7 @@ export interface UwsServeOptions extends UwsRequestHandlerOptions {
   port?: number
 }
 
-export interface UwsServer {
+export interface Server {
   /**
    * The underlying uWebSockets.js application.
    */
@@ -158,7 +158,7 @@ export function createUwsRequestHandler(
  * @param options Server options
  * @returns The running uWebSockets.js server
  */
-export function serve(handler: FetchHandler, options?: UwsServeOptions): UwsServer {
+export function serve(handler: FetchHandler, options?: ServeOptions): Server {
   let app = uWS.App()
   let listenSocket: uWS.us_listen_socket | false = false
   let port = 0

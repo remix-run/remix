@@ -1,4 +1,4 @@
-import { serve } from '@remix-run/node-fetch-server/uws'
+import { serve } from '@remix-run/node-serve'
 
 serve(
   async (request) => {

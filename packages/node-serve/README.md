@@ -1,0 +1,136 @@
+# node-serve
+
+Run Fetch API request handlers on a high-throughput Node.js server powered by [`uWebSockets.js`](https://github.com/uNetworking/uWebSockets.js). Use this package when you want Remix-style `Request`/`Response` handlers with a managed server optimized for raw throughput.
+
+## Features
+
+- **Fetch API Handlers**: Serve standard [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) to [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) request handlers
+- **uWebSockets.js Transport**: Uses the native uWebSockets.js HTTP server for high-throughput Node.js deployments
+- **Managed Server Lifecycle**: Start a server with `serve()`, wait for `server.ready`, and close it with `server.close()`
+- **Existing uWS App Support**: Use `createUwsRequestHandler()` when you already own a uWebSockets.js app
+- **Custom Hostname**: Override the host and protocol used to construct incoming `request.url` values
+- **Client Info**: Access client IP address, address family, and remote port when your handler accepts a second argument
+
+## Installation
+
+```sh
+npm i remix
+```
+
+`node-serve` uses [`uWebSockets.js`](https://github.com/uNetworking/uWebSockets.js), which is installed as an optional dependency. Standard installs include optional dependencies; if your install disables them, enable optional dependencies or install `uWebSockets.js` directly before using `remix/node-serve`.
+
+## Usage
+
+Use `serve()` to start a uWebSockets.js server that calls your fetch handler for every incoming request:
+
+```ts
+import { serve } from 'remix/node-serve'
+
+let users = new Map([
+  ['1', { id: '1', name: 'Alice', email: 'alice@example.com' }],
+  ['2', { id: '2', name: 'Bob', email: 'bob@example.com' }],
+])
+
+async function handler(request: Request) {
+  let url = new URL(request.url)
+
+  if (url.pathname === '/' && request.method === 'GET') {
+    return new Response('Welcome to the User API! Try GET /api/users')
+  }
+
+  if (url.pathname === '/api/users' && request.method === 'GET') {
+    return Response.json(Array.from(users.values()))
+  }
+
+  let userMatch = url.pathname.match(/^\/api\/users\/(\w+)$/)
+  if (userMatch && request.method === 'GET') {
+    let user = users.get(userMatch[1])
+    if (user) return Response.json(user)
+    return new Response('User not found', { status: 404 })
+  }
+
+  return new Response('Not Found', { status: 404 })
+}
+
+let server = serve(handler, { port: 3000 })
+
+await server.ready
+console.log(`Server running at http://localhost:${server.port}`)
+```
+
+### Custom Request URLs
+
+Use `host` and `protocol` when your server runs behind a proxy or load balancer and you need stable incoming request URLs:
+
+```ts
+import { serve } from 'remix/node-serve'
+
+let server = serve(handler, {
+  host: process.env.HOST ?? 'api.example.com',
+  protocol: 'https:',
+  port: 3000,
+})
+
+await server.ready
+```
+
+### Client Information
+
+Handlers that accept a second argument receive the remote client address:
+
+```ts
+import { type FetchHandler, serve } from 'remix/node-serve'
+
+let handler: FetchHandler = async (request, client) => {
+  console.log(`Request from ${client.address}:${client.port}`)
+
+  return Response.json({
+    path: new URL(request.url).pathname,
+    clientAddress: client.address,
+  })
+}
+
+serve(handler, { port: 3000 })
+```
+
+### Existing uWebSockets.js Apps
+
+Use `createUwsRequestHandler()` when you already have a uWebSockets.js app and want only part of the app to use a Fetch API handler:
+
+This example assumes `uWebSockets.js` is also a direct dependency of your app.
+
+```ts
+import { App } from 'uWebSockets.js'
+import { createUwsRequestHandler } from 'remix/node-serve'
+
+let app = App()
+
+async function handler(request: Request) {
+  let url = new URL(request.url)
+  return Response.json({ path: url.pathname })
+}
+
+app.get('/health', (res) => {
+  res.end('ok')
+})
+
+app.any('/api/*', createUwsRequestHandler(handler))
+
+app.listen(3000, (socket) => {
+  if (!socket) throw new Error('Could not listen on port 3000')
+})
+```
+
+## Related Packages
+
+- [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server) - Adapt Fetch API handlers to existing `node:http`, `node:https`, and `node:http2` servers
+- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Route incoming `Request` objects to Fetch API handlers
+
+## Related Work
+
+- [`uWebSockets.js`](https://github.com/uNetworking/uWebSockets.js) - Native HTTP/WebSocket server used by this package
+- [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) - Web standard `Request` and `Response` primitives
+
+## License
+
+See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

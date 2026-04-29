@@ -1302,16 +1302,15 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-    optionalDependencies:
-      uWebSockets.js:
-        specifier: github:uNetworking/uWebSockets.js#v20.66.0
-        version: https://codeload.github.com/uNetworking/uWebSockets.js/tar.gz/a63031f40f76dc2422e8da736c04217053e9db2b
 
   packages/node-fetch-server/bench:
     dependencies:
       '@remix-run/node-fetch-server':
         specifier: workspace:^
         version: link:..
+      '@remix-run/node-serve':
+        specifier: workspace:^
+        version: link:../../node-serve
       express:
         specifier: ^5.2.1
         version: 5.2.1
@@ -1332,6 +1331,25 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+
+  packages/node-serve:
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+    optionalDependencies:
+      uWebSockets.js:
+        specifier: github:uNetworking/uWebSockets.js#v20.66.0
+        version: https://codeload.github.com/uNetworking/uWebSockets.js/tar.gz/a63031f40f76dc2422e8da736c04217053e9db2b
 
   packages/remix:
     dependencies:
@@ -1428,6 +1446,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:^
         version: link:../node-fetch-server
+      '@remix-run/node-serve':
+        specifier: workspace:^
+        version: link:../node-serve
       '@remix-run/response':
         specifier: workspace:^
         version: link:../response

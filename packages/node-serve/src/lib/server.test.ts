@@ -1,7 +1,7 @@
-import assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 
-import { serve } from '../uws.ts'
+import { serve } from '../index.ts'
 
 describe('serve', () => {
   it('handles fetch requests with the uWebSockets.js transport', async () => {
