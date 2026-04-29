@@ -17,8 +17,6 @@ if (platform !== 'win32') {
 }
 
 export default {
-  // better-sqlite3 may crash on Windows when this demo opens in-memory
-  // databases across multiple test workers or browser project runs.
   concurrency: 1,
   playwrightConfig: {
     projects,

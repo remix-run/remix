@@ -1,6 +1,6 @@
 import * as fs from 'node:fs'
+import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
-import BetterSqlite3 from 'better-sqlite3'
 import { createDatabase } from 'remix/data-table'
 import { createMigrationRunner } from 'remix/data-table/migrations'
 import { loadMigrations } from 'remix/data-table/migrations/node'
@@ -23,8 +23,8 @@ if (process.env.NODE_ENV === 'test') {
 
 const migrationsDirectoryPath = fileURLToPath(new URL('../../db/migrations/', import.meta.url))
 
-const sqlite = new BetterSqlite3(databaseFilePath)
-sqlite.pragma('foreign_keys = ON')
+const sqlite = new DatabaseSync(databaseFilePath)
+sqlite.exec('PRAGMA foreign_keys = ON')
 const adapter = createSqliteDatabaseAdapter(sqlite)
 
 export const db = createDatabase(adapter)
