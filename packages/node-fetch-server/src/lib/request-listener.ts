@@ -2,7 +2,7 @@ import type * as http from 'node:http'
 import type * as http2 from 'node:http2'
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
-import { createLazyRequest } from './lazy-request.ts'
+import { createLazyRequestFactory } from './lazy-request.ts'
 
 /**
  * Options for creating a Node.js request listener.
@@ -67,6 +67,8 @@ export function createRequestListener(
   options?: RequestListenerOptions,
 ): http.RequestListener {
   let onError = options?.onError ?? defaultErrorHandler
+  let createLazyRequest = createLazyRequestFactory(options, createRequest, createHeaders)
+
   if (handler.length === 0) {
     let handlerWithoutArgs = handler as () => Response | Promise<Response>
 
@@ -91,7 +93,7 @@ export function createRequestListener(
     let requestHandler = handler as (request: Request) => Response | Promise<Response>
 
     return (req, res) => {
-      let request = createLazyRequest(req, res, options, createRequest, createHeaders)
+      let request = createLazyRequest(req, res)
 
       let response: Response | Promise<Response>
       try {
@@ -117,7 +119,7 @@ export function createRequestListener(
   }
 
   return async (req, res) => {
-    let request = createLazyRequest(req, res, options, createRequest, createHeaders)
+    let request = createLazyRequest(req, res)
     let client = {
       address: req.socket.remoteAddress!,
       family: req.socket.remoteFamily! as ClientAddress['family'],

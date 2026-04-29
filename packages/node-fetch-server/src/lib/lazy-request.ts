@@ -22,6 +22,122 @@ export function createLazyRequest<requestOptions>(
   return new LazyRequest(req, res, options, createRequest, createHeaders)
 }
 
+export function createLazyRequestFactory<requestOptions>(
+  options: requestOptions | undefined,
+  createRequest: RequestFactory<requestOptions>,
+  createHeaders: HeadersFactory,
+): (req: IncomingRequest, res: ServerResponse) => Request {
+  class BoundLazyRequest implements Request {
+    #request: Request | undefined
+    #headers: Headers | undefined
+    #req: IncomingRequest
+    #res: ServerResponse
+    #method: string
+
+    constructor(req: IncomingRequest, res: ServerResponse) {
+      this.#req = req
+      this.#res = res
+      this.#method = req.method ?? 'GET'
+    }
+
+    #materialize(): Request {
+      return (this.#request ??= createRequest(this.#req, this.#res, options))
+    }
+
+    get body() {
+      return this.#materialize().body
+    }
+
+    get bodyUsed() {
+      return this.#materialize().bodyUsed
+    }
+
+    get cache() {
+      return this.#materialize().cache
+    }
+
+    get credentials() {
+      return this.#materialize().credentials
+    }
+
+    get destination() {
+      return this.#materialize().destination
+    }
+
+    get headers() {
+      return (this.#headers ??= createLazyHeaders(this.#req, createHeaders))
+    }
+
+    get integrity() {
+      return this.#materialize().integrity
+    }
+
+    get keepalive() {
+      return this.#materialize().keepalive
+    }
+
+    get method() {
+      return this.#method
+    }
+
+    get mode() {
+      return this.#materialize().mode
+    }
+
+    get redirect() {
+      return this.#materialize().redirect
+    }
+
+    get referrer() {
+      return this.#materialize().referrer
+    }
+
+    get referrerPolicy() {
+      return this.#materialize().referrerPolicy
+    }
+
+    get signal() {
+      return this.#materialize().signal
+    }
+
+    get url() {
+      return this.#materialize().url
+    }
+
+    arrayBuffer() {
+      return this.#materialize().arrayBuffer()
+    }
+
+    blob() {
+      return this.#materialize().blob()
+    }
+
+    bytes() {
+      return this.#materialize().bytes()
+    }
+
+    clone() {
+      return this.#materialize().clone()
+    }
+
+    formData() {
+      return this.#materialize().formData()
+    }
+
+    json() {
+      return this.#materialize().json()
+    }
+
+    text() {
+      return this.#materialize().text()
+    }
+  }
+
+  Object.setPrototypeOf(BoundLazyRequest.prototype, Request.prototype)
+
+  return (req, res) => new BoundLazyRequest(req, res)
+}
+
 class LazyRequest<requestOptions> implements Request {
   #request: Request | undefined
   #headers: Headers | undefined
