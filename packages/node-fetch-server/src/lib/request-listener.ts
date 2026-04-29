@@ -88,6 +88,28 @@ export function createRequestListener(
     }
   }
 
+  if (handler.length === 1) {
+    let requestHandler = handler as (request: Request) => Response | Promise<Response>
+
+    return async (req, res) => {
+      let request = createLazyRequest(req, res, options, createRequest, createHeaders)
+
+      let response: Response
+      try {
+        response = await requestHandler(request)
+      } catch (error) {
+        try {
+          response = (await onError(error)) ?? internalServerError()
+        } catch (error) {
+          console.error(`There was an error in the error handler: ${error}`)
+          response = internalServerError()
+        }
+      }
+
+      await sendResponse(res, response)
+    }
+  }
+
   return async (req, res) => {
     let request = createLazyRequest(req, res, options, createRequest, createHeaders)
     let client = {
