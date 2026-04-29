@@ -460,8 +460,11 @@ function diffHost(
   let mixState = curr._mixState as MixinRuntimeState | undefined
   let currProps = getHostProps(curr)
   let nextProps = resolveNodeMixProps(next, frame, scheduler, mixState)
-  if (shouldDispatchInlineMixinLifecycle(curr._dom)) {
-    dispatchMixinBeforeUpdate(next._mixState as MixinRuntimeState | undefined)
+  let nextMixState = next._mixState as MixinRuntimeState | undefined
+  let shouldDispatchMixinLifecycle =
+    (nextMixState?.runners.length ?? 0) > 0 && shouldDispatchInlineMixinLifecycle(curr._dom)
+  if (shouldDispatchMixinLifecycle) {
+    dispatchMixinBeforeUpdate(nextMixState)
   }
 
   // Handle innerHTML prop BEFORE diffChildren to avoid clearing children
@@ -498,10 +501,8 @@ function diffHost(
   }
 
   bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, styles)
-  if (shouldDispatchInlineMixinLifecycle(curr._dom)) {
-    scheduler.enqueueCommitPhase([
-      () => dispatchMixinCommit(next._mixState as MixinRuntimeState | undefined),
-    ])
+  if (shouldDispatchMixinLifecycle) {
+    scheduler.enqueueCommitPhase([() => dispatchMixinCommit(nextMixState)])
   }
 
   return
