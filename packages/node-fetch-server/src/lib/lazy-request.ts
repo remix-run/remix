@@ -1,6 +1,8 @@
 import type * as http from 'node:http'
 import type * as http2 from 'node:http2'
 
+import { createLazyHeaders } from './lazy-headers.ts'
+
 type IncomingRequest = http.IncomingMessage | http2.Http2ServerRequest
 type ServerResponse = http.ServerResponse | http2.Http2ServerResponse
 type RequestFactory<requestOptions> = (
@@ -70,7 +72,7 @@ class LazyRequest<requestOptions> implements Request {
   }
 
   get headers() {
-    return (this.#headers ??= this.#createHeaders(this.#req))
+    return (this.#headers ??= createLazyHeaders(this.#req, this.#createHeaders))
   }
 
   get integrity() {
