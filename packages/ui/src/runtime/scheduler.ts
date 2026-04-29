@@ -49,6 +49,10 @@ export function createScheduler(
   let cascadingUpdateCount = 0
   let resetScheduled = false
   let phaseEvents = new EventTarget()
+  let phaseListenerCounts: Record<SchedulerPhaseType, number> = {
+    beforeUpdate: 0,
+    commit: 0,
+  }
   let scheduler: {
     enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void
     enqueueWork(newTasks: EmptyFn[]): void
@@ -172,6 +176,7 @@ export function createScheduler(
   }
 
   function dispatchPhaseEvent(type: SchedulerPhaseType, parents: ParentNode[]) {
+    if (phaseListenerCounts[type] === 0) return
     let event = new Event(type) as SchedulerPhaseEvent
     event.parents = parents
     phaseEvents.dispatchEvent(event)
@@ -246,10 +251,12 @@ export function createScheduler(
     },
 
     addEventListener(type, listener, options) {
+      if (listener) phaseListenerCounts[type]++
       phaseEvents.addEventListener(type, listener, options)
     },
 
     removeEventListener(type, listener, options) {
+      if (listener) phaseListenerCounts[type] = Math.max(0, phaseListenerCounts[type] - 1)
       phaseEvents.removeEventListener(type, listener, options)
     },
 

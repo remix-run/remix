@@ -332,6 +332,8 @@ function bindNodeMixRuntime(
 }
 
 function isHeadHostNode(node: HostNode): boolean {
+  if (node.type === 'head') return true
+  if (node.type.length !== 4) return false
   return node.type.toLowerCase() === 'head'
 }
 
@@ -460,8 +462,11 @@ function diffHost(
   let mixState = curr._mixState as MixinRuntimeState | undefined
   let currProps = getHostProps(curr)
   let nextProps = resolveNodeMixProps(next, frame, scheduler, mixState)
-  if (shouldDispatchInlineMixinLifecycle(curr._dom)) {
-    dispatchMixinBeforeUpdate(next._mixState as MixinRuntimeState | undefined)
+  let nextMixState = next._mixState as MixinRuntimeState | undefined
+  let shouldDispatchMixinLifecycle =
+    (nextMixState?.runners.length ?? 0) > 0 && shouldDispatchInlineMixinLifecycle(curr._dom)
+  if (shouldDispatchMixinLifecycle) {
+    dispatchMixinBeforeUpdate(nextMixState)
   }
 
   // Handle innerHTML prop BEFORE diffChildren to avoid clearing children
@@ -498,10 +503,8 @@ function diffHost(
   }
 
   bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, styles)
-  if (shouldDispatchInlineMixinLifecycle(curr._dom)) {
-    scheduler.enqueueCommitPhase([
-      () => dispatchMixinCommit(next._mixState as MixinRuntimeState | undefined),
-    ])
+  if (shouldDispatchMixinLifecycle) {
+    scheduler.enqueueCommitPhase([() => dispatchMixinCommit(nextMixState)])
   }
 
   return
@@ -1424,6 +1427,38 @@ function diffChildren(
 
     vParent._children = next
     return
+  }
+
+  if (currLength === nextLength) {
+    let canDiffByPosition = true
+    for (let i = 0; i < nextLength; i++) {
+      let currentNode = curr[i]
+      let nextNode = next[i]
+      if (!currentNode || currentNode.key !== nextNode.key || currentNode.type !== nextNode.type) {
+        canDiffByPosition = false
+        break
+      }
+    }
+
+    if (canDiffByPosition) {
+      for (let i = 0; i < nextLength; i++) {
+        diffVNodes(
+          curr[i],
+          next[i],
+          domParent,
+          frame,
+          scheduler,
+          styles,
+          vParent,
+          rootTarget,
+          anchor,
+          cursor,
+        )
+      }
+
+      vParent._children = next
+      return
+    }
   }
 
   // --- O(n + m) keyed diff with Map-based lookup ------------------------------

@@ -4,22 +4,22 @@ import type { RemixElement, RemixNode } from './jsx.ts'
 import { isRemixElement, TEXT_NODE, type VNode } from './vnode.ts'
 
 function flatMapChildrenToVNodes(node: RemixElement): VNode[] {
-  return 'children' in node.props
-    ? Array.isArray(node.props.children)
-      ? node.props.children.flat(Infinity).map(toVNode)
-      : [toVNode(node.props.children)]
-    : []
+  if (!('children' in node.props)) return []
+  let children = node.props.children
+  if (!Array.isArray(children)) return [toVNode(children)]
+  let vnodes: VNode[] = []
+  flattenChildrenToVNodes(children, vnodes)
+  return vnodes
 }
 
-function flattenRemixNodeArray(nodes: RemixNode[], out: RemixNode[] = []): RemixNode[] {
+function flattenChildrenToVNodes(nodes: RemixNode[], out: VNode[]): void {
   for (let child of nodes) {
     if (Array.isArray(child)) {
-      flattenRemixNodeArray(child, out)
+      flattenChildrenToVNodes(child, out)
     } else {
-      out.push(child)
+      out.push(toVNode(child))
     }
   }
-  return out
 }
 
 export function toVNode(node: RemixNode): VNode {
@@ -32,8 +32,9 @@ export function toVNode(node: RemixNode): VNode {
   }
 
   if (Array.isArray(node)) {
-    let flatChildren = flattenRemixNodeArray(node)
-    return { type: Fragment, _children: flatChildren.map(toVNode) }
+    let children: VNode[] = []
+    flattenChildrenToVNodes(node, children)
+    return { type: Fragment, _children: children }
   }
 
   if (node.type === Fragment) {
