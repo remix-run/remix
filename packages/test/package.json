@@ -28,8 +28,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json",
-    "./cli": "./src/cli.ts",
-    "./dom": "./src/dom.ts"
+    "./cli": "./src/cli.ts"
   },
   "publishConfig": {
     "bin": {
@@ -44,10 +43,6 @@
       "./cli": {
         "types": "./dist/cli.d.ts",
         "default": "./dist/cli.js"
-      },
-      "./dom": {
-        "types": "./dist/dom.d.ts",
-        "default": "./dist/dom.js"
       }
     }
   },
