@@ -3,8 +3,9 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, it } from '../lib/framework.ts'
-import { runFileInWorker } from '../lib/runner.ts'
+import { runServerTests } from '../lib/runner.ts'
 import { IS_BUN } from '../lib/runtime.ts'
+import type { Reporter } from '../lib/reporters/index.ts'
 import type { TestResults } from '../lib/reporters/results.ts'
 
 const PKG_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -12,7 +13,7 @@ const FIXTURE_DIR = path.join(PKG_DIR, '.tmp', 'worker-cleanup')
 const FIXTURE_FILE = path.join(FIXTURE_DIR, 'leaked-worker.test.ts')
 
 describe('worker cleanup', () => {
-  it('lets the callsite terminate a worker after receiving results', { skip: IS_BUN }, async () => {
+  it('terminates leaked workers after receiving results', { skip: IS_BUN }, async () => {
     await fsp.rm(FIXTURE_DIR, { recursive: true, force: true })
     await fsp.mkdir(FIXTURE_DIR, { recursive: true })
     await fsp.writeFile(
@@ -32,13 +33,20 @@ describe('leaked worker fixture', () => {
     )
 
     let results: TestResults | undefined
+    let reporter: Reporter = {
+      onResult(testResults) {
+        results = testResults
+      },
+      onSectionStart() {},
+      onSummary() {},
+    }
 
     try {
-      let run = runFileInWorker(FIXTURE_FILE, 'server', (testResults) => {
-        results = testResults
-      })
-      await run.finished
-      await run.worker.terminate()
+      let counts = await runServerTests([FIXTURE_FILE], reporter, 1, 'server')
+      assert.equal(counts.passed, 1)
+      assert.equal(counts.failed, 0)
+      assert.equal(counts.skipped, 0)
+      assert.equal(counts.todo, 0)
     } finally {
       await fsp.rm(FIXTURE_DIR, { recursive: true, force: true })
     }

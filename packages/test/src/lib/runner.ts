@@ -19,10 +19,12 @@ import type { Counts, TestResults } from './reporters/results.ts'
 const ext = IS_RUNNING_FROM_SRC ? '.ts' : '.js'
 const workerUrl = new URL(`./worker${ext}`, import.meta.url)
 const workerE2EUrl = new URL(`./worker-e2e${ext}`, import.meta.url)
+const WORKER_EXIT_GRACE_MS = 500
 
 interface WorkerRun {
   worker: Worker
   finished: Promise<void>
+  exited: Promise<number>
 }
 
 export async function runServerTests(
@@ -159,9 +161,12 @@ async function runInConcurrentWorkers(
           async () => {
             try {
               if (terminateWhenFinished) {
-                let terminated = await terminate()
-                if (!terminated) {
-                  onError()
+                let exited = await waitForWorkerExit(run.exited, WORKER_EXIT_GRACE_MS)
+                if (!exited) {
+                  let terminated = await terminate()
+                  if (!terminated) {
+                    onError()
+                  }
                 }
               }
             } finally {
@@ -185,6 +190,16 @@ async function runInConcurrentWorkers(
     }
 
     dispatch()
+  })
+}
+
+function waitForWorkerExit(exited: Promise<number>, timeoutMs: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    let timeout = setTimeout(() => resolve(false), timeoutMs)
+    exited.then(() => {
+      clearTimeout(timeout)
+      resolve(true)
+    })
   })
 }
 
@@ -219,6 +234,10 @@ export function runFileInWorker(
           },
         })
 
+  let exited = new Promise<number>((resolve) => {
+    worker.once('exit', (code) => resolve(code))
+  })
+
   let finished = new Promise<void>((resolve, reject) => {
     worker.once('message', (msg: TestResults) => {
       receivedResults = true
@@ -233,7 +252,7 @@ export function runFileInWorker(
       }
     })
     worker.once('error', reject)
-    worker.once('exit', (code) => {
+    exited.then((code) => {
       if (receivedResults || code === 0) {
         resolve()
       } else {
@@ -245,5 +264,6 @@ export function runFileInWorker(
   return {
     worker,
     finished,
+    exited,
   }
 }
