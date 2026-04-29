@@ -203,15 +203,15 @@ export function createRequest(
  * @returns A `Headers` object
  */
 export function createHeaders(req: http.IncomingMessage | http2.Http2ServerRequest): Headers {
-  let headers = new Headers()
+  let headerPairs: [string, string][] = []
 
   let rawHeaders = req.rawHeaders
   for (let i = 0; i < rawHeaders.length; i += 2) {
     if (rawHeaders[i].startsWith(':')) continue
-    headers.append(rawHeaders[i], rawHeaders[i + 1])
+    headerPairs.push([rawHeaders[i], rawHeaders[i + 1]])
   }
 
-  return headers
+  return new Headers(headerPairs)
 }
 
 /**
