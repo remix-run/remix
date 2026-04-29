@@ -212,8 +212,11 @@ jobs:
       - name: Run tests
         run: |
           # node:sqlite currently crashes in the bookstore demo on Windows under
-          # the full workspace test load. Ubuntu keeps bookstore coverage.
+          # the full workspace test load, so run it serially below.
           pnpm --parallel --filter "!bookstore-demo" --filter "!remix-the-web" run test
+
+      - name: Run bookstore tests
+        run: node ./scripts/run-bookstore-tests-serially.ts
 
   lint:
     name: Lint
