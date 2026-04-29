@@ -348,32 +348,7 @@ describe('migration runner', () => {
     )
   })
 
-  it('detects checksum drift before applying more migrations', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
-      {
-        id: '20260101000000',
-        name: 'users',
-        up: 'create table users (id integer)',
-        checksum: 'checksum_a',
-      },
-    ])
-
-    await runner.up()
-
-    let driftedRunner = createMigrationRunner(adapter, [
-      {
-        id: '20260101000000',
-        name: 'users',
-        up: 'create table users (id integer)',
-        checksum: 'checksum_b',
-      },
-    ])
-
-    await assert.rejects(() => driftedRunner.up(), /checksum drift detected/)
-  })
-
-  it('detects checksum drift from changed SQL when checksum is omitted', async () => {
+  it('detects checksum drift from changed up.sql', async () => {
     let adapter = new MemoryMigrationAdapter()
     let runner = createMigrationRunner(adapter, [
       {
@@ -493,15 +468,15 @@ describe('migration runner', () => {
   it('reports drifted, applied, and pending statuses', async () => {
     let adapter = new MemoryMigrationAdapter()
     let runner = createMigrationRunner(adapter, [
-      { id: '20260101000000', name: 'a', up: 'create table a (id integer)', checksum: 'a' },
-      { id: '20260102000000', name: 'b', up: 'create table b (id integer)', checksum: 'b' },
+      { id: '20260101000000', name: 'a', up: 'create table a (id integer)' },
+      { id: '20260102000000', name: 'b', up: 'create table b (id integer)' },
     ])
 
     await runner.up({ step: 1 })
 
     let driftedRunner = createMigrationRunner(adapter, [
-      { id: '20260101000000', name: 'a', up: 'create table a (id integer)', checksum: 'a2' },
-      { id: '20260102000000', name: 'b', up: 'create table b (id integer)', checksum: 'b' },
+      { id: '20260101000000', name: 'a', up: 'create table a (id integer, email text)' },
+      { id: '20260102000000', name: 'b', up: 'create table b (id integer)' },
     ])
     let statuses = await driftedRunner.status()
 

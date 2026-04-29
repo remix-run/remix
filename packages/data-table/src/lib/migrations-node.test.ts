@@ -44,7 +44,6 @@ describe('migration node loader', () => {
       assert.equal(migrations[0].name, 'create_users')
       assert.equal(migrations[0].up, 'create table users (id integer)')
       assert.equal(migrations[0].down, 'drop table users')
-      assert.match(migrations[0].checksum ?? '', /^[a-f0-9]{64}$/)
       assert.equal(migrations[1].id, '20260102000000')
       assert.equal(migrations[1].name, 'add_posts')
     } finally {

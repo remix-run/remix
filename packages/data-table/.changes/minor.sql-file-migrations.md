@@ -11,7 +11,7 @@ Migrations are directories named `YYYYMMDDHHmmss_<slug>/` containing a hand-writ
 
 **Changed APIs**
 
-- `MigrationDescriptor` is now `{ id, name, up: string, down?: string, transaction?, checksum?, path? }`
+- `MigrationDescriptor` is now `{ id, name, up: string, down?: string, transaction?, path? }`. Checksums are always `sha256(up)`, computed by the runner.
 - `MigrateResult.sql` is `string[]` instead of `SqlStatement[]`
 - `loadMigrations(directory)` scans folder-per-migration layouts (not `.ts` files) and returns descriptors with SQL strings
 - `DatabaseAdapter` gained a required `executeScript(sql, transaction?)` method; existing first-party adapters implement it natively
