@@ -211,7 +211,7 @@ jobs:
 
       - name: Run tests
         run: |
-          # better-sqlite3 may crash on Windows when the bookstore demo runs under
+          # node:sqlite may crash on Windows when the bookstore demo runs under
           # the full parallel workspace load, so keep its Windows coverage isolated.
           pnpm --parallel --filter "!bookstore-demo" --filter "!remix-the-web" run test
           pnpm --filter bookstore-demo run test
@@ -485,9 +485,6 @@ jobs:
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
-      - name: Build sqlite native module
-        run: pnpm rebuild better-sqlite3
 
       - name: Run sqlite adapter tests
         env:

@@ -506,9 +506,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build sqlite native module
-        run: pnpm rebuild better-sqlite3
-
       - name: Run sqlite adapter tests
         env:
           DATA_TABLE_INTEGRATION: '1'
