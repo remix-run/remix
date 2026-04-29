@@ -31,30 +31,43 @@ echo $(node -e 'console.log(`CPU: ${os.cpus()[0].model}`)')
 echo $(node -e 'console.log(`Date: ${new Date().toLocaleString()}`)')
 
 NODE_VERSION=$(node -e 'console.log(process.version.slice(1))')
-run_benchmark "node:http@$NODE_VERSION" \
-  "node ./servers/node-http.ts"
-run_benchmark "node:http-request-inspection@$NODE_VERSION" \
-  "node ./servers/node-http-request-inspection.ts" \
-  -s ./request-inspection.lua
-
 NODE_FETCH_SERVER_VERSION=$(node -e 'console.log(require("../package.json").version)')
 NODE_SERVE_VERSION=$(node -e 'console.log(require("./node_modules/@remix-run/node-serve/package.json").version)')
-run_benchmark "remix/node-fetch-server@$NODE_FETCH_SERVER_VERSION" \
-  "node ./servers/node-fetch-server.ts"
-run_benchmark "remix/node-serve@$NODE_SERVE_VERSION" \
-  "node ./servers/node-serve.ts"
-run_benchmark "remix/node-fetch-server-request-inspection@$NODE_FETCH_SERVER_VERSION" \
-  "node ./servers/node-fetch-server-request-inspection.ts" \
-  -s ./request-inspection.lua
-run_benchmark "remix/node-serve-request-inspection@$NODE_SERVE_VERSION" \
-  "node ./servers/node-serve-request-inspection.ts" \
-  -s ./request-inspection.lua
-
 EXPRESS_VERSION=$(node -e 'console.log(require("express/package.json").version)')
-run_benchmark "express@$EXPRESS_VERSION" \
-  "node ./servers/express.ts"
-run_benchmark "express-request-inspection@$EXPRESS_VERSION" \
-  "node ./servers/express-request-inspection.ts" \
-  -s ./request-inspection.lua
+
+run_benchmark "raw-throughput/node:http@$NODE_VERSION" \
+  "node ./raw-throughput/servers/node-http.ts"
+run_benchmark "raw-throughput/remix/node-fetch-server@$NODE_FETCH_SERVER_VERSION" \
+  "node ./raw-throughput/servers/node-fetch-server.ts"
+run_benchmark "raw-throughput/remix/node-serve@$NODE_SERVE_VERSION" \
+  "node ./raw-throughput/servers/node-serve.ts"
+run_benchmark "raw-throughput/express@$EXPRESS_VERSION" \
+  "node ./raw-throughput/servers/express.ts"
+
+run_benchmark "small-body/node:http@$NODE_VERSION" \
+  "node ./small-body/servers/node-http.ts" \
+  -s ./small-body/request.lua
+run_benchmark "small-body/remix/node-fetch-server@$NODE_FETCH_SERVER_VERSION" \
+  "node ./small-body/servers/node-fetch-server.ts" \
+  -s ./small-body/request.lua
+run_benchmark "small-body/remix/node-serve@$NODE_SERVE_VERSION" \
+  "node ./small-body/servers/node-serve.ts" \
+  -s ./small-body/request.lua
+run_benchmark "small-body/express@$EXPRESS_VERSION" \
+  "node ./small-body/servers/express.ts" \
+  -s ./small-body/request.lua
+
+run_benchmark "large-body/node:http@$NODE_VERSION" \
+  "node ./large-body/servers/node-http.ts" \
+  -s ./large-body/request.lua
+run_benchmark "large-body/remix/node-fetch-server@$NODE_FETCH_SERVER_VERSION" \
+  "node ./large-body/servers/node-fetch-server.ts" \
+  -s ./large-body/request.lua
+run_benchmark "large-body/remix/node-serve@$NODE_SERVE_VERSION" \
+  "node ./large-body/servers/node-serve.ts" \
+  -s ./large-body/request.lua
+run_benchmark "large-body/express@$EXPRESS_VERSION" \
+  "node ./large-body/servers/express.ts" \
+  -s ./large-body/request.lua
 
 popd > /dev/null

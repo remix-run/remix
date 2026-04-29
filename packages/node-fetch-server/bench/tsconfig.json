@@ -4,6 +4,6 @@
     "noEmit": true,
     "types": ["node"]
   },
-  "include": ["*.ts", "servers/**/*.ts"],
+  "include": ["**/*.ts"],
   "exclude": ["node_modules"]
 }
