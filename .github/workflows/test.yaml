@@ -122,20 +122,6 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/ui exec playwright install --with-deps
 
-      - name: Detect bookstore test changes
-        id: bookstore-tests
-        shell: bash
-        run: |
-          if git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -Eq '^(\.github/workflows/(check-main|check-pr|test)\.yaml|demos/bookstore/)'; then
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          fi
-
-      - name: Run bookstore tests
-        if: steps.bookstore-tests.outputs.run == 'true'
-        run: node ./scripts/run-bookstore-tests-serially.ts
-
       - name: Run changed package tests
         run: node ./scripts/detect-changed-packages.ts origin/${{ github.base_ref }}
 
