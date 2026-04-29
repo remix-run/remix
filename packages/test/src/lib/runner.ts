@@ -161,15 +161,7 @@ function runFileInWorker(
   } = {},
 ): Promise<void> {
   return new Promise((resolve, reject) => {
-    let settled = false
     let receivedResults = false
-    let settle = (fn: () => void) => {
-      if (settled) return
-      settled = true
-      fn()
-    }
-    let resolveOnce = () => settle(resolve)
-    let rejectOnce = (error: unknown) => settle(() => reject(error))
     let worker =
       type === 'e2e'
         ? new Worker(workerE2EUrl, {
@@ -193,17 +185,17 @@ function runFileInWorker(
       try {
         onResults(msg)
       } catch (error) {
-        rejectOnce(error)
+        reject(error)
         void worker.terminate()
         return
       }
     })
-    worker.once('error', rejectOnce)
+    worker.once('error', reject)
     worker.once('exit', (code) => {
       if (receivedResults || code === 0) {
-        resolveOnce()
+        resolve()
       } else {
-        rejectOnce(new Error(`Worker exited with code ${code}`))
+        reject(new Error(`Worker exited with code ${code}`))
       }
     })
   })
