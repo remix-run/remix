@@ -2,6 +2,7 @@ import type * as http from 'node:http'
 import type * as http2 from 'node:http2'
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
+import { createLazyRequest } from './lazy-request.ts'
 import { readStream } from './read-stream.ts'
 
 /**
@@ -88,7 +89,7 @@ export function createRequestListener(
   }
 
   return async (req, res) => {
-    let request = createLazyRequest(req, res, options)
+    let request = createLazyRequest(req, res, options, createRequest)
     let client = {
       address: req.socket.remoteAddress!,
       family: req.socket.remoteFamily! as ClientAddress['family'],
@@ -193,127 +194,6 @@ export function createRequest(
 
   return new Request(url, init)
 }
-
-function createLazyRequest(
-  req: http.IncomingMessage | http2.Http2ServerRequest,
-  res: http.ServerResponse | http2.Http2ServerResponse,
-  options?: RequestOptions,
-): Request {
-  return new LazyRequest(req, res, options) as unknown as Request
-}
-
-class LazyRequest {
-  #request: Request | undefined
-  #req: http.IncomingMessage | http2.Http2ServerRequest
-  #res: http.ServerResponse | http2.Http2ServerResponse
-  #options: RequestOptions | undefined
-  #method: string
-
-  constructor(
-    req: http.IncomingMessage | http2.Http2ServerRequest,
-    res: http.ServerResponse | http2.Http2ServerResponse,
-    options?: RequestOptions,
-  ) {
-    this.#req = req
-    this.#res = res
-    this.#options = options
-    this.#method = req.method ?? 'GET'
-  }
-
-  #materialize(): Request {
-    return (this.#request ??= createRequest(this.#req, this.#res, this.#options))
-  }
-
-  get body() {
-    return this.#materialize().body
-  }
-
-  get bodyUsed() {
-    return this.#materialize().bodyUsed
-  }
-
-  get cache() {
-    return this.#materialize().cache
-  }
-
-  get credentials() {
-    return this.#materialize().credentials
-  }
-
-  get destination() {
-    return this.#materialize().destination
-  }
-
-  get headers() {
-    return this.#materialize().headers
-  }
-
-  get integrity() {
-    return this.#materialize().integrity
-  }
-
-  get keepalive() {
-    return this.#materialize().keepalive
-  }
-
-  get method() {
-    return this.#method
-  }
-
-  get mode() {
-    return this.#materialize().mode
-  }
-
-  get redirect() {
-    return this.#materialize().redirect
-  }
-
-  get referrer() {
-    return this.#materialize().referrer
-  }
-
-  get referrerPolicy() {
-    return this.#materialize().referrerPolicy
-  }
-
-  get signal() {
-    return this.#materialize().signal
-  }
-
-  get url() {
-    return this.#materialize().url
-  }
-
-  arrayBuffer() {
-    return this.#materialize().arrayBuffer()
-  }
-
-  blob() {
-    return this.#materialize().blob()
-  }
-
-  bytes() {
-    return this.#materialize().bytes()
-  }
-
-  clone() {
-    return this.#materialize().clone()
-  }
-
-  formData() {
-    return this.#materialize().formData()
-  }
-
-  json() {
-    return this.#materialize().json()
-  }
-
-  text() {
-    return this.#materialize().text()
-  }
-}
-
-Object.setPrototypeOf(LazyRequest.prototype, Request.prototype)
 
 /**
  * Creates a [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) object from the headers in a Node.js
