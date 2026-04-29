@@ -2,12 +2,6 @@ import type * as http from 'node:http'
 import type * as http2 from 'node:http2'
 
 import { createLazyHeaders } from './lazy-headers.ts'
-import {
-  bodyUnusable,
-  bufferToArrayBuffer,
-  bufferToBytes,
-  requestMethodCanHaveBody,
-} from './request-body.ts'
 
 type IncomingRequest = http.IncomingMessage | http2.Http2ServerRequest
 type ServerResponse = http.ServerResponse | http2.Http2ServerResponse
@@ -305,6 +299,24 @@ class LazyRequest<requestOptions> implements Request {
 }
 
 Object.setPrototypeOf(LazyRequest.prototype, Request.prototype)
+
+function requestMethodCanHaveBody(method: string): boolean {
+  return method !== 'GET' && method !== 'HEAD'
+}
+
+function bufferToArrayBuffer(buffer: Buffer): ArrayBuffer {
+  return bufferToBytes(buffer).buffer
+}
+
+function bufferToBytes(buffer: Buffer): Uint8Array<ArrayBuffer> {
+  let bytes = new Uint8Array(buffer.byteLength)
+  bytes.set(buffer)
+  return bytes
+}
+
+function bodyUnusable(): TypeError {
+  return new TypeError('Body is unusable: Body has already been read')
+}
 
 function readRequestBody(req: IncomingRequest): Promise<Buffer> {
   return new Promise((resolve, reject) => {
