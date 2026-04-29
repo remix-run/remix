@@ -2,12 +2,23 @@ import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
 import { rawSql } from '../sql.ts'
 import type { MigrationDescriptor, MigrationJournalRow } from '../migrations.ts'
 
-export function normalizeChecksum(migration: MigrationDescriptor): string {
+export async function normalizeChecksum(migration: MigrationDescriptor): Promise<string> {
   if (migration.checksum) {
     return migration.checksum
   }
 
-  return migration.id + ':' + migration.name
+  let digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(migration.up))
+  return bytesToHex(new Uint8Array(digest))
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  let hex = ''
+
+  for (let byte of bytes) {
+    hex += byte.toString(16).padStart(2, '0')
+  }
+
+  return hex
 }
 
 export async function ensureMigrationJournal(

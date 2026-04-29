@@ -373,6 +373,29 @@ describe('migration runner', () => {
     await assert.rejects(() => driftedRunner.up(), /checksum drift detected/)
   })
 
+  it('detects checksum drift from changed SQL when checksum is omitted', async () => {
+    let adapter = new MemoryMigrationAdapter()
+    let runner = createMigrationRunner(adapter, [
+      {
+        id: '20260101000000',
+        name: 'users',
+        up: 'create table users (id integer)',
+      },
+    ])
+
+    await runner.up()
+
+    let driftedRunner = createMigrationRunner(adapter, [
+      {
+        id: '20260101000000',
+        name: 'users',
+        up: 'create table users (id integer, email text)',
+      },
+    ])
+
+    await assert.rejects(() => driftedRunner.up(), /checksum drift detected/)
+  })
+
   it('balances migration lock hooks when execution fails', async () => {
     let adapter = new MemoryMigrationAdapter()
     adapter.scriptError = new Error('boom')
