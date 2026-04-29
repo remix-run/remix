@@ -135,6 +135,16 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
 
       let { files, serverFiles, browserFiles, e2eFiles } = discoveredTests
 
+      let isPlural = config.concurrency !== 1
+      let concurrencyLabel =
+        config.concurrency > 1 ? `${config.concurrency} concurrent` : 'a single'
+      let workerLabel =
+        config.pool === 'forks'
+          ? `forked process${isPlural ? 'es' : ''}`
+          : `worker thread${isPlural ? 's' : ''}`
+
+      console.log(`Running tests in ${concurrencyLabel} ${workerLabel}`)
+
       if (config.watch) {
         watcher ??= createWatcher((file) => queueRerun(file))
         watcher.update(files)
@@ -175,16 +185,12 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
 
       if (serverFiles.length > 0) {
         reporter.onSectionStart('\nRunning server tests:')
-        let serverResult = await runServerTests(
-          serverFiles,
-          reporter,
-          config.concurrency,
-          'server',
-          {
-            coverage: config.coverage,
-            cwd,
-          },
-        )
+        let serverResult = await runServerTests(serverFiles, reporter, config.concurrency, {
+          type: 'server',
+          coverage: config.coverage,
+          cwd,
+          pool: config.pool,
+        })
         counts.failed += serverResult.failed
         counts.passed += serverResult.passed
         counts.skipped += serverResult.skipped
@@ -235,12 +241,14 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
                 })
               : null,
             e2eFiles.length > 0
-              ? runServerTests(e2eFiles, reporter, config.concurrency, 'e2e', {
-                  open: config.browser?.open,
+              ? runServerTests(e2eFiles, reporter, config.concurrency, {
+                  type: 'e2e',
+                  open: config.browser?.open === true,
                   playwrightUseOpts: project.playwrightUseOpts,
                   projectName: project.name,
                   coverage: config.coverage,
                   cwd,
+                  pool: config.pool,
                 })
               : null,
           ])

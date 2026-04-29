@@ -1,5 +1,5 @@
 import type { Browser, Page } from 'playwright'
-import type { V8CoverageEntry } from './coverage.ts'
+import type { CoverageConfig, V8CoverageEntry } from './coverage.ts'
 import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
 import { mock, type MockCall, type MockContext, type MockFunction } from './mock.ts'
 import type { getPlaywrightPageOptions } from './playwright.ts'
@@ -89,7 +89,7 @@ export interface TestContext {
 export interface CreateTestContextOptions {
   addE2ECoverageEntries: (value: { entries: V8CoverageEntry[]; baseUrl: string }) => void
   browser: Browser
-  coverage: boolean
+  coverage: CoverageConfig | undefined
   open: boolean
   playwrightPageOptions: ReturnType<typeof getPlaywrightPageOptions>
 }

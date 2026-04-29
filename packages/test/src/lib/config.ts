@@ -110,6 +110,10 @@ const cliOptions = {
     type: 'string',
     description: 'Path to a Playwright config file',
   },
+  pool: {
+    type: 'string',
+    description: 'Worker pool implementation: forks (default) or threads',
+  },
   project: {
     type: 'string',
     short: 'p',
@@ -153,6 +157,7 @@ const defaultValues: ResolvedRemixTestConfig = {
     e2e: '**/*.test.e2e.{ts,tsx}',
     exclude: 'node_modules/**',
   },
+  pool: 'forks',
   reporter: process.env.CI === 'true' ? 'files' : 'spec',
   type: 'server,browser,e2e',
   setup: undefined,
@@ -211,6 +216,13 @@ export interface RemixTestConfig {
    * PlaywrightTestConfig object. CLI `--playwrightConfig` only accepts a file path.
    */
   playwrightConfig?: string | PlaywrightTestConfig
+  /**
+   * Worker pool implementation (--pool). `forks` (default) runs each test file in
+   * a `child_process.fork` subprocess for full process-level isolation; `threads`
+   * runs each test file in a `worker_threads.Worker`, which has lower per-file
+   * startup overhead but shares the host process.
+   */
+  pool?: 'threads' | 'forks'
   /** Filter tests to a specific playwright project or comma-separated list of projects (--project) */
   project?: string
   /** Test reporter (--reporter) */
@@ -245,6 +257,7 @@ export interface ResolvedRemixTestConfig {
     exclude: string
   }
   playwrightConfig: string | PlaywrightTestConfig | undefined
+  pool: 'threads' | 'forks'
   project: string | undefined
   reporter: string
   setup: string | undefined
@@ -284,6 +297,19 @@ function parseCliArgs(args: string[]) {
   return util.parseArgs({ args, options: cliOptions, allowPositionals: true })
 }
 
+function resolvePool(value: string): 'threads' | 'forks' {
+  if (value === 'threads' || value === 'forks') return value
+  throw new Error(`Invalid pool "${value}" — must be "threads" or "forks"`)
+}
+
+function resolveConcurrency(value: number | string): number {
+  let n = Number(value)
+  if (!Number.isInteger(n) || n < 1) {
+    throw new Error(`Invalid concurrency "${value}" — must be a positive integer`)
+  }
+  return n
+}
+
 function resolveConfig(
   fileConfig: RemixTestConfig,
   { values: cliValues, positionals }: ReturnType<typeof parseCliArgs>,
@@ -304,7 +330,7 @@ function resolveConfig(
       echo: cliValues['browser.echo'] ?? fileConfig.browser?.echo ?? defaultValues.browser.echo,
       open: cliValues['browser.open'] ?? fileConfig.browser?.open ?? defaultValues.browser.open,
     },
-    concurrency: Number(
+    concurrency: resolveConcurrency(
       cliValues.concurrency ?? fileConfig.concurrency ?? defaultValues.concurrency,
     ),
     coverage:
@@ -348,6 +374,7 @@ function resolveConfig(
     setup: cliValues.setup ?? fileConfig.setup ?? defaultValues.setup,
     playwrightConfig:
       cliValues.playwrightConfig ?? fileConfig.playwrightConfig ?? defaultValues.playwrightConfig,
+    pool: resolvePool(cliValues.pool ?? fileConfig.pool ?? defaultValues.pool),
     project: cliValues.project ?? fileConfig.project ?? defaultValues.project,
     reporter: cliValues.reporter ?? fileConfig.reporter ?? defaultValues.reporter,
     type: cliValues.type ?? fileConfig.type ?? defaultValues.type,

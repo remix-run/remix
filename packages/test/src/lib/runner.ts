@@ -1,6 +1,7 @@
+import * as cp from 'node:child_process'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
 import { IS_RUNNING_FROM_SRC } from './config.ts'
 import {
@@ -13,6 +14,7 @@ import {
 import { type PlaywrightUseOpts } from './playwright.ts'
 import type { Reporter } from './reporters/index.ts'
 import type { Counts, TestResults } from './reporters/results.ts'
+import type { E2EWorkerPayload, WorkerPayload } from './channel.ts'
 
 // Ensure we load the right file whether we're running in the monorepo (TS) or
 // from a published package (JS)
@@ -22,29 +24,43 @@ const workerE2EUrl = new URL(`./worker-e2e${ext}`, import.meta.url)
 const DEFAULT_WORKER_SHUTDOWN_TIMEOUT_MS = 10_000
 
 interface WorkerRun {
-  worker: Worker
   finished: Promise<void>
   exited: Promise<number>
+  terminate: () => Promise<void>
 }
+
+type RunTestsOptions =
+  | {
+      type: 'server'
+      coverage: CoverageConfig | undefined
+      cwd: string
+      pool: 'threads' | 'forks'
+      workerShutdownTimeoutMs?: number
+    }
+  | {
+      type: 'e2e'
+      coverage: CoverageConfig | undefined
+      cwd: string
+      open: boolean
+      pool: 'threads' | 'forks'
+      playwrightUseOpts: PlaywrightUseOpts
+      projectName: string | undefined
+      workerShutdownTimeoutMs?: number
+    }
 
 export async function runServerTests(
   files: string[],
   reporter: Reporter,
   concurrency: number,
-  type: 'server' | 'e2e',
-  options: {
-    cwd?: string
-    open?: boolean
-    playwrightUseOpts?: PlaywrightUseOpts
-    projectName?: string
-    coverage?: CoverageConfig
-    workerShutdownTimeoutMs?: number
-  } = {},
+  options: RunTestsOptions,
 ): Promise<Counts & { coverageMap: CoverageMap | null }> {
   let counts: Counts = { passed: 0, failed: 0, skipped: 0, todo: 0 }
   let coverageMap: CoverageMap | null = null
   let cwd = options.cwd ?? process.cwd()
-  let envLabel = options.projectName ? `${type}:${options.projectName}` : type
+  let envLabel =
+    options.type === 'e2e' && options.projectName
+      ? `${options.type}:${options.projectName}`
+      : options.type
 
   function accumulate(results: TestResults, file: string) {
     reporter.onResult(
@@ -57,27 +73,19 @@ export async function runServerTests(
     counts.todo += results.todo
   }
 
-  if (type === 'e2e') {
+  if (options.type === 'e2e') {
     let allBrowserCoverageEntries: Array<{ entries: V8CoverageEntry[]; baseUrl: string }> = []
 
     await runInConcurrentWorkers(
       files,
       concurrency,
       (file) =>
-        runFileInWorker(
-          file,
-          type,
-          (results) => {
-            accumulate(results, file)
-            if (results.e2eBrowserCoverageEntries) {
-              allBrowserCoverageEntries.push(...results.e2eBrowserCoverageEntries)
-            }
-          },
-          {
-            ...options,
-            playwrightUseOpts: options.playwrightUseOpts,
-          },
-        ),
+        runFileInWorkerOrThread(file, options, (results) => {
+          accumulate(results, file)
+          if (results.e2eBrowserCoverageEntries) {
+            allBrowserCoverageEntries.push(...results.e2eBrowserCoverageEntries)
+          }
+        }),
       () => counts.failed++,
       !options.open,
       options.workerShutdownTimeoutMs ?? DEFAULT_WORKER_SHUTDOWN_TIMEOUT_MS,
@@ -102,7 +110,7 @@ export async function runServerTests(
     await runInConcurrentWorkers(
       files,
       concurrency,
-      (file) => runFileInWorker(file, type, (results) => accumulate(results, file), options),
+      (file) => runFileInWorkerOrThread(file, options, (results) => accumulate(results, file)),
       () => counts.failed++,
       true,
       options.workerShutdownTimeoutMs ?? DEFAULT_WORKER_SHUTDOWN_TIMEOUT_MS,
@@ -149,7 +157,7 @@ async function runInConcurrentWorkers(
 
         async function terminate(): Promise<boolean> {
           try {
-            await run.worker.terminate()
+            await run.terminate()
             return true
           } catch (err) {
             console.error(
@@ -207,52 +215,27 @@ function waitForWorkerExit(exited: Promise<number>, timeoutMs: number): Promise<
   })
 }
 
-export function runFileInWorker(
-  file: string,
-  type: 'server' | 'e2e',
+function runFileInWorkerThread(
+  file: URL,
+  payload: WorkerPayload | E2EWorkerPayload,
   onResults: (results: TestResults) => void,
-  options: {
-    cwd?: string
-    coverage?: CoverageConfig
-    open?: boolean
-    playwrightUseOpts?: PlaywrightUseOpts
-  } = {},
 ): WorkerRun {
   let receivedResults = false
-  let worker =
-    type === 'e2e'
-      ? new Worker(workerE2EUrl, {
-          workerData: {
-            file: pathToFileURL(file).href,
-            type,
-            coverage: options.coverage,
-            open: options.open,
-            playwrightUseOpts: options.playwrightUseOpts,
-          },
-        })
-      : new Worker(workerUrl, {
-          workerData: {
-            file: pathToFileURL(file).href,
-            type,
-            coverage: options.coverage,
-          },
-        })
-
+  let worker = new Worker(file, { workerData: payload })
   let exited = new Promise<number>((resolve) => {
     worker.once('exit', (code) => resolve(code))
   })
-
   let finished = new Promise<void>((resolve, reject) => {
     worker.once('message', (msg: TestResults) => {
       receivedResults = true
       try {
         onResults(msg)
+        if (payload.type !== 'e2e' || !payload.open) {
+          resolve()
+        }
       } catch (error) {
         reject(error)
         return
-      }
-      if (!options.open) {
-        resolve()
       }
     })
     worker.once('error', reject)
@@ -266,8 +249,104 @@ export function runFileInWorker(
   })
 
   return {
-    worker,
     finished,
     exited,
+    async terminate() {
+      await worker.terminate()
+    },
+  }
+}
+
+function runFileInForkedProcess(
+  workerScript: URL,
+  payload: WorkerPayload | E2EWorkerPayload,
+  onResults: (results: TestResults) => void,
+): WorkerRun {
+  let receivedResults = false
+  // child_process.fork inherits `execArgv` from the parent by default, so any
+  // TypeScript loader hooks (e.g. tsx, Node's strip-types) keep working in
+  // the child. The IPC channel carries the workerData payload as the first
+  // message and the test results as the reply.
+  let child = cp.fork(fileURLToPath(workerScript), [], {
+    stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
+  })
+  let exited = new Promise<number>((resolve, reject) => {
+    child.once('exit', (code, signal) => {
+      if (code === 0) resolve(code)
+      else if (signal) reject(new Error(`Forked process killed by signal ${signal}`))
+      else reject(new Error(`Forked process exited with code ${code}`))
+    })
+  })
+  let finished = new Promise<void>((resolve, reject) => {
+    child.once('message', (msg) => {
+      receivedResults = true
+      try {
+        onResults(msg as TestResults)
+        if (payload.type !== 'e2e' || !payload.open) {
+          resolve()
+        }
+      } catch (error) {
+        reject(error)
+        return
+      }
+    })
+    child.once('error', reject)
+
+    exited.then((code) => {
+      if (receivedResults || code === 0) {
+        resolve()
+      } else {
+        reject(new Error(`Worker exited with code ${code}`))
+      }
+    })
+
+    child.send(payload, (err) => {
+      if (err) reject(err)
+    })
+  })
+
+  return {
+    finished,
+    exited,
+    async terminate() {
+      return new Promise((resolve, reject) => {
+        if (child.kill()) {
+          resolve()
+        } else {
+          reject(new Error('Unable to kill forked process'))
+        }
+      })
+    },
+  }
+}
+
+function runFileInWorkerOrThread(
+  file: string,
+  options: RunTestsOptions,
+  onResults: (results: TestResults) => void,
+): WorkerRun {
+  let runner = options.pool === 'forks' ? runFileInForkedProcess : runFileInWorkerThread
+  if (options.type === 'server') {
+    return runner(
+      workerUrl,
+      {
+        file: pathToFileURL(file).href,
+        type: 'server',
+        coverage: options.coverage,
+      },
+      onResults,
+    )
+  } else {
+    return runner(
+      workerE2EUrl,
+      {
+        file: pathToFileURL(file).href,
+        type: 'e2e',
+        coverage: options.coverage,
+        open: options.open === true,
+        playwrightUseOpts: options.playwrightUseOpts,
+      },
+      onResults,
+    )
   }
 }

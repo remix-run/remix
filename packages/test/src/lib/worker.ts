@@ -1,11 +1,12 @@
 import * as mod from 'node:module'
-import * as path from 'node:path'
-import { parentPort, workerData } from 'node:worker_threads'
 import { runTests } from './executor.ts'
 import { importModule } from './import-module.ts'
 import type { TestResults } from './reporters/results.ts'
 import { IS_BUN } from './runtime.ts'
 import { IS_RUNNING_FROM_SRC } from './config.ts'
+import { closeWorkerChannel, receiveData, sendResults, type WorkerPayload } from './channel.ts'
+
+const workerData = await receiveData<WorkerPayload>()
 
 async function takeCoverage(): Promise<void> {
   if (workerData.coverage && !IS_BUN) {
@@ -32,8 +33,7 @@ try {
 
   let results = await runTests()
   await takeCoverage()
-  parentPort!.postMessage(results)
-  process.exit(0)
+  await sendResults(results)
 } catch (e) {
   try {
     await takeCoverage()
@@ -59,6 +59,7 @@ try {
       },
     ],
   }
-  parentPort!.postMessage(results)
-  process.exit(0)
+  await sendResults(results)
+} finally {
+  closeWorkerChannel()
 }

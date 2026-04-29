@@ -42,7 +42,11 @@ describe('leaked worker fixture', () => {
     }
 
     try {
-      let counts = await runServerTests([FIXTURE_FILE], reporter, 1, 'server', {
+      let counts = await runServerTests([FIXTURE_FILE], reporter, 1, {
+        type: 'server',
+        coverage: undefined,
+        cwd: FIXTURE_DIR,
+        pool: 'threads',
         workerShutdownTimeoutMs: 50,
       })
       assert.equal(counts.passed, 1)
