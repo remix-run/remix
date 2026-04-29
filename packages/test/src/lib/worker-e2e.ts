@@ -7,7 +7,9 @@ import {
   getPlaywrightPageOptions,
 } from './playwright.ts'
 import type { TestResults } from './reporters/results.ts'
+import { installWorkerThreadCleanup } from './worker-thread-cleanup.ts'
 
+const workerThreadCleanup = installWorkerThreadCleanup()
 try {
   await importModule(workerData.file, import.meta)
 
@@ -27,10 +29,17 @@ try {
       await new Promise<void>((resolve) => browser.on('disconnected', () => resolve()))
     }
   } finally {
+    await workerThreadCleanup.cleanup()
     await browser.close()
   }
   process.exit(0)
 } catch (e) {
+  try {
+    await workerThreadCleanup.cleanup()
+  } catch (cleanupError) {
+    e = cleanupError
+  }
+
   let results: TestResults = {
     passed: 0,
     failed: 1,

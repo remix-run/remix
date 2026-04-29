@@ -161,6 +161,15 @@ function runFileInWorker(
   } = {},
 ): Promise<void> {
   return new Promise((resolve, reject) => {
+    let settled = false
+    let receivedResults = false
+    let settle = (fn: () => void) => {
+      if (settled) return
+      settled = true
+      fn()
+    }
+    let resolveOnce = () => settle(resolve)
+    let rejectOnce = (error: unknown) => settle(() => reject(error))
     let worker =
       type === 'e2e'
         ? new Worker(workerE2EUrl, {
@@ -179,11 +188,23 @@ function runFileInWorker(
               coverage: options.coverage,
             },
           })
-    worker.once('message', (msg: TestResults) => onResults(msg))
-    worker.once('error', reject)
+    worker.once('message', (msg: TestResults) => {
+      receivedResults = true
+      try {
+        onResults(msg)
+      } catch (error) {
+        rejectOnce(error)
+        void worker.terminate()
+        return
+      }
+    })
+    worker.once('error', rejectOnce)
     worker.once('exit', (code) => {
-      if (code !== 0) reject(new Error(`Worker exited with code ${code}`))
-      else resolve()
+      if (receivedResults || code === 0) {
+        resolveOnce()
+      } else {
+        rejectOnce(new Error(`Worker exited with code ${code}`))
+      }
     })
   })
 }

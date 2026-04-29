@@ -6,7 +6,9 @@ import { importModule } from './import-module.ts'
 import type { TestResults } from './reporters/results.ts'
 import { IS_BUN } from './runtime.ts'
 import { IS_RUNNING_FROM_SRC } from './config.ts'
+import { installWorkerThreadCleanup } from './worker-thread-cleanup.ts'
 
+const workerThreadCleanup = installWorkerThreadCleanup()
 try {
   // When coverage is enabled in Node, we use a coverage-friendly TypeScript loader which
   // replaces tsx's minified transformation with a non-minified esbuild transform
@@ -24,9 +26,16 @@ try {
   }
 
   let results = await runTests()
+  await workerThreadCleanup.cleanup()
   parentPort!.postMessage(results)
   process.exit(0)
 } catch (e) {
+  try {
+    await workerThreadCleanup.cleanup()
+  } catch (cleanupError) {
+    e = cleanupError
+  }
+
   let results: TestResults = {
     passed: 0,
     failed: 1,
