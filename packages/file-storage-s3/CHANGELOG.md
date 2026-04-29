@@ -2,6 +2,13 @@
 
 This is the changelog for [`file-storage-s3`](https://github.com/remix-run/remix/tree/main/packages/file-storage-s3). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`file-storage@0.13.4`](https://github.com/remix-run/remix/releases/tag/file-storage@0.13.4)
+
 ## v0.1.0
 
 ### Minor Changes

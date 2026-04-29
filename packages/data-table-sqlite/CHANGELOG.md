@@ -2,6 +2,12 @@
 
 This is the changelog for [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.0
+
+### Minor Changes
+
+- Widened `createSqliteDatabaseAdapter` to accept synchronous SQLite clients that match the shared `prepare`/`exec` surface used by Node's `node:sqlite`, Bun's `bun:sqlite`, and compatible clients. The package no longer requires `better-sqlite3` as an optional peer dependency.
+
 ## v0.3.0
 
 ### Minor Changes

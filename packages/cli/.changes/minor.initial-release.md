@@ -1,1 +1,0 @@
-Initial release of `@remix-run/cli` with the public `runRemix()` API and commands for project scaffolding, health checks and fixes, route inspection, skills syncing, and running tests. The package requires Node.js 24.3.0 or later and exposes the programmatic CLI API; use the `remix` package for the user-facing `remix` executable.

@@ -2,6 +2,12 @@
 
 This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
 
+## v0.8.0
+
+### Minor Changes
+
+- Add an `X-Forwarded-Port` header when `xForwardedHeaders` is enabled.
+
 ## v0.7.1
 
 ### Patch Changes

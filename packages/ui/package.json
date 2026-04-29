@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/ui",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "UI tokens, mixins, and glyphs for Remix components",
   "author": "Ryan Florence <rpflorence@gmail.com>",
   "license": "MIT",

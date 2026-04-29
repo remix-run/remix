@@ -1,1 +1,0 @@
-Colorize high-signal logger tokens when terminal color detection allows it by default, with a `colors` option to force colorized output on or off and support for `CI`, `NO_COLOR`, `FORCE_COLOR`, `TERM=dumb`, and TTY output streams when the `process` global is defined.
