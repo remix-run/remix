@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review PR"
+  short_description: "Review Remix PRs locally"
+  default_prompt: "Use $review-pr to review a Remix pull request from the local checkout."

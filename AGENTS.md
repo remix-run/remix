@@ -22,10 +22,6 @@ This repository includes the source code for Remix 3, a web framework for buildi
 
 The changed-workspace commands default to diffing against `origin/main` and include uncommitted working tree changes when `head-ref` is `HEAD`.
 
-## Commit Workflow
-
-- After making a clean, scoped change and running the appropriate validation, commit the change without waiting to be asked. Do not auto-commit if validation fails, if unrelated working tree changes would be included, or if the user explicitly asks not to commit.
-
 ## Code Style
 
 - **Imports**: use `import type { X }` and `export type { X }`; include `.ts` extensions
@@ -61,6 +57,7 @@ For work on this repository itself, use the skills in `.agents/skills/`:
 - `make-demo` at `.agents/skills/make-demo/SKILL.md`: Create or revise demos in this repository with production-quality Remix patterns.
 - `make-pr` at `.agents/skills/make-pr/SKILL.md`: Prepare and open clear, reviewer-friendly pull requests.
 - `publish-placeholder-package` at `.agents/skills/publish-placeholder-package/SKILL.md`: Publish a `0.0.0` placeholder package to reserve an npm name.
+- `review-pr` at `.agents/skills/review-pr/SKILL.md`: Review Remix pull requests from a local checkout.
 - `supersede-pr` at `.agents/skills/supersede-pr/SKILL.md`: Replace one pull request with another and close the superseded PR safely.
 - `update-pr` at `.agents/skills/update-pr/SKILL.md`: Rewrite an existing pull request title and body to match the current diff.
 - `write-api-docs` at `.agents/skills/write-api-docs/SKILL.md`: Write or tighten JSDoc for exported public APIs.
