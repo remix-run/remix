@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/auth",
   "version": "0.1.1",
-  "description": "Browser login, OAuth, and OIDC helpers for Fetch API servers",
+  "description": "Browser login, OAuth, and OIDC helpers for Remix",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {

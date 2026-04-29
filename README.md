@@ -52,8 +52,8 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [assert](packages/assert): Node assert-compatible utilities for any JavaScript environment
 - [assets](packages/assets): Fetch-based server for compiling browser JS/TS and CSS assets on demand
 - [async-context-middleware](packages/async-context-middleware): Middleware for storing request context in AsyncLocalStorage
-- [auth](packages/auth): Browser login, OAuth, and OIDC helpers for Fetch API servers
-- [auth-middleware](packages/auth-middleware): Pluggable authentication middleware for Fetch API servers
+- [auth](packages/auth): Browser login, OAuth, and OIDC helpers for Remix
+- [auth-middleware](packages/auth-middleware): Pluggable authentication middleware for Remix
 - [cli](packages/cli): Command-line interface for Remix
 - [compression-middleware](packages/compression-middleware): Middleware for compressing HTTP responses
 - [cookie](packages/cookie): A toolkit for working with cookies in JavaScript
