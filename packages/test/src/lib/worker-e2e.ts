@@ -7,15 +7,14 @@ import {
   getPlaywrightPageOptions,
 } from './playwright.ts'
 import type { TestResults } from './reporters/results.ts'
-import { installWorkerThreadCleanup } from './worker-thread-cleanup.ts'
 
-const workerThreadCleanup = installWorkerThreadCleanup()
 try {
   await importModule(workerData.file, import.meta)
 
   let launcher = await getBrowserLauncher(workerData.playwrightUseOpts)
   let opts = getPlaywrightLaunchOptions(workerData.playwrightUseOpts)
   let browser = await launcher.launch(opts)
+  let browserClosed = false
   try {
     let results = await runTests({
       browser,
@@ -23,23 +22,22 @@ try {
       playwrightPageOptions: getPlaywrightPageOptions(workerData.playwrightUseOpts),
       coverage: workerData.coverage,
     })
-    parentPort!.postMessage(results)
     if (workerData.open) {
+      parentPort!.postMessage(results)
       console.log('\nBrowser is open. Press Ctrl+C to close.')
       await new Promise<void>((resolve) => browser.on('disconnected', () => resolve()))
+    } else {
+      await browser.close()
+      browserClosed = true
+      parentPort!.postMessage(results)
     }
   } finally {
-    await workerThreadCleanup.cleanup()
-    await browser.close()
+    if (!browserClosed) {
+      await browser.close()
+    }
   }
   process.exit(0)
 } catch (e) {
-  try {
-    await workerThreadCleanup.cleanup()
-  } catch (cleanupError) {
-    e = cleanupError
-  }
-
   let results: TestResults = {
     passed: 0,
     failed: 1,

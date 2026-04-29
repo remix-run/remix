@@ -1,21 +1,59 @@
 import * as assert from '@remix-run/assert'
-import { once } from 'node:events'
+import * as fsp from 'node:fs/promises'
+import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { describe, it } from '../lib/framework.ts'
+import { runFileInWorker } from '../lib/runner.ts'
 import { IS_BUN } from '../lib/runtime.ts'
-import { installWorkerThreadCleanup } from '../lib/worker-thread-cleanup.ts'
+import type { TestResults } from '../lib/reporters/results.ts'
+
+const PKG_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
+const FIXTURE_DIR = path.join(PKG_DIR, '.tmp', 'worker-cleanup')
+const FIXTURE_FILE = path.join(FIXTURE_DIR, 'leaked-worker.test.ts')
 
 describe('worker cleanup', () => {
-  it('terminates tracked worker threads during cleanup', { skip: IS_BUN }, async () => {
-    let cleanup = installWorkerThreadCleanup()
-    let { Worker } = await import('node:worker_threads')
-    let worker = new Worker('setInterval(() => {}, 1000)', { eval: true })
-    let exited = new Promise<number>((resolve) => {
-      worker.once('exit', resolve)
-    })
+  it('lets the callsite terminate a worker after receiving results', { skip: IS_BUN }, async () => {
+    await fsp.rm(FIXTURE_DIR, { recursive: true, force: true })
+    await fsp.mkdir(FIXTURE_DIR, { recursive: true })
+    await fsp.writeFile(
+      FIXTURE_FILE,
+      `
+import { Worker } from 'node:worker_threads'
+import { describe, it } from '../../src/lib/framework.ts'
 
-    await once(worker, 'online')
-    await cleanup.cleanup()
+process.exit = (() => undefined) as typeof process.exit
 
-    assert.equal(await exited, 1)
+describe('leaked worker fixture', () => {
+  it('passes while leaving a worker running', () => {
+    new Worker('setInterval(() => {}, 1000)', { eval: true })
+  })
+})
+`,
+    )
+
+    let results: TestResults | undefined
+
+    try {
+      let run = runFileInWorker(FIXTURE_FILE, 'server', (testResults) => {
+        results = testResults
+      })
+      await run.finished
+      await run.worker.terminate()
+    } finally {
+      await fsp.rm(FIXTURE_DIR, { recursive: true, force: true })
+    }
+
+    assert.ok(results)
+    assert.equal(results.passed, 1)
+    assert.equal(results.failed, 0)
+    assert.equal(results.skipped, 0)
+    assert.equal(results.todo, 0)
+
+    let { tests } = results
+    assert.equal(tests.length, 1)
+    assert.equal(tests[0].name, 'passes while leaving a worker running')
+    assert.equal(tests[0].suiteName, 'leaked worker fixture')
+    assert.equal(tests[0].status, 'passed')
+    assert.equal(typeof tests[0].duration, 'number')
   })
 })
