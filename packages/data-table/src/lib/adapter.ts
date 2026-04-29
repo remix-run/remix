@@ -147,7 +147,7 @@ export type DataManipulationOperation =
   | RawOperation
 
 /**
- * Qualified table reference used in migration operations.
+ * Qualified table reference.
  */
 export type TableRef = {
   name: string
@@ -243,313 +243,6 @@ export type ColumnDefinition = {
 }
 
 /**
- * Primary key constraint definition.
- */
-export type PrimaryKeyConstraint = {
-  columns: string[]
-  name: string
-}
-
-/**
- * Unique constraint definition.
- */
-export type UniqueConstraint = {
-  columns: string[]
-  name: string
-}
-
-/**
- * Check constraint definition.
- */
-export type CheckConstraint = {
-  expression: string
-  name: string
-}
-
-/**
- * Foreign key constraint definition.
- */
-export type ForeignKeyConstraint = {
-  columns: string[]
-  references: {
-    table: TableRef
-    columns: string[]
-  }
-  name: string
-  onDelete?: ForeignKeyAction
-  onUpdate?: ForeignKeyAction
-}
-
-/**
- * Index method used when creating an index.
- */
-export type IndexMethod = 'btree' | 'hash' | 'gin' | 'gist' | 'fulltext' | (string & {})
-
-/**
- * Index definition used in schema operations.
- */
-export type IndexDefinition = {
-  table: TableRef
-  name: string
-  columns: string[]
-  unique?: boolean
-  where?: string
-  using?: IndexMethod
-}
-
-/**
- * Operation that creates a new table.
- */
-export type CreateTableOperation = {
-  kind: 'createTable'
-  table: TableRef
-  ifNotExists?: boolean
-  columns: Record<string, ColumnDefinition>
-  primaryKey?: PrimaryKeyConstraint
-  uniques?: UniqueConstraint[]
-  checks?: CheckConstraint[]
-  foreignKeys?: ForeignKeyConstraint[]
-  comment?: string
-}
-
-/**
- * Alter-table change that adds a column.
- */
-export type AddColumnChange = {
-  kind: 'addColumn'
-  column: string
-  definition: ColumnDefinition
-}
-
-/**
- * Alter-table change that replaces a column definition.
- */
-export type ChangeColumnChange = {
-  kind: 'changeColumn'
-  column: string
-  definition: ColumnDefinition
-}
-
-/**
- * Alter-table change that renames a column.
- */
-export type RenameColumnChange = {
-  kind: 'renameColumn'
-  from: string
-  to: string
-}
-
-/**
- * Alter-table change that drops a column.
- */
-export type DropColumnChange = {
-  kind: 'dropColumn'
-  column: string
-  ifExists?: boolean
-}
-
-/**
- * Alter-table change that adds a primary key.
- */
-export type AddPrimaryKeyChange = {
-  kind: 'addPrimaryKey'
-  constraint: PrimaryKeyConstraint
-}
-
-/**
- * Alter-table change that drops a primary key.
- */
-export type DropPrimaryKeyChange = {
-  kind: 'dropPrimaryKey'
-  name: string
-}
-
-/**
- * Alter-table change that adds a unique constraint.
- */
-export type AddUniqueChange = {
-  kind: 'addUnique'
-  constraint: UniqueConstraint
-}
-
-/**
- * Alter-table change that drops a unique constraint.
- */
-export type DropUniqueChange = {
-  kind: 'dropUnique'
-  name: string
-}
-
-/**
- * Alter-table change that adds a foreign key constraint.
- */
-export type AddForeignKeyChange = {
-  kind: 'addForeignKey'
-  constraint: ForeignKeyConstraint
-}
-
-/**
- * Alter-table change that drops a foreign key constraint.
- */
-export type DropForeignKeyChange = {
-  kind: 'dropForeignKey'
-  name: string
-}
-
-/**
- * Alter-table change that adds a check constraint.
- */
-export type AddCheckChange = {
-  kind: 'addCheck'
-  constraint: CheckConstraint
-}
-
-/**
- * Alter-table change that drops a check constraint.
- */
-export type DropCheckChange = {
-  kind: 'dropCheck'
-  name: string
-}
-
-/**
- * Alter-table change that updates a table comment.
- */
-export type SetTableCommentChange = {
-  kind: 'setTableComment'
-  comment: string
-}
-
-/**
- * Union of supported `alterTable` changes.
- */
-export type AlterTableChange =
-  | AddColumnChange
-  | ChangeColumnChange
-  | RenameColumnChange
-  | DropColumnChange
-  | AddPrimaryKeyChange
-  | DropPrimaryKeyChange
-  | AddUniqueChange
-  | DropUniqueChange
-  | AddForeignKeyChange
-  | DropForeignKeyChange
-  | AddCheckChange
-  | DropCheckChange
-  | SetTableCommentChange
-
-/**
- * Operation that applies one or more table changes.
- */
-export type AlterTableOperation = {
-  kind: 'alterTable'
-  table: TableRef
-  changes: AlterTableChange[]
-  ifExists?: boolean
-}
-
-/**
- * Operation that renames a table.
- */
-export type RenameTableOperation = {
-  kind: 'renameTable'
-  from: TableRef
-  to: TableRef
-}
-
-/**
- * Operation that drops a table.
- */
-export type DropTableOperation = {
-  kind: 'dropTable'
-  table: TableRef
-  ifExists?: boolean
-  cascade?: boolean
-}
-
-/**
- * Operation that creates an index.
- */
-export type CreateIndexOperation = {
-  kind: 'createIndex'
-  index: IndexDefinition
-  ifNotExists?: boolean
-}
-
-/**
- * Operation that drops an index.
- */
-export type DropIndexOperation = {
-  kind: 'dropIndex'
-  table: TableRef
-  name: string
-  ifExists?: boolean
-}
-
-/**
- * Operation that renames an index.
- */
-export type RenameIndexOperation = {
-  kind: 'renameIndex'
-  table: TableRef
-  from: string
-  to: string
-}
-
-/**
- * Operation that adds a table-level foreign key.
- */
-export type AddForeignKeyOperation = {
-  kind: 'addForeignKey'
-  table: TableRef
-  constraint: ForeignKeyConstraint
-}
-
-/**
- * Operation that drops a table-level foreign key.
- */
-export type DropForeignKeyOperation = {
-  kind: 'dropForeignKey'
-  table: TableRef
-  name: string
-}
-
-/**
- * Operation that adds a table-level check constraint.
- */
-export type AddCheckOperation = {
-  kind: 'addCheck'
-  table: TableRef
-  constraint: CheckConstraint
-}
-
-/**
- * Operation that drops a table-level check constraint.
- */
-export type DropCheckOperation = {
-  kind: 'dropCheck'
-  table: TableRef
-  name: string
-}
-
-/**
- * Union of schema and migration operations understood by adapters.
- */
-export type DataMigrationOperation =
-  | CreateTableOperation
-  | AlterTableOperation
-  | RenameTableOperation
-  | DropTableOperation
-  | CreateIndexOperation
-  | DropIndexOperation
-  | RenameIndexOperation
-  | AddForeignKeyOperation
-  | DropForeignKeyOperation
-  | AddCheckOperation
-  | DropCheckOperation
-  | RawOperation
-
-/**
  * Opaque transaction handle supplied by adapters.
  */
 export type TransactionToken = {
@@ -574,30 +267,12 @@ export type DataManipulationRequest = {
 }
 
 /**
- * Adapter migration request payload.
- */
-export type DataMigrationRequest = {
-  operation: DataMigrationOperation
-  transaction?: TransactionToken
-}
-
-/**
  * Adapter data-manipulation result payload.
  */
 export type DataManipulationResult = {
   rows?: Record<string, unknown>[]
   affectedRows?: number
   insertId?: unknown
-}
-
-/**
- * Adapter data-migration result payload.
- */
-export type DataMigrationResult = {
-  /**
-   * Number of migration operations processed by the adapter call.
-   */
-  affectedOperations?: number
 }
 
 /**
@@ -624,12 +299,10 @@ export interface DatabaseAdapter {
   dialect: string
   /** Feature flags describing the adapter's supported behaviors. */
   capabilities: AdapterCapabilities
-  /** Compiles a data or migration operation into executable SQL statements. */
-  compileSql(operation: DataManipulationOperation | DataMigrationOperation): SqlStatement[]
+  /** Compiles a data-manipulation operation into executable SQL statements. */
+  compileSql(operation: DataManipulationOperation): SqlStatement[]
   /** Executes a data-manipulation request. */
   execute(request: DataManipulationRequest): Promise<DataManipulationResult>
-  /** Executes a migration request. */
-  migrate(request: DataMigrationRequest): Promise<DataMigrationResult>
   /**
    * Executes a raw SQL script that may contain multiple statements.
    *

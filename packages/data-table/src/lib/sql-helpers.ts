@@ -1,30 +1,9 @@
-import type { DataManipulationOperation, DataMigrationOperation, TableRef } from './adapter.ts'
+import type { TableRef } from './adapter.ts'
 
 /**
  * Function used to quote SQL identifiers for a dialect.
  */
 export type QuoteIdentifier = (value: string) => string
-
-/**
- * Type guard that narrows an operation to the data-manipulation union.
- * @param operation Operation to inspect.
- * @returns `true` when the operation is a data-manipulation operation.
- */
-export function isDataManipulationOperation(
-  operation: DataManipulationOperation | DataMigrationOperation,
-): operation is DataManipulationOperation {
-  return (
-    operation.kind === 'select' ||
-    operation.kind === 'count' ||
-    operation.kind === 'exists' ||
-    operation.kind === 'insert' ||
-    operation.kind === 'insertMany' ||
-    operation.kind === 'update' ||
-    operation.kind === 'delete' ||
-    operation.kind === 'upsert' ||
-    operation.kind === 'raw'
-  )
-}
 
 /**
  * Normalizes an arbitrary join type string into `inner`, `left`, or `right`.
