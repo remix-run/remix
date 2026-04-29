@@ -44,6 +44,17 @@ export async function navigate(href: string, options?: NavigationOptions) {
  * @param signal Abort signal used to remove the listener.
  */
 export function startNavigationListener(signal: AbortSignal) {
+  return startNavigationListenerImpl(signal, { getTopFrame, getNamedFrame })
+}
+
+// Internal version used by unit tests so we can inject stub frames
+export function startNavigationListenerImpl(
+  signal: AbortSignal,
+  options: {
+    getTopFrame: typeof getTopFrame
+    getNamedFrame: typeof getNamedFrame
+  },
+) {
   let navigation = window.navigation
 
   navigation.updateCurrentEntry({
@@ -58,8 +69,8 @@ export function startNavigationListener(signal: AbortSignal) {
       let state = getRuntimeNavigationState(event)
       if (!state) return
 
-      let topFrame = getTopFrame()
-      let namedFrame = state.target ? getNamedFrame(state.target) : undefined
+      let topFrame = options.getTopFrame()
+      let namedFrame = state.target ? options.getNamedFrame(state.target) : undefined
       let frame = namedFrame ?? topFrame
 
       event.intercept({

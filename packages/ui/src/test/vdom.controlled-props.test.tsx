@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest'
-import { userEvent } from '@vitest/browser/context'
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
+import { userEvent } from '@remix-run/test/dom'
 import type { Handle } from '../runtime/component.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { on } from '../index.ts'

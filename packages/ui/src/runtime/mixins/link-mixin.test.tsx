@@ -15,7 +15,7 @@ function render(node: RemixNode) {
   return { container, root }
 }
 
-function stubGlobal(t: TestContext, api: string, method: string, impl: any) {
+function stubGlobalMethod(t: TestContext, api: string, method: string, impl: any) {
   return t.mock.method((globalThis as any)[api], method, impl)
 }
 
@@ -70,7 +70,7 @@ describe('link mixin', () => {
   })
 
   it('navigates on plain click for non-anchor hosts', (t) => {
-    let navigateMock = stubGlobal(t, 'navigation', 'navigate', () => ({
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
       finished: Promise.resolve(),
     }))
 
@@ -87,7 +87,7 @@ describe('link mixin', () => {
   })
 
   it('passes history options through for non-anchor navigation', (t) => {
-    let navigateMock = stubGlobal(t, 'navigation', 'navigate', () => ({
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
       finished: Promise.resolve(),
     }))
 
@@ -104,7 +104,7 @@ describe('link mixin', () => {
   })
 
   it('passes resetScroll=false through for non-anchor navigation', (t) => {
-    let navigateMock = stubGlobal(t, 'navigation', 'navigate', () => ({
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
       finished: Promise.resolve(),
     }))
 
@@ -121,7 +121,7 @@ describe('link mixin', () => {
   })
 
   it('activates link buttons on Enter and suppresses keyboard clicks from Enter and Space', (t) => {
-    let navigateMock = stubGlobal(t, 'navigation', 'navigate', () => ({
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
       finished: Promise.resolve(),
     }))
 
@@ -147,7 +147,7 @@ describe('link mixin', () => {
   })
 
   it('activates generic link elements on Enter', (t) => {
-    let navigateMock = stubGlobal(t, 'navigation', 'navigate', () => ({
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
       finished: Promise.resolve(),
     }))
 
@@ -167,10 +167,10 @@ describe('link mixin', () => {
   })
 
   it('opens a new tab for meta-click, ctrl-click, and middle-click on non-anchor hosts', (t) => {
-    let navigateMock = stubGlobal(t, 'navigation', 'navigate', () => ({
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
       finished: Promise.resolve(),
     }))
-    let openMock = stubGlobal(t, 'globalThis', 'open', () => null)
+    let openMock = stubGlobalMethod(t, 'globalThis', 'open', () => null)
 
     let { container } = render(<button mix={link('/login')}>Login</button>)
 
@@ -192,7 +192,7 @@ describe('link mixin', () => {
   })
 
   it('does not navigate disabled or aria-disabled link hosts', (t) => {
-    let navigateMock = stubGlobal(t, 'navigation', 'navigate', () => ({
+    let navigateMock = stubGlobalMethod(t, 'navigation', 'navigate', () => ({
       finished: Promise.resolve(),
     }))
 
