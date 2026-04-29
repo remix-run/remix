@@ -305,16 +305,17 @@ export async function sendResponse(
 
   if (response.body != null && res.req.method !== 'HEAD') {
     let reader = response.body.getReader()
+    let first = await reader.read()
+    if (first.done) {
+      reader.releaseLock()
+    } else {
+      let second = await reader.read()
+      if (second.done) {
+        res.end(first.value)
+        return
+      }
 
-    try {
-      let first = await reader.read()
-      if (!first.done) {
-        let second = await reader.read()
-        if (second.done) {
-          res.end(first.value)
-          return
-        }
-
+      try {
         // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
         if (res.write(first.value) === false) {
           await new Promise<void>((resolve) => {
@@ -328,21 +329,21 @@ export async function sendResponse(
             res.once('drain', resolve)
           })
         }
-      }
 
-      while (true) {
-        let result = await reader.read()
-        if (result.done) break
+        while (true) {
+          let result = await reader.read()
+          if (result.done) break
 
-        // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
-        if (res.write(result.value) === false) {
-          await new Promise<void>((resolve) => {
-            res.once('drain', resolve)
-          })
+          // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
+          if (res.write(result.value) === false) {
+            await new Promise<void>((resolve) => {
+              res.once('drain', resolve)
+            })
+          }
         }
+      } finally {
+        reader.releaseLock()
       }
-    } finally {
-      reader.releaseLock()
     }
   }
 
