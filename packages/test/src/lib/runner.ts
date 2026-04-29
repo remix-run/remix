@@ -227,8 +227,8 @@ function runFileInForkedProcess(
     child.once('error', reject)
     child.once('exit', (code, signal) => {
       if (code === 0) resolve()
-      else if (signal) reject(new Error(`Worker killed by signal ${signal}`))
-      else reject(new Error(`Worker exited with code ${code}`))
+      else if (signal) reject(new Error(`Forked process killed by signal ${signal}`))
+      else reject(new Error(`Forked process exited with code ${code}`))
     })
 
     child.send(payload, (err) => {
