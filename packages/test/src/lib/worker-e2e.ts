@@ -14,6 +14,7 @@ try {
   let launcher = await getBrowserLauncher(workerData.playwrightUseOpts)
   let opts = getPlaywrightLaunchOptions(workerData.playwrightUseOpts)
   let browser = await launcher.launch(opts)
+  let browserClosed = false
   try {
     let results = await runTests({
       browser,
@@ -21,13 +22,19 @@ try {
       playwrightPageOptions: getPlaywrightPageOptions(workerData.playwrightUseOpts),
       coverage: workerData.coverage,
     })
-    parentPort!.postMessage(results)
     if (workerData.open) {
+      parentPort!.postMessage(results)
       console.log('\nBrowser is open. Press Ctrl+C to close.')
       await new Promise<void>((resolve) => browser.on('disconnected', () => resolve()))
+    } else {
+      await browser.close()
+      browserClosed = true
+      parentPort!.postMessage(results)
     }
   } finally {
-    await browser.close()
+    if (!browserClosed) {
+      await browser.close()
+    }
   }
   process.exit(0)
 } catch (e) {

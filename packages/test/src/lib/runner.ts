@@ -20,6 +20,11 @@ const ext = IS_RUNNING_FROM_SRC ? '.ts' : '.js'
 const workerUrl = new URL(`./worker${ext}`, import.meta.url)
 const workerE2EUrl = new URL(`./worker-e2e${ext}`, import.meta.url)
 
+interface WorkerRun {
+  worker: Worker
+  finished: Promise<void>
+}
+
 export async function runServerTests(
   files: string[],
   reporter: Reporter,
@@ -71,6 +76,7 @@ export async function runServerTests(
           },
         ),
       () => counts.failed++,
+      !options.open,
     )
 
     if (options.coverage && allBrowserCoverageEntries.length > 0) {
@@ -94,6 +100,7 @@ export async function runServerTests(
       concurrency,
       (file) => runFileInWorker(file, type, (results) => accumulate(results, file), options),
       () => counts.failed++,
+      true,
     )
 
     if (coverageDataDir) {
@@ -109,8 +116,9 @@ export async function runServerTests(
 async function runInConcurrentWorkers(
   files: string[],
   concurrency: number,
-  runFile: (file: string) => Promise<void>,
+  runFile: (file: string) => WorkerRun,
   onError: () => void,
+  terminateWhenFinished: boolean,
 ): Promise<void> {
   let index = 0
   let active = 0
@@ -122,22 +130,53 @@ async function runInConcurrentWorkers(
         index++
         active++
 
-        runFile(file).then(
-          () => {
-            active--
-            if (index < files.length) {
-              dispatch()
-            } else if (active === 0) {
-              resolve()
+        let run = runFile(file)
+
+        function complete() {
+          active--
+          if (index < files.length) {
+            dispatch()
+          } else if (active === 0) {
+            resolve()
+          }
+        }
+
+        async function terminate(): Promise<boolean> {
+          try {
+            await run.worker.terminate()
+            return true
+          } catch (err) {
+            console.error(
+              `Error terminating worker for ${file}:`,
+              err instanceof Error ? err.message : err,
+            )
+            console.error(err)
+            return false
+          }
+        }
+
+        run.finished.then(
+          async () => {
+            try {
+              if (terminateWhenFinished) {
+                let terminated = await terminate()
+                if (!terminated) {
+                  onError()
+                }
+              }
+            } finally {
+              complete()
             }
           },
-          (err) => {
-            console.error(`Error running ${file}:`, err.message)
-            console.error(err)
-            onError()
-            active--
-            if (active === 0 && index >= files.length) resolve()
-            else dispatch()
+          async (err) => {
+            try {
+              console.error(`Error running ${file}:`, err instanceof Error ? err.message : err)
+              console.error(err)
+              onError()
+              await terminate()
+            } finally {
+              complete()
+            }
           },
         )
       }
@@ -149,7 +188,7 @@ async function runInConcurrentWorkers(
   })
 }
 
-function runFileInWorker(
+export function runFileInWorker(
   file: string,
   type: 'server' | 'e2e',
   onResults: (results: TestResults) => void,
@@ -159,31 +198,52 @@ function runFileInWorker(
     open?: boolean
     playwrightUseOpts?: PlaywrightUseOpts
   } = {},
-): Promise<void> {
-  return new Promise((resolve, reject) => {
-    let worker =
-      type === 'e2e'
-        ? new Worker(workerE2EUrl, {
-            workerData: {
-              file: pathToFileURL(file).href,
-              type,
-              coverage: options.coverage,
-              open: options.open,
-              playwrightUseOpts: options.playwrightUseOpts,
-            },
-          })
-        : new Worker(workerUrl, {
-            workerData: {
-              file: pathToFileURL(file).href,
-              type,
-              coverage: options.coverage,
-            },
-          })
-    worker.once('message', (msg: TestResults) => onResults(msg))
+): WorkerRun {
+  let receivedResults = false
+  let worker =
+    type === 'e2e'
+      ? new Worker(workerE2EUrl, {
+          workerData: {
+            file: pathToFileURL(file).href,
+            type,
+            coverage: options.coverage,
+            open: options.open,
+            playwrightUseOpts: options.playwrightUseOpts,
+          },
+        })
+      : new Worker(workerUrl, {
+          workerData: {
+            file: pathToFileURL(file).href,
+            type,
+            coverage: options.coverage,
+          },
+        })
+
+  let finished = new Promise<void>((resolve, reject) => {
+    worker.once('message', (msg: TestResults) => {
+      receivedResults = true
+      try {
+        onResults(msg)
+      } catch (error) {
+        reject(error)
+        return
+      }
+      if (!options.open) {
+        resolve()
+      }
+    })
     worker.once('error', reject)
     worker.once('exit', (code) => {
-      if (code !== 0) reject(new Error(`Worker exited with code ${code}`))
-      else resolve()
+      if (receivedResults || code === 0) {
+        resolve()
+      } else {
+        reject(new Error(`Worker exited with code ${code}`))
+      }
     })
   })
+
+  return {
+    worker,
+    finished,
+  }
 }

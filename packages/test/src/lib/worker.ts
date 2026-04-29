@@ -7,6 +7,13 @@ import type { TestResults } from './reporters/results.ts'
 import { IS_BUN } from './runtime.ts'
 import { IS_RUNNING_FROM_SRC } from './config.ts'
 
+async function takeCoverage(): Promise<void> {
+  if (workerData.coverage && !IS_BUN) {
+    let v8 = await import('node:v8')
+    v8.takeCoverage()
+  }
+}
+
 try {
   // When coverage is enabled in Node, we use a coverage-friendly TypeScript loader which
   // replaces tsx's minified transformation with a non-minified esbuild transform
@@ -24,9 +31,16 @@ try {
   }
 
   let results = await runTests()
+  await takeCoverage()
   parentPort!.postMessage(results)
   process.exit(0)
 } catch (e) {
+  try {
+    await takeCoverage()
+  } catch (coverageError) {
+    e = coverageError
+  }
+
   let results: TestResults = {
     passed: 0,
     failed: 1,
