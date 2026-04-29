@@ -320,23 +320,23 @@ Command: `wrk -t12 -c400 -d30s`
 
 Simple HTML response benchmarks without inspecting the incoming request.
 
-| Server              |   Version | Requests/sec | Avg latency | Transfer/sec |
-| ------------------- | --------: | -----------: | ----------: | -----------: |
-| `node-serve`        |   `0.0.0` |  `62,169.97` |    `6.37ms` |     `9.84MB` |
-| `node:http`         | `24.15.0` |  `48,513.85` |   `10.61ms` |     `9.95MB` |
-| `node-fetch-server` |  `0.13.0` |  `44,886.75` |   `11.57ms` |     `9.12MB` |
-| `express`           |   `5.2.1` |  `40,475.71` |   `13.09ms` |     `9.77MB` |
+| Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
+| ------------------------- | --------: | -----------: | ----------: | -----------: |
+| `remix/node-serve`        |   `0.0.0` |  `62,169.97` |    `6.37ms` |     `9.84MB` |
+| `node:http`               | `24.15.0` |  `48,513.85` |   `10.61ms` |     `9.95MB` |
+| `remix/node-fetch-server` |  `0.13.0` |  `44,886.75` |   `11.57ms` |     `9.12MB` |
+| `express`                 |   `5.2.1` |  `40,475.71` |   `13.09ms` |     `9.77MB` |
 
 ### Request Inspection
 
 POST benchmarks that read the request method, headers, and body.
 
-| Server                                 |   Version | Requests/sec | Avg latency | Transfer/sec |
-| -------------------------------------- | --------: | -----------: | ----------: | -----------: |
-| `node-serve-request-inspection`        |   `0.0.0` |  `31,369.44` |   `12.60ms` |     `4.97MB` |
-| `node-fetch-server-request-inspection` |  `0.13.0` |  `26,196.04` |   `21.93ms` |     `5.32MB` |
-| `node:http-request-inspection`         | `24.15.0` |  `25,662.42` |   `22.31ms` |     `5.26MB` |
-| `express-request-inspection`           |   `5.2.1` |  `23,745.73` |   `25.28ms` |     `5.73MB` |
+| Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
+| ------------------------- | --------: | -----------: | ----------: | -----------: |
+| `remix/node-serve`        |   `0.0.0` |  `31,369.44` |   `12.60ms` |     `4.97MB` |
+| `remix/node-fetch-server` |  `0.13.0` |  `26,196.04` |   `21.93ms` |     `5.32MB` |
+| `node:http`               | `24.15.0` |  `25,662.42` |   `22.31ms` |     `5.26MB` |
+| `express`                 |   `5.2.1` |  `23,745.73` |   `25.28ms` |     `5.73MB` |
 
 <!-- benchmarks:end -->
 

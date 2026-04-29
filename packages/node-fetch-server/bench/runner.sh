@@ -39,14 +39,14 @@ run_benchmark "node:http-request-inspection@$NODE_VERSION" \
 
 NODE_FETCH_SERVER_VERSION=$(node -e 'console.log(require("../package.json").version)')
 NODE_SERVE_VERSION=$(node -e 'console.log(require("./node_modules/@remix-run/node-serve/package.json").version)')
-run_benchmark "node-fetch-server@$NODE_FETCH_SERVER_VERSION" \
+run_benchmark "remix/node-fetch-server@$NODE_FETCH_SERVER_VERSION" \
   "node ./servers/node-fetch-server.ts"
-run_benchmark "node-serve@$NODE_SERVE_VERSION" \
+run_benchmark "remix/node-serve@$NODE_SERVE_VERSION" \
   "node ./servers/node-serve.ts"
-run_benchmark "node-fetch-server-request-inspection@$NODE_FETCH_SERVER_VERSION" \
+run_benchmark "remix/node-fetch-server-request-inspection@$NODE_FETCH_SERVER_VERSION" \
   "node ./servers/node-fetch-server-request-inspection.ts" \
   -s ./request-inspection.lua
-run_benchmark "node-serve-request-inspection@$NODE_SERVE_VERSION" \
+run_benchmark "remix/node-serve-request-inspection@$NODE_SERVE_VERSION" \
   "node ./servers/node-serve-request-inspection.ts" \
   -s ./request-inspection.lua
 

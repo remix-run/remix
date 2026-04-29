@@ -66,12 +66,12 @@ async function main(): Promise<void> {
       benchmarks: [
         { name: 'node:http', version: nodeVersion, server: './servers/node-http.ts' },
         {
-          name: 'node-fetch-server',
+          name: 'remix/node-fetch-server',
           version: nodeFetchServerVersion,
           server: './servers/node-fetch-server.ts',
         },
         {
-          name: 'node-serve',
+          name: 'remix/node-serve',
           version: nodeServeVersion,
           server: './servers/node-serve.ts',
         },
@@ -89,12 +89,12 @@ async function main(): Promise<void> {
           server: './servers/node-http-request-inspection.ts',
         },
         {
-          name: 'node-fetch-server-request-inspection',
+          name: 'remix/node-fetch-server',
           version: nodeFetchServerVersion,
           server: './servers/node-fetch-server-request-inspection.ts',
         },
         {
-          name: 'node-serve-request-inspection',
+          name: 'remix/node-serve',
           version: nodeServeVersion,
           server: './servers/node-serve-request-inspection.ts',
         },
