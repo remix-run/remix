@@ -6,7 +6,7 @@ import { type Router } from 'remix/fetch-router'
 
 import { router } from '../config/router.tsx'
 
-let { values: cliArgs } = util.parseArgs({
+const { values: cliArgs } = util.parseArgs({
   options: {
     dir: {
       type: 'string',
