@@ -27,9 +27,14 @@ maps cleanly to a server-rendered route. Frames re-fetch the same route, so the 
 stays in one place and the client does not need a parallel "state" API.
 
 ```tsx
-on('submit', async (event) => {
+on('submit', async (event, signal) => {
   event.preventDefault()
-  await fetch(routes.cart.add.href(), { method: 'POST', body: new FormData(event.currentTarget) })
+  await fetch(routes.cart.add.href(), {
+    method: 'POST',
+    body: new FormData(event.currentTarget),
+    signal,
+  })
+  if (signal.aborted) return
   await handle.frames.get('cart-summary')?.reload()
 })
 ```
@@ -40,14 +45,15 @@ clear ownership of rendering logic.
 
 ## Client Entries
 
-Use `clientEntry` to mark a component for client-side hydration. The first argument is the module
-URL and export name in the form `moduleUrl#ExportName`:
+Use `clientEntry` to mark a component for client-side hydration. In source-served apps, prefer the
+source module's `import.meta.url` as the entry ID and let server rendering map it to the public
+asset URL:
 
 ```tsx
 import { clientEntry, on, type Handle } from 'remix/ui'
 
-export let Counter = clientEntry(
-  '/assets/counter.js#Counter',
+export const Counter = clientEntry(
+  import.meta.url,
   function Counter(handle: Handle<{ initialCount: number; label: string }>) {
     let count = handle.props.initialCount
 
@@ -70,19 +76,29 @@ export let Counter = clientEntry(
 )
 ```
 
-When the client assets are served via a typed route (e.g. `assets: '/assets/*path'`), build the
-module URL with `routes.assets.href({ path: 'counter.js#Counter' })` so the URL stays in sync
-with the route definition:
+On the server, provide `resolveClientEntry` to `renderToStream(...)` so source file URLs become
+browser-loadable asset URLs. Keep this resolution in the render helper so component modules do not
+hard-code deployment-specific asset paths:
 
 ```tsx
-import { routes } from '../routes.ts'
+let stream = renderToStream(<App />, {
+  async resolveClientEntry(entryId, component) {
+    let exportName = entryId.split('#')[1] || component.name
+    if (!exportName) {
+      throw new Error(`Unable to resolve client entry export for ${entryId}`)
+    }
 
-const moduleUrl = routes.assets.href({ path: 'counter.js#Counter' })
-
-export let Counter = clientEntry(moduleUrl, function Counter(handle: Handle<{ label: string }>) {
-  // ...
+    return {
+      href: await assetServer.getHref(entryId),
+      exportName,
+    }
+  },
 })
 ```
+
+If the module export name differs from the component function name, include `#ExportName` in the
+entry ID or return the exact export name from `resolveClientEntry`. A render helper that only
+supports source-owned entries can also fail fast when `entryId` is not a `file://` URL.
 
 On the server, `clientEntry` components render like any other component. The server wraps their
 output in comment markers and serializes props into a `<script type="application/json">` tag.

@@ -82,6 +82,11 @@ let preloads = await assetServer.getPreloads(['app/assets/entry.ts'])
 
 Use this when rendering documents or layouts that boot browser behavior with a known client entry.
 
+When resolving hydrated client entries during server rendering, pass the source entry ID from
+`clientEntry(import.meta.url, ...)` to `getHref()` inside `resolveClientEntry`. Keep export-name
+resolution in that render helper, and avoid hard-coding public asset URLs in source-owned component
+modules.
+
 ## Development vs Deployment
 
 In development:
