@@ -19,7 +19,7 @@ import type { Counts, TestResults } from './reporters/results.ts'
 const ext = IS_RUNNING_FROM_SRC ? '.ts' : '.js'
 const workerUrl = new URL(`./worker${ext}`, import.meta.url)
 const workerE2EUrl = new URL(`./worker-e2e${ext}`, import.meta.url)
-const WORKER_EXIT_GRACE_MS = 500
+const DEFAULT_WORKER_SHUTDOWN_TIMEOUT_MS = 10_000
 
 interface WorkerRun {
   worker: Worker
@@ -38,6 +38,7 @@ export async function runServerTests(
     playwrightUseOpts?: PlaywrightUseOpts
     projectName?: string
     coverage?: CoverageConfig
+    workerShutdownTimeoutMs?: number
   } = {},
 ): Promise<Counts & { coverageMap: CoverageMap | null }> {
   let counts: Counts = { passed: 0, failed: 0, skipped: 0, todo: 0 }
@@ -79,6 +80,7 @@ export async function runServerTests(
         ),
       () => counts.failed++,
       !options.open,
+      options.workerShutdownTimeoutMs ?? DEFAULT_WORKER_SHUTDOWN_TIMEOUT_MS,
     )
 
     if (options.coverage && allBrowserCoverageEntries.length > 0) {
@@ -103,6 +105,7 @@ export async function runServerTests(
       (file) => runFileInWorker(file, type, (results) => accumulate(results, file), options),
       () => counts.failed++,
       true,
+      options.workerShutdownTimeoutMs ?? DEFAULT_WORKER_SHUTDOWN_TIMEOUT_MS,
     )
 
     if (coverageDataDir) {
@@ -121,6 +124,7 @@ async function runInConcurrentWorkers(
   runFile: (file: string) => WorkerRun,
   onError: () => void,
   terminateWhenFinished: boolean,
+  workerShutdownTimeoutMs: number,
 ): Promise<void> {
   let index = 0
   let active = 0
@@ -161,7 +165,7 @@ async function runInConcurrentWorkers(
           async () => {
             try {
               if (terminateWhenFinished) {
-                let exited = await waitForWorkerExit(run.exited, WORKER_EXIT_GRACE_MS)
+                let exited = await waitForWorkerExit(run.exited, workerShutdownTimeoutMs)
                 if (!exited) {
                   let terminated = await terminate()
                   if (!terminated) {

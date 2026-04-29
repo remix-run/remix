@@ -42,7 +42,9 @@ describe('leaked worker fixture', () => {
     }
 
     try {
-      let counts = await runServerTests([FIXTURE_FILE], reporter, 1, 'server')
+      let counts = await runServerTests([FIXTURE_FILE], reporter, 1, 'server', {
+        workerShutdownTimeoutMs: 50,
+      })
       assert.equal(counts.passed, 1)
       assert.equal(counts.failed, 0)
       assert.equal(counts.skipped, 0)
