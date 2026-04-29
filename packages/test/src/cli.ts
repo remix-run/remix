@@ -196,12 +196,14 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
       if (browserFiles.length > 0 || e2eFiles.length > 0) {
         let projects = resolveProjects(playwrightConfig)
         if (config.project) {
-          let projectNames = config.project.split(',').map((project) => project.trim())
+          let projectNames = new Set(config.project)
           projects = projects.filter(
-            (project) => project.name && projectNames.includes(project.name),
+            (project) => project.name && projectNames.has(project.name),
           )
           if (projects.length === 0) {
-            throw new Error(`No playwright projects found with name(s) "${config.project}"`)
+            throw new Error(
+              `No playwright projects found with name(s) "${config.project.join(', ')}"`,
+            )
           }
         }
 
@@ -327,13 +329,13 @@ async function discoverTests(
   let files = await findFiles(config.glob.test, config.glob.exclude, cwd)
 
   if (files.length === 0) {
-    console.log(`No test files found matching pattern: ${config.glob.test}`)
+    console.log(`No test files found matching pattern: ${config.glob.test.join(', ')}`)
     return null
   }
 
   let browserSet = new Set(await findFiles(config.glob.browser, config.glob.exclude, cwd))
   let e2eSet = new Set(await findFiles(config.glob.e2e, config.glob.exclude, cwd))
-  let types = new Set(config.type.split(','))
+  let types = new Set(config.type)
   let browserFiles = types.has('browser') ? files.filter((f) => browserSet.has(f)) : []
   let e2eFiles = types.has('e2e') ? files.filter((file) => e2eSet.has(file)) : []
   let serverFiles = types.has('server')
@@ -342,7 +344,7 @@ async function discoverTests(
   let totalFiles = browserFiles.length + serverFiles.length + e2eFiles.length
 
   if (totalFiles === 0) {
-    console.log(`No test files remain after filtering for type ${config.type}`)
+    console.log(`No test files remain after filtering for type ${config.type.join(', ')}`)
     return null
   }
 
@@ -358,8 +360,12 @@ async function discoverTests(
   }
 }
 
-async function findFiles(pattern: string, excludePattern: string, cwd: string): Promise<string[]> {
-  let files: string[] = []
+async function findFiles(
+  patterns: string[],
+  excludePatterns: string[],
+  cwd: string,
+): Promise<string[]> {
+  let files = new Set<string>()
 
   if (IS_BUN) {
     // Bun's `fs.promises.glob` follows symlinks and doesn't prune traversal
@@ -367,18 +373,23 @@ async function findFiles(pattern: string, excludePattern: string, cwd: string): 
     // Use Bun's native Glob, which defaults to `followSymlinks: false`.
     // @ts-expect-error — bun module is only resolvable under the Bun runtime
     let { Glob } = await import('bun')
-    let glob = new Glob(pattern)
-    let excludeGlob = new Glob(excludePattern)
-    for await (let file of glob.scan({ cwd, absolute: true })) {
-      if (!excludeGlob.match(path.relative(cwd, file))) {
-        files.push(file)
+    let excludeGlobs = excludePatterns.map((p) => new Glob(p))
+    for (let pattern of patterns) {
+      let glob = new Glob(pattern)
+      for await (let file of glob.scan({ cwd, absolute: true })) {
+        let rel = path.relative(cwd, file)
+        if (!excludeGlobs.some((eg: { match: (s: string) => boolean }) => eg.match(rel))) {
+          files.add(file)
+        }
       }
     }
-    return files
+    return [...files]
   }
 
-  for await (let file of fsp.glob(pattern, { cwd, exclude: [excludePattern] })) {
-    files.push(path.resolve(cwd, file))
+  for (let pattern of patterns) {
+    for await (let file of fsp.glob(pattern, { cwd, exclude: excludePatterns })) {
+      files.add(path.resolve(cwd, file))
+    }
   }
-  return files
+  return [...files]
 }
