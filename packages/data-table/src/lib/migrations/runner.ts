@@ -61,10 +61,10 @@ function assertTargetOption(migrations: MigrationDescriptor[], to: string | unde
   }
 }
 
-function assertNoMigrationDrift(
+async function assertNoMigrationDrift(
   migrations: MigrationDescriptor[],
   journal: MigrationJournalRow[],
-): void {
+): Promise<void> {
   let migrationMap = new Map(migrations.map((migration) => [migration.id, migration]))
 
   for (let row of journal) {
@@ -74,7 +74,7 @@ function assertNoMigrationDrift(
       continue
     }
 
-    let expected = normalizeChecksum(migration)
+    let expected = await normalizeChecksum(migration)
 
     if (expected !== row.checksum) {
       throw new Error(
@@ -135,7 +135,7 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
     }
 
     let appliedMap = new Map(journal.map((row) => [row.id, row]))
-    assertNoMigrationDrift(migrations, journal)
+    await assertNoMigrationDrift(migrations, journal)
     let toRun: MigrationDescriptor[] = []
 
     if (input.direction === 'up') {
@@ -182,6 +182,8 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
 
     for (let migration of toRun) {
       let script = (input.direction === 'up' ? migration.up : migration.down) as string
+      let checksum =
+        input.direction === 'up' ? await normalizeChecksum(migration) : undefined
       let mode = resolveTransactionMode(migration)
 
       if (mode === 'required' && !adapter.capabilities.transactionalDdl) {
@@ -210,13 +212,17 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
 
         if (input.direction === 'up') {
           if (!dryRun) {
+            if (checksum === undefined) {
+              throw new Error('Expected checksum for up migration "' + migration.id + '"')
+            }
+
             await insertJournalRow(
               adapter,
               journalTable,
               {
                 id: migration.id,
                 name: migration.name,
-                checksum: normalizeChecksum(migration),
+                checksum,
                 batch,
               },
               token,
@@ -311,20 +317,23 @@ export function createMigrationRunner(
       let journalMap = new Map(journal.map((row) => [row.id, row]))
       let sortedMigrations = resolveMigrations(migrations)
 
-      return sortedMigrations.map((migration) => {
+      let statuses: MigrationStatusEntry[] = []
+
+      for (let migration of sortedMigrations) {
         let journalRow = journalMap.get(migration.id)
 
         if (!journalRow) {
-          return {
+          statuses.push({
             id: migration.id,
             name: migration.name,
             status: 'pending' as MigrationStatus,
-          }
+          })
+          continue
         }
 
-        let checksum = normalizeChecksum(migration)
+        let checksum = await normalizeChecksum(migration)
 
-        return {
+        statuses.push({
           id: migration.id,
           name: migration.name,
           status:
@@ -334,8 +343,10 @@ export function createMigrationRunner(
           appliedAt: journalRow.appliedAt,
           batch: journalRow.batch,
           checksum: journalRow.checksum,
-        }
-      })
+        })
+      }
+
+      return statuses
     },
   }
 }
