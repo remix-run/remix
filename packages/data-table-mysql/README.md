@@ -8,7 +8,7 @@ Use this package when you want `data-table` APIs backed by `mysql2`.
 - **Native `mysql2` Integration**: Works with `mysql2/promise` `Pool` and `PoolConnection` instances
 - **Full `data-table` API Support**: Queries, relations, writes, and transactions
 - **Adapter-Owned Compiler**: SQL compilation lives in this adapter, with optional shared pure helpers from `data-table`
-- **Migration DDL Support**: Compiles and executes `DataMigrationOperation` operations for `remix/data-table/migrations`
+- **Multi-Statement Migrations**: `executeScript()` runs `up.sql` / `down.sql` files via `mysql2` (requires `multipleStatements: true`)
 - **MySQL Capabilities Enabled By Default**:
   - `returning: false`
   - `savepoints: true`

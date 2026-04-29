@@ -3,8 +3,6 @@ import { describe, it } from '@remix-run/test'
 
 import type {
   DataManipulationRequest,
-  DataMigrationRequest,
-  DataMigrationResult,
   DataManipulationResult,
   DatabaseAdapter,
   TableRef,
@@ -109,20 +107,14 @@ class MemoryMigrationAdapter implements DatabaseAdapter {
     return { affectedRows: 0 }
   }
 
-  async migrate(request: DataMigrationRequest): Promise<DataMigrationResult> {
-    let operation = request.operation
-
-    if (operation.kind === 'createTable' && operation.table.name === this.journalTableName) {
-      this.journalTableCreated = true
-      return { affectedOperations: 1 }
-    }
-
-    return { affectedOperations: 0 }
-  }
-
   async executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
     if (transaction) {
       this.#assertToken(transaction)
+    }
+
+    if (sql.toLowerCase().startsWith('create table if not exists ' + this.journalTableName)) {
+      this.journalTableCreated = true
+      return
     }
 
     if (this.scriptError) {

@@ -1,1 +1,3 @@
-Added `executeScript(sql, transaction?)` to satisfy the `DatabaseAdapter` contract introduced for SQL-file migrations. Multi-statement scripts run via `better-sqlite3`'s native `db.exec`.
+BREAKING CHANGE: removed `migrate(request)` and `compileSql(DataMigrationOperation)`
+
+The DDL operation ADT has been removed from `@remix-run/data-table`, so this adapter no longer implements `migrate()` and `compileSql()` only accepts `DataManipulationOperation`. SQL-file migrations run through the new `executeScript(sql, transaction?)` method, which delegates to the SQLite client's native `exec()`.

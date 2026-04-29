@@ -61,7 +61,6 @@ export type MigrationStatusEntry = {
   checksum?: string
 }
 
-
 /**
  * Common options for `runner.up(...)` and `runner.down(...)`.
  * `to` and `step` are mutually exclusive.

@@ -15,6 +15,7 @@ Migrations are directories named `YYYYMMDDHHmmss_<slug>/` containing a hand-writ
 - `MigrateResult.sql` is `string[]` instead of `SqlStatement[]`
 - `loadMigrations(directory)` scans folder-per-migration layouts (not `.ts` files) and returns descriptors with SQL strings
 - `DatabaseAdapter` gained a required `executeScript(sql, transaction?)` method; existing first-party adapters implement it natively
+- Removed `migrate(request)` and the `DataMigrationOperation` ADT (`CreateTableOperation`, `AlterTableOperation`, `*Change`, `IndexDefinition`, `*Constraint`, etc.) from `DatabaseAdapter` and the public exports. `compileSql` now accepts only `DataManipulationOperation`. Migration journal table creation moved to portable SQL inside `journal-store.ts`. `isDataManipulationOperation` removed from `remix/data-table/sql-helpers`.
 
 **Transaction Modes**
 
