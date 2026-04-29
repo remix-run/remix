@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/data-table",
   "version": "0.2.0",
-  "description": "A typed, relational query toolkit for Remix",
+  "description": "A typed, relational query toolkit for JavaScript",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {

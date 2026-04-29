@@ -47,21 +47,21 @@ The benefit is code that's not just reusable, but **future-proof**.
 
 ## Packages
 
-Remix is composed of lots of small, focused sub-packages that are composed together under the `remix` "umbrella" package. This encourages strong, clear boundaries between different areas of functionality and makes it easier to swap out implementations when needed.
+Most packages in this repository are standalone JavaScript/TypeScript tools. The `remix` package composes them under one umbrella for distribution and documentation.
 
 - [assert](packages/assert): Node assert-compatible utilities for any JavaScript environment
-- [assets](packages/assets): Fetch-based server for compiling browser JS/TS assets on demand
+- [assets](packages/assets): Fetch-based server for compiling browser JS/TS and CSS assets on demand
 - [async-context-middleware](packages/async-context-middleware): Middleware for storing request context in AsyncLocalStorage
 - [auth](packages/auth): Browser login, OAuth, and OIDC helpers for Remix
 - [auth-middleware](packages/auth-middleware): Pluggable authentication middleware for Remix
-- [ui](packages/ui): UI runtime, components, theme tokens, and mixins for Remix
+- [cli](packages/cli): Command-line interface for Remix
 - [compression-middleware](packages/compression-middleware): Middleware for compressing HTTP responses
+- [cookie](packages/cookie): A toolkit for working with cookies in JavaScript
 - [cop-middleware](packages/cop-middleware): Middleware for tokenless cross-origin protection in Fetch API servers
 - [cors-middleware](packages/cors-middleware): Middleware for handling CORS in Fetch API servers
 - [csrf-middleware](packages/csrf-middleware): Middleware for CSRF protection in Fetch API servers
-- [cookie](packages/cookie): A toolkit for working with cookies in JavaScript
 - [data-schema](packages/data-schema): Tiny, standards-aligned schema validation
-- [data-table](packages/data-table): A typed, relational query toolkit for Remix
+- [data-table](packages/data-table): A typed, relational query toolkit for JavaScript
 - [data-table-mysql](packages/data-table-mysql): MySQL adapter for remix/data-table
 - [data-table-postgres](packages/data-table-postgres): PostgreSQL adapter for remix/data-table
 - [data-table-sqlite](packages/data-table-sqlite): SQLite adapter for remix/data-table
@@ -80,6 +80,7 @@ Remix is composed of lots of small, focused sub-packages that are composed toget
 - [mime](packages/mime): Utilities for working with MIME types
 - [multipart-parser](packages/multipart-parser): A fast, efficient parser for multipart streams in any JavaScript environment
 - [node-fetch-server](packages/node-fetch-server): Build servers for Node.js using the web fetch API
+- [remix](packages/remix): The Remix web framework
 - [response](packages/response): Response helpers for the web Fetch API
 - [route-pattern](packages/route-pattern): Match and generate URLs with strong typing
 - [session](packages/session): Session management for JavaScript
@@ -90,6 +91,7 @@ Remix is composed of lots of small, focused sub-packages that are composed toget
 - [tar-parser](packages/tar-parser): A fast, efficient parser for tar streams in any JavaScript environment
 - [terminal](packages/terminal): Terminal output utilities for JavaScript libraries and CLIs
 - [test](packages/test): A test framework for JavaScript and TypeScript projects
+- [ui](packages/ui): UI tokens, mixins, and glyphs for Remix components
 
 ## Installation
 
