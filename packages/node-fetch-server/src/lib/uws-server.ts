@@ -1,12 +1,10 @@
 import { STATUS_CODES } from 'node:http'
 import * as uWS from 'uWebSockets.js'
 
+import { createErrorResponse, defaultErrorHandler } from './error-response.ts'
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
-import {
-  createUwsRequest,
-  type UwsRequestOptions,
-  type UwsResponseState,
-} from './uws-request.ts'
+import { isPromiseLike } from './promise.ts'
+import { createUwsRequest, type UwsRequestOptions, type UwsResponseState } from './uws-request.ts'
 
 export interface UwsRequestHandlerOptions extends UwsRequestOptions {
   /**
@@ -324,14 +322,7 @@ async function sendErrorResponse(
   onError: ErrorHandler,
   error: unknown,
 ): Promise<void> {
-  let response: Response
-  try {
-    response = (await onError(error)) ?? internalServerError()
-  } catch (error) {
-    console.error(`There was an error in the error handler: ${error}`)
-    response = internalServerError()
-  }
-
+  let response = await createErrorResponse(onError, error)
   await sendUwsResponse(res, state, method, response)
 }
 
@@ -364,29 +355,4 @@ function createClientAddress(res: uWS.HttpResponse): ClientAddress {
 function createStatusLine(response: Response): string {
   let statusText = response.statusText || STATUS_CODES[response.status] || ''
   return statusText === '' ? String(response.status) : `${response.status} ${statusText}`
-}
-
-function isPromiseLike<value>(value: value | Promise<value>): value is Promise<value> {
-  return typeof (value as Promise<value>).then === 'function'
-}
-
-function defaultErrorHandler(error: unknown): Response {
-  console.error(error)
-  return internalServerError()
-}
-
-function internalServerError(): Response {
-  return new Response(
-    // "Internal Server Error"
-    new Uint8Array([
-      73, 110, 116, 101, 114, 110, 97, 108, 32, 83, 101, 114, 118, 101, 114, 32, 69, 114, 114, 111,
-      114,
-    ]),
-    {
-      status: 500,
-      headers: {
-        'Content-Type': 'text/plain',
-      },
-    },
-  )
 }

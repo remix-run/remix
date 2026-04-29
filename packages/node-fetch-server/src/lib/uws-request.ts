@@ -1,5 +1,11 @@
 import type { HttpRequest, HttpResponse } from 'uWebSockets.js'
 
+import {
+  bodyUnusable,
+  bufferToArrayBuffer,
+  bufferToBytes,
+  requestMethodCanHaveBody,
+} from './request-body.ts'
 import { createUwsHeaders } from './uws-headers.ts'
 
 export interface UwsRequestOptions {
@@ -244,22 +250,4 @@ function readUwsRequestBody(res: HttpResponse, state: UwsResponseState): Promise
       }
     })
   })
-}
-
-function requestMethodCanHaveBody(method: string): boolean {
-  return method !== 'GET' && method !== 'HEAD'
-}
-
-function bufferToArrayBuffer(buffer: Buffer): ArrayBuffer {
-  return bufferToBytes(buffer).buffer
-}
-
-function bufferToBytes(buffer: Buffer): Uint8Array<ArrayBuffer> {
-  let bytes = new Uint8Array(buffer.byteLength)
-  bytes.set(buffer)
-  return bytes
-}
-
-function bodyUnusable(): TypeError {
-  return new TypeError('Body is unusable: Body has already been read')
 }
