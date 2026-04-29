@@ -5,7 +5,8 @@ Build Node.js servers with web-standard Fetch API primitives. `node-fetch-server
 ## Features
 
 - **Web Standards** - Standard [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) APIs
-- **Drop-in Integration** - Works with `node:http` and `node:https` modules
+- **uWebSockets.js Transport** - Optional native transport for high-throughput Node.js servers
+- **Node.js HTTP Integration** - Works directly with `node:http`, `node:https`, and `node:http2`
 - **Streaming Support** - Response support with `ReadableStream`
 - **Custom Hostname** - Configuration for deployment flexibility
 - **Client Info** - Access to client connection info (IP address, port)
@@ -17,17 +18,15 @@ Build Node.js servers with web-standard Fetch API primitives. `node-fetch-server
 npm i remix
 ```
 
-## Quick Start
+The `remix/node-fetch-server/uws` export uses [`uWebSockets.js`](https://github.com/uNetworking/uWebSockets.js), which is installed as an optional dependency. Standard installs include optional dependencies; if your install disables them, enable optional dependencies before using the uWS export.
 
-### Basic Server
+## Usage
 
-Here's a complete working example with a simple in-memory data store:
+For high-throughput Node.js servers, use the `serve()` method from the `remix/node-fetch-server/uws` export:
 
 ```ts
-import * as http from 'node:http'
-import { createRequestListener } from 'remix/node-fetch-server'
+import { serve } from 'remix/node-fetch-server/uws'
 
-// Example: Simple in-memory user storage
 let users = new Map([
   ['1', { id: '1', name: 'Alice', email: 'alice@example.com' }],
   ['2', { id: '2', name: 'Bob', email: 'bob@example.com' }],
@@ -59,11 +58,69 @@ async function handler(request: Request) {
   return new Response('Not Found', { status: 404 })
 }
 
-// Create a standard Node.js server
+let server = serve(handler, { port: 3000 })
+
+await server.ready
+console.log(`Server running at http://localhost:${server.port}`)
+```
+
+### Node.js HTTP Server
+
+Use `createRequestListener()` when you want to plug a fetch handler into a standard Node.js server:
+
+```ts
+import * as http from 'node:http'
+import { createRequestListener } from 'remix/node-fetch-server'
+
+async function handler(request: Request) {
+  let url = new URL(request.url)
+
+  if (url.pathname === '/' && request.method === 'GET') {
+    return new Response('Welcome to the User API! Try GET /api/users')
+  }
+
+  if (url.pathname === '/api/users' && request.method === 'GET') {
+    return Response.json([
+      { id: '1', name: 'Alice', email: 'alice@example.com' },
+      { id: '2', name: 'Bob', email: 'bob@example.com' },
+    ])
+  }
+
+  return new Response('Not Found', { status: 404 })
+}
+
 let server = http.createServer(createRequestListener(handler))
 
 server.listen(3000, () => {
   console.log('Server running at http://localhost:3000')
+})
+```
+
+### Existing uWebSockets.js Apps
+
+Use `createUwsRequestHandler()` when you already have a uWebSockets.js app and want to route only part of it to a fetch handler:
+
+This example assumes `uWebSockets.js` is also a direct dependency of your app.
+
+```ts
+import { App } from 'uWebSockets.js'
+import { createUwsRequestHandler } from 'remix/node-fetch-server/uws'
+
+let app = App()
+
+async function handler(request: Request) {
+  let url = new URL(request.url)
+  return Response.json({ path: url.pathname })
+}
+
+app.get('/health', (res) => {
+  res.end('ok')
+})
+
+app.any('/api/*', createUwsRequestHandler(handler))
+
+app.listen(3000, (socket) => {
+  if (!socket) throw new Error('Could not listen on port 3000')
 })
 ```
 
@@ -308,17 +365,55 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/no
 
 - [`demos/http2`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server/demos/http2) - HTTP/2 server with TLS certificates
 
-## Benchmark
+## Related Packages
 
-To run benchmarks comparing `node-fetch-server` performance with comparable libraries:
+- [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
+
+## Benchmarks
+
+Run the full benchmark suite:
 
 ```sh
 pnpm run bench
 ```
 
-## Related Packages
+Update the benchmark results below:
 
-- [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
+```sh
+pnpm run bench:update-readme
+```
+
+<!-- benchmarks:start -->
+
+Last updated: 2026-04-29T07:04:28.909Z
+
+Environment: Darwin 25.3.0, Apple M1 Pro, Node.js v24.15.0
+
+Command: `wrk -t12 -c400 -d30s`
+
+### Raw Throughput
+
+Simple HTML response benchmarks without inspecting the incoming request.
+
+| Server                  |   Version | Requests/sec | Avg latency | Transfer/sec |
+| ----------------------- | --------: | -----------: | ----------: | -----------: |
+| `node-fetch-server-uws` |  `0.13.0` |  `62,591.17` |    `6.32ms` |     `9.91MB` |
+| `node:http`             | `24.15.0` |  `48,080.54` |   `10.71ms` |     `9.86MB` |
+| `node-fetch-server`     |  `0.13.0` |  `44,786.66` |   `11.49ms` |     `9.10MB` |
+| `express`               |  `4.19.2` |  `39,615.72` |   `13.52ms` |     `9.56MB` |
+
+### Request Inspection
+
+POST benchmarks that read the request method, headers, and body.
+
+| Server                                     |   Version | Requests/sec | Avg latency | Transfer/sec |
+| ------------------------------------------ | --------: | -----------: | ----------: | -----------: |
+| `node-fetch-server-uws-request-inspection` |  `0.13.0` |  `32,342.27` |   `12.21ms` |     `5.12MB` |
+| `node-fetch-server-request-inspection`     |  `0.13.0` |  `26,673.91` |   `21.47ms` |     `5.42MB` |
+| `node:http-request-inspection`             | `24.15.0` |  `26,025.90` |   `22.14ms` |     `5.34MB` |
+| `express-request-inspection`               |  `4.19.2` |  `23,535.84` |   `25.61ms` |     `5.68MB` |
+
+<!-- benchmarks:end -->
 
 ## License
 

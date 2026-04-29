@@ -20,6 +20,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./uws": "./src/uws.ts",
     "./test": "./src/test.ts",
     "./package.json": "./package.json"
   },
@@ -28,6 +29,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./uws": {
+        "types": "./dist/uws.d.ts",
+        "default": "./dist/uws.js"
       },
       "./test": {
         "types": "./dist/test.d.ts",
@@ -42,6 +47,8 @@
   },
   "scripts": {
     "bench": "bash ./bench/runner.sh",
+    "bench:typecheck": "tsgo --noEmit -p ./bench/tsconfig.json",
+    "bench:update-readme": "node ./bench/update-readme.ts",
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
@@ -55,5 +62,8 @@
     "response",
     "fetch",
     "web"
-  ]
+  ],
+  "optionalDependencies": {
+    "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.66.0"
+  }
 }

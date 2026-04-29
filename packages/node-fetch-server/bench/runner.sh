@@ -13,7 +13,7 @@ run_benchmark() {
     echo -e "\nRunning benchmark for $server_name ...\n"
 
     # Start the server in the background
-    $start_command &
+    $start_command > /dev/null &
     local server_pid=$!
 
     # Wait for the server to start
@@ -40,8 +40,13 @@ run_benchmark "node:http-request-inspection@$NODE_VERSION" \
 NODE_FETCH_SERVER_VERSION=$(node -e 'console.log(require("../package.json").version)')
 run_benchmark "node-fetch-server@$NODE_FETCH_SERVER_VERSION" \
   "node ./servers/node-fetch-server.ts"
+run_benchmark "node-fetch-server-uws@$NODE_FETCH_SERVER_VERSION" \
+  "node ./servers/node-fetch-server-uws.ts"
 run_benchmark "node-fetch-server-request-inspection@$NODE_FETCH_SERVER_VERSION" \
   "node ./servers/node-fetch-server-request-inspection.ts" \
+  -s ./request-inspection.lua
+run_benchmark "node-fetch-server-uws-request-inspection@$NODE_FETCH_SERVER_VERSION" \
+  "node ./servers/node-fetch-server-uws-request-inspection.ts" \
   -s ./request-inspection.lua
 
 EXPRESS_VERSION=$(node -e 'console.log(require("express/package.json").version)')
