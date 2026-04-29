@@ -36,7 +36,11 @@ class UwsRequest implements Request {
   #bodyPromise: Promise<Buffer> | undefined
   #bodyUsed = false
   #method: string
-  #url: string
+  #url: string | undefined
+  #protocol: string
+  #host: string
+  #path: string
+  #query: string
   #state: UwsResponseState
 
   constructor(
@@ -55,11 +59,10 @@ class UwsRequest implements Request {
     })
     this.#headers = createUwsHeaders(entries)
 
-    let query = req.getQuery()
-    let path = req.getUrl()
-    let protocol = options?.protocol ?? 'http:'
-    let host = options?.host ?? (req.getHeader('host') || 'localhost')
-    this.#url = `${protocol}//${host}${path}${query === '' ? '' : `?${query}`}`
+    this.#protocol = options?.protocol ?? 'http:'
+    this.#host = options?.host ?? (req.getHeader('host') || 'localhost')
+    this.#path = req.getUrl()
+    this.#query = req.getQuery()
 
     if (requestMethodCanHaveBody(this.#method)) {
       this.#bodyPromise = readUwsRequestBody(res, state)
@@ -80,7 +83,7 @@ class UwsRequest implements Request {
       ;(init as { duplex: 'half' }).duplex = 'half'
     }
 
-    return (this.#request = new Request(this.#url, init))
+    return (this.#request = new Request(this.url, init))
   }
 
   #createBodyStream(): ReadableStream<Uint8Array> {
@@ -157,7 +160,9 @@ class UwsRequest implements Request {
   }
 
   get url() {
-    return this.#url
+    return (this.#url ??= `${this.#protocol}//${this.#host}${this.#path}${
+      this.#query === '' ? '' : `?${this.#query}`
+    }`)
   }
 
   arrayBuffer() {
