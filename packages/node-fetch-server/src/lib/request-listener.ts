@@ -89,7 +89,7 @@ export function createRequestListener(
   }
 
   return async (req, res) => {
-    let request = createLazyRequest(req, res, options, createRequest)
+    let request = createLazyRequest(req, res, options, createRequest, createHeaders)
     let client = {
       address: req.socket.remoteAddress!,
       family: req.socket.remoteFamily! as ClientAddress['family'],

@@ -8,22 +8,26 @@ type RequestFactory<requestOptions> = (
   res: ServerResponse,
   options: requestOptions | undefined,
 ) => Request
+type HeadersFactory = (req: IncomingRequest) => Headers
 
 export function createLazyRequest<requestOptions>(
   req: IncomingRequest,
   res: ServerResponse,
   options: requestOptions | undefined,
   createRequest: RequestFactory<requestOptions>,
+  createHeaders: HeadersFactory,
 ): Request {
-  return new LazyRequest(req, res, options, createRequest)
+  return new LazyRequest(req, res, options, createRequest, createHeaders)
 }
 
 class LazyRequest<requestOptions> implements Request {
   #request: Request | undefined
+  #headers: Headers | undefined
   #req: IncomingRequest
   #res: ServerResponse
   #options: requestOptions | undefined
   #createRequest: RequestFactory<requestOptions>
+  #createHeaders: HeadersFactory
   #method: string
 
   constructor(
@@ -31,11 +35,13 @@ class LazyRequest<requestOptions> implements Request {
     res: ServerResponse,
     options: requestOptions | undefined,
     createRequest: RequestFactory<requestOptions>,
+    createHeaders: HeadersFactory,
   ) {
     this.#req = req
     this.#res = res
     this.#options = options
     this.#createRequest = createRequest
+    this.#createHeaders = createHeaders
     this.#method = req.method ?? 'GET'
   }
 
@@ -64,7 +70,7 @@ class LazyRequest<requestOptions> implements Request {
   }
 
   get headers() {
-    return this.#materialize().headers
+    return (this.#headers ??= this.#createHeaders(this.#req))
   }
 
   get integrity() {
