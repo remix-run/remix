@@ -122,9 +122,6 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/ui exec playwright install --with-deps
 
-      - name: Run changed package tests
-        run: node ./scripts/detect-changed-packages.ts origin/${{ github.base_ref }}
-
       - name: Detect bookstore test changes
         id: bookstore-tests
         shell: bash
@@ -138,6 +135,9 @@ jobs:
       - name: Run bookstore tests
         if: steps.bookstore-tests.outputs.run == 'true'
         run: node ./scripts/run-bookstore-tests-serially.ts
+
+      - name: Run changed package tests
+        run: node ./scripts/detect-changed-packages.ts origin/${{ github.base_ref }}
 
   test-windows-main:
     name: test (windows-latest)
@@ -177,11 +177,11 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/ui exec playwright install --with-deps
 
+      - name: Run bookstore tests
+        run: node ./scripts/run-bookstore-tests-serially.ts
+
       - name: Run tests
         run: |
           # node:sqlite currently crashes in the bookstore demo on Windows under
-          # the full workspace test load, so run it serially below.
+          # the full workspace test load, so run it serially before this step.
           pnpm --parallel --filter "!bookstore-demo" --filter "!remix-the-web" run test
-
-      - name: Run bookstore tests
-        run: node ./scripts/run-bookstore-tests-serially.ts

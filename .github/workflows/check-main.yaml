@@ -209,14 +209,14 @@ jobs:
         if: steps.cache-browsers.outputs.cache-hit != 'true'
         run: pnpm --filter @remix-run/ui exec playwright install --with-deps
 
+      - name: Run bookstore tests
+        run: node ./scripts/run-bookstore-tests-serially.ts
+
       - name: Run tests
         run: |
           # node:sqlite currently crashes in the bookstore demo on Windows under
-          # the full workspace test load, so run it serially below.
+          # the full workspace test load, so run it serially before this step.
           pnpm --parallel --filter "!bookstore-demo" --filter "!remix-the-web" run test
-
-      - name: Run bookstore tests
-        run: node ./scripts/run-bookstore-tests-serially.ts
 
   lint:
     name: Lint
