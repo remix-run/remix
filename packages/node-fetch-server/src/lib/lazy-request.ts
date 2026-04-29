@@ -136,7 +136,7 @@ export function createLazyRequestFactory<requestOptions>(
 
     text() {
       if (this.#request != null && !this.#bodyUsed) return this.#request.text()
-      return this.#consumeBody().then((body) => body.toString())
+      return this.#consumeTextBody()
     }
 
     #consumeBody(): Promise<Buffer> {
@@ -144,6 +144,13 @@ export function createLazyRequestFactory<requestOptions>(
       if (this.#bodyUsed) return Promise.reject(bodyUnusable())
       this.#bodyUsed = true
       return readRequestBody(this.#req)
+    }
+
+    #consumeTextBody(): Promise<string> {
+      if (!requestMethodCanHaveBody(this.#method)) return Promise.resolve('')
+      if (this.#bodyUsed) return Promise.reject(bodyUnusable())
+      this.#bodyUsed = true
+      return readRequestText(this.#req)
     }
   }
 
@@ -273,7 +280,7 @@ class LazyRequest<requestOptions> implements Request {
 
   text() {
     if (this.#request != null && !this.#bodyUsed) return this.#request.text()
-    return this.#consumeBody().then((body) => body.toString())
+    return this.#consumeTextBody()
   }
 
   #consumeBody(): Promise<Buffer> {
@@ -281,6 +288,13 @@ class LazyRequest<requestOptions> implements Request {
     if (this.#bodyUsed) return Promise.reject(bodyUnusable())
     this.#bodyUsed = true
     return readRequestBody(this.#req)
+  }
+
+  #consumeTextBody(): Promise<string> {
+    if (!requestMethodCanHaveBody(this.#method)) return Promise.resolve('')
+    if (this.#bodyUsed) return Promise.reject(bodyUnusable())
+    this.#bodyUsed = true
+    return readRequestText(this.#req)
   }
 }
 
@@ -322,6 +336,52 @@ function readRequestBody(req: IncomingRequest): Promise<Buffer> {
         resolve(firstChunk)
       } else {
         resolve(Buffer.concat(chunks, length))
+      }
+    }
+
+    function onError(error: Error) {
+      cleanup()
+      reject(error)
+    }
+
+    req.on('data', onData)
+    req.once('end', onEnd)
+    req.once('error', onError)
+  })
+}
+
+function readRequestText(req: IncomingRequest): Promise<string> {
+  return new Promise((resolve, reject) => {
+    let firstChunk: Buffer | undefined
+    let chunks: Buffer[] | undefined
+    let length = 0
+
+    function cleanup() {
+      req.off('data', onData)
+      req.off('end', onEnd)
+      req.off('error', onError)
+    }
+
+    function onData(chunk: unknown) {
+      let buffer = toBuffer(chunk)
+      length += buffer.byteLength
+
+      if (firstChunk == null) {
+        firstChunk = buffer
+      } else {
+        chunks ??= [firstChunk]
+        chunks.push(buffer)
+      }
+    }
+
+    function onEnd() {
+      cleanup()
+      if (firstChunk == null) {
+        resolve('')
+      } else if (chunks == null) {
+        resolve(firstChunk.toString())
+      } else {
+        resolve(Buffer.concat(chunks, length).toString())
       }
     }
 
