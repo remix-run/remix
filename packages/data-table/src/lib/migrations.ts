@@ -24,8 +24,6 @@ export type MigrationDescriptor = {
   down?: string
   /** Transaction wrapping mode. Defaults to `auto`. */
   transaction?: MigrationTransactionMode
-  /** Optional checksum used for drift detection. Defaults to `sha256(up)` when omitted. */
-  checksum?: string
   /** Optional source path used in error messages. */
   path?: string
 }
@@ -62,6 +60,7 @@ export type MigrationStatusEntry = {
   batch?: number
   checksum?: string
 }
+
 
 /**
  * Common options for `runner.up(...)` and `runner.down(...)`.

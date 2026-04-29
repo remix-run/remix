@@ -2,11 +2,7 @@ import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
 import { rawSql } from '../sql.ts'
 import type { MigrationDescriptor, MigrationJournalRow } from '../migrations.ts'
 
-export async function normalizeChecksum(migration: MigrationDescriptor): Promise<string> {
-  if (migration.checksum) {
-    return migration.checksum
-  }
-
+export async function computeChecksum(migration: MigrationDescriptor): Promise<string> {
   let digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(migration.up))
   return bytesToHex(new Uint8Array(digest))
 }

@@ -21,7 +21,7 @@ import {
   hasMigrationJournal,
   insertJournalRow,
   loadJournalRows,
-  normalizeChecksum,
+  computeChecksum,
 } from './journal-store.ts'
 import { resolveMigrations } from './registry.ts'
 
@@ -74,7 +74,7 @@ async function assertNoMigrationDrift(
       continue
     }
 
-    let expected = await normalizeChecksum(migration)
+    let expected = await computeChecksum(migration)
 
     if (expected !== row.checksum) {
       throw new Error(
@@ -182,8 +182,6 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
 
     for (let migration of toRun) {
       let script = (input.direction === 'up' ? migration.up : migration.down) as string
-      let checksum =
-        input.direction === 'up' ? await normalizeChecksum(migration) : undefined
       let mode = resolveTransactionMode(migration)
 
       if (mode === 'required' && !adapter.capabilities.transactionalDdl) {
@@ -212,17 +210,13 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
 
         if (input.direction === 'up') {
           if (!dryRun) {
-            if (checksum === undefined) {
-              throw new Error('Expected checksum for up migration "' + migration.id + '"')
-            }
-
             await insertJournalRow(
               adapter,
               journalTable,
               {
                 id: migration.id,
                 name: migration.name,
-                checksum,
+                checksum: await computeChecksum(migration),
                 batch,
               },
               token,
@@ -331,7 +325,7 @@ export function createMigrationRunner(
           continue
         }
 
-        let checksum = await normalizeChecksum(migration)
+        let checksum = await computeChecksum(migration)
 
         statuses.push({
           id: migration.id,

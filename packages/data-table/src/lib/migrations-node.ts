@@ -1,4 +1,3 @@
-import { createHash } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 
@@ -12,7 +11,7 @@ import { parseMigrationDirectoryName } from './migrations/directory-name.ts'
  * - `up.sql` (required)
  * - `down.sql` (optional; omit for irreversible migrations)
  *
- * `id` and `name` are inferred from the directory name. `checksum` is `sha256(up.sql)`.
+ * `id` and `name` are inferred from the directory name.
  * @param directory Absolute or relative directory containing migration directories.
  * @returns A sorted list of loaded migration descriptors.
  * @example
@@ -76,7 +75,6 @@ export async function loadMigrations(directory: string): Promise<MigrationDescri
       up,
       down,
       path: directoryPath,
-      checksum: createHash('sha256').update(up).digest('hex'),
     })
   }
 
