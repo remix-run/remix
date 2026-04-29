@@ -494,5 +494,25 @@
   },
   "bin": {
     "remix": "./src/cli-entry.ts"
+  },
+  "peerDependencies": {
+    "mysql2": "^3.15.3",
+    "pg": "^8.16.3",
+    "redis": "^5.10.0",
+    "playwright": "^1.59.0"
+  },
+  "peerDependenciesMeta": {
+    "mysql2": {
+      "optional": true
+    },
+    "pg": {
+      "optional": true
+    },
+    "redis": {
+      "optional": true
+    },
+    "playwright": {
+      "optional": true
+    }
   }
 }
