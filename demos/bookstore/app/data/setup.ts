@@ -1,4 +1,6 @@
 import * as fs from 'node:fs'
+import * as os from 'node:os'
+import * as path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
 import { createDatabase } from 'remix/data-table'
@@ -10,8 +12,11 @@ import { books, orderItems, orders, users } from './schema.ts'
 import { hashPassword } from '../utils/password-hash.ts'
 
 let databaseFilePath: string
+let testDatabaseDirectoryPath: string | undefined
+
 if (process.env.NODE_ENV === 'test') {
-  databaseFilePath = ':memory:'
+  testDatabaseDirectoryPath = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-bookstore-'))
+  databaseFilePath = path.join(testDatabaseDirectoryPath, 'bookstore.sqlite')
 } else {
   let databaseDirectoryUrl = new URL('../../db/', import.meta.url)
   databaseFilePath = fileURLToPath(new URL('bookstore.sqlite', databaseDirectoryUrl))
@@ -41,6 +46,15 @@ export function closeBookstoreDatabase(): void {
   if (sqlite.isOpen) {
     sqlite.close()
   }
+
+  if (testDatabaseDirectoryPath) {
+    fs.rmSync(testDatabaseDirectoryPath, { recursive: true, force: true })
+    testDatabaseDirectoryPath = undefined
+  }
+}
+
+if (process.env.NODE_ENV === 'test') {
+  process.once('exit', closeBookstoreDatabase)
 }
 
 async function initialize(): Promise<void> {
