@@ -100,7 +100,7 @@ export function createUwsRequestHandler(
     return (res, req) => {
       let state = createUwsResponseState(res)
       let method = req.getCaseSensitiveMethod()
-      let request = createUwsRequest(req, res, state, options)
+      let request = createUwsRequest(req, res, state, options, method)
 
       let response: Response | Promise<Response>
       try {
@@ -128,7 +128,7 @@ export function createUwsRequestHandler(
   return (res, req) => {
     let state = createUwsResponseState(res)
     let method = req.getCaseSensitiveMethod()
-    let request = createUwsRequest(req, res, state, options)
+    let request = createUwsRequest(req, res, state, options, method)
     let client = createClientAddress(res)
 
     let response: Response | Promise<Response>

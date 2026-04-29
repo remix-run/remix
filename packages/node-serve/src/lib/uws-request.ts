@@ -25,8 +25,9 @@ export function createUwsRequest(
   res: HttpResponse,
   state: UwsResponseState,
   options?: UwsRequestOptions,
+  method = req.getCaseSensitiveMethod(),
 ): Request {
-  return new UwsRequest(req, res, state, options)
+  return new UwsRequest(req, res, state, options, method)
 }
 
 class UwsRequest implements Request {
@@ -43,9 +44,10 @@ class UwsRequest implements Request {
     res: HttpResponse,
     state: UwsResponseState,
     options: UwsRequestOptions | undefined,
+    method: string,
   ) {
     this.#state = state
-    this.#method = req.getCaseSensitiveMethod()
+    this.#method = method
 
     let entries: [string, string][] = []
     req.forEach((key, value) => {
