@@ -17,7 +17,6 @@ if (platform !== 'win32') {
 }
 
 export default {
-  concurrency: 1,
   playwrightConfig: {
     projects,
     use: {
