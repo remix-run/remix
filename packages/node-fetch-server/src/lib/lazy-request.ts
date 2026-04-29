@@ -290,20 +290,43 @@ function requestMethodCanHaveBody(method: string): boolean {
   return method !== 'GET' && method !== 'HEAD'
 }
 
-async function readRequestBody(req: IncomingRequest): Promise<Buffer> {
-  let chunks: Buffer[] = []
-  let length = 0
+function readRequestBody(req: IncomingRequest): Promise<Buffer> {
+  return new Promise((resolve, reject) => {
+    let chunks: Buffer[] = []
+    let length = 0
 
-  for await (let chunk of req) {
-    let buffer = toBuffer(chunk)
-    chunks.push(buffer)
-    length += buffer.byteLength
-  }
+    function cleanup() {
+      req.off('data', onData)
+      req.off('end', onEnd)
+      req.off('error', onError)
+    }
 
-  if (chunks.length === 0) return Buffer.alloc(0)
-  if (chunks.length === 1) return chunks[0]
+    function onData(chunk: unknown) {
+      let buffer = toBuffer(chunk)
+      chunks.push(buffer)
+      length += buffer.byteLength
+    }
 
-  return Buffer.concat(chunks, length)
+    function onEnd() {
+      cleanup()
+      if (chunks.length === 0) {
+        resolve(Buffer.alloc(0))
+      } else if (chunks.length === 1) {
+        resolve(chunks[0])
+      } else {
+        resolve(Buffer.concat(chunks, length))
+      }
+    }
+
+    function onError(error: Error) {
+      cleanup()
+      reject(error)
+    }
+
+    req.on('data', onData)
+    req.once('end', onEnd)
+    req.once('error', onError)
+  })
 }
 
 function toBuffer(chunk: unknown): Buffer {
