@@ -1,0 +1,2 @@
+declare const onOutsideClick: <boundNode extends HTMLElement = HTMLElement>(active: boolean, handler: (target: Node | null) => void, isInsideTarget?: ((target: Node) => boolean) | undefined, stopPropagation?: boolean | undefined) => import("@remix-run/ui").MixinDescriptor<boundNode, [active: boolean, handler: (target: Node | null) => void, isInsideTarget?: ((target: Node) => boolean) | undefined, stopPropagation?: boolean | undefined], import("@remix-run/ui").ElementProps>;
+export { onOutsideClick };
