@@ -1426,6 +1426,38 @@ function diffChildren(
     return
   }
 
+  if (currLength === nextLength) {
+    let canDiffByPosition = true
+    for (let i = 0; i < nextLength; i++) {
+      let currentNode = curr[i]
+      let nextNode = next[i]
+      if (!currentNode || currentNode.key !== nextNode.key || currentNode.type !== nextNode.type) {
+        canDiffByPosition = false
+        break
+      }
+    }
+
+    if (canDiffByPosition) {
+      for (let i = 0; i < nextLength; i++) {
+        diffVNodes(
+          curr[i],
+          next[i],
+          domParent,
+          frame,
+          scheduler,
+          styles,
+          vParent,
+          rootTarget,
+          anchor,
+          cursor,
+        )
+      }
+
+      vParent._children = next
+      return
+    }
+  }
+
   // --- O(n + m) keyed diff with Map-based lookup ------------------------------
 
   let oldChildren = curr
