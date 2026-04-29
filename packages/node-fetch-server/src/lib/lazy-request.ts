@@ -30,6 +30,7 @@ export function createLazyRequestFactory<requestOptions>(
   class BoundLazyRequest implements Request {
     #request: Request | undefined
     #headers: Headers | undefined
+    #bodyUsed = false
     #req: IncomingRequest
     #res: ServerResponse
     #method: string
@@ -49,7 +50,7 @@ export function createLazyRequestFactory<requestOptions>(
     }
 
     get bodyUsed() {
-      return this.#materialize().bodyUsed
+      return this.#bodyUsed || this.#request?.bodyUsed === true
     }
 
     get cache() {
@@ -105,18 +106,22 @@ export function createLazyRequestFactory<requestOptions>(
     }
 
     arrayBuffer() {
-      return this.#materialize().arrayBuffer()
+      if (this.#request != null && !this.#bodyUsed) return this.#request.arrayBuffer()
+      return this.#consumeBody().then(bufferToArrayBuffer)
     }
 
     blob() {
-      return this.#materialize().blob()
+      if (this.#request != null && !this.#bodyUsed) return this.#request.blob()
+      return this.#consumeBody().then((body) => new Blob([bufferToBytes(body)]))
     }
 
     bytes() {
-      return this.#materialize().bytes()
+      if (this.#request != null && !this.#bodyUsed) return this.#request.bytes()
+      return this.#consumeBody().then(bufferToBytes)
     }
 
     clone() {
+      if (this.bodyUsed) throw bodyUnusable()
       return this.#materialize().clone()
     }
 
@@ -125,11 +130,20 @@ export function createLazyRequestFactory<requestOptions>(
     }
 
     json() {
-      return this.#materialize().json()
+      if (this.#request != null && !this.#bodyUsed) return this.#request.json()
+      return this.text().then(JSON.parse)
     }
 
     text() {
-      return this.#materialize().text()
+      if (this.#request != null && !this.#bodyUsed) return this.#request.text()
+      return this.#consumeBody().then((body) => body.toString())
+    }
+
+    #consumeBody(): Promise<Buffer> {
+      if (!requestMethodCanHaveBody(this.#method)) return Promise.resolve(Buffer.alloc(0))
+      if (this.#bodyUsed) return Promise.reject(bodyUnusable())
+      this.#bodyUsed = true
+      return readRequestBody(this.#req)
     }
   }
 
@@ -141,6 +155,7 @@ export function createLazyRequestFactory<requestOptions>(
 class LazyRequest<requestOptions> implements Request {
   #request: Request | undefined
   #headers: Headers | undefined
+  #bodyUsed = false
   #req: IncomingRequest
   #res: ServerResponse
   #options: requestOptions | undefined
@@ -172,7 +187,7 @@ class LazyRequest<requestOptions> implements Request {
   }
 
   get bodyUsed() {
-    return this.#materialize().bodyUsed
+    return this.#bodyUsed || this.#request?.bodyUsed === true
   }
 
   get cache() {
@@ -228,18 +243,22 @@ class LazyRequest<requestOptions> implements Request {
   }
 
   arrayBuffer() {
-    return this.#materialize().arrayBuffer()
+    if (this.#request != null && !this.#bodyUsed) return this.#request.arrayBuffer()
+    return this.#consumeBody().then(bufferToArrayBuffer)
   }
 
   blob() {
-    return this.#materialize().blob()
+    if (this.#request != null && !this.#bodyUsed) return this.#request.blob()
+    return this.#consumeBody().then((body) => new Blob([bufferToBytes(body)]))
   }
 
   bytes() {
-    return this.#materialize().bytes()
+    if (this.#request != null && !this.#bodyUsed) return this.#request.bytes()
+    return this.#consumeBody().then(bufferToBytes)
   }
 
   clone() {
+    if (this.bodyUsed) throw bodyUnusable()
     return this.#materialize().clone()
   }
 
@@ -248,12 +267,65 @@ class LazyRequest<requestOptions> implements Request {
   }
 
   json() {
-    return this.#materialize().json()
+    if (this.#request != null && !this.#bodyUsed) return this.#request.json()
+    return this.text().then(JSON.parse)
   }
 
   text() {
-    return this.#materialize().text()
+    if (this.#request != null && !this.#bodyUsed) return this.#request.text()
+    return this.#consumeBody().then((body) => body.toString())
+  }
+
+  #consumeBody(): Promise<Buffer> {
+    if (!requestMethodCanHaveBody(this.#method)) return Promise.resolve(Buffer.alloc(0))
+    if (this.#bodyUsed) return Promise.reject(bodyUnusable())
+    this.#bodyUsed = true
+    return readRequestBody(this.#req)
   }
 }
 
 Object.setPrototypeOf(LazyRequest.prototype, Request.prototype)
+
+function requestMethodCanHaveBody(method: string): boolean {
+  return method !== 'GET' && method !== 'HEAD'
+}
+
+async function readRequestBody(req: IncomingRequest): Promise<Buffer> {
+  let chunks: Buffer[] = []
+  let length = 0
+
+  for await (let chunk of req) {
+    let buffer = toBuffer(chunk)
+    chunks.push(buffer)
+    length += buffer.byteLength
+  }
+
+  if (chunks.length === 0) return Buffer.alloc(0)
+  if (chunks.length === 1) return chunks[0]
+
+  return Buffer.concat(chunks, length)
+}
+
+function toBuffer(chunk: unknown): Buffer {
+  if (Buffer.isBuffer(chunk)) return chunk
+  if (typeof chunk === 'string') return Buffer.from(chunk)
+  if (chunk instanceof Uint8Array) {
+    return Buffer.from(chunk.buffer, chunk.byteOffset, chunk.byteLength)
+  }
+
+  return Buffer.from(String(chunk))
+}
+
+function bufferToArrayBuffer(buffer: Buffer): ArrayBuffer {
+  return bufferToBytes(buffer).buffer
+}
+
+function bufferToBytes(buffer: Buffer): Uint8Array<ArrayBuffer> {
+  let bytes = new Uint8Array(buffer.byteLength)
+  bytes.set(buffer)
+  return bytes
+}
+
+function bodyUnusable(): TypeError {
+  return new TypeError('Body is unusable: Body has already been read')
+}

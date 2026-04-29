@@ -237,6 +237,50 @@ describe('createRequestListener', () => {
     })
   })
 
+  it('reads request method, headers, and body text', async (t) => {
+    await new Promise<void>((resolve) => {
+      let handler: FetchHandler = async (request) => {
+        assert.ok(request instanceof Request)
+        assert.equal(request.method, 'POST')
+        assert.equal(request.headers.get('x-test'), 'yes')
+        assert.equal(request.bodyUsed, false)
+
+        assert.equal(await request.text(), 'Hello, world!')
+        assert.equal(request.bodyUsed, true)
+
+        await assert.rejects(() => request.text(), {
+          name: 'TypeError',
+          message: 'Body is unusable: Body has already been read',
+        })
+
+        return new Response('ok')
+      }
+
+      let listener = createRequestListener(handler)
+      assert.ok(listener)
+
+      let req = createMockRequest({
+        method: 'POST',
+        headers: { 'x-test': 'yes' },
+        body: 'Hello, world!',
+      })
+      let res = createMockResponse({ req })
+
+      let chunks: Uint8Array[] = []
+      t.mock.method(res, 'write', (chunk: Uint8Array) => {
+        chunks.push(chunk)
+      })
+
+      t.mock.method(res, 'end', (chunk?: Uint8Array) => {
+        if (chunk != null) chunks.push(chunk)
+        assert.equal(Buffer.concat(chunks).toString(), 'ok')
+        resolve()
+      })
+
+      listener(req, res)
+    })
+  })
+
   it('sets multiple Set-Cookie headers', async (t) => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async () => {
