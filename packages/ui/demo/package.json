@@ -11,6 +11,7 @@
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "esbuild": "^0.25.10",
+    "node-html-parser": "^7.0.2",
     "playwright": "catalog:",
     "tsx": "catalog:"
   },
@@ -19,6 +20,8 @@
     "dev": "pnpm run --filter \".\" --parallel \"/^dev:/\"",
     "dev:server": "NODE_ENV=development tsx watch server.ts",
     "dev:browser": "node --import tsx scripts/build-browser.ts --watch",
+    "prerender": "pnpm run build:browser && tsx scripts/prerender.ts",
+    "prerender:serve": "npx http-server -p 3000 build/site",
     "screenshot": "node --import tsx review/screenshot.ts",
     "start": "pnpm run build:browser && tsx server.ts",
     "typecheck": "tsc --noEmit"
