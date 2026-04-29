@@ -91,22 +91,29 @@ export function createRequestListener(
   if (handler.length === 1) {
     let requestHandler = handler as (request: Request) => Response | Promise<Response>
 
-    return async (req, res) => {
+    return (req, res) => {
       let request = createLazyRequest(req, res, options, createRequest, createHeaders)
 
-      let response: Response
+      let response: Response | Promise<Response>
       try {
-        response = await requestHandler(request)
+        response = requestHandler(request)
       } catch (error) {
-        try {
-          response = (await onError(error)) ?? internalServerError()
-        } catch (error) {
-          console.error(`There was an error in the error handler: ${error}`)
-          response = internalServerError()
-        }
+        void sendErrorResponse(res, onError, error)
+        return
       }
 
-      await sendResponse(res, response)
+      if (isPromiseLike(response)) {
+        void response.then(
+          (response) => {
+            void sendResponse(res, response)
+          },
+          (error) => {
+            void sendErrorResponse(res, onError, error)
+          },
+        )
+      } else {
+        void sendResponse(res, response)
+      }
     }
   }
 
@@ -132,6 +139,26 @@ export function createRequestListener(
 
     await sendResponse(res, response)
   }
+}
+
+function isPromiseLike<value>(value: value | Promise<value>): value is Promise<value> {
+  return typeof (value as Promise<value>).then === 'function'
+}
+
+async function sendErrorResponse(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  onError: ErrorHandler,
+  error: unknown,
+): Promise<void> {
+  let response: Response
+  try {
+    response = (await onError(error)) ?? internalServerError()
+  } catch (error) {
+    console.error(`There was an error in the error handler: ${error}`)
+    response = internalServerError()
+  }
+
+  await sendResponse(res, response)
 }
 
 function defaultErrorHandler(error: unknown): Response {
