@@ -36,6 +36,8 @@ run_benchmark "node:http@$NODE_VERSION" \
 NODE_FETCH_SERVER_VERSION=$(node -e 'console.log(require("../package.json").version)')
 run_benchmark "node-fetch-server@$NODE_FETCH_SERVER_VERSION" \
   "node ./servers/node-fetch-server.ts"
+run_benchmark "node-fetch-server-request@$NODE_FETCH_SERVER_VERSION" \
+  "node ./servers/node-fetch-server-request.ts"
 
 EXPRESS_VERSION=$(node -e 'console.log(require("express/package.json").version)')
 run_benchmark "express@$EXPRESS_VERSION" \
