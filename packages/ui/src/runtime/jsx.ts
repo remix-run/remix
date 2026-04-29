@@ -380,19 +380,18 @@ function normalizeElementProps(props: ElementProps | null | undefined): ElementP
 function normalizeMixValue(mix: unknown): unknown[] | undefined {
   if (!mix) return undefined
 
-  let normalizedMix = flattenMixValue(mix)
+  let normalizedMix: unknown[] = []
+  flattenMixValue(mix, normalizedMix)
   return normalizedMix.length === 0 ? undefined : normalizedMix
 }
 
-function flattenMixValue(mix: unknown): unknown[] {
-  if (!mix) return []
-  if (!Array.isArray(mix)) return [mix]
-
-  let flattened: unknown[] = []
-
-  for (let item of mix) {
-    flattened.push(...flattenMixValue(item))
+function flattenMixValue(mix: unknown, out: unknown[]): void {
+  if (!mix) return
+  if (!Array.isArray(mix)) {
+    out.push(mix)
+    return
   }
-
-  return flattened
+  for (let item of mix) {
+    flattenMixValue(item, out)
+  }
 }
