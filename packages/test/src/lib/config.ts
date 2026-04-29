@@ -396,11 +396,16 @@ async function loadConfigFile(
   for (let candidate of candidates) {
     try {
       await fsp.access(candidate)
-      let mod = await importModule(candidate, import.meta)
-      return mod.default ?? mod
     } catch {
-      // not found or failed to load — try next
+      // not found — try the next candidate
+      continue
     }
+    // The file exists; let import errors propagate rather than silently
+    // falling through to defaults — that masking is what hid "Windows
+    // absolute paths aren't valid ESM specifiers" by classifying every
+    // browser test as a server test.
+    let mod = await importModule(candidate, import.meta)
+    return mod.default ?? mod
   }
 
   return {}

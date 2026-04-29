@@ -197,9 +197,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
         let projects = resolveProjects(playwrightConfig)
         if (config.project) {
           let projectNames = new Set(config.project)
-          projects = projects.filter(
-            (project) => project.name && projectNames.has(project.name),
-          )
+          projects = projects.filter((project) => project.name && projectNames.has(project.name))
           if (projects.length === 0) {
             throw new Error(
               `No playwright projects found with name(s) "${config.project.join(', ')}"`,
@@ -377,9 +375,9 @@ async function findFiles(
     for (let pattern of patterns) {
       let glob = new Glob(pattern)
       for await (let file of glob.scan({ cwd, absolute: true })) {
-        let rel = path.relative(cwd, file)
+        let rel = toPosix(path.relative(cwd, file))
         if (!excludeGlobs.some((eg: { match: (s: string) => boolean }) => eg.match(rel))) {
-          files.add(file)
+          files.add(toPosix(file))
         }
       }
     }
@@ -388,8 +386,16 @@ async function findFiles(
 
   for (let pattern of patterns) {
     for await (let file of fsp.glob(pattern, { cwd, exclude: excludePatterns })) {
-      files.add(path.resolve(cwd, file))
+      files.add(toPosix(path.resolve(cwd, file)))
     }
   }
   return [...files]
+}
+
+// Normalize discovered paths so set membership across the test/browser/e2e
+// `findFiles` calls is byte-stable on every platform. Node accepts forward
+// slashes for filesystem operations on Windows, so downstream `fs.readFile`
+// etc. work without further conversion.
+function toPosix(p: string): string {
+  return path.sep === '/' ? p : p.replace(/\\/g, '/')
 }
