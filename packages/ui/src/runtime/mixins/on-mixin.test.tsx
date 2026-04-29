@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import { createRoot } from '../vdom.ts'
 import { on } from './on-mixin.ts'
 import { invariant } from '../invariant.ts'
@@ -6,7 +7,7 @@ import type { Assert, Equal } from '../../test/utils.ts'
 import type { Dispatched } from './on-mixin.ts'
 
 describe('on mixin', () => {
-  it('updates listeners in place without rebinding when capture is unchanged', () => {
+  it('updates listeners in place without rebinding when capture is unchanged', (t) => {
     let calls: string[] = []
     let container = document.createElement('div')
     let root = createRoot(container)
@@ -26,8 +27,8 @@ describe('on mixin', () => {
 
     let button = container.querySelector('button')
     invariant(button)
-    let addSpy = vi.spyOn(button, 'addEventListener')
-    let removeSpy = vi.spyOn(button, 'removeEventListener')
+    let addSpy = t.mock.method(button, 'addEventListener')
+    let removeSpy = t.mock.method(button, 'removeEventListener')
 
     root.render(
       <button
@@ -49,7 +50,7 @@ describe('on mixin', () => {
     expect(removeSpy).toHaveBeenCalledTimes(0)
   })
 
-  it('rebinds when capture option changes', () => {
+  it('rebinds when capture option changes', (t) => {
     let container = document.createElement('div')
     let root = createRoot(container)
 
@@ -58,8 +59,8 @@ describe('on mixin', () => {
 
     let button = container.querySelector('button')
     invariant(button)
-    let addSpy = vi.spyOn(button, 'addEventListener')
-    let removeSpy = vi.spyOn(button, 'removeEventListener')
+    let addSpy = t.mock.method(button, 'addEventListener')
+    let removeSpy = t.mock.method(button, 'removeEventListener')
 
     root.render(<button mix={[on('click', () => {}, true)]}>click</button>)
     root.flush()

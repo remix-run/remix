@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 
 import { createElement } from '../runtime/create-element.ts'
 import { createMixin } from '../index.ts'

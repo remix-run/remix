@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import type { Assert, Equal } from './utils'
 import type { Handle, RemixNode } from '../runtime/component.ts'
 import { createMixin, on, ref } from '../index.ts'

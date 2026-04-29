@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import type { Handle } from '../runtime/component.ts'
 import { clientEntry, isEntry } from '../runtime/client-entries.ts'
 

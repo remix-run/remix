@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 
 import { createElement } from '@remix-run/ui'
 import { renderToString } from '@remix-run/ui/server'
