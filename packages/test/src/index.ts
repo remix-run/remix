@@ -1,4 +1,4 @@
-export type { RemixTestConfig } from './lib/config.ts'
+export type { RemixTestConfig, RemixTestPool } from './lib/config.ts'
 export {
   describe,
   it,

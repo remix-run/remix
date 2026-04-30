@@ -132,6 +132,11 @@ const SELF_CLOSING_TAGS = new Set([
 ])
 
 const DEFAULT_STYLE_LAYER = 'rmx'
+const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
+
+function stripDoctypeMarkup(html: string): string {
+  return html.replace(DOCTYPE_PATTERN, '')
+}
 
 function getStyleLayerName(selector: string, layer: string = DEFAULT_STYLE_LAYER): string {
   return `${layer}.${selector}`
@@ -335,11 +340,11 @@ async function splitFirstChunk(
 async function resolveFrameHtml(
   input: string | ReadableStream<Uint8Array>,
 ): Promise<ResolvedFrameHtml> {
-  if (typeof input === 'string') return { html: input }
+  if (typeof input === 'string') return { html: stripDoctypeMarkup(input) }
 
   let decoder = new TextDecoder()
   let { first, tail } = await splitFirstChunk(input)
-  return { html: decoder.decode(first), tail }
+  return { html: stripDoctypeMarkup(decoder.decode(first)), tail }
 }
 
 function isRemixElement(node: unknown): node is RemixElement {

@@ -1735,6 +1735,24 @@ describe('stream', () => {
       })
     })
 
+    it('strips doctype markup from non-blocking frame templates', async () => {
+      let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
+        async resolveFrame() {
+          let html = await drain(
+            renderToStream(<div mix={[css({ color: 'rebeccapurple' })]}>Resolved</div>),
+          )
+          return `<!DOCTYPE html>${html}`
+        },
+      })
+      let result = await drain(stream)
+
+      expect(result).not.toContain('<!DOCTYPE')
+      expect(result).toContain('<template')
+      expect(result).toContain('<head><style data-rmx=')
+      expect(result).toContain('<div class="rmxc-')
+      expect(result).toContain('>Resolved</div>')
+    })
+
     it('adds frame scripts for blocking frames', async () => {
       let stream = renderToStream(<Frame src="/x" />, {
         resolveFrame: () => '<div>Resolved</div>',

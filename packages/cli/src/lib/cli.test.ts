@@ -517,6 +517,7 @@ describe('run', () => {
       }
       let agentsGuide = await fs.readFile(path.join(appDir, 'AGENTS.md'), 'utf8')
       let readme = await fs.readFile(path.join(appDir, 'README.md'), 'utf8')
+      let server = await fs.readFile(path.join(appDir, 'server.ts'), 'utf8')
 
       assert.equal(packageJson.name, 'my-app')
       assert.equal(packageJson.dependencies.remix, `^${await readRepoRemixVersion()}`)
@@ -531,6 +532,9 @@ describe('run', () => {
         /Keep simple pages in flat files like `app\/controllers\/home\.tsx`/,
       )
       assert.match(readme, /^# My App/m)
+      assert.match(server, /import \{ serve \} from 'remix\/node-serve'/)
+      assert.doesNotMatch(server, /remix\/node-fetch-server/)
+      assert.doesNotMatch(server, /createRequestListener/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
       await assertPathExists(path.join(appDir, 'app', 'controllers', 'home.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'controllers', 'auth.tsx'))

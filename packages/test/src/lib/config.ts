@@ -120,6 +120,10 @@ const cliOptions = {
     multiple: true,
     description: 'Filter to specific Playwright project(s)',
   },
+  pool: {
+    type: 'string',
+    description: 'Pool used to run server and E2E test files: forks, threads (default: forks)',
+  },
   reporter: {
     type: 'string',
     short: 'r',
@@ -159,13 +163,16 @@ const defaultValues: ResolvedRemixTestConfig = {
     e2e: ['**/*.test.e2e.{ts,tsx}'],
     exclude: ['node_modules/**'],
   },
-  reporter: process.env.CI === 'true' ? 'files' : 'spec',
-  type: ['server', 'browser', 'e2e'],
-  setup: undefined,
+  pool: 'forks',
   playwrightConfig: undefined,
   project: undefined,
+  reporter: process.env.CI === 'true' ? 'files' : 'spec',
+  setup: undefined,
+  type: ['server', 'browser', 'e2e'],
   watch: false,
-} as const
+}
+
+export type RemixTestPool = 'forks' | 'threads'
 
 export interface RemixTestConfig {
   /**
@@ -219,6 +226,11 @@ export interface RemixTestConfig {
    */
   playwrightConfig?: string | PlaywrightTestConfig
   /**
+   * Pool used to run server and E2E test files. Forked child processes are the default,
+   * but worker threads are available for projects that prefer the previous behavior.
+   */
+  pool?: RemixTestPool
+  /**
    * Filter tests to specific playwright project(s) (--project). Accepts a single
    * project name or an array of names; `--project` may be repeated on the CLI.
    */
@@ -260,6 +272,7 @@ export interface ResolvedRemixTestConfig {
   playwrightConfig: string | PlaywrightTestConfig | undefined
   project: string[] | undefined
   reporter: string
+  pool: RemixTestPool
   setup: string | undefined
   type: string[]
   watch: boolean
@@ -375,6 +388,7 @@ function resolveConfig(
     setup: cliValues.setup ?? fileConfig.setup ?? defaultValues.setup,
     playwrightConfig:
       cliValues.playwrightConfig ?? fileConfig.playwrightConfig ?? defaultValues.playwrightConfig,
+    pool: resolvePool(cliValues.pool ?? fileConfig.pool ?? defaultValues.pool),
     project: (() => {
       let raw = cliValues.project ?? fileConfig.project ?? defaultValues.project
       return raw === undefined ? undefined : toArray(raw)
@@ -383,6 +397,14 @@ function resolveConfig(
     type: toArray(cliValues.type ?? fileConfig.type ?? defaultValues.type),
     watch: cliValues.watch ?? fileConfig.watch ?? defaultValues.watch,
   }
+}
+
+function resolvePool(value: string): RemixTestPool {
+  if (value === 'forks' || value === 'threads') {
+    return value
+  }
+
+  throw new Error(`Unsupported test pool "${value}". Supported pools are: forks, threads`)
 }
 
 async function loadConfigFile(

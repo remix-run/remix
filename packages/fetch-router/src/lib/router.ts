@@ -283,13 +283,24 @@ function mergeMiddleware(
 }
 
 function createRequestContext(input: string | URL | Request, init?: RequestInit): RequestContext {
-  let request = new Request(input, init)
+  let request: Request
+  if (input instanceof Request) {
+    request = cloneRequest(input)
+    if (init != null) request = new Request(request, init)
+  } else {
+    request = new Request(input, init)
+  }
 
   if (request.signal.aborted) {
     throw request.signal.reason
   }
 
   return new RequestContext(request)
+}
+
+function cloneRequest(input: Request): Request {
+  // Cloudflare's generated Request type preserves worker metadata generics through clone().
+  return input.clone() as Request
 }
 
 function getRoutePattern(

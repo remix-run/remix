@@ -2,10 +2,13 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { getTsconfig } from 'get-tsconfig'
+import MagicString from 'magic-string'
 import { minify } from 'oxc-minify'
+import { parseSync, visitorKeys } from 'oxc-parser'
 import { transform as oxcTransform } from 'oxc-transform'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
 import type { Cache, TsConfigJsonResolved } from 'get-tsconfig'
+import type { Node, Program } from 'oxc-parser'
 import type { TransformOptions as OxcTransformOptions } from 'oxc-transform'
 
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
@@ -15,6 +18,11 @@ import {
 } from '../compilation-error.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
 import { generateFingerprint } from '../fingerprint.ts'
+import {
+  maskAuthoredInjectedPackageSpecifier,
+  mayContainInjectedPackageSpecifier,
+  restoreAuthoredInjectedPackageSpecifier,
+} from '../injected-packages.ts'
 import type { ModuleRecord, ModuleTracking } from '../module-store.ts'
 import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
@@ -205,7 +213,7 @@ export async function transformModule(
     })
 
     analysis.unresolvedImports = analysis.unresolvedImports.filter(
-      (unresolved) => !args.externalSet.has(unresolved.specifier),
+      (unresolved) => !args.externalSet.has(getDisplayImportSpecifier(unresolved.specifier)),
     )
 
     if (mayContainCommonJSModuleGlobals(sourceText) && isCommonJS(analysis.rawCode)) {
@@ -306,11 +314,12 @@ async function analyzeModuleSource(
     target?: ResolvedScriptTarget
   },
 ) {
+  let maskedSourceText = maskAuthoredInjectedPackageImports(sourceText, resolvedPath)
   let transformResult: { code: string; errors?: Array<{ message?: string }>; map?: unknown }
   try {
     transformResult = await oxcTransform(
       resolvedPath,
-      sourceText,
+      maskedSourceText,
       getTransformOptions(resolvedPath, transformOptions, options),
     )
     assertNoCompilerErrors(transformResult.errors, resolvedPath, 'transform')
@@ -539,6 +548,99 @@ async function getUnresolvedImportsFromLexer(rawCode: string): Promise<Unresolve
   }
 
   return unresolvedImports
+}
+
+function getDisplayImportSpecifier(specifier: string): string {
+  return restoreAuthoredInjectedPackageSpecifier(specifier) ?? specifier
+}
+
+function maskAuthoredInjectedPackageImports(sourceText: string, resolvedPath: string): string {
+  if (!mayContainInjectedPackageSpecifier(sourceText)) {
+    return sourceText
+  }
+
+  let parseResult = parseSync(resolvedPath, sourceText, {
+    lang: getSourceLanguageForPath(resolvedPath),
+    sourceType: 'module',
+  })
+  if (parseResult.errors.length > 0) {
+    return sourceText
+  }
+
+  let replacements: Array<{ end: number; specifier: string; start: number }> = []
+
+  walkAst(parseResult.program, (node) => {
+    if (
+      node.type !== 'ImportDeclaration' &&
+      node.type !== 'ExportAllDeclaration' &&
+      node.type !== 'ExportNamedDeclaration' &&
+      node.type !== 'ImportExpression'
+    ) {
+      return
+    }
+
+    let source = 'source' in node ? node.source : null
+    if (!isStringLiteralNode(source)) return
+
+    let maskedSpecifier = maskAuthoredInjectedPackageSpecifier(source.value)
+    if (maskedSpecifier == null) return
+
+    replacements.push({
+      end: source.end - 1,
+      specifier: maskedSpecifier,
+      start: source.start + 1,
+    })
+  })
+
+  if (replacements.length === 0) return sourceText
+
+  let rewrittenSource = new MagicString(sourceText)
+  for (let replacement of replacements) {
+    rewrittenSource.overwrite(replacement.start, replacement.end, replacement.specifier)
+  }
+
+  return rewrittenSource.toString()
+}
+
+function walkAst(node: Program | Node, visit: (node: Program | Node) => void): void {
+  visit(node)
+
+  let keys = visitorKeys[node.type]
+  if (!keys) return
+
+  let walkableNode = node as unknown as Record<string, unknown>
+  for (let key of keys) {
+    let value = walkableNode[key]
+    if (Array.isArray(value)) {
+      for (let child of value) {
+        if (isAstNode(child)) {
+          walkAst(child, visit)
+        }
+      }
+      continue
+    }
+
+    if (isAstNode(value)) {
+      walkAst(value, visit)
+    }
+  }
+}
+
+function isAstNode(value: unknown): value is Node {
+  return typeof value === 'object' && value !== null && 'type' in value
+}
+
+function isStringLiteralNode(node: Node | null | undefined): node is Node & {
+  end: number
+  start: number
+  value: string
+} {
+  return (
+    node?.type === 'Literal' &&
+    typeof node.start === 'number' &&
+    typeof node.end === 'number' &&
+    typeof node.value === 'string'
+  )
 }
 
 function getStaticImportSpecifier(

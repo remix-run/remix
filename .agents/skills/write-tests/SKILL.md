@@ -7,21 +7,23 @@ description: Write, refactor, or review tests in the Remix repository. Use when 
 
 ## Overview
 
-Write tests that prove behavior with the smallest useful fixture surface. Keep package dependency graphs clean, choose the runner that fits the package, and validate with the narrowest reliable commands.
+Write tests that prove behavior with the smallest useful fixture surface. Use Remix's own
+test/assert packages and `describe`/`it` style by default, keep package dependency graphs clean, and
+validate with the narrowest reliable commands.
 
 ## Workflow
 
 1. Read the nearest `package.json`, `tsconfig.json`, and existing sibling tests before choosing a runner or fixture style.
-2. Identify whether the package is foundational, feature-level, browser/e2e, or already committed to a runner.
+2. Identify whether the package can depend on `@remix-run/test`, or whether it is a dependency of `@remix-run/test` and must avoid a circular dependency.
 3. Keep the test close to the behavior owner. Prefer local helpers and direct Web/Node primitives over importing higher-level workspace packages as fixtures.
 4. Put test-only workspace packages in `devDependencies` with `workspace:^`; do not add them to runtime `dependencies`.
 5. Run the package test and typecheck commands. Refresh `pnpm-lock.yaml` when package metadata changes.
 
 ## Runner Choice
 
-- Prefer the existing package test runner unless changing it is part of the task.
-- Use `node:test` and `node:assert/strict` for foundational packages that `@remix-run/test` depends on, or packages that should stay below shared Remix testing infrastructure.
-- Use `@remix-run/test` for packages that intentionally need Remix test framework features such as browser/e2e support, coverage integration, or its test context helpers.
+- Write new and changed tests in `describe`/`it` style. When touching a file that uses top-level `test()`, convert the affected tests to `describe`/`it` and leave unrelated tests alone.
+- Use `@remix-run/test` and `@remix-run/assert` by default for package tests.
+- Use `node:test` and `node:assert/strict` only when testing a package that is a dependency of `@remix-run/test`, or when adding Remix test/assert as a dependency would create a circular dependency.
 - Do not keep a `test:bun` script for `node:test` packages unless it has been validated. Bun's test runner does not automatically discover tests written with `node:test` imports.
 
 Node test package script:
@@ -34,7 +36,7 @@ Node test imports:
 
 ```ts
 import * as assert from 'node:assert/strict'
-import { describe, it, mock } from 'node:test'
+import { describe, it } from 'node:test'
 ```
 
 Remix test imports:
@@ -46,11 +48,11 @@ import { describe, it } from '@remix-run/test'
 
 ## Test Structure
 
-- Name tests by behavior, not implementation detail.
+- Name `describe()` blocks after the public API or behavior owner, and name `it()` tests by observable behavior.
 - Do not generate tests inside `describe()` with loops or conditionals; this breaks per-test IDE execution.
 - Prefer a few explicit cases over dense table tests when the cases document distinct behavior.
 - Keep async tests awaited all the way through. Avoid resolving promises before the behavior under test has completed.
-- Use mocks sparingly and locally. Prefer `mock.method()`/`mock.fn()` from `node:test` when using Node's runner, and the Remix test context mocks when using `@remix-run/test`.
+- Use mocks sparingly and locally. Prefer the Remix test context mocks when using `@remix-run/test`; use `mock.method()`/`mock.fn()` from `node:test` only in node-runner exception packages.
 
 ## Fixtures
 
@@ -61,8 +63,8 @@ import { describe, it } from '@remix-run/test'
 
 ## Assertions
 
-- Use `node:assert/strict` in Node test files.
-- Use `@remix-run/assert` only when the package intentionally tests or depends on Remix assertion behavior.
+- Use `@remix-run/assert` by default.
+- Use `node:assert/strict` only in node-runner exception packages that cannot depend on `@remix-run/assert`/`@remix-run/test`.
 - Assert public behavior and observable side effects. Avoid asserting private implementation structure unless the package's public contract is the structure.
 - For error tests, assert the error shape/message that consumers can rely on.
 

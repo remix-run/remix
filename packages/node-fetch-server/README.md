@@ -5,7 +5,7 @@ Build Node.js servers with web-standard Fetch API primitives. `node-fetch-server
 ## Features
 
 - **Web Standards** - Standard [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) APIs
-- **Drop-in Integration** - Works with `node:http` and `node:https` modules
+- **Node.js HTTP Integration** - Works directly with `node:http`, `node:https`, and `node:http2`
 - **Streaming Support** - Response support with `ReadableStream`
 - **Custom Hostname** - Configuration for deployment flexibility
 - **Client Info** - Access to client connection info (IP address, port)
@@ -17,49 +17,31 @@ Build Node.js servers with web-standard Fetch API primitives. `node-fetch-server
 npm i remix
 ```
 
-## Quick Start
+## Usage
 
-### Basic Server
-
-Here's a complete working example with a simple in-memory data store:
+Use `createRequestListener()` when you want to plug a fetch handler into a standard Node.js server:
 
 ```ts
 import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 
-// Example: Simple in-memory user storage
-let users = new Map([
-  ['1', { id: '1', name: 'Alice', email: 'alice@example.com' }],
-  ['2', { id: '2', name: 'Bob', email: 'bob@example.com' }],
-])
-
 async function handler(request: Request) {
   let url = new URL(request.url)
 
-  // GET / - Home page
   if (url.pathname === '/' && request.method === 'GET') {
     return new Response('Welcome to the User API! Try GET /api/users')
   }
 
-  // GET /api/users - List all users
   if (url.pathname === '/api/users' && request.method === 'GET') {
-    return Response.json(Array.from(users.values()))
-  }
-
-  // GET /api/users/:id - Get specific user
-  let userMatch = url.pathname.match(/^\/api\/users\/(\w+)$/)
-  if (userMatch && request.method === 'GET') {
-    let user = users.get(userMatch[1])
-    if (user) {
-      return Response.json(user)
-    }
-    return new Response('User not found', { status: 404 })
+    return Response.json([
+      { id: '1', name: 'Alice', email: 'alice@example.com' },
+      { id: '2', name: 'Bob', email: 'bob@example.com' },
+    ])
   }
 
   return new Response('Not Found', { status: 404 })
 }
 
-// Create a standard Node.js server
 let server = http.createServer(createRequestListener(handler))
 
 server.listen(3000, () => {
@@ -142,18 +124,17 @@ async function handler(request: Request) {
 
 ### Custom Hostname Configuration
 
-Configure custom hostnames for deployment on VPS or custom environments:
+Configure custom hostnames for deployment on VPS or custom environments. `node-fetch-server` uses
+the `host` option when constructing `request.url`.
 
 ```ts
 import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 
-// Use a custom hostname (e.g., from environment variable)
 let hostname = process.env.HOST || 'api.example.com'
 
 async function handler(request: Request) {
-  // request.url will now use your custom hostname
-  console.log(request.url) // https://api.example.com/path
+  console.log(request.url) // http://api.example.com/path
 
   return Response.json({
     message: 'Hello from custom domain!',
@@ -308,17 +289,67 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/no
 
 - [`demos/http2`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server/demos/http2) - HTTP/2 server with TLS certificates
 
-## Benchmark
+## Related Packages
 
-To run benchmarks comparing `node-fetch-server` performance with comparable libraries:
+- [`node-serve`](https://github.com/remix-run/remix/tree/main/packages/node-serve) - Build high-performance Fetch API servers for Node.js
+- [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
+
+## Benchmarks
+
+Run the full benchmark suite:
 
 ```sh
 pnpm run bench
 ```
 
-## Related Packages
+Update the benchmark results below:
 
-- [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
+```sh
+pnpm run bench:update-readme
+```
+
+<!-- benchmarks:start -->
+
+Last updated: 2026-04-29T17:19:30.407Z
+
+Environment: Darwin 25.3.0, Apple M1 Pro, Node.js v24.15.0
+
+Command: `wrk -t12 -c400 -d30s`
+
+### Raw Throughput
+
+Simple HTML response benchmarks without inspecting the incoming request.
+
+| Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
+| ------------------------- | --------: | -----------: | ----------: | -----------: |
+| `remix/node-serve`        |   `0.0.0` |     `62,225` |    `6.45ms` |     `9.85MB` |
+| `node:http`               | `24.15.0` |     `47,110` |   `10.66ms` |     `9.66MB` |
+| `remix/node-fetch-server` |  `0.13.0` |     `43,317` |   `11.69ms` |     `8.80MB` |
+| `express`                 |   `5.2.1` |     `39,752` |   `13.69ms` |     `9.59MB` |
+
+### Small Body
+
+POST benchmarks that read and print the request method, headers, and a small body.
+
+| Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
+| ------------------------- | --------: | -----------: | ----------: | -----------: |
+| `remix/node-serve`        |   `0.0.0` |     `31,213` |   `12.75ms` |     `4.94MB` |
+| `remix/node-fetch-server` |  `0.13.0` |     `25,430` |   `24.25ms` |     `5.17MB` |
+| `node:http`               | `24.15.0` |     `25,088` |   `23.89ms` |     `5.14MB` |
+| `express`                 |   `5.2.1` |     `22,845` |   `27.16ms` |     `5.51MB` |
+
+### Large Body
+
+POST benchmarks that read and print the request method, headers, and a 1 MB body.
+
+| Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
+| ------------------------- | --------: | -----------: | ----------: | -----------: |
+| `remix/node-serve`        |   `0.0.0` |      `1,148` |  `327.72ms` |   `186.03KB` |
+| `remix/node-fetch-server` |  `0.13.0` |      `1,086` |  `217.69ms` |   `225.87KB` |
+| `node:http`               | `24.15.0` |      `1,079` |  `198.67ms` |   `226.54KB` |
+| `express`                 |   `5.2.1` |      `1,022` |  `216.07ms` |   `252.51KB` |
+
+<!-- benchmarks:end -->
 
 ## License
 
