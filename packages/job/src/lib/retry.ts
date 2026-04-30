@@ -1,10 +1,10 @@
 import type { RetryPolicy, ResolvedRetryPolicy } from './types.ts'
 
-let DEFAULT_MAX_ATTEMPTS = 5
-let DEFAULT_STRATEGY = 'exponential' as const
-let DEFAULT_BASE_DELAY_MS = 1000
-let DEFAULT_MAX_DELAY_MS = 300000
-let DEFAULT_JITTER = 'full' as const
+const DEFAULT_MAX_ATTEMPTS = 5
+const DEFAULT_STRATEGY = 'exponential' as const
+const DEFAULT_BASE_DELAY_MS = 1000
+const DEFAULT_MAX_DELAY_MS = 300000
+const DEFAULT_JITTER = 'full' as const
 
 export function normalizeRetryPolicy(
   basePolicy?: RetryPolicy,

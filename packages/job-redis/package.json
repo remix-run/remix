@@ -35,7 +35,7 @@
     "@remix-run/job": "workspace:^"
   },
   "peerDependencies": {
-    "redis": "^5.9.0"
+    "redis": "^5.10.0"
   },
   "peerDependenciesMeta": {
     "redis": {
@@ -47,7 +47,7 @@
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "redis": "^5.9.0"
+    "redis": "^5.10.0"
   },
   "scripts": {
     "build": "pnpm run generate:scripts && tsgo -p tsconfig.build.json",

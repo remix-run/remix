@@ -8,7 +8,7 @@ type ScriptDefinition = {
   fileName: string
 }
 
-let scriptDefinitions: ScriptDefinition[] = [
+const scriptDefinitions: ScriptDefinition[] = [
   { exportName: 'ENQUEUE_JOB_SCRIPT', fileName: 'enqueue-job.lua' },
   { exportName: 'CANCEL_JOB_SCRIPT', fileName: 'cancel-job.lua' },
   { exportName: 'CLAIM_DUE_JOBS_SCRIPT', fileName: 'claim-due-jobs.lua' },
@@ -20,9 +20,9 @@ let scriptDefinitions: ScriptDefinition[] = [
   { exportName: 'PRUNE_JOBS_SCRIPT', fileName: 'prune-jobs.lua' },
 ]
 
-let scriptDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/lib/lua')
-let outputFile = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/lib/generated-lua.ts')
-let command = 'pnpm --filter @remix-run/job-redis run generate:scripts'
+const scriptDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/lib/lua')
+const outputFile = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../src/lib/generated-lua.ts')
+const command = 'pnpm --filter @remix-run/job-redis run generate:scripts'
 
 function main(): void {
   let generated = buildGeneratedModule()

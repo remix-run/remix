@@ -18,11 +18,11 @@ import type {
 import type { JobStorage } from './storage.ts'
 import { computeRetryAt } from './retry.ts'
 
-let DEFAULT_CONCURRENCY = 10
-let DEFAULT_POLL_INTERVAL_MS = 1000
-let DEFAULT_LEASE_MS = 30000
-let DEFAULT_RETENTION_INTERVAL_MS = 60000
-let DEFAULT_RETENTION_LIMIT = 500
+const DEFAULT_CONCURRENCY = 10
+const DEFAULT_POLL_INTERVAL_MS = 1000
+const DEFAULT_LEASE_MS = 30000
+const DEFAULT_RETENTION_INTERVAL_MS = 60000
+const DEFAULT_RETENTION_LIMIT = 500
 
 /**
  * Creates a worker loop that claims and executes jobs from storage.

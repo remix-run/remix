@@ -22,9 +22,9 @@ import {
   RETRY_FAILED_JOB_SCRIPT,
 } from './generated-lua.ts'
 
-let DEFAULT_PREFIX = 'job:'
+const DEFAULT_PREFIX = 'job:'
 
-let DEFAULT_RETRY: ResolvedRetryPolicy = {
+const DEFAULT_RETRY: ResolvedRetryPolicy = {
   maxAttempts: 5,
   strategy: 'exponential',
   baseDelayMs: 1000,

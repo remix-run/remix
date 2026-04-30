@@ -12,7 +12,7 @@ import {
   setupJobStorageSchema,
 } from './test/schema.ts'
 
-let integrationEnabled =
+const integrationEnabled =
   process.env.DATA_TABLE_INTEGRATION === '1' &&
   typeof process.env.DATA_TABLE_MYSQL_URL === 'string'
 

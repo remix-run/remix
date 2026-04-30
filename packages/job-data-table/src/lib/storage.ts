@@ -16,7 +16,7 @@ import type {
 } from '@remix-run/job/storage'
 import type { JobRecord, ResolvedRetryPolicy } from '@remix-run/job'
 
-let DEFAULT_TABLE_PREFIX = 'job_'
+const DEFAULT_TABLE_PREFIX = 'job_'
 
 type StorageTables = {
   jobs: string

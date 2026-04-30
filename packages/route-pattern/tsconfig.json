@@ -9,5 +9,5 @@
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "exclude": ["vendor", "dist"]
+  "exclude": ["vendor", "dist", "bench"]
 }

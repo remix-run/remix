@@ -4,7 +4,7 @@ import { createDataTableJobStorageMigration } from '../storage.ts'
 
 import type { Database } from '@remix-run/data-table'
 
-export let DEFAULT_TEST_TABLE_PREFIX = 'job_test_'
+export const DEFAULT_TEST_TABLE_PREFIX = 'job_test_'
 
 export async function setupJobStorageSchema(
   db: Database,

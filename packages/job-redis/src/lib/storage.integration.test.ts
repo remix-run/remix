@@ -6,7 +6,7 @@ import { runJobStorageContract } from '../../../job/src/lib/test/storage-contrac
 import { createRedisJobStorage } from './storage.ts'
 import type { RedisJobStorageClient } from './storage.ts'
 
-let integrationEnabled =
+const integrationEnabled =
   process.env.JOB_REDIS_INTEGRATION === '1' && typeof process.env.JOB_REDIS_URL === 'string'
 
 describe('redis job storage (integration)', () => {
