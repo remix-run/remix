@@ -439,7 +439,7 @@ middleware.push(loadAuth())
 let router = createRouter({ middleware })
 ```
 
-### Mutate, validate, and respond
+### Validate, mutate, and respond
 
 ```typescript
 import { redirect } from 'remix/response/redirect'
