@@ -1,12 +1,39 @@
 import * as assert from '@remix-run/assert'
 import * as fsp from 'node:fs/promises'
+import * as os from 'node:os'
 import * as path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { describe, it } from '../lib/framework.ts'
 import { getRemixTestHelpText, loadConfig } from '../lib/config.ts'
+import { describe, it } from '../lib/framework.ts'
+import { fileURLToPath } from 'node:url'
 
 const PKG_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')
 const CONFIG_FIXTURE_DIR = path.join(PKG_DIR, '.tmp', 'config')
+
+describe('loadConfig', () => {
+  it('loads remix-test.config.ts from cwd', async () => {
+    let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
+
+    try {
+      await fsp.writeFile(
+        path.join(tmp, 'remix-test.config.ts'),
+        [
+          'export default {',
+          "  glob: { test: 'src/**/*.test.ts', browser: 'src/**/*.test.ts' },",
+          "  type: ['browser'],",
+          '}',
+        ].join('\n'),
+      )
+
+      let config = await loadConfig([], tmp)
+
+      assert.deepEqual(config.glob.test, ['src/**/*.test.ts'])
+      assert.deepEqual(config.glob.browser, ['src/**/*.test.ts'])
+      assert.deepEqual(config.type, ['browser'])
+    } finally {
+      await fsp.rm(tmp, { recursive: true, force: true })
+    }
+  })
+})
 
 describe('config', () => {
   it('defaults to the forks pool', async () => {

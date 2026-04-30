@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import { createElement } from '../runtime/create-element.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { createMixin, on, ref } from '../index.ts'
@@ -80,53 +81,45 @@ describe('vnode mixins', () => {
     expect('innerHTML' in seenProps[1]!).toBe(false)
   })
 
-  it('ignores children returned from mixins while preserving host content', () => {
+  it('ignores children returned from mixins while preserving host content', (t) => {
     let withChildren = createMixin(
       (handle) => () =>
         createElement(handle.element as any, { 'data-mode': 'children' }, 'blocked'),
     )
 
-    let errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    try {
-      let container = document.createElement('div')
-      let root = createRoot(container)
+    let errorSpy = t.mock.method(console, 'error', () => {})
+    let container = document.createElement('div')
+    let root = createRoot(container)
 
-      root.render(<div mix={[withChildren()]}>safe</div>)
-      root.flush()
+    root.render(<div mix={[withChildren()]}>safe</div>)
+    root.flush()
 
-      expect(container.querySelector('div')?.dataset.mode).toBe('children')
-      expect(container.querySelector('div')?.textContent).toBe('safe')
-      expect(errorSpy).toHaveBeenCalledTimes(1)
-      let error = errorSpy.mock.calls[0]?.[0]
-      invariant(error instanceof Error)
-      expect(error.message).toBe('mixin elements must not receive children')
-    } finally {
-      errorSpy.mockRestore()
-    }
+    expect(container.querySelector('div')?.dataset.mode).toBe('children')
+    expect(container.querySelector('div')?.textContent).toBe('safe')
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    let error = errorSpy.mock.calls[0]?.arguments[0]
+    invariant(error instanceof Error)
+    expect(error.message).toBe('mixin elements must not receive children')
   })
 
-  it('ignores innerHTML returned from mixins while preserving host content', () => {
+  it('ignores innerHTML returned from mixins while preserving host content', (t) => {
     let withInnerHtml = createMixin((_handle) => () => (
       <div data-mode="innerHTML" innerHTML="<strong>blocked</strong>" />
     ))
 
-    let errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    try {
-      let container = document.createElement('div')
-      let root = createRoot(container)
+    let errorSpy = t.mock.method(console, 'error', () => {})
+    let container = document.createElement('div')
+    let root = createRoot(container)
 
-      root.render(<div mix={[withInnerHtml()]}>safe</div>)
-      root.flush()
+    root.render(<div mix={[withInnerHtml()]}>safe</div>)
+    root.flush()
 
-      expect(container.querySelector('div')?.dataset.mode).toBe('innerHTML')
-      expect(container.querySelector('div')?.textContent).toBe('safe')
-      expect(errorSpy).toHaveBeenCalledTimes(1)
-      let error = errorSpy.mock.calls[0]?.[0]
-      invariant(error instanceof Error)
-      expect(error.message).toBe('mixins must not return children or innerHTML')
-    } finally {
-      errorSpy.mockRestore()
-    }
+    expect(container.querySelector('div')?.dataset.mode).toBe('innerHTML')
+    expect(container.querySelector('div')?.textContent).toBe('safe')
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    let error = errorSpy.mock.calls[0]?.arguments[0]
+    invariant(error instanceof Error)
+    expect(error.message).toBe('mixins must not return children or innerHTML')
   })
 
   it('supports mixins returning nested descriptors directly', () => {

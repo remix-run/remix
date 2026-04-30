@@ -61,6 +61,12 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       getPlaywrightLaunchOptions(options.playwrightUseOpts),
     )
     page = await browser.newPage(getPlaywrightPageOptions(options.playwrightUseOpts))
+    // Cap how long we'll wait for a browser-test file to signal completion.
+    // Playwright's default is 30s; bumping to 60s buys headroom for slower
+    // suites without letting a hung test hide forever. Plumb this through
+    // config later if anyone needs to tune it.
+    page.setDefaultTimeout(60_000)
+    page.setDefaultNavigationTimeout(60_000)
 
     if (options.console) {
       page.on('console', (msg) => console.log(`${colors.dim('[browser console]')} ${msg.text()}`))

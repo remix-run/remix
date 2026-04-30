@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import { on } from '../index.ts'
 import type { Handle } from '../runtime/component.ts'
@@ -50,10 +51,10 @@ describe('vdom error handling', () => {
   })
 
   describe('setup errors', () => {
-    it('dispatches error event when setup throws', () => {
+    it('dispatches error event when setup throws', (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      let errorHandler = vi.fn()
+      let errorHandler = t.mock.fn()
       root.addEventListener('error', errorHandler)
 
       let error = new Error('setup error')
@@ -65,13 +66,13 @@ describe('vdom error handling', () => {
       root.render(<BadComponent />)
 
       expect(errorHandler).toHaveBeenCalledTimes(1)
-      expect((errorHandler.mock.calls[0][0] as ErrorEvent).error).toBe(error)
+      expect((errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error).toBe(error)
     })
 
-    it('dispatches error event when nested component setup throws', () => {
+    it('dispatches error event when nested component setup throws', (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      let errorHandler = vi.fn()
+      let errorHandler = t.mock.fn()
       root.addEventListener('error', errorHandler)
 
       let error = new Error('nested setup error')
@@ -91,15 +92,15 @@ describe('vdom error handling', () => {
       root.render(<Parent />)
 
       expect(errorHandler).toHaveBeenCalledTimes(1)
-      expect((errorHandler.mock.calls[0][0] as ErrorEvent).error).toBe(error)
+      expect((errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error).toBe(error)
     })
   })
 
   describe('render errors', () => {
-    it('dispatches error event when render function throws', () => {
+    it('dispatches error event when render function throws', (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      let errorHandler = vi.fn()
+      let errorHandler = t.mock.fn()
       root.addEventListener('error', errorHandler)
 
       let error = new Error('render error')
@@ -112,13 +113,13 @@ describe('vdom error handling', () => {
       root.render(<BadComponent />)
 
       expect(errorHandler).toHaveBeenCalledTimes(1)
-      expect((errorHandler.mock.calls[0][0] as ErrorEvent).error).toBe(error)
+      expect((errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error).toBe(error)
     })
 
-    it('dispatches error event when render throws on update', () => {
+    it('dispatches error event when render throws on update', (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      let errorHandler = vi.fn()
+      let errorHandler = t.mock.fn()
       root.addEventListener('error', errorHandler)
 
       let shouldThrow = false
@@ -142,7 +143,7 @@ describe('vdom error handling', () => {
       root.flush()
 
       expect(errorHandler).toHaveBeenCalledTimes(1)
-      expect((errorHandler.mock.calls[0][0] as ErrorEvent).error).toBe(error)
+      expect((errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error).toBe(error)
     })
   })
 
@@ -202,10 +203,10 @@ describe('vdom error handling', () => {
   })
 
   describe('queueTask errors', () => {
-    it('dispatches error event when sync queueTask throws', () => {
+    it('dispatches error event when sync queueTask throws', (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      let errorHandler = vi.fn()
+      let errorHandler = t.mock.fn()
       root.addEventListener('error', errorHandler)
 
       let error = new Error('sync task error')
@@ -221,13 +222,13 @@ describe('vdom error handling', () => {
       root.flush()
 
       expect(errorHandler).toHaveBeenCalledTimes(1)
-      expect((errorHandler.mock.calls[0][0] as ErrorEvent).error).toBe(error)
+      expect((errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error).toBe(error)
     })
 
-    it('dispatches error event when queueTask from update throws', () => {
+    it('dispatches error event when queueTask from update throws', (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      let errorHandler = vi.fn()
+      let errorHandler = t.mock.fn()
       root.addEventListener('error', errorHandler)
 
       let error = new Error('update task error')
@@ -251,15 +252,15 @@ describe('vdom error handling', () => {
       root.flush()
 
       expect(errorHandler).toHaveBeenCalledTimes(1)
-      expect((errorHandler.mock.calls[0][0] as ErrorEvent).error).toBe(error)
+      expect((errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error).toBe(error)
     })
   })
 
   describe('error does not prevent other work', () => {
-    it('continues running tasks after task error', () => {
+    it('continues running tasks after task error', (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      let errorHandler = vi.fn()
+      let errorHandler = t.mock.fn()
       root.addEventListener('error', errorHandler)
 
       let taskRan = false
@@ -363,10 +364,10 @@ describe('vdom error handling', () => {
   })
 
   describe('cascading updates protection', () => {
-    it('dispatches error when handle.update() is called during render', async () => {
+    it('dispatches error when handle.update() is called during render', async (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      let errorHandler = vi.fn()
+      let errorHandler = t.mock.fn()
       root.addEventListener('error', errorHandler)
 
       let renderCount = 0
@@ -394,15 +395,15 @@ describe('vdom error handling', () => {
       await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(errorHandler).toHaveBeenCalled()
-      let error = (errorHandler.mock.calls[0][0] as ErrorEvent).error as Error
+      let error = (errorHandler.mock.calls[0]!.arguments[0] as ErrorEvent).error as Error
       expect(error.message).toContain('infinite loop detected')
       expect(renderCount).toBeLessThan(100)
     })
 
-    it('allows legitimate multiple updates within same event loop turn', () => {
+    it('allows legitimate multiple updates within same event loop turn', (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      let errorHandler = vi.fn()
+      let errorHandler = t.mock.fn()
       root.addEventListener('error', errorHandler)
 
       let count = 0

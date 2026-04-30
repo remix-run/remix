@@ -1,4 +1,5 @@
-import { describe, it, expect, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { Fragment, type Handle } from '../runtime/component.ts'
@@ -364,10 +365,10 @@ describe('vnode rendering (keys)', () => {
       expect(container.textContent).toBe('unkeyed-1Bunkeyed-2A')
     })
 
-    it('handles duplicate keys (last one wins)', () => {
+    it('handles duplicate keys (last one wins)', (t) => {
       let container = document.createElement('div')
       let root = createRoot(container)
-      let warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
+      let warnSpy = t.mock.method(console, 'warn', () => {})
 
       function List(handle: Handle<{ labels: string[] }>) {
         return () => (
@@ -381,23 +382,19 @@ describe('vnode rendering (keys)', () => {
         )
       }
 
-      try {
-        root.render(<List labels={['first', 'second']} />)
-        expect(container.textContent).toBe('firstsecond')
+      root.render(<List labels={['first', 'second']} />)
+      expect(container.textContent).toBe('firstsecond')
 
-        root.render(<List labels={['only']} />)
-        expect(container.textContent).toBe('only')
+      root.render(<List labels={['only']} />)
+      expect(container.textContent).toBe('only')
 
-        let items = Array.from(container.querySelectorAll('li'))
-        expect(items.length).toBe(1)
-        expect(items[0].getAttribute('data-index')).toBe('0')
-        expect(warnSpy).toHaveBeenCalledTimes(1)
-        let warning = String(warnSpy.mock.calls[0]?.[0] ?? '')
-        expect(warning).toContain('Duplicate keys detected in siblings')
-        expect(warning).toContain('"dup"')
-      } finally {
-        warnSpy.mockRestore()
-      }
+      let items = Array.from(container.querySelectorAll('li'))
+      expect(items.length).toBe(1)
+      expect(items[0].getAttribute('data-index')).toBe('0')
+      expect(warnSpy).toHaveBeenCalledTimes(1)
+      let warning = String(warnSpy.mock.calls[0]?.arguments[0] ?? '')
+      expect(warning).toContain('Duplicate keys detected in siblings')
+      expect(warning).toContain('"dup"')
     })
 
     it('allows any type to be a key', () => {

@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, beforeEach, describe, it, mock, type FakeTimers } from '@remix-run/test'
 
 import { createRoot, type RemixNode } from '@remix-run/ui'
 
@@ -175,8 +176,10 @@ async function settleFrames(root: ReturnType<typeof createRoot>) {
   await settle(root)
 }
 
+let timers!: FakeTimers
+
 async function finishSelectionFlash(root: ReturnType<typeof createRoot>) {
-  await vi.advanceTimersByTimeAsync(flashDurationMs)
+  await timers.advanceAsync(flashDurationMs)
   await settle(root)
 }
 
@@ -187,13 +190,14 @@ async function finishDismissal(surface: HTMLElement, root: ReturnType<typeof cre
   await settle(root)
 }
 
+let scrollIntoViewSpy: ReturnType<typeof mock.method>
+
 beforeEach(() => {
-  vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {})
+  scrollIntoViewSpy = mock.method(HTMLElement.prototype, 'scrollIntoView', () => {})
 })
 
 afterEach(() => {
-  vi.useRealTimers()
-  vi.restoreAllMocks()
+  scrollIntoViewSpy.mock.restore!()
 
   for (let root of roots) {
     root.render(null)
@@ -303,7 +307,7 @@ describe('menu', () => {
     expect(document.activeElement).toBe(zoom)
   })
 
-  it('does not reopen a submenu after ArrowLeft restores focus to its trigger', async () => {
+  it('does not reopen a submenu after ArrowLeft restores focus to its trigger', async (t) => {
     let { container, root } = renderMenu()
     let trigger = getButtonByText(container, 'View')
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
@@ -319,13 +323,13 @@ describe('menu', () => {
     key(zoom, 'ArrowRight')
     await settleFrames(root)
 
-    let setTimeoutSpy = vi.spyOn(window, 'setTimeout')
+    let setTimeoutSpy = t.mock.method(window, 'setTimeout')
 
     key(zoomIn, 'ArrowLeft')
     await settle(root)
 
     let submenuDelayCalls = setTimeoutSpy.mock.calls.filter(
-      (call) => typeof call[1] === 'number' && call[1] > 0,
+      (call) => typeof call.arguments[1] === 'number' && (call.arguments[1] as number) > 0,
     )
 
     expect(submenuDelayCalls).toHaveLength(0)
@@ -382,12 +386,12 @@ describe('menu', () => {
     expect(document.activeElement).toBe(zoom)
   })
 
-  it('opens submenus after the focus delay without throwing', async () => {
+  it('opens submenus after the focus delay without throwing', async (t) => {
     let { container, root } = renderMenu()
     let trigger = getButtonByText(container, 'View')
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
     let [, childSurface] = getSurfaces(container)
-    let setTimeoutSpy = vi.spyOn(window, 'setTimeout')
+    let setTimeoutSpy = t.mock.method(window, 'setTimeout')
 
     key(trigger, 'ArrowDown')
     await settleFrames(root)
@@ -398,7 +402,7 @@ describe('menu', () => {
     expect(document.activeElement).toBe(zoom)
 
     let submenuDelay = setTimeoutSpy.mock.calls
-      .map((call) => call[1])
+      .map((call) => call.arguments[1])
       .find((delay): delay is number => typeof delay === 'number' && delay > 0)
 
     expect(submenuDelay).toBeDefined()
@@ -412,7 +416,7 @@ describe('menu', () => {
     expect(document.activeElement).toBe(zoom)
   })
 
-  it('does not reschedule submenu hover-open after focus moves to the trigger', async () => {
+  it('does not reschedule submenu hover-open after focus moves to the trigger', async (t) => {
     let { container, root } = renderMenu()
     let trigger = getButtonByText(container, 'View')
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
@@ -420,18 +424,18 @@ describe('menu', () => {
     click(trigger)
     await settleFrames(root)
 
-    let setTimeoutSpy = vi.spyOn(window, 'setTimeout')
+    let setTimeoutSpy = t.mock.method(window, 'setTimeout')
 
     pointerMove(zoom)
     await settle(root)
 
     let submenuDelayCalls = setTimeoutSpy.mock.calls.filter(
-      (call) => typeof call[1] === 'number' && call[1] > 0,
+      (call) => typeof call.arguments[1] === 'number' && (call.arguments[1] as number) > 0,
     )
     expect(submenuDelayCalls).toHaveLength(1)
   })
 
-  it('reopens submenu hover-open when the pointer re-enters a focused trigger from the left', async () => {
+  it('reopens submenu hover-open when the pointer re-enters a focused trigger from the left', async (t) => {
     let { container, root } = renderMenu()
     let trigger = getButtonByText(container, 'View')
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
@@ -440,13 +444,13 @@ describe('menu', () => {
     click(trigger)
     await settleFrames(root)
 
-    let setTimeoutSpy = vi.spyOn(window, 'setTimeout')
+    let setTimeoutSpy = t.mock.method(window, 'setTimeout')
 
     pointerMove(zoom)
     await settle(root)
 
     let submenuDelay = setTimeoutSpy.mock.calls
-      .map((call) => call[1])
+      .map((call) => call.arguments[1])
       .find((delay): delay is number => typeof delay === 'number' && delay > 0)
 
     expect(submenuDelay).toBeDefined()
@@ -472,7 +476,7 @@ describe('menu', () => {
     expect(document.activeElement).toBe(zoom)
   })
 
-  it('reopens submenu hover-open when the pointer re-enters a focused trigger from a separator', async () => {
+  it('reopens submenu hover-open when the pointer re-enters a focused trigger from a separator', async (t) => {
     let { container, root } = renderMenuWithSubmenuSeparator()
     let trigger = getButtonByText(container, 'View')
     let zoom = getMenuItemsByText(container, 'Zoom')[0]
@@ -482,13 +486,13 @@ describe('menu', () => {
     click(trigger)
     await settleFrames(root)
 
-    let setTimeoutSpy = vi.spyOn(window, 'setTimeout')
+    let setTimeoutSpy = t.mock.method(window, 'setTimeout')
 
     pointerMove(zoom)
     await settle(root)
 
     let submenuDelay = setTimeoutSpy.mock.calls
-      .map((call) => call[1])
+      .map((call) => call.arguments[1])
       .find((delay): delay is number => typeof delay === 'number' && delay > 0)
 
     expect(submenuDelay).toBeDefined()
@@ -680,7 +684,7 @@ describe('menu', () => {
     expect(document.activeElement).toBe(trigger)
   })
 
-  it('dispatches one bubbled selection event from submenu items and closes the full tree', async () => {
+  it('dispatches one bubbled selection event from submenu items and closes the full tree', async (t) => {
     let selections: MenuSelectEvent[] = []
     let { container, root } = renderMenu((event) => {
       selections.push(event)
@@ -699,7 +703,7 @@ describe('menu', () => {
     key(document.activeElement as HTMLElement, 'ArrowRight')
     await settleFrames(root)
 
-    vi.useFakeTimers()
+    timers = t.useFakeTimers()
 
     key(zoomIn, 'Enter')
     await settle(root)
@@ -735,7 +739,7 @@ describe('menu', () => {
     expect(document.activeElement).toBe(trigger)
   })
 
-  it('re-dispatches one selection event from the button so shared ancestors only see it once', async () => {
+  it('re-dispatches one selection event from the button so shared ancestors only see it once', async (t) => {
     let buttonSelections: MenuSelectEvent[] = []
     let ancestorSelections: MenuSelectEvent[] = []
     let { container, root } = renderMenu(
@@ -753,7 +757,7 @@ describe('menu', () => {
     click(trigger)
     await settleFrames(root)
 
-    vi.useFakeTimers()
+    timers = t.useFakeTimers()
 
     click(wordWrap)
     await settle(root)
@@ -778,7 +782,7 @@ describe('menu', () => {
     })
   })
 
-  it('does not swallow parent item clicks while a child submenu is open', async () => {
+  it('does not swallow parent item clicks while a child submenu is open', async (t) => {
     let selections: MenuSelectEvent[] = []
     let { container, root } = renderMenu((event) => {
       selections.push(event)
@@ -796,7 +800,7 @@ describe('menu', () => {
     key(document.activeElement as HTMLElement, 'ArrowRight')
     await settleFrames(root)
 
-    vi.useFakeTimers()
+    timers = t.useFakeTimers()
 
     click(wordWrap)
     await settle(root)

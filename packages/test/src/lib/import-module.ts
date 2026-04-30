@@ -19,6 +19,12 @@ function hasImportMetaResolve(meta: ImportMeta): meta is ImportMetaWithResolve {
  * @returns The imported module namespace.
  */
 export async function importModule(specifier: string, meta: ImportMeta): Promise<any> {
+  // Absolute Windows paths (`C:\foo\bar.ts`) aren't valid ESM specifiers — only
+  // `file:///C:/foo/bar.ts` URLs, relative specifiers, or POSIX absolute paths
+  // are. Convert any absolute filesystem path to its `file:` URL so loaders like
+  // `tsImport` and `import()` accept it on every platform. POSIX absolute paths
+  // happen to work as specifiers without conversion, but going through
+  // `pathToFileURL` is safe and platform-agnostic.
   let resolvedSpecifier = path.isAbsolute(specifier) ? pathToFileURL(specifier).href : specifier
 
   if (IS_BUN) {

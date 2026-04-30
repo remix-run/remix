@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
 
 import { anchor } from './anchor.ts'
 
@@ -84,9 +85,12 @@ function mockLayout(element: HTMLElement, rectInit: RectInit) {
   }
 }
 
+let rafSpy: ReturnType<typeof mock.method>
+let cafSpy: ReturnType<typeof mock.method>
+
 beforeEach(() => {
-  vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation(() => 1)
-  vi.spyOn(globalThis, 'cancelAnimationFrame').mockImplementation(() => {})
+  rafSpy = mock.method(globalThis, 'requestAnimationFrame', () => 1)
+  cafSpy = mock.method(globalThis, 'cancelAnimationFrame', () => {})
 
   Object.defineProperty(window, 'innerWidth', {
     configurable: true,
@@ -102,8 +106,9 @@ beforeEach(() => {
 })
 
 afterEach(() => {
-  vi.restoreAllMocks()
-  document.body.innerHTML = ''
+  rafSpy.mock.restore!()
+  cafSpy.mock.restore!()
+  document.body.textContent = ''
 })
 
 describe('anchor', () => {
@@ -305,7 +310,8 @@ describe('anchor', () => {
 
   it('repositions when the floating dimensions change during animation-frame polling', () => {
     let pollForPositionChanges: ((time: number) => void) | null = null
-    vi.mocked(requestAnimationFrame).mockImplementation((callback) => {
+    rafSpy.mock.restore!()
+    rafSpy = mock.method(globalThis, 'requestAnimationFrame', (callback) => {
       pollForPositionChanges = callback
       return 1
     })

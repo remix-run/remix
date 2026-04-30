@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, describe, it, mock, type FakeTimers } from '@remix-run/test'
 
 import { createRoot, type Handle, type RemixNode } from '@remix-run/ui'
 
@@ -135,7 +136,7 @@ function getOptionByText(container: HTMLElement, text: string) {
 }
 
 function stubScrollIntoView(node: HTMLElement) {
-  let spy = vi.fn()
+  let spy = mock.fn()
 
   Object.defineProperty(node, 'scrollIntoView', {
     configurable: true,
@@ -171,8 +172,10 @@ async function settle(root: ReturnType<typeof createRoot>) {
   root.flush()
 }
 
+let timers!: FakeTimers
+
 async function finishSelectionFlash(root: ReturnType<typeof createRoot>) {
-  await vi.advanceTimersByTimeAsync(flashDurationMs)
+  await timers.advanceAsync(flashDurationMs)
   await settle(root)
 }
 
@@ -184,7 +187,6 @@ afterEach(() => {
 
   roots = []
   document.body.innerHTML = ''
-  vi.useRealTimers()
 })
 
 describe('listbox', () => {
@@ -721,8 +723,8 @@ describe('listbox', () => {
     expect(preact.getAttribute('aria-selected')).toBe('true')
   })
 
-  it('delays onSelect during flashSelection and ignores interactions until the flash completes', async () => {
-    vi.useFakeTimers()
+  it('delays onSelect during flashSelection and ignores interactions until the flash completes', async (t) => {
+    timers = t.useFakeTimers()
 
     let highlights: SelectionCall[] = []
     let selections: SelectionCall[] = []

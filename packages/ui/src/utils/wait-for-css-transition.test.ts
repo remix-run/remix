@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
 
 import { waitForCssTransition } from './wait-for-css-transition.ts'
 
@@ -10,6 +11,8 @@ function createNode() {
 }
 
 let animationFrameCallbacks: FrameRequestCallback[] = []
+let rafSpy: ReturnType<typeof mock.method>
+let cafSpy: ReturnType<typeof mock.method>
 
 function flushAnimationFrame() {
   let callbacks = animationFrameCallbacks
@@ -23,17 +26,18 @@ function flushAnimationFrame() {
 beforeEach(() => {
   animationFrameCallbacks = []
 
-  vi.spyOn(globalThis, 'requestAnimationFrame').mockImplementation((callback) => {
+  rafSpy = mock.method(globalThis, 'requestAnimationFrame', (callback) => {
     animationFrameCallbacks.push(callback)
     return animationFrameCallbacks.length
   })
 
-  vi.spyOn(globalThis, 'cancelAnimationFrame').mockImplementation(() => {})
+  cafSpy = mock.method(globalThis, 'cancelAnimationFrame', () => {})
 })
 
 afterEach(() => {
-  document.body.innerHTML = ''
-  vi.restoreAllMocks()
+  document.body.textContent = ''
+  rafSpy.mock.restore!()
+  cafSpy.mock.restore!()
 })
 
 describe('waitForCssTransition', () => {

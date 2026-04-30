@@ -6,10 +6,17 @@ import type { Counts, TestResult, TestResults } from './results.ts'
 export class DotReporter implements Reporter {
   #failures: { name: string; error: TestResult['error'] }[] = []
   #dotCount = 0
+  #files = new Set<string>()
+  #suites = new Set<string>()
 
   onSectionStart(_label: string) {}
 
   onResult(results: TestResults, _env?: string) {
+    for (let test of results.tests) {
+      if (test.filePath) this.#files.add(test.filePath)
+      if (test.suiteName) this.#suites.add(test.suiteName)
+    }
+
     for (let test of results.tests) {
       if (test.status === 'passed') {
         process.stdout.write(colors.green('.'))
@@ -47,6 +54,8 @@ export class DotReporter implements Reporter {
     let { passed, failed, skipped, todo } = counts
     let info = colors.cyan('ℹ')
     console.log()
+    console.log(`${info} files ${this.#files.size}`)
+    console.log(`${info} suites ${this.#suites.size}`)
     console.log(`${info} tests ${passed + failed + skipped + todo}`)
     console.log(`${info} pass ${passed}`)
     console.log(`${info} fail ${failed}`)

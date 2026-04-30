@@ -170,6 +170,55 @@ describe('FakeTimers#advance — clearInterval', () => {
   })
 })
 
+describe('FakeTimers#advanceAsync', () => {
+  it('fires timers in order like advance', async () => {
+    let timers = createFakeTimers()
+    try {
+      let order: string[] = []
+      setTimeout(() => order.push('b'), 200)
+      setTimeout(() => order.push('a'), 100)
+      setTimeout(() => order.push('c'), 300)
+      await timers.advanceAsync(500)
+      assert.deepEqual(order, ['a', 'b', 'c'])
+    } finally {
+      timers.restore()
+    }
+  })
+
+  it('lets promise continuations settle between firings', async () => {
+    let timers = createFakeTimers()
+    try {
+      let order: string[] = []
+      setTimeout(() => {
+        order.push('first')
+        Promise.resolve().then(() => order.push('then'))
+      }, 100)
+      setTimeout(() => order.push('second'), 200)
+      await timers.advanceAsync(500)
+      // The microtask scheduled inside the first callback runs before the
+      // second timer fires.
+      assert.deepEqual(order, ['first', 'then', 'second'])
+    } finally {
+      timers.restore()
+    }
+  })
+
+  it('runs timers scheduled by an awaited promise within the same advance', async () => {
+    let timers = createFakeTimers()
+    try {
+      let fired = 0
+      setTimeout(async () => {
+        await Promise.resolve()
+        setTimeout(() => fired++, 50)
+      }, 100)
+      await timers.advanceAsync(200)
+      assert.equal(fired, 1)
+    } finally {
+      timers.restore()
+    }
+  })
+})
+
 describe('FakeTimers#restore', () => {
   it('drops pending timers so they never fire', () => {
     let timers = createFakeTimers()

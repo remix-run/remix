@@ -1,8 +1,42 @@
-import { describe, expect, it } from 'vitest'
-import { userEvent } from '@vitest/browser/context'
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import type { Handle } from '../runtime/component.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { on } from '../index.ts'
+
+// Synthetic per-character `type` against an <input>. Mirrors what a real
+// browser fires: keydown -> beforeinput -> input -> keyup, mutating the value
+// at the cursor between beforeinput and input. When the cursor is still at the
+// default 0/0 with a non-empty value we move it to the end first, so typing
+// into a pre-filled controlled input appends rather than prepends.
+async function type(field: HTMLInputElement, text: string): Promise<void> {
+  field.focus()
+  if (field.selectionStart === 0 && field.selectionEnd === 0 && field.value.length > 0) {
+    field.setSelectionRange(field.value.length, field.value.length)
+  }
+  for (let char of text) {
+    field.dispatchEvent(
+      new KeyboardEvent('keydown', { key: char, bubbles: true, cancelable: true }),
+    )
+    let beforeInput = new InputEvent('beforeinput', {
+      bubbles: true,
+      cancelable: true,
+      inputType: 'insertText',
+      data: char,
+    })
+    if (field.dispatchEvent(beforeInput)) {
+      let start = field.selectionStart ?? field.value.length
+      let end = field.selectionEnd ?? field.value.length
+      field.value = field.value.slice(0, start) + char + field.value.slice(end)
+      field.setSelectionRange(start + 1, start + 1)
+      field.dispatchEvent(
+        new InputEvent('input', { bubbles: true, inputType: 'insertText', data: char }),
+      )
+    }
+    field.dispatchEvent(new KeyboardEvent('keyup', { key: char, bubbles: true }))
+  }
+  await Promise.resolve()
+}
 
 describe('vdom controlled props', () => {
   it('restores controlled value on native input when no update happens', async () => {
@@ -116,18 +150,18 @@ describe('vdom controlled props', () => {
     let input = container.querySelector('input') as HTMLInputElement
     let output = container.querySelector('output') as HTMLOutputElement
 
-    await userEvent.type(input, 'a')
+    await type(input, 'a')
     root.flush()
     expect(input.value).toBe('helloa')
     expect(output.textContent).toBe('1:helloa')
 
-    await userEvent.type(input, '1')
+    await type(input, '1')
     await Promise.resolve()
     await Promise.resolve()
     expect(input.value).toBe('helloa')
     expect(output.textContent).toBe('1:helloa')
 
-    await userEvent.type(input, 'b')
+    await type(input, 'b')
     root.flush()
     expect(input.value).toBe('helloab')
     expect(output.textContent).toBe('2:helloab')
