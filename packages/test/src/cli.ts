@@ -183,6 +183,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
           {
             coverage: config.coverage,
             cwd,
+            pool: config.pool,
           },
         )
         counts.failed += serverResult.failed
@@ -241,6 +242,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
                   projectName: project.name,
                   coverage: config.coverage,
                   cwd,
+                  pool: config.pool,
                 })
               : null,
           ])

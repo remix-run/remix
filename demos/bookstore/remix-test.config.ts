@@ -17,13 +17,6 @@ if (platform !== 'win32') {
 }
 
 export default {
-  ...(platform === 'win32'
-    ? {
-        // node:sqlite currently crashes on Windows when this demo opens SQLite
-        // databases across multiple test workers concurrently.
-        concurrency: 1,
-      }
-    : {}),
   playwrightConfig: {
     projects,
     use: {
