@@ -301,7 +301,9 @@ jobs:
         env:
           SESSION_MEMCACHE_INTEGRATION: '1'
           SESSION_MEMCACHE_SERVER: 127.0.0.1:11211
-        run: node --disable-warning=ExperimentalWarning --test './packages/session-storage-memcache/src/lib/memcache-storage.integration.test.ts'
+        run: |
+          cd packages/session-storage-memcache
+          pnpm test src/lib/memcache-storage.integration.test.ts
 
   redis_integration:
     name: Redis Integration
@@ -338,7 +340,9 @@ jobs:
         env:
           SESSION_REDIS_INTEGRATION: '1'
           SESSION_REDIS_URL: redis://127.0.0.1:6379
-        run: node --disable-warning=ExperimentalWarning --test './packages/session-storage-redis/src/lib/redis-storage.integration.test.ts'
+        run: |
+          cd packages/session-storage-redis
+          pnpm test src/lib/redis-storage.integration.test.ts
 
   data_table_unit:
     name: Data Table Unit and Build
@@ -419,7 +423,9 @@ jobs:
         env:
           DATA_TABLE_INTEGRATION: '1'
           DATA_TABLE_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/remix
-        run: node --disable-warning=ExperimentalWarning --test './packages/data-table-postgres/src/lib/adapter.integration.test.ts'
+        run: |
+          cd packages/data-table-postgres
+          pnpm test src/lib/adapter.integration.test.ts
 
   mysql_integration:
     name: MySQL Integration
@@ -459,7 +465,9 @@ jobs:
         env:
           DATA_TABLE_INTEGRATION: '1'
           DATA_TABLE_MYSQL_URL: mysql://root:root@127.0.0.1:3306/remix
-        run: node --disable-warning=ExperimentalWarning --test './packages/data-table-mysql/src/lib/adapter.integration.test.ts'
+        run: |
+          cd packages/data-table-mysql
+          pnpm test src/lib/adapter.integration.test.ts
 
   sqlite_integration:
     name: SQLite Integration
@@ -485,7 +493,9 @@ jobs:
       - name: Run sqlite adapter tests
         env:
           DATA_TABLE_INTEGRATION: '1'
-        run: node --disable-warning=ExperimentalWarning --test './packages/data-table-sqlite/src/lib/adapter.integration.test.ts'
+        run: |
+          cd packages/data-table-sqlite
+          pnpm test src/lib/adapter.integration.test.ts
 
   file_storage_unit:
     name: File Storage Unit and Build
@@ -565,4 +575,6 @@ jobs:
           FILE_STORAGE_S3_ACCESS_KEY_ID: test
           FILE_STORAGE_S3_SECRET_ACCESS_KEY: test
           FILE_STORAGE_S3_FORCE_PATH_STYLE: '1'
-        run: node --disable-warning=ExperimentalWarning --test './packages/file-storage-s3/src/lib/s3.integration.test.ts'
+        run: |
+          cd packages/file-storage-s3
+          pnpm test src/lib/s3.integration.test.ts

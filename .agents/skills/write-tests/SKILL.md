@@ -39,6 +39,12 @@ import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 ```
 
+Remix test package script:
+
+```json
+"test": "remix-test"
+```
+
 Remix test imports:
 
 ```ts

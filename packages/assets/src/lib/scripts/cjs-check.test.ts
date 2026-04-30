@@ -1,5 +1,5 @@
-import { describe, it } from 'node:test'
-import assert from 'node:assert/strict'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import { transformSync } from 'oxc-transform'
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
 
