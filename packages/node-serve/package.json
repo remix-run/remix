@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/node-serve",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Build high-performance Fetch API servers for Node.js",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {

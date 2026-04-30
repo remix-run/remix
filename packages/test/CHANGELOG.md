@@ -1,3 +1,23 @@
+## v0.3.0
+
+### Minor Changes
+
+- Add `FakeTimers#advanceAsync(ms)` to `t.useFakeTimers()`. Like `advance`, it walks pending timers in time order and fires them, but yields to microtasks between each firing so promise continuations (and any timers they schedule) can settle before the next firing is processed. Use it when a fake-timer-driven callback awaits work that itself depends on the fake clock.
+
+- Accept arrays for `glob.{test,browser,e2e,exclude}`, `project`, `type`, and `coverage.{include,exclude}` config fields
+
+  - The matching CLI flags (`--glob.test`, `--project`, `--type`, etc.) can be repeated
+  - Positional arguments after `remix-test` now collect into `glob.test`, so `remix-test "src/**/*.test.ts" "tests/**/*.test.tsx"` works.
+  - `type`'s default is now `["server", "browser", "e2e"]` instead of `"server,browser,e2e"`.
+
+- Include the total number of test files/suites in the end-of-run summary for all test reporters
+
+### Patch Changes
+
+- Load Playwright only when browser or E2E tests run, allowing test help and server-only test runs without Playwright installed. Browser and E2E test runs now report a clearer error when Playwright is missing.
+
+- Run server and E2E test files in forked child processes by default, add `pool: 'threads'`/`--pool threads` to preserve the previous worker-thread behavior, and clean up leaked test worker resources after results are reported.
+
 ## v0.2.0
 
 ### Minor Changes

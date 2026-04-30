@@ -2,6 +2,14 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.1
+
+### Patch Changes
+
+- Improved runtime rendering performance by reducing child normalization, keyed reconciliation, mixin lifecycle, scheduler phase, and host insertion overhead.
+
+- Stripped `<!DOCTYPE>` markup from server and client frame responses before rendering frame content.
+
 ## v0.1.0
 
 ### Minor Changes

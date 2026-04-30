@@ -2,6 +2,37 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `createAssetServer()` now requires a `basePath` option, and `fileMap` URL patterns are now relative to that base path.
+
+  ```ts
+  // Before:
+  createAssetServer({
+    fileMap: {
+      '/assets/app/*path': 'app/*path',
+      '/assets/npm/*path': 'node_modules/*path',
+    },
+    allow: ['app/**', 'node_modules/**'],
+  })
+
+  // After:
+  createAssetServer({
+    basePath: '/assets',
+    fileMap: {
+      '/app/*path': 'app/*path',
+      '/npm/*path': 'node_modules/*path',
+    },
+    allow: ['app/**', 'node_modules/**'],
+  })
+  ```
+
+### Patch Changes
+
+- The `@oxc-project/runtime` package which provides helpers for generated code targeting older browsers is now served automatically by the asset server and doesn't need to be manually installed.
+
 ## v0.2.0
 
 ### Minor Changes

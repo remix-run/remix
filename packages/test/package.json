@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/test",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "A test framework for JavaScript and TypeScript projects",
   "author": "Shopify Inc.",
   "license": "MIT",

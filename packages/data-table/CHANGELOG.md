@@ -2,6 +2,12 @@
 
 This is the changelog for [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.1
+
+### Patch Changes
+
+- Clarify the package description to describe general JavaScript usage instead of Remix-specific usage.
+
 ## v0.2.0
 
 ### Minor Changes
