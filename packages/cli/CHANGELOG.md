@@ -2,6 +2,17 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.0
+
+### Minor Changes
+
+- Use `remix/node-serve` as the default server in new apps created with `remix new`.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`test@0.2.1`](https://github.com/remix-run/remix/releases/tag/test@0.2.1)
+
 ## v0.1.0
 
 ### Minor Changes

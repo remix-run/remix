@@ -2,6 +2,15 @@
 
 This is the changelog for [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.1
+
+### Patch Changes
+
+- Normalized native SQLite write metadata and bind values so `node:sqlite`, Bun SQLite, and compatible clients consistently report affected rows and treat `undefined` writes as SQL `NULL`.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.2.1`](https://github.com/remix-run/remix/releases/tag/data-table@0.2.1)
+
 ## v0.4.0
 
 ### Minor Changes

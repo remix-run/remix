@@ -2,6 +2,70 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-beta.0
+
+### Pre-release Changes
+
+- BREAKING CHANGE: Removed the deprecated `remix/component`, `remix/component/jsx-runtime`, `remix/component/jsx-dev-runtime`, and `remix/component/server` package exports. Import the consolidated UI runtime from `remix/ui`, `remix/ui/jsx-runtime`, `remix/ui/jsx-dev-runtime`, and `remix/ui/server` instead.
+
+  Removed `package.json` `bin` commands:
+
+  - `remix-test`
+
+  Added `package.json` `exports`:
+
+  - `remix/node-fetch-server/test` to re-export APIs from `@remix-run/node-fetch-server/test`
+  - `remix/node-serve` to re-export APIs from `@remix-run/node-serve`
+  - `remix/terminal` to re-export APIs from `@remix-run/terminal`
+  - `remix/test/cli` to re-export APIs from `@remix-run/test/cli`
+
+  Added `package.json` `exports` for the consolidated UI runtime:
+
+  - `remix/ui` to re-export APIs from `@remix-run/ui`
+  - `remix/ui/jsx-runtime` to re-export APIs from `@remix-run/ui/jsx-runtime`
+  - `remix/ui/jsx-dev-runtime` to re-export APIs from `@remix-run/ui/jsx-dev-runtime`
+  - `remix/ui/server` to re-export APIs from `@remix-run/ui/server`
+  - `remix/ui/animation` to re-export APIs from `@remix-run/ui/animation`
+  - `remix/ui/accordion` to re-export APIs from `@remix-run/ui/accordion`
+  - `remix/ui/anchor` to re-export APIs from `@remix-run/ui/anchor`
+  - `remix/ui/breadcrumbs` to re-export APIs from `@remix-run/ui/breadcrumbs`
+  - `remix/ui/button` to re-export APIs from `@remix-run/ui/button`
+  - `remix/ui/combobox` to re-export APIs from `@remix-run/ui/combobox`
+  - `remix/ui/glyph` to re-export APIs from `@remix-run/ui/glyph`
+  - `remix/ui/listbox` to re-export APIs from `@remix-run/ui/listbox`
+  - `remix/ui/menu` to re-export APIs from `@remix-run/ui/menu`
+  - `remix/ui/popover` to re-export APIs from `@remix-run/ui/popover`
+  - `remix/ui/scroll-lock` to re-export APIs from `@remix-run/ui/scroll-lock`
+  - `remix/ui/select` to re-export APIs from `@remix-run/ui/select`
+  - `remix/ui/separator` to re-export APIs from `@remix-run/ui/separator`
+  - `remix/ui/theme` to re-export APIs from `@remix-run/ui/theme`
+  - `remix/ui/test` to re-export APIs from `@remix-run/ui/test`
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.3.0`](https://github.com/remix-run/remix/releases/tag/assets@0.3.0)
+  - [`async-context-middleware@0.2.2`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.2.2)
+  - [`auth@0.2.1`](https://github.com/remix-run/remix/releases/tag/auth@0.2.1)
+  - [`auth-middleware@0.1.2`](https://github.com/remix-run/remix/releases/tag/auth-middleware@0.1.2)
+  - [`cli@0.2.0`](https://github.com/remix-run/remix/releases/tag/cli@0.2.0)
+  - [`compression-middleware@0.1.7`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.7)
+  - [`cop-middleware@0.1.2`](https://github.com/remix-run/remix/releases/tag/cop-middleware@0.1.2)
+  - [`cors-middleware@0.1.2`](https://github.com/remix-run/remix/releases/tag/cors-middleware@0.1.2)
+  - [`csrf-middleware@0.1.2`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@0.1.2)
+  - [`data-table@0.2.1`](https://github.com/remix-run/remix/releases/tag/data-table@0.2.1)
+  - [`data-table-mysql@0.3.1`](https://github.com/remix-run/remix/releases/tag/data-table-mysql@0.3.1)
+  - [`data-table-postgres@0.3.1`](https://github.com/remix-run/remix/releases/tag/data-table-postgres@0.3.1)
+  - [`data-table-sqlite@0.4.1`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.4.1)
+  - [`fetch-router@0.18.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.18.2)
+  - [`form-data-middleware@0.2.3`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.2.3)
+  - [`logger-middleware@0.2.1`](https://github.com/remix-run/remix/releases/tag/logger-middleware@0.2.1)
+  - [`method-override-middleware@0.1.7`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@0.1.7)
+  - [`node-fetch-server@0.13.1`](https://github.com/remix-run/remix/releases/tag/node-fetch-server@0.13.1)
+  - [`node-serve@0.1.0`](https://github.com/remix-run/remix/releases/tag/node-serve@0.1.0)
+  - [`session-middleware@0.2.2`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.2.2)
+  - [`static-middleware@0.4.8`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.8)
+  - [`test@0.2.1`](https://github.com/remix-run/remix/releases/tag/test@0.2.1)
+  - [`ui@0.1.1`](https://github.com/remix-run/remix/releases/tag/ui@0.1.1)
+
 ## v3.0.0-alpha.6
 
 ### Pre-release Changes
