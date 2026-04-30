@@ -1971,6 +1971,9 @@ importers:
       esbuild:
         specifier: ^0.25.10
         version: 0.25.12
+      node-html-parser:
+        specifier: ^7.0.2
+        version: 7.0.2
       playwright:
         specifier: 'catalog:'
         version: 1.59.0
