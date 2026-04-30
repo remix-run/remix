@@ -1,26 +1,60 @@
 import { css } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/ui'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
-import { NAV_SECTIONS, PAGES, type ShowcasePageDefinition, isPageActive } from './registry.tsx'
+import type { DocsRegistry, PageDefinition } from './registry.ts'
+import { isPageActive } from './registry.ts'
 import { bodyTextCss, eyebrowTextCss } from './page-primitives.tsx'
-import { routes } from 'config/routes.ts'
+import { routes } from './routes.ts'
+import { ServerPage } from './components.tsx'
 
-export function ExplorerDocument(handle: Handle<{ page: ShowcasePageDefinition }>) {
+export type DocsViewProps = {
+  page: PageDefinition
+  registry: DocsRegistry
+  versions: { version: string; crawl: boolean }[]
+  activeVersion?: string
+  children?: RemixNode | RemixNode[]
+}
+
+export function DocsDocument(handle: Handle<DocsViewProps>) {
   return () => {
-    let { page } = handle.props
+    let { page, registry, versions, activeVersion, children } = handle.props
+    let apiName = page.docFile?.name
+    let slug = page.docFile?.urlPath
     return (
-      <html>
+      <html lang="en">
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
+          {activeVersion != null ? (
+            <>
+              <meta name="robots" content="noindex,nofollow" />
+              <meta name="googlebot" content="noindex,nofollow" />
+            </>
+          ) : null}
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
           <link
             rel="stylesheet"
             href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
           />
-          <script async type="module" src="/assets/entry.js" />
-          <title>{`${page.title} | Remix UI Demo`}</title>
+          <title>{`${page.title} | Remix API Documentation`}</title>
+          {slug ? (
+            <link
+              rel="alternate"
+              type="text/markdown"
+              href={routes.markdown.href({ version: activeVersion, slug })}
+              title={`Markdown docs for ${apiName}`}
+            />
+          ) : null}
+          {/* <link
+            href={routes.assets.href({ version: activeVersion, asset: 'docs.css' })}
+            rel="stylesheet"
+          /> */}
+          <script
+            async
+            type="module"
+            src={routes.assets.href({ version: activeVersion, asset: 'entry.js' })}
+          />
           <RMX_01 />
         </head>
         <body mix={bodyCss}>
@@ -28,14 +62,19 @@ export function ExplorerDocument(handle: Handle<{ page: ShowcasePageDefinition }
           <div mix={shellCss}>
             <aside mix={sidebarFrameCss}>
               <div mix={sidebarStickyCss}>
-                <Sidebar currentPath={page.path} />
+                <Sidebar
+                  registry={registry}
+                  currentPath={page.path}
+                  versions={versions}
+                  activeVersion={activeVersion}
+                />
               </div>
             </aside>
 
             <main mix={mainCss}>
               <div mix={pageWrapCss}>
                 <PageHeader page={page} />
-                {page.render()}
+                {children}
               </div>
             </main>
           </div>
@@ -45,24 +84,32 @@ export function ExplorerDocument(handle: Handle<{ page: ShowcasePageDefinition }
   }
 }
 
-function Sidebar(handle: Handle<{ currentPath: string }>) {
+function Sidebar(
+  handle: Handle<{
+    registry: DocsRegistry
+    currentPath: string
+    versions: { version: string; crawl: boolean }[]
+    activeVersion?: string
+  }>,
+) {
   return () => {
-    let { currentPath } = handle.props
+    let { registry, currentPath, versions, activeVersion } = handle.props
     return (
       <div mix={sidebarPanelCss}>
         <div mix={sidebarIntroCss}>
-          <a href={routes.explorer.index.href()}>
-            <RemixLogoLight />
-            <RemixLogoDark />
+          <a href={routes.home.href({ version: undefined })} class="logo">
+            <RemixLogoLight activeVersion={activeVersion} />
+            <RemixLogoDark activeVersion={activeVersion} />
           </a>
+          <VersionSwitcher versions={versions} activeVersion={activeVersion} />
         </div>
 
-        {NAV_SECTIONS.map((section) => (
+        {registry.sections.map((section) => (
           <section key={section.id} mix={sidebarSectionCss}>
             <p mix={sidebarHeadingCss}>{section.label}</p>
             <nav aria-label={`${section.label} pages`} mix={sidebarNavCss}>
               {section.pageIds.map((pageId) => {
-                let navPage = PAGES[pageId]
+                let navPage = registry.pages[pageId]
                 return (
                   <a
                     key={navPage.path}
@@ -82,40 +129,99 @@ function Sidebar(handle: Handle<{ currentPath: string }>) {
   }
 }
 
-function RemixLogoLight() {
+function RemixLogoLight(handle: Handle<{ activeVersion?: string }>) {
+  let { activeVersion } = handle.props
   return () => {
     return (
       <div mix={logoLightCss}>
-        <img src={routes.logoLight.href()} alt="Remix" mix={logoCss} />
+        <img
+          src={routes.assets.href({
+            version: activeVersion,
+            asset: 'remix-wordmark-light-mode.svg',
+          })}
+          alt="Remix"
+          mix={logoCss}
+        />
       </div>
     )
   }
 }
 
-function RemixLogoDark() {
+function RemixLogoDark(handle: Handle<{ activeVersion?: string }>) {
+  let { activeVersion } = handle.props
   return () => {
     return (
       <div mix={logoDarkCss}>
-        <img src={routes.logoDark.href()} alt="Remix" mix={logoCss} />
+        <img
+          src={routes.assets.href({
+            version: activeVersion,
+            asset: 'remix-wordmark-dark-mode.svg',
+          })}
+          alt="Remix"
+          mix={logoCss}
+        />
       </div>
     )
   }
 }
 
-function PageHeader(handle: Handle<{ page: ShowcasePageDefinition }>) {
+function VersionSwitcher(
+  handle: Handle<{
+    versions: { version: string; crawl: boolean }[]
+    activeVersion?: string
+  }>,
+) {
+  return () => {
+    let { versions, activeVersion } = handle.props
+
+    let navVersions = versions
+    if (activeVersion) {
+      let idx = versions.findIndex((v) => v.version === activeVersion)
+      if (idx >= 0) navVersions = versions.slice(idx)
+    }
+
+    if (navVersions.length <= 1) return null
+
+    return (
+      <div mix={versionSwitcherCss} aria-label="Version">
+        {navVersions.map((v) => {
+          let latest =
+            (versions.length === 0 || v.version === versions[0]?.version) && !activeVersion
+          let active = v.version === activeVersion || latest
+          let href = routes.home.href({ version: !latest ? v.version : undefined })
+          return (
+            <a
+              key={v.version}
+              href={href}
+              rel={!latest && !v.crawl ? 'nofollow' : undefined}
+              mix={active ? [versionPillCss, versionPillActiveCss] : versionPillCss}
+            >
+              {v.version}
+              {latest ? ' (latest)' : null}
+            </a>
+          )
+        })}
+      </div>
+    )
+  }
+}
+
+function PageHeader(handle: Handle<{ page: PageDefinition }>) {
   return () => {
     let { page } = handle.props
     return (
       <header mix={pageHeaderCss}>
         <p mix={eyebrowTextCss}>{page.eyebrow}</p>
-        <h2 mix={pageTitleCss}>{page.title}</h2>
-        <p mix={[bodyTextCss, pageDescriptionCss]}>{page.description}</p>
+        {!page.docFile ? <h2 mix={pageTitleCss}>{page.title}</h2> : null}
+        {page.description ? (
+          <p mix={[bodyTextCss, pageDescriptionCss]}>{page.description}</p>
+        ) : null}
       </header>
     )
   }
 }
 
-function getNavItemMix(page: ShowcasePageDefinition, currentPath: string) {
+function getNavItemMix(page: PageDefinition, currentPath: string) {
   return isPageActive(page, currentPath) ? [navItemCss, navItemActiveCss] : navItemCss
 }
 
@@ -241,6 +347,36 @@ const navItemCss = css({
 })
 
 const navItemActiveCss = css({
+  backgroundColor: theme.surface.lvl0,
+  color: theme.colors.text.primary,
+  boxShadow: `inset 0 0 0 1px ${theme.colors.border.subtle}`,
+})
+
+const versionSwitcherCss = css({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: theme.space.xs,
+  paddingTop: theme.space.xs,
+})
+
+const versionPillCss = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  paddingInline: theme.space.sm,
+  minHeight: theme.control.height.sm,
+  borderRadius: theme.radius.full,
+  backgroundColor: theme.surface.lvl1,
+  color: theme.colors.text.secondary,
+  fontFamily: theme.fontFamily.mono,
+  fontSize: theme.fontSize.xxs,
+  textDecoration: 'none',
+  '&:hover': {
+    backgroundColor: theme.surface.lvl0,
+    color: theme.colors.text.primary,
+  },
+})
+
+const versionPillActiveCss = css({
   backgroundColor: theme.surface.lvl0,
   color: theme.colors.text.primary,
   boxShadow: `inset 0 0 0 1px ${theme.colors.border.subtle}`,
