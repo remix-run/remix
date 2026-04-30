@@ -2,6 +2,7 @@ export { type ClientAddress, type ErrorHandler, type FetchHandler } from './lib/
 export {
   type Server,
   type ServeOptions,
+  type ServeTlsOptions,
   type UwsRequestHandler,
   type UwsRequestHandlerOptions,
   createUwsRequestHandler,

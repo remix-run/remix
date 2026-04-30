@@ -6,6 +6,7 @@ Run Fetch API request handlers on a high-throughput Node.js server powered by [`
 
 - **Fetch API Handlers**: Serve standard [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) to [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) request handlers
 - **uWebSockets.js Transport**: Uses the native uWebSockets.js HTTP server for high-throughput Node.js deployments
+- **HTTPS Support**: Start a TLS server with certificate and key file paths
 - **Managed Server Lifecycle**: Start a server with `serve()`, wait for `server.ready`, and close it with `server.close()`
 - **Existing uWS App Support**: Use `createUwsRequestHandler()` when you already own a uWebSockets.js app
 - **Custom Hostname**: Override the host and protocol used to construct incoming `request.url` values
@@ -74,6 +75,27 @@ let server = serve(handler, {
 await server.ready
 ```
 
+### HTTPS
+
+Pass `tls` options to start a uWebSockets.js SSL app. `keyFile` and `certFile` are file paths, not PEM contents:
+
+```ts
+import { serve } from 'remix/node-serve'
+
+let server = serve(handler, {
+  port: 443,
+  tls: {
+    keyFile: './certs/server.key',
+    certFile: './certs/server.crt',
+  },
+})
+
+await server.ready
+console.log(`Server running at https://localhost:${server.port}`)
+```
+
+When `tls` is present, `request.url` defaults to the `https:` protocol. You can still set `protocol` explicitly when the public URL differs from the local server transport.
+
 ### Client Information
 
 Handlers that accept a second argument receive the remote client address:
@@ -118,6 +140,23 @@ app.any('/api/*', createUwsRequestHandler(handler))
 
 app.listen(3000, (socket) => {
   if (!socket) throw new Error('Could not listen on port 3000')
+})
+```
+
+For HTTPS with an existing uWebSockets.js app, create the SSL app yourself and pass `protocol: 'https:'` when you create the request handler:
+
+```ts
+import { SSLApp } from 'uWebSockets.js'
+import { createUwsRequestHandler } from 'remix/node-serve'
+
+let app = SSLApp({
+  key_file_name: './certs/server.key',
+  cert_file_name: './certs/server.crt',
+})
+
+app.any('/*', createUwsRequestHandler(handler, { protocol: 'https:' }))
+app.listen(443, (socket) => {
+  if (!socket) throw new Error('Could not listen on port 443')
 })
 ```
 

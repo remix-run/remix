@@ -21,6 +21,25 @@ export interface UwsRequestHandler {
   (res: uWS.HttpResponse, req: uWS.HttpRequest): void
 }
 
+export interface ServeTlsOptions {
+  /**
+   * The path to the private key file to use for TLS.
+   */
+  keyFile: string
+  /**
+   * The path to the certificate file to use for TLS.
+   */
+  certFile: string
+  /**
+   * The path to a CA certificate file to use for TLS.
+   */
+  caFile?: string
+  /**
+   * The passphrase to use when the private key is encrypted.
+   */
+  passphrase?: string
+}
+
 export interface ServeOptions extends UwsRequestHandlerOptions {
   /**
    * The hostname or IP address to listen on. By default uWebSockets.js listens on all interfaces.
@@ -30,6 +49,11 @@ export interface ServeOptions extends UwsRequestHandlerOptions {
    * The TCP port to listen on. Defaults to 3000.
    */
   port?: number
+  /**
+   * TLS options. When provided, `serve()` starts a uWebSockets.js SSL app and incoming request URLs
+   * default to the `https:` protocol.
+   */
+  tls?: ServeTlsOptions
 }
 
 export interface Server {
@@ -162,7 +186,7 @@ export function createUwsRequestHandler(
  * @returns The running uWebSockets.js server
  */
 export function serve(handler: FetchHandler, options?: ServeOptions): Server {
-  let app = uWS.App()
+  let app = createApp(options?.tls)
   let listenSocket: uWS.us_listen_socket | false = false
   let port = 0
 
@@ -178,7 +202,7 @@ export function serve(handler: FetchHandler, options?: ServeOptions): Server {
       resolve()
     }
 
-    app.any('/*', createUwsRequestHandler(handler, options))
+    app.any('/*', createUwsRequestHandler(handler, createServeRequestHandlerOptions(options)))
 
     if (options?.listenHost != null) {
       app.listen(options.listenHost, options.port ?? 3000, onListen)
@@ -201,6 +225,27 @@ export function serve(handler: FetchHandler, options?: ServeOptions): Server {
       app.close()
     },
   }
+}
+
+function createApp(tls: ServeTlsOptions | undefined): uWS.TemplatedApp {
+  if (tls == null) return uWS.App()
+
+  let options: uWS.AppOptions = {
+    key_file_name: tls.keyFile,
+    cert_file_name: tls.certFile,
+  }
+
+  if (tls.caFile != null) options.ca_file_name = tls.caFile
+  if (tls.passphrase != null) options.passphrase = tls.passphrase
+
+  return uWS.SSLApp(options)
+}
+
+function createServeRequestHandlerOptions(
+  options: ServeOptions | undefined,
+): UwsRequestHandlerOptions | undefined {
+  if (options?.tls == null || options.protocol != null) return options
+  return { ...options, protocol: 'https:' }
 }
 
 async function sendUwsResponse(
