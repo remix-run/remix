@@ -12,7 +12,7 @@ import { getTestCommandHelpText } from './test.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
 
-const TEST_COMMAND_HELP_TEXT = getTestCommandHelpText()
+const TEST_COMMAND_HELP_TEXT = await getTestCommandHelpText()
 
 describe('test command', () => {
   it('prints test command help', async () => {

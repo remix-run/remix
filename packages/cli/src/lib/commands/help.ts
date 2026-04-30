@@ -1,18 +1,7 @@
 import * as process from 'node:process'
 
-import { getCompletionCommandHelpText } from './completion.ts'
 import { renderCliError, toCliError, unknownHelpTopic } from '../errors.ts'
 import { formatHelpText } from '../help-text.ts'
-import { getDoctorCommandHelpText } from './doctor.ts'
-import { getNewCommandHelpText } from './new.ts'
-import { getRoutesCommandHelpText } from './routes.ts'
-import {
-  getSkillsCommandHelpText,
-  getSkillsInstallCommandHelpText,
-  getSkillsListCommandHelpText,
-} from './skills.ts'
-import { getTestCommandHelpText } from './test.ts'
-import { getVersionCommandHelpText } from './version.ts'
 
 export async function runHelpCommand(argv: string[]): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
@@ -21,7 +10,7 @@ export async function runHelpCommand(argv: string[]): Promise<number> {
   }
 
   try {
-    process.stdout.write(getCommandHelpText(argv))
+    process.stdout.write(await getCommandHelpText(argv))
     return 0
   } catch (error) {
     process.stderr.write(
@@ -89,7 +78,7 @@ export function getHelpCommandHelpText(target: NodeJS.WriteStream = process.stdo
   )
 }
 
-function getCommandHelpText(argv: string[]): string {
+async function getCommandHelpText(argv: string[]): Promise<string> {
   if (argv.length === 0) {
     return getCliHelpText()
   }
@@ -101,30 +90,36 @@ function getCommandHelpText(argv: string[]): string {
   }
 
   if (command === 'new' && rest.length === 0) {
+    let { getNewCommandHelpText } = await import('./new.ts')
     return getNewCommandHelpText()
   }
 
   if (command === 'completion' && rest.length === 0) {
+    let { getCompletionCommandHelpText } = await import('./completion.ts')
     return getCompletionCommandHelpText()
   }
 
   if (command === 'doctor' && rest.length === 0) {
+    let { getDoctorCommandHelpText } = await import('./doctor.ts')
     return getDoctorCommandHelpText()
   }
 
   if (command === 'routes' && rest.length === 0) {
+    let { getRoutesCommandHelpText } = await import('./routes.ts')
     return getRoutesCommandHelpText()
   }
 
   if (command === 'skills') {
-    return getSkillsHelpText(rest)
+    return await getSkillsHelpText(rest)
   }
 
   if (command === 'test' && rest.length === 0) {
-    return getTestCommandHelpText()
+    let { getTestCommandHelpText } = await import('./test.ts')
+    return await getTestCommandHelpText()
   }
 
   if (command === 'version' && rest.length === 0) {
+    let { getVersionCommandHelpText } = await import('./version.ts')
     return getVersionCommandHelpText()
   }
 
@@ -135,7 +130,13 @@ function getNestedHelpText(command: string, argv: string[]): string {
   throw unknownHelpTopic(`${command} ${argv.join(' ')}`)
 }
 
-function getSkillsHelpText(argv: string[]): string {
+async function getSkillsHelpText(argv: string[]): Promise<string> {
+  let {
+    getSkillsCommandHelpText,
+    getSkillsInstallCommandHelpText,
+    getSkillsListCommandHelpText,
+  } = await import('./skills.ts')
+
   if (argv.length === 0) {
     return getSkillsCommandHelpText()
   }

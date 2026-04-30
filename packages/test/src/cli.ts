@@ -1,16 +1,16 @@
 import * as fsp from 'node:fs/promises'
 import type * as http from 'node:http'
 import * as path from 'node:path'
+import type * as browserTestRunner from './lib/runner-browser.ts'
 import {
   getRemixTestHelpText,
   IS_RUNNING_FROM_SRC,
   loadConfig,
   type ResolvedRemixTestConfig,
 } from './lib/config.ts'
+import type * as playwrightSupport from './lib/playwright.ts'
 import { generateCombinedCoverageReport } from './lib/coverage.ts'
-import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
 import { createReporter } from './lib/reporters/index.ts'
-import { runBrowserTests } from './lib/runner-browser.ts'
 import { runServerTests } from './lib/runner.ts'
 import { createWatcher } from './lib/watcher.ts'
 import { importModule } from './lib/import-module.ts'
@@ -20,10 +20,15 @@ import { isMainThread } from 'node:worker_threads'
 
 export { getRemixTestHelpText }
 
+const MISSING_PLAYWRIGHT_MESSAGE =
+  'Playwright is required to run browser and E2E tests. Install it with `npm i -D playwright`.'
+
 export interface RunRemixTestOptions {
   argv?: string[]
   cwd?: string
 }
+
+type RunBrowserTests = typeof browserTestRunner.runBrowserTests
 
 interface DiscoveredTests {
   files: string[]
@@ -157,11 +162,6 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
         browserPort = result.port
       }
 
-      let playwrightConfig =
-        config.playwrightConfig == null || typeof config.playwrightConfig === 'string'
-          ? await loadPlaywrightConfig(config.playwrightConfig, cwd)
-          : config.playwrightConfig
-
       let reporter = createReporter(config.reporter)
       let startTime = performance.now()
 
@@ -195,7 +195,15 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
 
       // Run browser/e2e tests for all browsers configured by the user
       if (browserFiles.length > 0 || e2eFiles.length > 0) {
+        let { loadPlaywrightConfig, resolveProjects } = await importPlaywrightSupport()
+        let runBrowserTests =
+          browserFiles.length > 0 ? (await importBrowserTestRunner()).runBrowserTests : undefined
+        let playwrightConfig =
+          config.playwrightConfig == null || typeof config.playwrightConfig === 'string'
+            ? await loadPlaywrightConfig(config.playwrightConfig, cwd)
+            : config.playwrightConfig
         let projects = resolveProjects(playwrightConfig)
+
         if (config.project) {
           let projectNames = config.project.split(',').map((project) => project.trim())
           projects = projects.filter(
@@ -206,7 +214,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
           }
         }
 
-        let lastBrowserResult: Awaited<ReturnType<typeof runBrowserTests>> | null = null
+        let lastBrowserResult: Awaited<ReturnType<RunBrowserTests>> | null = null
 
         for (let project of projects) {
           reporter.onSectionStart(`\nRunning tests for project \`${project.name}\`:`)
@@ -223,7 +231,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
           }
 
           let [browserResult, e2eResult] = await Promise.all([
-            browserFiles.length > 0
+            runBrowserTests != null
               ? runBrowserTests({
                   baseUrl: `http://localhost:${browserPort}`,
                   console: config.browser?.echo,
@@ -312,6 +320,42 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
   }
 
   return await runPromise
+}
+
+async function importPlaywrightSupport(): Promise<typeof playwrightSupport> {
+  try {
+    return await import('./lib/playwright.ts')
+  } catch (error) {
+    throw toPlaywrightImportError(error)
+  }
+}
+
+async function importBrowserTestRunner(): Promise<typeof browserTestRunner> {
+  try {
+    return await import('./lib/runner-browser.ts')
+  } catch (error) {
+    throw toPlaywrightImportError(error)
+  }
+}
+
+function toPlaywrightImportError(error: unknown): unknown {
+  return isMissingPlaywrightImport(error) ? new Error(MISSING_PLAYWRIGHT_MESSAGE) : error
+}
+
+function isMissingPlaywrightImport(error: unknown): boolean {
+  if (!isRecord(error) || typeof error.message !== 'string') {
+    return false
+  }
+
+  return (
+    (error.code === 'ERR_MODULE_NOT_FOUND' || error.code === 'MODULE_NOT_FOUND') &&
+    (error.message.includes("Cannot find package 'playwright'") ||
+      error.message.includes("Cannot find module 'playwright'"))
+  )
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
 }
 
 async function resolveCwd(cwd: string): Promise<string> {
