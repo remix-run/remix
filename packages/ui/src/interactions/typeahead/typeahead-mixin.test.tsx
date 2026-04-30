@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, describe, it } from '@remix-run/test'
 
 import { createRoot, type RemixNode } from '@remix-run/ui'
 
@@ -74,8 +75,6 @@ afterEach(() => {
 
   roots = []
   document.body.innerHTML = ''
-  vi.useRealTimers()
-  vi.restoreAllMocks()
 })
 
 describe('itemMatchesSearchText', () => {
@@ -176,8 +175,8 @@ describe('hiddenTypeahead', () => {
     expect(calls).toEqual(['r', 're', 'r', '', 'a'])
   })
 
-  it('clears the query after the timeout so the next key starts a new search', async () => {
-    vi.useFakeTimers()
+  it('clears the query after the timeout so the next key starts a new search', async (t) => {
+    let timers = t.useFakeTimers()
 
     let calls: string[] = []
     let { container, root } = renderTypeahead((text) => {
@@ -188,7 +187,7 @@ describe('hiddenTypeahead', () => {
     key(scope, 'r')
     await settle(root)
 
-    await vi.advanceTimersByTimeAsync(typeaheadTimeoutMs + 1)
+    await timers.advanceAsync(typeaheadTimeoutMs + 1)
     await settle(root)
 
     key(scope, 'e')

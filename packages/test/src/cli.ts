@@ -1,16 +1,16 @@
 import * as fsp from 'node:fs/promises'
 import type * as http from 'node:http'
 import * as path from 'node:path'
+import type * as browserTestRunner from './lib/runner-browser.ts'
 import {
   getRemixTestHelpText,
   IS_RUNNING_FROM_SRC,
   loadConfig,
   type ResolvedRemixTestConfig,
 } from './lib/config.ts'
+import type * as playwrightSupport from './lib/playwright.ts'
 import { generateCombinedCoverageReport } from './lib/coverage.ts'
-import { loadPlaywrightConfig, resolveProjects } from './lib/playwright.ts'
 import { createReporter } from './lib/reporters/index.ts'
-import { runBrowserTests } from './lib/runner-browser.ts'
 import { runServerTests } from './lib/runner.ts'
 import { createWatcher } from './lib/watcher.ts'
 import { importModule } from './lib/import-module.ts'
@@ -20,10 +20,15 @@ import { isMainThread } from 'node:worker_threads'
 
 export { getRemixTestHelpText }
 
+const MISSING_PLAYWRIGHT_MESSAGE =
+  'Playwright is required to run browser and E2E tests. Install it with `npm i -D playwright`.'
+
 export interface RunRemixTestOptions {
   argv?: string[]
   cwd?: string
 }
+
+type RunBrowserTests = typeof browserTestRunner.runBrowserTests
 
 interface DiscoveredTests {
   files: string[]
@@ -157,11 +162,6 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
         browserPort = result.port
       }
 
-      let playwrightConfig =
-        config.playwrightConfig == null || typeof config.playwrightConfig === 'string'
-          ? await loadPlaywrightConfig(config.playwrightConfig, cwd)
-          : config.playwrightConfig
-
       let reporter = createReporter(config.reporter)
       let startTime = performance.now()
 
@@ -195,18 +195,26 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
 
       // Run browser/e2e tests for all browsers configured by the user
       if (browserFiles.length > 0 || e2eFiles.length > 0) {
+        let { loadPlaywrightConfig, resolveProjects } = await importPlaywrightSupport()
+        let runBrowserTests =
+          browserFiles.length > 0 ? (await importBrowserTestRunner()).runBrowserTests : undefined
+        let playwrightConfig =
+          config.playwrightConfig == null || typeof config.playwrightConfig === 'string'
+            ? await loadPlaywrightConfig(config.playwrightConfig, cwd)
+            : config.playwrightConfig
         let projects = resolveProjects(playwrightConfig)
+
         if (config.project) {
-          let projectNames = config.project.split(',').map((project) => project.trim())
-          projects = projects.filter(
-            (project) => project.name && projectNames.includes(project.name),
-          )
+          let projectNames = new Set(config.project)
+          projects = projects.filter((project) => project.name && projectNames.has(project.name))
           if (projects.length === 0) {
-            throw new Error(`No playwright projects found with name(s) "${config.project}"`)
+            throw new Error(
+              `No playwright projects found with name(s) "${config.project.join(', ')}"`,
+            )
           }
         }
 
-        let lastBrowserResult: Awaited<ReturnType<typeof runBrowserTests>> | null = null
+        let lastBrowserResult: Awaited<ReturnType<RunBrowserTests>> | null = null
 
         for (let project of projects) {
           reporter.onSectionStart(`\nRunning tests for project \`${project.name}\`:`)
@@ -223,7 +231,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
           }
 
           let [browserResult, e2eResult] = await Promise.all([
-            browserFiles.length > 0
+            runBrowserTests != null
               ? runBrowserTests({
                   baseUrl: `http://localhost:${browserPort}`,
                   console: config.browser?.echo,
@@ -314,6 +322,42 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
   return await runPromise
 }
 
+async function importPlaywrightSupport(): Promise<typeof playwrightSupport> {
+  try {
+    return await import('./lib/playwright.ts')
+  } catch (error) {
+    throw toPlaywrightImportError(error)
+  }
+}
+
+async function importBrowserTestRunner(): Promise<typeof browserTestRunner> {
+  try {
+    return await import('./lib/runner-browser.ts')
+  } catch (error) {
+    throw toPlaywrightImportError(error)
+  }
+}
+
+function toPlaywrightImportError(error: unknown): unknown {
+  return isMissingPlaywrightImport(error) ? new Error(MISSING_PLAYWRIGHT_MESSAGE) : error
+}
+
+function isMissingPlaywrightImport(error: unknown): boolean {
+  if (!isRecord(error) || typeof error.message !== 'string') {
+    return false
+  }
+
+  return (
+    (error.code === 'ERR_MODULE_NOT_FOUND' || error.code === 'MODULE_NOT_FOUND') &&
+    (error.message.includes("Cannot find package 'playwright'") ||
+      error.message.includes("Cannot find module 'playwright'"))
+  )
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
 async function resolveCwd(cwd: string): Promise<string> {
   try {
     return await fsp.realpath(cwd)
@@ -329,13 +373,13 @@ async function discoverTests(
   let files = await findFiles(config.glob.test, config.glob.exclude, cwd)
 
   if (files.length === 0) {
-    console.log(`No test files found matching pattern: ${config.glob.test}`)
+    console.log(`No test files found matching pattern: ${config.glob.test.join(', ')}`)
     return null
   }
 
   let browserSet = new Set(await findFiles(config.glob.browser, config.glob.exclude, cwd))
   let e2eSet = new Set(await findFiles(config.glob.e2e, config.glob.exclude, cwd))
-  let types = new Set(config.type.split(','))
+  let types = new Set(config.type)
   let browserFiles = types.has('browser') ? files.filter((f) => browserSet.has(f)) : []
   let e2eFiles = types.has('e2e') ? files.filter((file) => e2eSet.has(file)) : []
   let serverFiles = types.has('server')
@@ -344,7 +388,7 @@ async function discoverTests(
   let totalFiles = browserFiles.length + serverFiles.length + e2eFiles.length
 
   if (totalFiles === 0) {
-    console.log(`No test files remain after filtering for type ${config.type}`)
+    console.log(`No test files remain after filtering for type ${config.type.join(', ')}`)
     return null
   }
 
@@ -360,8 +404,12 @@ async function discoverTests(
   }
 }
 
-async function findFiles(pattern: string, excludePattern: string, cwd: string): Promise<string[]> {
-  let files: string[] = []
+async function findFiles(
+  patterns: string[],
+  excludePatterns: string[],
+  cwd: string,
+): Promise<string[]> {
+  let files = new Set<string>()
 
   if (IS_BUN) {
     // Bun's `fs.promises.glob` follows symlinks and doesn't prune traversal
@@ -369,18 +417,31 @@ async function findFiles(pattern: string, excludePattern: string, cwd: string): 
     // Use Bun's native Glob, which defaults to `followSymlinks: false`.
     // @ts-expect-error — bun module is only resolvable under the Bun runtime
     let { Glob } = await import('bun')
-    let glob = new Glob(pattern)
-    let excludeGlob = new Glob(excludePattern)
-    for await (let file of glob.scan({ cwd, absolute: true })) {
-      if (!excludeGlob.match(path.relative(cwd, file))) {
-        files.push(file)
+    let excludeGlobs = excludePatterns.map((p) => new Glob(p))
+    for (let pattern of patterns) {
+      let glob = new Glob(pattern)
+      for await (let file of glob.scan({ cwd, absolute: true })) {
+        let rel = toPosix(path.relative(cwd, file))
+        if (!excludeGlobs.some((eg: { match: (s: string) => boolean }) => eg.match(rel))) {
+          files.add(toPosix(file))
+        }
       }
     }
-    return files
+    return [...files]
   }
 
-  for await (let file of fsp.glob(pattern, { cwd, exclude: [excludePattern] })) {
-    files.push(path.resolve(cwd, file))
+  for (let pattern of patterns) {
+    for await (let file of fsp.glob(pattern, { cwd, exclude: excludePatterns })) {
+      files.add(toPosix(path.resolve(cwd, file)))
+    }
   }
-  return files
+  return [...files]
+}
+
+// Normalize discovered paths so set membership across the test/browser/e2e
+// `findFiles` calls is byte-stable on every platform. Node accepts forward
+// slashes for filesystem operations on Windows, so downstream `fs.readFile`
+// etc. work without further conversion.
+function toPosix(p: string): string {
+  return path.sep === '/' ? p : p.replace(/\\/g, '/')
 }

@@ -80,6 +80,7 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [mime](packages/mime): Utilities for working with MIME types
 - [multipart-parser](packages/multipart-parser): A fast, efficient parser for multipart streams in any JavaScript environment
 - [node-fetch-server](packages/node-fetch-server): Build servers for Node.js using the web fetch API
+- [node-serve](packages/node-serve): Build high-performance Fetch API servers for Node.js
 - [remix](packages/remix): The Remix web framework
 - [response](packages/response): Response helpers for the web Fetch API
 - [route-pattern](packages/route-pattern): Match and generate URLs with strong typing
@@ -95,7 +96,7 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 
 ## Installation
 
-To try the current Remix alpha, install the `next` dist-tag:
+To try the current Remix beta, install the `next` dist-tag:
 
 ```sh
 npm install remix@next

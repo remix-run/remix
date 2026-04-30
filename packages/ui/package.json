@@ -181,13 +181,12 @@
     }
   },
   "devDependencies": {
+    "@remix-run/assert": "workspace:*",
+    "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
-    "@vitest/browser": "^3.2.4",
-    "@vitest/coverage-v8": "^3.2.4",
     "@typescript/native-preview": "catalog:",
     "playwright": "catalog:",
-    "typescript": "^5.9.3",
-    "vitest": "^3.2.4"
+    "typescript": "^5.9.3"
   },
   "dependencies": {
     "@types/dom-navigation": "^1.0.7"
@@ -198,9 +197,9 @@
     "lint": "pnpm -w exec oxlint packages/ui -A all --quiet",
     "lint:fix": "pnpm -w exec oxlint packages/ui -A all --fix --quiet",
     "prepublishOnly": "pnpm run build",
-    "test": "vitest run",
-    "test:coverage": "vitest run --coverage",
-    "test:watch": "vitest",
+    "test": "remix-test",
+    "test:coverage": "remix-test --coverage",
+    "test:watch": "remix-test --watch",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [

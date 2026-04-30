@@ -1,4 +1,5 @@
-import { describe, it, expect, beforeEach, afterEach } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, beforeEach, describe, it } from '@remix-run/test'
 import { createDocumentState } from '../runtime/document-state.ts'
 
 describe('document-state', () => {

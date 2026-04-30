@@ -185,6 +185,10 @@ function runInIframe(testFile: string): Promise<FileResults> {
   return new Promise((resolve) => {
     let iframe = document.createElement('iframe')
     iframe.src = `/iframe?file=${encodeURIComponent(testFile)}`
+    // Make the iframe as big so we don't get unintentional scrolling in test UIs
+    let parentBody = iframe.contentWindow?.document.body
+    iframe.width = Math.max(parentBody?.scrollWidth ?? 0, 800).toString()
+    iframe.height = Math.max(Math.round((parentBody?.scrollHeight ?? 0) / 2), 400).toString()
     document.body.appendChild(iframe)
 
     function onMessage(event: MessageEvent) {

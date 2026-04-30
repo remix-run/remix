@@ -29,6 +29,8 @@ type RemixRunPackage = {
   packageJsonPath: string
   exports: ExportEntry[]
   bins: BinEntry[]
+  peerDependencies: Record<string, string>
+  peerDependenciesMeta: Record<string, { optional?: boolean }>
 }
 
 type BinEntry = {
@@ -101,6 +103,8 @@ async function getRemixRunPackages() {
       packageJsonPath,
       exports: [],
       bins,
+      peerDependencies: packageJson.peerDependencies ?? {},
+      peerDependenciesMeta: packageJson.peerDependenciesMeta ?? {},
     }
     remixRunPackages.push(remixRunPackage)
 
@@ -259,6 +263,39 @@ async function updateRemixPackage() {
 
   for (let packageInfo of remixRunPackages) {
     remixPackageJson.dependencies[packageInfo.name] = 'workspace:^'
+  }
+
+  // Lift peerDependencies from sub-packages to the umbrella package, preserving
+  // optional flags from peerDependenciesMeta. A peer is treated as optional in
+  // the umbrella if any sub-package declares it optional, since users of the
+  // umbrella typically only consume a subset of sub-packages.
+  let liftedPeerDeps: Record<string, string> = {}
+  let liftedPeerDepsMeta: Record<string, { optional?: boolean }> = {}
+  for (let packageInfo of remixRunPackages) {
+    for (let [name, version] of Object.entries(packageInfo.peerDependencies)) {
+      let existingVersion = liftedPeerDeps[name]
+      if (existingVersion !== undefined && existingVersion !== version) {
+        throw new Error(
+          `Conflicting peerDependency version for "${name}": ${existingVersion} vs ${version}`,
+        )
+      }
+      liftedPeerDeps[name] = version
+      let optional = packageInfo.peerDependenciesMeta[name]?.optional
+      if (optional) {
+        liftedPeerDepsMeta[name] = { optional: true }
+      }
+    }
+  }
+  if (Object.keys(liftedPeerDeps).length > 0) {
+    remixPackageJson.peerDependencies = liftedPeerDeps
+    if (Object.keys(liftedPeerDepsMeta).length > 0) {
+      remixPackageJson.peerDependenciesMeta = liftedPeerDepsMeta
+    } else {
+      delete remixPackageJson.peerDependenciesMeta
+    }
+  } else {
+    delete remixPackageJson.peerDependencies
+    delete remixPackageJson.peerDependenciesMeta
   }
 
   await fs.writeFile(

@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, beforeEach, describe, it, mock, type FakeTimers } from '@remix-run/test'
 
 import { createRoot, type RemixNode } from '@remix-run/ui'
 
@@ -64,7 +65,7 @@ function getOptionByText(container: HTMLElement, text: string) {
 }
 
 function stubScrollIntoView(node: HTMLElement) {
-  let spy = vi.fn()
+  let spy = mock.fn()
 
   Object.defineProperty(node, 'scrollIntoView', {
     configurable: true,
@@ -154,13 +155,15 @@ async function settleFrames(root: ReturnType<typeof createRoot>) {
   await settle(root)
 }
 
+let timers!: FakeTimers
+
 async function finishSelectionFlash(root: ReturnType<typeof createRoot>) {
-  await vi.advanceTimersByTimeAsync(flashDurationMs)
+  await timers.advanceAsync(flashDurationMs)
   await settle(root)
 }
 
 async function finishInputCommit(root: ReturnType<typeof createRoot>) {
-  await vi.advanceTimersByTimeAsync(inputCommitDelayMs)
+  await timers.advanceAsync(inputCommitDelayMs)
   await settle(root)
 }
 
@@ -171,15 +174,16 @@ async function finishCloseTransition(surface: HTMLElement) {
   await Promise.resolve()
 }
 
+let scrollIntoViewSpy: ReturnType<typeof mock.method>
+
 beforeEach(() => {
   document.body.removeAttribute('style')
   document.documentElement.removeAttribute('style')
-  vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {})
+  scrollIntoViewSpy = mock.method(HTMLElement.prototype, 'scrollIntoView', () => {})
 })
 
 afterEach(() => {
-  vi.useRealTimers()
-  vi.restoreAllMocks()
+  scrollIntoViewSpy.mock.restore!()
   for (let root of roots) {
     root.render(null)
     root.flush()
@@ -503,8 +507,8 @@ describe('Combobox', () => {
     expect(hiddenInput.value).toBe('')
   })
 
-  it('Enter selects the active option, flashes it, then closes the popover and emits onComboboxChange', async () => {
-    vi.useFakeTimers()
+  it('Enter selects the active option, flashes it, then closes the popover and emits onComboboxChange', async (t) => {
+    timers = t.useFakeTimers()
     let changes: ComboboxChangeEvent[] = []
     let { container, root } = renderObservedCombobox(changes)
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
@@ -566,7 +570,7 @@ describe('Combobox', () => {
     expect(changes[0]?.value).toBe('react')
   })
 
-  it('selecting from an untouched input delays the visible input commit until after close', async () => {
+  it('selecting from an untouched input delays the visible input commit until after close', async (t) => {
     let changes: ComboboxChangeEvent[] = []
     let { container, root } = renderObservedCombobox(changes)
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
@@ -577,7 +581,7 @@ describe('Combobox', () => {
     input.focus()
     key(input, 'ArrowDown')
     await settleFrames(root)
-    vi.useFakeTimers()
+    timers = t.useFakeTimers()
 
     expect(input.getAttribute('aria-activedescendant')).toBe(remix.id)
     expect(input.value).toBe('')
@@ -637,8 +641,8 @@ describe('Combobox', () => {
     expect(changes).toHaveLength(0)
   })
 
-  it('selects the input text after menu selection even when the label is already visible', async () => {
-    vi.useFakeTimers()
+  it('selects the input text after menu selection even when the label is already visible', async (t) => {
+    timers = t.useFakeTimers()
     let { container, root } = renderApp(renderCombobox())
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let surface = container.querySelector('[popover]') as HTMLElement
@@ -662,8 +666,8 @@ describe('Combobox', () => {
     expectInputSelection(input)
   })
 
-  it('clears the input selection when arrow navigation starts', async () => {
-    vi.useFakeTimers()
+  it('clears the input selection when arrow navigation starts', async (t) => {
+    timers = t.useFakeTimers()
     let { container, root } = renderApp(renderCombobox())
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let surface = container.querySelector('[popover]') as HTMLElement
@@ -801,8 +805,8 @@ describe('Combobox', () => {
     expect(input.getAttribute('aria-activedescendant')).toBe(null)
   })
 
-  it('pointer selection keeps focus on the input', async () => {
-    vi.useFakeTimers()
+  it('pointer selection keeps focus on the input', async (t) => {
+    timers = t.useFakeTimers()
     let { container, root } = renderApp(renderCombobox())
     let input = container.querySelector('input[type="text"]') as HTMLInputElement
     let hiddenInput = container.querySelector('input[type="hidden"]') as HTMLInputElement

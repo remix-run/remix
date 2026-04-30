@@ -41,13 +41,14 @@ Run tests with the CLI:
 remix test
 ```
 
-By default, `remix test` discovers all files matching `**/*.test{,.e2e}.{ts,tsx}`. Pass a glob as the first positional argument to override:
+By default, `remix test` discovers all files matching `**/*.test{,.e2e}.{ts,tsx}`. Pass one or more globs as positional arguments to override:
 
 ```sh
 remix test "src/**/*.test.ts"
+remix test "src/**/*.test.ts" "tests/**/*.test.tsx"
 ```
 
-Or, you may control via the `glob.test` config field/CLI arg.
+Or, you may control via the `glob.test` config field/CLI arg. Each `glob.*` field accepts a single string or an array of patterns, and `--glob.*` flags can be repeated on the CLI.
 
 If you install `@remix-run/test` directly instead of the umbrella `remix` package, the same runner is available as `remix-test`:
 
@@ -85,9 +86,9 @@ export default {
     enabled: true,
     // Output directory (default: ".coverage")
     dir: '.coverage',
-    // Glob patterns to include/exclude
-    include: ['src/**'],
-    exclude: ['src/**/*.test.ts'],
+    // Glob pattern(s) to include/exclude
+    include: 'src/**',
+    exclude: 'src/**/*.test.ts',
     // Minimum thresholds (%)
     statements: 80,
     lines: 80,
@@ -95,12 +96,13 @@ export default {
     functions: 80,
   },
 
+  // Glob pattern(s) identifying test files
   glob: {
-    // Glob pattern identifying all test files (default: "**/*.test{,.browser,.e2e}.{ts,tsx}")
+    // All test files (default: "**/*.test{,.browser,.e2e}.{ts,tsx}").
     test: '**/*.test{,.browser,.e2e}.ts',
-    // Glob pattern identifying browser test files (default: "**/*.test.browser.{ts,tsx}")
+    // Browser test files (default: "**/*.test.browser.{ts,tsx}")
     browser: '**/*.test.browser.ts',
-    // Glob pattern identifying E2E test files (default: "**/*.test.e2e.{ts,tsx}")
+    // E2E test files (default: "**/*.test.e2e.{ts,tsx}")
     e2e: '**/*.test.e2e.ts',
   },
 
@@ -117,7 +119,7 @@ export default {
     },
   },
 
-  // Comma-separated list of playwright projects to run E2E tests for
+  // Playwright project(s) to run E2E tests for
   project: 'chromium',
 
   // Test reporter ("spec", "files", "tap", "dot")
@@ -126,8 +128,8 @@ export default {
   // Path to a setup module (see Setup section below)
   setup: './test/setup.ts',
 
-  // Comma-separated list of test types to run ("server", "browser", "e2e")
-  type: 'server,browser,e2e',
+  // Test type(s) to run ("server", "browser", "e2e")
+  type: ['server', 'browser', 'e2e'],
 
   // Watch for file changes and re-run
   watch: false,

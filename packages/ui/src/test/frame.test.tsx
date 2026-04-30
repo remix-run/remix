@@ -1,4 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
 import type { Handle } from '../runtime/component.ts'
 import { Frame } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
@@ -69,7 +70,7 @@ describe('run', () => {
 
     document.body.innerHTML = html
 
-    let loadModule = vi.fn().mockResolvedValue(Counter)
+    let loadModule = mock.fn(() => Promise.resolve(Counter))
 
     let frame = run({ loadModule })
     await frame.ready()
@@ -96,7 +97,7 @@ describe('run', () => {
     let html = await drain(renderToStream(<Broken />))
     document.body.innerHTML = html
 
-    let app = run({ loadModule: vi.fn().mockResolvedValue(Broken) })
+    let app = run({ loadModule: mock.fn(() => Promise.resolve(Broken)) })
     let forwarded: unknown
     app.addEventListener('error', (event) => {
       forwarded = (event as ErrorEvent).error
@@ -118,7 +119,7 @@ describe('run', () => {
   it('dispatches ready() rejections to app error listeners', async () => {
     document.body.innerHTML = '<!-- rmx:h:broken --><button>Broken</button>'
 
-    let app = run({ loadModule: vi.fn() })
+    let app = run({ loadModule: mock.fn() })
     let forwarded: unknown
     app.addEventListener('error', (event) => {
       forwarded = event.error
@@ -163,7 +164,7 @@ describe('run', () => {
 
     document.body.innerHTML = html
 
-    let loadModule = vi.fn().mockResolvedValue(Button)
+    let loadModule = mock.fn(() => Promise.resolve(Button))
 
     let frame = run({ loadModule })
     await frame.ready()
@@ -221,7 +222,7 @@ describe('run', () => {
     document.body.innerHTML = await renderInitialBody()
 
     let app = run({
-      loadModule: vi.fn().mockResolvedValue(FragmentEntry),
+      loadModule: mock.fn(() => Promise.resolve(FragmentEntry)),
       async resolveFrame(src: string) {
         if (src === '/b') return await renderReloadDocument()
         throw new Error(`Unexpected frame src: ${src}`)
@@ -291,7 +292,7 @@ describe('run', () => {
     document.body.innerHTML = html
 
     let [slowModulePromise, resolveSlowModule] = withResolvers<Function>()
-    let loadModule = vi.fn().mockImplementation((moduleUrl: string, exportName: string) => {
+    let loadModule = mock.fn((moduleUrl: string, exportName: string) => {
       if (moduleUrl === '/js/fast.js' && exportName === 'Fast') return Fast
       if (moduleUrl === '/js/slow.js' && exportName === 'Slow') return slowModulePromise
       throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
@@ -359,7 +360,7 @@ describe('run', () => {
 
     document.body.innerHTML = html
 
-    let loadModule = vi.fn().mockResolvedValue(Card)
+    let loadModule = mock.fn(() => Promise.resolve(Card))
 
     let frame = run({ loadModule })
     await frame.ready()
@@ -422,7 +423,7 @@ describe('run', () => {
     let frameId = getCommentMarkerId(first.value, 'rmx:f:')
     let [lateModulePromise, resolveLateModule] = withResolvers<Function>()
 
-    let loadModule = vi.fn().mockImplementation((moduleUrl: string, exportName: string) => {
+    let loadModule = mock.fn((moduleUrl: string, exportName: string) => {
       if (moduleUrl === '/js/initial.js' && exportName === 'Initial') return Initial
       if (moduleUrl === '/js/late.js' && exportName === 'Late') return lateModulePromise
       throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
@@ -463,7 +464,7 @@ describe('run', () => {
   it('does nothing when no rmx-data script exists', async () => {
     document.body.innerHTML = '<div>No hydration here</div>'
 
-    let loadModule = vi.fn()
+    let loadModule = mock.fn()
 
     let frame = run({ loadModule })
     await frame.ready()
@@ -479,7 +480,7 @@ describe('run', () => {
       <script type="application/json" id="rmx-data">{}</script>
     `
 
-    let loadModule = vi.fn()
+    let loadModule = mock.fn()
 
     let frame = run({ loadModule })
     await frame.ready()
@@ -506,7 +507,7 @@ describe('run', () => {
     let existingSpan = document.querySelector('span')
     expect(existingSpan).toBeTruthy()
 
-    let loadModule = vi.fn().mockResolvedValue(Counter)
+    let loadModule = mock.fn(() => Promise.resolve(Counter))
 
     let frame = run({ loadModule })
     await frame.ready()
@@ -538,7 +539,7 @@ describe('run', () => {
     invariant(h1 && p && nav)
     expect(nav.textContent).toBe('Loading...')
 
-    let frame = run({ loadModule: vi.fn() })
+    let frame = run({ loadModule: mock.fn() })
     await frame.ready()
 
     let second = await chunks.next()
@@ -601,7 +602,7 @@ describe('run', () => {
       </script>
     `
 
-    let loadModule = vi.fn().mockImplementation((moduleUrl: string, exportName: string) => {
+    let loadModule = mock.fn((moduleUrl: string, exportName: string) => {
       if (moduleUrl === '/a.js' && exportName === 'A') return A
       if (moduleUrl === '/b.js' && exportName === 'B') return B
       throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
@@ -646,7 +647,7 @@ describe('run', () => {
       </script>
     `
 
-    let loadModule = vi.fn().mockImplementation((moduleUrl: string, exportName: string) => {
+    let loadModule = mock.fn((moduleUrl: string, exportName: string) => {
       if (moduleUrl === '/a.js' && exportName === 'A') return A
       throw new Error(`Unexpected module request: ${moduleUrl}#${exportName}`)
     })
@@ -1563,7 +1564,7 @@ describe('run', () => {
     document.body.innerHTML = html
 
     let [modulePromise, resolveModule] = withResolvers<Function>()
-    let loadModule = vi.fn().mockImplementation(async () => modulePromise)
+    let loadModule = mock.fn(async () => modulePromise)
     let clientFrame = run({ loadModule })
 
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -1620,7 +1621,7 @@ describe('run', () => {
     expect(document.getElementById('frame')!.textContent).toBe('Loading…')
 
     let clientFrame = run({
-      loadModule: vi.fn().mockResolvedValue(Counter),
+      loadModule: mock.fn(() => Promise.resolve(Counter)),
     })
     await clientFrame.ready()
 
@@ -1679,7 +1680,7 @@ describe('run', () => {
     expect(document.getElementById('fast')!.textContent).toBe('Loading fast…')
     expect(document.getElementById('slow')!.textContent).toBe('Loading slow…')
 
-    let clientFrame = run({ loadModule: vi.fn() })
+    let clientFrame = run({ loadModule: mock.fn() })
     await clientFrame.ready()
 
     // Resolve the fast frame first.
@@ -1728,7 +1729,7 @@ describe('run', () => {
       '"f":{"f1":{"status":"pending","src":"/slow"}}}' +
       '</script>'
 
-    let loadModuleFn = vi.fn().mockImplementation(async () => {
+    let loadModuleFn = mock.fn(async () => {
       let mod = await modulePromise
       moduleLoaded = true
       return mod
@@ -1819,7 +1820,7 @@ describe('run', () => {
     let outerFrameId = getCommentMarkerId(pageFirst.value, 'rmx:f:')
 
     let clientFrame = run({
-      loadModule: vi.fn().mockResolvedValue(Counter),
+      loadModule: mock.fn(() => Promise.resolve(Counter)),
     })
 
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -1904,7 +1905,7 @@ describe('run', () => {
     document.body.innerHTML = pageFirst.value
     let outerFrameId = getCommentMarkerId(pageFirst.value, 'rmx:f:')
 
-    let clientFrame = run({ loadModule: vi.fn() })
+    let clientFrame = run({ loadModule: mock.fn() })
     await clientFrame.ready()
 
     // Page content is visible, outer frame shows fallback.
@@ -2000,7 +2001,7 @@ describe('run', () => {
     document.body.innerHTML = pageHtml
 
     let clientFrame = run({
-      loadModule: vi.fn().mockResolvedValue(ReloadButton),
+      loadModule: mock.fn(() => Promise.resolve(ReloadButton)),
       resolveFrame: renderInner,
     })
 
@@ -2171,7 +2172,7 @@ describe('run', () => {
 
     let html = await drain(renderToStream(<Counter initialCount={2} />))
     let container = document.createElement('div')
-    let consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    let consoleError = mock.method(console, 'error', () => {})
 
     try {
       let root = createRoot(container, {
@@ -2186,11 +2187,13 @@ describe('run', () => {
 
       expect(consoleError).toHaveBeenCalled()
       expect(
-        consoleError.mock.calls.some((call) => String(call[0]).includes('Failed to load module')),
+        consoleError.mock.calls.some((call) =>
+          String(call.arguments[0]).includes('Failed to load module'),
+        ),
       ).toBe(true)
       expect(
         consoleError.mock.calls.some((call) =>
-          call.some((value) =>
+          call.arguments.some((value) =>
             String(value).includes(
               'loadModule is required to hydrate client entries inside <Frame />',
             ),
@@ -2198,7 +2201,7 @@ describe('run', () => {
         ),
       ).toBe(true)
     } finally {
-      consoleError.mockRestore()
+      consoleError.mock.restore!()
     }
   })
 
@@ -2213,7 +2216,7 @@ describe('run', () => {
 
     let html = await drain(renderToStream(<Counter initialCount={3} />))
     let container = document.createElement('div')
-    let consoleError = vi.spyOn(console, 'error').mockImplementation(() => {})
+    let consoleError = mock.method(console, 'error', () => {})
 
     try {
       let root = createRoot(container, {
@@ -2230,11 +2233,11 @@ describe('run', () => {
       expect(consoleError).toHaveBeenCalled()
       expect(
         consoleError.mock.calls.some((call) =>
-          call.some((value) => String(value).includes('is not a function')),
+          call.arguments.some((value) => String(value).includes('is not a function')),
         ),
       ).toBe(true)
     } finally {
-      consoleError.mockRestore()
+      consoleError.mock.restore!()
     }
   })
 
@@ -2366,11 +2369,9 @@ describe('run', () => {
 
     expect(document.querySelectorAll('#outer-fallback')).toHaveLength(1)
 
-    let clientResolveFrame = vi
-      .fn()
-      .mockImplementation(
-        async (src: string) => `<p data-client-resolve="${src}">client resolve ${src}</p>`,
-      )
+    let clientResolveFrame = mock.fn(
+      async (src: string) => `<p data-client-resolve="${src}">client resolve ${src}</p>`,
+    )
 
     let app = run({
       loadModule(moduleUrl, exportName) {

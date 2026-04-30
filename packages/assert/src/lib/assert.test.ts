@@ -80,6 +80,10 @@ describe('assert.deepEqual', () => {
   it('throws for structurally unequal objects', () => {
     nodeAssert.throws(() => assert.deepEqual({ a: 1 }, { a: 2 }), assert.AssertionError)
     nodeAssert.throws(() => assert.deepEqual({ a: 1 }, { a: 1, b: 2 }), assert.AssertionError)
+    nodeAssert.throws(
+      () => assert.deepEqual({ a: undefined }, { b: undefined }),
+      assert.AssertionError,
+    )
   })
 })
 
@@ -87,6 +91,7 @@ describe('assert.notDeepEqual', () => {
   it('passes for objects that differ', () => {
     assert.notDeepEqual({ a: 1 }, { a: 2 })
     assert.notDeepEqual({ a: 1 } as any, { a: '1' })
+    assert.notDeepEqual({ a: undefined }, { b: undefined })
   })
 
   it('throws for deeply strictly equal objects', () => {

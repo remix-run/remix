@@ -189,7 +189,7 @@ const SKILLS_LIST_COMMAND_HELP_TEXT = [
   '',
 ].join('\n')
 
-const TEST_COMMAND_HELP_TEXT = getTestCommandHelpText()
+const TEST_COMMAND_HELP_TEXT = await getTestCommandHelpText()
 
 const VERSION_COMMAND_HELP_TEXT = [
   'Usage:',

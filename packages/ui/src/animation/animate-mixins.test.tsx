@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { describe, it, mock } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import { animateEntrance, animateExit } from './animate-mixins.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -30,10 +31,12 @@ describe('animate entrance/exit mixins', () => {
   })
 
   it('retargets reclaim to natural styles instead of reversing exit animation', async () => {
-    let reverse = vi.fn()
-    let commitStyles = vi.fn()
-    let cancel = vi.fn()
-    let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(
+    let reverse = mock.fn()
+    let commitStyles = mock.fn()
+    let cancel = mock.fn()
+    let animateSpy = mock.method(
+      HTMLElement.prototype,
+      'animate',
       () =>
         ({
           playState: 'running',
@@ -67,12 +70,14 @@ describe('animate entrance/exit mixins', () => {
     expect(commitStyles).toHaveBeenCalledTimes(1)
     expect(cancel).toHaveBeenCalledTimes(1)
     expect(animateSpy).toHaveBeenCalledTimes(2)
-    animateSpy.mockRestore()
+    animateSpy.mock.restore!()
   })
 
   it('does not reverse on initial insert when entrance and exit mixins are both present', () => {
-    let reverse = vi.fn()
-    let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(
+    let reverse = mock.fn()
+    let animateSpy = mock.method(
+      HTMLElement.prototype,
+      'animate',
       () =>
         ({
           playState: 'running',
@@ -97,7 +102,7 @@ describe('animate entrance/exit mixins', () => {
 
     expect(animateSpy).toHaveBeenCalledTimes(1)
     expect(reverse).toHaveBeenCalledTimes(0)
-    animateSpy.mockRestore()
+    animateSpy.mock.restore!()
   })
 
   it('keeps persist behavior after reclaim interruption completes', async () => {
@@ -125,13 +130,15 @@ describe('animate entrance/exit mixins', () => {
   })
 
   it('skips first entrance when initial is false, but animates on reclaimed add', async () => {
-    let animateSpy = vi.spyOn(HTMLElement.prototype, 'animate').mockImplementation(
+    let animateSpy = mock.method(
+      HTMLElement.prototype,
+      'animate',
       () =>
         ({
           playState: 'running',
-          reverse: vi.fn(),
-          commitStyles: vi.fn(),
-          cancel: vi.fn(),
+          reverse: mock.fn(),
+          commitStyles: mock.fn(),
+          cancel: mock.fn(),
           finished: new Promise(() => {}),
         }) as unknown as Animation,
     )
@@ -157,6 +164,6 @@ describe('animate entrance/exit mixins', () => {
     await Promise.resolve()
     expect(animateSpy).toHaveBeenCalledTimes(2)
 
-    animateSpy.mockRestore()
+    animateSpy.mock.restore!()
   })
 })

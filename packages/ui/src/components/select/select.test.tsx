@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, beforeEach, describe, it, mock, type FakeTimers } from '@remix-run/test'
 
 import { createRoot, on, type Handle, type RemixNode } from '@remix-run/ui'
 
@@ -117,23 +118,25 @@ async function finishCloseTransition(surface: HTMLElement) {
   await Promise.resolve()
 }
 
+let timers!: FakeTimers
+let scrollIntoViewSpy: ReturnType<typeof mock.method>
+
 async function finishSelectUpdate(surface: HTMLElement, root: ReturnType<typeof createRoot>) {
-  await vi.advanceTimersByTimeAsync(flashDurationMs)
+  await timers.advanceAsync(flashDurationMs)
   await finishCloseTransition(surface)
   await settle(root)
-  await vi.advanceTimersByTimeAsync(labelDelayMs)
+  await timers.advanceAsync(labelDelayMs)
   await settle(root)
 }
 
 beforeEach(() => {
   document.body.removeAttribute('style')
   document.documentElement.removeAttribute('style')
-  vi.spyOn(HTMLElement.prototype, 'scrollIntoView').mockImplementation(() => {})
+  scrollIntoViewSpy = mock.method(HTMLElement.prototype, 'scrollIntoView', () => {})
 })
 
 afterEach(() => {
-  vi.useRealTimers()
-  vi.restoreAllMocks()
+  scrollIntoViewSpy.mock.restore!()
 
   for (let root of roots) {
     root.render(null)
@@ -160,7 +163,7 @@ describe('Select', () => {
     expect(react.getAttribute('aria-selected')).toBe('true')
   })
 
-  it('supports lower-level composition while keeping defaultLabel before selection settles', async () => {
+  it('supports lower-level composition while keeping defaultLabel before selection settles', async (t) => {
     function SelectValue(handle: Handle) {
       let context = handle.context.get(select.Context)
 
@@ -197,7 +200,7 @@ describe('Select', () => {
 
     await openSelect(container, root)
 
-    vi.useFakeTimers()
+    timers = t.useFakeTimers()
 
     let feature = getOptionByText(container, 'Feature')
     click(feature)
@@ -211,7 +214,7 @@ describe('Select', () => {
     expect(trigger.textContent).toContain('Feature')
   })
 
-  it('commits Option.label to the trigger after the flash, close transition, and label delay', async () => {
+  it('commits Option.label to the trigger after the flash, close transition, and label delay', async (t) => {
     let { container, root } = renderApp(renderSelect())
     let trigger = getTrigger(container)
     let surface = getSurface(container)
@@ -221,7 +224,7 @@ describe('Select', () => {
 
     await openSelect(container, root)
 
-    vi.useFakeTimers()
+    timers = t.useFakeTimers()
 
     let react = getOptionByText(container, 'React')
     click(react)
@@ -415,7 +418,7 @@ describe('Select', () => {
     expect(staging.getAttribute('data-highlighted')).toBe('true')
   })
 
-  it('participates in formdata with hidden input', async () => {
+  it('participates in formdata with hidden input', async (t) => {
     let { container, root } = renderApp(
       <form>
         <Select defaultLabel="Select a framework" name="framework" type="button">
@@ -440,7 +443,7 @@ describe('Select', () => {
 
     await openSelect(container, root)
 
-    vi.useFakeTimers()
+    timers = t.useFakeTimers()
 
     let react = getOptionByText(container, 'React')
     click(react)
@@ -452,7 +455,7 @@ describe('Select', () => {
     expect(hiddenInput.value).toBe('react')
     expect(formData.get('framework')).toBe('react')
   })
-  it('dispatches change event', async () => {
+  it('dispatches change event', async (t) => {
     let changes: SelectChangeEvent[] = []
     let { container, root } = renderApp(
       <div
@@ -468,7 +471,7 @@ describe('Select', () => {
 
     await openSelect(container, root)
 
-    vi.useFakeTimers()
+    timers = t.useFakeTimers()
 
     let react = getOptionByText(container, 'React')
     click(react)
