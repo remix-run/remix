@@ -2,7 +2,12 @@ import type * as http from 'node:http'
 import type * as http2 from 'node:http2'
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
-import { readStream } from './read-stream.ts'
+import { createLazyRequestFactory } from './lazy-request.ts'
+
+// "Internal Server Error"
+const internalServerErrorBody = [
+  73, 110, 116, 101, 114, 110, 97, 108, 32, 83, 101, 114, 118, 101, 114, 32, 69, 114, 114, 111, 114,
+]
 
 /**
  * Options for creating a Node.js request listener.
@@ -67,9 +72,54 @@ export function createRequestListener(
   options?: RequestListenerOptions,
 ): http.RequestListener {
   let onError = options?.onError ?? defaultErrorHandler
+  let createLazyRequest = createLazyRequestFactory(options, createRequest, createHeaders)
+
+  if (handler.length === 0) {
+    let handlerWithoutArgs = handler as () => Response | Promise<Response>
+
+    return async (_req, res) => {
+      let response: Response
+      try {
+        response = await handlerWithoutArgs()
+      } catch (error) {
+        response = await createErrorResponse(onError, error)
+      }
+
+      await sendResponse(res, response)
+    }
+  }
+
+  if (handler.length === 1) {
+    let requestHandler = handler as (request: Request) => Response | Promise<Response>
+
+    return (req, res) => {
+      let request = createLazyRequest(req, res)
+
+      let response: Response | Promise<Response>
+      try {
+        response = requestHandler(request)
+      } catch (error) {
+        void sendErrorResponse(res, onError, error)
+        return
+      }
+
+      if (isPromiseLike(response)) {
+        void response.then(
+          (response) => {
+            void sendResponse(res, response)
+          },
+          (error) => {
+            void sendErrorResponse(res, onError, error)
+          },
+        )
+      } else {
+        void sendResponse(res, response)
+      }
+    }
+  }
 
   return async (req, res) => {
-    let request = createRequest(req, res, options)
+    let request = createLazyRequest(req, res)
     let client = {
       address: req.socket.remoteAddress!,
       family: req.socket.remoteFamily! as ClientAddress['family'],
@@ -80,15 +130,28 @@ export function createRequestListener(
     try {
       response = await handler(request, client)
     } catch (error) {
-      try {
-        response = (await onError(error)) ?? internalServerError()
-      } catch (error) {
-        console.error(`There was an error in the error handler: ${error}`)
-        response = internalServerError()
-      }
+      response = await createErrorResponse(onError, error)
     }
 
     await sendResponse(res, response)
+  }
+}
+
+async function sendErrorResponse(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  onError: ErrorHandler,
+  error: unknown,
+): Promise<void> {
+  let response = await createErrorResponse(onError, error)
+  await sendResponse(res, response)
+}
+
+async function createErrorResponse(onError: ErrorHandler, error: unknown): Promise<Response> {
+  try {
+    return (await onError(error)) ?? internalServerError()
+  } catch (error) {
+    console.error(`There was an error in the error handler: ${error}`)
+    return internalServerError()
   }
 }
 
@@ -98,19 +161,16 @@ function defaultErrorHandler(error: unknown): Response {
 }
 
 function internalServerError(): Response {
-  return new Response(
-    // "Internal Server Error"
-    new Uint8Array([
-      73, 110, 116, 101, 114, 110, 97, 108, 32, 83, 101, 114, 118, 101, 114, 32, 69, 114, 114, 111,
-      114,
-    ]),
-    {
-      status: 500,
-      headers: {
-        'Content-Type': 'text/plain',
-      },
+  return new Response(new Uint8Array(internalServerErrorBody), {
+    status: 500,
+    headers: {
+      'Content-Type': 'text/plain',
     },
-  )
+  })
+}
+
+function isPromiseLike<value>(value: value | PromiseLike<value>): value is PromiseLike<value> {
+  return typeof (value as { then?: unknown }).then === 'function'
 }
 
 /**
@@ -149,7 +209,7 @@ export function createRequest(
   let protocol =
     options?.protocol ?? ('encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:')
   let host = options?.host ?? headers.get('Host') ?? req.headers[':authority'] ?? 'localhost'
-  let url = new URL(req.url!, `${protocol}//${host}`)
+  let url = `${protocol}//${host}${req.url}`
 
   let init: RequestInit = { method, headers, signal: controller.signal }
 
@@ -183,15 +243,14 @@ export function createRequest(
  * @returns A `Headers` object
  */
 export function createHeaders(req: http.IncomingMessage | http2.Http2ServerRequest): Headers {
-  let headers = new Headers()
+  let headers: Record<string, string> = {}
 
-  let rawHeaders = req.rawHeaders
-  for (let i = 0; i < rawHeaders.length; i += 2) {
-    if (rawHeaders[i].startsWith(':')) continue
-    headers.append(rawHeaders[i], rawHeaders[i + 1])
+  for (let [key, value] of Object.entries(req.headers)) {
+    if (key.startsWith(':') || value == null) continue
+    headers[key] = Array.isArray(value) ? value.join(', ') : value
   }
 
-  return headers
+  return new Headers(headers)
 }
 
 /**
@@ -235,12 +294,45 @@ export async function sendResponse(
   }
 
   if (response.body != null && res.req.method !== 'HEAD') {
-    for await (let chunk of readStream(response.body)) {
-      // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
-      if (res.write(chunk) === false) {
-        await new Promise<void>((resolve) => {
-          res.once('drain', resolve)
-        })
+    let reader = response.body.getReader()
+    let first = await reader.read()
+    if (first.done) {
+      reader.releaseLock()
+    } else {
+      let second = await reader.read()
+      if (second.done) {
+        res.end(first.value)
+        return
+      }
+
+      try {
+        // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
+        if (res.write(first.value) === false) {
+          await new Promise<void>((resolve) => {
+            res.once('drain', resolve)
+          })
+        }
+
+        // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
+        if (res.write(second.value) === false) {
+          await new Promise<void>((resolve) => {
+            res.once('drain', resolve)
+          })
+        }
+
+        while (true) {
+          let result = await reader.read()
+          if (result.done) break
+
+          // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
+          if (res.write(result.value) === false) {
+            await new Promise<void>((resolve) => {
+              res.once('drain', resolve)
+            })
+          }
+        }
+      } finally {
+        reader.releaseLock()
       }
     }
   }

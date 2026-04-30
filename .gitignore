@@ -4,6 +4,7 @@ pnpm-publish-summary.json
 reference/
 .coverage/
 .tmp/
+autoresearch-results/
 /demos/tmp/
 /packages/ui/demo/.artifacts/
 *.db
