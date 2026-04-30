@@ -1339,6 +1339,10 @@ importers:
         version: 7.0.0-dev.20251125.1
 
   packages/node-serve:
+    dependencies:
+      uWebSockets.js:
+        specifier: github:uNetworking/uWebSockets.js#v20.66.0
+        version: https://codeload.github.com/uNetworking/uWebSockets.js/tar.gz/a63031f40f76dc2422e8da736c04217053e9db2b
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
@@ -1352,10 +1356,6 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-    optionalDependencies:
-      uWebSockets.js:
-        specifier: github:uNetworking/uWebSockets.js#v20.66.0
-        version: https://codeload.github.com/uNetworking/uWebSockets.js/tar.gz/a63031f40f76dc2422e8da736c04217053e9db2b
 
   packages/remix:
     dependencies:
@@ -8539,8 +8539,7 @@ snapshots:
 
   typescript@5.9.3: {}
 
-  uWebSockets.js@https://codeload.github.com/uNetworking/uWebSockets.js/tar.gz/a63031f40f76dc2422e8da736c04217053e9db2b:
-    optional: true
+  uWebSockets.js@https://codeload.github.com/uNetworking/uWebSockets.js/tar.gz/a63031f40f76dc2422e8da736c04217053e9db2b: {}
 
   uc.micro@2.1.0: {}
 
