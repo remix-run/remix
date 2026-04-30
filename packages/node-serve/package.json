@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/node-serve",
   "version": "0.0.0",
-  "description": "Run fetch handlers on a high-throughput uWebSockets.js server",
+  "description": "Build high-performance Fetch API servers for Node.js",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "repository": {
     "type": "git",
@@ -52,6 +52,7 @@
     "server",
     "fetch",
     "web",
-    "uwebsockets"
+    "node",
+    "performance"
   ]
 }

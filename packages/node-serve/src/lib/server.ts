@@ -2,14 +2,26 @@ import { STATUS_CODES } from 'node:http'
 import * as uWS from 'uWebSockets.js'
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
-import { createUwsRequest, type UwsRequestOptions, type UwsResponseState } from './uws-request.ts'
+import { createUwsRequest, type UwsResponseState } from './uws-request.ts'
 
 // "Internal Server Error"
 const internalServerErrorBody = [
   73, 110, 116, 101, 114, 110, 97, 108, 32, 83, 101, 114, 118, 101, 114, 32, 69, 114, 114, 111, 114,
 ]
 
-export interface UwsRequestHandlerOptions extends UwsRequestOptions {
+/**
+ * Options for `createUwsRequestHandler()`.
+ */
+export interface UwsRequestHandlerOptions {
+  /**
+   * Overrides the host portion of the incoming request URL. By default the request URL host is
+   * derived from the HTTP `Host` header.
+   */
+  host?: string
+  /**
+   * Overrides the protocol of the incoming request URL. Defaults to `http:`.
+   */
+  protocol?: string
   /**
    * An error handler that determines the response when the request handler throws an error. By
    * default a 500 Internal Server Error response will be sent.
@@ -17,10 +29,16 @@ export interface UwsRequestHandlerOptions extends UwsRequestOptions {
   onError?: ErrorHandler
 }
 
+/**
+ * A route handler returned by `createUwsRequestHandler()`.
+ */
 export interface UwsRequestHandler {
   (res: uWS.HttpResponse, req: uWS.HttpRequest): void
 }
 
+/**
+ * TLS certificate options for an HTTPS server.
+ */
 export interface ServeTlsOptions {
   /**
    * The path to the private key file to use for TLS.
@@ -40,9 +58,27 @@ export interface ServeTlsOptions {
   passphrase?: string
 }
 
-export interface ServeOptions extends UwsRequestHandlerOptions {
+/**
+ * Options for a server created with `serve()`.
+ */
+export interface ServeOptions {
   /**
-   * The hostname or IP address to listen on. By default uWebSockets.js listens on all interfaces.
+   * Overrides the host portion of the incoming request URL. By default the request URL host is
+   * derived from the HTTP `Host` header.
+   */
+  host?: string
+  /**
+   * Overrides the protocol of the incoming request URL. Defaults to `http:` or `https:` when `tls`
+   * is provided.
+   */
+  protocol?: string
+  /**
+   * An error handler that determines the response when the request handler throws an error. By
+   * default a 500 Internal Server Error response will be sent.
+   */
+  onError?: ErrorHandler
+  /**
+   * The hostname or IP address to listen on. By default the server listens on all interfaces.
    */
   listenHost?: string
   /**
@@ -50,15 +86,18 @@ export interface ServeOptions extends UwsRequestHandlerOptions {
    */
   port?: number
   /**
-   * TLS options. When provided, `serve()` starts a uWebSockets.js SSL app and incoming request URLs
-   * default to the `https:` protocol.
+   * TLS options. When provided, the server accepts HTTPS requests and incoming request URLs default
+   * to the `https:` protocol.
    */
   tls?: ServeTlsOptions
 }
 
+/**
+ * A running Node.js server created by `serve()`.
+ */
 export interface Server {
   /**
-   * The underlying uWebSockets.js application.
+   * The underlying native server application for advanced transport-specific customization.
    */
   app: uWS.TemplatedApp
   /**
@@ -76,11 +115,11 @@ export interface Server {
 }
 
 /**
- * Wraps a fetch handler in a uWebSockets.js HTTP route handler.
+ * Creates a route handler for an existing uWebSockets.js app from a Fetch API handler.
  *
  * @param handler The fetch handler to use for processing incoming requests
  * @param options Request handler options
- * @returns A uWebSockets.js route handler
+ * @returns A route handler that can be registered on a uWebSockets.js app
  */
 export function createUwsRequestHandler(
   handler: FetchHandler,
@@ -179,11 +218,11 @@ export function createUwsRequestHandler(
 }
 
 /**
- * Starts a uWebSockets.js server that sends incoming requests to a fetch handler.
+ * Starts a high-performance Node.js server that sends incoming requests to a Fetch API handler.
  *
  * @param handler The fetch handler to use for processing incoming requests
  * @param options Server options
- * @returns The running uWebSockets.js server
+ * @returns The running server
  */
 export function serve(handler: FetchHandler, options?: ServeOptions): Server {
   let app = createApp(options?.tls)

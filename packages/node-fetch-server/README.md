@@ -291,7 +291,7 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/no
 
 ## Related Packages
 
-- [`node-serve`](https://github.com/remix-run/remix/tree/main/packages/node-serve) - Run Fetch API handlers on a managed uWebSockets.js server for high-throughput Node.js deployments
+- [`node-serve`](https://github.com/remix-run/remix/tree/main/packages/node-serve) - Build high-performance Fetch API servers for Node.js
 - [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
 
 ## Benchmarks

@@ -1,16 +1,16 @@
 # node-serve
 
-Run Fetch API request handlers on a high-throughput Node.js server powered by [`uWebSockets.js`](https://github.com/uNetworking/uWebSockets.js). Use this package when you want Remix-style `Request`/`Response` handlers with a managed server optimized for raw throughput.
+Build high-performance Node.js servers with web-standard Fetch API primitives. Use this package when you want Remix-style `Request`/`Response` handlers with a managed server optimized for production throughput.
 
 ## Features
 
 - **Fetch API Handlers**: Serve standard [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) to [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) request handlers
-- **uWebSockets.js Transport**: Uses the native uWebSockets.js HTTP server for high-throughput Node.js deployments
+- **High-Performance Node.js Server**: Start a fast managed server for Fetch API application code
 - **HTTPS Support**: Start a TLS server with certificate and key file paths
 - **Managed Server Lifecycle**: Start a server with `serve()`, wait for `server.ready`, and close it with `server.close()`
-- **Existing uWS App Support**: Use `createUwsRequestHandler()` when you already own a uWebSockets.js app
 - **Custom Hostname**: Override the host and protocol used to construct incoming `request.url` values
 - **Client Info**: Access client IP address, address family, and remote port when your handler accepts a second argument
+- **Existing uWebSockets.js App Adapter**: Use `createUwsRequestHandler()` when you already own a uWebSockets.js app
 
 ## Installation
 
@@ -18,11 +18,11 @@ Run Fetch API request handlers on a high-throughput Node.js server powered by [`
 npm i remix
 ```
 
-`node-serve` uses [`uWebSockets.js`](https://github.com/uNetworking/uWebSockets.js), which is installed as an optional dependency. Standard installs include optional dependencies; if your install disables them, enable optional dependencies or install `uWebSockets.js` directly before using `remix/node-serve`.
+`node-serve` includes a native high-performance transport as an optional dependency. Standard installs include optional dependencies; if your install disables them, enable optional dependencies before using `remix/node-serve`.
 
 ## Usage
 
-Use `serve()` to start a uWebSockets.js server that calls your fetch handler for every incoming request:
+Use `serve()` to start a Node.js server that calls your fetch handler for every incoming request:
 
 ```ts
 import { serve } from 'remix/node-serve'
@@ -77,7 +77,7 @@ await server.ready
 
 ### HTTPS
 
-Pass `tls` options to start a uWebSockets.js SSL app. `keyFile` and `certFile` are file paths, not PEM contents:
+Pass `tls` options to start an HTTPS server. `keyFile` and `certFile` are file paths, not PEM contents:
 
 ```ts
 import { serve } from 'remix/node-serve'
@@ -117,7 +117,7 @@ serve(handler, { port: 3000 })
 
 ### Existing uWebSockets.js Apps
 
-Use `createUwsRequestHandler()` when you already have a uWebSockets.js app and want only part of the app to use a Fetch API handler:
+Most apps should use `serve()`. Use `createUwsRequestHandler()` when you already have a uWebSockets.js app and want only part of the app to use a Fetch API handler:
 
 This example assumes `uWebSockets.js` is also a direct dependency of your app.
 
@@ -167,7 +167,6 @@ app.listen(443, (socket) => {
 
 ## Related Work
 
-- [`uWebSockets.js`](https://github.com/uNetworking/uWebSockets.js) - Native HTTP/WebSocket server used by this package
 - [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) - Web standard `Request` and `Response` primitives
 
 ## License
