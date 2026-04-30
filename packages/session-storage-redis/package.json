@@ -19,17 +19,11 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
@@ -39,7 +33,7 @@
     "redis": "^5.10.0"
   },
   "dependencies": {
-    "@remix-run/session": "workspace:^"
+    "@remix-run/session": "remix-run/remix#preview/pr-11100&path:packages/session"
   },
   "peerDependencies": {
     "redis": "^5.10.0"

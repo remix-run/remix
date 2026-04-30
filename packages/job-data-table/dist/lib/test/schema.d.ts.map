@@ -1,0 +1,1 @@
+{"version":3,"file":"schema.d.ts","sourceRoot":"","sources":["../../../src/lib/test/schema.ts"],"names":[],"mappings":"AAIA,OAAO,KAAK,EAAE,QAAQ,EAAE,MAAM,uBAAuB,CAAA;AAErD,eAAO,MAAM,yBAAyB,cAAc,CAAA;AAEpD,wBAAsB,qBAAqB,CACzC,EAAE,EAAE,QAAQ,EACZ,WAAW,SAA4B,GACtC,OAAO,CAAC,IAAI,CAAC,CAgBf;AAED,wBAAsB,qBAAqB,CACzC,EAAE,EAAE,QAAQ,EACZ,WAAW,SAA4B,GACtC,OAAO,CAAC,IAAI,CAAC,CAOf"}
