@@ -20,10 +20,28 @@ export function receiveWorkerData<T>(): T | Promise<T> {
   })
 }
 
-export function sendResults(results: TestResults): void {
+export async function sendResults(results: TestResults): Promise<void> {
   if (isWorkerThread) {
     parentPort!.postMessage(results)
   } else {
-    process.send!(results)
+    await new Promise<void>((resolve, reject) => {
+      process.send!(results, (error) => {
+        if (error) {
+          reject(error)
+        } else {
+          resolve()
+        }
+      })
+    })
   }
+}
+
+export function closeWorkerChannel(): void {
+  if (!isWorkerThread && process.connected) {
+    process.disconnect?.()
+  }
+
+  // Force worker shutdown for both pools so leaked handles in test files
+  // cannot keep a worker process/thread alive after results are sent.
+  process.exit(0)
 }

@@ -5,7 +5,7 @@ import { importModule } from './import-module.ts'
 import type { TestResults } from './reporters/results.ts'
 import { IS_BUN } from './runtime.ts'
 import { IS_RUNNING_FROM_SRC } from './config.ts'
-import { receiveWorkerData, sendResults } from './worker-channel.ts'
+import { closeWorkerChannel, receiveWorkerData, sendResults } from './worker-channel.ts'
 
 interface ServerWorkerData {
   file: string
@@ -32,8 +32,7 @@ try {
   }
 
   let results = await runTests()
-  sendResults(results)
-  process.exit(0)
+  await sendResults(results).finally(() => closeWorkerChannel())
 } catch (e) {
   let results: TestResults = {
     passed: 0,
@@ -53,6 +52,5 @@ try {
       },
     ],
   }
-  sendResults(results)
-  process.exit(0)
+  await sendResults(results).finally(() => closeWorkerChannel())
 }

@@ -7,7 +7,7 @@ import {
   type PlaywrightUseOpts,
 } from './playwright.ts'
 import type { TestResults } from './reporters/results.ts'
-import { receiveWorkerData, sendResults } from './worker-channel.ts'
+import { closeWorkerChannel, receiveWorkerData, sendResults } from './worker-channel.ts'
 
 interface E2EWorkerData {
   file: string
@@ -32,7 +32,7 @@ try {
       playwrightPageOptions: getPlaywrightPageOptions(workerData.playwrightUseOpts),
       coverage: workerData.coverage,
     })
-    sendResults(results)
+    await sendResults(results)
     if (workerData.open) {
       console.log('\nBrowser is open. Press Ctrl+C to close.')
       await new Promise<void>((resolve) => browser.on('disconnected', () => resolve()))
@@ -40,7 +40,7 @@ try {
   } finally {
     await browser.close()
   }
-  process.exit(0)
+  closeWorkerChannel()
 } catch (e) {
   let results: TestResults = {
     passed: 0,
@@ -60,6 +60,5 @@ try {
       },
     ],
   }
-  sendResults(results)
-  process.exit(0)
+  await sendResults(results).finally(() => closeWorkerChannel())
 }
