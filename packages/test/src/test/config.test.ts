@@ -18,7 +18,10 @@ describe('config', () => {
 
   it('reads pool from the config file', async () => {
     let cwd = await createConfigDir('file-pool')
-    await fsp.writeFile(path.join(cwd, 'remix-test.config.ts'), `export default { pool: 'threads' }`)
+    await fsp.writeFile(
+      path.join(cwd, 'remix-test.config.ts'),
+      `export default { pool: 'threads' }`,
+    )
 
     let config = await loadConfig([], cwd)
 
@@ -27,7 +30,10 @@ describe('config', () => {
 
   it('prefers the CLI pool over the config file', async () => {
     let cwd = await createConfigDir('cli-pool')
-    await fsp.writeFile(path.join(cwd, 'remix-test.config.ts'), `export default { pool: 'threads' }`)
+    await fsp.writeFile(
+      path.join(cwd, 'remix-test.config.ts'),
+      `export default { pool: 'threads' }`,
+    )
 
     let config = await loadConfig(['--pool', 'forks'], cwd)
 

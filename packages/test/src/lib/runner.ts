@@ -200,10 +200,7 @@ async function runInConcurrentWorkers(
   })
 }
 
-function waitForWorkerExit(
-  exited: Promise<number | null>,
-  timeoutMs: number,
-): Promise<boolean> {
+function waitForWorkerExit(exited: Promise<number | null>, timeoutMs: number): Promise<boolean> {
   return new Promise((resolve) => {
     let timeout = setTimeout(() => resolve(false), timeoutMs)
     exited.then(() => {

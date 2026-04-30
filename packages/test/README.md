@@ -144,29 +144,29 @@ remix test --config ./tests/config.ts
 
 You may also specify any config field as a CLI flag which will take precedence over config file values:
 
-| Flag                        | Short |
-| --------------------------- | ----- |
-| `--browser.echo`            |       |
-| `--browser.open`            |       |
-| `--concurrency <n>`         | `-c`  |
-| `--coverage`                |       |
-| `--coverage.dir <path>`     |       |
-| `--coverage.include`        |       |
-| `--coverage.exclude`        |       |
-| `--coverage.statements`     |       |
-| `--coverage.lines`          |       |
-| `--coverage.branches`       |       |
-| `--coverage.functions`      |       |
-| `--glob.test`               |       |
-| `--glob.browser`            |       |
-| `--glob.e2e`                |       |
-| `--playwrightConfig <path>` |       |
-| `--pool <forks|threads>`    |       |
-| `--project <name>`          | `-p`  |
-| `--reporter <name>`         | `-r`  |
-| `--setup <path>`            | `-s`  |
-| `--type <name>`             | `-t`  |
-| `--watch`                   | `-w`  |
+| Flag                        | Short     |
+| --------------------------- | --------- | --- |
+| `--browser.echo`            |           |
+| `--browser.open`            |           |
+| `--concurrency <n>`         | `-c`      |
+| `--coverage`                |           |
+| `--coverage.dir <path>`     |           |
+| `--coverage.include`        |           |
+| `--coverage.exclude`        |           |
+| `--coverage.statements`     |           |
+| `--coverage.lines`          |           |
+| `--coverage.branches`       |           |
+| `--coverage.functions`      |           |
+| `--glob.test`               |           |
+| `--glob.browser`            |           |
+| `--glob.e2e`                |           |
+| `--playwrightConfig <path>` |           |
+| `--pool <forks              | threads>` |     |
+| `--project <name>`          | `-p`      |
+| `--reporter <name>`         | `-r`      |
+| `--setup <path>`            | `-s`      |
+| `--type <name>`             | `-t`      |
+| `--watch`                   | `-w`      |
 
 ### Setup
 
