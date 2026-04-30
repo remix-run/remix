@@ -131,11 +131,8 @@ function getNestedHelpText(command: string, argv: string[]): string {
 }
 
 async function getSkillsHelpText(argv: string[]): Promise<string> {
-  let {
-    getSkillsCommandHelpText,
-    getSkillsInstallCommandHelpText,
-    getSkillsListCommandHelpText,
-  } = await import('./skills.ts')
+  let { getSkillsCommandHelpText, getSkillsInstallCommandHelpText, getSkillsListCommandHelpText } =
+    await import('./skills.ts')
 
   if (argv.length === 0) {
     return getSkillsCommandHelpText()
