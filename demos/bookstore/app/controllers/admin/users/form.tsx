@@ -1,4 +1,4 @@
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 
 import type { User } from '../../../data/schema.ts'
 import { RestfulForm } from '../../../ui/restful-form.tsx'

@@ -1,4 +1,4 @@
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 
 import { routes } from '../../../routes.ts'
 import { Document } from '../../../ui/document.tsx'

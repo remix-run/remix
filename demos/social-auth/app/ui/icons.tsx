@@ -1,4 +1,4 @@
-import type { Props } from 'remix/component'
+import type { Props } from 'remix/ui'
 
 export function UserIcon() {
   return (props: Props<'svg'>) => (

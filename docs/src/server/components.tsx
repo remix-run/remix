@@ -1,7 +1,7 @@
-import type { RemixNode } from 'remix/component/jsx-runtime'
+import type { RemixNode } from 'remix/ui/jsx-runtime'
 import type { DocFile } from './markdown.ts'
 import { routes } from './routes.ts'
-import type { Handle } from 'remix/component'
+import type { Handle } from 'remix/ui'
 
 export function Home() {
   return () => {
@@ -14,8 +14,9 @@ export function Home() {
   }
 }
 
-export function NotFound() {
-  return ({ slug }: { slug: string }) => {
+export function NotFound(handle: Handle<{ slug: string }>) {
+  return () => {
+    let { slug } = handle.props
     return (
       <div class="error">
         <h2>Not Found</h2>
@@ -33,19 +34,21 @@ export type ServerContext = {
   slug?: string
 }
 
-export function ServerPage(handle: Handle<ServerContext>, setup: ServerContext) {
-  handle.context.set(setup)
-  return ({ children }: { children: RemixNode | RemixNode[] }) => (
+export function ServerPage(
+  handle: Handle<{ children?: RemixNode | RemixNode[] } & ServerContext, ServerContext>,
+) {
+  handle.context.set(handle.props)
+  return () => (
     <Document>
-      <Layout>{children}</Layout>
+      <Layout>{handle.props.children}</Layout>
     </Document>
   )
 }
 
-function Document(handle: Handle) {
+function Document(handle: Handle<{ children?: RemixNode | RemixNode[] }>) {
   let { activeVersion, slug } = handle.context.get(ServerPage)
   let apiName = slug?.split('/').slice(-1)[0]
-  return ({ children }: { children: RemixNode | RemixNode[] }) => (
+  return () => (
     <html lang="en">
       <head>
         <meta charSet="UTF-8" />
@@ -76,13 +79,13 @@ function Document(handle: Handle) {
           src={routes.assets.href({ version: activeVersion, asset: 'entry.js' })}
         />
       </head>
-      <body>{children}</body>
+      <body>{handle.props.children}</body>
     </html>
   )
 }
 
-function Layout() {
-  return ({ children }: { children: RemixNode | RemixNode[] }) => (
+function Layout(handle: Handle<{ children?: RemixNode | RemixNode[] }>) {
+  return () => (
     <>
       <input class="nav-toggle" id="nav-toggle" type="checkbox" aria-hidden="true" tabIndex={-1} />
       <div class="mobile-header">
@@ -93,7 +96,7 @@ function Layout() {
       </div>
       <div class="container">
         <main class="main">
-          <div class="content">{children}</div>
+          <div class="content">{handle.props.children}</div>
         </main>
         <div class="sidebar">
           <header>
@@ -208,26 +211,27 @@ export function Nav(handle: Handle) {
   }
 }
 
-function NavDropdown(handle: Handle) {
-  return ({
-    title,
-    open,
-    children,
-  }: {
+function NavDropdown(
+  handle: Handle<{
     title: string
     open: boolean
-    children: RemixNode | RemixNode[]
-  }) => (
-    <details open={open}>
-      <summary>{title}</summary>
-      <div class="items">{children}</div>
+    children?: RemixNode | RemixNode[]
+  }>,
+) {
+  return () => (
+    <details open={handle.props.open}>
+      <summary>{handle.props.title}</summary>
+      <div class="items">{handle.props.children}</div>
     </details>
   )
 }
 
-function NavDropdownSection(handle: Handle) {
+function NavDropdownSection(
+  handle: Handle<{ title: string; files: ApiTypes; type: keyof ApiTypes }>,
+) {
   let { activeVersion: version, slug } = handle.context.get(ServerPage)
-  return ({ title, files, type }: { title: string; files: ApiTypes; type: keyof ApiTypes }) => {
+  return () => {
+    let { title, files, type } = handle.props
     if (files[type].length === 0) {
       return null
     }
@@ -254,8 +258,8 @@ function NavDropdownSection(handle: Handle) {
   }
 }
 
-export function MarkdownContent() {
-  return ({ html }: { html: string }) => <div innerHTML={html} />
+export function MarkdownContent(handle: Handle<{ html: string }>) {
+  return () => <div innerHTML={handle.props.html} />
 }
 
 function RemixLogoLight(handle: Handle) {

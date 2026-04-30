@@ -1,0 +1,216 @@
+{
+  "name": "@remix-run/ui",
+  "version": "0.1.0",
+  "description": "UI tokens, mixins, and glyphs for Remix components",
+  "author": "Ryan Florence <rpflorence@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/ui"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/ui#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test.tsx"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./accordion": {
+      "types": "./src/components/accordion/accordion.tsx",
+      "default": "./src/components/accordion/accordion.tsx"
+    },
+    "./animation": {
+      "types": "./src/animation/index.ts",
+      "default": "./src/animation/index.ts"
+    },
+    "./anchor": {
+      "types": "./src/components/anchor/anchor.ts",
+      "default": "./src/components/anchor/anchor.ts"
+    },
+    "./breadcrumbs": {
+      "types": "./src/components/breadcrumbs/breadcrumbs.tsx",
+      "default": "./src/components/breadcrumbs/breadcrumbs.tsx"
+    },
+    "./button": {
+      "types": "./src/components/button/button.tsx",
+      "default": "./src/components/button/button.tsx"
+    },
+    "./combobox": {
+      "types": "./src/components/combobox/combobox.tsx",
+      "default": "./src/components/combobox/combobox.tsx"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./src/jsx-runtime.ts",
+      "default": "./src/jsx-runtime.ts"
+    },
+    "./jsx-runtime": {
+      "types": "./src/jsx-runtime.ts",
+      "default": "./src/jsx-runtime.ts"
+    },
+    "./glyph": {
+      "types": "./src/components/glyph/glyph.tsx",
+      "default": "./src/components/glyph/glyph.tsx"
+    },
+    "./listbox": {
+      "types": "./src/components/listbox/listbox.ts",
+      "default": "./src/components/listbox/listbox.ts"
+    },
+    "./menu": {
+      "types": "./src/components/menu/menu.tsx",
+      "default": "./src/components/menu/menu.tsx"
+    },
+    "./popover": {
+      "types": "./src/components/popover/popover.ts",
+      "default": "./src/components/popover/popover.ts"
+    },
+    "./select": {
+      "types": "./src/components/select/select.tsx",
+      "default": "./src/components/select/select.tsx"
+    },
+    "./separator": {
+      "types": "./src/components/separator/separator.ts",
+      "default": "./src/components/separator/separator.ts"
+    },
+    "./server": {
+      "types": "./src/server/stream.ts",
+      "default": "./src/server/stream.ts"
+    },
+    "./test": {
+      "types": "./src/test.ts",
+      "default": "./src/test.ts"
+    },
+    "./theme": {
+      "types": "./src/theme/theme.ts",
+      "default": "./src/theme/theme.ts"
+    },
+    "./scroll-lock": {
+      "types": "./src/utils/scroll-lock.ts",
+      "default": "./src/utils/scroll-lock.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./accordion": {
+        "types": "./dist/components/accordion/accordion.d.ts",
+        "default": "./dist/components/accordion/accordion.js"
+      },
+      "./animation": {
+        "types": "./dist/animation/index.d.ts",
+        "default": "./dist/animation/index.js"
+      },
+      "./anchor": {
+        "types": "./dist/components/anchor/anchor.d.ts",
+        "default": "./dist/components/anchor/anchor.js"
+      },
+      "./breadcrumbs": {
+        "types": "./dist/components/breadcrumbs/breadcrumbs.d.ts",
+        "default": "./dist/components/breadcrumbs/breadcrumbs.js"
+      },
+      "./button": {
+        "types": "./dist/components/button/button.d.ts",
+        "default": "./dist/components/button/button.js"
+      },
+      "./combobox": {
+        "types": "./dist/components/combobox/combobox.d.ts",
+        "default": "./dist/components/combobox/combobox.js"
+      },
+      "./jsx-dev-runtime": {
+        "types": "./dist/jsx-runtime.d.ts",
+        "default": "./dist/jsx-runtime.js"
+      },
+      "./jsx-runtime": {
+        "types": "./dist/jsx-runtime.d.ts",
+        "default": "./dist/jsx-runtime.js"
+      },
+      "./glyph": {
+        "types": "./dist/components/glyph/glyph.d.ts",
+        "default": "./dist/components/glyph/glyph.js"
+      },
+      "./listbox": {
+        "types": "./dist/components/listbox/listbox.d.ts",
+        "default": "./dist/components/listbox/listbox.js"
+      },
+      "./menu": {
+        "types": "./dist/components/menu/menu.d.ts",
+        "default": "./dist/components/menu/menu.js"
+      },
+      "./popover": {
+        "types": "./dist/components/popover/popover.d.ts",
+        "default": "./dist/components/popover/popover.js"
+      },
+      "./select": {
+        "types": "./dist/components/select/select.d.ts",
+        "default": "./dist/components/select/select.js"
+      },
+      "./separator": {
+        "types": "./dist/components/separator/separator.d.ts",
+        "default": "./dist/components/separator/separator.js"
+      },
+      "./server": {
+        "types": "./dist/server/stream.d.ts",
+        "default": "./dist/server/stream.js"
+      },
+      "./test": {
+        "types": "./dist/test.d.ts",
+        "default": "./dist/test.js"
+      },
+      "./theme": {
+        "types": "./dist/theme/theme.d.ts",
+        "default": "./dist/theme/theme.js"
+      },
+      "./scroll-lock": {
+        "types": "./dist/utils/scroll-lock.d.ts",
+        "default": "./dist/utils/scroll-lock.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@vitest/browser": "^3.2.4",
+    "@vitest/coverage-v8": "^3.2.4",
+    "@typescript/native-preview": "catalog:",
+    "playwright": "catalog:",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  },
+  "dependencies": {
+    "@types/dom-navigation": "^1.0.7"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "lint": "pnpm -w exec oxlint packages/ui -A all --quiet",
+    "lint:fix": "pnpm -w exec oxlint packages/ui -A all --fix --quiet",
+    "prepublishOnly": "pnpm run build",
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [
+    "remix",
+    "ui",
+    "theming",
+    "design-tokens",
+    "css-variables",
+    "mixins",
+    "glyphs",
+    "component-styling"
+  ]
+}

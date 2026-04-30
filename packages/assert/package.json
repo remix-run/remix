@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/assert",
   "version": "0.1.0",
-  "description": "Assertion utilities for Remix",
+  "description": "Node assert-compatible utilities for any JavaScript environment",
   "author": "Shopify Inc.",
   "license": "MIT",
   "repository": {
@@ -35,12 +35,11 @@
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "remix-test",
-    "test:bun": "bun x --bun remix-test",
+    "test": "node --test",
+    "test:bun": "bun test",
     "typecheck": "tsgo --noEmit"
   },
   "devDependencies": {
-    "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },

@@ -1,6 +1,6 @@
 # Update the `remix` package by auto-generating from the `@remix-run/*` packages in the repo
-# runs on any pushes/PRs to `main` that touch any `package.json` files since that would
-# potentially alter the sub-exports that need to be reflected in the `remix` package.
+# runs on any pushes/PRs to `main` that touch any `package.json` files or the generator
+# implementation itself since those can alter the sub-exports reflected in the `remix` package.
 
 # Note: Does not currently run on PRs from forked repos.
 
@@ -12,12 +12,14 @@ on:
       - 'main'
     paths:
       - 'packages/**/package.json'
+      - 'scripts/generate-remix.ts'
   pull_request:
     branches-ignore:
       - release-v2
       - v2
     paths:
       - 'packages/**/package.json'
+      - 'scripts/generate-remix.ts'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

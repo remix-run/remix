@@ -1,4 +1,4 @@
-import { css } from '@remix-run/component'
+import { css } from '@remix-run/ui'
 import { chunkPairs } from '../shared/arrays.ts'
 
 const panelStyles = css({

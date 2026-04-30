@@ -1,4 +1,4 @@
-import { Frame } from 'remix/component'
+import { Frame } from 'remix/ui'
 import type { Controller } from 'remix/fetch-router'
 
 import { Counter } from '../../assets/counter.tsx'
@@ -83,7 +83,7 @@ export const framesController = {
             {new Date().toLocaleTimeString()}
           </div>
           <div style={{ marginTop: 8 }}>
-            <Counter setup={5} label="Inside mounted frame" />
+            <Counter initialCount={5} label="Inside mounted frame" />
           </div>
           <div style={{ marginTop: 10 }}>
             <div style={{ fontSize: 12, color: '#9aa8e8', marginBottom: 6 }}>Nested frame:</div>
@@ -111,7 +111,7 @@ export const framesController = {
         >
           <div style={{ fontSize: 12, color: '#b9c6ff' }}>Nested server fragment</div>
           <div style={{ marginTop: 6 }}>
-            <Counter setup={1} label="Nested frame counter" />
+            <Counter initialCount={1} label="Nested frame counter" />
           </div>
         </div>,
       )
@@ -133,7 +133,7 @@ export const framesController = {
             Outer server fragment from /frames/client-mounted-outer
           </div>
           <div style={{ marginTop: 8 }}>
-            <Counter setup={2} label="Outer frame counter" />
+            <Counter initialCount={2} label="Outer frame counter" />
           </div>
           <div style={{ marginTop: 10 }}>
             <div style={{ fontSize: 12, color: '#9aa8e8', marginBottom: 6 }}>
@@ -166,7 +166,7 @@ export const framesController = {
             {new Date().toLocaleTimeString()}
           </div>
           <div style={{ marginTop: 6 }}>
-            <Counter setup={3} label="Nested frame counter" />
+            <Counter initialCount={3} label="Nested frame counter" />
           </div>
         </div>,
       )
@@ -193,7 +193,7 @@ export const framesController = {
                 {now.toLocaleTimeString()}
               </div>
             </div>
-            <Counter setup={0} label="In a frame" />
+            <Counter initialCount={0} label="In a frame" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <ReloadTime />
             </div>

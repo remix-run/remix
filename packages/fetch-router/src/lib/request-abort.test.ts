@@ -52,13 +52,14 @@ describe('raceRequestAbort', () => {
   it('throws AbortError when signal is aborted during promise execution', async () => {
     let controller = new AbortController()
     let request = new Request('https://remix.run', { signal: controller.signal })
-    let promise = new Promise((resolve) => setTimeout(() => resolve('success'), 100))
+    let promise = new Promise<string>(() => {})
+    let result = raceRequestAbort(promise, request)
 
-    setTimeout(() => controller.abort(), 10)
+    controller.abort()
 
     await assert.rejects(
       async () => {
-        await raceRequestAbort(promise, request)
+        await result
       },
       (error: any) => {
         assert.equal(error.name, 'AbortError')

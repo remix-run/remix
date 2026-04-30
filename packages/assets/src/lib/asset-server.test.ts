@@ -4,6 +4,7 @@ import * as nodeFs from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
 import { isAssetServerCompilationError } from './compilation-error.ts'
@@ -18,9 +19,10 @@ import type { AssetServerOptions } from './asset-server.ts'
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
 
 function createAssetServerForTest(
-  options: Parameters<typeof createAssetServer>[0],
+  options: Omit<AssetServerOptions, 'basePath'> & { basePath?: string },
 ): ReturnType<typeof createAssetServer> {
   return createAssetServer({
+    basePath: options.basePath ?? '/assets',
     ...options,
     watch: options.watch ?? false,
   })
@@ -55,9 +57,10 @@ function getLineAndColumn(source: string, search: string): { line: number; colum
 function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions> = {}) {
   return createAssetServerForTest({
     allow: ['app/**', 'app/node_modules/**'],
+    basePath: '/assets',
     fileMap: {
-      '/assets/app/*path': 'app/*path',
-      '/assets/npm/*path': 'app/node_modules/*path',
+      '/app/*path': 'app/*path',
+      '/npm/*path': 'app/node_modules/*path',
     },
     rootDir,
     watch: overrides.watch ?? false,
@@ -90,10 +93,6 @@ async function getByFile(
   headers?: Record<string, string>,
 ) {
   return get(assetServer, await assetServer.getHref(filePath), headers)
-}
-
-async function headByFile(assetServer: ReturnType<typeof createAssetServer>, filePath: string) {
-  return head(assetServer, await assetServer.getHref(filePath))
 }
 
 function post(assetServer: ReturnType<typeof createAssetServer>, pathname: string) {
@@ -146,6 +145,43 @@ async function getCompiledCodeAndSourceMap(
   }
 }
 
+async function getAbsoluteImportSpecifiers(source: string): Promise<string[]> {
+  await esModuleLexerInit
+  let [imports] = esModuleLexer(source)
+
+  return imports
+    .map((imported) => imported.n)
+    .filter((specifier): specifier is string => specifier?.startsWith('/') === true)
+}
+
+async function assertRecursivelyServedImports(
+  assetServer: ReturnType<typeof createAssetServer>,
+  startingUrls: readonly string[],
+): Promise<Set<string>> {
+  let seen = new Set<string>()
+  let queue = [...startingUrls]
+
+  while (queue.length > 0) {
+    let url = queue.shift()!
+    if (seen.has(url)) continue
+    seen.add(url)
+
+    let response = await get(assetServer, url)
+    assert.ok(response)
+    assert.equal(response.status, 200, `Expected ${url} to be served`)
+
+    let body = await response.text()
+    let importSpecifiers = await getAbsoluteImportSpecifiers(body)
+    for (let specifier of importSpecifiers) {
+      if (!seen.has(specifier)) {
+        queue.push(specifier)
+      }
+    }
+  }
+
+  return seen
+}
+
 async function assertCharacterAccurateImportRewriteSourceMap(
   rootDir: string,
   sourceText = 'import { dep } from "./dep.ts"\nexport function value() {\n  return dep + 1\n}\n',
@@ -155,10 +191,8 @@ async function assertCharacterAccurateImportRewriteSourceMap(
 
   let assetServer = createTestServer(rootDir, {
     fingerprint: { buildId: 'build' },
-    scripts: {
-      minify: true,
-      sourceMaps: 'external',
-    },
+    minify: true,
+    sourceMaps: 'external',
   })
   try {
     let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(assetServer, 'app/entry.ts')
@@ -184,6 +218,14 @@ async function assertInternalServerError(response: Response): Promise<void> {
   assert.equal(response.status, 500)
   assert.equal(response.headers.get('Content-Type'), 'text/plain; charset=utf-8')
   assert.equal(await response.text(), 'Internal Server Error')
+}
+
+function decodeInlineSourceMap(source: string): { sources?: string[] } {
+  let match = source.match(/sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+)/)
+  assert.ok(match)
+
+  let decoded = Buffer.from(match[1]!, 'base64').toString('utf8')
+  return JSON.parse(decoded) as { sources?: string[] }
 }
 
 async function withTsconfigTransformCase(
@@ -341,20 +383,420 @@ describe('asset-server', () => {
     assert.match(await response.text(), /\/assets\/app\/dep\.mts/)
   })
 
-  it('ignores unsupported direct requests for non-script files', async () => {
+  it('serves CSS assets directly and ignores unsupported direct requests for other non-compiled files', async () => {
     await write(dir, 'app/data.json', '{"ok":true}')
     await write(dir, 'app/styles.css', 'body { color: red; }')
     await write(dir, 'app/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>')
     await write(dir, 'app/.env', 'SECRET=123')
     let assetServer = createTestServer(dir)
 
+    let styleResponse = await get(assetServer, '/assets/app/styles.css')
+    assert.ok(styleResponse)
+    assert.equal(styleResponse.status, 200)
+    assert.equal(styleResponse.headers.get('Content-Type'), 'text/css; charset=utf-8')
+    assert.match(await styleResponse.text(), /color: red/)
+
     assert.equal(await get(assetServer, '/assets/app/data.json'), null)
-    assert.equal(await get(assetServer, '/assets/app/styles.css'), null)
     assert.equal(await get(assetServer, '/assets/app/logo.svg'), null)
     assert.equal(await get(assetServer, '/assets/app/.env'), null)
   })
 
-  it('uses immutable caching for fingerprinted module requests', async () => {
+  it('serves direct CSS assets with no-cache, ETags, and HEAD support', async () => {
+    await write(dir, 'app/styles.css', 'body { color: red; }\n')
+    let assetServer = createTestServer(dir)
+
+    let response = await get(assetServer, '/assets/app/styles.css')
+    assert.ok(response)
+    assert.equal(response.headers.get('Cache-Control'), 'no-cache')
+    assert.equal(response.headers.get('Content-Type'), 'text/css; charset=utf-8')
+    assert.ok(response.headers.get('ETag'))
+
+    let headResponse = await head(assetServer, '/assets/app/styles.css')
+    assert.ok(headResponse)
+    assert.equal(headResponse.status, 200)
+    assert.equal(headResponse.headers.get('Content-Type'), 'text/css; charset=utf-8')
+    assert.equal(await headResponse.text(), '')
+
+    let notModified = await get(assetServer, '/assets/app/styles.css', {
+      'If-None-Match': response.headers.get('ETag')!,
+    })
+    assert.ok(notModified)
+    assert.equal(notModified.status, 304)
+  })
+
+  it('rewrites CSS imports to served URLs and preserves authored asset URLs', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      '@import "./reset.css";\n.hero { background: url("../images/logo.svg"); }\n',
+    )
+    await write(dir, 'app/styles/reset.css', 'body { color: red; }\n')
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let assetServer = createTestServer(dir)
+
+    let response = await getByFile(assetServer, 'app/styles/app.css')
+    assert.ok(response)
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('Content-Type'), 'text/css; charset=utf-8')
+
+    let css = await response.text()
+    assert.match(css, /@import "\/assets\/app\/styles\/reset\.css";/)
+    assert.match(css, /url\("\.\.\/images\/logo\.svg"\)/)
+
+    let preloads = await assetServer.getPreloads('app/styles/app.css')
+    assert.deepEqual(preloads, ['/assets/app/styles/app.css', '/assets/app/styles/reset.css'])
+    assert.equal(await get(assetServer, '/assets/app/images/logo.svg'), null)
+  })
+
+  it('leaves external CSS imports unchanged', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      [
+        '@import "data:text/css,body{color:red}"',
+        '@import "//cdn.example.com/theme.css"',
+        '@import "http://example.com/theme.css"',
+        '@import "https://example.com/theme.css"',
+        '@import "/themes/dark.css"',
+        '@import "#theme"',
+      ].join(';\n') + ';\n',
+    )
+    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+
+    let response = await getByFile(assetServer, 'app/styles/app.css')
+    assert.ok(response)
+    let css = await response.text()
+
+    assert.match(css, /@import "data:text\/css,body\{color:red\}";/)
+    assert.match(css, /@import "\/\/cdn\.example\.com\/theme\.css";/)
+    assert.match(css, /@import "http:\/\/example\.com\/theme\.css";/)
+    assert.match(css, /@import "https:\/\/example\.com\/theme\.css";/)
+    assert.match(css, /@import "\/themes\/dark\.css";/)
+    assert.match(css, /@import "#theme";/)
+  })
+
+  it('leaves external CSS url dependencies unchanged', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      [
+        '.data { background-image: url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\'%3E%3C/svg%3E"); }',
+        '.protocol-relative { background-image: url("//cdn.example.com/bg.png"); }',
+        '.http { background-image: url("http://example.com/bg.png"); }',
+        '.https { background-image: url("https://example.com/bg.png"); }',
+        '.root { background-image: url("/images/bg.png"); }',
+        '.relative { background-image: url("../images/logo.svg"); }',
+        '.fragment { filter: url("#my-filter"); }',
+      ].join('\n') + '\n',
+    )
+    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+
+    let response = await getByFile(assetServer, 'app/styles/app.css')
+    assert.ok(response)
+    let css = await response.text()
+
+    assert.match(
+      css,
+      /url\("data:image\/svg\+xml,%3Csvg xmlns='http:\/\/www\.w3\.org\/2000\/svg'%3E%3C\/svg%3E"\)/,
+    )
+    assert.match(css, /url\("\/\/cdn\.example\.com\/bg\.png"\)/)
+    assert.match(css, /url\("http:\/\/example\.com\/bg\.png"\)/)
+    assert.match(css, /url\("https:\/\/example\.com\/bg\.png"\)/)
+    assert.match(css, /url\("\/images\/bg\.png"\)/)
+    assert.match(css, /url\("\.\.\/images\/logo\.svg"\)/)
+    assert.match(css, /url\("#my-filter"\)/)
+  })
+
+  it('fingerprints CSS import graphs when fingerprinting is enabled', async () => {
+    await write(dir, 'app/styles/app.css', '@import "./reset.css";\nbody { color: black; }\n')
+    await write(dir, 'app/styles/reset.css', 'body { color: red; }\n')
+    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+
+    let appHref = await assetServer.getHref('app/styles/app.css')
+    let resetHref = await assetServer.getHref('app/styles/reset.css')
+    assert.match(appHref, /^\/assets\/app\/styles\/app\.@[A-Za-z0-9_-]+\.css$/)
+    assert.match(resetHref, /^\/assets\/app\/styles\/reset\.@[A-Za-z0-9_-]+\.css$/)
+
+    let response = await get(assetServer, appHref)
+    assert.ok(response)
+    let css = await response.text()
+    assert.ok(css.includes(`@import "${resetHref}";`))
+
+    let stableResponse = await get(assetServer, '/assets/app/styles/app.css')
+    assert.equal(stableResponse, null)
+
+    let preloads = await assetServer.getPreloads('app/styles/app.css')
+    assert.deepEqual(preloads, [appHref, resetHref])
+  })
+
+  it('getPreloads accepts multiple style roots and dedupes shared imports', async () => {
+    await write(dir, 'app/styles/a.css', '@import "./shared.css";\n.a { color: red; }\n')
+    await write(dir, 'app/styles/b.css', '@import "./shared.css";\n.b { color: blue; }\n')
+    await write(dir, 'app/styles/shared.css', 'body { color: black; }\n')
+    let assetServer = createTestServer(dir)
+
+    let preloads = await assetServer.getPreloads(['app/styles/a.css', 'app/styles/b.css'])
+    assert.deepEqual(preloads, [
+      '/assets/app/styles/a.css',
+      '/assets/app/styles/b.css',
+      '/assets/app/styles/shared.css',
+    ])
+  })
+
+  it('uses immutable caching for fingerprinted style requests and returns null on mismatch', async () => {
+    await write(dir, 'app/styles/app.css', '@import "./reset.css";\nbody { color: black; }\n')
+    await write(dir, 'app/styles/reset.css', 'body { color: red; }\n')
+    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+
+    let appHref = await assetServer.getHref('app/styles/app.css')
+    assert.match(appHref, /^\/assets\/app\/styles\/app\.@[A-Za-z0-9_-]+\.css$/)
+
+    let appResponse = await get(assetServer, appHref)
+    assert.ok(appResponse)
+    assert.equal(appResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
+    assert.ok(appResponse.headers.get('ETag'))
+
+    let appBody = await appResponse.text()
+    let resetMatch = appBody.match(
+      /@import "\/assets\/app\/styles\/reset\.@([A-Za-z0-9_-]+)\.css";/,
+    )
+    assert.ok(resetMatch)
+
+    let resetResponse = await get(assetServer, `/assets/app/styles/reset.@${resetMatch[1]}.css`)
+    assert.ok(resetResponse)
+    assert.equal(resetResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
+    assert.ok(resetResponse.headers.get('ETag'))
+
+    let nonFingerprinted = await get(assetServer, '/assets/app/styles/reset.css')
+    assert.equal(nonFingerprinted, null)
+
+    let mismatch = await get(assetServer, '/assets/app/styles/reset.@wronghash.css')
+    assert.equal(mismatch, null)
+  })
+
+  it('keeps fingerprinted style graphs stable within a build', async () => {
+    await write(dir, 'app/styles/app.css', '@import "./mid.css";\nbody { color: black; }\n')
+    await write(dir, 'app/styles/mid.css', '@import "./leaf.css";\nbody { color: red; }\n')
+    await write(dir, 'app/styles/leaf.css', 'body { color: blue; }\n')
+
+    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+
+    let before = await assetServer.getPreloads('app/styles/app.css')
+    let beforeMid = before.find((url) => url.includes('/assets/app/styles/mid.@'))
+    let beforeLeaf = before.find((url) => url.includes('/assets/app/styles/leaf.@'))
+
+    await write(dir, 'app/styles/leaf.css', 'body { color: green; }\n')
+
+    let after = await assetServer.getPreloads('app/styles/app.css')
+    let afterMid = after.find((url) => url.includes('/assets/app/styles/mid.@'))
+    let afterLeaf = after.find((url) => url.includes('/assets/app/styles/leaf.@'))
+
+    assert.equal(afterMid, beforeMid)
+    assert.equal(afterLeaf, beforeLeaf)
+  })
+
+  it('uses buildId to change internal style fingerprints', async () => {
+    await write(dir, 'app/styles/app.css', '@import "./dep.css";\nbody { color: black; }\n')
+    await write(dir, 'app/styles/dep.css', 'body { color: red; }\n')
+
+    let serverA = createTestServer(dir, { fingerprint: { buildId: 'build-a' } })
+    let serverB = createTestServer(dir, { fingerprint: { buildId: 'build-b' } })
+
+    let bodyA = await (await getByFile(serverA, 'app/styles/app.css'))!.text()
+    let bodyB = await (await getByFile(serverB, 'app/styles/app.css'))!.text()
+    let matchA = bodyA.match(/@import "\/assets\/app\/styles\/dep\.@([A-Za-z0-9_-]+)\.css";/)
+    let matchB = bodyB.match(/@import "\/assets\/app\/styles\/dep\.@([A-Za-z0-9_-]+)\.css";/)
+
+    assert.ok(matchA && matchB)
+    assert.notEqual(matchA[1], matchB[1])
+  })
+
+  it('supports external style source maps', async () => {
+    let stylePath = await write(dir, 'app/styles/app.css', 'body { color: red; }\n')
+    let assetServer = createTestServer(dir, {
+      sourceMaps: 'external',
+    })
+
+    let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(
+      assetServer,
+      'app/styles/app.css',
+    )
+    assert.match(compiledCode, /\/assets\/app\/styles\/app\.css\.map/)
+    assert.deepEqual(sourceMap.sources, ['/assets/app/styles/app.css'])
+    assert.deepEqual(sourceMap.sourcesContent, ['body { color: red; }\n'])
+
+    let headResponse = await head(assetServer, `${await assetServer.getHref(stylePath)}.map`)
+    assert.ok(headResponse)
+    assert.equal(headResponse.status, 200)
+    assert.equal(headResponse.headers.get('Content-Type'), 'application/json; charset=utf-8')
+    assert.equal(await headResponse.text(), '')
+  })
+
+  it('supports external style source maps for fingerprinted request URLs', async () => {
+    await write(dir, 'app/styles/app.css', 'body { color: red; }\n')
+    let assetServer = createTestServer(dir, {
+      fingerprint: { buildId: 'build' },
+      sourceMaps: 'external',
+    })
+
+    let response = await getByFile(assetServer, 'app/styles/app.css')
+    assert.ok(response)
+    let body = await response.text()
+    let sourceMapMatch = body.match(/\/assets\/app\/styles\/app\.@([A-Za-z0-9_-]+)\.css\.map/)
+    assert.ok(sourceMapMatch)
+
+    let sourceMapResponse = await get(
+      assetServer,
+      `/assets/app/styles/app.@${sourceMapMatch[1]}.css.map`,
+    )
+    assert.ok(sourceMapResponse)
+
+    let sourceMap = JSON.parse(await sourceMapResponse.text()) as RawSourceMap
+    assert.deepEqual(sourceMap.sources, ['/assets/app/styles/app.css'])
+    assert.deepEqual(sourceMap.sourcesContent, ['body { color: red; }\n'])
+  })
+
+  it('supports external style source maps for fingerprinted import graphs', async () => {
+    await write(dir, 'app/styles/app.css', '@import "./reset.css";\nbody { color: black; }\n')
+    await write(dir, 'app/styles/reset.css', 'body { color: red; }\n')
+    let assetServer = createTestServer(dir, {
+      fingerprint: { buildId: 'build' },
+      sourceMaps: 'external',
+    })
+
+    let appResponse = await getByFile(assetServer, 'app/styles/app.css')
+    assert.ok(appResponse)
+    let appBody = await appResponse.text()
+    let appMapMatch = appBody.match(/\/assets\/app\/styles\/app\.@([A-Za-z0-9_-]+)\.css\.map/)
+    assert.ok(appMapMatch)
+
+    let resetMatch = appBody.match(
+      /@import "\/assets\/app\/styles\/reset\.@([A-Za-z0-9_-]+)\.css";/,
+    )
+    assert.ok(resetMatch)
+
+    let resetResponse = await get(assetServer, `/assets/app/styles/reset.@${resetMatch[1]}.css`)
+    assert.ok(resetResponse)
+    let resetBody = await resetResponse.text()
+    assert.ok(resetBody.includes(`/assets/app/styles/reset.@${resetMatch[1]}.css.map`))
+
+    let appMap = await get(assetServer, `/assets/app/styles/app.@${appMapMatch[1]}.css.map`)
+    let resetMap = await get(assetServer, `/assets/app/styles/reset.@${resetMatch[1]}.css.map`)
+    assert.ok(appMap && resetMap)
+    assert.equal(appMap.status, 200)
+    assert.equal(resetMap.status, 200)
+    assert.deepEqual((JSON.parse(await appMap.text()) as RawSourceMap).sources, [
+      '/assets/app/styles/app.css',
+    ])
+    assert.deepEqual((JSON.parse(await resetMap.text()) as RawSourceMap).sources, [
+      '/assets/app/styles/reset.css',
+    ])
+  })
+
+  it('supports inline style source maps with absolute source paths', async () => {
+    let stylePath = await write(dir, 'app/styles/app.css', 'body { color: red; }\n')
+    let assetServer = createTestServer(dir, {
+      sourceMaps: 'inline',
+      sourceMapSourcePaths: 'absolute',
+    })
+
+    let response = await getByFile(assetServer, 'app/styles/app.css')
+    assert.ok(response)
+    let css = await response.text()
+    let sourceMap = decodeInlineSourceMap(css)
+    let expectedSource = nodeFs
+      .realpathSync(stylePath)
+      .replace(/\\/g, '/')
+      .replace(/^\/([A-Za-z]:\/)/, '$1')
+
+    assert.deepEqual(sourceMap.sources, [expectedSource])
+  })
+
+  it('applies top-level common compiler options to styles', async () => {
+    let stylePath = await write(
+      dir,
+      'app/styles/app.css',
+      'a { appearance: none; user-select: none; }\n',
+    )
+    let assetServer = createTestServer(dir, {
+      minify: true,
+      sourceMapSourcePaths: 'absolute',
+      sourceMaps: 'inline',
+      target: {
+        safari: '14',
+      },
+    })
+
+    let response = await getByFile(assetServer, 'app/styles/app.css')
+    assert.ok(response)
+    let css = await response.text()
+    let sourceMap = decodeInlineSourceMap(css)
+    let expectedSource = nodeFs
+      .realpathSync(stylePath)
+      .replace(/\\/g, '/')
+      .replace(/^\/([A-Za-z]:\/)/, '$1')
+
+    assert.deepEqual(sourceMap.sources, [expectedSource])
+    assert.match(
+      css,
+      /a\{-webkit-appearance:none;appearance:none;-webkit-user-select:none;user-select:none\}/,
+    )
+  })
+
+  it('updates style source map mappings after import rewriting', async () => {
+    let sourceText = '@import "./reset.css";\nbody { color: black; }\n'
+    await write(dir, 'app/styles/reset.css', 'body { color: red; }\n')
+    await write(dir, 'app/styles/app.css', sourceText)
+    let assetServer = createTestServer(dir, {
+      fingerprint: { buildId: 'build' },
+      sourceMaps: 'external',
+    })
+
+    let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(
+      assetServer,
+      'app/styles/app.css',
+    )
+    let consumer = new SourceMapConsumer(sourceMap)
+
+    let rewrittenImport = getLineAndColumn(compiledCode, '/assets/app/styles/reset.@')
+    let originalImport = consumer.originalPositionFor(rewrittenImport)
+    let expectedImport = getLineAndColumn(sourceText, '@import')
+    assert.equal(originalImport.line, expectedImport.line)
+    assert.equal(originalImport.column, expectedImport.column)
+
+    let generatedBody = getLineAndColumn(compiledCode, 'body')
+    let originalBody = consumer.originalPositionFor({
+      ...generatedBody,
+      bias: SourceMapConsumer.LEAST_UPPER_BOUND,
+    })
+    let expectedBody = getLineAndColumn(sourceText, 'body')
+    assert.equal(originalBody.line, expectedBody.line)
+    assert.equal(originalBody.column, expectedBody.column)
+  })
+
+  it('applies top-level target transforms and minifies CSS output', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      'a { appearance: none; user-select: none; text-size-adjust: none; }\n',
+    )
+    let assetServer = createTestServer(dir, {
+      target: {
+        safari: '14',
+      },
+      minify: true,
+    })
+
+    let response = await getByFile(assetServer, 'app/styles/app.css')
+    assert.ok(response)
+    let css = await response.text()
+
+    assert.match(css, /-webkit-appearance:none/)
+    assert.match(css, /-webkit-user-select:none/)
+    assert.doesNotMatch(css, /\n/)
+  })
+
+  it('uses immutable caching for fingerprinted script requests', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
     let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
@@ -396,7 +838,7 @@ describe('asset-server', () => {
     assert.equal(mismatch, null)
   })
 
-  it('keeps fingerprinted module graphs stable within a build', async () => {
+  it('keeps fingerprinted script graphs stable within a build', async () => {
     await write(dir, 'app/entry.ts', 'import "./mid.ts"\nexport const entry = true')
     await write(dir, 'app/mid.ts', 'import "./leaf.ts"\nexport const mid = true')
     await write(dir, 'app/leaf.ts', 'export const leaf = 1')
@@ -491,9 +933,7 @@ describe('asset-server', () => {
     await write(dir, 'app/dep.ts', 'export const dep: number = 2')
     let assetServer = createTestServer(dir, {
       fingerprint: { buildId: 'build' },
-      scripts: {
-        sourceMaps: 'external',
-      },
+      sourceMaps: 'external',
     })
 
     let entryResponse = await getByFile(assetServer, 'app/entry.ts')
@@ -520,10 +960,8 @@ describe('asset-server', () => {
   it('supports inline source maps with absolute source paths', async () => {
     let entryPath = await write(dir, 'app/entry.ts', 'export const entry: number = 1')
     let assetServer = createTestServer(dir, {
-      scripts: {
-        sourceMaps: 'inline',
-        sourceMapSourcePaths: 'absolute',
-      },
+      sourceMaps: 'inline',
+      sourceMapSourcePaths: 'absolute',
     })
 
     let response = await get(assetServer, '/assets/app/entry.ts')
@@ -544,15 +982,42 @@ describe('asset-server', () => {
     assert.deepEqual(sourceMap.sources, [expectedSource])
   })
 
+  it('applies top-level common compiler options to scripts', async () => {
+    let entryPath = await write(
+      dir,
+      'app/entry.ts',
+      'const data: { nested?: number } | null = { nested: 1 }\nexport let value = data?.nested ?? 0\n',
+    )
+    let assetServer = createTestServer(dir, {
+      minify: true,
+      sourceMapSourcePaths: 'absolute',
+      sourceMaps: 'inline',
+      target: {
+        chrome: '79',
+      },
+    })
+
+    let response = await getByFile(assetServer, 'app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+    let sourceMap = decodeInlineSourceMap(body)
+    let expectedSource = nodeFs
+      .realpathSync(entryPath)
+      .replace(/\\/g, '/')
+      .replace(/^\/([A-Za-z]:\/)/, '$1')
+
+    assert.deepEqual(sourceMap.sources, [expectedSource])
+    assert.doesNotMatch(body, /\?\?|\?\./)
+    assert.match(body, /void 0/)
+  })
+
   it('updates source map mappings after import rewriting', async () => {
     await write(dir, 'app/dep.ts', 'export const dep = 1')
     await write(dir, 'app/entry.ts', 'import "./dep.ts"; console.log(1)')
     let assetServer = createTestServer(dir, {
       fingerprint: { buildId: 'build' },
-      scripts: {
-        sourceMaps: 'external',
-        minify: true,
-      },
+      sourceMaps: 'external',
+      minify: true,
     })
 
     let entryResponse = await getByFile(assetServer, 'app/entry.ts')
@@ -672,9 +1137,7 @@ describe('asset-server', () => {
     )
     let assetServer = createTestServer(dir, {
       fingerprint: { buildId: 'build' },
-      scripts: {
-        sourceMaps: 'external',
-      },
+      sourceMaps: 'external',
     })
 
     let entryResponse = await getByFile(assetServer, 'app/entry.ts')
@@ -707,9 +1170,7 @@ describe('asset-server', () => {
   it('supports HEAD requests for source map URLs', async () => {
     await write(dir, 'app/entry.ts', 'export const entry: number = 1')
     let assetServer = createTestServer(dir, {
-      scripts: {
-        sourceMaps: 'external',
-      },
+      sourceMaps: 'external',
     })
 
     let response = await head(assetServer, '/assets/app/entry.ts.map')
@@ -723,18 +1184,18 @@ describe('asset-server', () => {
     await write(
       dir,
       'app/entry.ts',
-      'import { css } from "@remix-run/component"\nexport const button = css({ color: "red" })',
+      'import { css } from "@remix-run/ui"\nexport const button = css({ color: "red" })',
     )
     let assetServer = createTestServer(dir, {
       scripts: {
-        external: ['@remix-run/component'],
+        external: ['@remix-run/ui'],
       },
     })
 
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
     let body = await response.text()
-    assert.match(body, /from "@remix-run\/component"/)
+    assert.match(body, /from "@remix-run\/ui"/)
   })
 
   it('leaves data and http(s) URL imports unchanged', async () => {
@@ -775,7 +1236,7 @@ describe('asset-server', () => {
     assert.ok(!body.includes('/assets/app/alias/value.@'))
   })
 
-  it('getHref returns fingerprinted URLs for served module files when fingerprinting is enabled', async () => {
+  it('getHref returns fingerprinted URLs for served script files when fingerprinting is enabled', async () => {
     await write(dir, 'app/entry.ts', 'export const entry = true')
     let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
 
@@ -868,7 +1329,40 @@ describe('asset-server', () => {
     )
   })
 
-  it('getPreloads rejects module request URLs', async () => {
+  it('getPreloads stays shallowest-first across mixed asset roots', async () => {
+    await write(dir, 'app/a.ts', 'import "./a-1.ts"\nexport const a = true')
+    await write(dir, 'app/a-1.ts', 'import "./shared.ts"\nexport const a1 = true')
+    await write(dir, 'app/b.ts', 'import "./b-1.ts"\nexport const b = true')
+    await write(dir, 'app/b-1.ts', 'import "./shared.ts"\nexport const b1 = true')
+    await write(
+      dir,
+      'app/styles/app.css',
+      '@import "./reset.css";\n@import "./shared.css";\nbody { color: black; }\n',
+    )
+    await write(dir, 'app/styles/reset.css', '@import "./shared.css";\nbody { color: red; }\n')
+    await write(dir, 'app/styles/shared.css', 'body { color: purple; }\n')
+    await write(dir, 'app/shared.ts', 'export const shared = true')
+
+    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+
+    let urls = await assetServer.getPreloads(['app/a.ts', 'app/styles/app.css', 'app/b.ts'])
+
+    assert.deepEqual(
+      urls.map((url) => url.replace(/\.@[A-Za-z0-9_-]+(?=\.)/, '')),
+      [
+        '/assets/app/a.ts',
+        '/assets/app/b.ts',
+        '/assets/app/styles/app.css',
+        '/assets/app/a-1.ts',
+        '/assets/app/b-1.ts',
+        '/assets/app/styles/reset.css',
+        '/assets/app/styles/shared.css',
+        '/assets/app/shared.ts',
+      ],
+    )
+  })
+
+  it('getPreloads rejects script request URLs', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
 
@@ -876,11 +1370,11 @@ describe('asset-server', () => {
 
     await assert.rejects(
       () => assetServer.getPreloads('/assets/app/dep.@abc123.ts'),
-      /Module not found:/,
+      /File not found:/,
     )
   })
 
-  it('getPreloads rejects module request URLs in arrays', async () => {
+  it('getPreloads rejects script request URLs in arrays', async () => {
     await write(dir, 'app/entry.ts', 'import "./dep.ts"\nexport const entry = true')
     await write(dir, 'app/dep.ts', 'export const dep = 1')
 
@@ -888,7 +1382,7 @@ describe('asset-server', () => {
 
     await assert.rejects(
       () => assetServer.getPreloads(['app/entry.ts', '/assets/app/dep.@abc123.ts']),
-      /Module not found:/,
+      /File not found:/,
     )
   })
 
@@ -896,7 +1390,7 @@ describe('asset-server', () => {
     await write(dir, 'other.ts', 'export const value = 1')
     let assetServer = createTestServer(dir)
 
-    await assert.rejects(() => assetServer.getHref('other.ts'), /Module is not allowed:/)
+    await assert.rejects(() => assetServer.getHref('other.ts'), /File is not allowed:/)
   })
 
   it('getPreloads rejects denied modules', async () => {
@@ -905,15 +1399,15 @@ describe('asset-server', () => {
       allow: ['app/**'],
       deny: ['app/entry.ts'],
       rootDir: dir,
-      fileMap: { '/assets/app/*path': 'app/*path' },
+      fileMap: { '/app/*path': 'app/*path' },
     })
 
     await assert.rejects(
       () => assetServer.getPreloads('app/entry.ts'),
       (error: unknown) => {
         assert.ok(isAssetServerCompilationError(error))
-        assert.equal(error.code, 'MODULE_NOT_ALLOWED')
-        assert.match(error.message, /Module is not allowed/)
+        assert.equal(error.code, 'FILE_NOT_ALLOWED')
+        assert.match(error.message, /File is not allowed/)
         return true
       },
     )
@@ -925,7 +1419,7 @@ describe('asset-server', () => {
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
           jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/component',
+          jsxImportSource: '@remix-run/ui',
         },
       })
       await writeJson(caseDir, 'tsconfig.json', {
@@ -933,7 +1427,7 @@ describe('asset-server', () => {
       })
       await write(
         caseDir,
-        'app/node_modules/@remix-run/component/jsx-runtime.ts',
+        'app/node_modules/@remix-run/ui/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("fragment")',
       )
       await write(caseDir, 'app/entry.tsx', 'export let entry = <div />')
@@ -943,7 +1437,7 @@ describe('asset-server', () => {
       })
 
       let urls = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(urls.some((url) => url.includes('@remix-run/component/jsx-runtime.@')))
+      assert.ok(urls.some((url) => url.includes('@remix-run/ui/jsx-runtime.@')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -955,7 +1449,7 @@ describe('asset-server', () => {
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
           jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/component-a',
+          jsxImportSource: '@remix-run/ui-a',
         },
       })
       await writeJson(caseDir, 'tsconfig.json', {
@@ -963,12 +1457,12 @@ describe('asset-server', () => {
       })
       await write(
         caseDir,
-        'app/node_modules/@remix-run/component-a/jsx-runtime.ts',
+        'app/node_modules/@remix-run/ui-a/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("a")',
       )
       await write(
         caseDir,
-        'app/node_modules/@remix-run/component-b/jsx-runtime.ts',
+        'app/node_modules/@remix-run/ui-b/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("b")',
       )
       await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
@@ -976,24 +1470,24 @@ describe('asset-server', () => {
       let firstServer = createTestServer(caseDir)
 
       let before = await firstServer.getPreloads('app/entry.tsx')
-      assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
-      assert.ok(!before.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')))
+      assert.ok(before.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
+      assert.ok(!before.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
 
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
           jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/component-b',
+          jsxImportSource: '@remix-run/ui-b',
         },
       })
 
       let sameServer = await firstServer.getPreloads('app/entry.tsx')
-      assert.ok(sameServer.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
-      assert.ok(!sameServer.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')))
+      assert.ok(sameServer.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
+      assert.ok(!sameServer.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
 
       let secondServer = createTestServer(caseDir)
       let afterRestart = await secondServer.getPreloads('app/entry.tsx')
-      assert.ok(afterRestart.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')))
-      assert.ok(!afterRestart.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
+      assert.ok(afterRestart.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
+      assert.ok(!afterRestart.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -1005,7 +1499,7 @@ describe('asset-server', () => {
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
           jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/component-a',
+          jsxImportSource: '@remix-run/ui-a',
         },
       })
       await writeJson(caseDir, 'tsconfig.json', {
@@ -1013,12 +1507,12 @@ describe('asset-server', () => {
       })
       await write(
         caseDir,
-        'app/node_modules/@remix-run/component-a/jsx-runtime.ts',
+        'app/node_modules/@remix-run/ui-a/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("a")',
       )
       await write(
         caseDir,
-        'app/node_modules/@remix-run/component-b/jsx-runtime.ts',
+        'app/node_modules/@remix-run/ui-b/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("b")',
       )
       await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
@@ -1028,19 +1522,19 @@ describe('asset-server', () => {
       })
 
       let before = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.@')))
-      assert.ok(!before.some((url) => url.includes('@remix-run/component-b/jsx-runtime.@')))
+      assert.ok(before.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.@')))
+      assert.ok(!before.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.@')))
 
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
           jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/component-b',
+          jsxImportSource: '@remix-run/ui-b',
         },
       })
 
       let after = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(after.some((url) => url.includes('@remix-run/component-a/jsx-runtime.@')))
-      assert.ok(!after.some((url) => url.includes('@remix-run/component-b/jsx-runtime.@')))
+      assert.ok(after.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.@')))
+      assert.ok(!after.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.@')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -1131,8 +1625,9 @@ describe('asset-server', () => {
       await write(caseDir, 'app/entry.ts', 'export const value = 1')
       let assetServer = createAssetServer({
         allow: ['app/**'],
+        basePath: '/assets',
         fileMap: {
-          '/assets/app/*path': 'app/*path',
+          '/app/*path': 'app/*path',
         },
         rootDir: caseDir,
       })
@@ -1170,8 +1665,9 @@ describe('asset-server', () => {
       await fs.mkdir(projectDir, { recursive: true })
       let assetServer = createAssetServer({
         allow: ['../packages/**'],
+        basePath: '/assets',
         fileMap: {
-          '/assets/packages/*path': '../packages/*path',
+          '/packages/*path': '../packages/*path',
         },
         rootDir: projectDir,
       })
@@ -1250,6 +1746,99 @@ describe('asset-server', () => {
         let afterBody = await after.text()
 
         assert.match(afterBody, /\/assets\/app\/missing\.ts/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('picks up style source changes in watch mode without restarting', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/styles/app.css', 'body { color: red; }\n')
+      let assetServer = createWatchedTestServer(caseDir)
+
+      try {
+        let firstResponse = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(firstResponse)
+        assert.match(await firstResponse.text(), /color: red/)
+
+        let stylePath = await write(caseDir, 'app/styles/app.css', 'body { color: blue; }\n')
+        await emitWatchEvent(assetServer, stylePath, 'change')
+
+        let secondResponse = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(secondResponse)
+        assert.match(await secondResponse.text(), /color: (#00f|blue)/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('recovers in watch mode when a previously missing CSS import is created', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(
+        caseDir,
+        'app/styles/app.css',
+        '@import "./missing.css";\nbody { color: black; }\n',
+      )
+      let assetServer = createWatchedTestServer(caseDir, {
+        onError() {
+          return
+        },
+      })
+
+      try {
+        let before = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(before)
+        await assertInternalServerError(before)
+
+        let missingPath = await write(caseDir, 'app/styles/missing.css', 'body { color: blue; }\n')
+        await emitWatchEvent(assetServer, missingPath, 'add')
+
+        let after = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(after)
+        assert.equal(after.status, 200)
+        assert.match(await after.text(), /@import "\/assets\/app\/styles\/missing\.css";/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('recovers in watch mode when a previously broken style transform is fixed', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/styles/app.css', 'body { background: url("foo); }\n')
+      let errorCodes: string[] = []
+      let assetServer = createWatchedTestServer(caseDir, {
+        onError(error) {
+          if (isAssetServerCompilationError(error)) {
+            errorCodes.push(error.code)
+          }
+        },
+      })
+
+      try {
+        let before = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(before)
+        await assertInternalServerError(before)
+        assert.equal(errorCodes.at(-1), 'TRANSFORM_FAILED')
+
+        let stylePath = await write(caseDir, 'app/styles/app.css', 'body { color: red; }\n')
+        await emitWatchEvent(assetServer, stylePath, 'change')
+
+        let after = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(after)
+        assert.equal(after.status, 200)
+        assert.match(await after.text(), /color: red/)
       } finally {
         await assetServer.close()
       }
@@ -1528,7 +2117,7 @@ describe('asset-server', () => {
         }
 
         assert.equal(failure.status, 500)
-        assert.equal(failure.code, 'MODULE_TRANSFORM_FAILED')
+        assert.equal(failure.code, 'TRANSFORM_FAILED')
         assert.equal(failure.body, 'Internal Server Error')
 
         let fixedEntryPath = await write(caseDir, 'app/entry.ts', 'export const value = 7')
@@ -1612,7 +2201,7 @@ describe('asset-server', () => {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
         await assertInternalServerError(before)
-        assert.equal(errorCodes.at(-1), 'MODULE_TRANSFORM_FAILED')
+        assert.equal(errorCodes.at(-1), 'TRANSFORM_FAILED')
 
         let brokenPath = await write(caseDir, 'app/broken.ts', 'export const nope = 1')
         await emitWatchEvent(assetServer, brokenPath, 'change')
@@ -1649,12 +2238,12 @@ describe('asset-server', () => {
         let firstFailure = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(firstFailure)
         await assertInternalServerError(firstFailure)
-        assert.equal(errorCodes.at(-1), 'MODULE_TRANSFORM_FAILED')
+        assert.equal(errorCodes.at(-1), 'TRANSFORM_FAILED')
 
         let repeatedFailure = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(repeatedFailure)
         await assertInternalServerError(repeatedFailure)
-        assert.equal(errorCodes.at(-1), 'MODULE_TRANSFORM_FAILED')
+        assert.equal(errorCodes.at(-1), 'TRANSFORM_FAILED')
 
         let healthyResponse = await get(assetServer, '/assets/app/healthy.ts')
         assert.ok(healthyResponse)
@@ -1682,7 +2271,7 @@ describe('asset-server', () => {
 
         assert.match(recoveredBody, /\/assets\/app\/broken\.ts/)
         assert.match(recoveredBody, /entry = true/)
-        assert.ok(errorCodes.includes('MODULE_TRANSFORM_FAILED'))
+        assert.ok(errorCodes.includes('TRANSFORM_FAILED'))
         assert.ok(errorCodes.includes('IMPORT_RESOLUTION_FAILED'))
       } finally {
         await assetServer.close()
@@ -1698,7 +2287,7 @@ describe('asset-server', () => {
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
           jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/component-a',
+          jsxImportSource: '@remix-run/ui-a',
         },
       })
       await writeJson(caseDir, 'tsconfig.json', {
@@ -1706,12 +2295,12 @@ describe('asset-server', () => {
       })
       await write(
         caseDir,
-        'app/node_modules/@remix-run/component-a/jsx-runtime.ts',
+        'app/node_modules/@remix-run/ui-a/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("a")',
       )
       await write(
         caseDir,
-        'app/node_modules/@remix-run/component-b/jsx-runtime.ts',
+        'app/node_modules/@remix-run/ui-b/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("b")',
       )
       await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
@@ -1720,20 +2309,20 @@ describe('asset-server', () => {
 
       try {
         let before = await assetServer.getPreloads('app/entry.tsx')
-        assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
+        assert.ok(before.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
 
         let tsconfigPath = await writeJson(caseDir, 'tsconfig.base.json', {
           compilerOptions: {
             jsx: 'react-jsx',
-            jsxImportSource: '@remix-run/component-b',
+            jsxImportSource: '@remix-run/ui-b',
           },
         })
         await emitWatchEvent(assetServer, tsconfigPath, 'change')
 
         let after = await assetServer.getPreloads('app/entry.tsx')
 
-        assert.ok(after.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')))
-        assert.ok(!after.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
+        assert.ok(after.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
+        assert.ok(!after.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
       } finally {
         await assetServer.close()
       }
@@ -1748,7 +2337,7 @@ describe('asset-server', () => {
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
           jsx: 'react-jsx',
-          jsxImportSource: '@remix-run/component-a',
+          jsxImportSource: '@remix-run/ui-a',
         },
       })
       await writeJson(caseDir, 'tsconfig.json', {
@@ -1756,12 +2345,12 @@ describe('asset-server', () => {
       })
       await write(
         caseDir,
-        'app/node_modules/@remix-run/component-a/jsx-runtime.ts',
+        'app/node_modules/@remix-run/ui-a/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("a")',
       )
       await write(
         caseDir,
-        'app/node_modules/@remix-run/component-b/jsx-runtime.ts',
+        'app/node_modules/@remix-run/ui-b/jsx-runtime.ts',
         'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("b")',
       )
       await write(caseDir, 'app/entry.tsx', 'export let entry = <section />')
@@ -1773,19 +2362,19 @@ describe('asset-server', () => {
 
       try {
         let before = await assetServer.getPreloads('app/entry.tsx')
-        assert.ok(before.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
+        assert.ok(before.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
 
         let tsconfigPath = await writeJson(caseDir, 'tsconfig.base.json', {
           compilerOptions: {
             jsx: 'react-jsx',
-            jsxImportSource: '@remix-run/component-b',
+            jsxImportSource: '@remix-run/ui-b',
           },
         })
         await emitWatchEvent(assetServer, tsconfigPath, 'change')
 
         let after = await assetServer.getPreloads('app/entry.tsx')
-        assert.ok(after.some((url) => url.includes('@remix-run/component-a/jsx-runtime.ts')))
-        assert.ok(!after.some((url) => url.includes('@remix-run/component-b/jsx-runtime.ts')))
+        assert.ok(after.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
+        assert.ok(!after.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
       } finally {
         await assetServer.close()
       }
@@ -2555,13 +3144,31 @@ describe('asset-server', () => {
     assert.ok(assetServer)
   })
 
+  it('treats an empty basePath as root', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+
+    let assetServer = createAssetServer({
+      allow: ['app/**'],
+      basePath: '',
+      fileMap: {
+        '/app/*path': 'app/*path',
+      },
+      rootDir: dir,
+      watch: false,
+    })
+
+    let response = await get(assetServer, '/app/entry.ts')
+    assert.ok(response)
+    assert.equal(response.status, 200)
+  })
+
   it('rethrows unexpected realpath errors for exact file matchers', async () => {
     assert.throws(
       () =>
         createAssetServerForTest({
           allow: ['app/\0allowed-realpath.ts'],
           rootDir: dir,
-          fileMap: { '/assets/app/*path': 'app/*path' },
+          fileMap: { '/app/*path': 'app/*path' },
         }),
       { code: 'ERR_INVALID_ARG_VALUE' },
     )
@@ -2575,7 +3182,7 @@ describe('asset-server', () => {
           allow: [path.join(dir, 'app')],
           rootDir: dir,
           fileMap: {
-            '/assets/app/*path': `${path.join(dir, 'app')}/*path`,
+            '/app/*path': `${path.join(dir, 'app')}/*path`,
           },
           fingerprint: { buildId: 'build' },
           watch: false,
@@ -2592,7 +3199,7 @@ describe('asset-server', () => {
       allow: [allowedPath, path.join(dir, 'app')],
       deny: [path.join(dir, 'app/blocked.ts')],
       rootDir: dir,
-      fileMap: { '/assets/app/*path': 'app/*path' },
+      fileMap: { '/app/*path': 'app/*path' },
     })
 
     let allowedResponse = await get(assetServer, '/assets/app/allowed.ts')
@@ -2611,7 +3218,7 @@ describe('asset-server', () => {
         createAssetServerForTest({
           allow: ['app/**'],
           rootDir: dir,
-          fileMap: { '/assets/app/*': 'app/*path' },
+          fileMap: { '/app/*': 'app/*path' },
         }),
       /must use named wildcards/,
     )
@@ -2624,7 +3231,7 @@ describe('asset-server', () => {
       allow: ['app/**/*.ts'],
       deny: ['app/**/private/**'],
       rootDir: dir,
-      fileMap: { '/assets/app/*path': 'app/*path' },
+      fileMap: { '/app/*path': 'app/*path' },
     })
 
     let allowedResponse = await get(assetServer, '/assets/app/features/allowed.ts')
@@ -2641,8 +3248,8 @@ describe('asset-server', () => {
       allow: ['app/**/*', 'node_modules/**/*'],
       rootDir: dir,
       fileMap: {
-        '/assets/app/*path': 'app/*path',
-        '/assets/npm/*path': 'node_modules/*path',
+        '/app/*path': 'app/*path',
+        '/npm/*path': 'node_modules/*path',
       },
     })
 
@@ -2661,7 +3268,7 @@ describe('asset-server', () => {
       allow: ['app/**'],
       deny: ['app/blocked.ts'],
       rootDir: dir,
-      fileMap: { '/assets/app/*path': 'app/*path' },
+      fileMap: { '/app/*path': 'app/*path' },
       onError(error) {
         receivedError = error
       },
@@ -2678,7 +3285,7 @@ describe('asset-server', () => {
       'app/entry.ts',
       'export function greet(name: string) {\n  return "Hello " + name\n}\n',
     )
-    let assetServer = createTestServer(dir, { scripts: { minify: true } })
+    let assetServer = createTestServer(dir, { minify: true })
 
     let response = await get(assetServer, '/assets/app/entry.ts')
     assert.ok(response)
@@ -2693,9 +3300,9 @@ describe('asset-server', () => {
       'const data: { nested?: number } | null = { nested: 1 }\nexport let value = data?.nested ?? 0\n',
     )
     let assetServer = createTestServer(dir, {
-      scripts: {
-        minify: true,
-        target: 'es2019',
+      minify: true,
+      target: {
+        es: '2019',
       },
     })
 
@@ -2706,6 +3313,101 @@ describe('asset-server', () => {
     // ?? and ?. are not supported by the specified target
     assert.doesNotMatch(body, /\?\?|\?\./)
     assert.match(body, /void 0/)
+  })
+
+  it('lowers syntax to the configured browser target object', async () => {
+    await write(
+      dir,
+      'app/entry.ts',
+      'const data: { nested?: number } | null = { nested: 1 }\nexport let value = data?.nested ?? 0\n',
+    )
+    let assetServer = createTestServer(dir, {
+      target: {
+        chrome: '79',
+      },
+      minify: true,
+    })
+
+    let response = await get(assetServer, '/assets/app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.doesNotMatch(body, /\?\?|\?\./)
+    assert.match(body, /void 0/)
+  })
+
+  it('serves injected helpers while preserving authored imports of the same package', async () => {
+    await writeJson(dir, 'app/node_modules/@oxc-project/runtime/package.json', {
+      name: '@oxc-project/runtime',
+    })
+    await write(
+      dir,
+      'app/node_modules/@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+      'export default "user-runtime-helper"',
+    )
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import helper from "@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js"',
+        'void helper',
+        'export class Example {',
+        '  #value = 1',
+        '  #getValue() {',
+        '    return this.#value',
+        '  }',
+        '  value() {',
+        '    return this.#getValue()',
+        '  }',
+        '}',
+      ].join('\n'),
+    )
+    let assetServer = createTestServer(dir, {
+      fileMap: {
+        '/npm/*path': 'app/node_modules/*path',
+        '/app/*path': 'app/*path',
+      },
+      target: {
+        es: '2020',
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/entry.ts')
+    assert.ok(response)
+    assert.equal(response.status, 200)
+
+    let body = await response.text()
+    let entryImportSpecifiers = await getAbsoluteImportSpecifiers(body)
+    let helperPaths = entryImportSpecifiers.filter((specifier) =>
+      specifier.startsWith('/assets/__@remix/injected/@oxc-project/runtime/'),
+    )
+
+    assert.doesNotMatch(body, /from ["']@oxc-project\/runtime/)
+    assert.ok(
+      entryImportSpecifiers.includes(
+        '/assets/npm/@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+      ),
+    )
+    assert.ok(helperPaths.length > 0)
+    assert.ok(
+      helperPaths.includes(
+        '/assets/__@remix/injected/@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+      ),
+    )
+
+    let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+    assert.ok(
+      servedUrls.has(
+        '/assets/npm/@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+      ),
+      'expected authored runtime imports to use the consumer fileMap path',
+    )
+    assert.ok(
+      servedUrls.has(
+        '/assets/__@remix/injected/@oxc-project/runtime/src/helpers/esm/checkPrivateRedeclaration.js',
+      ),
+      'expected transitive Oxc helper imports to be servable',
+    )
   })
 
   it('does not inherit target from tsconfig', async () => {
@@ -2736,16 +3438,16 @@ describe('asset-server', () => {
           'tsconfig.json': {
             compilerOptions: {
               jsx: 'react-jsx',
-              jsxImportSource: '@remix-run/component',
+              jsxImportSource: '@remix-run/ui',
             },
           },
-          'app/node_modules/@remix-run/component/jsx-runtime.ts':
+          'app/node_modules/@remix-run/ui/jsx-runtime.ts':
             'export function jsx() {}\nexport const jsxs = jsx\nexport const Fragment = Symbol.for("fragment")',
           'app/entry.tsx': 'export let entry = <div />',
         },
         async ({ assetServer }) => {
           let urls = await assetServer.getPreloads('app/entry.tsx')
-          assert.ok(urls.some((url) => url.includes('@remix-run/component/jsx-runtime.ts')))
+          assert.ok(urls.some((url) => url.includes('@remix-run/ui/jsx-runtime.ts')))
         },
       )
     })
@@ -2818,7 +3520,7 @@ describe('asset-server', () => {
       )
 
       assert.ok(isAssetServerCompilationError(receivedError))
-      assert.equal(receivedError.code, 'MODULE_TRANSFORM_FAILED')
+      assert.equal(receivedError.code, 'TRANSFORM_FAILED')
       assert.match(receivedError.message, /compilerOptions\.jsx = "preserve"/)
     })
 
@@ -2848,7 +3550,7 @@ describe('asset-server', () => {
       )
 
       assert.ok(isAssetServerCompilationError(receivedError))
-      assert.equal(receivedError.code, 'MODULE_TRANSFORM_FAILED')
+      assert.equal(receivedError.code, 'TRANSFORM_FAILED')
 
       await withTsconfigTransformCase(
         {
@@ -3010,9 +3712,11 @@ describe('asset-server', () => {
           defaultBody = await response.text()
         },
         {
+          target: {
+            es: '2015',
+          },
           scripts: {
             external: [definePropertyHelperSpecifier],
-            target: 'es2015',
           },
         },
       )
@@ -3033,9 +3737,11 @@ describe('asset-server', () => {
           assignBody = await response.text()
         },
         {
+          target: {
+            es: '2015',
+          },
           scripts: {
             external: [definePropertyHelperSpecifier],
-            target: 'es2015',
           },
         },
       )
@@ -3089,8 +3795,9 @@ describe('asset-server', () => {
       () =>
         createAssetServer({
           allow: ['app/**'],
+          basePath: '/assets',
           fileMap: {
-            '/assets/app/*path': 'app/*path',
+            '/app/*path': 'app/*path',
           },
           rootDir: dir,
           fingerprint: { buildId: 'build' },
@@ -3113,10 +3820,10 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
-    assert.equal(receivedError.code, 'MODULE_TRANSFORM_FAILED')
+    assert.equal(receivedError.code, 'TRANSFORM_FAILED')
     assert.match(
       normalizeWindowsPath(receivedError.message),
-      /Failed to transform module .*app\/broken\.ts/,
+      /Failed to transform script .*app\/broken\.ts/,
     )
   })
 
@@ -3135,9 +3842,10 @@ describe('asset-server', () => {
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
     assert.equal(receivedError.code, 'IMPORT_NOT_SUPPORTED')
-    assert.match(receivedError.message, /not a supported script module/)
+    assert.match(receivedError.message, /not a supported script file/)
     assert.match(receivedError.message, /"\.\/data\.json"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
+    assert.match(normalizeWindowsPath(receivedError.message), /app\/data\.json/)
   })
 
   it('calls onError for import resolution failures', async () => {
@@ -3158,6 +3866,91 @@ describe('asset-server', () => {
     assert.match(receivedError.message, /"\.\/missing\.ts"/)
   })
 
+  it('calls onError for CSS import resolution failures', async () => {
+    await write(dir, 'app/styles/app.css', '@import "./missing.css";\nbody { color: red; }\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'IMPORT_RESOLUTION_FAILED')
+    assert.match(receivedError.message, /Failed to resolve import/)
+    assert.match(receivedError.message, /"\.\/missing\.css"/)
+  })
+
+  it('calls onError for malformed CSS transforms', async () => {
+    await write(dir, 'app/styles/app.css', 'body { background: url("foo); }\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'TRANSFORM_FAILED')
+    assert.match(
+      normalizeWindowsPath(receivedError.message),
+      /Failed to transform style .*app\/styles\/app\.css/,
+    )
+  })
+
+  it('calls onError for disallowed CSS imports', async () => {
+    await write(dir, 'app/styles/app.css', '@import "../../secret.css";\nbody { color: red; }\n')
+    await write(dir, 'secret.css', 'body { color: black; }\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'IMPORT_NOT_ALLOWED')
+    assert.match(receivedError.message, /not allowed by the asset server allow\/deny configuration/)
+    assert.match(receivedError.message, /"\.\.\/\.\.\/secret\.css"/)
+    assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
+    assert.match(normalizeWindowsPath(receivedError.message), /secret\.css/)
+  })
+
+  it('calls onError when a CSS import is outside configured fileMap entries', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      '@import "../../shared/reset.css";\nbody { color: red; }\n',
+    )
+    await write(dir, 'shared/reset.css', 'body { color: black; }\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      allow: ['app/**', 'shared/**'],
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'IMPORT_OUTSIDE_FILE_MAP')
+    assert.match(receivedError.message, /outside all configured fileMap entries/)
+    assert.match(receivedError.message, /"\.\.\/\.\.\/shared\/reset\.css"/)
+    assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
+    assert.match(normalizeWindowsPath(receivedError.message), /shared\/reset\.css/)
+  })
+
   it('calls onError for CommonJS modules', async () => {
     await write(dir, 'app/entry.ts', 'import "./legacy.js"\nexport const entry = true')
     await write(dir, 'app/dep.js', 'export const dep = true')
@@ -3173,12 +3966,12 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
-    assert.equal(receivedError.code, 'MODULE_COMMONJS_NOT_SUPPORTED')
+    assert.equal(receivedError.code, 'COMMONJS_NOT_SUPPORTED')
     assert.match(receivedError.message, /CommonJS module detected/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/legacy\.js/)
   })
 
-  it('calls onError for disallowed imported modules', async () => {
+  it('calls onError for disallowed imported scripts', async () => {
     await write(dir, 'app/entry.ts', 'import "../secret.ts"\nexport const entry = true')
     await write(dir, 'secret.ts', 'export const secret = true')
     let receivedError: unknown
@@ -3196,6 +3989,7 @@ describe('asset-server', () => {
     assert.match(receivedError.message, /not allowed by the asset server allow\/deny configuration/)
     assert.match(receivedError.message, /"\.\.\/secret\.ts"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
+    assert.match(normalizeWindowsPath(receivedError.message), /secret\.ts/)
   })
 
   it('calls onError when an imported module is outside configured fileMap entries', async () => {
@@ -3217,6 +4011,7 @@ describe('asset-server', () => {
     assert.match(receivedError.message, /outside all configured fileMap entries/)
     assert.match(receivedError.message, /"\.\.\/shared\/util\.ts"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
+    assert.match(normalizeWindowsPath(receivedError.message), /shared\/util\.ts/)
   })
 
   it('uses a custom response returned from onError', async () => {
@@ -3275,10 +4070,11 @@ describe('asset-server', () => {
         chokidarWatcher.emit('error', watchError)
 
         assert.equal(onError.mock.calls.length, 0)
-        assert.equal(
-          (consoleError.mock.calls.at(-1)?.arguments[1] as { code?: string }).code,
-          'EMFILE',
-        )
+        let lastConsoleError = consoleError.mock.calls.at(-1)
+        assert.ok(lastConsoleError)
+        let error = lastConsoleError.arguments[1]
+        assert.ok(error && typeof error === 'object' && 'code' in error)
+        assert.equal(error.code, 'EMFILE')
       } finally {
         await assetServer.close()
       }

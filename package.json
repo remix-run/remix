@@ -17,7 +17,7 @@
     "node": ">=24.3.0"
   },
   "scripts": {
-    "postinstall": "test -n \"$CI\" || pnpm --filter @remix-run/component exec playwright install",
+    "postinstall": "test -n \"${CI:-}\" || pnpm --filter @remix-run/ui exec playwright install",
     "build": "pnpm -r build",
     "changes:preview": "node ./scripts/changes-preview.ts",
     "changes:validate": "node ./scripts/changes-validate.ts",
@@ -43,7 +43,6 @@
   ],
   "pnpm": {
     "onlyBuiltDependencies": [
-      "better-sqlite3",
       "@swc/core",
       "esbuild",
       "sharp",

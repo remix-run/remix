@@ -2,6 +2,77 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-alpha.6
+
+### Pre-release Changes
+
+- BREAKING CHANGE: `MultipartPart.headers` from `remix/multipart-parser` and `remix/multipart-parser/node` is now a plain decoded object keyed by lower-case header name instead of a native `Headers` instance. Access part headers with bracket notation like `part.headers['content-type']` instead of `part.headers.get('content-type')`.
+
+- BREAKING CHANGE: Removed the deprecated `remix/component`, `remix/component/jsx-runtime`, `remix/component/jsx-dev-runtime`, and `remix/component/server` package exports. Import the consolidated UI runtime from `remix/ui`, `remix/ui/jsx-runtime`, `remix/ui/jsx-dev-runtime`, and `remix/ui/server` instead.
+
+  Removed `package.json` `bin` commands:
+
+  - `remix-test`
+
+  Added `package.json` `exports`:
+
+  - `remix/node-fetch-server/test` to re-export APIs from `@remix-run/node-fetch-server/test`
+  - `remix/terminal` to re-export APIs from `@remix-run/terminal`
+  - `remix/test/cli` to re-export APIs from `@remix-run/test/cli`
+
+  Added `package.json` `exports` for the consolidated UI runtime:
+
+  - `remix/ui` to re-export APIs from `@remix-run/ui`
+  - `remix/ui/jsx-runtime` to re-export APIs from `@remix-run/ui/jsx-runtime`
+  - `remix/ui/jsx-dev-runtime` to re-export APIs from `@remix-run/ui/jsx-dev-runtime`
+  - `remix/ui/server` to re-export APIs from `@remix-run/ui/server`
+  - `remix/ui/animation` to re-export APIs from `@remix-run/ui/animation`
+  - `remix/ui/accordion` to re-export APIs from `@remix-run/ui/accordion`
+  - `remix/ui/anchor` to re-export APIs from `@remix-run/ui/anchor`
+  - `remix/ui/breadcrumbs` to re-export APIs from `@remix-run/ui/breadcrumbs`
+  - `remix/ui/button` to re-export APIs from `@remix-run/ui/button`
+  - `remix/ui/combobox` to re-export APIs from `@remix-run/ui/combobox`
+  - `remix/ui/glyph` to re-export APIs from `@remix-run/ui/glyph`
+  - `remix/ui/listbox` to re-export APIs from `@remix-run/ui/listbox`
+  - `remix/ui/menu` to re-export APIs from `@remix-run/ui/menu`
+  - `remix/ui/popover` to re-export APIs from `@remix-run/ui/popover`
+  - `remix/ui/scroll-lock` to re-export APIs from `@remix-run/ui/scroll-lock`
+  - `remix/ui/select` to re-export APIs from `@remix-run/ui/select`
+  - `remix/ui/separator` to re-export APIs from `@remix-run/ui/separator`
+  - `remix/ui/theme` to re-export APIs from `@remix-run/ui/theme`
+  - `remix/ui/test` to re-export APIs from `@remix-run/ui/test`
+
+- Added `package.json` exports and binaries for the Remix CLI:
+
+  - `remix/cli` to expose the Remix CLI programmatic API
+  - `remix` as a `package.json` `bin` command that delegates to `@remix-run/cli`
+
+  The Remix CLI now reads the current Remix version from the `remix` package and declares Node.js 24.3.0 or later in package metadata.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.2.0`](https://github.com/remix-run/remix/releases/tag/assets@0.2.0)
+  - [`auth@0.2.0`](https://github.com/remix-run/remix/releases/tag/auth@0.2.0)
+  - [`cli@0.1.0`](https://github.com/remix-run/remix/releases/tag/cli@0.1.0)
+  - [`compression-middleware@0.1.6`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.6)
+  - [`data-schema@0.3.0`](https://github.com/remix-run/remix/releases/tag/data-schema@0.3.0)
+  - [`data-table-sqlite@0.4.0`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.4.0)
+  - [`fetch-proxy@0.8.0`](https://github.com/remix-run/remix/releases/tag/fetch-proxy@0.8.0)
+  - [`file-storage@0.13.4`](https://github.com/remix-run/remix/releases/tag/file-storage@0.13.4)
+  - [`file-storage-s3@0.1.1`](https://github.com/remix-run/remix/releases/tag/file-storage-s3@0.1.1)
+  - [`form-data-middleware@0.2.2`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.2.2)
+  - [`form-data-parser@0.17.0`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.17.0)
+  - [`fs@0.4.3`](https://github.com/remix-run/remix/releases/tag/fs@0.4.3)
+  - [`lazy-file@5.0.3`](https://github.com/remix-run/remix/releases/tag/lazy-file@5.0.3)
+  - [`logger-middleware@0.2.0`](https://github.com/remix-run/remix/releases/tag/logger-middleware@0.2.0)
+  - [`mime@0.4.1`](https://github.com/remix-run/remix/releases/tag/mime@0.4.1)
+  - [`multipart-parser@0.16.0`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.0)
+  - [`response@0.3.3`](https://github.com/remix-run/remix/releases/tag/response@0.3.3)
+  - [`static-middleware@0.4.7`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.7)
+  - [`tar-parser@0.7.1`](https://github.com/remix-run/remix/releases/tag/tar-parser@0.7.1)
+  - [`terminal@0.1.0`](https://github.com/remix-run/remix/releases/tag/terminal@0.1.0)
+  - [`test@0.2.0`](https://github.com/remix-run/remix/releases/tag/test@0.2.0)
+  - [`ui@0.1.0`](https://github.com/remix-run/remix/releases/tag/ui@0.1.0)
+
 ## v3.0.0-alpha.5
 
 ### Pre-release Changes
@@ -61,9 +132,9 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 
 - Add `remix/cors-middleware` to re-export the CORS middleware APIs from `@remix-run/cors-middleware`.
 
-- Update `remix/component` and `remix/component/server` to re-export the latest `@remix-run/component` frame-navigation APIs.
+- Update `remix/ui` and `remix/ui/server` to re-export the latest `@remix-run/ui` frame-navigation APIs.
 
-  `remix/component` now exposes `navigate(href, { src, target, history })`, `link(href, { src, target, history })`, `run({ loadModule, resolveFrame })`, and the `handle.frames.top` and `handle.frames.get(name)` helpers, while `remix/component/server` re-exports the SSR frame source APIs including `frameSrc`, `topFrameSrc`, and `ResolveFrameContext`.
+  `remix/ui` now exposes `navigate(href, { src, target, history })`, `link(href, { src, target, history })`, `run({ loadModule, resolveFrame })`, and the `handle.frames.top` and `handle.frames.get(name)` helpers, while `remix/ui/server` re-exports the SSR frame source APIs including `frameSrc`, `topFrameSrc`, and `ResolveFrameContext`.
 
 - Add browser-origin and CSRF protection middleware APIs to `remix`.
 
@@ -117,7 +188,7 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   - `remix/session-storage-memcache` to re-export APIs from `@remix-run/session-storage-memcache`
   - `remix/session-storage-redis` to re-export APIs from `@remix-run/session-storage-redis`
 
-- Remove the root export from the `remix` package so you will no longer import anything from `remix` and will instead always import from a sub-path such as `remix/fetch-router` or `remix/component`
+- Remove the root export from the `remix` package so you will no longer import anything from `remix` and will instead always import from a sub-path such as `remix/fetch-router` or `remix/ui`
 
 - Bumped `@remix-run/*` dependencies:
   - [`async-context-middleware@0.1.3`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.1.3)

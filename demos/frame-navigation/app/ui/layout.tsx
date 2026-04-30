@@ -1,5 +1,5 @@
-import type { RemixNode } from 'remix/component'
-import { css } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/ui'
+import { css } from 'remix/ui'
 
 import { routes } from '../routes.ts'
 import { NavLink } from './nav-link.tsx'
@@ -20,46 +20,49 @@ const navItems = [
   { id: 'settings', label: 'Settings', route: routes.settings.index },
 ]
 
-export function Layout() {
-  return ({ title, activeNav, children }: LayoutProps) => (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <title>{title} | LMS</title>
-        <script async type="module" src="/assets/entry.js" />
-      </head>
-      <body mix={bodyStyle}>
-        <div mix={appShellStyle}>
-          <aside mix={sidebarStyle}>
-            <a href={routes.main.index.href()} mix={brandLinkStyle}>
-              Atlas LMS
-            </a>
-            <p mix={sidebarSubtitleStyle}>Student workspace</p>
-            <nav mix={navStyle}>
-              {navItems.map((item) => (
-                <NavLink route={item.route} active={activeNav === item.id}>
-                  {item.label}
-                </NavLink>
-              ))}
-            </nav>
-            <form method="POST" action={routes.auth.logout.href()} mix={logoutFormStyle}>
-              <button type="submit" mix={logoutButtonStyle}>
-                Logout
-              </button>
-            </form>
-          </aside>
+export function Layout(handle: Handle<LayoutProps>) {
+  return () => {
+    let { title, activeNav, children } = handle.props
+    return (
+      <html lang="en">
+        <head>
+          <meta charSet="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>{title} | LMS</title>
+          <script async type="module" src="/assets/entry.js" />
+        </head>
+        <body mix={bodyStyle}>
+          <div mix={appShellStyle}>
+            <aside mix={sidebarStyle}>
+              <a href={routes.main.index.href()} mix={brandLinkStyle}>
+                Atlas LMS
+              </a>
+              <p mix={sidebarSubtitleStyle}>Student workspace</p>
+              <nav mix={navStyle}>
+                {navItems.map((item) => (
+                  <NavLink route={item.route} active={activeNav === item.id}>
+                    {item.label}
+                  </NavLink>
+                ))}
+              </nav>
+              <form method="POST" action={routes.auth.logout.href()} mix={logoutFormStyle}>
+                <button type="submit" mix={logoutButtonStyle}>
+                  Logout
+                </button>
+              </form>
+            </aside>
 
-          <main mix={mainStyle}>
-            <header mix={mainHeaderStyle}>
-              <h1 mix={mainTitleStyle}>{title}</h1>
-            </header>
-            {children}
-          </main>
-        </div>
-      </body>
-    </html>
-  )
+            <main mix={mainStyle}>
+              <header mix={mainHeaderStyle}>
+                <h1 mix={mainTitleStyle}>{title}</h1>
+              </header>
+              {children}
+            </main>
+          </div>
+        </body>
+      </html>
+    )
+  }
 }
 
 const bodyStyle = css({

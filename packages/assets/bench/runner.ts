@@ -78,7 +78,7 @@ const benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getBasicFixture()
       return async function run() {
-        let assetServer = createBenchAssetServer(fixture, { scripts: { minify: true } })
+        let assetServer = createBenchAssetServer(fixture, { minify: true })
         let source = await readHandledResponseText(
           assetServer,
           await assetServer.getHref(fixture.entryPoint),
@@ -105,7 +105,7 @@ const benchmarks: Benchmark[] = [
     async prepare() {
       let fixture = await getDeepGraphFixture()
       return async function run() {
-        let assetServer = createBenchAssetServer(fixture, { scripts: { minify: true } })
+        let assetServer = createBenchAssetServer(fixture, { minify: true })
         let urls = await assetServer.getPreloads(fixture.entryPoint)
         assertPreloadUrls(urls, fixture)
       }
@@ -185,14 +185,25 @@ function createBenchAssetServer(
   fixture: BenchFixture,
   overrides: Partial<AssetServerOptions> = {},
 ): AssetServer {
+  let defaultFingerprint: AssetServerOptions['fingerprint'] = {
+    buildId: String(Date.now()),
+  }
   let options: AssetServerOptions = {
-    rootDir: path.resolve(import.meta.dirname, '../../..'),
-    fingerprint: {
-      buildId: String(Date.now()),
-    },
-    watch: false,
-    ...fixture.assetServer,
-    ...overrides,
+    allow: overrides.allow ?? fixture.assetServer.allow,
+    basePath: overrides.basePath ?? fixture.assetServer.basePath,
+    fileMap: overrides.fileMap ?? fixture.assetServer.fileMap,
+    deny: overrides.deny,
+    fingerprint: Object.hasOwn(overrides, 'fingerprint')
+      ? overrides.fingerprint
+      : defaultFingerprint,
+    minify: overrides.minify,
+    onError: overrides.onError,
+    rootDir: overrides.rootDir ?? path.resolve(import.meta.dirname, '../../..'),
+    scripts: overrides.scripts,
+    sourceMaps: overrides.sourceMaps,
+    sourceMapSourcePaths: overrides.sourceMapSourcePaths,
+    target: overrides.target,
+    watch: overrides.watch ?? false,
   }
 
   return createAssetServer(options)

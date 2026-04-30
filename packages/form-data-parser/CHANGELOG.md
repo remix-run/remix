@@ -2,6 +2,19 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
+## v0.17.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Errors thrown or rejected by a `parseFormData()` upload handler now propagate directly instead of being wrapped in a `FormDataParseError`.
+
+### Patch Changes
+
+- Preserve non-ASCII multipart field names and filenames when parsing `multipart/form-data` requests.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`multipart-parser@0.16.0`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.0)
+
 ## v0.16.0
 
 ### Minor Changes

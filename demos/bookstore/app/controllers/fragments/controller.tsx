@@ -1,5 +1,5 @@
 import type { Controller } from 'remix/fetch-router'
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 import { Database } from 'remix/data-table'
 
 import { CartButton } from '../../assets/cart-button.tsx'

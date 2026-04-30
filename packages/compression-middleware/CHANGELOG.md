@@ -2,6 +2,14 @@
 
 This is the changelog for [`compression-middleware`](https://github.com/remix-run/remix/tree/main/packages/compression-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.6
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`mime@0.4.1`](https://github.com/remix-run/remix/releases/tag/mime@0.4.1)
+  - [`response@0.3.3`](https://github.com/remix-run/remix/releases/tag/response@0.3.3)
+
 ## v0.1.5
 
 ### Patch Changes

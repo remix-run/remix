@@ -1,12 +1,14 @@
 import type { RequestContext } from '@remix-run/fetch-router'
 
-import type { OAuthProvider, OAuthResult, OAuthTokens } from '../provider.ts'
+import type { OAuthProvider, OAuthResult, OAuthStandardTokens, OAuthTokens } from '../provider.ts'
 import {
   createAuthorizationURL,
   createOAuthProvider,
   exchangeAuthorizationCode,
+  exchangeRefreshToken,
   fetchJson,
   getAuthorizationCode,
+  mergeRefreshedStandardTokens,
 } from '../provider.ts'
 import { createCodeChallenge } from '../utils.ts'
 
@@ -125,7 +127,9 @@ export interface OIDCAuthProviderOptions<
 export function createOIDCAuthProvider<
   profile extends OIDCAuthProfile = OIDCAuthProfile,
   provider extends string = 'oidc',
->(options: OIDCAuthProviderOptions<profile, provider>): OAuthProvider<profile, provider> {
+>(
+  options: OIDCAuthProviderOptions<profile, provider>,
+): OAuthProvider<profile, provider, OAuthStandardTokens> {
   let name = options.name ?? ('oidc' as provider)
   let scopes = options.scopes ?? DEFAULT_OIDC_SCOPES
   let metadataPromise: Promise<OIDCAuthProviderMetadata> | undefined
@@ -161,7 +165,10 @@ export function createOIDCAuthProvider<
         code_challenge_method: 'S256',
       })
     },
-    async handleCallback(context, transaction): Promise<OAuthResult<profile, provider>> {
+    async handleCallback(
+      context,
+      transaction,
+    ): Promise<OAuthResult<profile, provider, OAuthStandardTokens>> {
       let metadata = await getMetadata()
       let tokens = await exchangeAuthorizationCode({
         tokenEndpoint: metadata.token_endpoint,
@@ -183,6 +190,21 @@ export function createOIDCAuthProvider<
         profile,
         tokens,
       }
+    },
+    async refreshTokens(currentTokens): Promise<OAuthStandardTokens> {
+      if (currentTokens.refreshToken == null || currentTokens.refreshToken.length === 0) {
+        throw new Error(`OIDC provider "${name}" did not receive a refresh token.`)
+      }
+
+      let metadata = await getMetadata()
+      let refreshedTokens = await exchangeRefreshToken({
+        tokenEndpoint: metadata.token_endpoint,
+        clientId: options.clientId,
+        clientSecret: options.clientSecret,
+        refreshToken: currentTokens.refreshToken,
+      })
+
+      return mergeRefreshedStandardTokens(currentTokens, refreshedTokens)
     },
   })
 }

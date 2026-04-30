@@ -1,4 +1,4 @@
-import { css } from 'remix/component'
+import { css } from 'remix/ui'
 import type { BuildAction } from 'remix/fetch-router'
 
 import { MessageStream } from '../assets/message-stream.tsx'
@@ -130,7 +130,7 @@ export const homeAction = {
           </div>
         </div>
 
-        <MessageStream setup={{ limit }} />
+        <MessageStream limit={limit} />
       </Layout>,
     )
   },

@@ -1,9 +1,34 @@
+import * as fsp from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import * as fsp from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 import * as util from 'node:util'
 import type { PlaywrightTestConfig } from 'playwright/test'
 import { importModule } from './import-module.ts'
+
+export const IS_RUNNING_FROM_SRC = path.extname(new URL(import.meta.url).pathname) === '.ts'
+
+/*
+ * The root directory for the test code. Coverage URLs are emitted as
+ * `/scripts/<rel-from-rootDir>` and resolved back via the same anchor.
+ *
+ *   - In a published install: `process.cwd()`, since deps and user source all
+ *     live under it.
+ *   - In monorepo src mode: the monorepo root, computed by walking back from
+ *     the resolved `@remix-run/test` source path. `process.cwd()` doesn't work
+ *     here because workspace deps and node_modules live above the per-package
+ *     cwd.
+ */
+export function getBrowserTestRootDir(): string {
+  return IS_RUNNING_FROM_SRC
+    ? // Resolve to packages/test/src/index.ts and the pop 3 directories off to the repo root
+      path
+        .dirname(fileURLToPath(import.meta.resolve('@remix-run/test')))
+        .split(path.sep)
+        .slice(0, -3)
+        .join(path.sep)
+    : process.cwd()
+}
 
 // prettier-ignore
 // Note: `description` is not a field used by parseArgs(), it's an additional field
@@ -16,6 +41,10 @@ const cliOptions = {
   'browser.open': {
     type: 'boolean',
     description: 'Open browser window and keep open after tests finish',
+  },
+  'glob.browser': {
+    type: 'string',
+    description: 'Glob pattern for browser test files',
   },
   'glob.e2e': {
     type: 'string',
@@ -86,6 +115,10 @@ const cliOptions = {
     short: 'p',
     description: 'Filter to a specific Playwright project (comma-separated)',
   },
+  pool: {
+    type: 'string',
+    description: 'Pool used to run server and E2E test files: forks, threads (default: forks)',
+  },
   reporter: {
     type: 'string',
     short: 'r',
@@ -94,7 +127,7 @@ const cliOptions = {
   type: {
     type: 'string',
     short: 't',
-    description: 'Comma-separated test types to run (default: server,e2e)',
+    description: 'Comma-separated test types to run (default: server,browser,e2e)',
   },
   watch: {
     type: 'boolean',
@@ -119,17 +152,21 @@ const defaultValues: ResolvedRemixTestConfig = {
     functions: undefined,
   },
   glob: {
-    test: '**/*.test{,.e2e}.{ts,tsx}',
+    test: '**/*.test{,.e2e,.browser}.{ts,tsx}',
+    browser: '**/*.test.browser.{ts,tsx}',
     e2e: '**/*.test.e2e.{ts,tsx}',
     exclude: 'node_modules/**',
   },
-  reporter: process.env.CI === 'true' ? 'dot' : 'spec',
-  type: 'server,e2e',
+  reporter: process.env.CI === 'true' ? 'files' : 'spec',
+  pool: 'forks',
+  type: 'server,browser,e2e',
   setup: undefined,
   playwrightConfig: undefined,
   project: undefined,
   watch: false,
-} as const
+}
+
+export type RemixTestPool = 'forks' | 'threads'
 
 export interface RemixTestConfig {
   /**
@@ -144,11 +181,13 @@ export interface RemixTestConfig {
   /**
    * Glob patterns to identify test files
    *  - `glob.test`: Glob pattern for all test files (--glob.test)
+   *  - `glob.browser`: Glob pattern for the subset of browser test files (--glob.browser)
    *  - `glob.e2e`: Glob pattern for the subset of e2e test files (--glob.e2e)
    *  - `glob.exclude`: Glob pattern for paths to exclude from discovery (--glob.exclude)
    */
   glob?: {
     test?: string
+    browser?: string
     e2e?: string
     exclude?: string
   }
@@ -183,6 +222,11 @@ export interface RemixTestConfig {
   project?: string
   /** Test reporter (--reporter) */
   reporter?: string
+  /**
+   * Pool used to run server and E2E test files. Forked child processes are the default,
+   * but worker threads are available for projects that prefer the previous behavior.
+   */
+  pool?: RemixTestPool
   /** Comma-separated list of test types to run (--type) */
   type?: string
   /** Watch mode — re-run tests on file changes (--watch) */
@@ -208,30 +252,27 @@ export interface ResolvedRemixTestConfig {
     | undefined
   glob: {
     test: string
+    browser: string
     e2e: string
     exclude: string
   }
   playwrightConfig: string | PlaywrightTestConfig | undefined
   project: string | undefined
   reporter: string
+  pool: RemixTestPool
   setup: string | undefined
   type: string
   watch: boolean
 }
 
-export async function loadConfig() {
-  if (process.argv.includes('--help') || process.argv.includes('-h')) {
-    console.log(generateHelp())
-    process.exit(0)
-  }
-
-  let parsed = parseCliArgs()
-  let fileConfig = await loadConfigFile(parsed.values.config)
+export async function loadConfig(args: string[] = process.argv.slice(2), cwd = process.cwd()) {
+  let parsed = parseCliArgs(args)
+  let fileConfig = await loadConfigFile(parsed.values.config, cwd)
   let config = resolveConfig(fileConfig, parsed)
   return config
 }
 
-function generateHelp(): string {
+export function getRemixTestHelpText(_target: NodeJS.WriteStream = process.stdout): string {
   let lines = [
     'Usage: remix-test [glob] [options]',
     '',
@@ -252,7 +293,7 @@ function generateHelp(): string {
   return lines.join('\n')
 }
 
-function parseCliArgs(args = process.argv.slice(2)) {
+function parseCliArgs(args: string[]) {
   return util.parseArgs({ args, options: cliOptions, allowPositionals: true })
 }
 
@@ -268,6 +309,7 @@ function resolveConfig(
         cliValues['glob.test'] ??
         fileConfig.glob?.test ??
         defaultValues.glob.test,
+      browser: cliValues['glob.browser'] ?? fileConfig.glob?.browser ?? defaultValues.glob.browser,
       e2e: cliValues['glob.e2e'] ?? fileConfig.glob?.e2e ?? defaultValues.glob.e2e,
       exclude: cliValues['glob.exclude'] ?? fileConfig.glob?.exclude ?? defaultValues.glob.exclude,
     },
@@ -321,18 +363,27 @@ function resolveConfig(
       cliValues.playwrightConfig ?? fileConfig.playwrightConfig ?? defaultValues.playwrightConfig,
     project: cliValues.project ?? fileConfig.project ?? defaultValues.project,
     reporter: cliValues.reporter ?? fileConfig.reporter ?? defaultValues.reporter,
+    pool: resolvePool(cliValues.pool ?? fileConfig.pool ?? defaultValues.pool),
     type: cliValues.type ?? fileConfig.type ?? defaultValues.type,
     watch: cliValues.watch ?? fileConfig.watch ?? defaultValues.watch,
   }
 }
 
-async function loadConfigFile(configPath?: string): Promise<RemixTestConfig> {
+function resolvePool(value: string): RemixTestPool {
+  if (value === 'forks' || value === 'threads') {
+    return value
+  }
+
+  throw new Error(`Unsupported test pool "${value}". Supported pools are: forks, threads`)
+}
+
+async function loadConfigFile(
+  configPath: string | undefined,
+  cwd: string,
+): Promise<RemixTestConfig> {
   let candidates = configPath
-    ? [path.resolve(process.cwd(), configPath)]
-    : [
-        path.join(process.cwd(), 'remix-test.config.ts'),
-        path.join(process.cwd(), 'remix-test.config.js'),
-      ]
+    ? [path.resolve(cwd, configPath)]
+    : [path.join(cwd, 'remix-test.config.ts'), path.join(cwd, 'remix-test.config.js')]
 
   for (let candidate of candidates) {
     try {

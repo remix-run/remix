@@ -37,6 +37,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 
 - **Tests run from source**: no build step required
 - **Test structure**: do not generate tests inside `describe()` with loops or conditionals; it breaks per-test IDE execution
+- **Test guidance**: use the `write-tests` skill when adding, refactoring, or reviewing tests, fixtures, test scripts, or test-only dependencies
 - **Docs and examples**: if you change a public API, update the related docs, JSDoc, README examples, and tests in the same change
 - **README/install conventions**: use `npm i remix` in install snippets and import from `remix`, not `@remix-run/*`
 
@@ -51,10 +52,12 @@ For work on this repository itself, use the skills in `.agents/skills/`:
 
 - `add-package` at `.agents/skills/add-package/SKILL.md`: Create or align a package under `packages/` with repo conventions.
 - `expert-typescript-programmer` at `.agents/skills/expert-typescript-programmer/SKILL.md`: Write, refactor, or review TypeScript with strict, precise, maintainable types.
+- `write-tests` at `.agents/skills/write-tests/SKILL.md`: Write, refactor, or review tests with repo runner, fixture, assertion, dependency, and validation conventions.
 - `make-change-file` at `.agents/skills/make-change-file/SKILL.md`: Create or update package change files under `packages/*/.changes`.
 - `make-demo` at `.agents/skills/make-demo/SKILL.md`: Create or revise demos in this repository with production-quality Remix patterns.
 - `make-pr` at `.agents/skills/make-pr/SKILL.md`: Prepare and open clear, reviewer-friendly pull requests.
 - `publish-placeholder-package` at `.agents/skills/publish-placeholder-package/SKILL.md`: Publish a `0.0.0` placeholder package to reserve an npm name.
+- `review-pr` at `.agents/skills/review-pr/SKILL.md`: Review Remix pull requests from a local checkout.
 - `supersede-pr` at `.agents/skills/supersede-pr/SKILL.md`: Replace one pull request with another and close the superseded PR safely.
 - `update-pr` at `.agents/skills/update-pr/SKILL.md`: Rewrite an existing pull request title and body to match the current diff.
 - `write-api-docs` at `.agents/skills/write-api-docs/SKILL.md`: Write or tighten JSDoc for exported public APIs.
@@ -64,5 +67,4 @@ For work on this repository itself, use the skills in `.agents/skills/`:
 
 For working on Remix code in demos or writing Remix app code, use the skills in `skills/`:
 
-- `remix-project-layout` at `skills/remix-project-layout/SKILL.md`: Define or scaffold the on-disk layout and conventions for a Remix app.
-- `remix-ui` at `skills/remix-ui/SKILL.md`: Build Remix app UI, including pages, layouts, interactions, styling, and UI tests.
+- `remix` at `skills/remix/SKILL.md`: Build, review, and refactor Remix apps end to end, including project layout, routes, controllers, middleware, validation, data access, auth, sessions, uploads, UI, hydration, navigation, animations, and tests.

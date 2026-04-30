@@ -1,22 +1,21 @@
-export {
-  ansi,
-  createStyles,
-  createTerminal,
-  shouldUseColors,
-  stripAnsi,
-  type Terminal,
-  type TerminalEnvironment,
-  type TerminalInputStream,
-  type TerminalOptions,
-  type TerminalOutputStream,
-  type TerminalStyles,
-  type UseColorOptions,
-} from './lib/terminal.ts'
-
+export { ansi, stripAnsi } from './lib/ansi.ts'
 export type {
   TerminalBackgroundColorName,
   TerminalForegroundColorName,
   TerminalModifierName,
-  TerminalStyle,
   TerminalStyleName,
-} from './lib/styles.ts'
+} from './lib/ansi.ts'
+
+export { shouldUseColors } from './lib/env.ts'
+export type { ColorSupportOptions, TerminalEnvironment } from './lib/env.ts'
+
+export { createStyles } from './lib/styles.ts'
+export type { CreateStylesOptions, TerminalStyle, TerminalStyles } from './lib/styles.ts'
+
+export { createTerminal } from './lib/terminal.ts'
+export type {
+  Terminal,
+  TerminalInputStream,
+  TerminalOptions,
+  TerminalOutputStream,
+} from './lib/terminal.ts'

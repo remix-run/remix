@@ -1,4 +1,4 @@
-export type { RemixTestConfig } from './lib/config.ts'
+export type { RemixTestConfig, RemixTestPool } from './lib/config.ts'
 export {
   describe,
   it,
@@ -13,3 +13,4 @@ export {
 } from './lib/framework.ts'
 export { mock } from './lib/mock.ts'
 export type { TestContext } from './lib/context.ts'
+export type { FakeTimers } from './lib/fake-timers.ts'

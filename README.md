@@ -1,3 +1,16 @@
+<br />
+<br />
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/public/remix-wordmark-racing-darkmode.svg">
+    <img alt="Remix" src="docs/public/remix-wordmark-racing-lightmode.svg" width="400">
+  </picture>
+</p>
+
+<br />
+<br />
+
 # Welcome to Remix 3!
 
 This is the source repository for Remix 3. It is under active development.
@@ -34,20 +47,21 @@ The benefit is code that's not just reusable, but **future-proof**.
 
 ## Packages
 
-Remix 3 includes the following packages:
+Most packages in this repository are standalone JavaScript/TypeScript tools. The `remix` package composes them under one umbrella for distribution and documentation.
 
-- [assert](packages/assert): Test assertions
+- [assert](packages/assert): Node assert-compatible utilities for any JavaScript environment
+- [assets](packages/assets): Fetch-based server for compiling browser JS/TS and CSS assets on demand
 - [async-context-middleware](packages/async-context-middleware): Middleware for storing request context in AsyncLocalStorage
 - [auth](packages/auth): Browser login, OAuth, and OIDC helpers for Remix
 - [auth-middleware](packages/auth-middleware): Pluggable authentication middleware for Remix
-- [component](packages/component): UI components for Remix
+- [cli](packages/cli): Command-line interface for Remix
 - [compression-middleware](packages/compression-middleware): Middleware for compressing HTTP responses
+- [cookie](packages/cookie): A toolkit for working with cookies in JavaScript
 - [cop-middleware](packages/cop-middleware): Middleware for tokenless cross-origin protection in Fetch API servers
 - [cors-middleware](packages/cors-middleware): Middleware for handling CORS in Fetch API servers
 - [csrf-middleware](packages/csrf-middleware): Middleware for CSRF protection in Fetch API servers
-- [cookie](packages/cookie): A toolkit for working with cookies in JavaScript
 - [data-schema](packages/data-schema): Tiny, standards-aligned schema validation
-- [data-table](packages/data-table): A typed, relational query toolkit for Remix
+- [data-table](packages/data-table): A typed, relational query toolkit for JavaScript
 - [data-table-mysql](packages/data-table-mysql): MySQL adapter for remix/data-table
 - [data-table-postgres](packages/data-table-postgres): PostgreSQL adapter for remix/data-table
 - [data-table-sqlite](packages/data-table-sqlite): SQLite adapter for remix/data-table
@@ -66,7 +80,7 @@ Remix 3 includes the following packages:
 - [mime](packages/mime): Utilities for working with MIME types
 - [multipart-parser](packages/multipart-parser): A fast, efficient parser for multipart streams in any JavaScript environment
 - [node-fetch-server](packages/node-fetch-server): Build servers for Node.js using the web fetch API
-- [remix](packages/remix): Remix Web Framework
+- [remix](packages/remix): The Remix web framework
 - [response](packages/response): Response helpers for the web Fetch API
 - [route-pattern](packages/route-pattern): Match and generate URLs with strong typing
 - [session](packages/session): Session management for JavaScript
@@ -75,7 +89,9 @@ Remix 3 includes the following packages:
 - [session-storage-redis](packages/session-storage-redis): Redis session storage for remix/session
 - [static-middleware](packages/static-middleware): Middleware for serving static files from the filesystem
 - [tar-parser](packages/tar-parser): A fast, efficient parser for tar streams in any JavaScript environment
-- [test](packages/test): Test runner supporting unit and E2E testing
+- [terminal](packages/terminal): Terminal output utilities for JavaScript libraries and CLIs
+- [test](packages/test): A test framework for JavaScript and TypeScript projects
+- [ui](packages/ui): UI tokens, mixins, and glyphs for Remix components
 
 ## Installation
 
@@ -83,6 +99,12 @@ To try the current Remix alpha, install the `next` dist-tag:
 
 ```sh
 npm install remix@next
+```
+
+To create a new Remix app with the CLI, use `npx remix@next new`:
+
+```sh
+npx remix@next new my-remix-app
 ```
 
 If you want to play around with the bleeding edge, we also build the latest `main` branch into a `preview/main` branch which can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):

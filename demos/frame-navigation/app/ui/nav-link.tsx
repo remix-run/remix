@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/component'
+import type { Handle, RemixNode } from 'remix/ui'
 import type { Route } from 'remix/fetch-router/routes'
 
 type NavLinkProps = {
@@ -9,8 +9,9 @@ type NavLinkProps = {
   children?: RemixNode
 }
 
-export function NavLink() {
-  return ({ route, active, target: frameTarget, frameSrc, children }: NavLinkProps) => {
+export function NavLink(handle: Handle<NavLinkProps>) {
+  return () => {
+    let { route, active, target: frameTarget, frameSrc, children } = handle.props
     let href = route.href()
 
     return (

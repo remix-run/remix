@@ -1,6 +1,5 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-
 import type * as http from 'node:http'
 import * as stream from 'node:stream'
 
@@ -23,7 +22,8 @@ describe('createRequestListener', () => {
         chunks.push(chunk)
       })
 
-      t.mock.method(res, 'end', () => {
+      t.mock.method(res, 'end', (chunk?: Uint8Array) => {
+        if (chunk != null) chunks.push(chunk)
         let body = Buffer.concat(chunks).toString()
         assert.equal(body, 'Hello, world!')
         resolve()
@@ -151,7 +151,8 @@ describe('createRequestListener', () => {
         chunks.push(chunk)
       })
 
-      t.mock.method(res, 'end', () => {
+      t.mock.method(res, 'end', (chunk?: Uint8Array) => {
+        if (chunk != null) chunks.push(chunk)
         assert.equal(status, 500)
         let body = Buffer.concat(chunks).toString()
         assert.equal(body, 'Internal Server Error')
@@ -165,6 +166,7 @@ describe('createRequestListener', () => {
   it('uses the `Host` header to construct the URL by default', async () => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async (request) => {
+        assert.ok(request instanceof Request)
         assert.equal(request.url, 'http://example.com/')
         return new Response('Hello, world!')
       }
@@ -231,6 +233,50 @@ describe('createRequestListener', () => {
 
       listener(req, res)
       resolve()
+    })
+  })
+
+  it('reads request method, headers, and body text', async (t) => {
+    await new Promise<void>((resolve) => {
+      let handler: FetchHandler = async (request) => {
+        assert.ok(request instanceof Request)
+        assert.equal(request.method, 'POST')
+        assert.equal(request.headers.get('x-test'), 'yes')
+        assert.equal(request.bodyUsed, false)
+
+        assert.equal(await request.text(), 'Hello, world!')
+        assert.equal(request.bodyUsed, true)
+
+        await assert.rejects(() => request.text(), {
+          name: 'TypeError',
+          message: 'Body is unusable: Body has already been read',
+        })
+
+        return new Response('ok')
+      }
+
+      let listener = createRequestListener(handler)
+      assert.ok(listener)
+
+      let req = createMockRequest({
+        method: 'POST',
+        headers: { 'x-test': 'yes' },
+        body: 'Hello, world!',
+      })
+      let res = createMockResponse({ req })
+
+      let chunks: Uint8Array[] = []
+      t.mock.method(res, 'write', (chunk: Uint8Array) => {
+        chunks.push(chunk)
+      })
+
+      t.mock.method(res, 'end', (chunk?: Uint8Array) => {
+        if (chunk != null) chunks.push(chunk)
+        assert.equal(Buffer.concat(chunks).toString(), 'ok')
+        resolve()
+      })
+
+      listener(req, res)
     })
   })
 

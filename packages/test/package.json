@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/test",
-  "version": "0.1.0",
-  "description": "A browser-based test framework for Remix components",
+  "version": "0.2.0",
+  "description": "A test framework for JavaScript and TypeScript projects",
   "author": "Shopify Inc.",
   "license": "MIT",
   "repository": {
@@ -19,8 +19,11 @@
     "!src/**/*.test.*"
   ],
   "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
   "bin": {
-    "remix-test": "./src/cli.ts"
+    "remix-test": "./src/cli-entry.ts"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -29,7 +32,7 @@
   },
   "publishConfig": {
     "bin": {
-      "remix-test": "./dist/cli.js"
+      "remix-test": "./dist/cli-entry.js"
     },
     "exports": {
       ".": {
@@ -37,26 +40,30 @@
         "default": "./dist/index.js"
       },
       "./package.json": "./package.json",
-      "./cli": "./dist/cli.js"
+      "./cli": {
+        "types": "./dist/cli.d.ts",
+        "default": "./dist/cli.js"
+      }
     }
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node src/cli.ts",
-    "test:bun": "bun --bun src/cli.ts --glob.test 'src/**/*.test.{ts,tsx}' --glob.e2e 'src/**/*.test.e2e.{ts,tsx}' --type server",
+    "test": "node src/cli-entry.ts",
+    "test:bun": "bun --bun src/cli-entry.ts --type server",
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
-    "@remix-run/component": "workspace:*",
-    "@remix-run/fetch-router": "workspace:*",
-    "@remix-run/node-fetch-server": "workspace:*",
     "@remix-run/terminal": "workspace:^",
+    "es-module-lexer": "^2.0.0",
     "esbuild": "^0.27.1",
+    "get-tsconfig": "^4.13.6",
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-report": "^3.0.1",
     "istanbul-reports": "^3.2.0",
+    "magic-string": "^0.30.21",
+    "source-map-js": "^1.2.1",
     "tsx": "^4.21.0",
     "v8-to-istanbul": "^9.3.0"
   },
@@ -69,12 +76,16 @@
     }
   },
   "devDependencies": {
-    "@remix-run/assert": "workspace:*",
+    "@remix-run/assert": "workspace:^",
+    "@remix-run/node-fetch-server": "workspace:^",
+    "@remix-run/ui": "workspace:^",
+    "@types/dom-navigation": "1.0.6",
     "@types/istanbul-lib-coverage": "^2.0.6",
     "@types/istanbul-lib-report": "^3.0.3",
     "@types/istanbul-reports": "^3.0.4",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
+    "decamelize": "^6.0.1",
     "playwright": "catalog:"
   },
   "keywords": [

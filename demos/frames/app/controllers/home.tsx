@@ -1,4 +1,4 @@
-import { Frame } from 'remix/component'
+import { Frame } from 'remix/ui'
 import type { BuildAction } from 'remix/fetch-router'
 
 import { ClientFrameExample } from '../assets/client-frame-example.tsx'
@@ -19,7 +19,7 @@ function HomePage() {
       <h1 style={{ margin: 0, letterSpacing: '-0.02em' }}>Full-stack Frames</h1>
       <p style={{ marginTop: 8, color: '#b9c6ff' }}>
         Server routes are handled by <code>remix/fetch-router</code>; UI is streamed with{' '}
-        <code>remix/component</code> Frames and client entries.
+        <code>remix/ui</code> Frames and client entries.
       </p>
       <p style={{ marginTop: 0, marginBottom: 16 }}>
         <a href={routes.time.href()} style={{ color: '#b9c6ff', textDecoration: 'underline' }}>
@@ -82,7 +82,7 @@ function HomePage() {
         >
           <h2 style={{ marginTop: 0, fontSize: 16 }}>Main</h2>
           <p style={{ color: '#b9c6ff', marginTop: 0 }}>The counter below is a client entry.</p>
-          <Counter setup={0} label="Clicks" />
+          <Counter initialCount={0} label="Clicks" />
           <ClientFrameExample />
 
           <div style={{ height: 16 }} />

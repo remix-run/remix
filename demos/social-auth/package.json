@@ -3,11 +3,9 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "better-sqlite3": "^12.8.0",
     "remix": "workspace:*"
   },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
     "tsx": "catalog:"
@@ -15,7 +13,7 @@
   "scripts": {
     "dev": "node --env-file-if-exists=.env --import tsx --watch server.ts",
     "start": "node --env-file-if-exists=.env --import tsx server.ts",
-    "test": "NODE_ENV=test remix-test",
+    "test": "NODE_ENV=test remix test",
     "typecheck": "tsc --noEmit"
   }
 }

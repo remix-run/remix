@@ -37,11 +37,12 @@ jobs:
       - name: Get Playwright Version
         id: playwright-version
         shell: bash
-        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+        run: echo "version=$(pnpm --filter @remix-run/ui exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright Browsers
         uses: actions/cache@v5
         id: cache-browsers
+        continue-on-error: true
         with:
           path: |
             ~/.cache/ms-playwright
@@ -49,7 +50,7 @@ jobs:
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @remix-run/component exec playwright install --with-deps
+        run: pnpm --filter @remix-run/ui exec playwright install --with-deps
 
       - name: Run tests
         run: pnpm test
@@ -107,18 +108,19 @@ jobs:
       - name: Get Playwright Version
         id: playwright-version
         shell: bash
-        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+        run: echo "version=$(pnpm --filter @remix-run/ui exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright Browsers
         uses: actions/cache@v5
         id: cache-browsers
+        continue-on-error: true
         with:
           path: ~/AppData/Local/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @remix-run/component exec playwright install --with-deps
+        run: pnpm --filter @remix-run/ui exec playwright install --with-deps
 
       - name: Run changed package tests
         run: node ./scripts/detect-changed-packages.ts origin/${{ github.base_ref }}
@@ -147,18 +149,19 @@ jobs:
       - name: Get Playwright Version
         id: playwright-version
         shell: bash
-        run: echo "version=$(pnpm --filter @remix-run/component exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+        run: echo "version=$(pnpm --filter @remix-run/ui exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
 
       - name: Cache Playwright Browsers
         uses: actions/cache@v5
         id: cache-browsers
+        continue-on-error: true
         with:
           path: ~/AppData/Local/ms-playwright
           key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
 
       - name: Install Playwright Browsers
         if: steps.cache-browsers.outputs.cache-hit != 'true'
-        run: pnpm --filter @remix-run/component exec playwright install --with-deps
+        run: pnpm --filter @remix-run/ui exec playwright install --with-deps
 
       - name: Run tests
-        run: pnpm test
+        run: pnpm --parallel --filter "!remix-the-web" run test

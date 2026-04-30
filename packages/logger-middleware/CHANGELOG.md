@@ -2,6 +2,17 @@
 
 This is the changelog for [`logger-middleware`](https://github.com/remix-run/remix/tree/main/packages/logger-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.0
+
+### Minor Changes
+
+- Colorize high-signal logger tokens when terminal color detection allows it by default, with a `colors` option to force colorized output on or off and support for `CI`, `NO_COLOR`, `FORCE_COLOR`, `TERM=dumb`, and TTY output streams when the `process` global is defined.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`terminal@0.1.0`](https://github.com/remix-run/remix/releases/tag/terminal@0.1.0)
+
 ## v0.1.5
 
 ### Patch Changes

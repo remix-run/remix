@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/component'
+import type { RemixNode } from 'remix/ui'
 
 import { getAssetEntry } from '../middleware/asset-entry.ts'
 
@@ -9,7 +9,7 @@ export interface DocumentProps {
 
 export function Document() {
   return ({ title = 'Bookstore', children }: DocumentProps) => {
-    let { src, preloads } = getAssetEntry()
+    let { scriptSrc, scriptPreloads, stylesheetHref } = getAssetEntry()
 
     return (
       <html lang="en">
@@ -17,11 +17,11 @@ export function Document() {
           <meta charSet="UTF-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1.0" />
           <title>{title}</title>
-          {preloads.map((href) => (
+          <link rel="stylesheet" href={stylesheetHref} />
+          {scriptPreloads.map((href) => (
             <link key={href} rel="modulepreload" href={href} />
           ))}
-          <script type="module" async src={src} />
-          <link rel="stylesheet" href="/app.css" />
+          <script type="module" async src={scriptSrc} />
         </head>
         <body>{children}</body>
       </html>

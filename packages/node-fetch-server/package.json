@@ -20,6 +20,7 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./test": "./src/test.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -28,17 +29,23 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./test": {
+        "types": "./dist/test.d.ts",
+        "default": "./dist/test.js"
+      },
       "./package.json": "./package.json"
     }
   },
   "devDependencies": {
-    "@remix-run/assert": "workspace:*",
-    "@remix-run/test": "workspace:*",
+    "@remix-run/assert": "workspace:^",
+    "@remix-run/test": "workspace:^",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
   "scripts": {
     "bench": "bash ./bench/runner.sh",
+    "bench:typecheck": "tsgo --noEmit -p ./bench/tsconfig.json",
+    "bench:update-readme": "node ./bench/update-readme.ts",
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",

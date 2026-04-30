@@ -1,9 +1,18 @@
 import type { Browser, Page } from 'playwright'
-import { mock, type MockFunction, type MockCall, type MockContext } from './mock.ts'
-
-import type { CreateServerFunction } from './e2e-server.ts'
-import type { getPlaywrightPageOptions } from './playwright.ts'
 import type { V8CoverageEntry } from './coverage.ts'
+import { createFakeTimers, type FakeTimers } from './fake-timers.ts'
+import { mock, type MockCall, type MockContext, type MockFunction } from './mock.ts'
+import type { getPlaywrightPageOptions } from './playwright.ts'
+
+/**
+ * The shape `t.serve()` consumes. Matches the result of `createTestServer`
+ * from `@remix-run/node-fetch-server/test`, but any object with a `baseUrl`
+ * and async `close()` works.
+ */
+export interface TestServer {
+  baseUrl: string
+  close(): Promise<void>
+}
 
 /**
  * Test Context providing utilities for testing via remix-test.  The context is
@@ -59,22 +68,36 @@ export interface TestContext {
   }
 
   /**
-   * Starts a test server with the provided request handler.
+   * Activates fake timers for testing time-dependent code.
    *
-   * @param {(req: Request) => Promise<Response>} handler - Function handling incoming requests
-   * @returns {Promise<Page>} A promise resolving to a page instance for the server
+   * @returns {FakeTimers} A fake timers instance for controlling time
    */
-  serve(handler: (req: Request) => Promise<Response>): Promise<Page>
+  useFakeTimers(): FakeTimers
+
+  /**
+   * Wires a running test server up to a Playwright page so the test can drive
+   * it. The server is closed automatically when the test ends. Pair with
+   * `createTestServer` from `@remix-run/node-fetch-server/test` (or any other
+   * source of a `{ baseUrl, close }` handle) to spin up the server first.
+   *
+   * @param server - The running server the page should target
+   * @returns A `Page` whose `baseURL` is set to `server.baseUrl`.
+   */
+  serve(server: TestServer): Promise<Page>
 }
 
-export function createTestContext(options: {
-  createServer?: CreateServerFunction
-  browser?: Browser
-  open?: boolean
-  playwrightPageOptions?: ReturnType<typeof getPlaywrightPageOptions>
-  coverage?: boolean
-  addE2ECoverageEntries?: (value: { entries: V8CoverageEntry[]; baseUrl: string }) => void
-}): { testContext: TestContext; cleanup(): Promise<void> } {
+export interface CreateTestContextOptions {
+  addE2ECoverageEntries: (value: { entries: V8CoverageEntry[]; baseUrl: string }) => void
+  browser: Browser
+  coverage: boolean
+  open: boolean
+  playwrightPageOptions: ReturnType<typeof getPlaywrightPageOptions>
+}
+
+export function createTestContext(options?: CreateTestContextOptions): {
+  testContext: TestContext
+  cleanup(): Promise<void>
+} {
   let cleanups: Array<() => void | Promise<void>> = []
 
   let testContext: TestContext = {
@@ -89,12 +112,16 @@ export function createTestContext(options: {
     after(fn) {
       cleanups.push(fn)
     },
-    async serve(handler) {
-      if (!options.createServer || !options.browser) {
+    useFakeTimers() {
+      let timers = createFakeTimers()
+      cleanups.push(timers.restore)
+      return timers
+    },
+    async serve(server) {
+      if (!options || !options.browser) {
         throw new Error('t.serve() is only available in E2E test suites')
       }
 
-      let server = await options.createServer(handler)
       let page = await options.browser.newPage({
         ...options.playwrightPageOptions,
         baseURL: server.baseUrl,
@@ -138,4 +165,4 @@ export function createTestContext(options: {
   }
 }
 
-export type { MockFunction, MockCall, MockContext }
+export type { MockCall, MockContext, MockFunction }

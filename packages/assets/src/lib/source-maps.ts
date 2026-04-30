@@ -52,17 +52,24 @@ export function rewriteSourceMapSources(
   resolvedPath: string,
   stableUrlPathname: string,
   sourceMapSourcePaths: 'absolute' | 'url',
+  sourceContent?: string,
 ): string {
-  let json = JSON.parse(sourceMap) as { sources?: string[] }
+  let json = JSON.parse(sourceMap) as { sources?: string[]; sourcesContent?: string[] }
   json.sources = [
     sourceMapSourcePaths === 'absolute' ? normalizeFilePath(resolvedPath) : stableUrlPathname,
   ]
+  if (sourceContent !== undefined) {
+    json.sourcesContent = [sourceContent]
+  }
   return JSON.stringify(json)
 }
 
 export function stringifySourceMap(map: unknown): string | null {
   if (!map) return null
   if (typeof map === 'string') return map
+  if (map instanceof Uint8Array) {
+    return Buffer.from(map).toString('utf8')
+  }
   if (typeof map === 'object' && map !== null) return JSON.stringify(map)
   return String(map)
 }

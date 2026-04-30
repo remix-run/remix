@@ -1,11 +1,11 @@
-import * as path from 'node:path'
-import * as fsp from 'node:fs/promises'
-import { fileURLToPath } from 'node:url'
-import { createRequire } from 'node:module'
 import type { createCoverageMap as CreateCoverageMap } from 'istanbul-lib-coverage'
 import type { createContext as CreateContext } from 'istanbul-lib-report'
 import type IstanbulReports from 'istanbul-reports'
-import { colors } from './utils.ts'
+import * as fsp from 'node:fs/promises'
+import { createRequire } from 'node:module'
+import * as path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { colors } from './colors.ts'
 import { transformTypeScript } from './ts-transform.ts'
 
 // Istanbul packages are loaded lazily so that FORCE_COLOR can be set based on
@@ -69,12 +69,7 @@ function filterCoverageMap(
 ): CoverageMap {
   let filtered = getIstanbul().createCoverageMap({})
   for (let filePath of coverageMap.files()) {
-    // Browser coverage entries are keyed as /scripts/@test/<relative> (the dev server path),
-    // not the real filesystem path, so path.relative would produce a ../../.. mess.
-    let scriptTestPrefix = '/scripts/@test/'
-    let idx = filePath.indexOf(scriptTestPrefix)
-    let relative =
-      idx >= 0 ? filePath.slice(idx + scriptTestPrefix.length) : path.relative(cwd, filePath)
+    let relative = path.relative(cwd, filePath)
 
     if (config.include && config.include.length > 0) {
       if (!matchesGlobs(relative, config.include)) continue
@@ -158,79 +153,38 @@ async function writeIstanbulReports(coverageMap: CoverageMap, cwd: string, outDi
 }
 
 // Convert a single V8 coverage entry to Istanbul format and merge it into the
-// coverage map. Both server and E2E collection use this shared path so the
-// esbuild re-transform and source-map options stay in sync.
+// coverage map.
+//
+// V8 reports byte offsets against the JS bytes it actually instrumented. When
+// the entry already carries that source (Playwright's `coverage.stopJSCoverage`
+// returns it on each entry, including the inline source map), we hand it
+// straight to v8-to-istanbul so the offsets line up exactly. The server path
+// uses Node's `NODE_V8_COVERAGE` JSON, which doesn't include source — there we
+// re-derive by re-running our esbuild transform on the original TS file.
 async function addV8EntryToCoverageMap(
   coverageMap: CoverageMap,
   filePath: string,
   functions: V8CoverageEntry['functions'],
+  source: string,
 ): Promise<boolean> {
   let { V8ToIstanbul } = getIstanbul()
-
-  // When our coverage-loader (server) or test handler (E2E) transforms
-  // TypeScript, V8 tracks coverage using byte offsets from the transformed JS.
-  // Re-transform with the same esbuild options so offsets align, then pass the
-  // result with its inline source map to v8-to-istanbul.
-  let sources: { source: string } | undefined
-  if (filePath.endsWith('.ts') || filePath.endsWith('.tsx')) {
-    let tsSource = await fsp.readFile(filePath, 'utf-8')
-    let { code } = await transformTypeScript(tsSource, filePath)
-    sources = { source: code }
-  }
-  let converter = new V8ToIstanbul(filePath, undefined, sources)
+  let converter = new V8ToIstanbul(filePath, undefined, { source })
   await converter.load()
   converter.applyCoverage(functions)
   coverageMap.merge(converter.toIstanbul())
   return true
 }
 
-// Resolve a V8 coverage entry URL to an absolute file path, or null if it
-// should be skipped (node_modules, test files, outside cwd, etc.).
-function resolveServerEntryPath(url: string, cwd: string, testFiles: Set<string>): string | null {
-  if (!url.startsWith('file://')) return null
-
-  let filePath: string
-  try {
-    filePath = fileURLToPath(url)
-  } catch {
-    return null
-  }
-
-  if (!filePath.startsWith(cwd + path.sep)) return null
-  if (filePath.includes(`${path.sep}node_modules${path.sep}`)) return null
-  if (testFiles.has(filePath)) return null
-  return filePath
-}
-
-// Resolve a browser coverage entry URL (http://host:port/path) to an absolute
-// file path, or null if it should be skipped.
-async function resolveE2EEntryPath(
-  url: string,
-  cwd: string,
+function shouldExcludeFromCoverage(
+  filePath: string,
+  rootDir: string,
   testFiles: Set<string>,
-): Promise<string | null> {
-  let urlPath: string
-  try {
-    urlPath = new URL(url).pathname
-  } catch {
-    return null
-  }
-
-  let relative = urlPath.startsWith('/') ? urlPath.slice(1) : urlPath
-  if (!relative) return null
-
-  let filePath = path.resolve(cwd, relative)
-  if (!filePath.startsWith(cwd + path.sep)) return null
-  if (filePath.includes(`${path.sep}node_modules${path.sep}`)) return null
-  if (testFiles.has(filePath)) return null
-
-  try {
-    await fsp.access(filePath)
-  } catch {
-    return null
-  }
-
-  return filePath
+): boolean {
+  return (
+    !filePath.startsWith(rootDir + path.sep) ||
+    filePath.includes(`${path.sep}node_modules${path.sep}`) ||
+    testFiles.has(filePath)
+  )
 }
 
 export async function collectServerCoverageMap(
@@ -256,42 +210,88 @@ export async function collectServerCoverageMap(
     let scriptCoverages: Array<{ url: string; functions: any[] }> = data.result ?? []
 
     for (let entry of scriptCoverages) {
-      let filePath = resolveServerEntryPath(entry.url, cwd, testFiles)
-      if (!filePath) continue
+      if (!entry.url.startsWith('file://')) continue
+
+      let filePath: string
+      try {
+        filePath = fileURLToPath(entry.url)
+      } catch {
+        continue
+      }
+
+      if (
+        !filePath ||
+        !['.ts', '.tsx'].includes(path.extname(filePath)) ||
+        shouldExcludeFromCoverage(filePath, cwd, testFiles)
+      ) {
+        continue
+      }
 
       try {
-        if (await addV8EntryToCoverageMap(coverageMap, filePath, entry.functions)) converted++
-      } catch {
+        // For server unit tests, we transform the TS with a module loader and V8 tracks
+        // coverage using byte offsets from the transformed JS. Re-transform with the
+        // same `esbuild` call here so offsets align, then pass the result with its
+        // inline source map to v8-to-istanbul.
+        let tsSource = await fsp.readFile(filePath, 'utf-8')
+        let { code } = await transformTypeScript(tsSource, filePath)
+        let success = await addV8EntryToCoverageMap(coverageMap, filePath, entry.functions, code)
+        if (success) converted++
+      } catch (e) {
         // Skip files that can't be converted
       }
     }
   }
 
   // Clean up raw V8 coverage JSON files now that we've processed them
-  await Promise.all(files.map((f) => fsp.rm(path.join(coverageDataDir, f), { force: true })))
+  //await Promise.all(files.map((f) => fsp.rm(path.join(coverageDataDir, f), { force: true })))
 
   return converted > 0 ? coverageMap : null
 }
 
-export async function collectE2ECoverageMap(
-  browserEntries: Array<{ entries: V8CoverageEntry[]; baseUrl: string }>,
-  cwd: string,
+export async function collectCoverageMapFromPlaywright(
+  entries: V8CoverageEntry[],
+  rootDir: string,
   testFiles: Set<string>,
+  resolveRelativePath: (url: string) => Promise<string | null>,
 ): Promise<CoverageMap | null> {
   let { createCoverageMap } = getIstanbul()
   let coverageMap = createCoverageMap({})
   let converted = 0
 
-  for (let { entries } of browserEntries) {
-    for (let entry of entries) {
-      let filePath = await resolveE2EEntryPath(entry.url, cwd, testFiles)
-      if (!filePath) continue
+  for (let entry of entries) {
+    let filePath: string
+    try {
+      let relativePath = await resolveRelativePath(new URL(entry.url).pathname)
+      if (!relativePath) continue
 
-      try {
-        if (await addV8EntryToCoverageMap(coverageMap, filePath, entry.functions)) converted++
-      } catch {
-        // Skip files that can't be converted
+      // Ignore entries outside the root dir, entries in node_modules, and test files
+      filePath = path.resolve(rootDir, relativePath)
+      if (shouldExcludeFromCoverage(filePath, rootDir, testFiles)) {
+        continue
       }
+
+      // Ensure file exists
+      await fsp.access(filePath)
+    } catch {
+      continue
+    }
+
+    if (!entry.source) {
+      throw new Error(
+        `Entry for ${entry.url} is missing source, cannot convert coverage. Ensure the browser launched with Playwright's JS coverage enabled.`,
+      )
+    }
+
+    try {
+      let success = await addV8EntryToCoverageMap(
+        coverageMap,
+        filePath,
+        entry.functions,
+        entry.source,
+      )
+      if (success) converted++
+    } catch {
+      // Skip files that can't be converted
     }
   }
 

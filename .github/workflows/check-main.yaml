@@ -1,0 +1,580 @@
+name: Check main
+
+on:
+  push:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  detect_changes:
+    name: Detect changes
+    runs-on: ubuntu-latest
+    outputs:
+      session: ${{ steps.detect.outputs.session }}
+      data_table: ${{ steps.detect.outputs.data_table }}
+      file_storage: ${{ steps.detect.outputs.file_storage }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect integration test changes
+        id: detect
+        shell: bash
+        env:
+          BEFORE_SHA: ${{ github.event.before }}
+          AFTER_SHA: ${{ github.sha }}
+        run: |
+          before_sha="$BEFORE_SHA"
+
+          if [ "$before_sha" = "0000000000000000000000000000000000000000" ]; then
+            before_sha="$(git rev-parse "$AFTER_SHA^")"
+          fi
+
+          changed_files="$(git diff --name-only "$before_sha" "$AFTER_SHA" -- .)"
+
+          run_all_integrations=false
+          if printf '%s\n' "$changed_files" | grep -Eq '^\.github/workflows/check-(pr|main)\.yaml$'; then
+            run_all_integrations=true
+          fi
+
+          session=false
+          if [ "$run_all_integrations" = true ] || printf '%s\n' "$changed_files" | grep -Eq '^(\.github/workflows/session-integration\.yaml|packages/session/|packages/session-storage-memcache/|packages/session-storage-redis/|pnpm-workspace\.yaml|package\.json)'; then
+            session=true
+          fi
+
+          data_table=false
+          if [ "$run_all_integrations" = true ] || printf '%s\n' "$changed_files" | grep -Eq '^(\.github/workflows/data-table-integration\.yaml|packages/data-table/|packages/data-table-postgres/|packages/data-table-mysql/|packages/data-table-sqlite/|pnpm-workspace\.yaml|package\.json)'; then
+            data_table=true
+          fi
+
+          file_storage=false
+          if [ "$run_all_integrations" = true ] || printf '%s\n' "$changed_files" | grep -Eq '^(\.github/workflows/file-storage-integration\.yaml|packages/file-storage/|packages/file-storage-s3/|pnpm-workspace\.yaml|package\.json)'; then
+            file_storage=true
+          fi
+
+          {
+            echo "session=$session"
+            echo "data_table=$data_table"
+            echo "file_storage=$file_storage"
+          } >> "$GITHUB_OUTPUT"
+
+  build_ubuntu:
+    name: build (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+  build_windows:
+    name: build (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build packages
+        run: pnpm build
+
+  test_ubuntu:
+    name: test (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get Playwright Version
+        id: playwright-version
+        shell: bash
+        run: echo "version=$(pnpm --filter @remix-run/ui exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright Browsers
+        id: cache-browsers
+        uses: actions/cache@v5
+        continue-on-error: true
+        with:
+          path: |
+            ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        if: steps.cache-browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter @remix-run/ui exec playwright install --with-deps
+
+      - name: Run tests
+        run: pnpm test
+
+  test_bun:
+    name: test (bun, ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Bun tests
+        run: pnpm test:bun
+
+  test_windows:
+    name: test (windows-latest)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Get Playwright Version
+        id: playwright-version
+        shell: bash
+        run: echo "version=$(pnpm --filter @remix-run/ui exec playwright --version | cut -d ' ' -f2)" >> $GITHUB_OUTPUT
+
+      - name: Cache Playwright Browsers
+        id: cache-browsers
+        uses: actions/cache@v5
+        continue-on-error: true
+        with:
+          path: ~/AppData/Local/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright-version.outputs.version }}
+
+      - name: Install Playwright Browsers
+        if: steps.cache-browsers.outputs.cache-hit != 'true'
+        run: pnpm --filter @remix-run/ui exec playwright install --with-deps
+
+      - name: Run tests
+        run: pnpm --parallel --filter "!remix-the-web" run test
+
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm lint
+
+  typecheck:
+    name: Typecheck
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+  change_files:
+    name: Validate change files
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+
+      - name: Check change files
+        run: node ./scripts/changes-validate.ts
+
+  memcache_integration:
+    name: Memcache Integration
+    needs: detect_changes
+    if: needs.detect_changes.outputs.session == 'true'
+    runs-on: ubuntu-latest
+    services:
+      memcached:
+        image: memcached:1.6
+        ports:
+          - 11211:11211
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run memcache integration tests
+        env:
+          SESSION_MEMCACHE_INTEGRATION: '1'
+          SESSION_MEMCACHE_SERVER: 127.0.0.1:11211
+        run: |
+          cd packages/session-storage-memcache
+          pnpm test src/lib/memcache-storage.integration.test.ts
+
+  redis_integration:
+    name: Redis Integration
+    needs: detect_changes
+    if: needs.detect_changes.outputs.session == 'true'
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping || exit 1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run redis integration tests
+        env:
+          SESSION_REDIS_INTEGRATION: '1'
+          SESSION_REDIS_URL: redis://127.0.0.1:6379
+        run: |
+          cd ../session-storage-redis
+          pnpm test src/lib/redis-storage.integration.test.ts
+
+  data_table_unit:
+    name: Data Table Unit and Build
+    needs: detect_changes
+    if: needs.detect_changes.outputs.data_table == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run data-table package checks
+        run: |
+          pnpm --filter @remix-run/data-table run typecheck
+          pnpm --filter @remix-run/data-table run test
+          pnpm --filter @remix-run/data-table run test:coverage
+          pnpm --filter @remix-run/data-table run build
+          pnpm --filter @remix-run/data-table-postgres run typecheck
+          pnpm --filter @remix-run/data-table-postgres run test
+          pnpm --filter @remix-run/data-table-postgres run test:coverage
+          pnpm --filter @remix-run/data-table-postgres run build
+          pnpm --filter @remix-run/data-table-mysql run typecheck
+          pnpm --filter @remix-run/data-table-mysql run test
+          pnpm --filter @remix-run/data-table-mysql run test:coverage
+          pnpm --filter @remix-run/data-table-mysql run build
+          pnpm --filter @remix-run/data-table-sqlite run typecheck
+          pnpm --filter @remix-run/data-table-sqlite run test
+          pnpm --filter @remix-run/data-table-sqlite run test:coverage
+          pnpm --filter @remix-run/data-table-sqlite run build
+
+  postgres_integration:
+    name: Postgres Integration
+    needs: detect_changes
+    if: needs.detect_changes.outputs.data_table == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: remix
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U postgres"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run postgres integration tests
+        env:
+          DATA_TABLE_INTEGRATION: '1'
+          DATA_TABLE_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/remix
+        run: |
+          cd ../data-table-postgres
+          pnpm test src/lib/adapter.integration.test.ts
+
+  mysql_integration:
+    name: MySQL Integration
+    needs: detect_changes
+    if: needs.detect_changes.outputs.data_table == 'true'
+    runs-on: ubuntu-latest
+    services:
+      mysql:
+        image: mysql:8
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: remix
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run mysql integration tests
+        env:
+          DATA_TABLE_INTEGRATION: '1'
+          DATA_TABLE_MYSQL_URL: mysql://root:root@127.0.0.1:3306/remix
+        run: |
+          cd ../data-table-mysql
+          pnpm test src/lib/adapter.integration.test.ts
+
+  sqlite_integration:
+    name: SQLite Integration
+    needs: detect_changes
+    if: needs.detect_changes.outputs.data_table == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run sqlite adapter tests
+        env:
+          DATA_TABLE_INTEGRATION: '1'
+        run: |
+          cd ../data-table-sqlite
+          pnpm test src/lib/adapter.integration.test.ts
+
+  file_storage_unit:
+    name: File Storage Unit and Build
+    needs: detect_changes
+    if: needs.detect_changes.outputs.file_storage == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run file-storage-s3 package checks
+        run: |
+          pnpm --filter @remix-run/file-storage-s3 run typecheck
+          pnpm --filter @remix-run/file-storage-s3 run test
+          pnpm --filter @remix-run/file-storage-s3 run build
+
+  s3_integration:
+    name: S3 Integration
+    needs: detect_changes
+    if: needs.detect_changes.outputs.file_storage == 'true'
+    runs-on: ubuntu-latest
+    services:
+      localstack:
+        image: localstack/localstack:4.4.0
+        env:
+          SERVICES: s3
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          DEFAULT_REGION: us-east-1
+        ports:
+          - 4566:4566
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Install Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version-file: 'package.json'
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Wait for LocalStack
+        run: |
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:4566/_localstack/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "LocalStack did not become ready in time"
+          exit 1
+
+      - name: Run S3 integration tests
+        env:
+          FILE_STORAGE_S3_INTEGRATION: '1'
+          FILE_STORAGE_S3_ENDPOINT: http://127.0.0.1:4566
+          FILE_STORAGE_S3_BUCKET: remix-file-storage-integration
+          FILE_STORAGE_S3_REGION: us-east-1
+          FILE_STORAGE_S3_ACCESS_KEY_ID: test
+          FILE_STORAGE_S3_SECRET_ACCESS_KEY: test
+          FILE_STORAGE_S3_FORCE_PATH_STYLE: '1'
+        run: |
+          cd ../file-storage-s3
+          pnpm test src/lib/s3.integration.test.ts

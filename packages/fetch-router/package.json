@@ -39,7 +39,6 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
-    "@remix-run/data-schema": "workspace:^",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"

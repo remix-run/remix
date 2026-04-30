@@ -1,7 +1,7 @@
 {
   "name": "remix",
-  "version": "3.0.0-alpha.5",
-  "description": "Remix Web Framework",
+  "version": "3.0.0-alpha.6",
+  "description": "The Remix web framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
@@ -17,16 +17,16 @@
     "src"
   ],
   "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
   "exports": {
     "./assert": "./src/assert.ts",
     "./assets": "./src/assets.ts",
     "./async-context-middleware": "./src/async-context-middleware.ts",
     "./auth": "./src/auth.ts",
     "./auth-middleware": "./src/auth-middleware.ts",
-    "./component": "./src/component.ts",
-    "./component/jsx-dev-runtime": "./src/component/jsx-dev-runtime.ts",
-    "./component/jsx-runtime": "./src/component/jsx-runtime.ts",
-    "./component/server": "./src/component/server.ts",
+    "./cli": "./src/cli.ts",
     "./compression-middleware": "./src/compression-middleware.ts",
     "./cookie": "./src/cookie.ts",
     "./cop-middleware": "./src/cop-middleware.ts",
@@ -64,6 +64,8 @@
     "./multipart-parser": "./src/multipart-parser.ts",
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
+    "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
+    "./node-serve": "./src/node-serve.ts",
     "./response/compress": "./src/response/compress.ts",
     "./response/file": "./src/response/file.ts",
     "./response/html": "./src/response/html.ts",
@@ -81,6 +83,26 @@
     "./tar-parser": "./src/tar-parser.ts",
     "./terminal": "./src/terminal.ts",
     "./test": "./src/test.ts",
+    "./test/cli": "./src/test/cli.ts",
+    "./ui": "./src/ui.ts",
+    "./ui/accordion": "./src/ui/accordion.ts",
+    "./ui/anchor": "./src/ui/anchor.ts",
+    "./ui/animation": "./src/ui/animation.ts",
+    "./ui/breadcrumbs": "./src/ui/breadcrumbs.ts",
+    "./ui/button": "./src/ui/button.ts",
+    "./ui/combobox": "./src/ui/combobox.ts",
+    "./ui/glyph": "./src/ui/glyph.ts",
+    "./ui/jsx-dev-runtime": "./src/ui/jsx-dev-runtime.ts",
+    "./ui/jsx-runtime": "./src/ui/jsx-runtime.ts",
+    "./ui/listbox": "./src/ui/listbox.ts",
+    "./ui/menu": "./src/ui/menu.ts",
+    "./ui/popover": "./src/ui/popover.ts",
+    "./ui/scroll-lock": "./src/ui/scroll-lock.ts",
+    "./ui/select": "./src/ui/select.ts",
+    "./ui/separator": "./src/ui/separator.ts",
+    "./ui/server": "./src/ui/server.ts",
+    "./ui/test": "./src/ui/test.ts",
+    "./ui/theme": "./src/ui/theme.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -105,21 +127,9 @@
         "types": "./dist/auth-middleware.d.ts",
         "default": "./dist/auth-middleware.js"
       },
-      "./component": {
-        "types": "./dist/component.d.ts",
-        "default": "./dist/component.js"
-      },
-      "./component/jsx-dev-runtime": {
-        "types": "./dist/component/jsx-dev-runtime.d.ts",
-        "default": "./dist/component/jsx-dev-runtime.js"
-      },
-      "./component/jsx-runtime": {
-        "types": "./dist/component/jsx-runtime.d.ts",
-        "default": "./dist/component/jsx-runtime.js"
-      },
-      "./component/server": {
-        "types": "./dist/component/server.d.ts",
-        "default": "./dist/component/server.js"
+      "./cli": {
+        "types": "./dist/cli.d.ts",
+        "default": "./dist/cli.js"
       },
       "./compression-middleware": {
         "types": "./dist/compression-middleware.d.ts",
@@ -269,6 +279,14 @@
         "types": "./dist/node-fetch-server.d.ts",
         "default": "./dist/node-fetch-server.js"
       },
+      "./node-fetch-server/test": {
+        "types": "./dist/node-fetch-server/test.d.ts",
+        "default": "./dist/node-fetch-server/test.js"
+      },
+      "./node-serve": {
+        "types": "./dist/node-serve.d.ts",
+        "default": "./dist/node-serve.js"
+      },
       "./response/compress": {
         "types": "./dist/response/compress.d.ts",
         "default": "./dist/response/compress.js"
@@ -337,10 +355,90 @@
         "types": "./dist/test.d.ts",
         "default": "./dist/test.js"
       },
+      "./test/cli": {
+        "types": "./dist/test/cli.d.ts",
+        "default": "./dist/test/cli.js"
+      },
+      "./ui": {
+        "types": "./dist/ui.d.ts",
+        "default": "./dist/ui.js"
+      },
+      "./ui/accordion": {
+        "types": "./dist/ui/accordion.d.ts",
+        "default": "./dist/ui/accordion.js"
+      },
+      "./ui/anchor": {
+        "types": "./dist/ui/anchor.d.ts",
+        "default": "./dist/ui/anchor.js"
+      },
+      "./ui/animation": {
+        "types": "./dist/ui/animation.d.ts",
+        "default": "./dist/ui/animation.js"
+      },
+      "./ui/breadcrumbs": {
+        "types": "./dist/ui/breadcrumbs.d.ts",
+        "default": "./dist/ui/breadcrumbs.js"
+      },
+      "./ui/button": {
+        "types": "./dist/ui/button.d.ts",
+        "default": "./dist/ui/button.js"
+      },
+      "./ui/combobox": {
+        "types": "./dist/ui/combobox.d.ts",
+        "default": "./dist/ui/combobox.js"
+      },
+      "./ui/glyph": {
+        "types": "./dist/ui/glyph.d.ts",
+        "default": "./dist/ui/glyph.js"
+      },
+      "./ui/jsx-dev-runtime": {
+        "types": "./dist/ui/jsx-dev-runtime.d.ts",
+        "default": "./dist/ui/jsx-dev-runtime.js"
+      },
+      "./ui/jsx-runtime": {
+        "types": "./dist/ui/jsx-runtime.d.ts",
+        "default": "./dist/ui/jsx-runtime.js"
+      },
+      "./ui/listbox": {
+        "types": "./dist/ui/listbox.d.ts",
+        "default": "./dist/ui/listbox.js"
+      },
+      "./ui/menu": {
+        "types": "./dist/ui/menu.d.ts",
+        "default": "./dist/ui/menu.js"
+      },
+      "./ui/popover": {
+        "types": "./dist/ui/popover.d.ts",
+        "default": "./dist/ui/popover.js"
+      },
+      "./ui/scroll-lock": {
+        "types": "./dist/ui/scroll-lock.d.ts",
+        "default": "./dist/ui/scroll-lock.js"
+      },
+      "./ui/select": {
+        "types": "./dist/ui/select.d.ts",
+        "default": "./dist/ui/select.js"
+      },
+      "./ui/separator": {
+        "types": "./dist/ui/separator.d.ts",
+        "default": "./dist/ui/separator.js"
+      },
+      "./ui/server": {
+        "types": "./dist/ui/server.d.ts",
+        "default": "./dist/ui/server.js"
+      },
+      "./ui/test": {
+        "types": "./dist/ui/test.d.ts",
+        "default": "./dist/ui/test.js"
+      },
+      "./ui/theme": {
+        "types": "./dist/ui/theme.d.ts",
+        "default": "./dist/ui/theme.js"
+      },
       "./package.json": "./package.json"
     },
     "bin": {
-      "remix-test": "./dist/remix-test.js"
+      "remix": "./dist/cli-entry.js"
     }
   },
   "devDependencies": {
@@ -353,7 +451,7 @@
     "@remix-run/async-context-middleware": "workspace:^",
     "@remix-run/auth": "workspace:^",
     "@remix-run/auth-middleware": "workspace:^",
-    "@remix-run/component": "workspace:^",
+    "@remix-run/ui": "workspace:^",
     "@remix-run/compression-middleware": "workspace:^",
     "@remix-run/cop-middleware": "workspace:^",
     "@remix-run/cors-middleware": "workspace:^",
@@ -388,8 +486,10 @@
     "@remix-run/static-middleware": "workspace:^",
     "@remix-run/tar-parser": "workspace:^",
     "@remix-run/assert": "workspace:^",
+    "@remix-run/cli": "workspace:^",
     "@remix-run/test": "workspace:^",
-    "@remix-run/terminal": "workspace:^"
+    "@remix-run/terminal": "workspace:^",
+    "@remix-run/node-serve": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
@@ -398,6 +498,6 @@
     "typecheck": "tsc --noEmit"
   },
   "bin": {
-    "remix-test": "./src/remix-test.ts"
+    "remix": "./src/cli-entry.ts"
   }
 }

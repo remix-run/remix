@@ -1,8 +1,8 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as semver from 'semver'
-import { type RemixNode } from 'remix/component'
-import { renderToStream } from 'remix/component/server'
+import { type RemixNode } from 'remix/ui'
+import { renderToStream } from 'remix/ui/server'
 import { createRouter as _createRouter, type Router } from 'remix/fetch-router'
 import { createHtmlResponse } from 'remix/response/html'
 import { ServerPage, Home, NotFound, type ServerContext } from './components.tsx'
@@ -76,12 +76,10 @@ export function createRouter(versions: ServerContext['versions']) {
         return await respond.document(
           request,
           <ServerPage
-            setup={{
-              docFiles,
-              versions,
-              slug: params.slug,
-              activeVersion: params.version,
-            }}
+            docFiles={docFiles}
+            versions={versions}
+            slug={params.slug}
+            activeVersion={params.version}
           >
             {node}
           </ServerPage>,
@@ -90,7 +88,7 @@ export function createRouter(versions: ServerContext['versions']) {
       async home({ request, params }) {
         return respond.document(
           request,
-          <ServerPage setup={{ docFiles, versions, activeVersion: params.version }}>
+          <ServerPage docFiles={docFiles} versions={versions} activeVersion={params.version}>
             <Home />
           </ServerPage>,
         )

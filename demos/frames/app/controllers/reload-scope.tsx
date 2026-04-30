@@ -1,4 +1,4 @@
-import { Frame } from 'remix/component'
+import { Frame, type Handle } from 'remix/ui'
 import type { BuildAction } from 'remix/fetch-router'
 
 import { routes } from '../routes.ts'
@@ -16,8 +16,8 @@ export const reloadScopeAction = {
   },
 } satisfies BuildAction<'GET', typeof routes.reloadScope>
 
-function ReloadScopePage() {
-  return ({ pageNow }: { pageNow: Date }) => (
+function ReloadScopePage(handle: Handle<{ pageNow: Date }>) {
+  return () => (
     <Document title="Frame vs top reload">
       <a href={routes.home.href()} style={{ color: '#b9c6ff', textDecoration: 'underline' }}>
         ← Back
@@ -31,7 +31,7 @@ function ReloadScopePage() {
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontSize: 13, color: '#b9c6ff' }}>Page server time</div>
         <div style={{ fontSize: 20, fontVariantNumeric: 'tabular-nums' }}>
-          {pageNow.toLocaleTimeString()}
+          {handle.props.pageNow.toLocaleTimeString()}
         </div>
       </div>
       <div

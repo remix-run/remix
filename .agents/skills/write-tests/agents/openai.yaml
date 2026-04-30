@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Write Tests'
+  short_description: 'Write focused, dependency-conscious tests for Remix packages.'
+  default_prompt: "Use the write-tests skill to add or update tests for this Remix package while following the repo's runner, fixture, assertion, and validation conventions."

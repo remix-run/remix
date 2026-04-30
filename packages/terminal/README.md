@@ -5,7 +5,7 @@ Terminal output utilities for JavaScript libraries and CLIs. It provides small p
 ## Features
 
 - **ANSI Styles** - Apply common modifiers, foreground colors, and background colors
-- **Color Detection** - Respect `CI`, `NO_COLOR`, explicit color options, `FORCE_COLOR`, `TERM=dumb`, and TTY streams
+- **Color Detection** - Respect `CI`, `NO_COLOR`, `FORCE_COLOR`, `TERM=dumb`, TTY streams, and explicit style overrides
 - **Terminal Controls** - Generate escape sequences for cursor movement, line clearing, and cursor visibility
 - **Testable Streams** - Create terminal instances around injected stdout/stderr/stdin streams
 

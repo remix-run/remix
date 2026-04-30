@@ -1,4 +1,5 @@
 import type { BuildAction } from 'remix/fetch-router'
+import type { Handle } from 'remix/ui'
 
 import { StateSearchPage } from '../assets/state-search-page.tsx'
 import { routes } from '../routes.ts'
@@ -16,8 +17,8 @@ export const stateSearchAction = {
   },
 } satisfies BuildAction<'GET', typeof routes.stateSearch>
 
-function StateSearchRoutePage() {
-  return ({ initialQuery }: { initialQuery: string }) => (
+function StateSearchRoutePage(handle: Handle<{ initialQuery: string }>) {
+  return () => (
     <Document title="Dynamic Frame src search">
       <a href={routes.home.href()} style={{ color: '#b9c6ff', textDecoration: 'underline' }}>
         ← Back
@@ -29,7 +30,7 @@ function StateSearchRoutePage() {
         Submit the form to update the frame <code>src</code> query params and fetch matching U.S.
         states.
       </p>
-      <StateSearchPage setup={initialQuery} />
+      <StateSearchPage initialQuery={handle.props.initialQuery} />
     </Document>
   )
 }

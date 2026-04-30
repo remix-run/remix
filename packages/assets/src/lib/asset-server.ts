@@ -1,14 +1,19 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs'
-import { isAssetServerCompilationError } from './compilation-error.ts'
 import { createAccessPolicy } from './access.ts'
-import { createModuleCompiler, createResponseForModule } from './scripts/compiler.ts'
-import { normalizeFilePath } from './paths.ts'
+import { isAssetServerCompilationError } from './compilation-error.ts'
+import { getFingerprintRequestCacheControl, parseFingerprintSuffix } from './fingerprint.ts'
+import { getInjectedPackageRouteConfigs } from './injected-packages.ts'
+import { normalizeFilePath, normalizePathname } from './paths.ts'
 import { compileRoutes } from './routes.ts'
 import type { CompiledRoutes } from './routes.ts'
+import { createResponseForScript, createScriptCompiler } from './scripts/compiler.ts'
+import { supportedScriptExtensions } from './scripts/resolve.ts'
+import { createResponseForStyle, createStyleCompiler, isStyleFilePath } from './styles/compiler.ts'
+import { resolveScriptTarget, resolveStyleTarget } from './target.ts'
+import type { AssetTarget, ResolvedScriptTarget, ResolvedStyleTarget } from './target.ts'
 import { createAssetServerWatcher } from './watch.ts'
-import type { ChokidarWatcher } from './watch.ts'
-import type { AssetServerWatcher } from './watch.ts'
+import type { AssetServerWatcher, ChokidarWatcher } from './watch.ts'
 
 interface AssetServerWatchOptions {
   /**
@@ -28,33 +33,31 @@ interface AssetServerWatchOptions {
 
 interface FingerprintOptions {
   /**
-   * Per-build invalidation token that must change whenever fingerprinted module URLs
+   * Per-build invalidation token that must change whenever fingerprinted asset URLs
    * should be invalidated together.
    */
   buildId: string
 }
 
-const scriptTargets = [
-  'es2015',
-  'es2016',
-  'es2017',
-  'es2018',
-  'es2019',
-  'es2020',
-  'es2021',
-  'es2022',
-  'es2023',
-  'es2024',
-  'es2025',
-  'es2026',
-  'esnext',
-] as const
-const scriptTargetSet = new Set<string>(scriptTargets)
+type AssetSourceMaps = 'inline' | 'external'
+type AssetSourceMapSourcePaths = 'url' | 'absolute'
 
-export type ScriptsTarget = (typeof scriptTargets)[number]
+interface AssetServerScriptOptions {
+  /**
+   * Replace global expressions with constant values during transform, e.g.
+   * `{ 'process.env.NODE_ENV': '"production"' }`
+   */
+  define?: Record<string, string>
+  /** Import specifiers to leave unrewritten (CDN URLs, import map entries, etc.) */
+  external?: string[]
+}
+
+const scriptExtensionSet = new Set<string>(supportedScriptExtensions)
 
 export interface AssetServerOptions {
-  /** File patterns keyed by public URL patterns. */
+  /** Public mount path for this asset server, e.g. `'/assets'`. */
+  basePath: string
+  /** File patterns keyed by public URL patterns relative to `basePath`. */
   fileMap: Readonly<Record<string, string>>
   /**
    * Root directory used to resolve relative file paths. Defaults to `process.cwd()`.
@@ -69,45 +72,37 @@ export interface AssetServerOptions {
    */
   deny?: readonly string[]
   /**
-   * Controls optional source-based URL fingerprinting for rewritten import URLs.
+   * Controls optional source-based URL fingerprinting for rewritten asset URLs.
    *
-   * When omitted, all served modules use stable non-fingerprinted URLs with `Cache-Control: no-cache`.
+   * When omitted, all served assets use stable non-fingerprinted URLs with `Cache-Control: no-cache`.
    * Cannot be used together with active watch mode. Set `watch: false` when fingerprinting.
    */
   fingerprint?: FingerprintOptions
   /**
-   * Script pipeline configuration. Omit to use defaults.
+   * Shared compatibility target for scripts and styles. Browser targets apply to both
+   * pipelines, and `es` only affects scripts.
    */
-  scripts?: {
-    /**
-     * Source map mode (disabled when omitted).
-     * - `'external'`: serve source maps as separate `.map` files; adds `//# sourceMappingURL=` comment
-     * - `'inline'`: embed source maps as a base64 data URL directly in the JS; no separate `.map` file
-     */
-    sourceMaps?: 'inline' | 'external'
-    /**
-     * Controls the source paths written into source map `sources`.
-     * - `'url'` (default): use the stable server path (e.g. `'/assets/app/entry.ts'`)
-     * - `'absolute'`: use the original filesystem path on disk
-     */
-    sourceMapSourcePaths?: 'url' | 'absolute'
-    /**
-     * Minify emitted modules.
-     */
-    minify?: boolean
-    /**
-     * Replace global expressions with constant values during transform, e.g.
-     * `{ 'process.env.NODE_ENV': '"production"' }`
-     */
-    define?: Record<string, string>
-    /**
-     * Lower emitted syntax to a specific ECMAScript target. Omit this option to preserve
-     * modern syntax unless project configuration already requests a lower target.
-     */
-    target?: ScriptsTarget
-    /** Import specifiers to leave unrewritten (CDN URLs, import map entries, etc.) */
-    external?: string[]
-  }
+  target?: AssetTarget
+  /**
+   * Source map mode for scripts and styles.
+   * - `'external'`: serve source maps as separate `.map` files
+   * - `'inline'`: embed source maps as a base64 data URL in the compiled asset
+   */
+  sourceMaps?: AssetSourceMaps
+  /**
+   * Source path strategy for source map `sources`.
+   * - `'url'` (default): use the stable server path (e.g. `'/assets/app/entry.ts'`)
+   * - `'absolute'`: use the original filesystem path on disk
+   */
+  sourceMapSourcePaths?: AssetSourceMapSourcePaths
+  /**
+   * Minification setting for emitted scripts and styles.
+   */
+  minify?: boolean
+  /**
+   * Script-only configuration.
+   */
+  scripts?: AssetServerScriptOptions
   /**
    * Enable filesystem-backed cache invalidation for long-lived server instances.
    * Enabled by default. Pass `true` to use the default watcher options, an options
@@ -123,16 +118,16 @@ export interface AssetServerOptions {
 
 export interface AssetServer {
   /**
-   * Serves a script request. Returns `Response | null` — null means the request was not
-   * handled by this server, letting the router fall through to a 404.
+   * Serves a script or style request. Returns `Response | null` — null means the request
+   * was not handled by this server, letting the router fall through to a 404.
    */
   fetch(request: Request): Promise<Response | null>
   /**
-   * Returns the request href for a served module file.
+   * Returns the request href for a served asset file.
    */
   getHref(filePath: string): Promise<string>
   /**
-   * Returns preload URLs for one or more served module files, ordered shallowest-first.
+   * Returns preload URLs for one or more served asset files, ordered shallowest-first.
    */
   getPreloads(filePath: string | readonly string[]): Promise<string[]>
   /**
@@ -143,18 +138,20 @@ export interface AssetServer {
 
 type ResolvedAssetServerOptions = {
   allow: readonly string[]
+  basePath: string
   buildId?: string
   define?: Record<string, string>
   deny?: readonly string[]
   external: string[]
-  fingerprintModules: boolean
+  fingerprintAssets: boolean
   minify: boolean
   onError: NonNullable<AssetServerOptions['onError']>
   rootDir: string
   routes: CompiledRoutes
   sourceMapSourcePaths: 'url' | 'absolute'
   sourceMaps?: 'inline' | 'external'
-  scriptsTarget?: ScriptsTarget
+  scriptsTarget?: ResolvedScriptTarget
+  stylesTarget?: ResolvedStyleTarget
   watchOptions: AssetServerWatchOptions | null
 }
 
@@ -172,8 +169,8 @@ export function getInternalWatchTargets(assetServer: AssetServer): readonly stri
 /**
  * Create an asset server instance
  *
- * Compiles TypeScript/JavaScript modules on demand with optional source-based URL
- * fingerprinting, caching, and configurable file mapping.
+ * Compiles TypeScript/JavaScript scripts and CSS styles on demand with optional
+ * source-based URL fingerprinting, caching, and configurable file mapping.
  *
  * @param options Server configuration
  * @returns A {@link AssetServer} with `fetch()`, `getHref()`, and `getPreloads()` methods
@@ -181,8 +178,9 @@ export function getInternalWatchTargets(assetServer: AssetServer): readonly stri
  * @example
  * ```ts
  * let assetServer = createAssetServer({
+ *   basePath: '/assets',
  *   fileMap: {
- *     '/assets/app/*path': 'app/*path',
+ *     '/app/*path': 'app/*path',
  *   },
  *   allow: ['app/**'],
  * })
@@ -199,11 +197,11 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
   })
   let watcher: AssetServerWatcher | null = null
   let chokidarWatcher: ChokidarWatcher | null = null
-  let moduleCompiler = createModuleCompiler({
+  let scriptCompiler = createScriptCompiler({
     buildId: resolvedOptions.buildId,
     define: resolvedOptions.define,
     external: resolvedOptions.external,
-    fingerprintModules: resolvedOptions.fingerprintModules,
+    fingerprintAssets: resolvedOptions.fingerprintAssets,
     isAllowed: accessPolicy.isAllowed,
     minify: resolvedOptions.minify,
     onWatchDirectoriesChange: (delta) => {
@@ -217,6 +215,22 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
     target: resolvedOptions.scriptsTarget,
     watchIgnore: resolvedOptions.watchOptions?.ignore,
     watchMode: resolvedOptions.watchOptions !== null,
+  })
+  let styleCompiler = createStyleCompiler({
+    buildId: resolvedOptions.buildId,
+    fingerprintAssets: resolvedOptions.fingerprintAssets,
+    isAllowed: accessPolicy.isAllowed,
+    minify: resolvedOptions.minify,
+    onWatchDirectoriesChange: (delta) => {
+      if (!watcher) return
+      watcher.updateWatchedDirectories(delta)
+    },
+    rootDir: resolvedOptions.rootDir,
+    routes: resolvedOptions.routes,
+    sourceMapSourcePaths: resolvedOptions.sourceMapSourcePaths,
+    sourceMaps: resolvedOptions.sourceMaps,
+    targets: resolvedOptions.stylesTarget,
+    watchIgnore: resolvedOptions.watchOptions?.ignore,
   })
   if (resolvedOptions.watchOptions) {
     watcher = createAssetServerWatcher({
@@ -241,7 +255,8 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
   async function handleWatchEvent(filePath: string, event: 'add' | 'change' | 'unlink') {
     try {
       let normalizedFilePath = normalizeFilePath(filePath)
-      await moduleCompiler.handleFileEvent(normalizedFilePath, event)
+      await scriptCompiler.handleFileEvent(normalizedFilePath, event)
+      await styleCompiler.handleFileEvent(normalizedFilePath, event)
     } catch (error) {
       console.error(`There was an error invalidating the asset server cache: ${error}`)
     }
@@ -251,30 +266,66 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
     async fetch(request) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return null
 
-      let parsedRequestPathname = moduleCompiler.parseRequestPathname(new URL(request.url).pathname)
+      let parsedRequestPathname = parseAssetRequestPathname(new URL(request.url).pathname, {
+        fingerprintAssets: resolvedOptions.fingerprintAssets,
+        routes: resolvedOptions.routes,
+      })
       if (!parsedRequestPathname) return null
 
       try {
         let ifNoneMatch = request.headers.get('If-None-Match')
-        let moduleResult = await moduleCompiler.getModule(parsedRequestPathname.filePath, {
+
+        if (isStyleFilePath(parsedRequestPathname.filePath)) {
+          let styleResult = await styleCompiler.getStyle(parsedRequestPathname.filePath, {
+            ifNoneMatch,
+            isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
+            requestedFingerprint: parsedRequestPathname.requestedFingerprint,
+          })
+          if (styleResult.type === 'not-modified') {
+            return new Response(null, {
+              status: 304,
+              headers: { ETag: styleResult.etag },
+            })
+          }
+
+          let compiledStyle = styleResult.style
+
+          if (parsedRequestPathname.requestedFingerprint !== null) {
+            if (compiledStyle.fingerprint !== parsedRequestPathname.requestedFingerprint)
+              return null
+          }
+
+          return createResponseForStyle(compiledStyle, {
+            cacheControl: parsedRequestPathname.cacheControl,
+            ifNoneMatch,
+            isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
+            method: request.method,
+          })
+        }
+
+        if (!isScriptFilePath(parsedRequestPathname.filePath)) {
+          return null
+        }
+
+        let scriptResult = await scriptCompiler.getScript(parsedRequestPathname.filePath, {
           ifNoneMatch,
           isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
           requestedFingerprint: parsedRequestPathname.requestedFingerprint,
         })
-        if (moduleResult.type === 'not-modified') {
+        if (scriptResult.type === 'not-modified') {
           return new Response(null, {
             status: 304,
-            headers: { ETag: moduleResult.etag },
+            headers: { ETag: scriptResult.etag },
           })
         }
 
-        let compiledModule = moduleResult.module
+        let compiledScript = scriptResult.script
 
         if (parsedRequestPathname.requestedFingerprint !== null) {
-          if (compiledModule.fingerprint !== parsedRequestPathname.requestedFingerprint) return null
+          if (compiledScript.fingerprint !== parsedRequestPathname.requestedFingerprint) return null
         }
 
-        return createResponseForModule(compiledModule, {
+        return createResponseForScript(compiledScript, {
           cacheControl: parsedRequestPathname.cacheControl,
           ifNoneMatch,
           isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
@@ -286,7 +337,7 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
         // handled here" so the outer router can continue to its own 404 behavior.
         if (
           isAssetServerCompilationError(error) &&
-          (error.code === 'MODULE_NOT_FOUND' || error.code === 'MODULE_NOT_ALLOWED')
+          (error.code === 'FILE_NOT_FOUND' || error.code === 'FILE_NOT_ALLOWED')
         ) {
           return null
         }
@@ -296,10 +347,46 @@ export function createAssetServer(options: AssetServerOptions): AssetServer {
     },
 
     async getHref(filePath) {
-      return moduleCompiler.getHref(filePath)
+      if (isStyleFilePath(filePath)) {
+        return styleCompiler.getHref(filePath)
+      }
+
+      return scriptCompiler.getHref(filePath)
     },
     async getPreloads(filePath) {
-      return moduleCompiler.getPreloadUrls(filePath)
+      let filePaths = Array.isArray(filePath) ? filePath : [filePath]
+      let styleFiles: string[] = []
+      let scriptFiles: string[] = []
+
+      for (let nextFilePath of filePaths) {
+        if (isStyleFilePath(nextFilePath)) {
+          styleFiles.push(nextFilePath)
+          continue
+        }
+
+        scriptFiles.push(nextFilePath)
+      }
+
+      if (styleFiles.length === 0 && scriptFiles.length === 0) {
+        return []
+      }
+
+      if (styleFiles.length === 0) {
+        return flattenPreloadLayers(await scriptCompiler.getPreloadLayers(filePath))
+      }
+
+      if (scriptFiles.length === 0) {
+        return flattenPreloadLayers(await styleCompiler.getPreloadLayers(filePath))
+      }
+
+      // Mixed asset type preloads need to be merged, so we merge in order of first asset type seen
+      let scriptPreloadLayersPromise = scriptCompiler.getPreloadLayers(scriptFiles)
+      let stylePreloadLayersPromise = styleCompiler.getPreloadLayers(styleFiles)
+      let preloadLayerGroups = isStyleFilePath(filePaths[0])
+        ? [stylePreloadLayersPromise, scriptPreloadLayersPromise]
+        : [scriptPreloadLayersPromise, stylePreloadLayersPromise]
+
+      return mergePreloadLayers(await Promise.all(preloadLayerGroups))
     },
     async close() {
       await watcher?.close()
@@ -323,12 +410,35 @@ function internalServerError(): Response {
   })
 }
 
+function mergePreloadLayers(preloadLayersByRoot: readonly (readonly string[][])[]): string[] {
+  let urls: string[] = []
+  let seen = new Set<string>()
+  let maxDepth = Math.max(0, ...preloadLayersByRoot.map((layers) => layers.length))
+
+  for (let depth = 0; depth < maxDepth; depth++) {
+    for (let preloadLayers of preloadLayersByRoot) {
+      for (let url of preloadLayers[depth] ?? []) {
+        if (seen.has(url)) continue
+        seen.add(url)
+        urls.push(url)
+      }
+    }
+  }
+
+  return urls
+}
+
+function flattenPreloadLayers(preloadLayers: readonly (readonly string[])[]): string[] {
+  return preloadLayers.flatMap((layer) => layer)
+}
+
 function defaultErrorHandler(error: unknown): void {
   console.error(error)
 }
 
 function resolveAssetServerOptions(options: AssetServerOptions): ResolvedAssetServerOptions {
   let rootDir = normalizeFilePath(fs.realpathSync(path.resolve(options.rootDir ?? process.cwd())))
+  let basePath = normalizeBasePath(options.basePath)
   let scriptOptions = options.scripts ?? {}
   let fingerprintOptions = normalizeFingerprintOptions({
     fingerprint: options.fingerprint,
@@ -337,37 +447,36 @@ function resolveAssetServerOptions(options: AssetServerOptions): ResolvedAssetSe
 
   return {
     allow: options.allow,
+    basePath,
     buildId: fingerprintOptions.buildId,
     define: scriptOptions.define,
     deny: options.deny,
     external: scriptOptions.external ?? [],
-    fingerprintModules: fingerprintOptions.enabled,
-    minify: scriptOptions.minify ?? false,
+    fingerprintAssets: fingerprintOptions.enabled,
+    minify: options.minify ?? false,
     onError: options.onError ?? defaultErrorHandler,
     rootDir,
-    routes: compileRoutes({
-      fileMap: options.fileMap,
-      rootDir,
-    }),
-    sourceMapSourcePaths: scriptOptions.sourceMapSourcePaths ?? 'url',
-    sourceMaps: scriptOptions.sourceMaps,
-    scriptsTarget: normalizeTarget(scriptOptions.target),
+    routes: compileRoutes(basePath, [
+      {
+        fileMap: options.fileMap,
+        rootDir,
+      },
+      ...getInjectedPackageRouteConfigs(),
+    ]),
+    sourceMapSourcePaths: options.sourceMapSourcePaths ?? 'url',
+    sourceMaps: options.sourceMaps,
+    scriptsTarget: resolveScriptTarget(options.target),
+    stylesTarget: resolveStyleTarget(options.target),
     watchOptions: normalizeWatchOptions(options.watch),
   }
 }
 
-function normalizeTarget(
-  target: NonNullable<AssetServerOptions['scripts']>['target'],
-): ScriptsTarget | undefined {
-  if (target == null) return undefined
-
-  if (typeof target !== 'string' || !scriptTargetSet.has(target)) {
-    throw new TypeError(
-      `Expected target to be one of ${scriptTargets.map((value) => `"${value}"`).join(', ')}. Received "${target}".`,
-    )
+function normalizeBasePath(basePath: string): string {
+  if (typeof basePath !== 'string') {
+    throw new TypeError('basePath must be a string')
   }
 
-  return target as ScriptsTarget
+  return normalizePathname(basePath || '/').replace(/\/+$/, '') || '/'
 }
 
 function normalizeFingerprintOptions(options: {
@@ -412,4 +521,35 @@ function normalizeWatchOptions(
   if (options === false) return null
   if (options == null || options === true) return {}
   return options
+}
+
+function parseAssetRequestPathname(
+  pathname: string,
+  options: {
+    fingerprintAssets: boolean
+    routes: CompiledRoutes
+  },
+): {
+  cacheControl: string
+  filePath: string
+  isSourceMapRequest: boolean
+  requestedFingerprint: string | null
+} | null {
+  let isSourceMapRequest = pathname.endsWith('.map')
+  let pathWithoutMap = isSourceMapRequest ? pathname.slice(0, -4) : pathname
+  let fingerprint = parseFingerprintSuffix(pathWithoutMap)
+  let filePath = options.routes.resolveUrlPathname(fingerprint.pathname)
+  if (!filePath) return null
+  if (options.fingerprintAssets && fingerprint.requestedFingerprint === null) return null
+
+  return {
+    cacheControl: getFingerprintRequestCacheControl(fingerprint.requestedFingerprint),
+    filePath,
+    isSourceMapRequest,
+    requestedFingerprint: fingerprint.requestedFingerprint,
+  }
+}
+
+function isScriptFilePath(filePath: string): boolean {
+  return scriptExtensionSet.has(path.extname(filePath).toLowerCase())
 }
