@@ -341,7 +341,7 @@ jobs:
           SESSION_REDIS_INTEGRATION: '1'
           SESSION_REDIS_URL: redis://127.0.0.1:6379
         run: |
-          cd ../session-storage-redis
+          cd ./packages/session-storage-redis
           pnpm test src/lib/redis-storage.integration.test.ts
 
   data_table_unit:
