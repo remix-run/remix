@@ -1,6 +1,6 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
+import { createMatcher, type Matcher, RoutePattern } from '@remix-run/route-pattern'
 import { createRoutes as route } from '@remix-run/routes'
 
 import type { BuildAction } from './controller.ts'
@@ -980,15 +980,17 @@ describe('custom matcher', () => {
   it('uses a custom matcher when provided', async () => {
     let matchAllCalls = 0
 
-    // Create a custom matcher that tracks calls
-    class CustomMatcher extends ArrayMatcher<MatchData> {
-      matchAll(url: string | URL) {
+    let inner = createMatcher<MatchData>()
+    let customMatcher: Matcher<MatchData> = {
+      ignoreCase: inner.ignoreCase,
+      add: inner.add.bind(inner),
+      match: inner.match.bind(inner),
+      matchAll(url, compareFn) {
         matchAllCalls++
-        return super.matchAll(url)
-      }
+        return inner.matchAll(url, compareFn)
+      },
     }
 
-    let customMatcher = new CustomMatcher()
     let router = createRouter({ matcher: customMatcher })
     router.get('/', () => new Response('Home'))
 
@@ -1000,15 +1002,18 @@ describe('custom matcher', () => {
   it('adds routes to the custom matcher', async () => {
     let addedPatterns: string[] = []
 
-    class CustomMatcher extends ArrayMatcher<MatchData> {
-      add<P extends string>(pattern: P | RoutePattern<P>, data: MatchData): void {
+    let inner = createMatcher<MatchData>()
+    let customMatcher: Matcher<MatchData> = {
+      ignoreCase: inner.ignoreCase,
+      add(pattern, data) {
         let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
         addedPatterns.push(routePattern.source)
-        super.add(pattern, data)
-      }
+        inner.add(pattern, data)
+      },
+      match: inner.match.bind(inner),
+      matchAll: inner.matchAll.bind(inner),
     }
 
-    let customMatcher = new CustomMatcher()
     let router = createRouter({ matcher: customMatcher })
     router.get('/home', () => new Response('Home'))
     router.get('/about', () => new Response('About'))
