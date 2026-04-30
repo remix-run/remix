@@ -69,9 +69,12 @@ export function DocsDocument(handle: Handle<DocsViewProps>) {
             </aside>
 
             <main mix={mainCss}>
-              <div mix={[pageWrapCss, page.css]}>
-                <PageHeader page={page} sourceUrl={sourceUrl} />
-                {children}
+              <div mix={pageWrapCss}>
+                <div mix={[pageContentCss, page.css]}>
+                  <PageHeader page={page} sourceUrl={sourceUrl} />
+                  {children}
+                </div>
+                <DocsFooter />
               </div>
             </main>
           </div>
@@ -234,7 +237,8 @@ function VersionSwitcher(
 function PageHeader(handle: Handle<{ page: PageDefinition; sourceUrl?: string }>) {
   return () => {
     let { page, sourceUrl } = handle.props
-    return page.eyebrow || !page.docFile || page.description || sourceUrl ? (
+    let showTitle = !page.docFile && page.title.length > 0
+    return page.eyebrow || showTitle || page.description || sourceUrl ? (
       <header mix={pageHeaderCss}>
         {page.eyebrow || sourceUrl ? (
           <div mix={eyebrowRowCss}>
@@ -246,13 +250,24 @@ function PageHeader(handle: Handle<{ page: PageDefinition; sourceUrl?: string }>
             ) : null}
           </div>
         ) : null}
-        {!page.docFile ? <h2 mix={pageTitleCss}>{page.title}</h2> : null}
+        {showTitle ? <h2 mix={pageTitleCss}>{page.title}</h2> : null}
         {page.description ? (
           <p mix={[bodyTextCss, pageDescriptionCss]}>{page.description}</p>
         ) : null}
       </header>
     ) : null
   }
+}
+
+function DocsFooter() {
+  return () => (
+    <footer mix={footerCss}>
+      <div mix={footerLegalTextCss}>
+        <span>docs and examples licensed under mit</span>
+        <span>©{new Date().getFullYear()} Shopify, Inc.</span>
+      </div>
+    </footer>
+  )
 }
 
 function getNavItemMix(page: PageDefinition, currentPath: string) {
@@ -543,18 +558,28 @@ const navItemActiveCss = css({
 const mainCss = css({
   minWidth: 0,
   padding: theme.space.xxl,
+  paddingBlockEnd: 0,
+  paddingInlineStart: 'clamp(48px, 6vw, 96px)',
   '@media (max-width: 980px)': {
     padding: theme.space.xl,
+    paddingBlockEnd: 0,
   },
 })
 
 const pageWrapCss = css({
   display: 'flex',
   flexDirection: 'column',
-  //gap: theme.space.xxl,
   width: '100%',
   maxWidth: '750px',
-  marginInline: 'auto',
+  minHeight: `calc(100vh - ${theme.space.xxl})`,
+  marginInline: '0 auto',
+  '@media (max-width: 980px)': {
+    minHeight: `calc(100vh - ${theme.space.xl})`,
+  },
+})
+
+const pageContentCss = css({
+  display: 'block',
 })
 
 const pageHeaderCss = css({
@@ -594,4 +619,27 @@ const pageTitleCss = css({
 
 const pageDescriptionCss = css({
   maxWidth: '64ch',
+})
+
+const footerCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  justifyContent: 'center',
+  marginTop: 'auto',
+  padding: `${theme.space.md} 0`,
+  color: theme.colors.text.muted,
+})
+
+const footerLegalTextCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: theme.space.xs,
+  fontFamily: theme.fontFamily.mono,
+  fontSize: theme.fontSize.xxxs,
+  lineHeight: '1.6',
+  letterSpacing: '0.05em',
+  textTransform: 'uppercase',
+  color: theme.colors.text.muted,
 })

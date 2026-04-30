@@ -1,4 +1,5 @@
 import { css } from 'node_modules/@remix-run/ui/src/style/css-mixin.ts'
+import { theme } from '@remix-run/ui/theme'
 import type { DocFile } from './markdown.ts'
 import { routes } from './routes.ts'
 
@@ -64,6 +65,7 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
     path: routes.home.href({ version }),
     sectionId: 'start',
     title: '',
+    css: homePageCss,
   }
   pages[HOME_PAGE_ID] = homePage
 
@@ -143,3 +145,13 @@ export function buildNotFoundPage(slug: string, version?: string): PageDefinitio
 export function isPageActive(page: PageDefinition, currentPath: string) {
   return currentPath === page.path
 }
+
+const homePageCss = css({
+  '& > p': {
+    marginTop: `${theme.space.sm} !important`,
+    marginBottom: `${theme.space.sm} !important`,
+  },
+  '& > ol > li + li': {
+    marginTop: theme.space.md,
+  },
+})
