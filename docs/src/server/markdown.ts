@@ -64,20 +64,22 @@ export async function renderMarkdownFile(
   filePath: string,
   docFilesLookup: Map<string, DocFile>,
   version?: string,
-): Promise<string> {
+): Promise<{ html: string; source?: string }> {
   try {
     let markdown = fs.readFileSync(filePath, 'utf-8')
     let { attributes, body } = parseFrontmatter(markdown)
     let marked = new Marked(getShikiExtension(attributes.title || '', docFilesLookup, version))
-    let htmlContent = await marked.parse(body)
-    return htmlContent
+    let html = await marked.parse(body)
+    return { html, source: typeof attributes.source === 'string' ? attributes.source : undefined }
   } catch (error) {
-    return `
+    return {
+      html: `
       <div class="error">
         <h2>Error loading file</h2>
         <p>Could not read file: ${filePath}</p>
       </div>
-    `
+    `,
+    }
   }
 }
 
@@ -95,7 +97,7 @@ function getShikiExtension(
             lang: token.lang || 'typescript',
             themes: {
               light: 'github-light',
-              // See Shiki styles in docs.css for activation
+              // See Shiki styles for activation
               dark: 'github-dark',
             },
             includeExplanation: true,

@@ -204,6 +204,9 @@ importers:
 
   docs:
     dependencies:
+      '@remix-run/ui':
+        specifier: workspace:*
+        version: link:../packages/ui
       front-matter:
         specifier: ^4.0.2
         version: 4.0.2
