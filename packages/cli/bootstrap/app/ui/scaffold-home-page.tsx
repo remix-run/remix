@@ -4,7 +4,7 @@ import { css, type RemixNode } from 'remix/ui'
 import { PromptButton } from './prompt-button.tsx'
 import { routes } from '../routes.ts'
 
-const APP_DISPLAY_NAME = decodeURIComponent('Remix 3 Template')
+const APP_DISPLAY_NAME = decodeURIComponent('%%RMX_APP_DISPLAY_NAME_URI_COMPONENT%%')
 
 const FONT_STACK =
   "'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
