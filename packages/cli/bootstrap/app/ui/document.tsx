@@ -1,5 +1,7 @@
 import type { RemixNode } from 'remix/ui'
 
+import { routes } from '../routes.ts'
+
 export interface DocumentProps {
   children?: RemixNode
   title?: string
@@ -15,7 +17,10 @@ export function Document() {
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{title}</title>
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <script type="module" src={routes.assets.href({ path: 'app/assets/entry.ts' })}></script>
+      </body>
     </html>
   )
 }

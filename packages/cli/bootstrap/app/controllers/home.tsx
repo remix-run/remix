@@ -7,8 +7,8 @@ import { render } from '../utils/render.tsx'
 const APP_DISPLAY_NAME = decodeURIComponent('%%RMX_APP_DISPLAY_NAME_URI_COMPONENT%%')
 
 export const home: BuildAction<'GET', typeof routes.home> = {
-  handler() {
-    return render(<HomePage />)
+  handler({ request }) {
+    return render(<HomePage />, request)
   },
 }
 
