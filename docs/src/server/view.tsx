@@ -94,6 +94,9 @@ function Sidebar(
 ) {
   return () => {
     let { registry, currentPath, versions, activeVersion } = handle.props
+    let activePage = Object.values(registry.pages).find((p) => p.path === currentPath)
+    let openSections = activePage && activePage.docFile ? [activePage.sectionId] : []
+
     return (
       <div mix={sidebarPanelCss}>
         <div mix={sidebarIntroCss}>
@@ -101,38 +104,47 @@ function Sidebar(
             <RemixLogoLight activeVersion={activeVersion} />
             <RemixLogoDark activeVersion={activeVersion} />
           </a>
-          <VersionSwitcher versions={versions} activeVersion={activeVersion} />
         </div>
 
+        <VersionSwitcher versions={versions} activeVersion={activeVersion} />
+
         {registry.sections.map((section) => (
-          <section key={section.id} mix={sidebarSectionCss}>
-            <p mix={sidebarHeadingCss}>{section.label}</p>
-            {section.groups.map((group) => (
-              <div key={group.id} mix={sidebarGroupCss}>
-                {group.label ? <p mix={sidebarHeadingCss}>{group.label}</p> : null}
-                <nav
-                  aria-label={
-                    group.label ? `${section.label} ${group.label}` : `${section.label} pages`
-                  }
-                  mix={sidebarNavCss}
-                >
-                  {group.pageIds.map((pageId) => {
-                    let navPage = registry.pages[pageId]
-                    return (
-                      <a
-                        key={navPage.path}
-                        href={navPage.path}
-                        aria-current={isPageActive(navPage, currentPath) ? 'page' : undefined}
-                        mix={getNavItemMix(navPage, currentPath)}
-                      >
-                        {navPage.navLabel}
-                      </a>
-                    )
-                  })}
-                </nav>
-              </div>
-            ))}
-          </section>
+          <details
+            key={section.id}
+            open={openSections.includes(section.id) || undefined}
+            mix={sectionDetailsCss}
+          >
+            <summary mix={sectionSummaryCss}>
+              <span mix={sectionSummaryLabelCss}>{section.label}</span>
+            </summary>
+            <div mix={sectionContentCss}>
+              {section.groups.map((group) => (
+                <div key={group.id} mix={sidebarGroupCss}>
+                  {group.label ? <p mix={sidebarHeadingCss}>{group.label}</p> : null}
+                  <nav
+                    aria-label={
+                      group.label ? `${section.label} ${group.label}` : `${section.label} pages`
+                    }
+                    mix={sidebarNavCss}
+                  >
+                    {group.pageIds.map((pageId) => {
+                      let navPage = registry.pages[pageId]
+                      return (
+                        <a
+                          key={navPage.path}
+                          href={navPage.path}
+                          aria-current={isPageActive(navPage, currentPath) ? 'page' : undefined}
+                          mix={getNavItemMix(navPage, currentPath)}
+                        >
+                          {navPage.navLabel}
+                        </a>
+                      )
+                    })}
+                  </nav>
+                </div>
+              ))}
+            </div>
+          </details>
         ))}
       </div>
     )
@@ -190,28 +202,34 @@ function VersionSwitcher(
       if (idx >= 0) navVersions = versions.slice(idx)
     }
 
-    if (navVersions.length <= 1) return null
-
     return (
-      <div mix={versionSwitcherCss} aria-label="Version">
-        {navVersions.map((v) => {
-          let latest =
-            (versions.length === 0 || v.version === versions[0]?.version) && !activeVersion
-          let active = v.version === activeVersion || latest
-          let href = routes.home.href({ version: !latest ? v.version : undefined })
-          return (
-            <a
-              key={v.version}
-              href={href}
-              rel={!latest && !v.crawl ? 'nofollow' : undefined}
-              mix={active ? [versionPillCss, versionPillActiveCss] : versionPillCss}
-            >
-              {v.version}
-              {latest ? ' (latest)' : null}
-            </a>
-          )
-        })}
-      </div>
+      <details open={activeVersion != null || undefined} mix={sectionDetailsCss}>
+        <summary mix={sectionSummaryCss}>
+          <span mix={sectionSummaryLabelCss}>Version</span>
+        </summary>
+        <div mix={sectionContentCss}>
+          <nav aria-label="Versions" mix={sidebarNavCss}>
+            {navVersions.map((v) => {
+              let latest =
+                (versions.length === 0 || v.version === versions[0]?.version) && !activeVersion
+              let active = v.version === activeVersion || latest
+              let href = routes.home.href({ version: !latest ? v.version : undefined })
+              return (
+                <a
+                  key={v.version}
+                  href={href}
+                  rel={!latest && !v.crawl ? 'nofollow' : undefined}
+                  aria-current={active ? 'page' : undefined}
+                  mix={active ? [navItemCss, navItemActiveCss] : navItemCss}
+                >
+                  {v.version}
+                  {latest ? ' (latest)' : null}
+                </a>
+              )
+            })}
+          </nav>
+        </div>
+      </details>
     )
   }
 }
@@ -280,19 +298,14 @@ const sidebarIntroCss = css({
   flexDirection: 'column',
   gap: theme.space.xs,
   paddingBottom: theme.space.sm,
+  marginBottom: theme.space.sm,
   borderBottom: `1px solid ${theme.colors.border.subtle}`,
 })
 
 const sidebarPanelCss = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.space.lg,
-})
-
-const sidebarSectionCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xs,
+  gap: 0,
 })
 
 const sidebarHeadingCss = css({
@@ -302,6 +315,38 @@ const sidebarHeadingCss = css({
   letterSpacing: theme.letterSpacing.meta,
   textTransform: 'uppercase',
   color: theme.colors.text.muted,
+})
+
+const sectionDetailsCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
+})
+
+const sectionSummaryCss = css({
+  margin: 0,
+  padding: `${theme.space.xs} 0`,
+  cursor: 'pointer',
+  fontSize: theme.fontSize.xxxs,
+  fontWeight: theme.fontWeight.semibold,
+  letterSpacing: theme.letterSpacing.meta,
+  textTransform: 'uppercase',
+  color: theme.colors.text.muted,
+  '&:hover': {
+    color: theme.colors.text.primary,
+  },
+})
+
+const sectionSummaryLabelCss = css({
+  paddingInlineStart: theme.space.xs,
+})
+
+const sectionContentCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.sm,
+  paddingInlineStart: theme.space.md,
+  paddingBottom: theme.space.sm,
 })
 
 const sidebarGroupCss = css({
@@ -364,36 +409,6 @@ const navItemCss = css({
 })
 
 const navItemActiveCss = css({
-  backgroundColor: theme.surface.lvl0,
-  color: theme.colors.text.primary,
-  boxShadow: `inset 0 0 0 1px ${theme.colors.border.subtle}`,
-})
-
-const versionSwitcherCss = css({
-  display: 'flex',
-  flexWrap: 'wrap',
-  gap: theme.space.xs,
-  paddingTop: theme.space.xs,
-})
-
-const versionPillCss = css({
-  display: 'inline-flex',
-  alignItems: 'center',
-  paddingInline: theme.space.sm,
-  minHeight: theme.control.height.sm,
-  borderRadius: theme.radius.full,
-  backgroundColor: theme.surface.lvl1,
-  color: theme.colors.text.secondary,
-  fontFamily: theme.fontFamily.mono,
-  fontSize: theme.fontSize.xxs,
-  textDecoration: 'none',
-  '&:hover': {
-    backgroundColor: theme.surface.lvl0,
-    color: theme.colors.text.primary,
-  },
-})
-
-const versionPillActiveCss = css({
   backgroundColor: theme.surface.lvl0,
   color: theme.colors.text.primary,
   boxShadow: `inset 0 0 0 1px ${theme.colors.border.subtle}`,
