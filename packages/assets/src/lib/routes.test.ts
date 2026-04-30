@@ -85,7 +85,9 @@ describe('compileRoutes', () => {
       'D:/repo/node_modules/@oxc-project/runtime/helpers/decorate.js',
     )
     assert.equal(
-      routes.toUrlPathname(String.raw`D:\repo\node_modules\@oxc-project\runtime\helpers\decorate.js`),
+      routes.toUrlPathname(
+        String.raw`D:\repo\node_modules\@oxc-project\runtime\helpers\decorate.js`,
+      ),
       '/assets/runtime/helpers/decorate.js',
     )
   })

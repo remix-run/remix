@@ -48,13 +48,13 @@ export const routes = route({
 
 ### Leaf route builders
 
-| Builder | HTTP method | Example |
-|---------|-------------|---------|
-| `get(path)` | GET | `get('/search')` |
-| `post(path)` | POST | `post('/logout')` |
-| `put(path)` | PUT | `put('/api/update')` |
-| `del(path)` | DELETE | `del('/api/remove')` |
-| String literal | ANY | `'/about'` |
+| Builder        | HTTP method | Example              |
+| -------------- | ----------- | -------------------- |
+| `get(path)`    | GET         | `get('/search')`     |
+| `post(path)`   | POST        | `post('/logout')`    |
+| `put(path)`    | PUT         | `put('/api/update')` |
+| `del(path)`    | DELETE      | `del('/api/remove')` |
+| String literal | ANY         | `'/about'`           |
 
 ### `form(path, options?)` — form route
 
@@ -278,7 +278,9 @@ middleware:
 ```typescript
 export default {
   middleware: [requireAuth(), requireAdmin()],
-  actions: { /* all actions require auth + admin */ },
+  actions: {
+    /* all actions require auth + admin */
+  },
 } satisfies Controller<typeof routes.admin, AppContext>
 ```
 

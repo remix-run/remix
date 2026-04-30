@@ -55,15 +55,15 @@ export type OrderWithItems = TableRowWith<typeof orders, 'items'>
 
 ### Column types
 
-| Method | SQL type |
-|--------|----------|
-| `c.integer()` | INTEGER |
-| `c.text()` | TEXT |
-| `c.boolean()` | BOOLEAN |
-| `c.decimal(precision, scale)` | DECIMAL |
-| `c.enum([...])` | TEXT (string enum) |
-| `c.uuid()` | UUID / TEXT |
-| `c.varchar(length)` | VARCHAR |
+| Method                        | SQL type           |
+| ----------------------------- | ------------------ |
+| `c.integer()`                 | INTEGER            |
+| `c.text()`                    | TEXT               |
+| `c.boolean()`                 | BOOLEAN            |
+| `c.decimal(precision, scale)` | DECIMAL            |
+| `c.enum([...])`               | TEXT (string enum) |
+| `c.uuid()`                    | UUID / TEXT        |
+| `c.varchar(length)`           | VARCHAR            |
 
 Column modifiers: `.primaryKey()`, `.autoIncrement()`, `.notNull()`, `.unique()`,
 `.references(table, column, fkName?)`, `.onDelete(action)`, `.default(value)`.
@@ -91,7 +91,9 @@ Tables can define `validate`, `beforeWrite`, and `afterRead` hooks:
 ```typescript
 export const books = table({
   name: 'books',
-  columns: { /* ... */ },
+  columns: {
+    /* ... */
+  },
   validate({ operation, value }) {
     let issues = []
     if (operation === 'create' && !value.slug) {
@@ -156,7 +158,7 @@ let total = await db.count(orders, { where: { user_id: userId } })
 let genres = await db.query(books).select('genre').distinct().orderBy('genre', 'asc').all()
 
 // Create
-let newBook = await db.create(books, { slug: 'new-book', title: 'New Book', /* ... */ })
+let newBook = await db.create(books, { slug: 'new-book', title: 'New Book' /* ... */ })
 
 // Update
 await db.update(books, bookId, { title: 'Updated Title' })
@@ -285,7 +287,7 @@ the context system. This also lets `methodOverride()` and CSRF middleware work u
 import { formData } from 'remix/form-data-middleware'
 
 let router = createRouter({
-  middleware: [/* ... */, formData(), /* ... */],
+  middleware: [, /* ... */ formData() /* ... */],
 })
 
 // In an action:
@@ -321,7 +323,8 @@ type. Transforms run after validation and compose with `.pipe(...)` and `.refine
 ```typescript
 import * as coerce from 'remix/data-schema/coerce'
 
-let slugSchema = s.string()
+let slugSchema = s
+  .string()
   .pipe(minLength(1))
   .transform((value) => value.trim().toLowerCase().replace(/\s+/g, '-'))
 

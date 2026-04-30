@@ -51,20 +51,20 @@ let router = createRouter({ middleware })
 
 ### Built-in middleware catalog
 
-| Middleware | Import | Use when | Notes |
-|-----------|--------|----------|-------|
-| `staticFiles(dir, opts?)` | `remix/static-middleware` | Serve files from `public/` or another directory exactly as they exist on disk | Fast exit; usually near the top |
-| `compression()` | `remix/compression-middleware` | Compress text-like responses | Usually global |
-| `logger()` | `remix/logger-middleware` | Log requests and responses | Often development-only; `colors` can force color output on/off |
-| `cors(opts?)` | `remix/cors-middleware` | Endpoints must serve cross-origin browsers or preflight `OPTIONS` requests | Usually early so preflights can short-circuit |
-| `cop(opts?)` | `remix/cop-middleware` | Reject unsafe cross-origin browser requests without synchronizer tokens | Put before session or CSRF when used |
-| `formData(opts?)` | `remix/form-data-middleware` | Parse `FormData` bodies, especially forms and uploads | Needed for `_csrf` form field extraction |
-| `methodOverride()` | `remix/method-override-middleware` | HTML forms need `PUT`, `PATCH`, or `DELETE` semantics | Run after form parsing |
-| `session(cookie, storage)` | `remix/session-middleware` | Cookie-backed sessions | Must run before session-backed auth or CSRF |
-| `csrf(opts?)` | `remix/csrf-middleware` | Session-backed form workflows need synchronizer-token CSRF protection | Requires `session()` before it |
-| `asyncContext()` | `remix/async-context-middleware` | Helpers outside handlers need request context via `getContext()` | Add before helpers rely on it |
-| `auth({ schemes })` | `remix/auth-middleware` | Resolve auth state into `context.get(Auth)` | Run after `session()` for session-backed auth |
-| `requireAuth()` | `remix/auth-middleware` | A controller or action must reject anonymous access | Usually controller-level or action-level, not global |
+| Middleware                 | Import                             | Use when                                                                      | Notes                                                          |
+| -------------------------- | ---------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `staticFiles(dir, opts?)`  | `remix/static-middleware`          | Serve files from `public/` or another directory exactly as they exist on disk | Fast exit; usually near the top                                |
+| `compression()`            | `remix/compression-middleware`     | Compress text-like responses                                                  | Usually global                                                 |
+| `logger()`                 | `remix/logger-middleware`          | Log requests and responses                                                    | Often development-only; `colors` can force color output on/off |
+| `cors(opts?)`              | `remix/cors-middleware`            | Endpoints must serve cross-origin browsers or preflight `OPTIONS` requests    | Usually early so preflights can short-circuit                  |
+| `cop(opts?)`               | `remix/cop-middleware`             | Reject unsafe cross-origin browser requests without synchronizer tokens       | Put before session or CSRF when used                           |
+| `formData(opts?)`          | `remix/form-data-middleware`       | Parse `FormData` bodies, especially forms and uploads                         | Needed for `_csrf` form field extraction                       |
+| `methodOverride()`         | `remix/method-override-middleware` | HTML forms need `PUT`, `PATCH`, or `DELETE` semantics                         | Run after form parsing                                         |
+| `session(cookie, storage)` | `remix/session-middleware`         | Cookie-backed sessions                                                        | Must run before session-backed auth or CSRF                    |
+| `csrf(opts?)`              | `remix/csrf-middleware`            | Session-backed form workflows need synchronizer-token CSRF protection         | Requires `session()` before it                                 |
+| `asyncContext()`           | `remix/async-context-middleware`   | Helpers outside handlers need request context via `getContext()`              | Add before helpers rely on it                                  |
+| `auth({ schemes })`        | `remix/auth-middleware`            | Resolve auth state into `context.get(Auth)`                                   | Run after `session()` for session-backed auth                  |
+| `requireAuth()`            | `remix/auth-middleware`            | A controller or action must reject anonymous access                           | Usually controller-level or action-level, not global           |
 
 ### Static files vs browser modules
 
@@ -195,11 +195,13 @@ export function getCurrentUserSafely() {
 Middleware can be applied at three levels:
 
 1. **Router-level** — runs for every request:
+
    ```typescript
    let router = createRouter({ middleware: [...] })
    ```
 
 2. **Controller-level** — runs for all actions in a controller subtree:
+
    ```typescript
    export default {
      middleware: [requireAuth()],

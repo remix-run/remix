@@ -39,7 +39,10 @@ function normalizeFilePattern(pattern: string): string {
   return normalizePathname(pattern)
 }
 
-export function compileRoutes(basePath: string, routeConfigs: readonly RouteConfig[]): CompiledRoutes {
+export function compileRoutes(
+  basePath: string,
+  routeConfigs: readonly RouteConfig[],
+): CompiledRoutes {
   if (routeConfigs.every((routeConfig) => Object.keys(routeConfig.fileMap).length === 0)) {
     throw new Error('createAssetServer() requires at least one configured fileMap entry.')
   }
