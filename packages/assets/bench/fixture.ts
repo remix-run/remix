@@ -12,7 +12,7 @@ export interface BenchFixture {
   id: 'basic' | 'deep-graph'
   label: string
   entryPoint: string
-  assetServer: Pick<AssetServerOptions, 'allow' | 'fileMap'>
+  assetServer: Pick<AssetServerOptions, 'allow' | 'basePath' | 'fileMap'>
   entryPointUrl: string
   expectedEntryUrlSubstrings: string[]
   expectedPreloadUrlSubstrings: string[]
@@ -117,10 +117,11 @@ async function createBenchFixture(options: CreateBenchFixtureOptions): Promise<B
     entryPoint,
     assetServer: {
       allow: [options.projectRoot, options.packagesRoot, repoPackagesRoot],
+      basePath: '/assets',
       fileMap: {
-        '/assets/app/*path': createFilePattern(repoRoot, path.join(options.projectRoot, 'app')),
-        '/assets/bench-packages/*path': createFilePattern(repoRoot, options.packagesRoot),
-        '/assets/packages/*path': createFilePattern(repoRoot, repoPackagesRoot),
+        '/app/*path': createFilePattern(repoRoot, path.join(options.projectRoot, 'app')),
+        '/bench-packages/*path': createFilePattern(repoRoot, options.packagesRoot),
+        '/packages/*path': createFilePattern(repoRoot, repoPackagesRoot),
       },
     },
     entryPointUrl: options.entryPointUrl,

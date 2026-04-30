@@ -32,6 +32,7 @@
     }
   },
   "dependencies": {
+    "@oxc-project/runtime": "^0.121.0",
     "@remix-run/headers": "workspace:*",
     "@remix-run/route-pattern": "workspace:*",
     "chokidar": "^5.0.0",

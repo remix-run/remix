@@ -185,14 +185,25 @@ function createBenchAssetServer(
   fixture: BenchFixture,
   overrides: Partial<AssetServerOptions> = {},
 ): AssetServer {
+  let defaultFingerprint: AssetServerOptions['fingerprint'] = {
+    buildId: String(Date.now()),
+  }
   let options: AssetServerOptions = {
-    rootDir: path.resolve(import.meta.dirname, '../../..'),
-    fingerprint: {
-      buildId: String(Date.now()),
-    },
-    watch: false,
-    ...fixture.assetServer,
-    ...overrides,
+    allow: overrides.allow ?? fixture.assetServer.allow,
+    basePath: overrides.basePath ?? fixture.assetServer.basePath,
+    fileMap: overrides.fileMap ?? fixture.assetServer.fileMap,
+    deny: overrides.deny,
+    fingerprint: Object.hasOwn(overrides, 'fingerprint')
+      ? overrides.fingerprint
+      : defaultFingerprint,
+    minify: overrides.minify,
+    onError: overrides.onError,
+    rootDir: overrides.rootDir ?? path.resolve(import.meta.dirname, '../../..'),
+    scripts: overrides.scripts,
+    sourceMaps: overrides.sourceMaps,
+    sourceMapSourcePaths: overrides.sourceMapSourcePaths,
+    target: overrides.target,
+    watch: overrides.watch ?? false,
   }
 
   return createAssetServer(options)

@@ -57,6 +57,34 @@ export function getFilePathDirectory(filePath: string): string {
   return path.posix.dirname(normalizeWindowsPath(filePath))
 }
 
+export function getRelativeFilePath(fromPath: string, toPath: string): string {
+  let normalizedFromPath = normalizeFilePath(fromPath)
+  let normalizedToPath = normalizeFilePath(toPath)
+
+  if (normalizedFromPath.startsWith('//') || normalizedToPath.startsWith('//')) {
+    return normalizeWindowsPath(
+      path.win32.relative(
+        normalizedFromPath.replace(/\//g, '\\'),
+        normalizedToPath.replace(/\//g, '\\'),
+      ),
+    )
+  }
+
+  if (
+    windowsDriveLetterRE.test(normalizedFromPath) ||
+    windowsDriveLetterRE.test(normalizedToPath)
+  ) {
+    return normalizeWindowsPath(
+      path.win32.relative(
+        normalizedFromPath.replace(/\//g, '\\'),
+        normalizedToPath.replace(/\//g, '\\'),
+      ),
+    )
+  }
+
+  return path.posix.relative(normalizedFromPath, normalizedToPath)
+}
+
 export function getFilePathBaseName(filePath: string): string {
   return path.posix.basename(normalizeWindowsPath(filePath))
 }

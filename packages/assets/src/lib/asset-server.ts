@@ -3,7 +3,8 @@ import * as fs from 'node:fs'
 import { createAccessPolicy } from './access.ts'
 import { isAssetServerCompilationError } from './compilation-error.ts'
 import { getFingerprintRequestCacheControl, parseFingerprintSuffix } from './fingerprint.ts'
-import { normalizeFilePath } from './paths.ts'
+import { getInjectedPackageRouteConfigs } from './injected-packages.ts'
+import { normalizeFilePath, normalizePathname } from './paths.ts'
 import { compileRoutes } from './routes.ts'
 import type { CompiledRoutes } from './routes.ts'
 import { createResponseForScript, createScriptCompiler } from './scripts/compiler.ts'
@@ -54,7 +55,9 @@ interface AssetServerScriptOptions {
 const scriptExtensionSet = new Set<string>(supportedScriptExtensions)
 
 export interface AssetServerOptions {
-  /** File patterns keyed by public URL patterns. */
+  /** Public mount path for this asset server, e.g. `'/assets'`. */
+  basePath: string
+  /** File patterns keyed by public URL patterns relative to `basePath`. */
   fileMap: Readonly<Record<string, string>>
   /**
    * Root directory used to resolve relative file paths. Defaults to `process.cwd()`.
@@ -135,6 +138,7 @@ export interface AssetServer {
 
 type ResolvedAssetServerOptions = {
   allow: readonly string[]
+  basePath: string
   buildId?: string
   define?: Record<string, string>
   deny?: readonly string[]
@@ -174,8 +178,9 @@ export function getInternalWatchTargets(assetServer: AssetServer): readonly stri
  * @example
  * ```ts
  * let assetServer = createAssetServer({
+ *   basePath: '/assets',
  *   fileMap: {
- *     '/assets/app/*path': 'app/*path',
+ *     '/app/*path': 'app/*path',
  *   },
  *   allow: ['app/**'],
  * })
@@ -433,6 +438,7 @@ function defaultErrorHandler(error: unknown): void {
 
 function resolveAssetServerOptions(options: AssetServerOptions): ResolvedAssetServerOptions {
   let rootDir = normalizeFilePath(fs.realpathSync(path.resolve(options.rootDir ?? process.cwd())))
+  let basePath = normalizeBasePath(options.basePath)
   let scriptOptions = options.scripts ?? {}
   let fingerprintOptions = normalizeFingerprintOptions({
     fingerprint: options.fingerprint,
@@ -441,6 +447,7 @@ function resolveAssetServerOptions(options: AssetServerOptions): ResolvedAssetSe
 
   return {
     allow: options.allow,
+    basePath,
     buildId: fingerprintOptions.buildId,
     define: scriptOptions.define,
     deny: options.deny,
@@ -449,16 +456,27 @@ function resolveAssetServerOptions(options: AssetServerOptions): ResolvedAssetSe
     minify: options.minify ?? false,
     onError: options.onError ?? defaultErrorHandler,
     rootDir,
-    routes: compileRoutes({
-      fileMap: options.fileMap,
-      rootDir,
-    }),
+    routes: compileRoutes(basePath, [
+      {
+        fileMap: options.fileMap,
+        rootDir,
+      },
+      ...getInjectedPackageRouteConfigs(),
+    ]),
     sourceMapSourcePaths: options.sourceMapSourcePaths ?? 'url',
     sourceMaps: options.sourceMaps,
     scriptsTarget: resolveScriptTarget(options.target),
     stylesTarget: resolveStyleTarget(options.target),
     watchOptions: normalizeWatchOptions(options.watch),
   }
+}
+
+function normalizeBasePath(basePath: string): string {
+  if (typeof basePath !== 'string') {
+    throw new TypeError('basePath must be a string')
+  }
+
+  return normalizePathname(basePath || '/').replace(/\/+$/, '') || '/'
 }
 
 function normalizeFingerprintOptions(options: {
