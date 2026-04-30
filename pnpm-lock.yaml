@@ -1482,6 +1482,18 @@ importers:
       '@remix-run/ui':
         specifier: workspace:^
         version: link:../ui
+      mysql2:
+        specifier: ^3.15.3
+        version: 3.16.3
+      pg:
+        specifier: ^8.16.3
+        version: 8.18.0
+      playwright:
+        specifier: ^1.59.0
+        version: 1.59.0
+      redis:
+        specifier: ^5.10.0
+        version: 5.11.0
     devDependencies:
       '@types/dom-navigation':
         specifier: ^1.0.7
