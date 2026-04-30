@@ -92,6 +92,7 @@ export const panelFooterCss = css({
 
 export const eyebrowTextCss = css({
   margin: 0,
+  padding: 0,
   fontSize: theme.fontSize.xxxs,
   fontWeight: theme.fontWeight.semibold,
   letterSpacing: theme.letterSpacing.meta,

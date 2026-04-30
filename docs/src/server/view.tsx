@@ -12,12 +12,13 @@ export type DocsViewProps = {
   registry: DocsRegistry
   versions: { version: string; crawl: boolean }[]
   activeVersion?: string
+  sourceUrl?: string
   children?: RemixNode | RemixNode[]
 }
 
 export function DocsDocument(handle: Handle<DocsViewProps>) {
   return () => {
-    let { page, registry, versions, activeVersion, children } = handle.props
+    let { page, registry, versions, activeVersion, sourceUrl, children } = handle.props
     let apiName = page.docFile?.name
     let slug = page.docFile?.urlPath
     return (
@@ -46,10 +47,6 @@ export function DocsDocument(handle: Handle<DocsViewProps>) {
               title={`Markdown docs for ${apiName}`}
             />
           ) : null}
-          {/* <link
-            href={routes.assets.href({ version: activeVersion, asset: 'docs.css' })}
-            rel="stylesheet"
-          /> */}
           <script
             async
             type="module"
@@ -72,8 +69,8 @@ export function DocsDocument(handle: Handle<DocsViewProps>) {
             </aside>
 
             <main mix={mainCss}>
-              <div mix={pageWrapCss}>
-                <PageHeader page={page} />
+              <div mix={[pageWrapCss, page.css]}>
+                <PageHeader page={page} sourceUrl={sourceUrl} />
                 {children}
               </div>
             </main>
@@ -100,7 +97,7 @@ function Sidebar(
     return (
       <div mix={sidebarPanelCss}>
         <div mix={sidebarIntroCss}>
-          <a href={routes.home.href({ version: undefined })} class="logo">
+          <a href="https://remix.run" class="logo">
             <RemixLogoLight activeVersion={activeVersion} />
             <RemixLogoDark activeVersion={activeVersion} />
           </a>
@@ -234,18 +231,27 @@ function VersionSwitcher(
   }
 }
 
-function PageHeader(handle: Handle<{ page: PageDefinition }>) {
+function PageHeader(handle: Handle<{ page: PageDefinition; sourceUrl?: string }>) {
   return () => {
-    let { page } = handle.props
-    return (
+    let { page, sourceUrl } = handle.props
+    return page.eyebrow || !page.docFile || page.description || sourceUrl ? (
       <header mix={pageHeaderCss}>
-        <p mix={eyebrowTextCss}>{page.eyebrow}</p>
+        {page.eyebrow || sourceUrl ? (
+          <div mix={eyebrowRowCss}>
+            {page.eyebrow ? <span mix={eyebrowTextCss}>{page.eyebrow}</span> : <span />}
+            {sourceUrl ? (
+              <a href={sourceUrl} target="_blank" rel="noopener" mix={viewSourceLinkCss}>
+                View Source
+              </a>
+            ) : null}
+          </div>
+        ) : null}
         {!page.docFile ? <h2 mix={pageTitleCss}>{page.title}</h2> : null}
         {page.description ? (
           <p mix={[bodyTextCss, pageDescriptionCss]}>{page.description}</p>
         ) : null}
       </header>
-    )
+    ) : null
   }
 }
 
@@ -253,11 +259,132 @@ function getNavItemMix(page: PageDefinition, currentPath: string) {
   return isPageActive(page, currentPath) ? [navItemCss, navItemActiveCss] : navItemCss
 }
 
+// Typography mirrors the `.md-prose` rules from the remix.run blog
+// (`/styles/md.css`) and is applied site-wide.
+//
+// `!important` is required on the margin/decoration overrides below because the
+// RMX_01 theme renders an unlayered `:where(h1, h2, ..., p, ul, ol, ...)
+// { margin: 0 }` reset, while the `css()` mixin always wraps its rules in
+// `@layer rmx.*`. Per the CSS cascade, unlayered author rules beat any layered
+// author rule of equal/lower importance regardless of specificity — so without
+// `!important` our margins are silently dropped.
 const bodyCss = css({
   margin: 0,
   backgroundColor: theme.surface.lvl0,
   color: theme.colors.text.primary,
   fontFamily: theme.fontFamily.sans,
+  fontSize: theme.fontSize.lg,
+  fontWeight: theme.fontWeight.normal,
+  lineHeight: '1.4',
+  letterSpacing: '-0.008em',
+
+  '& :is(h1, h2, h3, h4, h5, h6)': {
+    fontFamily: theme.fontFamily.sans,
+    fontWeight: theme.fontWeight.bold,
+    letterSpacing: '-0.02em',
+    lineHeight: '1',
+    color: theme.colors.text.primary,
+    marginTop: `${theme.space.lg} !important`,
+    marginBottom: `${theme.space.lg} !important`,
+  },
+  '& h1': {
+    fontSize: 'clamp(2rem, 4vw, 3.5rem)',
+  },
+  '& h2': {
+    fontSize: 'clamp(1.375rem, 2.5vw, 1.625rem)',
+    marginTop: `calc(${theme.space.xxl} + ${theme.space.lg}) !important`,
+  },
+  '& h3': {
+    fontSize: 'clamp(1.125rem, 1.75vw, 1.25rem)',
+  },
+  '& h4': {
+    fontSize: '1.0625rem',
+  },
+  '& h5': {
+    fontSize: '1rem',
+  },
+  '& h6': {
+    fontSize: '1rem',
+  },
+
+  '& p': {
+    marginTop: `${theme.space.lg} !important`,
+    marginBottom: `${theme.space.lg} !important`,
+  },
+
+  '& ul': {
+    listStyle: 'disc',
+    marginTop: `${theme.space.xxl} !important`,
+    marginBottom: `${theme.space.lg} !important`,
+    paddingInlineStart: theme.space.xxl,
+  },
+  '& ol': {
+    listStyle: 'decimal',
+    marginTop: `${theme.space.xxl} !important`,
+    marginBottom: `${theme.space.lg} !important`,
+    paddingInlineStart: theme.space.xxl,
+  },
+  '& li + li': {
+    marginTop: theme.space.xs,
+  },
+  '& li > p': {
+    margin: '0 !important',
+  },
+
+  '& a': {
+    color: theme.colors.text.link,
+    textDecoration: 'underline',
+  },
+
+  '& :is(code, pre)': {
+    fontFamily: theme.fontFamily.mono,
+    fontSize: theme.fontSize.md,
+    color: theme.colors.text.secondary,
+  },
+  '& pre': {
+    border: `1px solid ${theme.colors.border.subtle}`,
+    borderRadius: theme.radius.md,
+    padding: theme.space.md,
+    margin: `${theme.space.lg} 0 !important`,
+    overflowX: 'auto',
+    lineHeight: theme.lineHeight.relaxed,
+    '@media (min-width: 768px)': {
+      padding: theme.space.lg,
+    },
+  },
+  '& :not(a):not(pre) > code': {
+    background: theme.surface.lvl3,
+    borderRadius: theme.radius.sm,
+    padding: '1px 6px 2px',
+    lineHeight: '1.425',
+  },
+  '& :is(h1, h2, h3, h4, h5, h6) code': {
+    fontSize: '90%',
+    padding: '0.125em 0.25em',
+  },
+
+  '& .shiki': {
+    backgroundColor: `${theme.surface.lvl4} !important`,
+    '& a': {
+      color: 'inherit',
+    },
+    '@media (prefers-color-scheme: dark)': {
+      '&, & span': {
+        color: 'var(--shiki-dark) !important',
+      },
+    },
+  },
+
+  // Sidebar opt-out: the global `& a { underline }` and `& p { margin: 2rem }`
+  // would otherwise wreck the nav and group labels. Higher-specificity
+  // descendant selectors win without needing !important fights.
+  '& aside a': {
+    textDecoration: 'none',
+  },
+  '& aside p': {
+    marginTop: '0 !important',
+    marginBottom: '0 !important',
+  },
 })
 
 const shellCss = css({
@@ -299,7 +426,6 @@ const sidebarIntroCss = css({
   gap: theme.space.xs,
   paddingBottom: theme.space.sm,
   marginBottom: theme.space.sm,
-  borderBottom: `1px solid ${theme.colors.border.subtle}`,
 })
 
 const sidebarPanelCss = css({
@@ -385,8 +511,8 @@ const logoDarkCss = css({
 })
 
 const logoCss = css({
-  width: '100%',
-  height: 'auto',
+  width: 'auto',
+  height: '16px',
 })
 
 const navItemCss = css({
@@ -425,7 +551,7 @@ const mainCss = css({
 const pageWrapCss = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.space.xxl,
+  //gap: theme.space.xxl,
   width: '100%',
   maxWidth: '750px',
   marginInline: 'auto',
@@ -438,16 +564,34 @@ const pageHeaderCss = css({
   maxWidth: '52rem',
 })
 
+const eyebrowRowCss = css({
+  display: 'flex',
+  alignItems: 'baseline',
+  justifyContent: 'space-between',
+  gap: theme.space.md,
+})
+
+const viewSourceLinkCss = css({
+  fontSize: theme.fontSize.xxxs,
+  fontWeight: theme.fontWeight.semibold,
+  letterSpacing: theme.letterSpacing.meta,
+  textTransform: 'uppercase',
+  color: theme.colors.text.muted,
+  textDecoration: 'none',
+  '&:hover': {
+    color: theme.colors.text.primary,
+    textDecoration: 'underline',
+  },
+})
+
 const pageTitleCss = css({
   margin: 0,
   fontSize: 'clamp(28px, 3vw, 38px)',
   lineHeight: theme.lineHeight.tight,
   fontWeight: theme.fontWeight.semibold,
   color: theme.colors.text.primary,
-  maxWidth: '18ch',
 })
 
 const pageDescriptionCss = css({
-  margin: 0,
   maxWidth: '64ch',
 })

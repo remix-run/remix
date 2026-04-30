@@ -18,11 +18,12 @@ export type ServerContext = {
 
 export type ServerPageProps = ServerContext & {
   children?: RemixNode | RemixNode[]
+  sourceUrl?: string
 }
 
 export function ServerPage(handle: Handle<ServerPageProps>) {
   return () => {
-    let { docFiles, versions, activeVersion, slug, children } = handle.props
+    let { docFiles, versions, activeVersion, slug, sourceUrl, children } = handle.props
     let registry = buildRegistry(docFiles, activeVersion)
     let page: PageDefinition
     if (!slug) {
@@ -37,17 +38,12 @@ export function ServerPage(handle: Handle<ServerPageProps>) {
         registry={registry}
         versions={versions}
         activeVersion={activeVersion}
+        sourceUrl={sourceUrl}
       >
         {children}
       </DocsDocument>
     )
   }
-}
-
-export function Home() {
-  return () => (
-    <p>Browse the navigation on the left to explore types, interfaces, classes, and functions.</p>
-  )
 }
 
 export function NotFound(handle: Handle<{ slug: string }>) {

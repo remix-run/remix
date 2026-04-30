@@ -36,7 +36,6 @@ const h1 = (heading: string) => h(1, heading)
 const h2 = (heading: string, body: string) => h(2, heading, body)
 const h3 = (heading: string, body: string) => h(3, heading, body)
 const h4 = (heading: string, body: string) => h(4, heading, body)
-const p = (content: string) => `${content}`
 const pre = async (content: string, lang = 'ts') => {
   if (content.includes('(...)')) {
     // Prettier chokes on the ellipsis syntax in function signatures
@@ -59,17 +58,16 @@ const pre = async (content: string, lang = 'ts') => {
 }
 
 function frontmatter(comment: DocumentedAPI) {
-  return ['---', `title: ${comment.name}`, '---'].join('\n')
+  let lines = ['---', `title: ${comment.name}`]
+  if (comment.source) {
+    lines.push(`source: ${comment.source}`)
+  }
+  lines.push('---')
+  return lines.join('\n')
 }
 
 function name(comment: DocumentedAPI) {
   return h1(comment.name)
-}
-
-function source(comment: DocumentedAPI) {
-  return comment.source
-    ? p(`<a href="${comment.source}" target="_blank">View Source</a>`)
-    : undefined
 }
 
 function summary(comment: DocumentedAPI) {
@@ -83,7 +81,6 @@ async function getFunctionMarkdown(comment: DocumentedFunction): Promise<string>
   return [
     frontmatter(comment),
     name(comment),
-    source(comment),
     summary(comment),
     aliases(comment),
     h2('Signature', await pre(comment.signature)),
@@ -96,7 +93,9 @@ async function getFunctionMarkdown(comment: DocumentedFunction): Promise<string>
     comment.parameters.length > 0
       ? h2(
           'Params',
-          comment.parameters.map((param) => h3(param.name, param.description)).join('\n\n'),
+          comment.parameters
+            .map((param) => h3(`\`${param.name}\``, param.description))
+            .join('\n\n'),
         )
       : undefined,
     comment.returns ? h2('Returns', comment.returns) : undefined,
@@ -109,7 +108,6 @@ async function getClassMarkdown(comment: DocumentedClass): Promise<string> {
   return [
     frontmatter(comment),
     name(comment),
-    source(comment),
     summary(comment),
     aliases(comment),
     h2('Signature', await pre(comment.signature)),
@@ -119,17 +117,23 @@ async function getClassMarkdown(comment: DocumentedClass): Promise<string> {
           'Constructor Params',
           [
             comment.constructor.description,
-            ...comment.constructor.parameters.map((p) => h3(p.name, p.description)),
+            ...comment.constructor.parameters.map((p) => h3(`\`${p.name}\``, p.description)),
           ]
             .filter(Boolean)
             .join('\n\n'),
         )
       : undefined,
     comment.properties && comment.properties.length > 0
-      ? h2('Properties', comment.properties.map((p) => h3(p.name, p.description)).join('\n\n'))
+      ? h2(
+          'Properties',
+          comment.properties.map((p) => h3(`\`${p.name}\``, p.description)).join('\n\n'),
+        )
       : undefined,
     comment.accessors && comment.accessors.length > 0
-      ? h2('Accessors', comment.accessors.map((p) => h3(p.name, p.description)).join('\n\n'))
+      ? h2(
+          'Accessors',
+          comment.accessors.map((p) => h3(`\`${p.name}\``, p.description)).join('\n\n'),
+        )
       : undefined,
     comment.methods && comment.methods.length > 0
       ? h2(
@@ -137,8 +141,8 @@ async function getClassMarkdown(comment: DocumentedClass): Promise<string> {
           comment.methods
             .map((m) =>
               [
-                h3(m.signature, m.description),
-                ...m.parameters.map((p) => h4(p.name, p.description)),
+                h3(`\`${m.signature}\``, m.description),
+                ...m.parameters.map((p) => h4(`\`${p.name}\``, p.description)),
               ].join('\n\n'),
             )
             .join('\n\n'),
@@ -153,7 +157,6 @@ async function getInterfaceMarkdown(comment: DocumentedInterface): Promise<strin
   return [
     frontmatter(comment),
     name(comment),
-    source(comment),
     comment.description ? summary(comment) : null,
     aliases(comment),
     h2('Signature', await pre(comment.signature)),
@@ -174,7 +177,7 @@ async function getInterfaceMarkdown(comment: DocumentedInterface): Promise<strin
             .map((m) =>
               [
                 h3(m.signature, m.description),
-                ...m.parameters.map((p) => h4(p.name, p.description)),
+                ...m.parameters.map((p) => h4(`\`${p.name}\``, p.description)),
               ].join('\n\n'),
             )
             .join('\n\n'),
@@ -189,7 +192,6 @@ async function getInterfaceFunctionMarkdown(comment: DocumentedInterfaceFunction
   return [
     frontmatter(comment),
     name(comment),
-    source(comment),
     comment.description ? summary(comment) : null,
     aliases(comment),
     h2('Signature', await pre(comment.signature)),
@@ -209,7 +211,6 @@ async function getTypeMarkdown(comment: DocumentedType): Promise<string> {
   return [
     frontmatter(comment),
     name(comment),
-    source(comment),
     comment.description ? summary(comment) : null,
     aliases(comment),
     h2('Signature', await pre(comment.signature)),

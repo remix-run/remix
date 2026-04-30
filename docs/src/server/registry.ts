@@ -1,3 +1,4 @@
+import { css } from 'node_modules/@remix-run/ui/src/style/css-mixin.ts'
 import type { DocFile } from './markdown.ts'
 import { routes } from './routes.ts'
 
@@ -31,6 +32,7 @@ export type PageDefinition = {
   sectionId: string
   title: string
   docFile?: DocFile
+  css?: ReturnType<typeof css>
 }
 
 export type NavGroup = {
@@ -56,12 +58,12 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
 
   let homePage: PageDefinition = {
     id: HOME_PAGE_ID,
-    description: 'Select a document from the sidebar to get started.',
-    eyebrow: 'API Documentation',
+    description: '',
+    eyebrow: '',
     navLabel: 'Overview',
     path: routes.home.href({ version }),
     sectionId: 'start',
-    title: 'Remix API Documentation',
+    title: '',
   }
   pages[HOME_PAGE_ID] = homePage
 
