@@ -3,7 +3,6 @@ import type { Handle } from 'remix/ui'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
 import { NAV_SECTIONS, PAGES, type ShowcasePageDefinition, isPageActive } from './registry.tsx'
 import { bodyTextCss, eyebrowTextCss } from './page-primitives.tsx'
-import { routes } from '../../config/routes.ts'
 
 export function ExplorerDocument(handle: Handle<{ page: ShowcasePageDefinition }>) {
   return () => {
@@ -51,10 +50,11 @@ function Sidebar(handle: Handle<{ currentPath: string }>) {
     return (
       <div mix={sidebarPanelCss}>
         <div mix={sidebarIntroCss}>
-          <a href={routes.explorer.index.href()}>
-            <RemixLogoLight />
-            <RemixLogoDark />
-          </a>
+          <p mix={eyebrowTextCss}>Preview Documentation</p>
+          <h1 mix={sidebarTitleCss}>Remix UI</h1>
+          <p mix={bodyTextCss}>
+            This is a preview of the Remix UI library. It is not yet ready for production use.
+          </p>
         </div>
 
         {NAV_SECTIONS.map((section) => (
@@ -80,22 +80,6 @@ function Sidebar(handle: Handle<{ currentPath: string }>) {
       </div>
     )
   }
-}
-
-function RemixLogoLight() {
-  return () => (
-    <div mix={logoLightCss}>
-      <img src={routes.logoLight.href()} alt="Remix" mix={logoCss} />
-    </div>
-  )
-}
-
-function RemixLogoDark() {
-  return () => (
-    <div mix={logoDarkCss}>
-      <img src={routes.logoDark.href()} alt="Remix" mix={logoCss} />
-    </div>
-  )
 }
 
 function PageHeader(handle: Handle<{ page: ShowcasePageDefinition }>) {
@@ -196,25 +180,6 @@ const sidebarTitleCss = css({
   lineHeight: theme.lineHeight.tight,
   fontWeight: theme.fontWeight.semibold,
   color: theme.colors.text.primary,
-})
-
-const logoLightCss = css({
-  display: 'block',
-  '@media (prefers-color-scheme: dark)': {
-    display: 'none',
-  },
-})
-
-const logoDarkCss = css({
-  display: 'none',
-  '@media (prefers-color-scheme: dark)': {
-    display: 'block',
-  },
-})
-
-const logoCss = css({
-  width: '100%',
-  height: 'auto',
 })
 
 const navItemCss = css({

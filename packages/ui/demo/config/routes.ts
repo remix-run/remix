@@ -24,6 +24,4 @@ export const routes = {
   examples: route('/examples', exampleRoutes),
   themeBuilder: get('/theme-builder'),
   explorer: route('/', explorerRoutes),
-  logoLight: get('/remix-wordmark-light-mode.svg'),
-  logoDark: get('/remix-wordmark-dark-mode.svg'),
 }
