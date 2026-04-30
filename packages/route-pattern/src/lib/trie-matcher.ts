@@ -242,8 +242,9 @@ export class Trie<data = unknown> {
     if (protocol !== 'http' && protocol !== 'https') return []
     let hostNameNode = this.protocolNode[protocol]
 
-    // any hostname + port -> pathname
-    let anyHostname = hostNameNode.any.get(url.port)
+    // any hostname (no port) -> pathname
+    // port cannot appear without hostname, so always indexed under the empty-port key
+    let anyHostname = hostNameNode.any.get('')
     if (anyHostname) {
       origins.push({
         hostnameMatch: [

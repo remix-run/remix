@@ -275,6 +275,16 @@ describe('Matcher', () => {
         assert.ok(match)
         assert.deepEqual(match.params, { subdomain: 'api' })
       })
+
+      it('matches origin-less pattern against URL with any port', () => {
+        let matcher = createMatcher<null>()
+        matcher.add('/', null)
+        matcher.add('/about', null)
+
+        assert.ok(matcher.match('http://localhost/'))
+        assert.ok(matcher.match('http://localhost:44199/'))
+        assert.ok(matcher.match('https://example.com:8080/about'))
+      })
     })
 
     describe('pathname', () => {
