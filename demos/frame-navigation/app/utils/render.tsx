@@ -1,5 +1,6 @@
 import type { RemixNode } from 'remix/ui'
 import { renderToStream, type ResolveFrameContext } from 'remix/ui/server'
+import { createHtmlResponse } from 'remix/response/html'
 import { getContext } from 'remix/async-context-middleware'
 import type { Router } from 'remix/fetch-router'
 
@@ -16,12 +17,7 @@ export function render(node: RemixNode, init?: ResponseInit) {
     },
   })
 
-  let headers = new Headers(init?.headers)
-  if (!headers.has('Content-Type')) {
-    headers.set('Content-Type', 'text/html; charset=UTF-8')
-  }
-
-  return new Response(stream, { ...init, headers })
+  return createHtmlResponse(stream, init)
 }
 
 async function resolveFrame(
@@ -46,10 +42,11 @@ async function resolveFrame(
   if (cookie) headers.set('cookie', cookie)
 
   let res = await followFrameRedirects(router, request, url, headers)
-  if (res.body) return res.body
+  if (!res.ok) {
+    return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`
+  }
 
-  if (res.ok) return res.text()
-  return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`
+  return res.text()
 }
 
 async function followFrameRedirects(router: Router, request: Request, url: URL, headers: Headers) {

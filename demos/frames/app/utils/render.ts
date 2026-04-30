@@ -1,5 +1,6 @@
 import type { RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
+import { createHtmlResponse } from 'remix/response/html'
 import type { Router } from 'remix/fetch-router'
 
 type RenderOptions = {
@@ -25,15 +26,11 @@ export function render(node: RemixNode, options: RenderOptions = {}): Response {
 
   let headers = new Headers(options.init?.headers)
 
-  if (!headers.has('Content-Type')) {
-    headers.set('Content-Type', 'text/html; charset=utf-8')
-  }
-
   if (!headers.has('Cache-Control')) {
     headers.set('Cache-Control', 'no-store')
   }
 
-  return new Response(stream, { ...options.init, headers })
+  return createHtmlResponse(stream, { ...options.init, headers })
 }
 
 async function resolveFrameViaRouter(router: Router, request: Request, src: string) {
@@ -53,10 +50,6 @@ async function resolveFrameViaRouter(router: Router, request: Request, src: stri
 
   if (!response.ok) {
     return `<pre>Frame error: ${response.status} ${response.statusText}</pre>`
-  }
-
-  if (response.body) {
-    return response.body
   }
 
   return response.text()
