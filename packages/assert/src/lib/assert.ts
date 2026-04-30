@@ -274,9 +274,10 @@ export function doesNotThrow(fn: () => any, message?: string): void {
  *
  * @example
  * await assert.rejects(fetch('/missing'), (err) => err.status === 404)
+ * await assert.rejects(fetch('/missing'), { code: 'ERR_INVALID_ARG_VALUE' })
  *
  * @param fn - A function returning a promise, or a promise directly.
- * @param expectedError - Optional error constructor, instance, RegExp, or validator.
+ * @param expectedError - Optional error constructor, instance, RegExp, object, or validator.
  * @param message - Optional failure message.
  */
 export async function rejects(

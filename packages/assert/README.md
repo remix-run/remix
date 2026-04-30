@@ -12,8 +12,8 @@ Uses strict equality (`===`) for all comparisons — no type coercion.
 - `assert.deepEqual` / `assert.notDeepEqual` — recursive strict deep equality
 - `assert.match` — string matches a regexp
 - `assert.fail` — unconditional failure
-- `assert.throws` — synchronous throw assertion
-- `assert.rejects` — async rejection assertion
+- `assert.throws` — synchronous throw assertion with optional error validation
+- `assert.rejects` — async rejection assertion with optional error validation
 
 ## Installation
 
@@ -41,6 +41,15 @@ await assert.rejects(() => Promise.reject(new Error('oops')))
 assert.throws(() => {
   throw new TypeError('bad')
 }, TypeError)
+
+assert.throws(
+  () => {
+    let error = new Error('Invalid value') as Error & { code: string }
+    error.code = 'ERR_INVALID_ARG_VALUE'
+    throw error
+  },
+  { code: 'ERR_INVALID_ARG_VALUE', message: /Invalid value/ },
+)
 ```
 
 ### Named exports

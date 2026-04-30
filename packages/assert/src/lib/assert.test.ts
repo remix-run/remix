@@ -221,6 +221,16 @@ describe('assert.rejects', () => {
   it('validates error constructor', async () => {
     await assert.rejects(() => Promise.reject(new TypeError('bad type')), TypeError)
   })
+
+  it('validates rejection against an object of expected properties', async () => {
+    let err = new Error('boom') as NodeJS.ErrnoException
+    err.code = 'ERR_INVALID_ARG_VALUE'
+
+    await assert.rejects(() => Promise.reject(err), {
+      code: 'ERR_INVALID_ARG_VALUE',
+      message: /boom/,
+    })
+  })
 })
 
 describe('assert.doesNotReject', () => {

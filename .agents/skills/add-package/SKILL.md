@@ -49,6 +49,8 @@ Follow this exactly when creating package files, public exports, tests, and docs
   - `test:bun`: `bun x --bun remix-test`
   - `typecheck`: `tsgo --noEmit`
 - Use baseline dev dependencies:
+  - `"@remix-run/assert": "workspace:^"`
+  - `"@remix-run/test": "workspace:^"`
   - `"@types/node": "catalog:"`
   - `"@typescript/native-preview": "catalog:"`
 - Add `keywords` like existing packages (short, lowercase, feature-focused).
@@ -103,9 +105,9 @@ Use this `tsconfig.build.json` pattern:
   - `src/<entry>.ts` for public entry points
   - `src/lib/*.ts` for implementation
   - `src/lib/*.test.ts` for tests (colocated with implementation)
-- Tests use Node's built-in test runner:
-  - `import * as assert from 'node:assert/strict'`
-  - `import { describe, it } from 'node:test'`
+- Tests use Remix's test runner:
+  - `import * as assert from '@remix-run/assert'`
+  - `import { describe, it } from '@remix-run/test'`
 - Keep tests IDE-friendly:
   - Do not generate tests with loops/conditionals inside `describe()`.
 
@@ -180,8 +182,8 @@ export { createThing, type ThingOptions } from './lib/thing.ts'
 Use this minimal test style:
 
 ```ts
-import * as assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 
 import { createThing } from './thing.ts'
 
