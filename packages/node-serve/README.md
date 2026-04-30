@@ -10,6 +10,7 @@ Build high-performance Node.js servers with web-standard Fetch API primitives. U
 - **Managed Server Lifecycle**: Start a server with `serve()`, wait for `server.ready`, and close it with `server.close()`
 - **Custom Hostname**: Override the host and protocol used to construct incoming `request.url` values
 - **Client Info**: Access client IP address, address family, and remote port when your handler accepts a second argument
+- **uWebSockets.js Setup**: Register native WebSocket routes and connection filters before the Fetch fallback starts listening
 - **Existing uWebSockets.js App Adapter**: Use `createUwsRequestHandler()` when you already own a uWebSockets.js app
 
 ## Installation
@@ -58,6 +59,84 @@ let server = serve(handler, { port: 3000 })
 await server.ready
 console.log(`Server running at http://localhost:${server.port}`)
 ```
+
+### uWebSockets.js Setup
+
+Use `setup(app)` when `serve()` should still manage the server lifecycle and Fetch fallback, but you need to configure native uWebSockets.js transport features before the server starts listening. The hook runs after the app is created and before `node-serve` registers its catch-all Fetch route.
+
+This example adds a native WebSocket endpoint next to a normal Fetch handler on the same port:
+
+```ts
+import { serve } from 'remix/node-serve'
+
+let server = serve(
+  (request) => {
+    let url = new URL(request.url)
+
+    if (url.pathname === '/') {
+      return new Response('Chat server')
+    }
+
+    return new Response('Not Found', { status: 404 })
+  },
+  {
+    port: 3000,
+    setup(app) {
+      app.ws('/ws/chat', {
+        open(ws) {
+          ws.subscribe('chat')
+        },
+        message(ws, message, isBinary) {
+          ws.publish('chat', message, isBinary)
+        },
+      })
+    },
+  },
+)
+
+await server.ready
+```
+
+`app.ws(pattern, ...)` uses uWebSockets.js route patterns, not Remix `route-pattern` syntax. uWS supports simple path params such as `/rooms/:room`, and those params are available during `upgrade` through `req.getParameter('room')` or `req.getParameter(0)`. If WebSocket handlers need params, copy them into uWS user data during `upgrade`, then read them with `ws.getUserData()`:
+
+```ts
+serve(handler, {
+  setup(app) {
+    app.ws<{ room: string }>('/rooms/:room', {
+      upgrade(res, req, context) {
+        res.upgrade(
+          { room: req.getParameter('room') ?? 'general' },
+          req.getHeader('sec-websocket-key'),
+          req.getHeader('sec-websocket-protocol'),
+          req.getHeader('sec-websocket-extensions'),
+          context,
+        )
+      },
+      open(ws) {
+        ws.subscribe(`room:${ws.getUserData().room}`)
+      },
+    })
+  },
+})
+```
+
+uWS patterns do not support the full `route-pattern` feature set, including partial-segment params like `v:version`, split params like `:file.:ext`, optionals like `/api(/v:version)`, host/protocol/search matching, or named multi-segment wildcard captures like `*path`. You can use a uWS pattern like `/files/*` as a catch-all, but it does not provide Remix-style named wildcard params.
+
+You can also register connection filters for low-level transport metrics or limits:
+
+```ts
+let activeConnections = 0
+
+serve(handler, {
+  setup(app) {
+    app.filter((_res, count) => {
+      activeConnections = Number(count)
+    })
+  },
+})
+```
+
+`app.filter()` observes low-level connection count changes. It is not Fetch response middleware and should not be used to mutate normal `Response` headers or bodies. Use Fetch handlers, middleware, or [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) for normal HTTP routing and response behavior; reserve `setup()` for uWebSockets.js transport features that must be configured before listening.
 
 ### Custom Request URLs
 
