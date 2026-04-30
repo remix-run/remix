@@ -1,13 +1,6 @@
 import * as process from 'node:process'
 
-import { runCompletionCommand } from './commands/completion.ts'
-import { runDoctorCommand } from './commands/doctor.ts'
 import { getCliHelpText, runHelpCommand } from './commands/help.ts'
-import { runNewCommand } from './commands/new.ts'
-import { runRoutesCommand } from './commands/routes.ts'
-import { runSkillsCommand } from './commands/skills.ts'
-import { runTestCommand } from './commands/test.ts'
-import { runVersionCommand } from './commands/version.ts'
 import { resolveCliContext, type CliContext } from './cli-context.ts'
 import { renderCliError, unknownCommand } from './errors.ts'
 import { configureColors, restoreTerminalFormatting } from './terminal.ts'
@@ -56,34 +49,42 @@ async function runCommand(command: string, argv: string[], context: CliContext):
   }
 
   if (command === '-v' || command === '--version') {
+    let { runVersionCommand } = await import('./commands/version.ts')
     return runVersionCommand([], context)
   }
 
   if (command === 'new') {
+    let { runNewCommand } = await import('./commands/new.ts')
     return runNewCommand(argv, context)
   }
 
   if (command === 'completion') {
+    let { runCompletionCommand } = await import('./commands/completion.ts')
     return runCompletionCommand(argv)
   }
 
   if (command === 'doctor') {
+    let { runDoctorCommand } = await import('./commands/doctor.ts')
     return runDoctorCommand(argv, context)
   }
 
   if (command === 'skills') {
+    let { runSkillsCommand } = await import('./commands/skills.ts')
     return runSkillsCommand(argv, context)
   }
 
   if (command === 'routes') {
+    let { runRoutesCommand } = await import('./commands/routes.ts')
     return runRoutesCommand(argv, context)
   }
 
   if (command === 'test') {
+    let { runTestCommand } = await import('./commands/test.ts')
     return runTestCommand(argv, context)
   }
 
   if (command === 'version') {
+    let { runVersionCommand } = await import('./commands/version.ts')
     return runVersionCommand(argv, context)
   }
 
