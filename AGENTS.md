@@ -44,6 +44,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 ## Release Notes
 
 - If a change affects published packages, add or update the appropriate change file.
+- Prerelease channels come from `packages/*/.changes/config.json` and control the version suffix such as `alpha` or `beta`; prerelease packages still publish to the npm `next` dist-tag.
 - If you modify release or publish flow code, validate it with the preview or dry-run scripts before finishing.
 
 ## Repo Skills
@@ -51,6 +52,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 For work on this repository itself, use the skills in `.agents/skills/`:
 
 - `add-package` at `.agents/skills/add-package/SKILL.md`: Create or align a package under `packages/` with repo conventions.
+- `author-ui-modules` at `.agents/skills/author-ui-modules/SKILL.md`: Build idiomatic `packages/ui` modules, including first-party UI primitives, headless controls, and mixin-based modules.
 - `expert-typescript-programmer` at `.agents/skills/expert-typescript-programmer/SKILL.md`: Write, refactor, or review TypeScript with strict, precise, maintainable types.
 - `write-tests` at `.agents/skills/write-tests/SKILL.md`: Write, refactor, or review tests with repo runner, fixture, assertion, dependency, and validation conventions.
 - `make-change-file` at `.agents/skills/make-change-file/SKILL.md`: Create or update package change files under `packages/*/.changes`.
@@ -62,6 +64,7 @@ For work on this repository itself, use the skills in `.agents/skills/`:
 - `update-pr` at `.agents/skills/update-pr/SKILL.md`: Rewrite an existing pull request title and body to match the current diff.
 - `write-api-docs` at `.agents/skills/write-api-docs/SKILL.md`: Write or tighten JSDoc for exported public APIs.
 - `write-readme` at `.agents/skills/write-readme/SKILL.md`: Draft or revise package READMEs in the repo's style.
+- `write-ui-module-readme` at `.agents/skills/write-ui-module-readme/SKILL.md`: Write concise module README files for `packages/ui/src/lib/*` primitives.
 
 ## App And Demo Skills
 
