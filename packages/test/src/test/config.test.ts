@@ -33,6 +33,45 @@ describe('loadConfig', () => {
       await fsp.rm(tmp, { recursive: true, force: true })
     }
   })
+
+  it('normalizes comma-separated project and type values from config files', async () => {
+    let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
+
+    try {
+      await fsp.writeFile(
+        path.join(tmp, 'remix-test.config.ts'),
+        [
+          'export default {',
+          "  project: 'chromium, firefox',",
+          "  type: 'server,browser',",
+          '}',
+        ].join('\n'),
+      )
+
+      let config = await loadConfig([], tmp)
+
+      assert.deepEqual(config.project, ['chromium', 'firefox'])
+      assert.deepEqual(config.type, ['server', 'browser'])
+    } finally {
+      await fsp.rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  it('normalizes repeated comma-separated project and type values from CLI flags', async () => {
+    let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
+
+    try {
+      let config = await loadConfig(
+        ['--project', 'chromium,firefox', '--project', 'webkit', '--type', 'server,browser'],
+        tmp,
+      )
+
+      assert.deepEqual(config.project, ['chromium', 'firefox', 'webkit'])
+      assert.deepEqual(config.type, ['server', 'browser'])
+    } finally {
+      await fsp.rm(tmp, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('config', () => {

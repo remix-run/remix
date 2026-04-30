@@ -62,6 +62,18 @@ describe('expect.toEqual', () => {
   it('fails for structurally unequal objects', () => {
     expectFails(() => expect({ a: 1 }).toEqual({ a: 2 }))
   })
+
+  it('fails when undefined-valued keys are missing', () => {
+    expectFails(() => expect({ a: undefined }).toEqual({ b: undefined }))
+  })
+
+  it('supports objectContaining partial matches', () => {
+    expect({ a: 1, b: 2 }).toEqual(expect.objectContaining({ a: 1 }))
+  })
+
+  it('objectContaining requires undefined-valued keys to exist', () => {
+    expectFails(() => expect({}).toEqual(expect.objectContaining({ a: undefined })))
+  })
 })
 
 describe('expect.toBeNull / toBeUndefined / toBeDefined / toBeTruthy', () => {
@@ -169,6 +181,16 @@ describe('expect.toHaveProperty', () => {
   it('checks property value', () => {
     expect({ a: 1 }).toHaveProperty('a', 1)
     expectFails(() => expect({ a: 1 }).toHaveProperty('a', 2))
+  })
+})
+
+describe('expect.toMatchObject', () => {
+  it('passes for recursive partial matches', () => {
+    expect({ a: { b: 1, c: 2 } }).toMatchObject({ a: { b: 1 } })
+  })
+
+  it('requires undefined-valued keys to exist', () => {
+    expectFails(() => expect({}).toMatchObject({ a: undefined }))
   })
 })
 

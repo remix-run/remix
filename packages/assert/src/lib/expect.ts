@@ -17,6 +17,10 @@ function isPartialMatcher(value: unknown): value is PartialMatcher {
   )
 }
 
+function hasOwn(value: object, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key)
+}
+
 // Strict deep equality — uses === at primitive leaves (no type coercion).
 // `b` may be a partial matcher (from `expect.objectContaining`), in which case
 // only the keys it specifies are required to match.
@@ -34,7 +38,7 @@ function isDeepEqual(a: any, b: any): boolean {
 
     if (keysA.length !== keysB.length) return false
 
-    return keysA.every((key) => isDeepEqual(a[key], b[key]))
+    return keysA.every((key) => hasOwn(b, key) && isDeepEqual(a[key], b[key]))
   }
 
   return false
@@ -55,7 +59,9 @@ function matchesPartial(actual: any, expected: any): boolean {
     return expected.every((value, index) => matchesPartial(actual[index], value))
   }
 
-  return Object.keys(expected).every((key) => matchesPartial(actual[key], expected[key]))
+  return Object.keys(expected).every(
+    (key) => hasOwn(actual, key) && matchesPartial(actual[key], expected[key]),
+  )
 }
 
 interface MockShape {

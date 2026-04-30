@@ -314,6 +314,15 @@ function toArray<T>(value: T | readonly T[]): T[] {
   return Array.isArray(value) ? [...value] : [value as T]
 }
 
+function toCommaSeparatedArray(value: string | readonly string[]): string[] {
+  return toArray(value).flatMap((item) =>
+    item
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean),
+  )
+}
+
 function resolveConfig(
   fileConfig: RemixTestConfig,
   { values: cliValues, positionals }: ReturnType<typeof parseCliArgs>,
@@ -391,10 +400,10 @@ function resolveConfig(
     pool: resolvePool(cliValues.pool ?? fileConfig.pool ?? defaultValues.pool),
     project: (() => {
       let raw = cliValues.project ?? fileConfig.project ?? defaultValues.project
-      return raw === undefined ? undefined : toArray(raw)
+      return raw === undefined ? undefined : toCommaSeparatedArray(raw)
     })(),
     reporter: cliValues.reporter ?? fileConfig.reporter ?? defaultValues.reporter,
-    type: toArray(cliValues.type ?? fileConfig.type ?? defaultValues.type),
+    type: toCommaSeparatedArray(cliValues.type ?? fileConfig.type ?? defaultValues.type),
     watch: cliValues.watch ?? fileConfig.watch ?? defaultValues.watch,
   }
 }
