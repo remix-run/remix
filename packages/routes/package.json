@@ -1,15 +1,15 @@
 {
-  "name": "@remix-run/async-context-middleware",
-  "version": "0.2.2",
-  "description": "Middleware for storing request context in AsyncLocalStorage",
+  "name": "@remix-run/routes",
+  "version": "0.0.0",
+  "description": "Typed route definitions and URL helpers for Remix apps",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/async-context-middleware"
+    "directory": "packages/routes"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/async-context-middleware#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/routes#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -33,14 +33,12 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
-    "@remix-run/fetch-router": "workspace:*",
-    "@remix-run/routes": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
   "dependencies": {
-    "@remix-run/fetch-router": "workspace:^"
+    "@remix-run/route-pattern": "workspace:^"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
@@ -51,11 +49,11 @@
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [
-    "fetch",
-    "router",
-    "middleware",
-    "async",
-    "context",
-    "async-local-storage"
+    "route",
+    "routes",
+    "routing",
+    "url",
+    "pattern",
+    "href"
   ]
 }

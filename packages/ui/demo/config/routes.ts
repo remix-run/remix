@@ -1,4 +1,4 @@
-import { get, route } from 'remix/fetch-router/routes'
+import { get, route } from 'remix/routes'
 
 import { PAGE_LIST } from '../app/explorer/registry.tsx'
 

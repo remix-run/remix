@@ -92,7 +92,7 @@ describe('doctor command', () => {
           '}',
         ].join('\n'),
         'app/routes.ts': [
-          "import { route } from 'remix/fetch-router/routes'",
+          "import { route } from 'remix/routes'",
           '',
           'export const routes = route({',
           "  home: '/',",
@@ -223,7 +223,7 @@ describe('doctor command', () => {
             '}',
           ].join('\n'),
           'app/routes.ts': [
-            "import { route } from 'remix/fetch-router/routes'",
+            "import { route } from 'remix/routes'",
             '',
             'export const routes = route({',
             "  home: '/',",
@@ -300,7 +300,7 @@ describe('doctor command', () => {
           '}',
         ].join('\n'),
         'app/routes.ts': [
-          "import { route } from 'remix/fetch-router/routes'",
+          "import { route } from 'remix/routes'",
           '',
           'export const routes = route({',
           "  home: '/',",
@@ -436,7 +436,7 @@ describe('doctor command', () => {
           '}',
         ].join('\n'),
         'app/routes.ts': [
-          "import { route } from 'remix/fetch-router/routes'",
+          "import { route } from 'remix/routes'",
           '',
           'export const routes = route({',
           "  home: '/',",
@@ -658,7 +658,7 @@ describe('doctor command', () => {
     let projectDir = await createTempProject(
       {
         'app/routes.ts': [
-          "import { route } from 'remix/fetch-router/routes'",
+          "import { route } from 'remix/routes'",
           '',
           'export const routes = route({',
           "  'sales-report': '/sales-report',",
@@ -711,7 +711,7 @@ describe('doctor command', () => {
     let projectDir = await createTempProject(
       {
         'app/routes.ts': [
-          "import { route } from 'remix/fetch-router/routes'",
+          "import { route } from 'remix/routes'",
           '',
           'export const routes = route({',
           "  '../../../escape': '/escape',",
@@ -1023,7 +1023,7 @@ describe('doctor command', () => {
     let projectDir = await createTempProject(
       {
         'app/routes.ts': [
-          "import { form, route } from 'remix/fetch-router/routes'",
+          "import { form, route } from 'remix/routes'",
           '',
           'export const routes = route({',
           '  auth: {',
@@ -1113,7 +1113,7 @@ describe('doctor command', () => {
       {
         'app/controllers/about.ts': 'export {}\n',
         'app/routes.ts': [
-          "import { route } from 'remix/fetch-router/routes'",
+          "import { route } from 'remix/routes'",
           '',
           'export const routes = route({',
           "  home: '/',",
@@ -1157,7 +1157,7 @@ describe('doctor command', () => {
       {
         'app/controllers/about.jsx': 'export {}\n',
         'app/routes.ts': [
-          "import { route } from 'remix/fetch-router/routes'",
+          "import { route } from 'remix/routes'",
           '',
           'export const routes = route({',
           "  home: '/',",

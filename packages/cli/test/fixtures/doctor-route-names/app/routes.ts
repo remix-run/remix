@@ -1,4 +1,4 @@
-import { form, route } from 'remix/fetch-router/routes'
+import { form, route } from 'remix/routes'
 
 export const routes = route({
   shared: form('shared'),

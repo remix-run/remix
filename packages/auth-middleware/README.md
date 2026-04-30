@@ -27,7 +27,7 @@ The following example shows the request-time half of a session-backed browser lo
 ```ts
 import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/auth-middleware'
 import { createRouter } from 'remix/fetch-router'
-import { route } from 'remix/fetch-router/routes'
+import { route } from 'remix/routes'
 import type { GoodAuth } from 'remix/auth-middleware'
 import { session } from 'remix/session-middleware'
 

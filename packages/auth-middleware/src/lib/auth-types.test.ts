@@ -8,7 +8,7 @@ import {
   type MiddlewareContext,
   type RequestContext,
 } from '@remix-run/fetch-router'
-import { route } from '@remix-run/fetch-router/routes'
+import { route } from '@remix-run/routes'
 
 import {
   Auth,

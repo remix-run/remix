@@ -1,4 +1,4 @@
-import { del, get, post, put, route, form, resources } from 'remix/fetch-router/routes'
+import { del, get, post, put, route, form, resources } from 'remix/routes'
 
 export const assetsBase = '/assets'
 

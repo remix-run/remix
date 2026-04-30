@@ -8,7 +8,7 @@ import {
   type MergeContext,
   type RequestContext,
 } from '@remix-run/fetch-router'
-import { route } from '@remix-run/fetch-router/routes'
+import { route } from '@remix-run/routes'
 
 import { asyncContext, getContext } from './async-context.ts'
 
