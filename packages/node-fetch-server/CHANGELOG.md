@@ -2,6 +2,12 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## v0.13.1
+
+### Patch Changes
+
+- Improve request throughput so `node-fetch-server` is now on par with native `node:http` performance in the request-inspection benchmark, while preserving Fetch API request handlers. The main optimizations lazily materialize `Request` and `Headers` objects, specialize handlers by declared arity, avoid unnecessary client/request work on hot paths, and send single-chunk response bodies with less Web stream overhead. See the [`node-fetch-server` benchmarks](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server#benchmarks) for current results.
+
 ## v0.13.0 (2025-12-18)
 
 - Use the `:authority` header to set the URL of http/2 requests.

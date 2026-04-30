@@ -1,3 +1,9 @@
+## v0.2.1
+
+### Patch Changes
+
+- Run server and E2E test files in forked child processes by default, add `pool: 'threads'`/`--pool threads` to preserve the previous worker-thread behavior, and clean up leaked test worker resources after results are reported.
+
 ## v0.2.0
 
 ### Minor Changes
