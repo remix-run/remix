@@ -1,0 +1,74 @@
+import type { RetryPolicy, ResolvedRetryPolicy } from './types.ts'
+
+const DEFAULT_MAX_ATTEMPTS = 5
+const DEFAULT_STRATEGY = 'exponential' as const
+const DEFAULT_BASE_DELAY_MS = 1000
+const DEFAULT_MAX_DELAY_MS = 300000
+const DEFAULT_JITTER = 'full' as const
+
+export function normalizeRetryPolicy(
+  basePolicy?: RetryPolicy,
+  overridePolicy?: RetryPolicy,
+): ResolvedRetryPolicy {
+  let source = { ...basePolicy, ...overridePolicy }
+
+  let maxAttempts = normalizeWholeNumber(source.maxAttempts, DEFAULT_MAX_ATTEMPTS, 1)
+  let strategy = source.strategy ?? DEFAULT_STRATEGY
+  let baseDelayMs = normalizeWholeNumber(source.baseDelayMs, DEFAULT_BASE_DELAY_MS, 1)
+  let maxDelayMs = normalizeWholeNumber(source.maxDelayMs, DEFAULT_MAX_DELAY_MS, baseDelayMs)
+  let jitter = source.jitter ?? DEFAULT_JITTER
+
+  return {
+    maxAttempts,
+    strategy,
+    baseDelayMs,
+    maxDelayMs,
+    jitter,
+  }
+}
+
+export function computeRetryDelayMs(
+  attempt: number,
+  policy: ResolvedRetryPolicy,
+  random: () => number = Math.random,
+): number {
+  let normalizedAttempt = normalizeWholeNumber(attempt, 1, 1)
+  let attemptDelay = policy.baseDelayMs
+
+  if (policy.strategy === 'exponential') {
+    let exponent = Math.max(0, normalizedAttempt - 1)
+    attemptDelay = policy.baseDelayMs * 2 ** exponent
+  }
+
+  let cappedDelay = Math.min(policy.maxDelayMs, Math.max(policy.baseDelayMs, attemptDelay))
+
+  if (policy.jitter === 'none') {
+    return cappedDelay
+  }
+
+  return Math.floor(random() * cappedDelay)
+}
+
+export function computeRetryAt(
+  now: number,
+  attempt: number,
+  policy: ResolvedRetryPolicy,
+  random: () => number = Math.random,
+): number {
+  let delay = computeRetryDelayMs(attempt, policy, random)
+  return now + delay
+}
+
+function normalizeWholeNumber(value: unknown, fallback: number, minValue: number): number {
+  if (typeof value !== 'number' || !Number.isFinite(value)) {
+    return fallback
+  }
+
+  let normalized = Math.floor(value)
+
+  if (normalized < minValue) {
+    return minValue
+  }
+
+  return normalized
+}

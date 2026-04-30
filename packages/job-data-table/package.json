@@ -1,15 +1,15 @@
 {
-  "name": "@remix-run/data-table-postgres",
-  "version": "0.3.0",
-  "description": "PostgreSQL adapter for remix/data-table",
+  "name": "@remix-run/job-data-table",
+  "version": "0.0.0",
+  "description": "Data Table storage for remix/job",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/data-table-postgres"
+    "directory": "packages/job-data-table"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/data-table-postgres#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/job-data-table#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -18,7 +18,6 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
-  "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
     "./package.json": "./package.json"
@@ -32,40 +31,39 @@
       "./package.json": "./package.json"
     }
   },
+  "dependencies": {
+    "@remix-run/data-table": "workspace:^",
+    "@remix-run/job": "workspace:^"
+  },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
-    "@remix-run/data-table": "workspace:*",
+    "@remix-run/data-table-mysql": "workspace:*",
+    "@remix-run/data-table-postgres": "workspace:*",
+    "@remix-run/data-table-sqlite": "workspace:*",
     "@remix-run/test": "workspace:*",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "catalog:",
     "@types/pg": "^8.15.6",
     "@typescript/native-preview": "catalog:",
+    "better-sqlite3": "^12.4.1",
+    "mysql2": "^3.15.2",
     "pg": "^8.16.3"
-  },
-  "dependencies": {
-    "@remix-run/data-table": "workspace:^"
-  },
-  "peerDependencies": {
-    "pg": "^8.16.3"
-  },
-  "peerDependenciesMeta": {
-    "pg": {
-      "optional": true
-    }
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix-test",
-    "test:bun": "bun x --bun remix-test",
-    "test:integration": "remix-test --glob.test 'src/lib/adapter.integration.test.ts'",
-    "test:coverage": "remix-test --coverage",
+    "test:integration": "remix-test --glob.test 'src/lib/storage.*.test.ts'",
+    "test:integration:mysql": "remix-test --glob.test 'src/lib/storage.mysql.integration.test.ts'",
+    "test:integration:postgres": "remix-test --glob.test 'src/lib/storage.postgres.integration.test.ts'",
+    "test:integration:sqlite": "remix-test --glob.test 'src/lib/storage.sqlite.test.ts'",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [
-    "remix",
-    "orm",
-    "postgres",
+    "job",
+    "queue",
+    "scheduler",
     "database",
     "sql"
   ]
