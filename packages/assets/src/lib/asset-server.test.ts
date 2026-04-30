@@ -4,6 +4,7 @@ import * as nodeFs from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
 import { isAssetServerCompilationError } from './compilation-error.ts'
@@ -18,9 +19,10 @@ import type { AssetServerOptions } from './asset-server.ts'
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
 
 function createAssetServerForTest(
-  options: Parameters<typeof createAssetServer>[0],
+  options: Omit<AssetServerOptions, 'basePath'> & { basePath?: string },
 ): ReturnType<typeof createAssetServer> {
   return createAssetServer({
+    basePath: options.basePath ?? '/assets',
     ...options,
     watch: options.watch ?? false,
   })
@@ -55,9 +57,10 @@ function getLineAndColumn(source: string, search: string): { line: number; colum
 function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions> = {}) {
   return createAssetServerForTest({
     allow: ['app/**', 'app/node_modules/**'],
+    basePath: '/assets',
     fileMap: {
-      '/assets/app/*path': 'app/*path',
-      '/assets/npm/*path': 'app/node_modules/*path',
+      '/app/*path': 'app/*path',
+      '/npm/*path': 'app/node_modules/*path',
     },
     rootDir,
     watch: overrides.watch ?? false,
@@ -140,6 +143,43 @@ async function getCompiledCodeAndSourceMap(
     compiledCode,
     sourceMap: JSON.parse(await sourceMapResponse.text()) as RawSourceMap,
   }
+}
+
+async function getAbsoluteImportSpecifiers(source: string): Promise<string[]> {
+  await esModuleLexerInit
+  let [imports] = esModuleLexer(source)
+
+  return imports
+    .map((imported) => imported.n)
+    .filter((specifier): specifier is string => specifier?.startsWith('/') === true)
+}
+
+async function assertRecursivelyServedImports(
+  assetServer: ReturnType<typeof createAssetServer>,
+  startingUrls: readonly string[],
+): Promise<Set<string>> {
+  let seen = new Set<string>()
+  let queue = [...startingUrls]
+
+  while (queue.length > 0) {
+    let url = queue.shift()!
+    if (seen.has(url)) continue
+    seen.add(url)
+
+    let response = await get(assetServer, url)
+    assert.ok(response)
+    assert.equal(response.status, 200, `Expected ${url} to be served`)
+
+    let body = await response.text()
+    let importSpecifiers = await getAbsoluteImportSpecifiers(body)
+    for (let specifier of importSpecifiers) {
+      if (!seen.has(specifier)) {
+        queue.push(specifier)
+      }
+    }
+  }
+
+  return seen
 }
 
 async function assertCharacterAccurateImportRewriteSourceMap(
@@ -1359,7 +1399,7 @@ describe('asset-server', () => {
       allow: ['app/**'],
       deny: ['app/entry.ts'],
       rootDir: dir,
-      fileMap: { '/assets/app/*path': 'app/*path' },
+      fileMap: { '/app/*path': 'app/*path' },
     })
 
     await assert.rejects(
@@ -1585,8 +1625,9 @@ describe('asset-server', () => {
       await write(caseDir, 'app/entry.ts', 'export const value = 1')
       let assetServer = createAssetServer({
         allow: ['app/**'],
+        basePath: '/assets',
         fileMap: {
-          '/assets/app/*path': 'app/*path',
+          '/app/*path': 'app/*path',
         },
         rootDir: caseDir,
       })
@@ -1624,8 +1665,9 @@ describe('asset-server', () => {
       await fs.mkdir(projectDir, { recursive: true })
       let assetServer = createAssetServer({
         allow: ['../packages/**'],
+        basePath: '/assets',
         fileMap: {
-          '/assets/packages/*path': '../packages/*path',
+          '/packages/*path': '../packages/*path',
         },
         rootDir: projectDir,
       })
@@ -3102,13 +3144,31 @@ describe('asset-server', () => {
     assert.ok(assetServer)
   })
 
+  it('treats an empty basePath as root', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+
+    let assetServer = createAssetServer({
+      allow: ['app/**'],
+      basePath: '',
+      fileMap: {
+        '/app/*path': 'app/*path',
+      },
+      rootDir: dir,
+      watch: false,
+    })
+
+    let response = await get(assetServer, '/app/entry.ts')
+    assert.ok(response)
+    assert.equal(response.status, 200)
+  })
+
   it('rethrows unexpected realpath errors for exact file matchers', async () => {
     assert.throws(
       () =>
         createAssetServerForTest({
           allow: ['app/\0allowed-realpath.ts'],
           rootDir: dir,
-          fileMap: { '/assets/app/*path': 'app/*path' },
+          fileMap: { '/app/*path': 'app/*path' },
         }),
       { code: 'ERR_INVALID_ARG_VALUE' },
     )
@@ -3122,7 +3182,7 @@ describe('asset-server', () => {
           allow: [path.join(dir, 'app')],
           rootDir: dir,
           fileMap: {
-            '/assets/app/*path': `${path.join(dir, 'app')}/*path`,
+            '/app/*path': `${path.join(dir, 'app')}/*path`,
           },
           fingerprint: { buildId: 'build' },
           watch: false,
@@ -3139,7 +3199,7 @@ describe('asset-server', () => {
       allow: [allowedPath, path.join(dir, 'app')],
       deny: [path.join(dir, 'app/blocked.ts')],
       rootDir: dir,
-      fileMap: { '/assets/app/*path': 'app/*path' },
+      fileMap: { '/app/*path': 'app/*path' },
     })
 
     let allowedResponse = await get(assetServer, '/assets/app/allowed.ts')
@@ -3158,7 +3218,7 @@ describe('asset-server', () => {
         createAssetServerForTest({
           allow: ['app/**'],
           rootDir: dir,
-          fileMap: { '/assets/app/*': 'app/*path' },
+          fileMap: { '/app/*': 'app/*path' },
         }),
       /must use named wildcards/,
     )
@@ -3171,7 +3231,7 @@ describe('asset-server', () => {
       allow: ['app/**/*.ts'],
       deny: ['app/**/private/**'],
       rootDir: dir,
-      fileMap: { '/assets/app/*path': 'app/*path' },
+      fileMap: { '/app/*path': 'app/*path' },
     })
 
     let allowedResponse = await get(assetServer, '/assets/app/features/allowed.ts')
@@ -3188,8 +3248,8 @@ describe('asset-server', () => {
       allow: ['app/**/*', 'node_modules/**/*'],
       rootDir: dir,
       fileMap: {
-        '/assets/app/*path': 'app/*path',
-        '/assets/npm/*path': 'node_modules/*path',
+        '/app/*path': 'app/*path',
+        '/npm/*path': 'node_modules/*path',
       },
     })
 
@@ -3208,7 +3268,7 @@ describe('asset-server', () => {
       allow: ['app/**'],
       deny: ['app/blocked.ts'],
       rootDir: dir,
-      fileMap: { '/assets/app/*path': 'app/*path' },
+      fileMap: { '/app/*path': 'app/*path' },
       onError(error) {
         receivedError = error
       },
@@ -3274,6 +3334,80 @@ describe('asset-server', () => {
 
     assert.doesNotMatch(body, /\?\?|\?\./)
     assert.match(body, /void 0/)
+  })
+
+  it('serves injected helpers while preserving authored imports of the same package', async () => {
+    await writeJson(dir, 'app/node_modules/@oxc-project/runtime/package.json', {
+      name: '@oxc-project/runtime',
+    })
+    await write(
+      dir,
+      'app/node_modules/@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+      'export default "user-runtime-helper"',
+    )
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import helper from "@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js"',
+        'void helper',
+        'export class Example {',
+        '  #value = 1',
+        '  #getValue() {',
+        '    return this.#value',
+        '  }',
+        '  value() {',
+        '    return this.#getValue()',
+        '  }',
+        '}',
+      ].join('\n'),
+    )
+    let assetServer = createTestServer(dir, {
+      fileMap: {
+        '/npm/*path': 'app/node_modules/*path',
+        '/app/*path': 'app/*path',
+      },
+      target: {
+        es: '2020',
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/entry.ts')
+    assert.ok(response)
+    assert.equal(response.status, 200)
+
+    let body = await response.text()
+    let entryImportSpecifiers = await getAbsoluteImportSpecifiers(body)
+    let helperPaths = entryImportSpecifiers.filter((specifier) =>
+      specifier.startsWith('/assets/__@remix/injected/@oxc-project/runtime/'),
+    )
+
+    assert.doesNotMatch(body, /from ["']@oxc-project\/runtime/)
+    assert.ok(
+      entryImportSpecifiers.includes(
+        '/assets/npm/@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+      ),
+    )
+    assert.ok(helperPaths.length > 0)
+    assert.ok(
+      helperPaths.includes(
+        '/assets/__@remix/injected/@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+      ),
+    )
+
+    let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+    assert.ok(
+      servedUrls.has(
+        '/assets/npm/@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+      ),
+      'expected authored runtime imports to use the consumer fileMap path',
+    )
+    assert.ok(
+      servedUrls.has(
+        '/assets/__@remix/injected/@oxc-project/runtime/src/helpers/esm/checkPrivateRedeclaration.js',
+      ),
+      'expected transitive Oxc helper imports to be servable',
+    )
   })
 
   it('does not inherit target from tsconfig', async () => {
@@ -3661,8 +3795,9 @@ describe('asset-server', () => {
       () =>
         createAssetServer({
           allow: ['app/**'],
+          basePath: '/assets',
           fileMap: {
-            '/assets/app/*path': 'app/*path',
+            '/app/*path': 'app/*path',
           },
           rootDir: dir,
           fingerprint: { buildId: 'build' },

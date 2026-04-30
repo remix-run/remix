@@ -6,8 +6,9 @@ import { compileRoutes } from './routes.ts'
 describe('compileRoutes', () => {
   it('supports windows-style roots without parsing them as route syntax', () => {
     let routes = compileRoutes({
+      basePath: '/assets',
       fileMap: {
-        '/assets/app/*path': 'app/*path',
+        '/app/*path': 'app/*path',
       },
       rootDir: String.raw`C:\Users\runner\project`,
     })
@@ -22,10 +23,30 @@ describe('compileRoutes', () => {
     )
   })
 
+  it('supports UNC roots when mapping file paths back to URLs', () => {
+    let routes = compileRoutes({
+      basePath: '/assets',
+      fileMap: {
+        '/app/*path': 'app/*path',
+      },
+      rootDir: String.raw`\\server\share\project`,
+    })
+
+    assert.equal(
+      routes.resolveUrlPathname('/assets/app/entry.ts'),
+      '//server/share/project/app/entry.ts',
+    )
+    assert.equal(
+      routes.toUrlPathname(String.raw`\\server\share\project\app\entry.ts`),
+      '/assets/app/entry.ts',
+    )
+  })
+
   it('supports file patterns outside the root directory', () => {
     let routes = compileRoutes({
+      basePath: '/assets',
       fileMap: {
-        '/assets/packages/*path': '../packages/*path',
+        '/packages/*path': '../packages/*path',
       },
       rootDir: '/repo/project',
     })

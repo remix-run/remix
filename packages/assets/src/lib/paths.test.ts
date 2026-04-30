@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
 import {
+  getRelativeFilePath,
   isAbsoluteFilePath,
   normalizeFilePath,
   normalizePathname,
@@ -84,6 +85,27 @@ describe('paths', () => {
     assert.equal(
       resolveFilePath('//./c:/temp/project', './app/../app/entry.ts'),
       '//./c:/temp/project/app/entry.ts',
+    )
+  })
+
+  it('gets relative file paths across normalized roots', () => {
+    assert.equal(
+      getRelativeFilePath('/Users/runner/project', '/Users/runner/project/app/entry.ts'),
+      'app/entry.ts',
+    )
+    assert.equal(
+      getRelativeFilePath(
+        'C:/Users/runner/project',
+        String.raw`C:\Users\runner\project\app\entry.ts`,
+      ),
+      'app/entry.ts',
+    )
+    assert.equal(
+      getRelativeFilePath(
+        '//server/share/project',
+        String.raw`\\server\share\project\app\entry.ts`,
+      ),
+      'app/entry.ts',
     )
   })
 })

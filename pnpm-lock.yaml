@@ -256,6 +256,9 @@ importers:
 
   packages/assets:
     dependencies:
+      '@oxc-project/runtime':
+        specifier: ^0.121.0
+        version: 0.121.0
       '@remix-run/headers':
         specifier: workspace:*
         version: link:../headers
@@ -3104,6 +3107,10 @@ packages:
     engines: {node: ^20.19.0 || >=22.12.0}
     cpu: [x64]
     os: [win32]
+
+  '@oxc-project/runtime@0.121.0':
+    resolution: {integrity: sha512-p0bQukD8OEHxzY4T9OlANBbEFGnOnjo1CYi50HES7OD36UO2yPh6T+uOJKLtlg06eclxroipRCpQGMpeH8EJ/g==}
+    engines: {node: ^20.19.0 || >=22.12.0}
 
   '@oxc-project/types@0.121.0':
     resolution: {integrity: sha512-CGtOARQb9tyv7ECgdAlFxi0Fv7lmzvmlm2rpD/RdijOO9rfk/JvB1CjT8EnoD+tjna/IYgKKw3IV7objRb+aYw==}
@@ -6575,6 +6582,8 @@ snapshots:
 
   '@oxc-parser/binding-win32-x64-msvc@0.121.0':
     optional: true
+
+  '@oxc-project/runtime@0.121.0': {}
 
   '@oxc-project/types@0.121.0': {}
 

@@ -27,9 +27,10 @@ import { createRouter } from 'remix/fetch-router'
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
+  basePath: '/assets',
   fileMap: {
-    '/assets/app/*path': 'app/*path',
-    '/assets/npm/*path': 'node_modules/*path',
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
   },
   allow: ['app/assets/**', 'node_modules/**'],
 })
@@ -53,9 +54,10 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   rootDir: path.resolve(import.meta.dirname, '..'),
+  basePath: '/assets',
   fileMap: {
-    '/assets/app/*path': 'app/*path',
-    '/assets/npm/*path': 'node_modules/*path',
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
   },
   allow: ['app/assets/**', 'node_modules/**'],
 })
@@ -69,7 +71,8 @@ You must provide an `allow` list to specify which files are allowed to be served
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   deny: ['app/**/*.server.*'],
 })
@@ -79,21 +82,22 @@ Rules for `allow` and `deny` are file paths or globs. Relative values are resolv
 
 ## File Map
 
-Use `fileMap` to map public URLs to file paths on disk. The keys are public URL patterns, and the values are root-relative file path patterns.
+Use `fileMap` to map public URLs to file paths on disk. `basePath` defines the shared public mount point, and the `fileMap` keys are URL patterns relative to that base path. The values are root-relative file path patterns.
 
 ```ts
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
+  basePath: '/assets',
   fileMap: {
-    '/assets/app/*path': 'app/*path',
-    '/assets/packages/*path': '../packages/*path',
+    '/app/*path': 'app/*path',
+    '/packages/*path': '../packages/*path',
   },
   allow: ['app/assets/**', '../packages/**'],
 })
 ```
 
-`fileMap` entries use [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) syntax for both URL and file patterns. Wildcards must be named, and the same params must appear in both patterns so imports can be rewritten back to public URLs.
+`fileMap` entries use [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) syntax for both URL and file patterns. Wildcards must be named, and the same params must appear in both patterns so imports can be rewritten back to public URLs. For example, with `basePath: '/assets'`, a `fileMap` key of `'/app/*path'` is served at `/assets/app/*path`.
 
 ### File watching
 
@@ -103,7 +107,8 @@ The file system is watched by default so source changes are picked up without re
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**', 'app/node_modules/**'],
 })
 ```
@@ -120,7 +125,8 @@ You can disable file watching if the files on disk won't change, or if watching 
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**', 'app/node_modules/**'],
   watch: false,
 })
@@ -132,7 +138,8 @@ You can optionally provide an array of glob patterns to the `watch.ignore` optio
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**', 'app/node_modules/**'],
   watch: {
     ignore: ['**/node_modules/**'],
@@ -174,7 +181,8 @@ If you want clients to cache assets aggressively without revalidation, you can o
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   watch: false,
   fingerprint: {
@@ -195,7 +203,8 @@ Use `target` to lower emitted syntax to a specific browser support policy and/or
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   target: {
     chrome: '109',
@@ -215,7 +224,8 @@ Enable sourcemaps with either `'external'` or `'inline'` using `sourceMaps`:
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   sourceMaps: 'external',
 })
@@ -227,7 +237,8 @@ By default, sourcemap `sources` use URLs so they're presented alongside the comp
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   sourceMaps: 'inline',
   sourceMapSourcePaths: 'absolute',
@@ -242,7 +253,8 @@ Enable minification with `minify`:
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   minify: true,
 })
@@ -258,7 +270,8 @@ Use `scripts.define` to replace global identifiers with constant expressions.
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**', 'app/node_modules/**'],
   scripts: {
     define: {
@@ -278,7 +291,8 @@ Use `scripts.external` to leave specific import specifiers unchanged by providin
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   scripts: {
     external: ['my-external-import'],
@@ -305,7 +319,8 @@ Use `onError` to report unexpected compilation failures and/or return a custom r
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
-  fileMap: { '/assets/app/*path': 'app/*path' },
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   onError(error) {
     console.error('Failed to build client assets', error)

@@ -1,7 +1,7 @@
-import * as path from 'node:path'
 import { RoutePattern } from '@remix-run/route-pattern'
 
 import {
+  getRelativeFilePath,
   isAbsoluteFilePath,
   normalizeFilePath,
   normalizePathname,
@@ -35,6 +35,7 @@ function normalizeFilePattern(pattern: string): string {
 }
 
 export function compileRoutes(options: {
+  basePath: string
   fileMap: Readonly<Record<string, string>>
   rootDir: string
 }): CompiledRoutes {
@@ -48,7 +49,10 @@ export function compileRoutes(options: {
         urlPattern,
         filePattern,
       },
-      { rootDir: options.rootDir },
+      {
+        basePath: options.basePath,
+        rootDir: options.rootDir,
+      },
     ),
   )
 
@@ -69,8 +73,7 @@ export function compileRoutes(options: {
       let normalizedFilePath = normalizeFilePath(filePath)
 
       for (let route of compiledRoutes) {
-        let relativeFilePath = getRelativeFilePath(normalizedFilePath, route.rootDir)
-        if (relativeFilePath === null) continue
+        let relativeFilePath = getRelativeFilePath(route.rootDir, normalizedFilePath)
         let match = route.filePattern.ast.pathname.match(relativeFilePath)
         if (!match) continue
         return normalizePathname(route.urlPattern.href(getPathnameParams(route.filePattern, match)))
@@ -84,10 +87,15 @@ export function compileRoutes(options: {
 function compileRoute(
   route: AssetRouteDefinition,
   options: {
+    basePath: string
     rootDir: string
   },
 ): CompiledRoute {
-  let urlPatternSource = normalizePathname(route.urlPattern)
+  let basePath = normalizePathname(options.basePath).replace(/\/+$/, '') || '/'
+  let relativeUrlPattern = normalizePathname(route.urlPattern)
+  let urlPatternSource = normalizePathname(
+    `${basePath.replace(/\/+$/, '')}/${relativeUrlPattern.replace(/^\/+/, '')}`,
+  )
   let filePatternSource = normalizeFilePattern(route.filePattern)
 
   let urlPattern = new RoutePattern(urlPatternSource)
@@ -102,11 +110,6 @@ function compileRoute(
     urlPattern,
     filePattern,
   }
-}
-
-function getRelativeFilePath(filePath: string, rootDir: string): string | null {
-  if (filePath[1] === ':' && rootDir[1] === ':' && filePath[0] !== rootDir[0]) return null
-  return path.posix.relative(rootDir, filePath)
 }
 
 function getPathnameParams(

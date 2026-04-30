@@ -7,6 +7,11 @@ import {
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
 import type { AssetServerCompilationError } from '../compilation-error.ts'
+import {
+  getInjectedPackageNameForSpecifier,
+  getInjectedPackageImporterPath,
+  restoreAuthoredInjectedPackageSpecifier,
+} from '../injected-packages.ts'
 import type { ModuleRecord, ModuleTracking } from '../module-store.ts'
 import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
@@ -81,6 +86,11 @@ type ResolvedSpec = {
   specifier: string
 }
 
+type NormalizedSpecifierResolution = {
+  importerPath: string
+  specifier: string
+}
+
 export async function resolveModule(
   record: ScriptRecord,
   transformed: TransformedModule,
@@ -109,9 +119,10 @@ export async function resolveModule(
   let deps = new Set<string>()
 
   for (let unresolved of transformed.unresolvedImports) {
+    let displaySpecifier = getDisplayImportSpecifier(unresolved.specifier)
     let trackedResolution = getTrackedRelativeImportResolution(
       transformed.importerDir,
-      unresolved.specifier,
+      displaySpecifier,
       args.isWatchIgnored,
     )
 
@@ -119,7 +130,7 @@ export async function resolveModule(
     if (!resolvedSpec?.absolutePath) {
       return failResolve(
         createAssetServerCompilationError(
-          `Failed to resolve import "${unresolved.specifier}" in ${transformed.resolvedPath}. ` +
+          `Failed to resolve import "${displaySpecifier}" in ${transformed.resolvedPath}. ` +
             `Ensure it resolves to a file within the configured asset server fileMap, or mark it as external.`,
           {
             code: 'IMPORT_RESOLUTION_FAILED',
@@ -136,7 +147,7 @@ export async function resolveModule(
     if (!resolvedImport) {
       return failResolve(
         createAssetServerCompilationError(
-          `Import "${unresolved.specifier}" in ${transformed.resolvedPath}, resolved to "${resolvedSpec.absolutePath}", is not a supported script file. ` +
+          `Import "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedSpec.absolutePath}", is not a supported script file. ` +
             `Supported extensions are ${supportedScriptExtensions.join(', ')}.`,
           {
             code: 'IMPORT_NOT_SUPPORTED',
@@ -152,7 +163,7 @@ export async function resolveModule(
     if (!args.isAllowed(resolvedImport.identityPath)) {
       return failResolve(
         createAssetServerCompilationError(
-          `Import "${unresolved.specifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is not allowed by the asset server allow/deny configuration. ` +
+          `Import "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is not allowed by the asset server allow/deny configuration. ` +
             `Add a matching allow rule for this file path, remove a conflicting deny rule for this file path, or mark this import as external.`,
           {
             code: 'IMPORT_NOT_ALLOWED',
@@ -169,7 +180,7 @@ export async function resolveModule(
     if (!stableUrlPathname) {
       return failResolve(
         createAssetServerCompilationError(
-          `Import "${unresolved.specifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is outside all configured fileMap entries. ` +
+          `Import "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is outside all configured fileMap entries. ` +
             `Add a matching fileMap entry for this file path, or mark this import as external.`,
           {
             code: 'IMPORT_OUTSIDE_FILE_MAP',
@@ -323,11 +334,17 @@ async function batchResolveSpecifiers(
 
   try {
     for (let specifier of specifiers) {
-      let resolutionResult = await resolverFactory.resolveFileAsync(importerPath, specifier)
+      let normalizedResolution = normalizeSpecifierResolution(specifier, importerPath)
+      let resolutionResult = await resolverFactory.resolveFileAsync(
+        normalizedResolution.importerPath,
+        normalizedResolution.specifier,
+      )
       if (resolutionResult.error) {
         throw createAssetServerCompilationError(
-          `Failed to resolve import "${specifier}" in ${importerPath}. ` +
-            `Ensure it resolves to a file within the configured asset server fileMap, or mark it as external.`,
+          normalizedResolution.importerPath === getInjectedPackageImporterPath()
+            ? `Failed to resolve injected import "${specifier}" from asset server.`
+            : `Failed to resolve import "${normalizedResolution.specifier}" in ${normalizedResolution.importerPath}. ` +
+                `Ensure it resolves to a file within the configured asset server fileMap, or mark it as external.`,
           {
             code: 'IMPORT_RESOLUTION_FAILED',
           },
@@ -368,6 +385,35 @@ function getUniqueSpecifiers(unresolvedImports: TransformedModule['unresolvedImp
 
 function formatUnknownError(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
+}
+
+function normalizeSpecifierResolution(
+  specifier: string,
+  importerPath: string,
+): NormalizedSpecifierResolution {
+  let authoredInjectedPackageSpecifier = restoreAuthoredInjectedPackageSpecifier(specifier)
+  if (authoredInjectedPackageSpecifier) {
+    return {
+      importerPath,
+      specifier: authoredInjectedPackageSpecifier,
+    }
+  }
+
+  if (getInjectedPackageNameForSpecifier(specifier)) {
+    return {
+      importerPath: getInjectedPackageImporterPath(),
+      specifier,
+    }
+  }
+
+  return {
+    importerPath,
+    specifier,
+  }
+}
+
+function getDisplayImportSpecifier(specifier: string): string {
+  return restoreAuthoredInjectedPackageSpecifier(specifier) ?? specifier
 }
 
 function failResolve(

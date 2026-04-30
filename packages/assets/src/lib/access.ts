@@ -1,4 +1,5 @@
 import { createFileMatcher } from './file-matcher.ts'
+import { isInjectedPackageFilePath } from './injected-packages.ts'
 
 type AccessPolicy = {
   isAllowed(filePath: string): boolean
@@ -16,6 +17,7 @@ export function createAccessPolicy(options: {
 
   return {
     isAllowed(filePath) {
+      if (isInjectedPackageFilePath(filePath)) return true
       if (!allowMatchers.some((matcher) => matcher(filePath))) return false
       if (denyMatchers.length > 0 && denyMatchers.some((matcher) => matcher(filePath))) return false
       return true
