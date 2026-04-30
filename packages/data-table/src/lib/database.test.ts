@@ -559,9 +559,7 @@ describe('queries', () => {
       compileSql() {
         return []
       },
-      async migrate() {
-        return {}
-      },
+      async executeScript() {},
       async beginTransaction() {
         return { id: 'tx_1' }
       },
@@ -623,9 +621,7 @@ describe('queries', () => {
       compileSql() {
         return []
       },
-      async migrate() {
-        return {}
-      },
+      async executeScript() {},
       async beginTransaction() {
         return { id: 'tx_1' }
       },
@@ -880,9 +876,7 @@ describe('queries', () => {
       compileSql() {
         return []
       },
-      async migrate() {
-        return {}
-      },
+      async executeScript() {},
       async beginTransaction() {
         return { id: 'tx_1' }
       },
@@ -1179,9 +1173,7 @@ describe('writes and validation', () => {
       async execute() {
         return { affectedRows: 1 }
       },
-      async migrate() {
-        return {}
-      },
+      async executeScript() {},
       async beginTransaction() {
         return { id: 'tx' }
       },
@@ -2129,9 +2121,7 @@ describe('adapter errors', () => {
       compileSql() {
         return []
       },
-      async migrate() {
-        return {}
-      },
+      async executeScript() {},
       async beginTransaction() {
         tokens += 1
         return { id: 'tx_' + String(tokens) }

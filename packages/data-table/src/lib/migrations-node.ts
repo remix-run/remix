@@ -1,16 +1,18 @@
-import { createHash } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
-import { pathToFileURL } from 'node:url'
-import type { Migration, MigrationDescriptor } from './migrations.ts'
-import { parseMigrationFilename } from './migrations/filename.ts'
+
+import type { MigrationDescriptor } from './migrations.ts'
+import { parseMigrationDirectoryName } from './migrations/directory-name.ts'
 
 /**
- * Loads migration modules from a directory on Node.js.
+ * Loads SQL-file migrations from a directory on Node.js.
  *
- * Filenames are used to infer migration `id` and `name`.
- * Each file must default-export `createMigration(...)`.
- * @param directory Absolute or relative directory containing migration files.
+ * Each migration is a directory named `YYYYMMDDHHmmss_<slug>` containing:
+ * - `up.sql` (required)
+ * - `down.sql` (optional; omit for irreversible migrations)
+ *
+ * `id` and `name` are inferred from the directory name.
+ * @param directory Absolute or relative directory containing migration directories.
  * @returns A sorted list of loaded migration descriptors.
  * @example
  * ```ts
@@ -20,52 +22,70 @@ import { parseMigrationFilename } from './migrations/filename.ts'
  * ```
  */
 export async function loadMigrations(directory: string): Promise<MigrationDescriptor[]> {
-  let allFiles = (await fs.readdir(directory, { withFileTypes: true }))
-    .filter((entry) => entry.isFile())
+  let entries = await fs.readdir(directory, { withFileTypes: true })
+  let directories = entries
+    .filter((entry) => entry.isDirectory())
     .map((entry) => entry.name)
     .sort((left, right) => left.localeCompare(right))
-  let files: Array<{ file: string; id: string; name: string }> = []
-
-  for (let file of allFiles) {
-    if (!/\.(?:m?ts|m?js|cts|cjs)$/.test(file)) {
-      continue
-    }
-
-    let parsed = parseMigrationFilename(file)
-    files.push({ file, id: parsed.id, name: parsed.name })
-  }
 
   let migrations: MigrationDescriptor[] = []
   let seenIds = new Set<string>()
 
-  for (let entry of files) {
-    if (seenIds.has(entry.id)) {
+  for (let directoryName of directories) {
+    let parsed = parseMigrationDirectoryName(directoryName)
+
+    if (seenIds.has(parsed.id)) {
       throw new Error(
-        'Duplicate migration id "' + entry.id + '" inferred from filename "' + entry.file + '"',
+        'Duplicate migration id "' +
+          parsed.id +
+          '" inferred from directory "' +
+          directoryName +
+          '"',
       )
     }
 
-    seenIds.add(entry.id)
-    let fullPath = path.join(directory, entry.file)
-    let source = await fs.readFile(fullPath, 'utf8')
-    let checksum = createHash('sha256').update(source).digest('hex')
-    let module = (await import(pathToFileURL(fullPath).href)) as { default?: Migration }
-    let migration = module.default
+    seenIds.add(parsed.id)
 
-    if (!migration || typeof migration.up !== 'function' || typeof migration.down !== 'function') {
-      throw new Error(
-        'Migration file "' + entry.file + '" must default-export createMigration(...)',
-      )
+    let directoryPath = path.join(directory, directoryName)
+    let upPath = path.join(directoryPath, 'up.sql')
+    let downPath = path.join(directoryPath, 'down.sql')
+
+    let up: string
+    try {
+      up = await fs.readFile(upPath, 'utf8')
+    } catch (error) {
+      if (isNodeFileNotFoundError(error)) {
+        throw new Error('Migration directory "' + directoryName + '" is missing up.sql')
+      }
+      throw error
+    }
+
+    let down: string | undefined
+    try {
+      down = await fs.readFile(downPath, 'utf8')
+    } catch (error) {
+      if (!isNodeFileNotFoundError(error)) {
+        throw error
+      }
     }
 
     migrations.push({
-      id: entry.id,
-      name: entry.name,
-      path: fullPath,
-      checksum,
-      migration,
+      id: parsed.id,
+      name: parsed.name,
+      up,
+      down,
+      path: directoryPath,
     })
   }
 
   return migrations
+}
+
+function isNodeFileNotFoundError(error: unknown): boolean {
+  return (
+    typeof error === 'object' &&
+    error !== null &&
+    'code' in error &&
+    (error as { code?: unknown }).code === 'ENOENT'
+  )
 }
