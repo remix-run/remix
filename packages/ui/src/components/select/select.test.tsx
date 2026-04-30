@@ -1,12 +1,5 @@
 import { expect } from '@remix-run/assert'
-import {
-  afterEach,
-  beforeEach,
-  describe,
-  it,
-  mock,
-  type FakeTimers,
-} from '@remix-run/test'
+import { afterEach, beforeEach, describe, it, mock, type FakeTimers } from '@remix-run/test'
 
 import { createRoot, on, type Handle, type RemixNode } from '@remix-run/ui'
 

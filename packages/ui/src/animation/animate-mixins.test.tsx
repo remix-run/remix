@@ -34,7 +34,9 @@ describe('animate entrance/exit mixins', () => {
     let reverse = mock.fn()
     let commitStyles = mock.fn()
     let cancel = mock.fn()
-    let animateSpy = mock.method(HTMLElement.prototype, 'animate',
+    let animateSpy = mock.method(
+      HTMLElement.prototype,
+      'animate',
       () =>
         ({
           playState: 'running',
@@ -73,7 +75,9 @@ describe('animate entrance/exit mixins', () => {
 
   it('does not reverse on initial insert when entrance and exit mixins are both present', () => {
     let reverse = mock.fn()
-    let animateSpy = mock.method(HTMLElement.prototype, 'animate',
+    let animateSpy = mock.method(
+      HTMLElement.prototype,
+      'animate',
       () =>
         ({
           playState: 'running',
@@ -126,7 +130,9 @@ describe('animate entrance/exit mixins', () => {
   })
 
   it('skips first entrance when initial is false, but animates on reclaimed add', async () => {
-    let animateSpy = mock.method(HTMLElement.prototype, 'animate',
+    let animateSpy = mock.method(
+      HTMLElement.prototype,
+      'animate',
       () =>
         ({
           playState: 'running',
