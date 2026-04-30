@@ -90,6 +90,12 @@ export interface ServeOptions {
    * to the `https:` protocol.
    */
   tls?: ServeTlsOptions
+  /**
+   * Configures the underlying uWebSockets.js app before the Fetch fallback route is registered and
+   * before the server starts listening. Use this for low-level transport features such as native
+   * WebSocket routes and connection filters.
+   */
+  setup?: (app: uWS.TemplatedApp) => void
 }
 
 /**
@@ -228,6 +234,13 @@ export function serve(handler: FetchHandler, options?: ServeOptions): Server {
   let app = createApp(options?.tls)
   let listenSocket: uWS.us_listen_socket | false = false
   let port = 0
+
+  try {
+    options?.setup?.(app)
+  } catch (error) {
+    app.close()
+    throw error
+  }
 
   let ready = new Promise<void>((resolve, reject) => {
     let onListen = (socket: uWS.us_listen_socket | false) => {
