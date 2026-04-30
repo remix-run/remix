@@ -3,7 +3,7 @@ import type { Handle } from 'remix/ui'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
 import { NAV_SECTIONS, PAGES, type ShowcasePageDefinition, isPageActive } from './registry.tsx'
 import { bodyTextCss, eyebrowTextCss } from './page-primitives.tsx'
-import { routes } from 'config/routes.ts'
+import { routes } from '../../config/routes.ts'
 
 export function ExplorerDocument(handle: Handle<{ page: ShowcasePageDefinition }>) {
   return () => {
@@ -83,23 +83,19 @@ function Sidebar(handle: Handle<{ currentPath: string }>) {
 }
 
 function RemixLogoLight() {
-  return () => {
-    return (
-      <div mix={logoLightCss}>
-        <img src={routes.logoLight.href()} alt="Remix" mix={logoCss} />
-      </div>
-    )
-  }
+  return () => (
+    <div mix={logoLightCss}>
+      <img src={routes.logoLight.href()} alt="Remix" mix={logoCss} />
+    </div>
+  )
 }
 
 function RemixLogoDark() {
-  return () => {
-    return (
-      <div mix={logoDarkCss}>
-        <img src={routes.logoDark.href()} alt="Remix" mix={logoCss} />
-      </div>
-    )
-  }
+  return () => (
+    <div mix={logoDarkCss}>
+      <img src={routes.logoDark.href()} alt="Remix" mix={logoCss} />
+    </div>
+  )
 }
 
 function PageHeader(handle: Handle<{ page: ShowcasePageDefinition }>) {

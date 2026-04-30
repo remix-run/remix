@@ -5,7 +5,6 @@ import type { DocsRegistry, PageDefinition } from './registry.ts'
 import { isPageActive } from './registry.ts'
 import { bodyTextCss, eyebrowTextCss } from './page-primitives.tsx'
 import { routes } from './routes.ts'
-import { ServerPage } from './components.tsx'
 
 export type DocsViewProps = {
   page: PageDefinition
@@ -238,9 +237,9 @@ function PageHeader(handle: Handle<{ page: PageDefinition; sourceUrl?: string }>
   return () => {
     let { page, sourceUrl } = handle.props
     let showTitle = !page.docFile && page.title.length > 0
-    return page.eyebrow || showTitle || page.description || sourceUrl ? (
+    return page.eyebrow || showTitle || page.description ? (
       <header mix={pageHeaderCss}>
-        {page.eyebrow || sourceUrl ? (
+        {page.eyebrow && sourceUrl ? (
           <div mix={eyebrowRowCss}>
             {page.eyebrow ? <span mix={eyebrowTextCss}>{page.eyebrow}</span> : <span />}
             {sourceUrl ? (

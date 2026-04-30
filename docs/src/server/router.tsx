@@ -99,14 +99,9 @@ export function createRouter(versions: ServerContext['versions']) {
             <h1>Welcome to Remix 3!</h1>
             <p>
               Remix is a batteries-included, ultra-productive, zero dependencies and bundler-free
-              framework, ready to develop with in a model-first world.
+              framework, ready to develop with in a model-first world. Remix 3 is built on the
+              following principles:
             </p>
-            <p>
-              Remix 3 is a reimagining of what a web framework can be; a fresh foundation shaped by
-              decades of experience building for the web. Our focus is on simplicity, clarity, and
-              performance, without giving up the power developers need.
-            </p>
-            <p>When working on Remix 3, we follow these principles:</p>
 
             <ol>
               <li>
