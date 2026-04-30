@@ -10,8 +10,6 @@ import { getFixturePath } from '../../test/fixtures.ts'
 import { runRemix, type RunRemixOptions } from '../index.ts'
 import { getTestCommandHelpText } from './commands/test.ts'
 
-const REMIX_GITHUB_TREE_URL =
-  'https://api.github.com/repos/remix-run/remix/git/trees/main?recursive=1'
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
 const REMIX_PACKAGE_JSON_PATH = path.join(ROOT_DIR, 'packages', 'remix', 'package.json')
 
@@ -31,7 +29,6 @@ const ROOT_HELP_TEXT = [
   '  new <name>      Create a new Remix project',
   '  doctor          Check project health for the current project',
   '  routes          Show the route tree for the current project',
-  '  skills          Manage Remix skills for the current project',
   '  test [glob]     Run tests for the current project',
   '  version         Show the current Remix version',
   '',
@@ -45,12 +42,10 @@ const ROOT_HELP_TEXT = [
   '  remix help',
   '  remix help completion',
   '  remix help doctor',
-  '  remix help skills install',
   '  remix doctor',
   '  remix new my-remix-app',
   '  remix new my-remix-app --app-name "My Remix App"',
   '  remix routes',
-  '  remix skills install',
   '  remix test',
   '  remix version',
   '',
@@ -99,7 +94,6 @@ const HELP_COMMAND_HELP_TEXT = [
   '  remix help doctor',
   '  remix help new',
   '  remix help routes',
-  '  remix help skills install',
   '  remix help test',
   '  remix help version',
   '',
@@ -136,56 +130,6 @@ const ROUTES_COMMAND_HELP_TEXT = [
   '  remix routes --table --no-headers',
   '  remix routes --verbose',
   '  remix routes --json',
-  '',
-].join('\n')
-
-const SKILLS_COMMAND_HELP_TEXT = [
-  'Usage:',
-  '  remix skills <command>',
-  '',
-  'Manage Remix skills for the current project.',
-  '',
-  'Commands:',
-  '  install [--dir <path>]        Install Remix skills into a local directory',
-  '  list [--dir <path>] [--json]  List Remix skills and local status',
-  '',
-  'Examples:',
-  '  remix skills install',
-  '  remix skills install --dir custom/skills',
-  '  remix skills list --dir custom/skills',
-  '  remix skills list --json',
-  '',
-].join('\n')
-
-const SKILLS_INSTALL_COMMAND_HELP_TEXT = [
-  'Usage:',
-  '  remix skills install [--dir <path>]',
-  '',
-  'Install or refresh Remix skills in .agents/skills for the current project.',
-  '',
-  'Options:',
-  '  --dir <path>  Install skills into a custom directory relative to the project root',
-  '',
-  'Examples:',
-  '  remix skills install',
-  '  remix skills install --dir custom/skills',
-  '',
-].join('\n')
-
-const SKILLS_LIST_COMMAND_HELP_TEXT = [
-  'Usage:',
-  '  remix skills list [--dir <path>] [--json]',
-  '',
-  'List Remix skills and show whether each one is installed, outdated, or missing locally.',
-  '',
-  'Options:',
-  '  --dir <path>  Read local skills from a custom directory relative to the project root',
-  '  --json        Print skill state as JSON',
-  '',
-  'Examples:',
-  '  remix skills list',
-  '  remix skills list --dir custom/skills',
-  '  remix skills list --json',
   '',
 ].join('\n')
 
@@ -339,26 +283,6 @@ describe('run', () => {
       let routesReport = JSON.parse(routes.stdout) as { tree: Array<{ name: string }> }
       assert.ok(routesReport.tree.some((route) => route.name === 'home'))
 
-      let skillsProjectDir = path.join(tmpDir, 'skills-project')
-      await fs.mkdir(skillsProjectDir)
-      await fs.writeFile(
-        path.join(skillsProjectDir, 'package.json'),
-        `${JSON.stringify({ name: 'skills-project', private: true }, null, 2)}\n`,
-        'utf8',
-      )
-
-      let skills = await withCwd(skillsProjectDir, () =>
-        withFetchMock(createSkillsMetadataFetchMock(), () =>
-          captureOutput(() => run(['skills', 'list', '--json'])),
-        ),
-      )
-      assert.equal(skills.exitCode, 0, skills.stderr)
-      assert.equal(skills.stderr, '')
-      let skillsReport = JSON.parse(skills.stdout) as {
-        entries: Array<{ name: string; state: string }>
-      }
-      assert.deepEqual(skillsReport.entries, [{ name: 'remix-ui', state: 'missing' }])
-
       let test = await captureOutput(() => run(['test', '--help']))
       assert.equal(test.exitCode, 0)
       assert.equal(test.stdout, `${TEST_COMMAND_HELP_TEXT}\n`)
@@ -390,9 +314,6 @@ describe('run', () => {
     let newHelp = await captureOutput(() => run(['help', 'new']))
     let helpHelp = await captureOutput(() => run(['help', 'help']))
     let routesHelp = await captureOutput(() => run(['help', 'routes']))
-    let skillsHelp = await captureOutput(() => run(['help', 'skills']))
-    let skillsInstallHelp = await captureOutput(() => run(['help', 'skills', 'install']))
-    let skillsListHelp = await captureOutput(() => run(['help', 'skills', 'list']))
     let testHelp = await captureOutput(() => run(['help', 'test']))
     let versionHelp = await captureOutput(() => run(['help', 'version']))
 
@@ -411,15 +332,6 @@ describe('run', () => {
     assert.equal(routesHelp.exitCode, 0)
     assert.equal(routesHelp.stdout, ROUTES_COMMAND_HELP_TEXT)
     assert.equal(routesHelp.stderr, '')
-    assert.equal(skillsHelp.exitCode, 0)
-    assert.equal(skillsHelp.stdout, SKILLS_COMMAND_HELP_TEXT)
-    assert.equal(skillsHelp.stderr, '')
-    assert.equal(skillsInstallHelp.exitCode, 0)
-    assert.equal(skillsInstallHelp.stdout, SKILLS_INSTALL_COMMAND_HELP_TEXT)
-    assert.equal(skillsInstallHelp.stderr, '')
-    assert.equal(skillsListHelp.exitCode, 0)
-    assert.equal(skillsListHelp.stdout, SKILLS_LIST_COMMAND_HELP_TEXT)
-    assert.equal(skillsListHelp.stderr, '')
     assert.equal(testHelp.exitCode, 0)
     assert.equal(testHelp.stdout, TEST_COMMAND_HELP_TEXT)
     assert.equal(testHelp.stderr, '')
@@ -589,8 +501,8 @@ describe('run', () => {
       assert.equal(result.exitCode, 0)
 
       let documentSource = await fs.readFile(path.join(appDir, 'app', 'ui', 'document.tsx'), 'utf8')
-      let homeSource = await fs.readFile(
-        path.join(appDir, 'app', 'controllers', 'home.tsx'),
+      let scaffoldHomePageSource = await fs.readFile(
+        path.join(appDir, 'app', 'ui', 'scaffold-home-page.tsx'),
         'utf8',
       )
       let encodedAppName = encodeURIComponent(appName)
@@ -602,7 +514,7 @@ describe('run', () => {
         ),
       )
       assert.match(
-        homeSource,
+        scaffoldHomePageSource,
         new RegExp(
           `const APP_DISPLAY_NAME = decodeURIComponent\\('${escapeRegExp(encodedAppName)}'\\)`,
         ),
@@ -767,50 +679,11 @@ async function withCwd<T>(cwd: string, callback: () => Promise<T>): Promise<T> {
   }
 }
 
-async function withFetchMock<T>(fetchMock: typeof fetch, callback: () => Promise<T>): Promise<T> {
-  let originalFetch = globalThis.fetch
-  globalThis.fetch = fetchMock
-
-  try {
-    return await callback()
-  } finally {
-    globalThis.fetch = originalFetch
-  }
-}
-
 async function readRepoRemixVersion(): Promise<string> {
   let packageJson = JSON.parse(await fs.readFile(REMIX_PACKAGE_JSON_PATH, 'utf8')) as {
     version: string
   }
   return packageJson.version
-}
-
-function createSkillsMetadataFetchMock(): typeof fetch {
-  return (async (input: RequestInfo | URL) => {
-    let url =
-      typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url
-
-    if (url === REMIX_GITHUB_TREE_URL) {
-      return new Response(
-        JSON.stringify({
-          tree: [
-            {
-              path: 'skills/remix-ui/SKILL.md',
-              sha: '0000000000000000000000000000000000000000',
-              type: 'blob',
-            },
-          ],
-          truncated: false,
-        }),
-        {
-          headers: { 'Content-Type': 'application/json' },
-          status: 200,
-        },
-      )
-    }
-
-    return new Response('Not found', { status: 404, statusText: 'Not Found' })
-  }) as typeof fetch
 }
 
 async function assertPathExists(filePath: string): Promise<void> {

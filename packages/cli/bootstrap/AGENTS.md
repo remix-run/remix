@@ -11,6 +11,10 @@ npm test
 npm run typecheck
 ```
 
+## Building Features
+
+Refer to ./agents/skills/remix/SKILL.md
+
 ## Starter Layout
 
 - `app/controllers/home.tsx` owns the home page

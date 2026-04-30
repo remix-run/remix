@@ -37,7 +37,6 @@
   },
   "dependencies": {
     "@remix-run/test": "workspace:^",
-    "@remix-run/tar-parser": "workspace:^",
     "@remix-run/terminal": "workspace:^",
     "semver": "^7.7.4"
   },

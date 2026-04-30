@@ -5,8 +5,8 @@ import { Layout } from '../ui/layout.tsx'
 import { render } from '../utils/render.tsx'
 
 export const auth: BuildAction<'GET', typeof routes.auth> = {
-  handler() {
-    return render(<AuthPage />)
+  handler({ request }) {
+    return render(<AuthPage />, request)
   },
 }
 

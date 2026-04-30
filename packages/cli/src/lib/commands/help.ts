@@ -29,7 +29,6 @@ export function getCliHelpText(target: NodeJS.WriteStream = process.stdout): str
         { description: 'Create a new Remix project', label: 'new <name>' },
         { description: 'Check project health for the current project', label: 'doctor' },
         { description: 'Show the route tree for the current project', label: 'routes' },
-        { description: 'Manage Remix skills for the current project', label: 'skills' },
         { description: 'Run tests for the current project', label: 'test [glob]' },
         { description: 'Show the current Remix version', label: 'version' },
       ],
@@ -38,12 +37,10 @@ export function getCliHelpText(target: NodeJS.WriteStream = process.stdout): str
         'remix help',
         'remix help completion',
         'remix help doctor',
-        'remix help skills install',
         'remix doctor',
         'remix new my-remix-app',
         'remix new my-remix-app --app-name "My Remix App"',
         'remix routes',
-        'remix skills install',
         'remix test',
         'remix version',
       ],
@@ -68,7 +65,6 @@ export function getHelpCommandHelpText(target: NodeJS.WriteStream = process.stdo
         'remix help doctor',
         'remix help new',
         'remix help routes',
-        'remix help skills install',
         'remix help test',
         'remix help version',
       ],
@@ -109,10 +105,6 @@ async function getCommandHelpText(argv: string[]): Promise<string> {
     return getRoutesCommandHelpText()
   }
 
-  if (command === 'skills') {
-    return await getSkillsHelpText(rest)
-  }
-
   if (command === 'test' && rest.length === 0) {
     let { getTestCommandHelpText } = await import('./test.ts')
     return await getTestCommandHelpText()
@@ -128,28 +120,4 @@ async function getCommandHelpText(argv: string[]): Promise<string> {
 
 function getNestedHelpText(command: string, argv: string[]): string {
   throw unknownHelpTopic(`${command} ${argv.join(' ')}`)
-}
-
-async function getSkillsHelpText(argv: string[]): Promise<string> {
-  let { getSkillsCommandHelpText, getSkillsInstallCommandHelpText, getSkillsListCommandHelpText } =
-    await import('./skills.ts')
-
-  if (argv.length === 0) {
-    return getSkillsCommandHelpText()
-  }
-
-  let [subcommand, ...rest] = argv
-  if (rest.length > 0) {
-    throw unknownHelpTopic(`skills ${argv.join(' ')}`)
-  }
-
-  if (subcommand === 'install') {
-    return getSkillsInstallCommandHelpText()
-  }
-
-  if (subcommand === 'list') {
-    return getSkillsListCommandHelpText()
-  }
-
-  throw unknownHelpTopic(`skills ${argv.join(' ')}`)
 }

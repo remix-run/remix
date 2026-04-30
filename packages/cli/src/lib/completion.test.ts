@@ -14,7 +14,6 @@ describe('completion engine', () => {
       'help',
       'new',
       'routes',
-      'skills',
       'test',
       'version',
       '-h',
@@ -27,7 +26,6 @@ describe('completion engine', () => {
 
   it('completes nested help topics', () => {
     let topLevelResult = getCompletionResult(['remix', 'help', ''], 2)
-    let skillsResult = getCompletionResult(['remix', 'help', 'skills', ''], 3)
 
     assert.equal(topLevelResult.mode, 'values')
     assert.deepEqual(topLevelResult.values, [
@@ -36,31 +34,18 @@ describe('completion engine', () => {
       'help',
       'new',
       'routes',
-      'skills',
       'test',
       'version',
       '-h',
       '--help',
       '--no-color',
     ])
-
-    assert.equal(skillsResult.mode, 'values')
-    assert.deepEqual(skillsResult.values, ['install', 'list', '-h', '--help', '--no-color'])
   })
 
-  it('completes skills subcommands', () => {
-    let result = getCompletionResult(['remix', 'skills', ''], 2)
-
-    assert.equal(result.mode, 'values')
-    assert.deepEqual(result.values, ['install', 'list', '-h', '--help', '--no-color'])
-  })
-
-  it('uses file completion for new target directories and --dir values', () => {
+  it('uses file completion for new target directories', () => {
     let newResult = getCompletionResult(['remix', 'new', ''], 2)
-    let installResult = getCompletionResult(['remix', 'skills', 'install', '--dir', ''], 4)
 
     assert.equal(newResult.mode, 'files')
-    assert.equal(installResult.mode, 'files')
   })
 
   it('returns no completions for free-text --app-name values', () => {
@@ -94,8 +79,8 @@ describe('completion engine', () => {
   })
 
   it('keeps --no-color available until it is used', () => {
-    let available = getCompletionResult(['remix', 'skills', 'list', ''], 3)
-    let consumed = getCompletionResult(['remix', 'skills', 'list', '--no-color', ''], 4)
+    let available = getCompletionResult(['remix', 'routes', ''], 2)
+    let consumed = getCompletionResult(['remix', 'routes', '--no-color', ''], 3)
 
     assert.equal(available.mode, 'values')
     assert.ok(available.values?.includes('--no-color'))
