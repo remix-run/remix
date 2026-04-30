@@ -33,10 +33,16 @@ export type PageDefinition = {
   docFile?: DocFile
 }
 
+export type NavGroup = {
+  id: string
+  label?: string
+  pageIds: string[]
+}
+
 export type NavSection = {
   id: string
   label: string
-  pageIds: string[]
+  groups: NavGroup[]
 }
 
 export type DocsRegistry = {
@@ -58,7 +64,6 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
     title: 'Remix API Documentation',
   }
   pages[HOME_PAGE_ID] = homePage
-  sections.push({ id: 'start', label: 'Start', pageIds: [HOME_PAGE_ID] })
 
   let packageGroups = new Map<string, Map<ApiTypeKind, DocFile[]>>()
   for (let file of docFiles) {
@@ -82,10 +87,11 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
 
   for (let pkg of sortedPackages) {
     let typeMap = packageGroups.get(pkg)!
+    let groups: NavGroup[] = []
     for (let kind of TYPE_ORDER) {
       let files = typeMap.get(kind)
       if (!files || files.length === 0) continue
-      let sectionId = `${pkg}::${kind}`
+      let groupId = `${pkg}::${kind}`
       let sortedFiles = [...files].sort((a, b) => a.name.localeCompare(b.name))
       let pageIds: string[] = []
       for (let file of sortedFiles) {
@@ -95,14 +101,17 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
           eyebrow: `${pkg} · ${TYPE_EYEBROW[kind]}`,
           navLabel: file.name,
           path: routes.docs.href({ version, slug: file.urlPath }),
-          sectionId,
+          sectionId: pkg,
           title: file.name,
           docFile: file,
         }
         pages[file.urlPath] = page
         pageIds.push(file.urlPath)
       }
-      sections.push({ id: sectionId, label: `${pkg} · ${TYPE_LABEL[kind]}`, pageIds })
+      groups.push({ id: groupId, label: TYPE_LABEL[kind], pageIds })
+    }
+    if (groups.length > 0) {
+      sections.push({ id: pkg, label: pkg, groups })
     }
   }
 

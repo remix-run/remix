@@ -107,21 +107,31 @@ function Sidebar(
         {registry.sections.map((section) => (
           <section key={section.id} mix={sidebarSectionCss}>
             <p mix={sidebarHeadingCss}>{section.label}</p>
-            <nav aria-label={`${section.label} pages`} mix={sidebarNavCss}>
-              {section.pageIds.map((pageId) => {
-                let navPage = registry.pages[pageId]
-                return (
-                  <a
-                    key={navPage.path}
-                    href={navPage.path}
-                    aria-current={isPageActive(navPage, currentPath) ? 'page' : undefined}
-                    mix={getNavItemMix(navPage, currentPath)}
-                  >
-                    {navPage.navLabel}
-                  </a>
-                )
-              })}
-            </nav>
+            {section.groups.map((group) => (
+              <div key={group.id} mix={sidebarGroupCss}>
+                {group.label ? <p mix={sidebarHeadingCss}>{group.label}</p> : null}
+                <nav
+                  aria-label={
+                    group.label ? `${section.label} ${group.label}` : `${section.label} pages`
+                  }
+                  mix={sidebarNavCss}
+                >
+                  {group.pageIds.map((pageId) => {
+                    let navPage = registry.pages[pageId]
+                    return (
+                      <a
+                        key={navPage.path}
+                        href={navPage.path}
+                        aria-current={isPageActive(navPage, currentPath) ? 'page' : undefined}
+                        mix={getNavItemMix(navPage, currentPath)}
+                      >
+                        {navPage.navLabel}
+                      </a>
+                    )
+                  })}
+                </nav>
+              </div>
+            ))}
           </section>
         ))}
       </div>
@@ -292,6 +302,13 @@ const sidebarHeadingCss = css({
   letterSpacing: theme.letterSpacing.meta,
   textTransform: 'uppercase',
   color: theme.colors.text.muted,
+})
+
+const sidebarGroupCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xs,
+  paddingLeft: theme.space.sm,
 })
 
 const sidebarNavCss = css({
