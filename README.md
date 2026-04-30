@@ -96,7 +96,7 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 
 ## Installation
 
-To try the current Remix alpha, install the `next` dist-tag:
+To try the current Remix beta, install the `next` dist-tag:
 
 ```sh
 npm install remix@next
