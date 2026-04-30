@@ -346,6 +346,9 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/routes':
+        specifier: workspace:*
+        version: link:../routes
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
@@ -408,6 +411,9 @@ importers:
       '@remix-run/cookie':
         specifier: workspace:*
         version: link:../cookie
+      '@remix-run/routes':
+        specifier: workspace:*
+        version: link:../routes
       '@remix-run/session-middleware':
         specifier: workspace:*
         version: link:../session-middleware
@@ -812,6 +818,9 @@ importers:
       '@remix-run/route-pattern':
         specifier: workspace:^
         version: link:../route-pattern
+      '@remix-run/routes':
+        specifier: workspace:^
+        version: link:../routes
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
@@ -849,6 +858,9 @@ importers:
       '@remix-run/response':
         specifier: workspace:*
         version: link:../../../response
+      '@remix-run/routes':
+        specifier: workspace:*
+        version: link:../../../routes
       '@remix-run/session':
         specifier: workspace:*
         version: link:../../../session
@@ -886,6 +898,9 @@ importers:
       '@remix-run/response':
         specifier: workspace:*
         version: link:../../../response
+      '@remix-run/routes':
+        specifier: workspace:*
+        version: link:../../../routes
       '@remix-run/session':
         specifier: workspace:*
         version: link:../../../session
@@ -929,6 +944,9 @@ importers:
       '@remix-run/response':
         specifier: workspace:*
         version: link:../../../response
+      '@remix-run/routes':
+        specifier: workspace:*
+        version: link:../../../routes
       '@remix-run/session':
         specifier: workspace:*
         version: link:../../../session
@@ -1139,6 +1157,9 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/routes':
+        specifier: workspace:*
+        version: link:../routes
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
@@ -1461,6 +1482,9 @@ importers:
       '@remix-run/route-pattern':
         specifier: workspace:^
         version: link:../route-pattern
+      '@remix-run/routes':
+        specifier: workspace:^
+        version: link:../routes
       '@remix-run/session':
         specifier: workspace:^
         version: link:../session
@@ -1575,6 +1599,25 @@ importers:
       vitest:
         specifier: 4.0.15
         version: 4.0.15(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.8.2)
+
+  packages/routes:
+    dependencies:
+      '@remix-run/route-pattern':
+        specifier: workspace:^
+        version: link:../route-pattern
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
 
   packages/session:
     devDependencies:
@@ -1874,6 +1917,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:*
         version: link:../../node-fetch-server
+      '@remix-run/routes':
+        specifier: workspace:*
+        version: link:../../routes
       '@remix-run/static-middleware':
         specifier: workspace:*
         version: link:../../static-middleware

@@ -1,4 +1,4 @@
-import { route, form, resources } from '@remix-run/fetch-router/routes'
+import { route, form, resources } from '@remix-run/routes'
 
 export const routes = route({
   home: '/',

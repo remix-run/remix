@@ -34,6 +34,7 @@
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
+    "@remix-run/routes": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"

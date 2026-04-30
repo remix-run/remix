@@ -21,11 +21,11 @@ npm i remix
 
 The main purpose of the router is to map incoming requests to request handlers and middleware. The router uses the `fetch()` API to accept a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and return a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
 
-Import route definition helpers (`route`, `form`, `resource`, `resources`, etc.) from `remix/fetch-router/routes`, especially in a dedicated `routes.ts` file. Import runtime APIs (`createRouter`, `Middleware`, etc.) from `remix/fetch-router`.
+Import route definition helpers (`route`, `form`, `resource`, `resources`, etc.) from `remix/routes`, especially in a dedicated `routes.ts` file. Import runtime APIs (`createRouter`, `Middleware`, etc.) from `remix/fetch-router`.
 
 ```ts
 // routes.ts
-import { route, form, resources } from 'remix/fetch-router/routes'
+import { route, form, resources } from 'remix/routes'
 
 // router.ts
 import { createRouter } from 'remix/fetch-router'
@@ -35,7 +35,7 @@ The example below is a small site with a home page, an "about" page, and a blog.
 
 ```ts
 import { createRouter } from 'remix/fetch-router'
-import { route } from 'remix/fetch-router/routes'
+import { route } from 'remix/routes'
 import { logger } from 'remix/logger-middleware'
 
 // `route()` creates a "route map" that organizes routes by name. The keys
@@ -107,7 +107,7 @@ Note: We're using the [`createHtmlResponse` helper from `response`](https://gith
 
 ```ts
 import { createRouter } from 'remix/fetch-router'
-import { route } from 'remix/fetch-router/routes'
+import { route } from 'remix/routes'
 import { html } from 'remix/html-template'
 import { createHtmlResponse } from 'remix/response/html'
 
@@ -197,7 +197,7 @@ However, we can also encode the request method into the route definition itself 
 ```ts
 import * as assert from 'node:assert/strict'
 import { createRouter } from 'remix/fetch-router'
-import { route } from 'remix/fetch-router/routes'
+import { route } from 'remix/routes'
 
 let routes = route({
   home: { method: 'GET', pattern: '/' },
@@ -256,7 +256,7 @@ A `form()` route map contains two routes: `index` and `action`. The `index` rout
 
 ```tsx
 import { createRouter } from 'remix/fetch-router'
-import { route, form } from 'remix/fetch-router/routes'
+import { route, form } from 'remix/routes'
 import { createHtmlResponse } from 'remix/response/html'
 import { html } from 'remix/html-template'
 
@@ -340,7 +340,7 @@ The router provides a `resources()` helper that creates a route map with a set o
 
 ```ts
 import { createRouter } from 'remix/fetch-router'
-import { route, resources } from 'remix/fetch-router/routes'
+import { route, resources } from 'remix/routes'
 
 let routes = route({
   brands: {
@@ -395,7 +395,7 @@ The `resource()` helper creates a route map for a single resource (i.e. not some
 
 ```tsx
 import { createRouter } from 'remix/fetch-router'
-import { route, resources, resource } from 'remix/fetch-router/routes'
+import { route, resources, resource } from 'remix/routes'
 
 let routes = route({
   user: {
@@ -453,7 +453,7 @@ Resource route names may be customized using the `names` option when you'd prefe
 
 ```tsx
 import { createRouter } from 'remix/fetch-router'
-import { route, resources } from 'remix/fetch-router/routes'
+import { route, resources } from 'remix/routes'
 
 let routes = route({
   users: resources('users', {
@@ -472,7 +472,7 @@ If you want to use a param name other than `id`, you can use the `param` option.
 
 ```tsx
 import { createRouter } from 'remix/fetch-router'
-import { route, resources } from 'remix/fetch-router/routes'
+import { route, resources } from 'remix/routes'
 
 let routes = route({
   users: resources('users', {
@@ -620,7 +620,7 @@ Route params are only half of a handler's type contract. In many apps, handlers 
 ```ts
 import { Auth, requireAuth, type WithRequiredAuth } from 'remix/auth-middleware'
 import { type BuildAction, type RequestContext, type WithParams } from 'remix/fetch-router'
-import { route } from 'remix/fetch-router/routes'
+import { route } from 'remix/routes'
 
 let routes = route({
   account: '/account',

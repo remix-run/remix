@@ -1,4 +1,4 @@
-import { route } from 'remix/fetch-router/routes'
+import { route } from 'remix/routes'
 
 export const routes = route({
   assets: '/(:version/)assets/*asset',

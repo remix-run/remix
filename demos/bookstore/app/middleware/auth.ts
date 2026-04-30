@@ -1,4 +1,4 @@
-import type { Route } from 'remix/fetch-router/routes'
+import type { Route } from 'remix/routes'
 import { createCredentialsAuthProvider } from 'remix/auth'
 import {
   auth,

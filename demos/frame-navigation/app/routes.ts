@@ -1,4 +1,4 @@
-import { form, get, post, route } from 'remix/fetch-router/routes'
+import { form, get, post, route } from 'remix/routes'
 
 export const frames = {
   settings: 'settings',

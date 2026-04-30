@@ -1,9 +1,9 @@
 import { describe, it } from '@remix-run/test'
+import { createRoutes as route } from '@remix-run/routes'
 
 import type { BuildAction, Controller } from './controller.ts'
 import type { Middleware } from './middleware.ts'
 import { createContextKey, type RequestContext, type SetContextValue } from './request-context.ts'
-import { createRoutes as route } from './route-map.ts'
 import { createRouter } from './router.ts'
 import type { Router } from './router.ts'
 import type { IsEqual } from './type-utils.ts'

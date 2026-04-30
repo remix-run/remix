@@ -1,10 +1,10 @@
 import type { Params, RoutePattern } from '@remix-run/route-pattern'
+import type { Route, RouteMap } from '@remix-run/routes'
 
 import type { AnyMiddleware, ApplyMiddlewareTuple } from './middleware.ts'
 import type { RequestContext } from './request-context.ts'
 import type { WithParams } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
-import type { Route, RouteMap } from './route-map.ts'
 
 export type ActionObjectWithoutMiddleware<
   params extends Record<string, any>,

@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createRouter } from '@remix-run/fetch-router'
-import { route } from '@remix-run/fetch-router/routes'
+import { route } from '@remix-run/routes'
 import { createStyles } from '@remix-run/terminal'
 
 import { logger } from './logger.ts'

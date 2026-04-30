@@ -1,4 +1,5 @@
 import { type Matcher, type Params, ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
+import { type RouteMap, Route } from '@remix-run/routes'
 
 import { type AnyMiddleware, type ApplyMiddlewareTuple, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
@@ -17,7 +18,6 @@ import {
   isActionObject,
   isController,
 } from './controller.ts'
-import { type RouteMap, Route } from './route-map.ts'
 
 type AnyContext = RequestContext<any, any>
 

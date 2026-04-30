@@ -47,7 +47,6 @@
     "./data-table/sql-helpers": "./src/data-table/sql-helpers.ts",
     "./fetch-proxy": "./src/fetch-proxy.ts",
     "./fetch-router": "./src/fetch-router.ts",
-    "./fetch-router/routes": "./src/fetch-router/routes.ts",
     "./file-storage": "./src/file-storage.ts",
     "./file-storage-s3": "./src/file-storage-s3.ts",
     "./file-storage/fs": "./src/file-storage/fs.ts",
@@ -72,6 +71,7 @@
     "./response/redirect": "./src/response/redirect.ts",
     "./route-pattern": "./src/route-pattern.ts",
     "./route-pattern/specificity": "./src/route-pattern/specificity.ts",
+    "./routes": "./src/routes.ts",
     "./session": "./src/session.ts",
     "./session-middleware": "./src/session-middleware.ts",
     "./session-storage-memcache": "./src/session-storage-memcache.ts",
@@ -211,10 +211,6 @@
         "types": "./dist/fetch-router.d.ts",
         "default": "./dist/fetch-router.js"
       },
-      "./fetch-router/routes": {
-        "types": "./dist/fetch-router/routes.d.ts",
-        "default": "./dist/fetch-router/routes.js"
-      },
       "./file-storage": {
         "types": "./dist/file-storage.d.ts",
         "default": "./dist/file-storage.js"
@@ -310,6 +306,10 @@
       "./route-pattern/specificity": {
         "types": "./dist/route-pattern/specificity.d.ts",
         "default": "./dist/route-pattern/specificity.js"
+      },
+      "./routes": {
+        "types": "./dist/routes.d.ts",
+        "default": "./dist/routes.js"
       },
       "./session": {
         "types": "./dist/session.d.ts",
@@ -489,7 +489,8 @@
     "@remix-run/cli": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@remix-run/terminal": "workspace:^",
-    "@remix-run/node-serve": "workspace:^"
+    "@remix-run/node-serve": "workspace:^",
+    "@remix-run/routes": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

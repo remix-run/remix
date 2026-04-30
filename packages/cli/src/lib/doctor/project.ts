@@ -298,7 +298,7 @@ function getMostCommonExtension(extensions: OwnerFileExtension[]): OwnerFileExte
 
 function renderDefaultRoutesFile(): string {
   return [
-    `import { route } from 'remix/fetch-router/routes'`,
+    `import { route } from 'remix/routes'`,
     '',
     'export const routes = route({',
     `  home: '/',`,

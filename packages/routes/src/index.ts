@@ -5,6 +5,9 @@ export {
 } from './lib/route-map.ts'
 export type { BuildRoute, RouteMap, RouteDefs, RouteDef } from './lib/route-map.ts'
 
+export { RequestBodyMethods, RequestMethods } from './lib/request-methods.ts'
+export type { RequestBodyMethod, RequestMethod } from './lib/request-methods.ts'
+
 // Route helpers
 export {
   createDeleteRoute,

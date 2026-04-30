@@ -3,7 +3,7 @@ import * as http from 'node:http'
 import * as path from 'node:path'
 
 import { createRouter } from 'remix/fetch-router'
-import { route } from 'remix/fetch-router/routes'
+import { route } from 'remix/routes'
 import { createRequestListener } from 'remix/node-fetch-server'
 import { staticFiles } from 'remix/static-middleware'
 

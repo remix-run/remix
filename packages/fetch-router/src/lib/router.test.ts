@@ -1,10 +1,10 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
+import { createRoutes as route } from '@remix-run/routes'
 
 import type { BuildAction } from './controller.ts'
 import type { RequestContext } from './request-context.ts'
-import { createRoutes as route } from './route-map.ts'
 import type { MatchData } from './router.ts'
 import { createRouter } from './router.ts'
 
