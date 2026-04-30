@@ -341,7 +341,7 @@ jobs:
           SESSION_REDIS_INTEGRATION: '1'
           SESSION_REDIS_URL: redis://127.0.0.1:6379
         run: |
-          cd ./packages/session-storage-redis
+          cd packages/session-storage-redis
           pnpm test src/lib/redis-storage.integration.test.ts
 
   data_table_unit:
@@ -424,7 +424,7 @@ jobs:
           DATA_TABLE_INTEGRATION: '1'
           DATA_TABLE_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/remix
         run: |
-          cd ../data-table-postgres
+          cd packages/data-table-postgres
           pnpm test src/lib/adapter.integration.test.ts
 
   mysql_integration:
@@ -466,7 +466,7 @@ jobs:
           DATA_TABLE_INTEGRATION: '1'
           DATA_TABLE_MYSQL_URL: mysql://root:root@127.0.0.1:3306/remix
         run: |
-          cd ../data-table-mysql
+          cd packages/data-table-mysql
           pnpm test src/lib/adapter.integration.test.ts
 
   sqlite_integration:
@@ -494,7 +494,7 @@ jobs:
         env:
           DATA_TABLE_INTEGRATION: '1'
         run: |
-          cd ../data-table-sqlite
+          cd packages/data-table-sqlite
           pnpm test src/lib/adapter.integration.test.ts
 
   file_storage_unit:
@@ -576,5 +576,5 @@ jobs:
           FILE_STORAGE_S3_SECRET_ACCESS_KEY: test
           FILE_STORAGE_S3_FORCE_PATH_STYLE: '1'
         run: |
-          cd ../file-storage-s3
+          cd packages/file-storage-s3
           pnpm test src/lib/s3.integration.test.ts
