@@ -2,6 +2,12 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## v0.18.2
+
+### Patch Changes
+
+- Fix `router.fetch()` to support `Request` facades that clone to a native `Request`, such as lazy server request wrappers.
+
 ## v0.18.1
 
 ### Patch Changes

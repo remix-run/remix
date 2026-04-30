@@ -1,1 +1,0 @@
-Add missed object support to `assert.throws` and `assert.rejects` for validating individual error properties (e.g. `{ code: 'ERR_INVALID_ARG_VALUE' }`). `RegExp` values inside the object match string properties; everything else uses deep equality.

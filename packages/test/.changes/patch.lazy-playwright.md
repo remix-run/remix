@@ -1,1 +1,0 @@
-Load Playwright only when browser or E2E tests run, allowing test help and server-only test runs without Playwright installed. Browser and E2E test runs now report a clearer error when Playwright is missing.

@@ -2,6 +2,13 @@
 
 This is the changelog for [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.2.1`](https://github.com/remix-run/remix/releases/tag/data-table@0.2.1)
+
 ## v0.3.0
 
 ### Minor Changes

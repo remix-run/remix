@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/cop-middleware",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Middleware for tokenless cross-origin protection in Fetch API servers",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

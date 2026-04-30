@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/assert",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Node assert-compatible utilities for any JavaScript environment",
   "author": "Shopify Inc.",
   "license": "MIT",
