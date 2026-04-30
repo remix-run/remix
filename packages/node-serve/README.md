@@ -18,7 +18,7 @@ Build high-performance Node.js servers with web-standard Fetch API primitives. U
 npm i remix
 ```
 
-`node-serve` includes a native high-performance transport as an optional dependency. Standard installs include optional dependencies; if your install disables them, enable optional dependencies before using `remix/node-serve`.
+`node-serve` includes uWebSockets.js as its native high-performance transport.
 
 ## Usage
 

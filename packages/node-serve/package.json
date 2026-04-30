@@ -37,7 +37,7 @@
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
   },
-  "optionalDependencies": {
+  "dependencies": {
     "uWebSockets.js": "github:uNetworking/uWebSockets.js#v20.66.0"
   },
   "scripts": {
