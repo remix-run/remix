@@ -1,3 +1,5 @@
+import * as path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { tsImport } from 'tsx/esm/api'
 import { IS_BUN } from './runtime.ts'
 
@@ -17,13 +19,15 @@ function hasImportMetaResolve(meta: ImportMeta): meta is ImportMetaWithResolve {
  * @returns The imported module namespace.
  */
 export async function importModule(specifier: string, meta: ImportMeta): Promise<any> {
+  let resolvedSpecifier = path.isAbsolute(specifier) ? pathToFileURL(specifier).href : specifier
+
   if (IS_BUN) {
     if (!hasImportMetaResolve(meta)) {
       throw new Error('importModule() requires import.meta.resolve() in Bun')
     }
 
-    return import(meta.resolve(specifier, meta.url))
+    return import(meta.resolve(resolvedSpecifier, meta.url))
   }
 
-  return tsImport(specifier, meta.url)
+  return tsImport(resolvedSpecifier, meta.url)
 }

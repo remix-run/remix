@@ -115,6 +115,10 @@ const cliOptions = {
     short: 'p',
     description: 'Filter to a specific Playwright project (comma-separated)',
   },
+  pool: {
+    type: 'string',
+    description: 'Pool used to run server and E2E test files: forks, threads (default: forks)',
+  },
   reporter: {
     type: 'string',
     short: 'r',
@@ -154,12 +158,15 @@ const defaultValues: ResolvedRemixTestConfig = {
     exclude: 'node_modules/**',
   },
   reporter: process.env.CI === 'true' ? 'files' : 'spec',
+  pool: 'forks',
   type: 'server,browser,e2e',
   setup: undefined,
   playwrightConfig: undefined,
   project: undefined,
   watch: false,
-} as const
+}
+
+export type RemixTestPool = 'forks' | 'threads'
 
 export interface RemixTestConfig {
   /**
@@ -215,6 +222,11 @@ export interface RemixTestConfig {
   project?: string
   /** Test reporter (--reporter) */
   reporter?: string
+  /**
+   * Pool used to run server and E2E test files. Forked child processes are the default,
+   * but worker threads are available for projects that prefer the previous behavior.
+   */
+  pool?: RemixTestPool
   /** Comma-separated list of test types to run (--type) */
   type?: string
   /** Watch mode — re-run tests on file changes (--watch) */
@@ -247,6 +259,7 @@ export interface ResolvedRemixTestConfig {
   playwrightConfig: string | PlaywrightTestConfig | undefined
   project: string | undefined
   reporter: string
+  pool: RemixTestPool
   setup: string | undefined
   type: string
   watch: boolean
@@ -350,9 +363,18 @@ function resolveConfig(
       cliValues.playwrightConfig ?? fileConfig.playwrightConfig ?? defaultValues.playwrightConfig,
     project: cliValues.project ?? fileConfig.project ?? defaultValues.project,
     reporter: cliValues.reporter ?? fileConfig.reporter ?? defaultValues.reporter,
+    pool: resolvePool(cliValues.pool ?? fileConfig.pool ?? defaultValues.pool),
     type: cliValues.type ?? fileConfig.type ?? defaultValues.type,
     watch: cliValues.watch ?? fileConfig.watch ?? defaultValues.watch,
   }
+}
+
+function resolvePool(value: string): RemixTestPool {
+  if (value === 'forks' || value === 'threads') {
+    return value
+  }
+
+  throw new Error(`Unsupported test pool "${value}". Supported pools are: forks, threads`)
 }
 
 async function loadConfigFile(

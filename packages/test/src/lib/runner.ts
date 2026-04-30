@@ -1,8 +1,9 @@
+import { fork, type ChildProcess } from 'node:child_process'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
-import { pathToFileURL } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
-import { IS_RUNNING_FROM_SRC } from './config.ts'
+import { IS_RUNNING_FROM_SRC, type RemixTestPool } from './config.ts'
 import {
   collectCoverageMapFromPlaywright,
   collectServerCoverageMap,
@@ -19,12 +20,21 @@ import type { Counts, TestResults } from './reporters/results.ts'
 const ext = IS_RUNNING_FROM_SRC ? '.ts' : '.js'
 const workerUrl = new URL(`./worker${ext}`, import.meta.url)
 const workerE2EUrl = new URL(`./worker-e2e${ext}`, import.meta.url)
+const workerProcessUrl = new URL(`./worker-process${ext}`, import.meta.url)
 const DEFAULT_WORKER_SHUTDOWN_TIMEOUT_MS = 10_000
 
 interface WorkerRun {
-  worker: Worker
   finished: Promise<void>
-  exited: Promise<number>
+  exited: Promise<number | null>
+  terminate(): Promise<boolean>
+}
+
+interface RunFileOptions {
+  cwd?: string
+  coverage?: CoverageConfig
+  open?: boolean
+  playwrightUseOpts?: PlaywrightUseOpts
+  pool?: RemixTestPool
 }
 
 export async function runServerTests(
@@ -39,12 +49,14 @@ export async function runServerTests(
     projectName?: string
     coverage?: CoverageConfig
     workerShutdownTimeoutMs?: number
+    pool?: RemixTestPool
   } = {},
 ): Promise<Counts & { coverageMap: CoverageMap | null }> {
   let counts: Counts = { passed: 0, failed: 0, skipped: 0, todo: 0 }
   let coverageMap: CoverageMap | null = null
   let cwd = options.cwd ?? process.cwd()
   let envLabel = options.projectName ? `${type}:${options.projectName}` : type
+  let pool = options.pool ?? 'forks'
 
   function accumulate(results: TestResults, file: string) {
     reporter.onResult(
@@ -64,7 +76,7 @@ export async function runServerTests(
       files,
       concurrency,
       (file) =>
-        runFileInWorker(
+        runFileInPool(
           file,
           type,
           (results) => {
@@ -75,6 +87,7 @@ export async function runServerTests(
           },
           {
             ...options,
+            pool,
             playwrightUseOpts: options.playwrightUseOpts,
           },
         ),
@@ -102,7 +115,11 @@ export async function runServerTests(
     await runInConcurrentWorkers(
       files,
       concurrency,
-      (file) => runFileInWorker(file, type, (results) => accumulate(results, file), options),
+      (file) =>
+        runFileInPool(file, type, (results) => accumulate(results, file), {
+          ...options,
+          pool,
+        }),
       () => counts.failed++,
       true,
       options.workerShutdownTimeoutMs ?? DEFAULT_WORKER_SHUTDOWN_TIMEOUT_MS,
@@ -147,27 +164,13 @@ async function runInConcurrentWorkers(
           }
         }
 
-        async function terminate(): Promise<boolean> {
-          try {
-            await run.worker.terminate()
-            return true
-          } catch (err) {
-            console.error(
-              `Error terminating worker for ${file}:`,
-              err instanceof Error ? err.message : err,
-            )
-            console.error(err)
-            return false
-          }
-        }
-
         run.finished.then(
           async () => {
             try {
               if (terminateWhenFinished) {
                 let exited = await waitForWorkerExit(run.exited, workerShutdownTimeoutMs)
                 if (!exited) {
-                  let terminated = await terminate()
+                  let terminated = await run.terminate()
                   if (!terminated) {
                     onError()
                   }
@@ -182,7 +185,7 @@ async function runInConcurrentWorkers(
               console.error(`Error running ${file}:`, err instanceof Error ? err.message : err)
               console.error(err)
               onError()
-              await terminate()
+              await run.terminate()
             } finally {
               complete()
             }
@@ -197,7 +200,10 @@ async function runInConcurrentWorkers(
   })
 }
 
-function waitForWorkerExit(exited: Promise<number>, timeoutMs: number): Promise<boolean> {
+function waitForWorkerExit(
+  exited: Promise<number | null>,
+  timeoutMs: number,
+): Promise<boolean> {
   return new Promise((resolve) => {
     let timeout = setTimeout(() => resolve(false), timeoutMs)
     exited.then(() => {
@@ -207,16 +213,22 @@ function waitForWorkerExit(exited: Promise<number>, timeoutMs: number): Promise<
   })
 }
 
+function runFileInPool(
+  file: string,
+  type: 'server' | 'e2e',
+  onResults: (results: TestResults) => void,
+  options: RunFileOptions,
+): WorkerRun {
+  return options.pool === 'threads'
+    ? runFileInWorker(file, type, onResults, options)
+    : runFileInProcess(file, type, onResults, options)
+}
+
 export function runFileInWorker(
   file: string,
   type: 'server' | 'e2e',
   onResults: (results: TestResults) => void,
-  options: {
-    cwd?: string
-    coverage?: CoverageConfig
-    open?: boolean
-    playwrightUseOpts?: PlaywrightUseOpts
-  } = {},
+  options: RunFileOptions = {},
 ): WorkerRun {
   let receivedResults = false
   let worker =
@@ -266,8 +278,118 @@ export function runFileInWorker(
   })
 
   return {
-    worker,
     finished,
     exited,
+    async terminate() {
+      try {
+        await worker.terminate()
+        return true
+      } catch (err) {
+        console.error(
+          `Error terminating worker for ${file}:`,
+          err instanceof Error ? err.message : err,
+        )
+        console.error(err)
+        return false
+      }
+    },
   }
+}
+
+function runFileInProcess(
+  file: string,
+  type: 'server' | 'e2e',
+  onResults: (results: TestResults) => void,
+  options: RunFileOptions = {},
+): WorkerRun {
+  let receivedResults = false
+  let child = fork(fileURLToPath(workerProcessUrl), [], {
+    serialization: 'advanced',
+    stdio: ['ignore', 'inherit', 'inherit', 'ipc'],
+  })
+
+  let exited = new Promise<number | null>((resolve) => {
+    child.once('exit', (code) => resolve(code))
+  })
+
+  let finished = new Promise<void>((resolve, reject) => {
+    child.once('message', (msg: unknown) => {
+      if (!isTestResults(msg)) {
+        reject(new Error('Test worker process sent invalid results'))
+        return
+      }
+
+      receivedResults = true
+      try {
+        onResults(msg)
+      } catch (error) {
+        reject(error)
+        return
+      }
+      if (!options.open) {
+        resolve()
+      }
+    })
+    child.once('error', reject)
+    exited.then((code) => {
+      if (receivedResults || code === 0) {
+        resolve()
+      } else {
+        reject(new Error(`Worker process exited with code ${code}`))
+      }
+    })
+    child.send(
+      {
+        file: pathToFileURL(file).href,
+        type,
+        coverage: options.coverage,
+        open: options.open,
+        playwrightUseOpts: options.playwrightUseOpts,
+      },
+      (error) => {
+        if (error) {
+          reject(error)
+        }
+      },
+    )
+  })
+
+  return {
+    finished,
+    exited,
+    terminate: () => terminateChildProcess(child, exited),
+  }
+}
+
+async function terminateChildProcess(
+  child: ChildProcess,
+  exited: Promise<number | null>,
+): Promise<boolean> {
+  if (child.exitCode !== null || child.signalCode !== null) {
+    return true
+  }
+
+  if (!child.kill()) {
+    return false
+  }
+
+  return await waitForWorkerExit(exited, 5_000)
+}
+
+function isTestResults(value: unknown): value is TestResults {
+  if (!isRecord(value)) {
+    return false
+  }
+
+  return (
+    typeof value.passed === 'number' &&
+    typeof value.failed === 'number' &&
+    typeof value.skipped === 'number' &&
+    typeof value.todo === 'number' &&
+    Array.isArray(value.tests)
+  )
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
 }

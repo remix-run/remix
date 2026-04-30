@@ -1,1 +1,1 @@
-Clean up leaked test worker resources after results are reported while giving normal workers more time to finish shutdown first.
+Run server and E2E test files in forked child processes by default, add `pool: 'threads'`/`--pool threads` to preserve the previous worker-thread behavior, and clean up leaked test worker resources after results are reported.
