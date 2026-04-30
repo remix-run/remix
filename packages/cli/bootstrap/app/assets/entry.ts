@@ -14,7 +14,6 @@ run({
       headers,
       signal,
     })
-
     return response.body ?? response.text()
   },
 })
