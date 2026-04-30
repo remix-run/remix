@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, describe, it, mock } from '@remix-run/test'
 
 import { createRoot, on, type Handle, type RemixNode } from '@remix-run/ui'
 
@@ -151,13 +152,12 @@ afterEach(() => {
 
   roots = []
   document.body.innerHTML = ''
-  vi.restoreAllMocks()
 })
 
 describe('popover', () => {
-  it('renders a manual popover surface and responds to controlled open state changes', async () => {
-    let showPopover = vi.spyOn(HTMLElement.prototype, 'showPopover')
-    let hidePopover = vi.spyOn(HTMLElement.prototype, 'hidePopover')
+  it('renders a manual popover surface and responds to controlled open state changes', async (t) => {
+    let showPopover = t.mock.method(HTMLElement.prototype, 'showPopover')
+    let hidePopover = t.mock.method(HTMLElement.prototype, 'hidePopover')
     let { container, root } = renderPopover()
 
     let anchor = getById<HTMLButtonElement>(container, 'anchor')
@@ -171,13 +171,13 @@ describe('popover', () => {
     click(anchor)
     await settle(root)
 
-    expect(showPopover).toHaveBeenCalledOnce()
+    expect(showPopover).toHaveBeenCalledTimes(1)
     expect(isPopoverOpen(surface)).toBe(true)
 
     click(insideClose)
     await settle(root)
 
-    expect(hidePopover).toHaveBeenCalledOnce()
+    expect(hidePopover).toHaveBeenCalledTimes(1)
     expect(isPopoverOpen(surface)).toBe(false)
   })
 
@@ -221,7 +221,7 @@ describe('popover', () => {
   })
 
   it('calls onHide on Escape and focuses the registered hide target after closing', async () => {
-    let onHide = vi.fn<(request?: PopoverHideRequest) => void>()
+    let onHide = mock.fn<(request?: PopoverHideRequest) => void>()
     let { container, root } = renderPopover({
       onHide,
       withHideFocus: true,
@@ -240,14 +240,14 @@ describe('popover', () => {
     await settle(root)
 
     expect(event.defaultPrevented).toBe(true)
-    expect(onHide).toHaveBeenCalledOnce()
+    expect(onHide).toHaveBeenCalledTimes(1)
     expect(onHide).toHaveBeenCalledWith({ reason: 'escape-key' })
     expect(isPopoverOpen(surface)).toBe(false)
     expect(document.activeElement).toBe(anchor)
   })
 
   it('calls onHide on outside click and focuses the registered hide target', async () => {
-    let onHide = vi.fn<(request?: PopoverHideRequest) => void>()
+    let onHide = mock.fn<(request?: PopoverHideRequest) => void>()
     let { container, root } = renderPopover({
       onHide,
       withHideFocus: true,
@@ -264,14 +264,14 @@ describe('popover', () => {
     click(outside)
     await settle(root)
 
-    expect(onHide).toHaveBeenCalledOnce()
+    expect(onHide).toHaveBeenCalledTimes(1)
     expect(onHide).toHaveBeenCalledWith({ reason: 'outside-click', target: outside })
     expect(isPopoverOpen(surface)).toBe(false)
     expect(document.activeElement).toBe(anchor)
   })
 
   it('does not close when clicking inside the surface', async () => {
-    let onHide = vi.fn()
+    let onHide = mock.fn()
     let { container, root } = renderPopover({ onHide })
 
     let anchor = getById<HTMLButtonElement>(container, 'anchor')
@@ -289,7 +289,7 @@ describe('popover', () => {
   })
 
   it('can ignore anchor clicks while open when closeOnAnchorClick is false', async () => {
-    let onHide = vi.fn()
+    let onHide = mock.fn()
     let { container, root } = renderPopover({
       closeOnAnchorClick: false,
       onHide,
@@ -307,9 +307,9 @@ describe('popover', () => {
     expect(isPopoverOpen(surface)).toBe(true)
   })
 
-  it('stays open until the parent updates open to false after onHide runs', async () => {
-    let hidePopover = vi.spyOn(HTMLElement.prototype, 'hidePopover')
-    let onHide = vi.fn()
+  it('stays open until the parent updates open to false after onHide runs', async (t) => {
+    let hidePopover = t.mock.method(HTMLElement.prototype, 'hidePopover')
+    let onHide = mock.fn()
     let { container, root } = renderPopover({
       closeOnHide: false,
       onHide,
@@ -327,7 +327,7 @@ describe('popover', () => {
     key(inside, 'Escape')
     await settle(root)
 
-    expect(onHide).toHaveBeenCalledOnce()
+    expect(onHide).toHaveBeenCalledTimes(1)
     expect(hidePopover).not.toHaveBeenCalled()
     expect(isPopoverOpen(surface)).toBe(true)
   })

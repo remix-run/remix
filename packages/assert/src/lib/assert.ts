@@ -24,6 +24,10 @@ export class AssertionError extends Error {
 }
 
 // Strict deep equality — uses === at primitive leaves (no type coercion).
+function hasOwn(value: object, key: string): boolean {
+  return Object.prototype.hasOwnProperty.call(value, key)
+}
+
 function isDeepEqual(a: any, b: any): boolean {
   if (a === b) return true
   if (a == null || b == null) return false
@@ -37,7 +41,7 @@ function isDeepEqual(a: any, b: any): boolean {
 
     if (keysA.length !== keysB.length) return false
 
-    return keysA.every((key) => isDeepEqual(a[key], b[key]))
+    return keysA.every((key) => hasOwn(b, key) && isDeepEqual(a[key], b[key]))
   }
 
   return false

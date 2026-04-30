@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import type { Handle, RemixNode } from '../runtime/component.ts'
 

@@ -44,19 +44,23 @@ const cliOptions = {
   },
   'glob.browser': {
     type: 'string',
-    description: 'Glob pattern for browser test files',
+    multiple: true,
+    description: 'Glob pattern(s) for browser test files',
   },
   'glob.e2e': {
     type: 'string',
-    description: 'Glob pattern for E2E test files',
+    multiple: true,
+    description: 'Glob pattern(s) for E2E test files',
   },
   'glob.exclude': {
     type: 'string',
-    description: 'Glob pattern for paths to exclude from discovery',
+    multiple: true,
+    description: 'Glob pattern(s) for paths to exclude from discovery',
   },
   'glob.test': {
     type: 'string',
-    description: 'Glob pattern for all test files',
+    multiple: true,
+    description: 'Glob pattern(s) for all test files',
   },
   concurrency: {
     type: 'string',
@@ -113,7 +117,8 @@ const cliOptions = {
   project: {
     type: 'string',
     short: 'p',
-    description: 'Filter to a specific Playwright project (comma-separated)',
+    multiple: true,
+    description: 'Filter to specific Playwright project(s)',
   },
   pool: {
     type: 'string',
@@ -127,7 +132,8 @@ const cliOptions = {
   type: {
     type: 'string',
     short: 't',
-    description: 'Comma-separated test types to run (default: server,browser,e2e)',
+    multiple: true,
+    description: 'Test types to run (default: server, browser, e2e)',
   },
   watch: {
     type: 'boolean',
@@ -152,17 +158,17 @@ const defaultValues: ResolvedRemixTestConfig = {
     functions: undefined,
   },
   glob: {
-    test: '**/*.test{,.e2e,.browser}.{ts,tsx}',
-    browser: '**/*.test.browser.{ts,tsx}',
-    e2e: '**/*.test.e2e.{ts,tsx}',
-    exclude: 'node_modules/**',
+    test: ['**/*.test{,.e2e,.browser}.{ts,tsx}'],
+    browser: ['**/*.test.browser.{ts,tsx}'],
+    e2e: ['**/*.test.e2e.{ts,tsx}'],
+    exclude: ['node_modules/**'],
   },
-  reporter: process.env.CI === 'true' ? 'files' : 'spec',
   pool: 'forks',
-  type: 'server,browser,e2e',
-  setup: undefined,
   playwrightConfig: undefined,
   project: undefined,
+  reporter: process.env.CI === 'true' ? 'files' : 'spec',
+  setup: undefined,
+  type: ['server', 'browser', 'e2e'],
   watch: false,
 }
 
@@ -179,17 +185,18 @@ export interface RemixTestConfig {
     open?: boolean
   }
   /**
-   * Glob patterns to identify test files
-   *  - `glob.test`: Glob pattern for all test files (--glob.test)
-   *  - `glob.browser`: Glob pattern for the subset of browser test files (--glob.browser)
-   *  - `glob.e2e`: Glob pattern for the subset of e2e test files (--glob.e2e)
-   *  - `glob.exclude`: Glob pattern for paths to exclude from discovery (--glob.exclude)
+   * Glob patterns to identify test files. Each field accepts a single pattern
+   * or an array of patterns; arrays are unioned during discovery.
+   *  - `glob.test`: Glob pattern(s) for all test files (--glob.test)
+   *  - `glob.browser`: Glob pattern(s) for the subset of browser test files (--glob.browser)
+   *  - `glob.e2e`: Glob pattern(s) for the subset of e2e test files (--glob.e2e)
+   *  - `glob.exclude`: Glob pattern(s) for paths to exclude from discovery (--glob.exclude)
    */
   glob?: {
-    test?: string
-    browser?: string
-    e2e?: string
-    exclude?: string
+    test?: string | string[]
+    browser?: string | string[]
+    e2e?: string | string[]
+    exclude?: string | string[]
   }
   /** Max number of concurrent test workers (--concurrency) */
   concurrency?: number | string
@@ -201,8 +208,8 @@ export interface RemixTestConfig {
     | boolean
     | {
         dir?: string
-        include?: string[]
-        exclude?: string[]
+        include?: string | string[]
+        exclude?: string | string[]
         statements?: number | string
         lines?: number | string
         branches?: number | string
@@ -218,17 +225,23 @@ export interface RemixTestConfig {
    * PlaywrightTestConfig object. CLI `--playwrightConfig` only accepts a file path.
    */
   playwrightConfig?: string | PlaywrightTestConfig
-  /** Filter tests to a specific playwright project or comma-separated list of projects (--project) */
-  project?: string
-  /** Test reporter (--reporter) */
-  reporter?: string
   /**
    * Pool used to run server and E2E test files. Forked child processes are the default,
    * but worker threads are available for projects that prefer the previous behavior.
    */
   pool?: RemixTestPool
-  /** Comma-separated list of test types to run (--type) */
-  type?: string
+  /**
+   * Filter tests to specific playwright project(s) (--project). Accepts a single
+   * project name or an array of names; `--project` may be repeated on the CLI.
+   */
+  project?: string | string[]
+  /** Test reporter (--reporter) */
+  reporter?: string
+  /**
+   * Test type(s) to run (--type). Accepts a single type or an array of types;
+   * `--type` may be repeated on the CLI. Valid values: "server", "browser", "e2e".
+   */
+  type?: string | string[]
   /** Watch mode — re-run tests on file changes (--watch) */
   watch?: boolean
 }
@@ -251,17 +264,17 @@ export interface ResolvedRemixTestConfig {
       }
     | undefined
   glob: {
-    test: string
-    browser: string
-    e2e: string
-    exclude: string
+    test: string[]
+    browser: string[]
+    e2e: string[]
+    exclude: string[]
   }
   playwrightConfig: string | PlaywrightTestConfig | undefined
-  project: string | undefined
+  project: string[] | undefined
   reporter: string
   pool: RemixTestPool
   setup: string | undefined
-  type: string
+  type: string[]
   watch: boolean
 }
 
@@ -274,10 +287,10 @@ export async function loadConfig(args: string[] = process.argv.slice(2), cwd = p
 
 export function getRemixTestHelpText(_target: NodeJS.WriteStream = process.stdout): string {
   let lines = [
-    'Usage: remix-test [glob] [options]',
+    'Usage: remix-test [glob...] [options]',
     '',
     'Arguments:',
-    `  glob                     Glob pattern for test files (default: "${defaultValues.glob.test}")`,
+    `  glob                     Glob pattern(s) for test files (default: "${defaultValues.glob.test.join(', ')}")`,
     '',
     'Options:',
   ]
@@ -297,6 +310,19 @@ function parseCliArgs(args: string[]) {
   return util.parseArgs({ args, options: cliOptions, allowPositionals: true })
 }
 
+function toArray<T>(value: T | readonly T[]): T[] {
+  return Array.isArray(value) ? [...value] : [value as T]
+}
+
+function toCommaSeparatedArray(value: string | readonly string[]): string[] {
+  return toArray(value).flatMap((item) =>
+    item
+      .split(',')
+      .map((part) => part.trim())
+      .filter(Boolean),
+  )
+}
+
 function resolveConfig(
   fileConfig: RemixTestConfig,
   { values: cliValues, positionals }: ReturnType<typeof parseCliArgs>,
@@ -304,14 +330,18 @@ function resolveConfig(
   let fileCoverage = typeof fileConfig.coverage === 'boolean' ? {} : fileConfig.coverage || {}
   return {
     glob: {
-      test:
-        positionals[0] ??
-        cliValues['glob.test'] ??
-        fileConfig.glob?.test ??
-        defaultValues.glob.test,
-      browser: cliValues['glob.browser'] ?? fileConfig.glob?.browser ?? defaultValues.glob.browser,
-      e2e: cliValues['glob.e2e'] ?? fileConfig.glob?.e2e ?? defaultValues.glob.e2e,
-      exclude: cliValues['glob.exclude'] ?? fileConfig.glob?.exclude ?? defaultValues.glob.exclude,
+      test: toArray(
+        positionals.length > 0
+          ? positionals
+          : (cliValues['glob.test'] ?? fileConfig.glob?.test ?? defaultValues.glob.test),
+      ),
+      browser: toArray(
+        cliValues['glob.browser'] ?? fileConfig.glob?.browser ?? defaultValues.glob.browser,
+      ),
+      e2e: toArray(cliValues['glob.e2e'] ?? fileConfig.glob?.e2e ?? defaultValues.glob.e2e),
+      exclude: toArray(
+        cliValues['glob.exclude'] ?? fileConfig.glob?.exclude ?? defaultValues.glob.exclude,
+      ),
     },
     browser: {
       echo: cliValues['browser.echo'] ?? fileConfig.browser?.echo ?? defaultValues.browser.echo,
@@ -324,14 +354,20 @@ function resolveConfig(
       cliValues.coverage === true || !!fileConfig.coverage
         ? {
             dir: cliValues['coverage.dir'] ?? fileCoverage.dir ?? defaultValues.coverage!.dir,
-            include:
-              cliValues['coverage.include'] ??
-              fileCoverage.include ??
-              defaultValues.coverage!.include,
-            exclude:
-              cliValues['coverage.exclude'] ??
-              fileCoverage.exclude ??
-              defaultValues.coverage!.exclude,
+            include: (() => {
+              let raw =
+                cliValues['coverage.include'] ??
+                fileCoverage.include ??
+                defaultValues.coverage!.include
+              return raw === undefined ? undefined : toArray(raw)
+            })(),
+            exclude: (() => {
+              let raw =
+                cliValues['coverage.exclude'] ??
+                fileCoverage.exclude ??
+                defaultValues.coverage!.exclude
+              return raw === undefined ? undefined : toArray(raw)
+            })(),
             statements:
               cliValues['coverage.statements'] !== undefined
                 ? Number(cliValues['coverage.statements'])
@@ -361,10 +397,13 @@ function resolveConfig(
     setup: cliValues.setup ?? fileConfig.setup ?? defaultValues.setup,
     playwrightConfig:
       cliValues.playwrightConfig ?? fileConfig.playwrightConfig ?? defaultValues.playwrightConfig,
-    project: cliValues.project ?? fileConfig.project ?? defaultValues.project,
-    reporter: cliValues.reporter ?? fileConfig.reporter ?? defaultValues.reporter,
     pool: resolvePool(cliValues.pool ?? fileConfig.pool ?? defaultValues.pool),
-    type: cliValues.type ?? fileConfig.type ?? defaultValues.type,
+    project: (() => {
+      let raw = cliValues.project ?? fileConfig.project ?? defaultValues.project
+      return raw === undefined ? undefined : toCommaSeparatedArray(raw)
+    })(),
+    reporter: cliValues.reporter ?? fileConfig.reporter ?? defaultValues.reporter,
+    type: toCommaSeparatedArray(cliValues.type ?? fileConfig.type ?? defaultValues.type),
     watch: cliValues.watch ?? fileConfig.watch ?? defaultValues.watch,
   }
 }
@@ -388,11 +427,16 @@ async function loadConfigFile(
   for (let candidate of candidates) {
     try {
       await fsp.access(candidate)
-      let mod = await importModule(candidate, import.meta)
-      return mod.default ?? mod
     } catch {
-      // not found or failed to load — try next
+      // not found — try the next candidate
+      continue
     }
+    // The file exists; let import errors propagate rather than silently
+    // falling through to defaults — that masking is what hid "Windows
+    // absolute paths aren't valid ESM specifiers" by classifying every
+    // browser test as a server test.
+    let mod = await importModule(candidate, import.meta)
+    return mod.default ?? mod
   }
 
   return {}

@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, describe, it } from '@remix-run/test'
 
 import { createRoot, type Handle, type RemixNode } from '@remix-run/ui'
 import { renderToString } from '@remix-run/ui/server'

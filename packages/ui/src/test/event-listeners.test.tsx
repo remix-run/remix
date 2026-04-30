@@ -1,4 +1,5 @@
-import { describe, it, expect } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import { addEventListeners, TypedEventTarget, createRoot } from '../index.ts'
 import type { Dispatched } from '../runtime/event-listeners.ts'
 import type { Assert, Equal } from './utils.ts'

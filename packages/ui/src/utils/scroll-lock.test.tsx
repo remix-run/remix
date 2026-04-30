@@ -1,4 +1,5 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
 
 import { createRoot, type Handle } from '@remix-run/ui'
 
@@ -7,6 +8,7 @@ import { lockScroll, lockScrollOnToggle } from './scroll-lock.ts'
 let roots: ReturnType<typeof createRoot>[] = []
 let currentScrollX = 24
 let currentScrollY = 120
+let scrollToSpy: ReturnType<typeof mock.method>
 
 function dispatchBeforeToggle(target: HTMLElement, newState: 'closed' | 'open') {
   let event = new Event('beforetoggle', { bubbles: true }) as Event & {
@@ -64,7 +66,9 @@ beforeEach(() => {
     value: 980,
   })
 
-  vi.spyOn(window, 'scrollTo').mockImplementation(
+  scrollToSpy = mock.method(
+    window,
+    'scrollTo',
     (xOrOptions?: number | ScrollToOptions, y?: number) => {
       if (xOrOptions && typeof xOrOptions === 'object') {
         currentScrollX = xOrOptions.left ?? currentScrollX
@@ -88,7 +92,7 @@ afterEach(() => {
   document.body.innerHTML = ''
   document.body.removeAttribute('style')
   document.documentElement.removeAttribute('style')
-  vi.restoreAllMocks()
+  scrollToSpy?.mock.restore!()
 })
 
 describe('lockScroll', () => {
@@ -154,7 +158,7 @@ describe('lockScroll', () => {
     unlockSecond()
 
     expect(document.documentElement.style.overflow).toBe('')
-    expect(window.scrollTo).toHaveBeenCalledOnce()
+    expect(window.scrollTo).toHaveBeenCalledTimes(1)
   })
 })
 

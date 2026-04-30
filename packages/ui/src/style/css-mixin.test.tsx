@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { expect } from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { css } from './css-mixin.ts'

@@ -5,6 +5,8 @@ import type { Counts, TestResults } from './results.ts'
 export class TapReporter implements Reporter {
   #counter = 0
   #total = 0
+  #files = new Set<string>()
+  #suites = new Set<string>()
 
   onSectionStart(_label: string) {}
 
@@ -14,6 +16,11 @@ export class TapReporter implements Reporter {
     }
 
     let envComment = env ? ` # ${env}` : ''
+
+    for (let test of results.tests) {
+      if (test.filePath) this.#files.add(test.filePath)
+      if (test.suiteName) this.#suites.add(test.suiteName)
+    }
 
     for (let test of results.tests) {
       this.#counter++
@@ -48,6 +55,8 @@ export class TapReporter implements Reporter {
   onSummary(counts: Counts, durationMs: number) {
     let { passed, failed, skipped, todo } = counts
     console.log(`1..${this.#total}`)
+    console.log(`# files ${this.#files.size}`)
+    console.log(`# suites ${this.#suites.size}`)
     console.log(`# tests ${passed + failed + skipped + todo}`)
     console.log(`# pass ${passed}`)
     console.log(`# fail ${failed}`)
