@@ -218,7 +218,7 @@ export function createUwsRequestHandler(
 }
 
 /**
- * Starts a high-performance Node.js server that sends incoming requests to a Fetch API handler.
+ * Starts a server that sends incoming requests to a Fetch API handler.
  *
  * @param handler The fetch handler to use for processing incoming requests
  * @param options Server options
