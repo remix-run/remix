@@ -133,11 +133,6 @@ export const CLI_ERROR_DEFINITIONS = {
     title: 'Unknown help topic',
     fix: 'Run `remix help` to see available commands and help topics.',
   },
-  unknownSkillsCommand: {
-    code: 'RMX_UNKNOWN_SKILLS_COMMAND',
-    title: 'Unknown skills command',
-    fix: 'Run `remix skills --help` to see available skills commands.',
-  },
 } satisfies Record<string, CliErrorDefinition>
 
 export class CliError extends Error {
@@ -318,13 +313,6 @@ export function unknownHelpTopic(topic: string): UsageError {
   return createUsageError(CLI_ERROR_DEFINITIONS.unknownHelpTopic, {
     context: { topic },
     message: `Unknown help topic: ${topic}`,
-  })
-}
-
-export function unknownSkillsCommand(command: string): UsageError {
-  return createUsageError(CLI_ERROR_DEFINITIONS.unknownSkillsCommand, {
-    context: { command },
-    message: `Unknown skills command: ${command}`,
   })
 }
 

@@ -68,11 +68,6 @@ async function runCommand(command: string, argv: string[], context: CliContext):
     return runDoctorCommand(argv, context)
   }
 
-  if (command === 'skills') {
-    let { runSkillsCommand } = await import('./commands/skills.ts')
-    return runSkillsCommand(argv, context)
-  }
-
   if (command === 'routes') {
     let { runRoutesCommand } = await import('./commands/routes.ts')
     return runRoutesCommand(argv, context)

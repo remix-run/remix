@@ -343,7 +343,7 @@ what it exports. Open the linked reference file when you need full examples.
 - `remix/test` — `describe`, `it`, and lifecycle hooks. Use as the test framework
 - `remix/test/cli` — programmatic test runner APIs such as `runRemixTest`
 - `remix/cli` — programmatic Remix CLI API. Use the `remix` executable for project commands such
-  as `remix test`, `remix routes`, `remix skills`, and `remix doctor`
+  as `remix test`, `remix routes`, and `remix doctor`
 - `remix/assert` — assertion helpers. Use in place of `node:assert` so messages render cleanly
   in the runner
 - `remix/terminal` — ANSI styles, color detection, style factories, and testable terminal streams.

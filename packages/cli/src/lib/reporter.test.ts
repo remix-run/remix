@@ -189,22 +189,19 @@ describe('reporter', () => {
               configureColors({ disabled: false })
               let reporter = createCommandReporter()
 
-              reporter.status.startStep('Checking skills')
+              reporter.status.startStep('Checking routes')
               reporter.status.succeedStep()
               reporter.status.summaryGap()
-              reporter.out.line('Checked Remix skills against .agents/skills: 2 installed.')
+              reporter.out.line('Checked Remix routes: 2 found.')
               reporter.finish()
 
               assert.deepEqual(stderrWrites, [
                 '\n',
-                '• Checking skills...\n',
-                '✓ Checking skills\n',
+                '• Checking routes...\n',
+                '✓ Checking routes\n',
                 '\n',
               ])
-              assert.deepEqual(stdoutWrites, [
-                'Checked Remix skills against .agents/skills: 2 installed.\n',
-                '\n',
-              ])
+              assert.deepEqual(stdoutWrites, ['Checked Remix routes: 2 found.\n', '\n'])
             }),
           ),
         ),
@@ -214,7 +211,7 @@ describe('reporter', () => {
 
   it('keeps bullet formatting centralized in the reporter', async () => {
     let commandDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), 'commands')
-    let files = ['doctor.ts', 'new.ts', 'routes.ts', 'skills.ts']
+    let files = ['doctor.ts', 'new.ts', 'routes.ts', 'test.ts']
 
     for (let file of files) {
       let source = await fs.readFile(path.join(commandDir, file), 'utf8')

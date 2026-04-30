@@ -4,27 +4,8 @@ export interface CompletionResult {
 }
 
 const COMPLETION_SHELLS = ['bash', 'zsh'] as const
-const HELP_COMMANDS = [
-  'completion',
-  'doctor',
-  'help',
-  'new',
-  'routes',
-  'skills',
-  'test',
-  'version',
-] as const
-const ROOT_COMMANDS = [
-  'completion',
-  'doctor',
-  'help',
-  'new',
-  'routes',
-  'skills',
-  'test',
-  'version',
-] as const
-const SKILLS_COMMANDS = ['install', 'list'] as const
+const HELP_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'test', 'version'] as const
+const ROOT_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'test', 'version'] as const
 
 export type CompletionShell = (typeof COMPLETION_SHELLS)[number]
 
@@ -183,10 +164,6 @@ function completeCommand(
     return completeRoutes(tokens, currentWord, usedGlobalFlags)
   }
 
-  if (command === 'skills') {
-    return completeSkills(tokens, currentWord, usedGlobalFlags)
-  }
-
   if (command === 'version') {
     return completeSimpleFlags(tokens, currentWord, usedGlobalFlags, [])
   }
@@ -220,12 +197,8 @@ function completeHelp(
     return completeValues(withHelpFlags([...HELP_COMMANDS], usedGlobalFlags), currentWord)
   }
 
-  let [topic, ...rest] = filteredTokens
+  let [, ...rest] = filteredTokens
   if (rest.length === 0) {
-    if (topic === 'skills') {
-      return completeValues(withHelpFlags([...SKILLS_COMMANDS], usedGlobalFlags), currentWord)
-    }
-
     return completeValues([], currentWord)
   }
 
@@ -342,122 +315,6 @@ function completeRoutes(
   )
 
   return completeValues(flags, currentWord)
-}
-
-function completeSkills(
-  tokens: string[],
-  currentWord: string,
-  usedGlobalFlags: Set<string>,
-): CompletionResult {
-  let filteredTokens = filterGlobalCommandTokens(tokens, usedGlobalFlags)
-  if (filteredTokens == null) {
-    return completeValues([], currentWord)
-  }
-
-  if (filteredTokens.length === 0) {
-    return completeValues(withHelpFlags([...SKILLS_COMMANDS], usedGlobalFlags), currentWord)
-  }
-
-  let [subcommand, ...rest] = filteredTokens
-  if (subcommand === 'install') {
-    return completeSkillsInstall(rest, currentWord, usedGlobalFlags)
-  }
-
-  if (subcommand === 'list') {
-    return completeSkillsList(rest, currentWord, usedGlobalFlags)
-  }
-
-  return completeValues([], currentWord)
-}
-
-function completeSkillsInstall(
-  tokens: string[],
-  currentWord: string,
-  usedGlobalFlags: Set<string>,
-): CompletionResult {
-  let filteredTokens = filterGlobalCommandTokens(tokens, usedGlobalFlags)
-  if (filteredTokens == null) {
-    return completeValues([], currentWord)
-  }
-
-  let hasDir = false
-  let expectsDir = false
-
-  for (let token of filteredTokens) {
-    if (expectsDir) {
-      expectsDir = false
-      continue
-    }
-
-    if (token === '--dir') {
-      hasDir = true
-      expectsDir = true
-      continue
-    }
-
-    return completeValues([], currentWord)
-  }
-
-  if (expectsDir) {
-    return { mode: 'files' }
-  }
-
-  return completeValues(withHelpFlags(!hasDir ? ['--dir'] : [], usedGlobalFlags), currentWord)
-}
-
-function completeSkillsList(
-  tokens: string[],
-  currentWord: string,
-  usedGlobalFlags: Set<string>,
-): CompletionResult {
-  return completeSkillsDirectoryCommand(tokens, currentWord, usedGlobalFlags)
-}
-
-function completeSkillsDirectoryCommand(
-  tokens: string[],
-  currentWord: string,
-  usedGlobalFlags: Set<string>,
-): CompletionResult {
-  let filteredTokens = filterGlobalCommandTokens(tokens, usedGlobalFlags)
-  if (filteredTokens == null) {
-    return completeValues([], currentWord)
-  }
-
-  let hasDir = false
-  let hasJson = false
-  let expectsDir = false
-
-  for (let token of filteredTokens) {
-    if (expectsDir) {
-      expectsDir = false
-      continue
-    }
-
-    if (token === '--dir') {
-      hasDir = true
-      expectsDir = true
-      continue
-    }
-
-    if (token === '--json') {
-      hasJson = true
-      continue
-    }
-
-    return completeValues([], currentWord)
-  }
-
-  if (expectsDir) {
-    return { mode: 'files' }
-  }
-
-  return completeValues(
-    withHelpFlags(
-      [...(!hasDir ? ['--dir'] : []), ...(!hasJson ? ['--json'] : [])],
-      usedGlobalFlags,
-    ),
-    currentWord,
-  )
 }
 
 function completeCompletionCommand(

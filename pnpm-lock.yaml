@@ -423,9 +423,6 @@ importers:
 
   packages/cli:
     dependencies:
-      '@remix-run/tar-parser':
-        specifier: workspace:^
-        version: link:../tar-parser
       '@remix-run/terminal':
         specifier: workspace:^
         version: link:../terminal

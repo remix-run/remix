@@ -57,12 +57,28 @@ describe('completion command', () => {
   })
 
   it('returns machine-readable completions in plumbing mode', async () => {
-    let result = await captureOutput(() =>
-      runRemix(['completion', '--', '2', 'remix', 'skills', '']),
-    )
+    let result = await captureOutput(() => runRemix(['completion', '--', '1', 'remix', '']))
 
     assert.equal(result.exitCode, 0)
-    assert.equal(result.stdout, 'mode:values\ninstall\nlist\n-h\n--help\n--no-color\n')
+    assert.equal(
+      result.stdout,
+      [
+        'mode:values',
+        'completion',
+        'doctor',
+        'help',
+        'new',
+        'routes',
+        'test',
+        'version',
+        '-h',
+        '--help',
+        '--no-color',
+        '-v',
+        '--version',
+        '',
+      ].join('\n'),
+    )
     assert.equal(result.stderr, '')
   })
 })

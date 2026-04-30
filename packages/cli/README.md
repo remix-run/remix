@@ -9,7 +9,6 @@ Command-line interface for creating and managing Remix projects.
 - Check project environment and Remix app conventions with `remix doctor`
 - Create low-risk project and controller files with `remix doctor --fix`
 - Inspect the current app route tree with `remix routes`
-- Sync Remix skills into `.agents/skills` with `remix skills`
 - Run project tests with `remix test`
 - Print the current Remix version with `remix version`
 - Use the same CLI through the `remix` package or the `remix/cli` API
@@ -51,7 +50,6 @@ remix doctor --fix
 remix routes
 remix routes --table
 remix routes --table --no-headers
-remix skills install
 remix test
 remix version
 remix --no-color doctor
@@ -69,7 +67,6 @@ await runRemix(['doctor', '--fix'])
 await runRemix(['routes'])
 await runRemix(['routes', '--table'])
 await runRemix(['routes', '--table', '--no-headers'])
-await runRemix(['skills', 'list'])
 await runRemix(['test'])
 await runRemix(['version'])
 ```
