@@ -8,9 +8,14 @@ import {
   resolveFilePath,
 } from './paths.ts'
 
-export interface AssetRouteDefinition {
+interface AssetRouteDefinition {
   urlPattern: string
   filePattern: string
+}
+
+interface RouteConfig {
+  fileMap: Readonly<Record<string, string>>
+  rootDir: string
 }
 
 interface CompiledRoute {
@@ -34,25 +39,23 @@ function normalizeFilePattern(pattern: string): string {
   return normalizePathname(pattern)
 }
 
-export function compileRoutes(options: {
-  basePath: string
-  fileMap: Readonly<Record<string, string>>
-  rootDir: string
-}): CompiledRoutes {
-  if (Object.keys(options.fileMap).length === 0) {
+export function compileRoutes(basePath: string, routeConfigs: readonly RouteConfig[]): CompiledRoutes {
+  if (routeConfigs.every((routeConfig) => Object.keys(routeConfig.fileMap).length === 0)) {
     throw new Error('createAssetServer() requires at least one configured fileMap entry.')
   }
 
-  let compiledRoutes = Object.entries(options.fileMap).map(([urlPattern, filePattern]) =>
-    compileRoute(
-      {
-        urlPattern,
-        filePattern,
-      },
-      {
-        basePath: options.basePath,
-        rootDir: options.rootDir,
-      },
+  let compiledRoutes = routeConfigs.flatMap((routeConfig) =>
+    Object.entries(routeConfig.fileMap).map(([urlPattern, filePattern]) =>
+      compileRoute(
+        {
+          filePattern,
+          urlPattern,
+        },
+        {
+          basePath,
+          rootDir: routeConfig.rootDir,
+        },
+      ),
     ),
   )
 

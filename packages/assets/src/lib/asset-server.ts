@@ -3,7 +3,7 @@ import * as fs from 'node:fs'
 import { createAccessPolicy } from './access.ts'
 import { isAssetServerCompilationError } from './compilation-error.ts'
 import { getFingerprintRequestCacheControl, parseFingerprintSuffix } from './fingerprint.ts'
-import { getInjectedPackageFileMap } from './injected-packages.ts'
+import { getInjectedPackageRouteConfigs } from './injected-packages.ts'
 import { normalizeFilePath, normalizePathname } from './paths.ts'
 import { compileRoutes } from './routes.ts'
 import type { CompiledRoutes } from './routes.ts'
@@ -456,14 +456,13 @@ function resolveAssetServerOptions(options: AssetServerOptions): ResolvedAssetSe
     minify: options.minify ?? false,
     onError: options.onError ?? defaultErrorHandler,
     rootDir,
-    routes: compileRoutes({
-      basePath,
-      fileMap: {
-        ...options.fileMap,
-        ...getInjectedPackageFileMap(rootDir),
+    routes: compileRoutes(basePath, [
+      {
+        fileMap: options.fileMap,
+        rootDir,
       },
-      rootDir,
-    }),
+      ...getInjectedPackageRouteConfigs(),
+    ]),
     sourceMapSourcePaths: options.sourceMapSourcePaths ?? 'url',
     sourceMaps: options.sourceMaps,
     scriptsTarget: resolveScriptTarget(options.target),

@@ -1,7 +1,7 @@
 import * as fs from 'node:fs'
 import { fileURLToPath } from 'node:url'
 
-import { getFilePathDirectory, getRelativeFilePath, normalizeFilePath } from './paths.ts'
+import { getFilePathDirectory, normalizeFilePath } from './paths.ts'
 
 type ResolvedInjectedPackage = {
   packageJsonPath: string
@@ -26,13 +26,20 @@ export function isInjectedPackageFilePath(filePath: string): boolean {
   return false
 }
 
-export function getInjectedPackageFileMap(rootDir: string): Record<string, string> {
-  return Object.fromEntries(
-    injectedPackageNames.map((packageName) => [
-      getInjectedPackageRoutePattern(packageName),
-      `${toRelativePattern(rootDir, getResolvedInjectedPackage(packageName).packageRoot)}/*path`,
-    ]),
-  )
+export function getInjectedPackageRouteConfigs(): {
+  fileMap: Record<string, string>
+  rootDir: string
+}[] {
+  return injectedPackageNames.map((packageName) => {
+    let { packageRoot } = getResolvedInjectedPackage(packageName)
+
+    return {
+      fileMap: {
+        [getInjectedPackageRoutePattern(packageName)]: `${packageName}/*path`,
+      },
+      rootDir: getInjectedPackageRouteRoot(packageRoot, packageName),
+    }
+  })
 }
 
 export function getInjectedPackageNameForSpecifier(specifier: string): string | null {
@@ -99,7 +106,12 @@ function getInjectedPackageRoutePattern(packageName: string): string {
   return `${injectedPackagesBasePath}/${packageName}/*path`
 }
 
-function toRelativePattern(rootDir: string, targetDirectory: string): string {
-  let relativePath = getRelativeFilePath(rootDir, targetDirectory)
-  return relativePath === '' ? '.' : relativePath.replace(/\/+$/, '')
+function getInjectedPackageRouteRoot(packageRoot: string, packageName: string): string {
+  let routeRoot = packageRoot
+
+  for (let _segment of packageName.split('/')) {
+    routeRoot = getFilePathDirectory(routeRoot)
+  }
+
+  return routeRoot
 }
