@@ -15,7 +15,7 @@ type Mutable<T> = T extends unknown ? { -readonly [K in keyof T]: T[K] } : never
  * @returns The parsed pattern AST.
  * @throws {RoutePatternParseError} When the source is malformed.
  */
-export function parsePattern(source: string): RoutePatternAST {
+export function parsePattern<source extends string>(source: source): RoutePatternAST<source> {
   let spans = split(source)
 
   return {

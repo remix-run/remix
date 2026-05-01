@@ -5,7 +5,7 @@ export type PartPatternToken =
   | { readonly type: '(' | ')' }
   | { readonly type: ':' | '*'; readonly name: string }
 
-/** Parsed form of a single URL part (hostname or pathname). Plain data — no methods, no caches. */
+/** Parsed form of a single URL part (hostname or pathname). */
 export type PartPatternAST = {
   readonly tokens: ReadonlyArray<PartPatternToken>
   /** Maps a `(` token index to the index of its matching `)`. */
@@ -13,8 +13,14 @@ export type PartPatternAST = {
   readonly type: 'hostname' | 'pathname'
 }
 
-/** Parsed form of a route pattern. Plain data — no methods, no caches. */
-export type RoutePatternAST = {
+/**
+ * Parsed form of a route pattern.
+ *
+ * The `source` generic is preserved through TS alias inference (no runtime
+ * field needed) so downstream APIs like `toHref` can derive typed params
+ * from the original pattern source string.
+ */
+export type RoutePatternAST<source extends string = string> = {
   readonly protocol: 'http' | 'https' | 'http(s)' | null
   readonly hostname: PartPatternAST | null
   readonly port: string | null
