@@ -2,10 +2,48 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { getFixturePath } from '../../test/fixtures.ts'
-import { inspectControllerOwnership } from './controller-ownership.ts'
+import { buildOwnedSubtrees, inspectControllerOwnership } from './controller-ownership.ts'
 import { loadRouteManifest } from './route-map.ts'
 
 describe('controller ownership', () => {
+  it('does not plan a root owner when the root route map has no direct leaf routes', () => {
+    let subtrees = buildOwnedSubtrees([
+      {
+        children: [
+          {
+            children: [],
+            key: 'index',
+            kind: 'route',
+            method: 'GET',
+            name: 'main.index',
+          },
+        ],
+        key: 'main',
+        kind: 'group',
+        name: 'main',
+      },
+      {
+        children: [
+          {
+            children: [],
+            key: 'login',
+            kind: 'route',
+            method: 'GET',
+            name: 'auth.login',
+          },
+        ],
+        key: 'auth',
+        kind: 'group',
+        name: 'auth',
+      },
+    ])
+
+    assert.deepEqual(
+      subtrees.map((subtree) => subtree.routeName),
+      ['main', 'auth'],
+    )
+  })
+
   it('tracks duplicate owner files for a single route subtree', async () => {
     let routeManifest = await loadRouteManifest(getFixturePath('doctor-duplicate-owner'))
     let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)

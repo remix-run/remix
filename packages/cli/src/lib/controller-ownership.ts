@@ -71,7 +71,11 @@ export function buildOwnedSubtrees(
   parentSegments: string[] = [],
   subtrees: OwnedSubtreePlan[] = [],
 ): OwnedSubtreePlan[] {
-  if (parentSegments.length === 0 && subtrees.length === 0) {
+  if (
+    parentSegments.length === 0 &&
+    subtrees.length === 0 &&
+    tree.some((node) => node.kind === 'route')
+  ) {
     addSubtreePlan(ROOT_ROUTE_NAME, [], subtrees)
   }
 

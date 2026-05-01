@@ -63,6 +63,55 @@ describe('doctor command', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('does not require a root action controller when the root route map has no direct leaves', async () => {
+    let projectDir = await createTempProject(
+      {
+        'app/actions/auth/controller.ts': 'export default {}',
+        'app/actions/main/controller.ts': 'export default {}',
+        'app/routes.ts': [
+          "import { get, route } from 'remix/routes'",
+          '',
+          'export const routes = {',
+          "  main: route('/', {",
+          "    index: get('/'),",
+          '  }),',
+          "  auth: route('auth', {",
+          "    login: get('login'),",
+          '  }),',
+          '}',
+        ].join('\n'),
+        'package.json': JSON.stringify(
+          {
+            dependencies: {
+              remix: 'workspace:*',
+            },
+            engines: {
+              node: '>=24.3.0',
+            },
+            name: 'doctor-nested-root-fixture',
+            private: true,
+            type: 'module',
+          },
+          null,
+          2,
+        ),
+      },
+      { linkRemix: true },
+    )
+
+    try {
+      let result = await runDoctor([], projectDir)
+
+      assert.equal(result.status, 0, result.stderr)
+      assert.match(result.stdout, /✓ actions/)
+      assert.match(result.stdout, /Doctor found no issues\./)
+      assert.doesNotMatch(result.stdout, /Root route map is missing action controller/)
+      assert.equal(result.stderr, '')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('applies no fixes for a clean fixture', async () => {
     let result = await runDoctor(['--fix'], getFixturePath('doctor-clean'))
 
@@ -992,11 +1041,11 @@ describe('doctor command', () => {
 
       assert.equal(fixResult.status, 0, fixResult.stderr)
       assert.match(fixResult.stdout, /✓ actions/)
-      assert.match(fixResult.stdout, /Created app\/actions\/controller\.tsx/)
       assert.match(fixResult.stdout, /Created app\/actions\/auth\/controller\.tsx/)
       assert.match(fixResult.stdout, /Created app\/actions\/auth\/forgot-password\/controller\.tsx/)
       assert.match(fixResult.stdout, /Created app\/actions\/auth\/reset-password\/controller\.tsx/)
-      assert.match(fixResult.stdout, /Applied 4 fixes\./)
+      assert.doesNotMatch(fixResult.stdout, /Created app\/actions\/controller\.tsx/)
+      assert.match(fixResult.stdout, /Applied 3 fixes\./)
       assert.equal(fixResult.stderr, '')
 
       let authSource = await fs.readFile(
