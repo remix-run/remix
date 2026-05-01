@@ -92,7 +92,9 @@ redirect(routes.account.orders.show.href({ orderId: '42' }))
 
 ## Actions
 
-An action is a handler for a single leaf route. Type it with `BuildAction`:
+An action is the handler for one leaf route. In Remix app code, actions should live in controllers.
+Use `BuildAction` only when a reusable helper needs to type one action before it is added to a
+controller or when you are doing low-level router wiring outside the `app/actions` convention:
 
 ```typescript
 import type { BuildAction } from 'remix/fetch-router'
@@ -118,7 +120,7 @@ Actions with inline middleware:
 ```typescript
 import { requireAuth } from 'remix/auth-middleware'
 
-router.get(routes.account, {
+router.get(routes.account.index, {
   middleware: [requireAuth()],
   handler: accountAction.handler,
 })
@@ -216,7 +218,10 @@ with the server.
 
 ## Controllers
 
-A controller mirrors a route map. Each key in `actions` matches a key in the route definition.
+A controller owns the direct leaf routes in one route map. Each key in `actions` matches a direct
+leaf route key in the route definition passed to `router.map(...)`. Nested route-map keys do not
+belong inside a controller's `actions`; map those route maps with their own controllers.
+
 Pass `AppContext` as the second generic to `Controller` so `get(Database)`, `get(Session)`,
 `get(Auth)`, etc. are typed against your middleware stack.
 
@@ -242,38 +247,84 @@ export default {
 } satisfies Controller<typeof routes.books, AppContext>
 ```
 
-### Nested controllers
+### Root controller
 
-When a route map contains nested maps, the controller nests too:
+The root route map uses `app/actions/controller.tsx` and owns only top-level leaf routes:
 
 ```typescript
 // routes.ts
 export const routes = route({
+  assets: get('/assets/*path'),
+  home: '/',
   account: route('account', {
     index: '/',
     settings: form('settings', { formMethod: 'PUT', names: { action: 'update' } }),
-    orders: resources('orders', { only: ['index', 'show'], param: 'orderId' }),
   }),
 })
 
-// controllers/account/controller.tsx
-import settingsController from './settings/controller.tsx'
-import ordersController from './orders/controller.tsx'
+// app/actions/controller.tsx
+export default {
+  actions: {
+    async assets({ request }) {
+      return (await assetServer.fetch(request)) ?? new Response('Not Found', { status: 404 })
+    },
+    home() {
+      return render(<HomePage />)
+    },
+  },
+} satisfies Controller<typeof routes, AppContext>
+```
 
+Because `account` is a nested route map, it is not an action key in the root controller.
+
+### Nested route maps
+
+Nested route maps use their own shallow controllers under `app/actions/<route-key>/controller.tsx`.
+Directory names under `app/actions/` are route-map keys, not URL path segments.
+
+```typescript
+// app/actions/account/controller.tsx
 export default {
   middleware: [requireAuth()],
   actions: {
-    index() { return render(<AccountPage />) },
-    settings: settingsController,
-    orders: ordersController,
+    index() {
+      return render(<AccountPage />)
+    },
   },
 } satisfies Controller<typeof routes.account, AppContext>
+
+// app/actions/account/settings/controller.tsx
+export default {
+  middleware: [requireAuth()],
+  actions: {
+    index() {
+      return render(<SettingsPage />)
+    },
+    update() {
+      return redirect(routes.account.index.href(), 303)
+    },
+  },
+} satisfies Controller<typeof routes.account.settings, AppContext>
+```
+
+Then map each route map explicitly:
+
+```typescript
+import rootController from './actions/controller.tsx'
+import accountController from './actions/account/controller.tsx'
+import accountSettingsController from './actions/account/settings/controller.tsx'
+
+let router = createRouter({ middleware })
+
+router.map(routes, rootController)
+router.map(routes.account, accountController)
+router.map(routes.account.settings, accountSettingsController)
 ```
 
 ### Controller middleware
 
-The `middleware` array on a controller runs for every action in that subtree, before action-level
-middleware:
+The `middleware` array on a controller runs only for the direct actions in that controller, before
+action-level middleware. It does not apply to nested route-map controllers.
 
 ```typescript
 export default {
@@ -286,17 +337,21 @@ export default {
 
 ## Registering Routes
 
-Use `router.map` for route maps (controllers) and verb methods for leaf routes:
+Use `router.map` for route maps and controllers. Map each nested route map explicitly. Use verb
+methods only for low-level router wiring outside the `app/actions` controller convention.
 
 ```typescript
 let router = createRouter({ middleware })
 
-// Route map → controller
+// Route maps → shallow controllers
+router.map(routes, rootController)
+router.map(routes.contact, contactController)
 router.map(routes.auth, authController)
+router.map(routes.auth.login, authLoginController)
 router.map(routes.admin, adminController)
+router.map(routes.admin.books, adminBooksController)
 
-// Leaf route → action
-router.map(routes.home, home)
+// Leaf route → one-off action
 router.get(routes.search, searchAction)
 router.post(routes.logout, logoutAction)
 ```

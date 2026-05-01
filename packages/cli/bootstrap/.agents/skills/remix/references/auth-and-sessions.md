@@ -326,7 +326,7 @@ export default {
         authAccountId: authAccount.id,
       })
 
-      return redirect(returnTo ?? routes.account.href())
+      return redirect(returnTo ?? routes.account.index.href())
     },
   },
 } satisfies Controller<typeof routes.auth.google>
@@ -356,7 +356,7 @@ async function refreshGoogleTokens({ get }) {
 
 ### Controller-level protection
 
-Apply `requireAuth()` to an entire controller subtree:
+Apply `requireAuth()` to every action in one shallow controller:
 
 ```typescript
 import { requireAuth } from 'remix/auth-middleware'
@@ -367,9 +367,29 @@ export default {
     index() {
       /* guaranteed authenticated */
     },
-    settings: settingsController,
   },
 } satisfies Controller<typeof routes.account>
+```
+
+Nested route maps need their own explicit protection:
+
+```typescript
+// app/router.ts
+router.map(routes.account, accountController)
+router.map(routes.account.settings, accountSettingsController)
+
+// app/actions/account/settings/controller.tsx
+export default {
+  middleware: [requireAuth()],
+  actions: {
+    index() {
+      /* guaranteed authenticated */
+    },
+    update() {
+      /* guaranteed authenticated */
+    },
+  },
+} satisfies Controller<typeof routes.account.settings>
 ```
 
 ### Stacking middleware
@@ -394,7 +414,7 @@ Apply middleware to a single route:
 ```typescript
 import { Auth, requireAuth } from 'remix/auth-middleware'
 
-router.get(routes.account, {
+router.get(routes.account.index, {
   middleware: [requireAuth()],
   handler(context) {
     let auth = context.get(Auth)

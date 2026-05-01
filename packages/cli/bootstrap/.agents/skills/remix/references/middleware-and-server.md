@@ -200,7 +200,7 @@ Middleware can be applied at three levels:
    let router = createRouter({ middleware: [...] })
    ```
 
-2. **Controller-level** — runs for all actions in a controller subtree:
+2. **Controller-level** — runs for the direct actions in one shallow controller:
 
    ```typescript
    export default {
@@ -209,9 +209,12 @@ Middleware can be applied at three levels:
    } satisfies Controller<typeof routes.account>
    ```
 
+   Controller middleware does not flow into nested route-map controllers. Add the middleware to
+   each nested route-map controller that needs it.
+
 3. **Action-level** — runs for a single route:
    ```typescript
-   router.get(routes.account, {
+   router.get(routes.account.index, {
      middleware: [requireAuth()],
      handler: accountAction.handler,
    })
