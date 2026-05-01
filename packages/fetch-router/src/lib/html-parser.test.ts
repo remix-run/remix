@@ -6,7 +6,7 @@ import { parse } from './html-parser.ts'
 
 // Use the landing-page fixture from bench/fixtures as a realistic HTML document.
 // Expected counts were validated against node-html-parser's querySelectorAll.
-let fixtureHtml = readFileSync(
+const fixtureHtml = readFileSync(
   new URL('../../bench/fixtures/landing-page.html', import.meta.url),
   'utf-8',
 )
@@ -111,7 +111,10 @@ describe('parse()', () => {
 
     assert.equal(srcs.length, EXPECTED_IMG, 'every img should have a src')
     assert.ok(srcs.includes('/images/logo.svg'), 'should include /images/logo.svg')
-    assert.ok(srcs.includes('/images/hero-screenshot.png'), 'should include /images/hero-screenshot.png')
+    assert.ok(
+      srcs.includes('/images/hero-screenshot.png'),
+      'should include /images/hero-screenshot.png',
+    )
   })
 
   it('parses a simple HTML snippet correctly', () => {
