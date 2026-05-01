@@ -10,6 +10,7 @@ A minimal, composable router built on the [web Fetch API](https://developer.mozi
 - **Declarative Route Maps**: Define your route structure upfront with type-safe route names and request methods
 - **Flexible Middleware**: Apply middleware globally, per-route, or to entire route hierarchies
 - **Easy Testing**: Use standard `fetch()` to test your routes - no special test harness required
+- **Crawling and Prerendering**: Walk your router with `crawl()` to generate a static build by following links and assets
 
 ## Installation
 
@@ -767,6 +768,56 @@ let button = html`<button>${icon} Click me</button>` // icon is not escaped
 **Warning**: Only use `html.raw` with trusted content. Unlike the regular `html` template tag, `html.raw` does not escape its interpolations, which can lead to XSS vulnerabilities if used with untrusted user input.
 
 See the [`html-template` documentation](https://github.com/remix-run/remix/tree/main/packages/html-template#readme) for more details.
+
+### Crawling and Prerendering
+
+The `crawl()` function fetches every reachable URL in a router and yields the results as an async iterable, making it easy to prerender a site to a static build. By default it starts at `/`, and spiders the site to download links and assets (CSS, JavaScript, images).
+
+```ts
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
+import { crawl } from 'remix/fetch-router'
+import { router } from './router.ts'
+
+for await (let { pathname, filepath, response } of crawl(router)) {
+  let outputPath = path.join('dist', filepath)
+  await fs.mkdir(path.dirname(outputPath), { recursive: true })
+  await fs.writeFile(outputPath, new Uint8Array(await response.arrayBuffer()))
+  console.log(`Crawled ${pathname} -> ${outputPath}`)
+}
+```
+
+Each crawl result has three properties:
+
+- `pathname` - the URL path that was fetched (e.g. `/about`)
+- `filepath` - the relative file path to write the response to (e.g., `/about/index.html`, `/styles.css`)
+- `response` - the `Response` returned by the router
+
+If any response is non-2xx, `crawl()` throws. This is intentional — for static-site generation, a missing page is almost always a bug worth surfacing rather than silently skipping.
+
+#### Crawl Options
+
+`crawl()` accepts a options to control its behavior:
+
+- `paths` - the initial URL paths to put in the queue (defaults to `['/']`)
+- `spider` - whether to discover and crawl linked documents in HTML responses (`<a href>`, `<link rel="alternate" href>`) (defaults to `true`)
+- `concurrency` - the maximum number of concurrent requests (defaults to `1`)
+
+#### Link Discovery
+
+By default, only the initial paths and it's referenced assets (CSS, JS, images) are fetched.
+
+When `spider` is `true`, the crawler discovers additional URLs by parsing each HTML response and inspecting:
+
+- `<a href>` for navigation links (skips `rel="nofollow"`)
+- `<link rel="alternate" href>` for alternate representations of the same page, e.g. markdown variants or RSS feeds (skips `rel="nofollow"`)
+- `<link href>` for stylesheets and other linked resources (skips `rel="preload"`, `rel="prefetch"`, `rel="modulepreload"`, and `rel="alternate"`)
+- `<script src>` and `<img src>` for scripts and images
+- Certain URL patterns are always skipped:
+  - absolute URLs (e.g. `https://example.com/...` or `//example.com/...`)
+  - non-navigable schemes (`mailto:`, `tel:`, `javascript:`, `data:`)
+  - fragment-only links (`#...`)
+  - paths that have already been visited
 
 ### Testing
 

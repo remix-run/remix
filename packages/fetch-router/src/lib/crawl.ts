@@ -4,53 +4,60 @@ import type { createRouter, Router } from './router.ts'
 
 const BASE_URL = 'http://localhost'
 
-/** The result of crawling a single URL. */
+/**
+ * A single result yielded by {@link crawl}, representing one URL that was
+ * fetched and the file path it should be written to.
+ */
 export interface CrawlResult {
-  /** The pathname that was crawled (e.g. `/about`, `/assets/styles.css`). */
+  /** The pathname that was fetched (e.g. `/about`, `/assets/styles.css`). */
   pathname: string
-  /** The relative file path where the response should be written (e.g. `/about/index.html`, `/assets/styles.css`). */
+  /**
+   * The relative file path where the response should be written
+   * (e.g. `/about/index.html`, `/assets/styles.css`). HTML responses are
+   * mapped to `index.html` files inside a directory; non-HTML responses
+   * keep their original pathname.
+   */
   filepath: string
-  /** The response from the router for this pathname. */
+  /** The `Response` returned by the router for this pathname. */
   response: Response
 }
 
 /** Options for the {@link crawl} function. */
 export interface CrawlOptions {
-  /**
-   * Initial URL paths to put in the crawl queue (defaults to `['/']`)
-   */
+  /** Initial URL paths to put in the crawl queue (defaults to `['/']`). */
   paths?: string[]
   /**
-   * Whether to crawl links found in HTML documents (default `true`)
+   * Whether to follow navigation-style links found in HTML responses
+   * (`<a href>` and `<link rel="alternate" href>`); defaults to `true`.
+   * When `false`, only the initial paths are fetched, but assets
+   * referenced by those pages (CSS, scripts, images) are still queued.
    */
   spider?: boolean
-  /**
-   * Maximum number of concurrent requests (default 1)
-   */
+  /** Maximum number of concurrent requests (defaults to `1`). */
   concurrency?: number
 }
 
 /**
  * Crawls a router by fetching pages and following links, yielding each result
  * as it is fetched. HTML responses are parsed for additional links and assets
- * to enqueue (disable via `spider:false`). Non-HTML responses are yielded as-is
- * with their pathname as the filepath.
+ * to enqueue (disable link-following with `spider: false`); non-HTML responses
+ * are yielded as-is with their pathname as the filepath.
+ *
+ * Throws if any response is non-2xx, which makes `crawl()` well-suited for
+ * static-site generation where every reachable page must build successfully.
  *
  * @example
- * import { crawl, createRouter } from 'remix/fetch-router'
- *
- * let router = createRouter()
- * router.get('/', homeHandler)
- * router.get('/about', aboutHandler)
+ * import { crawl } from 'remix/fetch-router'
+ * import { router } from './router.ts'
  *
  * for await (let { pathname, filepath, response } of crawl(router)) {
- *   await writeResponse(filepath, response);
- *   console.log(`Crawled ${pathname} -> ${filepath}`);
+ *   await writeResponse(filepath, response)
+ *   console.log(`Crawled ${pathname} -> ${filepath}`)
  * }
  *
- * @param router A `remix/fetch-router` created with {@link createRouter}.
+ * @param router A router created with {@link createRouter}.
  * @param options Optional crawl configuration.
- * @returns An async iterable of crawl results, yielding each page as it is fetched.
+ * @returns An async iterable of {@link CrawlResult} values, yielding each page as it is fetched.
  */
 export async function* crawl(
   router: Router,
@@ -153,7 +160,8 @@ function extractAssetPaths(elements: HTMLElement[], baseUrl: string): string[] {
         el.name === 'link' &&
         !rel(el).includes('preload') &&
         !rel(el).includes('prefetch') &&
-        !rel(el).includes('modulepreload'),
+        !rel(el).includes('modulepreload') &&
+        !rel(el).includes('alternate'),
     )
     .map((el) => el.getAttribute('href'))
 
@@ -171,7 +179,11 @@ function extractAssetPaths(elements: HTMLElement[], baseUrl: string): string[] {
 
 function extractLinkPaths(elements: HTMLElement[], baseUrl: string): string[] {
   return elements
-    .filter((el) => el.name === 'a' && !rel(el).includes('nofollow'))
+    .filter(
+      (el) =>
+        !rel(el).includes('nofollow') &&
+        (el.name === 'a' || (el.name === 'link' && rel(el).includes('alternate'))),
+    )
     .map((el) => el.getAttribute('href'))
     .filter((href): href is string => href != null)
     .filter((href) => !isNonNavigable(href))

@@ -256,4 +256,66 @@ describe('crawl(router)', () => {
     assert.equal(visitCount['/shared'], 1)
   })
 
+  it('follows same-site link[rel="alternate"] when spider is true', async () => {
+    let router = createRouter()
+    router.get('/', () =>
+      html('<link rel="alternate" type="text/markdown" href="/index.md"><h1>Home</h1>'),
+    )
+    router.get('/index.md', () => new Response('# Home', { headers: { 'Content-Type': 'text/markdown' } }))
+
+    let visited: string[] = []
+    for await (let { pathname } of crawl(router)) {
+      visited.push(pathname)
+    }
+    assert.deepEqual(visited.toSorted(), ['/', '/index.md'])
+  })
+
+  it('does not follow link[rel="alternate"] when spider is false', async () => {
+    let router = createRouter()
+    router.get('/', () =>
+      html('<link rel="alternate" type="text/markdown" href="/index.md"><h1>Home</h1>'),
+    )
+    router.get('/index.md', () => new Response('# Home', { headers: { 'Content-Type': 'text/markdown' } }))
+
+    let visited: string[] = []
+    for await (let { pathname } of crawl(router, { spider: false })) {
+      visited.push(pathname)
+    }
+    assert.deepEqual(visited, ['/'])
+  })
+
+  it('skips cross-origin link[rel="alternate"] hrefs', async () => {
+    let router = createRouter()
+    router.get('/', () =>
+      html(`
+        <link rel="alternate" type="application/rss+xml" href="https://example.com/feed.xml">
+        <link rel="alternate" type="application/rss+xml" href="//example.com/feed.xml">
+      `),
+    )
+
+    let visited: string[] = []
+    for await (let { pathname } of crawl(router)) {
+      visited.push(pathname)
+    }
+    assert.deepEqual(visited, ['/'])
+  })
+
+  it('does not follow link[rel="alternate nofollow"]', async () => {
+    let router = createRouter()
+    router.get('/', () =>
+      html(`
+        <link rel="alternate nofollow" type="text/markdown" href="/skip.md">
+        <link rel="alternate" type="text/markdown" href="/follow.md">
+      `),
+    )
+    router.get('/skip.md', () => new Response('skip', { headers: { 'Content-Type': 'text/markdown' } }))
+    router.get('/follow.md', () => new Response('follow', { headers: { 'Content-Type': 'text/markdown' } }))
+
+    let visited: string[] = []
+    for await (let { pathname } of crawl(router)) {
+      visited.push(pathname)
+    }
+    assert.deepEqual(visited.toSorted(), ['/', '/follow.md'])
+  })
+
 })
