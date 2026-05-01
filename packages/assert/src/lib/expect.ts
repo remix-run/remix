@@ -519,24 +519,6 @@ function stringify(value: unknown): string {
   }
 }
 
-/**
- * jest/vitest-style expect API. Returns an object of matchers that throw
- * {@link AssertionError} on failure. Supports `.not` for negation and
- * `.rejects` / `.resolves` for asserting on promises.
- *
- * Mock-aware matchers (`toHaveBeenCalled*`) read `received.mock.calls[i].arguments`,
- * which is the shape produced by `mock.fn()` from `@remix-run/test`.
- *
- * @example
- * expect(value).toBe(42)
- * expect(value).not.toBeNull()
- * await expect(fetch('/missing')).rejects.toThrow('Not found')
- * await expect(loadModule()).resolves.toBeUndefined()
- *
- * @param received - The value or function or promise to assert against.
- * @returns An {@link Expectation} object exposing matchers, `.not`,
- *          `.rejects`, and `.resolves`.
- */
 function expectImpl(received: unknown): Expectation {
   return {
     ...createMatchers(received, false),
@@ -561,4 +543,22 @@ function objectContaining<T extends object>(expected: T): T {
   return { [PARTIAL_MATCHER]: true, expected } as unknown as T
 }
 
+/**
+ * jest/vitest-style expect API. Returns an object of matchers that throw
+ * {@link AssertionError} on failure. Supports `.not` for negation and
+ * `.rejects` / `.resolves` for asserting on promises.
+ *
+ * Mock-aware matchers (`toHaveBeenCalled*`) read `received.mock.calls[i].arguments`,
+ * which is the shape produced by `mock.fn()` from `@remix-run/test`.
+ *
+ * @example
+ * expect(value).toBe(42)
+ * expect(value).not.toBeNull()
+ * await expect(fetch('/missing')).rejects.toThrow('Not found')
+ * await expect(loadModule()).resolves.toBeUndefined()
+ *
+ * @param received - The value or function or promise to assert against.
+ * @returns An {@link Expectation} object exposing matchers, `.not`,
+ *          `.rejects`, and `.resolves`.
+ */
 export const expect = Object.assign(expectImpl, { objectContaining })
