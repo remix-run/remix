@@ -1,14 +1,16 @@
-import type { BuildAction } from 'remix/fetch-router'
+import type { Controller } from 'remix/fetch-router'
 
 import type { routes } from '../routes.ts'
 import { Layout } from '../ui/layout.tsx'
 import { render } from '../utils/render.tsx'
 
-export const auth: BuildAction<'GET', typeof routes.auth> = {
-  handler({ request }) {
-    return render(<AuthPage />, request)
+export const auth = {
+  actions: {
+    index({ request }) {
+      return render(<AuthPage />, request)
+    },
   },
-}
+} satisfies Controller<typeof routes.auth>
 
 function AuthPage() {
   return () => (

@@ -10,7 +10,7 @@ interface PromptButtonProps extends SerializableProps {
 }
 
 export const PromptButton = clientEntry(
-  '/assets/app/ui/prompt-button.tsx#PromptButton',
+  '/assets/app/assets/prompt-button.tsx#PromptButton',
   function PromptButton(handle: Handle<PromptButtonProps>) {
     let state: CopyState = 'idle'
 

@@ -1,13 +1,16 @@
 import { createAssetServer } from 'remix/assets'
+import type { Controller } from 'remix/fetch-router'
 
-export const assets = createAssetServer({
+import type { routes } from '../routes.ts'
+
+const assetServer = createAssetServer({
   basePath: '/assets',
   rootDir: process.cwd(),
   fileMap: {
     'app/*path': 'app/*path',
     'node_modules/*path': 'node_modules/*path',
   },
-  allow: ['app/assets/**', 'app/ui/prompt-button.tsx', 'node_modules/**'],
+  allow: ['app/assets/**', 'node_modules/**'],
   deny: ['app/**/*.server.*'],
   sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
   scripts: {
@@ -16,3 +19,13 @@ export const assets = createAssetServer({
     },
   },
 })
+
+export const assets = {
+  actions: {
+    index: {
+      async handler({ request }) {
+        return (await assetServer.fetch(request)) ?? new Response('Not Found', { status: 404 })
+      },
+    },
+  },
+} satisfies Controller<typeof routes.assets>

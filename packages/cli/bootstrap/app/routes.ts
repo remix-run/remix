@@ -1,7 +1,13 @@
 import { get, route } from 'remix/routes'
 
 export const routes = route({
-  assets: get('/assets/*path'),
-  home: '/',
-  auth: '/auth',
+  assets: route('/assets', {
+    index: get('/*path'),
+  }),
+  home: route('/', {
+    index: '/',
+  }),
+  auth: route('/auth', {
+    index: '/',
+  }),
 })
