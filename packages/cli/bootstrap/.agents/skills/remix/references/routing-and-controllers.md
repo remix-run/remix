@@ -17,7 +17,7 @@ data is `data-and-validation.md`. For request lifecycle and middleware ordering,
 
 ## Route Builders
 
-Import all route builders from `remix/fetch-router/routes`.
+Import all route builders from `remix/routes`.
 
 ### `route(prefix, map)` — nested route group
 
@@ -27,7 +27,7 @@ call (when you want a shared URL prefix) or a plain object literal (when each le
 its absolute path).
 
 ```typescript
-import { route, get, post } from 'remix/fetch-router/routes'
+import { route, get, post } from 'remix/routes'
 
 export const routes = route({
   home: '/',

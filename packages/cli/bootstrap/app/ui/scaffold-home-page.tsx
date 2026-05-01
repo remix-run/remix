@@ -1,7 +1,7 @@
 // Delete this file and put your own home page in app/controllers/home.tsx
 import { css, type RemixNode } from 'remix/ui'
 
-import { PromptButton } from './prompt-button.tsx'
+import { PromptButton } from '../assets/prompt-button.tsx'
 import { routes } from '../routes.ts'
 
 const APP_DISPLAY_NAME = decodeURIComponent('%%RMX_APP_DISPLAY_NAME_URI_COMPONENT%%')
@@ -23,7 +23,10 @@ export function HomePage() {
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
         />
-        <script type="module" src={routes.assets.href({ path: 'app/assets/entry.ts' })}></script>
+        <script
+          type="module"
+          src={routes.assets.index.href({ path: 'app/assets/entry.ts' })}
+        ></script>
       </head>
       <body
         mix={css({
@@ -147,7 +150,7 @@ function GetStartedCard() {
         })}
       >
         <li>
-          <CardLink href="https://remix.run/docs" icon={<AtomIcon />} label="Remix Docs" />
+          <CardLink href="https://api.remix.run" icon={<AtomIcon />} label="Remix API" />
         </li>
         <li>
           <CardLink

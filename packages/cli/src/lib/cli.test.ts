@@ -448,9 +448,13 @@ describe('run', () => {
       assert.doesNotMatch(server, /remix\/node-fetch-server/)
       assert.doesNotMatch(server, /createRequestListener/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
+      await assertPathMissing(path.join(appDir, 'app', 'assets.ts'))
+      await assertPathExists(path.join(appDir, 'app', 'assets', 'prompt-button.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'controllers', 'assets.ts'))
       await assertPathExists(path.join(appDir, 'app', 'controllers', 'home.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'controllers', 'auth.tsx'))
       await assertPathMissing(path.join(appDir, 'app', 'controllers', 'about.tsx'))
+      await assertPathMissing(path.join(appDir, 'app', 'ui', 'prompt-button.tsx'))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }

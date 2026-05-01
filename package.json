@@ -18,6 +18,7 @@
   },
   "scripts": {
     "postinstall": "test -n \"${CI:-}\" || pnpm --filter @remix-run/ui exec playwright install",
+    "bootstrap": "node ./scripts/start-bootstrap.ts",
     "build": "pnpm -r build",
     "changes:preview": "node ./scripts/changes-preview.ts",
     "changes:validate": "node ./scripts/changes-validate.ts",

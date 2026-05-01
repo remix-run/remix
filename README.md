@@ -119,10 +119,8 @@ pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
 
 ## Agent Skills For Building Apps
 
-Agents that are starting a Remix 3 app from this repository should look in `skills/`:
-
-- `remix-project-layout` at `skills/remix-project-layout/SKILL.md`: Use this when defining or scaffolding the on-disk layout and file conventions of a Remix app.
-- `remix-ui` at `skills/remix-ui/SKILL.md`: Use this when building pages, layouts, interactions, styling, navigation, and UI tests in a Remix app.
+Agents that are starting a Remix 3 app from this repository should use the skill that ships with
+the [bootstrap template](./packages/cli/bootstrap/.agents/skills/remix/SKILL.md).
 
 ## Contributing
 
