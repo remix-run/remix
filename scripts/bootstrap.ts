@@ -15,14 +15,14 @@ if (targetPath == null || extraArgs.length > 0) {
 
 targetPath = validateTargetPath(targetPath)
 
-let targetDir = path.resolve(ROOT_DIR, targetPath)
+const targetDir = path.resolve(ROOT_DIR, targetPath)
 if (fs.existsSync(targetDir)) {
   console.error(`Error: ${path.relative(ROOT_DIR, targetDir)} already exists.`)
   console.error('Remove it first or choose a different target path.')
   process.exit(1)
 }
 
-let result = cp.spawnSync(
+const result = cp.spawnSync(
   'pnpm',
   [
     'exec',
