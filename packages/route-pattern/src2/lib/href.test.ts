@@ -1,6 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
+import dedent from 'dedent'
+
 import { RoutePatternHrefError, toHref } from './href.ts'
 import { parsePattern } from './parse.ts'
 
@@ -391,6 +393,60 @@ describe('toHref', () => {
       assert.equal(
         toHref(parsePattern('://example.com:8080/path')),
         'https://example.com:8080/path',
+      )
+    })
+  })
+})
+
+describe('RoutePatternHrefError', () => {
+  describe('missing-hostname', () => {
+    it('shows pattern', () => {
+      let ast = parsePattern('https://*:8080/api')
+      let error = new RoutePatternHrefError({ type: 'missing-hostname', ast })
+      assert.equal(
+        error.toString(),
+        dedent`
+          RoutePatternHrefError: pattern requires hostname
+
+          Pattern: https://:8080/api
+        `,
+      )
+    })
+  })
+
+  describe('missing-params', () => {
+    it('shows missing param, pattern, and params', () => {
+      let ast = parsePattern('https://example.com/:collection/:id')
+      let error = new RoutePatternHrefError({
+        type: 'missing-params',
+        ast,
+        part: ast.pathname,
+        missingParams: ['collection', 'id'],
+        params: {},
+      })
+      assert.equal(
+        error.toString(),
+        dedent`
+          RoutePatternHrefError: missing param(s): 'collection', 'id'
+
+          Pattern: https://example.com/:collection/:id
+          Params: {}
+        `,
+      )
+    })
+  })
+
+  describe('nameless-wildcard', () => {
+    it('shows error message with pattern', () => {
+      let ast = parsePattern('https://example.com/api/*/users')
+      let error = new RoutePatternHrefError({ type: 'nameless-wildcard', ast })
+      assert.equal(
+        error.toString(),
+        dedent`
+          RoutePatternHrefError: pattern contains nameless wildcard
+
+          Pattern: https://example.com/api/*/users
+        `,
       )
     })
   })
