@@ -1,21 +1,33 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { createTestRouter, loginAsAdmin, requestWithSession } from '../../test/helpers.ts'
+import {
+  assertContains,
+  createTestRouter,
+  loginAsAdmin,
+  requestWithSession,
+} from '../../test/helpers.ts'
 import { books } from '../data/schema.ts'
 import { db } from '../data/setup.ts'
 import { uploadsStorage as uploads } from '../utils/uploads.ts'
 
 const router = await createTestRouter()
 
-describe('uploads handler', () => {
-  it('serves uploaded files from storage', async () => {
+describe('root controller', () => {
+  it('GET / returns home page', async () => {
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(response.status, 200)
+    let html = await response.text()
+    assertContains(html, 'Welcome to the Bookstore')
+    assertContains(html, 'Browse Books')
+  })
+
+  it('GET /uploads/*key serves uploaded files from storage', async () => {
     let sessionId = await loginAsAdmin(router)
 
-    // Get initial book count
     let initialBookCount = await db.count(books)
 
-    // Create a multipart form with a file upload
     let boundary = '----WebKitFormBoundary7MA4YWxkTrZu0gW'
     let fileContent = 'fake image data'
     let formBody = [
@@ -63,7 +75,6 @@ describe('uploads handler', () => {
       `------${boundary}--`,
     ].join('\r\n')
 
-    // Create book with file upload
     let createRequest = requestWithSession('https://remix.run/admin/books', sessionId, {
       method: 'POST',
       headers: {
@@ -76,7 +87,6 @@ describe('uploads handler', () => {
     assert.equal(createResponse.status, 302)
     assert.ok(createResponse.headers.get('Location')?.includes('/admin/books'))
 
-    // Get the newly created book from the database
     let currentBookCount = await db.count(books)
     assert.equal(currentBookCount, initialBookCount + 1)
 
@@ -85,7 +95,6 @@ describe('uploads handler', () => {
     assert.equal(newBook.slug, 'book-with-cover')
     assert.ok(newBook.cover_url.startsWith('/uploads/'))
 
-    // Now fetch the uploaded file from the /uploads route using the book's cover_url
     let fileResponse = await router.fetch(`https://remix.run${newBook.cover_url}`)
 
     assert.equal(fileResponse.status, 200)
@@ -94,27 +103,24 @@ describe('uploads handler', () => {
     assert.equal(await fileResponse.text(), fileContent)
   })
 
-  it('returns 404 for non-existent files', async () => {
+  it('GET /uploads/*key returns 404 for non-existent files', async () => {
     let response = await router.fetch('https://remix.run/uploads/nonexistent/file.jpg')
 
     assert.equal(response.status, 404)
     assert.equal(await response.text(), 'File not found')
   })
 
-  it('serves files with correct content type', async () => {
-    // Store different file types
+  it('GET /uploads/*key serves files with correct content type', async () => {
     let pngFile = new File(['png data'], 'test.png', { type: 'image/png' })
     let pdfFile = new File(['pdf data'], 'test.pdf', { type: 'application/pdf' })
 
     await uploads.set('images/test.png', pngFile)
     await uploads.set('docs/test.pdf', pdfFile)
 
-    // Verify PNG
     let pngResponse = await router.fetch('https://remix.run/uploads/images/test.png')
     assert.equal(pngResponse.status, 200)
     assert.equal(pngResponse.headers.get('Content-Type'), 'image/png')
 
-    // Verify PDF
     let pdfResponse = await router.fetch('https://remix.run/uploads/docs/test.pdf')
     assert.equal(pdfResponse.status, 200)
     assert.equal(pdfResponse.headers.get('Content-Type'), 'application/pdf')
