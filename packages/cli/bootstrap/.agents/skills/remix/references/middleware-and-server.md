@@ -9,7 +9,7 @@ involves:
 - Writing custom middleware that sets typed context values
 - Adding fast-exit handling (static files, CORS preflights) versus request-enriching layers
   (sessions, auth, data loading)
-- Booting a Node `http` server with `createRequestListener`
+- Booting a Node server with `serve`
 
 For data and persistence specifics, see `data-and-validation.md`. For session and auth specifics,
 see `auth-and-sessions.md`.
@@ -219,25 +219,28 @@ Middleware can be applied at three levels:
 
 ## Node Server Setup
 
-Use `createRequestListener` to bridge Node's `http` module to the Fetch API router:
+Use `serve` to boot the default Node server around a Fetch API router:
 
 ```typescript
-import * as http from 'node:http'
-import { createRequestListener } from 'remix/node-fetch-server'
+import { serve } from 'remix/node-serve'
 
-let server = http.createServer(
-  createRequestListener(async (request) => {
+let port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 3000
+
+let server = serve(
+  async (request) => {
     try {
       return await router.fetch(request)
     } catch (error) {
       console.error(error)
       return new Response('Internal Server Error', { status: 500 })
     }
-  }),
+  },
+  { port },
 )
 
-let port = Number(process.env.PORT) || 3000
-server.listen(port, () => {
-  console.log(`http://localhost:${port}`)
-})
+await server.ready
+console.log(`Server listening on http://localhost:${server.port}`)
 ```
+
+Use `remix/node-fetch-server` and `createRequestListener` only when you need to own a standard
+Node `http` or `https` server directly.

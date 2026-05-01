@@ -13,7 +13,7 @@ npm run typecheck
 
 ## Building Features
 
-Refer to ./agents/skills/remix/SKILL.md
+Refer to ./.agents/skills/remix/SKILL.md
 
 ## Starter Layout
 

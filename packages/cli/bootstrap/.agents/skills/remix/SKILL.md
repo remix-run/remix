@@ -227,13 +227,16 @@ what it exports. Open the linked reference file when you need full examples.
 
 - `remix/fetch-router` — the router itself. Use for `createRouter`, controller and middleware
   types, and registering routes
-- `remix/fetch-router/routes` — declarative route builders. Use for `route`, `get`, `post`, `put`,
-  `del`, `form`, `resources` when defining `app/routes.ts`
-- `remix/node-fetch-server` — adapter from Node's `http` module to a Fetch-style router. Use for
-  `createRequestListener` in `server.ts`
+- `remix/routes` — declarative route builders. Use for `route`, `get`, `post`, `put`, `del`,
+  `form`, `resources` when defining `app/routes.ts`
+- `remix/node-serve` — default Node server for new apps. Use `serve` in `server.ts` when you want
+  Remix to manage the server lifecycle around a Fetch handler
+- `remix/node-fetch-server` — lower-level adapter from Node's `http` module to a Fetch-style
+  router. Use `createRequestListener` when you need to own the Node server yourself
 - `remix/assets` — browser asset server. Use for `createAssetServer` when serving compiled
-  scripts and styles, getting public hrefs, and emitting preloads. Shared compiler options such as
-  `target`, `sourceMaps`, `sourceMapSourcePaths`, and `minify` live at the top level
+  scripts and styles, getting public hrefs, and emitting preloads. Configure a `basePath`, and
+  keep `fileMap` URL patterns relative to it. Shared compiler options such as `target`,
+  `sourceMaps`, `sourceMapSourcePaths`, and `minify` live at the top level
 - `remix/headers` — typed header parsers and builders. Use when reading `Accept`, `Cookie`, or
   setting `CacheControl`, `Vary`, etc., instead of hand-formatting strings
 - `remix/response/redirect` — `redirect(href, status?)`. Use for the canonical "POST then redirect"
@@ -354,7 +357,7 @@ what it exports. Open the linked reference file when you need full examples.
 ### Define routes first
 
 ```typescript
-import { form, get, post, resources, route } from 'remix/fetch-router/routes'
+import { form, get, post, resources, route } from 'remix/routes'
 
 export const routes = route({
   home: '/',
