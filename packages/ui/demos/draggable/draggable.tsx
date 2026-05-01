@@ -33,7 +33,7 @@ const baseDraggable = createMixin<HTMLElement, [boolean], DraggableProps>((handl
       stopDrag()
     }
 
-    return <handle.element {...props} mix={[on('pointerdown', onPointerDown)]} />
+    return <handle.element {...props} mix={[on('pointerdown', (event) => onPointerDown(event))]} />
   }
 
   function onPointerDown(event: PointerEvent) {
