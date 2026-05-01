@@ -53,8 +53,8 @@ export type ControllerWithMiddleware<
  * A controller object that maps the direct route leaves in a route map to action handlers.
  *
  * Controllers let you store related route handlers in one object while preserving the params
- * and request-context contract for each action. Controllers are shallow: nested route maps
- * should be mapped with their own controllers.
+ * and request-context contract for each action. Nested route maps should be mapped with their
+ * own controllers.
  */
 export type Controller<
   routes extends RouteMap,

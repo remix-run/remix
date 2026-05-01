@@ -16,7 +16,7 @@ Semver ranges are supported (via the [semver](https://www.npmjs.com/package/semv
 
 ## Code Highlights
 
-- [`app/router.ts`](app/router.ts) maps the root route map to a shallow controller, matching the layout conventions used by the other Remix demos.
+- [`app/router.ts`](app/router.ts) maps route maps to controllers, matching the layout conventions used by the other Remix demos.
 - [`app/actions/controller.ts`](app/actions/controller.ts) owns the top-level home and package-browser actions.
 - [`app/utils/npm.ts`](app/utils/npm.ts) fetches package tarballs from npm, decompresses them with `node:zlib`, and parses them using `@remix-run/tar-parser`. The `parsePackagePath()` function handles tricky URLs like `/@remix-run/cookie@1.0.0/src/index.ts`.
 - [`app/utils/tarball-cache.ts`](app/utils/tarball-cache.ts) stores decompressed tarballs under the demo’s root `tmp/` directory using `remix/file-storage/fs`, which keeps runtime scratch data inside the demo itself.

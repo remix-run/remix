@@ -239,7 +239,7 @@ describe('router.map() with single routes', () => {
 })
 
 describe('router.map()', () => {
-  it('maps route maps to shallow controllers', async () => {
+  it('maps route maps to controllers', async () => {
     let routes = route({
       home: '/',
       blog: {
@@ -412,7 +412,7 @@ describe('router.map()', () => {
     )
   })
 
-  it('keeps controller middleware shallow', async () => {
+  it('applies controller middleware only to direct route actions', async () => {
     let routes = route({
       home: '/',
       blog: {

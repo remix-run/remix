@@ -77,7 +77,7 @@ Inside `app/`, organize code by responsibility:
 ### Naming and ownership rules
 
 - Keep controllers thin. They should read request context, talk to the database or other runtime services, and return a response.
-- Controllers are shallow. `actions/controller.tsx` owns top-level leaf route actions, and each nested route map gets its own explicit `actions/<route-key>/controller.tsx` file. Do not put nested controller objects inside a parent controller's `actions`.
+- `actions/controller.tsx` owns top-level leaf route actions, and each nested route map gets its own explicit `actions/<route-key>/controller.tsx` file. A controller's `actions` object contains direct leaf route keys from the route map passed to its `router.map()` call.
 - Name directories under `app/actions/` after route-map keys, not URL path segments.
 - If a component or helper is only used by one controller feature, keep it in that controller feature folder instead of `actions/ui/`.
 - Use `actions/ui/` only for reusable UI primitives that are specific to the actions layer. Do not create a generic `app/components/` dumping ground.

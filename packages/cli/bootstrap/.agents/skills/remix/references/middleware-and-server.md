@@ -200,7 +200,7 @@ Middleware can be applied at three levels:
    let router = createRouter({ middleware: [...] })
    ```
 
-2. **Controller-level** — runs for the direct actions in one shallow controller:
+2. **Controller-level** — runs for the direct actions in one controller:
 
    ```typescript
    export default {

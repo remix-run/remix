@@ -124,8 +124,8 @@ When code could live in multiple places:
 ### Route Ownership
 
 - Put top-level leaf actions in `app/actions/controller.tsx`
-- Controllers are shallow: an `actions` object contains only direct leaf route keys from the route
-  map passed to `router.map(...)`
+- A controller's `actions` object contains only direct leaf route keys from the route map passed to
+  `router.map(...)`
 - Add `app/actions/<route-key>/controller.tsx` for each nested route map that needs actions or
   middleware, and map it explicitly with `router.map(routes.<routeKey>, controller)`
 - Name directories under `app/actions/` after route-map keys, not URL path segments
@@ -142,11 +142,11 @@ When code could live in multiple places:
 - Do not create `app/controllers/`; Remix app route handlers live under `app/actions/`
 - Do not put shared cross-route UI in `app/actions/`
 - Do not create standalone root action files; put root route actions in `app/actions/controller.tsx`
-- Do not put nested controller objects in a controller's `actions`
+- Do not put nested route-map keys in a controller's `actions`
 - Do not register normal app leaf routes directly in `app/router.ts` when they belong in a
   controller
-- Do not rely on parent controller middleware for nested route maps; map middleware explicitly in
-  each controller that needs it
+- Do not rely on middleware from one controller to protect another controller; map middleware
+  explicitly in each controller that needs it
 - Do not put middleware or persistence helpers in `app/utils/` when they have a clearer home
 
 ## Core Remix Rules
@@ -231,12 +231,12 @@ When code could live in multiple places:
 - Dropping shared code into vague buckets like `utils.ts`, `helpers.ts`, or `common.ts` when
   ownership is known
 - Recreating the old `app/controllers` or standalone root action file layout instead of using
-  shallow controllers under `app/actions`
+  controllers under `app/actions`
 - Putting nested route-map keys inside a controller `actions` object. Map nested route maps
   explicitly in `app/router.ts`
 - Treating direct `router.get(...)`/`router.post(...)` registrations as the default app structure
   instead of using controllers
-- Assuming controller middleware applies to child route-map controllers
+- Assuming controller middleware applies to controllers registered for nested route maps
 - Writing only component tests for a feature whose main behavior is really an HTTP route concern
 
 ## Package Map
@@ -423,7 +423,7 @@ export default {
 } satisfies Controller<typeof routes.books, AppContext>
 ```
 
-### Register shallow controllers explicitly
+### Register Controllers Explicitly
 
 ```typescript
 import { createRouter } from 'remix/fetch-router'

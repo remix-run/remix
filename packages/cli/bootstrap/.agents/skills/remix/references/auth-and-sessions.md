@@ -356,7 +356,7 @@ async function refreshGoogleTokens({ get }) {
 
 ### Controller-level protection
 
-Apply `requireAuth()` to every action in one shallow controller:
+Apply `requireAuth()` to every action in one controller:
 
 ```typescript
 import { requireAuth } from 'remix/auth-middleware'

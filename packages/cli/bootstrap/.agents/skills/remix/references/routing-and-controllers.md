@@ -279,7 +279,7 @@ Because `account` is a nested route map, it is not an action key in the root con
 
 ### Nested route maps
 
-Nested route maps use their own shallow controllers under `app/actions/<route-key>/controller.tsx`.
+Nested route maps use their own controllers under `app/actions/<route-key>/controller.tsx`.
 Directory names under `app/actions/` are route-map keys, not URL path segments.
 
 ```typescript
@@ -343,7 +343,7 @@ methods only for low-level router wiring outside the `app/actions` controller co
 ```typescript
 let router = createRouter({ middleware })
 
-// Route maps → shallow controllers
+// Route maps → controllers
 router.map(routes, rootController)
 router.map(routes.contact, contactController)
 router.map(routes.auth, authController)
