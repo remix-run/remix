@@ -810,12 +810,12 @@ jobs:
             printf 'These examples are sourced from the checked-out PR branch and should be used as reference context for current repository conventions.\n\n'
             printf 'Use these examples to understand local Remix component conventions before flagging framework-level bugs.\n\n'
 
-            printf '## Example: packages/cli/bootstrap/app/controllers/home.tsx\n\n```tsx\n'
-            cat packages/cli/bootstrap/app/controllers/home.tsx
+            printf '## Example: packages/cli/bootstrap/app/actions/controller.tsx\n\n```tsx\n'
+            cat packages/cli/bootstrap/app/actions/controller.tsx
             printf '\n```\n\n'
 
-            printf '## Example: packages/cli/bootstrap/app/controllers/auth.tsx\n\n```tsx\n'
-            cat packages/cli/bootstrap/app/controllers/auth.tsx
+            printf '## Example: packages/cli/bootstrap/app/ui/scaffold-home-page.tsx\n\n```tsx\n'
+            cat packages/cli/bootstrap/app/ui/scaffold-home-page.tsx
             printf '\n```\n\n'
 
             printf '## Example: packages/cli/bootstrap/app/utils/render.tsx\n\n```tsx\n'
