@@ -324,7 +324,7 @@ router.map(routes.account.settings, accountSettingsController)
 ### Controller middleware
 
 The `middleware` array on a controller runs only for the direct actions in that controller, before
-action-level middleware. It does not apply to nested route-map controllers.
+action-level middleware. It does not apply to other controllers.
 
 ```typescript
 export default {

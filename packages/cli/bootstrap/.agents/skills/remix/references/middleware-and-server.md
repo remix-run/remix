@@ -209,8 +209,8 @@ Middleware can be applied at three levels:
    } satisfies Controller<typeof routes.account>
    ```
 
-   Controller middleware does not flow into nested route-map controllers. Add the middleware to
-   each nested route-map controller that needs it.
+   Controller middleware does not flow into other controllers. Add the middleware to each
+   controller that needs it.
 
 3. **Action-level** — runs for a single route:
    ```typescript

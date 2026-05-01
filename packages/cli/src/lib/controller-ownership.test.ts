@@ -36,7 +36,7 @@ describe('controller ownership', () => {
     assert.deepEqual(authLogin.claimedFilePaths, ['app/actions/auth/login/controller.tsx'])
   })
 
-  it('claims route-local files under the matching route map controller', async () => {
+  it('claims route-local files under the matching controller', async () => {
     let routeManifest = await loadRouteManifest(getFixturePath('doctor-incomplete-controller'))
     let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
     let contact = ownership.subtrees.find((subtree) => subtree.routeName === 'contact')
