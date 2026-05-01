@@ -8,6 +8,8 @@ import {
   type DocumentedInterface,
   type DocumentedInterfaceFunction,
   type DocumentedType,
+  type DocumentedVariable,
+  type DocumentedVariableFunction,
 } from './documented-api.ts'
 import { debug, info, verbose, warn } from './utils.ts'
 
@@ -26,6 +28,10 @@ export async function writeMarkdownFiles(comments: DocumentedAPI[], docsDir: str
       await fs.writeFile(mdPath, await getInterfaceFunctionMarkdown(comment))
     } else if (comment.type === 'type') {
       await fs.writeFile(mdPath, await getTypeMarkdown(comment))
+    } else if (comment.type === 'variable') {
+      await fs.writeFile(mdPath, await getVariableMarkdown(comment))
+    } else if (comment.type === 'variable-function') {
+      await fs.writeFile(mdPath, await getVariableFunctionMarkdown(comment))
     }
   }
 }
@@ -214,6 +220,53 @@ async function getTypeMarkdown(comment: DocumentedType): Promise<string> {
     comment.description ? summary(comment) : null,
     aliases(comment),
     h2('Signature', await pre(comment.signature)),
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+}
+
+async function getVariableMarkdown(comment: DocumentedVariable): Promise<string> {
+  return [
+    frontmatter(comment),
+    name(comment),
+    comment.description ? summary(comment) : null,
+    aliases(comment),
+    h2('Signature', await pre(comment.signature)),
+    comment.example
+      ? h2(
+          'Example',
+          comment.example.trim().startsWith('```') ? comment.example : await pre(comment.example),
+        )
+      : undefined,
+  ]
+    .filter(Boolean)
+    .join('\n\n')
+}
+
+async function getVariableFunctionMarkdown(
+  comment: DocumentedVariableFunction,
+): Promise<string> {
+  return [
+    frontmatter(comment),
+    name(comment),
+    comment.description ? summary(comment) : null,
+    aliases(comment),
+    h2('Signature', await pre(comment.signature)),
+    comment.example
+      ? h2(
+          'Example',
+          comment.example.trim().startsWith('```') ? comment.example : await pre(comment.example),
+        )
+      : undefined,
+    comment.parameters.length > 0
+      ? h2(
+          'Params',
+          comment.parameters
+            .map((param) => h3(`\`${param.name}\``, param.description))
+            .join('\n\n'),
+        )
+      : undefined,
+    comment.returns ? h2('Returns', comment.returns) : undefined,
   ]
     .filter(Boolean)
     .join('\n\n')

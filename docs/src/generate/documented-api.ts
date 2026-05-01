@@ -8,6 +8,8 @@ export type DocumentedAPI =
   | DocumentedInterface
   | DocumentedInterfaceFunction
   | DocumentedType
+  | DocumentedVariable
+  | DocumentedVariableFunction
 
 // Function parameter or Class property
 type ParameterOrProperty = {
@@ -27,7 +29,14 @@ type Method = {
 
 // Fields required for all types
 type BaseDocumentedAPI = {
-  type: 'function' | 'class' | 'interface' | 'interface-function' | 'type'
+  type:
+    | 'function'
+    | 'class'
+    | 'interface'
+    | 'interface-function'
+    | 'type'
+    | 'variable'
+    | 'variable-function'
   path: string
   source: string | undefined
   name: string
@@ -77,6 +86,22 @@ export type DocumentedType = BaseDocumentedAPI & {
   signature: string
 }
 
+// Documented variable API
+export type DocumentedVariable = BaseDocumentedAPI & {
+  type: 'variable'
+  signature: string
+  example: string | undefined
+}
+
+// Documented variable API for variables whose type resolves to a callable
+export type DocumentedVariableFunction = BaseDocumentedAPI & {
+  type: 'variable-function'
+  signature: string
+  parameters: ParameterOrProperty[]
+  returns: string | undefined
+  example: string | undefined
+}
+
 // Path docs are served at on the website
 export const WEBSITE_DOCS_PATH = '/api'
 
@@ -97,6 +122,12 @@ export function getDocumentedAPI(fullName: string, node: typedoc.Reflection): Do
         api = getDocumentedInterface(fullName, node)
       } else if (node.kind === typedoc.ReflectionKind.TypeAlias) {
         api = getDocumentedType(fullName, node)
+      } else if (node.kind === typedoc.ReflectionKind.Variable) {
+        let signatures = getVariableCallSignatures(node)
+        api =
+          signatures.length > 0
+            ? getDocumentedVariableFunction(fullName, node, signatures)
+            : getDocumentedVariable(fullName, node)
       }
     }
 
@@ -339,6 +370,122 @@ function getDocumentedType(fullName: string, node: typedoc.DeclarationReflection
   }
 }
 
+// Resolve the call signatures from a Variable's type, or [] if non-callable.
+// Handles inline callables (`type.type === 'reflection'`) and `Object.assign`-
+// style intersections by picking the first member with signatures. Reference
+// types (`const x = ... as Interface`) are intentionally not chased in v1 —
+// see `docs/PLAN-variable-support.md` for the follow-up.
+function getVariableCallSignatures(
+  node: typedoc.DeclarationReflection,
+): typedoc.SignatureReflection[] {
+  if (!node.type) return []
+
+  let candidates: typedoc.SomeType[] =
+    node.type.type === 'intersection' ? [...node.type.types] : [node.type]
+
+  for (let candidate of candidates) {
+    if (candidate.type === 'reflection') {
+      let sigs = candidate.declaration?.signatures
+      if (sigs && sigs.length > 0) return sigs
+    }
+  }
+
+  return []
+}
+
+function getDocumentedVariable(
+  fullName: string,
+  node: typedoc.DeclarationReflection,
+): DocumentedVariable {
+  let name = getApiNameFromFullName(fullName)
+  let keyword = node.flags.isConst ? 'const' : 'let'
+  let typeStr = node.type ? node.type.toString() : 'unknown'
+  let signature = `${keyword} ${name}: ${typeStr}`
+
+  return {
+    type: 'variable',
+    path: getApiFilePath(fullName, 'variable'),
+    source: node.sources?.[0]?.url,
+    name,
+    aliases: node.comment ? getApiAliases(node.comment) : undefined,
+    description: node.comment ? getApiDescription(node.comment) : '',
+    example: node.comment?.getTag('@example')?.content
+      ? processApiComment(node.comment.getTag('@example')!.content)
+      : undefined,
+    signature,
+  }
+}
+
+function getDocumentedVariableFunction(
+  fullName: string,
+  node: typedoc.DeclarationReflection,
+  signatures: typedoc.SignatureReflection[],
+): DocumentedVariableFunction {
+  // Prefer the variable's own JSDoc; fall back to the first signature's
+  // comment (TypeDoc puts the comment on the signature for the inline
+  // arrow/function-expression case).
+  let comment = node.comment ?? signatures.find((s) => s.comment)?.comment
+
+  let name = getApiNameFromFullName(fullName)
+  let methods = signatures
+    .map((s) => getApiMethod(fullName, s))
+    .filter((m): m is Method => m != null)
+
+  // `getApiMethod` already produces `const name: (...) => T` for TypeLiteral
+  // parents. For overloads each line is shown — variables can't natively
+  // express overloads, so this serves as documentation only.
+  let signature = methods.map((m) => m.signature).join('\n\n')
+
+  let parameters: ParameterOrProperty[] = []
+  methods
+    .flatMap((m) => m.parameters)
+    .forEach((param) => {
+      if (!parameters.some((p) => p.name === param.name)) {
+        parameters.push(param)
+      }
+    })
+
+  // Variable JSDoc often carries `@param`/`@returns` tags that TypeDoc
+  // associates with the variable's comment rather than with the synthetic
+  // `__type` signature's parameters. Fill in missing descriptions from the
+  // variable comment so authors don't have to duplicate JSDoc onto an inner
+  // arrow function expression.
+  if (node.comment) {
+    let paramTagsByName = new Map<string, typedoc.CommentTag>()
+    for (let tag of node.comment.getTags('@param')) {
+      if (tag.name) paramTagsByName.set(tag.name, tag)
+    }
+    if (paramTagsByName.size > 0) {
+      parameters = parameters.map((p) => {
+        if (p.description) return p
+        let tag = paramTagsByName.get(p.name)
+        return tag ? { ...p, description: processApiComment(tag.content) } : p
+      })
+    }
+  }
+
+  let returns = methods[0]?.returns
+  if (!returns) {
+    let returnsTag = node.comment?.getTag('@returns')
+    if (returnsTag) returns = processApiComment(returnsTag.content)
+  }
+
+  return {
+    type: 'variable-function',
+    path: getApiFilePath(fullName, 'variable'),
+    source: node.sources?.[0]?.url,
+    name,
+    aliases: comment ? getApiAliases(comment) : undefined,
+    description: comment ? getApiDescription(comment) : '',
+    example: comment?.getTag('@example')?.content
+      ? processApiComment(comment.getTag('@example')!.content)
+      : undefined,
+    signature,
+    parameters,
+    returns,
+  }
+}
+
 function getApiAliases(typedocComment: typedoc.Comment): string[] | undefined {
   let tags = typedocComment.getTags('@alias')
   if (!tags || tags.length === 0) {
@@ -362,11 +509,7 @@ function getApiFilePath(fullName: string, type: DocumentedAPI['type']): string {
 }
 
 function getApiDescription(typedocComment: typedoc.Comment): string {
-  let description = typedocComment.summary
-    .map((part) => ('text' in part ? part.text : ''))
-    .join('')
-    .trim()
-  return description
+  return processApiComment(typedocComment.summary).trim()
 }
 
 function getApiPropertiesAndMethods(
@@ -452,6 +595,12 @@ function getApiMethod(fullName: string, node: typedoc.SignatureReflection): Meth
     signature = `constructor(${signatureParams}): ${returnType}`
   } else if (node.parent.kind === typedoc.ReflectionKind.Method) {
     signature = `${node.name}${typeParams}(${signatureParams}): ${returnType}`
+  } else if (node.parent.kind === typedoc.ReflectionKind.TypeLiteral) {
+    // Inline callable on a variable, e.g. `const f = (x: string) => x.length`.
+    // The synthetic `__type` parent name isn't useful — render as a `const`
+    // declaration using the variable's name from `fullName`.
+    let varName = getApiNameFromFullName(fullName)
+    signature = `const ${varName}: ${typeParams}(${signatureParams}) => ${returnType}`
   } else {
     invariant(
       false,
@@ -568,7 +717,8 @@ function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
             target.kind === typedoc.ReflectionKind.Class ? 'class' :
             target.kind === typedoc.ReflectionKind.TypeAlias ? 'type' :
             target.kind === typedoc.ReflectionKind.TypeLiteral ? 'type' :
-            target.kind === typedoc.ReflectionKind.Interface ? 'interface' : null;
+            target.kind === typedoc.ReflectionKind.Interface ? 'interface' :
+            target.kind === typedoc.ReflectionKind.Variable ? 'variable' : null;
 
           if (!type) {
             throw new Error(`Unsupported @link target kind: ${typedoc.ReflectionKind[target.kind]}`)

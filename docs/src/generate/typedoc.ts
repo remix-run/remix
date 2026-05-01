@@ -98,9 +98,7 @@ export function createLookupMaps(reflection: typedoc.ProjectReflection): Maps {
     typedoc.ReflectionKind.Class,
     typedoc.ReflectionKind.Interface,
     typedoc.ReflectionKind.TypeAlias,
-    // TODO: Not implemented yet - used for interactions like arrowLeft etc. so
-    // we eventually will probably want to support
-    // typedoc.ReflectionKind.Variable,
+    typedoc.ReflectionKind.Variable,
   ])
 
   recurse(reflection)
