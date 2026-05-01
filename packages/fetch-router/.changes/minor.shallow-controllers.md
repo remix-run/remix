@@ -1,0 +1,1 @@
+BREAKING CHANGE: `router.map(routes, controller)` now treats controllers as shallow route-map owners. Controller actions may only include direct route leaves from the route map passed to `router.map()`, nested route-map keys must be mapped with a separate `router.map()` call, and unknown action keys now throw at runtime.

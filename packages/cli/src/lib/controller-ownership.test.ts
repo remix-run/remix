@@ -9,15 +9,18 @@ describe('controller ownership', () => {
   it('tracks duplicate owner files for a single route subtree', async () => {
     let routeManifest = await loadRouteManifest(getFixturePath('doctor-duplicate-owner'))
     let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
-    let home = ownership.subtrees.find((subtree) => subtree.routeName === 'home')
+    let root = ownership.subtrees.find((subtree) => subtree.routeName === '<root>')
     let contact = ownership.subtrees.find((subtree) => subtree.routeName === 'contact')
 
-    assert.ok(home)
+    assert.ok(root)
     assert.ok(contact)
-    assert.deepEqual(home.actualEntryPaths, ['app/controllers/home.ts', 'app/controllers/home.tsx'])
+    assert.deepEqual(root.actualEntryPaths, [
+      'app/actions/controller.ts',
+      'app/actions/controller.tsx',
+    ])
     assert.deepEqual(contact.actualEntryPaths, [
-      'app/controllers/contact/controller.ts',
-      'app/controllers/contact/controller.jsx',
+      'app/actions/contact/controller.ts',
+      'app/actions/contact/controller.jsx',
     ])
   })
 
@@ -29,25 +32,23 @@ describe('controller ownership', () => {
 
     assert.ok(auth)
     assert.ok(authLogin)
-    assert.deepEqual(auth.claimedFilePaths, ['app/controllers/auth/controller.tsx'])
-    assert.deepEqual(authLogin.claimedFilePaths, ['app/controllers/auth/login/controller.tsx'])
+    assert.deepEqual(auth.claimedFilePaths, ['app/actions/auth/controller.tsx'])
+    assert.deepEqual(authLogin.claimedFilePaths, ['app/actions/auth/login/controller.tsx'])
   })
 
-  it('tracks promotion drift inside a standalone action subtree', async () => {
-    let routeManifest = await loadRouteManifest(getFixturePath('doctor-promotion-drift'))
+  it('claims route-local files under the matching route map controller', async () => {
+    let routeManifest = await loadRouteManifest(getFixturePath('doctor-incomplete-controller'))
     let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
-    let home = ownership.subtrees.find((subtree) => subtree.routeName === 'home')
+    let contact = ownership.subtrees.find((subtree) => subtree.routeName === 'contact')
 
-    assert.ok(home)
-    assert.equal(home.kind, 'action')
-    assert.equal(home.actualEntryPath, 'app/controllers/home.js')
-    assert.deepEqual(home.claimedRouteLocalFilePaths, ['app/controllers/home/page.tsx'])
+    assert.ok(contact)
+    assert.equal(contact.actualEntryPath, null)
+    assert.deepEqual(contact.claimedRouteLocalFilePaths, ['app/actions/contact/page.tsx'])
   })
 
   it('normalizes camelCase route keys to kebab-case disk segments', async () => {
     let routeManifest = await loadRouteManifest(getFixturePath('doctor-camel-case-keys'))
     let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
-    let userSettings = ownership.subtrees.find((subtree) => subtree.routeName === 'userSettings')
     let forgotPassword = ownership.subtrees.find(
       (subtree) => subtree.routeName === 'auth.forgotPassword',
     )
@@ -55,40 +56,25 @@ describe('controller ownership', () => {
       (subtree) => subtree.routeName === 'auth.resetPassword',
     )
 
-    assert.ok(userSettings)
     assert.ok(forgotPassword)
     assert.ok(resetPassword)
-    assert.equal(userSettings.entryDisplayPath, 'app/controllers/user-settings.tsx')
-    assert.equal(userSettings.actualEntryPath, 'app/controllers/user-settings.tsx')
-    assert.equal(
-      forgotPassword.entryDisplayPath,
-      'app/controllers/auth/forgot-password/controller.tsx',
-    )
-    assert.equal(
-      forgotPassword.actualEntryPath,
-      'app/controllers/auth/forgot-password/controller.tsx',
-    )
-    assert.equal(
-      resetPassword.entryDisplayPath,
-      'app/controllers/auth/reset-password/controller.tsx',
-    )
-    assert.equal(
-      resetPassword.actualEntryPath,
-      'app/controllers/auth/reset-password/controller.tsx',
-    )
+    assert.equal(forgotPassword.entryDisplayPath, 'app/actions/auth/forgot-password/controller.tsx')
+    assert.equal(forgotPassword.actualEntryPath, 'app/actions/auth/forgot-password/controller.tsx')
+    assert.equal(resetPassword.entryDisplayPath, 'app/actions/auth/reset-password/controller.tsx')
+    assert.equal(resetPassword.actualEntryPath, 'app/actions/auth/reset-password/controller.tsx')
   })
 
   it('tracks extraneous root directories outside the route tree', async () => {
     let routeManifest = await loadRouteManifest(getFixturePath('doctor-orphan-route-local-file'))
     let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
 
-    assert.deepEqual(ownership.orphanRouteDirectoryPaths, ['app/controllers/unused'])
+    assert.deepEqual(ownership.orphanRouteDirectoryPaths, ['app/actions/unused'])
   })
 
   it('tracks extraneous root directories from the route-map shape', async () => {
     let routeManifest = await loadRouteManifest(getFixturePath('doctor-generic-buckets'))
     let ownership = await inspectControllerOwnership(routeManifest.appRoot, routeManifest.tree)
 
-    assert.deepEqual(ownership.orphanRouteDirectoryPaths, ['app/controllers/components'])
+    assert.deepEqual(ownership.orphanRouteDirectoryPaths, ['app/actions/components'])
   })
 })

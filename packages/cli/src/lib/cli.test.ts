@@ -72,7 +72,7 @@ const DOCTOR_COMMAND_HELP_TEXT = [
   'Options:',
   '  --json    Print doctor findings as JSON',
   '  --strict  Exit with status 1 when warning-level findings are present',
-  '  --fix     Apply low-risk project and controller fixes',
+  '  --fix     Apply low-risk project and action fixes',
   '',
   'Examples:',
   '  remix doctor',
@@ -439,10 +439,7 @@ describe('run', () => {
       assert.equal(packageJson.engines.node, '>=24.3.0')
       assert.match(agentsGuide, /^# My App Agent Guide/m)
       assert.match(agentsGuide, /This starter intentionally begins small/)
-      assert.match(
-        agentsGuide,
-        /Keep simple pages in flat files like `app\/controllers\/home\.tsx`/,
-      )
+      assert.match(agentsGuide, /Put top-level route actions in `app\/actions\/controller\.tsx`/)
       assert.match(readme, /^# My App/m)
       assert.match(server, /import \{ serve \} from 'remix\/node-serve'/)
       assert.doesNotMatch(server, /remix\/node-fetch-server/)
@@ -450,10 +447,11 @@ describe('run', () => {
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
       await assertPathMissing(path.join(appDir, 'app', 'assets.ts'))
       await assertPathExists(path.join(appDir, 'app', 'assets', 'prompt-button.tsx'))
-      await assertPathExists(path.join(appDir, 'app', 'controllers', 'assets.ts'))
-      await assertPathExists(path.join(appDir, 'app', 'controllers', 'home.tsx'))
-      await assertPathExists(path.join(appDir, 'app', 'controllers', 'auth.tsx'))
-      await assertPathMissing(path.join(appDir, 'app', 'controllers', 'about.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'controller.tsx'))
+      await assertPathMissing(path.join(appDir, 'app', 'actions', 'assets.ts'))
+      await assertPathMissing(path.join(appDir, 'app', 'actions', 'home.tsx'))
+      await assertPathMissing(path.join(appDir, 'app', 'actions', 'auth.tsx'))
+      await assertPathMissing(path.join(appDir, 'app', 'actions', 'about.tsx'))
       await assertPathMissing(path.join(appDir, 'app', 'ui', 'prompt-button.tsx'))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })

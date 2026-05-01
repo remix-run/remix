@@ -1,0 +1,1 @@
+BREAKING CHANGE: Remix app scaffolding and `remix doctor` now use `app/actions` with controller files only. The root route map is owned by `app/actions/controller.tsx`, nested route maps are owned by `app/actions/<route-key>/controller.tsx`, and the CLI no longer treats root leaf routes as standalone action files.

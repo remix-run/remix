@@ -2,16 +2,18 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 
 import {
-  getActionOwnerCandidates,
   getControllerOwnerCandidates,
   getOwnerModuleBaseName,
   getPreferredOwnerDisplayPath,
   getRouteSubtreePath,
-  isActionFileName,
   isControllerEntryFileName,
   toDiskSegment,
 } from './controller-files.ts'
-import type { RouteOwnerKind, RouteTreeNodeKind } from './route-map.ts'
+import type { RouteTreeNodeKind } from './route-map.ts'
+
+const ACTIONS_PATH_PREFIX = 'app/actions/'
+
+export const ROOT_ROUTE_NAME = '<root>'
 
 export interface OwnershipRouteNode {
   children: OwnershipRouteNode[]
@@ -22,25 +24,19 @@ export interface OwnershipRouteNode {
 }
 
 export interface ControllerDirectoryScan {
-  actionEntryPaths: Set<string>
   controllerEntryPaths: Set<string>
   rootDirectoryPaths: Set<string>
   routeLocalFilePaths: Set<string>
 }
 
 export interface OwnedSubtreePlan {
-  alternateCandidates: string[]
-  alternateDisplayPath: string
   entryCandidates: string[]
   entryDisplayPath: string
-  kind: RouteOwnerKind
   routeName: string
   subtreePath: string
 }
 
 export interface OwnedSubtree extends OwnedSubtreePlan {
-  actualAlternatePath: string | null
-  actualAlternatePaths: string[]
   actualEntryPath: string | null
   actualEntryPaths: string[]
   claimedFilePaths: string[]
@@ -48,7 +44,6 @@ export interface OwnedSubtree extends OwnedSubtreePlan {
 }
 
 export interface ControllerOwnership {
-  orphanActionPaths: string[]
   orphanControllerPaths: string[]
   orphanRouteDirectoryPaths: string[]
   scan: ControllerDirectoryScan
@@ -64,7 +59,6 @@ export async function inspectControllerOwnership(
   let subtrees = applyScanToSubtrees(subtreePlans, scan)
 
   return {
-    orphanActionPaths: getOrphanActionPaths(subtreePlans, scan),
     orphanControllerPaths: getOrphanControllerPaths(subtreePlans, scan),
     orphanRouteDirectoryPaths: getOrphanRouteDirectoryPaths(subtreePlans, scan),
     scan,
@@ -77,51 +71,37 @@ export function buildOwnedSubtrees(
   parentSegments: string[] = [],
   subtrees: OwnedSubtreePlan[] = [],
 ): OwnedSubtreePlan[] {
+  if (parentSegments.length === 0 && subtrees.length === 0) {
+    addSubtreePlan(ROOT_ROUTE_NAME, [], subtrees)
+  }
+
   for (let node of tree) {
+    if (node.kind !== 'group') {
+      continue
+    }
+
     let segments = [...parentSegments, toDiskSegment(node.key)]
-
-    if (node.kind === 'group') {
-      let alternateCandidates = getActionOwnerCandidates(segments)
-      let entryCandidates = getControllerOwnerCandidates(segments)
-
-      subtrees.push({
-        alternateCandidates,
-        alternateDisplayPath: getPreferredOwnerDisplayPath(alternateCandidates),
-        entryCandidates,
-        entryDisplayPath: getPreferredOwnerDisplayPath(entryCandidates),
-        kind: 'controller',
-        routeName: node.name,
-        subtreePath: getRouteSubtreePath(segments),
-      })
-      buildOwnedSubtrees(node.children, segments, subtrees)
-      continue
-    }
-
-    if (parentSegments.length > 0) {
-      continue
-    }
-
-    let alternateCandidates = getControllerOwnerCandidates(segments)
-    let entryCandidates = getActionOwnerCandidates(segments)
-
-    subtrees.push({
-      alternateCandidates,
-      alternateDisplayPath: getPreferredOwnerDisplayPath(alternateCandidates),
-      entryCandidates,
-      entryDisplayPath: getPreferredOwnerDisplayPath(entryCandidates),
-      kind: 'action',
-      routeName: node.name,
-      subtreePath: getRouteSubtreePath(segments),
-    })
+    addSubtreePlan(node.name, segments, subtrees)
+    buildOwnedSubtrees(node.children, segments, subtrees)
   }
 
   return subtrees
 }
 
+function addSubtreePlan(routeName: string, segments: string[], subtrees: OwnedSubtreePlan[]): void {
+  let entryCandidates = getControllerOwnerCandidates(segments)
+
+  subtrees.push({
+    entryCandidates,
+    entryDisplayPath: getPreferredOwnerDisplayPath(entryCandidates),
+    routeName,
+    subtreePath: getRouteSubtreePath(segments),
+  })
+}
+
 async function scanControllersDirectory(appRoot: string): Promise<ControllerDirectoryScan> {
-  let controllersDir = path.join(appRoot, 'app', 'controllers')
+  let actionsDir = path.join(appRoot, 'app', 'actions')
   let controllerEntryPaths = new Set<string>()
-  let actionEntryPaths = new Set<string>()
   let rootDirectoryPaths = new Set<string>()
   let routeLocalFilePaths = new Set<string>()
 
@@ -160,21 +140,15 @@ async function scanControllersDirectory(appRoot: string): Promise<ControllerDire
         continue
       }
 
-      if (isRoot && isActionCandidate(entry.name)) {
-        actionEntryPaths.add(relativePath)
-        continue
-      }
-
-      if (!isRoot && isRouteLocalFileName(entry.name)) {
+      if (isRouteLocalFileName(entry.name)) {
         routeLocalFilePaths.add(relativePath)
       }
     }
   }
 
-  await walk(controllersDir, true)
+  await walk(actionsDir, true)
 
   return {
-    actionEntryPaths,
     controllerEntryPaths,
     rootDirectoryPaths,
     routeLocalFilePaths,
@@ -192,17 +166,10 @@ function applyScanToSubtrees(
   let claimedContentPaths = claimFilesToDeepestSubtree(getNestedContentPaths(scan), subtreePlans)
 
   return subtreePlans.map((subtree) => {
-    let actualAlternatePaths = findOwnerPaths(
-      scan,
-      invertOwnerKind(subtree.kind),
-      subtree.alternateCandidates,
-    )
-    let actualEntryPaths = findOwnerPaths(scan, subtree.kind, subtree.entryCandidates)
+    let actualEntryPaths = findOwnerPaths(scan, subtree.entryCandidates)
 
     return {
       ...subtree,
-      actualAlternatePath: actualAlternatePaths[0] ?? null,
-      actualAlternatePaths,
       actualEntryPath: actualEntryPaths[0] ?? null,
       actualEntryPaths,
       claimedFilePaths: claimedContentPaths.get(subtree.routeName) ?? [],
@@ -253,45 +220,14 @@ function claimFilesToDeepestSubtree(
   return claims
 }
 
-function getOrphanActionPaths(
-  subtreePlans: OwnedSubtreePlan[],
-  scan: ControllerDirectoryScan,
-): string[] {
-  let expectedActionPaths = new Set(
-    subtreePlans
-      .filter((subtree) => subtree.kind === 'action')
-      .flatMap((subtree) => subtree.entryCandidates),
-  )
-  let alternateActionPaths = new Set(
-    subtreePlans
-      .filter((subtree) => subtree.kind === 'controller')
-      .flatMap((subtree) => subtree.alternateCandidates),
-  )
-
-  return [...scan.actionEntryPaths]
-    .filter((filePath) => !expectedActionPaths.has(filePath))
-    .filter((filePath) => !alternateActionPaths.has(filePath))
-    .sort()
-}
-
 function getOrphanControllerPaths(
   subtreePlans: OwnedSubtreePlan[],
   scan: ControllerDirectoryScan,
 ): string[] {
-  let expectedControllerPaths = new Set(
-    subtreePlans
-      .filter((subtree) => subtree.kind === 'controller')
-      .flatMap((subtree) => subtree.entryCandidates),
-  )
-  let alternateControllerPaths = new Set(
-    subtreePlans
-      .filter((subtree) => subtree.kind === 'action')
-      .flatMap((subtree) => subtree.alternateCandidates),
-  )
+  let expectedControllerPaths = new Set(subtreePlans.flatMap((subtree) => subtree.entryCandidates))
 
   return [...scan.controllerEntryPaths]
     .filter((filePath) => !expectedControllerPaths.has(filePath))
-    .filter((filePath) => !alternateControllerPaths.has(filePath))
     .sort()
 }
 
@@ -300,7 +236,9 @@ function getOrphanRouteDirectoryPaths(
   scan: ControllerDirectoryScan,
 ): string[] {
   let expectedRootDirectories = new Set(
-    subtreePlans.map((subtree) => getTopLevelSubtreePath(subtree.subtreePath)),
+    subtreePlans
+      .map((subtree) => getTopLevelSubtreePath(subtree.subtreePath))
+      .filter((subtreePath) => subtreePath !== getRouteSubtreePath([])),
   )
   let actualControllerDirectories = [...scan.controllerEntryPaths].map((controllerPath) =>
     normalizeRelativePath(path.dirname(controllerPath)),
@@ -317,24 +255,6 @@ function getOrphanRouteDirectoryPaths(
     .sort()
 }
 
-function hasOwnerPath(
-  scan: ControllerDirectoryScan,
-  kind: RouteOwnerKind,
-  filePath: string,
-): boolean {
-  return kind === 'action'
-    ? scan.actionEntryPaths.has(filePath)
-    : scan.controllerEntryPaths.has(filePath)
-}
-
-function invertOwnerKind(kind: RouteOwnerKind): RouteOwnerKind {
-  return kind === 'action' ? 'controller' : 'action'
-}
-
-function isActionCandidate(fileName: string): boolean {
-  return isActionFileName(fileName)
-}
-
 function isRouteLocalFileName(fileName: string): boolean {
   let baseName = getOwnerModuleBaseName(fileName)
 
@@ -346,23 +266,11 @@ function isRouteLocalFileName(fileName: string): boolean {
   )
 }
 
-function findOwnerPath(
-  scan: ControllerDirectoryScan,
-  kind: RouteOwnerKind,
-  candidatePaths: string[],
-): string | null {
-  return findOwnerPaths(scan, kind, candidatePaths)[0] ?? null
-}
-
-function findOwnerPaths(
-  scan: ControllerDirectoryScan,
-  kind: RouteOwnerKind,
-  candidatePaths: string[],
-): string[] {
+function findOwnerPaths(scan: ControllerDirectoryScan, candidatePaths: string[]): string[] {
   let existingPaths: string[] = []
 
   for (let candidatePath of candidatePaths) {
-    if (hasOwnerPath(scan, kind, candidatePath)) {
+    if (scan.controllerEntryPaths.has(candidatePath)) {
       existingPaths.push(candidatePath)
     }
   }
@@ -372,8 +280,8 @@ function findOwnerPaths(
 
 function isNestedControllerPath(filePath: string): boolean {
   return (
-    filePath.startsWith('app/controllers/') &&
-    filePath.slice('app/controllers/'.length).includes('/')
+    filePath.startsWith(ACTIONS_PATH_PREFIX) &&
+    filePath.slice(ACTIONS_PATH_PREFIX.length).includes('/')
   )
 }
 
@@ -388,7 +296,12 @@ function isDirectoryWithinDirectory(directoryPath: string, parentDirectoryPath: 
 }
 
 function getTopLevelSubtreePath(subtreePath: string): string {
-  let subtreeSegments = subtreePath.slice('app/controllers/'.length).split('/')
+  let actionsRoot = getRouteSubtreePath([])
+  if (subtreePath === actionsRoot) {
+    return actionsRoot
+  }
+
+  let subtreeSegments = subtreePath.slice(ACTIONS_PATH_PREFIX.length).split('/')
   return getRouteSubtreePath([subtreeSegments[0]])
 }
 

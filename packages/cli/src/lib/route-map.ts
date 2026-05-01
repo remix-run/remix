@@ -4,7 +4,11 @@ import * as process from 'node:process'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-import { inspectControllerOwnership, type OwnedSubtree } from './controller-ownership.ts'
+import {
+  ROOT_ROUTE_NAME,
+  inspectControllerOwnership,
+  type OwnedSubtree,
+} from './controller-ownership.ts'
 import {
   routeMapLoaderFailed,
   routeMapLoaderInvalidJson,
@@ -13,7 +17,7 @@ import {
   routesFileNotFound,
 } from './errors.ts'
 
-export type RouteOwnerKind = 'action' | 'controller'
+export type RouteOwnerKind = 'controller'
 export type RouteTreeNodeKind = 'group' | 'route'
 
 export interface RouteTreeOwner {
@@ -179,7 +183,7 @@ function getRouteOwner(
     rawNode.kind === 'group'
       ? rawNode.name
       : parentSegments.length === 0
-        ? rawNode.name
+        ? ROOT_ROUTE_NAME
         : parentSegments.join('.')
   let subtree = subtreesByRouteName.get(ownerRouteName)
 
@@ -189,7 +193,7 @@ function getRouteOwner(
 
   return {
     exists: subtree.actualEntryPath != null,
-    kind: subtree.kind,
+    kind: 'controller',
     path: subtree.actualEntryPath ?? subtree.entryDisplayPath,
   }
 }

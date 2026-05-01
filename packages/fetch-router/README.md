@@ -8,7 +8,7 @@ A minimal, composable router built on the [web Fetch API](https://developer.mozi
 - **Type-Safe Routing**: Leverage TypeScript for compile-time route validation and parameter inference
 - **Typed Request Context**: Carry request-scoped context through routers, controllers, and actions
 - **Declarative Route Maps**: Define your route structure upfront with type-safe route names and request methods
-- **Flexible Middleware**: Apply middleware globally, per-route, or to entire route hierarchies
+- **Flexible Middleware**: Apply middleware globally, per-route, or to shallow route-map controllers
 - **Easy Testing**: Use standard `fetch()` to test your routes - no special test harness required
 
 ## Installation
@@ -55,8 +55,8 @@ let router = createRouter({
   middleware: [logger()],
 })
 
-// Map the routes to a "controller" that defines actions for each route.
-// Controllers always use the shape: { actions, middleware? }.
+// Map the root route map to a shallow "controller" that defines actions for
+// direct route leaves only. Nested route maps use their own controllers.
 router.map(routes, {
   actions: {
     home() {
@@ -65,16 +65,17 @@ router.map(routes, {
     about() {
       return new Response('About')
     },
-    blog: {
-      actions: {
-        index() {
-          return new Response('Blog')
-        },
-        show({ params }) {
-          // params is a type-safe object with the parameters from the route pattern
-          return new Response(`Post ${params.slug}`)
-        },
-      },
+  },
+})
+
+router.map(routes.blog, {
+  actions: {
+    index() {
+      return new Response('Blog')
+    },
+    show({ params }) {
+      // params is a type-safe object with the parameters from the route pattern
+      return new Response(`Post ${params.slug}`)
     },
   },
 })
@@ -559,6 +560,8 @@ Global middleware is added to the router when it is created using the `createRou
 
 Inline (or "route") middleware is added to the router when actions are registered using either `router.map()` or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. Route middleware runs after global middleware but before the route action, and is useful for doing things like authentication, authorization, and data validation. The object form for route actions is `{ handler, middleware? }`, so you can omit `middleware` entirely when you do not need it.
 
+Controllers are shallow. A controller's `middleware` applies only to the direct route actions in that controller, and its `actions` object may not include nested route-map keys. Map nested route maps explicitly so each controller owns exactly one level of the route hierarchy.
+
 ```tsx
 let routes = route({
   home: '/',
@@ -574,11 +577,14 @@ let router = createRouter({
 
 router.map(routes.home, () => new Response('Home'))
 
-router.map(routes.admin.dashboard, {
-  // This middleware runs only on the `/admin/dashboard` route.
+router.map(routes.admin, {
+  // This middleware applies to direct actions in `routes.admin`, not to nested
+  // child route maps that you map separately.
   middleware: [auth({ token: 'secret' })],
-  handler() {
-    return new Response('Dashboard')
+  actions: {
+    dashboard() {
+      return new Response('Dashboard')
+    },
   },
 })
 ```

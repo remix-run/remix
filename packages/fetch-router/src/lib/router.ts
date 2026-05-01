@@ -411,22 +411,34 @@ export function createRouter<
     mapController(target, handler)
   }
 
-  function mapController(
-    routes: RouteMap,
-    controller: ControllerShape,
-    parentMiddleware: AnyMiddleware[] = [],
-  ): void {
+  function mapController(routes: RouteMap, controller: ControllerShape): void {
     let controllerMiddleware = controller.middleware
-      ? mergeMiddleware(parentMiddleware, controller.middleware)
-      : parentMiddleware.length > 0
-        ? parentMiddleware
+      ? controller.middleware.length > 0
+        ? [...controller.middleware]
         : undefined
+      : undefined
+
+    for (let key in controller.actions) {
+      if (!(key in routes)) {
+        throw new TypeError(`Unknown action \`${key}\` in controller`)
+      }
+
+      if (!(routes[key] instanceof Route)) {
+        throw new TypeError(
+          `Cannot map nested route map key \`${key}\` in controller actions; call router.map() for that route map separately`,
+        )
+      }
+    }
 
     for (let key in routes) {
       let route = routes[key]
-      let action = controller.actions[key]
 
       if (route instanceof Route) {
+        if (!Object.hasOwn(controller.actions, key)) {
+          throw new TypeError(`Missing action \`${key}\` in controller`)
+        }
+
+        let action = controller.actions[key]
         let normalizedAction = normalizeAction(
           action as Action<any, any, ApplyMiddlewareTuple<context, middleware>>,
         )
@@ -434,14 +446,6 @@ export function createRouter<
           handler: normalizedAction.handler,
           middleware: mergeMiddleware(controllerMiddleware, normalizedAction.middleware),
         })
-      } else {
-        if (!isController(action)) {
-          throw new TypeError(
-            `Expected a nested controller with an \`actions\` property at \`${key}\``,
-          )
-        }
-
-        mapController(route as RouteMap, action, controllerMiddleware ?? [])
       }
     }
   }
