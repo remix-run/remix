@@ -1,4 +1,5 @@
 import type { PartPatternAST, PartPatternToken, RoutePatternAST } from './ast.ts'
+import type { Join } from './types/join.ts'
 
 /**
  * Join two route pattern ASTs.
@@ -6,8 +7,14 @@ import type { PartPatternAST, PartPatternToken, RoutePatternAST } from './ast.ts
  * Origin parts (`protocol`, `hostname`, `port`) from `b` override `a` when present.
  * Pathnames are concatenated with a separator inserted between them as needed.
  * Search constraints from both patterns are merged.
+ *
+ * The result carries `Join<a, b>` as its source brand so downstream APIs
+ * (e.g. `toHref`) infer typed params from the joined pattern.
  */
-export function joinPatterns(a: RoutePatternAST, b: RoutePatternAST): RoutePatternAST {
+export function joinPatterns<a extends string, b extends string>(
+  a: RoutePatternAST<a>,
+  b: RoutePatternAST<b>,
+): RoutePatternAST<Join<a, b>> {
   return {
     protocol: b.protocol ?? a.protocol,
     hostname: b.hostname ?? a.hostname,
