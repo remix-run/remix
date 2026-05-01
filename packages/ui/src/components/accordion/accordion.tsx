@@ -417,11 +417,7 @@ function AccordionImpl(handle: Handle<AccordionProps, AccordionContext>) {
 }
 
 export function onAccordionChange(handler: AccordionChangeHandler, captureBoolean?: boolean) {
-  return on<HTMLElement, typeof ACCORDION_CHANGE_EVENT>(
-    ACCORDION_CHANGE_EVENT,
-    handler,
-    captureBoolean,
-  )
+  return on<HTMLElement>(ACCORDION_CHANGE_EVENT, handler, captureBoolean)
 }
 
 export const Accordion = AccordionImpl

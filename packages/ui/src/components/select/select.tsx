@@ -533,7 +533,7 @@ const select = {
 } as const
 
 export function onSelectChange(handler: SelectChangeHandler, captureBoolean?: boolean) {
-  return on<HTMLElement, typeof SELECT_CHANGE_EVENT>(SELECT_CHANGE_EVENT, handler, captureBoolean)
+  return on<HTMLElement>(SELECT_CHANGE_EVENT, handler, captureBoolean)
 }
 
 function SelectLabel(handle: Handle) {

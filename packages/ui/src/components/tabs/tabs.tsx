@@ -447,7 +447,7 @@ export const trigger = triggerMixin
 const tabs = { Context, list, panel, trigger } as const
 
 export function onTabsChange(handler: TabsChangeHandler, captureBoolean?: boolean) {
-  return on<HTMLElement, typeof TABS_CHANGE_EVENT>(TABS_CHANGE_EVENT, handler, captureBoolean)
+  return on<HTMLElement>(TABS_CHANGE_EVENT, handler, captureBoolean)
 }
 
 export function Tabs(handle: Handle<TabsProps>) {

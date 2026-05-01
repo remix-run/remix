@@ -1407,7 +1407,7 @@ const menu = {
 } as const
 
 export function onMenuSelect(handler: MenuSelectHandler, captureBoolean?: boolean) {
-  return on<HTMLElement, typeof MENU_SELECT_EVENT>(MENU_SELECT_EVENT, handler, captureBoolean)
+  return on<HTMLElement>(MENU_SELECT_EVENT, handler, captureBoolean)
 }
 
 export interface MenuProps extends Omit<Props<'button'>, 'children'> {
