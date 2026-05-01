@@ -23,21 +23,15 @@
     "node": ">=24.3.0"
   },
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
-  },
   "dependencies": {
-    "@remix-run/test": "workspace:^",
-    "@remix-run/terminal": "workspace:^",
+    "@remix-run/test": "remix-run/remix#preview/pr-11150&path:packages/test",
+    "@remix-run/terminal": "remix-run/remix#preview/pr-11150&path:packages/terminal",
     "semver": "^7.7.4"
   },
   "devDependencies": {
