@@ -3,7 +3,7 @@ import type { Controller } from 'remix/fetch-router'
 
 import type { routes } from '../routes.ts'
 
-const assetServer = createAssetServer({
+export const assetServer = createAssetServer({
   basePath: '/assets',
   rootDir: process.cwd(),
   fileMap: {
