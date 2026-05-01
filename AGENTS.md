@@ -54,6 +54,7 @@ For work on this repository itself, use the skills in `.agents/skills/`:
 - `add-package` at `.agents/skills/add-package/SKILL.md`: Create or align a package under `packages/` with repo conventions.
 - `author-ui-modules` at `.agents/skills/author-ui-modules/SKILL.md`: Build idiomatic `packages/ui` modules, including first-party UI primitives, headless controls, and mixin-based modules.
 - `expert-typescript-programmer` at `.agents/skills/expert-typescript-programmer/SKILL.md`: Write, refactor, or review TypeScript with strict, precise, maintainable types.
+- `fix-issue` at `.agents/skills/fix-issue/SKILL.md`: Fix bugs reported in GitHub issues.
 - `write-tests` at `.agents/skills/write-tests/SKILL.md`: Write, refactor, or review tests with repo runner, fixture, assertion, dependency, and validation conventions.
 - `make-change-file` at `.agents/skills/make-change-file/SKILL.md`: Create or update package change files under `packages/*/.changes`.
 - `make-demo` at `.agents/skills/make-demo/SKILL.md`: Create or revise demos in this repository with production-quality Remix patterns.
