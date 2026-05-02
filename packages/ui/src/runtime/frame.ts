@@ -245,12 +245,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       isFullDocumentHtml(htmlContent)
 
     if (isFullDocumentReload && htmlContent !== undefined) {
-      // Full-document reload should tear down existing hydrated roots and subframes
-      // before diffing fresh HTML, otherwise stale component instances can survive
-      // on detached DOM nodes.
-      let previousBodyNodes = Array.from(container.doc.body.childNodes)
-      removeVirtualRoots(previousBodyNodes)
-      disposeSubFrames(previousBodyNodes, context)
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
       mergeRmxDataFromDocument(context.data, parsed)
       context.styleManager.reset()
@@ -259,17 +253,15 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       )
 
       syncElementAttributes(container.doc.documentElement, parsed.documentElement)
-      syncElementAttributes(container.doc.head, parsed.head)
-      syncElementAttributes(container.doc.body, parsed.body)
 
-      diffNodes(Array.from(container.doc.head.childNodes), Array.from(parsed.head.childNodes), {
+      diffNodes([container.doc.head], [parsed.head], {
         ...context,
-        regionParent: container.doc.head,
+        regionParent: container.doc.documentElement,
         regionTailRef: null,
       })
-      diffNodes(Array.from(container.doc.body.childNodes), Array.from(parsed.body.childNodes), {
+      diffNodes([container.doc.body], [parsed.body], {
         ...context,
-        regionParent: container.doc.body,
+        regionParent: container.doc.documentElement,
         regionTailRef: null,
       })
 

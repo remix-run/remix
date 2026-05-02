@@ -5,6 +5,7 @@ import { render } from './render.ts'
 import { ClientMountedPage } from './client-mounted.tsx'
 import { HomePage } from './home.tsx'
 import { ReloadScopePage } from './reload-scope.tsx'
+import { rootReloadClientEntriesAction } from './root-reload-client-entries.tsx'
 import { StateSearchRoutePage } from './state-search.tsx'
 import { TimePage } from './time.tsx'
 
@@ -42,5 +43,7 @@ export default {
         router,
       })
     },
+
+    rootReloadClientEntries: rootReloadClientEntriesAction.handler,
   },
 } satisfies Controller<typeof routes>

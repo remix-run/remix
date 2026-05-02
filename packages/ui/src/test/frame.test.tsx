@@ -246,6 +246,169 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('preserves hydrated client entries across full-document reloads', async () => {
+    let setupCount = 0
+    let removeCount = 0
+
+    function createRootEntryRender(handle: Handle<{ label: string }>) {
+      let count = 0
+      return () => (
+        <button
+          id="root-entry"
+          mix={[
+            on('click', () => {
+              count++
+              handle.update()
+            }),
+          ]}
+        >
+          {handle.props.label}: {count}
+        </button>
+      )
+    }
+
+    let ServerRootEntry = clientEntry(
+      '/js/root-entry.js#RootEntry',
+      function RootEntry(handle: Handle<{ label: string }>) {
+        return createRootEntryRender(handle)
+      },
+    )
+
+    let ClientRootEntry = clientEntry(
+      '/js/root-entry.js#RootEntry',
+      function RootEntry(handle: Handle<{ label: string }>) {
+        setupCount++
+        handle.signal.addEventListener('abort', () => {
+          removeCount++
+        })
+
+        return createRootEntryRender(handle)
+      },
+    )
+
+    async function renderDocument(label: string) {
+      return await drain(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <div>
+                <ServerRootEntry label={label} />
+              </div>
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderDocument('Initial'),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/root-entry.js' && exportName === 'RootEntry') return ClientRootEntry
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/root') return await renderDocument('Reloaded')
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+
+    let button = document.getElementById('root-entry') as HTMLButtonElement | null
+    invariant(button)
+    expect(button.textContent).toBe('Initial: 0')
+    expect(setupCount).toBe(1)
+
+    button.click()
+    app.flush()
+    expect(button.textContent).toBe('Initial: 1')
+
+    let topFrame = getTopFrame()
+    topFrame.src = '/root'
+    await topFrame.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('root-entry')).toBe(button)
+    expect(button.textContent).toBe('Reloaded: 1')
+    expect(setupCount).toBe(1)
+    expect(removeCount).toBe(0)
+
+    app.dispose()
+  })
+
+  it('disposes hydrated client entries removed by full-document reloads', async () => {
+    let removeCount = 0
+
+    let ServerRemovedEntry = clientEntry(
+      '/js/removed-entry.js#RemovedEntry',
+      function RemovedEntry() {
+        return () => <button id="removed-entry">Removed entry</button>
+      },
+    )
+
+    let ClientRemovedEntry = clientEntry(
+      '/js/removed-entry.js#RemovedEntry',
+      function RemovedEntry(handle: Handle) {
+        handle.signal.addEventListener('abort', () => {
+          removeCount++
+        })
+
+        return () => <button id="removed-entry">Removed entry</button>
+      },
+    )
+
+    async function renderDocument(includeEntry: boolean) {
+      return await drain(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>{includeEntry ? <ServerRemovedEntry /> : <p id="replacement">Gone</p>}</main>
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(await renderDocument(true), 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/removed-entry.js' && exportName === 'RemovedEntry') {
+          return ClientRemovedEntry
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/without-entry') return await renderDocument(false)
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+
+    expect(document.getElementById('removed-entry')).toBeInstanceOf(HTMLButtonElement)
+    expect(removeCount).toBe(0)
+
+    let topFrame = getTopFrame()
+    topFrame.src = '/without-entry'
+    await topFrame.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('removed-entry')).toBeNull()
+    expect(document.getElementById('replacement')?.textContent).toBe('Gone')
+    expect(removeCount).toBe(1)
+
+    app.dispose()
+  })
+
   it('hydrates ready modules before slower modules while ready() stays pending', async () => {
     let Fast = clientEntry('/js/fast.js#Fast', function Fast(handle: Handle) {
       let clicked = false
