@@ -35,19 +35,13 @@ type RemoveTrailingSeparator<T extends Token[]> =
   T extends [...infer Rest extends Token[], Separator] ? Rest : T
 
 // prettier-ignore
-type JoinPathnameTokens<
-  A extends Token[],
-  B extends Token[]
-> = B extends [Separator] ?
-    A :
-    StartsWithSeparator<B> extends true ?
-      [...A, ...B] :
-      [...A, Separator, ...B]
+type JoinPathnameTokens<A extends Token[], B extends Token[]> =
+  B extends [Separator] ? A :
+  StartsWithSeparator<B> extends true ? [...A, ...B] :
+  [...A, Separator, ...B]
 
 // prettier-ignore
-type JoinSearch<
-  A extends string | undefined,
-  B extends string | undefined
-> = B extends undefined ? A :
-    A extends undefined ? B :
-    `${A}&${B}`
+type JoinSearch<A extends string | undefined, B extends string | undefined> =
+  B extends undefined ? A :
+  A extends undefined ? B :
+  `${A}&${B}`
