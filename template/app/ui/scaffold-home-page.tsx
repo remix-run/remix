@@ -4,7 +4,7 @@ import { css, type RemixNode } from 'remix/ui'
 import { PromptButton } from '../assets/prompt-button.tsx'
 import { routes } from '../routes.ts'
 
-const APP_DISPLAY_NAME = decodeURIComponent('%%RMX_APP_DISPLAY_NAME_URI_COMPONENT%%')
+const APP_DISPLAY_NAME = readAppDisplayName('%%RMX_APP_DISPLAY_NAME_URI_COMPONENT%%')
 
 const FONT_STACK =
   "'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
@@ -330,6 +330,10 @@ function Footer() {
       </div>
     </footer>
   )
+}
+
+function readAppDisplayName(value: string): string {
+  return value.startsWith('%%') ? 'Remix App' : decodeURIComponent(value)
 }
 
 const CARD_STYLES = {

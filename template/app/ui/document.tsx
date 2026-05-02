@@ -7,7 +7,7 @@ export interface DocumentProps {
   title?: string
 }
 
-const DEFAULT_TITLE = decodeURIComponent('%%RMX_APP_DISPLAY_NAME_URI_COMPONENT%%')
+const DEFAULT_TITLE = readAppDisplayName('%%RMX_APP_DISPLAY_NAME_URI_COMPONENT%%')
 
 export function Document() {
   return ({ title = DEFAULT_TITLE, children }: DocumentProps) => (
@@ -23,4 +23,8 @@ export function Document() {
       </body>
     </html>
   )
+}
+
+function readAppDisplayName(value: string): string {
+  return value.startsWith('%%') ? 'Remix App' : decodeURIComponent(value)
 }
