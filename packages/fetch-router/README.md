@@ -21,21 +21,13 @@ npm i remix
 
 The main purpose of the router is to map incoming requests to request handlers and middleware. The router uses the `fetch()` API to accept a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and return a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
 
-Import route definition helpers (`route`, `form`, `resource`, `resources`, etc.) from `remix/routes`, especially in a dedicated `routes.ts` file. Import runtime APIs (`createRouter`, `Middleware`, etc.) from `remix/fetch-router`.
-
-```ts
-// routes.ts
-import { route, form, resources } from 'remix/routes'
-
-// router.ts
-import { createRouter } from 'remix/fetch-router'
-```
+Import route definition helpers (`route`, `form`, `resource`, `resources`, etc.) from `remix/routes` and runtime APIs (`createRouter`, `Middleware`, etc.) from `remix/fetch-router`.
 
 The example below is a small site with a home page, an "about" page, and a blog.
 
 ```ts
-import { createRouter } from 'remix/fetch-router'
 import { route } from 'remix/routes'
+import { createRouter } from 'remix/fetch-router'
 import { logger } from 'remix/logger-middleware'
 
 // `route()` creates a "route map" that organizes routes by name. The keys
@@ -50,13 +42,14 @@ let routes = route({
 })
 
 let router = createRouter({
-  // Middleware may be used to run code before and/or after actions run.
+  // Middleware is used to run code before and/or after actions run.
   // In this case, the `logger()` middleware logs the request to the console.
   middleware: [logger()],
 })
 
-// Map the root route map to a controller that defines actions for direct
-// route leaves only. Nested route maps use their own controllers.
+// Map a controller that supplies actions for the root routes.
+// A controller is a plain object with an `actions` property that
+// matches the direct route leaves in a route map.
 router.map(routes, {
   actions: {
     home() {
@@ -68,6 +61,7 @@ router.map(routes, {
   },
 })
 
+// Map another controller that supplies actions for the blog routes.
 router.map(routes.blog, {
   actions: {
     index() {
@@ -107,8 +101,8 @@ In addition to describing the structure of your routes, route maps also make it 
 Note: We're using the [`createHtmlResponse` helper from `response`](https://github.com/remix-run/remix/tree/main/packages/response#readme) below to create `Response`s with `Content-Type: text/html`. We're also using the `html` template tag to create safe HTML strings to use in the response body.
 
 ```ts
-import { createRouter } from 'remix/fetch-router'
 import { route } from 'remix/routes'
+import { createRouter } from 'remix/fetch-router'
 import { html } from 'remix/html-template'
 import { createHtmlResponse } from 'remix/response/html'
 
@@ -557,11 +551,11 @@ function auth(options?: AuthOptions): Middleware {
 }
 ```
 
-Middleware may be used in two different contexts: globally (at the router level) or inline (at the route level).
+Middleware may be used at three levels: globally on the router, on a controller, or inline on an individual action.
 
 Global middleware is added to the router when it is created using the `createRouter({ middleware })` option. This middleware runs before any routes are matched and is useful for doing things like logging, serving static files, profiling, and a variety of other things. Global middleware runs on every request, so it's important to keep them lightweight and fast.
 
-Inline (or "route") middleware is added to the router when actions are registered using either `router.map()` or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. Route middleware runs after global middleware but before the route action, and is useful for doing things like authentication, authorization, and data validation. The object form for route actions is `{ handler, middleware? }`, so you can omit `middleware` entirely when you do not need it.
+Controller middleware runs for every direct action in a controller. Action middleware runs only for one action, whether that action is registered in a controller or directly with `router.map()` or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. The object form for actions is `{ handler, middleware? }`, so you can omit `middleware` entirely when you do not need it.
 
 A controller's `middleware` applies only to the direct route actions in that controller, and its `actions` object may not include nested route-map keys. Map nested route maps explicitly so each controller owns the direct route actions for one route map.
 
@@ -570,6 +564,7 @@ let routes = route({
   home: '/',
   admin: {
     dashboard: '/admin/dashboard',
+    settings: '/admin/settings',
   },
 })
 
@@ -581,12 +576,18 @@ let router = createRouter({
 router.map(routes.home, () => new Response('Home'))
 
 router.map(routes.admin, {
-  // This middleware applies to direct actions in `routes.admin`, not to nested
-  // child route maps that you map separately.
+  // This middleware applies to all actions in this controller.
   middleware: [auth({ token: 'secret' })],
   actions: {
     dashboard() {
       return new Response('Dashboard')
+    },
+    settings: {
+      // This middleware applies only to this action.
+      middleware: [requireAdmin()],
+      handler() {
+        return new Response('Settings')
+      },
     },
   },
 })
