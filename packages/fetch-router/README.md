@@ -226,17 +226,18 @@ router.map(routes, {
       assert.equal(method, 'GET')
       return new Response('Home')
     },
-    contact: {
-      actions: {
-        index({ method }) {
-          assert.equal(method, 'GET')
-          return new Response('Contact')
-        },
-        action({ method }) {
-          assert.equal(method, 'POST')
-          return new Response('Contact Action')
-        },
-      },
+  },
+})
+
+router.map(routes.contact, {
+  actions: {
+    index({ method }) {
+      assert.equal(method, 'GET')
+      return new Response('Contact')
+    },
+    action({ method }) {
+      assert.equal(method, 'POST')
+      return new Response('Contact Action')
     },
   },
 })
@@ -293,43 +294,44 @@ router.map(routes, {
         </html>
       `)
     },
-    contact: {
-      actions: {
-        // GET /contact - shows the form
-        index() {
-          return createHtmlResponse(`
-            <html>
-              <body>
-                <h1>Contact Us</h1>
-                <form method="POST" action="${routes.contact.action.href()}">
-                  <label for="message">Message</label>
-                  <input type="text" name="message" />
-                  <button type="submit">Send</button>
-                </form>
-              </body>
-            </html>
-          `)
-        },
-        // POST /contact - handles the form submission
-        action({ get }) {
-          let formData = get(FormData)
-          let message = formData.get('message') as string
-          let body = html`
-            <html>
-              <body>
-                <h1>Thanks!</h1>
-                <p>You said: ${message}</p>
+  },
+})
 
-                <p>
-                  Got more to say? <a href="${routes.contact.index.href()}">Send another message</a>
-                </p>
-              </body>
-            </html>
-          `
+router.map(routes.contact, {
+  actions: {
+    // GET /contact - shows the form
+    index() {
+      return createHtmlResponse(`
+        <html>
+          <body>
+            <h1>Contact Us</h1>
+            <form method="POST" action="${routes.contact.action.href()}">
+              <label for="message">Message</label>
+              <input type="text" name="message" />
+              <button type="submit">Send</button>
+            </form>
+          </body>
+        </html>
+      `)
+    },
+    // POST /contact - handles the form submission
+    action({ get }) {
+      let formData = get(FormData)
+      let message = formData.get('message') as string
+      let body = html`
+        <html>
+          <body>
+            <h1>Thanks!</h1>
+            <p>You said: ${message}</p>
 
-          return createHtmlResponse(body)
-        },
-      },
+            <p>
+              Got more to say? <a href="${routes.contact.index.href()}">Send another message</a>
+            </p>
+          </body>
+        </html>
+      `
+
+      return createHtmlResponse(body)
     },
   },
 })
@@ -376,17 +378,18 @@ router.map(routes.brands, {
     show({ params }) {
       return new Response(`Brand ${params.id}`)
     },
-    products: {
-      actions: {
-        // GET /brands/:brandId/products
-        index() {
-          return new Response('Products Index')
-        },
-        // GET /brands/:brandId/products/:id
-        show({ params }) {
-          return new Response(`Brand ${params.brandId}, Product ${params.id}`)
-        },
-      },
+  },
+})
+
+router.map(routes.brands.products, {
+  actions: {
+    // GET /brands/:brandId/products
+    index() {
+      return new Response('Products Index')
+    },
+    // GET /brands/:brandId/products/:id
+    show({ params }) {
+      return new Response(`Brand ${params.brandId}, Product ${params.id}`)
     },
   },
 })
