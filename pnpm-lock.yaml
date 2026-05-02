@@ -154,12 +154,6 @@ importers:
 
   demos/sse:
     dependencies:
-      '@remix-run/events':
-        specifier: jam
-        version: 0.0.0-experimental-remix-jam.5
-      '@remix-run/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
@@ -3620,9 +3614,6 @@ packages:
     peerDependencies:
       '@redis/client': ^5.11.0
 
-  '@remix-run/events@0.0.0-experimental-remix-jam.5':
-    resolution: {integrity: sha512-rbKP27/YkLZq0gbCy3QpwaHQzJg41IgbC//8SggPgMtWxZdxkcnkWmQGMLH0xwQcBlZ3yLtZRDQvL+ir4GAA6g==}
-
   '@rollup/rollup-android-arm-eabi@4.53.5':
     resolution: {integrity: sha512-iDGS/h7D8t7tvZ1t6+WPK04KD0MwzLZrG0se1hzBjSi5fyxlsiggoJHwh18PCFNn7tG43OWb6pdZ6Y+rMlmyNQ==}
     cpu: [arm]
@@ -6652,8 +6643,6 @@ snapshots:
   '@redis/time-series@5.11.0(@redis/client@5.11.0)':
     dependencies:
       '@redis/client': 5.11.0
-
-  '@remix-run/events@0.0.0-experimental-remix-jam.5': {}
 
   '@rollup/rollup-android-arm-eabi@4.53.5':
     optional: true

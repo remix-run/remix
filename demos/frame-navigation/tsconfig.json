@@ -10,8 +10,7 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "remix/ui",
-    "preserveSymlinks": true
+    "jsxImportSource": "remix/ui"
   },
   "exclude": ["dist"]
 }
