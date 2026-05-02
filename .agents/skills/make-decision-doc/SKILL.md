@@ -7,7 +7,7 @@ description: Add a numbered decision document under `decisions/` to capture a no
 
 ## Overview
 
-Decision docs live at the repo root in `decisions/NNN-kebab-name.md`. They explain *why* a choice was made — the tradeoff, the alternatives that were actually considered, and (when useful) the conditions under which we'd revisit. They are not feature specs, not how-to guides, and not changelog entries.
+Decision docs live at the repo root in `decisions/NNN-kebab-name.md`. They explain _why_ a choice was made — the tradeoff, the alternatives that were actually considered, and (when useful) the conditions under which we'd revisit. They are not feature specs, not how-to guides, and not changelog entries.
 
 ## When to write one
 
@@ -21,7 +21,7 @@ Skip a decision doc when the choice is obvious, the alternatives weren't serious
 
 1. Read the existing files under `decisions/` (e.g. `decisions/001-*.md`) to match tone and structure.
 2. Pick the next number by counting existing files (`ls decisions/ | wc -l`) and add 1. Filename is `NNN-kebab-slug.md` with a 3-digit zero-padded prefix.
-3. Pick a slug that names the *thing being decided*, not the verb (`single-matcher`, not `pick-single-matcher`).
+3. Pick a slug that names the _thing being decided_, not the verb (`single-matcher`, not `pick-single-matcher`).
 4. Draft the doc following the structure below. Keep it grounded — no hypothetical alternatives, no aspirational language.
 5. If the decision relates to other decisions, link them as footnotes (`[NNN]: ./NNN-other.md`).
 
