@@ -13,11 +13,9 @@ import {
   resolveVersion,
   VersionNotFoundError,
 } from '../utils/npm.ts'
-import { render } from '../utils/render.ts'
+import { render } from './render.ts'
 import { HomePage } from '../ui/home-page.ts'
-import { renderDirectoryListing } from '../ui/package-browser/directory.ts'
-import { renderError } from '../ui/package-browser/error.ts'
-import { renderFileContent } from '../ui/package-browser/file-content.ts'
+import { renderDirectoryListing, renderError, renderFileContent } from './package-browser.ts'
 
 export default {
   actions: {

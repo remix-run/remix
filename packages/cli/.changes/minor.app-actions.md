@@ -16,3 +16,5 @@ router.map(routes.account.settings, accountSettingsController)
 Controller middleware applies only to the direct actions in that controller. Middleware on `app/actions/controller.tsx` applies only to the direct root actions in that controller; it does not protect controllers registered for nested route maps. If an app previously relied on middleware from one controller to protect another controller, copy the relevant middleware to each controller that needs it, such as `app/actions/account/controller.tsx` and `app/actions/account/settings/controller.tsx`.
 
 After moving files, remove nested route-map keys and unknown action keys from every controller. Each controller's `actions` object should contain exactly the direct leaf route keys for the route map passed to the matching `router.map()` call.
+
+Shared HTML response helpers that are only used by controllers should also live under `app/actions`, such as `app/actions/render.tsx`, instead of `app/utils`.

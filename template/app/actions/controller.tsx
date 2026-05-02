@@ -7,7 +7,7 @@ import type { Controller } from 'remix/fetch-router'
 import type { routes } from '../routes.ts'
 import { HomePage } from '../ui/scaffold-home-page.tsx'
 import { Layout } from '../ui/layout.tsx'
-import { render } from '../utils/render.tsx'
+import { render } from './render.tsx'
 
 const rootDir = process.cwd()
 const workspacePackagesDir = path.resolve(rootDir, '..', 'packages')

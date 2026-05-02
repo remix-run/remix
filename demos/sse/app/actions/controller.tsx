@@ -2,7 +2,7 @@ import type { Controller } from 'remix/fetch-router'
 
 import type { routes } from '../routes.ts'
 import { getMessageLimit } from '../utils/message-limit.ts'
-import { render } from '../utils/render.ts'
+import { render } from './render.ts'
 import { HomePage } from './home.tsx'
 
 export default {

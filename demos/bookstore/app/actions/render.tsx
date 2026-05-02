@@ -5,7 +5,7 @@ import { createHtmlResponse } from 'remix/response/html'
 import { getContext } from 'remix/async-context-middleware'
 import type { RequestContext, Router } from 'remix/fetch-router'
 
-import { assetServer } from './assets.ts'
+import { assetServer } from '../utils/assets.ts'
 
 export function render(node: RemixNode, init?: ResponseInit) {
   let context = getContext()

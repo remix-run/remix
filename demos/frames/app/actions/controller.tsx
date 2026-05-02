@@ -1,7 +1,7 @@
 import type { Controller } from 'remix/fetch-router'
 
 import type { routes } from '../routes.ts'
-import { render } from '../utils/render.ts'
+import { render } from './render.ts'
 import { ClientMountedPage } from './client-mounted.tsx'
 import { HomePage } from './home.tsx'
 import { ReloadScopePage } from './reload-scope.tsx'

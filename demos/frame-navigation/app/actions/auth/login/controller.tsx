@@ -3,7 +3,7 @@ import { css } from 'remix/ui'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../../../routes.ts'
-import { render } from '../../../utils/render.tsx'
+import { render } from '../../render.tsx'
 import { authCookie, isAuthenticated } from '../../../middleware/auth.ts'
 
 export default {

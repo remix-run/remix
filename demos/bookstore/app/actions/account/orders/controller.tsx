@@ -6,7 +6,7 @@ import { requireAuth } from '../../../middleware/auth.ts'
 import type { routes } from '../../../routes.ts'
 import { getCurrentUser } from '../../../utils/context.ts'
 import { parseId } from '../../../utils/ids.ts'
-import { render } from '../../../utils/render.tsx'
+import { render } from '../../render.tsx'
 import { AccountOrdersIndexPage } from './index-page.tsx'
 import { AccountOrderNotFoundPage, AccountOrderShowPage } from './show-page.tsx'
 

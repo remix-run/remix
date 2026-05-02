@@ -7,7 +7,7 @@ import { users } from '../../../data/schema.ts'
 import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
-import { render } from '../../../utils/render.tsx'
+import { render } from '../../render.tsx'
 import { normalizeEmail, registrationSchema } from '../schemas.ts'
 import { ExistingAccountPage, RegisterPage } from './page.tsx'
 

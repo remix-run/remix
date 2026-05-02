@@ -101,8 +101,8 @@ Use these root directories consistently:
 Inside `app/`, organize by responsibility:
 
 - `assets/` for client entrypoints and client-owned browser behavior
-- `actions/` for controller-owned route handlers and route-local UI/helpers that are not shared
-  across route areas
+- `actions/` for controller-owned route handlers, route-local response rendering, and route-local
+  UI/helpers that are not shared across route areas
 - `data/` for schema, queries, persistence setup, migrations, and runtime data initialization
 - `middleware/` for request lifecycle concerns such as auth, sessions, uploads, and database
   injection
@@ -134,6 +134,20 @@ When code could live in multiple places:
 - Move shared cross-route UI to `app/ui/`
 - If a top-level leaf grows into a route map, move its handler into the nested route-key
   controller and update `app/router.ts` to map that route map explicitly
+
+### Response Rendering And Utilities
+
+- Treat response rendering as action-layer code: modules that return `Response`, choose HTTP status
+  or headers, call `redirect(...)`, or call the local `render(...)` helper belong in `app/actions`
+- Keep `app/actions/render.tsx` small; it should adapt `remix/ui/server` output to
+  `createHtmlResponse(...)`. Route-specific response assembly can live in flat action modules, but
+  directories under `app/actions/` must still match route-map keys
+- Put pure support code in focused `app/utils/<topic>.ts` modules. Formatting, MIME
+  classification, path parsing, sorting, and normalization should be testable without a router,
+  request context, or `Response`, and should not import from `app/actions`, `remix/ui/server`, or
+  `remix/response/*`
+- Do not introduce page-data intermediary shapes only to keep route-specific renderers away from
+  `render(...)`; keep response assembly in actions and extract only the pure helpers
 
 ### Layout Anti-Patterns
 
@@ -205,6 +219,8 @@ When code could live in multiple places:
 - Use `routes.<name>.href(...)` in tests so URLs stay coupled to the route contract
 - For auth or session scenarios, use a test cookie and `createMemorySessionStorage()` instead of
   production storage
+- Co-locate tests for pure `app/utils` helpers beside their modules. Test response behavior through
+  router or controller tests
 - Use component tests only for interactive or DOM-specific behavior. Render with `createRoot(...)`,
   interact with the real DOM, and call `root.flush()` between steps
 - Prefer one representative behavior test over many repetitive assertion variants
@@ -324,7 +340,7 @@ what it exports. Open the linked reference file when you need full examples.
 - `remix/ui` — the component runtime: components, core mixins, `clientEntry`, `run`, `<Frame>`,
   navigation helpers, and `createRoot`. Use for app UI behavior
 - `remix/ui/server` — server rendering: `renderToStream`, `renderToString`. Use in the
-  `render(...)` helper that returns HTML responses
+  `app/actions/render.tsx` helper that returns HTML responses
 - `remix/ui/animation` — animation APIs: `animateEntrance`, `animateExit`, `animateLayout`,
   `spring`, `tween`, and `easings`
 - `remix/ui/<primitive>` — UI primitives, mixins, glyphs, and theme helpers. Import from
