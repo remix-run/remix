@@ -4,7 +4,13 @@ import * as process from 'node:process'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
-import { inspectControllerOwnership, type OwnedSubtree } from './controller-ownership.ts'
+import {
+  ROOT_ROUTE_NAME,
+  inspectControllerOwnership,
+  type ControllerOwnership,
+  type OwnedSubtree,
+  type RouteDirectoryPlan,
+} from './controller-ownership.ts'
 import {
   routeMapLoaderFailed,
   routeMapLoaderInvalidJson,
@@ -13,7 +19,7 @@ import {
   routesFileNotFound,
 } from './errors.ts'
 
-export type RouteOwnerKind = 'action' | 'controller'
+export type RouteOwnerKind = 'controller' | 'directory'
 export type RouteTreeNodeKind = 'group' | 'route'
 
 export interface RouteTreeOwner {
@@ -56,7 +62,7 @@ export interface RawRouteTreeNode {
 export async function loadRouteMap(cwd: string = process.cwd()): Promise<LoadedRouteMap> {
   let manifest = await loadRouteManifest(cwd)
   let ownership = await inspectControllerOwnership(manifest.appRoot, manifest.tree)
-  let tree = decorateRouteTree(manifest.tree, ownership.subtrees)
+  let tree = decorateRouteTree(manifest.tree, ownership)
 
   return {
     appRoot: manifest.appRoot,
@@ -137,28 +143,51 @@ async function loadRawRouteMap(appRoot: string, routesFile: string): Promise<Raw
 
 function decorateRouteTree(
   rawTree: RawRouteTreeNode[],
-  subtrees: OwnedSubtree[],
-  parentSegments: string[] = [],
+  ownership: ControllerOwnership,
 ): RouteTreeNode[] {
-  let subtreesByRouteName = new Map(subtrees.map((subtree) => [subtree.routeName, subtree]))
+  let subtreesByRouteName = new Map(
+    ownership.subtrees.map((subtree) => [subtree.routeName, subtree]),
+  )
+  let directoriesByRouteName = new Map(
+    ownership.routeDirectories.map((directory) => [directory.routeName, directory]),
+  )
 
-  return decorateRouteTreeWithLookup(rawTree, subtreesByRouteName, parentSegments)
+  return decorateRouteTreeWithLookup(
+    rawTree,
+    subtreesByRouteName,
+    directoriesByRouteName,
+    ownership.scan.routeDirectoryPaths,
+  )
 }
 
 function decorateRouteTreeWithLookup(
   rawTree: RawRouteTreeNode[],
   subtreesByRouteName: Map<string, OwnedSubtree>,
+  directoriesByRouteName: Map<string, RouteDirectoryPlan>,
+  actualRouteDirectories: Set<string>,
   parentSegments: string[] = [],
 ): RouteTreeNode[] {
   return rawTree.map((rawNode) => {
-    let owner = getRouteOwner(rawNode, parentSegments, subtreesByRouteName)
+    let owner = getRouteOwner(
+      rawNode,
+      parentSegments,
+      subtreesByRouteName,
+      directoriesByRouteName,
+      actualRouteDirectories,
+    )
     let nextParentSegments =
       rawNode.kind === 'group' ? [...parentSegments, rawNode.key] : parentSegments
 
     return {
       children:
         rawNode.kind === 'group'
-          ? decorateRouteTreeWithLookup(rawNode.children, subtreesByRouteName, nextParentSegments)
+          ? decorateRouteTreeWithLookup(
+              rawNode.children,
+              subtreesByRouteName,
+              directoriesByRouteName,
+              actualRouteDirectories,
+              nextParentSegments,
+            )
           : [],
       key: rawNode.key,
       kind: rawNode.kind,
@@ -174,24 +203,40 @@ function getRouteOwner(
   rawNode: RawRouteTreeNode,
   parentSegments: string[],
   subtreesByRouteName: Map<string, OwnedSubtree>,
+  directoriesByRouteName: Map<string, RouteDirectoryPlan>,
+  actualRouteDirectories: Set<string>,
 ): RouteTreeOwner {
   let ownerRouteName =
     rawNode.kind === 'group'
       ? rawNode.name
       : parentSegments.length === 0
-        ? rawNode.name
+        ? ROOT_ROUTE_NAME
         : parentSegments.join('.')
   let subtree = subtreesByRouteName.get(ownerRouteName)
 
-  if (subtree == null) {
-    throw routeOwnerPlanUnresolved(rawNode.name)
+  if (subtree != null) {
+    return {
+      exists: subtree.actualEntryPath != null,
+      kind: 'controller',
+      path: subtree.actualEntryPath ?? subtree.entryDisplayPath,
+    }
   }
 
-  return {
-    exists: subtree.actualEntryPath != null,
-    kind: subtree.kind,
-    path: subtree.actualEntryPath ?? subtree.entryDisplayPath,
+  if (rawNode.kind === 'group') {
+    let directory = directoriesByRouteName.get(rawNode.name)
+
+    if (directory == null) {
+      throw routeOwnerPlanUnresolved(rawNode.name)
+    }
+
+    return {
+      exists: actualRouteDirectories.has(directory.directoryPath),
+      kind: 'directory',
+      path: directory.directoryPath,
+    }
   }
+
+  throw routeOwnerPlanUnresolved(rawNode.name)
 }
 
 function assertRawRouteTree(value: unknown): RawRouteTreeNode[] {

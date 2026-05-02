@@ -11,23 +11,23 @@ describe('doctor fix plans', () => {
     let appRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-doctor-fixes-'))
 
     try {
-      await fs.mkdir(path.join(appRoot, 'app', 'controllers'), { recursive: true })
-      await fs.writeFile(path.join(appRoot, 'app', 'controllers', 'home.js'), 'export {}\n')
+      await fs.mkdir(path.join(appRoot, 'app', 'actions'), { recursive: true })
+      await fs.writeFile(path.join(appRoot, 'app', 'actions', 'controller.js'), 'export {}\n')
 
       let appliedFixes = await applyDoctorFixPlans(appRoot, [
         {
           code: 'missing-owner',
-          contents: 'export const home = {}\n',
+          contents: 'export default { actions: {} }\n',
           kind: 'create-file',
-          path: 'app/controllers/home.js',
-          routeName: 'home',
-          suite: 'controllers',
+          path: 'app/actions/controller.js',
+          routeName: '<root>',
+          suite: 'actions',
         },
       ])
 
       assert.deepEqual(appliedFixes, [])
       assert.equal(
-        await fs.readFile(path.join(appRoot, 'app', 'controllers', 'home.js'), 'utf8'),
+        await fs.readFile(path.join(appRoot, 'app', 'actions', 'controller.js'), 'utf8'),
         'export {}\n',
       )
     } finally {
@@ -49,7 +49,7 @@ describe('doctor fix plans', () => {
               kind: 'create-file',
               path: '../escape.js',
               routeName: '../../../escape',
-              suite: 'controllers',
+              suite: 'actions',
             },
           ]),
         /outside the app root/,

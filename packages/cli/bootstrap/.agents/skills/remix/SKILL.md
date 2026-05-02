@@ -17,7 +17,7 @@ subpath. There is no top-level `remix` import.
 A Remix app has four main pieces:
 
 - **Routes** in `app/routes.ts` define the typed URL contract and power `href()` generation.
-- **Controllers and actions** implement that contract and return `Response` objects.
+- **Controllers** in `app/actions` implement that contract and return `Response` objects.
 - **Middleware** composes request lifecycle behavior and populates typed context via
   `context.set(Key, value)`.
 - **Components** render UI with `remix/ui`. This is not React. A component receives a
@@ -101,7 +101,8 @@ Use these root directories consistently:
 Inside `app/`, organize by responsibility:
 
 - `assets/` for client entrypoints and client-owned browser behavior
-- `controllers/` for route-owned handlers and route-local UI
+- `actions/` for controller-owned route handlers and route-local UI/helpers that are not shared
+  across route areas
 - `data/` for schema, queries, persistence setup, migrations, and runtime data initialization
 - `middleware/` for request lifecycle concerns such as auth, sessions, uploads, and database
   injection
@@ -123,31 +124,42 @@ When code could live in multiple places:
 
 ### Route Ownership
 
-- Use a flat file in `app/controllers/` for a simple leaf action, such as `app/controllers/home.tsx`
-- Use a folder with `controller.tsx` when a route owns nested routes or multiple actions, such as
-  `app/controllers/account/controller.tsx`
-- Mirror nested route structure on disk, such as `app/controllers/auth/login/controller.tsx`
-- Keep route-local UI next to its owner, such as `app/controllers/contact/page.tsx`
-- Move shared UI to `app/ui/`
-- If a flat leaf grows child routes or multiple actions, promote it to a controller folder
+- Put top-level leaf actions in `app/actions/controller.tsx`
+- A controller's `actions` object contains only direct leaf route keys from the route map passed to
+  `router.map(...)`
+- Add `app/actions/<route-key>/controller.tsx` for each nested route map that needs actions or
+  middleware, and map it explicitly with `router.map(routes.<routeKey>, controller)`
+- Name directories under `app/actions/` after route-map keys, not URL path segments
+- Keep route-local UI and helpers next to the controller that owns them
+- Move shared cross-route UI to `app/ui/`
+- If a top-level leaf grows into a route map, move its handler into the nested route-key
+  controller and update `app/router.ts` to map that route map explicitly
 
 ### Layout Anti-Patterns
 
 - Do not create `app/lib/` as a generic dumping ground
 - Do not create `app/components/` as a second shared UI bucket when `app/ui/` already owns that
   role
-- Do not put shared cross-route UI in `app/controllers/`
+- Do not create `app/controllers/`; Remix app route handlers live under `app/actions/`
+- Do not put shared cross-route UI in `app/actions/`
+- Do not create standalone root action files; put root route actions in `app/actions/controller.tsx`
+- Do not put nested route-map keys in a controller's `actions`
+- Do not register normal app leaf routes directly in `app/router.ts` when they belong in a
+  controller
+- Do not rely on middleware from one controller to protect another controller; map middleware
+  explicitly in each controller that needs it
 - Do not put middleware or persistence helpers in `app/utils/` when they have a clearer home
-- Do not create folders for simple leaf actions unless they are real controllers
 
 ## Core Remix Rules
 
 - Import from `remix/<subpath>`, never `import { ... } from 'remix'`
 - Treat `app/routes.ts` as the source of truth for URLs. Use `routes.<name>.href(...)` for
   redirects, links, tests, and internal URL construction
-- Controllers and actions should return explicit `Response` objects, including redirects, 404s, and
+- Controllers should return explicit `Response` objects, including redirects, 404s, and
   validation failures. At the route boundary, prefer returning a `Response` for expected outcomes
   (validation errors, conflicts, not found) over throwing for control flow
+- `router.map(routes, controller)` maps only the direct leaf routes in `routes`; nested route maps
+  must be mapped with their own explicit controllers
 - Model HTTP behavior explicitly. Status codes, headers, redirects, cache rules, and content types
   are part of the route contract
 - Make the server route correct first. A POST should already return the right HTML, redirect, or
@@ -185,6 +197,9 @@ When code could live in multiple places:
 
 - Prefer server and router tests first. Drive the app with `router.fetch(new Request(...))` and
   assert on the returned `Response`
+- Keep controller tests shaped like controllers: root route behavior belongs in
+  `app/actions/controller.test.ts(x)`, and nested route-map behavior belongs beside that route-key
+  controller
 - Build a fresh router per test or per suite so sessions, in-memory storage, and database state
   stay isolated
 - Use `routes.<name>.href(...)` in tests so URLs stay coupled to the route contract
@@ -216,6 +231,13 @@ When code could live in multiple places:
 - Assuming authentication is enough without per-resource authorization checks
 - Dropping shared code into vague buckets like `utils.ts`, `helpers.ts`, or `common.ts` when
   ownership is known
+- Recreating the old `app/controllers` or standalone root action file layout instead of using
+  controllers under `app/actions`
+- Putting nested route-map keys inside a controller `actions` object. Map nested route maps
+  explicitly in `app/router.ts`
+- Treating direct `router.get(...)`/`router.post(...)` registrations as the default app structure
+  instead of using controllers
+- Assuming controller middleware applies to controllers registered for nested route maps
 - Writing only component tests for a feature whose main behavior is really an HTTP route concern
 
 ## Package Map
@@ -400,6 +422,31 @@ export default {
     },
   },
 } satisfies Controller<typeof routes.books, AppContext>
+```
+
+### Register Controllers Explicitly
+
+```typescript
+import { createRouter } from 'remix/fetch-router'
+
+import rootController from './actions/controller.tsx'
+import adminController from './actions/admin/controller.tsx'
+import adminBooksController from './actions/admin/books/controller.tsx'
+import authController from './actions/auth/controller.tsx'
+import authLoginController from './actions/auth/login/controller.tsx'
+import booksController from './actions/books/controller.tsx'
+import contactController from './actions/contact/controller.tsx'
+import { routes } from './routes.ts'
+
+export const router = createRouter({ middleware })
+
+router.map(routes, rootController)
+router.map(routes.contact, contactController)
+router.map(routes.books, booksController)
+router.map(routes.auth, authController)
+router.map(routes.auth.login, authLoginController)
+router.map(routes.admin, adminController)
+router.map(routes.admin.books, adminBooksController)
 ```
 
 ### Compose middleware deliberately

@@ -17,8 +17,7 @@ Refer to ./.agents/skills/remix/SKILL.md
 
 ## Starter Layout
 
-- `app/controllers/home.tsx` owns the home page
-- `app/controllers/auth.tsx` owns the auth page
+- `app/actions/controller.tsx` owns the top-level route actions
 - `app/routes.ts` defines the route contract
 - `app/router.ts` wires routes to route handlers
 - `app/ui/` holds the shared document and layout wrappers
@@ -27,10 +26,10 @@ Refer to ./.agents/skills/remix/SKILL.md
 ## Route Ownership
 
 - Start from `app/routes.ts` and map each route to the narrowest owner on disk.
-- Keep simple pages in flat files like `app/controllers/home.tsx` and `app/controllers/auth.tsx`.
-- Promote a route into a controller folder with `controller.tsx` only when it gains nested routes, multiple actions, or route-owned modules.
+- Put top-level route actions in `app/actions/controller.tsx`.
+- Add `app/actions/<route-key>/controller.tsx` for nested route maps that need their own actions or middleware.
 - Keep route-owned page modules next to the route that owns them.
-- Move shared UI to `app/ui/`, not `app/controllers/`.
+- Move shared UI to `app/ui/`, not `app/actions/`.
 
 ## Build-Out Notes
 

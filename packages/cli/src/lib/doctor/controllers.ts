@@ -18,6 +18,6 @@ export async function checkControllerConventions(
 
   return {
     fixPlans,
-    suite: createDoctorSuite('controllers', findings),
+    suite: createDoctorSuite('actions', findings),
   }
 }

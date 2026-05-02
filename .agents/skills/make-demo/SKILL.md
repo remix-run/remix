@@ -68,22 +68,23 @@ Use these root directories consistently:
 
 Inside `app/`, organize code by responsibility:
 
-- `controllers/` for all controller-owned features, with folders such as `controllers/home/`, `controllers/auth/`, or `controllers/account/`, each with a `controller.tsx` entrypoint and the UI it owns
-- `controllers/ui/` for reusable cross-feature UI primitives used by those controllers
+- `actions/` for all controller-owned route actions and route-local UI/helpers. The root route map lives in `actions/controller.tsx`; nested route maps live in route-key folders such as `actions/auth/controller.tsx` or `actions/account/controller.tsx`
 - `data/` for runtime data definitions such as table schema and setup helpers used by the application at startup
 - `middleware/` for request-layer concerns such as auth, database injection, sessions, and other request lifecycle setup
+- `ui/` for shared UI primitives used across route areas
 - `utils/` for shared runtime support code that does not clearly belong to one of the other app layers
 
 ### Naming and ownership rules
 
 - Keep controllers thin. They should read request context, talk to the database or other runtime services, and return a response.
-- Put each controller in its controller feature folder as `controller.tsx`. Do not split controller files across the app root and feature folders.
-- When one controller owns nested child controllers, model that hierarchy with nested feature directories on disk. Avoid flattened files such as `signup-controller.tsx` when the parent already lives at `auth/controller.tsx`; prefer `auth/signup/controller.tsx`.
-- If a component or helper is only used by one controller feature, keep it in that controller feature folder instead of `controllers/ui/`.
-- Use `controllers/ui/` only for reusable UI primitives. Do not create a generic `app/components/` dumping ground.
+- `actions/controller.tsx` owns top-level leaf route actions, and each nested route map gets its own explicit `actions/<route-key>/controller.tsx` file. A controller's `actions` object contains direct leaf route keys from the route map passed to its `router.map()` call.
+- Name directories under `app/actions/` after route-map keys, not URL path segments.
+- If a component or helper is only used by one controller feature, keep it in that controller feature folder.
+- If UI is shared across route areas, keep it in `app/ui/`.
+- Do not put shared UI under `app/actions/`, and do not create a generic `app/components/` dumping ground.
 - Do not create a generic `app/lib/` dumping ground.
 - Avoid feature barrel files such as `index.ts`. Import feature modules directly.
-- If a helper is shared only by controllers, keep it under `controllers/`.
+- If a non-UI helper is shared only by controllers, keep it under `actions/`.
 - If a helper is part of request or session setup, keep it under `middleware/`.
 - Keep table definitions, row types, and runtime database setup in `app/data/`.
 - Keep database artifacts such as migrations and SQLite files in `db/`.
@@ -100,12 +101,10 @@ demos/<name>/
     router.test.ts
     routes.ts
 
-    controllers/
+    actions/
       render.tsx
 
-      home/
-        controller.tsx
-        login-page.tsx
+      controller.tsx
 
       auth/
         controller.tsx
@@ -116,15 +115,6 @@ demos/<name>/
       account/
         controller.tsx
         account-page.tsx
-
-      ui/
-        auth-card.tsx
-        document.tsx
-        form-field.tsx
-        notice.tsx
-        icons.tsx
-        design-system.ts
-        styles.ts
 
     data/
       schema.ts
@@ -141,6 +131,14 @@ demos/<name>/
       auth-session.test.ts
       password-hash.ts
       external-auth.ts
+
+    ui/
+      auth-card.tsx
+      document.tsx
+      form-field.tsx
+      notice.tsx
+      icons.tsx
+      design-system.ts
 
   db/
     migrations/

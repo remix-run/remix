@@ -1,22 +1,18 @@
 import * as path from 'node:path'
 
 const OWNER_FILE_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx'] as const
-export type OwnerFileExtension = (typeof OWNER_FILE_EXTENSIONS)[number]
+const ACTIONS_DIRECTORY = path.join('app', 'actions')
 
-export function getActionOwnerCandidates(segments: string[]): string[] {
-  return OWNER_FILE_EXTENSIONS.map((extension) =>
-    normalizeRelativePath(path.join('app', 'controllers', `${path.join(...segments)}${extension}`)),
-  )
-}
+export type OwnerFileExtension = (typeof OWNER_FILE_EXTENSIONS)[number]
 
 export function getControllerOwnerCandidates(segments: string[]): string[] {
   return OWNER_FILE_EXTENSIONS.map((extension) =>
-    normalizeRelativePath(path.join('app', 'controllers', ...segments, `controller${extension}`)),
+    normalizeRelativePath(path.join(ACTIONS_DIRECTORY, ...segments, `controller${extension}`)),
   )
 }
 
 export function getRouteSubtreePath(segments: string[]): string {
-  return normalizeRelativePath(path.join('app', 'controllers', ...segments))
+  return normalizeRelativePath(path.join(ACTIONS_DIRECTORY, ...segments))
 }
 
 export function getPreferredOwnerDisplayPath(candidates: string[]): string {

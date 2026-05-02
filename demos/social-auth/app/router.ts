@@ -6,10 +6,15 @@ import type { SessionStorage } from 'remix/session'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
-import { accountAction } from './controllers/account/controller.tsx'
-import { createAuthController } from './controllers/auth/controller.tsx'
-import { createHomeController } from './controllers/home/controller.tsx'
-import { loadAuth, requireAuth } from './middleware/auth.ts'
+import { createAuthController } from './actions/auth/controller.tsx'
+import { forgotPasswordController } from './actions/auth/forgot-password/controller.tsx'
+import { createGitHubAuthController } from './actions/auth/github/controller.ts'
+import { createGoogleAuthController } from './actions/auth/google/controller.ts'
+import { resetPasswordController } from './actions/auth/reset-password/controller.tsx'
+import { signupController } from './actions/auth/signup/controller.tsx'
+import { createXAuthController } from './actions/auth/x/controller.ts'
+import { createRootController } from './actions/controller.tsx'
+import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { routes } from './routes.ts'
@@ -58,12 +63,14 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
     ] satisfies RootMiddleware,
   })
 
-  router.map(routes.home, createHomeController(providers))
-  router.get(routes.account, {
-    middleware: [requireAuth],
-    handler: accountAction.handler,
-  })
-  router.map(routes.auth, createAuthController(providers))
+  router.map(routes, createRootController(providers))
+  router.map(routes.auth, createAuthController())
+  router.map(routes.auth.signup, signupController)
+  router.map(routes.auth.forgotPassword, forgotPasswordController)
+  router.map(routes.auth.resetPassword, resetPasswordController)
+  router.map(routes.auth.google, createGoogleAuthController(providers))
+  router.map(routes.auth.github, createGitHubAuthController(providers))
+  router.map(routes.auth.x, createXAuthController(providers))
 
   return router
 }

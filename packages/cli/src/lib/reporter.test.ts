@@ -16,7 +16,7 @@ describe('reporter', () => {
       reporter.out.line('Summary')
       reporter.out.section('Findings:', () => {
         reporter.out.bullet(reporter.out.label('WARN', 'Missing app/routes.ts.'))
-        reporter.out.bullet('Created app/controllers/home.tsx')
+        reporter.out.bullet('Created app/actions/controller.tsx')
       })
       reporter.finish()
 
@@ -25,7 +25,7 @@ describe('reporter', () => {
         'Summary\n',
         'Findings:\n',
         '  • [WARN] Missing app/routes.ts.\n',
-        '  • Created app/controllers/home.tsx\n',
+        '  • Created app/actions/controller.tsx\n',
         '\n',
       ])
     })
@@ -139,14 +139,14 @@ describe('reporter', () => {
 
             reporter.status.startStep('Checking project')
             reporter.status.failStep()
-            reporter.status.skipStep('controllers', 'Blocked by project warnings.')
+            reporter.status.skipStep('actions', 'Blocked by project warnings.')
             reporter.finish()
 
             assert.deepEqual(writes, [
               '\n',
               '• Checking project...\n',
               '✗ Checking project\n',
-              '• controllers (skipped: Blocked by project warnings.)\n',
+              '• actions (skipped: Blocked by project warnings.)\n',
               '\n',
             ])
           }),

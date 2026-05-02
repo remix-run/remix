@@ -50,10 +50,11 @@ export type ControllerWithMiddleware<
 }
 
 /**
- * A controller object that mirrors a route map with matching action handlers.
+ * A controller object that maps the direct route leaves in a route map to action handlers.
  *
- * Controllers let you store a subtree of route handlers in one object while preserving the
- * params and request-context contract for each nested action.
+ * Controllers let you store related route handlers in one object while preserving the params
+ * and request-context contract for each action. Nested route maps should be mapped with their
+ * own controllers.
  */
 export type Controller<
   routes extends RouteMap,
@@ -65,11 +66,12 @@ export type Controller<
 // prettier-ignore
 type ControllerActions<routes extends RouteMap, context extends RequestContext<any, any>> = routes extends any ?
   {
-    [name in keyof routes]: (
+    [name in keyof routes as routes[name] extends Route<any, any> ? name : never]: (
       routes[name] extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? Action<method, pattern, context> :
-      routes[name] extends RouteMap ? Controller<routes[name], context> :
       never
     )
+  } & {
+    [name in keyof routes as routes[name] extends RouteMap ? name : never]?: never
   } :
   never
 

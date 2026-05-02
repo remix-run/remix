@@ -804,23 +804,50 @@ jobs:
         if: steps.config.outputs.enabled == 'true'
         env:
           RUNNER_TEMP: ${{ runner.temp }}
+        shell: bash
         run: |
+          shopt -s nullglob
+
+          write_example() {
+            local label="$1"
+            local language="$2"
+            shift 2
+
+            local path
+            for pattern in "$@"; do
+              for path in $pattern; do
+                if [[ -f "$path" ]]; then
+                  printf '## Example: %s\n\n```%s\n' "$path" "$language"
+                  cat "$path"
+                  printf '\n```\n\n'
+                  return 0
+                fi
+              done
+            done
+
+            printf '## Example unavailable: %s\n\n' "$label"
+            printf 'No matching file exists in this checkout.\n\n'
+          }
+
           {
             printf '# Remix Review Examples\n\n'
             printf 'These examples are sourced from the checked-out PR branch and should be used as reference context for current repository conventions.\n\n'
             printf 'Use these examples to understand local Remix component conventions before flagging framework-level bugs.\n\n'
 
-            printf '## Example: packages/cli/bootstrap/app/controllers/home.tsx\n\n```tsx\n'
-            cat packages/cli/bootstrap/app/controllers/home.tsx
-            printf '\n```\n\n'
+            write_example 'bootstrap controller' tsx \
+              'packages/cli/bootstrap/app/actions/controller.tsx' \
+              'packages/cli/bootstrap/app/actions/controller.ts' \
+              'packages/cli/bootstrap/app/actions/*/controller.tsx' \
+              'packages/cli/bootstrap/app/actions/*/controller.ts'
 
-            printf '## Example: packages/cli/bootstrap/app/controllers/auth.tsx\n\n```tsx\n'
-            cat packages/cli/bootstrap/app/controllers/auth.tsx
-            printf '\n```\n\n'
+            write_example 'bootstrap page component' tsx \
+              'packages/cli/bootstrap/app/ui/scaffold-home-page.tsx' \
+              'packages/cli/bootstrap/app/ui/document.tsx' \
+              'packages/cli/bootstrap/app/ui/layout.tsx'
 
-            printf '## Example: packages/cli/bootstrap/app/utils/render.tsx\n\n```tsx\n'
-            cat packages/cli/bootstrap/app/utils/render.tsx
-            printf '\n```\n'
+            write_example 'bootstrap render helper' tsx \
+              'packages/cli/bootstrap/app/utils/render.tsx' \
+              'packages/cli/bootstrap/app/utils/render.ts'
           } > "$RUNNER_TEMP/codex-pr-review-examples.md"
 
       - name: Run Codex

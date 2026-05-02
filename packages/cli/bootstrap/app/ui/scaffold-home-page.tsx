@@ -1,4 +1,4 @@
-// Delete this file and put your own home page in app/controllers/home.tsx
+// Delete this file and put your own home page in app/actions/controller.tsx
 import { css, type RemixNode } from 'remix/ui'
 
 import { PromptButton } from '../assets/prompt-button.tsx'
@@ -23,10 +23,7 @@ export function HomePage() {
           rel="stylesheet"
           href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
         />
-        <script
-          type="module"
-          src={routes.assets.index.href({ path: 'app/assets/entry.ts' })}
-        ></script>
+        <script type="module" src={routes.assets.href({ path: 'app/assets/entry.ts' })}></script>
       </head>
       <body
         mix={css({

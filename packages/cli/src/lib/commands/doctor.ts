@@ -26,9 +26,9 @@ import {
 } from '../reporter.ts'
 
 const DOCTOR_SUITE_LABELS = {
-  controllers: {
-    complete: 'controllers',
-    running: 'Checking controllers',
+  actions: {
+    complete: 'actions',
+    running: 'Checking actions',
   },
   environment: {
     complete: 'environment',
@@ -109,7 +109,7 @@ export function getDoctorCommandHelpText(target: NodeJS.WriteStream = process.st
           description: 'Exit with status 1 when warning-level findings are present',
           label: '--strict',
         },
-        { description: 'Apply low-risk project and controller fixes', label: '--fix' },
+        { description: 'Apply low-risk project and action fixes', label: '--fix' },
       ],
       usage: ['remix doctor [--json] [--strict] [--fix] [--no-color]'],
     },
@@ -182,16 +182,13 @@ async function collectDoctorReport(
 
   if (hasWarningFindings(environment.suite.findings)) {
     let projectSuite = createSkippedDoctorSuite('project', 'Blocked by environment warnings.')
-    let controllersSuite = createSkippedDoctorSuite(
-      'controllers',
-      'Blocked by environment warnings.',
-    )
-    suites.push(projectSuite, controllersSuite)
+    let actionsSuite = createSkippedDoctorSuite('actions', 'Blocked by environment warnings.')
+    suites.push(projectSuite, actionsSuite)
     progress?.skip(projectSuite.name, projectSuite.reason)
     writeDoctorSuiteDetails(reporter, projectSuite)
     progress?.writeSummaryGap()
-    progress?.skip(controllersSuite.name, controllersSuite.reason)
-    writeDoctorSuiteDetails(reporter, controllersSuite)
+    progress?.skip(actionsSuite.name, actionsSuite.reason)
+    writeDoctorSuiteDetails(reporter, actionsSuite)
     progress?.writeSummaryGap()
 
     return {
@@ -240,10 +237,10 @@ async function collectDoctorReport(
   progress?.writeSummaryGap()
 
   if (hasWarningFindings(project.suite.findings)) {
-    let controllersSuite = createSkippedDoctorSuite('controllers', 'Blocked by project warnings.')
-    suites.push(controllersSuite)
-    progress?.skip(controllersSuite.name, controllersSuite.reason)
-    writeDoctorSuiteDetails(reporter, controllersSuite)
+    let actionsSuite = createSkippedDoctorSuite('actions', 'Blocked by project warnings.')
+    suites.push(actionsSuite)
+    progress?.skip(actionsSuite.name, actionsSuite.reason)
+    writeDoctorSuiteDetails(reporter, actionsSuite)
     progress?.writeSummaryGap()
 
     return {
@@ -256,7 +253,7 @@ async function collectDoctorReport(
     }
   }
 
-  let controllers = await runDoctorSuite(progress, 'controllers', async () => {
+  let actions = await runDoctorSuite(progress, 'actions', async () => {
     let controllerResult = await checkControllerConventions(
       project.routeManifest!.appRoot,
       project.routeManifest!.tree,
@@ -276,7 +273,7 @@ async function collectDoctorReport(
       remainingFindings = finalControllerResult.suite.findings
     }
 
-    let suite = createDoctorSuite('controllers', remainingFindings)
+    let suite = createDoctorSuite('actions', remainingFindings)
     if (suiteAppliedFixes.length > 0) {
       suite.appliedFixes = suiteAppliedFixes
     }
@@ -284,10 +281,10 @@ async function collectDoctorReport(
     return { appliedFixes: suiteAppliedFixes, suite }
   })
 
-  findings.push(...controllers.suite.findings)
-  appliedFixes.push(...(controllers.appliedFixes ?? []))
-  suites.push(controllers.suite)
-  writeDoctorSuiteDetails(reporter, controllers.suite)
+  findings.push(...actions.suite.findings)
+  appliedFixes.push(...(actions.appliedFixes ?? []))
+  suites.push(actions.suite)
+  writeDoctorSuiteDetails(reporter, actions.suite)
   progress?.writeSummaryGap()
 
   let report: DoctorReport = {
