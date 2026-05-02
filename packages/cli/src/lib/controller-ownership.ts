@@ -25,8 +25,13 @@ export interface OwnershipRouteNode {
 
 export interface ControllerDirectoryScan {
   controllerEntryPaths: Set<string>
-  rootDirectoryPaths: Set<string>
+  routeDirectoryPaths: Set<string>
   routeLocalFilePaths: Set<string>
+}
+
+export interface RouteDirectoryPlan {
+  directoryPath: string
+  routeName: string
 }
 
 export interface OwnedSubtreePlan {
@@ -46,6 +51,7 @@ export interface OwnedSubtree extends OwnedSubtreePlan {
 export interface ControllerOwnership {
   orphanControllerPaths: string[]
   orphanRouteDirectoryPaths: string[]
+  routeDirectories: RouteDirectoryPlan[]
   scan: ControllerDirectoryScan
   subtrees: OwnedSubtree[]
 }
@@ -55,12 +61,14 @@ export async function inspectControllerOwnership(
   tree: OwnershipRouteNode[],
 ): Promise<ControllerOwnership> {
   let subtreePlans = buildOwnedSubtrees(tree)
+  let routeDirectories = buildRouteDirectories(tree)
   let scan = await scanControllersDirectory(appRoot)
   let subtrees = applyScanToSubtrees(subtreePlans, scan)
 
   return {
     orphanControllerPaths: getOrphanControllerPaths(subtreePlans, scan),
-    orphanRouteDirectoryPaths: getOrphanRouteDirectoryPaths(subtreePlans, scan),
+    orphanRouteDirectoryPaths: getOrphanRouteDirectoryPaths(routeDirectories, scan),
+    routeDirectories,
     scan,
     subtrees,
   }
@@ -85,11 +93,38 @@ export function buildOwnedSubtrees(
     }
 
     let segments = [...parentSegments, toDiskSegment(node.key)]
-    addSubtreePlan(node.name, segments, subtrees)
+    if (hasDirectRouteLeaf(node.children)) {
+      addSubtreePlan(node.name, segments, subtrees)
+    }
     buildOwnedSubtrees(node.children, segments, subtrees)
   }
 
   return subtrees
+}
+
+export function buildRouteDirectories(
+  tree: OwnershipRouteNode[],
+  parentSegments: string[] = [],
+  directories: RouteDirectoryPlan[] = [],
+): RouteDirectoryPlan[] {
+  for (let node of tree) {
+    if (node.kind !== 'group') {
+      continue
+    }
+
+    let segments = [...parentSegments, toDiskSegment(node.key)]
+    directories.push({
+      directoryPath: getRouteSubtreePath(segments),
+      routeName: node.name,
+    })
+    buildRouteDirectories(node.children, segments, directories)
+  }
+
+  return directories
+}
+
+function hasDirectRouteLeaf(tree: OwnershipRouteNode[]): boolean {
+  return tree.some((node) => node.kind === 'route')
 }
 
 function addSubtreePlan(routeName: string, segments: string[], subtrees: OwnedSubtreePlan[]): void {
@@ -106,7 +141,7 @@ function addSubtreePlan(routeName: string, segments: string[], subtrees: OwnedSu
 async function scanControllersDirectory(appRoot: string): Promise<ControllerDirectoryScan> {
   let actionsDir = path.join(appRoot, 'app', 'actions')
   let controllerEntryPaths = new Set<string>()
-  let rootDirectoryPaths = new Set<string>()
+  let routeDirectoryPaths = new Set<string>()
   let routeLocalFilePaths = new Set<string>()
 
   async function walk(currentDir: string, isRoot: boolean): Promise<void> {
@@ -127,10 +162,7 @@ async function scanControllersDirectory(appRoot: string): Promise<ControllerDire
       let relativePath = normalizeRelativePath(path.relative(appRoot, entryPath))
 
       if (entry.isDirectory()) {
-        if (isRoot) {
-          rootDirectoryPaths.add(relativePath)
-        }
-
+        routeDirectoryPaths.add(relativePath)
         await walk(entryPath, false)
         continue
       }
@@ -154,7 +186,7 @@ async function scanControllersDirectory(appRoot: string): Promise<ControllerDire
 
   return {
     controllerEntryPaths,
-    rootDirectoryPaths,
+    routeDirectoryPaths,
     routeLocalFilePaths,
   }
 }
@@ -236,20 +268,18 @@ function getOrphanControllerPaths(
 }
 
 function getOrphanRouteDirectoryPaths(
-  subtreePlans: OwnedSubtreePlan[],
+  routeDirectories: RouteDirectoryPlan[],
   scan: ControllerDirectoryScan,
 ): string[] {
-  let expectedRootDirectories = new Set(
-    subtreePlans
-      .map((subtree) => getTopLevelSubtreePath(subtree.subtreePath))
-      .filter((subtreePath) => subtreePath !== getRouteSubtreePath([])),
+  let expectedRouteDirectories = new Set(
+    routeDirectories.map((routeDirectory) => routeDirectory.directoryPath),
   )
   let actualControllerDirectories = [...scan.controllerEntryPaths].map((controllerPath) =>
     normalizeRelativePath(path.dirname(controllerPath)),
   )
 
-  return [...scan.rootDirectoryPaths]
-    .filter((directoryPath) => !expectedRootDirectories.has(directoryPath))
+  return [...scan.routeDirectoryPaths]
+    .filter((directoryPath) => !expectedRouteDirectories.has(directoryPath))
     .filter(
       (directoryPath) =>
         !actualControllerDirectories.some((controllerPath) =>
@@ -297,16 +327,6 @@ function isDirectoryWithinDirectory(directoryPath: string, parentDirectoryPath: 
   return (
     directoryPath === parentDirectoryPath || isWithinDirectory(directoryPath, parentDirectoryPath)
   )
-}
-
-function getTopLevelSubtreePath(subtreePath: string): string {
-  let actionsRoot = getRouteSubtreePath([])
-  if (subtreePath === actionsRoot) {
-    return actionsRoot
-  }
-
-  let subtreeSegments = subtreePath.slice(ACTIONS_PATH_PREFIX.length).split('/')
-  return getRouteSubtreePath([subtreeSegments[0]])
 }
 
 function normalizeRelativePath(filePath: string): string {

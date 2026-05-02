@@ -65,6 +65,7 @@ describe('routes command', () => {
     assert.match(result.stdout, /auth -> auth\/controller\.tsx/)
     assert.match(result.stdout, /login -> auth\/login\/controller\.tsx/)
     assert.match(result.stdout, /action\s+POST\s+\/login(?!\s+->)/)
+    assert.match(result.stdout, /admin -> admin/)
     assert.match(result.stdout, /orders -> account\/orders\/controller\.tsx/)
     assert.equal(result.stderr, '')
   })
@@ -79,6 +80,7 @@ describe('routes command', () => {
       result.stdout,
       /action\s+POST\s+\/login -> app\/actions\/auth\/login\/controller\.tsx/,
     )
+    assert.match(result.stdout, /admin -> app\/actions\/admin/)
     assert.match(result.stdout, /logout\s+POST\s+\/logout -> app\/actions\/auth\/controller\.tsx/)
     assert.equal(result.stderr, '')
   })
@@ -158,6 +160,7 @@ describe('routes command', () => {
 
     let home = findRouteNode(payload.tree, 'home')
     let account = findRouteNode(payload.tree, 'account')
+    let admin = findRouteNode(payload.tree, 'admin')
     let authLoginAction = findRouteNode(payload.tree, 'auth.login.action')
     let adminUsersDestroy = findRouteNode(payload.tree, 'admin.users.destroy')
 
@@ -177,6 +180,14 @@ describe('routes command', () => {
       exists: true,
       kind: 'controller',
       path: 'app/actions/account/controller.tsx',
+    })
+
+    assert.ok(admin)
+    assert.equal(admin.kind, 'group')
+    assert.deepEqual(admin.owner, {
+      exists: true,
+      kind: 'directory',
+      path: 'app/actions/admin',
     })
 
     assert.ok(authLoginAction)
@@ -205,7 +216,7 @@ describe('routes command', () => {
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /home\s+ANY\s+\/\s+-> controller\.tsx \[missing\]/)
-    assert.match(result.stdout, /auth -> auth\/controller\.tsx \[missing\]/)
+    assert.match(result.stdout, /auth -> auth \[missing\]/)
     assert.match(result.stdout, /login -> auth\/login\/controller\.tsx \[missing\]/)
     assert.match(result.stdout, /action\s+POST\s+\/auth\/login(?!\s+->)/)
     assert.equal(result.stderr, '')
@@ -320,7 +331,7 @@ interface RouteTreeNode {
   name: string
   owner: {
     exists: boolean
-    kind: 'controller'
+    kind: 'controller' | 'directory'
     path: string
   }
   pattern?: string

@@ -2,7 +2,12 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { getFixturePath } from '../../test/fixtures.ts'
-import { buildOwnedSubtrees, inspectControllerOwnership } from './controller-ownership.ts'
+import {
+  buildOwnedSubtrees,
+  buildRouteDirectories,
+  inspectControllerOwnership,
+  type OwnershipRouteNode,
+} from './controller-ownership.ts'
 import { loadRouteManifest } from './route-map.ts'
 
 describe('controller ownership', () => {
@@ -41,6 +46,64 @@ describe('controller ownership', () => {
     assert.deepEqual(
       subtrees.map((subtree) => subtree.routeName),
       ['main', 'auth'],
+    )
+  })
+
+  it('plans nested directories without planning controllers for route maps with no direct leaves', () => {
+    let tree = [
+      {
+        children: [
+          {
+            children: [
+              {
+                children: [],
+                key: 'index',
+                kind: 'route',
+                method: 'GET',
+                name: 'auth.forgotPassword.index',
+              },
+              {
+                children: [],
+                key: 'action',
+                kind: 'route',
+                method: 'POST',
+                name: 'auth.forgotPassword.action',
+              },
+            ],
+            key: 'forgotPassword',
+            kind: 'group',
+            name: 'auth.forgotPassword',
+          },
+          {
+            children: [
+              {
+                children: [],
+                key: 'index',
+                kind: 'route',
+                method: 'GET',
+                name: 'auth.resetPassword.index',
+              },
+            ],
+            key: 'resetPassword',
+            kind: 'group',
+            name: 'auth.resetPassword',
+          },
+        ],
+        key: 'auth',
+        kind: 'group',
+        name: 'auth',
+      },
+    ] satisfies OwnershipRouteNode[]
+    let subtrees = buildOwnedSubtrees(tree)
+    let directories = buildRouteDirectories(tree)
+
+    assert.deepEqual(
+      subtrees.map((subtree) => subtree.routeName),
+      ['auth.forgotPassword', 'auth.resetPassword'],
+    )
+    assert.deepEqual(
+      directories.map((directory) => directory.directoryPath),
+      ['app/actions/auth', 'app/actions/auth/forgot-password', 'app/actions/auth/reset-password'],
     )
   })
 

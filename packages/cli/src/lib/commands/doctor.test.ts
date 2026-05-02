@@ -1041,25 +1041,18 @@ describe('doctor command', () => {
 
       assert.equal(fixResult.status, 0, fixResult.stderr)
       assert.match(fixResult.stdout, /✓ actions/)
-      assert.match(fixResult.stdout, /Created app\/actions\/auth\/controller\.tsx/)
+      assert.doesNotMatch(fixResult.stdout, /Created app\/actions\/auth\/controller\.tsx/)
       assert.match(fixResult.stdout, /Created app\/actions\/auth\/forgot-password\/controller\.tsx/)
       assert.match(fixResult.stdout, /Created app\/actions\/auth\/reset-password\/controller\.tsx/)
       assert.doesNotMatch(fixResult.stdout, /Created app\/actions\/controller\.tsx/)
-      assert.match(fixResult.stdout, /Applied 3 fixes\./)
+      assert.match(fixResult.stdout, /Applied 2 fixes\./)
       assert.equal(fixResult.stderr, '')
 
-      let authSource = await fs.readFile(
-        path.join(projectDir, 'app', 'actions', 'auth', 'controller.tsx'),
-        'utf8',
-      )
       let forgotPasswordSource = await fs.readFile(
         path.join(projectDir, 'app', 'actions', 'auth', 'forgot-password', 'controller.tsx'),
         'utf8',
       )
 
-      assert.doesNotMatch(authSource, /forgotPasswordController/)
-      assert.doesNotMatch(authSource, /resetPasswordController/)
-      assert.match(authSource, /actions: \{\n  \}/)
       assert.match(forgotPasswordSource, /TODO: implement routes\.auth\.forgotPassword\.index/)
       assert.match(forgotPasswordSource, /TODO: implement routes\.auth\.forgotPassword\.action/)
 
