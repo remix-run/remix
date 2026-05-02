@@ -101,7 +101,8 @@ Use these root directories consistently:
 Inside `app/`, organize by responsibility:
 
 - `assets/` for client entrypoints and client-owned browser behavior
-- `actions/` for controller-owned route handlers and route-local UI
+- `actions/` for controller-owned route handlers and route-local UI/helpers that are not shared
+  across route areas
 - `data/` for schema, queries, persistence setup, migrations, and runtime data initialization
 - `middleware/` for request lifecycle concerns such as auth, sessions, uploads, and database
   injection
