@@ -1,4 +1,4 @@
-import * as styles from '../../ui/styles.ts'
+import * as styles from '../styles.ts'
 
 export function LoginFooter() {
   return ({ signupHref }: { signupHref: string }) => (

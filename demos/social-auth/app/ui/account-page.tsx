@@ -1,14 +1,14 @@
 import { css } from 'remix/ui'
 
-import { AuthCard } from '../../ui/auth-card.tsx'
-import { Document } from '../../ui/document.tsx'
-import { UserIcon } from '../../ui/icons.tsx'
-import { formatProviderLabel } from '../../ui/provider-presentation.tsx'
+import { AuthCard } from './auth-card.tsx'
+import { Document } from './document.tsx'
+import { UserIcon } from './icons.tsx'
+import { formatProviderLabel } from './provider-presentation.tsx'
 
-import { designSystem } from '../../ui/design-system.ts'
+import { designSystem } from './design-system.ts'
 
-import * as styles from '../../ui/styles.ts'
-import type { AuthIdentity } from '../../utils/auth-session.ts'
+import * as styles from './styles.ts'
+import type { AuthIdentity } from '../utils/auth-session.ts'
 
 const { tokens } = designSystem
 

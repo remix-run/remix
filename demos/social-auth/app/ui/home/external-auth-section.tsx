@@ -1,8 +1,8 @@
 import { css } from 'remix/ui'
 
-import { designSystem } from '../../ui/design-system.ts'
-import { formatProviderLabel, renderProviderIcon } from '../../ui/provider-presentation.tsx'
-import * as styles from '../../ui/styles.ts'
+import { designSystem } from '../design-system.ts'
+import { formatProviderLabel, renderProviderIcon } from '../provider-presentation.tsx'
+import * as styles from '../styles.ts'
 import { SocialProviderButton } from './social-provider-button.tsx'
 import type { ExternalProviderLink } from '../../utils/external-auth.ts'
 

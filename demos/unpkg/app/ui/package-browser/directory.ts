@@ -3,7 +3,7 @@ import { detectMimeType } from 'remix/mime'
 
 import type { PackageFile } from '../../utils/npm.ts'
 import { render } from '../../utils/render.ts'
-import { icons } from '../../ui/icons.ts'
+import { icons } from '../icons.ts'
 import { renderBreadcrumb } from './breadcrumb.ts'
 import { formatBytes } from './format-bytes.ts'
 

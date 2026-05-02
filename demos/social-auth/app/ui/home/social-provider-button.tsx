@@ -1,6 +1,6 @@
 import type { RemixNode } from 'remix/ui'
 
-import * as styles from '../../ui/styles.ts'
+import * as styles from '../styles.ts'
 
 interface SocialProviderButtonProps {
   label: string
