@@ -834,20 +834,20 @@ jobs:
             printf 'These examples are sourced from the checked-out PR branch and should be used as reference context for current repository conventions.\n\n'
             printf 'Use these examples to understand local Remix component conventions before flagging framework-level bugs.\n\n'
 
-            write_example 'bootstrap controller' tsx \
-              'packages/cli/bootstrap/app/actions/controller.tsx' \
-              'packages/cli/bootstrap/app/actions/controller.ts' \
-              'packages/cli/bootstrap/app/actions/*/controller.tsx' \
-              'packages/cli/bootstrap/app/actions/*/controller.ts'
+            write_example 'template controller' tsx \
+              'template/app/actions/controller.tsx' \
+              'template/app/actions/controller.ts' \
+              'template/app/actions/*/controller.tsx' \
+              'template/app/actions/*/controller.ts'
 
-            write_example 'bootstrap page component' tsx \
-              'packages/cli/bootstrap/app/ui/scaffold-home-page.tsx' \
-              'packages/cli/bootstrap/app/ui/document.tsx' \
-              'packages/cli/bootstrap/app/ui/layout.tsx'
+            write_example 'template page component' tsx \
+              'template/app/ui/scaffold-home-page.tsx' \
+              'template/app/ui/document.tsx' \
+              'template/app/ui/layout.tsx'
 
-            write_example 'bootstrap render helper' tsx \
-              'packages/cli/bootstrap/app/utils/render.tsx' \
-              'packages/cli/bootstrap/app/utils/render.ts'
+            write_example 'template render helper' tsx \
+              'template/app/utils/render.tsx' \
+              'template/app/utils/render.ts'
           } > "$RUNNER_TEMP/codex-pr-review-examples.md"
 
       - name: Run Codex
