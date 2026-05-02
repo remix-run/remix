@@ -27,7 +27,7 @@ export const framesController = {
       )
     },
 
-    async activity(context) {
+    async activity({ request, router }) {
       await delay(2000)
 
       return render(
@@ -41,11 +41,11 @@ export const framesController = {
             fallback={<div style={{ color: '#9aa8e8' }}>Loading detail…</div>}
           />
         </div>,
-        { request: context.request, router: context.router },
+        { request, router },
       )
     },
 
-    async activityDetail(context) {
+    async activityDetail({ request, router }) {
       await delay(600)
 
       return render(
@@ -60,11 +60,11 @@ export const framesController = {
             />
           </div>
         </div>,
-        { request: context.request, router: context.router },
+        { request, router },
       )
     },
 
-    async clientFrameExample(context) {
+    async clientFrameExample({ request, router }) {
       await delay(500)
 
       return render(
@@ -93,7 +93,7 @@ export const framesController = {
             />
           </div>
         </div>,
-        { request: context.request, router: context.router },
+        { request, router },
       )
     },
 
@@ -117,7 +117,7 @@ export const framesController = {
       )
     },
 
-    async clientMountedOuter(context) {
+    async clientMountedOuter({ request, router }) {
       await delay(350)
 
       return render(
@@ -145,7 +145,7 @@ export const framesController = {
             />
           </div>
         </div>,
-        { request: context.request, router: context.router },
+        { request, router },
       )
     },
 
@@ -218,10 +218,10 @@ export const framesController = {
       )
     },
 
-    async stateSearchResults(context) {
+    async stateSearchResults({ url }) {
       await delay(300)
 
-      let query = (new URL(context.request.url).searchParams.get('query') ?? '').trim()
+      let query = (url.searchParams.get('query') ?? '').trim()
       let matches = searchUnitedStates(query)
 
       return render(

@@ -15,8 +15,9 @@ import { hashPassword } from '../../../utils/password-hash.ts'
 import { render } from '../../../utils/render.tsx'
 
 async function loadResetToken(context: AppContext<{ token: string }>) {
-  let db = context.get(Database)
-  let token = context.params.token
+  let { get, params } = context
+  let db = get(Database)
+  let token = params.token
   let resetToken = await db.find(passwordResetTokens, { token })
   if (resetToken == null) {
     return null
@@ -33,13 +34,15 @@ async function loadResetToken(context: AppContext<{ token: string }>) {
 export const resetPasswordController = {
   actions: {
     async index(context) {
+      let { params, url } = context
+      let returnToQuery = getReturnToQuery(url)
       let resetToken = await loadResetToken(context)
       if (resetToken == null) {
         return render(
           <ErrorPage
             title="Reset Link Expired"
             message="That password reset link is missing or has expired."
-            loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+            loginHref={routes.home.href(undefined, returnToQuery)}
           />,
           { status: 400 },
         )
@@ -47,38 +50,37 @@ export const resetPasswordController = {
 
       return render(
         <ResetPasswordPage
-          formAction={routes.auth.resetPassword.action.href(
-            { token: context.params.token },
-            getReturnToQuery(context.url),
-          )}
-          loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+          formAction={routes.auth.resetPassword.action.href({ token: params.token }, returnToQuery)}
+          loginHref={routes.home.href(undefined, returnToQuery)}
         />,
       )
     },
 
     async action(context) {
-      let db = context.get(Database)
+      let { get, params, url } = context
+      let returnToQuery = getReturnToQuery(url)
+      let db = get(Database)
       let resetToken = await loadResetToken(context)
       if (resetToken == null) {
         return render(
           <ErrorPage
             title="Reset Link Expired"
             message="That password reset link is missing or has expired."
-            loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+            loginHref={routes.home.href(undefined, returnToQuery)}
           />,
           { status: 400 },
         )
       }
 
-      let result = s.parseSafe(resetPasswordSchema, context.get(FormData))
+      let result = s.parseSafe(resetPasswordSchema, get(FormData))
       if (!result.success) {
         return render(
           <ResetPasswordPage
             formAction={routes.auth.resetPassword.action.href(
-              { token: context.params.token },
-              getReturnToQuery(context.url),
+              { token: params.token },
+              returnToQuery,
             )}
-            loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+            loginHref={routes.home.href(undefined, returnToQuery)}
             error={getIssueMessage(result.issues)}
           />,
           { status: 400 },
@@ -90,10 +92,10 @@ export const resetPasswordController = {
         return render(
           <ResetPasswordPage
             formAction={routes.auth.resetPassword.action.href(
-              { token: context.params.token },
-              getReturnToQuery(context.url),
+              { token: params.token },
+              returnToQuery,
             )}
-            loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+            loginHref={routes.home.href(undefined, returnToQuery)}
             error="Passwords must match."
           />,
           { status: 400 },
@@ -107,7 +109,7 @@ export const resetPasswordController = {
           <ErrorPage
             title="Account Not Found"
             message="The account for that reset link no longer exists."
-            loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+            loginHref={routes.home.href(undefined, returnToQuery)}
           />,
           { status: 400 },
         )
@@ -118,13 +120,11 @@ export const resetPasswordController = {
       })
       await db.delete(passwordResetTokens, { token: resetToken.token })
 
-      let session = context.get(Session)
+      let session = get(Session)
       session.flash('success', 'Password updated. You can sign in now.')
 
       return render(
-        <ResetPasswordCompletePage
-          loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
-        />,
+        <ResetPasswordCompletePage loginHref={routes.home.href(undefined, returnToQuery)} />,
       )
     },
   },

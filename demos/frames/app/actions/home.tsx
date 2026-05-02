@@ -1,19 +1,11 @@
 import { Frame } from 'remix/ui'
-import type { BuildAction } from 'remix/fetch-router'
 
 import { ClientFrameExample } from '../assets/client-frame-example.tsx'
 import { Counter } from '../assets/counter.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
-import { render } from '../utils/render.ts'
 
-export const homeAction = {
-  handler(context) {
-    return render(<HomePage />, { request: context.request, router: context.router })
-  },
-} satisfies BuildAction<'GET', typeof routes.home>
-
-function HomePage() {
+export function HomePage() {
   return () => (
     <Document title="Frames + fetch-router demo" maxWidth="980px">
       <h1 style={{ margin: 0, letterSpacing: '-0.02em' }}>Full-stack Frames</h1>

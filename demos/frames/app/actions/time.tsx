@@ -1,17 +1,9 @@
 import { Frame } from 'remix/ui'
-import type { BuildAction } from 'remix/fetch-router'
 
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
-import { render } from '../utils/render.ts'
 
-export const timeAction = {
-  handler(context) {
-    return render(<TimePage />, { request: context.request, router: context.router })
-  },
-} satisfies BuildAction<'GET', typeof routes.time>
-
-function TimePage() {
+export function TimePage() {
   return () => (
     <Document title="Server time" maxWidth="720px">
       <a href={routes.home.href()} style={{ color: '#b9c6ff', textDecoration: 'underline' }}>

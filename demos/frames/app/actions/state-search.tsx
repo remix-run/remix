@@ -1,23 +1,10 @@
-import type { BuildAction } from 'remix/fetch-router'
 import type { Handle } from 'remix/ui'
 
 import { StateSearchPage } from '../assets/state-search-page.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
-import { render } from '../utils/render.ts'
 
-export const stateSearchAction = {
-  handler(context) {
-    let initialQuery = new URL(context.request.url).searchParams.get('query') ?? ''
-
-    return render(<StateSearchRoutePage initialQuery={initialQuery} />, {
-      request: context.request,
-      router: context.router,
-    })
-  },
-} satisfies BuildAction<'GET', typeof routes.stateSearch>
-
-function StateSearchRoutePage(handle: Handle<{ initialQuery: string }>) {
+export function StateSearchRoutePage(handle: Handle<{ initialQuery: string }>) {
   return () => (
     <Document title="Dynamic Frame src search">
       <a href={routes.home.href()} style={{ color: '#b9c6ff', textDecoration: 'underline' }}>

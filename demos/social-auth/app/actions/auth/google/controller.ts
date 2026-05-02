@@ -24,26 +24,30 @@ export function createGoogleAuthController(
   return {
     actions: {
       async login(context) {
+        let { get, url } = context
+
         if (provider == null) {
-          let session = context.get(Session)
+          let session = get(Session)
           session.flash('error', `${label} login is not configured.`)
-          return redirect(routes.home.href(undefined, getReturnToQuery(context.url)))
+          return redirect(routes.home.href(undefined, getReturnToQuery(url)))
         }
 
         try {
           return await startExternalAuth(provider, context, {
-            returnTo: context.url.searchParams.get('returnTo'),
+            returnTo: url.searchParams.get('returnTo'),
           })
         } catch {
-          let session = context.get(Session)
+          let session = get(Session)
           session.flash('error', `We could not start ${label} login.`)
-          return redirect(routes.home.href(undefined, getReturnToQuery(context.url)))
+          return redirect(routes.home.href(undefined, getReturnToQuery(url)))
         }
       },
 
       async callback(context) {
+        let { get } = context
+
         if (provider == null) {
-          let session = context.get(Session)
+          let session = get(Session)
           session.flash('error', `${label} login is not configured.`)
           return redirect(routes.home.href())
         }
@@ -51,7 +55,7 @@ export function createGoogleAuthController(
         try {
           let { result, returnTo } = await finishExternalAuth(provider, context)
 
-          let db = context.get(Database)
+          let db = get(Database)
           let { user, authAccount } = await resolveExternalAuth(db, result)
           let session = completeAuth(context)
           session.set('auth', {
@@ -62,7 +66,7 @@ export function createGoogleAuthController(
 
           return redirect(returnTo ?? routes.account.href())
         } catch {
-          let session = context.get(Session)
+          let session = get(Session)
           session.flash('error', `We could not finish ${label} login.`)
           return redirect(routes.home.href())
         }

@@ -11,13 +11,15 @@ export function createAuthController() {
   return {
     actions: {
       async login(context) {
+        let { get, url } = context
+
         try {
           let user = await verifyCredentials(passwordProvider, context)
 
           if (user == null) {
-            let session = context.get(Session)
+            let session = get(Session)
             session.flash('error', 'Invalid email or password. Please try again.')
-            return redirect(routes.home.href(undefined, getReturnToQuery(context.url)))
+            return redirect(routes.home.href(undefined, getReturnToQuery(url)))
           }
 
           let session = completeAuth(context)
@@ -26,16 +28,16 @@ export function createAuthController() {
             loginMethod: 'credentials',
           })
 
-          return redirect(getPostAuthRedirect(context.url))
+          return redirect(getPostAuthRedirect(url))
         } catch {
-          let session = context.get(Session)
+          let session = get(Session)
           session.flash('error', 'We could not complete that sign-in request.')
-          return redirect(routes.home.href(undefined, getReturnToQuery(context.url)))
+          return redirect(routes.home.href(undefined, getReturnToQuery(url)))
         }
       },
 
-      logout(context) {
-        let session = context.get(Session)
+      logout({ get }) {
+        let session = get(Session)
         session.unset('auth')
         session.regenerateId(true)
         return redirect(routes.home.href())

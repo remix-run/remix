@@ -20,16 +20,16 @@ export function createRootController(
 ) {
   return {
     actions: {
-      home(context) {
-        let auth = context.get(Auth)
+      home({ get, url }) {
+        let auth = get(Auth)
         if (auth.ok) {
           return redirect(routes.account.href())
         }
 
-        let session = context.get(Session)
+        let session = get(Session)
         let error = session.get('error')
         let success = session.get('success')
-        let returnToQuery = getReturnToQuery(context.url)
+        let returnToQuery = getReturnToQuery(url)
 
         return render(
           <LoginPage
@@ -44,8 +44,8 @@ export function createRootController(
       },
       account: {
         middleware: [requireAuth] as const,
-        handler(context) {
-          let auth = context.get(Auth)
+        handler({ get }) {
+          let auth = get(Auth)
           if (!auth.ok) {
             return new Response('Unauthorized', { status: 401 })
           }

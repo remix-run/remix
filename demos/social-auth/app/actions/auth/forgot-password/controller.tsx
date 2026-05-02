@@ -13,31 +13,27 @@ import { render } from '../../../utils/render.tsx'
 
 export const forgotPasswordController = {
   actions: {
-    index(context) {
+    index({ url }) {
       return render(
         <ForgotPasswordPage
-          formAction={routes.auth.forgotPassword.action.href(
-            undefined,
-            getReturnToQuery(context.url),
-          )}
-          loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+          formAction={routes.auth.forgotPassword.action.href(undefined, getReturnToQuery(url))}
+          loginHref={routes.home.href(undefined, getReturnToQuery(url))}
         />,
       )
     },
 
-    async action(context) {
-      let db = context.get(Database)
-      let result = s.parseSafe(forgotPasswordSchema, context.get(FormData))
+    async action({ get, url }) {
+      let db = get(Database)
+      let formData = get(FormData)
+      let returnToQuery = getReturnToQuery(url)
+      let result = s.parseSafe(forgotPasswordSchema, formData)
       if (!result.success) {
         return render(
           <ForgotPasswordPage
-            formAction={routes.auth.forgotPassword.action.href(
-              undefined,
-              getReturnToQuery(context.url),
-            )}
-            loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+            formAction={routes.auth.forgotPassword.action.href(undefined, returnToQuery)}
+            loginHref={routes.home.href(undefined, returnToQuery)}
             error={getIssueMessage(result.issues)}
-            email={readField(context.get(FormData), 'email')}
+            email={readField(formData, 'email')}
           />,
           { status: 400 },
         )
@@ -55,16 +51,13 @@ export const forgotPasswordController = {
           user_id: user.id,
           expires_at: Date.now() + 1000 * 60 * 60,
         })
-        resetHref = new URL(
-          routes.auth.resetPassword.index.href({ token }),
-          context.url.origin,
-        ).toString()
+        resetHref = new URL(routes.auth.resetPassword.index.href({ token }), url.origin).toString()
       }
 
       return render(
         <ForgotPasswordSentPage
           email={emailAddress}
-          loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+          loginHref={routes.home.href(undefined, returnToQuery)}
           resetHref={resetHref}
         />,
       )

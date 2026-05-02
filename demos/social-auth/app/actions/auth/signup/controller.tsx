@@ -16,25 +16,29 @@ import { render } from '../../../utils/render.tsx'
 
 export const signupController = {
   actions: {
-    index(context) {
+    index({ url }) {
+      let returnToQuery = getReturnToQuery(url)
+
       return render(
         <SignupPage
-          formAction={routes.auth.signup.action.href(undefined, getReturnToQuery(context.url))}
-          loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+          formAction={routes.auth.signup.action.href(undefined, returnToQuery)}
+          loginHref={routes.home.href(undefined, returnToQuery)}
         />,
       )
     },
 
-    async action(context) {
-      let db = context.get(Database)
-      let result = s.parseSafe(signupSchema, context.get(FormData))
+    async action({ get, url }) {
+      let db = get(Database)
+      let formData = get(FormData)
+      let returnToQuery = getReturnToQuery(url)
+      let result = s.parseSafe(signupSchema, formData)
       if (!result.success) {
         return render(
           <SignupPage
-            formAction={routes.auth.signup.action.href(undefined, getReturnToQuery(context.url))}
-            loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+            formAction={routes.auth.signup.action.href(undefined, returnToQuery)}
+            loginHref={routes.home.href(undefined, returnToQuery)}
             error={getIssueMessage(result.issues)}
-            values={readSignupValues(context.get(FormData))}
+            values={readSignupValues(formData)}
           />,
           { status: 400 },
         )
@@ -48,8 +52,8 @@ export const signupController = {
       if (existingUser != null) {
         return render(
           <SignupPage
-            formAction={routes.auth.signup.action.href(undefined, getReturnToQuery(context.url))}
-            loginHref={routes.home.href(undefined, getReturnToQuery(context.url))}
+            formAction={routes.auth.signup.action.href(undefined, returnToQuery)}
+            loginHref={routes.home.href(undefined, returnToQuery)}
             error="An account with that email already exists."
             values={{ name, email: emailAddress }}
           />,
@@ -67,14 +71,14 @@ export const signupController = {
         { returnRow: true },
       )
 
-      let session = context.get(Session)
+      let session = get(Session)
       session.regenerateId(true)
       session.set('auth', {
         userId: user.id,
         loginMethod: 'credentials',
       })
 
-      return redirect(getPostAuthRedirect(context.url))
+      return redirect(getPostAuthRedirect(url))
     },
   },
 } satisfies Controller<typeof routes.auth.signup, AppContext>

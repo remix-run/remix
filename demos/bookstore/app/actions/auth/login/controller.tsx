@@ -25,18 +25,19 @@ export default {
     },
 
     async action(context) {
+      let { get, url } = context
       let user = await verifyCredentials(passwordProvider, context)
 
       if (user == null) {
-        let session = context.get(Session)
+        let session = get(Session)
         session.flash('error', 'Invalid email or password. Please try again.')
-        return redirect(getLoginRedirectURL(context.url))
+        return redirect(getLoginRedirectURL(url))
       }
 
       let session = completeAuth(context)
       session.set('auth', { userId: user.id })
 
-      return redirect(getPostAuthRedirect(context.url))
+      return redirect(getPostAuthRedirect(url))
     },
   },
 } satisfies Controller<typeof routes.auth.login>

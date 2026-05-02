@@ -1,17 +1,8 @@
-import type { BuildAction } from 'remix/fetch-router'
-
 import { ClientMountedPageExample } from '../assets/client-mounted-page-example.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
-import { render } from '../utils/render.ts'
 
-export const clientMountedAction = {
-  handler(context) {
-    return render(<ClientMountedPage />, { request: context.request, router: context.router })
-  },
-} satisfies BuildAction<'GET', typeof routes.clientMounted>
-
-function ClientMountedPage() {
+export function ClientMountedPage() {
   return () => (
     <Document title="Client-mounted nested frame">
       <a href={routes.home.href()} style={{ color: '#b9c6ff', textDecoration: 'underline' }}>
