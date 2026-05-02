@@ -1,3 +1,6 @@
+import * as fs from 'node:fs'
+import * as path from 'node:path'
+
 import { createAssetServer } from 'remix/assets'
 import type { Controller } from 'remix/fetch-router'
 
@@ -6,14 +9,19 @@ import { HomePage } from '../ui/scaffold-home-page.tsx'
 import { Layout } from '../ui/layout.tsx'
 import { render } from '../utils/render.tsx'
 
+const rootDir = process.cwd()
+const workspacePackagesDir = path.resolve(rootDir, '..', 'packages')
+const usesWorkspaceRemix = fs.existsSync(path.join(workspacePackagesDir, 'remix', 'src', 'ui.ts'))
+
 export const assetServer = createAssetServer({
   basePath: '/assets',
-  rootDir: process.cwd(),
+  rootDir,
   fileMap: {
     'app/*path': 'app/*path',
     'node_modules/*path': 'node_modules/*path',
+    ...(usesWorkspaceRemix ? { 'packages/*path': '../packages/*path' } : {}),
   },
-  allow: ['app/assets/**', 'node_modules/**'],
+  allow: ['app/assets/**', 'node_modules/**', ...(usesWorkspaceRemix ? ['../packages/**'] : [])],
   deny: ['app/**/*.server.*'],
   sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
   scripts: {

@@ -55,8 +55,8 @@ Apply the Remix repo conventions while reviewing:
 - Use repository-local semantics over generic React assumptions.
 - `remix/ui` code in this repository intentionally uses components that return
   functions. Before flagging framework-level JSX or component-runtime behavior,
-  compare against nearby package patterns and bootstrap examples under
-  `packages/cli/bootstrap/app`.
+  compare against nearby package patterns and template examples under
+  `template/app`.
 
 ## Review Focus
 

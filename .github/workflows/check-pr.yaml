@@ -834,20 +834,20 @@ jobs:
             printf 'These examples are sourced from the checked-out PR branch and should be used as reference context for current repository conventions.\n\n'
             printf 'Use these examples to understand local Remix component conventions before flagging framework-level bugs.\n\n'
 
-            write_example 'bootstrap controller' tsx \
-              'packages/cli/bootstrap/app/actions/controller.tsx' \
-              'packages/cli/bootstrap/app/actions/controller.ts' \
-              'packages/cli/bootstrap/app/actions/*/controller.tsx' \
-              'packages/cli/bootstrap/app/actions/*/controller.ts'
+            write_example 'template controller' tsx \
+              'template/app/actions/controller.tsx' \
+              'template/app/actions/controller.ts' \
+              'template/app/actions/*/controller.tsx' \
+              'template/app/actions/*/controller.ts'
 
-            write_example 'bootstrap page component' tsx \
-              'packages/cli/bootstrap/app/ui/scaffold-home-page.tsx' \
-              'packages/cli/bootstrap/app/ui/document.tsx' \
-              'packages/cli/bootstrap/app/ui/layout.tsx'
+            write_example 'template page component' tsx \
+              'template/app/ui/scaffold-home-page.tsx' \
+              'template/app/ui/document.tsx' \
+              'template/app/ui/layout.tsx'
 
-            write_example 'bootstrap render helper' tsx \
-              'packages/cli/bootstrap/app/utils/render.tsx' \
-              'packages/cli/bootstrap/app/utils/render.ts'
+            write_example 'template render helper' tsx \
+              'template/app/utils/render.tsx' \
+              'template/app/utils/render.ts'
           } > "$RUNNER_TEMP/codex-pr-review-examples.md"
 
       - name: Run Codex
@@ -880,7 +880,7 @@ jobs:
             - Missing tests, docs, or change files matter when a published package changes.
             - Use repository-local semantics over generic React assumptions.
             - `remix/ui` code in this repository intentionally uses components that return functions.
-            - The bootstrap controller and render utility examples from the review examples file are reference examples for that pattern.
+            - The template controller and render utility examples from the review examples file are reference examples for that pattern.
             - Before flagging a framework-level JSX or component-runtime bug, compare the PR code against the review examples and search for the same pattern in the owning package. Treat those examples as evidence of current local conventions, not as proof that every use is correct.
 
             Review only the pull request diff. Use the base and head SHAs from the

@@ -452,22 +452,6 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
-  packages/cli/bootstrap:
-    dependencies:
-      remix:
-        specifier: workspace:^
-        version: link:../../remix
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
-    devDependencies:
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-
   packages/cli/test/fixtures/doctor-camel-case-keys:
     dependencies:
       remix:
@@ -2057,6 +2041,22 @@ importers:
       semver:
         specifier: ^7.6.3
         version: 7.6.3
+
+  template:
+    dependencies:
+      remix:
+        specifier: workspace:^
+        version: link:../packages/remix
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
 packages:
 

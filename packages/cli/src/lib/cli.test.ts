@@ -511,15 +511,11 @@ describe('run', () => {
 
       assert.match(
         documentSource,
-        new RegExp(
-          `const DEFAULT_TITLE = decodeURIComponent\\('${escapeRegExp(encodedAppName)}'\\)`,
-        ),
+        new RegExp(`readAppDisplayName\\('${escapeRegExp(encodedAppName)}'\\)`),
       )
       assert.match(
         scaffoldHomePageSource,
-        new RegExp(
-          `const APP_DISPLAY_NAME = decodeURIComponent\\('${escapeRegExp(encodedAppName)}'\\)`,
-        ),
+        new RegExp(`readAppDisplayName\\('${escapeRegExp(encodedAppName)}'\\)`),
       )
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
