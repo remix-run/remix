@@ -1,4 +1,4 @@
-import { type Matcher, type Params, ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
+import { type Matcher, type Params, createMatcher, RoutePattern } from '@remix-run/route-pattern'
 import { type RouteMap, Route } from '@remix-run/routes'
 
 import { type AnyMiddleware, type ApplyMiddlewareTuple, runMiddleware } from './middleware.ts'
@@ -184,7 +184,7 @@ export interface RouterOptions<
   /**
    * The matcher to use for matching routes.
    *
-   * @default `new ArrayMatcher()`
+   * @default `createMatcher()`
    */
   matcher?: Matcher<MatchData>
   /**
@@ -333,7 +333,7 @@ export function createRouter<
   const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
 >(options?: RouterOptions<context, middleware>): Router<ApplyMiddlewareTuple<context, middleware>> {
   let defaultHandler = (options?.defaultHandler ?? noMatchHandler) as RequestHandler<any, any>
-  let matcher = options?.matcher ?? new ArrayMatcher<MatchData>()
+  let matcher = options?.matcher ?? createMatcher<MatchData>()
   let routerMiddleware = options?.middleware ? [...options.middleware] : undefined
 
   async function dispatchRouter(

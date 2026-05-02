@@ -673,7 +673,6 @@ Built-in middleware packages may also export `With...` helpers when that makes c
 
 #### Scaling Your Application
 
-- how to use a TrieMatcher
 - how to spread controllers across multiple files
 
 #### Error Handling and Aborted Requests
