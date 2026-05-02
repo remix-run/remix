@@ -5,7 +5,7 @@ import { Counter } from '../../assets/counter.tsx'
 import { ReloadScope } from '../../assets/reload-scope.tsx'
 import { ReloadTime } from '../../assets/reload-time.tsx'
 import { routes } from '../../routes.ts'
-import { render } from '../../utils/render.ts'
+import { render } from '../render.ts'
 import { searchUnitedStates } from '../../utils/us-states.ts'
 
 export const framesController = {

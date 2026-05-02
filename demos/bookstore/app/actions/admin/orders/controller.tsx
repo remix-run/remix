@@ -6,7 +6,7 @@ import { requireAdmin } from '../../../middleware/admin.ts'
 import { requireAuth } from '../../../middleware/auth.ts'
 import type { routes } from '../../../routes.ts'
 import { parseId } from '../../../utils/ids.ts'
-import { render } from '../../../utils/render.tsx'
+import { render } from '../../render.tsx'
 import { AdminOrdersIndexPage } from './index-page.tsx'
 import { AdminOrderNotFoundPage, AdminOrderShowPage } from './show-page.tsx'
 

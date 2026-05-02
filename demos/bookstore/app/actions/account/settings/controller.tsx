@@ -10,7 +10,7 @@ import { requireAuth } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
 import { getCurrentUser } from '../../../utils/context.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
-import { render } from '../../../utils/render.tsx'
+import { render } from '../../render.tsx'
 import { AccountSettingsPage } from './page.tsx'
 
 const textField = f.field(s.defaulted(s.string(), ''))

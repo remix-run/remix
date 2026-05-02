@@ -6,7 +6,7 @@ import { getContext } from 'remix/async-context-middleware'
 import { requireAuth } from '../../middleware/auth.ts'
 import { frames, type routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
-import { render } from '../../utils/render.tsx'
+import { render } from '../render.tsx'
 import { SettingsLayout, type SettingsNavItem } from './layout.tsx'
 
 import { Grading } from './grading-page.tsx'

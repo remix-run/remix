@@ -21,7 +21,7 @@ Refer to ./.agents/skills/remix/SKILL.md
 - `app/routes.ts` defines the route contract
 - `app/router.ts` wires routes to route handlers
 - `app/ui/` holds the shared document and layout wrappers
-- `app/utils/render.tsx` centralizes HTML response rendering
+- `app/actions/render.tsx` centralizes HTML response rendering for controllers
 
 ## Route Ownership
 

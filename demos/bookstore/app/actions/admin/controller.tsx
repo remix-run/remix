@@ -3,7 +3,7 @@ import type { Controller } from 'remix/fetch-router'
 import { requireAdmin } from '../../middleware/admin.ts'
 import { requireAuth } from '../../middleware/auth.ts'
 import type { routes } from '../../routes.ts'
-import { render } from '../../utils/render.tsx'
+import { render } from '../render.tsx'
 import { AdminDashboardPage } from './page.tsx'
 
 export default {

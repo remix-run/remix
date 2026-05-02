@@ -4,7 +4,7 @@ import { redirect } from 'remix/response/redirect'
 
 import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
-import { render } from '../../../utils/render.tsx'
+import { render } from '../../render.tsx'
 import {
   getLoginRedirectURL,
   getPostAuthRedirect,

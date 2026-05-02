@@ -8,7 +8,7 @@ A minimal Remix application starter with a home page and an auth page.
 - `app/routes.ts` defines the route contract.
 - `app/router.ts` wires routes to handlers.
 - `app/ui/` holds the shared document and layout wrappers.
-- `app/utils/render.tsx` centralizes HTML response rendering.
+- `app/actions/render.tsx` centralizes HTML response rendering for controllers.
 
 ## Growing The App
 
