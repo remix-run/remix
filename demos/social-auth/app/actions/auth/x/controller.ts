@@ -23,7 +23,7 @@ export function createXAuthController(
 
   return {
     actions: {
-      async login(context: AppContext) {
+      async login(context) {
         if (provider == null) {
           let session = context.get(Session)
           session.flash('error', `${label} login is not configured.`)
@@ -41,7 +41,7 @@ export function createXAuthController(
         }
       },
 
-      async callback(context: AppContext) {
+      async callback(context) {
         if (provider == null) {
           let session = context.get(Session)
           session.flash('error', `${label} login is not configured.`)
