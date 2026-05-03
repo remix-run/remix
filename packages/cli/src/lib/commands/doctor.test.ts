@@ -892,6 +892,16 @@ describe('doctor command', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('fails fix mode when unfixable action warnings remain', async () => {
+    let result = await runDoctor(['--fix'], getFixturePath('doctor-duplicate-owner'))
+
+    assert.equal(result.status, 1)
+    assert.match(result.stdout, /✗ actions/)
+    assert.match(result.stdout, /has multiple action controller files/)
+    assert.doesNotMatch(result.stdout, /Applied fixes:/)
+    assert.equal(result.stderr, '')
+  })
+
   it('reports incomplete actions when a route-key folder is missing its entry file', async () => {
     let result = await runDoctor([], getFixturePath('doctor-incomplete-controller'))
 
