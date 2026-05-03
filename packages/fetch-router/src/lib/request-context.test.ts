@@ -65,6 +65,15 @@ describe('new RequestContext()', () => {
     }
   })
 
+  it('allows overriding request headers with a normal Headers object', () => {
+    let context = new RequestContext(new Request('https://remix.run/test'))
+
+    context.headers = new Headers({ 'Content-Type': 'text/plain' })
+
+    assert.ok(context.headers instanceof SuperHeaders)
+    assert.equal(context.headers.contentType.mediaType, 'text/plain')
+  })
+
   it('provides a copy of request headers that can be mutated independently', () => {
     let req = new Request('https://remix.run/test', {
       headers: { 'X-Original': 'value' },

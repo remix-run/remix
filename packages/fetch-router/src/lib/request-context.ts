@@ -137,17 +137,17 @@ export class RequestContext<
     this.url = new URL(request.url)
   }
 
-  #headers: Headers | undefined
+  #headers: SuperHeaders | undefined
 
   /**
    * A mutable copy of the request headers.
    */
-  get headers(): Headers {
+  get headers(): SuperHeaders {
     return (this.#headers ??= new SuperHeaders(this.request.headers))
   }
 
   set headers(headers: Headers) {
-    this.#headers = headers
+    this.#headers = headers instanceof SuperHeaders ? headers : new SuperHeaders(headers)
   }
 
   /**
