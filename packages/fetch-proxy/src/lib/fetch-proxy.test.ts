@@ -228,6 +228,106 @@ describe('fetch proxy', () => {
     assert.equal(setCookie[0], 'name=value; Domain=preview.example.com; Path=/search')
   })
 
+  it('omits cookie domains for IPv4 request hosts with ports', async () => {
+    let { response } = await testProxy(
+      new Request('http://127.0.0.1:5173/search?q=remix'),
+      'https://remix.run:3000/dest',
+      {
+        async fetch() {
+          return new Response(null, {
+            headers: [
+              ['Set-Cookie', 'name=value; Domain=remix.run; Path=/dest/search'],
+              ['Set-Cookie', 'name2=value2; Domain=remix.run:3000; Path=/dest'],
+            ],
+          })
+        },
+      },
+    )
+
+    let setCookie = response.headers.getSetCookie()
+    assert.ok(setCookie)
+    assert.equal(setCookie.length, 2)
+    assert.equal(setCookie[0], 'name=value; Path=/search')
+    assert.equal(setCookie[1], 'name2=value2; Path=/')
+  })
+
+  it('omits cookie domains for IPv6 request hosts with ports', async () => {
+    let { response } = await testProxy(
+      new Request('http://[2001:db8::1]:5173/search?q=remix'),
+      'https://remix.run:3000/dest',
+      {
+        async fetch() {
+          return new Response(null, {
+            headers: [['Set-Cookie', 'name=value; Domain=remix.run; Path=/dest/search']],
+          })
+        },
+      },
+    )
+
+    let setCookie = response.headers.getSetCookie()
+    assert.ok(setCookie)
+    assert.equal(setCookie.length, 1)
+    assert.equal(setCookie[0], 'name=value; Path=/search')
+  })
+
+  it('rewrites cookie domains to punycode hostnames without ports', async () => {
+    let { response } = await testProxy(
+      new Request('https://xn--mnich-kva.example:8443/search?q=remix'),
+      'https://remix.run:3000/dest',
+      {
+        async fetch() {
+          return new Response(null, {
+            headers: [['Set-Cookie', 'name=value; Domain=remix.run:3000; Path=/dest/search']],
+          })
+        },
+      },
+    )
+
+    let setCookie = response.headers.getSetCookie()
+    assert.ok(setCookie)
+    assert.equal(setCookie.length, 1)
+    assert.equal(setCookie[0], 'name=value; Domain=xn--mnich-kva.example; Path=/search')
+  })
+
+  it('preserves host-only upstream cookies while rewriting paths', async () => {
+    let { response } = await testProxy(
+      new Request('https://preview.example.com:8443/search?q=remix'),
+      'https://remix.run:3000/dest',
+      {
+        async fetch() {
+          return new Response(null, {
+            headers: [['Set-Cookie', 'name=value; Path=/dest/search; HttpOnly']],
+          })
+        },
+      },
+    )
+
+    let setCookie = response.headers.getSetCookie()
+    assert.ok(setCookie)
+    assert.equal(setCookie.length, 1)
+    assert.equal(setCookie[0], 'name=value; HttpOnly; Path=/search')
+  })
+
+  it('preserves cookie domains when only domain rewriting is disabled', async () => {
+    let { response } = await testProxy(
+      new Request('https://preview.example.com:8443/search?q=remix'),
+      'https://remix.run:3000/dest',
+      {
+        rewriteCookieDomain: false,
+        async fetch() {
+          return new Response(null, {
+            headers: [['Set-Cookie', 'name=value; Domain=remix.run:3000; Path=/dest/search']],
+          })
+        },
+      },
+    )
+
+    let setCookie = response.headers.getSetCookie()
+    assert.ok(setCookie)
+    assert.equal(setCookie.length, 1)
+    assert.equal(setCookie[0], 'name=value; Domain=remix.run:3000; Path=/search')
+  })
+
   it('does not rewrite cookie domain and path when opting-out', async () => {
     let { response } = await testProxy(
       new Request('http://shopify.com/?q=remix'),
