@@ -13,3 +13,10 @@ export { type RangeInit, Range } from './lib/range.ts'
 export { type CookieProperties, type SetCookieInit, SetCookie } from './lib/set-cookie.ts'
 export { type VaryInit, Vary } from './lib/vary.ts'
 export { parse, stringify } from './lib/raw-headers.ts'
+
+export {
+  type SuperHeadersInit,
+  type SuperHeadersPropertyInit,
+  SuperHeaders,
+  SuperHeaders as default,
+} from './lib/super-headers.ts'

@@ -14,6 +14,35 @@ describe('new RequestContext()', () => {
     assert.equal(context.headers.get('content-type'), 'application/json')
   })
 
+  it('lazily creates a mutable copy of request headers', () => {
+    let req = new Request('https://remix.run/test', {
+      headers: { 'Content-Type': 'text/html' },
+    })
+    let context = new RequestContext(req)
+
+    req.headers.set('Content-Type', 'application/json')
+
+    let headers = context.headers
+
+    assert.ok(headers instanceof Headers)
+    assert.equal(headers.get('Content-Type'), 'application/json')
+
+    req.headers.set('Content-Type', 'text/plain')
+
+    assert.equal(context.headers, headers)
+    assert.equal(context.headers.get('Content-Type'), 'application/json')
+  })
+
+  it('allows overriding request headers', () => {
+    let context = new RequestContext(new Request('https://remix.run/test'))
+    let headers = new Headers({ 'Content-Type': 'text/plain' })
+
+    context.headers = headers
+
+    assert.equal(context.headers, headers)
+    assert.equal(context.headers.get('Content-Type'), 'text/plain')
+  })
+
   it('provides a copy of request headers that can be mutated independently', () => {
     let req = new Request('https://remix.run/test', {
       headers: { 'X-Original': 'value' },
