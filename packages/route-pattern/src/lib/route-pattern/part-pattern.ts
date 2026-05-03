@@ -255,8 +255,8 @@ export class PartPattern {
 
     if (this.type === 'pathname') {
       return token.type === '*'
-        ? stringValue.split('/').map(encodeURIComponent).join('/')
-        : encodeURIComponent(stringValue)
+        ? stringValue.split('/').map(encodePathnameSegment).join('/')
+        : encodePathnameSegment(stringValue)
     }
 
     let result = encodeHostnameParam(pattern, this, token.name, stringValue)
@@ -348,6 +348,15 @@ export class PartPattern {
 function separatorForType(type: 'hostname' | 'pathname'): '.' | '/' {
   if (type === 'hostname') return '.'
   return '/'
+}
+
+function encodePathnameSegment(value: string): string {
+  return encodeURIComponent(value).replace(
+    /%(?:24|26|2B|2C|3A|3B|3D|40)/g,
+    function preservePathnameSegmentChar(match) {
+      return String.fromCharCode(Number.parseInt(match.slice(1), 16))
+    },
+  )
 }
 
 const hostnameNormalizationSuffix = '.route-pattern.invalid'

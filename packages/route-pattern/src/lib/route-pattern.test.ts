@@ -580,6 +580,12 @@ describe('RoutePattern', () => {
           assert.equal(result, '/search/caf%C3%A9%20%E5%8C%97%E4%BA%AC')
         })
 
+        it('preserves valid path segment punctuation', () => {
+          let pattern = new RoutePattern('/packages/:name')
+          let result = pattern.href({ name: '@remix-run:ui$&+,;=' })
+          assert.equal(result, '/packages/@remix-run:ui$&+,;=')
+        })
+
         it('ignores extra params', () => {
           let pattern = new RoutePattern('/posts/:id')
           let result = pattern.href({ id: '123', page: '2', sort: 'desc' })
@@ -624,11 +630,11 @@ describe('RoutePattern', () => {
 
       it('encodes wildcard segment contents while preserving separators', () => {
         let pattern = new RoutePattern('/files/*path')
-        let result = pattern.href({ path: 'docs/a b/你好?x#y' })
-        assert.equal(result, '/files/docs/a%20b/%E4%BD%A0%E5%A5%BD%3Fx%23y')
+        let result = pattern.href({ path: 'docs/@scope/pkg/a b/你好?x#y' })
+        assert.equal(result, '/files/docs/@scope/pkg/a%20b/%E4%BD%A0%E5%A5%BD%3Fx%23y')
 
         let url = new URL(result, 'https://example.com')
-        assert.equal(url.pathname, '/files/docs/a%20b/%E4%BD%A0%E5%A5%BD%3Fx%23y')
+        assert.equal(url.pathname, '/files/docs/@scope/pkg/a%20b/%E4%BD%A0%E5%A5%BD%3Fx%23y')
         assert.equal(url.search, '')
         assert.equal(url.hash, '')
       })
