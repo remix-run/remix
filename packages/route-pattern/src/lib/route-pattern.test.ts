@@ -474,6 +474,7 @@ describe('RoutePattern', () => {
           assert.throws(() => pattern.href({ host: 'api/example' }), hrefError('invalid-param'))
           assert.throws(() => pattern.href({ host: 'api?example' }), hrefError('invalid-param'))
           assert.throws(() => pattern.href({ host: 'api#example' }), hrefError('invalid-param'))
+          assert.throws(() => pattern.href({ host: 'api@evil' }), hrefError('invalid-param'))
           assert.throws(() => pattern.href({ host: 'api example' }), hrefError('invalid-param'))
         })
 
@@ -500,6 +501,11 @@ describe('RoutePattern', () => {
         let pattern = new RoutePattern('://*env.example.com/path')
         let result = pattern.href({ env: 'café.eu' })
         assert.equal(result, 'https://xn--caf-dma.eu.example.com/path')
+      })
+
+      it('throws when hostname wildcards contain URL authority separators', () => {
+        let pattern = new RoutePattern('://*env.example.com/path')
+        assert.throws(() => pattern.href({ env: 'api@evil' }), hrefError('invalid-param'))
       })
 
       it('throws for nameless wildcard', () => {

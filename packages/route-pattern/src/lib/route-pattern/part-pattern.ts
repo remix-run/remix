@@ -372,6 +372,17 @@ function encodeHostnameParam(
     })
   }
 
+  if (url.username !== '' || url.password !== '') {
+    throw new HrefError({
+      type: 'invalid-param',
+      pattern,
+      partPattern,
+      paramName,
+      paramValue: value,
+      reason: 'hostname params must not contain URL username or password separators',
+    })
+  }
+
   if (
     url.pathname !== '/' ||
     url.search !== '' ||
