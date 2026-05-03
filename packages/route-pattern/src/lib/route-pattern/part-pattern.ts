@@ -255,8 +255,11 @@ export class PartPattern {
 
     if (this.type === 'pathname') {
       return token.type === '*'
-        ? stringValue.split('/').map(encodePathnameSegment).join('/')
-        : encodePathnameSegment(stringValue)
+        ? stringValue
+            .split('/')
+            .map((segment) => this.#encodePathnameSegment(pattern, token, stringValue, segment))
+            .join('/')
+        : this.#encodePathnameSegment(pattern, token, stringValue, stringValue)
     }
 
     let result = encodeHostnameParam(pattern, this, token.name, stringValue)
@@ -272,6 +275,26 @@ export class PartPattern {
     }
 
     return result
+  }
+
+  #encodePathnameSegment(
+    pattern: RoutePattern,
+    token: ParamToken,
+    stringValue: string,
+    segment: string,
+  ): string {
+    if (segment === '.' || segment === '..') {
+      throw new HrefError({
+        type: 'invalid-param',
+        pattern,
+        partPattern: this,
+        paramName: token.name,
+        paramValue: stringValue,
+        reason: 'pathname params must not contain dot segments',
+      })
+    }
+
+    return encodePathnameSegment(segment)
   }
 
   match(part: string, options?: { ignoreCase?: boolean }): PartPatternMatch | null {

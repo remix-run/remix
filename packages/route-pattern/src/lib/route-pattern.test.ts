@@ -506,6 +506,9 @@ describe('RoutePattern', () => {
       it('throws when hostname wildcards contain URL authority separators', () => {
         let pattern = new RoutePattern('://*env.example.com/path')
         assert.throws(() => pattern.href({ env: 'api@evil' }), hrefError('invalid-param'))
+        assert.throws(() => pattern.href({ env: 'api:443' }), hrefError('invalid-param'))
+        assert.throws(() => pattern.href({ env: '[::1]' }), hrefError('invalid-param'))
+        assert.throws(() => pattern.href({ env: 'api[evil]' }), hrefError('invalid-param'))
       })
 
       it('throws for nameless wildcard', () => {
@@ -574,6 +577,23 @@ describe('RoutePattern', () => {
           assert.equal(url.hash, '')
         })
 
+        it('encodes percent signs from already-encoded input as segment content', () => {
+          let pattern = new RoutePattern('/files/:name')
+          let result = pattern.href({ name: 'already%2Fencoded%20value' })
+          assert.equal(result, '/files/already%252Fencoded%2520value')
+
+          let url = new URL(result, 'https://example.com')
+          assert.equal(url.pathname, '/files/already%252Fencoded%2520value')
+          assert.equal(url.search, '')
+          assert.equal(url.hash, '')
+        })
+
+        it('throws when params are dot segments', () => {
+          let pattern = new RoutePattern('/files/:name/preview')
+          assert.throws(() => pattern.href({ name: '.' }), hrefError('invalid-param'))
+          assert.throws(() => pattern.href({ name: '..' }), hrefError('invalid-param'))
+        })
+
         it('encodes spaces and unicode params', () => {
           let pattern = new RoutePattern('/search/:q')
           let result = pattern.href({ q: 'café 北京' })
@@ -637,6 +657,21 @@ describe('RoutePattern', () => {
         assert.equal(url.pathname, '/files/docs/@scope/pkg/a%20b/%E4%BD%A0%E5%A5%BD%3Fx%23y')
         assert.equal(url.search, '')
         assert.equal(url.hash, '')
+      })
+
+      it('preserves empty wildcard segments while encoding segment contents', () => {
+        let pattern = new RoutePattern('/files/*path')
+        let result = pattern.href({ path: 'docs//already%2Fencoded' })
+        assert.equal(result, '/files/docs//already%252Fencoded')
+      })
+
+      it('throws when wildcard params contain dot segments', () => {
+        let pattern = new RoutePattern('/files/*path')
+        assert.throws(() => pattern.href({ path: 'safe/./file.txt' }), hrefError('invalid-param'))
+        assert.throws(
+          () => pattern.href({ path: 'safe/../secret.txt' }),
+          hrefError('invalid-param'),
+        )
       })
 
       it('supports wildcard with number param', () => {
@@ -825,6 +860,23 @@ describe('RoutePattern', () => {
         let pattern = new RoutePattern('/posts?sort=asc')
         let result = pattern.href(undefined, { page: '2' })
         assert.equal(result, '/posts?page=2&sort=asc')
+      })
+
+      it('encodes user search params so search and hash cannot be injected', () => {
+        let pattern = new RoutePattern('/posts')
+        let result = pattern.href(undefined, {
+          'q&admin': '1#frag',
+          redirect: '/files/a?download=true#section',
+        })
+        assert.equal(
+          result,
+          '/posts?q%26admin=1%23frag&redirect=%2Ffiles%2Fa%3Fdownload%3Dtrue%23section',
+        )
+
+        let url = new URL(result, 'https://example.com')
+        assert.deepEqual(url.searchParams.getAll('q&admin'), ['1#frag'])
+        assert.deepEqual(url.searchParams.getAll('redirect'), ['/files/a?download=true#section'])
+        assert.equal(url.hash, '')
       })
     })
 
