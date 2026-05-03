@@ -10,6 +10,7 @@ import { runRemix } from '../../index.ts'
 import { getFixturePath } from '../../../test/fixtures.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
+const ANSI_CSI = `${String.fromCharCode(27)}[`
 
 const ROUTES_COMMAND_HELP_TEXT = [
   'Usage:',
@@ -54,7 +55,7 @@ describe('routes command', () => {
     let result = await runRoutes([], getFixturePath('routes-basic'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.doesNotMatch(result.stdout, /\u001B\[/)
+    assert.equal(result.stdout.includes(ANSI_CSI), false)
   })
 
   it('works from a nested directory inside an app', async () => {
@@ -119,7 +120,7 @@ describe('routes command', () => {
     let result = await runRoutes(['--no-color'], getFixturePath('routes-missing'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.doesNotMatch(result.stdout, /\u001B\[/)
+    assert.equal(result.stdout.includes(ANSI_CSI), false)
   })
 
   it('resolves owner files with js, jsx, and ts extensions', async () => {
