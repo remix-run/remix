@@ -107,6 +107,54 @@ describe('SuperHeaders', () => {
     }
   })
 
+  it('does not parse typed string initializer properties before access', () => {
+    let original = ContentType.from
+    let calls = 0
+
+    ContentType.from = function from(value) {
+      calls++
+      return original(value)
+    }
+
+    try {
+      let headers = new SuperHeaders({ contentType: 'text/html; charset=utf-8' })
+
+      assert.equal(headers.get('Content-Type'), 'text/html; charset=utf-8')
+      assert.equal(calls, 0)
+
+      assert.equal(headers.contentType.charset, 'utf-8')
+      assert.equal(calls, 1)
+      assert.equal(headers.contentType.mediaType, 'text/html')
+      assert.equal(calls, 1)
+    } finally {
+      ContentType.from = original
+    }
+  })
+
+  it('does not cache failed typed parses', () => {
+    let original = ContentType.from
+    let calls = 0
+
+    ContentType.from = function from(value) {
+      calls++
+      if (calls === 1) {
+        throw new Error('parse failed')
+      }
+      return original(value)
+    }
+
+    try {
+      let headers = new SuperHeaders({ 'Content-Type': 'text/html' })
+
+      assert.throws(() => headers.contentType, /parse failed/)
+      assert.equal(calls, 1)
+      assert.equal(headers.contentType.mediaType, 'text/html')
+      assert.equal(calls, 2)
+    } finally {
+      ContentType.from = original
+    }
+  })
+
   it('sets string property values without parsing', () => {
     let original = ContentType.from
     let calls = 0
@@ -250,6 +298,26 @@ describe('SuperHeaders', () => {
     assert.equal(headers.contentType.mediaType, 'application/json')
   })
 
+  it('keeps cached typed values stable until native storage changes', () => {
+    let headers = new SuperHeaders({ contentType: 'text/html' })
+    let contentType = headers.contentType
+
+    assert.equal(headers.contentType, contentType)
+
+    contentType.charset = 'utf-8'
+    assert.equal(headers.get('Content-Type'), 'text/html; charset=utf-8')
+    assert.equal(headers.contentType, contentType)
+
+    headers.set('content-type', 'application/json')
+    let updatedContentType = headers.contentType
+
+    assert.notEqual(updatedContentType, contentType)
+    assert.equal(updatedContentType.mediaType, 'application/json')
+
+    contentType.boundary = 'stale'
+    assert.equal(headers.get('Content-Type'), 'application/json')
+  })
+
   it('supports scalar header accessors', () => {
     let headers = new SuperHeaders()
     let date = new Date('2021-01-01T00:00:00Z')
@@ -316,6 +384,112 @@ describe('SuperHeaders', () => {
 
     headers.delete('Set-Cookie')
     assert.deepEqual(headers.getSetCookie(), [])
+  })
+
+  it('keeps Set-Cookie cache identity stable across observed mutations', () => {
+    let headers = new SuperHeaders({
+      setCookie: [{ name: 'session', value: 'abc' }],
+    })
+    let cookies = headers.setCookie
+
+    cookies.push({ name: 'theme', value: 'dark' })
+
+    assert.equal(headers.setCookie, cookies)
+    assert.deepEqual(headers.getSetCookie(), ['session=abc', 'theme=dark'])
+
+    headers.append('Set-Cookie', 'locale=en')
+
+    assert.notEqual(headers.setCookie, cookies)
+    assert.deepEqual(headers.getSetCookie(), ['session=abc', 'theme=dark', 'locale=en'])
+  })
+
+  it('syncs Set-Cookie element mutations reached through array helpers', () => {
+    let headers = new SuperHeaders({
+      setCookie: [{ name: 'session', value: 'abc' }],
+    })
+    let cookies = headers.setCookie
+
+    for (let cookie of cookies) {
+      cookie.secure = true
+    }
+    assert.deepEqual(headers.getSetCookie(), ['session=abc; Secure'])
+
+    let cookie = cookies.at(0)
+    assert.ok(cookie)
+    cookie.httpOnly = true
+    assert.deepEqual(headers.getSetCookie(), ['session=abc; HttpOnly; Secure'])
+
+    cookies.forEach((cookie) => {
+      cookie.path = '/'
+    })
+    assert.deepEqual(headers.getSetCookie(), ['session=abc; HttpOnly; Path=/; Secure'])
+  })
+
+  it('does not let stale nested or Set-Cookie values overwrite newer native values', () => {
+    let headers = new SuperHeaders({
+      range: { unit: 'bytes', ranges: [{ start: 0, end: 99 }] },
+      setCookie: [{ name: 'session', value: 'abc' }],
+    })
+    let staleRange = headers.range.ranges[0]
+    let staleCookies = headers.setCookie
+
+    assert.ok(staleRange)
+
+    headers.set('Range', 'bytes=200-299')
+    headers.set('Set-Cookie', 'fresh=1')
+
+    staleRange.end = 199
+    staleCookies.push({ name: 'theme', value: 'dark' })
+
+    assert.equal(headers.get('Range'), 'bytes=200-299')
+    assert.deepEqual(headers.getSetCookie(), ['fresh=1'])
+  })
+
+  it('syncs Object.defineProperty and delete mutations on typed values', () => {
+    let headers = new SuperHeaders()
+    let contentType = headers.contentType
+
+    Object.defineProperty(contentType, 'mediaType', {
+      configurable: true,
+      enumerable: true,
+      value: 'text/html',
+      writable: true,
+    })
+    assert.equal(headers.get('Content-Type'), 'text/html')
+
+    Object.defineProperty(contentType, 'charset', {
+      configurable: true,
+      enumerable: true,
+      value: 'utf-8',
+      writable: true,
+    })
+    assert.equal(headers.get('Content-Type'), 'text/html; charset=utf-8')
+
+    delete contentType.charset
+    assert.equal(headers.get('Content-Type'), 'text/html')
+  })
+
+  it('rejects invalid date property values without clearing existing headers', () => {
+    let lastModified = new Date('2021-01-01T00:00:00Z')
+    let headers = new SuperHeaders({ lastModified })
+
+    assert.throws(() => Reflect.set(headers, 'lastModified', {}), TypeError)
+    assert.equal(headers.get('Last-Modified'), 'Fri, 01 Jan 2021 00:00:00 GMT')
+  })
+
+  it('does not let initializer fields shadow native Headers methods', () => {
+    let headers = new SuperHeaders({
+      append: 'shadow append',
+      get: 'shadow get',
+    })
+
+    assert.equal(typeof headers.append, 'function')
+    assert.equal(typeof headers.get, 'function')
+    assert.equal(headers.get('append'), 'shadow append')
+    assert.equal(headers.get('get'), 'shadow get')
+
+    headers.append('append', 'again')
+    assert.equal(headers.get('append'), 'shadow append, again')
   })
 
   it('keeps Set-Cookie mutations visible to Response', () => {

@@ -853,7 +853,7 @@ function observeMutations<value extends object>(
     if (cached) return cached as item
 
     let proxy = new Proxy(item, {
-      get(target, property) {
+      get(target, property, receiver) {
         let member = Reflect.get(target, property, target)
 
         if (typeof member === 'function') {
@@ -869,6 +869,10 @@ function observeMutations<value extends object>(
             }
           }
 
+          if (Array.isArray(target)) {
+            return (...args: unknown[]) => member.apply(receiver, args)
+          }
+
           return member.bind(target)
         }
 
@@ -880,6 +884,11 @@ function observeMutations<value extends object>(
       },
       set(target, property, newValue) {
         let result = Reflect.set(target, property, newValue, target)
+        onChange()
+        return result
+      },
+      defineProperty(target, property, descriptor) {
+        let result = Reflect.defineProperty(target, property, descriptor)
         onChange()
         return result
       },
