@@ -85,7 +85,6 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
 
     let proxyInit: RequestInit = {
       method: request.method,
-      headers: proxyHeaders,
       cache: request.cache,
       credentials: request.credentials,
       integrity: request.integrity,
@@ -96,6 +95,7 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
       referrerPolicy: request.referrerPolicy,
       signal: request.signal,
       ...init,
+      headers: proxyHeaders,
     }
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       proxyInit.body = request.body
