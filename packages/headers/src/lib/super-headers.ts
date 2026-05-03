@@ -45,11 +45,8 @@ export interface SuperHeadersPropertyInit {
   accessControlRequestMethod?: string | null
   age?: string | number | null
   allow?: StringInit | null
-  altSvc?: string | null
   authorization?: string | null
   cacheControl?: string | CacheControlInit | null
-  cdnCacheControl?: StringInit | null
-  clearSiteData?: StringInit | null
   connection?: StringInit | null
   contentDisposition?: string | ContentDispositionInit | null
   contentEncoding?: StringInit | null
@@ -65,13 +62,8 @@ export interface SuperHeadersPropertyInit {
   crossOriginOpenerPolicy?: string | null
   crossOriginResourcePolicy?: string | null
   date?: string | DateInit | null
-  deviceMemory?: string | number | null
-  digest?: string | null
-  dnt?: string | null
-  earlyData?: string | number | null
   etag?: string | null
   expect?: string | null
-  expectCt?: string | null
   expires?: string | DateInit | null
   forwarded?: string | null
   from?: string | null
@@ -86,52 +78,25 @@ export interface SuperHeadersPropertyInit {
   link?: StringInit | null
   location?: string | null
   maxForwards?: string | number | null
-  nel?: string | null
   origin?: string | null
-  originAgentCluster?: string | null
   pragma?: StringInit | null
-  priority?: string | null
-  proxyAuthenticate?: StringInit | null
-  proxyAuthorization?: string | null
   range?: string | RangeInit | null
   referer?: string | null
   referrerPolicy?: string | null
   refresh?: string | null
   retryAfter?: string | null
-  secFetchDest?: string | null
-  secFetchMode?: string | null
-  secFetchSite?: string | null
-  secFetchUser?: string | null
-  secWebSocketAccept?: string | null
-  secWebSocketExtensions?: StringInit | null
-  secWebSocketKey?: string | null
-  secWebSocketProtocol?: StringInit | null
-  secWebSocketVersion?: string | number | null
   server?: string | null
-  serverTiming?: StringInit | null
-  serviceWorkerAllowed?: string | null
   setCookie?: SetCookieValue | readonly SetCookieValue[] | null
-  sourcemap?: string | null
   strictTransportSecurity?: string | null
-  te?: StringInit | null
-  timingAllowOrigin?: StringInit | null
-  trailer?: StringInit | null
-  transferEncoding?: StringInit | null
-  upgrade?: StringInit | null
   upgradeInsecureRequests?: string | number | null
   userAgent?: string | null
   vary?: string | string[] | VaryInit | null
   via?: StringInit | null
-  wantDigest?: StringInit | null
   wwwAuthenticate?: StringInit | null
   xContentTypeOptions?: string | null
-  xDnsPrefetchControl?: string | null
   xFrameOptions?: string | null
-  xPermittedCrossDomainPolicies?: string | null
   xPoweredBy?: string | null
-  xRequestedWith?: string | null
   xRobotsTag?: StringInit | null
-  xXssProtection?: string | null
 }
 
 /**
@@ -276,10 +241,7 @@ const StringHeaderDescriptors: readonly StringHeaderDescriptor[] = [
   stringHeader('accessControlRequestHeaders', 'Access-Control-Request-Headers', true),
   stringHeader('accessControlRequestMethod', 'Access-Control-Request-Method'),
   stringHeader('allow', 'Allow', true),
-  stringHeader('altSvc', 'Alt-Svc'),
   stringHeader('authorization', 'Authorization'),
-  stringHeader('cdnCacheControl', 'CDN-Cache-Control', true),
-  stringHeader('clearSiteData', 'Clear-Site-Data', true),
   stringHeader('connection', 'Connection', true),
   stringHeader('contentEncoding', 'Content-Encoding', true),
   stringHeader('contentLanguage', 'Content-Language', true),
@@ -289,68 +251,36 @@ const StringHeaderDescriptors: readonly StringHeaderDescriptor[] = [
   stringHeader('crossOriginEmbedderPolicy', 'Cross-Origin-Embedder-Policy'),
   stringHeader('crossOriginOpenerPolicy', 'Cross-Origin-Opener-Policy'),
   stringHeader('crossOriginResourcePolicy', 'Cross-Origin-Resource-Policy'),
-  stringHeader('digest', 'Digest'),
-  stringHeader('dnt', 'DNT'),
   stringHeader('etag', 'ETag', false, quoteEtag),
   stringHeader('expect', 'Expect'),
-  stringHeader('expectCt', 'Expect-CT'),
   stringHeader('forwarded', 'Forwarded'),
   stringHeader('from', 'From'),
   stringHeader('host', 'Host'),
   stringHeader('keepAlive', 'Keep-Alive'),
   stringHeader('link', 'Link', true),
   stringHeader('location', 'Location'),
-  stringHeader('nel', 'NEL'),
   stringHeader('origin', 'Origin'),
-  stringHeader('originAgentCluster', 'Origin-Agent-Cluster'),
   stringHeader('pragma', 'Pragma', true),
-  stringHeader('priority', 'Priority'),
-  stringHeader('proxyAuthenticate', 'Proxy-Authenticate', true),
-  stringHeader('proxyAuthorization', 'Proxy-Authorization'),
   stringHeader('referer', 'Referer'),
   stringHeader('referrerPolicy', 'Referrer-Policy'),
   stringHeader('refresh', 'Refresh'),
   stringHeader('retryAfter', 'Retry-After'),
-  stringHeader('secFetchDest', 'Sec-Fetch-Dest'),
-  stringHeader('secFetchMode', 'Sec-Fetch-Mode'),
-  stringHeader('secFetchSite', 'Sec-Fetch-Site'),
-  stringHeader('secFetchUser', 'Sec-Fetch-User'),
-  stringHeader('secWebSocketAccept', 'Sec-WebSocket-Accept'),
-  stringHeader('secWebSocketExtensions', 'Sec-WebSocket-Extensions', true),
-  stringHeader('secWebSocketKey', 'Sec-WebSocket-Key'),
-  stringHeader('secWebSocketProtocol', 'Sec-WebSocket-Protocol', true),
   stringHeader('server', 'Server'),
-  stringHeader('serverTiming', 'Server-Timing', true),
-  stringHeader('serviceWorkerAllowed', 'Service-Worker-Allowed'),
-  stringHeader('sourcemap', 'Sourcemap'),
   stringHeader('strictTransportSecurity', 'Strict-Transport-Security'),
-  stringHeader('te', 'TE', true),
-  stringHeader('timingAllowOrigin', 'Timing-Allow-Origin', true),
-  stringHeader('trailer', 'Trailer', true),
-  stringHeader('transferEncoding', 'Transfer-Encoding', true),
-  stringHeader('upgrade', 'Upgrade', true),
   stringHeader('userAgent', 'User-Agent'),
   stringHeader('via', 'Via', true),
-  stringHeader('wantDigest', 'Want-Digest', true),
   stringHeader('wwwAuthenticate', 'WWW-Authenticate', true),
   stringHeader('xContentTypeOptions', 'X-Content-Type-Options'),
-  stringHeader('xDnsPrefetchControl', 'X-DNS-Prefetch-Control'),
   stringHeader('xFrameOptions', 'X-Frame-Options'),
-  stringHeader('xPermittedCrossDomainPolicies', 'X-Permitted-Cross-Domain-Policies'),
   stringHeader('xPoweredBy', 'X-Powered-By'),
-  stringHeader('xRequestedWith', 'X-Requested-With'),
   stringHeader('xRobotsTag', 'X-Robots-Tag', true),
-  stringHeader('xXssProtection', 'X-XSS-Protection'),
 ]
 
 const NumberHeaderDescriptors: readonly NumberHeaderDescriptor[] = [
   numberHeader('accessControlMaxAge', 'Access-Control-Max-Age'),
   numberHeader('age', 'Age'),
   numberHeader('contentLength', 'Content-Length'),
-  numberHeader('deviceMemory', 'Device-Memory'),
-  numberHeader('earlyData', 'Early-Data'),
   numberHeader('maxForwards', 'Max-Forwards'),
-  numberHeader('secWebSocketVersion', 'Sec-WebSocket-Version'),
   numberHeader('upgradeInsecureRequests', 'Upgrade-Insecure-Requests'),
 ]
 
@@ -711,16 +641,10 @@ export interface SuperHeaders {
   set age(value: string | number | null | undefined)
   get allow(): string | null
   set allow(value: StringInit | null | undefined)
-  get altSvc(): string | null
-  set altSvc(value: string | null | undefined)
   get authorization(): string | null
   set authorization(value: string | null | undefined)
   get cacheControl(): CacheControl
   set cacheControl(value: string | CacheControlInit | null | undefined)
-  get cdnCacheControl(): string | null
-  set cdnCacheControl(value: StringInit | null | undefined)
-  get clearSiteData(): string | null
-  set clearSiteData(value: StringInit | null | undefined)
   get connection(): string | null
   set connection(value: StringInit | null | undefined)
   get contentDisposition(): ContentDisposition
@@ -751,20 +675,10 @@ export interface SuperHeaders {
   set crossOriginResourcePolicy(value: string | null | undefined)
   get date(): Date | null
   set date(value: string | DateInit | null | undefined)
-  get deviceMemory(): number | null
-  set deviceMemory(value: string | number | null | undefined)
-  get digest(): string | null
-  set digest(value: string | null | undefined)
-  get dnt(): string | null
-  set dnt(value: string | null | undefined)
-  get earlyData(): number | null
-  set earlyData(value: string | number | null | undefined)
   get etag(): string | null
   set etag(value: string | null | undefined)
   get expect(): string | null
   set expect(value: string | null | undefined)
-  get expectCt(): string | null
-  set expectCt(value: string | null | undefined)
   get expires(): Date | null
   set expires(value: string | DateInit | null | undefined)
   get forwarded(): string | null
@@ -793,20 +707,10 @@ export interface SuperHeaders {
   set location(value: string | null | undefined)
   get maxForwards(): number | null
   set maxForwards(value: string | number | null | undefined)
-  get nel(): string | null
-  set nel(value: string | null | undefined)
   get origin(): string | null
   set origin(value: string | null | undefined)
-  get originAgentCluster(): string | null
-  set originAgentCluster(value: string | null | undefined)
   get pragma(): string | null
   set pragma(value: StringInit | null | undefined)
-  get priority(): string | null
-  set priority(value: string | null | undefined)
-  get proxyAuthenticate(): string | null
-  set proxyAuthenticate(value: StringInit | null | undefined)
-  get proxyAuthorization(): string | null
-  set proxyAuthorization(value: string | null | undefined)
   get range(): Range
   set range(value: string | RangeInit | null | undefined)
   get referer(): string | null
@@ -817,46 +721,12 @@ export interface SuperHeaders {
   set refresh(value: string | null | undefined)
   get retryAfter(): string | null
   set retryAfter(value: string | null | undefined)
-  get secFetchDest(): string | null
-  set secFetchDest(value: string | null | undefined)
-  get secFetchMode(): string | null
-  set secFetchMode(value: string | null | undefined)
-  get secFetchSite(): string | null
-  set secFetchSite(value: string | null | undefined)
-  get secFetchUser(): string | null
-  set secFetchUser(value: string | null | undefined)
-  get secWebSocketAccept(): string | null
-  set secWebSocketAccept(value: string | null | undefined)
-  get secWebSocketExtensions(): string | null
-  set secWebSocketExtensions(value: StringInit | null | undefined)
-  get secWebSocketKey(): string | null
-  set secWebSocketKey(value: string | null | undefined)
-  get secWebSocketProtocol(): string | null
-  set secWebSocketProtocol(value: StringInit | null | undefined)
-  get secWebSocketVersion(): number | null
-  set secWebSocketVersion(value: string | number | null | undefined)
   get server(): string | null
   set server(value: string | null | undefined)
-  get serverTiming(): string | null
-  set serverTiming(value: StringInit | null | undefined)
-  get serviceWorkerAllowed(): string | null
-  set serviceWorkerAllowed(value: string | null | undefined)
   get setCookie(): SetCookieList
   set setCookie(value: SetCookieValue | readonly SetCookieValue[] | null | undefined)
-  get sourcemap(): string | null
-  set sourcemap(value: string | null | undefined)
   get strictTransportSecurity(): string | null
   set strictTransportSecurity(value: string | null | undefined)
-  get te(): string | null
-  set te(value: StringInit | null | undefined)
-  get timingAllowOrigin(): string | null
-  set timingAllowOrigin(value: StringInit | null | undefined)
-  get trailer(): string | null
-  set trailer(value: StringInit | null | undefined)
-  get transferEncoding(): string | null
-  set transferEncoding(value: StringInit | null | undefined)
-  get upgrade(): string | null
-  set upgrade(value: StringInit | null | undefined)
   get upgradeInsecureRequests(): number | null
   set upgradeInsecureRequests(value: string | number | null | undefined)
   get userAgent(): string | null
@@ -865,26 +735,16 @@ export interface SuperHeaders {
   set vary(value: string | string[] | VaryInit | null | undefined)
   get via(): string | null
   set via(value: StringInit | null | undefined)
-  get wantDigest(): string | null
-  set wantDigest(value: StringInit | null | undefined)
   get wwwAuthenticate(): string | null
   set wwwAuthenticate(value: StringInit | null | undefined)
   get xContentTypeOptions(): string | null
   set xContentTypeOptions(value: string | null | undefined)
-  get xDnsPrefetchControl(): string | null
-  set xDnsPrefetchControl(value: string | null | undefined)
   get xFrameOptions(): string | null
   set xFrameOptions(value: string | null | undefined)
-  get xPermittedCrossDomainPolicies(): string | null
-  set xPermittedCrossDomainPolicies(value: string | null | undefined)
   get xPoweredBy(): string | null
   set xPoweredBy(value: string | null | undefined)
-  get xRequestedWith(): string | null
-  set xRequestedWith(value: string | null | undefined)
   get xRobotsTag(): string | null
   set xRobotsTag(value: StringInit | null | undefined)
-  get xXssProtection(): string | null
-  set xXssProtection(value: string | null | undefined)
 }
 
 function objectHeader<init, value extends HeaderValue>(
