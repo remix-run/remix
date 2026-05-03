@@ -236,7 +236,7 @@ export async function collectServerCoverageMap(
         let { code } = await transformTypeScript(tsSource, filePath)
         let success = await addV8EntryToCoverageMap(coverageMap, filePath, entry.functions, code)
         if (success) converted++
-      } catch (e) {
+      } catch {
         // Skip files that can't be converted
       }
     }

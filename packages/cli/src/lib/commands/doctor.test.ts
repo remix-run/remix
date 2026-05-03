@@ -10,6 +10,7 @@ import { runRemix } from '../../index.ts'
 import { getFixturePath } from '../../../test/fixtures.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
+const ANSI_CSI = `${String.fromCharCode(27)}[`
 const REMIX_PACKAGE_JSON_PATH = path.join(ROOT_DIR, 'packages', 'remix', 'package.json')
 
 const DOCTOR_COMMAND_HELP_TEXT = [
@@ -126,7 +127,7 @@ describe('doctor command', () => {
     let result = await runDoctor([], getFixturePath('doctor-missing'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.doesNotMatch(result.stdout, /\u001B\[/)
+    assert.equal(result.stdout.includes(ANSI_CSI), false)
     assert.equal(result.stderr, '')
   })
 
@@ -872,7 +873,7 @@ describe('doctor command', () => {
     let result = await runDoctor(['--no-color'], getFixturePath('doctor-missing'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.doesNotMatch(result.stdout, /\u001B\[/)
+    assert.equal(result.stdout.includes(ANSI_CSI), false)
     assert.equal(result.stderr, '')
   })
 

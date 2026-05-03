@@ -5,6 +5,8 @@ import { describe, it } from '@remix-run/test'
 import { formatHelpText } from './help-text.ts'
 import { configureColors } from './terminal.ts'
 
+const ANSI_CSI = `${String.fromCharCode(27)}[`
+
 describe('help text', () => {
   it('renders plain help text with stable section order and alignment', () => {
     let output = withEnv('NO_COLOR', '1', () =>
@@ -63,10 +65,10 @@ describe('help text', () => {
       ),
     )
 
-    assert.match(output, /\u001B\[1m\u001B\[94mUsage\u001B\[0m:/)
-    assert.match(output, /remix demo \u001B\[93m\[options\]\u001B\[0m/)
-    assert.match(output, /\u001B\[93m--dir\u001B\[0m \u001B\[93m<path>\u001B\[0m/)
-    assert.match(output, /remix demo \u001B\[93m--json\u001B\[0m/)
+    assert.ok(output.includes(`${ANSI_CSI}1m${ANSI_CSI}94mUsage${ANSI_CSI}0m:`))
+    assert.ok(output.includes(`remix demo ${ANSI_CSI}93m[options]${ANSI_CSI}0m`))
+    assert.ok(output.includes(`${ANSI_CSI}93m--dir${ANSI_CSI}0m ${ANSI_CSI}93m<path>${ANSI_CSI}0m`))
+    assert.ok(output.includes(`remix demo ${ANSI_CSI}93m--json${ANSI_CSI}0m`))
   })
 
   it('colors help for stderr independently of stdout capability', () => {
@@ -89,8 +91,8 @@ describe('help text', () => {
       ),
     )
 
-    assert.match(output, /\u001B\[1m\u001B\[94mUsage\u001B\[0m:/)
-    assert.match(output, /remix demo \u001B\[93m<path>\u001B\[0m/)
+    assert.ok(output.includes(`${ANSI_CSI}1m${ANSI_CSI}94mUsage${ANSI_CSI}0m:`))
+    assert.ok(output.includes(`remix demo ${ANSI_CSI}93m<path>${ANSI_CSI}0m`))
   })
 })
 
