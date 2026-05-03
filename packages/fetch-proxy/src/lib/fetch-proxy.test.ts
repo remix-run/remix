@@ -452,6 +452,38 @@ describe('fetch proxy (double-arg style)', () => {
     assert.equal(capturedRequest.url, 'https://remix.run:3000/dest/api/resource')
   })
 
+  it('keeps X-Forwarded headers when proxy(url, init) provides custom headers', async () => {
+    let capturedRequest: Request
+    let proxy = createFetchProxy('https://upstream.example/base', {
+      xForwardedHeaders: true,
+      fetch(input, init) {
+        capturedRequest = new Request(input, init)
+        return Promise.resolve(new Response())
+      },
+    })
+
+    await proxy('http://shop.example:8080/orders', {
+      method: 'PATCH',
+      cache: 'reload',
+      credentials: 'same-origin',
+      headers: {
+        'X-Custom': 'present',
+      },
+    })
+
+    assert.ok(capturedRequest!)
+    assert.equal(capturedRequest.method, 'PATCH')
+    // Bun uses its own default Request values for several fields instead of preserving these inputs.
+    if (!isBun) {
+      assert.equal(capturedRequest.cache, 'reload')
+      assert.equal(capturedRequest.credentials, 'same-origin')
+    }
+    assert.equal(capturedRequest.headers.get('X-Custom'), 'present')
+    assert.equal(capturedRequest.headers.get('X-Forwarded-Proto'), 'http')
+    assert.equal(capturedRequest.headers.get('X-Forwarded-Host'), 'shop.example:8080')
+    assert.equal(capturedRequest.headers.get('X-Forwarded-Port'), '8080')
+  })
+
   it('handles proxy(url) with defaults', async () => {
     let capturedRequest: Request
     let proxy = createFetchProxy('https://remix.run:3000/dest', {
