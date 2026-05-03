@@ -1031,6 +1031,29 @@ describe('RoutePattern', () => {
           params,
         })
       })
+
+      it('round-trips href-generated reserved characters in variable params', () => {
+        let pattern = new RoutePattern('/files/:name')
+        let original = 'a/b?c#d%2Fe'
+        let href = pattern.href({ name: original })
+
+        assert.equal(href, '/files/a%2Fb%3Fc%23d%252Fe')
+
+        let match = pattern.match(new URL(href, 'https://example.com'))
+        assert.ok(match)
+        assert.equal(match.params.name, original)
+        assert.equal(match.paramsMeta.pathname[0].value, original)
+      })
+
+      it('does not treat encoded slash params as static path separators', () => {
+        let pattern = new RoutePattern('/files/:name')
+        let href = pattern.href({ name: 'a/b' })
+
+        assert.equal(
+          new RoutePattern('/files/a/b').match(new URL(href, 'https://example.com')),
+          null,
+        )
+      })
     })
 
     describe('search', () => {
