@@ -1,0 +1,331 @@
+import { RoutePattern } from "./route-pattern.js";
+import * as Variant from "./trie-matcher/variant.js";
+import { unreachable } from "./unreachable.js";
+import * as Specificity from "./specificity.js";
+import { decodeHostname, decodePathname } from "./decode.js";
+import { matchSearch } from "./route-pattern/match.js";
+/**
+ * Trie-based matcher optimized for repeated route lookups.
+ */
+export class TrieMatcher {
+    /**
+     * Whether pathname matching is case-insensitive.
+     */
+    ignoreCase;
+    /**
+     * Trie storage used to index registered patterns.
+     */
+    trie;
+    /**
+     * @param options Constructor options
+     * @param options.ignoreCase When `true`, pathname matching is case-insensitive for all patterns. Defaults to `false`.
+     */
+    constructor(options) {
+        this.ignoreCase = options?.ignoreCase ?? false;
+        this.trie = new Trie({ ignoreCase: this.ignoreCase });
+    }
+    /**
+     * Adds a pattern and associated data to the trie.
+     *
+     * @param pattern Pattern to register.
+     * @param data Data returned when the pattern matches.
+     */
+    add(pattern, data) {
+        pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern;
+        this.trie.insert(pattern, data);
+    }
+    /**
+     * Returns the best matching pattern for a URL.
+     *
+     * @param url URL to match.
+     * @param compareFn Specificity comparer used to rank matches.
+     * @returns The best match, or `null` when nothing matches.
+     */
+    match(url, compareFn = Specificity.descending) {
+        url = typeof url === 'string' ? new URL(url) : url;
+        let bestMatch = null;
+        for (let result of this.trie.search(url)) {
+            let match = toMatch(result, url);
+            if (bestMatch === null || compareFn(match, bestMatch) < 0) {
+                bestMatch = match;
+            }
+        }
+        return bestMatch;
+    }
+    /**
+     * Returns every pattern that matches a URL.
+     *
+     * @param url URL to match.
+     * @param compareFn Specificity comparer used to sort matches.
+     * @returns All matching routes sorted by specificity.
+     */
+    matchAll(url, compareFn = Specificity.descending) {
+        url = typeof url === 'string' ? new URL(url) : url;
+        let matches = this.trie.search(url);
+        return matches.map((result) => toMatch(result, url)).sort(compareFn);
+    }
+}
+function createHostnameNode() {
+    return {
+        static: new Map(),
+        dynamic: [],
+        any: new Map(),
+    };
+}
+function createPathnameNode() {
+    return {
+        static: new Map(),
+        variable: new Map(),
+        wildcard: new Map(),
+        values: [],
+    };
+}
+function toMatch(result, url) {
+    return {
+        pattern: result.pattern,
+        url,
+        params: result.params,
+        paramsMeta: { hostname: result.hostname, pathname: result.pathname },
+        data: result.data,
+    };
+}
+export class Trie {
+    #ignoreCase;
+    protocolNode;
+    constructor(options) {
+        this.#ignoreCase = options?.ignoreCase ?? false;
+        this.protocolNode = {
+            http: createHostnameNode(),
+            https: createHostnameNode(),
+        };
+    }
+    insert(pattern, data) {
+        for (let variant of Variant.generate(pattern)) {
+            // protocol -> hostname
+            let hostnameNode = this.protocolNode[variant.protocol];
+            // hostname -> port
+            let portNode = undefined;
+            if (variant.hostname.type === 'any') {
+                portNode = hostnameNode.any;
+            }
+            else if (variant.hostname.type === 'static') {
+                let key = variant.hostname.value.toLowerCase();
+                portNode = hostnameNode.static.get(key);
+                if (portNode === undefined) {
+                    portNode = new Map();
+                    hostnameNode.static.set(key, portNode);
+                }
+            }
+            else {
+                portNode = new Map();
+                hostnameNode.dynamic.push({ part: variant.hostname.value, portNode });
+            }
+            // port -> pathname
+            let pathnameRoot = portNode?.get(variant.port);
+            if (pathnameRoot === undefined) {
+                pathnameRoot = createPathnameNode();
+                portNode.set(variant.port, pathnameRoot);
+            }
+            // pathname segments
+            let pathnameNode = pathnameRoot;
+            let segments = variant.pathname.segments({ ignoreCase: this.#ignoreCase });
+            for (let segment of segments) {
+                if (segment.type === 'static') {
+                    let next = pathnameNode.static.get(segment.key);
+                    if (next === undefined) {
+                        next = createPathnameNode();
+                        pathnameNode.static.set(segment.key, next);
+                    }
+                    pathnameNode = next;
+                    continue;
+                }
+                if (segment.type === 'variable') {
+                    let next = pathnameNode.variable.get(segment.key);
+                    if (next === undefined) {
+                        next = { regexp: segment.regexp, pathnameNode: createPathnameNode() };
+                        pathnameNode.variable.set(segment.key, next);
+                    }
+                    pathnameNode = next.pathnameNode;
+                    continue;
+                }
+                if (segment.type === 'wildcard') {
+                    let next = pathnameNode.wildcard.get(segment.key);
+                    if (next === undefined) {
+                        next = { regexp: segment.regexp, pathnameNode: createPathnameNode() };
+                        pathnameNode.wildcard.set(segment.key, next);
+                    }
+                    pathnameNode = next.pathnameNode;
+                    continue;
+                }
+                unreachable(segment);
+            }
+            let requiredParams = variant.pathname.params();
+            let undefinedParams = [];
+            for (let param of pattern.ast.pathname.params) {
+                if (!requiredParams.some((p) => p.name === param.name) &&
+                    !undefinedParams.some((p) => p.name === param.name)) {
+                    undefinedParams.push(param);
+                }
+            }
+            pathnameNode.values.push({
+                pattern,
+                data,
+                requiredParams,
+                undefinedParams,
+            });
+        }
+    }
+    search(url) {
+        let origins = [];
+        let decodedHostname = decodeHostname(url.hostname);
+        // protocol -> hostname
+        let protocol = url.protocol.slice(0, -1);
+        if (protocol !== 'http' && protocol !== 'https')
+            return [];
+        let hostNameNode = this.protocolNode[protocol];
+        // any hostname (no port) -> pathname
+        // port cannot appear without hostname, so always indexed under the empty-port key
+        let anyHostname = hostNameNode.any.get('');
+        if (anyHostname) {
+            origins.push({
+                hostnameMatch: [
+                    { type: '*', name: '*', begin: 0, end: decodedHostname.length, value: decodedHostname },
+                ],
+                pathnameNode: anyHostname,
+            });
+        }
+        // static hostname + port -> pathname (hostname case-insensitive)
+        let staticHostname = hostNameNode.static.get(decodedHostname.toLowerCase());
+        if (staticHostname) {
+            let pathnameNode = staticHostname.get(url.port);
+            if (pathnameNode) {
+                origins.push({ hostnameMatch: [], pathnameNode });
+            }
+        }
+        // dynamic hostname + port -> pathname
+        hostNameNode.dynamic.forEach(({ part, portNode }) => {
+            let match = part.match(decodedHostname, { ignoreCase: true });
+            if (match) {
+                let pathnameNode = portNode.get(url.port);
+                if (pathnameNode) {
+                    origins.push({ hostnameMatch: match, pathnameNode });
+                }
+            }
+        });
+        let results = [];
+        // pathname
+        let urlSegments = decodePathname(url.pathname.slice(1)).split('/');
+        for (let origin of origins) {
+            let stack = [
+                { segmentIndex: 0, pathnameNode: origin.pathnameNode, charOffset: 0, pathnameMatch: [] },
+            ];
+            while (stack.length > 0) {
+                let current = stack.pop();
+                if (current.segmentIndex === urlSegments.length) {
+                    for (let value of current.pathnameNode.values) {
+                        if (!matchSearch(url.searchParams, value.pattern.ast.search)) {
+                            continue;
+                        }
+                        let pathnameMatch = [];
+                        for (let i = 0; i < value.requiredParams.length; i++) {
+                            let param = value.requiredParams[i];
+                            let rest = current.pathnameMatch[i];
+                            pathnameMatch.push({
+                                ...rest,
+                                ...param,
+                            });
+                        }
+                        let params = {};
+                        // Start with all params from the original pattern set to undefined
+                        for (let param of value.pattern.ast.hostname?.params ?? []) {
+                            if (param.name !== '*') {
+                                params[param.name] = undefined;
+                            }
+                        }
+                        for (let param of value.pattern.ast.pathname.params) {
+                            if (param.name !== '*') {
+                                params[param.name] = undefined;
+                            }
+                        }
+                        // Then overwrite with actual matched values
+                        for (let param of origin.hostnameMatch) {
+                            if (param.name === '*')
+                                continue;
+                            params[param.name] = param.value;
+                        }
+                        for (let param of pathnameMatch) {
+                            if (param.name === '*')
+                                continue;
+                            params[param.name] = param.value;
+                        }
+                        results.push({
+                            pattern: value.pattern,
+                            data: value.data,
+                            hostname: origin.hostnameMatch,
+                            pathname: pathnameMatch,
+                            params,
+                        });
+                    }
+                    continue;
+                }
+                let urlSegment = urlSegments[current.segmentIndex];
+                let staticKey = this.#ignoreCase ? urlSegment.toLowerCase() : urlSegment;
+                let nextStatic = current.pathnameNode.static.get(staticKey);
+                if (nextStatic) {
+                    stack.push({
+                        segmentIndex: current.segmentIndex + 1,
+                        pathnameNode: nextStatic,
+                        charOffset: current.charOffset + urlSegment.length + 1,
+                        pathnameMatch: current.pathnameMatch,
+                    });
+                }
+                for (let { regexp, pathnameNode } of current.pathnameNode.variable.values()) {
+                    let match = regexp.exec(urlSegment);
+                    if (match) {
+                        let pathnameMatch = current.pathnameMatch.slice();
+                        for (let i = 1; i < match.indices.length; i++) {
+                            let span = match.indices[i];
+                            if (span === undefined)
+                                unreachable();
+                            pathnameMatch.push({
+                                begin: current.charOffset + span[0],
+                                end: current.charOffset + span[1],
+                                value: match[i],
+                            });
+                        }
+                        stack.push({
+                            segmentIndex: current.segmentIndex + 1,
+                            pathnameNode,
+                            charOffset: current.charOffset + match.index + match[0].length + 1,
+                            pathnameMatch,
+                        });
+                    }
+                }
+                for (let { regexp, pathnameNode } of current.pathnameNode.wildcard.values()) {
+                    let remaining = urlSegments.slice(current.segmentIndex).join('/');
+                    let match = regexp.exec(remaining);
+                    if (match) {
+                        let pathnameMatch = current.pathnameMatch.slice();
+                        for (let i = 1; i < match.indices.length; i++) {
+                            let span = match.indices[i];
+                            if (span === undefined)
+                                continue;
+                            pathnameMatch.push({
+                                begin: current.charOffset + span[0],
+                                end: current.charOffset + span[1],
+                                value: match[i],
+                            });
+                        }
+                        stack.push({
+                            segmentIndex: urlSegments.length,
+                            pathnameNode,
+                            charOffset: current.charOffset + remaining.length,
+                            pathnameMatch,
+                        });
+                    }
+                }
+            }
+        }
+        return results;
+    }
+}
