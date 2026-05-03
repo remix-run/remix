@@ -256,15 +256,37 @@ describe('SuperHeaders', () => {
 
     headers.allow = ['GET', 'POST']
     headers.age = 42
+    headers.crossOriginEmbedderPolicyReportOnly = 'require-corp'
+    headers.crossOriginOpenerPolicyReportOnly = 'same-origin'
     headers.etag = 'abc123'
+    headers.idempotencyKey = 'abc'
     headers.lastModified = date
+    headers.permissionsPolicy = ['geolocation=()', 'camera=()']
+    headers.prefer = ['respond-async', 'return=minimal']
+    headers.preferenceApplied = 'return=minimal'
+    headers.traceparent = '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00'
+    headers.tracestate = ['rojo=00f067aa0ba902b7', 'congo=t61rcWkgMzE']
     headers.userAgent = 'Remix'
+    headers.xForwardedFor = ['203.0.113.7', '70.41.3.18']
+    headers.xForwardedHost = 'example.com'
+    headers.xForwardedProto = 'https'
 
     assert.equal(headers.get('Allow'), 'GET, POST')
     assert.equal(headers.age, 42)
+    assert.equal(headers.get('Cross-Origin-Embedder-Policy-Report-Only'), 'require-corp')
+    assert.equal(headers.get('Cross-Origin-Opener-Policy-Report-Only'), 'same-origin')
     assert.equal(headers.get('ETag'), '"abc123"')
+    assert.equal(headers.get('Idempotency-Key'), 'abc')
     assert.equal(headers.lastModified?.toUTCString(), 'Fri, 01 Jan 2021 00:00:00 GMT')
+    assert.equal(headers.get('Permissions-Policy'), 'geolocation=(), camera=()')
+    assert.equal(headers.get('Prefer'), 'respond-async, return=minimal')
+    assert.equal(headers.get('Preference-Applied'), 'return=minimal')
+    assert.equal(headers.traceparent, '00-4bf92f3577b34da6a3ce929d0e0e4736-00f067aa0ba902b7-00')
+    assert.equal(headers.get('Tracestate'), 'rojo=00f067aa0ba902b7, congo=t61rcWkgMzE')
     assert.equal(headers.userAgent, 'Remix')
+    assert.equal(headers.get('X-Forwarded-For'), '203.0.113.7, 70.41.3.18')
+    assert.equal(headers.get('X-Forwarded-Host'), 'example.com')
+    assert.equal(headers.get('X-Forwarded-Proto'), 'https')
   })
 
   it('preserves native iteration and raw stringification utilities', () => {
@@ -314,7 +336,10 @@ describe('SuperHeaders', () => {
     let init: SuperHeadersInit = {
       cacheControl: { public: true },
       contentType: { mediaType: 'text/html' },
+      idempotencyKey: 'abc',
+      permissionsPolicy: ['fullscreen=*', 'geolocation=()'],
       setCookie: { name: 'session', value: 'abc' },
+      xForwardedFor: ['203.0.113.7'],
     }
     let headers = new SuperHeaders(init)
 

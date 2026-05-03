@@ -59,7 +59,9 @@ export interface SuperHeadersPropertyInit {
   contentType?: string | ContentTypeInit | null
   cookie?: string | CookieInit | null
   crossOriginEmbedderPolicy?: string | null
+  crossOriginEmbedderPolicyReportOnly?: string | null
   crossOriginOpenerPolicy?: string | null
+  crossOriginOpenerPolicyReportOnly?: string | null
   crossOriginResourcePolicy?: string | null
   date?: string | DateInit | null
   etag?: string | null
@@ -68,6 +70,7 @@ export interface SuperHeadersPropertyInit {
   forwarded?: string | null
   from?: string | null
   host?: string | null
+  idempotencyKey?: string | null
   ifMatch?: string | string[] | IfMatchInit | null
   ifModifiedSince?: string | DateInit | null
   ifNoneMatch?: string | string[] | IfNoneMatchInit | null
@@ -79,7 +82,10 @@ export interface SuperHeadersPropertyInit {
   location?: string | null
   maxForwards?: string | number | null
   origin?: string | null
+  permissionsPolicy?: StringInit | null
   pragma?: StringInit | null
+  prefer?: StringInit | null
+  preferenceApplied?: StringInit | null
   range?: string | RangeInit | null
   referer?: string | null
   referrerPolicy?: string | null
@@ -88,12 +94,17 @@ export interface SuperHeadersPropertyInit {
   server?: string | null
   setCookie?: SetCookieValue | readonly SetCookieValue[] | null
   strictTransportSecurity?: string | null
+  traceparent?: string | null
+  tracestate?: StringInit | null
   upgradeInsecureRequests?: string | number | null
   userAgent?: string | null
   vary?: string | string[] | VaryInit | null
   via?: StringInit | null
   wwwAuthenticate?: StringInit | null
   xContentTypeOptions?: string | null
+  xForwardedFor?: StringInit | null
+  xForwardedHost?: string | null
+  xForwardedProto?: string | null
   xFrameOptions?: string | null
   xPoweredBy?: string | null
   xRobotsTag?: StringInit | null
@@ -249,28 +260,39 @@ const StringHeaderDescriptors: readonly StringHeaderDescriptor[] = [
   stringHeader('contentSecurityPolicy', 'Content-Security-Policy'),
   stringHeader('contentSecurityPolicyReportOnly', 'Content-Security-Policy-Report-Only'),
   stringHeader('crossOriginEmbedderPolicy', 'Cross-Origin-Embedder-Policy'),
+  stringHeader('crossOriginEmbedderPolicyReportOnly', 'Cross-Origin-Embedder-Policy-Report-Only'),
   stringHeader('crossOriginOpenerPolicy', 'Cross-Origin-Opener-Policy'),
+  stringHeader('crossOriginOpenerPolicyReportOnly', 'Cross-Origin-Opener-Policy-Report-Only'),
   stringHeader('crossOriginResourcePolicy', 'Cross-Origin-Resource-Policy'),
   stringHeader('etag', 'ETag', false, quoteEtag),
   stringHeader('expect', 'Expect'),
   stringHeader('forwarded', 'Forwarded'),
   stringHeader('from', 'From'),
   stringHeader('host', 'Host'),
+  stringHeader('idempotencyKey', 'Idempotency-Key'),
   stringHeader('keepAlive', 'Keep-Alive'),
   stringHeader('link', 'Link', true),
   stringHeader('location', 'Location'),
   stringHeader('origin', 'Origin'),
+  stringHeader('permissionsPolicy', 'Permissions-Policy', true),
   stringHeader('pragma', 'Pragma', true),
+  stringHeader('prefer', 'Prefer', true),
+  stringHeader('preferenceApplied', 'Preference-Applied', true),
   stringHeader('referer', 'Referer'),
   stringHeader('referrerPolicy', 'Referrer-Policy'),
   stringHeader('refresh', 'Refresh'),
   stringHeader('retryAfter', 'Retry-After'),
   stringHeader('server', 'Server'),
   stringHeader('strictTransportSecurity', 'Strict-Transport-Security'),
+  stringHeader('traceparent', 'Traceparent'),
+  stringHeader('tracestate', 'Tracestate', true),
   stringHeader('userAgent', 'User-Agent'),
   stringHeader('via', 'Via', true),
   stringHeader('wwwAuthenticate', 'WWW-Authenticate', true),
   stringHeader('xContentTypeOptions', 'X-Content-Type-Options'),
+  stringHeader('xForwardedFor', 'X-Forwarded-For', true),
+  stringHeader('xForwardedHost', 'X-Forwarded-Host'),
+  stringHeader('xForwardedProto', 'X-Forwarded-Proto'),
   stringHeader('xFrameOptions', 'X-Frame-Options'),
   stringHeader('xPoweredBy', 'X-Powered-By'),
   stringHeader('xRobotsTag', 'X-Robots-Tag', true),
@@ -669,8 +691,12 @@ export interface SuperHeaders {
   set cookie(value: string | CookieInit | null | undefined)
   get crossOriginEmbedderPolicy(): string | null
   set crossOriginEmbedderPolicy(value: string | null | undefined)
+  get crossOriginEmbedderPolicyReportOnly(): string | null
+  set crossOriginEmbedderPolicyReportOnly(value: string | null | undefined)
   get crossOriginOpenerPolicy(): string | null
   set crossOriginOpenerPolicy(value: string | null | undefined)
+  get crossOriginOpenerPolicyReportOnly(): string | null
+  set crossOriginOpenerPolicyReportOnly(value: string | null | undefined)
   get crossOriginResourcePolicy(): string | null
   set crossOriginResourcePolicy(value: string | null | undefined)
   get date(): Date | null
@@ -687,6 +713,8 @@ export interface SuperHeaders {
   set from(value: string | null | undefined)
   get host(): string | null
   set host(value: string | null | undefined)
+  get idempotencyKey(): string | null
+  set idempotencyKey(value: string | null | undefined)
   get ifMatch(): IfMatch
   set ifMatch(value: string | string[] | IfMatchInit | null | undefined)
   get ifModifiedSince(): Date | null
@@ -709,8 +737,14 @@ export interface SuperHeaders {
   set maxForwards(value: string | number | null | undefined)
   get origin(): string | null
   set origin(value: string | null | undefined)
+  get permissionsPolicy(): string | null
+  set permissionsPolicy(value: StringInit | null | undefined)
   get pragma(): string | null
   set pragma(value: StringInit | null | undefined)
+  get prefer(): string | null
+  set prefer(value: StringInit | null | undefined)
+  get preferenceApplied(): string | null
+  set preferenceApplied(value: StringInit | null | undefined)
   get range(): Range
   set range(value: string | RangeInit | null | undefined)
   get referer(): string | null
@@ -727,6 +761,10 @@ export interface SuperHeaders {
   set setCookie(value: SetCookieValue | readonly SetCookieValue[] | null | undefined)
   get strictTransportSecurity(): string | null
   set strictTransportSecurity(value: string | null | undefined)
+  get traceparent(): string | null
+  set traceparent(value: string | null | undefined)
+  get tracestate(): string | null
+  set tracestate(value: StringInit | null | undefined)
   get upgradeInsecureRequests(): number | null
   set upgradeInsecureRequests(value: string | number | null | undefined)
   get userAgent(): string | null
@@ -739,6 +777,12 @@ export interface SuperHeaders {
   set wwwAuthenticate(value: StringInit | null | undefined)
   get xContentTypeOptions(): string | null
   set xContentTypeOptions(value: string | null | undefined)
+  get xForwardedFor(): string | null
+  set xForwardedFor(value: StringInit | null | undefined)
+  get xForwardedHost(): string | null
+  set xForwardedHost(value: string | null | undefined)
+  get xForwardedProto(): string | null
+  set xForwardedProto(value: string | null | undefined)
   get xFrameOptions(): string | null
   set xFrameOptions(value: string | null | undefined)
   get xPoweredBy(): string | null
