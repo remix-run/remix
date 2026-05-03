@@ -374,6 +374,16 @@ describe('run', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('ignores a double-dash separator after global options', async () => {
+    let result = await captureOutput(() =>
+      run(['--no-color', '--', '--version'], { remixVersion: '9.9.9' }),
+    )
+
+    assert.equal(result.exitCode, 0)
+    assert.equal(result.stdout, '9.9.9\n')
+    assert.equal(result.stderr, '')
+  })
+
   it('fails for unknown commands', async () => {
     let result = await captureOutput(() => run(['unknown']))
 
@@ -536,6 +546,22 @@ describe('run', () => {
         result.stderr,
         new RegExp(`Target directory is not empty: ${escapeRegExp(appDir)}`),
       )
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects app names that cannot become package names before writing files', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-'))
+
+    try {
+      let appDir = path.join(tmpDir, 'invalid-name')
+      let result = await captureOutput(() => run(['new', appDir, '--app-name', '!!!']))
+
+      assert.equal(result.exitCode, 1)
+      assert.equal(result.stdout, '')
+      assert.match(result.stderr, /Could not derive a valid package name from "!!!"/)
+      await assertPathMissing(appDir)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }

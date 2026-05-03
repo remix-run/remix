@@ -169,11 +169,7 @@ function completeCommand(
   }
 
   if (command === 'test') {
-    return completeSimpleFlags(tokens, currentWord, usedGlobalFlags, [
-      '--coverage',
-      '--watch',
-      '--help',
-    ])
+    return completeSimpleFlags(tokens, currentWord, usedGlobalFlags, ['--coverage', '--watch'])
   }
 
   if (command === 'completion') {
