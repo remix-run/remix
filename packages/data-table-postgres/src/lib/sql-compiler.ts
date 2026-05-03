@@ -279,6 +279,13 @@ function rewriteRawPlaceholders(text: string): string {
       continue
     }
 
+    if ((char === 'E' || char === 'e') && text[index + 1] === "'") {
+      let end = scanEscapeSingleQuotedString(text, index + 1)
+      output += text.slice(index, end)
+      index = end
+      continue
+    }
+
     if (char === "'") {
       let end = scanSingleQuotedString(text, index)
       output += text.slice(index, end)
@@ -326,6 +333,30 @@ function scanSingleQuotedString(text: string, start: number): number {
   let index = start + 1
 
   while (index < text.length) {
+    if (text[index] === "'") {
+      if (text[index + 1] === "'") {
+        index += 2
+        continue
+      }
+
+      return index + 1
+    }
+
+    index += 1
+  }
+
+  return text.length
+}
+
+function scanEscapeSingleQuotedString(text: string, start: number): number {
+  let index = start + 1
+
+  while (index < text.length) {
+    if (text[index] === '\\') {
+      index += 2
+      continue
+    }
+
     if (text[index] === "'") {
       if (text[index + 1] === "'") {
         index += 2

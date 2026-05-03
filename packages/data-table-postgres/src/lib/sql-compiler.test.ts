@@ -613,6 +613,21 @@ describe('postgres sql-compiler', () => {
       })
     })
 
+    it('does not rewrite placeholders inside escape string constants', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: "select E'it\\'s ?' as literal, ? as value",
+          values: [123],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: "select E'it\\'s ?' as literal, $1 as value",
+        values: [123],
+      })
+    })
+
     it('does not rewrite placeholders inside double-quoted identifiers', () => {
       let compiled = compilePostgresOperation({
         kind: 'raw',
