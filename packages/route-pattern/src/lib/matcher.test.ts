@@ -2,6 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createMatcher } from './matcher.ts'
+import { RoutePattern } from './route-pattern.ts'
 import * as Specificity from './specificity.ts'
 
 describe('Matcher', () => {
@@ -376,6 +377,34 @@ describe('Matcher', () => {
         let match = matcher.match(url.href)
         assert.ok(match)
         assert.deepEqual(match.params, params)
+      })
+
+      it('round-trips href-generated reserved characters in variable params', () => {
+        let pattern = new RoutePattern('://example.com/files/:name')
+        let matcher = createMatcher<null>()
+        matcher.add(pattern, null)
+
+        let original = 'a/b?c#d%2Fe'
+        let href = pattern.href({ name: original })
+        let match = matcher.match(href)
+
+        assert.ok(match)
+        assert.equal(match.params.name, original)
+        assert.equal(match.paramsMeta.pathname[0].value, original)
+
+        let matches = matcher.matchAll(href)
+        assert.equal(matches.length, 1)
+        assert.equal(matches[0].params.name, original)
+      })
+
+      it('does not treat encoded slash params as static path separators', () => {
+        let pattern = new RoutePattern('://example.com/files/:name')
+        let matcher = createMatcher<null>()
+        matcher.add('://example.com/files/a/b', null)
+
+        let href = pattern.href({ name: 'a/b' })
+
+        assert.equal(matcher.match(href), null)
       })
 
       it('matches wildcard segments', () => {

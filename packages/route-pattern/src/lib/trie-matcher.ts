@@ -8,7 +8,7 @@ import * as Variant from './trie-matcher/variant.ts'
 import { unreachable } from './unreachable.ts'
 import type { Match, Matcher } from './matcher.ts'
 import * as Specificity from './specificity.ts'
-import { decodeHostname, decodePathname } from './decode.ts'
+import { decodeHostname, decodePathnameWithParams } from './decode.ts'
 import { matchSearch } from './route-pattern/match.ts'
 
 type Param = Extract<PartPatternToken, { type: ':' | '*' }>
@@ -276,7 +276,8 @@ export class Trie<data = unknown> {
     let results: SearchResult<data> = []
 
     // pathname
-    let urlSegments = decodePathname(url.pathname.slice(1)).split('/')
+    let pathnameDecoder = decodePathnameWithParams(url.pathname.slice(1))
+    let urlSegments = pathnameDecoder.pathname.split('/')
     for (let origin of origins) {
       let stack: Array<{
         segmentIndex: number
@@ -361,10 +362,12 @@ export class Trie<data = unknown> {
             for (let i = 1; i < match.indices!.length; i++) {
               let span = match.indices![i]
               if (span === undefined) unreachable()
+              let begin = current.charOffset + span[0]
+              let end = current.charOffset + span[1]
               pathnameMatch.push({
-                begin: current.charOffset + span[0],
-                end: current.charOffset + span[1],
-                value: match[i],
+                begin,
+                end,
+                value: pathnameDecoder.param(begin, end),
               })
             }
             stack.push({
@@ -384,10 +387,12 @@ export class Trie<data = unknown> {
             for (let i = 1; i < match.indices!.length; i++) {
               let span = match.indices![i]
               if (span === undefined) continue
+              let begin = current.charOffset + span[0]
+              let end = current.charOffset + span[1]
               pathnameMatch.push({
-                begin: current.charOffset + span[0],
-                end: current.charOffset + span[1],
-                value: match[i],
+                begin,
+                end,
+                value: pathnameDecoder.param(begin, end),
               })
             }
             stack.push({
