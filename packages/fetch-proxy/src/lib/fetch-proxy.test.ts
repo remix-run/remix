@@ -190,6 +190,44 @@ describe('fetch proxy', () => {
     assert.equal(setCookie[1], 'name2=value2; Domain=shopify.com; Path=/')
   })
 
+  it('omits cookie domain for localhost requests with a port and rewrites path', async () => {
+    let { response } = await testProxy(
+      new Request('http://localhost:5173/search?q=remix'),
+      'https://remix.run:3000/dest',
+      {
+        async fetch() {
+          return new Response(null, {
+            headers: [['Set-Cookie', 'name=value; Domain=remix.run; Path=/dest/search']],
+          })
+        },
+      },
+    )
+
+    let setCookie = response.headers.getSetCookie()
+    assert.ok(setCookie)
+    assert.equal(setCookie.length, 1)
+    assert.equal(setCookie[0], 'name=value; Path=/search')
+  })
+
+  it('rewrites cookie domain to hostname for DNS requests with a port and rewrites path', async () => {
+    let { response } = await testProxy(
+      new Request('https://preview.example.com:8443/search?q=remix'),
+      'https://remix.run:3000/dest',
+      {
+        async fetch() {
+          return new Response(null, {
+            headers: [['Set-Cookie', 'name=value; Domain=remix.run; Path=/dest/search']],
+          })
+        },
+      },
+    )
+
+    let setCookie = response.headers.getSetCookie()
+    assert.ok(setCookie)
+    assert.equal(setCookie.length, 1)
+    assert.equal(setCookie[0], 'name=value; Domain=preview.example.com; Path=/search')
+  })
+
   it('does not rewrite cookie domain and path when opting-out', async () => {
     let { response } = await testProxy(
       new Request('http://shopify.com/?q=remix'),
