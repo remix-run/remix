@@ -1,5 +1,6 @@
-import type { Router } from './router.ts'
+import { SuperHeaders } from '@remix-run/headers'
 
+import type { Router } from './router.ts'
 import type { RequestMethod } from './request-methods.ts'
 import type { Simplify } from './type-utils.ts'
 
@@ -130,17 +131,24 @@ export class RequestContext<
    * @param request The incoming request
    */
   constructor(request: Request) {
-    this.headers = new Headers(request.headers)
     this.method = request.method.toUpperCase() as RequestMethod
     this.params = {} as params
     this.request = request
     this.url = new URL(request.url)
   }
 
+  #headers: Headers | undefined
+
   /**
-   * The headers of the request.
+   * A mutable copy of the request headers.
    */
-  headers: Headers
+  get headers(): Headers {
+    return (this.#headers ??= new SuperHeaders(this.request.headers))
+  }
+
+  set headers(headers: Headers) {
+    this.#headers = headers
+  }
 
   /**
    * The request method. This may differ from `request.method` when using the `methodOverride`

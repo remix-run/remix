@@ -1,5 +1,6 @@
 import { describe, it } from '@remix-run/test'
 import assert from '@remix-run/assert'
+import { ContentType, SuperHeaders } from '@remix-run/headers'
 import { createContextKey, RequestContext } from './request-context.ts'
 
 describe('new RequestContext()', () => {
@@ -12,6 +13,56 @@ describe('new RequestContext()', () => {
     let context = new RequestContext(req)
 
     assert.equal(context.headers.get('content-type'), 'application/json')
+  })
+
+  it('lazily creates request headers as a SuperHeaders copy', () => {
+    let req = new Request('https://remix.run/test', {
+      headers: { 'Content-Type': 'text/html' },
+    })
+    let context = new RequestContext(req)
+
+    req.headers.set('Content-Type', 'application/json')
+
+    let headers = context.headers
+
+    assert.ok(headers instanceof Headers)
+    assert.ok(headers instanceof SuperHeaders)
+    assert.equal(headers.get('Content-Type'), 'application/json')
+
+    req.headers.set('Content-Type', 'text/plain')
+
+    assert.equal(context.headers, headers)
+    assert.equal(context.headers.get('Content-Type'), 'application/json')
+  })
+
+  it('does not parse SuperHeaders values until typed accessors are used', () => {
+    let original = ContentType.from
+    let calls = 0
+
+    ContentType.from = function from(value) {
+      calls++
+      return original(value)
+    }
+
+    try {
+      let context = new RequestContext(
+        new Request('https://remix.run/test', {
+          headers: { 'Content-Type': 'text/html' },
+        }),
+      )
+      let headers = context.headers
+
+      assert.ok(headers instanceof SuperHeaders)
+      assert.equal(headers.get('Content-Type'), 'text/html')
+      assert.equal(calls, 0)
+
+      assert.equal(headers.contentType.mediaType, 'text/html')
+      assert.equal(calls, 1)
+      assert.equal(headers.contentType.mediaType, 'text/html')
+      assert.equal(calls, 1)
+    } finally {
+      ContentType.from = original
+    }
   })
 
   it('provides a copy of request headers that can be mutated independently', () => {
