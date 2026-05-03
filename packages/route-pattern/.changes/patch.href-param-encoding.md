@@ -1,0 +1,1 @@
+Encode `RoutePattern.href` params so pathname params cannot inject URL path, query, or hash syntax. Wildcard pathname params now preserve slash-separated structure while encoding each segment, and hostname params are normalized or rejected using URL hostname parsing.

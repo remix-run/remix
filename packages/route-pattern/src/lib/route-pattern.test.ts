@@ -462,6 +462,21 @@ describe('RoutePattern', () => {
           assert.equal(result, 'https://example.com/path')
         })
 
+        it('normalizes unicode params with URL hostname behavior', () => {
+          let pattern = new RoutePattern('://:host.example.com/path')
+          let result = pattern.href({ host: 'café' })
+          assert.equal(result, 'https://xn--caf-dma.example.com/path')
+        })
+
+        it('throws when values cannot be represented as one hostname label', () => {
+          let pattern = new RoutePattern('://:host.example.com/path')
+          assert.throws(() => pattern.href({ host: 'api.example' }), hrefError('invalid-param'))
+          assert.throws(() => pattern.href({ host: 'api/example' }), hrefError('invalid-param'))
+          assert.throws(() => pattern.href({ host: 'api?example' }), hrefError('invalid-param'))
+          assert.throws(() => pattern.href({ host: 'api#example' }), hrefError('invalid-param'))
+          assert.throws(() => pattern.href({ host: 'api example' }), hrefError('invalid-param'))
+        })
+
         it('throws when missing', () => {
           let pattern = new RoutePattern('://:host/path')
           // @ts-expect-error - missing required param
@@ -479,6 +494,12 @@ describe('RoutePattern', () => {
         let pattern = new RoutePattern('://*env.example.com/path')
         let result = pattern.href({ env: 'staging' })
         assert.equal(result, 'https://staging.example.com/path')
+      })
+
+      it('preserves dot-separated structure in hostname wildcards', () => {
+        let pattern = new RoutePattern('://*env.example.com/path')
+        let result = pattern.href({ env: 'café.eu' })
+        assert.equal(result, 'https://xn--caf-dma.eu.example.com/path')
       })
 
       it('throws for nameless wildcard', () => {
@@ -536,6 +557,23 @@ describe('RoutePattern', () => {
           assert.equal(result, '/posts/123')
         })
 
+        it('encodes URL syntax chars as segment content', () => {
+          let pattern = new RoutePattern('/files/:name')
+          let result = pattern.href({ name: 'a/b?c#d' })
+          assert.equal(result, '/files/a%2Fb%3Fc%23d')
+
+          let url = new URL(result, 'https://example.com')
+          assert.equal(url.pathname, '/files/a%2Fb%3Fc%23d')
+          assert.equal(url.search, '')
+          assert.equal(url.hash, '')
+        })
+
+        it('encodes spaces and unicode params', () => {
+          let pattern = new RoutePattern('/search/:q')
+          let result = pattern.href({ q: 'café 北京' })
+          assert.equal(result, '/search/caf%C3%A9%20%E5%8C%97%E4%BA%AC')
+        })
+
         it('ignores extra params', () => {
           let pattern = new RoutePattern('/posts/:id')
           let result = pattern.href({ id: '123', page: '2', sort: 'desc' })
@@ -576,6 +614,17 @@ describe('RoutePattern', () => {
           new RoutePattern('images/*path.png').href({ path: 'images/hero' }),
           '/images/images/hero.png',
         )
+      })
+
+      it('encodes wildcard segment contents while preserving separators', () => {
+        let pattern = new RoutePattern('/files/*path')
+        let result = pattern.href({ path: 'docs/a b/你好?x#y' })
+        assert.equal(result, '/files/docs/a%20b/%E4%BD%A0%E5%A5%BD%3Fx%23y')
+
+        let url = new URL(result, 'https://example.com')
+        assert.equal(url.pathname, '/files/docs/a%20b/%E4%BD%A0%E5%A5%BD%3Fx%23y')
+        assert.equal(url.search, '')
+        assert.equal(url.hash, '')
       })
 
       it('supports wildcard with number param', () => {
