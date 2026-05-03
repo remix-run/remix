@@ -1,0 +1,1 @@
+Added `SuperHeaders` as the default and named export from `@remix-run/headers`. `SuperHeaders` extends the native `Headers` class and restores lazy, typed property accessors such as `headers.contentType`, `headers.cacheControl`, and `headers.setCookie` while keeping native `Headers` storage synchronized for platform APIs like `Response`.
