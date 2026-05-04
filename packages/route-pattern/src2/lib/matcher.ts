@@ -5,15 +5,18 @@ import { Trie } from './matcher/trie.ts'
 import type { Match } from './matcher/types.ts'
 import * as Specificity from './specificity.ts'
 
-export type RoutePatternMatch<data = unknown> = Match<data> & { url: URL }
+export type RoutePatternMatch<source extends string = string, data = unknown> = Match<
+  source,
+  data
+> & { url: URL }
 
 export type RoutePatternMatcher<data = unknown> = {
   readonly ignoreCase: boolean
   add(pattern: string | RoutePatternAST, data: data): void
   /** Most specific match for `url`, or `null` when nothing matches. */
-  match(url: string | URL): RoutePatternMatch<data> | null
+  match(url: string | URL): RoutePatternMatch<string, data> | null
   /** Every match for `url`, sorted from most to least specific. */
-  matchAll(url: string | URL): Array<RoutePatternMatch<data>>
+  matchAll(url: string | URL): Array<RoutePatternMatch<string, data>>
 }
 
 export type RoutePatternMatcherOptions = {
@@ -44,9 +47,9 @@ class TrieMatcher<data = unknown> implements RoutePatternMatcher<data> {
     this.#trie.insert(ast, data)
   }
 
-  match(url: string | URL): RoutePatternMatch<data> | null {
+  match(url: string | URL): RoutePatternMatch<string, data> | null {
     let parsedUrl = typeof url === 'string' ? new URL(url) : url
-    let best: RoutePatternMatch<data> | null = null
+    let best: RoutePatternMatch<string, data> | null = null
     for (let match of this.#trie.search(parsedUrl)) {
       let candidate = toMatch(match, parsedUrl)
       if (best === null || Specificity.greaterThan(candidate, best)) {
@@ -56,9 +59,9 @@ class TrieMatcher<data = unknown> implements RoutePatternMatcher<data> {
     return best
   }
 
-  matchAll(url: string | URL): Array<RoutePatternMatch<data>> {
+  matchAll(url: string | URL): Array<RoutePatternMatch<string, data>> {
     let parsedUrl = typeof url === 'string' ? new URL(url) : url
-    let matches: Array<RoutePatternMatch<data>> = []
+    let matches: Array<RoutePatternMatch<string, data>> = []
     for (let match of this.#trie.search(parsedUrl)) {
       matches.push(toMatch(match, parsedUrl))
     }
@@ -66,6 +69,9 @@ class TrieMatcher<data = unknown> implements RoutePatternMatcher<data> {
   }
 }
 
-function toMatch<data>(result: Match<data>, url: URL): RoutePatternMatch<data> {
+function toMatch<data>(
+  result: Match<string, data>,
+  url: URL,
+): RoutePatternMatch<string, data> {
   return { ...result, url }
 }

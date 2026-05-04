@@ -1,4 +1,5 @@
 import type { RoutePatternAST } from '../ast.ts'
+import type { Params } from '../types/params.ts'
 
 export type MatchedParam = {
   type: ':' | '*'
@@ -8,10 +9,10 @@ export type MatchedParam = {
   end: number
 }
 
-export type Match<data = unknown> = {
-  pattern: RoutePatternAST
+export type Match<source extends string = string, data = unknown> = {
+  pattern: RoutePatternAST<source>
   data: data
-  params: Record<string, string | undefined>
+  params: Params<source>
   paramsMeta: {
     hostname: ReadonlyArray<MatchedParam>
     pathname: ReadonlyArray<MatchedParam>

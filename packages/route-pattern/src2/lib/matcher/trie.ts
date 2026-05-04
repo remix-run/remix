@@ -98,7 +98,7 @@ export class Trie<data = unknown> {
     }
   }
 
-  search(url: URL): Array<Match<data>> {
+  search(url: URL): Array<Match<string, data>> {
     let protocol = url.protocol.slice(0, -1)
     if (protocol !== 'http' && protocol !== 'https') return []
 
@@ -148,7 +148,7 @@ export class Trie<data = unknown> {
       origins.push({ hostnameMatch, pathnameNode: next })
     }
 
-    let results: Array<Match<data>> = []
+    let results: Array<Match<string, data>> = []
     let urlSegments = decodePathname(url.pathname.slice(1)).split('/')
 
     for (let origin of origins) {

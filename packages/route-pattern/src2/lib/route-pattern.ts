@@ -15,7 +15,7 @@ import type { RoutePatternMatcher } from './matcher.ts'
 import { createPatternMatcher } from './matcher.ts'
 
 export class RoutePattern<source extends string = string> {
-  readonly ast: RoutePatternAST
+  readonly ast: RoutePatternAST<source>
 
   readonly protocol: string
   readonly hostname: string
@@ -25,7 +25,7 @@ export class RoutePattern<source extends string = string> {
 
   #matcher: RoutePatternMatcher<undefined>
 
-  constructor(ast: RoutePatternAST) {
+  constructor(ast: RoutePatternAST<source>) {
     this.ast = ast
 
     this.protocol = serializeProtocol(this.ast)
@@ -38,7 +38,7 @@ export class RoutePattern<source extends string = string> {
     this.#matcher.add(this.ast, undefined)
   }
 
-  static parse(source: string): RoutePattern {
+  static parse<source extends string>(source: source): RoutePattern<source> {
     return new RoutePattern(parsePattern(source))
   }
 
@@ -53,8 +53,8 @@ export class RoutePattern<source extends string = string> {
     return toHref(this.ast, ...(args as any))
   }
 
-  match(url: string | URL): RoutePatternMatch<undefined> | null {
-    return this.#matcher.match(url)
+  match(url: string | URL): RoutePatternMatch<source, undefined> | null {
+    return this.#matcher.match(url) as RoutePatternMatch<source, undefined> | null
   }
 
   test(url: string | URL): boolean {
