@@ -3,8 +3,11 @@ import { describe, it } from '@remix-run/test'
 
 import { parsePattern } from './parse.ts'
 import { serializePattern } from './serialize.ts'
-import { type Match, type MatcherOptions } from './matcher/types.ts'
-import { createPatternMatcher } from './matcher.ts'
+import {
+  createPatternMatcher,
+  type RoutePatternMatch,
+  type RoutePatternMatcherOptions,
+} from './matcher.ts'
 
 describe('createPatternMatcher', () => {
   describe('matchAll', () => {
@@ -327,11 +330,31 @@ describe('createPatternMatcher', () => {
       })
     })
 
+    describe('add', () => {
+      it('accepts string patterns', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('/users/:id', null)
+
+        let [match] = matcher.matchAll('http://example.com/users/1')
+        assert.ok(match)
+        assert.deepEqual(match.params, { id: '1' })
+      })
+
+      it('accepts pre-parsed AST', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add(parsePattern('/users/:id'), null)
+
+        let [match] = matcher.matchAll('http://example.com/users/1')
+        assert.ok(match)
+        assert.deepEqual(match.params, { id: '1' })
+      })
+    })
+
     describe('data', () => {
       it('returns the data associated with each pattern', () => {
         let matcher = createPatternMatcher<string>()
-        matcher.add(parsePattern('/users/:id'), 'users')
-        matcher.add(parsePattern('/posts/:id'), 'posts')
+        matcher.add('/users/:id', 'users')
+        matcher.add('/posts/:id', 'posts')
 
         let [users] = matcher.matchAll('http://example.com/users/1')
         assert.equal(users?.data, 'users')
@@ -343,12 +366,12 @@ describe('createPatternMatcher', () => {
   })
 })
 
-function build(patterns: ReadonlyArray<string>, options?: MatcherOptions) {
+function build(patterns: ReadonlyArray<string>, options?: RoutePatternMatcherOptions) {
   let matcher = createPatternMatcher<null>(options)
-  for (let p of patterns) matcher.add(parsePattern(p), null)
+  for (let p of patterns) matcher.add(p, null)
   return matcher
 }
 
-function sources(matches: ReadonlyArray<Match<string, unknown>>): Array<string> {
+function sources(matches: ReadonlyArray<RoutePatternMatch<unknown>>): Array<string> {
   return matches.map((m) => serializePattern(m.ast))
 }

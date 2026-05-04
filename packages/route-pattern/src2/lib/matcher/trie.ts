@@ -3,19 +3,13 @@ import { decodeHostname, decodePathname } from './decode.ts'
 import { generateVariants, type Param } from './variant.ts'
 import { unreachable } from '../unreachable.ts'
 
-import type { MatcherOptions, Match, PartMatch, MatchedParam } from './types.ts'
+import type { Match, MatchedParam } from './types.ts'
 
-/**
- * Trie-based matcher that returns every pattern matching a URL. Order is unspecified.
- *
- * Patterns are inserted via `add`. Lookups via `matchAll` walk the trie and collect every
- * leaf whose hostname/port/pathname/search constraints are satisfied by the URL.
- */
-export class TrieMatcher<data = unknown> {
+export class Trie<data = unknown> {
   readonly ignoreCase: boolean
   #root: ProtocolNode<data>
 
-  constructor(options?: MatcherOptions) {
+  constructor(options?: { ignoreCase?: boolean }) {
     this.ignoreCase = options?.ignoreCase ?? false
     this.#root = {
       http: createHostnameNode(),
@@ -23,8 +17,7 @@ export class TrieMatcher<data = unknown> {
     }
   }
 
-  /** Register an AST and its associated data. */
-  add(ast: RoutePatternAST, data: data): void {
+  insert(ast: RoutePatternAST, data: data): void {
     for (let variant of generateVariants(ast)) {
       let hostnameNode = this.#root[variant.protocol]
 
@@ -105,16 +98,15 @@ export class TrieMatcher<data = unknown> {
     }
   }
 
-  /** Return every match for `url` in unspecified order. */
-  matchAll(url: string | URL): Array<Match<string, data>> {
-    let parsedUrl = typeof url === 'string' ? new URL(url) : url
-    let protocol = parsedUrl.protocol.slice(0, -1)
+  search(url: URL): Array<Match<data>> {
+    let protocol = url.protocol.slice(0, -1)
     if (protocol !== 'http' && protocol !== 'https') return []
 
     let hostnameNode = this.#root[protocol]
-    let decodedHostname = decodeHostname(parsedUrl.hostname)
+    let decodedHostname = decodeHostname(url.hostname)
 
-    let origins: Array<{ hostnameMatch: PartMatch; pathnameNode: PathnameNode<data> }> = []
+    let origins: Array<{ hostnameMatch: Array<MatchedParam>; pathnameNode: PathnameNode<data> }> =
+      []
 
     // any hostname (no port allowed -- empty-port key)
     let anyPathname = hostnameNode.any.get('')
@@ -130,7 +122,7 @@ export class TrieMatcher<data = unknown> {
     // static hostname
     let staticPort = hostnameNode.static.get(decodedHostname.toLowerCase())
     if (staticPort) {
-      let next = staticPort.get(parsedUrl.port)
+      let next = staticPort.get(url.port)
       if (next) origins.push({ hostnameMatch: [], pathnameNode: next })
     }
 
@@ -138,7 +130,7 @@ export class TrieMatcher<data = unknown> {
     for (let entry of hostnameNode.dynamic) {
       let m = entry.regexp.exec(decodedHostname)
       if (!m) continue
-      let next = entry.portNode.get(parsedUrl.port)
+      let next = entry.portNode.get(url.port)
       if (!next) continue
       let hostnameMatch: Array<MatchedParam> = []
       for (let i = 0; i < entry.params.length; i++) {
@@ -156,8 +148,8 @@ export class TrieMatcher<data = unknown> {
       origins.push({ hostnameMatch, pathnameNode: next })
     }
 
-    let results: Array<Match<string, data>> = []
-    let urlSegments = decodePathname(parsedUrl.pathname.slice(1)).split('/')
+    let results: Array<Match<data>> = []
+    let urlSegments = decodePathname(url.pathname.slice(1)).split('/')
 
     for (let origin of origins) {
       let stack: Array<{
@@ -172,7 +164,7 @@ export class TrieMatcher<data = unknown> {
 
         if (current.segmentIndex === urlSegments.length) {
           for (let value of current.pathnameNode.values) {
-            if (!matchSearch(parsedUrl.searchParams, value.ast.search)) continue
+            if (!matchSearch(url.searchParams, value.ast.search)) continue
 
             let pathnameMatch: Array<MatchedParam> = []
             for (let i = 0; i < value.requiredParams.length; i++) {
@@ -209,7 +201,6 @@ export class TrieMatcher<data = unknown> {
 
             results.push({
               ast: value.ast,
-              url: parsedUrl,
               data: value.data,
               params,
               paramsMeta: { hostname: origin.hostnameMatch, pathname: pathnameMatch },
