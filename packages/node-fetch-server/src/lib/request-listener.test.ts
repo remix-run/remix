@@ -406,6 +406,59 @@ describe('createRequestListener', () => {
       listener(req, res)
     })
   })
+
+  it('writes the first response stream chunk before waiting for the second chunk', async () => {
+    let encoder = new TextEncoder()
+    let resolveSecondChunk!: () => void
+    let secondChunkReady = new Promise<void>((resolve) => {
+      resolveSecondChunk = resolve
+    })
+
+    let handler: FetchHandler = async () =>
+      new Response(
+        new ReadableStream({
+          async start(controller) {
+            controller.enqueue(encoder.encode('first'))
+            await secondChunkReady
+            controller.enqueue(encoder.encode('second'))
+            controller.close()
+          },
+        }),
+      )
+
+    let listener = createRequestListener(handler)
+    assert.ok(listener)
+
+    let req = createMockRequest()
+    let writtenChunks: Uint8Array[] = []
+    let resolveFirstWrite!: () => void
+    let firstWrite = new Promise<void>((resolve) => {
+      resolveFirstWrite = resolve
+    })
+    let end = new Promise<void>((resolve) => {
+      let res = Object.assign(new stream.Writable(), {
+        req,
+        writeHead() {},
+        write(chunk: Uint8Array) {
+          writtenChunks.push(chunk)
+          if (writtenChunks.length === 1) resolveFirstWrite()
+          return true
+        },
+        end() {
+          resolve()
+        },
+      }) as unknown as http.ServerResponse
+
+      listener(req, res)
+    })
+
+    await firstWrite
+    assert.equal(Buffer.concat(writtenChunks).toString(), 'first')
+
+    resolveSecondChunk()
+    await end
+    assert.equal(Buffer.concat(writtenChunks).toString(), 'firstsecond')
+  })
 })
 
 describe('createRequest abort behavior', () => {
