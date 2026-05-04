@@ -2760,6 +2760,115 @@ describe('run', () => {
     expect(document.getElementById('nested')?.textContent).toBe('Nested loaded')
   })
 
+  it('streams nested frame templates after a client-triggered top frame reload', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+
+    let ReloadTopButton = clientEntry(
+      '/assets/reload-top-stream.js#ReloadTopStream',
+      function ReloadTopStream(handle: Handle) {
+        reloadTop = () => handle.frames.top.reload()
+        return () => (
+          <button id="reload-top-stream" type="button">
+            Reload top
+          </button>
+        )
+      },
+    )
+
+    async function renderControls(): Promise<string> {
+      return await drain(
+        renderToStream(
+          <section>
+            <p id="controls">Initial controls</p>
+            <ReloadTopButton />
+          </section>,
+        ),
+      )
+    }
+
+    let serverHtml = await drain(
+      renderToStream(
+        <html>
+          <body>
+            <main>
+              <p id="top-state">Initial top</p>
+              <Frame src="/controls" fallback={<span id="controls">Loading controls…</span>} />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/controls') return renderControls()
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      ),
+    )
+    let initialDocument = new DOMParser().parseFromString(serverHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [nestedResolvePromise, resolveNested] = withResolvers<string>()
+    let streamedReload = renderToStream(
+      <html>
+        <body>
+          <main>
+            <p id="top-state">Reloaded top</p>
+            <Frame src="/nested" fallback={<span id="nested">Loading nested…</span>} />
+          </main>
+        </body>
+      </html>,
+      {
+        resolveFrame(src: string) {
+          if (src === '/nested') return nestedResolvePromise
+          throw new Error(`Unexpected nested src: ${src}`)
+        },
+      },
+    )
+
+    let streamedChunks = readChunks(streamedReload)
+    let firstChunk = await streamedChunks.next()
+    invariant(!firstChunk.done)
+    resolveNested('<span id="nested">Nested loaded</span>')
+    let secondChunk = await streamedChunks.next()
+    invariant(!secondChunk.done)
+    let [secondChunkPromise, releaseSecondChunk] = withResolvers<string>()
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/reload-top-stream.js' &&
+          exportName === 'ReloadTopStream'
+        ) {
+          return ReloadTopButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks([firstChunk.value, secondChunkPromise])
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reloadTop)
+    let reloadPromise = reloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('top-state')?.textContent).toBe('Reloaded top')
+    expect(document.getElementById('nested')?.textContent).toBe('Loading nested…')
+
+    releaseSecondChunk(secondChunk.value)
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('nested')?.textContent).toBe('Nested loaded')
+    app.dispose()
+  })
+
   it('cancels stale client frame streams when src changes', async () => {
     let rootContainer = document.createElement('div')
     document.body.appendChild(rootContainer)

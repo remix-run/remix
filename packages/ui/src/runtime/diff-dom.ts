@@ -76,7 +76,16 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
   // Comment -> Comment
   if (isCommentNode(current) && isCommentNode(next)) {
     let newData = next.data
-    if (current.data !== newData) current.data = newData
+    if (current.data !== newData) {
+      if (isFrameStartMarker(current) && isFrameStartMarker(next)) {
+        let subFrame = context.frameInstances.get(current)
+        if (subFrame) {
+          subFrame.dispose()
+          context.frameInstances.delete(current)
+        }
+      }
+      current.data = newData
+    }
     return
   }
 
