@@ -197,17 +197,18 @@ if (!parsed.success) {
 ### Return JSON
 
 For routes consumed by client code rather than rendered as a page (autocomplete endpoints, polling
-APIs, inter-service calls), return a JSON `Response`. Use `remix/headers` for cache headers
-instead of hand-formatting strings:
+APIs, inter-service calls), return a JSON `Response`. Use `SuperHeaders` from `remix/headers` when
+typed header accessors make the response clearer:
 
 ```typescript
-import { CacheControl } from 'remix/headers'
+import Headers from 'remix/headers'
+
+let headers = new Headers()
+headers.contentType = { mediaType: 'application/json', charset: 'utf-8' }
+headers.cacheControl = { noStore: true }
 
 return new Response(JSON.stringify({ results }), {
-  headers: {
-    'Content-Type': 'application/json; charset=utf-8',
-    'Cache-Control': new CacheControl({ noStore: true }).toString(),
-  },
+  headers,
 })
 ```
 
