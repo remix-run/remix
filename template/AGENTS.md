@@ -23,6 +23,7 @@ Refer to ./.agents/skills/remix/SKILL.md
 - `app/middleware/render.tsx` installs the request-scoped renderer used by actions
 - `app/ui/` holds the shared document and layout wrappers
 - `app/assets.ts` owns the server-side asset pipeline used by the asset route and renderer
+- `public/` contains static files served from the app root
 
 ## Route Ownership
 

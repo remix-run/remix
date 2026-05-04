@@ -10,6 +10,7 @@ A minimal Remix application starter with a home page.
 - `app/middleware/render.tsx` installs the request-scoped renderer used by actions.
 - `app/ui/` holds the shared document and layout wrappers.
 - `app/assets.ts` owns the server-side asset pipeline used by the asset route and renderer.
+- `public/` contains static files served from the app root.
 
 ## Growing The App
 
