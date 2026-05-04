@@ -267,16 +267,18 @@ what it exports. Open the linked reference file when you need full examples.
   types, and registering routes
 - `remix/routes` — declarative route builders. Use for `route`, `get`, `post`, `put`, `del`,
   `form`, `resources` when defining `app/routes.ts`
-- `remix/node-serve` — default Node server for new apps. Use `serve` in `server.ts` when you want
-  Remix to manage the server lifecycle around a Fetch handler
-- `remix/node-fetch-server` — lower-level adapter from Node's `http` module to a Fetch-style
-  router. Use `createRequestListener` when you need to own the Node server yourself
+- `remix/node-fetch-server` — default Node adapter for new apps. Use `createRequestListener` with
+  `node:http`, `node:https`, or `node:http2` in `server.ts` when booting the template-style app
+- `remix/node-serve` — managed high-performance Node server. Use `serve` when you want Remix to
+  manage the server lifecycle, TLS options, or uWebSockets.js setup around a Fetch handler
 - `remix/assets` — browser asset server. Use for `createAssetServer` when serving compiled
   scripts and styles, getting public hrefs, and emitting preloads. Configure a `basePath`, and
   keep `fileMap` URL patterns relative to it. Shared compiler options such as `target`,
   `sourceMaps`, `sourceMapSourcePaths`, and `minify` live at the top level
-- `remix/headers` — typed header parsers and builders. Use when reading `Accept`, `Cookie`, or
-  setting `CacheControl`, `Vary`, etc., instead of hand-formatting strings
+- `remix/headers` — `SuperHeaders` plus typed header parsers and builders. Use the default export
+  when you want a `Headers` subclass with typed accessors like `headers.contentType`,
+  `headers.cacheControl`, and `headers.setCookie`; use named classes such as `CacheControl`,
+  `ContentDisposition`, and `Vary` when working with individual header values
 - `remix/response/redirect` — `redirect(href, status?)`. Use for the canonical "POST then redirect"
   pattern and other location changes
 - `remix/response/html` — `createHtmlResponse`. Use when you need an HTML `Response` from a string
@@ -285,10 +287,14 @@ what it exports. Open the linked reference file when you need full examples.
   the global `compression()` middleware
 - `remix/response/file` — file-download responses. Use for `Content-Disposition: attachment`
   responses
-- `remix/route-pattern` — low-level URL matching and generation. Use when working with raw
-  patterns outside the router (custom matchers, scripts)
+- `remix/route-pattern` — low-level URL matching and generation. Use `RoutePattern` or
+  `createMatcher` when working with raw patterns outside the router. `href(...)` encodes pathname
+  and search params for you, and `match(...)` returns decoded params
+- `remix/route-pattern/specificity` — pattern ranking helpers. Use only when building custom
+  matcher or reporting logic outside the normal router/matcher APIs
 - `remix/fetch-proxy` — Fetch-based HTTP proxying. Use to forward a request to another origin; pass
-  `xForwardedHeaders` when the upstream needs forwarded proto, host, and port
+  `xForwardedHeaders` when the upstream needs forwarded proto, host, and port. It also rewrites
+  proxied `Set-Cookie` domain/path attributes by default
 
 ### Data, Validation, and Persistence
 
@@ -301,6 +307,8 @@ what it exports. Open the linked reference file when you need full examples.
   Use when input arrives as a string but should be a typed value
 - `remix/data-schema/form-data` — `f.object` and `f.field` for parsing `FormData` directly. Use
   in actions that read browser forms
+- `remix/data-schema/lazy` — recursive or mutually-referential schemas. Use when a schema needs to
+  refer to itself or another schema that is declared later
 - `remix/data-table` — typed tables and a `Database` interface. Use for `table`, `column`,
   `createDatabase` when modeling persisted data
 - `remix/data-table-sqlite`, `remix/data-table-postgres`, `remix/data-table-mysql` — adapters.
@@ -312,6 +320,8 @@ what it exports. Open the linked reference file when you need full examples.
   apply migrations
 - `remix/data-table/operators` — query operators such as `inList(...)`. Use when `where` clauses
   need set or comparison logic
+- `remix/data-table/sql-helpers` — SQL helper utilities for adapter or advanced query work. Avoid
+  this in normal app code unless you are intentionally working below the table/query API
 
 ### Auth, Sessions, and Cookies
 
@@ -343,11 +353,14 @@ what it exports. Open the linked reference file when you need full examples.
   `app/actions/render.tsx` helper that returns HTML responses
 - `remix/ui/animation` — animation APIs: `animateEntrance`, `animateExit`, `animateLayout`,
   `spring`, `tween`, and `easings`
-- `remix/ui/<primitive>` — UI primitives, mixins, glyphs, and theme helpers. Import from
-  `remix/ui/accordion`, `remix/ui/button`, `remix/ui/select`, etc.
+- `remix/ui/<primitive>` — UI primitives, mixins, glyphs, and theme helpers. Current subpaths
+  include `remix/ui/accordion`, `remix/ui/anchor`, `remix/ui/breadcrumbs`, `remix/ui/button`,
+  `remix/ui/combobox`, `remix/ui/glyph`, `remix/ui/listbox`, `remix/ui/menu`,
+  `remix/ui/popover`, `remix/ui/scroll-lock`, `remix/ui/select`, `remix/ui/separator`, and
+  `remix/ui/theme`
 - `remix/ui/test` — component test rendering helpers such as `render`
-- `remix/ui/jsx-runtime` — JSX transform target. Configured in `tsconfig.json`, rarely
-  imported directly
+- `remix/ui/jsx-runtime` and `remix/ui/jsx-dev-runtime` — JSX transform targets. Configured in
+  `tsconfig.json`, rarely imported directly
 - `remix/html-template` — escaped HTML template literals. Use when generating HTML outside the
   component system (RSS feeds, email bodies, error pages)
 - `remix/file-storage` — backend-agnostic `File` storage interface. Use as the type bound for
@@ -383,12 +396,22 @@ what it exports. Open the linked reference file when you need full examples.
 
 - `remix/test` — `describe`, `it`, and lifecycle hooks. Use as the test framework
 - `remix/test/cli` — programmatic test runner APIs such as `runRemixTest`
+- `remix/node-fetch-server/test` — `createTestServer` for end-to-end tests that need a real local
+  HTTP server around a Fetch handler
 - `remix/cli` — programmatic Remix CLI API. Use the `remix` executable for project commands such
-  as `remix test`, `remix routes`, and `remix doctor`
+  as `remix test`, `remix routes`, `remix doctor`, and `remix version`
 - `remix/assert` — assertion helpers. Use in place of `node:assert` so messages render cleanly
   in the runner
 - `remix/terminal` — ANSI styles, color detection, style factories, and testable terminal streams.
   Use for CLIs and terminal output instead of hand-rolled escape sequences
+- `remix/fs` — small filesystem helpers such as `openLazyFile` and `writeFile`. Use in Node-only
+  app or tooling code when you need lazy file responses or safe file writes
+- `remix/lazy-file` — `LazyFile` primitives and byte-range helpers. Use when implementing file or
+  range responses below the higher-level response/file helpers
+- `remix/mime` — content-type and MIME detection helpers. Use instead of maintaining app-local
+  extension maps
+- `remix/tar-parser` — streaming tar parsing. Use for import/export tooling that consumes tar
+  archives
 
 ## Canonical Patterns
 
@@ -468,24 +491,7 @@ router.map(routes.admin.books, adminBooksController)
 ### Compose middleware deliberately
 
 ```typescript
-import {
-  createRouter,
-  type AnyParams,
-  type MiddlewareContext,
-  type WithParams,
-} from 'remix/fetch-router'
-
-export type RootMiddleware = [
-  ReturnType<typeof formData>,
-  ReturnType<typeof session>,
-  ReturnType<typeof loadDatabase>,
-  ReturnType<typeof loadAuth>,
-]
-
-export type AppContext<params extends AnyParams = AnyParams> = WithParams<
-  MiddlewareContext<RootMiddleware>,
-  params
->
+import { createRouter } from 'remix/fetch-router'
 
 let middleware = []
 

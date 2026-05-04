@@ -9,6 +9,7 @@ the task involves:
 - Building a fresh router per test for session, storage, or database isolation
 - Rendering components into a real DOM with `render(...)` or `createRoot(...)`
 - Configuring `remix test` discovery, excludes, and coverage
+- Using adjacent CLI checks such as `remix routes`, `remix doctor`, and `remix version`
 - Choosing which layer to test for a given behavior
 
 For session and auth test setup, see `auth-and-sessions.md`. For component lifecycle, see
@@ -61,6 +62,21 @@ let router = createBookstoreRouter({
   sessionCookie: createCookie('session', { secrets: ['test'] }),
   sessionStorage: createMemorySessionStorage(),
 })
+```
+
+Use `createTestServer` from `remix/node-fetch-server/test` when the behavior depends on a real
+HTTP origin, redirects, streaming, cookies through a network boundary, or browser-style `fetch`:
+
+```ts
+import { createTestServer } from 'remix/node-fetch-server/test'
+
+let server = await createTestServer((request) => router.fetch(request))
+try {
+  let response = await fetch(new URL(routes.home.href(), server.baseUrl))
+  assert.equal(response.status, 200)
+} finally {
+  await server.close()
+}
 ```
 
 ## Test Runner Config

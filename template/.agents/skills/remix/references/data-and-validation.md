@@ -84,9 +84,16 @@ runtime only needs the column shape and validation hooks. Two valid patterns:
 
 Pick one and apply it consistently across the app.
 
-### Table validation hooks
+### Table lifecycle hooks
 
-Tables can define `validate`, `beforeWrite`, and `afterRead` hooks:
+Tables can define validation and lifecycle hooks:
+
+- `validate` runs before `create` and `update` writes and should return either `{ value }` or
+  `{ issues }`
+- `beforeWrite` can normalize or veto `create`/`update` values
+- `afterWrite` observes completed `create`/`update` operations
+- `beforeDelete` and `afterDelete` observe or veto deletes
+- `afterRead` can normalize or reject row values after reads
 
 ```typescript
 export const books = table({
@@ -94,12 +101,21 @@ export const books = table({
   columns: {
     /* ... */
   },
+  beforeWrite({ value }) {
+    if (typeof value.slug === 'string') {
+      return { value: { ...value, slug: value.slug.trim().toLowerCase() } }
+    }
+    return { value }
+  },
   validate({ operation, value }) {
     let issues = []
     if (operation === 'create' && !value.slug) {
       issues.push({ message: 'Slug is required.', path: ['slug'] })
     }
     return issues.length > 0 ? { issues } : { value }
+  },
+  afterRead({ value }) {
+    return { value }
   },
 })
 ```

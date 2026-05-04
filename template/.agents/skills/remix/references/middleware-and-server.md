@@ -9,7 +9,7 @@ involves:
 - Writing custom middleware that sets typed context values
 - Adding fast-exit handling (static files, CORS preflights) versus request-enriching layers
   (sessions, auth, data loading)
-- Booting a Node server with `serve`
+- Choosing when to keep the generated Node server versus switching server adapters
 
 For data and persistence specifics, see `data-and-validation.md`. For session and auth specifics,
 see `auth-and-sessions.md`.
@@ -103,7 +103,7 @@ staticFiles('./public', {
 })
 
 // Form data with upload handler
-import { FileUpload } from 'remix/form-data-parser'
+import type { FileUpload } from 'remix/form-data-parser'
 import { createFsFileStorage } from 'remix/file-storage/fs'
 
 let fileStorage = createFsFileStorage('./tmp/uploads')
@@ -120,8 +120,9 @@ errors at the route boundary when they should become user-facing `Response` obje
 
 ## Writing Custom Middleware
 
-Middleware is a function that receives `(context, next)` and returns a `Response`. Call `next()` to
-continue the chain.
+Middleware is a function that receives `(context, next)`. Return a `Response` to short-circuit, call
+and return `next()` when you need the downstream response, or return nothing when you only set
+context and want the router to continue automatically.
 
 ### Setting context values
 
@@ -222,28 +223,11 @@ Middleware can be applied at three levels:
 
 ## Node Server Setup
 
-Use `serve` to boot the default Node server around a Fetch API router:
+New apps already include a `server.ts` that adapts the app router with
+`remix/node-fetch-server`. Keep that generated server unless the task specifically needs to change
+runtime behavior such as host/protocol handling, TLS, HTTP/2, WebSockets, deployment lifecycle, or
+test-only server setup.
 
-```typescript
-import { serve } from 'remix/node-serve'
-
-let port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 3000
-
-let server = serve(
-  async (request) => {
-    try {
-      return await router.fetch(request)
-    } catch (error) {
-      console.error(error)
-      return new Response('Internal Server Error', { status: 500 })
-    }
-  },
-  { port },
-)
-
-await server.ready
-console.log(`Server listening on http://localhost:${server.port}`)
-```
-
-Use `remix/node-fetch-server` and `createRequestListener` only when you need to own a standard
-Node `http` or `https` server directly.
+Use `remix/node-fetch-server` when you want to keep owning a standard Node `http`, `https`, or
+`http2` server directly. Use `remix/node-serve` and `serve()` when you want a managed
+high-performance server with `server.ready`, TLS options, or uWebSockets.js setup.
