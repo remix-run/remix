@@ -554,6 +554,7 @@ function objectContaining<T extends object>(expected: T): T {
  * @example
  * expect(value).toBe(42)
  * expect(value).not.toBeNull()
+ * expect(value).toEqual(expect.objectContaining({ success: true }))
  * await expect(fetch('/missing')).rejects.toThrow('Not found')
  * await expect(loadModule()).resolves.toBeUndefined()
  *

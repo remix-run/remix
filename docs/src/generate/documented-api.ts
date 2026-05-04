@@ -12,7 +12,7 @@ export type DocumentedAPI =
   | DocumentedVariableFunction
 
 // Function parameter or Class property
-type ParameterOrProperty = {
+export type ParameterOrProperty = {
   name: string
   type: string
   description: string
