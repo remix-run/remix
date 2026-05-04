@@ -37,7 +37,7 @@ function generateProtocolVariants(
 
 // Hostname ----------------------------------------------------------------------------------------
 
-type Param = Extract<PartPatternToken, { type: ':' | '*' }>
+export type Param = Extract<PartPatternToken, { type: ':' | '*' }>
 
 function toParams(tokens: PartVariant): ReadonlyArray<Param> {
   let params: Array<Param> = []
@@ -91,12 +91,24 @@ function stringifyStatic(variant: PartVariant, separator: string): string {
 
 // Pathname ----------------------------------------------------------------------------------------
 
-type PathnameVariantSegment =
+export type PathnameVariantSegment =
   | { readonly type: 'static'; readonly key: string }
-  | { readonly type: 'variable'; readonly key: string; readonly regexp: RegExp }
-  | { readonly type: 'wildcard'; readonly key: string; readonly regexp: RegExp }
+  | {
+      readonly type: 'variable'
+      readonly key: string
+      readonly regexp: RegExp
+      readonly params: ReadonlyArray<Param>
+    }
+  | {
+      readonly type: 'wildcard'
+      readonly key: string
+      readonly regexp: RegExp
+      readonly params: ReadonlyArray<Param>
+    }
 
-type PathnameVariant = ReadonlyArray<PathnameVariantSegment>
+export type PathnameVariant = ReadonlyArray<PathnameVariantSegment>
+
+// todo: anchor regexps in pathname variants with `^` and `$`
 
 function generatePathnameVariants(
   pathname: PartPatternAST,
@@ -111,6 +123,7 @@ function generatePathnameVariants(
     let reSource = ''
     let reFlags = ignoreCase ? 'di' : 'd'
     let type: 'static' | 'variable' | 'wildcard' = 'static'
+    let params: Array<Param> = []
 
     for (let token of tokens) {
       if (token.type === 'separator') {
@@ -121,9 +134,10 @@ function generatePathnameVariants(
           continue
         }
         if (type === 'variable') {
-          variant.push({ type: 'variable', key, regexp: new RegExp(reSource, reFlags) })
+          variant.push({ type: 'variable', key, regexp: new RegExp(reSource, reFlags), params })
           key = ''
           reSource = ''
+          params = []
           type = 'static'
           continue
         }
@@ -144,6 +158,7 @@ function generatePathnameVariants(
       if (token.type === ':') {
         key += '{:}'
         reSource += `([^/]+)`
+        params.push(token)
         if (type === 'static') type = 'variable'
         continue
       }
@@ -151,6 +166,7 @@ function generatePathnameVariants(
       if (token.type === '*') {
         key += '{*}'
         reSource += `(.*)`
+        params.push(token)
         type = 'wildcard'
         continue
       }
@@ -162,7 +178,7 @@ function generatePathnameVariants(
       variant.push({ type: 'static', key: ignoreCase ? key.toLowerCase() : key })
     }
     if (type === 'variable' || type === 'wildcard') {
-      variant.push({ type, key, regexp: new RegExp(reSource, reFlags) })
+      variant.push({ type, key, regexp: new RegExp(reSource, reFlags), params })
     }
     result.push(variant)
   }
