@@ -1,372 +1,756 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { parsePattern } from './parse.ts'
+import { createPatternMatcher } from './matcher.ts'
 import { serializePattern } from './serialize.ts'
-import {
-  createPatternMatcher,
-  type RoutePatternMatch,
-  type RoutePatternMatcherOptions,
-} from './matcher.ts'
 
-describe('createPatternMatcher', () => {
-  describe('matchAll', () => {
+describe('Matcher', () => {
+  describe('match', () => {
     describe('protocol', () => {
-      it('matches both http and https when protocol is omitted', () => {
-        let m = build(['://example.com/users'])
-        assert.deepEqual(sources(m.matchAll('http://example.com/users')), ['://example.com/users'])
-        assert.deepEqual(sources(m.matchAll('https://example.com/users')), ['://example.com/users'])
+      it('matches any protocol when protocol is omitted', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users', null)
+
+        let httpMatch = matcher.match('http://example.com/users')
+        assert.ok(httpMatch)
+
+        let httpsMatch = matcher.match('https://example.com/users')
+        assert.ok(httpsMatch)
       })
 
       it('matches http only when protocol is explicit http', () => {
-        let m = build(['http://example.com/users'])
-        assert.deepEqual(sources(m.matchAll('http://example.com/users')), [
-          'http://example.com/users',
-        ])
-        assert.deepEqual(m.matchAll('https://example.com/users'), [])
+        let matcher = createPatternMatcher<null>()
+        matcher.add('http://example.com/users', null)
+
+        let match = matcher.match('http://example.com/users')
+        assert.ok(match)
+      })
+
+      it('matches https only when protocol is explicit https', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('https://example.com/users', null)
+
+        let match = matcher.match('https://example.com/users')
+        assert.ok(match)
       })
 
       it('matches both http and https when protocol is http(s)', () => {
-        let m = build(['http(s)://example.com/users'])
-        assert.equal(m.matchAll('http://example.com/users').length, 1)
-        assert.equal(m.matchAll('https://example.com/users').length, 1)
+        let matcher = createPatternMatcher<null>()
+        matcher.add('http(s)://example.com/users', null)
+
+        let httpMatch = matcher.match('http://example.com/users')
+        assert.ok(httpMatch)
+
+        let httpsMatch = matcher.match('https://example.com/users')
+        assert.ok(httpsMatch)
       })
 
-      it('returns empty when protocol does not match', () => {
-        let m = build(['http://example.com/users'])
-        assert.deepEqual(m.matchAll('https://example.com/users'), [])
+      it('returns null when protocol does not match', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('http://example.com/users', null)
+
+        let match = matcher.match('https://example.com/users')
+        assert.equal(match, null)
       })
     })
 
     describe('hostname', () => {
-      it('matches any hostname when omitted', () => {
-        let m = build(['users'])
-        assert.equal(m.matchAll('https://example.com/users').length, 1)
-        assert.equal(m.matchAll('http://localhost/users').length, 1)
+      it('matches any hostname when hostname is omitted', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('users', null)
+
+        let match1 = matcher.match('https://example.com/users')
+        assert.ok(match1)
+
+        let match2 = matcher.match('https://other.com/users')
+        assert.ok(match2)
+
+        let match3 = matcher.match('http://localhost/users')
+        assert.ok(match3)
       })
 
-      it('matches static hostname', () => {
-        let m = build(['://example.com/users'])
-        let [match] = m.matchAll('https://example.com/users')
+      it('matches exact static hostname', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users', null)
+
+        let match = matcher.match('https://example.com/users')
         assert.ok(match)
         assert.deepEqual(match.params, {})
       })
 
-      it('returns empty when static hostname does not match', () => {
-        let m = build(['://example.com/users'])
-        assert.deepEqual(m.matchAll('https://other.com/users'), [])
+      it('matches non-ASCII hostname param values', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://:accented.:cjk.:rtl.:combining.example.com/users', null)
+
+        let params = {
+          // Unlike pathname params, hostname labels can't use the emoji, zwj,
+          // nbsp, or fullwidth cases; see:
+          // https://unicode.org/reports/tr46/#Validity_Criteria
+          accented: 'café',
+          cjk: '北京',
+          rtl: 'مرحبا',
+          combining: 'hà-nội',
+        }
+        let url = new URL(
+          `https://${params.accented}.${params.cjk}.${params.rtl}.${params.combining}.example.com/users`,
+        )
+
+        let match = matcher.match(url.href)
+        assert.ok(match)
+        assert.deepEqual(match.params, params)
       })
 
-      it('matches variable in hostname', () => {
-        let m = build(['://:subdomain.example.com/api'])
-        let [match] = m.matchAll('https://api.example.com/api')
+      it('returns null when static hostname does not match', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users', null)
+
+        let match = matcher.match('https://other.com/users')
+        assert.equal(match, null)
+      })
+
+      it('matches variable segment in hostname', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://:subdomain.example.com/api', null)
+
+        let match = matcher.match('https://api.example.com/api')
         assert.ok(match)
         assert.deepEqual(match.params, { subdomain: 'api' })
       })
 
       it('matches multiple variables in hostname', () => {
-        let m = build(['://:subdomain.:env.example.com/api'])
-        let [match] = m.matchAll('https://api.prod.example.com/api')
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://:subdomain.:env.example.com/api', null)
+
+        let match = matcher.match('https://api.prod.example.com/api')
         assert.ok(match)
         assert.deepEqual(match.params, { subdomain: 'api', env: 'prod' })
       })
 
-      it('matches wildcard in hostname', () => {
-        let m = build(['://*host.example.com/api'])
-        let [match] = m.matchAll('https://api.v1.example.com/api')
+      it('matches wildcard segment in hostname', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://*host.example.com/api', null)
+
+        let match = matcher.match('https://api.v1.example.com/api')
         assert.ok(match)
         assert.deepEqual(match.params, { host: 'api.v1' })
       })
 
       it('excludes unnamed wildcard from params', () => {
-        let m = build(['://*.example.com/api'])
-        let [match] = m.matchAll('https://api.v1.example.com/api')
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://*.example.com/api', null)
+
+        let match = matcher.match('https://api.v1.example.com/api')
         assert.ok(match)
         assert.deepEqual(match.params, {})
       })
 
-      it('matches optional hostname segments when present and absent', () => {
-        let m = build(['://api(-:version).example.com/users'])
-        let [present] = m.matchAll('https://api-v2.example.com/users')
-        assert.ok(present)
-        assert.deepEqual(present.params, { version: 'v2' })
+      it('matches optional hostname segments when present', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://api(-:version).example.com/users', null)
 
-        let [absent] = m.matchAll('https://api.example.com/users')
-        assert.ok(absent)
-        assert.deepEqual(absent.params, { version: undefined })
+        let match = matcher.match('https://api-v2.example.com/users')
+        assert.ok(match)
+        assert.deepEqual(match.params, { version: 'v2' })
       })
 
-      it('hostname matching is case-insensitive', () => {
-        let m = build(['://Example.COM/users'])
-        assert.equal(m.matchAll('https://example.com/users').length, 1)
-        assert.equal(m.matchAll('https://EXAMPLE.COM/users').length, 1)
+      it('matches optional hostname segments when absent', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://api(-:version).example.com/users', null)
+
+        let match = matcher.match('https://api.example.com/users')
+        assert.ok(match)
+        assert.deepEqual(match.params, { version: undefined })
+      })
+
+      it('matches nested optionals in hostname', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://api(.:region(-:zone)).example.com/users', null)
+
+        let matchAll = matcher.match('https://api.us-east1.example.com/users')
+        assert.ok(matchAll)
+        assert.deepEqual(matchAll.params, { region: 'us', zone: 'east1' })
+
+        let matchPartial = matcher.match('https://api.us.example.com/users')
+        assert.ok(matchPartial)
+        assert.deepEqual(matchPartial.params, { region: 'us', zone: undefined })
+
+        let matchNone = matcher.match('https://api.example.com/users')
+        assert.ok(matchNone)
+        assert.deepEqual(matchNone.params, { region: undefined, zone: undefined })
+      })
+
+      it('matches multiple optionals in hostname', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://:sub(-:version).example(.:tld).com/api', null)
+
+        let match = matcher.match('https://api-v2.example.dev.com/api')
+        assert.ok(match)
+        assert.deepEqual(match.params, { sub: 'api', version: 'v2', tld: 'dev' })
+      })
+
+      it('matches mixed static/variable/wildcard segments', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://*prefix.:env.example.com/api', null)
+
+        let match = matcher.match('https://api.v1.prod.example.com/api')
+        assert.ok(match)
+        assert.deepEqual(match.params, { prefix: 'api.v1', env: 'prod' })
+      })
+
+      it('prefers static over variable hostname', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://:subdomain.example.com/api', null)
+        matcher.add('://api.example.com/api', null)
+
+        let match = matcher.match('https://api.example.com/api')
+        assert.ok(match)
+        assert.equal(serializePattern(match.pattern), '://api.example.com/api')
+      })
+
+      it('prefers variable over wildcard hostname', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://*host.example.com/api', null)
+        matcher.add('://:subdomain.example.com/api', null)
+
+        let match = matcher.match('https://api.example.com/api')
+        assert.ok(match)
+        assert.equal(serializePattern(match.pattern), '://:subdomain.example.com/api')
+      })
+
+      it('prefers longer static prefix in hostname', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://:subdomain.com/api', null)
+        matcher.add('://:subdomain.example.com/api', null)
+
+        let match = matcher.match('https://api.example.com/api')
+        assert.ok(match)
+        assert.equal(serializePattern(match.pattern), '://:subdomain.example.com/api')
       })
     })
 
     describe('port', () => {
+      it('matches omitted port in URL when port is omitted in pattern', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users', null)
+
+        assert.ok(matcher.match('http://example.com/users'))
+        assert.ok(matcher.match('https://example.com/users'))
+      })
+
       it('matches explicit port', () => {
-        let m = build(['://example.com:8080/users'])
-        assert.equal(m.matchAll('http://example.com:8080/users').length, 1)
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com:8080/users', null)
+
+        let match = matcher.match('http://example.com:8080/users')
+        assert.ok(match)
+        assert.deepEqual(match.params, {})
       })
 
-      it('returns empty when port mismatches', () => {
-        let m = build(['://example.com:8080/users'])
-        assert.deepEqual(m.matchAll('http://example.com:3000/users'), [])
-        assert.deepEqual(m.matchAll('http://example.com/users'), [])
+      it('returns null when explicit port does not match', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com:8080/users', null)
+
+        assert.equal(matcher.match('http://example.com:3000/users'), null)
       })
 
-      it('returns empty when pattern omits port but URL has one', () => {
-        let m = build(['://example.com/users'])
-        assert.deepEqual(m.matchAll('http://example.com:8080/users'), [])
+      it('returns null when pattern has explicit port but URL omits port', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com:8080/users', null)
+
+        assert.equal(matcher.match('http://example.com/users'), null)
       })
 
-      it('origin-less pattern matches any port', () => {
-        let m = build(['/about'])
-        assert.equal(m.matchAll('http://localhost/about').length, 1)
-        assert.equal(m.matchAll('http://localhost:44199/about').length, 1)
-        assert.equal(m.matchAll('https://example.com:8080/about').length, 1)
+      it('returns null when pattern omits port but URL has explicit port', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users', null)
+
+        assert.equal(matcher.match('http://example.com:8080/users'), null)
+      })
+
+      it('matches port with hostname variables', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://:subdomain.example.com:8080/api', null)
+
+        let match = matcher.match('https://api.example.com:8080/api')
+        assert.ok(match)
+        assert.deepEqual(match.params, { subdomain: 'api' })
+      })
+
+      it('matches origin-less pattern against URL with any port', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('/', null)
+        matcher.add('/about', null)
+
+        assert.ok(matcher.match('http://localhost/'))
+        assert.ok(matcher.match('http://localhost:44199/'))
+        assert.ok(matcher.match('https://example.com:8080/about'))
       })
     })
 
     describe('pathname', () => {
       it('matches root pathname when pathname is empty', () => {
-        let m = build(['://example.com'])
-        assert.equal(m.matchAll('http://example.com/').length, 1)
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com', null)
+
+        assert.ok(matcher.match('http://example.com/'))
       })
 
       it('matches static segments', () => {
-        let m = build(['://example.com/users/list'])
-        let [match] = m.matchAll('http://example.com/users/list')
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users/list', null)
+
+        let match = matcher.match('http://example.com/users/list')
         assert.ok(match)
         assert.deepEqual(match.params, {})
       })
 
-      it('returns empty when URL is shorter than pattern', () => {
-        let m = build(['://example.com/users/list'])
-        assert.deepEqual(m.matchAll('http://example.com/users'), [])
+      it('returns null when static segment does not match', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users', null)
+
+        assert.equal(matcher.match('http://example.com/posts'), null)
       })
 
-      it('returns empty when trailing slash differs', () => {
-        let m = build(['://example.com/users'])
-        assert.deepEqual(m.matchAll('http://example.com/users/'), [])
+      it('returns null when URL is shorter than pattern', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users/list', null)
+
+        assert.equal(matcher.match('http://example.com/users'), null)
+      })
+
+      it('returns null when trailing slash does not match', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users', null)
+
+        assert.equal(matcher.match('http://example.com/users/'), null)
       })
 
       it('matches variable segments', () => {
-        let m = build(['://example.com/users/:id'])
-        let [match] = m.matchAll('http://example.com/users/123')
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users/:id', null)
+
+        let match = matcher.match('http://example.com/users/123')
         assert.ok(match)
         assert.deepEqual(match.params, { id: '123' })
       })
 
       it('matches multiple variables', () => {
-        let m = build(['://example.com/users/:userId/posts/:postId'])
-        let [match] = m.matchAll('http://example.com/users/42/posts/99')
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users/:userId/posts/:postId', null)
+
+        let match = matcher.match('http://example.com/users/42/posts/99')
         assert.ok(match)
         assert.deepEqual(match.params, { userId: '42', postId: '99' })
       })
 
+      it('matches special characters in variable values', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/files/:filename', null)
+
+        let match = matcher.match('http://example.com/files/my-file_v2.txt')
+        assert.ok(match)
+        assert.deepEqual(match.params, { filename: 'my-file_v2.txt' })
+      })
+
+      it('matches non-ASCII param values', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add(
+          '://example.com/:accented/:cjk/:rtl/:combining/:emoji/:zwj/:nbsp/:fullwidth',
+          null,
+        )
+
+        let params = {
+          accented: 'café',
+          cjk: '北京-とうきょう-서울',
+          rtl: 'مرحبا-עולם',
+          combining: 'Hà-Nội',
+          emoji: '💿',
+          zwj: '🧑‍🚀', // 🚀 + zero-width joiner + 👨
+          nbsp: 'acme\u00A0corp',
+          fullwidth: 'ｗｉｄｅ',
+        }
+        let url = new URL(
+          `https://example.com/${params.accented}/${params.cjk}/${params.rtl}/${params.combining}/${params.emoji}/${params.zwj}/${params.nbsp}/${params.fullwidth}`,
+        )
+
+        let match = matcher.match(url.href)
+        assert.ok(match)
+        assert.deepEqual(match.params, params)
+      })
+
       it('matches wildcard segments', () => {
-        let m = build(['://example.com/files/*path'])
-        let [match] = m.matchAll('http://example.com/files/docs/readme.md')
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/files/*path', null)
+
+        let match = matcher.match('http://example.com/files/docs/readme.md')
         assert.ok(match)
         assert.deepEqual(match.params, { path: 'docs/readme.md' })
       })
 
       it('matches wildcard with continuation', () => {
-        let m = build(['://example.com/files/*path/status'])
-        let [match] = m.matchAll('http://example.com/files/docs/api/status')
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/files/*path/status', null)
+
+        let match = matcher.match('http://example.com/files/docs/api/status')
         assert.ok(match)
         assert.deepEqual(match.params, { path: 'docs/api' })
       })
 
-      it('matches optional pathname segments when present and absent', () => {
-        let m = build(['://example.com/posts(/:lang)'])
-        let [present] = m.matchAll('http://example.com/posts/en')
-        assert.ok(present)
-        assert.deepEqual(present.params, { lang: 'en' })
+      it('excludes unnamed wildcard from params', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/files/*/download', null)
 
-        let [absent] = m.matchAll('http://example.com/posts')
-        assert.ok(absent)
-        assert.deepEqual(absent.params, { lang: undefined })
+        let match = matcher.match('http://example.com/files/docs/download')
+        assert.ok(match)
+        assert.deepEqual(match.params, {})
+      })
+
+      it('matches optional segments when present', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/posts(/:lang)', null)
+
+        let match = matcher.match('http://example.com/posts/en')
+        assert.ok(match)
+        assert.deepEqual(match.params, { lang: 'en' })
+      })
+
+      it('matches optional segments when absent', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/posts(/:lang)', null)
+
+        let match = matcher.match('http://example.com/posts')
+        assert.ok(match)
+        assert.deepEqual(match.params, { lang: undefined })
       })
 
       it('matches nested optionals', () => {
-        let m = build(['://example.com/docs(/:version(/:page))'])
-        let [all] = m.matchAll('http://example.com/docs/v1/intro')
-        assert.deepEqual(all?.params, { version: 'v1', page: 'intro' })
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/docs(/:version(/:page))', null)
 
-        let [partial] = m.matchAll('http://example.com/docs/v1')
-        assert.deepEqual(partial?.params, { version: 'v1', page: undefined })
+        let match1 = matcher.match('http://example.com/docs/v1/intro')
+        assert.ok(match1)
+        assert.deepEqual(match1.params, { version: 'v1', page: 'intro' })
 
-        let [none] = m.matchAll('http://example.com/docs')
-        assert.deepEqual(none?.params, { version: undefined, page: undefined })
+        let match2 = matcher.match('http://example.com/docs/v1')
+        assert.ok(match2)
+        assert.deepEqual(match2.params, { version: 'v1', page: undefined })
+
+        let match3 = matcher.match('http://example.com/docs')
+        assert.ok(match3)
+        assert.deepEqual(match3.params, { version: undefined, page: undefined })
       })
 
-      it('matches file-extension optionals', () => {
-        let m = build(['://example.com/files/:id(.:format)'])
-        let [withExt] = m.matchAll('http://example.com/files/doc123.pdf')
-        assert.deepEqual(withExt?.params, { id: 'doc123', format: 'pdf' })
+      it('matches multiple optionals', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/api(/:version)/users(/:id)', null)
 
-        let [noExt] = m.matchAll('http://example.com/files/doc123')
-        assert.deepEqual(noExt?.params, { id: 'doc123', format: undefined })
-      })
-    })
-
-    describe('search', () => {
-      it('matches when no search constraints', () => {
-        let m = build(['://example.com/search'])
-        assert.equal(m.matchAll('http://example.com/search').length, 1)
-        assert.equal(m.matchAll('http://example.com/search?q=test').length, 1)
+        let match = matcher.match('http://example.com/api/v2/users/123')
+        assert.ok(match)
+        assert.deepEqual(match.params, { version: 'v2', id: '123' })
       })
 
-      it('requires bare parameter to be present', () => {
-        let m = build(['://example.com/api?auth'])
-        assert.deepEqual(m.matchAll('http://example.com/api'), [])
-        assert.deepEqual(m.matchAll('http://example.com/api?other=value'), [])
-        assert.equal(m.matchAll('http://example.com/api?auth').length, 1)
-        assert.equal(m.matchAll('http://example.com/api?auth=token').length, 1)
+      it('matches complex optionals for file extensions', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/files/:id(.:format)', null)
+
+        let match1 = matcher.match('http://example.com/files/doc123.pdf')
+        assert.ok(match1)
+        assert.deepEqual(match1.params, { id: 'doc123', format: 'pdf' })
+
+        let match2 = matcher.match('http://example.com/files/doc123')
+        assert.ok(match2)
+        assert.deepEqual(match2.params, { id: 'doc123', format: undefined })
       })
 
-      it('matches specific value', () => {
-        let m = build(['://example.com/api?format=json'])
-        assert.equal(m.matchAll('http://example.com/api?format=json').length, 1)
-        assert.deepEqual(m.matchAll('http://example.com/api?format=xml'), [])
+      it('matches mixed static/variable/wildcard segments', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/api/:version/files/*path', null)
+
+        let match = matcher.match('http://example.com/api/v1/files/docs/guide.pdf')
+        assert.ok(match)
+        assert.deepEqual(match.params, { version: 'v1', path: 'docs/guide.pdf' })
       })
 
-      it('matches constraints regardless of order in URL', () => {
-        let m = build(['://example.com/api?format=json&version=v1'])
-        assert.equal(m.matchAll('http://example.com/api?version=v1&format=json').length, 1)
-      })
-    })
+      it('matches deep nesting', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add(
+          '://example.com/products/electronics/computers/laptops/gaming/accessories/keyboards',
+          null,
+        )
 
-    describe('multiple matches', () => {
-      it('returns every matching pattern, sorted most-to-least specific', () => {
-        let m = build([
-          '://example.com/*path',
-          '://example.com/users/:id',
-          '://example.com/users/new',
-        ])
-        let matches = m.matchAll('http://example.com/users/new')
-        assert.deepEqual(sources(matches), [
-          '://example.com/users/new',
-          '://example.com/users/:id',
-          '://example.com/*path',
-        ])
+        let match = matcher.match(
+          'http://example.com/products/electronics/computers/laptops/gaming/accessories/keyboards',
+        )
+        assert.ok(match)
+        assert.deepEqual(match.params, {})
       })
 
-      it('orders complex specificity scenarios consistently', () => {
-        let m = build([
-          '/*path',
-          '://api.example.com/users/:id',
-          '://:subdomain.example.com/*path',
-          '://api.example.com/*path',
-          '/users/:id',
-          '://api.example.com/users/123',
-          '://:subdomain.example.com/users/:id',
-          '://api.example.com/:resource/:id',
-          '://api.example.com/users(/:id)',
-          '/users(/:id)',
-          '://api(.:region).example.com/users/:id',
-        ])
-        assert.deepEqual(sources(m.matchAll('http://api.example.com/users/123')), [
-          '://api.example.com/users/123',
-          '://api.example.com/users/:id',
-          '://api.example.com/users(/:id)',
-          '://api(.:region).example.com/users/:id',
-          '://api.example.com/:resource/:id',
-          '://api.example.com/*path',
-          '://:subdomain.example.com/users/:id',
-          '://:subdomain.example.com/*path',
-          '/users/:id',
-          '/users(/:id)',
-          '/*path',
-        ])
-      })
+      it('prefers static over variable pathname', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users/new', null)
+        matcher.add('://example.com/users/:id', null)
 
-      it('returns empty array when no matches', () => {
-        let m = build(['://example.com/users', '://example.com/posts'])
-        assert.deepEqual(m.matchAll('http://example.com/comments'), [])
-      })
-    })
-
-    describe('match', () => {
-      it('returns the most specific match', () => {
-        let m = build([
-          '://example.com/*path',
-          '://example.com/users/:id',
-          '://example.com/users/new',
-        ])
-        let match = m.match('http://example.com/users/new')
+        let match = matcher.match('http://example.com/users/new')
         assert.ok(match)
         assert.equal(serializePattern(match.pattern), '://example.com/users/new')
       })
 
-      it('returns null when nothing matches', () => {
-        let m = build(['://example.com/users'])
-        assert.equal(m.match('http://example.com/posts'), null)
+      it('prefers variable over wildcard pathname', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/files/*path', null)
+        matcher.add('://example.com/files/:id', null)
+
+        let match = matcher.match('http://example.com/files/123')
+        assert.ok(match)
+        assert.equal(serializePattern(match.pattern), '://example.com/files/:id')
       })
 
-      it('prefers static over variable, variable over wildcard', () => {
-        let m = build(['/*path', '/:id', '/users'])
-        assert.equal(serializePattern(m.match('http://example.com/users')!.pattern), '/users')
-        assert.equal(serializePattern(m.match('http://example.com/123')!.pattern), '/:id')
-        assert.equal(serializePattern(m.match('http://example.com/a/b')!.pattern), '/*path')
+      it('prefers longer static prefix in pathname', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/api/:id', null)
+        matcher.add('://example.com/api/v1/:id', null)
+
+        let match = matcher.match('http://example.com/api/v1/users')
+        assert.ok(match)
+        assert.equal(serializePattern(match.pattern), '://example.com/api/v1/:id')
+      })
+    })
+
+    describe('search', () => {
+      it('matches any query params when no search constraints', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/search', null)
+
+        assert.ok(matcher.match('http://example.com/search'))
+        assert.ok(matcher.match('http://example.com/search?q=test'))
+        assert.ok(matcher.match('http://example.com/search?q=test&lang=en'))
       })
 
-      it('returns each variant of a pattern with optionals as one match', () => {
-        let m = build(['://example.com/posts(/:lang)'])
-        let withLang = m.matchAll('http://example.com/posts/en')
-        assert.equal(withLang.length, 1)
-        assert.deepEqual(withLang[0].params, { lang: 'en' })
+      it('matches bare parameter for presence check', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/search?q', null)
 
-        let withoutLang = m.matchAll('http://example.com/posts')
-        assert.equal(withoutLang.length, 1)
-        assert.deepEqual(withoutLang[0].params, { lang: undefined })
+        let match = matcher.match('http://example.com/search?q')
+        assert.ok(match)
+      })
+
+      it('matches bare parameter with any value', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/search?q', null)
+
+        assert.ok(matcher.match('http://example.com/search?q=test'))
+        assert.ok(matcher.match('http://example.com/search?q=hello'))
+      })
+
+      it('matches any value constraint with non-empty value', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/search?q=', null)
+
+        let match = matcher.match('http://example.com/search?q=test')
+        assert.ok(match)
+      })
+
+      it('matches key-only constraint', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/search?q=', null)
+
+        assert.ok(matcher.match('http://example.com/search?q'))
+        assert.ok(matcher.match('http://example.com/search?q='))
+        assert.ok(matcher.match('http://example.com/search?q=test'))
+      })
+
+      it('matches specific value with exact match', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/api?format=json', null)
+
+        let match = matcher.match('http://example.com/api?format=json')
+        assert.ok(match)
+      })
+
+      it('returns null when specific value does not match', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/api?format=json', null)
+
+        assert.equal(matcher.match('http://example.com/api?format=xml'), null)
+      })
+
+      it('matches multiple constraints', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/search?q=&lang=en', null)
+
+        let match = matcher.match('http://example.com/search?q=test&lang=en')
+        assert.ok(match)
+      })
+
+      it('matches constraints regardless of order', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/api?format=json&version=v1', null)
+
+        let match = matcher.match('http://example.com/api?version=v1&format=json')
+        assert.ok(match)
+      })
+
+      it('allows extra params beyond constraints', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/search?q', null)
+
+        let match = matcher.match('http://example.com/search?q=test&lang=en&page=2')
+        assert.ok(match)
+      })
+
+      it('preserves URL encoding in search parameter values', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/search?q=hello%20world', null)
+
+        let match = matcher.match('http://example.com/search?q=hello%20world')
+        assert.ok(match)
+      })
+
+      it('matches repeated parameter values', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/filter?tags', null)
+
+        let match = matcher.match('http://example.com/filter?tags=a&tags=b')
+        assert.ok(match)
+      })
+
+      it('returns null when constraint is not met', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/api?auth', null)
+
+        assert.equal(matcher.match('http://example.com/api'), null)
+        assert.equal(matcher.match('http://example.com/api?other=value'), null)
+      })
+
+      it('prefers more constraints over fewer', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/search?q', null)
+        matcher.add('://example.com/search?q&lang', null)
+
+        let match = matcher.match('http://example.com/search?q=test&lang=en')
+        assert.ok(match)
+        assert.equal(serializePattern(match.pattern), '://example.com/search?q=&lang=')
+      })
+
+      it('prefers exact value over any value', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/api?format', null)
+        matcher.add('://example.com/api?format=json', null)
+
+        let match = matcher.match('http://example.com/api?format=json')
+        assert.ok(match)
+        assert.equal(serializePattern(match.pattern), '://example.com/api?format=json')
+      })
+
+      it('ties specificity for both forms of key only constraints; tiebreaks using insertion order', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/search?q', null)
+        matcher.add('://example.com/search?q=', null)
+
+        let match = matcher.match('http://example.com/search?q=test')
+        assert.ok(match)
+        assert.equal(serializePattern(match.pattern), '://example.com/search?q=')
       })
     })
 
     describe('ignoreCase', () => {
-      it('case-sensitive pathname by default', () => {
-        let m = build(['/Posts/:id'])
-        assert.deepEqual(m.matchAll('https://example.com/posts/123'), [])
-        assert.equal(m.matchAll('https://example.com/Posts/123').length, 1)
+      it('uses case-sensitive pathname matching by default', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('/Posts/:id', null)
+
+        assert.equal(matcher.match('https://example.com/posts/123'), null)
+        assert.equal(matcher.match('https://example.com/POSTS/123'), null)
+        assert.ok(matcher.match('https://example.com/Posts/123'))
       })
 
-      it('ignores pathname case when enabled', () => {
-        let m = build(['/Posts/:id'], { ignoreCase: true })
-        assert.equal(m.matchAll('https://example.com/posts/123').length, 1)
-        assert.equal(m.matchAll('https://example.com/POSTS/123').length, 1)
+      it('ignores pathname case when ignoreCase is true', () => {
+        let matcher = createPatternMatcher<null>({ ignoreCase: true })
+        matcher.add('/Posts/:id', null)
+
+        assert.ok(matcher.match('https://example.com/posts/123'))
+        assert.ok(matcher.match('https://example.com/POSTS/123'))
+        assert.ok(matcher.match('https://example.com/Posts/123'))
       })
 
-      it('hostname case-insensitive regardless', () => {
-        let m = build(['://Example.COM/users'])
-        assert.equal(m.matchAll('https://example.com/users').length, 1)
-        assert.equal(m.matchAll('https://EXAMPLE.COM/users').length, 1)
+      it('ignores hostname case regardless of ignoreCase', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://Example.COM/users', null)
+
+        assert.ok(matcher.match('https://example.com/users'))
+        assert.ok(matcher.match('https://EXAMPLE.COM/users'))
       })
 
-      it('search params case-sensitive regardless', () => {
-        let m = build(['/api?Sort'], { ignoreCase: true })
-        assert.equal(m.matchAll('https://example.com/api?Sort').length, 1)
-        assert.deepEqual(m.matchAll('https://example.com/api?sort'), [])
+      it('matches search params case-sensitively regardless of ignoreCase', () => {
+        let matcher = createPatternMatcher<null>({ ignoreCase: true })
+        matcher.add('/api?Sort', null)
+
+        assert.ok(matcher.match('https://example.com/api?Sort'))
+        assert.equal(matcher.match('https://example.com/api?sort'), null)
+      })
+
+      it('defaults to false', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('/Posts/:id', null)
+        assert.equal(matcher.match('https://example.com/posts/123'), null)
       })
     })
 
     describe('paramsMeta', () => {
-      it('includes wildcard hostname for pathname-only patterns', () => {
-        let m = build(['/users/:id'])
-        let [match] = m.matchAll('http://example.com/users/123')
+      it('returns empty arrays when no params', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users', null)
+
+        let match = matcher.match('http://example.com/users')
+        assert.ok(match)
+        assert.deepEqual(match.paramsMeta.hostname, [])
+        assert.deepEqual(match.paramsMeta.pathname, [])
+      })
+
+      it('includes wildcard hostname metadata for pathname-only patterns', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('/users/:id', null)
+
+        let match = matcher.match('http://example.com/users/123')
         assert.ok(match)
         assert.deepEqual(match.paramsMeta.hostname, [
-          { type: '*', name: '*', value: 'example.com', begin: 0, end: 11 },
+          { type: '*', name: '*', begin: 0, end: 11, value: 'example.com' },
         ])
         assert.deepEqual(match.paramsMeta.pathname, [
-          { type: ':', name: 'id', value: '123', begin: 6, end: 9 },
+          { type: ':', name: 'id', begin: 6, end: 9, value: '123' },
         ])
       })
 
-      it('captures hostname and pathname params with metadata', () => {
-        let m = build(['://:subdomain.example.com/users/:id'])
-        let [match] = m.matchAll('https://api.example.com/users/123')
+      it('includes hostname params with metadata', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://:subdomain.example.com/api', null)
+
+        let match = matcher.match('https://api.example.com/api')
+        assert.ok(match)
+        assert.equal(match.paramsMeta.hostname.length, 1)
+        assert.equal(match.paramsMeta.hostname[0].name, 'subdomain')
+        assert.equal(match.paramsMeta.hostname[0].type, ':')
+        assert.equal(match.paramsMeta.hostname[0].value, 'api')
+        assert.deepEqual(match.paramsMeta.pathname, [])
+      })
+
+      it('includes pathname params with metadata', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users/:id', null)
+
+        let match = matcher.match('http://example.com/users/123')
+        assert.ok(match)
+        assert.deepEqual(match.paramsMeta.hostname, [])
+        assert.equal(match.paramsMeta.pathname.length, 1)
+        assert.equal(match.paramsMeta.pathname[0].name, 'id')
+        assert.equal(match.paramsMeta.pathname[0].type, ':')
+        assert.equal(match.paramsMeta.pathname[0].value, '123')
+      })
+
+      it('includes params from both hostname and pathname', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://:subdomain.example.com/users/:id', null)
+
+        let match = matcher.match('https://api.example.com/users/123')
         assert.ok(match)
         assert.equal(match.paramsMeta.hostname.length, 1)
         assert.equal(match.paramsMeta.hostname[0].name, 'subdomain')
@@ -376,56 +760,186 @@ describe('createPatternMatcher', () => {
         assert.equal(match.paramsMeta.pathname[0].value, '123')
       })
 
+      it('includes wildcard params in metadata', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/files/*path', null)
+
+        let match = matcher.match('http://example.com/files/docs/readme.md')
+        assert.ok(match)
+        assert.equal(match.paramsMeta.pathname.length, 1)
+        assert.equal(match.paramsMeta.pathname[0].name, 'path')
+        assert.equal(match.paramsMeta.pathname[0].type, '*')
+        assert.equal(match.paramsMeta.pathname[0].value, 'docs/readme.md')
+      })
+
+      it('includes unnamed wildcards in metadata with name "*"', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/files/*/download', null)
+
+        let match = matcher.match('http://example.com/files/docs/download')
+        assert.ok(match)
+        assert.equal(match.paramsMeta.pathname.length, 1)
+        assert.equal(match.paramsMeta.pathname[0].name, '*')
+        assert.equal(match.paramsMeta.pathname[0].type, '*')
+        assert.equal(match.paramsMeta.pathname[0].value, 'docs')
+      })
+
       it('excludes undefined optional params from metadata', () => {
-        let m = build(['://example.com/posts(/:lang)'])
-        let [match] = m.matchAll('http://example.com/posts')
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/posts(/:lang)', null)
+
+        let match = matcher.match('http://example.com/posts')
         assert.ok(match)
         assert.deepEqual(match.paramsMeta.pathname, [])
       })
-    })
 
-    describe('add', () => {
-      it('accepts string patterns', () => {
+      it('includes only matched optional params in metadata', () => {
         let matcher = createPatternMatcher<null>()
-        matcher.add('/users/:id', null)
+        matcher.add('://example.com/docs(/:version(/:page))', null)
 
-        let [match] = matcher.matchAll('http://example.com/users/1')
+        let match = matcher.match('http://example.com/docs/v1')
         assert.ok(match)
-        assert.deepEqual(match.params, { id: '1' })
-      })
-
-      it('accepts pre-parsed AST', () => {
-        let matcher = createPatternMatcher<null>()
-        matcher.add(parsePattern('/users/:id'), null)
-
-        let [match] = matcher.matchAll('http://example.com/users/1')
-        assert.ok(match)
-        assert.deepEqual(match.params, { id: '1' })
+        assert.equal(match.paramsMeta.pathname.length, 1)
+        assert.equal(match.paramsMeta.pathname[0].name, 'version')
+        assert.equal(match.paramsMeta.pathname[0].value, 'v1')
       })
     })
 
-    describe('data', () => {
-      it('returns the data associated with each pattern', () => {
-        let matcher = createPatternMatcher<string>()
-        matcher.add('/users/:id', 'users')
-        matcher.add('/posts/:id', 'posts')
+    describe('specificity', () => {
+      it('prefers static over variable', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/:segment', null)
+        matcher.add('://example.com/users', null)
 
-        let [users] = matcher.matchAll('http://example.com/users/1')
-        assert.equal(users?.data, 'users')
+        let match = matcher.match('http://example.com/users')
+        assert.ok(match)
+        assert.equal(serializePattern(match.pattern), '://example.com/users')
+      })
 
-        let [posts] = matcher.matchAll('http://example.com/posts/1')
-        assert.equal(posts?.data, 'posts')
+      it('prefers variable over wildcard', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/*path', null)
+        matcher.add('://example.com/:id', null)
+
+        let match = matcher.match('http://example.com/123')
+        assert.ok(match)
+        assert.equal(serializePattern(match.pattern), '://example.com/:id')
+      })
+
+      it('prefers longer static prefix over shorter', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/:id', null)
+        matcher.add('://example.com/api/:id', null)
+
+        let match = matcher.match('http://example.com/api/users')
+        assert.ok(match)
+        assert.equal(serializePattern(match.pattern), '://example.com/api/:id')
+      })
+
+      it('prefers hostname specificity over pathname specificity', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/*path', null)
+        matcher.add('://:subdomain.example.com/users', null)
+
+        let match = matcher.match('http://api.example.com/users')
+        assert.ok(match)
+        assert.equal(serializePattern(match.pattern), '://:subdomain.example.com/users')
+      })
+
+      it('increases specificity with search constraints', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/search', null)
+        matcher.add('://example.com/search?q', null)
+
+        let match = matcher.match('http://example.com/search?q=test')
+        assert.ok(match)
+        assert.equal(serializePattern(match.pattern), '://example.com/search?q=')
+      })
+
+      it('returns null when no patterns match', () => {
+        let matcher = createPatternMatcher<null>()
+        matcher.add('://example.com/users', null)
+        matcher.add('://example.com/posts', null)
+
+        assert.equal(matcher.match('http://example.com/comments'), null)
       })
     })
   })
+
+  describe('matchAll', () => {
+    it('returns all matches sorted by specificity', () => {
+      let matcher = createPatternMatcher<null>()
+      matcher.add('://example.com/*path', null)
+      matcher.add('://example.com/users/:id', null)
+      matcher.add('://example.com/users/new', null)
+
+      let matches = matcher.matchAll('http://example.com/users/new')
+      assert.deepEqual(
+        matches.map((m) => serializePattern(m.pattern)),
+        ['://example.com/users/new', '://example.com/users/:id', '://example.com/*path'],
+      )
+    })
+
+    it('returns empty array when no matches', () => {
+      let matcher = createPatternMatcher<null>()
+      matcher.add('://example.com/users', null)
+      matcher.add('://example.com/posts', null)
+
+      let matches = matcher.matchAll('http://example.com/comments')
+      assert.deepEqual(matches, [])
+    })
+
+    it('includes patterns with same specificity', () => {
+      let matcher = createPatternMatcher<null>()
+      matcher.add('://example.com/users/:id', null)
+      matcher.add('://example.com/posts/:id', null)
+
+      let matches = matcher.matchAll('http://example.com/users/123')
+      assert.deepEqual(
+        matches.map((m) => serializePattern(m.pattern)),
+        ['://example.com/users/:id'],
+      )
+
+      let matches2 = matcher.matchAll('http://example.com/posts/456')
+      assert.deepEqual(
+        matches2.map((m) => serializePattern(m.pattern)),
+        ['://example.com/posts/:id'],
+      )
+    })
+
+    it('orders complex specificity scenarios consistently', () => {
+      let matcher = createPatternMatcher<null>()
+      // Add patterns in random order to ensure ordering is by specificity, not insertion order
+      matcher.add('/*path', null)
+      matcher.add('://api.example.com/users/:id', null)
+      matcher.add('://:subdomain.example.com/*path', null)
+      matcher.add('://api.example.com/*path', null)
+      matcher.add('/users/:id', null)
+      matcher.add('://api.example.com/users/123', null)
+      matcher.add('://:subdomain.example.com/users/:id', null)
+      matcher.add('://api.example.com/:resource/:id', null)
+      matcher.add('://api.example.com/users(/:id)', null)
+      matcher.add('/users(/:id)', null)
+      matcher.add('://api(.:region).example.com/users/:id', null)
+
+      let matches = matcher.matchAll('http://api.example.com/users/123')
+
+      assert.deepEqual(
+        matches.map((m) => serializePattern(m.pattern)),
+        [
+          '://api.example.com/users/123',
+          '://api.example.com/users/:id',
+          '://api.example.com/users(/:id)',
+          '://api(.:region).example.com/users/:id',
+          '://api.example.com/:resource/:id',
+          '://api.example.com/*path',
+          '://:subdomain.example.com/users/:id',
+          '://:subdomain.example.com/*path',
+          '/users/:id',
+          '/users(/:id)',
+          '/*path',
+        ],
+      )
+    })
+  })
 })
-
-function build(patterns: ReadonlyArray<string>, options?: RoutePatternMatcherOptions) {
-  let matcher = createPatternMatcher<null>(options)
-  for (let p of patterns) matcher.add(p, null)
-  return matcher
-}
-
-function sources(matches: ReadonlyArray<RoutePatternMatch<unknown>>): Array<string> {
-  return matches.map((m) => serializePattern(m.pattern))
-}
