@@ -153,7 +153,7 @@ export type ButtonTone = keyof typeof toneStyleByTone
  * Props accepted by the {@link Button} component.
  *
  * Extends the native `<button>` element props with optional icon slots and a
- * tone variant. The `children` type is widened to `RemixNode`.
+ * tone variant
  */
 export type ButtonProps = Omit<Props<'button'>, 'children'> & {
   /**
@@ -175,12 +175,8 @@ export type ButtonProps = Omit<Props<'button'>, 'children'> & {
 }
 
 /**
- * Standard `@remix-run/ui` button component for ordinary action buttons.
- *
- * Renders a `<button>` with `baseStyle` and the resolved tone style.
- * `children` are placed inside `labelStyle` and `startIcon`/`endIcon` are
- * placed inside `iconStyle`. Compose the flat `*Style` exports directly
- * when a higher-level control needs button structure without this wrapper.
+ * Renders a `<button>` with `baseStyle` and the resolved tone style, along with
+ * optional start and end icons.
  *
  * @param handle Component handle providing the runtime API and the resolved {@link ButtonProps}.
  * @returns A render function for the button element.
