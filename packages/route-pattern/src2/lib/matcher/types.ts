@@ -9,7 +9,7 @@ export type MatchedParam = {
 }
 
 export type Match<data = unknown> = {
-  ast: RoutePatternAST
+  pattern: RoutePatternAST
   data: data
   params: Record<string, string | undefined>
   paramsMeta: {

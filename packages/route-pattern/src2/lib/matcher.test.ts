@@ -240,23 +240,77 @@ describe('createPatternMatcher', () => {
     })
 
     describe('multiple matches', () => {
-      it('returns every matching pattern (order unspecified)', () => {
+      it('returns every matching pattern, sorted most-to-least specific', () => {
         let m = build([
           '://example.com/*path',
           '://example.com/users/:id',
           '://example.com/users/new',
         ])
         let matches = m.matchAll('http://example.com/users/new')
-        assert.deepEqual(sources(matches).sort(), [
-          '://example.com/*path',
-          '://example.com/users/:id',
+        assert.deepEqual(sources(matches), [
           '://example.com/users/new',
+          '://example.com/users/:id',
+          '://example.com/*path',
+        ])
+      })
+
+      it('orders complex specificity scenarios consistently', () => {
+        let m = build([
+          '/*path',
+          '://api.example.com/users/:id',
+          '://:subdomain.example.com/*path',
+          '://api.example.com/*path',
+          '/users/:id',
+          '://api.example.com/users/123',
+          '://:subdomain.example.com/users/:id',
+          '://api.example.com/:resource/:id',
+          '://api.example.com/users(/:id)',
+          '/users(/:id)',
+          '://api(.:region).example.com/users/:id',
+        ])
+        assert.deepEqual(sources(m.matchAll('http://api.example.com/users/123')), [
+          '://api.example.com/users/123',
+          '://api.example.com/users/:id',
+          '://api.example.com/users(/:id)',
+          '://api(.:region).example.com/users/:id',
+          '://api.example.com/:resource/:id',
+          '://api.example.com/*path',
+          '://:subdomain.example.com/users/:id',
+          '://:subdomain.example.com/*path',
+          '/users/:id',
+          '/users(/:id)',
+          '/*path',
         ])
       })
 
       it('returns empty array when no matches', () => {
         let m = build(['://example.com/users', '://example.com/posts'])
         assert.deepEqual(m.matchAll('http://example.com/comments'), [])
+      })
+    })
+
+    describe('match', () => {
+      it('returns the most specific match', () => {
+        let m = build([
+          '://example.com/*path',
+          '://example.com/users/:id',
+          '://example.com/users/new',
+        ])
+        let match = m.match('http://example.com/users/new')
+        assert.ok(match)
+        assert.equal(serializePattern(match.pattern), '://example.com/users/new')
+      })
+
+      it('returns null when nothing matches', () => {
+        let m = build(['://example.com/users'])
+        assert.equal(m.match('http://example.com/posts'), null)
+      })
+
+      it('prefers static over variable, variable over wildcard', () => {
+        let m = build(['/*path', '/:id', '/users'])
+        assert.equal(serializePattern(m.match('http://example.com/users')!.pattern), '/users')
+        assert.equal(serializePattern(m.match('http://example.com/123')!.pattern), '/:id')
+        assert.equal(serializePattern(m.match('http://example.com/a/b')!.pattern), '/*path')
       })
 
       it('returns each variant of a pattern with optionals as one match', () => {
@@ -373,5 +427,5 @@ function build(patterns: ReadonlyArray<string>, options?: RoutePatternMatcherOpt
 }
 
 function sources(matches: ReadonlyArray<RoutePatternMatch<unknown>>): Array<string> {
-  return matches.map((m) => serializePattern(m.ast))
+  return matches.map((m) => serializePattern(m.pattern))
 }

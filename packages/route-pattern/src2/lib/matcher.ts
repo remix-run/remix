@@ -3,14 +3,18 @@ import { parsePattern } from './parse.ts'
 
 import { Trie } from './matcher/trie.ts'
 import type { Match } from './matcher/types.ts'
+import * as Specificity from './specificity.ts'
+
+export type RoutePatternMatch<data = unknown> = Match<data> & { url: URL }
 
 export type RoutePatternMatcher<data = unknown> = {
   readonly ignoreCase: boolean
   add(pattern: string | RoutePatternAST, data: data): void
+  /** Most specific match for `url`, or `null` when nothing matches. */
+  match(url: string | URL): RoutePatternMatch<data> | null
+  /** Every match for `url`, sorted from most to least specific. */
   matchAll(url: string | URL): Array<RoutePatternMatch<data>>
 }
-
-export type RoutePatternMatch<data> = Match<data> & { url: URL }
 
 export type RoutePatternMatcherOptions = {
   /**
@@ -40,19 +44,28 @@ class TrieMatcher<data = unknown> implements RoutePatternMatcher<data> {
     this.#trie.insert(ast, data)
   }
 
+  match(url: string | URL): RoutePatternMatch<data> | null {
+    let parsedUrl = typeof url === 'string' ? new URL(url) : url
+    let best: RoutePatternMatch<data> | null = null
+    for (let match of this.#trie.search(parsedUrl)) {
+      let candidate = toMatch(match, parsedUrl)
+      if (best === null || Specificity.greaterThan(candidate, best)) {
+        best = candidate
+      }
+    }
+    return best
+  }
+
   matchAll(url: string | URL): Array<RoutePatternMatch<data>> {
     let parsedUrl = typeof url === 'string' ? new URL(url) : url
-    let results = this.#trie.search(parsedUrl)
     let matches: Array<RoutePatternMatch<data>> = []
-    for (let r of results) {
-      matches.push({
-        ast: r.ast,
-        url: parsedUrl,
-        data: r.data,
-        params: r.params,
-        paramsMeta: r.paramsMeta,
-      })
+    for (let match of this.#trie.search(parsedUrl)) {
+      matches.push(toMatch(match, parsedUrl))
     }
-    return matches
+    return matches.sort(Specificity.descending)
   }
+}
+
+function toMatch<data>(result: Match<data>, url: URL): RoutePatternMatch<data> {
+  return { ...result, url }
 }

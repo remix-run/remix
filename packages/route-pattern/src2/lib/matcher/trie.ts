@@ -200,7 +200,7 @@ export class Trie<data = unknown> {
             }
 
             results.push({
-              ast: value.ast,
+              pattern: value.ast,
               data: value.data,
               params,
               paramsMeta: { hostname: origin.hostnameMatch, pathname: pathnameMatch },
