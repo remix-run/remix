@@ -301,9 +301,7 @@ function createServerComponentId(context: RenderContext): string {
   return `s${context.serverIdScope}-${context.serverIdCounter}`
 }
 
-async function splitFirstChunk(
-  stream: ReadableStream<Uint8Array>,
-): Promise<ResolvedFrameHtml> {
+async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<ResolvedFrameHtml> {
   let reader = stream.getReader()
   let decoder = new TextDecoder()
 
