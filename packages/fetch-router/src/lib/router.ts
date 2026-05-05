@@ -227,12 +227,21 @@ function noMatchHandler({ url }: RequestContext): Response {
   return new Response(`Not Found: ${url.pathname}`, { status: 404 })
 }
 
+function normalizeMiddleware(
+  middleware: readonly AnyMiddleware[] | undefined,
+): AnyMiddleware[] | undefined {
+  if (middleware == null || middleware.length === 0) {
+    return undefined
+  }
+
+  return [...middleware]
+}
+
 function normalizeAction(action: unknown): NormalizedAction {
   if (isActionObject(action)) {
     return {
       handler: action.handler,
-      middleware:
-        action.middleware && action.middleware.length > 0 ? [...action.middleware] : undefined,
+      middleware: normalizeMiddleware(action.middleware),
     }
   }
 
@@ -246,15 +255,18 @@ function mergeMiddleware(
   upstream: AnyMiddleware[] | undefined,
   downstream: AnyMiddleware[] | undefined,
 ): AnyMiddleware[] | undefined {
-  if (!upstream || upstream.length === 0) {
-    return downstream
+  let upstreamMiddleware = normalizeMiddleware(upstream)
+  let downstreamMiddleware = normalizeMiddleware(downstream)
+
+  if (!upstreamMiddleware) {
+    return downstreamMiddleware
   }
 
-  if (!downstream || downstream.length === 0) {
-    return upstream
+  if (!downstreamMiddleware) {
+    return upstreamMiddleware
   }
 
-  return upstream.concat(downstream)
+  return upstreamMiddleware.concat(downstreamMiddleware)
 }
 
 function createRequestContext(input: string | URL | Request, init?: RequestInit): RequestContext {
@@ -311,12 +323,12 @@ export function createRouter<
 >(options?: RouterOptions<context, middleware>): Router<ApplyMiddlewareTuple<context, middleware>> {
   let defaultHandler = (options?.defaultHandler ?? noMatchHandler) as RequestHandler<any, any>
   let matcher = options?.matcher ?? createMatcher<MatchData>()
-  let routerMiddleware = options?.middleware ? [...options.middleware] : undefined
+  let routerMiddleware = normalizeMiddleware(options?.middleware)
 
   async function dispatchRouter(context: RequestContext): Promise<Response> {
     let dispatch = () => dispatchMatches(context)
 
-    if (routerMiddleware && routerMiddleware.length > 0) {
+    if (routerMiddleware) {
       return runMiddleware(routerMiddleware, context, dispatch)
     }
 
@@ -331,7 +343,7 @@ export function createRouter<
 
       context.params = { ...context.params, ...match.params }
 
-      if (match.data.middleware && match.data.middleware.length > 0) {
+      if (match.data.middleware) {
         return runMiddleware(match.data.middleware, context, match.data.handler)
       }
 
@@ -383,11 +395,7 @@ export function createRouter<
   }
 
   function mapController(routes: RouteMap, controller: ControllerShape): void {
-    let controllerMiddleware = controller.middleware
-      ? controller.middleware.length > 0
-        ? [...controller.middleware]
-        : undefined
-      : undefined
+    let controllerMiddleware = normalizeMiddleware(controller.middleware)
 
     for (let key in controller.actions) {
       if (!(key in routes)) {
