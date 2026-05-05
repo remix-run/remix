@@ -247,5 +247,9 @@ export const framesController = {
 } satisfies Controller<typeof routes.frames>
 
 function delay(ms: number) {
+  if (process.env.NODE_ENV === 'test') {
+    ms = 10
+  }
+
   return new Promise((resolve) => setTimeout(resolve, ms))
 }

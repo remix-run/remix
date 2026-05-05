@@ -138,6 +138,18 @@ function stripDoctypeMarkup(html: string): string {
   return html.replace(DOCTYPE_PATTERN, '')
 }
 
+function hasRenderableHtml(html: string): boolean {
+  return stripDoctypeMarkup(html).trim() !== ''
+}
+
+function emptyReadableStream(): ReadableStream<Uint8Array> {
+  return new ReadableStream({
+    start(controller) {
+      controller.close()
+    },
+  })
+}
+
 function getStyleLayerName(selector: string, layer: string = DEFAULT_STYLE_LAYER): string {
   return `${layer}.${selector}`
 }
@@ -291,20 +303,26 @@ function createServerComponentId(context: RenderContext): string {
 
 async function splitFirstChunk(
   stream: ReadableStream<Uint8Array>,
-): Promise<{ first: Uint8Array; tail: ReadableStream<Uint8Array> }> {
+): Promise<ResolvedFrameHtml> {
   let reader = stream.getReader()
+  let decoder = new TextDecoder()
 
-  let { value, done } = await reader.read()
-  if (done || !value) {
-    reader.releaseLock()
-    return {
-      first: new Uint8Array(),
-      tail: new ReadableStream({
-        start(controller) {
-          controller.close()
-        },
-      }),
+  let first: Uint8Array | undefined
+  while (true) {
+    let { value, done } = await reader.read()
+    if (done || !value) break
+
+    let text = decoder.decode(value, { stream: true })
+    if (hasRenderableHtml(text)) {
+      first = value
+      break
     }
+  }
+
+  if (!first) {
+    decoder.decode()
+    reader.releaseLock()
+    return { html: '', tail: emptyReadableStream() }
   }
 
   let released = false
@@ -334,7 +352,7 @@ async function splitFirstChunk(
     },
   })
 
-  return { first: value, tail }
+  return { html: stripDoctypeMarkup(decoder.decode(first)), tail }
 }
 
 async function resolveFrameHtml(
@@ -342,9 +360,7 @@ async function resolveFrameHtml(
 ): Promise<ResolvedFrameHtml> {
   if (typeof input === 'string') return { html: stripDoctypeMarkup(input) }
 
-  let decoder = new TextDecoder()
-  let { first, tail } = await splitFirstChunk(input)
-  return { html: stripDoctypeMarkup(decoder.decode(first)), tail }
+  return await splitFirstChunk(input)
 }
 
 function isRemixElement(node: unknown): node is RemixElement {

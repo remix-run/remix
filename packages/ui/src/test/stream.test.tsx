@@ -1753,6 +1753,30 @@ describe('stream', () => {
       expect(result).toContain('>Resolved</div>')
     })
 
+    it('keeps frame stream content inside the template when doctype is its own chunk', async () => {
+      let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
+        resolveFrame() {
+          let encoder = new TextEncoder()
+          return new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(encoder.encode('<!DOCTYPE html>'))
+              controller.enqueue(encoder.encode('<div id="resolved">Resolved</div>'))
+              controller.close()
+            },
+          })
+        },
+      })
+      let result = await drain(stream)
+
+      let template = document.createElement('template')
+      template.innerHTML = result
+      let resolvedTemplate = template.content.querySelector('template')
+
+      expect(result).not.toContain('<!DOCTYPE')
+      expect(result).not.toContain('</template><div id="resolved">')
+      expect(resolvedTemplate?.innerHTML).toContain('<div id="resolved">Resolved</div>')
+    })
+
     it('adds frame scripts for blocking frames', async () => {
       let stream = renderToStream(<Frame src="/x" />, {
         resolveFrame: () => '<div>Resolved</div>',
