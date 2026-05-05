@@ -14,6 +14,12 @@ import type { RoutePatternMatch } from './matcher.ts'
 import type { RoutePatternMatcher } from './matcher.ts'
 import { createPatternMatcher } from './matcher.ts'
 
+export function compilePattern<source extends string = string>(
+  pattern: RoutePattern<source>,
+): CompiledRoutePattern<source> {
+  return new CompiledRoutePattern(pattern)
+}
+
 export class CompiledRoutePattern<source extends string = string> {
   readonly pattern: RoutePattern<source>
 

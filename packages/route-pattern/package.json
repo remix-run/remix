@@ -18,13 +18,23 @@
     "README.md",
     "dist",
     "src",
+    "src2",
     "!src/**/*.test.ts",
-    "!src/**/*.types.bench.ts"
+    "!src/**/*.types.bench.ts",
+    "!src2/**/*.test.ts",
+    "!src2/**/*.types.bench.ts"
   ],
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
     "./specificity": "./src/specificity.ts",
+    "./compile": "./src2/compile.ts",
+    "./href": "./src2/href.ts",
+    "./join": "./src2/join.ts",
+    "./matcher": "./src2/matcher.ts",
+    "./parse": "./src2/parse.ts",
+    "./pattern": "./src2/pattern.ts",
+    "./serialize": "./src2/serialize.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -36,6 +46,34 @@
       "./specificity": {
         "types": "./dist/specificity.d.ts",
         "default": "./dist/specificity.js"
+      },
+      "./compile": {
+        "types": "./dist/compile.d.ts",
+        "default": "./dist/compile.js"
+      },
+      "./href": {
+        "types": "./dist/href.d.ts",
+        "default": "./dist/href.js"
+      },
+      "./join": {
+        "types": "./dist/join.d.ts",
+        "default": "./dist/join.js"
+      },
+      "./matcher": {
+        "types": "./dist/matcher.d.ts",
+        "default": "./dist/matcher.js"
+      },
+      "./parse": {
+        "types": "./dist/parse.d.ts",
+        "default": "./dist/parse.js"
+      },
+      "./pattern": {
+        "types": "./dist/pattern.d.ts",
+        "default": "./dist/pattern.js"
+      },
+      "./serialize": {
+        "types": "./dist/serialize.d.ts",
+        "default": "./dist/serialize.js"
       },
       "./package.json": "./package.json"
     }
