@@ -8,6 +8,7 @@ import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffNodes } from './diff-dom.ts'
 import { createStyleManager, type StyleManager } from '../style/index.ts'
+import { findFlushMarker, type FlushKind } from './stream-protocol.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
 
@@ -62,10 +63,6 @@ const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
 
 function stripDoctypeMarkup(html: string): string {
   return html.replace(DOCTYPE_PATTERN, '')
-}
-
-function hasRenderableHtml(html: string): boolean {
-  return stripDoctypeMarkup(html).trim() !== ''
 }
 
 function syncElementAttributes(target: Element, source: Element) {
@@ -142,6 +139,7 @@ export type Frame = {
 }
 
 type RenderOptions = {
+  flushKind?: FlushKind
   initialHydrationTracker?: InitialHydrationTracker
   signal?: AbortSignal
 }
@@ -215,9 +213,9 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (options?.signal?.aborted) return
 
     if (content instanceof ReadableStream) {
-      await renderFrameStream(content, container.doc, async (html) => {
+      await renderFrameStream(content, container.doc, async (html, flushKind) => {
         if (options?.signal?.aborted) return
-        await render(html, options)
+        await render(html, { ...options, flushKind })
       })
       return
     }
@@ -241,12 +239,24 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       contentRoot = undefined
     }
 
+    if (typeof content === 'string') {
+      let flushed = await consumeFlushBatches(content, async (html, flushKind) => {
+        await render(html, { ...options, flushKind })
+      })
+      if (flushed.applied) {
+        if (flushed.remainder !== '') {
+          await render(flushed.remainder, { ...options, flushKind: 'fragment' })
+        }
+        return
+      }
+    }
+
     let htmlContent = typeof content === 'string' ? stripDoctypeMarkup(content) : undefined
 
     let isFullDocumentReload =
       container.root instanceof Document &&
       htmlContent !== undefined &&
-      isFullDocumentHtml(htmlContent)
+      options?.flushKind === 'document'
 
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
@@ -982,13 +992,12 @@ function extractTemplatesFromBuffer(
 async function renderFrameStream(
   stream: ReadableStream<Uint8Array>,
   doc: Document,
-  applyHtml: (html: string) => Promise<void>,
+  applyHtml: (html: string, flushKind: FlushKind) => Promise<void>,
 ): Promise<void> {
   let reader = stream.getReader()
   let decoder = new TextDecoder()
   let buffer = ''
   let html = ''
-  let appliedLength = 0
   let appliedOnce = false
 
   try {
@@ -1002,19 +1011,9 @@ async function renderFrameStream(
 
       if (parsed.html !== '') {
         html += parsed.html
-        // A doctype or whitespace prelude can arrive in its own chunk. Wait
-        // until there is actual frame content before applying the stream.
-        if (!hasRenderableHtml(html)) {
-          continue
-        }
-
-        let htmlMarkers = collectHtmlMarkerSummary(html)
-        if (!hasBalancedMarkerSummary(htmlMarkers)) {
-          continue
-        }
-        await applyHtml(html)
-        appliedLength = html.length
-        appliedOnce = true
+        let flushed = await consumeFlushBatches(html, applyHtml)
+        appliedOnce = flushed.applied || appliedOnce
+        html = flushed.remainder
       }
     }
 
@@ -1027,21 +1026,38 @@ async function renderFrameStream(
       buffer = ''
     }
 
-    let hasHtmlToApply = hasRenderableHtml(html)
-
-    if (hasHtmlToApply && html.length > appliedLength) {
-      await applyHtml(html)
+    if (html !== '') {
+      await applyHtml(html, 'fragment')
       appliedOnce = true
     }
 
     // A frame stream can legitimately resolve to empty content. Ensure the
     // existing frame region is cleared instead of treated as a no-op.
-    if (!hasHtmlToApply && !appliedOnce) {
-      await applyHtml('')
+    if (html === '' && !appliedOnce) {
+      await applyHtml('', 'fragment')
     }
   } finally {
     reader.releaseLock()
   }
+}
+
+async function consumeFlushBatches(
+  html: string,
+  applyHtml: (html: string, flushKind: FlushKind) => Promise<void>,
+): Promise<{ applied: boolean; remainder: string }> {
+  let applied = false
+  let cursor = 0
+  let marker = findFlushMarker(html, cursor)
+
+  while (marker) {
+    let batch = html.slice(cursor, marker.index)
+    await applyHtml(batch, marker.kind)
+    applied = true
+    cursor = marker.endIndex
+    marker = findFlushMarker(html, cursor)
+  }
+
+  return { applied, remainder: html.slice(cursor) }
 }
 
 type FrameContainer = {
@@ -1106,11 +1122,6 @@ function isRemixNodeFrameContent(content: InternalFrameContent): content is Remi
     content instanceof DocumentFragment ||
     typeof content === 'string'
   )
-}
-
-function isFullDocumentHtml(content: string): boolean {
-  let trimmed = content.trimStart()
-  return /^<!doctype html\b/i.test(trimmed) || /^<html[\s>]/i.test(trimmed)
 }
 
 type HydrationMarker = {
@@ -1206,17 +1217,3 @@ function findEndMarker(
   throw new Error('End marker not found')
 }
 
-function collectHtmlMarkerSummary(html: string): Record<string, number> {
-  return {
-    frameStarts: html.match(/<!--\s*rmx:f:/g)?.length ?? 0,
-    frameEnds: html.match(/<!--\s*\/rmx:f\s*-->/g)?.length ?? 0,
-    hydrationStarts: html.match(/<!--\s*rmx:h:/g)?.length ?? 0,
-    hydrationEnds: html.match(/<!--\s*\/rmx:h\s*-->/g)?.length ?? 0,
-  }
-}
-
-function hasBalancedMarkerSummary(summary: Record<string, number>): boolean {
-  return (
-    summary.frameStarts === summary.frameEnds && summary.hydrationStarts === summary.hydrationEnds
-  )
-}

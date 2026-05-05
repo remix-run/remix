@@ -11,6 +11,7 @@ import { Frame } from '../runtime/component.ts'
 import { invariant } from '../runtime/invariant.ts'
 
 const rmxDataScriptSelector = 'script[type="application/json"]#rmx-data'
+const flushMarkerPattern = /<!--\s*rmx:flush\s+(?:document|fragment)\s*-->/g
 
 describe('stream', () => {
   function getLatestRmxDataScript(root: ParentNode): HTMLScriptElement {
@@ -50,6 +51,24 @@ describe('stream', () => {
       let stream = renderToStream(<div>Hello, world!</div>)
       let html = await drain(stream)
       expect(html).toBe('<div>Hello, world!</div>')
+    })
+
+    it('marks stream batches as documents or fragments', async () => {
+      let fragmentChunks = readChunks(renderToStream(<div>Hello, world!</div>))
+      let fragment = await fragmentChunks.next()
+      invariant(!fragment.done)
+      expect(fragment.value).toContain('<!-- rmx:flush fragment -->')
+
+      let documentChunks = readChunks(
+        renderToStream(
+          <html>
+            <body>Hello, world!</body>
+          </html>,
+        ),
+      )
+      let document = await documentChunks.next()
+      invariant(!document.done)
+      expect(document.value).toContain('<!-- rmx:flush document -->')
     })
 
     it('renders string nodes', async () => {
@@ -1880,6 +1899,7 @@ describe('stream', () => {
       // Both outer and inner should be present in first chunk
       expect(content).toContain('Outer')
       expect(content).toContain('<div>Inner</div>')
+      expect(content.match(flushMarkerPattern)?.length).toBe(1)
 
       // Both frames resolved in aggregated data
       let shelf = document.createElement('template')
