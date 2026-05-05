@@ -77,13 +77,7 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
   if (isCommentNode(current) && isCommentNode(next)) {
     let newData = next.data
     if (current.data !== newData) {
-      if (isFrameStartMarker(current) && isFrameStartMarker(next)) {
-        let subFrame = context.frameInstances.get(current)
-        if (subFrame) {
-          subFrame.dispose()
-          context.frameInstances.delete(current)
-        }
-      }
+      if (isFrameStartMarker(current)) disposeFrameStartMarker(current, context)
       current.data = newData
     }
     return
@@ -427,16 +421,20 @@ function disposeRemovedSubFrames(node: Node, context: FrameContext): void {
     if (!next) continue
 
     if (isFrameStartMarker(next)) {
-      let subFrame = context.frameInstances.get(next)
-      if (subFrame) {
-        subFrame.dispose()
-        context.frameInstances.delete(next)
-      }
+      disposeFrameStartMarker(next, context)
     }
 
     for (let child of Array.from(next.childNodes)) {
       stack.push(child)
     }
+  }
+}
+
+function disposeFrameStartMarker(marker: Comment, context: FrameContext): void {
+  let subFrame = context.frameInstances.get(marker)
+  if (subFrame) {
+    subFrame.dispose()
+    context.frameInstances.delete(marker)
   }
 }
 

@@ -409,6 +409,80 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('disposes named frames replaced by client entries during full-document reloads', async () => {
+    let readNamedFrame: (() => unknown) | undefined
+
+    let Probe = clientEntry('/js/probe.js#Probe', function Probe(handle: Handle) {
+      readNamedFrame = () => handle.frames.get('replace-me')
+      return () => <button id="probe">Probe</button>
+    })
+
+    let Replacement = clientEntry('/js/replacement.js#Replacement', function Replacement() {
+      return () => <p id="replacement">Replacement</p>
+    })
+
+    async function renderDocument(includeFrame: boolean) {
+      return await drain(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>
+                <Probe />
+                {includeFrame ? (
+                  <Frame
+                    name="replace-me"
+                    src="/frame"
+                    fallback={<span id="frame-fallback">Loading frame...</span>}
+                  />
+                ) : (
+                  <Replacement />
+                )}
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/frame') return '<p id="frame-content">Frame content</p>'
+              throw new Error(`Unexpected frame src: ${src}`)
+            },
+          },
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(await renderDocument(true), 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/probe.js' && exportName === 'Probe') return Probe
+        if (moduleUrl === '/js/replacement.js' && exportName === 'Replacement') return Replacement
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/without-frame') return await renderDocument(false)
+        if (src === '/frame') return '<p id="frame-content">Frame content</p>'
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+
+    invariant(readNamedFrame)
+    expect(readNamedFrame()).toBeDefined()
+
+    let topFrame = getTopFrame()
+    topFrame.src = '/without-frame'
+    await topFrame.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('replacement')?.textContent).toBe('Replacement')
+    expect(readNamedFrame()).toBeUndefined()
+
+    app.dispose()
+  })
+
   it('hydrates ready modules before slower modules while ready() stays pending', async () => {
     let Fast = clientEntry('/js/fast.js#Fast', function Fast(handle: Handle) {
       let clicked = false
