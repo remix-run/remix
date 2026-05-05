@@ -3,13 +3,14 @@ import { theme } from '@remix-run/ui/theme'
 import type { DocFile } from './markdown.ts'
 import { routes } from './routes.ts'
 
-export type ApiTypeKind = 'type' | 'interface' | 'class' | 'function' | 'variable'
+export type ApiTypeKind = 'type' | 'interface' | 'class' | 'function' | 'mixin' | 'variable'
 
 const TYPE_LABEL: Record<ApiTypeKind, string> = {
   type: 'Types',
   interface: 'Interfaces',
   class: 'Classes',
   function: 'Functions',
+  mixin: 'Mixins',
   variable: 'Variables',
 }
 
@@ -18,10 +19,18 @@ const TYPE_EYEBROW: Record<ApiTypeKind, string> = {
   interface: 'Interface',
   class: 'Class',
   function: 'Function',
+  mixin: 'Mixin',
   variable: 'Variable',
 }
 
-const TYPE_ORDER: ApiTypeKind[] = ['type', 'interface', 'class', 'function', 'variable']
+const TYPE_ORDER: ApiTypeKind[] = [
+  'type',
+  'interface',
+  'class',
+  'function',
+  'mixin',
+  'variable',
+]
 
 export const HOME_PAGE_ID = '__home__'
 export const NOT_FOUND_PAGE_ID = '__not-found__'

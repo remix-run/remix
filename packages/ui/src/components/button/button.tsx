@@ -97,29 +97,39 @@ const buttonDefaultsCss = buttonDefaultsMixin()
  * Base button styling with the default `type="button"` behavior for `<button>`
  * hosts. Compose with a tone style (e.g. {@link primaryStyle}) when applying
  * button styling without using the {@link Button} component.
+ *
+ * @category mixin
  */
 export const baseStyle = [buttonDefaultsCss, buttonBaseStyleCss] as const
 
 /**
  * Icon slot sizing and `aria-hidden` defaults for decorative icons rendered
  * inside a button.
+ *
+ * @category mixin
  */
 export const iconStyle = [buttonIconAttrsCss, buttonIconCss] as const
 
 /**
  * Inline label slot with the standard button label spacing.
+ *
+ * @category mixin
  */
 export const labelStyle = buttonLabelCss
 
 /**
  * Primary visual treatment for buttons. Combine with {@link baseStyle} when
  * styling a non-`Button` host element.
+ *
+ * @category mixin
  */
 export const primaryStyle = createButtonCss(theme.colors.action.primary)
 
 /**
  * Secondary visual treatment for buttons. Combine with {@link baseStyle} when
  * styling a non-`Button` host element.
+ *
+ * @category mixin
  */
 export const secondaryStyle = createButtonCss(theme.colors.action.secondary)
 
@@ -127,12 +137,16 @@ export const secondaryStyle = createButtonCss(theme.colors.action.secondary)
  * Ghost visual treatment for buttons — transparent background with a hover
  * surface. Combine with {@link baseStyle} when styling a non-`Button` host
  * element.
+ *
+ * @category mixin
  */
 export const ghostStyle = ghostButtonToneCss
 
 /**
  * Danger visual treatment for destructive actions. Combine with
  * {@link baseStyle} when styling a non-`Button` host element.
+ *
+ * @category mixin
  */
 export const dangerStyle = createButtonCss(theme.colors.action.danger)
 

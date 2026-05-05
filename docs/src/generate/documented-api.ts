@@ -86,11 +86,18 @@ export type DocumentedType = BaseDocumentedAPI & {
   signature: string
 }
 
+// Optional sidebar bucket override. When set, the variable lives at
+// `<package>/mixin/<Name>.md` instead of `<package>/variable/<Name>.md` and
+// is grouped under "Mixins" in the website sidebar. Authors opt in via
+// `@category mixin` in the variable's JSDoc.
+const VARIABLE_CATEGORIES = ['mixin'] as const
+
 // Documented variable API
 export type DocumentedVariable = BaseDocumentedAPI & {
   type: 'variable'
   signature: string
   example: string | undefined
+  category: (typeof VARIABLE_CATEGORIES)[number] | undefined
 }
 
 // Documented variable API for variables whose type resolves to a callable
@@ -401,10 +408,11 @@ function getDocumentedVariable(
   let keyword = node.flags.isConst ? 'const' : 'let'
   let typeStr = node.type ? node.type.toString() : 'unknown'
   let signature = `${keyword} ${name}: ${typeStr}`
+  let category = getVariableCategory(node.comment)
 
   return {
     type: 'variable',
-    path: getApiFilePath(fullName, 'variable'),
+    path: getApiFilePath(fullName, category ?? 'variable'),
     source: node.sources?.[0]?.url,
     name,
     aliases: node.comment ? getApiAliases(node.comment) : undefined,
@@ -413,7 +421,26 @@ function getDocumentedVariable(
       ? processApiComment(node.comment.getTag('@example')!.content)
       : undefined,
     signature,
+    category,
   }
+}
+
+// Read a `@category` tag and return a recognized sidebar bucket override.
+// Currently `mixin` is the only supported category; unknown values are
+// ignored so the variable stays in the default "Variables" bucket.
+function getVariableCategory(
+  comment: typedoc.Comment | undefined,
+): DocumentedVariable['category'] | undefined {
+  let tag = comment?.getTag('@category')
+  if (!tag) return undefined
+  let value = tag.content
+    .map((p) => ('text' in p ? p.text : ''))
+    .join('')
+    .trim()
+    .toLowerCase()
+  return VARIABLE_CATEGORIES.includes(value as (typeof VARIABLE_CATEGORIES)[number])
+    ? (value as (typeof VARIABLE_CATEGORIES)[number])
+    : undefined
 }
 
 function getDocumentedVariableFunction(
@@ -502,7 +529,10 @@ function getApiAliases(typedocComment: typedoc.Comment): string[] | undefined {
   })
 }
 
-function getApiFilePath(fullName: string, type: DocumentedAPI['type']): string {
+function getApiFilePath(
+  fullName: string,
+  type: DocumentedAPI['type'] | (typeof VARIABLE_CATEGORIES)[number],
+): string {
   let nameParts = fullName.split('.')
   let name = nameParts.pop()
   return [...nameParts.map((s) => s.replace(/^@remix-run\//g, '')), type, `${name}.md`].join('/')
@@ -712,13 +742,13 @@ function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
           }
         } else if (target instanceof typedoc.Reflection) {
           // prettier-ignore
-          let type: DocumentedAPI['type'] | null =
+          let type: DocumentedAPI['type'] | (typeof VARIABLE_CATEGORIES)[number] | null =
             target.kind === typedoc.ReflectionKind.Function ? 'function' :
             target.kind === typedoc.ReflectionKind.Class ? 'class' :
             target.kind === typedoc.ReflectionKind.TypeAlias ? 'type' :
             target.kind === typedoc.ReflectionKind.TypeLiteral ? 'type' :
             target.kind === typedoc.ReflectionKind.Interface ? 'interface' :
-            target.kind === typedoc.ReflectionKind.Variable ? 'variable' : null;
+            target.kind === typedoc.ReflectionKind.Variable ? getVariableCategory(target.comment) || "variable" : null;
 
           if (!type) {
             throw new Error(`Unsupported @link target kind: ${typedoc.ReflectionKind[target.kind]}`)
