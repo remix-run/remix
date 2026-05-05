@@ -144,28 +144,7 @@ type NormalizedAction = {
   middleware: AnyMiddleware[] | undefined
 }
 
-/**
- * The valid types for the first argument to `router.map()`.
- */
-export type MapTarget =
-  | string
-  | RoutePattern<string>
-  | Route<RequestMethod | 'ANY', string>
-  | RouteMap
-
-/**
- * Infer the correct handler type (Action or Controller) based on the map target.
- */
-// prettier-ignore
-export type MapHandler<
-  target extends MapTarget,
-  context extends AnyContext = RequestContext,
-> =
-  target extends string ? Action<RequestMethod | 'ANY', target, context> :
-  target extends RoutePattern<infer pattern extends string> ? Action<RequestMethod | 'ANY', pattern, context> :
-  target extends Route<RequestMethod | 'ANY', infer pattern extends string> ? Action<RequestMethod | 'ANY', pattern, context> :
-  target extends RouteMap ? Controller<target, context> :
-  never
+type MapTarget = SingleRouteTarget | RouteMap
 
 /**
  * Options for creating a router.
