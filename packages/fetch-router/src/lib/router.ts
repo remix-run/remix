@@ -36,6 +36,8 @@ type MapRouteTarget<method extends RequestMethod | 'ANY', pattern extends string
   | RoutePattern<pattern>
   | Route<method, pattern>
 
+type SingleRouteTarget = string | RoutePattern<string> | Route<RequestMethod | 'ANY', string>
+
 type RouteMethod<context extends AnyContext> = {
   <method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
@@ -303,9 +305,11 @@ function cloneRequest(input: Request): Request {
   return input.clone() as Request
 }
 
-function getRoutePattern(
-  target: string | RoutePattern<string> | Route<any, string>,
-): RoutePattern<string> {
+function isSingleRouteTarget(target: MapTarget): target is SingleRouteTarget {
+  return typeof target === 'string' || target instanceof RoutePattern || target instanceof Route
+}
+
+function getRoutePattern(target: SingleRouteTarget): RoutePattern<string> {
   if (target instanceof Route) {
     return target.pattern
   }
@@ -313,7 +317,7 @@ function getRoutePattern(
   return typeof target === 'string' ? new RoutePattern(target) : target
 }
 
-function getMappedRouteMethod(target: MapRouteTarget<any, any>): RequestMethod | 'ANY' {
+function getMappedRouteMethod(target: SingleRouteTarget): RequestMethod | 'ANY' {
   return target instanceof Route ? target.method : 'ANY'
 }
 
@@ -370,9 +374,9 @@ export function createRouter<
     return raceRequestAbort(Promise.resolve(runtime.defaultHandler(context)), context.request)
   }
 
-  function registerRoute<method extends RequestMethod | 'ANY', pattern extends string>(
-    method: method,
-    route: RouteTarget<method, pattern>,
+  function registerRoute(
+    method: RequestMethod | 'ANY',
+    route: SingleRouteTarget,
     normalizedAction: NormalizedAction,
   ): void {
     let pattern = getRoutePattern(route)
@@ -394,13 +398,13 @@ export function createRouter<
     registerRoute(method, route, normalizeAction(handler))
   }
 
+  function mapSingleRoute(target: SingleRouteTarget, handler: unknown): void {
+    registerRoute(getMappedRouteMethod(target), target, normalizeAction(handler))
+  }
+
   function mapRoutes(target: MapTarget, handler: unknown): void {
-    if (typeof target === 'string' || target instanceof RoutePattern || target instanceof Route) {
-      addRoute(
-        getMappedRouteMethod(target as MapRouteTarget<any, any>) as any,
-        target as any,
-        handler as Action<any, any, ApplyMiddlewareTuple<context, middleware>>,
-      )
+    if (isSingleRouteTarget(target)) {
+      mapSingleRoute(target, handler)
       return
     }
 
