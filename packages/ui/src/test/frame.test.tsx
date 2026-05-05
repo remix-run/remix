@@ -246,6 +246,243 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('preserves hydrated client entries across full-document reloads', async () => {
+    let setupCount = 0
+    let removeCount = 0
+
+    function createRootEntryRender(handle: Handle<{ label: string }>) {
+      let count = 0
+      return () => (
+        <button
+          id="root-entry"
+          mix={[
+            on('click', () => {
+              count++
+              handle.update()
+            }),
+          ]}
+        >
+          {handle.props.label}: {count}
+        </button>
+      )
+    }
+
+    let ServerRootEntry = clientEntry(
+      '/js/root-entry.js#RootEntry',
+      function RootEntry(handle: Handle<{ label: string }>) {
+        return createRootEntryRender(handle)
+      },
+    )
+
+    let ClientRootEntry = clientEntry(
+      '/js/root-entry.js#RootEntry',
+      function RootEntry(handle: Handle<{ label: string }>) {
+        setupCount++
+        handle.signal.addEventListener('abort', () => {
+          removeCount++
+        })
+
+        return createRootEntryRender(handle)
+      },
+    )
+
+    async function renderDocument(label: string) {
+      return await drain(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <div>
+                <ServerRootEntry label={label} />
+              </div>
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await renderDocument('Initial'),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/root-entry.js' && exportName === 'RootEntry') return ClientRootEntry
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/root') return await renderDocument('Reloaded')
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+
+    let button = document.getElementById('root-entry') as HTMLButtonElement | null
+    invariant(button)
+    expect(button.textContent).toBe('Initial: 0')
+    expect(setupCount).toBe(1)
+
+    button.click()
+    app.flush()
+    expect(button.textContent).toBe('Initial: 1')
+
+    let topFrame = getTopFrame()
+    topFrame.src = '/root'
+    await topFrame.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('root-entry')).toBe(button)
+    expect(button.textContent).toBe('Reloaded: 1')
+    expect(setupCount).toBe(1)
+    expect(removeCount).toBe(0)
+
+    app.dispose()
+  })
+
+  it('disposes hydrated client entries removed by full-document reloads', async () => {
+    let removeCount = 0
+
+    let ServerRemovedEntry = clientEntry(
+      '/js/removed-entry.js#RemovedEntry',
+      function RemovedEntry() {
+        return () => <button id="removed-entry">Removed entry</button>
+      },
+    )
+
+    let ClientRemovedEntry = clientEntry(
+      '/js/removed-entry.js#RemovedEntry',
+      function RemovedEntry(handle: Handle) {
+        handle.signal.addEventListener('abort', () => {
+          removeCount++
+        })
+
+        return () => <button id="removed-entry">Removed entry</button>
+      },
+    )
+
+    async function renderDocument(includeEntry: boolean) {
+      return await drain(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>{includeEntry ? <ServerRemovedEntry /> : <p id="replacement">Gone</p>}</main>
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(await renderDocument(true), 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/removed-entry.js' && exportName === 'RemovedEntry') {
+          return ClientRemovedEntry
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/without-entry') return await renderDocument(false)
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+
+    expect(document.getElementById('removed-entry')).toBeInstanceOf(HTMLButtonElement)
+    expect(removeCount).toBe(0)
+
+    let topFrame = getTopFrame()
+    topFrame.src = '/without-entry'
+    await topFrame.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('removed-entry')).toBeNull()
+    expect(document.getElementById('replacement')?.textContent).toBe('Gone')
+    expect(removeCount).toBe(1)
+
+    app.dispose()
+  })
+
+  it('disposes named frames replaced by client entries during full-document reloads', async () => {
+    let readNamedFrame: (() => unknown) | undefined
+
+    let Probe = clientEntry('/js/probe.js#Probe', function Probe(handle: Handle) {
+      readNamedFrame = () => handle.frames.get('replace-me')
+      return () => <button id="probe">Probe</button>
+    })
+
+    let Replacement = clientEntry('/js/replacement.js#Replacement', function Replacement() {
+      return () => <p id="replacement">Replacement</p>
+    })
+
+    async function renderDocument(includeFrame: boolean) {
+      return await drain(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>
+                <Probe />
+                {includeFrame ? (
+                  <Frame
+                    name="replace-me"
+                    src="/frame"
+                    fallback={<span id="frame-fallback">Loading frame...</span>}
+                  />
+                ) : (
+                  <Replacement />
+                )}
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/frame') return '<p id="frame-content">Frame content</p>'
+              throw new Error(`Unexpected frame src: ${src}`)
+            },
+          },
+        ),
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(await renderDocument(true), 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/probe.js' && exportName === 'Probe') return Probe
+        if (moduleUrl === '/js/replacement.js' && exportName === 'Replacement') return Replacement
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/without-frame') return await renderDocument(false)
+        if (src === '/frame') return '<p id="frame-content">Frame content</p>'
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+
+    invariant(readNamedFrame)
+    expect(readNamedFrame()).toBeDefined()
+
+    let topFrame = getTopFrame()
+    topFrame.src = '/without-frame'
+    await topFrame.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('replacement')?.textContent).toBe('Replacement')
+    expect(readNamedFrame()).toBeUndefined()
+
+    app.dispose()
+  })
+
   it('hydrates ready modules before slower modules while ready() stays pending', async () => {
     let Fast = clientEntry('/js/fast.js#Fast', function Fast(handle: Handle) {
       let clicked = false
@@ -2595,6 +2832,115 @@ describe('run', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('nested')?.textContent).toBe('Nested loaded')
+  })
+
+  it('streams nested frame templates after a client-triggered top frame reload', async () => {
+    let reloadTop: undefined | (() => Promise<AbortSignal>)
+
+    let ReloadTopButton = clientEntry(
+      '/assets/reload-top-stream.js#ReloadTopStream',
+      function ReloadTopStream(handle: Handle) {
+        reloadTop = () => handle.frames.top.reload()
+        return () => (
+          <button id="reload-top-stream" type="button">
+            Reload top
+          </button>
+        )
+      },
+    )
+
+    async function renderControls(): Promise<string> {
+      return await drain(
+        renderToStream(
+          <section>
+            <p id="controls">Initial controls</p>
+            <ReloadTopButton />
+          </section>,
+        ),
+      )
+    }
+
+    let serverHtml = await drain(
+      renderToStream(
+        <html>
+          <body>
+            <main>
+              <p id="top-state">Initial top</p>
+              <Frame src="/controls" fallback={<span id="controls">Loading controls…</span>} />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/controls') return renderControls()
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      ),
+    )
+    let initialDocument = new DOMParser().parseFromString(serverHtml, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [nestedResolvePromise, resolveNested] = withResolvers<string>()
+    let streamedReload = renderToStream(
+      <html>
+        <body>
+          <main>
+            <p id="top-state">Reloaded top</p>
+            <Frame src="/nested" fallback={<span id="nested">Loading nested…</span>} />
+          </main>
+        </body>
+      </html>,
+      {
+        resolveFrame(src: string) {
+          if (src === '/nested') return nestedResolvePromise
+          throw new Error(`Unexpected nested src: ${src}`)
+        },
+      },
+    )
+
+    let streamedChunks = readChunks(streamedReload)
+    let firstChunk = await streamedChunks.next()
+    invariant(!firstChunk.done)
+    resolveNested('<span id="nested">Nested loaded</span>')
+    let secondChunk = await streamedChunks.next()
+    invariant(!secondChunk.done)
+    let [secondChunkPromise, releaseSecondChunk] = withResolvers<string>()
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/reload-top-stream.js' &&
+          exportName === 'ReloadTopStream'
+        ) {
+          return ReloadTopButton
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks(['<!DOCTYPE html>', firstChunk.value, secondChunkPromise])
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    invariant(reloadTop)
+    let reloadPromise = reloadTop()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('top-state')?.textContent).toBe('Reloaded top')
+    expect(document.getElementById('nested')?.textContent).toBe('Loading nested…')
+
+    releaseSecondChunk(secondChunk.value)
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('nested')?.textContent).toBe('Nested loaded')
+    app.dispose()
   })
 
   it('cancels stale client frame streams when src changes', async () => {

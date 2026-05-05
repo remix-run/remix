@@ -52,5 +52,9 @@ async function resolveFrameViaRouter(router: Router, request: Request, src: stri
     return `<pre>Frame error: ${response.status} ${response.statusText}</pre>`
   }
 
+  if (response.body) {
+    return response.body
+  }
+
   return response.text()
 }

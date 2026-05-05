@@ -26,6 +26,13 @@ export function HomePage() {
         </a>
         {' · '}
         <a
+          href={routes.rootReloadClientEntries.href()}
+          style={{ color: '#b9c6ff', textDecoration: 'underline' }}
+        >
+          Root reload client entries
+        </a>
+        {' · '}
+        <a
           href={routes.stateSearch.href()}
           style={{ color: '#b9c6ff', textDecoration: 'underline' }}
         >

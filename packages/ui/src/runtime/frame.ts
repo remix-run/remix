@@ -64,6 +64,10 @@ function stripDoctypeMarkup(html: string): string {
   return html.replace(DOCTYPE_PATTERN, '')
 }
 
+function hasRenderableHtml(html: string): boolean {
+  return stripDoctypeMarkup(html).trim() !== ''
+}
+
 function syncElementAttributes(target: Element, source: Element) {
   for (let attribute of Array.from(target.attributes)) {
     if (!source.hasAttribute(attribute.name)) {
@@ -245,12 +249,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       isFullDocumentHtml(htmlContent)
 
     if (isFullDocumentReload && htmlContent !== undefined) {
-      // Full-document reload should tear down existing hydrated roots and subframes
-      // before diffing fresh HTML, otherwise stale component instances can survive
-      // on detached DOM nodes.
-      let previousBodyNodes = Array.from(container.doc.body.childNodes)
-      removeVirtualRoots(previousBodyNodes)
-      disposeSubFrames(previousBodyNodes, context)
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
       mergeRmxDataFromDocument(context.data, parsed)
       context.styleManager.reset()
@@ -259,17 +257,15 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       )
 
       syncElementAttributes(container.doc.documentElement, parsed.documentElement)
-      syncElementAttributes(container.doc.head, parsed.head)
-      syncElementAttributes(container.doc.body, parsed.body)
 
-      diffNodes(Array.from(container.doc.head.childNodes), Array.from(parsed.head.childNodes), {
+      diffNodes([container.doc.head], [parsed.head], {
         ...context,
-        regionParent: container.doc.head,
+        regionParent: container.doc.documentElement,
         regionTailRef: null,
       })
-      diffNodes(Array.from(container.doc.body.childNodes), Array.from(parsed.body.childNodes), {
+      diffNodes([container.doc.body], [parsed.body], {
         ...context,
-        regionParent: container.doc.body,
+        regionParent: container.doc.documentElement,
         regionTailRef: null,
       })
 
@@ -1006,6 +1002,12 @@ async function renderFrameStream(
 
       if (parsed.html !== '') {
         html += parsed.html
+        // A doctype or whitespace prelude can arrive in its own chunk. Wait
+        // until there is actual frame content before applying the stream.
+        if (!hasRenderableHtml(html)) {
+          continue
+        }
+
         let htmlMarkers = collectHtmlMarkerSummary(html)
         if (!hasBalancedMarkerSummary(htmlMarkers)) {
           continue
@@ -1025,14 +1027,16 @@ async function renderFrameStream(
       buffer = ''
     }
 
-    if (html !== '' && html.length > appliedLength) {
+    let hasHtmlToApply = hasRenderableHtml(html)
+
+    if (hasHtmlToApply && html.length > appliedLength) {
       await applyHtml(html)
       appliedOnce = true
     }
 
     // A frame stream can legitimately resolve to empty content. Ensure the
     // existing frame region is cleared instead of treated as a no-op.
-    if (html === '' && !appliedOnce) {
+    if (!hasHtmlToApply && !appliedOnce) {
       await applyHtml('')
     }
   } finally {

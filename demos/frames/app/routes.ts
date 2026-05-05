@@ -4,6 +4,7 @@ export const routes = route({
   home: get('/'),
   time: get('/time'),
   reloadScope: get('/reload-scope'),
+  rootReloadClientEntries: get('/root-reload-client-entries'),
   stateSearch: get('/state-search'),
   clientMounted: get('/client-mounted'),
   frames: route('frames', {

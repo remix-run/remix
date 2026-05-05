@@ -1,6 +1,12 @@
 import { invariant } from './invariant.ts'
 import type { FrameContext } from './frame.ts'
 
+type HydratedVirtualRootStartMarker = Comment & {
+  $rmx: {
+    dispose(): void
+  }
+}
+
 export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
   let parent = curr[0]?.parentNode ?? context.regionParent ?? null
   invariant(parent, 'Parent node not found')
@@ -23,8 +29,7 @@ export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
         parent.appendChild(n)
       }
     } else if (c && !n) {
-      disposeRemovedSubFrames(c, context)
-      parent.removeChild(c)
+      removeNode(c, parent, context)
     } else if (c && n) {
       // Skip hydrated client-entry boundary ranges; hydration pass re-renders
       // roots with new props from incoming payload
@@ -71,7 +76,10 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
   // Comment -> Comment
   if (isCommentNode(current) && isCommentNode(next)) {
     let newData = next.data
-    if (current.data !== newData) current.data = newData
+    if (current.data !== newData) {
+      if (isFrameStartMarker(current)) disposeFrameStartMarker(current, context)
+      current.data = newData
+    }
     return
   }
 
@@ -80,7 +88,10 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
     // Different tags: replace
     if (current.tagName !== next.tagName) {
       let parent = current.parentNode
-      if (parent) parent.replaceChild(next, current)
+      if (parent) {
+        parent.insertBefore(next, current)
+        removeNode(current, parent, context)
+      }
       return
     }
 
@@ -93,7 +104,10 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
 
   // Type mismatch: replace
   let parent = current.parentNode
-  if (parent) parent.replaceChild(next, current)
+  if (parent) {
+    parent.insertBefore(next, current)
+    removeNode(current, parent, context)
+  }
 }
 
 function diffElementAttributes(current: Element, next: Element): void {
@@ -315,8 +329,7 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
   for (let i = 0; i < currentChildren.length; i++) {
     if (!used[i]) {
       let nodeToRemove = currentChildren[i]
-      disposeRemovedSubFrames(nodeToRemove, context)
-      current.removeChild(currentChildren[i])
+      removeNode(nodeToRemove, current, context)
     }
   }
 }
@@ -375,18 +388,24 @@ function isFrameStartMarker(node: Node): node is Comment {
   return node instanceof Comment && node.data.trim().startsWith('rmx:f:')
 }
 
-function disposeRemovedSubFrames(node: Node, context: FrameContext): void {
+function removeNode(node: Node, parent: ParentNode, context: FrameContext): void {
+  disposeRemovedVirtualRoots(node)
+  disposeRemovedSubFrames(node, context)
+
+  if (node.parentNode === parent) {
+    parent.removeChild(node)
+  }
+}
+
+function disposeRemovedVirtualRoots(node: Node): void {
   let stack: Node[] = [node]
   while (stack.length > 0) {
     let next = stack.pop()
     if (!next) continue
 
-    if (isFrameStartMarker(next)) {
-      let subFrame = context.frameInstances.get(next)
-      if (subFrame) {
-        subFrame.dispose()
-        context.frameInstances.delete(next)
-      }
+    if (isHydratedVirtualRootStartMarker(next)) {
+      next.$rmx.dispose()
+      continue
     }
 
     for (let child of Array.from(next.childNodes)) {
@@ -395,8 +414,36 @@ function disposeRemovedSubFrames(node: Node, context: FrameContext): void {
   }
 }
 
+function disposeRemovedSubFrames(node: Node, context: FrameContext): void {
+  let stack: Node[] = [node]
+  while (stack.length > 0) {
+    let next = stack.pop()
+    if (!next) continue
+
+    if (isFrameStartMarker(next)) {
+      disposeFrameStartMarker(next, context)
+    }
+
+    for (let child of Array.from(next.childNodes)) {
+      stack.push(child)
+    }
+  }
+}
+
+function disposeFrameStartMarker(marker: Comment, context: FrameContext): void {
+  let subFrame = context.frameInstances.get(marker)
+  if (subFrame) {
+    subFrame.dispose()
+    context.frameInstances.delete(marker)
+  }
+}
+
 function isVirtualRootStartMarker(node: Node): node is Comment {
   return isCommentNode(node) && node.data.trim().startsWith('rmx:h:')
+}
+
+function isHydratedVirtualRootStartMarker(node: Node): node is HydratedVirtualRootStartMarker {
+  return isVirtualRootStartMarker(node) && '$rmx' in node
 }
 
 function isVirtualRootEndMarker(node: Node): node is Comment {
