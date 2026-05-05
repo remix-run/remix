@@ -169,9 +169,25 @@ interface AsyncMatchers {
   toThrow(expected?: unknown): Promise<void>
 }
 
+/**
+ * Object returned by {@link expect}. Exposes the synchronous matcher set
+ * directly on the object, plus the negation and async-resolution gateways
+ * needed for full jest/vitest-style assertions.
+ */
 export interface Expectation extends Matchers {
+  /**
+   * Negates the next matcher — `expect(x).not.toBe(1)` passes when `x !== 1`.
+   */
   not: Matchers
+  /**
+   * Awaits the received promise expecting it to reject, then runs the next
+   * matcher against the rejection value. Use with `await`.
+   */
   rejects: AsyncMatchers
+  /**
+   * Awaits the received promise expecting it to resolve, then runs the next
+   * matcher against the resolved value. Use with `await`.
+   */
   resolves: AsyncMatchers
 }
 

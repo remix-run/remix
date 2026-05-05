@@ -54,6 +54,9 @@ interface AssetServerScriptOptions {
 
 const scriptExtensionSet = new Set<string>(supportedScriptExtensions)
 
+/**
+ * Options used to construct an {@link AssetServer} via {@link createAssetServer}.
+ */
 export interface AssetServerOptions {
   /** Public mount path for this asset server, e.g. `'/assets'`. */
   basePath: string
@@ -116,6 +119,10 @@ export interface AssetServerOptions {
   onError?: (error: unknown) => void | Response | Promise<void | Response>
 }
 
+/**
+ * Serves compiled scripts and styles for asset requests routed to it.
+ * Construct with {@link createAssetServer}.
+ */
 export interface AssetServer {
   /**
    * Serves a script or style request. Returns `Response | null` — null means the request
