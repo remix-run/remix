@@ -111,6 +111,7 @@ async function runCliPrepack() {
 // Update `package.json` files to point to this branch on github
 async function updatePackageDependencies() {
   let packagesDir = path.join(process.cwd(), 'packages')
+  let catalogVersions = await readDefaultCatalogVersions()
 
   let packageDirNames = await fsp.readdir(packagesDir, { withFileTypes: true })
 
@@ -132,6 +133,30 @@ async function updatePackageDependencies() {
       }
     }
 
+    for (let dependencyMap of [
+      pkg.dependencies,
+      pkg.devDependencies,
+      pkg.optionalDependencies,
+      pkg.peerDependencies,
+    ]) {
+      if (dependencyMap == null) {
+        continue
+      }
+
+      for (let [name, version] of Object.entries(dependencyMap)) {
+        if (version !== 'catalog:') {
+          continue
+        }
+
+        let catalogVersion = catalogVersions.get(name)
+        if (catalogVersion == null) {
+          throw new Error(`No default catalog version found for ${name}`)
+        }
+
+        dependencyMap[name] = catalogVersion
+      }
+    }
+
     // Apply `publishConfig` overrides
     if (pkg.publishConfig) {
       Object.assign(pkg, pkg.publishConfig)
@@ -143,4 +168,35 @@ async function updatePackageDependencies() {
   }
 
   console.log('Done')
+}
+
+async function readDefaultCatalogVersions(): Promise<Map<string, string>> {
+  let pnpmWorkspaceYamlPath = path.join(process.cwd(), 'pnpm-workspace.yaml')
+  let content = await fsp.readFile(pnpmWorkspaceYamlPath, 'utf-8')
+  let catalogVersions = new Map<string, string>()
+  let inCatalog = false
+
+  for (let line of content.split('\n')) {
+    if (line.trim() === '' || line.trimStart().startsWith('#')) {
+      continue
+    }
+
+    if (!line.startsWith(' ')) {
+      inCatalog = line.trim() === 'catalog:'
+      continue
+    }
+
+    if (!inCatalog) {
+      continue
+    }
+
+    let match = /^ {2}(['"]?)(?<name>.+?)\1: (?<version>.+)$/.exec(line)
+    if (match?.groups == null) {
+      continue
+    }
+
+    catalogVersions.set(match.groups.name, match.groups.version)
+  }
+
+  return catalogVersions
 }
