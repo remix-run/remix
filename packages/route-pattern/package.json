@@ -20,14 +20,11 @@
     "src",
     "src2",
     "!src/**/*.test.ts",
-    "!src/**/*.types.bench.ts",
-    "!src2/**/*.test.ts",
-    "!src2/**/*.types.bench.ts"
+    "!src2/**/*.test.ts"
   ],
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./specificity": "./src/specificity.ts",
     "./compile": "./src2/compile.ts",
     "./href": "./src2/href.ts",
     "./join": "./src2/join.ts",
@@ -35,6 +32,7 @@
     "./parse": "./src2/parse.ts",
     "./pattern": "./src2/pattern.ts",
     "./serialize": "./src2/serialize.ts",
+    "./specificity": "./src2/specificity.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
