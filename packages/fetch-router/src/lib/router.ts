@@ -133,12 +133,6 @@ type RouteMatchData = {
  */
 export type MatchData = RouteMatchData
 
-type RouterRuntime = {
-  defaultHandler: RequestHandler<any, any>
-  matcher: Matcher<MatchData>
-  middleware: AnyMiddleware[] | undefined
-}
-
 type NormalizedAction = {
   handler: RequestHandler<any, any>
   middleware: AnyMiddleware[] | undefined
@@ -319,24 +313,18 @@ export function createRouter<
   let matcher = options?.matcher ?? createMatcher<MatchData>()
   let routerMiddleware = options?.middleware ? [...options.middleware] : undefined
 
-  async function dispatchRouter(
-    runtime: RouterRuntime,
-    context: RequestContext,
-  ): Promise<Response> {
-    let dispatch = () => dispatchMatches(runtime, context)
+  async function dispatchRouter(context: RequestContext): Promise<Response> {
+    let dispatch = () => dispatchMatches(context)
 
-    if (runtime.middleware && runtime.middleware.length > 0) {
-      return runMiddleware(runtime.middleware, context, dispatch)
+    if (routerMiddleware && routerMiddleware.length > 0) {
+      return runMiddleware(routerMiddleware, context, dispatch)
     }
 
     return dispatch()
   }
 
-  async function dispatchMatches(
-    runtime: RouterRuntime,
-    context: RequestContext,
-  ): Promise<Response> {
-    for (let match of runtime.matcher.matchAll(context.url)) {
+  async function dispatchMatches(context: RequestContext): Promise<Response> {
+    for (let match of matcher.matchAll(context.url)) {
       if (match.data.method !== context.method && match.data.method !== 'ANY') {
         continue
       }
@@ -350,7 +338,7 @@ export function createRouter<
       return raceRequestAbort(Promise.resolve(match.data.handler(context)), context.request)
     }
 
-    return raceRequestAbort(Promise.resolve(runtime.defaultHandler(context)), context.request)
+    return raceRequestAbort(Promise.resolve(defaultHandler(context)), context.request)
   }
 
   function registerRoute(
@@ -449,17 +437,11 @@ export function createRouter<
     }) as VerbMethod<method, RouterContext>
   }
 
-  let runtime: RouterRuntime = {
-    defaultHandler,
-    matcher,
-    middleware: routerMiddleware,
-  }
-
   let router: Router<RouterContext> = {
     fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
       let context = createRequestContext(input, init)
       context.router = router
-      return dispatchRouter(runtime, context)
+      return dispatchRouter(context)
     },
     route<
       method extends RequestMethod | 'ANY',
