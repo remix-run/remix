@@ -1,6 +1,5 @@
 import type { Router } from './router.ts'
 
-import type { RequestMethod } from './request-methods.ts'
 import type { Simplify } from './type-utils.ts'
 
 /**
@@ -130,7 +129,7 @@ export class RequestContext<
    * @param request The incoming request
    */
   constructor(request: Request) {
-    this.method = request.method.toUpperCase() as RequestMethod
+    this.method = request.method.toUpperCase()
     this.params = {} as params
     this.request = request
     this.url = new URL(request.url)
@@ -154,7 +153,7 @@ export class RequestContext<
    * middleware, which allows HTML forms to simulate RESTful API request methods like `PUT` and
    * `DELETE` using a hidden input field.
    */
-  method: RequestMethod
+  method: string
 
   /**
    * Params that were parsed from the URL.

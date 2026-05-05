@@ -1,0 +1,1 @@
+BREAKING CHANGE: `RequestContext.method` is now typed as `string` instead of `RequestMethod`, matching the Fetch API and allowing custom or extension request methods. Use the new `isRequestMethod()` helper to narrow a string to one of the router-supported `RequestMethod` values when needed.

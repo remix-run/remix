@@ -81,6 +81,12 @@ describe('new RequestContext()', () => {
     assert.equal(await avatar.text(), await file.text())
   })
 
+  it('stores arbitrary request methods as strings', () => {
+    let context = new RequestContext(new Request('https://remix.run/test', { method: 'PROPFIND' }))
+
+    assert.equal(context.method, 'PROPFIND')
+  })
+
   it('sets and gets values in request context', () => {
     let key = createContextKey('hello')
     let context = new RequestContext(new Request('https://remix.run/test'))

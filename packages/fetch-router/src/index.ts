@@ -23,7 +23,7 @@ export type {
   NextFunction,
 } from './lib/middleware.ts'
 
-export { RequestMethods } from './lib/request-methods.ts'
+export { RequestMethods, isRequestMethod } from './lib/request-methods.ts'
 export type { RequestMethod } from './lib/request-methods.ts'
 
 export { createRouter } from './lib/router.ts'
