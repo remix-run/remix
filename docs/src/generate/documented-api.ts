@@ -534,8 +534,14 @@ function getApiFilePath(
   type: DocumentedAPI['type'] | (typeof VARIABLE_CATEGORIES)[number],
 ): string {
   let nameParts = fullName.split('.')
+  invariant(nameParts.length >= 2, `Invalid full name for API: ${fullName}`)
+  // Rewrite `@remix-run/<pkg>` to `remix/<pkg>` so docs render under the
+  // umbrella's import path. The doc generator skips the actual `remix`
+  // umbrella package and documents `@remix-run/*` source reflections directly
+  // (see `createLookupMaps` in typedoc.ts).
+  let pkg = nameParts.shift()?.replace(/^@remix-run\//g, 'remix/')
   let name = nameParts.pop()
-  return [...nameParts.map((s) => s.replace(/^@remix-run\//g, '')), type, `${name}.md`].join('/')
+  return [pkg, ...nameParts, type, `${name}.md`].join('/')
 }
 
 function getApiDescription(typedocComment: typedoc.Comment): string {
