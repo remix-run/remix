@@ -2909,10 +2909,7 @@ describe('run', () => {
 
     let app = run({
       loadModule(moduleUrl, exportName) {
-        if (
-          moduleUrl === '/assets/reload-top-stream.js' &&
-          exportName === 'ReloadTopStream'
-        ) {
+        if (moduleUrl === '/assets/reload-top-stream.js' && exportName === 'ReloadTopStream') {
           return ReloadTopButton
         }
         throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
