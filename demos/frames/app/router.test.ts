@@ -12,7 +12,10 @@ describe('router', () => {
 
     let chunks = readChunks(response.body)
 
-    let initial = await readNextChunk(chunks)
+    let initial = await readUntil(
+      chunks,
+      (html) => html.includes('Loading sidebar…') && html.includes('Loading activity…'),
+    )
     assert.ok(initial.includes('Loading sidebar…'))
     assert.ok(initial.includes('Loading activity…'))
     assert.ok(!initial.includes('This content is rendered by <code>/frames/sidebar</code>.'))
@@ -65,12 +68,6 @@ async function* readChunks(stream: ReadableStream<Uint8Array>): AsyncGenerator<s
   } finally {
     reader.releaseLock()
   }
-}
-
-async function readNextChunk(chunks: AsyncGenerator<string, void, void>): Promise<string> {
-  let result = await chunks.next()
-  assert.equal(result.done, false)
-  return result.value
 }
 
 async function readUntil(

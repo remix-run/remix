@@ -64,6 +64,10 @@ function stripDoctypeMarkup(html: string): string {
   return html.replace(DOCTYPE_PATTERN, '')
 }
 
+function hasRenderableHtml(html: string): boolean {
+  return stripDoctypeMarkup(html).trim() !== ''
+}
+
 function syncElementAttributes(target: Element, source: Element) {
   for (let attribute of Array.from(target.attributes)) {
     if (!source.hasAttribute(attribute.name)) {
@@ -998,6 +1002,12 @@ async function renderFrameStream(
 
       if (parsed.html !== '') {
         html += parsed.html
+        // A doctype or whitespace prelude can arrive in its own chunk. Wait
+        // until there is actual frame content before applying the stream.
+        if (!hasRenderableHtml(html)) {
+          continue
+        }
+
         let htmlMarkers = collectHtmlMarkerSummary(html)
         if (!hasBalancedMarkerSummary(htmlMarkers)) {
           continue
@@ -1017,14 +1027,16 @@ async function renderFrameStream(
       buffer = ''
     }
 
-    if (html !== '' && html.length > appliedLength) {
+    let hasHtmlToApply = hasRenderableHtml(html)
+
+    if (hasHtmlToApply && html.length > appliedLength) {
       await applyHtml(html)
       appliedOnce = true
     }
 
     // A frame stream can legitimately resolve to empty content. Ensure the
     // existing frame region is cleared instead of treated as a no-op.
-    if (html === '' && !appliedOnce) {
+    if (!hasHtmlToApply && !appliedOnce) {
       await applyHtml('')
     }
   } finally {

@@ -76,11 +76,9 @@ function prependDoctypeToStream(stream: ReadableStream<Uint8Array>): ReadableStr
           // Already has DOCTYPE, pass through
           controller.enqueue(firstChunk.value)
         } else {
-          // Keep the prepended DOCTYPE in the same chunk as the first body
-          // bytes so stream consumers that inspect the first chunk still see
-          // the start of the document content.
-          let outputChunk = concatBytes(doctypeBytes, firstChunk.value)
-          controller.enqueue(outputChunk)
+          // Prepend DOCTYPE
+          controller.enqueue(doctypeBytes)
+          controller.enqueue(firstChunk.value)
         }
 
         // Pass through remaining chunks
@@ -96,11 +94,4 @@ function prependDoctypeToStream(stream: ReadableStream<Uint8Array>): ReadableStr
       }
     },
   })
-}
-
-function concatBytes(a: Uint8Array, b: Uint8Array): Uint8Array {
-  let bytes = new Uint8Array(a.byteLength + b.byteLength)
-  bytes.set(a, 0)
-  bytes.set(b, a.byteLength)
-  return bytes
 }

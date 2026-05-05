@@ -179,28 +179,6 @@ describe('createHtmlResponse()', () => {
         let response = createHtmlResponse(stream)
         assert.equal(await response.text(), '<!DOCTYPE html><html><body>Hello</body></html>')
       })
-
-      it('prepends DOCTYPE in the same chunk as the first body chunk', async () => {
-        let stream = new ReadableStream({
-          start(controller) {
-            controller.enqueue(new TextEncoder().encode('<html>'))
-            controller.enqueue(new TextEncoder().encode('<body>Hello</body></html>'))
-            controller.close()
-          },
-        })
-        let response = createHtmlResponse(stream)
-        assert.ok(response.body)
-
-        let reader = response.body.getReader()
-        let firstChunk = await reader.read()
-        await reader.cancel()
-
-        assert.equal(firstChunk.done, false)
-        assert.equal(
-          new TextDecoder().decode(firstChunk.value),
-          '<!DOCTYPE html><html>',
-        )
-      })
     })
   })
 })

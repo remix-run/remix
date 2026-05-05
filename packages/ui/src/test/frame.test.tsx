@@ -2845,7 +2845,7 @@ describe('run', () => {
       },
       resolveFrame(src: string) {
         if (src === document.location.href) {
-          return streamFromChunks([firstChunk.value, secondChunkPromise])
+          return streamFromChunks(['<!DOCTYPE html>', firstChunk.value, secondChunkPromise])
         }
         throw new Error(`Unexpected frame src: ${src}`)
       },
