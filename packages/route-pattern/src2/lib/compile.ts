@@ -1,6 +1,7 @@
 import type { RoutePattern } from './route-pattern.ts'
 import { parsePattern } from './parse.ts'
 import {
+  serializePattern,
   serializeProtocol,
   serializeHostname,
   serializePathname,
@@ -15,8 +16,9 @@ import type { RoutePatternMatcher } from './matcher.ts'
 import { createPatternMatcher } from './matcher.ts'
 
 export function compilePattern<source extends string = string>(
-  pattern: RoutePattern<source>,
+  pattern: source | RoutePattern<source>,
 ): CompiledRoutePattern<source> {
+  pattern = typeof pattern === 'string' ? parsePattern(pattern) : pattern
   return new CompiledRoutePattern(pattern)
 }
 
@@ -65,5 +67,9 @@ export class CompiledRoutePattern<source extends string = string> {
 
   test(url: string | URL): boolean {
     return this.match(url) !== null
+  }
+
+  toString(): string {
+    return serializePattern(this.pattern)
   }
 }
