@@ -74,7 +74,7 @@ console.log(
 
 // Remove `dist` from gitignore so we include built code in the repo
 async function updateGitignore() {
-  let linesToRemove = new Set(['dist', '/packages/cli/template/'])
+  let linesToRemove = new Set(['dist/', '/packages/cli/template/'])
   let gitignorePath = path.join(process.cwd(), '.gitignore')
   let content = await fsp.readFile(gitignorePath, 'utf-8')
   let filtered = content
