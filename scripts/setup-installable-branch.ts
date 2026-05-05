@@ -56,6 +56,7 @@ logAndExec('pnpm build')
 
 await updateGitignore()
 await updatePackageDependencies()
+await runCliPrepack()
 
 logAndExec('git add .')
 logAndExec(`git commit -a -m "installable build from ${sha}"`)
@@ -81,6 +82,29 @@ async function updateGitignore() {
     .join('\n')
   await fsp.writeFile(gitignorePath, filtered)
   console.log('Updated .gitignore')
+}
+
+// Run the cli package's `prepack` script to sync the CLI template, then strip
+// the prepack/postpack scripts so they don't run again when the installable
+// branch is consumed. Warn if `prepack` has been removed upstream.
+async function runCliPrepack() {
+  let cliPackageJsonPath = path.join(process.cwd(), 'packages', 'cli', 'package.json')
+  let pkg = JSON.parse(await fsp.readFile(cliPackageJsonPath, 'utf-8'))
+  if (!pkg.scripts?.prepack) {
+    console.warn(
+      '⚠️  @remix-run/cli no longer defines a `prepack` script — skipping CLI template sync. ' +
+        'If the template is still required on the installable branch, update setup-installable-branch.ts.',
+    )
+    return
+  }
+
+  console.log('Running CLI prepack script...')
+  logAndExec('pnpm --filter @remix-run/cli run prepack')
+
+  delete pkg.scripts.prepack
+  delete pkg.scripts.postpack
+  await fsp.writeFile(cliPackageJsonPath, JSON.stringify(pkg, null, 2) + '\n')
+  console.log('Removed prepack/postpack scripts from @remix-run/cli')
 }
 
 // Update `package.json` files to point to this branch on github
