@@ -133,13 +133,13 @@ export interface ControllerShape {
 }
 
 /**
- * Check if an object has an `actions` property.
+ * Check if an object has an object `actions` property.
  *
  * @param obj The object to check
  * @returns `true` if the object is a controller
  */
 export function isController(obj: unknown): obj is ControllerShape {
-  return typeof obj === 'object' && obj != null && 'actions' in obj
+  return isRecord(obj) && isRecord(obj.actions)
 }
 
 /**
@@ -151,11 +151,15 @@ export interface ActionObjectShape {
 }
 
 /**
- * Check if an object has a `handler` property.
+ * Check if an object has a function `handler` property.
  *
  * @param obj The object to check
  * @returns `true` if the object is an action object
  */
 export function isActionObject(obj: unknown): obj is ActionObjectShape {
-  return typeof obj === 'object' && obj != null && 'handler' in obj
+  return isRecord(obj) && typeof obj.handler === 'function'
+}
+
+function isRecord(obj: unknown): obj is Record<PropertyKey, unknown> {
+  return typeof obj === 'object' && obj != null && !Array.isArray(obj)
 }

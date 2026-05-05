@@ -237,6 +237,10 @@ function normalizeMiddleware(
   return [...middleware]
 }
 
+function isRequestHandler(action: unknown): action is RequestHandler<any, any> {
+  return typeof action === 'function'
+}
+
 function normalizeAction(action: unknown): NormalizedAction {
   if (isActionObject(action)) {
     return {
@@ -245,8 +249,14 @@ function normalizeAction(action: unknown): NormalizedAction {
     }
   }
 
+  if (!isRequestHandler(action)) {
+    throw new TypeError(
+      'Expected a request handler function or action object with a function `handler` property',
+    )
+  }
+
   return {
-    handler: action as RequestHandler<any, any>,
+    handler: action,
     middleware: undefined,
   }
 }
@@ -388,7 +398,7 @@ export function createRouter<
     }
 
     if (!isController(handler)) {
-      throw new TypeError('Expected a controller with an `actions` property')
+      throw new TypeError('Expected a controller with an object `actions` property')
     }
 
     mapController(target, handler)

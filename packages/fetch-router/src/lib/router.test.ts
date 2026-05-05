@@ -338,6 +338,42 @@ describe('router.map()', () => {
     }
   })
 
+  it('rejects controllers without an object actions property', () => {
+    let routes = route({
+      home: '/',
+    })
+
+    let router = createRouter()
+
+    assert.throws(
+      () =>
+        router.map(routes, {
+          actions: undefined,
+        } as any),
+      /Expected a controller with an object `actions` property/,
+    )
+  })
+
+  it('rejects action objects without function handlers', () => {
+    let routes = route({
+      home: '/',
+    })
+
+    let router = createRouter()
+
+    assert.throws(
+      () =>
+        router.map(routes, {
+          actions: {
+            home: {
+              handler: 1,
+            },
+          },
+        } as any),
+      /Expected a request handler function or action object with a function `handler` property/,
+    )
+  })
+
   it('rejects nested route map keys in controller actions', () => {
     let routes = route({
       home: '/',
