@@ -1,5 +1,5 @@
 import { split, type Span } from './split.ts'
-import type { PartPatternAST, PartPatternToken, RoutePatternAST } from './ast.ts'
+import type { PartPattern, PartPatternToken, RoutePattern } from './route-pattern.ts'
 
 const IDENTIFIER_RE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
@@ -9,13 +9,13 @@ const IDENTIFIER_RE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 type Mutable<T> = T extends unknown ? { -readonly [K in keyof T]: T[K] } : never
 
 /**
- * Parse a route pattern source string into its AST form.
+ * Parse a route pattern source string
  *
  * @param source The pattern source, e.g. `'/users/:id'` or `'https://:tenant.example.com/dashboard?tab'`.
- * @returns The parsed pattern AST.
+ * @returns The parsed pattern.
  * @throws {RoutePatternParseError} When the source is malformed.
  */
-export function parsePattern<source extends string>(source: source): RoutePatternAST<source> {
+export function parsePattern<source extends string>(source: source): RoutePattern<source> {
   let spans = split(source)
 
   return {
@@ -30,14 +30,14 @@ export function parsePattern<source extends string>(source: source): RoutePatter
 }
 
 /**
- * Parse a single URL part (hostname or pathname) into its AST form.
+ * Parse a single URL part (hostname or pathname).
  *
  * Exposed for sub-exports that need to construct or transform individual parts.
  */
 export function parsePart(
   source: string,
   options: { span?: Span; type: 'hostname' | 'pathname' },
-): PartPatternAST {
+): PartPattern {
   let span = options.span ?? [0, source.length]
   let separator = options.type === 'hostname' ? '.' : '/'
 
@@ -121,7 +121,7 @@ export function parsePart(
   return { tokens, optionals, type: options.type }
 }
 
-function parseProtocol(source: string, span: Span | null): RoutePatternAST['protocol'] {
+function parseProtocol(source: string, span: Span | null): RoutePattern['protocol'] {
   if (!span) return null
   let protocol = source.slice(...span)
   if (protocol === '' || protocol === 'http' || protocol === 'https' || protocol === 'http(s)') {
@@ -130,21 +130,21 @@ function parseProtocol(source: string, span: Span | null): RoutePatternAST['prot
   throw new RoutePatternParseError('invalid protocol', source, span[0])
 }
 
-function parseHostname(source: string, span: Span | null): RoutePatternAST['hostname'] | null {
+function parseHostname(source: string, span: Span | null): RoutePattern['hostname'] | null {
   if (!span) return null
   let part = parsePart(source, { span, type: 'hostname' })
   if (isNamelessWildcard(part)) return null
   return part
 }
 
-function isNamelessWildcard(part: PartPatternAST): boolean {
+function isNamelessWildcard(part: PartPattern): boolean {
   if (part.tokens.length !== 1) return false
   let token = part.tokens[0]
   if (token.type !== '*') return false
   return token.name === '*'
 }
 
-function parseSearch(source: string): RoutePatternAST['search'] {
+function parseSearch(source: string): RoutePattern['search'] {
   let constraints = new Map<string, Set<string>>()
 
   let searchParams = new URLSearchParams(source)

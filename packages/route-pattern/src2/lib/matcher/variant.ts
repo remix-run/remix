@@ -1,4 +1,4 @@
-import type { PartPatternAST, PartPatternToken, RoutePatternAST } from '../ast.ts'
+import type { PartPattern, PartPatternToken, RoutePattern } from '../route-pattern.ts'
 import { escape } from './regexp.ts'
 import { unreachable } from '../unreachable.ts'
 import { toRegExp } from './regexp.ts'
@@ -10,7 +10,7 @@ export type Variant = {
   readonly pathname: PathnameVariant
 }
 
-export function generateVariants(pattern: RoutePatternAST): ReadonlyArray<Variant> {
+export function generateVariants(pattern: RoutePattern): ReadonlyArray<Variant> {
   let result: Array<Variant> = []
   let port = pattern.port ?? ''
 
@@ -29,7 +29,7 @@ export function generateVariants(pattern: RoutePatternAST): ReadonlyArray<Varian
 type ProtocolVariant = 'http' | 'https'
 
 function generateProtocolVariants(
-  protocol: RoutePatternAST['protocol'],
+  protocol: RoutePattern['protocol'],
 ): ReadonlyArray<ProtocolVariant> {
   if (protocol === null || protocol === 'http(s)') return ['http', 'https']
   return [protocol]
@@ -61,7 +61,7 @@ type HostnameVariant =
     }
   | { readonly type: 'any' }
 
-function generateHostnameVariants(hostname: PartPatternAST | null): ReadonlyArray<HostnameVariant> {
+function generateHostnameVariants(hostname: PartPattern | null): ReadonlyArray<HostnameVariant> {
   let result: Array<HostnameVariant> = []
   if (hostname === null) return [{ type: 'any' }]
   for (let variant of generatePartVariants(hostname)) {
@@ -111,7 +111,7 @@ export type PathnameVariant = ReadonlyArray<PathnameVariantSegment>
 // todo: anchor regexps in pathname variants with `^` and `$`
 
 function generatePathnameVariants(
-  pathname: PartPatternAST,
+  pathname: PartPattern,
   options?: { ignoreCase?: boolean },
 ): ReadonlyArray<ReadonlyArray<PathnameVariantSegment>> {
   let result: Array<ReadonlyArray<PathnameVariantSegment>> = []
@@ -196,7 +196,7 @@ type PartVariant = ReadonlyArray<PartVariantToken>
  * Each variant is the linear token sequence you'd get by independently choosing
  * to include or omit every `(` `)` group. No nesting, no optional markers.
  */
-export function generatePartVariants(part: PartPatternAST): ReadonlyArray<PartVariant> {
+export function generatePartVariants(part: PartPattern): ReadonlyArray<PartVariant> {
   let result: Array<PartVariant> = []
   let stack: Array<{ index: number; tokens: Array<PartVariantToken> }> = [{ index: 0, tokens: [] }]
 

@@ -1,4 +1,4 @@
-import type { PartPatternToken } from '../ast.ts'
+import type { PartPatternToken } from '../route-pattern.ts'
 import { unreachable } from '../unreachable.ts'
 
 /**

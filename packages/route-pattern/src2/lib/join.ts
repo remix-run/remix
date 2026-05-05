@@ -1,8 +1,8 @@
-import type { PartPatternAST, PartPatternToken, RoutePatternAST } from './ast.ts'
+import type { PartPattern, PartPatternToken, RoutePattern } from './route-pattern.ts'
 import type { Join } from './types/join.ts'
 
 /**
- * Join two route pattern ASTs.
+ * Join two route patterns.
  *
  * Origin parts (`protocol`, `hostname`, `port`) from `b` override `a` when present.
  * Pathnames are concatenated with a separator inserted between them as needed.
@@ -12,9 +12,9 @@ import type { Join } from './types/join.ts'
  * (e.g. `toHref`) infer typed params from the joined pattern.
  */
 export function joinPatterns<a extends string, b extends string>(
-  a: RoutePatternAST<a>,
-  b: RoutePatternAST<b>,
-): RoutePatternAST<Join<a, b>> {
+  a: RoutePattern<a>,
+  b: RoutePattern<b>,
+): RoutePattern<Join<a, b>> {
   return {
     protocol: b.protocol ?? a.protocol,
     hostname: b.hostname ?? a.hostname,
@@ -40,7 +40,7 @@ export function joinPatterns<a extends string, b extends string>(
  * '(a/)'+'(/b)' -> '(a)(/b)'
  * ```
  */
-function joinPathname(a: PartPatternAST, b: PartPatternAST): PartPatternAST {
+function joinPathname(a: PartPattern, b: PartPattern): PartPattern {
   if (a.tokens.length === 0) return b
   if (b.tokens.length === 0) return a
 
@@ -92,10 +92,7 @@ function joinPathname(a: PartPatternAST, b: PartPatternAST): PartPatternAST {
  * ''     + '?a'   -> '?a'
  * ```
  */
-function joinSearch(
-  a: RoutePatternAST['search'],
-  b: RoutePatternAST['search'],
-): RoutePatternAST['search'] {
+function joinSearch(a: RoutePattern['search'], b: RoutePattern['search']): RoutePattern['search'] {
   let result = new Map<string, Set<string>>()
 
   for (let [name, values] of a) {

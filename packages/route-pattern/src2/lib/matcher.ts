@@ -1,4 +1,4 @@
-import type { RoutePatternAST } from './ast.ts'
+import type { RoutePattern } from './route-pattern.ts'
 import { parsePattern } from './parse.ts'
 
 import { Trie } from './matcher/trie.ts'
@@ -12,7 +12,7 @@ export type RoutePatternMatch<source extends string = string, data = unknown> = 
 
 export type RoutePatternMatcher<data = unknown> = {
   readonly ignoreCase: boolean
-  add(pattern: string | RoutePatternAST, data: data): void
+  add(pattern: string | RoutePattern, data: data): void
   /** Most specific match for `url`, or `null` when nothing matches. */
   match(url: string | URL): RoutePatternMatch<string, data> | null
   /** Every match for `url`, sorted from most to least specific. */
@@ -42,9 +42,9 @@ class TrieMatcher<data = unknown> implements RoutePatternMatcher<data> {
     this.#trie = new Trie<data>({ ignoreCase: this.ignoreCase })
   }
 
-  add(pattern: string | RoutePatternAST, data: data): void {
-    let ast = typeof pattern === 'string' ? parsePattern(pattern) : pattern
-    this.#trie.insert(ast, data)
+  add(pattern: string | RoutePattern, data: data): void {
+    pattern = typeof pattern === 'string' ? parsePattern(pattern) : pattern
+    this.#trie.insert(pattern, data)
   }
 
   match(url: string | URL): RoutePatternMatch<string, data> | null {
@@ -69,9 +69,6 @@ class TrieMatcher<data = unknown> implements RoutePatternMatcher<data> {
   }
 }
 
-function toMatch<data>(
-  result: Match<string, data>,
-  url: URL,
-): RoutePatternMatch<string, data> {
+function toMatch<data>(result: Match<string, data>, url: URL): RoutePatternMatch<string, data> {
   return { ...result, url }
 }

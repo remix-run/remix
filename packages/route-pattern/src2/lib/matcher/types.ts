@@ -1,4 +1,4 @@
-import type { RoutePatternAST } from '../ast.ts'
+import type { RoutePattern } from '../route-pattern.ts'
 import type { Params } from '../types/params.ts'
 
 export type MatchedParam = {
@@ -10,7 +10,7 @@ export type MatchedParam = {
 }
 
 export type Match<source extends string = string, data = unknown> = {
-  pattern: RoutePatternAST<source>
+  pattern: RoutePattern<source>
   data: data
   params: Params<source>
   paramsMeta: {

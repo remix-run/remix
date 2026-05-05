@@ -1,4 +1,4 @@
-import type { RoutePatternAST } from '../ast.ts'
+import type { RoutePattern } from '../route-pattern.ts'
 import { decodeHostname, decodePathname } from './decode.ts'
 import { generateVariants, type Param } from './variant.ts'
 import { unreachable } from '../unreachable.ts'
@@ -17,8 +17,8 @@ export class Trie<data = unknown> {
     }
   }
 
-  insert(ast: RoutePatternAST, data: data): void {
-    for (let variant of generateVariants(ast)) {
+  insert(pattern: RoutePattern, data: data): void {
+    for (let variant of generateVariants(pattern)) {
       let hostnameNode = this.#root[variant.protocol]
 
       let portNode: PortNode<data>
@@ -87,14 +87,14 @@ export class Trie<data = unknown> {
         }
       }
       let undefinedParams: Array<Param> = []
-      for (let param of ast.pathname.tokens) {
+      for (let param of pattern.pathname.tokens) {
         if (param.type !== ':' && param.type !== '*') continue
         if (requiredParams.some((p) => p.name === param.name)) continue
         if (undefinedParams.some((p) => p.name === param.name)) continue
         undefinedParams.push(param)
       }
 
-      pathnameNode.values.push({ ast, data, requiredParams, undefinedParams })
+      pathnameNode.values.push({ pattern, data, requiredParams, undefinedParams })
     }
   }
 
@@ -164,7 +164,7 @@ export class Trie<data = unknown> {
 
         if (current.segmentIndex === urlSegments.length) {
           for (let value of current.pathnameNode.values) {
-            if (!matchSearch(url.searchParams, value.ast.search)) continue
+            if (!matchSearch(url.searchParams, value.pattern.search)) continue
 
             let pathnameMatch: Array<MatchedParam> = []
             for (let i = 0; i < value.requiredParams.length; i++) {
@@ -180,12 +180,12 @@ export class Trie<data = unknown> {
             }
 
             let params: Record<string, string | undefined> = {}
-            for (let token of value.ast.hostname?.tokens ?? []) {
+            for (let token of value.pattern.hostname?.tokens ?? []) {
               if ((token.type === ':' || token.type === '*') && token.name !== '*') {
                 params[token.name] = undefined
               }
             }
-            for (let token of value.ast.pathname.tokens) {
+            for (let token of value.pattern.pathname.tokens) {
               if ((token.type === ':' || token.type === '*') && token.name !== '*') {
                 params[token.name] = undefined
               }
@@ -200,7 +200,7 @@ export class Trie<data = unknown> {
             }
 
             results.push({
-              pattern: value.ast,
+              pattern: value.pattern,
               data: value.data,
               params,
               paramsMeta: { hostname: origin.hostnameMatch, pathname: pathnameMatch },
@@ -313,7 +313,7 @@ type PathnameNode<data> = {
   variable: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
   wildcard: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
   values: Array<{
-    ast: RoutePatternAST
+    pattern: RoutePattern
     data: data
     requiredParams: Array<Param>
     undefinedParams: Array<Param>

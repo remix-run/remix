@@ -1,4 +1,4 @@
-import type { RoutePatternAST } from './ast.ts'
+import type { RoutePattern } from './route-pattern.ts'
 import type { RoutePatternMatch } from './matcher.ts'
 import { decodeHostname } from './matcher/decode.ts'
 
@@ -161,7 +161,7 @@ function comparePathname(
   return 0
 }
 
-function compareSearch(a: RoutePatternAST['search'], b: RoutePatternAST['search']): -1 | 0 | 1 {
+function compareSearch(a: RoutePattern['search'], b: RoutePattern['search']): -1 | 0 | 1 {
   let aSpecificity = searchSpecificity(a)
   let bSpecificity = searchSpecificity(b)
 
@@ -174,7 +174,7 @@ function compareSearch(a: RoutePatternAST['search'], b: RoutePatternAST['search'
   return 0
 }
 
-function searchSpecificity(constraints: RoutePatternAST['search']): {
+function searchSpecificity(constraints: RoutePattern['search']): {
   key: number
   keyValue: number
 } {

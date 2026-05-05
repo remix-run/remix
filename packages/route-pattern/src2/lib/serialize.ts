@@ -1,7 +1,7 @@
-import type { PartPatternAST, RoutePatternAST } from './ast.ts'
+import type { PartPattern, RoutePattern } from './route-pattern.ts'
 import { unreachable } from './unreachable.ts'
 
-/** Pre-serialized parts of a route pattern AST. Empty string for absent parts (mirrors `URL`). */
+/** Pre-serialized parts of a route pattern. Empty string for absent parts (mirrors `URL`). */
 export type SerializedPatternParts = {
   protocol: string
   hostname: string
@@ -10,13 +10,13 @@ export type SerializedPatternParts = {
   search: string
 }
 
-/** Serialize a route pattern AST back to its source string. */
-export function serializePattern(ast: RoutePatternAST): string {
-  let protocol = serializeProtocol(ast)
-  let hostname = serializeHostname(ast)
-  let port = serializePort(ast)
-  let pathname = serializePathname(ast)
-  let search = serializeSearch(ast)
+/** Serialize a route pattern back to its source string. */
+export function serializePattern(pattern: RoutePattern): string {
+  let protocol = serializeProtocol(pattern)
+  let hostname = serializeHostname(pattern)
+  let port = serializePort(pattern)
+  let pathname = serializePathname(pattern)
+  let search = serializeSearch(pattern)
 
   let result = ''
   if (protocol || hostname || port) {
@@ -28,45 +28,45 @@ export function serializePattern(ast: RoutePatternAST): string {
 }
 
 /**
- * Serialize each part of a route pattern AST as a string.
+ * Serialize each part of a route pattern as a string.
  *
  * Destructure to grab one part. Empty string for absent parts.
  */
-export function serializePatternParts(ast: RoutePatternAST): SerializedPatternParts {
+export function serializePatternParts(pattern: RoutePattern): SerializedPatternParts {
   return {
-    protocol: serializeProtocol(ast),
-    hostname: serializeHostname(ast),
-    port: serializePort(ast),
-    pathname: serializePathname(ast),
-    search: serializeSearch(ast),
+    protocol: serializeProtocol(pattern),
+    hostname: serializeHostname(pattern),
+    port: serializePort(pattern),
+    pathname: serializePathname(pattern),
+    search: serializeSearch(pattern),
   }
 }
 
-/** Serialize the protocol of a route pattern AST. Empty string if absent. */
-export function serializeProtocol(ast: RoutePatternAST): string {
-  return ast.protocol ?? ''
+/** Serialize the protocol of a route pattern. Empty string if absent. */
+export function serializeProtocol(pattern: RoutePattern): string {
+  return pattern.protocol ?? ''
 }
 
-/** Serialize the hostname of a route pattern AST. Empty string if absent. */
-export function serializeHostname(ast: RoutePatternAST): string {
-  return ast.hostname ? serializePart(ast.hostname) : ''
+/** Serialize the hostname of a route pattern. Empty string if absent. */
+export function serializeHostname(pattern: RoutePattern): string {
+  return pattern.hostname ? serializePart(pattern.hostname) : ''
 }
 
-/** Serialize the port of a route pattern AST. Empty string if absent. */
-export function serializePort(ast: RoutePatternAST): string {
-  return ast.port ?? ''
+/** Serialize the port of a route pattern. Empty string if absent. */
+export function serializePort(pattern: RoutePattern): string {
+  return pattern.port ?? ''
 }
 
-/** Serialize the pathname of a route pattern AST. */
-export function serializePathname(ast: RoutePatternAST): string {
-  return serializePart(ast.pathname)
+/** Serialize the pathname of a route pattern. */
+export function serializePathname(pattern: RoutePattern): string {
+  return serializePart(pattern.pathname)
 }
 
-/** Serialize the search of a route pattern AST. Empty string if absent. */
-export function serializeSearch(ast: RoutePatternAST): string {
-  if (ast.search.size === 0) return ''
+/** Serialize the search of a route pattern. Empty string if absent. */
+export function serializeSearch(pattern: RoutePattern): string {
+  if (pattern.search.size === 0) return ''
   let searchParams = new URLSearchParams()
-  for (let [key, constraint] of ast.search) {
+  for (let [key, constraint] of pattern.search) {
     if (constraint.size === 0) {
       searchParams.append(key, '')
     } else {
@@ -78,8 +78,8 @@ export function serializeSearch(ast: RoutePatternAST): string {
   return searchParams.toString()
 }
 
-/** Internal: serialize a single part AST. Not part of the public `/ast` export. */
-export function serializePart(part: PartPatternAST): string {
+/** @private */
+export function serializePart(part: PartPattern): string {
   let separator = part.type === 'hostname' ? '.' : '/'
   let result = ''
   for (let token of part.tokens) {

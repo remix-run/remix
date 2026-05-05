@@ -1,63 +1,40 @@
-import type { RoutePatternAST } from './ast.ts'
-import { parsePattern } from './parse.ts'
-import {
-  serializeProtocol,
-  serializeHostname,
-  serializePathname,
-  serializeSearch,
-} from './serialize.ts'
-import { joinPatterns } from './join.ts'
-import type { Join } from './types/join.ts'
-import type { HrefArgs } from './href.ts'
-import { toHref } from './href.ts'
-import type { RoutePatternMatch } from './matcher.ts'
-import type { RoutePatternMatcher } from './matcher.ts'
-import { createPatternMatcher } from './matcher.ts'
+/** A token in a parsed pattern part (hostname or pathname). */
+export type PartPatternToken =
+  | { readonly type: 'text'; readonly text: string }
+  | { readonly type: 'separator' }
+  | { readonly type: '(' | ')' }
+  | { readonly type: ':' | '*'; readonly name: string }
 
-export class RoutePattern<source extends string = string> {
-  readonly ast: RoutePatternAST<source>
+/** Parsed form of a single URL part (hostname or pathname). */
+export type PartPattern = {
+  readonly tokens: ReadonlyArray<PartPatternToken>
+  /** Maps a `(` token index to the index of its matching `)`. */
+  readonly optionals: ReadonlyMap<number, number>
+  readonly type: 'hostname' | 'pathname'
+}
 
-  readonly protocol: string
-  readonly hostname: string
-  readonly port: string
-  readonly pathname: string
-  readonly search: string
-
-  #matcher: RoutePatternMatcher<undefined>
-
-  constructor(ast: RoutePatternAST<source>) {
-    this.ast = ast
-
-    this.protocol = serializeProtocol(this.ast)
-    this.hostname = serializeHostname(this.ast)
-    this.port = this.ast.port ?? ''
-    this.pathname = serializePathname(this.ast)
-    this.search = serializeSearch(this.ast)
-
-    this.#matcher = createPatternMatcher()
-    this.#matcher.add(this.ast, undefined)
-  }
-
-  static parse<source extends string>(source: source): RoutePattern<source> {
-    return new RoutePattern(parsePattern(source))
-  }
-
-  join<other extends string>(
-    other: other | RoutePattern<other>,
-  ): RoutePattern<Join<source, other>> {
-    let otherAst = typeof other === 'string' ? parsePattern(other) : other.ast
-    return new RoutePattern(joinPatterns(this.ast, otherAst))
-  }
-
-  href(...args: HrefArgs<source>): string {
-    return toHref(this.ast, ...(args as any))
-  }
-
-  match(url: string | URL): RoutePatternMatch<source, undefined> | null {
-    return this.#matcher.match(url) as RoutePatternMatch<source, undefined> | null
-  }
-
-  test(url: string | URL): boolean {
-    return this.match(url) !== null
-  }
+/**
+ * Parsed form of a route pattern.
+ *
+ * The `source` generic is preserved through TS alias inference (no runtime
+ * field needed) so downstream APIs like `toHref` can derive typed params
+ * from the original pattern source string.
+ */
+export type RoutePattern<source extends string = string> = {
+  readonly protocol: 'http' | 'https' | 'http(s)' | null
+  readonly hostname: PartPattern | null
+  readonly port: string | null
+  readonly pathname: PartPattern
+  /**
+   * Required values keyed by search param name.
+   *
+   * Follows
+   * [WHATWG's application/x-www-form-urlencoded parsing](https://url.spec.whatwg.org/#application/x-www-form-urlencoded) spec
+   * (same as [`URLSearchParams`](https://developer.mozilla.org/en-US/docs/Web/API/URLSearchParams#percent_encoding)).
+   * For example, `+` is decoded as ` ` (literal space) instead of `%20`.
+   *
+   * - **Empty `Set`**: key must appear; value may be anything (including empty).
+   * - **Non-empty `Set`**: key must appear with all listed values; extra values are OK.
+   */
+  readonly search: ReadonlyMap<string, ReadonlySet<string>>
 }

@@ -4,7 +4,7 @@ import dedent from 'dedent'
 
 import { RoutePatternParseError, parsePart, parsePattern } from './parse.ts'
 import { serializePart } from './serialize.ts'
-import type { PartPatternAST, RoutePatternAST } from './ast.ts'
+import type { PartPattern, RoutePattern } from './route-pattern.ts'
 
 describe('RoutePatternParseError', () => {
   it('exposes type, source, and index properties', () => {
@@ -29,7 +29,7 @@ describe('RoutePatternParseError', () => {
 })
 
 describe('parsePart', () => {
-  function assertParse(source: string, expected: Omit<PartPatternAST, 'type'>) {
+  function assertParse(source: string, expected: Omit<PartPattern, 'type'>) {
     assert.deepEqual(parsePart(source, { type: 'pathname' }), { ...expected, type: 'pathname' })
   }
 
@@ -243,14 +243,14 @@ describe('parsePattern', () => {
   function assertParse(
     source: string,
     expected: {
-      protocol?: RoutePatternAST['protocol']
+      protocol?: RoutePattern['protocol']
       hostname?: string
       port?: string
       pathname?: string
       search?: Record<string, Array<string>>
     },
   ) {
-    let ast = parsePattern(source)
+    let pattern = parsePattern(source)
     let expectedSearch = new Map<string, Set<string>>()
     if (expected.search) {
       for (let name in expected.search) {
@@ -260,11 +260,11 @@ describe('parsePattern', () => {
     }
     assert.deepEqual(
       {
-        protocol: ast.protocol,
-        hostname: ast.hostname ? serializePart(ast.hostname) : null,
-        port: ast.port,
-        pathname: serializePart(ast.pathname),
-        search: ast.search,
+        protocol: pattern.protocol,
+        hostname: pattern.hostname ? serializePart(pattern.hostname) : null,
+        port: pattern.port,
+        pathname: serializePart(pattern.pathname),
+        search: pattern.search,
       },
       {
         protocol: expected.protocol ?? null,
@@ -396,5 +396,4 @@ describe('parsePattern', () => {
   it('parses nameless hostname wildcard as null', () => {
     assertParse('://*', {})
   })
-
 })

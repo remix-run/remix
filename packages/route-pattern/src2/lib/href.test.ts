@@ -32,61 +32,61 @@ describe('toHref', () => {
   describe('hostname', () => {
     describe('when origin is present', () => {
       it('throws when protocol specified', () => {
-        let ast = parsePattern('https://*/path')
+        let pattern = parsePattern('https://*/path')
         // @ts-expect-error - missing hostname
-        assert.throws(() => toHref(ast), hrefError('missing-hostname'))
+        assert.throws(() => toHref(pattern), hrefError('missing-hostname'))
       })
 
       it('throws when protocol with named wildcard missing param', () => {
-        let ast = parsePattern('http://*host/path')
+        let pattern = parsePattern('http://*host/path')
         // @ts-expect-error - missing required param
-        assert.throws(() => toHref(ast), hrefError('missing-params'))
+        assert.throws(() => toHref(pattern), hrefError('missing-params'))
       })
 
       it('throws when port specified', () => {
-        let ast = parsePattern('://:8080/path')
-        assert.throws(() => toHref(ast), hrefError('missing-hostname'))
+        let pattern = parsePattern('://:8080/path')
+        assert.throws(() => toHref(pattern), hrefError('missing-hostname'))
       })
     })
 
     it('supports static hostname', () => {
-      let ast = parsePattern('://example.com/path')
-      assert.equal(toHref(ast), 'https://example.com/path')
-      assert.equal(toHref(ast, {}), 'https://example.com/path')
-      assert.equal(toHref(ast, null), 'https://example.com/path')
-      assert.equal(toHref(ast, undefined), 'https://example.com/path')
+      let pattern = parsePattern('://example.com/path')
+      assert.equal(toHref(pattern), 'https://example.com/path')
+      assert.equal(toHref(pattern, {}), 'https://example.com/path')
+      assert.equal(toHref(pattern, null), 'https://example.com/path')
+      assert.equal(toHref(pattern, undefined), 'https://example.com/path')
     })
 
     describe('with dynamic segment', () => {
       it('works when provided', () => {
-        let ast = parsePattern('://:host.com/path')
-        assert.equal(toHref(ast, { host: 'example' }), 'https://example.com/path')
+        let pattern = parsePattern('://:host.com/path')
+        assert.equal(toHref(pattern, { host: 'example' }), 'https://example.com/path')
       })
 
       it('throws when missing', () => {
-        let ast = parsePattern('://:host/path')
+        let pattern = parsePattern('://:host/path')
         // @ts-expect-error - missing required param
-        assert.throws(() => toHref(ast), hrefError('missing-params'))
+        assert.throws(() => toHref(pattern), hrefError('missing-params'))
       })
     })
 
     it('supports multiple dynamic segments', () => {
-      let ast = parsePattern('://:subdomain.:domain.com/path')
+      let pattern = parsePattern('://:subdomain.:domain.com/path')
       assert.equal(
-        toHref(ast, { subdomain: 'api', domain: 'example' }),
+        toHref(pattern, { subdomain: 'api', domain: 'example' }),
         'https://api.example.com/path',
       )
     })
 
     it('supports named wildcard', () => {
-      let ast = parsePattern('://*env.example.com/path')
-      assert.equal(toHref(ast, { env: 'staging' }), 'https://staging.example.com/path')
+      let pattern = parsePattern('://*env.example.com/path')
+      assert.equal(toHref(pattern, { env: 'staging' }), 'https://staging.example.com/path')
     })
 
     it('throws for nameless wildcard', () => {
-      let ast = parsePattern('://*.example.com/path')
+      let pattern = parsePattern('://*.example.com/path')
       // @ts-expect-error - nameless wildcard
-      assert.throws(() => toHref(ast), hrefError('nameless-wildcard'))
+      assert.throws(() => toHref(pattern), hrefError('nameless-wildcard'))
     })
 
     it('includes optional with static content', () => {
@@ -106,18 +106,18 @@ describe('toHref', () => {
     })
 
     it('works with hostname params', () => {
-      let ast = parsePattern('://:host:8080/path')
-      assert.equal(toHref(ast, { host: 'localhost' }), 'https://localhost:8080/path')
+      let pattern = parsePattern('://:host:8080/path')
+      assert.equal(toHref(pattern, { host: 'localhost' }), 'https://localhost:8080/path')
     })
   })
 
   describe('pathname', () => {
     it('supports static pathname', () => {
-      let ast = parsePattern('/posts')
-      assert.equal(toHref(ast), '/posts')
-      assert.equal(toHref(ast, {}), '/posts')
-      assert.equal(toHref(ast, null), '/posts')
-      assert.equal(toHref(ast, undefined), '/posts')
+      let pattern = parsePattern('/posts')
+      assert.equal(toHref(pattern), '/posts')
+      assert.equal(toHref(pattern, {}), '/posts')
+      assert.equal(toHref(pattern, null), '/posts')
+      assert.equal(toHref(pattern, undefined), '/posts')
     })
 
     it('normalizes static pathname without leading slash', () => {
@@ -141,21 +141,21 @@ describe('toHref', () => {
       })
 
       it('throws when missing', () => {
-        let ast = parsePattern('/posts/:id')
+        let pattern = parsePattern('/posts/:id')
         // @ts-expect-error - missing required param
-        assert.throws(() => toHref(ast), hrefError('missing-params'))
+        assert.throws(() => toHref(pattern), hrefError('missing-params'))
       })
 
       it('throws when params is null (required params)', () => {
-        let ast = parsePattern('/posts/:id')
+        let pattern = parsePattern('/posts/:id')
         // @ts-expect-error - null not allowed when required params
-        assert.throws(() => toHref(ast, null), hrefError('missing-params'))
+        assert.throws(() => toHref(pattern, null), hrefError('missing-params'))
       })
 
       it('throws when params is undefined (required params)', () => {
-        let ast = parsePattern('/posts/:id')
+        let pattern = parsePattern('/posts/:id')
         // @ts-expect-error - undefined not allowed when required params
-        assert.throws(() => toHref(ast, undefined), hrefError('missing-params'))
+        assert.throws(() => toHref(pattern, undefined), hrefError('missing-params'))
       })
     })
 
@@ -182,9 +182,9 @@ describe('toHref', () => {
     })
 
     it('throws for unnamed wildcard', () => {
-      let ast = parsePattern('/files/*')
+      let pattern = parsePattern('/files/*')
       // @ts-expect-error - nameless wildcard
-      assert.throws(() => toHref(ast), hrefError('nameless-wildcard'))
+      assert.throws(() => toHref(pattern), hrefError('nameless-wildcard'))
     })
 
     it('supports repeated params', () => {
@@ -210,11 +210,11 @@ describe('toHref', () => {
     })
 
     it('omits optional with variable when omitted', () => {
-      let ast = parsePattern('/posts(/:id)')
-      assert.equal(toHref(ast), '/posts')
-      assert.equal(toHref(ast, {}), '/posts')
-      assert.equal(toHref(ast, null), '/posts')
-      assert.equal(toHref(ast, undefined), '/posts')
+      let pattern = parsePattern('/posts(/:id)')
+      assert.equal(toHref(pattern), '/posts')
+      assert.equal(toHref(pattern, {}), '/posts')
+      assert.equal(toHref(pattern, null), '/posts')
+      assert.equal(toHref(pattern, undefined), '/posts')
     })
 
     it('includes optional with wildcard when provided', () => {
@@ -225,19 +225,19 @@ describe('toHref', () => {
     })
 
     it('omits optional with wildcard when omitted', () => {
-      let ast = parsePattern('/files(/*path)')
-      assert.equal(toHref(ast), '/files')
-      assert.equal(toHref(ast, {}), '/files')
-      assert.equal(toHref(ast, null), '/files')
-      assert.equal(toHref(ast, undefined), '/files')
+      let pattern = parsePattern('/files(/*path)')
+      assert.equal(toHref(pattern), '/files')
+      assert.equal(toHref(pattern, {}), '/files')
+      assert.equal(toHref(pattern, null), '/files')
+      assert.equal(toHref(pattern, undefined), '/files')
     })
 
     it('omits optional with nameless wildcard', () => {
-      let ast = parsePattern('/files(/*)')
-      assert.equal(toHref(ast), '/files')
-      assert.equal(toHref(ast, {}), '/files')
-      assert.equal(toHref(ast, null), '/files')
-      assert.equal(toHref(ast, undefined), '/files')
+      let pattern = parsePattern('/files(/*)')
+      assert.equal(toHref(pattern), '/files')
+      assert.equal(toHref(pattern, {}), '/files')
+      assert.equal(toHref(pattern, null), '/files')
+      assert.equal(toHref(pattern, undefined), '/files')
     })
 
     describe('with nested optionals', () => {
@@ -401,8 +401,8 @@ describe('toHref', () => {
 describe('RoutePatternHrefError', () => {
   describe('missing-hostname', () => {
     it('shows pattern', () => {
-      let ast = parsePattern('https://*:8080/api')
-      let error = new RoutePatternHrefError({ type: 'missing-hostname', ast })
+      let pattern = parsePattern('https://*:8080/api')
+      let error = new RoutePatternHrefError({ type: 'missing-hostname', pattern })
       assert.equal(
         error.toString(),
         dedent`
@@ -416,11 +416,11 @@ describe('RoutePatternHrefError', () => {
 
   describe('missing-params', () => {
     it('shows missing param, pattern, and params', () => {
-      let ast = parsePattern('https://example.com/:collection/:id')
+      let pattern = parsePattern('https://example.com/:collection/:id')
       let error = new RoutePatternHrefError({
         type: 'missing-params',
-        ast,
-        part: ast.pathname,
+        pattern,
+        part: pattern.pathname,
         missingParams: ['collection', 'id'],
         params: {},
       })
@@ -438,8 +438,8 @@ describe('RoutePatternHrefError', () => {
 
   describe('nameless-wildcard', () => {
     it('shows error message with pattern', () => {
-      let ast = parsePattern('https://example.com/api/*/users')
-      let error = new RoutePatternHrefError({ type: 'nameless-wildcard', ast })
+      let pattern = parsePattern('https://example.com/api/*/users')
+      let error = new RoutePatternHrefError({ type: 'nameless-wildcard', pattern })
       assert.equal(
         error.toString(),
         dedent`

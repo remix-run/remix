@@ -1,4 +1,4 @@
-import type { PartPatternAST, RoutePatternAST } from './ast.ts'
+import type { PartPattern, RoutePattern } from './route-pattern.ts'
 import { serializePattern } from './serialize.ts'
 import type { ParseParams } from './types/params.ts'
 import type { Split, SplitPattern } from './types/split.ts'
@@ -38,39 +38,40 @@ type Optionalize<record extends Record<string, string | undefined>> =
   & { [key in keyof record as undefined extends record[key] ? key : never]?: string | number | null | undefined }
 
 /**
- * Generate an href from a route pattern AST and the supplied params.
+ * Generate an href from a route pattern and the supplied params.
  *
- * @param ast The parsed route pattern.
+ * @param pattern The parsed route pattern.
  * @param args Path params and optional search params.
  * @returns The generated href string.
  * @throws {RoutePatternHrefError} When the pattern requires a hostname, contains a nameless wildcard, or is missing required params.
  */
 export function toHref<source extends string>(
-  ast: RoutePatternAST<source>,
+  pattern: RoutePattern<source>,
   ...args: HrefArgs<source>
 ): string {
   let [params, searchParams] = args
   searchParams ??= {}
 
-  let hasOrigin = ast.protocol !== null || ast.hostname !== null || ast.port !== null
+  let hasOrigin = pattern.protocol !== null || pattern.hostname !== null || pattern.port !== null
   let result = ''
 
   if (hasOrigin) {
-    let protocol = ast.protocol === null || ast.protocol === 'http(s)' ? 'https' : ast.protocol
+    let protocol =
+      pattern.protocol === null || pattern.protocol === 'http(s)' ? 'https' : pattern.protocol
 
-    if (ast.hostname === null) {
-      throw new RoutePatternHrefError({ type: 'missing-hostname', ast })
+    if (pattern.hostname === null) {
+      throw new RoutePatternHrefError({ type: 'missing-hostname', pattern })
     }
-    let hostname = hrefPart(ast, ast.hostname, params ?? {})
+    let hostname = hrefPart(pattern, pattern.hostname, params ?? {})
 
-    let port = ast.port === null ? '' : `:${ast.port}`
+    let port = pattern.port === null ? '' : `:${pattern.port}`
     result += `${protocol}://${hostname}${port}`
   }
 
-  let pathname = hrefPart(ast, ast.pathname, params ?? {})
+  let pathname = hrefPart(pattern, pattern.pathname, params ?? {})
   result += '/' + pathname
 
-  let search = hrefSearch(ast, searchParams)
+  let search = hrefSearch(pattern, searchParams)
   if (search) result += `?${search}`
 
   return result
@@ -78,8 +79,8 @@ export function toHref<source extends string>(
 
 /** Generate the partial href for a single part (hostname or pathname). */
 function hrefPart(
-  ast: RoutePatternAST,
-  part: PartPatternAST,
+  pattern: RoutePattern,
+  part: PartPattern,
   params: Record<string, unknown>,
 ): string {
   let separator = part.type === 'hostname' ? '.' : '/'
@@ -115,7 +116,7 @@ function hrefPart(
       if (value === undefined) {
         if (stack.length <= 1) {
           if (token.name === '*') {
-            throw new RoutePatternHrefError({ type: 'nameless-wildcard', ast })
+            throw new RoutePatternHrefError({ type: 'nameless-wildcard', pattern })
           }
           missingParams.push(token.name)
         }
@@ -130,15 +131,21 @@ function hrefPart(
     unreachable(token.type)
   }
   if (missingParams.length > 0) {
-    throw new RoutePatternHrefError({ type: 'missing-params', ast, part, missingParams, params })
+    throw new RoutePatternHrefError({
+      type: 'missing-params',
+      pattern,
+      part,
+      missingParams,
+      params,
+    })
   }
   if (stack.length !== 1) unreachable()
   return stack[0].href
 }
 
-/** Generate a search query string from an AST and supplied params. */
-function hrefSearch(ast: RoutePatternAST, searchParams: SearchParams): string | undefined {
-  let constraints = ast.search
+/** Generate a search query string from a pattern and supplied params. */
+function hrefSearch(pattern: RoutePattern, searchParams: SearchParams): string | undefined {
+  let constraints = pattern.search
   if (constraints.size === 0 && Object.keys(searchParams).length === 0) {
     return undefined
   }
@@ -172,15 +179,15 @@ function hrefSearch(ast: RoutePatternAST, searchParams: SearchParams): string | 
 }
 
 type RoutePatternHrefErrorDetails =
-  | { type: 'missing-hostname'; ast: RoutePatternAST }
+  | { type: 'missing-hostname'; pattern: RoutePattern }
   | {
       type: 'missing-params'
-      ast: RoutePatternAST
-      part: PartPatternAST
+      pattern: RoutePattern
+      part: PartPattern
       missingParams: Array<string>
       params: Record<string, unknown>
     }
-  | { type: 'nameless-wildcard'; ast: RoutePatternAST }
+  | { type: 'nameless-wildcard'; pattern: RoutePattern }
 
 /** Error thrown when a route pattern cannot generate an href from the supplied args. */
 export class RoutePatternHrefError extends Error {
@@ -194,7 +201,7 @@ export class RoutePatternHrefError extends Error {
 
   /** Format an error message for the given href failure details. */
   static message(details: RoutePatternHrefErrorDetails): string {
-    let pattern = serializePattern(details.ast)
+    let pattern = serializePattern(details.pattern)
 
     if (details.type === 'missing-hostname') {
       return `pattern requires hostname\n\nPattern: ${pattern}`
