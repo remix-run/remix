@@ -1,13 +1,13 @@
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { runRemixTest } from '@remix-run/test/cli'
 
 import { runRemix } from '../../index.ts'
+import { captureOutput } from '../../../test/capture-output.ts'
 import { getTestCommandHelpText } from './test.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
@@ -124,31 +124,4 @@ async function writeTestProject(
     ].join('\n'),
     'utf8',
   )
-}
-
-async function captureOutput(
-  callback: () => Promise<number>,
-): Promise<{ exitCode: number; stderr: string; stdout: string }> {
-  let stderr = ''
-  let stdout = ''
-  let originalStdoutWrite = process.stdout.write
-  let originalStderrWrite = process.stderr.write
-
-  process.stdout.write = ((chunk: string | Uint8Array) => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stdout.write
-
-  process.stderr.write = ((chunk: string | Uint8Array) => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stderr.write
-
-  try {
-    let exitCode = await callback()
-    return { exitCode, stderr, stdout }
-  } finally {
-    process.stdout.write = originalStdoutWrite
-    process.stderr.write = originalStderrWrite
-  }
 }

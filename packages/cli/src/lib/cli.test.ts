@@ -7,6 +7,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { getFixturePath } from '../../test/fixtures.ts'
+import { captureOutput } from '../../test/capture-output.ts'
 import { runRemix, type RunRemixOptions } from '../index.ts'
 import { getTestCommandHelpText } from './commands/test.ts'
 
@@ -651,33 +652,6 @@ describe('run', () => {
     assert.match(result.stderr, /Unknown argument: --remix-version/)
   })
 })
-
-async function captureOutput(
-  callback: () => Promise<number>,
-): Promise<{ exitCode: number; stderr: string; stdout: string }> {
-  let stderr = ''
-  let stdout = ''
-  let originalStdoutWrite = process.stdout.write
-  let originalStderrWrite = process.stderr.write
-
-  process.stdout.write = ((chunk: string | Uint8Array) => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stdout.write
-
-  process.stderr.write = ((chunk: string | Uint8Array) => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stderr.write
-
-  try {
-    let exitCode = await callback()
-    return { exitCode, stderr, stdout }
-  } finally {
-    process.stdout.write = originalStdoutWrite
-    process.stderr.write = originalStderrWrite
-  }
-}
 
 async function withEnv<T>(name: string, value: string, callback: () => Promise<T>): Promise<T> {
   let previousValue = process.env[name]

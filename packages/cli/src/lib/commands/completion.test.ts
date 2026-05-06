@@ -1,8 +1,8 @@
-import * as process from 'node:process'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { runRemix } from '../../index.ts'
+import { captureOutput } from '../../../test/capture-output.ts'
 
 const COMPLETION_COMMAND_HELP_TEXT = [
   'Usage:',
@@ -98,30 +98,3 @@ describe('completion command', () => {
     assert.equal(result.stderr, '')
   })
 })
-
-async function captureOutput(
-  callback: () => Promise<number>,
-): Promise<{ exitCode: number; stderr: string; stdout: string }> {
-  let stderr = ''
-  let stdout = ''
-  let originalStdoutWrite = process.stdout.write
-  let originalStderrWrite = process.stderr.write
-
-  process.stdout.write = ((chunk: string | Uint8Array) => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stdout.write
-
-  process.stderr.write = ((chunk: string | Uint8Array) => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stderr.write
-
-  try {
-    let exitCode = await callback()
-    return { exitCode, stderr, stdout }
-  } finally {
-    process.stdout.write = originalStdoutWrite
-    process.stderr.write = originalStderrWrite
-  }
-}

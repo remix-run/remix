@@ -8,6 +8,7 @@ import { describe, it } from '@remix-run/test'
 
 import { runRemix } from '../../index.ts'
 import { getFixturePath } from '../../../test/fixtures.ts'
+import { captureOutput } from '../../../test/capture-output.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
 const ANSI_CSI = `${String.fromCharCode(27)}[`
@@ -36,7 +37,7 @@ describe('doctor command', () => {
   it('prints doctor command help', async () => {
     let result = await runDoctor(['--help'], ROOT_DIR)
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.equal(result.stdout, DOCTOR_COMMAND_HELP_TEXT)
     assert.equal(result.stderr, '')
   })
@@ -45,7 +46,7 @@ describe('doctor command', () => {
     let nestedDir = path.join(getFixturePath('doctor-clean'), 'app', 'actions', 'contact')
     let result = await runDoctor([], nestedDir)
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /✓ environment/)
     assert.match(result.stdout, /✓ project/)
     assert.match(result.stdout, /✓ actions/)
@@ -56,7 +57,7 @@ describe('doctor command', () => {
   it('reports no findings for a clean fixture', async () => {
     let result = await runDoctor([], getFixturePath('doctor-clean'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(
       result.stdout,
       /\n• Checking environment\.\.\.\n✓ environment\n\n• Checking project\.\.\.\n✓ project\n\n• Checking actions\.\.\.\n✓ actions\n\nDoctor found no issues\.\nSummary: 0 warnings, 0 advice\.\n\n$/,
@@ -103,7 +104,7 @@ describe('doctor command', () => {
     try {
       let result = await runDoctor([], projectDir)
 
-      assert.equal(result.status, 0, result.stderr)
+      assert.equal(result.exitCode, 0, result.stderr)
       assert.match(result.stdout, /✓ actions/)
       assert.match(result.stdout, /Doctor found no issues\./)
       assert.doesNotMatch(result.stdout, /Root route map is missing action controller/)
@@ -116,7 +117,7 @@ describe('doctor command', () => {
   it('applies no fixes for a clean fixture', async () => {
     let result = await runDoctor(['--fix'], getFixturePath('doctor-clean'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.doesNotMatch(result.stdout, /Applied fixes:/)
     assert.match(result.stdout, /Doctor found no issues\./)
     assert.match(result.stdout, /✓ actions/)
@@ -126,7 +127,7 @@ describe('doctor command', () => {
   it('does not print color when output is not a tty', async () => {
     let result = await runDoctor([], getFixturePath('doctor-missing'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.equal(result.stdout.includes(ANSI_CSI), false)
     assert.equal(result.stderr, '')
   })
@@ -169,7 +170,7 @@ describe('doctor command', () => {
     try {
       let result = await runDoctor([], projectDir)
 
-      assert.equal(result.status, 0, result.stderr)
+      assert.equal(result.exitCode, 0, result.stderr)
       assert.match(result.stdout, /✓ environment/)
       assert.doesNotMatch(result.stdout, /✗ environment/)
       assert.match(
@@ -191,7 +192,7 @@ describe('doctor command', () => {
     try {
       let result = await runDoctor([], tmpDir)
 
-      assert.equal(result.status, 0, result.stderr)
+      assert.equal(result.exitCode, 0, result.stderr)
       assert.match(result.stdout, /✗ environment/)
       assert.match(result.stdout, /• project \(skipped: Blocked by environment warnings\.\)/)
       assert.match(result.stdout, /• actions \(skipped: Blocked by environment warnings\.\)/)
@@ -210,7 +211,7 @@ describe('doctor command', () => {
     try {
       let result = await runDoctor([], tmpDir)
 
-      assert.equal(result.status, 0, result.stderr)
+      assert.equal(result.exitCode, 0, result.stderr)
       assert.match(result.stdout, /✗ environment/)
       assert.match(result.stdout, /• project \(skipped: Blocked by environment warnings\.\)/)
       assert.match(result.stdout, /• actions \(skipped: Blocked by environment warnings\.\)/)
@@ -249,7 +250,7 @@ describe('doctor command', () => {
 
       let result = await runDoctor([], tmpDir)
 
-      assert.equal(result.status, 0, result.stderr)
+      assert.equal(result.exitCode, 0, result.stderr)
       assert.match(result.stdout, /✗ environment/)
       assert.match(
         result.stdout,
@@ -305,13 +306,13 @@ describe('doctor command', () => {
       try {
         let checkResult = await runDoctor([], projectDir)
 
-        assert.equal(checkResult.status, 0, `${label}: ${checkResult.stderr}`)
+        assert.equal(checkResult.exitCode, 0, `${label}: ${checkResult.stderr}`)
         assert.match(checkResult.stdout, /Doctor found no issues\./, label)
         assert.equal(checkResult.stderr, '', label)
 
         let fixResult = await runDoctor(['--fix'], projectDir)
 
-        assert.equal(fixResult.status, 0, `${label}: ${fixResult.stderr}`)
+        assert.equal(fixResult.exitCode, 0, `${label}: ${fixResult.stderr}`)
         assert.doesNotMatch(fixResult.stdout, /Applied fixes:/, label)
         assert.match(fixResult.stdout, /Doctor found no issues\./, label)
         assert.equal(fixResult.stderr, '', label)
@@ -332,7 +333,7 @@ describe('doctor command', () => {
   it('reports missing remix dependencies and skips later suites', async () => {
     let result = await runDoctor([], getFixturePath('doctor-env-missing-remix-dependency'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /✗ environment/)
     assert.match(result.stdout, /• project \(skipped: Blocked by environment warnings\.\)/)
     assert.match(result.stdout, /• actions \(skipped: Blocked by environment warnings\.\)/)
@@ -378,7 +379,7 @@ describe('doctor command', () => {
     try {
       let fixResult = await runDoctor(['--fix'], projectDir)
 
-      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.equal(fixResult.exitCode, 0, fixResult.stderr)
       assert.match(fixResult.stdout, /✓ environment/)
       assert.match(fixResult.stdout, /✓ environment\n  Applied fixes:\n    • Updated package\.json/)
       assert.equal(fixResult.stderr, '')
@@ -398,7 +399,7 @@ describe('doctor command', () => {
 
       let checkResult = await runDoctor([], projectDir)
 
-      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
       assert.match(checkResult.stdout, /Doctor found no issues\./)
       assert.equal(checkResult.stderr, '')
     } finally {
@@ -428,7 +429,7 @@ describe('doctor command', () => {
     try {
       let result = await runDoctor([], tmpDir)
 
-      assert.equal(result.status, 0, result.stderr)
+      assert.equal(result.exitCode, 0, result.stderr)
       assert.match(result.stdout, /✗ environment/)
       assert.match(result.stdout, /• project \(skipped: Blocked by environment warnings\.\)/)
       assert.match(result.stdout, /• actions \(skipped: Blocked by environment warnings\.\)/)
@@ -470,7 +471,7 @@ describe('doctor command', () => {
 
       let result = await runDoctor([], tmpDir)
 
-      assert.equal(result.status, 0, result.stderr)
+      assert.equal(result.exitCode, 0, result.stderr)
       assert.match(result.stdout, /✓ environment/)
       assert.match(result.stdout, /✗ project/)
       assert.match(result.stdout, /• actions \(skipped: Blocked by project warnings\.\)/)
@@ -522,7 +523,7 @@ describe('doctor command', () => {
     try {
       let fixResult = await runDoctor(['--fix'], projectDir)
 
-      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.equal(fixResult.exitCode, 0, fixResult.stderr)
       assert.match(fixResult.stdout, /Updated package\.json/)
       assert.equal(fixResult.stderr, '')
 
@@ -536,7 +537,7 @@ describe('doctor command', () => {
 
       let checkResult = await runDoctor([], projectDir)
 
-      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
       assert.match(checkResult.stdout, /Doctor found no issues\./)
       assert.equal(checkResult.stderr, '')
     } finally {
@@ -547,7 +548,7 @@ describe('doctor command', () => {
   it('reports missing action controllers', async () => {
     let result = await runDoctor([], getFixturePath('doctor-missing'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /✗ actions/)
     assert.match(
       result.stdout,
@@ -586,7 +587,7 @@ describe('doctor command', () => {
     try {
       let fixResult = await runDoctor(['--fix'], projectDir)
 
-      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.equal(fixResult.exitCode, 0, fixResult.stderr)
       assert.match(fixResult.stdout, /✓ project/)
       assert.match(fixResult.stdout, /✓ project\n  Applied fixes:/)
       assert.match(fixResult.stdout, /Created app\/routes\.ts/)
@@ -611,7 +612,7 @@ describe('doctor command', () => {
 
       let checkResult = await runDoctor([], projectDir)
 
-      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
       assert.match(checkResult.stdout, /Doctor found no issues\./)
       assert.equal(checkResult.stderr, '')
     } finally {
@@ -645,7 +646,7 @@ describe('doctor command', () => {
     try {
       let fixResult = await runDoctor(['--fix'], projectDir)
 
-      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.equal(fixResult.exitCode, 0, fixResult.stderr)
       assert.match(fixResult.stdout, /✓ project/)
       assert.match(fixResult.stdout, /Updated app\/routes\.ts/)
       assert.match(fixResult.stdout, /Created app\/actions\/controller\.js/)
@@ -664,7 +665,7 @@ describe('doctor command', () => {
 
       let checkResult = await runDoctor([], projectDir)
 
-      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
       assert.match(checkResult.stdout, /Doctor found no issues\./)
       assert.equal(checkResult.stderr, '')
     } finally {
@@ -678,7 +679,7 @@ describe('doctor command', () => {
     try {
       let fixResult = await runDoctor(['--fix'], projectDir)
 
-      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.equal(fixResult.exitCode, 0, fixResult.stderr)
       assert.match(fixResult.stdout, /✓ actions/)
       assert.match(fixResult.stdout, /Applied fixes:/)
       assert.match(fixResult.stdout, /Created app\/actions\/controller\.js/)
@@ -707,7 +708,7 @@ describe('doctor command', () => {
 
       let checkResult = await runDoctor([], projectDir)
 
-      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
       assert.match(checkResult.stdout, /Doctor found no issues\./)
       assert.equal(checkResult.stderr, '')
     } finally {
@@ -747,7 +748,7 @@ describe('doctor command', () => {
     try {
       let fixResult = await runDoctor(['--fix'], projectDir)
 
-      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.equal(fixResult.exitCode, 0, fixResult.stderr)
       assert.match(fixResult.stdout, /Created app\/actions\/controller\.js/)
 
       let controllerSource = await fs.readFile(
@@ -760,7 +761,7 @@ describe('doctor command', () => {
 
       let checkResult = await runDoctor([], projectDir)
 
-      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
       assert.match(checkResult.stdout, /Doctor found no issues\./)
       assert.equal(checkResult.stderr, '')
     } finally {
@@ -801,14 +802,14 @@ describe('doctor command', () => {
       let outsidePath = path.join(path.dirname(projectDir), 'escape.js')
       let fixResult = await runDoctor(['--fix'], projectDir)
 
-      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.equal(fixResult.exitCode, 0, fixResult.stderr)
       assert.match(fixResult.stdout, /Created app\/actions\/controller\.js/)
       await assertPathExists(path.join(projectDir, 'app', 'actions', 'controller.js'))
       await assertPathMissing(outsidePath)
 
       let checkResult = await runDoctor([], projectDir)
 
-      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
       assert.match(checkResult.stdout, /Doctor found no issues\./)
       assert.equal(checkResult.stderr, '')
     } finally {
@@ -850,7 +851,7 @@ describe('doctor command', () => {
     try {
       let fixResult = await runDoctor(['--fix'], projectDir)
 
-      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.equal(fixResult.exitCode, 0, fixResult.stderr)
       assert.match(fixResult.stdout, /Created app\/actions\/controller\.tsx/)
 
       let controllerSource = await fs.readFile(
@@ -872,7 +873,7 @@ describe('doctor command', () => {
   it('accepts the global no-color flag', async () => {
     let result = await runDoctor(['--no-color'], getFixturePath('doctor-missing'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.equal(result.stdout.includes(ANSI_CSI), false)
     assert.equal(result.stderr, '')
   })
@@ -880,7 +881,7 @@ describe('doctor command', () => {
   it('reports duplicate action controller files', async () => {
     let result = await runDoctor([], getFixturePath('doctor-duplicate-owner'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /✗ actions/)
     assert.match(
       result.stdout,
@@ -896,7 +897,7 @@ describe('doctor command', () => {
   it('fails fix mode when unfixable action warnings remain', async () => {
     let result = await runDoctor(['--fix'], getFixturePath('doctor-duplicate-owner'))
 
-    assert.equal(result.status, 1)
+    assert.equal(result.exitCode, 1)
     assert.match(result.stdout, /✗ actions/)
     assert.match(result.stdout, /has multiple action controller files/)
     assert.doesNotMatch(result.stdout, /Applied fixes:/)
@@ -906,7 +907,7 @@ describe('doctor command', () => {
   it('reports incomplete actions when a route-key folder is missing its entry file', async () => {
     let result = await runDoctor([], getFixturePath('doctor-incomplete-controller'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /✗ actions/)
     assert.match(
       result.stdout,
@@ -922,7 +923,7 @@ describe('doctor command', () => {
     try {
       let fixResult = await runDoctor(['--fix'], projectDir)
 
-      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.equal(fixResult.exitCode, 0, fixResult.stderr)
       assert.match(fixResult.stdout, /✓ actions/)
       assert.match(fixResult.stdout, /Created app\/actions\/contact\/controller\.tsx/)
       assert.equal(fixResult.stderr, '')
@@ -939,7 +940,7 @@ describe('doctor command', () => {
 
       let checkResult = await runDoctor([], projectDir)
 
-      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
       assert.match(checkResult.stdout, /Doctor found no issues\./)
       assert.equal(checkResult.stderr, '')
     } finally {
@@ -950,7 +951,7 @@ describe('doctor command', () => {
   it('reports orphan action controller folders', async () => {
     let result = await runDoctor([], getFixturePath('doctor-orphans'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /✗ actions/)
     assert.match(
       result.stdout,
@@ -962,7 +963,7 @@ describe('doctor command', () => {
   it('reports extraneous route directories outside any controller route', async () => {
     let result = await runDoctor([], getFixturePath('doctor-orphan-route-local-file'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /✗ actions/)
     assert.match(
       result.stdout,
@@ -974,7 +975,7 @@ describe('doctor command', () => {
   it('reports extraneous route directories from the route-map shape', async () => {
     let result = await runDoctor([], getFixturePath('doctor-generic-buckets'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /✗ actions/)
     assert.match(
       result.stdout,
@@ -990,7 +991,7 @@ describe('doctor command', () => {
   it('allows route names like shared and common when the route map declares them', async () => {
     let result = await runDoctor([], getFixturePath('doctor-route-names'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /✓ actions/)
     assert.doesNotMatch(result.stdout, /shared-bucket/)
     assert.equal(result.stderr, '')
@@ -999,7 +1000,7 @@ describe('doctor command', () => {
   it('uses kebab-case controller paths for camelCase route keys', async () => {
     let result = await runDoctor([], getFixturePath('doctor-camel-case-keys'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /✓ actions/)
     assert.doesNotMatch(result.stdout, /forgotPassword/)
     assert.doesNotMatch(result.stdout, /resetPassword/)
@@ -1050,7 +1051,7 @@ describe('doctor command', () => {
     try {
       let fixResult = await runDoctor(['--fix'], projectDir)
 
-      assert.equal(fixResult.status, 0, fixResult.stderr)
+      assert.equal(fixResult.exitCode, 0, fixResult.stderr)
       assert.match(fixResult.stdout, /✓ actions/)
       assert.doesNotMatch(fixResult.stdout, /Created app\/actions\/auth\/controller\.tsx/)
       assert.match(fixResult.stdout, /Created app\/actions\/auth\/forgot-password\/controller\.tsx/)
@@ -1069,7 +1070,7 @@ describe('doctor command', () => {
 
       let checkResult = await runDoctor([], projectDir)
 
-      assert.equal(checkResult.status, 0, checkResult.stderr)
+      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
       assert.match(checkResult.stdout, /Doctor found no issues\./)
       assert.equal(checkResult.stderr, '')
     } finally {
@@ -1113,7 +1114,7 @@ describe('doctor command', () => {
     try {
       let result = await runDoctor(['--fix'], projectDir)
 
-      assert.equal(result.status, 0, result.stderr)
+      assert.equal(result.exitCode, 0, result.stderr)
       assert.match(result.stdout, /✓ actions/)
       assert.match(result.stdout, /Created app\/actions\/controller\.ts/)
       assert.equal(result.stderr, '')
@@ -1159,7 +1160,7 @@ describe('doctor command', () => {
     try {
       let result = await runDoctor(['--fix'], projectDir)
 
-      assert.equal(result.status, 0, result.stderr)
+      assert.equal(result.exitCode, 0, result.stderr)
       assert.match(result.stdout, /✓ actions/)
       assert.match(result.stdout, /Created app\/actions\/controller\.jsx/)
       assert.equal(result.stderr, '')
@@ -1172,7 +1173,7 @@ describe('doctor command', () => {
   it('reports project warnings when routes is not exported', async () => {
     let result = await runDoctor([], getFixturePath('routes-no-export'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /✗ project/)
     assert.match(result.stdout, /• actions \(skipped: Blocked by project warnings\.\)/)
     assert.match(
@@ -1185,7 +1186,7 @@ describe('doctor command', () => {
   it('reports project warnings when the route map is invalid', async () => {
     let result = await runDoctor([], getFixturePath('routes-invalid-value'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /✗ project/)
     assert.match(result.stdout, /• actions \(skipped: Blocked by project warnings\.\)/)
     assert.match(result.stdout, /✗ project\n  • \[WARN\] Invalid route map value at "broken"/)
@@ -1195,7 +1196,7 @@ describe('doctor command', () => {
   it('reports project warnings when importing routes throws', async () => {
     let result = await runDoctor([], getFixturePath('routes-import-error'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /✗ project/)
     assert.match(result.stdout, /• actions \(skipped: Blocked by project warnings\.\)/)
     assert.match(
@@ -1209,7 +1210,7 @@ describe('doctor command', () => {
     let fixtureDir = getFixturePath('doctor-missing')
     let result = await runDoctor(['--json'], fixtureDir)
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.equal(result.stderr, '')
 
     let payload = JSON.parse(result.stdout) as DoctorReport
@@ -1241,7 +1242,7 @@ describe('doctor command', () => {
     try {
       let result = await runDoctor(['--fix', '--json'], projectDir)
 
-      assert.equal(result.status, 0, result.stderr)
+      assert.equal(result.exitCode, 0, result.stderr)
       assert.equal(result.stderr, '')
 
       let payload = JSON.parse(result.stdout) as DoctorReport
@@ -1259,7 +1260,7 @@ describe('doctor command', () => {
     let fixtureDir = getFixturePath('routes-no-export')
     let result = await runDoctor(['--json'], fixtureDir)
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
 
     let payload = JSON.parse(result.stdout) as DoctorReport
     let projectSuite = payload.suites.find((suite) => suite.name === 'project')
@@ -1273,7 +1274,7 @@ describe('doctor command', () => {
   it('fails strict mode when action warnings are present', async () => {
     let result = await runDoctor(['--strict'], getFixturePath('doctor-missing'))
 
-    assert.equal(result.status, 1)
+    assert.equal(result.exitCode, 1)
     assert.match(result.stdout, /Summary: 2 warnings, 0 advice\./)
     assert.match(result.stdout, /✗ actions/)
     assert.equal(result.stderr, '')
@@ -1282,7 +1283,7 @@ describe('doctor command', () => {
   it('fails strict mode when project warnings are present', async () => {
     let result = await runDoctor(['--strict'], getFixturePath('routes-no-export'))
 
-    assert.equal(result.status, 1)
+    assert.equal(result.exitCode, 1)
     assert.match(result.stdout, /must export a named "routes" value/)
     assert.match(result.stdout, /✗ project/)
     assert.equal(result.stderr, '')
@@ -1299,33 +1300,6 @@ async function readRemixVersion(): Promise<string> {
     version: string
   }
   return packageJson.version
-}
-
-async function captureOutput(
-  callback: () => Promise<number>,
-): Promise<{ status: number; stderr: string; stdout: string }> {
-  let stderr = ''
-  let stdout = ''
-  let originalStdoutWrite = process.stdout.write
-  let originalStderrWrite = process.stderr.write
-
-  process.stdout.write = ((chunk: string | Uint8Array) => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stdout.write
-
-  process.stderr.write = ((chunk: string | Uint8Array) => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stderr.write
-
-  try {
-    let status = await callback()
-    return { status, stderr, stdout }
-  } finally {
-    process.stdout.write = originalStdoutWrite
-    process.stderr.write = originalStderrWrite
-  }
 }
 
 async function copyFixtureProject(name: string): Promise<string> {
