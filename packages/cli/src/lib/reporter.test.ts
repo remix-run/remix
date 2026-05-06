@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
+import { withEnv } from '../../test/with-env.ts'
 import { createCommandReporter } from './reporter.ts'
 import { configureColors } from './terminal.ts'
 
@@ -56,98 +57,109 @@ describe('reporter', () => {
   })
 
   it('renders tables with bold headers and optional omitted headers', async () => {
-    await withEnv('NO_COLOR', undefined, async () =>
-      withEnv('FORCE_COLOR', '1', async () =>
-        withEnv('TERM', 'xterm-256color', async () =>
-          withTTY(process.stdout, true, async () =>
-            withCapturedWrites(process.stdout, async (writes) => {
-              configureColors({ disabled: false })
-              let reporter = createCommandReporter()
+    await withEnv({ FORCE_COLOR: '1', NO_COLOR: undefined, TERM: 'xterm-256color' }, async () =>
+      withTTY(process.stdout, true, async () =>
+        withCapturedWrites(process.stdout, async (writes) => {
+          configureColors({ disabled: false })
+          let reporter = createCommandReporter()
 
-              reporter.out.table({
-                headers: ['Route', 'Method'],
-                rows: [
-                  ['home', 'ANY'],
-                  ['auth.login.action', 'POST'],
-                ],
-              })
-              reporter.out.blank()
-              reporter.out.table({
-                headers: ['Route', 'Method'],
-                noHeaders: true,
-                rows: [['home', 'ANY']],
-              })
-              reporter.finish()
+          reporter.out.table({
+            headers: ['Route', 'Method'],
+            rows: [
+              ['home', 'ANY'],
+              ['auth.login.action', 'POST'],
+            ],
+          })
+          reporter.out.blank()
+          reporter.out.table({
+            headers: ['Route', 'Method'],
+            noHeaders: true,
+            rows: [['home', 'ANY']],
+          })
+          reporter.finish()
 
-              assert.deepEqual(writes, [
-                '\n',
-                '\u001B[1mRoute            \u001B[0m  \u001B[1mMethod\u001B[0m\n',
-                'home               ANY   \n',
-                'auth.login.action  POST  \n',
-                '\n',
-                'home   ANY   \n',
-                '\n',
-              ])
-            }),
-          ),
-        ),
+          assert.deepEqual(writes, [
+            '\n',
+            '\u001B[1mRoute            \u001B[0m  \u001B[1mMethod\u001B[0m\n',
+            'home               ANY   \n',
+            'auth.login.action  POST  \n',
+            '\n',
+            'home   ANY   \n',
+            '\n',
+          ])
+        }),
       ),
     )
   })
 
   it('renders progress to stderr with live tty updates', async () => {
-    await withEnv('NO_COLOR', undefined, async () =>
-      withEnv('FORCE_COLOR', '1', async () =>
-        withEnv('TERM', 'xterm-256color', async () =>
-          withTTY(process.stderr, true, async () =>
-            withCapturedWrites(process.stderr, async (writes) => {
-              configureColors({ disabled: false })
-              let reporter = createCommandReporter({ statusFrameIntervalMs: 5 })
+    await withEnv({ FORCE_COLOR: '1', NO_COLOR: undefined, TERM: 'xterm-256color' }, async () =>
+      withTTY(process.stderr, true, async () =>
+        withCapturedWrites(process.stderr, async (writes) => {
+          configureColors({ disabled: false })
+          let reporter = createCommandReporter({ statusFrameIntervalMs: 5 })
 
-              reporter.status.startStep('Checking environment')
-              await wait(25)
-              reporter.status.succeedStep()
-              reporter.status.summaryGap()
+          reporter.status.startStep('Checking environment')
+          await wait(25)
+          reporter.status.succeedStep()
+          reporter.status.summaryGap()
 
-              assert.equal(writes[0], '\n')
-              assert.equal(writes[1], '\r\u001B[2K\u001B[90m• Checking environment.\u001B[0m')
-              assert.ok(
-                writes.some(
-                  (write) =>
-                    write === '\r\u001B[2K\u001B[90m• Checking environment..\u001B[0m' ||
-                    write === '\r\u001B[2K\u001B[90m• Checking environment...\u001B[0m',
-                ),
-              )
-              assert.deepEqual(writes.slice(-2), [
-                '\r\u001B[2K\u001B[92m✓\u001B[0m \u001B[90mChecking environment\u001B[0m\n',
-                '\n',
-              ])
-            }),
-          ),
-        ),
+          assert.equal(writes[0], '\n')
+          assert.equal(writes[1], '\r\u001B[2K\u001B[90m• Checking environment.\u001B[0m')
+          assert.ok(
+            writes.some(
+              (write) =>
+                write === '\r\u001B[2K\u001B[90m• Checking environment..\u001B[0m' ||
+                write === '\r\u001B[2K\u001B[90m• Checking environment...\u001B[0m',
+            ),
+          )
+          assert.deepEqual(writes.slice(-2), [
+            '\r\u001B[2K\u001B[92m✓\u001B[0m \u001B[90mChecking environment\u001B[0m\n',
+            '\n',
+          ])
+        }),
       ),
     )
   })
 
   it('renders non-interactive progress as stable stderr lines', async () => {
-    await withEnv('NO_COLOR', undefined, async () =>
-      withEnv('TERM', 'xterm-256color', async () =>
-        withTTY(process.stderr, false, async () =>
-          withCapturedWrites(process.stderr, async (writes) => {
+    await withEnv({ NO_COLOR: undefined, TERM: 'xterm-256color' }, async () =>
+      withTTY(process.stderr, false, async () =>
+        withCapturedWrites(process.stderr, async (writes) => {
+          configureColors({ disabled: false })
+          let reporter = createCommandReporter()
+
+          reporter.status.startStep('Checking project')
+          reporter.status.failStep()
+          reporter.status.skipStep('actions', 'Blocked by project warnings.')
+          reporter.finish()
+
+          assert.deepEqual(writes, [
+            '\n',
+            '• Checking project...\n',
+            '✗ Checking project\n',
+            '• actions (skipped: Blocked by project warnings.)\n',
+            '\n',
+          ])
+        }),
+      ),
+    )
+  })
+
+  it('writes the progress command header to stderr and never stdout', async () => {
+    await withEnv({ FORCE_COLOR: '1', NO_COLOR: undefined, TERM: 'xterm-256color' }, async () =>
+      withTTY(process.stderr, true, async () =>
+        withCapturedWrites(process.stdout, async (stdoutWrites) =>
+          withCapturedWrites(process.stderr, async (stderrWrites) => {
             configureColors({ disabled: false })
-            let reporter = createCommandReporter()
+            let reporter = createCommandReporter({ remixVersion: '9.9.9' })
 
-            reporter.status.startStep('Checking project')
-            reporter.status.failStep()
-            reporter.status.skipStep('actions', 'Blocked by project warnings.')
-            reporter.finish()
+            await reporter.status.commandHeader('doctor')
 
-            assert.deepEqual(writes, [
+            assert.deepEqual(stdoutWrites, [])
+            assert.deepEqual(stderrWrites, [
               '\n',
-              '• Checking project...\n',
-              '✗ Checking project\n',
-              '• actions (skipped: Blocked by project warnings.)\n',
-              '\n',
+              '\u001B[94mR\u001B[0m\u001B[92mE\u001B[0m\u001B[93mM\u001B[0m\u001B[95mI\u001B[0m\u001B[91mX\u001B[0m v9.9.9 - doctor\n\n',
             ])
           }),
         ),
@@ -155,55 +167,28 @@ describe('reporter', () => {
     )
   })
 
-  it('writes the progress command header to stderr and never stdout', async () => {
-    await withEnv('NO_COLOR', undefined, async () =>
-      withEnv('FORCE_COLOR', '1', async () =>
-        withEnv('TERM', 'xterm-256color', async () =>
-          withTTY(process.stderr, true, async () =>
-            withCapturedWrites(process.stdout, async (stdoutWrites) =>
-              withCapturedWrites(process.stderr, async (stderrWrites) => {
-                configureColors({ disabled: false })
-                let reporter = createCommandReporter({ remixVersion: '9.9.9' })
-
-                await reporter.status.commandHeader('doctor')
-
-                assert.deepEqual(stdoutWrites, [])
-                assert.deepEqual(stderrWrites, [
-                  '\n',
-                  '\u001B[94mR\u001B[0m\u001B[92mE\u001B[0m\u001B[93mM\u001B[0m\u001B[95mI\u001B[0m\u001B[91mX\u001B[0m v9.9.9 - doctor\n\n',
-                ])
-              }),
-            ),
-          ),
-        ),
-      ),
-    )
-  })
-
   it('does not add a second preamble when progress is on stderr and the summary is on stdout', async () => {
-    await withEnv('NO_COLOR', undefined, async () =>
-      withEnv('TERM', 'xterm-256color', async () =>
-        withTTY(process.stderr, false, async () =>
-          withCapturedWrites(process.stdout, async (stdoutWrites) =>
-            withCapturedWrites(process.stderr, async (stderrWrites) => {
-              configureColors({ disabled: false })
-              let reporter = createCommandReporter()
+    await withEnv({ NO_COLOR: undefined, TERM: 'xterm-256color' }, async () =>
+      withTTY(process.stderr, false, async () =>
+        withCapturedWrites(process.stdout, async (stdoutWrites) =>
+          withCapturedWrites(process.stderr, async (stderrWrites) => {
+            configureColors({ disabled: false })
+            let reporter = createCommandReporter()
 
-              reporter.status.startStep('Checking routes')
-              reporter.status.succeedStep()
-              reporter.status.summaryGap()
-              reporter.out.line('Checked Remix routes: 2 found.')
-              reporter.finish()
+            reporter.status.startStep('Checking routes')
+            reporter.status.succeedStep()
+            reporter.status.summaryGap()
+            reporter.out.line('Checked Remix routes: 2 found.')
+            reporter.finish()
 
-              assert.deepEqual(stderrWrites, [
-                '\n',
-                '• Checking routes...\n',
-                '✓ Checking routes\n',
-                '\n',
-              ])
-              assert.deepEqual(stdoutWrites, ['Checked Remix routes: 2 found.\n', '\n'])
-            }),
-          ),
+            assert.deepEqual(stderrWrites, [
+              '\n',
+              '• Checking routes...\n',
+              '✓ Checking routes\n',
+              '\n',
+            ])
+            assert.deepEqual(stdoutWrites, ['Checked Remix routes: 2 found.\n', '\n'])
+          }),
         ),
       ),
     )
@@ -236,32 +221,6 @@ async function withCapturedWrites<T>(
     return await callback(writes)
   } finally {
     stream.write = originalWrite
-  }
-}
-
-async function withEnv<T>(
-  name: string,
-  value: string | undefined,
-  callback: () => Promise<T> | T,
-): Promise<T> {
-  let previousValue = process.env[name]
-
-  if (value == null) {
-    delete process.env[name]
-  } else {
-    process.env[name] = value
-  }
-
-  try {
-    return await callback()
-  } finally {
-    if (previousValue == null) {
-      delete process.env[name]
-    } else {
-      process.env[name] = previousValue
-    }
-
-    configureColors({ disabled: false })
   }
 }
 

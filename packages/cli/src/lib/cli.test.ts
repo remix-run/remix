@@ -8,6 +8,7 @@ import { describe, it } from '@remix-run/test'
 
 import { getFixturePath } from '../../test/fixtures.ts'
 import { captureOutput } from '../../test/capture-output.ts'
+import { withEnv } from '../../test/with-env.ts'
 import { runRemix, type RunRemixOptions } from '../index.ts'
 import { getTestCommandHelpText } from './commands/test.ts'
 
@@ -597,7 +598,7 @@ describe('run', () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-'))
     try {
       let appDir = path.join(tmpDir, 'my-app')
-      let result = await withEnv('REMIX_VERSION', '4.5.6', () =>
+      let result = await withEnv({ REMIX_VERSION: '4.5.6' }, () =>
         captureOutput(() => run(['new', appDir], { remixVersion: '9.9.9' })),
       )
 
@@ -636,7 +637,7 @@ describe('run', () => {
   })
 
   it('does not let REMIX_VERSION override the reported Remix version', async () => {
-    let result = await withEnv('REMIX_VERSION', '4.5.6', () =>
+    let result = await withEnv({ REMIX_VERSION: '4.5.6' }, () =>
       captureOutput(() => run(['version'], { remixVersion: '9.9.9' })),
     )
 
@@ -652,21 +653,6 @@ describe('run', () => {
     assert.match(result.stderr, /Unknown argument: --remix-version/)
   })
 })
-
-async function withEnv<T>(name: string, value: string, callback: () => Promise<T>): Promise<T> {
-  let previousValue = process.env[name]
-  process.env[name] = value
-
-  try {
-    return await callback()
-  } finally {
-    if (previousValue == null) {
-      delete process.env[name]
-    } else {
-      process.env[name] = previousValue
-    }
-  }
-}
 
 async function withCwd<T>(cwd: string, callback: () => Promise<T>): Promise<T> {
   let previousCwd = testCwd
