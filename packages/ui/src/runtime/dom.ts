@@ -3418,6 +3418,10 @@ export interface TemplateHTMLProps<eventTarget extends EventTarget = HTMLTemplat
  */
 export interface TextareaHTMLProps<eventTarget extends EventTarget = HTMLTextAreaElement>
   extends HTMLProps<eventTarget> {
+  /** Textarea content comes from `value` or `defaultValue`. */
+  children?: never
+  /** Textarea content comes from `value` or `defaultValue`. */
+  innerHTML?: never
   /** The `autocomplete` HTML attribute. */
   autocomplete?: Trackable<string | undefined>
   /** The `autoComplete` HTML attribute. */

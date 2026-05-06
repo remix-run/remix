@@ -31,7 +31,7 @@ describe('e2e', () => {
     await page.getByRole('heading', { name: 'Shopping Cart' }).waitFor()
     let cartRow = await page.locator(`table tr`)
     assert.equal(await cartRow.getByRole('link').innerText(), book?.title)
-    assert.equal(await cartRow.getByRole('spinbutton').getAttribute('defaultvalue'), '1')
+    assert.equal(await cartRow.getByRole('spinbutton').inputValue(), '1')
   })
 })
 

@@ -44,9 +44,12 @@ export function AdminBookFormPage() {
 
           <div class="form-group">
             <label for="description">Description</label>
-            <textarea id="description" name="description" required>
-              {book?.description}
-            </textarea>
+            <textarea
+              id="description"
+              name="description"
+              required
+              defaultValue={book?.description}
+            />
           </div>
 
           <div class="form-group">
