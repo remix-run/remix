@@ -4,7 +4,6 @@ import type { Route, RouteMap } from '@remix-run/routes'
 import type { AnyMiddleware, ApplyMiddlewareTuple } from './middleware.ts'
 import type { RequestContext } from './request-context.ts'
 import type { WithParams } from './request-context.ts'
-import type { RequestMethod } from './request-methods.ts'
 
 export type ActionObjectWithoutMiddleware<
   params extends Record<string, any>,
@@ -67,7 +66,7 @@ export type Controller<
 type ControllerActions<routes extends RouteMap, context extends RequestContext<any, any>> = routes extends any ?
   {
     [name in keyof routes as routes[name] extends Route<any, any> ? name : never]: (
-      routes[name] extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? Action<method, pattern, context> :
+      routes[name] extends Route<any, infer pattern extends string> ? Action<pattern, context> :
       never
     )
   } & {
@@ -89,7 +88,6 @@ export type ControllerInput<
  * Actions can be plain handler functions or action objects with optional inline middleware.
  */
 export type Action<
-  _method extends RequestMethod | 'ANY',
   pattern extends string,
   context extends RequestContext<any, any> = RequestContext,
 > = ActionInput<Params<pattern>, WithParams<context, Params<pattern>>, readonly AnyMiddleware[]>
@@ -99,13 +97,12 @@ export type Action<
  */
 // prettier-ignore
 export type BuildAction<
-  method extends RequestMethod | 'ANY',
   route extends string | RoutePattern | Route,
   context extends RequestContext<any, any> = RequestContext,
 > =
-  route extends string ? Action<method, route, context> :
-  route extends RoutePattern<infer pattern> ? Action<method, pattern, context> :
-  route extends Route<infer _, infer pattern> ? Action<method, pattern, context> :
+  route extends string ? Action<route, context> :
+  route extends RoutePattern<infer pattern> ? Action<pattern, context> :
+  route extends Route<infer _, infer pattern> ? Action<pattern, context> :
   never
 
 /**

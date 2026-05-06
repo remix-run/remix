@@ -109,7 +109,7 @@ const privateAction = {
 
     return new Response('Private')
   },
-} satisfies BuildAction<'GET', typeof routes.private, ProtectedAppContext>
+} satisfies BuildAction<typeof routes.private, ProtectedAppContext>
 
 const adminController = {
   actions: {
