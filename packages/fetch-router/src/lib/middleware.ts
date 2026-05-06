@@ -1,12 +1,11 @@
 import type { RequestHandler } from './controller.ts'
 import { raceRequestAbort } from './request-abort.ts'
 import type { ContextEntries, RequestContext } from './request-context.ts'
-import type { RequestMethod } from './request-methods.ts'
 
 /**
- * A middleware of any method, params, or context transform.
+ * A middleware of any params or context transform.
  */
-export type AnyMiddleware = Middleware<any, any, any>
+export type AnyMiddleware = Middleware<any, any>
 
 /**
  * The type-level effect a middleware can apply to request context.
@@ -18,7 +17,7 @@ export type MiddlewareContextTransform =
 type IdentityContextTransform = readonly []
 
 type MiddlewareTransform<middleware> =
-  middleware extends Middleware<any, any, infer transform> ? transform : IdentityContextTransform
+  middleware extends Middleware<any, infer transform> ? transform : IdentityContextTransform
 
 /**
  * Applies a middleware context transform to a request-context type.
@@ -80,7 +79,6 @@ export type MiddlewareContext<middleware extends readonly AnyMiddleware[]> = App
  * @returns A response to short-circuit the chain, or `undefined`/`void` to continue
  */
 export interface Middleware<
-  _method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
   params extends Record<string, any> = {},
   transform extends MiddlewareContextTransform = IdentityContextTransform,
 > {
@@ -105,10 +103,7 @@ export interface Middleware<
  */
 export type NextFunction = () => Promise<Response>
 
-export function runMiddleware<
-  _method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
-  params extends Record<string, any> = {},
->(
+export function runMiddleware<params extends Record<string, any> = {}>(
   middleware: AnyMiddleware[],
   context: RequestContext<params>,
   handler: RequestHandler<params, any>,

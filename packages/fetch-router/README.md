@@ -629,8 +629,8 @@ Route params are only half of a handler's type contract. In many apps, handlers 
 `fetch-router` now lets you carry that context contract through the router, controller, and action types directly. A common pattern is to derive one app-local context type from your router middleware, then reuse it across stored controllers and actions.
 
 ```ts
-import { Auth, requireAuth, type WithRequiredAuth } from 'remix/auth-middleware'
-import { type BuildAction, type RequestContext, type WithParams } from 'remix/fetch-router'
+import { Auth, requireAuth } from 'remix/auth-middleware'
+import { type Action, type RequestContext, type WithParams } from 'remix/fetch-router'
 import { route } from 'remix/routes'
 
 let routes = route({
@@ -641,21 +641,18 @@ type AppContext<params extends Record<string, string> = {}> = WithParams<Request
 
 type AuthIdentity = { id: string }
 
-type AuthenticatedAppContext<params extends Record<string, string> = {}> = WithRequiredAuth<
-  AppContext<params>,
-  AuthIdentity
->
+let accountMiddleware = [requireAuth<AuthIdentity>()] as const
 
 let accountAction = {
-  middleware: [requireAuth<AuthIdentity>()],
+  middleware: accountMiddleware,
   handler(context) {
     let auth = context.get(Auth)
     return Response.json({ id: auth.identity.id })
   },
-} satisfies BuildAction<typeof routes.account, AuthenticatedAppContext>
+} satisfies Action<typeof routes.account, AppContext, typeof accountMiddleware>
 ```
 
-In this example, the action declares the stronger context it requires, and the action-local middleware makes that contract true at runtime. In a larger app, you can still derive a shared base context from router middleware with `MiddlewareContext<typeof middleware>` and build on top of it the same way.
+In this example, the action-local middleware tuple gives the handler the stronger context it requires and makes that contract true at runtime. In a larger app, you can still derive a shared base context from router middleware with `MiddlewareContext<typeof middleware>` and build on top of it the same way.
 
 #### Middleware Provider Guidance
 

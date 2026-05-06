@@ -3,7 +3,7 @@ import { describe, it } from '@remix-run/test'
 import { createMatcher, type Matcher, RoutePattern } from '@remix-run/route-pattern'
 import { createRoutes as route } from '@remix-run/routes'
 
-import type { BuildAction } from './controller.ts'
+import type { Action } from './controller.ts'
 import type { RequestContext } from './request-context.ts'
 import type { RouteEntry } from './router.ts'
 import { createRouter } from './router.ts'
@@ -812,13 +812,13 @@ describe('inline middleware', () => {
     assert.equal(await response.text(), 'Home')
   })
 
-  it('allows BuildAction object form without middleware', () => {
+  it('allows Action object form without middleware', () => {
     let routes = route({
       home: '/',
     })
 
     if (false as boolean) {
-      let action: BuildAction<typeof routes.home> = {
+      let action: Action<typeof routes.home> = {
         handler() {
           return new Response('Home')
         },

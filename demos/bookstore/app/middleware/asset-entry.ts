@@ -20,7 +20,7 @@ type SetAssetEntryContextTransform = readonly [readonly [typeof assetsEntryKey, 
 export function loadAssetEntry(
   scriptEntry = defaultScriptEntry,
   stylesheetEntry = defaultStylesheetEntry,
-): Middleware<any, any, SetAssetEntryContextTransform> {
+): Middleware<any, SetAssetEntryContextTransform> {
   return async (context, next) => {
     let [scriptSrc, scriptPreloads, stylesheetHref] = await Promise.all([
       assetServer.getHref(scriptEntry),

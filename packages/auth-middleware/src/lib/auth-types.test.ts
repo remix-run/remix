@@ -2,7 +2,7 @@ import { describe, it } from '@remix-run/test'
 
 import {
   createRouter,
-  type BuildAction,
+  type Action,
   type Controller,
   type GetContextValue,
   type MiddlewareContext,
@@ -109,7 +109,7 @@ const privateAction = {
 
     return new Response('Private')
   },
-} satisfies BuildAction<typeof routes.private, ProtectedAppContext>
+} satisfies Action<typeof routes.private, ProtectedAppContext>
 
 const adminController = {
   actions: {

@@ -5,7 +5,7 @@ import { db } from '../data/setup.ts'
 
 type SetDatabaseContextTransform = readonly [readonly [typeof Database, Database]]
 
-export function loadDatabase(): Middleware<'ANY', {}, SetDatabaseContextTransform> {
+export function loadDatabase(): Middleware<{}, SetDatabaseContextTransform> {
   return async (context, next) => {
     context.set(Database, db)
     return next()

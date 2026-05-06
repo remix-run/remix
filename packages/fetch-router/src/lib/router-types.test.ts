@@ -1,7 +1,7 @@
 import { describe, it } from '@remix-run/test'
 import { createRoutes as route } from '@remix-run/routes'
 
-import type { BuildAction, Controller } from './controller.ts'
+import type { Action, Controller } from './controller.ts'
 import type { Middleware } from './middleware.ts'
 import { createContextKey, type RequestContext, type SetContextValue } from './request-context.ts'
 import { createRouter } from './router.ts'
@@ -21,7 +21,7 @@ type SetRoleTransform<role extends 'viewer' | 'admin'> = readonly [
 
 type SetFormDataTransform = readonly [readonly [typeof FormData, FormData]]
 
-function requireUser(): Middleware<any, any, RequireUserTransform> {
+function requireUser(): Middleware<any, RequireUserTransform> {
   return async (context, next) => {
     context.set(CurrentUser, { id: 'user-1' })
     return next()
@@ -30,14 +30,14 @@ function requireUser(): Middleware<any, any, RequireUserTransform> {
 
 function setRole<role extends 'viewer' | 'admin'>(
   role: role,
-): Middleware<any, any, SetRoleTransform<role>> {
+): Middleware<any, SetRoleTransform<role>> {
   return async (context, next) => {
     context.set(CurrentRole, role)
     return next()
   }
 }
 
-function setFormData(): Middleware<any, any, SetFormDataTransform> {
+function setFormData(): Middleware<any, SetFormDataTransform> {
   return async (context, next) => {
     context.set(FormData, new FormData())
     return next()
@@ -111,7 +111,7 @@ const accountAction = {
 
     return new Response(accountId + ':' + user.id + ':' + role)
   },
-} satisfies BuildAction<typeof routes.account, AppContext>
+} satisfies Action<typeof routes.account, AppContext>
 
 const adminController = {
   actions: {
@@ -165,9 +165,25 @@ const elevatedReportAction = {
 
     return new Response(role)
   },
-} satisfies BuildAction<typeof routes.reports, AdminAppContext>
+} satisfies Action<typeof routes.reports, AdminAppContext>
+
+const elevatedReportMiddleware = [setRole('admin')] as const
+const elevatedReportActionWithMiddleware = {
+  middleware: elevatedReportMiddleware,
+  handler(context) {
+    let role = context.get(CurrentRole)
+    let reportId: string = context.params.reportId
+    let exactRole: 'admin' = role
+
+    void reportId
+    void exactRole
+
+    return new Response(role)
+  },
+} satisfies Action<typeof routes.reports, AppContext, typeof elevatedReportMiddleware>
 
 router.get(routes.account, accountAction)
+router.get(routes.reports, elevatedReportActionWithMiddleware)
 router.map(routes.admin, adminController)
 if (false as boolean) {
   let rootController = {
@@ -214,6 +230,7 @@ void accountAction
 void adminController
 void elevatedReportsController
 void elevatedReportAction
+void elevatedReportActionWithMiddleware
 
 describe('router type inference', () => {
   it('propagates router context into controller and action contracts', () => {})

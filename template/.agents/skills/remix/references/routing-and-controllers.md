@@ -93,13 +93,13 @@ redirect(routes.account.orders.show.href({ orderId: '42' }))
 ## Actions
 
 An action is the handler for one leaf route. In Remix app code, actions should live in controllers.
-Use `BuildAction` only when a reusable helper needs to type one action before it is added to a
+Use `Action` only when a reusable helper needs to type one action before it is added to a
 controller or when you are doing low-level router wiring outside the `app/actions` convention:
 
 ```typescript
-import type { BuildAction } from 'remix/fetch-router'
+import type { Action } from 'remix/fetch-router'
 
-export const search: BuildAction<'GET', typeof routes.search> = {
+export const search: Action<typeof routes.search> = {
   async handler({ url }) {
     let query = url.searchParams.get('q') ?? ''
     let results = await searchIndex(query)
