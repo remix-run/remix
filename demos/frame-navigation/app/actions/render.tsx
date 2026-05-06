@@ -31,15 +31,15 @@ async function resolveFrame(
   let url = new URL(src, frameSrc)
 
   let headers = new Headers()
-  headers.set('accept', 'text/html')
-  headers.set('accept-encoding', 'identity')
-  headers.set('x-remix-frame', 'true')
+  headers.set('Accept', 'text/html')
+  headers.set('Accept-Encoding', 'identity')
+  headers.set('X-Remix-Frame', 'true')
   if (target) {
-    headers.set('x-remix-target', target)
+    headers.set('X-Remix-Target', target)
   }
 
-  let cookie = request.headers.get('cookie')
-  if (cookie) headers.set('cookie', cookie)
+  let cookie = request.headers.get('Cookie')
+  if (cookie) headers.set('Cookie', cookie)
 
   let res = await followFrameRedirects(router, request, url, headers)
   if (!res.ok) {
@@ -62,7 +62,7 @@ async function followFrameRedirects(router: Router, request: Request, url: URL, 
       }),
     )
 
-    let location = res.headers.get('location')
+    let location = res.headers.get('Location')
     if (!location || res.status < 300 || res.status >= 400) {
       return res
     }

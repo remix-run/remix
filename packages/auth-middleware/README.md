@@ -177,7 +177,7 @@ let authCookie = createCookie('__auth', {
 let authCookieScheme: AuthScheme<'demo-user'> = {
   name: 'auth-cookie',
   async authenticate(context) {
-    let value = await authCookie.parse(context.headers.get('cookie'))
+    let value = await authCookie.parse(context.headers.get('Cookie'))
     if (value !== '1') {
       return
     }
@@ -191,7 +191,7 @@ let authCookieScheme: AuthScheme<'demo-user'> = {
 
 let requireAuthCookie = requireAuth<'demo-user'>({
   onFailure(context) {
-    let isFrameRequest = context.request.headers.get('x-remix-frame') === 'true'
+    let isFrameRequest = context.request.headers.get('X-Remix-Frame') === 'true'
     if (isFrameRequest) {
       return new Response('<p>Not authorized</p>', {
         status: 401,

@@ -20,10 +20,10 @@ export function render(node: RemixNode, request: Request, init?: ResponseInit) {
       }
     },
     async resolveFrame(src, target) {
-      let headers = new Headers({ accept: 'text/html' })
-      let cookie = request.headers.get('cookie')
-      if (cookie) headers.set('cookie', cookie)
-      if (target) headers.set('x-remix-target', target)
+      let headers = new Headers({ Accept: 'text/html' })
+      let cookie = request.headers.get('Cookie')
+      if (cookie) headers.set('Cookie', cookie)
+      if (target) headers.set('X-Remix-Target', target)
 
       let response = await router.fetch(new Request(new URL(src, request.url), { headers }))
       return response.body ?? response.text()

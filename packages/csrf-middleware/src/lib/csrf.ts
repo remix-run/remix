@@ -3,7 +3,7 @@ import type { Middleware, RequestContext, RequestMethod } from '@remix-run/fetch
 import { Session } from '@remix-run/session'
 
 const defaultSafeMethods: RequestMethod[] = ['GET', 'HEAD', 'OPTIONS']
-const defaultTokenHeaderNames = ['x-csrf-token', 'x-xsrf-token', 'csrf-token']
+const defaultTokenHeaderNames = ['X-Csrf-Token', 'X-Xsrf-Token', 'Csrf-Token']
 
 type OriginMatcher = string | RegExp | ReadonlyArray<string | RegExp>
 
@@ -71,7 +71,7 @@ export interface CsrfOptions {
   /**
    * Header names checked (in order) for CSRF tokens.
    *
-   * @default ['x-csrf-token', 'x-xsrf-token', 'csrf-token']
+   * @default ['X-Csrf-Token', 'X-Xsrf-Token', 'Csrf-Token']
    */
   headerNames?: readonly string[]
 

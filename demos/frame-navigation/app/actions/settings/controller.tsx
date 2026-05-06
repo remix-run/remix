@@ -68,5 +68,5 @@ function SettingsShellOrFragment(handle: Handle<SettingsPageProps>) {
 }
 
 function isFrameRequest() {
-  return getContext().request.headers.get('x-remix-target') === frames.settings
+  return getContext().request.headers.get('X-Remix-Target') === frames.settings
 }

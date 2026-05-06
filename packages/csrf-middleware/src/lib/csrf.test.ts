@@ -67,7 +67,7 @@ describe('csrf middleware', () => {
     let postRequest = createRequest(tokenResponse, {
       method: 'POST',
       headers: {
-        'X-CSRF-Token': token,
+        'X-Csrf-Token': token,
       },
     })
 
@@ -115,7 +115,7 @@ describe('csrf middleware', () => {
     let postRequest = createRequest(tokenResponse, {
       method: 'POST',
       headers: {
-        'X-CSRF-Token': 'invalid-token',
+        'X-Csrf-Token': 'invalid-token',
       },
     })
 
@@ -171,7 +171,7 @@ describe('csrf middleware', () => {
       method: 'POST',
       headers: {
         Origin: 'https://evil.example',
-        'X-CSRF-Token': token,
+        'X-Csrf-Token': token,
       },
     })
 
@@ -199,7 +199,7 @@ describe('csrf middleware', () => {
       method: 'POST',
       headers: {
         Origin: 'https://admin.example.com',
-        'X-CSRF-Token': token,
+        'X-Csrf-Token': token,
       },
     })
 
@@ -218,7 +218,7 @@ describe('csrf middleware', () => {
         session(cookie, storage),
         csrf({
           value(context) {
-            return context.headers.get('X-Custom-CSRF')
+            return context.headers.get('X-Custom-Csrf')
           },
         }),
       ],
@@ -233,7 +233,7 @@ describe('csrf middleware', () => {
     let postRequest = createRequest(tokenResponse, {
       method: 'POST',
       headers: {
-        'X-Custom-CSRF': token,
+        'X-Custom-Csrf': token,
       },
     })
 

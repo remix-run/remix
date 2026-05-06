@@ -15,7 +15,7 @@ function getToken(): string {
 }
 
 function auth() {
-  return { headers: { authorization: `token ${getToken()}` } }
+  return { headers: { Authorization: `token ${getToken()}` } }
 }
 
 export type CreateReleaseResult =

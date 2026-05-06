@@ -11,7 +11,7 @@ describe('new RequestContext()', () => {
     })
     let context = new RequestContext(req)
 
-    assert.equal(context.headers.get('content-type'), 'application/json')
+    assert.equal(context.headers.get('Content-Type'), 'application/json')
   })
 
   it('lazily creates a mutable copy of request headers', () => {
