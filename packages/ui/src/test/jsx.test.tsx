@@ -59,6 +59,14 @@ describe('jsx', () => {
 
       expect(withNested.props.mix).toEqual([descriptor, descriptor])
     })
+
+    it('does not accept children for textarea elements', () => {
+      let good = <textarea defaultValue="Hello" />
+      // @ts-expect-error textarea content should come from value/defaultValue
+      let bad = <textarea>Hello</textarea>
+      // @ts-expect-error textarea content should come from value/defaultValue
+      let alsoBad = <textarea innerHTML="Hello" />
+    })
   })
 
   describe('library managed attributes', () => {

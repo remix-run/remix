@@ -132,6 +132,8 @@ const SELF_CLOSING_TAGS = new Set([
   'track',
   'wbr',
 ])
+const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
+const INPUT_DEFAULT_PROPS = new Set(['defaultValue', 'defaultChecked'])
 
 const DEFAULT_STYLE_LAYER = 'rmx'
 const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
@@ -482,7 +484,15 @@ function buildElementSegment(
   let processedProps = processStyleProps(mixedProps)
   // Determine namespace context for the current element and its children
   let currentIsSvg = context.insideSvg || tag === 'svg'
-  let attrs = renderAttributes(processedProps, currentIsSvg)
+
+  if (!currentIsSvg && tag === 'textarea') {
+    return buildTextareaElementSegment(tag, processedProps)
+  }
+
+  let attrs =
+    !currentIsSvg && tag === 'input'
+      ? renderInputAttributes(processedProps)
+      : renderAttributes(processedProps, currentIsSvg)
 
   if (SELF_CLOSING_TAGS.has(tag)) {
     return staticSeg(`<${tag}${attrs} />`)
@@ -503,6 +513,27 @@ function buildElementSegment(
   return compositeSeg([open, children, close])
 }
 
+function buildTextareaElementSegment(tag: string, props: any): Segment {
+  let attrs = renderAttributes(props, false, TEXTAREA_VALUE_PROPS)
+  let value = props.value ?? props.defaultValue ?? ''
+  return staticSeg(`<${tag}${attrs}>${escapeTextContent(String(value))}</${tag}>`)
+}
+
+function renderInputAttributes(props: any): string {
+  let value =
+    props.value === undefined && props.defaultValue !== undefined ? props.defaultValue : props.value
+  let checked =
+    props.checked === undefined && props.defaultChecked !== undefined
+      ? props.defaultChecked
+      : props.checked
+  let inputProps = {
+    ...props,
+    ...(value === undefined ? {} : { value }),
+    ...(checked === undefined ? {} : { checked }),
+  }
+  return renderAttributes(inputProps, false, INPUT_DEFAULT_PROPS)
+}
+
 function buildHeadElementSegment(
   tag: string,
   props: any,
@@ -520,11 +551,12 @@ function buildHeadElementSegment(
   return compositeSeg([open, children, close])
 }
 
-function renderAttributes(props: any, isSvg: boolean): string {
+function renderAttributes(props: any, isSvg: boolean, excludedProps?: Set<string>): string {
   let attrs = ''
 
   for (let key in props) {
     if (FRAMEWORK_PROPS.has(key)) continue
+    if (excludedProps?.has(key)) continue
 
     let value = props[key]
     if (value === undefined || value === null || value === false) continue
