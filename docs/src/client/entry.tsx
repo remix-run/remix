@@ -28,11 +28,4 @@ window.navigation.addEventListener('navigate', () => {
   if (toggle) {
     toggle.checked = false
   }
-
-  let transition = window.navigation.transition
-  if (transition) {
-    let overlay = document.getElementById('nav-overlay')
-    overlay?.classList.add('active')
-    transition.finished.finally(() => overlay?.classList.remove('active'))
-  }
 })
