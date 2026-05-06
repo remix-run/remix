@@ -1,13 +1,13 @@
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { runRemix } from '../../index.ts'
 import { getFixturePath } from '../../../test/fixtures.ts'
+import { captureOutput } from '../../../test/capture-output.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
 const ANSI_CSI = `${String.fromCharCode(27)}[`
@@ -37,7 +37,7 @@ describe('routes command', () => {
   it('prints routes command help', async () => {
     let result = await runRoutes(['--help'], ROOT_DIR)
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.equal(result.stdout, ROUTES_COMMAND_HELP_TEXT)
     assert.equal(result.stderr, '')
   })
@@ -45,7 +45,7 @@ describe('routes command', () => {
   it('prints a compact tree for a basic fixture app', async () => {
     let result = await runRoutes([], getFixturePath('routes-basic'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /home\s+ANY\s+\/\s+-> controller\.tsx/)
     assert.match(result.stdout, /auth\s+ANY\s+\/auth\s+-> controller\.tsx/)
     assert.equal(result.stderr, '')
@@ -54,7 +54,7 @@ describe('routes command', () => {
   it('does not print color when output is not a tty', async () => {
     let result = await runRoutes([], getFixturePath('routes-basic'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.equal(result.stdout.includes(ANSI_CSI), false)
   })
 
@@ -62,7 +62,7 @@ describe('routes command', () => {
     let nestedDir = path.join(getFixturePath('routes-tree'), 'app', 'actions', 'admin')
     let result = await runRoutes([], nestedDir)
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /auth -> auth\/controller\.tsx/)
     assert.match(result.stdout, /login -> auth\/login\/controller\.tsx/)
     assert.match(result.stdout, /action\s+POST\s+\/login(?!\s+->)/)
@@ -74,7 +74,7 @@ describe('routes command', () => {
   it('prints a verbose tree with full owner paths on every route', async () => {
     let result = await runRoutes(['--verbose'], getFixturePath('routes-tree'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /auth -> app\/actions\/auth\/controller\.tsx/)
     assert.match(result.stdout, /login -> app\/actions\/auth\/login\/controller\.tsx/)
     assert.match(
@@ -89,7 +89,7 @@ describe('routes command', () => {
   it('prints a flat table of routes', async () => {
     let result = await runRoutes(['--table'], getFixturePath('routes-tree'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /Route\s+Method\s+Path\s+Owner/)
     assert.match(result.stdout, /home\s+ANY\s+\/\s+controller\.tsx/)
     assert.match(
@@ -106,7 +106,7 @@ describe('routes command', () => {
   it('omits the table header row with --no-headers', async () => {
     let result = await runRoutes(['--table', '--no-headers'], getFixturePath('routes-tree'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.doesNotMatch(result.stdout, /Route\s+Method\s+Path\s+Owner/)
     assert.match(result.stdout, /home\s+ANY\s+\/\s+controller\.tsx/)
     assert.match(
@@ -119,14 +119,14 @@ describe('routes command', () => {
   it('accepts the global no-color flag', async () => {
     let result = await runRoutes(['--no-color'], getFixturePath('routes-missing'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.equal(result.stdout.includes(ANSI_CSI), false)
   })
 
   it('resolves owner files with js, jsx, and ts extensions', async () => {
     let result = await runRoutes([], getFixturePath('doctor-clean'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /home\s+ANY\s+\/\s+-> controller\.jsx/)
     assert.match(result.stdout, /about\s+ANY\s+\/about\s+-> controller\.jsx/)
     assert.match(result.stdout, /contact -> contact\/controller\.ts/)
@@ -136,7 +136,7 @@ describe('routes command', () => {
   it('maps camelCase route keys to kebab-case owner paths', async () => {
     let result = await runRoutes([], getFixturePath('doctor-camel-case-keys'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /userSettings\s+ANY\s+\/user-settings\s+-> controller\.tsx/)
     assert.match(result.stdout, /forgotPassword -> auth\/forgot-password\/controller\.tsx/)
     assert.match(result.stdout, /resetPassword -> auth\/reset-password\/controller\.tsx/)
@@ -147,7 +147,7 @@ describe('routes command', () => {
     let fixtureDir = getFixturePath('routes-tree')
     let result = await runRoutes(['--json'], fixtureDir)
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.equal(result.stderr, '')
 
     let payload = JSON.parse(result.stdout) as {
@@ -215,7 +215,7 @@ describe('routes command', () => {
   it('annotates missing owners without failing the command', async () => {
     let result = await runRoutes([], getFixturePath('routes-missing'))
 
-    assert.equal(result.status, 0, result.stderr)
+    assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /home\s+ANY\s+\/\s+-> controller\.tsx \[missing\]/)
     assert.match(result.stdout, /auth -> auth \[missing\]/)
     assert.match(result.stdout, /login -> auth\/login\/controller\.tsx \[missing\]/)
@@ -226,21 +226,21 @@ describe('routes command', () => {
   it('rejects --json when combined with table formatting', async () => {
     let result = await runRoutes(['--json', '--table'], getFixturePath('routes-basic'))
 
-    assert.equal(result.status, 1)
+    assert.equal(result.exitCode, 1)
     assert.match(result.stderr, /Cannot combine --json with --table/)
   })
 
   it('rejects --json when combined with verbose formatting', async () => {
     let result = await runRoutes(['--json', '--verbose'], getFixturePath('routes-basic'))
 
-    assert.equal(result.status, 1)
+    assert.equal(result.exitCode, 1)
     assert.match(result.stderr, /Cannot combine --json with --verbose/)
   })
 
   it('rejects --no-headers without table formatting', async () => {
     let result = await runRoutes(['--no-headers'], getFixturePath('routes-basic'))
 
-    assert.equal(result.status, 1)
+    assert.equal(result.exitCode, 1)
     assert.match(result.stderr, /Cannot use --no-headers without --table/)
   })
 
@@ -250,7 +250,7 @@ describe('routes command', () => {
     try {
       let result = await runRoutes([], tmpDir)
 
-      assert.equal(result.status, 1)
+      assert.equal(result.exitCode, 1)
       assert.match(result.stderr, /Could not find app\/routes\.ts/)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
@@ -260,21 +260,21 @@ describe('routes command', () => {
   it('fails when the route module does not export routes', async () => {
     let result = await runRoutes([], getFixturePath('routes-no-export'))
 
-    assert.equal(result.status, 1)
+    assert.equal(result.exitCode, 1)
     assert.match(result.stderr, /must export a named "routes" value/)
   })
 
   it('fails when the route map contains invalid values', async () => {
     let result = await runRoutes([], getFixturePath('routes-invalid-value'))
 
-    assert.equal(result.status, 1)
+    assert.equal(result.exitCode, 1)
     assert.match(result.stderr, /Invalid route map value at "broken"/)
   })
 
   it('fails when importing the route module throws', async () => {
     let result = await runRoutes([], getFixturePath('routes-import-error'))
 
-    assert.equal(result.status, 1)
+    assert.equal(result.exitCode, 1)
     assert.match(result.stderr, /boom from routes fixture/)
   })
 })
@@ -296,33 +296,6 @@ function findRouteNode(tree: RouteTreeNode[], name: string): RouteTreeNode | und
 
 async function runRoutes(args: string[], cwd: string) {
   return await captureOutput(() => runRemix(['routes', ...args], { cwd }))
-}
-
-async function captureOutput(
-  callback: () => Promise<number>,
-): Promise<{ status: number; stderr: string; stdout: string }> {
-  let stderr = ''
-  let stdout = ''
-  let originalStdoutWrite = process.stdout.write
-  let originalStderrWrite = process.stderr.write
-
-  process.stdout.write = ((chunk: string | Uint8Array) => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stdout.write
-
-  process.stderr.write = ((chunk: string | Uint8Array) => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stderr.write
-
-  try {
-    let status = await callback()
-    return { status, stderr, stdout }
-  } finally {
-    process.stdout.write = originalStdoutWrite
-    process.stderr.write = originalStderrWrite
-  }
 }
 
 interface RouteTreeNode {
