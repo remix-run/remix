@@ -1,5 +1,5 @@
-import { RequestMethods } from '@remix-run/fetch-router'
-import type { Middleware, RequestContext, RequestMethod } from '@remix-run/fetch-router'
+import { isRequestMethod } from '@remix-run/fetch-router'
+import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 
 /**
  * Options for the {@link methodOverride} middleware.
@@ -32,9 +32,9 @@ export function methodOverride(options?: MethodOverrideOptions): Middleware {
       return
     }
 
-    let requestMethod = method.toUpperCase() as RequestMethod
+    let requestMethod = method.toUpperCase()
 
-    if (RequestMethods.includes(requestMethod)) {
+    if (isRequestMethod(requestMethod)) {
       context.method = requestMethod
     }
   }

@@ -1,21 +1,15 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import type { Matcher } from './matcher.ts'
+import { createMatcher } from './matcher.ts'
+import { RoutePattern } from './route-pattern.ts'
 import * as Specificity from './specificity.ts'
-import { ArrayMatcher } from './array-matcher.ts'
-import { TrieMatcher } from './trie-matcher.ts'
 
-type MatcherConstructor = new (options?: { ignoreCase?: boolean }) => Matcher<null>
-
-describe('ArrayMatcher', () => testSuite(ArrayMatcher))
-describe('TrieMatcher', () => testSuite(TrieMatcher))
-
-function testSuite(MatcherClass: MatcherConstructor): void {
+describe('Matcher', () => {
   describe('match', () => {
     describe('protocol', () => {
       it('matches any protocol when protocol is omitted', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users', null)
 
         let httpMatch = matcher.match('http://example.com/users')
@@ -26,7 +20,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches http only when protocol is explicit http', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('http://example.com/users', null)
 
         let match = matcher.match('http://example.com/users')
@@ -34,7 +28,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches https only when protocol is explicit https', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('https://example.com/users', null)
 
         let match = matcher.match('https://example.com/users')
@@ -42,7 +36,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches both http and https when protocol is http(s)', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('http(s)://example.com/users', null)
 
         let httpMatch = matcher.match('http://example.com/users')
@@ -53,7 +47,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('returns null when protocol does not match', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('http://example.com/users', null)
 
         let match = matcher.match('https://example.com/users')
@@ -63,7 +57,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
 
     describe('hostname', () => {
       it('matches any hostname when hostname is omitted', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('users', null)
 
         let match1 = matcher.match('https://example.com/users')
@@ -77,7 +71,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches exact static hostname', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users', null)
 
         let match = matcher.match('https://example.com/users')
@@ -86,7 +80,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches non-ASCII hostname param values', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://:accented.:cjk.:rtl.:combining.example.com/users', null)
 
         let params = {
@@ -108,7 +102,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('returns null when static hostname does not match', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users', null)
 
         let match = matcher.match('https://other.com/users')
@@ -116,7 +110,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches variable segment in hostname', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://:subdomain.example.com/api', null)
 
         let match = matcher.match('https://api.example.com/api')
@@ -125,7 +119,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches multiple variables in hostname', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://:subdomain.:env.example.com/api', null)
 
         let match = matcher.match('https://api.prod.example.com/api')
@@ -134,7 +128,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches wildcard segment in hostname', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://*host.example.com/api', null)
 
         let match = matcher.match('https://api.v1.example.com/api')
@@ -143,7 +137,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('excludes unnamed wildcard from params', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://*.example.com/api', null)
 
         let match = matcher.match('https://api.v1.example.com/api')
@@ -152,7 +146,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches optional hostname segments when present', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://api(-:version).example.com/users', null)
 
         let match = matcher.match('https://api-v2.example.com/users')
@@ -161,7 +155,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches optional hostname segments when absent', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://api(-:version).example.com/users', null)
 
         let match = matcher.match('https://api.example.com/users')
@@ -170,7 +164,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches nested optionals in hostname', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://api(.:region(-:zone)).example.com/users', null)
 
         let matchAll = matcher.match('https://api.us-east1.example.com/users')
@@ -187,7 +181,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches multiple optionals in hostname', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://:sub(-:version).example(.:tld).com/api', null)
 
         let match = matcher.match('https://api-v2.example.dev.com/api')
@@ -196,7 +190,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches mixed static/variable/wildcard segments', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://*prefix.:env.example.com/api', null)
 
         let match = matcher.match('https://api.v1.prod.example.com/api')
@@ -205,7 +199,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('prefers static over variable hostname', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://:subdomain.example.com/api', null)
         matcher.add('://api.example.com/api', null)
 
@@ -215,7 +209,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('prefers variable over wildcard hostname', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://*host.example.com/api', null)
         matcher.add('://:subdomain.example.com/api', null)
 
@@ -225,7 +219,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('prefers longer static prefix in hostname', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://:subdomain.com/api', null)
         matcher.add('://:subdomain.example.com/api', null)
 
@@ -237,7 +231,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
 
     describe('port', () => {
       it('matches omitted port in URL when port is omitted in pattern', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users', null)
 
         assert.ok(matcher.match('http://example.com/users'))
@@ -245,7 +239,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches explicit port', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com:8080/users', null)
 
         let match = matcher.match('http://example.com:8080/users')
@@ -254,46 +248,56 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('returns null when explicit port does not match', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com:8080/users', null)
 
         assert.equal(matcher.match('http://example.com:3000/users'), null)
       })
 
       it('returns null when pattern has explicit port but URL omits port', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com:8080/users', null)
 
         assert.equal(matcher.match('http://example.com/users'), null)
       })
 
       it('returns null when pattern omits port but URL has explicit port', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users', null)
 
         assert.equal(matcher.match('http://example.com:8080/users'), null)
       })
 
       it('matches port with hostname variables', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://:subdomain.example.com:8080/api', null)
 
         let match = matcher.match('https://api.example.com:8080/api')
         assert.ok(match)
         assert.deepEqual(match.params, { subdomain: 'api' })
       })
+
+      it('matches origin-less pattern against URL with any port', () => {
+        let matcher = createMatcher<null>()
+        matcher.add('/', null)
+        matcher.add('/about', null)
+
+        assert.ok(matcher.match('http://localhost/'))
+        assert.ok(matcher.match('http://localhost:44199/'))
+        assert.ok(matcher.match('https://example.com:8080/about'))
+      })
     })
 
     describe('pathname', () => {
       it('matches root pathname when pathname is empty', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com', null)
 
         assert.ok(matcher.match('http://example.com/'))
       })
 
       it('matches static segments', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users/list', null)
 
         let match = matcher.match('http://example.com/users/list')
@@ -302,28 +306,28 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('returns null when static segment does not match', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users', null)
 
         assert.equal(matcher.match('http://example.com/posts'), null)
       })
 
       it('returns null when URL is shorter than pattern', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users/list', null)
 
         assert.equal(matcher.match('http://example.com/users'), null)
       })
 
       it('returns null when trailing slash does not match', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users', null)
 
         assert.equal(matcher.match('http://example.com/users/'), null)
       })
 
       it('matches variable segments', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users/:id', null)
 
         let match = matcher.match('http://example.com/users/123')
@@ -332,7 +336,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches multiple variables', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users/:userId/posts/:postId', null)
 
         let match = matcher.match('http://example.com/users/42/posts/99')
@@ -341,7 +345,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches special characters in variable values', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/files/:filename', null)
 
         let match = matcher.match('http://example.com/files/my-file_v2.txt')
@@ -350,7 +354,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches non-ASCII param values', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add(
           '://example.com/:accented/:cjk/:rtl/:combining/:emoji/:zwj/:nbsp/:fullwidth',
           null,
@@ -375,8 +379,36 @@ function testSuite(MatcherClass: MatcherConstructor): void {
         assert.deepEqual(match.params, params)
       })
 
+      it('round-trips href-generated reserved characters in variable params', () => {
+        let pattern = new RoutePattern('://example.com/files/:name')
+        let matcher = createMatcher<null>()
+        matcher.add(pattern, null)
+
+        let original = 'a/b?c#d%2Fe'
+        let href = pattern.href({ name: original })
+        let match = matcher.match(href)
+
+        assert.ok(match)
+        assert.equal(match.params.name, original)
+        assert.equal(match.paramsMeta.pathname[0].value, original)
+
+        let matches = matcher.matchAll(href)
+        assert.equal(matches.length, 1)
+        assert.equal(matches[0].params.name, original)
+      })
+
+      it('does not treat encoded slash params as static path separators', () => {
+        let pattern = new RoutePattern('://example.com/files/:name')
+        let matcher = createMatcher<null>()
+        matcher.add('://example.com/files/a/b', null)
+
+        let href = pattern.href({ name: 'a/b' })
+
+        assert.equal(matcher.match(href), null)
+      })
+
       it('matches wildcard segments', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/files/*path', null)
 
         let match = matcher.match('http://example.com/files/docs/readme.md')
@@ -385,7 +417,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches wildcard with continuation', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/files/*path/status', null)
 
         let match = matcher.match('http://example.com/files/docs/api/status')
@@ -394,7 +426,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('excludes unnamed wildcard from params', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/files/*/download', null)
 
         let match = matcher.match('http://example.com/files/docs/download')
@@ -403,7 +435,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches optional segments when present', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/posts(/:lang)', null)
 
         let match = matcher.match('http://example.com/posts/en')
@@ -412,7 +444,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches optional segments when absent', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/posts(/:lang)', null)
 
         let match = matcher.match('http://example.com/posts')
@@ -421,7 +453,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches nested optionals', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/docs(/:version(/:page))', null)
 
         let match1 = matcher.match('http://example.com/docs/v1/intro')
@@ -438,7 +470,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches multiple optionals', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/api(/:version)/users(/:id)', null)
 
         let match = matcher.match('http://example.com/api/v2/users/123')
@@ -447,7 +479,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches complex optionals for file extensions', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/files/:id(.:format)', null)
 
         let match1 = matcher.match('http://example.com/files/doc123.pdf')
@@ -460,7 +492,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches mixed static/variable/wildcard segments', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/api/:version/files/*path', null)
 
         let match = matcher.match('http://example.com/api/v1/files/docs/guide.pdf')
@@ -469,7 +501,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches deep nesting', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add(
           '://example.com/products/electronics/computers/laptops/gaming/accessories/keyboards',
           null,
@@ -483,7 +515,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('prefers static over variable pathname', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users/new', null)
         matcher.add('://example.com/users/:id', null)
 
@@ -493,7 +525,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('prefers variable over wildcard pathname', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/files/*path', null)
         matcher.add('://example.com/files/:id', null)
 
@@ -503,7 +535,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('prefers longer static prefix in pathname', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/api/:id', null)
         matcher.add('://example.com/api/v1/:id', null)
 
@@ -515,7 +547,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
 
     describe('search', () => {
       it('matches any query params when no search constraints', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/search', null)
 
         assert.ok(matcher.match('http://example.com/search'))
@@ -524,7 +556,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches bare parameter for presence check', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/search?q', null)
 
         let match = matcher.match('http://example.com/search?q')
@@ -532,7 +564,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches bare parameter with any value', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/search?q', null)
 
         assert.ok(matcher.match('http://example.com/search?q=test'))
@@ -540,7 +572,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches any value constraint with non-empty value', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/search?q=', null)
 
         let match = matcher.match('http://example.com/search?q=test')
@@ -548,7 +580,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches key-only constraint', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/search?q=', null)
 
         assert.ok(matcher.match('http://example.com/search?q'))
@@ -557,7 +589,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches specific value with exact match', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/api?format=json', null)
 
         let match = matcher.match('http://example.com/api?format=json')
@@ -565,14 +597,14 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('returns null when specific value does not match', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/api?format=json', null)
 
         assert.equal(matcher.match('http://example.com/api?format=xml'), null)
       })
 
       it('matches multiple constraints', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/search?q=&lang=en', null)
 
         let match = matcher.match('http://example.com/search?q=test&lang=en')
@@ -580,7 +612,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches constraints regardless of order', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/api?format=json&version=v1', null)
 
         let match = matcher.match('http://example.com/api?version=v1&format=json')
@@ -588,7 +620,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('allows extra params beyond constraints', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/search?q', null)
 
         let match = matcher.match('http://example.com/search?q=test&lang=en&page=2')
@@ -596,7 +628,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('preserves URL encoding in search parameter values', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/search?q=hello%20world', null)
 
         let match = matcher.match('http://example.com/search?q=hello%20world')
@@ -604,7 +636,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches repeated parameter values', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/filter?tags', null)
 
         let match = matcher.match('http://example.com/filter?tags=a&tags=b')
@@ -612,7 +644,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('returns null when constraint is not met', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/api?auth', null)
 
         assert.equal(matcher.match('http://example.com/api'), null)
@@ -620,7 +652,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('prefers more constraints over fewer', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/search?q', null)
         matcher.add('://example.com/search?q&lang', null)
 
@@ -630,7 +662,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('prefers exact value over any value', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/api?format', null)
         matcher.add('://example.com/api?format=json', null)
 
@@ -640,7 +672,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('ties specificity for both forms of key only constraints; tiebreaks using insertion order', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/search?q', null)
         matcher.add('://example.com/search?q=', null)
 
@@ -652,7 +684,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
 
     describe('ignoreCase', () => {
       it('uses case-sensitive pathname matching by default', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('/Posts/:id', null)
 
         assert.equal(matcher.match('https://example.com/posts/123'), null)
@@ -661,7 +693,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('ignores pathname case when ignoreCase is true', () => {
-        let matcher = new MatcherClass({ ignoreCase: true })
+        let matcher = createMatcher<null>({ ignoreCase: true })
         matcher.add('/Posts/:id', null)
 
         assert.ok(matcher.match('https://example.com/posts/123'))
@@ -670,7 +702,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('ignores hostname case regardless of ignoreCase', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://Example.COM/users', null)
 
         assert.ok(matcher.match('https://example.com/users'))
@@ -678,7 +710,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('matches search params case-sensitively regardless of ignoreCase', () => {
-        let matcher = new MatcherClass({ ignoreCase: true })
+        let matcher = createMatcher<null>({ ignoreCase: true })
         matcher.add('/api?Sort', null)
 
         assert.ok(matcher.match('https://example.com/api?Sort'))
@@ -686,7 +718,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('defaults to false', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('/Posts/:id', null)
         assert.equal(matcher.match('https://example.com/posts/123'), null)
       })
@@ -694,7 +726,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
 
     describe('paramsMeta', () => {
       it('returns empty arrays when no params', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users', null)
 
         let match = matcher.match('http://example.com/users')
@@ -704,7 +736,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('includes wildcard hostname metadata for pathname-only patterns', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('/users/:id', null)
 
         let match = matcher.match('http://example.com/users/123')
@@ -718,7 +750,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('includes hostname params with metadata', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://:subdomain.example.com/api', null)
 
         let match = matcher.match('https://api.example.com/api')
@@ -731,7 +763,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('includes pathname params with metadata', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users/:id', null)
 
         let match = matcher.match('http://example.com/users/123')
@@ -744,7 +776,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('includes params from both hostname and pathname', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://:subdomain.example.com/users/:id', null)
 
         let match = matcher.match('https://api.example.com/users/123')
@@ -758,7 +790,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('includes wildcard params in metadata', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/files/*path', null)
 
         let match = matcher.match('http://example.com/files/docs/readme.md')
@@ -770,7 +802,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('includes unnamed wildcards in metadata with name "*"', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/files/*/download', null)
 
         let match = matcher.match('http://example.com/files/docs/download')
@@ -782,7 +814,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('excludes undefined optional params from metadata', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/posts(/:lang)', null)
 
         let match = matcher.match('http://example.com/posts')
@@ -791,7 +823,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('includes only matched optional params in metadata', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/docs(/:version(/:page))', null)
 
         let match = matcher.match('http://example.com/docs/v1')
@@ -804,7 +836,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
 
     describe('specificity', () => {
       it('prefers static over variable', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/:segment', null)
         matcher.add('://example.com/users', null)
 
@@ -814,7 +846,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('prefers variable over wildcard', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/*path', null)
         matcher.add('://example.com/:id', null)
 
@@ -824,7 +856,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('prefers longer static prefix over shorter', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/:id', null)
         matcher.add('://example.com/api/:id', null)
 
@@ -834,7 +866,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('prefers hostname specificity over pathname specificity', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/*path', null)
         matcher.add('://:subdomain.example.com/users', null)
 
@@ -844,7 +876,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('increases specificity with search constraints', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/search', null)
         matcher.add('://example.com/search?q', null)
 
@@ -854,7 +886,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       })
 
       it('returns null when no patterns match', () => {
-        let matcher = new MatcherClass()
+        let matcher = createMatcher<null>()
         matcher.add('://example.com/users', null)
         matcher.add('://example.com/posts', null)
 
@@ -865,7 +897,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
 
   describe('matchAll', () => {
     it('returns all matches sorted by specificity', () => {
-      let matcher = new MatcherClass()
+      let matcher = createMatcher<null>()
       matcher.add('://example.com/*path', null)
       matcher.add('://example.com/users/:id', null)
       matcher.add('://example.com/users/new', null)
@@ -878,7 +910,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
     })
 
     it('returns empty array when no matches', () => {
-      let matcher = new MatcherClass()
+      let matcher = createMatcher<null>()
       matcher.add('://example.com/users', null)
       matcher.add('://example.com/posts', null)
 
@@ -887,7 +919,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
     })
 
     it('includes patterns with same specificity', () => {
-      let matcher = new MatcherClass()
+      let matcher = createMatcher<null>()
       matcher.add('://example.com/users/:id', null)
       matcher.add('://example.com/posts/:id', null)
 
@@ -905,7 +937,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
     })
 
     it('orders complex specificity scenarios consistently', () => {
-      let matcher = new MatcherClass()
+      let matcher = createMatcher<null>()
       // Add patterns in random order to ensure ordering is by specificity, not insertion order
       matcher.add('/*path', null)
       matcher.add('://api.example.com/users/:id', null)
@@ -942,7 +974,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
 
   describe('custom compareFn', () => {
     it('uses custom compareFn for match() to select best', () => {
-      let matcher = new MatcherClass()
+      let matcher = createMatcher<null>()
       matcher.add('://example.com/*path', null)
       matcher.add('://example.com/users/:id', null)
       matcher.add('://example.com/users/123', null)
@@ -959,7 +991,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
     })
 
     it('uses custom compareFn for matchAll() to sort results', () => {
-      let matcher = new MatcherClass()
+      let matcher = createMatcher<null>()
       matcher.add('://example.com/*path', null)
       matcher.add('://example.com/users/:id', null)
       matcher.add('://example.com/users/123', null)
@@ -976,7 +1008,7 @@ function testSuite(MatcherClass: MatcherConstructor): void {
     })
 
     it('supports ascending specificity order', () => {
-      let matcher = new MatcherClass()
+      let matcher = createMatcher<null>()
       matcher.add('://example.com/*path', null)
       matcher.add('://example.com/users/:id', null)
       matcher.add('://example.com/users/123', null)
@@ -989,4 +1021,4 @@ function testSuite(MatcherClass: MatcherConstructor): void {
       )
     })
   })
-}
+})

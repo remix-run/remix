@@ -157,12 +157,6 @@ importers:
 
   demos/sse:
     dependencies:
-      '@remix-run/events':
-        specifier: jam
-        version: 0.0.0-experimental-remix-jam.5
-      '@remix-run/ui':
-        specifier: workspace:*
-        version: link:../../packages/ui
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
@@ -464,28 +458,6 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
-  packages/cli/bootstrap:
-    dependencies:
-      remix:
-        specifier: workspace:^
-        version: link:../../remix
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
-    devDependencies:
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-
-  packages/cli/test/fixtures/doctor-ambiguous:
-    dependencies:
-      remix:
-        specifier: workspace:*
-        version: link:../../../../remix
-
   packages/cli/test/fixtures/doctor-camel-case-keys:
     dependencies:
       remix:
@@ -536,19 +508,7 @@ importers:
         specifier: workspace:*
         version: link:../../../../remix
 
-  packages/cli/test/fixtures/doctor-promotion-drift:
-    dependencies:
-      remix:
-        specifier: workspace:*
-        version: link:../../../../remix
-
   packages/cli/test/fixtures/doctor-route-names:
-    dependencies:
-      remix:
-        specifier: workspace:*
-        version: link:../../../../remix
-
-  packages/cli/test/fixtures/doctor-wrong-kind:
     dependencies:
       remix:
         specifier: workspace:*
@@ -2087,6 +2047,22 @@ importers:
       semver:
         specifier: ^7.6.3
         version: 7.6.3
+
+  template:
+    dependencies:
+      remix:
+        specifier: workspace:^
+        version: link:../packages/remix
+      tsx:
+        specifier: 'catalog:'
+        version: 4.21.0
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
 packages:
 
@@ -3649,9 +3625,6 @@ packages:
     engines: {node: '>= 18'}
     peerDependencies:
       '@redis/client': ^5.11.0
-
-  '@remix-run/events@0.0.0-experimental-remix-jam.5':
-    resolution: {integrity: sha512-rbKP27/YkLZq0gbCy3QpwaHQzJg41IgbC//8SggPgMtWxZdxkcnkWmQGMLH0xwQcBlZ3yLtZRDQvL+ir4GAA6g==}
 
   '@rollup/rollup-android-arm-eabi@4.53.5':
     resolution: {integrity: sha512-iDGS/h7D8t7tvZ1t6+WPK04KD0MwzLZrG0se1hzBjSi5fyxlsiggoJHwh18PCFNn7tG43OWb6pdZ6Y+rMlmyNQ==}
@@ -6713,8 +6686,6 @@ snapshots:
   '@redis/time-series@5.11.0(@redis/client@5.11.0)':
     dependencies:
       '@redis/client': 5.11.0
-
-  '@remix-run/events@0.0.0-experimental-remix-jam.5': {}
 
   '@rollup/rollup-android-arm-eabi@4.53.5':
     optional: true

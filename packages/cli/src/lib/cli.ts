@@ -17,12 +17,10 @@ export async function runRemix(
   let context = await resolveCliContext(options)
 
   try {
-    while (argv[0] === '--') {
-      argv = argv.slice(1)
-    }
+    argv = stripLeadingSeparators(argv)
 
     let globalOptions = extractGlobalOptions(argv)
-    argv = globalOptions.argv
+    argv = stripLeadingSeparators(globalOptions.argv)
     configureColors({ disabled: globalOptions.noColor })
 
     if (argv.length === 0) {
@@ -41,6 +39,14 @@ export async function runRemix(
   } finally {
     restoreTerminalFormatting()
   }
+}
+
+function stripLeadingSeparators(argv: string[]): string[] {
+  while (argv[0] === '--') {
+    argv = argv.slice(1)
+  }
+
+  return argv
 }
 
 async function runCommand(command: string, argv: string[], context: CliContext): Promise<number> {

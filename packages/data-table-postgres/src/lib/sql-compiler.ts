@@ -258,17 +258,236 @@ function compileRawOperation(statement: SqlStatement): SqlStatement {
     }
   }
 
-  let index = 1
-  let text = statement.text.replace(/\?/g, function replaceParameter() {
-    let placeholder = '$' + String(index)
-    index += 1
-    return placeholder
-  })
-
   return {
-    text,
+    text: rewriteRawPlaceholders(statement.text),
     values: [...statement.values],
   }
+}
+
+function rewriteRawPlaceholders(text: string): string {
+  let output = ''
+  let index = 0
+  let placeholderIndex = 1
+
+  while (index < text.length) {
+    let char = text[index]
+
+    if (char === '?') {
+      output += '$' + String(placeholderIndex)
+      placeholderIndex += 1
+      index += 1
+      continue
+    }
+
+    if ((char === 'E' || char === 'e') && text[index + 1] === "'") {
+      let end = scanEscapeSingleQuotedString(text, index + 1)
+      output += text.slice(index, end)
+      index = end
+      continue
+    }
+
+    if (char === "'") {
+      let end = scanSingleQuotedString(text, index)
+      output += text.slice(index, end)
+      index = end
+      continue
+    }
+
+    if (char === '"') {
+      let end = scanDoubleQuotedIdentifier(text, index)
+      output += text.slice(index, end)
+      index = end
+      continue
+    }
+
+    if (text.startsWith('--', index)) {
+      let end = scanLineComment(text, index)
+      output += text.slice(index, end)
+      index = end
+      continue
+    }
+
+    if (text.startsWith('/*', index)) {
+      let end = scanBlockComment(text, index)
+      output += text.slice(index, end)
+      index = end
+      continue
+    }
+
+    let dollarQuotedStringEnd = scanDollarQuotedString(text, index)
+
+    if (dollarQuotedStringEnd !== undefined) {
+      output += text.slice(index, dollarQuotedStringEnd)
+      index = dollarQuotedStringEnd
+      continue
+    }
+
+    output += char
+    index += 1
+  }
+
+  return output
+}
+
+function scanSingleQuotedString(text: string, start: number): number {
+  let index = start + 1
+
+  while (index < text.length) {
+    if (text[index] === "'") {
+      if (text[index + 1] === "'") {
+        index += 2
+        continue
+      }
+
+      return index + 1
+    }
+
+    index += 1
+  }
+
+  return text.length
+}
+
+function scanEscapeSingleQuotedString(text: string, start: number): number {
+  let index = start + 1
+
+  while (index < text.length) {
+    if (text[index] === '\\') {
+      index += 2
+      continue
+    }
+
+    if (text[index] === "'") {
+      if (text[index + 1] === "'") {
+        index += 2
+        continue
+      }
+
+      return index + 1
+    }
+
+    index += 1
+  }
+
+  return text.length
+}
+
+function scanDoubleQuotedIdentifier(text: string, start: number): number {
+  let index = start + 1
+
+  while (index < text.length) {
+    if (text[index] === '"') {
+      if (text[index + 1] === '"') {
+        index += 2
+        continue
+      }
+
+      return index + 1
+    }
+
+    index += 1
+  }
+
+  return text.length
+}
+
+function scanLineComment(text: string, start: number): number {
+  let index = start + 2
+
+  while (index < text.length && text[index] !== '\n' && text[index] !== '\r') {
+    index += 1
+  }
+
+  return index
+}
+
+function scanBlockComment(text: string, start: number): number {
+  let index = start + 2
+  let depth = 1
+
+  while (index < text.length && depth > 0) {
+    if (text.startsWith('/*', index)) {
+      depth += 1
+      index += 2
+      continue
+    }
+
+    if (text.startsWith('*/', index)) {
+      depth -= 1
+      index += 2
+      continue
+    }
+
+    index += 1
+  }
+
+  return index
+}
+
+function scanDollarQuotedString(text: string, start: number): number | undefined {
+  let delimiter = getDollarQuoteDelimiter(text, start)
+
+  if (delimiter === undefined) {
+    return undefined
+  }
+
+  let end = text.indexOf(delimiter, start + delimiter.length)
+
+  return end === -1 ? text.length : end + delimiter.length
+}
+
+function getDollarQuoteDelimiter(text: string, start: number): string | undefined {
+  if (text[start] !== '$') {
+    return undefined
+  }
+
+  let index = start + 1
+
+  if (text[index] === '$') {
+    return '$$'
+  }
+
+  if (!isDollarQuoteTagStart(text[index])) {
+    return undefined
+  }
+
+  index += 1
+
+  while (index < text.length && isDollarQuoteTagPart(text[index])) {
+    index += 1
+  }
+
+  if (text[index] !== '$') {
+    return undefined
+  }
+
+  return text.slice(start, index + 1)
+}
+
+function isDollarQuoteTagStart(char: string | undefined): boolean {
+  if (char === undefined) {
+    return false
+  }
+
+  return isAsciiLetter(char) || char === '_'
+}
+
+function isDollarQuoteTagPart(char: string | undefined): boolean {
+  if (char === undefined) {
+    return false
+  }
+
+  return isDollarQuoteTagStart(char) || isAsciiDigit(char)
+}
+
+function isAsciiLetter(char: string): boolean {
+  let code = char.charCodeAt(0)
+  return (code >= 65 && code <= 90) || (code >= 97 && code <= 122)
+}
+
+function isAsciiDigit(char: string): boolean {
+  let code = char.charCodeAt(0)
+  return code >= 48 && code <= 57
 }
 
 function compileFromClause(

@@ -1,4 +1,4 @@
-import { RequestMethods } from '@remix-run/fetch-router'
+import { isRequestMethod } from '@remix-run/fetch-router'
 import type { Middleware, RequestContext, RequestMethod } from '@remix-run/fetch-router'
 
 const safeMethods: RequestMethod[] = ['GET', 'HEAD', 'OPTIONS']
@@ -77,7 +77,7 @@ class CrossOriginProtection {
   }
 
   check(context: RequestContext): CopFailureReason | null {
-    if (safeMethods.includes(context.method)) {
+    if (isSafeMethod(context.method)) {
       return null
     }
 
@@ -128,6 +128,10 @@ class CrossOriginProtection {
     let normalizedOrigin = normalizeOrigin(requestOrigin)
     return normalizedOrigin != null && this.#trustedOrigins.has(normalizedOrigin)
   }
+}
+
+function isSafeMethod(method: string): boolean {
+  return isRequestMethod(method) && safeMethods.includes(method)
 }
 
 /**
@@ -228,8 +232,8 @@ function parseBypassPattern(pattern: string): BypassPattern {
   let methodPattern = /^([A-Z]+)\s+(.+)$/.exec(trimmedPattern)
 
   if (methodPattern != null && methodPattern[2].startsWith('/')) {
-    let maybeMethod = methodPattern[1] as RequestMethod
-    if (!RequestMethods.includes(maybeMethod)) {
+    let maybeMethod = methodPattern[1]
+    if (!isRequestMethod(maybeMethod)) {
       throw new Error(`invalid request method in bypass pattern ${JSON.stringify(pattern)}`)
     }
 

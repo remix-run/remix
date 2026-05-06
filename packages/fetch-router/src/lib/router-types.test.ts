@@ -141,11 +141,41 @@ const elevatedReportAction = {
 router.get(routes.account, accountAction)
 router.map(routes.admin, adminController)
 if (false as boolean) {
+  let rootController = {
+    actions: {
+      account: accountAction,
+      reports(context) {
+        let reportId: string = context.params.reportId
+        return new Response(reportId)
+      },
+      // @ts-expect-error - nested route maps are mapped with their own controllers
+      admin: adminController,
+    },
+  } satisfies Controller<typeof routes, AppContext>
+
+  let unknownActionController = {
+    actions: {
+      dashboard() {
+        return new Response('Dashboard')
+      },
+      member() {
+        return new Response('Member')
+      },
+      // @ts-expect-error - controller action keys must exist in the route map
+      missing() {
+        return new Response('Missing')
+      },
+    },
+  } satisfies Controller<typeof routes.admin, AppContext>
+
   router.get(routes.reports, (context) => {
     // @ts-expect-error - the base app context still only guarantees the inherited viewer role
     let adminRole: 'admin' = context.get(CurrentRole)
     return new Response(adminRole)
   })
+
+  void rootController
+  void unknownActionController
 }
 
 void plainRouter

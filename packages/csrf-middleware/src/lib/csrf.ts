@@ -1,3 +1,4 @@
+import { isRequestMethod } from '@remix-run/fetch-router'
 import type { Middleware, RequestContext, RequestMethod } from '@remix-run/fetch-router'
 import { Session } from '@remix-run/session'
 
@@ -128,7 +129,7 @@ export function csrf(options: CsrfOptions = {}): Middleware {
 
     let expectedToken = getCsrfToken(context, tokenKey)
 
-    if (safeMethods.includes(context.method)) {
+    if (isSafeMethod(context.method, safeMethods)) {
       return next()
     }
 
@@ -154,6 +155,10 @@ export function csrf(options: CsrfOptions = {}): Middleware {
 
     return next()
   }
+}
+
+function isSafeMethod(method: string, safeMethods: readonly RequestMethod[]): boolean {
+  return isRequestMethod(method) && safeMethods.includes(method)
 }
 
 /**

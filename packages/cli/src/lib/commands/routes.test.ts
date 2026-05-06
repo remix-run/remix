@@ -10,6 +10,7 @@ import { runRemix } from '../../index.ts'
 import { getFixturePath } from '../../../test/fixtures.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
+const ANSI_CSI = `${String.fromCharCode(27)}[`
 
 const ROUTES_COMMAND_HELP_TEXT = [
   'Usage:',
@@ -45,8 +46,8 @@ describe('routes command', () => {
     let result = await runRoutes([], getFixturePath('routes-basic'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /home\s+ANY\s+\/\s+-> home\.tsx/)
-    assert.match(result.stdout, /auth\s+ANY\s+\/auth\s+-> auth\.tsx/)
+    assert.match(result.stdout, /home\s+ANY\s+\/\s+-> controller\.tsx/)
+    assert.match(result.stdout, /auth\s+ANY\s+\/auth\s+-> controller\.tsx/)
     assert.equal(result.stderr, '')
   })
 
@@ -54,17 +55,18 @@ describe('routes command', () => {
     let result = await runRoutes([], getFixturePath('routes-basic'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.doesNotMatch(result.stdout, /\u001B\[/)
+    assert.equal(result.stdout.includes(ANSI_CSI), false)
   })
 
   it('works from a nested directory inside an app', async () => {
-    let nestedDir = path.join(getFixturePath('routes-tree'), 'app', 'controllers', 'admin')
+    let nestedDir = path.join(getFixturePath('routes-tree'), 'app', 'actions', 'admin')
     let result = await runRoutes([], nestedDir)
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /auth -> auth\/controller\.tsx/)
     assert.match(result.stdout, /login -> auth\/login\/controller\.tsx/)
     assert.match(result.stdout, /action\s+POST\s+\/login(?!\s+->)/)
+    assert.match(result.stdout, /admin -> admin/)
     assert.match(result.stdout, /orders -> account\/orders\/controller\.tsx/)
     assert.equal(result.stderr, '')
   })
@@ -73,16 +75,14 @@ describe('routes command', () => {
     let result = await runRoutes(['--verbose'], getFixturePath('routes-tree'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /auth -> app\/controllers\/auth\/controller\.tsx/)
-    assert.match(result.stdout, /login -> app\/controllers\/auth\/login\/controller\.tsx/)
+    assert.match(result.stdout, /auth -> app\/actions\/auth\/controller\.tsx/)
+    assert.match(result.stdout, /login -> app\/actions\/auth\/login\/controller\.tsx/)
     assert.match(
       result.stdout,
-      /action\s+POST\s+\/login -> app\/controllers\/auth\/login\/controller\.tsx/,
+      /action\s+POST\s+\/login -> app\/actions\/auth\/login\/controller\.tsx/,
     )
-    assert.match(
-      result.stdout,
-      /logout\s+POST\s+\/logout -> app\/controllers\/auth\/controller\.tsx/,
-    )
+    assert.match(result.stdout, /admin -> app\/actions\/admin/)
+    assert.match(result.stdout, /logout\s+POST\s+\/logout -> app\/actions\/auth\/controller\.tsx/)
     assert.equal(result.stderr, '')
   })
 
@@ -91,7 +91,7 @@ describe('routes command', () => {
 
     assert.equal(result.status, 0, result.stderr)
     assert.match(result.stdout, /Route\s+Method\s+Path\s+Owner/)
-    assert.match(result.stdout, /home\s+ANY\s+\/\s+home\.tsx/)
+    assert.match(result.stdout, /home\s+ANY\s+\/\s+controller\.tsx/)
     assert.match(
       result.stdout,
       /auth\.login\.action\s+POST\s+\/login\s+auth\/login\/controller\.tsx/,
@@ -108,7 +108,7 @@ describe('routes command', () => {
 
     assert.equal(result.status, 0, result.stderr)
     assert.doesNotMatch(result.stdout, /Route\s+Method\s+Path\s+Owner/)
-    assert.match(result.stdout, /home\s+ANY\s+\/\s+home\.tsx/)
+    assert.match(result.stdout, /home\s+ANY\s+\/\s+controller\.tsx/)
     assert.match(
       result.stdout,
       /auth\.login\.action\s+POST\s+\/login\s+auth\/login\/controller\.tsx/,
@@ -120,15 +120,15 @@ describe('routes command', () => {
     let result = await runRoutes(['--no-color'], getFixturePath('routes-missing'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.doesNotMatch(result.stdout, /\u001B\[/)
+    assert.equal(result.stdout.includes(ANSI_CSI), false)
   })
 
   it('resolves owner files with js, jsx, and ts extensions', async () => {
     let result = await runRoutes([], getFixturePath('doctor-clean'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /home\s+ANY\s+\/\s+-> home\.js/)
-    assert.match(result.stdout, /about\s+ANY\s+\/about\s+-> about\.jsx/)
+    assert.match(result.stdout, /home\s+ANY\s+\/\s+-> controller\.jsx/)
+    assert.match(result.stdout, /about\s+ANY\s+\/about\s+-> controller\.jsx/)
     assert.match(result.stdout, /contact -> contact\/controller\.ts/)
     assert.equal(result.stderr, '')
   })
@@ -137,7 +137,7 @@ describe('routes command', () => {
     let result = await runRoutes([], getFixturePath('doctor-camel-case-keys'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /userSettings\s+ANY\s+\/user-settings\s+-> user-settings\.tsx/)
+    assert.match(result.stdout, /userSettings\s+ANY\s+\/user-settings\s+-> controller\.tsx/)
     assert.match(result.stdout, /forgotPassword -> auth\/forgot-password\/controller\.tsx/)
     assert.match(result.stdout, /resetPassword -> auth\/reset-password\/controller\.tsx/)
     assert.equal(result.stderr, '')
@@ -161,6 +161,7 @@ describe('routes command', () => {
 
     let home = findRouteNode(payload.tree, 'home')
     let account = findRouteNode(payload.tree, 'account')
+    let admin = findRouteNode(payload.tree, 'admin')
     let authLoginAction = findRouteNode(payload.tree, 'auth.login.action')
     let adminUsersDestroy = findRouteNode(payload.tree, 'admin.users.destroy')
 
@@ -170,8 +171,8 @@ describe('routes command', () => {
     assert.equal(home.pattern, '/')
     assert.deepEqual(home.owner, {
       exists: true,
-      kind: 'action',
-      path: 'app/controllers/home.tsx',
+      kind: 'controller',
+      path: 'app/actions/controller.tsx',
     })
 
     assert.ok(account)
@@ -179,7 +180,15 @@ describe('routes command', () => {
     assert.deepEqual(account.owner, {
       exists: true,
       kind: 'controller',
-      path: 'app/controllers/account/controller.tsx',
+      path: 'app/actions/account/controller.tsx',
+    })
+
+    assert.ok(admin)
+    assert.equal(admin.kind, 'group')
+    assert.deepEqual(admin.owner, {
+      exists: true,
+      kind: 'directory',
+      path: 'app/actions/admin',
     })
 
     assert.ok(authLoginAction)
@@ -189,7 +198,7 @@ describe('routes command', () => {
     assert.deepEqual(authLoginAction.owner, {
       exists: true,
       kind: 'controller',
-      path: 'app/controllers/auth/login/controller.tsx',
+      path: 'app/actions/auth/login/controller.tsx',
     })
 
     assert.ok(adminUsersDestroy)
@@ -199,7 +208,7 @@ describe('routes command', () => {
     assert.deepEqual(adminUsersDestroy.owner, {
       exists: true,
       kind: 'controller',
-      path: 'app/controllers/admin/users/controller.tsx',
+      path: 'app/actions/admin/users/controller.tsx',
     })
   })
 
@@ -207,8 +216,8 @@ describe('routes command', () => {
     let result = await runRoutes([], getFixturePath('routes-missing'))
 
     assert.equal(result.status, 0, result.stderr)
-    assert.match(result.stdout, /home\s+ANY\s+\/\s+-> home\.tsx \[missing\]/)
-    assert.match(result.stdout, /auth -> auth\/controller\.tsx \[missing\]/)
+    assert.match(result.stdout, /home\s+ANY\s+\/\s+-> controller\.tsx \[missing\]/)
+    assert.match(result.stdout, /auth -> auth \[missing\]/)
     assert.match(result.stdout, /login -> auth\/login\/controller\.tsx \[missing\]/)
     assert.match(result.stdout, /action\s+POST\s+\/auth\/login(?!\s+->)/)
     assert.equal(result.stderr, '')
@@ -323,7 +332,7 @@ interface RouteTreeNode {
   name: string
   owner: {
     exists: boolean
-    kind: 'action' | 'controller'
+    kind: 'controller' | 'directory'
     path: string
   }
   pattern?: string

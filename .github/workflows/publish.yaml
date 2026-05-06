@@ -93,6 +93,8 @@ jobs:
   docs:
     name: Update API Docs
     needs: publish
+    # Don't run on no-op publish runs (i.e., docs updates on a clean main branch)
+    if: needs.publish.outputs.tag != ''
     runs-on: ubuntu-latest
     steps:
       - name: Trigger remix-api-docs
@@ -103,18 +105,6 @@ jobs:
             await github.rest.repos.createDispatchEvent({
               owner: 'remix-run',
               repo: 'remix-api-docs',
-              event_type: 'update-docs',
-              client_payload: { tag: '${{ needs.publish.outputs.tag }}' }
-            });
-
-      - name: Trigger remix-ui-docs
-        uses: actions/github-script@v8
-        with:
-          github-token: ${{ secrets.REMIX_API_DOCS_PAT }}
-          script: |
-            await github.rest.repos.createDispatchEvent({
-              owner: 'remix-run',
-              repo: 'remix-ui-docs',
               event_type: 'update-docs',
               client_payload: { tag: '${{ needs.publish.outputs.tag }}' }
             });

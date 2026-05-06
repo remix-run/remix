@@ -4,6 +4,7 @@ Typed utilities for parsing, manipulating, and serializing HTTP header values. `
 
 ## Features
 
+- **Enhanced `Headers` Class** - Use `SuperHeaders` for lazy, typed property accessors that still work anywhere native `Headers` are expected
 - **Header-Specific Classes** - Purpose-built APIs for `Accept`, `Cache-Control`, `Content-Type`, and more
 - **Round-Trip Safety** - Parse from raw values and serialize back with `.toString()`
 - **Typed Operations** - Work with structured values instead of manual string parsing
@@ -12,6 +13,44 @@ Typed utilities for parsing, manipulating, and serializing HTTP header values. `
 
 ```sh
 npm i remix
+```
+
+## Usage
+
+`SuperHeaders` extends the native `Headers` class and adds lazy, typed property accessors for common headers. It is also the default export from this package.
+
+```ts
+import Headers from 'remix/headers'
+
+let headers = new Headers(request.headers)
+
+headers.contentType = { mediaType: 'text/html', charset: 'utf-8' }
+headers.cacheControl = { public: true, maxAge: 3600 }
+headers.setCookie = { name: 'session', value: 'abc', httpOnly: true }
+
+headers.contentType.charset = 'iso-8859-1'
+headers.cacheControl.maxAge = 60
+headers.setCookie.push({ name: 'theme', value: 'dark', path: '/' })
+
+return new Response(html, { headers })
+```
+
+Because `SuperHeaders` is a real `Headers` subclass, it can be passed directly to platform APIs:
+
+```ts
+let headers = new Headers({ contentType: 'text/plain' })
+
+headers instanceof globalThis.Headers // true
+new Response('Hello', { headers }).headers.get('Content-Type') // 'text/plain'
+```
+
+Typed accessors parse values only when you read them:
+
+```ts
+let headers = new Headers({ 'Content-Type': 'application/json; charset=utf-8' })
+
+headers.get('Content-Type') // no typed parse needed
+headers.contentType.mediaType // parses Content-Type lazily
 ```
 
 ## Individual Header Utilities

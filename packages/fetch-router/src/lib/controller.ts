@@ -50,10 +50,11 @@ export type ControllerWithMiddleware<
 }
 
 /**
- * A controller object that mirrors a route map with matching action handlers.
+ * A controller object that maps the direct route leaves in a route map to action handlers.
  *
- * Controllers let you store a subtree of route handlers in one object while preserving the
- * params and request-context contract for each nested action.
+ * Controllers let you store related route handlers in one object while preserving the params
+ * and request-context contract for each action. Nested route maps should be mapped with their
+ * own controllers.
  */
 export type Controller<
   routes extends RouteMap,
@@ -65,11 +66,12 @@ export type Controller<
 // prettier-ignore
 type ControllerActions<routes extends RouteMap, context extends RequestContext<any, any>> = routes extends any ?
   {
-    [name in keyof routes]: (
+    [name in keyof routes as routes[name] extends Route<any, any> ? name : never]: (
       routes[name] extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? Action<method, pattern, context> :
-      routes[name] extends RouteMap ? Controller<routes[name], context> :
       never
     )
+  } & {
+    [name in keyof routes as routes[name] extends RouteMap ? name : never]?: never
   } :
   never
 
@@ -131,13 +133,13 @@ export interface ControllerShape {
 }
 
 /**
- * Check if an object has an `actions` property.
+ * Check if an object has an object `actions` property.
  *
  * @param obj The object to check
  * @returns `true` if the object is a controller
  */
 export function isController(obj: unknown): obj is ControllerShape {
-  return typeof obj === 'object' && obj != null && 'actions' in obj
+  return isRecord(obj) && isRecord(obj.actions)
 }
 
 /**
@@ -149,11 +151,15 @@ export interface ActionObjectShape {
 }
 
 /**
- * Check if an object has a `handler` property.
+ * Check if an object has a function `handler` property.
  *
  * @param obj The object to check
  * @returns `true` if the object is an action object
  */
 export function isActionObject(obj: unknown): obj is ActionObjectShape {
-  return typeof obj === 'object' && obj != null && 'handler' in obj
+  return isRecord(obj) && typeof obj.handler === 'function'
+}
+
+function isRecord(obj: unknown): obj is Record<PropertyKey, unknown> {
+  return typeof obj === 'object' && obj != null && !Array.isArray(obj)
 }

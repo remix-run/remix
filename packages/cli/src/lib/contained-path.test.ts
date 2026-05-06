@@ -9,8 +9,8 @@ describe('resolveContainedPath', () => {
     let rootDir = path.join(path.sep, 'tmp', 'remix-app')
 
     assert.equal(
-      resolveContainedPath(rootDir, 'app/controllers/home.ts'),
-      path.resolve(rootDir, 'app', 'controllers', 'home.ts'),
+      resolveContainedPath(rootDir, 'app/actions/controller.ts'),
+      path.resolve(rootDir, 'app', 'actions', 'controller.ts'),
     )
   })
 

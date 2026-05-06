@@ -1,6 +1,6 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { ArrayMatcher, RoutePattern } from '@remix-run/route-pattern'
+import { createMatcher, type Matcher, RoutePattern } from '@remix-run/route-pattern'
 import { createRoutes as route } from '@remix-run/routes'
 
 import type { BuildAction } from './controller.ts'
@@ -239,7 +239,7 @@ describe('router.map() with single routes', () => {
 })
 
 describe('router.map()', () => {
-  it('maps a route map to a map of actions', async () => {
+  it('maps route maps to controllers', async () => {
     let routes = route({
       home: '/',
       blog: {
@@ -256,18 +256,19 @@ describe('router.map()', () => {
         home() {
           return new Response('Home')
         },
-        blog: {
-          actions: {
-            index() {
-              return new Response('Blog')
-            },
-            create() {
-              return new Response('Blog Post Created')
-            },
-            show({ params }) {
-              return new Response(`Blog Post ${params.id}`)
-            },
-          },
+      },
+    })
+
+    router.map(routes.blog, {
+      actions: {
+        index() {
+          return new Response('Blog')
+        },
+        create() {
+          return new Response('Blog Post Created')
+        },
+        show({ params }) {
+          return new Response(`Blog Post ${params.id}`)
         },
       },
     })
@@ -337,11 +338,121 @@ describe('router.map()', () => {
     }
   })
 
-  it('supports middleware in nested controllers', async () => {
+  it('rejects controllers without an object actions property', () => {
     let routes = route({
+      home: '/',
+    })
+
+    let router = createRouter()
+
+    assert.throws(
+      () =>
+        router.map(routes, {
+          actions: undefined,
+        } as any),
+      /Expected a controller with an object `actions` property/,
+    )
+  })
+
+  it('rejects action objects without function handlers', () => {
+    let routes = route({
+      home: '/',
+    })
+
+    let router = createRouter()
+
+    assert.throws(
+      () =>
+        router.map(routes, {
+          actions: {
+            home: {
+              handler: 1,
+            },
+          },
+        } as any),
+      /Expected a request handler function or action object with a function `handler` property/,
+    )
+  })
+
+  it('rejects nested route map keys in controller actions', () => {
+    let routes = route({
+      home: '/',
       blog: {
         index: '/blog',
-        show: '/blog/:id',
+      },
+    })
+
+    let router = createRouter()
+
+    assert.throws(
+      () =>
+        router.map(routes, {
+          actions: {
+            home() {
+              return new Response('Home')
+            },
+            blog: {
+              actions: {
+                index() {
+                  return new Response('Blog')
+                },
+              },
+            },
+          },
+        } as any),
+      /Cannot map nested route map key `blog` in controller actions/,
+    )
+  })
+
+  it('rejects unknown controller action keys', () => {
+    let routes = route({
+      home: '/',
+    })
+
+    let router = createRouter()
+
+    assert.throws(
+      () =>
+        router.map(routes, {
+          actions: {
+            home() {
+              return new Response('Home')
+            },
+            missing() {
+              return new Response('Missing')
+            },
+          },
+        } as any),
+      /Unknown action `missing` in controller/,
+    )
+  })
+
+  it('requires direct leaf actions in controllers', () => {
+    let routes = route({
+      home: '/',
+      about: '/about',
+    })
+
+    let router = createRouter()
+
+    assert.throws(
+      () =>
+        router.map(routes, {
+          actions: {
+            home() {
+              return new Response('Home')
+            },
+          },
+        } as any),
+      /Missing action `about` in controller/,
+    )
+  })
+
+  it('applies controller middleware only to direct route actions', async () => {
+    let routes = route({
+      home: '/',
+      blog: {
+        index: '/blog',
       },
     })
 
@@ -355,37 +466,33 @@ describe('router.map()', () => {
         },
       ],
       actions: {
-        blog: {
-          middleware: [
-            () => {
-              requestLog.push('inner middleware')
-            },
-          ],
-          actions: {
-            index() {
-              requestLog.push('blog-index')
-              return new Response('Blog')
-            },
-            show() {
-              requestLog.push('blog-show')
-              return new Response('Blog Post')
-            },
-          },
+        home() {
+          requestLog.push('home')
+          return new Response('Home')
         },
       },
     })
 
-    let response = await router.fetch('https://remix.run/blog')
+    router.map(routes.blog, {
+      actions: {
+        index() {
+          requestLog.push('blog-index')
+          return new Response('Blog')
+        },
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Blog')
-    assert.deepEqual(requestLog, ['outer middleware', 'inner middleware', 'blog-index'])
+    assert.equal(await response.text(), 'Home')
+    assert.deepEqual(requestLog, ['outer middleware', 'home'])
 
     requestLog = []
 
-    response = await router.fetch('https://remix.run/blog/1')
+    response = await router.fetch('https://remix.run/blog')
     assert.equal(response.status, 200)
-    assert.equal(await response.text(), 'Blog Post')
-    assert.deepEqual(requestLog, ['outer middleware', 'inner middleware', 'blog-show'])
+    assert.equal(await response.text(), 'Blog')
+    assert.deepEqual(requestLog, ['blog-index'])
   })
 
   it('allows selective middleware by mapping specific nested route subtrees separately', async () => {
@@ -980,15 +1087,17 @@ describe('custom matcher', () => {
   it('uses a custom matcher when provided', async () => {
     let matchAllCalls = 0
 
-    // Create a custom matcher that tracks calls
-    class CustomMatcher extends ArrayMatcher<MatchData> {
-      matchAll(url: string | URL) {
+    let inner = createMatcher<MatchData>()
+    let customMatcher: Matcher<MatchData> = {
+      ignoreCase: inner.ignoreCase,
+      add: inner.add.bind(inner),
+      match: inner.match.bind(inner),
+      matchAll(url, compareFn) {
         matchAllCalls++
-        return super.matchAll(url)
-      }
+        return inner.matchAll(url, compareFn)
+      },
     }
 
-    let customMatcher = new CustomMatcher()
     let router = createRouter({ matcher: customMatcher })
     router.get('/', () => new Response('Home'))
 
@@ -1000,15 +1109,18 @@ describe('custom matcher', () => {
   it('adds routes to the custom matcher', async () => {
     let addedPatterns: string[] = []
 
-    class CustomMatcher extends ArrayMatcher<MatchData> {
-      add<P extends string>(pattern: P | RoutePattern<P>, data: MatchData): void {
+    let inner = createMatcher<MatchData>()
+    let customMatcher: Matcher<MatchData> = {
+      ignoreCase: inner.ignoreCase,
+      add(pattern, data) {
         let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
         addedPatterns.push(routePattern.source)
-        super.add(pattern, data)
-      }
+        inner.add(pattern, data)
+      },
+      match: inner.match.bind(inner),
+      matchAll: inner.matchAll.bind(inner),
     }
 
-    let customMatcher = new CustomMatcher()
     let router = createRouter({ matcher: customMatcher })
     router.get('/home', () => new Response('Home'))
     router.get('/about', () => new Response('About'))

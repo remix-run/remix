@@ -163,6 +163,16 @@ describe('ContentDisposition', () => {
       assert.equal(header.preferredFilename, 'special file.txt')
     })
 
+    it('preserves literal plus characters in filename*', () => {
+      let header = new ContentDisposition("attachment; filename*=UTF-8''a+b.txt")
+      assert.equal(header.preferredFilename, 'a+b.txt')
+    })
+
+    it('decodes percent-encoded spaces without treating plus as a space', () => {
+      let header = new ContentDisposition("attachment; filename*=UTF-8''a+b%20c.txt")
+      assert.equal(header.preferredFilename, 'a+b c.txt')
+    })
+
     it('handles UTF-8 encoded filename* with special characters', () => {
       let header = new ContentDisposition("attachment; filename*=UTF-8''%E6%96%87%E4%BB%B6.txt")
       assert.equal(header.preferredFilename, '文件.txt')

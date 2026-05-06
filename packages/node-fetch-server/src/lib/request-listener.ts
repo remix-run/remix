@@ -299,22 +299,9 @@ export async function sendResponse(
     if (first.done) {
       reader.releaseLock()
     } else {
-      let second = await reader.read()
-      if (second.done) {
-        res.end(first.value)
-        return
-      }
-
       try {
         // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
         if (res.write(first.value) === false) {
-          await new Promise<void>((resolve) => {
-            res.once('drain', resolve)
-          })
-        }
-
-        // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
-        if (res.write(second.value) === false) {
           await new Promise<void>((resolve) => {
             res.once('drain', resolve)
           })

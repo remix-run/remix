@@ -1,4 +1,4 @@
-export type DoctorSuiteName = 'environment' | 'project' | 'controllers'
+export type DoctorSuiteName = 'environment' | 'project' | 'actions'
 export type DoctorFindingSeverity = 'warn' | 'advice'
 export type DoctorSuiteStatus = 'ok' | 'issues' | 'skipped'
 
@@ -18,12 +18,8 @@ export type DoctorFindingCode =
   | 'route-map-invalid-json'
   | 'route-map-loader-signal'
   | 'missing-owner'
-  | 'wrong-owner-kind'
-  | 'ambiguous-owner'
   | 'duplicate-owner-file'
   | 'incomplete-controller'
-  | 'promotion-drift'
-  | 'orphan-action'
   | 'orphan-controller'
   | 'orphan-route-directory'
 
