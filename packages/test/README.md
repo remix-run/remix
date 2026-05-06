@@ -50,13 +50,6 @@ remix test "src/**/*.test.ts" "tests/**/*.test.tsx"
 
 Or, you may control via the `glob.test` config field/CLI arg. Each `glob.*` field accepts a single string or an array of patterns, and `--glob.*` flags can be repeated on the CLI.
 
-If you install `@remix-run/test` directly instead of the umbrella `remix` package, the same runner is available as `remix-test`:
-
-```sh
-npm i @remix-run/test
-remix-test
-```
-
 ### Config File
 
 Create a `remix-test.config.ts` (or `.js`) file at the root of your project (shown with default values):
@@ -228,7 +221,7 @@ let exitCode = await runRemixTest({
 })
 ```
 
-`runRemixTest()` returns the runner exit code. The `remix test` and `remix-test` bin wrappers call
+`runRemixTest()` returns the runner exit code. The `remix test` bin wrapper calls
 `process.exit()` with that code when the run finishes so open workers, browsers, or project handles
 cannot keep the CLI alive.
 
