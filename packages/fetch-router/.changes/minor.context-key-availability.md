@@ -10,12 +10,7 @@ function readName(context: RequestContext): string {
 
 // after
 function readName(context: RequestContext): string {
-  let formData = context.get(FormData)
-  if (formData == null) {
-    return ''
-  }
-
-  return String(formData.get('name') ?? '')
+  return String(context.get(FormData)?.get('name') ?? '')
 }
 ```
 
