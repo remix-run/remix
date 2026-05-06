@@ -1216,4 +1216,3 @@ function findEndMarker(
 
   throw new Error('End marker not found')
 }
-
