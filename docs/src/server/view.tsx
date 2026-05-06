@@ -1,5 +1,6 @@
 import { css } from 'remix/ui'
 import type { Handle, RemixNode } from 'remix/ui'
+import { Glyph } from '@remix-run/ui/glyph'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
 import type { DocsRegistry, PageDefinition } from './registry.ts'
 import { isPageActive } from './registry.ts'
@@ -55,8 +56,31 @@ export function DocsDocument(handle: Handle<DocsViewProps>) {
         </head>
         <body mix={bodyCss}>
           <RMX_01_GLYPHS />
+          <input
+            id="nav-toggle"
+            type="checkbox"
+            mix={navToggleCss}
+            aria-hidden="true"
+            tabIndex={-1}
+          />
+          <a href="https://remix.run" mix={mobileLogoBannerCss}>
+            <RemixLogoLight activeVersion={activeVersion} />
+            <RemixLogoDark activeVersion={activeVersion} />
+          </a>
+          <label
+            for="nav-toggle"
+            mix={mobileTopBarCss}
+            aria-controls="docs-sidebar"
+            aria-label="Toggle navigation"
+          >
+            <span mix={mobileTopBarTextCss}>
+              {page.eyebrow ? <span mix={eyebrowTextCss}>{page.eyebrow}</span> : null}
+              <span mix={mobileTopBarTitleCss}>{page.navLabel || page.title || 'Overview'}</span>
+            </span>
+            <Glyph name="menu" mix={mobileTopBarIconCss} aria-hidden="true" />
+          </label>
           <div mix={shellCss}>
-            <aside mix={sidebarFrameCss}>
+            <aside id="docs-sidebar" mix={sidebarFrameCss}>
               <div mix={sidebarStickyCss}>
                 <Sidebar
                   registry={registry}
@@ -77,6 +101,7 @@ export function DocsDocument(handle: Handle<DocsViewProps>) {
               </div>
             </main>
           </div>
+          <label id="nav-backdrop" for="nav-toggle" aria-label="Close navigation" />
         </body>
       </html>
     )
@@ -302,7 +327,8 @@ const bodyCss = css({
     marginBottom: `${theme.space.lg} !important`,
   },
   '& h1': {
-    fontSize: 'clamp(2rem, 4vw, 3.5rem)',
+    fontSize: 'clamp(1.5rem, 4vw, 3.5rem)',
+    overflowWrap: 'anywhere',
   },
   '& h2': {
     fontSize: 'clamp(1.375rem, 2.5vw, 1.625rem)',
@@ -399,6 +425,59 @@ const bodyCss = css({
     marginTop: '0 !important',
     marginBottom: '0 !important',
   },
+
+  '#nav-backdrop': {
+    display: 'none',
+  },
+
+  // Mobile nav toggle: the sidebar is always positioned below the breakpoint
+  // but clipped to nothing via clip-path. Toggling the checkbox animates the
+  // clip-path open, wiping the content into view from top to bottom.
+  '@media (max-width: 980px)': {
+    '& #docs-sidebar': {
+      position: 'fixed',
+      top: '56px',
+      bottom: '15vh',
+      left: 0,
+      right: 0,
+      overflowY: 'auto',
+      borderRight: 'none',
+      borderBottom: `1px solid ${theme.colors.border.subtle}`,
+      boxShadow: `0 8px 6px -6px ${theme.colors.text.secondary}`,
+      zIndex: 50,
+      // Negative insets on the sides and bottom give the box-shadow room to
+      // paint beyond the element's bounds — clip-path otherwise clips the
+      // shadow along with the rest of the element.
+      clipPath: 'inset(0 -24px 100% -24px)',
+      pointerEvents: 'none',
+      transition: 'clip-path 280ms ease',
+    },
+    '& main': {
+      transition: 'opacity 280ms ease',
+    },
+    '&:has(#nav-toggle:checked)': {
+      overflow: 'hidden',
+    },
+    '&:has(#nav-toggle:checked) #docs-sidebar': {
+      clipPath: 'inset(0 -24px -24px -24px)',
+      pointerEvents: 'auto',
+    },
+    // The backdrop label is kept (transparent) so clicking outside the menu
+    // still toggles the checkbox closed; only the gradient is gone.
+    '&:has(#nav-toggle:checked) #nav-backdrop': {
+      display: 'block',
+      position: 'fixed',
+      bottom: 0,
+      left: 0,
+      right: 0,
+      height: '15vh',
+      cursor: 'pointer',
+      zIndex: 50,
+    },
+    '&:has(#nav-toggle:checked) main': {
+      opacity: 0.25,
+    },
+  },
 })
 
 const shellCss = css({
@@ -416,8 +495,11 @@ const sidebarFrameCss = css({
   backgroundColor: theme.surface.lvl3,
   borderRight: `1px solid ${theme.colors.border.subtle}`,
   '@media (max-width: 980px)': {
+    // Mobile open/closed state is driven from bodyCss via :has(#nav-toggle:checked)
+    // (see the bodyCss media block). The sidebar is hidden by default and
+    // overlaid on top of the page when the toggle is checked, so no border
+    // styling is needed here on mobile.
     borderRight: 'none',
-    borderBottom: `1px solid ${theme.colors.border.subtle}`,
   },
 })
 
@@ -455,6 +537,9 @@ const sidebarHeadingCss = css({
   letterSpacing: theme.letterSpacing.meta,
   textTransform: 'uppercase',
   color: theme.colors.text.muted,
+  '@media (max-width: 980px)': {
+    fontSize: theme.fontSize.xs,
+  },
 })
 
 const sectionDetailsCss = css({
@@ -474,6 +559,11 @@ const sectionSummaryCss = css({
   color: theme.colors.text.muted,
   '&:hover': {
     color: theme.colors.text.primary,
+  },
+  '@media (max-width: 980px)': {
+    minHeight: '44px',
+    padding: `${theme.space.md} 0`,
+    fontSize: theme.fontSize.xs,
   },
 })
 
@@ -546,6 +636,9 @@ const navItemCss = css({
     backgroundColor: theme.surface.lvl0,
     color: theme.colors.text.primary,
   },
+  '@media (max-width: 980px)': {
+    minHeight: '44px',
+  },
 })
 
 const navItemActiveCss = css({
@@ -560,7 +653,7 @@ const mainCss = css({
   paddingBlockEnd: 0,
   paddingInlineStart: 'clamp(48px, 6vw, 96px)',
   '@media (max-width: 980px)': {
-    padding: theme.space.xl,
+    padding: theme.space.lg,
     paddingBlockEnd: 0,
   },
 })
@@ -641,4 +734,75 @@ const footerLegalTextCss = css({
   letterSpacing: '0.05em',
   textTransform: 'uppercase',
   color: theme.colors.text.muted,
+})
+
+// Visually hide the checkbox while keeping it focusable. Toggling happens via
+// the <label for="nav-toggle"> elements (top bar + backdrop).
+const navToggleCss = css({
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  padding: 0,
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+})
+
+// Mobile-only Remix logo banner that sits above the sticky top bar in the
+// document flow. It scrolls off the screen as the user scrolls the page.
+const mobileLogoBannerCss = css({
+  display: 'none',
+  '@media (max-width: 980px)': {
+    display: 'flex',
+    alignItems: 'center',
+    padding: `${theme.space.lg}`,
+    backgroundColor: theme.surface.lvl3,
+    borderBottom: `1px solid ${theme.colors.border.subtle}`,
+  },
+})
+
+const mobileTopBarCss = css({
+  display: 'none',
+  '@media (max-width: 980px)': {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.space.md,
+    padding: `0 ${theme.space.lg}`,
+    height: '48px',
+    backgroundColor: theme.surface.lvl3,
+    borderBottom: `1px solid ${theme.colors.border.subtle}`,
+    cursor: 'pointer',
+    position: 'sticky',
+    top: 0,
+    zIndex: 60,
+    userSelect: 'none',
+    WebkitTapHighlightColor: 'transparent',
+  },
+})
+
+const mobileTopBarTextCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2px',
+  minWidth: 0,
+  overflow: 'hidden',
+})
+
+const mobileTopBarTitleCss = css({
+  fontSize: theme.fontSize.md,
+  fontWeight: theme.fontWeight.semibold,
+  color: theme.colors.text.primary,
+  whiteSpace: 'nowrap',
+  textOverflow: 'ellipsis',
+  overflow: 'hidden',
+})
+
+const mobileTopBarIconCss = css({
+  width: theme.fontSize.xl,
+  height: theme.fontSize.xl,
+  color: theme.colors.text.primary,
+  flexShrink: 0,
 })
