@@ -111,7 +111,7 @@ const accountAction = {
 
     return new Response(accountId + ':' + user.id + ':' + role)
   },
-} satisfies BuildAction<'GET', typeof routes.account, AppContext>
+} satisfies BuildAction<typeof routes.account, AppContext>
 
 const adminController = {
   actions: {
@@ -165,7 +165,7 @@ const elevatedReportAction = {
 
     return new Response(role)
   },
-} satisfies BuildAction<'GET', typeof routes.reports, AdminAppContext>
+} satisfies BuildAction<typeof routes.reports, AdminAppContext>
 
 router.get(routes.account, accountAction)
 router.map(routes.admin, adminController)

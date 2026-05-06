@@ -652,7 +652,7 @@ let accountAction = {
     let auth = context.get(Auth)
     return Response.json({ id: auth.identity.id })
   },
-} satisfies BuildAction<'GET', typeof routes.account, AuthenticatedAppContext>
+} satisfies BuildAction<typeof routes.account, AuthenticatedAppContext>
 ```
 
 In this example, the action declares the stronger context it requires, and the action-local middleware makes that contract true at runtime. In a larger app, you can still derive a shared base context from router middleware with `MiddlewareContext<typeof middleware>` and build on top of it the same way.

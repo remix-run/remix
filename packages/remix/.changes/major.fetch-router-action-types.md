@@ -1,0 +1,1 @@
+BREAKING CHANGE: Updated the re-exported `remix/fetch-router` action helper types to match `@remix-run/fetch-router`: `Action` and `BuildAction` no longer accept an unused request method type parameter, and custom matcher payloads should use `RouteEntry` instead of `MatchData`.

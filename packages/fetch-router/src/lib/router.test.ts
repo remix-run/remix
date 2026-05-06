@@ -5,7 +5,7 @@ import { createRoutes as route } from '@remix-run/routes'
 
 import type { BuildAction } from './controller.ts'
 import type { RequestContext } from './request-context.ts'
-import type { MatchData } from './router.ts'
+import type { RouteEntry } from './router.ts'
 import { createRouter } from './router.ts'
 
 describe('router.fetch()', () => {
@@ -818,7 +818,7 @@ describe('inline middleware', () => {
     })
 
     if (false as boolean) {
-      let action: BuildAction<'GET', typeof routes.home> = {
+      let action: BuildAction<typeof routes.home> = {
         handler() {
           return new Response('Home')
         },
@@ -1087,8 +1087,8 @@ describe('custom matcher', () => {
   it('uses a custom matcher when provided', async () => {
     let matchAllCalls = 0
 
-    let inner = createMatcher<MatchData>()
-    let customMatcher: Matcher<MatchData> = {
+    let inner = createMatcher<RouteEntry>()
+    let customMatcher: Matcher<RouteEntry> = {
       ignoreCase: inner.ignoreCase,
       add: inner.add.bind(inner),
       match: inner.match.bind(inner),
@@ -1109,8 +1109,8 @@ describe('custom matcher', () => {
   it('adds routes to the custom matcher', async () => {
     let addedPatterns: string[] = []
 
-    let inner = createMatcher<MatchData>()
-    let customMatcher: Matcher<MatchData> = {
+    let inner = createMatcher<RouteEntry>()
+    let customMatcher: Matcher<RouteEntry> = {
       ignoreCase: inner.ignoreCase,
       add(pattern, data) {
         let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern

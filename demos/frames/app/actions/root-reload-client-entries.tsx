@@ -28,7 +28,7 @@ export const rootReloadClientEntriesAction = {
       { request: context.request, router: context.router },
     )
   },
-} satisfies BuildAction<'GET', typeof routes.rootReloadClientEntries>
+} satisfies BuildAction<typeof routes.rootReloadClientEntries>
 
 type RootReloadClientEntriesPageProps = {
   includeRemoved: boolean
