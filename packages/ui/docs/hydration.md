@@ -54,7 +54,7 @@ let app = run({
     return mod[exportName]
   },
   async resolveFrame(src, signal) {
-    let res = await fetch(src, { headers: { accept: 'text/html' }, signal })
+    let res = await fetch(src, { headers: { Accept: 'text/html' }, signal })
     return res.body ?? (await res.text())
   },
 })

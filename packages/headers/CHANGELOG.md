@@ -40,7 +40,7 @@ This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/ma
 
   // After:
   import { ContentType } from '@remix-run/headers'
-  let contentType = ContentType.from(request.headers.get('content-type'))
+  let contentType = ContentType.from(request.headers.get('Content-Type'))
   let mediaType = contentType.mediaType
   ```
 

@@ -37,8 +37,8 @@ async function resolveFrameViaRouter(router: Router, request: Request, src: stri
   let url = new URL(src, request.url)
   let headers = new Headers(request.headers)
 
-  headers.delete('accept-encoding')
-  headers.set('accept', 'text/html')
+  headers.delete('Accept-Encoding')
+  headers.set('Accept', 'text/html')
 
   let response = await router.fetch(
     new Request(url, {

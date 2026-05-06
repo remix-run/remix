@@ -171,7 +171,7 @@ export async function createFileResponse<file extends FileLike>(
 
   // If-Match support: https://httpwg.org/specs/rfc9110.html#field.if-match
   if (etag && hasIfMatch) {
-    let ifMatch = IfMatch.from(headers.get('if-match'))
+    let ifMatch = IfMatch.from(headers.get('If-Match'))
     if (!ifMatch.matches(etag)) {
       return new Response('Precondition Failed', {
         status: 412,
@@ -186,7 +186,7 @@ export async function createFileResponse<file extends FileLike>(
 
   // If-Unmodified-Since support: https://httpwg.org/specs/rfc9110.html#field.if-unmodified-since
   if (lastModified && !hasIfMatch) {
-    let ifUnmodifiedSinceHeader = headers.get('if-unmodified-since')
+    let ifUnmodifiedSinceHeader = headers.get('If-Unmodified-Since')
     if (ifUnmodifiedSinceHeader != null) {
       let ifUnmodifiedSince = new Date(ifUnmodifiedSinceHeader)
       if (removeMilliseconds(lastModified) > removeMilliseconds(ifUnmodifiedSince)) {
@@ -206,12 +206,12 @@ export async function createFileResponse<file extends FileLike>(
   // If-Modified-Since support: https://httpwg.org/specs/rfc9110.html#field.if-modified-since
   if (etag || lastModified) {
     let shouldReturnNotModified = false
-    let ifNoneMatch = IfNoneMatch.from(headers.get('if-none-match'))
+    let ifNoneMatch = IfNoneMatch.from(headers.get('If-None-Match'))
 
     if (etag && ifNoneMatch.matches(etag)) {
       shouldReturnNotModified = true
     } else if (lastModified && ifNoneMatch.tags.length === 0) {
-      let ifModifiedSinceHeader = headers.get('if-modified-since')
+      let ifModifiedSinceHeader = headers.get('If-Modified-Since')
       if (ifModifiedSinceHeader != null) {
         let ifModifiedSince = new Date(ifModifiedSinceHeader)
         if (removeMilliseconds(lastModified) <= removeMilliseconds(ifModifiedSince)) {
@@ -235,7 +235,7 @@ export async function createFileResponse<file extends FileLike>(
   // Range support: https://httpwg.org/specs/rfc9110.html#field.range
   // If-Range support: https://httpwg.org/specs/rfc9110.html#field.if-range
   if (acceptRanges && request.method === 'GET' && headers.has('Range')) {
-    let range = Range.from(headers.get('range'))
+    let range = Range.from(headers.get('Range'))
 
     // Check if the Range header was sent but parsing resulted in no valid ranges (malformed)
     if (range.ranges.length === 0) {
@@ -245,7 +245,7 @@ export async function createFileResponse<file extends FileLike>(
     }
 
     // If-Range support: https://httpwg.org/specs/rfc9110.html#field.if-range
-    let ifRange = IfRange.from(headers.get('if-range'))
+    let ifRange = IfRange.from(headers.get('If-Range'))
     if (
       ifRange.matches({
         etag,

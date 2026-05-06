@@ -24,7 +24,7 @@ export function createAPIAuthScheme<identity>(
   options: APIAuthSchemeOptions<identity>,
 ): AuthScheme<identity> {
   let name = options.name ?? 'api-key'
-  let headerName = options.headerName ?? 'X-API-Key'
+  let headerName = options.headerName ?? 'X-Api-Key'
 
   return {
     name,

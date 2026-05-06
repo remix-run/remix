@@ -73,7 +73,7 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 
 ### Pre-release Changes
 
-- BREAKING CHANGE: `MultipartPart.headers` from `remix/multipart-parser` and `remix/multipart-parser/node` is now a plain decoded object keyed by lower-case header name instead of a native `Headers` instance. Access part headers with bracket notation like `part.headers['content-type']` instead of `part.headers.get('content-type')`.
+- BREAKING CHANGE: `MultipartPart.headers` from `remix/multipart-parser` and `remix/multipart-parser/node` is now a plain decoded object keyed by lower-case header name instead of a native `Headers` instance. Access part headers with bracket notation like `part.headers['content-type']` instead of `part.headers.get('Content-Type')`.
 
 - BREAKING CHANGE: Removed the deprecated `remix/component`, `remix/component/jsx-runtime`, `remix/component/jsx-dev-runtime`, and `remix/component/server` package exports. Import the consolidated UI runtime from `remix/ui`, `remix/ui/jsx-runtime`, `remix/ui/jsx-dev-runtime`, and `remix/ui/server` instead.
 

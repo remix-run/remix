@@ -10,8 +10,8 @@ const CRLF = '\r\n'
  *
  * @example
  * let headers = parse('Content-Type: text/html\r\nCache-Control: no-cache')
- * headers.get('content-type') // 'text/html'
- * headers.get('cache-control') // 'no-cache'
+ * headers.get('Content-Type') // 'text/html'
+ * headers.get('Cache-Control') // 'no-cache'
  */
 export function parse(raw: string): Headers {
   let headers = new Headers()

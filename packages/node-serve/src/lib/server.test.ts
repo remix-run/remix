@@ -53,7 +53,7 @@ describeUws('serve', () => {
     let server = serve(
       async (request) => {
         assert.equal(request.method, 'POST')
-        assert.equal(request.headers.get('content-type'), 'text/plain')
+        assert.equal(request.headers.get('Content-Type'), 'text/plain')
         assert.equal(await request.text(), 'hello')
 
         return new Response('ok', {
@@ -79,7 +79,7 @@ describeUws('serve', () => {
       })
 
       assert.equal(response.status, 201)
-      assert.equal(response.headers.get('x-test'), 'yes')
+      assert.equal(response.headers.get('X-Test'), 'yes')
       assert.equal(await response.text(), 'ok')
     } finally {
       server.close()

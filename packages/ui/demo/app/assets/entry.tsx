@@ -23,11 +23,11 @@ async function resolveFrameResponse(
   target?: string,
 ): Promise<FrameContent> {
   let headers = new Headers()
-  headers.set('accept', 'text/html')
-  headers.set('x-remix-frame', 'true')
+  headers.set('Accept', 'text/html')
+  headers.set('X-Remix-Frame', 'true')
 
   if (target) {
-    headers.set('x-remix-target', target)
+    headers.set('X-Remix-Target', target)
   }
 
   let response = await fetch(url, { headers, signal })

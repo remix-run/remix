@@ -213,7 +213,7 @@ function createMockS3Fetch(): typeof globalThis.fetch {
       objects.set(objectKey, {
         body,
         metadata,
-        contentType: request.headers.get('content-type') ?? '',
+        contentType: request.headers.get('Content-Type') ?? '',
         updatedAt: Date.now(),
       })
 
@@ -300,16 +300,16 @@ function listObjects(url: URL, bucket: string, objects: Map<string, StoredObject
   return new Response(xml, {
     status: 200,
     headers: {
-      'content-type': 'application/xml',
+      'Content-Type': 'application/xml',
     },
   })
 }
 
 function createObjectResponse(object: StoredObject, headOnly: boolean): Response {
   let headers = new Headers({
-    'content-type': object.contentType,
-    'content-length': String(object.body.byteLength),
-    'last-modified': new Date(object.updatedAt).toUTCString(),
+    'Content-Type': object.contentType,
+    'Content-Length': String(object.body.byteLength),
+    'Last-Modified': new Date(object.updatedAt).toUTCString(),
   })
 
   for (let [header, value] of Object.entries(object.metadata)) {
@@ -367,7 +367,7 @@ function createErrorResponse(status: number, code: string, message: string): Res
   return new Response(xml, {
     status,
     headers: {
-      'content-type': 'application/xml',
+      'Content-Type': 'application/xml',
     },
   })
 }

@@ -39,11 +39,11 @@ async function resolveFrame<context extends RequestContext<any, any>>(
   let url = new URL(src, request.url)
 
   let headers = new Headers()
-  headers.set('accept', 'text/html')
-  headers.set('accept-encoding', 'identity')
+  headers.set('Accept', 'text/html')
+  headers.set('Accept-Encoding', 'identity')
 
-  let cookie = request.headers.get('cookie')
-  if (cookie) headers.set('cookie', cookie)
+  let cookie = request.headers.get('Cookie')
+  if (cookie) headers.set('Cookie', cookie)
 
   let res = await router.fetch(
     new Request(url, {
