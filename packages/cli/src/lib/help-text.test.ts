@@ -47,21 +47,19 @@ describe('help text', () => {
   })
 
   it('colors headings and syntax tokens when ansi is enabled', () => {
-    let output = withEnv(
-      { FORCE_COLOR: '1', NO_COLOR: undefined, TERM: 'xterm-256color' },
-      () =>
-        withTTY(process.stdout, true, () => {
-          configureColors({ disabled: false })
+    let output = withEnv({ FORCE_COLOR: '1', NO_COLOR: undefined, TERM: 'xterm-256color' }, () =>
+      withTTY(process.stdout, true, () => {
+        configureColors({ disabled: false })
 
-          return formatHelpText(
-            {
-              examples: ['remix demo --json'],
-              options: [{ description: 'Print JSON output', label: '--dir <path>' }],
-              usage: ['remix demo [options]'],
-            },
-            process.stdout,
-          )
-        }),
+        return formatHelpText(
+          {
+            examples: ['remix demo --json'],
+            options: [{ description: 'Print JSON output', label: '--dir <path>' }],
+            usage: ['remix demo [options]'],
+          },
+          process.stdout,
+        )
+      }),
     )
 
     assert.ok(output.includes(`${ANSI_CSI}1m${ANSI_CSI}94mUsage${ANSI_CSI}0m:`))
@@ -71,21 +69,19 @@ describe('help text', () => {
   })
 
   it('colors help for stderr independently of stdout capability', () => {
-    let output = withEnv(
-      { FORCE_COLOR: '1', NO_COLOR: undefined, TERM: 'xterm-256color' },
-      () =>
-        withTTY(process.stdout, false, () =>
-          withTTY(process.stderr, true, () => {
-            configureColors({ disabled: false })
+    let output = withEnv({ FORCE_COLOR: '1', NO_COLOR: undefined, TERM: 'xterm-256color' }, () =>
+      withTTY(process.stdout, false, () =>
+        withTTY(process.stderr, true, () => {
+          configureColors({ disabled: false })
 
-            return formatHelpText(
-              {
-                usage: ['remix demo <path>'],
-              },
-              process.stderr,
-            )
-          }),
-        ),
+          return formatHelpText(
+            {
+              usage: ['remix demo <path>'],
+            },
+            process.stderr,
+          )
+        }),
+      ),
     )
 
     assert.ok(output.includes(`${ANSI_CSI}1m${ANSI_CSI}94mUsage${ANSI_CSI}0m:`))
