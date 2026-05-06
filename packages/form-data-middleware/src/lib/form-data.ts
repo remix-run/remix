@@ -59,6 +59,7 @@ export function formData(
     }
 
     if (context.method === 'GET' || context.method === 'HEAD') {
+      context.set(FormData, new FormData())
       return
     }
 

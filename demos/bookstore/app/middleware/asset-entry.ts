@@ -15,10 +15,12 @@ const assetsEntryKey = createContextKey<AssetEntry>()
 const defaultScriptEntry = path.resolve(import.meta.dirname, '../assets/entry.tsx')
 const defaultStylesheetEntry = path.resolve(import.meta.dirname, '../assets/app.css')
 
+type SetAssetEntryContextTransform = readonly [readonly [typeof assetsEntryKey, AssetEntry]]
+
 export function loadAssetEntry(
   scriptEntry = defaultScriptEntry,
   stylesheetEntry = defaultStylesheetEntry,
-): Middleware {
+): Middleware<any, any, SetAssetEntryContextTransform> {
   return async (context, next) => {
     let [scriptSrc, scriptPreloads, stylesheetHref] = await Promise.all([
       assetServer.getHref(scriptEntry),

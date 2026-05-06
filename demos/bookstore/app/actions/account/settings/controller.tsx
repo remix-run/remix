@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import type { AppController } from '../../../router.ts'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { minLength } from 'remix/data-schema/checks'
@@ -46,4 +46,4 @@ export default {
       return redirect(routes.account.index.href())
     },
   },
-} satisfies Controller<typeof routes.account.settings>
+} satisfies AppController<typeof routes.account.settings>

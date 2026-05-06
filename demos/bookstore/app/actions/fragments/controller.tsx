@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import type { AppController } from '../../router.ts'
 import { css } from 'remix/ui'
 import { Database } from 'remix/data-table'
 
@@ -49,4 +49,4 @@ export default {
       return renderFragment(<CartItems items={cart.items} total={total} canCheckout={!!user} />)
     },
   },
-} satisfies Controller<typeof routes.fragments>
+} satisfies AppController<typeof routes.fragments>

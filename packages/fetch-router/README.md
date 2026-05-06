@@ -615,6 +615,7 @@ router.get('/posts/:id', (context) => {
   // set/get: type-safe request-scoped context data on the context object
   context.set(UserKey, currentUser)
   let user = context.get(UserKey)
+  if (user == null) throw new Error('Expected current user')
   console.log(user.id)
 
   return new Response(`Post ${context.params.id}`)
@@ -657,6 +658,8 @@ let accountAction = {
 In this example, the action declares the stronger context it requires, and the action-local middleware makes that contract true at runtime. In a larger app, you can still derive a shared base context from router middleware with `MiddlewareContext<typeof middleware>` and build on top of it the same way.
 
 #### Middleware Provider Guidance
+
+`context.get(key)` returns a defined value when the context type includes that key or the key was created with a default value. Constructor keys like `FormData` are useful context keys, but the constructor itself is not a guarantee that a value exists. Use middleware context transforms for required values, and handle `undefined` when reading values that may not be present.
 
 If you're authoring a middleware package that stores values in request context, treat that context contract as part of the package API. A good provider should usually export:
 

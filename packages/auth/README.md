@@ -38,8 +38,8 @@ import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/auth-mid
 import { completeAuth, createCredentialsAuthProvider, verifyCredentials } from 'remix/auth'
 import { createCookie } from 'remix/cookie'
 import { createRouter } from 'remix/fetch-router'
+import { formData } from 'remix/form-data-middleware'
 import { form, route } from 'remix/routes'
-import { FormData, formData } from 'remix/form-data-middleware'
 import type { GoodAuth } from 'remix/auth-middleware'
 import { redirect } from 'remix/response/redirect'
 import { Session } from 'remix/session'
@@ -71,6 +71,9 @@ let routes = route({
 let passwordProvider = createCredentialsAuthProvider({
   parse(context) {
     let formData = context.get(FormData)
+    if (formData == null) {
+      throw new Error('Expected formData() middleware before verifyCredentials()')
+    }
 
     return {
       email: String(formData.get('email') ?? ''),

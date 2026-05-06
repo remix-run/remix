@@ -1,6 +1,9 @@
 import { describe, it } from '@remix-run/test'
 import assert from '@remix-run/assert'
 import { createContextKey, RequestContext } from './request-context.ts'
+import type { IsEqual } from './type-utils.ts'
+
+function expectTypeEquality<_check extends true>() {}
 
 describe('new RequestContext()', () => {
   it('provides access to request headers', () => {
@@ -73,12 +76,31 @@ describe('new RequestContext()', () => {
     context.set(FormData, formData)
 
     assert.equal(context.has(FormData), true)
-    assert.equal(context.get(FormData).get('name'), 'Jane')
-    let avatar = context.get(FormData).get('avatar')
+    let storedFormData = context.get(FormData)
+    if (storedFormData == null) {
+      throw new Error('Expected FormData in request context')
+    }
+
+    expectTypeEquality<IsEqual<typeof storedFormData, FormData>>()
+
+    assert.equal(storedFormData.get('name'), 'Jane')
+    let avatar = storedFormData.get('avatar')
     assert.ok(avatar instanceof File)
     assert.equal(avatar.name, file.name)
     assert.equal(avatar.type, file.type)
     assert.equal(await avatar.text(), await file.text())
+  })
+
+  it('does not type constructor keys as available unless they are in context', () => {
+    let context = new RequestContext(new Request('https://remix.run/test'))
+    let formData = context.get(FormData)
+
+    expectTypeEquality<IsEqual<typeof formData, FormData | undefined>>()
+
+    if (false as boolean) {
+      // @ts-expect-error - FormData is not available until it is set or provided by middleware
+      context.get(FormData).get('name')
+    }
   })
 
   it('stores arbitrary request methods as strings', () => {
@@ -110,11 +132,20 @@ describe('new RequestContext()', () => {
     assert.equal(context.get(key), null)
   })
 
-  it('throws if a context value is not set and no default value exists', () => {
-    let key = createContextKey()
+  it('allows `undefined` as a valid default value in request context', () => {
+    let key = createContextKey(undefined)
     let context = new RequestContext(new Request('https://remix.run/test'))
 
-    assert.throws(() => context.get(key), Error)
+    assert.equal(context.get(key), undefined)
+  })
+
+  it('returns undefined if a context value is not set and no default value exists', () => {
+    let key = createContextKey<string>()
+    let context = new RequestContext(new Request('https://remix.run/test'))
+    let value = context.get(key)
+
+    expectTypeEquality<IsEqual<typeof value, string | undefined>>()
+    assert.equal(value, undefined)
   })
 
   it('checks if a key has a context value', () => {
@@ -126,17 +157,29 @@ describe('new RequestContext()', () => {
     assert.equal(context.has(key), true)
   })
 
+  it('gets values without a default only when they have been set', () => {
+    let key = createContextKey<string>()
+    let context = new RequestContext(new Request('https://remix.run/test'))
+
+    assert.equal(context.get(key), undefined)
+    context.set(key, 'value')
+    assert.equal(context.get(key), 'value')
+  })
+
   it('supports destructuring get/set/has from request context', () => {
-    let key = createContextKey('default')
+    let defaultKey = createContextKey('default')
+    let key = createContextKey<string>()
     let context = new RequestContext(new Request('https://remix.run/test'))
     let { get, has, set } = context
 
     assert.equal(has(key), false)
-    assert.equal(get(key), 'default')
+    assert.equal(get(defaultKey), 'default')
+    assert.equal(get(key), undefined)
 
     set(key, 'value')
 
     assert.equal(has(key), true)
+    assert.equal(get(defaultKey), 'default')
     assert.equal(get(key), 'value')
   })
 
@@ -155,6 +198,11 @@ describe('new RequestContext()', () => {
     context.set(Value, value)
 
     assert.equal(context.has(Value), true)
-    assert.equal(context.get(Value), value)
+    let storedValue = context.get(Value)
+    if (storedValue == null) {
+      throw new Error('Expected Value in request context')
+    }
+
+    assert.equal(storedValue, value)
   })
 })

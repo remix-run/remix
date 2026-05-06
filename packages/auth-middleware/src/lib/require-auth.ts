@@ -48,13 +48,12 @@ export function requireAuth<identity = unknown>(
   options: RequireAuthOptions = {},
 ): Middleware<any, any, RequireAuthContextTransform<identity>> {
   return async (context, next) => {
-    if (!context.has(Auth)) {
+    let auth = context.get(Auth)
+    if (auth == null) {
       throw new Error(
         'Auth state not found. Make sure auth() middleware runs before requireAuth().',
       )
     }
-
-    let auth = context.get(Auth)
 
     if (auth.ok) {
       return next()

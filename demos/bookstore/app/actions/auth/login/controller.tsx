@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import type { AppController } from '../../../router.ts'
 import { completeAuth, verifyCredentials } from 'remix/auth'
 import { redirect } from 'remix/response/redirect'
 
@@ -40,4 +40,4 @@ export default {
       return redirect(getPostAuthRedirect(url))
     },
   },
-} satisfies Controller<typeof routes.auth.login>
+} satisfies AppController<typeof routes.auth.login>

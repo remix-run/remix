@@ -11,14 +11,38 @@ import {
   type FileUploadHandler,
 } from '@remix-run/form-data-parser'
 import { createRouter } from '@remix-run/fetch-router'
+import type { RequestContext } from '@remix-run/fetch-router'
 
 import { formData } from './form-data.ts'
+
+type FormDataState = {
+  isDefined: boolean
+  isFormData: boolean
+  isEmpty: boolean
+}
 
 // Native File normalizes some MIME types differently across runtimes (for example
 // Bun adds charset for text types and rewrites application/javascript), so derive
 // the input type from the current runtime before asserting the response headers.
 function normalizeFileType(type: string): string {
   return new File([''], '', { type }).type
+}
+
+function getFormDataState(context: RequestContext): FormDataState {
+  let formData = context.get(FormData)
+  if (formData == null) {
+    return {
+      isDefined: false,
+      isFormData: false,
+      isEmpty: false,
+    }
+  }
+
+  return {
+    isDefined: true,
+    isFormData: formData instanceof FormData,
+    isEmpty: formData.entries().next().done === true,
+  }
 }
 
 describe('formData middleware', () => {
@@ -130,6 +154,44 @@ describe('formData middleware', () => {
         name: 'test2.txt',
         type: fileType,
       },
+    })
+  })
+
+  it('provides an empty FormData for GET requests', async () => {
+    let router = createRouter({
+      middleware: [formData()],
+    })
+
+    router.get('/', (context) => Response.json(getFormDataState(context)))
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), {
+      isDefined: true,
+      isFormData: true,
+      isEmpty: true,
+    })
+  })
+
+  it('provides an empty FormData for HEAD requests', async () => {
+    let formDataState: FormDataState | undefined
+    let router = createRouter({
+      middleware: [formData()],
+    })
+
+    router.head('/', (context) => {
+      formDataState = getFormDataState(context)
+      return new Response(null)
+    })
+
+    let response = await router.fetch('https://remix.run/', { method: 'HEAD' })
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(formDataState, {
+      isDefined: true,
+      isFormData: true,
+      isEmpty: true,
     })
   })
 

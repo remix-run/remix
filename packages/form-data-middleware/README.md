@@ -19,6 +19,8 @@ npm i remix
 
 Use the `formData()` middleware at the router level to parse `FormData` from the request body and make it available on request context via `context.get(FormData)`.
 
+When `formData()` runs successfully it always provides a `FormData` value. Requests that do not contain a form body, including `GET` and `HEAD` requests, receive an empty `FormData`.
+
 Uploaded files are available in the parsed `FormData` object. For a single file field, use `formData.get(name)`. For repeated file fields, use `formData.getAll(name)`.
 
 ```ts

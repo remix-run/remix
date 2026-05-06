@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import type { AppController } from '../../router.ts'
 import { redirect } from 'remix/response/redirect'
 
 import { Session } from '../../middleware/session.ts'
@@ -13,4 +13,4 @@ export default {
       return redirect(routes.home.href())
     },
   },
-} satisfies Controller<typeof routes.auth>
+} satisfies AppController<typeof routes.auth>

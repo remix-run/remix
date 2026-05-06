@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import type { AppController } from '../../../router.ts'
 import * as s from 'remix/data-schema'
 import { Database } from 'remix/data-table'
 
@@ -34,4 +34,4 @@ export default {
       return render(<ForgotPasswordSuccessPage token={token} />)
     },
   },
-} satisfies Controller<typeof routes.auth.forgotPassword>
+} satisfies AppController<typeof routes.auth.forgotPassword>

@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import type { AppController } from '../../router.ts'
 import { Database, ilike } from 'remix/data-table'
 
 import { books } from '../../data/schema.ts'
@@ -54,4 +54,4 @@ export default {
       })
     },
   },
-} satisfies Controller<typeof routes.books>
+} satisfies AppController<typeof routes.books>
