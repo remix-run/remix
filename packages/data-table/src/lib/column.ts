@@ -1,5 +1,17 @@
-import type { ColumnDefinition, ForeignKeyAction, IdentityOptions } from './adapter.ts'
-import { toTableRef } from './migrations/helpers.ts'
+import type { ColumnDefinition, ForeignKeyAction, IdentityOptions, TableRef } from './adapter.ts'
+
+function toTableRef(name: string): TableRef {
+  let segments = name.split('.')
+
+  if (segments.length === 1) {
+    return { name }
+  }
+
+  return {
+    schema: segments[0],
+    name: segments.slice(1).join('.'),
+  }
+}
 
 /**
  * Chainable builder used to describe physical column definitions.
