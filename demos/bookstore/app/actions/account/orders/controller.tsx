@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import type { AppController } from '../../../router.ts'
 import { Database } from 'remix/data-table'
 
 import { orders, orderItemsWithBook } from '../../../data/schema.ts'
@@ -50,4 +50,4 @@ export default {
       return render(<AccountOrderShowPage order={order} shippingAddress={shippingAddress} />)
     },
   },
-} satisfies Controller<typeof routes.account.orders>
+} satisfies AppController<typeof routes.account.orders>

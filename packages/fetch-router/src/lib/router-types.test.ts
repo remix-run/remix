@@ -19,6 +19,8 @@ type SetRoleTransform<role extends 'viewer' | 'admin'> = readonly [
   readonly [typeof CurrentRole, role],
 ]
 
+type SetFormDataTransform = readonly [readonly [typeof FormData, FormData]]
+
 function requireUser(): Middleware<any, any, RequireUserTransform> {
   return async (context, next) => {
     context.set(CurrentUser, { id: 'user-1' })
@@ -31,6 +33,13 @@ function setRole<role extends 'viewer' | 'admin'>(
 ): Middleware<any, any, SetRoleTransform<role>> {
   return async (context, next) => {
     context.set(CurrentRole, role)
+    return next()
+  }
+}
+
+function setFormData(): Middleware<any, any, SetFormDataTransform> {
+  return async (context, next) => {
+    context.set(FormData, new FormData())
     return next()
   }
 }
@@ -49,6 +58,16 @@ plainRouter.get('/public', (context) => {
   // @ts-expect-error - CurrentUser is nullable without middleware refinement
   void context.get(CurrentUser).id
 
+  // @ts-expect-error - FormData is not available unless context has it
+  context.get(FormData).get('name')
+
+  let optionalFormData = context.get(FormData)
+  expectTypeEquality<IsEqual<typeof optionalFormData, FormData | undefined>>()
+
+  if (optionalFormData != null) {
+    expectTypeEquality<IsEqual<typeof optionalFormData, FormData>>()
+  }
+
   return new Response('Public')
 })
 
@@ -64,6 +83,16 @@ router.get(routes.account, (context) => {
   expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
 
   return new Response(accountId + ':' + user.id + ':' + role)
+})
+
+const formRouter = createRouter({ middleware: [setFormData()] as const })
+
+formRouter.post('/form', (context) => {
+  let formData = context.get(FormData)
+
+  expectTypeEquality<IsEqual<typeof formData, FormData>>()
+
+  return new Response(String(formData.get('name') ?? ''))
 })
 
 type AppContext =
@@ -180,6 +209,7 @@ if (false as boolean) {
 
 void plainRouter
 void router
+void formRouter
 void accountAction
 void adminController
 void elevatedReportsController

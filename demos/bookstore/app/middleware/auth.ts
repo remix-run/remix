@@ -27,6 +27,10 @@ export function loadAuth() {
         },
         async verify(value, context) {
           let db = context.get(Database)
+          if (db == null) {
+            throw new Error('Expected database middleware before auth middleware')
+          }
+
           return (await db.find(users, value.userId)) ?? null
         },
         invalidate(session) {
@@ -40,6 +44,9 @@ export function loadAuth() {
 export const passwordProvider = createCredentialsAuthProvider({
   parse(context) {
     let formData = context.get(FormData)
+    if (formData == null) {
+      throw new Error('Expected formData() middleware before password auth provider')
+    }
 
     return {
       email: normalizeEmail(formData.get('email')?.toString() ?? ''),
@@ -48,6 +55,10 @@ export const passwordProvider = createCredentialsAuthProvider({
   },
   async verify({ email, password }, context) {
     let db = context.get(Database)
+    if (db == null) {
+      throw new Error('Expected database middleware before password auth provider')
+    }
+
     let user = await db.findOne(users, { where: { email } })
 
     if (!user || !(await verifyPassword(password, user.password_hash))) {

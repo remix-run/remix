@@ -123,7 +123,7 @@ export function csrf(options: CsrfOptions = {}): Middleware {
   let allowMissingOrigin = options.allowMissingOrigin ?? true
 
   return async (context, next) => {
-    if (!context.has(Session)) {
+    if (context.get(Session) == null) {
       throw new Error('csrf middleware requires session() middleware to run before it')
     }
 
@@ -169,11 +169,11 @@ function isSafeMethod(method: string, safeMethods: readonly RequestMethod[]): bo
  * @returns The active CSRF token
  */
 export function getCsrfToken(context: RequestContext, tokenKey = '_csrf'): string {
-  if (!context.has(Session)) {
+  let session = context.get(Session)
+  if (session == null) {
     throw new Error('Session is not started. Use session() middleware before csrf().')
   }
 
-  let session = context.get(Session)
   let token = session.get(tokenKey)
   if (typeof token === 'string' && token !== '') {
     return token
@@ -245,7 +245,7 @@ async function resolveSubmittedToken(
     }
   }
 
-  let formValue = context.has(FormData) ? context.get(FormData).get(fieldName) : undefined
+  let formValue = context.get(FormData)?.get(fieldName)
   if (typeof formValue === 'string') {
     let trimmedFormValue = formValue.trim()
     if (trimmedFormValue !== '') {

@@ -1,6 +1,7 @@
 import {
   createRouter,
   type AnyParams,
+  type Controller,
   type MiddlewareContext,
   type WithParams,
 } from 'remix/fetch-router'
@@ -10,6 +11,7 @@ import { formData } from 'remix/form-data-middleware'
 import type { Cookie } from 'remix/cookie'
 import { logger } from 'remix/logger-middleware'
 import { methodOverride } from 'remix/method-override-middleware'
+import type { RouteMap } from 'remix/routes'
 import type { SessionStorage } from 'remix/session'
 import { session } from 'remix/session-middleware'
 import { staticFiles } from 'remix/static-middleware'
@@ -45,13 +47,16 @@ export type RootMiddleware = [
   ReturnType<typeof formData>,
   ReturnType<typeof session>,
   ReturnType<typeof loadDatabase>,
+  ReturnType<typeof loadAssetEntry>,
   ReturnType<typeof loadAuth>,
 ]
 
-export type AppContext<params extends AnyParams = AnyParams> = WithParams<
+export type AppContext<params extends AnyParams = {}> = WithParams<
   MiddlewareContext<RootMiddleware>,
   params
 >
+
+export type AppController<routes extends RouteMap> = Controller<routes, AppContext>
 
 export interface BookstoreRouterOptions {
   sessionCookie?: Cookie
@@ -83,7 +88,7 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
   middleware.push(loadAssetEntry())
   middleware.push(loadAuth())
 
-  let router = createRouter({ middleware })
+  let router = createRouter<AppContext>({ middleware })
 
   router.map(routes, rootController)
   router.map(routes.fragments, fragmentsController)

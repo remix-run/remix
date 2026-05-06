@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import type { AppController } from '../../../router.ts'
 import * as s from 'remix/data-schema'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
@@ -44,4 +44,4 @@ export default {
       return redirect(routes.account.index.href())
     },
   },
-} satisfies Controller<typeof routes.auth.register>
+} satisfies AppController<typeof routes.auth.register>

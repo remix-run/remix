@@ -2,16 +2,26 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createRouter } from '@remix-run/fetch-router'
+import type { RequestContext } from '@remix-run/fetch-router'
 import { formData } from '@remix-run/form-data-middleware'
 
 import { createCredentialsAuthProvider } from './providers/credentials.ts'
 import { verifyCredentials } from './verify-credentials.ts'
 
+function getFormData(context: RequestContext): FormData {
+  let formData = context.get(FormData)
+  if (formData == null) {
+    throw new Error('FormData not found in request context')
+  }
+
+  return formData
+}
+
 describe('verifyCredentials()', () => {
   it('returns the authenticated result when credentials are valid', async () => {
     let provider = createCredentialsAuthProvider({
       parse(context) {
-        let formData = context.get(FormData)
+        let formData = getFormData(context)
         return {
           email: String(formData.get('email') ?? ''),
           password: String(formData.get('password') ?? ''),
@@ -56,7 +66,7 @@ describe('verifyCredentials()', () => {
   it('returns null when credentials are rejected', async () => {
     let provider = createCredentialsAuthProvider({
       parse(context) {
-        let formData = context.get(FormData)
+        let formData = getFormData(context)
         return {
           email: String(formData.get('email') ?? ''),
           password: String(formData.get('password') ?? ''),

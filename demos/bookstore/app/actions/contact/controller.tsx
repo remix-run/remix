@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import type { AppController } from '../../router.ts'
 
 import type { routes } from '../../routes.ts'
 import { render } from '../render.tsx'
@@ -14,4 +14,4 @@ export default {
       return render(<ContactSuccessPage />)
     },
   },
-} satisfies Controller<typeof routes.contact>
+} satisfies AppController<typeof routes.contact>

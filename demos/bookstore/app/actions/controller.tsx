@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import type { AppController } from '../router.ts'
 import { Database, ilike, inList, or } from 'remix/data-table'
 import { createFileResponse as sendFile } from 'remix/response/file'
 
@@ -67,4 +67,4 @@ export default {
       return render(<SearchPage query={query} matchingBooks={matchingBooks} cart={cart} />)
     },
   },
-} satisfies Controller<typeof routes>
+} satisfies AppController<typeof routes>

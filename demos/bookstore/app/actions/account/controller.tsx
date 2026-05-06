@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import type { AppController } from '../../router.ts'
 
 import { requireAuth } from '../../middleware/auth.ts'
 import type { routes } from '../../routes.ts'
@@ -15,4 +15,4 @@ export default {
       return render(<AccountPage user={user} />)
     },
   },
-} satisfies Controller<typeof routes.account>
+} satisfies AppController<typeof routes.account>

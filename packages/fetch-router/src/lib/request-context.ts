@@ -8,8 +8,12 @@ import type { Simplify } from './type-utils.ts'
  * @param defaultValue The default value for the context key
  * @returns The new context key
  */
+export function createContextKey<value>(): ContextKey<value>
+export function createContextKey<value>(
+  defaultValue: value,
+): ContextKey<value> & { defaultValue: value }
 export function createContextKey<value>(defaultValue?: value): ContextKey<value> {
-  return { defaultValue }
+  return arguments.length === 0 ? {} : { defaultValue }
 }
 
 /**
@@ -43,9 +47,15 @@ export type ContextEntries = readonly ContextEntry[]
 export type ContextValue<key> =
   key extends ContextKey<infer value>
     ? value
-    : key extends abstract new (...args: any[]) => infer instance
+    : key extends { prototype: infer instance }
       ? instance
       : never
+
+type ContextDefaultValue<key> = key extends { defaultValue: infer value } ? value : never
+
+type ContextFallbackValue<key> = [ContextDefaultValue<key>] extends [never]
+  ? ContextValue<key> | undefined
+  : ContextDefaultValue<key>
 
 /**
  * Extracts the route params type from a {@link RequestContext}.
@@ -95,8 +105,8 @@ type ResolveContextEntryValue<
  */
 export type GetContextValue<context, key extends object> =
   context extends RequestContext<any, infer entries extends ContextEntries>
-    ? ResolveContextEntryValue<entries, key, ContextValue<key>>
-    : ContextValue<key>
+    ? ResolveContextEntryValue<entries, key, ContextFallbackValue<key>>
+    : ContextFallbackValue<key>
 
 /**
  * Appends context entries to an existing {@link RequestContext}.
@@ -178,13 +188,13 @@ export class RequestContext<
    * Get a value from request context.
    *
    * @param key The key to read
-   * @returns The value for the given key
+   * @returns The value for the given key, or `undefined` if the value is not available
    */
   get = <key extends object>(key: key): GetContextValue<RequestContext<params, entries>, key> => {
     if (!this.#contextMap.has(key)) {
       let contextKey = key as ContextKey<GetContextValue<RequestContext<params, entries>, key>>
-      if (contextKey.defaultValue === undefined) {
-        throw new Error(`Missing default value in context for key ${key}`)
+      if (!Object.hasOwn(contextKey, 'defaultValue')) {
+        return undefined as GetContextValue<RequestContext<params, entries>, key>
       }
 
       return contextKey.defaultValue as GetContextValue<RequestContext<params, entries>, key>
