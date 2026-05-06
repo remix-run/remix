@@ -20,12 +20,12 @@ export class ArrayMatcher<data> implements Matcher<data> {
     this.#patterns.push({ pattern, data })
   }
 
-  match(url: string | URL, compareFn = Specificity.descending): Match<string, data> | null {
+  match(url: string | URL): Match<string, data> | null {
     let bestMatch: Match<string, data> | null = null
     for (let entry of this.#patterns) {
       let match = entry.pattern.match(url, { ignoreCase: this.ignoreCase })
       if (match) {
-        if (bestMatch === null || compareFn(match, bestMatch) < 0) {
+        if (bestMatch === null || Specificity.greaterThan(match, bestMatch)) {
           bestMatch = { ...match, data: entry.data }
         }
       }
@@ -33,7 +33,7 @@ export class ArrayMatcher<data> implements Matcher<data> {
     return bestMatch
   }
 
-  matchAll(url: string | URL, compareFn = Specificity.descending): Array<Match<string, data>> {
+  matchAll(url: string | URL): Array<Match<string, data>> {
     let matches: Array<Match<string, data>> = []
     for (let entry of this.#patterns) {
       let match = entry.pattern.match(url, { ignoreCase: this.ignoreCase })
@@ -41,6 +41,6 @@ export class ArrayMatcher<data> implements Matcher<data> {
         matches.push({ ...match, data: entry.data })
       }
     }
-    return matches.sort(compareFn)
+    return matches.sort(Specificity.descending)
   }
 }
