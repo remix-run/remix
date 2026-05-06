@@ -1092,9 +1092,9 @@ describe('custom matcher', () => {
       ignoreCase: inner.ignoreCase,
       add: inner.add.bind(inner),
       match: inner.match.bind(inner),
-      matchAll(url, compareFn) {
+      matchAll(url) {
         matchAllCalls++
-        return inner.matchAll(url, compareFn)
+        return inner.matchAll(url)
       },
     }
 
