@@ -3,6 +3,7 @@ import type { ElementType, ElementProps, RemixElement } from '../runtime/jsx.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import { normalizeSvgAttribute } from '../runtime/svg-attributes.ts'
+import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
 
 interface VNode {
   type: ElementType
@@ -90,6 +91,7 @@ interface RenderContext {
   unresolvedHydrationData: Map<string, UnresolvedHydrationData>
   frameData: Map<string, FrameData>
   blockingFrameTails: ReadableStream<Uint8Array>[]
+  flushKind: FlushKind
   serverIdScope: string
   serverIdCounter: number
 }
@@ -230,6 +232,7 @@ export function renderToStream(
     unresolvedHydrationData: new Map(),
     frameData: new Map(),
     blockingFrameTails: [],
+    flushKind: 'fragment',
     serverIdScope: crypto.randomUUID().slice(0, 8),
     serverIdCounter: 0,
   }
@@ -243,7 +246,7 @@ export function renderToStream(
         validateClientEntriesForHydration(context)
         let html = serializeSegment(root)
         let finalHtml = finalizeHtml(html, context)
-        let bytes = encoder.encode(finalHtml)
+        let bytes = encoder.encode(appendFlushMarker(finalHtml, context.flushKind))
         controller.enqueue(bytes)
 
         // If we have any tails from blocking frame streams, stream them now.
@@ -350,13 +353,13 @@ async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<Reso
     },
   })
 
-  return { html: stripDoctypeMarkup(decoder.decode(first)), tail }
+  return { html: stripFlushMarkers(stripDoctypeMarkup(decoder.decode(first))), tail }
 }
 
 async function resolveFrameHtml(
   input: string | ReadableStream<Uint8Array>,
 ): Promise<ResolvedFrameHtml> {
-  if (typeof input === 'string') return { html: stripDoctypeMarkup(input) }
+  if (typeof input === 'string') return { html: stripFlushMarkers(stripDoctypeMarkup(input)) }
 
   return await splitFirstChunk(input)
 }
@@ -399,6 +402,7 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
       let tag = type
 
       if (tag === 'html') {
+        context.flushKind = 'document'
         return buildElementSegment(tag, props, context, frameState)
       }
 
@@ -812,7 +816,11 @@ function buildComponentSegment(
   let [renderedNode] = handle.render(props)
   let childContext = { ...context, parentVNode: vnode }
 
-  return buildSegment(renderedNode, childContext, frameState)
+  let rendered = buildSegment(renderedNode, childContext, frameState)
+  if (childContext.flushKind === 'document') {
+    context.flushKind = 'document'
+  }
+  return rendered
 }
 
 function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFrameState) {
@@ -1094,7 +1102,7 @@ function transformAttributeName(name: string, isSvg: boolean): string {
 }
 
 function finalizeHtml(html: string, context: RenderContext): string {
-  let hasHtmlRoot = html.trimStart().toLowerCase().startsWith('<html')
+  let hasHtmlRoot = context.flushKind === 'document'
 
   let styles = collectStyleTags(context)
   if (styles) {
@@ -1351,11 +1359,13 @@ async function drain(stream: ReadableStream<Uint8Array>): Promise<string> {
  * @returns Rendered HTML.
  */
 export async function renderToString(node: RemixNode): Promise<string> {
-  return drain(
-    renderToStream(node, {
-      onError(error) {
-        throw error
-      },
-    }),
+  return stripFlushMarkers(
+    await drain(
+      renderToStream(node, {
+        onError(error) {
+          throw error
+        },
+      }),
+    ),
   )
 }
