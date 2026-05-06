@@ -23,21 +23,15 @@
     "node": ">=24.3.0"
   },
   "exports": {
-    ".": "./src/index.ts",
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json"
-    }
-  },
   "dependencies": {
-    "@remix-run/test": "workspace:^",
-    "@remix-run/terminal": "workspace:^",
+    "@remix-run/test": "remix-run/remix#preview/pr-11363&path:packages/test",
+    "@remix-run/terminal": "remix-run/remix#preview/pr-11363&path:packages/terminal",
     "semver": "^7.7.4"
   },
   "devDependencies": {
@@ -49,8 +43,6 @@
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
-    "postpack": "node ../../scripts/sync-cli-template.ts --clean",
-    "prepack": "node ../../scripts/sync-cli-template.ts",
     "prepublishOnly": "pnpm run build",
     "test": "remix-test --concurrency 1",
     "typecheck": "tsgo --noEmit"
