@@ -3,7 +3,8 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "remix": "workspace:*"
+    "remix": "workspace:*",
+    "svgo": "^4.0.1"
   },
   "devDependencies": {
     "@types/node": "catalog:",

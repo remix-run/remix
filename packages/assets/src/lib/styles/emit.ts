@@ -34,6 +34,12 @@ type EmitResult =
 export async function emitResolvedStyle(
   resolvedStyle: ResolvedStyle,
   options: {
+    getServedFileUrl?(
+      identityPath: string,
+      options: {
+        transform: string | null
+      },
+    ): Promise<string>
     getServedUrl(identityPath: string): Promise<string>
     sourceMaps?: 'external' | 'inline'
   },
@@ -77,6 +83,12 @@ async function rewriteDependencies(
   resolvedStyle: ResolvedStyle,
   options: {
     getServedUrl(identityPath: string): Promise<string>
+    getServedFileUrl?(
+      identityPath: string,
+      options: {
+        transform: string | null
+      },
+    ): Promise<string>
   },
 ): Promise<{ code: string; sourceMap: string | null }> {
   if (resolvedStyle.dependencies.length === 0) {
@@ -92,7 +104,16 @@ async function rewriteDependencies(
     let replacement =
       dependency.kind === 'external'
         ? dependency.replacement
-        : `${await options.getServedUrl(dependency.depPath)}${dependency.suffix}`
+        : dependency.kind === 'style'
+          ? `${await options.getServedUrl(dependency.depPath)}${dependency.suffix}`
+          : appendUrlSuffix(
+              await getServedFileUrl(options, resolvedStyle.identityPath, dependency.depPath, {
+                transform: dependency.requestTransform,
+              }),
+              dependency.suffix,
+            )
+    // Ensure double quotes used in transform queries don't break the quoted CSS URL output.
+    replacement = replacement.replaceAll('"', '%22')
     let start = resolvedStyle.rawCode.indexOf(dependency.placeholder)
     if (start < 0) {
       throw createAssetServerCompilationError(
@@ -114,6 +135,55 @@ async function rewriteDependencies(
           resolvedStyle.sourceMap,
         )
       : null,
+  }
+}
+
+function appendUrlSuffix(url: string, suffix: string): string {
+  if (!suffix.startsWith('?') || !url.includes('?')) {
+    return `${url}${suffix}`
+  }
+
+  return `${url}&${suffix.slice(1)}`
+}
+
+async function getServedFileUrl(
+  options: {
+    getServedFileUrl?(
+      identityPath: string,
+      options: {
+        transform: string | null
+      },
+    ): Promise<string>
+    getServedUrl(identityPath: string): Promise<string>
+  },
+  importerPath: string,
+  identityPath: string,
+  request: {
+    transform: string | null
+  },
+): Promise<string> {
+  if (!options.getServedFileUrl) {
+    throw createAssetServerCompilationError(`Missing file URL resolver for ${identityPath}.`, {
+      code: 'EMIT_FAILED',
+    })
+  }
+
+  try {
+    return await options.getServedFileUrl(identityPath, request)
+  } catch (error) {
+    if (
+      request.transform !== null &&
+      isAssetServerCompilationError(error) &&
+      error.code === 'INVALID_TRANSFORM_QUERY'
+    ) {
+      console.warn(
+        `Invalid file transform request "${request.transform}" in CSS asset ${importerPath} for ${identityPath}: ${error.message}`,
+      )
+      let href = await options.getServedFileUrl(identityPath, { transform: null })
+      return `${href}?transform=${encodeURIComponent(request.transform)}`
+    }
+
+    throw error
   }
 }
 

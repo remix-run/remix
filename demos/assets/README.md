@@ -2,7 +2,7 @@
 
 Minimal watch-mode demo for `remix/assets`.
 
-It serves browser-only modules from a long-lived Node server so you can edit client code, refresh the page, and verify that the browser code updates.
+It serves browser-only assets from a long-lived Node server so you can edit client code, refresh the page, and verify that the assets update.
 
 ## Run
 

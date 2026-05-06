@@ -9,12 +9,14 @@ if (!(root instanceof HTMLElement)) {
 }
 
 root.innerHTML = `
-  <h2 style="margin-top: 0">Client code is live</h2>
-  <p>
-    This UI comes from browser-only modules served by <code>remix/assets</code>.
-  </p>
-  <p>${getContent()}</p>
-  <p style="color: #475569; font-size: 0.95rem; margin-bottom: 0;">
-    Refresh after editing this file to confirm the server keeps running.
-  </p>
+  <section class="client-card">
+    <h2>Client code is live</h2>
+    <p>
+      This UI comes from browser-only modules served by <code>remix/assets</code>.
+    </p>
+    <p>${getContent()}</p>
+    <p class="client-note">
+      Refresh after editing this file to confirm the server keeps running.
+    </p>
+  </section>
 `
