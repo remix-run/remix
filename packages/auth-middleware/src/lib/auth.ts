@@ -135,7 +135,7 @@ export interface AuthOptions<schemes extends readonly AuthScheme<any>[] = AuthSc
  */
 export function auth<schemes extends readonly AuthScheme<any>[]>(
   options: AuthOptions<schemes>,
-): Middleware<any, SetAuthContextTransform<AuthForSchemes<schemes>>> {
+): Middleware<SetAuthContextTransform<AuthForSchemes<schemes>>> {
   if (options.schemes.length === 0) {
     throw new Error('auth() requires at least one authentication scheme')
   }

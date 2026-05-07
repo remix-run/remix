@@ -74,7 +74,7 @@ type RequireBookstoreUserTransform = readonly [readonly [typeof Auth, GoodAuth<U
 
 export function requireAuth(
   options?: RequireAuthOptions,
-): Middleware<any, RequireBookstoreUserTransform> {
+): Middleware<RequireBookstoreUserTransform> {
   let redirectTo = options?.redirectTo ?? routes.auth.login.index
 
   return (context, next) => {

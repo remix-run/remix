@@ -1,4 +1,4 @@
-BREAKING CHANGE: Simplified route action, controller, and middleware helper types so they no longer accept unused request method type parameters. `Action` now accepts a route pattern, `RoutePattern`, or `Route` object as its first generic and the full request context as its optional second generic. `Controller` now accepts the route map as its first generic and the full request context as its optional second generic. `BuildAction` is no longer exported.
+BREAKING CHANGE: Simplified route action, controller, request handler, and middleware helper types. `Action` now accepts a route pattern, `RoutePattern`, or `Route` object as its first generic and the full request context as its optional second generic. `Controller` now accepts the route map as its first generic and the full request context as its optional second generic. `RequestHandler` now accepts the full request context as its only generic. `Middleware` now accepts only the context transform generic. `BuildAction` is no longer exported.
 
 For most apps, augment `RouterTypes.context` once and use `createAction()`/`createController()` to type stored handlers without `satisfies` clauses:
 
@@ -63,14 +63,24 @@ let matcher = createMatcher<MatchData>()
 let matcher = createMatcher<RouteEntry>()
 ```
 
-If you manually annotate middleware, pass only the params type and context transform type:
+If you manually annotate request handlers, pass the full request context type as the only generic:
 
 ```ts
 // before
-let middleware: Middleware<'ANY', {}, SetDatabaseContextTransform>
+let handler: RequestHandler<{ id: string }, RequestContext<{ id: string }>>
 
 // after
+let handler: RequestHandler<RequestContext<{ id: string }>>
+```
+
+If you manually annotate middleware, pass only the context transform type:
+
+```ts
+// before
 let middleware: Middleware<{}, SetDatabaseContextTransform>
+
+// after
+let middleware: Middleware<SetDatabaseContextTransform>
 ```
 
 Simplified the public middleware context helper types. `MiddlewareContext` is now the exported helper for deriving the request context produced by a middleware chain, and it accepts an optional base context as its second type parameter. `ContextWithMiddleware` is available when code reads more naturally by naming the base context first. The lower-level `ApplyContextTransform`, `ApplyMiddleware`, and `ApplyMiddlewareTuple` helpers are no longer exported. `MiddlewareContextTransform` has been renamed to `ContextTransform`.

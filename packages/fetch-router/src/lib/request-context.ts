@@ -20,6 +20,12 @@ import type { Simplify } from './type-utils.ts'
  */
 export interface RouterTypes {}
 
+export type DefaultContext = RouterTypes extends {
+  context: infer context extends RequestContext<any, any>
+}
+  ? context
+  : RequestContext
+
 /**
  * Create a request context key with an optional default value.
  *
@@ -80,12 +86,6 @@ type ContextFallbackValue<key> = [ContextDefaultValue<key>] extends [never]
  */
 export type ContextParams<context> =
   context extends RequestContext<infer params extends Record<string, any>, any> ? params : {}
-
-export type DefaultContext = RouterTypes extends {
-  context: infer context extends RequestContext<any, any>
-}
-  ? context
-  : RequestContext
 
 type DuplicateParamNames<
   left extends Record<string, any>,

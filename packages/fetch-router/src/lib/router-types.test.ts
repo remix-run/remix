@@ -21,23 +21,21 @@ type SetRoleTransform<role extends 'viewer' | 'admin'> = readonly [
 
 type SetFormDataTransform = readonly [readonly [typeof FormData, FormData]]
 
-function requireUser(): Middleware<any, RequireUserTransform> {
+function requireUser(): Middleware<RequireUserTransform> {
   return async (context, next) => {
     context.set(CurrentUser, { id: 'user-1' })
     return next()
   }
 }
 
-function setRole<role extends 'viewer' | 'admin'>(
-  role: role,
-): Middleware<any, SetRoleTransform<role>> {
+function setRole<role extends 'viewer' | 'admin'>(role: role): Middleware<SetRoleTransform<role>> {
   return async (context, next) => {
     context.set(CurrentRole, role)
     return next()
   }
 }
 
-function setFormData(): Middleware<any, SetFormDataTransform> {
+function setFormData(): Middleware<SetFormDataTransform> {
   return async (context, next) => {
     context.set(FormData, new FormData())
     return next()

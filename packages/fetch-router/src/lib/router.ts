@@ -3,7 +3,7 @@ import { type RouteMap, Route } from '@remix-run/routes'
 
 import { type AnyMiddleware, type MiddlewareContext, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
-import { type ContextParams, RequestContext, type ContextWithParams } from './request-context.ts'
+import { RequestContext, type ContextWithParams } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import {
   type Action,
@@ -28,7 +28,7 @@ type RouteTarget<
 type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
   <pattern extends string>(
     route: RouteTarget<pattern, method>,
-    handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
+    handler: RequestHandler<RouteContext<context, pattern>>,
   ): void
   <pattern extends string, actionContext extends AnyContext = context>(
     route: RouteTarget<pattern, method>,
@@ -47,7 +47,7 @@ export interface RouteEntry {
   /**
    * The handler that runs when this route matches.
    */
-  handler: RequestHandler<any, any>
+  handler: RequestHandler<any>
   /**
    * The request method this route handles, or `ANY` for method-agnostic routes.
    */
@@ -59,7 +59,7 @@ export interface RouteEntry {
 }
 
 type NormalizedAction = {
-  handler: RequestHandler<any, any>
+  handler: RequestHandler<any>
   middleware: AnyMiddleware[] | undefined
 }
 
@@ -76,10 +76,7 @@ export interface RouterOptions<
    * The default request handler that runs when no route matches.
    * Defaults to a 404 `Not Found` response.
    */
-  defaultHandler?: RequestHandler<
-    ContextParams<MiddlewareContext<middleware, context>>,
-    MiddlewareContext<middleware, context>
-  >
+  defaultHandler?: RequestHandler<MiddlewareContext<middleware, context>>
   /**
    * The matcher to use for matching routes.
    * Defaults to `createMatcher()`.
@@ -114,7 +111,7 @@ export interface Router<context extends AnyContext = RequestContext> {
   route<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
     pattern: RouteTarget<pattern, method>,
-    handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
+    handler: RequestHandler<RouteContext<context, pattern>>,
   ): void
   route<
     method extends RequestMethod | 'ANY',
@@ -130,7 +127,7 @@ export interface Router<context extends AnyContext = RequestContext> {
    */
   map<pattern extends string>(
     target: RouteTarget<pattern>,
-    handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
+    handler: RequestHandler<RouteContext<context, pattern>>,
   ): void
   map<pattern extends string, actionContext extends AnyContext = context>(
     target: RouteTarget<pattern>,
@@ -184,7 +181,7 @@ function normalizeMiddleware(
   return [...middleware]
 }
 
-function isRequestHandler(action: unknown): action is RequestHandler<any, any> {
+function isRequestHandler(action: unknown): action is RequestHandler<any> {
   return typeof action === 'function'
 }
 
@@ -206,24 +203,6 @@ function normalizeAction(action: unknown): NormalizedAction {
     handler: action,
     middleware: undefined,
   }
-}
-
-function mergeMiddleware(
-  upstream: AnyMiddleware[] | undefined,
-  downstream: AnyMiddleware[] | undefined,
-): AnyMiddleware[] | undefined {
-  let upstreamMiddleware = normalizeMiddleware(upstream)
-  let downstreamMiddleware = normalizeMiddleware(downstream)
-
-  if (!upstreamMiddleware) {
-    return downstreamMiddleware
-  }
-
-  if (!downstreamMiddleware) {
-    return upstreamMiddleware
-  }
-
-  return upstreamMiddleware.concat(downstreamMiddleware)
 }
 
 function createRequestContext(input: string | URL | Request, init?: RequestInit): RequestContext {
@@ -257,7 +236,7 @@ export function createRouter<
 >(options?: RouterOptions<context, middleware>): Router<MiddlewareContext<middleware, context>> {
   type RouterContext = MiddlewareContext<middleware, context>
 
-  let defaultHandler = (options?.defaultHandler ?? noMatchHandler) as RequestHandler<any, any>
+  let defaultHandler = (options?.defaultHandler ?? noMatchHandler) as RequestHandler<any>
   let matcher = options?.matcher ?? createMatcher<RouteEntry>()
   let routerMiddleware = normalizeMiddleware(options?.middleware)
 
@@ -315,9 +294,7 @@ export function createRouter<
   function addRoute<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
     route: RouteTarget<pattern, method>,
-    handler:
-      | RequestHandler<Params<pattern>, RouteContext<RouterContext, pattern>>
-      | Action<pattern, AnyContext>,
+    handler: RequestHandler<RouteContext<RouterContext, pattern>> | Action<pattern, AnyContext>,
   ): void {
     registerRoute(method, route, normalizeAction(handler))
   }
@@ -370,9 +347,14 @@ export function createRouter<
 
         let action = controller.actions[key]
         let normalizedAction = normalizeAction(action as Action<any, RouterContext>)
+        let middleware = normalizedAction.middleware
+        if (controllerMiddleware) {
+          middleware = middleware ? controllerMiddleware.concat(middleware) : controllerMiddleware
+        }
+
         registerRoute(route.method, route.pattern, {
           handler: normalizedAction.handler,
-          middleware: mergeMiddleware(controllerMiddleware, normalizedAction.middleware),
+          middleware,
         })
       }
     }
@@ -383,9 +365,7 @@ export function createRouter<
   ): VerbMethod<method, RouterContext> {
     return (<pattern extends string>(
       route: RouteTarget<pattern, method>,
-      handler:
-        | RequestHandler<Params<pattern>, RouteContext<RouterContext, pattern>>
-        | Action<pattern, AnyContext>,
+      handler: RequestHandler<RouteContext<RouterContext, pattern>> | Action<pattern, AnyContext>,
     ): void => {
       addRoute(method, route, handler)
     }) as VerbMethod<method, RouterContext>
@@ -400,9 +380,7 @@ export function createRouter<
     route<method extends RequestMethod | 'ANY', pattern extends string>(
       method: method,
       route: RouteTarget<pattern, method>,
-      handler:
-        | RequestHandler<Params<pattern>, RouteContext<RouterContext, pattern>>
-        | Action<pattern, AnyContext>,
+      handler: RequestHandler<RouteContext<RouterContext, pattern>> | Action<pattern, AnyContext>,
     ): void {
       addRoute(method, route, handler)
     },

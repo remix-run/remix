@@ -46,7 +46,7 @@ export interface RequireAuthOptions {
  */
 export function requireAuth<identity = unknown>(
   options: RequireAuthOptions = {},
-): Middleware<any, RequireAuthContextTransform<identity>> {
+): Middleware<RequireAuthContextTransform<identity>> {
   return async (context, next) => {
     let auth = context.get(Auth)
     if (auth == null) {
