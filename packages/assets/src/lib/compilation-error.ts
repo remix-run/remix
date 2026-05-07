@@ -1,7 +1,9 @@
 type AssetServerCompilationErrorCode =
   | 'FILE_NOT_FOUND'
   | 'FILE_NOT_ALLOWED'
+  | 'FILE_NOT_SUPPORTED'
   | 'FILE_OUTSIDE_FILE_MAP'
+  | 'INVALID_TRANSFORM_QUERY'
   | 'COMMONJS_NOT_SUPPORTED'
   | 'TRANSFORM_FAILED'
   | 'EMIT_FAILED'
@@ -9,6 +11,10 @@ type AssetServerCompilationErrorCode =
   | 'IMPORT_NOT_SUPPORTED'
   | 'IMPORT_NOT_ALLOWED'
   | 'IMPORT_OUTSIDE_FILE_MAP'
+  | 'URL_RESOLUTION_FAILED'
+  | 'URL_NOT_SUPPORTED'
+  | 'URL_NOT_ALLOWED'
+  | 'URL_OUTSIDE_FILE_MAP'
 
 /**
  * Internal error used by the request-time asset compilation pipeline.

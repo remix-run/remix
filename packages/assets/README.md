@@ -1,10 +1,11 @@
 # assets
 
-Fetch-based server for compiling browser JS/TS and CSS assets on demand.
+Fetch-based server for compiling browser assets on demand.
 
 ## Features
 
 - **On-Demand Compilation** - Compile browser scripts and styles on demand
+- **File Serving** - Serve configured file assets like images and fonts with optional transforms
 - **Custom File Mapping** - Define patterns for mapping public URLs to file paths on disk
 - **Access Control** - Control exactly which files can be served with allow and deny rules
 - **Preloads** - Generate preload URLs for scripts and styles based on imports
@@ -20,7 +21,7 @@ npm i remix
 
 ## Usage
 
-Use `createAssetServer` to serve browser JS/TS and CSS assets from a URL namespace in your app.
+Use `createAssetServer` to serve browser assets from a URL namespace in your app.
 
 ```ts
 import { createRouter } from 'remix/fetch-router'
@@ -33,6 +34,9 @@ let assetServer = createAssetServer({
     '/npm/*path': 'node_modules/*path',
   },
   allow: ['app/assets/**', 'node_modules/**'],
+  files: {
+    extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
+  },
 })
 
 let router = createRouter()
@@ -156,6 +160,15 @@ let src = await assetServer.getHref('app/assets/entry.tsx')
 // '/assets/app/assets/entry.tsx'
 ```
 
+For configured `files` assets, you can also pass a `transform` pipeline to build a request URL with custom file transforms. Basic transforms are written as strings, while dynamic transforms use `[name, param]` tuples.
+
+```ts
+let src = await assetServer.getHref('app/assets/image.png', {
+  transform: [['resize', '100x100'], 'webp'],
+})
+// '/assets/app/assets/image.png?transform=resize%3A100x100&transform=webp'
+```
+
 ## Preloads
 
 Use `assetServer.getPreloads()` when rendering HTML so you can turn the returned URLs into `<link rel="modulepreload">`, stylesheet preload tags, or `Link` headers for one or more assets and their dependencies. You can provide root-relative or absolute file paths, or `file://` URLs.
@@ -173,7 +186,7 @@ let preloads = await assetServer.getPreloads(['app/assets/entry.tsx', 'app/asset
 
 ## Fingerprinting
 
-By default, assets are served at stable URLs with ETags and `Cache-Control: no-cache`. Responses are cached for the lifetime of the asset server instance.
+By default, assets are served at stable URLs with ETags and `Cache-Control: no-cache`.
 
 If you want clients to cache assets aggressively without revalidation, you can opt into source-based fingerprinting.
 
@@ -300,15 +313,200 @@ let assetServer = createAssetServer({
 })
 ```
 
-## CSS Imports
+## File Options
 
-Relative CSS `@import` rules are rewritten to asset server URLs. External `@import` URLs are left unchanged automatically. `url()` references are preserved as authored.
+Use `files` to serve additional leaf assets like images and fonts. File extensions must include the leading dot and are only served when explicitly configured.
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  files: {
+    extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
+  },
+})
+```
+
+JavaScript/TypeScript and CSS extensions not supported in `files.extensions` as they are not leaf assets and have their own module systems.
+
+### File transforms
+
+Files can optionally be transformed before serving.
+
+Use `files.transforms` for named transforms that callers can opt into per request, provided via the `transform` option when calling `assetServer.getHref()`.
+
+```ts
+import { createAssetServer, defineFileTransform } from 'remix/assets'
+import sharp from 'sharp'
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  files: {
+    extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
+    transforms: {
+      webp: defineFileTransform({
+        extensions: ['.png', '.jpg', '.jpeg'],
+        async transform(bytes) {
+          return {
+            content: await sharp(bytes).webp({ quality: 80 }).toBuffer(),
+            extension: '.webp',
+          }
+        },
+      }),
+    },
+  },
+})
+
+let imageUrl = await assetServer.getHref('app/assets/photo.jpg', {
+  transform: ['webp'],
+})
+```
+
+Transforms can also accept a single string param value, provided as a `[name, param]` tuple in the `transform` array when calling `assetServer.getHref()`.
+
+```ts
+import { createAssetServer, defineFileTransform } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  files: {
+    extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
+    transforms: {
+      recolor: defineFileTransform({
+        extensions: ['.svg'],
+        param: true,
+        async transform(bytes, { param }) {
+          if (!/^#?(?:[\da-f]{3,4}|[\da-f]{6}(?:[\da-f]{2})?)$/i.test(param)) {
+            throw new TypeError('Expected a hex color, with or without a leading #')
+          }
+
+          let svg = new TextDecoder().decode(bytes)
+          return svg.replaceAll('currentColor', `${!param.startsWith('#') ? '#' : ''}${param}`)
+        },
+      }),
+    },
+  },
+})
+
+let imageUrl = await assetServer.getHref('app/assets/logo.svg', {
+  transform: [['recolor', '0000ff']],
+})
+```
+
+Hand-authored URLs use repeated `transform` search params with `name` or `name:param` values:
 
 ```css
-/* Rewritten to asset server URL: */
+.selector {
+  background-image: url('/assets/app/assets/image.png?transform=resize:100x100&transform=webp');
+}
+```
+
+#### Global file transforms
+
+Use `files.globalTransforms` to define transforms that should always happen before a file is served. These transforms are run after any request-level transforms for all configured file extensions, and can return `null` to skip themselves for a given input.
+
+```ts
+import { createAssetServer } from 'remix/assets'
+import { optimize as optimizeSvg } from 'svgo'
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  files: {
+    extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
+    globalTransforms: [
+      {
+        extensions: ['.svg'],
+        async transform(bytes) {
+          let svg = new TextDecoder().decode(bytes)
+          return optimizeSvg(svg, { multipass: true }).data
+        },
+      },
+    ],
+  },
+})
+```
+
+#### File transform caching
+
+Use `files.cache` to store transformed file outputs via a [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) backend.
+
+Without `files.cache`, transformed file outputs are recomputed per request.
+
+If `fingerprint.buildId` is set, the file cache can be reused across server restarts for the same build.
+
+```ts
+import * as path from 'node:path'
+import { createAssetServer } from 'remix/assets'
+import { createFsFileStorage } from 'remix/file-storage/fs'
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  files: {
+    cache: createFsFileStorage(path.resolve('.tmp/assets-cache')),
+    extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
+    transforms: {
+      /*...*/
+    },
+  },
+})
+```
+
+#### Request transform limits
+
+Use `files.maxRequestTransforms` to cap request transform pipelines. It defaults to `5`.
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  files: {
+    maxRequestTransforms: 5,
+    extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
+    transforms: {
+      /*...*/
+    },
+  },
+})
+```
+
+## CSS Imports
+
+Relative CSS `@import` rules and `url()` references are rewritten to asset server URLs.
+
+```css
+/* Rewritten to asset server URLs: */
 @import './reset.css';
-/* External URL: */
+.selector {
+  background-image: url('./image.png');
+}
+
+/* External URLs: */
 @import 'https://fonts.googleapis.com/css2?family=Inter';
+.selector {
+  background-image: url('https://example.com/logo.svg');
+}
+```
+
+File transforms can also be applied to relative CSS `url()` references:
+
+```css
+.selector {
+  background-image: url('./image.png?transform=resize:100x100&transform=webp');
+}
 ```
 
 ## Error Handling
