@@ -6,20 +6,20 @@ export type {
   GetContextValue,
   ContextEntries,
   ContextEntry,
-  MergeContext,
-  SetContextValue,
-  WithParams,
+  ContextWithValues,
+  ContextWithValue,
+  ContextWithParams,
+  RouterTypes,
 } from './lib/request-context.ts'
 
-export type { Controller, Action, RequestHandler } from './lib/controller.ts'
+export { createAction, createController } from './lib/controller.ts'
+export type { RequestHandler, Action, Controller } from './lib/controller.ts'
 
 export type {
-  ApplyContextTransform,
-  ApplyMiddleware,
-  ApplyMiddlewareTuple,
+  ContextWithMiddleware,
+  ContextTransform,
   Middleware,
   MiddlewareContext,
-  MiddlewareContextTransform,
   NextFunction,
 } from './lib/middleware.ts'
 

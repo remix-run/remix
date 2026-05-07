@@ -1,4 +1,4 @@
-import type { AppController } from '../../../router.ts'
+import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { Database } from 'remix/data-table'
@@ -25,8 +25,8 @@ const userSchema = f.object({
   role: roleField,
 })
 
-export default {
-  middleware: [requireAuth(), requireAdmin()],
+export default createController(routes.admin.users, {
+  middleware: [requireAuth(), requireAdmin()] as const,
   actions: {
     async index({ get }) {
       let db = get(Database)
@@ -97,4 +97,4 @@ export default {
       return redirect(routes.admin.users.index.href())
     },
   },
-} satisfies AppController<typeof routes.admin.users>
+})

@@ -1,4 +1,4 @@
-import type { AppController } from '../../router.ts'
+import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { Database } from 'remix/data-table'
@@ -23,8 +23,8 @@ const shippingAddressSchema = f.object({
   zip: textField,
 })
 
-export default {
-  middleware: [requireAuth()],
+export default createController(routes.checkout, {
+  middleware: [requireAuth()] as const,
   actions: {
     index() {
       let cart = getCurrentCart()
@@ -107,4 +107,4 @@ export default {
       return render(<CheckoutConfirmationPage order={order} />)
     },
   },
-} satisfies AppController<typeof routes.checkout>
+})

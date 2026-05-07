@@ -933,10 +933,9 @@ describe('doctor command', () => {
         'utf8',
       )
 
-      assert.match(contactSource, /import type \{ Controller \} from 'remix\/fetch-router'/)
-      assert.match(contactSource, /import type \{ routes \} from '\.\.\/\.\.\/routes\.ts'/)
-      assert.match(contactSource, /export default \{/)
-      assert.match(contactSource, /\} satisfies Controller<typeof routes\.contact>/)
+      assert.match(contactSource, /import \{ createController \} from 'remix\/fetch-router'/)
+      assert.match(contactSource, /import \{ routes \} from '\.\.\/\.\.\/routes\.ts'/)
+      assert.match(contactSource, /export default createController\(routes\.contact, \{/)
 
       let checkResult = await runDoctor([], projectDir)
 

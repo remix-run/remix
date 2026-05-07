@@ -1,15 +1,15 @@
-import type { AppController } from '../../router.ts'
+import { createController } from 'remix/fetch-router'
 import { Database, ilike } from 'remix/data-table'
 
 import { books } from '../../data/schema.ts'
-import type { routes } from '../../routes.ts'
+import { routes } from '../../routes.ts'
 import { getCurrentCart } from '../../utils/context.ts'
 import { render } from '../render.tsx'
 import { IndexPage } from './index-page.tsx'
 import { GenreNotFoundPage, GenrePage } from './genre-page.tsx'
 import { BookNotFoundPage, ShowPage } from './show-page.tsx'
 
-export default {
+export default createController(routes.books, {
   actions: {
     async index({ get }) {
       let db = get(Database)
@@ -54,4 +54,4 @@ export default {
       })
     },
   },
-} satisfies AppController<typeof routes.books>
+})

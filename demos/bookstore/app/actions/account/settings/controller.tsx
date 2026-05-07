@@ -1,4 +1,4 @@
-import type { AppController } from '../../../router.ts'
+import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { minLength } from 'remix/data-schema/checks'
@@ -23,8 +23,8 @@ const accountSettingsSchema = f.object({
   password: passwordField,
 })
 
-export default {
-  middleware: [requireAuth()],
+export default createController(routes.account.settings, {
+  middleware: [requireAuth()] as const,
   actions: {
     index() {
       let user = getCurrentUser()
@@ -46,4 +46,4 @@ export default {
       return redirect(routes.account.index.href())
     },
   },
-} satisfies AppController<typeof routes.account.settings>
+})

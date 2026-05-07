@@ -1,6 +1,6 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 
-import type { routes } from '../routes.ts'
+import { routes } from '../routes.ts'
 import { render } from './render.ts'
 import { ClientMountedPage } from './client-mounted.tsx'
 import { HomePage } from './home.tsx'
@@ -9,7 +9,7 @@ import { rootReloadClientEntriesAction } from './root-reload-client-entries.tsx'
 import { StateSearchRoutePage } from './state-search.tsx'
 import { TimePage } from './time.tsx'
 
-export default {
+export default createController(routes, {
   actions: {
     home({ request, router }) {
       return render(<HomePage />, { request, router })
@@ -46,4 +46,4 @@ export default {
 
     rootReloadClientEntries: rootReloadClientEntriesAction.handler,
   },
-} satisfies Controller<typeof routes>
+})

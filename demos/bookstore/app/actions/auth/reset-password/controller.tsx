@@ -1,4 +1,4 @@
-import type { AppController } from '../../../router.ts'
+import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
@@ -11,7 +11,7 @@ import { render } from '../../render.tsx'
 import { resetPasswordSchema } from '../schemas.ts'
 import { ResetPasswordPage, ResetPasswordSuccessPage } from './page.tsx'
 
-export default {
+export default createController(routes.auth.resetPassword, {
   actions: {
     index({ params, get }) {
       let session = get(Session)
@@ -59,4 +59,4 @@ export default {
       return render(<ResetPasswordSuccessPage />)
     },
   },
-} satisfies AppController<typeof routes.auth.resetPassword>
+})

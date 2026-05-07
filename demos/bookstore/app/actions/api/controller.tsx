@@ -1,11 +1,11 @@
-import type { AppController } from '../../router.ts'
+import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { Database } from 'remix/data-table'
 
 import { books } from '../../data/schema.ts'
 import { Session } from '../../middleware/session.ts'
-import type { routes } from '../../routes.ts'
+import { routes } from '../../routes.ts'
 import { addToCart, removeFromCart } from '../../utils/cart.ts'
 import { getCurrentCart } from '../../utils/context.ts'
 import { parseId } from '../../utils/ids.ts'
@@ -15,7 +15,7 @@ const bookIdSchema = f.object({
   bookId: bookIdField,
 })
 
-export default {
+export default createController(routes.api, {
   actions: {
     async cartToggle({ get }) {
       let db = get(Database)
@@ -40,4 +40,4 @@ export default {
       return new Response(null, { status: 204 })
     },
   },
-} satisfies AppController<typeof routes.api>
+})

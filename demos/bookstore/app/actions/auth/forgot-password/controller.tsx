@@ -1,14 +1,14 @@
-import type { AppController } from '../../../router.ts'
+import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import { Database } from 'remix/data-table'
 
 import { passwordResetTokens, users } from '../../../data/schema.ts'
-import type { routes } from '../../../routes.ts'
+import { routes } from '../../../routes.ts'
 import { render } from '../../render.tsx'
 import { forgotPasswordSchema, normalizeEmail } from '../schemas.ts'
 import { ForgotPasswordPage, ForgotPasswordSuccessPage } from './page.tsx'
 
-export default {
+export default createController(routes.auth.forgotPassword, {
   actions: {
     index() {
       return render(<ForgotPasswordPage />)
@@ -34,4 +34,4 @@ export default {
       return render(<ForgotPasswordSuccessPage token={token} />)
     },
   },
-} satisfies AppController<typeof routes.auth.forgotPassword>
+})

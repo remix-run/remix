@@ -1,4 +1,4 @@
-import type { Action } from 'remix/fetch-router'
+import { createAction } from 'remix/fetch-router'
 import type { Handle } from 'remix/ui'
 
 import {
@@ -10,7 +10,7 @@ import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 import { render } from './render.ts'
 
-export const rootReloadClientEntriesAction = {
+export const rootReloadClientEntriesAction = createAction(routes.rootReloadClientEntries, {
   async handler(context) {
     await delay(1000)
 
@@ -28,7 +28,7 @@ export const rootReloadClientEntriesAction = {
       { request: context.request, router: context.router },
     )
   },
-} satisfies Action<typeof routes.rootReloadClientEntries>
+})
 
 type RootReloadClientEntriesPageProps = {
   includeRemoved: boolean

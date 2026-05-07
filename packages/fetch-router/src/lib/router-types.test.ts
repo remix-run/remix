@@ -1,9 +1,9 @@
 import { describe, it } from '@remix-run/test'
 import { createRoutes as route } from '@remix-run/routes'
 
-import type { Action, Controller } from './controller.ts'
-import type { Middleware } from './middleware.ts'
-import { createContextKey, type RequestContext, type SetContextValue } from './request-context.ts'
+import { createAction, createController, type Action, type Controller } from './controller.ts'
+import type { ContextWithMiddleware, Middleware } from './middleware.ts'
+import { createContextKey, type RequestContext, type ContextWithValue } from './request-context.ts'
 import { createRouter } from './router.ts'
 import type { Router } from './router.ts'
 import type { IsEqual } from './type-utils.ts'
@@ -98,7 +98,13 @@ formRouter.post('/form', (context) => {
 type AppContext =
   typeof router extends Router<infer context extends RequestContext<any, any>> ? context : never
 
-type AdminAppContext = SetContextValue<AppContext, typeof CurrentRole, 'admin'>
+declare module './request-context.ts' {
+  interface RouterTypes {
+    context: AppContext
+  }
+}
+
+type AdminAppContext = ContextWithValue<AppContext, typeof CurrentRole, 'admin'>
 
 const accountAction = {
   handler(context) {
@@ -168,11 +174,63 @@ const elevatedReportAction = {
 } satisfies Action<typeof routes.reports, AdminAppContext>
 
 const elevatedReportMiddleware = [setRole('admin')] as const
-const elevatedReportActionWithMiddleware = {
+type ElevatedAppContext = ContextWithMiddleware<AppContext, typeof elevatedReportMiddleware>
+
+function checkMiddlewareContextBase(context: ElevatedAppContext): void {
+  let user = context.get(CurrentUser)
+  let role = context.get(CurrentRole)
+  let exactRole: 'admin' = role
+
+  expectTypeEquality<IsEqual<typeof user, { id: string }>>()
+
+  void exactRole
+}
+
+const elevatedReportActionWithMiddleware = createAction<typeof routes.reports, ElevatedAppContext>(
+  routes.reports,
+  {
+    middleware: elevatedReportMiddleware,
+    handler(context) {
+      let role = context.get(CurrentRole)
+      let reportId: string = context.params.reportId
+      let exactRole: 'admin' = role
+
+      void reportId
+      void exactRole
+
+      return new Response(role)
+    },
+  },
+)
+
+const elevatedReportsControllerWithMiddleware = createController<
+  { reports: typeof routes.reports },
+  ElevatedAppContext
+>(
+  { reports: routes.reports },
+  {
+    middleware: elevatedReportMiddleware,
+    actions: {
+      reports(context) {
+        let role = context.get(CurrentRole)
+        let reportId: string = context.params.reportId
+        let exactRole: 'admin' = role
+
+        void reportId
+        void exactRole
+
+        return new Response(role)
+      },
+    },
+  },
+)
+
+const untypedElevatedReportAction = createAction(routes.reports, {
   middleware: elevatedReportMiddleware,
   handler(context) {
     let role = context.get(CurrentRole)
     let reportId: string = context.params.reportId
+    // @ts-expect-error - local middleware context is not inferred into the handler
     let exactRole: 'admin' = role
 
     void reportId
@@ -180,7 +238,27 @@ const elevatedReportActionWithMiddleware = {
 
     return new Response(role)
   },
-} satisfies Action<typeof routes.reports, AppContext, typeof elevatedReportMiddleware>
+})
+
+const untypedElevatedReportsController = createController(
+  { reports: routes.reports },
+  {
+    middleware: elevatedReportMiddleware,
+    actions: {
+      reports(context) {
+        let role = context.get(CurrentRole)
+        let reportId: string = context.params.reportId
+        // @ts-expect-error - local middleware context is not inferred into the handler
+        let exactRole: 'admin' = role
+
+        void reportId
+        void exactRole
+
+        return new Response(role)
+      },
+    },
+  },
+)
 
 router.get(routes.account, accountAction)
 router.get(routes.reports, elevatedReportActionWithMiddleware)
@@ -219,8 +297,34 @@ if (false as boolean) {
     return new Response(adminRole)
   })
 
+  router.map(
+    { reports: routes.reports },
+    {
+      middleware: elevatedReportMiddleware,
+      actions: {
+        reports(context) {
+          // @ts-expect-error - local middleware context is not inferred into the handler
+          let adminRole: 'admin' = context.get(CurrentRole)
+          return new Response(adminRole)
+        },
+      },
+    },
+  )
+
+  let controllerWithUntypedMiddleware = {
+    middleware: elevatedReportMiddleware,
+    actions: {
+      reports(context) {
+        // @ts-expect-error - controller context must include values provided by local middleware
+        let adminRole: 'admin' = context.get(CurrentRole)
+        return new Response(adminRole)
+      },
+    },
+  } satisfies Controller<{ reports: typeof routes.reports }, AppContext>
+
   void rootController
   void unknownActionController
+  void controllerWithUntypedMiddleware
 }
 
 void plainRouter
@@ -231,6 +335,10 @@ void adminController
 void elevatedReportsController
 void elevatedReportAction
 void elevatedReportActionWithMiddleware
+void elevatedReportsControllerWithMiddleware
+void untypedElevatedReportAction
+void untypedElevatedReportsController
+void checkMiddlewareContextBase
 
 describe('router type inference', () => {
   it('propagates router context into controller and action contracts', () => {})

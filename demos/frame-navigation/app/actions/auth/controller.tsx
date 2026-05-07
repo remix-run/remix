@@ -1,10 +1,10 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../../routes.ts'
 import { authCookie } from '../../middleware/auth.ts'
 
-export default {
+export default createController(routes.auth, {
   actions: {
     async logout() {
       return redirect(routes.auth.login.index.href(), {
@@ -14,4 +14,4 @@ export default {
       })
     },
   },
-} satisfies Controller<typeof routes.auth>
+})

@@ -626,58 +626,84 @@ router.get('/posts/:id', (context) => {
 
 Route params are only half of a handler's type contract. In many apps, handlers also depend on values that middleware loads into request context, like sessions, database connections, or authenticated users.
 
-`fetch-router` now lets you carry that context contract through the router, controller, and action types directly. A common pattern is to derive one app-local context type from your router middleware, then reuse it across stored controllers and actions.
+`fetch-router` lets you carry that context contract through the router and into stored controllers and actions. A common pattern is to derive one app-local context type from your router middleware, augment `RouterTypes.context` with it, then use `createAction()` and `createController()` to type stored handlers.
 
 ```ts
 import { Auth, requireAuth } from 'remix/auth-middleware'
-import { type Action, type RequestContext, type WithParams } from 'remix/fetch-router'
+import {
+  createAction,
+  createController,
+  type ContextWithParams,
+  type ContextWithMiddleware,
+  type RequestContext,
+} from 'remix/fetch-router'
 import { route } from 'remix/routes'
 
 let routes = route({
   account: '/account',
 })
 
-type AppContext<params extends Record<string, string> = {}> = WithParams<RequestContext, params>
+type AppContext<params extends Record<string, string> = {}> = ContextWithParams<
+  RequestContext,
+  params
+>
 
 type AuthIdentity = { id: string }
 
-let accountMiddleware = [requireAuth<AuthIdentity>()] as const
+declare module 'remix/fetch-router' {
+  interface RouterTypes {
+    context: AppContext
+  }
+}
 
-let accountAction = {
+let accountMiddleware = [requireAuth<AuthIdentity>()] as const
+type AccountContext = ContextWithMiddleware<AppContext, typeof accountMiddleware>
+
+let accountAction = createAction<typeof routes.account, AccountContext>(routes.account, {
   middleware: accountMiddleware,
   handler(context) {
     let auth = context.get(Auth)
     return Response.json({ id: auth.identity.id })
   },
-} satisfies Action<typeof routes.account, AppContext, typeof accountMiddleware>
+})
+
+let accountController = createController<typeof routes, AccountContext>(routes, {
+  middleware: accountMiddleware,
+  actions: {
+    account(context) {
+      let auth = context.get(Auth)
+      return Response.json({ id: auth.identity.id })
+    },
+  },
+})
 ```
 
-In this example, the action-local middleware tuple gives the handler the stronger context it requires and makes that contract true at runtime. In a larger app, you can still derive a shared base context from router middleware with `MiddlewareContext<typeof middleware>` and build on top of it the same way.
+In this example, `AccountContext` describes the context the local middleware provides before the handler runs. In a larger app, you can derive a shared base context from router middleware with `MiddlewareContext<typeof middleware>`, or apply middleware to an existing context with `ContextWithMiddleware<AppContext, typeof middleware>`.
 
 #### Middleware Provider Guidance
 
-`context.get(key)` returns a defined value when the context type includes that key or the key was created with a default value. Constructor keys like `FormData` are useful context keys, but the constructor itself is not a guarantee that a value exists. Use middleware context transforms for required values, and handle `undefined` when reading values that may not be present.
+`context.get(key)` returns a defined value when the context type includes that key or the key was created with a default value. Constructor keys like `FormData` are useful context keys, but the constructor itself is not a guarantee that a value exists. Use context transforms for required middleware values, and handle `undefined` when reading values that may not be present.
 
 If you're authoring a middleware package that stores values in request context, treat that context contract as part of the package API. A good provider should usually export:
 
 - the context key consumers read with `context.get(...)`
 - the middleware that populates that key at runtime
-- one or more `With...` helper types (optional) that let applications describe the resulting request context without touching raw context entries directly
+- one or more `ContextWith...` helper types that let applications describe the resulting request context without touching raw context entries directly
+
+Prefer `ContextWith...` names for third-party middleware packages that augment request context. This matches the built-in `ContextWithParams`, `ContextWithValues`, and `ContextWithValue` helpers and makes it clear that the type produces a new `RequestContext` type with additional context available.
 
 ```ts
-import { createContextKey, type MergeContext, type RequestContext } from 'remix/fetch-router'
+import { createContextKey, type ContextWithValues, type RequestContext } from 'remix/fetch-router'
 
 // The context key that consumers will need to read from `context.get(...)`
 export const CurrentUser = createContextKey<User | null>()
 
-// One or more With* helper types that apps can use to describe the request context
-export type WithCurrentUser<context extends RequestContext<any, any>> = MergeContext<
+// One or more ContextWith* helper types that apps can use to describe the request context
+export type ContextWithCurrentUser<context extends RequestContext<any, any>> = ContextWithValues<
   context,
   [readonly [typeof CurrentUser, User | null]]
 >
 ```
-
-Built-in middleware packages may also export `With...` helpers when that makes controller and action contracts clearer, for example `auth-middleware` provides `WithAuth` and `WithRequiredAuth`.
 
 ### Additional Topics
 

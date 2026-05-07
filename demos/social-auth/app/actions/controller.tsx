@@ -1,10 +1,9 @@
 import { Auth } from 'remix/auth-middleware'
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { getReturnToQuery, requireAuth } from '../middleware/auth.ts'
 import { Session } from '../middleware/session.ts'
-import type { AppContext } from '../router.ts'
 import { routes } from '../routes.ts'
 import { AccountPage } from '../ui/account-page.tsx'
 import { LoginPage } from '../ui/home/page.tsx'
@@ -18,7 +17,7 @@ import { render } from './render.tsx'
 export function createRootController(
   registry: ExternalProviderRegistry = externalProviderRegistry,
 ) {
-  return {
+  return createController(routes, {
     actions: {
       home({ get, url }) {
         let auth = get(Auth)
@@ -56,5 +55,5 @@ export function createRootController(
         },
       },
     },
-  } satisfies Controller<typeof routes, AppContext>
+  })
 }

@@ -204,10 +204,10 @@ Middleware can be applied at three levels:
 2. **Controller-level** — runs for the direct actions in one controller:
 
    ```typescript
-   export default {
+   export default createController(routes.account, {
      middleware: [requireAuth()],
      actions: { ... },
-   } satisfies Controller<typeof routes.account>
+   })
    ```
 
    Controller middleware does not flow into other controllers. Add the middleware to each

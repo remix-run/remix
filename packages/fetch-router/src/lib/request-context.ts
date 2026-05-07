@@ -3,6 +3,24 @@ import type { Router } from './router.ts'
 import type { Simplify } from './type-utils.ts'
 
 /**
+ * Ambient router type configuration for application-wide defaults.
+ *
+ * Apps may augment this interface to define the default request context used by
+ * `createAction()` and `createController()`. Multi-router apps should avoid this
+ * global default and pass explicit context types instead.
+ *
+ * @example
+ * ```ts
+ * declare module '@remix-run/fetch-router' {
+ *   interface RouterTypes {
+ *     context: AppContext
+ *   }
+ * }
+ * ```
+ */
+export interface RouterTypes {}
+
+/**
  * Create a request context key with an optional default value.
  *
  * @param defaultValue The default value for the context key
@@ -63,6 +81,12 @@ type ContextFallbackValue<key> = [ContextDefaultValue<key>] extends [never]
 export type ContextParams<context> =
   context extends RequestContext<infer params extends Record<string, any>, any> ? params : {}
 
+export type DefaultContext = RouterTypes extends {
+  context: infer context extends RequestContext<any, any>
+}
+  ? context
+  : RequestContext
+
 type DuplicateParamNames<
   left extends Record<string, any>,
   right extends Record<string, any>,
@@ -77,9 +101,9 @@ export type MergeContextParams<
 > = [DuplicateParamNames<left, right>] extends [never] ? Simplify<left & right> : never
 
 /**
- * Replaces the params type of a {@link RequestContext} while preserving its existing context entries.
+ * Adds route params to a {@link RequestContext} while preserving its existing context values.
  */
-export type WithParams<context, params extends Record<string, any>> =
+export type ContextWithParams<context, params extends Record<string, any>> =
   context extends RequestContext<any, infer entries extends ContextEntries>
     ? MergeContextParams<ContextParams<context>, params> extends infer merged
       ? [merged] extends [never]
@@ -109,9 +133,12 @@ export type GetContextValue<context, key extends object> =
     : ContextFallbackValue<key>
 
 /**
- * Appends context entries to an existing {@link RequestContext}.
+ * Appends context values to an existing {@link RequestContext}.
+ *
+ * Third-party middleware packages that add multiple values should expose their own
+ * `ContextWith*` helper built on this type.
  */
-export type MergeContext<context, additions extends ContextEntries> =
+export type ContextWithValues<context, additions extends ContextEntries> =
   context extends RequestContext<
     infer params extends Record<string, any>,
     infer entries extends ContextEntries
@@ -121,8 +148,11 @@ export type MergeContext<context, additions extends ContextEntries> =
 
 /**
  * Replaces or adds the value type for a single context key in a {@link RequestContext}.
+ *
+ * Third-party middleware packages that add one value should expose their own
+ * `ContextWith*` helper built on this type.
  */
-export type SetContextValue<context, key extends object, value> = MergeContext<
+export type ContextWithValue<context, key extends object, value> = ContextWithValues<
   context,
   [readonly [key, value]]
 >

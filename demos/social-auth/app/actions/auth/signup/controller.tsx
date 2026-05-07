@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 import { redirect } from 'remix/response/redirect'
@@ -9,12 +9,11 @@ import { signupSchema } from '../schemas.ts'
 import { normalizeEmail, normalizeText, users } from '../../../data/schema.ts'
 import { getPostAuthRedirect, getReturnToQuery } from '../../../middleware/auth.ts'
 import { Session } from '../../../middleware/session.ts'
-import type { AppContext } from '../../../router.ts'
 import { routes } from '../../../routes.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
 import { render } from '../../render.tsx'
 
-export const signupController = {
+export const signupController = createController(routes.auth.signup, {
   actions: {
     index({ url }) {
       let returnToQuery = getReturnToQuery(url)
@@ -81,4 +80,4 @@ export const signupController = {
       return redirect(getPostAuthRedirect(url))
     },
   },
-} satisfies Controller<typeof routes.auth.signup, AppContext>
+})

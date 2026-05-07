@@ -28,7 +28,7 @@ preloads, sourcemaps, or fingerprinted URLs.
 
 ```typescript
 import { createAssetServer } from 'remix/assets'
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { get, route } from 'remix/routes'
 
 export const routes = route({
@@ -54,13 +54,13 @@ let assetServer = createAssetServer({
   },
 })
 
-export default {
+export default createController(routes, {
   actions: {
     async assets({ request }) {
       return (await assetServer.fetch(request)) ?? new Response('Not Found', { status: 404 })
     },
   },
-} satisfies Controller<typeof routes>
+})
 ```
 
 ## Rules

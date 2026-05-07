@@ -1,7 +1,7 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { createRedirectResponse as redirect } from 'remix/response/redirect'
 
-import type { routes } from '../routes.ts'
+import { routes } from '../routes.ts'
 import {
   fetchPackageContents,
   fetchPackageMetadata,
@@ -17,7 +17,7 @@ import { render } from './render.ts'
 import { HomePage } from '../ui/home-page.ts'
 import { renderDirectoryListing, renderError, renderFileContent } from './package-browser.ts'
 
-export default {
+export default createController(routes, {
   actions: {
     home() {
       return render('UNPKG - npm package browser', HomePage())
@@ -77,4 +77,4 @@ export default {
       }
     },
   },
-} satisfies Controller<typeof routes>
+})

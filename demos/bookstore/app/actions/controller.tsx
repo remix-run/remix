@@ -1,9 +1,9 @@
-import type { AppController } from '../router.ts'
+import { createController } from 'remix/fetch-router'
 import { Database, ilike, inList, or } from 'remix/data-table'
 import { createFileResponse as sendFile } from 'remix/response/file'
 
 import { books } from '../data/schema.ts'
-import type { routes } from '../routes.ts'
+import { routes } from '../routes.ts'
 import { assetServer } from '../utils/assets.ts'
 import { getCurrentCart } from '../utils/context.ts'
 import { render } from './render.tsx'
@@ -12,7 +12,7 @@ import { AboutPage } from './about.tsx'
 import { HomePage } from './home.tsx'
 import { SearchPage } from './search.tsx'
 
-export default {
+export default createController(routes, {
   actions: {
     async assets({ request }) {
       let assetResponse = await assetServer.fetch(request)
@@ -67,4 +67,4 @@ export default {
       return render(<SearchPage query={query} matchingBooks={matchingBooks} cart={cart} />)
     },
   },
-} satisfies AppController<typeof routes>
+})

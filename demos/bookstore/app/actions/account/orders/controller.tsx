@@ -1,17 +1,17 @@
-import type { AppController } from '../../../router.ts'
+import { createController } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
 
 import { orders, orderItemsWithBook } from '../../../data/schema.ts'
 import { requireAuth } from '../../../middleware/auth.ts'
-import type { routes } from '../../../routes.ts'
+import { routes } from '../../../routes.ts'
 import { getCurrentUser } from '../../../utils/context.ts'
 import { parseId } from '../../../utils/ids.ts'
 import { render } from '../../render.tsx'
 import { AccountOrdersIndexPage } from './index-page.tsx'
 import { AccountOrderNotFoundPage, AccountOrderShowPage } from './show-page.tsx'
 
-export default {
-  middleware: [requireAuth()],
+export default createController(routes.account.orders, {
+  middleware: [requireAuth()] as const,
   actions: {
     async index({ get }) {
       let db = get(Database)
@@ -50,4 +50,4 @@ export default {
       return render(<AccountOrderShowPage order={order} shippingAddress={shippingAddress} />)
     },
   },
-} satisfies AppController<typeof routes.account.orders>
+})
