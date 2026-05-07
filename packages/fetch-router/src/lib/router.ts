@@ -8,7 +8,6 @@ import type { RequestMethod } from './request-methods.ts'
 import {
   type Action,
   type Controller,
-  type ControllerShape,
   type RequestHandler,
   isAction,
   isController,
@@ -347,7 +346,13 @@ export function createRouter<
     mapController(target, handler)
   }
 
-  function mapController(routes: RouteMap, controller: ControllerShape): void {
+  function mapController(
+    routes: RouteMap,
+    controller: {
+      middleware?: readonly AnyMiddleware[] | undefined
+      actions: Record<string, unknown>
+    },
+  ): void {
     let controllerMiddleware = normalizeMiddleware(controller.middleware)
 
     for (let key in controller.actions) {

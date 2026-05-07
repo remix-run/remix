@@ -73,12 +73,10 @@ export function createAction(route: ActionRoute, action: Action<ActionRoute, Req
   return action
 }
 
-export interface ActionShape {
-  middleware?: readonly AnyMiddleware[]
+export function isAction(obj: unknown): obj is {
+  middleware?: readonly AnyMiddleware[] | undefined
   handler: RequestHandler<any, any>
-}
-
-export function isAction(obj: unknown): obj is ActionShape {
+} {
   return isRecord(obj) && typeof obj.handler === 'function'
 }
 
@@ -134,12 +132,10 @@ export function createController(
   return controller
 }
 
-export interface ControllerShape {
-  middleware?: readonly AnyMiddleware[]
+export function isController(obj: unknown): obj is {
+  middleware?: readonly AnyMiddleware[] | undefined
   actions: Record<string, unknown>
-}
-
-export function isController(obj: unknown): obj is ControllerShape {
+} {
   return isRecord(obj) && isRecord(obj.actions)
 }
 
