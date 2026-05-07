@@ -67,6 +67,8 @@ async function spider(router: Router, outputDir: string, urlQueue = new Set(['/'
 }
 
 async function crawl(router: Router, urlPath: string, outputDir: string) {
+  urlPath = stripHash(urlPath)
+
   let response
   try {
     response = await router.fetch(new Request(`http://localhost${urlPath}`))
@@ -104,6 +106,8 @@ async function crawl(router: Router, urlPath: string, outputDir: string) {
         .map((link) => link.getAttribute('href'))
         .filter((href) => href && !isAbsoluteUrl(href))
         .map((href) => resolveRelativeLink(href!, urlPath))
+        .map(stripHash)
+        .filter((href) => href !== urlPath)
         .flatMap((href) => {
           let match = routes.docs.match(`http://localhost${href}`)
           return match ? [href, routes.markdown.href(match.params)] : [href]
@@ -114,6 +118,10 @@ async function crawl(router: Router, urlPath: string, outputDir: string) {
     await fs.writeFile(outputPath, new Uint8Array(content))
     return { downloadedUrl: urlPath, discoveredUrls: [] }
   }
+}
+
+function stripHash(urlPath: string): string {
+  return urlPath.split('#', 1)[0] || '/'
 }
 
 function isAbsoluteUrl(href: string): boolean {

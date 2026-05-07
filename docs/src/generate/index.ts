@@ -4,6 +4,7 @@ import util from 'node:util'
 import { getDocumentedAPI } from './documented-api.ts'
 import { writeLookupFile } from './lookup.ts'
 import { writeMarkdownFiles } from './markdown.ts'
+import { discoverPackageOverviews, writePackageOverviewFiles } from './packages.ts'
 import { loadTypeDoc } from './typedoc.ts'
 import { info } from './utils.ts'
 
@@ -57,6 +58,7 @@ let documentedAPIs = [...apisToDocument].map((name) => getDocumentedAPI(name, co
 
 // Write out docs
 await writeMarkdownFiles(documentedAPIs, DOCS_DIR)
+await writePackageOverviewFiles(await discoverPackageOverviews(), DOCS_DIR)
 
 // Write out API name -> URL path lookup file
 await writeLookupFile(documentedAPIs, DOCS_DIR)

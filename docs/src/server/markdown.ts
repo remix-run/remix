@@ -13,13 +13,27 @@ const parseFrontmatter = frontmatter.default as unknown as (md: string) => {
   body: string
 }
 
-export type DocFile = {
+export type ApiTypeKind = 'type' | 'interface' | 'class' | 'function'
+
+export type ApiDocFile = {
+  kind: 'api'
   path: string
-  type: string
+  type: ApiTypeKind
   name: string
   package: string
   urlPath: string
 }
+
+export type PackageDocFile = {
+  kind: 'package'
+  path: string
+  type: 'package'
+  name: string
+  package: string
+  urlPath: string
+}
+
+export type DocFile = ApiDocFile | PackageDocFile
 
 export async function discoverMarkdownFiles(
   baseDir: string,
@@ -42,22 +56,45 @@ export async function discoverMarkdownFiles(
       if (entry.isDirectory()) {
         walk(fullPath)
       } else if (entry.isFile() && entry.name.endsWith('.md')) {
-        let relativePath = path.relative(baseDir, fullPath)
-        let parts = relativePath.split(path.sep)
-        let packageName = parts.slice(0, parts.length - 2).join('/')
-        let type = parts[parts.length - 2]
-        let urlPath = relativePath.replace(/\.md$/, '').replace(/\\/g, '/')
-
-        files.push({
-          path: fullPath,
-          type: type || 'unknown',
-          name: entry.name.replace(/\.md$/, ''),
-          package: packageName,
-          urlPath: urlPath,
-        })
+        files.push(getDocFile(baseDir, fullPath))
       }
     }
   }
+}
+
+function getDocFile(baseDir: string, fullPath: string): DocFile {
+  let relativePath = path.relative(baseDir, fullPath)
+  let parts = relativePath.split(path.sep)
+  let name = path.basename(fullPath, '.md')
+
+  if (name === 'index') {
+    let packageName = parts.slice(0, -1).join('/')
+    return {
+      kind: 'package',
+      path: fullPath,
+      type: 'package',
+      name: packageName,
+      package: packageName,
+      urlPath: packageName,
+    }
+  }
+
+  let packageName = parts.slice(0, -2).join('/')
+  return {
+    kind: 'api',
+    path: fullPath,
+    type: getApiTypeKind(parts.at(-2)),
+    name,
+    package: packageName,
+    urlPath: relativePath.replace(/\.md$/, '').replace(/\\/g, '/'),
+  }
+}
+
+function getApiTypeKind(value: string | undefined): ApiTypeKind {
+  if (value === 'type' || value === 'interface' || value === 'class' || value === 'function') {
+    return value
+  }
+  throw new Error(`Invalid API docs type: ${value ?? '<missing>'}`)
 }
 
 export async function renderMarkdownFile(
