@@ -17,6 +17,10 @@ export interface RequestHandler<context extends RequestContext<any, any> = Reque
   (context: context): Response | Promise<Response>
 }
 
+export function isRequestHandler(object: unknown): object is RequestHandler<any> {
+  return typeof object === 'function'
+}
+
 type ActionRoute = string | RoutePattern | Route
 
 // prettier-ignore

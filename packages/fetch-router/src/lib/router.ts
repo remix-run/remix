@@ -6,9 +6,10 @@ import { raceRequestAbort } from './request-abort.ts'
 import { RequestContext, type ContextWithParams } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import {
+  type RequestHandler,
   type Action,
   type Controller,
-  type RequestHandler,
+  isRequestHandler,
   isAction,
   isController,
 } from './controller.ts'
@@ -174,15 +175,7 @@ function noMatchHandler({ url }: RequestContext): Response {
 function normalizeMiddleware(
   middleware: readonly AnyMiddleware[] | undefined,
 ): AnyMiddleware[] | undefined {
-  if (middleware == null || middleware.length === 0) {
-    return undefined
-  }
-
-  return [...middleware]
-}
-
-function isRequestHandler(action: unknown): action is RequestHandler<any> {
-  return typeof action === 'function'
+  return middleware == null || middleware.length === 0 ? undefined : [...middleware]
 }
 
 function normalizeAction(action: unknown): NormalizedAction {
@@ -203,16 +196,6 @@ function normalizeAction(action: unknown): NormalizedAction {
     handler: action,
     middleware: undefined,
   }
-}
-
-function createRequestContext(input: string | URL | Request, init?: RequestInit): RequestContext {
-  let request = input instanceof Request && init == null ? input : new Request(input, init)
-
-  if (request.signal.aborted) {
-    throw request.signal.reason
-  }
-
-  return new RequestContext(request)
 }
 
 function isRouteTarget(target: MapTarget): target is RouteTarget {
@@ -373,8 +356,15 @@ export function createRouter<
 
   let router: Router<RouterContext> = {
     fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-      let context = createRequestContext(input, init)
+      let request = input instanceof Request && init == null ? input : new Request(input, init)
+
+      if (request.signal.aborted) {
+        throw request.signal.reason
+      }
+
+      let context = new RequestContext(request)
       context.router = router
+
       return dispatchRouter(context)
     },
     route<method extends RequestMethod | 'ANY', pattern extends string>(
