@@ -28,8 +28,6 @@ console.log('Prerendering versions:\n', JSON.stringify(versions, null, 2))
 const docsRouter = createRouter(versions)
 const crawlableUrls = await getCrawlableUrls(versions)
 
-await fs.rm(outputDir, { recursive: true, force: true })
-
 // Copy static assets to the output directory
 await fs.cp(assetsDir, path.join(outputDir, 'assets'), { recursive: true })
 for (let version of versions || getDefaultVersions()) {

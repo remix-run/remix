@@ -3,7 +3,8 @@ import * as path from 'node:path'
 import * as semver from 'semver'
 import { type RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
-import { createRouter as _createRouter, type Router } from 'remix/fetch-router'
+import { createRouter as _createRouter, type RouteEntry, type Router } from 'remix/fetch-router'
+import { createMatcher, type Match, type Matcher } from 'remix/route-pattern'
 import { createHtmlResponse } from 'remix/response/html'
 import { MarkdownContent, ServerPage, NotFound, type ServerContext } from './components.tsx'
 import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
@@ -27,7 +28,7 @@ export const getDefaultVersions = (): ServerContext['versions'] => {
 }
 
 export function createRouter(versions: ServerContext['versions']) {
-  const router = _createRouter()
+  const router = _createRouter({ matcher: createStrictMatcher() })
 
   const respond = {
     async file(request: Request, filePath: string, name?: string) {
@@ -62,16 +63,6 @@ export function createRouter(versions: ServerContext['versions']) {
         return respond.file(request, filePath, params.asset)
       },
       async docs({ request, params }) {
-        let markdownMatch = routes.markdown.match(request.url)
-        if (markdownMatch) {
-          let docFile = docFiles.find((file) => file.urlPath === markdownMatch.params.slug)
-          if (!docFile) {
-            return new Response('Not Found', { status: 404 })
-          }
-
-          return respond.file(request, docFile.path)
-        }
-
         // Docs page
         let docFile = docFiles.find((file) => file.urlPath === params.slug)
         let node: RemixNode
@@ -213,4 +204,26 @@ function stream(router: Router, request: Request, node: RemixNode, init?: Respon
       return await res.text()
     },
   })
+}
+
+function createStrictMatcher(): Matcher<RouteEntry> {
+  let matcher = createMatcher<RouteEntry>()
+
+  function isStrictMatch(match: Match<string, RouteEntry>) {
+    // Work around a trie matcher bug where `Matcher.matchAll()` can return a
+    // candidate that the candidate's own `RoutePattern.match()` rejects.
+    // See https://github.com/remix-run/remix/pull/11368.
+    return match.data.pattern.match(match.url) !== null
+  }
+
+  return {
+    ignoreCase: matcher.ignoreCase,
+    add: matcher.add.bind(matcher),
+    match(url, compareFn) {
+      return this.matchAll(url, compareFn)[0] ?? null
+    },
+    matchAll(url, compareFn) {
+      return matcher.matchAll(url, compareFn).filter(isStrictMatch)
+    },
+  }
 }
