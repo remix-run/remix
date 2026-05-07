@@ -1,4 +1,4 @@
-BREAKING CHANGE: Simplified route action, controller, request handler, and middleware helper types. `Action` now accepts a route pattern, `RoutePattern`, or `Route` object as its first generic and the full request context as its optional second generic. `Controller` now accepts the route map as its first generic and the full request context as its optional second generic. `RequestHandler` now accepts the full request context as its only generic. `Middleware` now accepts only the context transform generic. `BuildAction` is no longer exported.
+BREAKING CHANGE: Simplified route action, controller, request handler, and middleware helper types. `Action` now describes object-form route handlers only and accepts a route pattern, `RoutePattern`, or `Route` object as its first generic and the full request context as its optional second generic. Use the new `RouteHandler` type when you need to describe either a plain request handler function or an action object. `Controller` now accepts the route map as its first generic and the full request context as its optional second generic. `RequestHandler` now accepts the full request context as its only generic. `Middleware` now accepts only the context transform generic. `BuildAction` is no longer exported.
 
 For most apps, augment `RouterTypes.context` once and use `createAction()`/`createController()` to type stored handlers without `satisfies` clauses:
 
@@ -49,6 +49,27 @@ let action: Action<typeof routes.account, AccountContext> = {
   handler(context) {
     let auth = context.get(Auth)
     return Response.json(auth.identity)
+  },
+}
+```
+
+If you used `Action` to annotate a stored route handler function, switch that annotation to `RouteHandler`. `Action` remains available for object-form handlers with optional middleware:
+
+```ts
+// before
+let handler: Action<typeof routes.account, AccountContext> = (context) => {
+  return Response.json(context.get(Auth).identity)
+}
+
+// after
+let handler: RouteHandler<typeof routes.account, AccountContext> = (context) => {
+  return Response.json(context.get(Auth).identity)
+}
+
+let action: Action<typeof routes.account, AccountContext> = {
+  middleware: accountMiddleware,
+  handler(context) {
+    return Response.json(context.get(Auth).identity)
   },
 }
 ```

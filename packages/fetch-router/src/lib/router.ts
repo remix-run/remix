@@ -7,8 +7,8 @@ import { RequestContext, type ContextWithParams } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import {
   type RequestHandler,
-  type Action,
   type Controller,
+  type RouteHandler,
   isRequestHandler,
   isAction,
   isController,
@@ -33,7 +33,7 @@ type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
   ): void
   <pattern extends string, actionContext extends AnyContext = context>(
     route: RouteTarget<pattern, method>,
-    action: Action<pattern, actionContext>,
+    action: RouteHandler<RouteTarget<pattern, method>, actionContext>,
   ): void
 }
 
@@ -59,7 +59,7 @@ export interface RouteEntry {
   middleware: AnyMiddleware[] | undefined
 }
 
-type NormalizedAction = {
+type NormalizedRouteHandler = {
   handler: RequestHandler<any>
   middleware: AnyMiddleware[] | undefined
 }
@@ -121,7 +121,7 @@ export interface Router<context extends AnyContext = RequestContext> {
   >(
     method: method,
     pattern: RouteTarget<pattern, method>,
-    action: Action<pattern, actionContext>,
+    action: RouteHandler<RouteTarget<pattern, method>, actionContext>,
   ): void
   /**
    * Maps either a single route target to an action or a route map to a controller.
@@ -132,7 +132,7 @@ export interface Router<context extends AnyContext = RequestContext> {
   ): void
   map<pattern extends string, actionContext extends AnyContext = context>(
     target: RouteTarget<pattern>,
-    action: Action<pattern, actionContext>,
+    action: RouteHandler<RouteTarget<pattern>, actionContext>,
   ): void
   map<target extends RouteMap, controllerContext extends AnyContext = context>(
     target: target,
@@ -178,22 +178,22 @@ function normalizeMiddleware(
   return middleware == null || middleware.length === 0 ? undefined : [...middleware]
 }
 
-function normalizeAction(action: unknown): NormalizedAction {
-  if (isAction(action)) {
+function normalizeRouteHandler(routeHandler: unknown): NormalizedRouteHandler {
+  if (isAction(routeHandler)) {
     return {
-      handler: action.handler,
-      middleware: normalizeMiddleware(action.middleware),
+      handler: routeHandler.handler,
+      middleware: normalizeMiddleware(routeHandler.middleware),
     }
   }
 
-  if (!isRequestHandler(action)) {
+  if (!isRequestHandler(routeHandler)) {
     throw new TypeError(
       'Expected a request handler function or action object with a function `handler` property',
     )
   }
 
   return {
-    handler: action,
+    handler: routeHandler,
     middleware: undefined,
   }
 }
@@ -256,7 +256,7 @@ export function createRouter<
   function registerRoute(
     method: RequestMethod | 'ANY',
     route: RouteTarget,
-    normalizedAction: NormalizedAction,
+    routeHandler: NormalizedRouteHandler,
   ): void {
     let pattern =
       route instanceof Route
@@ -266,9 +266,9 @@ export function createRouter<
           : route
     let entry: RouteEntry = {
       pattern,
-      handler: normalizedAction.handler,
+      handler: routeHandler.handler,
       method,
-      middleware: normalizedAction.middleware,
+      middleware: routeHandler.middleware,
     }
 
     matcher.add(pattern, entry)
@@ -277,9 +277,11 @@ export function createRouter<
   function addRoute<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
     route: RouteTarget<pattern, method>,
-    handler: RequestHandler<RouteContext<RouterContext, pattern>> | Action<pattern, AnyContext>,
+    handler:
+      | RequestHandler<RouteContext<RouterContext, pattern>>
+      | RouteHandler<RouteTarget<pattern, method>, AnyContext>,
   ): void {
-    registerRoute(method, route, normalizeAction(handler))
+    registerRoute(method, route, normalizeRouteHandler(handler))
   }
 
   function mapRoutes(target: MapTarget, handler: unknown): void {
@@ -296,7 +298,11 @@ export function createRouter<
   }
 
   function mapSingleRoute(target: RouteTarget, handler: unknown): void {
-    registerRoute(target instanceof Route ? target.method : 'ANY', target, normalizeAction(handler))
+    registerRoute(
+      target instanceof Route ? target.method : 'ANY',
+      target,
+      normalizeRouteHandler(handler),
+    )
   }
 
   function mapController(
@@ -329,14 +335,14 @@ export function createRouter<
         }
 
         let action = controller.actions[key]
-        let normalizedAction = normalizeAction(action as Action<any, RouterContext>)
-        let middleware = normalizedAction.middleware
+        let routeHandler = normalizeRouteHandler(action)
+        let middleware = routeHandler.middleware
         if (controllerMiddleware) {
           middleware = middleware ? controllerMiddleware.concat(middleware) : controllerMiddleware
         }
 
         registerRoute(route.method, route.pattern, {
-          handler: normalizedAction.handler,
+          handler: routeHandler.handler,
           middleware,
         })
       }
@@ -348,7 +354,9 @@ export function createRouter<
   ): VerbMethod<method, RouterContext> {
     return (<pattern extends string>(
       route: RouteTarget<pattern, method>,
-      handler: RequestHandler<RouteContext<RouterContext, pattern>> | Action<pattern, AnyContext>,
+      handler:
+        | RequestHandler<RouteContext<RouterContext, pattern>>
+        | RouteHandler<RouteTarget<pattern, method>, AnyContext>,
     ): void => {
       addRoute(method, route, handler)
     }) as VerbMethod<method, RouterContext>
@@ -370,7 +378,9 @@ export function createRouter<
     route<method extends RequestMethod | 'ANY', pattern extends string>(
       method: method,
       route: RouteTarget<pattern, method>,
-      handler: RequestHandler<RouteContext<RouterContext, pattern>> | Action<pattern, AnyContext>,
+      handler:
+        | RequestHandler<RouteContext<RouterContext, pattern>>
+        | RouteHandler<RouteTarget<pattern, method>, AnyContext>,
     ): void {
       addRoute(method, route, handler)
     },

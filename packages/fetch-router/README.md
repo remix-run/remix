@@ -680,6 +680,8 @@ let accountController = createController<typeof routes, AccountContext>(routes, 
 
 In this example, `AccountContext` describes the context the local middleware provides before the handler runs. In a larger app, you can derive a shared base context from router middleware with `MiddlewareContext<typeof middleware>`, or apply middleware to an existing context with `ContextWithMiddleware<AppContext, typeof middleware>`.
 
+When manually annotating stored handlers, use `RouteHandler<typeof route, Context>` for values that may be either a plain handler function or an action object. Use `Action<typeof route, Context>` specifically for object-form handlers with optional middleware.
+
 #### Middleware Provider Guidance
 
 `context.get(key)` returns a defined value when the context type includes that key or the key was created with a default value. Constructor keys like `FormData` are useful context keys, but the constructor itself is not a guarantee that a value exists. Use context transforms for required middleware values, and handle `undefined` when reading values that may not be present.

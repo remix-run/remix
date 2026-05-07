@@ -2,7 +2,8 @@ import type { Params, RoutePattern } from '@remix-run/route-pattern'
 import type { Route, RouteMap } from '@remix-run/routes'
 
 import type { AnyMiddleware } from './middleware.ts'
-import type { ContextWithParams, DefaultContext, RequestContext } from './request-context.ts'
+import type { ContextWithParams, RequestContext } from './request-context.ts'
+import type { DefaultContext } from './router-types.ts'
 
 /**
  * A request handler function that returns some kind of response.
@@ -33,22 +34,36 @@ type ActionPattern<route extends ActionRoute> =
 /**
  * An individual route action.
  *
- * Actions can be plain handler functions or action objects with optional inline middleware.
- * Most app code should use {@link createAction}; use this type directly when you need
- * to describe an action for an explicit request-context type.
+ * Actions are object-form route handlers with optional inline middleware.
+ * Most app code should use {@link createAction}; use {@link RouteHandler}
+ * when a value may be either a handler function or an action object.
  */
-export type Action<
+export interface Action<
+  route extends ActionRoute,
+  context extends RequestContext<any, any> = DefaultContext,
+> {
+  /**
+   * Middleware that runs before this action's handler.
+   */
+  middleware?: readonly AnyMiddleware[] | undefined
+  /**
+   * The handler that runs after this action's middleware.
+   */
+  handler: RequestHandler<ContextWithParams<context, Params<ActionPattern<route>>>>
+}
+
+/**
+ * A route handler can be a plain request handler function or an action object.
+ */
+export type RouteHandler<
   route extends ActionRoute,
   context extends RequestContext<any, any> = DefaultContext,
 > =
   | RequestHandler<ContextWithParams<context, Params<ActionPattern<route>>>>
-  | {
-      middleware?: readonly AnyMiddleware[] | undefined
-      handler: RequestHandler<ContextWithParams<context, Params<ActionPattern<route>>>>
-    }
+  | Action<route, context>
 
 /**
- * Defines an action with route-aware params and the default router context.
+ * Defines a route handler with route-aware params and the default router context.
  *
  * This helper returns the action unchanged while giving TypeScript the route pattern it needs to
  * type `context.params`. If local middleware adds context values, compose those values into the
@@ -61,24 +76,21 @@ export type Action<
 export function createAction<
   route extends ActionRoute,
   context extends RequestContext<any, any> = DefaultContext,
-  action extends Action<route, context> = Action<route, context>,
+  action extends RouteHandler<route, context> = RouteHandler<route, context>,
 >(route: route, action: action): action {
   void route
   return action
 }
 
-export function isAction(obj: unknown): obj is {
-  middleware?: readonly AnyMiddleware[] | undefined
-  handler: RequestHandler<any>
-} {
+export function isAction(obj: unknown): obj is Action<any, any> {
   return isRecord(obj) && typeof obj.handler === 'function'
 }
 
 /**
- * A controller maps route leaves in a route map to actions.
+ * A controller maps route leaves in a route map to route handlers.
  *
- * Controllers let you store related actions together while preserving the params
- * and request-context contract for each action. Most app code should use
+ * Controllers let you store related route handlers together while preserving the params
+ * and request-context contract for each route handler. Most app code should use
  * {@link createController}; use this type directly when you need to describe a
  * controller for an explicit request-context type.
  */
@@ -91,8 +103,8 @@ export type Controller<
     ? {
         [name in keyof routes as routes[name] extends Route<any, any>
           ? name
-          : never]: routes[name] extends Route<any, infer pattern extends string>
-          ? Action<pattern, context>
+          : never]: routes[name] extends Route<any, any>
+          ? RouteHandler<routes[name], context>
           : never
       } & {
         [name in keyof routes as routes[name] extends RouteMap ? name : never]?: never
