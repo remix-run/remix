@@ -67,7 +67,10 @@ function getDocFile(baseDir: string, fullPath: string): DocFile {
   let parts = relativePath.split(path.sep)
   let name = path.basename(fullPath, '.md')
 
-  if (name === 'index') {
+  let markdown = fs.readFileSync(fullPath, 'utf-8')
+  let { attributes } = parseFrontmatter(markdown)
+
+  if (attributes.type === 'package') {
     let packageName = parts.slice(0, -1).join('/')
     return {
       kind: 'package',
@@ -75,7 +78,7 @@ function getDocFile(baseDir: string, fullPath: string): DocFile {
       type: 'package',
       name: packageName,
       package: packageName,
-      urlPath: packageName,
+      urlPath: relativePath.replace(/\.md$/, '').replace(/\\/g, '/'),
     }
   }
 

@@ -52,8 +52,9 @@ export async function discoverPackageOverviews(): Promise<PackageOverview[]> {
 
 export async function writePackageOverviewFiles(overviews: PackageOverview[], docsDir: string) {
   for (let overview of overviews) {
-    let mdPath = path.join(docsDir, overview.docsPackage, 'index.md')
+    let mdPath = path.join(docsDir, overview.docsPackage, 'overview.md')
     await fs.mkdir(path.dirname(mdPath), { recursive: true })
+    await fs.rm(path.join(docsDir, overview.docsPackage, 'index.md'), { force: true })
 
     let body: string
     if (overview.readmePath) {

@@ -62,6 +62,16 @@ export function createRouter(versions: ServerContext['versions']) {
         return respond.file(request, filePath, params.asset)
       },
       async docs({ request, params }) {
+        let markdownMatch = routes.markdown.match(request.url)
+        if (markdownMatch) {
+          let docFile = docFiles.find((file) => file.urlPath === markdownMatch.params.slug)
+          if (!docFile) {
+            return new Response('Not Found', { status: 404 })
+          }
+
+          return respond.file(request, docFile.path)
+        }
+
         // Docs page
         let docFile = docFiles.find((file) => file.urlPath === params.slug)
         let node: RemixNode
