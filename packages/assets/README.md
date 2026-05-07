@@ -166,7 +166,7 @@ let preloads = await assetServer.getPreloads(['app/assets/entry.tsx', 'app/asset
 //   '/assets/app/assets/entry.tsx',
 //   '/assets/app/assets/search.tsx',
 //   '/assets/app/assets/utils.ts',
-//   '/assets/npm/@remix-run/ui/index.js',
+//   '/assets/npm/remix/ui/index.js',
 //   ...etc
 // ]
 ```

@@ -1,15 +1,15 @@
 import { css } from 'node_modules/@remix-run/ui/src/style/css-mixin.ts'
 import { theme } from '@remix-run/ui/theme'
-import type { DocFile } from './markdown.ts'
+import type { ApiDocFile, ApiTypeKind, DocFile } from './markdown.ts'
 import { routes } from './routes.ts'
-
-export type ApiTypeKind = 'type' | 'interface' | 'class' | 'function'
 
 const TYPE_LABEL: Record<ApiTypeKind, string> = {
   type: 'Types',
   interface: 'Interfaces',
   class: 'Classes',
   function: 'Functions',
+  variable: 'Variables',
+  mixin: 'Mixins',
 }
 
 const TYPE_EYEBROW: Record<ApiTypeKind, string> = {
@@ -17,9 +17,11 @@ const TYPE_EYEBROW: Record<ApiTypeKind, string> = {
   interface: 'Interface',
   class: 'Class',
   function: 'Function',
+  variable: 'Variable',
+  mixin: 'Mixin',
 }
 
-const TYPE_ORDER: ApiTypeKind[] = ['type', 'interface', 'class', 'function']
+const TYPE_ORDER: ApiTypeKind[] = ['type', 'interface', 'class', 'function', 'variable', 'mixin']
 
 export const HOME_PAGE_ID = '__home__'
 export const NOT_FOUND_PAGE_ID = '__not-found__'
@@ -69,31 +71,43 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
   }
   pages[HOME_PAGE_ID] = homePage
 
-  let packageGroups = new Map<string, Map<ApiTypeKind, DocFile[]>>()
+  let packageGroups = new Map<string, Map<ApiTypeKind, ApiDocFile[]>>()
+  let packageOverviews = new Map<string, DocFile>()
   for (let file of docFiles) {
-    if (!packageGroups.has(file.package)) {
-      packageGroups.set(file.package, new Map())
+    if (file.kind === 'package') {
+      packageOverviews.set(file.package, file)
+      continue
     }
-    let typeMap = packageGroups.get(file.package)!
-    let kind = file.type as ApiTypeKind
-    if (!typeMap.has(kind)) typeMap.set(kind, [])
-    typeMap.get(kind)!.push(file)
+
+    let typeMap = getOrSet(packageGroups, file.package, () => new Map())
+    getOrSet(typeMap, file.type, () => []).push(file)
   }
 
-  let sortedPackages = Array.from(packageGroups.keys()).sort((a, b) => {
-    if (a === 'remix' && b.startsWith('remix/')) return -1
-    if (b === 'remix' && a.startsWith('remix/')) return 1
-    if (a.startsWith('remix/') && b.startsWith('remix/')) return a.localeCompare(b)
-    if (a === 'remix' || a.startsWith('remix/')) return -1
-    if (b === 'remix' || b.startsWith('remix/')) return 1
-    return a.localeCompare(b)
-  })
+  let sortedPackages = Array.from(
+    new Set([...packageGroups.keys(), ...packageOverviews.keys()]),
+  ).sort(comparePackages)
 
   for (let pkg of sortedPackages) {
-    let typeMap = packageGroups.get(pkg)!
+    let typeMap = packageGroups.get(pkg)
     let groups: NavGroup[] = []
+    let overview = packageOverviews.get(pkg)
+    if (overview) {
+      let page: PageDefinition = {
+        id: overview.urlPath,
+        description: '',
+        eyebrow: 'Package',
+        navLabel: 'Overview',
+        path: routes.docs.href({ version, slug: overview.urlPath }),
+        sectionId: pkg,
+        title: pkg,
+        docFile: overview,
+      }
+      pages[overview.urlPath] = page
+      groups.push({ id: `${pkg}::overview`, pageIds: [overview.urlPath] })
+    }
+
     for (let kind of TYPE_ORDER) {
-      let files = typeMap.get(kind)
+      let files = typeMap?.get(kind)
       if (!files || files.length === 0) continue
       let groupId = `${pkg}::${kind}`
       let sortedFiles = [...files].sort((a, b) => a.name.localeCompare(b.name))
@@ -144,6 +158,24 @@ export function buildNotFoundPage(slug: string, version?: string): PageDefinitio
 
 export function isPageActive(page: PageDefinition, currentPath: string) {
   return currentPath === page.path
+}
+
+function comparePackages(a: string, b: string): number {
+  if (a === 'remix' && b.startsWith('remix/')) return -1
+  if (b === 'remix' && a.startsWith('remix/')) return 1
+  if (a.startsWith('remix/') && b.startsWith('remix/')) return a.localeCompare(b)
+  if (a === 'remix' || a.startsWith('remix/')) return -1
+  if (b === 'remix' || b.startsWith('remix/')) return 1
+  return a.localeCompare(b)
+}
+
+function getOrSet<key, value>(map: Map<key, value>, key: key, init: () => value): value {
+  let value = map.get(key)
+  if (value === undefined) {
+    value = init()
+    map.set(key, value)
+  }
+  return value
 }
 
 const homePageCss = css({

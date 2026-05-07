@@ -7,6 +7,7 @@ import * as semver from 'semver'
 import { type Router } from 'remix/fetch-router'
 import { createRouter, getDefaultVersions } from './router.tsx'
 import type { ServerContext } from './components.tsx'
+import { discoverMarkdownFiles } from './markdown.ts'
 import { routes } from './routes.ts'
 
 let { values: cliArgs } = util.parseArgs({
@@ -25,6 +26,7 @@ const versions = await getVersionsToBuild()
 console.log('Prerendering versions:\n', JSON.stringify(versions, null, 2))
 
 const docsRouter = createRouter(versions)
+const crawlableUrls = await getCrawlableUrls(versions)
 
 // Copy static assets to the output directory
 await fs.cp(assetsDir, path.join(outputDir, 'assets'), { recursive: true })
@@ -67,6 +69,8 @@ async function spider(router: Router, outputDir: string, urlQueue = new Set(['/'
 }
 
 async function crawl(router: Router, urlPath: string, outputDir: string) {
+  urlPath = stripHash(urlPath)
+
   let response
   try {
     response = await router.fetch(new Request(`http://localhost${urlPath}`))
@@ -78,7 +82,8 @@ async function crawl(router: Router, urlPath: string, outputDir: string) {
     throw error
   }
 
-  let isHtmlFile = response.headers.get('Content-Type')?.includes('text/html')
+  let isMarkdownFile = routes.markdown.match(`http://localhost${urlPath}`) !== null
+  let isHtmlFile = !isMarkdownFile && response.headers.get('Content-Type')?.includes('text/html')
 
   // Always put `index.html` files into directories - this leads to the best
   // support with and without trailing slashes on github pages:
@@ -103,6 +108,9 @@ async function crawl(router: Router, urlPath: string, outputDir: string) {
         .map((link) => link.getAttribute('href'))
         .filter((href) => href && !isAbsoluteUrl(href))
         .map((href) => resolveRelativeLink(href!, urlPath))
+        .map(stripHash)
+        .filter((href) => href !== urlPath)
+        .filter((href) => isCrawlableUrl(href, crawlableUrls))
         .flatMap((href) => {
           let match = routes.docs.match(`http://localhost${href}`)
           return match ? [href, routes.markdown.href(match.params)] : [href]
@@ -115,8 +123,21 @@ async function crawl(router: Router, urlPath: string, outputDir: string) {
   }
 }
 
+function stripHash(urlPath: string): string {
+  return urlPath.split('#', 1)[0] || '/'
+}
+
 function isAbsoluteUrl(href: string): boolean {
   return href.startsWith('http://') || href.startsWith('https://') || href.startsWith('//')
+}
+
+function isCrawlableUrl(urlPath: string, crawlableUrls: Set<string>): boolean {
+  let url = `http://localhost${urlPath}`
+  return (
+    crawlableUrls.has(urlPath) ||
+    routes.assets.match(url) !== null ||
+    routes.home.match(url) !== null
+  )
 }
 
 function resolveRelativeLink(link: string, url: string): string {
@@ -144,4 +165,26 @@ async function getVersionsToBuild(): Promise<ServerContext['versions']> {
   return remixVersions.length > 0
     ? remixVersions.map((tag, i) => ({ version: tag, crawl: i === 0 }))
     : getDefaultVersions()
+}
+
+async function getCrawlableUrls(versions: ServerContext['versions']): Promise<Set<string>> {
+  let { docFiles } = await discoverMarkdownFiles(path.join(process.cwd(), 'build', 'md'))
+  let urls = new Set<string>(['/', '/api.json'])
+
+  for (let file of docFiles) {
+    urls.add(routes.docs.href({ slug: file.urlPath }))
+    urls.add(routes.markdown.href({ slug: file.urlPath }))
+  }
+
+  for (let version of versions) {
+    urls.add(`/${version.version}/`)
+    urls.add(`/${version.version}/api.json`)
+
+    for (let file of docFiles) {
+      urls.add(routes.docs.href({ version: version.version, slug: file.urlPath }))
+      urls.add(routes.markdown.href({ version: version.version, slug: file.urlPath }))
+    }
+  }
+
+  return urls
 }

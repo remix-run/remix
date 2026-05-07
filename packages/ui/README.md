@@ -169,9 +169,9 @@ Render shared glyphs separately from the theme styles:
 
 ```tsx
 import type { RemixNode } from 'remix/ui'
-import { Button } from '@remix-run/ui/button'
-import { Glyph } from '@remix-run/ui/glyph'
-import { RMX_01, RMX_01_GLYPHS } from '@remix-run/ui/theme'
+import { Button } from 'remix/ui/button'
+import { Glyph } from 'remix/ui/glyph'
+import { RMX_01, RMX_01_GLYPHS } from 'remix/ui/theme'
 
 function Layout(props: { children: RemixNode }) {
   return (

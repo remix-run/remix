@@ -30,7 +30,7 @@
     "docs": "node src/generate/index.ts",
     "docs:debug": "DEBUG=1 node src/generate/index.ts",
     "prerender": "tsx src/server/prerender.ts",
-    "prerender:serve": "npx http-server -p 3000 build/site",
+    "prerender:serve": "npx http-server -p 44100 build/site",
     "serve": "tsx src/server/index.ts",
     "typecheck": "tsc --noEmit"
   }
