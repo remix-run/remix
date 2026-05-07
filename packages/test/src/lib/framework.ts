@@ -80,9 +80,20 @@ function registerDescribe(
   }
 }
 
+// We implement this standalone so we can leverage multiple signatures through
+// typedoc, but we need to do the `const describe = Object.assign()` thing below to
+// get the modifiers onto the method in a typescript-aware way.
+function describeImpl(name: string, fn: () => void): void
+function describeImpl(name: string, meta: SuiteMeta, fn: () => void): void
+function describeImpl(name: string, metaOrFn: SuiteMeta | (() => void), fn?: () => void): void {
+  let meta = typeof metaOrFn === 'function' ? {} : metaOrFn
+  let suiteFn = typeof metaOrFn === 'function' ? metaOrFn : fn!
+  registerDescribe(name, suiteFn, meta)
+}
+
 /**
- * Groups related tests into a named suite. Suites can be nested snd will be displayed
- * as such or joined with ` > ` in reporter output. Lifecycle hooks registered inside
+ * Groups related tests into a named suite. Suites can be nested and will be displayed
+ * as such in reporter output. Lifecycle hooks registered inside
  * a `describe` block apply only to tests within that block.
  *
  * @example
@@ -96,26 +107,20 @@ function registerDescribe(
  * describe.todo('planned suite')
  *
  * @param name - The suite name shown in reporter output.
+ * @param meta - Suite metadata such as `skip` or `only`.
  * @param fn - A function that registers the tests and lifecycle hooks in this suite.
  */
-export const describe = Object.assign(
-  (name: string, metaOrFn: SuiteMeta | (() => void), fn?: () => void) => {
-    let meta = typeof metaOrFn === 'function' ? {} : metaOrFn
-    let suiteFn = typeof metaOrFn === 'function' ? metaOrFn : fn!
-    registerDescribe(name, suiteFn, meta)
+export const describe = Object.assign(describeImpl, {
+  skip: (name: string, fn: () => void) => registerDescribe(name, fn, { skip: true }),
+  only: (name: string, fn: () => void) => registerDescribe(name, fn, { only: true }),
+  todo: (name: string) => {
+    let fullName = currentSuite ? `${currentSuite.name} > ${name}` : name
+    if (rootSuites.some((s) => s.name === fullName)) {
+      throw new Error(`Duplicate suite name: "${fullName}"`)
+    }
+    rootSuites.push({ name: fullName, tests: [], todo: true })
   },
-  {
-    skip: (name: string, fn: () => void) => registerDescribe(name, fn, { skip: true }),
-    only: (name: string, fn: () => void) => registerDescribe(name, fn, { only: true }),
-    todo: (name: string) => {
-      let fullName = currentSuite ? `${currentSuite.name} > ${name}` : name
-      if (rootSuites.some((s) => s.name === fullName)) {
-        throw new Error(`Duplicate suite name: "${fullName}"`)
-      }
-      rootSuites.push({ name: fullName, tests: [], todo: true })
-    },
-  },
-)
+})
 
 type SuiteMeta = { skip?: boolean; only?: boolean }
 type TestMeta = { skip?: boolean; only?: boolean }
@@ -127,6 +132,17 @@ function registerIt(name: string, fn: TestFn, flags?: { only?: boolean; skip?: b
     throw new Error(`Duplicate test name: "${name}" in suite "${suite.name || 'Global'}"`)
   }
   suite.tests.push({ name, fn, suite, ...flags })
+}
+
+// We implement this standalone so we can leverage multiple signatures through
+// typedoc, but we need to do the `const it = Object.assign()` thing below to
+// get the modifiers onto the method in a typescript-aware way.
+function itImpl(name: string, fn: TestFn): void
+function itImpl(name: string, meta: TestMeta, fn: TestFn): void
+function itImpl(name: string, metaOrFn: TestMeta | TestFn, fn?: TestFn): void {
+  let meta = typeof metaOrFn === 'function' ? {} : metaOrFn
+  let testFn = typeof metaOrFn === 'function' ? metaOrFn : fn!
+  registerIt(name, testFn, meta)
 }
 
 /**
@@ -145,26 +161,20 @@ function registerIt(name: string, fn: TestFn, flags?: { only?: boolean; skip?: b
  * it.todo('coming soon')
  *
  * @param name - The test name shown in reporter output.
+ * @param meta - Test metadata such as `skip` or `only`.
  * @param fn - The test body, receiving a {@link TestContext} as its first argument.
  */
-export const it = Object.assign(
-  (name: string, metaOrFn: TestMeta | TestFn, fn?: TestFn) => {
-    let meta = typeof metaOrFn === 'function' ? {} : metaOrFn
-    let testFn = typeof metaOrFn === 'function' ? metaOrFn : fn!
-    registerIt(name, testFn, meta)
+export const it = Object.assign(itImpl, {
+  skip: (name: string, fn?: TestFn) => registerIt(name, fn ?? (() => {}), { skip: true }),
+  only: (name: string, fn: TestFn) => registerIt(name, fn, { only: true }),
+  todo: (name: string) => {
+    let suite = currentSuite ?? getImplicitRootSuite()
+    if (suite.tests.some((t) => t.name === name)) {
+      throw new Error(`Duplicate test name: "${name}" in suite "${suite.name || 'Global'}"`)
+    }
+    suite.tests.push({ name, fn: () => {}, suite, todo: true })
   },
-  {
-    skip: (name: string, fn?: TestFn) => registerIt(name, fn ?? (() => {}), { skip: true }),
-    only: (name: string, fn: TestFn) => registerIt(name, fn, { only: true }),
-    todo: (name: string) => {
-      let suite = currentSuite ?? getImplicitRootSuite()
-      if (suite.tests.some((t) => t.name === name)) {
-        throw new Error(`Duplicate test name: "${name}" in suite "${suite.name || 'Global'}"`)
-      }
-      suite.tests.push({ name, fn: () => {}, suite, todo: true })
-    },
-  },
-)
+})
 
 /** Alias for {@link describe}. */
 export const suite = describe

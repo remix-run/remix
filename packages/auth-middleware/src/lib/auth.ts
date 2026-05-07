@@ -51,11 +51,22 @@ export type AuthState<identity = unknown> = GoodAuth<identity> | BadAuth
  */
 export const Auth = createContextKey<AuthState>()
 
+/**
+ * Adds the {@link Auth} context key — typed as the full {@link AuthState}
+ * union — onto an existing router `RequestContext`. Use this on handlers
+ * mounted under {@link auth} where the auth state may be `'good'` or `'bad'`.
+ */
 export type WithAuth<context extends RequestContext<any, any>, identity = unknown> = MergeContext<
   context,
   [readonly [typeof Auth, AuthState<identity>]]
 >
 
+/**
+ * Adds the {@link Auth} context key — typed as a {@link GoodAuth} only —
+ * onto an existing router `RequestContext`. Use this on handlers mounted
+ * under `requireAuth` where reading the context is guaranteed to return
+ * a successful auth state.
+ */
 export type WithRequiredAuth<
   context extends RequestContext<any, any>,
   identity = unknown,
