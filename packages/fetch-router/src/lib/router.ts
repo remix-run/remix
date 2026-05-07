@@ -21,25 +21,18 @@ type RouteContext<context extends AnyContext, pattern extends string> = ContextW
   Params<pattern>
 >
 
-type RouteTarget<method extends RequestMethod | 'ANY', pattern extends string> =
-  | pattern
-  | RoutePattern<pattern>
-  | Route<method | 'ANY', pattern>
-
-type MapRouteTarget<method extends RequestMethod | 'ANY', pattern extends string> =
-  | pattern
-  | RoutePattern<pattern>
-  | Route<method, pattern>
-
-type SingleRouteTarget = string | RoutePattern<string> | Route<RequestMethod | 'ANY', string>
+type RouteTarget<
+  pattern extends string = string,
+  method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
+> = pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>
 
 type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
   <pattern extends string>(
-    route: RouteTarget<method, pattern>,
+    route: RouteTarget<pattern, method>,
     handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
   ): void
   <pattern extends string, actionContext extends AnyContext = context>(
-    route: RouteTarget<method, pattern>,
+    route: RouteTarget<pattern, method>,
     action: Action<pattern, actionContext>,
   ): void
 }
@@ -71,7 +64,7 @@ type NormalizedAction = {
   middleware: AnyMiddleware[] | undefined
 }
 
-type MapTarget = SingleRouteTarget | RouteMap
+type MapTarget = RouteTarget | RouteMap
 
 /**
  * Options for creating a router.
@@ -121,7 +114,7 @@ export interface Router<context extends AnyContext = RequestContext> {
    */
   route<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
-    pattern: RouteTarget<method, pattern>,
+    pattern: RouteTarget<pattern, method>,
     handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
   ): void
   route<
@@ -130,22 +123,18 @@ export interface Router<context extends AnyContext = RequestContext> {
     actionContext extends AnyContext = context,
   >(
     method: method,
-    pattern: RouteTarget<method, pattern>,
+    pattern: RouteTarget<pattern, method>,
     action: Action<pattern, actionContext>,
   ): void
   /**
    * Maps either a single route target to an action or a route map to a controller.
    */
-  map<method extends RequestMethod | 'ANY', pattern extends string>(
-    target: MapRouteTarget<method, pattern>,
+  map<pattern extends string>(
+    target: RouteTarget<pattern>,
     handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
   ): void
-  map<
-    method extends RequestMethod | 'ANY',
-    pattern extends string,
-    actionContext extends AnyContext = context,
-  >(
-    target: MapRouteTarget<method, pattern>,
+  map<pattern extends string, actionContext extends AnyContext = context>(
+    target: RouteTarget<pattern>,
     action: Action<pattern, actionContext>,
   ): void
   map<target extends RouteMap, controllerContext extends AnyContext = context>(
@@ -259,11 +248,11 @@ function cloneRequest(input: Request): Request {
   return input.clone() as Request
 }
 
-function isSingleRouteTarget(target: MapTarget): target is SingleRouteTarget {
+function isRouteTarget(target: MapTarget): target is RouteTarget {
   return typeof target === 'string' || target instanceof RoutePattern || target instanceof Route
 }
 
-function getRoutePattern(target: SingleRouteTarget): RoutePattern<string> {
+function getRoutePattern(target: RouteTarget): RoutePattern<string> {
   if (target instanceof Route) {
     return target.pattern
   }
@@ -271,7 +260,7 @@ function getRoutePattern(target: SingleRouteTarget): RoutePattern<string> {
   return typeof target === 'string' ? new RoutePattern(target) : target
 }
 
-function getMappedRouteMethod(target: SingleRouteTarget): RequestMethod | 'ANY' {
+function getMappedRouteMethod(target: RouteTarget): RequestMethod | 'ANY' {
   return target instanceof Route ? target.method : 'ANY'
 }
 
@@ -328,7 +317,7 @@ export function createRouter<
 
   function registerRoute(
     method: RequestMethod | 'ANY',
-    route: SingleRouteTarget,
+    route: RouteTarget,
     normalizedAction: NormalizedAction,
   ): void {
     let pattern = getRoutePattern(route)
@@ -344,7 +333,7 @@ export function createRouter<
 
   function addRoute<method extends RequestMethod | 'ANY', pattern extends string>(
     method: method,
-    route: RouteTarget<method, pattern>,
+    route: RouteTarget<pattern, method>,
     handler:
       | RequestHandler<Params<pattern>, RouteContext<RouterContext, pattern>>
       | Action<pattern, AnyContext>,
@@ -352,12 +341,12 @@ export function createRouter<
     registerRoute(method, route, normalizeAction(handler))
   }
 
-  function mapSingleRoute(target: SingleRouteTarget, handler: unknown): void {
+  function mapSingleRoute(target: RouteTarget, handler: unknown): void {
     registerRoute(getMappedRouteMethod(target), target, normalizeAction(handler))
   }
 
   function mapRoutes(target: MapTarget, handler: unknown): void {
-    if (isSingleRouteTarget(target)) {
+    if (isRouteTarget(target)) {
       mapSingleRoute(target, handler)
       return
     }
@@ -406,7 +395,7 @@ export function createRouter<
     method: method,
   ): VerbMethod<method, RouterContext> {
     return (<pattern extends string>(
-      route: RouteTarget<method, pattern>,
+      route: RouteTarget<pattern, method>,
       handler:
         | RequestHandler<Params<pattern>, RouteContext<RouterContext, pattern>>
         | Action<pattern, AnyContext>,
@@ -423,7 +412,7 @@ export function createRouter<
     },
     route<method extends RequestMethod | 'ANY', pattern extends string>(
       method: method,
-      route: RouteTarget<method, pattern>,
+      route: RouteTarget<pattern, method>,
       handler:
         | RequestHandler<Params<pattern>, RouteContext<RouterContext, pattern>>
         | Action<pattern, AnyContext>,
