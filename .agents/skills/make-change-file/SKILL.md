@@ -23,8 +23,19 @@ Write release notes that match this repository's `.changes` conventions. Use it 
 - Use `packages/<package>/.changes/[major|minor|patch].short-description.md`.
 - Keep the slug short, specific, and stable.
 - Reuse existing deterministic names when the repo already has a pattern for that class of note.
-- For Remix export-only changes, update `packages/remix/.changes/minor.remix.update-exports.md` in place.
 - For brand-new package releases, prefer `minor.initial-release.md`.
+- For Remix export-only changes, update `packages/remix/.changes/minor.remix.update-exports.md` in place.
+- When `packages/remix/.changes` mirrors a change file from a re-exported package, name it `packages/remix/.changes/[major|minor|patch].<package>.short-description.md`, where `<package>` omits the `@remix-run/` scope.
+
+  ```text
+  packages/
+  ├── route-pattern/
+  │   └── .changes/
+  │       └── patch.no-partial-matches-for-dynamic-pathnames.md
+  └── remix/
+      └── .changes/
+          └── patch.route-pattern.no-partial-matches-for-dynamic-pathnames.md
+  ```
 
 ## Bump Rules
 
@@ -40,7 +51,10 @@ Write release notes that match this repository's `.changes` conventions. Use it 
 - Document user-visible behavior, public API changes, exports, migrations, or upgrade work.
 - Do not write release notes for internal refactors unless they surface as real API or behavior changes.
 - Prefer a small number of logically grouped notes over many tiny files.
-- If one package changes internally and another package re-exports the new surface, add notes for both when users can consume the change from both package entrypoints.
+- Add a manual change file to the package that owns the changed API, behavior, or implementation.
+- If another package directly re-exports a newly added, removed, renamed, or otherwise changed public API surface, add a change file for the re-exporting package when users can consume that API through the re-exported entrypoint.
+- Do not add manual change files recursively for packages that only observe a change through dependency updates. The release scripts automatically include transitive dependents in the release set and generate dependency bump changelog entries; see `scripts/utils/changes.ts` (`parseAllChangeFiles` and `generateChangelogContent`).
+- For bug fixes in an underlying package, usually add a change file only to the package that owns the fix. Add a re-export package note only when the re-exporting package's own changelog needs to call out the behavior directly, not merely because the fixed dependency is reachable from that package.
 - Do not manually hard-wrap prose in `.changes/*.md` files. Keep each paragraph or bullet on a single source line and let rendered changelogs wrap naturally.
 - Use flat bullets only when they add clarity. Short paragraphs are usually better.
 
