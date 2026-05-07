@@ -1,4 +1,4 @@
-import type { BuildAction } from 'remix/fetch-router'
+import type { Action } from 'remix/fetch-router'
 import type { Handle } from 'remix/ui'
 
 import {
@@ -28,7 +28,7 @@ export const rootReloadClientEntriesAction = {
       { request: context.request, router: context.router },
     )
   },
-} satisfies BuildAction<typeof routes.rootReloadClientEntries>
+} satisfies Action<typeof routes.rootReloadClientEntries>
 
 type RootReloadClientEntriesPageProps = {
   includeRemoved: boolean

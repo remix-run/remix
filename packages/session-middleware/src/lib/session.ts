@@ -14,7 +14,7 @@ type SetSessionContextTransform = readonly [readonly [typeof Session, Session]]
 export function session(
   sessionCookie: Cookie,
   sessionStorage: SessionStorage,
-): Middleware<any, any, SetSessionContextTransform> {
+): Middleware<any, SetSessionContextTransform> {
   if (!sessionCookie.signed) {
     throw new Error('Session cookie must be signed')
   }

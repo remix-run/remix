@@ -7,9 +7,6 @@ import { type ContextParams, RequestContext, type WithParams } from './request-c
 import type { RequestMethod } from './request-methods.ts'
 import {
   type Action,
-  type ActionInput,
-  type ActionObjectWithMiddleware,
-  type ActionObjectWithoutMiddleware,
   type Controller,
   type ControllerShape,
   type ControllerWithMiddleware,
@@ -44,24 +41,14 @@ type RouteMethod<context extends AnyContext> = {
     pattern: RouteTarget<method, pattern>,
     handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
   ): void
-  <method extends RequestMethod | 'ANY', pattern extends string>(
-    method: method,
-    pattern: RouteTarget<method, pattern>,
-    action: ActionObjectWithoutMiddleware<Params<pattern>, RouteContext<context, pattern>>,
-  ): void
   <
     method extends RequestMethod | 'ANY',
     pattern extends string,
-    middleware extends readonly AnyMiddleware[],
+    middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
   >(
     method: method,
     pattern: RouteTarget<method, pattern>,
-    action: ActionObjectWithMiddleware<Params<pattern>, RouteContext<context, pattern>, middleware>,
-  ): void
-  <method extends RequestMethod | 'ANY', pattern extends string>(
-    method: method,
-    pattern: RouteTarget<method, pattern>,
-    action: Action<pattern, context>,
+    action: Action<pattern, context, middleware>,
   ): void
 }
 
@@ -70,21 +57,13 @@ type ActionMapping<context extends AnyContext> = {
     target: MapRouteTarget<method, pattern>,
     handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
   ): void
-  <method extends RequestMethod | 'ANY', pattern extends string>(
-    target: MapRouteTarget<method, pattern>,
-    action: ActionObjectWithoutMiddleware<Params<pattern>, RouteContext<context, pattern>>,
-  ): void
   <
     method extends RequestMethod | 'ANY',
     pattern extends string,
-    middleware extends readonly AnyMiddleware[],
+    middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
   >(
     target: MapRouteTarget<method, pattern>,
-    action: ActionObjectWithMiddleware<Params<pattern>, RouteContext<context, pattern>, middleware>,
-  ): void
-  <method extends RequestMethod | 'ANY', pattern extends string>(
-    target: MapRouteTarget<method, pattern>,
-    action: Action<pattern, context>,
+    action: Action<pattern, context, middleware>,
   ): void
 }
 
@@ -107,17 +86,9 @@ type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
     route: RouteTarget<method, pattern>,
     handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
   ): void
-  <pattern extends string>(
+  <pattern extends string, middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[]>(
     route: RouteTarget<method, pattern>,
-    action: ActionObjectWithoutMiddleware<Params<pattern>, RouteContext<context, pattern>>,
-  ): void
-  <pattern extends string, middleware extends readonly AnyMiddleware[]>(
-    route: RouteTarget<method, pattern>,
-    action: ActionObjectWithMiddleware<Params<pattern>, RouteContext<context, pattern>, middleware>,
-  ): void
-  <pattern extends string>(
-    route: RouteTarget<method, pattern>,
-    action: Action<pattern, context>,
+    action: Action<pattern, context, middleware>,
   ): void
 }
 
@@ -329,6 +300,8 @@ export function createRouter<
   context extends AnyContext = RequestContext,
   const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
 >(options?: RouterOptions<context, middleware>): Router<ApplyMiddlewareTuple<context, middleware>> {
+  type RouterContext = ApplyMiddlewareTuple<context, middleware>
+
   let defaultHandler = (options?.defaultHandler ?? noMatchHandler) as RequestHandler<any, any>
   let matcher = options?.matcher ?? createMatcher<RouteEntry>()
   let routerMiddleware = normalizeMiddleware(options?.middleware)
@@ -379,10 +352,14 @@ export function createRouter<
     matcher.add(pattern, entry)
   }
 
-  function addRoute<method extends RequestMethod | 'ANY', pattern extends string>(
+  function addRoute<
+    method extends RequestMethod | 'ANY',
+    pattern extends string,
+    actionMiddleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+  >(
     method: method,
     route: RouteTarget<method, pattern>,
-    handler: Action<pattern, ApplyMiddlewareTuple<context, middleware>>,
+    handler: Action<pattern, RouterContext, actionMiddleware>,
   ): void {
     registerRoute(method, route, normalizeAction(handler))
   }
@@ -428,9 +405,7 @@ export function createRouter<
         }
 
         let action = controller.actions[key]
-        let normalizedAction = normalizeAction(
-          action as Action<any, ApplyMiddlewareTuple<context, middleware>>,
-        )
+        let normalizedAction = normalizeAction(action as Action<any, RouterContext>)
         registerRoute(route.method, route.pattern, {
           handler: normalizedAction.handler,
           middleware: mergeMiddleware(controllerMiddleware, normalizedAction.middleware),
@@ -438,8 +413,6 @@ export function createRouter<
       }
     }
   }
-
-  type RouterContext = ApplyMiddlewareTuple<context, middleware>
 
   function createVerbMethod<method extends RequestMethod>(
     method: method,
@@ -449,9 +422,9 @@ export function createRouter<
       actionMiddleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
     >(
       route: RouteTarget<method, pattern>,
-      handler: ActionInput<Params<pattern>, RouteContext<RouterContext, pattern>, actionMiddleware>,
+      handler: Action<pattern, RouterContext, actionMiddleware>,
     ): void => {
-      addRoute(method, route, handler as Action<pattern, RouterContext>)
+      addRoute(method, route, handler)
     }) as VerbMethod<method, RouterContext>
   }
 
@@ -468,9 +441,9 @@ export function createRouter<
     >(
       method: method,
       route: RouteTarget<method, pattern>,
-      handler: ActionInput<Params<pattern>, RouteContext<RouterContext, pattern>, actionMiddleware>,
+      handler: Action<pattern, RouterContext, actionMiddleware>,
     ): void {
-      addRoute(method, route, handler as Action<pattern, RouterContext>)
+      addRoute(method, route, handler)
     },
     map: mapRoutes,
     get: createVerbMethod('GET'),

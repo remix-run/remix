@@ -5,31 +5,14 @@ import type { AnyMiddleware, ApplyMiddlewareTuple } from './middleware.ts'
 import type { RequestContext } from './request-context.ts'
 import type { WithParams } from './request-context.ts'
 
-export type ActionObjectWithoutMiddleware<
-  params extends Record<string, any>,
-  context extends RequestContext<any, any>,
-> = {
-  middleware?: undefined
-  handler: RequestHandler<params, context>
-}
+type ActionRoute = string | RoutePattern | Route
 
-export type ActionObjectWithMiddleware<
-  params extends Record<string, any>,
-  context extends RequestContext<any, any>,
-  middleware extends readonly AnyMiddleware[],
-> = {
-  middleware: readonly [...middleware]
-  handler: RequestHandler<params, ApplyMiddlewareTuple<context, middleware>>
-}
-
-export type ActionInput<
-  params extends Record<string, any>,
-  context extends RequestContext<any, any>,
-  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
-> =
-  | RequestHandler<params, context>
-  | ActionObjectWithoutMiddleware<params, context>
-  | ActionObjectWithMiddleware<params, context, middleware>
+// prettier-ignore
+type ActionPattern<route extends ActionRoute> =
+  route extends string ? route :
+  route extends RoutePattern<infer pattern extends string> ? pattern :
+  route extends Route<any, infer pattern extends string> ? pattern :
+  never
 
 export type ControllerWithoutMiddleware<
   routes extends RouteMap,
@@ -88,22 +71,18 @@ export type ControllerInput<
  * Actions can be plain handler functions or action objects with optional inline middleware.
  */
 export type Action<
-  pattern extends string,
+  route extends ActionRoute,
   context extends RequestContext<any, any> = RequestContext,
-> = ActionInput<Params<pattern>, WithParams<context, Params<pattern>>, readonly AnyMiddleware[]>
-
-/**
- * Builds an {@link Action} type from a string pattern, {@link RoutePattern}, or {@link Route}.
- */
-// prettier-ignore
-export type BuildAction<
-  route extends string | RoutePattern | Route,
-  context extends RequestContext<any, any> = RequestContext,
+  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
 > =
-  route extends string ? Action<route, context> :
-  route extends RoutePattern<infer pattern> ? Action<pattern, context> :
-  route extends Route<infer _, infer pattern> ? Action<pattern, context> :
-  never
+  | RequestHandler<Params<ActionPattern<route>>, WithParams<context, Params<ActionPattern<route>>>>
+  | {
+      middleware?: readonly [...middleware] | undefined
+      handler: RequestHandler<
+        Params<ActionPattern<route>>,
+        ApplyMiddlewareTuple<WithParams<context, Params<ActionPattern<route>>>, middleware>
+      >
+    }
 
 /**
  * A request handler function that returns some kind of response.
