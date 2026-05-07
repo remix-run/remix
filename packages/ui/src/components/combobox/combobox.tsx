@@ -967,11 +967,7 @@ const combobox = {
 } as const
 
 export function onComboboxChange(handler: ComboboxChangeHandler, captureBoolean?: boolean) {
-  return on<HTMLElement, typeof COMBOBOX_CHANGE_EVENT>(
-    COMBOBOX_CHANGE_EVENT,
-    handler,
-    captureBoolean,
-  )
+  return on<HTMLElement>(COMBOBOX_CHANGE_EVENT, handler, captureBoolean)
 }
 
 export function Combobox(handle: Handle<ComboboxProps>) {
