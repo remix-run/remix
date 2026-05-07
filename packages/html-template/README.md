@@ -94,7 +94,7 @@ let page = html`<div>${showError ? html`<div class="error">${errorMessage}</div>
 
 ## Related Packages
 
-- [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - HTTP router that works great with html-template
+- [`remix/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - HTTP router that works great with html-template
 
 ## License
 

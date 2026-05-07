@@ -162,9 +162,9 @@ let sessionStorage = createMemorySessionStorage()
 
 ## Related Packages
 
-- [`@remix-run/cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie) - Cookie parsing and serialization
-- [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router with built-in session middleware
-- [`@remix-run/session-storage-memcache`](https://github.com/remix-run/remix/tree/main/packages/session-storage-memcache) - Memcache-backed session storage
+- [`remix/cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie) - Cookie parsing and serialization
+- [`remix/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router with built-in session middleware
+- [`remix/session-storage-memcache`](https://github.com/remix-run/remix/tree/main/packages/session-storage-memcache) - Memcache-backed session storage
 
 ## License
 

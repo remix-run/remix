@@ -33,7 +33,7 @@ router.get('/', () => new Response('Home'))
 
 ### With Cache Control
 
-Internally, the `staticFiles()` middleware uses the [`createFileResponse()` helper from `@remix-run/response`](https://github.com/remix-run/remix/tree/main/packages/response/README.md#file-responses) to send files with full HTTP semantics. This means it also accepts the same options as the `createFileResponse()` helper.
+Internally, the `staticFiles()` middleware uses the [`createFileResponse()` helper from `remix/response`](https://github.com/remix-run/remix/tree/main/packages/response/README.md#file-responses) to send files with full HTTP semantics. This means it also accepts the same options as the `createFileResponse()` helper.
 
 ```ts
 let router = createRouter({

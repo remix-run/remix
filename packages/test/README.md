@@ -209,11 +209,11 @@ suite('My Test Suite', () => {
 
 ### Programmatic runner
 
-`@remix-run/test/cli` exports `runRemixTest()` for tools that want to run the test runner without
+`remix/test/cli` exports `runRemixTest()` for tools that want to run the test runner without
 exiting the current process:
 
 ```ts
-import { runRemixTest } from '@remix-run/test/cli'
+import { runRemixTest } from 'remix/test/cli'
 
 let exitCode = await runRemixTest({
   argv: ['--type', 'server'],
