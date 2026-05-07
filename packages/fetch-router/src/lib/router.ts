@@ -33,47 +33,6 @@ type MapRouteTarget<method extends RequestMethod | 'ANY', pattern extends string
 
 type SingleRouteTarget = string | RoutePattern<string> | Route<RequestMethod | 'ANY', string>
 
-type RouteMethod<context extends AnyContext> = {
-  <method extends RequestMethod | 'ANY', pattern extends string>(
-    method: method,
-    pattern: RouteTarget<method, pattern>,
-    handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
-  ): void
-  <
-    method extends RequestMethod | 'ANY',
-    pattern extends string,
-    actionContext extends AnyContext = context,
-  >(
-    method: method,
-    pattern: RouteTarget<method, pattern>,
-    action: Action<pattern, actionContext>,
-  ): void
-}
-
-type ActionMapping<context extends AnyContext> = {
-  <method extends RequestMethod | 'ANY', pattern extends string>(
-    target: MapRouteTarget<method, pattern>,
-    handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
-  ): void
-  <
-    method extends RequestMethod | 'ANY',
-    pattern extends string,
-    actionContext extends AnyContext = context,
-  >(
-    target: MapRouteTarget<method, pattern>,
-    action: Action<pattern, actionContext>,
-  ): void
-}
-
-type ControllerMapping<context extends AnyContext> = {
-  <target extends RouteMap, controllerContext extends AnyContext = context>(
-    target: target,
-    controller: Controller<target, controllerContext>,
-  ): void
-}
-
-type MapMethod<context extends AnyContext> = ActionMapping<context> & ControllerMapping<context>
-
 type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
   <pattern extends string>(
     route: RouteTarget<method, pattern>,
@@ -160,11 +119,39 @@ export interface Router<context extends AnyContext = RequestContext> {
    *
    * Accepts either a plain request handler or an action object with optional inline middleware.
    */
-  route: RouteMethod<context>
+  route<method extends RequestMethod | 'ANY', pattern extends string>(
+    method: method,
+    pattern: RouteTarget<method, pattern>,
+    handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
+  ): void
+  route<
+    method extends RequestMethod | 'ANY',
+    pattern extends string,
+    actionContext extends AnyContext = context,
+  >(
+    method: method,
+    pattern: RouteTarget<method, pattern>,
+    action: Action<pattern, actionContext>,
+  ): void
   /**
    * Maps either a single route target to an action or a route map to a controller.
    */
-  map: MapMethod<context>
+  map<method extends RequestMethod | 'ANY', pattern extends string>(
+    target: MapRouteTarget<method, pattern>,
+    handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
+  ): void
+  map<
+    method extends RequestMethod | 'ANY',
+    pattern extends string,
+    actionContext extends AnyContext = context,
+  >(
+    target: MapRouteTarget<method, pattern>,
+    action: Action<pattern, actionContext>,
+  ): void
+  map<target extends RouteMap, controllerContext extends AnyContext = context>(
+    target: target,
+    controller: Controller<target, controllerContext>,
+  ): void
   /**
    * Shorthand for registering a `GET` route.
    */
