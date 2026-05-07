@@ -35,8 +35,8 @@ type ActionPattern<route extends ActionRoute> =
  * An individual route action.
  *
  * Actions are object-form route handlers with optional inline middleware.
- * Most app code should use {@link createAction}; use {@link RouteHandler}
- * when a value may be either a handler function or an action object.
+ * Most app code should use {@link createAction}; use this type directly when you need
+ * to describe an action for an explicit RequestContext type.
  */
 export interface Action<
   route extends ActionRoute,
@@ -92,7 +92,7 @@ export function isAction(obj: unknown): obj is Action<any, any> {
  * Controllers let you store related route handlers together while preserving the params
  * and request-context contract for each route handler. Most app code should use
  * {@link createController}; use this type directly when you need to describe a
- * controller for an explicit request-context type.
+ * controller for an explicit RequestContext type.
  */
 export type Controller<
   routes extends RouteMap,

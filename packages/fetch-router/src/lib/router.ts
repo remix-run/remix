@@ -7,8 +7,8 @@ import { RequestContext, type ContextWithParams } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import {
   type RequestHandler,
+  type Action,
   type Controller,
-  type RouteHandler,
   isRequestHandler,
   isAction,
   isController,
@@ -33,7 +33,7 @@ type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
   ): void
   <pattern extends string, actionContext extends AnyContext = context>(
     route: RouteTarget<pattern, method>,
-    action: RouteHandler<RouteTarget<pattern, method>, actionContext>,
+    action: Action<RouteTarget<pattern, method>, actionContext>,
   ): void
 }
 
@@ -121,7 +121,7 @@ export interface Router<context extends AnyContext = RequestContext> {
   >(
     method: method,
     pattern: RouteTarget<pattern, method>,
-    action: RouteHandler<RouteTarget<pattern, method>, actionContext>,
+    action: Action<RouteTarget<pattern, method>, actionContext>,
   ): void
   /**
    * Maps either a single route target to an action or a route map to a controller.
@@ -132,7 +132,7 @@ export interface Router<context extends AnyContext = RequestContext> {
   ): void
   map<pattern extends string, actionContext extends AnyContext = context>(
     target: RouteTarget<pattern>,
-    action: RouteHandler<RouteTarget<pattern>, actionContext>,
+    action: Action<RouteTarget<pattern>, actionContext>,
   ): void
   map<target extends RouteMap, controllerContext extends AnyContext = context>(
     target: target,
@@ -279,7 +279,7 @@ export function createRouter<
     route: RouteTarget<pattern, method>,
     handler:
       | RequestHandler<RouteContext<RouterContext, pattern>>
-      | RouteHandler<RouteTarget<pattern, method>, AnyContext>,
+      | Action<RouteTarget<pattern, method>, AnyContext>,
   ): void {
     registerRoute(method, route, normalizeRouteHandler(handler))
   }
@@ -356,7 +356,7 @@ export function createRouter<
       route: RouteTarget<pattern, method>,
       handler:
         | RequestHandler<RouteContext<RouterContext, pattern>>
-        | RouteHandler<RouteTarget<pattern, method>, AnyContext>,
+        | Action<RouteTarget<pattern, method>, AnyContext>,
     ): void => {
       addRoute(method, route, handler)
     }) as VerbMethod<method, RouterContext>
@@ -380,7 +380,7 @@ export function createRouter<
       route: RouteTarget<pattern, method>,
       handler:
         | RequestHandler<RouteContext<RouterContext, pattern>>
-        | RouteHandler<RouteTarget<pattern, method>, AnyContext>,
+        | Action<RouteTarget<pattern, method>, AnyContext>,
     ): void {
       addRoute(method, route, handler)
     },
