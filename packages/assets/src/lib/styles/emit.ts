@@ -37,7 +37,7 @@ export async function emitResolvedStyle(
     getServedFileUrl?(
       identityPath: string,
       options: {
-        transform: string | null
+        transform: readonly string[] | null
       },
     ): Promise<string>
     getServedUrl(identityPath: string): Promise<string>
@@ -86,7 +86,7 @@ async function rewriteDependencies(
     getServedFileUrl?(
       identityPath: string,
       options: {
-        transform: string | null
+        transform: readonly string[] | null
       },
     ): Promise<string>
   },
@@ -112,8 +112,6 @@ async function rewriteDependencies(
               }),
               dependency.suffix,
             )
-    // Ensure double quotes used in transform queries don't break the quoted CSS URL output.
-    replacement = replacement.replaceAll('"', '%22')
     let start = resolvedStyle.rawCode.indexOf(dependency.placeholder)
     if (start < 0) {
       throw createAssetServerCompilationError(
@@ -151,7 +149,7 @@ async function getServedFileUrl(
     getServedFileUrl?(
       identityPath: string,
       options: {
-        transform: string | null
+        transform: readonly string[] | null
       },
     ): Promise<string>
     getServedUrl(identityPath: string): Promise<string>
@@ -159,7 +157,7 @@ async function getServedFileUrl(
   importerPath: string,
   identityPath: string,
   request: {
-    transform: string | null
+    transform: readonly string[] | null
   },
 ): Promise<string> {
   if (!options.getServedFileUrl) {
@@ -177,10 +175,16 @@ async function getServedFileUrl(
       error.code === 'INVALID_TRANSFORM_QUERY'
     ) {
       console.warn(
-        `Invalid file transform request "${request.transform}" in CSS asset ${importerPath} for ${identityPath}: ${error.message}`,
+        `Invalid file transform request "${request.transform.join(',')}" in CSS asset ${importerPath} for ${identityPath}: ${error.message}`,
       )
       let href = await options.getServedFileUrl(identityPath, { transform: null })
-      return `${href}?transform=${encodeURIComponent(request.transform)}`
+      let searchParams = new URLSearchParams()
+      for (let transform of request.transform) {
+        searchParams.append('transform', transform)
+      }
+
+      let search = searchParams.toString()
+      return search.length > 0 ? `${href}?${search}` : href
     }
 
     throw error

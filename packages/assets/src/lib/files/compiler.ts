@@ -12,11 +12,7 @@ import {
 import { formatFingerprintedPathname, generateFingerprint, hashContent } from '../fingerprint.ts'
 import { normalizeFilePath, resolveFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
-import type {
-  AssetFileTransformResult,
-  AssetTransformParamValue,
-  AssetRequestTransformMap,
-} from './config.ts'
+import type { AssetFileTransformResult, AssetRequestTransformMap } from './config.ts'
 import { parseAssetTransformInvocations } from './config.ts'
 import { createSourceFileStore } from './store.ts'
 import type {
@@ -51,11 +47,11 @@ type FileGetResult =
 type FileGetOptions = {
   ifNoneMatch: string | null
   requestedFingerprint: string | null
-  transform: string | null
+  transform: readonly string[] | null
 }
 
 type FileGetHrefOptions = {
-  transform: string | null
+  transform: readonly string[] | null
 }
 
 type FileCompilerOptions<transforms extends AssetRequestTransformMap = {}> = {
@@ -92,7 +88,7 @@ export type FileCompiler = {
   getHref(filePath: string, options: FileGetHrefOptions): Promise<string>
   handleFileEvent(filePath: string, event: 'add' | 'change' | 'unlink'): Promise<void>
   isServedFilePath(filePath: string): boolean
-  validateTransformQuery(transformQuery: string): void
+  validateTransformQuery(transformQuery: readonly string[]): void
 }
 
 type ResolveArgs = {
@@ -108,7 +104,7 @@ type ResolvedFile = {
 
 type ParsedRequestTransform = {
   name: string
-  param: AssetTransformParamValue | undefined
+  param: string | undefined
 }
 
 export function createFileCompiler<transforms extends AssetRequestTransformMap>(
@@ -220,8 +216,11 @@ export function createFileCompiler<transforms extends AssetRequestTransformMap>(
     return resolveFilePath(resolvedOptions.rootDir, filePath)
   }
 
-  function shouldUseTransformPipeline(transformQuery: string | null): boolean {
-    return transformQuery !== null || resolvedOptions.globalTransforms.length > 0
+  function shouldUseTransformPipeline(transformQuery: readonly string[] | null): boolean {
+    return (
+      (transformQuery !== null && transformQuery.length > 0) ||
+      resolvedOptions.globalTransforms.length > 0
+    )
   }
 
   function getFreshSourceFileRecord(identityPath: string): SourceFileRecord {
@@ -278,7 +277,7 @@ export function createFileCompiler<transforms extends AssetRequestTransformMap>(
 
   async function getOrCreateTransformedFile(
     record: SourceFileRecord,
-    transformQuery: string | null,
+    transformQuery: readonly string[] | null,
   ): Promise<EmittedFile> {
     let parsedTransforms = parseRequestTransforms(
       transformQuery,
@@ -586,13 +585,13 @@ function getRecordCacheKey(record: SourceFileRecord): string {
 function getTransformedRecordCacheKey(
   cacheEpoch: string,
   record: SourceFileRecord,
-  transformQuery: string | null,
+  transformQuery: readonly string[] | null,
 ): string {
   return [
     encodeCacheKeyPart(cacheEpoch),
     encodeCacheKeyPart(record.identityPath),
     String(record.invalidationVersion),
-    encodeCacheKeyPart(transformQuery ?? ''),
+    encodeCacheKeyPart(JSON.stringify(transformQuery ?? [])),
   ].join('/')
 }
 
@@ -642,9 +641,15 @@ function isFileSnapshotFresh(snapshot: FileSnapshot): boolean {
   return current != null && current.mtimeNs === snapshot.mtimeNs && current.size === snapshot.size
 }
 
-function appendTransformQuery(href: string, transformQuery: string | null): string {
+function appendTransformQuery(href: string, transformQuery: readonly string[] | null): string {
   if (transformQuery === null) return href
-  return `${href}?transform=${encodeURIComponent(transformQuery)}`
+  let searchParams = new URLSearchParams()
+  for (let transform of transformQuery) {
+    searchParams.append('transform', transform)
+  }
+
+  let search = searchParams.toString()
+  return search.length > 0 ? `${href}?${search}` : href
 }
 
 function encodeCacheKeyPart(value: string): string {
@@ -739,7 +744,7 @@ function supportsTransformExtension(
 }
 
 function parseRequestTransforms(
-  transformQuery: string | null,
+  transformQuery: readonly string[] | null,
   transforms: AssetRequestTransformMap,
   maxRequestTransforms: number,
 ): readonly ParsedRequestTransform[] {

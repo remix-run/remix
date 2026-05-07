@@ -163,10 +163,10 @@ let src = await assetServer.getHref('app/assets/entry.tsx')
 For configured `files` assets, you can also pass a `transform` pipeline to build a request URL with custom file transforms. Basic transforms are written as strings, while dynamic transforms use `[name, param]` tuples.
 
 ```ts
-let src = await assetServer.getHref('app/assets/logo.png', {
-  transform: ['grayscale', ['resize', { height: 100 }]],
+let src = await assetServer.getHref('app/assets/image.png', {
+  transform: [['resize', '100x100'], 'webp'],
 })
-// '/assets/app/assets/logo.png?transform=["grayscale",["resize",{"height":100}]]'
+// '/assets/app/assets/image.png?transform=resize%3A100x100&transform=webp'
 ```
 
 ## Preloads
@@ -347,7 +347,7 @@ let assetServer = createAssetServer({
   fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   files: {
-    extensions: ['.svg', '.png', '.jpg', '.jpeg'],
+    extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
     transforms: {
       webp: defineFileTransform({
         extensions: ['.png', '.jpg', '.jpeg'],
@@ -367,30 +367,28 @@ let imageUrl = await assetServer.getHref('app/assets/photo.jpg', {
 })
 ```
 
-Transforms can also accept a single param value, provided as a `[name, param]` tuple in the `transform` array when calling `assetServer.getHref()`.
+Transforms can also accept a single string param value, provided as a `[name, param]` tuple in the `transform` array when calling `assetServer.getHref()`.
 
 ```ts
 import { createAssetServer, defineFileTransform } from 'remix/assets'
-import { string } from 'remix/data-schema'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   files: {
-    extensions: ['.svg', '.png', '.jpg', '.jpeg'],
+    extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
     transforms: {
       recolor: defineFileTransform({
         extensions: ['.svg'],
-        paramSchema: string()
-          .refine(
-            (value) => /^#?(?:[\da-f]{3,4}|[\da-f]{6}(?:[\da-f]{2})?)$/i.test(value),
-            'Expected a hex color, with or without a leading #',
-          )
-          .transform((value) => `${!value.startsWith('#') ? '#' : ''}${value}`),
+        param: true,
         async transform(bytes, { param }) {
+          if (!/^#?(?:[\da-f]{3,4}|[\da-f]{6}(?:[\da-f]{2})?)$/i.test(param)) {
+            throw new TypeError('Expected a hex color, with or without a leading #')
+          }
+
           let svg = new TextDecoder().decode(bytes)
-          return svg.replaceAll('currentColor', param)
+          return svg.replaceAll('currentColor', `${!param.startsWith('#') ? '#' : ''}${param}`)
         },
       }),
     },
@@ -398,8 +396,16 @@ let assetServer = createAssetServer({
 })
 
 let imageUrl = await assetServer.getHref('app/assets/logo.svg', {
-  transform: [['recolor', '#8B5CF6']],
+  transform: [['recolor', '0000ff']],
 })
+```
+
+Hand-authored URLs use repeated `transform` search params with `name` or `name:param` values:
+
+```css
+.selector {
+  background-image: url('/assets/app/assets/image.png?transform=resize:100x100&transform=webp');
+}
 ```
 
 #### Global file transforms
@@ -415,7 +421,7 @@ let assetServer = createAssetServer({
   fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   files: {
-    extensions: ['.svg', '.png', '.jpg', '.jpeg'],
+    extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
     globalTransforms: [
       {
         extensions: ['.svg'],
@@ -447,8 +453,11 @@ let assetServer = createAssetServer({
   fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   files: {
-    extensions: ['.svg'],
     cache: createFsFileStorage(path.resolve('.tmp/assets-cache')),
+    extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
+    transforms: {
+      /*...*/
+    },
   },
 })
 ```
@@ -465,11 +474,11 @@ let assetServer = createAssetServer({
   fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   files: {
-    extensions: ['.svg'],
+    maxRequestTransforms: 5,
+    extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
     transforms: {
       /*...*/
     },
-    maxRequestTransforms: 5,
   },
 })
 ```
@@ -482,7 +491,7 @@ Relative CSS `@import` rules and `url()` references are rewritten to asset serve
 /* Rewritten to asset server URLs: */
 @import './reset.css';
 .selector {
-  background-image: url('../images/logo.svg');
+  background-image: url('./image.png');
 }
 
 /* External URLs: */
@@ -496,7 +505,7 @@ File transforms can also be applied to relative CSS `url()` references:
 
 ```css
 .selector {
-  background-image: url('../images/logo.png?transform=[["width",100]]');
+  background-image: url('./image.png?transform=resize:100x100&transform=webp');
 }
 ```
 

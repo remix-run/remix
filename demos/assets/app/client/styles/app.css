@@ -56,7 +56,7 @@ code {
 .asset-background-request-transformed {
   background:
     linear-gradient(135deg, rgba(139, 92, 246, 0.16), rgba(14, 165, 233, 0.2)),
-    url('../images/image.svg?transform=[["recolor","ff0000"]]') center/5rem 5rem no-repeat,
+    url('../images/image.svg?transform=recolor:ff0000') center/5rem 5rem no-repeat,
     white;
 }
 

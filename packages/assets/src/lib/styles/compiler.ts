@@ -47,7 +47,7 @@ type StyleCompilerOptions = {
   getServedFileUrl?(
     identityPath: string,
     options: {
-      transform: string | null
+      transform: readonly string[] | null
     },
   ): Promise<string>
   isAllowed(absolutePath: string): boolean

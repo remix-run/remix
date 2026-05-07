@@ -1,5 +1,3 @@
-import type { InferInput, InferOutput, Schema } from '@remix-run/data-schema'
-import { parseSafe } from '@remix-run/data-schema'
 import type { FileStorage } from '@remix-run/file-storage'
 import { supportedScriptExtensions } from '../scripts/resolve.ts'
 
@@ -8,28 +6,16 @@ export interface AssetFileTransformResult {
   extension?: string
 }
 
-type AssetTransformParamPrimitive = string | number | boolean | null
-export type AssetTransformParamValue =
-  | AssetTransformParamPrimitive
-  | readonly AssetTransformParamValue[]
-  | { readonly [key: string]: AssetTransformParamValue | undefined }
-
-type AssetTransformParamSchema = Schema<any, AssetTransformParamValue>
-
-type InferAssetTransformParamInput<paramSchema> = paramSchema extends AssetTransformParamSchema
-  ? InferInput<paramSchema>
-  : undefined
-
-type InferAssetTransformParamOutput<paramSchema> = paramSchema extends AssetTransformParamSchema
-  ? InferOutput<paramSchema>
-  : undefined
+type AssetRequestTransformParamMode = true | 'optional' | undefined
 
 declare const assetRequestTransformTypes: unique symbol
 
-type AssetRequestTransformTypes<paramSchema extends AssetTransformParamSchema | undefined> = {
-  input: InferAssetTransformParamInput<paramSchema>
-  output: InferAssetTransformParamOutput<paramSchema>
-  schema: paramSchema
+type AssetRequestTransformTypes<
+  param extends string,
+  mode extends AssetRequestTransformParamMode,
+> = {
+  input: param
+  mode: mode
 }
 
 export interface AssetTransformContext {
@@ -37,31 +23,36 @@ export interface AssetTransformContext {
   filePath: string
 }
 
-export interface AssetRequestTransformContext<param = undefined> extends AssetTransformContext {
-  param: param
+type AssetRequestTransformRuntimeParam<mode extends AssetRequestTransformParamMode> =
+  mode extends true ? string : mode extends 'optional' ? string | undefined : undefined
+
+export interface AssetRequestTransformContext<
+  mode extends AssetRequestTransformParamMode = undefined,
+> extends AssetTransformContext {
+  param: AssetRequestTransformRuntimeParam<mode>
 }
 
 export interface AssetGlobalTransformContext extends AssetTransformContext {}
 
-export interface AssetRequestTransform<
-  paramSchema extends AssetTransformParamSchema | undefined = undefined,
-> {
-  readonly [assetRequestTransformTypes]?: AssetRequestTransformTypes<paramSchema>
+export type AssetRequestTransform<
+  param extends string = string,
+  mode extends AssetRequestTransformParamMode = undefined,
+> = {
+  readonly [assetRequestTransformTypes]?: AssetRequestTransformTypes<param, mode>
   /**
    * Optional list of file extensions this transform accepts. Values must use `.ext` format.
    * Matching is evaluated against the current extension at this point in the transform pipeline.
    */
   extensions?: readonly string[]
-  paramSchema?: paramSchema
   transform(
     bytes: Uint8Array,
-    context: AssetRequestTransformContext<InferAssetTransformParamOutput<paramSchema>>,
+    context: AssetRequestTransformContext<mode>,
   ):
     | string
     | Uint8Array
     | AssetFileTransformResult
     | Promise<string | Uint8Array | AssetFileTransformResult>
-}
+} & (mode extends undefined ? { param?: undefined } : { param: mode })
 
 type AssetGlobalTransformHandler = (
   bytes: Uint8Array,
@@ -92,7 +83,7 @@ interface ResolvedAssetGlobalTransform {
 }
 
 export type AssetRequestTransformMap = Readonly<
-  Record<string, AssetRequestTransform<AssetTransformParamSchema | undefined>>
+  Record<string, AssetRequestTransform<string, AssetRequestTransformParamMode>>
 >
 
 export interface AssetServerFilesOptions<transforms extends AssetRequestTransformMap = {}> {
@@ -130,23 +121,41 @@ export interface ResolvedAssetServerFilesOptions<transforms extends AssetRequest
   transforms: transforms
 }
 
-type AssetTransformStep<name extends string, param> = undefined extends param
-  ? name | readonly [name] | readonly [name, Exclude<param, undefined>]
-  : readonly [name, param]
+type AssetTransformStep<
+  name extends string,
+  param extends string,
+  mode extends AssetRequestTransformParamMode,
+> = mode extends true
+  ? readonly [name, param]
+  : mode extends 'optional'
+    ? name | readonly [name] | readonly [name, param]
+    : name | readonly [name]
 
 export type AssetTransformInvocation<transforms extends AssetRequestTransformMap> = {
   [name in keyof transforms & string]: transforms[name] extends {
     readonly [assetRequestTransformTypes]?: infer types
   }
-    ? types extends { output: infer param }
-      ? AssetTransformStep<name, param>
+    ? types extends {
+        input: infer param extends string
+        mode: infer mode extends AssetRequestTransformParamMode
+      }
+      ? AssetTransformStep<name, param, mode>
       : never
     : never
 }[keyof transforms & string]
 
-export function defineFileTransform<
-  const paramSchema extends AssetTransformParamSchema | undefined,
->(transform: AssetRequestTransform<paramSchema>): AssetRequestTransform<paramSchema> {
+export function defineFileTransform(
+  transform: AssetRequestTransform<string, undefined>,
+): AssetRequestTransform<string, undefined>
+export function defineFileTransform<const param extends string = string>(
+  transform: AssetRequestTransform<param, true>,
+): AssetRequestTransform<param, true>
+export function defineFileTransform<const param extends string = string>(
+  transform: AssetRequestTransform<param, 'optional'>,
+): AssetRequestTransform<param, 'optional'>
+export function defineFileTransform(
+  transform: AssetRequestTransform<string, AssetRequestTransformParamMode>,
+): AssetRequestTransform<string, AssetRequestTransformParamMode> {
   return transform
 }
 
@@ -203,7 +212,7 @@ export function normalizeFilesOptions<transforms extends AssetRequestTransformMa
 
   let normalizedTransformsEntries: [
     string,
-    AssetRequestTransform<AssetTransformParamSchema | undefined>,
+    AssetRequestTransform<string, AssetRequestTransformParamMode>,
   ][] = []
 
   for (let [name, transform] of Object.entries(transforms)) {
@@ -219,6 +228,15 @@ export function normalizeFilesOptions<transforms extends AssetRequestTransformMa
       typeof transform.transform !== 'function'
     ) {
       throw new TypeError(`files.transforms.${name} must define a transform() function`)
+    }
+
+    if (
+      'param' in transform &&
+      transform.param !== undefined &&
+      transform.param !== true &&
+      transform.param !== 'optional'
+    ) {
+      throw new TypeError(`files.transforms.${name}.param must be true or "optional"`)
     }
 
     normalizedTransformsEntries.push([
@@ -333,47 +351,29 @@ export function serializeAssetTransformInvocations<transforms extends AssetReque
   transforms: readonly AssetTransformInvocation<transforms>[],
   transformsByName: transforms,
   maxTransforms = defaultMaxRequestTransforms,
-): string {
+): string[] {
   if (transforms.length > maxTransforms) {
     throw new TypeError(`Expected at most ${maxTransforms} request transforms`)
   }
 
-  let normalizedTransforms = transforms.map((transformInvocation) =>
+  return transforms.map((transformInvocation) =>
     normalizeAssetTransformInvocation(transformInvocation, transformsByName, (message) => {
       throw new TypeError(message)
     }),
   )
-
-  try {
-    return JSON.stringify(normalizedTransforms)
-  } catch {
-    throw new TypeError('File transform params must be JSON-serializable')
-  }
 }
 
 export function parseAssetTransformInvocations<transforms extends AssetRequestTransformMap>(
-  transformsQuery: string,
+  transformsQuery: readonly string[],
   transformsByName: transforms,
   maxTransforms = defaultMaxRequestTransforms,
-): readonly (string | readonly [string, AssetTransformParamValue])[] {
-  let parsedTransforms: unknown
-
-  try {
-    parsedTransforms = JSON.parse(transformsQuery)
-  } catch {
-    throw new TypeError('Expected transforms to be valid JSON')
-  }
-
-  if (!Array.isArray(parsedTransforms)) {
-    throw new TypeError('Expected transforms to be an array')
-  }
-
-  if (parsedTransforms.length > maxTransforms) {
+): readonly (string | readonly [string, string])[] {
+  if (transformsQuery.length > maxTransforms) {
     throw new TypeError(`Expected at most ${maxTransforms} request transforms`)
   }
 
-  return parsedTransforms.map((transformInvocation) =>
-    normalizeAssetTransformInvocation(transformInvocation, transformsByName, (message) => {
+  return transformsQuery.map((transformQuery) =>
+    parseSerializedAssetTransformInvocation(transformQuery, transformsByName, (message) => {
       throw new TypeError(message)
     }),
   )
@@ -383,7 +383,7 @@ function normalizeAssetTransformInvocation<transforms extends AssetRequestTransf
   transformInvocation: unknown,
   transformsByName: transforms,
   onError: (message: string) => never,
-): string | readonly [string, AssetTransformParamValue] {
+): string {
   if (typeof transformInvocation === 'string') {
     if (!/^[A-Za-z0-9_-]+$/.test(transformInvocation)) {
       return onError('Expected each transform name to use "transform-name" format')
@@ -394,7 +394,7 @@ function normalizeAssetTransformInvocation<transforms extends AssetRequestTransf
       return onError(`Unknown file transform "${transformInvocation}"`)
     }
 
-    if (transform.paramSchema) {
+    if (transform.param === true) {
       return onError(`File transform "${transformInvocation}" requires a param`)
     }
 
@@ -419,7 +419,19 @@ function normalizeAssetTransformInvocation<transforms extends AssetRequestTransf
     return onError(`Unknown file transform "${name}"`)
   }
 
-  if (!transform.paramSchema) {
+  if (transformInvocation.length === 1) {
+    if (transform.param === true) {
+      return onError(`File transform "${name}" requires a param`)
+    }
+
+    return name
+  }
+
+  if (typeof rawParam !== 'string') {
+    return onError(`Invalid param for file transform "${name}": expected a string`)
+  }
+
+  if (transform.param === undefined) {
     if (transformInvocation.length === 2) {
       return onError(`File transform "${name}" does not accept a param`)
     }
@@ -427,84 +439,42 @@ function normalizeAssetTransformInvocation<transforms extends AssetRequestTransf
     return name
   }
 
-  let parsedParam = parseSafe(transform.paramSchema, rawParam)
-  if (!parsedParam.success) {
-    let issue = parsedParam.issues[0]
-    return onError(
-      `Invalid param for file transform "${name}": ${issue?.message ?? 'Invalid value'}`,
-    )
-  }
-
-  if (!isJsonRoundTripSafe(parsedParam.value)) {
-    return onError(
-      `Invalid param for file transform "${name}": param value must be JSON-compatible`,
-    )
-  }
-
-  return [name, parsedParam.value]
+  return `${name}:${rawParam}`
 }
 
-function isJsonRoundTripSafe(value: unknown): value is AssetTransformParamValue {
-  let serialized: string
-  try {
-    serialized = JSON.stringify(value)
-  } catch {
-    return false
+function parseSerializedAssetTransformInvocation<transforms extends AssetRequestTransformMap>(
+  transformQuery: string,
+  transformsByName: transforms,
+  onError: (message: string) => never,
+): string | readonly [string, string] {
+  let separatorIndex = transformQuery.indexOf(':')
+  let name = separatorIndex === -1 ? transformQuery : transformQuery.slice(0, separatorIndex)
+  let param = separatorIndex === -1 ? undefined : transformQuery.slice(separatorIndex + 1)
+
+  if (!/^[A-Za-z0-9_-]+$/.test(name)) {
+    return onError('Expected each transform name to use "transform-name" format')
   }
 
-  if (serialized === undefined) return false
-
-  try {
-    return isJsonRoundTripEqual(value, JSON.parse(serialized))
-  } catch {
-    return false
-  }
-}
-
-function isJsonRoundTripEqual(left: unknown, right: unknown): boolean {
-  if (left === null || right === null) {
-    return left === right
+  let transform = transformsByName[name]
+  if (!transform) {
+    return onError(`Unknown file transform "${name}"`)
   }
 
-  switch (typeof left) {
-    case 'string':
-    case 'boolean':
-      return left === right
-    case 'number':
-      return typeof right === 'number' && Number.isFinite(left) && Object.is(left, right)
-    case 'object':
-      if (typeof right !== 'object') return false
+  if (transform.param === undefined) {
+    if (param !== undefined) {
+      return onError(`File transform "${name}" does not accept a param`)
+    }
 
-      if (Array.isArray(left)) {
-        if (!Array.isArray(right) || left.length !== right.length) return false
-        for (let index = 0; index < left.length; index++) {
-          if (!(index in left) || !(index in right)) return false
-          if (!isJsonRoundTripEqual(left[index], right[index])) return false
-        }
-
-        return true
-      }
-
-      if (Array.isArray(right)) return false
-
-      let leftKeys = Object.keys(left)
-      let rightKeys = Object.keys(right)
-      if (leftKeys.length !== rightKeys.length) return false
-
-      for (let key of leftKeys) {
-        if (!Object.hasOwn(right, key)) return false
-        if (
-          !isJsonRoundTripEqual(
-            (left as Record<string, unknown>)[key],
-            (right as Record<string, unknown>)[key],
-          )
-        ) {
-          return false
-        }
-      }
-
-      return true
-    default:
-      return false
+    return name
   }
+
+  if (transform.param === true && param === undefined) {
+    return onError(`File transform "${name}" requires a param`)
+  }
+
+  if (param === undefined) {
+    return name
+  }
+
+  return [name, param]
 }

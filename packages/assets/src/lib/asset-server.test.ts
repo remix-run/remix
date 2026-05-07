@@ -5,7 +5,6 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
-import { bigint, number, string } from '@remix-run/data-schema'
 import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
@@ -497,15 +496,15 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
         transforms: {
-          recolor: defineFileTransform({
-            paramSchema: string(),
+          recolor: defineFileTransform<string>({
+            param: true,
             async transform(bytes, { extension, param }) {
               assert.equal(extension, '.svg')
               return new TextDecoder().decode(bytes).replace('currentColor', param)
             },
           }),
-          retitle: defineFileTransform({
-            paramSchema: string(),
+          retitle: defineFileTransform<string>({
+            param: true,
             async transform(bytes, { param }) {
               return new TextDecoder()
                 .decode(bytes)
@@ -543,11 +542,16 @@ describe('asset-server', () => {
               return new TextDecoder().decode(bytes).toUpperCase()
             },
           }),
-          repeat: defineFileTransform({
-            paramSchema: number(),
+          repeat: defineFileTransform<`${number}`>({
+            param: true,
             async transform(bytes, { param }) {
+              let count = Number(param)
+              if (!Number.isInteger(count)) {
+                throw new TypeError('Expected an integer repeat count')
+              }
+
               let text = new TextDecoder().decode(bytes).trim()
-              return Array.from({ length: param }, () => text).join('|')
+              return Array.from({ length: count }, () => text).join('|')
             },
           }),
         },
@@ -555,12 +559,9 @@ describe('asset-server', () => {
     })
 
     let href = await assetServer.getHref('app/content/value.txt', {
-      transform: [['repeat', 3], 'upper'],
+      transform: [['repeat', '3'], 'upper'],
     })
-    assert.equal(
-      href,
-      '/assets/app/content/value.txt?transform=%5B%5B%22repeat%22%2C3%5D%2C%22upper%22%5D',
-    )
+    assert.equal(href, '/assets/app/content/value.txt?transform=repeat%3A3&transform=upper')
 
     let response = await get(assetServer, href)
     assert.ok(response)
@@ -577,8 +578,8 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
         transforms: {
-          retitle: defineFileTransform({
-            paramSchema: string(),
+          retitle: defineFileTransform<string>({
+            param: true,
             async transform(bytes, { param }) {
               return new TextDecoder()
                 .decode(bytes)
@@ -592,10 +593,7 @@ describe('asset-server', () => {
     let href = await assetServer.getHref('app/images/logo.svg', {
       transform: [['retitle', 'Purple | demo (v2)']],
     })
-    assert.equal(
-      href,
-      '/assets/app/images/logo.svg?transform=%5B%5B%22retitle%22%2C%22Purple%20%7C%20demo%20(v2)%22%5D%5D',
-    )
+    assert.equal(href, '/assets/app/images/logo.svg?transform=retitle%3APurple+%7C+demo+%28v2%29')
 
     let response = await get(assetServer, href)
     assert.ok(response)
@@ -626,35 +624,6 @@ describe('asset-server', () => {
     assert.equal(emptyTransformHref, '/assets/app/images/logo.svg')
   })
 
-  it('treats a handwritten empty transform query as no transform', async () => {
-    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
-    let transformCalls = 0
-    let assetServer = createTestServer(dir, {
-      files: {
-        extensions: ['.svg'],
-        transforms: {
-          optimize: defineFileTransform({
-            async transform(bytes) {
-              transformCalls += 1
-              return bytes
-            },
-          }),
-        },
-      },
-    })
-
-    let directResponse = await get(assetServer, '/assets/app/images/logo.svg')
-    assert.ok(directResponse)
-    let directBody = await directResponse.text()
-
-    let emptyTransformResponse = await get(assetServer, '/assets/app/images/logo.svg?transform=[]')
-    assert.ok(emptyTransformResponse)
-    assert.equal(emptyTransformResponse.status, 200)
-    assert.equal(emptyTransformResponse.headers.get('ETag'), directResponse.headers.get('ETag'))
-    assert.equal(await emptyTransformResponse.text(), directBody)
-    assert.equal(transformCalls, 0)
-  })
-
   it('returns 400 for malformed file transform queries without calling onError', async () => {
     await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
     let onErrorCalls = 0
@@ -674,11 +643,14 @@ describe('asset-server', () => {
       },
     })
 
-    let response = await get(assetServer, '/assets/app/images/logo.svg?transform=wat')
+    let response = await get(assetServer, '/assets/app/images/logo.svg?transform=:wat')
     assert.ok(response)
     assert.equal(response.status, 400)
     assert.equal(response.headers.get('Content-Type'), 'text/plain; charset=utf-8')
-    assert.match(await response.text(), /Expected transforms to be valid JSON/)
+    assert.match(
+      await response.text(),
+      /Expected each transform name to use "transform-name" format/,
+    )
     assert.equal(onErrorCalls, 0)
   })
 
@@ -689,8 +661,8 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
         transforms: {
-          recolor: defineFileTransform({
-            paramSchema: string(),
+          recolor: defineFileTransform<string>({
+            param: true,
             async transform(bytes) {
               return bytes
             },
@@ -702,7 +674,7 @@ describe('asset-server', () => {
       },
     })
 
-    let response = await get(assetServer, '/assets/app/images/logo.svg?transform=["recolor"]')
+    let response = await get(assetServer, '/assets/app/images/logo.svg?transform=recolor')
     assert.ok(response)
     assert.equal(response.status, 400)
     assert.equal(response.headers.get('Content-Type'), 'text/plain; charset=utf-8')
@@ -718,7 +690,7 @@ describe('asset-server', () => {
     assert.ok(directResponse)
     assert.equal(directResponse.status, 200)
 
-    let transformedResponse = await get(assetServer, '/assets/app/entry.ts?transform=["resize"]')
+    let transformedResponse = await get(assetServer, '/assets/app/entry.ts?transform=resize')
     assert.ok(transformedResponse)
     assert.equal(transformedResponse.status, 400)
     assert.equal(transformedResponse.headers.get('Content-Type'), 'text/plain; charset=utf-8')
@@ -736,7 +708,7 @@ describe('asset-server', () => {
     assert.ok(directResponse)
     assert.equal(directResponse.status, 200)
 
-    let transformedResponse = await get(assetServer, '/assets/app/styles.css?transform=["resize"]')
+    let transformedResponse = await get(assetServer, '/assets/app/styles.css?transform=resize')
     assert.ok(transformedResponse)
     assert.equal(transformedResponse.status, 400)
     assert.equal(transformedResponse.headers.get('Content-Type'), 'text/plain; charset=utf-8')
@@ -761,8 +733,8 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
         transforms: {
-          recolor: defineFileTransform({
-            paramSchema: string(),
+          recolor: defineFileTransform<string>({
+            param: true,
             async transform(bytes, { param }) {
               return new TextDecoder().decode(bytes).replace('currentColor', param)
             },
@@ -784,73 +756,7 @@ describe('asset-server', () => {
             ],
           ],
         }),
-      /Invalid param for file transform "recolor"/,
-    )
-  })
-
-  it('validates that transform params are valid JSON', async () => {
-    await write(
-      dir,
-      'app/images/logo.svg',
-      '<svg xmlns="http://www.w3.org/2000/svg" color="#0EA5E9"><rect fill="currentColor" /></svg>\n',
-    )
-    let assetServer = createTestServer(dir, {
-      files: {
-        extensions: ['.svg'],
-        transforms: {
-          bigintValue: defineFileTransform({
-            // @ts-expect-error - bigint outputs are not valid JSON param values
-            paramSchema: bigint(),
-            async transform(bytes) {
-              return bytes
-            },
-          }),
-          urlValue: defineFileTransform({
-            // @ts-expect-error - transformed URL outputs are not valid JSON param values
-            paramSchema: string().transform((value) => new URL(value, 'https://example.com')),
-            async transform(bytes) {
-              return bytes
-            },
-          }),
-          nonFiniteNumber: defineFileTransform({
-            // NaN still has the static type `number`, so this one is runtime-only.
-            paramSchema: number().transform(() => Number.NaN) as any,
-            async transform(bytes) {
-              return bytes
-            },
-          }),
-        },
-      },
-    })
-
-    await assert.rejects(
-      () =>
-        assetServer.getHref('app/images/logo.svg', {
-          transform: [
-            [
-              'bigintValue',
-              // @ts-expect-error - bigint outputs are not valid JSON param values
-              1n,
-            ],
-          ],
-        }),
-      /Invalid param for file transform "bigintValue": param value must be JSON-compatible/,
-    )
-
-    await assert.rejects(
-      () =>
-        assetServer.getHref('app/images/logo.svg', {
-          transform: [['urlValue', 'https://remix.run']],
-        }),
-      /Invalid param for file transform "urlValue": param value must be JSON-compatible/,
-    )
-
-    await assert.rejects(
-      () =>
-        assetServer.getHref('app/images/logo.svg', {
-          transform: [['nonFiniteNumber', 1]],
-        }),
-      /Invalid param for file transform "nonFiniteNumber": param value must be JSON-compatible/,
+      /Invalid param for file transform "recolor": expected a string/,
     )
   })
 
@@ -1196,7 +1102,7 @@ describe('asset-server', () => {
       transform: [['optimize']],
     })
 
-    assert.equal(href, '/assets/app/images/logo.svg?transform=%5B%22optimize%22%5D')
+    assert.equal(href, '/assets/app/images/logo.svg?transform=optimize')
   })
 
   it('limits request transforms to 5 by default when generating hrefs', async () => {
@@ -1244,7 +1150,7 @@ describe('asset-server', () => {
 
     let response = await get(
       assetServer,
-      '/assets/app/images/logo.svg?transform=["optimize","optimize","optimize","optimize","optimize","optimize"]',
+      '/assets/app/images/logo.svg?transform=optimize&transform=optimize&transform=optimize&transform=optimize&transform=optimize&transform=optimize',
     )
     assert.ok(response)
     assert.equal(response.status, 400)
@@ -1311,7 +1217,7 @@ describe('asset-server', () => {
     await write(
       dir,
       'app/styles/app.css',
-      '.hero { background-image: url(\'../images/logo.svg?transform=[["recolor","red"]]\'); }\n',
+      ".hero { background-image: url('../images/logo.svg?transform=recolor:red'); }\n",
     )
     await write(
       dir,
@@ -1322,8 +1228,8 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
         transforms: {
-          recolor: defineFileTransform({
-            paramSchema: string(),
+          recolor: defineFileTransform<string>({
+            param: true,
             async transform(bytes, { param }) {
               return new TextDecoder().decode(bytes).replace('currentColor', param)
             },
@@ -1337,15 +1243,9 @@ describe('asset-server', () => {
     assert.equal(response.status, 200)
 
     let css = await response.text()
-    assert.match(
-      css,
-      /url\("\/assets\/app\/images\/logo\.svg\?transform=%5B%5B%22recolor%22%2C%22red%22%5D%5D"\)/,
-    )
+    assert.match(css, /url\("\/assets\/app\/images\/logo\.svg\?transform=recolor%3Ared"\)/)
 
-    let fileResponse = await get(
-      assetServer,
-      '/assets/app/images/logo.svg?transform=[["recolor","red"]]',
-    )
+    let fileResponse = await get(assetServer, '/assets/app/images/logo.svg?transform=recolor:red')
     assert.ok(fileResponse)
     assert.match(await fileResponse.text(), /red/i)
   })
@@ -1354,7 +1254,7 @@ describe('asset-server', () => {
     await write(
       dir,
       'app/styles/app.css',
-      '.hero { background-image: url(\'../images/logo.svg?transform=[["recolor","red"]]#icon\'); }\n',
+      ".hero { background-image: url('../images/logo.svg?transform=recolor:red#icon'); }\n",
     )
     await write(
       dir,
@@ -1365,8 +1265,8 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
         transforms: {
-          recolor: defineFileTransform({
-            paramSchema: string(),
+          recolor: defineFileTransform<string>({
+            param: true,
             async transform(bytes, { param }) {
               return new TextDecoder().decode(bytes).replace('currentColor', param)
             },
@@ -1396,7 +1296,7 @@ describe('asset-server', () => {
     await write(
       dir,
       'app/styles/app.css',
-      '.hero { background-image: url(\'../images/logo.svg?transform=[["recolor","red"]]&v=1&mode=dark\'); }\n',
+      ".hero { background-image: url('../images/logo.svg?transform=recolor:red&v=1&mode=dark'); }\n",
     )
     await write(
       dir,
@@ -1407,8 +1307,8 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
         transforms: {
-          recolor: defineFileTransform({
-            paramSchema: string(),
+          recolor: defineFileTransform<string>({
+            param: true,
             async transform(bytes, { param }) {
               return new TextDecoder().decode(bytes).replace('currentColor', param)
             },
@@ -1422,12 +1322,12 @@ describe('asset-server', () => {
     let css = await response.text()
     assert.match(
       css,
-      /url\("\/assets\/app\/images\/logo\.svg\?transform=%5B%5B%22recolor%22%2C%22red%22%5D%5D&v=1&mode=dark"\)/,
+      /url\("\/assets\/app\/images\/logo\.svg\?transform=recolor%3Ared&v=1&mode=dark"\)/,
     )
 
     let fileResponse = await get(
       assetServer,
-      '/assets/app/images/logo.svg?transform=[["recolor","red"]]&v=1&mode=dark',
+      '/assets/app/images/logo.svg?transform=recolor:red&v=1&mode=dark',
     )
     assert.ok(fileResponse)
     assert.equal(fileResponse.status, 200)
@@ -1438,7 +1338,7 @@ describe('asset-server', () => {
     await write(
       dir,
       'app/styles/app.css',
-      '.hero { background-image: url(\'../images/logo.svg?transform=[["recolor","red"]]&v=1#icon\'); }\n',
+      ".hero { background-image: url('../images/logo.svg?transform=recolor:red&v=1#icon'); }\n",
     )
     await write(
       dir,
@@ -1449,8 +1349,8 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
         transforms: {
-          recolor: defineFileTransform({
-            paramSchema: string(),
+          recolor: defineFileTransform<string>({
+            param: true,
             async transform(bytes, { param }) {
               return new TextDecoder().decode(bytes).replace('currentColor', param)
             },
@@ -1622,8 +1522,8 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
         transforms: {
-          recolor: defineFileTransform({
-            paramSchema: string(),
+          recolor: defineFileTransform<string>({
+            param: true,
             async transform(bytes, { param }) {
               return new TextDecoder().decode(bytes).replace('currentColor', param)
             },
@@ -1638,7 +1538,7 @@ describe('asset-server', () => {
     })
     assert.match(
       href,
-      /^\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg\?transform=%5B%5B%22recolor%22%2C%22%238B5CF6%22%5D%5D$/,
+      /^\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg\?transform=recolor%3A%238B5CF6$/,
     )
 
     let fingerprintedResponse = await get(assetServer, href)
@@ -1651,7 +1551,7 @@ describe('asset-server', () => {
 
     let stableResponse = await get(
       assetServer,
-      '/assets/app/images/logo.svg?transform=%5B%5B%22recolor%22%2C%22%238B5CF6%22%5D%5D',
+      '/assets/app/images/logo.svg?transform=recolor:%238B5CF6',
     )
     assert.equal(stableResponse, null)
   })
@@ -1666,8 +1566,8 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
         transforms: {
-          recolor: defineFileTransform({
-            paramSchema: string(),
+          recolor: defineFileTransform<string>({
+            param: true,
             async transform(bytes, { param }) {
               return new TextDecoder().decode(bytes).replace('currentColor', param)
             },
@@ -1682,7 +1582,7 @@ describe('asset-server', () => {
     })
     assert.match(
       href,
-      /^\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg\?transform=%5B%5B%22recolor%22%2C%22%238B5CF6%22%5D%5D$/,
+      /^\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg\?transform=recolor%3A%238B5CF6$/,
     )
 
     let fingerprintedResponse = await get(assetServer, href)
@@ -1695,7 +1595,7 @@ describe('asset-server', () => {
 
     let mismatch = await get(
       assetServer,
-      '/assets/app/images/logo.@wronghash.svg?transform=%5B%5B%22recolor%22%2C%22%238B5CF6%22%5D%5D',
+      '/assets/app/images/logo.@wronghash.svg?transform=recolor:%238B5CF6',
     )
     assert.equal(mismatch, null)
   })
@@ -1710,8 +1610,8 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
         transforms: {
-          recolor: defineFileTransform({
-            paramSchema: string(),
+          recolor: defineFileTransform<string>({
+            param: true,
             async transform(bytes, { param }) {
               return new TextDecoder().decode(bytes).replace('currentColor', param)
             },
@@ -5309,20 +5209,20 @@ describe('asset-server', () => {
     assert.ok(warning)
     assert.match(
       normalizeWindowsPath(String(warning.arguments[0])),
-      /Invalid file transform request "wat" in CSS asset .*app\/styles\/app\.css.*Expected transforms to be valid JSON/,
+      /Invalid file transform request "wat" in CSS asset .*app\/styles\/app\.css.*Unknown file transform "wat"/,
     )
 
     let assetResponse = await get(assetServer, '/assets/app/images/logo.svg?transform=wat')
     assert.ok(assetResponse)
     assert.equal(assetResponse.status, 400)
-    assert.match(await assetResponse.text(), /Expected transforms to be valid JSON/)
+    assert.match(await assetResponse.text(), /Unknown file transform "wat"/)
   })
 
   it('warns for invalid CSS-authored file transform requests without failing the stylesheet', async (t) => {
     await write(
       dir,
       'app/styles/app.css',
-      'body { background-image: url("../images/logo.svg?transform=[\\"recolor\\"]"); }\n',
+      'body { background-image: url("../images/logo.svg?transform=recolor"); }\n',
     )
     await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
     let onErrorCalls = 0
@@ -5330,8 +5230,8 @@ describe('asset-server', () => {
       files: {
         extensions: ['.svg'],
         transforms: {
-          recolor: defineFileTransform({
-            paramSchema: string(),
+          recolor: defineFileTransform<string>({
+            param: true,
             async transform(bytes) {
               return bytes
             },
@@ -5350,17 +5250,17 @@ describe('asset-server', () => {
     assert.equal(onErrorCalls, 0)
     assert.match(
       await response.text(),
-      /url\("\/assets\/app\/images\/logo\.svg\?transform=%5B%22recolor%22%5D"\)/,
+      /url\("\/assets\/app\/images\/logo\.svg\?transform=recolor"\)/,
     )
 
     let warning = consoleWarn.mock.calls.at(-1)
     assert.ok(warning)
     assert.match(
       normalizeWindowsPath(String(warning.arguments[0])),
-      /Invalid file transform request "\["recolor"\]" in CSS asset .*app\/styles\/app\.css.*File transform "recolor" requires a param/,
+      /Invalid file transform request "recolor" in CSS asset .*app\/styles\/app\.css.*File transform "recolor" requires a param/,
     )
 
-    let assetResponse = await get(assetServer, '/assets/app/images/logo.svg?transform=["recolor"]')
+    let assetResponse = await get(assetServer, '/assets/app/images/logo.svg?transform=recolor')
     assert.ok(assetResponse)
     assert.equal(assetResponse.status, 400)
     assert.match(await assetResponse.text(), /File transform "recolor" requires a param/)
@@ -5370,7 +5270,7 @@ describe('asset-server', () => {
     await write(
       dir,
       'app/styles/app.css',
-      'body { background-image: url("../images/logo.svg?transform=[\\"optimize\\",\\"optimize\\",\\"optimize\\",\\"optimize\\",\\"optimize\\",\\"optimize\\"]"); }\n',
+      'body { background-image: url("../images/logo.svg?transform=optimize&transform=optimize&transform=optimize&transform=optimize&transform=optimize&transform=optimize"); }\n',
     )
     await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
     let onErrorCalls = 0
@@ -5400,12 +5300,12 @@ describe('asset-server', () => {
     assert.ok(warning)
     assert.match(
       normalizeWindowsPath(String(warning.arguments[0])),
-      /Invalid file transform request "\["optimize","optimize","optimize","optimize","optimize","optimize"\]" in CSS asset .*app\/styles\/app\.css.*Expected at most 5 request transforms/,
+      /Invalid file transform request "optimize,optimize,optimize,optimize,optimize,optimize" in CSS asset .*app\/styles\/app\.css.*Expected at most 5 request transforms/,
     )
 
     let assetResponse = await get(
       assetServer,
-      '/assets/app/images/logo.svg?transform=["optimize","optimize","optimize","optimize","optimize","optimize"]',
+      '/assets/app/images/logo.svg?transform=optimize&transform=optimize&transform=optimize&transform=optimize&transform=optimize&transform=optimize',
     )
     assert.ok(assetResponse)
     assert.equal(assetResponse.status, 400)

@@ -259,9 +259,6 @@ importers:
       '@oxc-project/runtime':
         specifier: ^0.121.0
         version: 0.121.0
-      '@remix-run/data-schema':
-        specifier: workspace:*
-        version: link:../data-schema
       '@remix-run/file-storage':
         specifier: workspace:*
         version: link:../file-storage

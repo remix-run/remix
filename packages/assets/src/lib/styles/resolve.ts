@@ -24,7 +24,7 @@ type ResolvedDependency =
       depPath: string
       kind: 'file' | 'style'
       placeholder: string
-      requestTransform: string | null
+      requestTransform: readonly string[] | null
       suffix: string
     }
 
@@ -367,7 +367,7 @@ function parseResolvedFileRequest(
   hash: string,
 ): {
   suffix: string
-  transform: string | null
+  transform: readonly string[] | null
 } {
   if (search.length === 0) {
     return {
@@ -377,13 +377,13 @@ function parseResolvedFileRequest(
   }
 
   let searchParams = new URLSearchParams(search.slice(1))
-  let transform = searchParams.get('transform')
+  let transform = searchParams.getAll('transform')
   searchParams.delete('transform')
   let remainingSearch = searchParams.toString()
 
   return {
     suffix: `${remainingSearch.length > 0 ? `?${remainingSearch}` : ''}${hash}`,
-    transform,
+    transform: transform.length > 0 ? transform : null,
   }
 }
 

@@ -33,7 +33,6 @@
   },
   "dependencies": {
     "@oxc-project/runtime": "^0.121.0",
-    "@remix-run/data-schema": "workspace:*",
     "@remix-run/file-storage": "workspace:*",
     "@remix-run/headers": "workspace:*",
     "@remix-run/mime": "workspace:*",

@@ -261,7 +261,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   let styleCompiler = createStyleCompiler({
     buildId: resolvedOptions.buildId,
     fingerprintAssets: resolvedOptions.fingerprintAssets,
-    getServedFileUrl: (identityPath: string, options: { transform: string | null }) => {
+    getServedFileUrl: (identityPath: string, options: { transform: readonly string[] | null }) => {
       if (!fileCompiler) {
         throw createAssetServerCompilationError(`File type is not supported: ${identityPath}`, {
           code: 'FILE_NOT_SUPPORTED',
@@ -344,9 +344,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       if (request.method !== 'GET' && request.method !== 'HEAD') return null
 
       let requestUrl = new URL(request.url)
-      let requestedTransform = normalizeRequestedTransformQuery(
-        requestUrl.searchParams.get('transform'),
-      )
+      let requestedTransform = normalizeRequestedTransformQuery(requestUrl.searchParams)
       let parsedRequestPathname = parseAssetRequestPathname(requestUrl.pathname, {
         fingerprintAssets: resolvedOptions.fingerprintAssets,
         routes: resolvedOptions.routes,
@@ -587,7 +585,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
 function getHrefTransform<transforms extends AssetRequestTransformMap>(
   options: AssetServerGetHrefOptions<transforms> | undefined,
   files: ResolvedAssetServerFilesOptions<transforms>,
-): string | null {
+): readonly string[] | null {
   if (!options) return null
   let transform = options.transform
   if (transform.length === 0) {
@@ -597,15 +595,9 @@ function getHrefTransform<transforms extends AssetRequestTransformMap>(
   return serializeAssetTransformInvocations(transform, files.transforms, files.maxRequestTransforms)
 }
 
-function normalizeRequestedTransformQuery(transformQuery: string | null): string | null {
-  if (transformQuery === null) return null
-
-  try {
-    let parsed = JSON.parse(transformQuery)
-    return Array.isArray(parsed) && parsed.length === 0 ? null : transformQuery
-  } catch {
-    return transformQuery
-  }
+function normalizeRequestedTransformQuery(searchParams: URLSearchParams): readonly string[] | null {
+  let transforms = searchParams.getAll('transform')
+  return transforms.length > 0 ? transforms : null
 }
 
 function internalServerError(): Response {
