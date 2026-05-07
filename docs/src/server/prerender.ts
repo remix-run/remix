@@ -78,7 +78,8 @@ async function crawl(router: Router, urlPath: string, outputDir: string) {
     throw error
   }
 
-  let isHtmlFile = response.headers.get('Content-Type')?.includes('text/html')
+  let isMarkdownFile = routes.markdown.match(`http://localhost${urlPath}`) !== null
+  let isHtmlFile = !isMarkdownFile && response.headers.get('Content-Type')?.includes('text/html')
 
   // Always put `index.html` files into directories - this leads to the best
   // support with and without trailing slashes on github pages:
