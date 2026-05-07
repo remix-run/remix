@@ -154,7 +154,7 @@ export class PartPatternVariant {
           continue
         }
         if (type === 'variable') {
-          result.push({ type: 'variable', key, regexp: new RegExp(reSource, reFlags) })
+          result.push({ type: 'variable', key, regexp: new RegExp(`^${reSource}$`, reFlags) })
           key = ''
           reSource = ''
           type = 'static'
@@ -195,7 +195,7 @@ export class PartPatternVariant {
       result.push({ type: 'static', key: ignoreCase ? key.toLowerCase() : key })
     }
     if (type === 'variable' || type === 'wildcard') {
-      result.push({ type, key, regexp: new RegExp(reSource, reFlags) })
+      result.push({ type, key, regexp: new RegExp(`^${reSource}$`, reFlags) })
     }
     return result
   }

@@ -425,18 +425,33 @@ describe('Matcher', () => {
         assert.deepEqual(match.params, { path: 'docs/api' })
       })
 
-      it('does not match wildcard continuations against partial pathnames', () => {
-        let docs = new RoutePattern('/api/*slug/')
-        let markdown = new RoutePattern('/api/*slug.md')
+      it('does not match variable segment continuations against partial segments', () => {
+        let markdown = new RoutePattern('/files/:name.md')
+        let backup = new RoutePattern('/files/:name.md.backup')
         let matcher = createMatcher<string>()
-        matcher.add(docs, 'docs')
         matcher.add(markdown, 'markdown')
+        matcher.add(backup, 'backup')
 
-        let matches = matcher.matchAll('http://localhost/api/remix/fetch-router/overview.md')
+        let matches = matcher.matchAll('http://localhost/files/readme.md.backup')
 
         assert.deepEqual(
           matches.map((match) => [match.data, match.params]),
-          [['markdown', { slug: 'remix/fetch-router/overview' }]],
+          [['backup', { name: 'readme' }]],
+        )
+      })
+
+      it('does not match wildcard continuations against partial remaining pathnames', () => {
+        let editor = new RoutePattern('/api/*slug/edit')
+        let json = new RoutePattern('/api/*slug/edit.json')
+        let matcher = createMatcher<string>()
+        matcher.add(editor, 'editor')
+        matcher.add(json, 'json')
+
+        let matches = matcher.matchAll('http://localhost/api/remix/fetch-router/edit.json')
+
+        assert.deepEqual(
+          matches.map((match) => [match.data, match.params]),
+          [['json', { slug: 'remix/fetch-router' }]],
         )
       })
 
