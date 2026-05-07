@@ -425,6 +425,21 @@ describe('Matcher', () => {
         assert.deepEqual(match.params, { path: 'docs/api' })
       })
 
+      it('does not match wildcard continuations against partial pathnames', () => {
+        let docs = new RoutePattern('/api/*slug/')
+        let markdown = new RoutePattern('/api/*slug.md')
+        let matcher = createMatcher<string>()
+        matcher.add(docs, 'docs')
+        matcher.add(markdown, 'markdown')
+
+        let matches = matcher.matchAll('http://localhost/api/remix/fetch-router/overview.md')
+
+        assert.deepEqual(
+          matches.map((match) => [match.data, match.params]),
+          [['markdown', { slug: 'remix/fetch-router/overview' }]],
+        )
+      })
+
       it('excludes unnamed wildcard from params', () => {
         let matcher = createMatcher<null>()
         matcher.add('://example.com/files/*/download', null)
