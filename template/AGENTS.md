@@ -22,6 +22,7 @@ Refer to ./.agents/skills/remix/SKILL.md
 - `app/router.ts` wires routes to route handlers
 - `app/ui/` holds the shared document and layout wrappers
 - `app/actions/render.tsx` centralizes HTML response rendering for controllers
+- `public/` contains static files served from the app root
 
 ## Route Ownership
 
@@ -33,6 +34,6 @@ Refer to ./.agents/skills/remix/SKILL.md
 
 ## Build-Out Notes
 
-- This starter intentionally begins small; add directories like `app/data/`, `app/middleware/`, `public/`, and `test/` only when you need them.
+- This starter intentionally begins small; add directories like `app/data/`, `app/middleware/`, and `test/` only when you need them.
 - Prefer putting code in the narrowest owner before introducing shared modules.
 - Avoid generic dumping-ground directories like `app/lib/` or `app/components/`.
