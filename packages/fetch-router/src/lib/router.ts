@@ -240,18 +240,6 @@ function isRouteTarget(target: MapTarget): target is RouteTarget {
   return typeof target === 'string' || target instanceof RoutePattern || target instanceof Route
 }
 
-function getRoutePattern(target: RouteTarget): RoutePattern<string> {
-  if (target instanceof Route) {
-    return target.pattern
-  }
-
-  return typeof target === 'string' ? new RoutePattern(target) : target
-}
-
-function getMappedRouteMethod(target: RouteTarget): RequestMethod | 'ANY' {
-  return target instanceof Route ? target.method : 'ANY'
-}
-
 /**
  * Create a new router.
  *
@@ -308,7 +296,12 @@ export function createRouter<
     route: RouteTarget,
     normalizedAction: NormalizedAction,
   ): void {
-    let pattern = getRoutePattern(route)
+    let pattern =
+      route instanceof Route
+        ? route.pattern
+        : typeof route === 'string'
+          ? new RoutePattern(route)
+          : route
     let entry: RouteEntry = {
       pattern,
       handler: normalizedAction.handler,
@@ -329,10 +322,6 @@ export function createRouter<
     registerRoute(method, route, normalizeAction(handler))
   }
 
-  function mapSingleRoute(target: RouteTarget, handler: unknown): void {
-    registerRoute(getMappedRouteMethod(target), target, normalizeAction(handler))
-  }
-
   function mapRoutes(target: MapTarget, handler: unknown): void {
     if (isRouteTarget(target)) {
       mapSingleRoute(target, handler)
@@ -344,6 +333,10 @@ export function createRouter<
     }
 
     mapController(target, handler)
+  }
+
+  function mapSingleRoute(target: RouteTarget, handler: unknown): void {
+    registerRoute(target instanceof Route ? target.method : 'ANY', target, normalizeAction(handler))
   }
 
   function mapController(
