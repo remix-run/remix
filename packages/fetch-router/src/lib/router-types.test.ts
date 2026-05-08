@@ -2,13 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createRoutes as route } from '@remix-run/routes'
 
-import {
-  createAction,
-  createController,
-  type Action,
-  type Controller,
-  type RouteHandler,
-} from './controller.ts'
+import { createAction, createController, type Action, type Controller } from './controller.ts'
 import type { ContextWithMiddleware, Middleware, MiddlewareContext } from './middleware.ts'
 import { createContextKey, type ContextWithValue } from './request-context.ts'
 import { createRouter } from './router.ts'
@@ -151,7 +145,7 @@ describe('router type inference', () => {
       },
     } satisfies Action<typeof routes.account, AppContext>
 
-    let reportRouteHandler = ((context) => {
+    let reportAction = ((context) => {
       let user = context.get(CurrentUser)
       let role = context.get(CurrentRole)
       let reportId: string = context.params.reportId
@@ -160,10 +154,10 @@ describe('router type inference', () => {
       expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
 
       return new Response(reportId + ':' + user.id + ':' + role)
-    }) satisfies RouteHandler<typeof routes.reports, AppContext>
+    }) satisfies Action<typeof routes.reports, AppContext>
 
     void accountAction
-    void reportRouteHandler
+    void reportAction
   })
 
   it('types controllers with route params and explicit app context', () => {
@@ -403,7 +397,6 @@ describe('router type inference', () => {
         },
       } satisfies Controller<typeof routes.admin, AppContext>
 
-      // @ts-expect-error - Action is the object form; use RouteHandler for object-or-function values
       let functionAction: Action<typeof routes.reports, AppContext> = (context) =>
         new Response(context.params.reportId)
 

@@ -31,17 +31,10 @@ type ActionPattern<route extends ActionRoute> =
   route extends Route<any, infer pattern extends string> ? pattern :
   never
 
-/**
- * An individual route action.
- *
- * Actions are object-form route handlers with optional inline middleware.
- * Most app code should use {@link createAction}; use this type directly when you need
- * to describe an action for an explicit RequestContext type.
- */
-export interface Action<
+type ActionObject<
   route extends ActionRoute,
   context extends RequestContext<any, any> = DefaultContext,
-> {
+> = {
   /**
    * Middleware that runs before this action's handler.
    */
@@ -53,14 +46,18 @@ export interface Action<
 }
 
 /**
- * A route handler can be a plain request handler function or an action object.
+ * An individual route action.
+ *
+ * Actions may be plain request handler functions or objects with optional inline middleware.
+ * Most app code should use {@link createAction}; use this type directly when you need
+ * to describe an action for an explicit RequestContext type.
  */
-export type RouteHandler<
+export type Action<
   route extends ActionRoute,
   context extends RequestContext<any, any> = DefaultContext,
 > =
   | RequestHandler<ContextWithParams<context, Params<ActionPattern<route>>>>
-  | Action<route, context>
+  | ActionObject<route, context>
 
 /**
  * Defines a route handler with route-aware params and the default router context.
@@ -76,21 +73,25 @@ export type RouteHandler<
 export function createAction<
   route extends ActionRoute,
   context extends RequestContext<any, any> = DefaultContext,
-  action extends RouteHandler<route, context> = RouteHandler<route, context>,
+  action extends Action<route, context> = Action<route, context>,
 >(route: route, action: action): action {
   void route
   return action
 }
 
 export function isAction(obj: unknown): obj is Action<any, any> {
+  return isRequestHandler(obj) || isActionObject(obj)
+}
+
+export function isActionObject(obj: unknown): obj is ActionObject<any, any> {
   return isRecord(obj) && typeof obj.handler === 'function'
 }
 
 /**
- * A controller maps route leaves in a route map to route handlers.
+ * A controller maps route leaves in a route map to actions.
  *
- * Controllers let you store related route handlers together while preserving the params
- * and request-context contract for each route handler. Most app code should use
+ * Controllers let you store related actions together while preserving the params
+ * and request-context contract for each action. Most app code should use
  * {@link createController}; use this type directly when you need to describe a
  * controller for an explicit RequestContext type.
  */
@@ -103,9 +104,7 @@ export type Controller<
     ? {
         [name in keyof routes as routes[name] extends Route<any, any>
           ? name
-          : never]: routes[name] extends Route<any, any>
-          ? RouteHandler<routes[name], context>
-          : never
+          : never]: routes[name] extends Route<any, any> ? Action<routes[name], context> : never
       } & {
         [name in keyof routes as routes[name] extends RouteMap ? name : never]?: never
       }

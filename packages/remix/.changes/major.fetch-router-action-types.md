@@ -1,4 +1,4 @@
-BREAKING CHANGE: Updated the re-exported `remix/fetch-router` helper types to match `@remix-run/fetch-router`: `Action` now describes object-form route handlers only, the new `RouteHandler` type describes either a plain request handler function or action object, `Action` and `Controller` now accept the full request context as their optional second generic, `RequestHandler` now accepts the full request context as its only generic, `Middleware` now accepts only the context transform generic, `BuildAction` is no longer exported, `createAction()`/`createController()` are the preferred helpers for stored handlers, `RouterTypes.context` configures the default builder context, `MiddlewareContext` now accepts an optional base context, `ContextWithMiddleware` applies middleware to an existing context, `ContextTransform` replaces `MiddlewareContextTransform`, the lower-level `ApplyContextTransform`/`ApplyMiddleware`/`ApplyMiddlewareTuple` helpers are no longer exported, and custom matcher payloads should use `RouteEntry` instead of `MatchData`.
+BREAKING CHANGE: Updated the re-exported `remix/fetch-router` helper types to match `@remix-run/fetch-router`: `Action` now describes either a plain request handler function or action object and accepts the full request context as its optional second generic, `Controller` now accepts the full request context as its optional second generic, `RequestHandler` now accepts the full request context as its only generic, `Middleware` now accepts only the context transform generic, `BuildAction` is no longer exported, `createAction()`/`createController()` are the preferred helpers for stored handlers, `RouterTypes.context` configures the default builder context, `MiddlewareContext` now accepts an optional base context, `ContextWithMiddleware` applies middleware to an existing context, `ContextTransform` replaces `MiddlewareContextTransform`, the lower-level `ApplyContextTransform`/`ApplyMiddleware`/`ApplyMiddlewareTuple` helpers are no longer exported, and custom matcher payloads should use `RouteEntry` instead of `MatchData`.
 
 The request context helper type renames also apply to imports from `remix/fetch-router`.
 
@@ -44,16 +44,10 @@ let handler: RequestHandler<{ id: string }, RequestContext<{ id: string }>>
 let handler: RequestHandler<RequestContext<{ id: string }>>
 ```
 
-If you manually annotate stored route handler functions, use `RouteHandler`. Use `Action` for object-form handlers with optional middleware:
+`Action` can be used to manually annotate either action form:
 
 ```ts
-// before
 let handler: Action<typeof routes.account, AccountContext> = (context) => {
-  return Response.json(context.get(Auth).identity)
-}
-
-// after
-let handler: RouteHandler<typeof routes.account, AccountContext> = (context) => {
   return Response.json(context.get(Auth).identity)
 }
 

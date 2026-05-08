@@ -14,7 +14,7 @@ export type {
 export type { RouterTypes } from './lib/router-types.ts'
 
 export { createAction, createController } from './lib/controller.ts'
-export type { RequestHandler, Action, RouteHandler, Controller } from './lib/controller.ts'
+export type { RequestHandler, Action, Controller } from './lib/controller.ts'
 
 export type {
   ContextWithMiddleware,
