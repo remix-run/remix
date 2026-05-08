@@ -695,15 +695,31 @@ If you're authoring a middleware package that stores values in request context, 
 Prefer `ContextWith...` names for third-party middleware packages that augment request context. This matches the built-in `ContextWithParams`, `ContextWithValues`, and `ContextWithValue` helpers and makes it clear that the type produces a new `RequestContext` type with additional context available.
 
 ```ts
-import { createContextKey, type ContextWithValues, type RequestContext } from 'remix/fetch-router'
+import {
+  createContextKey,
+  type ContextEntry,
+  type ContextWithValues,
+  type Middleware,
+  type RequestContext,
+} from 'remix/fetch-router'
 
 // The context key that consumers will need to read from `context.get(...)`
 export const CurrentUser = createContextKey<User | null>()
 
+// The context effect carried by middleware that sets one context value
+type CurrentUserContextEntry = ContextEntry<typeof CurrentUser, User | null>
+
+export function loadCurrentUser(): Middleware<CurrentUserContextEntry> {
+  return async (context, next) => {
+    context.set(CurrentUser, await getCurrentUser(context.request))
+    return next()
+  }
+}
+
 // One or more ContextWith* helper types that apps can use to describe the request context
 export type ContextWithCurrentUser<context extends RequestContext<any, any>> = ContextWithValues<
   context,
-  [readonly [typeof CurrentUser, User | null]]
+  [CurrentUserContextEntry]
 >
 ```
 

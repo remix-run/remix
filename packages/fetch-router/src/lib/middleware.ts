@@ -1,20 +1,19 @@
 import type { RequestHandler } from './controller.ts'
 import { raceRequestAbort } from './request-abort.ts'
-import type { ContextEntries, RequestContext } from './request-context.ts'
+import type {
+  ContextEntries,
+  ContextEntry,
+  ContextWithValues,
+  RequestContext,
+} from './request-context.ts'
 
 /**
  * A middleware of any context transform.
  */
-export type AnyMiddleware = Middleware<any>
+export type AnyMiddleware = Middleware<ContextTransform>
 
-/**
- * The type-level effect a middleware can apply to request context.
- *
- * Middleware authors may provide either context entries or a custom context transform
- * function. Prefer exposing named `ContextWith*` helpers for reusable middleware that
- * adds values to context.
- */
-export type ContextTransform =
+type ContextTransform =
+  | ContextEntry
   | ContextEntries
   | (<context extends RequestContext<any, any>>(context: context) => RequestContext<any, any>)
 
@@ -27,19 +26,16 @@ type ContextWithTransform<
   context extends RequestContext<any, any>,
   transform,
 > = transform extends ContextEntries
-  ? context extends RequestContext<
-      infer params extends Record<string, any>,
-      infer entries extends ContextEntries
-    >
-    ? RequestContext<params, [...entries, ...transform]>
-    : context
-  : transform extends {
-        <inputContext extends context>(context: inputContext): infer output
-      }
-    ? output extends RequestContext<any, any>
-      ? output
+  ? ContextWithValues<context, transform>
+  : transform extends ContextEntry
+    ? ContextWithValues<context, [transform]>
+    : transform extends {
+          <inputContext extends context>(context: inputContext): infer output
+        }
+      ? output extends RequestContext<any, any>
+        ? output
+        : context
       : context
-    : context
 
 /**
  * Resolves the request-context type produced by a middleware array.
@@ -74,6 +70,9 @@ export type ContextWithMiddleware<
  * @param context The request context
  * @param next A function that invokes the next middleware or request handler in the chain
  * @returns A response to short-circuit the chain, or `undefined`/`void` to continue
+ *
+ * The generic describes the context effect this middleware has. Use a {@link ContextEntry}
+ * for middleware that provides one context value, or {@link ContextEntries} for multiple values.
  */
 export interface Middleware<transform extends ContextTransform = EmptyContextTransform> {
   /**

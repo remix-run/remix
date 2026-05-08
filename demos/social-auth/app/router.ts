@@ -1,4 +1,4 @@
-import type { WithRequiredAuth } from 'remix/auth-middleware'
+import type { ContextWithRequiredAuth } from 'remix/auth-middleware'
 import { createRouter, type MiddlewareContext, type ContextWithParams } from 'remix/fetch-router'
 import type { Cookie } from 'remix/cookie'
 import { formData } from 'remix/form-data-middleware'
@@ -40,10 +40,8 @@ declare module 'remix/fetch-router' {
   }
 }
 
-export type AuthenticatedAppContext<params extends Record<string, string> = {}> = WithRequiredAuth<
-  AppContext<params>,
-  AuthIdentity
->
+export type AuthenticatedAppContext<params extends Record<string, string> = {}> =
+  ContextWithRequiredAuth<AppContext<params>, AuthIdentity>
 
 export interface SocialAuthRouterOptions {
   sessionCookie?: Cookie

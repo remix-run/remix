@@ -18,7 +18,6 @@ export type { RequestHandler, Action, Controller } from './lib/controller.ts'
 
 export type {
   ContextWithMiddleware,
-  ContextTransform,
   Middleware,
   MiddlewareContext,
   NextFunction,

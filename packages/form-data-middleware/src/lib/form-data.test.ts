@@ -11,7 +11,7 @@ import {
   type FileUploadHandler,
 } from '@remix-run/form-data-parser'
 import { createRouter } from '@remix-run/fetch-router'
-import type { RequestContext } from '@remix-run/fetch-router'
+import type { ContextEntries, RequestContext } from '@remix-run/fetch-router'
 
 import { formData } from './form-data.ts'
 
@@ -28,7 +28,9 @@ function normalizeFileType(type: string): string {
   return new File([''], '', { type }).type
 }
 
-function getFormDataState(context: RequestContext): FormDataState {
+function getFormDataState<params extends Record<string, any>, entries extends ContextEntries>(
+  context: RequestContext<params, entries>,
+): FormDataState {
   let formData = context.get(FormData)
   if (formData == null) {
     return {

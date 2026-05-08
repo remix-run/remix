@@ -4,7 +4,7 @@ import { createRoutes as route } from '@remix-run/routes'
 
 import { createAction, createController, type Action, type Controller } from './controller.ts'
 import type { ContextWithMiddleware, Middleware, MiddlewareContext } from './middleware.ts'
-import { createContextKey, type ContextWithValue } from './request-context.ts'
+import { createContextKey, type ContextEntry, type ContextWithValue } from './request-context.ts'
 import { createRouter } from './router.ts'
 import type { IsEqual } from './type-utils.ts'
 
@@ -13,29 +13,27 @@ function expectTypeEquality<_check extends true>() {}
 const CurrentUser = createContextKey<{ id: string } | null>(null)
 const CurrentRole = createContextKey<'viewer' | 'admin' | null>(null)
 
-type RequireUserTransform = readonly [readonly [typeof CurrentUser, { id: string }]]
+type CurrentUserContextEntry = ContextEntry<typeof CurrentUser, { id: string }>
 
-type SetRoleTransform<role extends 'viewer' | 'admin'> = readonly [
-  readonly [typeof CurrentRole, role],
-]
+type RoleContextEntry<role extends 'viewer' | 'admin'> = ContextEntry<typeof CurrentRole, role>
 
-type SetFormDataTransform = readonly [readonly [typeof FormData, FormData]]
+type FormDataContextEntry = ContextEntry<typeof FormData, FormData>
 
-function requireUser(): Middleware<RequireUserTransform> {
+function requireUser(): Middleware<CurrentUserContextEntry> {
   return async (context, next) => {
     context.set(CurrentUser, { id: 'user-1' })
     return next()
   }
 }
 
-function setRole<role extends 'viewer' | 'admin'>(role: role): Middleware<SetRoleTransform<role>> {
+function setRole<role extends 'viewer' | 'admin'>(role: role): Middleware<RoleContextEntry<role>> {
   return async (context, next) => {
     context.set(CurrentRole, role)
     return next()
   }
 }
 
-function setFormData(): Middleware<SetFormDataTransform> {
+function setFormData(): Middleware<FormDataContextEntry> {
   return async (context, next) => {
     context.set(FormData, new FormData())
     return next()

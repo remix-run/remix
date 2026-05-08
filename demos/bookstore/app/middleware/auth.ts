@@ -2,7 +2,7 @@ import type { Route } from 'remix/routes'
 import { createCredentialsAuthProvider } from 'remix/auth'
 import { Auth, auth, createSessionAuthScheme, type GoodAuth } from 'remix/auth-middleware'
 import { Database } from 'remix/data-table'
-import type { Middleware } from 'remix/fetch-router'
+import type { ContextEntry, Middleware } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../data/schema.ts'
@@ -70,11 +70,9 @@ export interface RequireAuthOptions {
   redirectTo?: Route
 }
 
-type RequireBookstoreUserTransform = readonly [readonly [typeof Auth, GoodAuth<User>]]
+type BookstoreUserContextEntry = ContextEntry<typeof Auth, GoodAuth<User>>
 
-export function requireAuth(
-  options?: RequireAuthOptions,
-): Middleware<RequireBookstoreUserTransform> {
+export function requireAuth(options?: RequireAuthOptions): Middleware<BookstoreUserContextEntry> {
   let redirectTo = options?.redirectTo ?? routes.auth.login.index
 
   return (context, next) => {

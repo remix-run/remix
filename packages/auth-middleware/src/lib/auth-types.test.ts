@@ -14,9 +14,9 @@ import {
   Auth,
   auth,
   type AuthState,
+  type ContextWithAuth,
+  type ContextWithRequiredAuth,
   type GoodAuth,
-  type WithAuth,
-  type WithRequiredAuth,
 } from './auth.ts'
 import { requireAuth } from './require-auth.ts'
 import { createAPIAuthScheme } from './schemes/api-key.ts'
@@ -58,9 +58,9 @@ const routes = route({
 const routerMiddleware = [typedAuth] as const
 
 type AppContext = MiddlewareContext<typeof routerMiddleware>
-type ProtectedAppContext = WithRequiredAuth<AppContext, APIIdentity>
+type ProtectedAppContext = ContextWithRequiredAuth<AppContext, APIIdentity>
 
-type AuthContext = WithAuth<RequestContext, APIIdentity>
+type AuthContext = ContextWithAuth<RequestContext, APIIdentity>
 
 const router = createRouter({ middleware: routerMiddleware })
 const fallbackRouter = createRouter()
@@ -130,7 +130,7 @@ const adminController = createController<typeof routes.admin, ProtectedAppContex
 })
 
 type SessionIdentity = { kind: 'session'; id: string }
-type SessionAuthContext = WithRequiredAuth<RequestContext, SessionIdentity>
+type SessionAuthContext = ContextWithRequiredAuth<RequestContext, SessionIdentity>
 
 const sessionAction = createAction<'/session/:id', SessionAuthContext>('/session/:id', {
   middleware: [requireAuth<SessionIdentity>()] as const,

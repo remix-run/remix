@@ -3,7 +3,7 @@ import { describe, it } from '@remix-run/test'
 
 import { createCookie } from '@remix-run/cookie'
 import { createRouter } from '@remix-run/fetch-router'
-import type { Middleware } from '@remix-run/fetch-router'
+import type { ContextEntry, Middleware } from '@remix-run/fetch-router'
 import { createSession, Session } from '@remix-run/session'
 import { createMemorySessionStorage } from '@remix-run/session/memory-storage'
 import { session as sessionMiddleware } from '@remix-run/session-middleware'
@@ -13,7 +13,7 @@ import { requireAuth } from '../require-auth.ts'
 import { Auth } from '../auth.ts'
 import { createSessionAuthScheme } from './session.ts'
 
-type SetSessionContextTransform = readonly [readonly [typeof Session, Session]]
+type SessionContextEntry = ContextEntry<typeof Session, Session>
 
 describe('createSessionAuthScheme scheme', () => {
   it('throws when Session is not available in request context', async () => {
@@ -109,7 +109,7 @@ describe('createSessionAuthScheme scheme', () => {
 
   it('fails and invalidates when verify() returns null', async () => {
     let invalidated = false
-    let setSession: Middleware<SetSessionContextTransform> = (context, next) => {
+    let setSession: Middleware<SessionContextEntry> = (context, next) => {
       let session = createSession()
       session.set('auth', { userId: 'u1' })
       context.set(Session, session)
