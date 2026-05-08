@@ -103,12 +103,15 @@ function getApiTypeKind(value: string | undefined): ApiTypeKind {
 export async function renderMarkdownFile(
   filePath: string,
   docFilesLookup: Map<string, DocFile>,
-  version?: string,
+  version: string | undefined,
+  addLinks: boolean,
 ): Promise<{ html: string; source?: string }> {
   try {
     let markdown = fs.readFileSync(filePath, 'utf-8')
     let { attributes, body } = parseFrontmatter(markdown)
-    let marked = new Marked(getShikiExtension(attributes.title || '', docFilesLookup, version))
+    let marked = new Marked(
+      getShikiExtension(attributes.title || '', docFilesLookup, version, addLinks),
+    )
     let html = await marked.parse(body)
     return { html, source: typeof attributes.source === 'string' ? attributes.source : undefined }
   } catch (error) {
@@ -126,7 +129,8 @@ export async function renderMarkdownFile(
 function getShikiExtension(
   apiName: string,
   docFilesLookup: Map<string, DocFile>,
-  version?: string,
+  version: string | undefined,
+  addLinks: boolean,
 ): MarkedExtension {
   return {
     async: true,
@@ -145,6 +149,10 @@ function getShikiExtension(
               // Insert cross-links to known APIs
               {
                 span(node, line, col) {
+                  if (!addLinks) {
+                    return
+                  }
+
                   // We only enhance single-symbol spans of word characters,
                   // skipping spans for parens, braces, etc
                   if (

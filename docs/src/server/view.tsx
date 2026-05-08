@@ -1,7 +1,7 @@
 import { css } from 'remix/ui'
 import type { Handle, RemixNode } from 'remix/ui'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
-import type { DocsRegistry, PageDefinition } from './registry.ts'
+import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { isPageActive } from './registry.ts'
 import { bodyTextCss, eyebrowTextCss } from './page-primitives.tsx'
 import { routes } from './routes.ts'
@@ -117,36 +117,49 @@ function Sidebar(
               <span mix={sectionSummaryLabelCss}>{section.label}</span>
             </summary>
             <div mix={sectionContentCss}>
-              {section.groups.map((group) => (
-                <div key={group.id} mix={sidebarGroupCss}>
-                  {group.label ? <p mix={sidebarHeadingCss}>{group.label}</p> : null}
-                  <nav
-                    aria-label={
-                      group.label ? `${section.label} ${group.label}` : `${section.label} pages`
-                    }
-                    mix={sidebarNavCss}
-                  >
-                    {group.pageIds.map((pageId) => {
-                      let navPage = registry.pages[pageId]
-                      return (
-                        <a
-                          key={navPage.path}
-                          href={navPage.path}
-                          aria-current={isPageActive(navPage, currentPath) ? 'page' : undefined}
-                          mix={getNavItemMix(navPage, currentPath)}
-                        >
-                          {navPage.navLabel}
-                        </a>
-                      )
-                    })}
+              {section.groups.map((group) =>
+                group.label ? (
+                  <nav key={group.id} mix={[sidebarGroupCss]}>
+                    <p mix={sidebarHeadingCss}>{group.label}</p>
+                    <nav aria-label={`${section.label} ${group.label}`} mix={sidebarNavCss}>
+                      <SidebarGroup registry={registry} group={group} currentPath={currentPath} />
+                    </nav>
                   </nav>
-                </div>
-              ))}
+                ) : (
+                  <nav
+                    key={group.id}
+                    aria-label={`${section.label} Pages`}
+                    mix={[sidebarGroupCss, css({ paddingLeft: 0 })]}
+                  >
+                    <SidebarGroup registry={registry} group={group} currentPath={currentPath} />
+                  </nav>
+                ),
+              )}
             </div>
           </details>
         ))}
       </div>
     )
+  }
+}
+
+function SidebarGroup(
+  handle: Handle<{ registry: DocsRegistry; group: NavGroup; currentPath: string }>,
+) {
+  return () => {
+    let { registry, group, currentPath } = handle.props
+    return group.pageIds.map((pageId) => {
+      let page = registry.pages[pageId]
+      return (
+        <a
+          href={page.path}
+          aria-current={isPageActive(page, currentPath) ? 'page' : undefined}
+          mix={getNavItemMix(page, currentPath)}
+        >
+          {page.navLabel}
+        </a>
+      )
+    })
   }
 }
 
@@ -500,14 +513,6 @@ const sidebarNavCss = css({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.space.xs,
-})
-
-const sidebarTitleCss = css({
-  margin: 0,
-  fontSize: theme.fontSize.xl,
-  lineHeight: theme.lineHeight.tight,
-  fontWeight: theme.fontWeight.semibold,
-  color: theme.colors.text.primary,
 })
 
 const logoLightCss = css({
