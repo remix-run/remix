@@ -598,7 +598,6 @@ class MixinHandleImpl
     this.#activeScope = scope
     if (!scope) return
     if (this.#scopeTargets.has(scope)) return
-    this.#scopeSignals.set(scope, new AbortController())
     this.#scopeTargets.set(scope, new TypedEventTarget<MixinHandleEventMap<Element>>())
     this.#scopePhaseCounts.set(scope, { beforeUpdate: 0, commit: 0 })
   }
@@ -616,8 +615,11 @@ class MixinHandleImpl
       this.#decrementGlobalPhaseCount('beforeUpdate', scopePhaseCounts.beforeUpdate)
       this.#decrementGlobalPhaseCount('commit', scopePhaseCounts.commit)
     }
-    this.#scopeSignals.get(scope)?.abort()
-    this.#scopeSignals.delete(scope)
+    let controller = this.#scopeSignals.get(scope)
+    if (controller) {
+      controller.abort()
+      this.#scopeSignals.delete(scope)
+    }
     this.#scopePhaseCounts.delete(scope)
     this.#scopeTargets.delete(scope)
     if (this.#activeScope === scope) {
@@ -646,7 +648,10 @@ class MixinHandleImpl
 
   #getScopeSignal(scope: symbol) {
     let controller = this.#scopeSignals.get(scope)
-    invariant(controller)
+    if (!controller) {
+      controller = new AbortController()
+      this.#scopeSignals.set(scope, controller)
+    }
     return controller.signal
   }
 

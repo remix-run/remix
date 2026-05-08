@@ -1,14 +1,12 @@
 import { clientEntry } from 'remix/ui'
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 
 import { render } from '../../config/render.tsx'
-import type { routes } from '../../config/routes.ts'
+import { routes } from '../../config/routes.ts'
 import { findExample, loadExampleModule, readExampleSource } from './index.tsx'
 import { ExampleContent, ExampleDocument } from './view.tsx'
 
-type ExampleActions = Controller<typeof routes.examples>['actions']
-
-let examplesController = {
+let examplesController = createController(routes.examples, {
   actions: {
     async content(context) {
       let example = findExample(context.params.slug)
@@ -55,8 +53,8 @@ let examplesController = {
         },
       )
     },
-  } satisfies ExampleActions,
-} satisfies Controller<typeof routes.examples>
+  },
+})
 
 export default examplesController
 

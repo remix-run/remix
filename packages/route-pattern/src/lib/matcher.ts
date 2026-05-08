@@ -1,4 +1,5 @@
 import type { RoutePattern, RoutePatternMatch } from './route-pattern.ts'
+import { TrieMatcher } from './trie-matcher.ts'
 
 /**
  * Successful pattern match paired with matcher-specific data.
@@ -41,4 +42,15 @@ export type Matcher<data = unknown> = {
    * @returns All matches
    */
   matchAll(url: string | URL, compareFn?: CompareFn): Array<Match<string, data>>
+}
+
+/**
+ * Create a new matcher.
+ *
+ * @param options Constructor options
+ * @param options.ignoreCase When `true`, pathname matching is case-insensitive for all patterns. Defaults to `false`.
+ * @returns A new matcher instance.
+ */
+export function createMatcher<data = unknown>(options?: { ignoreCase?: boolean }): Matcher<data> {
+  return new TrieMatcher<data>(options)
 }

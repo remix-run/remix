@@ -20,6 +20,8 @@ export type PartPatternToken =
   | { type: '(' | ')' }
   | { type: ':' | '*'; name: string }
 
+type ParamToken = Extract<PartPatternToken, { type: ':' | '*' }>
+
 const IDENTIFIER_RE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 
 export class PartPattern {
@@ -229,7 +231,7 @@ export class PartPattern {
           i = this.optionals.get(frame.begin!)! + 1
           continue
         }
-        stack[stack.length - 1].href += typeof value === 'string' ? value : String(value)
+        stack[stack.length - 1].href += this.#encodeParamHref(pattern, token, value)
         i += 1
         continue
       }
@@ -246,6 +248,53 @@ export class PartPattern {
     }
     if (stack.length !== 1) unreachable()
     return stack[0].href
+  }
+
+  #encodeParamHref(pattern: RoutePattern, token: ParamToken, value: unknown): string {
+    let stringValue = typeof value === 'string' ? value : String(value)
+
+    if (this.type === 'pathname') {
+      return token.type === '*'
+        ? stringValue
+            .split('/')
+            .map((segment) => this.#encodePathnameSegment(pattern, token, stringValue, segment))
+            .join('/')
+        : this.#encodePathnameSegment(pattern, token, stringValue, stringValue)
+    }
+
+    let result = encodeHostnameParam(pattern, this, token.name, stringValue)
+    if (token.type === ':' && result.includes('.')) {
+      throw new HrefError({
+        type: 'invalid-param',
+        pattern,
+        partPattern: this,
+        paramName: token.name,
+        paramValue: stringValue,
+        reason: 'hostname variable params must not contain hostname separators',
+      })
+    }
+
+    return result
+  }
+
+  #encodePathnameSegment(
+    pattern: RoutePattern,
+    token: ParamToken,
+    stringValue: string,
+    segment: string,
+  ): string {
+    if (segment === '.' || segment === '..') {
+      throw new HrefError({
+        type: 'invalid-param',
+        pattern,
+        partPattern: this,
+        paramName: token.name,
+        paramValue: stringValue,
+        reason: 'pathname params must not contain dot segments',
+      })
+    }
+
+    return encodePathnameSegment(segment)
   }
 
   match(part: string, options?: { ignoreCase?: boolean }): PartPatternMatch | null {
@@ -322,4 +371,65 @@ export class PartPattern {
 function separatorForType(type: 'hostname' | 'pathname'): '.' | '/' {
   if (type === 'hostname') return '.'
   return '/'
+}
+
+function encodePathnameSegment(value: string): string {
+  return encodeURIComponent(value).replace(
+    /%(?:24|26|2B|2C|3A|3B|3D|40)/g,
+    function preservePathnameSegmentChar(match) {
+      return String.fromCharCode(Number.parseInt(match.slice(1), 16))
+    },
+  )
+}
+
+const hostnameNormalizationSuffix = '.route-pattern.invalid'
+
+function encodeHostnameParam(
+  pattern: RoutePattern,
+  partPattern: PartPattern,
+  paramName: string,
+  value: string,
+): string {
+  let url: URL
+  try {
+    url = new URL(`https://${value}${hostnameNormalizationSuffix}/`)
+  } catch {
+    throw new HrefError({
+      type: 'invalid-param',
+      pattern,
+      partPattern,
+      paramName,
+      paramValue: value,
+      reason: 'hostname params must be valid URL hostname content',
+    })
+  }
+
+  if (url.username !== '' || url.password !== '') {
+    throw new HrefError({
+      type: 'invalid-param',
+      pattern,
+      partPattern,
+      paramName,
+      paramValue: value,
+      reason: 'hostname params must not contain URL username or password separators',
+    })
+  }
+
+  if (
+    url.pathname !== '/' ||
+    url.search !== '' ||
+    url.hash !== '' ||
+    !url.hostname.endsWith(hostnameNormalizationSuffix)
+  ) {
+    throw new HrefError({
+      type: 'invalid-param',
+      pattern,
+      partPattern,
+      paramName,
+      paramValue: value,
+      reason: 'hostname params must not contain URL path, query, or hash separators',
+    })
+  }
+
+  return url.hostname.slice(0, -hostnameNormalizationSuffix.length)
 }

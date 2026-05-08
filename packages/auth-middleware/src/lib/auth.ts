@@ -1,6 +1,7 @@
 import {
   createContextKey,
-  type MergeContext,
+  type ContextEntry,
+  type ContextWithValues,
   type Middleware,
   type RequestContext,
 } from '@remix-run/fetch-router'
@@ -51,26 +52,29 @@ export type AuthState<identity = unknown> = GoodAuth<identity> | BadAuth
  */
 export const Auth = createContextKey<AuthState>()
 
+type AuthContextEntry<auth> = ContextEntry<typeof Auth, auth>
+
 /**
  * Adds the {@link Auth} context key — typed as the full {@link AuthState}
  * union — onto an existing router `RequestContext`. Use this on handlers
- * mounted under {@link auth} where the auth state may be `'good'` or `'bad'`.
+ * mounted under {@link auth} where the request may be either authenticated
+ * ({@link GoodAuth}) or unauthenticated ({@link BadAuth}).
  */
-export type WithAuth<context extends RequestContext<any, any>, identity = unknown> = MergeContext<
-  context,
-  [readonly [typeof Auth, AuthState<identity>]]
->
+export type ContextWithAuth<
+  context extends RequestContext<any, any>,
+  identity = unknown,
+> = ContextWithValues<context, [AuthContextEntry<AuthState<identity>>]>
 
 /**
  * Adds the {@link Auth} context key — typed as a {@link GoodAuth} only —
  * onto an existing router `RequestContext`. Use this on handlers mounted
- * under `requireAuth` where reading the context is guaranteed to return
- * a successful auth state.
+ * under {@link requireAuth} where the request is guaranteed to be
+ * authenticated.
  */
-export type WithRequiredAuth<
+export type ContextWithRequiredAuth<
   context extends RequestContext<any, any>,
   identity = unknown,
-> = MergeContext<context, [readonly [typeof Auth, GoodAuth<identity>]]>
+> = ContextWithValues<context, [AuthContextEntry<GoodAuth<identity>>]>
 
 /**
  * Successful result returned by an auth scheme.
@@ -128,8 +132,6 @@ type AuthForSchemes<schemes extends readonly AuthScheme<any>[]> = AuthState<
   AuthSchemeIdentity<schemes[number]>
 >
 
-type SetAuthContextTransform<auth> = readonly [readonly [typeof Auth, auth]]
-
 /**
  * Options for loading auth state for each request.
  */
@@ -146,7 +148,7 @@ export interface AuthOptions<schemes extends readonly AuthScheme<any>[] = AuthSc
  */
 export function auth<schemes extends readonly AuthScheme<any>[]>(
   options: AuthOptions<schemes>,
-): Middleware<any, any, SetAuthContextTransform<AuthForSchemes<schemes>>> {
+): Middleware<AuthContextEntry<AuthForSchemes<schemes>>> {
   if (options.schemes.length === 0) {
     throw new Error('auth() requires at least one authentication scheme')
   }

@@ -1,8 +1,8 @@
-import * as process from 'node:process'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { runRemix } from '../../index.ts'
+import { captureOutput } from '../../../test/capture-output.ts'
 
 const COMPLETION_COMMAND_HELP_TEXT = [
   'Usage:',
@@ -35,6 +35,14 @@ describe('completion command', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('prints completion command help when help appears after the shell', async () => {
+    let result = await captureOutput(() => runRemix(['completion', 'bash', '--help']))
+
+    assert.equal(result.exitCode, 0)
+    assert.equal(result.stdout, COMPLETION_COMMAND_HELP_TEXT)
+    assert.equal(result.stderr, '')
+  })
+
   it('prints the same wrapper for bash and zsh', async () => {
     let bashResult = await captureOutput(() => runRemix(['completion', 'bash']))
     let zshResult = await captureOutput(() => runRemix(['completion', 'zsh']))
@@ -54,6 +62,14 @@ describe('completion command', () => {
     assert.equal(result.exitCode, 1)
     assert.equal(result.stdout, '')
     assert.equal(result.stderr, UNKNOWN_COMPLETION_SHELL_ERROR_TEXT)
+  })
+
+  it('keeps plumbing mode active when completed words include help flags', async () => {
+    let result = await captureOutput(() => runRemix(['completion', '--', '2', 'remix', '--help']))
+
+    assert.equal(result.exitCode, 0)
+    assert.equal(result.stdout, 'mode:values\n')
+    assert.equal(result.stderr, '')
   })
 
   it('returns machine-readable completions in plumbing mode', async () => {
@@ -82,30 +98,3 @@ describe('completion command', () => {
     assert.equal(result.stderr, '')
   })
 })
-
-async function captureOutput(
-  callback: () => Promise<number>,
-): Promise<{ exitCode: number; stderr: string; stdout: string }> {
-  let stderr = ''
-  let stdout = ''
-  let originalStdoutWrite = process.stdout.write
-  let originalStderrWrite = process.stderr.write
-
-  process.stdout.write = ((chunk: string | Uint8Array) => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stdout.write
-
-  process.stderr.write = ((chunk: string | Uint8Array) => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stderr.write
-
-  try {
-    let exitCode = await callback()
-    return { exitCode, stderr, stdout }
-  } finally {
-    process.stdout.write = originalStdoutWrite
-    process.stderr.write = originalStderrWrite
-  }
-}

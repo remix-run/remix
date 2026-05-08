@@ -16,13 +16,18 @@ import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
 
 export async function runCompletionCommand(argv: string[]): Promise<number> {
-  if (argv.length === 0 || argv[0] === '-h' || argv[0] === '--help') {
+  if (argv.length === 0) {
     process.stdout.write(getCompletionCommandHelpText())
     return 0
   }
 
   if (argv[0] === '--') {
     return runCompletionPlumbing(argv.slice(1))
+  }
+
+  if (argv.includes('-h') || argv.includes('--help')) {
+    process.stdout.write(getCompletionCommandHelpText())
+    return 0
   }
 
   let [shell, ...rest] = argv

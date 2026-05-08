@@ -100,6 +100,13 @@ describe('completion engine', () => {
     assert.ok(!nested.values?.includes('-v'))
     assert.ok(!nested.values?.includes('--version'))
   })
+
+  it('does not duplicate help flags for commands with their own help handling', () => {
+    let result = getCompletionResult(['remix', 'test', ''], 2)
+
+    assert.equal(result.mode, 'values')
+    assert.deepEqual(result.values, ['--coverage', '--watch', '-h', '--help', '--no-color'])
+  })
 })
 
 describe('completion script', () => {

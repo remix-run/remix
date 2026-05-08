@@ -85,7 +85,6 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
 
     let proxyInit: RequestInit = {
       method: request.method,
-      headers: proxyHeaders,
       cache: request.cache,
       credentials: request.credentials,
       integrity: request.integrity,
@@ -96,6 +95,7 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
       referrerPolicy: request.referrerPolicy,
       signal: request.signal,
       ...init,
+      headers: proxyHeaders,
     }
     if (request.method !== 'GET' && request.method !== 'HEAD') {
       proxyInit.body = request.body
@@ -119,7 +119,7 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
         let header = new SetCookie(cookie)
 
         if (rewriteCookieDomain && header.domain) {
-          header.domain = url.host
+          header.domain = getCookieDomain(url.hostname)
         }
 
         if (rewriteCookiePath && header.path) {
@@ -140,6 +140,18 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
       headers: responseHeaders,
     })
   }
+}
+
+function getCookieDomain(hostname: string): string | undefined {
+  if (hostname.toLowerCase() === 'localhost' || isIpAddress(hostname)) {
+    return undefined
+  }
+
+  return hostname
+}
+
+function isIpAddress(hostname: string): boolean {
+  return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname) || hostname.includes(':')
 }
 
 function getForwardedPort(url: URL): string {

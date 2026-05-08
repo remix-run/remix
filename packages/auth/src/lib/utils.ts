@@ -47,11 +47,12 @@ export function getSession(
   context: RequestContext,
   source: 'completeAuth()' | 'finishExternalAuth()' | 'startExternalAuth()',
 ): Session {
-  if (!context.has(Session)) {
+  let session = context.get(Session)
+  if (session == null) {
     throw new Error(`Session not found. Make sure session() middleware runs before ${source}.`)
   }
 
-  return context.get(Session)
+  return session
 }
 
 export function resolveRedirectTarget(

@@ -12,11 +12,10 @@ import {
 } from './errors.ts'
 import { runProgressStep, type StepProgressReporter } from './reporter.ts'
 
-const BOOTSTRAP_DIRECTORY = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '../../bootstrap',
-)
-const BOOTSTRAP_EXCLUDED_NAMES = new Set(['.gitkeep', 'node_modules'])
+const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url))
+const PACKAGE_TEMPLATE_DIRECTORY = path.resolve(MODULE_DIRECTORY, '../../template')
+const REPO_TEMPLATE_DIRECTORY = path.resolve(MODULE_DIRECTORY, '../../../../template')
+const TEMPLATE_EXCLUDED_NAMES = new Set(['.gitkeep', 'node_modules'])
 export const MINIMUM_SUPPORTED_NODE_VERSION = '24.3.0'
 
 export interface BootstrapProjectOptions {
@@ -67,9 +66,9 @@ export async function bootstrapProject(
   await runProgressStep(progress, 'prepare-target-directory', () =>
     ensureTargetDirectory(targetDir, options.force),
   )
-  await runProgressStep(progress, 'generate-scaffold-files', () =>
-    copyBootstrapDirectory({
-      sourceDir: BOOTSTRAP_DIRECTORY,
+  await runProgressStep(progress, 'generate-scaffold-files', async () =>
+    copyTemplateDirectory({
+      sourceDir: await resolveTemplateDirectory(),
       targetDir,
       templateValues: createTemplateValues(config),
     }),
@@ -102,6 +101,34 @@ function createTemplateValues(config: BootstrapConfig): TemplateValues {
   return {
     '%%RMX_APP_DISPLAY_NAME%%': config.appDisplayName,
     '%%RMX_APP_DISPLAY_NAME_URI_COMPONENT%%': encodeURIComponent(config.appDisplayName),
+  }
+}
+
+async function resolveTemplateDirectory(): Promise<string> {
+  if (await isDirectory(PACKAGE_TEMPLATE_DIRECTORY)) {
+    return PACKAGE_TEMPLATE_DIRECTORY
+  }
+
+  if (await isDirectory(REPO_TEMPLATE_DIRECTORY)) {
+    return REPO_TEMPLATE_DIRECTORY
+  }
+
+  throw new Error(
+    `Could not find the Remix app template at ${PACKAGE_TEMPLATE_DIRECTORY} or ${REPO_TEMPLATE_DIRECTORY}.`,
+  )
+}
+
+async function isDirectory(directory: string): Promise<boolean> {
+  try {
+    let stats = await fs.stat(directory)
+    return stats.isDirectory()
+  } catch (error) {
+    let nodeError = error as NodeJS.ErrnoException
+    if (nodeError.code === 'ENOENT') {
+      return false
+    }
+
+    throw error
   }
 }
 
@@ -154,7 +181,7 @@ async function ensureTargetDirectory(targetDir: string, force: boolean): Promise
   await fs.mkdir(targetDir, { recursive: true })
 }
 
-async function copyBootstrapDirectory({
+async function copyTemplateDirectory({
   sourceDir,
   targetDir,
   templateValues,
@@ -169,13 +196,13 @@ async function copyBootstrapDirectory({
     let sourcePath = path.join(sourceDir, entry.name)
     let targetPath = path.join(targetDir, entry.name)
 
-    if (BOOTSTRAP_EXCLUDED_NAMES.has(entry.name)) {
+    if (TEMPLATE_EXCLUDED_NAMES.has(entry.name)) {
       continue
     }
 
     if (entry.isDirectory()) {
       await fs.mkdir(targetPath, { recursive: true })
-      await copyBootstrapDirectory({ sourceDir: sourcePath, targetDir: targetPath, templateValues })
+      await copyTemplateDirectory({ sourceDir: sourcePath, targetDir: targetPath, templateValues })
       continue
     }
 

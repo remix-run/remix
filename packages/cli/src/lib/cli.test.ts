@@ -7,6 +7,8 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { getFixturePath } from '../../test/fixtures.ts'
+import { captureOutput } from '../../test/capture-output.ts'
+import { withEnv } from '../../test/with-env.ts'
 import { runRemix, type RunRemixOptions } from '../index.ts'
 import { getTestCommandHelpText } from './commands/test.ts'
 
@@ -72,7 +74,7 @@ const DOCTOR_COMMAND_HELP_TEXT = [
   'Options:',
   '  --json    Print doctor findings as JSON',
   '  --strict  Exit with status 1 when warning-level findings are present',
-  '  --fix     Apply low-risk project and controller fixes',
+  '  --fix     Apply low-risk project and action fixes',
   '',
   'Examples:',
   '  remix doctor',
@@ -374,6 +376,16 @@ describe('run', () => {
     assert.equal(result.stderr, '')
   })
 
+  it('ignores a double-dash separator after global options', async () => {
+    let result = await captureOutput(() =>
+      run(['--no-color', '--', '--version'], { remixVersion: '9.9.9' }),
+    )
+
+    assert.equal(result.exitCode, 0)
+    assert.equal(result.stdout, '9.9.9\n')
+    assert.equal(result.stderr, '')
+  })
+
   it('fails for unknown commands', async () => {
     let result = await captureOutput(() => run(['unknown']))
 
@@ -439,18 +451,22 @@ describe('run', () => {
       assert.equal(packageJson.engines.node, '>=24.3.0')
       assert.match(agentsGuide, /^# My App Agent Guide/m)
       assert.match(agentsGuide, /This starter intentionally begins small/)
-      assert.match(
-        agentsGuide,
-        /Keep simple pages in flat files like `app\/controllers\/home\.tsx`/,
-      )
+      assert.match(agentsGuide, /Put top-level route actions in `app\/actions\/controller\.tsx`/)
       assert.match(readme, /^# My App/m)
-      assert.match(server, /import \{ serve \} from 'remix\/node-serve'/)
-      assert.doesNotMatch(server, /remix\/node-fetch-server/)
-      assert.doesNotMatch(server, /createRequestListener/)
+      assert.match(server, /import \* as http from 'node:http'/)
+      assert.match(server, /import \{ createRequestListener \} from 'remix\/node-fetch-server'/)
+      assert.match(server, /http\.createServer/)
+      assert.match(server, /createRequestListener/)
+      assert.doesNotMatch(server, /remix\/node-serve/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
-      await assertPathExists(path.join(appDir, 'app', 'controllers', 'home.tsx'))
-      await assertPathExists(path.join(appDir, 'app', 'controllers', 'auth.tsx'))
-      await assertPathMissing(path.join(appDir, 'app', 'controllers', 'about.tsx'))
+      await assertPathMissing(path.join(appDir, 'app', 'assets.ts'))
+      await assertPathExists(path.join(appDir, 'app', 'assets', 'prompt-button.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'actions', 'controller.tsx'))
+      await assertPathMissing(path.join(appDir, 'app', 'actions', 'assets.ts'))
+      await assertPathMissing(path.join(appDir, 'app', 'actions', 'home.tsx'))
+      await assertPathMissing(path.join(appDir, 'app', 'actions', 'auth.tsx'))
+      await assertPathMissing(path.join(appDir, 'app', 'actions', 'about.tsx'))
+      await assertPathMissing(path.join(appDir, 'app', 'ui', 'prompt-button.tsx'))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -509,15 +525,11 @@ describe('run', () => {
 
       assert.match(
         documentSource,
-        new RegExp(
-          `const DEFAULT_TITLE = decodeURIComponent\\('${escapeRegExp(encodedAppName)}'\\)`,
-        ),
+        new RegExp(`readAppDisplayName\\('${escapeRegExp(encodedAppName)}'\\)`),
       )
       assert.match(
         scaffoldHomePageSource,
-        new RegExp(
-          `const APP_DISPLAY_NAME = decodeURIComponent\\('${escapeRegExp(encodedAppName)}'\\)`,
-        ),
+        new RegExp(`readAppDisplayName\\('${escapeRegExp(encodedAppName)}'\\)`),
       )
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
@@ -538,6 +550,22 @@ describe('run', () => {
         result.stderr,
         new RegExp(`Target directory is not empty: ${escapeRegExp(appDir)}`),
       )
+    } finally {
+      await fs.rm(tmpDir, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects app names that cannot become package names before writing files', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-'))
+
+    try {
+      let appDir = path.join(tmpDir, 'invalid-name')
+      let result = await captureOutput(() => run(['new', appDir, '--app-name', '!!!']))
+
+      assert.equal(result.exitCode, 1)
+      assert.equal(result.stdout, '')
+      assert.match(result.stderr, /Could not derive a valid package name from "!!!"/)
+      await assertPathMissing(appDir)
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -570,7 +598,7 @@ describe('run', () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-'))
     try {
       let appDir = path.join(tmpDir, 'my-app')
-      let result = await withEnv('REMIX_VERSION', '4.5.6', () =>
+      let result = await withEnv({ REMIX_VERSION: '4.5.6' }, () =>
         captureOutput(() => run(['new', appDir], { remixVersion: '9.9.9' })),
       )
 
@@ -609,7 +637,7 @@ describe('run', () => {
   })
 
   it('does not let REMIX_VERSION override the reported Remix version', async () => {
-    let result = await withEnv('REMIX_VERSION', '4.5.6', () =>
+    let result = await withEnv({ REMIX_VERSION: '4.5.6' }, () =>
       captureOutput(() => run(['version'], { remixVersion: '9.9.9' })),
     )
 
@@ -625,48 +653,6 @@ describe('run', () => {
     assert.match(result.stderr, /Unknown argument: --remix-version/)
   })
 })
-
-async function captureOutput(
-  callback: () => Promise<number>,
-): Promise<{ exitCode: number; stderr: string; stdout: string }> {
-  let stderr = ''
-  let stdout = ''
-  let originalStdoutWrite = process.stdout.write
-  let originalStderrWrite = process.stderr.write
-
-  process.stdout.write = ((chunk: string | Uint8Array) => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stdout.write
-
-  process.stderr.write = ((chunk: string | Uint8Array) => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stderr.write
-
-  try {
-    let exitCode = await callback()
-    return { exitCode, stderr, stdout }
-  } finally {
-    process.stdout.write = originalStdoutWrite
-    process.stderr.write = originalStderrWrite
-  }
-}
-
-async function withEnv<T>(name: string, value: string, callback: () => Promise<T>): Promise<T> {
-  let previousValue = process.env[name]
-  process.env[name] = value
-
-  try {
-    return await callback()
-  } finally {
-    if (previousValue == null) {
-      delete process.env[name]
-    } else {
-      process.env[name] = previousValue
-    }
-  }
-}
 
 async function withCwd<T>(cwd: string, callback: () => Promise<T>): Promise<T> {
   let previousCwd = testCwd

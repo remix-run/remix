@@ -5,7 +5,7 @@ import {
   createContextKey,
   createRouter,
   type AnyParams,
-  type MergeContext,
+  type ContextWithValues,
   type RequestContext,
 } from '@remix-run/fetch-router'
 import { route } from '@remix-run/routes'
@@ -16,7 +16,7 @@ const CurrentUser = createContextKey<unknown>()
 
 declare module './async-context.ts' {
   interface AsyncContextTypes {
-    requestContext: MergeContext<
+    requestContext: ContextWithValues<
       RequestContext<AnyParams>,
       [readonly [typeof CurrentUser, { id: string }]]
     >

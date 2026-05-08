@@ -36,14 +36,16 @@ export async function runServerTestFile(value: unknown): Promise<TestResults> {
     let results = await runTests()
     await takeCoverage(workerData.coverage)
     return results
-  } catch (e) {
+  } catch (error) {
+    let failure = error
+
     try {
       await takeCoverage(workerData?.coverage)
     } catch (coverageError) {
-      e = coverageError
+      failure = coverageError
     }
 
-    return createFailedResults(e)
+    return createFailedResults(failure)
   }
 }
 

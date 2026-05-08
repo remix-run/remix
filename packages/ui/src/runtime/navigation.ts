@@ -65,7 +65,11 @@ export function startNavigationListenerImpl(
   navigation.addEventListener(
     'navigate',
     (event) => {
-      if (!event.canIntercept) return
+      // Safari seems to incorrectly set canIntercept to true for sub-domain navigations, so
+      // we do a host check ourselves/. The spec is clear that a different host should prevent
+      // interception so this is likely a bug in Safari:
+      // https://html.spec.whatwg.org/multipage/nav-history-apis.html#can-have-its-url-rewritten
+      if (!event.canIntercept || isCrossOriginDestination(event)) return
 
       let state = getRuntimeNavigationState(event)
       if (!state) return
@@ -96,6 +100,11 @@ export function startNavigationListenerImpl(
 
 function isRuntimeNavigation(info: unknown): info is NavigationState {
   return typeof info === 'object' && info != null && '$rmx' in info
+}
+
+function isCrossOriginDestination(event: NavigateEvent): boolean {
+  let destination = new URL(event.destination.url)
+  return destination.origin !== window.location.origin
 }
 
 function getRuntimeNavigationState(event: NavigateEvent): NavigationState | undefined {

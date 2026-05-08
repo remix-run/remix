@@ -1,11 +1,8 @@
 import type { Route } from 'remix/routes'
 import { createCredentialsAuthProvider } from 'remix/auth'
-import {
-  auth,
-  requireAuth as requireAuthenticatedUser,
-  createSessionAuthScheme,
-} from 'remix/auth-middleware'
+import { Auth, auth, createSessionAuthScheme, type GoodAuth } from 'remix/auth-middleware'
 import { Database } from 'remix/data-table'
+import type { ContextEntry, Middleware } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../data/schema.ts'
@@ -27,6 +24,10 @@ export function loadAuth() {
         },
         async verify(value, context) {
           let db = context.get(Database)
+          if (db == null) {
+            throw new Error('Expected database middleware before auth middleware')
+          }
+
           return (await db.find(users, value.userId)) ?? null
         },
         invalidate(session) {
@@ -40,6 +41,9 @@ export function loadAuth() {
 export const passwordProvider = createCredentialsAuthProvider({
   parse(context) {
     let formData = context.get(FormData)
+    if (formData == null) {
+      throw new Error('Expected formData() middleware before password auth provider')
+    }
 
     return {
       email: normalizeEmail(formData.get('email')?.toString() ?? ''),
@@ -48,6 +52,10 @@ export const passwordProvider = createCredentialsAuthProvider({
   },
   async verify({ email, password }, context) {
     let db = context.get(Database)
+    if (db == null) {
+      throw new Error('Expected database middleware before password auth provider')
+    }
+
     let user = await db.findOne(users, { where: { email } })
 
     if (!user || !(await verifyPassword(password, user.password_hash))) {
@@ -62,20 +70,29 @@ export interface RequireAuthOptions {
   redirectTo?: Route
 }
 
-export function requireAuth(options?: RequireAuthOptions) {
+type BookstoreUserContextEntry = ContextEntry<typeof Auth, GoodAuth<User>>
+
+export function requireAuth(options?: RequireAuthOptions): Middleware<BookstoreUserContextEntry> {
   let redirectTo = options?.redirectTo ?? routes.auth.login.index
 
-  return requireAuthenticatedUser({
-    onFailure(context) {
-      return redirect(
-        redirectTo.href(undefined, {
-          returnTo:
-            getSafeReturnTo(context.url.searchParams.get('returnTo')) ??
-            context.url.pathname + context.url.search,
-        }),
-      )
-    },
-  })
+  return (context, next) => {
+    let authState = context.get(Auth)
+    if (authState == null) {
+      throw new Error('Auth state not found. Make sure loadAuth() runs before requireAuth().')
+    }
+
+    if (authState.ok) {
+      return next()
+    }
+
+    return redirect(
+      redirectTo.href(undefined, {
+        returnTo:
+          getSafeReturnTo(context.url.searchParams.get('returnTo')) ??
+          context.url.pathname + context.url.search,
+      }),
+    )
+  }
 }
 
 export function getPostAuthRedirect(url: URL, fallback = routes.account.index.href()): string {

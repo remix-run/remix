@@ -1,110 +1,9 @@
 import type { Params, RoutePattern } from '@remix-run/route-pattern'
 import type { Route, RouteMap } from '@remix-run/routes'
 
-import type { AnyMiddleware, ApplyMiddlewareTuple } from './middleware.ts'
-import type { RequestContext } from './request-context.ts'
-import type { WithParams } from './request-context.ts'
-import type { RequestMethod } from './request-methods.ts'
-
-export type ActionObjectWithoutMiddleware<
-  params extends Record<string, any>,
-  context extends RequestContext<any, any>,
-> = {
-  middleware?: undefined
-  handler: RequestHandler<params, context>
-}
-
-export type ActionObjectWithMiddleware<
-  params extends Record<string, any>,
-  context extends RequestContext<any, any>,
-  middleware extends readonly AnyMiddleware[],
-> = {
-  middleware: readonly [...middleware]
-  handler: RequestHandler<params, ApplyMiddlewareTuple<context, middleware>>
-}
-
-export type ActionInput<
-  params extends Record<string, any>,
-  context extends RequestContext<any, any>,
-  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
-> =
-  | RequestHandler<params, context>
-  | ActionObjectWithoutMiddleware<params, context>
-  | ActionObjectWithMiddleware<params, context, middleware>
-
-export type ControllerWithoutMiddleware<
-  routes extends RouteMap,
-  context extends RequestContext<any, any>,
-> = {
-  middleware?: undefined
-  actions: ControllerActions<routes, context>
-}
-
-export type ControllerWithMiddleware<
-  routes extends RouteMap,
-  context extends RequestContext<any, any>,
-  middleware extends readonly AnyMiddleware[],
-> = {
-  middleware: readonly [...middleware]
-  actions: ControllerActions<routes, ApplyMiddlewareTuple<context, middleware>>
-}
-
-/**
- * A controller object that mirrors a route map with matching action handlers.
- *
- * Controllers let you store a subtree of route handlers in one object while preserving the
- * params and request-context contract for each nested action.
- */
-export type Controller<
-  routes extends RouteMap,
-  context extends RequestContext<any, any> = RequestContext,
-> =
-  | ControllerWithoutMiddleware<routes, context>
-  | ControllerWithMiddleware<routes, context, readonly AnyMiddleware[]>
-
-// prettier-ignore
-type ControllerActions<routes extends RouteMap, context extends RequestContext<any, any>> = routes extends any ?
-  {
-    [name in keyof routes]: (
-      routes[name] extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? Action<method, pattern, context> :
-      routes[name] extends RouteMap ? Controller<routes[name], context> :
-      never
-    )
-  } :
-  never
-
-export type ControllerInput<
-  routes extends RouteMap,
-  context extends RequestContext<any, any>,
-  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
-> =
-  | ControllerWithoutMiddleware<routes, context>
-  | ControllerWithMiddleware<routes, context, middleware>
-
-/**
- * An individual route action.
- *
- * Actions can be plain handler functions or action objects with optional inline middleware.
- */
-export type Action<
-  _method extends RequestMethod | 'ANY',
-  pattern extends string,
-  context extends RequestContext<any, any> = RequestContext,
-> = ActionInput<Params<pattern>, WithParams<context, Params<pattern>>, readonly AnyMiddleware[]>
-
-/**
- * Builds an {@link Action} type from a string pattern, {@link RoutePattern}, or {@link Route}.
- */
-// prettier-ignore
-export type BuildAction<
-  method extends RequestMethod | 'ANY',
-  route extends string | RoutePattern | Route,
-  context extends RequestContext<any, any> = RequestContext,
-> =
-  route extends string ? Action<method, route, context> :
-  route extends RoutePattern<infer pattern> ? Action<method, pattern, context> :
-  route extends Route<infer _, infer pattern> ? Action<method, pattern, context> :
-  never
+import type { AnyMiddleware } from './middleware.ts'
+import type { ContextWithParams, RequestContext } from './request-context.ts'
+import type { DefaultContext } from './router-types.ts'
 
 /**
  * A request handler function that returns some kind of response.
@@ -112,48 +11,133 @@ export type BuildAction<
  * @param context The request context
  * @returns The response
  */
-export interface RequestHandler<
-  params extends Record<string, any> = {},
-  context extends RequestContext<any, any> = RequestContext<params>,
-> {
+export interface RequestHandler<context extends RequestContext<any, any> = RequestContext> {
   /**
    * Handles a matched request and returns the response.
    */
   (context: context): Response | Promise<Response>
 }
 
+export function isRequestHandler(object: unknown): object is RequestHandler<any> {
+  return typeof object === 'function'
+}
+
+type ActionRoute = string | RoutePattern | Route
+
+// prettier-ignore
+type ActionPattern<route extends ActionRoute> =
+  route extends string ? route :
+  route extends RoutePattern<infer pattern extends string> ? pattern :
+  route extends Route<any, infer pattern extends string> ? pattern :
+  never
+
+type ActionObject<
+  route extends ActionRoute,
+  context extends RequestContext<any, any> = DefaultContext,
+> = {
+  /**
+   * Middleware that runs before this action's handler.
+   */
+  middleware?: readonly AnyMiddleware[] | undefined
+  /**
+   * The handler that runs after this action's middleware.
+   */
+  handler: RequestHandler<ContextWithParams<context, Params<ActionPattern<route>>>>
+}
+
 /**
- * Runtime shape for a controller.
+ * An individual route action.
+ *
+ * Actions may be plain request handler functions or objects with optional inline middleware.
+ * Most app code should use {@link createAction}; use this type directly when you need
+ * to describe an action for an explicit RequestContext type.
  */
-export interface ControllerShape {
+export type Action<
+  route extends ActionRoute,
+  context extends RequestContext<any, any> = DefaultContext,
+> =
+  | RequestHandler<ContextWithParams<context, Params<ActionPattern<route>>>>
+  | ActionObject<route, context>
+
+/**
+ * Defines a route handler with route-aware params and the default router context.
+ *
+ * This helper returns the action unchanged while giving TypeScript the route pattern it needs to
+ * type `context.params`. If local middleware adds context values, compose those values into the
+ * action context type and pass it as the second generic.
+ *
+ * @param route The route pattern or route object this action handles.
+ * @param action The handler function or action object to type-check.
+ * @returns The same action value.
+ */
+export function createAction<
+  route extends ActionRoute,
+  context extends RequestContext<any, any> = DefaultContext,
+  action extends Action<route, context> = Action<route, context>,
+>(route: route, action: action): action {
+  void route
+  return action
+}
+
+export function isAction(obj: unknown): obj is Action<any, any> {
+  return isRequestHandler(obj) || isActionObject(obj)
+}
+
+export function isActionObject(obj: unknown): obj is ActionObject<any, any> {
+  return isRecord(obj) && typeof obj.handler === 'function'
+}
+
+/**
+ * A controller maps route leaves in a route map to actions.
+ *
+ * Controllers let you store related actions together while preserving the params
+ * and request-context contract for each action. Most app code should use
+ * {@link createController}; use this type directly when you need to describe a
+ * controller for an explicit RequestContext type.
+ */
+export type Controller<
+  routes extends RouteMap,
+  context extends RequestContext<any, any> = DefaultContext,
+> = {
+  middleware?: readonly AnyMiddleware[] | undefined
+  actions: routes extends any
+    ? {
+        [name in keyof routes as routes[name] extends Route<any, any>
+          ? name
+          : never]: routes[name] extends Route<any, any> ? Action<routes[name], context> : never
+      } & {
+        [name in keyof routes as routes[name] extends RouteMap ? name : never]?: never
+      }
+    : never
+}
+
+/**
+ * Defines a controller whose action keys and params are checked against a route map.
+ *
+ * This helper returns the controller unchanged while giving TypeScript the route map it needs to
+ * type each action's `context.params`. If local middleware adds context values, compose those
+ * values into the controller context type and pass it as the second generic.
+ *
+ * @param routes The route map this controller handles.
+ * @param controller The controller object to type-check.
+ * @returns The same controller value.
+ */
+export function createController<
+  routes extends RouteMap,
+  context extends RequestContext<any, any> = DefaultContext,
+  controller extends Controller<routes, context> = Controller<routes, context>,
+>(routes: routes, controller: controller): controller {
+  void routes
+  return controller
+}
+
+export function isController(obj: unknown): obj is {
+  middleware?: readonly AnyMiddleware[] | undefined
   actions: Record<string, unknown>
-  middleware?: AnyMiddleware[]
+} {
+  return isRecord(obj) && isRecord(obj.actions)
 }
 
-/**
- * Check if an object has an `actions` property.
- *
- * @param obj The object to check
- * @returns `true` if the object is a controller
- */
-export function isController(obj: unknown): obj is ControllerShape {
-  return typeof obj === 'object' && obj != null && 'actions' in obj
-}
-
-/**
- * Runtime shape for an action object.
- */
-export interface ActionObjectShape {
-  middleware?: AnyMiddleware[]
-  handler: RequestHandler<any, any>
-}
-
-/**
- * Check if an object has a `handler` property.
- *
- * @param obj The object to check
- * @returns `true` if the object is an action object
- */
-export function isActionObject(obj: unknown): obj is ActionObjectShape {
-  return typeof obj === 'object' && obj != null && 'handler' in obj
+function isRecord(obj: unknown): obj is Record<PropertyKey, unknown> {
+  return typeof obj === 'object' && obj != null && !Array.isArray(obj)
 }

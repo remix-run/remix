@@ -2,9 +2,10 @@
   "name": "sse-demo",
   "private": true,
   "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
   "dependencies": {
-    "@remix-run/ui": "workspace:*",
-    "@remix-run/events": "jam",
     "remix": "workspace:*"
   },
   "devDependencies": {

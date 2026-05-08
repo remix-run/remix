@@ -567,6 +567,231 @@ describe('postgres sql-compiler', () => {
         values: [],
       })
     })
+
+    it('does not rewrite placeholders inside the reported string literal repro', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: "select '?' as literal, ? as value",
+          values: [123],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: "select '?' as literal, $1 as value",
+        values: [123],
+      })
+    })
+
+    it('rewrites adjacent placeholders while preserving literal question marks', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: "select ?::text || '?' || ?::text as label where id in (?,?)",
+          values: ['left', 'right', 1, 2],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: "select $1::text || '?' || $2::text as label where id in ($3,$4)",
+        values: ['left', 'right', 1, 2],
+      })
+    })
+
+    it('does not rewrite placeholders inside single-quoted strings', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: "select 'literal ?' as literal, ? as value",
+          values: [123],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: "select 'literal ?' as literal, $1 as value",
+        values: [123],
+      })
+    })
+
+    it('does not rewrite placeholders inside escaped single quotes', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: "select 'it''s ?' as literal, ? as value",
+          values: [123],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: "select 'it''s ?' as literal, $1 as value",
+        values: [123],
+      })
+    })
+
+    it('does not rewrite placeholders inside escape string constants', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: "select E'it\\'s ?' as literal, ? as value",
+          values: [123],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: "select E'it\\'s ?' as literal, $1 as value",
+        values: [123],
+      })
+    })
+
+    it('does not rewrite placeholders after unterminated single-quoted strings', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: "select 'unterminated ? literal, ? as value",
+          values: [],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: "select 'unterminated ? literal, ? as value",
+        values: [],
+      })
+    })
+
+    it('does not rewrite placeholders inside double-quoted identifiers', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: 'select "is ? active" from accounts where id = ?',
+          values: [10],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: 'select "is ? active" from accounts where id = $1',
+        values: [10],
+      })
+    })
+
+    it('does not rewrite placeholders inside escaped double-quoted identifiers', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: 'select "is ""?"" active" from accounts where id = ?',
+          values: [10],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: 'select "is ""?"" active" from accounts where id = $1',
+        values: [10],
+      })
+    })
+
+    it('does not rewrite placeholders inside line comments', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: 'select ? as value -- keep ? in comment\nfrom accounts where id = ?',
+          values: [123, 10],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: 'select $1 as value -- keep ? in comment\nfrom accounts where id = $2',
+        values: [123, 10],
+      })
+    })
+
+    it('does not rewrite placeholders inside CRLF line comments', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: 'select ? as value -- keep ? in comment\r\nfrom accounts where id = ?',
+          values: [123, 10],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: 'select $1 as value -- keep ? in comment\r\nfrom accounts where id = $2',
+        values: [123, 10],
+      })
+    })
+
+    it('does not rewrite placeholders inside block comments', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: 'select ? as value /* keep ? in comment */ from accounts where id = ?',
+          values: [123, 10],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: 'select $1 as value /* keep ? in comment */ from accounts where id = $2',
+        values: [123, 10],
+      })
+    })
+
+    it('does not rewrite placeholders inside nested block comments', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: 'select ? as value /* keep ? /* nested ? */ still ? */ from accounts where id = ?',
+          values: [123, 10],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: 'select $1 as value /* keep ? /* nested ? */ still ? */ from accounts where id = $2',
+        values: [123, 10],
+      })
+    })
+
+    it('does not rewrite placeholders inside unterminated block comments', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: 'select ? as value /* keep ? in unterminated comment where id = ?',
+          values: [123],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: 'select $1 as value /* keep ? in unterminated comment where id = ?',
+        values: [123],
+      })
+    })
+
+    it('does not rewrite placeholders inside PostgreSQL dollar-quoted strings', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: 'select $$literal ?$$ as untagged, $tag$tagged ?$tag$ as tagged, ? as value',
+          values: [123],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: 'select $$literal ?$$ as untagged, $tag$tagged ?$tag$ as tagged, $1 as value',
+        values: [123],
+      })
+    })
+
+    it('does not rewrite placeholders inside dollar-quoted strings with digits and underscores in tags', () => {
+      let compiled = compilePostgresOperation({
+        kind: 'raw',
+        sql: {
+          text: 'select $_tag9$literal ?$_tag9$, $tag_2$tagged ?$tag_2$, ? as value',
+          values: [123],
+        },
+      })
+
+      assert.deepEqual(compiled, {
+        text: 'select $_tag9$literal ?$_tag9$, $tag_2$tagged ?$tag_2$, $1 as value',
+        values: [123],
+      })
+    })
   })
 
   describe('error handling', () => {

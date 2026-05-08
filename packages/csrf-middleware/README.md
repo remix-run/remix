@@ -49,7 +49,7 @@ router.get('/form', (context) => {
 
 By default, `csrf()` checks token values in this order:
 
-1. Request headers: `x-csrf-token`, `x-xsrf-token`, `csrf-token`
+1. Request headers: `X-Csrf-Token`, `X-Xsrf-Token`, `Csrf-Token`
 2. Form field: `_csrf` (requires `formData()` middleware to parse request bodies)
 3. Query param: `_csrf`
 

@@ -98,6 +98,49 @@ describe('navigate', () => {
     controller.abort()
   })
 
+  it('does not intercept navigations to a cross-origin destination', (t) => {
+    let navigateListener: EventListener | undefined
+    let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))
+    let updateCurrentEntryMock = mock.fn()
+    let stubNavigation = {
+      navigate: navigateMethodMock,
+      updateCurrentEntry: updateCurrentEntryMock,
+      addEventListener(type: string, listener: EventListener) {
+        if (type === 'navigate') {
+          navigateListener = listener
+        }
+      },
+    }
+    stubGlobalField(t, 'navigation', stubNavigation)
+
+    let controller = new AbortController()
+    startNavigationListenerImpl(controller.signal, stubFrames)
+
+    let anchor = document.createElement('a')
+    anchor.href = 'https://example.com/login'
+    document.body.append(anchor)
+
+    let intercept = mock.fn()
+    let event = Object.assign(new Event('navigate'), {
+      canIntercept: true,
+      navigationType: 'push',
+      sourceElement: anchor,
+      destination: {
+        url: 'https://example.com/login',
+        key: 'next',
+        getState: () => undefined,
+      },
+      intercept,
+    })
+
+    navigateListener?.(event)
+
+    expect(intercept).not.toHaveBeenCalled()
+
+    anchor.remove()
+    controller.abort()
+  })
+
   it('does not intercept anchors marked for download', (t) => {
     let navigateMethodMock = mock.fn(() => ({ finished: Promise.resolve() }))
     let updateCurrentEntryMock = mock.fn()
@@ -157,7 +200,7 @@ describe('navigate', () => {
       navigationType: 'push',
       sourceElement: path,
       destination: {
-        url: 'https://example.com/logo',
+        url: new URL('/logo', window.location.origin).href,
         key: 'next',
         getState: () => undefined,
       },

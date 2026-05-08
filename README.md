@@ -92,7 +92,7 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [tar-parser](packages/tar-parser): A fast, efficient parser for tar streams in any JavaScript environment
 - [terminal](packages/terminal): Terminal output utilities for JavaScript libraries and CLIs
 - [test](packages/test): A test framework for JavaScript and TypeScript projects
-- [ui](packages/ui): UI tokens, mixins, and glyphs for Remix components
+- [ui](packages/ui): View layer with reconciler, component model, and first-party UI components
 
 ## Installation
 
@@ -112,17 +112,18 @@ If you want to play around with the bleeding edge, we also build the latest `mai
 
 ```sh
 pnpm install "remix-run/remix#preview/main&path:packages/remix"
+```
 
-# Or, just install a single package
+Or, just install a single package:
+
+```
 pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
 ```
 
 ## Agent Skills For Building Apps
 
-Agents that are starting a Remix 3 app from this repository should look in `skills/`:
-
-- `remix-project-layout` at `skills/remix-project-layout/SKILL.md`: Use this when defining or scaffolding the on-disk layout and file conventions of a Remix app.
-- `remix-ui` at `skills/remix-ui/SKILL.md`: Use this when building pages, layouts, interactions, styling, navigation, and UI tests in a Remix app.
+Agents that are starting a Remix 3 app from this repository should use the skill that ships with
+the [app template](./template/.agents/skills/remix/SKILL.md).
 
 ## Contributing
 

@@ -1,14 +1,8 @@
 import { createRouter } from 'remix/fetch-router'
 
-import { homeController } from './controllers/home/controller.ts'
+import rootController from './actions/controller.ts'
 import { routes } from './routes.ts'
-import { assetServer } from './utils/assets.ts'
 
 export const router = createRouter()
 
-router.map(routes.home, homeController)
-
-router.get(routes.assets, async ({ request }) => {
-  let assetResponse = await assetServer.fetch(request)
-  return assetResponse ?? new Response('Not found', { status: 404 })
-})
+router.map(routes, rootController)

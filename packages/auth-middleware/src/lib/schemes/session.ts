@@ -35,13 +35,13 @@ export function createSessionAuthScheme<identity, session_value = unknown>(
   return {
     name,
     async authenticate(context) {
-      if (!context.has(Session)) {
+      let session = context.get(Session)
+      if (session == null) {
         throw new Error(
           'Session not found. Make sure session() middleware runs before createSessionAuthScheme().',
         )
       }
 
-      let session = context.get(Session)
       let value = options.read(session, context)
 
       if (value == null) {

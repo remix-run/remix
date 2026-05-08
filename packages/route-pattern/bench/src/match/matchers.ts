@@ -1,6 +1,8 @@
 import FindMyWay from 'find-my-way'
 import { match } from 'path-to-regexp'
-import { ArrayMatcher, TrieMatcher, type Matcher } from '@remix-run/route-pattern'
+import { createMatcher, type Matcher } from '@remix-run/route-pattern'
+
+import { ArrayMatcher } from './array-matcher.ts'
 
 export let matchers = {
   routePatternArray: {
@@ -9,7 +11,7 @@ export let matchers = {
   },
   routePatternTrie: {
     name: 'route-pattern/trie',
-    createMatcher: () => new TrieMatcher<null>(),
+    createMatcher: () => createMatcher<null>(),
   },
   findMyWay: {
     name: 'find-my-way',

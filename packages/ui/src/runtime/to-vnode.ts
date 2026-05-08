@@ -1,5 +1,6 @@
 import { Fragment } from './component.ts'
 import { invariant } from './invariant.ts'
+import { isEmptyChild, isPrimitiveChild, normalizeChildren } from './core/children.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'
 import { isRemixElement, TEXT_NODE, type VNode } from './vnode.ts'
 
@@ -13,21 +14,17 @@ function flatMapChildrenToVNodes(node: RemixElement): VNode[] {
 }
 
 function flattenChildrenToVNodes(nodes: RemixNode[], out: VNode[]): void {
-  for (let child of nodes) {
-    if (Array.isArray(child)) {
-      flattenChildrenToVNodes(child, out)
-    } else {
-      out.push(toVNode(child))
-    }
+  for (let child of normalizeChildren(nodes)) {
+    out.push(toVNode(child))
   }
 }
 
 export function toVNode(node: RemixNode): VNode {
-  if (node === null || node === undefined || typeof node === 'boolean') {
+  if (isEmptyChild(node)) {
     return { type: TEXT_NODE, _text: '' }
   }
 
-  if (typeof node === 'string' || typeof node === 'number' || typeof node === 'bigint') {
+  if (isPrimitiveChild(node)) {
     return { type: TEXT_NODE, _text: String(node) }
   }
 

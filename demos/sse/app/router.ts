@@ -3,8 +3,7 @@ import { compression } from 'remix/compression-middleware'
 import { logger } from 'remix/logger-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
-import { homeAction } from './controllers/home.tsx'
-import { messagesAction } from './controllers/messages.ts'
+import rootController from './actions/controller.tsx'
 import { routes } from './routes.ts'
 
 const middleware = []
@@ -24,5 +23,4 @@ middleware.push(
 
 export const router = createRouter({ middleware })
 
-router.get(routes.home, homeAction)
-router.get(routes.messages, messagesAction)
+router.map(routes, rootController)

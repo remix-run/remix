@@ -99,7 +99,7 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   import { Accept } from '@remix-run/headers'
 
   router.get('/api/users', (context) => {
-    let accept = Accept.from(context.headers.get('accept'))
+    let accept = Accept.from(context.headers.get('Accept'))
     let acceptsJson = accept.accepts('application/json')
     // ...
   })

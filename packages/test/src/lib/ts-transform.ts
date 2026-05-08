@@ -1,4 +1,4 @@
-import { transform, type TsconfigRaw } from 'esbuild'
+import { transform } from 'esbuild'
 import { getTsconfig, type TsConfigResult } from 'get-tsconfig'
 import * as path from 'node:path'
 

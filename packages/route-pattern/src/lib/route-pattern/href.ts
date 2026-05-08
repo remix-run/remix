@@ -100,6 +100,14 @@ type HrefErrorDetails =
       type: 'nameless-wildcard'
       pattern: RoutePattern
     }
+  | {
+      type: 'invalid-param'
+      pattern: RoutePattern
+      partPattern: PartPattern
+      paramName: string
+      paramValue: string
+      reason: string
+    }
 
 /**
  * Error thrown when a route pattern cannot generate an href from the supplied args.
@@ -138,6 +146,10 @@ export class HrefError extends Error {
     if (details.type === 'missing-params') {
       let params = details.missingParams.map((p) => `'${p}'`).join(', ')
       return `missing param(s): ${params}\n\nPattern: ${pattern}\nParams: ${JSON.stringify(details.params)}`
+    }
+
+    if (details.type === 'invalid-param') {
+      return `invalid param '${details.paramName}': ${details.reason}\n\nPattern: ${pattern}\nParam: ${JSON.stringify(details.paramValue)}`
     }
 
     unreachable(details)

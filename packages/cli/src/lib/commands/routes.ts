@@ -8,7 +8,7 @@ import { createCommandReporter, type TextChannel } from '../reporter.ts'
 import { loadRouteMap, type LoadedRouteMap, type RouteTreeNode } from '../route-map.ts'
 import { lightRed } from '../terminal.ts'
 
-const CONTROLLERS_PATH_PREFIX = 'app/controllers/'
+const ACTIONS_PATH_PREFIX = 'app/actions/'
 
 export async function runRoutesCommand(argv: string[], context: CliContext): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
@@ -243,8 +243,8 @@ function colorRouteLine(line: string, node: RouteTreeNode): string {
 }
 
 function getCompactOwnerPath(ownerPath: string): string {
-  if (ownerPath.startsWith(CONTROLLERS_PATH_PREFIX)) {
-    return ownerPath.slice(CONTROLLERS_PATH_PREFIX.length)
+  if (ownerPath.startsWith(ACTIONS_PATH_PREFIX)) {
+    return ownerPath.slice(ACTIONS_PATH_PREFIX.length)
   }
 
   return ownerPath

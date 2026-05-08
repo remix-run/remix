@@ -25,17 +25,17 @@ describe('progress adapter', () => {
     let calls: string[] = []
     let status = createMockStatusChannel(calls)
     let progress = createStepProgressReporter(status, {
-      controllers: 'controllers',
+      actions: 'actions',
     })
 
     await assert.rejects(
-      runProgressStep(progress, 'controllers', async () => {
+      runProgressStep(progress, 'actions', async () => {
         throw new Error('boom')
       }),
       /boom/,
     )
 
-    assert.deepEqual(calls, ['start:controllers', 'fail:controllers'])
+    assert.deepEqual(calls, ['start:actions', 'fail:actions'])
   })
 })
 

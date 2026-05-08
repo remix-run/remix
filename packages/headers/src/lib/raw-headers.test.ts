@@ -6,31 +6,31 @@ import { parse as parseRawHeaders, stringify as stringifyRawHeaders } from './ra
 describe('parseRawHeaders', () => {
   it('parses a single header', () => {
     let headers = parseRawHeaders('Content-Type: text/html')
-    assert.equal(headers.get('content-type'), 'text/html')
+    assert.equal(headers.get('Content-Type'), 'text/html')
   })
 
   it('parses multiple headers', () => {
     let headers = parseRawHeaders('Content-Type: text/html\r\nCache-Control: no-cache')
-    assert.equal(headers.get('content-type'), 'text/html')
-    assert.equal(headers.get('cache-control'), 'no-cache')
+    assert.equal(headers.get('Content-Type'), 'text/html')
+    assert.equal(headers.get('Cache-Control'), 'no-cache')
   })
 
   it('trims whitespace from header names and values', () => {
     let headers = parseRawHeaders('  Content-Type  :  text/html  ')
-    assert.equal(headers.get('content-type'), 'text/html')
+    assert.equal(headers.get('Content-Type'), 'text/html')
   })
 
   it('handles multiple values for the same header', () => {
     let headers = parseRawHeaders('Set-Cookie: a=1\r\nSet-Cookie: b=2')
-    assert.equal(headers.get('set-cookie'), 'a=1, b=2')
+    assert.equal(headers.get('Set-Cookie'), 'a=1, b=2')
   })
 
   it('ignores malformed lines', () => {
     let headers = parseRawHeaders(
       'Content-Type: text/html\r\nmalformed line\r\nCache-Control: no-cache',
     )
-    assert.equal(headers.get('content-type'), 'text/html')
-    assert.equal(headers.get('cache-control'), 'no-cache')
+    assert.equal(headers.get('Content-Type'), 'text/html')
+    assert.equal(headers.get('Cache-Control'), 'no-cache')
   })
 
   it('returns empty Headers for empty string', () => {
@@ -40,7 +40,7 @@ describe('parseRawHeaders', () => {
 
   it('handles headers with colons in values', () => {
     let headers = parseRawHeaders('Location: https://example.com:8080/path')
-    assert.equal(headers.get('location'), 'https://example.com:8080/path')
+    assert.equal(headers.get('Location'), 'https://example.com:8080/path')
   })
 })
 
@@ -72,9 +72,9 @@ describe('stringifyRawHeaders', () => {
 
   it('uses canonical header name casing', () => {
     let headers = new Headers()
-    headers.set('etag', '"abc"')
-    headers.set('www-authenticate', 'Basic')
-    headers.set('x-custom-header', 'value')
+    headers.set('ETag', '"abc"')
+    headers.set('WWW-Authenticate', 'Basic')
+    headers.set('X-Custom-Header', 'value')
     let result = stringifyRawHeaders(headers)
     assert.ok(result.includes('ETag: "abc"'))
     assert.ok(result.includes('WWW-Authenticate: Basic'))
@@ -89,7 +89,7 @@ describe('stringifyRawHeaders', () => {
     let stringified = stringifyRawHeaders(original)
     let parsed = parseRawHeaders(stringified)
 
-    assert.equal(parsed.get('content-type'), 'text/html')
-    assert.equal(parsed.get('cache-control'), 'no-cache')
+    assert.equal(parsed.get('Content-Type'), 'text/html')
+    assert.equal(parsed.get('Cache-Control'), 'no-cache')
   })
 })

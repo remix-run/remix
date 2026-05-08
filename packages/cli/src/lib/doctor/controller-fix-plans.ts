@@ -11,7 +11,8 @@ import type {
   OwnedSubtree,
   OwnershipRouteNode,
 } from '../controller-ownership.ts'
-import { renderActionPlaceholder, renderControllerPlaceholder } from './controller-placeholders.ts'
+import { ROOT_ROUTE_NAME } from '../controller-ownership.ts'
+import { renderControllerPlaceholder } from './controller-placeholders.ts'
 import type { DoctorFixPlan } from './types.ts'
 
 const OWNER_EXTENSION_PRIORITY: OwnerFileExtension[] = ['.tsx', '.ts', '.jsx', '.js']
@@ -57,10 +58,7 @@ export async function getControllerFixPlans(
       continue
     }
 
-    let contents =
-      subtree.kind === 'action'
-        ? renderActionPlaceholder(routeNode, entryPath)
-        : renderControllerPlaceholder(routeNode, entryPath, resolvedEntryPathByRouteName)
+    let contents = renderControllerPlaceholder(routeNode, entryPath)
 
     fixPlans.push({
       code,
@@ -68,7 +66,7 @@ export async function getControllerFixPlans(
       kind: 'create-file',
       path: entryPath,
       routeName: subtree.routeName,
-      suite: 'controllers',
+      suite: 'actions',
     })
   }
 
@@ -76,7 +74,7 @@ export async function getControllerFixPlans(
 }
 
 function getFixCodeForSubtree(subtree: OwnedSubtree): DoctorFixPlan['code'] | null {
-  if (subtree.actualEntryPaths.length > 1 || subtree.actualAlternatePaths.length > 1) {
+  if (subtree.actualEntryPaths.length > 1) {
     return null
   }
 
@@ -84,19 +82,7 @@ function getFixCodeForSubtree(subtree: OwnedSubtree): DoctorFixPlan['code'] | nu
     return null
   }
 
-  if (subtree.actualAlternatePath != null) {
-    return 'wrong-owner-kind'
-  }
-
-  if (subtree.kind === 'controller') {
-    return subtree.claimedFilePaths.length > 0 ? 'incomplete-controller' : 'missing-owner'
-  }
-
-  if (subtree.claimedFilePaths.length > 0) {
-    return null
-  }
-
-  return 'missing-owner'
+  return subtree.claimedFilePaths.length > 0 ? 'incomplete-controller' : 'missing-owner'
 }
 
 function inferOwnerExtension(
@@ -109,15 +95,7 @@ function inferOwnerExtension(
     return subtreeExtension
   }
 
-  let alternateExtension = getMostCommonOwnerExtension(subtree.actualAlternatePaths)
-  if (alternateExtension != null) {
-    return alternateExtension
-  }
-
-  let projectExtension = getMostCommonOwnerExtension([
-    ...ownership.scan.actionEntryPaths,
-    ...ownership.scan.controllerEntryPaths,
-  ])
+  let projectExtension = getMostCommonOwnerExtension([...ownership.scan.controllerEntryPaths])
   if (projectExtension != null) {
     return projectExtension
   }
@@ -157,6 +135,12 @@ function getMostCommonOwnerExtension(filePaths: string[]): OwnerFileExtension | 
 
 function getRouteNodesByName(tree: OwnershipRouteNode[]): Map<string, OwnershipRouteNode> {
   let routeNodesByName = new Map<string, OwnershipRouteNode>()
+  routeNodesByName.set(ROOT_ROUTE_NAME, {
+    children: tree,
+    key: ROOT_ROUTE_NAME,
+    kind: 'group',
+    name: ROOT_ROUTE_NAME,
+  })
 
   function visit(nodes: OwnershipRouteNode[]): void {
     for (let node of nodes) {

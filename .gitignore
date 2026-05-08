@@ -6,6 +6,7 @@ reference/
 .tmp/
 autoresearch-results/
 /demos/tmp/
+/packages/cli/template/
 /packages/ui/demo/.artifacts/
 *.db
 *.db-*

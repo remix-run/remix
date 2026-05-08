@@ -17,7 +17,7 @@ export const authCookie = createCookie('frame-navigation-auth', {
 const authCookieScheme: AuthScheme<FrameAuthIdentity> = {
   name: 'auth-cookie',
   async authenticate(context) {
-    let cookie = await authCookie.parse(context.headers.get('cookie'))
+    let cookie = await authCookie.parse(context.headers.get('Cookie'))
     if (cookie !== '1') {
       return
     }
@@ -42,7 +42,7 @@ export function isAuthenticated() {
 
 export const requireAuth = requireAuthenticated<FrameAuthIdentity>({
   onFailure(context) {
-    let isFrameRequest = context.request.headers.get('x-remix-frame') === 'true'
+    let isFrameRequest = context.request.headers.get('X-Remix-Frame') === 'true'
     if (isFrameRequest) {
       return new Response(
         '<div><h1>Not authorized</h1><p>Refresh the page to sign in again.</p></div>',

@@ -1,0 +1,1 @@
+Fix a bug in Safari where cross-origin links to a new subdomain incorrectly set `event.canIntercept=true` and try to opt-into a `<Frame>` navigation which fails. Cross-origin links now correctly fall through to a document navigation in Safari.

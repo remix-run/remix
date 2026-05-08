@@ -8,6 +8,7 @@ import { createStyles } from '@remix-run/terminal'
 import { logger } from './logger.ts'
 
 const styles = createStyles({ colors: true, env: {} })
+const ANSI_CSI = `${String.fromCharCode(27)}[`
 
 describe('logger', () => {
   it('logs the request', async () => {
@@ -44,7 +45,15 @@ describe('logger', () => {
 
       assert.equal(method, styles.green('GET'))
       assert.equal(status, styles.green('200'))
-      assert.match(duration, /^\x1b\[(32|33|35|31)m\d+\x1b\[39m$/)
+      let durationColor = ['32', '33', '35', '31'].find((color) =>
+        duration.startsWith(`${ANSI_CSI}${color}m`),
+      )
+      assert.ok(durationColor)
+      assert.ok(duration.endsWith(`${ANSI_CSI}39m`))
+      assert.match(
+        duration.slice(`${ANSI_CSI}${durationColor}m`.length, -`${ANSI_CSI}39m`.length),
+        /^\d+$/,
+      )
       assert.equal(contentLength, styles.cyan('2048'))
     })
   })
