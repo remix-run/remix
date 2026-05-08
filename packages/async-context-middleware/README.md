@@ -52,24 +52,25 @@ import type { ContextWithRequiredAuth } from 'remix/auth-middleware'
 
 export type RootMiddleware = [ReturnType<typeof loadSession>, ReturnType<typeof loadAuth>]
 
-export type AppContext<params extends AnyParams = AnyParams> = ContextWithParams<
+export type AppContext<params extends AnyParams = {}> = ContextWithParams<
   MiddlewareContext<RootMiddleware>,
   params
 >
 
-export type AuthenticatedAppContext<params extends AnyParams = AnyParams> = ContextWithRequiredAuth<
+export type AuthenticatedAppContext<params extends AnyParams = {}> = ContextWithRequiredAuth<
   AppContext<params>,
   { id: string }
 >
 
 declare module 'remix/fetch-router' {
   interface RouterTypes {
-    context: AppContext<AnyParams>
+    context: AppContext
   }
 }
 ```
 
-After that augmentation, `getContext()` returns your app context values everywhere in the app, with route params typed broadly as `AnyParams`.
+After that augmentation, `getContext()` returns your app context values everywhere in the app,
+with route params typed broadly as `AnyParams`.
 
 ```ts
 import { Auth } from 'remix/auth-middleware'
