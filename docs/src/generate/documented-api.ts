@@ -555,7 +555,7 @@ function getApiFilePath(
   // (see `createLookupMaps` in typedoc.ts).
   let pkg = nameParts.shift()?.replace(/^@remix-run\//g, 'remix/')
   let name = nameParts.pop()
-  return [pkg, ...nameParts, type, `${name}.md`].join('/')
+  return [pkg, ...nameParts, type, `${name}.md`].filter(Boolean).join('/')
 }
 
 function getApiDescription(typedocComment: typedoc.Comment): string {

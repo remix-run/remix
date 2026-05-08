@@ -95,7 +95,7 @@ function getDocFile(baseDir: string, fullPath: string): DocFile {
 }
 
 function getApiTypeKind(value: string | undefined): ApiTypeKind {
-  if (ApiTypeKinds.includes(value as ApiTypeKind)) {
+  if (apiTypeKinds.includes(value as ApiTypeKind)) {
     return value as ApiTypeKind
   }
   throw new Error(`Invalid API docs type: ${value ?? '<missing>'}`)
