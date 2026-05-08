@@ -38,7 +38,7 @@ const bookSchema = f.object({
 })
 
 export default createController(routes.admin.books, {
-  middleware: [requireAuth(), requireAdmin()] as const,
+  middleware: [requireAuth(), requireAdmin()],
   actions: {
     async index({ get }) {
       let db = get(Database)

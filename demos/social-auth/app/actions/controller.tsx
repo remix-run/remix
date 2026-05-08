@@ -42,7 +42,7 @@ export function createRootController(
         )
       },
       account: {
-        middleware: [requireAuth] as const,
+        middleware: [requireAuth],
         handler({ get }) {
           let auth = get(Auth)
           if (!auth.ok) {

@@ -7,7 +7,7 @@ import { render } from '../render.tsx'
 import { AccountPage } from './page.tsx'
 
 export default createController(routes.account, {
-  middleware: [requireAuth()] as const,
+  middleware: [requireAuth()],
   actions: {
     index() {
       let user = getCurrentUser()

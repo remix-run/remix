@@ -11,7 +11,7 @@ import { AdminOrdersIndexPage } from './index-page.tsx'
 import { AdminOrderNotFoundPage, AdminOrderShowPage } from './show-page.tsx'
 
 export default createController(routes.admin.orders, {
-  middleware: [requireAuth(), requireAdmin()] as const,
+  middleware: [requireAuth(), requireAdmin()],
   actions: {
     async index({ get }) {
       let db = get(Database)

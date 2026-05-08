@@ -24,7 +24,7 @@ const accountSettingsSchema = f.object({
 })
 
 export default createController(routes.account.settings, {
-  middleware: [requireAuth()] as const,
+  middleware: [requireAuth()],
   actions: {
     index() {
       let user = getCurrentUser()

@@ -1,0 +1,1 @@
+BREAKING CHANGE: `remix/async-context-middleware` no longer exposes `AsyncContextTypes`. `getContext()` now derives its type from `remix/fetch-router`'s `RouterTypes.context`, with route params broadened to `AnyParams`, so apps only need the router context augmentation.
