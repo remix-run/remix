@@ -2,7 +2,12 @@ import type { ComponentHandle, FrameHandle, Key, RemixNode } from '../runtime/co
 import type { ElementType, ElementProps, RemixElement } from '../runtime/jsx.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
-import { normalizeSvgAttribute } from '../runtime/svg-attributes.ts'
+import {
+  FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
+  SELF_CLOSING_TAGS,
+  normalizeAttributeName,
+  serializeStyleObject,
+} from '../runtime/core/attributes.ts'
 import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
 
 interface VNode {
@@ -116,22 +121,6 @@ type Segment =
       pending?: Promise<void>
     }
 
-const SELF_CLOSING_TAGS = new Set([
-  'area',
-  'base',
-  'br',
-  'col',
-  'embed',
-  'hr',
-  'img',
-  'input',
-  'link',
-  'meta',
-  'param',
-  'source',
-  'track',
-  'wbr',
-])
 const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
 const INPUT_DEFAULT_PROPS = new Set(['defaultValue', 'defaultChecked'])
 
@@ -158,26 +147,7 @@ function getStyleLayerName(selector: string, layer: string = DEFAULT_STYLE_LAYER
   return `${layer}.${selector}`
 }
 
-const NUMERIC_CSS_PROPS = new Set([
-  'z-index',
-  'opacity',
-  'flex-grow',
-  'flex-shrink',
-  'flex-order',
-  'grid-area',
-  'grid-row',
-  'grid-column',
-  'font-weight',
-  'line-height',
-  'order',
-  'orphans',
-  'widows',
-  'zoom',
-  'columns',
-  'column-count',
-])
-
-const FRAMEWORK_PROPS = new Set(['children', 'innerHTML', 'on', 'key', 'mix'])
+const SSR_OMITTED_PROPS = RUNTIME_FRAMEWORK_PROPS
 
 const ssrSignal = Object.freeze({
   get aborted() {
@@ -555,7 +525,7 @@ function renderAttributes(props: any, isSvg: boolean, excludedProps?: Set<string
   let attrs = ''
 
   for (let key in props) {
-    if (FRAMEWORK_PROPS.has(key)) continue
+    if (SSR_OMITTED_PROPS.has(key)) continue
     if (excludedProps?.has(key)) continue
 
     let value = props[key]
@@ -1117,20 +1087,7 @@ function escapeTemplateContent(html: string): string {
 }
 
 function transformAttributeName(name: string, isSvg: boolean): string {
-  // aria-/data- pass through
-  if (name.startsWith('aria-') || name.startsWith('data-')) return name
-
-  // HTML mappings
-  if (name === 'className') return 'class'
-  if (!isSvg) {
-    if (name === 'htmlFor') return 'for'
-    if (name === 'tabIndex') return 'tabindex'
-    if (name === 'acceptCharset') return 'accept-charset'
-    if (name === 'httpEquiv') return 'http-equiv'
-    return name.toLowerCase()
-  }
-
-  return normalizeSvgAttribute(name).attr
+  return normalizeAttributeName(name, isSvg).attr
 }
 
 function finalizeHtml(html: string, context: RenderContext): string {
@@ -1277,36 +1234,6 @@ function buildRmxDataScript(context: RenderContext): string {
 function escapeScriptJson(json: string): string {
   // Avoid prematurely closing the script tag when serialized data contains "</script>".
   return json.replace(/</g, '\\u003c')
-}
-
-function serializeStyleObject(style: Record<string, any>): string {
-  let parts: string[] = []
-
-  for (let [key, value] of Object.entries(style)) {
-    if (value == null) continue
-    if (typeof value === 'boolean') continue
-    if (typeof value === 'number' && !Number.isFinite(value)) continue
-
-    // Convert camelCase to kebab-case
-    let cssKey = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)
-
-    // Add px to numeric values where appropriate
-    let shouldAppendPx =
-      typeof value === 'number' &&
-      value !== 0 &&
-      !NUMERIC_CSS_PROPS.has(cssKey) &&
-      !cssKey.startsWith('--')
-
-    let cssValue = shouldAppendPx
-      ? `${value}px`
-      : Array.isArray(value)
-        ? value.join(', ')
-        : String(value)
-
-    parts.push(`${cssKey}: ${cssValue};`)
-  }
-
-  return parts.join(' ')
 }
 
 // Frame styles work end-to-end when frame handlers use their own `renderToStream`:

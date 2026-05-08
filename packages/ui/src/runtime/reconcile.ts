@@ -24,7 +24,7 @@ import {
   findContextFromAncestry,
 } from './vnode.ts'
 import { invariant } from './invariant.ts'
-import { diffHostProps } from './diff-props.ts'
+import { patchHostProps } from './core/props.ts'
 import type { StyleManager } from '../style/index.ts'
 import type { ElementProps } from './jsx.ts'
 import { skipComments, logHydrationMismatch } from './client-entries.ts'
@@ -42,12 +42,9 @@ import {
   type MixinRuntimeBinding,
   type MixinRuntimeState,
 } from './mixins/mixin.ts'
+import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
-
-// Internal diffing flags (modeled after Preact)
-const INSERT_VNODE = 1 << 0
-const MATCHED = 1 << 1
 
 let idCounter = 0
 let persistedRemovalToken = 0
@@ -115,6 +112,20 @@ type ControlledReflectionState = {
   onInput: () => void
   onChange: () => void
 }
+
+type DirectEventBinding = {
+  type: string
+  handler: (event: Event, signal: AbortSignal) => void | Promise<void>
+  capture: boolean
+  stableHandler: ((event: Event) => void) | null
+  reentry: AbortController | null
+}
+
+type DirectEventState = {
+  bindings: DirectEventBinding[]
+}
+
+const EMPTY_DIRECT_EVENT_DESCRIPTORS: OnMixinDescriptor[] = []
 
 function shouldRestoreControlledReflectionOnInput(
   node: CommittedHostNode,
@@ -258,6 +269,18 @@ function resolveNodeMixProps(
   state?: MixinRuntimeState,
 ): ElementProps {
   let mix = node.props.mix
+  let directEventDescriptors = resolveDirectEventDescriptors(mix)
+  if (directEventDescriptors) {
+    if (state) {
+      teardownMixins(state)
+    }
+    node._mixState = undefined
+    node._mixedProps = node.props
+    node._directEventDescriptors = directEventDescriptors
+    return node.props
+  }
+
+  node._directEventDescriptors = undefined
   if (state == null && (mix == null || (Array.isArray(mix) && mix.length === 0))) {
     node._mixState = undefined
     node._mixedProps = node.props
@@ -283,6 +306,22 @@ function resolveNodeMixProps(
   return resolved.props
 }
 
+function resolveDirectEventDescriptors(mix: ElementProps['mix']): OnMixinDescriptor[] | null {
+  if (!mix) return EMPTY_DIRECT_EVENT_DESCRIPTORS
+  if (!Array.isArray(mix)) {
+    return isOnMixinDescriptor(mix) ? [mix] : null
+  }
+
+  return areOnMixinDescriptors(mix) ? mix : null
+}
+
+function areOnMixinDescriptors(descriptors: unknown[]): descriptors is OnMixinDescriptor[] {
+  for (let item of descriptors) {
+    if (!isOnMixinDescriptor(item)) return false
+  }
+  return true
+}
+
 function enqueueMixinBindingUpdate(
   this: MixinRuntimeBinding,
   done: (signal: AbortSignal) => void,
@@ -299,7 +338,7 @@ function enqueueMixinBindingUpdate(
       dispatchMixinBeforeUpdate(state)
       let prevProps = getHostProps(node)
       let nextProps = resolveNodeMixProps(node, this.frame, this.scheduler, state)
-      diffHostProps(prevProps, nextProps, this.node)
+      patchHostProps(prevProps, nextProps, this.node)
 
       dispatchMixinCommit(state)
       done(state ? getMixinRuntimeSignal(state) : AbortSignal.abort())
@@ -490,19 +529,23 @@ function diffHost(
     next,
     rootTarget,
   )
-  diffHostProps(currProps, nextProps, curr._dom)
+  patchHostProps(currProps, nextProps, curr._dom)
 
   next._dom = curr._dom
   next._parent = vParent
   next._controller = curr._controller
+  next._directEventState = curr._directEventState
   next._controlledState = curr._controlledState
+  syncDirectEventListeners(next as CommittedHostNode)
 
   if (next._controlledState || shouldTrackControlledReflection(nextProps)) {
     ensureControlledReflection(next as CommittedHostNode, scheduler)
     syncControlledReflection(next as CommittedHostNode, nextProps)
   }
 
-  bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, styles)
+  if (next._mixState) {
+    bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, styles)
+  }
   if (shouldDispatchMixinLifecycle) {
     scheduler.enqueueCommitPhase([() => dispatchMixinCommit(nextMixState)])
   }
@@ -515,10 +558,113 @@ function setupHostNode(node: HostNode, dom: Element, scheduler: Scheduler): void
   let props = getHostProps(node)
   let committedNode = node as CommittedHostNode
 
+  syncDirectEventListeners(committedNode)
+
   if (shouldTrackControlledReflection(props)) {
     ensureControlledReflection(committedNode, scheduler)
     syncControlledReflection(committedNode, props)
   }
+}
+
+function syncDirectEventListeners(node: CommittedHostNode): void {
+  let descriptors = node._directEventDescriptors as OnMixinDescriptor[] | undefined
+  if (!descriptors) {
+    teardownDirectEventListeners(node)
+    return
+  }
+  if (descriptors.length === 0) {
+    teardownDirectEventListeners(node)
+    return
+  }
+
+  let state = node._directEventState as DirectEventState | undefined
+  if (!state) {
+    state = { bindings: [] }
+    node._directEventState = state
+  }
+
+  let bindings = state.bindings
+  for (let index = 0; index < descriptors.length; index++) {
+    let descriptor = descriptors[index]
+    let [type, handler, captureBoolean = false] = descriptor.args
+    let binding = bindings[index]
+
+    if (!binding) {
+      binding = createDirectEventBinding(type, handler, captureBoolean)
+      bindings[index] = binding
+      attachDirectEventBinding(node._dom, binding)
+      continue
+    }
+
+    if (binding.type !== type || binding.capture !== captureBoolean) {
+      removeDirectEventBinding(node._dom, binding)
+      binding.type = type
+      binding.capture = captureBoolean
+      attachDirectEventBinding(node._dom, binding)
+    }
+
+    binding.handler = handler
+  }
+
+  for (let index = descriptors.length; index < bindings.length; index++) {
+    removeDirectEventBinding(node._dom, bindings[index])
+  }
+  bindings.length = descriptors.length
+}
+
+function createDirectEventBinding(
+  type: string,
+  handler: DirectEventBinding['handler'],
+  capture: boolean,
+): DirectEventBinding {
+  let binding: DirectEventBinding = {
+    type,
+    handler,
+    capture,
+    reentry: null,
+    stableHandler: null,
+  }
+
+  return binding
+}
+
+function getStableDirectEventHandler(binding: DirectEventBinding): (event: Event) => void {
+  if (binding.stableHandler) return binding.stableHandler
+
+  binding.stableHandler = (event) => {
+    invokeDirectEventBinding(binding, event)
+  }
+  return binding.stableHandler
+}
+
+function attachDirectEventBinding(dom: Element, binding: DirectEventBinding): void {
+  dom.addEventListener(binding.type, getStableDirectEventHandler(binding), binding.capture)
+}
+
+function removeDirectEventBinding(dom: Element, binding: DirectEventBinding): void {
+  if (binding.stableHandler) {
+    dom.removeEventListener(binding.type, binding.stableHandler, binding.capture)
+  }
+  binding.reentry?.abort(new DOMException('', 'AbortError'))
+  binding.reentry = null
+}
+
+function teardownDirectEventListeners(node: CommittedHostNode): void {
+  let state = node._directEventState as DirectEventState | undefined
+  if (!state) return
+
+  for (let binding of state.bindings) {
+    removeDirectEventBinding(node._dom, binding)
+  }
+
+  state.bindings.length = 0
+  node._directEventState = undefined
+}
+
+function invokeDirectEventBinding(binding: DirectEventBinding, event: Event): void {
+  binding.reentry?.abort(new DOMException('', 'EventReentry'))
+  binding.reentry = new AbortController()
+  void binding.handler(event, binding.reentry.signal)
 }
 
 function diffText(curr: CommittedTextNode, next: TextNode, vParent: VNode) {
@@ -621,9 +767,11 @@ function insert(
           rootTarget,
           childCursor,
         )
-        diffHostProps({}, hostProps, targetHead)
+        patchHostProps({}, hostProps, targetHead)
         setupHostNode(node, targetHead, scheduler)
-        bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
+        if (node._mixState) {
+          bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
+        }
         return cursor
       }
     }
@@ -641,7 +789,7 @@ function insert(
       let cursorTag = node._svg ? cursor.tagName : cursor.tagName.toLowerCase()
       if (cursorTag === node.type) {
         let nextCursor = cursor.nextSibling
-        diffHostProps({}, hostProps, cursor)
+        patchHostProps({}, hostProps, cursor)
 
         // Handle innerHTML prop
         if (hostProps.innerHTML != null) {
@@ -663,7 +811,9 @@ function insert(
         }
 
         setupHostNode(node, cursor, scheduler)
-        bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
+        if (node._mixState) {
+          bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
+        }
         return nextCursor
       } else {
         // Type mismatch - try single-advance retry to handle browser extension injections
@@ -674,7 +824,7 @@ function insert(
           if (nextTag === node.type) {
             let nextCursor = nextSibling.nextSibling
             // Found a match after skipping - adopt it and leave skipped node in place
-            diffHostProps({}, hostProps, nextSibling)
+            patchHostProps({}, hostProps, nextSibling)
 
             if (hostProps.innerHTML != null) {
               nextSibling.innerHTML = hostProps.innerHTML as string
@@ -694,7 +844,9 @@ function insert(
             }
 
             setupHostNode(node, nextSibling, scheduler)
-            bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
+            if (node._mixState) {
+              bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
+            }
             return nextCursor
           }
         }
@@ -706,7 +858,7 @@ function insert(
     let dom = node._svg
       ? document.createElementNS(SVG_NS, node.type)
       : document.createElement(node.type)
-    diffHostProps({}, hostProps, dom)
+    patchHostProps({}, hostProps, dom)
 
     // Handle innerHTML prop
     if (hostProps.innerHTML != null) {
@@ -716,7 +868,9 @@ function insert(
     }
 
     setupHostNode(node, dom, scheduler)
-    bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles, false, domParent)
+    if (node._mixState) {
+      bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles, false, domParent)
+    }
     doInsert(dom)
     return cursor
   }
@@ -1226,6 +1380,7 @@ function cleanupDescendants(node: VNode, scheduler: Scheduler, styles: StyleMana
     }
 
     teardownMixins(node._mixState as MixinRuntimeState | undefined)
+    teardownDirectEventListeners(node)
     teardownControlledReflection(node)
     if (node._controller) node._controller.abort()
     return
@@ -1323,6 +1478,7 @@ function performHostNodeRemoval(
   }
 
   teardownMixins(node._mixState as MixinRuntimeState | undefined)
+  teardownDirectEventListeners(node)
   teardownControlledReflection(node)
   // Never remove the real document.head node when reconciling a <head> vnode.
   if (!isHeadHostNode(node)) {
@@ -1343,42 +1499,12 @@ function diffChildren(
   cursor?: Node | null,
   anchor?: Node,
 ) {
-  let nextLength = next.length
+  let hasKeys = hasKeyedChildren(next)
 
-  // Warn when duplicate keys are present among siblings. Duplicate keys are
-  // still processed (last one wins), but they make keyed diffing ambiguous.
-  let hasKeys = false
-  let seenKeys: Set<string> | undefined
-  let duplicateKeys: Set<string> | undefined
-  for (let i = 0; i < nextLength; i++) {
-    let node = next[i]
-    if (node && node.key != null) {
-      hasKeys = true
-      if (!seenKeys) {
-        seenKeys = new Set([node.key])
-        continue
-      }
-      if (seenKeys.has(node.key)) {
-        if (!duplicateKeys) {
-          duplicateKeys = new Set()
-        }
-        duplicateKeys.add(node.key)
-      } else {
-        seenKeys.add(node.key)
-      }
-    }
-  }
-
-  if (duplicateKeys?.size) {
-    let quotedKeys = Array.from(duplicateKeys, (key) => `"${key}"`)
-    console.warn(
-      `Duplicate keys detected in siblings: ${quotedKeys.join(', ')}. Keys should be unique.`,
-    )
-  }
-
-  // Initial mount / hydration: delegate to insert() for each child so that
-  // hydration cursors and creation logic remain centralized there.
   if (curr === null) {
+    if (hasKeys) {
+      warnDuplicateKeys(next)
+    }
     for (let node of next) {
       cursor = insert(
         node,
@@ -1396,14 +1522,23 @@ function diffChildren(
     return cursor
   }
 
-  let currLength = curr.length
+  if (
+    next.length === 0 &&
+    anchor === undefined &&
+    !parentUsesInnerHTML(vParent) &&
+    canBulkClearChildren(curr)
+  ) {
+    for (let node of curr) {
+      cleanupDescendants(node, scheduler, styles)
+    }
+    domParent.textContent = ''
+    vParent._children = next
+    return
+  }
 
-  // Detect if any keys are present in the new children. If not, we can fall
-  // back to the simpler index-based diff which is cheaper and matches
-  // pre-existing behavior.
   if (!hasKeys) {
-    for (let i = 0; i < nextLength; i++) {
-      let currentNode = i < currLength ? curr[i] : null
+    for (let i = 0; i < next.length; i++) {
+      let currentNode = i < curr.length ? curr[i] : null
       diffVNodes(
         currentNode,
         next[i],
@@ -1418,8 +1553,8 @@ function diffChildren(
       )
     }
 
-    if (currLength > nextLength) {
-      for (let i = nextLength; i < currLength; i++) {
+    if (curr.length > next.length) {
+      for (let i = next.length; i < curr.length; i++) {
         let node = curr[i]
         if (node) remove(node, domParent, scheduler, styles)
       }
@@ -1429,160 +1564,137 @@ function diffChildren(
     return
   }
 
-  if (currLength === nextLength) {
-    let canDiffByPosition = true
-    for (let i = 0; i < nextLength; i++) {
-      let currentNode = curr[i]
-      let nextNode = next[i]
-      if (!currentNode || currentNode.key !== nextNode.key || currentNode.type !== nextNode.type) {
-        canDiffByPosition = false
-        break
-      }
-    }
+  patchKeyedChildren(
+    curr,
+    next,
+    domParent,
+    frame,
+    scheduler,
+    styles,
+    vParent,
+    rootTarget,
+    cursor,
+    anchor,
+  )
 
-    if (canDiffByPosition) {
-      for (let i = 0; i < nextLength; i++) {
-        diffVNodes(
-          curr[i],
-          next[i],
-          domParent,
-          frame,
-          scheduler,
-          styles,
-          vParent,
-          rootTarget,
-          anchor,
-          cursor,
-        )
-      }
+  return
+}
 
-      vParent._children = next
-      return
+function parentUsesInnerHTML(parent: VNode): boolean {
+  return isHostNode(parent) && getHostProps(parent).innerHTML != null
+}
+
+function canBulkClearChildren(children: VNode[]): boolean {
+  for (let child of children) {
+    if (!canBulkClearNode(child)) return false
+  }
+  return true
+}
+
+function canBulkClearNode(node: VNode): boolean {
+  if (isCommittedTextNode(node)) return true
+
+  if (isCommittedHostNode(node)) {
+    if (node._mixState) return false
+    for (let child of node._children) {
+      if (!canBulkClearNode(child)) return false
     }
+    return true
   }
 
-  // --- O(n + m) keyed diff with Map-based lookup ------------------------------
-
-  let oldChildren = curr
-  let oldChildrenLength = currLength
-  let remainingOldChildren = oldChildrenLength
-
-  // Build key → index map for O(1) lookup: O(m)
-  let oldKeyMap = new Map<string, number>()
-  for (let i = 0; i < oldChildrenLength; i++) {
-    let c = oldChildren[i]
-    if (c) {
-      c._flags = 0
-      if (c.key != null) {
-        oldKeyMap.set(c.key, i)
-      }
-    }
+  if (isFragmentNode(node)) {
+    return canBulkClearChildren(node._children)
   }
 
-  let skew = 0
-  let newChildren: VNode[] = new Array(nextLength)
+  if (isCommittedComponentNode(node)) {
+    return canBulkClearNode(node._content)
+  }
 
-  // First pass: match new children to old ones using Map lookup: O(n)
-  for (let i = 0; i < nextLength; i++) {
-    let childVNode = next[i]
-    if (!childVNode) {
-      newChildren[i] = childVNode
+  return false
+}
+
+function hasKeyedChildren(children: VNode[]): boolean {
+  for (let node of children) {
+    if (node.key != null) return true
+  }
+  return false
+}
+
+function warnDuplicateKeys(children: VNode[]): void {
+  let seenKeys: Set<string> | undefined
+  let duplicateKeys: Set<string> | undefined
+
+  for (let node of children) {
+    if (node.key == null) continue
+
+    if (!seenKeys) {
+      seenKeys = new Set([node.key])
       continue
     }
 
-    newChildren[i] = childVNode
-    childVNode._parent = vParent
-
-    let skewedIndex = i + skew
-    let matchingIndex = -1
-
-    let key = childVNode.key
-    let type = childVNode.type
-
-    if (key != null) {
-      // O(1) Map lookup for keyed children
-      let mapIndex = oldKeyMap.get(key)
-      if (mapIndex !== undefined) {
-        let candidate = oldChildren[mapIndex]
-        let candidateFlags = candidate?._flags ?? 0
-        if (candidate && (candidateFlags & MATCHED) === 0 && candidate.type === type) {
-          matchingIndex = mapIndex
-        }
-      }
+    if (seenKeys.has(node.key)) {
+      duplicateKeys ??= new Set()
+      duplicateKeys.add(node.key)
     } else {
-      // Non-keyed children use positional identity only - no searching
-      let searchVNode = oldChildren[skewedIndex]
-      let searchFlags = searchVNode?._flags ?? 0
-      let available = searchVNode != null && (searchFlags & MATCHED) === 0
-      if (available && searchVNode.key == null && type === searchVNode.type) {
-        matchingIndex = skewedIndex
+      seenKeys.add(node.key)
+    }
+  }
+
+  if (duplicateKeys?.size) {
+    let quotedKeys = Array.from(duplicateKeys, (key) => `"${key}"`)
+    console.warn(
+      `Duplicate keys detected in siblings: ${quotedKeys.join(', ')}. Keys should be unique.`,
+    )
+  }
+}
+
+function patchKeyedChildren(
+  curr: VNode[],
+  next: VNode[],
+  domParent: ParentNode,
+  frame: FrameHandle,
+  scheduler: Scheduler,
+  styles: StyleManager,
+  vParent: VNode,
+  rootTarget: EventTarget,
+  cursor?: Node | null,
+  anchor?: Node,
+): void {
+  let matches =
+    matchKeyedChildrenInOrder(curr, next) ??
+    matchKeyedChildrenAfterSingleRemoval(curr, next) ??
+    matchKeyedChildrenAfterPairSwap(curr, next)
+  if (!matches) {
+    warnDuplicateKeys(next)
+    matches = matchKeyedChildren(curr, next)
+  }
+
+  let matchAnalysis = analyzeKeyedChildMatches(curr.length, matches)
+  if (matchAnalysis.hasRemovals) {
+    let usedOldIndexes = new Uint8Array(curr.length)
+
+    for (let match of matches) {
+      if (match.oldIndex >= 0) {
+        usedOldIndexes[match.oldIndex] = 1
       }
     }
 
-    childVNode._index = matchingIndex
-
-    let matchedOldVNode: VNode | null = null
-    if (matchingIndex !== -1) {
-      matchedOldVNode = oldChildren[matchingIndex]
-      remainingOldChildren--
-      if (matchedOldVNode) {
-        matchedOldVNode._flags = (matchedOldVNode._flags ?? 0) | MATCHED
-      }
-    }
-
-    // Determine whether this is a mount vs move and mark INSERT_VNODE
-    let oldDom = matchedOldVNode && findFirstDomAnchor(matchedOldVNode)
-    let isMounting = !matchedOldVNode || !oldDom
-    if (isMounting) {
-      if (matchingIndex === -1) {
-        // Adjust skew similar to Preact when lengths differ
-        if (nextLength > oldChildrenLength) {
-          skew--
-        } else if (nextLength < oldChildrenLength) {
-          skew++
-        }
-      }
-
-      childVNode._flags = (childVNode._flags ?? 0) | INSERT_VNODE
-    } else if (matchingIndex !== i + skew) {
-      if (matchingIndex === i + skew - 1) {
-        skew--
-      } else if (matchingIndex === i + skew + 1) {
-        skew++
-      } else {
-        if (matchingIndex! > i + skew) skew--
-        else skew++
-        childVNode._flags = (childVNode._flags ?? 0) | INSERT_VNODE
+    for (let oldIndex = 0; oldIndex < curr.length; oldIndex++) {
+      if (usedOldIndexes[oldIndex] === 0) {
+        remove(curr[oldIndex], domParent, scheduler, styles)
       }
     }
   }
 
-  // Unmount any old children that weren't matched
-  if (remainingOldChildren) {
-    for (let i = 0; i < oldChildrenLength; i++) {
-      let oldVNode = oldChildren[i]
-      if (oldVNode && ((oldVNode._flags ?? 0) & MATCHED) === 0) {
-        remove(oldVNode, domParent, scheduler, styles)
-      }
-    }
-  }
+  vParent._children = next
 
-  // Second pass: diff matched pairs and place/move DOM nodes in the correct
-  // order, similar to Preact's diffChildren + insert.
-  vParent._children = newChildren
-
-  let lastPlaced: Node | null = null
-
-  for (let i = 0; i < nextLength; i++) {
-    let childVNode = newChildren[i]
-    if (!childVNode) continue
-
-    let idx = childVNode._index ?? -1
-    let oldVNode = idx >= 0 ? oldChildren[idx] : null
+  for (let index = 0; index < next.length; index++) {
+    let match = matches[index]
+    let oldNode = match.oldIndex >= 0 ? curr[match.oldIndex] : null
 
     diffVNodes(
-      oldVNode,
-      childVNode,
+      oldNode,
+      next[index],
       domParent,
       frame,
       scheduler,
@@ -1592,40 +1704,255 @@ function diffChildren(
       anchor,
       cursor,
     )
+  }
 
-    let shouldPlace = (childVNode._flags ?? 0) & INSERT_VNODE
-    let firstDom = findFirstDomAnchor(childVNode)
-    let lastDom = firstDom ? findLastDomAnchor(childVNode) : null
-    if (shouldPlace && firstDom && lastDom && firstDom.parentNode === domParent) {
-      let target: Node | null
-      if (lastPlaced === null) {
-        if (vParent._rangeStart && vParent._rangeStart.parentNode === domParent) {
-          target = vParent._rangeStart.nextSibling
-        } else {
-          target = domParent.firstChild
+  if (matchAnalysis.canSkipPlacement) {
+    return
+  }
+
+  let stableIndexes = lisMatches(matches)
+  let stableCursor = stableIndexes.length - 1
+  let placementAnchor: Node | null = anchor ?? null
+
+  for (let index = next.length - 1; index >= 0; index--) {
+    let nextNode = next[index]
+    let isStable = stableIndexes[stableCursor] === index
+
+    if (isStable) {
+      stableCursor--
+    } else {
+      placeVNode(nextNode, domParent, placementAnchor)
+    }
+
+    placementAnchor = findFirstDomAnchor(nextNode) ?? placementAnchor
+  }
+}
+
+function matchKeyedChildren(curr: VNode[], next: VNode[]): Array<{ oldIndex: number }> {
+  let oldKeyMap = new Map<string, number>()
+  let usedOldIndexes = new Set<number>()
+  let unkeyedSearchStart = 0
+
+  for (let index = 0; index < curr.length; index++) {
+    let key = curr[index].key
+    if (key != null) oldKeyMap.set(key, index)
+  }
+
+  return next.map((nextNode) => {
+    let oldIndex = -1
+
+    if (nextNode.key != null) {
+      let keyedOldIndex = oldKeyMap.get(nextNode.key)
+      if (keyedOldIndex !== undefined) {
+        let oldNode = curr[keyedOldIndex]
+        if (!usedOldIndexes.has(keyedOldIndex) && oldNode.type === nextNode.type) {
+          oldIndex = keyedOldIndex
         }
-      } else {
-        target = lastPlaced.nextSibling
       }
+    } else {
+      for (let index = unkeyedSearchStart; index < curr.length; index++) {
+        let oldNode = curr[index]
+        if (usedOldIndexes.has(index) || oldNode.key != null || oldNode.type !== nextNode.type) {
+          continue
+        }
 
-      if (target === null && anchor) target = anchor
-
-      // If target lies within the range we're moving, skip the move.
-      if (target && domRangeContainsNode(firstDom, lastDom, target)) {
-        // no-op
-      } else if (firstDom !== target) {
-        moveDomRange(domParent, firstDom, lastDom, target)
+        oldIndex = index
+        unkeyedSearchStart = index + 1
+        break
       }
     }
 
-    if (lastDom) lastPlaced = lastDom
+    if (oldIndex >= 0) usedOldIndexes.add(oldIndex)
+    return { oldIndex }
+  })
+}
 
-    // Clear internal flags for next diff
-    childVNode._flags = 0
-    childVNode._index = undefined
+function matchKeyedChildrenInOrder(
+  curr: VNode[],
+  next: VNode[],
+): Array<{ oldIndex: number }> | null {
+  let length = Math.min(curr.length, next.length)
+  let matches: Array<{ oldIndex: number }> = []
+
+  for (let index = 0; index < length; index++) {
+    let nextNode = next[index]
+    if (nextNode.key == null) return null
+
+    let oldNode = curr[index]
+    if (oldNode.key !== nextNode.key || oldNode.type !== nextNode.type) {
+      return null
+    }
+
+    matches.push({ oldIndex: index })
   }
 
-  return
+  for (let index = length; index < next.length; index++) {
+    if (next[index].key == null) return null
+    matches.push({ oldIndex: -1 })
+  }
+
+  return matches
+}
+
+function matchKeyedChildrenAfterSingleRemoval(
+  curr: VNode[],
+  next: VNode[],
+): Array<{ oldIndex: number }> | null {
+  if (curr.length !== next.length + 1) return null
+
+  let matches: Array<{ oldIndex: number }> = []
+  let oldIndex = 0
+  let skippedOldNode = false
+
+  for (let nextIndex = 0; nextIndex < next.length; nextIndex++) {
+    let nextNode = next[nextIndex]
+    if (nextNode.key == null) return null
+
+    let oldNode = curr[oldIndex]
+    if (oldNode.key === nextNode.key && oldNode.type === nextNode.type) {
+      matches.push({ oldIndex })
+      oldIndex++
+      continue
+    }
+
+    if (skippedOldNode) return null
+    skippedOldNode = true
+    oldIndex++
+
+    oldNode = curr[oldIndex]
+    if (oldNode.key !== nextNode.key || oldNode.type !== nextNode.type) {
+      return null
+    }
+
+    matches.push({ oldIndex })
+    oldIndex++
+  }
+
+  return matches
+}
+
+function matchKeyedChildrenAfterPairSwap(
+  curr: VNode[],
+  next: VNode[],
+): Array<{ oldIndex: number }> | null {
+  if (curr.length !== next.length) return null
+
+  let matches: Array<{ oldIndex: number }> = []
+  let firstMismatch = -1
+  let secondMismatch = -1
+
+  for (let index = 0; index < next.length; index++) {
+    let nextNode = next[index]
+    if (nextNode.key == null) return null
+
+    let oldNode = curr[index]
+    if (oldNode.key === nextNode.key && oldNode.type === nextNode.type) {
+      matches.push({ oldIndex: index })
+      continue
+    }
+
+    if (firstMismatch === -1) {
+      firstMismatch = index
+    } else if (secondMismatch === -1) {
+      secondMismatch = index
+    } else {
+      return null
+    }
+    matches.push({ oldIndex: -1 })
+  }
+
+  if (firstMismatch === -1) return matches
+  if (secondMismatch === -1) return null
+
+  let firstOldNode = curr[firstMismatch]
+  let secondOldNode = curr[secondMismatch]
+  let firstNextNode = next[firstMismatch]
+  let secondNextNode = next[secondMismatch]
+
+  if (
+    firstOldNode.key !== secondNextNode.key ||
+    firstOldNode.type !== secondNextNode.type ||
+    secondOldNode.key !== firstNextNode.key ||
+    secondOldNode.type !== firstNextNode.type
+  ) {
+    return null
+  }
+
+  matches[firstMismatch] = { oldIndex: secondMismatch }
+  matches[secondMismatch] = { oldIndex: firstMismatch }
+  return matches
+}
+
+function analyzeKeyedChildMatches(
+  currentLength: number,
+  matches: ReadonlyArray<{ oldIndex: number }>,
+): { hasRemovals: boolean; canSkipPlacement: boolean } {
+  let hasRemovals = matches.length !== currentLength
+  let canSkipPlacement = true
+  let lastOldIndex = -1
+  let sawNewNode = false
+
+  for (let match of matches) {
+    if (match.oldIndex < 0) {
+      hasRemovals = true
+      sawNewNode = true
+      continue
+    }
+
+    if (sawNewNode || match.oldIndex < lastOldIndex) {
+      canSkipPlacement = false
+    }
+    lastOldIndex = match.oldIndex
+  }
+
+  return { hasRemovals, canSkipPlacement }
+}
+
+function lisMatches(matches: ReadonlyArray<{ oldIndex: number }>): number[] {
+  let predecessors = Array.from<number>({ length: matches.length })
+  let tails: number[] = []
+
+  for (let index = 0; index < matches.length; index++) {
+    let value = matches[index].oldIndex + 1
+    if (value === 0) continue
+
+    let low = 0
+    let high = tails.length
+
+    while (low < high) {
+      let middle = (low + high) >> 1
+
+      if (matches[tails[middle]].oldIndex + 1 < value) {
+        low = middle + 1
+      } else {
+        high = middle
+      }
+    }
+
+    predecessors[index] = low > 0 ? tails[low - 1] : -1
+    tails[low] = index
+  }
+
+  let cursor = tails.at(-1) ?? -1
+
+  for (let index = tails.length - 1; index >= 0; index--) {
+    tails[index] = cursor
+    cursor = predecessors[cursor] ?? -1
+  }
+
+  return tails
+}
+
+function placeVNode(node: VNode, domParent: ParentNode, anchor: Node | null): void {
+  let firstDom = findFirstDomAnchor(node)
+  if (!firstDom || firstDom.parentNode !== domParent) return
+
+  let lastDom = findLastDomAnchor(node)
+  if (!lastDom) return
+  if (anchor && domRangeContainsNode(firstDom, lastDom, anchor)) return
+  if (firstDom === anchor) return
+
+  moveDomRange(domParent, firstDom, lastDom, anchor)
 }
 
 export function findFirstDomAnchor(node: VNode | null | undefined): Node | null {
@@ -1721,6 +2048,7 @@ function reclaimPersistedMixinNode(
   newNode._parent = vParent
   newNode._controller = persistedNode._controller
   newNode._mixState = persistedNode._mixState
+  newNode._directEventState = persistedNode._directEventState
   newNode._controlledState = persistedNode._controlledState
 
   let prevProps = getHostProps(persistedNode)
@@ -1733,7 +2061,8 @@ function reclaimPersistedMixinNode(
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
     dispatchMixinBeforeUpdate(newNode._mixState as MixinRuntimeState | undefined)
   }
-  diffHostProps(prevProps, nextProps, persistedNode._dom)
+  patchHostProps(prevProps, nextProps, persistedNode._dom)
+  syncDirectEventListeners(newNode as CommittedHostNode)
   ensureControlledReflection(newNode as CommittedHostNode, scheduler)
   syncControlledReflection(newNode as CommittedHostNode, nextProps)
 
@@ -1748,7 +2077,9 @@ function reclaimPersistedMixinNode(
     rootTarget,
   )
 
-  bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles, true)
+  if (newNode._mixState) {
+    bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles, true)
+  }
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
     scheduler.enqueueCommitPhase([
       () => dispatchMixinCommit(newNode._mixState as MixinRuntimeState | undefined),
