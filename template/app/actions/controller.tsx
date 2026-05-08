@@ -5,7 +5,7 @@ import { assetServer } from '../assets.ts'
 import { routes } from '../routes.ts'
 import { HomePage } from '../ui/scaffold-home-page.tsx'
 
-const controller = createController(routes, {
+export default createController(routes, {
   actions: {
     async assets(context) {
       return (
@@ -18,5 +18,3 @@ const controller = createController(routes, {
     },
   },
 })
-
-export default controller
