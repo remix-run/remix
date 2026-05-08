@@ -633,22 +633,26 @@ import { Auth, requireAuth } from 'remix/auth-middleware'
 import {
   createAction,
   createController,
+  type AnyParams,
   type ContextWithParams,
   type ContextWithMiddleware,
-  type RequestContext,
+  type MiddlewareContext,
 } from 'remix/fetch-router'
 import { route } from 'remix/routes'
+import { loadDatabase } from './middleware/database.ts'
+import { loadSession } from './middleware/session.ts'
 
 let routes = route({
   account: '/account',
 })
 
-type AppContext<params extends Record<string, string> = {}> = ContextWithParams<
-  RequestContext,
+type AuthIdentity = { id: string }
+type RootMiddleware = [ReturnType<typeof loadSession>, ReturnType<typeof loadDatabase>]
+
+type AppContext<params extends AnyParams = {}> = ContextWithParams<
+  MiddlewareContext<RootMiddleware>,
   params
 >
-
-type AuthIdentity = { id: string }
 
 declare module 'remix/fetch-router' {
   interface RouterTypes {
@@ -678,7 +682,9 @@ let accountController = createController<typeof routes, AccountContext>(routes, 
 })
 ```
 
-In this example, `AccountContext` describes the context the local middleware provides before the handler runs. In a larger app, you can derive a shared base context from router middleware with `MiddlewareContext<typeof middleware>`, or apply middleware to an existing context with `ContextWithMiddleware<AppContext, typeof middleware>`.
+In this example, `RootMiddleware` is the middleware tuple that defines the app context contract. It should include middleware that provides typed context values, even if the runtime router middleware array also includes middleware that does not add context or is assembled conditionally. `AccountContext` applies local account middleware on top of that base context before the handler runs.
+
+For small apps with a stable tuple-typed runtime array, `MiddlewareContext<typeof middleware>` is a fine shortcut. For larger apps, prefer the named `RootMiddleware` and `AppContext` pattern so runtime middleware assembly and context typing can evolve independently.
 
 When manually annotating stored handlers, use `Action<typeof route, Context>` for values that may be either a plain handler function or an action object with optional middleware.
 

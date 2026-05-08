@@ -49,6 +49,8 @@ This middleware requires support for `node:async_hooks`, so it is intended for N
 ```ts
 import type { AnyParams, MiddlewareContext, ContextWithParams } from 'remix/fetch-router'
 import type { ContextWithRequiredAuth } from 'remix/auth-middleware'
+import { loadAuth } from './middleware/auth.ts'
+import { loadSession } from './middleware/session.ts'
 
 export type RootMiddleware = [ReturnType<typeof loadSession>, ReturnType<typeof loadAuth>]
 
@@ -69,8 +71,7 @@ declare module 'remix/fetch-router' {
 }
 ```
 
-After that augmentation, `getContext()` returns your app context values everywhere in the app,
-with route params typed broadly as `AnyParams`.
+After that augmentation, `getContext()` returns your app context values everywhere in the app, with route params typed broadly as `AnyParams`.
 
 ```ts
 import { Auth } from 'remix/auth-middleware'

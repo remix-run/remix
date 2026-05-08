@@ -1,5 +1,10 @@
 import type { ContextWithRequiredAuth } from 'remix/auth-middleware'
-import { createRouter, type MiddlewareContext, type ContextWithParams } from 'remix/fetch-router'
+import {
+  createRouter,
+  type AnyParams,
+  type MiddlewareContext,
+  type ContextWithParams,
+} from 'remix/fetch-router'
 import type { Cookie } from 'remix/cookie'
 import { formData } from 'remix/form-data-middleware'
 import type { SessionStorage } from 'remix/session'
@@ -21,15 +26,14 @@ import { routes } from './routes.ts'
 import type { AuthIdentity } from './utils/auth-session.ts'
 import { externalProviderRegistry, type ExternalProviderRegistry } from './utils/external-auth.ts'
 
-type RootMiddleware = [
-  ReturnType<typeof staticFiles>,
+export type RootMiddleware = [
   ReturnType<typeof formData>,
   ReturnType<typeof session>,
   ReturnType<typeof loadDatabase>,
   ReturnType<typeof loadAuth>,
 ]
 
-export type AppContext<params extends Record<string, string> = {}> = ContextWithParams<
+export type AppContext<params extends AnyParams = {}> = ContextWithParams<
   MiddlewareContext<RootMiddleware>,
   params
 >
@@ -40,7 +44,7 @@ declare module 'remix/fetch-router' {
   }
 }
 
-export type AuthenticatedAppContext<params extends Record<string, string> = {}> =
+export type AuthenticatedAppContext<params extends AnyParams = {}> =
   ContextWithRequiredAuth<AppContext<params>, AuthIdentity>
 
 export interface SocialAuthRouterOptions {
@@ -53,7 +57,7 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   let cookie = options?.sessionCookie ?? sessionCookie
   let storage = options?.sessionStorage ?? sessionStorage
   let providers = options?.externalProviderRegistry ?? externalProviderRegistry
-  let router = createRouter({
+  let router = createRouter<AppContext>({
     middleware: [
       staticFiles('./public', {
         cacheControl: 'no-store, must-revalidate',
@@ -64,7 +68,7 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
       session(cookie, storage),
       loadDatabase(),
       loadAuth(),
-    ] satisfies RootMiddleware,
+    ],
   })
 
   router.map(routes, createRootController(providers))
