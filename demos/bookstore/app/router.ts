@@ -42,11 +42,11 @@ import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
 
 export type RootMiddleware = [
-  ReturnType<typeof formData>,
-  ReturnType<typeof session>,
-  ReturnType<typeof loadDatabase>,
-  ReturnType<typeof loadAssetEntry>,
-  ReturnType<typeof loadAuth>,
+  typeof formData,
+  typeof session,
+  typeof loadDatabase,
+  typeof loadAssetEntry,
+  typeof loadAuth,
 ]
 
 export type AppContext<params extends AnyParams = {}> = ContextWithParams<

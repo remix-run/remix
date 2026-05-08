@@ -27,10 +27,10 @@ import type { AuthIdentity } from './utils/auth-session.ts'
 import { externalProviderRegistry, type ExternalProviderRegistry } from './utils/external-auth.ts'
 
 export type RootMiddleware = [
-  ReturnType<typeof formData>,
-  ReturnType<typeof session>,
-  ReturnType<typeof loadDatabase>,
-  ReturnType<typeof loadAuth>,
+  typeof formData,
+  typeof session,
+  typeof loadDatabase,
+  typeof loadAuth,
 ]
 
 export type AppContext<params extends AnyParams = {}> = ContextWithParams<

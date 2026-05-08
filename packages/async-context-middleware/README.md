@@ -52,7 +52,7 @@ import type { ContextWithRequiredAuth } from 'remix/auth-middleware'
 import { loadAuth } from './middleware/auth.ts'
 import { loadSession } from './middleware/session.ts'
 
-export type RootMiddleware = [ReturnType<typeof loadSession>, ReturnType<typeof loadAuth>]
+export type RootMiddleware = [typeof loadSession, typeof loadAuth]
 
 export type AppContext<params extends AnyParams = {}> = ContextWithParams<
   MiddlewareContext<RootMiddleware>,

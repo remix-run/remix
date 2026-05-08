@@ -15,7 +15,7 @@ import settingsController from './actions/settings/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { routes } from './routes.ts'
 
-export type RootMiddleware = [ReturnType<typeof loadAuth>]
+export type RootMiddleware = [typeof loadAuth]
 
 export type AppContext<params extends AnyParams = {}> = ContextWithParams<
   MiddlewareContext<RootMiddleware>,

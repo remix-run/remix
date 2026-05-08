@@ -12,6 +12,9 @@ import type {
  */
 export type AnyMiddleware = Middleware<ContextTransform>
 
+type AnyMiddlewareFactory = (...args: never[]) => AnyMiddleware
+type MiddlewareSource = AnyMiddleware | AnyMiddlewareFactory
+
 type ContextTransform =
   | ContextEntry
   | ContextEntries
@@ -22,7 +25,11 @@ type EmptyContextTransform = readonly []
 declare const contextTransform: unique symbol
 
 type TransformOf<middleware> =
-  middleware extends Middleware<infer transform> ? transform : EmptyContextTransform
+  middleware extends Middleware<infer transform>
+    ? transform
+    : middleware extends (...args: never[]) => Middleware<infer transform>
+      ? transform
+      : EmptyContextTransform
 
 type ContextWithTransform<
   context extends RequestContext<any, any>,
@@ -40,16 +47,18 @@ type ContextWithTransform<
       : context
 
 /**
- * Resolves the request-context type produced by a middleware array.
+ * Resolves the request-context type produced by a middleware source tuple.
+ *
+ * Sources may be middleware instances or factory functions that return middleware.
  */
 export type MiddlewareContext<
-  middleware extends readonly AnyMiddleware[],
+  middleware extends readonly MiddlewareSource[],
   context extends RequestContext<any, any> = RequestContext,
 > = number extends middleware['length']
   ? context
   : middleware extends readonly [
-        infer first extends AnyMiddleware,
-        ...infer rest extends readonly AnyMiddleware[],
+        infer first extends MiddlewareSource,
+        ...infer rest extends readonly MiddlewareSource[],
       ]
     ? MiddlewareContext<rest, ContextWithTransform<context, TransformOf<first>>>
     : context
@@ -57,12 +66,12 @@ export type MiddlewareContext<
 /**
  * Resolves the request-context type produced by applying middleware to an existing context.
  *
- * This is useful for router helpers and third-party libraries that need to describe
- * the context available after a known middleware tuple runs.
+ * This is useful for router helpers and third-party libraries that need to describe the context
+ * available after a known tuple of middleware instances or middleware factories runs.
  */
 export type ContextWithMiddleware<
   context extends RequestContext<any, any>,
-  middleware extends readonly AnyMiddleware[],
+  middleware extends readonly MiddlewareSource[],
 > = MiddlewareContext<middleware, context>
 
 /**

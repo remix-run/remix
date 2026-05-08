@@ -33,6 +33,10 @@ function setRole<role extends 'viewer' | 'admin'>(role: role): Middleware<RoleCo
   }
 }
 
+function loadAdminRole() {
+  return setRole('admin')
+}
+
 function setFormData(): Middleware<FormDataContextEntry> {
   return async (context, next) => {
     context.set(FormData, new FormData())
@@ -127,6 +131,24 @@ describe('router type inference', () => {
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), '')
+  })
+
+  it('derives context from middleware factory function types', () => {
+    type FactoryContext = MiddlewareContext<
+      [typeof requireUser, typeof loadAdminRole, typeof setFormData]
+    >
+
+    function assertContext(context: FactoryContext) {
+      let user = context.get(CurrentUser)
+      let role = context.get(CurrentRole)
+      let formData = context.get(FormData)
+
+      expectTypeEquality<IsEqual<typeof user, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof role, 'admin'>>()
+      expectTypeEquality<IsEqual<typeof formData, FormData>>()
+    }
+
+    void assertContext
   })
 
   it('types stored actions with route params and explicit app context', () => {
