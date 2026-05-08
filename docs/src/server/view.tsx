@@ -30,6 +30,12 @@ export function DocsDocument(handle: Handle<DocsViewProps>) {
               <meta name="robots" content="noindex,nofollow" />
               <meta name="googlebot" content="noindex,nofollow" />
             </>
+          ) : page.docFile?.kind === 'package' ? (
+            // Overview pages (package READMEs) link densely to every API page
+            // in the package; those are already reachable via the sidebar, so
+            // tell crawlers — including our prerender spider — not to follow
+            // links from here. The page itself is still indexable.
+            <meta name="robots" content="nofollow" />
           ) : null}
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
