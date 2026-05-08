@@ -21,7 +21,13 @@ import { routes } from './routes.ts'
 import { externalProviderRegistry, type ExternalProviderRegistry } from './utils/external-auth.ts'
 
 type AppContext = MiddlewareContext<
-  [typeof formData, typeof session, typeof loadDatabase, typeof loadAuth, typeof render]
+  [
+    ReturnType<typeof formData>,
+    ReturnType<typeof session>,
+    ReturnType<typeof loadDatabase>,
+    ReturnType<typeof loadAuth>,
+    ReturnType<typeof render>,
+  ]
 >
 
 declare module 'remix/fetch-router' {

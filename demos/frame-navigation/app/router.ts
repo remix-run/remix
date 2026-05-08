@@ -11,7 +11,7 @@ import { loadAuth } from './middleware/auth.ts'
 import { render } from './middleware/render.tsx'
 import { routes } from './routes.ts'
 
-type AppContext = MiddlewareContext<[typeof loadAuth, typeof render]>
+type AppContext = MiddlewareContext<[ReturnType<typeof loadAuth>, ReturnType<typeof render>]>
 
 declare module 'remix/fetch-router' {
   interface RouterTypes {

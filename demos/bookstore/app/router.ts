@@ -39,12 +39,12 @@ import { routes } from './routes.ts'
 
 type AppContext = MiddlewareContext<
   [
-    typeof formData,
-    typeof session,
-    typeof loadDatabase,
-    typeof loadAssetEntry,
-    typeof loadAuth,
-    typeof render,
+    ReturnType<typeof formData>,
+    ReturnType<typeof session>,
+    ReturnType<typeof loadDatabase>,
+    ReturnType<typeof loadAssetEntry>,
+    ReturnType<typeof loadAuth>,
+    ReturnType<typeof render>,
   ]
 >
 
