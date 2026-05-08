@@ -7,6 +7,7 @@ import * as semver from 'semver'
 import { type Router } from 'remix/fetch-router'
 import { createRouter, getDefaultVersions } from './router.tsx'
 import type { ServerContext } from './components.tsx'
+import { discoverMarkdownFiles } from './markdown.ts'
 import { routes } from './routes.ts'
 
 let { values: cliArgs } = util.parseArgs({
@@ -95,10 +96,25 @@ async function crawl(router: Router, urlPath: string, outputDir: string) {
     let html = await response.text()
     await fs.writeFile(outputPath, html, 'utf-8')
 
+    let parsedHtml = parse(html)
+
+    // Honor `<meta name="robots" content="nofollow">` (e.g. on package
+    // overview pages) by skipping link discovery. Per-link `rel="nofollow"`
+    // is filtered separately in the selector below.
+    let robots = parsedHtml.querySelector('meta[name="robots"]')?.getAttribute('content') || ''
+    let noFollow = robots
+      .split(',')
+      .map((s) => s.trim().toLowerCase())
+      .includes('nofollow')
+
+    if (noFollow) {
+      return { downloadedUrl: urlPath, discoveredUrls: [] }
+    }
+
     // Parse HTML files for other resources/links to add to queue
     return {
       downloadedUrl: urlPath,
-      discoveredUrls: parse(html)
+      discoveredUrls: parsedHtml
         .querySelectorAll('a:not([rel="nofollow"]),link:not([rel="preload"]):not([rel="prefetch"])')
         .map((link) => link.getAttribute('href'))
         .filter((href) => href && !isAbsoluteUrl(href))
