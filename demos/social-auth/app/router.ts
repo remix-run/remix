@@ -1,10 +1,4 @@
-import type { ContextWithRequiredAuth } from 'remix/auth-middleware'
-import {
-  createRouter,
-  type AnyParams,
-  type MiddlewareContext,
-  type ContextWithParams,
-} from 'remix/fetch-router'
+import { createRouter, type MiddlewareContext } from 'remix/fetch-router'
 import type { Cookie } from 'remix/cookie'
 import { formData } from 'remix/form-data-middleware'
 import type { SessionStorage } from 'remix/session'
@@ -23,19 +17,10 @@ import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { routes } from './routes.ts'
-import type { AuthIdentity } from './utils/auth-session.ts'
 import { externalProviderRegistry, type ExternalProviderRegistry } from './utils/external-auth.ts'
 
-export type RootMiddleware = [
-  typeof formData,
-  typeof session,
-  typeof loadDatabase,
-  typeof loadAuth,
-]
-
-export type AppContext<params extends AnyParams = {}> = ContextWithParams<
-  MiddlewareContext<RootMiddleware>,
-  params
+type AppContext = MiddlewareContext<
+  [typeof formData, typeof session, typeof loadDatabase, typeof loadAuth]
 >
 
 declare module 'remix/fetch-router' {
@@ -43,9 +28,6 @@ declare module 'remix/fetch-router' {
     context: AppContext
   }
 }
-
-export type AuthenticatedAppContext<params extends AnyParams = {}> =
-  ContextWithRequiredAuth<AppContext<params>, AuthIdentity>
 
 export interface SocialAuthRouterOptions {
   sessionCookie?: Cookie

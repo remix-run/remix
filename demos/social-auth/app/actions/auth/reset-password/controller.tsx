@@ -9,15 +9,11 @@ import { resetPasswordSchema } from '../schemas.ts'
 import { passwordResetTokens, users } from '../../../data/schema.ts'
 import { getReturnToQuery } from '../../../middleware/auth.ts'
 import { Session } from '../../../middleware/session.ts'
-import type { AppContext } from '../../../router.ts'
 import { routes } from '../../../routes.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
 import { render } from '../../render.tsx'
 
-async function loadResetToken(context: AppContext<{ token: string }>) {
-  let { get, params } = context
-  let db = get(Database)
-  let token = params.token
+async function loadResetToken(db: Database, token: string) {
   let resetToken = await db.find(passwordResetTokens, { token })
   if (resetToken == null) {
     return null
@@ -34,9 +30,9 @@ async function loadResetToken(context: AppContext<{ token: string }>) {
 export const resetPasswordController = createController(routes.auth.resetPassword, {
   actions: {
     async index(context) {
-      let { params, url } = context
+      let { get, params, url } = context
       let returnToQuery = getReturnToQuery(url)
-      let resetToken = await loadResetToken(context)
+      let resetToken = await loadResetToken(get(Database), params.token)
       if (resetToken == null) {
         return render(
           <ErrorPage
@@ -60,7 +56,7 @@ export const resetPasswordController = createController(routes.auth.resetPasswor
       let { get, params, url } = context
       let returnToQuery = getReturnToQuery(url)
       let db = get(Database)
-      let resetToken = await loadResetToken(context)
+      let resetToken = await loadResetToken(db, params.token)
       if (resetToken == null) {
         return render(
           <ErrorPage

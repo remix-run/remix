@@ -1,9 +1,4 @@
-import {
-  createRouter,
-  type AnyParams,
-  type ContextWithParams,
-  type MiddlewareContext,
-} from 'remix/fetch-router'
+import { createRouter, type MiddlewareContext } from 'remix/fetch-router'
 import { asyncContext } from 'remix/async-context-middleware'
 import { logger } from 'remix/logger-middleware'
 import { staticFiles } from 'remix/static-middleware'
@@ -15,12 +10,7 @@ import settingsController from './actions/settings/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { routes } from './routes.ts'
 
-export type RootMiddleware = [typeof loadAuth]
-
-export type AppContext<params extends AnyParams = {}> = ContextWithParams<
-  MiddlewareContext<RootMiddleware>,
-  params
->
+type AppContext = MiddlewareContext<[typeof loadAuth]>
 
 declare module 'remix/fetch-router' {
   interface RouterTypes {

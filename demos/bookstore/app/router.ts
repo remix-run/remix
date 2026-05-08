@@ -1,9 +1,4 @@
-import {
-  createRouter,
-  type AnyParams,
-  type MiddlewareContext,
-  type ContextWithParams,
-} from 'remix/fetch-router'
+import { createRouter, type MiddlewareContext } from 'remix/fetch-router'
 import { asyncContext } from 'remix/async-context-middleware'
 import { compression } from 'remix/compression-middleware'
 import { formData } from 'remix/form-data-middleware'
@@ -41,17 +36,8 @@ import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
 
-export type RootMiddleware = [
-  typeof formData,
-  typeof session,
-  typeof loadDatabase,
-  typeof loadAssetEntry,
-  typeof loadAuth,
-]
-
-export type AppContext<params extends AnyParams = {}> = ContextWithParams<
-  MiddlewareContext<RootMiddleware>,
-  params
+type AppContext = MiddlewareContext<
+  [typeof formData, typeof session, typeof loadDatabase, typeof loadAssetEntry, typeof loadAuth]
 >
 
 declare module 'remix/fetch-router' {
