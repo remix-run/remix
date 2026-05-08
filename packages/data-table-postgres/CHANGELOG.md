@@ -2,6 +2,12 @@
 
 This is the changelog for [`data-table-postgres`](https://github.com/remix-run/remix/tree/main/packages/data-table-postgres). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.2
+
+### Patch Changes
+
+- Fixed raw SQL placeholder rewriting so `?` characters inside string literals, quoted identifiers, comments, and PostgreSQL dollar-quoted strings are preserved.
+
 ## v0.3.1
 
 ### Patch Changes

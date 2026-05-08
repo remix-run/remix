@@ -2,6 +2,22 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.2
+
+### Patch Changes
+
+- Fix a bug in Safari where cross-origin links to a new subdomain incorrectly set `event.canIntercept=true` and try to opt-into a `<Frame>` navigation which fails. Cross-origin links now correctly fall through to a document navigation in Safari.
+
+- Keep streamed frame content in its template when a resolved frame stream starts with a doctype-only chunk.
+
+- Preserve hydrated client entry instances and nested frame resolution during full-document root frame reloads.
+
+- ---
+  '@remix-run/ui': patch
+  ---
+
+  Fix server rendering for `<textarea value>`, `<textarea defaultValue>`, `<input defaultValue>`, and `<input defaultChecked>` so initial form control content matches client rendering, and disallow textarea children in JSX types.
+
 ## v0.1.1
 
 ### Patch Changes

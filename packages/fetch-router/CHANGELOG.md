@@ -2,6 +2,278 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## v0.19.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Simplified route action, controller, request handler, and middleware helper types. `Action` now accepts a route pattern, `RoutePattern`, or `Route` object as its first generic and the full request context as its optional second generic. It describes either a plain request handler function or an action object with optional inline middleware. `Controller` now accepts the route map as its first generic and the full request context as its optional second generic. `RequestHandler` now accepts the full request context as its only generic. `Middleware` now accepts one context effect generic, which can be a single `ContextEntry`, a `ContextEntries` tuple, or a context transform function. `BuildAction` is no longer exported.
+
+  For most apps, augment `RouterTypes.context` once and use `createAction()`/`createController()` to type stored handlers without `satisfies` clauses:
+
+  ```ts
+  import {
+    createAction,
+    createController,
+    type ContextWithParams,
+    type RequestContext,
+  } from 'remix/fetch-router'
+
+  type AppContext<params extends Record<string, string> = {}> = ContextWithParams<
+    RequestContext,
+    params
+  >
+
+  declare module 'remix/fetch-router' {
+    interface RouterTypes {
+      context: AppContext
+    }
+  }
+
+  let action = createAction(routes.account, {
+    handler(context) {
+      return new Response(context.params.id)
+    },
+  })
+
+  let controller = createController(routes, {
+    actions: {
+      account(context) {
+        return new Response(context.params.id)
+      },
+    },
+  })
+  ```
+
+  If you manually type actions or controllers in advanced multi-router code, compose the full context type first and pass it as the second generic:
+
+  ```ts
+  import type { Action, ContextWithMiddleware } from 'remix/fetch-router'
+
+  let accountMiddleware = [requireAuth<AuthIdentity>()] as const
+  type AccountContext = ContextWithMiddleware<AppContext, typeof accountMiddleware>
+
+  let action: Action<typeof routes.account, AccountContext> = {
+    middleware: accountMiddleware,
+    handler(context) {
+      let auth = context.get(Auth)
+      return Response.json(auth.identity)
+    },
+  }
+  ```
+
+  `Action` can be used to manually annotate either action form:
+
+  ```ts
+  let handler: Action<typeof routes.account, AccountContext> = (context) => {
+    return Response.json(context.get(Auth).identity)
+  }
+
+  let action: Action<typeof routes.account, AccountContext> = {
+    middleware: accountMiddleware,
+    handler(context) {
+      return Response.json(context.get(Auth).identity)
+    },
+  }
+  ```
+
+  Renamed the custom router matcher payload type from `MatchData` to `RouteEntry`:
+
+  ```ts
+  // before
+  let matcher = createMatcher<MatchData>()
+
+  // after
+  let matcher = createMatcher<RouteEntry>()
+  ```
+
+  If you manually annotate request handlers, pass the full request context type as the only generic:
+
+  ```ts
+  // before
+  let handler: RequestHandler<{ id: string }, RequestContext<{ id: string }>>
+
+  // after
+  let handler: RequestHandler<RequestContext<{ id: string }>>
+  ```
+
+  If you manually annotate middleware, pass only the context transform type:
+
+  ```ts
+  // before
+  let middleware: Middleware<{}, SetDatabaseContextTransform>
+
+  // after
+  type DatabaseContextEntry = ContextEntry<typeof Database, Database>
+  let middleware: Middleware<DatabaseContextEntry>
+  ```
+
+  Simplified the public middleware context helper types. `MiddlewareContext` is now the exported helper for deriving the request context produced by a middleware chain, and it accepts an optional base context as its second type parameter. `ContextWithMiddleware` is available when code reads more naturally by naming the base context first. Middleware that provides one context value can use `ContextEntry<typeof Key, Value>` directly instead of wrapping the entry in a one-item tuple. The lower-level `MiddlewareContextTransform`, `ContextTransform`, `ApplyContextTransform`, `ApplyMiddleware`, and `ApplyMiddlewareTuple` helpers are no longer exported.
+
+  ```ts
+  // before
+  type AppContext = ApplyMiddlewareTuple<RequestContext, typeof middleware>
+
+  // after
+  type AppContext = MiddlewareContext<typeof middleware>
+  ```
+
+  ```ts
+  // before
+  type ActionContext = ApplyMiddlewareTuple<AppContext, typeof actionMiddleware>
+
+  // after
+  type ActionContext = ContextWithMiddleware<AppContext, typeof actionMiddleware>
+  ```
+
+  Renamed request context helper types so their names describe the `RequestContext` type they produce. Use `ContextWithParams` when deriving an app context that includes route params:
+
+  ```ts
+  // before
+  type AppContext<params extends AnyParams = {}> = WithParams<
+    MiddlewareContext<typeof middleware>,
+    params
+  >
+
+  // after
+  type AppContext<params extends AnyParams = {}> = ContextWithParams<
+    MiddlewareContext<typeof middleware>,
+    params
+  >
+  ```
+
+  Use `ContextWithValues` when a middleware package provides one or more context values. Third-party middleware packages that augment request context should prefer exported helper names like `ContextWithCurrentUser` so their package-specific helpers match the built-in `ContextWith...` naming pattern:
+
+  ```ts
+  // before
+  export type WithCurrentUser<context extends RequestContext<any, any>> = MergeContext<
+    context,
+    [readonly [typeof CurrentUser, User | null]]
+  >
+
+  // after
+  type CurrentUserContextEntry = ContextEntry<typeof CurrentUser, User | null>
+
+  export type ContextWithCurrentUser<context extends RequestContext<any, any>> = ContextWithValues<
+    context,
+    [CurrentUserContextEntry]
+  >
+  ```
+
+  Use `ContextWithValue` when refining a single context value for a specific handler or middleware result:
+
+  ```ts
+  // before
+  type AdminContext = SetContextValue<AppContext, typeof CurrentRole, 'admin'>
+
+  // after
+  type AdminContext = ContextWithValue<AppContext, typeof CurrentRole, 'admin'>
+  ```
+
+  Stored action objects and controllers no longer derive handler context from their local middleware tuple. If local middleware adds context values that a handler requires, compose the full handler context explicitly and pass it to `Action`, `Controller`, `createAction()`, or `createController()`:
+
+  ```ts
+  // before
+  let controller = createController(routes, {
+    middleware: [requireAuth<AuthIdentity>()],
+    actions: {
+      account(context) {
+        let auth = context.get(Auth)
+        return Response.json(auth.identity)
+      },
+    },
+  })
+
+  // after
+  let accountMiddleware = [requireAuth<AuthIdentity>()] as const
+  type AuthenticatedAppContext = ContextWithMiddleware<AppContext, typeof accountMiddleware>
+
+  let controller = createController<typeof routes, AuthenticatedAppContext>(routes, {
+    middleware: accountMiddleware,
+    actions: {
+      account(context) {
+        let auth = context.get(Auth)
+        return Response.json(auth.identity)
+      },
+    },
+  })
+  ```
+
+- BREAKING CHANGE: `context.get(key)` now returns `undefined` when the requested value is not available in request context and the key does not provide a default value. Constructor keys such as `FormData` and `Session` still infer their instance value type when they are set, but an empty `RequestContext` no longer types `context.get(FormData)` as available by default.
+
+  If your code reads a constructor key from a broad `RequestContext`, handle the missing case before using the value:
+
+  ```ts
+  // before
+  function readName(context: RequestContext): string {
+    return String(context.get(FormData).get('name') ?? '')
+  }
+
+  // after
+  function readName(context: RequestContext): string {
+    return String(context.get(FormData)?.get('name') ?? '')
+  }
+  ```
+
+  Handlers whose context contract proves that middleware provides the key can keep reading a defined value. Keep middleware arrays tuple-typed when you want that context contribution to flow into handlers:
+
+  ```ts
+  let router = createRouter({
+    middleware: [formData()] as const,
+  })
+
+  router.post('/profile', (context) => {
+    let formData = context.get(FormData)
+    return Response.json({ name: formData.get('name') })
+  })
+  ```
+
+- BREAKING CHANGE: `router.map(routes, controller)` now maps a controller to the direct leaf routes in the route map passed to `router.map()`. Controller actions may only include direct route leaves from that route map. Nested route-map keys must be mapped with a separate `router.map()` call, unknown action keys throw at runtime, and direct leaf routes still require matching actions.
+
+  If an app currently maps nested route maps in one `router.map()` call:
+
+  ```ts
+  router.map(routes, {
+    middleware: [requireAuth()],
+    actions: {
+      home,
+      account: {
+        actions: {
+          settings,
+        },
+      },
+    },
+  })
+  ```
+
+  Map each route map to its own controller:
+
+  ```ts
+  router.map(routes, {
+    actions: { home },
+  })
+
+  router.map(routes.account, {
+    middleware: [requireAuth()],
+    actions: { settings },
+  })
+  ```
+
+  Controller middleware only runs for the direct actions in that controller; it is not inherited by controllers registered for nested route maps. Move shared protection such as `requireAuth()` or `requireAdmin()` onto every controller that needs it, or keep truly global behavior in the router-level middleware stack.
+
+- BREAKING CHANGE: Removed the `@remix-run/fetch-router/routes` export. Import route definitions and helpers from `@remix-run/routes` instead.
+
+  The `fetch-router` package now depends on `@remix-run/routes` for route map primitives like `Route` and `RouteMap`, keeping `fetch-router` focused on request dispatch.
+
+- BREAKING CHANGE: `router.fetch()` no longer clones `Request` inputs or supports `Request` facades that only become native requests through `clone()`. Pass a real `Request` object to `router.fetch()` when dispatching an existing request.
+
+- BREAKING CHANGE: `RequestContext.method` is now typed as `string` instead of `RequestMethod`, matching the Fetch API and allowing custom or extension request methods. Use the new `isRequestMethod()` helper to narrow a string to one of the router-supported `RequestMethod` values when needed.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`route-pattern@0.21.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.21.0)
+  - [`routes@0.1.0`](https://github.com/remix-run/remix/releases/tag/routes@0.1.0)
+
 ## v0.18.2
 
 ### Patch Changes

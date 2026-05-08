@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/routes",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "Typed route definitions and URL helpers for Remix apps",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
