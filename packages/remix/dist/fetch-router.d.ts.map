@@ -1,0 +1,1 @@
+{"version":3,"file":"fetch-router.d.ts","sourceRoot":"","sources":["../src/fetch-router.ts"],"names":[],"mappings":"AACA,cAAc,yBAAyB,CAAA;AAEvC,MAAM,WAAW,WAAW;CAAG;AAC/B,KAAK,gBAAgB,GAAG,WAAW,CAAA;AAEnC,OAAO,QAAQ,yBAAyB,CAAC;IACvC,UAAU,WAAY,SAAQ,gBAAgB;KAAG;CAClD"}
