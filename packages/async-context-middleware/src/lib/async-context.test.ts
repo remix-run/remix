@@ -14,10 +14,7 @@ import { asyncContext, getContext } from './async-context.ts'
 
 const CurrentUser = createContextKey<unknown>()
 
-type AppContext = ContextWithValues<
-  RequestContext,
-  [readonly [typeof CurrentUser, { id: string }]]
->
+type AppContext = ContextWithValues<RequestContext, [readonly [typeof CurrentUser, { id: string }]]>
 
 declare module '@remix-run/fetch-router' {
   interface RouterTypes {
