@@ -1,46 +1,23 @@
-import * as fs from 'node:fs'
-import * as path from 'node:path'
-
-import { createAssetServer } from 'remix/assets'
 import { createController } from 'remix/fetch-router'
+import { Renderer } from 'remix/render-middleware'
 
+import { assetServer } from '../assets.ts'
 import { routes } from '../routes.ts'
 import { HomePage } from '../ui/scaffold-home-page.tsx'
 import { Layout } from '../ui/layout.tsx'
-import { render } from './render.tsx'
-
-const rootDir = process.cwd()
-const workspacePackagesDir = path.resolve(rootDir, '..', 'packages')
-const usesWorkspaceRemix = fs.existsSync(path.join(workspacePackagesDir, 'remix', 'src', 'ui.ts'))
-
-export const assetServer = createAssetServer({
-  basePath: '/assets',
-  rootDir,
-  fileMap: {
-    'app/*path': 'app/*path',
-    'node_modules/*path': 'node_modules/*path',
-    ...(usesWorkspaceRemix ? { 'packages/*path': '../packages/*path' } : {}),
-  },
-  allow: ['app/assets/**', 'node_modules/**', ...(usesWorkspaceRemix ? ['../packages/**'] : [])],
-  deny: ['app/**/*.server.*'],
-  sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
-  scripts: {
-    define: {
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'development'),
-    },
-  },
-})
 
 const controller = createController(routes, {
   actions: {
     async assets({ request }) {
       return (await assetServer.fetch(request)) ?? new Response('Not Found', { status: 404 })
     },
-    home({ request }) {
-      return render(<HomePage />, request)
+    home({ get }) {
+      let render = get(Renderer)
+      return render(<HomePage />)
     },
-    auth({ request }) {
-      return render(<AuthPage />, request)
+    auth({ get }) {
+      let render = get(Renderer)
+      return render(<AuthPage />)
     },
   },
 })
