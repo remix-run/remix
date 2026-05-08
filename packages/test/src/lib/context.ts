@@ -15,7 +15,7 @@ export interface TestServer {
 }
 
 /**
- * Test Context providing utilities for testing via remix-test.  The context is
+ * Test Context providing utilities for testing via `remix-test`.  The context is
  * passed as the first argument to the {@link test}/{@link it} functions.
  *
  * @example
@@ -36,8 +36,8 @@ export interface TestContext {
   after(fn: () => void): void
 
   /**
-   * Mock tracker for the current test. Mirrors the shape of Node's
-   * `t.mock`. Method mocks created here are auto-restored on test completion.
+   * Mock tracker for the current test using {@link mock}. Mirrors the shape of Node's
+   * `t.mock`. Method mocks created via `t.mock` are auto-restored on test completion.
    */
   mock: {
     /**
@@ -77,8 +77,8 @@ export interface TestContext {
   /**
    * Wires a running test server up to a Playwright page so the test can drive
    * it. The server is closed automatically when the test ends. Pair with
-   * `createTestServer` from `@remix-run/node-fetch-server/test` (or any other
-   * source of a `{ baseUrl, close }` handle) to spin up the server first.
+   * {@link createTestServer} from `@remix-run/node-fetch-server/test` to spin
+   * up the server.
    *
    * @param server - The running server the page should target
    * @returns A `Page` whose `baseURL` is set to `server.baseUrl`.

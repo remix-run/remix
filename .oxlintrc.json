@@ -29,7 +29,8 @@
     "jsdoc": {
       "ignorePrivate": true,
       "tagNamePreference": {
-        "return": "return"
+        "return": "return",
+        "category": "category"
       }
     }
   },

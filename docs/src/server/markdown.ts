@@ -13,13 +13,28 @@ const parseFrontmatter = frontmatter.default as unknown as (md: string) => {
   body: string
 }
 
-export type DocFile = {
+const apiTypeKinds = ['type', 'interface', 'class', 'function', 'mixin', 'variable'] as const
+export type ApiTypeKind = (typeof apiTypeKinds)[number]
+
+export type ApiDocFile = {
+  kind: 'api'
   path: string
-  type: string
+  type: ApiTypeKind
   name: string
   package: string
   urlPath: string
 }
+
+export type PackageDocFile = {
+  kind: 'package'
+  path: string
+  type: 'package'
+  name: string
+  package: string
+  urlPath: string
+}
+
+export type DocFile = ApiDocFile | PackageDocFile
 
 export async function discoverMarkdownFiles(
   baseDir: string,
@@ -42,33 +57,62 @@ export async function discoverMarkdownFiles(
       if (entry.isDirectory()) {
         walk(fullPath)
       } else if (entry.isFile() && entry.name.endsWith('.md')) {
-        let relativePath = path.relative(baseDir, fullPath)
-        let parts = relativePath.split(path.sep)
-        let packageName = parts.slice(0, parts.length - 2).join('/')
-        let type = parts[parts.length - 2]
-        let urlPath = relativePath.replace(/\.md$/, '').replace(/\\/g, '/')
-
-        files.push({
-          path: fullPath,
-          type: type || 'unknown',
-          name: entry.name.replace(/\.md$/, ''),
-          package: packageName,
-          urlPath: urlPath,
-        })
+        files.push(getDocFile(baseDir, fullPath))
       }
     }
   }
 }
 
+function getDocFile(baseDir: string, fullPath: string): DocFile {
+  let relativePath = path.relative(baseDir, fullPath)
+  let parts = relativePath.split(path.sep)
+  let name = path.basename(fullPath, '.md')
+
+  let markdown = fs.readFileSync(fullPath, 'utf-8')
+  let { attributes } = parseFrontmatter(markdown)
+
+  if (attributes.type === 'package') {
+    let packageName = parts.slice(0, -1).join('/')
+    return {
+      kind: 'package',
+      path: fullPath,
+      type: 'package',
+      name: packageName,
+      package: packageName,
+      urlPath: relativePath.replace(/\.md$/, '').replace(/\\/g, '/'),
+    }
+  }
+
+  let packageName = parts.slice(0, -2).join('/')
+  return {
+    kind: 'api',
+    path: fullPath,
+    type: getApiTypeKind(parts.at(-2)),
+    name,
+    package: packageName,
+    urlPath: relativePath.replace(/\.md$/, '').replace(/\\/g, '/'),
+  }
+}
+
+function getApiTypeKind(value: string | undefined): ApiTypeKind {
+  if (apiTypeKinds.includes(value as ApiTypeKind)) {
+    return value as ApiTypeKind
+  }
+  throw new Error(`Invalid API docs type: ${value ?? '<missing>'}`)
+}
+
 export async function renderMarkdownFile(
   filePath: string,
   docFilesLookup: Map<string, DocFile>,
-  version?: string,
+  version: string | undefined,
+  addLinks: boolean,
 ): Promise<{ html: string; source?: string }> {
   try {
     let markdown = fs.readFileSync(filePath, 'utf-8')
     let { attributes, body } = parseFrontmatter(markdown)
-    let marked = new Marked(getShikiExtension(attributes.title || '', docFilesLookup, version))
+    let marked = new Marked(
+      getShikiExtension(attributes.title || '', docFilesLookup, version, addLinks),
+    )
     let html = await marked.parse(body)
     return { html, source: typeof attributes.source === 'string' ? attributes.source : undefined }
   } catch (error) {
@@ -86,7 +130,8 @@ export async function renderMarkdownFile(
 function getShikiExtension(
   apiName: string,
   docFilesLookup: Map<string, DocFile>,
-  version?: string,
+  version: string | undefined,
+  addLinks: boolean,
 ): MarkedExtension {
   return {
     async: true,
@@ -105,6 +150,10 @@ function getShikiExtension(
               // Insert cross-links to known APIs
               {
                 span(node, line, col) {
+                  if (!addLinks) {
+                    return
+                  }
+
                   // We only enhance single-symbol spans of word characters,
                   // skipping spans for parens, braces, etc
                   if (

@@ -74,7 +74,7 @@ import {
 
 ### `expect`
 
-A vitest-/jest-style chainable matcher API on top of the same `AssertionError`. Use `.not` to negate, `.rejects` / `.resolves` to assert on a promise. Mock-aware matchers work with `mock.fn()` / `mock.method()` from `@remix-run/test`.
+A vitest-/jest-style chainable matcher API on top of the same `AssertionError`. Use `.not` to negate, `.rejects` / `.resolves` to assert on a promise. Mock-aware matchers work with `mock.fn()` / `mock.method()` from `remix/test`.
 
 ```ts
 import { expect } from 'remix/assert'

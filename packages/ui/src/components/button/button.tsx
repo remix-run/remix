@@ -93,12 +93,61 @@ const buttonDefaultsMixin = createMixin<Element, [], ElementProps>(
 
 const buttonDefaultsCss = buttonDefaultsMixin()
 
+/**
+ * Base button styling with the default `type="button"` behavior for `<button>`
+ * hosts. Compose with a tone style (e.g. {@link primaryStyle}) when applying
+ * button styling without using the {@link Button} component.
+ *
+ * @category mixin
+ */
 export const baseStyle = [buttonDefaultsCss, buttonBaseStyleCss] as const
+
+/**
+ * Icon slot sizing and `aria-hidden` defaults for decorative icons rendered
+ * inside a button.
+ *
+ * @category mixin
+ */
 export const iconStyle = [buttonIconAttrsCss, buttonIconCss] as const
+
+/**
+ * Inline label slot with the standard button label spacing.
+ *
+ * @category mixin
+ */
 export const labelStyle = buttonLabelCss
+
+/**
+ * Primary visual treatment for buttons. Combine with {@link baseStyle} when
+ * styling a non-`Button` host element.
+ *
+ * @category mixin
+ */
 export const primaryStyle = createButtonCss(theme.colors.action.primary)
+
+/**
+ * Secondary visual treatment for buttons. Combine with {@link baseStyle} when
+ * styling a non-`Button` host element.
+ *
+ * @category mixin
+ */
 export const secondaryStyle = createButtonCss(theme.colors.action.secondary)
+
+/**
+ * Ghost visual treatment for buttons — transparent background with a hover
+ * surface. Combine with {@link baseStyle} when styling a non-`Button` host
+ * element.
+ *
+ * @category mixin
+ */
 export const ghostStyle = ghostButtonToneCss
+
+/**
+ * Danger visual treatment for destructive actions. Combine with
+ * {@link baseStyle} when styling a non-`Button` host element.
+ *
+ * @category mixin
+ */
 export const dangerStyle = createButtonCss(theme.colors.action.danger)
 
 const toneStyleByTone = {
@@ -108,15 +157,54 @@ const toneStyleByTone = {
   danger: dangerStyle,
 } as const
 
+/**
+ * Visual treatment supported by {@link Button} — `'primary'`, `'secondary'`,
+ * `'ghost'`, or `'danger'`.
+ */
 export type ButtonTone = keyof typeof toneStyleByTone
 
+/**
+ * Props accepted by the {@link Button} component.
+ *
+ * Extends the native `<button>` element props with optional icon slots and a
+ * tone variant
+ */
 export type ButtonProps = Omit<Props<'button'>, 'children'> & {
+  /**
+   * Content rendered inside the button's label slot.
+   */
   readonly children?: RemixNode
+  /**
+   * Decorative icon rendered after the label, inside the icon slot.
+   */
   readonly endIcon?: RemixNode
+  /**
+   * Decorative icon rendered before the label, inside the icon slot.
+   */
   readonly startIcon?: RemixNode
+  /**
+   * Visual treatment to apply to the button (default `'secondary'`).
+   */
   readonly tone?: ButtonTone
 }
 
+/**
+ * Renders a `<button>` with `baseStyle` and the resolved tone style, along with
+ * optional start and end icons.
+ *
+ * @param handle Component handle providing the runtime API and the resolved {@link ButtonProps}.
+ * @returns A render function for the button element.
+ *
+ * @example
+ * ```tsx
+ * import { Button } from '@remix-run/ui/button'
+ * import { Glyph } from '@remix-run/ui/glyph'
+ *
+ * <Button startIcon={<Glyph name="add" />} tone="primary">
+ *   Create project
+ * </Button>
+ * ```
+ */
 export function Button(handle: Handle<ButtonProps>) {
   return () => {
     let { children, endIcon, mix, startIcon, tone = 'secondary', ...buttonProps } = handle.props

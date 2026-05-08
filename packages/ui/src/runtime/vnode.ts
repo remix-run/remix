@@ -1,6 +1,9 @@
 import type { ComponentHandle, Component } from './component.ts'
 import { Fragment, Frame } from './component.ts'
-import type { ElementProps, RemixElement, RemixNode } from './jsx.ts'
+import { isRemixElement } from './core/vnode.ts'
+import type { ElementProps, RemixNode } from './jsx.ts'
+
+export { isRemixElement }
 
 export const TEXT_NODE = Symbol('TEXT_NODE')
 export const ROOT_VNODE = Symbol('ROOT_VNODE')
@@ -25,6 +28,8 @@ export type VNode<T extends VNodeType = VNodeType> = {
   _dom?: unknown
   _controller?: AbortController
   _mixState?: unknown
+  _directEventDescriptors?: unknown
+  _directEventState?: unknown
   _controlledState?: unknown
   _svg?: boolean
   // Range roots render between comment boundary markers
@@ -36,10 +41,6 @@ export type VNode<T extends VNodeType = VNodeType> = {
   _frameResolveToken?: number
   _frameResolveController?: AbortController
   _frameResolved?: boolean
-
-  // Internal diffing fields
-  _index?: number
-  _flags?: number
 
   // TEXT_NODE
   _text?: string
@@ -119,10 +120,6 @@ export function isComponentNode(node: VNode): node is ComponentNode {
 
 export function isCommittedComponentNode(node: VNode): node is CommittedComponentNode {
   return isComponentNode(node) && node._content !== undefined
-}
-
-export function isRemixElement(node: RemixNode): node is RemixElement {
-  return typeof node === 'object' && node !== null && '$rmx' in node
 }
 
 export function findContextFromAncestry(node: VNode, type: Component): unknown {

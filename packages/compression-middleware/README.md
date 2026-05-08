@@ -94,7 +94,7 @@ let router = createRouter({
 
 ### Filter Media Type
 
-**Default:** Uses `isCompressibleMimeType()` from [`@remix-run/mime`](https://github.com/remix-run/remix/tree/main/packages/mime)
+**Default:** Uses `isCompressibleMimeType()` from [`remix/mime`](https://github.com/remix-run/remix/tree/main/packages/mime)
 
 You can customize this behavior with the `filterMediaType` option:
 
@@ -167,9 +167,9 @@ let router = createRouter({
 
 ## Related Packages
 
-- [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API
-- [`@remix-run/mime`](https://github.com/remix-run/remix/tree/main/packages/mime) - MIME type utilities
-- [`@remix-run/response`](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers
+- [`remix/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API
+- [`remix/mime`](https://github.com/remix-run/remix/tree/main/packages/mime) - MIME type utilities
+- [`remix/response`](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers
 
 ## License
 

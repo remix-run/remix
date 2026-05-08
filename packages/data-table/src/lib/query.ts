@@ -143,6 +143,11 @@ type QueryResultMap<row extends Record<string, unknown>, loaded extends Record<s
   upsert: WriteResult | WriteRowResult<row>
 }
 
+/**
+ * Convenience alias for any {@link Query} regardless of its source, columns,
+ * row shape, loaded relations, or execution phase. Use this in helper APIs
+ * that accept a query but don't care about the specific generic parameters.
+ */
 export type AnyQuery = Query<any, any, any, any, any>
 
 type QuerySource<input extends AnyQuery> =
@@ -212,6 +217,17 @@ export const querySnapshot = Symbol('querySnapshot')
 
 declare const queryTypeBrand: unique symbol
 
+/**
+ * Type-safe query builder for `@remix-run/data-table` sources. Construct via
+ * {@link query} and chain calls (`select`, `where`, `orderBy`, etc.) to build
+ * up a plan; run it by `await`-ing on a runtime-bound query, or by passing an
+ * unbound one to a runtime.
+ *
+ * The five generic parameters track, in order: the source/table, the column
+ * type map, the projected row shape, any loaded relations, and the
+ * binding/execution-mode phase. Most consumers do not need to spell them out
+ * — `query(table)` infers everything.
+ */
 export class Query<
   source extends AnyQuerySource,
   columnTypes extends Record<string, unknown> = QuerySourceColumnTypes<source>,
@@ -684,6 +700,23 @@ export class Query<
   }
 }
 
+/**
+ * Begin a {@link Query} against a `@remix-run/data-table` source. The returned
+ * builder is in `'all'` execution mode and unbound; chain `select`, `where`,
+ * `orderBy`, etc. to refine the plan, and `await` it after binding it to a
+ * runtime to materialize results.
+ *
+ * @param table The table or source to query.
+ * @returns An unbound {@link Query} builder rooted at `table`.
+ *
+ * @example
+ * ```ts
+ * let activeUsers = await query(users)
+ *   .where({ status: 'active' })
+ *   .orderBy('createdAt', 'desc')
+ *   .select(['id', 'email'])
+ * ```
+ */
 export function query<
   tableName extends string,
   row extends Record<string, unknown>,

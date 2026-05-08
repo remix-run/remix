@@ -54,11 +54,23 @@ export const Auth = createContextKey<AuthState>()
 
 type AuthContextEntry<auth> = ContextEntry<typeof Auth, auth>
 
+/**
+ * Adds the {@link Auth} context key — typed as the full {@link AuthState}
+ * union — onto an existing router `RequestContext`. Use this on handlers
+ * mounted under {@link auth} where the request may be either authenticated
+ * ({@link GoodAuth}) or unauthenticated ({@link BadAuth}).
+ */
 export type ContextWithAuth<
   context extends RequestContext<any, any>,
   identity = unknown,
 > = ContextWithValues<context, [AuthContextEntry<AuthState<identity>>]>
 
+/**
+ * Adds the {@link Auth} context key — typed as a {@link GoodAuth} only —
+ * onto an existing router `RequestContext`. Use this on handlers mounted
+ * under {@link requireAuth} where the request is guaranteed to be
+ * authenticated.
+ */
 export type ContextWithRequiredAuth<
   context extends RequestContext<any, any>,
   identity = unknown,
