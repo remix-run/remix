@@ -2,6 +2,18 @@
 
 This is the changelog for [`form-data-middleware`](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `formData()` now always stores a `FormData` value when the middleware runs successfully. Requests without a form body, including `GET` and `HEAD` requests, receive an empty `FormData` so downstream handlers can rely on `context.get(FormData)` after the middleware has run.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.19.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.19.0)
+  - [`form-data-parser@0.17.1`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.17.1)
+
 ## v0.2.3
 
 ### Patch Changes

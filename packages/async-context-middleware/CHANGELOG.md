@@ -2,6 +2,13 @@
 
 This is the changelog for [`async-context-middleware`](https://github.com/remix-run/remix/tree/main/packages/async-context-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.3
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.19.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.19.0)
+
 ## v0.2.2
 
 ### Patch Changes

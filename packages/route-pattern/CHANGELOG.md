@@ -2,6 +2,48 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.21.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Replace `ArrayMatcher` and `TrieMatcher` exports with a single `createMatcher` function.
+
+  The package now ships one matcher implementation. `Matcher` and `Match` types are unchanged.
+
+  ```ts
+  // before
+  import { ArrayMatcher, TrieMatcher } from '@remix-run/route-pattern'
+  let matcher = new ArrayMatcher<string>()
+  // or
+  let matcher = new TrieMatcher<string>()
+
+  // after
+  import { createMatcher } from '@remix-run/route-pattern'
+  let matcher = createMatcher<string>()
+  ```
+
+### Patch Changes
+
+- Encode `RoutePattern.href` params so pathname params cannot inject URL path, dot segment, query, or hash syntax. Wildcard pathname params now preserve slash-separated structure while encoding each segment, and hostname params are normalized or rejected when they would inject URL authority, path, query, or hash syntax. `RoutePattern.match` and `createMatcher` now decode generated pathname params so reserved characters like `/`, `?`, and `#` round-trip as param content.
+
+- Do not allow partial matches for variables and wildcards in pathname
+
+  ```ts
+  let matcher = createMatcher<string>()
+  matcher.add('/files/:name.md', 'original')
+  matcher.add('/files/:name.md.backup', 'backup')
+
+  // before: 'original' included since `:name.md` partially matches `readme.md.backup`
+  matcher.matchAll('https://example.com/files/readme.md.backup').map((match) => match.data)
+  // ❌ ['backup', 'original']
+
+  // after: only matches when the pattern covers the whole segment
+  matcher.matchAll('https://example.com/files/readme.md.backup').map((match) => match.data)
+  // ✅ ['backup']
+  ```
+
+- Fix matcher to match origin-less patterns (e.g. `/`, `/about`) against URLs that have an explicit port. Previously a pattern like `/` would not match `http://localhost:44199/`, diverging from `RoutePattern.match` which ignores port checks when the pattern has no origin.
+
 ## v0.20.1
 
 ### Patch Changes

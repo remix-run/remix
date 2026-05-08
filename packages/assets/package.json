@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/assets",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "Fetch-based server for compiling browser JS/TS and CSS assets on demand",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
