@@ -547,7 +547,7 @@ function getApiFilePath(
   fullName: string,
   type: DocumentedAPI['type'] | (typeof VARIABLE_CATEGORIES)[number],
 ): string {
-  let nameParts = fullName.split('.')
+  let nameParts = fullName.split('.').filter((part) => part !== '')
   invariant(nameParts.length >= 2, `Invalid full name for API: ${fullName}`)
   // Rewrite `@remix-run/<pkg>` to `remix/<pkg>` so docs render under the
   // umbrella's import path. The doc generator skips the actual `remix`

@@ -26,9 +26,8 @@ let shuttingDown = false
 function shutdown() {
   if (shuttingDown) return
   shuttingDown = true
-  server.close(() => {
-    process.exit(0)
-  })
+  server.close(() => process.exit(0))
+  server.closeAllConnections()
 }
 
 process.on('SIGINT', shutdown)
