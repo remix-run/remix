@@ -425,6 +425,20 @@ function getDocumentedVariable(
   }
 }
 
+// Resolve which sidebar bucket / URL segment a `@link` to a Variable should
+// use. Callable variables (`html`, `describe`, `expect`, …) live under
+// `function/` so they group with the rest of the package's functions in the
+// sidebar; mixin-tagged variables stay under `mixin/`; everything else falls
+// back to `variable/`.
+function getVariableLinkType(
+  target: typedoc.Reflection,
+): 'function' | 'variable' | (typeof VARIABLE_CATEGORIES)[number] {
+  if (target.isDeclaration() && getVariableCallSignatures(target).length > 0) {
+    return 'function'
+  }
+  return getVariableCategory(target.comment) || 'variable'
+}
+
 // Read a `@category` tag and return a recognized sidebar bucket override.
 // Currently `mixin` is the only supported category; unknown values are
 // ignored so the variable stays in the default "Variables" bucket.
@@ -499,7 +513,7 @@ function getDocumentedVariableFunction(
 
   return {
     type: 'variable-function',
-    path: getApiFilePath(fullName, 'variable'),
+    path: getApiFilePath(fullName, 'function'),
     source: node.sources?.[0]?.url,
     name,
     aliases: comment ? getApiAliases(comment) : undefined,
@@ -754,7 +768,7 @@ function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
             target.kind === typedoc.ReflectionKind.TypeAlias ? 'type' :
             target.kind === typedoc.ReflectionKind.TypeLiteral ? 'type' :
             target.kind === typedoc.ReflectionKind.Interface ? 'interface' :
-            target.kind === typedoc.ReflectionKind.Variable ? getVariableCategory(target.comment) || "variable" : null;
+            target.kind === typedoc.ReflectionKind.Variable ? getVariableLinkType(target) : null;
 
           if (!type) {
             throw new Error(`Unsupported @link target kind: ${typedoc.ReflectionKind[target.kind]}`)
