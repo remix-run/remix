@@ -7,7 +7,7 @@ import {
 } from '@remix-run/fetch-router'
 
 /**
- * Converts application data into a `Response`.
+ * A function that converts application data into a `Response`.
  */
 export interface Renderer<input = unknown, responseInit = ResponseInit> {
   /**
@@ -17,7 +17,7 @@ export interface Renderer<input = unknown, responseInit = ResponseInit> {
    * @param init Optional renderer-specific response options.
    * @returns A rendered response.
    */
-  render(input: input, init?: responseInit): Response | Promise<Response>
+  (input: input, init?: responseInit): Response | Promise<Response>
 }
 
 /**
@@ -43,13 +43,13 @@ type RendererFactory<renderer extends AnyRenderer> = (context: RequestContext<an
 /**
  * Adds a renderer to request context.
  *
- * @param renderer A renderer instance, or a function that creates one for each request.
+ * @param createRenderer A function that creates a renderer for each request.
  * @returns Middleware that stores the renderer in request context.
  */
 export function renderWith<const renderer extends AnyRenderer>(
-  renderer: renderer | RendererFactory<renderer>,
+  createRenderer: RendererFactory<renderer>,
 ): Middleware<ContextEntry<typeof Renderer, renderer>> {
   return (context) => {
-    context.set(Renderer, typeof renderer === 'function' ? renderer(context) : renderer)
+    context.set(Renderer, createRenderer(context))
   }
 }

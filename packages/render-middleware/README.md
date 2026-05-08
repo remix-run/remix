@@ -23,11 +23,12 @@ Use `renderWith()` to add a renderer to request context.
 import { createRouter, type MiddlewareContext } from 'remix/fetch-router'
 import { Renderer, renderWith } from 'remix/render-middleware'
 
-const render = renderWith((context) => ({
-  render(value: string, init?: ResponseInit) {
-    return new Response(`${context.url.pathname}: ${value}`, init)
-  },
-}))
+const render = renderWith(
+  (context) =>
+    function render(value: string, init?: ResponseInit) {
+      return new Response(`${context.url.pathname}: ${value}`, init)
+    },
+)
 
 type AppContext = MiddlewareContext<[typeof render]>
 
@@ -36,7 +37,7 @@ const router = createRouter<AppContext>({
 })
 
 router.get('/hello', (context) => {
-  return context.get(Renderer).render('Hello')
+  return context.get(Renderer)('Hello')
 })
 ```
 
@@ -45,14 +46,15 @@ Renderers may render any value type, not just UI nodes.
 ```ts
 import { Renderer, renderWith } from 'remix/render-middleware'
 
-const json = renderWith({
-  render(data: unknown, init?: ResponseInit) {
-    return Response.json(data, init)
-  },
-})
+const json = renderWith(
+  () =>
+    function render(data: unknown, init?: ResponseInit) {
+      return Response.json(data, init)
+    },
+)
 
 router.get('/api', (context) => {
-  return context.get(Renderer).render({ ok: true })
+  return context.get(Renderer)({ ok: true })
 })
 ```
 
@@ -64,23 +66,24 @@ import { renderWith } from 'remix/render-middleware'
 import type { RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
 
-const render = renderWith(({ router, url }) => ({
-  render(node: RemixNode, init?: ResponseInit) {
-    let stream = renderToStream(node, {
-      async resolveFrame(src) {
-        let response = await router.fetch(new URL(src, url))
+const render = renderWith(
+  ({ router, url }) =>
+    function render(node: RemixNode, init?: ResponseInit) {
+      let stream = renderToStream(node, {
+        async resolveFrame(src) {
+          let response = await router.fetch(new URL(src, url))
 
-        if (!response.ok) {
-          return `<pre>Frame error: ${response.status}</pre>`
-        }
+          if (!response.ok) {
+            return `<pre>Frame error: ${response.status}</pre>`
+          }
 
-        return response.body ?? response.text()
-      },
-    })
+          return response.body ?? response.text()
+        },
+      })
 
-    return createHtmlResponse(stream, init)
-  },
-}))
+      return createHtmlResponse(stream, init)
+    },
+)
 ```
 
 ## Related Packages
