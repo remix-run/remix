@@ -9,15 +9,15 @@ import {
 /**
  * Converts application data into a `Response`.
  */
-export interface Renderer<input = unknown, options = ResponseInit> {
+export interface Renderer<input = unknown, responseInit = ResponseInit> {
   /**
    * Render input data into a response.
    *
    * @param input The value to render.
-   * @param options Optional renderer-specific response options.
+   * @param init Optional renderer-specific response options.
    * @returns A rendered response.
    */
-  render(input: input, options?: options): Response | Promise<Response>
+  render(input: input, init?: responseInit): Response | Promise<Response>
 }
 
 /**
@@ -38,9 +38,7 @@ export type ContextWithRenderer<
   renderer extends AnyRenderer,
 > = ContextWithValue<context, typeof Renderer, renderer>
 
-type RendererFactory<renderer extends AnyRenderer> = (
-  context: RequestContext<any, any>,
-) => renderer
+type RendererFactory<renderer extends AnyRenderer> = (context: RequestContext<any, any>) => renderer
 
 /**
  * Adds a renderer to request context.
@@ -51,10 +49,7 @@ type RendererFactory<renderer extends AnyRenderer> = (
 export function renderWith<const renderer extends AnyRenderer>(
   renderer: renderer | RendererFactory<renderer>,
 ): Middleware<ContextEntry<typeof Renderer, renderer>> {
-  return (context, next) => {
-    let currentRenderer = typeof renderer === 'function' ? renderer(context) : renderer
-
-    context.set(Renderer, currentRenderer)
-    return next()
+  return (context) => {
+    context.set(Renderer, typeof renderer === 'function' ? renderer(context) : renderer)
   }
 }

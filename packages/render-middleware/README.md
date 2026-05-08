@@ -68,7 +68,7 @@ const render = renderWith(({ router, url }) => ({
   render(node: RemixNode, init?: ResponseInit) {
     let stream = renderToStream(node, {
       async resolveFrame(src) {
-        let response = await router.fetch(new Request(new URL(src, url)))
+        let response = await router.fetch(new URL(src, url))
 
         if (!response.ok) {
           return `<pre>Frame error: ${response.status}</pre>`
