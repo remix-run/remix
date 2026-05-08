@@ -64,11 +64,11 @@ import { renderWith } from 'remix/render-middleware'
 import type { RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
 
-const render = renderWith((context) => ({
+const render = renderWith(({ router, url }) => ({
   render(node: RemixNode, init?: ResponseInit) {
     let stream = renderToStream(node, {
       async resolveFrame(src) {
-        let response = await context.router.fetch(new Request(new URL(src, context.request.url)))
+        let response = await router.fetch(new Request(new URL(src, url)))
 
         if (!response.ok) {
           return `<pre>Frame error: ${response.status}</pre>`
