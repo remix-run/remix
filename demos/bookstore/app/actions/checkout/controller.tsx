@@ -24,7 +24,7 @@ const shippingAddressSchema = f.object({
 })
 
 export default createController(routes.checkout, {
-  middleware: [requireAuth()] as const,
+  middleware: [requireAuth()],
   actions: {
     index() {
       let cart = getCurrentCart()

@@ -11,7 +11,7 @@ import { AccountOrdersIndexPage } from './index-page.tsx'
 import { AccountOrderNotFoundPage, AccountOrderShowPage } from './show-page.tsx'
 
 export default createController(routes.account.orders, {
-  middleware: [requireAuth()] as const,
+  middleware: [requireAuth()],
   actions: {
     async index({ get }) {
       let db = get(Database)

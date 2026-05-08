@@ -26,7 +26,7 @@ const userSchema = f.object({
 })
 
 export default createController(routes.admin.users, {
-  middleware: [requireAuth(), requireAdmin()] as const,
+  middleware: [requireAuth(), requireAdmin()],
   actions: {
     async index({ get }) {
       let db = get(Database)

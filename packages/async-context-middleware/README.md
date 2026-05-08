@@ -5,7 +5,7 @@ Request-scoped async context middleware for Remix. It stores each request contex
 ## Features
 
 - **Request context access** - Read the current `RequestContext` from anywhere in the same async execution flow
-- **App-typed `getContext()`** - Augment `AsyncContextTypes` so `getContext()` returns your app's request context contract
+- **App-typed `getContext()`** - Reuses your fetch-router `RouterTypes.context` by default
 - **Simple router integration** - Add a single middleware at the router level
 - **Node async hooks** - Built on `node:async_hooks` `AsyncLocalStorage`
 
@@ -44,32 +44,34 @@ This middleware requires support for `node:async_hooks`, so it is intended for N
 
 ## Typed `getContext()`
 
-`getContext()` is global and out-of-band, so apps can augment `AsyncContextTypes` to tell the package what request context lives in async local storage.
+`getContext()` is global and out-of-band, so it reuses your fetch-router `RouterTypes.context` by default.
 
 ```ts
 import type { AnyParams, MiddlewareContext, ContextWithParams } from 'remix/fetch-router'
 import type { ContextWithRequiredAuth } from 'remix/auth-middleware'
+import { loadAuth } from './middleware/auth.ts'
+import { loadSession } from './middleware/session.ts'
 
-export type RootMiddleware = [ReturnType<typeof loadSession>, ReturnType<typeof loadAuth>]
+export type RootMiddleware = [typeof loadSession, typeof loadAuth]
 
-export type AppContext<params extends AnyParams = AnyParams> = ContextWithParams<
+export type AppContext<params extends AnyParams = {}> = ContextWithParams<
   MiddlewareContext<RootMiddleware>,
   params
 >
 
-export type AuthenticatedAppContext<params extends AnyParams = AnyParams> = ContextWithRequiredAuth<
+export type AuthenticatedAppContext<params extends AnyParams = {}> = ContextWithRequiredAuth<
   AppContext<params>,
   { id: string }
 >
 
-declare module 'remix/async-context-middleware' {
-  interface AsyncContextTypes {
-    requestContext: AppContext<AnyParams>
+declare module 'remix/fetch-router' {
+  interface RouterTypes {
+    context: AppContext
   }
 }
 ```
 
-After that augmentation, `getContext()` returns `AppContext<AnyParams>` everywhere in the app.
+After that augmentation, `getContext()` returns your app context values everywhere in the app, with route params typed broadly as `AnyParams`.
 
 ```ts
 import { Auth } from 'remix/auth-middleware'
@@ -80,7 +82,7 @@ function getCurrentAuth() {
 }
 ```
 
-Use a broad app-level context like `AppContext<AnyParams>` here. Route handlers themselves can still use more precise route-specific params in their own `RequestContext` types.
+Route handlers themselves can still use more precise route-specific params in their own `RequestContext` types.
 
 ## Related Packages
 

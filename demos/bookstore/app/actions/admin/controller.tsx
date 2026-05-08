@@ -7,7 +7,7 @@ import { render } from '../render.tsx'
 import { AdminDashboardPage } from './page.tsx'
 
 export default createController(routes.admin, {
-  middleware: [requireAuth(), requireAdmin()] as const,
+  middleware: [requireAuth(), requireAdmin()],
   actions: {
     index() {
       return render(<AdminDashboardPage />)
