@@ -19,6 +19,8 @@ type ContextTransform =
 
 type EmptyContextTransform = readonly []
 
+declare const contextTransform: unique symbol
+
 type TransformOf<middleware> =
   middleware extends Middleware<infer transform> ? transform : EmptyContextTransform
 
@@ -86,7 +88,7 @@ export interface Middleware<transform extends ContextTransform = EmptyContextTra
   /**
    * Type-only metadata that carries the middleware's declared context effect.
    */
-  readonly '~contextTransform'?: transform | undefined
+  readonly [contextTransform]?: transform | undefined
 }
 
 /**
