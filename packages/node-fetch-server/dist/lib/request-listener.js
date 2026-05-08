@@ -1,0 +1,248 @@
+import { createLazyRequestFactory } from "./lazy-request.js";
+// "Internal Server Error"
+const internalServerErrorBody = [
+    73, 110, 116, 101, 114, 110, 97, 108, 32, 83, 101, 114, 118, 101, 114, 32, 69, 114, 114, 111, 114,
+];
+/**
+ * Wraps a fetch handler in a Node.js request listener that can be used with:
+ *
+ * - [`http.createServer()`](https://nodejs.org/api/http.html#httpcreateserveroptions-requestlistener)
+ * - [`https.createServer()`](https://nodejs.org/api/https.html#httpscreateserveroptions-requestlistener)
+ * - [`http2.createServer()`](https://nodejs.org/api/http2.html#http2createserveroptions-onrequesthandler)
+ * - [`http2.createSecureServer()`](https://nodejs.org/api/http2.html#http2createsecureserveroptions-onrequesthandler)
+ *
+ * Example:
+ *
+ * ```ts
+ * import * as http from 'node:http';
+ * import { createRequestListener } from 'remix/node-fetch-server';
+ *
+ * async function handler(request) {
+ *   return new Response('Hello, world!');
+ * }
+ *
+ * let server = http.createServer(
+ *   createRequestListener(handler)
+ * );
+ *
+ * server.listen(3000);
+ * ```
+ *
+ * @param handler The fetch handler to use for processing incoming requests
+ * @param options Request listener options
+ * @returns A Node.js request listener function
+ */
+export function createRequestListener(handler, options) {
+    let onError = options?.onError ?? defaultErrorHandler;
+    let createLazyRequest = createLazyRequestFactory(options, createRequest, createHeaders);
+    if (handler.length === 0) {
+        let handlerWithoutArgs = handler;
+        return async (_req, res) => {
+            let response;
+            try {
+                response = await handlerWithoutArgs();
+            }
+            catch (error) {
+                response = await createErrorResponse(onError, error);
+            }
+            await sendResponse(res, response);
+        };
+    }
+    if (handler.length === 1) {
+        let requestHandler = handler;
+        return (req, res) => {
+            let request = createLazyRequest(req, res);
+            let response;
+            try {
+                response = requestHandler(request);
+            }
+            catch (error) {
+                void sendErrorResponse(res, onError, error);
+                return;
+            }
+            if (isPromiseLike(response)) {
+                void response.then((response) => {
+                    void sendResponse(res, response);
+                }, (error) => {
+                    void sendErrorResponse(res, onError, error);
+                });
+            }
+            else {
+                void sendResponse(res, response);
+            }
+        };
+    }
+    return async (req, res) => {
+        let request = createLazyRequest(req, res);
+        let client = {
+            address: req.socket.remoteAddress,
+            family: req.socket.remoteFamily,
+            port: req.socket.remotePort,
+        };
+        let response;
+        try {
+            response = await handler(request, client);
+        }
+        catch (error) {
+            response = await createErrorResponse(onError, error);
+        }
+        await sendResponse(res, response);
+    };
+}
+async function sendErrorResponse(res, onError, error) {
+    let response = await createErrorResponse(onError, error);
+    await sendResponse(res, response);
+}
+async function createErrorResponse(onError, error) {
+    try {
+        return (await onError(error)) ?? internalServerError();
+    }
+    catch (error) {
+        console.error(`There was an error in the error handler: ${error}`);
+        return internalServerError();
+    }
+}
+function defaultErrorHandler(error) {
+    console.error(error);
+    return internalServerError();
+}
+function internalServerError() {
+    return new Response(new Uint8Array(internalServerErrorBody), {
+        status: 500,
+        headers: {
+            'Content-Type': 'text/plain',
+        },
+    });
+}
+function isPromiseLike(value) {
+    return typeof value.then === 'function';
+}
+/**
+ * Creates a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) object from
+ *
+ * - a [`http.IncomingMessage`](https://nodejs.org/api/http.html#class-httpincomingmessage)/[`http.ServerResponse`](https://nodejs.org/api/http.html#class-httpserverresponse) pair
+ * - a [`http2.Http2ServerRequest`](https://nodejs.org/api/http2.html#class-http2http2serverrequest)/[`http2.Http2ServerResponse`](https://nodejs.org/api/http2.html#class-http2http2serverresponse) pair
+ *
+ * @param req The incoming request object
+ * @param res The server response object
+ * @param options Options for creating the request
+ * @returns A `Request` object
+ */
+export function createRequest(req, res, options) {
+    let controller = new AbortController();
+    // Abort once we can no longer write a response if we have
+    // not yet sent a response (i.e., `close` without `finish`)
+    // `finish` -> done rendering the response
+    // `close` -> response can no longer be written to
+    res.once('close', () => controller?.abort());
+    res.once('finish', () => (controller = null));
+    let method = req.method ?? 'GET';
+    let headers = createHeaders(req);
+    let protocol = options?.protocol ?? ('encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:');
+    let host = options?.host ?? headers.get('Host') ?? req.headers[':authority'] ?? 'localhost';
+    let url = `${protocol}//${host}${req.url}`;
+    let init = { method, headers, signal: controller.signal };
+    if (method !== 'GET' && method !== 'HEAD') {
+        init.body = new ReadableStream({
+            start(controller) {
+                req.on('data', (chunk) => {
+                    controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength));
+                });
+                req.on('end', () => {
+                    controller.close();
+                });
+            },
+        });
+        init.duplex = 'half';
+    }
+    return new Request(url, init);
+}
+/**
+ * Creates a [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) object from the headers in a Node.js
+ * [`http.IncomingMessage`](https://nodejs.org/api/http.html#class-httpincomingmessage)/[`http2.Http2ServerRequest`](https://nodejs.org/api/http2.html#class-http2http2serverrequest).
+ *
+ * @param req The incoming request object
+ * @returns A `Headers` object
+ */
+export function createHeaders(req) {
+    let headers = {};
+    for (let [key, value] of Object.entries(req.headers)) {
+        if (key.startsWith(':') || value == null)
+            continue;
+        headers[key] = Array.isArray(value) ? value.join(', ') : value;
+    }
+    return new Headers(headers);
+}
+/**
+ * Sends a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) to the client using a Node.js
+ * [`http.ServerResponse`](https://nodejs.org/api/http.html#class-httpserverresponse)/[`http2.Http2ServerResponse`](https://nodejs.org/api/http2.html#class-http2http2serverresponse)
+ * object.
+ *
+ * @param res The server response object
+ * @param response The response to send
+ */
+export async function sendResponse(res, response) {
+    // Iterate over response.headers so we are sure to send multiple Set-Cookie headers correctly.
+    // These would incorrectly be merged into a single header if we tried to use
+    // `Object.fromEntries(response.headers.entries())`.
+    let headers = {};
+    for (let [key, value] of response.headers) {
+        if (key in headers) {
+            if (Array.isArray(headers[key])) {
+                headers[key].push(value);
+            }
+            else {
+                headers[key] = [headers[key], value];
+            }
+        }
+        else {
+            headers[key] = value;
+        }
+    }
+    if (res.req.httpVersionMajor === 1) {
+        ;
+        res.writeHead(response.status, response.statusText, headers);
+    }
+    else {
+        // HTTP/2 doesn't support status messages
+        // https://datatracker.ietf.org/doc/html/rfc7540#section-8.1.2.4
+        //
+        // HTTP2 `res.writeHead()` will safely ignore the statusText parameter, but
+        // it will emit a warning which we want to avoid.
+        // https://nodejs.org/docs/latest-v22.x/api/http2.html#responsewriteheadstatuscode-statusmessage-headers
+        ;
+        res.writeHead(response.status, headers);
+    }
+    if (response.body != null && res.req.method !== 'HEAD') {
+        let reader = response.body.getReader();
+        let first = await reader.read();
+        if (first.done) {
+            reader.releaseLock();
+        }
+        else {
+            try {
+                // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
+                if (res.write(first.value) === false) {
+                    await new Promise((resolve) => {
+                        res.once('drain', resolve);
+                    });
+                }
+                while (true) {
+                    let result = await reader.read();
+                    if (result.done)
+                        break;
+                    // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
+                    if (res.write(result.value) === false) {
+                        await new Promise((resolve) => {
+                            res.once('drain', resolve);
+                        });
+                    }
+                }
+            }
+            finally {
+                reader.releaseLock();
+            }
+        }
+    }
+    res.end();
+}
