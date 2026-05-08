@@ -3,7 +3,7 @@ import { type RouteMap, Route } from '@remix-run/routes'
 
 import { type AnyMiddleware, type MiddlewareContext, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
-import { RequestContext } from './request-context.ts'
+import { createContextKey, RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import {
   type RequestHandler,
@@ -49,6 +49,11 @@ export interface RouteEntry {
    */
   middleware: AnyMiddleware[] | undefined
 }
+
+/**
+ * Request context key for the route matched by the router.
+ */
+export const MatchedRoute = createContextKey<RouteEntry>()
 
 type NormalizedAction = {
   handler: RequestHandler<any>
@@ -224,6 +229,7 @@ export function createRouter<
       }
 
       context.params = { ...context.params, ...match.params }
+      context.set(MatchedRoute, route)
 
       if (route.middleware) {
         return runMiddleware(route.middleware, context, route.handler)
