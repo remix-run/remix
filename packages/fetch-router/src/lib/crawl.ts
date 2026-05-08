@@ -137,8 +137,9 @@ export async function* crawl(
         // Always queue referenced assets (CSS, JS, images)
         enqueue(extractAssetPaths(elements, pathname))
 
-        // Only follow navigation links when spider mode is enabled
-        if (spider) {
+        // Only follow navigation links when spider mode is enabled and the page
+        // does not have a <meta name="robots" content="nofollow"> directive
+        if (spider && shouldCrawlLinks(elements)) {
           enqueue(extractLinkPaths(elements, pathname))
         }
       } else {
@@ -190,6 +191,17 @@ function extractLinkPaths(elements: HTMLElement[], baseUrl: string): string[] {
     .filter(isRelativeUrl)
     .map((href) => resolveHref(href, baseUrl))
     .filter((href): href is string => href != null)
+}
+
+function shouldCrawlLinks(elements: HTMLElement[]): boolean {
+  let hasPageNoFollowDirective = elements.some((el) => {    
+    if (el.name !== 'meta') return false
+    let name = el.getAttribute('name')?.toLowerCase()
+    if (name !== 'robots' && name !== 'googlebot') return false
+    let content = el.getAttribute('content')?.toLowerCase() ?? ''
+    return content.split(/[\s,]+/).includes('nofollow')
+  })
+  return !hasPageNoFollowDirective
 }
 
 function rel(el: HTMLElement) {

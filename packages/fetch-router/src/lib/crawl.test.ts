@@ -300,6 +300,96 @@ describe('crawl(router)', () => {
     assert.deepEqual(visited, ['/'])
   })
 
+  it('does not follow links on pages with <meta name="robots" content="nofollow">', async () => {
+    let router = createRouter()
+    router.get('/', () =>
+      html(`
+        <meta name="robots" content="nofollow">
+        <a href="/about">About</a>
+        <a href="/contact">Contact</a>
+      `),
+    )
+    router.get('/about', () => html('<html></html>'))
+    router.get('/contact', () => html('<html></html>'))
+
+    let visited: string[] = []
+    for await (let { pathname } of crawl(router)) {
+      visited.push(pathname)
+    }
+    assert.deepEqual(visited, ['/'])
+  })
+
+  it('does not follow links on pages with <meta name="robots" content="noindex, nofollow">', async () => {
+    let router = createRouter()
+    router.get('/', () =>
+      html(`
+        <meta name="robots" content="noindex, nofollow">
+        <a href="/about">About</a>
+      `),
+    )
+    router.get('/about', () => html('<html></html>'))
+
+    let visited: string[] = []
+    for await (let { pathname } of crawl(router)) {
+      visited.push(pathname)
+    }
+    assert.deepEqual(visited, ['/'])
+  })
+
+  it('does not follow links on pages with <meta name="googlebot" content="nofollow">', async () => {
+    let router = createRouter()
+    router.get('/', () =>
+      html(`
+        <meta name="googlebot" content="nofollow">
+        <a href="/about">About</a>
+      `),
+    )
+    router.get('/about', () => html('<html></html>'))
+
+    let visited: string[] = []
+    for await (let { pathname } of crawl(router)) {
+      visited.push(pathname)
+    }
+    assert.deepEqual(visited, ['/'])
+  })
+
+  it('still follows links on pages without a meta robots nofollow directive', async () => {
+    let router = createRouter()
+    router.get('/', () =>
+      html(`
+        <meta name="robots" content="noindex">
+        <a href="/about">About</a>
+      `),
+    )
+    router.get('/about', () => html('<html></html>'))
+
+    let visited: string[] = []
+    for await (let { pathname } of crawl(router)) {
+      visited.push(pathname)
+    }
+    assert.deepEqual(visited, ['/', '/about'])
+  })
+
+  it('still queues assets even when meta robots nofollow prevents link following', async () => {
+    let router = createRouter()
+    router.get('/', () =>
+      html(`
+        <meta name="robots" content="nofollow">
+        <link rel="stylesheet" href="/style.css">
+        <a href="/about">About</a>
+      `),
+    )
+    router.get('/style.css', () => css())
+    router.get('/about', () => html('<html></html>'))
+
+    let visited: string[] = []
+    for await (let { pathname } of crawl(router)) {
+      visited.push(pathname)
+    }
+    assert.deepEqual(visited.toSorted(), ['/', '/style.css'])
+  })
+
+
   it('does not follow link[rel="alternate nofollow"]', async () => {
     let router = createRouter()
     router.get('/', () =>
