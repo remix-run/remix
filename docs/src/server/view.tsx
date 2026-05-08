@@ -6,6 +6,11 @@ import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { isPageActive } from './registry.ts'
 import { bodyTextCss, eyebrowTextCss } from './page-primitives.tsx'
 import { routes } from './routes.ts'
+import {
+  MOBILE_NAV_MAX_HEIGHT,
+  MOBILE_NAV_MEDIA_RULE,
+  MOBILE_TOP_BAR_HEIGHT_PX,
+} from '../shared/breakpoints.ts'
 
 export type DocsViewProps = {
   page: PageDefinition
@@ -26,6 +31,17 @@ export function DocsDocument(handle: Handle<DocsViewProps>) {
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <link
+            rel="icon"
+            href={routes.assets.href({ version: activeVersion, asset: 'favicon.ico' })}
+            sizes="32x32"
+          />
+          <link
+            rel="icon"
+            href={routes.assets.href({ version: activeVersion, asset: 'favicon.svg' })}
+            type="image/svg+xml"
+            sizes="any"
+          />
           {activeVersion != null ? (
             <>
               <meta name="robots" content="noindex,nofollow" />
@@ -54,7 +70,6 @@ export function DocsDocument(handle: Handle<DocsViewProps>) {
             />
           ) : null}
           <script
-            async
             type="module"
             src={routes.assets.href({ version: activeVersion, asset: 'entry.js' })}
           />
@@ -107,7 +122,6 @@ export function DocsDocument(handle: Handle<DocsViewProps>) {
               </div>
             </main>
           </div>
-          <label id="nav-backdrop" for="nav-toggle" aria-label="Close navigation" />
         </body>
       </html>
     )
@@ -181,11 +195,14 @@ function SidebarGroup(
     let { registry, group, currentPath } = handle.props
     return group.pageIds.map((pageId) => {
       let page = registry.pages[pageId]
+      let active = isPageActive(page, currentPath)
       return (
         <a
+          key={page.path}
           href={page.path}
-          aria-current={isPageActive(page, currentPath) ? 'page' : undefined}
-          mix={getNavItemMix(page, currentPath)}
+          aria-current={active ? 'page' : undefined}
+          data-active-doc={active ? 'true' : undefined}
+          mix={navItemCss}
         >
           {page.navLabel}
         </a>
@@ -263,7 +280,7 @@ function VersionSwitcher(
                   href={href}
                   rel={!latest && !v.crawl ? 'nofollow' : undefined}
                   aria-current={active ? 'page' : undefined}
-                  mix={active ? [navItemCss, navItemActiveCss] : navItemCss}
+                  mix={navItemCss}
                 >
                   {v.version}
                   {latest ? ' (latest)' : null}
@@ -311,10 +328,6 @@ function DocsFooter() {
       </div>
     </footer>
   )
-}
-
-function getNavItemMix(page: PageDefinition, currentPath: string) {
-  return isPageActive(page, currentPath) ? [navItemCss, navItemActiveCss] : navItemCss
 }
 
 // Typography mirrors the `.md-prose` rules from the remix.run blog
@@ -445,56 +458,21 @@ const bodyCss = css({
     marginBottom: '0 !important',
   },
 
-  '#nav-backdrop': {
-    display: 'none',
-  },
-
-  // Mobile nav toggle: the sidebar is always positioned below the breakpoint
-  // but clipped to nothing via clip-path. Toggling the checkbox animates the
-  // clip-path open, wiping the content into view from top to bottom.
-  '@media (max-width: 980px)': {
+  // Mobile nav toggle: the sidebar stays in document flow below the sticky top
+  // bar so opening it pushes page content down instead of layering over it.
+  [MOBILE_NAV_MEDIA_RULE]: {
     '& #docs-sidebar': {
-      position: 'fixed',
-      top: '56px',
-      bottom: '15vh',
-      left: 0,
-      right: 0,
+      maxHeight: 0,
       overflowY: 'auto',
       borderRight: 'none',
-      borderBottom: `1px solid ${theme.colors.border.subtle}`,
-      boxShadow: `0 8px 6px -6px ${theme.colors.text.secondary}`,
-      zIndex: 50,
-      // Negative insets on the sides and bottom give the box-shadow room to
-      // paint beyond the element's bounds — clip-path otherwise clips the
-      // shadow along with the rest of the element.
-      clipPath: 'inset(0 -24px 100% -24px)',
+      borderBottom: `1px solid transparent`,
       pointerEvents: 'none',
-      transition: 'clip-path 280ms ease',
-    },
-    '& main': {
-      transition: 'opacity 280ms ease',
-    },
-    '&:has(#nav-toggle:checked)': {
-      overflow: 'hidden',
+      transition: 'max-height 280ms ease, border-color 180ms ease',
     },
     '&:has(#nav-toggle:checked) #docs-sidebar': {
-      clipPath: 'inset(0 -24px -24px -24px)',
+      maxHeight: MOBILE_NAV_MAX_HEIGHT,
+      borderBottomColor: theme.colors.border.subtle,
       pointerEvents: 'auto',
-    },
-    // The backdrop label is kept (transparent) so clicking outside the menu
-    // still toggles the checkbox closed; only the gradient is gone.
-    '&:has(#nav-toggle:checked) #nav-backdrop': {
-      display: 'block',
-      position: 'fixed',
-      bottom: 0,
-      left: 0,
-      right: 0,
-      height: '15vh',
-      cursor: 'pointer',
-      zIndex: 50,
-    },
-    '&:has(#nav-toggle:checked) main': {
-      opacity: 0.25,
     },
   },
 })
@@ -505,7 +483,7 @@ const shellCss = css({
   gridTemplateColumns: '320px minmax(0, 1fr)',
   background:
     'linear-gradient(to bottom, color-mix(in oklab, rgb(246 246 246) 72%, white) 0%, white 18%)',
-  '@media (max-width: 980px)': {
+  [MOBILE_NAV_MEDIA_RULE]: {
     gridTemplateColumns: '1fr',
   },
 })
@@ -513,11 +491,8 @@ const shellCss = css({
 const sidebarFrameCss = css({
   backgroundColor: theme.surface.lvl3,
   borderRight: `1px solid ${theme.colors.border.subtle}`,
-  '@media (max-width: 980px)': {
-    // Mobile open/closed state is driven from bodyCss via :has(#nav-toggle:checked)
-    // (see the bodyCss media block). The sidebar is hidden by default and
-    // overlaid on top of the page when the toggle is checked, so no border
-    // styling is needed here on mobile.
+  [MOBILE_NAV_MEDIA_RULE]: {
+    // Mobile open/closed state is driven from bodyCss via :has(#nav-toggle:checked).
     borderRight: 'none',
   },
 })
@@ -528,7 +503,7 @@ const sidebarStickyCss = css({
   height: '100vh',
   overflowY: 'auto',
   padding: theme.space.xl,
-  '@media (max-width: 980px)': {
+  [MOBILE_NAV_MEDIA_RULE]: {
     position: 'static',
     height: 'auto',
     overflowY: 'visible',
@@ -541,6 +516,9 @@ const sidebarIntroCss = css({
   gap: theme.space.xs,
   paddingBottom: theme.space.sm,
   marginBottom: theme.space.sm,
+  [MOBILE_NAV_MEDIA_RULE]: {
+    display: 'none',
+  },
 })
 
 const sidebarPanelCss = css({
@@ -556,7 +534,7 @@ const sidebarHeadingCss = css({
   letterSpacing: theme.letterSpacing.meta,
   textTransform: 'uppercase',
   color: theme.colors.text.muted,
-  '@media (max-width: 980px)': {
+  [MOBILE_NAV_MEDIA_RULE]: {
     fontSize: theme.fontSize.xs,
   },
 })
@@ -579,7 +557,7 @@ const sectionSummaryCss = css({
   '&:hover': {
     color: theme.colors.text.primary,
   },
-  '@media (max-width: 980px)': {
+  [MOBILE_NAV_MEDIA_RULE]: {
     minHeight: '44px',
     padding: `${theme.space.md} 0`,
     fontSize: theme.fontSize.xs,
@@ -647,15 +625,14 @@ const navItemCss = css({
     backgroundColor: theme.surface.lvl0,
     color: theme.colors.text.primary,
   },
-  '@media (max-width: 980px)': {
+  '&[aria-current="page"]': {
+    backgroundColor: theme.surface.lvl0,
+    color: theme.colors.text.primary,
+    boxShadow: `inset 0 0 0 1px ${theme.colors.border.subtle}`,
+  },
+  [MOBILE_NAV_MEDIA_RULE]: {
     minHeight: '44px',
   },
-})
-
-const navItemActiveCss = css({
-  backgroundColor: theme.surface.lvl0,
-  color: theme.colors.text.primary,
-  boxShadow: `inset 0 0 0 1px ${theme.colors.border.subtle}`,
 })
 
 const mainCss = css({
@@ -663,7 +640,7 @@ const mainCss = css({
   padding: theme.space.xxl,
   paddingBlockEnd: 0,
   paddingInlineStart: 'clamp(48px, 6vw, 96px)',
-  '@media (max-width: 980px)': {
+  [MOBILE_NAV_MEDIA_RULE]: {
     padding: theme.space.lg,
     paddingBlockEnd: 0,
   },
@@ -676,7 +653,7 @@ const pageWrapCss = css({
   maxWidth: '750px',
   minHeight: `calc(100vh - ${theme.space.xxl})`,
   marginInline: '0 auto',
-  '@media (max-width: 980px)': {
+  [MOBILE_NAV_MEDIA_RULE]: {
     minHeight: `calc(100vh - ${theme.space.xl})`,
   },
 })
@@ -748,7 +725,7 @@ const footerLegalTextCss = css({
 })
 
 // Visually hide the checkbox while keeping it focusable. Toggling happens via
-// the <label for="nav-toggle"> elements (top bar + backdrop).
+// the mobile top bar's <label for="nav-toggle">.
 const navToggleCss = css({
   position: 'absolute',
   width: '1px',
@@ -765,7 +742,7 @@ const navToggleCss = css({
 // document flow. It scrolls off the screen as the user scrolls the page.
 const mobileLogoBannerCss = css({
   display: 'none',
-  '@media (max-width: 980px)': {
+  [MOBILE_NAV_MEDIA_RULE]: {
     display: 'flex',
     alignItems: 'center',
     padding: `${theme.space.lg}`,
@@ -776,13 +753,13 @@ const mobileLogoBannerCss = css({
 
 const mobileTopBarCss = css({
   display: 'none',
-  '@media (max-width: 980px)': {
+  [MOBILE_NAV_MEDIA_RULE]: {
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'space-between',
     gap: theme.space.md,
     padding: `0 ${theme.space.lg}`,
-    height: '48px',
+    height: MOBILE_TOP_BAR_HEIGHT_PX,
     backgroundColor: theme.surface.lvl3,
     borderBottom: `1px solid ${theme.colors.border.subtle}`,
     cursor: 'pointer',
