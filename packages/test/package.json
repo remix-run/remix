@@ -23,27 +23,17 @@
     "node": ">=24.3.0"
   },
   "bin": {
-    "remix-test": "./src/cli-entry.ts"
+    "remix-test": "./dist/cli-entry.js"
   },
   "exports": {
-    ".": "./src/index.ts",
-    "./package.json": "./package.json",
-    "./cli": "./src/cli.ts"
-  },
-  "publishConfig": {
-    "bin": {
-      "remix-test": "./dist/cli-entry.js"
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./package.json": "./package.json",
-      "./cli": {
-        "types": "./dist/cli.d.ts",
-        "default": "./dist/cli.js"
-      }
+    "./package.json": "./package.json",
+    "./cli": {
+      "types": "./dist/cli.d.ts",
+      "default": "./dist/cli.js"
     }
   },
   "scripts": {
@@ -55,7 +45,7 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
-    "@remix-run/terminal": "workspace:^",
+    "@remix-run/terminal": "remix-run/remix#preview/pr-11314&path:packages/terminal",
     "es-module-lexer": "^2.0.0",
     "esbuild": "^0.27.1",
     "get-tsconfig": "^4.13.6",
