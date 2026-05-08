@@ -23,12 +23,12 @@ export function renderControllerPlaceholder(
   let routeExpression = getRouteAccessExpression(routeNode.name)
   let routesImportPath = getRelativeImportPath(entryPath, 'app/routes.ts')
 
-  lines.push(`import type { Controller } from 'remix/fetch-router'`, '')
-  lines.push(`import type { routes } from '${routesImportPath}'`)
+  lines.push(`import { createController } from 'remix/fetch-router'`, '')
+  lines.push(`import { routes } from '${routesImportPath}'`)
 
-  lines.push('', 'export default {', '  actions: {')
+  lines.push('', `export default createController(${routeExpression}, {`, '  actions: {')
   lines.push(...actionEntries)
-  lines.push('  },', `} satisfies Controller<typeof ${routeExpression}>`, '')
+  lines.push('  },', '})', '')
 
   return lines.join('\n')
 }

@@ -344,13 +344,13 @@ function renderDefaultHomeAction(entryPath: string): string {
 
   if (extension === '.ts') {
     return [
-      `import type { Controller } from 'remix/fetch-router'`,
+      `import { createController } from 'remix/fetch-router'`,
       `import { html } from 'remix/html-template'`,
       `import { createHtmlResponse } from 'remix/response/html'`,
       '',
-      `import type { routes } from '../routes.ts'`,
+      `import { routes } from '../routes.ts'`,
       '',
-      `export default {`,
+      `export default createController(routes, {`,
       '  actions: {',
       '    home() {',
       '      let page = html`',
@@ -369,7 +369,7 @@ function renderDefaultHomeAction(entryPath: string): string {
       '      return createHtmlResponse(page)',
       '    },',
       '  },',
-      `} satisfies Controller<typeof routes>`,
+      `})`,
       '',
     ].join('\n')
   }
@@ -408,20 +408,20 @@ function renderDefaultHomeAction(entryPath: string): string {
   }
 
   return [
-    `import type { Controller } from 'remix/fetch-router'`,
+    `import { createController } from 'remix/fetch-router'`,
     `import { renderToStream } from 'remix/ui/server'`,
     `import { createHtmlResponse } from 'remix/response/html'`,
     '',
-    `import type { routes } from '../routes.ts'`,
+    `import { routes } from '../routes.ts'`,
     '',
-    `export default {`,
+    `export default createController(routes, {`,
     '  actions: {',
     '    home() {',
     '      let page = <HomePage />',
     '      return createHtmlResponse(renderToStream(page))',
     '    },',
     '  },',
-    `} satisfies Controller<typeof routes>`,
+    `})`,
     '',
     'function HomePage() {',
     '  return () => (',

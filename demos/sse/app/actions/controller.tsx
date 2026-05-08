@@ -1,11 +1,11 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 
-import type { routes } from '../routes.ts'
+import { routes } from '../routes.ts'
 import { getMessageLimit } from '../utils/message-limit.ts'
 import { render } from './render.ts'
 import { HomePage } from './home.tsx'
 
-export default {
+export default createController(routes, {
   actions: {
     assets() {
       return new Response('Not found', { status: 404 })
@@ -66,4 +66,4 @@ export default {
       })
     },
   },
-} satisfies Controller<typeof routes>
+})

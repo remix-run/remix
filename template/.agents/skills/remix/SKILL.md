@@ -441,12 +441,11 @@ export const routes = route({
 ### Type controllers against the route contract
 
 ```typescript
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 
-import type { AppContext } from '../router.ts'
 import { routes } from '../routes.ts'
 
-export default {
+export default createController(routes.books, {
   actions: {
     async index({ get }) {
       let db = get(Database)
@@ -460,7 +459,7 @@ export default {
       return render(<BookShowPage book={book} />)
     },
   },
-} satisfies Controller<typeof routes.books, AppContext>
+})
 ```
 
 ### Register Controllers Explicitly
@@ -514,18 +513,21 @@ let router = createRouter({ middleware })
 ### Validate, mutate, and respond
 
 ```typescript
+import { createController } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { Session } from 'remix/session'
 import { Database } from 'remix/data-table'
 
+import { routes } from '../routes.ts'
+
 let bookSchema = f.object({
   slug: f.field(s.string()),
   title: f.field(s.string()),
 })
 
-export default {
+export default createController(routes.books, {
   actions: {
     async create({ get }) {
       let parsed = s.parseSafe(bookSchema, get(FormData))
@@ -542,7 +544,7 @@ export default {
       return redirect(routes.books.show.href({ slug: book.slug }))
     },
   },
-} satisfies Controller<typeof routes.books, AppContext>
+})
 ```
 
 This shape works without JavaScript, returns a `Response` for every outcome, and is ready for

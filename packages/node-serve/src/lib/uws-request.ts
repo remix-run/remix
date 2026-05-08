@@ -27,208 +27,64 @@ export function createUwsRequest(
   options?: UwsRequestOptions,
   method = req.getCaseSensitiveMethod(),
 ): Request {
-  return new UwsRequest(req, res, state, options, method)
+  let init: RequestInit = {
+    method,
+    headers: createRequestHeaders(req),
+    signal: getAbortSignal(state),
+  }
+
+  if (requestMethodCanHaveBody(method)) {
+    init.body = createBodyStream(readUwsRequestBody(res, state))
+    ;(init as { duplex: 'half' }).duplex = 'half'
+  }
+
+  return new Request(createRequestUrl(req, options), init)
 }
 
-class UwsRequest implements Request {
-  #request: Request | undefined
-  #headers: Headers
-  #bodyPromise: Promise<Buffer> | undefined
-  #bodyUsed = false
-  #method: string
-  #url: string | undefined
-  #protocol: string
-  #host: string
-  #path: string
-  #query: string
-  #state: UwsResponseState
-
-  constructor(
-    req: HttpRequest,
-    res: HttpResponse,
-    state: UwsResponseState,
-    options: UwsRequestOptions | undefined,
-    method: string,
-  ) {
-    this.#state = state
-    this.#method = method
-
-    let entries: [string, string][] = []
-    req.forEach((key, value) => {
-      entries.push([key, value])
-    })
-    this.#headers = createUwsHeaders(entries)
-
-    this.#protocol = options?.protocol ?? 'http:'
-    this.#host = options?.host ?? (req.getHeader('host') || 'localhost')
-    this.#path = req.getUrl()
-    this.#query = req.getQuery()
-
-    if (requestMethodCanHaveBody(this.#method)) {
-      this.#bodyPromise = readUwsRequestBody(res, state)
-    }
-  }
-
-  #materialize(): Request {
-    if (this.#request != null) return this.#request
-
-    let init: RequestInit = {
-      method: this.#method,
-      headers: this.#headers,
-      signal: this.signal,
-    }
-
-    if (requestMethodCanHaveBody(this.#method)) {
-      init.body = this.#createBodyStream()
-      ;(init as { duplex: 'half' }).duplex = 'half'
-    }
-
-    return (this.#request = new Request(this.url, init))
-  }
-
-  #createBodyStream(): ReadableStream<Uint8Array> {
-    let sent = false
-
-    return new ReadableStream({
-      pull: async (controller) => {
-        if (sent) return
-        sent = true
-
-        let body = await this.#readBody()
-        if (body.byteLength !== 0) controller.enqueue(bufferToBytes(body))
-        controller.close()
-      },
-    })
-  }
-
-  get body() {
-    return this.#materialize().body
-  }
-
-  get bodyUsed() {
-    return this.#bodyUsed || this.#request?.bodyUsed === true
-  }
-
-  get cache() {
-    return this.#materialize().cache
-  }
-
-  get credentials() {
-    return this.#materialize().credentials
-  }
-
-  get destination() {
-    return this.#materialize().destination
-  }
-
-  get headers() {
-    return this.#headers
-  }
-
-  get integrity() {
-    return this.#materialize().integrity
-  }
-
-  get keepalive() {
-    return this.#materialize().keepalive
-  }
-
-  get method() {
-    return this.#method
-  }
-
-  get mode() {
-    return this.#materialize().mode
-  }
-
-  get redirect() {
-    return this.#materialize().redirect
-  }
-
-  get referrer() {
-    return this.#materialize().referrer
-  }
-
-  get referrerPolicy() {
-    return this.#materialize().referrerPolicy
-  }
-
-  get signal() {
-    let controller = (this.#state.controller ??= new AbortController())
-    if (this.#state.aborted) controller.abort()
-    return controller.signal
-  }
-
-  get url() {
-    return (this.#url ??= `${this.#protocol}//${this.#host}${this.#path}${
-      this.#query === '' ? '' : `?${this.#query}`
-    }`)
-  }
-
-  arrayBuffer() {
-    if (this.#request != null && !this.#bodyUsed) return this.#request.arrayBuffer()
-    return this.#consumeBody().then(bufferToArrayBuffer)
-  }
-
-  blob() {
-    if (this.#request != null && !this.#bodyUsed) return this.#request.blob()
-    return this.#consumeBody().then((body) => new Blob([bufferToBytes(body)]))
-  }
-
-  bytes() {
-    if (this.#request != null && !this.#bodyUsed) return this.#request.bytes()
-    return this.#consumeBody().then(bufferToBytes)
-  }
-
-  clone() {
-    if (this.bodyUsed) throw bodyUnusable()
-    return this.#materialize().clone()
-  }
-
-  formData() {
-    return this.#materialize().formData()
-  }
-
-  json() {
-    if (this.#request != null && !this.#bodyUsed) return this.#request.json()
-    return this.text().then(JSON.parse)
-  }
-
-  text() {
-    if (this.#request != null && !this.#bodyUsed) return this.#request.text()
-    return this.#consumeBody().then((body) => body.toString())
-  }
-
-  #consumeBody(): Promise<Buffer> {
-    if (!requestMethodCanHaveBody(this.#method)) return Promise.resolve(Buffer.alloc(0))
-    if (this.#bodyUsed) return Promise.reject(bodyUnusable())
-    this.#bodyUsed = true
-    return this.#readBody()
-  }
-
-  #readBody(): Promise<Buffer> {
-    return this.#bodyPromise ?? Promise.resolve(Buffer.alloc(0))
-  }
+function createRequestHeaders(req: HttpRequest): Headers {
+  let entries: [string, string][] = []
+  req.forEach((key, value) => {
+    entries.push([key, value])
+  })
+  return createUwsHeaders(entries)
 }
 
-Object.setPrototypeOf(UwsRequest.prototype, Request.prototype)
+function getAbortSignal(state: UwsResponseState): AbortSignal {
+  let controller = (state.controller ??= new AbortController())
+  if (state.aborted) controller.abort()
+  return controller.signal
+}
+
+function createRequestUrl(req: HttpRequest, options: UwsRequestOptions | undefined): string {
+  let protocol = options?.protocol ?? 'http:'
+  let host = options?.host ?? (req.getHeader('host') || 'localhost')
+  let query = req.getQuery()
+  return `${protocol}//${host}${req.getUrl()}${query === '' ? '' : `?${query}`}`
+}
+
+function createBodyStream(body: Promise<Buffer>): ReadableStream<Uint8Array> {
+  let sent = false
+
+  return new ReadableStream({
+    pull: async (controller) => {
+      if (sent) return
+      sent = true
+
+      let buffer = await body
+      if (buffer.byteLength !== 0) controller.enqueue(bufferToBytes(buffer))
+      controller.close()
+    },
+  })
+}
 
 function requestMethodCanHaveBody(method: string): boolean {
   return method !== 'GET' && method !== 'HEAD'
-}
-
-function bufferToArrayBuffer(buffer: Buffer): ArrayBuffer {
-  return bufferToBytes(buffer).buffer
 }
 
 function bufferToBytes(buffer: Buffer): Uint8Array<ArrayBuffer> {
   let bytes = new Uint8Array(buffer.byteLength)
   bytes.set(buffer)
   return bytes
-}
-
-function bodyUnusable(): TypeError {
-  return new TypeError('Body is unusable: Body has already been read')
 }
 
 function readUwsRequestBody(res: HttpResponse, state: UwsResponseState): Promise<Buffer> {

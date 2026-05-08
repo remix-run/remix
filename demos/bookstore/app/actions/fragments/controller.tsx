@@ -1,4 +1,4 @@
-import type { AppController } from '../../router.ts'
+import { createController } from 'remix/fetch-router'
 import { css } from 'remix/ui'
 import { Database } from 'remix/data-table'
 
@@ -11,7 +11,7 @@ import { getCurrentCart, getCurrentUserSafely } from '../../utils/context.ts'
 import { parseId } from '../../utils/ids.ts'
 import { renderFragment } from '../render.tsx'
 
-export default {
+export default createController(routes.fragments, {
   actions: {
     async cartButton({ get, params }) {
       let db = get(Database)
@@ -49,4 +49,4 @@ export default {
       return renderFragment(<CartItems items={cart.items} total={total} canCheckout={!!user} />)
     },
   },
-} satisfies AppController<typeof routes.fragments>
+})

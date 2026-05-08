@@ -1,10 +1,10 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import type { Handle, RemixNode } from 'remix/ui'
 import { Frame } from 'remix/ui'
 import { getContext } from 'remix/async-context-middleware'
 
 import { requireAuth } from '../../middleware/auth.ts'
-import { frames, type routes } from '../../routes.ts'
+import { frames, routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
 import { render } from '../render.tsx'
 import { SettingsLayout, type SettingsNavItem } from './layout.tsx'
@@ -16,7 +16,7 @@ import { Notifications } from './notifications-page.tsx'
 import { Privacy } from './privacy-page.tsx'
 import { Profile } from './profile-page.tsx'
 
-export default {
+export default createController(routes.settings, {
   middleware: [requireAuth],
   actions: {
     index() {
@@ -38,7 +38,7 @@ export default {
       return renderSettingsPage('integrations', <Integrations />)
     },
   },
-} satisfies Controller<typeof routes.settings>
+})
 
 type SettingsPageProps = {
   activeItem: SettingsNavItem

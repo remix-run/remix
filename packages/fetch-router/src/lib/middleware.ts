@@ -1,74 +1,69 @@
 import type { RequestHandler } from './controller.ts'
 import { raceRequestAbort } from './request-abort.ts'
-import type { ContextEntries, RequestContext } from './request-context.ts'
+import type {
+  ContextEntries,
+  ContextEntry,
+  ContextWithValues,
+  RequestContext,
+} from './request-context.ts'
 
 /**
- * A middleware of any params or context transform.
+ * A middleware of any context transform.
  */
-export type AnyMiddleware = Middleware<any, any>
+export type AnyMiddleware = Middleware<ContextTransform>
 
-/**
- * The type-level effect a middleware can apply to request context.
- */
-export type MiddlewareContextTransform =
+type ContextTransform =
+  | ContextEntry
   | ContextEntries
   | (<context extends RequestContext<any, any>>(context: context) => RequestContext<any, any>)
 
-type IdentityContextTransform = readonly []
+type EmptyContextTransform = readonly []
 
-type MiddlewareTransform<middleware> =
-  middleware extends Middleware<any, infer transform> ? transform : IdentityContextTransform
+declare const contextTransform: unique symbol
 
-/**
- * Applies a middleware context transform to a request-context type.
- */
-export type ApplyContextTransform<
-  currentContext extends RequestContext<any, any>,
+type TransformOf<middleware> =
+  middleware extends Middleware<infer transform> ? transform : EmptyContextTransform
+
+type ContextWithTransform<
+  context extends RequestContext<any, any>,
   transform,
 > = transform extends ContextEntries
-  ? currentContext extends RequestContext<
-      infer params extends Record<string, any>,
-      infer entries extends ContextEntries
-    >
-    ? RequestContext<params, [...entries, ...transform]>
-    : currentContext
-  : transform extends {
-        <inputContext extends currentContext>(context: inputContext): infer output
-      }
-    ? output extends RequestContext<any, any>
-      ? output
-      : currentContext
-    : currentContext
-
-/**
- * Applies the declared context effect of a single middleware to a request-context type.
- */
-export type ApplyMiddleware<
-  context extends RequestContext<any, any>,
-  middleware,
-> = ApplyContextTransform<context, MiddlewareTransform<middleware>>
-
-/**
- * Applies an ordered middleware array to a request-context type from left to right.
- */
-export type ApplyMiddlewareTuple<
-  context extends RequestContext<any, any>,
-  middleware,
-> = middleware extends readonly AnyMiddleware[]
-  ? number extends middleware['length']
-    ? context
-    : middleware extends readonly [infer first, ...infer rest]
-      ? ApplyMiddlewareTuple<ApplyMiddleware<context, first>, rest>
+  ? ContextWithValues<context, transform>
+  : transform extends ContextEntry
+    ? ContextWithValues<context, [transform]>
+    : transform extends {
+          <inputContext extends context>(context: inputContext): infer output
+        }
+      ? output extends RequestContext<any, any>
+        ? output
+        : context
       : context
-  : context
 
 /**
- * Resolves the request-context type produced by a router middleware array.
+ * Resolves the request-context type produced by a middleware array.
  */
-export type MiddlewareContext<middleware extends readonly AnyMiddleware[]> = ApplyMiddlewareTuple<
-  RequestContext,
-  middleware
->
+export type MiddlewareContext<
+  middleware extends readonly AnyMiddleware[],
+  context extends RequestContext<any, any> = RequestContext,
+> = number extends middleware['length']
+  ? context
+  : middleware extends readonly [
+        infer first extends AnyMiddleware,
+        ...infer rest extends readonly AnyMiddleware[],
+      ]
+    ? MiddlewareContext<rest, ContextWithTransform<context, TransformOf<first>>>
+    : context
+
+/**
+ * Resolves the request-context type produced by applying middleware to an existing context.
+ *
+ * This is useful for router helpers and third-party libraries that need to describe
+ * the context available after a known middleware tuple runs.
+ */
+export type ContextWithMiddleware<
+  context extends RequestContext<any, any>,
+  middleware extends readonly AnyMiddleware[],
+> = MiddlewareContext<middleware, context>
 
 /**
  * A special kind of request handler that either returns a response or passes control
@@ -77,23 +72,23 @@ export type MiddlewareContext<middleware extends readonly AnyMiddleware[]> = App
  * @param context The request context
  * @param next A function that invokes the next middleware or request handler in the chain
  * @returns A response to short-circuit the chain, or `undefined`/`void` to continue
+ *
+ * The generic describes the context effect this middleware has. Use a {@link ContextEntry}
+ * for middleware that provides one context value, or {@link ContextEntries} for multiple values.
  */
-export interface Middleware<
-  params extends Record<string, any> = {},
-  transform extends MiddlewareContextTransform = IdentityContextTransform,
-> {
+export interface Middleware<transform extends ContextTransform = EmptyContextTransform> {
   /**
    * Handles a request and optionally delegates to the next middleware or handler.
    */
   (
-    context: RequestContext<params>,
+    context: RequestContext<any>,
     next: NextFunction,
   ): Response | undefined | void | Promise<Response | undefined | void>
 
   /**
    * Type-only metadata that carries the middleware's declared context effect.
    */
-  readonly '~contextTransform'?: transform | undefined
+  readonly [contextTransform]?: transform | undefined
 }
 
 /**
@@ -103,10 +98,10 @@ export interface Middleware<
  */
 export type NextFunction = () => Promise<Response>
 
-export function runMiddleware<params extends Record<string, any> = {}>(
+export function runMiddleware(
   middleware: AnyMiddleware[],
-  context: RequestContext<params>,
-  handler: RequestHandler<params, any>,
+  context: RequestContext<any, any>,
+  handler: RequestHandler<any>,
 ): Promise<Response> {
   let index = -1
 

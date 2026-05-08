@@ -1,11 +1,8 @@
 import type { Route } from 'remix/routes'
 import { createCredentialsAuthProvider } from 'remix/auth'
-import {
-  auth,
-  requireAuth as requireAuthenticatedUser,
-  createSessionAuthScheme,
-} from 'remix/auth-middleware'
+import { Auth, auth, createSessionAuthScheme, type GoodAuth } from 'remix/auth-middleware'
 import { Database } from 'remix/data-table'
+import type { ContextEntry, Middleware } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../data/schema.ts'
@@ -73,20 +70,29 @@ export interface RequireAuthOptions {
   redirectTo?: Route
 }
 
-export function requireAuth(options?: RequireAuthOptions) {
+type BookstoreUserContextEntry = ContextEntry<typeof Auth, GoodAuth<User>>
+
+export function requireAuth(options?: RequireAuthOptions): Middleware<BookstoreUserContextEntry> {
   let redirectTo = options?.redirectTo ?? routes.auth.login.index
 
-  return requireAuthenticatedUser({
-    onFailure(context) {
-      return redirect(
-        redirectTo.href(undefined, {
-          returnTo:
-            getSafeReturnTo(context.url.searchParams.get('returnTo')) ??
-            context.url.pathname + context.url.search,
-        }),
-      )
-    },
-  })
+  return (context, next) => {
+    let authState = context.get(Auth)
+    if (authState == null) {
+      throw new Error('Auth state not found. Make sure loadAuth() runs before requireAuth().')
+    }
+
+    if (authState.ok) {
+      return next()
+    }
+
+    return redirect(
+      redirectTo.href(undefined, {
+        returnTo:
+          getSafeReturnTo(context.url.searchParams.get('returnTo')) ??
+          context.url.pathname + context.url.search,
+      }),
+    )
+  }
 }
 
 export function getPostAuthRedirect(url: URL, fallback = routes.account.index.href()): string {

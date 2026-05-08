@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 
@@ -31,7 +31,7 @@ async function loadResetToken(context: AppContext<{ token: string }>) {
   return resetToken
 }
 
-export const resetPasswordController = {
+export const resetPasswordController = createController(routes.auth.resetPassword, {
   actions: {
     async index(context) {
       let { params, url } = context
@@ -128,4 +128,4 @@ export const resetPasswordController = {
       )
     },
   },
-} satisfies Controller<typeof routes.auth.resetPassword, AppContext>
+})

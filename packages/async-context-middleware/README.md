@@ -47,17 +47,17 @@ This middleware requires support for `node:async_hooks`, so it is intended for N
 `getContext()` is global and out-of-band, so apps can augment `AsyncContextTypes` to tell the package what request context lives in async local storage.
 
 ```ts
-import type { AnyParams, MiddlewareContext, WithParams } from 'remix/fetch-router'
-import type { WithRequiredAuth } from 'remix/auth-middleware'
+import type { AnyParams, MiddlewareContext, ContextWithParams } from 'remix/fetch-router'
+import type { ContextWithRequiredAuth } from 'remix/auth-middleware'
 
 export type RootMiddleware = [ReturnType<typeof loadSession>, ReturnType<typeof loadAuth>]
 
-export type AppContext<params extends AnyParams = AnyParams> = WithParams<
+export type AppContext<params extends AnyParams = AnyParams> = ContextWithParams<
   MiddlewareContext<RootMiddleware>,
   params
 >
 
-export type AuthenticatedAppContext<params extends AnyParams = AnyParams> = WithRequiredAuth<
+export type AuthenticatedAppContext<params extends AnyParams = AnyParams> = ContextWithRequiredAuth<
   AppContext<params>,
   { id: string }
 >

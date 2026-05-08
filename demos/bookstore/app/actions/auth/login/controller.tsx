@@ -1,4 +1,4 @@
-import type { AppController } from '../../../router.ts'
+import { createController } from 'remix/fetch-router'
 import { completeAuth, verifyCredentials } from 'remix/auth'
 import { redirect } from 'remix/response/redirect'
 
@@ -12,7 +12,7 @@ import {
 } from '../../../middleware/auth.ts'
 import { LoginPage } from './page.tsx'
 
-export default {
+export default createController(routes.auth.login, {
   actions: {
     index({ get, url }) {
       let session = get(Session)
@@ -40,4 +40,4 @@ export default {
       return redirect(getPostAuthRedirect(url))
     },
   },
-} satisfies AppController<typeof routes.auth.login>
+})

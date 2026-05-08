@@ -19,11 +19,16 @@ describe('router.fetch()', () => {
     assert.equal(await response.text(), 'Home')
   })
 
-  it('fetches a request facade that clones to a real Request', async () => {
+  it('uses a Request input directly', async () => {
     let router = createRouter()
-    router.get('/', () => new Response('Home'))
+    let request = new Request('https://remix.run')
 
-    let response = await router.fetch(createRequestFacade('https://remix.run'))
+    router.get('/', (context) => {
+      assert.equal(context.request, request)
+      return new Response('Home')
+    })
+
+    let response = await router.fetch(request)
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Home')
@@ -168,19 +173,6 @@ describe('router.fetch()', () => {
     assert.deepEqual(requestLog, ['middleware'])
   })
 })
-
-function createRequestFacade(url: string): Request {
-  let request = new Request(url)
-  let facade = {
-    clone() {
-      return request.clone()
-    },
-  }
-
-  Object.setPrototypeOf(facade, Request.prototype)
-
-  return facade as Request
-}
 
 describe('router.map() with single routes', () => {
   it('maps a single route to a request handler', async () => {

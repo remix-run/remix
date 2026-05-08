@@ -77,9 +77,9 @@ export type MergeContextParams<
 > = [DuplicateParamNames<left, right>] extends [never] ? Simplify<left & right> : never
 
 /**
- * Replaces the params type of a {@link RequestContext} while preserving its existing context entries.
+ * Adds route params to a {@link RequestContext} while preserving its existing context values.
  */
-export type WithParams<context, params extends Record<string, any>> =
+export type ContextWithParams<context, params extends Record<string, any>> =
   context extends RequestContext<any, infer entries extends ContextEntries>
     ? MergeContextParams<ContextParams<context>, params> extends infer merged
       ? [merged] extends [never]
@@ -109,9 +109,12 @@ export type GetContextValue<context, key extends object> =
     : ContextFallbackValue<key>
 
 /**
- * Appends context entries to an existing {@link RequestContext}.
+ * Appends context values to an existing {@link RequestContext}.
+ *
+ * Third-party middleware packages that add multiple values should expose their own
+ * `ContextWith*` helper built on this type.
  */
-export type MergeContext<context, additions extends ContextEntries> =
+export type ContextWithValues<context, additions extends ContextEntries> =
   context extends RequestContext<
     infer params extends Record<string, any>,
     infer entries extends ContextEntries
@@ -121,8 +124,11 @@ export type MergeContext<context, additions extends ContextEntries> =
 
 /**
  * Replaces or adds the value type for a single context key in a {@link RequestContext}.
+ *
+ * Third-party middleware packages that add one value should expose their own
+ * `ContextWith*` helper built on this type.
  */
-export type SetContextValue<context, key extends object, value> = MergeContext<
+export type ContextWithValue<context, key extends object, value> = ContextWithValues<
   context,
   [readonly [key, value]]
 >

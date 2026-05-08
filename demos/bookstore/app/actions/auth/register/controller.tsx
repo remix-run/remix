@@ -1,4 +1,4 @@
-import type { AppController } from '../../../router.ts'
+import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
@@ -11,7 +11,7 @@ import { render } from '../../render.tsx'
 import { normalizeEmail, registrationSchema } from '../schemas.ts'
 import { ExistingAccountPage, RegisterPage } from './page.tsx'
 
-export default {
+export default createController(routes.auth.register, {
   actions: {
     index() {
       return render(<RegisterPage />)
@@ -44,4 +44,4 @@ export default {
       return redirect(routes.account.index.href())
     },
   },
-} satisfies AppController<typeof routes.auth.register>
+})

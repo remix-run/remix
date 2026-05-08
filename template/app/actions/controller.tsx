@@ -2,9 +2,9 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 
 import { createAssetServer } from 'remix/assets'
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 
-import type { routes } from '../routes.ts'
+import { routes } from '../routes.ts'
 import { HomePage } from '../ui/scaffold-home-page.tsx'
 import { Layout } from '../ui/layout.tsx'
 import { render } from './render.tsx'
@@ -31,7 +31,7 @@ export const assetServer = createAssetServer({
   },
 })
 
-const controller = {
+const controller = createController(routes, {
   actions: {
     async assets({ request }) {
       return (await assetServer.fetch(request)) ?? new Response('Not Found', { status: 404 })
@@ -43,7 +43,7 @@ const controller = {
       return render(<AuthPage />, request)
     },
   },
-} satisfies Controller<typeof routes>
+})
 
 export default controller
 

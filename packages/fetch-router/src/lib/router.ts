@@ -1,113 +1,61 @@
-import { type Matcher, type Params, createMatcher, RoutePattern } from '@remix-run/route-pattern'
+import { type Matcher, createMatcher, RoutePattern } from '@remix-run/route-pattern'
 import { type RouteMap, Route } from '@remix-run/routes'
 
-import { type AnyMiddleware, type ApplyMiddlewareTuple, runMiddleware } from './middleware.ts'
+import { type AnyMiddleware, type MiddlewareContext, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
-import { type ContextParams, RequestContext, type WithParams } from './request-context.ts'
+import { RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import {
+  type RequestHandler,
   type Action,
   type Controller,
-  type ControllerShape,
-  type ControllerWithMiddleware,
-  type ControllerWithoutMiddleware,
-  type RequestHandler,
+  isRequestHandler,
   isActionObject,
   isController,
 } from './controller.ts'
 
 type AnyContext = RequestContext<any, any>
 
-type RouteContext<context extends AnyContext, pattern extends string> = WithParams<
-  context,
-  Params<pattern>
->
-
-type RouteTarget<method extends RequestMethod | 'ANY', pattern extends string> =
-  | pattern
-  | RoutePattern<pattern>
-  | Route<method | 'ANY', pattern>
-
-type MapRouteTarget<method extends RequestMethod | 'ANY', pattern extends string> =
-  | pattern
-  | RoutePattern<pattern>
-  | Route<method, pattern>
-
-type SingleRouteTarget = string | RoutePattern<string> | Route<RequestMethod | 'ANY', string>
-
-type RouteMethod<context extends AnyContext> = {
-  <method extends RequestMethod | 'ANY', pattern extends string>(
-    method: method,
-    pattern: RouteTarget<method, pattern>,
-    handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
-  ): void
-  <
-    method extends RequestMethod | 'ANY',
-    pattern extends string,
-    middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
-  >(
-    method: method,
-    pattern: RouteTarget<method, pattern>,
-    action: Action<pattern, context, middleware>,
-  ): void
-}
-
-type ActionMapping<context extends AnyContext> = {
-  <method extends RequestMethod | 'ANY', pattern extends string>(
-    target: MapRouteTarget<method, pattern>,
-    handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
-  ): void
-  <
-    method extends RequestMethod | 'ANY',
-    pattern extends string,
-    middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
-  >(
-    target: MapRouteTarget<method, pattern>,
-    action: Action<pattern, context, middleware>,
-  ): void
-}
-
-type ControllerMapping<context extends AnyContext> = {
-  <target extends RouteMap>(
-    target: target,
-    controller: ControllerWithoutMiddleware<target, context>,
-  ): void
-  <target extends RouteMap, middleware extends readonly AnyMiddleware[]>(
-    target: target,
-    controller: ControllerWithMiddleware<target, context, middleware>,
-  ): void
-  <target extends RouteMap>(target: target, controller: Controller<target, context>): void
-}
-
-type MapMethod<context extends AnyContext> = ActionMapping<context> & ControllerMapping<context>
+type RouteTarget<
+  pattern extends string = string,
+  method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
+> = pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>
 
 type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
-  <pattern extends string>(
-    route: RouteTarget<method, pattern>,
-    handler: RequestHandler<Params<pattern>, RouteContext<context, pattern>>,
-  ): void
-  <pattern extends string, middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[]>(
-    route: RouteTarget<method, pattern>,
-    action: Action<pattern, context, middleware>,
+  <pattern extends string, actionContext extends AnyContext = context>(
+    route: RouteTarget<pattern, method>,
+    action: Action<RouteTarget<pattern, method>, actionContext>,
   ): void
 }
 
 /**
  * The normalized route entry stored in the router matcher.
  */
-export type RouteEntry = {
+export interface RouteEntry {
+  /**
+   * The URL pattern used to match this route.
+   */
   pattern: RoutePattern<string>
-  handler: RequestHandler<any, any>
+  /**
+   * The handler that runs when this route matches.
+   */
+  handler: RequestHandler<any>
+  /**
+   * The request method this route handles, or `ANY` for method-agnostic routes.
+   */
   method: RequestMethod | 'ANY'
+  /**
+   * Route-specific middleware that runs before the handler.
+   */
   middleware: AnyMiddleware[] | undefined
 }
 
 type NormalizedAction = {
-  handler: RequestHandler<any, any>
+  handler: RequestHandler<any>
   middleware: AnyMiddleware[] | undefined
 }
 
-type MapTarget = SingleRouteTarget | RouteMap
+type MapTarget = RouteTarget | RouteMap
 
 /**
  * Options for creating a router.
@@ -118,17 +66,12 @@ export interface RouterOptions<
 > {
   /**
    * The default request handler that runs when no route matches.
-   *
-   * @default A 404 "Not Found" response
+   * Defaults to a 404 `Not Found` response.
    */
-  defaultHandler?: RequestHandler<
-    ContextParams<ApplyMiddlewareTuple<context, middleware>>,
-    ApplyMiddlewareTuple<context, middleware>
-  >
+  defaultHandler?: RequestHandler<MiddlewareContext<middleware, context>>
   /**
    * The matcher to use for matching routes.
-   *
-   * @default `createMatcher()`
+   * Defaults to `createMatcher()`.
    */
   matcher?: Matcher<RouteEntry>
   /**
@@ -157,11 +100,26 @@ export interface Router<context extends AnyContext = RequestContext> {
    *
    * Accepts either a plain request handler or an action object with optional inline middleware.
    */
-  route: RouteMethod<context>
+  route<
+    method extends RequestMethod | 'ANY',
+    pattern extends string,
+    actionContext extends AnyContext = context,
+  >(
+    method: method,
+    pattern: RouteTarget<pattern, method>,
+    action: Action<RouteTarget<pattern, method>, actionContext>,
+  ): void
   /**
    * Maps either a single route target to an action or a route map to a controller.
    */
-  map: MapMethod<context>
+  map<pattern extends string, actionContext extends AnyContext = context>(
+    target: RouteTarget<pattern>,
+    action: Action<RouteTarget<pattern>, actionContext>,
+  ): void
+  map<target extends RouteMap, controllerContext extends AnyContext = context>(
+    target: target,
+    controller: Controller<target, controllerContext>,
+  ): void
   /**
    * Shorthand for registering a `GET` route.
    */
@@ -199,90 +157,31 @@ function noMatchHandler({ url }: RequestContext): Response {
 function normalizeMiddleware(
   middleware: readonly AnyMiddleware[] | undefined,
 ): AnyMiddleware[] | undefined {
-  if (middleware == null || middleware.length === 0) {
-    return undefined
-  }
-
-  return [...middleware]
-}
-
-function isRequestHandler(action: unknown): action is RequestHandler<any, any> {
-  return typeof action === 'function'
+  return middleware == null || middleware.length === 0 ? undefined : [...middleware]
 }
 
 function normalizeAction(action: unknown): NormalizedAction {
-  if (isActionObject(action)) {
+  if (isRequestHandler(action)) {
     return {
-      handler: action.handler,
-      middleware: normalizeMiddleware(action.middleware),
+      handler: action,
+      middleware: undefined,
     }
   }
 
-  if (!isRequestHandler(action)) {
+  if (!isActionObject(action)) {
     throw new TypeError(
       'Expected a request handler function or action object with a function `handler` property',
     )
   }
 
   return {
-    handler: action,
-    middleware: undefined,
+    handler: action.handler,
+    middleware: normalizeMiddleware(action.middleware),
   }
 }
 
-function mergeMiddleware(
-  upstream: AnyMiddleware[] | undefined,
-  downstream: AnyMiddleware[] | undefined,
-): AnyMiddleware[] | undefined {
-  let upstreamMiddleware = normalizeMiddleware(upstream)
-  let downstreamMiddleware = normalizeMiddleware(downstream)
-
-  if (!upstreamMiddleware) {
-    return downstreamMiddleware
-  }
-
-  if (!downstreamMiddleware) {
-    return upstreamMiddleware
-  }
-
-  return upstreamMiddleware.concat(downstreamMiddleware)
-}
-
-function createRequestContext(input: string | URL | Request, init?: RequestInit): RequestContext {
-  let request: Request
-  if (input instanceof Request) {
-    request = cloneRequest(input)
-    if (init != null) request = new Request(request, init)
-  } else {
-    request = new Request(input, init)
-  }
-
-  if (request.signal.aborted) {
-    throw request.signal.reason
-  }
-
-  return new RequestContext(request)
-}
-
-function cloneRequest(input: Request): Request {
-  // Cloudflare's generated Request type preserves worker metadata generics through clone().
-  return input.clone() as Request
-}
-
-function isSingleRouteTarget(target: MapTarget): target is SingleRouteTarget {
+function isRouteTarget(target: MapTarget): target is RouteTarget {
   return typeof target === 'string' || target instanceof RoutePattern || target instanceof Route
-}
-
-function getRoutePattern(target: SingleRouteTarget): RoutePattern<string> {
-  if (target instanceof Route) {
-    return target.pattern
-  }
-
-  return typeof target === 'string' ? new RoutePattern(target) : target
-}
-
-function getMappedRouteMethod(target: SingleRouteTarget): RequestMethod | 'ANY' {
-  return target instanceof Route ? target.method : 'ANY'
 }
 
 /**
@@ -295,14 +194,14 @@ export function createRouter<context extends AnyContext = RequestContext>(): Rou
 export function createRouter<
   context extends AnyContext = RequestContext,
   const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
->(options: RouterOptions<context, middleware>): Router<ApplyMiddlewareTuple<context, middleware>>
+>(options: RouterOptions<context, middleware>): Router<MiddlewareContext<middleware, context>>
 export function createRouter<
   context extends AnyContext = RequestContext,
   const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
->(options?: RouterOptions<context, middleware>): Router<ApplyMiddlewareTuple<context, middleware>> {
-  type RouterContext = ApplyMiddlewareTuple<context, middleware>
+>(options?: RouterOptions<context, middleware>): Router<MiddlewareContext<middleware, context>> {
+  type RouterContext = MiddlewareContext<middleware, context>
 
-  let defaultHandler = (options?.defaultHandler ?? noMatchHandler) as RequestHandler<any, any>
+  let defaultHandler = (options?.defaultHandler ?? noMatchHandler) as RequestHandler<any>
   let matcher = options?.matcher ?? createMatcher<RouteEntry>()
   let routerMiddleware = normalizeMiddleware(options?.middleware)
 
@@ -338,15 +237,20 @@ export function createRouter<
 
   function registerRoute(
     method: RequestMethod | 'ANY',
-    route: SingleRouteTarget,
-    normalizedAction: NormalizedAction,
+    route: RouteTarget,
+    action: NormalizedAction,
   ): void {
-    let pattern = getRoutePattern(route)
+    let pattern =
+      route instanceof Route
+        ? route.pattern
+        : typeof route === 'string'
+          ? new RoutePattern(route)
+          : route
     let entry: RouteEntry = {
       pattern,
-      handler: normalizedAction.handler,
+      handler: action.handler,
       method,
-      middleware: normalizedAction.middleware,
+      middleware: action.middleware,
     }
 
     matcher.add(pattern, entry)
@@ -355,21 +259,17 @@ export function createRouter<
   function addRoute<
     method extends RequestMethod | 'ANY',
     pattern extends string,
-    actionMiddleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+    actionContext extends AnyContext,
   >(
     method: method,
-    route: RouteTarget<method, pattern>,
-    handler: Action<pattern, RouterContext, actionMiddleware>,
+    route: RouteTarget<pattern, method>,
+    action: Action<RouteTarget<pattern, method>, actionContext>,
   ): void {
-    registerRoute(method, route, normalizeAction(handler))
-  }
-
-  function mapSingleRoute(target: SingleRouteTarget, handler: unknown): void {
-    registerRoute(getMappedRouteMethod(target), target, normalizeAction(handler))
+    registerRoute(method, route, normalizeAction(action))
   }
 
   function mapRoutes(target: MapTarget, handler: unknown): void {
-    if (isSingleRouteTarget(target)) {
+    if (isRouteTarget(target)) {
       mapSingleRoute(target, handler)
       return
     }
@@ -381,7 +281,17 @@ export function createRouter<
     mapController(target, handler)
   }
 
-  function mapController(routes: RouteMap, controller: ControllerShape): void {
+  function mapSingleRoute(target: RouteTarget, handler: unknown): void {
+    registerRoute(target instanceof Route ? target.method : 'ANY', target, normalizeAction(handler))
+  }
+
+  function mapController(
+    routes: RouteMap,
+    controller: {
+      middleware?: readonly AnyMiddleware[] | undefined
+      actions: Record<string, unknown>
+    },
+  ): void {
     let controllerMiddleware = normalizeMiddleware(controller.middleware)
 
     for (let key in controller.actions) {
@@ -404,11 +314,15 @@ export function createRouter<
           throw new TypeError(`Missing action \`${key}\` in controller`)
         }
 
-        let action = controller.actions[key]
-        let normalizedAction = normalizeAction(action as Action<any, RouterContext>)
+        let action = normalizeAction(controller.actions[key])
+        let middleware = action.middleware
+        if (controllerMiddleware) {
+          middleware = middleware ? controllerMiddleware.concat(middleware) : controllerMiddleware
+        }
+
         registerRoute(route.method, route.pattern, {
-          handler: normalizedAction.handler,
-          middleware: mergeMiddleware(controllerMiddleware, normalizedAction.middleware),
+          handler: action.handler,
+          middleware,
         })
       }
     }
@@ -417,33 +331,37 @@ export function createRouter<
   function createVerbMethod<method extends RequestMethod>(
     method: method,
   ): VerbMethod<method, RouterContext> {
-    return (<
-      pattern extends string,
-      actionMiddleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
-    >(
-      route: RouteTarget<method, pattern>,
-      handler: Action<pattern, RouterContext, actionMiddleware>,
+    return (<pattern extends string, actionContext extends AnyContext = RouterContext>(
+      route: RouteTarget<pattern, method>,
+      action: Action<RouteTarget<pattern, method>, actionContext>,
     ): void => {
-      addRoute(method, route, handler)
+      addRoute(method, route, action)
     }) as VerbMethod<method, RouterContext>
   }
 
   let router: Router<RouterContext> = {
     fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-      let context = createRequestContext(input, init)
+      let request = input instanceof Request && init == null ? input : new Request(input, init)
+
+      if (request.signal.aborted) {
+        throw request.signal.reason
+      }
+
+      let context = new RequestContext(request)
       context.router = router
+
       return dispatchRouter(context)
     },
     route<
       method extends RequestMethod | 'ANY',
       pattern extends string,
-      actionMiddleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+      actionContext extends AnyContext = RouterContext,
     >(
       method: method,
-      route: RouteTarget<method, pattern>,
-      handler: Action<pattern, RouterContext, actionMiddleware>,
+      route: RouteTarget<pattern, method>,
+      action: Action<RouteTarget<pattern, method>, actionContext>,
     ): void {
-      addRoute(method, route, handler)
+      addRoute(method, route, action)
     },
     map: mapRoutes,
     get: createVerbMethod('GET'),

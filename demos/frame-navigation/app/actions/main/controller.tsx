@@ -1,8 +1,8 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import type { RemixNode } from 'remix/ui'
 
 import { requireAuth } from '../../middleware/auth.ts'
-import type { routes } from '../../routes.ts'
+import { routes } from '../../routes.ts'
 import { Layout, type MainNavItem } from '../../ui/layout.tsx'
 import { render } from '../render.tsx'
 import { MainAccountPage } from './account-page.tsx'
@@ -18,7 +18,7 @@ function renderMainPage(title: string, activeNav: MainNavItem, content: RemixNod
   )
 }
 
-export default {
+export default createController(routes.main, {
   middleware: [requireAuth],
   actions: {
     index() {
@@ -34,4 +34,4 @@ export default {
       return renderMainPage('Account', 'account', <MainAccountPage />)
     },
   },
-} satisfies Controller<typeof routes.main>
+})

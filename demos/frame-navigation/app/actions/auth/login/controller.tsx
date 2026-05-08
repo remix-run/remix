@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { css } from 'remix/ui'
 import { redirect } from 'remix/response/redirect'
 
@@ -6,7 +6,7 @@ import { routes } from '../../../routes.ts'
 import { render } from '../../render.tsx'
 import { authCookie, isAuthenticated } from '../../../middleware/auth.ts'
 
-export default {
+export default createController(routes.auth.login, {
   actions: {
     async index() {
       if (await isAuthenticated()) {
@@ -50,7 +50,7 @@ export default {
       })
     },
   },
-} satisfies Controller<typeof routes.auth.login>
+})
 
 const cardStyle = css({
   maxWidth: '38rem',

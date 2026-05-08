@@ -97,15 +97,17 @@ Use `Action` only when a reusable helper needs to type one action before it is a
 controller or when you are doing low-level router wiring outside the `app/actions` convention:
 
 ```typescript
-import type { Action } from 'remix/fetch-router'
+import { createAction } from 'remix/fetch-router'
 
-export const search: Action<typeof routes.search> = {
+import { routes } from '../routes.ts'
+
+export const search = createAction(routes.search, {
   async handler({ url }) {
     let query = url.searchParams.get('q') ?? ''
     let results = await searchIndex(query)
     return render(<SearchPage query={query} results={results} />)
   },
-}
+})
 ```
 
 The handler receives a context object with:
@@ -223,14 +225,16 @@ A controller owns the direct leaf routes in one route map. Each key in `actions`
 leaf route key in the route definition passed to `router.map(...)`. Nested route-map keys do not
 belong inside a controller's `actions`; map those route maps with their own controllers.
 
-Pass `AppContext` as the second generic to `Controller` so `get(Database)`, `get(Session)`,
-`get(Auth)`, etc. are typed against your middleware stack.
+Configure `RouterTypes.context` with your app context in the router module, then use
+`createController()` so `get(Database)`, `get(Session)`, `get(Auth)`, etc. are typed against your
+middleware stack without repeating a type clause on every controller.
 
 ```typescript
-import type { Controller } from 'remix/fetch-router'
-import type { AppContext } from '../router.ts'
+import { createController } from 'remix/fetch-router'
 
-export default {
+import { routes } from '../routes.ts'
+
+export default createController(routes.books, {
   actions: {
     async index({ get }) {
       let db = get(Database)
@@ -245,7 +249,7 @@ export default {
       return render(<ShowPage book={book} />)
     },
   },
-} satisfies Controller<typeof routes.books, AppContext>
+})
 ```
 
 ### Root controller
@@ -264,7 +268,7 @@ export const routes = route({
 })
 
 // app/actions/controller.tsx
-export default {
+export default createController(routes, {
   actions: {
     async assets({ request }) {
       return (await assetServer.fetch(request)) ?? new Response('Not Found', { status: 404 })
@@ -273,7 +277,7 @@ export default {
       return render(<HomePage />)
     },
   },
-} satisfies Controller<typeof routes, AppContext>
+})
 ```
 
 Because `account` is a nested route map, it is not an action key in the root controller.
@@ -285,17 +289,17 @@ Directory names under `app/actions/` are route-map keys, not URL path segments.
 
 ```typescript
 // app/actions/account/controller.tsx
-export default {
+export default createController(routes.account, {
   middleware: [requireAuth()],
   actions: {
     index() {
       return render(<AccountPage />)
     },
   },
-} satisfies Controller<typeof routes.account, AppContext>
+})
 
 // app/actions/account/settings/controller.tsx
-export default {
+export default createController(routes.account.settings, {
   middleware: [requireAuth()],
   actions: {
     index() {
@@ -305,7 +309,7 @@ export default {
       return redirect(routes.account.index.href(), 303)
     },
   },
-} satisfies Controller<typeof routes.account.settings, AppContext>
+})
 ```
 
 Then map each route map explicitly:
@@ -328,12 +332,12 @@ The `middleware` array on a controller runs only for the direct actions in that 
 action-level middleware. It does not apply to other controllers.
 
 ```typescript
-export default {
+export default createController(routes.admin, {
   middleware: [requireAuth(), requireAdmin()],
   actions: {
     /* all actions require auth + admin */
   },
-} satisfies Controller<typeof routes.admin, AppContext>
+})
 ```
 
 ## Registering Routes
@@ -359,10 +363,11 @@ router.post(routes.logout, logoutAction)
 
 ## Typed Context
 
-Define an `AppContext` type from your middleware stack for use in actions and controllers:
+Define an `AppContext` type from your middleware stack, then make it the default context used by
+`createAction()` and `createController()`:
 
 ```typescript
-import type { MiddlewareContext, WithParams, AnyParams } from 'remix/fetch-router'
+import type { MiddlewareContext, ContextWithParams, AnyParams } from 'remix/fetch-router'
 
 type RootMiddleware = [
   ReturnType<typeof formData>,
@@ -371,10 +376,16 @@ type RootMiddleware = [
   ReturnType<typeof loadAuth>,
 ]
 
-export type AppContext<params extends AnyParams = AnyParams> = WithParams<
+export type AppContext<params extends AnyParams = {}> = ContextWithParams<
   MiddlewareContext<RootMiddleware>,
   params
 >
+
+declare module 'remix/fetch-router' {
+  interface RouterTypes {
+    context: AppContext
+  }
+}
 ```
 
 This gives typed `context.get(Database)`, `context.get(Session)`, `context.get(Auth)`, etc.

@@ -1,4 +1,4 @@
-import type { AppController } from '../../../router.ts'
+import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { Database } from 'remix/data-table'
@@ -24,7 +24,7 @@ const cartUpdateSchema = f.object({
   redirect: redirectField,
 })
 
-export default {
+export default createController(routes.cart.api, {
   actions: {
     async add({ get }) {
       let db = get(Database)
@@ -100,4 +100,4 @@ export default {
       return redirect(routes.cart.index.href())
     },
   },
-} satisfies AppController<typeof routes.cart.api>
+})

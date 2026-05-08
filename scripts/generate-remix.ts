@@ -314,6 +314,20 @@ function isRemixTestBin(bin: { command: string; packageName: string }): boolean 
 }
 
 function createExportSource(entry: ExportEntry): string {
+  if (entry.reExportFrom === '@remix-run/fetch-router') {
+    return [
+      `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
+      `export * from '${entry.reExportFrom}'`,
+      ``,
+      `export interface RouterTypes {}`,
+      `type RemixRouterTypes = RouterTypes`,
+      ``,
+      `declare module '@remix-run/fetch-router' {`,
+      `  interface RouterTypes extends RemixRouterTypes {}`,
+      `}\n`,
+    ].join('\n')
+  }
+
   return [
     `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
     `export * from '${entry.reExportFrom}'\n`,

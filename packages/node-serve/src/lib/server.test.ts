@@ -86,6 +86,29 @@ describeUws('serve', () => {
     }
   })
 
+  it('passes a native Request object to handlers', async () => {
+    let server = serve(
+      (request) => {
+        let copy = new Request(request)
+
+        assert.equal(copy.url, request.url)
+        return new Response('ok')
+      },
+      { port: 0 },
+    )
+
+    await server.ready
+
+    try {
+      let response = await fetch(`http://127.0.0.1:${server.port}/test`)
+
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'ok')
+    } finally {
+      server.close()
+    }
+  })
+
   it('uses the host option to override the incoming Host header', async () => {
     let server = serve(
       async (request) => {

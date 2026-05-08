@@ -1,5 +1,5 @@
 import { Frame } from 'remix/ui'
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 
 import { Counter } from '../../assets/counter.tsx'
 import { ReloadScope } from '../../assets/reload-scope.tsx'
@@ -8,7 +8,7 @@ import { routes } from '../../routes.ts'
 import { render } from '../render.ts'
 import { searchUnitedStates } from '../../utils/us-states.ts'
 
-export const framesController = {
+export const framesController = createController(routes.frames, {
   actions: {
     async sidebar() {
       await delay(400)
@@ -244,7 +244,7 @@ export const framesController = {
       )
     },
   },
-} satisfies Controller<typeof routes.frames>
+})
 
 function delay(ms: number) {
   if (process.env.NODE_ENV === 'test') {

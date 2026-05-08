@@ -1,16 +1,16 @@
-import type { AppController } from '../../router.ts'
+import { createController } from 'remix/fetch-router'
 
 import { requireAdmin } from '../../middleware/admin.ts'
 import { requireAuth } from '../../middleware/auth.ts'
-import type { routes } from '../../routes.ts'
+import { routes } from '../../routes.ts'
 import { render } from '../render.tsx'
 import { AdminDashboardPage } from './page.tsx'
 
-export default {
-  middleware: [requireAuth(), requireAdmin()],
+export default createController(routes.admin, {
+  middleware: [requireAuth(), requireAdmin()] as const,
   actions: {
     index() {
       return render(<AdminDashboardPage />)
     },
   },
-} satisfies AppController<typeof routes.admin>
+})

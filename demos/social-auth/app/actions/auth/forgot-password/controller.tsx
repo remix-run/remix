@@ -1,4 +1,4 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 
@@ -7,11 +7,10 @@ import { getIssueMessage, readField } from '../form-utils.ts'
 import { forgotPasswordSchema } from '../schemas.ts'
 import { normalizeEmail, passwordResetTokens, users } from '../../../data/schema.ts'
 import { getReturnToQuery } from '../../../middleware/auth.ts'
-import type { AppContext } from '../../../router.ts'
 import { routes } from '../../../routes.ts'
 import { render } from '../../render.tsx'
 
-export const forgotPasswordController = {
+export const forgotPasswordController = createController(routes.auth.forgotPassword, {
   actions: {
     index({ url }) {
       return render(
@@ -63,4 +62,4 @@ export const forgotPasswordController = {
       )
     },
   },
-} satisfies Controller<typeof routes.auth.forgotPassword, AppContext>
+})
