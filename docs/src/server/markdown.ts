@@ -13,7 +13,8 @@ const parseFrontmatter = frontmatter.default as unknown as (md: string) => {
   body: string
 }
 
-export type ApiTypeKind = 'type' | 'interface' | 'class' | 'function'
+const apiTypeKinds = ['type', 'interface', 'class', 'function', 'mixin', 'variable'] as const
+export type ApiTypeKind = (typeof apiTypeKinds)[number]
 
 export type ApiDocFile = {
   kind: 'api'
@@ -94,8 +95,8 @@ function getDocFile(baseDir: string, fullPath: string): DocFile {
 }
 
 function getApiTypeKind(value: string | undefined): ApiTypeKind {
-  if (value === 'type' || value === 'interface' || value === 'class' || value === 'function') {
-    return value
+  if (apiTypeKinds.includes(value as ApiTypeKind)) {
+    return value as ApiTypeKind
   }
   throw new Error(`Invalid API docs type: ${value ?? '<missing>'}`)
 }

@@ -59,48 +59,6 @@ function isTemplateStringsArray(obj: any): obj is TemplateStringsArray {
   return Array.isArray(obj) && 'raw' in obj
 }
 
-/**
- * Use this helper to escape HTML and create a safe HTML string.
- *
- * ```ts
- * let unsafe = '<script>alert(1)</script>'
- * let safe = html`<h1>${unsafe}</h1>`
- * assert.equal(String(safe), '<h1>&lt;script&gt;alert(1)&lt;/script&gt;</h1>')
- * ```
- *
- * To interpolate raw HTML without escaping, use `html.raw` as a template tag:
- *
- * ```ts
- * let icon = '<b>OK</b>'
- * let safe = html.raw`<div>${icon}</div>`
- * assert.equal(String(safe), '<div><b>Bold</b></div>')
- * ```
- *
- * This has the same semantics as `String.raw` but for HTML snippets that have
- * already been escaped or are from trusted sources.
- */
-type SafeHtmlHelper = {
-  /**
-   * A tagged template function that escapes interpolated values as HTML.
-   *
-   * @param strings The template strings
-   * @param values The values to interpolate
-   * @returns A `SafeHtml` value
-   */
-  (strings: TemplateStringsArray, ...values: Interpolation[]): SafeHtml
-  /**
-   * A tagged template function that does not escape interpolated values.
-   *
-   * Similar to `String.raw`, this preserves the raw values without escaping.
-   * Only use with trusted content or pre-escaped HTML.
-   *
-   * @param strings The template strings
-   * @param values The values to interpolate
-   * @returns A `SafeHtml` value
-   */
-  raw(strings: TemplateStringsArray, ...values: Interpolation[]): SafeHtml
-}
-
 function htmlHelper(strings: TemplateStringsArray, ...values: Interpolation[]): SafeHtml {
   if (!isTemplateStringsArray(strings)) {
     throw new TypeError('html must be used as a template tag')
@@ -117,19 +75,39 @@ function htmlHelper(strings: TemplateStringsArray, ...values: Interpolation[]): 
 
 /**
  * Tagged template helper for creating {@link SafeHtml} values.
+ *
+ * ```ts
+ * let unsafe = '<script>alert(1)</script>'
+ * let safe = html`<h1>${unsafe}</h1>`
+ * assert.equal(String(safe), '<h1>&lt;script&gt;alert(1)&lt;/script&gt;</h1>')
+ * ```
+ *
+ * To interpolate raw HTML without escaping, use `html.raw` as a template tag.
+ * This has the same semantics as `String.raw` but for HTML snippets that have
+ * already been escaped or are from trusted sources.
+ *
+ * ```ts
+ * let icon = '<b>OK</b>'
+ * let safe = html.raw`<div>${icon}</div>`
+ * assert.equal(String(safe), '<div><b>OK</b></div>')
+ * ```
+ *
+ * @param strings The template strings
+ * @param values The values to interpolate
+ * @returns A `SafeHtml` value
  */
-export const html = htmlHelper as SafeHtmlHelper
+export const html = Object.assign(htmlHelper, {
+  raw(strings: TemplateStringsArray, ...values: Interpolation[]): SafeHtml {
+    if (!isTemplateStringsArray(strings)) {
+      throw new TypeError('html.raw must be used as a template tag')
+    }
 
-html.raw = (strings, ...values) => {
-  if (!isTemplateStringsArray(strings)) {
-    throw new TypeError('html.raw must be used as a template tag')
-  }
+    let out = ''
+    for (let i = 0; i < strings.length; i++) {
+      out += strings[i]
+      if (i < values.length) out += stringifyRawInterpolation(values[i])
+    }
 
-  let out = ''
-  for (let i = 0; i < strings.length; i++) {
-    out += strings[i]
-    if (i < values.length) out += stringifyRawInterpolation(values[i])
-  }
-
-  return createSafeHtml(out)
-}
+    return createSafeHtml(out)
+  },
+})

@@ -15,7 +15,7 @@ let server = http.createServer(
   }),
 )
 
-let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 3000
+let port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
 server.listen(port, () => {
   console.log(`Remix API docs server running on http://localhost:${port}`)
