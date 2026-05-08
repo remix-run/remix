@@ -2,6 +2,7 @@ import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { Database } from 'remix/data-table'
+import { Renderer } from 'remix/render-middleware'
 import { redirect } from 'remix/response/redirect'
 
 import { itemsByOrder, orders, orderItemsWithBook } from '../../data/schema.ts'
@@ -11,7 +12,6 @@ import { routes } from '../../routes.ts'
 import { clearCart, getCartTotal } from '../../utils/cart.ts'
 import { getCurrentUser, getCurrentCart } from '../../utils/context.ts'
 import { parseId } from '../../utils/ids.ts'
-import { render } from '../render.tsx'
 import { CheckoutConfirmationPage, CheckoutOrderNotFoundPage } from './confirmation-page.tsx'
 import { CheckoutPage, EmptyCheckoutPage } from './checkout-page.tsx'
 
@@ -26,7 +26,8 @@ const shippingAddressSchema = f.object({
 export default createController(routes.checkout, {
   middleware: [requireAuth()],
   actions: {
-    index() {
+    index({ get }) {
+      let render = get(Renderer)
       let cart = getCurrentCart()
       let total = getCartTotal(cart)
 
@@ -91,6 +92,7 @@ export default createController(routes.checkout, {
 
     async confirmation({ get, params }) {
       let db = get(Database)
+      let render = get(Renderer)
       let user = getCurrentUser()
       let orderId = parseId(params.orderId)
       let order =

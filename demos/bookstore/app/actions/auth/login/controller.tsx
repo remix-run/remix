@@ -1,10 +1,10 @@
 import { createController } from 'remix/fetch-router'
 import { completeAuth, verifyCredentials } from 'remix/auth'
+import { Renderer } from 'remix/render-middleware'
 import { redirect } from 'remix/response/redirect'
 
 import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
-import { render } from '../../render.tsx'
 import {
   getLoginRedirectURL,
   getPostAuthRedirect,
@@ -16,6 +16,7 @@ export default createController(routes.auth.login, {
   actions: {
     index({ get, url }) {
       let session = get(Session)
+      let render = get(Renderer)
       let error = session.get('error')
       let formAction = getLoginRedirectURL(url, routes.auth.login.action)
 

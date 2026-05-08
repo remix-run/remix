@@ -1,7 +1,7 @@
 import { createController } from 'remix/fetch-router'
+import { Renderer } from 'remix/render-middleware'
 
 import { routes } from '../routes.ts'
-import { render } from './render.ts'
 import { ClientMountedPage } from './client-mounted.tsx'
 import { HomePage } from './home.tsx'
 import { ReloadScopePage } from './reload-scope.tsx'
@@ -11,27 +11,32 @@ import { TimePage } from './time.tsx'
 
 export default createController(routes, {
   actions: {
-    home() {
+    home({ get }) {
+      let render = get(Renderer)
       return render(<HomePage />)
     },
 
-    time() {
+    time({ get }) {
+      let render = get(Renderer)
       return render(<TimePage />)
     },
 
-    reloadScope() {
+    reloadScope({ get }) {
+      let render = get(Renderer)
       let pageNow = new Date()
 
       return render(<ReloadScopePage pageNow={pageNow} />)
     },
 
-    stateSearch({ url }) {
+    stateSearch({ get, url }) {
+      let render = get(Renderer)
       let initialQuery = url.searchParams.get('query') ?? ''
 
       return render(<StateSearchRoutePage initialQuery={initialQuery} />)
     },
 
-    clientMounted() {
+    clientMounted({ get }) {
+      let render = get(Renderer)
       return render(<ClientMountedPage />)
     },
 

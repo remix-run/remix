@@ -1,6 +1,7 @@
 import { createController } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
+import { Renderer } from 'remix/render-middleware'
 import { redirect } from 'remix/response/redirect'
 
 import { SignupPage } from './page.tsx'
@@ -11,12 +12,12 @@ import { getPostAuthRedirect, getReturnToQuery } from '../../../middleware/auth.
 import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
-import { render } from '../../render.tsx'
 
 export const signupController = createController(routes.auth.signup, {
   actions: {
-    index({ url }) {
+    index({ get, url }) {
       let returnToQuery = getReturnToQuery(url)
+      let render = get(Renderer)
 
       return render(
         <SignupPage
@@ -31,6 +32,8 @@ export const signupController = createController(routes.auth.signup, {
       let formData = get(FormData)
       let returnToQuery = getReturnToQuery(url)
       let result = s.parseSafe(signupSchema, formData)
+      let render = get(Renderer)
+
       if (!result.success) {
         return render(
           <SignupPage

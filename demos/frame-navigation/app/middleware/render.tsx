@@ -1,23 +1,26 @@
+import type { Router } from 'remix/fetch-router'
+import { renderWith } from 'remix/render-middleware'
+import { createHtmlResponse } from 'remix/response/html'
 import type { RemixNode } from 'remix/ui'
 import { renderToStream, type ResolveFrameContext } from 'remix/ui/server'
-import { createHtmlResponse } from 'remix/response/html'
-import { getContext } from 'remix/async-context-middleware'
-import type { Router } from 'remix/fetch-router'
 
-export function render(node: RemixNode, init?: ResponseInit) {
-  let context = getContext()
-  let request = context.request
-  let router = context.router
+export function render() {
+  return renderWith((context) => {
+    let request = context.request
+    let router = context.router
 
-  let stream = renderToStream(node, {
-    frameSrc: request.url,
-    resolveFrame: (src, target, context) => resolveFrame(router, request, src, target, context),
-    onError(error) {
-      console.error(error)
-    },
+    return function render(node: RemixNode, init?: ResponseInit) {
+      let stream = renderToStream(node, {
+        frameSrc: request.url,
+        resolveFrame: (src, target, context) => resolveFrame(router, request, src, target, context),
+        onError(error) {
+          console.error(error)
+        },
+      })
+
+      return createHtmlResponse(stream, init)
+    }
   })
-
-  return createHtmlResponse(stream, init)
 }
 
 async function resolveFrame(

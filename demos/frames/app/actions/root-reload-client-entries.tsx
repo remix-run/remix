@@ -1,4 +1,5 @@
 import { createAction } from 'remix/fetch-router'
+import { Renderer } from 'remix/render-middleware'
 import type { Handle } from 'remix/ui'
 
 import {
@@ -8,12 +9,12 @@ import {
 } from '../assets/root-reload-client-entries.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
-import { render } from './render.ts'
 
 export const rootReloadClientEntriesAction = createAction(routes.rootReloadClientEntries, {
-  async handler({ url }) {
+  async handler({ get, url }) {
     await delay(1000)
 
+    let render = get(Renderer)
     let includeRemoved = url.searchParams.get('removed') !== '0'
     let serverVersion = new Date().toLocaleTimeString()
 
