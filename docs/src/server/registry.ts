@@ -8,8 +8,6 @@ const TYPE_LABEL: Record<ApiTypeKind, string> = {
   interface: 'Interfaces',
   class: 'Classes',
   function: 'Functions',
-  variable: 'Variables',
-  mixin: 'Mixins',
 }
 
 const TYPE_EYEBROW: Record<ApiTypeKind, string> = {
@@ -17,11 +15,9 @@ const TYPE_EYEBROW: Record<ApiTypeKind, string> = {
   interface: 'Interface',
   class: 'Class',
   function: 'Function',
-  variable: 'Variable',
-  mixin: 'Mixin',
 }
 
-const TYPE_ORDER: ApiTypeKind[] = ['type', 'interface', 'class', 'function', 'variable', 'mixin']
+const TYPE_ORDER: ApiTypeKind[] = ['type', 'interface', 'class', 'function']
 
 export const HOME_PAGE_ID = '__home__'
 export const NOT_FOUND_PAGE_ID = '__not-found__'
