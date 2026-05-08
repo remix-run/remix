@@ -232,6 +232,9 @@ function resolveHref(href: string, baseUrl: string): string | null {
     }
   }
 
+  // Root-relative path — no URL parsing needed
+  if (href.startsWith('/')) return href
+
   // Relative URL — resolve against the current page's path
   try {
     return new URL(href, `${BASE_URL}${baseUrl}`).pathname

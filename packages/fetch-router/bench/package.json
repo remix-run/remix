@@ -5,6 +5,7 @@
   "scripts": {
     "bench": "pnpm run --filter \".\" --sequential \"/^bench:/\"",
     "bench:concurrency": "node src/crawl-concurrency.ts",
+    "bench:throughput": "node src/crawl-throughput.ts",
     "bench:parse-html": "vitest bench --run"
   },
   "dependencies": {

@@ -44,6 +44,7 @@ export function parse(html: string): HTMLElement[] {
   let currentTagName = ''
   let currentAttrName = ''
   let currentAttrValue = ''
+  let attrValueStart = 0
 
   while (i < html.length) {
     let char = html[i]
@@ -159,9 +160,11 @@ export function parse(html: string): HTMLElement[] {
       case State.AFTER_ATTR_NAME:
         if (char === '"') {
           state = State.ATTR_VALUE_DOUBLE_QUOTED
+          attrValueStart = i + 1
           currentAttrValue = ''
         } else if (char === "'") {
           state = State.ATTR_VALUE_SINGLE_QUOTED
+          attrValueStart = i + 1
           currentAttrValue = ''
         } else if (!/\s/.test(char)) {
           state = State.ATTR_VALUE_UNQUOTED
@@ -171,23 +174,19 @@ export function parse(html: string): HTMLElement[] {
 
       case State.ATTR_VALUE_DOUBLE_QUOTED:
         if (char === '"') {
-          currentElement!.setAttribute(currentAttrName, currentAttrValue)
+          currentElement!.setAttribute(currentAttrName, html.slice(attrValueStart, i))
           state = State.BEFORE_ATTR
           currentAttrName = ''
           currentAttrValue = ''
-        } else {
-          currentAttrValue += char
         }
         break
 
       case State.ATTR_VALUE_SINGLE_QUOTED:
         if (char === "'") {
-          currentElement!.setAttribute(currentAttrName, currentAttrValue)
+          currentElement!.setAttribute(currentAttrName, html.slice(attrValueStart, i))
           state = State.BEFORE_ATTR
           currentAttrName = ''
           currentAttrValue = ''
-        } else {
-          currentAttrValue += char
         }
         break
 
