@@ -1,4 +1,5 @@
 import { createRouter } from 'remix/fetch-router'
+import { asyncContext } from 'remix/async-context-middleware'
 import { logger } from 'remix/logger-middleware'
 import { staticFiles } from 'remix/static-middleware'
 
@@ -20,6 +21,7 @@ middleware.push(
     index: false,
   }),
 )
+middleware.push(asyncContext())
 
 export const router = createRouter({ middleware })
 router.map(routes, rootController)

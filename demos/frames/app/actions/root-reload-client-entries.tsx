@@ -11,10 +11,9 @@ import { Document } from '../ui/document.tsx'
 import { render } from './render.ts'
 
 export const rootReloadClientEntriesAction = createAction(routes.rootReloadClientEntries, {
-  async handler(context) {
+  async handler({ url }) {
     await delay(1000)
 
-    let url = new URL(context.request.url)
     let includeRemoved = url.searchParams.get('removed') !== '0'
     let serverVersion = new Date().toLocaleTimeString()
 
@@ -25,7 +24,6 @@ export const rootReloadClientEntriesAction = createAction(routes.rootReloadClien
         withRemovedHref={routes.rootReloadClientEntries.href(undefined, { removed: '1' })}
         withoutRemovedHref={routes.rootReloadClientEntries.href(undefined, { removed: '0' })}
       />,
-      { request: context.request, router: context.router },
     )
   },
 })

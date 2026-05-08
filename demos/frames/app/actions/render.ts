@@ -1,36 +1,28 @@
 import type { RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
 import { createHtmlResponse } from 'remix/response/html'
+import { getContext } from 'remix/async-context-middleware'
 import type { Router } from 'remix/fetch-router'
 
-type RenderOptions = {
-  request?: Request
-  router?: Router
-  init?: ResponseInit
-}
+export function render(node: RemixNode, init?: ResponseInit): Response {
+  let context = getContext()
+  let request = context.request
+  let router = context.router
 
-export function render(node: RemixNode, options: RenderOptions = {}): Response {
-  let stream =
-    options.request && options.router
-      ? renderToStream(node, {
-          resolveFrame: (src) => resolveFrameViaRouter(options.router!, options.request!, src),
-          onError(error) {
-            console.error(error)
-          },
-        })
-      : renderToStream(node, {
-          onError(error) {
-            console.error(error)
-          },
-        })
+  let stream = renderToStream(node, {
+    resolveFrame: (src) => resolveFrameViaRouter(router, request, src),
+    onError(error) {
+      console.error(error)
+    },
+  })
 
-  let headers = new Headers(options.init?.headers)
+  let headers = new Headers(init?.headers)
 
   if (!headers.has('Cache-Control')) {
     headers.set('Cache-Control', 'no-store')
   }
 
-  return createHtmlResponse(stream, { ...options.init, headers })
+  return createHtmlResponse(stream, { ...init, headers })
 }
 
 async function resolveFrameViaRouter(router: Router, request: Request, src: string) {

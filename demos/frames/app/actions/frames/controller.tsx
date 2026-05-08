@@ -27,7 +27,7 @@ export const framesController = createController(routes.frames, {
       )
     },
 
-    async activity({ request, router }) {
+    async activity() {
       await delay(2000)
 
       return render(
@@ -41,11 +41,10 @@ export const framesController = createController(routes.frames, {
             fallback={<div style={{ color: '#9aa8e8' }}>Loading detail…</div>}
           />
         </div>,
-        { request, router },
       )
     },
 
-    async activityDetail({ request, router }) {
+    async activityDetail() {
       await delay(600)
 
       return render(
@@ -60,11 +59,10 @@ export const framesController = createController(routes.frames, {
             />
           </div>
         </div>,
-        { request, router },
       )
     },
 
-    async clientFrameExample({ request, router }) {
+    async clientFrameExample() {
       await delay(500)
 
       return render(
@@ -93,7 +91,6 @@ export const framesController = createController(routes.frames, {
             />
           </div>
         </div>,
-        { request, router },
       )
     },
 
@@ -117,7 +114,7 @@ export const framesController = createController(routes.frames, {
       )
     },
 
-    async clientMountedOuter({ request, router }) {
+    async clientMountedOuter() {
       await delay(350)
 
       return render(
@@ -145,7 +142,6 @@ export const framesController = createController(routes.frames, {
             />
           </div>
         </div>,
-        { request, router },
       )
     },
 

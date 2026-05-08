@@ -11,37 +11,28 @@ import { TimePage } from './time.tsx'
 
 export default createController(routes, {
   actions: {
-    home({ request, router }) {
-      return render(<HomePage />, { request, router })
+    home() {
+      return render(<HomePage />)
     },
 
-    time({ request, router }) {
-      return render(<TimePage />, { request, router })
+    time() {
+      return render(<TimePage />)
     },
 
-    reloadScope({ request, router }) {
+    reloadScope() {
       let pageNow = new Date()
 
-      return render(<ReloadScopePage pageNow={pageNow} />, {
-        request,
-        router,
-      })
+      return render(<ReloadScopePage pageNow={pageNow} />)
     },
 
-    stateSearch({ request, router, url }) {
+    stateSearch({ url }) {
       let initialQuery = url.searchParams.get('query') ?? ''
 
-      return render(<StateSearchRoutePage initialQuery={initialQuery} />, {
-        request,
-        router,
-      })
+      return render(<StateSearchRoutePage initialQuery={initialQuery} />)
     },
 
-    clientMounted({ request, router }) {
-      return render(<ClientMountedPage />, {
-        request,
-        router,
-      })
+    clientMounted() {
+      return render(<ClientMountedPage />)
     },
 
     rootReloadClientEntries: rootReloadClientEntriesAction.handler,
