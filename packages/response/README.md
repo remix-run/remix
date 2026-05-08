@@ -29,7 +29,7 @@ import { compressResponse } from 'remix/response/compress'
 
 ### File Responses
 
-The `createFileResponse` helper creates a response for serving files with full HTTP semantics. It works with both native `File` objects and `LazyFile` from `@remix-run/lazy-file`:
+The `createFileResponse` helper creates a response for serving files with full HTTP semantics. It works with both native `File` objects and `LazyFile` from `remix/lazy-file`:
 
 ```ts
 import { createFileResponse } from 'remix/response/file'
@@ -129,7 +129,7 @@ let response = createHtmlResponse('<h1>Hello, World!</h1>')
 // Body: <!DOCTYPE html><h1>Hello, World!</h1>
 ```
 
-The helper automatically prepends `<!DOCTYPE html>` if not already present. It works with strings, `SafeHtml` [from `@remix-run/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template), Blobs/Files, ArrayBuffers, and ReadableStreams.
+The helper automatically prepends `<!DOCTYPE html>` if not already present. It works with strings, `SafeHtml` [from `remix/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template), Blobs/Files, ArrayBuffers, and ReadableStreams.
 
 ```ts
 import { html } from 'remix/html-template'
@@ -226,11 +226,11 @@ Range requests and compression are mutually exclusive. When `Accept-Ranges: byte
 
 ## Related Packages
 
-- [`@remix-run/headers`](https://github.com/remix-run/remix/tree/main/packages/headers) - Type-safe HTTP header manipulation
-- [`@remix-run/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template) - Safe HTML templating with automatic escaping
-- [`@remix-run/fs`](https://github.com/remix-run/remix/tree/main/packages/fs) - File system utilities including `openFile`
-- [`@remix-run/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Build HTTP routers using the web fetch API
-- [`@remix-run/mime`](https://github.com/remix-run/remix/tree/main/packages/mime) - MIME type utilities
+- [`remix/headers`](https://github.com/remix-run/remix/tree/main/packages/headers) - Type-safe HTTP header manipulation
+- [`remix/html-template`](https://github.com/remix-run/remix/tree/main/packages/html-template) - Safe HTML templating with automatic escaping
+- [`remix/fs`](https://github.com/remix-run/remix/tree/main/packages/fs) - File system utilities including `openFile`
+- [`remix/fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Build HTTP routers using the web fetch API
+- [`remix/mime`](https://github.com/remix-run/remix/tree/main/packages/mime) - MIME type utilities
 
 ## License
 

@@ -74,6 +74,8 @@ export function createRouter(versions: ServerContext['versions']) {
             docFile.path,
             docFilesLookup,
             params.version,
+            // Don't transform links in README - too many false positives
+            docFile.kind !== 'package',
           )
           node = <MarkdownContent html={html} />
           sourceUrl = source
