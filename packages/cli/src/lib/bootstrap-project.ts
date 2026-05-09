@@ -194,7 +194,7 @@ async function copyTemplateDirectory({
 
   for (let entry of entries) {
     let sourcePath = path.join(sourceDir, entry.name)
-    let targetPath = path.join(targetDir, entry.name)
+    let targetPath = path.join(targetDir, entry.name === 'gitignore' ? '.gitignore' : entry.name)
 
     if (TEMPLATE_EXCLUDED_NAMES.has(entry.name)) {
       continue
