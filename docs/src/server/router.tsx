@@ -100,8 +100,8 @@ export function createRouter(versions: ServerContext['versions']) {
           <ServerPage docFiles={docFiles} versions={versions} activeVersion={params.version}>
             <h1>Welcome to Remix 3!</h1>
             <p>
-              Remix is a batteries-included, ultra-productive, zero dependencies and bundler-free
-              framework, ready to develop with in a model-first world. Remix 3 is built on the
+              Remix is a batteries-included, ultra-productive, zero-dependency, bundler-free
+              framework, ready for development in a model-first world. Remix 3 is built on the
               following principles:
             </p>
 
