@@ -1,4 +1,4 @@
-BREAKING CHANGE: Simplified route action, controller, request handler, and middleware helper types. `Action` now accepts a route pattern, `RoutePattern`, or `Route` object as its first generic and the full request context as its optional second generic. It describes either a plain request handler function or an action object with optional inline middleware. `Controller` now accepts the route map as its first generic and the full request context as its optional second generic. `RequestHandler` now accepts the full request context as its only generic. `Middleware` now accepts one context effect generic, which can be a single `ContextEntry`, a `ContextEntries` tuple, or a context transform function. `BuildAction` is no longer exported.
+BREAKING CHANGE: Simplified route action, controller, request handler, and middleware helper types. `Action` now accepts a route pattern, `RoutePattern`, or `Route` object as its first generic and the full request context as its optional second generic. It describes either a plain request handler function or an action object with optional inline middleware. `Controller` now accepts the route map as its first generic and the full request context as its optional second generic. `RequestHandler` now accepts the full request context as its only generic. `Middleware` now accepts one context effect generic, which can be a single readonly `[key, value]` tuple, a `ContextEntries` tuple, or a context transform function. `BuildAction` is no longer exported.
 
 For most apps, augment `RouterTypes.context` once and use `createAction()`/`createController()` to type stored handlers without `satisfies` clauses:
 
@@ -39,10 +39,10 @@ let controller = createController(routes, {
 If you manually type actions or controllers in advanced multi-router code, compose the full context type first and pass it as the second generic:
 
 ```ts
-import type { Action, ContextWithMiddleware } from 'remix/fetch-router'
+import type { Action, MiddlewareContext } from 'remix/fetch-router'
 
 let accountMiddleware = [requireAuth<AuthIdentity>()] as const
-type AccountContext = ContextWithMiddleware<AppContext, typeof accountMiddleware>
+type AccountContext = MiddlewareContext<typeof accountMiddleware, AppContext>
 
 let action: Action<typeof routes.account, AccountContext> = {
   middleware: accountMiddleware,
@@ -95,13 +95,12 @@ If you manually annotate middleware, pass only the context transform type:
 let middleware: Middleware<{}, SetDatabaseContextTransform>
 
 // after
-type DatabaseContextEntry = ContextEntry<typeof Database, Database>
-let middleware: Middleware<DatabaseContextEntry>
+let middleware: Middleware<readonly [typeof Database, Database]>
 ```
 
-Simplified the public middleware context helper types. `MiddlewareContext` is now the exported helper for deriving the request context produced by a middleware chain, and it accepts an optional base context as its second type parameter. `ContextWithMiddleware` is available when code reads more naturally by naming the base context first. Middleware that provides one context value can use `ContextEntry<typeof Key, Value>` directly instead of wrapping the entry in a one-item tuple. The lower-level `MiddlewareContextTransform`, `ContextTransform`, `ApplyContextTransform`, `ApplyMiddleware`, and `ApplyMiddlewareTuple` helpers are no longer exported.
+Simplified the public middleware context helper types. `MiddlewareContext` is now the exported helper for deriving the request context produced by a middleware chain, and it accepts an optional base context as its second type parameter. Middleware that provides one context value can use a readonly `[key, value]` tuple directly instead of wrapping the entry in a one-item tuple. The lower-level `MiddlewareContextTransform`, `ContextTransform`, `ApplyContextTransform`, `ApplyMiddleware`, and `ApplyMiddlewareTuple` helpers are no longer exported.
 
-`MiddlewareContext` and `ContextWithMiddleware` accept middleware values, not middleware factory function types. Use `ReturnType<typeof factory>` when a middleware is created by a factory function:
+`MiddlewareContext` accepts middleware values, not middleware factory function types. Use `ReturnType<typeof factory>` when a middleware is created by a factory function:
 
 ```ts
 // before
@@ -124,7 +123,7 @@ type AppContext = MiddlewareContext<typeof middleware>
 type ActionContext = ApplyMiddlewareTuple<AppContext, typeof actionMiddleware>
 
 // after
-type ActionContext = ContextWithMiddleware<AppContext, typeof actionMiddleware>
+type ActionContext = MiddlewareContext<typeof actionMiddleware, AppContext>
 ```
 
 Renamed request context helper types so their names describe the `RequestContext` type they produce. Use `ContextWithParams` when deriving an app context that includes route params:
@@ -143,32 +142,27 @@ type AppContext<params extends AnyParams = {}> = ContextWithParams<
 >
 ```
 
-Use `ContextWithValues` when a middleware package provides one or more context values. Third-party middleware packages that augment request context should prefer exported helper names like `ContextWithCurrentUser` so their package-specific helpers match the built-in `ContextWith...` naming pattern:
+Use `ContextWithEntries` when manually composing one or more context entries without a middleware tuple:
 
 ```ts
 // before
-export type WithCurrentUser<context extends RequestContext<any, any>> = MergeContext<
-  context,
-  [readonly [typeof CurrentUser, User | null]]
->
+type CurrentUserContext = MergeContext<AppContext, [readonly [typeof CurrentUser, User | null]]>
 
 // after
-type CurrentUserContextEntry = ContextEntry<typeof CurrentUser, User | null>
-
-export type ContextWithCurrentUser<context extends RequestContext<any, any>> = ContextWithValues<
-  context,
-  [CurrentUserContextEntry]
+type CurrentUserContext = ContextWithEntries<
+  AppContext,
+  [readonly [typeof CurrentUser, User | null]]
 >
 ```
 
-Use `ContextWithValue` when refining a single context value for a specific handler or middleware result:
+Use `ContextWithEntry` when refining a single context entry for a specific handler or middleware result:
 
 ```ts
 // before
 type AdminContext = SetContextValue<AppContext, typeof CurrentRole, 'admin'>
 
 // after
-type AdminContext = ContextWithValue<AppContext, typeof CurrentRole, 'admin'>
+type AdminContext = ContextWithEntry<AppContext, readonly [typeof CurrentRole, 'admin']>
 ```
 
 Stored action objects and controllers no longer derive handler context from their local middleware tuple. If local middleware adds context values that a handler requires, compose the full handler context explicitly and pass it to `Action`, `Controller`, `createAction()`, or `createController()`:
@@ -187,7 +181,7 @@ let controller = createController(routes, {
 
 // after
 let accountMiddleware = [requireAuth<AuthIdentity>()] as const
-type AuthenticatedAppContext = ContextWithMiddleware<AppContext, typeof accountMiddleware>
+type AuthenticatedAppContext = MiddlewareContext<typeof accountMiddleware, AppContext>
 
 let controller = createController<typeof routes, AuthenticatedAppContext>(routes, {
   middleware: accountMiddleware,

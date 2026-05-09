@@ -1,10 +1,4 @@
-import {
-  createContextKey,
-  type ContextEntry,
-  type ContextWithValues,
-  type Middleware,
-  type RequestContext,
-} from '@remix-run/fetch-router'
+import { createContextKey, type Middleware, type RequestContext } from '@remix-run/fetch-router'
 
 /**
  * Failure details for an unauthenticated request.
@@ -51,30 +45,6 @@ export type AuthState<identity = unknown> = GoodAuth<identity> | BadAuth
  * Context key used to read auth state with `context.get(Auth)`.
  */
 export const Auth = createContextKey<AuthState>()
-
-type AuthContextEntry<auth> = ContextEntry<typeof Auth, auth>
-
-/**
- * Adds the {@link Auth} context key — typed as the full {@link AuthState}
- * union — onto an existing router `RequestContext`. Use this on handlers
- * mounted under {@link auth} where the request may be either authenticated
- * ({@link GoodAuth}) or unauthenticated ({@link BadAuth}).
- */
-export type ContextWithAuth<
-  context extends RequestContext<any, any>,
-  identity = unknown,
-> = ContextWithValues<context, [AuthContextEntry<AuthState<identity>>]>
-
-/**
- * Adds the {@link Auth} context key — typed as a {@link GoodAuth} only —
- * onto an existing router `RequestContext`. Use this on handlers mounted
- * under {@link requireAuth} where the request is guaranteed to be
- * authenticated.
- */
-export type ContextWithRequiredAuth<
-  context extends RequestContext<any, any>,
-  identity = unknown,
-> = ContextWithValues<context, [AuthContextEntry<GoodAuth<identity>>]>
 
 /**
  * Successful result returned by an auth scheme.
@@ -148,7 +118,7 @@ export interface AuthOptions<schemes extends readonly AuthScheme<any>[] = AuthSc
  */
 export function auth<schemes extends readonly AuthScheme<any>[]>(
   options: AuthOptions<schemes>,
-): Middleware<AuthContextEntry<AuthForSchemes<schemes>>> {
+): Middleware<readonly [typeof Auth, AuthForSchemes<schemes>]> {
   if (options.schemes.length === 0) {
     throw new Error('auth() requires at least one authentication scheme')
   }

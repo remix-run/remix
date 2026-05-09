@@ -18,7 +18,5 @@ export type {
   AuthSchemeSuccess,
   GoodAuth,
   BadAuth,
-  ContextWithAuth,
-  ContextWithRequiredAuth,
 } from './lib/auth.ts'
 export type { RequireAuthOptions } from './lib/require-auth.ts'

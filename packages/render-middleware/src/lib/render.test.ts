@@ -1,15 +1,9 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createRouter, type MiddlewareContext, type RequestContext } from '@remix-run/fetch-router'
+import { createRouter, type MiddlewareContext } from '@remix-run/fetch-router'
 
-import {
-  Renderer,
-  renderWith,
-  type AnyRenderer,
-  type ContextWithRenderer,
-  type Renderer as RendererType,
-} from '../index.ts'
+import { Renderer, renderWith, type AnyRenderer, type Renderer as RendererType } from '../index.ts'
 
 type IsEqual<left, right> =
   (<type>() => type extends left ? 1 : 2) extends <type>() => type extends right ? 1 : 2
@@ -87,14 +81,19 @@ describe('renderWith', () => {
     assert.equal(await response.text(), '{\n  "ok": true\n}')
   })
 
-  it('exports context helpers for explicit context composition', () => {
-    type JsonRenderer = (value: { ok: boolean }) => Response
-    type JsonContext = ContextWithRenderer<RequestContext, JsonRenderer>
+  it('derives renderer context from middleware', () => {
+    let json = renderWith(
+      () =>
+        function render(value: { ok: boolean }) {
+          return Response.json(value)
+        },
+    )
+    type JsonContext = MiddlewareContext<[typeof json]>
 
     function assertContext(context: JsonContext) {
       let renderer = context.get(Renderer)
 
-      expectTypeEquality<IsEqual<typeof renderer, JsonRenderer>>()
+      expectTypeEquality<IsEqual<typeof renderer, (value: { ok: boolean }) => Response>>()
 
       renderer({ ok: true })
 

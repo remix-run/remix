@@ -47,21 +47,22 @@ This middleware requires support for `node:async_hooks`, so it is intended for N
 `getContext()` is global and out-of-band, so it reuses your fetch-router `RouterTypes.context` by default.
 
 ```ts
-import type { AnyParams, MiddlewareContext, ContextWithParams } from 'remix/fetch-router'
-import type { ContextWithRequiredAuth } from 'remix/auth-middleware'
+import { requireAuth } from 'remix/auth-middleware'
+import type { AnyParams, ContextWithParams, MiddlewareContext } from 'remix/fetch-router'
 import { loadAuth } from './middleware/auth.ts'
 import { loadSession } from './middleware/session.ts'
 
 export type RootMiddleware = [ReturnType<typeof loadSession>, ReturnType<typeof loadAuth>]
+export const authenticatedMiddleware = [requireAuth<{ id: string }>()] as const
 
 export type AppContext<params extends AnyParams = {}> = ContextWithParams<
   MiddlewareContext<RootMiddleware>,
   params
 >
 
-export type AuthenticatedAppContext<params extends AnyParams = {}> = ContextWithRequiredAuth<
-  AppContext<params>,
-  { id: string }
+export type AuthenticatedAppContext<params extends AnyParams = {}> = ContextWithParams<
+  MiddlewareContext<typeof authenticatedMiddleware, AppContext>,
+  params
 >
 
 declare module 'remix/fetch-router' {
