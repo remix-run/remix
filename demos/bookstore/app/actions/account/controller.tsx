@@ -8,8 +8,8 @@ import { AccountPage } from './page.tsx'
 export default createController(routes.account, {
   middleware: [requireAuth()],
   actions: {
-    index({ render }) {
-      let user = getCurrentUser()
+    index({ auth, render }) {
+      let user = getCurrentUser(auth)
 
       return render(<AccountPage user={user} />)
     },

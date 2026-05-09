@@ -11,8 +11,8 @@ import { AccountOrderNotFoundPage, AccountOrderShowPage } from './show-page.tsx'
 export default createController(routes.account.orders, {
   middleware: [requireAuth()],
   actions: {
-    async index({ db, render }) {
-      let user = getCurrentUser()
+    async index({ auth, db, render }) {
+      let user = getCurrentUser(auth)
       let userOrders = await db.findMany(orders, {
         where: { user_id: user.id },
         orderBy: ['created_at', 'asc'],
@@ -22,8 +22,8 @@ export default createController(routes.account.orders, {
       return render(<AccountOrdersIndexPage orders={userOrders} />)
     },
 
-    async show({ db, params, render }) {
-      let user = getCurrentUser()
+    async show({ auth, db, params, render }) {
+      let user = getCurrentUser(auth)
       let orderId = parseId(params.orderId)
       let order =
         orderId === undefined

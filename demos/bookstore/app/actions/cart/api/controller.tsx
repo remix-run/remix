@@ -38,7 +38,7 @@ export default createController(routes.cart.api, {
 
       session.set(
         'cart',
-        addToCart(getCurrentCart(), book.id, book.slug, book.title, book.price, 1),
+        addToCart(getCurrentCart(session), book.id, book.slug, book.title, book.price, 1),
       )
 
       if (redirectTo === 'none') {
@@ -59,7 +59,7 @@ export default createController(routes.cart.api, {
       }
 
       let nextQuantity = parseInt(quantity, 10)
-      session.set('cart', updateCartItem(getCurrentCart(), book.id, nextQuantity))
+      session.set('cart', updateCartItem(getCurrentCart(session), book.id, nextQuantity))
 
       if (redirectTo === 'none') {
         return new Response(null, { status: 204 })
@@ -80,7 +80,7 @@ export default createController(routes.cart.api, {
         return new Response('Book not found', { status: 404 })
       }
 
-      session.set('cart', removeFromCart(getCurrentCart(), book.id))
+      session.set('cart', removeFromCart(getCurrentCart(session), book.id))
 
       if (redirectTo === 'none') {
         return new Response(null, { status: 204 })

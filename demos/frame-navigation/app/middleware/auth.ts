@@ -1,4 +1,3 @@
-import { getContext } from 'remix/async-context-middleware'
 import { auth, requireAuth as requireAuthenticated } from 'remix/auth-middleware'
 import type { AuthScheme } from 'remix/auth-middleware'
 import { createCookie } from 'remix/cookie'
@@ -33,10 +32,6 @@ export function loadAuth() {
   return auth({
     schemes: [authCookieScheme],
   })
-}
-
-export function isAuthenticated() {
-  return getContext().auth.ok
 }
 
 export const requireAuth = requireAuthenticated<FrameAuthIdentity>({

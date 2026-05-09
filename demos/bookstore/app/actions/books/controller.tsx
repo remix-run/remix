@@ -10,17 +10,17 @@ import { BookNotFoundPage, ShowPage } from './show-page.tsx'
 
 export default createController(routes.books, {
   actions: {
-    async index({ db, render }) {
+    async index({ db, render, session }) {
       let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
       let genreRows = await db.query(books).select('genre').distinct().orderBy('genre', 'asc').all()
-      let cart = getCurrentCart()
+      let cart = getCurrentCart(session)
 
       return render(
         <IndexPage allBooks={allBooks} genres={genreRows.map((row) => row.genre)} cart={cart} />,
       )
     },
 
-    async genre({ db, params, render }) {
+    async genre({ db, params, render, session }) {
       let genre = params.genre
       let matchingBooks = await db.findMany(books, {
         where: ilike('genre', genre),
@@ -31,7 +31,7 @@ export default createController(routes.books, {
         return render(<GenreNotFoundPage genre={genre} />, { status: 404 })
       }
 
-      let cart = getCurrentCart()
+      let cart = getCurrentCart(session)
 
       return render(<GenrePage genre={genre} matchingBooks={matchingBooks} cart={cart} />)
     },

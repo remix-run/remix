@@ -26,8 +26,8 @@ const userSchema = f.object({
 export default createController(routes.admin.users, {
   middleware: [requireAuth(), requireAdmin()],
   actions: {
-    async index({ db, render }) {
-      let currentUser = getCurrentUser()
+    async index({ auth, db, render }) {
+      let currentUser = getCurrentUser(auth)
       let allUsers = await db.findMany(users, { orderBy: ['id', 'asc'] })
 
       return render(<AdminUsersIndexPage users={allUsers} currentUserId={currentUser.id} />)

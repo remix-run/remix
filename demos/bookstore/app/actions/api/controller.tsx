@@ -23,7 +23,7 @@ export default createController(routes.api, {
         return new Response('Book not found', { status: 404 })
       }
 
-      let cart = getCurrentCart()
+      let cart = getCurrentCart(session)
       let inCart = cart.items.some((item) => item.bookId === book.id)
 
       let next = inCart

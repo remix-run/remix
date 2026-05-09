@@ -28,8 +28,8 @@ export default createController(routes, {
         cacheControl: 'public, max-age=31536000',
       })
     },
-    async home({ db, render }) {
-      let cart = getCurrentCart()
+    async home({ db, render, session }) {
+      let cart = getCurrentCart(session)
       let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
       let featuredBookRows = await db.findMany(books, {
         where: inList('slug', featuredSlugs),
@@ -47,7 +47,7 @@ export default createController(routes, {
     about({ render }) {
       return render(<AboutPage />)
     },
-    async search({ db, render, url }) {
+    async search({ db, render, session, url }) {
       let query = url.searchParams.get('q') ?? ''
       let matchingBooks = query
         ? await db.findMany(books, {
@@ -59,7 +59,7 @@ export default createController(routes, {
             orderBy: ['id', 'asc'],
           })
         : []
-      let cart = getCurrentCart()
+      let cart = getCurrentCart(session)
 
       return render(<SearchPage query={query} matchingBooks={matchingBooks} cart={cart} />)
     },

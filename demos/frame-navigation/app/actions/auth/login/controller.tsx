@@ -3,12 +3,12 @@ import { css } from 'remix/ui'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../../../routes.ts'
-import { authCookie, isAuthenticated } from '../../../middleware/auth.ts'
+import { authCookie } from '../../../middleware/auth.ts'
 
 export default createController(routes.auth.login, {
   actions: {
-    async index({ render }) {
-      if (isAuthenticated()) {
+    async index({ auth, render }) {
+      if (auth.ok) {
         return redirect(routes.main.index.href())
       }
 

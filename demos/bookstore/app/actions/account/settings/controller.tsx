@@ -24,14 +24,14 @@ const accountSettingsSchema = f.object({
 export default createController(routes.account.settings, {
   middleware: [requireAuth()],
   actions: {
-    index({ render }) {
-      let user = getCurrentUser()
+    index({ auth, render }) {
+      let user = getCurrentUser(auth)
 
       return render(<AccountSettingsPage user={user} />)
     },
 
-    async update({ db, formData }) {
-      let user = getCurrentUser()
+    async update({ auth, db, formData }) {
+      let user = getCurrentUser(auth)
       let { email, name, password } = s.parse(accountSettingsSchema, formData)
 
       let updateData = password
