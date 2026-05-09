@@ -1,11 +1,11 @@
 # session-middleware
 
-Session middleware for Remix using signed cookies. It loads session state from incoming requests, exposes it as `context.session` and `context.get(Session)`, and persists updates automatically.
+Session middleware for Remix using signed cookies. It loads session state from incoming requests, exposes it as `context.session` (or `context.get(Session)`), and persists updates automatically.
 
 ## Features
 
 - **Session Lifecycle Handling** - Reads and saves session state per request
-- **Context Integration** - Exposes session APIs as `context.session` and `context.get(Session)`
+- **Context Integration** - Exposes `context.session` (or `context.get(Session)`)
 - **Secure Cookie Support** - Designed for signed session cookies
 
 ## Installation
@@ -44,10 +44,10 @@ router.get('/', (context) => {
 The middleware:
 
 - Reads the session from the cookie on incoming requests
-- Makes it available as `context.session` and `context.get(Session)`
+- Makes it available as `context.session` (or `context.get(Session)`)
 - Automatically saves session changes and sets the cookie on responses
 
-Use `context.session` in handlers for normal session reads and writes. `context.get(Session)` reads the same session and remains available for middleware internals or generic keyed-context helpers.
+Use `context.session` (or `context.get(Session)`) for normal session reads and writes.
 
 Note: The session cookie must be signed for security. This prevents tampering with the session data on the client.
 

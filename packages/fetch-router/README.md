@@ -551,7 +551,7 @@ function auth(options?: AuthOptions): Middleware {
 }
 ```
 
-Middleware that provides a value to downstream handlers can store it in request context with a key. If the value is common enough that handlers would otherwise repeat `context.get(Key)` everywhere, the middleware can also install a direct context property. Declare the property in the middleware's context entry type and pass the same property name to `context.set()`:
+Middleware can store values in request context with a key. To make that value available as `context.db`, add `property: 'db'` to the middleware type and pass `{ property: 'db' }` to `context.set()`:
 
 ```ts
 import { createContextKey, type Middleware } from 'remix/fetch-router'
@@ -578,7 +578,7 @@ router.get('/books', async (context) => {
 })
 ```
 
-The context key remains the source of truth. `context.db` is a non-enumerable getter that reads the same value as `context.get(Database)`, so middleware internals and advanced code can still use keyed access when that is clearer.
+Use `context.db` (or `context.get(Database)`). If two values use the same property name, the router throws.
 
 Middleware may be used at three levels: globally on the router, on a controller, or inline on an individual action.
 
@@ -718,13 +718,13 @@ When manually annotating stored handlers, use `Action<typeof route, Context>` fo
 
 #### Middleware Provider Guidance
 
-`context.get(key)` returns a defined value when the context type includes that key or the key was created with a default value. Constructor keys like `FormData` are useful context keys, but the constructor itself is not a guarantee that a value exists. Use context transforms for required middleware values, and handle `undefined` when reading values that may not be present.
+`context.get(key)` returns a defined value when the context type includes the key or the key has a default. Constructor keys like `FormData` are useful, but they do not imply presence; use context transforms for required values and handle `undefined` otherwise.
 
 If you're authoring a middleware package that stores values in request context, treat that context contract as part of the package API. A good provider should usually export:
 
 - the context key consumers read with `context.get(...)`
 - the middleware that populates that key at runtime, with a `Middleware` context transform that describes the value it provides
-- an optional direct context property for common values that would otherwise require repetitive `context.get(...)` calls
+- an optional direct context property for values handlers read frequently
 
 Apps can derive request context from the middleware tuple with `MiddlewareContext`. If they need to describe a context shape without a middleware tuple, they can use the core `ContextWithEntry` and `ContextWithEntries` helpers directly.
 
@@ -750,7 +750,7 @@ export function loadCurrentUser(): Middleware<{
 let middleware = [loadCurrentUser()] as const
 type AppContext = MiddlewareContext<typeof middleware>
 
-// Handlers can use either form:
+// Use context.currentUser (or context.get(CurrentUser)).
 // context.currentUser
 // context.get(CurrentUser)
 ```
@@ -887,7 +887,7 @@ No special test harness or mocking required! Just use `fetch()` like you would i
 
 - [auth-middleware](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) - Request authentication and route protection helpers
 - [session-middleware](https://github.com/remix-run/remix/tree/main/packages/session-middleware) - Load and persist sessions in request context
-- [form-data-middleware](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware) - Parse request bodies into `context.get(FormData)`
+- [form-data-middleware](https://github.com/remix-run/remix/tree/main/packages/form-data-middleware) - Parse request bodies into `context.formData` (or `context.get(FormData)`)
 - [response](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers for HTML, JSON, files, and redirects
 
 ## Related Work

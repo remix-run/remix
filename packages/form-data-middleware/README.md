@@ -1,11 +1,11 @@
 # form-data-middleware
 
-Form body parsing middleware for Remix. It parses incoming [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) and exposes it via `context.formData` and `context.get(FormData)`.
+Form body parsing middleware for Remix. It parses incoming [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) and exposes it via `context.formData` (or `context.get(FormData)`).
 
 ## Features
 
 - **Request Form Parsing** - Parses request body form data once per request
-- **File Access** - Uploaded files are available from `context.formData` and `context.get(FormData)`
+- **File Access** - Uploaded files are available from `context.formData` (or `context.get(FormData)`)
 - **Custom Upload Handling** - Supports pluggable upload handlers for file processing
 - **Error Control** - Optional suppression for malformed form data
 
@@ -17,7 +17,7 @@ npm i remix
 
 ## Usage
 
-Use the `formData()` middleware at the router level to parse `FormData` from the request body and make it available on request context via `context.formData` and `context.get(FormData)`.
+Use the `formData()` middleware at the router level to parse `FormData` from the request body and make it available as `context.formData` (or `context.get(FormData)`).
 
 When `formData()` runs successfully it always provides a `FormData` value. Requests that do not contain a form body, including `GET` and `HEAD` requests, receive an empty `FormData`.
 
@@ -43,7 +43,7 @@ router.post('/users', async (context) => {
 })
 ```
 
-Use `context.formData` in handlers for the common case. `context.get(FormData)` reads the same value and remains useful in middleware or generic helpers that work with keyed context.
+Use `context.formData` (or `context.get(FormData)`).
 
 ### Custom File Upload Handler
 

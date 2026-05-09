@@ -6,7 +6,7 @@ Request-scoped renderer middleware for Remix. It stores a renderer in `fetch-rou
 
 - **Generic renderers** - Render any input type to a `Response`
 - **Request-scoped setup** - Create renderers from the current `RequestContext`
-- **Typed context** - `context.render` and `context.get(Renderer)` use the renderer type provided by middleware
+- **Typed context** - Typed `context.render` (or `context.get(Renderer)`)
 - **Small runtime** - The package only stores a renderer in request context
 
 ## Installation
@@ -17,7 +17,7 @@ npm i remix
 
 ## Usage
 
-Use `renderWith()` to add a renderer to request context. The renderer is available as `context.render` for handlers and as `context.get(Renderer)` for keyed access.
+Use `renderWith()` to add a renderer to `context.render` and `context.get(Renderer)`.
 
 ```ts
 import { createRouter, type MiddlewareContext } from 'remix/fetch-router'
@@ -41,7 +41,7 @@ router.get('/hello', (context) => {
 })
 ```
 
-`context.render` and `context.get(Renderer)` read the same request-scoped renderer. Prefer `context.render(...)` in route actions, and use `Renderer` when writing lower-level middleware or generic helpers that operate on context keys.
+Use `context.render(...)` (or `context.get(Renderer)(...)`).
 
 Renderers may render any value type, not just UI nodes.
 
