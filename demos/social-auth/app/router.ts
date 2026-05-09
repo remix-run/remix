@@ -15,12 +15,19 @@ import { createXAuthController } from './actions/auth/x/controller.ts'
 import { createRootController } from './actions/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
+import { render } from './middleware/render.tsx'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { routes } from './routes.ts'
 import { externalProviderRegistry, type ExternalProviderRegistry } from './utils/external-auth.ts'
 
 type AppContext = MiddlewareContext<
-  [typeof formData, typeof session, typeof loadDatabase, typeof loadAuth]
+  [
+    ReturnType<typeof formData>,
+    ReturnType<typeof session>,
+    ReturnType<typeof loadDatabase>,
+    ReturnType<typeof loadAuth>,
+    ReturnType<typeof render>,
+  ]
 >
 
 declare module 'remix/fetch-router' {
@@ -50,6 +57,7 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
       session(cookie, storage),
       loadDatabase(),
       loadAuth(),
+      render(),
     ],
   })
 

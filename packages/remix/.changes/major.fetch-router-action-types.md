@@ -2,6 +2,16 @@ BREAKING CHANGE: Updated the re-exported `remix/fetch-router` helper types to ma
 
 The request context helper type renames also apply to imports from `remix/fetch-router`.
 
+`MiddlewareContext` and `ContextWithMiddleware` accept middleware values, not middleware factory function types. Use `ReturnType<typeof factory>` when a middleware is created by a factory function:
+
+```ts
+// before
+type AppContext = MiddlewareContext<[typeof session]>
+
+// after
+type AppContext = MiddlewareContext<[ReturnType<typeof session>]>
+```
+
 Use `ContextWithParams` when deriving an app context that includes route params:
 
 ```ts

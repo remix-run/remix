@@ -1,1 +1,0 @@
-`MiddlewareContext` and `ContextWithMiddleware` now accept middleware factory function types in addition to middleware instance types, so app context tuples can use entries like `typeof session` instead of `ReturnType<typeof session>`.

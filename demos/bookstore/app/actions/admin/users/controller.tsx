@@ -2,6 +2,7 @@ import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { Database } from 'remix/data-table'
+import { Renderer } from 'remix/render-middleware'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../../../data/schema.ts'
@@ -10,7 +11,6 @@ import { requireAuth } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
 import { getCurrentUser } from '../../../utils/context.ts'
 import { parseId } from '../../../utils/ids.ts'
-import { render } from '../../render.tsx'
 import { AdminUserFormPage } from './form.tsx'
 import { AdminUsersIndexPage } from './index-page.tsx'
 import { AdminUserNotFoundPage, AdminUserShowPage } from './show-page.tsx'
@@ -30,6 +30,7 @@ export default createController(routes.admin.users, {
   actions: {
     async index({ get }) {
       let db = get(Database)
+      let render = get(Renderer)
       let currentUser = getCurrentUser()
       let allUsers = await db.findMany(users, { orderBy: ['id', 'asc'] })
 
@@ -38,6 +39,7 @@ export default createController(routes.admin.users, {
 
     async show({ get, params }) {
       let db = get(Database)
+      let render = get(Renderer)
       let userId = parseId(params.userId)
       let targetUser = userId === undefined ? undefined : await db.find(users, userId)
 
@@ -50,6 +52,7 @@ export default createController(routes.admin.users, {
 
     async edit({ get, params }) {
       let db = get(Database)
+      let render = get(Renderer)
       let userId = parseId(params.userId)
       let targetUser = userId === undefined ? undefined : await db.find(users, userId)
 

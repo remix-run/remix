@@ -32,12 +32,20 @@ import fragmentsController from './actions/fragments/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
+import { render } from './middleware/render.tsx'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
 
 type AppContext = MiddlewareContext<
-  [typeof formData, typeof session, typeof loadDatabase, typeof loadAssetEntry, typeof loadAuth]
+  [
+    ReturnType<typeof formData>,
+    ReturnType<typeof session>,
+    ReturnType<typeof loadDatabase>,
+    ReturnType<typeof loadAssetEntry>,
+    ReturnType<typeof loadAuth>,
+    ReturnType<typeof render>,
+  ]
 >
 
 declare module 'remix/fetch-router' {
@@ -75,6 +83,7 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
   middleware.push(loadDatabase())
   middleware.push(loadAssetEntry())
   middleware.push(loadAuth())
+  middleware.push(render())
 
   let router = createRouter<AppContext>({ middleware })
 

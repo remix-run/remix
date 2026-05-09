@@ -101,6 +101,16 @@ let middleware: Middleware<DatabaseContextEntry>
 
 Simplified the public middleware context helper types. `MiddlewareContext` is now the exported helper for deriving the request context produced by a middleware chain, and it accepts an optional base context as its second type parameter. `ContextWithMiddleware` is available when code reads more naturally by naming the base context first. Middleware that provides one context value can use `ContextEntry<typeof Key, Value>` directly instead of wrapping the entry in a one-item tuple. The lower-level `MiddlewareContextTransform`, `ContextTransform`, `ApplyContextTransform`, `ApplyMiddleware`, and `ApplyMiddlewareTuple` helpers are no longer exported.
 
+`MiddlewareContext` and `ContextWithMiddleware` accept middleware values, not middleware factory function types. Use `ReturnType<typeof factory>` when a middleware is created by a factory function:
+
+```ts
+// before
+type AppContext = MiddlewareContext<[typeof session]>
+
+// after
+type AppContext = MiddlewareContext<[ReturnType<typeof session>]>
+```
+
 ```ts
 // before
 type AppContext = ApplyMiddlewareTuple<RequestContext, typeof middleware>

@@ -13,7 +13,7 @@ export function Layout() {
     <Document title={title}>
       <header>
         <nav>
-          <a href={routes.home.href()}>Home</a> <a href={routes.auth.href()}>Auth</a>
+          <a href={routes.home.href()}>Home</a>
         </nav>
       </header>
       <main>{children}</main>

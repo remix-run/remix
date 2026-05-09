@@ -1,21 +1,23 @@
 import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import { Database } from 'remix/data-table'
+import { Renderer } from 'remix/render-middleware'
 
 import { passwordResetTokens, users } from '../../../data/schema.ts'
 import { routes } from '../../../routes.ts'
-import { render } from '../../render.tsx'
 import { forgotPasswordSchema, normalizeEmail } from '../schemas.ts'
 import { ForgotPasswordPage, ForgotPasswordSuccessPage } from './page.tsx'
 
 export default createController(routes.auth.forgotPassword, {
   actions: {
-    index() {
+    index({ get }) {
+      let render = get(Renderer)
       return render(<ForgotPasswordPage />)
     },
 
     async action({ get }) {
       let db = get(Database)
+      let render = get(Renderer)
       let formData = get(FormData)
       let { email } = s.parse(forgotPasswordSchema, formData)
       let normalizedEmail = normalizeEmail(email)

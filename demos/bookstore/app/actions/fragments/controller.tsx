@@ -1,4 +1,5 @@
 import { createController } from 'remix/fetch-router'
+import { Renderer } from 'remix/render-middleware'
 import { css } from 'remix/ui'
 import { Database } from 'remix/data-table'
 
@@ -9,32 +10,37 @@ import { routes } from '../../routes.ts'
 import { getCartTotal } from '../../utils/cart.ts'
 import { getCurrentCart, getCurrentUserSafely } from '../../utils/context.ts'
 import { parseId } from '../../utils/ids.ts'
-import { renderFragment } from '../render.tsx'
+import { fragmentResponseInit } from '../../middleware/render.tsx'
 
 export default createController(routes.fragments, {
   actions: {
     async cartButton({ get, params }) {
       let db = get(Database)
+      let render = get(Renderer)
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
 
       if (!book) {
-        return renderFragment(<p>Book not found</p>, { status: 404 })
+        return render(<p>Book not found</p>, fragmentResponseInit({ status: 404 }))
       }
 
       let cart = getCurrentCart()
       let inCart = cart.items.some((item) => item.bookId === book.id)
 
-      return renderFragment(<CartButton inCart={inCart} id={book.id} slug={book.slug} />)
+      return render(
+        <CartButton inCart={inCart} id={book.id} slug={book.slug} />,
+        fragmentResponseInit(),
+      )
     },
 
-    cartItems() {
+    cartItems({ get }) {
+      let render = get(Renderer)
       let cart = getCurrentCart()
       let total = getCartTotal(cart)
       let user = getCurrentUserSafely()
 
       if (cart.items.length === 0) {
-        return renderFragment(
+        return render(
           <div mix={css({ marginTop: '2rem' })}>
             <p>Your cart is empty.</p>
             <p mix={css({ marginTop: '1rem' })}>
@@ -43,10 +49,14 @@ export default createController(routes.fragments, {
               </a>
             </p>
           </div>,
+          fragmentResponseInit(),
         )
       }
 
-      return renderFragment(<CartItems items={cart.items} total={total} canCheckout={!!user} />)
+      return render(
+        <CartItems items={cart.items} total={total} canCheckout={!!user} />,
+        fragmentResponseInit(),
+      )
     },
   },
 })

@@ -133,9 +133,13 @@ describe('router type inference', () => {
     assert.equal(await response.text(), '')
   })
 
-  it('derives context from middleware factory function types', () => {
+  it('derives context from middleware factory return types', () => {
     type FactoryContext = MiddlewareContext<
-      [typeof requireUser, typeof loadAdminRole, typeof setFormData]
+      [
+        ReturnType<typeof requireUser>,
+        ReturnType<typeof loadAdminRole>,
+        ReturnType<typeof setFormData>,
+      ]
     >
 
     function assertContext(context: FactoryContext) {

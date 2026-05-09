@@ -1,6 +1,7 @@
 import { createController } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
+import { Renderer } from 'remix/render-middleware'
 
 import { ErrorPage } from '../error-page.tsx'
 import { getIssueMessage } from '../form-utils.ts'
@@ -11,7 +12,6 @@ import { getReturnToQuery } from '../../../middleware/auth.ts'
 import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
-import { render } from '../../render.tsx'
 
 async function loadResetToken(db: Database, token: string) {
   let resetToken = await db.find(passwordResetTokens, { token })
@@ -33,6 +33,8 @@ export const resetPasswordController = createController(routes.auth.resetPasswor
       let { get, params, url } = context
       let returnToQuery = getReturnToQuery(url)
       let resetToken = await loadResetToken(get(Database), params.token)
+      let render = get(Renderer)
+
       if (resetToken == null) {
         return render(
           <ErrorPage
@@ -57,6 +59,8 @@ export const resetPasswordController = createController(routes.auth.resetPasswor
       let returnToQuery = getReturnToQuery(url)
       let db = get(Database)
       let resetToken = await loadResetToken(db, params.token)
+      let render = get(Renderer)
+
       if (resetToken == null) {
         return render(
           <ErrorPage

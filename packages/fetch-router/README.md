@@ -647,7 +647,7 @@ let routes = route({
 })
 
 type AuthIdentity = { id: string }
-type RootMiddleware = [typeof loadSession, typeof loadDatabase]
+type RootMiddleware = [ReturnType<typeof loadSession>, ReturnType<typeof loadDatabase>]
 
 type AppContext<params extends AnyParams = {}> = ContextWithParams<
   MiddlewareContext<RootMiddleware>,
@@ -682,7 +682,7 @@ let accountController = createController<typeof routes, AccountContext>(routes, 
 })
 ```
 
-In this example, `RootMiddleware` is the middleware source tuple that defines the app context contract. It can include middleware instances or middleware factory functions that provide typed context values, even if the runtime router middleware array also includes middleware that does not add context or is assembled conditionally. `AccountContext` applies local account middleware on top of that base context before the handler runs.
+In this example, `RootMiddleware` is the middleware tuple that defines the app context contract. It should include middleware instances. When a middleware is created by a factory function like `loadSession()`, use `ReturnType<typeof loadSession>` so the type describes the middleware value that actually runs. `AccountContext` applies local account middleware on top of that base context before the handler runs.
 
 For small apps with a stable tuple-typed runtime array, `MiddlewareContext<typeof middleware>` is a fine shortcut. For larger apps, prefer the named `RootMiddleware` and `AppContext` pattern so runtime middleware assembly and context typing can evolve independently.
 
