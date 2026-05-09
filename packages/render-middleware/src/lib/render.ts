@@ -1,10 +1,4 @@
-import {
-  createContextKey,
-  type ContextEntry,
-  type ContextWithValue,
-  type Middleware,
-  type RequestContext,
-} from '@remix-run/fetch-router'
+import { createContextKey, type Middleware, type RequestContext } from '@remix-run/fetch-router'
 
 /**
  * A function that converts application data into a `Response`.
@@ -30,14 +24,6 @@ export type AnyRenderer = Renderer<never, never>
  */
 export const Renderer = createContextKey<AnyRenderer>()
 
-/**
- * Adds a renderer to an existing request context type.
- */
-export type ContextWithRenderer<
-  context extends RequestContext<any, any>,
-  renderer extends AnyRenderer,
-> = ContextWithValue<context, typeof Renderer, renderer>
-
 type RendererFactory<renderer extends AnyRenderer> = (context: RequestContext<any, any>) => renderer
 
 /**
@@ -48,7 +34,7 @@ type RendererFactory<renderer extends AnyRenderer> = (context: RequestContext<an
  */
 export function renderWith<const renderer extends AnyRenderer>(
   createRenderer: RendererFactory<renderer>,
-): Middleware<ContextEntry<typeof Renderer, renderer>> {
+): Middleware<readonly [typeof Renderer, renderer]> {
   return (context) => {
     context.set(Renderer, createRenderer(context))
   }

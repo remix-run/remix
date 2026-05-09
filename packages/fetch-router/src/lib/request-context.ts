@@ -32,14 +32,9 @@ export interface ContextKey<value> {
 export type AnyParams = Record<string, string>
 
 /**
- * A single request-context entry that associates a context key with its stored value type.
- */
-export type ContextEntry<key extends object = object, value = unknown> = readonly [key, value]
-
-/**
  * An ordered list of request-context entries. Later entries override earlier ones for the same key.
  */
-export type ContextEntries = readonly ContextEntry[]
+export type ContextEntries = readonly (readonly [object, unknown])[]
 
 /**
  * Resolves the value type associated with a request-context key.
@@ -88,16 +83,19 @@ export type ContextWithParams<context, params extends Record<string, any>> =
       : never
     : RequestContext<params>
 
-type ResolveContextEntryValue<
+type ResolveEntryValue<
   entries extends ContextEntries,
   key extends object,
   fallback,
-> = entries extends readonly [...infer rest extends ContextEntries, infer last extends ContextEntry]
+> = entries extends readonly [
+  ...infer rest extends ContextEntries,
+  infer last extends readonly [object, unknown],
+]
   ? [key] extends [last[0]]
     ? [last[0]] extends [key]
       ? last[1]
-      : ResolveContextEntryValue<rest, key, fallback>
-    : ResolveContextEntryValue<rest, key, fallback>
+      : ResolveEntryValue<rest, key, fallback>
+    : ResolveEntryValue<rest, key, fallback>
   : fallback
 
 /**
@@ -105,16 +103,14 @@ type ResolveContextEntryValue<
  */
 export type GetContextValue<context, key extends object> =
   context extends RequestContext<any, infer entries extends ContextEntries>
-    ? ResolveContextEntryValue<entries, key, ContextFallbackValue<key>>
+    ? ResolveEntryValue<entries, key, ContextFallbackValue<key>>
     : ContextFallbackValue<key>
 
 /**
- * Appends context values to an existing {@link RequestContext}.
- *
- * Third-party middleware packages that add multiple values should expose their own
- * `ContextWith*` helper built on this type.
+ * Appends context entries to an existing {@link RequestContext}.
+ * This is useful when deriving a context shape without a middleware tuple.
  */
-export type ContextWithValues<context, additions extends ContextEntries> =
+export type ContextWithEntries<context, additions extends ContextEntries> =
   context extends RequestContext<
     infer params extends Record<string, any>,
     infer entries extends ContextEntries
@@ -123,15 +119,13 @@ export type ContextWithValues<context, additions extends ContextEntries> =
     : never
 
 /**
- * Replaces or adds the value type for a single context key in a {@link RequestContext}.
- *
- * Third-party middleware packages that add one value should expose their own
- * `ContextWith*` helper built on this type.
+ * Replaces or adds the value type for a single context entry in a {@link RequestContext}.
+ * This is useful when deriving a context shape without a middleware tuple.
  */
-export type ContextWithValue<context, key extends object, value> = ContextWithValues<
+export type ContextWithEntry<
   context,
-  [readonly [key, value]]
->
+  entry extends readonly [object, unknown],
+> = ContextWithEntries<context, [entry]>
 
 /**
  * A context object that contains information about the current request. Every request

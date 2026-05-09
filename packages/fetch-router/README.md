@@ -635,7 +635,6 @@ import {
   createController,
   type AnyParams,
   type ContextWithParams,
-  type ContextWithMiddleware,
   type MiddlewareContext,
 } from 'remix/fetch-router'
 import { route } from 'remix/routes'
@@ -661,7 +660,7 @@ declare module 'remix/fetch-router' {
 }
 
 let accountMiddleware = [requireAuth<AuthIdentity>()] as const
-type AccountContext = ContextWithMiddleware<AppContext, typeof accountMiddleware>
+type AccountContext = MiddlewareContext<typeof accountMiddleware, AppContext>
 
 let accountAction = createAction<typeof routes.account, AccountContext>(routes.account, {
   middleware: accountMiddleware,
@@ -695,38 +694,26 @@ When manually annotating stored handlers, use `Action<typeof route, Context>` fo
 If you're authoring a middleware package that stores values in request context, treat that context contract as part of the package API. A good provider should usually export:
 
 - the context key consumers read with `context.get(...)`
-- the middleware that populates that key at runtime
-- one or more `ContextWith...` helper types that let applications describe the resulting request context without touching raw context entries directly
+- the middleware that populates that key at runtime, with a `Middleware` context transform that describes the value it provides
 
-Prefer `ContextWith...` names for third-party middleware packages that augment request context. This matches the built-in `ContextWithParams`, `ContextWithValues`, and `ContextWithValue` helpers and makes it clear that the type produces a new `RequestContext` type with additional context available.
+Apps can derive request context from the middleware tuple with `MiddlewareContext`. If they need to describe a context shape without a middleware tuple, they can use the core `ContextWithEntry` and `ContextWithEntries` helpers directly.
 
 ```ts
-import {
-  createContextKey,
-  type ContextEntry,
-  type ContextWithValues,
-  type Middleware,
-  type RequestContext,
-} from 'remix/fetch-router'
+import { createContextKey, type Middleware, type MiddlewareContext } from 'remix/fetch-router'
 
 // The context key that consumers will need to read from `context.get(...)`
 export const CurrentUser = createContextKey<User | null>()
 
 // The context effect carried by middleware that sets one context value
-type CurrentUserContextEntry = ContextEntry<typeof CurrentUser, User | null>
-
-export function loadCurrentUser(): Middleware<CurrentUserContextEntry> {
+export function loadCurrentUser(): Middleware<readonly [typeof CurrentUser, User | null]> {
   return async (context, next) => {
     context.set(CurrentUser, await getCurrentUser(context.request))
     return next()
   }
 }
 
-// One or more ContextWith* helper types that apps can use to describe the request context
-export type ContextWithCurrentUser<context extends RequestContext<any, any>> = ContextWithValues<
-  context,
-  [CurrentUserContextEntry]
->
+let middleware = [loadCurrentUser()] as const
+type AppContext = MiddlewareContext<typeof middleware>
 ```
 
 ### Additional Topics

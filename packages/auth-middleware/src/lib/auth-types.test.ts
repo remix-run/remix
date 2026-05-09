@@ -6,18 +6,10 @@ import {
   createRouter,
   type GetContextValue,
   type MiddlewareContext,
-  type RequestContext,
 } from '@remix-run/fetch-router'
 import { route } from '@remix-run/routes'
 
-import {
-  Auth,
-  auth,
-  type AuthState,
-  type ContextWithAuth,
-  type ContextWithRequiredAuth,
-  type GoodAuth,
-} from './auth.ts'
+import { Auth, auth, type AuthState, type GoodAuth } from './auth.ts'
 import { requireAuth } from './require-auth.ts'
 import { createAPIAuthScheme } from './schemes/api-key.ts'
 import { createBearerTokenAuthScheme } from './schemes/bearer.ts'
@@ -56,11 +48,12 @@ const routes = route({
 })
 
 const routerMiddleware = [typedAuth] as const
+const protectedMiddleware = [requireAuth<APIIdentity>()] as const
 
 type AppContext = MiddlewareContext<typeof routerMiddleware>
-type ProtectedAppContext = ContextWithRequiredAuth<AppContext, APIIdentity>
+type ProtectedAppContext = MiddlewareContext<typeof protectedMiddleware, AppContext>
 
-type AuthContext = ContextWithAuth<RequestContext, APIIdentity>
+type AuthContext = MiddlewareContext<[typeof typedAuth]>
 
 const router = createRouter({ middleware: routerMiddleware })
 const fallbackRouter = createRouter()
@@ -96,7 +89,7 @@ router.get(routes.public, (context) => {
 })
 
 const privateAction = createAction<typeof routes.private, ProtectedAppContext>(routes.private, {
-  middleware: [requireAuth<APIIdentity>()] as const,
+  middleware: protectedMiddleware,
   handler(context) {
     let currentAuth = context.get(Auth)
     let id: string = context.params.id
@@ -113,7 +106,7 @@ const privateAction = createAction<typeof routes.private, ProtectedAppContext>(r
 })
 
 const adminController = createController<typeof routes.admin, ProtectedAppContext>(routes.admin, {
-  middleware: [requireAuth<APIIdentity>()] as const,
+  middleware: protectedMiddleware,
   actions: {
     dashboard(context) {
       let currentAuth = context.get(Auth)
@@ -130,10 +123,11 @@ const adminController = createController<typeof routes.admin, ProtectedAppContex
 })
 
 type SessionIdentity = { kind: 'session'; id: string }
-type SessionAuthContext = ContextWithRequiredAuth<RequestContext, SessionIdentity>
+const sessionAuthMiddleware = [requireAuth<SessionIdentity>()] as const
+type SessionAuthContext = MiddlewareContext<typeof sessionAuthMiddleware>
 
 const sessionAction = createAction<'/session/:id', SessionAuthContext>('/session/:id', {
-  middleware: [requireAuth<SessionIdentity>()] as const,
+  middleware: sessionAuthMiddleware,
   handler(context) {
     let currentAuth = context.get(Auth)
     let id: string = context.params.id

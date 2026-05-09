@@ -3,8 +3,8 @@ import { describe, it } from '@remix-run/test'
 import { createRoutes as route } from '@remix-run/routes'
 
 import { createAction, createController, type Action, type Controller } from './controller.ts'
-import type { ContextWithMiddleware, Middleware, MiddlewareContext } from './middleware.ts'
-import { createContextKey, type ContextEntry, type ContextWithValue } from './request-context.ts'
+import type { Middleware, MiddlewareContext } from './middleware.ts'
+import { createContextKey, type ContextWithEntry } from './request-context.ts'
 import { createRouter } from './router.ts'
 import type { IsEqual } from './type-utils.ts'
 
@@ -13,20 +13,16 @@ function expectTypeEquality<_check extends true>() {}
 const CurrentUser = createContextKey<{ id: string } | null>(null)
 const CurrentRole = createContextKey<'viewer' | 'admin' | null>(null)
 
-type CurrentUserContextEntry = ContextEntry<typeof CurrentUser, { id: string }>
-
-type RoleContextEntry<role extends 'viewer' | 'admin'> = ContextEntry<typeof CurrentRole, role>
-
-type FormDataContextEntry = ContextEntry<typeof FormData, FormData>
-
-function requireUser(): Middleware<CurrentUserContextEntry> {
+function requireUser(): Middleware<readonly [typeof CurrentUser, { id: string }]> {
   return async (context, next) => {
     context.set(CurrentUser, { id: 'user-1' })
     return next()
   }
 }
 
-function setRole<role extends 'viewer' | 'admin'>(role: role): Middleware<RoleContextEntry<role>> {
+function setRole<role extends 'viewer' | 'admin'>(
+  role: role,
+): Middleware<readonly [typeof CurrentRole, role]> {
   return async (context, next) => {
     context.set(CurrentRole, role)
     return next()
@@ -37,7 +33,7 @@ function loadAdminRole() {
   return setRole('admin')
 }
 
-function setFormData(): Middleware<FormDataContextEntry> {
+function setFormData(): Middleware<readonly [typeof FormData, FormData]> {
   return async (context, next) => {
     context.set(FormData, new FormData())
     return next()
@@ -62,10 +58,10 @@ declare module './router-types.ts' {
   }
 }
 
-type AdminAppContext = ContextWithValue<AppContext, typeof CurrentRole, 'admin'>
+type AdminAppContext = ContextWithEntry<AppContext, readonly [typeof CurrentRole, 'admin']>
 
 const elevatedReportMiddleware = [setRole('admin')] as const
-type ElevatedAppContext = ContextWithMiddleware<AppContext, typeof elevatedReportMiddleware>
+type ElevatedAppContext = MiddlewareContext<typeof elevatedReportMiddleware, AppContext>
 
 describe('router type inference', () => {
   it('keeps context values optional when middleware has not provided them', async () => {

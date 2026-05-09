@@ -8,9 +8,7 @@ import {
   type FileUploadHandler,
   type ParseFormDataOptions,
 } from '@remix-run/form-data-parser'
-import type { ContextEntry, Middleware } from '@remix-run/fetch-router'
-
-type FormDataContextEntry = ContextEntry<typeof FormData, FormData>
+import type { Middleware } from '@remix-run/fetch-router'
 
 function isMultipartLimitError(error: unknown): boolean {
   return (
@@ -47,7 +45,9 @@ export interface FormDataOptions extends ParseFormDataOptions {
  * @param options Options for parsing form data
  * @returns A middleware function that parses form data
  */
-export function formData(options?: FormDataOptions): Middleware<FormDataContextEntry> {
+export function formData(
+  options?: FormDataOptions,
+): Middleware<readonly [typeof FormData, FormData]> {
   let suppressErrors = options?.suppressErrors ?? false
   let uploadHandler = options?.uploadHandler
 

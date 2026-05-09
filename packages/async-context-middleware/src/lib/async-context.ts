@@ -8,7 +8,7 @@ import type {
   RouterTypes,
 } from '@remix-run/fetch-router'
 
-type ContextWithAnyParams<context> =
+type RequestContextWithAnyParams<context> =
   context extends RequestContext<any, infer entries extends ContextEntries>
     ? RequestContext<AnyParams, entries>
     : RequestContext<AnyParams>
@@ -16,7 +16,7 @@ type ContextWithAnyParams<context> =
 export type AsyncRequestContext = RouterTypes extends {
   context: infer context extends RequestContext<any, any>
 }
-  ? ContextWithAnyParams<context>
+  ? RequestContextWithAnyParams<context>
   : RequestContext<AnyParams>
 
 const storage = new AsyncLocalStorage<RequestContext<any, any>>()

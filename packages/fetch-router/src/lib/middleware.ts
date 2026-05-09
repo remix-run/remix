@@ -2,8 +2,8 @@ import type { RequestHandler } from './controller.ts'
 import { raceRequestAbort } from './request-abort.ts'
 import type {
   ContextEntries,
-  ContextEntry,
-  ContextWithValues,
+  ContextWithEntries,
+  ContextWithEntry,
   RequestContext,
 } from './request-context.ts'
 
@@ -13,7 +13,7 @@ import type {
 export type AnyMiddleware = Middleware<ContextTransform>
 
 type ContextTransform =
-  | ContextEntry
+  | readonly [object, unknown]
   | ContextEntries
   | (<context extends RequestContext<any, any>>(context: context) => RequestContext<any, any>)
 
@@ -28,9 +28,9 @@ type ContextWithTransform<
   context extends RequestContext<any, any>,
   transform,
 > = transform extends ContextEntries
-  ? ContextWithValues<context, transform>
-  : transform extends ContextEntry
-    ? ContextWithValues<context, [transform]>
+  ? ContextWithEntries<context, transform>
+  : transform extends readonly [object, unknown]
+    ? ContextWithEntry<context, transform>
     : transform extends {
           <inputContext extends context>(context: inputContext): infer output
         }
@@ -55,17 +55,6 @@ export type MiddlewareContext<
     : context
 
 /**
- * Resolves the request-context type produced by applying middleware to an existing context.
- *
- * This is useful for router helpers and third-party libraries that need to describe the context
- * available after a known tuple of middleware runs.
- */
-export type ContextWithMiddleware<
-  context extends RequestContext<any, any>,
-  middleware extends readonly AnyMiddleware[],
-> = MiddlewareContext<middleware, context>
-
-/**
  * A special kind of request handler that either returns a response or passes control
  * to the next middleware or request handler in the chain.
  *
@@ -73,8 +62,9 @@ export type ContextWithMiddleware<
  * @param next A function that invokes the next middleware or request handler in the chain
  * @returns A response to short-circuit the chain, or `undefined`/`void` to continue
  *
- * The generic describes the context effect this middleware has. Use a {@link ContextEntry}
- * for middleware that provides one context value, or {@link ContextEntries} for multiple values.
+ * The generic describes the context effect this middleware has. Use a readonly `[key, value]`
+ * tuple for middleware that provides one context value, or {@link ContextEntries} for multiple
+ * values.
  */
 export interface Middleware<transform extends ContextTransform = EmptyContextTransform> {
   /**

@@ -1,9 +1,9 @@
-BREAKING CHANGE: Renamed the `remix/auth-middleware` auth context helper types from `WithAuth` and `WithRequiredAuth` to `ContextWithAuth` and `ContextWithRequiredAuth` so middleware packages consistently use the `ContextWith*` naming pattern for helpers that produce refined `RequestContext` types.
+BREAKING CHANGE: Removed the `ContextWithAuth` and `ContextWithRequiredAuth` helper types from `remix/auth-middleware`. Derive auth-aware request context from the actual auth middleware tuple with `MiddlewareContext`, or use the core `ContextWithEntry` helper from `remix/fetch-router` when manually composing context types without a middleware tuple.
 
 ```ts
-// before
-type AppAuthContext = WithRequiredAuth<AppContext, AuthIdentity>
+import { requireAuth } from 'remix/auth-middleware'
+import type { MiddlewareContext } from 'remix/fetch-router'
 
-// after
-type AppAuthContext = ContextWithRequiredAuth<AppContext, AuthIdentity>
+let protectedMiddleware = [requireAuth<AuthIdentity>()] as const
+type AppAuthContext = MiddlewareContext<typeof protectedMiddleware, AppContext>
 ```
