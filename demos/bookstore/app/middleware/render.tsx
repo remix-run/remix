@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 
-import type { RequestContext, Router } from 'remix/fetch-router'
+import type { Router } from 'remix/fetch-router'
 import { renderWith } from 'remix/render-middleware'
 import { createHtmlResponse } from 'remix/response/html'
 import type { RemixNode } from 'remix/ui'
@@ -9,39 +9,33 @@ import { renderToStream } from 'remix/ui/server'
 import { assetServer } from '../utils/assets.ts'
 
 export function render() {
-  return renderWith((context) => {
-    let request = context.request
-    let router = context.router
+  return renderWith(
+    ({ request, router }) =>
+      function render(node: RemixNode, init?: ResponseInit) {
+        let stream = renderToStream(node, {
+          resolveFrame: (src) => resolveFrame(router, request, src),
+          async resolveClientEntry(entryId, component) {
+            if (!entryId.startsWith('file://')) {
+              throw new Error(
+                `Expected \`import.meta.url\` for clientEntry ID, received '${entryId}'`,
+              )
+            }
+            return {
+              href: await assetServer.getHref(entryId),
+              exportName: entryId.split('#')[1] || component.name || titleCaseFileName(entryId),
+            }
+          },
+          onError(error) {
+            console.error(error)
+          },
+        })
 
-    return function render(node: RemixNode, init?: ResponseInit) {
-      let stream = renderToStream(node, {
-        resolveFrame: (src) => resolveFrame(router, request, src),
-        async resolveClientEntry(entryId, component) {
-          if (!entryId.startsWith('file://')) {
-            throw new Error(
-              `Expected \`import.meta.url\` for clientEntry ID, received '${entryId}'`,
-            )
-          }
-          return {
-            href: await assetServer.getHref(entryId),
-            exportName: entryId.split('#')[1] || component.name || titleCaseFileName(entryId),
-          }
-        },
-        onError(error) {
-          console.error(error)
-        },
-      })
-
-      return createHtmlResponse(stream, init)
-    }
-  })
+        return createHtmlResponse(stream, init)
+      },
+  )
 }
 
-async function resolveFrame<context extends RequestContext<any, any>>(
-  router: Router<context>,
-  request: Request,
-  src: string,
-) {
+async function resolveFrame(router: Router, request: Request, src: string) {
   let url = new URL(src, request.url)
 
   let headers = new Headers()
