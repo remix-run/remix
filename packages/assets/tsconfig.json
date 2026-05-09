@@ -10,5 +10,5 @@
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true
   },
-  "exclude": ["bench/fixtures"]
+  "exclude": ["bench/fixtures", "dist"]
 }
