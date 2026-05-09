@@ -1,9 +1,7 @@
 import { getContext } from 'remix/async-context-middleware'
-import { Auth } from 'remix/auth-middleware'
 import type { AuthState } from 'remix/auth-middleware'
 
 import type { User } from '../data/schema.ts'
-import { Session } from '../middleware/session.ts'
 import { getCart, type Cart } from './cart.ts'
 
 export function getCurrentUser(): User {
@@ -25,9 +23,9 @@ export function getCurrentUserSafely(): User | null {
 }
 
 export function getCurrentCart(): Cart {
-  return getCart(getContext().get(Session).get('cart'))
+  return getCart(getContext().session.get('cart'))
 }
 
 function getCurrentAuth(): AuthState<User> {
-  return getContext().get(Auth)
+  return getContext().auth
 }

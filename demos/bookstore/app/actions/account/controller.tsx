@@ -1,5 +1,4 @@
 import { createController } from 'remix/fetch-router'
-import { Renderer } from 'remix/render-middleware'
 
 import { requireAuth } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
@@ -9,8 +8,7 @@ import { AccountPage } from './page.tsx'
 export default createController(routes.account, {
   middleware: [requireAuth()],
   actions: {
-    index({ get }) {
-      let render = get(Renderer)
+    index({ render }) {
       let user = getCurrentUser()
 
       return render(<AccountPage user={user} />)

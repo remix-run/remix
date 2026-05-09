@@ -32,9 +32,38 @@ export interface ContextKey<value> {
 export type AnyParams = Record<string, string>
 
 /**
+ * Options for installing a request-context value as a direct property on {@link RequestContext}.
+ */
+export interface ContextPropertyOptions<property extends string = string> {
+  /**
+   * The direct property name to install on the request context.
+   */
+  property: property
+}
+
+/**
+ * A request-context entry provided by middleware. The optional `property` field installs the value
+ * as a direct request-context property when the middleware sets the value.
+ */
+export interface ContextEntry<key extends object = object, value = unknown> {
+  /**
+   * The context key that stores the value.
+   */
+  key: key
+  /**
+   * The value type stored for the context key.
+   */
+  value: value
+  /**
+   * Optional direct property name installed on the request context.
+   */
+  property?: string
+}
+
+/**
  * An ordered list of request-context entries. Later entries override earlier ones for the same key.
  */
-export type ContextEntries = readonly (readonly [object, unknown])[]
+export type ContextEntries = readonly ContextEntry[]
 
 /**
  * Resolves the value type associated with a request-context key.
@@ -79,21 +108,18 @@ export type ContextWithParams<context, params extends Record<string, any>> =
     ? MergeContextParams<ContextParams<context>, params> extends infer merged
       ? [merged] extends [never]
         ? never
-        : RequestContext<Extract<merged, Record<string, any>>, entries>
+        : RequestContextWithEntries<Extract<merged, Record<string, any>>, entries>
       : never
-    : RequestContext<params>
+    : RequestContextWithEntries<params, []>
 
 type ResolveEntryValue<
   entries extends ContextEntries,
   key extends object,
   fallback,
-> = entries extends readonly [
-  ...infer rest extends ContextEntries,
-  infer last extends readonly [object, unknown],
-]
-  ? [key] extends [last[0]]
-    ? [last[0]] extends [key]
-      ? last[1]
+> = entries extends readonly [...infer rest extends ContextEntries, infer last extends ContextEntry]
+  ? [key] extends [last['key']]
+    ? [last['key']] extends [key]
+      ? last['value']
       : ResolveEntryValue<rest, key, fallback>
     : ResolveEntryValue<rest, key, fallback>
   : fallback
@@ -106,6 +132,45 @@ export type GetContextValue<context, key extends object> =
     ? ResolveEntryValue<entries, key, ContextFallbackValue<key>>
     : ContextFallbackValue<key>
 
+type ContextEntryProperty<entry extends ContextEntry> = entry extends {
+  property: infer property extends string
+}
+  ? string extends property
+    ? never
+    : property
+  : never
+
+type ContextProperty<entries extends ContextEntries, entry extends ContextEntry> = {
+  readonly [property in ContextEntryProperty<entry>]: ResolveEntryValue<
+    entries,
+    entry['key'],
+    entry['value']
+  >
+}
+
+type ContextPropertiesFrom<
+  entries extends ContextEntries,
+  allEntries extends ContextEntries,
+> = entries extends readonly [...infer rest extends ContextEntries, infer last extends ContextEntry]
+  ? Simplify<
+      Omit<ContextPropertiesFrom<rest, allEntries>, ContextEntryProperty<last>> &
+        ContextProperty<allEntries, last>
+    >
+  : {}
+
+/**
+ * Resolves the direct request-context properties installed by context entries.
+ */
+export type ContextProperties<entries extends ContextEntries> = ContextPropertiesFrom<
+  entries,
+  entries
+>
+
+type RequestContextWithEntries<
+  params extends Record<string, any>,
+  entries extends ContextEntries,
+> = RequestContext<params, entries> & ContextProperties<entries>
+
 /**
  * Appends context entries to an existing {@link RequestContext}.
  * This is useful when deriving a context shape without a middleware tuple.
@@ -115,17 +180,17 @@ export type ContextWithEntries<context, additions extends ContextEntries> =
     infer params extends Record<string, any>,
     infer entries extends ContextEntries
   >
-    ? RequestContext<params, [...entries, ...additions]>
+    ? RequestContextWithEntries<params, [...entries, ...additions]>
     : never
 
 /**
  * Replaces or adds the value type for a single context entry in a {@link RequestContext}.
  * This is useful when deriving a context shape without a middleware tuple.
  */
-export type ContextWithEntry<
+export type ContextWithEntry<context, entry extends ContextEntry> = ContextWithEntries<
   context,
-  entry extends readonly [object, unknown],
-> = ContextWithEntries<context, [entry]>
+  [entry]
+>
 
 /**
  * A context object that contains information about the current request. Every request
@@ -184,6 +249,9 @@ export class RequestContext<
 
   #contextMap: Map<object, unknown> = new Map()
 
+  #contextProperties: Map<string, object> = new Map()
+  #contextPropertyKeys: Map<object, string> = new Map()
+
   /**
    * Get a value from request context.
    *
@@ -216,9 +284,63 @@ export class RequestContext<
    *
    * @param key The key to write
    * @param value The value to write
+   * @param options Options for installing the value as a direct context property
    */
-  set = <key extends object>(key: key, value: ContextValue<key>): void => {
+  set = <key extends object>(
+    key: key,
+    value: ContextValue<key>,
+    options?: ContextPropertyOptions,
+  ): void => {
+    if (options != null) {
+      this.#installContextProperty(key, options)
+    }
+
     this.#contextMap.set(key, value)
+  }
+
+  #installContextProperty(key: object, options: ContextPropertyOptions): void {
+    let property = options.property
+
+    if (typeof property !== 'string') {
+      throw new Error('Context property name must be a string.')
+    }
+
+    if (property.length === 0) {
+      throw new Error('Cannot install an empty context property name.')
+    }
+
+    let formattedProperty = JSON.stringify(property)
+
+    let existingProperty = this.#contextPropertyKeys.get(key)
+    if (existingProperty != null && existingProperty !== property) {
+      throw new Error(
+        `Cannot install context property ${formattedProperty} because this context key already uses ${JSON.stringify(existingProperty)}.`,
+      )
+    }
+
+    let existingKey = this.#contextProperties.get(property)
+    if (existingKey != null) {
+      if (existingKey !== key) {
+        throw new Error(
+          `Cannot install context property ${formattedProperty} because another context key already uses it.`,
+        )
+      }
+
+      return
+    }
+
+    if (property in this) {
+      throw new Error(
+        `Cannot install context property ${formattedProperty} because it already exists on RequestContext.`,
+      )
+    }
+
+    this.#contextProperties.set(property, key)
+    this.#contextPropertyKeys.set(key, property)
+
+    Object.defineProperty(this, property, {
+      get: () => this.get(key),
+    })
   }
 
   #router?: Router<any>

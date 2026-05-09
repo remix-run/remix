@@ -1,5 +1,4 @@
 import { createController } from 'remix/fetch-router'
-import { Renderer } from 'remix/render-middleware'
 import { css } from 'remix/ui'
 import { redirect } from 'remix/response/redirect'
 
@@ -8,12 +7,10 @@ import { authCookie, isAuthenticated } from '../../../middleware/auth.ts'
 
 export default createController(routes.auth.login, {
   actions: {
-    async index({ get }) {
+    async index({ render }) {
       if (isAuthenticated()) {
         return redirect(routes.main.index.href())
       }
-
-      let render = get(Renderer)
 
       return render(
         <html lang="en">

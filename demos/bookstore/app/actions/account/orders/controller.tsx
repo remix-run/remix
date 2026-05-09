@@ -1,6 +1,4 @@
 import { createController } from 'remix/fetch-router'
-import { Database } from 'remix/data-table'
-import { Renderer } from 'remix/render-middleware'
 
 import { orders, orderItemsWithBook } from '../../../data/schema.ts'
 import { requireAuth } from '../../../middleware/auth.ts'
@@ -13,9 +11,7 @@ import { AccountOrderNotFoundPage, AccountOrderShowPage } from './show-page.tsx'
 export default createController(routes.account.orders, {
   middleware: [requireAuth()],
   actions: {
-    async index({ get }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async index({ db, render }) {
       let user = getCurrentUser()
       let userOrders = await db.findMany(orders, {
         where: { user_id: user.id },
@@ -26,9 +22,7 @@ export default createController(routes.account.orders, {
       return render(<AccountOrdersIndexPage orders={userOrders} />)
     },
 
-    async show({ get, params }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async show({ db, params, render }) {
       let user = getCurrentUser()
       let orderId = parseId(params.orderId)
       let order =

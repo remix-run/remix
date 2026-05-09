@@ -1,13 +1,10 @@
 import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
-import { Database } from 'remix/data-table'
-import { Renderer } from 'remix/render-middleware'
 import { redirect } from 'remix/response/redirect'
 
 import { itemsByOrder, orders, orderItemsWithBook } from '../../data/schema.ts'
 import { requireAuth } from '../../middleware/auth.ts'
-import { Session } from '../../middleware/session.ts'
 import { routes } from '../../routes.ts'
 import { clearCart, getCartTotal } from '../../utils/cart.ts'
 import { getCurrentUser, getCurrentCart } from '../../utils/context.ts'
@@ -26,8 +23,7 @@ const shippingAddressSchema = f.object({
 export default createController(routes.checkout, {
   middleware: [requireAuth()],
   actions: {
-    index({ get }) {
-      let render = get(Renderer)
+    index({ render }) {
       let cart = getCurrentCart()
       let total = getCartTotal(cart)
 
@@ -38,10 +34,7 @@ export default createController(routes.checkout, {
       return render(<CheckoutPage cart={cart} total={total} />)
     },
 
-    async action({ get }) {
-      let db = get(Database)
-      let session = get(Session)
-      let formData = get(FormData)
+    async action({ db, formData, session }) {
       let user = getCurrentUser()
       let cart = getCurrentCart()
 
@@ -90,9 +83,7 @@ export default createController(routes.checkout, {
       return redirect(routes.checkout.confirmation.href({ orderId: order.id }))
     },
 
-    async confirmation({ get, params }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async confirmation({ db, params, render }) {
       let user = getCurrentUser()
       let orderId = parseId(params.orderId)
       let order =

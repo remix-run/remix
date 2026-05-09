@@ -1,6 +1,6 @@
 import { createController } from 'remix/fetch-router'
 import type { RemixNode } from 'remix/ui'
-import { Renderer, type Renderer as Render } from 'remix/render-middleware'
+import type { Renderer as Render } from 'remix/render-middleware'
 
 import { requireAuth } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
@@ -26,17 +26,17 @@ function renderMainPage(
 export default createController(routes.main, {
   middleware: [requireAuth],
   actions: {
-    index({ get }) {
-      return renderMainPage(get(Renderer), 'Dashboard', 'dashboard', <MainIndexPage />)
+    index({ render }) {
+      return renderMainPage(render, 'Dashboard', 'dashboard', <MainIndexPage />)
     },
-    courses({ get }) {
-      return renderMainPage(get(Renderer), 'Courses', 'courses', <MainCoursesPage />)
+    courses({ render }) {
+      return renderMainPage(render, 'Courses', 'courses', <MainCoursesPage />)
     },
-    calendar({ get }) {
-      return renderMainPage(get(Renderer), 'Calendar', 'calendar', <MainCalendarPage />)
+    calendar({ render }) {
+      return renderMainPage(render, 'Calendar', 'calendar', <MainCalendarPage />)
     },
-    account({ get }) {
-      return renderMainPage(get(Renderer), 'Account', 'account', <MainAccountPage />)
+    account({ render }) {
+      return renderMainPage(render, 'Account', 'account', <MainAccountPage />)
     },
   },
 })

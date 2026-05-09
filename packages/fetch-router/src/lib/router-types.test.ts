@@ -12,19 +12,25 @@ function expectTypeEquality<_check extends true>() {}
 
 const CurrentUser = createContextKey<{ id: string } | null>(null)
 const CurrentRole = createContextKey<'viewer' | 'admin' | null>(null)
+const currentUserContextProperty = { property: 'currentUser' } as const
+const currentRoleContextProperty = { property: 'role' } as const
 
-function requireUser(): Middleware<readonly [typeof CurrentUser, { id: string }]> {
+function requireUser(): Middleware<{
+  key: typeof CurrentUser
+  value: { id: string }
+  property: 'currentUser'
+}> {
   return async (context, next) => {
-    context.set(CurrentUser, { id: 'user-1' })
+    context.set(CurrentUser, { id: 'user-1' }, currentUserContextProperty)
     return next()
   }
 }
 
 function setRole<role extends 'viewer' | 'admin'>(
   role: role,
-): Middleware<readonly [typeof CurrentRole, role]> {
+): Middleware<{ key: typeof CurrentRole; value: role; property: 'role' }> {
   return async (context, next) => {
-    context.set(CurrentRole, role)
+    context.set(CurrentRole, role, currentRoleContextProperty)
     return next()
   }
 }
@@ -33,7 +39,7 @@ function loadAdminRole() {
   return setRole('admin')
 }
 
-function setFormData(): Middleware<readonly [typeof FormData, FormData]> {
+function setFormData(): Middleware<{ key: typeof FormData; value: FormData }> {
   return async (context, next) => {
     context.set(FormData, new FormData())
     return next()
@@ -58,7 +64,10 @@ declare module './router-types.ts' {
   }
 }
 
-type AdminAppContext = ContextWithEntry<AppContext, readonly [typeof CurrentRole, 'admin']>
+type AdminAppContext = ContextWithEntry<
+  AppContext,
+  { key: typeof CurrentRole; value: 'admin'; property: 'role' }
+>
 
 const elevatedReportMiddleware = [setRole('admin')] as const
 type ElevatedAppContext = MiddlewareContext<typeof elevatedReportMiddleware, AppContext>
@@ -102,8 +111,10 @@ describe('router type inference', () => {
 
       expectTypeEquality<IsEqual<typeof user, { id: string }>>()
       expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
+      expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'viewer'>>()
 
-      return new Response(accountId + ':' + user.id + ':' + role)
+      return new Response(accountId + ':' + context.currentUser.id + ':' + context.role)
     })
 
     let response = await router.fetch('https://remix.run/account/123')
@@ -146,6 +157,8 @@ describe('router type inference', () => {
       expectTypeEquality<IsEqual<typeof user, { id: string }>>()
       expectTypeEquality<IsEqual<typeof role, 'admin'>>()
       expectTypeEquality<IsEqual<typeof formData, FormData>>()
+      expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'admin'>>()
     }
 
     void assertContext

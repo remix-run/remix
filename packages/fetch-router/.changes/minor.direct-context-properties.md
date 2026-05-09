@@ -1,0 +1,5 @@
+Added support for middleware-installed direct request context properties. Middleware can now declare a context entry as `{ key, value, property: 'name' }` and call `context.set(key, value, { property: 'name' })` to make the value available as `context.name` in handlers while preserving `context.get(key)` access. The context key remains the source of truth; direct properties are installed as non-enumerable getters that read from keyed request context.
+
+Direct property names are checked at runtime. Empty property names are rejected, a single context key cannot be installed under multiple property names, different context keys cannot share the same property name, and middleware cannot install a property that already exists on `RequestContext`.
+
+The new `ContextEntry` type describes object-shaped middleware entries. Use `{ key: typeof Database, value: Database, property: 'db' }` for middleware that should expose `context.db`, or omit `property` when the value should only be read with `context.get(key)`.

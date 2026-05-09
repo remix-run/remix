@@ -51,8 +51,7 @@ export const router = createRouter({
   middleware: [logger(), formData(), session(sessionCookie, sessionStorage)],
 })
 
-router.map(routes.home, ({ get }) => {
-  let session = get(Session)
+router.map(routes.home, ({ session }) => {
   let posts = data.getPosts()
   let username = session.get('username') as string | undefined
 
@@ -101,8 +100,7 @@ router.map(routes.home, ({ get }) => {
 
 router.map(routes.login, {
   actions: {
-    index({ get }) {
-      let session = get(Session)
+    index({ session }) {
       let username = session.get('username') as string | undefined
       if (username) {
         return redirect(routes.home.href())
@@ -133,9 +131,7 @@ router.map(routes.login, {
         </html>
       `)
     },
-    async action({ get }) {
-      let session = get(Session)
-      let formData = get(FormData)
+    async action({ formData, session }) {
       let { username } = s.parse(loginSchema, formData)
 
       if (username) {
@@ -148,8 +144,7 @@ router.map(routes.login, {
   },
 })
 
-router.post(routes.logout, ({ get }) => {
-  let session = get(Session)
+router.post(routes.logout, ({ session }) => {
   session.destroy()
   return redirect(routes.home.href())
 })
@@ -185,9 +180,7 @@ router.map(routes.posts, {
         `)
       },
     },
-    async create({ get }) {
-      let session = get(Session)
-      let formData = get(FormData)
+    async create({ formData, session }) {
       let username = session.get('username') as string
       if (!username) {
         return redirect(routes.login.index.href())

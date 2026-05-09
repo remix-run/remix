@@ -1,5 +1,5 @@
 import { createController } from 'remix/fetch-router'
-import { Renderer, type Renderer as Render } from 'remix/render-middleware'
+import type { Renderer as Render } from 'remix/render-middleware'
 import type { Handle, RemixNode } from 'remix/ui'
 import { Frame } from 'remix/ui'
 import { getContext } from 'remix/async-context-middleware'
@@ -19,23 +19,23 @@ import { Profile } from './profile-page.tsx'
 export default createController(routes.settings, {
   middleware: [requireAuth],
   actions: {
-    index({ get }) {
-      return renderSettingsPage(get(Renderer), 'overview', <Index />)
+    index({ render }) {
+      return renderSettingsPage(render, 'overview', <Index />)
     },
-    profile({ get }) {
-      return renderSettingsPage(get(Renderer), 'profile', <Profile />)
+    profile({ render }) {
+      return renderSettingsPage(render, 'profile', <Profile />)
     },
-    notifications({ get }) {
-      return renderSettingsPage(get(Renderer), 'notifications', <Notifications />)
+    notifications({ render }) {
+      return renderSettingsPage(render, 'notifications', <Notifications />)
     },
-    privacy({ get }) {
-      return renderSettingsPage(get(Renderer), 'privacy', <Privacy />, { status: 500 })
+    privacy({ render }) {
+      return renderSettingsPage(render, 'privacy', <Privacy />, { status: 500 })
     },
-    grading({ get }) {
-      return renderSettingsPage(get(Renderer), 'grading', <Grading />)
+    grading({ render }) {
+      return renderSettingsPage(render, 'grading', <Grading />)
     },
-    integrations({ get }) {
-      return renderSettingsPage(get(Renderer), 'integrations', <Integrations />)
+    integrations({ render }) {
+      return renderSettingsPage(render, 'integrations', <Integrations />)
     },
   },
 })

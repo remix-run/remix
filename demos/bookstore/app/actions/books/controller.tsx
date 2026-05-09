@@ -1,6 +1,5 @@
 import { createController } from 'remix/fetch-router'
-import { Database, ilike } from 'remix/data-table'
-import { Renderer } from 'remix/render-middleware'
+import { ilike } from 'remix/data-table'
 
 import { books } from '../../data/schema.ts'
 import { routes } from '../../routes.ts'
@@ -11,9 +10,7 @@ import { BookNotFoundPage, ShowPage } from './show-page.tsx'
 
 export default createController(routes.books, {
   actions: {
-    async index({ get }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async index({ db, render }) {
       let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
       let genreRows = await db.query(books).select('genre').distinct().orderBy('genre', 'asc').all()
       let cart = getCurrentCart()
@@ -23,9 +20,7 @@ export default createController(routes.books, {
       )
     },
 
-    async genre({ get, params }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async genre({ db, params, render }) {
       let genre = params.genre
       let matchingBooks = await db.findMany(books, {
         where: ilike('genre', genre),
@@ -41,9 +36,7 @@ export default createController(routes.books, {
       return render(<GenrePage genre={genre} matchingBooks={matchingBooks} cart={cart} />)
     },
 
-    async show({ get, params }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async show({ db, params, render }) {
       let book = await db.findOne(books, { where: { slug: params.slug } })
 
       if (!book) {

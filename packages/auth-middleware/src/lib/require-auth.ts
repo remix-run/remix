@@ -28,7 +28,10 @@ type ResolvedGoodAuth<context extends RequestContext<any, any>, identity> = [
 
 type RequireAuthContextTransform<identity> = <context extends RequestContext<any, any>>(
   context: context,
-) => ContextWithEntry<context, readonly [typeof Auth, ResolvedGoodAuth<context, identity>]>
+) => ContextWithEntry<
+  context,
+  { key: typeof Auth; value: ResolvedGoodAuth<context, identity>; property: 'auth' }
+>
 
 /**
  * Options for enforcing authentication on a route.

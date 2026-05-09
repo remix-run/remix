@@ -12,7 +12,7 @@ import { Session, type SessionStorage } from '@remix-run/session'
 export function session(
   sessionCookie: Cookie,
   sessionStorage: SessionStorage,
-): Middleware<readonly [typeof Session, Session]> {
+): Middleware<{ key: typeof Session; value: Session; property: 'session' }> {
   if (!sessionCookie.signed) {
     throw new Error('Session cookie must be signed')
   }
@@ -25,7 +25,7 @@ export function session(
     let cookieValue = await sessionCookie.parse(context.headers.get('Cookie'))
     let session = await sessionStorage.read(cookieValue)
 
-    context.set(Session, session)
+    context.set(Session, session, { property: 'session' })
 
     let response = await next()
 

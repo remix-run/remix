@@ -1,11 +1,9 @@
 import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
-import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 
 import { books } from '../../../data/schema.ts'
-import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
 import { addToCart, removeFromCart, updateCartItem } from '../../../utils/cart.ts'
 import { getCurrentCart } from '../../../utils/context.ts'
@@ -26,10 +24,7 @@ const cartUpdateSchema = f.object({
 
 export default createController(routes.cart.api, {
   actions: {
-    async add({ get }) {
-      let db = get(Database)
-      let session = get(Session)
-      let formData = get(FormData)
+    async add({ db, formData, session }) {
       let { bookId, redirect: redirectTo } = s.parse(cartActionSchema, formData)
       if (process.env.NODE_ENV !== 'test') {
         await new Promise((resolve) => setTimeout(resolve, 1000))
@@ -53,10 +48,7 @@ export default createController(routes.cart.api, {
       return redirect(routes.cart.index.href())
     },
 
-    async update({ get }) {
-      let db = get(Database)
-      let session = get(Session)
-      let formData = get(FormData)
+    async update({ db, formData, session }) {
       let { bookId, quantity, redirect: redirectTo } = s.parse(cartUpdateSchema, formData)
       await new Promise((resolve) => setTimeout(resolve, 1000))
 
@@ -76,10 +68,7 @@ export default createController(routes.cart.api, {
       return redirect(routes.cart.index.href())
     },
 
-    async remove({ get }) {
-      let db = get(Database)
-      let session = get(Session)
-      let formData = get(FormData)
+    async remove({ db, formData, session }) {
       let { bookId, redirect: redirectTo } = s.parse(cartActionSchema, formData)
       if (process.env.NODE_ENV !== 'test') {
         await new Promise((resolve) => setTimeout(resolve, 1000))

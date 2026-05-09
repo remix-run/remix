@@ -16,7 +16,7 @@ const CurrentUser = createContextKey<unknown>()
 
 type AppContext = ContextWithEntries<
   RequestContext,
-  [readonly [typeof CurrentUser, { id: string }]]
+  [{ key: typeof CurrentUser; value: { id: string }; property: 'currentUser' }]
 >
 
 declare module '@remix-run/fetch-router' {
@@ -47,6 +47,8 @@ describe('asyncContext', () => {
 if (false as boolean) {
   let user = getContext().get(CurrentUser)
   void user.id
+  let currentUser = getContext().currentUser
+  void currentUser.id
   let param: string = getContext().params.anything
   void param
 

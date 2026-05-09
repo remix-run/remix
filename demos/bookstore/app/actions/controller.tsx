@@ -1,6 +1,5 @@
 import { createController } from 'remix/fetch-router'
-import { Database, ilike, inList, or } from 'remix/data-table'
-import { Renderer } from 'remix/render-middleware'
+import { ilike, inList, or } from 'remix/data-table'
 import { createFileResponse as sendFile } from 'remix/response/file'
 
 import { books } from '../data/schema.ts'
@@ -29,9 +28,7 @@ export default createController(routes, {
         cacheControl: 'public, max-age=31536000',
       })
     },
-    async home({ get }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async home({ db, render }) {
       let cart = getCurrentCart()
       let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
       let featuredBookRows = await db.findMany(books, {
@@ -47,13 +44,10 @@ export default createController(routes, {
         headers: { 'Cache-Control': 'no-store' },
       })
     },
-    about({ get }) {
-      let render = get(Renderer)
+    about({ render }) {
       return render(<AboutPage />)
     },
-    async search({ get, url }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async search({ db, render, url }) {
       let query = url.searchParams.get('q') ?? ''
       let matchingBooks = query
         ? await db.findMany(books, {
