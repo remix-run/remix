@@ -1,13 +1,13 @@
 # button
 
-`button` is the shared button styling contract for `@remix-run/ui`. Use `Button` for ordinary action buttons, or compose flat `button.*Style` exports directly when a higher-level control needs button structure without a wrapper.
+`button` is the shared button styling contract for `remix/ui`. Use `Button` for ordinary action buttons, or compose flat `button.*Style` exports directly when a higher-level control needs button structure without a wrapper.
 
 ## Usage
 
 ```tsx
-import { Button } from '@remix-run/ui/button'
-import * as button from '@remix-run/ui/button'
-import { Glyph } from '@remix-run/ui/glyph'
+import { Button } from 'remix/ui/button'
+import * as button from 'remix/ui/button'
+import { Glyph } from 'remix/ui/glyph'
 
 function Actions() {
   return (

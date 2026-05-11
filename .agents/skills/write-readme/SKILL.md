@@ -46,6 +46,7 @@ npm i remix
 - Keep prose compact. Do not hard-wrap paragraphs at awkward places in the middle of a sentence just to force a line length.
 - Prefer flat bullets and short paragraphs over long explanatory blocks.
 - `Related Packages` should point to relevant Remix packages in the monorepo.
+- Use full GitHub URLs for cross-file or cross-package repo links so README content still works when copied into generated docs. Keep same-document anchors and README self-links relative.
 - `Related Work` should point to external libraries, specs, standards, or prior art that help readers place the package.
 - `License` should use the standard repo wording and link.
 

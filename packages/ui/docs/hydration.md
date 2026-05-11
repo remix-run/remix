@@ -107,6 +107,6 @@ This means:
 
 ## See Also
 
-- [Server Rendering](./server-rendering.md) - Rendering components to HTML
+- [Server](../src/server/README.md) - Rendering components to HTML
 - [Frames](./frames.md) - Streaming partial server UI
 - [Components](./components.md) - Component model and lifecycle
