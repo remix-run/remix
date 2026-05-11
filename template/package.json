@@ -3,17 +3,16 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "tsx watch server.ts",
-    "start": "tsx server.ts",
-    "test": "tsx --test",
+    "dev": "node --watch --import remix/node-tsx server.ts",
+    "start": "node --import remix/node-tsx server.ts",
+    "test": "node --import remix/node-tsx --test",
     "typecheck": "tsc --noEmit"
   },
   "engines": {
     "node": ">=24.3.0"
   },
   "dependencies": {
-    "remix": "workspace:^",
-    "tsx": "catalog:"
+    "remix": "workspace:^"
   },
   "devDependencies": {
     "@types/node": "catalog:",

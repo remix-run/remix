@@ -6,10 +6,10 @@
   "dependencies": {
     "@oxlint/plugins": "^1.57.0",
     "@typescript/native-preview": "catalog:",
+    "oxc-parser": "^0.121.0",
     "oxlint": "^1.57.0",
     "oxlint-tsgolint": "^0.17.4",
     "prettier": "^3.3.3",
-    "tsx": "catalog:",
     "typescript": "catalog:",
     "typescript-language-server": "catalog:"
   },

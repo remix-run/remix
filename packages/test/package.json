@@ -55,6 +55,7 @@
     "typecheck": "tsgo --noEmit"
   },
   "dependencies": {
+    "@remix-run/node-tsx": "workspace:^",
     "@remix-run/terminal": "workspace:^",
     "es-module-lexer": "^2.0.0",
     "esbuild": "^0.27.1",
@@ -64,7 +65,6 @@
     "istanbul-reports": "^3.2.0",
     "magic-string": "^0.30.21",
     "source-map-js": "^1.2.1",
-    "tsx": "^4.21.0",
     "v8-to-istanbul": "^9.3.0"
   },
   "peerDependencies": {

@@ -65,6 +65,8 @@
     "./node-fetch-server": "./src/node-fetch-server.ts",
     "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
     "./node-serve": "./src/node-serve.ts",
+    "./node-tsx": "./src/node-tsx.ts",
+    "./node-tsx/load-module": "./src/node-tsx/load-module.ts",
     "./response/compress": "./src/response/compress.ts",
     "./response/file": "./src/response/file.ts",
     "./response/html": "./src/response/html.ts",
@@ -283,6 +285,14 @@
         "types": "./dist/node-serve.d.ts",
         "default": "./dist/node-serve.js"
       },
+      "./node-tsx": {
+        "types": "./dist/node-tsx.d.ts",
+        "default": "./dist/node-tsx.js"
+      },
+      "./node-tsx/load-module": {
+        "types": "./dist/node-tsx/load-module.d.ts",
+        "default": "./dist/node-tsx/load-module.js"
+      },
       "./response/compress": {
         "types": "./dist/response/compress.d.ts",
         "default": "./dist/response/compress.js"
@@ -490,7 +500,8 @@
     "@remix-run/test": "workspace:^",
     "@remix-run/terminal": "workspace:^",
     "@remix-run/node-serve": "workspace:^",
-    "@remix-run/routes": "workspace:^"
+    "@remix-run/routes": "workspace:^",
+    "@remix-run/node-tsx": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

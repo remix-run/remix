@@ -1,6 +1,6 @@
 import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { tsImport } from 'tsx/esm/api'
+import { loadModule } from '@remix-run/node-tsx/load-module'
 import { IS_BUN } from './runtime.ts'
 
 interface ImportMetaWithResolve extends ImportMeta {
@@ -35,5 +35,5 @@ export async function importModule(specifier: string, meta: ImportMeta): Promise
     return import(meta.resolve(resolvedSpecifier, meta.url))
   }
 
-  return tsImport(resolvedSpecifier, meta.url)
+  return loadModule(resolvedSpecifier, meta.url)
 }

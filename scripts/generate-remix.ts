@@ -11,6 +11,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
+import { parseSync } from 'oxc-parser'
 import { logAndExec } from './utils/process.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
@@ -47,6 +48,21 @@ type ExportEntry = {
   exportPath: string
   // The package/sub-export to re-export from: `@remix-run/headers`, `@remix-run/headers/cookie-storage`
   reExportFrom: string
+  exportMode: ExportMode
+}
+
+type ExportMode = 'value' | 'type' | 'side-effect' | 'type-and-side-effect'
+
+type ExportClassification = {
+  hasRuntimeCode: boolean
+  hasTypeExports: boolean
+  hasValueExports: boolean
+}
+
+type UnknownRecord = Record<string, unknown>
+
+type AstNode = UnknownRecord & {
+  type: string
 }
 
 const { remixRunPackages, allExports, allBins } = await getRemixRunPackages()
@@ -114,9 +130,11 @@ async function getRemixRunPackages() {
     let binExports = new Set(bins.map((b) => `./${b.sourceExport}`))
     let packageExports = packageJson.exports
     if (packageExports && typeof packageExports === 'object') {
-      for (let [exportPath, _] of Object.entries(packageExports)) {
+      for (let [exportPath, exportConfig] of Object.entries(packageExports)) {
         if (exportPath === './package.json') continue
         if (binExports.has(exportPath)) continue
+
+        let exportMode = await getPackageExportMode(packageDirName, exportConfig)
 
         if (exportPath === '.') {
           // Main export
@@ -125,12 +143,14 @@ async function getRemixRunPackages() {
               sourceFile: 'cli.ts',
               exportPath: './cli',
               reExportFrom: packageName,
+              exportMode,
             })
           } else {
             remixRunPackage.exports.push({
               sourceFile: `${shortName}.ts`,
               exportPath: `./${shortName}`,
               reExportFrom: packageName,
+              exportMode,
             })
           }
         } else {
@@ -140,6 +160,7 @@ async function getRemixRunPackages() {
             sourceFile: `${shortName}/${subExport}.ts`,
             exportPath: `./${shortName}/${subExport}`,
             reExportFrom: `${packageName}/${subExport}`,
+            exportMode,
           })
         }
       }
@@ -314,10 +335,236 @@ function isRemixTestBin(bin: { command: string; packageName: string }): boolean 
 }
 
 function createExportSource(entry: ExportEntry): string {
-  return [
-    `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
-    `export * from '${entry.reExportFrom}'\n`,
-  ].join('\n')
+  if (entry.exportMode === 'type') {
+    return [
+      `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
+      `export type * from '${entry.reExportFrom}'\n`,
+    ].join('\n')
+  }
+
+  if (entry.exportMode === 'side-effect') {
+    return [
+      `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
+      `import '${entry.reExportFrom}'`,
+      `export {}\n`,
+    ].join('\n')
+  }
+
+  if (entry.exportMode === 'type-and-side-effect') {
+    return [
+      `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
+      `import '${entry.reExportFrom}'`,
+      `export type * from '${entry.reExportFrom}'\n`,
+    ].join('\n')
+  }
+
+  if (entry.exportMode === 'value') {
+    return [
+      `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
+      `export * from '${entry.reExportFrom}'\n`,
+    ].join('\n')
+  }
+
+  return unreachableExportMode(entry.exportMode)
+}
+
+async function getPackageExportMode(
+  packageDirName: string,
+  exportConfig: unknown,
+): Promise<ExportMode> {
+  let exportTarget = getPackageExportTarget(exportConfig)
+  if (!exportTarget) {
+    return 'value'
+  }
+
+  let sourceFilePath = path.join(packagesDir, packageDirName, exportTarget)
+  let source = await fs.readFile(sourceFilePath, 'utf-8')
+  let classification = classifyExports(sourceFilePath, source)
+
+  if (classification.hasValueExports) {
+    return 'value'
+  }
+
+  if (classification.hasTypeExports && classification.hasRuntimeCode) {
+    return 'type-and-side-effect'
+  }
+
+  if (classification.hasTypeExports) {
+    return 'type'
+  }
+
+  if (classification.hasRuntimeCode) {
+    return 'side-effect'
+  }
+
+  throw new Error(`Unable to generate an export for empty module "${sourceFilePath}"`)
+}
+
+function unreachableExportMode(exportMode: never): never {
+  throw new Error(`Unhandled export mode "${exportMode}"`)
+}
+
+function getPackageExportTarget(exportConfig: unknown): string | null {
+  if (typeof exportConfig === 'string') {
+    return exportConfig
+  }
+
+  if (!isRecord(exportConfig)) {
+    return null
+  }
+
+  let target = exportConfig.default ?? exportConfig.import ?? exportConfig.types
+  return typeof target === 'string' ? target : null
+}
+
+function classifyExports(sourceFilePath: string, source: string): ExportClassification {
+  let parseResult = parseSync(sourceFilePath, source, { sourceType: 'module' })
+  let errors = getArrayProperty(parseResult, 'errors')
+  if (errors.length > 0) {
+    throw new Error(
+      `Failed to parse ${sourceFilePath}:\n${errors.map((error) => String(error)).join('\n')}`,
+    )
+  }
+
+  let classification: ExportClassification = {
+    hasRuntimeCode: false,
+    hasTypeExports: false,
+    hasValueExports: false,
+  }
+
+  for (let node of getProgramBody(parseResult)) {
+    classifyTopLevelNode(node, classification)
+  }
+
+  return classification
+}
+
+function classifyTopLevelNode(node: AstNode, classification: ExportClassification): void {
+  if (node.type === 'ExportNamedDeclaration') {
+    classifyNamedExport(node, classification)
+    return
+  }
+
+  if (node.type === 'ExportAllDeclaration' || node.type === 'ExportDefaultDeclaration') {
+    if (getStringProperty(node, 'exportKind') === 'type') {
+      classification.hasTypeExports = true
+    } else {
+      classification.hasValueExports = true
+    }
+    return
+  }
+
+  if (isRuntimeNode(node)) {
+    classification.hasRuntimeCode = true
+  }
+}
+
+function classifyNamedExport(node: AstNode, classification: ExportClassification): void {
+  let declaration = getNodeProperty(node, 'declaration')
+  let specifiers = getNodeArrayProperty(node, 'specifiers')
+
+  // `export {}` marks the file as a module but does not add a public export.
+  if (!declaration && specifiers.length === 0) {
+    return
+  }
+
+  if (getStringProperty(node, 'exportKind') === 'type') {
+    classification.hasTypeExports = true
+    return
+  }
+
+  if (declaration) {
+    if (isTypeOnlyDeclaration(declaration)) {
+      classification.hasTypeExports = true
+    } else {
+      classification.hasValueExports = true
+    }
+  }
+
+  for (let specifier of specifiers) {
+    if (getStringProperty(specifier, 'exportKind') === 'type') {
+      classification.hasTypeExports = true
+    } else {
+      classification.hasValueExports = true
+    }
+  }
+}
+
+function isTypeOnlyDeclaration(node: AstNode): boolean {
+  return (
+    getBooleanProperty(node, 'declare') ||
+    node.type === 'TSDeclareFunction' ||
+    node.type === 'TSInterfaceDeclaration' ||
+    node.type === 'TSTypeAliasDeclaration'
+  )
+}
+
+function isRuntimeNode(node: AstNode): boolean {
+  if (node.type === 'ImportDeclaration') {
+    return getStringProperty(node, 'importKind') !== 'type'
+  }
+
+  return !isTypeOnlyTopLevelNode(node)
+}
+
+function isTypeOnlyTopLevelNode(node: AstNode): boolean {
+  if (
+    node.type === 'TSDeclareFunction' ||
+    node.type === 'TSInterfaceDeclaration' ||
+    node.type === 'TSTypeAliasDeclaration'
+  ) {
+    return true
+  }
+
+  if (node.type === 'TSModuleDeclaration') {
+    return getBooleanProperty(node, 'declare')
+  }
+
+  return false
+}
+
+function getProgramBody(parseResult: unknown): AstNode[] {
+  let program = isRecord(parseResult) ? parseResult.program : null
+  if (!isRecord(program)) {
+    return []
+  }
+
+  return getNodeArrayProperty(program, 'body')
+}
+
+function getNodeProperty(record: UnknownRecord, key: string): AstNode | null {
+  let value = record[key]
+  return isNode(value) ? value : null
+}
+
+function getNodeArrayProperty(record: UnknownRecord, key: string): AstNode[] {
+  return getArrayProperty(record, key).filter(isNode)
+}
+
+function getArrayProperty(record: unknown, key: string): unknown[] {
+  if (!isRecord(record)) {
+    return []
+  }
+
+  let value = record[key]
+  return Array.isArray(value) ? value : []
+}
+
+function getStringProperty(record: UnknownRecord, key: string): string | null {
+  let value = record[key]
+  return typeof value === 'string' ? value : null
+}
+
+function getBooleanProperty(record: UnknownRecord, key: string): boolean {
+  return record[key] === true
+}
+
+function isNode(value: unknown): value is AstNode {
+  return isRecord(value) && typeof value.type === 'string'
+}
+
+function isRecord(value: unknown): value is UnknownRecord {
+  return typeof value === 'object' && value !== null
 }
 
 function createCliEntrySource(): string {
