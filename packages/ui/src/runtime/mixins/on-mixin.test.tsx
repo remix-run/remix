@@ -4,7 +4,7 @@ import { createRoot } from '../vdom.ts'
 import { on } from './on-mixin.ts'
 import { invariant } from '../invariant.ts'
 import type { Assert, Equal } from '../../test/utils.ts'
-import type { Dispatched } from './on-mixin.ts'
+import type { Dispatched } from '../event-listeners.ts'
 
 describe('on mixin', () => {
   it('updates listeners in place without rebinding when capture is unchanged', (t) => {
@@ -192,18 +192,61 @@ describe('on mixin', () => {
     for (let resolve of pendingResolvers) resolve()
     await Promise.resolve()
   })
+
+  // Type-only test; skip but do not delete
+  it.skip('infers types in jsx for `event`, `event.currentTarget`, and `signal`', () => {
+    type AccordionChangeHandler<target extends HTMLElement> = (
+      event: Dispatched<AccordionChangeEvent, target>,
+      signal: AbortSignal,
+    ) => void | Promise<void>
+
+    function onAccordionChange<target extends HTMLElement>(
+      handler: AccordionChangeHandler<target>,
+      captureBoolean?: boolean,
+    ) {
+      // @ts-expect-error `visibilitychange` is a Document event, not an HTMLButtonElement event
+      on('visibilitychange', () => {})
+
+      return on(ACCORDION_CHANGE_EVENT, handler, captureBoolean)
+    }
+
+    let button = (
+      <button
+        mix={[
+          on('pointerdown', (event, signal) => {
+            type _inferredEvent = Assert<
+              Equal<typeof event, Dispatched<PointerEvent, HTMLButtonElement>>
+            >
+            type _inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
+            type _inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+          }),
+          onAccordionChange((event, signal) => {
+            type _inferredEvent = Assert<
+              Equal<typeof event, Dispatched<AccordionChangeEvent, HTMLButtonElement>>
+            >
+            type _inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
+            type _inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
+          }),
+          // @ts-expect-error `visibilitychange` is a Document event, not an HTMLButtonElement event
+          on('visibilitychange', () => {}),
+        ]}
+      />
+    )
+  })
 })
 
-const _infersNodeType = (
-  <button
-    mix={[
-      on('pointerdown', (event, signal) => {
-        type _inferredEvent = Assert<
-          Equal<typeof event, Dispatched<PointerEvent, HTMLButtonElement>>
-        >
-        type _inferredTarget = Assert<Equal<typeof event.currentTarget, HTMLButtonElement>>
-        type _inferredSignal = Assert<Equal<typeof signal, AbortSignal>>
-      }),
-    ]}
-  />
-)
+// Types for type inference testing ----------------------------------------------------------------
+
+declare const ACCORDION_CHANGE_EVENT: 'remix/ui::src/runtime/mixins/on-mixin.test.tsx::accordion-change'
+
+type AccordionChangeEvent = Event & {
+  accordionType: 'single' | 'multiple'
+  itemValue: string
+  value: string | null | string[]
+}
+
+declare global {
+  interface HTMLElementEventMap {
+    [ACCORDION_CHANGE_EVENT]: AccordionChangeEvent
+  }
+}

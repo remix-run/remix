@@ -8,6 +8,7 @@ import {
   on,
   ref,
   type CSSMixinDescriptor,
+  type Dispatched,
   type ElementProps,
   type Handle,
   type Props,
@@ -32,7 +33,10 @@ const MENU_FLASH_DURATION_MS = 60
 const SUBMENU_OPEN_DELAY_MS = 300
 const SUBMENU_ANCHOR_RELATIVE_TO = '[role="menu"] > [role^="menuitem"]'
 
-type MenuSelectHandler = (event: MenuSelectEvent, signal: AbortSignal) => void | Promise<void>
+type MenuSelectHandler<target extends HTMLElement> = (
+  event: Dispatched<MenuSelectEvent, target>,
+  signal: AbortSignal,
+) => void | Promise<void>
 
 const menuButtonCss: CSSMixinDescriptor = css({
   display: 'grid',
@@ -1406,8 +1410,11 @@ const menu = {
   trigger,
 } as const
 
-export function onMenuSelect(handler: MenuSelectHandler, captureBoolean?: boolean) {
-  return on<HTMLElement, typeof MENU_SELECT_EVENT>(MENU_SELECT_EVENT, handler, captureBoolean)
+export function onMenuSelect<target extends HTMLElement>(
+  handler: MenuSelectHandler<target>,
+  captureBoolean?: boolean,
+) {
+  return on(MENU_SELECT_EVENT, handler, captureBoolean)
 }
 
 export interface MenuProps extends Omit<Props<'button'>, 'children'> {
