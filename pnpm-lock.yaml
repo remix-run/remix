@@ -1431,6 +1431,9 @@ importers:
       '@remix-run/node-tsx':
         specifier: workspace:^
         version: link:../node-tsx
+      '@remix-run/render-middleware':
+        specifier: workspace:^
+        version: link:../render-middleware
       '@remix-run/response':
         specifier: workspace:^
         version: link:../response
@@ -1489,6 +1492,25 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+
+  packages/render-middleware:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
 
   packages/response:
     dependencies:

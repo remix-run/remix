@@ -92,11 +92,11 @@ export async function compressResponse(
   let acceptEncodingHeader = request.headers.get('Accept-Encoding')
   let responseHeaders = new Headers(response.headers)
 
-  let contentEncodingHeader = responseHeaders.get('content-encoding')
-  let contentLengthHeader = responseHeaders.get('content-length')
+  let contentEncodingHeader = responseHeaders.get('Content-Encoding')
+  let contentLengthHeader = responseHeaders.get('Content-Length')
   let contentLength = contentLengthHeader != null ? parseInt(contentLengthHeader, 10) : null
-  let acceptRangesHeader = responseHeaders.get('accept-ranges')
-  let cacheControl = CacheControl.from(responseHeaders.get('cache-control'))
+  let acceptRangesHeader = responseHeaders.get('Accept-Ranges')
+  let cacheControl = CacheControl.from(responseHeaders.get('Cache-Control'))
 
   if (
     !acceptEncodingHeader ||
@@ -168,19 +168,19 @@ function negotiateEncoding(
 }
 
 function setCompressionHeaders(headers: Headers, encoding: string): void {
-  headers.set('content-encoding', encoding)
-  headers.set('accept-ranges', 'none')
-  headers.delete('content-length')
+  headers.set('Content-Encoding', encoding)
+  headers.set('Accept-Ranges', 'none')
+  headers.delete('Content-Length')
 
   // Update Vary header to include Accept-Encoding
-  let vary = Vary.from(headers.get('vary'))
+  let vary = Vary.from(headers.get('Vary'))
   vary.add('Accept-Encoding')
-  headers.set('vary', vary.toString())
+  headers.set('Vary', vary.toString())
 
   // Convert strong ETags to weak since compressed representation is byte-different
-  let etagHeader = headers.get('etag')
+  let etagHeader = headers.get('ETag')
   if (etagHeader && !etagHeader.startsWith('W/')) {
-    headers.set('etag', `W/${etagHeader}`)
+    headers.set('ETag', `W/${etagHeader}`)
   }
 }
 

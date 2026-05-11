@@ -227,113 +227,125 @@ export type ComponentHandle = ReturnType<typeof createComponent>
  * @returns Component runtime helpers used by the reconciler.
  */
 export function createComponent<C = NoContext>(config: ComponentConfig) {
-  let taskQueue: Task[] = []
-  let renderCtrl: AbortController | null = null
-  let connectedCtrl: AbortController | null = null
-  let contextValue: C | undefined = undefined
+  return new ComponentRuntime<C>(config)
+}
 
-  function getConnectedSignal() {
-    if (!connectedCtrl) connectedCtrl = new AbortController()
-    return connectedCtrl.signal
-  }
+class ComponentRuntime<C = NoContext> {
+  frame: FrameHandle
 
-  let getContent: null | RenderFn = null
-  let scheduleUpdate: () => void = () => {
+  #config: ComponentConfig
+  #connectedController: AbortController | undefined
+  #contextValue: C | undefined
+  #handle: Handle<ElementProps, C>
+  #props = {} as ElementProps
+  #renderController: AbortController | undefined
+  #renderFn: RenderFn | undefined
+  #scheduleUpdate: () => void = () => {
     throw new Error('scheduleUpdate not implemented')
   }
-  let props = {} as ElementProps
+  #tasks: Task[] = []
 
-  let context: Context<C> = {
-    set: (value: C) => {
-      contextValue = value
-    },
-    get: (type: Component) => config.getContext(type),
+  constructor(config: ComponentConfig) {
+    this.#config = config
+    this.frame = config.frame
+    this.#handle = this.#createHandle()
   }
 
-  let handle: Handle<ElementProps, C> = {
-    id: config.id,
-    props,
-    update: () =>
-      new Promise((resolve) => {
-        taskQueue.push((signal) => resolve(signal))
-        scheduleUpdate()
-      }),
-    queueTask: (task: Task) => {
-      taskQueue.push(task)
-    },
-    frame: config.frame,
-    frames: {
-      get top() {
-        return config.getTopFrame?.() ?? config.frame
-      },
-      get(name: string) {
-        return config.getFrameByName(name)
-      },
-    },
-    context: context,
-    get signal() {
-      return config.signal ?? getConnectedSignal()
-    },
-  }
-
-  function dequeueTasks(): (() => void)[] {
-    // Only create render controller if any task expects a signal (has length >= 1)
-    let needsSignal = taskQueue.some((task) => task.length >= 1)
-    if (needsSignal && !renderCtrl) {
-      renderCtrl = new AbortController()
-    }
-    let signal = renderCtrl?.signal
-    return taskQueue.splice(0, taskQueue.length).map((task) => () => task(signal!))
-  }
-
-  function render(props: ElementProps): [RemixNode, Array<() => void>] {
-    if (connectedCtrl?.signal.aborted) {
+  render = (nextProps: ElementProps): [RemixNode, Array<() => void>] => {
+    if (this.#connectedController?.signal.aborted) {
       console.warn('render called after component was removed, potential application memory leak')
       return [null, []]
     }
 
-    // Only abort render controller if it was initialized
-    if (renderCtrl) {
-      renderCtrl.abort()
-      renderCtrl = null
-    }
+    this.#abortRenderSignal()
+    syncProps(this.#props, nextProps)
 
-    syncProps(handle.props, props)
+    let renderFn = this.#renderFn
 
-    let renderContent = getContent
-    if (!renderContent) {
-      let result = config.type(handle)
+    if (renderFn === undefined) {
+      let result = this.#config.type(this.#handle)
+
       if (typeof result !== 'function') {
-        let name = config.type.name || 'Anonymous'
+        let name = this.#config.type.name || 'Anonymous'
         throw new Error(`${name} must return a render function, received ${typeof result}`)
-      } else {
-        getContent = result
-        renderContent = result
       }
+
+      renderFn = result as RenderFn
+      this.#renderFn = renderFn
     }
-    if (!renderContent) {
-      throw new Error('component render function was not initialized')
+
+    return [renderFn(this.#props), this.#dequeueTasks()]
+  }
+
+  remove = (): Array<() => void> => {
+    this.#connectedController?.abort()
+    this.#abortRenderSignal()
+    return this.#dequeueTasks()
+  }
+
+  setScheduleUpdate = (nextScheduleUpdate: () => void): void => {
+    this.#scheduleUpdate = nextScheduleUpdate
+  }
+
+  getContextValue = (): C | undefined => this.#contextValue
+
+  #createHandle(): Handle<ElementProps, C> {
+    let component = this
+    let context: Context<C> = {
+      set: (value: C) => {
+        this.#contextValue = value
+      },
+      get: (type: ElementType | symbol) => this.#config.getContext(type as Component),
     }
 
-    let node = renderContent(handle.props)
-    return [node, dequeueTasks()]
+    return {
+      id: this.#config.id,
+      props: this.#props,
+      update: () =>
+        new Promise((resolve) => {
+          this.#tasks.push((signal) => resolve(signal))
+          this.#scheduleUpdate()
+        }),
+      queueTask: (task: Task) => {
+        this.#tasks.push(task)
+      },
+      frame: this.#config.frame,
+      frames: {
+        get top() {
+          return component.#config.getTopFrame?.() ?? component.#config.frame
+        },
+        get(name: string) {
+          return component.#config.getFrameByName(name)
+        },
+      },
+      context,
+      get signal() {
+        return component.#config.signal ?? component.#connectedSignal()
+      },
+    }
   }
 
-  function remove(): (() => void)[] {
-    connectedCtrl?.abort()
-    renderCtrl?.abort()
-    return dequeueTasks()
+  #connectedSignal(): AbortSignal {
+    this.#connectedController ??= new AbortController()
+    return this.#connectedController.signal
   }
 
-  function setScheduleUpdate(nextScheduleUpdate: () => void) {
-    scheduleUpdate = nextScheduleUpdate
+  #abortRenderSignal(): void {
+    this.#renderController?.abort()
+    this.#renderController = undefined
   }
 
-  function getContextValue(): C | undefined {
-    return contextValue
-  }
+  #dequeueTasks(): Array<() => void> {
+    let needsSignal = this.#tasks.some((task) => task.length >= 1)
 
-  return { render, remove, setScheduleUpdate, frame: config.frame, getContextValue }
+    if (needsSignal) {
+      this.#renderController ??= new AbortController()
+    }
+
+    let signal = this.#renderController?.signal
+    let tasks = this.#tasks.splice(0, this.#tasks.length)
+    return tasks.map((task) => () => task(signal!))
+  }
 }
 
 function syncProps(target: ElementProps, next: ElementProps): void {

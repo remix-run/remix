@@ -1,9 +1,17 @@
-import type { Middleware, RequestContext, RequestMethod } from '@remix-run/fetch-router'
+import { isRequestMethod } from '@remix-run/fetch-router'
+import type {
+  AnyParams,
+  ContextEntries,
+  Middleware,
+  RequestContext,
+  RequestMethod,
+} from '@remix-run/fetch-router'
 import { Session } from '@remix-run/session'
 
 const defaultSafeMethods: RequestMethod[] = ['GET', 'HEAD', 'OPTIONS']
-const defaultTokenHeaderNames = ['x-csrf-token', 'x-xsrf-token', 'csrf-token']
+const defaultTokenHeaderNames = ['X-Csrf-Token', 'X-Xsrf-Token', 'Csrf-Token']
 
+type AnyRequestContext = RequestContext<AnyParams, ContextEntries>
 type OriginMatcher = string | RegExp | ReadonlyArray<string | RegExp>
 
 /**
@@ -20,7 +28,7 @@ export interface CsrfOriginResolver {
    */
   (
     origin: string,
-    context: RequestContext,
+    context: AnyRequestContext,
   ): CsrfOriginResolverResult | Promise<CsrfOriginResolverResult>
 }
 
@@ -41,7 +49,7 @@ export interface CsrfTokenResolver {
   /**
    * Resolves the submitted CSRF token for the current request.
    */
-  (context: RequestContext): CsrfTokenResolverResult | Promise<CsrfTokenResolverResult>
+  (context: AnyRequestContext): CsrfTokenResolverResult | Promise<CsrfTokenResolverResult>
 }
 
 /**
@@ -70,7 +78,7 @@ export interface CsrfOptions {
   /**
    * Header names checked (in order) for CSRF tokens.
    *
-   * @default ['x-csrf-token', 'x-xsrf-token', 'csrf-token']
+   * @default ['X-Csrf-Token', 'X-Xsrf-Token', 'Csrf-Token']
    */
   headerNames?: readonly string[]
 
@@ -103,7 +111,7 @@ export interface CsrfOptions {
   /**
    * Optional custom error response for rejected requests.
    */
-  onError?: (reason: CsrfFailureReason, context: RequestContext) => Response | Promise<Response>
+  onError?: (reason: CsrfFailureReason, context: AnyRequestContext) => Response | Promise<Response>
 }
 
 /**
@@ -122,13 +130,13 @@ export function csrf(options: CsrfOptions = {}): Middleware {
   let allowMissingOrigin = options.allowMissingOrigin ?? true
 
   return async (context, next) => {
-    if (!context.has(Session)) {
+    if (context.get(Session) == null) {
       throw new Error('csrf middleware requires session() middleware to run before it')
     }
 
     let expectedToken = getCsrfToken(context, tokenKey)
 
-    if (safeMethods.includes(context.method)) {
+    if (isSafeMethod(context.method, safeMethods)) {
       return next()
     }
 
@@ -156,6 +164,10 @@ export function csrf(options: CsrfOptions = {}): Middleware {
   }
 }
 
+function isSafeMethod(method: string, safeMethods: readonly RequestMethod[]): boolean {
+  return isRequestMethod(method) && safeMethods.includes(method)
+}
+
 /**
  * Gets the CSRF token from the session. Creates one if missing.
  *
@@ -163,12 +175,12 @@ export function csrf(options: CsrfOptions = {}): Middleware {
  * @param tokenKey Session key that stores the token
  * @returns The active CSRF token
  */
-export function getCsrfToken(context: RequestContext, tokenKey = '_csrf'): string {
-  if (!context.has(Session)) {
+export function getCsrfToken(context: AnyRequestContext, tokenKey = '_csrf'): string {
+  let session = context.get(Session)
+  if (session == null) {
     throw new Error('Session is not started. Use session() middleware before csrf().')
   }
 
-  let session = context.get(Session)
   let token = session.get(tokenKey)
   if (typeof token === 'string' && token !== '') {
     return token
@@ -195,7 +207,7 @@ function createCsrfToken(): string {
 function getErrorResponse(
   options: CsrfOptions,
   reason: CsrfFailureReason,
-  context: RequestContext,
+  context: AnyRequestContext,
 ): Response | Promise<Response> {
   if (options.onError) {
     return options.onError(reason, context)
@@ -213,7 +225,7 @@ function getErrorResponse(
 }
 
 async function resolveSubmittedToken(
-  context: RequestContext,
+  context: AnyRequestContext,
   valueResolver: CsrfTokenResolver | undefined,
   fieldName: string,
   headerNames: readonly string[],
@@ -240,7 +252,7 @@ async function resolveSubmittedToken(
     }
   }
 
-  let formValue = context.has(FormData) ? context.get(FormData).get(fieldName) : undefined
+  let formValue = context.get(FormData)?.get(fieldName)
   if (typeof formValue === 'string') {
     let trimmedFormValue = formValue.trim()
     if (trimmedFormValue !== '') {
@@ -258,7 +270,7 @@ async function resolveSubmittedToken(
 }
 
 async function validateRequestOrigin(
-  context: RequestContext,
+  context: AnyRequestContext,
   configuredOrigin: CsrfOrigin | undefined,
   allowMissingOrigin: boolean,
   defaultOrigin: string,
@@ -298,7 +310,7 @@ async function validateRequestOrigin(
   return false
 }
 
-function getRequestOrigin(context: RequestContext): string | null {
+function getRequestOrigin(context: AnyRequestContext): string | null {
   let origin = context.headers.get('Origin')
   if (origin != null && origin.trim() !== '') {
     return origin

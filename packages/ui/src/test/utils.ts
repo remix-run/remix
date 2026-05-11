@@ -1,3 +1,5 @@
+import { stripFlushMarkers } from '../runtime/stream-protocol.ts'
+
 export type Assert<T extends true> = T
 
 export type Equal<X, Y> =
@@ -14,7 +16,7 @@ export async function drain(stream: ReadableStream<Uint8Array>): Promise<string>
     html += decoder.decode(value)
   }
 
-  return html
+  return stripFlushMarkers(html)
 }
 
 export function readChunks(stream: ReadableStream<Uint8Array>): AsyncGenerator<string, void, void> {

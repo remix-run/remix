@@ -2,7 +2,7 @@ import type {
   GetContextValue,
   Middleware,
   RequestContext,
-  SetContextValue,
+  ContextWithEntry,
 } from '@remix-run/fetch-router'
 
 import { Auth, type BadAuth, type GoodAuth } from './auth.ts'
@@ -28,7 +28,7 @@ type ResolvedGoodAuth<context extends RequestContext<any, any>, identity> = [
 
 type RequireAuthContextTransform<identity> = <context extends RequestContext<any, any>>(
   context: context,
-) => SetContextValue<context, typeof Auth, ResolvedGoodAuth<context, identity>>
+) => ContextWithEntry<context, readonly [typeof Auth, ResolvedGoodAuth<context, identity>]>
 
 /**
  * Options for enforcing authentication on a route.
@@ -46,15 +46,14 @@ export interface RequireAuthOptions {
  */
 export function requireAuth<identity = unknown>(
   options: RequireAuthOptions = {},
-): Middleware<any, any, RequireAuthContextTransform<identity>> {
+): Middleware<RequireAuthContextTransform<identity>> {
   return async (context, next) => {
-    if (!context.has(Auth)) {
+    let auth = context.get(Auth)
+    if (auth == null) {
       throw new Error(
         'Auth state not found. Make sure auth() middleware runs before requireAuth().',
       )
     }
-
-    let auth = context.get(Auth)
 
     if (auth.ok) {
       return next()

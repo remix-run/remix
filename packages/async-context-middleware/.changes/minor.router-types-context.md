@@ -1,0 +1,1 @@
+BREAKING CHANGE: `getContext()` now derives its type from `fetch-router`'s `RouterTypes.context`, with route params broadened to `AnyParams`. The separate `AsyncContextTypes.requestContext` augmentation has been removed, so apps that configure their router context no longer need a second async-context-specific augmentation.

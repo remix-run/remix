@@ -54,7 +54,7 @@ let { values: args } = parseArgs({
       type: 'string',
       multiple: true,
       short: 'f',
-      // default: ['remix', 'preact'],
+      default: ['remix', 'preact'],
     },
     benchmark: { type: 'string', multiple: true, short: 'b' },
   },

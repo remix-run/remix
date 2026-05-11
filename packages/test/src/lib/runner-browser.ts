@@ -16,6 +16,8 @@ import {
 import type { Reporter } from './reporters/index.ts'
 import type { TestResults } from './reporters/results.ts'
 
+const BROWSER_TEST_FILE_TIMEOUT_MS = 90_000
+
 // The harness reports each test result with `filePath` set to the
 // `/scripts/<rel>` URL the iframe loaded. Reporters expect a real filesystem
 // path so they can compute `path.relative(cwd, ...)` cleanly; otherwise they
@@ -61,12 +63,10 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       getPlaywrightLaunchOptions(options.playwrightUseOpts),
     )
     page = await browser.newPage(getPlaywrightPageOptions(options.playwrightUseOpts))
-    // Cap how long we'll wait for a browser-test file to signal completion.
-    // Playwright's default is 30s; bumping to 60s buys headroom for slower
-    // suites without letting a hung test hide forever. Plumb this through
-    // config later if anyone needs to tune it.
-    page.setDefaultTimeout(90_000)
-    page.setDefaultNavigationTimeout(90_000)
+    // Cap individual browser operations, then separately watch for per-file
+    // progress so large suites can run longer than this without hiding hangs.
+    page.setDefaultTimeout(BROWSER_TEST_FILE_TIMEOUT_MS)
+    page.setDefaultNavigationTimeout(BROWSER_TEST_FILE_TIMEOUT_MS)
 
     if (options.console) {
       page.on('console', (msg) => console.log(`${colors.dim('[browser console]')} ${msg.text()}`))
@@ -84,6 +84,32 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
     let totalSkipped = 0
     let totalTodo = 0
     let rootDir = getBrowserTestRootDir()
+    let completedFiles = 0
+    let totalFiles = options.testFiles?.length ?? 0
+    let progressTimeoutId: ReturnType<typeof setTimeout> | undefined
+    let rejectProgressTimeout: (error: Error) => void = () => {}
+    let progressTimeoutPromise = new Promise<never>((_, reject) => {
+      rejectProgressTimeout = reject
+    })
+
+    function clearProgressTimeout() {
+      if (progressTimeoutId !== undefined) {
+        clearTimeout(progressTimeoutId)
+        progressTimeoutId = undefined
+      }
+    }
+
+    function resetProgressTimeout() {
+      clearProgressTimeout()
+      progressTimeoutId = setTimeout(() => {
+        let progress = totalFiles > 0 ? ` (${completedFiles}/${totalFiles} files completed)` : ''
+        rejectProgressTimeout(
+          new Error(
+            `Timed out waiting ${BROWSER_TEST_FILE_TIMEOUT_MS}ms for browser test progress${progress}`,
+          ),
+        )
+      }, BROWSER_TEST_FILE_TIMEOUT_MS)
+    }
 
     await page.route('**/file-results', async (route) => {
       let results = route.request().postDataJSON() as TestResults
@@ -95,6 +121,8 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
       totalFailed += results.failed
       totalSkipped += results.skipped
       totalTodo += results.todo
+      completedFiles++
+      resetProgressTimeout()
       await route.fulfill({ status: 200 })
     })
 
@@ -117,9 +145,19 @@ export async function runBrowserTests(options: TestRunOptions): Promise<{
 
     // Prevent unhandled rejection if we fail before setting up the listener
     errorPromise.catch(() => {})
+    progressTimeoutPromise.catch(() => {})
 
-    await page.goto(options.baseUrl)
-    await Promise.race([page.waitForFunction('window.__testsDone'), errorPromise])
+    resetProgressTimeout()
+    try {
+      await page.goto(options.baseUrl)
+      await Promise.race([
+        page.waitForFunction('window.__testsDone', undefined, { timeout: 0 }),
+        errorPromise,
+        progressTimeoutPromise,
+      ])
+    } finally {
+      clearProgressTimeout()
+    }
 
     if (coverageEnabled) {
       let entries = (await page.coverage.stopJSCoverage()) as unknown as V8CoverageEntry[]

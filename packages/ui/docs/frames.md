@@ -164,8 +164,8 @@ On the client, `run` accepts an optional `resolveFrame` implementation:
 let app = run({
   loadModule: ...,
   async resolveFrame(src, signal, target) {
-    let headers = new Headers({ accept: 'text/html' })
-    if (target) headers.set('x-remix-target', target)
+    let headers = new Headers({ Accept: 'text/html' })
+    if (target) headers.set('X-Remix-Target', target)
     let response = await fetch(src, { headers, signal })
     return response.body ?? (await response.text())
   },

@@ -3,9 +3,9 @@ import { describe, it } from '@remix-run/test'
 import { createMatcher, type Matcher, RoutePattern } from '@remix-run/route-pattern'
 import { createRoutes as route } from '@remix-run/routes'
 
-import type { BuildAction } from './controller.ts'
+import type { Action } from './controller.ts'
 import type { RequestContext } from './request-context.ts'
-import type { MatchData } from './router.ts'
+import type { RouteEntry } from './router.ts'
 import { createRouter } from './router.ts'
 
 describe('router.fetch()', () => {
@@ -19,11 +19,16 @@ describe('router.fetch()', () => {
     assert.equal(await response.text(), 'Home')
   })
 
-  it('fetches a request facade that clones to a real Request', async () => {
+  it('uses a Request input directly', async () => {
     let router = createRouter()
-    router.get('/', () => new Response('Home'))
+    let request = new Request('https://remix.run')
 
-    let response = await router.fetch(createRequestFacade('https://remix.run'))
+    router.get('/', (context) => {
+      assert.equal(context.request, request)
+      return new Response('Home')
+    })
+
+    let response = await router.fetch(request)
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Home')
@@ -168,19 +173,6 @@ describe('router.fetch()', () => {
     assert.deepEqual(requestLog, ['middleware'])
   })
 })
-
-function createRequestFacade(url: string): Request {
-  let request = new Request(url)
-  let facade = {
-    clone() {
-      return request.clone()
-    },
-  }
-
-  Object.setPrototypeOf(facade, Request.prototype)
-
-  return facade as Request
-}
 
 describe('router.map() with single routes', () => {
   it('maps a single route to a request handler', async () => {
@@ -336,6 +328,42 @@ describe('router.map()', () => {
         },
       })
     }
+  })
+
+  it('rejects controllers without an object actions property', () => {
+    let routes = route({
+      home: '/',
+    })
+
+    let router = createRouter()
+
+    assert.throws(
+      () =>
+        router.map(routes, {
+          actions: undefined,
+        } as any),
+      /Expected a controller with an object `actions` property/,
+    )
+  })
+
+  it('rejects action objects without function handlers', () => {
+    let routes = route({
+      home: '/',
+    })
+
+    let router = createRouter()
+
+    assert.throws(
+      () =>
+        router.map(routes, {
+          actions: {
+            home: {
+              handler: 1,
+            },
+          },
+        } as any),
+      /Expected a request handler function or action object with a function `handler` property/,
+    )
   })
 
   it('rejects nested route map keys in controller actions', () => {
@@ -776,13 +804,13 @@ describe('inline middleware', () => {
     assert.equal(await response.text(), 'Home')
   })
 
-  it('allows BuildAction object form without middleware', () => {
+  it('allows Action object form without middleware', () => {
     let routes = route({
       home: '/',
     })
 
     if (false as boolean) {
-      let action: BuildAction<'GET', typeof routes.home> = {
+      let action: Action<typeof routes.home> = {
         handler() {
           return new Response('Home')
         },
@@ -1051,8 +1079,8 @@ describe('custom matcher', () => {
   it('uses a custom matcher when provided', async () => {
     let matchAllCalls = 0
 
-    let inner = createMatcher<MatchData>()
-    let customMatcher: Matcher<MatchData> = {
+    let inner = createMatcher<RouteEntry>()
+    let customMatcher: Matcher<RouteEntry> = {
       ignoreCase: inner.ignoreCase,
       add: inner.add.bind(inner),
       match: inner.match.bind(inner),
@@ -1073,8 +1101,8 @@ describe('custom matcher', () => {
   it('adds routes to the custom matcher', async () => {
     let addedPatterns: string[] = []
 
-    let inner = createMatcher<MatchData>()
-    let customMatcher: Matcher<MatchData> = {
+    let inner = createMatcher<RouteEntry>()
+    let customMatcher: Matcher<RouteEntry> = {
       ignoreCase: inner.ignoreCase,
       add(pattern, data) {
         let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern

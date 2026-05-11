@@ -1,4 +1,4 @@
-import { createMixin } from './mixin.ts'
+import { createMixin, type MixinType } from './mixin.ts'
 import type { ElementProps } from '../jsx.ts'
 import type { MixinDescriptor } from './mixin.ts'
 import type {
@@ -17,12 +17,16 @@ type EventType<target extends Element> = Extract<AddEventType<target>, string>
 type ListenerFor<target extends Element, type extends EventType<target>> = SignaledListener<
   Parameters<AddEventListenerFor<target, type>>[0]
 >
+export type OnMixinDescriptor = {
+  type: typeof onMixinType
+  args: [type: string, handler: SignaledListener<Event>, captureBoolean?: boolean]
+}
 
-const onMixin = createMixin<
+const onMixinType: MixinType<
   Element,
   [type: string, handler: SignaledListener<Event>, captureBoolean?: boolean],
   ElementProps
->((handle) => {
+> = (handle) => {
   let currentHandler: SignaledListener<Event> = () => {}
   let currentType = ''
   let currentCapture = false
@@ -61,7 +65,15 @@ const onMixin = createMixin<
 
     return handle.element
   }
-})
+}
+
+const onMixin = createMixin(onMixinType)
+
+export function isOnMixinDescriptor(descriptor: unknown): descriptor is OnMixinDescriptor {
+  if (!descriptor || typeof descriptor !== 'object') return false
+  let candidate = descriptor as { type?: unknown; args?: unknown }
+  return candidate.type === onMixinType && Array.isArray(candidate.args)
+}
 
 /**
  * Attaches a typed DOM event handler through the mixin system.

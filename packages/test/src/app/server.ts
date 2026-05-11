@@ -9,6 +9,9 @@ import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
 import { getBrowserTestRootDir, IS_RUNNING_FROM_SRC } from '../lib/config.ts'
 import { transformTypeScript } from '../lib/ts-transform.ts'
 
+const log = (str: string) => console.log(`[remix:test] ${str}`)
+const logError = (str: string, e: unknown) => console.error(`[remix:test] Error: ${str}\n`, e)
+
 export async function startServer(
   browserFiles: string[],
 ): Promise<{ server: http.Server; port: number }> {
@@ -20,7 +23,7 @@ export async function startServer(
     try {
       let server = http.createServer((req, res) => {
         handle(req, res).catch((error) => {
-          console.error(`[remix-test] Unhandled error for ${req.url}:`, error)
+          logError(`Unhandled error for ${req.url}`, error)
           if (!res.headersSent) {
             res.writeHead(500, { 'Content-Type': 'text/plain' })
           }
@@ -31,7 +34,7 @@ export async function startServer(
         server.once('error', reject)
         server.listen(port, () => {
           server.removeListener('error', reject)
-          console.log(`Test server running on http://localhost:${port}`)
+          log(`Test server running on http://localhost:${port}`)
           resolve()
         })
       })
@@ -39,7 +42,7 @@ export async function startServer(
     } catch (error: any) {
       if (error.code !== 'EADDRINUSE') throw error
       lastError = error
-      console.log(`Port ${port} is in use, trying another port...`)
+      log(`Port ${port} is in use, trying another port...`)
       port += 1
     }
   }
@@ -99,7 +102,7 @@ function createRequestHandler(
           await serveScript(res, filePath, url.pathname, rootDir)
           return
         } catch (error) {
-          console.error(`[remix-test] Error serving ${url.pathname}:`, error)
+          logError(`Error serving ${url.pathname}`, error)
           sendText(res, 500, String(error))
           return
         }
@@ -151,9 +154,8 @@ async function serveScript(
       let result = await transformTypeScript(source, filePath)
       code = result.code
     } catch (error) {
-      let msg = error instanceof Error ? error.message : String(error)
-      console.error(`[remix-test] Failed to transform ${urlPath}: ${msg}`)
-      sendText(res, 500, msg)
+      logError(`Failed to transform ${urlPath}`, error)
+      sendText(res, 500, `Failed to transform ${urlPath}`)
       return
     }
   } else {
@@ -163,9 +165,8 @@ async function serveScript(
   try {
     code = await rewriteImports(code, filePath, rootDir)
   } catch (error) {
-    let msg = error instanceof Error ? error.message : String(error)
-    console.error(`[remix-test] Failed to rewrite imports for ${urlPath}: ${msg}`)
-    sendText(res, 500, msg)
+    logError(`Failed to rewrite imports for ${urlPath}`, error)
+    sendText(res, 500, `Failed to rewrite imports for ${urlPath}`)
     return
   }
 

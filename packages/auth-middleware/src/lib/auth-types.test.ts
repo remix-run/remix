@@ -1,23 +1,15 @@
 import { describe, it } from '@remix-run/test'
 
 import {
+  createAction,
+  createController,
   createRouter,
-  type BuildAction,
-  type Controller,
   type GetContextValue,
   type MiddlewareContext,
-  type RequestContext,
 } from '@remix-run/fetch-router'
 import { route } from '@remix-run/routes'
 
-import {
-  Auth,
-  auth,
-  type AuthState,
-  type GoodAuth,
-  type WithAuth,
-  type WithRequiredAuth,
-} from './auth.ts'
+import { Auth, auth, type AuthState, type GoodAuth } from './auth.ts'
 import { requireAuth } from './require-auth.ts'
 import { createAPIAuthScheme } from './schemes/api-key.ts'
 import { createBearerTokenAuthScheme } from './schemes/bearer.ts'
@@ -56,11 +48,12 @@ const routes = route({
 })
 
 const routerMiddleware = [typedAuth] as const
+const protectedMiddleware = [requireAuth<APIIdentity>()] as const
 
 type AppContext = MiddlewareContext<typeof routerMiddleware>
-type ProtectedAppContext = WithRequiredAuth<AppContext, APIIdentity>
+type ProtectedAppContext = MiddlewareContext<typeof protectedMiddleware, AppContext>
 
-type AuthContext = WithAuth<RequestContext, APIIdentity>
+type AuthContext = MiddlewareContext<[typeof typedAuth]>
 
 const router = createRouter({ middleware: routerMiddleware })
 const fallbackRouter = createRouter()
@@ -95,7 +88,8 @@ router.get(routes.public, (context) => {
   return new Response('Public')
 })
 
-const privateAction = {
+const privateAction = createAction<typeof routes.private, ProtectedAppContext>(routes.private, {
+  middleware: protectedMiddleware,
   handler(context) {
     let currentAuth = context.get(Auth)
     let id: string = context.params.id
@@ -109,9 +103,10 @@ const privateAction = {
 
     return new Response('Private')
   },
-} satisfies BuildAction<'GET', typeof routes.private, ProtectedAppContext>
+})
 
-const adminController = {
+const adminController = createController<typeof routes.admin, ProtectedAppContext>(routes.admin, {
+  middleware: protectedMiddleware,
   actions: {
     dashboard(context) {
       let currentAuth = context.get(Auth)
@@ -125,10 +120,14 @@ const adminController = {
       return new Response('Admin')
     },
   },
-} satisfies Controller<typeof routes.admin, ProtectedAppContext>
+})
 
-fallbackRouter.get('/session/:id', {
-  middleware: [requireAuth<{ kind: 'session'; id: string }>()] as const,
+type SessionIdentity = { kind: 'session'; id: string }
+const sessionAuthMiddleware = [requireAuth<SessionIdentity>()] as const
+type SessionAuthContext = MiddlewareContext<typeof sessionAuthMiddleware>
+
+const sessionAction = createAction<'/session/:id', SessionAuthContext>('/session/:id', {
+  middleware: sessionAuthMiddleware,
   handler(context) {
     let currentAuth = context.get(Auth)
     let id: string = context.params.id
@@ -142,15 +141,11 @@ fallbackRouter.get('/session/:id', {
   },
 })
 
-router.get(routes.private, {
-  middleware: [requireAuth<APIIdentity>()] as const,
-  handler: privateAction.handler,
-})
+fallbackRouter.get('/session/:id', sessionAction)
 
-router.map(routes.admin, {
-  middleware: [requireAuth<APIIdentity>()] as const,
-  actions: adminController.actions,
-})
+router.get(routes.private, privateAction)
+
+router.map(routes.admin, adminController)
 
 if (false as boolean) {
   router.get(routes.private, (context) => {
@@ -165,6 +160,7 @@ void router
 void fallbackRouter
 void privateAction
 void adminController
+void sessionAction
 
 describe('auth middleware type inference', () => {
   it('propagates auth state into controller and action contracts', () => {})

@@ -67,6 +67,7 @@
     "./node-serve": "./src/node-serve.ts",
     "./node-tsx": "./src/node-tsx.ts",
     "./node-tsx/load-module": "./src/node-tsx/load-module.ts",
+    "./render-middleware": "./src/render-middleware.ts",
     "./response/compress": "./src/response/compress.ts",
     "./response/file": "./src/response/file.ts",
     "./response/html": "./src/response/html.ts",
@@ -293,6 +294,10 @@
         "types": "./dist/node-tsx/load-module.d.ts",
         "default": "./dist/node-tsx/load-module.js"
       },
+      "./render-middleware": {
+        "types": "./dist/render-middleware.d.ts",
+        "default": "./dist/render-middleware.js"
+      },
       "./response/compress": {
         "types": "./dist/response/compress.d.ts",
         "default": "./dist/response/compress.js"
@@ -501,7 +506,8 @@
     "@remix-run/terminal": "workspace:^",
     "@remix-run/node-serve": "workspace:^",
     "@remix-run/routes": "workspace:^",
-    "@remix-run/node-tsx": "workspace:^"
+    "@remix-run/node-tsx": "workspace:^",
+    "@remix-run/render-middleware": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

@@ -1,9 +1,4 @@
-import {
-  createContextKey,
-  type MergeContext,
-  type Middleware,
-  type RequestContext,
-} from '@remix-run/fetch-router'
+import { createContextKey, type Middleware, type RequestContext } from '@remix-run/fetch-router'
 
 /**
  * Failure details for an unauthenticated request.
@@ -50,16 +45,6 @@ export type AuthState<identity = unknown> = GoodAuth<identity> | BadAuth
  * Context key used to read auth state with `context.get(Auth)`.
  */
 export const Auth = createContextKey<AuthState>()
-
-export type WithAuth<context extends RequestContext<any, any>, identity = unknown> = MergeContext<
-  context,
-  [readonly [typeof Auth, AuthState<identity>]]
->
-
-export type WithRequiredAuth<
-  context extends RequestContext<any, any>,
-  identity = unknown,
-> = MergeContext<context, [readonly [typeof Auth, GoodAuth<identity>]]>
 
 /**
  * Successful result returned by an auth scheme.
@@ -117,8 +102,6 @@ type AuthForSchemes<schemes extends readonly AuthScheme<any>[]> = AuthState<
   AuthSchemeIdentity<schemes[number]>
 >
 
-type SetAuthContextTransform<auth> = readonly [readonly [typeof Auth, auth]]
-
 /**
  * Options for loading auth state for each request.
  */
@@ -135,7 +118,7 @@ export interface AuthOptions<schemes extends readonly AuthScheme<any>[] = AuthSc
  */
 export function auth<schemes extends readonly AuthScheme<any>[]>(
   options: AuthOptions<schemes>,
-): Middleware<any, any, SetAuthContextTransform<AuthForSchemes<schemes>>> {
+): Middleware<readonly [typeof Auth, AuthForSchemes<schemes>]> {
   if (options.schemes.length === 0) {
     throw new Error('auth() requires at least one authentication scheme')
   }

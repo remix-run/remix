@@ -18,8 +18,7 @@
     "README.md",
     "dist",
     "src",
-    "!src/**/*.test.ts",
-    "!src/**/*.types.bench.ts"
+    "!src/**/*.test.ts"
   ],
   "type": "module",
   "exports": {

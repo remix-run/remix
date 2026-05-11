@@ -3,9 +3,7 @@ import { Database } from 'remix/data-table'
 
 import { db } from '../data/setup.ts'
 
-type SetDatabaseContextTransform = readonly [readonly [typeof Database, Database]]
-
-export function loadDatabase(): Middleware<'ANY', {}, SetDatabaseContextTransform> {
+export function loadDatabase(): Middleware<readonly [typeof Database, Database]> {
   return async (context, next) => {
     context.set(Database, db)
     return next()

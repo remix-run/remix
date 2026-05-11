@@ -1,5 +1,6 @@
 import { Frame, type Handle } from 'remix/ui'
 
+import { Counter } from '../assets/counter.tsx'
 import { routes } from '../routes.ts'
 import { Document } from '../ui/document.tsx'
 
@@ -15,6 +16,20 @@ export function ReloadScopePage(handle: Handle<{ pageNow: Date }>) {
       <p style={{ marginTop: 0, color: '#b9c6ff' }}>
         Reload only this frame, or reload the entire runtime tree from inside the same client entry.
       </p>
+      <div
+        style={{
+          border: '1px solid rgba(255,255,255,0.12)',
+          borderRadius: 12,
+          padding: 16,
+          background: 'rgba(255,255,255,0.04)',
+          marginBottom: 16,
+        }}
+      >
+        <div style={{ fontSize: 13, color: '#b9c6ff', marginBottom: 8 }}>
+          Root client entry state
+        </div>
+        <Counter initialCount={0} label="Root" />
+      </div>
       <div style={{ marginBottom: 10 }}>
         <div style={{ fontSize: 13, color: '#b9c6ff' }}>Page server time</div>
         <div style={{ fontSize: 20, fontVariantNumeric: 'tabular-nums' }}>

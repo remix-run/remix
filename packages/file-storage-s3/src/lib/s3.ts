@@ -93,11 +93,11 @@ export function createS3FileStorage(options: S3FileStorageOptions): FileStorage 
     let headers = new Headers()
 
     if (file.type !== '') {
-      headers.set('content-type', file.type)
+      headers.set('Content-Type', file.type)
     }
 
-    headers.set('x-amz-meta-file-name', encodeMetadataValue(file.name))
-    headers.set('x-amz-meta-file-last-modified', String(file.lastModified))
+    headers.set('X-Amz-Meta-File-Name', encodeMetadataValue(file.name))
+    headers.set('X-Amz-Meta-File-Last-Modified', String(file.lastModified))
 
     let response = await s3Fetch(getObjectUrl(key), {
       method: 'PUT',
@@ -130,13 +130,13 @@ export function createS3FileStorage(options: S3FileStorageOptions): FileStorage 
     return {
       key: object.key,
       lastModified:
-        parseEpochMillis(response.headers.get('x-amz-meta-file-last-modified')) ??
+        parseEpochMillis(response.headers.get('X-Amz-Meta-File-Last-Modified')) ??
         object.lastModified,
       name:
-        decodeMetadataValue(response.headers.get('x-amz-meta-file-name')) ??
+        decodeMetadataValue(response.headers.get('X-Amz-Meta-File-Name')) ??
         getDefaultFileName(object.key),
-      size: parseInteger(response.headers.get('content-length')) ?? object.size,
-      type: response.headers.get('content-type') ?? '',
+      size: parseInteger(response.headers.get('Content-Length')) ?? object.size,
+      type: response.headers.get('Content-Type') ?? '',
     }
   }
 
@@ -154,14 +154,14 @@ export function createS3FileStorage(options: S3FileStorageOptions): FileStorage 
 
       return new File(
         [body],
-        decodeMetadataValue(response.headers.get('x-amz-meta-file-name')) ??
+        decodeMetadataValue(response.headers.get('X-Amz-Meta-File-Name')) ??
           getDefaultFileName(key),
         {
           lastModified:
-            parseEpochMillis(response.headers.get('x-amz-meta-file-last-modified')) ??
-            parseHttpDate(response.headers.get('last-modified')) ??
+            parseEpochMillis(response.headers.get('X-Amz-Meta-File-Last-Modified')) ??
+            parseHttpDate(response.headers.get('Last-Modified')) ??
             0,
-          type: response.headers.get('content-type') ?? '',
+          type: response.headers.get('Content-Type') ?? '',
         },
       )
     },

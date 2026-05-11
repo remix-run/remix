@@ -10,5 +10,6 @@
     "verbatimModuleSyntax": true,
     "jsx": "react-jsx",
     "jsxImportSource": "@remix-run/ui"
-  }
+  },
+  "exclude": ["dist"]
 }

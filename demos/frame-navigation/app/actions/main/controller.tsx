@@ -1,16 +1,21 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import type { RemixNode } from 'remix/ui'
+import { Renderer, type Renderer as Render } from 'remix/render-middleware'
 
 import { requireAuth } from '../../middleware/auth.ts'
-import type { routes } from '../../routes.ts'
+import { routes } from '../../routes.ts'
 import { Layout, type MainNavItem } from '../../ui/layout.tsx'
-import { render } from '../render.tsx'
 import { MainAccountPage } from './account-page.tsx'
 import { MainCalendarPage } from './calendar-page.tsx'
 import { MainCoursesPage } from './courses-page.tsx'
 import { MainIndexPage } from './index-page.tsx'
 
-function renderMainPage(title: string, activeNav: MainNavItem, content: RemixNode) {
+function renderMainPage(
+  render: Render<RemixNode>,
+  title: string,
+  activeNav: MainNavItem,
+  content: RemixNode,
+) {
   return render(
     <Layout title={title} activeNav={activeNav}>
       {content}
@@ -18,20 +23,20 @@ function renderMainPage(title: string, activeNav: MainNavItem, content: RemixNod
   )
 }
 
-export default {
+export default createController(routes.main, {
   middleware: [requireAuth],
   actions: {
-    index() {
-      return renderMainPage('Dashboard', 'dashboard', <MainIndexPage />)
+    index({ get }) {
+      return renderMainPage(get(Renderer), 'Dashboard', 'dashboard', <MainIndexPage />)
     },
-    courses() {
-      return renderMainPage('Courses', 'courses', <MainCoursesPage />)
+    courses({ get }) {
+      return renderMainPage(get(Renderer), 'Courses', 'courses', <MainCoursesPage />)
     },
-    calendar() {
-      return renderMainPage('Calendar', 'calendar', <MainCalendarPage />)
+    calendar({ get }) {
+      return renderMainPage(get(Renderer), 'Calendar', 'calendar', <MainCalendarPage />)
     },
-    account() {
-      return renderMainPage('Account', 'account', <MainAccountPage />)
+    account({ get }) {
+      return renderMainPage(get(Renderer), 'Account', 'account', <MainAccountPage />)
     },
   },
-} satisfies Controller<typeof routes.main>
+})

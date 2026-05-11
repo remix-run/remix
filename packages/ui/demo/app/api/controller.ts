@@ -1,6 +1,6 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 
-import type { routes } from '../../config/routes.ts'
+import { routes } from '../../config/routes.ts'
 import { AIRPORTS, searchAirports } from './airports.ts'
 
 function parseLimit(url: URL) {
@@ -17,35 +17,31 @@ function parseLimit(url: URL) {
   return Math.min(limit, 500)
 }
 
-type ApiActions = Controller<typeof routes.api>['actions']
+const apiController = createController(routes.api, {
+  actions: {
+    airports({ url }) {
+      let query = url.searchParams.get('query') ?? url.searchParams.get('q') ?? ''
+      let limit = parseLimit(url)
+      let airports = searchAirports(query)
+      if (limit !== null) {
+        airports = airports.slice(0, limit)
+      }
 
-const actions = {
-  airports({ url }: { url: URL }) {
-    let query = url.searchParams.get('query') ?? url.searchParams.get('q') ?? ''
-    let limit = parseLimit(url)
-    let airports = searchAirports(query)
-    if (limit !== null) {
-      airports = airports.slice(0, limit)
-    }
-
-    return Response.json(
-      {
-        airports,
-        query,
-        returned: airports.length,
-        total: AIRPORTS.length,
-      },
-      {
-        headers: {
-          'Cache-Control': 'public, max-age=300',
+      return Response.json(
+        {
+          airports,
+          query,
+          returned: airports.length,
+          total: AIRPORTS.length,
         },
-      },
-    )
+        {
+          headers: {
+            'Cache-Control': 'public, max-age=300',
+          },
+        },
+      )
+    },
   },
-} satisfies ApiActions
-
-const apiController = {
-  actions,
-} satisfies Controller<typeof routes.api>
+})
 
 export default apiController

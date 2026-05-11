@@ -9,9 +9,9 @@ Tiny, standards-aligned data validation for Remix and the wider TypeScript ecosy
 ## Quick start
 
 ```ts
-import { enum_, literal, number, object, parse, string, variant } from '@remix-run/data-schema'
-import { email, maxLength, min, minLength } from '@remix-run/data-schema/checks'
-import * as coerce from '@remix-run/data-schema/coerce'
+import { enum_, literal, number, object, parse, string, variant } from 'remix/data-schema'
+import { email, maxLength, min, minLength } from 'remix/data-schema/checks'
+import * as coerce from 'remix/data-schema/coerce'
 
 let User = object({
   id: string(),
@@ -46,7 +46,7 @@ let event = parse(Event, { type: 'created', id: 'evt_1' })
 Use `parse()` when you want a typed value or an exception.
 
 ```ts
-import { object, string, number, parse } from '@remix-run/data-schema'
+import { object, string, number, parse } from 'remix/data-schema'
 
 let User = object({ name: string(), age: number() })
 
@@ -56,7 +56,7 @@ let user = parse(User, { name: 'Ada', age: 37 })
 Use `parseSafe()` when you prefer explicit branching over exceptions.
 
 ```ts
-import { object, string, number, parseSafe } from '@remix-run/data-schema'
+import { object, string, number, parseSafe } from 'remix/data-schema'
 
 let User = object({ name: string(), age: number() })
 
@@ -104,8 +104,8 @@ File helpers are intended for `FormData`; `URLSearchParams` only supports text v
 You can also customize built-in validation messages with `errorMap`:
 
 ```ts
-import { object, parseSafe, string } from '@remix-run/data-schema'
-import { minLength } from '@remix-run/data-schema/checks'
+import { object, parseSafe, string } from 'remix/data-schema'
+import { minLength } from 'remix/data-schema/checks'
 
 let User = object({
   name: string(),
@@ -133,7 +133,7 @@ Return `undefined` to keep the default message.
 ## Primitives
 
 ```ts
-import { string, number, boolean, bigint, symbol, null_, undefined_ } from '@remix-run/data-schema'
+import { string, number, boolean, bigint, symbol, null_, undefined_ } from 'remix/data-schema'
 
 string() // validates typeof === 'string'
 number() // validates finite numbers (rejects NaN, Infinity)
@@ -147,7 +147,7 @@ undefined_() // validates value === undefined
 ## Literals, enums, and unions
 
 ```ts
-import { literal, enum_, union } from '@remix-run/data-schema'
+import { literal, enum_, union } from 'remix/data-schema'
 
 // Exact value match
 let yes = literal('yes')
@@ -162,7 +162,7 @@ let StringOrNumber = union([string(), number()])
 ## Objects
 
 ```ts
-import { object, string, number, optional, defaulted } from '@remix-run/data-schema'
+import { object, string, number, optional, defaulted } from 'remix/data-schema'
 
 let User = object({
   name: string(),
@@ -182,7 +182,7 @@ object({ name: string() }, { unknownKeys: 'error' }) // rejects unknown keys
 ## Collections
 
 ```ts
-import { array, tuple, record, map, set, string, number, boolean } from '@remix-run/data-schema'
+import { array, tuple, record, map, set, string, number, boolean } from 'remix/data-schema'
 
 array(number()) // number[]
 tuple([string(), number(), boolean()]) // [string, number, boolean]
@@ -194,7 +194,7 @@ set(number()) // Set<number>
 ## Modifiers
 
 ```ts
-import { nullable, optional, defaulted, string, number } from '@remix-run/data-schema'
+import { nullable, optional, defaulted, string, number } from 'remix/data-schema'
 
 nullable(string()) // string | null
 optional(number()) // number | undefined
@@ -204,7 +204,7 @@ defaulted(string(), 'n/a') // fills 'n/a' when undefined
 ## Instance checks
 
 ```ts
-import { instanceof_, object } from '@remix-run/data-schema'
+import { instanceof_, object } from 'remix/data-schema'
 
 let Schema = object({
   created: instanceof_(Date),
@@ -217,7 +217,7 @@ let Schema = object({
 Accept any value without validation. Useful when part of a structure is opaque.
 
 ```ts
-import { any, object, string } from '@remix-run/data-schema'
+import { any, object, string } from 'remix/data-schema'
 
 let Envelope = object({
   type: string(),
@@ -230,7 +230,7 @@ let Envelope = object({
 Add domain-specific validation logic inline. The predicate runs after the schema validates.
 
 ```ts
-import { number, string, object } from '@remix-run/data-schema'
+import { number, string, object } from 'remix/data-schema'
 
 let Profile = object({
   username: string().refine((s) => s.length >= 3, 'Too short'),
@@ -243,7 +243,7 @@ let Profile = object({
 Map a validated value into the shape your app wants. The transformer runs after the schema validates and changes the parsed output type.
 
 ```ts
-import { object, parse, string } from '@remix-run/data-schema'
+import { object, parse, string } from 'remix/data-schema'
 
 let Event = object({
   id: string(),
@@ -267,8 +267,8 @@ Use `.refine()` for checks that reject values without changing them. Use `.trans
 Compose reusable `Check` objects for common constraints.
 
 ```ts
-import { object, string, number } from '@remix-run/data-schema'
-import { minLength, maxLength, email, min, max } from '@remix-run/data-schema/checks'
+import { object, string, number } from 'remix/data-schema'
+import { minLength, maxLength, email, min, max } from 'remix/data-schema/checks'
 
 let Credentials = object({
   username: string().pipe(minLength(3), maxLength(20)),
@@ -284,8 +284,8 @@ Built-in checks: `minLength`, `maxLength`, `email`, `url`, `min`, `max`.
 Turn stringly-typed inputs (like form data or query strings) into real types at the schema boundary.
 
 ```ts
-import { object, parse } from '@remix-run/data-schema'
-import * as coerce from '@remix-run/data-schema/coerce'
+import { object, parse } from 'remix/data-schema'
+import * as coerce from 'remix/data-schema/coerce'
 
 let Query = object({
   page: coerce.number(),
@@ -309,7 +309,7 @@ let query = parse(Query, {
 Pick the right schema based on a discriminator property.
 
 ```ts
-import { literal, number, object, string, variant } from '@remix-run/data-schema'
+import { literal, number, object, string, variant } from 'remix/data-schema'
 
 let Event = variant('type', {
   created: object({ type: literal('created'), id: string() }),
@@ -322,9 +322,9 @@ let Event = variant('type', {
 Model trees and self-referencing structures. `lazy()` defers schema resolution to avoid circular references.
 
 ```ts
-import { array, object, string } from '@remix-run/data-schema'
-import { lazy } from '@remix-run/data-schema/lazy'
-import type { Schema } from '@remix-run/data-schema'
+import { array, object, string } from 'remix/data-schema'
+import { lazy } from 'remix/data-schema/lazy'
+import type { Schema } from 'remix/data-schema'
 
 type TreeNode = { id: string; children: TreeNode[] }
 
@@ -336,7 +336,7 @@ let Node: Schema<unknown, TreeNode> = lazy(() => object({ id: string(), children
 By default, validation collects all issues in a single pass. To stop at the first issue, enable `abortEarly`.
 
 ```ts
-import { object, string, number, parseSafe } from '@remix-run/data-schema'
+import { object, string, number, parseSafe } from 'remix/data-schema'
 
 let result = parseSafe(
   object({ name: string(), age: number() }),
@@ -354,8 +354,8 @@ if (!result.success) {
 Extract input and output types from any Standard Schema-compatible schema.
 
 ```ts
-import { object, string, number } from '@remix-run/data-schema'
-import type { InferInput, InferOutput } from '@remix-run/data-schema'
+import { object, string, number } from 'remix/data-schema'
+import type { InferInput, InferOutput } from 'remix/data-schema'
 
 let User = object({ name: string(), age: number() })
 
@@ -368,8 +368,8 @@ type UserOutput = InferOutput<typeof User> // { name: string; age: number }
 Build custom schemas using `createSchema`, `createIssue`, and `fail`. These are the same primitives used internally by every built-in schema.
 
 ```ts
-import { createSchema, createIssue, fail } from '@remix-run/data-schema'
-import type { Schema } from '@remix-run/data-schema'
+import { createSchema, createIssue, fail } from 'remix/data-schema'
+import type { Schema } from 'remix/data-schema'
 
 // A schema that validates a non-empty trimmed string
 function trimmedString(): Schema<unknown, string> {

@@ -7,6 +7,8 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { getFixturePath } from '../../test/fixtures.ts'
+import { captureOutput } from '../../test/capture-output.ts'
+import { withEnv } from '../../test/with-env.ts'
 import { runRemix, type RunRemixOptions } from '../index.ts'
 import { getTestCommandHelpText } from './commands/test.ts'
 
@@ -440,6 +442,11 @@ describe('run', () => {
       let agentsGuide = await fs.readFile(path.join(appDir, 'AGENTS.md'), 'utf8')
       let readme = await fs.readFile(path.join(appDir, 'README.md'), 'utf8')
       let server = await fs.readFile(path.join(appDir, 'server.ts'), 'utf8')
+      let routes = await fs.readFile(path.join(appDir, 'app', 'routes.ts'), 'utf8')
+      let controller = await fs.readFile(
+        path.join(appDir, 'app', 'actions', 'controller.tsx'),
+        'utf8',
+      )
 
       assert.equal(packageJson.name, 'my-app')
       assert.equal(packageJson.dependencies.remix, `^${await readRepoRemixVersion()}`)
@@ -450,16 +457,22 @@ describe('run', () => {
       assert.match(agentsGuide, /This starter intentionally begins small/)
       assert.match(agentsGuide, /Put top-level route actions in `app\/actions\/controller\.tsx`/)
       assert.match(readme, /^# My App/m)
+      assert.doesNotMatch(readme, /auth page/)
       assert.match(server, /import \* as http from 'node:http'/)
       assert.match(server, /import \{ createRequestListener \} from 'remix\/node-fetch-server'/)
       assert.match(server, /http\.createServer/)
       assert.match(server, /createRequestListener/)
       assert.doesNotMatch(server, /remix\/node-serve/)
+      assert.doesNotMatch(routes, /auth/)
+      assert.match(controller, /context\.get\(Renderer\)/)
+      assert.doesNotMatch(controller, /AuthPage/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
-      await assertPathMissing(path.join(appDir, 'app', 'assets.ts'))
+      await assertPathExists(path.join(appDir, 'app', 'assets.ts'))
       await assertPathExists(path.join(appDir, 'app', 'assets', 'prompt-button.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'actions', 'controller.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'middleware', 'render.tsx'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'assets.ts'))
+      await assertPathMissing(path.join(appDir, 'app', 'actions', 'render.tsx'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'home.tsx'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'auth.tsx'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'about.tsx'))
@@ -595,7 +608,7 @@ describe('run', () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-'))
     try {
       let appDir = path.join(tmpDir, 'my-app')
-      let result = await withEnv('REMIX_VERSION', '4.5.6', () =>
+      let result = await withEnv({ REMIX_VERSION: '4.5.6' }, () =>
         captureOutput(() => run(['new', appDir], { remixVersion: '9.9.9' })),
       )
 
@@ -634,7 +647,7 @@ describe('run', () => {
   })
 
   it('does not let REMIX_VERSION override the reported Remix version', async () => {
-    let result = await withEnv('REMIX_VERSION', '4.5.6', () =>
+    let result = await withEnv({ REMIX_VERSION: '4.5.6' }, () =>
       captureOutput(() => run(['version'], { remixVersion: '9.9.9' })),
     )
 
@@ -650,48 +663,6 @@ describe('run', () => {
     assert.match(result.stderr, /Unknown argument: --remix-version/)
   })
 })
-
-async function captureOutput(
-  callback: () => Promise<number>,
-): Promise<{ exitCode: number; stderr: string; stdout: string }> {
-  let stderr = ''
-  let stdout = ''
-  let originalStdoutWrite = process.stdout.write
-  let originalStderrWrite = process.stderr.write
-
-  process.stdout.write = ((chunk: string | Uint8Array) => {
-    stdout += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stdout.write
-
-  process.stderr.write = ((chunk: string | Uint8Array) => {
-    stderr += typeof chunk === 'string' ? chunk : Buffer.from(chunk).toString('utf8')
-    return true
-  }) as typeof process.stderr.write
-
-  try {
-    let exitCode = await callback()
-    return { exitCode, stderr, stdout }
-  } finally {
-    process.stdout.write = originalStdoutWrite
-    process.stderr.write = originalStderrWrite
-  }
-}
-
-async function withEnv<T>(name: string, value: string, callback: () => Promise<T>): Promise<T> {
-  let previousValue = process.env[name]
-  process.env[name] = value
-
-  try {
-    return await callback()
-  } finally {
-    if (previousValue == null) {
-      delete process.env[name]
-    } else {
-      process.env[name] = previousValue
-    }
-  }
-}
 
 async function withCwd<T>(cwd: string, callback: () => Promise<T>): Promise<T> {
   let previousCwd = testCwd

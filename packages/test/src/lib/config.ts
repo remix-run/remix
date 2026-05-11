@@ -172,8 +172,19 @@ const defaultValues: ResolvedRemixTestConfig = {
   watch: false,
 }
 
+/**
+ * Worker pool used by `remix-test` to run server and E2E test files.
+ * `'forks'` (default) uses child processes for stronger isolation; `'threads'`
+ * uses worker threads for projects that prefer lower-overhead startup.
+ */
 export type RemixTestPool = 'forks' | 'threads'
 
+/**
+ * User-facing configuration for the `remix-test` CLI. Every field is
+ * optional — unset fields fall back to runner defaults. The same shape can
+ * be exported from a config file (see `--config`) or passed inline to
+ * {@link runRemixTest} via the corresponding flags.
+ */
 export interface RemixTestConfig {
   /**
    * Options for controlling the playwright browser
@@ -285,6 +296,15 @@ export async function loadConfig(args: string[] = process.argv.slice(2), cwd = p
   return config
 }
 
+/**
+ * Returns the formatted `remix-test --help` text. Useful for embedding the
+ * runner's CLI options in higher-level tooling.
+ *
+ * @param _target Output stream the help text will be written to. Reserved
+ *                for future use (e.g. width-aware formatting); currently
+ *                unused.
+ * @returns The help text as a single string ready to write to a stream.
+ */
 export function getRemixTestHelpText(_target: NodeJS.WriteStream = process.stdout): string {
   let lines = [
     'Usage: remix-test [glob...] [options]',

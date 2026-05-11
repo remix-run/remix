@@ -50,7 +50,7 @@ describe('compressResponse()', () => {
 
     assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
     assert.equal(compressed.headers.get('Accept-Ranges'), 'none')
-    let vary = Vary.from(compressed.headers.get('vary'))
+    let vary = Vary.from(compressed.headers.get('Vary'))
     assert.ok(vary.has('Accept-Encoding'))
 
     let buffer = Buffer.from(await compressed.arrayBuffer())
@@ -85,7 +85,7 @@ describe('compressResponse()', () => {
 
     assert.equal(compressed.headers.get('Content-Encoding'), 'deflate')
     assert.equal(compressed.headers.get('Accept-Ranges'), 'none')
-    let vary = Vary.from(compressed.headers.get('vary'))
+    let vary = Vary.from(compressed.headers.get('Vary'))
     assert.ok(vary.has('Accept-Encoding'))
 
     let buffer = Buffer.from(await compressed.arrayBuffer())
@@ -642,7 +642,7 @@ describe('compressResponse()', () => {
     assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
     assert.equal(compressed.headers.get('Accept-Ranges'), 'none')
     assert.equal(compressed.headers.get('Content-Length'), null)
-    let vary = Vary.from(compressed.headers.get('vary'))
+    let vary = Vary.from(compressed.headers.get('Vary'))
     assert.ok(vary.has('Accept-Encoding'))
     assert.equal(compressed.body, null)
   })
@@ -692,7 +692,7 @@ describe('compressResponse()', () => {
     assert.equal(compressed.headers.get('Content-Encoding'), 'gzip')
     assert.equal(compressed.headers.get('Accept-Ranges'), 'none')
     assert.equal(compressed.headers.get('Content-Length'), null)
-    let vary = Vary.from(compressed.headers.get('vary'))
+    let vary = Vary.from(compressed.headers.get('Vary'))
     assert.ok(vary.has('Accept-Encoding'))
     assert.equal(compressed.body, null)
   })

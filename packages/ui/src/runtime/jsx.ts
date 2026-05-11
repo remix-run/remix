@@ -1,5 +1,6 @@
 import type * as dom from './dom.d.ts'
 import type { Handle, RenderFn } from './component.ts'
+import { createRemixElement } from './core/vnode.ts'
 
 /**
  * Any valid element type accepted by JSX or {@link import('./create-element.ts').createElement}.
@@ -102,7 +103,7 @@ export type Props<T extends keyof JSX.IntrinsicElements> = NormalizeMixProp<
  */
 export function jsx(type: ElementType, props: ElementProps, key?: string): RemixElement
 export function jsx(type: ElementType, props: ElementProps, key?: string): RemixElement {
-  return { type, props: normalizeElementProps(props), key, $rmx: true }
+  return createRemixElement(type, props, key)
 }
 
 export { jsx as jsxDEV, jsx as jsxs }
@@ -365,33 +366,5 @@ declare global {
       extends IntrinsicSVGElements,
         IntrinsicMathMLElements,
         IntrinsicHTMLElements {}
-  }
-}
-
-function normalizeElementProps(props: ElementProps | null | undefined): ElementProps {
-  if (!props) return {}
-  if (!('mix' in props)) return props
-
-  let { mix, ...rest } = props
-  let normalizedMix = normalizeMixValue(mix)
-  return normalizedMix === undefined ? rest : { ...rest, mix: normalizedMix }
-}
-
-function normalizeMixValue(mix: unknown): unknown[] | undefined {
-  if (!mix) return undefined
-
-  let normalizedMix: unknown[] = []
-  flattenMixValue(mix, normalizedMix)
-  return normalizedMix.length === 0 ? undefined : normalizedMix
-}
-
-function flattenMixValue(mix: unknown, out: unknown[]): void {
-  if (!mix) return
-  if (!Array.isArray(mix)) {
-    out.push(mix)
-    return
-  }
-  for (let item of mix) {
-    flattenMixValue(item, out)
   }
 }

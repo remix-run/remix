@@ -1,6 +1,5 @@
 import * as path from 'node:path'
-import { createContextKey } from 'remix/fetch-router'
-import type { Middleware } from 'remix/fetch-router'
+import { createContextKey, type Middleware } from 'remix/fetch-router'
 import { getContext } from 'remix/async-context-middleware'
 
 import { assetServer } from '../utils/assets.ts'
@@ -18,7 +17,7 @@ const defaultStylesheetEntry = path.resolve(import.meta.dirname, '../assets/app.
 export function loadAssetEntry(
   scriptEntry = defaultScriptEntry,
   stylesheetEntry = defaultStylesheetEntry,
-): Middleware {
+): Middleware<readonly [typeof assetsEntryKey, AssetEntry]> {
   return async (context, next) => {
     let [scriptSrc, scriptPreloads, stylesheetHref] = await Promise.all([
       assetServer.getHref(scriptEntry),

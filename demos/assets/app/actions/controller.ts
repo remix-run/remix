@@ -1,12 +1,12 @@
 import * as path from 'node:path'
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 
-import type { routes } from '../routes.ts'
+import { routes } from '../routes.ts'
 import { assetServer } from '../utils/assets.ts'
 
 const entryFilePath = path.resolve(import.meta.dirname, '../client/entry.ts')
 
-export default {
+export default createController(routes, {
   actions: {
     async home() {
       let entryUrl = await assetServer.getHref(entryFilePath)
@@ -84,7 +84,7 @@ export default {
       return assetResponse ?? new Response('Not found', { status: 404 })
     },
   },
-} satisfies Controller<typeof routes>
+})
 
 function escapeHtml(value: string): string {
   return value.replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;')

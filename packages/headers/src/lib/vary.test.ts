@@ -65,7 +65,7 @@ describe('Vary', () => {
   it('adds a header name', () => {
     let header = new Vary()
     header.add('Accept-Encoding')
-    assert.equal(header.has('accept-encoding'), true)
+    assert.equal(header.has('Accept-Encoding'), true)
     assert.equal(header.size, 1)
   })
 

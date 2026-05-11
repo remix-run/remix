@@ -70,6 +70,22 @@ describe('vnode rendering', () => {
       invariant(div2 instanceof HTMLDivElement)
       expect(div2.style.color).toBe('blue')
     })
+
+    it('updates style objects by adding, changing, and removing properties', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<div style={{ color: 'red', marginTop: 12 }}>X</div>)
+      let div = container.querySelector('div')
+      invariant(div instanceof HTMLDivElement)
+      expect(div.style.color).toBe('red')
+      expect(div.style.marginTop).toBe('12px')
+
+      root.render(<div style={{ color: 'red', padding: 5 }}>X</div>)
+      expect(div.style.color).toBe('red')
+      expect(div.style.marginTop).toBe('')
+      expect(div.style.padding).toBe('5px')
+    })
   })
 
   describe('fragments', () => {

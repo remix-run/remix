@@ -1,3 +1,7 @@
+/**
+ * HTTP request methods whose requests may carry a body. Mirrors the
+ * runtime tuple {@link RequestBodyMethods}.
+ */
 export type RequestBodyMethod = 'POST' | 'PUT' | 'PATCH' | 'DELETE' | 'OPTIONS'
 
 /**

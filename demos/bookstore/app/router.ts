@@ -1,9 +1,4 @@
-import {
-  createRouter,
-  type AnyParams,
-  type MiddlewareContext,
-  type WithParams,
-} from 'remix/fetch-router'
+import { createRouter, type MiddlewareContext } from 'remix/fetch-router'
 import { asyncContext } from 'remix/async-context-middleware'
 import { compression } from 'remix/compression-middleware'
 import { formData } from 'remix/form-data-middleware'
@@ -37,21 +32,27 @@ import fragmentsController from './actions/fragments/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
+import { render } from './middleware/render.tsx'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
 
-export type RootMiddleware = [
-  ReturnType<typeof formData>,
-  ReturnType<typeof session>,
-  ReturnType<typeof loadDatabase>,
-  ReturnType<typeof loadAuth>,
-]
-
-export type AppContext<params extends AnyParams = AnyParams> = WithParams<
-  MiddlewareContext<RootMiddleware>,
-  params
+type AppContext = MiddlewareContext<
+  [
+    ReturnType<typeof formData>,
+    ReturnType<typeof session>,
+    ReturnType<typeof loadDatabase>,
+    ReturnType<typeof loadAssetEntry>,
+    ReturnType<typeof loadAuth>,
+    ReturnType<typeof render>,
+  ]
 >
+
+declare module 'remix/fetch-router' {
+  interface RouterTypes {
+    context: AppContext
+  }
+}
 
 export interface BookstoreRouterOptions {
   sessionCookie?: Cookie
@@ -82,8 +83,9 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
   middleware.push(loadDatabase())
   middleware.push(loadAssetEntry())
   middleware.push(loadAuth())
+  middleware.push(render())
 
-  let router = createRouter({ middleware })
+  let router = createRouter<AppContext>({ middleware })
 
   router.map(routes, rootController)
   router.map(routes.fragments, fragmentsController)

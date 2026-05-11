@@ -48,8 +48,8 @@ function App() {
 
 let stream = renderToStream(<App />, {
   resolveFrame(src, target, context) {
-    let headers = new Headers({ accept: 'text/html' })
-    if (target) headers.set('x-remix-target', target)
+    let headers = new Headers({ Accept: 'text/html' })
+    if (target) headers.set('X-Remix-Target', target)
     return fetch(new URL(src, context?.currentFrameSrc ?? request.url), { headers }).then((res) =>
       res.text(),
     )
@@ -109,8 +109,8 @@ let app = run({
     return mod[exportName]
   },
   async resolveFrame(src, signal, target) {
-    let headers = new Headers({ accept: 'text/html' })
-    if (target) headers.set('x-remix-target', target)
+    let headers = new Headers({ Accept: 'text/html' })
+    if (target) headers.set('X-Remix-Target', target)
     let res = await fetch(src, { headers, signal })
     return res.body ?? (await res.text())
   },

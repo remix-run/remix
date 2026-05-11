@@ -222,7 +222,7 @@ describe('SuperHeaders', () => {
     headers.accept.set('text/html')
     headers.accept.set('application/json', 0.8)
     headers.cookie.set('theme', 'dark')
-    headers.vary.add('accept-encoding')
+    headers.vary.add('Accept-Encoding')
 
     assert.equal(headers.get('Accept'), 'text/html,application/json;q=0.8')
     assert.equal(headers.get('Cookie'), 'theme=dark')
@@ -308,7 +308,7 @@ describe('SuperHeaders', () => {
     assert.equal(headers.get('Content-Type'), 'text/html; charset=utf-8')
     assert.equal(headers.contentType, contentType)
 
-    headers.set('content-type', 'application/json')
+    headers.set('Content-Type', 'application/json')
     let updatedContentType = headers.contentType
 
     assert.notEqual(updatedContentType, contentType)
@@ -485,11 +485,11 @@ describe('SuperHeaders', () => {
 
     assert.equal(typeof headers.append, 'function')
     assert.equal(typeof headers.get, 'function')
-    assert.equal(headers.get('append'), 'shadow append')
-    assert.equal(headers.get('get'), 'shadow get')
+    assert.equal(headers.get('Append'), 'shadow append')
+    assert.equal(headers.get('Get'), 'shadow get')
 
-    headers.append('append', 'again')
-    assert.equal(headers.get('append'), 'shadow append, again')
+    headers.append('Append', 'again')
+    assert.equal(headers.get('Append'), 'shadow append, again')
   })
 
   it('keeps Set-Cookie mutations visible to Response', () => {

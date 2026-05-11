@@ -1,46 +1,45 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
+import { Renderer } from 'remix/render-middleware'
 
-import type { routes } from '../routes.ts'
-import { render } from './render.ts'
+import { routes } from '../routes.ts'
 import { ClientMountedPage } from './client-mounted.tsx'
 import { HomePage } from './home.tsx'
 import { ReloadScopePage } from './reload-scope.tsx'
+import { rootReloadClientEntriesAction } from './root-reload-client-entries.tsx'
 import { StateSearchRoutePage } from './state-search.tsx'
 import { TimePage } from './time.tsx'
 
-export default {
+export default createController(routes, {
   actions: {
-    home({ request, router }) {
-      return render(<HomePage />, { request, router })
+    home({ get }) {
+      let render = get(Renderer)
+      return render(<HomePage />)
     },
 
-    time({ request, router }) {
-      return render(<TimePage />, { request, router })
+    time({ get }) {
+      let render = get(Renderer)
+      return render(<TimePage />)
     },
 
-    reloadScope({ request, router }) {
+    reloadScope({ get }) {
+      let render = get(Renderer)
       let pageNow = new Date()
 
-      return render(<ReloadScopePage pageNow={pageNow} />, {
-        request,
-        router,
-      })
+      return render(<ReloadScopePage pageNow={pageNow} />)
     },
 
-    stateSearch({ request, router, url }) {
+    stateSearch({ get, url }) {
+      let render = get(Renderer)
       let initialQuery = url.searchParams.get('query') ?? ''
 
-      return render(<StateSearchRoutePage initialQuery={initialQuery} />, {
-        request,
-        router,
-      })
+      return render(<StateSearchRoutePage initialQuery={initialQuery} />)
     },
 
-    clientMounted({ request, router }) {
-      return render(<ClientMountedPage />, {
-        request,
-        router,
-      })
+    clientMounted({ get }) {
+      let render = get(Renderer)
+      return render(<ClientMountedPage />)
     },
+
+    rootReloadClientEntries: rootReloadClientEntriesAction.handler,
   },
-} satisfies Controller<typeof routes>
+})

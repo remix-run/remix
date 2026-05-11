@@ -1,18 +1,18 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { Database, ilike, inList, or } from 'remix/data-table'
+import { Renderer } from 'remix/render-middleware'
 import { createFileResponse as sendFile } from 'remix/response/file'
 
 import { books } from '../data/schema.ts'
-import type { routes } from '../routes.ts'
+import { routes } from '../routes.ts'
 import { assetServer } from '../utils/assets.ts'
 import { getCurrentCart } from '../utils/context.ts'
-import { render } from './render.tsx'
 import { uploadsStorage } from '../utils/uploads.ts'
 import { AboutPage } from './about.tsx'
 import { HomePage } from './home.tsx'
 import { SearchPage } from './search.tsx'
 
-export default {
+export default createController(routes, {
   actions: {
     async assets({ request }) {
       let assetResponse = await assetServer.fetch(request)
@@ -31,6 +31,7 @@ export default {
     },
     async home({ get }) {
       let db = get(Database)
+      let render = get(Renderer)
       let cart = getCurrentCart()
       let featuredSlugs = ['bbq', 'heavy-metal', 'three-ways']
       let featuredBookRows = await db.findMany(books, {
@@ -46,11 +47,13 @@ export default {
         headers: { 'Cache-Control': 'no-store' },
       })
     },
-    about() {
+    about({ get }) {
+      let render = get(Renderer)
       return render(<AboutPage />)
     },
     async search({ get, url }) {
       let db = get(Database)
+      let render = get(Renderer)
       let query = url.searchParams.get('q') ?? ''
       let matchingBooks = query
         ? await db.findMany(books, {
@@ -67,4 +70,4 @@ export default {
       return render(<SearchPage query={query} matchingBooks={matchingBooks} cart={cart} />)
     },
   },
-} satisfies Controller<typeof routes>
+})

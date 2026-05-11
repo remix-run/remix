@@ -5,26 +5,20 @@ export type {
   ContextValue,
   GetContextValue,
   ContextEntries,
-  ContextEntry,
-  MergeContext,
-  SetContextValue,
-  WithParams,
+  ContextWithEntries,
+  ContextWithEntry,
+  ContextWithParams,
 } from './lib/request-context.ts'
 
-export type { Controller, Action, BuildAction, RequestHandler } from './lib/controller.ts'
+export type { RouterTypes } from './lib/router-types.ts'
 
-export type {
-  ApplyContextTransform,
-  ApplyMiddleware,
-  ApplyMiddlewareTuple,
-  Middleware,
-  MiddlewareContext,
-  MiddlewareContextTransform,
-  NextFunction,
-} from './lib/middleware.ts'
+export { createAction, createController } from './lib/controller.ts'
+export type { RequestHandler, Action, Controller } from './lib/controller.ts'
 
-export { RequestMethods } from './lib/request-methods.ts'
+export type { Middleware, MiddlewareContext, NextFunction } from './lib/middleware.ts'
+
+export { RequestMethods, isRequestMethod } from './lib/request-methods.ts'
 export type { RequestMethod } from './lib/request-methods.ts'
 
 export { createRouter } from './lib/router.ts'
-export type { MatchData, Router, RouterOptions } from './lib/router.ts'
+export type { RouteEntry, Router, RouterOptions } from './lib/router.ts'

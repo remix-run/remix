@@ -19,8 +19,12 @@ export async function loadTypeDoc(opts: {
 
   let { comments, apisToDocument } = createLookupMaps(project)
 
-  // Prefer `remix` package exports over other package exports
-  getDuplicateAPIs(apisToDocument).forEach((name) => apisToDocument.delete(name))
+  // Warn if the same name is exported from multiple `@remix-run/*` packages.
+  // The umbrella `remix` package is skipped at traversal time so there are no
+  // umbrella/source duplicates to dedupe — only genuine cross-package
+  // collisions remain (e.g. `Cookie` in both `@remix-run/cookie` and
+  // `@remix-run/headers`).
+  warnOnCrossPackageCollisions(apisToDocument)
 
   // Remove aliased APIs and only document the canonicals
   getAliasedAPIs(comments).forEach((name) => apisToDocument.delete(name))
@@ -98,9 +102,7 @@ export function createLookupMaps(reflection: typedoc.ProjectReflection): Maps {
     typedoc.ReflectionKind.Class,
     typedoc.ReflectionKind.Interface,
     typedoc.ReflectionKind.TypeAlias,
-    // TODO: Not implemented yet - used for interactions like arrowLeft etc. so
-    // we eventually will probably want to support
-    // typedoc.ReflectionKind.Variable,
+    typedoc.ReflectionKind.Variable,
   ])
 
   recurse(reflection)
@@ -111,6 +113,16 @@ export function createLookupMaps(reflection: typedoc.ProjectReflection): Maps {
     node.traverse((child) => {
       let apiName = alias || child.getFriendlyFullName()
       apiName = apiName.replace(/\.\.+/g, '.') // Clean up any `..` in top-level remix re-exports
+
+      // Skip the umbrella `remix` package entirely. It is a pure pass-through
+      // that re-exports each `@remix-run/*` package; documenting both copies
+      // is redundant and is fragile when typedoc resolves the umbrella's
+      // re-exports through bundled `.d.ts` files that may have stripped JSDoc.
+      // We document the `@remix-run/*` source reflections directly and rewrite
+      // their paths to `remix/*` in `getApiFilePath`.
+      if (apiName === 'remix' || apiName.startsWith('remix.')) {
+        return
+      }
 
       if (child.kind !== typedoc.ReflectionKind.Module) {
         comments.set(apiName, child)
@@ -159,54 +171,21 @@ export function createLookupMaps(reflection: typedoc.ProjectReflection): Maps {
   }
 }
 
-// Deduplicate APIs that are exported from multiple packages, preferring the remix package
-function getDuplicateAPIs(apisToDocument: Set<string>): Set<string> {
+// Warn when the same short API name is exported from multiple `@remix-run/*`
+// packages. The umbrella `remix` package is skipped at traversal time
+// (see `createLookupMaps`), so `apisToDocument` only contains source-level
+// `@remix-run/*` reflections — no umbrella/duplicate dedup is needed.
+function warnOnCrossPackageCollisions(apisToDocument: Set<string>): void {
   let apisByName = new Map<string, string[]>()
-  let duplicates = new Set<string>()
-
-  // Group APIs by short name
   for (let fullName of apisToDocument) {
     let apiName = getApiNameFromFullName(fullName)
     apisByName.set(apiName, [...(apisByName.get(apiName) || []), fullName])
   }
-
-  // Process each group of APIs with the same name
   for (let [apiName, fullNames] of apisByName) {
-    if (fullNames.length <= 1) {
-      continue
-    }
-
-    let remixAPIs = fullNames.filter(
-      (name) => name.split('.').length === 2 && name.split('.')[0] === 'remix',
-    )
-    let deepRemixAPIs = fullNames.filter(
-      (name) => name.split('.').length > 2 && name.split('.')[0] === 'remix',
-    )
-    let nonRemixAPIs = fullNames.filter((name) => name.split('.')[0] !== 'remix')
-
-    if (remixAPIs.length > 1) {
-      throw new Error(`Cannot have the same API exported from multiple packages: ${apiName}`)
-    }
-
-    if (remixAPIs.length === 1) {
-      // Remove non-remix APIs, keep the remix one
-      for (let api of [...deepRemixAPIs, ...nonRemixAPIs]) {
-        debug(`Preferring \`remix\` export for ${apiName}, removing: ${api}`)
-        duplicates.add(api)
-      }
-    } else if (deepRemixAPIs.length > 0) {
-      // Remove non-remix APIs, keep the remix/* one
-      for (let api of nonRemixAPIs) {
-        debug(`Preferring \`${deepRemixAPIs[0]}\` export, removing: ${api}`)
-        duplicates.add(api)
-      }
-    } else if (fullNames.length > 1) {
-      // Multiple non-remix packages export this API
+    if (fullNames.length > 1) {
       warn(`Multiple packages export ${apiName}: ${fullNames.join(', ')}`)
     }
   }
-
-  return duplicates
 }
 
 function getAliasedAPIs(comments: Map<string, typedoc.Reflection>): Set<string> {

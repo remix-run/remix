@@ -1,19 +1,20 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
+import { Renderer } from 'remix/render-middleware'
 
 import { ForgotPasswordPage, ForgotPasswordSentPage } from './page.tsx'
 import { getIssueMessage, readField } from '../form-utils.ts'
 import { forgotPasswordSchema } from '../schemas.ts'
 import { normalizeEmail, passwordResetTokens, users } from '../../../data/schema.ts'
 import { getReturnToQuery } from '../../../middleware/auth.ts'
-import type { AppContext } from '../../../router.ts'
 import { routes } from '../../../routes.ts'
-import { render } from '../../render.tsx'
 
-export const forgotPasswordController = {
+export const forgotPasswordController = createController(routes.auth.forgotPassword, {
   actions: {
-    index({ url }) {
+    index({ get, url }) {
+      let render = get(Renderer)
+
       return render(
         <ForgotPasswordPage
           formAction={routes.auth.forgotPassword.action.href(undefined, getReturnToQuery(url))}
@@ -27,6 +28,8 @@ export const forgotPasswordController = {
       let formData = get(FormData)
       let returnToQuery = getReturnToQuery(url)
       let result = s.parseSafe(forgotPasswordSchema, formData)
+      let render = get(Renderer)
+
       if (!result.success) {
         return render(
           <ForgotPasswordPage
@@ -63,4 +66,4 @@ export const forgotPasswordController = {
       )
     },
   },
-} satisfies Controller<typeof routes.auth.forgotPassword, AppContext>
+})

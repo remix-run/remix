@@ -1,10 +1,16 @@
 import { css } from 'remix/ui'
 import type { Handle, RemixNode } from 'remix/ui'
+import { Glyph } from '@remix-run/ui/glyph'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
-import type { DocsRegistry, PageDefinition } from './registry.ts'
+import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { isPageActive } from './registry.ts'
 import { bodyTextCss, eyebrowTextCss } from './page-primitives.tsx'
 import { routes } from './routes.ts'
+import {
+  MOBILE_NAV_MAX_HEIGHT,
+  MOBILE_NAV_MEDIA_RULE,
+  MOBILE_TOP_BAR_HEIGHT_PX,
+} from '../shared/breakpoints.ts'
 
 export type DocsViewProps = {
   page: PageDefinition
@@ -25,11 +31,28 @@ export function DocsDocument(handle: Handle<DocsViewProps>) {
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <link
+            rel="icon"
+            href={routes.assets.href({ version: activeVersion, asset: 'favicon.ico' })}
+            sizes="32x32"
+          />
+          <link
+            rel="icon"
+            href={routes.assets.href({ version: activeVersion, asset: 'favicon.svg' })}
+            type="image/svg+xml"
+            sizes="any"
+          />
           {activeVersion != null ? (
             <>
               <meta name="robots" content="noindex,nofollow" />
               <meta name="googlebot" content="noindex,nofollow" />
             </>
+          ) : page.docFile?.kind === 'package' ? (
+            // Overview pages (package READMEs) link densely to every API page
+            // in the package; those are already reachable via the sidebar, so
+            // tell crawlers — including our prerender spider — not to follow
+            // links from here. The page itself is still indexable.
+            <meta name="robots" content="nofollow" />
           ) : null}
           <link rel="preconnect" href="https://fonts.googleapis.com" />
           <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
@@ -47,7 +70,6 @@ export function DocsDocument(handle: Handle<DocsViewProps>) {
             />
           ) : null}
           <script
-            async
             type="module"
             src={routes.assets.href({ version: activeVersion, asset: 'entry.js' })}
           />
@@ -55,8 +77,31 @@ export function DocsDocument(handle: Handle<DocsViewProps>) {
         </head>
         <body mix={bodyCss}>
           <RMX_01_GLYPHS />
+          <input
+            id="nav-toggle"
+            type="checkbox"
+            mix={navToggleCss}
+            aria-hidden="true"
+            tabIndex={-1}
+          />
+          <a href="https://remix.run" mix={mobileLogoBannerCss}>
+            <RemixLogoLight activeVersion={activeVersion} />
+            <RemixLogoDark activeVersion={activeVersion} />
+          </a>
+          <label
+            for="nav-toggle"
+            mix={mobileTopBarCss}
+            aria-controls="docs-sidebar"
+            aria-label="Toggle navigation"
+          >
+            <span mix={mobileTopBarTextCss}>
+              {page.eyebrow ? <span mix={eyebrowTextCss}>{page.eyebrow}</span> : null}
+              <span mix={mobileTopBarTitleCss}>{page.navLabel || page.title || 'Overview'}</span>
+            </span>
+            <Glyph name="menu" mix={mobileTopBarIconCss} aria-hidden="true" />
+          </label>
           <div mix={shellCss}>
-            <aside mix={sidebarFrameCss}>
+            <aside id="docs-sidebar" mix={sidebarFrameCss}>
               <div mix={sidebarStickyCss}>
                 <Sidebar
                   registry={registry}
@@ -117,36 +162,52 @@ function Sidebar(
               <span mix={sectionSummaryLabelCss}>{section.label}</span>
             </summary>
             <div mix={sectionContentCss}>
-              {section.groups.map((group) => (
-                <div key={group.id} mix={sidebarGroupCss}>
-                  {group.label ? <p mix={sidebarHeadingCss}>{group.label}</p> : null}
-                  <nav
-                    aria-label={
-                      group.label ? `${section.label} ${group.label}` : `${section.label} pages`
-                    }
-                    mix={sidebarNavCss}
-                  >
-                    {group.pageIds.map((pageId) => {
-                      let navPage = registry.pages[pageId]
-                      return (
-                        <a
-                          key={navPage.path}
-                          href={navPage.path}
-                          aria-current={isPageActive(navPage, currentPath) ? 'page' : undefined}
-                          mix={getNavItemMix(navPage, currentPath)}
-                        >
-                          {navPage.navLabel}
-                        </a>
-                      )
-                    })}
+              {section.groups.map((group) =>
+                group.label ? (
+                  <nav key={group.id} mix={[sidebarGroupCss]}>
+                    <p mix={sidebarHeadingCss}>{group.label}</p>
+                    <nav aria-label={`${section.label} ${group.label}`} mix={sidebarNavCss}>
+                      <SidebarGroup registry={registry} group={group} currentPath={currentPath} />
+                    </nav>
                   </nav>
-                </div>
-              ))}
+                ) : (
+                  <nav
+                    key={group.id}
+                    aria-label={`${section.label} Pages`}
+                    mix={[sidebarGroupCss, css({ paddingLeft: 0 })]}
+                  >
+                    <SidebarGroup registry={registry} group={group} currentPath={currentPath} />
+                  </nav>
+                ),
+              )}
             </div>
           </details>
         ))}
       </div>
     )
+  }
+}
+
+function SidebarGroup(
+  handle: Handle<{ registry: DocsRegistry; group: NavGroup; currentPath: string }>,
+) {
+  return () => {
+    let { registry, group, currentPath } = handle.props
+    return group.pageIds.map((pageId) => {
+      let page = registry.pages[pageId]
+      let active = isPageActive(page, currentPath)
+      return (
+        <a
+          key={page.path}
+          href={page.path}
+          aria-current={active ? 'page' : undefined}
+          data-active-doc={active ? 'true' : undefined}
+          mix={navItemCss}
+        >
+          {page.navLabel}
+        </a>
+      )
+    })
   }
 }
 
@@ -219,7 +280,7 @@ function VersionSwitcher(
                   href={href}
                   rel={!latest && !v.crawl ? 'nofollow' : undefined}
                   aria-current={active ? 'page' : undefined}
-                  mix={active ? [navItemCss, navItemActiveCss] : navItemCss}
+                  mix={navItemCss}
                 >
                   {v.version}
                   {latest ? ' (latest)' : null}
@@ -269,10 +330,6 @@ function DocsFooter() {
   )
 }
 
-function getNavItemMix(page: PageDefinition, currentPath: string) {
-  return isPageActive(page, currentPath) ? [navItemCss, navItemActiveCss] : navItemCss
-}
-
 // Typography mirrors the `.md-prose` rules from the remix.run blog
 // (`/styles/md.css`) and is applied site-wide.
 //
@@ -302,7 +359,8 @@ const bodyCss = css({
     marginBottom: `${theme.space.lg} !important`,
   },
   '& h1': {
-    fontSize: 'clamp(2rem, 4vw, 3.5rem)',
+    fontSize: 'clamp(1.5rem, 4vw, 3.5rem)',
+    overflowWrap: 'anywhere',
   },
   '& h2': {
     fontSize: 'clamp(1.375rem, 2.5vw, 1.625rem)',
@@ -399,6 +457,24 @@ const bodyCss = css({
     marginTop: '0 !important',
     marginBottom: '0 !important',
   },
+
+  // Mobile nav toggle: the sidebar stays in document flow below the sticky top
+  // bar so opening it pushes page content down instead of layering over it.
+  [MOBILE_NAV_MEDIA_RULE]: {
+    '& #docs-sidebar': {
+      maxHeight: 0,
+      overflowY: 'auto',
+      borderRight: 'none',
+      borderBottom: `1px solid transparent`,
+      pointerEvents: 'none',
+      transition: 'max-height 280ms ease, border-color 180ms ease',
+    },
+    '&:has(#nav-toggle:checked) #docs-sidebar': {
+      maxHeight: MOBILE_NAV_MAX_HEIGHT,
+      borderBottomColor: theme.colors.border.subtle,
+      pointerEvents: 'auto',
+    },
+  },
 })
 
 const shellCss = css({
@@ -407,7 +483,7 @@ const shellCss = css({
   gridTemplateColumns: '320px minmax(0, 1fr)',
   background:
     'linear-gradient(to bottom, color-mix(in oklab, rgb(246 246 246) 72%, white) 0%, white 18%)',
-  '@media (max-width: 980px)': {
+  [MOBILE_NAV_MEDIA_RULE]: {
     gridTemplateColumns: '1fr',
   },
 })
@@ -415,9 +491,9 @@ const shellCss = css({
 const sidebarFrameCss = css({
   backgroundColor: theme.surface.lvl3,
   borderRight: `1px solid ${theme.colors.border.subtle}`,
-  '@media (max-width: 980px)': {
+  [MOBILE_NAV_MEDIA_RULE]: {
+    // Mobile open/closed state is driven from bodyCss via :has(#nav-toggle:checked).
     borderRight: 'none',
-    borderBottom: `1px solid ${theme.colors.border.subtle}`,
   },
 })
 
@@ -427,7 +503,7 @@ const sidebarStickyCss = css({
   height: '100vh',
   overflowY: 'auto',
   padding: theme.space.xl,
-  '@media (max-width: 980px)': {
+  [MOBILE_NAV_MEDIA_RULE]: {
     position: 'static',
     height: 'auto',
     overflowY: 'visible',
@@ -440,6 +516,9 @@ const sidebarIntroCss = css({
   gap: theme.space.xs,
   paddingBottom: theme.space.sm,
   marginBottom: theme.space.sm,
+  [MOBILE_NAV_MEDIA_RULE]: {
+    display: 'none',
+  },
 })
 
 const sidebarPanelCss = css({
@@ -455,6 +534,9 @@ const sidebarHeadingCss = css({
   letterSpacing: theme.letterSpacing.meta,
   textTransform: 'uppercase',
   color: theme.colors.text.muted,
+  [MOBILE_NAV_MEDIA_RULE]: {
+    fontSize: theme.fontSize.xs,
+  },
 })
 
 const sectionDetailsCss = css({
@@ -474,6 +556,11 @@ const sectionSummaryCss = css({
   color: theme.colors.text.muted,
   '&:hover': {
     color: theme.colors.text.primary,
+  },
+  [MOBILE_NAV_MEDIA_RULE]: {
+    minHeight: '44px',
+    padding: `${theme.space.md} 0`,
+    fontSize: theme.fontSize.xs,
   },
 })
 
@@ -500,14 +587,6 @@ const sidebarNavCss = css({
   display: 'flex',
   flexDirection: 'column',
   gap: theme.space.xs,
-})
-
-const sidebarTitleCss = css({
-  margin: 0,
-  fontSize: theme.fontSize.xl,
-  lineHeight: theme.lineHeight.tight,
-  fontWeight: theme.fontWeight.semibold,
-  color: theme.colors.text.primary,
 })
 
 const logoLightCss = css({
@@ -546,12 +625,14 @@ const navItemCss = css({
     backgroundColor: theme.surface.lvl0,
     color: theme.colors.text.primary,
   },
-})
-
-const navItemActiveCss = css({
-  backgroundColor: theme.surface.lvl0,
-  color: theme.colors.text.primary,
-  boxShadow: `inset 0 0 0 1px ${theme.colors.border.subtle}`,
+  '&[aria-current="page"]': {
+    backgroundColor: theme.surface.lvl0,
+    color: theme.colors.text.primary,
+    boxShadow: `inset 0 0 0 1px ${theme.colors.border.subtle}`,
+  },
+  [MOBILE_NAV_MEDIA_RULE]: {
+    minHeight: '44px',
+  },
 })
 
 const mainCss = css({
@@ -559,8 +640,8 @@ const mainCss = css({
   padding: theme.space.xxl,
   paddingBlockEnd: 0,
   paddingInlineStart: 'clamp(48px, 6vw, 96px)',
-  '@media (max-width: 980px)': {
-    padding: theme.space.xl,
+  [MOBILE_NAV_MEDIA_RULE]: {
+    padding: theme.space.lg,
     paddingBlockEnd: 0,
   },
 })
@@ -572,7 +653,7 @@ const pageWrapCss = css({
   maxWidth: '750px',
   minHeight: `calc(100vh - ${theme.space.xxl})`,
   marginInline: '0 auto',
-  '@media (max-width: 980px)': {
+  [MOBILE_NAV_MEDIA_RULE]: {
     minHeight: `calc(100vh - ${theme.space.xl})`,
   },
 })
@@ -641,4 +722,75 @@ const footerLegalTextCss = css({
   letterSpacing: '0.05em',
   textTransform: 'uppercase',
   color: theme.colors.text.muted,
+})
+
+// Visually hide the checkbox while keeping it focusable. Toggling happens via
+// the mobile top bar's <label for="nav-toggle">.
+const navToggleCss = css({
+  position: 'absolute',
+  width: '1px',
+  height: '1px',
+  padding: 0,
+  margin: '-1px',
+  overflow: 'hidden',
+  clip: 'rect(0, 0, 0, 0)',
+  whiteSpace: 'nowrap',
+  border: 0,
+})
+
+// Mobile-only Remix logo banner that sits above the sticky top bar in the
+// document flow. It scrolls off the screen as the user scrolls the page.
+const mobileLogoBannerCss = css({
+  display: 'none',
+  [MOBILE_NAV_MEDIA_RULE]: {
+    display: 'flex',
+    alignItems: 'center',
+    padding: `${theme.space.lg}`,
+    backgroundColor: theme.surface.lvl3,
+    borderBottom: `1px solid ${theme.colors.border.subtle}`,
+  },
+})
+
+const mobileTopBarCss = css({
+  display: 'none',
+  [MOBILE_NAV_MEDIA_RULE]: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: theme.space.md,
+    padding: `0 ${theme.space.lg}`,
+    height: MOBILE_TOP_BAR_HEIGHT_PX,
+    backgroundColor: theme.surface.lvl3,
+    borderBottom: `1px solid ${theme.colors.border.subtle}`,
+    cursor: 'pointer',
+    position: 'sticky',
+    top: 0,
+    zIndex: 60,
+    userSelect: 'none',
+    WebkitTapHighlightColor: 'transparent',
+  },
+})
+
+const mobileTopBarTextCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: '2px',
+  minWidth: 0,
+  overflow: 'hidden',
+})
+
+const mobileTopBarTitleCss = css({
+  fontSize: theme.fontSize.md,
+  fontWeight: theme.fontWeight.semibold,
+  color: theme.colors.text.primary,
+  whiteSpace: 'nowrap',
+  textOverflow: 'ellipsis',
+  overflow: 'hidden',
+})
+
+const mobileTopBarIconCss = css({
+  width: theme.fontSize.xl,
+  height: theme.fontSize.xl,
+  color: theme.colors.text.primary,
+  flexShrink: 0,
 })

@@ -1,7 +1,8 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
+import { Renderer } from 'remix/render-middleware'
 import { createRedirectResponse as redirect } from 'remix/response/redirect'
 
-import type { routes } from '../routes.ts'
+import { routes } from '../routes.ts'
 import {
   fetchPackageContents,
   fetchPackageMetadata,
@@ -13,16 +14,17 @@ import {
   resolveVersion,
   VersionNotFoundError,
 } from '../utils/npm.ts'
-import { render } from './render.ts'
 import { HomePage } from '../ui/home-page.ts'
 import { renderDirectoryListing, renderError, renderFileContent } from './package-browser.ts'
 
-export default {
+export default createController(routes, {
   actions: {
-    home() {
-      return render('UNPKG - npm package browser', HomePage())
+    home({ get }) {
+      let render = get(Renderer)
+      return render({ title: 'UNPKG - npm package browser', content: HomePage() })
     },
-    async packageBrowser({ params }) {
+    async packageBrowser({ get, params }) {
+      let render = get(Renderer)
       let path = params.path ?? ''
 
       if (!path) {
@@ -47,34 +49,37 @@ export default {
           let fileData = await contents.getFileContent(filePath)
           if (!fileData) {
             return renderError(
+              render,
               'File not found',
               `The file "${filePath}" was not found in the package.`,
             )
           }
 
-          return renderFileContent(name, resolvedVersion, filePath, file, fileData)
+          return renderFileContent(render, name, resolvedVersion, filePath, file, fileData)
         }
 
         let files = getFilesAtPath(contents.files, filePath)
-        return renderDirectoryListing(name, resolvedVersion, filePath, files)
+        return renderDirectoryListing(render, name, resolvedVersion, filePath, files)
       } catch (error) {
         if (error instanceof PackageNotFoundError) {
           return renderError(
+            render,
             'Package not found',
             `The package "${error.packageName}" was not found on npm.`,
           )
         }
         if (error instanceof VersionNotFoundError) {
           return renderError(
+            render,
             'Version not found',
             `Version "${error.version}" of package "${error.packageName}" was not found.`,
           )
         }
         if (error instanceof InvalidPathError) {
-          return renderError('Invalid path', `The path "${error.path}" is not valid.`)
+          return renderError(render, 'Invalid path', `The path "${error.path}" is not valid.`)
         }
         throw error
       }
     },
   },
-} satisfies Controller<typeof routes>
+})

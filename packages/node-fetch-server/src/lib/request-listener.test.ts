@@ -40,8 +40,8 @@ describe('createRequestListener', () => {
           status: 201,
           statusText: 'Created!',
           headers: {
-            'x-a': 'A',
-            'x-b': 'B',
+            'X-A': 'A',
+            'X-B': 'B',
           },
         })
 
@@ -76,8 +76,8 @@ describe('createRequestListener', () => {
           status: 201,
           statusText: 'Created!',
           headers: {
-            'x-a': 'A',
-            'x-b': 'B',
+            'X-A': 'A',
+            'X-B': 'B',
           },
         })
 
@@ -174,7 +174,7 @@ describe('createRequestListener', () => {
       let listener = createRequestListener(handler)
       assert.ok(listener)
 
-      let req = createMockRequest({ headers: { host: 'example.com' } })
+      let req = createMockRequest({ headers: { Host: 'example.com' } })
       let res = createMockResponse({ req })
 
       listener(req, res)
@@ -210,7 +210,7 @@ describe('createRequestListener', () => {
       let listener = createRequestListener(handler, { host: 'remix.run' })
       assert.ok(listener)
 
-      let req = createMockRequest({ headers: { host: 'example.com' } })
+      let req = createMockRequest({ headers: { Host: 'example.com' } })
       let res = createMockResponse({ req })
 
       listener(req, res)
@@ -228,7 +228,7 @@ describe('createRequestListener', () => {
       let listener = createRequestListener(handler, { protocol: 'https:' })
       assert.ok(listener)
 
-      let req = createMockRequest({ headers: { host: 'example.com' } })
+      let req = createMockRequest({ headers: { Host: 'example.com' } })
       let res = createMockResponse({ req })
 
       listener(req, res)
@@ -241,7 +241,7 @@ describe('createRequestListener', () => {
       let handler: FetchHandler = async (request) => {
         assert.ok(request instanceof Request)
         assert.equal(request.method, 'POST')
-        assert.equal(request.headers.get('x-test'), 'yes')
+        assert.equal(request.headers.get('X-Test'), 'yes')
         assert.equal(request.bodyUsed, false)
 
         assert.equal(await request.text(), 'Hello, world!')
@@ -260,7 +260,7 @@ describe('createRequestListener', () => {
 
       let req = createMockRequest({
         method: 'POST',
-        headers: { 'x-test': 'yes' },
+        headers: { 'X-Test': 'yes' },
         body: 'Hello, world!',
       })
       let res = createMockResponse({ req })
@@ -405,6 +405,59 @@ describe('createRequestListener', () => {
 
       listener(req, res)
     })
+  })
+
+  it('writes the first response stream chunk before waiting for the second chunk', async () => {
+    let encoder = new TextEncoder()
+    let resolveSecondChunk!: () => void
+    let secondChunkReady = new Promise<void>((resolve) => {
+      resolveSecondChunk = resolve
+    })
+
+    let handler: FetchHandler = async () =>
+      new Response(
+        new ReadableStream({
+          async start(controller) {
+            controller.enqueue(encoder.encode('first'))
+            await secondChunkReady
+            controller.enqueue(encoder.encode('second'))
+            controller.close()
+          },
+        }),
+      )
+
+    let listener = createRequestListener(handler)
+    assert.ok(listener)
+
+    let req = createMockRequest()
+    let writtenChunks: Uint8Array[] = []
+    let resolveFirstWrite!: () => void
+    let firstWrite = new Promise<void>((resolve) => {
+      resolveFirstWrite = resolve
+    })
+    let end = new Promise<void>((resolve) => {
+      let res = Object.assign(new stream.Writable(), {
+        req,
+        writeHead() {},
+        write(chunk: Uint8Array) {
+          writtenChunks.push(chunk)
+          if (writtenChunks.length === 1) resolveFirstWrite()
+          return true
+        },
+        end() {
+          resolve()
+        },
+      }) as unknown as http.ServerResponse
+
+      listener(req, res)
+    })
+
+    await firstWrite
+    assert.equal(Buffer.concat(writtenChunks).toString(), 'first')
+
+    resolveSecondChunk()
+    await end
+    assert.equal(Buffer.concat(writtenChunks).toString(), 'firstsecond')
   })
 })
 

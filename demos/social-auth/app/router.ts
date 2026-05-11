@@ -1,5 +1,4 @@
-import type { WithRequiredAuth } from 'remix/auth-middleware'
-import { createRouter, type MiddlewareContext, type WithParams } from 'remix/fetch-router'
+import { createRouter, type MiddlewareContext } from 'remix/fetch-router'
 import type { Cookie } from 'remix/cookie'
 import { formData } from 'remix/form-data-middleware'
 import type { SessionStorage } from 'remix/session'
@@ -16,28 +15,26 @@ import { createXAuthController } from './actions/auth/x/controller.ts'
 import { createRootController } from './actions/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
 import { loadDatabase } from './middleware/database.ts'
+import { render } from './middleware/render.tsx'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { routes } from './routes.ts'
-import type { AuthIdentity } from './utils/auth-session.ts'
 import { externalProviderRegistry, type ExternalProviderRegistry } from './utils/external-auth.ts'
 
-type RootMiddleware = [
-  ReturnType<typeof staticFiles>,
-  ReturnType<typeof formData>,
-  ReturnType<typeof session>,
-  ReturnType<typeof loadDatabase>,
-  ReturnType<typeof loadAuth>,
-]
-
-export type AppContext<params extends Record<string, string> = {}> = WithParams<
-  MiddlewareContext<RootMiddleware>,
-  params
+type AppContext = MiddlewareContext<
+  [
+    ReturnType<typeof formData>,
+    ReturnType<typeof session>,
+    ReturnType<typeof loadDatabase>,
+    ReturnType<typeof loadAuth>,
+    ReturnType<typeof render>,
+  ]
 >
 
-export type AuthenticatedAppContext<params extends Record<string, string> = {}> = WithRequiredAuth<
-  AppContext<params>,
-  AuthIdentity
->
+declare module 'remix/fetch-router' {
+  interface RouterTypes {
+    context: AppContext
+  }
+}
 
 export interface SocialAuthRouterOptions {
   sessionCookie?: Cookie
@@ -49,7 +46,7 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
   let cookie = options?.sessionCookie ?? sessionCookie
   let storage = options?.sessionStorage ?? sessionStorage
   let providers = options?.externalProviderRegistry ?? externalProviderRegistry
-  let router = createRouter({
+  let router = createRouter<AppContext>({
     middleware: [
       staticFiles('./public', {
         cacheControl: 'no-store, must-revalidate',
@@ -60,7 +57,8 @@ export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
       session(cookie, storage),
       loadDatabase(),
       loadAuth(),
-    ] satisfies RootMiddleware,
+      render(),
+    ],
   })
 
   router.map(routes, createRootController(providers))

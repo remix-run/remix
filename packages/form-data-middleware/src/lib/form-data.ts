@@ -10,8 +10,6 @@ import {
 } from '@remix-run/form-data-parser'
 import type { Middleware } from '@remix-run/fetch-router'
 
-type SetFormDataContextTransform = readonly [readonly [typeof FormData, FormData]]
-
 function isMultipartLimitError(error: unknown): boolean {
   return (
     error instanceof MaxFilesExceededError ||
@@ -49,7 +47,7 @@ export interface FormDataOptions extends ParseFormDataOptions {
  */
 export function formData(
   options?: FormDataOptions,
-): Middleware<any, any, SetFormDataContextTransform> {
+): Middleware<readonly [typeof FormData, FormData]> {
   let suppressErrors = options?.suppressErrors ?? false
   let uploadHandler = options?.uploadHandler
 
@@ -59,6 +57,7 @@ export function formData(
     }
 
     if (context.method === 'GET' || context.method === 'HEAD') {
+      context.set(FormData, new FormData())
       return
     }
 

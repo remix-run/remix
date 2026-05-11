@@ -1,8 +1,9 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import * as coerce from 'remix/data-schema/coerce'
 import { Database } from 'remix/data-table'
+import { Renderer } from 'remix/render-middleware'
 import { redirect } from 'remix/response/redirect'
 
 import { books } from '../../../data/schema.ts'
@@ -10,7 +11,6 @@ import { requireAdmin } from '../../../middleware/admin.ts'
 import { requireAuth } from '../../../middleware/auth.ts'
 import { routes } from '../../../routes.ts'
 import { parseId } from '../../../utils/ids.ts'
-import { render } from '../../render.tsx'
 import { AdminBookFormPage } from './form.tsx'
 import { AdminBooksIndexPage } from './index-page.tsx'
 import { AdminBookNotFoundPage, AdminBookShowPage } from './show-page.tsx'
@@ -37,11 +37,12 @@ const bookSchema = f.object({
   inStock: inStockField,
 })
 
-export default {
+export default createController(routes.admin.books, {
   middleware: [requireAuth(), requireAdmin()],
   actions: {
     async index({ get }) {
       let db = get(Database)
+      let render = get(Renderer)
       let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
 
       return render(<AdminBooksIndexPage books={allBooks} />)
@@ -49,6 +50,7 @@ export default {
 
     async show({ get, params }) {
       let db = get(Database)
+      let render = get(Renderer)
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
 
@@ -59,7 +61,8 @@ export default {
       return render(<AdminBookShowPage book={book} />)
     },
 
-    new() {
+    new({ get }) {
+      let render = get(Renderer)
       return render(
         <AdminBookFormPage
           title="Add New Book"
@@ -95,6 +98,7 @@ export default {
 
     async edit({ get, params }) {
       let db = get(Database)
+      let render = get(Renderer)
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
 
@@ -154,4 +158,4 @@ export default {
       return redirect(routes.admin.books.index.href())
     },
   },
-} satisfies Controller<typeof routes.admin.books>
+})
