@@ -1,20 +1,21 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
+import { Renderer } from 'remix/render-middleware'
 
 import { orders, orderItemsWithBook } from '../../../data/schema.ts'
 import { requireAdmin } from '../../../middleware/admin.ts'
 import { requireAuth } from '../../../middleware/auth.ts'
-import type { routes } from '../../../routes.ts'
+import { routes } from '../../../routes.ts'
 import { parseId } from '../../../utils/ids.ts'
-import { render } from '../../render.tsx'
 import { AdminOrdersIndexPage } from './index-page.tsx'
 import { AdminOrderNotFoundPage, AdminOrderShowPage } from './show-page.tsx'
 
-export default {
+export default createController(routes.admin.orders, {
   middleware: [requireAuth(), requireAdmin()],
   actions: {
     async index({ get }) {
       let db = get(Database)
+      let render = get(Renderer)
       let allOrders = await db.findMany(orders, {
         orderBy: ['created_at', 'asc'],
         with: { items: orderItemsWithBook },
@@ -25,6 +26,7 @@ export default {
 
     async show({ get, params }) {
       let db = get(Database)
+      let render = get(Renderer)
       let orderId = parseId(params.orderId)
       let order =
         orderId === undefined
@@ -47,4 +49,4 @@ export default {
       return render(<AdminOrderShowPage order={order} shippingAddress={shippingAddress} />)
     },
   },
-} satisfies Controller<typeof routes.admin.orders>
+})

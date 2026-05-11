@@ -1,23 +1,26 @@
+import type { Router } from 'remix/fetch-router'
+import { renderWith } from 'remix/render-middleware'
+import { createHtmlResponse } from 'remix/response/html'
 import type { RemixNode } from 'remix/ui'
 import { renderToStream, type ResolveFrameContext } from 'remix/ui/server'
-import { createHtmlResponse } from 'remix/response/html'
-import { getContext } from 'remix/async-context-middleware'
-import type { Router } from 'remix/fetch-router'
 
-export function render(node: RemixNode, init?: ResponseInit) {
-  let context = getContext()
-  let request = context.request
-  let router = context.router
+export function render() {
+  return renderWith((context) => {
+    let request = context.request
+    let router = context.router
 
-  let stream = renderToStream(node, {
-    frameSrc: request.url,
-    resolveFrame: (src, target, context) => resolveFrame(router, request, src, target, context),
-    onError(error) {
-      console.error(error)
-    },
+    return function render(node: RemixNode, init?: ResponseInit) {
+      let stream = renderToStream(node, {
+        frameSrc: request.url,
+        resolveFrame: (src, target, context) => resolveFrame(router, request, src, target, context),
+        onError(error) {
+          console.error(error)
+        },
+      })
+
+      return createHtmlResponse(stream, init)
+    }
   })
-
-  return createHtmlResponse(stream, init)
 }
 
 async function resolveFrame(
@@ -31,15 +34,15 @@ async function resolveFrame(
   let url = new URL(src, frameSrc)
 
   let headers = new Headers()
-  headers.set('accept', 'text/html')
-  headers.set('accept-encoding', 'identity')
-  headers.set('x-remix-frame', 'true')
+  headers.set('Accept', 'text/html')
+  headers.set('Accept-Encoding', 'identity')
+  headers.set('X-Remix-Frame', 'true')
   if (target) {
-    headers.set('x-remix-target', target)
+    headers.set('X-Remix-Target', target)
   }
 
-  let cookie = request.headers.get('cookie')
-  if (cookie) headers.set('cookie', cookie)
+  let cookie = request.headers.get('Cookie')
+  if (cookie) headers.set('Cookie', cookie)
 
   let res = await followFrameRedirects(router, request, url, headers)
   if (!res.ok) {
@@ -62,7 +65,7 @@ async function followFrameRedirects(router: Router, request: Request, url: URL, 
       }),
     )
 
-    let location = res.headers.get('location')
+    let location = res.headers.get('Location')
     if (!location || res.status < 300 || res.status >= 400) {
       return res
     }

@@ -1,13 +1,14 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
+import { Renderer } from 'remix/render-middleware'
 
-import type { routes } from '../../routes.ts'
-import { render } from '../render.tsx'
+import { routes } from '../../routes.ts'
 import { CartPage } from './page.tsx'
 
-export default {
+export default createController(routes.cart, {
   actions: {
-    index() {
+    index({ get }) {
+      let render = get(Renderer)
       return render(<CartPage />)
     },
   },
-} satisfies Controller<typeof routes.cart>
+})

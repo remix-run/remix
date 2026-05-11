@@ -31,8 +31,12 @@ const sessionCookie = createCookie('__sess', {
 const sessionStorage = createCookieSessionStorage()
 
 function requireAuth(): Middleware {
-  return ({ get }, next) => {
-    let session = get(Session)
+  return (context, next) => {
+    let session = context.get(Session)
+    if (session == null) {
+      throw new Error('Expected session() middleware before requireAuth()')
+    }
+
     let username = session.get('username')
 
     if (!username) {

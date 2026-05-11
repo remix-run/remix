@@ -40,8 +40,8 @@ describe('createRequestListener', () => {
           status: 201,
           statusText: 'Created!',
           headers: {
-            'x-a': 'A',
-            'x-b': 'B',
+            'X-A': 'A',
+            'X-B': 'B',
           },
         })
 
@@ -76,8 +76,8 @@ describe('createRequestListener', () => {
           status: 201,
           statusText: 'Created!',
           headers: {
-            'x-a': 'A',
-            'x-b': 'B',
+            'X-A': 'A',
+            'X-B': 'B',
           },
         })
 
@@ -174,7 +174,7 @@ describe('createRequestListener', () => {
       let listener = createRequestListener(handler)
       assert.ok(listener)
 
-      let req = createMockRequest({ headers: { host: 'example.com' } })
+      let req = createMockRequest({ headers: { Host: 'example.com' } })
       let res = createMockResponse({ req })
 
       listener(req, res)
@@ -210,7 +210,7 @@ describe('createRequestListener', () => {
       let listener = createRequestListener(handler, { host: 'remix.run' })
       assert.ok(listener)
 
-      let req = createMockRequest({ headers: { host: 'example.com' } })
+      let req = createMockRequest({ headers: { Host: 'example.com' } })
       let res = createMockResponse({ req })
 
       listener(req, res)
@@ -228,7 +228,7 @@ describe('createRequestListener', () => {
       let listener = createRequestListener(handler, { protocol: 'https:' })
       assert.ok(listener)
 
-      let req = createMockRequest({ headers: { host: 'example.com' } })
+      let req = createMockRequest({ headers: { Host: 'example.com' } })
       let res = createMockResponse({ req })
 
       listener(req, res)
@@ -241,7 +241,7 @@ describe('createRequestListener', () => {
       let handler: FetchHandler = async (request) => {
         assert.ok(request instanceof Request)
         assert.equal(request.method, 'POST')
-        assert.equal(request.headers.get('x-test'), 'yes')
+        assert.equal(request.headers.get('X-Test'), 'yes')
         assert.equal(request.bodyUsed, false)
 
         assert.equal(await request.text(), 'Hello, world!')
@@ -260,7 +260,7 @@ describe('createRequestListener', () => {
 
       let req = createMockRequest({
         method: 'POST',
-        headers: { 'x-test': 'yes' },
+        headers: { 'X-Test': 'yes' },
         body: 'Hello, world!',
       })
       let res = createMockResponse({ req })

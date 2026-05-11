@@ -1,14 +1,13 @@
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { completeAuth, verifyCredentials } from 'remix/auth'
 import { redirect } from 'remix/response/redirect'
 
 import { getPostAuthRedirect, getReturnToQuery, passwordProvider } from '../../middleware/auth.ts'
 import { Session } from '../../middleware/session.ts'
-import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 
 export function createAuthController() {
-  return {
+  return createController(routes.auth, {
     actions: {
       async login(context) {
         let { get, url } = context
@@ -43,5 +42,5 @@ export function createAuthController() {
         return redirect(routes.home.href())
       },
     },
-  } satisfies Controller<typeof routes.auth, AppContext>
+  })
 }

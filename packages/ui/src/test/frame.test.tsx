@@ -30,6 +30,19 @@ function streamFromChunks(chunks: Array<string | Promise<string>>): ReadableStre
   })
 }
 
+async function drainWithProtocol(stream: ReadableStream<Uint8Array>): Promise<string> {
+  let chunks = readChunks(stream)
+  let html = ''
+
+  while (true) {
+    let chunk = await chunks.next()
+    if (chunk.done) break
+    html += chunk.value
+  }
+
+  return html
+}
+
 describe('run', () => {
   let container: HTMLDivElement
 
@@ -206,7 +219,7 @@ describe('run', () => {
     }
 
     async function renderReloadDocument() {
-      return await drain(
+      return await drainWithProtocol(
         renderToStream(
           <html>
             <body>
@@ -287,7 +300,7 @@ describe('run', () => {
     )
 
     async function renderDocument(label: string) {
-      return await drain(
+      return await drainWithProtocol(
         renderToStream(
           <html>
             <head />
@@ -364,7 +377,7 @@ describe('run', () => {
     )
 
     async function renderDocument(includeEntry: boolean) {
-      return await drain(
+      return await drainWithProtocol(
         renderToStream(
           <html>
             <head />
@@ -422,7 +435,7 @@ describe('run', () => {
     })
 
     async function renderDocument(includeFrame: boolean) {
-      return await drain(
+      return await drainWithProtocol(
         renderToStream(
           <html>
             <head />

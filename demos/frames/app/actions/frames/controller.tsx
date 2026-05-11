@@ -1,19 +1,20 @@
-import { Frame } from 'remix/ui'
-import type { Controller } from 'remix/fetch-router'
+import { createController, type RouterTypes } from 'remix/fetch-router'
+import { Renderer } from 'remix/render-middleware'
+import { Frame, type RemixNode } from 'remix/ui'
 
 import { Counter } from '../../assets/counter.tsx'
 import { ReloadScope } from '../../assets/reload-scope.tsx'
 import { ReloadTime } from '../../assets/reload-time.tsx'
 import { routes } from '../../routes.ts'
-import { render } from '../render.ts'
 import { searchUnitedStates } from '../../utils/us-states.ts'
 
-export const framesController = {
+export const framesController = createController(routes.frames, {
   actions: {
-    async sidebar() {
+    async sidebar(context) {
       await delay(400)
 
       return render(
+        context,
         <div>
           <p style={{ marginTop: 0, color: '#b9c6ff' }}>
             This content is rendered by <code>/frames/sidebar</code>.
@@ -27,10 +28,11 @@ export const framesController = {
       )
     },
 
-    async activity({ request, router }) {
+    async activity(context) {
       await delay(2000)
 
       return render(
+        context,
         <div>
           <p style={{ marginTop: 0, color: '#b9c6ff' }}>
             Rendered by <code>/frames/activity</code> at{' '}
@@ -41,14 +43,14 @@ export const framesController = {
             fallback={<div style={{ color: '#9aa8e8' }}>Loading detail…</div>}
           />
         </div>,
-        { request, router },
       )
     },
 
-    async activityDetail({ request, router }) {
+    async activityDetail(context) {
       await delay(600)
 
       return render(
+        context,
         <div>
           <p style={{ marginTop: 0, marginBottom: 8, color: '#9aa8e8' }}>
             Nested frame with a hydrated counter:
@@ -60,14 +62,14 @@ export const framesController = {
             />
           </div>
         </div>,
-        { request, router },
       )
     },
 
-    async clientFrameExample({ request, router }) {
+    async clientFrameExample(context) {
       await delay(500)
 
       return render(
+        context,
         <div
           style={{
             border: '1px solid rgba(255,255,255,0.10)',
@@ -93,14 +95,14 @@ export const framesController = {
             />
           </div>
         </div>,
-        { request, router },
       )
     },
 
-    async clientFrameExampleNested() {
+    async clientFrameExampleNested(context) {
       await delay(350)
 
       return render(
+        context,
         <div
           style={{
             border: '1px solid rgba(255,255,255,0.10)',
@@ -117,10 +119,11 @@ export const framesController = {
       )
     },
 
-    async clientMountedOuter({ request, router }) {
+    async clientMountedOuter(context) {
       await delay(350)
 
       return render(
+        context,
         <div
           style={{
             border: '1px solid rgba(255,255,255,0.10)',
@@ -145,14 +148,14 @@ export const framesController = {
             />
           </div>
         </div>,
-        { request, router },
       )
     },
 
-    async clientMountedNested() {
+    async clientMountedNested(context) {
       await delay(2200)
 
       return render(
+        context,
         <div
           style={{
             border: '1px solid rgba(255,255,255,0.10)',
@@ -172,12 +175,13 @@ export const framesController = {
       )
     },
 
-    async time() {
+    async time(context) {
       await delay(1200)
 
       let now = new Date()
 
       return render(
+        context,
         <div>
           <div
             style={{
@@ -202,12 +206,13 @@ export const framesController = {
       )
     },
 
-    async reloadScope() {
+    async reloadScope(context) {
       await delay(700)
 
       let now = new Date()
 
       return render(
+        context,
         <div>
           <div style={{ fontSize: 13, color: '#b9c6ff' }}>Frame server time</div>
           <div style={{ fontSize: 18, fontVariantNumeric: 'tabular-nums', marginBottom: 10 }}>
@@ -218,13 +223,14 @@ export const framesController = {
       )
     },
 
-    async stateSearchResults({ url }) {
+    async stateSearchResults(context) {
       await delay(300)
 
-      let query = (url.searchParams.get('query') ?? '').trim()
+      let query = (context.url.searchParams.get('query') ?? '').trim()
       let matches = searchUnitedStates(query)
 
       return render(
+        context,
         <div>
           <p style={{ marginTop: 0, marginBottom: 10, color: '#b9c6ff' }}>
             {query
@@ -244,7 +250,11 @@ export const framesController = {
       )
     },
   },
-} satisfies Controller<typeof routes.frames>
+})
+
+function render(context: RouterTypes['context'], node: RemixNode, init?: ResponseInit) {
+  return context.get(Renderer)(node, init)
+}
 
 function delay(ms: number) {
   if (process.env.NODE_ENV === 'test') {

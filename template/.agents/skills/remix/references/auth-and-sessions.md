@@ -303,7 +303,9 @@ module-scope provider to `finishExternalAuth(...)` and `refreshExternalAuth(...)
 ### OAuth controller
 
 ```typescript
-export default {
+import { createController } from 'remix/fetch-router'
+
+export default createController(routes.auth.google, {
   actions: {
     // GET /auth/google — redirect to Google
     async index(context) {
@@ -329,7 +331,7 @@ export default {
       return redirect(returnTo ?? routes.account.index.href())
     },
   },
-} satisfies Controller<typeof routes.auth.google>
+})
 ```
 
 ### Refresh stored provider tokens
@@ -359,16 +361,17 @@ async function refreshGoogleTokens({ get }) {
 Apply `requireAuth()` to every action in one controller:
 
 ```typescript
+import { createController } from 'remix/fetch-router'
 import { requireAuth } from 'remix/auth-middleware'
 
-export default {
+export default createController(routes.account, {
   middleware: [requireAuth()],
   actions: {
     index() {
       /* guaranteed authenticated */
     },
   },
-} satisfies Controller<typeof routes.account>
+})
 ```
 
 Nested route maps need their own explicit protection:
@@ -379,7 +382,7 @@ router.map(routes.account, accountController)
 router.map(routes.account.settings, accountSettingsController)
 
 // app/actions/account/settings/controller.tsx
-export default {
+export default createController(routes.account.settings, {
   middleware: [requireAuth()],
   actions: {
     index() {
@@ -389,7 +392,7 @@ export default {
       /* guaranteed authenticated */
     },
   },
-} satisfies Controller<typeof routes.account.settings>
+})
 ```
 
 ### Stacking middleware
@@ -397,14 +400,14 @@ export default {
 Combine auth checks with role checks:
 
 ```typescript
-export default {
+export default createController(routes.admin, {
   middleware: [requireAuth(), requireAdmin()],
   actions: {
     index() {
       /* requires auth + admin */
     },
   },
-} satisfies Controller<typeof routes.admin>
+})
 ```
 
 ### Action-level protection

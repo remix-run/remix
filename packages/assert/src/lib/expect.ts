@@ -169,9 +169,25 @@ interface AsyncMatchers {
   toThrow(expected?: unknown): Promise<void>
 }
 
+/**
+ * Object returned by {@link expect}. Exposes the synchronous matcher set
+ * directly on the object, plus the negation and async-resolution gateways
+ * needed for full jest/vitest-style assertions.
+ */
 export interface Expectation extends Matchers {
+  /**
+   * Negates the next matcher — `expect(x).not.toBe(1)` passes when `x !== 1`.
+   */
   not: Matchers
+  /**
+   * Awaits the received promise expecting it to reject, then runs the next
+   * matcher against the rejection value. Use with `await`.
+   */
   rejects: AsyncMatchers
+  /**
+   * Awaits the received promise expecting it to resolve, then runs the next
+   * matcher against the resolved value. Use with `await`.
+   */
   resolves: AsyncMatchers
 }
 
@@ -519,24 +535,6 @@ function stringify(value: unknown): string {
   }
 }
 
-/**
- * jest/vitest-style expect API. Returns an object of matchers that throw
- * {@link AssertionError} on failure. Supports `.not` for negation and
- * `.rejects` / `.resolves` for asserting on promises.
- *
- * Mock-aware matchers (`toHaveBeenCalled*`) read `received.mock.calls[i].arguments`,
- * which is the shape produced by `mock.fn()` from `@remix-run/test`.
- *
- * @example
- * expect(value).toBe(42)
- * expect(value).not.toBeNull()
- * await expect(fetch('/missing')).rejects.toThrow('Not found')
- * await expect(loadModule()).resolves.toBeUndefined()
- *
- * @param received - The value or function or promise to assert against.
- * @returns An {@link Expectation} object exposing matchers, `.not`,
- *          `.rejects`, and `.resolves`.
- */
 function expectImpl(received: unknown): Expectation {
   return {
     ...createMatchers(received, false),
@@ -561,4 +559,23 @@ function objectContaining<T extends object>(expected: T): T {
   return { [PARTIAL_MATCHER]: true, expected } as unknown as T
 }
 
+/**
+ * jest/vitest-style expect API. Returns an object of matchers that throw
+ * {@link AssertionError} on failure. Supports `.not` for negation and
+ * `.rejects` / `.resolves` for asserting on promises.
+ *
+ * Mock-aware matchers (`toHaveBeenCalled*`) read `received.mock.calls[i].arguments`,
+ * which is the shape produced by `mock.fn()` from `@remix-run/test`.
+ *
+ * @example
+ * expect(value).toBe(42)
+ * expect(value).not.toBeNull()
+ * expect(value).toEqual(expect.objectContaining({ success: true }))
+ * await expect(fetch('/missing')).rejects.toThrow('Not found')
+ * await expect(loadModule()).resolves.toBeUndefined()
+ *
+ * @param received - The value or function or promise to assert against.
+ * @returns An {@link Expectation} object exposing matchers, `.not`,
+ *          `.rejects`, and `.resolves`.
+ */
 export const expect = Object.assign(expectImpl, { objectContaining })

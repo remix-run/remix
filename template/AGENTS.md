@@ -20,8 +20,9 @@ Refer to ./.agents/skills/remix/SKILL.md
 - `app/actions/controller.tsx` owns the top-level route actions
 - `app/routes.ts` defines the route contract
 - `app/router.ts` wires routes to route handlers
+- `app/middleware/render.tsx` installs the request-scoped renderer used by actions
 - `app/ui/` holds the shared document and layout wrappers
-- `app/actions/render.tsx` centralizes HTML response rendering for controllers
+- `app/assets.ts` owns the server-side asset pipeline used by the asset route and renderer
 
 ## Route Ownership
 
@@ -33,6 +34,6 @@ Refer to ./.agents/skills/remix/SKILL.md
 
 ## Build-Out Notes
 
-- This starter intentionally begins small; add directories like `app/data/`, `app/middleware/`, `public/`, and `test/` only when you need them.
+- This starter intentionally begins small; add directories like `app/data/`, `public/`, and `test/` only when you need them.
 - Prefer putting code in the narrowest owner before introducing shared modules.
 - Avoid generic dumping-ground directories like `app/lib/` or `app/components/`.

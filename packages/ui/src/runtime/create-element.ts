@@ -1,5 +1,6 @@
 import { jsx } from './jsx.ts'
 import type { ElementType, RemixElement } from './jsx.ts'
+import { normalizeChildren } from './core/children.ts'
 
 /**
  * Creates a Remix virtual element from a JSX-like call signature.
@@ -20,7 +21,7 @@ export function createElement(
       console.error(new Error('mixin elements must not receive children'))
     }
   } else {
-    nextProps.children = children
+    nextProps.children = normalizeChildren(children)
   }
 
   if (nextProps.key != null) {

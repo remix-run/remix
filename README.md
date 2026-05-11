@@ -92,7 +92,7 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [tar-parser](packages/tar-parser): A fast, efficient parser for tar streams in any JavaScript environment
 - [terminal](packages/terminal): Terminal output utilities for JavaScript libraries and CLIs
 - [test](packages/test): A test framework for JavaScript and TypeScript projects
-- [ui](packages/ui): UI tokens, mixins, and glyphs for Remix components
+- [ui](packages/ui): View layer with reconciler, component model, and first-party UI components
 
 ## Installation
 
@@ -112,8 +112,11 @@ If you want to play around with the bleeding edge, we also build the latest `mai
 
 ```sh
 pnpm install "remix-run/remix#preview/main&path:packages/remix"
+```
 
-# Or, just install a single package
+Or, just install a single package:
+
+```
 pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
 ```
 

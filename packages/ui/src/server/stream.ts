@@ -2,7 +2,13 @@ import type { ComponentHandle, FrameHandle, Key, RemixNode } from '../runtime/co
 import type { ElementType, ElementProps, RemixElement } from '../runtime/jsx.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
-import { normalizeSvgAttribute } from '../runtime/svg-attributes.ts'
+import {
+  FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
+  SELF_CLOSING_TAGS,
+  normalizeAttributeName,
+  serializeStyleObject,
+} from '../runtime/core/attributes.ts'
+import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
 
 interface VNode {
   type: ElementType
@@ -90,6 +96,7 @@ interface RenderContext {
   unresolvedHydrationData: Map<string, UnresolvedHydrationData>
   frameData: Map<string, FrameData>
   blockingFrameTails: ReadableStream<Uint8Array>[]
+  flushKind: FlushKind
   serverIdScope: string
   serverIdCounter: number
 }
@@ -114,22 +121,8 @@ type Segment =
       pending?: Promise<void>
     }
 
-const SELF_CLOSING_TAGS = new Set([
-  'area',
-  'base',
-  'br',
-  'col',
-  'embed',
-  'hr',
-  'img',
-  'input',
-  'link',
-  'meta',
-  'param',
-  'source',
-  'track',
-  'wbr',
-])
+const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
+const INPUT_DEFAULT_PROPS = new Set(['defaultValue', 'defaultChecked'])
 
 const DEFAULT_STYLE_LAYER = 'rmx'
 const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
@@ -154,26 +147,7 @@ function getStyleLayerName(selector: string, layer: string = DEFAULT_STYLE_LAYER
   return `${layer}.${selector}`
 }
 
-const NUMERIC_CSS_PROPS = new Set([
-  'z-index',
-  'opacity',
-  'flex-grow',
-  'flex-shrink',
-  'flex-order',
-  'grid-area',
-  'grid-row',
-  'grid-column',
-  'font-weight',
-  'line-height',
-  'order',
-  'orphans',
-  'widows',
-  'zoom',
-  'columns',
-  'column-count',
-])
-
-const FRAMEWORK_PROPS = new Set(['children', 'innerHTML', 'on', 'key', 'mix'])
+const SSR_OMITTED_PROPS = RUNTIME_FRAMEWORK_PROPS
 
 const ssrSignal = Object.freeze({
   get aborted() {
@@ -230,6 +204,7 @@ export function renderToStream(
     unresolvedHydrationData: new Map(),
     frameData: new Map(),
     blockingFrameTails: [],
+    flushKind: 'fragment',
     serverIdScope: crypto.randomUUID().slice(0, 8),
     serverIdCounter: 0,
   }
@@ -243,7 +218,7 @@ export function renderToStream(
         validateClientEntriesForHydration(context)
         let html = serializeSegment(root)
         let finalHtml = finalizeHtml(html, context)
-        let bytes = encoder.encode(finalHtml)
+        let bytes = encoder.encode(appendFlushMarker(finalHtml, context.flushKind))
         controller.enqueue(bytes)
 
         // If we have any tails from blocking frame streams, stream them now.
@@ -350,13 +325,13 @@ async function splitFirstChunk(stream: ReadableStream<Uint8Array>): Promise<Reso
     },
   })
 
-  return { html: stripDoctypeMarkup(decoder.decode(first)), tail }
+  return { html: stripFlushMarkers(stripDoctypeMarkup(decoder.decode(first))), tail }
 }
 
 async function resolveFrameHtml(
   input: string | ReadableStream<Uint8Array>,
 ): Promise<ResolvedFrameHtml> {
-  if (typeof input === 'string') return { html: stripDoctypeMarkup(input) }
+  if (typeof input === 'string') return { html: stripFlushMarkers(stripDoctypeMarkup(input)) }
 
   return await splitFirstChunk(input)
 }
@@ -399,6 +374,7 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
       let tag = type
 
       if (tag === 'html') {
+        context.flushKind = 'document'
         return buildElementSegment(tag, props, context, frameState)
       }
 
@@ -478,7 +454,15 @@ function buildElementSegment(
   let processedProps = processStyleProps(mixedProps)
   // Determine namespace context for the current element and its children
   let currentIsSvg = context.insideSvg || tag === 'svg'
-  let attrs = renderAttributes(processedProps, currentIsSvg)
+
+  if (!currentIsSvg && tag === 'textarea') {
+    return buildTextareaElementSegment(tag, processedProps)
+  }
+
+  let attrs =
+    !currentIsSvg && tag === 'input'
+      ? renderInputAttributes(processedProps)
+      : renderAttributes(processedProps, currentIsSvg)
 
   if (SELF_CLOSING_TAGS.has(tag)) {
     return staticSeg(`<${tag}${attrs} />`)
@@ -499,6 +483,27 @@ function buildElementSegment(
   return compositeSeg([open, children, close])
 }
 
+function buildTextareaElementSegment(tag: string, props: any): Segment {
+  let attrs = renderAttributes(props, false, TEXTAREA_VALUE_PROPS)
+  let value = props.value ?? props.defaultValue ?? ''
+  return staticSeg(`<${tag}${attrs}>${escapeTextContent(String(value))}</${tag}>`)
+}
+
+function renderInputAttributes(props: any): string {
+  let value =
+    props.value === undefined && props.defaultValue !== undefined ? props.defaultValue : props.value
+  let checked =
+    props.checked === undefined && props.defaultChecked !== undefined
+      ? props.defaultChecked
+      : props.checked
+  let inputProps = {
+    ...props,
+    ...(value === undefined ? {} : { value }),
+    ...(checked === undefined ? {} : { checked }),
+  }
+  return renderAttributes(inputProps, false, INPUT_DEFAULT_PROPS)
+}
+
 function buildHeadElementSegment(
   tag: string,
   props: any,
@@ -516,11 +521,12 @@ function buildHeadElementSegment(
   return compositeSeg([open, children, close])
 }
 
-function renderAttributes(props: any, isSvg: boolean): string {
+function renderAttributes(props: any, isSvg: boolean, excludedProps?: Set<string>): string {
   let attrs = ''
 
   for (let key in props) {
-    if (FRAMEWORK_PROPS.has(key)) continue
+    if (SSR_OMITTED_PROPS.has(key)) continue
+    if (excludedProps?.has(key)) continue
 
     let value = props[key]
     if (value === undefined || value === null || value === false) continue
@@ -812,7 +818,11 @@ function buildComponentSegment(
   let [renderedNode] = handle.render(props)
   let childContext = { ...context, parentVNode: vnode }
 
-  return buildSegment(renderedNode, childContext, frameState)
+  let rendered = buildSegment(renderedNode, childContext, frameState)
+  if (childContext.flushKind === 'document') {
+    context.flushKind = 'document'
+  }
+  return rendered
 }
 
 function createHydrationPropsReplacer(context: RenderContext, frameState: SsrFrameState) {
@@ -1077,24 +1087,11 @@ function escapeTemplateContent(html: string): string {
 }
 
 function transformAttributeName(name: string, isSvg: boolean): string {
-  // aria-/data- pass through
-  if (name.startsWith('aria-') || name.startsWith('data-')) return name
-
-  // HTML mappings
-  if (name === 'className') return 'class'
-  if (!isSvg) {
-    if (name === 'htmlFor') return 'for'
-    if (name === 'tabIndex') return 'tabindex'
-    if (name === 'acceptCharset') return 'accept-charset'
-    if (name === 'httpEquiv') return 'http-equiv'
-    return name.toLowerCase()
-  }
-
-  return normalizeSvgAttribute(name).attr
+  return normalizeAttributeName(name, isSvg).attr
 }
 
 function finalizeHtml(html: string, context: RenderContext): string {
-  let hasHtmlRoot = html.trimStart().toLowerCase().startsWith('<html')
+  let hasHtmlRoot = context.flushKind === 'document'
 
   let styles = collectStyleTags(context)
   if (styles) {
@@ -1239,36 +1236,6 @@ function escapeScriptJson(json: string): string {
   return json.replace(/</g, '\\u003c')
 }
 
-function serializeStyleObject(style: Record<string, any>): string {
-  let parts: string[] = []
-
-  for (let [key, value] of Object.entries(style)) {
-    if (value == null) continue
-    if (typeof value === 'boolean') continue
-    if (typeof value === 'number' && !Number.isFinite(value)) continue
-
-    // Convert camelCase to kebab-case
-    let cssKey = key.replace(/[A-Z]/g, (m) => `-${m.toLowerCase()}`)
-
-    // Add px to numeric values where appropriate
-    let shouldAppendPx =
-      typeof value === 'number' &&
-      value !== 0 &&
-      !NUMERIC_CSS_PROPS.has(cssKey) &&
-      !cssKey.startsWith('--')
-
-    let cssValue = shouldAppendPx
-      ? `${value}px`
-      : Array.isArray(value)
-        ? value.join(', ')
-        : String(value)
-
-    parts.push(`${cssKey}: ${cssValue};`)
-  }
-
-  return parts.join(' ')
-}
-
 // Frame styles work end-to-end when frame handlers use their own `renderToStream`:
 // the handler's `finalizeHtml` emits selector-addressed `<style>` tags in its HTML, and on the client,
 // the `adoptServerStyleTag` MutationObserver (stylesheet.ts) picks it up anywhere in the
@@ -1351,11 +1318,13 @@ async function drain(stream: ReadableStream<Uint8Array>): Promise<string> {
  * @returns Rendered HTML.
  */
 export async function renderToString(node: RemixNode): Promise<string> {
-  return drain(
-    renderToStream(node, {
-      onError(error) {
-        throw error
-      },
-    }),
+  return stripFlushMarkers(
+    await drain(
+      renderToStream(node, {
+        onError(error) {
+          throw error
+        },
+      }),
+    ),
   )
 }

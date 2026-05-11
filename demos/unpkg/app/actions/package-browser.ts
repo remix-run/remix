@@ -1,17 +1,22 @@
 import { html } from 'remix/html-template'
+import type { Renderer } from 'remix/render-middleware'
 
 import type { PackageFile } from '../utils/npm.ts'
 import { formatBytes } from '../utils/format-bytes.ts'
 import { detectFileMimeType, getImageMimeType, isTextContent } from '../utils/mime-type.ts'
 import { icons } from '../ui/icons.ts'
-import { render } from './render.ts'
+import type { HtmlDocument } from '../middleware/render.ts'
+
+type HtmlRenderer = Renderer<HtmlDocument>
+type HtmlRenderResult = ReturnType<HtmlRenderer>
 
 export function renderDirectoryListing(
+  render: HtmlRenderer,
   packageName: string,
   version: string,
   dirPath: string,
   files: PackageFile[],
-): Response {
+): HtmlRenderResult {
   let title = dirPath ? `${packageName}@${version}/${dirPath}` : `${packageName}@${version}`
   let breadcrumb = renderBreadcrumb(packageName, version, dirPath)
 
@@ -46,9 +51,9 @@ export function renderDirectoryListing(
     `
   })
 
-  return render(
+  return render({
     title,
-    html`
+    content: html`
       <h1>${packageName}</h1>
       ${breadcrumb}
       <p class="package-info">Version: ${version}</p>
@@ -68,16 +73,17 @@ export function renderDirectoryListing(
         </table>
       </div>
     `,
-  )
+  })
 }
 
 export function renderFileContent(
+  render: HtmlRenderer,
   packageName: string,
   version: string,
   filePath: string,
   file: PackageFile,
   data: Uint8Array,
-): Response {
+): HtmlRenderResult {
   let title = `${packageName}@${version}/${filePath}`
   let breadcrumb = renderBreadcrumb(packageName, version, filePath)
   let imageMimeType = getImageMimeType(file.name)
@@ -106,29 +112,35 @@ export function renderFileContent(
     `
   }
 
-  return render(
+  return render({
     title,
-    html`
+    content: html`
       <h1>${file.name}</h1>
       ${breadcrumb}
       <p class="package-info">Size: ${formatBytes(file.size)}</p>
       ${content}
     `,
-  )
+  })
 }
 
-export function renderError(title: string, message: string): Response {
+export function renderError(
+  render: HtmlRenderer,
+  title: string,
+  message: string,
+): HtmlRenderResult {
   return render(
-    title,
-    html`
-      <h1>${title}</h1>
-      <div class="error">
-        <p>${message}</p>
-      </div>
-      <p style="margin-top: 1rem;">
-        <a href="/">Back to home</a>
-      </p>
-    `,
+    {
+      title,
+      content: html`
+        <h1>${title}</h1>
+        <div class="error">
+          <p>${message}</p>
+        </div>
+        <p style="margin-top: 1rem;">
+          <a href="/">Back to home</a>
+        </p>
+      `,
+    },
     { status: 404 },
   )
 }

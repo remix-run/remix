@@ -66,6 +66,9 @@ interface AssetServerScriptOptions {
 
 const scriptExtensionSet = new Set<string>(supportedScriptExtensions)
 
+/**
+ * Options used to construct an {@link AssetServer} via {@link createAssetServer}.
+ */
 export interface AssetServerOptions<transforms extends AssetRequestTransformMap = {}> {
   /** Public mount path for this asset server, e.g. `'/assets'`. */
   basePath: string
@@ -150,6 +153,10 @@ export type AssetServerGetHrefOptions<transforms extends AssetRequestTransformMa
       transform: readonly AssetTransformInvocation<transforms>[]
     }
 
+/**
+ * Serves compiled scripts and styles for asset requests routed to it.
+ * Construct with {@link createAssetServer}.
+ */
 export interface AssetServer<transforms extends AssetRequestTransformMap = {}> {
   /**
    * Serves a script or style request. Returns `Response | null` — null means the request

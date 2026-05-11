@@ -10,7 +10,7 @@ const app = run({
     return exp
   },
   async resolveFrame(src, signal) {
-    let res = await fetch(src, { headers: { accept: 'text/html' }, signal })
+    let res = await fetch(src, { headers: { Accept: 'text/html' }, signal })
     if (!res.ok) {
       return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`
     }

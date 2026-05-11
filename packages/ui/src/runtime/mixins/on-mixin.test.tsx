@@ -126,6 +126,181 @@ describe('on mixin', () => {
     expect(calls).toEqual(['focus', 'click'])
   })
 
+  it('keeps bubbling events on the host element for connected roots', (t) => {
+    let currentTargets: EventTarget[] = []
+    let container = document.createElement('div')
+    document.body.append(container)
+    let root = createRoot(container)
+    let documentAddSpy = t.mock.method(document, 'addEventListener')
+
+    try {
+      root.render(
+        <input
+          mix={[
+            on('input', (event) => {
+              currentTargets.push(event.currentTarget)
+            }),
+          ]}
+        />,
+      )
+      root.flush()
+
+      let input = container.querySelector('input')
+      invariant(input)
+      input.dispatchEvent(new Event('input', { bubbles: true }))
+      root.flush()
+
+      expect(currentTargets).toEqual([input])
+      expect(documentAddSpy.mock.calls.some((call) => call.arguments[0] === 'input')).toBe(false)
+    } finally {
+      root.dispose()
+      container.remove()
+    }
+  })
+
+  it('keeps non-bubbling events on the host element for connected roots', () => {
+    let calls = 0
+    let container = document.createElement('div')
+    document.body.append(container)
+    let root = createRoot(container)
+
+    try {
+      root.render(
+        <button
+          mix={[
+            on('mouseenter', () => {
+              calls++
+            }),
+          ]}
+        >
+          hover
+        </button>,
+      )
+      root.flush()
+
+      let button = container.querySelector('button')
+      invariant(button)
+      button.dispatchEvent(new MouseEvent('mouseenter', { bubbles: false }))
+      root.flush()
+
+      expect(calls).toBe(1)
+    } finally {
+      root.dispose()
+      container.remove()
+    }
+  })
+
+  it('runs host listeners before ancestor propagation is stopped', () => {
+    let calls: string[] = []
+    let container = document.createElement('div')
+    document.body.append(container)
+    let root = createRoot(container)
+
+    try {
+      root.render(
+        <button
+          mix={[
+            on('click', () => {
+              calls.push('button')
+            }),
+          ]}
+        >
+          click
+        </button>,
+      )
+      root.flush()
+
+      container.addEventListener('click', (event) => {
+        calls.push('container')
+        event.stopPropagation()
+      })
+
+      let button = container.querySelector('button')
+      invariant(button)
+      button.click()
+      root.flush()
+
+      expect(calls).toEqual(['button', 'container'])
+    } finally {
+      root.dispose()
+      container.remove()
+    }
+  })
+
+  it('does not treat stopPropagation as stopImmediatePropagation on the same host', () => {
+    let calls: string[] = []
+    let container = document.createElement('div')
+    document.body.append(container)
+    let root = createRoot(container)
+
+    try {
+      root.render(
+        <button
+          mix={[
+            on('click', (event) => {
+              calls.push('first')
+              event.stopPropagation()
+            }),
+            on('click', () => {
+              calls.push('second')
+            }),
+          ]}
+        >
+          click
+        </button>,
+      )
+      root.flush()
+
+      let button = container.querySelector('button')
+      invariant(button)
+      button.click()
+      root.flush()
+
+      expect(calls).toEqual(['first', 'second'])
+    } finally {
+      root.dispose()
+      container.remove()
+    }
+  })
+
+  it('keeps capture listeners on the host element for connected roots', (t) => {
+    let calls = 0
+    let container = document.createElement('div')
+    document.body.append(container)
+    let root = createRoot(container)
+    let documentAddSpy = t.mock.method(document, 'addEventListener')
+
+    try {
+      root.render(
+        <button
+          mix={[
+            on(
+              'keydown',
+              () => {
+                calls++
+              },
+              true,
+            ),
+          ]}
+        >
+          press
+        </button>,
+      )
+      root.flush()
+
+      let button = container.querySelector('button')
+      invariant(button)
+      button.dispatchEvent(new KeyboardEvent('keydown', { bubbles: true }))
+      root.flush()
+
+      expect(calls).toBe(1)
+      expect(documentAddSpy.mock.calls.some((call) => call.arguments[0] === 'keydown')).toBe(false)
+    } finally {
+      root.dispose()
+      container.remove()
+    }
+  })
+
   it('removes listeners when on() mixin is removed', () => {
     let calls = 0
     let container = document.createElement('div')

@@ -1,6 +1,6 @@
 import { getContext } from 'remix/async-context-middleware'
 import { Auth, auth, requireAuth as requireAuthenticated } from 'remix/auth-middleware'
-import type { AuthScheme, AuthState } from 'remix/auth-middleware'
+import type { AuthScheme } from 'remix/auth-middleware'
 import { createCookie } from 'remix/cookie'
 import { redirect } from 'remix/response/redirect'
 
@@ -17,7 +17,7 @@ export const authCookie = createCookie('frame-navigation-auth', {
 const authCookieScheme: AuthScheme<FrameAuthIdentity> = {
   name: 'auth-cookie',
   async authenticate(context) {
-    let cookie = await authCookie.parse(context.headers.get('cookie'))
+    let cookie = await authCookie.parse(context.headers.get('Cookie'))
     if (cookie !== '1') {
       return
     }
@@ -36,13 +36,13 @@ export function loadAuth() {
 }
 
 export function isAuthenticated() {
-  let authState = getContext().get(Auth) as AuthState<FrameAuthIdentity>
+  let authState = getContext().get(Auth)
   return authState.ok
 }
 
 export const requireAuth = requireAuthenticated<FrameAuthIdentity>({
   onFailure(context) {
-    let isFrameRequest = context.request.headers.get('x-remix-frame') === 'true'
+    let isFrameRequest = context.request.headers.get('X-Remix-Frame') === 'true'
     if (isFrameRequest) {
       return new Response(
         '<div><h1>Not authorized</h1><p>Refresh the page to sign in again.</p></div>',

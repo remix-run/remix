@@ -24,7 +24,7 @@ describe('apiKey scheme', () => {
       },
     })
 
-    let result = await scheme.authenticate(createContext({ 'X-API-Key': 'k_live_123' }))
+    let result = await scheme.authenticate(createContext({ 'X-Api-Key': 'k_live_123' }))
 
     assert.deepEqual(result, {
       status: 'success',
@@ -52,12 +52,12 @@ describe('apiKey scheme', () => {
       },
     })
 
-    let result = await scheme.authenticate(createContext({ 'X-API-Key': '   ' }))
+    let result = await scheme.authenticate(createContext({ 'X-Api-Key': '   ' }))
 
     assert.deepEqual(result, {
       status: 'failure',
       code: 'missing_credentials',
-      message: 'X-API-Key header is empty',
+      message: 'X-Api-Key header is empty',
     })
   })
 
@@ -68,7 +68,7 @@ describe('apiKey scheme', () => {
       },
     })
 
-    let result = await scheme.authenticate(createContext({ 'X-API-Key': 'bad-key' }))
+    let result = await scheme.authenticate(createContext({ 'X-Api-Key': 'bad-key' }))
 
     assert.deepEqual(result, {
       status: 'failure',

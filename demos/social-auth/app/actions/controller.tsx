@@ -1,10 +1,10 @@
 import { Auth } from 'remix/auth-middleware'
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
+import { Renderer } from 'remix/render-middleware'
 import { redirect } from 'remix/response/redirect'
 
 import { getReturnToQuery, requireAuth } from '../middleware/auth.ts'
 import { Session } from '../middleware/session.ts'
-import type { AppContext } from '../router.ts'
 import { routes } from '../routes.ts'
 import { AccountPage } from '../ui/account-page.tsx'
 import { LoginPage } from '../ui/home/page.tsx'
@@ -13,12 +13,11 @@ import {
   readExternalProviderLinks,
   type ExternalProviderRegistry,
 } from '../utils/external-auth.ts'
-import { render } from './render.tsx'
 
 export function createRootController(
   registry: ExternalProviderRegistry = externalProviderRegistry,
 ) {
-  return {
+  return createController(routes, {
     actions: {
       home({ get, url }) {
         let auth = get(Auth)
@@ -30,6 +29,7 @@ export function createRootController(
         let error = session.get('error')
         let success = session.get('success')
         let returnToQuery = getReturnToQuery(url)
+        let render = get(Renderer)
 
         return render(
           <LoginPage
@@ -43,12 +43,14 @@ export function createRootController(
         )
       },
       account: {
-        middleware: [requireAuth] as const,
+        middleware: [requireAuth],
         handler({ get }) {
           let auth = get(Auth)
           if (!auth.ok) {
             return new Response('Unauthorized', { status: 401 })
           }
+
+          let render = get(Renderer)
 
           return render(
             <AccountPage identity={auth.identity} logoutAction={routes.auth.logout.href()} />,
@@ -56,5 +58,5 @@ export function createRootController(
         },
       },
     },
-  } satisfies Controller<typeof routes, AppContext>
+  })
 }

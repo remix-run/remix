@@ -1,14 +1,23 @@
 import { AsyncLocalStorage } from 'node:async_hooks'
 
-import type { Middleware, RequestContext } from '@remix-run/fetch-router'
+import type {
+  AnyParams,
+  ContextEntries,
+  Middleware,
+  RequestContext,
+  RouterTypes,
+} from '@remix-run/fetch-router'
 
-export interface AsyncContextTypes {}
+type RequestContextWithAnyParams<context> =
+  context extends RequestContext<any, infer entries extends ContextEntries>
+    ? RequestContext<AnyParams, entries>
+    : RequestContext<AnyParams>
 
-export type AsyncRequestContext = AsyncContextTypes extends {
-  requestContext: infer context extends RequestContext<any, any>
+export type AsyncRequestContext = RouterTypes extends {
+  context: infer context extends RequestContext<any, any>
 }
-  ? context
-  : RequestContext
+  ? RequestContextWithAnyParams<context>
+  : RequestContext<AnyParams>
 
 const storage = new AsyncLocalStorage<RequestContext<any, any>>()
 

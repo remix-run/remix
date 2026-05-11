@@ -1,12 +1,11 @@
 import { completeAuth, finishExternalAuth, startExternalAuth } from 'remix/auth'
 import { Database } from 'remix/data-table'
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { resolveExternalAuth } from '../resolve-external-auth.ts'
 import { getReturnToQuery } from '../../../middleware/auth.ts'
 import { Session } from '../../../middleware/session.ts'
-import type { AppContext } from '../../../router.ts'
 import { routes } from '../../../routes.ts'
 import {
   externalProviderRegistry,
@@ -21,7 +20,7 @@ export function createGoogleAuthController(
 ) {
   let provider = registry.google
 
-  return {
+  return createController(routes.auth.google, {
     actions: {
       async login(context) {
         let { get, url } = context
@@ -72,5 +71,5 @@ export function createGoogleAuthController(
         }
       },
     },
-  } satisfies Controller<typeof routes.auth.google, AppContext>
+  })
 }
