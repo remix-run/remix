@@ -7,6 +7,9 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
+permissions:
+  contents: read
+
 jobs:
   check:
     name: Check release readiness
@@ -81,10 +84,14 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      - name: Prepare CLI package
+        run: node ./scripts/sync-cli-template.ts
+
       - name: Publish to npm and create releases
         run: node ./scripts/publish.ts
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_PROVENANCE: 'true'
 
       - name: Output tag
         id: get_tag

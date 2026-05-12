@@ -1,13 +1,16 @@
 /**
  * Publishes packages to npm and creates tags/releases for what was published.
  *
- * This script uses pnpm publish with --report-summary, reads the summary file,
- * and creates Git tags + GitHub releases. When one or more packages are in
- * prerelease mode (have .changes/config.json with prereleaseChannel), it publishes
- * in two phases: all other packages as "latest", then prerelease packages with
- * the "next" tag.
+ * This script uses pnpm publish with --report-summary and --ignore-scripts,
+ * reads the summary file, and creates Git tags + GitHub releases. When one or
+ * more packages are in prerelease mode (have .changes/config.json with
+ * prereleaseChannel), it publishes in two phases: all other packages as
+ * "latest", then prerelease packages with the "next" tag.
  *
  * This script is designed for CI use. For previewing releases, use `pnpm changes:preview`.
+ * CI must build packages and prepare package contents before running this
+ * script because publish-time lifecycle scripts are disabled while npm trusted
+ * publishing credentials are available.
  *
  * Usage:
  *   node scripts/publish.ts [--skip-ci-check] [--dry-run]
@@ -466,6 +469,7 @@ async function main() {
         ...prereleasePackages.map((pkg) => `--filter "!${pkg.dirName}"`),
         '--access public',
         '--no-git-checks',
+        '--ignore-scripts',
         '--report-summary',
       ].join(' '),
       ...prereleasePackages.map((pkg) =>
@@ -474,6 +478,7 @@ async function main() {
           '--tag next',
           '--access public',
           '--no-git-checks',
+          '--ignore-scripts',
           '--report-summary',
         ].join(' '),
       ),
@@ -494,7 +499,7 @@ async function main() {
   } else {
     // Single-phase publish: everything as latest
     let publishCommand =
-      'pnpm publish --recursive --filter "./packages/*" --access public --no-git-checks --report-summary'
+      'pnpm publish --recursive --filter "./packages/*" --access public --no-git-checks --ignore-scripts --report-summary'
 
     if (dryRun) {
       console.log('Would run:')
