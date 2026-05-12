@@ -132,7 +132,7 @@ matcher.match('https://example.com/search?q=hello')
 
 ## Benchmark
 
-Benchmarks live in [`bench/`](https://github.com/remix-run/remix/tree/main/packages/route-pattern/bench).
+Benchmarks live in [`bench/`](./bench/).
 
 ## Related Work
 

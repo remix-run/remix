@@ -83,6 +83,8 @@ async function getRemixRunPackages() {
   // Scan each package for its exports
   for (let packageDirName of packageDirNames) {
     let packageJsonPath = path.join(packagesDir, packageDirName, 'package.json')
+    if (!isFile(packageJsonPath)) continue
+
     let packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
     let packageName = packageJson.name as string
 
