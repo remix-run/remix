@@ -1,4 +1,4 @@
-import { createController, type RequestContext } from 'remix/fetch-router'
+import { createController, type RequestContext } from 'remix/router'
 
 import { render } from '../../config/render.tsx'
 import { routes } from '../../config/routes.ts'

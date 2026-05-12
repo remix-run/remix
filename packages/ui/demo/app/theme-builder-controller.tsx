@@ -1,4 +1,4 @@
-import type { RequestContext } from 'remix/fetch-router'
+import type { RequestContext } from 'remix/router'
 
 import { render } from '../config/render.tsx'
 import { ThemeBuilderDocument } from './theme-builder-view.tsx'
