@@ -5,10 +5,10 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as url from 'node:url'
 
-let __dirname = path.dirname(url.fileURLToPath(import.meta.url))
-let packagesDir = path.resolve(__dirname, '..')
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
+const packagesDir = path.resolve(__dirname, '..')
 
-let manifest: Record<string, string> = JSON.parse(
+const manifest: Record<string, string> = JSON.parse(
   fs.readFileSync(path.join(__dirname, 'manifest.json'), 'utf-8'),
 )
 
@@ -40,7 +40,7 @@ function expandPatternEntry(
 }
 
 // Collect all workspace package names by scanning the packages directory.
-let workspacePackageNames: string[] = fs
+const workspacePackageNames: string[] = fs
   .readdirSync(packagesDir)
   .filter(dir => fs.existsSync(path.join(packagesDir, dir, 'package.json')))
   .map(dir => {
@@ -51,7 +51,7 @@ let workspacePackageNames: string[] = fs
   })
 
 // Expand pattern entries alongside literal entries to form the effective manifest.
-let effectiveManifest: Record<string, string> = {}
+const effectiveManifest: Record<string, string> = {}
 for (let [key, value] of Object.entries(manifest)) {
   if (isPatternEntry(value)) {
     for (let [k, v] of expandPatternEntry(key, value, workspacePackageNames)) {
@@ -81,13 +81,13 @@ function exportSpecifier(packageName: string, exportPath: string): string {
 }
 
 // Build a reverse lookup: specifier -> remix canonical path(s) from effective manifest.
-let specifierToRemixPaths = new Map<string, string[]>()
+const specifierToRemixPaths = new Map<string, string[]>()
 for (let [remixPath, specifier] of Object.entries(effectiveManifest)) {
   let existing = specifierToRemixPaths.get(specifier) ?? []
   specifierToRemixPaths.set(specifier, [...existing, remixPath])
 }
 
-let referencedPackages = new Set(Object.values(effectiveManifest).map(packageNameFromSpecifier))
+const referencedPackages = new Set(Object.values(effectiveManifest).map(packageNameFromSpecifier))
 
 // --- Tests ---
 

@@ -18,6 +18,44 @@ const packagesDir = path.resolve(__dirname, '../packages')
 const remixDir = path.join(packagesDir, 'remix')
 const remixChangesDir = path.join(remixDir, '.changes')
 const remixPackageJsonPath = path.join(remixDir, 'package.json')
+const manifestPath = path.join(remixDir, 'manifest.json')
+
+// Load raw manifest; patterns are expanded at runtime once package names are known.
+const manifestRaw: Record<string, string> = JSON.parse(await fs.readFile(manifestPath, 'utf-8'))
+
+/**
+ * Expand the manifest into a reverse lookup: specifier → canonical remix path.
+ *
+ * Literal entries: `"remix/router": "@remix-run/fetch-router"`
+ *   → `@remix-run/fetch-router` maps to `remix/router`
+ *
+ * Pattern entries (value contains a capture group): `"remix/middleware/$1": "@remix-run/([a-z-]+)-middleware"`
+ *   → matched against each workspace package name; capture groups substitute $1, $2 … in the key
+ *   → e.g. `@remix-run/async-context-middleware` maps to `remix/middleware/async-context`
+ */
+function buildSpecifierToRemixPath(
+  manifest: Record<string, string>,
+  workspacePackageNames: string[],
+): Map<string, string> {
+  let result = new Map<string, string>()
+  for (let [key, value] of Object.entries(manifest)) {
+    if (value.includes('(')) {
+      // Pattern entry: value is a regex matching package names
+      let regex = new RegExp(`^${value}$`)
+      for (let pkgName of workspacePackageNames) {
+        let m = pkgName.match(regex)
+        if (m) {
+          let concreteKey = key.replace(/\$(\d+)/g, (_, n) => m[Number(n)] ?? '')
+          result.set(pkgName, concreteKey)
+        }
+      }
+    } else {
+      // Literal entry: value is the full specifier (package or package/subpath)
+      result.set(value, key)
+    }
+  }
+  return result
+}
 
 const CLI_PACKAGE_NAME = '@remix-run/cli'
 const SOURCE_FOLDER = 'src'
@@ -107,19 +145,27 @@ async function getRemixRunPackages() {
       peerDependenciesMeta: packageJson.peerDependenciesMeta ?? {},
     }
     remixRunPackages.push(remixRunPackage)
+  }
 
+  // Expand the manifest now that we have all package names.
+  let allPackageNames = remixRunPackages.map((p) => p.name)
+  let specifierToRemixPath = buildSpecifierToRemixPath(manifestRaw, allPackageNames)
+
+  // Build ExportEntry objects for each package, using manifest overrides where available.
+  for (let remixRunPackage of remixRunPackages) {
+    let packageName = remixRunPackage.name
+    let packageJsonPath = remixRunPackage.packageJsonPath
+    let packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
     let shortName = packageName.replace('@remix-run/', '')
 
-    // Get all exports except package.json and bin-derived exports (e.g. "./cli")
-    let binExports = new Set(bins.map((b) => `./${b.sourceExport}`))
+    let binExports = new Set(remixRunPackage.bins.map((b) => `./${b.sourceExport}`))
     let packageExports = packageJson.exports
     if (packageExports && typeof packageExports === 'object') {
-      for (let [exportPath, _] of Object.entries(packageExports)) {
+      for (let [exportPath] of Object.entries(packageExports)) {
         if (exportPath === './package.json') continue
         if (binExports.has(exportPath)) continue
 
         if (exportPath === '.') {
-          // Main export
           if (packageName === CLI_PACKAGE_NAME) {
             remixRunPackage.exports.push({
               sourceFile: 'cli.ts',
@@ -127,28 +173,26 @@ async function getRemixRunPackages() {
               reExportFrom: packageName,
             })
           } else {
+            let specifier = packageName
+            let remixPath = specifierToRemixPath.get(specifier)
+            let relPath = remixPath ? remixPath.replace('remix/', '') : shortName
             remixRunPackage.exports.push({
-              sourceFile: `${shortName}.ts`,
-              exportPath: `./${shortName}`,
-              reExportFrom: packageName,
+              sourceFile: `${relPath}.ts`,
+              exportPath: `./${relPath}`,
+              reExportFrom: specifier,
             })
           }
         } else {
           // Sub-export (e.g., "./cookie-storage")
           let subExport = exportPath.replace('./', '')
-          if (packageName === '@remix-run/fetch-router' && subExport === 'routes') {
-            remixRunPackage.exports.push({
-              sourceFile: 'routes.ts',
-              exportPath: './routes',
-              reExportFrom: '@remix-run/fetch-router/routes',
-            })
-          } else {
-            remixRunPackage.exports.push({
-              sourceFile: `${shortName}/${subExport}.ts`,
-              exportPath: `./${shortName}/${subExport}`,
-              reExportFrom: `${packageName}/${subExport}`,
-            })
-          }
+          let specifier = `${packageName}/${subExport}`
+          let remixPath = specifierToRemixPath.get(specifier)
+          let relPath = remixPath ? remixPath.replace('remix/', '') : `${shortName}/${subExport}`
+          remixRunPackage.exports.push({
+            sourceFile: `${relPath}.ts`,
+            exportPath: `./${relPath}`,
+            reExportFrom: specifier,
+          })
         }
       }
     }

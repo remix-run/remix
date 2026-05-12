@@ -23,64 +23,64 @@
   "exports": {
     "./assert": "./src/assert.ts",
     "./assets": "./src/assets.ts",
-    "./async-context-middleware": "./src/async-context-middleware.ts",
     "./auth": "./src/auth.ts",
-    "./auth-middleware": "./src/auth-middleware.ts",
     "./cli": "./src/cli.ts",
-    "./compression-middleware": "./src/compression-middleware.ts",
     "./cookie": "./src/cookie.ts",
-    "./cop-middleware": "./src/cop-middleware.ts",
-    "./cors-middleware": "./src/cors-middleware.ts",
-    "./csrf-middleware": "./src/csrf-middleware.ts",
     "./data-schema": "./src/data-schema.ts",
     "./data-schema/checks": "./src/data-schema/checks.ts",
     "./data-schema/coerce": "./src/data-schema/coerce.ts",
     "./data-schema/form-data": "./src/data-schema/form-data.ts",
     "./data-schema/lazy": "./src/data-schema/lazy.ts",
     "./data-table": "./src/data-table.ts",
-    "./data-table-mysql": "./src/data-table-mysql.ts",
-    "./data-table-postgres": "./src/data-table-postgres.ts",
-    "./data-table-sqlite": "./src/data-table-sqlite.ts",
     "./data-table/migrations": "./src/data-table/migrations.ts",
     "./data-table/migrations/node": "./src/data-table/migrations/node.ts",
+    "./data-table/mysql": "./src/data-table/mysql.ts",
     "./data-table/operators": "./src/data-table/operators.ts",
+    "./data-table/postgres": "./src/data-table/postgres.ts",
     "./data-table/sql-helpers": "./src/data-table/sql-helpers.ts",
+    "./data-table/sqlite": "./src/data-table/sqlite.ts",
     "./fetch-proxy": "./src/fetch-proxy.ts",
-    "./fetch-router": "./src/fetch-router.ts",
     "./file-storage": "./src/file-storage.ts",
-    "./file-storage-s3": "./src/file-storage-s3.ts",
     "./file-storage/fs": "./src/file-storage/fs.ts",
     "./file-storage/memory": "./src/file-storage/memory.ts",
-    "./form-data-middleware": "./src/form-data-middleware.ts",
+    "./file-storage/s3": "./src/file-storage/s3.ts",
     "./form-data-parser": "./src/form-data-parser.ts",
     "./fs": "./src/fs.ts",
     "./headers": "./src/headers.ts",
     "./html-template": "./src/html-template.ts",
     "./lazy-file": "./src/lazy-file.ts",
-    "./logger-middleware": "./src/logger-middleware.ts",
-    "./method-override-middleware": "./src/method-override-middleware.ts",
+    "./middleware/async-context": "./src/middleware/async-context.ts",
+    "./middleware/auth": "./src/middleware/auth.ts",
+    "./middleware/compression": "./src/middleware/compression.ts",
+    "./middleware/cop": "./src/middleware/cop.ts",
+    "./middleware/cors": "./src/middleware/cors.ts",
+    "./middleware/csrf": "./src/middleware/csrf.ts",
+    "./middleware/form-data": "./src/middleware/form-data.ts",
+    "./middleware/logger": "./src/middleware/logger.ts",
+    "./middleware/method-override": "./src/middleware/method-override.ts",
+    "./middleware/render": "./src/middleware/render.ts",
+    "./middleware/session": "./src/middleware/session.ts",
+    "./middleware/static": "./src/middleware/static.ts",
     "./mime": "./src/mime.ts",
     "./multipart-parser": "./src/multipart-parser.ts",
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
     "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
     "./node-serve": "./src/node-serve.ts",
-    "./render-middleware": "./src/render-middleware.ts",
     "./response/compress": "./src/response/compress.ts",
     "./response/file": "./src/response/file.ts",
     "./response/html": "./src/response/html.ts",
     "./response/redirect": "./src/response/redirect.ts",
     "./route-pattern": "./src/route-pattern.ts",
     "./route-pattern/specificity": "./src/route-pattern/specificity.ts",
+    "./router": "./src/router.ts",
     "./routes": "./src/routes.ts",
     "./session": "./src/session.ts",
-    "./session-middleware": "./src/session-middleware.ts",
-    "./session-storage-memcache": "./src/session-storage-memcache.ts",
-    "./session-storage-redis": "./src/session-storage-redis.ts",
-    "./session/cookie-storage": "./src/session/cookie-storage.ts",
-    "./session/fs-storage": "./src/session/fs-storage.ts",
-    "./session/memory-storage": "./src/session/memory-storage.ts",
-    "./static-middleware": "./src/static-middleware.ts",
+    "./session-storage/cookie": "./src/session-storage/cookie.ts",
+    "./session-storage/fs": "./src/session-storage/fs.ts",
+    "./session-storage/memcache": "./src/session-storage/memcache.ts",
+    "./session-storage/memory": "./src/session-storage/memory.ts",
+    "./session-storage/redis": "./src/session-storage/redis.ts",
     "./tar-parser": "./src/tar-parser.ts",
     "./terminal": "./src/terminal.ts",
     "./test": "./src/test.ts",
@@ -116,41 +116,17 @@
         "types": "./dist/assets.d.ts",
         "default": "./dist/assets.js"
       },
-      "./async-context-middleware": {
-        "types": "./dist/async-context-middleware.d.ts",
-        "default": "./dist/async-context-middleware.js"
-      },
       "./auth": {
         "types": "./dist/auth.d.ts",
         "default": "./dist/auth.js"
-      },
-      "./auth-middleware": {
-        "types": "./dist/auth-middleware.d.ts",
-        "default": "./dist/auth-middleware.js"
       },
       "./cli": {
         "types": "./dist/cli.d.ts",
         "default": "./dist/cli.js"
       },
-      "./compression-middleware": {
-        "types": "./dist/compression-middleware.d.ts",
-        "default": "./dist/compression-middleware.js"
-      },
       "./cookie": {
         "types": "./dist/cookie.d.ts",
         "default": "./dist/cookie.js"
-      },
-      "./cop-middleware": {
-        "types": "./dist/cop-middleware.d.ts",
-        "default": "./dist/cop-middleware.js"
-      },
-      "./cors-middleware": {
-        "types": "./dist/cors-middleware.d.ts",
-        "default": "./dist/cors-middleware.js"
-      },
-      "./csrf-middleware": {
-        "types": "./dist/csrf-middleware.d.ts",
-        "default": "./dist/csrf-middleware.js"
       },
       "./data-schema": {
         "types": "./dist/data-schema.d.ts",
@@ -176,18 +152,6 @@
         "types": "./dist/data-table.d.ts",
         "default": "./dist/data-table.js"
       },
-      "./data-table-mysql": {
-        "types": "./dist/data-table-mysql.d.ts",
-        "default": "./dist/data-table-mysql.js"
-      },
-      "./data-table-postgres": {
-        "types": "./dist/data-table-postgres.d.ts",
-        "default": "./dist/data-table-postgres.js"
-      },
-      "./data-table-sqlite": {
-        "types": "./dist/data-table-sqlite.d.ts",
-        "default": "./dist/data-table-sqlite.js"
-      },
       "./data-table/migrations": {
         "types": "./dist/data-table/migrations.d.ts",
         "default": "./dist/data-table/migrations.js"
@@ -196,29 +160,33 @@
         "types": "./dist/data-table/migrations/node.d.ts",
         "default": "./dist/data-table/migrations/node.js"
       },
+      "./data-table/mysql": {
+        "types": "./dist/data-table/mysql.d.ts",
+        "default": "./dist/data-table/mysql.js"
+      },
       "./data-table/operators": {
         "types": "./dist/data-table/operators.d.ts",
         "default": "./dist/data-table/operators.js"
+      },
+      "./data-table/postgres": {
+        "types": "./dist/data-table/postgres.d.ts",
+        "default": "./dist/data-table/postgres.js"
       },
       "./data-table/sql-helpers": {
         "types": "./dist/data-table/sql-helpers.d.ts",
         "default": "./dist/data-table/sql-helpers.js"
       },
+      "./data-table/sqlite": {
+        "types": "./dist/data-table/sqlite.d.ts",
+        "default": "./dist/data-table/sqlite.js"
+      },
       "./fetch-proxy": {
         "types": "./dist/fetch-proxy.d.ts",
         "default": "./dist/fetch-proxy.js"
       },
-      "./fetch-router": {
-        "types": "./dist/fetch-router.d.ts",
-        "default": "./dist/fetch-router.js"
-      },
       "./file-storage": {
         "types": "./dist/file-storage.d.ts",
         "default": "./dist/file-storage.js"
-      },
-      "./file-storage-s3": {
-        "types": "./dist/file-storage-s3.d.ts",
-        "default": "./dist/file-storage-s3.js"
       },
       "./file-storage/fs": {
         "types": "./dist/file-storage/fs.d.ts",
@@ -228,9 +196,9 @@
         "types": "./dist/file-storage/memory.d.ts",
         "default": "./dist/file-storage/memory.js"
       },
-      "./form-data-middleware": {
-        "types": "./dist/form-data-middleware.d.ts",
-        "default": "./dist/form-data-middleware.js"
+      "./file-storage/s3": {
+        "types": "./dist/file-storage/s3.d.ts",
+        "default": "./dist/file-storage/s3.js"
       },
       "./form-data-parser": {
         "types": "./dist/form-data-parser.d.ts",
@@ -252,13 +220,53 @@
         "types": "./dist/lazy-file.d.ts",
         "default": "./dist/lazy-file.js"
       },
-      "./logger-middleware": {
-        "types": "./dist/logger-middleware.d.ts",
-        "default": "./dist/logger-middleware.js"
+      "./middleware/async-context": {
+        "types": "./dist/middleware/async-context.d.ts",
+        "default": "./dist/middleware/async-context.js"
       },
-      "./method-override-middleware": {
-        "types": "./dist/method-override-middleware.d.ts",
-        "default": "./dist/method-override-middleware.js"
+      "./middleware/auth": {
+        "types": "./dist/middleware/auth.d.ts",
+        "default": "./dist/middleware/auth.js"
+      },
+      "./middleware/compression": {
+        "types": "./dist/middleware/compression.d.ts",
+        "default": "./dist/middleware/compression.js"
+      },
+      "./middleware/cop": {
+        "types": "./dist/middleware/cop.d.ts",
+        "default": "./dist/middleware/cop.js"
+      },
+      "./middleware/cors": {
+        "types": "./dist/middleware/cors.d.ts",
+        "default": "./dist/middleware/cors.js"
+      },
+      "./middleware/csrf": {
+        "types": "./dist/middleware/csrf.d.ts",
+        "default": "./dist/middleware/csrf.js"
+      },
+      "./middleware/form-data": {
+        "types": "./dist/middleware/form-data.d.ts",
+        "default": "./dist/middleware/form-data.js"
+      },
+      "./middleware/logger": {
+        "types": "./dist/middleware/logger.d.ts",
+        "default": "./dist/middleware/logger.js"
+      },
+      "./middleware/method-override": {
+        "types": "./dist/middleware/method-override.d.ts",
+        "default": "./dist/middleware/method-override.js"
+      },
+      "./middleware/render": {
+        "types": "./dist/middleware/render.d.ts",
+        "default": "./dist/middleware/render.js"
+      },
+      "./middleware/session": {
+        "types": "./dist/middleware/session.d.ts",
+        "default": "./dist/middleware/session.js"
+      },
+      "./middleware/static": {
+        "types": "./dist/middleware/static.d.ts",
+        "default": "./dist/middleware/static.js"
       },
       "./mime": {
         "types": "./dist/mime.d.ts",
@@ -284,10 +292,6 @@
         "types": "./dist/node-serve.d.ts",
         "default": "./dist/node-serve.js"
       },
-      "./render-middleware": {
-        "types": "./dist/render-middleware.d.ts",
-        "default": "./dist/render-middleware.js"
-      },
       "./response/compress": {
         "types": "./dist/response/compress.d.ts",
         "default": "./dist/response/compress.js"
@@ -312,6 +316,10 @@
         "types": "./dist/route-pattern/specificity.d.ts",
         "default": "./dist/route-pattern/specificity.js"
       },
+      "./router": {
+        "types": "./dist/router.d.ts",
+        "default": "./dist/router.js"
+      },
       "./routes": {
         "types": "./dist/routes.d.ts",
         "default": "./dist/routes.js"
@@ -320,33 +328,25 @@
         "types": "./dist/session.d.ts",
         "default": "./dist/session.js"
       },
-      "./session-middleware": {
-        "types": "./dist/session-middleware.d.ts",
-        "default": "./dist/session-middleware.js"
+      "./session-storage/cookie": {
+        "types": "./dist/session-storage/cookie.d.ts",
+        "default": "./dist/session-storage/cookie.js"
       },
-      "./session-storage-memcache": {
-        "types": "./dist/session-storage-memcache.d.ts",
-        "default": "./dist/session-storage-memcache.js"
+      "./session-storage/fs": {
+        "types": "./dist/session-storage/fs.d.ts",
+        "default": "./dist/session-storage/fs.js"
       },
-      "./session-storage-redis": {
-        "types": "./dist/session-storage-redis.d.ts",
-        "default": "./dist/session-storage-redis.js"
+      "./session-storage/memcache": {
+        "types": "./dist/session-storage/memcache.d.ts",
+        "default": "./dist/session-storage/memcache.js"
       },
-      "./session/cookie-storage": {
-        "types": "./dist/session/cookie-storage.d.ts",
-        "default": "./dist/session/cookie-storage.js"
+      "./session-storage/memory": {
+        "types": "./dist/session-storage/memory.d.ts",
+        "default": "./dist/session-storage/memory.js"
       },
-      "./session/fs-storage": {
-        "types": "./dist/session/fs-storage.d.ts",
-        "default": "./dist/session/fs-storage.js"
-      },
-      "./session/memory-storage": {
-        "types": "./dist/session/memory-storage.d.ts",
-        "default": "./dist/session/memory-storage.js"
-      },
-      "./static-middleware": {
-        "types": "./dist/static-middleware.d.ts",
-        "default": "./dist/static-middleware.js"
+      "./session-storage/redis": {
+        "types": "./dist/session-storage/redis.d.ts",
+        "default": "./dist/session-storage/redis.js"
       },
       "./tar-parser": {
         "types": "./dist/tar-parser.d.ts",
@@ -501,6 +501,7 @@
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
+    "test": "remix-test",
     "typecheck": "tsc --noEmit"
   },
   "bin": {
