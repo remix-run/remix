@@ -288,7 +288,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
  * ```ts
  * import { DatabaseSync } from 'node:sqlite'
  * import { createDatabase } from 'remix/data-table'
- * import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
+ * import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
  *
  * let sqlite = new DatabaseSync('./data/app.db')
  * let adapter = createSqliteDatabaseAdapter(sqlite)
