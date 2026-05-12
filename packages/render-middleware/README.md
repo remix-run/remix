@@ -90,9 +90,9 @@ const render = renderWith(
 
 ## Related Packages
 
-- [`fetch-router`](../fetch-router) - Request routing and context
-- [`ui`](../ui) - Remix UI rendering primitives
-- [`response`](../response) - Response helpers
+- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Request routing and context
+- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) - Remix UI rendering primitives
+- [`response`](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers
 
 ## License
 
