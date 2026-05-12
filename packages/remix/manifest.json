@@ -1,0 +1,12 @@
+{
+  "remix/data-table/$1": "@remix-run/data-table-([a-z]+)",
+  "remix/file-storage/$1": "@remix-run/file-storage-([a-z0-9]+)",
+  "remix/middleware/$1": "@remix-run/([a-z-]+)-middleware",
+  "remix/router": "@remix-run/fetch-router",
+  "remix/routes": "@remix-run/fetch-router/routes",
+  "remix/session": "@remix-run/session",
+  "remix/session-storage/$1": "@remix-run/session-storage-([a-z]+)",
+  "remix/session-storage/cookie": "@remix-run/session/cookie-storage",
+  "remix/session-storage/fs": "@remix-run/session/fs-storage",
+  "remix/session-storage/memory": "@remix-run/session/memory-storage"
+}
