@@ -140,31 +140,21 @@ type ContextEntryProperty<entry extends ContextEntry> = entry extends {
     : property
   : never
 
-type ContextProperty<entries extends ContextEntries, entry extends ContextEntry> = {
-  readonly [property in ContextEntryProperty<entry>]: ResolveEntryValue<
-    entries,
-    entry['key'],
-    entry['value']
-  >
+type ContextProperty<entry extends ContextEntry> = {
+  readonly [property in ContextEntryProperty<entry>]: entry['value']
 }
 
-type ContextPropertiesFrom<
-  entries extends ContextEntries,
-  allEntries extends ContextEntries,
-> = entries extends readonly [...infer rest extends ContextEntries, infer last extends ContextEntry]
-  ? Simplify<
-      Omit<ContextPropertiesFrom<rest, allEntries>, ContextEntryProperty<last>> &
-        ContextProperty<allEntries, last>
-    >
+type ContextPropertiesFrom<entries extends ContextEntries> = entries extends readonly [
+  ...infer rest extends ContextEntries,
+  infer last extends ContextEntry,
+]
+  ? Simplify<Omit<ContextPropertiesFrom<rest>, ContextEntryProperty<last>> & ContextProperty<last>>
   : {}
 
 /**
  * Resolves the direct request-context properties installed by context entries.
  */
-export type ContextProperties<entries extends ContextEntries> = ContextPropertiesFrom<
-  entries,
-  entries
->
+export type ContextProperties<entries extends ContextEntries> = ContextPropertiesFrom<entries>
 
 type RequestContextWithEntries<
   params extends Record<string, any>,

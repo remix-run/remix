@@ -3,3 +3,5 @@ Added support for middleware-installed direct request context properties. Middle
 Direct property names are checked at runtime. Empty property names are rejected, a single context key cannot be installed under multiple property names, different context keys cannot share the same property name, and middleware cannot install a property that already exists on `RequestContext`.
 
 The new `ContextEntry` type describes object-shaped middleware entries. Use `{ key: typeof Database, value: Database, property: 'db' }` for middleware that should expose `context.db`, or omit `property` when the value should only be read with `context.get(key)`.
+
+When the same key/property pair is declared more than once, the last declaration determines the property type.

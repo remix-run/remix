@@ -153,19 +153,17 @@ const sessionAction = createAction<'/session/:id', SessionAuthContext>('/session
   middleware: sessionAuthMiddleware,
   handler(context) {
     let currentAuth = context.get(Auth)
+    let directAuth = context.auth
     let id: string = context.params.id
 
     expectTypeEquality<IsEqual<typeof currentAuth, GoodAuth<{ kind: 'session'; id: string }>>>()
+    expectTypeEquality<IsEqual<typeof directAuth, GoodAuth<{ kind: 'session'; id: string }>>>()
     expectTypeEquality<IsEqual<typeof currentAuth.method, string>>()
-
-    if (false as boolean) {
-      // @ts-expect-error - requireAuth() narrows Auth but does not install context.auth by itself
-      context.auth
-    }
+    expectTypeEquality<IsEqual<typeof directAuth.method, string>>()
 
     void id
 
-    return new Response(currentAuth.method)
+    return new Response(directAuth.method)
   },
 })
 

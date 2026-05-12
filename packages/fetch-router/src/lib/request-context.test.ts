@@ -286,11 +286,35 @@ describe('new RequestContext()', () => {
     void assertContext
   })
 
-  it('derives direct property types from the final context key value', () => {
+  it('keeps direct property types independent from entries without properties', () => {
+    let messageKey = createContextKey<string>()
+    let countKey = createContextKey<number>()
+    type Context = ContextWithEntries<
+      RequestContext,
+      [
+        { key: typeof messageKey; value: string; property: 'message' },
+        { key: typeof countKey; value: number },
+      ]
+    >
+
+    function assertContext(context: Context) {
+      let count = context.get(countKey)
+
+      expectTypeEquality<IsEqual<typeof context.message, string>>()
+      expectTypeEquality<IsEqual<typeof count, number>>()
+    }
+
+    void assertContext
+  })
+
+  it('derives direct property types from the last entry that declares the property', () => {
     let key = createContextKey<string | number>()
     type Context = ContextWithEntries<
       RequestContext,
-      [{ key: typeof key; value: string; property: 'message' }, { key: typeof key; value: number }]
+      [
+        { key: typeof key; value: string; property: 'message' },
+        { key: typeof key; value: number; property: 'message' },
+      ]
     >
 
     function assertContext(context: Context) {

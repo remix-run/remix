@@ -14,11 +14,12 @@ export interface RequireAuthOptions {
  * Enforces that `auth()` has already resolved a successful auth state for the current request.
  *
  * @param options Failure handling options for unauthenticated requests.
- * @returns Middleware that allows authenticated requests through and rejects anonymous ones.
+ * @returns Middleware that allows authenticated requests through, rejects anonymous ones, and
+ * narrows auth state on request context.
  */
 export function requireAuth<identity = unknown>(
   options: RequireAuthOptions = {},
-): Middleware<{ key: typeof Auth; value: GoodAuth<identity> }> {
+): Middleware<{ key: typeof Auth; value: GoodAuth<identity>; property: 'auth' }> {
   return async (context, next) => {
     let auth = context.get(Auth)
     if (auth == null) {
@@ -28,6 +29,7 @@ export function requireAuth<identity = unknown>(
     }
 
     if (auth.ok) {
+      context.set(Auth, auth, { property: 'auth' })
       return next()
     }
 
