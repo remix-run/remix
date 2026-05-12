@@ -1,10 +1,10 @@
 import { type Matcher, createMatcher, RoutePattern } from '@remix-run/route-pattern'
-import { type RouteMap, Route } from '@remix-run/routes'
 
 import { type AnyMiddleware, type MiddlewareContext, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
 import { RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
+import { type RouteMap, Route } from './route-map.ts'
 import {
   type RequestHandler,
   type Action,

@@ -1,8 +1,8 @@
 import type { Params, RoutePattern } from '@remix-run/route-pattern'
-import type { Route, RouteMap } from '@remix-run/routes'
 
 import type { AnyMiddleware } from './middleware.ts'
 import type { ContextWithParams, RequestContext } from './request-context.ts'
+import type { Route, RouteMap } from './route-map.ts'
 import type { DefaultContext } from './router-types.ts'
 
 /**

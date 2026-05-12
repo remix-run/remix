@@ -1,8 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createMatcher, type Matcher, RoutePattern } from '@remix-run/route-pattern'
-import { createRoutes as route } from '@remix-run/routes'
 
+import { createRoutes as route } from '../routes.ts'
 import type { Action } from './controller.ts'
 import type { RequestContext } from './request-context.ts'
 import type { RouteEntry } from './router.ts'

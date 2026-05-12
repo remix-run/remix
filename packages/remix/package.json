@@ -495,7 +495,6 @@
     "@remix-run/test": "workspace:^",
     "@remix-run/terminal": "workspace:^",
     "@remix-run/node-serve": "workspace:^",
-    "@remix-run/routes": "workspace:^",
     "@remix-run/render-middleware": "workspace:^"
   },
   "scripts": {

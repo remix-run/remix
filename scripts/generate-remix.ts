@@ -136,11 +136,19 @@ async function getRemixRunPackages() {
         } else {
           // Sub-export (e.g., "./cookie-storage")
           let subExport = exportPath.replace('./', '')
-          remixRunPackage.exports.push({
-            sourceFile: `${shortName}/${subExport}.ts`,
-            exportPath: `./${shortName}/${subExport}`,
-            reExportFrom: `${packageName}/${subExport}`,
-          })
+          if (packageName === '@remix-run/fetch-router' && subExport === 'routes') {
+            remixRunPackage.exports.push({
+              sourceFile: 'routes.ts',
+              exportPath: './routes',
+              reExportFrom: '@remix-run/fetch-router/routes',
+            })
+          } else {
+            remixRunPackage.exports.push({
+              sourceFile: `${shortName}/${subExport}.ts`,
+              exportPath: `./${shortName}/${subExport}`,
+              reExportFrom: `${packageName}/${subExport}`,
+            })
+          }
         }
       }
     }

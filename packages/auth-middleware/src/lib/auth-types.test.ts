@@ -7,7 +7,7 @@ import {
   type GetContextValue,
   type MiddlewareContext,
 } from '@remix-run/fetch-router'
-import { route } from '@remix-run/routes'
+import { route } from '@remix-run/fetch-router/routes'
 
 import { Auth, auth, type AuthState, type GoodAuth } from './auth.ts'
 import { requireAuth } from './require-auth.ts'

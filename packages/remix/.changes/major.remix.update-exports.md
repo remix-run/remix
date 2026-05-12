@@ -3,4 +3,4 @@ BREAKING CHANGE: Removed the `remix/fetch-router/routes` export. Import route de
 Added `package.json` `exports`:
 
 - `remix/render-middleware` to re-export APIs from `@remix-run/render-middleware`
-- `remix/routes` to re-export APIs from `@remix-run/routes`
+- `remix/routes` to re-export APIs from `@remix-run/fetch-router/routes`
