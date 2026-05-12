@@ -9,6 +9,6 @@
   },
   "dependencies": {
     "esbuild": "^0.27.1",
-    "preact": "^10.28.0"
+    "preact": "^10.29.1"
   }
 }
