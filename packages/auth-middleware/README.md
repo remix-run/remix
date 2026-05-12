@@ -22,14 +22,14 @@ npm i remix
 The following example shows the request-time half of a session-backed browser login flow:
 
 - another part of the app has already called `completeAuth()` and written `{ userId }` into the returned session
-- `remix/auth-middleware` reads that value, resolves the current user, and protects the dashboard route
+- `remix/middleware/auth` reads that value, resolves the current user, and protects the dashboard route
 
 ```ts
-import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/auth-middleware'
-import { createRouter } from 'remix/fetch-router'
+import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/middleware/auth'
+import { createRouter } from 'remix/router'
 import { route } from 'remix/routes'
-import type { GoodAuth } from 'remix/auth-middleware'
-import { session } from 'remix/session-middleware'
+import type { GoodAuth } from 'remix/middleware/auth'
+import { session } from 'remix/middleware/session'
 
 let routes = route({
   app: {
@@ -110,8 +110,8 @@ This package ships with three built-in auth schemes:
 If none of the built-in auth schemes match your environment, you can create your own auth scheme easily. A custom scheme usually wraps one auth mechanism behind a small `create*` factory function and returns an `AuthScheme`. For example, apps behind a trusted access proxy can authenticate requests from forwarded identity headers instead of sessions or bearer tokens.
 
 ```ts
-import type { RequestContext } from 'remix/fetch-router'
-import type { AuthScheme } from 'remix/auth-middleware'
+import type { RequestContext } from 'remix/router'
+import type { AuthScheme } from 'remix/middleware/auth'
 
 type User = {
   id: string
@@ -162,10 +162,10 @@ The scheme `name` becomes `auth.method` when authentication succeeds.
 If your app already has an auth cookie and you do not need a session-backed identity lookup, you can use a small custom auth scheme and still rely on `requireAuth()` for route protection.
 
 ```ts
-import { auth, requireAuth } from 'remix/auth-middleware'
-import type { AuthScheme } from 'remix/auth-middleware'
+import { auth, requireAuth } from 'remix/middleware/auth'
+import type { AuthScheme } from 'remix/middleware/auth'
 import { createCookie } from 'remix/cookie'
-import { createRouter } from 'remix/fetch-router'
+import { createRouter } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
 let authCookie = createCookie('__auth', {
@@ -221,7 +221,7 @@ router.get('/dashboard', {
 })
 ```
 
-This pattern keeps the auth check app-owned. Use [`remix/session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) and [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) when you need server-managed session data, credential verification helpers, or OAuth/OIDC flows.
+This pattern keeps the auth check app-owned. Use [`remix/middleware/session`](https://github.com/remix-run/remix/tree/main/packages/session-middleware) and [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) when you need server-managed session data, credential verification helpers, or OAuth/OIDC flows.
 
 ## Related Packages
 

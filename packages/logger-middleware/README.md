@@ -18,8 +18,8 @@ npm i remix
 ## Usage
 
 ```ts
-import { createRouter } from 'remix/fetch-router'
-import { logger } from 'remix/logger-middleware'
+import { createRouter } from 'remix/router'
+import { logger } from 'remix/middleware/logger'
 
 let router = createRouter({
   middleware: [logger()],

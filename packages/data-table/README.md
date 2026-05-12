@@ -38,7 +38,7 @@ Define tables once, then create a database with an adapter.
 ```ts
 import { Pool } from 'pg'
 import { column as c, createDatabase, hasMany, query, table } from 'remix/data-table'
-import { createPostgresDatabaseAdapter } from 'remix/data-table-postgres'
+import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
 
 let users = table({
   name: 'users',
@@ -402,7 +402,7 @@ In `app/db/migrate.ts`:
 ```ts
 import path from 'node:path'
 import { Pool } from 'pg'
-import { createPostgresDatabaseAdapter } from 'remix/data-table-postgres'
+import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
 import { createMigrationRunner } from 'remix/data-table/migrations'
 import { loadMigrations } from 'remix/data-table/migrations/node'
 

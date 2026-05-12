@@ -27,7 +27,7 @@ npm i remix mysql2
 ```ts
 import { createPool } from 'mysql2/promise'
 import { createDatabase } from 'remix/data-table'
-import { createMysqlDatabaseAdapter } from 'remix/data-table-mysql'
+import { createMysqlDatabaseAdapter } from 'remix/data-table/mysql'
 
 let pool = createPool(process.env.DATABASE_URL as string)
 let db = createDatabase(createMysqlDatabaseAdapter(pool))
