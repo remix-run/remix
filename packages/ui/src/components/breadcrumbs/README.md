@@ -35,13 +35,7 @@ Mark an earlier item as current when the page belongs to a parent section but th
 Pass `separator` to replace the default chevron glyph.
 
 ```tsx
-<Breadcrumbs
-  items={[
-    { href: '/', label: 'Home' },
-    { label: 'Breadcrumbs' },
-  ]}
-  separator="/"
-/>
+<Breadcrumbs items={[{ href: '/', label: 'Home' }, { label: 'Breadcrumbs' }]} separator="/" />
 ```
 
 ## `breadcrumbs.*`
