@@ -8,6 +8,7 @@
  * Run: node docs/generate-remix.ts
  */
 
+import { statSync } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
@@ -47,6 +48,8 @@ type ExportEntry = {
   exportPath: string
   // The package/sub-export to re-export from: `@remix-run/headers`, `@remix-run/headers/cookie-storage`
   reExportFrom: string
+  // The README file in the owning package to copy next to the generated umbrella export.
+  readmePath?: string
 }
 
 const { remixRunPackages, allExports, allBins } = await getRemixRunPackages()
@@ -80,6 +83,8 @@ async function getRemixRunPackages() {
   // Scan each package for its exports
   for (let packageDirName of packageDirNames) {
     let packageJsonPath = path.join(packagesDir, packageDirName, 'package.json')
+    if (!isFile(packageJsonPath)) continue
+
     let packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
     let packageName = packageJson.name as string
 
@@ -114,41 +119,37 @@ async function getRemixRunPackages() {
     let binExports = new Set(bins.map((b) => `./${b.sourceExport}`))
     let packageExports = packageJson.exports
     if (packageExports && typeof packageExports === 'object') {
-      for (let [exportPath, _] of Object.entries(packageExports)) {
+      for (let [exportPath, exportConfig] of Object.entries(packageExports)) {
         if (exportPath === './package.json') continue
         if (binExports.has(exportPath)) continue
 
         if (exportPath === '.') {
           // Main export
-          if (packageName === CLI_PACKAGE_NAME) {
-            remixRunPackage.exports.push({
-              sourceFile: 'cli.ts',
-              exportPath: './cli',
-              reExportFrom: packageName,
-            })
-          } else {
-            remixRunPackage.exports.push({
-              sourceFile: `${shortName}.ts`,
-              exportPath: `./${shortName}`,
-              reExportFrom: packageName,
-            })
-          }
+          let isCliPackage = packageName === CLI_PACKAGE_NAME
+          let readmePath = findReadmePath(packageDirName)
+          remixRunPackage.exports.push({
+            sourceFile: isCliPackage ? 'cli.ts' : `${shortName}.ts`,
+            exportPath: isCliPackage ? './cli' : `./${shortName}`,
+            reExportFrom: packageName,
+            readmePath,
+          })
         } else {
           // Sub-export (e.g., "./cookie-storage")
           let subExport = exportPath.replace('./', '')
-          if (packageName === '@remix-run/fetch-router' && subExport === 'routes') {
-            remixRunPackage.exports.push({
-              sourceFile: 'routes.ts',
-              exportPath: './routes',
-              reExportFrom: '@remix-run/fetch-router/routes',
-            })
-          } else {
-            remixRunPackage.exports.push({
-              sourceFile: `${shortName}/${subExport}.ts`,
-              exportPath: `./${shortName}/${subExport}`,
-              reExportFrom: `${packageName}/${subExport}`,
-            })
-          }
+          let sourceEntryPath = getSourceEntryPath(exportConfig)
+          let readmePath = sourceEntryPath
+            ? findReadmePath(packageDirName, sourceEntryPath)
+            : undefined
+          let isRoutesExport = packageName === '@remix-run/fetch-router' && subExport === 'routes'
+
+          remixRunPackage.exports.push({
+            sourceFile: isRoutesExport ? 'routes.ts' : `${shortName}/${subExport}.ts`,
+            exportPath: isRoutesExport ? './routes' : `./${shortName}/${subExport}`,
+            reExportFrom: isRoutesExport
+              ? '@remix-run/fetch-router/routes'
+              : `${packageName}/${subExport}`,
+            readmePath,
+          })
         }
       }
     }
@@ -175,6 +176,51 @@ async function getRemixRunPackages() {
   return { remixRunPackages, allExports, allBins }
 }
 
+function getSourceEntryPath(exportConfig: unknown): string | undefined {
+  if (typeof exportConfig === 'string') {
+    return exportConfig
+  }
+
+  if (exportConfig === null || typeof exportConfig !== 'object' || Array.isArray(exportConfig)) {
+    return undefined
+  }
+
+  if ('types' in exportConfig && typeof exportConfig.types === 'string') {
+    return exportConfig.types
+  }
+
+  if ('default' in exportConfig && typeof exportConfig.default === 'string') {
+    return exportConfig.default
+  }
+
+  return undefined
+}
+
+function findReadmePath(packageDirName: string, sourceEntryPath?: string): string | undefined {
+  let packageDir = path.join(packagesDir, packageDirName)
+  if (sourceEntryPath) {
+    let colocatedReadmePath = path.join(packageDir, path.dirname(sourceEntryPath), 'README.md')
+    if (isFile(colocatedReadmePath)) {
+      return colocatedReadmePath
+    }
+
+    let nestedReadmePath = path.join(
+      packageDir,
+      path.dirname(sourceEntryPath),
+      path.basename(sourceEntryPath, path.extname(sourceEntryPath)),
+      'README.md',
+    )
+    return isFile(nestedReadmePath) ? nestedReadmePath : undefined
+  }
+
+  let readmePath = path.join(packageDir, 'README.md')
+  return isFile(readmePath) ? readmePath : undefined
+}
+
+function isFile(filePath: string): boolean {
+  return statSync(filePath, { throwIfNoEntry: false })?.isFile() ?? false
+}
+
 async function updateRemixPackage() {
   // Ensure we have a passing linter before generating code
   logAndExec(`pnpm exec oxlint packages/remix/ -A all --quiet`)
@@ -193,6 +239,18 @@ async function updateRemixPackage() {
     await fs.mkdir(sourceFileDir, { recursive: true })
     let content = createExportSource(entry)
     await fs.writeFile(sourceFilePath, content, 'utf-8')
+
+    if (!entry.readmePath) continue
+
+    // Copy source-adjacent READMEs so agents can discover docs from node_modules/remix.
+    let readmePath = path.join(
+      remixDir,
+      SOURCE_FOLDER,
+      entry.sourceFile.replace(/\.ts$/, ''),
+      'README.md',
+    )
+    await fs.mkdir(path.dirname(readmePath), { recursive: true })
+    await fs.copyFile(entry.readmePath, readmePath)
   }
 
   // Run linter against generated code with --fix (before bin wrappers, which must keep their shebang)
