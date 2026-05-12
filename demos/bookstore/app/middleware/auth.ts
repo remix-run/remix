@@ -1,8 +1,8 @@
 import type { Route } from 'remix/routes'
 import { createCredentialsAuthProvider } from 'remix/auth'
-import { Auth, auth, createSessionAuthScheme, type GoodAuth } from 'remix/auth-middleware'
+import { Auth, auth, createSessionAuthScheme, type GoodAuth } from 'remix/middleware/auth'
 import { Database } from 'remix/data-table'
-import type { Middleware } from 'remix/fetch-router'
+import type { Middleware } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../data/schema.ts'

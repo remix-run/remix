@@ -1,5 +1,5 @@
-import { createController } from 'remix/fetch-router'
-import { Renderer } from 'remix/render-middleware'
+import { createController } from 'remix/router'
+import { Renderer } from 'remix/middleware/render'
 import { createRedirectResponse as redirect } from 'remix/response/redirect'
 
 import { routes } from '../routes.ts'

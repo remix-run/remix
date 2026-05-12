@@ -1,6 +1,6 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 import { Database } from 'remix/data-table'
-import { Renderer } from 'remix/render-middleware'
+import { Renderer } from 'remix/middleware/render'
 
 import { orders, orderItemsWithBook } from '../../../data/schema.ts'
 import { requireAuth } from '../../../middleware/auth.ts'

@@ -1,7 +1,7 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
-import { Renderer } from 'remix/render-middleware'
+import { Renderer } from 'remix/middleware/render'
 
 import { ForgotPasswordPage, ForgotPasswordSentPage } from './page.tsx'
 import { getIssueMessage, readField } from '../form-utils.ts'

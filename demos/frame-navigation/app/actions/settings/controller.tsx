@@ -1,8 +1,8 @@
-import { createController } from 'remix/fetch-router'
-import { Renderer, type Renderer as Render } from 'remix/render-middleware'
+import { createController } from 'remix/router'
+import { Renderer, type Renderer as Render } from 'remix/middleware/render'
 import type { Handle, RemixNode } from 'remix/ui'
 import { Frame } from 'remix/ui'
-import { getContext } from 'remix/async-context-middleware'
+import { getContext } from 'remix/middleware/async-context'
 
 import { requireAuth } from '../../middleware/auth.ts'
 import { frames, routes } from '../../routes.ts'

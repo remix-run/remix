@@ -1,5 +1,5 @@
-import { createController, type RouterTypes } from 'remix/fetch-router'
-import { Renderer } from 'remix/render-middleware'
+import { createController, type RouterTypes } from 'remix/router'
+import { Renderer } from 'remix/middleware/render'
 import { Frame, type RemixNode } from 'remix/ui'
 
 import { Counter } from '../../assets/counter.tsx'

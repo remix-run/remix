@@ -1,9 +1,9 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { minLength } from 'remix/data-schema/checks'
 import { Database } from 'remix/data-table'
-import { Renderer } from 'remix/render-middleware'
+import { Renderer } from 'remix/middleware/render'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../../../data/schema.ts'

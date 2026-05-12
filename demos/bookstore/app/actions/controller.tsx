@@ -1,6 +1,6 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 import { Database, ilike, inList, or } from 'remix/data-table'
-import { Renderer } from 'remix/render-middleware'
+import { Renderer } from 'remix/middleware/render'
 import { createFileResponse as sendFile } from 'remix/response/file'
 
 import { books } from '../data/schema.ts'

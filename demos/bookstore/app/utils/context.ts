@@ -1,6 +1,6 @@
-import { getContext } from 'remix/async-context-middleware'
-import { Auth } from 'remix/auth-middleware'
-import type { AuthState } from 'remix/auth-middleware'
+import { getContext } from 'remix/middleware/async-context'
+import { Auth } from 'remix/middleware/auth'
+import type { AuthState } from 'remix/middleware/auth'
 
 import type { User } from '../data/schema.ts'
 import { Session } from '../middleware/session.ts'

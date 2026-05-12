@@ -1,5 +1,5 @@
-import { createAction } from 'remix/fetch-router'
-import { Renderer } from 'remix/render-middleware'
+import { createAction } from 'remix/router'
+import { Renderer } from 'remix/middleware/render'
 import type { Handle } from 'remix/ui'
 
 import {

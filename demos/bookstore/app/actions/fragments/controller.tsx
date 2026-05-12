@@ -1,5 +1,5 @@
-import { createController } from 'remix/fetch-router'
-import { Renderer } from 'remix/render-middleware'
+import { createController } from 'remix/router'
+import { Renderer } from 'remix/middleware/render'
 import { css } from 'remix/ui'
 import { Database } from 'remix/data-table'
 

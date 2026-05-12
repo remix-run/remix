@@ -1,4 +1,4 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
 import { Session } from '../../middleware/session.ts'

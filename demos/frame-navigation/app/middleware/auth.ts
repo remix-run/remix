@@ -1,6 +1,6 @@
-import { getContext } from 'remix/async-context-middleware'
-import { Auth, auth, requireAuth as requireAuthenticated } from 'remix/auth-middleware'
-import type { AuthScheme } from 'remix/auth-middleware'
+import { getContext } from 'remix/middleware/async-context'
+import { Auth, auth, requireAuth as requireAuthenticated } from 'remix/middleware/auth'
+import type { AuthScheme } from 'remix/middleware/auth'
 import { createCookie } from 'remix/cookie'
 import { redirect } from 'remix/response/redirect'
 

@@ -1,6 +1,6 @@
-import { Auth } from 'remix/auth-middleware'
-import { createController } from 'remix/fetch-router'
-import { Renderer } from 'remix/render-middleware'
+import { Auth } from 'remix/middleware/auth'
+import { createController } from 'remix/router'
+import { Renderer } from 'remix/middleware/render'
 import { redirect } from 'remix/response/redirect'
 
 import { getReturnToQuery, requireAuth } from '../middleware/auth.ts'
