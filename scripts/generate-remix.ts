@@ -49,7 +49,7 @@ type ExportEntry = {
   // The package/sub-export to re-export from: `@remix-run/headers`, `@remix-run/headers/cookie-storage`
   reExportFrom: string
   // The README file in the owning package to copy next to the generated umbrella export.
-  readmePath: string | undefined
+  readmePath?: string
 }
 
 const { remixRunPackages, allExports, allBins } = await getRemixRunPackages()
@@ -123,45 +123,31 @@ async function getRemixRunPackages() {
 
         if (exportPath === '.') {
           // Main export
+          let isCliPackage = packageName === CLI_PACKAGE_NAME
           let readmePath = findReadmePath(packageDirName)
-          if (packageName === CLI_PACKAGE_NAME) {
-            remixRunPackage.exports.push({
-              sourceFile: 'cli.ts',
-              exportPath: './cli',
-              reExportFrom: packageName,
-              readmePath,
-            })
-          } else {
-            remixRunPackage.exports.push({
-              sourceFile: `${shortName}.ts`,
-              exportPath: `./${shortName}`,
-              reExportFrom: packageName,
-              readmePath,
-            })
-          }
+          remixRunPackage.exports.push({
+            sourceFile: isCliPackage ? 'cli.ts' : `${shortName}.ts`,
+            exportPath: isCliPackage ? './cli' : `./${shortName}`,
+            reExportFrom: packageName,
+            readmePath,
+          })
         } else {
           // Sub-export (e.g., "./cookie-storage")
           let subExport = exportPath.replace('./', '')
           let sourceEntryPath = getSourceEntryPath(exportConfig)
-          if (packageName === '@remix-run/fetch-router' && subExport === 'routes') {
-            remixRunPackage.exports.push({
-              sourceFile: 'routes.ts',
-              exportPath: './routes',
-              reExportFrom: '@remix-run/fetch-router/routes',
-              readmePath: sourceEntryPath
-                ? findReadmePath(packageDirName, sourceEntryPath)
-                : undefined,
-            })
-          } else {
-            remixRunPackage.exports.push({
-              sourceFile: `${shortName}/${subExport}.ts`,
-              exportPath: `./${shortName}/${subExport}`,
-              reExportFrom: `${packageName}/${subExport}`,
-              readmePath: sourceEntryPath
-                ? findReadmePath(packageDirName, sourceEntryPath)
-                : undefined,
-            })
-          }
+          let readmePath = sourceEntryPath
+            ? findReadmePath(packageDirName, sourceEntryPath)
+            : undefined
+          let isRoutesExport = packageName === '@remix-run/fetch-router' && subExport === 'routes'
+
+          remixRunPackage.exports.push({
+            sourceFile: isRoutesExport ? 'routes.ts' : `${shortName}/${subExport}.ts`,
+            exportPath: isRoutesExport ? './routes' : `./${shortName}/${subExport}`,
+            reExportFrom: isRoutesExport
+              ? '@remix-run/fetch-router/routes'
+              : `${packageName}/${subExport}`,
+            readmePath,
+          })
         }
       }
     }

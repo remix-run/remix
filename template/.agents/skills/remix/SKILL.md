@@ -5,21 +5,21 @@ description: Build and review Remix 3 applications using the `remix` npm package
 
 # Build a Remix App
 
-Use this skill for end-to-end Remix app work. It should help the agent choose the right layer
+Use this skill for end-to-end Remix app work. This skill helps you choose the right layer
 first, reach for the right package, and avoid the most common Remix-specific mistakes.
 
 ## Full Package Documentation
 
 This skill is the quick guide. When you need fuller API documentation, examples, or package-specific
-details for a `remix/*` subpath, read that subpath's README next. The published `remix` package
-includes those READMEs next to its generated source files:
-`node_modules/remix/src/<subpath>/README.md`.
+details for a `remix/*` subpath, first look for a README next to the relevant generated source file
+in the published `remix` package:
+`node_modules/remix/src/<subpath>/README.md`. If that README does not exist, look for the nearest
+parent README because some subpaths share their parent package documentation.
 
 Examples:
 
 - `remix/fetch-router` -> `node_modules/remix/src/fetch-router/README.md`
 - `remix/ui/button` -> `node_modules/remix/src/ui/button/README.md`
-- `remix/session/cookie-storage` -> `node_modules/remix/src/session/cookie-storage/README.md`
 
 ## What Remix Is
 
