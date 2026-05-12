@@ -1,15 +1,11 @@
 import * as path from 'node:path'
 import * as url from 'node:url'
-import {
-  buildSpecifierToRemixPath,
-  readManifest,
-} from '../../../scripts/utils/manifest.ts'
+import { buildSpecifierToRemixPath } from '../../../scripts/utils/manifest.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '../../../../packages')
-const manifestPath = path.resolve(packagesDir, 'remix/manifest.json')
 
-const specifierMap = buildSpecifierToRemixPath(readManifest(manifestPath), packagesDir)
+const specifierMap = buildSpecifierToRemixPath(packagesDir)
 
 /**
  * Maps a full npm specifier (e.g. `@remix-run/fetch-router` or

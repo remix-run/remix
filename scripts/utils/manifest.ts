@@ -17,10 +17,11 @@ import * as path from 'node:path'
  * Sub-path specifiers (e.g. `@remix-run/session/cookie-storage`) are covered
  * by literal entries whose values include a `/`.
  */
-export function buildSpecifierToRemixPath(
-  manifest: Record<string, string>,
-  packagesDir: string,
-): Map<string, string> {
+export function buildSpecifierToRemixPath(packagesDir: string): Map<string, string> {
+  let manifest: Record<string, string> = JSON.parse(
+    fs.readFileSync(path.join(packagesDir, 'remix', 'manifest.json'), 'utf-8'),
+  )
+
   let workspacePackageNames = fs
     .readdirSync(packagesDir)
     .filter((dir) => fs.existsSync(path.join(packagesDir, dir, 'package.json')))
@@ -52,7 +53,4 @@ export function buildSpecifierToRemixPath(
   return result
 }
 
-/** Read and parse a manifest.json file. */
-export function readManifest(manifestPath: string): Record<string, string> {
-  return JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
-}
+

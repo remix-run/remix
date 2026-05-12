@@ -6,14 +6,15 @@ import * as path from 'node:path'
 import * as url from 'node:url'
 import {
   buildSpecifierToRemixPath,
-  readManifest,
 } from '../../scripts/utils/manifest.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '..')
 
-const manifest = readManifest(path.join(__dirname, 'manifest.json'))
-const specifierMap = buildSpecifierToRemixPath(manifest, packagesDir)
+const manifest: Record<string, string> = JSON.parse(
+  fs.readFileSync(path.join(__dirname, 'manifest.json'), 'utf-8'),
+)
+const specifierMap = buildSpecifierToRemixPath(packagesDir)
 
 // Invert for coverage checks: specifier → all remix paths that cover it.
 const specifierToRemixPaths = new Map<string, string[]>()

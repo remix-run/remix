@@ -11,7 +11,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
-import { buildSpecifierToRemixPath, readManifest } from './utils/manifest.ts'
+import { buildSpecifierToRemixPath } from './utils/manifest.ts'
 import { logAndExec } from './utils/process.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
@@ -19,10 +19,6 @@ const packagesDir = path.resolve(__dirname, '../packages')
 const remixDir = path.join(packagesDir, 'remix')
 const remixChangesDir = path.join(remixDir, '.changes')
 const remixPackageJsonPath = path.join(remixDir, 'package.json')
-const manifestPath = path.join(remixDir, 'manifest.json')
-
-// Load raw manifest; patterns are expanded at runtime once package names are known.
-const manifestRaw = readManifest(manifestPath)
 
 const CLI_PACKAGE_NAME = '@remix-run/cli'
 const SOURCE_FOLDER = 'src'
@@ -115,7 +111,7 @@ async function getRemixRunPackages() {
   }
 
   // Expand the manifest now that we have all package names.
-  let specifierToRemixPath = buildSpecifierToRemixPath(manifestRaw, packagesDir)
+  let specifierToRemixPath = buildSpecifierToRemixPath(packagesDir)
 
   // Build ExportEntry objects for each package, using manifest overrides where available.
   for (let remixRunPackage of remixRunPackages) {
