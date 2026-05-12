@@ -562,7 +562,8 @@ function getApiFilePath(
   // APIs from sub-exports land under the right canonical path.
   if (rawPkg.startsWith('@remix-run/') && nameParts.length > 0) {
     let withSub = `${rawPkg}/${nameParts[0]}`
-    if (hasRemixPackage(withSub)) {      rawPkg = withSub
+    if (hasRemixPackage(withSub)) {
+      rawPkg = withSub
       nameParts.shift()
     }
   }

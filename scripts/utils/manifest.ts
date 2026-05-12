@@ -52,5 +52,3 @@ export function buildSpecifierToRemixPath(packagesDir: string): Map<string, stri
   }
   return result
 }
-
-

@@ -4,9 +4,7 @@ import { describe, it } from '@remix-run/test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as url from 'node:url'
-import {
-  buildSpecifierToRemixPath,
-} from '../../scripts/utils/manifest.ts'
+import { buildSpecifierToRemixPath } from '../../scripts/utils/manifest.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '..')
@@ -70,8 +68,7 @@ describe('manifest', () => {
         fs.readFileSync(pkgJsonPath, 'utf-8'),
       )
       let packageExports = pkgJson.exports ?? {}
-      let exportKey =
-        specifier === pkgName ? '.' : `./${specifier.slice(pkgName.length + 1)}`
+      let exportKey = specifier === pkgName ? '.' : `./${specifier.slice(pkgName.length + 1)}`
 
       assert.ok(
         exportKey in packageExports,
