@@ -20,7 +20,31 @@ export function ProjectBreadcrumbs() {
 }
 ```
 
-## Public API
+Mark an earlier item as current when the page belongs to a parent section but the final crumb is still useful context. The current item always renders as text with `aria-current="page"`.
+
+```tsx
+<Breadcrumbs
+  items={[
+    { href: '/', label: 'Home' },
+    { current: true, href: '/components', label: 'Components' },
+    { label: 'Breadcrumbs' },
+  ]}
+/>
+```
+
+Pass `separator` to replace the default chevron glyph.
+
+```tsx
+<Breadcrumbs
+  items={[
+    { href: '/', label: 'Home' },
+    { label: 'Breadcrumbs' },
+  ]}
+  separator="/"
+/>
+```
+
+## `breadcrumbs.*`
 
 - `Breadcrumbs`: component that renders a `<nav>` with an ordered list of breadcrumb items.
 - `BreadcrumbItem`: item shape with `label`, optional `href`, and optional `current`.
@@ -29,8 +53,9 @@ export function ProjectBreadcrumbs() {
 ## Behavior Notes
 
 - The default `aria-label` is `"Breadcrumb"` unless an `aria-label` prop is provided.
+- Breadcrumb items render inside an ordered list.
 - The last item is treated as current when no item has `current: true`.
 - An explicit current item wins over the last-item default.
 - Current items render as text with `aria-current="page"`, even when they include `href`.
 - Non-current items with `href` render as links; non-current items without `href` render as text.
-- The default separator is the `chevronRight` glyph. Pass `separator` to render custom separator content.
+- The default separator is the `chevronRight` glyph. Separators render between items and are hidden from assistive technology.
