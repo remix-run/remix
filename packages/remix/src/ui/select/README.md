@@ -71,12 +71,7 @@ function IssueTypeSelect() {
             <div mix={[listbox.optionStyle, select.option({ label: 'Bug', value: 'bug' })]}>
               Bug
             </div>
-            <div
-              mix={[
-                listbox.optionStyle,
-                select.option({ label: 'Feature', value: 'feature' }),
-              ]}
-            >
+            <div mix={[listbox.optionStyle, select.option({ label: 'Feature', value: 'feature' })]}>
               Feature
             </div>
           </div>

@@ -36,12 +36,7 @@ export function ViewMenu(handle: Handle) {
       <MenuItem checked={density === 'compact'} name="density" type="radio" value="compact">
         Compact
       </MenuItem>
-      <MenuItem
-        checked={density === 'comfortable'}
-        name="density"
-        type="radio"
-        value="comfortable"
-      >
+      <MenuItem checked={density === 'comfortable'} name="density" type="radio" value="comfortable">
         Comfortable
       </MenuItem>
       <Submenu label="Zoom">

@@ -75,7 +75,7 @@ function selectLastOption() {
   void listboxRef?.selectActive()
 }
 
-<listbox.Context
+;<listbox.Context
   value={value}
   activeValue={activeValue}
   ref={(ref) => {
