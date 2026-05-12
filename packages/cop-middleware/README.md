@@ -1,4 +1,4 @@
-# cop-middleware
+# middleware/cop
 
 Cross-origin protection middleware for Remix. It mirrors Go's `CrossOriginProtection` by rejecting unsafe cross-origin browser requests without synchronizer tokens.
 

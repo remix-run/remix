@@ -1,4 +1,4 @@
-# auth-middleware
+# middleware/auth
 
 Request-time authentication and route protection for Remix. Use this package to resolve identity into `context.get(Auth)` from sessions, bearer tokens, API keys, or your own schemes. Pair it with [`remix/auth`](https://github.com/remix-run/remix/tree/main/packages/auth) when you need browser login routes that call `verifyCredentials()` or `finishExternalAuth()`, then rotate the session id with `completeAuth()` before writing the auth record.
 

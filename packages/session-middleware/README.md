@@ -1,4 +1,4 @@
-# session-middleware
+# middleware/session
 
 Session middleware for Remix using signed cookies. It loads session state from incoming requests, stores it in request context using `Session`, and persists updates automatically.
 
