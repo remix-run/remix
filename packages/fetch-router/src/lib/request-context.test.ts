@@ -279,7 +279,7 @@ describe('new RequestContext()', () => {
 
       if (false as boolean) {
         // @ts-expect-error - broad string properties do not install typed direct properties
-        context.message
+        void context.message
       }
     }
 

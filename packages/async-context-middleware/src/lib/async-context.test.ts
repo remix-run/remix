@@ -4,7 +4,6 @@ import { describe, it } from '@remix-run/test'
 import {
   createContextKey,
   createRouter,
-  type AnyParams,
   type ContextWithEntries,
   type RequestContext,
 } from '@remix-run/fetch-router'

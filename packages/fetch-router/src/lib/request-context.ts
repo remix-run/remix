@@ -32,16 +32,6 @@ export interface ContextKey<value> {
 export type AnyParams = Record<string, string>
 
 /**
- * Options for installing a request-context value as a direct property on {@link RequestContext}.
- */
-export interface ContextPropertyOptions<property extends string = string> {
-  /**
-   * The direct property name to install on the request context.
-   */
-  property: property
-}
-
-/**
  * A request-context entry provided by middleware. The optional `property` field installs the value
  * as a direct request-context property when the middleware sets the value.
  */
@@ -140,21 +130,16 @@ type ContextEntryProperty<entry extends ContextEntry> = entry extends {
     : property
   : never
 
-type ContextProperty<entry extends ContextEntry> = {
-  readonly [property in ContextEntryProperty<entry>]: entry['value']
-}
-
-type ContextPropertiesFrom<entries extends ContextEntries> = entries extends readonly [
+type ContextProperties<entries extends ContextEntries> = entries extends readonly [
   ...infer rest extends ContextEntries,
   infer last extends ContextEntry,
 ]
-  ? Simplify<Omit<ContextPropertiesFrom<rest>, ContextEntryProperty<last>> & ContextProperty<last>>
+  ? Simplify<
+      Omit<ContextProperties<rest>, ContextEntryProperty<last>> & {
+        readonly [property in ContextEntryProperty<last>]: last['value']
+      }
+    >
   : {}
-
-/**
- * Resolves the direct request-context properties installed by context entries.
- */
-export type ContextProperties<entries extends ContextEntries> = ContextPropertiesFrom<entries>
 
 type RequestContextWithEntries<
   params extends Record<string, any>,
@@ -279,18 +264,16 @@ export class RequestContext<
   set = <key extends object>(
     key: key,
     value: ContextValue<key>,
-    options?: ContextPropertyOptions,
+    options?: { property: string },
   ): void => {
     if (options != null) {
-      this.#installContextProperty(key, options)
+      this.#installContextProperty(key, options.property)
     }
 
     this.#contextMap.set(key, value)
   }
 
-  #installContextProperty(key: object, options: ContextPropertyOptions): void {
-    let property = options.property
-
+  #installContextProperty(key: object, property: string): void {
     if (typeof property !== 'string') {
       throw new Error('Context property name must be a string.')
     }
