@@ -1,6 +1,4 @@
-// @jsxRuntime classic
-// @jsx createElement
-import { createElement, css } from 'remix/ui'
+import { css } from 'remix/ui'
 import {
   Accordion,
   AccordionContent,

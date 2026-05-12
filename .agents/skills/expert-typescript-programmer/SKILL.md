@@ -57,7 +57,7 @@ Prefer local repo conventions first, then apply the official TypeScript guidance
 - Use primitive types `string`, `number`, `boolean`, `symbol`, and `object`; do not use boxed types like `String`, `Number`, `Boolean`, `Symbol`, or `Object`.
 - Prefer `interface` for new public object shapes and option objects. Prefer `type` for unions, tuples, mapped types, conditional types, and aliases over non-object shapes.
 - Represent states with discriminated unions when behavior depends on a mode, status, kind, or variant. Use exhaustive checks when adding or changing variants.
-- Prefer literal unions and const objects over enums unless the surrounding package already established enums for that domain.
+- Keep TypeScript syntax erasable by Node's built-in type stripping, and ensure `erasableSyntaxOnly` is enabled in the relevant `tsconfig.json`.
 - Use `satisfies` when an object literal must conform to a broader type while preserving narrow property inference.
 - Use `as const` for literal tables, discriminants, and tuples that should remain narrow and readonly. Do not use it to paper over mutable data flow.
 

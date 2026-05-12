@@ -2,6 +2,8 @@
 
 Run Node.js with JSX syntax support in `.tsx` and `.jsx` files.
 
+JSX compiler options are read from the nearest `tsconfig.json` for each loaded file.
+
 ## Installation
 
 ```sh
@@ -14,6 +16,16 @@ Pass the `--import` flag to register the `remix/node-tsx` loader when executing 
 
 ```sh
 node --import remix/node-tsx ./server.ts
+```
+
+Since TypeScript syntax is otherwise handled by Node.js, code must be compatible with Node's built-in type stripping. It's recommended to enable `erasableSyntaxOnly` in your `tsconfig.json` so type checking catches syntax that cannot be erased at runtime, such as `enum` and parameter properties:
+
+```json
+{
+  "compilerOptions": {
+    "erasableSyntaxOnly": true
+  }
+}
 ```
 
 ### Programmatic usage

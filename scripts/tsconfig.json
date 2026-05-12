@@ -9,6 +9,7 @@
     "checkJs": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
+    "erasableSyntaxOnly": true,
     "skipLibCheck": true
   },
   "exclude": ["dist"]

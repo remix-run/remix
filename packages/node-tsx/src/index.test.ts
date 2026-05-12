@@ -81,6 +81,126 @@ describe('node-tsx', () => {
     })
   })
 
+  it('runs tsx modules from symlinked workspace packages', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeJsxRuntime(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'workspace-package/package.json',
+        [
+          '{',
+          '  "name": "workspace-package",',
+          '  "type": "module",',
+          '  "exports": {',
+          '    "./view": "./view.tsx"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'workspace-package/tsconfig.json',
+        [
+          '{',
+          '  "compilerOptions": {',
+          '    "jsx": "react-jsx",',
+          '    "jsxImportSource": "local-jsx"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'workspace-package/view.tsx',
+        ['export function render() {', '  return <main>Workspace</main>', '}', ''].join('\n'),
+      )
+      await fs.symlink(
+        path.join(projectPath, 'workspace-package'),
+        path.join(projectPath, 'node_modules', 'workspace-package'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'server.ts',
+        [
+          "import { render } from 'workspace-package/view'",
+          'console.log(JSON.stringify(render()))',
+          '',
+        ].join('\n'),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.ts'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.deepEqual(JSON.parse(result.stdout.trim()), {
+        props: { children: 'Workspace' },
+        type: 'main',
+      })
+    })
+  })
+
+  it('only uses jsx tsconfig options from real node_modules paths', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeJsxRuntime(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'node_modules/raw-tsx/package.json',
+        [
+          '{',
+          '  "name": "raw-tsx",',
+          '  "type": "module",',
+          '  "exports": {',
+          '    "./view": "./view.tsx"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'node_modules/raw-tsx/tsconfig.json',
+        [
+          '{',
+          '  "compilerOptions": {',
+          '    "jsx": "react-jsx",',
+          '    "jsxImportSource": "local-jsx",',
+          '    "module": "CommonJS",',
+          '    "paths": {',
+          '      "local-jsx/jsx-runtime": ["./missing-jsx-runtime.js"]',
+          '    }',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'node_modules/raw-tsx/view.tsx',
+        ['export function render() {', '  return <main>Dependency</main>', '}', ''].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'server.ts',
+        ["import { render } from 'raw-tsx/view'", 'console.log(JSON.stringify(render()))', ''].join(
+          '\n',
+        ),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.ts'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.deepEqual(JSON.parse(result.stdout.trim()), {
+        props: { children: 'Dependency' },
+        type: 'main',
+      })
+    })
+  })
+
   it('loads ts entrypoints with tsx imports through remix/node-tsx/load-module', async () => {
     await withProject(async (projectPath) => {
       await linkRemixPackage(projectPath)

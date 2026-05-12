@@ -1,5 +1,3 @@
-// @jsxRuntime classic
-// @jsx createElement
 import {
   attrs,
   createElement,
@@ -219,19 +217,8 @@ declare global {
 type MenuItemType = 'item' | 'checkbox' | 'radio'
 type CloseAnimation = 'fade' | 'none'
 type OpenStrategy = 'first' | 'last' | 'list' | 'none'
-
-enum NavigationStrategy {
-  Next = 0,
-  Previous = 1,
-  First = 2,
-  Last = 3,
-}
-
-enum State {
-  Idle = 'idle',
-  Dismissing = 'dismissing',
-  Selecting = 'selecting',
-}
+type NavigationStrategy = 'next' | 'previous' | 'first' | 'last'
+type State = 'idle' | 'dismissing' | 'selecting'
 
 export interface MenuSelectItem {
   checked?: boolean
@@ -435,7 +422,7 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
   let items: RegisteredMenuItem[] = []
   let listRef: HTMLElement | undefined
   let open = false
-  let state = State.Idle
+  let state: State = 'idle'
   let suppressNextPointerLeaveClear = false
   let surfaceRef: HTMLElement | undefined
   let triggerId: string | undefined
@@ -487,7 +474,7 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
     strategy = 'list',
     focus = strategy !== 'none',
   }: OpenMenuOptions = {}) {
-    if (state !== State.Idle) {
+    if (state !== 'idle') {
       return
     }
 
@@ -538,9 +525,9 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
     open = false
     if (animation === 'none') {
       activeId = null
-      state = State.Idle
-    } else if (wasOpen && state === State.Idle) {
-      state = State.Dismissing
+      state = 'idle'
+    } else if (wasOpen && state === 'idle') {
+      state = 'dismissing'
     }
     updates.push(handle.update())
   }
@@ -561,8 +548,8 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
       shouldUpdate = true
     }
 
-    if (state !== State.Idle) {
-      state = State.Idle
+    if (state !== 'idle') {
+      state = 'idle'
       shouldUpdate = true
     }
 
@@ -630,7 +617,7 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
   }
 
   function highlight(id: string | null, { focus = false }: HighlightOptions = {}) {
-    if (state !== State.Idle) {
+    if (state !== 'idle') {
       return
     }
 
@@ -673,7 +660,7 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
   }
 
   function navigate(strategy: NavigationStrategy) {
-    if (state !== State.Idle) {
+    if (state !== 'idle') {
       return
     }
 
@@ -682,22 +669,22 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
     let nextItem: RegisteredMenuItem | undefined
 
     switch (strategy) {
-      case NavigationStrategy.Next:
+      case 'next':
         nextItem =
           activeIndex === -1
             ? interactableItems[0]
             : (interactableItems[activeIndex + 1] ?? interactableItems[activeIndex])
         break
-      case NavigationStrategy.Previous:
+      case 'previous':
         nextItem =
           activeIndex === -1
             ? interactableItems[interactableItems.length - 1]
             : interactableItems[activeIndex - 1]
         break
-      case NavigationStrategy.First:
+      case 'first':
         nextItem = interactableItems[0]
         break
-      case NavigationStrategy.Last:
+      case 'last':
         nextItem = interactableItems[interactableItems.length - 1]
         break
     }
@@ -708,7 +695,7 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
   }
 
   function highlightSearchMatch(text: string) {
-    if (state !== State.Idle) {
+    if (state !== 'idle') {
       return
     }
 
@@ -727,7 +714,7 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
   }
 
   async function activateItem(id: string) {
-    if (state !== State.Idle) {
+    if (state !== 'idle') {
       return
     }
 
@@ -744,7 +731,7 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
     let committedChecked =
       item.type === 'checkbox' ? !item.checked : item.type === 'radio' ? true : undefined
 
-    state = State.Selecting
+    state = 'selecting'
     activeId = item.id
     flashState = item.type === 'item' ? { id: item.id } : { checked: committedChecked, id: item.id }
     let signal = await handle.update()
@@ -776,7 +763,7 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
 
     await closeAll()
 
-    state = State.Idle
+    state = 'idle'
     signal = await handle.update()
     if (signal.aborted) {
       return
@@ -792,7 +779,7 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
   }
 
   async function openActiveSubmenu() {
-    if (state !== State.Idle) {
+    if (state !== 'idle') {
       return
     }
 
@@ -1102,22 +1089,22 @@ const listMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
         case 'ArrowDown':
           event.preventDefault()
           event.stopPropagation()
-          context.navigate(NavigationStrategy.Next)
+          context.navigate('next')
           return
         case 'ArrowUp':
           event.preventDefault()
           event.stopPropagation()
-          context.navigate(NavigationStrategy.Previous)
+          context.navigate('previous')
           return
         case 'Home':
           event.preventDefault()
           event.stopPropagation()
-          context.navigate(NavigationStrategy.First)
+          context.navigate('first')
           return
         case 'End':
           event.preventDefault()
           event.stopPropagation()
-          context.navigate(NavigationStrategy.Last)
+          context.navigate('last')
           return
         case 'Enter':
         case ' ':
@@ -1312,7 +1299,7 @@ const submenuTriggerMixin = createMixin<
         'aria-disabled': options.disabled ? 'true' : undefined,
         'aria-expanded': childMenu.isOpen ? 'true' : 'false',
         'aria-haspopup': 'menu',
-        'data-submenu-state': childMenu.state === State.Idle ? undefined : childMenu.state,
+        'data-submenu-state': childMenu.state === 'idle' ? undefined : childMenu.state,
         'data-highlighted': parent.activeId === handle.id ? 'true' : undefined,
       }),
       ref((node: HTMLElement, signal) => {

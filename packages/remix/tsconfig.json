@@ -10,7 +10,8 @@
     "jsxImportSource": "@remix-run/ui",
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true
   },
   "exclude": ["dist"]
 }

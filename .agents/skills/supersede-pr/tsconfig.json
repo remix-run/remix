@@ -6,7 +6,8 @@
     "noEmit": true,
     "strict": true,
     "target": "ESNext",
-    "verbatimModuleSyntax": true
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true
   },
   "include": ["scripts/**/*.ts"]
 }
