@@ -23,20 +23,5 @@ const specifierMap = buildSpecifierToRemixPath(manifest, packageNames)
  * entry covers the specifier.
  */
 export function mapToRemixPackage(specifier: string): string {
-  // Direct hit (literal entries and pattern-expanded package names).
-  let direct = specifierMap.get(specifier)
-  if (direct) return direct
-
-  // Sub-path specifier (e.g. `@remix-run/fetch-router/routes`): check the
-  // package root against the map and append the subpath.
-  let parts = specifier.split('/')
-  if (parts.length > 2) {
-    let pkgName = `${parts[0]}/${parts[1]}`
-    let subpath = parts.slice(2).join('/')
-    let pkgKey = specifierMap.get(pkgName)
-    if (pkgKey) return `${pkgKey}/${subpath}`
-  }
-
-  // Mechanical fallback.
-  return specifier.replace(/^@remix-run\//, 'remix/')
+  return specifierMap.get(specifier) ?? specifier.replace(/^@remix-run\//, 'remix/')
 }
