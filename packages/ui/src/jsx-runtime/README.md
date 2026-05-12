@@ -1,4 +1,4 @@
-# JSX Runtime
+# jsx-runtime
 
 `jsx-runtime` and `jsx-dev-runtime` expose the JSX entrypoints used by Remix UI's custom JSX transform. They are compiler-facing modules; most application code should import public runtime APIs from `remix/ui` instead.
 
@@ -16,7 +16,7 @@ export function Message() {
 
 - `jsx`, `jsxs`, and `jsxDEV`: JSX factory functions exported from the internal runtime.
 - `Fragment`: fragment component used by the JSX transform.
-- Runtime element and prop types are re-exported from `remix/ui`.
+- `ElementType`, `ElementProps`, `RemixElement`, `Renderable`, `RemixNode`, and `Props`: runtime element and prop types.
 
 ## Behavior Notes
 

@@ -1,4 +1,4 @@
-# Breadcrumbs
+# breadcrumbs
 
 `Breadcrumbs` renders semantic breadcrumb navigation from a list of items. Use it when the page needs a compact path back through parent sections.
 
@@ -20,7 +20,7 @@ export function ProjectBreadcrumbs() {
 }
 ```
 
-## `breadcrumbs.*`
+## Public API
 
 - `Breadcrumbs`: component that renders a `<nav>` with an ordered list of breadcrumb items.
 - `BreadcrumbItem`: item shape with `label`, optional `href`, and optional `current`.

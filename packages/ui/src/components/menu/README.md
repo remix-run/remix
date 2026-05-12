@@ -1,4 +1,4 @@
-# Menu
+# menu
 
 `Menu` renders a button-triggered menu with keyboard navigation, checked items, selection events, and nested submenus. Use it for action menus and command groups.
 
@@ -38,6 +38,8 @@ export function ViewMenu() {
 - `Submenu`: nested menu wrapper with its own trigger and child menu surface.
 - `MenuList`: lower-level list wrapper for custom composition.
 - `onMenuSelect(...)`: event mixin for the bubbling `MenuSelectEvent`.
+- `MenuSelectEvent`: bubbling event class whose `item` describes the selected item.
+- `MenuSelectItem`: selected item shape with `checked`, `id`, `label`, `name`, `type`, and `value`.
 - `menu.Context`, `menu.trigger()`, `menu.popover()`, `menu.list()`, `menu.item(...)`, and `menu.submenuTrigger(...)`: lower-level composition primitives.
 - `buttonStyle`, `popoverStyle`, `listStyle`, `itemStyle`, `itemSlotStyle`, `itemLabelStyle`, `itemGlyphStyle`, and `triggerGlyphStyle`: flat style mixins used by the wrappers.
 
@@ -49,3 +51,4 @@ export function ViewMenu() {
 - Submenus open with `ArrowRight`, close with `ArrowLeft`, and are anchored relative to their menu item.
 - Pointer movement uses hover aim so submenus stay open while moving toward their child surface.
 - Selection dispatches one bubbled `MenuSelectEvent`, flashes the selected item briefly, and closes the full menu tree.
+- `menuLabel`, `Submenu.menuLabel`, and `Submenu.listProps` let composed menus label and customize menu surfaces separately from trigger content.

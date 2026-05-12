@@ -1,18 +1,25 @@
-# Scroll Lock
+# scroll-lock
 
 `scroll-lock` locks document scrolling while a floating or modal surface is open. Use `lockScroll` directly for imperative flows or `lockScrollOnToggle` for popover-style elements that emit `beforetoggle`.
 
 ## Usage
 
 ```tsx
-import { lockScrollOnToggle } from 'remix/ui/scroll-lock'
+import { lockScroll, lockScrollOnToggle } from 'remix/ui/scroll-lock'
 
 function DialogSurface() {
   return <div popover="auto" mix={lockScrollOnToggle()} />
 }
+
+function openModal() {
+  let unlock = lockScroll()
+
+  // Later, when the modal closes:
+  unlock()
+}
 ```
 
-## `scroll-lock.*`
+## API
 
 - `lockScroll(document?)`: locks the target document and returns an idempotent unlock function.
 - `lockScrollOnToggle()`: mixin that locks on `beforetoggle` open, unlocks on close, and releases the lock when the host unmounts.

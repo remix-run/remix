@@ -1,25 +1,28 @@
-# Listbox
+# listbox
 
 `listbox` is a headless option-list primitive for controlled selection and highlighting. Use it under components like `select` and `combobox`, or directly when you need custom listbox markup.
 
 ## Usage
 
 ```tsx
+import type { Handle } from 'remix/ui'
 import * as listbox from 'remix/ui/listbox'
 
-function FrameworkListbox() {
+function FrameworkListbox(handle: Handle) {
   let value: string | null = null
   let activeValue: string | null = null
 
-  return (
+  return () => (
     <listbox.Context
       value={value}
       activeValue={activeValue}
       onSelect={(nextValue) => {
         value = nextValue
+        void handle.update()
       }}
       onHighlight={(nextValue) => {
         activeValue = nextValue
+        void handle.update()
       }}
     >
       <div aria-label="Frameworks" mix={listbox.list()}>
@@ -35,9 +38,9 @@ function FrameworkListbox() {
 
 ## `listbox.*`
 
-- `listbox.Context`: provider for controlled `value` and `activeValue`, option registration, selection, highlighting, and optional ref access.
+- `listbox.Context`: provider for controlled `value` and `activeValue`, option registration, selection, highlighting, optional ref access, `flashSelection`, `selectionFlashAttribute`, and `onSelectSettled`.
 - `listbox.list()`: mixin that wires `role="listbox"`, default `tabIndex={-1}`, keyboard navigation, focus scrolling, and typeahead highlighting.
-- `listbox.option(options)`: mixin that registers an option and wires `role="option"`, id, selected, disabled, highlighted, mouse, and click behavior.
+- `listbox.option(options)`: mixin that registers an option with required `label` and `value`, optional `disabled` and `textValue`, and wires `role="option"`, id, selected, disabled, highlighted, mouse, and click behavior.
 - `listStyle`, `optionStyle`, `glyphStyle`, and `labelStyle`: flat style mixins for standard listbox presentation.
 - `ListboxRef`: live ref object exposing active/selected options, option navigation, search matching, scrolling, and selection helpers.
 

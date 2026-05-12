@@ -1,4 +1,4 @@
-# Theme
+# theme
 
 `theme` provides Remix UI design tokens, theme creation, glyph contracts, and the built-in `RMX_01` preset. Use it to install CSS custom properties once and consume typed token references in component styles.
 
@@ -72,15 +72,26 @@ let card = css({
   backgroundColor: theme.surface.lvl0,
   color: theme.colors.text.primary,
 })
+
+function Layout() {
+  return (
+    <body>
+      <Theme />
+      <article mix={card}>Project status</article>
+    </body>
+  )
+}
 ```
 
 ## `theme.*`
 
 - `theme`: typed CSS variable reference contract, such as `theme.space.md` and `theme.colors.text.primary`.
-- `createTheme(values, options?)`: creates a style component with `cssText`, `selector`, and `vars`.
+- `createTheme(values, options?)`: creates a style component with `cssText`, `selector`, `values`, `vars`, and `Style`.
 - `RMX_01`: built-in theme component.
 - `RMX_01_GLYPHS`: built-in glyph sheet component.
 - `glyphContract` and `glyphNames`: stable glyph ids and supported glyph names.
+- `ThemeValues`, `ThemeVars`, `ThemeComponent`, `ThemeStyleProps`, `CreateThemeOptions`, and `ThemeMix`: public TypeScript types for custom themes.
+- `GlyphName`, `GlyphSymbol`, and `GlyphValues`: public TypeScript types for glyph contracts.
 
 ## Behavior Notes
 
@@ -89,3 +100,4 @@ let card = css({
 - The default selector is `:root`; pass `selector` for scoped themes.
 - The base reset is included by default and can be disabled with `reset: false`.
 - The built-in components consume this token contract through their style mixins.
+- Render `<RMX_01 />` and `<RMX_01_GLYPHS />` once when using the built-in theme and glyph preset.

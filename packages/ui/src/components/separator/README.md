@@ -1,4 +1,4 @@
-# Separator
+# separator
 
 `separator` provides the shared separator style used inside item lists such as menus. Use it on an `<hr>` or an element with `role="separator"` when it needs to align with first-party item indentation.
 

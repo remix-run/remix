@@ -1,4 +1,4 @@
-# Select
+# select
 
 `Select` is a button-triggered popup value picker backed by `listbox` and `popover`. Use it when the user should choose one stable string value from a finite set.
 
@@ -27,12 +27,12 @@ export function FrameworkSelect() {
 }
 ```
 
-## `select.*`
+## Public API
 
-- `Select`: composed trigger, popover, listbox, option list, and optional hidden input for form participation.
-- `Option`: option wrapper that renders the standard check glyph and label slot.
+- `Select`: composed trigger, popover, listbox, option list, and optional hidden input for form participation. Accepts `defaultLabel`, `defaultValue`, `disabled`, `name`, and button props.
+- `Option`: option wrapper that renders the standard check glyph and label slot. Accepts `label`, `value`, optional `disabled`, and optional `textValue`.
 - `onSelectChange(...)`: event mixin for the bubbling `SelectChangeEvent`.
-- `select.Context`, `select.trigger()`, `select.popover()`, `select.list()`, `select.option(...)`, and `select.hiddenInput()`: lower-level composition primitives.
+- `Context`, `trigger()`, `popover()`, `list()`, `option(...)`, and `hiddenInput()`: lower-level composition primitives.
 - `triggerStyle`: standard select trigger style.
 - `SelectChangeEvent`: event with `value`, `label`, and `optionId`.
 

@@ -1,4 +1,4 @@
-# Animation
+# animation
 
 `animation` provides small primitives for entrance, exit, layout, spring, and tween animation. Use these helpers with Remix UI mixins, CSS transitions, and the Web Animations API.
 
@@ -27,7 +27,7 @@ function Panel() {
 
 ## `animation.*`
 
-- `animateEntrance(...)`: mixin that animates an element when it enters the DOM. Pass `initial: false` to skip the first insertion.
+- `animateEntrance(...)`: mixin that animates an element when it enters the DOM. Pass `initial: false` to skip the first keyed insertion.
 - `animateExit(...)`: mixin that keeps a removed keyed element around long enough to run its exit animation.
 - `animateLayout(...)`: mixin that animates layout changes by comparing geometry between renders.
 - `spring(...)`: returns a decorated iterator with `duration`, `easing`, and `toString()` for CSS and WAAPI usage.
@@ -35,6 +35,7 @@ function Panel() {
 - `spring.presets`: named `smooth`, `snappy`, and `bouncy` spring defaults.
 - `tween(...)`: generator that interpolates numeric values over time with a cubic-bezier curve.
 - `easings`: common cubic-bezier presets for `tween`.
+- `SpringIterator`, `SpringPreset`, `SpringOptions`, `TweenOptions`, and `BezierCurve`: public TypeScript types for spring and tween configuration.
 
 ## Behavior Notes
 
@@ -43,3 +44,4 @@ function Panel() {
 - `animateLayout({ size: false })` animates translation without scale projection.
 - Layout animation skips work when geometry does not change and cancels interrupted in-flight animations.
 - `spring()` can be iterated for JavaScript animation, spread into WAAPI options, or stringified into CSS transition syntax.
+- `tween(...)` yields the initial value first; advance the generator with frame timestamps via `next(timestamp)` and read `done` to detect completion.

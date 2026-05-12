@@ -1,4 +1,4 @@
-# Accordion
+# accordion
 
 `Accordion` renders a disclosure set with one or more expandable items. Use it for grouped settings, FAQ sections, and dense panels where each item owns a trigger and content region.
 
@@ -29,8 +29,9 @@ export function SettingsAccordion() {
 - `Accordion`: root component. Defaults to single-item mode and supports controlled `value`, uncontrolled `defaultValue`, `onValueChange`, `disabled`, `headingLevel`, `collapsible`, and `type="multiple"`.
 - `AccordionItem`: registers one accordion item by `value`. Pass `disabled` to prevent that item from opening or receiving keyboard focus.
 - `AccordionTrigger`: button for an item. It wires `aria-expanded`, `aria-controls`, keyboard navigation, and the default chevron indicator.
-- `AccordionContent`: panel for an item. It wires the panel id, `role="region"`, `aria-labelledby`, and open/closed state attributes.
+- `AccordionContent`: panel for an item. It wires the panel id, `aria-labelledby`, inert state, and open/closed state attributes.
 - `onAccordionChange(...)`: event mixin for the bubbling `AccordionChangeEvent`.
+- `AccordionChangeEvent`: bubbling event class with `value`, `itemValue`, and `accordionType`.
 - `rootStyle`, `itemStyle`, `triggerStyle`, `indicatorStyle`, `panelStyle`, and `bodyStyle`: flat style mixins used by the component wrappers.
 
 ## Behavior Notes
