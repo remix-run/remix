@@ -1,7 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { createRoutes as route } from '@remix-run/routes'
 
+import { createRoutes as route } from '../routes.ts'
 import { createAction, createController, type Action, type Controller } from './controller.ts'
 import type { Middleware, MiddlewareContext } from './middleware.ts'
 import { createContextKey, type ContextWithEntry } from './request-context.ts'
