@@ -6,7 +6,7 @@ Request-scoped renderer middleware for Remix. It stores a renderer in `fetch-rou
 
 - **Generic renderers** - Render any input type to a `Response`
 - **Request-scoped setup** - Create renderers from the current `RequestContext`
-- **Typed context** - `context.get(Renderer)` returns the renderer type provided by middleware
+- **Typed context** - Typed `context.render` (or `context.get(Renderer)`)
 - **Small runtime** - The package only stores a renderer in request context
 
 ## Installation
@@ -17,11 +17,11 @@ npm i remix
 
 ## Usage
 
-Use `renderWith()` to add a renderer to request context.
+Use `renderWith()` to add a renderer to `context.render` and `context.get(Renderer)`.
 
 ```ts
 import { createRouter, type MiddlewareContext } from 'remix/fetch-router'
-import { Renderer, renderWith } from 'remix/render-middleware'
+import { renderWith } from 'remix/render-middleware'
 
 const render = renderWith(
   (context) =>
@@ -37,14 +37,16 @@ const router = createRouter<AppContext>({
 })
 
 router.get('/hello', (context) => {
-  return context.get(Renderer)('Hello')
+  return context.render('Hello')
 })
 ```
+
+Use `context.render(...)` (or `context.get(Renderer)(...)`).
 
 Renderers may render any value type, not just UI nodes.
 
 ```ts
-import { Renderer, renderWith } from 'remix/render-middleware'
+import { renderWith } from 'remix/render-middleware'
 
 const json = renderWith(
   () =>
@@ -54,7 +56,7 @@ const json = renderWith(
 )
 
 router.get('/api', (context) => {
-  return context.get(Renderer)({ ok: true })
+  return context.render({ ok: true })
 })
 ```
 
@@ -88,9 +90,9 @@ const render = renderWith(
 
 ## Related Packages
 
-- [`fetch-router`](../fetch-router) - Request routing and context
-- [`ui`](../ui) - Remix UI rendering primitives
-- [`response`](../response) - Response helpers
+- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Request routing and context
+- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) - Remix UI rendering primitives
+- [`response`](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers
 
 ## License
 
