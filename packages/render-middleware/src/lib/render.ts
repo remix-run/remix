@@ -27,12 +27,6 @@ export const Renderer = createContextKey<AnyRenderer>()
 
 type RendererFactory<renderer extends AnyRenderer> = (context: RequestContext<any, any>) => renderer
 
-interface RendererContextEntry<renderer extends AnyRenderer> {
-  key: typeof Renderer
-  value: renderer
-  property: 'render'
-}
-
 /**
  * Adds a renderer to request context.
  *
@@ -41,7 +35,7 @@ interface RendererContextEntry<renderer extends AnyRenderer> {
  */
 export function renderWith<const renderer extends AnyRenderer>(
   createRenderer: RendererFactory<renderer>,
-): Middleware<RendererContextEntry<renderer>> {
+): Middleware<{ key: typeof Renderer; value: renderer; property: 'render' }> {
   return (context) => {
     context.set(Renderer, createRenderer(context), { property: 'render' })
   }
