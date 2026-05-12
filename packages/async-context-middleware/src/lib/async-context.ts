@@ -3,6 +3,7 @@ import { AsyncLocalStorage } from 'node:async_hooks'
 import type {
   AnyParams,
   ContextEntries,
+  ContextWithEntries,
   Middleware,
   RequestContext,
   RouterTypes,
@@ -10,7 +11,7 @@ import type {
 
 type RequestContextWithAnyParams<context> =
   context extends RequestContext<any, infer entries extends ContextEntries>
-    ? RequestContext<AnyParams, entries>
+    ? ContextWithEntries<RequestContext<AnyParams>, entries>
     : RequestContext<AnyParams>
 
 export type AsyncRequestContext = RouterTypes extends {

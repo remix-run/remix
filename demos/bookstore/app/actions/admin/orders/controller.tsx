@@ -1,6 +1,4 @@
 import { createController } from 'remix/fetch-router'
-import { Database } from 'remix/data-table'
-import { Renderer } from 'remix/render-middleware'
 
 import { orders, orderItemsWithBook } from '../../../data/schema.ts'
 import { requireAdmin } from '../../../middleware/admin.ts'
@@ -13,9 +11,7 @@ import { AdminOrderNotFoundPage, AdminOrderShowPage } from './show-page.tsx'
 export default createController(routes.admin.orders, {
   middleware: [requireAuth(), requireAdmin()],
   actions: {
-    async index({ get }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async index({ db, render }) {
       let allOrders = await db.findMany(orders, {
         orderBy: ['created_at', 'asc'],
         with: { items: orderItemsWithBook },
@@ -24,9 +20,7 @@ export default createController(routes.admin.orders, {
       return render(<AdminOrdersIndexPage orders={allOrders} />)
     },
 
-    async show({ get, params }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async show({ db, params, render }) {
       let orderId = parseId(params.orderId)
       let order =
         orderId === undefined

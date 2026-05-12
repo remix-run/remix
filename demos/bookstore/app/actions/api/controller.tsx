@@ -1,10 +1,8 @@
 import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
-import { Database } from 'remix/data-table'
 
 import { books } from '../../data/schema.ts'
-import { Session } from '../../middleware/session.ts'
 import { routes } from '../../routes.ts'
 import { addToCart, removeFromCart } from '../../utils/cart.ts'
 import { getCurrentCart } from '../../utils/context.ts'
@@ -17,10 +15,7 @@ const bookIdSchema = f.object({
 
 export default createController(routes.api, {
   actions: {
-    async cartToggle({ get }) {
-      let db = get(Database)
-      let session = get(Session)
-      let formData = get(FormData)
+    async cartToggle({ db, formData, session }) {
       let { bookId } = s.parse(bookIdSchema, formData)
       let parsedBookId = parseId(bookId)
       let book = parsedBookId === undefined ? undefined : await db.find(books, parsedBookId)
@@ -28,7 +23,7 @@ export default createController(routes.api, {
         return new Response('Book not found', { status: 404 })
       }
 
-      let cart = getCurrentCart()
+      let cart = getCurrentCart(session)
       let inCart = cart.items.some((item) => item.bookId === book.id)
 
       let next = inCart

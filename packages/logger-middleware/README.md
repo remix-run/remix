@@ -1,10 +1,11 @@
 # logger-middleware
 
-HTTP request/response logging middleware for Remix. It logs request metadata and response details with configurable output formats.
+HTTP request/response logging middleware for Remix. It logs request metadata and response details with configurable output formats, and exposes the configured log function on request context.
 
 ## Features
 
 - **Request/Response Logging** - Logs method, path, status, and response metadata
+- **Context Logger** - Exposes `context.logger` (or `context.get(Logger)`)
 - **Token-Based Formatting** - Customize log output with built-in placeholders
 - **Structured Timing Data** - Includes request duration and timestamps
 - **Colorized Output** - Highlights method, status, duration, and content length in TTY output
@@ -25,8 +26,15 @@ let router = createRouter({
   middleware: [logger()],
 })
 
+router.get('/users/:id', (context) => {
+  context.logger(`Loading user ${context.params.id}`)
+  return Response.json(loadUser(context.params.id))
+})
+
 // Logs: [19/Nov/2025:14:32:10 -0800] GET /users/123 200 1234
 ```
+
+Use `context.logger(message)` (or `context.get(Logger)(message)`) for app logs that should use the configured logger.
 
 ### Custom Format
 

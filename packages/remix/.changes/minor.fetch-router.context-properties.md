@@ -1,0 +1,1 @@
+Added support for middleware-installed direct request context properties through `remix/fetch-router`, including the new `ContextEntry` type for object-shaped context entries. Built-in middleware now uses this for `context.auth`, `context.formData`, `context.logger`, `context.render`, and `context.session`; keyed access with `context.get(...)` remains supported.

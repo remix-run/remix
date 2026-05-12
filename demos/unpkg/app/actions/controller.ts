@@ -1,5 +1,4 @@
 import { createController } from 'remix/fetch-router'
-import { Renderer } from 'remix/render-middleware'
 import { createRedirectResponse as redirect } from 'remix/response/redirect'
 
 import { routes } from '../routes.ts'
@@ -19,12 +18,10 @@ import { renderDirectoryListing, renderError, renderFileContent } from './packag
 
 export default createController(routes, {
   actions: {
-    home({ get }) {
-      let render = get(Renderer)
+    home({ render }) {
       return render({ title: 'UNPKG - npm package browser', content: HomePage() })
     },
-    async packageBrowser({ get, params }) {
-      let render = get(Renderer)
+    async packageBrowser({ params, render }) {
       let path = params.path ?? ''
 
       if (!path) {
