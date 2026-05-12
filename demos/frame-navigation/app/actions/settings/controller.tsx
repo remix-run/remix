@@ -1,5 +1,4 @@
 import { createController } from 'remix/fetch-router'
-import type { Renderer as Render } from 'remix/render-middleware'
 import type { Handle, RemixNode } from 'remix/ui'
 import { Frame } from 'remix/ui'
 
@@ -19,22 +18,47 @@ export default createController(routes.settings, {
   middleware: [requireAuth],
   actions: {
     index({ render, request }) {
-      return renderSettingsPage(render, request, 'overview', <Index />)
+      return render(
+        <SettingsPage activeItem="overview" {...getSettingsFrameProps(request)}>
+          <Index />
+        </SettingsPage>,
+      )
     },
     profile({ render, request }) {
-      return renderSettingsPage(render, request, 'profile', <Profile />)
+      return render(
+        <SettingsPage activeItem="profile" {...getSettingsFrameProps(request)}>
+          <Profile />
+        </SettingsPage>,
+      )
     },
     notifications({ render, request }) {
-      return renderSettingsPage(render, request, 'notifications', <Notifications />)
+      return render(
+        <SettingsPage activeItem="notifications" {...getSettingsFrameProps(request)}>
+          <Notifications />
+        </SettingsPage>,
+      )
     },
     privacy({ render, request }) {
-      return renderSettingsPage(render, request, 'privacy', <Privacy />, { status: 500 })
+      return render(
+        <SettingsPage activeItem="privacy" {...getSettingsFrameProps(request)}>
+          <Privacy />
+        </SettingsPage>,
+        { status: 500 },
+      )
     },
     grading({ render, request }) {
-      return renderSettingsPage(render, request, 'grading', <Grading />)
+      return render(
+        <SettingsPage activeItem="grading" {...getSettingsFrameProps(request)}>
+          <Grading />
+        </SettingsPage>,
+      )
     },
     integrations({ render, request }) {
-      return renderSettingsPage(render, request, 'integrations', <Integrations />)
+      return render(
+        <SettingsPage activeItem="integrations" {...getSettingsFrameProps(request)}>
+          <Integrations />
+        </SettingsPage>,
+      )
     },
   },
 })
@@ -42,39 +66,27 @@ export default createController(routes.settings, {
 type SettingsPageProps = {
   activeItem: SettingsNavItem
   children?: RemixNode
-  isSettingsFrameRequest: boolean
-  requestUrl: string
+  frameSrc: string
+  isFrameRequest: boolean
 }
 
-function renderSettingsPage(
-  render: Render<RemixNode>,
-  request: Request,
-  activeItem: SettingsNavItem,
-  content: RemixNode,
-  init?: ResponseInit,
-) {
-  return render(
-    <SettingsShellOrFragment
-      activeItem={activeItem}
-      isSettingsFrameRequest={request.headers.get('X-Remix-Target') === frames.settings}
-      requestUrl={request.url}
-    >
-      {content}
-    </SettingsShellOrFragment>,
-    init,
-  )
+function getSettingsFrameProps(request: Request) {
+  return {
+    frameSrc: request.url,
+    isFrameRequest: request.headers.get('X-Remix-Target') === frames.settings,
+  }
 }
 
-function SettingsShellOrFragment(handle: Handle<SettingsPageProps>) {
+function SettingsPage(handle: Handle<SettingsPageProps>) {
   return () => {
-    let { activeItem, children, isSettingsFrameRequest, requestUrl } = handle.props
-    if (isSettingsFrameRequest) {
+    let { activeItem, children, frameSrc, isFrameRequest } = handle.props
+    if (isFrameRequest) {
       return <SettingsLayout activeItem={activeItem}>{children}</SettingsLayout>
     }
 
     return (
       <Layout title="Settings" activeNav="settings">
-        <Frame name={frames.settings} src={requestUrl} />
+        <Frame name={frames.settings} src={frameSrc} />
       </Layout>
     )
   }
