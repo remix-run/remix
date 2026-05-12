@@ -3,7 +3,7 @@
   "private": true,
   "dependencies": {
     "@remix-run/multipart-parser": "workspace:^",
-    "tmp": "^0.2.3"
+    "tmp": "^0.2.5"
   },
   "devDependencies": {
     "@types/bun": "^1.1.6",
