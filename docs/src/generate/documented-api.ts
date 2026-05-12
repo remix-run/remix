@@ -1,4 +1,5 @@
 import * as typedoc from 'typedoc'
+import { resolveRemixPath } from './manifest.ts'
 import { getApiNameFromFullName, invariant, unimplemented, warn } from './utils.ts'
 import { MDN_SYMBOLS } from './symbols.ts'
 
@@ -549,11 +550,13 @@ function getApiFilePath(
 ): string {
   let nameParts = fullName.split('.').filter((part) => part !== '')
   invariant(nameParts.length >= 2, `Invalid full name for API: ${fullName}`)
-  // Rewrite `@remix-run/<pkg>` to `remix/<pkg>` so docs render under the
-  // umbrella's import path. The doc generator skips the actual `remix`
-  // umbrella package and documents `@remix-run/*` source reflections directly
-  // (see `createLookupMaps` in typedoc.ts).
-  let pkg = nameParts.shift()?.replace(/^@remix-run\//g, 'remix/')
+  // Resolve `@remix-run/<pkg>` to its canonical `remix/*` path via the
+  // manifest so docs render under the umbrella's import path. The doc
+  // generator skips the actual `remix` umbrella package and documents
+  // `@remix-run/*` source reflections directly (see `createLookupMaps` in
+  // typedoc.ts).
+  let rawPkg = nameParts.shift() ?? ''
+  let pkg = rawPkg.startsWith('@remix-run/') ? `remix/${resolveRemixPath(rawPkg)}` : rawPkg
   let name = nameParts.pop()
   return [pkg, ...nameParts, type, `${name}.md`].filter(Boolean).join('/')
 }
