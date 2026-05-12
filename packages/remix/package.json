@@ -492,6 +492,7 @@
     "@remix-run/mime": "workspace:^",
     "@remix-run/multipart-parser": "workspace:^",
     "@remix-run/node-fetch-server": "workspace:^",
+    "@remix-run/node-tsx": "workspace:^",
     "@remix-run/response": "workspace:^",
     "@remix-run/route-pattern": "workspace:^",
     "@remix-run/session": "workspace:^",
@@ -505,8 +506,6 @@
     "@remix-run/test": "workspace:^",
     "@remix-run/terminal": "workspace:^",
     "@remix-run/node-serve": "workspace:^",
-    "@remix-run/routes": "workspace:^",
-    "@remix-run/node-tsx": "workspace:^",
     "@remix-run/render-middleware": "workspace:^"
   },
   "scripts": {
