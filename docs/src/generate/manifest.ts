@@ -27,14 +27,12 @@ export function mapToRemixPackage(specifier: string): string {
   let direct = specifierMap.get(specifier)
   if (direct) return direct
 
-  // Sub-path specifier whose package root matched a pattern entry:
-  // e.g. `@remix-run/fetch-router/routes` — check the bare package name.
-  let pkgName = specifier.startsWith('@')
-    ? specifier.slice(0, specifier.indexOf('/', 1))
-    : specifier.slice(0, specifier.indexOf('/'))
-  let subpath = specifier.slice(pkgName.length + 1) // strip leading "/"
-
-  if (subpath) {
+  // Sub-path specifier (e.g. `@remix-run/fetch-router/routes`): check the
+  // package root against the map and append the subpath.
+  let parts = specifier.split('/')
+  if (parts.length > 2) {
+    let pkgName = `${parts[0]}/${parts[1]}`
+    let subpath = parts.slice(2).join('/')
     let pkgKey = specifierMap.get(pkgName)
     if (pkgKey) return `${pkgKey}/${subpath}`
   }
