@@ -1,7 +1,7 @@
 {
   "remix/data-table/$1": "@remix-run/data-table-([a-z0-9-]+)",
   "remix/file-storage/$1": "@remix-run/file-storage-([a-z0-9-]+)",
-  "remix/middleware/$1": "@remix-run/(a-z0-9-]+)-middleware",
+  "remix/middleware/$1": "@remix-run/([a-z0-9-]+)-middleware",
   "remix/router": "@remix-run/fetch-router",
   "remix/routes": "@remix-run/fetch-router/routes",
   "remix/session": "@remix-run/session",
