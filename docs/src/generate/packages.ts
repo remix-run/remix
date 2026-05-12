@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as s from 'remix/data-schema'
-import { resolveRemixPath } from './manifest.ts'
+import { mapToRemixPackage } from './manifest.ts'
 import { info, invariant, warn } from './utils.ts'
 
 type PackageOverview = {
@@ -202,7 +202,7 @@ function getDocsPackageName(packageName: string): string {
   }
 
   invariant(packageName.startsWith('@remix-run/'), `Unexpected package name: ${packageName}`)
-  return `remix/${resolveRemixPath(packageName)}`
+  return mapToRemixPackage(packageName)
 }
 
 function frontmatter(overview: PackageOverview): string {

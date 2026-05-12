@@ -1,5 +1,5 @@
 import * as typedoc from 'typedoc'
-import { resolveRemixPath } from './manifest.ts'
+import { mapToRemixPackage } from './manifest.ts'
 import { getApiNameFromFullName, invariant, unimplemented, warn } from './utils.ts'
 import { MDN_SYMBOLS } from './symbols.ts'
 
@@ -556,7 +556,7 @@ function getApiFilePath(
   // `@remix-run/*` source reflections directly (see `createLookupMaps` in
   // typedoc.ts).
   let rawPkg = nameParts.shift() ?? ''
-  let pkg = rawPkg.startsWith('@remix-run/') ? `remix/${resolveRemixPath(rawPkg)}` : rawPkg
+  let pkg = rawPkg.startsWith('@remix-run/') ? mapToRemixPackage(rawPkg) : rawPkg
   let name = nameParts.pop()
   return [pkg, ...nameParts, type, `${name}.md`].filter(Boolean).join('/')
 }
