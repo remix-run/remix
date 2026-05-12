@@ -115,8 +115,7 @@ async function getRemixRunPackages() {
   }
 
   // Expand the manifest now that we have all package names.
-  let allPackageNames = remixRunPackages.map((p) => p.name)
-  let specifierToRemixPath = buildSpecifierToRemixPath(manifestRaw, allPackageNames)
+  let specifierToRemixPath = buildSpecifierToRemixPath(manifestRaw, packagesDir)
 
   // Build ExportEntry objects for each package, using manifest overrides where available.
   for (let remixRunPackage of remixRunPackages) {

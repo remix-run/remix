@@ -7,17 +7,13 @@ import * as url from 'node:url'
 import {
   buildSpecifierToRemixPath,
   readManifest,
-  readWorkspacePackageNames,
 } from '../../scripts/utils/manifest.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '..')
 
 const manifest = readManifest(path.join(__dirname, 'manifest.json'))
-const workspacePackageNames = readWorkspacePackageNames(packagesDir)
-
-// Build the expanded specifier → canonical remix path map.
-const specifierMap = buildSpecifierToRemixPath(manifest, workspacePackageNames)
+const specifierMap = buildSpecifierToRemixPath(manifest, packagesDir)
 
 // Invert for coverage checks: specifier → all remix paths that cover it.
 const specifierToRemixPaths = new Map<string, string[]>()
@@ -50,7 +46,7 @@ describe('manifest', () => {
     for (let [keyPattern, valuePattern] of Object.entries(manifest)) {
       if (!valuePattern.includes('(')) continue
       let regex = new RegExp(`^${valuePattern}$`)
-      let matched = workspacePackageNames.some((name) => regex.test(name))
+      let matched = [...specifierMap.keys()].some((name) => regex.test(name))
       assert.ok(
         matched,
         `Pattern entry "${keyPattern}": "${valuePattern}" did not match any workspace package`,

@@ -3,7 +3,7 @@ import * as path from 'node:path'
 
 /**
  * Builds a reverse lookup from npm specifier to canonical `remix/*` path by
- * expanding the manifest against a list of workspace package names.
+ * scanning workspace packages and expanding the manifest against their names.
  *
  * Literal entries map directly: `"remix/router": "@remix-run/fetch-router"`
  *   → `@remix-run/fetch-router` → `remix/router`
@@ -19,8 +19,19 @@ import * as path from 'node:path'
  */
 export function buildSpecifierToRemixPath(
   manifest: Record<string, string>,
-  workspacePackageNames: string[],
+  packagesDir: string,
 ): Map<string, string> {
+  let workspacePackageNames = fs
+    .readdirSync(packagesDir)
+    .filter((dir) => fs.existsSync(path.join(packagesDir, dir, 'package.json')))
+    .map((dir) => {
+      let pkg: { name: string } = JSON.parse(
+        fs.readFileSync(path.join(packagesDir, dir, 'package.json'), 'utf-8'),
+      )
+      return pkg.name
+    })
+    .filter((name) => name.startsWith('@remix-run/'))
+
   let result = new Map<string, string>()
   for (let [key, value] of Object.entries(manifest)) {
     if (value.includes('(')) {
@@ -44,18 +55,4 @@ export function buildSpecifierToRemixPath(
 /** Read and parse a manifest.json file. */
 export function readManifest(manifestPath: string): Record<string, string> {
   return JSON.parse(fs.readFileSync(manifestPath, 'utf-8'))
-}
-
-/** Scan a packages directory and return all `@remix-run/*` package names. */
-export function readWorkspacePackageNames(packagesDir: string): string[] {
-  return fs
-    .readdirSync(packagesDir)
-    .filter((dir) => fs.existsSync(path.join(packagesDir, dir, 'package.json')))
-    .map((dir) => {
-      let pkg: { name: string } = JSON.parse(
-        fs.readFileSync(path.join(packagesDir, dir, 'package.json'), 'utf-8'),
-      )
-      return pkg.name
-    })
-    .filter((name) => name.startsWith('@remix-run/'))
 }
