@@ -98,7 +98,7 @@ That separation is intentional so the same auth resolution can support public ro
 
 Use `requireAuth()` after `auth()` when a route must be authenticated. If `auth()` did not run first, `requireAuth()` throws. Otherwise it returns `401 Unauthorized` by default, or you can replace that with `onFailure(context, auth)` to return JSON, redirects, or any other custom response.
 
-Handlers whose context contract includes `requireAuth<Identity>()` can read `context.auth.identity` without a manual lookup or cast. You can also use `context.get(Auth)`.
+Handlers whose context contract includes `auth()` and `requireAuth<Identity>()` can read `context.auth.identity` without a manual lookup or cast. You can also use `context.get(Auth)`.
 
 Auth challenges are forwarded to `WWW-Authenticate` automatically when the auth failure included a `challenge`, so clients that honor those challenges can react without custom header handling.
 
