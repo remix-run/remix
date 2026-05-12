@@ -11,6 +11,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
+import { buildSpecifierToRemixPath, readManifest } from './utils/manifest.ts'
 import { logAndExec } from './utils/process.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
@@ -21,41 +22,7 @@ const remixPackageJsonPath = path.join(remixDir, 'package.json')
 const manifestPath = path.join(remixDir, 'manifest.json')
 
 // Load raw manifest; patterns are expanded at runtime once package names are known.
-const manifestRaw: Record<string, string> = JSON.parse(await fs.readFile(manifestPath, 'utf-8'))
-
-/**
- * Expand the manifest into a reverse lookup: specifier → canonical remix path.
- *
- * Literal entries: `"remix/router": "@remix-run/fetch-router"`
- *   → `@remix-run/fetch-router` maps to `remix/router`
- *
- * Pattern entries (value contains a capture group): `"remix/middleware/$1": "@remix-run/([a-z-]+)-middleware"`
- *   → matched against each workspace package name; capture groups substitute $1, $2 … in the key
- *   → e.g. `@remix-run/async-context-middleware` maps to `remix/middleware/async-context`
- */
-function buildSpecifierToRemixPath(
-  manifest: Record<string, string>,
-  workspacePackageNames: string[],
-): Map<string, string> {
-  let result = new Map<string, string>()
-  for (let [key, value] of Object.entries(manifest)) {
-    if (value.includes('(')) {
-      // Pattern entry: value is a regex matching package names
-      let regex = new RegExp(`^${value}$`)
-      for (let pkgName of workspacePackageNames) {
-        let m = pkgName.match(regex)
-        if (m) {
-          let concreteKey = key.replace(/\$(\d+)/g, (_, n) => m[Number(n)] ?? '')
-          result.set(pkgName, concreteKey)
-        }
-      }
-    } else {
-      // Literal entry: value is the full specifier (package or package/subpath)
-      result.set(value, key)
-    }
-  }
-  return result
-}
+const manifestRaw = readManifest(manifestPath)
 
 const CLI_PACKAGE_NAME = '@remix-run/cli'
 const SOURCE_FOLDER = 'src'
