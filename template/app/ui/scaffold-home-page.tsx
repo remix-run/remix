@@ -2,30 +2,15 @@
 import { css, type RemixNode } from 'remix/ui'
 
 import { PromptButton } from '../assets/prompt-button.tsx'
-import { routes } from '../routes.ts'
-
-const APP_DISPLAY_NAME = readAppDisplayName('%%RMX_APP_DISPLAY_NAME_URI_COMPONENT%%')
+import { Document } from './document.tsx'
 
 const FONT_STACK =
   "'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
 
 export function HomePage() {
   return () => (
-    <html lang="en">
-      <head>
-        <meta charSet="utf-8" />
-        <meta name="viewport" content="width=device-width,initial-scale=1" />
-        <meta name="color-scheme" content="light dark" />
-        <title>Welcome to {APP_DISPLAY_NAME}</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap"
-        />
-        <script type="module" src={routes.assets.href({ path: 'app/assets/entry.ts' })}></script>
-      </head>
-      <body
+    <Document>
+      <main
         mix={css({
           // Light-mode design tokens (default).
           '--surface-0': '#dee2e6',
@@ -58,7 +43,7 @@ export function HomePage() {
           justifyContent: 'center',
         })}
       >
-        <main
+        <div
           mix={css({
             width: '100%',
             maxWidth: '820px',
@@ -71,9 +56,9 @@ export function HomePage() {
           <Masthead />
           <Columns />
           <Footer />
-        </main>
-      </body>
-    </html>
+        </div>
+      </main>
+    </Document>
   )
 }
 
@@ -133,8 +118,8 @@ function Columns() {
 
 function GetStartedCard() {
   return () => (
-    <div mix={css({ ...CARD_STYLES, flex: '0 0 auto' })}>
-      <h2 mix={css(CARD_HEADER_STYLES)}>Get started</h2>
+    <div mix={[cardStyle, css({ flex: '0 0 auto' })]}>
+      <h2 mix={cardHeaderStyle}>Get started</h2>
       <ul
         mix={css({
           listStyle: 'none',
@@ -164,14 +149,16 @@ function GetStartedCard() {
 function CodingWithAiCard() {
   return () => (
     <div
-      mix={css({
-        ...CARD_STYLES,
-        width: '540px',
-        justifyContent: 'center',
-        '@media (max-width: 720px)': { width: '100%' },
-      })}
+      mix={[
+        cardStyle,
+        css({
+          width: '540px',
+          justifyContent: 'center',
+          '@media (max-width: 720px)': { width: '100%' },
+        }),
+      ]}
     >
-      <h2 mix={css(CARD_HEADER_STYLES)}>Coding with AI?</h2>
+      <h2 mix={cardHeaderStyle}>Coding with AI?</h2>
       <div
         mix={css({
           width: '100%',
@@ -332,11 +319,7 @@ function Footer() {
   )
 }
 
-function readAppDisplayName(value: string): string {
-  return value.startsWith('%%') ? 'Remix App' : decodeURIComponent(value)
-}
-
-const CARD_STYLES = {
+const cardStyle = css({
   background: 'var(--surface-3)',
   borderRadius: '20px',
   padding: '32px 16px 16px',
@@ -344,9 +327,9 @@ const CARD_STYLES = {
   flexDirection: 'column',
   alignItems: 'center',
   gap: '32px',
-} as const
+})
 
-const CARD_HEADER_STYLES = {
+const cardHeaderStyle = css({
   margin: 0,
   width: '100%',
   padding: '0 16px',
@@ -358,7 +341,7 @@ const CARD_HEADER_STYLES = {
   textTransform: 'uppercase',
   letterSpacing: '0.1em',
   color: 'var(--text-primary)',
-} as const
+})
 
 // ----- SVG icons -----
 // Inline so the page is fully self-contained with no external icon assets.
