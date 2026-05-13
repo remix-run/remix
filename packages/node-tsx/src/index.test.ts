@@ -81,6 +81,52 @@ describe('node-tsx', () => {
     })
   })
 
+  it('maps errors in transformed modules back to the original source', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeJsxRuntime(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'server.ts',
+        ["import { render } from './view.tsx'", 'render()', ''].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'view.tsx',
+        [
+          'export function render() {',
+          '  let element = <div>Hello</div>',
+          '  throw new Error(`render failed for ${element.type}`)',
+          '}',
+          '',
+        ].join('\n'),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.ts'], projectPath)
+
+      assert.notEqual(result.exitCode, 0)
+      assert.match(result.stderr, /render failed for div/)
+      assert.match(result.stderr, /view\.tsx:3:\d+/)
+    })
+  })
+
+  it('delegates non-jsx TypeScript files back to Node', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'server.ts',
+        ['let element = <div>Hello</div>', 'console.log(element)', ''].join('\n'),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.ts'], projectPath)
+
+      assert.notEqual(result.exitCode, 0)
+      assert.match(result.stderr, /server\.ts/)
+      assert.match(result.stderr, /SyntaxError|ERR_INVALID_TYPESCRIPT_SYNTAX/)
+    })
+  })
+
   it('runs tsx modules from symlinked workspace packages', async () => {
     await withProject(async (projectPath) => {
       await linkRemixPackage(projectPath)
@@ -518,6 +564,66 @@ describe('node-tsx', () => {
     })
   })
 
+  it('loads package export graphs through remix/node-tsx/load-module', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeJsxRuntime(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'node_modules/scoped-package/package.json',
+        [
+          '{',
+          '  "name": "scoped-package",',
+          '  "type": "module",',
+          '  "exports": {',
+          '    "./view": "./view.tsx"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'node_modules/scoped-package/view.tsx',
+        [
+          "import { createChild } from './child.tsx'",
+          '',
+          'export function render() {',
+          '  return createChild()',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'node_modules/scoped-package/child.tsx',
+        ['export function createChild() {', '  return <main>Scoped package</main>', '}', ''].join(
+          '\n',
+        ),
+      )
+      await writeProjectFile(
+        projectPath,
+        'start.mjs',
+        [
+          "import { loadModule } from 'remix/node-tsx/load-module'",
+          '',
+          "let { render } = await loadModule('scoped-package/view', import.meta.url)",
+          'console.log(JSON.stringify(render()))',
+          '',
+        ].join('\n'),
+      )
+
+      let result = await runNode(['./start.mjs'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.deepEqual(JSON.parse(result.stdout.trim()), {
+        props: { children: 'Scoped package' },
+        type: 'main',
+      })
+    })
+  })
+
   it('scopes loadModule to the requested import graph', async () => {
     await withProject(async (projectPath) => {
       await linkRemixPackage(projectPath)
@@ -554,6 +660,244 @@ describe('node-tsx', () => {
         type: 'div',
       })
       assert.equal(scopeMessage, 'scoped import only')
+    })
+  })
+
+  it('keeps separate loadModule registrations isolated from each other', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'app-a/tsconfig.json',
+        [
+          '{',
+          '  "compilerOptions": {',
+          '    "jsx": "react-jsx",',
+          '    "jsxImportSource": "jsx-a"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'app-b/tsconfig.json',
+        [
+          '{',
+          '  "compilerOptions": {',
+          '    "jsx": "react-jsx",',
+          '    "jsxImportSource": "jsx-b"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'node_modules/jsx-a/package.json',
+        [
+          '{',
+          '  "name": "jsx-a",',
+          '  "type": "module",',
+          '  "exports": {',
+          '    "./jsx-runtime": "./jsx-runtime.js"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'node_modules/jsx-a/jsx-runtime.js',
+        [
+          'export const Fragment = "Fragment"',
+          '',
+          'export function jsx(type, props) {',
+          '  return { source: "a", type, props: props ?? null }',
+          '}',
+          '',
+          'export { jsx as jsxs }',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'node_modules/jsx-b/package.json',
+        [
+          '{',
+          '  "name": "jsx-b",',
+          '  "type": "module",',
+          '  "exports": {',
+          '    "./jsx-runtime": "./jsx-runtime.js"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'node_modules/jsx-b/jsx-runtime.js',
+        [
+          'export const Fragment = "Fragment"',
+          '',
+          'export function jsx(type, props) {',
+          '  return { source: "b", type, props: props ?? null }',
+          '}',
+          '',
+          'export { jsx as jsxs }',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'app-a/view.tsx',
+        ['export function render() {', '  return <section>A</section>', '}', ''].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'app-b/view.tsx',
+        ['export function render() {', '  return <article>B</article>', '}', ''].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'start.mjs',
+        [
+          "import { loadModule } from 'remix/node-tsx/load-module'",
+          '',
+          "let first = await loadModule('./app-a/view.tsx', import.meta.url)",
+          "let second = await loadModule('./app-b/view.tsx', import.meta.url)",
+          'console.log(JSON.stringify([first.render(), second.render()]))',
+          '',
+        ].join('\n'),
+      )
+
+      let result = await runNode(['./start.mjs'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.deepEqual(JSON.parse(result.stdout.trim()), [
+        {
+          props: { children: 'A' },
+          source: 'a',
+          type: 'section',
+        },
+        {
+          props: { children: 'B' },
+          source: 'b',
+          type: 'article',
+        },
+      ])
+    })
+  })
+
+  it('resolves loadModule requests from URL parents and absolute paths', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeJsxRuntime(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'relative.tsx',
+        ['export function render() {', '  return <span>Relative</span>', '}', ''].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'absolute.tsx',
+        ['export function render() {', '  return <strong>Absolute</strong>', '}', ''].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'start.mjs',
+        [
+          "import * as path from 'node:path'",
+          "import { fileURLToPath } from 'node:url'",
+          "import { loadModule } from 'remix/node-tsx/load-module'",
+          '',
+          'let projectDir = path.dirname(fileURLToPath(import.meta.url))',
+          "let relative = await loadModule('./relative.tsx', new URL('./start.mjs', import.meta.url))",
+          "let absolute = await loadModule(path.join(projectDir, 'absolute.tsx'), import.meta.url)",
+          'console.log(JSON.stringify([relative.render(), absolute.render()]))',
+          '',
+        ].join('\n'),
+      )
+
+      let result = await runNode(['./start.mjs'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.deepEqual(JSON.parse(result.stdout.trim()), [
+        {
+          props: { children: 'Relative' },
+          type: 'span',
+        },
+        {
+          props: { children: 'Absolute' },
+          type: 'strong',
+        },
+      ])
+    })
+  })
+
+  it('uses the nearest package type for nested tsx modules', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'tsconfig.json',
+        [
+          '{',
+          '  "compilerOptions": {',
+          '    "jsx": "react",',
+          '    "jsxFactory": "jsxRuntime.createElement"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'nested/package.json',
+        ['{', '  "type": "commonjs"', '}', ''].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'nested/view.tsx',
+        [
+          'module.exports.render = function render() {',
+          '  return <div>Nested CommonJS</div>',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'server.ts',
+        [
+          'globalThis.jsxRuntime = {',
+          '  createElement(type, props, ...children) {',
+          '    return {',
+          '      type,',
+          '      props: {',
+          '        ...(props ?? {}),',
+          '        children: children.length <= 1 ? children[0] : children,',
+          '      },',
+          '    }',
+          '  },',
+          '}',
+          '',
+          "let view = await import('./nested/view.tsx')",
+          'console.log(JSON.stringify(view.default.render()))',
+          '',
+        ].join('\n'),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.ts'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.deepEqual(JSON.parse(result.stdout.trim()), {
+        props: { children: 'Nested CommonJS' },
+        type: 'div',
+      })
     })
   })
 
