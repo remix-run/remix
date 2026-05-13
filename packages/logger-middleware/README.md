@@ -1,4 +1,4 @@
-# middleware/logger
+# logger-middleware
 
 HTTP request/response logging middleware for Remix. It logs request metadata and response details with configurable output formats, and exposes the configured log function on request context.
 
@@ -19,8 +19,8 @@ npm i remix
 ## Usage
 
 ```ts
-import { createRouter } from 'remix/router'
-import { logger } from 'remix/middleware/logger'
+import { createRouter } from 'remix/fetch-router'
+import { logger } from 'remix/logger-middleware'
 
 let router = createRouter({
   middleware: [logger()],

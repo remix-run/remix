@@ -22,14 +22,14 @@ request-enriching middleware (session, auth) later.
 Recommended ordering:
 
 ```typescript
-import { createRouter } from 'remix/router'
-import { compression } from 'remix/middleware/compression'
-import { formData } from 'remix/middleware/form-data'
-import { logger } from 'remix/middleware/logger'
-import { methodOverride } from 'remix/middleware/method-override'
-import { session } from 'remix/middleware/session'
-import { staticFiles } from 'remix/middleware/static'
-import { asyncContext } from 'remix/middleware/async-context'
+import { createRouter } from 'remix/fetch-router'
+import { compression } from 'remix/compression-middleware'
+import { formData } from 'remix/form-data-middleware'
+import { logger } from 'remix/logger-middleware'
+import { methodOverride } from 'remix/method-override-middleware'
+import { session } from 'remix/session-middleware'
+import { staticFiles } from 'remix/static-middleware'
+import { asyncContext } from 'remix/async-context-middleware'
 
 let middleware = []
 
@@ -53,18 +53,18 @@ let router = createRouter({ middleware })
 
 | Middleware                 | Import                             | Use when                                                                      | Notes                                                          |
 | -------------------------- | ---------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `staticFiles(dir, opts?)`  | `remix/middleware/static`          | Serve files from `public/` or another directory exactly as they exist on disk | Fast exit; usually near the top                                |
-| `compression()`            | `remix/middleware/compression`     | Compress text-like responses                                                  | Usually global                                                 |
-| `logger()`                 | `remix/middleware/logger`          | Log requests and responses                                                    | Often development-only; `colors` can force color output on/off |
-| `cors(opts?)`              | `remix/middleware/cors`            | Endpoints must serve cross-origin browsers or preflight `OPTIONS` requests    | Usually early so preflights can short-circuit                  |
-| `cop(opts?)`               | `remix/middleware/cop`             | Reject unsafe cross-origin browser requests without synchronizer tokens       | Put before session or CSRF when used                           |
-| `formData(opts?)`          | `remix/middleware/form-data`       | Parse `FormData` bodies, especially forms and uploads                         | Needed for `_csrf` form field extraction                       |
-| `methodOverride()`         | `remix/middleware/method-override` | HTML forms need `PUT`, `PATCH`, or `DELETE` semantics                         | Run after form parsing                                         |
-| `session(cookie, storage)` | `remix/middleware/session`         | Cookie-backed sessions                                                        | Must run before session-backed auth or CSRF                    |
-| `csrf(opts?)`              | `remix/middleware/csrf`            | Session-backed form workflows need synchronizer-token CSRF protection         | Requires `session()` before it                                 |
-| `asyncContext()`           | `remix/middleware/async-context`   | Helpers outside handlers need request context via `getContext()`              | Add before helpers rely on it                                  |
-| `auth({ schemes })`        | `remix/middleware/auth`            | Resolve auth state into `context.get(Auth)`                                   | Run after `session()` for session-backed auth                  |
-| `requireAuth()`            | `remix/middleware/auth`            | A controller or action must reject anonymous access                           | Usually controller-level or action-level, not global           |
+| `staticFiles(dir, opts?)`  | `remix/static-middleware`          | Serve files from `public/` or another directory exactly as they exist on disk | Fast exit; usually near the top                                |
+| `compression()`            | `remix/compression-middleware`     | Compress text-like responses                                                  | Usually global                                                 |
+| `logger()`                 | `remix/logger-middleware`          | Log requests and responses                                                    | Often development-only; `colors` can force color output on/off |
+| `cors(opts?)`              | `remix/cors-middleware`            | Endpoints must serve cross-origin browsers or preflight `OPTIONS` requests    | Usually early so preflights can short-circuit                  |
+| `cop(opts?)`               | `remix/cop-middleware`             | Reject unsafe cross-origin browser requests without synchronizer tokens       | Put before session or CSRF when used                           |
+| `formData(opts?)`          | `remix/form-data-middleware`       | Parse `FormData` bodies, especially forms and uploads                         | Needed for `_csrf` form field extraction                       |
+| `methodOverride()`         | `remix/method-override-middleware` | HTML forms need `PUT`, `PATCH`, or `DELETE` semantics                         | Run after form parsing                                         |
+| `session(cookie, storage)` | `remix/session-middleware`         | Cookie-backed sessions                                                        | Must run before session-backed auth or CSRF                    |
+| `csrf(opts?)`              | `remix/csrf-middleware`            | Session-backed form workflows need synchronizer-token CSRF protection         | Requires `session()` before it                                 |
+| `asyncContext()`           | `remix/async-context-middleware`   | Helpers outside handlers need request context via `getContext()`              | Add before helpers rely on it                                  |
+| `auth({ schemes })`        | `remix/auth-middleware`            | Resolve auth state into `context.get(Auth)`                                   | Run after `session()` for session-backed auth                  |
+| `requireAuth()`            | `remix/auth-middleware`            | A controller or action must reject anonymous access                           | Usually controller-level or action-level, not global           |
 
 ### Static files vs browser modules
 
@@ -129,7 +129,7 @@ context and want the router to continue automatically.
 Use `context.set(key, value)` to add typed values accessible downstream via `context.get(key)`.
 
 ```typescript
-import type { Middleware } from 'remix/router'
+import type { Middleware } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
 
 export function loadDatabase(): Middleware {
@@ -143,7 +143,7 @@ export function loadDatabase(): Middleware {
 ### Guarding routes
 
 ```typescript
-import { Auth } from 'remix/middleware/auth'
+import { Auth } from 'remix/auth-middleware'
 
 export function requireAdmin(): Middleware {
   return (context, next) => {
@@ -164,8 +164,8 @@ helpers:
 
 ```typescript
 // app/utils/context.ts
-import { getContext } from 'remix/middleware/async-context'
-import { Auth } from 'remix/middleware/auth'
+import { getContext } from 'remix/async-context-middleware'
+import { Auth } from 'remix/auth-middleware'
 import { Database } from 'remix/data-table'
 import { Session } from 'remix/session'
 

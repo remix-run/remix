@@ -1,11 +1,11 @@
-# middleware/session
+# session-middleware
 
-Session middleware for Remix using signed cookies. It loads session state from incoming requests, stores it in request context using `Session`, and persists updates automatically.
+Session middleware for Remix using signed cookies. It loads session state from incoming requests, exposes it as `context.session` (or `context.get(Session)`), and persists updates automatically.
 
 ## Features
 
 - **Session Lifecycle Handling** - Reads and saves session state per request
-- **Context Integration** - Exposes session APIs directly on request context
+- **Context Integration** - Exposes `context.session` (or `context.get(Session)`)
 - **Secure Cookie Support** - Designed for signed session cookies
 
 ## Installation
@@ -17,11 +17,10 @@ npm i remix
 ## Usage
 
 ```ts
-import { createRouter } from 'remix/router'
+import { createRouter } from 'remix/fetch-router'
 import { createCookie } from 'remix/cookie'
-import { Session } from 'remix/session'
-import { createCookieSessionStorage } from 'remix/session-storage/cookie'
-import { session } from 'remix/middleware/session'
+import { createCookieSessionStorage } from 'remix/session/cookie-storage'
+import { session } from 'remix/session-middleware'
 
 let sessionCookie = createCookie('__session', {
   secrets: ['s3cr3t'], // session cookies must be signed!
@@ -37,17 +36,18 @@ let router = createRouter({
 })
 
 router.get('/', (context) => {
-  let session = context.get(Session)
-  session.set('count', Number(session.get('count') ?? 0) + 1)
-  return new Response(`Count: ${session.get('count')}`)
+  context.session.set('count', Number(context.session.get('count') ?? 0) + 1)
+  return new Response(`Count: ${context.session.get('count')}`)
 })
 ```
 
 The middleware:
 
 - Reads the session from the cookie on incoming requests
-- Makes it available as `context.get(Session)`
+- Makes it available as `context.session` (or `context.get(Session)`)
 - Automatically saves session changes and sets the cookie on responses
+
+Use `context.session` (or `context.get(Session)`) for normal session reads and writes.
 
 Note: The session cookie must be signed for security. This prevents tampering with the session data on the client.
 
@@ -56,11 +56,9 @@ Note: The session cookie must be signed for security. This prevents tampering wi
 A basic login/logout flow could look like this:
 
 ```ts
-import * as res from 'remix/router/response-helpers'
-import { Session } from 'remix/session'
+import * as res from 'remix/fetch-router/response-helpers'
 
-router.get('/login', ({ get }) => {
-  let session = get(Session)
+router.get('/login', ({ session }) => {
   let error = session.get('error')
   return res.html(`
     <html>
@@ -77,8 +75,7 @@ router.get('/login', ({ get }) => {
   `)
 })
 
-router.post('/login', ({ get }) => {
-  let session = get(Session)
+router.post('/login', ({ get, session }) => {
   let formData = get(FormData)
   let username = formData.get('username')
   let password = formData.get('password')
@@ -95,8 +92,7 @@ router.post('/login', ({ get }) => {
   return res.redirect('/dashboard')
 })
 
-router.post('/logout', ({ get }) => {
-  let session = get(Session)
+router.post('/logout', ({ session }) => {
   session.destroy()
   return res.redirect('/')
 })

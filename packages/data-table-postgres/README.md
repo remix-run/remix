@@ -1,4 +1,4 @@
-# data-table/postgres
+# data-table-postgres
 
 PostgreSQL adapter for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table).
 Use this package when you want `data-table` APIs backed by `pg`.
@@ -27,7 +27,7 @@ npm i remix pg
 ```ts
 import { Pool } from 'pg'
 import { createDatabase } from 'remix/data-table'
-import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
+import { createPostgresDatabaseAdapter } from 'remix/data-table-postgres'
 
 let pool = new Pool({
   connectionString: process.env.DATABASE_URL,

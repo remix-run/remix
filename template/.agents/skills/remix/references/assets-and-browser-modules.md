@@ -28,7 +28,7 @@ preloads, sourcemaps, or fingerprinted URLs.
 
 ```typescript
 import { createAssetServer } from 'remix/assets'
-import { createController } from 'remix/router'
+import { createController } from 'remix/fetch-router'
 import { get, route } from 'remix/routes'
 
 export const routes = route({

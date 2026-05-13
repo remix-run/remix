@@ -55,7 +55,7 @@ a known session, swap in `createMemorySessionStorage()` and a test cookie when c
 router.
 
 ```ts
-import { createMemorySessionStorage } from 'remix/session-storage/memory'
+import { createMemorySessionStorage } from 'remix/session/memory-storage'
 import { createCookie } from 'remix/cookie'
 
 let router = createBookstoreRouter({

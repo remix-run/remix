@@ -1,4 +1,4 @@
-# middleware/csrf
+# csrf-middleware
 
 CSRF protection middleware for Remix. It provides synchronizer-token validation backed by session storage, plus origin checks for unsafe requests.
 
@@ -21,10 +21,10 @@ This middleware requires [`session-middleware`](https://github.com/remix-run/rem
 
 ```ts
 import { createCookie } from 'remix/cookie'
-import { createRouter } from 'remix/router'
-import { createCookieSessionStorage } from 'remix/session-storage/cookie'
-import { session } from 'remix/middleware/session'
-import { csrf, getCsrfToken } from 'remix/middleware/csrf'
+import { createRouter } from 'remix/fetch-router'
+import { createCookieSessionStorage } from 'remix/session/cookie-storage'
+import { session } from 'remix/session-middleware'
+import { csrf, getCsrfToken } from 'remix/csrf-middleware'
 
 let sessionCookie = createCookie('__session', { secrets: ['secret1'] })
 let sessionStorage = createCookieSessionStorage()

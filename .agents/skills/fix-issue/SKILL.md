@@ -29,7 +29,7 @@ Use `gh issue view <number> --repo remix-run/remix` or `WebFetch` to read the fu
 Extract:
 
 - Bug description and expected vs actual behavior
-- Remix version and which package(s) are involved (e.g., `remix/router`, `remix/route-pattern`, `remix/cli`)
+- Remix version and which package(s) are involved (e.g., `remix/fetch-router`, `remix/route-pattern`, `remix/cli`)
 - Any code snippets in the issue
 - Links to reproductions (StackBlitz, CodeSandbox, GitHub repo, etc.)
 

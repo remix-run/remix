@@ -1,6 +1,6 @@
 # auth
 
-Composable browser authentication primitives for Remix. Use this package to verify credentials on your own server, start external OAuth or OIDC redirects, finish provider callbacks, and write an app-owned auth record into the session. Pair it with [`remix/middleware/auth`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) when later requests need to resolve that session data into the current user and protect routes.
+Composable browser authentication primitives for Remix. Use this package to verify credentials on your own server, start external OAuth or OIDC redirects, finish provider callbacks, and write an app-owned auth record into the session. Pair it with [`remix/auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) when later requests need to resolve that session data into the current user and protect routes.
 
 ## Features
 
@@ -9,7 +9,7 @@ Composable browser authentication primitives for Remix. Use this package to veri
 - Module-scope provider configuration for boot-time validation and stable callback URLs
 - App-owned session records so you decide what auth data to persist
 - Shared session completion for credentials and external auth flows
-- Designed to pair with `remix/middleware/auth` for request-time auth resolution and route protection
+- Designed to pair with `remix/auth-middleware` for request-time auth resolution and route protection
 
 ## Installation
 
@@ -34,17 +34,17 @@ The route owns redirects, flashes, and other app-specific behavior. `remix/auth`
 Use `createCredentialsAuthProvider()` when your own server can verify submitted credentials directly, such as email/password logins.
 
 ```ts
-import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/middleware/auth'
+import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/auth-middleware'
 import { completeAuth, createCredentialsAuthProvider, verifyCredentials } from 'remix/auth'
 import { createCookie } from 'remix/cookie'
-import { createRouter } from 'remix/router'
-import { formData } from 'remix/middleware/form-data'
+import { createRouter } from 'remix/fetch-router'
+import { formData } from 'remix/form-data-middleware'
 import { form, route } from 'remix/routes'
-import type { GoodAuth } from 'remix/middleware/auth'
+import type { GoodAuth } from 'remix/auth-middleware'
 import { redirect } from 'remix/response/redirect'
 import { Session } from 'remix/session'
-import { session } from 'remix/middleware/session'
-import { createCookieSessionStorage } from 'remix/session-storage/cookie'
+import { session } from 'remix/session-middleware'
+import { createCookieSessionStorage } from 'remix/session/cookie-storage'
 
 let sessionCookie = createCookie('__session', {
   secrets: [env.SESSION_SECRET],
@@ -148,7 +148,7 @@ router.get(routes.app.dashboard, {
 Starting from the same `session()`, `auth()`, and `createSessionAuthScheme()` setup as the credentials example above, you can add a Google login flow like this. The provider is created once at module scope, and the routes compose `startExternalAuth()`, `finishExternalAuth()`, and `completeAuth()` directly.
 
 ```ts
-import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/middleware/auth'
+import { auth, Auth, createSessionAuthScheme, requireAuth } from 'remix/auth-middleware'
 import {
   completeAuth,
   createGoogleAuthProvider,
@@ -157,12 +157,12 @@ import {
   startExternalAuth,
 } from 'remix/auth'
 import { createCookie } from 'remix/cookie'
-import { createRouter } from 'remix/router'
+import { createRouter } from 'remix/fetch-router'
 import { route } from 'remix/routes'
-import type { GoodAuth } from 'remix/middleware/auth'
+import type { GoodAuth } from 'remix/auth-middleware'
 import { redirect } from 'remix/response/redirect'
-import { session } from 'remix/middleware/session'
-import { createCookieSessionStorage } from 'remix/session-storage/cookie'
+import { session } from 'remix/session-middleware'
+import { createCookieSessionStorage } from 'remix/session/cookie-storage'
 
 let sessionCookie = createCookie('__session', {
   secrets: [env.SESSION_SECRET],

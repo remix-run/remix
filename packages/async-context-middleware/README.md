@@ -1,4 +1,4 @@
-# middleware/async-context
+# async-context-middleware
 
 Request-scoped async context middleware for Remix. It stores each request context in [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html#class-asynclocalstorage) so utilities can access it anywhere in the same async call stack.
 
@@ -20,8 +20,8 @@ npm i remix
 Use `asyncContext()` at the router level to make the current request context available to helpers deeper in the same async call stack.
 
 ```ts
-import { createRouter } from 'remix/router'
-import { asyncContext, getContext } from 'remix/middleware/async-context'
+import { createRouter } from 'remix/fetch-router'
+import { asyncContext, getContext } from 'remix/async-context-middleware'
 
 let router = createRouter({
   middleware: [asyncContext()],
@@ -47,8 +47,8 @@ This middleware requires support for `node:async_hooks`, so it is intended for N
 `getContext()` is global and out-of-band, so it reuses your fetch-router `RouterTypes.context` by default.
 
 ```ts
-import { requireAuth } from 'remix/middleware/auth'
-import type { AnyParams, ContextWithParams, MiddlewareContext } from 'remix/router'
+import { requireAuth } from 'remix/auth-middleware'
+import type { AnyParams, ContextWithParams, MiddlewareContext } from 'remix/fetch-router'
 import { loadAuth } from './middleware/auth.ts'
 import { loadSession } from './middleware/session.ts'
 
@@ -65,7 +65,7 @@ export type AuthenticatedAppContext<params extends AnyParams = {}> = ContextWith
   params
 >
 
-declare module 'remix/router' {
+declare module 'remix/fetch-router' {
   interface RouterTypes {
     context: AppContext
   }
@@ -75,8 +75,8 @@ declare module 'remix/router' {
 After that augmentation, `getContext()` returns your app context values everywhere in the app, with route params typed broadly as `AnyParams`.
 
 ```ts
-import { Auth } from 'remix/middleware/auth'
-import { getContext } from 'remix/middleware/async-context'
+import { Auth } from 'remix/auth-middleware'
+import { getContext } from 'remix/async-context-middleware'
 
 function getCurrentAuth() {
   return getContext().get(Auth)
