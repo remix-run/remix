@@ -1,4 +1,4 @@
-# session-storage/redis
+# session-storage-redis
 
 Redis-backed session storage for [`remix/session`](https://github.com/remix-run/remix/tree/main/packages/session).
 Use this package when app servers need to share session state through Redis.
@@ -13,7 +13,7 @@ npm i remix
 
 ```ts
 import { createClient } from 'redis'
-import { createRedisSessionStorage } from 'remix/session-storage/redis'
+import { createRedisSessionStorage } from 'remix/session-storage-redis'
 
 let redis = createClient({ url: process.env.REDIS_URL })
 await redis.connect()

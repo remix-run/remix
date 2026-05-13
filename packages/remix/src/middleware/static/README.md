@@ -1,4 +1,4 @@
-# middleware/static
+# static-middleware
 
 Static file serving middleware for Remix. Serves static files from a directory with support for ETags, range requests, and conditional requests.
 
@@ -21,8 +21,8 @@ npm i remix
 Static middleware is useful for serving static files from a directory.
 
 ```ts
-import { createRouter } from 'remix/router'
-import { staticFiles } from 'remix/middleware/static'
+import { createRouter } from 'remix/fetch-router'
+import { staticFiles } from 'remix/static-middleware'
 
 let router = createRouter({
   middleware: [staticFiles('./public')],

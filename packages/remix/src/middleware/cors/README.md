@@ -1,4 +1,4 @@
-# middleware/cors
+# cors-middleware
 
 CORS middleware for Remix. It adds standard CORS response headers to Fetch API servers and can either short-circuit preflight requests or pass them through to app-defined `OPTIONS` handlers.
 
@@ -19,8 +19,8 @@ npm i remix
 ## Usage
 
 ```ts
-import { createRouter } from 'remix/router'
-import { cors } from 'remix/middleware/cors'
+import { createRouter } from 'remix/fetch-router'
+import { cors } from 'remix/cors-middleware'
 
 let router = createRouter({
   middleware: [

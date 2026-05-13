@@ -1,4 +1,4 @@
-# middleware/form-data
+# form-data-middleware
 
 Form body parsing middleware for Remix. It parses incoming [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) and exposes it via `context.formData` (or `context.get(FormData)`).
 
@@ -24,8 +24,8 @@ When `formData()` runs successfully it always provides a `FormData` value. Reque
 Uploaded files are available in the parsed `FormData` object. For a single file field, use `formData.get(name)`. For repeated file fields, use `formData.getAll(name)`.
 
 ```ts
-import { createRouter } from 'remix/router'
-import { formData } from 'remix/middleware/form-data'
+import { createRouter } from 'remix/fetch-router'
+import { formData } from 'remix/form-data-middleware'
 
 let router = createRouter({
   middleware: [formData()],
@@ -50,7 +50,7 @@ Use `context.formData` (or `context.get(FormData)`).
 You can use a custom upload handler to customize how file uploads are handled. The return value of the upload handler will be used as the value of the form field in the `FormData` object.
 
 ```ts
-import { formData } from 'remix/middleware/form-data'
+import { formData } from 'remix/form-data-middleware'
 import { writeFile } from 'node:fs/promises'
 
 let router = createRouter({
