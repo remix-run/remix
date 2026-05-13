@@ -201,6 +201,123 @@ describe('node-tsx', () => {
     })
   })
 
+  it('supports jsxImportSource pragmas in transformed modules', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeJsxRuntime(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'node_modules/pragma-jsx/package.json',
+        [
+          '{',
+          '  "name": "pragma-jsx",',
+          '  "type": "module",',
+          '  "exports": {',
+          '    "./jsx-runtime": "./jsx-runtime.js"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'node_modules/pragma-jsx/jsx-runtime.js',
+        [
+          'export const Fragment = "Fragment"',
+          '',
+          'export function jsx(type, props) {',
+          '  return { source: "pragma", type, props: props ?? null }',
+          '}',
+          '',
+          'export { jsx as jsxs }',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'server.tsx',
+        [
+          '/** @jsxImportSource pragma-jsx */',
+          'let element = <div>Hello</div>',
+          'console.log(JSON.stringify(element))',
+          '',
+        ].join('\n'),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.tsx'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.deepEqual(JSON.parse(result.stdout.trim()), {
+        props: { children: 'Hello' },
+        source: 'pragma',
+        type: 'div',
+      })
+    })
+  })
+
+  it('supports classic jsx factory pragmas in transformed modules', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'tsconfig.json',
+        [
+          '{',
+          '  "compilerOptions": {',
+          '    "jsx": "react",',
+          '    "jsxFactory": "React.createElement",',
+          '    "jsxFragmentFactory": "React.Fragment"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'server.tsx',
+        [
+          '/** @jsx h */',
+          '/** @jsxFrag Fragment */',
+          'const Fragment = "Fragment"',
+          '',
+          'function h(type, props, ...children) {',
+          '  return {',
+          '    source: "pragma",',
+          '    type,',
+          '    props: {',
+          '      ...(props ?? {}),',
+          '      children: children.length <= 1 ? children[0] : children,',
+          '    },',
+          '  }',
+          '}',
+          '',
+          'let element = <>',
+          '  <div>Hello</div>',
+          '</>',
+          'console.log(JSON.stringify(element))',
+          '',
+        ].join('\n'),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.tsx'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.deepEqual(JSON.parse(result.stdout.trim()), {
+        props: {
+          children: {
+            props: { children: 'Hello' },
+            source: 'pragma',
+            type: 'div',
+          },
+        },
+        source: 'pragma',
+        type: 'Fragment',
+      })
+    })
+  })
+
   it('loads ts entrypoints with tsx imports through remix/node-tsx/load-module', async () => {
     await withProject(async (projectPath) => {
       await linkRemixPackage(projectPath)
