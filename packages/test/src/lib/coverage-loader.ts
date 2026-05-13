@@ -25,7 +25,7 @@ export async function load(
 
   let filePath = fileURLToPath(cleanUrl)
   let source = await readFile(filePath, 'utf-8')
-  let { code, format } = await transformTypeScript(source, filePath)
+  let { code } = await transformTypeScript(source, filePath)
 
-  return { format, source: code, shortCircuit: true }
+  return { format: 'module', source: code, shortCircuit: true }
 }
