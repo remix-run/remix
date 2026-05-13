@@ -1,5 +1,4 @@
 import { createController } from 'remix/router'
-import { Renderer } from 'remix/middleware/render'
 
 import { assetServer } from '../assets.ts'
 import { routes } from '../routes.ts'
@@ -13,8 +12,7 @@ export default createController(routes, {
       )
     },
     home(context) {
-      let render = context.get(Renderer)
-      return render(<HomePage />)
+      return context.render(<HomePage />)
     },
   },
 })

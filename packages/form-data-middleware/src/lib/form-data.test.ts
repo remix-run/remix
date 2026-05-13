@@ -11,7 +11,7 @@ import {
   type FileUploadHandler,
 } from '@remix-run/form-data-parser'
 import { createRouter } from '@remix-run/fetch-router'
-import type { ContextEntries, RequestContext } from '@remix-run/fetch-router'
+import type { ContextEntries, Middleware, RequestContext } from '@remix-run/fetch-router'
 
 import { formData } from './form-data.ts'
 
@@ -54,7 +54,7 @@ describe('formData middleware', () => {
     })
 
     router.post('/', (context) => {
-      let entries = Object.fromEntries(context.get(FormData).entries())
+      let entries = Object.fromEntries(context.formData.entries())
       return Response.json(entries)
     })
 
@@ -539,6 +539,32 @@ describe('formData middleware', () => {
     })
     assert.equal(firstUploadHandler.mock.calls.length, 1)
     assert.equal(secondUploadHandler.mock.calls.length, 0)
+  })
+
+  it('installs context.formData when FormData was already parsed by an earlier middleware', async () => {
+    let parsedFormData = new FormData()
+    parsedFormData.set('name', 'test')
+
+    let setFormData: Middleware<{ key: typeof FormData; value: FormData }> = (context) => {
+      context.set(FormData, parsedFormData)
+    }
+
+    let router = createRouter({
+      middleware: [setFormData, formData()],
+    })
+
+    router.post('/', (context) =>
+      Response.json({
+        name: context.formData.get('name'),
+      }),
+    )
+
+    let response = await router.fetch('https://remix.run/', { method: 'POST' })
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), {
+      name: 'test',
+    })
   })
 
   it('is a no-op when FormData has already been parsed by earlier request pipeline middleware', async (t) => {

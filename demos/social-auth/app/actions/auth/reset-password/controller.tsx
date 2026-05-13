@@ -1,7 +1,6 @@
 import { createController } from 'remix/router'
-import { Database } from 'remix/data-table'
+import type { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
-import { Renderer } from 'remix/middleware/render'
 
 import { ErrorPage } from '../error-page.tsx'
 import { getIssueMessage } from '../form-utils.ts'
@@ -9,7 +8,6 @@ import { ResetPasswordCompletePage, ResetPasswordPage } from './page.tsx'
 import { resetPasswordSchema } from '../schemas.ts'
 import { passwordResetTokens, users } from '../../../data/schema.ts'
 import { getReturnToQuery } from '../../../middleware/auth.ts'
-import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
 
@@ -30,10 +28,9 @@ async function loadResetToken(db: Database, token: string) {
 export const resetPasswordController = createController(routes.auth.resetPassword, {
   actions: {
     async index(context) {
-      let { get, params, url } = context
+      let { db, params, render, url } = context
       let returnToQuery = getReturnToQuery(url)
-      let resetToken = await loadResetToken(get(Database), params.token)
-      let render = get(Renderer)
+      let resetToken = await loadResetToken(db, params.token)
 
       if (resetToken == null) {
         return render(
@@ -55,11 +52,9 @@ export const resetPasswordController = createController(routes.auth.resetPasswor
     },
 
     async action(context) {
-      let { get, params, url } = context
+      let { db, formData, params, render, session, url } = context
       let returnToQuery = getReturnToQuery(url)
-      let db = get(Database)
       let resetToken = await loadResetToken(db, params.token)
-      let render = get(Renderer)
 
       if (resetToken == null) {
         return render(
@@ -72,7 +67,7 @@ export const resetPasswordController = createController(routes.auth.resetPasswor
         )
       }
 
-      let result = s.parseSafe(resetPasswordSchema, get(FormData))
+      let result = s.parseSafe(resetPasswordSchema, formData)
       if (!result.success) {
         return render(
           <ResetPasswordPage
@@ -120,7 +115,6 @@ export const resetPasswordController = createController(routes.auth.resetPasswor
       })
       await db.delete(passwordResetTokens, { token: resetToken.token })
 
-      let session = get(Session)
       session.flash('success', 'Password updated. You can sign in now.')
 
       return render(

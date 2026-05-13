@@ -1,5 +1,4 @@
 import { createController, type RouterTypes } from 'remix/router'
-import { Renderer } from 'remix/middleware/render'
 import { Frame, type RemixNode } from 'remix/ui'
 
 import { Counter } from '../../assets/counter.tsx'
@@ -253,7 +252,7 @@ export const framesController = createController(routes.frames, {
 })
 
 function render(context: RouterTypes['context'], node: RemixNode, init?: ResponseInit) {
-  return context.get(Renderer)(node, init)
+  return context.render(node, init)
 }
 
 function delay(ms: number) {

@@ -1,5 +1,4 @@
 import { createRouter, type MiddlewareContext } from 'remix/router'
-import { asyncContext } from 'remix/middleware/async-context'
 import { logger } from 'remix/middleware/logger'
 import { staticFiles } from 'remix/middleware/static'
 
@@ -33,7 +32,6 @@ middleware.push(
     index: false,
   }),
 )
-middleware.push(asyncContext())
 middleware.push(loadAuth())
 middleware.push(render())
 

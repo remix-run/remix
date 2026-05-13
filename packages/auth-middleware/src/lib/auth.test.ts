@@ -14,6 +14,49 @@ describe('auth middleware', () => {
     )
   })
 
+  it('provides auth state on request context', async () => {
+    let router = createRouter({
+      middleware: [
+        auth({
+          schemes: [
+            {
+              name: 'bearer',
+              authenticate() {
+                return {
+                  status: 'success',
+                  identity: { id: 1 },
+                }
+              },
+            },
+          ],
+        }),
+      ],
+    })
+
+    router.get('/', (context) =>
+      Response.json({
+        direct: context.auth,
+        keyed: context.get(Auth),
+      }),
+    )
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(response.status, 200)
+    assert.deepEqual(await response.json(), {
+      direct: {
+        ok: true,
+        identity: { id: 1 },
+        method: 'bearer',
+      },
+      keyed: {
+        ok: true,
+        identity: { id: 1 },
+        method: 'bearer',
+      },
+    })
+  })
+
   it('authenticates with the first successful scheme', async () => {
     let callLog: string[] = []
 

@@ -2,6 +2,7 @@ export { createContextKey, RequestContext } from './lib/request-context.ts'
 
 export type {
   AnyParams,
+  ContextEntry,
   ContextValue,
   GetContextValue,
   ContextEntries,

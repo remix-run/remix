@@ -1,13 +1,10 @@
 import { createController } from 'remix/router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
-import { Database } from 'remix/data-table'
-import { Renderer } from 'remix/middleware/render'
 import { redirect } from 'remix/response/redirect'
 
 import { itemsByOrder, orders, orderItemsWithBook } from '../../data/schema.ts'
 import { requireAuth } from '../../middleware/auth.ts'
-import { Session } from '../../middleware/session.ts'
 import { routes } from '../../routes.ts'
 import { clearCart, getCartTotal } from '../../utils/cart.ts'
 import { getCurrentUser, getCurrentCart } from '../../utils/context.ts'
@@ -26,9 +23,8 @@ const shippingAddressSchema = f.object({
 export default createController(routes.checkout, {
   middleware: [requireAuth()],
   actions: {
-    index({ get }) {
-      let render = get(Renderer)
-      let cart = getCurrentCart()
+    index({ render, session }) {
+      let cart = getCurrentCart(session)
       let total = getCartTotal(cart)
 
       if (cart.items.length === 0) {
@@ -38,12 +34,9 @@ export default createController(routes.checkout, {
       return render(<CheckoutPage cart={cart} total={total} />)
     },
 
-    async action({ get }) {
-      let db = get(Database)
-      let session = get(Session)
-      let formData = get(FormData)
-      let user = getCurrentUser()
-      let cart = getCurrentCart()
+    async action({ auth, db, formData, session }) {
+      let user = getCurrentUser(auth)
+      let cart = getCurrentCart(session)
 
       if (cart.items.length === 0) {
         return redirect(routes.cart.index.href())
@@ -90,10 +83,8 @@ export default createController(routes.checkout, {
       return redirect(routes.checkout.confirmation.href({ orderId: order.id }))
     },
 
-    async confirmation({ get, params }) {
-      let db = get(Database)
-      let render = get(Renderer)
-      let user = getCurrentUser()
+    async confirmation({ auth, db, params, render }) {
+      let user = getCurrentUser(auth)
       let orderId = parseId(params.orderId)
       let order =
         orderId === undefined
