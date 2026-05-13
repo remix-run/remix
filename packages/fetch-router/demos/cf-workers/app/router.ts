@@ -1,4 +1,4 @@
-import { createRouter } from '@remix-run/fetch-router'
+import { createContextKey, createRouter, type Middleware } from '@remix-run/fetch-router'
 import { createCookie } from '@remix-run/cookie'
 import * as s from '@remix-run/data-schema'
 import * as f from '@remix-run/data-schema/form-data'
@@ -10,7 +10,6 @@ import { session } from '@remix-run/session-middleware'
 import { html } from '@remix-run/html-template'
 import { createHtmlResponse } from '@remix-run/response/html'
 import { createRedirectResponse as redirect } from '@remix-run/response/redirect'
-import type { Middleware } from '@remix-run/fetch-router'
 import { env } from 'cloudflare:workers'
 
 import { routes } from './routes.ts'
@@ -29,6 +28,13 @@ const sessionCookie = createCookie('__sess', {
   secrets: ['s3cr3t'],
 })
 const sessionStorage = createCookieSessionStorage()
+const Database = createContextKey<D1Database>()
+
+function loadDatabase(): Middleware<{ key: typeof Database; value: D1Database; property: 'db' }> {
+  return (context) => {
+    context.set(Database, env.DB, { property: 'db' })
+  }
+}
 
 function requireAuth(): Middleware {
   return (context, next) => {
@@ -48,12 +54,11 @@ function requireAuth(): Middleware {
 }
 
 export const router = createRouter({
-  middleware: [logger(), formData(), session(sessionCookie, sessionStorage)],
+  middleware: [logger(), formData(), session(sessionCookie, sessionStorage), loadDatabase()],
 })
 
-router.map(routes.home, async ({ get }) => {
-  let session = get(Session)
-  let posts = await data.getPosts(env.DB)
+router.map(routes.home, async ({ db, session }) => {
+  let posts = await data.getPosts(db)
   let username = session.get('username') as string | undefined
 
   return createHtmlResponse(html`
@@ -100,8 +105,7 @@ router.map(routes.home, async ({ get }) => {
 
 router.map(routes.login, {
   actions: {
-    index({ get }) {
-      let session = get(Session)
+    index({ session }) {
       let username = session.get('username') as string | undefined
       if (username) {
         return redirect(routes.home.href())
@@ -131,9 +135,7 @@ router.map(routes.login, {
         </html>
       `)
     },
-    async action({ get }) {
-      let session = get(Session)
-      let formData = get(FormData)
+    async action({ formData, session }) {
       let { username } = s.parse(loginSchema, formData)
 
       if (username) {
@@ -146,8 +148,7 @@ router.map(routes.login, {
   },
 })
 
-router.post(routes.logout, ({ get }) => {
-  let session = get(Session)
+router.post(routes.logout, ({ session }) => {
   session.destroy()
   return redirect(routes.home.href())
 })
@@ -182,9 +183,7 @@ router.map(routes.posts, {
         `)
       },
     },
-    async create({ get }) {
-      let session = get(Session)
-      let formData = get(FormData)
+    async create({ db, formData, session }) {
       let username = session.get('username') as string
       if (!username) {
         return redirect(routes.login.index.href())
@@ -196,11 +195,11 @@ router.map(routes.posts, {
         return redirect(routes.posts.new.href())
       }
 
-      let post = await data.createPost(env.DB, title, content, username)
+      let post = await data.createPost(db, title, content, username)
       return redirect(routes.posts.show.href({ id: post.id }))
     },
-    async show({ params }) {
-      let post = await data.getPost(env.DB, params.id)
+    async show({ db, params }) {
+      let post = await data.getPost(db, params.id)
       if (!post) {
         return new Response('Post not found', { status: 404 })
       }

@@ -1,8 +1,6 @@
 import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
-import { Database } from 'remix/data-table'
-import { Renderer } from 'remix/render-middleware'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../../../data/schema.ts'
@@ -28,18 +26,14 @@ const userSchema = f.object({
 export default createController(routes.admin.users, {
   middleware: [requireAuth(), requireAdmin()],
   actions: {
-    async index({ get }) {
-      let db = get(Database)
-      let render = get(Renderer)
-      let currentUser = getCurrentUser()
+    async index({ auth, db, render }) {
+      let currentUser = getCurrentUser(auth)
       let allUsers = await db.findMany(users, { orderBy: ['id', 'asc'] })
 
       return render(<AdminUsersIndexPage users={allUsers} currentUserId={currentUser.id} />)
     },
 
-    async show({ get, params }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async show({ db, params, render }) {
       let userId = parseId(params.userId)
       let targetUser = userId === undefined ? undefined : await db.find(users, userId)
 
@@ -50,9 +44,7 @@ export default createController(routes.admin.users, {
       return render(<AdminUserShowPage user={targetUser} />)
     },
 
-    async edit({ get, params }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async edit({ db, params, render }) {
       let userId = parseId(params.userId)
       let targetUser = userId === undefined ? undefined : await db.find(users, userId)
 
@@ -71,9 +63,7 @@ export default createController(routes.admin.users, {
       )
     },
 
-    async update({ get, params }) {
-      let db = get(Database)
-      let formData = get(FormData)
+    async update({ db, formData, params }) {
       let userId = parseId(params.userId)
       let targetUser = userId === undefined ? undefined : await db.find(users, userId)
       let { email, name, role } = s.parse(userSchema, formData)
@@ -89,8 +79,7 @@ export default createController(routes.admin.users, {
       return redirect(routes.admin.users.index.href())
     },
 
-    async destroy({ get, params }) {
-      let db = get(Database)
+    async destroy({ db, params }) {
       let userId = parseId(params.userId)
       let targetUser = userId === undefined ? undefined : await db.find(users, userId)
       if (targetUser) {

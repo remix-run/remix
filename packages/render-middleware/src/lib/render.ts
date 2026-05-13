@@ -21,6 +21,7 @@ export type AnyRenderer = Renderer<never, never>
 
 /**
  * Context key used to read the current request renderer with `context.get(Renderer)`.
+ * The `renderWith()` middleware also installs the renderer as `context.render`.
  */
 export const Renderer = createContextKey<AnyRenderer>()
 
@@ -34,8 +35,8 @@ type RendererFactory<renderer extends AnyRenderer> = (context: RequestContext<an
  */
 export function renderWith<const renderer extends AnyRenderer>(
   createRenderer: RendererFactory<renderer>,
-): Middleware<readonly [typeof Renderer, renderer]> {
+): Middleware<{ key: typeof Renderer; value: renderer; property: 'render' }> {
   return (context) => {
-    context.set(Renderer, createRenderer(context))
+    context.set(Renderer, createRenderer(context), { property: 'render' })
   }
 }

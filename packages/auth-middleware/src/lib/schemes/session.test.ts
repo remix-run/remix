@@ -107,7 +107,7 @@ describe('createSessionAuthScheme scheme', () => {
 
   it('fails and invalidates when verify() returns null', async () => {
     let invalidated = false
-    let setSession: Middleware<readonly [typeof Session, Session]> = (context, next) => {
+    let setSession: Middleware<{ key: typeof Session; value: Session }> = (context, next) => {
       let session = createSession()
       session.set('auth', { userId: 'u1' })
       context.set(Session, session)

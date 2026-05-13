@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@octokit/request": "^9.1.3",
+    "@octokit/request": "^9.2.4",
     "@remix-run/assert": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",

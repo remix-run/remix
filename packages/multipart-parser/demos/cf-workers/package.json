@@ -5,10 +5,10 @@
     "@remix-run/multipart-parser": "workspace:^"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20251014.0",
+    "@cloudflare/workers-types": "^4.20260511.1",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "wrangler": "^4.20.0"
+    "wrangler": "^4.90.1"
   },
   "scripts": {
     "deploy": "wrangler deploy",

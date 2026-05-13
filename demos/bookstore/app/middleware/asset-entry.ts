@@ -17,7 +17,7 @@ const defaultStylesheetEntry = path.resolve(import.meta.dirname, '../assets/app.
 export function loadAssetEntry(
   scriptEntry = defaultScriptEntry,
   stylesheetEntry = defaultStylesheetEntry,
-): Middleware<readonly [typeof assetsEntryKey, AssetEntry]> {
+): Middleware<{ key: typeof assetsEntryKey; value: AssetEntry }> {
   return async (context, next) => {
     let [scriptSrc, scriptPreloads, stylesheetHref] = await Promise.all([
       assetServer.getHref(scriptEntry),

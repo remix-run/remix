@@ -1,7 +1,5 @@
 import { createController } from 'remix/fetch-router'
-import { Renderer } from 'remix/render-middleware'
 import { css } from 'remix/ui'
-import { Database } from 'remix/data-table'
 
 import { CartButton } from '../../assets/cart-button.tsx'
 import { CartItems } from '../../assets/cart-items.tsx'
@@ -14,9 +12,7 @@ import { fragmentResponseInit } from '../../middleware/render.tsx'
 
 export default createController(routes.fragments, {
   actions: {
-    async cartButton({ get, params }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async cartButton({ db, params, render, session }) {
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
 
@@ -24,7 +20,7 @@ export default createController(routes.fragments, {
         return render(<p>Book not found</p>, fragmentResponseInit({ status: 404 }))
       }
 
-      let cart = getCurrentCart()
+      let cart = getCurrentCart(session)
       let inCart = cart.items.some((item) => item.bookId === book.id)
 
       return render(
@@ -33,11 +29,10 @@ export default createController(routes.fragments, {
       )
     },
 
-    cartItems({ get }) {
-      let render = get(Renderer)
-      let cart = getCurrentCart()
+    cartItems({ auth, render, session }) {
+      let cart = getCurrentCart(session)
       let total = getCartTotal(cart)
-      let user = getCurrentUserSafely()
+      let user = getCurrentUserSafely(auth)
 
       if (cart.items.length === 0) {
         return render(

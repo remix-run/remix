@@ -4,11 +4,10 @@ import { describe, it } from '@remix-run/test'
 import {
   createContextKey,
   createRouter,
-  type AnyParams,
   type ContextWithEntries,
   type RequestContext,
 } from '@remix-run/fetch-router'
-import { route } from '@remix-run/routes'
+import { route } from '@remix-run/fetch-router/routes'
 
 import { asyncContext, getContext } from './async-context.ts'
 
@@ -16,7 +15,7 @@ const CurrentUser = createContextKey<unknown>()
 
 type AppContext = ContextWithEntries<
   RequestContext,
-  [readonly [typeof CurrentUser, { id: string }]]
+  [{ key: typeof CurrentUser; value: { id: string }; property: 'currentUser' }]
 >
 
 declare module '@remix-run/fetch-router' {
@@ -47,6 +46,8 @@ describe('asyncContext', () => {
 if (false as boolean) {
   let user = getContext().get(CurrentUser)
   void user.id
+  let currentUser = getContext().currentUser
+  void currentUser.id
   let param: string = getContext().params.anything
   void param
 

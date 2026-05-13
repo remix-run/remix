@@ -31,8 +31,7 @@ describe('session middleware', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.map('/', ({ get }) => {
-      let session = get(Session)
+    router.map('/', ({ session }) => {
       session.set('count', Number(session.get('count') ?? 0) + 1)
       return new Response(`Count: ${session.get('count')}`)
     })
@@ -55,8 +54,7 @@ describe('session middleware', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.map('/', ({ get }) => {
-      let session = get(Session)
+    router.map('/', ({ session }) => {
       session.set('count', Number(session.get('count') ?? 0) + 1)
       return fetch('http://example.com')
     })
@@ -120,8 +118,7 @@ describe('session middleware', () => {
       middleware: [sessionMiddleware(cookie, storage)],
     })
 
-    router.map('/', ({ get }) => {
-      let session = get(Session)
+    router.map('/', ({ session }) => {
       session.set('count', Number(session.get('count') ?? 0) + 1)
       return new Response(`Count: ${session.get('count')}`, {
         headers: {

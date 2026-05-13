@@ -1,9 +1,7 @@
 import { createController } from 'remix/fetch-router'
 import { completeAuth, verifyCredentials } from 'remix/auth'
-import { Renderer } from 'remix/render-middleware'
 import { redirect } from 'remix/response/redirect'
 
-import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
 import {
   getLoginRedirectURL,
@@ -14,9 +12,7 @@ import { LoginPage } from './page.tsx'
 
 export default createController(routes.auth.login, {
   actions: {
-    index({ get, url }) {
-      let session = get(Session)
-      let render = get(Renderer)
+    index({ render, session, url }) {
       let error = session.get('error')
       let formAction = getLoginRedirectURL(url, routes.auth.login.action)
 
@@ -26,17 +22,16 @@ export default createController(routes.auth.login, {
     },
 
     async action(context) {
-      let { get, url } = context
+      let { session, url } = context
       let user = await verifyCredentials(passwordProvider, context)
 
       if (user == null) {
-        let session = get(Session)
         session.flash('error', 'Invalid email or password. Please try again.')
         return redirect(getLoginRedirectURL(url))
       }
 
-      let session = completeAuth(context)
-      session.set('auth', { userId: user.id })
+      let authSession = completeAuth(context)
+      authSession.set('auth', { userId: user.id })
 
       return redirect(getPostAuthRedirect(url))
     },

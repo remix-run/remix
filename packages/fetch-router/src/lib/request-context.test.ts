@@ -1,6 +1,7 @@
 import { describe, it } from '@remix-run/test'
 import assert from '@remix-run/assert'
 import { createContextKey, RequestContext } from './request-context.ts'
+import type { ContextWithEntries, ContextWithEntry } from './request-context.ts'
 import type { IsEqual } from './type-utils.ts'
 
 function expectTypeEquality<_check extends true>() {}
@@ -181,6 +182,149 @@ describe('new RequestContext()', () => {
     assert.equal(has(key), true)
     assert.equal(get(defaultKey), 'default')
     assert.equal(get(key), 'value')
+  })
+
+  it('installs direct properties for context values', () => {
+    let key = createContextKey<string>()
+    let context = new RequestContext(new Request('https://remix.run/test'))
+
+    assert.equal('message' in context, false)
+
+    context.set(key, 'hello', { property: 'message' })
+
+    let aliasedContext = context as typeof context & { readonly message: string }
+
+    assert.equal('message' in context, true)
+    assert.equal(aliasedContext.message, 'hello')
+    assert.deepEqual(Object.keys(context).includes('message'), false)
+
+    context.set(key, 'world')
+
+    assert.equal(aliasedContext.message, 'world')
+  })
+
+  it('does not install direct properties for unset default values', () => {
+    let key = createContextKey('default')
+    let context = new RequestContext(new Request('https://remix.run/test'))
+
+    assert.equal(context.get(key), 'default')
+    assert.equal('message' in context, false)
+
+    context.set(key, 'value', { property: 'message' })
+
+    assert.equal((context as typeof context & { readonly message: string }).message, 'value')
+  })
+
+  it('rejects context properties that conflict with request context properties', () => {
+    let key = createContextKey<string>()
+    let context = new RequestContext(new Request('https://remix.run/test'))
+
+    assert.throws(() => {
+      context.set(key, 'hello', { property: 'url' })
+    }, new Error('Cannot install context property "url" because it already exists on RequestContext.'))
+  })
+
+  it('rejects context properties used by another context key', () => {
+    let first = createContextKey<string>()
+    let second = createContextKey<string>()
+    let context = new RequestContext(new Request('https://remix.run/test'))
+
+    context.set(first, 'one', { property: 'value' })
+
+    assert.throws(() => {
+      context.set(second, 'two', { property: 'value' })
+    }, new Error('Cannot install context property "value" because another context key already uses it.'))
+  })
+
+  it('rejects multiple context properties for the same context key', () => {
+    let key = createContextKey<string>()
+    let context = new RequestContext(new Request('https://remix.run/test'))
+
+    context.set(key, 'one', { property: 'one' })
+
+    assert.throws(() => {
+      context.set(key, 'two', { property: 'two' })
+    }, new Error('Cannot install context property "two" because this context key already uses "one".'))
+  })
+
+  it('derives direct property types from context entries', () => {
+    let key = createContextKey<string>()
+    type Context = ContextWithEntry<
+      RequestContext,
+      { key: typeof key; value: string; property: 'message' }
+    >
+
+    function assertContext(context: Context) {
+      let value = context.get(key)
+
+      expectTypeEquality<IsEqual<typeof context.message, string>>()
+      expectTypeEquality<IsEqual<typeof value, string>>()
+    }
+
+    void assertContext
+  })
+
+  it('does not derive direct property types from broad string properties', () => {
+    let key = createContextKey<string>()
+    type Context = ContextWithEntry<
+      RequestContext,
+      { key: typeof key; value: string; property: string }
+    >
+
+    function assertContext(context: Context) {
+      let value = context.get(key)
+
+      expectTypeEquality<IsEqual<typeof value, string>>()
+      expectTypeEquality<IsEqual<typeof context.url, URL>>()
+
+      if (false as boolean) {
+        // @ts-expect-error - broad string properties do not install typed direct properties
+        void context.message
+      }
+    }
+
+    void assertContext
+  })
+
+  it('keeps direct property types independent from entries without properties', () => {
+    let messageKey = createContextKey<string>()
+    let countKey = createContextKey<number>()
+    type Context = ContextWithEntries<
+      RequestContext,
+      [
+        { key: typeof messageKey; value: string; property: 'message' },
+        { key: typeof countKey; value: number },
+      ]
+    >
+
+    function assertContext(context: Context) {
+      let count = context.get(countKey)
+
+      expectTypeEquality<IsEqual<typeof context.message, string>>()
+      expectTypeEquality<IsEqual<typeof count, number>>()
+    }
+
+    void assertContext
+  })
+
+  it('derives direct property types from the last entry that declares the property', () => {
+    let key = createContextKey<string | number>()
+    type Context = ContextWithEntries<
+      RequestContext,
+      [
+        { key: typeof key; value: string; property: 'message' },
+        { key: typeof key; value: number; property: 'message' },
+      ]
+    >
+
+    function assertContext(context: Context) {
+      let value = context.get(key)
+
+      expectTypeEquality<IsEqual<typeof context.message, number>>()
+      expectTypeEquality<IsEqual<typeof value, number>>()
+    }
+
+    void assertContext
   })
 
   it('supports class constructors as context keys', () => {
