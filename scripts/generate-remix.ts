@@ -149,7 +149,7 @@ async function getRemixRunPackages() {
           if (packageName === CLI_PACKAGE_NAME) {
             let readmePath = findReadmePath(packageDirName)
             remixRunPackage.exports.push({
-              sourceFile: 'cli.ts',
+              sourceFile: 'cli/index.ts',
               exportPath: './cli',
               reExportFrom: packageName,
               readmePath,
@@ -160,7 +160,7 @@ async function getRemixRunPackages() {
             let relPath = remixPath ? remixPath.replace('remix/', '') : shortName
             let readmePath = findReadmePath(packageDirName)
             remixRunPackage.exports.push({
-              sourceFile: `${relPath}.ts`,
+              sourceFile: `${relPath}/index.ts`,
               exportPath: `./${relPath}`,
               reExportFrom: specifier,
               readmePath,
@@ -177,7 +177,7 @@ async function getRemixRunPackages() {
             ? findReadmePath(packageDirName, sourceEntryPath)
             : undefined
           remixRunPackage.exports.push({
-            sourceFile: `${relPath}.ts`,
+            sourceFile: `${relPath}/index.ts`,
             exportPath: `./${relPath}`,
             reExportFrom: specifier,
             readmePath,
@@ -238,7 +238,7 @@ function buildLegacyAliases(canonicalExports: ExportEntry[]): ExportEntry[] {
     if (!canonical) continue
 
     aliases.push({
-      sourceFile: `${shortSpecifier}.ts`,
+      sourceFile: `${shortSpecifier}/index.ts`,
       exportPath: mechanicalExportPath,
       reExportFrom: canonical.reExportFrom,
       deprecatedAliasOf: canonicalPath,
@@ -319,7 +319,7 @@ async function updateRemixPackage() {
     let readmePath = path.join(
       remixDir,
       SOURCE_FOLDER,
-      entry.sourceFile.replace(/\.ts$/, ''),
+      path.dirname(entry.sourceFile),
       'README.md',
     )
     await fs.mkdir(path.dirname(readmePath), { recursive: true })
@@ -482,7 +482,7 @@ function createCliEntrySource(): string {
 // IMPORTANT: This file is auto-generated, please do not edit manually.
 import * as process from 'node:process'
 
-import { runRemix } from './cli.ts'
+import { runRemix } from './cli/index.ts'
 
 try {
   let exitCode = await runRemix(process.argv.slice(2))
@@ -566,7 +566,7 @@ async function outputExportsChangeFiles(
       changes += ` - \`${exportName}\`\n`
 
       // Remove re-export file
-      let srcFile = path.join(remixDir, SOURCE_FOLDER, exportPath + '.ts')
+      let srcFile = path.join(remixDir, SOURCE_FOLDER, exportPath, 'index.ts')
       try {
         await fs.unlink(srcFile)
       } catch (e) {
