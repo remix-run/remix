@@ -1148,8 +1148,10 @@ async function runNode(
 
 function normalizeNodeError(stderr: string, projectPath: string): string {
   return stderr
+    .replace(/\r\n/g, '\n')
     .replaceAll(`/private${projectPath}`, '<project>')
     .replaceAll(projectPath, '<project>')
+    .replaceAll('<project>\\', '<project>/')
     .replace(/node:internal\/modules\/run_main:\d+/g, 'node:internal/modules/run_main:<line>')
     .replace(/Node\.js v[\d.]+/g, 'Node.js <version>')
 }
