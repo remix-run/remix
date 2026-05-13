@@ -1,5 +1,3 @@
-import { getFilePathDirectory } from '../paths.ts'
-
 export type FileSnapshot = {
   filePath: string
   mtimeNs: bigint
@@ -20,7 +18,6 @@ type SourceFileRecordState = {
   invalidationVersion: number
   staleMetadata?: SourceFileMetadata
   staleMetadataSnapshot?: FileSnapshot
-  watchedDirectory: string
 }
 
 export type SourceFileRecord = Readonly<SourceFileRecordState>
@@ -32,7 +29,6 @@ type MutableSourceFileRecord = {
   invalidationVersion: number
   staleMetadata?: SourceFileMetadata
   staleMetadataSnapshot?: FileSnapshot
-  watchedDirectory: string
 }
 
 export type SourceFileStore = {
@@ -42,14 +38,9 @@ export type SourceFileStore = {
   set(identityPath: string, metadata: SourceFileMetadata, snapshot: FileSnapshot | null): void
 }
 
-export function createSourceFileStore(
-  options: {
-    onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
-  } = {},
-): SourceFileStore {
+export function createSourceFileStore(): SourceFileStore {
   let recordsByIdentityPath = new Map<string, MutableSourceFileRecord>()
   let invalidationVersionByIdentityPath = new Map<string, number>()
-  let watchDirectoryRefCountByPath = new Map<string, number>()
 
   return {
     get(identityPath) {
@@ -70,7 +61,6 @@ export function createSourceFileStore(
 
       if (event === 'unlink') {
         recordsByIdentityPath.delete(filePath)
-        removeWatchDirectory(record.watchedDirectory)
       }
     },
 
@@ -105,39 +95,15 @@ export function createSourceFileStore(
     invalidationVersionByIdentityPath.set(record.identityPath, record.invalidationVersion)
   }
 
-  function addWatchDirectory(directory: string): void {
-    let previousCount = watchDirectoryRefCountByPath.get(directory) ?? 0
-    watchDirectoryRefCountByPath.set(directory, previousCount + 1)
-    if (previousCount === 0) {
-      options.onWatchDirectoriesChange?.({ add: [directory], remove: [] })
-    }
-  }
-
-  function removeWatchDirectory(directory: string): void {
-    let previousCount = watchDirectoryRefCountByPath.get(directory)
-    if (!previousCount) return
-
-    if (previousCount === 1) {
-      watchDirectoryRefCountByPath.delete(directory)
-      options.onWatchDirectoriesChange?.({ add: [], remove: [directory] })
-      return
-    }
-
-    watchDirectoryRefCountByPath.set(directory, previousCount - 1)
-  }
-
   function getOrCreateRecord(identityPath: string): MutableSourceFileRecord {
     let existing = recordsByIdentityPath.get(identityPath)
     if (existing) return existing
 
-    let watchedDirectory = getFilePathDirectory(identityPath)
     let record: MutableSourceFileRecord = {
       identityPath,
       invalidationVersion: invalidationVersionByIdentityPath.get(identityPath) ?? 0,
-      watchedDirectory,
     }
     recordsByIdentityPath.set(identityPath, record)
-    addWatchDirectory(watchedDirectory)
     return record
   }
 }

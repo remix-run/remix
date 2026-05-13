@@ -813,6 +813,76 @@ describe('asset-server', () => {
     assert.equal(transformCalls, 1)
   })
 
+  it('reports named global file transform result errors with the function name', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let receivedError: unknown
+
+    async function annotateFile() {
+      return undefined
+    }
+
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+        // @ts-expect-error - exercise runtime validation for invalid global transform returns
+        globalTransforms: [annotateFile],
+      },
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/content/value.txt')
+
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'FILE_TRANSFORM_RESULT_INVALID')
+    assert.match(
+      normalizeWindowsPath(receivedError.message),
+      /Global file transform "annotateFile" must return a string, Uint8Array, or object for .*app\/content\/value\.txt/,
+    )
+  })
+
+  it('reports anonymous global file transform result errors with the transform index', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+        globalTransforms: [
+          {
+            async transform() {
+              return 'hello\n'
+            },
+          },
+          {
+            // @ts-expect-error - exercise runtime validation for invalid global transform returns
+            transform: [
+              async function () {
+                return undefined
+              },
+            ][0],
+          },
+        ],
+      },
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/content/value.txt')
+
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'FILE_TRANSFORM_RESULT_INVALID')
+    assert.match(
+      normalizeWindowsPath(receivedError.message),
+      /Global file transform at index 1 must return a string, Uint8Array, or object for .*app\/content\/value\.txt/,
+    )
+  })
+
   it('allows request file transforms to return string content directly', async () => {
     await write(dir, 'app/content/value.txt', 'hello\n')
     let assetServer = createTestServer(dir, {
@@ -869,11 +939,76 @@ describe('asset-server', () => {
     assert.ok(response)
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
-    assert.equal(receivedError.code, 'TRANSFORM_FAILED')
+    assert.equal(receivedError.code, 'FILE_TRANSFORM_NOT_SUPPORTED')
     assert.match(
       normalizeWindowsPath(receivedError.message),
       /File transform "annotate" does not support \.txt inputs for .*app\/content\/value\.txt/,
     )
+  })
+
+  it('reports invalid request file transform results with a specific error code', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+        transforms: {
+          broken: defineFileTransform({
+            // @ts-expect-error - exercise runtime validation for invalid user transform returns
+            async transform() {
+              return undefined
+            },
+          }),
+        },
+      },
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/content/value.txt?transform=broken')
+
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'FILE_TRANSFORM_RESULT_INVALID')
+    assert.match(
+      normalizeWindowsPath(receivedError.message),
+      /File transform "broken" must return a string, Uint8Array, or object for .*app\/content\/value\.txt/,
+    )
+  })
+
+  it('reports thrown request file transform errors as transform failures', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+        transforms: {
+          broken: defineFileTransform({
+            async transform() {
+              throw new Error('boom')
+            },
+          }),
+        },
+      },
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/content/value.txt?transform=broken')
+
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'FILE_TRANSFORM_FAILED')
+    assert.match(
+      normalizeWindowsPath(receivedError.message),
+      /File transform "broken" failed for .*app\/content\/value\.txt\. boom/,
+    )
+    assert.ok(receivedError.cause instanceof Error)
+    assert.equal(receivedError.cause.message, 'boom')
   })
 
   it('matches transform extension filters against the current extension in the pipeline', async () => {
@@ -2965,6 +3100,192 @@ describe('asset-server', () => {
         assert.ok(after)
         assert.equal(after.status, 200)
         assert.match(await after.text(), /@import "\/assets\/app\/styles\/missing\.css";/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('recovers in watch mode when a previously missing CSS url file is created', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(
+        caseDir,
+        'app/styles/app.css',
+        'body { background-image: url("../images/logo.svg"); }\n',
+      )
+      let errorCodes: string[] = []
+      let assetServer = createWatchedTestServer(caseDir, {
+        files: {
+          extensions: ['.svg'],
+        },
+        onError(error) {
+          if (isAssetServerCompilationError(error)) {
+            errorCodes.push(error.code)
+          }
+        },
+      })
+
+      try {
+        let before = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(before)
+        await assertInternalServerError(before)
+        assert.equal(errorCodes.at(-1), 'URL_RESOLUTION_FAILED')
+
+        let missingPath = await write(
+          caseDir,
+          'app/images/logo.svg',
+          '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n',
+        )
+        await emitWatchEvent(assetServer, missingPath, 'add')
+
+        let after = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(after)
+        assert.equal(after.status, 200)
+        assert.match(await after.text(), /url\("\/assets\/app\/images\/logo\.svg"\)/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not watch style dependency ancestor directories in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(
+        caseDir,
+        'app/styles/app.css',
+        'body { background-image: url("../images/logo.svg"); }\n',
+      )
+      await write(
+        caseDir,
+        'app/images/logo.svg',
+        '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n',
+      )
+      let assetServer = createWatchedTestServer(caseDir, {
+        files: {
+          extensions: ['.svg'],
+        },
+      })
+      let appDir = normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app')))
+      let imagesDir = normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app/images')))
+      let rootDir = normalizeWindowsPath(nodeFs.realpathSync(caseDir))
+      let stylesDir = normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app/styles')))
+
+      try {
+        let response = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        await response.text()
+
+        let targets = getInternalWatchTargets(assetServer).map((target) =>
+          normalizeWindowsPath(target),
+        )
+
+        assert.ok(targets.includes(imagesDir))
+        assert.ok(targets.includes(stylesDir))
+        assert.ok(!targets.includes(appDir))
+        assert.ok(!targets.includes(rootDir))
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails in watch mode when a CSS url file is deleted', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(
+        caseDir,
+        'app/styles/app.css',
+        'body { background-image: url("../images/logo.svg"); }\n',
+      )
+      let logoPath = await write(
+        caseDir,
+        'app/images/logo.svg',
+        '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n',
+      )
+      let errorCodes: string[] = []
+      let assetServer = createWatchedTestServer(caseDir, {
+        files: {
+          extensions: ['.svg'],
+        },
+        onError(error) {
+          if (isAssetServerCompilationError(error)) {
+            errorCodes.push(error.code)
+          }
+        },
+      })
+
+      try {
+        let before = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(before)
+        assert.equal(before.status, 200)
+        assert.match(await before.text(), /url\("\/assets\/app\/images\/logo\.svg"\)/)
+
+        await fs.rm(logoPath)
+        await emitWatchEvent(assetServer, logoPath, 'unlink')
+
+        let after = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(after)
+        await assertInternalServerError(after)
+        assert.equal(errorCodes.at(-1), 'URL_RESOLUTION_FAILED')
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails in watch mode when a CSS url file ancestor directory is deleted', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(
+        caseDir,
+        'app/styles/app.css',
+        'body { background-image: url("../assets/images/logo.svg"); }\n',
+      )
+      let logoPath = await write(
+        caseDir,
+        'app/assets/images/logo.svg',
+        '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n',
+      )
+      let logoWatchPath = nodeFs.realpathSync(logoPath)
+      let errorCodes: string[] = []
+      let assetServer = createWatchedTestServer(caseDir, {
+        files: {
+          extensions: ['.svg'],
+        },
+        onError(error) {
+          if (isAssetServerCompilationError(error)) {
+            errorCodes.push(error.code)
+          }
+        },
+      })
+
+      try {
+        let before = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(before)
+        assert.equal(before.status, 200)
+        assert.match(await before.text(), /url\("\/assets\/app\/assets\/images\/logo\.svg"\)/)
+
+        await fs.rm(path.join(caseDir, 'app/assets'), { recursive: true })
+        let chokidarWatcher = getInternalChokidarWatcher(assetServer)
+        assert.ok(chokidarWatcher)
+        chokidarWatcher.emit('unlink', logoWatchPath)
+        await Promise.resolve()
+
+        let after = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(after)
+        await assertInternalServerError(after)
+        assert.equal(errorCodes.at(-1), 'URL_RESOLUTION_FAILED')
       } finally {
         await assetServer.close()
       }
@@ -5216,6 +5537,45 @@ describe('asset-server', () => {
     assert.ok(assetResponse)
     assert.equal(assetResponse.status, 400)
     assert.match(await assetResponse.text(), /Unknown file transform "wat"/)
+  })
+
+  it('treats inherited object property names as unknown file transform requests', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let onErrorCalls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          optimize: defineFileTransform({
+            async transform(bytes) {
+              return bytes
+            },
+          }),
+        },
+      },
+      onError() {
+        onErrorCalls += 1
+      },
+    })
+
+    let constructorResponse = await get(
+      assetServer,
+      '/assets/app/images/logo.svg?transform=constructor',
+    )
+    assert.ok(constructorResponse)
+    assert.equal(constructorResponse.status, 400)
+    assert.match(await constructorResponse.text(), /Unknown file transform "constructor"/)
+
+    let toStringResponse = await get(assetServer, '/assets/app/images/logo.svg?transform=toString')
+    assert.ok(toStringResponse)
+    assert.equal(toStringResponse.status, 400)
+    assert.match(await toStringResponse.text(), /Unknown file transform "toString"/)
+
+    let protoResponse = await get(assetServer, '/assets/app/images/logo.svg?transform=__proto__')
+    assert.ok(protoResponse)
+    assert.equal(protoResponse.status, 400)
+    assert.match(await protoResponse.text(), /Unknown file transform "__proto__"/)
+    assert.equal(onErrorCalls, 0)
   })
 
   it('warns for invalid CSS-authored file transform requests without failing the stylesheet', async (t) => {

@@ -184,7 +184,7 @@ type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
   define?: Record<string, string>
   deny?: readonly string[]
   external: string[]
-  files: ResolvedAssetServerFilesOptions<transforms>
+  files: ResolvedAssetServerFilesOptions
   fingerprintAssets: boolean
   minify: boolean
   onError: NonNullable<AssetServerOptions['onError']>
@@ -288,7 +288,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     minify: resolvedOptions.minify,
     onWatchDirectoriesChange: (delta) => {
       if (!watcher) return
-      watcher.updateWatchedDirectories(delta)
+      watcher.updateWatchedDirectories(delta, { includeAncestors: false })
     },
     rootDir: resolvedOptions.rootDir,
     routes: resolvedOptions.routes,
@@ -306,10 +306,6 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       globalTransforms: resolvedOptions.files.globalTransforms,
       isAllowed: accessPolicy.isAllowed,
       maxRequestTransforms: resolvedOptions.files.maxRequestTransforms,
-      onWatchDirectoriesChange: (delta) => {
-        if (!watcher) return
-        watcher.updateWatchedDirectories(delta)
-      },
       transforms: resolvedOptions.files.transforms,
       rootDir: resolvedOptions.rootDir,
       routes: resolvedOptions.routes,
@@ -466,7 +462,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
         ) {
           return null
         }
-        if (isAssetServerCompilationError(error) && error.code === 'INVALID_TRANSFORM_QUERY') {
+        if (isAssetServerCompilationError(error) && error.code === 'FILE_TRANSFORM_QUERY_INVALID') {
           return new Response(error.message, {
             status: 400,
             headers: { 'Content-Type': 'text/plain; charset=utf-8' },
@@ -591,7 +587,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
 
 function getHrefTransform<transforms extends AssetRequestTransformMap>(
   options: AssetServerGetHrefOptions<transforms> | undefined,
-  files: ResolvedAssetServerFilesOptions<transforms>,
+  files: ResolvedAssetServerFilesOptions,
 ): readonly string[] | null {
   if (!options) return null
   let transform = options.transform

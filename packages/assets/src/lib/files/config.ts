@@ -86,6 +86,11 @@ export type AssetRequestTransformMap = Readonly<
   Record<string, AssetRequestTransform<string, AssetRequestTransformParamMode>>
 >
 
+export type ResolvedAssetRequestTransformMap = ReadonlyMap<
+  string,
+  AssetRequestTransform<string, AssetRequestTransformParamMode>
+>
+
 export interface AssetServerFilesOptions<transforms extends AssetRequestTransformMap = {}> {
   /**
    * File extensions to expose as leaf assets. Values must include the leading dot,
@@ -112,13 +117,13 @@ export interface AssetServerFilesOptions<transforms extends AssetRequestTransfor
   cache?: FileStorage
 }
 
-export interface ResolvedAssetServerFilesOptions<transforms extends AssetRequestTransformMap = {}> {
+export interface ResolvedAssetServerFilesOptions {
   cache?: FileStorage
   extensions: readonly string[]
   globalTransforms: readonly ResolvedAssetGlobalTransform[]
   hasTransforms: boolean
   maxRequestTransforms: number
-  transforms: transforms
+  transforms: ResolvedAssetRequestTransformMap
 }
 
 type AssetTransformStep<
@@ -164,14 +169,14 @@ const defaultMaxRequestTransforms = 5
 
 export function normalizeFilesOptions<transforms extends AssetRequestTransformMap>(
   files: AssetServerFilesOptions<transforms> | undefined,
-): ResolvedAssetServerFilesOptions<transforms> {
+): ResolvedAssetServerFilesOptions {
   if (files == null) {
     return {
       extensions: [],
       globalTransforms: [],
       hasTransforms: false,
       maxRequestTransforms: defaultMaxRequestTransforms,
-      transforms: {} as transforms,
+      transforms: new Map(),
     }
   }
 
@@ -210,10 +215,10 @@ export function normalizeFilesOptions<transforms extends AssetRequestTransformMa
     throw new TypeError('files.transforms must be an object')
   }
 
-  let normalizedTransformsEntries: [
+  let normalizedTransforms = new Map<
     string,
-    AssetRequestTransform<string, AssetRequestTransformParamMode>,
-  ][] = []
+    AssetRequestTransform<string, AssetRequestTransformParamMode>
+  >()
 
   for (let [name, transform] of Object.entries(transforms)) {
     if (!/^[A-Za-z0-9_-]+$/.test(name)) {
@@ -239,19 +244,14 @@ export function normalizeFilesOptions<transforms extends AssetRequestTransformMa
       throw new TypeError(`files.transforms.${name}.param must be true or "optional"`)
     }
 
-    normalizedTransformsEntries.push([
-      name,
-      {
-        ...transform,
-        extensions: normalizeTransformExtensions(
-          transform.extensions,
-          `files.transforms.${name}.extensions`,
-        ),
-      },
-    ])
+    normalizedTransforms.set(name, {
+      ...transform,
+      extensions: normalizeTransformExtensions(
+        transform.extensions,
+        `files.transforms.${name}.extensions`,
+      ),
+    })
   }
-
-  let normalizedTransforms = Object.fromEntries(normalizedTransformsEntries) as transforms
 
   let globalTransforms = files.globalTransforms ?? []
   if (!Array.isArray(globalTransforms)) {
@@ -307,8 +307,7 @@ export function normalizeFilesOptions<transforms extends AssetRequestTransformMa
     cache: files.cache,
     extensions: normalizedExtensions,
     globalTransforms: normalizedGlobalTransforms,
-    hasTransforms:
-      Object.keys(normalizedTransforms).length > 0 || normalizedGlobalTransforms.length > 0,
+    hasTransforms: normalizedTransforms.size > 0 || normalizedGlobalTransforms.length > 0,
     maxRequestTransforms,
     transforms: normalizedTransforms,
   }
@@ -349,7 +348,7 @@ function normalizeTransformExtensions(
 
 export function serializeAssetTransformInvocations<transforms extends AssetRequestTransformMap>(
   transforms: readonly AssetTransformInvocation<transforms>[],
-  transformsByName: transforms,
+  transformsByName: ResolvedAssetRequestTransformMap,
   maxTransforms = defaultMaxRequestTransforms,
 ): string[] {
   if (transforms.length > maxTransforms) {
@@ -363,9 +362,9 @@ export function serializeAssetTransformInvocations<transforms extends AssetReque
   )
 }
 
-export function parseAssetTransformInvocations<transforms extends AssetRequestTransformMap>(
+export function parseAssetTransformInvocations(
   transformsQuery: readonly string[],
-  transformsByName: transforms,
+  transformsByName: ResolvedAssetRequestTransformMap,
   maxTransforms = defaultMaxRequestTransforms,
 ): readonly (string | readonly [string, string])[] {
   if (transformsQuery.length > maxTransforms) {
@@ -379,9 +378,9 @@ export function parseAssetTransformInvocations<transforms extends AssetRequestTr
   )
 }
 
-function normalizeAssetTransformInvocation<transforms extends AssetRequestTransformMap>(
+function normalizeAssetTransformInvocation(
   transformInvocation: unknown,
-  transformsByName: transforms,
+  transformsByName: ResolvedAssetRequestTransformMap,
   onError: (message: string) => never,
 ): string {
   if (typeof transformInvocation === 'string') {
@@ -389,8 +388,8 @@ function normalizeAssetTransformInvocation<transforms extends AssetRequestTransf
       return onError('Expected each transform name to use "transform-name" format')
     }
 
-    let transform = transformsByName[transformInvocation]
-    if (!transform) {
+    let transform = transformsByName.get(transformInvocation)
+    if (transform === undefined) {
       return onError(`Unknown file transform "${transformInvocation}"`)
     }
 
@@ -414,8 +413,8 @@ function normalizeAssetTransformInvocation<transforms extends AssetRequestTransf
     return onError('Expected each transform name to use "transform-name" format')
   }
 
-  let transform = transformsByName[name]
-  if (!transform) {
+  let transform = transformsByName.get(name)
+  if (transform === undefined) {
     return onError(`Unknown file transform "${name}"`)
   }
 
@@ -442,9 +441,9 @@ function normalizeAssetTransformInvocation<transforms extends AssetRequestTransf
   return `${name}:${rawParam}`
 }
 
-function parseSerializedAssetTransformInvocation<transforms extends AssetRequestTransformMap>(
+function parseSerializedAssetTransformInvocation(
   transformQuery: string,
-  transformsByName: transforms,
+  transformsByName: ResolvedAssetRequestTransformMap,
   onError: (message: string) => never,
 ): string | readonly [string, string] {
   let separatorIndex = transformQuery.indexOf(':')
@@ -455,8 +454,8 @@ function parseSerializedAssetTransformInvocation<transforms extends AssetRequest
     return onError('Expected each transform name to use "transform-name" format')
   }
 
-  let transform = transformsByName[name]
-  if (!transform) {
+  let transform = transformsByName.get(name)
+  if (transform === undefined) {
     return onError(`Unknown file transform "${name}"`)
   }
 

@@ -1,5 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import {
   createAssetServerCompilationError,
@@ -22,7 +23,13 @@ type ResolvedDependency =
     }
   | {
       depPath: string
-      kind: 'file' | 'style'
+      kind: 'style'
+      placeholder: string
+      suffix: string
+    }
+  | {
+      depPath: string
+      kind: 'file'
       placeholder: string
       requestTransform: readonly string[] | null
       suffix: string
@@ -59,6 +66,12 @@ type ResolveResult = {
       ok: false
     }
 )
+
+type ParsedRelativeUrl = {
+  hash: string
+  resolvedPath: string
+  search: string
+}
 
 export async function resolveStyle(
   record: StyleRecord,
@@ -182,8 +195,8 @@ function resolveImportDependency(
     }
   }
 
-  let { hash, pathname, search } = splitUrlSuffix(url)
-  if (pathname.length === 0 || pathname === '#') {
+  let parsedUrl = parseRelativeUrl(url, importerPath)
+  if (parsedUrl === null) {
     return {
       kind: 'external',
       placeholder,
@@ -191,15 +204,8 @@ function resolveImportDependency(
     }
   }
 
-  if (pathname.startsWith('/')) {
-    return {
-      kind: 'external',
-      placeholder,
-      replacement: url,
-    }
-  }
-
-  let resolvedFilePath = normalizeFilePath(path.resolve(path.dirname(importerPath), pathname))
+  let { hash, resolvedPath, search } = parsedUrl
+  let resolvedFilePath = resolvedPath
   let identityPath = resolveExistingFilePath(resolvedFilePath)
   if (!identityPath || !isStyleFilePath(identityPath)) {
     throw createAssetServerCompilationError(
@@ -234,7 +240,6 @@ function resolveImportDependency(
     depPath: identityPath,
     kind: 'style',
     placeholder,
-    requestTransform: null,
     suffix: `${search}${hash}`,
   }
 }
@@ -253,8 +258,8 @@ function resolveUrlDependency(
     }
   }
 
-  let { hash, pathname, search } = splitUrlSuffix(url)
-  if (pathname.length === 0 || pathname === '#') {
+  let parsedUrl = parseRelativeUrl(url, importerPath)
+  if (parsedUrl === null) {
     return {
       kind: 'external',
       placeholder,
@@ -262,15 +267,8 @@ function resolveUrlDependency(
     }
   }
 
-  if (pathname.startsWith('/')) {
-    return {
-      kind: 'external',
-      placeholder,
-      replacement: url,
-    }
-  }
-
-  let resolvedFilePath = normalizeFilePath(path.resolve(path.dirname(importerPath), pathname))
+  let { hash, resolvedPath, search } = parsedUrl
+  let resolvedFilePath = resolvedPath
   let identityPath = resolveExistingFilePath(resolvedFilePath)
   if (!identityPath) {
     throw createAssetServerCompilationError(`Failed to resolve url("${url}") in ${importerPath}.`, {
@@ -308,7 +306,7 @@ function resolveUrlDependency(
     )
   }
 
-  let parsedRequest = parseResolvedFileRequest(search, hash)
+  let parsedRequest = parseResolvedFileRequest({ hash, search })
 
   return {
     depPath: identityPath,
@@ -328,47 +326,26 @@ function resolveExistingFilePath(filePath: string): string | null {
   }
 }
 
-function splitUrlSuffix(url: string): {
-  hash: string
-  pathname: string
-  search: string
-} {
-  let queryIndex = url.indexOf('?')
-  let hashIndex = url.indexOf('#')
-  let endIndex = [queryIndex, hashIndex].filter((index) => index >= 0).sort((a, b) => a - b)[0]
-
-  if (endIndex == null) {
-    return {
-      hash: '',
-      pathname: url,
-      search: '',
-    }
+function parseRelativeUrl(url: string, importerPath: string): ParsedRelativeUrl | null {
+  if (url.length === 0 || url.startsWith('?') || url.startsWith('/') || isExternalUrl(url)) {
+    return null
   }
 
-  let search = ''
-  let hash = ''
-  if (queryIndex >= 0) {
-    let searchEnd = hashIndex >= 0 && hashIndex > queryIndex ? hashIndex : url.length
-    search = url.slice(queryIndex, searchEnd)
-  }
-  if (hashIndex >= 0) {
-    hash = url.slice(hashIndex)
-  }
+  let parsed = new URL(url, pathToFileURL(importerPath))
 
   return {
-    hash,
-    pathname: url.slice(0, endIndex),
-    search,
+    hash: parsed.hash,
+    resolvedPath: normalizeFilePath(fileURLToPath(parsed)),
+    search: parsed.search,
   }
 }
 
-function parseResolvedFileRequest(
-  search: string,
-  hash: string,
-): {
+function parseResolvedFileRequest(url: Pick<ParsedRelativeUrl, 'hash' | 'search'>): {
   suffix: string
   transform: readonly string[] | null
 } {
+  let { hash, search } = url
+
   if (search.length === 0) {
     return {
       suffix: hash,
@@ -388,21 +365,11 @@ function parseResolvedFileRequest(
 }
 
 function getTrackedImportFilePath(specifier: string, importerPath: string): string | null {
-  let { pathname } = splitUrlSuffix(specifier)
-  if (pathname.startsWith('./') || pathname.startsWith('../')) {
-    return normalizeFilePath(path.resolve(path.dirname(importerPath), pathname))
-  }
-
-  return null
+  return parseRelativeUrl(specifier, importerPath)?.resolvedPath ?? null
 }
 
 function getTrackedUrlFilePath(url: string, importerPath: string): string | null {
-  let { pathname } = splitUrlSuffix(url)
-  if (pathname.startsWith('./') || pathname.startsWith('../')) {
-    return normalizeFilePath(path.resolve(path.dirname(importerPath), pathname))
-  }
-
-  return null
+  return parseRelativeUrl(url, importerPath)?.resolvedPath ?? null
 }
 
 function isStyleFilePath(filePath: string): boolean {

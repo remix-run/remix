@@ -9,10 +9,11 @@ import {
   createAssetServerCompilationError,
   isAssetServerCompilationError,
 } from '../compilation-error.ts'
+import type { AssetServerCompilationError } from '../compilation-error.ts'
 import { formatFingerprintedPathname, generateFingerprint, hashContent } from '../fingerprint.ts'
 import { normalizeFilePath, resolveFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
-import type { AssetFileTransformResult, AssetRequestTransformMap } from './config.ts'
+import type { AssetFileTransformResult, ResolvedAssetRequestTransformMap } from './config.ts'
 import { parseAssetTransformInvocations } from './config.ts'
 import { createSourceFileStore } from './store.ts'
 import type {
@@ -54,7 +55,7 @@ type FileGetHrefOptions = {
   transform: readonly string[] | null
 }
 
-type FileCompilerOptions<transforms extends AssetRequestTransformMap = {}> = {
+type FileCompilerOptions = {
   buildId?: string
   cache?: FileStorage
   extensions: readonly string[]
@@ -77,8 +78,7 @@ type FileCompilerOptions<transforms extends AssetRequestTransformMap = {}> = {
   }[]
   isAllowed(absolutePath: string): boolean
   maxRequestTransforms: number
-  onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
-  transforms: transforms
+  transforms: ResolvedAssetRequestTransformMap
   rootDir: string
   routes: CompiledRoutes
 }
@@ -107,16 +107,23 @@ type ParsedRequestTransform = {
   param: string | undefined
 }
 
-export function createFileCompiler<transforms extends AssetRequestTransformMap>(
-  options: FileCompilerOptions<transforms>,
-): FileCompiler {
+type FileTransformSubject =
+  | {
+      kind: 'request'
+      name: string
+    }
+  | {
+      index: number
+      kind: 'global'
+      name: string | undefined
+    }
+
+export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
   let resolvedOptions = {
     ...options,
     extensionSet: new Set(options.extensions),
   }
-  let sourceFileStore: SourceFileStore = createSourceFileStore({
-    onWatchDirectoriesChange: options.onWatchDirectoriesChange,
-  })
+  let sourceFileStore: SourceFileStore = createSourceFileStore()
   let sourceFileInFlightByCacheKey = new Map<string, Promise<EmittedFile>>()
   let transformedAssetMetadataByCacheKey = new Map<string, EmittedFileMetadata>()
   let transformedCacheKeysByIdentityPath = new Map<string, Set<string>>()
@@ -361,49 +368,64 @@ export function createFileCompiler<transforms extends AssetRequestTransformMap>(
     let appliedTransform = false
 
     for (let requestTransform of transforms) {
-      let transform = resolvedOptions.transforms[requestTransform.name]
-      if (!transform) {
+      let transform = resolvedOptions.transforms.get(requestTransform.name)
+      if (transform === undefined) {
         throw createAssetServerCompilationError(
           `Unknown file transform "${requestTransform.name}" requested for ${filePath}`,
-          { code: 'TRANSFORM_FAILED' },
+          { code: 'FILE_TRANSFORM_QUERY_INVALID' },
         )
       }
 
       if (!supportsTransformExtension(transform.extensions, currentExtension)) {
         throw createAssetServerCompilationError(
           `File transform "${requestTransform.name}" does not support ${currentExtension} inputs for ${filePath}`,
-          { code: 'TRANSFORM_FAILED' },
+          { code: 'FILE_TRANSFORM_NOT_SUPPORTED' },
         )
       }
 
-      let result = await transform.transform(currentBody, {
-        extension: currentExtension,
-        filePath,
-        param: requestTransform.param,
-      })
+      let result: unknown
+      let transformSubject: FileTransformSubject = {
+        kind: 'request',
+        name: requestTransform.name,
+      }
+      try {
+        result = await transform.transform(currentBody, {
+          extension: currentExtension,
+          filePath,
+          param: requestTransform.param,
+        })
+      } catch (error) {
+        throw toFileTransformFailedError(error, filePath, transformSubject)
+      }
       let normalizedResult = normalizeTransformResult(result, {
         currentExtension,
         filePath,
-        transformName: requestTransform.name,
+        transformSubject,
       })
       currentBody = normalizedResult.content
       currentExtension = normalizedResult.extension
       appliedTransform = true
     }
 
-    for (let globalTransform of resolvedOptions.globalTransforms) {
+    for (let [index, globalTransform] of resolvedOptions.globalTransforms.entries()) {
       if (!supportsTransformExtension(globalTransform.extensions, currentExtension)) continue
 
-      let result = await globalTransform.transform(currentBody, {
-        extension: currentExtension,
-        filePath,
-      })
+      let result: unknown
+      let transformSubject = getGlobalFileTransformSubject(globalTransform, index)
+      try {
+        result = await globalTransform.transform(currentBody, {
+          extension: currentExtension,
+          filePath,
+        })
+      } catch (error) {
+        throw toFileTransformFailedError(error, filePath, transformSubject)
+      }
       if (result === null) continue
 
       let normalizedResult = normalizeTransformResult(result, {
         currentExtension,
         filePath,
-        transformName: globalTransform.name ?? '<anonymous>',
+        transformSubject,
       })
       currentBody = normalizedResult.content
       currentExtension = normalizedResult.extension
@@ -661,7 +683,7 @@ function normalizeTransformResult(
   options: {
     currentExtension: string
     filePath: string
-    transformName: string
+    transformSubject: FileTransformSubject
   },
 ): AssetFileTransformResult & { content: Uint8Array; extension: string } {
   if (typeof result === 'string') {
@@ -680,8 +702,8 @@ function normalizeTransformResult(
 
   if (result === null || typeof result !== 'object') {
     throw createAssetServerCompilationError(
-      `File transform "${options.transformName}" must return a string, Uint8Array, or object for ${options.filePath}`,
-      { code: 'TRANSFORM_FAILED' },
+      `${formatFileTransformSubject(options.transformSubject)} must return a string, Uint8Array, or object for ${options.filePath}`,
+      { code: 'FILE_TRANSFORM_RESULT_INVALID' },
     )
   }
 
@@ -690,8 +712,8 @@ function normalizeTransformResult(
     (typeof result.content !== 'string' && !(result.content instanceof Uint8Array))
   ) {
     throw createAssetServerCompilationError(
-      `File transform "${options.transformName}" must return a string or Uint8Array content value for ${options.filePath}`,
-      { code: 'TRANSFORM_FAILED' },
+      `${formatFileTransformSubject(options.transformSubject)} must return a string or Uint8Array content value for ${options.filePath}`,
+      { code: 'FILE_TRANSFORM_RESULT_INVALID' },
     )
   }
 
@@ -699,15 +721,15 @@ function normalizeTransformResult(
   if ('extension' in result && result.extension !== undefined) {
     if (typeof result.extension !== 'string') {
       throw createAssetServerCompilationError(
-        `File transform "${options.transformName}" must return a string extension for ${options.filePath}`,
-        { code: 'TRANSFORM_FAILED' },
+        `${formatFileTransformSubject(options.transformSubject)} must return a string extension for ${options.filePath}`,
+        { code: 'FILE_TRANSFORM_RESULT_INVALID' },
       )
     }
 
     extension = normalizeTransformExtension(
       result.extension,
       options.filePath,
-      options.transformName,
+      options.transformSubject,
     )
   }
 
@@ -723,17 +745,59 @@ function normalizeTransformResult(
 function normalizeTransformExtension(
   extension: string,
   filePath: string,
-  transformName: string,
+  transformSubject: FileTransformSubject,
 ): string {
   let normalizedExtension = extension.trim().toLowerCase()
   if (!/^\.[A-Za-z0-9_-]+$/.test(normalizedExtension)) {
     throw createAssetServerCompilationError(
-      `File transform "${transformName}" returned an invalid extension "${extension}" for ${filePath}`,
-      { code: 'TRANSFORM_FAILED' },
+      `${formatFileTransformSubject(transformSubject)} returned an invalid extension "${extension}" for ${filePath}`,
+      { code: 'FILE_TRANSFORM_RESULT_INVALID' },
     )
   }
 
   return normalizedExtension
+}
+
+function toFileTransformFailedError(
+  error: unknown,
+  filePath: string,
+  transformSubject: FileTransformSubject,
+): AssetServerCompilationError {
+  if (isAssetServerCompilationError(error)) return error
+
+  return createAssetServerCompilationError(
+    `${formatFileTransformSubject(transformSubject)} failed for ${filePath}. ${formatUnknownError(error)}`,
+    {
+      cause: error,
+      code: 'FILE_TRANSFORM_FAILED',
+    },
+  )
+}
+
+function getGlobalFileTransformSubject(
+  globalTransform: FileCompilerOptions['globalTransforms'][number],
+  index: number,
+): FileTransformSubject {
+  let functionName = globalTransform.transform.name
+  return {
+    index,
+    kind: 'global',
+    name: globalTransform.name ?? (functionName.length > 0 ? functionName : undefined),
+  }
+}
+
+function formatFileTransformSubject(transformSubject: FileTransformSubject): string {
+  if (transformSubject.kind === 'request') {
+    return `File transform "${transformSubject.name}"`
+  }
+
+  return transformSubject.name === undefined
+    ? `Global file transform at index ${transformSubject.index}`
+    : `Global file transform "${transformSubject.name}"`
+}
+
+function formatUnknownError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 function supportsTransformExtension(
@@ -745,7 +809,7 @@ function supportsTransformExtension(
 
 function parseRequestTransforms(
   transformQuery: readonly string[] | null,
-  transforms: AssetRequestTransformMap,
+  transforms: ResolvedAssetRequestTransformMap,
   maxRequestTransforms: number,
 ): readonly ParsedRequestTransform[] {
   if (transformQuery === null) return []
@@ -767,7 +831,7 @@ function parseRequestTransforms(
     throw createAssetServerCompilationError(
       error instanceof Error ? error.message : 'Invalid file transforms',
       {
-        code: 'INVALID_TRANSFORM_QUERY',
+        code: 'FILE_TRANSFORM_QUERY_INVALID',
       },
     )
   }

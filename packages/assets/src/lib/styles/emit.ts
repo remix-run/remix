@@ -172,7 +172,7 @@ async function getServedFileUrl(
     if (
       request.transform !== null &&
       isAssetServerCompilationError(error) &&
-      error.code === 'INVALID_TRANSFORM_QUERY'
+      error.code === 'FILE_TRANSFORM_QUERY_INVALID'
     ) {
       console.warn(
         `Invalid file transform request "${request.transform.join(',')}" in CSS asset ${importerPath} for ${identityPath}: ${error.message}`,
