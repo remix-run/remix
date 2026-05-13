@@ -1,4 +1,4 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 import { ilike } from 'remix/data-table'
 
 import { books } from '../../data/schema.ts'

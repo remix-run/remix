@@ -1,4 +1,4 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 import { ilike, inList, or } from 'remix/data-table'
 import { createFileResponse as sendFile } from 'remix/response/file'
 
