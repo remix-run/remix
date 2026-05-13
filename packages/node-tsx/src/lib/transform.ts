@@ -1,4 +1,4 @@
-import { transformSync, type TransformOptions } from 'oxc-transform'
+import { transformSync, type OxcError, type TransformOptions } from 'oxc-transform'
 import { getTsconfig, type TsConfigResult } from 'get-tsconfig'
 import * as path from 'node:path'
 
@@ -22,7 +22,7 @@ export function transformModule(filePath: string, source: string): string {
   })
 
   if (result.errors.length > 0) {
-    throw new Error(result.errors.map((error) => error.message).join('\n'))
+    throw createTransformError(result.errors)
   }
 
   if (result.map == null) {
@@ -32,6 +32,23 @@ export function transformModule(filePath: string, source: string): string {
   return `${result.code}\n//# sourceMappingURL=data:application/json;base64,${Buffer.from(
     JSON.stringify(result.map),
   ).toString('base64')}`
+}
+
+function createTransformError(errors: OxcError[]): SyntaxError {
+  let message = errors.map((error) => error.message).join('\n')
+  let error = new SyntaxError(message)
+  error.stack = errors.map(formatTransformError).join('\n\n')
+  return error
+}
+
+function formatTransformError(error: OxcError): string {
+  let sections = [error.codeframe?.trimEnd() ?? error.message, `SyntaxError: ${error.message}`]
+
+  if (error.helpMessage != null) {
+    sections.push(error.helpMessage)
+  }
+
+  return sections.join('\n\n')
 }
 
 function getSourceType(filePath: string): NonNullable<TransformOptions['sourceType']> {

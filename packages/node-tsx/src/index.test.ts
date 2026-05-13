@@ -81,6 +81,88 @@ describe('node-tsx', () => {
     })
   })
 
+  it('reports syntax errors in tsx files', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeJsxRuntime(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'server.tsx',
+        ['let element = <div>Hello</span>', 'console.log(JSON.stringify(element))', ''].join(
+          '\n',
+        ),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.tsx'], projectPath)
+
+      assert.notEqual(result.exitCode, 0)
+      assert.equal(
+        normalizeNodeError(result.stderr, projectPath),
+        [
+          'node:internal/modules/run_main:<line>',
+          '    triggerUncaughtException(',
+          '    ^',
+          '',
+          '[',
+          "  x Expected corresponding JSX closing tag for 'div'.",
+          '   ,-[<project>/server.tsx:1:27]',
+          ' 1 | let element = <div>Hello</span>',
+          '   :                ^|^        ^^|^',
+          '   :                 |           `-- Expected `</div>`',
+          '   :                 `-- Opened here',
+          ' 2 | console.log(JSON.stringify(element))',
+          '   `----',
+          '',
+          "SyntaxError: Expected corresponding JSX closing tag for 'div'.]",
+          '',
+          'Node.js <version>',
+          '',
+        ].join('\n'),
+      )
+    })
+  })
+
+  it('reports syntax errors in jsx files', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeJsxRuntime(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'server.jsx',
+        ['let element = <main>Hello</section>', 'console.log(JSON.stringify(element))', ''].join(
+          '\n',
+        ),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.jsx'], projectPath)
+
+      assert.notEqual(result.exitCode, 0)
+      assert.equal(
+        normalizeNodeError(result.stderr, projectPath),
+        [
+          'node:internal/modules/run_main:<line>',
+          '    triggerUncaughtException(',
+          '    ^',
+          '',
+          '[',
+          "  x Expected corresponding JSX closing tag for 'main'.",
+          '   ,-[<project>/server.jsx:1:28]',
+          ' 1 | let element = <main>Hello</section>',
+          '   :                ^^|^        ^^^|^^^',
+          '   :                  |            `-- Expected `</main>`',
+          '   :                  `-- Opened here',
+          ' 2 | console.log(JSON.stringify(element))',
+          '   `----',
+          '',
+          "SyntaxError: Expected corresponding JSX closing tag for 'main'.]",
+          '',
+          'Node.js <version>',
+          '',
+        ].join('\n'),
+      )
+    })
+  })
+
   it('maps errors in transformed modules back to the original source', async () => {
     await withProject(async (projectPath) => {
       await linkRemixPackage(projectPath)
@@ -1062,6 +1144,14 @@ async function runNode(
     stderr,
     stdout,
   }
+}
+
+function normalizeNodeError(stderr: string, projectPath: string): string {
+  return stderr
+    .replaceAll(`/private${projectPath}`, '<project>')
+    .replaceAll(projectPath, '<project>')
+    .replace(/node:internal\/modules\/run_main:\d+/g, 'node:internal/modules/run_main:<line>')
+    .replace(/Node\.js v[\d.]+/g, 'Node.js <version>')
 }
 
 async function waitForClose(
