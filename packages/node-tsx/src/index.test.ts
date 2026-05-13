@@ -106,7 +106,7 @@ describe('node-tsx', () => {
           '{',
           '  "compilerOptions": {',
           '    "jsx": "react-jsx",',
-          '    "jsxImportSource": "local-jsx"',
+          '    "jsxImportSource": "jsx-package"',
           '  }',
           '}',
           '',
@@ -167,10 +167,10 @@ describe('node-tsx', () => {
           '{',
           '  "compilerOptions": {',
           '    "jsx": "react-jsx",',
-          '    "jsxImportSource": "local-jsx",',
+          '    "jsxImportSource": "jsx-package",',
           '    "module": "CommonJS",',
           '    "paths": {',
-          '      "local-jsx/jsx-runtime": ["./missing-jsx-runtime.js"]',
+          '      "jsx-package/jsx-runtime": ["./missing-jsx-runtime.js"]',
           '    }',
           '  }',
           '}',
@@ -207,10 +207,10 @@ describe('node-tsx', () => {
       await writeJsxRuntime(projectPath)
       await writeProjectFile(
         projectPath,
-        'node_modules/pragma-jsx/package.json',
+        'node_modules/jsx-pragma-package/package.json',
         [
           '{',
-          '  "name": "pragma-jsx",',
+          '  "name": "jsx-pragma-package",',
           '  "type": "module",',
           '  "exports": {',
           '    "./jsx-runtime": "./jsx-runtime.js"',
@@ -221,7 +221,7 @@ describe('node-tsx', () => {
       )
       await writeProjectFile(
         projectPath,
-        'node_modules/pragma-jsx/jsx-runtime.js',
+        'node_modules/jsx-pragma-package/jsx-runtime.js',
         [
           'export const Fragment = "Fragment"',
           '',
@@ -237,7 +237,7 @@ describe('node-tsx', () => {
         projectPath,
         'server.tsx',
         [
-          '/** @jsxImportSource pragma-jsx */',
+          '/** @jsxImportSource jsx-pragma-package */',
           'let element = <div>Hello</div>',
           'console.log(JSON.stringify(element))',
           '',
@@ -266,8 +266,8 @@ describe('node-tsx', () => {
           '{',
           '  "compilerOptions": {',
           '    "jsx": "react",',
-          '    "jsxFactory": "React.createElement",',
-          '    "jsxFragmentFactory": "React.Fragment"',
+          '    "jsxFactory": "jsxRuntime.createElement",',
+          '    "jsxFragmentFactory": "jsxRuntime.Fragment"',
           '  }',
           '}',
           '',
@@ -315,6 +315,169 @@ describe('node-tsx', () => {
         source: 'pragma',
         type: 'Fragment',
       })
+    })
+  })
+
+  it('uses the automatic jsx runtime when no jsx tsconfig option is configured', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'tsconfig.json',
+        [
+          '{',
+          '  "compilerOptions": {',
+          '    "jsxImportSource": "jsx-package"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'node_modules/jsx-package/package.json',
+        [
+          '{',
+          '  "name": "jsx-package",',
+          '  "type": "module",',
+          '  "exports": {',
+          '    "./jsx-runtime": "./jsx-runtime.js"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'node_modules/jsx-package/jsx-runtime.js',
+        [
+          'export const Fragment = "Fragment"',
+          '',
+          'export function jsx(type, props) {',
+          '  return { source: "jsx-package", type, props: props ?? null }',
+          '}',
+          '',
+          'export { jsx as jsxs }',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'server.tsx',
+        ['let element = <div>Hello</div>', 'console.log(JSON.stringify(element))', ''].join('\n'),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.tsx'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.deepEqual(JSON.parse(result.stdout.trim()), {
+        props: { children: 'Hello' },
+        source: 'jsx-package',
+        type: 'div',
+      })
+    })
+  })
+
+  it('uses the development automatic jsx runtime for jsxdev mode', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'tsconfig.json',
+        [
+          '{',
+          '  "compilerOptions": {',
+          '    "jsx": "react-jsxdev",',
+          '    "jsxImportSource": "jsx-package"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'node_modules/jsx-package/package.json',
+        [
+          '{',
+          '  "name": "jsx-package",',
+          '  "type": "module",',
+          '  "exports": {',
+          '    "./jsx-dev-runtime": "./jsx-dev-runtime.js"',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'node_modules/jsx-package/jsx-dev-runtime.js',
+        [
+          'export const Fragment = "Fragment"',
+          '',
+          'export function jsxDEV(type, props) {',
+          '  return { development: true, type, props: props ?? null }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'server.tsx',
+        ['let element = <div>Hello</div>', 'console.log(JSON.stringify(element))', ''].join('\n'),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.tsx'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.deepEqual(JSON.parse(result.stdout.trim()), {
+        development: true,
+        props: { children: 'Hello' },
+        type: 'div',
+      })
+    })
+  })
+
+  it('rejects preserve jsx mode because it leaves jsx syntax behind', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'tsconfig.json',
+        ['{', '  "compilerOptions": {', '    "jsx": "preserve"', '  }', '}', ''].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'server.tsx',
+        ['let element = <div>Hello</div>', 'console.log(JSON.stringify(element))', ''].join('\n'),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.tsx'], projectPath)
+
+      assert.notEqual(result.exitCode, 0)
+      assert.match(result.stderr, /Unsupported tsconfig compilerOptions\.jsx = "preserve"/)
+    })
+  })
+
+  it('rejects native jsx mode because it leaves jsx syntax behind', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'tsconfig.json',
+        ['{', '  "compilerOptions": {', '    "jsx": "react-native"', '  }', '}', ''].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'server.tsx',
+        ['let element = <div>Hello</div>', 'console.log(JSON.stringify(element))', ''].join('\n'),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.tsx'], projectPath)
+
+      assert.notEqual(result.exitCode, 0)
+      assert.match(result.stderr, /Unsupported tsconfig compilerOptions\.jsx = "react-native"/)
     })
   })
 
@@ -401,13 +564,21 @@ describe('node-tsx', () => {
         await writeProjectFile(
           projectPath,
           'tsconfig.json',
-          ['{', '  "compilerOptions": {', '    "jsx": "react"', '  }', '}', ''].join('\n'),
+          [
+            '{',
+            '  "compilerOptions": {',
+            '    "jsx": "react",',
+            '    "jsxFactory": "jsxRuntime.createElement"',
+            '  }',
+            '}',
+            '',
+          ].join('\n'),
         )
         await writeProjectFile(
           projectPath,
           'server.tsx',
           [
-            'globalThis.React = {',
+            'globalThis.jsxRuntime = {',
             '  createElement(type, props, ...children) {',
             '    return {',
             '      type,',
@@ -455,13 +626,21 @@ describe('node-tsx', () => {
         await writeProjectFile(
           projectPath,
           'tsconfig.json',
-          ['{', '  "compilerOptions": {', '    "jsx": "react"', '  }', '}', ''].join('\n'),
+          [
+            '{',
+            '  "compilerOptions": {',
+            '    "jsx": "react",',
+            '    "jsxFactory": "jsxRuntime.createElement"',
+            '  }',
+            '}',
+            '',
+          ].join('\n'),
         )
         await writeProjectFile(
           projectPath,
           'server.jsx',
           [
-            'globalThis.React = {',
+            'globalThis.jsxRuntime = {',
             '  createElement(type, props, ...children) {',
             '    return {',
             '      type,',
@@ -565,7 +744,7 @@ async function writeJsxRuntime(projectDir: string): Promise<void> {
       '{',
       '  "compilerOptions": {',
       '    "jsx": "react-jsx",',
-      '    "jsxImportSource": "local-jsx"',
+      '    "jsxImportSource": "jsx-package"',
       '  }',
       '}',
       '',
@@ -573,10 +752,10 @@ async function writeJsxRuntime(projectDir: string): Promise<void> {
   )
   await writeProjectFile(
     projectDir,
-    'node_modules/local-jsx/package.json',
+    'node_modules/jsx-package/package.json',
     [
       '{',
-      '  "name": "local-jsx",',
+      '  "name": "jsx-package",',
       '  "type": "module",',
       '  "exports": {',
       '    "./jsx-runtime": "./jsx-runtime.js"',
@@ -587,7 +766,7 @@ async function writeJsxRuntime(projectDir: string): Promise<void> {
   )
   await writeProjectFile(
     projectDir,
-    'node_modules/local-jsx/jsx-runtime.js',
+    'node_modules/jsx-package/jsx-runtime.js',
     [
       'export const Fragment = "Fragment"',
       '',
