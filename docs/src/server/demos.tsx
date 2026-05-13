@@ -200,16 +200,19 @@ function walkDemoFiles(directory: string): string[] {
   let files: string[] = []
 
   for (let entry of fs.readdirSync(directory, { withFileTypes: true })) {
+    if (!entry.isDirectory()) continue
     let absolutePath = path.join(directory, entry.name)
 
-    if (entry.isDirectory()) {
-      files.push(...walkDemoFiles(absolutePath))
+    if (entry.name === 'demos') {
+      for (let demoEntry of fs.readdirSync(absolutePath, { withFileTypes: true })) {
+        if (demoEntry.isFile() && demoEntry.name.endsWith('.demo.tsx')) {
+          files.push(path.join(absolutePath, demoEntry.name))
+        }
+      }
       continue
     }
 
-    if (entry.isFile() && entry.name.endsWith('.demo.tsx')) {
-      files.push(absolutePath)
-    }
+    files.push(...walkDemoFiles(absolutePath))
   }
 
   return files
