@@ -1,17 +1,17 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import * as semver from 'semver'
+import { createRouter as _createRouter, type Router } from 'remix/fetch-router'
+import { openLazyFile } from 'remix/fs'
+import { createFileResponse } from 'remix/response/file'
+import { createHtmlResponse } from 'remix/response/html'
 import { type RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
-import { createRouter as _createRouter, type Router } from 'remix/fetch-router'
-import { createHtmlResponse } from 'remix/response/html'
-import { Home, MarkdownContent, Document, NotFound, type Versions, DemoContent } from './view.tsx'
+import * as semver from 'semver'
 import { discoverDemoFiles, loadDemoComponent, renderDemoSource } from './demos.tsx'
 import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
 import { buildRegistry, type DocsRegistry } from './registry.ts'
 import { routes } from './routes.ts'
-import { createFileResponse } from 'remix/response/file'
-import { openLazyFile } from 'remix/fs'
+import { DemoContent, Document, Home, MarkdownContent, NotFound, type Versions } from './view.tsx'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const REPO_DIR = path.resolve(DOCS_DIR, '..')

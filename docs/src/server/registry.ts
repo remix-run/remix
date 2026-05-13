@@ -1,5 +1,5 @@
-import { css } from 'node_modules/@remix-run/ui/src/style/css-mixin.ts'
 import { theme } from '@remix-run/ui/theme'
+import { css } from 'node_modules/@remix-run/ui/src/style/css-mixin.ts'
 import type { DemoDocFile } from './demos.tsx'
 import type { ApiDocFile, ApiTypeKind, PackageDocFile } from './markdown.ts'
 import { routes } from './routes.ts'

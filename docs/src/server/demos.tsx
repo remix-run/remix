@@ -1,7 +1,7 @@
+import * as esbuild from 'esbuild'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as url from 'node:url'
-import * as esbuild from 'esbuild'
 import * as prettier from 'prettier'
 import type { RemixNode } from 'remix/ui'
 import { codeToHtml } from 'shiki'

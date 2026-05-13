@@ -1,16 +1,16 @@
-import { css } from 'remix/ui'
-import type { Handle, RemixNode } from 'remix/ui'
 import { Glyph } from '@remix-run/ui/glyph'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
-import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
-import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
-import { routes } from './routes.ts'
+import type { Handle, RemixNode } from 'remix/ui'
+import { css } from 'remix/ui'
 import {
   MOBILE_NAV_MAX_HEIGHT,
   MOBILE_NAV_MEDIA_RULE,
   MOBILE_TOP_BAR_HEIGHT_PX,
 } from '../shared/breakpoints.ts'
-import type { DemoComponent, DemoDocFile } from './demos.tsx'
+import type { DemoDocFile } from './demos.tsx'
+import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
+import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
+import { routes } from './routes.ts'
 
 export type Versions = { version: string; crawl: boolean }[]
 

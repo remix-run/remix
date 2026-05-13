@@ -107,6 +107,14 @@
       }
     },
     {
+      "files": ["packages/ui/**/demos/*.demo.tsx"],
+      "plugins": ["jsdoc"],
+      "rules": {
+        // Don't need @returns in our demo files
+        "jsdoc/require-returns": "off"
+      }
+    },
+    {
       "files": ["packages/**/*.test.ts"],
       "plugins": ["jsdoc"],
       "rules": {
