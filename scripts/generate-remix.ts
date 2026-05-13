@@ -51,9 +51,21 @@ type ExportEntry = {
   reExportFrom: string
   // The README file in the owning package to copy next to the generated umbrella export.
   readmePath?: string
+  // If set, this is a deprecated alias re-exporting from the canonical path instead of the package.
+  // The value is the canonical remix/* path this alias points to (e.g. 'remix/router').
+  // To remove legacy aliases entirely, delete the `buildLegacyAliases()` call below.
+  deprecatedAliasOf?: string
 }
 
 const { remixRunPackages, allExports, allBins } = await getRemixRunPackages()
+
+// ----- LEGACY ALIASES -----
+// Re-exports old mechanical paths (e.g. remix/fetch-router) pointing at canonical ones.
+// Remove this block and the buildLegacyAliases() function to drop legacy support.
+const legacyAliases = buildLegacyAliases(allExports)
+allExports.push(...legacyAliases)
+// --------------------------
+
 const remixPackageJson = JSON.parse(await fs.readFile(remixPackageJsonPath, 'utf-8'))
 
 // Track existing exports and bins for comparison
@@ -193,6 +205,47 @@ async function getRemixRunPackages() {
   )
 
   return { remixRunPackages, allExports, allBins }
+}
+
+/**
+ * Builds deprecated alias entries for old mechanical remix paths that now have canonical names.
+ * Each alias re-exports from the canonical path (e.g. `remix/fetch-router` → `remix/router`).
+ * To remove legacy aliases: delete the `buildLegacyAliases()` call in the top-level script.
+ */
+function buildLegacyAliases(canonicalExports: ExportEntry[]): ExportEntry[] {
+  // Build a map from canonical exportPath → sourceFile for re-export resolution.
+  let canonicalByExportPath = new Map(canonicalExports.map((e) => [e.exportPath, e]))
+
+  // Build a map from specifier → canonical exportPath (e.g. '@remix-run/fetch-router' → './router')
+  let specifierToRemixPath = buildSpecifierToRemixPath(packagesDir)
+
+  let aliases: ExportEntry[] = []
+
+  for (let [specifier, canonicalPath] of specifierToRemixPath) {
+    // Derive the old mechanical path: '@remix-run/fetch-router' → 'fetch-router',
+    // '@remix-run/fetch-router/routes' → 'fetch-router/routes'
+    let shortSpecifier = specifier.replace(/^@remix-run\//, '')
+    let mechanicalExportPath = `./${shortSpecifier}`
+    let canonicalExportPath = `./${canonicalPath.replace('remix/', '')}`
+
+    // Only emit an alias when the mechanical path differs from the canonical one
+    if (mechanicalExportPath === canonicalExportPath) continue
+    // Skip if a canonical export already occupies this path
+    if (canonicalByExportPath.has(mechanicalExportPath)) continue
+
+    let canonical = canonicalByExportPath.get(canonicalExportPath)
+    if (!canonical) continue
+
+    aliases.push({
+      sourceFile: `${shortSpecifier}.ts`,
+      exportPath: mechanicalExportPath,
+      reExportFrom: canonical.reExportFrom,
+      deprecatedAliasOf: canonicalPath,
+    })
+  }
+
+  aliases.sort((a, b) => a.exportPath.localeCompare(b.exportPath))
+  return aliases
 }
 
 function getSourceEntryPath(exportConfig: unknown): string | undefined {
@@ -399,10 +452,14 @@ function isRemixTestBin(bin: { command: string; packageName: string }): boolean 
 }
 
 function createExportSource(entry: ExportEntry): string {
+  let deprecatedComment = entry.deprecatedAliasOf
+    ? `/** @deprecated Import from '${entry.deprecatedAliasOf}' instead. */\n`
+    : ''
+
   if (entry.reExportFrom === '@remix-run/fetch-router') {
     return [
       `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
-      `export * from '${entry.reExportFrom}'`,
+      deprecatedComment + `export * from '${entry.reExportFrom}'`,
       ``,
       `export interface RouterTypes {}`,
       `type RemixRouterTypes = RouterTypes`,
@@ -415,7 +472,7 @@ function createExportSource(entry: ExportEntry): string {
 
   return [
     `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
-    `export * from '${entry.reExportFrom}'\n`,
+    deprecatedComment + `export * from '${entry.reExportFrom}'\n`,
   ].join('\n')
 }
 
@@ -441,11 +498,20 @@ async function outputExportsChangeFiles(
   exportsConfig: Record<string, string>,
   binsConfig: Record<string, string>,
 ) {
+  // Legacy alias export paths — excluded from change-file diffs since they are
+  // not meaningful additions/removals from the user's perspective.
+  let legacyAliasPaths = new Set(legacyAliases.map((e) => e.exportPath))
+
   let newExportsSet = new Set<string>(
-    Object.keys(exportsConfig).filter((key) => key !== '.' && key !== './package.json'),
+    Object.keys(exportsConfig).filter(
+      (key) => key !== '.' && key !== './package.json' && !legacyAliasPaths.has(key),
+    ),
   )
-  let addedExports = Array.from(newExportsSet).filter((key) => !existingExports.has(key))
-  let removedExports = Array.from(existingExports).filter((key) => !newExportsSet.has(key))
+  let filteredExistingExports = new Set(
+    Array.from(existingExports).filter((key) => !legacyAliasPaths.has(key)),
+  )
+  let addedExports = Array.from(newExportsSet).filter((key) => !filteredExistingExports.has(key))
+  let removedExports = Array.from(filteredExistingExports).filter((key) => !newExportsSet.has(key))
 
   let newBinsSet = new Set<string>(Object.keys(binsConfig))
   let addedBins = Array.from(newBinsSet).filter((cmd) => !existingBins.has(cmd))
