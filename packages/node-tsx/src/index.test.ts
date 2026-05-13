@@ -567,6 +567,36 @@ describe('node-tsx', () => {
     })
   })
 
+  it('rejects invalid jsx tsconfig option values', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'tsconfig.json',
+        [
+          '{',
+          '  "compilerOptions": {',
+          '    "jsx": "react-jsx",',
+          '    "jsxImportSource": ["jsx-package"]',
+          '  }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'server.tsx',
+        ['let element = <div>Hello</div>', 'console.log(JSON.stringify(element))', ''].join('\n'),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.tsx'], projectPath)
+
+      assert.notEqual(result.exitCode, 0)
+      assert.match(result.stderr, /Invalid tsconfig compilerOptions/)
+      assert.match(result.stderr, /compilerOptions\.jsxImportSource: Expected string/)
+    })
+  })
+
   it('rejects preserve jsx mode because it leaves jsx syntax behind', async () => {
     await withProject(async (projectPath) => {
       await linkRemixPackage(projectPath)

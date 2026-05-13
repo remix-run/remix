@@ -5,12 +5,23 @@ import * as path from 'node:path'
 import { getModuleFormat, type ModuleFormat } from './package-type.ts'
 
 const tsconfigCache = new Map<string, TsConfigResult | null>()
-const supportedTsconfigTransformCompilerOptions = {
-  jsx: 'jsx',
-  jsxFactory: 'jsxFactory',
-  jsxFragmentFactory: 'jsxFragmentFactory',
-  jsxImportSource: 'jsxImportSource',
-} as const
+const tsconfigTransformCompilerOptionKeys = [
+  'jsx',
+  'jsxFactory',
+  'jsxFragmentFactory',
+  'jsxImportSource',
+] as const
+
+type TsconfigTransformCompilerOptionKey = (typeof tsconfigTransformCompilerOptionKeys)[number]
+
+type TsconfigTransformCompilerOptions = {
+  [key in TsconfigTransformCompilerOptionKey]?: string
+}
+
+type TsconfigTransformCompilerOptionsIssue = {
+  key: TsconfigTransformCompilerOptionKey
+  value: unknown
+}
 
 export function transformModule(filePath: string, source: string): string {
   let compilerOptions = getTsconfigCompilerOptions(filePath)
@@ -65,35 +76,88 @@ function getLanguage(filePath: string): NonNullable<TransformOptions['lang']> {
   return filePath.endsWith('.tsx') ? 'tsx' : 'jsx'
 }
 
-function getTsconfigCompilerOptions(filePath: string): Record<string, unknown> | undefined {
+function getTsconfigCompilerOptions(filePath: string): TsconfigTransformCompilerOptions | undefined {
   let parsed = getTsconfig(path.dirname(filePath), 'tsconfig.json', tsconfigCache)
   if (parsed == null) {
     return undefined
   }
 
   let compilerOptions = parsed.config.compilerOptions
-  return typeof compilerOptions === 'object' && compilerOptions !== null
-    ? (compilerOptions as Record<string, unknown>)
-    : undefined
+  if (typeof compilerOptions !== 'object' || compilerOptions === null) {
+    return undefined
+  }
+
+  return parseTsconfigTransformCompilerOptions(
+    filePath,
+    compilerOptions as Record<string, unknown>,
+  )
+}
+
+function parseTsconfigTransformCompilerOptions(
+  filePath: string,
+  compilerOptions: Record<string, unknown>,
+): TsconfigTransformCompilerOptions {
+  let options: TsconfigTransformCompilerOptions = {}
+  let issues: TsconfigTransformCompilerOptionsIssue[] = []
+
+  for (let key of tsconfigTransformCompilerOptionKeys) {
+    let value = compilerOptions[key]
+    if (value === undefined) {
+      continue
+    }
+
+    if (typeof value !== 'string') {
+      issues.push({ key, value })
+      continue
+    }
+
+    options[key] = value
+  }
+
+  if (issues.length > 0) {
+    throw createTsconfigCompilerOptionsError(filePath, issues)
+  }
+
+  return options
+}
+
+function createTsconfigCompilerOptionsError(
+  filePath: string,
+  issues: TsconfigTransformCompilerOptionsIssue[],
+): Error {
+  let details = issues.map(formatTsconfigCompilerOptionsIssue).join('\n')
+  return new Error(
+    `Invalid tsconfig compilerOptions for ${filePath}.\n` +
+      `remix/node-tsx only supports string values for JSX transform options.\n${details}`,
+  )
+}
+
+function formatTsconfigCompilerOptionsIssue(
+  issue: TsconfigTransformCompilerOptionsIssue,
+): string {
+  return `- compilerOptions.${issue.key}: Expected string, received ${getValueType(issue.value)}`
+}
+
+function getValueType(value: unknown): string {
+  if (Array.isArray(value)) {
+    return 'array'
+  }
+
+  if (value === null) {
+    return 'null'
+  }
+
+  return typeof value
 }
 
 function getJsxTransformOptions(
   filePath: string,
-  compilerOptions?: Record<string, unknown>,
+  compilerOptions?: TsconfigTransformCompilerOptions,
 ): Pick<TransformOptions, 'jsx'> {
-  let jsx = getStringOption(compilerOptions, supportedTsconfigTransformCompilerOptions.jsx)
-  let importSource = getStringOption(
-    compilerOptions,
-    supportedTsconfigTransformCompilerOptions.jsxImportSource,
-  )
-  let factory = getStringOption(
-    compilerOptions,
-    supportedTsconfigTransformCompilerOptions.jsxFactory,
-  )
-  let fragment = getStringOption(
-    compilerOptions,
-    supportedTsconfigTransformCompilerOptions.jsxFragmentFactory,
-  )
+  let jsx = compilerOptions?.jsx
+  let importSource = compilerOptions?.jsxImportSource
+  let factory = compilerOptions?.jsxFactory
+  let fragment = compilerOptions?.jsxFragmentFactory
 
   if (jsx === 'preserve' || jsx === 'react-native') {
     throw new Error(
@@ -119,12 +183,4 @@ function getJsxTransformOptions(
       runtime: 'classic',
     },
   }
-}
-
-function getStringOption(
-  compilerOptions: Record<string, unknown> | undefined,
-  key: string,
-): string | undefined {
-  let value = compilerOptions?.[key]
-  return typeof value === 'string' ? value : undefined
 }
