@@ -51,10 +51,9 @@ type ExportEntry = {
   reExportFrom: string
   // The README file in the owning package to copy next to the generated umbrella export.
   readmePath?: string
-  // If set, this is a deprecated alias re-exporting from the canonical path instead of the package.
-  // The value is the canonical remix/* path this alias points to (e.g. 'remix/router').
+  // If set, this is a legacy alias re-exporting from the canonical path instead of the package.
   // To remove legacy aliases entirely, delete the `buildLegacyAliases()` call below.
-  deprecatedAliasOf?: string
+  legacyAliasOf?: string
 }
 
 const { remixRunPackages, allExports, allBins } = await getRemixRunPackages()
@@ -241,7 +240,7 @@ function buildLegacyAliases(canonicalExports: ExportEntry[]): ExportEntry[] {
       sourceFile: `${shortSpecifier}.ts`,
       exportPath: mechanicalExportPath,
       reExportFrom: canonical.reExportFrom,
-      deprecatedAliasOf: canonicalPath,
+      legacyAliasOf: canonicalPath,
       readmePath: canonical.readmePath,
     })
 
@@ -458,14 +457,10 @@ function isRemixTestBin(bin: { command: string; packageName: string }): boolean 
 }
 
 function createExportSource(entry: ExportEntry): string {
-  let deprecatedComment = entry.deprecatedAliasOf
-    ? `/** @deprecated Import from '${entry.deprecatedAliasOf}' instead. */\n`
-    : ''
-
   if (entry.reExportFrom === '@remix-run/fetch-router') {
     return [
       `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
-      deprecatedComment + `export * from '${entry.reExportFrom}'`,
+      `export * from '${entry.reExportFrom}'`,
       ``,
       `export interface RouterTypes {}`,
       `type RemixRouterTypes = RouterTypes`,
@@ -478,7 +473,7 @@ function createExportSource(entry: ExportEntry): string {
 
   return [
     `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
-    deprecatedComment + `export * from '${entry.reExportFrom}'\n`,
+    `export * from '${entry.reExportFrom}'\n`,
   ].join('\n')
 }
 
