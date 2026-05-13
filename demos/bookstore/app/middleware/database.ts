@@ -1,4 +1,4 @@
-import type { Middleware } from 'remix/router'
+import type { Middleware } from 'remix/fetch-router'
 import { Database } from 'remix/data-table'
 
 import { db } from '../data/setup.ts'

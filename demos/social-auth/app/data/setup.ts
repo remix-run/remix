@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { createDatabase } from 'remix/data-table'
 import { createMigrationRunner } from 'remix/data-table/migrations'
 import { loadMigrations } from 'remix/data-table/migrations/node'
-import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
+import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
 
 import { hashPassword } from '../utils/password-hash.ts'
 import { authAccounts, passwordResetTokens, users } from './schema.ts'

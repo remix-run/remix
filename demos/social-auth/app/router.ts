@@ -1,9 +1,9 @@
-import { createRouter, type MiddlewareContext } from 'remix/router'
+import { createRouter, type MiddlewareContext } from 'remix/fetch-router'
 import type { Cookie } from 'remix/cookie'
-import { formData } from 'remix/middleware/form-data'
+import { formData } from 'remix/form-data-middleware'
 import type { SessionStorage } from 'remix/session'
-import { session } from 'remix/middleware/session'
-import { staticFiles } from 'remix/middleware/static'
+import { session } from 'remix/session-middleware'
+import { staticFiles } from 'remix/static-middleware'
 
 import { createAuthController } from './actions/auth/controller.tsx'
 import { forgotPasswordController } from './actions/auth/forgot-password/controller.tsx'
@@ -30,7 +30,7 @@ type AppContext = MiddlewareContext<
   ]
 >
 
-declare module 'remix/router' {
+declare module 'remix/fetch-router' {
   interface RouterTypes {
     context: AppContext
   }

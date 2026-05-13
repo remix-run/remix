@@ -1,4 +1,4 @@
-import { createController } from 'remix/router'
+import { createController } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../../routes.ts'

@@ -1,6 +1,6 @@
 import { createCookie } from 'remix/cookie'
 import { SetCookie, Cookie } from 'remix/headers'
-import { createMemorySessionStorage } from 'remix/session-storage/memory'
+import { createMemorySessionStorage } from 'remix/session/memory-storage'
 
 import { createBookstoreRouter } from '../app/router.ts'
 import { initializeBookstoreDatabase } from '../app/data/setup.ts'

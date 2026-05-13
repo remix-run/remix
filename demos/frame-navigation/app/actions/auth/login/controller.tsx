@@ -1,4 +1,4 @@
-import { createController } from 'remix/router'
+import { createController } from 'remix/fetch-router'
 import { css } from 'remix/ui'
 import { redirect } from 'remix/response/redirect'
 

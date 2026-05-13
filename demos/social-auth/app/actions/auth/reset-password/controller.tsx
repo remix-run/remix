@@ -1,4 +1,4 @@
-import { createController } from 'remix/router'
+import { createController } from 'remix/fetch-router'
 import type { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 

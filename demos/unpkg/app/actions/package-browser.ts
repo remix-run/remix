@@ -1,5 +1,5 @@
 import { html } from 'remix/html-template'
-import type { Renderer } from 'remix/middleware/render'
+import type { Renderer } from 'remix/render-middleware'
 
 import type { PackageFile } from '../utils/npm.ts'
 import { formatBytes } from '../utils/format-bytes.ts'

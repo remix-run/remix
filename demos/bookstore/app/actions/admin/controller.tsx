@@ -1,4 +1,4 @@
-import { createController } from 'remix/router'
+import { createController } from 'remix/fetch-router'
 
 import { requireAdmin } from '../../middleware/admin.ts'
 import { requireAuth } from '../../middleware/auth.ts'

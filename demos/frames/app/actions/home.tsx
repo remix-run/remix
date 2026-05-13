@@ -10,7 +10,7 @@ export function HomePage() {
     <Document title="Frames + fetch-router demo" maxWidth="980px">
       <h1 style={{ margin: 0, letterSpacing: '-0.02em' }}>Full-stack Frames</h1>
       <p style={{ marginTop: 8, color: '#b9c6ff' }}>
-        Server routes are handled by <code>remix/router</code>; UI is streamed with{' '}
+        Server routes are handled by <code>remix/fetch-router</code>; UI is streamed with{' '}
         <code>remix/ui</code> Frames and client entries.
       </p>
       <p style={{ marginTop: 0, marginBottom: 16 }}>

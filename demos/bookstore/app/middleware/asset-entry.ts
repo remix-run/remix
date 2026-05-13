@@ -1,6 +1,6 @@
 import * as path from 'node:path'
-import { createContextKey, type Middleware } from 'remix/router'
-import { getContext } from 'remix/middleware/async-context'
+import { createContextKey, type Middleware } from 'remix/fetch-router'
+import { getContext } from 'remix/async-context-middleware'
 
 import { assetServer } from '../utils/assets.ts'
 

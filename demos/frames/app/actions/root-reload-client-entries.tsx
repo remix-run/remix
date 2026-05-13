@@ -1,4 +1,4 @@
-import { createAction } from 'remix/router'
+import { createAction } from 'remix/fetch-router'
 import type { Handle } from 'remix/ui'
 
 import {

@@ -1,4 +1,4 @@
-import { createController } from 'remix/router'
+import { createController } from 'remix/fetch-router'
 import { completeAuth, verifyCredentials } from 'remix/auth'
 import { redirect } from 'remix/response/redirect'
 

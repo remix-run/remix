@@ -1,5 +1,5 @@
-import { auth, requireAuth as requireAuthenticated } from 'remix/middleware/auth'
-import type { AuthScheme } from 'remix/middleware/auth'
+import { auth, requireAuth as requireAuthenticated } from 'remix/auth-middleware'
+import type { AuthScheme } from 'remix/auth-middleware'
 import { createCookie } from 'remix/cookie'
 import { redirect } from 'remix/response/redirect'
 

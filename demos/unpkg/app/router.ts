@@ -1,4 +1,4 @@
-import { createRouter, type MiddlewareContext } from 'remix/router'
+import { createRouter, type MiddlewareContext } from 'remix/fetch-router'
 
 import rootController from './actions/controller.ts'
 import { render } from './middleware/render.ts'
@@ -6,7 +6,7 @@ import { routes } from './routes.ts'
 
 type AppContext = MiddlewareContext<[ReturnType<typeof render>]>
 
-declare module 'remix/router' {
+declare module 'remix/fetch-router' {
   interface RouterTypes {
     context: AppContext
   }

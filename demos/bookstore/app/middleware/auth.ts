@@ -4,7 +4,7 @@ import {
   auth,
   createSessionAuthScheme,
   requireAuth as requireAuthenticated,
-} from 'remix/middleware/auth'
+} from 'remix/auth-middleware'
 import { Database } from 'remix/data-table'
 import { redirect } from 'remix/response/redirect'
 

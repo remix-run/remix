@@ -1,4 +1,4 @@
-import { createRouter } from 'remix/router'
+import { createRouter } from 'remix/fetch-router'
 
 import rootController from './actions/controller.ts'
 import { routes } from './routes.ts'

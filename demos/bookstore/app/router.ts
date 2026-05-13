@@ -1,13 +1,13 @@
-import { createRouter, type MiddlewareContext } from 'remix/router'
-import { asyncContext } from 'remix/middleware/async-context'
-import { compression } from 'remix/middleware/compression'
-import { formData } from 'remix/middleware/form-data'
+import { createRouter, type MiddlewareContext } from 'remix/fetch-router'
+import { asyncContext } from 'remix/async-context-middleware'
+import { compression } from 'remix/compression-middleware'
+import { formData } from 'remix/form-data-middleware'
 import type { Cookie } from 'remix/cookie'
-import { logger } from 'remix/middleware/logger'
-import { methodOverride } from 'remix/middleware/method-override'
+import { logger } from 'remix/logger-middleware'
+import { methodOverride } from 'remix/method-override-middleware'
 import type { SessionStorage } from 'remix/session'
-import { session } from 'remix/middleware/session'
-import { staticFiles } from 'remix/middleware/static'
+import { session } from 'remix/session-middleware'
+import { staticFiles } from 'remix/static-middleware'
 
 import apiController from './actions/api/controller.tsx'
 import accountController from './actions/account/controller.tsx'
@@ -48,7 +48,7 @@ type AppContext = MiddlewareContext<
   ]
 >
 
-declare module 'remix/router' {
+declare module 'remix/fetch-router' {
   interface RouterTypes {
     context: AppContext
   }
