@@ -120,6 +120,7 @@ export function createRouter(versions: Versions) {
           <Document {...docProps}>
             <NotFound slug={params.slug} />
           </Document>,
+          { status: 404 },
         )
       },
       async home({ request, params }) {

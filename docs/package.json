@@ -33,6 +33,7 @@
     "prerender": "tsx src/server/prerender.ts",
     "prerender:serve": "npx http-server -p 44100 build/site",
     "serve": "tsx src/server/index.ts",
+    "test": "remix test",
     "typecheck": "tsc --noEmit"
   }
 }
