@@ -2,7 +2,7 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
 import { parse } from 'node-html-parser'
-import { type Router } from 'remix/router'
+import { type Router } from 'remix/fetch-router'
 
 import { router } from '../config/router.tsx'
 

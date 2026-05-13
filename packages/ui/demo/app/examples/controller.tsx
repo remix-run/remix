@@ -1,5 +1,5 @@
 import { clientEntry } from 'remix/ui'
-import { createController } from 'remix/router'
+import { createController } from 'remix/fetch-router'
 
 import { render } from '../../config/render.tsx'
 import { routes } from '../../config/routes.ts'

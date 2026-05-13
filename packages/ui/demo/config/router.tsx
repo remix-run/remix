@@ -1,6 +1,6 @@
-import { createRouter } from 'remix/router'
-import { logger } from 'remix/middleware/logger'
-import { staticFiles } from 'remix/middleware/static'
+import { createRouter } from 'remix/fetch-router'
+import { logger } from 'remix/logger-middleware'
+import { staticFiles } from 'remix/static-middleware'
 
 import apiController from '../app/api/controller.ts'
 import examplesController from '../app/examples/controller.tsx'
