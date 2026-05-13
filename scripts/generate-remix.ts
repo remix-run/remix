@@ -160,7 +160,7 @@ async function getRemixRunPackages() {
             let relPath = remixPath ? remixPath.replace('remix/', '') : shortName
             let readmePath = findReadmePath(packageDirName)
             remixRunPackage.exports.push({
-              sourceFile: `${relPath}.ts`,
+              sourceFile: `${shortName}.ts`,
               exportPath: `./${relPath}`,
               reExportFrom: specifier,
               readmePath,
@@ -177,7 +177,7 @@ async function getRemixRunPackages() {
             ? findReadmePath(packageDirName, sourceEntryPath)
             : undefined
           remixRunPackage.exports.push({
-            sourceFile: `${relPath}.ts`,
+            sourceFile: `${shortName}/${subExport}.ts`,
             exportPath: `./${relPath}`,
             reExportFrom: specifier,
             readmePath,
@@ -238,7 +238,7 @@ function buildLegacyAliases(canonicalExports: ExportEntry[]): ExportEntry[] {
     if (!canonical) continue
 
     aliases.push({
-      sourceFile: `${shortSpecifier}.ts`,
+      sourceFile: canonical.sourceFile,
       exportPath: mechanicalExportPath,
       reExportFrom: canonical.reExportFrom,
       legacyAliasOf: canonicalPath,
@@ -310,13 +310,18 @@ async function updateRemixPackage() {
 
   // Generate fresh source files
   console.log('Generating Remix source files...')
+  let writtenSourceFiles = new Set<string>()
   for (let entry of allExports) {
     let sourceFilePath = path.join(remixDir, SOURCE_FOLDER, entry.sourceFile)
     // Create subdirectory if needed
     let sourceFileDir = path.dirname(sourceFilePath)
     await fs.mkdir(sourceFileDir, { recursive: true })
-    let content = createExportSource(entry)
-    await fs.writeFile(sourceFilePath, content, 'utf-8')
+    // Multiple export paths may share one stub (e.g. legacy alias + canonical)
+    if (!writtenSourceFiles.has(entry.sourceFile)) {
+      writtenSourceFiles.add(entry.sourceFile)
+      let content = createExportSource(entry)
+      await fs.writeFile(sourceFilePath, content, 'utf-8')
+    }
 
     if (!entry.readmePath) continue
 
