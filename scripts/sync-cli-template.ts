@@ -10,6 +10,7 @@ const EXCLUDED_NAMES = new Set([
   '.cache',
   '.coverage',
   '.git',
+  '.gitignore',
   '.tmp',
   '.turbo',
   'bun.lock',
@@ -40,6 +41,7 @@ if (command === '--clean') {
       return !EXCLUDED_NAMES.has(name) && !isLocalEnvironmentFile(name) && !name.endsWith('.log')
     },
   })
+  await fs.copyFile(path.join(SOURCE_DIR, '.gitignore'), path.join(TARGET_DIR, 'gitignore'))
 }
 
 function isLocalEnvironmentFile(name: string): boolean {
