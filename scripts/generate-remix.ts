@@ -63,6 +63,7 @@ const { remixRunPackages, allExports, allBins } = await getRemixRunPackages()
 // Remove this block and the buildLegacyAliases() function to drop legacy support.
 const legacyAliases = buildLegacyAliases(allExports)
 allExports.push(...legacyAliases)
+allExports.sort((a, b) => a.exportPath.localeCompare(b.exportPath))
 // --------------------------
 
 const remixPackageJson = JSON.parse(await fs.readFile(remixPackageJsonPath, 'utf-8'))
