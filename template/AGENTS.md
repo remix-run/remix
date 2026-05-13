@@ -35,6 +35,6 @@ Refer to ./.agents/skills/remix/SKILL.md
 
 ## Build-Out Notes
 
-- This starter intentionally begins small; add directories like `app/data/`, `public/`, and `test/` only when you need them.
+- This starter intentionally begins small; add directories like `app/data/` and `test/` only when you need them.
 - Prefer putting code in the narrowest owner before introducing shared modules.
 - Avoid generic dumping-ground directories like `app/lib/` or `app/components/`.
