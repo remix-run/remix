@@ -241,6 +241,9 @@ importers:
       typedoc:
         specifier: ^0.28.19
         version: 0.28.19(typescript@5.9.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
   packages/assert:
     devDependencies:
