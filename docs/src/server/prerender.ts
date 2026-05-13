@@ -6,9 +6,8 @@ import { parse } from 'node-html-parser'
 import * as semver from 'semver'
 import { type Router } from 'remix/fetch-router'
 import { createRouter, getDefaultVersions } from './router.tsx'
-import type { ServerContext } from './components.tsx'
-import { discoverMarkdownFiles } from './markdown.ts'
 import { routes } from './routes.ts'
+import type { Versions } from './view.tsx'
 
 let { values: cliArgs } = util.parseArgs({
   options: {
@@ -145,7 +144,7 @@ function resolveRelativeLink(link: string, url: string): string {
   return path.posix.join(base, link)
 }
 
-async function getVersionsToBuild(): Promise<ServerContext['versions']> {
+async function getVersionsToBuild(): Promise<Versions> {
   // Get all Remix v3 tags, transform them to vX.Y.Z format, sort newest to oldest
   const remixVersions = cp
     .execSync('git tag', { encoding: 'utf-8' })

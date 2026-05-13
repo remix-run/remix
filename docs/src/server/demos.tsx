@@ -1,11 +1,9 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as url from 'node:url'
-import { css } from '@remix-run/ui'
-import { theme } from '@remix-run/ui/theme'
 import * as esbuild from 'esbuild'
 import * as prettier from 'prettier'
-import type { Handle, RemixNode } from 'remix/ui'
+import type { RemixNode } from 'remix/ui'
 import { codeToHtml } from 'shiki'
 import ts from 'typescript'
 
@@ -29,8 +27,6 @@ export type DemoDocFile = {
   urlPath: string
 }
 
-type DemoComponent = () => RemixNode | (() => RemixNode)
-
 export async function discoverDemoFiles(): Promise<DemoDocFile[]> {
   let demoPaths = walkDemoFiles(UI_COMPONENTS_DIR).sort()
   let demoFiles = await Promise.all(demoPaths.map((demoPath) => getDemoFile(demoPath)))
@@ -51,7 +47,7 @@ export async function discoverDemoFiles(): Promise<DemoDocFile[]> {
 
 export async function loadDemoComponent(
   demo: Pick<DemoDocFile, 'importHref' | 'slug'>,
-): Promise<DemoComponent> {
+): Promise<() => () => RemixNode> {
   let version = fs.statSync(new URL(demo.importHref)).mtimeMs.toString(36)
   let mod: unknown = await import(`${demo.importHref}?v=${version}`)
 
@@ -59,7 +55,7 @@ export async function loadDemoComponent(
     throw new Error(`Demo "${demo.slug}" must default export a component function`)
   }
 
-  return mod.default as DemoComponent
+  return mod.default as () => () => RemixNode
 }
 
 export async function renderDemoSource(source: string): Promise<string> {
@@ -70,31 +66,6 @@ export async function renderDemoSource(source: string): Promise<string> {
       dark: 'github-dark',
     },
   })
-}
-
-export function DemoContent(
-  handle: Handle<{
-    demo: Pick<DemoDocFile, 'description' | 'name'>
-    ExampleComponent: DemoComponent
-    sourceHtml: string
-  }>,
-) {
-  return () => {
-    let { demo, ExampleComponent, sourceHtml } = handle.props
-    return (
-      <div mix={demoPageCss}>
-        <header mix={demoHeaderCss}>
-          <h1 mix={demoTitleCss}>{demo.name}</h1>
-          <p>{demo.description}</p>
-        </header>
-
-        <div mix={demoFrameCss}>
-          <div mix={demoPreviewCss}>{renderDemoNode(ExampleComponent)}</div>
-          <div mix={demoSourceCss} innerHTML={sourceHtml} />
-        </div>
-      </div>
-    )
-  }
 }
 
 async function getDemoFile(filePath: string): Promise<DemoDocFile> {
@@ -225,11 +196,6 @@ function readJsdocTag(jsDoc: ts.JSDoc, tagName: 'name' | 'description'): string 
   return trimmed.length > 0 ? trimmed : undefined
 }
 
-function renderDemoNode(ExampleComponent: DemoComponent): RemixNode {
-  let node = ExampleComponent()
-  return typeof node === 'function' ? node() : node
-}
-
 function walkDemoFiles(directory: string): string[] {
   let files: string[] = []
 
@@ -248,46 +214,3 @@ function walkDemoFiles(directory: string): string[] {
 
   return files
 }
-
-const demoPageCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xl,
-})
-
-const demoHeaderCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.sm,
-})
-
-const demoTitleCss = css({
-  margin: '0 !important',
-})
-
-const demoFrameCss = css({
-  border: `1px solid ${theme.colors.border.subtle}`,
-  borderRadius: theme.radius.lg,
-  overflow: 'hidden',
-})
-
-const demoPreviewCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: '120px',
-  padding: theme.space.xxl,
-  borderBottom: `1px solid ${theme.colors.border.subtle}`,
-  backgroundColor: theme.surface.lvl0,
-  overflowX: 'auto',
-})
-
-const demoSourceCss = css({
-  '& > pre.shiki': {
-    margin: '0 !important',
-    marginBlockStart: '0px !important',
-    marginBlockEnd: '0px !important',
-    border: 'none !important',
-    borderRadius: '0 !important',
-  },
-})

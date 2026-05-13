@@ -1,9 +1,10 @@
 import { css } from 'node_modules/@remix-run/ui/src/style/css-mixin.ts'
 import { theme } from '@remix-run/ui/theme'
-import type { DemoDocFile } from './demo.tsx'
-import type { DocFile } from './doc-files.ts'
+import type { DemoDocFile } from './demos.tsx'
 import type { ApiDocFile, ApiTypeKind, PackageDocFile } from './markdown.ts'
 import { routes } from './routes.ts'
+
+export type DocFile = ApiDocFile | PackageDocFile | DemoDocFile
 
 const TYPE_LABEL: Record<ApiTypeKind, string> = {
   type: 'Types',
