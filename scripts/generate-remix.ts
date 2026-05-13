@@ -136,6 +136,7 @@ async function getRemixRunPackages() {
     let packageJsonPath = remixRunPackage.packageJsonPath
     let packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
     let shortName = packageName.replace('@remix-run/', '')
+    let packageDirName = shortName
 
     let binExports = new Set(remixRunPackage.bins.map((b) => `./${b.sourceExport}`))
     let packageExports = packageJson.exports
