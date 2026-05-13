@@ -242,7 +242,12 @@ function buildLegacyAliases(canonicalExports: ExportEntry[]): ExportEntry[] {
       exportPath: mechanicalExportPath,
       reExportFrom: canonical.reExportFrom,
       deprecatedAliasOf: canonicalPath,
+      readmePath: canonical.readmePath,
     })
+
+    // Move the README to the legacy alias location — clears it from the canonical
+    // entry so the README lands at the old mechanical path (less PR noise).
+    canonical.readmePath = undefined
   }
 
   aliases.sort((a, b) => a.exportPath.localeCompare(b.exportPath))
