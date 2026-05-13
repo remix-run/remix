@@ -23,7 +23,7 @@ npm i remix
 Use `createAssetServer` to serve browser JS/TS and CSS assets from a URL namespace in your app.
 
 ```ts
-import { createRouter } from 'remix/fetch-router'
+import { createRouter } from 'remix/router'
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
