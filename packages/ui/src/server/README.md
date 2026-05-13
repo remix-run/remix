@@ -1,4 +1,4 @@
-# Server Rendering
+# Server
 
 Remix Component can render to HTML on the server using two APIs:
 
@@ -84,5 +84,5 @@ Components using the `css` prop have their styles collected during rendering and
 
 ## See Also
 
-- [Hydration](./hydration.md) - Making server-rendered components interactive on the client
-- [Frames](./frames.md) - Streaming partial server UI with `<Frame>`
+- [Hydration](https://github.com/remix-run/remix/blob/main/packages/ui/docs/hydration.md) - Making server-rendered components interactive on the client
+- [Frames](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md) - Streaming partial server UI with `<Frame>`

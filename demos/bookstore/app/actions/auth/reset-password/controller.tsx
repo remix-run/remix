@@ -1,11 +1,8 @@
 import { createController } from 'remix/fetch-router'
 import * as s from 'remix/data-schema'
-import { Database } from 'remix/data-table'
-import { Renderer } from 'remix/render-middleware'
 import { redirect } from 'remix/response/redirect'
 
 import { passwordResetTokens, users } from '../../../data/schema.ts'
-import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
 import { resetPasswordSchema } from '../schemas.ts'
@@ -13,9 +10,7 @@ import { ResetPasswordPage, ResetPasswordSuccessPage } from './page.tsx'
 
 export default createController(routes.auth.resetPassword, {
   actions: {
-    index({ params, get }) {
-      let session = get(Session)
-      let render = get(Renderer)
+    index({ params, render, session }) {
       let token = params.token
       let error = session.get('error')
 
@@ -24,11 +19,7 @@ export default createController(routes.auth.resetPassword, {
       )
     },
 
-    async action({ get, params }) {
-      let db = get(Database)
-      let render = get(Renderer)
-      let session = get(Session)
-      let formData = get(FormData)
+    async action({ db, formData, params, render, session }) {
       let { confirmPassword, password } = s.parse(resetPasswordSchema, formData)
       let token = params.token
 

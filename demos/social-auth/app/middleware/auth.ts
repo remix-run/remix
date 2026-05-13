@@ -30,7 +30,7 @@ export function loadAuth() {
         async verify(value, context) {
           let db = context.get(Database)
           if (db == null) {
-            throw new Error('Expected database middleware before auth middleware')
+            throw new Error('Expected loadDatabase() middleware before loadAuth()')
           }
 
           let user = await db.find(users, value.userId)
@@ -73,7 +73,7 @@ export const passwordProvider = createCredentialsAuthProvider({
   async verify({ email, password }, context) {
     let db = context.get(Database)
     if (db == null) {
-      throw new Error('Expected database middleware before password auth provider')
+      throw new Error('Expected loadDatabase() middleware before password auth provider')
     }
 
     let user = await db.findOne(users, { where: { email } })
@@ -91,11 +91,13 @@ export const passwordProvider = createCredentialsAuthProvider({
   },
 })
 
-export const requireAuth = requireAuthenticated<AuthIdentity>({
-  onFailure() {
-    return redirect(routes.home.href())
-  },
-})
+export function requireAuth() {
+  return requireAuthenticated<AuthIdentity>({
+    onFailure() {
+      return redirect(routes.home.href())
+    },
+  })
+}
 
 export function getPostAuthRedirect(url: URL, fallback = routes.account.href()): string {
   return getSafeReturnTo(url.searchParams.get('returnTo')) ?? fallback

@@ -17,4 +17,4 @@ Controller middleware applies only to the direct actions in that controller. Mid
 
 After moving files, remove nested route-map keys and unknown action keys from every controller. Each controller's `actions` object should contain exactly the direct leaf route keys for the route map passed to the matching `router.map()` call.
 
-The default template now starts with a single home route. Shared HTML rendering should live in middleware and be read from request context with `context.get(Renderer)`, matching the default template's `app/middleware/render.tsx` pattern.
+The default template now starts with a single home route. Shared HTML rendering should live in middleware and be read from request context with `context.render`, matching the default template's `app/middleware/render.tsx` pattern.

@@ -18,7 +18,7 @@
     "@types/semver": "^7.5.8",
     "esbuild": "^0.25.10",
     "shiki": "^3.22.0",
-    "typedoc": "^0.28.15"
+    "typedoc": "^0.28.19"
   },
   "scripts": {
     "build": "pnpm run --filter \".\" --parallel \"/^build:/\"",

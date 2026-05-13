@@ -47,17 +47,22 @@ export interface FormDataOptions extends ParseFormDataOptions {
  */
 export function formData(
   options?: FormDataOptions,
-): Middleware<readonly [typeof FormData, FormData]> {
+): Middleware<{ key: typeof FormData; value: FormData; property: 'formData' }> {
   let suppressErrors = options?.suppressErrors ?? false
   let uploadHandler = options?.uploadHandler
 
   return async (context) => {
     if (context.has(FormData)) {
+      let formData = context.get(FormData)
+      if (formData != null) {
+        context.set(FormData, formData, { property: 'formData' })
+      }
+
       return
     }
 
     if (context.method === 'GET' || context.method === 'HEAD') {
-      context.set(FormData, new FormData())
+      context.set(FormData, new FormData(), { property: 'formData' })
       return
     }
 
@@ -67,18 +72,20 @@ export function formData(
       (!contentType.startsWith('multipart/') &&
         !contentType.startsWith('application/x-www-form-urlencoded'))
     ) {
-      context.set(FormData, new FormData())
+      context.set(FormData, new FormData(), { property: 'formData' })
       return
     }
 
     try {
-      context.set(FormData, await parseFormData(context.request, options, uploadHandler))
+      context.set(FormData, await parseFormData(context.request, options, uploadHandler), {
+        property: 'formData',
+      })
     } catch (error) {
       if (!suppressErrors || isMultipartLimitError(error)) {
         throw error
       }
 
-      context.set(FormData, new FormData())
+      context.set(FormData, new FormData(), { property: 'formData' })
     }
   }
 }

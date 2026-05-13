@@ -464,7 +464,7 @@ describe('run', () => {
       assert.match(server, /createRequestListener/)
       assert.doesNotMatch(server, /remix\/node-serve/)
       assert.doesNotMatch(routes, /auth/)
-      assert.match(controller, /context\.get\(Renderer\)/)
+      assert.match(controller, /context\.render\(<HomePage \/>/)
       assert.doesNotMatch(controller, /AuthPage/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
       await assertPathExists(path.join(appDir, 'app', 'assets.ts'))

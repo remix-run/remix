@@ -5,12 +5,37 @@ import { createRouter } from '@remix-run/fetch-router'
 import { route } from '@remix-run/fetch-router/routes'
 import { createStyles } from '@remix-run/terminal'
 
-import { logger } from './logger.ts'
+import { Logger, logger } from './logger.ts'
 
 const styles = createStyles({ colors: true, env: {} })
 const ANSI_CSI = `${String.fromCharCode(27)}[`
 
 describe('logger', () => {
+  it('provides the configured logger on request context', async () => {
+    let messages: string[] = []
+    let router = createRouter({
+      middleware: [
+        logger({
+          colors: false,
+          format: 'access',
+          log: (message) => messages.push(message),
+        }),
+      ],
+    })
+
+    router.get('/', (context) => {
+      context.logger('direct')
+      context.get(Logger)('keyed')
+      return new Response('Home')
+    })
+
+    let response = await router.fetch('https://remix.run/')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Home')
+    assert.deepEqual(messages, ['direct', 'keyed', 'access'])
+  })
+
   it('logs the request', async () => {
     let { message, response } = await logRequest({
       loggerOptions: { colors: false },

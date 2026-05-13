@@ -166,7 +166,7 @@ export let Counter = clientEntry(
 
 - [Components](./components.md) - Component structure and runtime behavior
 - [Handle API](./handle.md) - The component's interface to the framework
-- [Server Rendering](./server-rendering.md) - `renderToString` and `renderToStream`
+- [Server](../src/server/README.md) - `renderToString` and `renderToStream`
 - [Hydration](./hydration.md) - `clientEntry` and `run`
 - [Frames](./frames.md) - Streaming partial server UI with `<Frame>`
 - [Styling](./styling.md) - CSS mixin for inline styling

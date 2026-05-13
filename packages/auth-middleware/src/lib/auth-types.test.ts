@@ -67,19 +67,32 @@ expectTypeEquality<
 
 router.get(routes.public, (context) => {
   let currentAuth = context.get(Auth)
+  let directAuth = context.auth
   let id: string = context.params.id
 
   let authState: AuthState<APIIdentity> = currentAuth
+  let directAuthState: AuthState<APIIdentity> = directAuth
 
   void id
   void authState
+  void directAuthState
 
   // @ts-expect-error - auth must be narrowed before reading identity
   void currentAuth.identity
+  // @ts-expect-error - auth must be narrowed before reading identity
+  void directAuth.identity
 
   if (currentAuth.ok) {
     let identity: APIIdentity = currentAuth.identity
     let method: string = currentAuth.method
+
+    void identity
+    void method
+  }
+
+  if (directAuth.ok) {
+    let identity: APIIdentity = directAuth.identity
+    let method: string = directAuth.method
 
     void identity
     void method
@@ -92,14 +105,19 @@ const privateAction = createAction<typeof routes.private, ProtectedAppContext>(r
   middleware: protectedMiddleware,
   handler(context) {
     let currentAuth = context.get(Auth)
+    let directAuth = context.auth
     let id: string = context.params.id
 
     let authState: GoodAuth<APIIdentity> = currentAuth
+    let directAuthState: GoodAuth<APIIdentity> = directAuth
     let method: string = currentAuth.method
+    let directMethod: string = directAuth.method
 
     void id
     void authState
+    void directAuthState
     void method
+    void directMethod
 
     return new Response('Private')
   },
@@ -110,12 +128,17 @@ const adminController = createController<typeof routes.admin, ProtectedAppContex
   actions: {
     dashboard(context) {
       let currentAuth = context.get(Auth)
+      let directAuth = context.auth
 
       let authState: GoodAuth<APIIdentity> = currentAuth
+      let directAuthState: GoodAuth<APIIdentity> = directAuth
       let method: string = currentAuth.method
+      let directMethod: string = directAuth.method
 
       void authState
+      void directAuthState
       void method
+      void directMethod
 
       return new Response('Admin')
     },
@@ -130,14 +153,17 @@ const sessionAction = createAction<'/session/:id', SessionAuthContext>('/session
   middleware: sessionAuthMiddleware,
   handler(context) {
     let currentAuth = context.get(Auth)
+    let directAuth = context.auth
     let id: string = context.params.id
 
     expectTypeEquality<IsEqual<typeof currentAuth, GoodAuth<{ kind: 'session'; id: string }>>>()
+    expectTypeEquality<IsEqual<typeof directAuth, GoodAuth<{ kind: 'session'; id: string }>>>()
     expectTypeEquality<IsEqual<typeof currentAuth.method, string>>()
+    expectTypeEquality<IsEqual<typeof directAuth.method, string>>()
 
     void id
 
-    return new Response(currentAuth.method)
+    return new Response(directAuth.method)
   },
 })
 
