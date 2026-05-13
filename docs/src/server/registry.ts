@@ -1,6 +1,8 @@
 import { css } from 'node_modules/@remix-run/ui/src/style/css-mixin.ts'
 import { theme } from '@remix-run/ui/theme'
-import type { ApiDocFile, ApiTypeKind, DocFile } from './markdown.ts'
+import type { DemoDocFile } from './demo.tsx'
+import type { DocFile } from './doc-files.ts'
+import type { ApiDocFile, ApiTypeKind, PackageDocFile } from './markdown.ts'
 import { routes } from './routes.ts'
 
 const TYPE_LABEL: Record<ApiTypeKind, string> = {
@@ -72,10 +74,16 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
   pages[HOME_PAGE_ID] = homePage
 
   let packageGroups = new Map<string, Map<ApiTypeKind, ApiDocFile[]>>()
-  let packageOverviews = new Map<string, DocFile>()
+  let packageOverviews = new Map<string, PackageDocFile>()
+  let packageDemos = new Map<string, DemoDocFile[]>()
   for (let file of docFiles) {
     if (file.kind === 'package') {
       packageOverviews.set(file.package, file)
+      continue
+    }
+
+    if (file.kind === 'demo') {
+      getOrSet(packageDemos, file.package, () => []).push(file)
       continue
     }
 
@@ -84,7 +92,7 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
   }
 
   let sortedPackages = Array.from(
-    new Set([...packageGroups.keys(), ...packageOverviews.keys()]),
+    new Set([...packageGroups.keys(), ...packageOverviews.keys(), ...packageDemos.keys()]),
   ).sort(comparePackages)
 
   for (let pkg of sortedPackages) {
@@ -104,6 +112,28 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
       }
       pages[overview.urlPath] = page
       groups.push({ id: `${pkg}::overview`, pageIds: [overview.urlPath] })
+    }
+
+    let demos = packageDemos.get(pkg)
+    if (demos && demos.length > 0) {
+      let groupId = `${pkg}::demos`
+      let sortedDemos = [...demos].sort((a, b) => a.name.localeCompare(b.name))
+      let pageIds: string[] = []
+      for (let file of sortedDemos) {
+        let page: PageDefinition = {
+          id: file.urlPath,
+          description: '',
+          eyebrow: `${pkg} · Demo`,
+          navLabel: file.name,
+          path: routes.docs.href({ version, slug: file.urlPath }),
+          sectionId: pkg,
+          title: file.name,
+          docFile: file,
+        }
+        pages[file.urlPath] = page
+        pageIds.push(file.urlPath)
+      }
+      groups.push({ id: groupId, label: 'Examples', pageIds })
     }
 
     for (let kind of TYPE_ORDER) {

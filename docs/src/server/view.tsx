@@ -61,12 +61,12 @@ export function DocsDocument(handle: Handle<DocsViewProps>) {
             href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700"
           />
           <title>{`${page.title} | Remix API Documentation`}</title>
-          {slug ? (
+          {slug && page.docFile?.kind !== 'demo' ? (
             <link
               rel="alternate"
               type="text/markdown"
               href={routes.markdown.href({ version: activeVersion, slug })}
-              title={`Markdown docs for ${apiName}`}
+              title={`Markdown docs for ${apiName ?? page.title}`}
             />
           ) : null}
           <script
@@ -417,7 +417,7 @@ const bodyCss = css({
     border: `1px solid ${theme.colors.border.subtle}`,
     borderRadius: theme.radius.md,
     padding: theme.space.md,
-    margin: `${theme.space.lg} 0 !important`,
+    margin: `${theme.space.lg} 0`,
     overflowX: 'auto',
     lineHeight: theme.lineHeight.relaxed,
     '@media (min-width: 768px)': {

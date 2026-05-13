@@ -6,6 +6,7 @@ import { renderToStream } from 'remix/ui/server'
 import { createRouter as _createRouter, type Router } from 'remix/fetch-router'
 import { createHtmlResponse } from 'remix/response/html'
 import { MarkdownContent, ServerPage, NotFound, type ServerContext } from './components.tsx'
+import { DemoContent, discoverDemoFiles, loadDemoComponent, renderDemoSource } from './demo.tsx'
 import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
 import { routes } from './routes.ts'
 import { createFileResponse } from 'remix/response/file'
@@ -19,7 +20,9 @@ const ASSETS_DIR = path.join(BUILD_DIR, 'assets')
 const DEV_CSS_DIR = path.join(DOCS_DIR, 'public')
 const REMIX_PKG_JSON = path.join(REPO_DIR, 'packages', 'remix', 'package.json')
 
-const { docFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
+const { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
+const demoFiles = await discoverDemoFiles()
+const docFiles = [...markdownFiles, ...demoFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
 
 export const getDefaultVersions = (): ServerContext['versions'] => {
   let version = JSON.parse(fs.readFileSync(REMIX_PKG_JSON, 'utf-8')).version
@@ -69,6 +72,11 @@ export function createRouter(versions: ServerContext['versions']) {
 
         if (!docFile) {
           node = <NotFound slug={params.slug} />
+        } else if (docFile.kind === 'demo') {
+          let ExampleComponent = await loadDemoComponent(docFile)
+          let sourceHtml = await renderDemoSource(docFile.source)
+          node = <DemoContent demo={docFile} ExampleComponent={ExampleComponent} sourceHtml={sourceHtml} />
+          sourceUrl = docFile.sourceUrl
         } else {
           let { html, source } = await renderMarkdownFile(
             docFile.path,
@@ -160,7 +168,7 @@ export function createRouter(versions: ServerContext['versions']) {
         return Response.json(content)
       },
       async markdown({ request, params }) {
-        let docFile = docFiles.find((file) => file.urlPath === params.slug)
+        let docFile = markdownFiles.find((file) => file.urlPath === params.slug)
         if (!docFile) {
           return new Response('Not Found', { status: 404 })
         }

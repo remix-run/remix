@@ -1,5 +1,5 @@
 import type { Handle, RemixNode } from 'remix/ui'
-import type { DocFile } from './markdown.ts'
+import type { DocFile } from './doc-files.ts'
 import {
   buildRegistry,
   buildNotFoundPage,
