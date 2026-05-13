@@ -1,5 +1,4 @@
 import { createController } from 'remix/fetch-router'
-import { Renderer } from 'remix/render-middleware'
 
 import { routes } from '../routes.ts'
 import { getMessageLimit } from '../utils/message-limit.ts'
@@ -10,8 +9,7 @@ export default createController(routes, {
     assets() {
       return new Response('Not found', { status: 404 })
     },
-    home({ get, url }) {
-      let render = get(Renderer)
+    home({ render, url }) {
       let limit = getMessageLimit(url)
       return render(<HomePage limit={limit} />)
     },

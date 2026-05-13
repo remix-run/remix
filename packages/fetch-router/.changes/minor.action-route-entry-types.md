@@ -1,4 +1,4 @@
-BREAKING CHANGE: Simplified route action, controller, request handler, and middleware helper types. `Action` now accepts a route pattern, `RoutePattern`, or `Route` object as its first generic and the full request context as its optional second generic. It describes either a plain request handler function or an action object with optional inline middleware. `Controller` now accepts the route map as its first generic and the full request context as its optional second generic. `RequestHandler` now accepts the full request context as its only generic. `Middleware` now accepts one context effect generic, which can be a single readonly `[key, value]` tuple, a `ContextEntries` tuple, or a context transform function. `BuildAction` is no longer exported.
+BREAKING CHANGE: Simplified route action, controller, request handler, and middleware helper types. `Action` now accepts a route pattern, `RoutePattern`, or `Route` object as its first generic and the full request context as its optional second generic. It describes either a plain request handler function or an action object with optional inline middleware. `Controller` now accepts the route map as its first generic and the full request context as its optional second generic. `RequestHandler` now accepts the full request context as its only generic. `Middleware` now accepts one context effect generic, which can be a single `{ key, value }` context entry, a `ContextEntries` tuple, or a context transform function. `BuildAction` is no longer exported.
 
 For most apps, augment `RouterTypes.context` once and use `createAction()`/`createController()` to type stored handlers without `satisfies` clauses:
 
@@ -95,10 +95,10 @@ If you manually annotate middleware, pass only the context transform type:
 let middleware: Middleware<{}, SetDatabaseContextTransform>
 
 // after
-let middleware: Middleware<readonly [typeof Database, Database]>
+let middleware: Middleware<{ key: typeof Database; value: Database }>
 ```
 
-Simplified the public middleware context helper types. `MiddlewareContext` is now the exported helper for deriving the request context produced by a middleware chain, and it accepts an optional base context as its second type parameter. Middleware that provides one context value can use a readonly `[key, value]` tuple directly instead of wrapping the entry in a one-item tuple. The lower-level `MiddlewareContextTransform`, `ContextTransform`, `ApplyContextTransform`, `ApplyMiddleware`, and `ApplyMiddlewareTuple` helpers are no longer exported.
+Simplified the public middleware context helper types. `MiddlewareContext` is now the exported helper for deriving the request context produced by a middleware chain, and it accepts an optional base context as its second type parameter. Middleware that provides one context value can use a `{ key, value }` entry directly instead of wrapping the entry in a one-item tuple. The lower-level `MiddlewareContextTransform`, `ContextTransform`, `ApplyContextTransform`, `ApplyMiddleware`, and `ApplyMiddlewareTuple` helpers are no longer exported.
 
 `MiddlewareContext` accepts middleware values, not middleware factory function types. Use `ReturnType<typeof factory>` when a middleware is created by a factory function:
 
@@ -151,7 +151,7 @@ type CurrentUserContext = MergeContext<AppContext, [readonly [typeof CurrentUser
 // after
 type CurrentUserContext = ContextWithEntries<
   AppContext,
-  [readonly [typeof CurrentUser, User | null]]
+  [{ key: typeof CurrentUser; value: User | null }]
 >
 ```
 
@@ -162,7 +162,7 @@ Use `ContextWithEntry` when refining a single context entry for a specific handl
 type AdminContext = SetContextValue<AppContext, typeof CurrentRole, 'admin'>
 
 // after
-type AdminContext = ContextWithEntry<AppContext, readonly [typeof CurrentRole, 'admin']>
+type AdminContext = ContextWithEntry<AppContext, { key: typeof CurrentRole; value: 'admin' }>
 ```
 
 Stored action objects and controllers no longer derive handler context from their local middleware tuple. If local middleware adds context values that a handler requires, compose the full handler context explicitly and pass it to `Action`, `Controller`, `createAction()`, or `createController()`:

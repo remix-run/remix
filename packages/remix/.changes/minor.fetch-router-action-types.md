@@ -1,4 +1,4 @@
-BREAKING CHANGE: Updated the re-exported `remix/fetch-router` helper types to match `@remix-run/fetch-router`: `Action` now describes either a plain request handler function or action object and accepts the full request context as its optional second generic, `Controller` now accepts the full request context as its optional second generic, `RequestHandler` now accepts the full request context as its only generic, `Middleware` now accepts one context effect generic, which can be a single readonly `[key, value]` tuple, a `ContextEntries` tuple, or a context transform function, `BuildAction` is no longer exported, `createAction()`/`createController()` are the preferred helpers for stored handlers, `RouterTypes.context` configures the default builder context, `MiddlewareContext` now accepts an optional base context, the lower-level `MiddlewareContextTransform`, `ContextTransform`, `ApplyContextTransform`, `ApplyMiddleware`, and `ApplyMiddlewareTuple` helpers are no longer exported, and custom matcher payloads should use `RouteEntry` instead of `MatchData`.
+BREAKING CHANGE: Updated the re-exported `remix/fetch-router` helper types to match `@remix-run/fetch-router`: `Action` now describes either a plain request handler function or action object and accepts the full request context as its optional second generic, `Controller` now accepts the full request context as its optional second generic, `RequestHandler` now accepts the full request context as its only generic, `Middleware` now accepts one context effect generic, which can be a single `{ key, value }` context entry, a `ContextEntries` tuple, or a context transform function, `BuildAction` is no longer exported, `createAction()`/`createController()` are the preferred helpers for stored handlers, `RouterTypes.context` configures the default builder context, `MiddlewareContext` now accepts an optional base context, the lower-level `MiddlewareContextTransform`, `ContextTransform`, `ApplyContextTransform`, `ApplyMiddleware`, and `ApplyMiddlewareTuple` helpers are no longer exported, and custom matcher payloads should use `RouteEntry` instead of `MatchData`.
 
 The request context helper type renames also apply to imports from `remix/fetch-router`.
 
@@ -37,7 +37,7 @@ type CurrentUserContext = MergeContext<AppContext, [readonly [typeof CurrentUser
 // after
 type CurrentUserContext = ContextWithEntries<
   AppContext,
-  [readonly [typeof CurrentUser, User | null]]
+  [{ key: typeof CurrentUser; value: User | null }]
 >
 ```
 
@@ -73,7 +73,7 @@ If you manually annotate middleware, pass only the context transform type:
 let middleware: Middleware<{}, SetDatabaseContextTransform>
 
 // after
-let middleware: Middleware<readonly [typeof Database, Database]>
+let middleware: Middleware<{ key: typeof Database; value: Database }>
 ```
 
 Use `ContextWithEntry` when refining a single context entry for a specific handler or middleware result:
@@ -83,7 +83,7 @@ Use `ContextWithEntry` when refining a single context entry for a specific handl
 type AdminContext = SetContextValue<AppContext, typeof CurrentRole, 'admin'>
 
 // after
-type AdminContext = ContextWithEntry<AppContext, readonly [typeof CurrentRole, 'admin']>
+type AdminContext = ContextWithEntry<AppContext, { key: typeof CurrentRole; value: 'admin' }>
 ```
 
 For most apps, augment `RouterTypes.context` once and use `createController()` instead of repeating a `satisfies Controller<...>` clause on every controller:
@@ -92,7 +92,7 @@ For most apps, augment `RouterTypes.context` once and use `createController()` i
 // before
 type AuthenticatedAppContext = ContextWithEntry<
   AppContext,
-  readonly [typeof Auth, GoodAuth<AuthIdentity>]
+  { key: typeof Auth; value: GoodAuth<AuthIdentity> }
 >
 
 let controller = {

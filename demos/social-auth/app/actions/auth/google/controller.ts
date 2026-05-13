@@ -1,11 +1,9 @@
 import { completeAuth, finishExternalAuth, startExternalAuth } from 'remix/auth'
-import { Database } from 'remix/data-table'
 import { createController } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { resolveExternalAuth } from '../resolve-external-auth.ts'
 import { getReturnToQuery } from '../../../middleware/auth.ts'
-import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
 import {
   externalProviderRegistry,
@@ -23,10 +21,9 @@ export function createGoogleAuthController(
   return createController(routes.auth.google, {
     actions: {
       async login(context) {
-        let { get, url } = context
+        let { session, url } = context
 
         if (provider == null) {
-          let session = get(Session)
           session.flash('error', `${label} login is not configured.`)
           return redirect(routes.home.href(undefined, getReturnToQuery(url)))
         }
@@ -36,17 +33,15 @@ export function createGoogleAuthController(
             returnTo: url.searchParams.get('returnTo'),
           })
         } catch {
-          let session = get(Session)
           session.flash('error', `We could not start ${label} login.`)
           return redirect(routes.home.href(undefined, getReturnToQuery(url)))
         }
       },
 
       async callback(context) {
-        let { get } = context
+        let { db, session } = context
 
         if (provider == null) {
-          let session = get(Session)
           session.flash('error', `${label} login is not configured.`)
           return redirect(routes.home.href())
         }
@@ -54,10 +49,9 @@ export function createGoogleAuthController(
         try {
           let { result, returnTo } = await finishExternalAuth(provider, context)
 
-          let db = get(Database)
           let { user, authAccount } = await resolveExternalAuth(db, result)
-          let session = completeAuth(context)
-          session.set('auth', {
+          let authSession = completeAuth(context)
+          authSession.set('auth', {
             userId: user.id,
             loginMethod: result.provider,
             authAccountId: authAccount.id,
@@ -65,7 +59,6 @@ export function createGoogleAuthController(
 
           return redirect(returnTo ?? routes.account.href())
         } catch {
-          let session = get(Session)
           session.flash('error', `We could not finish ${label} login.`)
           return redirect(routes.home.href())
         }

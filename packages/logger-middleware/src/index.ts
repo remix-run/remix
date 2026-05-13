@@ -1,1 +1,1 @@
-export { type LoggerOptions, logger } from './lib/logger.ts'
+export { Logger, type LoggerFunction, type LoggerOptions, logger } from './lib/logger.ts'

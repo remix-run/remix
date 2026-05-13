@@ -1,4 +1,4 @@
-# Testing
+# Test
 
 When writing tests, use `root.flush()` to synchronously execute all pending updates and tasks. This ensures the DOM and component state are fully synchronized before making assertions.
 
@@ -103,5 +103,5 @@ expect(container.innerHTML).toBe('')
 
 ## See Also
 
-- [Getting Started](./getting-started.md) - Root methods reference
-- [Handle API](./handle.md) - `handle.queueTask()` behavior
+- [Getting Started](https://github.com/remix-run/remix/blob/main/packages/ui/docs/getting-started.md) - Root methods reference
+- [Handle API](https://github.com/remix-run/remix/blob/main/packages/ui/docs/handle.md) - `handle.queueTask()` behavior
