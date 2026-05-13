@@ -21,539 +21,539 @@
     "node": ">=24.3.0"
   },
   "exports": {
-    "./assert": "./src/assert/index.ts",
-    "./assets": "./src/assets/index.ts",
-    "./auth": "./src/auth/index.ts",
-    "./cli": "./src/cli/index.ts",
-    "./cookie": "./src/cookie/index.ts",
-    "./data-schema": "./src/data-schema/index.ts",
-    "./data-schema/checks": "./src/data-schema/checks/index.ts",
-    "./data-schema/coerce": "./src/data-schema/coerce/index.ts",
-    "./data-schema/form-data": "./src/data-schema/form-data/index.ts",
-    "./data-schema/lazy": "./src/data-schema/lazy/index.ts",
-    "./data-table": "./src/data-table/index.ts",
-    "./data-table/migrations": "./src/data-table/migrations/index.ts",
-    "./data-table/migrations/node": "./src/data-table/migrations/node/index.ts",
-    "./data-table/mysql": "./src/data-table/mysql/index.ts",
-    "./data-table/operators": "./src/data-table/operators/index.ts",
-    "./data-table/postgres": "./src/data-table/postgres/index.ts",
-    "./data-table/sql-helpers": "./src/data-table/sql-helpers/index.ts",
-    "./data-table/sqlite": "./src/data-table/sqlite/index.ts",
-    "./fetch-proxy": "./src/fetch-proxy/index.ts",
-    "./file-storage": "./src/file-storage/index.ts",
-    "./file-storage/fs": "./src/file-storage/fs/index.ts",
-    "./file-storage/memory": "./src/file-storage/memory/index.ts",
-    "./file-storage/s3": "./src/file-storage/s3/index.ts",
-    "./form-data-parser": "./src/form-data-parser/index.ts",
-    "./fs": "./src/fs/index.ts",
-    "./headers": "./src/headers/index.ts",
-    "./html-template": "./src/html-template/index.ts",
-    "./lazy-file": "./src/lazy-file/index.ts",
-    "./middleware/async-context": "./src/middleware/async-context/index.ts",
-    "./middleware/auth": "./src/middleware/auth/index.ts",
-    "./middleware/compression": "./src/middleware/compression/index.ts",
-    "./middleware/cop": "./src/middleware/cop/index.ts",
-    "./middleware/cors": "./src/middleware/cors/index.ts",
-    "./middleware/csrf": "./src/middleware/csrf/index.ts",
-    "./middleware/form-data": "./src/middleware/form-data/index.ts",
-    "./middleware/logger": "./src/middleware/logger/index.ts",
-    "./middleware/method-override": "./src/middleware/method-override/index.ts",
-    "./middleware/render": "./src/middleware/render/index.ts",
-    "./middleware/session": "./src/middleware/session/index.ts",
-    "./middleware/static": "./src/middleware/static/index.ts",
-    "./mime": "./src/mime/index.ts",
-    "./multipart-parser": "./src/multipart-parser/index.ts",
-    "./multipart-parser/node": "./src/multipart-parser/node/index.ts",
-    "./node-fetch-server": "./src/node-fetch-server/index.ts",
-    "./node-fetch-server/test": "./src/node-fetch-server/test/index.ts",
-    "./node-serve": "./src/node-serve/index.ts",
-    "./response/compress": "./src/response/compress/index.ts",
-    "./response/file": "./src/response/file/index.ts",
-    "./response/html": "./src/response/html/index.ts",
-    "./response/redirect": "./src/response/redirect/index.ts",
-    "./route-pattern": "./src/route-pattern/index.ts",
-    "./route-pattern/specificity": "./src/route-pattern/specificity/index.ts",
-    "./router": "./src/router/index.ts",
-    "./routes": "./src/routes/index.ts",
-    "./session": "./src/session/index.ts",
-    "./session-storage/cookie": "./src/session-storage/cookie/index.ts",
-    "./session-storage/fs": "./src/session-storage/fs/index.ts",
-    "./session-storage/memcache": "./src/session-storage/memcache/index.ts",
-    "./session-storage/memory": "./src/session-storage/memory/index.ts",
-    "./session-storage/redis": "./src/session-storage/redis/index.ts",
-    "./tar-parser": "./src/tar-parser/index.ts",
-    "./terminal": "./src/terminal/index.ts",
-    "./test": "./src/test/index.ts",
-    "./test/cli": "./src/test/cli/index.ts",
-    "./ui": "./src/ui/index.ts",
-    "./ui/accordion": "./src/ui/accordion/index.ts",
-    "./ui/anchor": "./src/ui/anchor/index.ts",
-    "./ui/animation": "./src/ui/animation/index.ts",
-    "./ui/breadcrumbs": "./src/ui/breadcrumbs/index.ts",
-    "./ui/button": "./src/ui/button/index.ts",
-    "./ui/combobox": "./src/ui/combobox/index.ts",
-    "./ui/glyph": "./src/ui/glyph/index.ts",
-    "./ui/jsx-dev-runtime": "./src/ui/jsx-dev-runtime/index.ts",
-    "./ui/jsx-runtime": "./src/ui/jsx-runtime/index.ts",
-    "./ui/listbox": "./src/ui/listbox/index.ts",
-    "./ui/menu": "./src/ui/menu/index.ts",
-    "./ui/popover": "./src/ui/popover/index.ts",
-    "./ui/scroll-lock": "./src/ui/scroll-lock/index.ts",
-    "./ui/select": "./src/ui/select/index.ts",
-    "./ui/separator": "./src/ui/separator/index.ts",
-    "./ui/server": "./src/ui/server/index.ts",
-    "./ui/test": "./src/ui/test/index.ts",
-    "./ui/theme": "./src/ui/theme/index.ts",
-    "./async-context-middleware": "./src/async-context-middleware/index.ts",
-    "./auth-middleware": "./src/auth-middleware/index.ts",
-    "./compression-middleware": "./src/compression-middleware/index.ts",
-    "./cop-middleware": "./src/cop-middleware/index.ts",
-    "./cors-middleware": "./src/cors-middleware/index.ts",
-    "./csrf-middleware": "./src/csrf-middleware/index.ts",
-    "./data-table-mysql": "./src/data-table-mysql/index.ts",
-    "./data-table-postgres": "./src/data-table-postgres/index.ts",
-    "./data-table-sqlite": "./src/data-table-sqlite/index.ts",
-    "./fetch-router": "./src/fetch-router/index.ts",
-    "./fetch-router/routes": "./src/fetch-router/routes/index.ts",
-    "./file-storage-s3": "./src/file-storage-s3/index.ts",
-    "./form-data-middleware": "./src/form-data-middleware/index.ts",
-    "./logger-middleware": "./src/logger-middleware/index.ts",
-    "./method-override-middleware": "./src/method-override-middleware/index.ts",
-    "./render-middleware": "./src/render-middleware/index.ts",
-    "./session-middleware": "./src/session-middleware/index.ts",
-    "./session-storage-memcache": "./src/session-storage-memcache/index.ts",
-    "./session-storage-redis": "./src/session-storage-redis/index.ts",
-    "./session/cookie-storage": "./src/session/cookie-storage/index.ts",
-    "./session/fs-storage": "./src/session/fs-storage/index.ts",
-    "./session/memory-storage": "./src/session/memory-storage/index.ts",
-    "./static-middleware": "./src/static-middleware/index.ts",
+    "./assert": "./src/assert.ts",
+    "./assets": "./src/assets.ts",
+    "./auth": "./src/auth.ts",
+    "./cli": "./src/cli.ts",
+    "./cookie": "./src/cookie.ts",
+    "./data-schema": "./src/data-schema.ts",
+    "./data-schema/checks": "./src/data-schema/checks.ts",
+    "./data-schema/coerce": "./src/data-schema/coerce.ts",
+    "./data-schema/form-data": "./src/data-schema/form-data.ts",
+    "./data-schema/lazy": "./src/data-schema/lazy.ts",
+    "./data-table": "./src/data-table.ts",
+    "./data-table/migrations": "./src/data-table/migrations.ts",
+    "./data-table/migrations/node": "./src/data-table/migrations/node.ts",
+    "./data-table/mysql": "./src/data-table/mysql.ts",
+    "./data-table/operators": "./src/data-table/operators.ts",
+    "./data-table/postgres": "./src/data-table/postgres.ts",
+    "./data-table/sql-helpers": "./src/data-table/sql-helpers.ts",
+    "./data-table/sqlite": "./src/data-table/sqlite.ts",
+    "./fetch-proxy": "./src/fetch-proxy.ts",
+    "./file-storage": "./src/file-storage.ts",
+    "./file-storage/fs": "./src/file-storage/fs.ts",
+    "./file-storage/memory": "./src/file-storage/memory.ts",
+    "./file-storage/s3": "./src/file-storage/s3.ts",
+    "./form-data-parser": "./src/form-data-parser.ts",
+    "./fs": "./src/fs.ts",
+    "./headers": "./src/headers.ts",
+    "./html-template": "./src/html-template.ts",
+    "./lazy-file": "./src/lazy-file.ts",
+    "./middleware/async-context": "./src/middleware/async-context.ts",
+    "./middleware/auth": "./src/middleware/auth.ts",
+    "./middleware/compression": "./src/middleware/compression.ts",
+    "./middleware/cop": "./src/middleware/cop.ts",
+    "./middleware/cors": "./src/middleware/cors.ts",
+    "./middleware/csrf": "./src/middleware/csrf.ts",
+    "./middleware/form-data": "./src/middleware/form-data.ts",
+    "./middleware/logger": "./src/middleware/logger.ts",
+    "./middleware/method-override": "./src/middleware/method-override.ts",
+    "./middleware/render": "./src/middleware/render.ts",
+    "./middleware/session": "./src/middleware/session.ts",
+    "./middleware/static": "./src/middleware/static.ts",
+    "./mime": "./src/mime.ts",
+    "./multipart-parser": "./src/multipart-parser.ts",
+    "./multipart-parser/node": "./src/multipart-parser/node.ts",
+    "./node-fetch-server": "./src/node-fetch-server.ts",
+    "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
+    "./node-serve": "./src/node-serve.ts",
+    "./response/compress": "./src/response/compress.ts",
+    "./response/file": "./src/response/file.ts",
+    "./response/html": "./src/response/html.ts",
+    "./response/redirect": "./src/response/redirect.ts",
+    "./route-pattern": "./src/route-pattern.ts",
+    "./route-pattern/specificity": "./src/route-pattern/specificity.ts",
+    "./router": "./src/router.ts",
+    "./routes": "./src/routes.ts",
+    "./session": "./src/session.ts",
+    "./session-storage/cookie": "./src/session-storage/cookie.ts",
+    "./session-storage/fs": "./src/session-storage/fs.ts",
+    "./session-storage/memcache": "./src/session-storage/memcache.ts",
+    "./session-storage/memory": "./src/session-storage/memory.ts",
+    "./session-storage/redis": "./src/session-storage/redis.ts",
+    "./tar-parser": "./src/tar-parser.ts",
+    "./terminal": "./src/terminal.ts",
+    "./test": "./src/test.ts",
+    "./test/cli": "./src/test/cli.ts",
+    "./ui": "./src/ui.ts",
+    "./ui/accordion": "./src/ui/accordion.ts",
+    "./ui/anchor": "./src/ui/anchor.ts",
+    "./ui/animation": "./src/ui/animation.ts",
+    "./ui/breadcrumbs": "./src/ui/breadcrumbs.ts",
+    "./ui/button": "./src/ui/button.ts",
+    "./ui/combobox": "./src/ui/combobox.ts",
+    "./ui/glyph": "./src/ui/glyph.ts",
+    "./ui/jsx-dev-runtime": "./src/ui/jsx-dev-runtime.ts",
+    "./ui/jsx-runtime": "./src/ui/jsx-runtime.ts",
+    "./ui/listbox": "./src/ui/listbox.ts",
+    "./ui/menu": "./src/ui/menu.ts",
+    "./ui/popover": "./src/ui/popover.ts",
+    "./ui/scroll-lock": "./src/ui/scroll-lock.ts",
+    "./ui/select": "./src/ui/select.ts",
+    "./ui/separator": "./src/ui/separator.ts",
+    "./ui/server": "./src/ui/server.ts",
+    "./ui/test": "./src/ui/test.ts",
+    "./ui/theme": "./src/ui/theme.ts",
+    "./async-context-middleware": "./src/async-context-middleware.ts",
+    "./auth-middleware": "./src/auth-middleware.ts",
+    "./compression-middleware": "./src/compression-middleware.ts",
+    "./cop-middleware": "./src/cop-middleware.ts",
+    "./cors-middleware": "./src/cors-middleware.ts",
+    "./csrf-middleware": "./src/csrf-middleware.ts",
+    "./data-table-mysql": "./src/data-table-mysql.ts",
+    "./data-table-postgres": "./src/data-table-postgres.ts",
+    "./data-table-sqlite": "./src/data-table-sqlite.ts",
+    "./fetch-router": "./src/fetch-router.ts",
+    "./fetch-router/routes": "./src/fetch-router/routes.ts",
+    "./file-storage-s3": "./src/file-storage-s3.ts",
+    "./form-data-middleware": "./src/form-data-middleware.ts",
+    "./logger-middleware": "./src/logger-middleware.ts",
+    "./method-override-middleware": "./src/method-override-middleware.ts",
+    "./render-middleware": "./src/render-middleware.ts",
+    "./session-middleware": "./src/session-middleware.ts",
+    "./session-storage-memcache": "./src/session-storage-memcache.ts",
+    "./session-storage-redis": "./src/session-storage-redis.ts",
+    "./session/cookie-storage": "./src/session/cookie-storage.ts",
+    "./session/fs-storage": "./src/session/fs-storage.ts",
+    "./session/memory-storage": "./src/session/memory-storage.ts",
+    "./static-middleware": "./src/static-middleware.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
       "./assert": {
-        "types": "./dist/assert/index.d.ts",
-        "default": "./dist/assert/index.js"
+        "types": "./dist/assert.d.ts",
+        "default": "./dist/assert.js"
       },
       "./assets": {
-        "types": "./dist/assets/index.d.ts",
-        "default": "./dist/assets/index.js"
+        "types": "./dist/assets.d.ts",
+        "default": "./dist/assets.js"
       },
       "./auth": {
-        "types": "./dist/auth/index.d.ts",
-        "default": "./dist/auth/index.js"
+        "types": "./dist/auth.d.ts",
+        "default": "./dist/auth.js"
       },
       "./cli": {
-        "types": "./dist/cli/index.d.ts",
-        "default": "./dist/cli/index.js"
+        "types": "./dist/cli.d.ts",
+        "default": "./dist/cli.js"
       },
       "./cookie": {
-        "types": "./dist/cookie/index.d.ts",
-        "default": "./dist/cookie/index.js"
+        "types": "./dist/cookie.d.ts",
+        "default": "./dist/cookie.js"
       },
       "./data-schema": {
-        "types": "./dist/data-schema/index.d.ts",
-        "default": "./dist/data-schema/index.js"
+        "types": "./dist/data-schema.d.ts",
+        "default": "./dist/data-schema.js"
       },
       "./data-schema/checks": {
-        "types": "./dist/data-schema/checks/index.d.ts",
-        "default": "./dist/data-schema/checks/index.js"
+        "types": "./dist/data-schema/checks.d.ts",
+        "default": "./dist/data-schema/checks.js"
       },
       "./data-schema/coerce": {
-        "types": "./dist/data-schema/coerce/index.d.ts",
-        "default": "./dist/data-schema/coerce/index.js"
+        "types": "./dist/data-schema/coerce.d.ts",
+        "default": "./dist/data-schema/coerce.js"
       },
       "./data-schema/form-data": {
-        "types": "./dist/data-schema/form-data/index.d.ts",
-        "default": "./dist/data-schema/form-data/index.js"
+        "types": "./dist/data-schema/form-data.d.ts",
+        "default": "./dist/data-schema/form-data.js"
       },
       "./data-schema/lazy": {
-        "types": "./dist/data-schema/lazy/index.d.ts",
-        "default": "./dist/data-schema/lazy/index.js"
+        "types": "./dist/data-schema/lazy.d.ts",
+        "default": "./dist/data-schema/lazy.js"
       },
       "./data-table": {
-        "types": "./dist/data-table/index.d.ts",
-        "default": "./dist/data-table/index.js"
+        "types": "./dist/data-table.d.ts",
+        "default": "./dist/data-table.js"
       },
       "./data-table/migrations": {
-        "types": "./dist/data-table/migrations/index.d.ts",
-        "default": "./dist/data-table/migrations/index.js"
+        "types": "./dist/data-table/migrations.d.ts",
+        "default": "./dist/data-table/migrations.js"
       },
       "./data-table/migrations/node": {
-        "types": "./dist/data-table/migrations/node/index.d.ts",
-        "default": "./dist/data-table/migrations/node/index.js"
+        "types": "./dist/data-table/migrations/node.d.ts",
+        "default": "./dist/data-table/migrations/node.js"
       },
       "./data-table/mysql": {
-        "types": "./dist/data-table/mysql/index.d.ts",
-        "default": "./dist/data-table/mysql/index.js"
+        "types": "./dist/data-table/mysql.d.ts",
+        "default": "./dist/data-table/mysql.js"
       },
       "./data-table/operators": {
-        "types": "./dist/data-table/operators/index.d.ts",
-        "default": "./dist/data-table/operators/index.js"
+        "types": "./dist/data-table/operators.d.ts",
+        "default": "./dist/data-table/operators.js"
       },
       "./data-table/postgres": {
-        "types": "./dist/data-table/postgres/index.d.ts",
-        "default": "./dist/data-table/postgres/index.js"
+        "types": "./dist/data-table/postgres.d.ts",
+        "default": "./dist/data-table/postgres.js"
       },
       "./data-table/sql-helpers": {
-        "types": "./dist/data-table/sql-helpers/index.d.ts",
-        "default": "./dist/data-table/sql-helpers/index.js"
+        "types": "./dist/data-table/sql-helpers.d.ts",
+        "default": "./dist/data-table/sql-helpers.js"
       },
       "./data-table/sqlite": {
-        "types": "./dist/data-table/sqlite/index.d.ts",
-        "default": "./dist/data-table/sqlite/index.js"
+        "types": "./dist/data-table/sqlite.d.ts",
+        "default": "./dist/data-table/sqlite.js"
       },
       "./fetch-proxy": {
-        "types": "./dist/fetch-proxy/index.d.ts",
-        "default": "./dist/fetch-proxy/index.js"
+        "types": "./dist/fetch-proxy.d.ts",
+        "default": "./dist/fetch-proxy.js"
       },
       "./file-storage": {
-        "types": "./dist/file-storage/index.d.ts",
-        "default": "./dist/file-storage/index.js"
+        "types": "./dist/file-storage.d.ts",
+        "default": "./dist/file-storage.js"
       },
       "./file-storage/fs": {
-        "types": "./dist/file-storage/fs/index.d.ts",
-        "default": "./dist/file-storage/fs/index.js"
+        "types": "./dist/file-storage/fs.d.ts",
+        "default": "./dist/file-storage/fs.js"
       },
       "./file-storage/memory": {
-        "types": "./dist/file-storage/memory/index.d.ts",
-        "default": "./dist/file-storage/memory/index.js"
+        "types": "./dist/file-storage/memory.d.ts",
+        "default": "./dist/file-storage/memory.js"
       },
       "./file-storage/s3": {
-        "types": "./dist/file-storage/s3/index.d.ts",
-        "default": "./dist/file-storage/s3/index.js"
+        "types": "./dist/file-storage/s3.d.ts",
+        "default": "./dist/file-storage/s3.js"
       },
       "./form-data-parser": {
-        "types": "./dist/form-data-parser/index.d.ts",
-        "default": "./dist/form-data-parser/index.js"
+        "types": "./dist/form-data-parser.d.ts",
+        "default": "./dist/form-data-parser.js"
       },
       "./fs": {
-        "types": "./dist/fs/index.d.ts",
-        "default": "./dist/fs/index.js"
+        "types": "./dist/fs.d.ts",
+        "default": "./dist/fs.js"
       },
       "./headers": {
-        "types": "./dist/headers/index.d.ts",
-        "default": "./dist/headers/index.js"
+        "types": "./dist/headers.d.ts",
+        "default": "./dist/headers.js"
       },
       "./html-template": {
-        "types": "./dist/html-template/index.d.ts",
-        "default": "./dist/html-template/index.js"
+        "types": "./dist/html-template.d.ts",
+        "default": "./dist/html-template.js"
       },
       "./lazy-file": {
-        "types": "./dist/lazy-file/index.d.ts",
-        "default": "./dist/lazy-file/index.js"
+        "types": "./dist/lazy-file.d.ts",
+        "default": "./dist/lazy-file.js"
       },
       "./middleware/async-context": {
-        "types": "./dist/middleware/async-context/index.d.ts",
-        "default": "./dist/middleware/async-context/index.js"
+        "types": "./dist/middleware/async-context.d.ts",
+        "default": "./dist/middleware/async-context.js"
       },
       "./middleware/auth": {
-        "types": "./dist/middleware/auth/index.d.ts",
-        "default": "./dist/middleware/auth/index.js"
+        "types": "./dist/middleware/auth.d.ts",
+        "default": "./dist/middleware/auth.js"
       },
       "./middleware/compression": {
-        "types": "./dist/middleware/compression/index.d.ts",
-        "default": "./dist/middleware/compression/index.js"
+        "types": "./dist/middleware/compression.d.ts",
+        "default": "./dist/middleware/compression.js"
       },
       "./middleware/cop": {
-        "types": "./dist/middleware/cop/index.d.ts",
-        "default": "./dist/middleware/cop/index.js"
+        "types": "./dist/middleware/cop.d.ts",
+        "default": "./dist/middleware/cop.js"
       },
       "./middleware/cors": {
-        "types": "./dist/middleware/cors/index.d.ts",
-        "default": "./dist/middleware/cors/index.js"
+        "types": "./dist/middleware/cors.d.ts",
+        "default": "./dist/middleware/cors.js"
       },
       "./middleware/csrf": {
-        "types": "./dist/middleware/csrf/index.d.ts",
-        "default": "./dist/middleware/csrf/index.js"
+        "types": "./dist/middleware/csrf.d.ts",
+        "default": "./dist/middleware/csrf.js"
       },
       "./middleware/form-data": {
-        "types": "./dist/middleware/form-data/index.d.ts",
-        "default": "./dist/middleware/form-data/index.js"
+        "types": "./dist/middleware/form-data.d.ts",
+        "default": "./dist/middleware/form-data.js"
       },
       "./middleware/logger": {
-        "types": "./dist/middleware/logger/index.d.ts",
-        "default": "./dist/middleware/logger/index.js"
+        "types": "./dist/middleware/logger.d.ts",
+        "default": "./dist/middleware/logger.js"
       },
       "./middleware/method-override": {
-        "types": "./dist/middleware/method-override/index.d.ts",
-        "default": "./dist/middleware/method-override/index.js"
+        "types": "./dist/middleware/method-override.d.ts",
+        "default": "./dist/middleware/method-override.js"
       },
       "./middleware/render": {
-        "types": "./dist/middleware/render/index.d.ts",
-        "default": "./dist/middleware/render/index.js"
+        "types": "./dist/middleware/render.d.ts",
+        "default": "./dist/middleware/render.js"
       },
       "./middleware/session": {
-        "types": "./dist/middleware/session/index.d.ts",
-        "default": "./dist/middleware/session/index.js"
+        "types": "./dist/middleware/session.d.ts",
+        "default": "./dist/middleware/session.js"
       },
       "./middleware/static": {
-        "types": "./dist/middleware/static/index.d.ts",
-        "default": "./dist/middleware/static/index.js"
+        "types": "./dist/middleware/static.d.ts",
+        "default": "./dist/middleware/static.js"
       },
       "./mime": {
-        "types": "./dist/mime/index.d.ts",
-        "default": "./dist/mime/index.js"
+        "types": "./dist/mime.d.ts",
+        "default": "./dist/mime.js"
       },
       "./multipart-parser": {
-        "types": "./dist/multipart-parser/index.d.ts",
-        "default": "./dist/multipart-parser/index.js"
+        "types": "./dist/multipart-parser.d.ts",
+        "default": "./dist/multipart-parser.js"
       },
       "./multipart-parser/node": {
-        "types": "./dist/multipart-parser/node/index.d.ts",
-        "default": "./dist/multipart-parser/node/index.js"
+        "types": "./dist/multipart-parser/node.d.ts",
+        "default": "./dist/multipart-parser/node.js"
       },
       "./node-fetch-server": {
-        "types": "./dist/node-fetch-server/index.d.ts",
-        "default": "./dist/node-fetch-server/index.js"
+        "types": "./dist/node-fetch-server.d.ts",
+        "default": "./dist/node-fetch-server.js"
       },
       "./node-fetch-server/test": {
-        "types": "./dist/node-fetch-server/test/index.d.ts",
-        "default": "./dist/node-fetch-server/test/index.js"
+        "types": "./dist/node-fetch-server/test.d.ts",
+        "default": "./dist/node-fetch-server/test.js"
       },
       "./node-serve": {
-        "types": "./dist/node-serve/index.d.ts",
-        "default": "./dist/node-serve/index.js"
+        "types": "./dist/node-serve.d.ts",
+        "default": "./dist/node-serve.js"
       },
       "./response/compress": {
-        "types": "./dist/response/compress/index.d.ts",
-        "default": "./dist/response/compress/index.js"
+        "types": "./dist/response/compress.d.ts",
+        "default": "./dist/response/compress.js"
       },
       "./response/file": {
-        "types": "./dist/response/file/index.d.ts",
-        "default": "./dist/response/file/index.js"
+        "types": "./dist/response/file.d.ts",
+        "default": "./dist/response/file.js"
       },
       "./response/html": {
-        "types": "./dist/response/html/index.d.ts",
-        "default": "./dist/response/html/index.js"
+        "types": "./dist/response/html.d.ts",
+        "default": "./dist/response/html.js"
       },
       "./response/redirect": {
-        "types": "./dist/response/redirect/index.d.ts",
-        "default": "./dist/response/redirect/index.js"
+        "types": "./dist/response/redirect.d.ts",
+        "default": "./dist/response/redirect.js"
       },
       "./route-pattern": {
-        "types": "./dist/route-pattern/index.d.ts",
-        "default": "./dist/route-pattern/index.js"
+        "types": "./dist/route-pattern.d.ts",
+        "default": "./dist/route-pattern.js"
       },
       "./route-pattern/specificity": {
-        "types": "./dist/route-pattern/specificity/index.d.ts",
-        "default": "./dist/route-pattern/specificity/index.js"
+        "types": "./dist/route-pattern/specificity.d.ts",
+        "default": "./dist/route-pattern/specificity.js"
       },
       "./router": {
-        "types": "./dist/router/index.d.ts",
-        "default": "./dist/router/index.js"
+        "types": "./dist/router.d.ts",
+        "default": "./dist/router.js"
       },
       "./routes": {
-        "types": "./dist/routes/index.d.ts",
-        "default": "./dist/routes/index.js"
+        "types": "./dist/routes.d.ts",
+        "default": "./dist/routes.js"
       },
       "./session": {
-        "types": "./dist/session/index.d.ts",
-        "default": "./dist/session/index.js"
+        "types": "./dist/session.d.ts",
+        "default": "./dist/session.js"
       },
       "./session-storage/cookie": {
-        "types": "./dist/session-storage/cookie/index.d.ts",
-        "default": "./dist/session-storage/cookie/index.js"
+        "types": "./dist/session-storage/cookie.d.ts",
+        "default": "./dist/session-storage/cookie.js"
       },
       "./session-storage/fs": {
-        "types": "./dist/session-storage/fs/index.d.ts",
-        "default": "./dist/session-storage/fs/index.js"
+        "types": "./dist/session-storage/fs.d.ts",
+        "default": "./dist/session-storage/fs.js"
       },
       "./session-storage/memcache": {
-        "types": "./dist/session-storage/memcache/index.d.ts",
-        "default": "./dist/session-storage/memcache/index.js"
+        "types": "./dist/session-storage/memcache.d.ts",
+        "default": "./dist/session-storage/memcache.js"
       },
       "./session-storage/memory": {
-        "types": "./dist/session-storage/memory/index.d.ts",
-        "default": "./dist/session-storage/memory/index.js"
+        "types": "./dist/session-storage/memory.d.ts",
+        "default": "./dist/session-storage/memory.js"
       },
       "./session-storage/redis": {
-        "types": "./dist/session-storage/redis/index.d.ts",
-        "default": "./dist/session-storage/redis/index.js"
+        "types": "./dist/session-storage/redis.d.ts",
+        "default": "./dist/session-storage/redis.js"
       },
       "./tar-parser": {
-        "types": "./dist/tar-parser/index.d.ts",
-        "default": "./dist/tar-parser/index.js"
+        "types": "./dist/tar-parser.d.ts",
+        "default": "./dist/tar-parser.js"
       },
       "./terminal": {
-        "types": "./dist/terminal/index.d.ts",
-        "default": "./dist/terminal/index.js"
+        "types": "./dist/terminal.d.ts",
+        "default": "./dist/terminal.js"
       },
       "./test": {
-        "types": "./dist/test/index.d.ts",
-        "default": "./dist/test/index.js"
+        "types": "./dist/test.d.ts",
+        "default": "./dist/test.js"
       },
       "./test/cli": {
-        "types": "./dist/test/cli/index.d.ts",
-        "default": "./dist/test/cli/index.js"
+        "types": "./dist/test/cli.d.ts",
+        "default": "./dist/test/cli.js"
       },
       "./ui": {
-        "types": "./dist/ui/index.d.ts",
-        "default": "./dist/ui/index.js"
+        "types": "./dist/ui.d.ts",
+        "default": "./dist/ui.js"
       },
       "./ui/accordion": {
-        "types": "./dist/ui/accordion/index.d.ts",
-        "default": "./dist/ui/accordion/index.js"
+        "types": "./dist/ui/accordion.d.ts",
+        "default": "./dist/ui/accordion.js"
       },
       "./ui/anchor": {
-        "types": "./dist/ui/anchor/index.d.ts",
-        "default": "./dist/ui/anchor/index.js"
+        "types": "./dist/ui/anchor.d.ts",
+        "default": "./dist/ui/anchor.js"
       },
       "./ui/animation": {
-        "types": "./dist/ui/animation/index.d.ts",
-        "default": "./dist/ui/animation/index.js"
+        "types": "./dist/ui/animation.d.ts",
+        "default": "./dist/ui/animation.js"
       },
       "./ui/breadcrumbs": {
-        "types": "./dist/ui/breadcrumbs/index.d.ts",
-        "default": "./dist/ui/breadcrumbs/index.js"
+        "types": "./dist/ui/breadcrumbs.d.ts",
+        "default": "./dist/ui/breadcrumbs.js"
       },
       "./ui/button": {
-        "types": "./dist/ui/button/index.d.ts",
-        "default": "./dist/ui/button/index.js"
+        "types": "./dist/ui/button.d.ts",
+        "default": "./dist/ui/button.js"
       },
       "./ui/combobox": {
-        "types": "./dist/ui/combobox/index.d.ts",
-        "default": "./dist/ui/combobox/index.js"
+        "types": "./dist/ui/combobox.d.ts",
+        "default": "./dist/ui/combobox.js"
       },
       "./ui/glyph": {
-        "types": "./dist/ui/glyph/index.d.ts",
-        "default": "./dist/ui/glyph/index.js"
+        "types": "./dist/ui/glyph.d.ts",
+        "default": "./dist/ui/glyph.js"
       },
       "./ui/jsx-dev-runtime": {
-        "types": "./dist/ui/jsx-dev-runtime/index.d.ts",
-        "default": "./dist/ui/jsx-dev-runtime/index.js"
+        "types": "./dist/ui/jsx-dev-runtime.d.ts",
+        "default": "./dist/ui/jsx-dev-runtime.js"
       },
       "./ui/jsx-runtime": {
-        "types": "./dist/ui/jsx-runtime/index.d.ts",
-        "default": "./dist/ui/jsx-runtime/index.js"
+        "types": "./dist/ui/jsx-runtime.d.ts",
+        "default": "./dist/ui/jsx-runtime.js"
       },
       "./ui/listbox": {
-        "types": "./dist/ui/listbox/index.d.ts",
-        "default": "./dist/ui/listbox/index.js"
+        "types": "./dist/ui/listbox.d.ts",
+        "default": "./dist/ui/listbox.js"
       },
       "./ui/menu": {
-        "types": "./dist/ui/menu/index.d.ts",
-        "default": "./dist/ui/menu/index.js"
+        "types": "./dist/ui/menu.d.ts",
+        "default": "./dist/ui/menu.js"
       },
       "./ui/popover": {
-        "types": "./dist/ui/popover/index.d.ts",
-        "default": "./dist/ui/popover/index.js"
+        "types": "./dist/ui/popover.d.ts",
+        "default": "./dist/ui/popover.js"
       },
       "./ui/scroll-lock": {
-        "types": "./dist/ui/scroll-lock/index.d.ts",
-        "default": "./dist/ui/scroll-lock/index.js"
+        "types": "./dist/ui/scroll-lock.d.ts",
+        "default": "./dist/ui/scroll-lock.js"
       },
       "./ui/select": {
-        "types": "./dist/ui/select/index.d.ts",
-        "default": "./dist/ui/select/index.js"
+        "types": "./dist/ui/select.d.ts",
+        "default": "./dist/ui/select.js"
       },
       "./ui/separator": {
-        "types": "./dist/ui/separator/index.d.ts",
-        "default": "./dist/ui/separator/index.js"
+        "types": "./dist/ui/separator.d.ts",
+        "default": "./dist/ui/separator.js"
       },
       "./ui/server": {
-        "types": "./dist/ui/server/index.d.ts",
-        "default": "./dist/ui/server/index.js"
+        "types": "./dist/ui/server.d.ts",
+        "default": "./dist/ui/server.js"
       },
       "./ui/test": {
-        "types": "./dist/ui/test/index.d.ts",
-        "default": "./dist/ui/test/index.js"
+        "types": "./dist/ui/test.d.ts",
+        "default": "./dist/ui/test.js"
       },
       "./ui/theme": {
-        "types": "./dist/ui/theme/index.d.ts",
-        "default": "./dist/ui/theme/index.js"
+        "types": "./dist/ui/theme.d.ts",
+        "default": "./dist/ui/theme.js"
       },
       "./async-context-middleware": {
-        "types": "./dist/async-context-middleware/index.d.ts",
-        "default": "./dist/async-context-middleware/index.js"
+        "types": "./dist/async-context-middleware.d.ts",
+        "default": "./dist/async-context-middleware.js"
       },
       "./auth-middleware": {
-        "types": "./dist/auth-middleware/index.d.ts",
-        "default": "./dist/auth-middleware/index.js"
+        "types": "./dist/auth-middleware.d.ts",
+        "default": "./dist/auth-middleware.js"
       },
       "./compression-middleware": {
-        "types": "./dist/compression-middleware/index.d.ts",
-        "default": "./dist/compression-middleware/index.js"
+        "types": "./dist/compression-middleware.d.ts",
+        "default": "./dist/compression-middleware.js"
       },
       "./cop-middleware": {
-        "types": "./dist/cop-middleware/index.d.ts",
-        "default": "./dist/cop-middleware/index.js"
+        "types": "./dist/cop-middleware.d.ts",
+        "default": "./dist/cop-middleware.js"
       },
       "./cors-middleware": {
-        "types": "./dist/cors-middleware/index.d.ts",
-        "default": "./dist/cors-middleware/index.js"
+        "types": "./dist/cors-middleware.d.ts",
+        "default": "./dist/cors-middleware.js"
       },
       "./csrf-middleware": {
-        "types": "./dist/csrf-middleware/index.d.ts",
-        "default": "./dist/csrf-middleware/index.js"
+        "types": "./dist/csrf-middleware.d.ts",
+        "default": "./dist/csrf-middleware.js"
       },
       "./data-table-mysql": {
-        "types": "./dist/data-table-mysql/index.d.ts",
-        "default": "./dist/data-table-mysql/index.js"
+        "types": "./dist/data-table-mysql.d.ts",
+        "default": "./dist/data-table-mysql.js"
       },
       "./data-table-postgres": {
-        "types": "./dist/data-table-postgres/index.d.ts",
-        "default": "./dist/data-table-postgres/index.js"
+        "types": "./dist/data-table-postgres.d.ts",
+        "default": "./dist/data-table-postgres.js"
       },
       "./data-table-sqlite": {
-        "types": "./dist/data-table-sqlite/index.d.ts",
-        "default": "./dist/data-table-sqlite/index.js"
+        "types": "./dist/data-table-sqlite.d.ts",
+        "default": "./dist/data-table-sqlite.js"
       },
       "./fetch-router": {
-        "types": "./dist/fetch-router/index.d.ts",
-        "default": "./dist/fetch-router/index.js"
+        "types": "./dist/fetch-router.d.ts",
+        "default": "./dist/fetch-router.js"
       },
       "./fetch-router/routes": {
-        "types": "./dist/fetch-router/routes/index.d.ts",
-        "default": "./dist/fetch-router/routes/index.js"
+        "types": "./dist/fetch-router/routes.d.ts",
+        "default": "./dist/fetch-router/routes.js"
       },
       "./file-storage-s3": {
-        "types": "./dist/file-storage-s3/index.d.ts",
-        "default": "./dist/file-storage-s3/index.js"
+        "types": "./dist/file-storage-s3.d.ts",
+        "default": "./dist/file-storage-s3.js"
       },
       "./form-data-middleware": {
-        "types": "./dist/form-data-middleware/index.d.ts",
-        "default": "./dist/form-data-middleware/index.js"
+        "types": "./dist/form-data-middleware.d.ts",
+        "default": "./dist/form-data-middleware.js"
       },
       "./logger-middleware": {
-        "types": "./dist/logger-middleware/index.d.ts",
-        "default": "./dist/logger-middleware/index.js"
+        "types": "./dist/logger-middleware.d.ts",
+        "default": "./dist/logger-middleware.js"
       },
       "./method-override-middleware": {
-        "types": "./dist/method-override-middleware/index.d.ts",
-        "default": "./dist/method-override-middleware/index.js"
+        "types": "./dist/method-override-middleware.d.ts",
+        "default": "./dist/method-override-middleware.js"
       },
       "./render-middleware": {
-        "types": "./dist/render-middleware/index.d.ts",
-        "default": "./dist/render-middleware/index.js"
+        "types": "./dist/render-middleware.d.ts",
+        "default": "./dist/render-middleware.js"
       },
       "./session-middleware": {
-        "types": "./dist/session-middleware/index.d.ts",
-        "default": "./dist/session-middleware/index.js"
+        "types": "./dist/session-middleware.d.ts",
+        "default": "./dist/session-middleware.js"
       },
       "./session-storage-memcache": {
-        "types": "./dist/session-storage-memcache/index.d.ts",
-        "default": "./dist/session-storage-memcache/index.js"
+        "types": "./dist/session-storage-memcache.d.ts",
+        "default": "./dist/session-storage-memcache.js"
       },
       "./session-storage-redis": {
-        "types": "./dist/session-storage-redis/index.d.ts",
-        "default": "./dist/session-storage-redis/index.js"
+        "types": "./dist/session-storage-redis.d.ts",
+        "default": "./dist/session-storage-redis.js"
       },
       "./session/cookie-storage": {
-        "types": "./dist/session/cookie-storage/index.d.ts",
-        "default": "./dist/session/cookie-storage/index.js"
+        "types": "./dist/session/cookie-storage.d.ts",
+        "default": "./dist/session/cookie-storage.js"
       },
       "./session/fs-storage": {
-        "types": "./dist/session/fs-storage/index.d.ts",
-        "default": "./dist/session/fs-storage/index.js"
+        "types": "./dist/session/fs-storage.d.ts",
+        "default": "./dist/session/fs-storage.js"
       },
       "./session/memory-storage": {
-        "types": "./dist/session/memory-storage/index.d.ts",
-        "default": "./dist/session/memory-storage/index.js"
+        "types": "./dist/session/memory-storage.d.ts",
+        "default": "./dist/session/memory-storage.js"
       },
       "./static-middleware": {
-        "types": "./dist/static-middleware/index.d.ts",
-        "default": "./dist/static-middleware/index.js"
+        "types": "./dist/static-middleware.d.ts",
+        "default": "./dist/static-middleware.js"
       },
       "./package.json": "./package.json"
     },

@@ -2,7 +2,7 @@
 // IMPORTANT: This file is auto-generated, please do not edit manually.
 import * as process from 'node:process'
 
-import { runRemix } from './cli/index.ts'
+import { runRemix } from './cli.ts'
 
 try {
   let exitCode = await runRemix(process.argv.slice(2))
