@@ -1,27 +1,6 @@
-BREAKING CHANGE: Updated the `remix` package to use domain-oriented exports, no longer always mapping 1:1 to underlying `@remix-run/*` packages
+BREAKING CHANGE: Removed the `remix/fetch-router/routes` export. Import route definitions and helpers from `remix/routes` instead.
 
-Removed `package.json` `exports`:
+Added `package.json` `exports`:
 
-- `remix/async-context-middleware` → `remix/middleware/async-context`
-- `remix/auth-middleware` → `remix/middleware/auth`
-- `remix/compression-middleware` → `remix/middleware/compression`
-- `remix/cop-middleware` → `remix/middleware/cop`
-- `remix/cors-middleware` → `remix/middleware/cors`
-- `remix/csrf-middleware` → `remix/middleware/csrf`
-- `remix/data-table-mysql` → `remix/data-table/mysql`
-- `remix/data-table-postgres` → `remix/data-table/postgres`
-- `remix/data-table-sqlite` → `remix/data-table/sqlite`
-- `remix/fetch-router` → `remix/router`
-- `remix/fetch-router/routes` → `remix/routes`
-- `remix/file-storage-s3` → `remix/file-storage/s3`
-- `remix/form-data-middleware` → `remix/middleware/form-data`
-- `remix/logger-middleware` → `remix/middleware/logger`
-- `remix/method-override-middleware` → `remix/middleware/method-override`
-- `remix/render-middleware` → `remix/middleware/render`
-- `remix/session-middleware` → `remix/middleware/session`
-- `remix/session-storage-memcache` → `remix/session-storage/memcache`
-- `remix/session-storage-redis` → `remix/session-storage/redis`
-- `remix/session/cookie-storage` → `remix/session-storage/cookie`
-- `remix/session/fs-storage` → `remix/session-storage/fs`
-- `remix/session/memory-storage` → `remix/session-storage/memory`
-- `remix/static-middleware` → `remix/middleware/static`
+- `remix/render-middleware` to re-export APIs from `@remix-run/render-middleware`
+- `remix/routes` to re-export APIs from `@remix-run/fetch-router/routes`
