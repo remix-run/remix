@@ -350,7 +350,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
  * ```ts
  * import { createPool } from 'mysql2/promise'
  * import { createDatabase } from 'remix/data-table'
- * import { createMysqlDatabaseAdapter } from 'remix/data-table/mysql'
+ * import { createMysqlDatabaseAdapter } from 'remix/data-table-mysql'
  *
  * let pool = createPool({ uri: process.env.DATABASE_URL })
  * let adapter = createMysqlDatabaseAdapter(pool)

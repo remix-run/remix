@@ -1,4 +1,4 @@
-import { createController } from 'remix/router'
+import { createController } from 'remix/fetch-router'
 
 import { assetServer } from '../assets.ts'
 import { routes } from '../routes.ts'

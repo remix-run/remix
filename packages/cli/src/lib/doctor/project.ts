@@ -344,7 +344,7 @@ function renderDefaultHomeAction(entryPath: string): string {
 
   if (extension === '.ts') {
     return [
-      `import { createController } from 'remix/router'`,
+      `import { createController } from 'remix/fetch-router'`,
       `import { html } from 'remix/html-template'`,
       `import { createHtmlResponse } from 'remix/response/html'`,
       '',
@@ -408,7 +408,7 @@ function renderDefaultHomeAction(entryPath: string): string {
   }
 
   return [
-    `import { createController } from 'remix/router'`,
+    `import { createController } from 'remix/fetch-router'`,
     `import { renderToStream } from 'remix/ui/server'`,
     `import { createHtmlResponse } from 'remix/response/html'`,
     '',
