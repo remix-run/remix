@@ -158,6 +158,13 @@ npm i remix <peer-dependency>
 
 - `packages/remix` is generated automatically in CI.
 - Do not hand-edit `packages/remix/package.json` or `packages/remix/src/*`; run the generator when generated output is required.
+- **When adding a new package**, add it to `packages/remix/manifest.json` before running the generator:
+  - Add one entry per export: `"remix/<canonical-path>": "@remix-run/<package-name>"`.
+  - For sub-exports (e.g. `./foo`), add `"remix/<canonical-path>/foo": "@remix-run/<package-name>/foo"`.
+  - Place entries before the `_comment` separator line (canonical entries come first).
+  - Choose a domain-oriented canonical path (e.g. `remix/middleware/logger`, not `remix/logger-middleware`).
+  - Then run: `node --experimental-strip-types scripts/generate-remix.ts`
+  - The manifest test (`pnpm --filter remix run test`) will fail if any package export is missing.
 - If user asks for full surfacing, you can still update root `README.md` package list when applicable.
 
 9. Validate before finishing.

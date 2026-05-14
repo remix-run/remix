@@ -38,6 +38,17 @@ function exportSpecifier(packageName: string, exportPath: string): string {
 
 const referencedPackages = new Set([...specifierMap.keys()].map(packageNameFromSpecifier))
 
+// All @remix-run/* packages in the workspace (excluding remix itself).
+const allRemixRunPackages: string[] = fs
+  .readdirSync(packagesDir, { withFileTypes: true })
+  .filter((d) => d.isDirectory() && d.name !== 'remix')
+  .flatMap((d) => {
+    let pkgJsonPath = path.join(packagesDir, d.name, 'package.json')
+    if (!fs.existsSync(pkgJsonPath)) return []
+    let { name } = JSON.parse(fs.readFileSync(pkgJsonPath, 'utf-8'))
+    return name?.startsWith('@remix-run/') ? [name as string] : []
+  })
+
 // --- Tests ---
 
 describe('manifest', () => {
@@ -102,6 +113,19 @@ describe('manifest', () => {
             `any manifest entry. Add an entry mapping a canonical remix path to "${specifier}".`,
         )
       }
+    }
+  })
+
+  it('every @remix-run/* workspace package is referenced in the manifest', () => {
+    for (let pkgName of allRemixRunPackages) {
+      // @remix-run/cli is intentionally excluded from the manifest — it is handled
+      // separately by the generate-remix script via the CLI_PACKAGE_NAME constant.
+      if (pkgName === '@remix-run/cli') continue
+      assert.ok(
+        referencedPackages.has(pkgName),
+        `Package "${pkgName}" is not referenced in manifest.json. ` +
+          `Add a canonical remix/* entry mapping to "${pkgName}".`,
+      )
     }
   })
 })
