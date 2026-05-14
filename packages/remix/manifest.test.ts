@@ -41,14 +41,16 @@ const referencedPackages = new Set([...specifierMap.keys()].map(packageNameFromS
 // --- Tests ---
 
 describe('manifest', () => {
-  it('every pattern entry matches at least one workspace package', () => {
-    for (let [keyPattern, valuePattern] of Object.entries(manifest)) {
-      if (!valuePattern.includes('(')) continue
-      let regex = new RegExp(`^${valuePattern}$`)
-      let matched = [...specifierMap.keys()].some((name) => regex.test(name))
+  it('every manifest entry has a valid remix path format', () => {
+    for (let [remixPath, specifier] of Object.entries(manifest)) {
+      if (remixPath.startsWith('_')) continue
       assert.ok(
-        matched,
-        `Pattern entry "${keyPattern}": "${valuePattern}" did not match any workspace package`,
+        remixPath.startsWith('remix/'),
+        `Manifest key "${remixPath}" must start with "remix/"`,
+      )
+      assert.ok(
+        specifier.startsWith('@remix-run/'),
+        `Manifest value "${specifier}" for key "${remixPath}" must start with "@remix-run/"`,
       )
     }
   })

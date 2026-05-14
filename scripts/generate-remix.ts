@@ -1,18 +1,17 @@
 /**
  * Auto-generates the remix umbrella package by:
- * 1. Scanning all @remix-run/* packages in packages/ directory
+ * 1. Reading the manifest.json for all remix/* → @remix-run/* mappings
  * 2. Creating source files that re-export from each package and sub-export
  * 3. Generating exports configuration in package.json
  * 4. Setting up dependencies for all referenced packages
  *
- * Run: node docs/generate-remix.ts
+ * Run: node scripts/generate-remix.ts
  */
 
 import { statSync } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import url from 'node:url'
-import { buildSpecifierToRemixPath } from './utils/manifest.ts'
 import { logAndExec } from './utils/process.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
@@ -20,6 +19,7 @@ const packagesDir = path.resolve(__dirname, '../packages')
 const remixDir = path.join(packagesDir, 'remix')
 const remixChangesDir = path.join(remixDir, '.changes')
 const remixPackageJsonPath = path.join(remixDir, 'package.json')
+const manifestPath = path.join(remixDir, 'manifest.json')
 
 const CLI_PACKAGE_NAME = '@remix-run/cli'
 const SOURCE_FOLDER = 'src'
@@ -29,7 +29,6 @@ type RemixRunPackage = {
   name: string
   version: string
   packageJsonPath: string
-  exports: ExportEntry[]
   bins: BinEntry[]
   peerDependencies: Record<string, string>
   peerDependenciesMeta: Record<string, { optional?: boolean }>
@@ -45,26 +44,22 @@ type BinEntry = {
 type ExportEntry = {
   // The source file path relative to src: `headers.ts`, `headers/cookie-storage.ts`
   sourceFile: string
-  // The export path in package.json exports: `./headers`, `./headers/cookie-storage`1
+  // The export path in package.json exports: `./headers`, `./headers/cookie-storage`
   exportPath: string
   // The package/sub-export to re-export from: `@remix-run/headers`, `@remix-run/headers/cookie-storage`
   reExportFrom: string
   // The README file in the owning package to copy next to the generated umbrella export.
   readmePath?: string
-  // If set, this is a legacy alias re-exporting from the canonical path instead of the package.
-  // To remove legacy aliases entirely, delete the `buildLegacyAliases()` call below.
-  legacyAliasOf?: string
 }
 
-const { remixRunPackages, allExports, allBins } = await getRemixRunPackages()
-
-// ----- LEGACY ALIASES -----
-// Re-exports old mechanical paths (e.g. remix/fetch-router) pointing at canonical ones.
-// Remove this block and the buildLegacyAliases() function to drop legacy support.
-const legacyAliases = buildLegacyAliases(allExports)
-allExports.push(...legacyAliases)
-allExports.sort((a, b) => a.exportPath.localeCompare(b.exportPath))
-// --------------------------
+const manifest: Record<string, string> = JSON.parse(await fs.readFile(manifestPath, 'utf-8'))
+const remixRunPackages = await scanPackages()
+const allExports = await buildExportsFromManifest(manifest, remixRunPackages)
+const allBins = remixRunPackages
+  .flatMap((pkg) =>
+    pkg.bins.map((bin) => ({ ...bin, packageName: pkg.name, packageJsonPath: pkg.packageJsonPath })),
+  )
+  .sort((a, b) => a.command.localeCompare(b.command))
 
 const remixPackageJson = JSON.parse(await fs.readFile(remixPackageJsonPath, 'utf-8'))
 
@@ -83,28 +78,22 @@ await updateRemixPackage()
 await outputExportsChangeFiles(remixPackageJson.exports, remixPackageJson.bin || {})
 
 // Implementations
-async function getRemixRunPackages() {
+async function scanPackages(): Promise<RemixRunPackage[]> {
   console.log('Scanning packages...')
 
-  // Get all packages except remix itself
   let packageDirNames = (await fs.readdir(packagesDir, { withFileTypes: true }))
     .filter((dirent) => dirent.isDirectory() && dirent.name !== 'remix')
     .map((dirent) => dirent.name)
 
-  let remixRunPackages: RemixRunPackage[] = []
+  let packages: RemixRunPackage[] = []
 
-  // Scan each package for its exports
   for (let packageDirName of packageDirNames) {
     let packageJsonPath = path.join(packagesDir, packageDirName, 'package.json')
     if (!isFile(packageJsonPath)) continue
 
     let packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
     let packageName = packageJson.name as string
-
-    // Skip if not a @remix-run package
-    if (!packageName.startsWith('@remix-run/')) {
-      continue
-    }
+    if (!packageName.startsWith('@remix-run/')) continue
 
     let bins: BinEntry[] = []
     let packageBin = packageJson.bin
@@ -115,143 +104,106 @@ async function getRemixRunPackages() {
       }
     }
 
-    let remixRunPackage: RemixRunPackage = {
+    packages.push({
       name: packageName,
       version: packageJson.version,
       packageJsonPath,
-      exports: [],
       bins,
       peerDependencies: packageJson.peerDependencies ?? {},
       peerDependenciesMeta: packageJson.peerDependenciesMeta ?? {},
-    }
-    remixRunPackages.push(remixRunPackage)
+    })
   }
 
-  // Expand the manifest now that we have all package names.
-  let specifierToRemixPath = buildSpecifierToRemixPath(packagesDir)
-
-  // Build ExportEntry objects for each package, using manifest overrides where available.
-  for (let remixRunPackage of remixRunPackages) {
-    let packageName = remixRunPackage.name
-    let packageJsonPath = remixRunPackage.packageJsonPath
-    let packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
-    let shortName = packageName.replace('@remix-run/', '')
-    let packageDirName = shortName
-
-    let binExports = new Set(remixRunPackage.bins.map((b) => `./${b.sourceExport}`))
-    let packageExports = packageJson.exports
-    if (packageExports && typeof packageExports === 'object') {
-      for (let [exportPath, exportConfig] of Object.entries(packageExports)) {
-        if (exportPath === './package.json') continue
-        if (binExports.has(exportPath)) continue
-
-        if (exportPath === '.') {
-          if (packageName === CLI_PACKAGE_NAME) {
-            let readmePath = findReadmePath(packageDirName)
-            remixRunPackage.exports.push({
-              sourceFile: 'cli.ts',
-              exportPath: './cli',
-              reExportFrom: packageName,
-              readmePath,
-            })
-          } else {
-            let specifier = packageName
-            let remixPath = specifierToRemixPath.get(specifier)
-            let relPath = remixPath ? remixPath.replace('remix/', '') : shortName
-            let readmePath = findReadmePath(packageDirName)
-            remixRunPackage.exports.push({
-              sourceFile: `${shortName}.ts`,
-              exportPath: `./${relPath}`,
-              reExportFrom: specifier,
-              readmePath,
-            })
-          }
-        } else {
-          // Sub-export (e.g., "./cookie-storage")
-          let subExport = exportPath.replace('./', '')
-          let specifier = `${packageName}/${subExport}`
-          let remixPath = specifierToRemixPath.get(specifier)
-          let relPath = remixPath ? remixPath.replace('remix/', '') : `${shortName}/${subExport}`
-          let sourceEntryPath = getSourceEntryPath(exportConfig)
-          let readmePath = sourceEntryPath
-            ? findReadmePath(packageDirName, sourceEntryPath)
-            : undefined
-          remixRunPackage.exports.push({
-            sourceFile: `${shortName}/${subExport}.ts`,
-            exportPath: `./${relPath}`,
-            reExportFrom: specifier,
-            readmePath,
-          })
-        }
-      }
-    }
-  }
-
-  // Sort exports by export path for consistent ordering
-  let allExports = remixRunPackages.flatMap((pkg) => pkg.exports)
-  allExports.sort((a, b) => a.exportPath.localeCompare(b.exportPath))
-
-  // Sort bins by command for consistent ordering
-  let allBins = remixRunPackages.flatMap((pkg) =>
-    pkg.bins.map((bin) => ({
-      ...bin,
-      packageName: pkg.name,
-      packageJsonPath: pkg.packageJsonPath,
-    })),
-  )
-  allBins.sort((a, b) => a.command.localeCompare(b.command))
-
-  console.log(
-    `Found ${remixRunPackages.length} @remix-run packages with a total of ${allExports.length} exports.`,
-  )
-
-  return { remixRunPackages, allExports, allBins }
+  console.log(`Found ${packages.length} @remix-run packages.`)
+  return packages
 }
 
 /**
- * Builds deprecated alias entries for old mechanical remix paths that now have canonical names.
- * Each alias re-exports from the canonical path (e.g. `remix/fetch-router` → `remix/router`).
- * To remove legacy aliases: delete the `buildLegacyAliases()` call in the top-level script.
+ * Builds ExportEntry list directly from the manifest. Each manifest entry
+ * maps a remix/* path to a specifier. Multiple remix paths may share the same
+ * stub file (e.g. remix/router and remix/fetch-router both use fetch-router.ts).
+ * READMEs are attached to the first entry per stub (the canonical one, since
+ * canonical entries come first in manifest.json).
  */
-function buildLegacyAliases(canonicalExports: ExportEntry[]): ExportEntry[] {
-  // Build a map from canonical exportPath → sourceFile for re-export resolution.
-  let canonicalByExportPath = new Map(canonicalExports.map((e) => [e.exportPath, e]))
-
-  // Build a map from specifier → canonical exportPath (e.g. '@remix-run/fetch-router' → './router')
-  let specifierToRemixPath = buildSpecifierToRemixPath(packagesDir)
-
-  let aliases: ExportEntry[] = []
-
-  for (let [specifier, canonicalPath] of specifierToRemixPath) {
-    // Derive the old mechanical path: '@remix-run/fetch-router' → 'fetch-router',
-    // '@remix-run/fetch-router/routes' → 'fetch-router/routes'
-    let shortSpecifier = specifier.replace(/^@remix-run\//, '')
-    let mechanicalExportPath = `./${shortSpecifier}`
-    let canonicalExportPath = `./${canonicalPath.replace('remix/', '')}`
-
-    // Only emit an alias when the mechanical path differs from the canonical one
-    if (mechanicalExportPath === canonicalExportPath) continue
-    // Skip if a canonical export already occupies this path
-    if (canonicalByExportPath.has(mechanicalExportPath)) continue
-
-    let canonical = canonicalByExportPath.get(canonicalExportPath)
-    if (!canonical) continue
-
-    aliases.push({
-      sourceFile: canonical.sourceFile,
-      exportPath: mechanicalExportPath,
-      reExportFrom: canonical.reExportFrom,
-      legacyAliasOf: canonicalPath,
-      readmePath: canonical.readmePath,
-    })
-
-    // Move the README to the legacy alias location — clears it from the canonical
-    // entry so the README lands at the old mechanical path (less PR noise).
-    canonical.readmePath = undefined
+async function buildExportsFromManifest(
+  manifest: Record<string, string>,
+  packages: RemixRunPackage[],
+): Promise<ExportEntry[]> {
+  let pkgJsonByName = new Map<string, Record<string, unknown>>()
+  for (let pkg of packages) {
+    // Eagerly load package.json content for README sub-export lookup
+    try {
+      pkgJsonByName.set(pkg.name, JSON.parse(await fs.readFile(pkg.packageJsonPath, 'utf-8')))
+    } catch {}
   }
 
-  aliases.sort((a, b) => a.exportPath.localeCompare(b.exportPath))
-  return aliases
+  let exports: ExportEntry[] = []
+  let readmesWritten = new Set<string>()
+
+  for (let [remixPath, specifier] of Object.entries(manifest)) {
+    if (remixPath.startsWith('_')) continue // skip comment/metadata keys
+    let sourceFile = specifier.replace('@remix-run/', '') + '.ts'
+    let exportPath = './' + remixPath.replace('remix/', '')
+
+    let readmePath: string | undefined
+    if (!readmesWritten.has(sourceFile)) {
+      readmePath = findReadmeForSpecifier(specifier, pkgJsonByName)
+      if (readmePath) readmesWritten.add(sourceFile)
+    }
+
+    exports.push({ sourceFile, exportPath, reExportFrom: specifier, readmePath })
+  }
+
+  // Add CLI entry — handled separately from the manifest
+  let cliPkg = packages.find((p) => p.name === CLI_PACKAGE_NAME)
+  if (cliPkg) {
+    let readmePath = findReadmePath(CLI_PACKAGE_NAME.replace('@remix-run/', ''))
+    exports.push({
+      sourceFile: 'cli.ts',
+      exportPath: './cli',
+      reExportFrom: CLI_PACKAGE_NAME,
+      readmePath,
+    })
+  }
+
+  exports.sort((a, b) => a.exportPath.localeCompare(b.exportPath))
+  console.log(`Built ${exports.length} exports from manifest.`)
+  return exports
+}
+
+function findReadmeForSpecifier(
+  specifier: string,
+  pkgJsonByName: Map<string, Record<string, unknown>>,
+): string | undefined {
+  // '@remix-run/fetch-router' → packageName='@remix-run/fetch-router', subExport=undefined
+  // '@remix-run/data-schema/checks' → packageName='@remix-run/data-schema', subExport='./checks'
+  let parts = specifier.split('/')
+  let packageName = parts[0].startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0]
+  let packageDirName = packageName.replace('@remix-run/', '')
+  let subPath = parts.slice(packageName.split('/').length).join('/')
+
+  if (!subPath) {
+    return findReadmePath(packageDirName)
+  }
+
+  let pkgJson = pkgJsonByName.get(packageName)
+  let exportConfig = (pkgJson?.exports as Record<string, unknown>)?.[`./${subPath}`]
+  let sourceEntryPath = getSourceEntryPath(exportConfig)
+  return sourceEntryPath ? findReadmePath(packageDirName, sourceEntryPath) : undefined
+}
+
+/**
+ * Returns true if the given manifest entry is a legacy alias — its remix path
+ * matches the mechanical (specifier-derived) path but another canonical entry
+ * maps the same specifier to a different path.
+ */
+function isLegacyAlias(remixPath: string, specifier: string): boolean {
+  let shortPath = remixPath.replace('remix/', '')
+  let shortSpecifier = specifier.replace('@remix-run/', '')
+  if (shortPath !== shortSpecifier) return false
+  return Object.entries(manifest).some(
+    ([rp, sp]) => sp === specifier && rp.replace('remix/', '') !== sp.replace('@remix-run/', ''),
+  )
 }
 
 function getSourceEntryPath(exportConfig: unknown): string | undefined {
@@ -505,17 +457,20 @@ async function outputExportsChangeFiles(
   exportsConfig: Record<string, string>,
   binsConfig: Record<string, string>,
 ) {
-  // Legacy alias export paths — excluded from change-file diffs since they are
-  // not meaningful additions/removals from the user's perspective.
-  let legacyAliasPaths = new Set(legacyAliases.map((e) => e.exportPath))
+  // Exclude legacy alias export paths from change-file diffs.
+  function isLegacyExportPath(exportPath: string): boolean {
+    let remixPath = 'remix/' + exportPath.replace('./', '')
+    let specifier = manifest[remixPath]
+    return specifier != null && isLegacyAlias(remixPath, specifier)
+  }
 
   let newExportsSet = new Set<string>(
     Object.keys(exportsConfig).filter(
-      (key) => key !== '.' && key !== './package.json' && !legacyAliasPaths.has(key),
+      (key) => key !== '.' && key !== './package.json' && !isLegacyExportPath(key),
     ),
   )
   let filteredExistingExports = new Set(
-    Array.from(existingExports).filter((key) => !legacyAliasPaths.has(key)),
+    Array.from(existingExports).filter((key) => !isLegacyExportPath(key)),
   )
   let addedExports = Array.from(newExportsSet).filter((key) => !filteredExistingExports.has(key))
   let removedExports = Array.from(filteredExistingExports).filter((key) => !newExportsSet.has(key))
