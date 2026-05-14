@@ -57,6 +57,13 @@ function registerDescribe(
   }
   let suite: TestSuite = { name: fullName, tests: [], ...flags }
 
+  // Children inherit `skip`/`only` from their parent so that
+  // `describe.skip('parent', () => describe('child', () => it(...)))` actually
+  // skips the child's tests. The executor walks `rootSuites` as a flat list and
+  // only inspects each suite's own flag, so the propagation has to happen here.
+  if (currentSuite?.skip) suite.skip = true
+  if (currentSuite?.only) suite.only = true
+
   // Inherit lifecycle hooks from parent suite (or root hooks if at top level)
   let parent = currentSuite ?? rootHooks
   if (parent.beforeEach) suite.beforeEach = parent.beforeEach

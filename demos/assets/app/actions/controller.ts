@@ -1,5 +1,5 @@
 import * as path from 'node:path'
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 
 import { routes } from '../routes.ts'
 import { assetServer } from '../utils/assets.ts'

@@ -18,8 +18,8 @@ npm i remix
 ## Usage
 
 ```ts
-import { createRouter } from 'remix/fetch-router'
-import { cop } from 'remix/cop-middleware'
+import { createRouter } from 'remix/router'
+import { cop } from 'remix/middleware/cop'
 
 let router = createRouter({
   middleware: [cop()],
@@ -51,11 +51,11 @@ You can also layer `cop()` in front of `csrf()` when you want both browser prove
 
 ```ts
 import { createCookie } from 'remix/cookie'
-import { createRouter } from 'remix/fetch-router'
-import { createCookieSessionStorage } from 'remix/session/cookie-storage'
-import { session } from 'remix/session-middleware'
-import { cop } from 'remix/cop-middleware'
-import { csrf } from 'remix/csrf-middleware'
+import { createRouter } from 'remix/router'
+import { createCookieSessionStorage } from 'remix/session-storage/cookie'
+import { session } from 'remix/middleware/session'
+import { cop } from 'remix/middleware/cop'
+import { csrf } from 'remix/middleware/csrf'
 
 let sessionCookie = createCookie('__session', { secrets: ['secret1'] })
 let sessionStorage = createCookieSessionStorage()
@@ -70,8 +70,8 @@ In this setup, `cop()` runs first and rejects unsafe cross-origin browser reques
 ## Trusted Origins
 
 ```ts
-import { createRouter } from 'remix/fetch-router'
-import { cop } from 'remix/cop-middleware'
+import { createRouter } from 'remix/router'
+import { cop } from 'remix/middleware/cop'
 
 let router = createRouter({
   middleware: [
@@ -95,8 +95,8 @@ Bypass patterns intentionally weaken protection for specific endpoints. They sup
 - Tail wildcards with `{name...}`
 
 ```ts
-import { createRouter } from 'remix/fetch-router'
-import { cop } from 'remix/cop-middleware'
+import { createRouter } from 'remix/router'
+import { cop } from 'remix/middleware/cop'
 
 let router = createRouter({
   middleware: [

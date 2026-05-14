@@ -21,8 +21,8 @@ npm i remix
 Static middleware is useful for serving static files from a directory.
 
 ```ts
-import { createRouter } from 'remix/fetch-router'
-import { staticFiles } from 'remix/static-middleware'
+import { createRouter } from 'remix/router'
+import { staticFiles } from 'remix/middleware/static'
 
 let router = createRouter({
   middleware: [staticFiles('./public')],

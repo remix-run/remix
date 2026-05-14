@@ -1,4 +1,4 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 import { css } from 'remix/ui'
 
 import { CartButton } from '../../assets/cart-button.tsx'

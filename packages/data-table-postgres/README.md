@@ -8,7 +8,7 @@ Use this package when you want `data-table` APIs backed by `pg`.
 - **Native `pg` Integration**: Works with `pg` `Pool` and `PoolClient` instances
 - **Full `data-table` API Support**: Queries, relations, writes, and transactions
 - **Adapter-Owned Compiler**: SQL compilation lives in this adapter, with optional shared pure helpers from `data-table`
-- **Migration DDL Support**: Compiles and executes `DataMigrationOperation` operations for `remix/data-table/migrations`
+- **Multi-Statement Migrations**: `executeScript()` runs `up.sql` / `down.sql` files natively via `pg`
 - **Postgres Capabilities Enabled By Default**:
   - `returning: true`
   - `savepoints: true`
@@ -27,7 +27,7 @@ npm i remix pg
 ```ts
 import { Pool } from 'pg'
 import { createDatabase } from 'remix/data-table'
-import { createPostgresDatabaseAdapter } from 'remix/data-table-postgres'
+import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
 
 let pool = new Pool({
   connectionString: process.env.DATABASE_URL,

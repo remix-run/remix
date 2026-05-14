@@ -1,11 +1,11 @@
 /**
  * Auto-generates the remix umbrella package by:
- * 1. Scanning all @remix-run/* packages in packages/ directory
+ * 1. Reading the manifest.json for all remix/* → @remix-run/* mappings
  * 2. Creating source files that re-export from each package and sub-export
  * 3. Generating exports configuration in package.json
  * 4. Setting up dependencies for all referenced packages
  *
- * Run: node docs/generate-remix.ts
+ * Run: node scripts/generate-remix.ts
  */
 
 import { statSync } from 'node:fs'
@@ -19,6 +19,7 @@ const packagesDir = path.resolve(__dirname, '../packages')
 const remixDir = path.join(packagesDir, 'remix')
 const remixChangesDir = path.join(remixDir, '.changes')
 const remixPackageJsonPath = path.join(remixDir, 'package.json')
+const manifestPath = path.join(remixDir, 'manifest.json')
 
 const CLI_PACKAGE_NAME = '@remix-run/cli'
 const SOURCE_FOLDER = 'src'
@@ -28,7 +29,6 @@ type RemixRunPackage = {
   name: string
   version: string
   packageJsonPath: string
-  exports: ExportEntry[]
   bins: BinEntry[]
   peerDependencies: Record<string, string>
   peerDependenciesMeta: Record<string, { optional?: boolean }>
@@ -44,7 +44,7 @@ type BinEntry = {
 type ExportEntry = {
   // The source file path relative to src: `headers.ts`, `headers/cookie-storage.ts`
   sourceFile: string
-  // The export path in package.json exports: `./headers`, `./headers/cookie-storage`1
+  // The export path in package.json exports: `./headers`, `./headers/cookie-storage`
   exportPath: string
   // The package/sub-export to re-export from: `@remix-run/headers`, `@remix-run/headers/cookie-storage`
   reExportFrom: string
@@ -52,7 +52,19 @@ type ExportEntry = {
   readmePath?: string
 }
 
-const { remixRunPackages, allExports, allBins } = await getRemixRunPackages()
+const manifest: Record<string, string> = JSON.parse(await fs.readFile(manifestPath, 'utf-8'))
+const remixRunPackages = await scanPackages()
+const allExports = await buildExportsFromManifest(manifest, remixRunPackages)
+const allBins = remixRunPackages
+  .flatMap((pkg) =>
+    pkg.bins.map((bin) => ({
+      ...bin,
+      packageName: pkg.name,
+      packageJsonPath: pkg.packageJsonPath,
+    })),
+  )
+  .sort((a, b) => a.command.localeCompare(b.command))
+
 const remixPackageJson = JSON.parse(await fs.readFile(remixPackageJsonPath, 'utf-8'))
 
 // Track existing exports and bins for comparison
@@ -70,28 +82,22 @@ await updateRemixPackage()
 await outputExportsChangeFiles(remixPackageJson.exports, remixPackageJson.bin || {})
 
 // Implementations
-async function getRemixRunPackages() {
+async function scanPackages(): Promise<RemixRunPackage[]> {
   console.log('Scanning packages...')
 
-  // Get all packages except remix itself
   let packageDirNames = (await fs.readdir(packagesDir, { withFileTypes: true }))
     .filter((dirent) => dirent.isDirectory() && dirent.name !== 'remix')
     .map((dirent) => dirent.name)
 
-  let remixRunPackages: RemixRunPackage[] = []
+  let packages: RemixRunPackage[] = []
 
-  // Scan each package for its exports
   for (let packageDirName of packageDirNames) {
     let packageJsonPath = path.join(packagesDir, packageDirName, 'package.json')
     if (!isFile(packageJsonPath)) continue
 
     let packageJson = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
     let packageName = packageJson.name as string
-
-    // Skip if not a @remix-run package
-    if (!packageName.startsWith('@remix-run/')) {
-      continue
-    }
+    if (!packageName.startsWith('@remix-run/')) continue
 
     let bins: BinEntry[] = []
     let packageBin = packageJson.bin
@@ -102,78 +108,92 @@ async function getRemixRunPackages() {
       }
     }
 
-    let remixRunPackage: RemixRunPackage = {
+    packages.push({
       name: packageName,
       version: packageJson.version,
       packageJsonPath,
-      exports: [],
       bins,
       peerDependencies: packageJson.peerDependencies ?? {},
       peerDependenciesMeta: packageJson.peerDependenciesMeta ?? {},
-    }
-    remixRunPackages.push(remixRunPackage)
-
-    let shortName = packageName.replace('@remix-run/', '')
-
-    // Get all exports except package.json and bin-derived exports (e.g. "./cli")
-    let binExports = new Set(bins.map((b) => `./${b.sourceExport}`))
-    let packageExports = packageJson.exports
-    if (packageExports && typeof packageExports === 'object') {
-      for (let [exportPath, exportConfig] of Object.entries(packageExports)) {
-        if (exportPath === './package.json') continue
-        if (binExports.has(exportPath)) continue
-
-        if (exportPath === '.') {
-          // Main export
-          let isCliPackage = packageName === CLI_PACKAGE_NAME
-          let readmePath = findReadmePath(packageDirName)
-          remixRunPackage.exports.push({
-            sourceFile: isCliPackage ? 'cli.ts' : `${shortName}.ts`,
-            exportPath: isCliPackage ? './cli' : `./${shortName}`,
-            reExportFrom: packageName,
-            readmePath,
-          })
-        } else {
-          // Sub-export (e.g., "./cookie-storage")
-          let subExport = exportPath.replace('./', '')
-          let sourceEntryPath = getSourceEntryPath(exportConfig)
-          let readmePath = sourceEntryPath
-            ? findReadmePath(packageDirName, sourceEntryPath)
-            : undefined
-          let isRoutesExport = packageName === '@remix-run/fetch-router' && subExport === 'routes'
-
-          remixRunPackage.exports.push({
-            sourceFile: isRoutesExport ? 'routes.ts' : `${shortName}/${subExport}.ts`,
-            exportPath: isRoutesExport ? './routes' : `./${shortName}/${subExport}`,
-            reExportFrom: isRoutesExport
-              ? '@remix-run/fetch-router/routes'
-              : `${packageName}/${subExport}`,
-            readmePath,
-          })
-        }
-      }
-    }
+    })
   }
 
-  // Sort exports by export path for consistent ordering
-  let allExports = remixRunPackages.flatMap((pkg) => pkg.exports)
-  allExports.sort((a, b) => a.exportPath.localeCompare(b.exportPath))
+  console.log(`Found ${packages.length} @remix-run packages.`)
+  return packages
+}
 
-  // Sort bins by command for consistent ordering
-  let allBins = remixRunPackages.flatMap((pkg) =>
-    pkg.bins.map((bin) => ({
-      ...bin,
-      packageName: pkg.name,
-      packageJsonPath: pkg.packageJsonPath,
-    })),
-  )
-  allBins.sort((a, b) => a.command.localeCompare(b.command))
+/**
+ * Builds ExportEntry list directly from the manifest. Each manifest entry
+ * maps a remix/* path to a specifier. Multiple remix paths may share the same
+ * stub file (e.g. remix/router and remix/fetch-router both use fetch-router.ts).
+ * READMEs are attached to the first entry per stub (the canonical one, since
+ * canonical entries come first in manifest.json).
+ */
+async function buildExportsFromManifest(
+  manifest: Record<string, string>,
+  packages: RemixRunPackage[],
+): Promise<ExportEntry[]> {
+  let pkgJsonByName = new Map<string, Record<string, unknown>>()
+  for (let pkg of packages) {
+    // Eagerly load package.json content for README sub-export lookup
+    try {
+      pkgJsonByName.set(pkg.name, JSON.parse(await fs.readFile(pkg.packageJsonPath, 'utf-8')))
+    } catch {}
+  }
 
-  console.log(
-    `Found ${remixRunPackages.length} @remix-run packages with a total of ${allExports.length} exports.`,
-  )
+  let exports: ExportEntry[] = []
+  let readmesWritten = new Set<string>()
 
-  return { remixRunPackages, allExports, allBins }
+  for (let [remixPath, specifier] of Object.entries(manifest)) {
+    if (remixPath.startsWith('_')) continue // skip comment/metadata keys
+    let sourceFile = specifier.replace('@remix-run/', '') + '.ts'
+    let exportPath = './' + remixPath.replace('remix/', '')
+
+    let readmePath: string | undefined
+    if (!readmesWritten.has(sourceFile)) {
+      readmePath = findReadmeForSpecifier(specifier, pkgJsonByName)
+      if (readmePath) readmesWritten.add(sourceFile)
+    }
+
+    exports.push({ sourceFile, exportPath, reExportFrom: specifier, readmePath })
+  }
+
+  // Add CLI entry — handled separately from the manifest
+  let cliPkg = packages.find((p) => p.name === CLI_PACKAGE_NAME)
+  if (cliPkg) {
+    let readmePath = findReadmePath(CLI_PACKAGE_NAME.replace('@remix-run/', ''))
+    exports.push({
+      sourceFile: 'cli.ts',
+      exportPath: './cli',
+      reExportFrom: CLI_PACKAGE_NAME,
+      readmePath,
+    })
+  }
+
+  exports.sort((a, b) => a.exportPath.localeCompare(b.exportPath))
+  console.log(`Built ${exports.length} exports from manifest.`)
+  return exports
+}
+
+function findReadmeForSpecifier(
+  specifier: string,
+  pkgJsonByName: Map<string, Record<string, unknown>>,
+): string | undefined {
+  // '@remix-run/fetch-router' → packageName='@remix-run/fetch-router', subExport=undefined
+  // '@remix-run/data-schema/checks' → packageName='@remix-run/data-schema', subExport='./checks'
+  let parts = specifier.split('/')
+  let packageName = parts[0].startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0]
+  let packageDirName = packageName.replace('@remix-run/', '')
+  let subPath = parts.slice(packageName.split('/').length).join('/')
+
+  if (!subPath) {
+    return findReadmePath(packageDirName)
+  }
+
+  let pkgJson = pkgJsonByName.get(packageName)
+  let exportConfig = (pkgJson?.exports as Record<string, unknown>)?.[`./${subPath}`]
+  let sourceEntryPath = getSourceEntryPath(exportConfig)
+  return sourceEntryPath ? findReadmePath(packageDirName, sourceEntryPath) : undefined
 }
 
 function getSourceEntryPath(exportConfig: unknown): string | undefined {
@@ -232,13 +252,18 @@ async function updateRemixPackage() {
 
   // Generate fresh source files
   console.log('Generating Remix source files...')
+  let writtenSourceFiles = new Set<string>()
   for (let entry of allExports) {
     let sourceFilePath = path.join(remixDir, SOURCE_FOLDER, entry.sourceFile)
     // Create subdirectory if needed
     let sourceFileDir = path.dirname(sourceFilePath)
     await fs.mkdir(sourceFileDir, { recursive: true })
-    let content = createExportSource(entry)
-    await fs.writeFile(sourceFilePath, content, 'utf-8')
+    // Multiple export paths may share one stub (e.g. legacy alias + canonical)
+    if (!writtenSourceFiles.has(entry.sourceFile)) {
+      writtenSourceFiles.add(entry.sourceFile)
+      let content = createExportSource(entry)
+      await fs.writeFile(sourceFilePath, content, 'utf-8')
+    }
 
     if (!entry.readmePath) continue
 
@@ -425,8 +450,9 @@ async function outputExportsChangeFiles(
   let newExportsSet = new Set<string>(
     Object.keys(exportsConfig).filter((key) => key !== '.' && key !== './package.json'),
   )
-  let addedExports = Array.from(newExportsSet).filter((key) => !existingExports.has(key))
-  let removedExports = Array.from(existingExports).filter((key) => !newExportsSet.has(key))
+  let filteredExistingExports = new Set(existingExports)
+  let addedExports = Array.from(newExportsSet).filter((key) => !filteredExistingExports.has(key))
+  let removedExports = Array.from(filteredExistingExports).filter((key) => !newExportsSet.has(key))
 
   let newBinsSet = new Set<string>(Object.keys(binsConfig))
   let addedBins = Array.from(newBinsSet).filter((cmd) => !existingBins.has(cmd))

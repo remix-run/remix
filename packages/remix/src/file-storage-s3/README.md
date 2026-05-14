@@ -18,7 +18,7 @@ npm i remix
 ## Usage
 
 ```ts
-import { createS3FileStorage } from 'remix/file-storage-s3'
+import { createS3FileStorage } from 'remix/file-storage/s3'
 
 let storage = createS3FileStorage({
   accessKeyId: process.env.AWS_ACCESS_KEY_ID!,
