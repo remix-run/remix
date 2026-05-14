@@ -10,7 +10,7 @@ Typed relational query toolkit for JavaScript runtimes.
 - **Optional Runtime Validation**: Add `validate(context)` at the table level for create/update validation and coercion
 - **Relation-First Queries**: `hasMany`, `hasOne`, `belongsTo`, `hasManyThrough`, and nested eager loading
 - **Safe Scoped Writes**: `update`/`delete` with `orderBy`/`limit` run safely in a transaction
-- **First-Class Migrations**: Up/down migrations with schema builders, runner controls, and dry-run planning
+- **First-Class Migrations**: Plain SQL `up.sql`/`down.sql` files with a journaling runner and dry-run planning
 - **Raw SQL Escape Hatch**: Execute SQL directly with `db.exec(sql\`...\`)`
 
 `data-table` gives you two complementary APIs:
@@ -344,11 +344,10 @@ await db.transaction(async (tx) => {
 
 ## Migrations
 
-`data-table` includes a first-class migration system under `remix/data-table/migrations`.
-Migrations are adapter-driven: adapters execute SQL for their dialect/runtime, and SQL compilation
-is handled by adapter-owned compilers (with optional shared pure helpers from `data-table`).
-For adapter authors (including third-party adapters), shared SQL helper utilities are available at
-`remix/data-table/sql-helpers`.
+`data-table` ships a SQL-first migration system under `remix/data-table/migrations`. Each migration
+is a directory containing hand-written `up.sql` and (optionally) `down.sql`. The runner journals
+applied migrations, detects checksum drift, and wraps each migration in a transaction when the
+adapter supports transactional DDL.
 
 ### Example Setup
 
@@ -356,42 +355,56 @@ For adapter authors (including third-party adapters), shared SQL helper utilitie
 app/
   db/
     migrations/
-      20260228090000_create_users.ts
-      20260301113000_add_user_status.ts
+      20260228090000_create_users/
+        up.sql
+        down.sql
+      20260301113000_add_user_status/
+        up.sql
+        down.sql
     migrate.ts
 ```
 
-- Keep migration files in one directory (for example `app/db/migrations`).
-- Name each file as `YYYYMMDDHHmmss_name.ts` (or `.js`, `.mjs`, `.cjs`, `.cts`).
-- Each file must `default` export `createMigration(...)`; `id` and `name` are inferred from filename.
+- Keep migration directories in one parent directory (for example `app/db/migrations`).
+- Each directory is named `YYYYMMDDHHmmss_<slug>`.
+- `up.sql` is required. `down.sql` is optional (omit for irreversible migrations).
+- Scripts may contain multiple statements. `id` and `name` are inferred from the directory name.
 
 ### Migration File Example
 
+`20260228090000_create_users/up.sql`:
+
+```sql
+create table users (
+  id serial primary key,
+  email varchar(255) not null unique,
+  created_at timestamptz not null default now()
+);
+
+create unique index users_email_idx on users (email);
+```
+
+`20260228090000_create_users/down.sql`:
+
+```sql
+drop index if exists users_email_idx;
+drop table if exists users;
+```
+
+### Multi-Statement Driver Configuration
+
+The runner sends each migration to the adapter as a single multi-statement script. Make sure the
+underlying driver accepts multiple statements:
+
+- `better-sqlite3`: works out of the box (`db.exec`).
+- `pg`: works out of the box when no parameter array is passed.
+- `mysql2`: requires `multipleStatements: true` on the connection/pool.
+
 ```ts
-import { column as c, table } from 'remix/data-table'
-import { createMigration } from 'remix/data-table/migrations'
+import { createPool } from 'mysql2/promise'
 
-let users = table({
-  name: 'users',
-  columns: {
-    id: c.integer().primaryKey(),
-    email: c.varchar(255).notNull().unique(),
-    created_at: c.timestamp({ withTimezone: true }).defaultNow(),
-  },
-})
-
-export default createMigration({
-  async up({ db, schema }) {
-    await schema.createTable(users)
-    await schema.createIndex(users, 'email', { unique: true })
-
-    if (db.adapter.dialect === 'sqlite') {
-      await db.exec('pragma foreign_keys = on')
-    }
-  },
-  async down({ schema }) {
-    await schema.dropTable(users, { ifExists: true })
-  },
+let pool = createPool({
+  uri: process.env.DATABASE_URL,
+  multipleStatements: true,
 })
 ```
 
@@ -443,70 +456,59 @@ node ./app/db/migrate.ts down
 node ./app/db/migrate.ts down 20260228090000
 ```
 
-Use `step` when you want bounded rollforward/rollback behavior instead of a target id:
+Use `step` for bounded rollforward/rollback behavior instead of a target id:
 
 ```ts
 await runner.up({ step: 1 })
 await runner.down({ step: 1 })
 ```
 
-`to` and `step` are mutually exclusive. Use one or the other for a given run.
+`to` and `step` are mutually exclusive within a single run.
 
-Use `dryRun` to compile and inspect the SQL plan without applying migrations:
-
-```ts
-let dryRunResult = await runner.up({ dryRun: true })
-console.log(dryRunResult.sql)
-```
-
-When migration transactions are enabled, migration-time `schema.createTable(...)`, `db.exec(...)`,
-query-builder data operations, and `schema.hasTable(...)` / `schema.hasColumn(...)` all run in the same
-adapter transaction context.
-
-You can also pass a pre-built SQL statement into `schema.plan(...)` when authoring migrations:
+Use `dryRun` to inspect the SQL plan without applying or journaling anything:
 
 ```ts
-import { sql } from 'remix/data-table'
-
-await schema.plan(sql`update users set status = ${'active'} where status is null`)
+let plan = await runner.up({ dryRun: true })
+for (let script of plan.sql) {
+  console.log(script)
+}
 ```
 
-You can run lightweight schema checks inside a migration with `schema.hasTable(...)` and
-`schema.hasColumn(...)` when you need defensive conditional behavior. Methods that take a table name
-accept either a string (`'app.users'`) or a `table(...)` object.
+### Transaction Modes
 
-In `dryRun` mode, introspection methods still check the live database state. They do not simulate
-tables/columns from pending operations in the current dry-run plan.
+By default each migration is wrapped in a transaction when the adapter supports transactional DDL.
+Override per migration with a directive on the first non-blank line of `up.sql`:
 
-For key-oriented migration APIs, single-column and compound forms are both supported:
-
-```ts
-await schema.alterTable(users, (table) => {
-  table.addPrimaryKey('id')
-  table.addForeignKey('account_id', 'accounts', 'id')
-  table.addForeignKey(['tenant_id', 'account_id'], 'accounts', ['tenant_id', 'id'])
-})
+```sql
+-- data-table/transaction: none
+create index concurrently users_email_active_idx on users (email) where status = 'active';
 ```
 
-Constraint and index names are optional in migration APIs. When omitted, `data-table` generates
-deterministic names for primary keys, uniques, foreign keys, checks, and indexes.
+Supported modes:
 
-This is useful when you want to:
+- `auto` (default): wrap when the adapter supports transactional DDL.
+- `required`: wrap; the runner throws if the adapter cannot support it.
+- `none`: never wrap. Use this for statements like postgres `CREATE INDEX CONCURRENTLY` that
+  cannot run inside a transaction.
 
-- Review generated SQL in CI before deploying
-- Verify migration ordering and target/step selection
-- Audit dialect-specific SQL differences across adapters
+You can also set `transaction` directly on a `MigrationDescriptor` when registering migrations
+programmatically.
 
-For non-filesystem runtimes, register migrations manually:
+### Programmatic Registration
+
+For non-filesystem runtimes, register migrations directly:
 
 ```ts
 import { createMigrationRegistry, createMigrationRunner } from 'remix/data-table/migrations'
-import createUsers from './db/migrations/20260228090000_create_users.ts'
 
 let registry = createMigrationRegistry()
-registry.register({ id: '20260228090000', name: 'create_users', migration: createUsers })
+registry.register({
+  id: '20260228090000',
+  name: 'create_users',
+  up: 'create table users (id serial primary key, email text not null);',
+  down: 'drop table users;',
+})
 
-// adapter from createPostgresDatabaseAdapter/createMysqlDatabaseAdapter/createSqliteDatabaseAdapter
 let runner = createMigrationRunner(adapter, registry)
 await runner.up()
 ```

@@ -8,7 +8,7 @@ Use this package when you want `data-table` APIs backed by a synchronous SQLite 
 - **Native Runtime SQLite Support**: Works with Node's `node:sqlite` `DatabaseSync`, Bun's `bun:sqlite` `Database`, and compatible synchronous SQLite clients
 - **Full `data-table` API Support**: Queries, relations, writes, and transactions
 - **Adapter-Owned Compiler**: SQL compilation lives in this adapter, with optional shared pure helpers from `data-table`
-- **Migration DDL Support**: Compiles and executes `DataMigrationOperation` operations for `remix/data-table/migrations`
+- **Multi-Statement Migrations**: `executeScript()` runs `up.sql` / `down.sql` files via `Database.exec()`
 - **SQLite Capabilities Enabled By Default**:
   - `returning: true`
   - `savepoints: true`
