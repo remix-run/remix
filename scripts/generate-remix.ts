@@ -57,7 +57,11 @@ const remixRunPackages = await scanPackages()
 const allExports = await buildExportsFromManifest(manifest, remixRunPackages)
 const allBins = remixRunPackages
   .flatMap((pkg) =>
-    pkg.bins.map((bin) => ({ ...bin, packageName: pkg.name, packageJsonPath: pkg.packageJsonPath })),
+    pkg.bins.map((bin) => ({
+      ...bin,
+      packageName: pkg.name,
+      packageJsonPath: pkg.packageJsonPath,
+    })),
   )
   .sort((a, b) => a.command.localeCompare(b.command))
 
