@@ -724,7 +724,6 @@ describe('postgres adapter', () => {
     assert.deepEqual(result.rows, [{ ok: true }])
   })
 
-
   it('executeScript forwards the script as an unparameterized query', async () => {
     let calls: Array<{ text: string; values: unknown[] | undefined }> = []
     let client = {

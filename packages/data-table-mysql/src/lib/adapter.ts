@@ -458,4 +458,3 @@ function isInsertOperation(
     operation.kind === 'insert' || operation.kind === 'insertMany' || operation.kind === 'upsert'
   )
 }
-
