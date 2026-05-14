@@ -17,7 +17,10 @@ export type ChokidarWatcher = ReturnType<typeof chokidar.watch>
 export type AssetServerWatcher = {
   close(): Promise<void>
   getWatchedTargets(): readonly string[]
-  updateWatchedDirectories(delta: { add: readonly string[]; remove: readonly string[] }): void
+  updateWatchedDirectories(
+    delta: { add: readonly string[]; remove: readonly string[] },
+    options?: { includeAncestors?: boolean },
+  ): void
 }
 
 export function createAssetServerWatcher(options: AssetServerWatcherOptions): AssetServerWatcher {
@@ -27,7 +30,8 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
     ...resolveChokidarWatchOptions(options),
   })
   options.onChokidarWatcherCreated?.(watcher)
-  let watchedDirectories = new Set<string>()
+  let watchedResolutionDirectories = new Set<string>()
+  let watchedFileDirectories = new Set<string>()
   let watchedTargets = new Set<string>()
 
   for (let event of ['add', 'change', 'unlink'] as const) {
@@ -46,8 +50,12 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
     getWatchedTargets() {
       return [...watchedTargets]
     },
-    updateWatchedDirectories(delta) {
-      let nextWatchedDirectories = new Set(watchedDirectories)
+    updateWatchedDirectories(delta, updateOptions = {}) {
+      let includeAncestors = updateOptions.includeAncestors ?? true
+      let previousDirectories = includeAncestors
+        ? watchedResolutionDirectories
+        : watchedFileDirectories
+      let nextWatchedDirectories = new Set(previousDirectories)
 
       for (let directory of delta.add) {
         nextWatchedDirectories.add(directory)
@@ -56,7 +64,17 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
         nextWatchedDirectories.delete(directory)
       }
 
-      let nextTargets = getWatchTargetsForDirectories(options.rootDir, [...nextWatchedDirectories])
+      if (includeAncestors) {
+        watchedResolutionDirectories = nextWatchedDirectories
+      } else {
+        watchedFileDirectories = nextWatchedDirectories
+      }
+
+      let nextTargets = getWatchTargets({
+        rootDir: options.rootDir,
+        fileDirectories: [...watchedFileDirectories],
+        resolutionDirectories: [...watchedResolutionDirectories],
+      })
       let targetsToAdd = [...nextTargets].filter((target) => !watchedTargets.has(target))
       let targetsToRemove = [...watchedTargets].filter((target) => !nextTargets.has(target))
 
@@ -67,7 +85,6 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
         watcher.add(targetsToAdd)
       }
 
-      watchedDirectories = nextWatchedDirectories
       watchedTargets = nextTargets
     },
   }
@@ -88,15 +105,20 @@ function resolveChokidarWatchOptions(
   }
 }
 
-function getWatchTargetsForDirectories(
-  rootDir: string,
-  directories: readonly string[],
-): Set<string> {
-  let normalizedRootDir = normalizeFilePath(rootDir)
+function getWatchTargets(options: {
+  fileDirectories: readonly string[]
+  resolutionDirectories: readonly string[]
+  rootDir: string
+}): Set<string> {
+  let normalizedRootDir = normalizeFilePath(options.rootDir)
   let targets = new Set<string>()
   let configAncestors = new Set<string>()
 
-  for (let directory of directories) {
+  for (let directory of options.fileDirectories) {
+    targets.add(normalizeFilePath(directory).replace(/\/+$/, ''))
+  }
+
+  for (let directory of options.resolutionDirectories) {
     let normalizedDirectory = normalizeFilePath(directory).replace(/\/+$/, '')
 
     targets.add(normalizedDirectory)

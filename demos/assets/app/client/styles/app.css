@@ -1,0 +1,107 @@
+:root {
+  color-scheme: light;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  font-size: 0.95em;
+}
+
+.page-shell {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 4rem;
+}
+
+.asset-previews {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.asset-preview {
+  width: 9rem;
+  margin: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+.asset-image,
+.asset-background {
+  width: 9rem;
+  height: 9rem;
+  border-radius: 1.5rem;
+  display: grid;
+  place-items: center;
+  background: white;
+  border: 1px solid #cbd5e1;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+}
+
+.asset-background {
+  background:
+    linear-gradient(135deg, rgba(14, 165, 233, 0.16), rgba(139, 92, 246, 0.2)),
+    url('../images/image.svg') center/5rem 5rem no-repeat,
+    white;
+}
+
+.asset-background-request-transformed {
+  background:
+    linear-gradient(135deg, rgba(139, 92, 246, 0.16), rgba(14, 165, 233, 0.2)),
+    url('../images/image.svg?transform=recolor:ff0000') center/5rem 5rem no-repeat,
+    white;
+}
+
+.asset-image {
+  display: block;
+}
+
+.asset-preview figcaption {
+  color: #475569;
+  font-size: 0.95rem;
+  text-align: center;
+}
+
+h1 {
+  margin: 0 0 1rem;
+}
+
+p {
+  line-height: 1.6;
+}
+
+.app {
+  margin-top: 1.25rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.75rem;
+  background: white;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.client-card {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.client-card h2 {
+  margin: 0;
+}
+
+.client-card p {
+  margin: 0;
+}
+
+.client-note {
+  color: #475569;
+  font-size: 0.95rem;
+}
