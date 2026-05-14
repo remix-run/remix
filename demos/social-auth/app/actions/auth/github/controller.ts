@@ -1,5 +1,5 @@
 import { completeAuth, finishExternalAuth, startExternalAuth } from 'remix/auth'
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
 import { resolveExternalAuth } from '../resolve-external-auth.ts'

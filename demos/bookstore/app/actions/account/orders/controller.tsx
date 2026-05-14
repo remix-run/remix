@@ -1,4 +1,4 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 
 import { orders, orderItemsWithBook } from '../../../data/schema.ts'
 import { requireAuth } from '../../../middleware/auth.ts'

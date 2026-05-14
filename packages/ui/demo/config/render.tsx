@@ -1,7 +1,7 @@
 import type { RemixNode } from 'remix/ui'
 import { renderToStream, type ResolveFrameContext } from 'remix/ui/server'
 import { createHtmlResponse } from 'remix/response/html'
-import type { RequestContext, Router } from 'remix/fetch-router'
+import type { RequestContext, Router } from 'remix/router'
 
 export function render(context: RequestContext, node: RemixNode, init?: ResponseInit) {
   let stream = renderToStream(node, {

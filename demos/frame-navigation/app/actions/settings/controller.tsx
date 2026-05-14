@@ -1,4 +1,4 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 import type { Handle, RemixNode } from 'remix/ui'
 import { Frame } from 'remix/ui'
 

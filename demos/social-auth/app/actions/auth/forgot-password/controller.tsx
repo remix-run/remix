@@ -1,4 +1,4 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 import * as s from 'remix/data-schema'
 
 import { ForgotPasswordPage, ForgotPasswordSentPage } from './page.tsx'

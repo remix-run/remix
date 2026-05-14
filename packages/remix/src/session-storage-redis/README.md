@@ -13,7 +13,7 @@ npm i remix
 
 ```ts
 import { createClient } from 'redis'
-import { createRedisSessionStorage } from 'remix/session-storage-redis'
+import { createRedisSessionStorage } from 'remix/session-storage/redis'
 
 let redis = createClient({ url: process.env.REDIS_URL })
 await redis.connect()

@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as s from 'remix/data-schema'
+import { hasRemixPackage, mapToRemixPackage } from './manifest.ts'
 import { info, invariant, warn } from './utils.ts'
 
 type PackageOverview = {
@@ -73,6 +74,19 @@ async function discoverPackageSubpathOverviews(
   for (let [exportPath, exportConfig] of Object.entries(exports)) {
     if (!exportPath.startsWith('./') || exportPath === './package.json') continue
 
+    let exportSubpath = exportPath.slice(2) // e.g. "fetch-router/routes"
+    let candidateDocsPackage = `${getDocsPackageName(packageJson.name)}/${exportSubpath}`
+
+    // For the remix umbrella, skip legacy alias exports (e.g. ./fetch-router/routes)
+    // that resolve to a different canonical path (e.g. remix/routes). The canonical
+    // sub-package discovery will create the correct sidebar entry.
+    if (packageJson.name === 'remix') {
+      let specifier = `@remix-run/${exportSubpath}`
+      if (hasRemixPackage(specifier) && mapToRemixPackage(specifier) !== candidateDocsPackage) {
+        continue
+      }
+    }
+
     let entryPath = getExportEntryPath(exportConfig)
     if (!entryPath) continue
 
@@ -80,7 +94,7 @@ async function discoverPackageSubpathOverviews(
     if (!(await isFile(readmePath))) continue
 
     overviews.push({
-      docsPackage: `${getDocsPackageName(packageJson.name)}/${exportPath.slice(2)}`,
+      docsPackage: candidateDocsPackage,
       packageDir,
       readmePath,
     })
@@ -99,7 +113,7 @@ export async function writePackageOverviewFiles(overviews: PackageOverview[], do
     if (overview.readmePath) {
       body = await fs.readFile(overview.readmePath, 'utf-8')
       warnOnInvalidReadmeSyntax(body, overview.readmePath)
-      body = normalizeReadmeMarkdown(body)
+      body = normalizeReadmeMarkdown(body, overview.docsPackage)
     } else {
       body = getMissingReadmeMarkdown(overview.docsPackage, overview.packageDir)
     }
@@ -132,10 +146,12 @@ function getExportEntryPath(exportConfig: unknown): string | undefined {
   return typeof config === 'string' ? config : (config.types ?? config.default)
 }
 
-function normalizeReadmeMarkdown(markdown: string): string {
-  return markdown.replace(/\]\((?:\.\/)?README\.md(#[^)]+)?\)/g, (_, hash: string | undefined) => {
-    return `](${hash ?? './'})`
-  })
+function normalizeReadmeMarkdown(markdown: string, docsPackage: string): string {
+  return markdown
+    .replace(/^# .*(?:\r?\n|$)/, `# ${docsPackage}\n`)
+    .replace(/\]\((?:\.\/)?README\.md(#[^)]+)?\)/g, (_, hash: string | undefined) => {
+      return `](${hash ?? './'})`
+    })
 }
 
 function warnOnInvalidReadmeSyntax(markdown: string, readmePath: string) {
@@ -200,10 +216,8 @@ function getDocsPackageName(packageName: string): string {
     return 'remix'
   }
 
-  let match = packageName.match(/^@remix-run\/(.+)$/)
-  invariant(match, `Unexpected package name: ${packageName}`)
-
-  return `remix/${match[1]}`
+  invariant(packageName.startsWith('@remix-run/'), `Unexpected package name: ${packageName}`)
+  return mapToRemixPackage(packageName)
 }
 
 function frontmatter(overview: PackageOverview): string {

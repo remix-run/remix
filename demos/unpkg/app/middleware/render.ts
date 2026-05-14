@@ -1,5 +1,5 @@
 import type { SafeHtml } from 'remix/html-template'
-import { renderWith } from 'remix/render-middleware'
+import { renderWith } from 'remix/middleware/render'
 import { createHtmlResponse } from 'remix/response/html'
 
 import { createDocument } from '../ui/document.ts'

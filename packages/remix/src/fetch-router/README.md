@@ -21,14 +21,14 @@ npm i remix
 
 The main purpose of the router is to map incoming requests to request handlers and middleware. The router uses the `fetch()` API to accept a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and return a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
 
-Import route definition helpers (`route`, `form`, `resource`, `resources`, etc.) from `remix/routes` and runtime APIs (`createRouter`, `Middleware`, etc.) from `remix/fetch-router`.
+Import route definition helpers (`route`, `form`, `resource`, `resources`, etc.) from `remix/routes` and runtime APIs (`createRouter`, `Middleware`, etc.) from `remix/router`.
 
 The example below is a small site with a home page, an "about" page, and a blog.
 
 ```ts
 import { route } from 'remix/routes'
-import { createRouter } from 'remix/fetch-router'
-import { logger } from 'remix/logger-middleware'
+import { createRouter } from 'remix/router'
+import { logger } from 'remix/middleware/logger'
 
 // `route()` creates a "route map" that organizes routes by name. The keys
 // of the map may be any name, and may be nested to group related routes.
@@ -102,7 +102,7 @@ Note: We're using the [`createHtmlResponse` helper from `response`](https://gith
 
 ```ts
 import { route } from 'remix/routes'
-import { createRouter } from 'remix/fetch-router'
+import { createRouter } from 'remix/router'
 import { html } from 'remix/html-template'
 import { createHtmlResponse } from 'remix/response/html'
 
@@ -191,7 +191,7 @@ However, we can also encode the request method into the route definition itself 
 
 ```ts
 import * as assert from 'node:assert/strict'
-import { createRouter } from 'remix/fetch-router'
+import { createRouter } from 'remix/router'
 import { route } from 'remix/routes'
 
 let routes = route({
@@ -251,7 +251,7 @@ Continuing with [the example of the contact page](#routing-based-on-request-meth
 A `form()` route map contains two routes: `index` and `action`. The `index` route is a `GET` route that shows the form, and the `action` route is a `POST` route that handles the form submission.
 
 ```tsx
-import { createRouter } from 'remix/fetch-router'
+import { createRouter } from 'remix/router'
 import { route, form } from 'remix/routes'
 import { createHtmlResponse } from 'remix/response/html'
 import { html } from 'remix/html-template'
@@ -336,7 +336,7 @@ router.map(routes.contact, {
 The router provides a `resources()` helper that creates a route map with a set of resource-based routes, useful when defining RESTful API routes or modeling resources in a web application ([similar to Rails' `resources` helper](https://guides.rubyonrails.org/routing.html#resource-routing-the-rails-default)). You can think of "resources" as a way to define routes for a collection of related resources, like products, books, users, etc.
 
 ```ts
-import { createRouter } from 'remix/fetch-router'
+import { createRouter } from 'remix/router'
 import { route, resources } from 'remix/routes'
 
 let routes = route({
@@ -392,7 +392,7 @@ router.map(routes.brands.products, {
 The `resource()` helper creates a route map for a single resource (i.e. not something that is part of a collection). This is useful when defining operations on a singleton resource, like a user profile.
 
 ```tsx
-import { createRouter } from 'remix/fetch-router'
+import { createRouter } from 'remix/router'
 import { route, resources, resource } from 'remix/routes'
 
 let routes = route({
@@ -450,7 +450,7 @@ type Routes = typeof routes
 Resource route names may be customized using the `names` option when you'd prefer not to use the default `index`/`new`/`show`/`create`/`edit`/`update`/`destroy` route names.
 
 ```tsx
-import { createRouter } from 'remix/fetch-router'
+import { createRouter } from 'remix/router'
 import { route, resources } from 'remix/routes'
 
 let routes = route({
@@ -469,7 +469,7 @@ type Routes = typeof routes.users
 If you want to use a param name other than `id`, you can use the `param` option.
 
 ```tsx
-import { createRouter } from 'remix/fetch-router'
+import { createRouter } from 'remix/router'
 import { route, resources } from 'remix/routes'
 
 let routes = route({
@@ -507,7 +507,7 @@ Middleware functions run code before and/or after actions. They are a powerful w
 A basic logging middleware might look like this:
 
 ```ts
-import type { Middleware } from 'remix/fetch-router'
+import type { Middleware } from 'remix/router'
 
 // You can use the `Middleware` type to type middleware functions.
 function logger(): Middleware {
@@ -554,7 +554,7 @@ function auth(options?: AuthOptions): Middleware {
 Middleware can store values in request context with a key. To make that value available as `context.db`, add `property: 'db'` to the middleware type and pass `{ property: 'db' }` to `context.set()`:
 
 ```ts
-import { createContextKey, type Middleware } from 'remix/fetch-router'
+import { createContextKey, type Middleware } from 'remix/router'
 
 interface Database {
   findMany(): Promise<unknown[]>
@@ -658,14 +658,14 @@ Route params are only half of a handler's type contract. In many apps, handlers 
 `fetch-router` lets you carry that context contract through the router and into stored controllers and actions. A common pattern is to derive one app-local context type from your router middleware, augment `RouterTypes.context` with it, then use `createAction()` and `createController()` to type stored handlers.
 
 ```ts
-import { Auth, requireAuth } from 'remix/auth-middleware'
+import { Auth, requireAuth } from 'remix/middleware/auth'
 import {
   createAction,
   createController,
   type AnyParams,
   type ContextWithParams,
   type MiddlewareContext,
-} from 'remix/fetch-router'
+} from 'remix/router'
 import { route } from 'remix/routes'
 import { loadDatabase } from './middleware/database.ts'
 import { loadSession } from './middleware/session.ts'
@@ -682,7 +682,7 @@ type AppContext<params extends AnyParams = {}> = ContextWithParams<
   params
 >
 
-declare module 'remix/fetch-router' {
+declare module 'remix/router' {
   interface RouterTypes {
     context: AppContext
   }
@@ -729,7 +729,7 @@ If you're authoring a middleware package that stores values in request context, 
 Apps can derive request context from the middleware tuple with `MiddlewareContext`. If they need to describe a context shape without a middleware tuple, they can use the core `ContextWithEntry` and `ContextWithEntries` helpers directly.
 
 ```ts
-import { createContextKey, type Middleware, type MiddlewareContext } from 'remix/fetch-router'
+import { createContextKey, type Middleware, type MiddlewareContext } from 'remix/router'
 
 // The context key that consumers will need to read from `context.get(...)`
 export const CurrentUser = createContextKey<User | null>()

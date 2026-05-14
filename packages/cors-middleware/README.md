@@ -19,8 +19,8 @@ npm i remix
 ## Usage
 
 ```ts
-import { createRouter } from 'remix/fetch-router'
-import { cors } from 'remix/cors-middleware'
+import { createRouter } from 'remix/router'
+import { cors } from 'remix/middleware/cors'
 
 let router = createRouter({
   middleware: [

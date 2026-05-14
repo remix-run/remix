@@ -27,7 +27,7 @@ npm i remix pg
 ```ts
 import { Pool } from 'pg'
 import { createDatabase } from 'remix/data-table'
-import { createPostgresDatabaseAdapter } from 'remix/data-table-postgres'
+import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
 
 let pool = new Pool({
   connectionString: process.env.DATABASE_URL,

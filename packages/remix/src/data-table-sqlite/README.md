@@ -29,7 +29,7 @@ npm i remix
 ```ts
 import { DatabaseSync } from 'node:sqlite'
 import { createDatabase } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
+import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
 
 let sqlite = new DatabaseSync('app.db')
 let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
@@ -40,7 +40,7 @@ let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
 ```ts
 import { Database } from 'bun:sqlite'
 import { createDatabase } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
+import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
 
 let sqlite = new Database('app.db')
 let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
@@ -66,7 +66,7 @@ Import any driver-specific types you need directly from your runtime's SQLite mo
 ```ts
 import { DatabaseSync } from 'node:sqlite'
 import { createDatabase } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
+import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
 
 let sqlite = new DatabaseSync(':memory:')
 let db = createDatabase(createSqliteDatabaseAdapter(sqlite))
