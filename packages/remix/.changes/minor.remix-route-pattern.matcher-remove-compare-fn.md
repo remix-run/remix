@@ -3,7 +3,7 @@ BREAKING CHANGE: In `remix/route-pattern`, remove the `compareFn` parameter from
 Matches always sort by specificity (most specific first). If you need a different order, sort the result of `matchAll` yourself.
 
 ```ts
-import * as Specificity from "remix/route-pattern/specificity"
+import * as Specificity from 'remix/route-pattern/specificity'
 
 // before
 matcher.matchAll(url, Specificity.ascending)
