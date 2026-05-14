@@ -192,20 +192,6 @@ function findReadmeForSpecifier(
   return sourceEntryPath ? findReadmePath(packageDirName, sourceEntryPath) : undefined
 }
 
-/**
- * Returns true if the given manifest entry is a legacy alias — its remix path
- * matches the mechanical (specifier-derived) path but another canonical entry
- * maps the same specifier to a different path.
- */
-function isLegacyAlias(remixPath: string, specifier: string): boolean {
-  let shortPath = remixPath.replace('remix/', '')
-  let shortSpecifier = specifier.replace('@remix-run/', '')
-  if (shortPath !== shortSpecifier) return false
-  return Object.entries(manifest).some(
-    ([rp, sp]) => sp === specifier && rp.replace('remix/', '') !== sp.replace('@remix-run/', ''),
-  )
-}
-
 function getSourceEntryPath(exportConfig: unknown): string | undefined {
   if (typeof exportConfig === 'string') {
     return exportConfig
@@ -457,21 +443,10 @@ async function outputExportsChangeFiles(
   exportsConfig: Record<string, string>,
   binsConfig: Record<string, string>,
 ) {
-  // Exclude legacy alias export paths from change-file diffs.
-  function isLegacyExportPath(exportPath: string): boolean {
-    let remixPath = 'remix/' + exportPath.replace('./', '')
-    let specifier = manifest[remixPath]
-    return specifier != null && isLegacyAlias(remixPath, specifier)
-  }
-
   let newExportsSet = new Set<string>(
-    Object.keys(exportsConfig).filter(
-      (key) => key !== '.' && key !== './package.json' && !isLegacyExportPath(key),
-    ),
+    Object.keys(exportsConfig).filter((key) => key !== '.' && key !== './package.json'),
   )
-  let filteredExistingExports = new Set(
-    Array.from(existingExports).filter((key) => !isLegacyExportPath(key)),
-  )
+  let filteredExistingExports = new Set(existingExports)
   let addedExports = Array.from(newExportsSet).filter((key) => !filteredExistingExports.has(key))
   let removedExports = Array.from(filteredExistingExports).filter((key) => !newExportsSet.has(key))
 
