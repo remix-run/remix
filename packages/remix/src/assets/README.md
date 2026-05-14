@@ -1,4 +1,4 @@
-# assets
+# remix/assets
 
 Fetch-based server for compiling browser JS/TS and CSS assets on demand.
 

@@ -1,4 +1,4 @@
-# route-pattern
+# remix/route-pattern
 
 Type-safe URL matching and href generation for JavaScript. `route-pattern` supports path params, wildcards, optionals, and full-URL patterns with predictable ranking.
 

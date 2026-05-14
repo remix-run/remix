@@ -1,4 +1,4 @@
-# tar-parser
+# remix/tar-parser
 
 Streaming [tar archive](<https://en.wikipedia.org/wiki/Tar_(computing)>) parsing for JavaScript. `tar-parser` handles POSIX/GNU/PAX archives incrementally so large tar files can be processed without buffering the full payload.
 

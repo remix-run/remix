@@ -1,4 +1,4 @@
-# headers
+# remix/headers
 
 Typed utilities for parsing, manipulating, and serializing HTTP header values. `headers` provides focused classes for common HTTP headers.
 

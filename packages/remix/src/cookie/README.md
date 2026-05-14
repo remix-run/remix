@@ -1,4 +1,4 @@
-# cookie
+# remix/cookie
 
 Type-safe cookie parsing and serialization for Remix. It supports secure signing, secret rotation, and complete cookie attribute control.
 

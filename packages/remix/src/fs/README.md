@@ -1,4 +1,4 @@
-# fs
+# remix/fs
 
 Lazy, streaming filesystem utilities for JavaScript. This package provides utilities for working with files on the local filesystem using the [`LazyFile`](https://github.com/remix-run/remix/tree/main/packages/lazy-file)/ native [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) API.
 

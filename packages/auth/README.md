@@ -1,4 +1,4 @@
-# auth
+# remix/auth
 
 Composable browser authentication primitives for Remix. Use this package to verify credentials on your own server, start external OAuth or OIDC redirects, finish provider callbacks, and write an app-owned auth record into the session. Pair it with [`remix/middleware/auth`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) when later requests need to resolve that session data into the current user and protect routes.
 

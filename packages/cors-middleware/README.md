@@ -1,4 +1,4 @@
-# cors-middleware
+# remix/middleware/cors
 
 CORS middleware for Remix. It adds standard CORS response headers to Fetch API servers and can either short-circuit preflight requests or pass them through to app-defined `OPTIONS` handlers.
 

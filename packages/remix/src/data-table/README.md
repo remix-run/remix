@@ -1,4 +1,4 @@
-# data-table
+# remix/data-table
 
 Typed relational query toolkit for JavaScript runtimes.
 

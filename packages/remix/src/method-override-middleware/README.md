@@ -1,4 +1,4 @@
-# method-override-middleware
+# remix/middleware/method-override
 
 Method override middleware for Remix. It allows HTML forms to simulate `PUT`, `PATCH`, and `DELETE` requests using a hidden form field.
 

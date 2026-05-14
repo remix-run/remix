@@ -1,4 +1,4 @@
-# session-middleware
+# remix/middleware/session
 
 Session middleware for Remix using signed cookies. It loads session state from incoming requests, exposes it as `context.session` (or `context.get(Session)`), and persists updates automatically.
 

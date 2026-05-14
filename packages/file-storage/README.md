@@ -1,4 +1,4 @@
-# file-storage
+# remix/file-storage
 
 Key/value storage interfaces for server-side [`File` objects](https://developer.mozilla.org/en-US/docs/Web/API/File). `file-storage` gives Remix apps one consistent API across local disk and memory backends.
 

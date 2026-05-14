@@ -1,4 +1,4 @@
-# assert
+# remix/assert
 
 A compatible subset of `node:assert/strict` that works in any JavaScript environment, including browsers — plus a vitest-/jest-style `expect` API for tests that prefer chainable matchers.
 

@@ -1,4 +1,4 @@
-# logger-middleware
+# remix/middleware/logger
 
 HTTP request/response logging middleware for Remix. It logs request metadata and response details with configurable output formats, and exposes the configured log function on request context.
 

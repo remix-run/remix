@@ -1,4 +1,4 @@
-# form-data-middleware
+# remix/middleware/form-data
 
 Form body parsing middleware for Remix. It parses incoming [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) and exposes it via `context.formData` (or `context.get(FormData)`).
 

@@ -1,4 +1,4 @@
-# fetch-router
+# remix/router
 
 A minimal, composable router built on the [web Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API) and [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). Use it to define typed route maps, run middleware, and share request-scoped context across APIs, web services, and server-rendered applications.
 
