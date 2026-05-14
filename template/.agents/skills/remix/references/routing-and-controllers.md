@@ -97,7 +97,7 @@ Use `Action` only when a reusable helper needs to type one action before it is a
 controller or when you are doing low-level router wiring outside the `app/actions` convention:
 
 ```typescript
-import { createAction } from 'remix/fetch-router'
+import { createAction } from 'remix/router'
 
 import { routes } from '../routes.ts'
 
@@ -120,7 +120,7 @@ The handler receives a context object with:
 Actions with inline middleware:
 
 ```typescript
-import { requireAuth } from 'remix/auth-middleware'
+import { requireAuth } from 'remix/middleware/auth'
 
 router.get(routes.account.index, {
   middleware: [requireAuth()],
@@ -230,7 +230,7 @@ Configure `RouterTypes.context` with your app context in the router module, then
 middleware stack without repeating a type clause on every controller.
 
 ```typescript
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 
 import { routes } from '../routes.ts'
 
@@ -367,7 +367,7 @@ Define an `AppContext` type from your middleware stack, then make it the default
 `createAction()` and `createController()`:
 
 ```typescript
-import type { MiddlewareContext, ContextWithParams, AnyParams } from 'remix/fetch-router'
+import type { MiddlewareContext, ContextWithParams, AnyParams } from 'remix/router'
 
 type RootMiddleware = [
   ReturnType<typeof formData>,
@@ -381,7 +381,7 @@ export type AppContext<params extends AnyParams = {}> = ContextWithParams<
   params
 >
 
-declare module 'remix/fetch-router' {
+declare module 'remix/router' {
   interface RouterTypes {
     context: AppContext
   }

@@ -127,7 +127,7 @@ Create a database with an adapter and expose it via middleware:
 ```typescript
 import BetterSqlite3 from 'better-sqlite3'
 import { createDatabase, Database } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
+import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
 
 let sqlite = new BetterSqlite3('./db/app.db')
 sqlite.pragma('foreign_keys = ON')
@@ -142,7 +142,7 @@ client fits the runtime instead of assuming `better-sqlite3` is required.
 ### Database middleware
 
 ```typescript
-import type { Middleware } from 'remix/fetch-router'
+import type { Middleware } from 'remix/router'
 import { Database } from 'remix/data-table'
 
 export function loadDatabase(): Middleware {
@@ -300,7 +300,7 @@ The recommended way: register `formData()` middleware in the root stack and read
 the context system. This also lets `methodOverride()` and CSRF middleware work uniformly.
 
 ```typescript
-import { formData } from 'remix/form-data-middleware'
+import { formData } from 'remix/middleware/form-data'
 
 let router = createRouter({
   middleware: [, /* ... */ formData() /* ... */],
