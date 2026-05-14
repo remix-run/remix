@@ -135,7 +135,7 @@ describe('manifest', () => {
       let readmePath = path.join(packagesDir, short, 'README.md')
       if (!fs.existsSync(readmePath)) continue
 
-      let heading = fs.readFileSync(readmePath, 'utf-8').split('\n', 1)[0]
+      let heading = fs.readFileSync(readmePath, 'utf-8').split(/\r?\n/, 1)[0]
       assert.equal(
         heading,
         `# ${short}`,
