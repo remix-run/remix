@@ -145,6 +145,17 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
   let animationTarget: Box | null = null
   let animationEndTime = 0
 
+  let clearActiveAnimationState = () => {
+    animation = null
+    animationTarget = null
+    animationEndTime = 0
+  }
+
+  let clearLayoutState = () => {
+    clearActiveAnimationState()
+    snapshot = null
+  }
+
   let clearProjectionStyles = (node: HTMLElement) => {
     node.style.transform = ''
     node.style.transformOrigin = ''
@@ -172,7 +183,7 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
     if (runningAnimation && animationTarget && layoutConfig) {
       latest = measureAnimationTargetBox(htmlNode, runningAnimation, animationEndTime)
       if (isTargetBoxSame(latest, animationTarget, layoutConfig)) {
-        snapshot = latest
+        snapshot = null
         return
       }
     }
@@ -181,18 +192,17 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
     // mixin was just attached, layoutConfig was disabled this render, or an
     // in-flight animation needs to retarget to a new final box).
     animation?.cancel()
-    animation = null
-    animationTarget = null
+    clearActiveAnimationState()
     clearProjectionStyles(htmlNode)
     latest ??= measureNaturalBox(htmlNode)
 
     if (!layoutConfig) {
-      snapshot = latest
+      clearLayoutState()
       return
     }
 
     if (!snapshot) {
-      snapshot = latest
+      snapshot = null
       return
     }
 
@@ -200,7 +210,7 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
     calcBoxDelta(targetDelta, latest, snapshot, layoutConfig)
 
     if (isVisualDeltaZero(targetDelta, layoutConfig)) {
-      snapshot = latest
+      snapshot = null
       return
     }
 
@@ -221,6 +231,7 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
     animation = active
     animationTarget = latest
     animationEndTime = duration
+    snapshot = null
     active.finished
       .then(() => {
         if (animation !== active) return
@@ -230,18 +241,14 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
         // animation because more than one effect targets the same property.
         active.cancel()
         clearProjectionStyles(htmlNode)
-        animation = null
-        animationTarget = null
-        snapshot = rectToBox(htmlNode.getBoundingClientRect())
+        clearLayoutState()
       })
       .catch(() => {})
   })
 
   handle.addEventListener('remove', () => {
     animation?.cancel()
-    animation = null
-    animationTarget = null
-    snapshot = null
+    clearLayoutState()
   })
 
   return (config = true) => {
