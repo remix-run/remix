@@ -447,11 +447,11 @@ describe('Matcher', () => {
         matcher.add(editor, 'editor')
         matcher.add(json, 'json')
 
-        let matches = matcher.matchAll('http://localhost/api/remix/fetch-router/edit.json')
+        let matches = matcher.matchAll('http://localhost/api/remix/router/edit.json')
 
         assert.deepEqual(
           matches.map((match) => [match.data, match.params]),
-          [['json', { slug: 'remix/fetch-router' }]],
+          [['json', { slug: 'remix/router' }]],
         )
       })
 
