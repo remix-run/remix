@@ -37,14 +37,6 @@ const buttonRowCss = css({
   display: 'flex',
   alignItems: 'center',
   gap: theme.space.sm,
-  width: 'max-content',
-  maxWidth: '100%',
-  overflowX: 'auto',
-  overflowY: 'hidden',
-  paddingBottom: theme.space.xs,
-  '& > *': {
-    flexShrink: 0,
-  },
 })
 
 const spinnerGlyphCss = css({
