@@ -1,4 +1,4 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 
 import { routes } from '../routes.ts'
 import { getMessageLimit } from '../utils/message-limit.ts'

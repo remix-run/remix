@@ -3,7 +3,7 @@ import {
   auth,
   createSessionAuthScheme,
   requireAuth as requireAuthenticated,
-} from 'remix/auth-middleware'
+} from 'remix/middleware/auth'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { Database } from 'remix/data-table'

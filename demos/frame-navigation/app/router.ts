@@ -1,6 +1,6 @@
-import { createRouter, type MiddlewareContext } from 'remix/fetch-router'
-import { logger } from 'remix/logger-middleware'
-import { staticFiles } from 'remix/static-middleware'
+import { createRouter, type MiddlewareContext } from 'remix/router'
+import { logger } from 'remix/middleware/logger'
+import { staticFiles } from 'remix/middleware/static'
 
 import authController from './actions/auth/controller.tsx'
 import authLoginController from './actions/auth/login/controller.tsx'
@@ -12,7 +12,7 @@ import { routes } from './routes.ts'
 
 type AppContext = MiddlewareContext<[ReturnType<typeof loadAuth>, ReturnType<typeof render>]>
 
-declare module 'remix/fetch-router' {
+declare module 'remix/router' {
   interface RouterTypes {
     context: AppContext
   }

@@ -3,7 +3,7 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createCookie } from 'remix/cookie'
 import { Session } from 'remix/session'
-import { createFsSessionStorage } from 'remix/session/fs-storage'
+import { createFsSessionStorage } from 'remix/session-storage/fs'
 
 const sessionSecret = process.env.SESSION_SECRET ?? 'social-auth-demo-secret'
 const demoRootPath = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..')

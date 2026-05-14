@@ -1,6 +1,6 @@
 import { createCookie } from 'remix/cookie'
 import { Cookie, SetCookie } from 'remix/headers'
-import { createMemorySessionStorage } from 'remix/session/memory-storage'
+import { createMemorySessionStorage } from 'remix/session-storage/memory'
 
 import { createSocialAuthRouter, type SocialAuthRouterOptions } from '../app/router.ts'
 import { initializeSocialAuthDatabase, resetSocialAuthDatabase } from '../app/data/setup.ts'
