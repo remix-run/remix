@@ -3,7 +3,6 @@ import { beforeEach, it } from '@remix-run/test'
 
 import { column } from '../src/lib/column.ts'
 import type { Database } from '../src/lib/database.ts'
-import { createMigration } from '../src/lib/migrations.ts'
 import { createMigrationRunner } from '../src/lib/migrations/runner.ts'
 import { table, hasMany, hasManyThrough } from '../src/lib/table.ts'
 import { between, eq, ilike, inList, ne } from '../src/lib/operators.ts'
@@ -435,17 +434,16 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
           }
         },
       })
-      let migration = createMigration({
-        async up({ schema }) {
-          await schema.createTable(lifecycleAccounts, { ifNotExists: true })
-        },
-        async down({ schema }) {
-          await schema.dropTable('lifecycle_accounts', { ifExists: true })
-        },
-      })
       let runner = createMigrationRunner(
         db.adapter,
-        [{ id: '20260228001000', name: 'create_lifecycle_accounts', migration }],
+        [
+          {
+            id: '20260228001000',
+            name: 'create_lifecycle_accounts',
+            up: 'create table if not exists lifecycle_accounts (id integer primary key, email text not null, status text not null)',
+            down: 'drop table if exists lifecycle_accounts',
+          },
+        ],
         { journalTable: 'adapter_contract_migrations' },
       )
 
