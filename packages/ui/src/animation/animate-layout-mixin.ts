@@ -60,30 +60,6 @@ function calcBoxDelta(delta: Delta, source: Box, target: Box, layoutConfig: Layo
   calcAxisDelta(delta.y, source.y, target.y, origin)
 }
 
-function mixAxisDelta(output: AxisDelta, delta: AxisDelta, progress: number): void {
-  output.translate = mix(delta.translate, 0, progress)
-  output.scale = mix(delta.scale, 1, progress)
-  output.origin = delta.origin
-  output.originPoint = delta.originPoint
-}
-
-function mixDelta(output: Delta, delta: Delta, progress: number): void {
-  mixAxisDelta(output.x, delta.x, progress)
-  mixAxisDelta(output.y, delta.y, progress)
-}
-
-function copyAxisDeltaInto(target: AxisDelta, source: AxisDelta): void {
-  target.translate = source.translate
-  target.scale = source.scale
-  target.origin = source.origin
-  target.originPoint = source.originPoint
-}
-
-function copyDeltaInto(target: Delta, source: Delta): void {
-  copyAxisDeltaInto(target.x, source.x)
-  copyAxisDeltaInto(target.y, source.y)
-}
-
 function buildProjectionTransform(delta: Delta, layoutConfig: LayoutAnimationConfig): string {
   let transform = ''
   if (delta.x.translate || delta.y.translate) {
@@ -133,23 +109,51 @@ function isVisualDeltaZero(delta: Delta, layoutConfig: LayoutAnimationConfig): b
   )
 }
 
+function isTargetBoxSame(source: Box, target: Box, layoutConfig: LayoutAnimationConfig): boolean {
+  return (
+    isNear(source.x.min, target.x.min, TRANSLATE_PRECISION) &&
+    isNear(source.y.min, target.y.min, TRANSLATE_PRECISION) &&
+    (layoutConfig.size === false ||
+      (isNear(source.x.max, target.x.max, TRANSLATE_PRECISION) &&
+        isNear(source.y.max, target.y.max, TRANSLATE_PRECISION)))
+  )
+}
+
+function measureAnimationTargetBox(
+  node: HTMLElement,
+  animation: Animation,
+  animationEndTime: number,
+): Box {
+  let currentTime = animation.currentTime
+  let wasRunning = animation.playState === 'running'
+
+  animation.currentTime = animationEndTime
+  let box = measureNaturalBox(node)
+  animation.currentTime = currentTime
+
+  if (wasRunning && animation.playState !== 'running') {
+    animation.play()
+  }
+
+  return box
+}
+
 const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], ElementProps>((handle) => {
   let snapshot: Box | null = null
   let currentConfig: LayoutConfig = true
-  let currentDelta: Delta | null = null
-  let animationProgress = 0
   let animation: Animation | null = null
+  let animationTarget: Box | null = null
+  let animationEndTime = 0
 
-  let scheduleProgressTracking = (duration: number, active: Animation) => {
-    let start = performance.now()
-    let tick = () => {
-      if (animation !== active) return
-      animationProgress = Math.min(1, (performance.now() - start) / duration)
-      if (animationProgress < 1) {
-        requestAnimationFrame(tick)
-      }
-    }
-    requestAnimationFrame(tick)
+  let clearActiveAnimationState = () => {
+    animation = null
+    animationTarget = null
+    animationEndTime = 0
+  }
+
+  let clearLayoutState = () => {
+    clearActiveAnimationState()
+    snapshot = null
   }
 
   let clearProjectionStyles = (node: HTMLElement) => {
@@ -157,33 +161,48 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
     node.style.transformOrigin = ''
   }
 
-  let resetAnimation = () => {
-    animation = null
-    currentDelta = null
-    animationProgress = 0
-  }
-
   handle.addEventListener('beforeUpdate', (event) => {
     let layoutConfig = resolveLayoutConfig(currentConfig)
     if (!layoutConfig) return
-    snapshot = measureNaturalBox(event.node as HTMLElement)
+    let htmlNode = event.node as HTMLElement
+    // Capture the live on-screen position so the next animation can pick up
+    // where this one was interrupted if this update changes the target box.
+    if (animation && animation.playState === 'running') {
+      snapshot = rectToBox(htmlNode.getBoundingClientRect())
+    } else {
+      snapshot = measureNaturalBox(htmlNode)
+    }
   })
 
   handle.addEventListener('commit', (event) => {
     let layoutConfig = resolveLayoutConfig(currentConfig)
     let htmlNode = event.node as HTMLElement
-    let latest = measureNaturalBox(htmlNode)
+    let runningAnimation = animation?.playState === 'running' ? animation : null
+    let latest: Box | null = null
+
+    if (runningAnimation && animationTarget && layoutConfig) {
+      latest = measureAnimationTargetBox(htmlNode, runningAnimation, animationEndTime)
+      if (isTargetBoxSame(latest, animationTarget, layoutConfig)) {
+        snapshot = null
+        return
+      }
+    }
+
+    // Defensive cleanup for cases where beforeUpdate didn't run (e.g. the
+    // mixin was just attached, layoutConfig was disabled this render, or an
+    // in-flight animation needs to retarget to a new final box).
+    animation?.cancel()
+    clearActiveAnimationState()
+    clearProjectionStyles(htmlNode)
+    latest ??= measureNaturalBox(htmlNode)
 
     if (!layoutConfig) {
-      animation?.cancel()
-      clearProjectionStyles(htmlNode)
-      resetAnimation()
-      snapshot = latest
+      clearLayoutState()
       return
     }
 
     if (!snapshot) {
-      snapshot = latest
+      snapshot = null
       return
     }
 
@@ -191,25 +210,9 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
     calcBoxDelta(targetDelta, latest, snapshot, layoutConfig)
 
     if (isVisualDeltaZero(targetDelta, layoutConfig)) {
-      snapshot = latest
+      snapshot = null
       return
     }
-
-    if (animation && animation.playState === 'running') {
-      animation.cancel()
-      if (currentDelta && animationProgress > 0 && animationProgress < 1) {
-        let visual = createDelta()
-        mixDelta(visual, currentDelta, animationProgress)
-        targetDelta.x.translate += visual.x.translate
-        targetDelta.y.translate += visual.y.translate
-        targetDelta.x.scale *= visual.x.scale
-        targetDelta.y.scale *= visual.y.scale
-      }
-    }
-
-    if (!currentDelta) currentDelta = createDelta()
-    copyDeltaInto(currentDelta, targetDelta)
-    animationProgress = 0
 
     let invert = buildProjectionTransform(targetDelta, layoutConfig)
     let origin = buildTransformOrigin(targetDelta)
@@ -226,21 +229,26 @@ const animateLayoutMixin = createMixin<Element, [config?: LayoutConfig], Element
       { duration, easing, fill: 'forwards' },
     )
     animation = active
-    scheduleProgressTracking(duration, active)
+    animationTarget = latest
+    animationEndTime = duration
+    snapshot = null
     active.finished
       .then(() => {
         if (animation !== active) return
+        // Cancel even though the animation finished naturally. A fill:forwards
+        // animation in 'finished' state remains an effective animation on
+        // transform, which makes commitStyles() throw on the next interrupted
+        // animation because more than one effect targets the same property.
+        active.cancel()
         clearProjectionStyles(htmlNode)
-        resetAnimation()
-        snapshot = rectToBox(htmlNode.getBoundingClientRect())
+        clearLayoutState()
       })
       .catch(() => {})
   })
 
   handle.addEventListener('remove', () => {
     animation?.cancel()
-    resetAnimation()
-    snapshot = null
+    clearLayoutState()
   })
 
   return (config = true) => {
