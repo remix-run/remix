@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as s from 'remix/data-schema'
-import { mapToRemixPackage } from './manifest.ts'
+import { hasRemixPackage, mapToRemixPackage } from './manifest.ts'
 import { info, invariant, warn } from './utils.ts'
 
 type PackageOverview = {
@@ -74,6 +74,19 @@ async function discoverPackageSubpathOverviews(
   for (let [exportPath, exportConfig] of Object.entries(exports)) {
     if (!exportPath.startsWith('./') || exportPath === './package.json') continue
 
+    let exportSubpath = exportPath.slice(2) // e.g. "fetch-router/routes"
+    let candidateDocsPackage = `${getDocsPackageName(packageJson.name)}/${exportSubpath}`
+
+    // For the remix umbrella, skip legacy alias exports (e.g. ./fetch-router/routes)
+    // that resolve to a different canonical path (e.g. remix/routes). The canonical
+    // sub-package discovery will create the correct sidebar entry.
+    if (packageJson.name === 'remix') {
+      let specifier = `@remix-run/${exportSubpath}`
+      if (hasRemixPackage(specifier) && mapToRemixPackage(specifier) !== candidateDocsPackage) {
+        continue
+      }
+    }
+
     let entryPath = getExportEntryPath(exportConfig)
     if (!entryPath) continue
 
@@ -81,7 +94,7 @@ async function discoverPackageSubpathOverviews(
     if (!(await isFile(readmePath))) continue
 
     overviews.push({
-      docsPackage: `${getDocsPackageName(packageJson.name)}/${exportPath.slice(2)}`,
+      docsPackage: candidateDocsPackage,
       packageDir,
       readmePath,
     })
