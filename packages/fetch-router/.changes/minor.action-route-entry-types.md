@@ -8,14 +8,14 @@ import {
   createController,
   type ContextWithParams,
   type RequestContext,
-} from 'remix/router'
+} from 'remix/fetch-router'
 
 type AppContext<params extends Record<string, string> = {}> = ContextWithParams<
   RequestContext,
   params
 >
 
-declare module 'remix/router' {
+declare module 'remix/fetch-router' {
   interface RouterTypes {
     context: AppContext
   }
@@ -39,7 +39,7 @@ let controller = createController(routes, {
 If you manually type actions or controllers in advanced multi-router code, compose the full context type first and pass it as the second generic:
 
 ```ts
-import type { Action, MiddlewareContext } from 'remix/router'
+import type { Action, MiddlewareContext } from 'remix/fetch-router'
 
 let accountMiddleware = [requireAuth<AuthIdentity>()] as const
 type AccountContext = MiddlewareContext<typeof accountMiddleware, AppContext>
