@@ -261,8 +261,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
       mergeRmxDataFromDocument(context.data, parsed)
-      context.styleManager.reset()
-      context.styleManager.adoptServerStyles(
+      context.styleManager.replaceServerStyles(
         collectFrameServerStyleTags(createElementContainer(parsed)),
       )
 
@@ -288,8 +287,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       htmlContent !== undefined ? createFragmentFromString(container.doc, htmlContent) : content
-    context.styleManager.reset()
-    context.styleManager.adoptServerStyles(
+    context.styleManager.replaceServerStyles(
       collectFrameServerStyleTags(createElementContainer(fragment)),
     )
     removeEmptyHeads(fragment)
@@ -350,8 +348,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   async function hydrateInitial(): Promise<void> {
     let initialHydrationTracker = createInitialHydrationTracker()
 
-    context.styleManager.reset()
-    context.styleManager.adoptServerStyles(collectFrameServerStyleTags(container))
+    context.styleManager.replaceServerStyles(collectFrameServerStyleTags(container))
     createSubFrames(container.childNodes, context)
     scheduleHydrationInContainer(container, context, initialHydrationTracker)
 
