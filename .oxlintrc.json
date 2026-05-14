@@ -110,8 +110,18 @@
       "files": ["packages/ui/**/demos/*.demo.tsx"],
       "plugins": ["jsdoc"],
       "rules": {
-        // Don't need @returns in our demo files
-        "jsdoc/require-returns": "off"
+        "arrow-body-style": "off",
+        "jsdoc/check-access": "off",
+        "jsdoc/check-property-names": "off",
+        "jsdoc/check-tag-names": "off",
+        "jsdoc/empty-tags": "off",
+        "jsdoc/implements-on-classes": "off",
+        "jsdoc/no-defaults": "off",
+        "jsdoc/require-param": "off",
+        "jsdoc/require-param-description": "off",
+        "jsdoc/require-param-name": "off",
+        "jsdoc/require-returns": "off",
+        "jsdoc/require-returns-description": "off"
       }
     },
     {
