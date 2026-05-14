@@ -128,4 +128,19 @@ describe('manifest', () => {
       )
     }
   })
+
+  it('package README headings use unscoped package names', () => {
+    for (let pkgName of allRemixRunPackages) {
+      let short = shortName(pkgName)
+      let readmePath = path.join(packagesDir, short, 'README.md')
+      if (!fs.existsSync(readmePath)) continue
+
+      let heading = fs.readFileSync(readmePath, 'utf-8').split('\n', 1)[0]
+      assert.equal(
+        heading,
+        `# ${short}`,
+        `${path.relative(packagesDir, readmePath)} should use "# ${short}" as its H1`,
+      )
+    }
+  })
 })

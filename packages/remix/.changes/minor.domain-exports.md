@@ -1,6 +1,6 @@
 Updated the `remix` package to use domain-oriented exports, no longer always mapping
-1:1 to underlying `@remix-run/*` packages.  1:1 package exports are left to ease migrations,
-but are marked deprecated and will be removed before a Remix 3.0.0 stable release.
+1:1 to underlying `@remix-run/*` packages. 1:1 package exports are left to ease migrations
+and will be removed before a Remix 3.0.0 stable release.
 
 Changed package mappings:
 

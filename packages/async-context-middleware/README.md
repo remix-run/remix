@@ -1,4 +1,4 @@
-# remix/middleware/async-context
+# async-context-middleware
 
 Request-scoped async context middleware for Remix. It stores each request context in [`AsyncLocalStorage`](https://nodejs.org/api/async_context.html#class-asynclocalstorage) so utilities can access it anywhere in the same async call stack.
 

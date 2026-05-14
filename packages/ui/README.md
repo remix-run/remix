@@ -1,4 +1,4 @@
-# remix/ui
+# ui
 
 Runtime UI primitives for Remix apps, including the component runtime, server rendering, frame hydration, reusable mixins, first-party components, and theme tokens.
 

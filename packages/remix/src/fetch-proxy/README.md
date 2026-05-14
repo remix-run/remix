@@ -1,4 +1,4 @@
-# remix/fetch-proxy
+# fetch-proxy
 
 HTTP proxy utilities built on the web [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API).
 Use `fetch-proxy` to create `fetch` handlers that forward requests to target servers while optionally rewriting headers and cookies.

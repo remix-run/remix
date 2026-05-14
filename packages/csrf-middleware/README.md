@@ -1,4 +1,4 @@
-# remix/middleware/csrf
+# csrf-middleware
 
 CSRF protection middleware for Remix. It provides synchronizer-token validation backed by session storage, plus origin checks for unsafe requests.
 

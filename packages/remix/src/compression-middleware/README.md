@@ -1,4 +1,4 @@
-# remix/middleware/compression
+# compression-middleware
 
 Response compression middleware for Remix. It negotiates `br`, `gzip`, and `deflate` from `Accept-Encoding` and applies sensible defaults for when compression is useful.
 

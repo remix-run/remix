@@ -1,4 +1,4 @@
-# remix/middleware/static
+# static-middleware
 
 Static file serving middleware for Remix. Serves static files from a directory with support for ETags, range requests, and conditional requests.
 

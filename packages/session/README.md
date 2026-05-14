@@ -1,4 +1,4 @@
-# remix/session
+# session
 
 A session management library for JavaScript. This package provides a flexible and secure way to manage user sessions in server-side applications with a flexible API for different session storage strategies.
 

@@ -1,4 +1,4 @@
-# remix/session-storage/memcache
+# session-storage-memcache
 
 Memcache session storage for [`remix/session`](https://github.com/remix-run/remix/tree/main/packages/session).
 

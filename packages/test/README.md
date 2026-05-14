@@ -1,4 +1,4 @@
-# remix/test
+# test
 
 A test framework for JavaScript and TypeScript projects.
 

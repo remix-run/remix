@@ -1,4 +1,4 @@
-# remix/data-schema
+# data-schema
 
 Tiny, standards-aligned data validation for Remix and the wider TypeScript ecosystem.
 

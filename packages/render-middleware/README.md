@@ -1,4 +1,4 @@
-# remix/middleware/render
+# render-middleware
 
 Request-scoped renderer middleware for Remix. It stores a renderer in `fetch-router` request context so route actions can render responses without passing request-specific rendering details through every action.
 

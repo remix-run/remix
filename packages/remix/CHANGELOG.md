@@ -194,10 +194,10 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 
   Added `package.json` `exports`:
 
-  - `remix/middleware/auth` to re-export APIs from `@remix-run/auth-middleware`
+  - `remix/auth-middleware` to re-export APIs from `@remix-run/auth-middleware`
   - `remix/auth` to re-export APIs from `@remix-run/auth`
 
-- Add `remix/middleware/cors` to re-export the CORS middleware APIs from `@remix-run/cors-middleware`.
+- Add `remix/cors-middleware` to re-export the CORS middleware APIs from `@remix-run/cors-middleware`.
 
 - Update `remix/ui` and `remix/ui/server` to re-export the latest `@remix-run/ui` frame-navigation APIs.
 
@@ -205,9 +205,9 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 
 - Add browser-origin and CSRF protection middleware APIs to `remix`.
 
-  - `remix/middleware/cop` exposes `cop(options)` for browser-focused cross-origin protection
+  - `remix/cop-middleware` exposes `cop(options)` for browser-focused cross-origin protection
     using `Sec-Fetch-Site` with `Origin` fallback, trusted origins, and configurable bypasses.
-  - `remix/middleware/csrf` exposes `csrf(options)` and `getCsrfToken(context)` for
+  - `remix/csrf-middleware` exposes `csrf(options)` and `getCsrfToken(context)` for
     session-backed CSRF tokens plus origin validation.
   - Apps can use either middleware independently or layer `cop()`, `session()`, and `csrf()`
     together when they want both browser-origin filtering and token-backed protection.
@@ -247,15 +247,15 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   - `remix/data-schema/coerce` to re-export APIs from `@remix-run/data-schema/coerce`
   - `remix/data-schema/lazy` to re-export APIs from `@remix-run/data-schema/lazy`
   - `remix/data-table` to re-export APIs from `@remix-run/data-table`
-  - `remix/data-table/mysql` to re-export APIs from `@remix-run/data-table-mysql`
-  - `remix/data-table/postgres` to re-export APIs from `@remix-run/data-table-postgres`
-  - `remix/data-table/sqlite` to re-export APIs from `@remix-run/data-table-sqlite`
-  - `remix/routes` to re-export APIs from `@remix-run/fetch-router/routes`
-  - `remix/file-storage/s3` to re-export APIs from `@remix-run/file-storage-s3`
-  - `remix/session-storage/memcache` to re-export APIs from `@remix-run/session-storage-memcache`
-  - `remix/session-storage/redis` to re-export APIs from `@remix-run/session-storage-redis`
+  - `remix/data-table-mysql` to re-export APIs from `@remix-run/data-table-mysql`
+  - `remix/data-table-postgres` to re-export APIs from `@remix-run/data-table-postgres`
+  - `remix/data-table-sqlite` to re-export APIs from `@remix-run/data-table-sqlite`
+  - `remix/fetch-router/routes` to re-export APIs from `@remix-run/fetch-router/routes`
+  - `remix/file-storage-s3` to re-export APIs from `@remix-run/file-storage-s3`
+  - `remix/session-storage-memcache` to re-export APIs from `@remix-run/session-storage-memcache`
+  - `remix/session-storage-redis` to re-export APIs from `@remix-run/session-storage-redis`
 
-- Remove the root export from the `remix` package so you will no longer import anything from `remix` and will instead always import from a sub-path such as `remix/router` or `remix/ui`
+- Remove the root export from the `remix` package so you will no longer import anything from `remix` and will instead always import from a sub-path such as `remix/fetch-router` or `remix/ui`
 
 - Bumped `@remix-run/*` dependencies:
   - [`async-context-middleware@0.1.3`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.1.3)

@@ -1,4 +1,4 @@
-# remix/html-template
+# html-template
 
 Safe HTML template literals for Remix. `html-template` automatically escapes interpolated values to prevent XSS while still supporting explicit trusted HTML insertion.
 

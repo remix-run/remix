@@ -1,4 +1,4 @@
-# remix/terminal
+# terminal
 
 Terminal output utilities for JavaScript libraries and CLIs. It provides small primitives for ANSI styles, color support detection, escape sequences, and testable stdout/stderr handling.
 

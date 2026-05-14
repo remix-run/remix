@@ -113,7 +113,7 @@ export async function writePackageOverviewFiles(overviews: PackageOverview[], do
     if (overview.readmePath) {
       body = await fs.readFile(overview.readmePath, 'utf-8')
       warnOnInvalidReadmeSyntax(body, overview.readmePath)
-      body = normalizeReadmeMarkdown(body)
+      body = normalizeReadmeMarkdown(body, overview.docsPackage)
     } else {
       body = getMissingReadmeMarkdown(overview.docsPackage, overview.packageDir)
     }
@@ -146,10 +146,12 @@ function getExportEntryPath(exportConfig: unknown): string | undefined {
   return typeof config === 'string' ? config : (config.types ?? config.default)
 }
 
-function normalizeReadmeMarkdown(markdown: string): string {
-  return markdown.replace(/\]\((?:\.\/)?README\.md(#[^)]+)?\)/g, (_, hash: string | undefined) => {
-    return `](${hash ?? './'})`
-  })
+function normalizeReadmeMarkdown(markdown: string, docsPackage: string): string {
+  return markdown
+    .replace(/^# .*(?:\r?\n|$)/, `# ${docsPackage}\n`)
+    .replace(/\]\((?:\.\/)?README\.md(#[^)]+)?\)/g, (_, hash: string | undefined) => {
+      return `](${hash ?? './'})`
+    })
 }
 
 function warnOnInvalidReadmeSyntax(markdown: string, readmePath: string) {

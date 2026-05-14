@@ -1,4 +1,4 @@
-# remix/node-fetch-server
+# node-fetch-server
 
 Build Node.js servers with web-standard Fetch API primitives. `node-fetch-server` converts Node's HTTP server interfaces into [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request)/[`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) flows that match modern runtimes.
 

@@ -1,4 +1,4 @@
-# remix/data-table/postgres
+# data-table-postgres
 
 PostgreSQL adapter for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table).
 Use this package when you want `data-table` APIs backed by `pg`.
