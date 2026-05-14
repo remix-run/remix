@@ -4,10 +4,10 @@ import { createRouter as _createRouter, type Router } from 'remix/fetch-router'
 import { openLazyFile } from 'remix/fs'
 import { createFileResponse } from 'remix/response/file'
 import { createHtmlResponse } from 'remix/response/html'
-import { type RemixNode } from 'remix/ui'
+import { clientEntry, type RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
 import * as semver from 'semver'
-import { discoverDemoFiles, loadDemoComponent, renderDemoSource } from './demos.tsx'
+import { discoverDemoFiles, loadDemoComponent, renderDemoSource, type DemoImportMap } from './demos.tsx'
 import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
 import { buildRegistry, type DocsRegistry } from './registry.ts'
 import { routes } from './routes.ts'
@@ -22,7 +22,7 @@ const DEV_CSS_DIR = path.join(DOCS_DIR, 'public')
 const REMIX_PKG_JSON = path.join(REPO_DIR, 'packages', 'remix', 'package.json')
 
 const { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
-const demoFiles = await discoverDemoFiles()
+const { demoFiles, importMap: demoImportMap } = await discoverDemoFiles()
 const docFiles = [...markdownFiles, ...demoFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
 
 const registryByVersion = new Map<string | undefined, DocsRegistry>()
@@ -84,17 +84,21 @@ export function createRouter(versions: Versions) {
           versions: versions,
           slug: params.slug,
           activeVersion: params.version,
+          demoImportMap,
         }
 
         if (docFile) {
           if (docFile.kind === 'demo') {
-            let ExampleComponent = await loadDemoComponent(docFile)
+            let ExampleComponent = clientEntry(
+              `${docFile.assetHref}#default`,
+              await loadDemoComponent(docFile),
+            )
             let sourceHtml = await renderDemoSource(docFile.source)
             return await respond.document(
               request,
               <Document {...docProps} sourceUrl={docFile.sourceUrl}>
                 <DemoContent demo={docFile} sourceHtml={sourceHtml}>
-                  <ExampleComponent />
+                  <ExampleComponent key={docFile.slug} />
                 </DemoContent>
               </Document>,
             )
@@ -130,6 +134,7 @@ export function createRouter(versions: Versions) {
             registry={getRegistry(params.version)}
             versions={versions}
             activeVersion={params.version}
+            demoImportMap={demoImportMap}
           >
             <Home />
           </Document>,
@@ -147,9 +152,16 @@ export function createRouter(versions: Versions) {
         return Response.json(content)
       },
       async markdown({ request, params }) {
-        let docFile = markdownFiles.find((file) => file.urlPath === params.slug)
+        let docFile = docFiles.find((file) => file.urlPath === params.slug)
         if (!docFile) {
           return new Response('Not Found', { status: 404 })
+        }
+
+        if (docFile.kind === 'demo') {
+          let md = `# ${docFile.name}\n\n${docFile.description}\n\n\`\`\`tsx\n${docFile.source}\n\`\`\`\n`
+          return new Response(md, {
+            headers: { 'content-type': 'text/markdown; charset=utf-8' },
+          })
         }
 
         return respond.file(request, docFile.path)

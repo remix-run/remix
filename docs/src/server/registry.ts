@@ -118,7 +118,7 @@ export function buildRegistry(docFiles: DocFile[], version?: string): DocsRegist
     let demos = packageDemos.get(pkg)
     if (demos && demos.length > 0) {
       let groupId = `${pkg}::demos`
-      let sortedDemos = [...demos].sort((a, b) => a.name.localeCompare(b.name))
+      let sortedDemos = [...demos].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))
       let pageIds: string[] = []
       for (let file of sortedDemos) {
         let page: PageDefinition = {

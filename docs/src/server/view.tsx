@@ -7,7 +7,8 @@ import {
   MOBILE_NAV_MEDIA_RULE,
   MOBILE_TOP_BAR_HEIGHT_PX,
 } from '../shared/breakpoints.ts'
-import type { DemoDocFile } from './demos.tsx'
+import type { DemoDocFile, DemoImportMap } from './demos.tsx'
+import { REMIX_UI_ASSET_HREF } from './demos.tsx'
 import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
 import { routes } from './routes.ts'
@@ -20,12 +21,13 @@ export function Document(
     activeVersion?: string
     slug?: string
     registry: DocsRegistry
+    demoImportMap?: DemoImportMap
     children?: RemixNode | RemixNode[]
     sourceUrl?: string
   }>,
 ) {
   return () => {
-    let { registry, versions, activeVersion, slug, sourceUrl, children } = handle.props
+    let { registry, versions, activeVersion, slug, sourceUrl, demoImportMap, children } = handle.props
     let page = slug
       ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug, activeVersion))
       : getHomePage(registry)
@@ -51,11 +53,12 @@ export function Document(
               <meta name="robots" content="noindex,nofollow" />
               <meta name="googlebot" content="noindex,nofollow" />
             </>
-          ) : page.docFile?.kind === 'package' ? (
+          ) : page.docFile?.kind === 'package' || page.docFile?.kind === 'demo' ? (
             // Overview pages (package READMEs) link densely to every API page
             // in the package; those are already reachable via the sidebar, so
             // tell crawlers — including our prerender spider — not to follow
             // links from here. The page itself is still indexable.
+            // Demo pages contain example links that are not real docs paths.
             <meta name="robots" content="nofollow" />
           ) : null}
           <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -65,13 +68,22 @@ export function Document(
             href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700"
           />
           <title>{`${page.title} | Remix API Documentation`}</title>
-          {page.docFile && page.docFile.kind !== 'demo' ? (
+          {page.docFile ? (
             <link
               rel="alternate"
               type="text/markdown"
               href={routes.markdown.href({ version: activeVersion, slug: page.docFile.urlPath })}
               title={`Markdown docs for ${page.docFile.name ?? page.title}`}
             />
+          ) : null}
+          {demoImportMap ? (
+            <>
+              <script type="importmap" innerHTML={JSON.stringify(demoImportMap)} />
+              <link rel="modulepreload" href={REMIX_UI_ASSET_HREF} />
+            </>
+          ) : null}
+          {page.docFile?.kind === 'demo' ? (
+            <link rel="modulepreload" href={page.docFile.assetHref} />
           ) : null}
           <script
             type="module"
