@@ -1,18 +1,19 @@
 const fingerprintedExtensionRE = /^(.+)\.@([A-Za-z0-9_-]+)(\.[^./]+)$/
 const fingerprintedBasenameRE = /^(.+)\.@([A-Za-z0-9_-]+)$/
 
-export async function hashContent(content: string): Promise<string> {
-  let encoder = new TextEncoder()
-  let data = encoder.encode(content)
-  let hashBuffer = await crypto.subtle.digest('SHA-256', data)
+export async function hashContent(content: string | Uint8Array<ArrayBufferLike>): Promise<string> {
+  let bytes = typeof content === 'string' ? new TextEncoder().encode(content) : Buffer.from(content)
+  let hashBuffer = await crypto.subtle.digest('SHA-256', bytes)
   return Buffer.from(hashBuffer).toString('base64url').slice(0, 6)
 }
 
-export async function generateFingerprint(options: {
+export async function generateFingerprint(args: {
   buildId: string
-  content: string
+  content: string | Uint8Array<ArrayBufferLike>
 }): Promise<string> {
-  return hashContent(JSON.stringify([options.content, options.buildId]))
+  let content =
+    typeof args.content === 'string' ? args.content : Buffer.from(args.content).toString('base64')
+  return hashContent(JSON.stringify([content, args.buildId]))
 }
 
 export function parseFingerprintSuffix(pathname: string): {

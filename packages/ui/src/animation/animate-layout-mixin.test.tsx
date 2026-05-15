@@ -7,8 +7,12 @@ import { invariant } from '../runtime/invariant.ts'
 interface MockAnimation {
   keyframes: Keyframe[]
   options: KeyframeAnimationOptions
+  currentTime: number | null
   playState: AnimationPlayState
   finished: Promise<Animation>
+  pause: () => void
+  play: () => void
+  commitStyles: () => void
   cancel: () => void
 }
 
@@ -27,8 +31,16 @@ function createMockAnimation(
   return {
     keyframes,
     options,
+    currentTime: 0,
     playState: 'running',
     finished,
+    pause() {
+      this.playState = 'paused'
+    },
+    play() {
+      this.playState = 'running'
+    },
+    commitStyles() {},
     cancel() {
       this.playState = 'idle'
       resolveFinished()
@@ -207,7 +219,7 @@ describe('animateLayout mixin', () => {
     expect(mockAnimations).toHaveLength(0)
   })
 
-  it('cancels an in-flight layout animation when interrupted', () => {
+  it('starts interrupted layout animations from the current visual position', () => {
     let container = document.createElement('div')
     let root = createRoot(container)
 
@@ -231,7 +243,7 @@ describe('animateLayout mixin', () => {
     expect(firstAnimation.playState).toBe('running')
 
     mockBoundingRectSequence(node, [
-      { left: 30, top: 0, right: 130, bottom: 100 },
+      { left: 45, top: 0, right: 145, bottom: 100 },
       { left: 60, top: 0, right: 160, bottom: 100 },
     ])
     root.render(<div data-tick="3" mix={[animateLayout()]} />)
@@ -239,6 +251,79 @@ describe('animateLayout mixin', () => {
 
     expect(firstAnimation.playState).toBe('idle')
     expect(mockAnimations).toHaveLength(2)
+
+    let secondAnimation = mockAnimations[1]
+    expect(String(secondAnimation.keyframes[0].transform)).toBe('translate3d(-15px, 0px, 0)')
+  })
+
+  it('keeps active layout animations when the target geometry does not change', () => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    root.render(<div data-tick="0" mix={[animateLayout()]} />)
+    root.flush()
+    let node = container.querySelector('div')
+    invariant(node)
+
+    mockBoundingRect(node, { left: 0, top: 0, right: 100, bottom: 100 })
+    root.render(<div data-tick="1" mix={[animateLayout()]} />)
+    root.flush()
+    mockAnimations = []
+
+    mockBoundingRectSequence(node, [
+      { left: 0, top: 0, right: 100, bottom: 100 },
+      { left: 30, top: 0, right: 130, bottom: 100 },
+    ])
+    root.render(<div data-tick="2" mix={[animateLayout()]} />)
+    root.flush()
+    let active = mockAnimations[0]
+    expect(active.playState).toBe('running')
+
+    mockBoundingRectSequence(node, [
+      { left: 45, top: 0, right: 145, bottom: 100 },
+      { left: 30, top: 0, right: 130, bottom: 100 },
+    ])
+    root.render(<div data-tick="3" mix={[animateLayout()]} />)
+    root.flush()
+
+    expect(active.playState).toBe('running')
+    expect(mockAnimations).toHaveLength(1)
+  })
+
+  it('does not reuse completed animation geometry when beforeUpdate is skipped', async () => {
+    let container = document.createElement('div')
+    let root = createRoot(container)
+
+    root.render(<div data-tick="0" mix={[animateLayout()]} />)
+    root.flush()
+    let node = container.querySelector('div')
+    invariant(node)
+
+    mockBoundingRect(node, { left: 0, top: 0, right: 100, bottom: 100 })
+    root.render(<div data-tick="1" mix={[animateLayout()]} />)
+    root.flush()
+    mockAnimations = []
+
+    mockBoundingRectSequence(node, [
+      { left: 0, top: 0, right: 100, bottom: 100 },
+      { left: 30, top: 0, right: 130, bottom: 100 },
+    ])
+    root.render(<div data-tick="2" mix={[animateLayout()]} />)
+    root.flush()
+    let active = mockAnimations[0]
+    active.cancel()
+    await active.finished
+    mockAnimations = []
+
+    mockBoundingRect(node, { left: 30, top: 0, right: 130, bottom: 100 })
+    root.render(<div data-tick="3" mix={[animateLayout(false)]} />)
+    root.flush()
+
+    mockBoundingRect(node, { left: 80, top: 0, right: 180, bottom: 100 })
+    root.render(<div data-tick="4" mix={[animateLayout()]} />)
+    root.flush()
+
+    expect(mockAnimations).toHaveLength(0)
   })
 
   it('cancels active animation on remove', () => {
