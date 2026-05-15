@@ -847,6 +847,12 @@ describe('asset-server', () => {
   it('reports anonymous global file transform result errors with the transform index', async () => {
     await write(dir, 'app/content/value.txt', 'hello\n')
     let receivedError: unknown
+    let anonymousTransform = async function () {
+      return undefined
+    }
+    // Force the function name to be empty to simulate truly anonymous function
+    Object.defineProperty(anonymousTransform, 'name', { value: '' })
+
     let assetServer = createTestServer(dir, {
       files: {
         extensions: ['.txt'],
@@ -858,11 +864,7 @@ describe('asset-server', () => {
           },
           {
             // @ts-expect-error - exercise runtime validation for invalid global transform returns
-            transform: [
-              async function () {
-                return undefined
-              },
-            ][0],
+            transform: anonymousTransform,
           },
         ],
       },
