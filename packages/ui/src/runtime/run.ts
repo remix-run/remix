@@ -11,8 +11,21 @@ import { TypedEventTarget } from './typed-event-target.ts'
 /**
  * Options for starting the client runtime with {@link run}.
  */
-export type RunInit = {
+export interface RunInit {
+  /**
+   * Loads the named browser module export for a hydrated `clientEntry()`.
+   *
+   * Implementations usually call dynamic `import(moduleUrl)` and return
+   * `mod[exportName]`.
+   */
   loadModule: LoadModule
+
+  /**
+   * Resolves browser-loaded `<Frame>` content.
+   *
+   * Omit this only when the runtime never needs to load or reload frames in the
+   * browser.
+   */
   resolveFrame?: ResolveFrame
 }
 
@@ -27,8 +40,11 @@ export type AppRuntimeEventMap = {
  * Client runtime returned by {@link run}.
  */
 export type AppRuntime = TypedEventTarget<AppRuntimeEventMap> & {
+  /** Resolves after the current document finishes hydrating. */
   ready(): Promise<void>
+  /** Flushes any queued component updates synchronously. */
   flush(): void
+  /** Stops runtime listeners and disposes the top-level frame. */
   dispose(): void
 }
 
