@@ -1,5 +1,5 @@
-import type { Split, SplitPattern } from './split'
-import type { ForceDistributive } from './utils'
+import type { Split, SplitPattern } from './split.ts'
+import type { ForceDistributive } from './utils.ts'
 
 export interface ParsedPattern {
   protocol: Token[] | undefined

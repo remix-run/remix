@@ -1,6 +1,4 @@
-// Deliberately extensionless so the demo can show resolution winner changes in watch mode.
-// oxlint-disable-next-line import/extensions
-import { getContent } from './content'
+import { getContent } from './content.ts'
 
 const root = document.getElementById('app-root')
 

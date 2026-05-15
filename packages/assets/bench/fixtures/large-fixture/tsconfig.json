@@ -5,6 +5,8 @@
     "jsx": "react-jsx",
     "jsxImportSource": "@remix-run/ui",
     "types": ["node", "dom-navigation"],
+    "noEmit": true,
+    "rewriteRelativeImportExtensions": false,
     "paths": {
       "#packages/*": ["./packages/*"]
     }

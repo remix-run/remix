@@ -88,9 +88,7 @@ describe('node-tsx', () => {
       await writeProjectFile(
         projectPath,
         'server.tsx',
-        ['let element = <div>Hello</span>', 'console.log(JSON.stringify(element))', ''].join(
-          '\n',
-        ),
+        ['let element = <div>Hello</span>', 'console.log(JSON.stringify(element))', ''].join('\n'),
       )
 
       let result = await runNode(['--import', 'remix/node-tsx', './server.tsx'], projectPath)

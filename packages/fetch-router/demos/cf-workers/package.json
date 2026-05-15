@@ -1,6 +1,7 @@
 {
   "name": "fetch-router-cf-workers-demo",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@remix-run/cookie": "workspace:*",
     "@remix-run/data-schema": "workspace:*",

@@ -1,6 +1,7 @@
 {
   "name": "multipart-parser-cf-workers-example",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@remix-run/multipart-parser": "workspace:^"
   },

@@ -1,4 +1,4 @@
-import { stableLabel } from '#packages/shared/strings'
+import { stableLabel } from '#packages/shared/strings.ts'
 
 export interface FeatureData {
   id: string

@@ -9,7 +9,10 @@
     "checkJs": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true,
     "erasableSyntaxOnly": true,
+    "isolatedModules": true,
     "skipLibCheck": true
   },
   "exclude": ["dist"]

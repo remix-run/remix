@@ -1,4 +1,4 @@
-import { applyDiscount } from '#packages/pricing/index'
+import { applyDiscount } from '#packages/pricing/index.ts'
 import { getFeatureData00 } from './data.ts'
 
 export function scoreFeature00(): number {

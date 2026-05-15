@@ -1,4 +1,4 @@
-import type { RemixTestConfig } from './src'
+import type { RemixTestConfig } from './src/index.ts'
 
 export default {
   playwrightConfig: {

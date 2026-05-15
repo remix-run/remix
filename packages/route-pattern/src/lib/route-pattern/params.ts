@@ -1,5 +1,5 @@
-import type { Split, SplitPattern } from '../types/split'
-import type { Simplify } from '../types/utils'
+import type { Split, SplitPattern } from '../types/split.ts'
+import type { Simplify } from '../types/utils.ts'
 
 /**
  * Extracted route params for a route-pattern source string.

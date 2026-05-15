@@ -1,5 +1,5 @@
-import type { Parse, ParsedPattern, Separator, Token } from './parse'
-import type { StartsWithSeparator, Stringify } from './stringify'
+import type { Parse, ParsedPattern, Separator, Token } from './parse.ts'
+import type { StartsWithSeparator, Stringify } from './stringify.ts'
 
 /**
  * Join two pattern strings together.

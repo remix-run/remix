@@ -76,7 +76,9 @@ function getLanguage(filePath: string): NonNullable<TransformOptions['lang']> {
   return filePath.endsWith('.tsx') ? 'tsx' : 'jsx'
 }
 
-function getTsconfigCompilerOptions(filePath: string): TsconfigTransformCompilerOptions | undefined {
+function getTsconfigCompilerOptions(
+  filePath: string,
+): TsconfigTransformCompilerOptions | undefined {
   let parsed = getTsconfig(path.dirname(filePath), 'tsconfig.json', tsconfigCache)
   if (parsed == null) {
     return undefined
@@ -87,10 +89,7 @@ function getTsconfigCompilerOptions(filePath: string): TsconfigTransformCompiler
     return undefined
   }
 
-  return parseTsconfigTransformCompilerOptions(
-    filePath,
-    compilerOptions as Record<string, unknown>,
-  )
+  return parseTsconfigTransformCompilerOptions(filePath, compilerOptions as Record<string, unknown>)
 }
 
 function parseTsconfigTransformCompilerOptions(
@@ -132,9 +131,7 @@ function createTsconfigCompilerOptionsError(
   )
 }
 
-function formatTsconfigCompilerOptionsIssue(
-  issue: TsconfigTransformCompilerOptionsIssue,
-): string {
+function formatTsconfigCompilerOptionsIssue(issue: TsconfigTransformCompilerOptionsIssue): string {
   return `- compilerOptions.${issue.key}: Expected string, received ${getValueType(issue.value)}`
 }
 
