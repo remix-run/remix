@@ -1,7 +1,2 @@
-export { RoutePattern, type RoutePatternMatch } from './lib/route-pattern.ts'
-export type { Join } from './lib/types/index.ts'
-export type { Params } from './lib/route-pattern/params.ts'
+export { RoutePattern } from './lib/route-pattern.ts'
 export { ParseError } from './lib/route-pattern/parse.ts'
-export { type HrefArgs, HrefError } from './lib/route-pattern/href.ts'
-
-export { type Matcher, type Match, createMatcher } from './lib/matcher.ts'

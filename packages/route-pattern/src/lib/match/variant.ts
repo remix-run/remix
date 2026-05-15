@@ -1,168 +1,152 @@
+import type { PartPattern, PartPatternToken, RoutePattern } from '../route-pattern.ts'
+import { escape } from './regexp.ts'
 import { unreachable } from '../unreachable.ts'
-import type { PartPattern, PartPatternToken } from '../route-pattern/part-pattern.ts'
-import type { RoutePattern } from '../route-pattern.ts'
-import * as RE from '../regexp.ts'
+import { toRegExp } from './regexp.ts'
 
-type Variant = {
-  protocol: 'http' | 'https'
-  hostname:
-    | { type: 'static'; value: string }
-    | { type: 'dynamic'; value: PartPattern }
-    | { type: 'any' }
-  port: string
-  pathname: PartPatternVariant
+export type Variant = {
+  readonly protocol: ProtocolVariant
+  readonly hostname: HostnameVariant
+  readonly port: string
+  readonly pathname: PathnameVariant
 }
 
-type Segment =
-  | { type: 'static'; key: string }
-  | { type: 'variable'; key: string; regexp: RegExp }
-  | { type: 'wildcard'; key: string; regexp: RegExp }
-
-export function generate(pattern: RoutePattern): Array<Variant> {
-  // prettier-ignore
-  let protocols =
-    pattern.ast.protocol === null ? ['http', 'https'] as const :
-    pattern.ast.protocol === 'http(s)' ? ['http', 'https'] as const :
-    [pattern.ast.protocol]
-
-  // prettier-ignore
-  let hostnames =
-    pattern.ast.hostname === null ? [{ type: 'any' as const }] :
-    pattern.ast.hostname.params.length === 0 ?
-      PartPatternVariant.generate(pattern.ast.hostname).map((variant) => ({ type: 'static' as const, value: variant.toString('.') })) :
-      [{ type: 'dynamic' as const, value: pattern.ast.hostname }]
-
-  let pathnames = PartPatternVariant.generate(pattern.ast.pathname)
-
+export function generateVariants(pattern: RoutePattern): ReadonlyArray<Variant> {
   let result: Array<Variant> = []
-  for (let protocol of protocols) {
-    for (let hostname of hostnames) {
-      for (let pathname of pathnames) {
-        result.push({ protocol, hostname, port: pattern.ast.port ?? '', pathname })
+  let port = pattern.port ?? ''
+
+  for (let protocol of generateProtocolVariants(pattern.protocol)) {
+    for (let hostname of generateHostnameVariants(pattern.hostname)) {
+      for (let pathname of generatePathnameVariants(pattern.pathname)) {
+        result.push({ protocol, hostname, port, pathname })
       }
     }
   }
-
   return result
 }
 
-type Token = Extract<PartPatternToken, { type: 'text' | ':' | '*' | 'separator' }>
-type Param = Extract<PartPatternToken, { type: ':' | '*' }>
+// Protocol ----------------------------------------------------------------------------------------
 
-export class PartPatternVariant {
-  tokens: Array<Token>
+type ProtocolVariant = 'http' | 'https'
 
-  constructor(tokens: Array<Token>) {
-    this.tokens = tokens
+function generateProtocolVariants(
+  protocol: RoutePattern['protocol'],
+): ReadonlyArray<ProtocolVariant> {
+  if (protocol === null || protocol === 'http(s)') return ['http', 'https']
+  return [protocol]
+}
+
+// Hostname ----------------------------------------------------------------------------------------
+
+export type Param = Extract<PartPatternToken, { type: ':' | '*' }>
+
+function toParams(tokens: PartVariant): ReadonlyArray<Param> {
+  let params: Array<Param> = []
+  for (let token of tokens) {
+    if (token.type === ':' || token.type === '*') {
+      params.push(token)
+    }
   }
+  return params
+}
 
-  static generate(pattern: PartPattern): Array<PartPatternVariant> {
-    let result: Array<PartPatternVariant> = []
+type HostnameVariant =
+  | {
+      readonly type: 'static'
+      readonly value: string
+    }
+  | {
+      readonly type: 'dynamic'
+      readonly params: ReadonlyArray<Param>
+      readonly regexp: RegExp
+    }
+  | { readonly type: 'any' }
 
-    let stack: Array<{ index: number; tokens: Array<Token> }> = [{ index: 0, tokens: [] }]
+function generateHostnameVariants(hostname: PartPattern | null): ReadonlyArray<HostnameVariant> {
+  let result: Array<HostnameVariant> = []
+  if (hostname === null) return [{ type: 'any' }]
+  for (let variant of generatePartVariants(hostname)) {
+    let params = toParams(variant)
+    if (params.length > 0) {
+      result.push({
+        type: 'dynamic',
+        params,
+        regexp: toRegExp(variant, { separator: '.', ignoreCase: false }),
+      })
+    } else {
+      result.push({ type: 'static', value: stringifyStatic(variant, '.') })
+    }
+  }
+  return result
+}
 
-    while (stack.length > 0) {
-      let { index, tokens } = stack.pop()!
+function stringifyStatic(variant: PartVariant, separator: string): string {
+  let result = ''
+  for (let token of variant) {
+    if (token.type === 'text') result += token.text
+    else if (token.type === 'separator') result += separator
+    else throw new Error(`expected static part variant, got token type '${token.type}'`)
+  }
+  return result
+}
 
-      if (index === pattern.tokens.length) {
-        result.push(new PartPatternVariant(tokens))
-        continue
-      }
+// Pathname ----------------------------------------------------------------------------------------
 
-      let token = pattern.tokens[index]
-
-      if (token.type === '(') {
-        stack.push(
-          { index: index + 1, tokens },
-          { index: pattern.optionals.get(index)! + 1, tokens: tokens.slice() },
-        )
-        continue
-      }
-
-      if (token.type === ')') {
-        stack.push({ index: index + 1, tokens })
-        continue
-      }
-
-      if (
-        token.type === ':' ||
-        token.type === '*' ||
-        token.type === 'text' ||
-        token.type === 'separator'
-      ) {
-        tokens.push(token)
-        stack.push({ index: index + 1, tokens })
-        continue
-      }
-      unreachable(token.type)
+export type PathnameVariantSegment =
+  | { readonly type: 'static'; readonly key: string }
+  | {
+      readonly type: 'variable'
+      readonly key: string
+      readonly regexp: RegExp
+      readonly params: ReadonlyArray<Param>
+    }
+  | {
+      readonly type: 'wildcard'
+      readonly key: string
+      readonly regexp: RegExp
+      readonly params: ReadonlyArray<Param>
     }
 
-    return result
-  }
+export type PathnameVariant = ReadonlyArray<PathnameVariantSegment>
 
-  params(): Array<Param> {
-    let result = []
-    for (let token of this.tokens) {
-      if (token.type === ':' || token.type === '*') {
-        result.push(token)
-      }
-    }
-    return result
-  }
+function generatePathnameVariants(
+  pathname: PartPattern,
+  options?: { ignoreCase?: boolean },
+): ReadonlyArray<ReadonlyArray<PathnameVariantSegment>> {
+  let result: Array<ReadonlyArray<PathnameVariantSegment>> = []
+  let ignoreCase = options?.ignoreCase ?? false
 
-  toString(separator: string): string {
-    let result = ''
-
-    for (let token of this.tokens) {
-      if (token.type === 'text') {
-        result += token.text
-        continue
-      }
-
-      if (token.type === ':' || token.type === '*') {
-        let name = token.name === '*' ? '' : token.name
-        result += `{${token.type}${name}}`
-        continue
-      }
-
-      if (token.type === 'separator') {
-        result += separator
-        continue
-      }
-
-      unreachable(token.type)
-    }
-
-    return result
-  }
-
-  segments(options?: { ignoreCase?: boolean }): Array<Segment> {
-    let ignoreCase = options?.ignoreCase ?? false
-    let result: Array<Segment> = []
-
+  for (let tokens of generatePartVariants(pathname)) {
+    let variant: Array<PathnameVariantSegment> = []
     let key = ''
     let reSource = ''
     let reFlags = ignoreCase ? 'di' : 'd'
     let type: 'static' | 'variable' | 'wildcard' = 'static'
+    let params: Array<Param> = []
 
-    for (let token of this.tokens) {
+    for (let token of tokens) {
       if (token.type === 'separator') {
         if (type === 'static') {
-          result.push({ type: 'static', key: ignoreCase ? key.toLowerCase() : key })
+          variant.push({ type: 'static', key: ignoreCase ? key.toLowerCase() : key })
           key = ''
           reSource = ''
           continue
         }
         if (type === 'variable') {
-          result.push({ type: 'variable', key, regexp: new RegExp(`^${reSource}$`, reFlags) })
+          variant.push({
+            type: 'variable',
+            key,
+            regexp: new RegExp(`^${reSource}$`, reFlags),
+            params,
+          })
           key = ''
           reSource = ''
+          params = []
           type = 'static'
           continue
         }
         if (type === 'wildcard') {
           key += '/'
-          reSource += RE.escape('/')
+          reSource += escape('/')
           continue
         }
         unreachable(type)
@@ -170,13 +154,14 @@ export class PartPatternVariant {
 
       if (token.type === 'text') {
         key += token.text
-        reSource += RE.escape(token.text)
+        reSource += escape(token.text)
         continue
       }
 
       if (token.type === ':') {
         key += '{:}'
         reSource += `([^/]+)`
+        params.push(token)
         if (type === 'static') type = 'variable'
         continue
       }
@@ -184,6 +169,7 @@ export class PartPatternVariant {
       if (token.type === '*') {
         key += '{*}'
         reSource += `(.*)`
+        params.push(token)
         type = 'wildcard'
         continue
       }
@@ -192,11 +178,65 @@ export class PartPatternVariant {
     }
 
     if (type === 'static') {
-      result.push({ type: 'static', key: ignoreCase ? key.toLowerCase() : key })
+      variant.push({ type: 'static', key: ignoreCase ? key.toLowerCase() : key })
     }
     if (type === 'variable' || type === 'wildcard') {
-      result.push({ type, key, regexp: new RegExp(`^${reSource}$`, reFlags) })
+      variant.push({ type, key, regexp: new RegExp(`^${reSource}$`, reFlags), params })
     }
-    return result
+    result.push(variant)
   }
+  return result
+}
+
+// Part --------------------------------------------------------------------------------------------
+
+type PartVariantToken = Exclude<PartPatternToken, { type: '(' | ')' }>
+type PartVariant = ReadonlyArray<PartVariantToken>
+
+/**
+ * Expand a part pattern's optionals into the list of all concrete variants.
+ *
+ * Each variant is the linear token sequence you'd get by independently choosing
+ * to include or omit every `(` `)` group. No nesting, no optional markers.
+ */
+export function generatePartVariants(part: PartPattern): ReadonlyArray<PartVariant> {
+  let result: Array<PartVariant> = []
+  let stack: Array<{ index: number; tokens: Array<PartVariantToken> }> = [{ index: 0, tokens: [] }]
+
+  while (stack.length > 0) {
+    let { index, tokens } = stack.pop()!
+
+    if (index === part.tokens.length) {
+      result.push(tokens)
+      continue
+    }
+
+    let token = part.tokens[index]
+
+    if (token.type === '(') {
+      stack.push(
+        { index: index + 1, tokens },
+        { index: part.optionals.get(index)! + 1, tokens: tokens.slice() },
+      )
+      continue
+    }
+
+    if (token.type === ')') {
+      stack.push({ index: index + 1, tokens })
+      continue
+    }
+
+    if (
+      token.type === ':' ||
+      token.type === '*' ||
+      token.type === 'text' ||
+      token.type === 'separator'
+    ) {
+      tokens.push(token)
+      stack.push({ index: index + 1, tokens })
+      continue
+    }
+    unreachable(token.type)
+  }
+  return result
 }

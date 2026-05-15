@@ -1,192 +1,60 @@
-import type {
-  PartPattern,
-  PartPatternMatch,
-  PartPatternToken,
-} from './route-pattern/part-pattern.ts'
-import { RoutePattern } from './route-pattern.ts'
-import * as Variant from './trie-matcher/variant.ts'
-import { unreachable } from './unreachable.ts'
-import type { Match, Matcher } from './matcher.ts'
-import * as Specificity from './specificity.ts'
-import { decodeHostname, decodePathnameWithParams } from './decode.ts'
-import { matchSearch } from './route-pattern/match.ts'
+import type { RoutePattern } from '../route-pattern.ts'
+import { decodeHostname, decodePathname } from './decode.ts'
+import { generateVariants, type Param } from './variant.ts'
+import { unreachable } from '../unreachable.ts'
 
-type Param = Extract<PartPatternToken, { type: ':' | '*' }>
-
-/**
- * Trie-based matcher optimized for repeated route lookups.
- */
-export class TrieMatcher<data = unknown> implements Matcher<data> {
-  /**
-   * Whether pathname matching is case-insensitive.
-   */
-  readonly ignoreCase: boolean
-
-  /**
-   * Trie storage used to index registered patterns.
-   */
-  trie: Trie<data>
-
-  /**
-   * @param options Constructor options
-   * @param options.ignoreCase When `true`, pathname matching is case-insensitive for all patterns. Defaults to `false`.
-   */
-  constructor(options?: { ignoreCase?: boolean }) {
-    this.ignoreCase = options?.ignoreCase ?? false
-    this.trie = new Trie({ ignoreCase: this.ignoreCase })
-  }
-
-  /**
-   * Adds a pattern and associated data to the trie.
-   *
-   * @param pattern Pattern to register.
-   * @param data Data returned when the pattern matches.
-   */
-  add(pattern: string | RoutePattern, data: data): void {
-    pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
-    this.trie.insert(pattern, data)
-  }
-
-  /**
-   * Returns the best matching pattern for a URL.
-   *
-   * @param url URL to match.
-   * @returns The best match, or `null` when nothing matches.
-   */
-  match(url: string | URL): Match<string, data> | null {
-    url = typeof url === 'string' ? new URL(url) : url
-    let bestMatch: Match<string, data> | null = null
-    for (let result of this.trie.search(url)) {
-      let match = toMatch(result, url)
-      if (bestMatch === null || Specificity.greaterThan(match, bestMatch)) {
-        bestMatch = match
-      }
-    }
-    return bestMatch
-  }
-
-  /**
-   * Returns every pattern that matches a URL.
-   *
-   * @param url URL to match.
-   * @returns All matching routes sorted by specificity (most specific first).
-   */
-  matchAll(url: string | URL): Array<Match<string, data>> {
-    url = typeof url === 'string' ? new URL(url) : url
-    let matches = this.trie.search(url)
-    return matches.map((result) => toMatch(result, url)).sort(Specificity.descending)
-  }
-}
-
-type ProtocolNode<data> = {
-  http: HostnameNode<data>
-  https: HostnameNode<data>
-}
-
-type HostnameNode<data> = {
-  static: Map<string, PortNode<data>>
-  dynamic: Array<{ part: PartPattern; portNode: PortNode<data> }>
-  any: PortNode<data>
-}
-
-function createHostnameNode<data>(): HostnameNode<data> {
-  return {
-    static: new Map(),
-    dynamic: [],
-    any: new Map(),
-  }
-}
-
-type PortNode<data> = Map<string, PathnameNode<data>>
-
-type PathnameNode<data> = {
-  static: Map<string, PathnameNode<data>>
-  variable: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
-  wildcard: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
-  values: Array<{
-    pattern: RoutePattern
-    data: data
-    requiredParams: Array<Param>
-    undefinedParams: Array<Param>
-  }>
-}
-
-function createPathnameNode<data>(): PathnameNode<data> {
-  return {
-    static: new Map(),
-    variable: new Map(),
-    wildcard: new Map(),
-    values: [],
-  }
-}
-
-type SearchResult<data> = Array<{
-  pattern: RoutePattern
-  data: data
-  hostname: PartPatternMatch
-  pathname: PartPatternMatch
-  params: Record<string, string | undefined>
-}>
-
-function toMatch<data>(result: SearchResult<data>[number], url: URL): Match<string, data> {
-  return {
-    pattern: result.pattern,
-    url,
-    params: result.params,
-    paramsMeta: { hostname: result.hostname, pathname: result.pathname },
-    data: result.data,
-  }
-}
+import type { Match, MatchParamMeta } from './types.ts'
 
 export class Trie<data = unknown> {
-  #ignoreCase: boolean
-  protocolNode: ProtocolNode<data>
+  readonly ignoreCase: boolean
+  #root: ProtocolNode<data>
 
   constructor(options?: { ignoreCase?: boolean }) {
-    this.#ignoreCase = options?.ignoreCase ?? false
-    this.protocolNode = {
+    this.ignoreCase = options?.ignoreCase ?? false
+    this.#root = {
       http: createHostnameNode(),
       https: createHostnameNode(),
     }
   }
 
   insert(pattern: RoutePattern, data: data): void {
-    for (let variant of Variant.generate(pattern)) {
-      // protocol -> hostname
-      let hostnameNode = this.protocolNode[variant.protocol]
+    for (let variant of generateVariants(pattern)) {
+      let hostnameNode = this.#root[variant.protocol]
 
-      // hostname -> port
-      let portNode: PortNode<data> | undefined = undefined
+      let portNode: PortNode<data>
       if (variant.hostname.type === 'any') {
         portNode = hostnameNode.any
       } else if (variant.hostname.type === 'static') {
         let key = variant.hostname.value.toLowerCase()
-        portNode = hostnameNode.static.get(key)
-        if (portNode === undefined) {
-          portNode = new Map()
-          hostnameNode.static.set(key, portNode)
+        let existing = hostnameNode.static.get(key)
+        if (existing === undefined) {
+          existing = new Map()
+          hostnameNode.static.set(key, existing)
         }
+        portNode = existing
       } else {
         portNode = new Map()
-        hostnameNode.dynamic.push({ part: variant.hostname.value, portNode })
+        hostnameNode.dynamic.push({
+          regexp: variant.hostname.regexp,
+          params: variant.hostname.params,
+          portNode,
+        })
       }
 
-      // port -> pathname
-      let pathnameRoot = portNode?.get(variant.port)
+      let pathnameRoot = portNode.get(variant.port)
       if (pathnameRoot === undefined) {
         pathnameRoot = createPathnameNode()
         portNode.set(variant.port, pathnameRoot)
       }
 
-      // pathname segments
       let pathnameNode = pathnameRoot
-      let segments = variant.pathname.segments({ ignoreCase: this.#ignoreCase })
-      for (let segment of segments) {
+      for (let segment of variant.pathname) {
         if (segment.type === 'static') {
-          let next = pathnameNode.static.get(segment.key)
+          let key = this.ignoreCase ? segment.key.toLowerCase() : segment.key
+          let next = pathnameNode.static.get(key)
           if (next === undefined) {
             next = createPathnameNode()
-            pathnameNode.static.set(segment.key, next)
+            pathnameNode.static.set(key, next)
           }
           pathnameNode = next
           continue
@@ -212,198 +80,251 @@ export class Trie<data = unknown> {
         unreachable(segment)
       }
 
-      let requiredParams = variant.pathname.params()
-      let undefinedParams: Array<Param> = []
-      for (let param of pattern.ast.pathname.params) {
-        if (
-          !requiredParams.some((p) => p.name === param.name) &&
-          !undefinedParams.some((p) => p.name === param.name)
-        ) {
-          undefinedParams.push(param)
+      let requiredParams: Array<Param> = []
+      for (let segment of variant.pathname) {
+        if (segment.type === 'variable' || segment.type === 'wildcard') {
+          for (let param of segment.params) requiredParams.push(param)
         }
       }
-      pathnameNode.values.push({
-        pattern,
-        data,
-        requiredParams,
-        undefinedParams,
-      })
+      let undefinedParams: Array<Param> = []
+      for (let param of pattern.pathname.tokens) {
+        if (param.type !== ':' && param.type !== '*') continue
+        if (requiredParams.some((p) => p.name === param.name)) continue
+        if (undefinedParams.some((p) => p.name === param.name)) continue
+        undefinedParams.push(param)
+      }
+
+      pathnameNode.values.push({ pattern, data, requiredParams, undefinedParams })
     }
   }
 
-  search(url: URL): SearchResult<data> {
-    let origins: Array<{ hostnameMatch: PartPatternMatch; pathnameNode: PathnameNode<data> }> = []
-    let decodedHostname = decodeHostname(url.hostname)
-
-    // protocol -> hostname
+  search(url: URL): Array<Match<string, data>> {
     let protocol = url.protocol.slice(0, -1)
     if (protocol !== 'http' && protocol !== 'https') return []
-    let hostNameNode = this.protocolNode[protocol]
 
-    // any hostname (no port) -> pathname
-    // port cannot appear without hostname, so always indexed under the empty-port key
-    let anyHostname = hostNameNode.any.get('')
-    if (anyHostname) {
+    let hostnameNode = this.#root[protocol]
+    let decodedHostname = decodeHostname(url.hostname)
+
+    let origins: Array<{ hostnameMatch: Array<MatchParamMeta>; pathnameNode: PathnameNode<data> }> =
+      []
+
+    // any hostname (no port allowed -- empty-port key)
+    let anyPathname = hostnameNode.any.get('')
+    if (anyPathname) {
       origins.push({
         hostnameMatch: [
-          { type: '*', name: '*', begin: 0, end: decodedHostname.length, value: decodedHostname },
+          { type: '*', name: '*', value: decodedHostname, begin: 0, end: decodedHostname.length },
         ],
-        pathnameNode: anyHostname,
+        pathnameNode: anyPathname,
       })
     }
 
-    // static hostname + port -> pathname (hostname case-insensitive)
-    let staticHostname = hostNameNode.static.get(decodedHostname.toLowerCase())
-    if (staticHostname) {
-      let pathnameNode = staticHostname.get(url.port)
-      if (pathnameNode) {
-        origins.push({ hostnameMatch: [], pathnameNode })
-      }
+    // static hostname
+    let staticPort = hostnameNode.static.get(decodedHostname.toLowerCase())
+    if (staticPort) {
+      let next = staticPort.get(url.port)
+      if (next) origins.push({ hostnameMatch: [], pathnameNode: next })
     }
-    // dynamic hostname + port -> pathname
-    hostNameNode.dynamic.forEach(({ part, portNode }) => {
-      let match = part.match(decodedHostname, { ignoreCase: true })
-      if (match) {
-        let pathnameNode = portNode.get(url.port)
-        if (pathnameNode) {
-          origins.push({ hostnameMatch: match, pathnameNode })
-        }
+
+    // dynamic hostnames
+    for (let entry of hostnameNode.dynamic) {
+      let m = entry.regexp.exec(decodedHostname)
+      if (!m) continue
+      let next = entry.portNode.get(url.port)
+      if (!next) continue
+      let hostnameMatch: Array<MatchParamMeta> = []
+      for (let i = 0; i < entry.params.length; i++) {
+        let param = entry.params[i]
+        let span = m.indices?.[i + 1]
+        if (span === undefined) continue
+        hostnameMatch.push({
+          type: param.type,
+          name: param.name,
+          value: m[i + 1],
+          begin: span[0],
+          end: span[1],
+        })
       }
-    })
+      origins.push({ hostnameMatch, pathnameNode: next })
+    }
 
-    let results: SearchResult<data> = []
+    let results: Array<Match<string, data>> = []
+    let urlSegments = decodePathname(url.pathname.slice(1)).split('/')
 
-    // pathname
-    let pathnameDecoder = decodePathnameWithParams(url.pathname.slice(1))
-    let urlSegments = pathnameDecoder.pathname.split('/')
     for (let origin of origins) {
       let stack: Array<{
         segmentIndex: number
         pathnameNode: PathnameNode<data>
         charOffset: number
-        pathnameMatch: Array<{
-          value: string
-          begin: number
-          end: number
-        }>
-      }> = [
-        { segmentIndex: 0, pathnameNode: origin.pathnameNode, charOffset: 0, pathnameMatch: [] },
-      ]
+        captures: Array<{ value: string; begin: number; end: number }>
+      }> = [{ segmentIndex: 0, pathnameNode: origin.pathnameNode, charOffset: 0, captures: [] }]
+
       while (stack.length > 0) {
         let current = stack.pop()!
 
         if (current.segmentIndex === urlSegments.length) {
           for (let value of current.pathnameNode.values) {
-            if (!matchSearch(url.searchParams, value.pattern.ast.search)) {
-              continue
-            }
+            if (!matchSearch(url.searchParams, value.pattern.search)) continue
 
-            let pathnameMatch: PartPatternMatch = []
+            let pathnameMatch: Array<MatchParamMeta> = []
             for (let i = 0; i < value.requiredParams.length; i++) {
               let param = value.requiredParams[i]
-              let rest = current.pathnameMatch[i]
+              let cap = current.captures[i]
               pathnameMatch.push({
-                ...rest,
-                ...param,
+                type: param.type,
+                name: param.name,
+                value: cap.value,
+                begin: cap.begin,
+                end: cap.end,
               })
             }
 
             let params: Record<string, string | undefined> = {}
-            // Start with all params from the original pattern set to undefined
-            for (let param of value.pattern.ast.hostname?.params ?? []) {
-              if (param.name !== '*') {
-                params[param.name] = undefined
+            for (let token of value.pattern.hostname?.tokens ?? []) {
+              if ((token.type === ':' || token.type === '*') && token.name !== '*') {
+                params[token.name] = undefined
               }
             }
-            for (let param of value.pattern.ast.pathname.params) {
-              if (param.name !== '*') {
-                params[param.name] = undefined
+            for (let token of value.pattern.pathname.tokens) {
+              if ((token.type === ':' || token.type === '*') && token.name !== '*') {
+                params[token.name] = undefined
               }
             }
-            // Then overwrite with actual matched values
-            for (let param of origin.hostnameMatch) {
-              if (param.name === '*') continue
-              params[param.name] = param.value
+            for (let p of origin.hostnameMatch) {
+              if (p.name === '*') continue
+              params[p.name] = p.value
             }
-            for (let param of pathnameMatch) {
-              if (param.name === '*') continue
-              params[param.name] = param.value
+            for (let p of pathnameMatch) {
+              if (p.name === '*') continue
+              params[p.name] = p.value
             }
 
             results.push({
+              url,
               pattern: value.pattern,
               data: value.data,
-              hostname: origin.hostnameMatch,
-              pathname: pathnameMatch,
               params,
+              paramsMeta: { hostname: origin.hostnameMatch, pathname: pathnameMatch },
             })
           }
           continue
         }
 
         let urlSegment = urlSegments[current.segmentIndex]
-        let staticKey = this.#ignoreCase ? urlSegment.toLowerCase() : urlSegment
+        let staticKey = this.ignoreCase ? urlSegment.toLowerCase() : urlSegment
         let nextStatic = current.pathnameNode.static.get(staticKey)
         if (nextStatic) {
           stack.push({
             segmentIndex: current.segmentIndex + 1,
             pathnameNode: nextStatic,
             charOffset: current.charOffset + urlSegment.length + 1,
-            pathnameMatch: current.pathnameMatch,
+            captures: current.captures,
           })
         }
 
         for (let { regexp, pathnameNode } of current.pathnameNode.variable.values()) {
-          let match = regexp.exec(urlSegment)
-          if (match) {
-            let pathnameMatch = current.pathnameMatch.slice()
-            for (let i = 1; i < match.indices!.length; i++) {
-              let span = match.indices![i]
-              if (span === undefined) unreachable()
-              let begin = current.charOffset + span[0]
-              let end = current.charOffset + span[1]
-              pathnameMatch.push({
-                begin,
-                end,
-                value: pathnameDecoder.param(begin, end),
-              })
-            }
-            stack.push({
-              segmentIndex: current.segmentIndex + 1,
-              pathnameNode,
-              charOffset: current.charOffset + match.index + match[0].length + 1,
-              pathnameMatch,
+          let m = regexp.exec(urlSegment)
+          if (!m) continue
+          let captures = current.captures.slice()
+          for (let i = 1; i < m.indices!.length; i++) {
+            let span = m.indices![i]
+            if (span === undefined) unreachable()
+            captures.push({
+              value: m[i],
+              begin: current.charOffset + span[0],
+              end: current.charOffset + span[1],
             })
           }
+          stack.push({
+            segmentIndex: current.segmentIndex + 1,
+            pathnameNode,
+            charOffset: current.charOffset + m.index + m[0].length + 1,
+            captures,
+          })
         }
 
         for (let { regexp, pathnameNode } of current.pathnameNode.wildcard.values()) {
           let remaining = urlSegments.slice(current.segmentIndex).join('/')
-          let match = regexp.exec(remaining)
-          if (match) {
-            let pathnameMatch = current.pathnameMatch.slice()
-            for (let i = 1; i < match.indices!.length; i++) {
-              let span = match.indices![i]
-              if (span === undefined) continue
-              let begin = current.charOffset + span[0]
-              let end = current.charOffset + span[1]
-              pathnameMatch.push({
-                begin,
-                end,
-                value: pathnameDecoder.param(begin, end),
-              })
-            }
-            stack.push({
-              segmentIndex: urlSegments.length,
-              pathnameNode,
-              charOffset: current.charOffset + remaining.length,
-              pathnameMatch,
+          let m = regexp.exec(remaining)
+          if (!m) continue
+          let captures = current.captures.slice()
+          for (let i = 1; i < m.indices!.length; i++) {
+            let span = m.indices![i]
+            if (span === undefined) continue
+            captures.push({
+              value: m[i],
+              begin: current.charOffset + span[0],
+              end: current.charOffset + span[1],
             })
           }
+          stack.push({
+            segmentIndex: urlSegments.length,
+            pathnameNode,
+            charOffset: current.charOffset + remaining.length,
+            captures,
+          })
         }
       }
     }
 
     return results
   }
+}
+
+// Search ------------------------------------------------------------------------------------------
+
+function matchSearch(
+  params: URLSearchParams,
+  constraints: ReadonlyMap<string, ReadonlySet<string>>,
+): boolean {
+  for (let [name, requiredValues] of constraints) {
+    if (requiredValues.size === 0) {
+      if (!params.has(name)) return false
+      continue
+    }
+    let values = params.getAll(name)
+    for (let requiredValue of requiredValues) {
+      if (!values.includes(requiredValue)) return false
+    }
+  }
+  return true
+}
+
+// Trie nodes --------------------------------------------------------------------------------------
+
+type ProtocolNode<data> = {
+  http: HostnameNode<data>
+  https: HostnameNode<data>
+}
+
+type HostnameNode<data> = {
+  static: Map<string, PortNode<data>>
+  dynamic: Array<{
+    regexp: RegExp
+    params: ReadonlyArray<Param>
+    portNode: PortNode<data>
+  }>
+  any: PortNode<data>
+}
+
+type PortNode<data> = Map<string, PathnameNode<data>>
+
+type PathnameNode<data> = {
+  static: Map<string, PathnameNode<data>>
+  variable: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
+  wildcard: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
+  values: Array<{
+    pattern: RoutePattern
+    data: data
+    requiredParams: Array<Param>
+    undefinedParams: Array<Param>
+  }>
+}
+
+function createHostnameNode<data>(): HostnameNode<data> {
+  return { static: new Map(), dynamic: [], any: new Map() }
+}
+
+function createPathnameNode<data>(): PathnameNode<data> {
+  return { static: new Map(), variable: new Map(), wildcard: new Map(), values: [] }
 }

@@ -1,5 +1,5 @@
 /**
- * An internal error the should never happen.
+ * An internal error that should never happen.
  *
  * @param value Typed as `never` to ensure exhaustiveness for discriminated unions.
  */

@@ -1,43 +1,55 @@
-import type { RoutePattern } from '../route-pattern.ts'
-import { PartPattern, type PartPatternToken } from './part-pattern.ts'
-
-type Pathname = RoutePattern['ast']['pathname']
+import { RoutePattern } from './route-pattern.ts'
+import type { PartPattern, PartPatternToken } from './route-pattern.ts'
+import type { JoinPatterns } from './types/join.ts'
 
 /**
- * Joins two pathnames, adding slash between them if needed.
+ * Join two route patterns.
  *
- * Trailing slash is omitted from `a`.
- * A slash is added between `a` and `b` if `b` does not have a leading slash.
+ * Origin parts (`protocol`, `hostname`, `port`) from `b` override `a` when present.
+ * Pathnames are concatenated with a separator inserted between them as needed.
+ * Search constraints from both patterns are merged.
  *
- * Definitions:
- * - A leading slash can only have parens `(` `)` before it.
- * - A trailing slash can only have parens `(` `)` after it.
- *
- * Conceptually:
- *
- * ```ts
- * join('a', 'b') -> 'a/b'
- * join('a/', 'b') -> 'a/b'
- * join('a', '/b') -> 'a/b'
- * join('a/', '/b') -> 'a/b'
- * join('(a)', '(b)') -> '(a)/(b)'
- * join('(a/)', '(b)') -> '(a)/(b)'
- * join('(a)', '(/b)') -> '(a)(/b)'
- * join('(a/)', '(/b)') -> '(a)(/b)'
- * ```
- *
- * @param a the first pathname pattern
- * @param b the second pathname pattern
- * @returns the joined pathname pattern
+ * The result carries `JoinPatterns<a, b>` as its source brand so downstream APIs
+ * (e.g. `createHref`) infer typed params from the joined pattern.
  */
-export function joinPathname(a: Pathname, b: Pathname): Pathname {
+export function joinPatterns<a extends string, b extends string>(
+  a: a | RoutePattern<a>,
+  b: b | RoutePattern<b>,
+): RoutePattern<JoinPatterns<a, b>> {
+  a = typeof a === 'string' ? RoutePattern.parse(a) : a
+  b = typeof b === 'string' ? RoutePattern.parse(b) : b
+  return new RoutePattern<JoinPatterns<a, b>>({
+    protocol: b.protocol ?? a.protocol,
+    hostname: b.hostname ?? a.hostname,
+    port: b.port ?? a.port,
+    pathname: joinPathname(a.pathname, b.pathname),
+    search: joinSearch(a.search, b.search),
+  })
+}
+
+/**
+ * Join two pathname parts, inserting a separator between them as needed.
+ *
+ * Trailing separator is stripped from `a`; leading separator is added to `b` if absent.
+ *
+ * ```text
+ * 'a'   + 'b'   -> 'a/b'
+ * 'a/'  + 'b'   -> 'a/b'
+ * 'a'   + '/b'  -> 'a/b'
+ * 'a/'  + '/b'  -> 'a/b'
+ * '(a)' + '(b)' -> '(a)/(b)'
+ * '(a/)'+ '(b)' -> '(a)/(b)'
+ * '(a)' +'(/b)' -> '(a)(/b)'
+ * '(a/)'+'(/b)' -> '(a)(/b)'
+ * ```
+ */
+function joinPathname(a: PartPattern, b: PartPattern): PartPattern {
   if (a.tokens.length === 0) return b
   if (b.tokens.length === 0) return a
 
   let tokens: Array<PartPatternToken> = []
 
-  // if `a` has a trailing separator (only optionals after it)
-  // then omit the separator
+  // strip `a`'s trailing separator (only optionals after it)
   let aLastNonOptionalIndex = a.tokens.findLastIndex(
     (token) => token.type !== '(' && token.type !== ')',
   )
@@ -45,27 +57,19 @@ export function joinPathname(a: Pathname, b: Pathname): Pathname {
   let aHasTrailingSeparator = aLastNonOptional?.type === 'separator'
 
   a.tokens.forEach((token, index) => {
-    if (index === aLastNonOptionalIndex && token.type === 'separator') {
-      return
-    }
+    if (index === aLastNonOptionalIndex && token.type === 'separator') return
     tokens.push(token)
   })
 
-  // if `b` does not have a leading separator (only optionals before it)
-  // then add a separator
+  // add separator if `b` has no leading one (only optionals before it)
   let bFirstNonOptional = b.tokens.find((token) => token.type !== '(' && token.type !== ')')
   let needsSeparator = bFirstNonOptional === undefined || bFirstNonOptional.type !== 'separator'
-  if (needsSeparator) {
-    tokens.push({ type: 'separator' })
-  }
+  if (needsSeparator) tokens.push({ type: 'separator' })
 
   let tokenOffset = tokens.length
+  b.tokens.forEach((token) => tokens.push(token))
 
-  b.tokens.forEach((token) => {
-    tokens.push(token)
-  })
-
-  let optionals = new Map()
+  let optionals = new Map<number, number>()
   for (let [begin, end] of a.optionals) {
     if (aHasTrailingSeparator) {
       // one less token before this optional since trailing slash token was omitted
@@ -78,43 +82,33 @@ export function joinPathname(a: Pathname, b: Pathname): Pathname {
     optionals.set(tokenOffset + begin, tokenOffset + end)
   }
 
-  return new PartPattern({ tokens, optionals }, { type: 'pathname' })
+  return { tokens, optionals, type: 'pathname' }
 }
 
-type Search = RoutePattern['ast']['search']
-
 /**
- * Joins two search patterns, merging params and their constraints.
+ * Merge two search constraint maps.
  *
- * Conceptually:
- *
- * ```ts
- * search('?a', '?b') -> '?a&b'
- * search('?a=1', '?a=2') -> '?a=1&a=2'
- * search('?a=1', '?b=2') -> '?a=1&b=2'
- * search('', '?a') -> '?a'
+ * ```text
+ * '?a'   + '?b'   -> '?a&b'
+ * '?a=1' + '?a=2' -> '?a=1&a=2'
+ * '?a=1' + '?b=2' -> '?a=1&b=2'
+ * ''     + '?a'   -> '?a'
  * ```
- *
- * @param a the first search constraints
- * @param b the second search constraints
- * @returns the merged search constraints
  */
-export function joinSearch(a: Search, b: Search): Search {
+function joinSearch(a: RoutePattern['search'], b: RoutePattern['search']): RoutePattern['search'] {
   let result = new Map<string, Set<string>>()
 
-  for (let [name, requiredValues] of a) {
-    result.set(name, new Set(requiredValues))
+  for (let [name, values] of a) {
+    result.set(name, new Set(values))
   }
 
-  for (let [name, requiredValues] of b) {
+  for (let [name, values] of b) {
     let current = result.get(name)
-
     if (current === undefined) {
-      result.set(name, new Set(requiredValues))
+      result.set(name, new Set(values))
       continue
     }
-
-    for (let value of requiredValues) {
+    for (let value of values) {
       current.add(value)
     }
   }

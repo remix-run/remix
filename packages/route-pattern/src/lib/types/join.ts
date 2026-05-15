@@ -1,12 +1,10 @@
-import type { Parse, ParsedPattern, Separator, Token } from './parse'
-import type { StartsWithSeparator, Stringify } from './stringify'
+import type { Parse, ParsedPattern, Separator, Token } from './parse.ts'
+import type { StartsWithSeparator, Stringify } from './stringify.ts'
 
-/**
- * Join two pattern strings together.
- */
-export type Join<A extends string, B extends string> = _Join<Parse<A>, Parse<B>>
+/** Join two pattern source strings together at the type level. */
+export type JoinPatterns<A extends string, B extends string> = _JoinPatterns<Parse<A>, Parse<B>>
 
-type _Join<A extends ParsedPattern, B extends ParsedPattern> = Stringify<{
+type _JoinPatterns<A extends ParsedPattern, B extends ParsedPattern> = Stringify<{
   protocol: JoinOriginField<A, B, 'protocol'>
   hostname: JoinOriginField<A, B, 'hostname'>
   port: JoinOriginField<A, B, 'port'>
@@ -37,19 +35,13 @@ type RemoveTrailingSeparator<T extends Token[]> =
   T extends [...infer Rest extends Token[], Separator] ? Rest : T
 
 // prettier-ignore
-type JoinPathnameTokens<
-  A extends Token[],
-  B extends Token[]
-> = B extends [Separator] ?
-    A :
-    StartsWithSeparator<B> extends true ?
-      [...A, ...B] :
-      [...A, Separator, ...B]
+type JoinPathnameTokens<A extends Token[], B extends Token[]> =
+  B extends [Separator] ? A :
+  StartsWithSeparator<B> extends true ? [...A, ...B] :
+  [...A, Separator, ...B]
 
 // prettier-ignore
-type JoinSearch<
-  A extends string | undefined,
-  B extends string | undefined
-> = B extends undefined ? A :
-    A extends undefined ? B :
-    `${A}&${B}`
+type JoinSearch<A extends string | undefined, B extends string | undefined> =
+  B extends undefined ? A :
+  A extends undefined ? B :
+  `${A}&${B}`
