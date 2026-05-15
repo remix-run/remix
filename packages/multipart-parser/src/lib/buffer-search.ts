@@ -2,8 +2,17 @@ export interface SearchFunction {
   (haystack: Uint8Array, start?: number): number
 }
 
+export function encodeAsciiPattern(pattern: string): Uint8Array {
+  let bytes = new Uint8Array(pattern.length)
+  for (let index = 0; index < pattern.length; ++index) {
+    bytes[index] = pattern.charCodeAt(index) & 0xff
+  }
+
+  return bytes
+}
+
 export function createSearch(pattern: string): SearchFunction {
-  let needle = new TextEncoder().encode(pattern)
+  let needle = encodeAsciiPattern(pattern)
 
   let search: SearchFunction
   // Use the built-in Buffer.indexOf method on Node.js for better perf.
@@ -43,7 +52,7 @@ export interface PartialTailSearchFunction {
 }
 
 export function createPartialTailSearch(pattern: string): PartialTailSearchFunction {
-  let needle = new TextEncoder().encode(pattern)
+  let needle = encodeAsciiPattern(pattern)
 
   let byteIndexes: Record<number, number[]> = {}
   for (let i = 0; i < needle.length; ++i) {
