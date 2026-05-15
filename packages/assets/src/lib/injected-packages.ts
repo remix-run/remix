@@ -1,5 +1,6 @@
 import * as fs from 'node:fs'
-import { fileURLToPath } from 'node:url'
+import { createRequire } from 'node:module'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 
 import { getFilePathDirectory, normalizeFilePath } from './paths.ts'
 
@@ -90,7 +91,7 @@ function getResolvedInjectedPackage(packageName: string): ResolvedInjectedPackag
   let existing = resolvedInjectedPackages.get(packageName)
   if (existing) return existing
 
-  let packageJsonUrl = import.meta.resolve(`${packageName}/package.json`)
+  let packageJsonUrl = resolveInjectedPackageJsonUrl(packageName)
   let packageJsonPath = normalizeFilePath(fs.realpathSync(fileURLToPath(packageJsonUrl)))
 
   let resolvedInjectedPackage = {
@@ -100,6 +101,18 @@ function getResolvedInjectedPackage(packageName: string): ResolvedInjectedPackag
 
   resolvedInjectedPackages.set(packageName, resolvedInjectedPackage)
   return resolvedInjectedPackage
+}
+
+export function resolveInjectedPackageJsonUrl(
+  packageName: string,
+  resolve: ((specifier: string) => string) | undefined = import.meta.resolve,
+): string {
+  if (typeof resolve === 'function') {
+    return resolve(`${packageName}/package.json`)
+  }
+
+  let require = createRequire(import.meta.url)
+  return pathToFileURL(require.resolve(`${packageName}/package.json`)).href
 }
 
 function getInjectedPackageRoutePattern(packageName: string): string {
