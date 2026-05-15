@@ -24,6 +24,7 @@
     "build": "pnpm run --filter \".\" --parallel \"/^build:/\"",
     "build:demos": "tsx src/generate/build-demos.ts",
     "build:public": "mkdir -p build/public && cp public/* build/public",
+    "predev": "pnpm run build",
     "dev": "NODE_ENV=development tsx --watch src/server/index.ts",
     "docs": "node src/generate/index.ts",
     "docs:debug": "DEBUG=1 node src/generate/index.ts",
