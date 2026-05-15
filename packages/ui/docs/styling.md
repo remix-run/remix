@@ -80,6 +80,70 @@ function ProgressBar(handle: Handle) {
 - Dynamic styles that change based on state or props
 - Computed values that update frequently
 
+## Cascade Layers
+
+Generated `css(...)` rules are emitted in native CSS cascade layers under the stable parent layer
+`rmx`. Each generated class gets its own sublayer, so a class such as `rmxc-k4a9f` is emitted as
+`@layer rmx.rmxc-k4a9f { ... }`. This keeps mix ordering stable across roots and frames.
+
+Unlayered author CSS outranks normal layered CSS. That means global styles can override generated
+component styles even when Remix UI inserts its rules later.
+
+The built-in theme reset is emitted in `rmx-reset` and ordered before `rmx`. No extra layer setup is
+needed unless the app adds layers that should sit before or after Remix UI.
+
+Put layers that should lose to Remix UI before `rmx-reset` and `rmx`. The layer can use any
+app-owned name; `base` is a common choice for defaults:
+
+```css
+@layer base, rmx-reset, rmx;
+
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-size: inherit;
+    font-weight: inherit;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    margin: 0;
+    padding: 0;
+  }
+
+  code,
+  pre {
+    font-size: 1em;
+  }
+}
+```
+
+Put layers that should override Remix UI after `rmx`:
+
+```css
+@layer base, rmx-reset, rmx, app;
+
+@layer app {
+  .marketing-heading {
+    font-size: clamp(2rem, 6vw, 4rem);
+  }
+}
+```
+
+For imported styles, use an import layer when your build supports it:
+
+```css
+@layer base, rmx-reset, rmx;
+@import './base.css' layer(base);
+```
+
 ## Pseudo-Selectors
 
 Use `&` to reference the current element in pseudo-selectors:

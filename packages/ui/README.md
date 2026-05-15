@@ -191,6 +191,27 @@ function Layout(props: { children: RemixNode }) {
 }
 ```
 
+## Cascade Layers
+
+Remix UI emits its built-in theme reset in `rmx-reset` and generated `css(...)` rules under `rmx`. Unlayered CSS outranks layered component CSS, so use explicit layer order when mixing Remix UI with global styles.
+
+Put layers that should lose to Remix UI before `rmx-reset` and `rmx`:
+
+```css
+@layer base, rmx-reset, rmx;
+
+@layer base {
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+    margin: 0;
+    padding: 0;
+  }
+}
+```
+
 ## License
 
 See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)
