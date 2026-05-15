@@ -27,7 +27,8 @@ export function Document(
   }>,
 ) {
   return () => {
-    let { registry, versions, activeVersion, slug, sourceUrl, demoImportMap, children } = handle.props
+    let { registry, versions, activeVersion, slug, sourceUrl, demoImportMap, children } =
+      handle.props
     let page = slug
       ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug, activeVersion))
       : getHomePage(registry)
@@ -882,7 +883,6 @@ const demoPreviewCss = css({
   padding: theme.space.xxl,
   borderBottom: `1px solid ${theme.colors.border.subtle}`,
   backgroundColor: theme.surface.lvl0,
-  overflowX: 'auto',
 })
 
 const demoSourceCss = css({

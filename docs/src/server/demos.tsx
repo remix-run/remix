@@ -13,8 +13,11 @@ const UI_COMPONENTS_DIR = path.join(REPO_DIR, 'packages', 'ui', 'src', 'componen
 const UI_PACKAGE_DIR = path.join(REPO_DIR, 'packages', 'ui')
 const DEMO_BUILD_DIR = path.join(DOCS_DIR, 'build', 'demos')
 const DEMO_ASSETS_DIR = path.join(DOCS_DIR, 'build', 'assets', 'demos')
-const REMIX_UI_ASSET_PATH = path.join(DOCS_DIR, 'build', 'assets', 'remix-ui.js')
-export const REMIX_UI_ASSET_HREF = '/assets/remix-ui.js'
+const REMIX_UI_ASSET_DIR = path.join(DOCS_DIR, 'build', 'assets', 'remix-ui')
+const REMIX_UI_ASSET_HREF_BASE = '/assets/remix-ui'
+// Index entry's href for things like <link rel="modulepreload">. Per-subpath
+// hrefs are surfaced through the import map.
+export const REMIX_UI_ASSET_HREF = `${REMIX_UI_ASSET_HREF_BASE}/index.js`
 const SOURCE_URL_BASE = 'https://github.com/remix-run/remix/blob/main'
 
 const UI_PACKAGE_JSON = path.join(UI_PACKAGE_DIR, 'package.json')
@@ -92,7 +95,10 @@ async function getDemoFile(filePath: string): Promise<DemoDocFile> {
   let slug = path.basename(filePath, '.demo.tsx')
   let packageName = getDemoPackageName(relativePath)
   let componentName = packageName.split('/').at(-1)!
-  let { name, description, order, displaySource } = extractDemoMetadata(rewrittenSource, relativePath)
+  let { name, description, order, displaySource } = extractDemoMetadata(
+    rewrittenSource,
+    relativePath,
+  )
   let formattedSource = await formatDemoSource(displaySource, filePath)
   let [importHref, assetHref] = await Promise.all([
     compileDemoModule(rewrittenSource, packageName, slug),
@@ -158,37 +164,51 @@ async function buildDemoImportMap(): Promise<DemoImportMap> {
     (k) => k !== './package.json' && k !== './server',
   )
 
-  // Build a single shared bundle re-exporting all subpaths.
-  let entryContents = subpaths
-    .map((subpath) => {
-      let specifier = subpath === '.' ? '@remix-run/ui' : `@remix-run/ui/${subpath.slice(2)}`
-      return `export * from '${specifier}'`
-    })
-    .join('\n')
+  // Emit one entry per subpath so that `import * as <subpath>` in a demo
+  // resolves to *only* that subpath's exports. A single shared bundle that
+  // `export *`s every subpath silently drops names that collide across
+  // subpaths (e.g. `anchor` is exported by both `@remix-run/ui/anchor` and
+  // `@remix-run/ui/popover`), which surfaced as `popover.anchor is not a
+  // function` at runtime. esbuild's code-splitting dedupes the underlying
+  // modules across entries.
+  fs.mkdirSync(REMIX_UI_ASSET_DIR, { recursive: true })
+  let shimDir = path.join(DEMO_BUILD_DIR, '_remix-ui-shims')
+  fs.mkdirSync(shimDir, { recursive: true })
+
+  let entryNames = new Map<string, string>() // subpath -> entry name (no extension)
+  let entryPoints: Record<string, string> = {}
+  for (let subpath of subpaths) {
+    let specifier = subpath === '.' ? '@remix-run/ui' : `@remix-run/ui/${subpath.slice(2)}`
+    let name = subpath === '.' ? 'index' : subpath.slice(2).replace(/\//g, '__')
+    let shimPath = path.join(shimDir, `${name}.ts`)
+    fs.writeFileSync(shimPath, `export * from '${specifier}'\n`)
+    entryPoints[name] = shimPath
+    entryNames.set(subpath, name)
+  }
 
   await esbuild.build({
-    stdin: {
-      contents: entryContents,
-      loader: 'ts',
-      resolveDir: UI_PACKAGE_DIR,
-    },
+    entryPoints,
     bundle: true,
+    splitting: true,
     format: 'esm',
     jsx: 'automatic',
     jsxImportSource: '@remix-run/ui',
     platform: 'browser',
     target: 'es2022',
-    outfile: REMIX_UI_ASSET_PATH,
+    outdir: REMIX_UI_ASSET_DIR,
+    absWorkingDir: UI_PACKAGE_DIR,
   })
 
-  // Map every subpath specifier to the same shared bundle URL —
+  // Map every subpath specifier to its own per-subpath bundle —
   // both @remix-run/ui/* (used by demo files) and remix/ui* (used by entry.js).
   let imports: Record<string, string> = {}
   for (let subpath of subpaths) {
+    let name = entryNames.get(subpath)!
     let rmxSpecifier = subpath === '.' ? '@remix-run/ui' : `@remix-run/ui/${subpath.slice(2)}`
     let remixSpecifier = subpath === '.' ? 'remix/ui' : `remix/ui/${subpath.slice(2)}`
-    imports[rmxSpecifier] = REMIX_UI_ASSET_HREF
-    imports[remixSpecifier] = REMIX_UI_ASSET_HREF
+    let href = `${REMIX_UI_ASSET_HREF_BASE}/${name}.js`
+    imports[rmxSpecifier] = href
+    imports[remixSpecifier] = href
   }
 
   return { imports }
@@ -294,7 +314,10 @@ function extractDemoMetadata(
   )
 }
 
-function readJsdocTag(jsDoc: ts.JSDoc, tagName: 'name' | 'description' | 'order'): string | undefined {
+function readJsdocTag(
+  jsDoc: ts.JSDoc,
+  tagName: 'name' | 'description' | 'order',
+): string | undefined {
   let tag = jsDoc.tags?.find((t) => t.tagName.text === tagName)
   if (!tag) return undefined
   let comment = tag.comment
