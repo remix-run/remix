@@ -1,5 +1,5 @@
 import { Database } from 'remix/data-table'
-import type { Middleware } from 'remix/fetch-router'
+import type { Middleware } from 'remix/router'
 
 import { db } from '../data/setup.ts'
 

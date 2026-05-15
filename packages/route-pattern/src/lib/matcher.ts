@@ -8,8 +8,6 @@ export type Match<source extends string = string, data = unknown> = RoutePattern
   data: data
 }
 
-type CompareFn = (a: RoutePatternMatch, b: RoutePatternMatch) => number
-
 /**
  * A type for matching URLs against patterns.
  */
@@ -33,7 +31,7 @@ export type Matcher<data = unknown> = {
    * @param url The URL to match
    * @returns The match result, or `null` if no match was found
    */
-  match(url: string | URL, compareFn?: CompareFn): Match<string, data> | null
+  match(url: string | URL): Match<string, data> | null
 
   /**
    * Find all matches for a URL.
@@ -41,7 +39,7 @@ export type Matcher<data = unknown> = {
    * @param url The URL to match
    * @returns All matches
    */
-  matchAll(url: string | URL, compareFn?: CompareFn): Array<Match<string, data>>
+  matchAll(url: string | URL): Array<Match<string, data>>
 }
 
 /**

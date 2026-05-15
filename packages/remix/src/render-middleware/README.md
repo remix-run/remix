@@ -20,8 +20,8 @@ npm i remix
 Use `renderWith()` to add a renderer to `context.render` and `context.get(Renderer)`.
 
 ```ts
-import { createRouter, type MiddlewareContext } from 'remix/fetch-router'
-import { renderWith } from 'remix/render-middleware'
+import { createRouter, type MiddlewareContext } from 'remix/router'
+import { renderWith } from 'remix/middleware/render'
 
 const render = renderWith(
   (context) =>
@@ -46,7 +46,7 @@ Use `context.render(...)` (or `context.get(Renderer)(...)`).
 Renderers may render any value type, not just UI nodes.
 
 ```ts
-import { renderWith } from 'remix/render-middleware'
+import { renderWith } from 'remix/middleware/render'
 
 const json = renderWith(
   () =>
@@ -64,7 +64,7 @@ For Remix UI, create a renderer that owns frame resolution and response creation
 
 ```tsx
 import { createHtmlResponse } from 'remix/response/html'
-import { renderWith } from 'remix/render-middleware'
+import { renderWith } from 'remix/middleware/render'
 import type { RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
 

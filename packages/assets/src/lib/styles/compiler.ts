@@ -44,7 +44,14 @@ type StyleGetOptions = {
 type StyleCompilerOptions = {
   buildId?: string
   fingerprintAssets: boolean
+  getServedFileUrl?(
+    identityPath: string,
+    options: {
+      transform: readonly string[] | null
+    },
+  ): Promise<string>
   isAllowed(absolutePath: string): boolean
+  isServedFilePath(filePath: string): boolean
   minify: boolean
   onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
   rootDir: string
@@ -79,6 +86,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
   let emitInFlightByCacheKey = new Map<string, Promise<EmittedStyle>>()
   let resolveArgs: ResolveArgs = {
     isAllowed: resolvedOptions.isAllowed,
+    isServedFilePath: resolvedOptions.isServedFilePath,
     isWatchIgnored,
     routes: resolvedOptions.routes,
   }
@@ -248,6 +256,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       let startedVersion = record.invalidationVersion
       let resolvedStyle = await getOrCreateResolvedStyle(record)
       let emitResolvedStyleResult = await emitResolvedStyle(resolvedStyle, {
+        getServedFileUrl: resolvedOptions.getServedFileUrl,
         getServedUrl,
         sourceMaps: resolvedOptions.sourceMaps,
       })

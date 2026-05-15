@@ -17,10 +17,10 @@ npm i remix
 ## Usage
 
 ```ts
-import { createRouter } from 'remix/fetch-router'
+import { createRouter } from 'remix/router'
 import { createCookie } from 'remix/cookie'
-import { createCookieSessionStorage } from 'remix/session/cookie-storage'
-import { session } from 'remix/session-middleware'
+import { createCookieSessionStorage } from 'remix/session-storage/cookie'
+import { session } from 'remix/middleware/session'
 
 let sessionCookie = createCookie('__session', {
   secrets: ['s3cr3t'], // session cookies must be signed!
@@ -56,7 +56,7 @@ Note: The session cookie must be signed for security. This prevents tampering wi
 A basic login/logout flow could look like this:
 
 ```ts
-import * as res from 'remix/fetch-router/response-helpers'
+import * as res from 'remix/router/response-helpers'
 
 router.get('/login', ({ session }) => {
   let error = session.get('error')

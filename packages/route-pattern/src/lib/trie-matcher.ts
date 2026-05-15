@@ -51,15 +51,14 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
    * Returns the best matching pattern for a URL.
    *
    * @param url URL to match.
-   * @param compareFn Specificity comparer used to rank matches.
    * @returns The best match, or `null` when nothing matches.
    */
-  match(url: string | URL, compareFn = Specificity.descending): Match<string, data> | null {
+  match(url: string | URL): Match<string, data> | null {
     url = typeof url === 'string' ? new URL(url) : url
     let bestMatch: Match<string, data> | null = null
     for (let result of this.trie.search(url)) {
       let match = toMatch(result, url)
-      if (bestMatch === null || compareFn(match, bestMatch) < 0) {
+      if (bestMatch === null || Specificity.greaterThan(match, bestMatch)) {
         bestMatch = match
       }
     }
@@ -70,13 +69,12 @@ export class TrieMatcher<data = unknown> implements Matcher<data> {
    * Returns every pattern that matches a URL.
    *
    * @param url URL to match.
-   * @param compareFn Specificity comparer used to sort matches.
-   * @returns All matching routes sorted by specificity.
+   * @returns All matching routes sorted by specificity (most specific first).
    */
-  matchAll(url: string | URL, compareFn = Specificity.descending): Array<Match<string, data>> {
+  matchAll(url: string | URL): Array<Match<string, data>> {
     url = typeof url === 'string' ? new URL(url) : url
     let matches = this.trie.search(url)
-    return matches.map((result) => toMatch(result, url)).sort(compareFn)
+    return matches.map((result) => toMatch(result, url)).sort(Specificity.descending)
   }
 }
 

@@ -6,7 +6,8 @@
     "node": ">=24.3.0"
   },
   "dependencies": {
-    "remix": "workspace:*"
+    "remix": "workspace:*",
+    "svgo": "^4.0.1"
   },
   "devDependencies": {
     "@types/node": "catalog:",
