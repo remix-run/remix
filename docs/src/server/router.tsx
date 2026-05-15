@@ -1,12 +1,14 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { openLazyFile } from 'remix/fs'
+import { staticFiles } from 'remix/middleware/static'
 import { createFileResponse } from 'remix/response/file'
 import { createHtmlResponse } from 'remix/response/html'
 import { createRouter as _createRouter, type Router } from 'remix/router'
 import { clientEntry, type RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
 import * as semver from 'semver'
+import { assetServer, entryPreloads } from './asset-server.ts'
 import { discoverDemoFiles, loadDemoComponent, renderDemoSource } from './demos.tsx'
 import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
 import { buildRegistry, type DocsRegistry } from './registry.ts'
@@ -17,12 +19,11 @@ const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const REPO_DIR = path.resolve(DOCS_DIR, '..')
 const BUILD_DIR = path.join(REPO_DIR, 'docs', 'build')
 const MD_DIR = path.join(BUILD_DIR, 'md')
-const ASSETS_DIR = path.join(BUILD_DIR, 'assets')
-const DEV_CSS_DIR = path.join(DOCS_DIR, 'public')
+const PUBLIC_DIR = path.join(BUILD_DIR, 'public')
 const REMIX_PKG_JSON = path.join(REPO_DIR, 'packages', 'remix', 'package.json')
 
 const { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
-const { demoFiles, importMap: demoImportMap } = await discoverDemoFiles()
+const demoFiles = await discoverDemoFiles()
 const docFiles = [...markdownFiles, ...demoFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
 
 const registryByVersion = new Map<string | undefined, DocsRegistry>()
@@ -43,7 +44,7 @@ export const getDefaultVersions = (): Versions => {
 }
 
 export function createRouter(versions: Versions) {
-  const router = _createRouter()
+  const router = _createRouter({ middleware: [staticFiles(PUBLIC_DIR)] })
 
   const respond = {
     async file(request: Request, filePath: string, name?: string) {
@@ -68,14 +69,12 @@ export function createRouter(versions: Versions) {
 
   router.map(routes, {
     actions: {
-      assets: ({ request, params }) => {
-        // Replicate `staticFiles` middleware but allowing for a dynamic version param
-        let devPath = path.join(DEV_CSS_DIR, params.asset)
-        let filePath =
-          process.env.NODE_ENV === 'development' && fs.existsSync(devPath)
-            ? devPath
-            : path.join(ASSETS_DIR, params.asset)
-        return respond.file(request, filePath, params.asset)
+      assets: async ({ request, params }) => {
+        // Drop the optional version prefix so the asset server sees a stable URL space.
+        let url = new URL(request.url)
+        url.pathname = routes.assets.href({ asset: params.asset })
+        let response = await assetServer.fetch(new Request(url, request))
+        return response ?? new Response('Not Found', { status: 404 })
       },
       async docs({ request, params }) {
         let docFile = docFiles.find((file) => file.urlPath === params.slug)
@@ -84,7 +83,7 @@ export function createRouter(versions: Versions) {
           versions: versions,
           slug: params.slug,
           activeVersion: params.version,
-          demoImportMap,
+          entryPreloads,
         }
 
         if (docFile) {
@@ -134,7 +133,7 @@ export function createRouter(versions: Versions) {
             registry={getRegistry(params.version)}
             versions={versions}
             activeVersion={params.version}
-            demoImportMap={demoImportMap}
+            entryPreloads={entryPreloads}
           >
             <Home />
           </Document>,

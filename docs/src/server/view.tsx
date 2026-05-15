@@ -7,8 +7,7 @@ import {
   MOBILE_NAV_MEDIA_RULE,
   MOBILE_TOP_BAR_HEIGHT_PX,
 } from '../shared/breakpoints.ts'
-import type { DemoDocFile, DemoImportMap } from './demos.tsx'
-import { REMIX_UI_ASSET_HREF } from './demos.tsx'
+import type { DemoDocFile } from './demos.tsx'
 import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
 import { routes } from './routes.ts'
@@ -21,13 +20,13 @@ export function Document(
     activeVersion?: string
     slug?: string
     registry: DocsRegistry
-    demoImportMap?: DemoImportMap
     children?: RemixNode | RemixNode[]
     sourceUrl?: string
+    entryPreloads: readonly string[]
   }>,
 ) {
   return () => {
-    let { registry, versions, activeVersion, slug, sourceUrl, demoImportMap, children } =
+    let { registry, versions, activeVersion, slug, sourceUrl, children, entryPreloads } =
       handle.props
     let page = slug
       ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug, activeVersion))
@@ -38,17 +37,8 @@ export function Document(
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <link
-            rel="icon"
-            href={routes.assets.href({ version: activeVersion, asset: 'favicon.ico' })}
-            sizes="32x32"
-          />
-          <link
-            rel="icon"
-            href={routes.assets.href({ version: activeVersion, asset: 'favicon.svg' })}
-            type="image/svg+xml"
-            sizes="any"
-          />
+          <link rel="icon" href="/favicon.ico" sizes="32x32" />
+          <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
           {activeVersion != null ? (
             <>
               <meta name="robots" content="noindex,nofollow" />
@@ -77,18 +67,17 @@ export function Document(
               title={`Markdown docs for ${page.docFile.name ?? page.title}`}
             />
           ) : null}
-          {demoImportMap ? (
-            <>
-              <script type="importmap" innerHTML={JSON.stringify(demoImportMap)} />
-              <link rel="modulepreload" href={REMIX_UI_ASSET_HREF} />
-            </>
-          ) : null}
-          {page.docFile?.kind === 'demo' ? (
-            <link rel="modulepreload" href={page.docFile.assetHref} />
-          ) : null}
+          {[
+            ...new Set([
+              ...entryPreloads,
+              ...(page.docFile?.kind === 'demo' ? page.docFile.preloads : []),
+            ]),
+          ].map((href) => (
+            <link key={href} rel="modulepreload" href={href} />
+          ))}
           <script
             type="module"
-            src={routes.assets.href({ version: activeVersion, asset: 'entry.js' })}
+            src={routes.assets.href({ version: activeVersion, asset: 'client/entry.tsx' })}
           />
           <RMX_01 />
         </head>
@@ -102,8 +91,7 @@ export function Document(
             tabIndex={-1}
           />
           <a href="https://remix.run" mix={mobileLogoBannerCss}>
-            <RemixLogoLight activeVersion={activeVersion} />
-            <RemixLogoDark activeVersion={activeVersion} />
+            <RemixLogos />
           </a>
           <label
             for="nav-toggle"
@@ -257,8 +245,7 @@ function Sidebar(
       <div mix={sidebarPanelCss}>
         <div mix={sidebarIntroCss}>
           <a href="https://remix.run" class="logo">
-            <RemixLogoLight activeVersion={activeVersion} />
-            <RemixLogoDark activeVersion={activeVersion} />
+            <RemixLogos />
           </a>
         </div>
 
@@ -323,40 +310,17 @@ function SidebarGroup(
   }
 }
 
-function RemixLogoLight(handle: Handle<{ activeVersion?: string }>) {
-  let { activeVersion } = handle.props
-  return () => {
-    return (
+function RemixLogos() {
+  return () => (
+    <>
       <div mix={logoLightCss}>
-        <img
-          src={routes.assets.href({
-            version: activeVersion,
-            asset: 'remix-wordmark-light-mode.svg',
-          })}
-          alt="Remix"
-          mix={logoCss}
-        />
+        <img src="/remix-wordmark-light-mode.svg" alt="Remix" mix={logoCss} />
       </div>
-    )
-  }
-}
-
-function RemixLogoDark(handle: Handle<{ activeVersion?: string }>) {
-  let { activeVersion } = handle.props
-  return () => {
-    return (
       <div mix={logoDarkCss}>
-        <img
-          src={routes.assets.href({
-            version: activeVersion,
-            asset: 'remix-wordmark-dark-mode.svg',
-          })}
-          alt="Remix"
-          mix={logoCss}
-        />
+        <img src="/remix-wordmark-dark-mode.svg" alt="Remix" mix={logoCss} />
       </div>
-    )
-  }
+    </>
+  )
 }
 
 function VersionSwitcher(

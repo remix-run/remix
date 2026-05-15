@@ -1,4 +1,3 @@
-import * as esbuild from 'esbuild'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as url from 'node:url'
@@ -6,23 +5,12 @@ import * as prettier from 'prettier'
 import type { RemixNode } from 'remix/ui'
 import { codeToHtml } from 'shiki'
 import ts from 'typescript'
+import { assetServer } from './asset-server.ts'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
-const REPO_DIR = path.resolve(DOCS_DIR, '..')
-const UI_COMPONENTS_DIR = path.join(REPO_DIR, 'packages', 'ui', 'src', 'components')
-const UI_PACKAGE_DIR = path.join(REPO_DIR, 'packages', 'ui')
 const DEMO_BUILD_DIR = path.join(DOCS_DIR, 'build', 'demos')
-const DEMO_ASSETS_DIR = path.join(DOCS_DIR, 'build', 'assets', 'demos')
-const REMIX_UI_ASSET_DIR = path.join(DOCS_DIR, 'build', 'assets', 'remix-ui')
-const REMIX_UI_ASSET_HREF_BASE = '/assets/remix-ui'
-// Index entry's href for things like <link rel="modulepreload">. Per-subpath
-// hrefs are surfaced through the import map.
-export const REMIX_UI_ASSET_HREF = `${REMIX_UI_ASSET_HREF_BASE}/index.js`
 const SOURCE_URL_BASE = 'https://github.com/remix-run/remix/blob/main'
-
-const UI_PACKAGE_JSON = path.join(UI_PACKAGE_DIR, 'package.json')
-
-export type DemoImportMap = { imports: Record<string, string> }
+const SOURCE_RELATIVE_BASE = 'packages/ui/src/components'
 
 export type DemoDocFile = {
   kind: 'demo'
@@ -33,6 +21,7 @@ export type DemoDocFile = {
   order: number
   package: string
   path: string
+  preloads: readonly string[]
   relativePath: string
   slug: string
   source: string
@@ -40,12 +29,14 @@ export type DemoDocFile = {
   urlPath: string
 }
 
-export async function discoverDemoFiles(): Promise<{
-  demoFiles: DemoDocFile[]
-  importMap: DemoImportMap
-}> {
-  let importMap = await buildDemoImportMap()
-  let demoPaths = walkDemoFiles(UI_COMPONENTS_DIR).sort()
+export async function discoverDemoFiles(): Promise<DemoDocFile[]> {
+  if (!fs.existsSync(DEMO_BUILD_DIR)) {
+    throw new Error(
+      `Demo build directory not found: ${DEMO_BUILD_DIR}. Run "pnpm build:demos" first.`,
+    )
+  }
+
+  let demoPaths = walkBuiltDemos(DEMO_BUILD_DIR).sort()
   let demoFiles = await Promise.all(demoPaths.map((demoPath) => getDemoFile(demoPath)))
 
   let seenUrls = new Map<string, string>()
@@ -59,10 +50,7 @@ export async function discoverDemoFiles(): Promise<{
     seenUrls.set(demo.urlPath, demo.relativePath)
   }
 
-  return {
-    demoFiles: demoFiles.sort((a, b) => a.urlPath.localeCompare(b.urlPath)),
-    importMap,
-  }
+  return demoFiles.sort((a, b) => a.urlPath.localeCompare(b.urlPath))
 }
 
 export async function loadDemoComponent(
@@ -89,21 +77,24 @@ export async function renderDemoSource(source: string): Promise<string> {
 }
 
 async function getDemoFile(filePath: string): Promise<DemoDocFile> {
-  let relativePath = path.relative(REPO_DIR, filePath).split(path.sep).join('/')
-  let rawSource = fs.readFileSync(filePath, 'utf-8')
-  let rewrittenSource = rewriteDemoImports(rawSource)
-  let slug = path.basename(filePath, '.demo.tsx')
-  let packageName = getDemoPackageName(relativePath)
-  let componentName = packageName.split('/').at(-1)!
-  let { name, description, order, displaySource } = extractDemoMetadata(
-    rewrittenSource,
-    relativePath,
-  )
+  // build/demos/ui/<comp>/<slug>.demo.tsx, mirrors source layout one-to-one.
+  let parts = path.relative(DEMO_BUILD_DIR, filePath).split(path.sep)
+  if (parts.length !== 3 || parts[0] !== 'ui' || !parts[2].endsWith('.demo.tsx')) {
+    throw new Error(`Invalid built demo location: ${filePath}`)
+  }
+  let component = parts[1]
+  let slug = parts[2].slice(0, -'.demo.tsx'.length)
+  let packageName = `remix/ui/${component}`
+  let relativePath = `${SOURCE_RELATIVE_BASE}/${component}/demos/${slug}.demo.tsx`
+
+  let source = fs.readFileSync(filePath, 'utf-8')
+  let { name, description, order, displaySource } = extractDemoMetadata(source, relativePath)
   let formattedSource = await formatDemoSource(displaySource, filePath)
-  let [importHref, assetHref] = await Promise.all([
-    compileDemoModule(rewrittenSource, packageName, slug),
-    buildDemoAsset(filePath, rawSource, componentName, slug, relativePath),
+  let [assetHref, preloads] = await Promise.all([
+    assetServer.getHref(filePath),
+    assetServer.getPreloads(filePath),
   ])
+  let importHref = url.pathToFileURL(filePath).href
 
   await loadDemoComponent({ importHref, slug })
 
@@ -116,6 +107,7 @@ async function getDemoFile(filePath: string): Promise<DemoDocFile> {
     order,
     package: packageName,
     path: filePath,
+    preloads,
     relativePath,
     slug,
     source: formattedSource,
@@ -131,147 +123,6 @@ async function formatDemoSource(source: string, filePath: string): Promise<strin
     filepath: filePath,
     printWidth: 80,
   })
-}
-
-async function compileDemoModule(
-  source: string,
-  packageName: string,
-  slug: string,
-): Promise<string> {
-  let result = await esbuild.transform(source, {
-    loader: 'tsx',
-    jsx: 'automatic',
-    jsxImportSource: 'remix/ui',
-    format: 'esm',
-    target: 'esnext',
-  })
-  let outDir = path.join(DEMO_BUILD_DIR, packageName.replace(/\//g, '__'))
-  fs.mkdirSync(outDir, { recursive: true })
-  let outPath = path.join(outDir, `${slug}.js`)
-  let existing = fs.existsSync(outPath) ? fs.readFileSync(outPath, 'utf-8') : null
-  if (existing !== result.code) {
-    fs.writeFileSync(outPath, result.code)
-  }
-  return url.pathToFileURL(outPath).href
-}
-
-async function buildDemoImportMap(): Promise<DemoImportMap> {
-  // Discover all subpaths from @remix-run/ui's package.json exports.
-  let uiPkg = JSON.parse(fs.readFileSync(UI_PACKAGE_JSON, 'utf-8')) as {
-    exports: Record<string, unknown>
-  }
-  let subpaths = Object.keys(uiPkg.exports).filter(
-    (k) => k !== './package.json' && k !== './server',
-  )
-
-  // Emit one entry per subpath so that `import * as <subpath>` in a demo
-  // resolves to *only* that subpath's exports. A single shared bundle that
-  // `export *`s every subpath silently drops names that collide across
-  // subpaths (e.g. `anchor` is exported by both `@remix-run/ui/anchor` and
-  // `@remix-run/ui/popover`), which surfaced as `popover.anchor is not a
-  // function` at runtime. esbuild's code-splitting dedupes the underlying
-  // modules across entries.
-  fs.mkdirSync(REMIX_UI_ASSET_DIR, { recursive: true })
-  let shimDir = path.join(DEMO_BUILD_DIR, '_remix-ui-shims')
-  fs.mkdirSync(shimDir, { recursive: true })
-
-  let entryNames = new Map<string, string>() // subpath -> entry name (no extension)
-  let entryPoints: Record<string, string> = {}
-  for (let subpath of subpaths) {
-    let specifier = subpath === '.' ? '@remix-run/ui' : `@remix-run/ui/${subpath.slice(2)}`
-    let name = subpath === '.' ? 'index' : subpath.slice(2).replace(/\//g, '__')
-    let shimPath = path.join(shimDir, `${name}.ts`)
-    fs.writeFileSync(shimPath, `export * from '${specifier}'\n`)
-    entryPoints[name] = shimPath
-    entryNames.set(subpath, name)
-  }
-
-  await esbuild.build({
-    entryPoints,
-    bundle: true,
-    splitting: true,
-    format: 'esm',
-    jsx: 'automatic',
-    jsxImportSource: '@remix-run/ui',
-    platform: 'browser',
-    target: 'es2022',
-    outdir: REMIX_UI_ASSET_DIR,
-    absWorkingDir: UI_PACKAGE_DIR,
-  })
-
-  // Map every subpath specifier to its own per-subpath bundle —
-  // both @remix-run/ui/* (used by demo files) and remix/ui* (used by entry.js).
-  let imports: Record<string, string> = {}
-  for (let subpath of subpaths) {
-    let name = entryNames.get(subpath)!
-    let rmxSpecifier = subpath === '.' ? '@remix-run/ui' : `@remix-run/ui/${subpath.slice(2)}`
-    let remixSpecifier = subpath === '.' ? 'remix/ui' : `remix/ui/${subpath.slice(2)}`
-    let href = `${REMIX_UI_ASSET_HREF_BASE}/${name}.js`
-    imports[rmxSpecifier] = href
-    imports[remixSpecifier] = href
-  }
-
-  return { imports }
-}
-
-async function buildDemoAsset(
-  filePath: string,
-  rawSource: string,
-  componentName: string,
-  slug: string,
-  relativePath: string,
-): Promise<string> {
-  // Fail fast if any @remix-run/ import isn't @remix-run/ui — those aren't
-  // covered by the import map and the browser can't resolve them.
-  let unsupported = [...rawSource.matchAll(/from\s+['"](@remix-run\/(?!ui)[^'"]+)['"]/g)]
-  if (unsupported.length > 0) {
-    let specifiers = unsupported.map((m) => m[1]).join(', ')
-    throw new Error(
-      `Demo "${relativePath}" imports from unsupported packages: ${specifiers}. ` +
-        `Only @remix-run/ui/* imports are supported in demos.`,
-    )
-  }
-
-  // Transform-only (no bundling) — @remix-run/ui/* imports are left as bare
-  // specifiers for the browser to resolve via the import map.
-  let result = await esbuild.transform(rawSource, {
-    loader: 'tsx',
-    jsx: 'automatic',
-    jsxImportSource: '@remix-run/ui',
-    format: 'esm',
-    target: 'es2022',
-  })
-
-  let outDir = path.join(DEMO_ASSETS_DIR, componentName)
-  fs.mkdirSync(outDir, { recursive: true })
-  let outfile = path.join(outDir, `${slug}.js`)
-  fs.writeFileSync(outfile, result.code)
-
-  return `/assets/demos/${componentName}/${slug}.js`
-}
-
-function getDemoPackageName(relativePath: string) {
-  let parts = relativePath.split('/')
-  if (
-    parts.length !== 7 ||
-    parts[0] !== 'packages' ||
-    parts[1] !== 'ui' ||
-    parts[2] !== 'src' ||
-    parts[3] !== 'components' ||
-    parts[5] !== 'demos' ||
-    !parts[6]?.endsWith('.demo.tsx')
-  ) {
-    throw new Error(`Invalid demo location: ${relativePath}`)
-  }
-
-  return `remix/ui/${parts[4]}`
-}
-
-function rewriteDemoImports(source: string): string {
-  return source.replace(
-    /(from\s+['"]|import\s*\(\s*['"])@remix-run\//g,
-    (_match, prefix) => `${prefix}remix/`,
-  )
 }
 
 function extractDemoMetadata(
@@ -331,24 +182,15 @@ function readJsdocTag(
   return trimmed.length > 0 ? trimmed : undefined
 }
 
-function walkDemoFiles(directory: string): string[] {
+function walkBuiltDemos(directory: string): string[] {
   let files: string[] = []
-
-  for (let entry of fs.readdirSync(directory, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue
-    let absolutePath = path.join(directory, entry.name)
-
-    if (entry.name === 'demos') {
-      for (let demoEntry of fs.readdirSync(absolutePath, { withFileTypes: true })) {
-        if (demoEntry.isFile() && demoEntry.name.endsWith('.demo.tsx')) {
-          files.push(path.join(absolutePath, demoEntry.name))
-        }
-      }
-      continue
+  function recurse(dir: string) {
+    for (let entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      let p = path.join(dir, entry.name)
+      if (entry.isDirectory()) recurse(p)
+      else if (entry.name.endsWith('.demo.tsx')) files.push(p)
     }
-
-    files.push(...walkDemoFiles(absolutePath))
   }
-
+  recurse(directory)
   return files
 }
