@@ -75,6 +75,13 @@ export function createStyleManager(layer: string = 'rmx') {
   // Using an object to track both count and index together
   let ruleMap = new Map<string, RuleEntry>()
 
+  // Selectors currently held by a server-style adoption ref. We track this
+  // separately from `ruleMap` so `replaceServerStyles` can release only the
+  // adoption refs of selectors absent from the next page, without disturbing
+  // selectors that exist solely because a client-side css mixin inserted them
+  // (e.g. transient UI state that the server never rendered).
+  let adoptedSelectors = new Set<string>()
+
   function getStylesheet(): CSSStyleSheet {
     if (!stylesheet) {
       stylesheet = new CSSStyleSheet()
@@ -98,19 +105,27 @@ export function createStyleManager(layer: string = 'rmx') {
     }
   }
 
-  function adoptServerStyleTag(styleEl: HTMLStyleElement) {
+  function adoptServerStyleTag(styleEl: HTMLStyleElement): string | undefined {
     let selector = getStyleSelector(styleEl)
-    if (!selector) return
+    if (!selector) return undefined
 
     if (ruleMap.has(selector)) {
+      // Already tracked. Take an adoption ref if we don't already have one —
+      // the rule may have been inserted by a client-side css mixin first and
+      // the SSR'd style tag arrived afterwards (e.g. a streamed fragment).
+      if (!adoptedSelectors.has(selector)) {
+        let entry = ruleMap.get(selector)!
+        entry.count++
+        adoptedSelectors.add(selector)
+      }
       styleEl.remove()
-      return
+      return selector
     }
 
     let cssText = styleEl.textContent?.trim() ?? ''
     if (cssText.length === 0) {
       styleEl.remove()
-      return
+      return undefined
     }
 
     try {
@@ -118,9 +133,12 @@ export function createStyleManager(layer: string = 'rmx') {
       let index = sheet.cssRules.length
       sheet.insertRule(cssText, index)
       ruleMap.set(selector, { count: 1, index })
+      adoptedSelectors.add(selector)
       styleEl.remove()
+      return selector
     } catch {
       // If adoption fails, keep the <style> tag in the DOM so styles still apply.
+      return undefined
     }
   }
 
@@ -169,6 +187,7 @@ export function createStyleManager(layer: string = 'rmx') {
 
     // Remove from tracking
     ruleMap.delete(className)
+    adoptedSelectors.delete(className)
 
     // TODO: just search and remove, stop re-indexing
     if (!stylesheet) return
@@ -186,24 +205,69 @@ export function createStyleManager(layer: string = 'rmx') {
   function reset() {
     clearStylesheet()
     ruleMap.clear()
+    adoptedSelectors.clear()
     removeStylesheet()
     generation++
   }
 
-  function adoptServerStyles(source: ServerStyleSource) {
+  function adoptServerStyles(source: ServerStyleSource): Set<string> {
     let styles = collectServerStyleTags(source)
+    let adopted = new Set<string>()
 
     for (let styleEl of styles) {
-      adoptServerStyleTag(styleEl)
+      let selector = adoptServerStyleTag(styleEl)
+      if (selector) adopted.add(selector)
     }
+
+    return adopted
+  }
+
+  // Snapshot the currently-adopted server selectors, adopt the incoming
+  // server styles additively, then release the adoption ref of any prior-only
+  // selectors.
+  //
+  // Refcount-aware semantics keep preserved DOM styled: a prior-only selector
+  // with no live css-mixin ref drops immediately, but one still referenced by
+  // an active mixin (e.g. inside a hydration region that the DOM diff skipped)
+  // stays in the stylesheet and is only fully removed when that mixin's
+  // `remove` event eventually fires. This avoids the FOUC that a hard
+  // `reset()` would cause between the style swap and the hydration re-render.
+  //
+  // Only adoption refs are considered — selectors that exist solely because a
+  // client-side css mixin inserted them (e.g. transient UI state never
+  // rendered by the server) are unaffected.
+  function replaceServerStyles(source: ServerStyleSource): void {
+    let prior = new Set(adoptedSelectors)
+    let adopted = adoptServerStyles(source)
+    for (let selector of prior) {
+      if (!adopted.has(selector)) {
+        adoptedSelectors.delete(selector)
+        remove(selector)
+      }
+    }
+  }
+
+  function selectors(): IterableIterator<string> {
+    return ruleMap.keys()
   }
 
   function dispose() {
     removeStylesheet()
     // Clear internal state
     ruleMap.clear()
+    adoptedSelectors.clear()
     generation++
   }
 
-  return { insert, remove, has, getGeneration, reset, adoptServerStyles, dispose }
+  return {
+    insert,
+    remove,
+    has,
+    getGeneration,
+    reset,
+    adoptServerStyles,
+    replaceServerStyles,
+    selectors,
+    dispose,
+  }
 }

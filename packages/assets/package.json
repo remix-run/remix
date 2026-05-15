@@ -33,7 +33,9 @@
   },
   "dependencies": {
     "@oxc-project/runtime": "^0.121.0",
+    "@remix-run/file-storage": "workspace:*",
     "@remix-run/headers": "workspace:*",
+    "@remix-run/mime": "workspace:*",
     "@remix-run/route-pattern": "workspace:*",
     "chokidar": "^5.0.0",
     "es-module-lexer": "^2.0.0",
