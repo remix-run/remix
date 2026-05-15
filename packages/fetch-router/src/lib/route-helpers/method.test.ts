@@ -1,6 +1,5 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
-import { RoutePattern } from '@remix-run/route-pattern'
 
 import type { Assert, IsEqual } from '../type-utils.ts'
 import { Route, createRoutes as route } from '../route-map.ts'
@@ -122,8 +121,8 @@ const composedRoutes = route({
     health: head('/api/health'),
     options: options('/api/settings'),
   },
-  patch: patch(new RoutePattern('/patch')),
-  put: put(new RoutePattern('/misc/put')),
+  patch: patch('/patch'),
+  put: put('/misc/put'),
 })
 
 /* oxlint-disable-next-line eslint/no-unused-vars */

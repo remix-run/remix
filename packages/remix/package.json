@@ -88,6 +88,9 @@
     "./response/html": "./src/response/html.ts",
     "./response/redirect": "./src/response/redirect.ts",
     "./route-pattern": "./src/route-pattern.ts",
+    "./route-pattern/href": "./src/route-pattern/href.ts",
+    "./route-pattern/join": "./src/route-pattern/join.ts",
+    "./route-pattern/match": "./src/route-pattern/match.ts",
     "./route-pattern/specificity": "./src/route-pattern/specificity.ts",
     "./router": "./src/fetch-router.ts",
     "./routes": "./src/fetch-router/routes.ts",
@@ -398,6 +401,18 @@
       "./route-pattern": {
         "types": "./dist/route-pattern.d.ts",
         "default": "./dist/route-pattern.js"
+      },
+      "./route-pattern/href": {
+        "types": "./dist/route-pattern/href.d.ts",
+        "default": "./dist/route-pattern/href.js"
+      },
+      "./route-pattern/join": {
+        "types": "./dist/route-pattern/join.d.ts",
+        "default": "./dist/route-pattern/join.js"
+      },
+      "./route-pattern/match": {
+        "types": "./dist/route-pattern/match.d.ts",
+        "default": "./dist/route-pattern/match.js"
       },
       "./route-pattern/specificity": {
         "types": "./dist/route-pattern/specificity.d.ts",

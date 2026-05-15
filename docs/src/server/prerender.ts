@@ -6,9 +6,12 @@ import * as util from 'node:util'
 import { type Router } from 'remix/router'
 import * as semver from 'semver'
 import { assetServer } from './asset-server.ts'
+import { createMatcher } from 'remix/route-pattern/match'
 import { createRouter, getDefaultVersions } from './router.tsx'
 import { routes } from './routes.ts'
 import type { Versions } from './view.tsx'
+
+let docsMatcher = createMatcher(routes.docs.pattern)
 
 let { values: cliArgs } = util.parseArgs({
   options: {
@@ -137,7 +140,7 @@ async function crawl(router: Router, urlPath: string, outputDir: string) {
       .filter((href): href is string => !!href && !isAbsoluteUrl(href))
       .map((href) => resolveRelativeLink(href, urlPath))
       .flatMap((href) => {
-        let match = routes.docs.match(`http://localhost${href}`)
+        let match = docsMatcher.match(`http://localhost${href}`)
         return match ? [href, routes.markdown.href(match.params)] : [href]
       })
 

@@ -1,5 +1,8 @@
 import { RoutePattern } from '@remix-run/route-pattern'
-import type { HrefArgs, Join, RoutePatternMatch } from '@remix-run/route-pattern'
+import type { CreateHrefArgs } from '@remix-run/route-pattern/href'
+import { createHref } from '@remix-run/route-pattern/href'
+import type { JoinPatterns } from '@remix-run/route-pattern/join'
+import { joinPatterns } from '@remix-run/route-pattern/join'
 
 import type { RequestMethod } from './request-methods.ts'
 import type { Simplify } from './type-utils.ts'
@@ -27,17 +30,18 @@ export class Route<
   readonly method: method | 'ANY'
 
   /**
-   * The pattern this route matches.
+   * The parsed route-pattern AST. Useful for advanced consumers (e.g. matchers) that want to skip
+   * re-parsing the source string.
    */
   readonly pattern: RoutePattern<pattern>
 
   /**
    * @param method The HTTP method this route matches
-   * @param pattern The pattern this route matches
+   * @param pattern The route-pattern source string or pre-parsed AST
    */
   constructor(method: method | 'ANY', pattern: pattern | RoutePattern<pattern>) {
     this.method = method
-    this.pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
+    this.pattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
   }
 
   /**
@@ -46,18 +50,8 @@ export class Route<
    * @param args The parameters to use for building the href
    * @returns The built URL href
    */
-  href(...args: HrefArgs<pattern>): string {
-    return this.pattern.href(...args)
-  }
-
-  /**
-   * Match a URL against this route's pattern.
-   *
-   * @param url The URL to match
-   * @returns The match result, or `null` if the URL doesn't match
-   */
-  match(url: string | URL): RoutePatternMatch<pattern> | null {
-    return this.pattern.match(url)
+  href(...args: CreateHrefArgs<pattern>): string {
+    return createHref(this.pattern, ...(args as any))
   }
 }
 
@@ -89,12 +83,13 @@ export function createRoutes<base extends string, const defs extends RouteDefs>(
   defs: defs,
 ): BuildRouteMap<base, defs>
 export function createRoutes(baseOrDefs: any, defs?: RouteDefs): RouteMap {
-  return typeof baseOrDefs === 'string' || baseOrDefs instanceof RoutePattern
-    ? buildRouteMap(
-        typeof baseOrDefs === 'string' ? new RoutePattern(baseOrDefs) : baseOrDefs,
-        defs!,
-      )
-    : buildRouteMap(new RoutePattern('/'), baseOrDefs)
+  let baseIsPattern = typeof baseOrDefs === 'string' || baseOrDefs instanceof RoutePattern
+  if (baseIsPattern) {
+    let baseAst: RoutePattern =
+      typeof baseOrDefs === 'string' ? RoutePattern.parse(baseOrDefs) : baseOrDefs
+    return buildRouteMap(baseAst, defs!)
+  }
+  return buildRouteMap(RoutePattern.parse('/'), baseOrDefs)
 }
 
 function buildRouteMap<base extends string, defs extends RouteDefs>(
@@ -107,11 +102,15 @@ function buildRouteMap<base extends string, defs extends RouteDefs>(
     let def = defs[key]
 
     if (def instanceof Route) {
-      routes[key] = new Route(def.method, base.join(def.pattern))
-    } else if (typeof def === 'string' || def instanceof RoutePattern) {
-      routes[key] = new Route('ANY', base.join(def))
+      routes[key] = new Route(def.method, joinPatterns(base, def.pattern))
+    } else if (typeof def === 'string') {
+      routes[key] = new Route('ANY', joinPatterns(base, RoutePattern.parse(def)))
+    } else if (def instanceof RoutePattern) {
+      routes[key] = new Route('ANY', joinPatterns(base, def))
     } else if (typeof def === 'object' && def != null && 'pattern' in def) {
-      routes[key] = new Route((def as any).method ?? 'ANY', base.join((def as any).pattern))
+      let defPattern: RoutePattern =
+        typeof def.pattern === 'string' ? RoutePattern.parse(def.pattern) : (def as any).pattern
+      routes[key] = new Route((def as any).method ?? 'ANY', joinPatterns(base, defPattern))
     } else {
       routes[key] = buildRouteMap(base, def as any)
     }
@@ -123,7 +122,7 @@ function buildRouteMap<base extends string, defs extends RouteDefs>(
 // prettier-ignore
 export type BuildRouteMap<base extends string, defs extends RouteDefs> = Simplify<{
   -readonly [name in keyof defs]: (
-    defs[name] extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? Route<method, Join<base, pattern>> :
+    defs[name] extends Route<infer method extends RequestMethod | 'ANY', infer pattern extends string> ? Route<method, JoinPatterns<base, pattern>> :
     defs[name] extends RouteDef ? BuildRouteWithBase<base, defs[name]> :
     defs[name] extends RouteDefs ? BuildRouteMap<base, defs[name]> :
     never
@@ -132,11 +131,11 @@ export type BuildRouteMap<base extends string, defs extends RouteDefs> = Simplif
 
 // prettier-ignore
 type BuildRouteWithBase<base extends string, def extends RouteDef> =
-  def extends string ? Route<'ANY', Join<base, def>> :
-  def extends RoutePattern<infer pattern extends string> ? Route<'ANY', Join<base, pattern>> :
+  def extends string ? Route<'ANY', JoinPatterns<base, def>> :
+  def extends RoutePattern<infer pattern extends string> ? Route<'ANY', JoinPatterns<base, pattern>> :
   def extends { method: infer method extends RequestMethod | 'ANY', pattern: infer pattern } ? (
-    pattern extends string ? Route<method, Join<base, pattern>> :
-    pattern extends RoutePattern<infer source extends string> ? Route<method, Join<base, source>> :
+    pattern extends string ? Route<method, JoinPatterns<base, pattern>> :
+    pattern extends RoutePattern<infer source extends string> ? Route<method, JoinPatterns<base, source>> :
     never
   ) :
   never
@@ -152,8 +151,8 @@ export interface RouteDefs {
 }
 
 /**
- * A route definition that can be a string pattern, `RoutePattern`, or an object with method and
- * pattern.
+ * A route definition that can be a string pattern, pre-parsed `RoutePattern`, or an object with
+ * method and pattern.
  */
 export type RouteDef<source extends string = string> =
   | source

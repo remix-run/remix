@@ -35,7 +35,7 @@ let urls: Array<URL> = [
 ].map((pathname) => new URL(`https://shopify.com${pathname}`))
 
 benchMatchers({
-  matchers: [matchers.pathToRegexp, matchers.routePatternArray, matchers.routePatternTrie],
+  matchers: [matchers.pathToRegexp, matchers.routePatternArray, matchers.routePattern],
   patterns,
   urls,
 })

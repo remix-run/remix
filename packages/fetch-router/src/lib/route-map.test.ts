@@ -5,6 +5,13 @@ import type { Assert, IsEqual } from './type-utils.ts'
 import { Route, createRoutes as route } from './route-map.ts'
 
 describe('createRoutes', () => {
+  it('stores route method and pattern', () => {
+    let route = new Route('GET', '/users/:id')
+
+    assert.equal(route.method, 'GET')
+    assert.equal(route.pattern.toString(), '/users/:id')
+  })
+
   it('creates a route map', () => {
     let routes = route({
       home: '/',

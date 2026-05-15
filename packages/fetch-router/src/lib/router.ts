@@ -1,8 +1,13 @@
-import { type Matcher, createMatcher, RoutePattern } from '@remix-run/route-pattern'
+import { RoutePattern } from '@remix-run/route-pattern'
+import {
+  createMultiMatcher,
+  type MatchParams,
+  type MultiMatcher,
+} from '@remix-run/route-pattern/match'
 
 import { type AnyMiddleware, type MiddlewareContext, runMiddleware } from './middleware.ts'
 import { raceRequestAbort } from './request-abort.ts'
-import { RequestContext } from './request-context.ts'
+import { type ContextWithParams, RequestContext } from './request-context.ts'
 import type { RequestMethod } from './request-methods.ts'
 import { type RouteMap, Route } from './route-map.ts'
 import {
@@ -20,6 +25,11 @@ type RouteTarget<
   pattern extends string = string,
   method extends RequestMethod | 'ANY' = RequestMethod | 'ANY',
 > = pattern | RoutePattern<pattern> | Route<method | 'ANY', pattern>
+
+type RouteContext<context extends AnyContext, pattern extends string> = ContextWithParams<
+  context,
+  MatchParams<pattern>
+>
 
 type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
   <pattern extends string, actionContext extends AnyContext = context>(
@@ -50,12 +60,31 @@ export interface RouteEntry {
   middleware: AnyMiddleware[] | undefined
 }
 
+export type MatchData = RouteEntry
+
 type NormalizedAction = {
   handler: RequestHandler<any>
   middleware: AnyMiddleware[] | undefined
 }
 
-type MapTarget = RouteTarget | RouteMap
+/**
+ * The valid types for the first argument to `router.map()`.
+ */
+export type MapTarget = RouteTarget | RouteMap
+
+/**
+ * Infer the correct handler type (Action or Controller) based on the map target.
+ */
+// prettier-ignore
+export type MapHandler<
+  target extends MapTarget,
+  context extends AnyContext = RequestContext,
+> =
+  target extends string ? Action<target, context> :
+  target extends RoutePattern<infer pattern extends string> ? Action<RoutePattern<pattern>, context> :
+  target extends Route<any, any> ? Action<target, context> :
+  target extends RouteMap ? Controller<target, context> :
+  never
 
 /**
  * Options for creating a router.
@@ -71,9 +100,10 @@ export interface RouterOptions<
   defaultHandler?: RequestHandler<MiddlewareContext<middleware, context>>
   /**
    * The matcher to use for matching routes.
-   * Defaults to `createMatcher()`.
+   *
+   * @default `createMultiMatcher()`
    */
-  matcher?: Matcher<RouteEntry>
+  matcher?: MultiMatcher<MatchData>
   /**
    * Middleware to run for every request handled by this router.
    *
@@ -180,8 +210,49 @@ function normalizeAction(action: unknown): NormalizedAction {
   }
 }
 
+function mergeMiddleware(
+  upstream: AnyMiddleware[] | undefined,
+  downstream: AnyMiddleware[] | undefined,
+): AnyMiddleware[] | undefined {
+  if (!upstream || upstream.length === 0) {
+    return downstream
+  }
+
+  if (!downstream || downstream.length === 0) {
+    return upstream
+  }
+
+  return upstream.concat(downstream)
+}
+
 function isRouteTarget(target: MapTarget): target is RouteTarget {
-  return typeof target === 'string' || target instanceof RoutePattern || target instanceof Route
+  return typeof target === 'string' || target instanceof Route || target instanceof RoutePattern
+}
+
+function createRequestContext(input: string | URL | Request, init?: RequestInit): RequestContext {
+  let request = input instanceof Request && init == null ? input : new Request(input, init)
+
+  if (request.signal.aborted) {
+    throw request.signal.reason
+  }
+
+  return new RequestContext(request)
+}
+
+function getRoutePattern(target: RouteTarget): RoutePattern {
+  if (target instanceof Route) {
+    return target.pattern
+  }
+
+  if (typeof target === 'string') {
+    return RoutePattern.parse(target)
+  }
+
+  return target
+}
+
+function getMappedRouteMethod(target: RouteTarget): RequestMethod | 'ANY' {
+  return target instanceof Route ? target.method : 'ANY'
 }
 
 /**
@@ -202,7 +273,7 @@ export function createRouter<
   type RouterContext = MiddlewareContext<middleware, context>
 
   let defaultHandler = (options?.defaultHandler ?? noMatchHandler) as RequestHandler<any>
-  let matcher = options?.matcher ?? createMatcher<RouteEntry>()
+  let matcher = options?.matcher ?? createMultiMatcher<MatchData>()
   let routerMiddleware = normalizeMiddleware(options?.middleware)
 
   async function dispatchRouter(context: RequestContext): Promise<Response> {
@@ -240,12 +311,7 @@ export function createRouter<
     route: RouteTarget,
     action: NormalizedAction,
   ): void {
-    let pattern =
-      route instanceof Route
-        ? route.pattern
-        : typeof route === 'string'
-          ? new RoutePattern(route)
-          : route
+    let pattern = getRoutePattern(route)
     let entry: RouteEntry = {
       pattern,
       handler: action.handler,
@@ -282,7 +348,7 @@ export function createRouter<
   }
 
   function mapSingleRoute(target: RouteTarget, handler: unknown): void {
-    registerRoute(target instanceof Route ? target.method : 'ANY', target, normalizeAction(handler))
+    registerRoute(getMappedRouteMethod(target), target, normalizeAction(handler))
   }
 
   function mapController(
@@ -315,14 +381,9 @@ export function createRouter<
         }
 
         let action = normalizeAction(controller.actions[key])
-        let middleware = action.middleware
-        if (controllerMiddleware) {
-          middleware = middleware ? controllerMiddleware.concat(middleware) : controllerMiddleware
-        }
-
-        registerRoute(route.method, route.pattern, {
+        registerRoute(route.method, route, {
           handler: action.handler,
-          middleware,
+          middleware: mergeMiddleware(controllerMiddleware, action.middleware),
         })
       }
     }
@@ -341,13 +402,7 @@ export function createRouter<
 
   let router: Router<RouterContext> = {
     fetch(input: string | URL | Request, init?: RequestInit): Promise<Response> {
-      let request = input instanceof Request && init == null ? input : new Request(input, init)
-
-      if (request.signal.aborted) {
-        throw request.signal.reason
-      }
-
-      let context = new RequestContext(request)
+      let context = createRequestContext(input, init)
       context.router = router
 
       return dispatchRouter(context)
