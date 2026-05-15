@@ -1,6 +1,5 @@
 import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import { loadModule } from '@remix-run/node-tsx/load-module'
 import { IS_BUN } from './runtime.ts'
 
 interface ImportMetaWithResolve extends ImportMeta {
@@ -35,5 +34,7 @@ export async function importModule(specifier: string, meta: ImportMeta): Promise
     return import(meta.resolve(resolvedSpecifier, meta.url))
   }
 
+  // node-tsx uses Node APIs that fail in Bun if statically imported
+  let { loadModule } = await import('@remix-run/node-tsx/load-module')
   return loadModule(resolvedSpecifier, meta.url)
 }
