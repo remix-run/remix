@@ -29,8 +29,20 @@
   "publishConfig": {
     "exports": {
       ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
+        "types": "./dist/route-pattern.d.ts",
+        "default": "./dist/route-pattern.js"
+      },
+      "./href": {
+        "types": "./dist/href.d.ts",
+        "default": "./dist/href.js"
+      },
+      "./join": {
+        "types": "./dist/join.d.ts",
+        "default": "./dist/join.js"
+      },
+      "./match": {
+        "types": "./dist/match.d.ts",
+        "default": "./dist/match.js"
       },
       "./specificity": {
         "types": "./dist/specificity.d.ts",
