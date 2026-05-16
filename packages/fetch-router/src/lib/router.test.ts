@@ -6,7 +6,7 @@ import { createRoutes as route } from '../routes.ts'
 import type { Action } from './controller.ts'
 import type { RequestContext } from './request-context.ts'
 import type { RouteEntry } from './router.ts'
-import { createRouter } from './router.ts'
+import { createRouter, MatchedRoute } from './router.ts'
 
 describe('router.fetch()', () => {
   it('fetches a route', async () => {
@@ -91,6 +91,79 @@ describe('router.fetch()', () => {
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Home')
     assert.deepEqual(requestLog, ['router middleware', 'route middleware'])
+  })
+
+  it('stores the matched route in context before route middleware runs', async () => {
+    let routes = route({
+      profile: '/profile/:id',
+    })
+
+    let matchedRoutes: RouteEntry[] = []
+    let router = createRouter()
+
+    router.get(routes.profile, {
+      middleware: [
+        (context) => {
+          let matchedRoute = context.get(MatchedRoute)
+          if (matchedRoute != null) {
+            matchedRoutes.push(matchedRoute)
+          }
+        },
+      ],
+      handler() {
+        return new Response('Profile')
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/profile/123')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Profile')
+    assert.equal(matchedRoutes.length, 1)
+    assert.equal(matchedRoutes[0]?.pattern.source, '/profile/:id')
+    assert.equal(matchedRoutes[0]?.method, 'GET')
+  })
+
+  it('lets router middleware read the matched route after downstream dispatch', async () => {
+    let matchedRoutes: Array<string | undefined> = []
+    let router = createRouter({
+      middleware: [
+        async (context, next) => {
+          let response = await next()
+          matchedRoutes.push(context.get(MatchedRoute)?.pattern.source)
+          return response
+        },
+      ],
+    })
+
+    router.get('/account/:id', () => new Response('Account'))
+
+    let response = await router.fetch('https://remix.run/account/123')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Account')
+    assert.deepEqual(matchedRoutes, ['/account/:id'])
+  })
+
+  it('does not store a matched route when no route matches', async () => {
+    let matchedRoutes: Array<string | undefined> = []
+    let router = createRouter({
+      middleware: [
+        async (context, next) => {
+          let response = await next()
+          matchedRoutes.push(context.get(MatchedRoute)?.pattern.source)
+          return response
+        },
+      ],
+    })
+
+    router.get('/', () => new Response('Home'))
+
+    let response = await router.fetch('https://remix.run/missing')
+
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Not Found: /missing')
+    assert.deepEqual(matchedRoutes, [undefined])
   })
 
   it('fetches a route with specific method actions', async () => {

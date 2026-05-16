@@ -1,0 +1,1 @@
+Added a `MatchedRoute` request context key that stores the route entry matched by `createRouter()`. Router middleware can read it after `await next()`, and route middleware or handlers can read it during matched route dispatch.

@@ -21,5 +21,5 @@ export type { Middleware, MiddlewareContext, NextFunction } from './lib/middlewa
 export { RequestMethods, isRequestMethod } from './lib/request-methods.ts'
 export type { RequestMethod } from './lib/request-methods.ts'
 
-export { createRouter } from './lib/router.ts'
+export { createRouter, MatchedRoute } from './lib/router.ts'
 export type { RouteEntry, Router, RouterOptions } from './lib/router.ts'
