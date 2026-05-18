@@ -16,7 +16,7 @@ catalogs:
       specifier: ^1.59.0
       version: 1.59.0
     tsx:
-      specifier: ^4.20.6
+      specifier: ^4.21.0
       version: 4.21.0
     typescript:
       specifier: ^5.9.3
@@ -2023,6 +2023,9 @@ importers:
       semver:
         specifier: ^7.6.3
         version: 7.6.3
+      yaml:
+        specifier: ^2.9.0
+        version: 2.9.0
 
   template:
     dependencies:
