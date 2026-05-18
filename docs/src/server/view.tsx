@@ -332,13 +332,6 @@ function DocsFooter() {
 
 // Typography mirrors the `.md-prose` rules from the remix.run blog
 // (`/styles/md.css`) and is applied site-wide.
-//
-// `!important` is required on the margin/decoration overrides below because the
-// RMX_01 theme renders an unlayered `:where(h1, h2, ..., p, ul, ol, ...)
-// { margin: 0 }` reset, while the `css()` mixin always wraps its rules in
-// `@layer rmx.*`. Per the CSS cascade, unlayered author rules beat any layered
-// author rule of equal/lower importance regardless of specificity — so without
-// `!important` our margins are silently dropped.
 const bodyCss = css({
   margin: 0,
   backgroundColor: theme.surface.lvl0,
@@ -349,22 +342,23 @@ const bodyCss = css({
   lineHeight: '1.4',
   letterSpacing: '-0.008em',
 
+  // Headings
   '& :is(h1, h2, h3, h4, h5, h6)': {
     fontFamily: theme.fontFamily.sans,
     fontWeight: theme.fontWeight.bold,
     letterSpacing: '-0.02em',
     lineHeight: '1',
     color: theme.colors.text.primary,
-    marginTop: `${theme.space.lg} !important`,
-    marginBottom: `${theme.space.lg} !important`,
+    margin: `${theme.space.lg} 0`,
   },
   '& h1': {
     fontSize: 'clamp(1.5rem, 4vw, 3.5rem)',
     overflowWrap: 'anywhere',
+    marginTop: theme.space.xxl,
   },
   '& h2': {
     fontSize: 'clamp(1.375rem, 2.5vw, 1.625rem)',
-    marginTop: `calc(${theme.space.xxl} + ${theme.space.lg}) !important`,
+    marginTop: theme.space.xxl,
   },
   '& h3': {
     fontSize: 'clamp(1.125rem, 1.75vw, 1.25rem)',
@@ -379,28 +373,27 @@ const bodyCss = css({
     fontSize: '1rem',
   },
 
+  // Paragraphs
   '& p': {
-    marginTop: `${theme.space.lg} !important`,
-    marginBottom: `${theme.space.lg} !important`,
+    margin: `${theme.space.lg} 0`,
   },
 
+  // Lists
+  '& ol, & ul': {
+    margin: `${theme.space.xxl} 0 ${theme.space.lg}`,
+    paddingInlineStart: theme.space.xxl,
+  },
   '& ul': {
     listStyle: 'disc',
-    marginTop: `${theme.space.xxl} !important`,
-    marginBottom: `${theme.space.lg} !important`,
-    paddingInlineStart: theme.space.xxl,
   },
   '& ol': {
     listStyle: 'decimal',
-    marginTop: `${theme.space.xxl} !important`,
-    marginBottom: `${theme.space.lg} !important`,
-    paddingInlineStart: theme.space.xxl,
   },
   '& li + li': {
     marginTop: theme.space.xs,
   },
   '& li > p': {
-    margin: '0 !important',
+    margin: 0,
   },
 
   '& a': {
@@ -417,7 +410,7 @@ const bodyCss = css({
     border: `1px solid ${theme.colors.border.subtle}`,
     borderRadius: theme.radius.md,
     padding: theme.space.md,
-    margin: `${theme.space.lg} 0 !important`,
+    margin: `${theme.space.lg} 0`,
     overflowX: 'auto',
     lineHeight: theme.lineHeight.relaxed,
     '@media (min-width: 768px)': {
@@ -436,26 +429,26 @@ const bodyCss = css({
   },
 
   '& .shiki': {
-    backgroundColor: `${theme.surface.lvl4} !important`,
+    backgroundColor: theme.surface.lvl4,
     '& a': {
       color: 'inherit',
     },
     '@media (prefers-color-scheme: dark)': {
       '&, & span': {
-        color: 'var(--shiki-dark) !important',
+        color: 'var(--shiki-dark)',
       },
     },
   },
 
   // Sidebar opt-out: the global `& a { underline }` and `& p { margin: 2rem }`
   // would otherwise wreck the nav and group labels. Higher-specificity
-  // descendant selectors win without needing !important fights.
+  // descendant selectors win without needing fights.
   '& aside a': {
     textDecoration: 'none',
   },
   '& aside p': {
-    marginTop: '0 !important',
-    marginBottom: '0 !important',
+    marginTop: 0,
+    marginBottom: 0,
   },
 
   // Mobile nav toggle: the sidebar stays in document flow below the sticky top

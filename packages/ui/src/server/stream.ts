@@ -9,6 +9,7 @@ import {
   serializeStyleObject,
 } from '../runtime/core/attributes.ts'
 import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
+import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 
 interface VNode {
   type: ElementType
@@ -124,7 +125,6 @@ type Segment =
 const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
 const INPUT_DEFAULT_PROPS = new Set(['defaultValue', 'defaultChecked'])
 
-const DEFAULT_STYLE_LAYER = 'rmx'
 const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
 
 function stripDoctypeMarkup(html: string): string {
@@ -143,7 +143,7 @@ function emptyReadableStream(): ReadableStream<Uint8Array> {
   })
 }
 
-function getStyleLayerName(selector: string, layer: string = DEFAULT_STYLE_LAYER): string {
+function getStyleLayerName(selector: string, layer: string = REMIX_UI_STYLE_LAYER): string {
   return `${layer}.${selector}`
 }
 
@@ -1175,7 +1175,7 @@ function collectStyleTags(context: RenderContext): string {
 function wrapStyleForLayer(
   selector: string,
   css: string,
-  layer: string = DEFAULT_STYLE_LAYER,
+  layer: string = REMIX_UI_STYLE_LAYER,
 ): string {
   let trimmed = css.trim()
   if (!trimmed) return ''
@@ -1185,7 +1185,7 @@ function wrapStyleForLayer(
 function renderStyleTag(
   selector: string,
   css: string,
-  layer: string = DEFAULT_STYLE_LAYER,
+  layer: string = REMIX_UI_STYLE_LAYER,
 ): string {
   let wrappedCss = wrapStyleForLayer(selector, css, layer)
   if (!wrappedCss) return ''

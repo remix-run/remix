@@ -98,6 +98,6 @@ function Layout() {
 - `theme` values are CSS variable references, not raw token values.
 - `createTheme` serializes token values into CSS custom properties and renders a `<style data-rmx-theme>` tag.
 - The default selector is `:root`; pass `selector` for scoped themes.
-- The base reset is included by default and can be disabled with `reset: false`.
+- The base reset is included by default, emitted in `rmx-reset`, and can be disabled with `reset: false`.
 - The built-in components consume this token contract through their style mixins.
 - Render `<RMX_01 />` and `<RMX_01_GLYPHS />` once when using the built-in theme and glyph preset.

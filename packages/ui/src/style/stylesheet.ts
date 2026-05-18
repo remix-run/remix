@@ -1,10 +1,11 @@
+import { REMIX_UI_STYLE_LAYER } from './layers.ts'
+
 type RuleEntry = { count: number; index: number }
 type ServerStyleSource = ParentNode | Iterable<Node>
 
 const SERVER_STYLE_SELECTOR = 'style[data-rmx]'
-const DEFAULT_STYLE_LAYER = 'rmx'
 
-function getStyleLayerName(className: string, layer: string = DEFAULT_STYLE_LAYER): string {
+function getStyleLayerName(className: string, layer: string = REMIX_UI_STYLE_LAYER): string {
   return `${layer}.${className}`
 }
 
@@ -67,7 +68,7 @@ function getStyleSelector(styleEl: HTMLStyleElement): string | null {
   return selector ? selector : null
 }
 
-export function createStyleManager(layer: string = 'rmx') {
+export function createStyleManager(layer: string = REMIX_UI_STYLE_LAYER) {
   let stylesheet: CSSStyleSheet | null = null
   let generation = 0
 

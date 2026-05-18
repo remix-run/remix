@@ -1,5 +1,6 @@
 import { createElement, type Handle } from '@remix-run/ui'
 
+import { REMIX_UI_RESET_LAYER, REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
 import {
   theme,
   themeVariableNames,
@@ -76,7 +77,9 @@ function serializeThemeCss(selector: string, vars: ThemeVars, options: { reset: 
   let blocks = [`${selector} {\n${lines}\n}`]
 
   if (options.reset) {
-    blocks.push(serializeThemeResetCss(selector))
+    let resetCss = serializeThemeResetCss(selector)
+    blocks.push(`@layer ${REMIX_UI_RESET_LAYER}, ${REMIX_UI_STYLE_LAYER};`)
+    blocks.push(`@layer ${REMIX_UI_RESET_LAYER} { ${resetCss} }`)
   }
 
   return blocks.join('\n\n')
