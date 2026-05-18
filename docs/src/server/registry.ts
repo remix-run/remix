@@ -180,8 +180,7 @@ function getOrSet<key, value>(map: Map<key, value>, key: key, init: () => value)
 
 const homePageCss = css({
   '& > p': {
-    marginTop: `${theme.space.sm} !important`,
-    marginBottom: `${theme.space.sm} !important`,
+    margin: `${theme.space.sm} 0`,
   },
   '& > ol > li + li': {
     marginTop: theme.space.md,
