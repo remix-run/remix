@@ -131,7 +131,9 @@ function validateExplicitConsumerDependencyRanges(packageInfos: PublishedPackage
   return violations
 }
 
-function validateConsistentConsumerDependencyRanges(packageInfos: PublishedPackageInfo[]): string[] {
+function validateConsistentConsumerDependencyRanges(
+  packageInfos: PublishedPackageInfo[],
+): string[] {
   let violations: string[] = []
   let firstPartyPackageNames = new Set(
     packageInfos.map((packageInfo) => packageInfo.packageJson.name),
