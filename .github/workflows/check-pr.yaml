@@ -255,6 +255,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Validate package meta
+        run: pnpm validate-package-meta
+
       - name: Lint
         run: pnpm lint
 
