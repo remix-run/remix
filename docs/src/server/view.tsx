@@ -7,12 +7,15 @@ import {
   MOBILE_NAV_MEDIA_RULE,
   MOBILE_TOP_BAR_HEIGHT_PX,
 } from '../shared/breakpoints.ts'
+import { assetServer } from './asset-server.ts'
 import type { DemoDocFile } from './demos.tsx'
 import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
 import { routes } from './routes.ts'
 
 export type Versions = { version: string; crawl: boolean }[]
+
+const entryHref = await assetServer.getHref('docs/src/client/entry.tsx')
 
 export function Document(
   handle: Handle<{
@@ -34,98 +37,20 @@ export function Document(
 
     return (
       <html lang="en">
-        <head>
-          <meta charSet="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <link rel="icon" href="/favicon.ico" sizes="32x32" />
-          <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
-          {activeVersion != null ? (
-            <>
-              <meta name="robots" content="noindex,nofollow" />
-              <meta name="googlebot" content="noindex,nofollow" />
-            </>
-          ) : page.docFile?.kind === 'package' || page.docFile?.kind === 'demo' ? (
-            // Overview pages (package READMEs) link densely to every API page
-            // in the package; those are already reachable via the sidebar, so
-            // tell crawlers — including our prerender spider — not to follow
-            // links from here. The page itself is still indexable.
-            // Demo pages contain example links that are not real docs paths.
-            <meta name="robots" content="nofollow" />
-          ) : null}
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-          <link
-            rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700"
-          />
-          <title>{`${page.title} | Remix API Documentation`}</title>
-          {page.docFile ? (
-            <link
-              rel="alternate"
-              type="text/markdown"
-              href={routes.markdown.href({ version: activeVersion, slug: page.docFile.urlPath })}
-              title={`Markdown docs for ${page.docFile.name ?? page.title}`}
-            />
-          ) : null}
-          {[
-            ...new Set([
-              ...entryPreloads,
-              ...(page.docFile?.kind === 'demo' ? page.docFile.preloads : []),
-            ]),
-          ].map((href) => (
-            <link key={href} rel="modulepreload" href={href} />
-          ))}
-          <script
-            type="module"
-            src={routes.assets.href({ version: activeVersion, asset: 'client/entry.tsx' })}
-          />
-          <RMX_01 />
-        </head>
+        <Head page={page} activeVersion={activeVersion} entryPreloads={entryPreloads} />
         <body mix={bodyCss}>
           <RMX_01_GLYPHS />
-          <input
-            id="nav-toggle"
-            type="checkbox"
-            mix={navToggleCss}
-            aria-hidden="true"
-            tabIndex={-1}
-          />
-          <a href="https://remix.run" mix={mobileLogoBannerCss}>
-            <RemixLogos />
-          </a>
-          <label
-            for="nav-toggle"
-            mix={mobileTopBarCss}
-            aria-controls="docs-sidebar"
-            aria-label="Toggle navigation"
-          >
-            <span mix={mobileTopBarTextCss}>
-              {page.eyebrow ? <span mix={eyebrowTextCss}>{page.eyebrow}</span> : null}
-              <span mix={mobileTopBarTitleCss}>{page.navLabel || page.title || 'Overview'}</span>
-            </span>
-            <Glyph name="menu" mix={mobileTopBarIconCss} aria-hidden="true" />
-          </label>
+          <MobileHeader page={page} />
           <div mix={shellCss}>
-            <aside id="docs-sidebar" mix={sidebarFrameCss}>
-              <div mix={sidebarStickyCss}>
-                <Sidebar
-                  registry={registry}
-                  currentPath={page.path}
-                  versions={versions}
-                  activeVersion={activeVersion}
-                />
-              </div>
-            </aside>
-
-            <main mix={mainCss}>
-              <div mix={pageWrapCss}>
-                <div mix={[pageContentCss, page.css]}>
-                  <PageHeader page={page} sourceUrl={sourceUrl} />
-                  {children}
-                </div>
-                <DocsFooter />
-              </div>
-            </main>
+            <Sidebar
+              registry={registry}
+              currentPath={page.path}
+              versions={versions}
+              activeVersion={activeVersion}
+            />
+            <MainContent page={page} header={<PageHeader page={page} sourceUrl={sourceUrl} />}>
+              {children}
+            </MainContent>
           </div>
         </body>
       </html>
@@ -133,6 +58,111 @@ export function Document(
   }
 }
 
+function MobileHeader(handle: Handle<{ page: PageDefinition }>) {
+  return () => {
+    let { page } = handle.props
+    return (
+      <>
+        <input
+          id="nav-toggle"
+          type="checkbox"
+          mix={navToggleCss}
+          aria-hidden="true"
+          tabIndex={-1}
+        />
+        <a href="https://remix.run" mix={mobileLogoBannerCss}>
+          <RemixLogos />
+        </a>
+        <label
+          for="nav-toggle"
+          mix={mobileTopBarCss}
+          aria-controls="docs-sidebar"
+          aria-label="Toggle navigation"
+        >
+          <span mix={mobileTopBarTextCss}>
+            {page.eyebrow ? <span mix={eyebrowTextCss}>{page.eyebrow}</span> : null}
+            <span mix={mobileTopBarTitleCss}>{page.navLabel || page.title || 'Overview'}</span>
+          </span>
+          <Glyph name="menu" mix={mobileTopBarIconCss} aria-hidden="true" />
+        </label>
+      </>
+    )
+  }
+}
+
+function Head(
+  handle: Handle<{
+    page: PageDefinition
+    activeVersion?: string
+    entryPreloads: readonly string[]
+  }>,
+) {
+  return () => {
+    let { page, activeVersion, entryPreloads } = handle.props
+    return (
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
+        {activeVersion != null ? (
+          <>
+            <meta name="robots" content="noindex,nofollow" />
+            <meta name="googlebot" content="noindex,nofollow" />
+          </>
+        ) : page.docFile?.kind === 'package' || page.docFile?.kind === 'demo' ? (
+          // Overview pages (package READMEs) link densely to every API page
+          // in the package; those are already reachable via the sidebar, so
+          // tell crawlers — including our prerender spider — not to follow
+          // links from here. The page itself is still indexable.
+          // Demo pages contain example links that are not real docs paths.
+          <meta name="robots" content="nofollow" />
+        ) : null}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700"
+        />
+        <title>{`${page.title} | Remix API Documentation`}</title>
+        {page.docFile ? (
+          <link
+            rel="alternate"
+            type="text/markdown"
+            href={routes.markdown.href({ version: activeVersion, slug: page.docFile.urlPath })}
+            title={`Markdown docs for ${page.docFile.name ?? page.title}`}
+          />
+        ) : null}
+        {[
+          ...new Set([
+            ...entryPreloads,
+            ...(page.docFile?.kind === 'demo' ? page.docFile.preloads : []),
+          ]),
+        ].map((href) => (
+          <link key={href} rel="modulepreload" href={href} />
+        ))}
+        <script type="module" src={entryHref} />
+        <RMX_01 />
+      </head>
+    )
+  }
+}
+
+function MainContent(
+  handle: Handle<{ page: PageDefinition; header?: RemixNode; children: RemixNode | RemixNode[] }>,
+) {
+  return () => (
+    <main mix={mainCss}>
+      <div mix={pageWrapCss}>
+        <div mix={[pageContentCss, handle.props.page.css]}>
+          {handle.props.header}
+          {handle.props.children}
+        </div>
+        <DocsFooter />
+      </div>
+    </main>
+  )
+}
 // Route Components
 export function Home() {
   return () => (
@@ -242,47 +272,56 @@ function Sidebar(
     let openSections = activePage && activePage.docFile ? [activePage.sectionId] : []
 
     return (
-      <div mix={sidebarPanelCss}>
-        <div mix={sidebarIntroCss}>
-          <a href="https://remix.run" class="logo">
-            <RemixLogos />
-          </a>
-        </div>
-
-        <VersionSwitcher versions={versions} activeVersion={activeVersion} />
-
-        {registry.sections.map((section) => (
-          <details
-            key={section.id}
-            open={openSections.includes(section.id) || undefined}
-            mix={sectionDetailsCss}
-          >
-            <summary mix={sectionSummaryCss}>
-              <span mix={sectionSummaryLabelCss}>{section.label}</span>
-            </summary>
-            <div mix={sectionContentCss}>
-              {section.groups.map((group) =>
-                group.label ? (
-                  <nav key={group.id} mix={[sidebarGroupCss]}>
-                    <p mix={sidebarHeadingCss}>{group.label}</p>
-                    <nav aria-label={`${section.label} ${group.label}`} mix={sidebarNavCss}>
-                      <SidebarGroup registry={registry} group={group} currentPath={currentPath} />
-                    </nav>
-                  </nav>
-                ) : (
-                  <nav
-                    key={group.id}
-                    aria-label={`${section.label} Pages`}
-                    mix={[sidebarGroupCss, css({ paddingLeft: 0 })]}
-                  >
-                    <SidebarGroup registry={registry} group={group} currentPath={currentPath} />
-                  </nav>
-                ),
-              )}
+      <aside id="docs-sidebar" mix={sidebarFrameCss}>
+        <div mix={sidebarStickyCss}>
+          {' '}
+          <div mix={sidebarPanelCss}>
+            <div mix={sidebarIntroCss}>
+              <a href="https://remix.run" class="logo">
+                <RemixLogos />
+              </a>
             </div>
-          </details>
-        ))}
-      </div>
+
+            <VersionSwitcher versions={versions} activeVersion={activeVersion} />
+
+            {registry.sections.map((section) => (
+              <details
+                key={section.id}
+                open={openSections.includes(section.id) || undefined}
+                mix={sectionDetailsCss}
+              >
+                <summary mix={sectionSummaryCss}>
+                  <span mix={sectionSummaryLabelCss}>{section.label}</span>
+                </summary>
+                <div mix={sectionContentCss}>
+                  {section.groups.map((group) =>
+                    group.label ? (
+                      <nav key={group.id} mix={[sidebarGroupCss]}>
+                        <p mix={sidebarHeadingCss}>{group.label}</p>
+                        <nav aria-label={`${section.label} ${group.label}`} mix={sidebarNavCss}>
+                          <SidebarGroup
+                            registry={registry}
+                            group={group}
+                            currentPath={currentPath}
+                          />
+                        </nav>
+                      </nav>
+                    ) : (
+                      <nav
+                        key={group.id}
+                        aria-label={`${section.label} Pages`}
+                        mix={[sidebarGroupCss, css({ paddingLeft: 0 })]}
+                      >
+                        <SidebarGroup registry={registry} group={group} currentPath={currentPath} />
+                      </nav>
+                    ),
+                  )}
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </aside>
     )
   }
 }
