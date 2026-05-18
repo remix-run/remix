@@ -69,15 +69,13 @@ function main() {
 
     if (issues.length > 0) {
       hasFailures = true
-      console.error(`  ${colorize('✗', colors.red)} ${check.name}\n`)
-      console.error(issues.join('\n\n'))
+      console.error(`${colorize('✗', colors.red)} ${check.name}\n`)
+      console.error(`${formatIssues(issues)}\n`)
       continue
     }
 
-    console.log(`  ${colorize('✓', colors.lightGreen)} ${check.name}`)
+    console.log(`${colorize('✓', colors.lightGreen)} ${check.name}\n`)
   }
-
-  console.log()
 
   if (hasFailures) {
     process.exit(1)
@@ -220,6 +218,15 @@ function formatUsages(usages: DependencyUsage[]): string[] {
     (usage) =>
       `- ${usage.packageDir}/package.json ${usage.field}.${usage.dependencyName}: ${usage.specifier}`,
   )
+}
+
+function formatIssues(issues: string[]): string {
+  return issues.map(formatIssue).join('\n\n')
+}
+
+function formatIssue(issue: string): string {
+  let [firstLine, ...remainingLines] = issue.split('\n')
+  return [`- ${firstLine}`, ...remainingLines.map((line) => `  ${line}`)].join('\n')
 }
 
 main()
