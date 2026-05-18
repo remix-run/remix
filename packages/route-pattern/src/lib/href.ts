@@ -77,7 +77,6 @@ export function createHref<source extends string>(
   return result
 }
 
-/** Generate the partial href for a single part (hostname or pathname). */
 function hrefPart(
   pattern: RoutePattern,
   part: PartPattern,
@@ -143,7 +142,6 @@ function hrefPart(
   return stack[0].href
 }
 
-/** Generate a search query string from a pattern and supplied params. */
 function hrefSearch(pattern: RoutePattern, searchParams: SearchParams): string | undefined {
   let constraints = pattern.search
   if (constraints.size === 0 && Object.keys(searchParams).length === 0) {
@@ -199,7 +197,6 @@ export class CreateHrefError extends Error {
     this.details = details
   }
 
-  /** Format an error message for the given href failure details. */
   static message(details: CreateHrefErrorDetails): string {
     let pattern = details.pattern.toString()
 

@@ -198,6 +198,8 @@ type PartVariant = ReadonlyArray<PartVariantToken>
  *
  * Each variant is the linear token sequence you'd get by independently choosing
  * to include or omit every `(` `)` group. No nesting, no optional markers.
+ *
+ * @private
  */
 export function generatePartVariants(part: PartPattern): ReadonlyArray<PartVariant> {
   let result: Array<PartVariant> = []

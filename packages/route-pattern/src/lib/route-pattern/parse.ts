@@ -29,7 +29,7 @@ export function parsePattern<source extends string>(source: source): RoutePatter
 /**
  * Parse a single URL part (hostname or pathname).
  *
- * Exposed for sub-exports that need to construct or transform individual parts.
+ * @private
  */
 export function parsePart(
   source: string,

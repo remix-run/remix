@@ -43,16 +43,23 @@ export class RoutePattern<source extends string = string> implements ParsedRoute
   readonly pathname: ParsedRoutePattern['pathname']
   readonly search: ParsedRoutePattern['search']
 
-  /** Create a new `RoutePattern` by parsing a source string */
+  /**
+   * Create a new `RoutePattern` by parsing a source string.
+   *
+   * @param source The route pattern source string.
+   * @returns The parsed route pattern.
+   */
   static parse<source extends string>(source: source): RoutePattern<source> {
     return parsePattern(source)
   }
 
   /**
-   * Create a new `RoutePattern` from parsed parts of a route pattern
+   * Create a new `RoutePattern` from parsed parts of a route pattern.
    *
    * Useful for efficiently deriving new patterns from already parsed patterns.
    * Unless you know what you are doing, you probably want `RoutePattern.parse`.
+   *
+   * @param parsed Parsed route pattern parts.
    */
   constructor(parsed: ParsedRoutePattern) {
     this.protocol = parsed.protocol

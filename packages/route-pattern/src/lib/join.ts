@@ -5,32 +5,33 @@ import type { JoinPatterns } from './types/join.ts'
 /**
  * Join two route patterns.
  *
- * Origin parts (`protocol`, `hostname`, `port`) from `b` override `a` when present.
+ * Origin parts (`protocol`, `hostname`, `port`) from `next` override `base` when present.
  * Pathnames are concatenated with a separator inserted between them as needed.
  * Search constraints from both patterns are merged.
  *
- * The result carries `JoinPatterns<a, b>` as its source brand so downstream APIs
- * (e.g. `createHref`) infer typed params from the joined pattern.
+ * @param base The base pattern.
+ * @param next The next pattern to join onto `base`.
+ * @returns The joined route pattern.
  */
-export function joinPatterns<a extends string, b extends string>(
-  a: a | RoutePattern<a>,
-  b: b | RoutePattern<b>,
-): RoutePattern<JoinPatterns<a, b>> {
-  a = typeof a === 'string' ? RoutePattern.parse(a) : a
-  b = typeof b === 'string' ? RoutePattern.parse(b) : b
-  return new RoutePattern<JoinPatterns<a, b>>({
-    protocol: b.protocol ?? a.protocol,
-    hostname: b.hostname ?? a.hostname,
-    port: b.port ?? a.port,
-    pathname: joinPathname(a.pathname, b.pathname),
-    search: joinSearch(a.search, b.search),
+export function joinPatterns<base extends string, next extends string>(
+  base: base | RoutePattern<base>,
+  next: next | RoutePattern<next>,
+): RoutePattern<JoinPatterns<base, next>> {
+  base = typeof base === 'string' ? RoutePattern.parse(base) : base
+  next = typeof next === 'string' ? RoutePattern.parse(next) : next
+  return new RoutePattern<JoinPatterns<base, next>>({
+    protocol: next.protocol ?? base.protocol,
+    hostname: next.hostname ?? base.hostname,
+    port: next.port ?? base.port,
+    pathname: joinPathname(base.pathname, next.pathname),
+    search: joinSearch(base.search, next.search),
   })
 }
 
 /**
  * Join two pathname parts, inserting a separator between them as needed.
  *
- * Trailing separator is stripped from `a`; leading separator is added to `b` if absent.
+ * Trailing separator is stripped from `base`; leading separator is added to `next` if absent.
  *
  * ```text
  * 'a'   + 'b'   -> 'a/b'
@@ -42,43 +43,46 @@ export function joinPatterns<a extends string, b extends string>(
  * '(a)' +'(/b)' -> '(a)(/b)'
  * '(a/)'+'(/b)' -> '(a)(/b)'
  * ```
+ *
+ * @private
  */
-function joinPathname(a: PartPattern, b: PartPattern): PartPattern {
-  if (a.tokens.length === 0) return b
-  if (b.tokens.length === 0) return a
+function joinPathname(base: PartPattern, next: PartPattern): PartPattern {
+  if (base.tokens.length === 0) return next
+  if (next.tokens.length === 0) return base
 
   let tokens: Array<PartPatternToken> = []
 
-  // strip `a`'s trailing separator (only optionals after it)
-  let aLastNonOptionalIndex = a.tokens.findLastIndex(
+  // strip `base`'s trailing separator (only optionals after it)
+  let baseLastNonOptionalIndex = base.tokens.findLastIndex(
     (token) => token.type !== '(' && token.type !== ')',
   )
-  let aLastNonOptional = a.tokens[aLastNonOptionalIndex]
-  let aHasTrailingSeparator = aLastNonOptional?.type === 'separator'
+  let baseLastNonOptional = base.tokens[baseLastNonOptionalIndex]
+  let baseHasTrailingSeparator = baseLastNonOptional?.type === 'separator'
 
-  a.tokens.forEach((token, index) => {
-    if (index === aLastNonOptionalIndex && token.type === 'separator') return
+  base.tokens.forEach((token, index) => {
+    if (index === baseLastNonOptionalIndex && token.type === 'separator') return
     tokens.push(token)
   })
 
-  // add separator if `b` has no leading one (only optionals before it)
-  let bFirstNonOptional = b.tokens.find((token) => token.type !== '(' && token.type !== ')')
-  let needsSeparator = bFirstNonOptional === undefined || bFirstNonOptional.type !== 'separator'
+  // add separator if `next` has no leading one (only optionals before it)
+  let nextFirstNonOptional = next.tokens.find((token) => token.type !== '(' && token.type !== ')')
+  let needsSeparator =
+    nextFirstNonOptional === undefined || nextFirstNonOptional.type !== 'separator'
   if (needsSeparator) tokens.push({ type: 'separator' })
 
   let tokenOffset = tokens.length
-  b.tokens.forEach((token) => tokens.push(token))
+  next.tokens.forEach((token) => tokens.push(token))
 
   let optionals = new Map<number, number>()
-  for (let [begin, end] of a.optionals) {
-    if (aHasTrailingSeparator) {
+  for (let [begin, end] of base.optionals) {
+    if (baseHasTrailingSeparator) {
       // one less token before this optional since trailing slash token was omitted
-      if (begin > aLastNonOptionalIndex) begin -= 1
-      if (end > aLastNonOptionalIndex) end -= 1
+      if (begin > baseLastNonOptionalIndex) begin -= 1
+      if (end > baseLastNonOptionalIndex) end -= 1
     }
     optionals.set(begin, end)
   }
-  for (let [begin, end] of b.optionals) {
+  for (let [begin, end] of next.optionals) {
     optionals.set(tokenOffset + begin, tokenOffset + end)
   }
 
@@ -94,15 +98,20 @@ function joinPathname(a: PartPattern, b: PartPattern): PartPattern {
  * '?a=1' + '?b=2' -> '?a=1&b=2'
  * ''     + '?a'   -> '?a'
  * ```
+ *
+ * @private
  */
-function joinSearch(a: RoutePattern['search'], b: RoutePattern['search']): RoutePattern['search'] {
+function joinSearch(
+  base: RoutePattern['search'],
+  next: RoutePattern['search'],
+): RoutePattern['search'] {
   let result = new Map<string, Set<string>>()
 
-  for (let [name, values] of a) {
+  for (let [name, values] of base) {
     result.set(name, new Set(values))
   }
 
-  for (let [name, values] of b) {
+  for (let [name, values] of next) {
     let current = result.get(name)
     if (current === undefined) {
       result.set(name, new Set(values))

@@ -1,7 +1,6 @@
 import type { PartPattern, RoutePattern } from '../route-pattern.ts'
 import { unreachable } from '../unreachable.ts'
 
-/** Serialize a route pattern back to its source string. */
 export function serializePattern(pattern: RoutePattern): string {
   let protocol = serializeProtocol(pattern)
   let hostname = serializeHostname(pattern)
@@ -18,11 +17,6 @@ export function serializePattern(pattern: RoutePattern): string {
   return result
 }
 
-/**
- * Serialize each part of a route pattern as a string.
- *
- * Destructure to grab one part. Empty string for absent parts.
- */
 export function serializePatternParts(pattern: RoutePattern): {
   protocol: string
   hostname: string
@@ -39,27 +33,22 @@ export function serializePatternParts(pattern: RoutePattern): {
   }
 }
 
-/** Serialize the protocol of a route pattern. Empty string if absent. */
 export function serializeProtocol(pattern: RoutePattern): string {
   return pattern.protocol ?? ''
 }
 
-/** Serialize the hostname of a route pattern. Empty string if absent. */
 export function serializeHostname(pattern: RoutePattern): string {
   return pattern.hostname ? serializePart(pattern.hostname) : ''
 }
 
-/** Serialize the port of a route pattern. Empty string if absent. */
 export function serializePort(pattern: RoutePattern): string {
   return pattern.port ?? ''
 }
 
-/** Serialize the pathname of a route pattern. */
 export function serializePathname(pattern: RoutePattern): string {
   return serializePart(pattern.pathname)
 }
 
-/** Serialize the search of a route pattern. Empty string if absent. */
 export function serializeSearch(pattern: RoutePattern): string {
   if (pattern.search.size === 0) return ''
   let searchParams = new URLSearchParams()
