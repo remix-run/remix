@@ -45,10 +45,11 @@ createHref('blog/:slug', { slug: 'v3' })
 createHref('api(/v:version)/*path', { version: '2', path: 'users/profile' })
 // '/api/v2/users/profile'
 
-createHref(
-  'http(s)://:region.cdn.com/assets/*file.:ext',
-  { region: 'us-west', file: 'images/logo', ext: 'png' },
-)
+createHref('http(s)://:region.cdn.com/assets/*file.:ext', {
+  region: 'us-west',
+  file: 'images/logo',
+  ext: 'png',
+})
 // 'https://us-west.cdn.com/assets/images/logo.png'
 ```
 
@@ -73,7 +74,7 @@ For in-depth reference, visit the [`route-pattern` API docs](https://api.remix.r
 Protocol must be `http`, `https`, or `http(s)`:
 
 ```ts
-'https://example.com'   // matches https://example.com
+'https://example.com' // matches https://example.com
 'http(s)://example.com' // matches http://example.com, https://example.com
 ```
 
@@ -82,33 +83,33 @@ Protocol must be `http`, `https`, or `http(s)`:
 **Variables** capture dynamic segments using `:name`:
 
 ```ts
-'users/:id'                    // matches /users/123
+'users/:id' // matches /users/123
 'blog/:year-:month-:day/:slug' // matches /blog/2024-01-15/hello
 ```
 
 **Wildcards** match multi-segment paths using `*name`:
 
 ```ts
-'files/*path'                         // matches /files/images/logo.png
+'files/*path' // matches /files/images/logo.png
 'node_modules/*package/dist/index.js' // matches /node_modules/@remix-run/router/dist/index.js
-'files/*'                             // matches any path under /files, but doesn't capture the wildcard value
+'files/*' // matches any path under /files, but doesn't capture the wildcard value
 ```
 
 **Optionals** make parts optional using `()`:
 
 ```ts
-'api(/v:version)/users'   // matches /api/users, /api/v2/users
-'blog/:slug(.html)'       // matches /blog/hello, /blog/hello.html
+'api(/v:version)/users' // matches /api/users, /api/v2/users
+'blog/:slug(.html)' // matches /blog/hello, /blog/hello.html
 'docs(/guides/:category)' // matches /docs, /docs/guides/routing
-'api(/v:major(.:minor))'  // matches /api, /api/v2, /api/v2.1
+'api(/v:major(.:minor))' // matches /api, /api/v2, /api/v2.1
 ```
 
 While variables, wilcards, and optionals are most prevalent in pathnames, you can also use them in hostnames:
 
 ```ts
-':tenant.example.com/dashboard'         // matches acme.example.com/dashboard
-'(www.)example.com/blog/:slug(.html)'   // matches example.com/blog/hello, www.example.com/blog/hello.html
-'*.example.com/files/*path'             // matches cdn.example.com/files/images/logo.png
+':tenant.example.com/dashboard' // matches acme.example.com/dashboard
+'(www.)example.com/blog/:slug(.html)' // matches example.com/blog/hello, www.example.com/blog/hello.html
+'*.example.com/files/*path' // matches cdn.example.com/files/images/logo.png
 '(:locale.)example.com/docs(/:section)' // matches en.example.com/docs, en.example.com/docs/guides
 ```
 
@@ -117,7 +118,7 @@ While variables, wilcards, and optionals are most prevalent in pathnames, you ca
 **Search constraints** narrow matches using `?key` or `?key=value`:
 
 ```ts
-'search?q'         // key must be present
+'search?q' // key must be present
 'search?q=routing' // requires ?q=routing exactly
 ```
 
@@ -188,7 +189,7 @@ matcher.add('files/readme.md', null)
 
 let matches = matcher.matchAll('https://example.com/files/readme.md')
 
-matches.sort(descending).map(match => match.pattern.toString())
+matches.sort(descending).map((match) => match.pattern.toString())
 // ['/files/readme.md', '/files/:name', '/files/*path']
 ```
 
