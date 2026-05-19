@@ -19,7 +19,8 @@ let app = run({
     if (!response.ok) {
       return `<pre>Frame error: ${response.status} ${response.statusText}</pre>`
     }
-    return response.body ?? response.text()
+    if (response.body) return response.body
+    return response.text()
   },
 })
 
