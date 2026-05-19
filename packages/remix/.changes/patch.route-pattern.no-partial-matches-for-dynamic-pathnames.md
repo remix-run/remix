@@ -1,9 +1,9 @@
-Fix `createMatcher` from `remix/route-pattern` so dynamic pathname segments and wildcard continuations only match when they cover the full pathname range being tested.
+Fix matching so dynamic pathname segments and wildcard continuations only match when they cover the full pathname range being tested.
 
 ```ts
-import { createMatcher } from 'remix/route-pattern'
+import { createMultiMatcher } from 'remix/route-pattern'
 
-let matcher = createMatcher<string>()
+let matcher = createMultiMatcher<string>()
 matcher.add('/files/:name.md', 'markdown')
 matcher.add('/files/:name.md.backup', 'backup')
 

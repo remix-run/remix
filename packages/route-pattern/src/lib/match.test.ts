@@ -1,14 +1,13 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createMatcher } from './matcher.ts'
-import { RoutePattern } from './route-pattern.ts'
+import { createMultiMatcher } from './match.ts'
 
 describe('Matcher', () => {
   describe('match', () => {
     describe('protocol', () => {
       it('matches any protocol when protocol is omitted', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users', null)
 
         let httpMatch = matcher.match('http://example.com/users')
@@ -19,7 +18,7 @@ describe('Matcher', () => {
       })
 
       it('matches http only when protocol is explicit http', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('http://example.com/users', null)
 
         let match = matcher.match('http://example.com/users')
@@ -27,7 +26,7 @@ describe('Matcher', () => {
       })
 
       it('matches https only when protocol is explicit https', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('https://example.com/users', null)
 
         let match = matcher.match('https://example.com/users')
@@ -35,7 +34,7 @@ describe('Matcher', () => {
       })
 
       it('matches both http and https when protocol is http(s)', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('http(s)://example.com/users', null)
 
         let httpMatch = matcher.match('http://example.com/users')
@@ -46,7 +45,7 @@ describe('Matcher', () => {
       })
 
       it('returns null when protocol does not match', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('http://example.com/users', null)
 
         let match = matcher.match('https://example.com/users')
@@ -56,7 +55,7 @@ describe('Matcher', () => {
 
     describe('hostname', () => {
       it('matches any hostname when hostname is omitted', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('users', null)
 
         let match1 = matcher.match('https://example.com/users')
@@ -70,7 +69,7 @@ describe('Matcher', () => {
       })
 
       it('matches exact static hostname', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users', null)
 
         let match = matcher.match('https://example.com/users')
@@ -79,7 +78,7 @@ describe('Matcher', () => {
       })
 
       it('matches non-ASCII hostname param values', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://:accented.:cjk.:rtl.:combining.example.com/users', null)
 
         let params = {
@@ -101,7 +100,7 @@ describe('Matcher', () => {
       })
 
       it('returns null when static hostname does not match', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users', null)
 
         let match = matcher.match('https://other.com/users')
@@ -109,7 +108,7 @@ describe('Matcher', () => {
       })
 
       it('matches variable segment in hostname', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://:subdomain.example.com/api', null)
 
         let match = matcher.match('https://api.example.com/api')
@@ -118,7 +117,7 @@ describe('Matcher', () => {
       })
 
       it('matches multiple variables in hostname', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://:subdomain.:env.example.com/api', null)
 
         let match = matcher.match('https://api.prod.example.com/api')
@@ -127,7 +126,7 @@ describe('Matcher', () => {
       })
 
       it('matches wildcard segment in hostname', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://*host.example.com/api', null)
 
         let match = matcher.match('https://api.v1.example.com/api')
@@ -136,7 +135,7 @@ describe('Matcher', () => {
       })
 
       it('excludes unnamed wildcard from params', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://*.example.com/api', null)
 
         let match = matcher.match('https://api.v1.example.com/api')
@@ -145,7 +144,7 @@ describe('Matcher', () => {
       })
 
       it('matches optional hostname segments when present', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://api(-:version).example.com/users', null)
 
         let match = matcher.match('https://api-v2.example.com/users')
@@ -154,7 +153,7 @@ describe('Matcher', () => {
       })
 
       it('matches optional hostname segments when absent', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://api(-:version).example.com/users', null)
 
         let match = matcher.match('https://api.example.com/users')
@@ -163,7 +162,7 @@ describe('Matcher', () => {
       })
 
       it('matches nested optionals in hostname', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://api(.:region(-:zone)).example.com/users', null)
 
         let matchAll = matcher.match('https://api.us-east1.example.com/users')
@@ -180,7 +179,7 @@ describe('Matcher', () => {
       })
 
       it('matches multiple optionals in hostname', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://:sub(-:version).example(.:tld).com/api', null)
 
         let match = matcher.match('https://api-v2.example.dev.com/api')
@@ -189,7 +188,7 @@ describe('Matcher', () => {
       })
 
       it('matches mixed static/variable/wildcard segments', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://*prefix.:env.example.com/api', null)
 
         let match = matcher.match('https://api.v1.prod.example.com/api')
@@ -198,39 +197,39 @@ describe('Matcher', () => {
       })
 
       it('prefers static over variable hostname', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://:subdomain.example.com/api', null)
         matcher.add('://api.example.com/api', null)
 
         let match = matcher.match('https://api.example.com/api')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://api.example.com/api')
+        assert.equal(match.pattern.toString(), '://api.example.com/api')
       })
 
       it('prefers variable over wildcard hostname', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://*host.example.com/api', null)
         matcher.add('://:subdomain.example.com/api', null)
 
         let match = matcher.match('https://api.example.com/api')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://:subdomain.example.com/api')
+        assert.equal(match.pattern.toString(), '://:subdomain.example.com/api')
       })
 
       it('prefers longer static prefix in hostname', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://:subdomain.com/api', null)
         matcher.add('://:subdomain.example.com/api', null)
 
         let match = matcher.match('https://api.example.com/api')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://:subdomain.example.com/api')
+        assert.equal(match.pattern.toString(), '://:subdomain.example.com/api')
       })
     })
 
     describe('port', () => {
       it('matches omitted port in URL when port is omitted in pattern', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users', null)
 
         assert.ok(matcher.match('http://example.com/users'))
@@ -238,7 +237,7 @@ describe('Matcher', () => {
       })
 
       it('matches explicit port', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com:8080/users', null)
 
         let match = matcher.match('http://example.com:8080/users')
@@ -247,28 +246,28 @@ describe('Matcher', () => {
       })
 
       it('returns null when explicit port does not match', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com:8080/users', null)
 
         assert.equal(matcher.match('http://example.com:3000/users'), null)
       })
 
       it('returns null when pattern has explicit port but URL omits port', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com:8080/users', null)
 
         assert.equal(matcher.match('http://example.com/users'), null)
       })
 
       it('returns null when pattern omits port but URL has explicit port', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users', null)
 
         assert.equal(matcher.match('http://example.com:8080/users'), null)
       })
 
       it('matches port with hostname variables', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://:subdomain.example.com:8080/api', null)
 
         let match = matcher.match('https://api.example.com:8080/api')
@@ -277,7 +276,7 @@ describe('Matcher', () => {
       })
 
       it('matches origin-less pattern against URL with any port', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('/', null)
         matcher.add('/about', null)
 
@@ -289,14 +288,14 @@ describe('Matcher', () => {
 
     describe('pathname', () => {
       it('matches root pathname when pathname is empty', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com', null)
 
         assert.ok(matcher.match('http://example.com/'))
       })
 
       it('matches static segments', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users/list', null)
 
         let match = matcher.match('http://example.com/users/list')
@@ -305,28 +304,28 @@ describe('Matcher', () => {
       })
 
       it('returns null when static segment does not match', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users', null)
 
         assert.equal(matcher.match('http://example.com/posts'), null)
       })
 
       it('returns null when URL is shorter than pattern', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users/list', null)
 
         assert.equal(matcher.match('http://example.com/users'), null)
       })
 
       it('returns null when trailing slash does not match', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users', null)
 
         assert.equal(matcher.match('http://example.com/users/'), null)
       })
 
       it('matches variable segments', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users/:id', null)
 
         let match = matcher.match('http://example.com/users/123')
@@ -335,7 +334,7 @@ describe('Matcher', () => {
       })
 
       it('matches multiple variables', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users/:userId/posts/:postId', null)
 
         let match = matcher.match('http://example.com/users/42/posts/99')
@@ -344,7 +343,7 @@ describe('Matcher', () => {
       })
 
       it('matches special characters in variable values', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/:filename', null)
 
         let match = matcher.match('http://example.com/files/my-file_v2.txt')
@@ -352,8 +351,15 @@ describe('Matcher', () => {
         assert.deepEqual(match.params, { filename: 'my-file_v2.txt' })
       })
 
+      it('does not partially match variable segments after a static suffix', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('://example.com/files/report-:format.pdf', null)
+
+        assert.equal(matcher.match('http://example.com/files/report-json.pdf.backup'), null)
+      })
+
       it('matches non-ASCII param values', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add(
           '://example.com/:accented/:cjk/:rtl/:combining/:emoji/:zwj/:nbsp/:fullwidth',
           null,
@@ -378,36 +384,8 @@ describe('Matcher', () => {
         assert.deepEqual(match.params, params)
       })
 
-      it('round-trips href-generated reserved characters in variable params', () => {
-        let pattern = new RoutePattern('://example.com/files/:name')
-        let matcher = createMatcher<null>()
-        matcher.add(pattern, null)
-
-        let original = 'a/b?c#d%2Fe'
-        let href = pattern.href({ name: original })
-        let match = matcher.match(href)
-
-        assert.ok(match)
-        assert.equal(match.params.name, original)
-        assert.equal(match.paramsMeta.pathname[0].value, original)
-
-        let matches = matcher.matchAll(href)
-        assert.equal(matches.length, 1)
-        assert.equal(matches[0].params.name, original)
-      })
-
-      it('does not treat encoded slash params as static path separators', () => {
-        let pattern = new RoutePattern('://example.com/files/:name')
-        let matcher = createMatcher<null>()
-        matcher.add('://example.com/files/a/b', null)
-
-        let href = pattern.href({ name: 'a/b' })
-
-        assert.equal(matcher.match(href), null)
-      })
-
       it('matches wildcard segments', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/*path', null)
 
         let match = matcher.match('http://example.com/files/docs/readme.md')
@@ -416,7 +394,7 @@ describe('Matcher', () => {
       })
 
       it('matches wildcard with continuation', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/*path/status', null)
 
         let match = matcher.match('http://example.com/files/docs/api/status')
@@ -424,38 +402,15 @@ describe('Matcher', () => {
         assert.deepEqual(match.params, { path: 'docs/api' })
       })
 
-      it('does not match variable segment continuations against partial segments', () => {
-        let markdown = new RoutePattern('/files/:name.md')
-        let backup = new RoutePattern('/files/:name.md.backup')
-        let matcher = createMatcher<string>()
-        matcher.add(markdown, 'markdown')
-        matcher.add(backup, 'backup')
+      it('does not partially match wildcard segments before a static suffix', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('://example.com/files/*path/status', null)
 
-        let matches = matcher.matchAll('http://localhost/files/readme.md.backup')
-
-        assert.deepEqual(
-          matches.map((match) => [match.data, match.params]),
-          [['backup', { name: 'readme' }]],
-        )
-      })
-
-      it('does not match wildcard continuations against partial remaining pathnames', () => {
-        let editor = new RoutePattern('/api/*slug/edit')
-        let json = new RoutePattern('/api/*slug/edit.json')
-        let matcher = createMatcher<string>()
-        matcher.add(editor, 'editor')
-        matcher.add(json, 'json')
-
-        let matches = matcher.matchAll('http://localhost/api/remix/router/edit.json')
-
-        assert.deepEqual(
-          matches.map((match) => [match.data, match.params]),
-          [['json', { slug: 'remix/router' }]],
-        )
+        assert.equal(matcher.match('http://example.com/files/docs/status/extra'), null)
       })
 
       it('excludes unnamed wildcard from params', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/*/download', null)
 
         let match = matcher.match('http://example.com/files/docs/download')
@@ -464,7 +419,7 @@ describe('Matcher', () => {
       })
 
       it('matches optional segments when present', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/posts(/:lang)', null)
 
         let match = matcher.match('http://example.com/posts/en')
@@ -473,7 +428,7 @@ describe('Matcher', () => {
       })
 
       it('matches optional segments when absent', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/posts(/:lang)', null)
 
         let match = matcher.match('http://example.com/posts')
@@ -482,7 +437,7 @@ describe('Matcher', () => {
       })
 
       it('matches nested optionals', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/docs(/:version(/:page))', null)
 
         let match1 = matcher.match('http://example.com/docs/v1/intro')
@@ -499,7 +454,7 @@ describe('Matcher', () => {
       })
 
       it('matches multiple optionals', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/api(/:version)/users(/:id)', null)
 
         let match = matcher.match('http://example.com/api/v2/users/123')
@@ -508,7 +463,7 @@ describe('Matcher', () => {
       })
 
       it('matches complex optionals for file extensions', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/:id(.:format)', null)
 
         let match1 = matcher.match('http://example.com/files/doc123.pdf')
@@ -521,7 +476,7 @@ describe('Matcher', () => {
       })
 
       it('matches mixed static/variable/wildcard segments', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/api/:version/files/*path', null)
 
         let match = matcher.match('http://example.com/api/v1/files/docs/guide.pdf')
@@ -530,7 +485,7 @@ describe('Matcher', () => {
       })
 
       it('matches deep nesting', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add(
           '://example.com/products/electronics/computers/laptops/gaming/accessories/keyboards',
           null,
@@ -544,39 +499,39 @@ describe('Matcher', () => {
       })
 
       it('prefers static over variable pathname', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users/new', null)
         matcher.add('://example.com/users/:id', null)
 
         let match = matcher.match('http://example.com/users/new')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://example.com/users/new')
+        assert.equal(match.pattern.toString(), '://example.com/users/new')
       })
 
       it('prefers variable over wildcard pathname', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/*path', null)
         matcher.add('://example.com/files/:id', null)
 
         let match = matcher.match('http://example.com/files/123')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://example.com/files/:id')
+        assert.equal(match.pattern.toString(), '://example.com/files/:id')
       })
 
       it('prefers longer static prefix in pathname', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/api/:id', null)
         matcher.add('://example.com/api/v1/:id', null)
 
         let match = matcher.match('http://example.com/api/v1/users')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://example.com/api/v1/:id')
+        assert.equal(match.pattern.toString(), '://example.com/api/v1/:id')
       })
     })
 
     describe('search', () => {
       it('matches any query params when no search constraints', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/search', null)
 
         assert.ok(matcher.match('http://example.com/search'))
@@ -585,7 +540,7 @@ describe('Matcher', () => {
       })
 
       it('matches bare parameter for presence check', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/search?q', null)
 
         let match = matcher.match('http://example.com/search?q')
@@ -593,7 +548,7 @@ describe('Matcher', () => {
       })
 
       it('matches bare parameter with any value', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/search?q', null)
 
         assert.ok(matcher.match('http://example.com/search?q=test'))
@@ -601,7 +556,7 @@ describe('Matcher', () => {
       })
 
       it('matches any value constraint with non-empty value', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/search?q=', null)
 
         let match = matcher.match('http://example.com/search?q=test')
@@ -609,7 +564,7 @@ describe('Matcher', () => {
       })
 
       it('matches key-only constraint', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/search?q=', null)
 
         assert.ok(matcher.match('http://example.com/search?q'))
@@ -618,7 +573,7 @@ describe('Matcher', () => {
       })
 
       it('matches specific value with exact match', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/api?format=json', null)
 
         let match = matcher.match('http://example.com/api?format=json')
@@ -626,14 +581,14 @@ describe('Matcher', () => {
       })
 
       it('returns null when specific value does not match', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/api?format=json', null)
 
         assert.equal(matcher.match('http://example.com/api?format=xml'), null)
       })
 
       it('matches multiple constraints', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/search?q=&lang=en', null)
 
         let match = matcher.match('http://example.com/search?q=test&lang=en')
@@ -641,7 +596,7 @@ describe('Matcher', () => {
       })
 
       it('matches constraints regardless of order', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/api?format=json&version=v1', null)
 
         let match = matcher.match('http://example.com/api?version=v1&format=json')
@@ -649,7 +604,7 @@ describe('Matcher', () => {
       })
 
       it('allows extra params beyond constraints', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/search?q', null)
 
         let match = matcher.match('http://example.com/search?q=test&lang=en&page=2')
@@ -657,7 +612,7 @@ describe('Matcher', () => {
       })
 
       it('preserves URL encoding in search parameter values', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/search?q=hello%20world', null)
 
         let match = matcher.match('http://example.com/search?q=hello%20world')
@@ -665,7 +620,7 @@ describe('Matcher', () => {
       })
 
       it('matches repeated parameter values', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/filter?tags', null)
 
         let match = matcher.match('http://example.com/filter?tags=a&tags=b')
@@ -673,7 +628,7 @@ describe('Matcher', () => {
       })
 
       it('returns null when constraint is not met', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/api?auth', null)
 
         assert.equal(matcher.match('http://example.com/api'), null)
@@ -681,39 +636,39 @@ describe('Matcher', () => {
       })
 
       it('prefers more constraints over fewer', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/search?q', null)
         matcher.add('://example.com/search?q&lang', null)
 
         let match = matcher.match('http://example.com/search?q=test&lang=en')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://example.com/search?q=&lang=')
+        assert.equal(match.pattern.toString(), '://example.com/search?q=&lang=')
       })
 
       it('prefers exact value over any value', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/api?format', null)
         matcher.add('://example.com/api?format=json', null)
 
         let match = matcher.match('http://example.com/api?format=json')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://example.com/api?format=json')
+        assert.equal(match.pattern.toString(), '://example.com/api?format=json')
       })
 
       it('ties specificity for both forms of key only constraints; tiebreaks using insertion order', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/search?q', null)
         matcher.add('://example.com/search?q=', null)
 
         let match = matcher.match('http://example.com/search?q=test')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://example.com/search?q=')
+        assert.equal(match.pattern.toString(), '://example.com/search?q=')
       })
     })
 
     describe('ignoreCase', () => {
       it('uses case-sensitive pathname matching by default', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('/Posts/:id', null)
 
         assert.equal(matcher.match('https://example.com/posts/123'), null)
@@ -722,7 +677,7 @@ describe('Matcher', () => {
       })
 
       it('ignores pathname case when ignoreCase is true', () => {
-        let matcher = createMatcher<null>({ ignoreCase: true })
+        let matcher = createMultiMatcher<null>({ ignoreCase: true })
         matcher.add('/Posts/:id', null)
 
         assert.ok(matcher.match('https://example.com/posts/123'))
@@ -731,7 +686,7 @@ describe('Matcher', () => {
       })
 
       it('ignores hostname case regardless of ignoreCase', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://Example.COM/users', null)
 
         assert.ok(matcher.match('https://example.com/users'))
@@ -739,7 +694,7 @@ describe('Matcher', () => {
       })
 
       it('matches search params case-sensitively regardless of ignoreCase', () => {
-        let matcher = createMatcher<null>({ ignoreCase: true })
+        let matcher = createMultiMatcher<null>({ ignoreCase: true })
         matcher.add('/api?Sort', null)
 
         assert.ok(matcher.match('https://example.com/api?Sort'))
@@ -747,7 +702,7 @@ describe('Matcher', () => {
       })
 
       it('defaults to false', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('/Posts/:id', null)
         assert.equal(matcher.match('https://example.com/posts/123'), null)
       })
@@ -755,7 +710,7 @@ describe('Matcher', () => {
 
     describe('paramsMeta', () => {
       it('returns empty arrays when no params', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users', null)
 
         let match = matcher.match('http://example.com/users')
@@ -765,7 +720,7 @@ describe('Matcher', () => {
       })
 
       it('includes wildcard hostname metadata for pathname-only patterns', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('/users/:id', null)
 
         let match = matcher.match('http://example.com/users/123')
@@ -779,7 +734,7 @@ describe('Matcher', () => {
       })
 
       it('includes hostname params with metadata', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://:subdomain.example.com/api', null)
 
         let match = matcher.match('https://api.example.com/api')
@@ -792,7 +747,7 @@ describe('Matcher', () => {
       })
 
       it('includes pathname params with metadata', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users/:id', null)
 
         let match = matcher.match('http://example.com/users/123')
@@ -805,7 +760,7 @@ describe('Matcher', () => {
       })
 
       it('includes params from both hostname and pathname', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://:subdomain.example.com/users/:id', null)
 
         let match = matcher.match('https://api.example.com/users/123')
@@ -819,7 +774,7 @@ describe('Matcher', () => {
       })
 
       it('includes wildcard params in metadata', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/*path', null)
 
         let match = matcher.match('http://example.com/files/docs/readme.md')
@@ -831,7 +786,7 @@ describe('Matcher', () => {
       })
 
       it('includes unnamed wildcards in metadata with name "*"', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/*/download', null)
 
         let match = matcher.match('http://example.com/files/docs/download')
@@ -843,7 +798,7 @@ describe('Matcher', () => {
       })
 
       it('excludes undefined optional params from metadata', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/posts(/:lang)', null)
 
         let match = matcher.match('http://example.com/posts')
@@ -852,7 +807,7 @@ describe('Matcher', () => {
       })
 
       it('includes only matched optional params in metadata', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/docs(/:version(/:page))', null)
 
         let match = matcher.match('http://example.com/docs/v1')
@@ -865,57 +820,57 @@ describe('Matcher', () => {
 
     describe('specificity', () => {
       it('prefers static over variable', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/:segment', null)
         matcher.add('://example.com/users', null)
 
         let match = matcher.match('http://example.com/users')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://example.com/users')
+        assert.equal(match.pattern.toString(), '://example.com/users')
       })
 
       it('prefers variable over wildcard', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/*path', null)
         matcher.add('://example.com/:id', null)
 
         let match = matcher.match('http://example.com/123')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://example.com/:id')
+        assert.equal(match.pattern.toString(), '://example.com/:id')
       })
 
       it('prefers longer static prefix over shorter', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/:id', null)
         matcher.add('://example.com/api/:id', null)
 
         let match = matcher.match('http://example.com/api/users')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://example.com/api/:id')
+        assert.equal(match.pattern.toString(), '://example.com/api/:id')
       })
 
       it('prefers hostname specificity over pathname specificity', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/*path', null)
         matcher.add('://:subdomain.example.com/users', null)
 
         let match = matcher.match('http://api.example.com/users')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://:subdomain.example.com/users')
+        assert.equal(match.pattern.toString(), '://:subdomain.example.com/users')
       })
 
       it('increases specificity with search constraints', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/search', null)
         matcher.add('://example.com/search?q', null)
 
         let match = matcher.match('http://example.com/search?q=test')
         assert.ok(match)
-        assert.equal(match.pattern.source, '://example.com/search?q=')
+        assert.equal(match.pattern.toString(), '://example.com/search?q=')
       })
 
       it('returns null when no patterns match', () => {
-        let matcher = createMatcher<null>()
+        let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users', null)
         matcher.add('://example.com/posts', null)
 
@@ -926,20 +881,20 @@ describe('Matcher', () => {
 
   describe('matchAll', () => {
     it('returns all matches sorted by specificity', () => {
-      let matcher = createMatcher<null>()
+      let matcher = createMultiMatcher<null>()
       matcher.add('://example.com/*path', null)
       matcher.add('://example.com/users/:id', null)
       matcher.add('://example.com/users/new', null)
 
       let matches = matcher.matchAll('http://example.com/users/new')
       assert.deepEqual(
-        matches.map((m) => m.pattern.source),
+        matches.map((m) => m.pattern.toString()),
         ['://example.com/users/new', '://example.com/users/:id', '://example.com/*path'],
       )
     })
 
     it('returns empty array when no matches', () => {
-      let matcher = createMatcher<null>()
+      let matcher = createMultiMatcher<null>()
       matcher.add('://example.com/users', null)
       matcher.add('://example.com/posts', null)
 
@@ -948,25 +903,25 @@ describe('Matcher', () => {
     })
 
     it('includes patterns with same specificity', () => {
-      let matcher = createMatcher<null>()
+      let matcher = createMultiMatcher<null>()
       matcher.add('://example.com/users/:id', null)
       matcher.add('://example.com/posts/:id', null)
 
       let matches = matcher.matchAll('http://example.com/users/123')
       assert.deepEqual(
-        matches.map((m) => m.pattern.source),
+        matches.map((m) => m.pattern.toString()),
         ['://example.com/users/:id'],
       )
 
       let matches2 = matcher.matchAll('http://example.com/posts/456')
       assert.deepEqual(
-        matches2.map((m) => m.pattern.source),
+        matches2.map((m) => m.pattern.toString()),
         ['://example.com/posts/:id'],
       )
     })
 
     it('orders complex specificity scenarios consistently', () => {
-      let matcher = createMatcher<null>()
+      let matcher = createMultiMatcher<null>()
       // Add patterns in random order to ensure ordering is by specificity, not insertion order
       matcher.add('/*path', null)
       matcher.add('://api.example.com/users/:id', null)
@@ -983,7 +938,7 @@ describe('Matcher', () => {
       let matches = matcher.matchAll('http://api.example.com/users/123')
 
       assert.deepEqual(
-        matches.map((m) => m.pattern.source),
+        matches.map((m) => m.pattern.toString()),
         [
           '://api.example.com/users/123',
           '://api.example.com/users/:id',

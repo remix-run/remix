@@ -1,20 +1,25 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { RoutePattern } from './route-pattern.ts'
+import { createMultiMatcher } from './match.ts'
+import type { Match } from './match/types.ts'
 import * as Specificity from './specificity.ts'
 
 describe('specificity', () => {
   describe('compare', () => {
-    function assertCompare(patterns: [string, string], url: URL | string, expected: -1 | 0 | 1) {
-      url = typeof url === 'string' ? new URL(url) : url
-      let a = new RoutePattern(patterns[0])
-      let b = new RoutePattern(patterns[1])
-      let matchA = a.match(url)
-      let matchB = b.match(url)
+    function matchPattern(pattern: string, url: URL): Match | null {
+      let matcher = createMultiMatcher()
+      matcher.add(pattern, null)
+      return matcher.match(url)
+    }
 
-      assert.notEqual(matchA, null, `Pattern A "${patterns[0]}" should match URL "${url}"`)
-      assert.notEqual(matchB, null, `Pattern B "${patterns[1]}" should match URL "${url}"`)
+    function assertCompare(patterns: [string, string], url: URL | string, expected: -1 | 0 | 1) {
+      let parsed = typeof url === 'string' ? new URL(url) : url
+      let matchA = matchPattern(patterns[0], parsed)
+      let matchB = matchPattern(patterns[1], parsed)
+
+      assert.notEqual(matchA, null, `Pattern A "${patterns[0]}" should match URL "${parsed}"`)
+      assert.notEqual(matchB, null, `Pattern B "${patterns[1]}" should match URL "${parsed}"`)
 
       assert.equal(Specificity.compare(matchA!, matchB!), expected)
     }
@@ -190,9 +195,8 @@ describe('specificity', () => {
     })
 
     it('throws when comparing matches for different URLs', () => {
-      let pattern = new RoutePattern('https://example.com/:path')
-      let match1 = pattern.match('https://example.com/foo')
-      let match2 = pattern.match('https://example.com/bar')
+      let match1 = matchPattern('https://example.com/:path', new URL('https://example.com/foo'))
+      let match2 = matchPattern('https://example.com/:path', new URL('https://example.com/bar'))
 
       assert.notEqual(match1, null)
       assert.notEqual(match2, null)

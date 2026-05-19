@@ -1,5 +1,5 @@
-import type { Split, SplitPattern } from './split'
-import type { ForceDistributive } from './utils'
+import type { Split, SplitPattern } from './split.ts'
+import type { ForceDistributive } from './utils.ts'
 
 export interface ParsedPattern {
   protocol: Token[] | undefined
@@ -53,21 +53,21 @@ type _ParsePart<S extends ParsePartState, Sep extends string = ''> =
     Head extends ':' ?
       IdentifierParse<Tail> extends { identifier: infer name extends string, rest: infer rest extends string } ?
         (name extends '' ? never : _ParsePart<AppendToken<S, { type: 'variable', name: name }, rest>, Sep>) :
-      never : // this should never happen
+      never :
     Head extends '*' ?
       IdentifierParse<Tail> extends { identifier: infer name extends string, rest: infer rest extends string } ?
         _ParsePart<AppendToken<S, (name extends '' ? { type: 'wildcard' } : { type: 'wildcard', name: name }), rest>, Sep> :
-      never : // this should never happen
+      never :
     Head extends '(' ? _ParsePart<PushOptional<S, Tail>, Sep> :
     Head extends ')' ?
       PopOptional<S, Tail> extends infer next extends ParsePartState ? _ParsePart<next, Sep> :
-      never : // unmatched `)` handled in PopOptional
+      never :
     Head extends '\\' ?
       Tail extends `${infer L}${infer R}` ? _ParsePart<AppendText<S, L, R>, Sep> :
-      never : // dangling escape
+      never :
     _ParsePart<AppendText<S, Head, Tail>, Sep> :
   S['optionals'] extends [] ? S['tokens'] :
-  never // unmatched `(`
+  never
 
 // prettier-ignore
 type AppendToken<S extends ParsePartState, token extends Token, rest extends string> =
@@ -97,16 +97,12 @@ type AppendText<S extends ParsePartState, text extends string, rest extends stri
         { tokens: [...S['tokens'], { type: 'text', value: text }]; optionals: S['optionals']; rest: rest }
     )
 
-// Optional stack helpers ---------------------------------------------------------------------------
-
 type PushOptional<S extends ParsePartState, rest extends string> = {
   tokens: S['tokens']
   optionals: [...S['optionals'], []]
   rest: rest
 }
 
-// If stack is empty -> unmatched ')', return never
-// Else pop and wrap tokens into an Optional token; append to parent or part
 type PopOptional<S extends ParsePartState, R extends string> = S['optionals'] extends [
   ...infer O extends Array<Token[]>,
   infer Top extends Array<Token>,
@@ -119,8 +115,6 @@ type PopOptional<S extends ParsePartState, R extends string> = S['optionals'] ex
       }
     : { tokens: [...S['tokens'], { type: 'optional'; tokens: Top }]; optionals: []; rest: R }
   : never
-
-// Identifier --------------------------------------------------------------------------------------
 
 // prettier-ignore
 type _a_z = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z'

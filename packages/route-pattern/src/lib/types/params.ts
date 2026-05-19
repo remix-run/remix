@@ -1,10 +1,4 @@
-import type { Split, SplitPattern } from '../types/split'
-import type { Simplify } from '../types/utils'
-
-/**
- * Extracted route params for a route-pattern source string.
- */
-export type Params<source extends string> = Simplify<Omit<ParseParams<Split<source>>, '*'>>
+import type { SplitPattern } from './split.ts'
 
 // prettier-ignore
 export type ParseParams<split extends SplitPattern> =
@@ -50,8 +44,6 @@ type Param<name extends string, stack extends Array<null>> = stack extends []
   ? { [key in name]: string }
   : { [key in name]: string | undefined }
 
-// Identifier --------------------------------------------------------------------------------------
-
 type IdentifierHead = a_z | A_Z | '_' | '$'
 type IdentifierTail = IdentifierHead | _0_9
 
@@ -66,8 +58,6 @@ type _IdentifierParse<state extends { identifier: string, rest: string }> =
     _IdentifierParse<{ identifier: `${state['identifier']}${head}`, rest: rest }>
   :
   state
-
-// Character classes -------------------------------------------------------------------------------
 
 // prettier-ignore
 type a_z = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z'

@@ -1,14 +1,15 @@
 import { bench } from '@ark/attest'
-import { RoutePattern, type Join } from '@remix-run/route-pattern'
+import { RoutePattern } from '@remix-run/route-pattern'
+import { joinPatterns, type JoinPatterns } from '@remix-run/route-pattern/join'
 
 bench.baseline(() => {
-  let pattern = new RoutePattern('/')
-  pattern.join('/other')
+  let pattern = RoutePattern.parse('/')
+  joinPatterns(pattern, '/other')
 })
 
 bench('join', () => {
-  let pattern = new RoutePattern('/posts/:id')
-  pattern.join('/comments/:commentId')
+  let pattern = RoutePattern.parse('/posts/:id')
+  joinPatterns(pattern, '/comments/:commentId')
 }).types([2445, 'instantiations'])
 
 bench('join > mediarss', async () => {
@@ -28,7 +29,7 @@ bench('join > mediarss', async () => {
 function eagerlyEvaluateTypesForJoin<patterns extends ReadonlyArray<string>>(
   // prettier-ignore
   _: patterns & (
-    { [pattern in patterns[number]]: Join<patterns[number], string> } extends
+    { [pattern in patterns[number]]: JoinPatterns<patterns[number], string> } extends
     { [pattern in patterns[number]]: string }
     ? patterns : never
   ),

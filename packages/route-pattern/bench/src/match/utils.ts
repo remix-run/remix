@@ -1,9 +1,9 @@
 import { bench, describe } from 'vitest'
-import type { Matcher } from '@remix-run/route-pattern'
+import type { MultiMatcher } from '@remix-run/route-pattern/match'
 
 export type BenchMatcher = {
   name: string
-  createMatcher: () => Matcher<null>
+  createMatcher: () => MultiMatcher<unknown>
 }
 
 type MatchBenchOptions<matcher extends BenchMatcher> = {
