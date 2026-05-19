@@ -16,9 +16,10 @@ let app = run({
   },
   async resolveFrame(src, signal) {
     let response = await fetch(src, { headers: { accept: 'text/html' }, signal })
-    return response.ok
-      ? (response.body ?? response.text())
-      : `<pre>Frame error: ${response.status} ${response.statusText}</pre>`
+    if (!response.ok) {
+      return `<pre>Frame error: ${response.status} ${response.statusText}</pre>`
+    }
+    return response.body ?? response.text()
   },
 })
 
