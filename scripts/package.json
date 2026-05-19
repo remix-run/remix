@@ -9,7 +9,8 @@
     "@types/node": "catalog:",
     "@types/semver": "^7.5.8",
     "@typescript/native-preview": "catalog:",
-    "semver": "^7.6.3"
+    "semver": "^7.6.3",
+    "yaml": "^2.9.0"
   },
   "scripts": {
     "test": "remix-test",

@@ -3,7 +3,7 @@ Improved type inference for `on` mixin
 When defining a wrapper for `on`, use `target` generic on your handler type:
 
 ```ts
-import { type Dispatched } from '@remix-run/ui'
+import { on, type Dispatched } from '@remix-run/ui'
 
 const ACCORDION_CHANGE_EVENT = 'rmx:accordion-change' as const
 
