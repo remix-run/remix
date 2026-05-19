@@ -448,6 +448,7 @@ function DocsFooter() {
 // Typography mirrors the `.md-prose` rules from the remix.run blog
 // (`/styles/md.css`) and is applied site-wide.
 const bodyCss = css({
+  colorScheme: 'light dark',
   margin: 0,
   backgroundColor: theme.surface.lvl0,
   color: theme.colors.text.primary,
@@ -544,15 +545,16 @@ const bodyCss = css({
   },
 
   '& .shiki': {
-    backgroundColor: theme.surface.lvl4,
-    '& a': {
-      color: 'inherit',
-    },
-    '@media (prefers-color-scheme: dark)': {
-      '&, & span': {
-        color: 'var(--shiki-dark)',
-      },
-    },
+    backgroundColor: `${theme.surface.lvl4} !important`,
+  },
+
+  '& .shiki a': {
+    color: 'inherit',
+    textDecoration: `none`,
+  },
+
+  '& .shiki a:hover, & .shiki a:focus': {
+    textDecoration: `underline`,
   },
 
   // Sidebar opt-out: the global `& a { underline }` and `& p { margin: 2rem }`
@@ -583,6 +585,50 @@ const bodyCss = css({
       pointerEvents: 'auto',
     },
   },
+
+  // Dark mode: override theme CSS custom properties
+  '@media (prefers-color-scheme: dark)': {
+    colorScheme: 'dark',
+    '--rmx-surface-lvl0': '#1a1a1a',
+    '--rmx-surface-lvl1': '#1f1f1f',
+    '--rmx-surface-lvl2': '#232323',
+    '--rmx-surface-lvl3': '#272727',
+    '--rmx-surface-lvl4': '#2c2c2c',
+    '--rmx-color-text-primary': '#ececec',
+    '--rmx-color-text-secondary': '#b0b0b0',
+    '--rmx-color-text-muted': '#888888',
+    '--rmx-color-text-link': '#6eaaff',
+    '--rmx-color-border-subtle': '#333333',
+    '--rmx-color-border-default': '#444444',
+    '--rmx-color-border-strong': '#666666',
+    '--rmx-color-focus-ring': '#6eaaff',
+    '--rmx-color-overlay-scrim': 'rgb(0 0 0 / 0.55)',
+    '--rmx-color-action-primary-background': '#4d94ff',
+    '--rmx-color-action-primary-background-hover': '#3d84ef',
+    '--rmx-color-action-primary-background-active': '#2d74df',
+    '--rmx-color-action-primary-foreground': 'rgb(255 255 255 / 0.92)',
+    '--rmx-color-action-primary-border': '#4d94ff',
+    '--rmx-color-action-secondary-background': '#2c2c2c',
+    '--rmx-color-action-secondary-background-hover': '#333333',
+    '--rmx-color-action-secondary-background-active': '#3a3a3a',
+    '--rmx-color-action-secondary-foreground': '#ececec',
+    '--rmx-color-action-secondary-border': '#444444',
+    '--rmx-color-action-danger-background': '#ff4d2e',
+    '--rmx-color-action-danger-background-hover': '#e6432a',
+    '--rmx-color-action-danger-background-active': '#cc3b25',
+    '--rmx-color-action-danger-foreground': 'rgb(255 255 255 / 0.92)',
+    '--rmx-color-action-danger-border': '#ff4d2e',
+    '--rmx-shadow-xs': '0 1px 1px rgb(0 0 0 / 0.2)',
+    '--rmx-shadow-sm': '0 1px 2px rgb(0 0 0 / 0.25)',
+    '--rmx-shadow-md': '0 6px 18px rgb(0 0 0 / 0.3)',
+    '--rmx-shadow-lg': '0 16px 34px rgb(0 0 0 / 0.35)',
+    '--rmx-shadow-xl': '0 24px 52px rgb(0 0 0 / 0.4)',
+
+    '& .shiki, & .shiki span': {
+      backgroundColor: 'var(--shiki-dark-bg) !important',
+      color: 'var(--shiki-dark) !important',
+    },
+  },
 })
 
 const shellCss = css({
@@ -593,6 +639,10 @@ const shellCss = css({
     'linear-gradient(to bottom, color-mix(in oklab, rgb(246 246 246) 72%, white) 0%, white 18%)',
   [MOBILE_NAV_MEDIA_RULE]: {
     gridTemplateColumns: '1fr',
+  },
+  '@media (prefers-color-scheme: dark)': {
+    background:
+      'linear-gradient(to bottom, color-mix(in oklab, rgb(30 30 30) 72%, #1a1a1a) 0%, #1a1a1a 18%)',
   },
 })
 
