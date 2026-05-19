@@ -24,7 +24,7 @@ let app = run({
     try {
       var theme = localStorage.getItem('docs-color-scheme')
       if (theme === 'dark' || theme === 'light') {
-        // text = text.replace(/<html lang="en">/, `<html lang="en" data-color-scheme="${theme}">`)
+        text = text.replace(/<html lang="en">/, `<html lang="en" data-color-scheme="${theme}">`)
       }
     } catch (e) {}
 

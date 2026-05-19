@@ -120,6 +120,7 @@ function Head(
               var theme = localStorage.getItem('docs-color-scheme');
               if (theme === 'dark' || theme === 'light') {
                 document.documentElement.style.colorScheme = theme;
+                document.documentElement.dataset.colorScheme = theme;
               }
             } catch (e) {
               console.error('Failed to apply saved color scheme preference:', e);
@@ -779,11 +780,29 @@ const sidebarIntroHeaderCss = css({
 })
 
 const logoLightCss = css({
-  display: 'light-dark(block, none)',
+  display: 'block',
+  '@media (prefers-color-scheme: dark)': {
+    display: 'none',
+  },
+  '[data-color-scheme="dark"] &': {
+    display: 'none',
+  },
+  '[data-color-scheme="light"] &': {
+    display: 'block',
+  },
 })
 
 const logoDarkCss = css({
-  display: 'light-dark(none, block)',
+  display: 'none',
+  '@media (prefers-color-scheme: dark)': {
+    display: 'block',
+  },
+  '[data-color-scheme="dark"] &': {
+    display: 'block',
+  },
+  '[data-color-scheme="light"] &': {
+    display: 'none',
+  },
 })
 
 const logoCss = css({

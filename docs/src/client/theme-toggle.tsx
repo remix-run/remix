@@ -51,6 +51,7 @@ function toggle() {
   }
   let next = current === 'dark' ? 'light' : 'dark'
   html.style.colorScheme = next
+  html.dataset.colorScheme = next
   try {
     localStorage.setItem('docs-color-scheme', next)
   } catch {
@@ -78,9 +79,27 @@ const themeToggleCss = css({
 })
 
 const sunIconCss = css({
-  display: 'light-dark(none, block)',
+  display: 'none',
+  '@media (prefers-color-scheme: dark)': {
+    display: 'block',
+  },
+  '[data-color-scheme="dark"] &': {
+    display: 'block',
+  },
+  '[data-color-scheme="light"] &': {
+    display: 'none',
+  },
 })
 
 const moonIconCss = css({
-  display: 'light-dark(block, none)',
+  display: 'block',
+  '@media (prefers-color-scheme: dark)': {
+    display: 'none',
+  },
+  '[data-color-scheme="dark"] &': {
+    display: 'none',
+  },
+  '[data-color-scheme="light"] &': {
+    display: 'block',
+  },
 })
