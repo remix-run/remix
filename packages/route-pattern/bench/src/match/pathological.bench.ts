@@ -105,7 +105,7 @@ let urls = [
 ].map((url) => new URL(url))
 
 benchMatchers({
-  matchers: [matchers.routePatternArray, matchers.routePatternTrie],
+  matchers: [matchers.routePatternArray, matchers.routePattern],
   patterns: generatePatterns(),
   urls,
 })

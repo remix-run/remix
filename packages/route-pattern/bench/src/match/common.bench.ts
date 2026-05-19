@@ -53,7 +53,7 @@ for (let count of [10, 100, 1000, 5000]) {
     benchMatchers({
       matchers: [
         matchers.routePatternArray,
-        matchers.routePatternTrie,
+        matchers.routePattern,
         matchers.findMyWay,
         matchers.pathToRegexp,
       ],

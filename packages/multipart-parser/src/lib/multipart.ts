@@ -1,6 +1,7 @@
 import { ContentDisposition, ContentType } from '@remix-run/headers'
 
 import {
+  encodeAsciiPattern,
   createSearch,
   createPartialTailSearch,
   type SearchFunction,
@@ -265,7 +266,7 @@ export class MultipartParser {
     this.#findBoundary = createSearch(boundaryPattern)
     this.#findPartialTailBoundary = createPartialTailSearch(boundaryPattern)
     this.#boundaryLength = 4 + boundary.length // length of '\r\n--' + boundary
-    this.#boundaryBytes = new TextEncoder().encode(boundaryPattern)
+    this.#boundaryBytes = encodeAsciiPattern(boundaryPattern)
   }
 
   /**
@@ -499,7 +500,12 @@ export class MultipartParser {
   }
 }
 
-const decoder = new TextDecoder('utf-8', { fatal: true })
+let decoder: TextDecoder | undefined
+
+function decodeUtf8(input: Uint8Array): string {
+  decoder ??= new TextDecoder('utf-8', { fatal: true })
+  return decoder.decode(input as BufferSource)
+}
 
 /**
  * The decoded headers for a multipart part, keyed by lower-case header name.
@@ -573,7 +579,7 @@ export class MultipartPart {
    */
   get headers(): MultipartHeaders {
     if (!this.#headers) {
-      this.#headers = parseMultipartHeaders(decoder.decode(this.#header))
+      this.#headers = parseMultipartHeaders(decodeUtf8(this.#header))
     }
 
     return this.#headers
@@ -634,6 +640,6 @@ export class MultipartPart {
    * Note: Do not use this for binary data, use `part.bytes` or `part.arrayBuffer` instead.
    */
   get text(): string {
-    return decoder.decode(this.bytes)
+    return decodeUtf8(this.bytes)
   }
 }

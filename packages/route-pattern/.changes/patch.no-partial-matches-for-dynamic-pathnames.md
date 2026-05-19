@@ -1,7 +1,7 @@
 Do not allow partial matches for variables and wildcards in pathname
 
 ```ts
-let matcher = createMatcher<string>()
+let matcher = createMultiMatcher<string>()
 matcher.add('/files/:name.md', 'original')
 matcher.add('/files/:name.md.backup', 'backup')
 

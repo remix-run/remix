@@ -40,12 +40,31 @@ type FrameMarkerData = FrameData & {
 type PendingClientEntries = Map<Comment, [Comment, RemixElement]>
 
 /**
- * Loads a client entry module for hydration.
+ * Loads a named client-entry export for hydration.
+ *
+ * @param moduleUrl Browser-resolvable URL for the module that contains the client entry.
+ * @param exportName Named export to read from the loaded module.
+ * @returns The exported component function, or a promise for it.
+ *
+ * @example
+ * ```ts
+ * run({
+ *   async loadModule(moduleUrl, exportName) {
+ *     let mod = await import(moduleUrl)
+ *     return mod[exportName]
+ *   },
+ * })
+ * ```
  */
 export type LoadModule = (moduleUrl: string, exportName: string) => Promise<Function> | Function
 
 /**
- * Resolves frame content for the given frame source.
+ * Resolves content for a browser-loaded frame.
+ *
+ * @param src Source string from the `<Frame src>` prop.
+ * @param signal Abort signal for the active frame load or reload.
+ * @param target Optional name of the frame being reloaded.
+ * @returns HTML, a stream of HTML bytes, or Remix node content to render into the frame.
  */
 export type ResolveFrame = (
   src: string,
@@ -261,8 +280,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
       mergeRmxDataFromDocument(context.data, parsed)
-      context.styleManager.reset()
-      context.styleManager.adoptServerStyles(
+      context.styleManager.replaceServerStyles(
         collectFrameServerStyleTags(createElementContainer(parsed)),
       )
 
@@ -288,8 +306,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     let fragment =
       htmlContent !== undefined ? createFragmentFromString(container.doc, htmlContent) : content
-    context.styleManager.reset()
-    context.styleManager.adoptServerStyles(
+    context.styleManager.replaceServerStyles(
       collectFrameServerStyleTags(createElementContainer(fragment)),
     )
     removeEmptyHeads(fragment)
@@ -350,8 +367,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   async function hydrateInitial(): Promise<void> {
     let initialHydrationTracker = createInitialHydrationTracker()
 
-    context.styleManager.reset()
-    context.styleManager.adoptServerStyles(collectFrameServerStyleTags(container))
+    context.styleManager.replaceServerStyles(collectFrameServerStyleTags(container))
     createSubFrames(container.childNodes, context)
     scheduleHydrationInContainer(container, context, initialHydrationTracker)
 

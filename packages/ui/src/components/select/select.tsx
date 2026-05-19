@@ -6,6 +6,7 @@ import {
   on,
   ref,
   type CSSMixinDescriptor,
+  type Dispatched,
   type ElementProps,
   type Handle,
   type MixinHandle,
@@ -26,7 +27,10 @@ import type { AnchorOptions } from '../anchor/anchor.ts'
 const SELECT_CHANGE_EVENT = 'rmx:select-change' as const
 const LABEL_SWAP_DELAY_MS = 75
 
-type SelectChangeHandler = (event: SelectChangeEvent, signal: AbortSignal) => void | Promise<void>
+type SelectChangeHandler<target extends HTMLElement> = (
+  event: Dispatched<SelectChangeEvent, target>,
+  signal: AbortSignal,
+) => void | Promise<void>
 
 declare global {
   interface HTMLElementEventMap {
@@ -525,8 +529,11 @@ const select = {
   trigger,
 } as const
 
-export function onSelectChange(handler: SelectChangeHandler, captureBoolean?: boolean) {
-  return on<HTMLElement, typeof SELECT_CHANGE_EVENT>(SELECT_CHANGE_EVENT, handler, captureBoolean)
+export function onSelectChange<target extends HTMLElement>(
+  handler: SelectChangeHandler<target>,
+  captureBoolean?: boolean,
+) {
+  return on(SELECT_CHANGE_EVENT, handler, captureBoolean)
 }
 
 function SelectLabel(handle: Handle) {

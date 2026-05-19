@@ -1,19 +1,19 @@
 import { bench } from '@ark/attest'
 import { RoutePattern } from '@remix-run/route-pattern'
+import { createHref, type CreateHrefArgs } from '@remix-run/route-pattern/href'
 
 bench.baseline(() => {
-  let pattern = new RoutePattern('/')
-  pattern.href()
+  createHref('/')
 })
 
 bench('href > simple route', () => {
-  let pattern = new RoutePattern('/posts/:id')
-  pattern.href({ id: '123' })
+  let pattern = RoutePattern.parse('/posts/:id')
+  createHref(pattern, { id: '123' })
 }).types([493, 'instantiations'])
 
 bench('href > complex route', () => {
-  let pattern = new RoutePattern('/api(/v:major(.:minor))/*path/help')
-  pattern.href({ major: '1', minor: '2', path: 'users', help: 'help' })
+  let pattern = RoutePattern.parse('/api(/v:major(.:minor))/*path/help')
+  createHref(pattern, { major: '1', minor: '2', path: 'users', help: 'help' })
 }).types([1252, 'instantiations'])
 
 bench('href > mediarss', async () => {
@@ -33,7 +33,7 @@ bench('href > mediarss', async () => {
 function eagerlyEvaluateTypesForHrefParams<patterns extends ReadonlyArray<string>>(
   // prettier-ignore
   _: patterns & (
-    { [pattern in patterns[number]]: Parameters<RoutePattern<pattern>['href']>[0] } extends
+    { [pattern in patterns[number]]: CreateHrefArgs<pattern>[0] } extends
     { [pattern in patterns[number]]: Record<string, unknown> | null | undefined }
     ? patterns : never
   ),

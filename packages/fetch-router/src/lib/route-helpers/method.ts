@@ -6,7 +6,7 @@ import { Route } from '../route-map.ts'
  * Shorthand for a DELETE route.
  *
  * @alias del
- * @param pattern The route pattern string or {@link RoutePattern} object
+ * @param pattern The route pattern string or pre-parsed AST
  * @returns A Route configured for DELETE requests
  */
 export function createDeleteRoute<source extends string>(
@@ -19,7 +19,7 @@ export function createDeleteRoute<source extends string>(
  * Shorthand for a GET route.
  *
  * @alias get
- * @param pattern The route pattern string or {@link RoutePattern} object
+ * @param pattern The route pattern string or pre-parsed AST
  * @returns A Route configured for GET requests
  */
 export function createGetRoute<source extends string>(
@@ -32,7 +32,7 @@ export function createGetRoute<source extends string>(
  * Shorthand for a HEAD route.
  *
  * @alias head
- * @param pattern The route pattern string or {@link RoutePattern} object
+ * @param pattern The route pattern string or pre-parsed AST
  * @returns A Route configured for HEAD requests
  */
 export function createHeadRoute<source extends string>(
@@ -45,7 +45,7 @@ export function createHeadRoute<source extends string>(
  * Shorthand for a OPTIONS route.
  *
  * @alias options
- * @param pattern The route pattern string or {@link RoutePattern} object
+ * @param pattern The route pattern string or pre-parsed AST
  * @returns A Route configured for OPTIONS requests
  */
 export function createOptionsRoute<source extends string>(
@@ -58,7 +58,7 @@ export function createOptionsRoute<source extends string>(
  * Shorthand for a PATCH route.
  *
  * @alias patch
- * @param pattern The route pattern string or {@link RoutePattern} object
+ * @param pattern The route pattern string or pre-parsed AST
  * @returns A Route configured for PATCH requests
  */
 export function createPatchRoute<source extends string>(
@@ -71,7 +71,7 @@ export function createPatchRoute<source extends string>(
  * Shorthand for a POST route.
  *
  * @alias post
- * @param pattern The route pattern string or {@link RoutePattern} object
+ * @param pattern The route pattern string or pre-parsed AST
  * @returns A Route configured for POST requests
  */
 export function createPostRoute<source extends string>(
@@ -84,7 +84,7 @@ export function createPostRoute<source extends string>(
  * Shorthand for a PUT route.
  *
  * @alias put
- * @param pattern The route pattern string or {@link RoutePattern} object
+ * @param pattern The route pattern string or pre-parsed AST
  * @returns A Route configured for PUT requests
  */
 export function createPutRoute<source extends string>(

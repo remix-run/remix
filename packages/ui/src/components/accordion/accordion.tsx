@@ -7,6 +7,7 @@ import {
   type Handle,
   type Props,
   type RemixNode,
+  type Dispatched,
 } from '@remix-run/ui'
 
 import { spring } from '@remix-run/ui/animation'
@@ -15,8 +16,8 @@ import { theme } from '../../theme/theme.ts'
 
 const ACCORDION_CHANGE_EVENT = 'rmx:accordion-change' as const
 
-type AccordionChangeHandler = (
-  event: AccordionChangeEvent,
+type AccordionChangeHandler<target extends HTMLElement> = (
+  event: Dispatched<AccordionChangeEvent, target>,
   signal: AbortSignal,
 ) => void | Promise<void>
 
@@ -414,12 +415,11 @@ function AccordionImpl(handle: Handle<AccordionProps, AccordionContext>) {
   }
 }
 
-export function onAccordionChange(handler: AccordionChangeHandler, captureBoolean?: boolean) {
-  return on<HTMLElement, typeof ACCORDION_CHANGE_EVENT>(
-    ACCORDION_CHANGE_EVENT,
-    handler,
-    captureBoolean,
-  )
+export function onAccordionChange<target extends HTMLElement>(
+  handler: AccordionChangeHandler<target>,
+  captureBoolean?: boolean,
+) {
+  return on(ACCORDION_CHANGE_EVENT, handler, captureBoolean)
 }
 
 export const Accordion = AccordionImpl

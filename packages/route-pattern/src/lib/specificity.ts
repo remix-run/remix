@@ -1,5 +1,6 @@
-import type { RoutePattern, RoutePatternMatch } from './route-pattern.ts'
-import { decodeHostname } from './decode.ts'
+import type { RoutePattern } from './route-pattern.ts'
+import type { Match } from './match/types.ts'
+import { decodeHostname } from './match/decode.ts'
 
 /**
  * Returns true if match `a` is less specific than match `b`.
@@ -8,7 +9,7 @@ import { decodeHostname } from './decode.ts'
  * @param b the second match to compare
  * @returns true if `a` is less specific than `b`
  */
-export function lessThan(a: RoutePatternMatch, b: RoutePatternMatch): boolean {
+export function lessThan(a: Match, b: Match): boolean {
   return compare(a, b) === -1
 }
 
@@ -19,7 +20,7 @@ export function lessThan(a: RoutePatternMatch, b: RoutePatternMatch): boolean {
  * @param b the second match to compare
  * @returns true if `a` is more specific than `b`
  */
-export function greaterThan(a: RoutePatternMatch, b: RoutePatternMatch): boolean {
+export function greaterThan(a: Match, b: Match): boolean {
   return compare(a, b) === 1
 }
 
@@ -30,7 +31,7 @@ export function greaterThan(a: RoutePatternMatch, b: RoutePatternMatch): boolean
  * @param b the second match to compare
  * @returns true if `a` and `b` have equal specificity
  */
-export function equal(a: RoutePatternMatch, b: RoutePatternMatch): boolean {
+export function equal(a: Match, b: Match): boolean {
   return compare(a, b) === 0
 }
 
@@ -41,7 +42,7 @@ export function equal(a: RoutePatternMatch, b: RoutePatternMatch): boolean {
  * @param b the second match to compare
  * @returns negative if `a` is less specific, positive if more specific, 0 if equal
  */
-export const ascending = (a: RoutePatternMatch, b: RoutePatternMatch): number => compare(a, b)
+export const ascending = (a: Match, b: Match): number => compare(a, b)
 
 /**
  * Comparator function for sorting matches from most specific to least specific.
@@ -50,7 +51,7 @@ export const ascending = (a: RoutePatternMatch, b: RoutePatternMatch): number =>
  * @param b the second match to compare
  * @returns positive if `a` is less specific, negative if more specific, 0 if equal
  */
-export const descending = (a: RoutePatternMatch, b: RoutePatternMatch): number => compare(a, b) * -1
+export const descending = (a: Match, b: Match): number => compare(a, b) * -1
 
 /**
  * Compare two matches by specificity.
@@ -60,22 +61,19 @@ export const descending = (a: RoutePatternMatch, b: RoutePatternMatch): number =
  * @param b the second match to compare
  * @returns -1 if `a` is less specific, 1 if `a` is more specific, 0 if tied.
  */
-export function compare(a: RoutePatternMatch, b: RoutePatternMatch): -1 | 0 | 1 {
+export function compare(a: Match, b: Match): -1 | 0 | 1 {
   if (a.url.href !== b.url.href) {
     throw new Error(`Cannot compare matches for different URLs: ${a.url.href} vs ${b.url.href}`)
   }
   let hostname = decodeHostname(a.url.hostname)
 
-  // Hostname comparison
   let hostnameResult = compareHostname(hostname, a.paramsMeta.hostname, b.paramsMeta.hostname)
   if (hostnameResult !== 0) return hostnameResult
 
-  // Pathname comparison
   let pathnameResult = comparePathname(a.paramsMeta.pathname, b.paramsMeta.pathname)
   if (pathnameResult !== 0) return pathnameResult
 
-  // Search comparison
-  let searchResult = compareSearch(a.pattern.ast.search, b.pattern.ast.search)
+  let searchResult = compareSearch(a.pattern.search, b.pattern.search)
   if (searchResult !== 0) return searchResult
 
   return 0
@@ -83,8 +81,8 @@ export function compare(a: RoutePatternMatch, b: RoutePatternMatch): -1 | 0 | 1 
 
 function compareHostname(
   hostname: string,
-  a: RoutePatternMatch['paramsMeta']['hostname'],
-  b: RoutePatternMatch['paramsMeta']['hostname'],
+  a: Match['paramsMeta']['hostname'],
+  b: Match['paramsMeta']['hostname'],
 ): -1 | 0 | 1 {
   if (a.length === 0 && b.length === 0) return 0
   if (a.length === 0 && b.length > 0) return 1
@@ -125,8 +123,8 @@ function compareHostname(
 }
 
 function comparePathname(
-  a: RoutePatternMatch['paramsMeta']['pathname'],
-  b: RoutePatternMatch['paramsMeta']['pathname'],
+  a: Match['paramsMeta']['pathname'],
+  b: Match['paramsMeta']['pathname'],
 ): -1 | 0 | 1 {
   if (a.length === 0 && b.length === 0) return 0
   if (a.length === 0 && b.length > 0) return 1
@@ -163,10 +161,7 @@ function comparePathname(
   return 0
 }
 
-function compareSearch(
-  a: RoutePattern['ast']['search'],
-  b: RoutePattern['ast']['search'],
-): -1 | 0 | 1 {
+function compareSearch(a: RoutePattern['search'], b: RoutePattern['search']): -1 | 0 | 1 {
   let aSpecificity = searchSpecificity(a)
   let bSpecificity = searchSpecificity(b)
 
@@ -179,7 +174,7 @@ function compareSearch(
   return 0
 }
 
-function searchSpecificity(constraints: RoutePattern['ast']['search']): {
+function searchSpecificity(constraints: RoutePattern['search']): {
   key: number
   keyValue: number
 } {

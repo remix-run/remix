@@ -5,6 +5,7 @@ import {
   createMixin,
   on,
   type CSSMixinDescriptor,
+  type Dispatched,
   type ElementProps,
   type Handle,
   type MixinHandle,
@@ -16,7 +17,10 @@ import { theme } from '../../theme/theme.ts'
 
 const TABS_CHANGE_EVENT = 'rmx:tabs-change' as const
 
-type TabsChangeHandler = (event: TabsChangeEvent, signal: AbortSignal) => void | Promise<void>
+type TabsChangeHandler<target extends HTMLElement> = (
+  event: Dispatched<TabsChangeEvent, target>,
+  signal: AbortSignal,
+) => void | Promise<void>
 
 const tabsListCss: CSSMixinDescriptor = css({
   display: 'inline-flex',
@@ -444,8 +448,11 @@ export const trigger = triggerMixin
 
 const tabs = { Context, list, panel, trigger } as const
 
-export function onTabsChange(handler: TabsChangeHandler, captureBoolean?: boolean) {
-  return on<HTMLElement, typeof TABS_CHANGE_EVENT>(TABS_CHANGE_EVENT, handler, captureBoolean)
+export function onTabsChange<target extends HTMLElement>(
+  handler: TabsChangeHandler<target>,
+  captureBoolean?: boolean,
+) {
+  return on(TABS_CHANGE_EVENT, handler, captureBoolean)
 }
 
 export function Tabs(handle: Handle<TabsProps>) {

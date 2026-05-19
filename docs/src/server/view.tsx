@@ -1,126 +1,56 @@
-import { css } from 'remix/ui'
-import type { Handle, RemixNode } from 'remix/ui'
 import { Glyph } from '@remix-run/ui/glyph'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
-import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
-import { isPageActive } from './registry.ts'
-import { bodyTextCss, eyebrowTextCss } from './page-primitives.tsx'
-import { routes } from './routes.ts'
+import type { Handle, RemixNode } from 'remix/ui'
+import { css } from 'remix/ui'
 import {
   MOBILE_NAV_MAX_HEIGHT,
   MOBILE_NAV_MEDIA_RULE,
   MOBILE_TOP_BAR_HEIGHT_PX,
 } from '../shared/breakpoints.ts'
+import { assetServer } from './asset-server.ts'
+import type { DemoDocFile } from './demos.tsx'
+import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
+import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
+import { routes } from './routes.ts'
 
-export type DocsViewProps = {
-  page: PageDefinition
-  registry: DocsRegistry
-  versions: { version: string; crawl: boolean }[]
-  activeVersion?: string
-  sourceUrl?: string
-  children?: RemixNode | RemixNode[]
-}
+export type Versions = { version: string; crawl: boolean }[]
 
-export function DocsDocument(handle: Handle<DocsViewProps>) {
+const entryHref = await assetServer.getHref('docs/src/client/entry.tsx')
+
+export function Document(
+  handle: Handle<{
+    versions: Versions
+    activeVersion?: string
+    slug?: string
+    registry: DocsRegistry
+    children?: RemixNode | RemixNode[]
+    sourceUrl?: string
+    entryPreloads: readonly string[]
+  }>,
+) {
   return () => {
-    let { page, registry, versions, activeVersion, sourceUrl, children } = handle.props
-    let apiName = page.docFile?.name
-    let slug = page.docFile?.urlPath
+    let { registry, versions, activeVersion, slug, sourceUrl, children, entryPreloads } =
+      handle.props
+    let page = slug
+      ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug, activeVersion))
+      : getHomePage(registry)
+
     return (
       <html lang="en">
-        <head>
-          <meta charSet="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <link
-            rel="icon"
-            href={routes.assets.href({ version: activeVersion, asset: 'favicon.ico' })}
-            sizes="32x32"
-          />
-          <link
-            rel="icon"
-            href={routes.assets.href({ version: activeVersion, asset: 'favicon.svg' })}
-            type="image/svg+xml"
-            sizes="any"
-          />
-          {activeVersion != null ? (
-            <>
-              <meta name="robots" content="noindex,nofollow" />
-              <meta name="googlebot" content="noindex,nofollow" />
-            </>
-          ) : page.docFile?.kind === 'package' ? (
-            // Overview pages (package READMEs) link densely to every API page
-            // in the package; those are already reachable via the sidebar, so
-            // tell crawlers — including our prerender spider — not to follow
-            // links from here. The page itself is still indexable.
-            <meta name="robots" content="nofollow" />
-          ) : null}
-          <link rel="preconnect" href="https://fonts.googleapis.com" />
-          <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-          <link
-            rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700"
-          />
-          <title>{`${page.title} | Remix API Documentation`}</title>
-          {slug ? (
-            <link
-              rel="alternate"
-              type="text/markdown"
-              href={routes.markdown.href({ version: activeVersion, slug })}
-              title={`Markdown docs for ${apiName}`}
-            />
-          ) : null}
-          <script
-            type="module"
-            src={routes.assets.href({ version: activeVersion, asset: 'entry.js' })}
-          />
-          <RMX_01 />
-        </head>
+        <Head page={page} activeVersion={activeVersion} entryPreloads={entryPreloads} />
         <body mix={bodyCss}>
           <RMX_01_GLYPHS />
-          <input
-            id="nav-toggle"
-            type="checkbox"
-            mix={navToggleCss}
-            aria-hidden="true"
-            tabIndex={-1}
-          />
-          <a href="https://remix.run" mix={mobileLogoBannerCss}>
-            <RemixLogoLight activeVersion={activeVersion} />
-            <RemixLogoDark activeVersion={activeVersion} />
-          </a>
-          <label
-            for="nav-toggle"
-            mix={mobileTopBarCss}
-            aria-controls="docs-sidebar"
-            aria-label="Toggle navigation"
-          >
-            <span mix={mobileTopBarTextCss}>
-              {page.eyebrow ? <span mix={eyebrowTextCss}>{page.eyebrow}</span> : null}
-              <span mix={mobileTopBarTitleCss}>{page.navLabel || page.title || 'Overview'}</span>
-            </span>
-            <Glyph name="menu" mix={mobileTopBarIconCss} aria-hidden="true" />
-          </label>
+          <MobileHeader page={page} />
           <div mix={shellCss}>
-            <aside id="docs-sidebar" mix={sidebarFrameCss}>
-              <div mix={sidebarStickyCss}>
-                <Sidebar
-                  registry={registry}
-                  currentPath={page.path}
-                  versions={versions}
-                  activeVersion={activeVersion}
-                />
-              </div>
-            </aside>
-
-            <main mix={mainCss}>
-              <div mix={pageWrapCss}>
-                <div mix={[pageContentCss, page.css]}>
-                  <PageHeader page={page} sourceUrl={sourceUrl} />
-                  {children}
-                </div>
-                <DocsFooter />
-              </div>
-            </main>
+            <Sidebar
+              registry={registry}
+              currentPath={page.path}
+              versions={versions}
+              activeVersion={activeVersion}
+            />
+            <MainContent page={page} header={<PageHeader page={page} sourceUrl={sourceUrl} />}>
+              {children}
+            </MainContent>
           </div>
         </body>
       </html>
@@ -128,6 +58,206 @@ export function DocsDocument(handle: Handle<DocsViewProps>) {
   }
 }
 
+function MobileHeader(handle: Handle<{ page: PageDefinition }>) {
+  return () => {
+    let { page } = handle.props
+    return (
+      <>
+        <input
+          id="nav-toggle"
+          type="checkbox"
+          mix={navToggleCss}
+          aria-hidden="true"
+          tabIndex={-1}
+        />
+        <a href="https://remix.run" mix={mobileLogoBannerCss}>
+          <RemixLogos />
+        </a>
+        <label
+          for="nav-toggle"
+          mix={mobileTopBarCss}
+          aria-controls="docs-sidebar"
+          aria-label="Toggle navigation"
+        >
+          <span mix={mobileTopBarTextCss}>
+            {page.eyebrow ? <span mix={eyebrowTextCss}>{page.eyebrow}</span> : null}
+            <span mix={mobileTopBarTitleCss}>{page.navLabel || page.title || 'Overview'}</span>
+          </span>
+          <Glyph name="menu" mix={mobileTopBarIconCss} aria-hidden="true" />
+        </label>
+      </>
+    )
+  }
+}
+
+function Head(
+  handle: Handle<{
+    page: PageDefinition
+    activeVersion?: string
+    entryPreloads: readonly string[]
+  }>,
+) {
+  return () => {
+    let { page, activeVersion, entryPreloads } = handle.props
+    return (
+      <head>
+        <meta charSet="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
+        {activeVersion != null ? (
+          <>
+            <meta name="robots" content="noindex,nofollow" />
+            <meta name="googlebot" content="noindex,nofollow" />
+          </>
+        ) : page.docFile?.kind === 'package' || page.docFile?.kind === 'demo' ? (
+          // Overview pages (package READMEs) link densely to every API page
+          // in the package; those are already reachable via the sidebar, so
+          // tell crawlers — including our prerender spider — not to follow
+          // links from here. The page itself is still indexable.
+          // Demo pages contain example links that are not real docs paths.
+          <meta name="robots" content="nofollow" />
+        ) : null}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
+        <link
+          rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700"
+        />
+        <title>{`${page.title} | Remix API Documentation`}</title>
+        {page.docFile ? (
+          <link
+            rel="alternate"
+            type="text/markdown"
+            href={routes.markdown.href({ version: activeVersion, slug: page.docFile.urlPath })}
+            title={`Markdown docs for ${page.docFile.name ?? page.title}`}
+          />
+        ) : null}
+        {[
+          ...new Set([
+            ...entryPreloads,
+            ...(page.docFile?.kind === 'demo' ? page.docFile.preloads : []),
+          ]),
+        ].map((href) => (
+          <link key={href} rel="modulepreload" href={href} />
+        ))}
+        <script type="module" src={entryHref} />
+        <RMX_01 />
+      </head>
+    )
+  }
+}
+
+function MainContent(
+  handle: Handle<{ page: PageDefinition; header?: RemixNode; children: RemixNode | RemixNode[] }>,
+) {
+  return () => (
+    <main mix={mainCss}>
+      <div mix={pageWrapCss}>
+        <div mix={[pageContentCss, handle.props.page.css]}>
+          {handle.props.header}
+          {handle.props.children}
+        </div>
+        <DocsFooter />
+      </div>
+    </main>
+  )
+}
+// Route Components
+export function Home() {
+  return () => (
+    <>
+      <h1>Welcome to Remix 3!</h1>
+      <p>
+        Remix is a batteries-included, ultra-productive, zero dependencies and bundler-free
+        framework, ready to develop with in a model-first world. Remix 3 is built on the following
+        principles:
+      </p>
+
+      <ol>
+        <li>
+          <b>Model-First Development.</b> AI fundamentally shifts the human-computer interaction
+          model for both user experience and developer workflows. Optimize the source code,
+          documentation, tooling, and abstractions for LLMs. Additionally, develop abstractions for
+          applications to use models in the product itself, not just as a tool to develop it.
+        </li>
+        <li>
+          <b>Build on Web APIs.</b> Sharing abstractions across the stack greatly reduces the amount
+          of context switching, both for humans and machines. Build on the foundation of Web APIs
+          and JavaScript because it is the only full stack ecosystem.
+        </li>
+        <li>
+          <b>Religiously Runtime.</b> Designing for bundlers/compilers/typegen (and any pre-runtime
+          static analysis) leads to poor API design that eventually pollutes the entire system. All
+          packages must be designed with no expectation of static analysis and all tests must run
+          without bundling. Because browsers are involved, --import loaders for simple
+          transformations like TypeScript and JSX are permissible.
+        </li>
+        <li>
+          <b>Avoid Dependencies.</b> Dependencies lock you into somebody else's roadmap. Choose them
+          wisely, wrap them completely, and expect to replace most of them with our own package
+          eventually. The goal is zero.
+        </li>
+        <li>
+          <b>Demand Composition.</b> Abstractions should be single-purpose and replaceable. A
+          composable abstraction is easy to add and remove from an existing program. Every package
+          must be useful and documented independent of any other context. New features should first
+          be attempted as a new package. If impossible, attempt to break up the existing package to
+          make it more composable. However, tightly coupled modules that almost always change
+          together in both directions should be moved to the same package.
+        </li>
+        <li>
+          <b>Distribute Cohesively.</b> Extremely composable ecosystems are difficult to learn and
+          use. Remix will be distributed as a single remix package for both distribution and
+          documentation.
+        </li>
+      </ol>
+    </>
+  )
+}
+
+export function MarkdownContent(handle: Handle<{ html: string }>) {
+  return () => <div innerHTML={handle.props.html} />
+}
+
+export function DemoContent(
+  handle: Handle<{
+    demo: Pick<DemoDocFile, 'description' | 'name'>
+    sourceHtml: string
+    children: RemixNode
+  }>,
+) {
+  return () => {
+    let { demo, sourceHtml, children } = handle.props
+
+    return (
+      <div mix={demoPageCss}>
+        <header mix={demoHeaderCss}>
+          <h1 mix={demoTitleCss}>{demo.name}</h1>
+          <p>{demo.description}</p>
+        </header>
+
+        <div mix={demoFrameCss}>
+          <div mix={demoPreviewCss}>{children}</div>
+          <div mix={demoSourceCss} innerHTML={sourceHtml} />
+        </div>
+      </div>
+    )
+  }
+}
+
+export function NotFound(handle: Handle<{ slug: string }>) {
+  return () => (
+    <div class="error">
+      <p>Could not find a document at:</p>
+      <p>
+        <code>{handle.props.slug}</code>
+      </p>
+    </div>
+  )
+}
+
+// UI Components
 function Sidebar(
   handle: Handle<{
     registry: DocsRegistry
@@ -142,48 +272,56 @@ function Sidebar(
     let openSections = activePage && activePage.docFile ? [activePage.sectionId] : []
 
     return (
-      <div mix={sidebarPanelCss}>
-        <div mix={sidebarIntroCss}>
-          <a href="https://remix.run" class="logo">
-            <RemixLogoLight activeVersion={activeVersion} />
-            <RemixLogoDark activeVersion={activeVersion} />
-          </a>
-        </div>
-
-        <VersionSwitcher versions={versions} activeVersion={activeVersion} />
-
-        {registry.sections.map((section) => (
-          <details
-            key={section.id}
-            open={openSections.includes(section.id) || undefined}
-            mix={sectionDetailsCss}
-          >
-            <summary mix={sectionSummaryCss}>
-              <span mix={sectionSummaryLabelCss}>{section.label}</span>
-            </summary>
-            <div mix={sectionContentCss}>
-              {section.groups.map((group) =>
-                group.label ? (
-                  <nav key={group.id} mix={[sidebarGroupCss]}>
-                    <p mix={sidebarHeadingCss}>{group.label}</p>
-                    <nav aria-label={`${section.label} ${group.label}`} mix={sidebarNavCss}>
-                      <SidebarGroup registry={registry} group={group} currentPath={currentPath} />
-                    </nav>
-                  </nav>
-                ) : (
-                  <nav
-                    key={group.id}
-                    aria-label={`${section.label} Pages`}
-                    mix={[sidebarGroupCss, css({ paddingLeft: 0 })]}
-                  >
-                    <SidebarGroup registry={registry} group={group} currentPath={currentPath} />
-                  </nav>
-                ),
-              )}
+      <aside id="docs-sidebar" mix={sidebarFrameCss}>
+        <div mix={sidebarStickyCss}>
+          {' '}
+          <div mix={sidebarPanelCss}>
+            <div mix={sidebarIntroCss}>
+              <a href="https://remix.run" class="logo">
+                <RemixLogos />
+              </a>
             </div>
-          </details>
-        ))}
-      </div>
+
+            <VersionSwitcher versions={versions} activeVersion={activeVersion} />
+
+            {registry.sections.map((section) => (
+              <details
+                key={section.id}
+                open={openSections.includes(section.id) || undefined}
+                mix={sectionDetailsCss}
+              >
+                <summary mix={sectionSummaryCss}>
+                  <span mix={sectionSummaryLabelCss}>{section.label}</span>
+                </summary>
+                <div mix={sectionContentCss}>
+                  {section.groups.map((group) =>
+                    group.label ? (
+                      <nav key={group.id} mix={[sidebarGroupCss]}>
+                        <p mix={sidebarHeadingCss}>{group.label}</p>
+                        <nav aria-label={`${section.label} ${group.label}`} mix={sidebarNavCss}>
+                          <SidebarGroup
+                            registry={registry}
+                            group={group}
+                            currentPath={currentPath}
+                          />
+                        </nav>
+                      </nav>
+                    ) : (
+                      <nav
+                        key={group.id}
+                        aria-label={`${section.label} Pages`}
+                        mix={[sidebarGroupCss, css({ paddingLeft: 0 })]}
+                      >
+                        <SidebarGroup registry={registry} group={group} currentPath={currentPath} />
+                      </nav>
+                    ),
+                  )}
+                </div>
+              </details>
+            ))}
+          </div>
+        </div>
+      </aside>
     )
   }
 }
@@ -211,40 +349,17 @@ function SidebarGroup(
   }
 }
 
-function RemixLogoLight(handle: Handle<{ activeVersion?: string }>) {
-  let { activeVersion } = handle.props
-  return () => {
-    return (
+function RemixLogos() {
+  return () => (
+    <>
       <div mix={logoLightCss}>
-        <img
-          src={routes.assets.href({
-            version: activeVersion,
-            asset: 'remix-wordmark-light-mode.svg',
-          })}
-          alt="Remix"
-          mix={logoCss}
-        />
+        <img src="/remix-wordmark-light-mode.svg" alt="Remix" mix={logoCss} />
       </div>
-    )
-  }
-}
-
-function RemixLogoDark(handle: Handle<{ activeVersion?: string }>) {
-  let { activeVersion } = handle.props
-  return () => {
-    return (
       <div mix={logoDarkCss}>
-        <img
-          src={routes.assets.href({
-            version: activeVersion,
-            asset: 'remix-wordmark-dark-mode.svg',
-          })}
-          alt="Remix"
-          mix={logoCss}
-        />
+        <img src="/remix-wordmark-dark-mode.svg" alt="Remix" mix={logoCss} />
       </div>
-    )
-  }
+    </>
+  )
 }
 
 function VersionSwitcher(
@@ -332,13 +447,6 @@ function DocsFooter() {
 
 // Typography mirrors the `.md-prose` rules from the remix.run blog
 // (`/styles/md.css`) and is applied site-wide.
-//
-// `!important` is required on the margin/decoration overrides below because the
-// RMX_01 theme renders an unlayered `:where(h1, h2, ..., p, ul, ol, ...)
-// { margin: 0 }` reset, while the `css()` mixin always wraps its rules in
-// `@layer rmx.*`. Per the CSS cascade, unlayered author rules beat any layered
-// author rule of equal/lower importance regardless of specificity — so without
-// `!important` our margins are silently dropped.
 const bodyCss = css({
   margin: 0,
   backgroundColor: theme.surface.lvl0,
@@ -349,22 +457,23 @@ const bodyCss = css({
   lineHeight: '1.4',
   letterSpacing: '-0.008em',
 
+  // Headings
   '& :is(h1, h2, h3, h4, h5, h6)': {
     fontFamily: theme.fontFamily.sans,
     fontWeight: theme.fontWeight.bold,
     letterSpacing: '-0.02em',
     lineHeight: '1',
     color: theme.colors.text.primary,
-    marginTop: `${theme.space.lg} !important`,
-    marginBottom: `${theme.space.lg} !important`,
+    margin: `${theme.space.lg} 0`,
   },
   '& h1': {
     fontSize: 'clamp(1.5rem, 4vw, 3.5rem)',
     overflowWrap: 'anywhere',
+    marginTop: theme.space.xxl,
   },
   '& h2': {
     fontSize: 'clamp(1.375rem, 2.5vw, 1.625rem)',
-    marginTop: `calc(${theme.space.xxl} + ${theme.space.lg}) !important`,
+    marginTop: theme.space.xxl,
   },
   '& h3': {
     fontSize: 'clamp(1.125rem, 1.75vw, 1.25rem)',
@@ -379,28 +488,27 @@ const bodyCss = css({
     fontSize: '1rem',
   },
 
+  // Paragraphs
   '& p': {
-    marginTop: `${theme.space.lg} !important`,
-    marginBottom: `${theme.space.lg} !important`,
+    margin: `${theme.space.lg} 0`,
   },
 
+  // Lists
+  '& ol, & ul': {
+    margin: `${theme.space.xxl} 0 ${theme.space.lg}`,
+    paddingInlineStart: theme.space.xxl,
+  },
   '& ul': {
     listStyle: 'disc',
-    marginTop: `${theme.space.xxl} !important`,
-    marginBottom: `${theme.space.lg} !important`,
-    paddingInlineStart: theme.space.xxl,
   },
   '& ol': {
     listStyle: 'decimal',
-    marginTop: `${theme.space.xxl} !important`,
-    marginBottom: `${theme.space.lg} !important`,
-    paddingInlineStart: theme.space.xxl,
   },
   '& li + li': {
     marginTop: theme.space.xs,
   },
   '& li > p': {
-    margin: '0 !important',
+    margin: 0,
   },
 
   '& a': {
@@ -417,7 +525,7 @@ const bodyCss = css({
     border: `1px solid ${theme.colors.border.subtle}`,
     borderRadius: theme.radius.md,
     padding: theme.space.md,
-    margin: `${theme.space.lg} 0 !important`,
+    margin: `${theme.space.lg} 0`,
     overflowX: 'auto',
     lineHeight: theme.lineHeight.relaxed,
     '@media (min-width: 768px)': {
@@ -436,26 +544,26 @@ const bodyCss = css({
   },
 
   '& .shiki': {
-    backgroundColor: `${theme.surface.lvl4} !important`,
+    backgroundColor: theme.surface.lvl4,
     '& a': {
       color: 'inherit',
     },
     '@media (prefers-color-scheme: dark)': {
       '&, & span': {
-        color: 'var(--shiki-dark) !important',
+        color: 'var(--shiki-dark)',
       },
     },
   },
 
   // Sidebar opt-out: the global `& a { underline }` and `& p { margin: 2rem }`
   // would otherwise wreck the nav and group labels. Higher-specificity
-  // descendant selectors win without needing !important fights.
+  // descendant selectors win without needing fights.
   '& aside a': {
     textDecoration: 'none',
   },
   '& aside p': {
-    marginTop: '0 !important',
-    marginBottom: '0 !important',
+    marginTop: 0,
+    marginBottom: 0,
   },
 
   // Mobile nav toggle: the sidebar stays in document flow below the sticky top
@@ -701,6 +809,23 @@ const pageDescriptionCss = css({
   maxWidth: '64ch',
 })
 
+const eyebrowTextCss = css({
+  margin: 0,
+  padding: 0,
+  fontSize: theme.fontSize.xxxs,
+  fontWeight: theme.fontWeight.semibold,
+  letterSpacing: theme.letterSpacing.meta,
+  textTransform: 'uppercase',
+  color: theme.colors.text.muted,
+})
+
+const bodyTextCss = css({
+  margin: 0,
+  fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.relaxed,
+  color: theme.colors.text.secondary,
+})
+
 const footerCss = css({
   display: 'flex',
   flexDirection: 'column',
@@ -722,6 +847,48 @@ const footerLegalTextCss = css({
   letterSpacing: '0.05em',
   textTransform: 'uppercase',
   color: theme.colors.text.muted,
+})
+
+const demoPageCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.xl,
+})
+
+const demoHeaderCss = css({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.space.sm,
+})
+
+const demoTitleCss = css({
+  margin: '0 !important',
+})
+
+const demoFrameCss = css({
+  border: `1px solid ${theme.colors.border.subtle}`,
+  borderRadius: theme.radius.lg,
+  overflow: 'hidden',
+})
+
+const demoPreviewCss = css({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  minHeight: '120px',
+  padding: theme.space.xxl,
+  borderBottom: `1px solid ${theme.colors.border.subtle}`,
+  backgroundColor: theme.surface.lvl0,
+})
+
+const demoSourceCss = css({
+  '& > pre.shiki': {
+    margin: '0 !important',
+    marginBlockStart: '0px !important',
+    marginBlockEnd: '0px !important',
+    border: 'none !important',
+    borderRadius: '0 !important',
+  },
 })
 
 // Visually hide the checkbox while keeping it focusable. Toggling happens via

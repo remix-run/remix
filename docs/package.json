@@ -16,17 +16,17 @@
     "@types/hast": "^3.0.4",
     "@types/node": "catalog:",
     "@types/semver": "^7.5.8",
-    "esbuild": "^0.25.10",
     "shiki": "^3.22.0",
-    "typedoc": "^0.28.19"
+    "typedoc": "^0.28.19",
+    "typescript": "catalog:"
   },
   "scripts": {
     "build": "pnpm run --filter \".\" --parallel \"/^build:/\"",
-    "build:browser": "esbuild src/client/*.tsx --outbase=src/client --outdir=build/assets --bundle --splitting --format=esm",
-    "build:public": "mkdir -p build/assets && cp public/* build/assets",
-    "dev": "NODE_ENV=development pnpm run --filter \".\" --parallel \"/^dev:/\"",
-    "dev:browser": "pnpm run build:browser --sourcemap --watch",
+    "build:demos": "node --import remix/node-tsx src/generate/build-demos.ts",
+    "build:public": "mkdir -p build/public && cp public/* build/public",
+    "predev": "pnpm run build",
     "dev:server": "node --watch --import remix/node-tsx src/server/index.ts",
+    "dev": "NODE_ENV=development pnpm run dev:server",
     "docs": "node src/generate/index.ts",
     "docs:debug": "DEBUG=1 node src/generate/index.ts",
     "prerender": "node --import remix/node-tsx src/server/prerender.ts",

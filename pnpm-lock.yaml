@@ -211,15 +211,15 @@ importers:
       '@types/semver':
         specifier: ^7.5.8
         version: 7.5.8
-      esbuild:
-        specifier: ^0.25.10
-        version: 0.25.12
       shiki:
         specifier: ^3.22.0
         version: 3.23.0
       typedoc:
         specifier: ^0.28.19
         version: 0.28.19(typescript@5.9.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
 
   packages/assert:
     devDependencies:

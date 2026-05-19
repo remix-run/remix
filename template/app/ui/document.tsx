@@ -1,23 +1,26 @@
-import type { RemixNode } from 'remix/ui'
+import { css, type RemixNode } from 'remix/ui'
 
 import { routes } from '../routes.ts'
 
 export interface DocumentProps {
   children?: RemixNode
+  head?: RemixNode
   title?: string
 }
 
 const DEFAULT_TITLE = readAppDisplayName('%%RMX_APP_DISPLAY_NAME_URI_COMPONENT%%')
 
 export function Document() {
-  return ({ title = DEFAULT_TITLE, children }: DocumentProps) => (
+  return ({ children, head, title = DEFAULT_TITLE }: DocumentProps) => (
     <html lang="en">
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
         <title>{title}</title>
+        {head}
       </head>
-      <body>
+      <body mix={css({ margin: 0 })}>
         {children}
         <script type="module" src={routes.assets.href({ path: 'app/assets/entry.ts' })}></script>
       </body>

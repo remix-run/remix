@@ -1,4 +1,4 @@
-BREAKING CHANGE: Remove the `compareFn` parameter from `Matcher.match` and `Matcher.matchAll`.
+BREAKING CHANGE: Remove the `compareFn` parameter from `match` and `matchAll` methods
 
 Matches always sort by specificity (most specific first). If you need a different order, sort the result of `matchAll` yourself.
 
