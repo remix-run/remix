@@ -529,10 +529,18 @@ describe('run', () => {
       assert.equal(result.exitCode, 0)
 
       let documentSource = await fs.readFile(path.join(appDir, 'app', 'ui', 'document.tsx'), 'utf8')
+      let scaffoldHomePageSource = await fs.readFile(
+        path.join(appDir, 'app', 'ui', 'scaffold-home-page.tsx'),
+        'utf8',
+      )
       let encodedAppName = encodeURIComponent(appName)
 
       assert.match(
         documentSource,
+        new RegExp(`readAppDisplayName\\('${escapeRegExp(encodedAppName)}'\\)`),
+      )
+      assert.match(
+        scaffoldHomePageSource,
         new RegExp(`readAppDisplayName\\('${escapeRegExp(encodedAppName)}'\\)`),
       )
     } finally {
