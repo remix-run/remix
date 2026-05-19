@@ -16,19 +16,9 @@ let app = run({
   },
   async resolveFrame(src, signal) {
     let response = await fetch(src, { headers: { accept: 'text/html' }, signal })
-    if (!response.ok) {
-      return `<pre>Frame error: ${response.status} ${response.statusText}</pre>`
-    }
-    let text = await response.text()
-
-    try {
-      var theme = localStorage.getItem('docs-color-scheme')
-      if (theme === 'dark' || theme === 'light') {
-        text = text.replace(/<html lang="en">/, `<html lang="en" data-color-scheme="${theme}">`)
-      }
-    } catch (e) {}
-
-    return text
+    return response.ok
+      ? (response.body ?? response.text())
+      : `<pre>Frame error: ${response.status} ${response.statusText}</pre>`
   },
 })
 

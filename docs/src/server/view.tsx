@@ -1,6 +1,6 @@
 import { Glyph } from '@remix-run/ui/glyph'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
-import { clientEntry, createElement } from 'remix/ui'
+import { createElement } from 'remix/ui'
 import type { Handle, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
 import {
@@ -13,13 +13,10 @@ import type { DemoDocFile } from './demos.tsx'
 import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
 import { routes } from './routes.ts'
-import { ThemeToggle as ThemeToggleFn } from '../client/theme-toggle.tsx'
 
 export type Versions = { version: string; crawl: boolean }[]
 
 const entryHref = await assetServer.getHref('docs/src/client/entry.tsx')
-const themeToggleHref = await assetServer.getHref('docs/src/client/theme-toggle.tsx')
-const ThemeToggle = clientEntry(`${themeToggleHref}#ThemeToggle`, ThemeToggleFn)
 
 export function Document(
   handle: Handle<{
@@ -78,7 +75,6 @@ function MobileHeader(handle: Handle<{ page: PageDefinition }>) {
           <a href="https://remix.run">
             <RemixLogos />
           </a>
-          <ThemeToggle />
         </div>
         <label
           for="nav-toggle"
@@ -110,22 +106,6 @@ function Head(
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        {/*
-          Inline script emitted before CSS paints to restore the saved color scheme
-          preference from localStorage, avoiding a flash of the wrong theme.
-        */}
-        <script
-          innerHTML={`
-            try {
-              var theme = localStorage.getItem('docs-color-scheme');
-              if (theme === 'dark' || theme === 'light') {
-                document.documentElement.style.colorScheme = theme;
-                document.documentElement.dataset.colorScheme = theme;
-              }
-            } catch (e) {
-              console.error('Failed to apply saved color scheme preference:', e);
-            }`}
-        />
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
         {activeVersion != null ? (
@@ -300,12 +280,9 @@ function Sidebar(
           {' '}
           <div mix={sidebarPanelCss}>
             <div mix={sidebarIntroCss}>
-              <div mix={sidebarIntroHeaderCss}>
-                <a href="https://remix.run" class="logo">
-                  <RemixLogos />
-                </a>
-                <ThemeToggle />
-              </div>
+              <a href="https://remix.run" class="logo">
+                <RemixLogos />
+              </a>
             </div>
 
             <VersionSwitcher versions={versions} activeVersion={activeVersion} />
@@ -772,23 +749,10 @@ const sidebarNavCss = css({
   gap: theme.space.xs,
 })
 
-const sidebarIntroHeaderCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  gap: theme.space.sm,
-})
-
 const logoLightCss = css({
   display: 'block',
   '@media (prefers-color-scheme: dark)': {
     display: 'none',
-  },
-  '[data-color-scheme="dark"] &': {
-    display: 'none',
-  },
-  '[data-color-scheme="light"] &': {
-    display: 'block',
   },
 })
 
@@ -796,12 +760,6 @@ const logoDarkCss = css({
   display: 'none',
   '@media (prefers-color-scheme: dark)': {
     display: 'block',
-  },
-  '[data-color-scheme="dark"] &': {
-    display: 'block',
-  },
-  '[data-color-scheme="light"] &': {
-    display: 'none',
   },
 })
 
