@@ -1,6 +1,5 @@
 import { Glyph } from '@remix-run/ui/glyph'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
-import { createElement } from 'remix/ui'
 import type { Handle, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
 import {
@@ -634,7 +633,6 @@ const bodyCss = css({
       pointerEvents: 'auto',
     },
   },
-
 })
 
 const shellCss = css({
