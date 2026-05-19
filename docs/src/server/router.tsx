@@ -1,33 +1,50 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
-import * as semver from 'semver'
-import { type RemixNode } from 'remix/ui'
-import { renderToStream } from 'remix/ui/server'
-import { createRouter as _createRouter, type Router } from 'remix/router'
-import { createHtmlResponse } from 'remix/response/html'
-import { MarkdownContent, ServerPage, NotFound, type ServerContext } from './components.tsx'
-import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
-import { routes } from './routes.ts'
-import { createFileResponse } from 'remix/response/file'
 import { openLazyFile } from 'remix/fs'
+import { staticFiles } from 'remix/middleware/static'
+import { createFileResponse } from 'remix/response/file'
+import { createHtmlResponse } from 'remix/response/html'
+import { createRouter as _createRouter, type Router } from 'remix/router'
+import { clientEntry, type RemixNode } from 'remix/ui'
+import { renderToStream } from 'remix/ui/server'
+import * as semver from 'semver'
+import { assetServer, entryPreloads } from './asset-server.ts'
+import { discoverDemoFiles, loadDemoComponent, renderDemoSource } from './demos.tsx'
+import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
+import { buildRegistry, type DocsRegistry } from './registry.ts'
+import { routes } from './routes.ts'
+import { DemoContent, Document, Home, MarkdownContent, NotFound, type Versions } from './view.tsx'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const REPO_DIR = path.resolve(DOCS_DIR, '..')
 const BUILD_DIR = path.join(REPO_DIR, 'docs', 'build')
 const MD_DIR = path.join(BUILD_DIR, 'md')
-const ASSETS_DIR = path.join(BUILD_DIR, 'assets')
-const DEV_CSS_DIR = path.join(DOCS_DIR, 'public')
+const PUBLIC_DIR = path.join(BUILD_DIR, 'public')
 const REMIX_PKG_JSON = path.join(REPO_DIR, 'packages', 'remix', 'package.json')
 
-const { docFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
+const { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
+const demoFiles = await discoverDemoFiles()
+const docFiles = [...markdownFiles, ...demoFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
 
-export const getDefaultVersions = (): ServerContext['versions'] => {
+const registryByVersion = new Map<string | undefined, DocsRegistry>()
+registryByVersion.set(undefined, buildRegistry(docFiles))
+
+function getRegistry(version?: string): DocsRegistry {
+  let registry = registryByVersion.get(version)
+  if (!registry) {
+    registry = buildRegistry(docFiles, version)
+    registryByVersion.set(version, registry)
+  }
+  return registry
+}
+
+export const getDefaultVersions = (): Versions => {
   let version = JSON.parse(fs.readFileSync(REMIX_PKG_JSON, 'utf-8')).version
   return [{ version, crawl: semver.prerelease(version) === null }]
 }
 
-export function createRouter(versions: ServerContext['versions']) {
-  const router = _createRouter()
+export function createRouter(versions: Versions) {
+  const router = _createRouter({ middleware: [staticFiles(PUBLIC_DIR)] })
 
   const respond = {
     async file(request: Request, filePath: string, name?: string) {
@@ -52,24 +69,40 @@ export function createRouter(versions: ServerContext['versions']) {
 
   router.map(routes, {
     actions: {
-      assets: ({ request, params }) => {
-        // Replicate `staticFiles` middleware but allowing for a dynamic version param
-        let devPath = path.join(DEV_CSS_DIR, params.asset)
-        let filePath =
-          process.env.NODE_ENV === 'development' && fs.existsSync(devPath)
-            ? devPath
-            : path.join(ASSETS_DIR, params.asset)
-        return respond.file(request, filePath, params.asset)
+      assets: async ({ request, params }) => {
+        // Drop the optional version prefix so the asset server sees a stable URL space.
+        let url = new URL(request.url)
+        url.pathname = routes.assets.href({ asset: params.asset })
+        let response = await assetServer.fetch(new Request(url, request))
+        return response ?? new Response('Not Found', { status: 404 })
       },
       async docs({ request, params }) {
-        // Docs page
         let docFile = docFiles.find((file) => file.urlPath === params.slug)
-        let node: RemixNode
-        let sourceUrl: string | undefined
+        let docProps = {
+          registry: getRegistry(params.version),
+          versions: versions,
+          slug: params.slug,
+          activeVersion: params.version,
+          entryPreloads,
+        }
 
-        if (!docFile) {
-          node = <NotFound slug={params.slug} />
-        } else {
+        if (docFile) {
+          if (docFile.kind === 'demo') {
+            let ExampleComponent = clientEntry(
+              `${docFile.assetHref}#default`,
+              await loadDemoComponent(docFile),
+            )
+            let sourceHtml = await renderDemoSource(docFile.source)
+            return await respond.document(
+              request,
+              <Document {...docProps} sourceUrl={docFile.sourceUrl}>
+                <DemoContent demo={docFile} sourceHtml={sourceHtml}>
+                  <ExampleComponent key={docFile.slug} />
+                </DemoContent>
+              </Document>,
+            )
+          }
+
           let { html, source } = await renderMarkdownFile(
             docFile.path,
             docFilesLookup,
@@ -77,75 +110,33 @@ export function createRouter(versions: ServerContext['versions']) {
             // Don't transform links in README - too many false positives
             docFile.kind !== 'package',
           )
-          node = <MarkdownContent html={html} />
-          sourceUrl = source
+          return await respond.document(
+            request,
+            <Document {...docProps} sourceUrl={source}>
+              <MarkdownContent html={html} />
+            </Document>,
+          )
         }
 
         return await respond.document(
           request,
-          <ServerPage
-            docFiles={docFiles}
-            versions={versions}
-            slug={params.slug}
-            activeVersion={params.version}
-            sourceUrl={sourceUrl}
-          >
-            {node}
-          </ServerPage>,
+          <Document {...docProps}>
+            <NotFound slug={params.slug} />
+          </Document>,
+          { status: 404 },
         )
       },
       async home({ request, params }) {
         return respond.document(
           request,
-          <ServerPage docFiles={docFiles} versions={versions} activeVersion={params.version}>
-            <h1>Welcome to Remix 3!</h1>
-            <p>
-              Remix is a batteries-included, ultra-productive, zero dependencies and bundler-free
-              framework, ready to develop with in a model-first world. Remix 3 is built on the
-              following principles:
-            </p>
-
-            <ol>
-              <li>
-                <b>Model-First Development.</b> AI fundamentally shifts the human-computer
-                interaction model for both user experience and developer workflows. Optimize the
-                source code, documentation, tooling, and abstractions for LLMs. Additionally,
-                develop abstractions for applications to use models in the product itself, not just
-                as a tool to develop it.
-              </li>
-              <li>
-                <b>Build on Web APIs.</b> Sharing abstractions across the stack greatly reduces the
-                amount of context switching, both for humans and machines. Build on the foundation
-                of Web APIs and JavaScript because it is the only full stack ecosystem.
-              </li>
-              <li>
-                <b>Religiously Runtime.</b> Designing for bundlers/compilers/typegen (and any
-                pre-runtime static analysis) leads to poor API design that eventually pollutes the
-                entire system. All packages must be designed with no expectation of static analysis
-                and all tests must run without bundling. Because browsers are involved, --import
-                loaders for simple transformations like TypeScript and JSX are permissible.
-              </li>
-              <li>
-                <b>Avoid Dependencies.</b> Dependencies lock you into somebody else's roadmap.
-                Choose them wisely, wrap them completely, and expect to replace most of them with
-                our own package eventually. The goal is zero.
-              </li>
-              <li>
-                <b>Demand Composition.</b> Abstractions should be single-purpose and replaceable. A
-                composable abstraction is easy to add and remove from an existing program. Every
-                package must be useful and documented independent of any other context. New features
-                should first be attempted as a new package. If impossible, attempt to break up the
-                existing package to make it more composable. However, tightly coupled modules that
-                almost always change together in both directions should be moved to the same
-                package.
-              </li>
-              <li>
-                <b>Distribute Cohesively.</b> Extremely composable ecosystems are difficult to learn
-                and use. Remix will be distributed as a single remix package for both distribution
-                and documentation.
-              </li>
-            </ol>
-          </ServerPage>,
+          <Document
+            registry={getRegistry(params.version)}
+            versions={versions}
+            activeVersion={params.version}
+            entryPreloads={entryPreloads}
+          >
+            <Home />
+          </Document>,
         )
       },
       async lookup({ request, params }) {
@@ -163,6 +154,13 @@ export function createRouter(versions: ServerContext['versions']) {
         let docFile = docFiles.find((file) => file.urlPath === params.slug)
         if (!docFile) {
           return new Response('Not Found', { status: 404 })
+        }
+
+        if (docFile.kind === 'demo') {
+          let md = `# ${docFile.name}\n\n${docFile.description}\n\n\`\`\`tsx\n${docFile.source}\n\`\`\`\n`
+          return new Response(md, {
+            headers: { 'content-type': 'text/markdown; charset=utf-8' },
+          })
         }
 
         return respond.file(request, docFile.path)
