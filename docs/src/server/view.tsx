@@ -70,11 +70,9 @@ function MobileHeader(handle: Handle<{ page: PageDefinition }>) {
           aria-hidden="true"
           tabIndex={-1}
         />
-        <div mix={mobileLogoBannerCss}>
-          <a href="https://remix.run">
-            <RemixLogos />
-          </a>
-        </div>
+        <a href="https://remix.run" mix={mobileLogoBannerCss}>
+          <RemixLogos />
+        </a>
         <label
           for="nav-toggle"
           mix={mobileTopBarCss}
@@ -588,6 +586,28 @@ const bodyCss = css({
     padding: '0.125em 0.25em',
   },
 
+  // Not sure why this multiple levels of nesting doesn't work but it produces the following in the document HTML
+  //
+  // & .shiki {
+  //   background-color: light-dark(var(--rmx-surface-lvl4), var(--shiki-dark-bg)) !important;
+  //   & span: [object Object];
+  //   & a: [object Object];
+  // }
+  //
+  // '& .shiki': {
+  //   backgroundColor: `light-dark(${theme.surface.lvl4}, var(--shiki-dark-bg)) !important`,
+  //   '& span': {
+  //     color: 'light-dark(var(--shiki-light), var(--shiki-dark)) !important',
+  //   },
+  //   '& a': {
+  //     color: 'inherit',
+  //     textDecoration: `none`,
+  //     '&:hover, &:focus': {
+  //       textDecoration: `underline`,
+  //     },
+  //   },
+  // },
+
   '& .shiki': {
     backgroundColor: `light-dark(${theme.surface.lvl4}, var(--shiki-dark-bg)) !important`,
   },
@@ -601,8 +621,10 @@ const bodyCss = css({
     textDecoration: `underline`,
   },
 
-  '& .shiki span': {
-    color: 'light-dark(var(--shiki-light), var(--shiki-dark)) !important',
+  '@media (prefers-color-scheme: dark)': {
+    '& .shiki span': {
+      color: 'var(--shiki-dark) !important',
+    },
   },
 
   // Sidebar opt-out: the global `& a { underline }` and `& p { margin: 2rem }`
