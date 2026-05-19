@@ -8,7 +8,6 @@
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
-    "erasableSyntaxOnly": true,
     "isolatedModules": true,
     "jsx": "react-jsx",
     "jsxImportSource": "remix/ui",

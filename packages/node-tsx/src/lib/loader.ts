@@ -20,12 +20,12 @@ export function initialize(data?: { namespace?: string }): void {
 }
 
 /**
- * Transforms `.jsx` and `.tsx` modules into runnable JavaScript for Node's `load` hook API.
+ * Transforms `.ts`, `.tsx`, and `.jsx` modules into runnable JavaScript for Node's `load` hook API.
  *
  * @param url Module URL being loaded by Node.
  * @param context Hook context for the current load request.
  * @param nextLoad Continuation for delegating to the next registered hook.
- * @returns The transformed module source for `.jsx`/`.tsx` files, or the delegated result.
+ * @returns The transformed module source for supported TypeScript/JSX files, or the delegated result.
  */
 export const load: NonNullable<RegisterHooksOptions['load']> = (url, context, nextLoad) => {
   let namespace = scopedState.namespace
@@ -35,11 +35,12 @@ export const load: NonNullable<RegisterHooksOptions['load']> = (url, context, ne
 
   if (url.startsWith('file:')) {
     let filePath = fileURLToPath(url)
-    if (filePath.endsWith('.tsx') || filePath.endsWith('.jsx')) {
+    if (isTransformableFile(filePath)) {
+      let source = fs.readFileSync(filePath, 'utf8')
       return {
-        format: getModuleFormat(filePath),
+        format: getModuleFormat(filePath, source),
         shortCircuit: true,
-        source: transformModule(filePath, fs.readFileSync(filePath, 'utf8')),
+        source: transformModule(filePath, source),
       }
     }
   }
@@ -86,4 +87,8 @@ export function createLoadModuleSpecifier(
   namespace: string,
 ): string {
   return createScopedSpecifier({ namespace, parentURL, specifier })
+}
+
+function isTransformableFile(filePath: string): boolean {
+  return filePath.endsWith('.ts') || filePath.endsWith('.tsx') || filePath.endsWith('.jsx')
 }

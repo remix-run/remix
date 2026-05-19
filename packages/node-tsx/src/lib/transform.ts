@@ -2,7 +2,7 @@ import { transformSync, type OxcError, type TransformOptions } from 'oxc-transfo
 import { getTsconfig, type TsConfigResult } from 'get-tsconfig'
 import * as path from 'node:path'
 
-import { getModuleFormat, type ModuleFormat } from './package-type.ts'
+import { getModuleFormat } from './package-type.ts'
 
 const tsconfigCache = new Map<string, TsConfigResult | null>()
 const tsconfigTransformCompilerOptionKeys = [
@@ -27,7 +27,7 @@ export function transformModule(filePath: string, source: string): string {
   let compilerOptions = getTsconfigCompilerOptions(filePath)
   let result = transformSync(filePath, source, {
     lang: getLanguage(filePath),
-    sourceType: getSourceType(filePath),
+    sourceType: getSourceType(filePath, source),
     sourcemap: true,
     ...getJsxTransformOptions(filePath, compilerOptions),
   })
@@ -62,18 +62,14 @@ function formatTransformError(error: OxcError): string {
   return sections.join('\n\n')
 }
 
-function getSourceType(filePath: string): NonNullable<TransformOptions['sourceType']> {
-  return getModuleFormatForTransform(filePath) === 'module' ? 'module' : 'commonjs'
-}
-
-function getModuleFormatForTransform(filePath: string): ModuleFormat {
-  return filePath.endsWith('.tsx') || filePath.endsWith('.jsx')
-    ? (getModuleFormat(filePath) as ModuleFormat)
-    : 'module'
+function getSourceType(filePath: string, source: string): NonNullable<TransformOptions['sourceType']> {
+  return getModuleFormat(filePath, source) === 'module' ? 'module' : 'commonjs'
 }
 
 function getLanguage(filePath: string): NonNullable<TransformOptions['lang']> {
-  return filePath.endsWith('.tsx') ? 'tsx' : 'jsx'
+  if (filePath.endsWith('.tsx')) return 'tsx'
+  if (filePath.endsWith('.jsx')) return 'jsx'
+  return 'ts'
 }
 
 function getTsconfigCompilerOptions(

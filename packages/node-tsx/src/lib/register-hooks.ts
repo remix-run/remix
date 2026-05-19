@@ -26,11 +26,12 @@ export async function load(
 
   if (url.startsWith('file:')) {
     let filePath = fileURLToPath(url)
-    if (filePath.endsWith('.tsx') || filePath.endsWith('.jsx')) {
+    if (isTransformableFile(filePath)) {
+      let source = await fs.readFile(filePath, 'utf8')
       return {
-        format: getModuleFormat(filePath),
+        format: getModuleFormat(filePath, source),
         shortCircuit: true,
-        source: transformModule(filePath, await fs.readFile(filePath, 'utf8')),
+        source: transformModule(filePath, source),
       }
     }
   }
@@ -72,4 +73,8 @@ export async function resolve(
     ...resolved,
     url: appendNamespaceToUrl(resolved.url, namespace),
   }
+}
+
+function isTransformableFile(filePath: string): boolean {
+  return filePath.endsWith('.ts') || filePath.endsWith('.tsx') || filePath.endsWith('.jsx')
 }

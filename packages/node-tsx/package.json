@@ -1,7 +1,7 @@
 {
   "name": "@remix-run/node-tsx",
   "version": "0.0.0",
-  "description": "Run Node.js with JSX syntax support in .tsx and .jsx files",
+  "description": "Run Node.js with TypeScript and JSX syntax support",
   "author": "Michael Jackson <mjjackson@gmail.com>",
   "license": "MIT",
   "repository": {

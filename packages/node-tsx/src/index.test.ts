@@ -190,7 +190,90 @@ describe('node-tsx', () => {
     })
   })
 
-  it('delegates non-jsx TypeScript files back to Node', async () => {
+  it('runs TypeScript files with transform-only syntax through remix/node-tsx', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'server.ts',
+        [
+          'enum Status {',
+          '  Ready = "ready",',
+          '}',
+          '',
+          'namespace Labels {',
+          '  export const status = "status"',
+          '}',
+          '',
+          'class Message {',
+          '  constructor(public text: string) {}',
+          '}',
+          '',
+          'let message = new Message(Status.Ready)',
+          'console.log(JSON.stringify({ [Labels.status]: message.text }))',
+          '',
+        ].join('\n'),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.ts'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.deepEqual(JSON.parse(result.stdout.trim()), { status: 'ready' })
+    })
+  })
+
+  it('detects module syntax in TypeScript files outside packages', async () => {
+    await withPackageLessProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'server.ts',
+        [
+          'enum Status {',
+          '  Ready = "ready",',
+          '}',
+          '',
+          'export const status = Status.Ready',
+          'console.log(status)',
+          '',
+        ].join('\n'),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.ts'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.equal(result.stdout.trim(), 'ready')
+    })
+  })
+
+  it('defaults TypeScript files outside packages without module syntax to CommonJS', async () => {
+    await withPackageLessProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'server.ts',
+        [
+          'namespace Labels {',
+          '  export const status = "ready"',
+          '}',
+          '',
+          'module.exports = { status: Labels.status }',
+          'console.log(module.exports.status)',
+          '',
+        ].join('\n'),
+      )
+
+      let result = await runNode(['--import', 'remix/node-tsx', './server.ts'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.equal(result.stdout.trim(), 'ready')
+    })
+  })
+
+  it('rejects JSX syntax in ts files', async () => {
     await withProject(async (projectPath) => {
       await linkRemixPackage(projectPath)
       await writeProjectFile(
@@ -671,6 +754,48 @@ describe('node-tsx', () => {
         props: { children: 'Hello' },
         type: 'div',
       })
+    })
+  })
+
+  it('loads TypeScript modules with transform-only syntax through remix/node-tsx/load-module', async () => {
+    await withProject(async (projectPath) => {
+      await linkRemixPackage(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'start.mjs',
+        [
+          "import { loadModule } from 'remix/node-tsx/load-module'",
+          '',
+          "let { render } = await loadModule('./server.ts', import.meta.url)",
+          'console.log(JSON.stringify(render()))',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'server.ts',
+        [
+          'enum ElementType {',
+          '  Main = "main",',
+          '}',
+          '',
+          'class ElementDescriptor {',
+          '  constructor(public type: ElementType) {}',
+          '}',
+          '',
+          'export function render() {',
+          '  let element = new ElementDescriptor(ElementType.Main)',
+          '  return { type: element.type }',
+          '}',
+          '',
+        ].join('\n'),
+      )
+
+      let result = await runNode(['./start.mjs'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.deepEqual(JSON.parse(result.stdout.trim()), { type: 'main' })
     })
   })
 
@@ -1264,6 +1389,18 @@ async function withProject(
     'package.json',
     ['{', `  "type": "${options.packageType ?? 'module'}"`, '}', ''].join('\n'),
   )
+
+  try {
+    await callback(projectPath)
+  } finally {
+    await fs.rm(projectPath, { recursive: true, force: true })
+  }
+}
+
+async function withPackageLessProject(
+  callback: (projectPath: string) => Promise<void>,
+): Promise<void> {
+  let projectPath = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-node-tsx-'))
 
   try {
     await callback(projectPath)
