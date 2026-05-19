@@ -45,12 +45,12 @@ export function ThemeToggle(handle: Handle) {
 
 function toggle() {
   let html = document.documentElement
-  let current = html.dataset.colorScheme
-  if (!current) {
+  let current = html.style.colorScheme
+  if (!current || current === 'light dark') {
     current = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
   }
   let next = current === 'dark' ? 'light' : 'dark'
-  html.dataset.colorScheme = next
+  html.style.colorScheme = next
   try {
     localStorage.setItem('docs-color-scheme', next)
   } catch {
@@ -78,27 +78,9 @@ const themeToggleCss = css({
 })
 
 const sunIconCss = css({
-  display: 'none',
-  '@media (prefers-color-scheme: dark)': {
-    display: 'block',
-  },
-  '[data-color-scheme="dark"] &': {
-    display: 'block',
-  },
-  '[data-color-scheme="light"] &': {
-    display: 'none',
-  },
+  display: 'light-dark(none, block)',
 })
 
 const moonIconCss = css({
-  display: 'block',
-  '@media (prefers-color-scheme: dark)': {
-    display: 'none',
-  },
-  '[data-color-scheme="dark"] &': {
-    display: 'none',
-  },
-  '[data-color-scheme="light"] &': {
-    display: 'block',
-  },
+  display: 'light-dark(block, none)',
 })

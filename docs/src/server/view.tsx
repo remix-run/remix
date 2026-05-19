@@ -40,7 +40,7 @@ export function Document(
       : getHomePage(registry)
 
     return (
-      <html lang="en">
+      <html lang="en" style={{ colorScheme: 'light dark' }}>
         <Head page={page} activeVersion={activeVersion} entryPreloads={entryPreloads} />
         <body mix={bodyCss}>
           <RMX_01_GLYPHS />
@@ -119,7 +119,7 @@ function Head(
             try {
               var theme = localStorage.getItem('docs-color-scheme');
               if (theme === 'dark' || theme === 'light') {
-                document.documentElement.dataset.colorScheme = theme;
+                document.documentElement.style.colorScheme = theme;
               }
             } catch (e) {
               console.error('Failed to apply saved color scheme preference:', e);
@@ -471,87 +471,51 @@ function DocsFooter() {
 }
 
 // Dark and light theme variable overrides used in both the system-preference
-// media query and the explicit data-color-scheme attribute override blocks.
-const DARK_VARS = {
-  '--rmx-surface-lvl0': '#1a1a1a',
-  '--rmx-surface-lvl1': '#1f1f1f',
-  '--rmx-surface-lvl2': '#232323',
-  '--rmx-surface-lvl3': '#272727',
-  '--rmx-surface-lvl4': '#2c2c2c',
-  '--rmx-color-text-primary': '#ececec',
-  '--rmx-color-text-secondary': '#b3b3b3',
-  '--rmx-color-text-muted': '#b3b3b3',
-  '--rmx-color-text-link': '#6eaaff',
-  '--rmx-color-border-subtle': '#333333',
-  '--rmx-color-border-default': '#444444',
-  '--rmx-color-border-strong': '#666666',
-  '--rmx-color-focus-ring': '#6eaaff',
-  '--rmx-color-overlay-scrim': 'rgb(0 0 0 / 0.55)',
-  '--rmx-color-action-primary-background': '#4d94ff',
-  '--rmx-color-action-primary-background-hover': '#3d84ef',
-  '--rmx-color-action-primary-background-active': '#2d74df',
+// Single set of CSS custom property definitions using light-dark(lightVal, darkVal).
+// The browser picks the right value automatically based on the `color-scheme` on <html>,
+// which defaults to `light dark` (system preference) and is overridden to `light` or
+// `dark` by the init script / toggle button when the user has an explicit preference.
+const COLOR_VARS = {
+  '--rmx-surface-lvl0': 'light-dark(#ffffff, #1a1a1a)',
+  '--rmx-surface-lvl1': 'light-dark(#f8f8f8, #1f1f1f)',
+  '--rmx-surface-lvl2': 'light-dark(#f5f5f5, #232323)',
+  '--rmx-surface-lvl3': 'light-dark(#f3f3f3, #272727)',
+  '--rmx-surface-lvl4': 'light-dark(#efefef, #2c2c2c)',
+  '--rmx-color-text-primary': 'light-dark(#151515, #ececec)',
+  '--rmx-color-text-secondary': 'light-dark(#4f4f4f, #b3b3b3)',
+  '--rmx-color-text-muted': 'light-dark(#6d6d6d, #b3b3b3)',
+  '--rmx-color-text-link': 'light-dark(#1A72FF, #6eaaff)',
+  '--rmx-color-border-subtle': 'light-dark(#e7e7e7, #333333)',
+  '--rmx-color-border-default': 'light-dark(#d1d1d1, #444444)',
+  '--rmx-color-border-strong': 'light-dark(#b0b0b0, #666666)',
+  '--rmx-color-focus-ring': 'light-dark(#1A72FF, #6eaaff)',
+  '--rmx-color-overlay-scrim': 'light-dark(rgb(0 0 0 / 0.28), rgb(0 0 0 / 0.55))',
+  '--rmx-color-action-primary-background': 'light-dark(#1A72FF, #4d94ff)',
+  '--rmx-color-action-primary-background-hover': 'light-dark(#1463e0, #3d84ef)',
+  '--rmx-color-action-primary-background-active': 'light-dark(#0f55c9, #2d74df)',
   '--rmx-color-action-primary-foreground': 'rgb(255 255 255 / 0.92)',
-  '--rmx-color-action-primary-border': '#4d94ff',
-  '--rmx-color-action-secondary-background': '#2c2c2c',
-  '--rmx-color-action-secondary-background-hover': '#333333',
-  '--rmx-color-action-secondary-background-active': '#3a3a3a',
-  '--rmx-color-action-secondary-foreground': '#ececec',
-  '--rmx-color-action-secondary-border': '#444444',
-  '--rmx-color-action-danger-background': '#ff4d2e',
-  '--rmx-color-action-danger-background-hover': '#e6432a',
-  '--rmx-color-action-danger-background-active': '#cc3b25',
+  '--rmx-color-action-primary-border': 'light-dark(#1A72FF, #4d94ff)',
+  '--rmx-color-action-secondary-background': 'light-dark(#ffffff, #2c2c2c)',
+  '--rmx-color-action-secondary-background-hover': 'light-dark(#fbfbfb, #333333)',
+  '--rmx-color-action-secondary-background-active': 'light-dark(#f3f3f3, #3a3a3a)',
+  '--rmx-color-action-secondary-foreground': 'light-dark(#202020, #ececec)',
+  '--rmx-color-action-secondary-border': 'light-dark(#d1d1d1, #444444)',
+  '--rmx-color-action-danger-background': 'light-dark(#FF3000, #ff4d2e)',
+  '--rmx-color-action-danger-background-hover': 'light-dark(#e12b00, #e6432a)',
+  '--rmx-color-action-danger-background-active': 'light-dark(#c52600, #cc3b25)',
   '--rmx-color-action-danger-foreground': 'rgb(255 255 255 / 0.92)',
-  '--rmx-color-action-danger-border': '#ff4d2e',
-  '--rmx-shadow-xs': '0 1px 1px rgb(0 0 0 / 0.2)',
-  '--rmx-shadow-sm': '0 1px 2px rgb(0 0 0 / 0.25)',
-  '--rmx-shadow-md': '0 6px 18px rgb(0 0 0 / 0.3)',
-  '--rmx-shadow-lg': '0 16px 34px rgb(0 0 0 / 0.35)',
-  '--rmx-shadow-xl': '0 24px 52px rgb(0 0 0 / 0.4)',
-} as const
-
-// RMX_01 light theme values, used to reset back to light when the user
-// explicitly chooses light on a dark-system device.
-const LIGHT_VARS = {
-  '--rmx-surface-lvl0': '#ffffff',
-  '--rmx-surface-lvl1': '#f8f8f8',
-  '--rmx-surface-lvl2': '#f5f5f5',
-  '--rmx-surface-lvl3': '#f3f3f3',
-  '--rmx-surface-lvl4': '#efefef',
-  '--rmx-color-text-primary': '#151515',
-  '--rmx-color-text-secondary': '#4f4f4f',
-  '--rmx-color-text-muted': '#6d6d6d',
-  '--rmx-color-text-link': '#1A72FF',
-  '--rmx-color-border-subtle': '#e7e7e7',
-  '--rmx-color-border-default': '#d1d1d1',
-  '--rmx-color-border-strong': '#b0b0b0',
-  '--rmx-color-focus-ring': '#1A72FF',
-  '--rmx-color-overlay-scrim': 'rgb(0 0 0 / 0.28)',
-  '--rmx-color-action-primary-background': '#1A72FF',
-  '--rmx-color-action-primary-background-hover': '#1463e0',
-  '--rmx-color-action-primary-background-active': '#0f55c9',
-  '--rmx-color-action-primary-foreground': 'rgb(255 255 255 / 0.92)',
-  '--rmx-color-action-primary-border': '#1A72FF',
-  '--rmx-color-action-secondary-background': '#ffffff',
-  '--rmx-color-action-secondary-background-hover': '#fbfbfb',
-  '--rmx-color-action-secondary-background-active': '#f3f3f3',
-  '--rmx-color-action-secondary-foreground': '#202020',
-  '--rmx-color-action-secondary-border': '#d1d1d1',
-  '--rmx-color-action-danger-background': '#FF3000',
-  '--rmx-color-action-danger-background-hover': '#e12b00',
-  '--rmx-color-action-danger-background-active': '#c52600',
-  '--rmx-color-action-danger-foreground': 'rgb(255 255 255 / 0.92)',
-  '--rmx-color-action-danger-border': '#FF3000',
-  '--rmx-shadow-xs': '0 1px 1px rgb(0 0 0 / 0.05)',
-  '--rmx-shadow-sm': '0 1px 2px rgb(0 0 0 / 0.07)',
-  '--rmx-shadow-md': '0 6px 18px rgb(0 0 0 / 0.08)',
-  '--rmx-shadow-lg': '0 16px 34px rgb(0 0 0 / 0.10)',
-  '--rmx-shadow-xl': '0 24px 52px rgb(0 0 0 / 0.14)',
+  '--rmx-color-action-danger-border': 'light-dark(#FF3000, #ff4d2e)',
+  '--rmx-shadow-xs': 'light-dark(0 1px 1px rgb(0 0 0 / 0.05), 0 1px 1px rgb(0 0 0 / 0.2))',
+  '--rmx-shadow-sm': 'light-dark(0 1px 2px rgb(0 0 0 / 0.07), 0 1px 2px rgb(0 0 0 / 0.25))',
+  '--rmx-shadow-md': 'light-dark(0 6px 18px rgb(0 0 0 / 0.08), 0 6px 18px rgb(0 0 0 / 0.3))',
+  '--rmx-shadow-lg': 'light-dark(0 16px 34px rgb(0 0 0 / 0.10), 0 16px 34px rgb(0 0 0 / 0.35))',
+  '--rmx-shadow-xl': 'light-dark(0 24px 52px rgb(0 0 0 / 0.14), 0 24px 52px rgb(0 0 0 / 0.4))',
 } as const
 
 // Typography mirrors the `.md-prose` rules from the remix.run blog
 // (`/styles/md.css`) and is applied site-wide.
 const bodyCss = css({
-  colorScheme: 'light dark',
+  ...COLOR_VARS,
   margin: 0,
   backgroundColor: theme.surface.lvl0,
   color: theme.colors.text.primary,
@@ -648,7 +612,7 @@ const bodyCss = css({
   },
 
   '& .shiki': {
-    backgroundColor: `${theme.surface.lvl4} !important`,
+    backgroundColor: `light-dark(${theme.surface.lvl4}, var(--shiki-dark-bg)) !important`,
   },
 
   '& .shiki a': {
@@ -658,6 +622,10 @@ const bodyCss = css({
 
   '& .shiki a:hover, & .shiki a:focus': {
     textDecoration: `underline`,
+  },
+
+  '& .shiki span': {
+    color: 'light-dark(var(--shiki-light), var(--shiki-dark)) !important',
   },
 
   // Sidebar opt-out: the global `& a { underline }` and `& p { margin: 2rem }`
@@ -689,36 +657,6 @@ const bodyCss = css({
     },
   },
 
-  // Dark mode: override theme CSS custom properties.
-  // The media query handles the system preference (no JS needed).
-  // The [data-color-scheme] attribute overrides the system preference when
-  // the user explicitly toggles via the button (set by the init script + entry.tsx).
-  '@media (prefers-color-scheme: dark)': {
-    colorScheme: 'dark',
-    ...DARK_VARS,
-    '& .shiki, & .shiki span': {
-      backgroundColor: 'var(--shiki-dark-bg) !important',
-      color: 'var(--shiki-dark) !important',
-    },
-  },
-  // Explicit dark: beats system-light (specificity 0-2-0 > 0-1-0)
-  '[data-color-scheme="dark"] &': {
-    colorScheme: 'dark',
-    ...DARK_VARS,
-  },
-  '[data-color-scheme="dark"] & .shiki, [data-color-scheme="dark"] & .shiki span': {
-    backgroundColor: 'var(--shiki-dark-bg) !important',
-    color: 'var(--shiki-dark) !important',
-  },
-  // Explicit light: beats system-dark (specificity 0-2-0 > 0-1-0, wins !important too)
-  '[data-color-scheme="light"] &': {
-    colorScheme: 'light',
-    ...LIGHT_VARS,
-  },
-  '[data-color-scheme="light"] & .shiki, [data-color-scheme="light"] & .shiki span': {
-    backgroundColor: `${theme.surface.lvl4} !important`,
-    color: 'var(--shiki-light) !important',
-  },
 })
 
 const shellCss = css({
@@ -726,21 +664,9 @@ const shellCss = css({
   display: 'grid',
   gridTemplateColumns: '320px minmax(0, 1fr)',
   background:
-    'linear-gradient(to bottom, color-mix(in oklab, rgb(246 246 246) 72%, white) 0%, white 18%)',
+    'light-dark(linear-gradient(to bottom, color-mix(in oklab, rgb(246 246 246) 72%, white) 0%, white 18%), linear-gradient(to bottom, color-mix(in oklab, rgb(30 30 30) 72%, #1a1a1a) 0%, #1a1a1a 18%))',
   [MOBILE_NAV_MEDIA_RULE]: {
     gridTemplateColumns: '1fr',
-  },
-  '@media (prefers-color-scheme: dark)': {
-    background:
-      'linear-gradient(to bottom, color-mix(in oklab, rgb(30 30 30) 72%, #1a1a1a) 0%, #1a1a1a 18%)',
-  },
-  '[data-color-scheme="dark"] &': {
-    background:
-      'linear-gradient(to bottom, color-mix(in oklab, rgb(30 30 30) 72%, #1a1a1a) 0%, #1a1a1a 18%)',
-  },
-  '[data-color-scheme="light"] &': {
-    background:
-      'linear-gradient(to bottom, color-mix(in oklab, rgb(246 246 246) 72%, white) 0%, white 18%)',
   },
 })
 
@@ -853,29 +779,11 @@ const sidebarIntroHeaderCss = css({
 })
 
 const logoLightCss = css({
-  display: 'block',
-  '@media (prefers-color-scheme: dark)': {
-    display: 'none',
-  },
-  '[data-color-scheme="dark"] &': {
-    display: 'none',
-  },
-  '[data-color-scheme="light"] &': {
-    display: 'block',
-  },
+  display: 'light-dark(block, none)',
 })
 
 const logoDarkCss = css({
-  display: 'none',
-  '@media (prefers-color-scheme: dark)': {
-    display: 'block',
-  },
-  '[data-color-scheme="dark"] &': {
-    display: 'block',
-  },
-  '[data-color-scheme="light"] &': {
-    display: 'none',
-  },
+  display: 'light-dark(none, block)',
 })
 
 const logoCss = css({
