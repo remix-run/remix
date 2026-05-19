@@ -19,8 +19,16 @@ let app = run({
     if (!response.ok) {
       return `<pre>Frame error: ${response.status} ${response.statusText}</pre>`
     }
-    if (response.body) return response.body
-    return response.text()
+    let text = await response.text()
+
+    try {
+      var theme = localStorage.getItem('docs-color-scheme')
+      if (theme === 'dark' || theme === 'light') {
+        // text = text.replace(/<html lang="en">/, `<html lang="en" data-color-scheme="${theme}">`)
+      }
+    } catch (e) {}
+
+    return text
   },
 })
 
