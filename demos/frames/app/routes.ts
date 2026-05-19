@@ -12,11 +12,13 @@ export const routes = route({
     clientFrameExampleNested: get('/client-frame-example/nested'),
     clientMountedOuter: get('/client-mounted-outer'),
     clientMountedNested: get('/client-mounted-nested'),
+    rootReloadEntryFrame: get('/root-reload-entry-frame'),
     sidebar: get('/sidebar'),
     activity: get('/activity'),
     activityDetail: get('/activity/detail'),
     time: get('/time'),
     reloadScope: get('/reload-scope'),
+    reloadScopeBlocking: get('/reload-scope/blocking'),
     stateSearchResults: get('/state-search-results'),
   }),
 })
