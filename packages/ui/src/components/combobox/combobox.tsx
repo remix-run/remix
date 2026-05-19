@@ -8,6 +8,7 @@ import {
   on,
   ref,
   type CSSMixinDescriptor,
+  type Dispatched,
   type ElementProps,
   type Handle,
   type MixinHandle,
@@ -26,8 +27,8 @@ import { wait } from '../../utils/wait.ts'
 const COMBOBOX_CHANGE_EVENT = 'rmx:combobox-change' as const
 const INPUT_COMMIT_DELAY_MS = 50
 
-type ComboboxChangeHandler = (
-  event: ComboboxChangeEvent,
+type ComboboxChangeHandler<target extends HTMLElement> = (
+  event: Dispatched<ComboboxChangeEvent, target>,
   signal: AbortSignal,
 ) => void | Promise<void>
 
@@ -966,12 +967,11 @@ const combobox = {
   popover: popoverMixin,
 } as const
 
-export function onComboboxChange(handler: ComboboxChangeHandler, captureBoolean?: boolean) {
-  return on<HTMLElement, typeof COMBOBOX_CHANGE_EVENT>(
-    COMBOBOX_CHANGE_EVENT,
-    handler,
-    captureBoolean,
-  )
+export function onComboboxChange<target extends HTMLElement>(
+  handler: ComboboxChangeHandler<target>,
+  captureBoolean?: boolean,
+) {
+  return on(COMBOBOX_CHANGE_EVENT, handler, captureBoolean)
 }
 
 export function Combobox(handle: Handle<ComboboxProps>) {
