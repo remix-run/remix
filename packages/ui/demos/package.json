@@ -15,9 +15,9 @@
   "scripts": {
     "dev": "concurrently \"pnpm dev:browser\" \"pnpm dev:server\"",
     "dev:browser": "esbuild ./*/entry.tsx --bundle --outdir=. --out-extension:.js=.bundled.js --format=esm --platform=browser --target=es2020 --sourcemap=inline --watch",
-    "dev:server": "node --experimental-strip-types --watch server.ts",
+    "dev:server": "node --watch --import remix/node-tsx server.ts",
     "build": "esbuild ./*/entry.tsx --bundle --outdir=. --out-extension:.js=.bundled.js --format=esm --platform=browser --target=es2020",
     "typecheck": "tsc --noEmit",
-    "start": "node --experimental-strip-types server.ts"
+    "start": "node --import remix/node-tsx server.ts"
   }
 }
