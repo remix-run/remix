@@ -229,5 +229,4 @@ runtime behavior such as host/protocol handling, TLS, HTTP/2, WebSockets, deploy
 test-only server setup.
 
 Use `remix/node-fetch-server` when you want to keep owning a standard Node `http`, `https`, or
-`http2` server directly. Use `remix/node-serve` and `serve()` when you want a managed
-high-performance server with `server.ready`, TLS options, or uWebSockets.js setup.
+`http2` server directly.

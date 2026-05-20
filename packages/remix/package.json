@@ -81,7 +81,6 @@
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
     "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
-    "./node-serve": "./src/node-serve.ts",
     "./node-tsx": "./src/node-tsx.ts",
     "./node-tsx/load-module": "./src/node-tsx/load-module.ts",
     "./render-middleware": "./src/render-middleware.ts",
@@ -376,10 +375,6 @@
         "types": "./dist/node-fetch-server/test.d.ts",
         "default": "./dist/node-fetch-server/test.js"
       },
-      "./node-serve": {
-        "types": "./dist/node-serve.d.ts",
-        "default": "./dist/node-serve.js"
-      },
       "./node-tsx": {
         "types": "./dist/node-tsx.d.ts",
         "default": "./dist/node-tsx.js"
@@ -635,7 +630,6 @@
     "@remix-run/cli": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@remix-run/terminal": "workspace:^",
-    "@remix-run/node-serve": "workspace:^",
     "@remix-run/render-middleware": "workspace:^"
   },
   "scripts": {

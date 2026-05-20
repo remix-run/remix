@@ -4,7 +4,6 @@
   "type": "module",
   "dependencies": {
     "@remix-run/node-fetch-server": "workspace:^",
-    "@remix-run/node-serve": "workspace:^",
     "express": "^5.2.1"
   },
   "devDependencies": {

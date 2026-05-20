@@ -1,0 +1,1 @@
+Removed `remix/node-serve` and `@remix-run/node-serve` from this beta so installing Remix no longer pulls in the native transport dependency that currently blocks some package managers and runtimes. We expect to restore node-serve in a future beta after its native dependency is published through npm-compatible packages.
