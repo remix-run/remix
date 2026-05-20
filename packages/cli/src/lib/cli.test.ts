@@ -443,6 +443,11 @@ describe('run', () => {
       let readme = await fs.readFile(path.join(appDir, 'README.md'), 'utf8')
       let server = await fs.readFile(path.join(appDir, 'server.ts'), 'utf8')
       let routes = await fs.readFile(path.join(appDir, 'app', 'routes.ts'), 'utf8')
+      let entry = await fs.readFile(path.join(appDir, 'app', 'assets', 'entry.ts'), 'utf8')
+      let renderMiddleware = await fs.readFile(
+        path.join(appDir, 'app', 'middleware', 'render.tsx'),
+        'utf8',
+      )
       let controller = await fs.readFile(
         path.join(appDir, 'app', 'actions', 'controller.tsx'),
         'utf8',
@@ -464,6 +469,12 @@ describe('run', () => {
       assert.match(server, /createRequestListener/)
       assert.doesNotMatch(server, /remix\/node-serve/)
       assert.doesNotMatch(routes, /auth/)
+      assert.match(entry, /loadModule/)
+      assert.doesNotMatch(entry, /resolveFrame/)
+      assert.doesNotMatch(entry, /X-Remix-Frame/)
+      assert.match(renderMiddleware, /resolveClientEntry/)
+      assert.doesNotMatch(renderMiddleware, /resolveFrame/)
+      assert.doesNotMatch(renderMiddleware, /X-Remix-Frame/)
       assert.match(controller, /context\.render\(<HomePage \/>/)
       assert.doesNotMatch(controller, /AuthPage/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))

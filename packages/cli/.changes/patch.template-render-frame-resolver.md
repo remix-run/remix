@@ -1,1 +1,1 @@
-Updated the default `remix new` render middleware so its server-side frame resolver is defined inline with the `renderToStream()` options, matching the browser `run()` setup shape.
+Removed unused frame resolver plumbing from the default `remix new` app template while keeping the client-entry setup used for isolated browser interactivity.
