@@ -1,8 +1,12 @@
+import * as path from 'node:path'
+
 import type { Router } from 'remix/router'
 import { renderWith } from 'remix/middleware/render'
 import { createHtmlResponse } from 'remix/response/html'
 import type { RemixNode } from 'remix/ui'
 import { renderToStream, type ResolveFrameContext } from 'remix/ui/server'
+
+import { assetServer } from '../utils/assets.ts'
 
 export function render() {
   return renderWith((context) => {
@@ -13,6 +17,18 @@ export function render() {
       let stream = renderToStream(node, {
         frameSrc: request.url,
         resolveFrame: (src, target, context) => resolveFrame(router, request, src, target, context),
+        async resolveClientEntry(entryId, component) {
+          if (!entryId.startsWith('file://')) {
+            throw new Error(
+              `Expected \`import.meta.url\` for clientEntry ID, received '${entryId}'`,
+            )
+          }
+
+          return {
+            href: await assetServer.getHref(entryId),
+            exportName: entryId.split('#')[1] || component.name || titleCaseFileName(entryId),
+          }
+        },
         onError(error) {
           console.error(error)
         },
@@ -76,4 +92,14 @@ async function followFrameRedirects(router: Router, request: Request, url: URL, 
 
     currentUrl = new URL(location, currentUrl)
   }
+}
+
+function titleCaseFileName(fileUrl: string): string {
+  let url = new URL(fileUrl)
+  let fileName = path.basename(url.pathname, path.extname(url.pathname))
+  return fileName
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map((segment) => segment[0]!.toUpperCase() + segment.slice(1))
+    .join('')
 }
