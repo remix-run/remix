@@ -2,6 +2,18 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
+## v0.21.0
+
+### Minor Changes
+
+- Add `SuperHeaders#apply(init)` to apply `SuperHeadersInit` values to an existing instance with header-aware behavior, replacing singleton headers while preserving additive headers like `Cookie`, `Set-Cookie`, and `Vary` (see #11398).
+
+### Patch Changes
+
+- Add explicit public API return types to header value serialization methods so generated declarations no longer depend on inferred method signatures (see #11433).
+
+- Fix `Cookie` and `SuperHeaders.cookie` so duplicate cookie names from path- or domain-specific cookies are preserved in order. `Cookie#get(name)` now returns the first matching value, `Cookie#getAll(name)` can be used to read every matching value, and `Cookie#append(name, value)` can be used to add another cookie with the same name (see #11423).
+
 ## v0.20.0
 
 ### Minor Changes

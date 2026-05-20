@@ -1,3 +1,11 @@
+## v0.4.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`node-tsx@0.1.1`](https://github.com/remix-run/remix/releases/tag/node-tsx@0.1.1)
+  - [`terminal@0.1.1`](https://github.com/remix-run/remix/releases/tag/terminal@0.1.1)
+
 ## v0.4.0
 
 ### Minor Changes

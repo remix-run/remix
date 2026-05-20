@@ -2,6 +2,14 @@
 
 This is the changelog for [`csrf-middleware`](https://github.com/remix-run/remix/tree/main/packages/csrf-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.4
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.19.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.19.1)
+  - [`session@0.4.2`](https://github.com/remix-run/remix/releases/tag/session@0.4.2)
+
 ## v0.1.3
 
 ### Patch Changes

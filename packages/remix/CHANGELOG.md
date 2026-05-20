@@ -2,6 +2,59 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-beta.2
+
+### Pre-release Changes
+
+- Removed `remix/node-serve` and `@remix-run/node-serve` from this beta so installing Remix no longer pulls in the native transport dependency that currently blocks some package managers and runtimes. We expect to restore node-serve in a future beta after its native dependency is published through npm-compatible packages (see #11439).
+
+- Expose `SuperHeaders#apply(init)` through `remix/headers` so apps can apply `SuperHeadersInit` values to an existing instance with header-aware behavior (see #11398).
+
+- Carry explicit public type annotations from underlying packages through re-exported Remix package APIs so generated declarations stay aligned with the owning package APIs (see #11433).
+
+- Expose the updated `remix/file-storage` types, including the new `FileLike` alias and filesystem storage `LazyFile` return types (see #11430).
+
+- Fix `Cookie` and `SuperHeaders.cookie` from `remix/headers` so duplicate cookie names from path- or domain-specific cookies are preserved in order. `Cookie#get(name)` now returns the first matching value, `Cookie#getAll(name)` can be used to read every matching value, and `Cookie#append(name, value)` can be used to add another cookie with the same name (see #11423).
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assert@0.2.1`](https://github.com/remix-run/remix/releases/tag/assert@0.2.1)
+  - [`assets@0.4.1`](https://github.com/remix-run/remix/releases/tag/assets@0.4.1)
+  - [`async-context-middleware@0.3.1`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.3.1)
+  - [`auth@0.2.3`](https://github.com/remix-run/remix/releases/tag/auth@0.2.3)
+  - [`auth-middleware@0.2.1`](https://github.com/remix-run/remix/releases/tag/auth-middleware@0.2.1)
+  - [`cli@0.3.1`](https://github.com/remix-run/remix/releases/tag/cli@0.3.1)
+  - [`compression-middleware@0.1.9`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.9)
+  - [`cookie@0.5.3`](https://github.com/remix-run/remix/releases/tag/cookie@0.5.3)
+  - [`cop-middleware@0.1.4`](https://github.com/remix-run/remix/releases/tag/cop-middleware@0.1.4)
+  - [`cors-middleware@0.1.4`](https://github.com/remix-run/remix/releases/tag/cors-middleware@0.1.4)
+  - [`csrf-middleware@0.1.4`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@0.1.4)
+  - [`fetch-proxy@0.8.2`](https://github.com/remix-run/remix/releases/tag/fetch-proxy@0.8.2)
+  - [`fetch-router@0.19.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.19.1)
+  - [`file-storage@0.13.5`](https://github.com/remix-run/remix/releases/tag/file-storage@0.13.5)
+  - [`file-storage-s3@0.1.2`](https://github.com/remix-run/remix/releases/tag/file-storage-s3@0.1.2)
+  - [`form-data-middleware@0.3.1`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.3.1)
+  - [`form-data-parser@0.17.2`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.17.2)
+  - [`fs@0.4.4`](https://github.com/remix-run/remix/releases/tag/fs@0.4.4)
+  - [`headers@0.21.0`](https://github.com/remix-run/remix/releases/tag/headers@0.21.0)
+  - [`html-template@0.3.1`](https://github.com/remix-run/remix/releases/tag/html-template@0.3.1)
+  - [`lazy-file@5.0.4`](https://github.com/remix-run/remix/releases/tag/lazy-file@5.0.4)
+  - [`logger-middleware@0.3.1`](https://github.com/remix-run/remix/releases/tag/logger-middleware@0.3.1)
+  - [`method-override-middleware@0.1.9`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@0.1.9)
+  - [`multipart-parser@0.16.2`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.2)
+  - [`node-fetch-server@0.13.3`](https://github.com/remix-run/remix/releases/tag/node-fetch-server@0.13.3)
+  - [`node-tsx@0.1.1`](https://github.com/remix-run/remix/releases/tag/node-tsx@0.1.1)
+  - [`render-middleware@0.1.1`](https://github.com/remix-run/remix/releases/tag/render-middleware@0.1.1)
+  - [`response@0.3.5`](https://github.com/remix-run/remix/releases/tag/response@0.3.5)
+  - [`route-pattern@0.21.1`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.21.1)
+  - [`session@0.4.2`](https://github.com/remix-run/remix/releases/tag/session@0.4.2)
+  - [`session-middleware@0.3.1`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.3.1)
+  - [`session-storage-memcache@0.1.1`](https://github.com/remix-run/remix/releases/tag/session-storage-memcache@0.1.1)
+  - [`session-storage-redis@0.1.1`](https://github.com/remix-run/remix/releases/tag/session-storage-redis@0.1.1)
+  - [`static-middleware@0.4.10`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.10)
+  - [`terminal@0.1.1`](https://github.com/remix-run/remix/releases/tag/terminal@0.1.1)
+  - [`test@0.4.1`](https://github.com/remix-run/remix/releases/tag/test@0.4.1)
+  - [`ui@0.2.0`](https://github.com/remix-run/remix/releases/tag/ui@0.2.0)
+
 ## v3.0.0-beta.1
 
 ### Pre-release Changes

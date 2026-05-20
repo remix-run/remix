@@ -2,6 +2,12 @@
 
 This is the changelog for [`node-tsx`](https://github.com/remix-run/remix/tree/main/packages/node-tsx). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.1
+
+### Patch Changes
+
+- Fix `loadModule()` in built packages so it registers the emitted JavaScript hooks file instead of a missing TypeScript source file (see #11441).
+
 ## v0.1.0
 
 ### Minor Changes

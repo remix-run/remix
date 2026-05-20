@@ -2,6 +2,13 @@
 
 This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
 
+## v0.8.2
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.0`](https://github.com/remix-run/remix/releases/tag/headers@0.21.0)
+
 ## v0.8.1
 
 ### Patch Changes

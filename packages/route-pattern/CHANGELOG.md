@@ -2,6 +2,12 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.21.1
+
+### Patch Changes
+
+- Add an explicit public API type for serialized route pattern JSON so generated declarations no longer depend on inferred object shapes (see #11433).
+
 ## v0.21.0
 
 ### Minor Changes

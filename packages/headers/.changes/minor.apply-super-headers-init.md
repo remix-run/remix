@@ -1,1 +1,0 @@
-Add `SuperHeaders#apply(init)` to apply `SuperHeadersInit` values to an existing instance with header-aware behavior, replacing singleton headers while preserving additive headers like `Cookie`, `Set-Cookie`, and `Vary` (see #11398).

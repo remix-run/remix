@@ -2,6 +2,16 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.1
+
+### Patch Changes
+
+- Fix help text syntax highlighting so hyphens in path arguments like `./my-remix-app` are not highlighted as single-character flags (see #11409).
+
+- Bumped `@remix-run/*` dependencies:
+  - [`terminal@0.1.1`](https://github.com/remix-run/remix/releases/tag/terminal@0.1.1)
+  - [`test@0.4.1`](https://github.com/remix-run/remix/releases/tag/test@0.4.1)
+
 ## v0.3.0
 
 ### Minor Changes
