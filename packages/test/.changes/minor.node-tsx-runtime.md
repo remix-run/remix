@@ -1,3 +1,3 @@
 Migrated `@remix-run/test` from the `tsx` package to Remix's internal `@remix-run/node-tsx` module loader.
 
-BREAKING CHANGE: `.ts` and `.tsx` module loading in `@remix-run/test` now more closely tracks Node's built-in `.ts` support. Remix only adds JSX syntax support for `.tsx` files, so resolution and runtime behavior should otherwise follow Node's built-in TypeScript semantics.
+BREAKING CHANGE: `.ts`, `.tsx`, and `.jsx` module loading in `@remix-run/test` now uses Remix's internal `@remix-run/node-tsx` loader. Test modules are still transformed before execution, including JSX and TypeScript syntax that requires JavaScript output, but the loader is now maintained inside Remix.
