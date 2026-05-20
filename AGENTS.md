@@ -61,6 +61,7 @@ For work on this repository itself, use the skills in `.agents/skills/`:
 - `make-pr` at `.agents/skills/make-pr/SKILL.md`: Prepare and open clear, reviewer-friendly pull requests.
 - `publish-placeholder-package` at `.agents/skills/publish-placeholder-package/SKILL.md`: Publish a `0.0.0` placeholder package to reserve an npm name.
 - `review-pr` at `.agents/skills/review-pr/SKILL.md`: Review Remix pull requests from a local checkout.
+- `remix` at `.agents/skills/remix/SKILL.md`: Build, review, and refactor Remix apps end to end, including project layout, routes, controllers, middleware, validation, data access, auth, sessions, uploads, UI, hydration, navigation, animations, and tests.
 - `supersede-pr` at `.agents/skills/supersede-pr/SKILL.md`: Replace one pull request with another and close the superseded PR safely.
 - `typescript-expert` at `.agents/skills/typescript-expert/SKILL.md`: Write, refactor, or review TypeScript with strict, precise, maintainable types.
 - `update-pr` at `.agents/skills/update-pr/SKILL.md`: Rewrite an existing pull request title and body to match the current diff.
@@ -71,6 +72,6 @@ For work on this repository itself, use the skills in `.agents/skills/`:
 
 ## App And Demo Skills
 
-For working on Remix code in demos or writing Remix app code, use the skill that ships with the default app template:
+For working on Remix code in demos or writing Remix app code, use the root `remix` skill listed above.
 
-- `remix` at `template/.agents/skills/remix/SKILL.md`: Build, review, and refactor Remix apps end to end, including project layout, routes, controllers, middleware, validation, data access, auth, sessions, uploads, UI, hydration, navigation, animations, and tests.
+The CLI prepack step copies `.agents/skills/remix` into the default app template so scaffolded apps can refer to `./.agents/skills/remix/SKILL.md`.
