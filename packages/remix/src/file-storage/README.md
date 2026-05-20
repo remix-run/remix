@@ -7,7 +7,7 @@ Key/value storage interfaces for server-side [`File` objects](https://developer.
 - **Simple API** - Intuitive key/value API (like [Web Storage](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API), but for `File`s instead of strings)
 - **Multiple Backends** - Built-in filesystem and memory backends
 - **Streaming Support** - Stream file content to and from storage
-- **Metadata Preservation** - Preserves all `File` metadata including `file.name`, `file.type`, and `file.lastModified`
+- **Metadata Preservation** - Preserves all `File` metadata including `file.name`, `file.type`, `file.size`, and `file.lastModified`
 
 ## Installation
 
@@ -32,9 +32,15 @@ await storage.set(key, file)
 
 // Then, sometime later...
 let fileFromStorage = await storage.get(key)
-// All of the original file's metadata is intact
-fileFromStorage.name // 'hello.txt'
-fileFromStorage.type // 'text/plain'
+
+if (fileFromStorage != null) {
+  // All of the original file's metadata is intact
+  fileFromStorage.name // 'hello.txt'
+  fileFromStorage.type // 'text/plain'
+
+  // The filesystem backend returns a LazyFile, so you can stream it directly.
+  let response = new Response(fileFromStorage.stream())
+}
 
 // To remove from storage
 await storage.remove(key)

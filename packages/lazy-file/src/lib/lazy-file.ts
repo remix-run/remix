@@ -50,7 +50,7 @@ export interface LazyBlobOptions {
  *
  * [MDN `Blob` Reference](https://developer.mozilla.org/en-US/docs/Web/API/Blob)
  */
-export class LazyBlob {
+export class LazyBlob implements Blob {
   readonly #content: BlobContent
 
   /**
@@ -195,7 +195,7 @@ export interface LazyFileOptions extends LazyBlobOptions {
  *
  * [MDN `File` Reference](https://developer.mozilla.org/en-US/docs/Web/API/File)
  */
-export class LazyFile {
+export class LazyFile implements File {
   readonly #content: BlobContent
 
   /**

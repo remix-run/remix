@@ -1,14 +1,20 @@
 /**
+ * A value that implements the TypeScript [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File)
+ * interface. This may be a native `File` or a structurally compatible implementation.
+ */
+export type FileLike = File
+
+/**
  * A key/value interface for storing `File` objects.
  */
-export interface FileStorage {
+export interface FileStorage<file extends FileLike = FileLike> {
   /**
-   * Get a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) at the given key.
+   * Get the file at the given key.
    *
    * @param key The key to look up
    * @returns The file with the given key, or `null` if no such key exists
    */
-  get(key: string): File | null | Promise<File | null>
+  get(key: string): file | null | Promise<file | null>
   /**
    * Check if a file with the given key exists.
    *
@@ -77,14 +83,13 @@ export interface FileStorage {
    */
   list<T extends ListOptions>(options?: T): ListResult<T> | Promise<ListResult<T>>
   /**
-   * Put a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) in storage and return a
-   * new file backed by this storage.
+   * Put a `File` in storage and return a new file backed by this storage.
    *
    * @param key The key to store the file under
    * @param file The file to store
-   * @returns A new `File` object backed by this storage
+   * @returns A new file backed by this storage
    */
-  put(key: string, file: File): File | Promise<File>
+  put(key: string, file: FileLike): file | Promise<file>
   /**
    * Remove the file with the given key from storage.
    *
@@ -92,13 +97,12 @@ export interface FileStorage {
    */
   remove(key: string): void | Promise<void>
   /**
-   * Put a [`File`](https://developer.mozilla.org/en-US/docs/Web/API/File) in storage at the given
-   * key.
+   * Put a `File` in storage at the given key.
    *
    * @param key The key to store the file under
    * @param file The file to store
    */
-  set(key: string, file: File): void | Promise<void>
+  set(key: string, file: FileLike): void | Promise<void>
 }
 
 /**

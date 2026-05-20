@@ -6,7 +6,7 @@ Use this package when you want the `FileStorage` API backed by AWS S3 or an S3-c
 ## Features
 
 - **S3-Compatible API** - Works with AWS S3 and S3-compatible APIs (e.g. MinIO, LocalStack)
-- **Metadata Preservation** - Preserves `File` metadata (`name`, `type`, `lastModified`)
+- **Metadata Preservation** - Preserves `File` metadata (`name`, `type`, `size`, `lastModified`)
 - **Runtime-Agnostic Signing** - Uses [`aws4fetch`](https://github.com/mhart/aws4fetch) for SigV4 signing
 
 ## Installation

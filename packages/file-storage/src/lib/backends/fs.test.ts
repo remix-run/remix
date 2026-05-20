@@ -4,11 +4,35 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { parseFormData } from '@remix-run/form-data-parser'
+import { LazyFile } from '@remix-run/lazy-file'
 
+import type { FileLike, FileStorage } from '../file-storage.ts'
 import { createFsFileStorage } from './fs.ts'
+
+// Compile-time API contract checks. These expressions are never executed, but TypeScript will
+// fail this file if FileLike stops accepting native File/LazyFile values, or if the filesystem
+// backend stops advertising LazyFile return values through FileStorage.
+null as unknown as File satisfies FileLike
+null as unknown as LazyFile satisfies FileLike
+null as unknown as ReturnType<typeof createFsFileStorage> satisfies FileStorage<LazyFile>
 
 function normalizeFileType(type: string): string {
   return new File([''], '', { type }).type
+}
+
+function findMetadataPath(directory: string): string {
+  for (let subdir of fs.readdirSync(directory)) {
+    let subdirPath = path.join(directory, subdir)
+    if (!fs.statSync(subdirPath).isDirectory()) continue
+
+    for (let entry of fs.readdirSync(subdirPath)) {
+      if (entry.endsWith('.meta.json')) {
+        return path.join(subdirPath, entry)
+      }
+    }
+  }
+
+  assert.fail('Expected metadata file')
 }
 
 describe('fs file storage', () => {
@@ -36,6 +60,7 @@ describe('fs file storage', () => {
     let retrieved = await storage.get('hello')
 
     assert.ok(retrieved)
+    assert.equal(retrieved instanceof LazyFile, true)
     assert.equal(retrieved.name, 'hello.txt')
     assert.equal(retrieved.type, file.type)
     assert.equal(retrieved.lastModified, lastModified)
@@ -49,6 +74,19 @@ describe('fs file storage', () => {
 
     assert.ok(!(await storage.has('hello')))
     assert.equal(await storage.get('hello'), null)
+  })
+
+  it('stores file size in metadata', async () => {
+    let storage = createFsFileStorage(tmpDir)
+    let file = new File(['Hello, world!'], 'hello.txt', { type: 'text/plain' })
+
+    await storage.set('hello', file)
+
+    let metadata: unknown = JSON.parse(fs.readFileSync(findMetadataPath(tmpDir), 'utf-8'))
+
+    assert.ok(metadata != null && typeof metadata === 'object')
+    assert.ok('size' in metadata)
+    assert.equal(metadata.size, file.size)
   })
 
   it('removes empty hash directories after removing files', async () => {

@@ -1,5 +1,6 @@
 export type {
   FileStorage,
+  FileLike,
   FileKey,
   FileMetadata,
   ListOptions,

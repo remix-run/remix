@@ -2,7 +2,12 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { parseFormData } from '@remix-run/form-data-parser'
 
+import type { FileStorage } from '../file-storage.ts'
 import { createMemoryFileStorage } from './memory.ts'
+
+// Compile-time API contract check. This expression is never executed, but TypeScript will fail
+// this file if the memory backend stops advertising native File return values through FileStorage.
+null as unknown as ReturnType<typeof createMemoryFileStorage> satisfies FileStorage<File>
 
 // Native File normalizes some MIME types differently across runtimes (for example
 // Bun adds charset for text types and rewrites application/javascript), so derive
