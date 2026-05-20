@@ -20,7 +20,10 @@ For host-element behavior (event handlers, styles, refs, animations), see
 A component has two phases:
 
 1. **Setup phase** — runs once when the component is created
-2. **Render phase** — returned function runs on initial render and every update
+2. **Render phase** — returned zero-argument function runs on initial render and every update
+
+The component shape is `function Component(handle: Handle<Props>) { return () => ... }`. Props are
+available as `handle.props` in setup scope and are updated before every render.
 
 ```tsx
 import { on, type Handle } from 'remix/ui'

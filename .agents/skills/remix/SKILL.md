@@ -34,7 +34,7 @@ A Remix app has four main pieces:
 - **Middleware** composes request lifecycle behavior and populates typed context via
   `context.set(Key, value)`.
 - **Components** render UI with `remix/ui`. This is not React. A component receives a
-  `handle`, reads current props from `handle.props`, and returns a render function.
+  `handle`, reads current props from `handle.props`, and returns a zero-argument render function.
 
 ## When To Use This Skill
 
@@ -198,9 +198,9 @@ When code could live in multiple places:
   need the harness
 - Outside actions and controllers, only use `getContext()` when `asyncContext()` is in the
   middleware stack
-- Remix Component is not React: read props from `handle.props`, keep state in setup-scope
-  variables, call `handle.update()` explicitly, and do DOM-sensitive work in event handlers or
-  `queueTask(...)`, not in render
+- Remix Component is not React: write `function Name(handle: Handle<Props>) { return () => ... }`,
+  read props from `handle.props`, keep state in setup-scope variables, call `handle.update()`
+  explicitly, and do DOM-sensitive work in event handlers or `queueTask(...)`, not in render
 - Prefer host-element mixins via `mix={mixin(...)}` for behavior and styling instead of inventing
   custom host prop conventions. Use `mix={[...]}` only when composing multiple mixins
 - Hydrated `clientEntry(...)` props must be serializable. Do not pass functions, class instances, or

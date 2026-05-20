@@ -52,12 +52,13 @@ function Toast() {
 `animateExit` keeps a removed keyed element in the DOM long enough to animate from its natural styles to the provided keyframe.
 
 ```tsx
+import type { Handle } from 'remix/ui'
 import { animateExit } from 'remix/ui/animation'
 
-function Item({ id, label }: { id: string; label: string }) {
+function Item(handle: Handle<{ id: string; label: string }>) {
   return () => (
     <li
-      key={id}
+      key={handle.props.id}
       mix={[
         animateExit({
           opacity: 0,
@@ -67,7 +68,7 @@ function Item({ id, label }: { id: string; label: string }) {
         }),
       ]}
     >
-      {label}
+      {handle.props.label}
     </li>
   )
 }
@@ -105,12 +106,13 @@ Exit animations can reclaim a removed keyed node if the same keyed element is re
 `animateLayout` animates layout changes with a FLIP-style transform projection. Use it on elements whose position or size can change between renders.
 
 ```tsx
+import type { Handle } from 'remix/ui'
 import { animateLayout, spring } from 'remix/ui/animation'
 
-function Card({ expanded }: { expanded: boolean }) {
+function Card(handle: Handle<{ expanded: boolean }>) {
   return () => (
     <section
-      class={expanded ? 'card expanded' : 'card'}
+      class={handle.props.expanded ? 'card expanded' : 'card'}
       mix={[
         animateLayout({
           ...spring('smooth'),

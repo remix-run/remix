@@ -433,8 +433,8 @@ function Header(handle: Handle) {
 The simplest component just returns JSX:
 
 ```tsx
-function Greeting() {
-  return (props: { name: string }) => <div>Hello, {props.name}!</div>
+function Greeting(handle: Handle<{ name: string }>) {
+  return () => <div>Hello, {handle.props.name}!</div>
 }
 
 let el = <Greeting name="World" />
@@ -449,11 +449,11 @@ function Parent() {
   return () => <Child message="Hello from parent" count={42} />
 }
 
-function Child() {
-  return (props: { message: string; count: number }) => (
+function Child(handle: Handle<{ message: string; count: number }>) {
+  return () => (
     <div>
-      <p>{props.message}</p>
-      <p>Count: {props.count}</p>
+      <p>{handle.props.message}</p>
+      <p>Count: {handle.props.count}</p>
     </div>
   )
 }
@@ -823,8 +823,8 @@ function Button() {
 Use `&::before` and `&::after` for pseudo-elements:
 
 ```tsx
-function Badge() {
-  return (props: { count: number }) => (
+function Badge(handle: Handle<{ count: number }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -843,7 +843,7 @@ function Badge() {
         }),
       ]}
     >
-      {props.count > 0 && <span>{props.count}</span>}
+      {handle.props.count > 0 && <span>{handle.props.count}</span>}
     </div>
   )
 }
@@ -854,10 +854,10 @@ function Badge() {
 Use `&[attribute]` for attribute selectors:
 
 ```tsx
-function Input() {
-  return (props: { required?: boolean }) => (
+function Input(handle: Handle<{ required?: boolean }>) {
+  return () => (
     <input
-      required={props.required}
+      required={handle.props.required}
       mix={[
         css({
           padding: '8px',
@@ -882,8 +882,8 @@ function Input() {
 Use class names or element selectors directly for descendant selectors:
 
 ```tsx
-function Card() {
-  return (props: { children: RemixNode }) => (
+function Card(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -913,7 +913,7 @@ function Card() {
         }),
       ]}
     >
-      {props.children}
+      {handle.props.children}
     </div>
   )
 }
@@ -939,10 +939,10 @@ Use nested selectors when **parent state affects children**. Don't nest when you
 
 ```tsx
 // ❌ Avoid: Managing hover state in JavaScript
-function CardWithJSState(handle: Handle) {
+function CardWithJSState(handle: Handle<{ children: RemixNode }>) {
   let isHovered = false
 
-  return (props: { children: RemixNode }) => (
+  return () => (
     <div
       mix={[
         on('mouseenter', () => {
@@ -966,8 +966,8 @@ function CardWithJSState(handle: Handle) {
 }
 
 // ✅ Prefer: CSS nested selectors handle state declaratively
-function Card(handle: Handle) {
-  return (props: { children: RemixNode }) => (
+function Card(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -1075,8 +1075,8 @@ function Navigation() {
 Use `@media` for responsive design:
 
 ```tsx
-function ResponsiveGrid() {
-  return (props: { children: RemixNode }) => (
+function ResponsiveGrid(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -1092,7 +1092,7 @@ function ResponsiveGrid() {
         }),
       ]}
     >
-      {props.children}
+      {handle.props.children}
     </div>
   )
 }
@@ -1103,8 +1103,8 @@ function ResponsiveGrid() {
 Here's a comprehensive example demonstrating parent-state-affecting-children and media queries, with styles applied directly to elements:
 
 ```tsx
-function ProductCard() {
-  return (props: { title: string; price: number; image: string }) => (
+function ProductCard(handle: Handle<{ title: string; price: number; image: string }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -1133,8 +1133,8 @@ function ProductCard() {
       ]}
     >
       <img
-        src={props.image}
-        alt={props.title}
+        src={handle.props.image}
+        alt={handle.props.title}
         mix={[
           css({
             width: '100%',
@@ -1169,7 +1169,7 @@ function ProductCard() {
             }),
           ]}
         >
-          {props.title}
+          {handle.props.title}
         </h3>
         <div
           className="price"
@@ -1181,7 +1181,7 @@ function ProductCard() {
             }),
           ]}
         >
-          ${props.price}
+          ${handle.props.price}
         </div>
         <button
           mix={[
@@ -1358,8 +1358,8 @@ Keys can be any type (string, number, bigint, object, symbol), but should be sta
 Components can compose other components via `children`:
 
 ```tsx
-function Layout() {
-  return (props: { children: RemixNode }) => (
+function Layout(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -1370,7 +1370,7 @@ function Layout() {
       ]}
     >
       <header>My App</header>
-      <main>{props.children}</main>
+      <main>{handle.props.children}</main>
       <footer>© 2024</footer>
     </div>
   )
@@ -1905,19 +1905,19 @@ This ensures only the latest search request completes, preventing stale results 
 Use `handle.queueTask()` in the render function for reactive data loading that responds to prop changes. The signal will be aborted if props change or the component is removed:
 
 ```tsx
-function DataLoader(handle: Handle) {
+function DataLoader(handle: Handle<{ url: string }>) {
   let data: any = null
   let loading = false
   let error: Error | null = null
 
-  return (props: { url: string }) => {
+  return () => {
     // Queue data loading task that responds to prop changes
     handle.queueTask(async (signal) => {
       loading = true
       error = null
       handle.update()
 
-      let response = await fetch(props.url, { signal })
+      let response = await fetch(handle.props.url, { signal })
       let json = await response.json()
       if (signal.aborted) return
       data = json

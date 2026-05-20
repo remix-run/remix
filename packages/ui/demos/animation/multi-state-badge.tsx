@@ -73,15 +73,17 @@ export function MultiStateBadge(handle: Handle) {
   )
 }
 
-function Badge(handle: Handle) {
+function Badge(handle: Handle<{ state: State }>) {
   let badgeEl: HTMLDivElement
   let prevState: State | null = null
 
-  return (props: { state: State }) => {
+  return () => {
+    let { state } = handle.props
+
     // Trigger shake/scale animations on state change
-    if (prevState !== null && prevState !== props.state) {
+    if (prevState !== null && prevState !== state) {
       handle.queueTask(() => {
-        if (props.state === 'error') {
+        if (state === 'error') {
           badgeEl.animate(
             {
               transform: [
@@ -94,7 +96,7 @@ function Badge(handle: Handle) {
             },
             { duration: 300, easing: 'ease-in-out', delay: 100 },
           )
-        } else if (props.state === 'success') {
+        } else if (state === 'success') {
           badgeEl.animate(
             { transform: ['scale(1)', 'scale(1.2)', 'scale(1)'] },
             { duration: 300, easing: 'ease-in-out' },
@@ -102,7 +104,7 @@ function Badge(handle: Handle) {
         }
       })
     }
-    prevState = props.state
+    prevState = state
 
     return (
       <div
@@ -122,17 +124,17 @@ function Badge(handle: Handle) {
             transition: `gap ${spring('snappy')}`,
           }),
         ]}
-        style={{ gap: props.state === 'idle' ? '0px' : '8px' }}
+        style={{ gap: state === 'idle' ? '0px' : '8px' }}
       >
-        <Icon state={props.state} />
-        <Label state={props.state} />
+        <Icon state={state} />
+        <Label state={state} />
       </div>
     )
   }
 }
 
-function Icon() {
-  return (props: { state: State }) => (
+function Icon(handle: Handle<{ state: State }>) {
+  return () => (
     <span
       mix={[
         css({
@@ -145,9 +147,9 @@ function Icon() {
           transition: `width ${spring({ duration: 200, bounce: 0.2 })}`,
         }),
       ]}
-      style={{ width: props.state === 'idle' ? 0 : ICON_SIZE }}
+      style={{ width: handle.props.state === 'idle' ? 0 : ICON_SIZE }}
     >
-      {props.state === 'processing' && (
+      {handle.props.state === 'processing' && (
         <span
           key="loader"
           mix={[
@@ -159,7 +161,7 @@ function Icon() {
           <Loader />
         </span>
       )}
-      {props.state === 'success' && (
+      {handle.props.state === 'success' && (
         <span
           key="check"
           mix={[
@@ -171,7 +173,7 @@ function Icon() {
           <Check />
         </span>
       )}
-      {props.state === 'error' && (
+      {handle.props.state === 'error' && (
         <span
           key="x"
           mix={[
@@ -302,7 +304,7 @@ function X() {
   )
 }
 
-function Label(handle: Handle) {
+function Label(handle: Handle<{ state: State }>) {
   let measureEl: HTMLSpanElement
   let labelWidth = 0
   let labelHeight = 0
@@ -313,7 +315,9 @@ function Label(handle: Handle) {
     isFirstRender = false
   })
 
-  return (props: { state: State }) => {
+  return () => {
+    let { state } = handle.props
+
     // Measure label dimensions after render
     handle.queueTask(() => {
       if (measureEl) {
@@ -369,10 +373,10 @@ function Label(handle: Handle) {
             css({ position: 'absolute', visibility: 'hidden', whiteSpace: 'nowrap' }),
           ]}
         >
-          {STATES[props.state]}
+          {STATES[state]}
         </span>
 
-        {props.state === 'idle' && (
+        {state === 'idle' && (
           <span
             key="idle"
             mix={[
@@ -383,7 +387,7 @@ function Label(handle: Handle) {
             {STATES.idle}
           </span>
         )}
-        {props.state === 'processing' && (
+        {state === 'processing' && (
           <span
             key="processing"
             mix={[
@@ -394,7 +398,7 @@ function Label(handle: Handle) {
             {STATES.processing}
           </span>
         )}
-        {props.state === 'success' && (
+        {state === 'success' && (
           <span
             key="success"
             mix={[
@@ -405,7 +409,7 @@ function Label(handle: Handle) {
             {STATES.success}
           </span>
         )}
-        {props.state === 'error' && (
+        {state === 'error' && (
           <span
             key="error"
             mix={[
