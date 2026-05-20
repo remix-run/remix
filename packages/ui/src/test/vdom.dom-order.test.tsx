@@ -405,9 +405,9 @@ describe('vnode rendering', () => {
       let capturedUpdates: (() => void)[] = []
       let showMiddle = false
 
-      function Middle(handle: Handle) {
+      function Middle(handle: Handle<{ id: string }>) {
         capturedUpdates.push(() => handle.update())
-        return ({ id }: { id: string }) => (showMiddle ? <span id={id}>Middle</span> : undefined)
+        return () => (showMiddle ? <span id={handle.props.id}>Middle</span> : undefined)
       }
 
       function App() {

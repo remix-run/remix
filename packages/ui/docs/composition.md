@@ -11,11 +11,11 @@ function Parent() {
   return () => <Child message="Hello from parent" count={42} />
 }
 
-function Child() {
-  return (props: { message: string; count: number }) => (
+function Child(handle: Handle<{ message: string; count: number }>) {
+  return () => (
     <div>
-      <p>{props.message}</p>
-      <p>Count: {props.count}</p>
+      <p>{handle.props.message}</p>
+      <p>Count: {handle.props.count}</p>
     </div>
   )
 }
@@ -26,11 +26,11 @@ function Child() {
 Components can compose other components via `children`:
 
 ```tsx
-function Layout() {
-  return (props: { children: RemixNode }) => (
+function Layout(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div mix={[css({ padding: '20px', maxWidth: '1200px', margin: '0 auto' })]}>
       <header>My App</header>
-      <main>{props.children}</main>
+      <main>{handle.props.children}</main>
       <footer>© 2024</footer>
     </div>
   )

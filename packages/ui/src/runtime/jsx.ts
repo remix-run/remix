@@ -44,7 +44,7 @@ export type Renderable = RemixElement | string | number | bigint | boolean | nul
  * Particularly useful for `props.children`.
  *
  * ```tsx
- * function MyComponent({ children }: { children: RemixNode }) {}
+ * function MyComponent(handle: Handle<{ children: RemixNode }>) {}
  * ```
  */
 export type RemixNode = Renderable | RemixNode[]

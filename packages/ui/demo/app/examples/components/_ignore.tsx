@@ -5,71 +5,75 @@ import { Menu, MenuItem, onMenuSelect } from '@remix-run/ui/menu'
 
 type State = 'idle' | 'deleting' | 'copying' | 'error'
 
-function Row(handle: Handle) {
+function Row(handle: Handle<SomeFile>) {
   let state: State = 'idle'
   let showCopyConfirmation = false
 
-  return (file: SomeFile) => (
-    <div
-      mix={[
-        link(file.href),
-        ui.flex.row,
-        ui.rounded.md,
-        css({
-          background: theme.surface.lvl1,
-          '&:hover': {
-            background: theme.surface.lvl2,
-          },
-        }),
-      ]}
-    >
-      <div mix={css({ fontWeight: theme.fontWeight.semibold })}>{file.name}</div>
-      <div>{formattedSize(file.size)}</div>
+  return () => {
+    let file = handle.props
 
-      <Menu
-        label="Actions"
-        mix={onMenuSelect(async (event) => {
-          switch (event.item.name) {
-            case 'copy-url':
-              let url = await navigator.clipboard.writeText(file.href)
-              if (handle.signal.aborted) return
-
-              showCopyConfirmation = true
-              await handle.update()
-
-              setTimeout(() => {
-                if (handle.signal.aborted) return
-                handle.update()
-              }, 4000)
-
-              break
-            case 'delete':
-              state = 'deleting'
-              break
-            default:
-              break
-          }
-        })}
+    return (
+      <div
+        mix={[
+          link(file.href),
+          ui.flex.row,
+          ui.rounded.md,
+          css({
+            background: theme.surface.lvl1,
+            '&:hover': {
+              background: theme.surface.lvl2,
+            },
+          }),
+        ]}
       >
-        <MenuItem name="copy-url" value="Copy URL">
-          Copy URL
-        </MenuItem>
-        <MenuItem name="delete" value="Delete">
-          Delete
-        </MenuItem>
-      </Menu>
-    </div>
-  )
+        <div mix={css({ fontWeight: theme.fontWeight.semibold })}>{file.name}</div>
+        <div>{formattedSize(file.size)}</div>
+
+        <Menu
+          label="Actions"
+          mix={onMenuSelect(async (event) => {
+            switch (event.item.name) {
+              case 'copy-url':
+                let url = await navigator.clipboard.writeText(file.href)
+                if (handle.signal.aborted) return
+
+                showCopyConfirmation = true
+                await handle.update()
+
+                setTimeout(() => {
+                  if (handle.signal.aborted) return
+                  handle.update()
+                }, 4000)
+
+                break
+              case 'delete':
+                state = 'deleting'
+                break
+              default:
+                break
+            }
+          })}
+        >
+          <MenuItem name="copy-url" value="Copy URL">
+            Copy URL
+          </MenuItem>
+          <MenuItem name="delete" value="Delete">
+            Delete
+          </MenuItem>
+        </Menu>
+      </div>
+    )
+  }
 }
 
 import { type Handle, on } from 'remix/ui'
 import { ui, Glyph } from 'remix/ui'
 import { tooltip } from 'remix/ui/tooltip'
 
-function CopyToClipboard(handle: Handle) {
+function CopyToClipboard(handle: Handle<{ url: string }>) {
   let state: 'idle' | 'copied' | 'error' = 'idle'
 
-  return (props: { url: string }) => {
+  return () => {
     let label = state === 'idle' ? 'Copy' : state === 'copied' ? 'Copied' : 'Error'
 
     return (
@@ -86,7 +90,7 @@ function CopyToClipboard(handle: Handle) {
           // add the event handler to do the work
           on('click', async (event) => {
             try {
-              await navigator.clipboard.writeText(props.url)
+              await navigator.clipboard.writeText(handle.props.url)
               if (handle.signal.aborted) return
             } catch (error) {
               state = 'error'

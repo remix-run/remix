@@ -1,18 +1,18 @@
 import { css } from 'remix/ui'
 import { Button } from '@remix-run/ui/button'
-import type { RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/ui'
 import { Glyph } from '@remix-run/ui/glyph'
 import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
 
-export function AppDocument(props: { children: RemixNode }) {
-  return (
+export function AppDocument(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <html>
       <head>
         <RMX_01 />
       </head>
       <body>
         <RMX_01_GLYPHS />
-        {props.children}
+        {handle.props.children}
       </body>
     </html>
   )

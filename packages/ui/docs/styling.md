@@ -190,8 +190,8 @@ function Button() {
 Use `&::before` and `&::after` for pseudo-elements:
 
 ```tsx
-function Badge() {
-  return (props: { count: number }) => (
+function Badge(handle: Handle<{ count: number }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -210,7 +210,7 @@ function Badge() {
         }),
       ]}
     >
-      {props.count > 0 && <span>{props.count}</span>}
+      {handle.props.count > 0 && <span>{handle.props.count}</span>}
     </div>
   )
 }
@@ -221,10 +221,10 @@ function Badge() {
 Use `&[attribute]` for attribute selectors:
 
 ```tsx
-function Input() {
-  return (props: { required?: boolean }) => (
+function Input(handle: Handle<{ required?: boolean }>) {
+  return () => (
     <input
-      required={props.required}
+      required={handle.props.required}
       mix={[
         css({
           padding: '8px',
@@ -249,8 +249,8 @@ function Input() {
 Use class names or element selectors directly for descendant selectors:
 
 ```tsx
-function Card() {
-  return (props: { children: RemixNode }) => (
+function Card(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -280,7 +280,7 @@ function Card() {
         }),
       ]}
     >
-      {props.children}
+      {handle.props.children}
     </div>
   )
 }
@@ -306,10 +306,10 @@ Use nested selectors when **parent state affects children**. Don't nest when you
 
 ```tsx
 // ❌ Avoid: Managing hover state in JavaScript
-function CardWithJSState(handle: Handle) {
+function CardWithJSState(handle: Handle<{ children: RemixNode }>) {
   let isHovered = false
 
-  return (props: { children: RemixNode }) => (
+  return () => (
     <div
       mix={[
         on('mouseenter', () => {
@@ -334,8 +334,8 @@ function CardWithJSState(handle: Handle) {
 }
 
 // ✅ Prefer: CSS nested selectors handle state declaratively
-function Card(handle: Handle) {
-  return (props: { children: RemixNode }) => (
+function Card(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -443,8 +443,8 @@ function Navigation() {
 Use `@media` for responsive design:
 
 ```tsx
-function ResponsiveGrid() {
-  return (props: { children: RemixNode }) => (
+function ResponsiveGrid(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -460,7 +460,7 @@ function ResponsiveGrid() {
         }),
       ]}
     >
-      {props.children}
+      {handle.props.children}
     </div>
   )
 }
@@ -471,8 +471,8 @@ function ResponsiveGrid() {
 Here's a comprehensive example demonstrating parent-state-affecting-children and media queries:
 
 ```tsx
-function ProductCard() {
-  return (props: { title: string; price: number; image: string }) => (
+function ProductCard(handle: Handle<{ title: string; price: number; image: string }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -501,8 +501,8 @@ function ProductCard() {
       ]}
     >
       <img
-        src={props.image}
-        alt={props.title}
+        src={handle.props.image}
+        alt={handle.props.title}
         mix={[
           css({
             width: '100%',
@@ -537,7 +537,7 @@ function ProductCard() {
             }),
           ]}
         >
-          {props.title}
+          {handle.props.title}
         </h3>
         <div
           className="price"
@@ -549,7 +549,7 @@ function ProductCard() {
             }),
           ]}
         >
-          ${props.price}
+          ${handle.props.price}
         </div>
         <button
           mix={[

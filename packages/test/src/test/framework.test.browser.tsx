@@ -81,9 +81,9 @@ describe('Counter', () => {
 
 describe('FieldLabel (using decamelize)', () => {
   // Demonstrates that ESM third-party libraries are importable from test modules
-  function FieldLabel(_handle: unknown) {
-    return (props: { name: string }) => (
-      <span data-testid="label">{decamelize(props.name, { separator: ' ' })}</span>
+  function FieldLabel(handle: Handle<{ name: string }>) {
+    return () => (
+      <span data-testid="label">{decamelize(handle.props.name, { separator: ' ' })}</span>
     )
   }
 

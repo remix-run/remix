@@ -53,10 +53,10 @@ export function HoldToConfirm(handle: Handle) {
   )
 }
 
-function HoldButton(handle: Handle) {
+function HoldButton(handle: Handle<{ onConfirm: () => void }>) {
   let confirming = false
 
-  return (props: { onConfirm: () => void }) => (
+  return () => (
     <button
       mix={[
         animateExit(buttonExitAnimation),
@@ -93,7 +93,7 @@ function HoldButton(handle: Handle) {
           handle.update()
         }),
         on(confirmPress.end, () => {
-          props.onConfirm()
+          handle.props.onConfirm()
         }),
       ]}
     >
@@ -133,8 +133,8 @@ function HoldButton(handle: Handle) {
   )
 }
 
-function Confirmation() {
-  return (props: { onReset: () => void }) => (
+function Confirmation(handle: Handle<{ onReset: () => void }>) {
+  return () => (
     <div
       mix={[
         animateEntrance(confirmationEnterAnimation),
@@ -178,7 +178,7 @@ function Confirmation() {
               borderColor: '#cbd5e1',
             },
           }),
-          on('click', props.onReset),
+          on('click', () => handle.props.onReset()),
         ]}
       >
         Reset Demo

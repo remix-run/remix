@@ -1,8 +1,8 @@
-import type { RemixNode, Props } from 'remix/ui'
+import type { Handle, RemixNode, Props } from 'remix/ui'
 import { css } from 'remix/ui'
 
-export function Layout() {
-  return ({ children }: { children: RemixNode }) => (
+export function Layout(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -54,13 +54,13 @@ export function Layout() {
         </div>
       </header>
 
-      {children}
+      {handle.props.children}
     </div>
   )
 }
 
-export function EqualizerLayout() {
-  return ({ children }: { children: RemixNode }) => (
+export function EqualizerLayout(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -76,13 +76,13 @@ export function EqualizerLayout() {
         }),
       ]}
     >
-      {children}
+      {handle.props.children}
     </div>
   )
 }
 
-export function TempoLayout() {
-  return ({ children }: { children: RemixNode }) => (
+export function TempoLayout(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -94,13 +94,13 @@ export function TempoLayout() {
         }),
       ]}
     >
-      {children}
+      {handle.props.children}
     </div>
   )
 }
 
-export function TempoButtons() {
-  return ({ children }: { children: RemixNode }) => (
+export function TempoButtons(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -113,13 +113,13 @@ export function TempoButtons() {
         }),
       ]}
     >
-      {children}
+      {handle.props.children}
     </div>
   )
 }
 
-export function BPMDisplay() {
-  return ({ bpm }: { bpm: number }) => (
+export function BPMDisplay(handle: Handle<{ bpm: number }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -162,13 +162,13 @@ export function BPMDisplay() {
           }),
         ]}
       >
-        {bpm}
+        {handle.props.bpm}
       </div>
     </div>
   )
 }
 
-export function EqualizerBar() {
+export function EqualizerBar(handle: Handle<{ volume: number }>) {
   let colors = [
     '#FF3000',
     '#FF3000',
@@ -182,8 +182,8 @@ export function EqualizerBar() {
     '#1A72FF',
   ]
 
-  return ({ volume }: { volume: number /* 0-1 */ }) => {
-    let startIndexToShow = 10 - Math.round(volume * 10)
+  return () => {
+    let startIndexToShow = 10 - Math.round(handle.props.volume * 10)
     return (
       <div
         mix={[
@@ -215,70 +215,79 @@ export function EqualizerBar() {
   }
 }
 
-export function ControlGroup() {
-  return ({ children, mix: mixOverride, ...rest }: Props<'div'>) => (
-    <div
-      {...rest}
-      mix={[
-        css({
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gridTemplateRows: '1fr 1fr',
-          gap: '18px',
-          alignItems: 'center',
-          justifyContent: 'center',
-          '& button:focus-visible': {
-            outline: '2px solid #2684FF',
-            outlineOffset: '2px',
-          },
-        }),
-        ...(mixOverride ?? []),
-      ]}
-    >
-      {children}
-    </div>
-  )
-}
+export function ControlGroup(handle: Handle<Props<'div'>>) {
+  return () => {
+    let { children, mix: mixOverride, ...rest } = handle.props
 
-export function Button() {
-  return ({ children, mix, ...rest }: Props<'button'>) => (
-    <button
-      {...rest}
-      mix={[
-        css({
-          all: 'unset',
-          letterSpacing: 0.9,
-          height: 120,
-          display: 'flex',
-          alignItems: 'end',
-          background: '#666',
-          borderRadius: '18px',
-          padding: '32px',
-          fontSize: '18px',
-          fontWeight: 700,
-          '&:disabled': {
-            opacity: 0.25,
-          },
-          '&:active': {
-            background: '#555',
-          },
-          '@media (prefers-color-scheme: light)': {
-            background: '#E0E0E0',
-            '&:active': {
-              background: '#D0D0D0',
+    return (
+      <div
+        {...rest}
+        mix={[
+          css({
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gridTemplateRows: '1fr 1fr',
+            gap: '18px',
+            alignItems: 'center',
+            justifyContent: 'center',
+            '& button:focus-visible': {
+              outline: '2px solid #2684FF',
+              outlineOffset: '2px',
             },
-          },
-        }),
-        ...(mix ?? []),
-      ]}
-    >
-      {children}
-    </button>
-  )
+          }),
+          ...(mixOverride ?? []),
+        ]}
+      >
+        {children}
+      </div>
+    )
+  }
 }
 
-export function Triangle() {
-  return ({ label, orientation }: { label: string; orientation: 'up' | 'down' }) => {
+export function Button(handle: Handle<Props<'button'>>) {
+  return () => {
+    let { children, mix, ...rest } = handle.props
+
+    return (
+      <button
+        {...rest}
+        mix={[
+          css({
+            all: 'unset',
+            letterSpacing: 0.9,
+            height: 120,
+            display: 'flex',
+            alignItems: 'end',
+            background: '#666',
+            borderRadius: '18px',
+            padding: '32px',
+            fontSize: '18px',
+            fontWeight: 700,
+            '&:disabled': {
+              opacity: 0.25,
+            },
+            '&:active': {
+              background: '#555',
+            },
+            '@media (prefers-color-scheme: light)': {
+              background: '#E0E0E0',
+              '&:active': {
+                background: '#D0D0D0',
+              },
+            },
+          }),
+          ...(mix ?? []),
+        ]}
+      >
+        {children}
+      </button>
+    )
+  }
+}
+
+export function Triangle(handle: Handle<{ label: string; orientation: 'up' | 'down' }>) {
+  return () => {
+    let { label, orientation } = handle.props
     let up = '5,1.34 9.33,8.66 0.67,8.66'
     let down = '5,8.66 9.33,1.34 0.67,1.34'
     return (
@@ -300,40 +309,44 @@ interface TempoButtonProps extends Props<'button'> {
   orientation: 'up' | 'down'
 }
 
-export function TempoButton() {
-  return ({ orientation, mix: mixOverride, ...rest }: TempoButtonProps) => (
-    <button
-      {...rest}
-      mix={[
-        css({
-          all: 'unset',
-          flex: 1,
-          background: '#666',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          '&:active': {
-            background: '#555',
-          },
-          '@media (prefers-color-scheme: light)': {
-            background: '#E0E0E0',
+export function TempoButton(handle: Handle<TempoButtonProps>) {
+  return () => {
+    let { orientation, mix: mixOverride, ...rest } = handle.props
+
+    return (
+      <button
+        {...rest}
+        mix={[
+          css({
+            all: 'unset',
+            flex: 1,
+            background: '#666',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
             '&:active': {
-              background: '#D0D0D0',
+              background: '#555',
             },
-          },
-          '&:first-child': {
-            borderTopRightRadius: '18px',
-          },
-          '&:last-child': {
-            borderBottomRightRadius: '18px',
-          },
-        }),
-        ...(mixOverride ?? []),
-      ]}
-    >
-      <Triangle label={orientation} orientation={orientation} />
-    </button>
-  )
+            '@media (prefers-color-scheme: light)': {
+              background: '#E0E0E0',
+              '&:active': {
+                background: '#D0D0D0',
+              },
+            },
+            '&:first-child': {
+              borderTopRightRadius: '18px',
+            },
+            '&:last-child': {
+              borderBottomRightRadius: '18px',
+            },
+          }),
+          ...(mixOverride ?? []),
+        ]}
+      >
+        <Triangle label={orientation} orientation={orientation} />
+      </button>
+    )
+  }
 }
 
 export function Logo() {

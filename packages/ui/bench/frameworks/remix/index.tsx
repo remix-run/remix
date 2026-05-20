@@ -13,81 +13,80 @@ import type { Handle } from '@remix-run/ui'
 
 export const name = 'remix'
 
-function Button() {
-  return ({ id, text, fn }: { id: string; text: string; fn: () => void }) => (
+function Button(handle: Handle<{ id: string; text: string; fn: () => void }>) {
+  return () => (
     <div class="col-sm-6 smallpad">
-      <button id={id} class="btn btn-primary btn-block" type="button" mix={[on('click', fn)]}>
-        {text}
+      <button
+        id={handle.props.id}
+        class="btn btn-primary btn-block"
+        type="button"
+        mix={[on('click', handle.props.fn)]}
+      >
+        {handle.props.text}
       </button>
     </div>
   )
 }
 
 // Stateful Metric Card Component
-function MetricCard(handle: Handle) {
+function MetricCard(handle: Handle<{ id: number; label: string; value: string; change: string }>) {
   let selected = false
   let hovered = false
 
-  return ({
-    id,
-    label,
-    value,
-    change,
-  }: {
-    id: number
-    label: string
-    value: string
-    change: string
-  }) => (
-    <div
-      class={`metric-card ${selected ? 'selected' : ''}`}
-      mix={[
-        on('click', () => {
-          selected = !selected
-          handle.update()
-        }),
-        on('mouseenter', () => {
-          hovered = true
-          handle.update()
-        }),
-        on('mouseleave', () => {
-          hovered = false
-          handle.update()
-        }),
-        on('focus', (e: any) => {
-          e.currentTarget.style.outline = '2px solid #222'
-          e.currentTarget.style.outlineOffset = '2px'
-        }),
-        on('blur', (e: any) => {
-          e.currentTarget.style.outline = ''
-        }),
-      ]}
-      tabIndex={0}
-      style={{
-        backgroundColor: hovered ? '#f5f5f5' : '#fff',
-        transform: hovered && !selected ? 'translateY(-2px)' : 'translateY(0)',
-        transition: 'all 0.2s',
-        padding: '20px',
-        border: '1px solid #ddd',
-        borderRadius: '8px',
-        cursor: 'pointer',
-        boxShadow: selected ? '0 4px 8px rgba(0,0,0,0.1)' : '0 2px 4px rgba(0,0,0,0.05)',
-      }}
-    >
-      <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>{label}</div>
-      <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '4px' }}>{value}</div>
-      <div style={{ fontSize: '12px', color: change.startsWith('+') ? '#28a745' : '#dc3545' }}>
-        {change}
+  return () => {
+    let { label, value, change } = handle.props
+
+    return (
+      <div
+        class={`metric-card ${selected ? 'selected' : ''}`}
+        mix={[
+          on('click', () => {
+            selected = !selected
+            handle.update()
+          }),
+          on('mouseenter', () => {
+            hovered = true
+            handle.update()
+          }),
+          on('mouseleave', () => {
+            hovered = false
+            handle.update()
+          }),
+          on('focus', (e: any) => {
+            e.currentTarget.style.outline = '2px solid #222'
+            e.currentTarget.style.outlineOffset = '2px'
+          }),
+          on('blur', (e: any) => {
+            e.currentTarget.style.outline = ''
+          }),
+        ]}
+        tabIndex={0}
+        style={{
+          backgroundColor: hovered ? '#f5f5f5' : '#fff',
+          transform: hovered && !selected ? 'translateY(-2px)' : 'translateY(0)',
+          transition: 'all 0.2s',
+          padding: '20px',
+          border: '1px solid #ddd',
+          borderRadius: '8px',
+          cursor: 'pointer',
+          boxShadow: selected ? '0 4px 8px rgba(0,0,0,0.1)' : '0 2px 4px rgba(0,0,0,0.05)',
+        }}
+      >
+        <div style={{ fontSize: '14px', color: '#666', marginBottom: '8px' }}>{label}</div>
+        <div style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '4px' }}>{value}</div>
+        <div style={{ fontSize: '12px', color: change.startsWith('+') ? '#28a745' : '#dc3545' }}>
+          {change}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 }
 
 // Stateful Chart Bar Component
-function ChartBar(handle: Handle) {
+function ChartBar(handle: Handle<{ value: number; index: number }>) {
   let hovered = false
 
-  return ({ value, index }: { value: number; index: number }) => (
+  return () => (
     <div
       class="chart-bar"
       mix={[
@@ -109,7 +108,7 @@ function ChartBar(handle: Handle) {
         }),
       ]}
       style={{
-        height: `${value}%`,
+        height: `${handle.props.value}%`,
         backgroundColor: hovered ? '#286090' : '#337ab7',
         width: '30px',
         margin: '0 2px',
@@ -124,68 +123,72 @@ function ChartBar(handle: Handle) {
 }
 
 // Stateful Activity Item Component
-function ActivityItem(handle: Handle) {
+function ActivityItem(handle: Handle<{ id: number; title: string; time: string; icon: string }>) {
   let read = false
   let hovered = false
 
-  return ({ id, title, time, icon }: { id: number; title: string; time: string; icon: string }) => (
-    <li
-      class={`activity-item ${read ? 'read' : ''}`}
-      mix={[
-        on('click', () => {
-          read = !read
-          handle.update()
-        }),
-        on('mouseenter', () => {
-          hovered = true
-          handle.update()
-        }),
-        on('mouseleave', () => {
-          hovered = false
-          handle.update()
-        }),
-      ]}
-      style={{
-        padding: '12px',
-        borderBottom: '1px solid #eee',
-        cursor: 'pointer',
-        backgroundColor: hovered ? '#f5f5f5' : read ? 'rgba(245, 245, 245, 0.6)' : '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-      }}
-    >
-      <span
+  return () => {
+    let { title, time, icon } = handle.props
+
+    return (
+      <li
+        class={`activity-item ${read ? 'read' : ''}`}
+        mix={[
+          on('click', () => {
+            read = !read
+            handle.update()
+          }),
+          on('mouseenter', () => {
+            hovered = true
+            handle.update()
+          }),
+          on('mouseleave', () => {
+            hovered = false
+            handle.update()
+          }),
+        ]}
         style={{
-          width: '32px',
-          height: '32px',
-          borderRadius: '50%',
-          backgroundColor: '#337ab7',
-          color: '#fff',
+          padding: '12px',
+          borderBottom: '1px solid #eee',
+          cursor: 'pointer',
+          backgroundColor: hovered ? '#f5f5f5' : read ? 'rgba(245, 245, 245, 0.6)' : '#fff',
           display: 'flex',
           alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 'bold',
+          gap: '12px',
         }}
       >
-        {icon}
-      </span>
-      <div style={{ flex: 1 }}>
-        <div style={{ fontWeight: read ? 'normal' : 'bold' }}>{title}</div>
-        <div style={{ fontSize: '12px', color: '#666' }}>{time}</div>
-      </div>
-    </li>
-  )
+        <span
+          style={{
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            backgroundColor: '#337ab7',
+            color: '#fff',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: 'bold',
+          }}
+        >
+          {icon}
+        </span>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontWeight: read ? 'normal' : 'bold' }}>{title}</div>
+          <div style={{ fontSize: '12px', color: '#666' }}>{time}</div>
+        </div>
+      </li>
+    )
+  }
 }
 
 // Stateful Dropdown Menu Component
-function DropdownMenu(handle: Handle) {
+function DropdownMenu(handle: Handle<{ rowId: number }>) {
   let open = false
   let hovered = false
 
   let actions = ['View Details', 'Edit', 'Duplicate', 'Archive', 'Delete']
 
-  return ({ rowId }: { rowId: number }) => (
+  return () => (
     <div style={{ position: 'relative', display: 'inline-block' }}>
       <button
         class="btn btn-primary"
@@ -272,45 +275,49 @@ function DropdownMenu(handle: Handle) {
 }
 
 // Stateful Dashboard Table Row Component
-function DashboardTableRow(handle: Handle) {
+function DashboardTableRow(handle: Handle<{ row: Row }>) {
   let hovered = false
   let selected = false
 
-  return ({ row }: { row: Row }) => (
-    <tr
-      class={selected ? 'danger' : ''}
-      mix={[
-        on('click', () => {
-          selected = !selected
-          handle.update()
-        }),
-        on('mouseenter', () => {
-          hovered = true
-          handle.update()
-        }),
-        on('mouseleave', () => {
-          hovered = false
-          handle.update()
-        }),
-      ]}
-      style={{
-        backgroundColor: hovered ? '#f5f5f5' : '#fff',
-        cursor: 'pointer',
-      }}
-    >
-      <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>{row.id}</td>
-      <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>{row.label}</td>
-      <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>
-        <span style={{ color: '#28a745' }}>Active</span>
-      </td>
-      <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>
-        ${(row.id * 10.5).toFixed(2)}
-      </td>
-      <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>
-        <DropdownMenu rowId={row.id} />
-      </td>
-    </tr>
-  )
+  return () => {
+    let { row } = handle.props
+
+    return (
+      <tr
+        class={selected ? 'danger' : ''}
+        mix={[
+          on('click', () => {
+            selected = !selected
+            handle.update()
+          }),
+          on('mouseenter', () => {
+            hovered = true
+            handle.update()
+          }),
+          on('mouseleave', () => {
+            hovered = false
+            handle.update()
+          }),
+        ]}
+        style={{
+          backgroundColor: hovered ? '#f5f5f5' : '#fff',
+          cursor: 'pointer',
+        }}
+      >
+        <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>{row.id}</td>
+        <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>{row.label}</td>
+        <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>
+          <span style={{ color: '#28a745' }}>Active</span>
+        </td>
+        <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>
+          ${(row.id * 10.5).toFixed(2)}
+        </td>
+        <td style={{ padding: '12px', borderTop: '1px solid #ddd' }}>
+          <DropdownMenu rowId={row.id} />
+        </td>
+      </tr>
+    )
+  }
 }
 
 // Stateful Search Input Component
@@ -550,7 +557,7 @@ function FormWidgets(handle: Handle) {
   )
 }
 
-function Dashboard(handle: Handle) {
+function Dashboard(handle: Handle<{ onSwitchToTable: () => void }>) {
   let dashboardRows = buildData(300)
 
   let sortDashboardAsc = () => {
@@ -570,7 +577,7 @@ function Dashboard(handle: Handle) {
     icon: ['O', 'P', 'S', 'C', 'U'][i % 5],
   }))
 
-  return ({ onSwitchToTable }: { onSwitchToTable: () => void }) => (
+  return () => (
     <div class="container" style={{ maxWidth: '1400px' }}>
       <div
         style={{
@@ -585,7 +592,7 @@ function Dashboard(handle: Handle) {
           id="switchToTable"
           class="btn btn-primary"
           type="button"
-          mix={[on('click', onSwitchToTable)]}
+          mix={[on('click', handle.props.onSwitchToTable)]}
         >
           Switch to Table
         </button>

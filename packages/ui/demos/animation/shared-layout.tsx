@@ -3,13 +3,14 @@ import { animateEntrance, animateExit } from 'remix/ui/animation'
 
 const ease = 'cubic-bezier(0.26, 0.02, 0.23, 0.94)'
 
-function OverlapExample(handle: Handle) {
+function OverlapExample(handle: Handle<{ state: boolean }>) {
   let shouldAnimate = false
   handle.queueTask(() => {
     shouldAnimate = true
   })
 
-  return ({ state }: { state: boolean }) => {
+  return () => {
+    let { state } = handle.props
     let animationMix = [
       animateExit({
         opacity: 0,
@@ -52,13 +53,14 @@ function OverlapExample(handle: Handle) {
   }
 }
 
-function WaitExample(handle: Handle) {
+function WaitExample(handle: Handle<{ state: boolean }>) {
   let shouldAnimate = false
   handle.queueTask(() => {
     shouldAnimate = true
   })
 
-  return ({ state }: { state: boolean }) => {
+  return () => {
+    let { state } = handle.props
     let animationMix = [
       animateExit({
         opacity: 0,
@@ -148,8 +150,8 @@ export function SharedLayout(handle: Handle) {
   )
 }
 
-function Circle() {
-  return (props: { filled?: boolean; children: RemixNode }) => (
+function Circle(handle: Handle<{ filled?: boolean; children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -160,13 +162,13 @@ function Circle() {
           alignItems: 'center',
           justifyContent: 'center',
           boxSizing: 'border-box',
-          backgroundColor: props.filled ? '#0f1115' : 'transparent',
-          color: props.filled ? '#f5f5f5' : '#0f1115',
-          border: props.filled ? '2px solid #0f1115' : '2px solid #0f1115',
+          backgroundColor: handle.props.filled ? '#0f1115' : 'transparent',
+          color: handle.props.filled ? '#f5f5f5' : '#0f1115',
+          border: handle.props.filled ? '2px solid #0f1115' : '2px solid #0f1115',
         }),
       ]}
     >
-      {props.children}
+      {handle.props.children}
     </div>
   )
 }

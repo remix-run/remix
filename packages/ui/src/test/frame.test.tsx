@@ -1575,12 +1575,12 @@ describe('run', () => {
 
     let CartItems = clientEntry(
       '/assets/cart-items-css.js#CartItemsCss',
-      function CartItemsCss(handle: Handle) {
+      function CartItemsCss(handle: Handle<{ items: Item[] }>) {
         reload = () => handle.frame.reload()
 
-        return (props: { items: Item[] }) => (
+        return () => (
           <section>
-            {props.items.map((item) => (
+            {handle.props.items.map((item) => (
               <form
                 key={item.id}
                 data-row={item.id}
@@ -1671,7 +1671,7 @@ describe('run', () => {
 
     let CartSummary = clientEntry(
       '/assets/cart-summary-css.js#CartSummaryCss',
-      function CartSummaryCss(handle: Handle) {
+      function CartSummaryCss(handle: Handle<{ itemCount: number }>) {
         let pending = false
 
         startPendingReload = async () => {
@@ -1680,7 +1680,7 @@ describe('run', () => {
           return await handle.frame.reload()
         }
 
-        return (props: { itemCount: number }) => (
+        return () => (
           <section>
             {pending ? (
               <p id="pending-message" mix={[css({ color: 'rgb(200, 0, 0)' })]}>
@@ -1688,7 +1688,7 @@ describe('run', () => {
               </p>
             ) : null}
             <p id="item-count" mix={[css({ color: 'rgb(0, 0, 200)' })]}>
-              Items: {props.itemCount}
+              Items: {handle.props.itemCount}
             </p>
           </section>
         )

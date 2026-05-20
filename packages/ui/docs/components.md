@@ -84,11 +84,11 @@ function Parent() {
   return () => <Child message="Hello from parent" count={42} />
 }
 
-function Child() {
-  return (props: { message: string; count: number }) => (
+function Child(handle: Handle<{ message: string; count: number }>) {
+  return () => (
     <div>
-      <p>{props.message}</p>
-      <p>Count: {props.count}</p>
+      <p>{handle.props.message}</p>
+      <p>Count: {handle.props.count}</p>
     </div>
   )
 }
