@@ -2,6 +2,22 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.0
+
+### Minor Changes
+
+- Add a `signal` option to `renderToStream()` so request aborts can cancel pending frame rendering without invoking `onError` (see #11431).
+
+### Patch Changes
+
+- Add explicit public API types for UI component, mixin, scheduler, stylesheet, animation, and theme helpers so generated declarations no longer depend on broad inference across helper factories (see #11433).
+
+- Fix rendering and JSX types for booleanish string attributes so `contentEditable={false}`, `draggable={false}`, `spellCheck={false}`, and matching SVG attributes produce explicit `"false"` values instead of being omitted. The `translate` JSX type now accepts the HTML attribute values `"yes"` and `"no"` (see #11434).
+
+- Fix hydrated `@remix-run/ui` components so non-rendering children inside fragments keep the correct DOM anchor when they later become renderable (see #11425).
+
+- Ignore component updates scheduled after a frame reload has already removed that component, avoiding `Node.insertBefore` errors from stale updates after the frame renders replacement markup (see #11422).
+
 ## v0.1.2
 
 ### Patch Changes

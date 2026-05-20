@@ -2,6 +2,14 @@
 
 This is the changelog for [`response`](https://github.com/remix-run/remix/tree/main/packages/response). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.5
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.0`](https://github.com/remix-run/remix/releases/tag/headers@0.21.0)
+  - [`html-template@0.3.1`](https://github.com/remix-run/remix/releases/tag/html-template@0.3.1)
+
 ## v0.3.4
 
 ### Patch Changes

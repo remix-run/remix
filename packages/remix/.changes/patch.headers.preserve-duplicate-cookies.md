@@ -1,1 +1,0 @@
-Fix `Cookie` and `SuperHeaders.cookie` from `remix/headers` so duplicate cookie names from path- or domain-specific cookies are preserved in order. `Cookie#get(name)` now returns the first matching value, `Cookie#getAll(name)` can be used to read every matching value, and `Cookie#append(name, value)` can be used to add another cookie with the same name (see #11423).
