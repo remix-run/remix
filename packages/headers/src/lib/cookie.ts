@@ -2,6 +2,8 @@ import { type HeaderValue } from './header-value.ts'
 import { parseParams, quote } from './param-values.ts'
 import { isIterable } from './utils.ts'
 
+type CookiePair = [name: string, value: string]
+
 /**
  * Initializer for a {@link Cookie} header value.
  */
@@ -15,61 +17,91 @@ export type CookieInit = Iterable<[string, string]> | Record<string, string>
  * [HTTP/1.1 Specification](https://datatracker.ietf.org/doc/html/rfc6265#section-4.2)
  */
 export class Cookie implements HeaderValue, Iterable<[string, string]> {
-  #map!: Map<string, string>
+  #cookies!: CookiePair[]
 
   constructor(init?: string | CookieInit) {
     if (init) return Cookie.from(init)
-    this.#map = new Map()
+    this.#cookies = []
   }
 
   /**
    * An array of the names of the cookies in the header.
    */
   get names(): string[] {
-    return Array.from(this.#map.keys())
+    return this.#cookies.map(([name]) => name)
   }
 
   /**
    * An array of the values of the cookies in the header.
    */
   get values(): string[] {
-    return Array.from(this.#map.values())
+    return this.#cookies.map(([, value]) => value)
   }
 
   /**
    * The number of cookies in the header.
    */
   get size(): number {
-    return this.#map.size
+    return this.#cookies.length
   }
 
   /**
-   * Gets the value of a cookie with the given name from the header.
+   * Gets the first value of a cookie with the given name from the header.
    *
    * @param name The name of the cookie
-   * @returns The value of the cookie, or `null` if the cookie does not exist
+   * @returns The first value of the cookie, or `null` if the cookie does not exist
    */
   get(name: string): string | null {
-    return this.#map.get(name) ?? null
+    let cookie = this.#cookies.find(([cookieName]) => cookieName === name)
+    return cookie?.[1] ?? null
   }
 
   /**
-   * Sets a cookie with the given name and value in the header.
+   * Gets all values of cookies with the given name from the header.
+   *
+   * @param name The name of the cookie
+   * @returns The values of all matching cookies, or an empty array if none exist
+   */
+  getAll(name: string): string[] {
+    return this.#cookies.filter(([cookieName]) => cookieName === name).map(([, value]) => value)
+  }
+
+  /**
+   * Sets a cookie with the given name and value in the header, replacing any existing values.
    *
    * @param name The name of the cookie
    * @param value The value of the cookie
    */
   set(name: string, value: string): void {
-    this.#map.set(name, value)
+    let index = this.#cookies.findIndex(([cookieName]) => cookieName === name)
+
+    if (index === -1) {
+      this.#cookies.push([name, value])
+    } else {
+      this.#cookies[index] = [name, value]
+      this.#cookies = this.#cookies.filter(
+        ([cookieName], cookieIndex) => cookieName !== name || cookieIndex === index,
+      )
+    }
   }
 
   /**
-   * Removes a cookie with the given name from the header.
+   * Appends a cookie with the given name and value to the header.
+   *
+   * @param name The name of the cookie
+   * @param value The value of the cookie
+   */
+  append(name: string, value: string): void {
+    this.#cookies.push([name, value])
+  }
+
+  /**
+   * Removes all cookies with the given name from the header.
    *
    * @param name The name of the cookie
    */
   delete(name: string): void {
-    this.#map.delete(name)
+    this.#cookies = this.#cookies.filter(([cookieName]) => cookieName !== name)
   }
 
   /**
@@ -79,14 +111,14 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
    * @returns `true` if a cookie with the given name exists in the header
    */
   has(name: string): boolean {
-    return this.#map.has(name)
+    return this.#cookies.some(([cookieName]) => cookieName === name)
   }
 
   /**
    * Removes all cookies from the header.
    */
   clear(): void {
-    this.#map.clear()
+    this.#cookies = []
   }
 
   /**
@@ -94,8 +126,10 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
    *
    * @returns An iterator of `[name, value]` tuples
    */
-  entries(): IterableIterator<[string, string]> {
-    return this.#map.entries()
+  *entries(): IterableIterator<[string, string]> {
+    for (let [name, value] of this.#cookies) {
+      yield [name, value]
+    }
   }
 
   /**
@@ -127,7 +161,7 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
   toString(): string {
     let pairs: string[] = []
 
-    for (let [name, value] of this.#map) {
+    for (let [name, value] of this.#cookies) {
       pairs.push(`${name}=${quote(value)}`)
     }
 
@@ -147,15 +181,15 @@ export class Cookie implements HeaderValue, Iterable<[string, string]> {
       if (typeof value === 'string') {
         let params = parseParams(value)
         for (let [name, val] of params) {
-          header.#map.set(name, val ?? '')
+          header.#cookies.push([name, val ?? ''])
         }
       } else if (isIterable(value)) {
         for (let [name, val] of value) {
-          header.#map.set(name, val)
+          header.#cookies.push([name, val])
         }
       } else {
         for (let name of Object.getOwnPropertyNames(value)) {
-          header.#map.set(name, value[name])
+          header.#cookies.push([name, value[name]])
         }
       }
     }

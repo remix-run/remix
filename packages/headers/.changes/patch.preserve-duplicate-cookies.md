@@ -1,0 +1,1 @@
+Fix `Cookie` and `SuperHeaders.cookie` so duplicate cookie names are preserved in order. `Cookie#get(name)` now returns the first matching value, `Cookie#getAll(name)` can be used to read every matching value, and `Cookie#append(name, value)` can be used to add another cookie with the same name.
