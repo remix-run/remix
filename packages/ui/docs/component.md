@@ -611,7 +611,7 @@ function LabeledInput(handle: Handle) {
 Context API for ancestor/descendant communication. All components are potential context providers and consumers. Use `handle.context.set()` to provide values and `handle.context.get()` to consume them.
 
 ```tsx
-function App(handle: Handle<{ theme: string }>) {
+function App(handle: Handle<Record<string, never>, { theme: string }>) {
   handle.context.set({ theme: 'dark' })
 
   return () => (
@@ -649,7 +649,7 @@ class Theme extends TypedEventTarget<{ change: Event }> {
   }
 }
 
-function App(handle: Handle<Theme>) {
+function App(handle: Handle<Record<string, never>, Theme>) {
   let theme = new Theme()
   handle.context.set(theme)
 
@@ -702,22 +702,22 @@ function List(handle: Handle) {
 
 ## Documentation
 
-- [Getting Started](./docs/getting-started.md)
-- [Components](./docs/components.md)
-- [Handle API](./docs/handle.md)
+- [Getting Started](./getting-started.md)
+- [Components](./components.md)
+- [Handle API](./handle.md)
 - [Server](../src/server/README.md)
-- [Hydration](./docs/hydration.md)
-- [Frames](./docs/frames.md)
-- [Styling](./docs/styling.md)
-- [Events](./docs/events.md)
-- [Interactions](./docs/interactions.md)
-- [Context](./docs/context.md)
-- [Composition](./docs/composition.md)
-- [Patterns](./docs/patterns.md)
+- [Hydration](./hydration.md)
+- [Frames](./frames.md)
+- [Styling](./styling.md)
+- [Events](./events.md)
+- [Interactions](./interactions.md)
+- [Context](./context.md)
+- [Composition](./composition.md)
+- [Patterns](./patterns.md)
 - [Test](../src/test/README.md)
 - Animations
-  - [spring](./docs/spring.md)
-  - [tween](./docs/tween.md)
+  - [spring](./spring.md)
+  - [tween](./tween.md)
 - [Server](../src/server/README.md)
 
 See [LICENSE](https://github.com/remix-run/remix/blob/main/LICENSE)

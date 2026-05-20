@@ -1,10 +1,10 @@
 # Getting Started
 
-Create interactive UIs with Remix Component using a two-phase component model: setup runs once, render runs on every update.
+Create interactive UIs with Remix UI using a two-phase component model: setup runs once, and render runs on every update.
 
 ## Client-Only Root
 
-To start using Remix Component on the client, create a root and render your top-level component:
+To start using Remix UI on the client, create a root and render your top-level component:
 
 ```tsx
 import { createRoot } from 'remix/ui'

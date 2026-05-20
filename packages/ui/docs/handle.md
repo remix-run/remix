@@ -285,7 +285,7 @@ function LabeledInput(handle: Handle) {
 Context API for ancestor/descendant communication. See [Context](./context.md) for full documentation.
 
 ```tsx
-function App(handle: Handle<{ theme: string }>) {
+function App(handle: Handle<Record<string, never>, { theme: string }>) {
   handle.context.set({ theme: 'dark' })
 
   return () => (
