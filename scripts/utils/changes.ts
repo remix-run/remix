@@ -29,8 +29,10 @@ export type ParsedChangesConfig =
 /**
  * Reads and validates a package's .changes/config.json.
  */
-export function readChangesConfig(packageDirName: string): ParsedChangesConfig {
-  let packagePath = getPackagePath(packageDirName)
+export function readChangesConfig(
+  packageDirName: string,
+  packagePath = getPackagePath(packageDirName),
+): ParsedChangesConfig {
   let configJsonPath = path.join(packagePath, '.changes', 'config.json')
 
   if (!fs.existsSync(configJsonPath)) {
@@ -155,14 +157,16 @@ type ParsedPackageChanges =
  * Parses and validates all change files for a package.
  * Returns changes if valid, or errors if invalid.
  */
-function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
-  let packagePath = getPackagePath(packageDirName)
+export function parsePackageChanges(
+  packageDirName: string,
+  packagePath = getPackagePath(packageDirName),
+): ParsedPackageChanges {
   let changesDir = path.join(packagePath, '.changes')
   let changes: ChangeFile[] = []
   let errors: ValidationError[] = []
 
   // Get package version to determine validation rules
-  let packageJsonPath = getPackageFile(packageDirName, 'package.json')
+  let packageJsonPath = path.join(packagePath, 'package.json')
   let packageJson = readJson(packageJsonPath)
   let currentVersion = packageJson.version as string
   let majorVersion = major(currentVersion)
@@ -171,19 +175,6 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
   let isCurrentVersionPrerelease = currentVersionPrereleaseId !== null
 
   if (!fs.existsSync(changesDir)) {
-    if (isCurrentVersionPrerelease) {
-      return {
-        valid: false,
-        errors: [
-          {
-            packageDirName,
-            file: '.changes/config.json',
-            error: `Version ${currentVersion} is a prerelease but no .changes/config.json exists. Either add .changes/config.json with { "prereleaseChannel": "${currentVersionPrereleaseId}" }, or add a change file to graduate to stable.`,
-          },
-        ],
-      }
-    }
-
     return { valid: true, changes, changesConfig: null }
   }
 
@@ -202,7 +193,7 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
 
   // Handle .changes/config.json for packages in prerelease mode
   let changesConfig: ChangesConfig | null = null
-  let parsedChangesConfig = readChangesConfig(packageDirName)
+  let parsedChangesConfig = readChangesConfig(packageDirName, packagePath)
   if (parsedChangesConfig.exists) {
     if (!parsedChangesConfig.valid) {
       errors.push({

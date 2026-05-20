@@ -1,10 +1,10 @@
 import * as fs from 'node:fs'
+import * as os from 'node:os'
 import * as path from 'node:path'
 import assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { PackageRelease } from './changes.ts'
-import { generateChangelogContent, getNextVersion, parseAllChangeFiles } from './changes.ts'
-import { packagesDir } from './packages.ts'
+import { generateChangelogContent, getNextVersion, parsePackageChanges } from './changes.ts'
 
 function makeRelease(overrides: Partial<PackageRelease> = {}): PackageRelease {
   return {
@@ -19,8 +19,11 @@ function makeRelease(overrides: Partial<PackageRelease> = {}): PackageRelease {
   }
 }
 
-function withTemporaryPackage(version: string, callback: (packageDirName: string) => void) {
-  let packagePath = fs.mkdtempSync(path.join(path.resolve(packagesDir), 'changes-test-'))
+function withTemporaryPackage(
+  version: string,
+  callback: (packageDirName: string, packagePath: string) => void,
+) {
+  let packagePath = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-changes-test-'))
   let packageDirName = path.basename(packagePath)
   let packageJsonPath = path.join(packagePath, 'package.json')
 
@@ -38,36 +41,23 @@ function withTemporaryPackage(version: string, callback: (packageDirName: string
   )
 
   try {
-    callback(packageDirName)
+    callback(packageDirName, packagePath)
   } finally {
     fs.rmSync(packagePath, { recursive: true, force: true })
   }
 }
 
-describe('parseAllChangeFiles', () => {
+describe('parsePackageChanges', () => {
   it('allows stable packages without .changes directories', () => {
-    withTemporaryPackage('1.0.0', () => {
-      let result = parseAllChangeFiles()
+    withTemporaryPackage('1.0.0', (packageDirName, packagePath) => {
+      let result = parsePackageChanges(packageDirName, packagePath)
 
       if (!result.valid) {
         assert.fail('Expected a stable package without a .changes directory to validate')
       }
-    })
-  })
 
-  it('requires prerelease packages without .changes directories to configure prerelease mode', () => {
-    withTemporaryPackage('1.0.0-beta.1', (packageDirName) => {
-      let result = parseAllChangeFiles()
-
-      if (result.valid) {
-        assert.fail('Expected a prerelease package without a .changes directory to fail validation')
-      }
-
-      let errors = result.errors.filter((error) => error.packageDirName === packageDirName)
-
-      assert.equal(errors.length, 1)
-      assert.equal(errors[0]?.file, '.changes/config.json')
-      assert.match(errors[0]?.error ?? '', /no \.changes\/config\.json exists/)
+      assert.equal(result.changes.length, 0)
+      assert.equal(result.changesConfig, null)
     })
   })
 })
