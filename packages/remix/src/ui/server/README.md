@@ -1,6 +1,6 @@
 # Server
 
-Remix Component can render to HTML on the server using two APIs:
+Remix UI can render to HTML on the server using two APIs:
 
 - `renderToString` - Returns a complete HTML string. Simple, but buffers the entire response.
 - `renderToStream` - Returns a `ReadableStream<Uint8Array>`. Sends the initial HTML immediately and streams frame content as it resolves.
@@ -26,6 +26,7 @@ import { renderToStream } from 'remix/ui/server'
 
 let stream = renderToStream(<App />, {
   frameSrc: request.url,
+  signal: request.signal,
   resolveFrame(src, _target, context) {
     let frameUrl = new URL(src, context?.currentFrameSrc ?? request.url)
     return fetchHtml(frameUrl)
@@ -44,6 +45,7 @@ return new Response(stream, {
 
 - **`frameSrc`** - Seeds SSR frame state for the current render. When provided, server-rendered components can read `handle.frame.src` and `handle.frames.top.src` during SSR.
 - **`topFrameSrc`** - Overrides the root frame URL used for `handle.frames.top.src`. This is mainly useful when calling `renderToStream()` from inside `resolveFrame()` for a nested frame render.
+- **`signal`** - Cancels pending server rendering work. Pass `request.signal` so client disconnects can stop unresolved frame work without invoking `onError` for the disconnect itself.
 - **`resolveFrame(src, target, context)`** - Called when a `<Frame>` needs its content. Return a string of HTML, a `ReadableStream<Uint8Array>`, or a promise of either. `context.currentFrameSrc` is the URL for the frame that contains the `<Frame>`, and `context.topFrameSrc` is the outer document URL. Required if your component tree contains `<Frame>` elements.
 - **`onError(error)`** - Called when a rendering error occurs. If not provided, the stream rejects with the error.
 
@@ -80,7 +82,7 @@ function ProductPage() {
 
 ## CSS
 
-Components using the `css` prop have their styles collected during rendering and emitted as a single `<style>` tag in the `<head>`. No client-side style injection is needed for server-rendered content.
+Components using the `css(...)` mixin through `mix` have their styles collected during rendering and emitted as a single `<style>` tag in the `<head>`. No client-side style injection is needed for server-rendered content.
 
 ## See Also
 
