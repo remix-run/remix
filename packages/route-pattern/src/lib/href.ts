@@ -160,7 +160,9 @@ function encodePathSegment(segment: string): string {
   if (segment === '.') return '%252E'
   if (segment === '..') return '%252E%252E'
 
-  return encodeURIComponent(segment)
+  return encodeURIComponent(segment).replace(/%(24|26|2B|2C|3A|3B|3D|40)/gi, (encoded) =>
+    String.fromCharCode(Number.parseInt(encoded.slice(1), 16)),
+  )
 }
 
 function hrefSearch(pattern: RoutePattern, searchParams: SearchParams): string | undefined {

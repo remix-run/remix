@@ -132,6 +132,13 @@ describe('createHref', () => {
         assert.equal(createHref('/posts/:id', { id: 'a/b?c#d' }), '/posts/a%2Fb%3Fc%23d')
       })
 
+      it('preserves valid path segment syntax in params', () => {
+        assert.equal(
+          createHref('/packages/:name', { name: '@remix-run:ui' }),
+          '/packages/@remix-run:ui',
+        )
+      })
+
       it('encodes dot segment params', () => {
         assert.equal(createHref('/posts/:id', { id: '..' }), '/posts/%252E%252E')
       })
@@ -182,6 +189,13 @@ describe('createHref', () => {
       assert.equal(
         createHref('/files/*path', { path: '../draft docs/readme.md?raw#intro' }),
         '/files/%252E%252E/draft%20docs/readme.md%3Fraw%23intro',
+      )
+    })
+
+    it('preserves valid wildcard path segment syntax', () => {
+      assert.equal(
+        createHref('/assets/*path', { path: 'node_modules/@remix-run/ui/jsx-runtime.ts' }),
+        '/assets/node_modules/@remix-run/ui/jsx-runtime.ts',
       )
     })
 
