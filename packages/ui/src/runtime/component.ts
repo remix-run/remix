@@ -240,6 +240,7 @@ class ComponentRuntime<C = NoContext> {
   #props = {} as ElementProps
   #renderController: AbortController | undefined
   #renderFn: RenderFn | undefined
+  #removed = false
   #scheduleUpdate: () => void = () => {
     throw new Error('scheduleUpdate not implemented')
   }
@@ -252,7 +253,7 @@ class ComponentRuntime<C = NoContext> {
   }
 
   render = (nextProps: ElementProps): [RemixNode, Array<() => void>] => {
-    if (this.#connectedController?.signal.aborted) {
+    if (this.#removed) {
       console.warn('render called after component was removed, potential application memory leak')
       return [null, []]
     }
@@ -278,9 +279,11 @@ class ComponentRuntime<C = NoContext> {
   }
 
   remove = (): Array<() => void> => {
+    if (this.#removed) return []
+    this.#removed = true
     this.#connectedController?.abort()
     this.#abortRenderSignal()
-    return this.#dequeueTasks()
+    return this.#dequeueTasks(AbortSignal.abort())
   }
 
   setScheduleUpdate = (nextScheduleUpdate: () => void): void => {
@@ -288,6 +291,8 @@ class ComponentRuntime<C = NoContext> {
   }
 
   getContextValue = (): C | undefined => this.#contextValue
+
+  isRemoved = (): boolean => this.#removed
 
   #createHandle(): Handle<ElementProps, C> {
     let component = this
@@ -303,6 +308,11 @@ class ComponentRuntime<C = NoContext> {
       props: this.#props,
       update: () =>
         new Promise((resolve) => {
+          if (component.#removed) {
+            resolve(AbortSignal.abort())
+            return
+          }
+
           this.#tasks.push((signal) => resolve(signal))
           this.#scheduleUpdate()
         }),
@@ -335,14 +345,14 @@ class ComponentRuntime<C = NoContext> {
     this.#renderController = undefined
   }
 
-  #dequeueTasks(): Array<() => void> {
-    let needsSignal = this.#tasks.some((task) => task.length >= 1)
+  #dequeueTasks(signal?: AbortSignal): Array<() => void> {
+    let needsSignal = signal === undefined && this.#tasks.some((task) => task.length >= 1)
 
     if (needsSignal) {
       this.#renderController ??= new AbortController()
     }
 
-    let signal = this.#renderController?.signal
+    signal ??= this.#renderController?.signal
     let tasks = this.#tasks.splice(0, this.#tasks.length)
     return tasks.map((task) => () => task(signal!))
   }

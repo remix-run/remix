@@ -1188,6 +1188,93 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
+  it('ignores updates from a client entry removed by a frame reload', async () => {
+    let pending = false
+    let showCartItems = true
+    let removeLastItem: undefined | (() => Promise<void>)
+
+    let CartItems = clientEntry(
+      '/assets/cart-items.js#CartItems',
+      function CartItems(handle: Handle) {
+        removeLastItem = async () => {
+          pending = true
+          await handle.update()
+          showCartItems = false
+          await handle.frame.reload()
+          pending = false
+          handle.update()
+        }
+
+        return () => (
+          <>
+            {pending ? <p id="cart-pending">Updating your cart...</p> : null}
+            <table id="cart-items">
+              <tbody>
+                <tr>
+                  <td>Book</td>
+                  <td>
+                    <button>Remove</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div id="cart-total">Total: $16.99</div>
+          </>
+        )
+      },
+    )
+
+    async function renderCartItems(): Promise<string> {
+      return await drain(
+        renderToStream(
+          showCartItems ? <CartItems /> : <p id="empty-cart">Your cart is empty.</p>,
+        ),
+      )
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/cart-items" />
+        </main>,
+        { resolveFrame: renderCartItems },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let errors: unknown[] = []
+    let clientFrame = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/cart-items.js' && exportName === 'CartItems') {
+          return CartItems
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/cart-items') return renderCartItems()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+    clientFrame.addEventListener('error', (event) => {
+      errors.push(event.error)
+    })
+
+    await clientFrame.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('cart-items')).toBeInstanceOf(HTMLElement)
+    invariant(removeLastItem)
+
+    await removeLastItem()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('cart-items')).toBeNull()
+    expect(document.getElementById('empty-cart')?.textContent).toBe('Your cart is empty.')
+    expect(errors).toEqual([])
+
+    clientFrame.dispose()
+  })
+
   it('looks up named adjacent frames from handle.frames.get(name)', async () => {
     let summaryRenderCount = 0
     let reloadSummary: undefined | (() => Promise<void>)
