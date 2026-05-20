@@ -7,12 +7,12 @@ Context enables components to communicate without direct prop passing.
 Use `handle.context.set()` to provide values and `handle.context.get()` to consume them:
 
 ```tsx
-function ThemeProvider(handle: Handle<{ theme: 'light' | 'dark' }>) {
+function ThemeProvider(handle: Handle<{ children?: RemixNode }, { theme: 'light' | 'dark' }>) {
   let theme: 'light' | 'dark' = 'light'
 
   handle.context.set({ theme })
 
-  return (props: { children: RemixNode }) => (
+  return () => (
     <div>
       <button
         mix={[
@@ -25,7 +25,7 @@ function ThemeProvider(handle: Handle<{ theme: 'light' | 'dark' }>) {
       >
         Toggle Theme
       </button>
-      {props.children}
+      {handle.props.children}
     </div>
   )
 }
@@ -42,6 +42,38 @@ function ThemedContent(handle: Handle) {
 ```
 
 **Important:** `handle.context.set()` does not cause any updates—it simply stores a value. If you want the component tree to update when context changes, you must call `handle.update()` after setting the context (as shown above).
+
+## Component Identity
+
+Context lookup is keyed by component identity. `handle.context.get(Component)` reads the nearest ancestor instance whose component function is exactly `Component`, and the returned value is inferred from that component's `Handle<Props, ContextValue>` type.
+
+This keeps component relationships explicit and avoids accidental collisions between unrelated providers. Nested instances of the same provider component shadow outer instances, but different component types remain independent even when their context values have the same shape.
+
+When multiple public components should provide the same logical scope, create a shared provider component and render it from each public component:
+
+```tsx
+type MenuScopeValue = {
+  id: string
+}
+
+function MenuScope(handle: Handle<{ children?: RemixNode }, MenuScopeValue>) {
+  handle.context.set({ id: handle.id })
+  return () => handle.props.children
+}
+
+function MenuRoot(handle: Handle<{ children?: RemixNode }>) {
+  return () => <MenuScope>{handle.props.children}</MenuScope>
+}
+
+function MenuGroup(handle: Handle<{ children?: RemixNode }>) {
+  return () => <MenuScope>{handle.props.children}</MenuScope>
+}
+
+function MenuTrigger(handle: Handle) {
+  let scope = handle.context.get(MenuScope)
+  return () => <button aria-controls={scope.id}>Open</button>
+}
+```
 
 ## TypedEventTarget for Granular Updates
 
@@ -63,11 +95,11 @@ class Theme extends TypedEventTarget<{ change: Event }> {
   }
 }
 
-function ThemeProvider(handle: Handle<Theme>) {
+function ThemeProvider(handle: Handle<{ children?: RemixNode }, Theme>) {
   let theme = new Theme()
   handle.context.set(theme)
 
-  return (props: { children: RemixNode }) => (
+  return () => (
     <div>
       <button
         mix={[
@@ -79,7 +111,7 @@ function ThemeProvider(handle: Handle<Theme>) {
       >
         Toggle Theme
       </button>
-      {props.children}
+      {handle.props.children}
     </div>
   )
 }
@@ -136,11 +168,11 @@ class AppContext extends TypedEventTarget<{ userChange: Event; settingsChange: E
   }
 }
 
-function AppProvider(handle: Handle<AppContext>) {
+function AppProvider(handle: Handle<{ children?: RemixNode }, AppContext>) {
   let context = new AppContext()
   handle.context.set(context)
 
-  return (props: { children: RemixNode }) => props.children
+  return () => handle.props.children
 }
 
 // Components can subscribe to only the events they care about

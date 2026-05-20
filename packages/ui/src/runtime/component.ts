@@ -118,13 +118,18 @@ export type ContextFrom<ComponentType> =
 
 /**
  * Context storage API exposed on component handles.
+ *
+ * Context values are keyed by provider component identity. `get(Component)`
+ * reads the nearest ancestor instance whose component function is exactly
+ * `Component`, so nested instances of the same provider shadow outer instances
+ * while different component types remain independent.
  */
 export interface Context<C> {
   /** Replaces the current context value for this component instance. */
   set(values: C): void
-  /** Reads the context value associated with the given component type. */
+  /** Reads the context value from the nearest ancestor instance of the given component type. */
   get<ComponentType>(component: ComponentType): ContextFrom<ComponentType>
-  /** Reads the context value associated with the given component key. */
+  /** Reads an unknown context value for an untyped lookup. */
   get(component: ElementType | symbol): unknown | undefined
 }
 
