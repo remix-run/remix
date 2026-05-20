@@ -5,9 +5,10 @@ import { renderToStream } from 'remix/ui/server'
 
 export function render() {
   return renderWith(
-    () =>
+    ({ request }) =>
       function render(node: RemixNode, init?: ResponseInit) {
         let stream = renderToStream(node, {
+          signal: request.signal,
           onError(error) {
             console.error(error)
           },

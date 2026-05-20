@@ -175,6 +175,7 @@ export function createRouter(versions: Versions) {
 
 function stream(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
   return renderToStream(node, {
+    signal: request.signal,
     async resolveFrame(src) {
       let url = new URL(src, request.url)
 
