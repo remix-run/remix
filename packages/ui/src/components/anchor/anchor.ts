@@ -643,7 +643,7 @@ export function anchor(
   floating: HTMLElement,
   anchorElement: HTMLElement,
   options: AnchorOptions = {},
-) {
+): () => void {
   let lastAnchorRect: DOMRect
   let lastFloatingDimensions: FloatingDimensions
 

@@ -6,5 +6,4 @@ export type {
 } from './style.ts'
 export { processStyleClass, normalizeCssValue } from './style.ts'
 export { createStyleManager }
-
-export type StyleManager = ReturnType<typeof createStyleManager>
+export type { ServerStyleSource, StyleManager } from './stylesheet.ts'

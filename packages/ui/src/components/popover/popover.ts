@@ -4,7 +4,9 @@ import {
   css,
   on,
   type CSSMixinDescriptor,
+  type ElementProps,
   type Handle,
+  type MixinFactory,
   type RemixNode,
 } from '@remix-run/ui'
 import { anchor as positionAnchor, type AnchorOptions } from '../anchor/anchor.ts'
@@ -75,7 +77,7 @@ const popoverSurfaceCss: CSSMixinDescriptor = css({
 export const contentStyle = popoverContentCss
 export const surfaceStyle = [popoverSurfaceCss, popoverSurfaceTransitionCss] as const
 
-function PopoverProvider(handle: Handle<PopoverProps, PopoverContext>) {
+function PopoverProvider(handle: Handle<PopoverProps, PopoverContext>): () => RemixNode {
   handle.context.set({
     hideFocusTarget: null,
     showFocusTarget: null,
@@ -99,7 +101,10 @@ export interface PopoverHideRequest {
   target?: Node | null
 }
 
-const anchorMixin = createMixin<HTMLElement, [options: AnchorOptions]>((handle) => {
+const anchorMixin: MixinFactory<HTMLElement, [options: AnchorOptions], ElementProps> = createMixin<
+  HTMLElement,
+  [options: AnchorOptions]
+>((handle) => {
   let context = handle.context.get(PopoverProvider)
   return (options) => {
     handle.queueTask((node) => {
@@ -108,91 +113,97 @@ const anchorMixin = createMixin<HTMLElement, [options: AnchorOptions]>((handle) 
   }
 })
 
-const surfaceMixin = createMixin<HTMLElement, [options: PopoverSurfaceOptions]>((handle) => {
-  let openProp = false
-  let cleanupAnchor = () => {}
-  let unlockScroll = () => {}
-  let context = handle.context.get(PopoverProvider)
+const surfaceMixin: MixinFactory<HTMLElement, [options: PopoverSurfaceOptions], ElementProps> =
+  createMixin<HTMLElement, [options: PopoverSurfaceOptions]>((handle) => {
+    let openProp = false
+    let cleanupAnchor = () => {}
+    let unlockScroll = () => {}
+    let context = handle.context.get(PopoverProvider)
 
-  handle.queueTask((node, signal) => {
-    context.surface = node
+    handle.queueTask((node, signal) => {
+      context.surface = node
 
-    signal.addEventListener('abort', () => {
-      if (context.surface === node) {
-        context.surface = null
-      }
-    })
-  })
-
-  return (options) => {
-    let wasOpen = openProp
-    openProp = options.open
-
-    handle.queueTask(async (node) => {
-      if (openProp && !wasOpen) {
-        node.showPopover()
-      } else if (!openProp && wasOpen) {
-        node.hidePopover()
-      }
+      signal.addEventListener('abort', () => {
+        if (context.surface === node) {
+          context.surface = null
+        }
+      })
     })
 
-    return [
-      attrs({ popover: 'manual' }),
+    return (options) => {
+      let wasOpen = openProp
+      openProp = options.open
 
-      on('beforetoggle', (event) => {
-        if (event.newState === 'open') {
-          cleanupAnchor = positionAnchor(
-            event.currentTarget,
-            context.anchor!.node,
-            context.anchor!.options,
-          )
-          unlockScroll = lockScroll()
-        } else if (event.newState === 'closed') {
-          cleanupAnchor()
-          unlockScroll()
+      handle.queueTask(async (node) => {
+        if (openProp && !wasOpen) {
+          node.showPopover()
+        } else if (!openProp && wasOpen) {
+          node.hidePopover()
         }
-      }),
+      })
 
-      on('toggle', async (event) => {
-        if (event.newState === 'open') {
-          context.showFocusTarget?.focus()
-        } else if (event.newState === 'closed' && options.restoreFocusOnHide !== false) {
-          context.hideFocusTarget?.focus()
-        }
-      }),
+      return [
+        attrs({ popover: 'manual' }),
 
-      on('keydown', (event) => {
-        if (event.key === 'Escape') {
-          event.preventDefault()
-          options.onHide({ reason: 'escape-key' })
-        }
-      }),
+        on('beforetoggle', (event) => {
+          if (event.newState === 'open') {
+            cleanupAnchor = positionAnchor(
+              event.currentTarget,
+              context.anchor!.node,
+              context.anchor!.options,
+            )
+            unlockScroll = lockScroll()
+          } else if (event.newState === 'closed') {
+            cleanupAnchor()
+            unlockScroll()
+          }
+        }),
 
-      onOutsideClick(
-        openProp,
-        (target) => {
-          options.onHide({ reason: 'outside-click', target })
-        },
-        (target) => options.closeOnAnchorClick === false && !!context.anchor?.node.contains(target),
-        options.stopOutsideClickPropagation ?? true,
-      ),
-    ]
-  }
-})
+        on('toggle', async (event) => {
+          if (event.newState === 'open') {
+            context.showFocusTarget?.focus()
+          } else if (event.newState === 'closed' && options.restoreFocusOnHide !== false) {
+            context.hideFocusTarget?.focus()
+          }
+        }),
 
-const focusOnShowMixin = createMixin<HTMLElement, []>((handle) => {
-  handle.addEventListener('insert', (event) => {
-    let context = handle.context.get(PopoverProvider)
-    context.showFocusTarget = event.node
+        on('keydown', (event) => {
+          if (event.key === 'Escape') {
+            event.preventDefault()
+            options.onHide({ reason: 'escape-key' })
+          }
+        }),
+
+        onOutsideClick(
+          openProp,
+          (target) => {
+            options.onHide({ reason: 'outside-click', target })
+          },
+          (target) =>
+            options.closeOnAnchorClick === false && !!context.anchor?.node.contains(target),
+          options.stopOutsideClickPropagation ?? true,
+        ),
+      ]
+    }
   })
-})
 
-const focusOnHideMixin = createMixin<HTMLElement, []>((handle) => {
-  handle.addEventListener('insert', (event) => {
-    let context = handle.context.get(PopoverProvider)
-    context.hideFocusTarget = event.node
-  })
-})
+const focusOnShowMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<HTMLElement, []>(
+  (handle) => {
+    handle.addEventListener('insert', (event) => {
+      let context = handle.context.get(PopoverProvider)
+      context.showFocusTarget = event.node
+    })
+  },
+)
+
+const focusOnHideMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<HTMLElement, []>(
+  (handle) => {
+    handle.addEventListener('insert', (event) => {
+      let context = handle.context.get(PopoverProvider)
+      context.hideFocusTarget = event.node
+    })
+  },
+)
 
 export const Context = PopoverProvider
 export const anchor = anchorMixin

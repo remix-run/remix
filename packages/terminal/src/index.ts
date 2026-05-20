@@ -1,5 +1,7 @@
 export { ansi, stripAnsi } from './lib/ansi.ts'
 export type {
+  Ansi,
+  AnsiStyleCodes,
   TerminalBackgroundColorName,
   TerminalForegroundColorName,
   TerminalModifierName,

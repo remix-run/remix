@@ -17,7 +17,23 @@ type SchedulerPhaseListener = EventListenerOrEventListenerObject | null
 /**
  * Scheduler API used by the reconciler and frame runtime.
  */
-export type Scheduler = ReturnType<typeof createScheduler>
+export interface Scheduler {
+  enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void
+  enqueueWork(newTasks: EmptyFn[]): void
+  enqueueCommitPhase(newTasks: EmptyFn[]): void
+  enqueueTasks(newTasks: EmptyFn[]): void
+  addEventListener(
+    type: SchedulerPhaseType,
+    listener: SchedulerPhaseListener,
+    options?: AddEventListenerOptions | boolean,
+  ): void
+  removeEventListener(
+    type: SchedulerPhaseType,
+    listener: SchedulerPhaseListener,
+    options?: EventListenerOptions | boolean,
+  ): void
+  dequeue(): void
+}
 
 // Protect against infinite cascading updates (e.g. handle.update() during render)
 const MAX_CASCADING_UPDATES = 50
@@ -38,7 +54,7 @@ export function createScheduler(
   doc: Document,
   rootTarget: EventTarget,
   styles: StyleManager = defaultStyleManager,
-) {
+): Scheduler {
   let documentState = createDocumentState(doc)
   let scheduled = new Map<CommittedComponentNode, ParentNode>()
   let workTasks: EmptyFn[] = []
@@ -53,23 +69,7 @@ export function createScheduler(
     beforeUpdate: 0,
     commit: 0,
   }
-  let scheduler: {
-    enqueue(vnode: CommittedComponentNode, domParent: ParentNode): void
-    enqueueWork(newTasks: EmptyFn[]): void
-    enqueueCommitPhase(newTasks: EmptyFn[]): void
-    enqueueTasks(newTasks: EmptyFn[]): void
-    addEventListener(
-      type: SchedulerPhaseType,
-      listener: SchedulerPhaseListener,
-      options?: AddEventListenerOptions | boolean,
-    ): void
-    removeEventListener(
-      type: SchedulerPhaseType,
-      listener: SchedulerPhaseListener,
-      options?: EventListenerOptions | boolean,
-    ): void
-    dequeue(): void
-  }
+  let scheduler: Scheduler
 
   function dispatchError(error: unknown) {
     console.error(error)

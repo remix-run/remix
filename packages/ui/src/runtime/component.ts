@@ -223,7 +223,14 @@ type ComponentConfig = {
 /**
  * Runtime handle returned by {@link createComponent}.
  */
-export type ComponentHandle = ReturnType<typeof createComponent>
+export interface ComponentHandle<C = NoContext> {
+  frame: FrameHandle
+  render(nextProps: ElementProps): [RemixNode, Array<() => void>]
+  remove(): Array<() => void>
+  setScheduleUpdate(nextScheduleUpdate: () => void): void
+  getContextValue(): C | undefined
+  isRemoved(): boolean
+}
 
 /**
  * Creates the internal runtime wrapper for a component instance.
@@ -231,11 +238,11 @@ export type ComponentHandle = ReturnType<typeof createComponent>
  * @param config Component runtime configuration.
  * @returns Component runtime helpers used by the reconciler.
  */
-export function createComponent<C = NoContext>(config: ComponentConfig) {
+export function createComponent<C = NoContext>(config: ComponentConfig): ComponentHandle<C> {
   return new ComponentRuntime<C>(config)
 }
 
-class ComponentRuntime<C = NoContext> {
+class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
   frame: FrameHandle
 
   #config: ComponentConfig
@@ -381,7 +388,7 @@ function syncProps(target: ElementProps, next: ElementProps): void {
  * @param handle Component handle for the frame instance.
  * @returns A placeholder render function handled by the reconciler.
  */
-export function Frame(handle: Handle<FrameProps, FrameHandle>) {
+export function Frame(handle: Handle<FrameProps, FrameHandle>): RenderFn {
   void handle
   return () => null // reconciler renders
 }
@@ -392,7 +399,7 @@ export function Frame(handle: Handle<FrameProps, FrameHandle>) {
  * @param handle Component handle for the fragment instance.
  * @returns A placeholder render function handled by the reconciler.
  */
-export function Fragment(handle: Handle<FragmentProps>) {
+export function Fragment(handle: Handle<FragmentProps>): RenderFn {
   void handle
   return () => null // reconciler renders
 }

@@ -105,7 +105,7 @@ export class Vary implements HeaderValue, VaryInit, Iterable<string> {
    *
    * @returns The header value as a comma-separated string.
    */
-  toString() {
+  toString(): string {
     return Array.from(this.#set).join(', ')
   }
 

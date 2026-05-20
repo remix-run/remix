@@ -64,12 +64,24 @@ export type TerminalStyleName =
   | TerminalForegroundColorName
   | TerminalBackgroundColorName
 
+export type AnsiStyleCodes = Record<TerminalStyleName, string>
+
+export interface Ansi extends AnsiStyleCodes {
+  reset: string
+  clearLine: string
+  eraseDown: string
+  hideCursor: string
+  showCursor: string
+  cursorTo(column: number, row?: number): string
+  moveCursor(columns: number, rows: number): string
+}
+
 /**
  * ANSI reset sequence that clears all active styles.
  */
 export const ansiResetCode = '\x1b[0m'
 
-export const ansiStyleCodes = {
+export const ansiStyleCodes: AnsiStyleCodes = {
   bold: '\x1b[1m',
   dim: '\x1b[2m',
   italic: '\x1b[3m',
@@ -113,12 +125,12 @@ export const ansiStyleCodes = {
   bgMagentaBright: '\x1b[105m',
   bgCyanBright: '\x1b[106m',
   bgWhiteBright: '\x1b[107m',
-} satisfies Record<TerminalStyleName, string>
+}
 
 /**
  * Raw ANSI escape sequences and helpers for terminal controls.
  */
-export const ansi = {
+export const ansi: Ansi = {
   /**
    * Resets all ANSI styles.
    */

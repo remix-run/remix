@@ -35,6 +35,14 @@ type ParsedRoutePattern = {
   readonly search: ReadonlyMap<string, ReadonlySet<string>>
 }
 
+export interface RoutePatternJSON {
+  protocol: string
+  hostname: string
+  port: string
+  pathname: string
+  search: string
+}
+
 /** A parsed route pattern */
 export class RoutePattern<source extends string = string> implements ParsedRoutePattern {
   readonly protocol: ParsedRoutePattern['protocol']
@@ -88,7 +96,7 @@ export class RoutePattern<source extends string = string> implements ParsedRoute
    *
    * @returns The serialized protocol, hostname, port, pathname, and search.
    */
-  toJSON() {
+  toJSON(): RoutePatternJSON {
     return serializePatternParts(this)
   }
 }

@@ -82,7 +82,7 @@ export class IfRange implements HeaderValue {
    *
    * @returns The header value as a string
    */
-  toString() {
+  toString(): string {
     return this.value
   }
 

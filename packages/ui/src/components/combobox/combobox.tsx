@@ -10,6 +10,7 @@ import {
   type ElementProps,
   type Handle,
   type MixinHandle,
+  type MixinFactory,
   type Props,
   type RemixNode,
 } from '@remix-run/ui'
@@ -213,7 +214,9 @@ function getOptionSearchValue(option: {
   return option.searchValue ?? option.textValue ?? option.label
 }
 
-function ComboboxProvider(handle: Handle<ComboboxContextProps, ComboboxContextValue>) {
+function ComboboxProvider(
+  handle: Handle<ComboboxContextProps, ComboboxContextValue>,
+): () => RemixNode {
   let inputRef: HTMLInputElement | undefined
   let listboxRef: listbox.ListboxRef | undefined
   let surfaceRef: HTMLElement | undefined
@@ -807,7 +810,11 @@ function getComboboxContext(handle: Handle | MixinHandle) {
   return handle.context.get(ComboboxProvider)
 }
 
-const inputMixin = createMixin<HTMLInputElement, [], ElementProps>((handle) => {
+const inputMixin: MixinFactory<HTMLInputElement, [], ElementProps> = createMixin<
+  HTMLInputElement,
+  [],
+  ElementProps
+>((handle) => {
   let context = getComboboxContext(handle)
 
   return (props) => [
@@ -882,7 +889,11 @@ const inputMixin = createMixin<HTMLInputElement, [], ElementProps>((handle) => {
   ]
 })
 
-const popoverMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
+const popoverMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
+  HTMLElement,
+  [],
+  ElementProps
+>((handle) => {
   let context = getComboboxContext(handle)
 
   return () => [
@@ -908,12 +919,20 @@ const popoverMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
   ]
 })
 
-const listMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
+const listMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
+  HTMLElement,
+  [],
+  ElementProps
+>((handle) => {
   let context = getComboboxContext(handle)
   return () => [attrs({ id: context.listId }), listbox.list()]
 })
 
-const hiddenInputMixin = createMixin<HTMLInputElement, [], ElementProps>((handle) => {
+const hiddenInputMixin: MixinFactory<HTMLInputElement, [], ElementProps> = createMixin<
+  HTMLInputElement,
+  [],
+  ElementProps
+>((handle) => {
   let context = getComboboxContext(handle)
   return () =>
     attrs({
@@ -924,8 +943,8 @@ const hiddenInputMixin = createMixin<HTMLInputElement, [], ElementProps>((handle
     })
 })
 
-const optionMixin = createMixin<HTMLElement, [options: ComboboxOptionOptions], ElementProps>(
-  (handle) => {
+const optionMixin: MixinFactory<HTMLElement, [options: ComboboxOptionOptions], ElementProps> =
+  createMixin<HTMLElement, [options: ComboboxOptionOptions], ElementProps>((handle) => {
     let context = getComboboxContext(handle)
 
     return (options) => {
@@ -946,8 +965,7 @@ const optionMixin = createMixin<HTMLElement, [options: ComboboxOptionOptions], E
         }),
       ]
     }
-  },
-)
+  })
 
 export const Context = ComboboxProvider
 export const hiddenInput = hiddenInputMixin
@@ -968,11 +986,11 @@ const combobox = {
 export function onComboboxChange<target extends HTMLElement>(
   handler: ComboboxChangeHandler<target>,
   captureBoolean?: boolean,
-) {
+): ReturnType<typeof on<target, typeof COMBOBOX_CHANGE_EVENT>> {
   return on(COMBOBOX_CHANGE_EVENT, handler, captureBoolean)
 }
 
-export function Combobox(handle: Handle<ComboboxProps>) {
+export function Combobox(handle: Handle<ComboboxProps>): () => RemixNode {
   return () => {
     let { children, defaultValue, disabled, inputId, name, placeholder, ...divProps } = handle.props
 
@@ -995,7 +1013,7 @@ export function Combobox(handle: Handle<ComboboxProps>) {
   }
 }
 
-export function ComboboxOption(handle: Handle<ComboboxOptionProps>) {
+export function ComboboxOption(handle: Handle<ComboboxOptionProps>): () => RemixNode {
   return () => {
     let { children, disabled, label, mix, searchValue, value, ...divProps } = handle.props
 

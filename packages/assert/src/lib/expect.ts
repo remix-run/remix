@@ -191,6 +191,11 @@ export interface Expectation extends Matchers {
   resolves: AsyncMatchers
 }
 
+export interface Expect {
+  (received: unknown): Expectation
+  objectContaining<value extends object>(expected: value): value
+}
+
 function fail(operator: string, message: string, actual: unknown, expected: unknown): never {
   throw new AssertionError({ message, actual, expected, operator })
 }
@@ -578,4 +583,4 @@ function objectContaining<T extends object>(expected: T): T {
  * @returns An {@link Expectation} object exposing matchers, `.not`,
  *          `.rejects`, and `.resolves`.
  */
-export const expect = Object.assign(expectImpl, { objectContaining })
+export const expect: Expect = Object.assign(expectImpl, { objectContaining })

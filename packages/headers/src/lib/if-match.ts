@@ -84,7 +84,7 @@ export class IfMatch implements HeaderValue, IfMatchInit {
    *
    * @returns The header value as a string
    */
-  toString() {
+  toString(): string {
     return this.tags.join(', ')
   }
 
