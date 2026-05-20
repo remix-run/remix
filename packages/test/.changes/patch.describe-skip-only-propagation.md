@@ -1,1 +1,0 @@
-Fix `describe.skip` and `describe.only` so they propagate to nested `describe` blocks. Previously the skipped/focused state was set only on the outer suite, so tests inside nested describes still ran (or were incorrectly skipped under `only`).

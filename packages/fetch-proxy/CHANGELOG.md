@@ -2,6 +2,17 @@
 
 This is the changelog for [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy). It follows [semantic versioning](https://semver.org/).
 
+## v0.8.1
+
+### Patch Changes
+
+- Fix `Set-Cookie` domain rewrites so proxied cookies never include the request URL port and `localhost`/IP requests use host-only cookies.
+
+- Preserve generated `X-Forwarded-*` headers when proxied requests include custom `init.headers`.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.20.0`](https://github.com/remix-run/remix/releases/tag/headers@0.20.0)
+
 ## v0.8.0
 
 ### Minor Changes

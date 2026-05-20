@@ -2,6 +2,12 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## v0.13.2
+
+### Patch Changes
+
+- Start writing the first response stream chunk immediately instead of waiting for another chunk. Streaming responses with a delayed second chunk now flush their initial data without unnecessary blocking.
+
 ## v0.13.1
 
 ### Patch Changes
