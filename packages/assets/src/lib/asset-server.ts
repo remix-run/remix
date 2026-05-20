@@ -252,6 +252,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     external: resolvedOptions.external,
     fingerprintAssets: resolvedOptions.fingerprintAssets,
     isAllowed: accessPolicy.isAllowed,
+    isDenied: accessPolicy.isDenied,
     minify: resolvedOptions.minify,
     onWatchDirectoriesChange: (delta) => {
       if (!watcher) return

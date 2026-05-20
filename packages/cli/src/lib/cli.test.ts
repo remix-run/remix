@@ -442,6 +442,7 @@ describe('run', () => {
       let agentsGuide = await fs.readFile(path.join(appDir, 'AGENTS.md'), 'utf8')
       let readme = await fs.readFile(path.join(appDir, 'README.md'), 'utf8')
       let server = await fs.readFile(path.join(appDir, 'server.ts'), 'utf8')
+      let assets = await fs.readFile(path.join(appDir, 'app', 'assets.ts'), 'utf8')
       let routes = await fs.readFile(path.join(appDir, 'app', 'routes.ts'), 'utf8')
       let entry = await fs.readFile(path.join(appDir, 'app', 'assets', 'entry.ts'), 'utf8')
       let renderMiddleware = await fs.readFile(
@@ -468,6 +469,9 @@ describe('run', () => {
       assert.match(server, /http\.createServer/)
       assert.match(server, /createRequestListener/)
       assert.doesNotMatch(server, /remix\/node-serve/)
+      assert.doesNotMatch(assets, /\.\.\/packages/)
+      assert.doesNotMatch(assets, /usesWorkspaceRemix/)
+      assert.doesNotMatch(assets, /workspacePackagesDir/)
       assert.doesNotMatch(routes, /auth/)
       assert.match(entry, /loadModule/)
       assert.doesNotMatch(entry, /resolveFrame/)
