@@ -3,9 +3,9 @@ import { describe, it } from '@remix-run/test'
 
 import { type LazyContent, LazyBlob, LazyFile } from './lazy-file.ts'
 
-// Type assertions: ensure LazyBlob and LazyFile implement all native Blob/File APIs.
-null as unknown as LazyBlob satisfies Record<keyof Blob, unknown>
-null as unknown as LazyFile satisfies Record<keyof File, unknown>
+// Type assertions: ensure LazyBlob and LazyFile remain assignable to native Blob/File APIs.
+null as unknown as LazyBlob satisfies Blob
+null as unknown as LazyFile satisfies File
 
 // Native File/Blob normalizes some MIME types differently across runtimes (for example
 // Bun adds charset for text types and rewrites application/javascript), so derive
