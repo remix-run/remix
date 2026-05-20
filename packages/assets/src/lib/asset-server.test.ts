@@ -54,6 +54,41 @@ async function symlinkDirectory(target: string, link: string): Promise<void> {
   await fs.symlink(target, link, process.platform === 'win32' ? 'junction' : 'dir')
 }
 
+async function writePnpmSymlinkedPackageFixture(dir: string): Promise<void> {
+  await writeJson(dir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/package.json', {
+    name: 'remix',
+    type: 'module',
+    exports: {
+      './ui': './dist/ui.js',
+    },
+  })
+  await write(
+    dir,
+    'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/dist/ui.js',
+    'export * from "@remix-run/ui"',
+  )
+  await writeJson(
+    dir,
+    'app/node_modules/.pnpm/remix@1.0.0/node_modules/@remix-run/ui/package.json',
+    {
+      name: '@remix-run/ui',
+      type: 'module',
+      exports: {
+        '.': './dist/index.js',
+      },
+    },
+  )
+  await write(
+    dir,
+    'app/node_modules/.pnpm/remix@1.0.0/node_modules/@remix-run/ui/dist/index.js',
+    'export const ui = true',
+  )
+  await symlinkDirectory(
+    path.join(dir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix'),
+    path.join(dir, 'app/node_modules/remix'),
+  )
+}
+
 function getLineAndColumn(source: string, search: string): { line: number; column: number } {
   let index = source.indexOf(search)
   assert.notEqual(index, -1, `Expected to find "${search}" in:\n${source}`)
@@ -2552,6 +2587,54 @@ describe('asset-server', () => {
         assert.ok(servedUrls.has('/assets/node_modules/remix/src/ui.ts'))
         assert.ok(servedUrls.has('/assets/node_modules/remix/src/shared.ts'))
         assert.equal(servedUrls.has('/assets/packages/remix/src/ui.ts'), false)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('resolves bare package dependencies from pnpm package realpaths', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writePnpmSymlinkedPackageFixture(caseDir)
+
+      let assetServer = createNodeModulesTestServer(caseDir)
+      try {
+        let response = await get(assetServer, '/assets/node_modules/remix/dist/ui.js')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        let body = await response.text()
+
+        assert.match(
+          body,
+          /\/assets\/node_modules\/\.pnpm\/remix@1\.0\.0\/node_modules\/@remix-run\/ui\/dist\/index\.js/,
+        )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('serves app imports through pnpm symlinked package dependencies', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writePnpmSymlinkedPackageFixture(caseDir)
+      await write(caseDir, 'app/entry.ts', 'import { ui } from "remix/ui"\nexport { ui }')
+
+      let assetServer = createNodeModulesTestServer(caseDir)
+      try {
+        let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+
+        assert.ok(servedUrls.has('/assets/node_modules/remix/dist/ui.js'))
+        assert.ok(
+          servedUrls.has(
+            '/assets/node_modules/.pnpm/remix@1.0.0/node_modules/@remix-run/ui/dist/index.js',
+          ),
+        )
       } finally {
         await assetServer.close()
       }
