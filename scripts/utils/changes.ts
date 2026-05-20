@@ -29,8 +29,10 @@ export type ParsedChangesConfig =
 /**
  * Reads and validates a package's .changes/config.json.
  */
-export function readChangesConfig(packageDirName: string): ParsedChangesConfig {
-  let packagePath = getPackagePath(packageDirName)
+export function readChangesConfig(
+  packageDirName: string,
+  packagePath = getPackagePath(packageDirName),
+): ParsedChangesConfig {
   let configJsonPath = path.join(packagePath, '.changes', 'config.json')
 
   if (!fs.existsSync(configJsonPath)) {
@@ -155,38 +157,16 @@ type ParsedPackageChanges =
  * Parses and validates all change files for a package.
  * Returns changes if valid, or errors if invalid.
  */
-function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
-  let packagePath = getPackagePath(packageDirName)
+export function parsePackageChanges(
+  packageDirName: string,
+  packagePath = getPackagePath(packageDirName),
+): ParsedPackageChanges {
   let changesDir = path.join(packagePath, '.changes')
   let changes: ChangeFile[] = []
   let errors: ValidationError[] = []
 
-  // Changes directory should exist (with at least README.md)
-  if (!fs.existsSync(changesDir)) {
-    return {
-      valid: false,
-      errors: [
-        {
-          packageDirName,
-          file: '.changes/',
-          error: 'Changes directory does not exist',
-        },
-      ],
-    }
-  }
-
-  // README.md should exist in .changes directory so it persists between releases
-  let readmePath = path.join(changesDir, 'README.md')
-  if (!fs.existsSync(readmePath)) {
-    errors.push({
-      packageDirName,
-      file: '.changes/README.md',
-      error: 'README.md is missing from .changes directory',
-    })
-  }
-
   // Get package version to determine validation rules
-  let packageJsonPath = getPackageFile(packageDirName, 'package.json')
+  let packageJsonPath = path.join(packagePath, 'package.json')
   let packageJson = readJson(packageJsonPath)
   let currentVersion = packageJson.version as string
   let majorVersion = major(currentVersion)
@@ -194,9 +174,26 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
   let currentVersionPrereleaseId = getPrereleaseIdentifier(currentVersion)
   let isCurrentVersionPrerelease = currentVersionPrereleaseId !== null
 
+  if (!fs.existsSync(changesDir)) {
+    return { valid: true, changes, changesConfig: null }
+  }
+
+  if (!fs.statSync(changesDir).isDirectory()) {
+    return {
+      valid: false,
+      errors: [
+        {
+          packageDirName,
+          file: '.changes/',
+          error: '.changes exists but is not a directory',
+        },
+      ],
+    }
+  }
+
   // Handle .changes/config.json for packages in prerelease mode
   let changesConfig: ChangesConfig | null = null
-  let parsedChangesConfig = readChangesConfig(packageDirName)
+  let parsedChangesConfig = readChangesConfig(packageDirName, packagePath)
   if (parsedChangesConfig.exists) {
     if (!parsedChangesConfig.valid) {
       errors.push({

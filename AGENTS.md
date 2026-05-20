@@ -49,6 +49,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 ## Release Notes
 
 - If a change affects published packages, add or update the appropriate change file.
+- Package `.changes/` directories are optional. Create `packages/<package>/.changes/` on demand when adding a change file or prerelease config.
 - Prerelease channels come from `packages/*/.changes/config.json` and control the version suffix such as `alpha` or `beta`; prerelease packages still publish to the npm `next` dist-tag.
 - If you modify release or publish flow code, validate it with the preview or dry-run scripts before finishing.
 
