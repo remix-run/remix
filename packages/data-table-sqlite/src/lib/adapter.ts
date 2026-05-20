@@ -96,6 +96,10 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
       }
     }
 
+    if (request.transaction) {
+      this.#assertTransaction(request.transaction)
+    }
+
     let statement = this.compileSql(request.operation)[0]
     let prepared = this.#database.prepare(statement.text)
     let values = normalizeStatementValues(statement.values)
