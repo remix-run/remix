@@ -282,8 +282,6 @@ what it exports. Open the linked reference file when you need full examples.
   `form`, `resources` when defining `app/routes.ts`
 - `remix/node-fetch-server` — default Node adapter for new apps. Use `createRequestListener` with
   `node:http`, `node:https`, or `node:http2` in `server.ts` when booting the template-style app
-- `remix/node-serve` — managed high-performance Node server. Use `serve` when you want Remix to
-  manage the server lifecycle, TLS options, or uWebSockets.js setup around a Fetch handler
 - `remix/assets` — browser asset server. Use for `createAssetServer` when serving compiled
   scripts and styles, getting public hrefs, and emitting preloads. Configure a `basePath`, and
   keep `fileMap` URL patterns relative to it. Shared compiler options such as `target`,

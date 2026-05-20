@@ -468,7 +468,6 @@ describe('run', () => {
       assert.match(server, /import \{ createRequestListener \} from 'remix\/node-fetch-server'/)
       assert.match(server, /http\.createServer/)
       assert.match(server, /createRequestListener/)
-      assert.doesNotMatch(server, /remix\/node-serve/)
       assert.doesNotMatch(assets, /\.\.\/packages/)
       assert.doesNotMatch(assets, /usesWorkspaceRemix/)
       assert.doesNotMatch(assets, /workspacePackagesDir/)
