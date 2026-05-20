@@ -164,13 +164,12 @@ describe('createRequestListener', () => {
   })
 
   it('does not forward request abort errors to onError when the response closes before the handler returns', async (t) => {
-    let handler: FetchHandler = async (request) => {
-      return await new Promise<Response>((_resolve, reject) => {
+    let handler: FetchHandler = async (request) =>
+      await new Promise<Response>((_resolve, reject) => {
         request.signal.addEventListener('abort', () => reject(request.signal.reason), {
           once: true,
         })
       })
-    }
     let errorHandler = t.mock.fn()
 
     let listener = createRequestListener(handler, { onError: errorHandler })
@@ -194,8 +193,8 @@ describe('createRequestListener', () => {
   it('drops the response without writing when the request was aborted before send', async (t) => {
     let errorHandler = t.mock.fn()
 
-    let handler: FetchHandler = (request) => {
-      return new Promise<Response>((resolve) => {
+    let handler: FetchHandler = (request) =>
+      new Promise<Response>((resolve) => {
         request.signal.addEventListener(
           'abort',
           () => {
@@ -206,7 +205,6 @@ describe('createRequestListener', () => {
           { once: true },
         )
       })
-    }
 
     let listener = createRequestListener(handler, { onError: errorHandler })
     assert.ok(listener)
@@ -232,8 +230,8 @@ describe('createRequestListener', () => {
     let encoder = new TextEncoder()
     let errorHandler = t.mock.fn()
 
-    let handler: FetchHandler = (request) => {
-      return new Response(
+    let handler: FetchHandler = (request) =>
+      new Response(
         new ReadableStream({
           start(controller) {
             controller.enqueue(encoder.encode('first'))
@@ -247,7 +245,6 @@ describe('createRequestListener', () => {
           },
         }),
       )
-    }
 
     let listener = createRequestListener(handler, { onError: errorHandler })
     assert.ok(listener)

@@ -2047,13 +2047,12 @@ describe('stream', () => {
         onError(error) {
           errors.push(error)
         },
-        resolveFrame: () => {
-          return new Promise<string>((_resolve, reject) => {
+        resolveFrame: () =>
+          new Promise<string>((_resolve, reject) => {
             controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
               once: true,
             })
-          })
-        },
+          }),
         signal: controller.signal,
       })
 
@@ -2077,13 +2076,12 @@ describe('stream', () => {
           onError(error) {
             errors.push(error)
           },
-          resolveFrame: () => {
-            return new Promise<string>((_resolve, reject) => {
+          resolveFrame: () =>
+            new Promise<string>((_resolve, reject) => {
               controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
                 once: true,
               })
-            })
-          },
+            }),
           signal: controller.signal,
         },
       )
@@ -2127,14 +2125,13 @@ describe('stream', () => {
         onError(error) {
           errors.push(error)
         },
-        resolveFrame: () => {
-          return new Promise<string>((_resolve, reject) => {
+        resolveFrame: () =>
+          new Promise<string>((_resolve, reject) => {
             controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
               once: true,
             })
             if (controller.signal.aborted) reject(controller.signal.reason)
-          })
-        },
+          }),
         signal: controller.signal,
       })
 
