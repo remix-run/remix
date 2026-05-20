@@ -1,1 +1,1 @@
-Ignore component updates scheduled after a frame reload has already removed that component.
+Ignore component updates scheduled after a frame reload has already removed that component, avoiding `Node.insertBefore` errors from stale updates after the frame renders replacement markup (see #11410).
