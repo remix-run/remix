@@ -459,6 +459,65 @@ describe('createRequestListener', () => {
     await end
     assert.equal(Buffer.concat(writtenChunks).toString(), 'firstsecond')
   })
+
+  it('cancels a streaming response body when the response closes before it finishes', async () => {
+    let requestAborted = false
+    let resolveBodyCancelled!: () => void
+    let bodyCancelled = new Promise<void>((resolve) => {
+      resolveBodyCancelled = resolve
+    })
+
+    let handler: FetchHandler = async (request) => {
+      request.signal.addEventListener('abort', () => {
+        requestAborted = true
+      })
+
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(new TextEncoder().encode('first'))
+          },
+          cancel() {
+            resolveBodyCancelled()
+          },
+        }),
+      )
+    }
+
+    let listener = createRequestListener(handler)
+    assert.ok(listener)
+
+    let req = createMockRequest()
+    req.httpVersionMajor = 1
+
+    let resolveFirstWrite!: () => void
+    let firstWrite = new Promise<void>((resolve) => {
+      resolveFirstWrite = resolve
+    })
+
+    let res = Object.assign(new stream.Writable(), {
+      req,
+      writeHead() {},
+      write(chunk: Uint8Array) {
+        assert.equal(new TextDecoder().decode(chunk), 'first')
+        resolveFirstWrite()
+        return true
+      },
+      end() {},
+    }) as unknown as http.ServerResponse
+
+    listener(req, res)
+    await firstWrite
+
+    res.emit('close')
+
+    assert.equal(requestAborted, true)
+    await waitFor(
+      bodyCancelled,
+      100,
+      'Expected the streaming response body to be cancelled when the response closed',
+    )
+  })
 })
 
 describe('createRequest abort behavior', () => {
@@ -529,4 +588,19 @@ function createMockResponse({
     write() {},
     end() {},
   }) as unknown as http.ServerResponse
+}
+
+async function waitFor(promise: Promise<void>, ms: number, message: string): Promise<void> {
+  let timeout: ReturnType<typeof setTimeout> | undefined
+
+  try {
+    await Promise.race([
+      promise,
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => reject(new Error(message)), ms)
+      }),
+    ])
+  } finally {
+    if (timeout != null) clearTimeout(timeout)
+  }
 }

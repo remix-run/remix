@@ -295,34 +295,59 @@ export async function sendResponse(
 
   if (response.body != null && res.req.method !== 'HEAD') {
     let reader = response.body.getReader()
-    let first = await reader.read()
-    if (first.done) {
-      reader.releaseLock()
-    } else {
-      try {
-        // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
-        if (res.write(first.value) === false) {
-          await new Promise<void>((resolve) => {
-            res.once('drain', resolve)
-          })
-        }
+    let responseClosed = false
 
-        while (true) {
-          let result = await reader.read()
-          if (result.done) break
-
-          // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
-          if (res.write(result.value) === false) {
-            await new Promise<void>((resolve) => {
-              res.once('drain', resolve)
-            })
-          }
-        }
-      } finally {
-        reader.releaseLock()
-      }
+    function cancelBody() {
+      responseClosed = true
+      void reader.cancel().catch(() => undefined)
     }
+
+    res.once('close', cancelBody)
+
+    try {
+      while (!responseClosed) {
+        let result = await reader.read()
+        if (result.done) break
+
+        // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
+        if (res.write(result.value) === false) {
+          await waitForDrainOrClose(res)
+          if (responseClosed || res.destroyed) return
+        }
+      }
+    } finally {
+      res.removeListener('close', cancelBody)
+      reader.releaseLock()
+    }
+
+    if (responseClosed) return
   }
 
   res.end()
+}
+
+async function waitForDrainOrClose(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+): Promise<void> {
+  if (res.destroyed) return
+
+  await new Promise<void>((resolve) => {
+    function cleanup() {
+      res.removeListener('close', onClose)
+      res.removeListener('drain', onDrain)
+    }
+
+    function onClose() {
+      cleanup()
+      resolve()
+    }
+
+    function onDrain() {
+      cleanup()
+      resolve()
+    }
+
+    res.once('close', onClose)
+    res.once('drain', onDrain)
+  })
 }
