@@ -62,7 +62,10 @@ function formatTransformError(error: OxcError): string {
   return sections.join('\n\n')
 }
 
-function getSourceType(filePath: string, source: string): NonNullable<TransformOptions['sourceType']> {
+function getSourceType(
+  filePath: string,
+  source: string,
+): NonNullable<TransformOptions['sourceType']> {
   return getModuleFormat(filePath, source) === 'module' ? 'module' : 'commonjs'
 }
 
