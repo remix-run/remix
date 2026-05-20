@@ -1,1 +1,1 @@
-Fixed help text syntax highlighting to not highlight hyphens in path arguments (e.g. `./my-remix-app`) as single-character flags.
+Fix help text syntax highlighting so hyphens in path arguments like `./my-remix-app` are not highlighted as single-character flags (see #11409).
