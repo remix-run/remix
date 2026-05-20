@@ -106,14 +106,15 @@ export function createRequestListener(
       if (isPromiseLike(response)) {
         void response.then(
           (response) => {
-            void sendResponse(res, response)
+            void sendResponseForRequest(res, response, request, onError)
           },
           (error) => {
+            if (isRequestAbortError(request, error)) return
             void sendErrorResponse(res, onError, error)
           },
         )
       } else {
-        void sendResponse(res, response)
+        void sendResponseForRequest(res, response, request, onError)
       }
     }
   }
@@ -130,10 +131,11 @@ export function createRequestListener(
     try {
       response = await handler(request, client)
     } catch (error) {
+      if (isRequestAbortError(request, error)) return
       response = await createErrorResponse(onError, error)
     }
 
-    await sendResponse(res, response)
+    await sendResponseForRequest(res, response, request, onError)
   }
 }
 
@@ -144,6 +146,21 @@ async function sendErrorResponse(
 ): Promise<void> {
   let response = await createErrorResponse(onError, error)
   await sendResponse(res, response)
+}
+
+async function sendResponseForRequest(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  response: Response,
+  request: Request,
+  onError: ErrorHandler,
+): Promise<void> {
+  if (request.signal.aborted) return
+  try {
+    await sendResponse(res, response)
+  } catch (error) {
+    if (isRequestAbortError(request, error)) return
+    await sendErrorResponse(res, onError, error)
+  }
 }
 
 async function createErrorResponse(onError: ErrorHandler, error: unknown): Promise<Response> {
@@ -171,6 +188,10 @@ function internalServerError(): Response {
 
 function isPromiseLike<value>(value: value | PromiseLike<value>): value is PromiseLike<value> {
   return typeof (value as { then?: unknown }).then === 'function'
+}
+
+function isRequestAbortError(request: Request, error: unknown): boolean {
+  return request.signal.aborted && error === request.signal.reason
 }
 
 /**

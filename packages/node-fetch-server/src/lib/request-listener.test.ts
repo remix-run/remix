@@ -163,6 +163,114 @@ describe('createRequestListener', () => {
     })
   })
 
+  it('does not forward request abort errors to onError when the response closes before the handler returns', async (t) => {
+    let handler: FetchHandler = async (request) => {
+      return await new Promise<Response>((_resolve, reject) => {
+        request.signal.addEventListener('abort', () => reject(request.signal.reason), {
+          once: true,
+        })
+      })
+    }
+    let errorHandler = t.mock.fn()
+
+    let listener = createRequestListener(handler, { onError: errorHandler })
+    assert.ok(listener)
+
+    let req = createMockRequest()
+    let res = createMockResponse({ req })
+    let writeHead = t.mock.method(res, 'writeHead')
+    let end = t.mock.method(res, 'end')
+
+    listener(req, res)
+    res.emit('close')
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.equal(errorHandler.mock.calls.length, 0)
+    assert.equal(writeHead.mock.calls.length, 0)
+    assert.equal(end.mock.calls.length, 0)
+  })
+
+  it('drops the response without writing when the request was aborted before send', async (t) => {
+    let errorHandler = t.mock.fn()
+
+    let handler: FetchHandler = (request) => {
+      return new Promise<Response>((resolve) => {
+        request.signal.addEventListener(
+          'abort',
+          () => {
+            // Resolve with a normal-looking response after the abort fires, as
+            // a consumer's outer try/catch would do.
+            resolve(new Response('Internal Server Error', { status: 500 }))
+          },
+          { once: true },
+        )
+      })
+    }
+
+    let listener = createRequestListener(handler, { onError: errorHandler })
+    assert.ok(listener)
+
+    let req = createMockRequest()
+    let res = createMockResponse({ req })
+    let writeHead = t.mock.method(res, 'writeHead')
+    let write = t.mock.method(res, 'write')
+    let end = t.mock.method(res, 'end')
+
+    listener(req, res)
+    res.emit('close')
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.equal(errorHandler.mock.calls.length, 0)
+    assert.equal(writeHead.mock.calls.length, 0)
+    assert.equal(write.mock.calls.length, 0)
+    assert.equal(end.mock.calls.length, 0)
+  })
+
+  it('does not forward request abort errors to onError while streaming the response body', async (t) => {
+    let encoder = new TextEncoder()
+    let errorHandler = t.mock.fn()
+
+    let handler: FetchHandler = (request) => {
+      return new Response(
+        new ReadableStream({
+          start(controller) {
+            controller.enqueue(encoder.encode('first'))
+            request.signal.addEventListener(
+              'abort',
+              () => {
+                controller.error(request.signal.reason)
+              },
+              { once: true },
+            )
+          },
+        }),
+      )
+    }
+
+    let listener = createRequestListener(handler, { onError: errorHandler })
+    assert.ok(listener)
+
+    let req = createMockRequest()
+    let res = createMockResponse({ req })
+    let writeHead = t.mock.method(res, 'writeHead')
+    let end = t.mock.method(res, 'end')
+
+    t.mock.method(res, 'write', () => {
+      res.emit('close')
+      return true
+    })
+
+    listener(req, res)
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.equal(errorHandler.mock.calls.length, 0)
+    assert.equal(writeHead.mock.calls.length, 1)
+    assert.equal(end.mock.calls.length, 0)
+  })
+
   it('uses the `Host` header to construct the URL by default', async () => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async (request) => {

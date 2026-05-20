@@ -5,9 +5,9 @@ import { renderToStream } from 'remix/ui/server'
 
 export function render() {
   return renderWith(
-    () =>
+    ({ request }) =>
       function render(node: RemixNode, init?: ResponseInit) {
-        return createHtmlResponse(renderToStream(node), init)
+        return createHtmlResponse(renderToStream(node, { signal: request.signal }), init)
       },
   )
 }

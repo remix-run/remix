@@ -2039,6 +2039,110 @@ describe('stream', () => {
       expect(done.done).toBe(true)
     })
 
+    it('cancels blocking frame rendering when signal aborts without calling onError', async () => {
+      let controller = new AbortController()
+      let errors: unknown[] = []
+
+      let stream = renderToStream(<Frame src="/fragments/product" />, {
+        onError(error) {
+          errors.push(error)
+        },
+        resolveFrame: () => {
+          return new Promise<string>((_resolve, reject) => {
+            controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
+              once: true,
+            })
+          })
+        },
+        signal: controller.signal,
+      })
+
+      let reader = stream.getReader()
+      let read = reader.read()
+
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      controller.abort(abortError)
+
+      await expect(read).resolves.toEqual({ done: true, value: undefined })
+      expect(errors).toEqual([])
+    })
+
+    it('cancels non-blocking frame rendering when signal aborts without calling onError', async () => {
+      let controller = new AbortController()
+      let errors: unknown[] = []
+
+      let stream = renderToStream(
+        <Frame src="/fragments/product" fallback={<div>Loading...</div>} />,
+        {
+          onError(error) {
+            errors.push(error)
+          },
+          resolveFrame: () => {
+            return new Promise<string>((_resolve, reject) => {
+              controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
+                once: true,
+              })
+            })
+          },
+          signal: controller.signal,
+        },
+      )
+
+      let reader = stream.getReader()
+      let first = await reader.read()
+      expect(first.done).toBe(false)
+
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      controller.abort(abortError)
+
+      await expect(reader.read()).resolves.toEqual({ done: true, value: undefined })
+      expect(errors).toEqual([])
+    })
+
+    it('calls onError for AbortError when the request was not canceled', async () => {
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      let errors: unknown[] = []
+
+      let stream = renderToStream(<Frame src="/fragments/product" />, {
+        onError(error) {
+          errors.push(error)
+        },
+        resolveFrame() {
+          throw abortError
+        },
+      })
+
+      await expect(drain(stream)).rejects.toThrow('This operation was aborted')
+      expect(errors).toEqual([abortError])
+    })
+
+    it('closes immediately when signal is already aborted before rendering starts', async () => {
+      let controller = new AbortController()
+      let abortError = new DOMException('Already aborted', 'AbortError')
+      controller.abort(abortError)
+
+      let errors: unknown[] = []
+
+      let stream = renderToStream(<Frame src="/fragments/product" />, {
+        onError(error) {
+          errors.push(error)
+        },
+        resolveFrame: () => {
+          return new Promise<string>((_resolve, reject) => {
+            controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
+              once: true,
+            })
+            if (controller.signal.aborted) reject(controller.signal.reason)
+          })
+        },
+        signal: controller.signal,
+      })
+
+      let reader = stream.getReader()
+      await expect(reader.read()).resolves.toEqual({ done: true, value: undefined })
+      expect(errors).toEqual([])
+    })
+
     it('escapes frame template content to prevent template breakouts', async () => {
       let [promise, resolve] = withResolvers<string>()
       let injectedHtml = '</template><script>alert("xss")</script><template><p>safe</p>'

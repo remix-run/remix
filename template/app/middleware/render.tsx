@@ -9,9 +9,10 @@ import { assetServer } from '../assets.ts'
 
 export function render() {
   return renderWith(
-    () =>
+    ({ request }) =>
       function render(node: RemixNode, init?: ResponseInit) {
         let stream = renderToStream(node, {
+          signal: request.signal,
           // Server rendering turns client entries into browser module URLs.
           async resolveClientEntry(entryId, component) {
             if (!entryId.startsWith('file://')) {

@@ -12,6 +12,7 @@ export function render() {
     return function render(node: RemixNode, init?: ResponseInit) {
       let stream = renderToStream(node, {
         frameSrc: request.url,
+        signal: request.signal,
         resolveFrame: (src, target, context) => resolveFrame(router, request, src, target, context),
         onError(error) {
           console.error(error)
