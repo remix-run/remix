@@ -2,6 +2,7 @@ import type { RequestHandler } from './controller.ts'
 import { raceRequestAbort } from './request-abort.ts'
 import type {
   ContextEntries,
+  ContextEntry,
   ContextWithEntries,
   ContextWithEntry,
   RequestContext,
@@ -13,7 +14,7 @@ import type {
 export type AnyMiddleware = Middleware<ContextTransform>
 
 type ContextTransform =
-  | readonly [object, unknown]
+  | ContextEntry
   | ContextEntries
   | (<context extends RequestContext<any, any>>(context: context) => RequestContext<any, any>)
 
@@ -29,7 +30,7 @@ type ContextWithTransform<
   transform,
 > = transform extends ContextEntries
   ? ContextWithEntries<context, transform>
-  : transform extends readonly [object, unknown]
+  : transform extends ContextEntry
     ? ContextWithEntry<context, transform>
     : transform extends {
           <inputContext extends context>(context: inputContext): infer output
@@ -62,9 +63,9 @@ export type MiddlewareContext<
  * @param next A function that invokes the next middleware or request handler in the chain
  * @returns A response to short-circuit the chain, or `undefined`/`void` to continue
  *
- * The generic describes the context effect this middleware has. Use a readonly `[key, value]`
- * tuple for middleware that provides one context value, or {@link ContextEntries} for multiple
- * values.
+ * The generic describes the context effect this middleware has. Use a `{ key, value }` object for
+ * middleware that provides one context value, add a `property` field to install a direct context
+ * property, or use {@link ContextEntries} for multiple values.
  */
 export interface Middleware<transform extends ContextTransform = EmptyContextTransform> {
   /**

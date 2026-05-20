@@ -1,6 +1,6 @@
 # Social Auth Demo
 
-This demo shows how to combine `remix/auth`, `remix/auth-middleware`, `remix/data-schema`, and `remix/data-table` to build a small auth application with:
+This demo shows how to combine `remix/auth`, `remix/middleware/auth`, `remix/data-schema`, and `remix/data-table` to build a small auth application with:
 
 - credentials login with email and password
 - external login with Google, GitHub, and X
@@ -50,7 +50,7 @@ If you configure the external providers locally, use these callback URLs:
 
 ## What This Demo Shows
 
-- request-time auth resolution with `remix/auth-middleware`
+- request-time auth resolution with `remix/middleware/auth`
 - credentials login with `verifyCredentials()` and `completeAuth()`
 - external auth with `startExternalAuth()`, `finishExternalAuth()`, and `completeAuth()`
 - module-scope provider configuration with a boot-time provider registry

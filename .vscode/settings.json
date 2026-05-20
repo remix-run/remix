@@ -3,7 +3,7 @@
   "nodejs-testing.extensions": [
     {
       "extensions": ["ts", "tsx"],
-      "parameters": ["--import", "tsx"]
+      "parameters": ["--import", "${workspaceFolder}/packages/node-tsx/src/index.ts"]
     }
   ],
   "typescript.tsdk": "./node_modules/typescript/lib",

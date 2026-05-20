@@ -1,4 +1,6 @@
-import { clientEntry, css, on, type Handle } from 'remix/ui'
+import { Frame, clientEntry, css, on, type Handle } from 'remix/ui'
+
+import { routes } from '../routes.ts'
 
 type RootReloadControlsProps = {
   includeRemoved: boolean
@@ -27,17 +29,27 @@ export const RootReloadControls = clientEntry(
       })
     }
 
-    async function reloadTopFrame(src: string) {
-      if (pendingHref) return
-      pendingHref = src
-      await handle.update()
+    handle.frames.top.addEventListener(
+      'reloadStart',
+      () => {
+        pendingHref = handle.frames.top.src
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
 
+    handle.frames.top.addEventListener(
+      'reloadComplete',
+      () => {
+        pendingHref = null
+        handle.update()
+      },
+      { signal: handle.signal },
+    )
+
+    function reloadTopFrame(src: string) {
       handle.frames.top.src = src
-      let signal = await handle.frames.top.reload()
-      if (signal.aborted) return
-
-      pendingHref = null
-      handle.update()
+      handle.frames.top.reload()
     }
 
     return () => (
@@ -77,7 +89,6 @@ export const RootReloadControls = clientEntry(
           <button
             type="button"
             mix={[buttonStyle(), on('click', () => reloadTopFrame(handle.props.withRemovedHref))]}
-            disabled={pendingHref !== null}
           >
             {pendingHref === handle.props.withRemovedHref
               ? 'Reloading with entry…'
@@ -89,7 +100,6 @@ export const RootReloadControls = clientEntry(
               buttonStyle(),
               on('click', () => reloadTopFrame(handle.props.withoutRemovedHref)),
             ]}
-            disabled={pendingHref !== null}
           >
             {pendingHref === handle.props.withoutRemovedHref
               ? 'Reloading without entry…'
@@ -136,6 +146,11 @@ export const PersistentRootReloadEntry = clientEntry(
         >
           Increment persistent count
         </button>
+        <EntryFrame
+          entryLabel="persistent"
+          frameName="persistent-root-reload-entry-frame"
+          fallbackLabel="Loading persistent entry frame…"
+        />
       </section>
     )
   },
@@ -180,10 +195,40 @@ export const RemovableRootReloadEntry = clientEntry(
         >
           Increment removable count
         </button>
+        <EntryFrame
+          entryLabel="removable"
+          frameName="removable-root-reload-entry-frame"
+          fallbackLabel="Loading removable entry frame…"
+        />
       </section>
     )
   },
 )
+
+function EntryFrame(
+  handle: Handle<{
+    entryLabel: 'persistent' | 'removable'
+    frameName: string
+    fallbackLabel: string
+  }>,
+) {
+  return () => (
+    <div mix={css({ marginTop: 16 })}>
+      <h3 mix={css({ margin: '0 0 6px', fontSize: 14 })}>
+        Frame inside {handle.props.entryLabel} entry
+      </h3>
+      <p mix={css({ margin: '0 0 10px', color: '#b9c6ff' })}>
+        This frame has a stable name and src while its containing client entry remains mounted
+        across root reloads.
+      </p>
+      <Frame
+        name={handle.props.frameName}
+        src={routes.frames.rootReloadEntryFrame.href()}
+        fallback={<div mix={css({ color: '#9aa8e8' })}>{handle.props.fallbackLabel}</div>}
+      />
+    </div>
+  )
+}
 
 function EntryDetails(
   handle: Handle<{ setupId: number; localCount: number; serverVersion: string }>,
@@ -222,10 +267,6 @@ function buttonStyle() {
     color: '#e9eefc',
     cursor: 'pointer',
     '&:hover': { background: 'rgba(255,255,255,0.10)' },
-    '&:disabled': {
-      cursor: 'default',
-      opacity: 0.65,
-    },
   })
 }
 

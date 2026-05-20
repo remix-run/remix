@@ -12,7 +12,7 @@ This repository includes the source code for Remix 3, a web framework for buildi
 
 ## Default Development Loop
 
-- **Fast local loop**: `pnpm run lint`, `pnpm run test:changed`, `pnpm run typecheck:changed`
+- **Fast local loop**: `pnpm run validate-package-meta`, `pnpm run lint`, `pnpm run test:changed`, `pnpm run typecheck:changed`
 - **Full CI-style validation**: `pnpm test` and `pnpm run typecheck`
 - **When to use full runs locally**: broad cross-workspace changes, shared root config changes, release/publish flow changes, or anything that could affect the whole repo
 - **Single package commands**: `pnpm --filter @remix-run/<package> run test`, `pnpm --filter @remix-run/<package> run typecheck`, `pnpm --filter @remix-run/<package> run build`
@@ -40,6 +40,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 - **Test guidance**: use the `write-tests` skill when adding, refactoring, or reviewing tests, fixtures, test scripts, or test-only dependencies
 - **Docs and examples**: if you change a public API, update the related docs, JSDoc, README examples, and tests in the same change
 - **README/install conventions**: use `npm i remix` in install snippets and import from `remix`, not `@remix-run/*`
+- **README link conventions**: use full GitHub URLs for cross-file or cross-package repo links so copied docs render correctly; keep same-document anchors and README self-links relative
 
 ## Release Notes
 

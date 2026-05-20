@@ -4,18 +4,17 @@
   "dependencies": {
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/node-fetch-server": "workspace:*",
-    "@remix-run/routes": "workspace:*",
-    "@remix-run/static-middleware": "workspace:*"
+    "@remix-run/static-middleware": "workspace:*",
+    "remix": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "playwright": "^1.49.1",
-    "tsx": "catalog:"
+    "playwright": "^1.49.1"
   },
   "scripts": {
-    "start": "tsx server.ts",
-    "dev": "tsx watch server.ts",
+    "start": "node --import remix/node-tsx server.ts",
+    "dev": "node --watch --import remix/node-tsx server.ts",
     "build-frameworks": "pnpm --filter \"ui-benchmark-*\" run build",
-    "bench": "tsx runner.ts"
+    "bench": "node --import remix/node-tsx runner.ts"
   }
 }

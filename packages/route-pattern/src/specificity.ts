@@ -1,1 +1,1 @@
-export { lessThan, greaterThan, equal, ascending, descending, compare } from './lib/specificity.ts'
+export { lessThan, greaterThan, equal, descending, ascending, compare } from './lib/specificity.ts'

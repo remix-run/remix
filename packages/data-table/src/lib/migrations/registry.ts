@@ -33,7 +33,7 @@ export function resolveMigrations(
  * import { createMigrationRegistry } from 'remix/data-table/migrations'
  *
  * let registry = createMigrationRegistry()
- * registry.register({ id, name, migration })
+ * registry.register({ id, name, up, down })
  * ```
  */
 export function createMigrationRegistry(initial: MigrationDescriptor[] = []): MigrationRegistry {

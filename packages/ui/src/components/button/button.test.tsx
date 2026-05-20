@@ -1,5 +1,3 @@
-// @jsxRuntime classic
-// @jsx createElement
 import { createElement } from '@remix-run/ui'
 import { renderToString } from '@remix-run/ui/server'
 import { expect } from '@remix-run/assert'

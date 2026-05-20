@@ -183,5 +183,5 @@ This is used both for initial hydration of pending frames and for `handle.frame.
 
 ## See Also
 
-- [Server Rendering](./server-rendering.md) - Streaming HTML with `renderToStream`
+- [Server](../src/server/README.md) - Streaming HTML with `renderToStream`
 - [Hydration](./hydration.md) - Client entries and the `run` function

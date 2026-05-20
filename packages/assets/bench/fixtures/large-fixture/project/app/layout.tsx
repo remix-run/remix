@@ -1,5 +1,5 @@
 import { css } from '@remix-run/ui'
-import { GridPanel } from '#packages/ui/panel'
+import { GridPanel } from '#packages/ui/panel.tsx'
 import { palette } from './theme.ts'
 
 const frame = css({

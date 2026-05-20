@@ -1,6 +1,6 @@
 import { css } from '@remix-run/ui'
-import { stableLabel } from '#packages/shared/strings'
-import { GridPanel } from '@bench/ui/panel'
+import { stableLabel } from '#packages/shared/strings.ts'
+import { GridPanel } from '@bench/ui/panel.tsx'
 import { summarizeBasicFixture } from './summary.ts'
 
 const entryStyles = css({

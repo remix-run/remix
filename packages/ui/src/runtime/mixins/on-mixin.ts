@@ -1,21 +1,17 @@
 import { createMixin, type MixinType } from './mixin.ts'
 import type { ElementProps } from '../jsx.ts'
 import type { MixinDescriptor } from './mixin.ts'
-import type {
-  EventType as AddEventType,
-  ListenerFor as AddEventListenerFor,
-} from '../event-listeners.ts'
-
-export type { Dispatched } from '../event-listeners.ts'
+import type { EnsureEvent, EventMap } from '../event-listeners.ts'
 
 type SignaledListener<event extends Event> = (
   event: event,
   signal: AbortSignal,
 ) => void | Promise<void>
 
-type EventType<target extends Element> = Extract<AddEventType<target>, string>
+type EventType<target extends Element> = string & keyof EventMap<target>
+
 type ListenerFor<target extends Element, type extends EventType<target>> = SignaledListener<
-  Parameters<AddEventListenerFor<target, type>>[0]
+  EnsureEvent<EventMap<target>[type], target>
 >
 export type OnMixinDescriptor = {
   type: typeof onMixinType

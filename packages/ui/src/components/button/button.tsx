@@ -1,5 +1,3 @@
-// @jsxRuntime classic
-// @jsx createElement
 import { attrs, createElement, createMixin, css } from '@remix-run/ui'
 import type { CSSMixinDescriptor, ElementProps, Handle, Props, RemixNode } from '@remix-run/ui'
 

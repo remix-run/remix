@@ -3,13 +3,14 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@octokit/request": "^9.1.3",
+    "@octokit/request": "^9.2.4",
     "@remix-run/assert": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
     "@types/semver": "^7.5.8",
     "@typescript/native-preview": "catalog:",
-    "semver": "^7.6.3"
+    "semver": "^7.6.3",
+    "yaml": "^2.9.0"
   },
   "scripts": {
     "test": "remix-test",

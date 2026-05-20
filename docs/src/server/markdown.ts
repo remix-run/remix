@@ -4,8 +4,8 @@ import { Marked, type MarkedExtension } from 'marked'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { codeToHtml } from 'shiki'
-import { routes } from './routes.ts'
 import { IGNORE_SYMBOLS, MDN_SYMBOLS } from '../generate/symbols.ts'
+import { routes } from './routes.ts'
 
 // No types exist for the `frontmatter` package
 const parseFrontmatter = frontmatter.default as unknown as (md: string) => {

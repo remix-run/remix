@@ -158,6 +158,9 @@ npm i remix <peer-dependency>
 
 - `packages/remix` is generated automatically in CI.
 - Do not hand-edit `packages/remix/package.json` or `packages/remix/src/*`; run the generator when generated output is required.
+- **When adding a new package**, add it to `packages/remix/manifest.json` before running the generator:
+  - Add one entry per export: `"remix/<canonical-path>": "@remix-run/<package-name>"`,`"remix/<canonical-path>/foo": "@remix-run/<package-name>/foo"`.
+  - Choose a domain-oriented canonical path (e.g. `remix/middleware/logger`, not `remix/logger-middleware`).
 - If user asks for full surfacing, you can still update root `README.md` package list when applicable.
 
 9. Validate before finishing.

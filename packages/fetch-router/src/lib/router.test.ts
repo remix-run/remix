@@ -1,12 +1,11 @@
 import * as assert from '@remix-run/assert'
+import { createMultiMatcher, type MultiMatcher } from '@remix-run/route-pattern/match'
 import { describe, it } from '@remix-run/test'
-import { createMatcher, type Matcher, RoutePattern } from '@remix-run/route-pattern'
-import { createRoutes as route } from '@remix-run/routes'
 
-import type { Action } from './controller.ts'
+import { createRoutes as route } from '../routes.ts'
+import type { Action, Controller } from './controller.ts'
 import type { RequestContext } from './request-context.ts'
-import type { RouteEntry } from './router.ts'
-import { createRouter } from './router.ts'
+import { createRouter, type MatchData } from './router.ts'
 
 describe('router.fetch()', () => {
   it('fetches a route', async () => {
@@ -321,12 +320,14 @@ describe('router.map()', () => {
     // This is a compile-time type check only - we use a never-executed block
     // to verify that TypeScript catches the error without running the code.
     if (false as boolean) {
-      router.map(routes, {
+      let invalidController: Controller<typeof routes> = {
         // @ts-expect-error - controllers must define actions under `actions`
         home() {
           return new Response('OK')
         },
-      })
+      }
+
+      router.map(routes, invalidController)
     }
   })
 
@@ -1079,14 +1080,14 @@ describe('custom matcher', () => {
   it('uses a custom matcher when provided', async () => {
     let matchAllCalls = 0
 
-    let inner = createMatcher<RouteEntry>()
-    let customMatcher: Matcher<RouteEntry> = {
+    let inner = createMultiMatcher<MatchData>()
+    let customMatcher: MultiMatcher<MatchData> = {
       ignoreCase: inner.ignoreCase,
       add: inner.add.bind(inner),
       match: inner.match.bind(inner),
-      matchAll(url, compareFn) {
+      matchAll(url) {
         matchAllCalls++
-        return inner.matchAll(url, compareFn)
+        return inner.matchAll(url)
       },
     }
 
@@ -1101,12 +1102,11 @@ describe('custom matcher', () => {
   it('adds routes to the custom matcher', async () => {
     let addedPatterns: string[] = []
 
-    let inner = createMatcher<RouteEntry>()
-    let customMatcher: Matcher<RouteEntry> = {
+    let inner = createMultiMatcher<MatchData>()
+    let customMatcher: MultiMatcher<MatchData> = {
       ignoreCase: inner.ignoreCase,
       add(pattern, data) {
-        let routePattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
-        addedPatterns.push(routePattern.source)
+        addedPatterns.push(typeof pattern === 'string' ? pattern : pattern.toString())
         inner.add(pattern, data)
       },
       match: inner.match.bind(inner),

@@ -1,11 +1,8 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 import * as s from 'remix/data-schema'
-import { Database } from 'remix/data-table'
-import { Renderer } from 'remix/render-middleware'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../../../data/schema.ts'
-import { Session } from '../../../middleware/session.ts'
 import { routes } from '../../../routes.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
 import { normalizeEmail, registrationSchema } from '../schemas.ts'
@@ -13,16 +10,11 @@ import { ExistingAccountPage, RegisterPage } from './page.tsx'
 
 export default createController(routes.auth.register, {
   actions: {
-    index({ get }) {
-      let render = get(Renderer)
+    index({ render }) {
       return render(<RegisterPage />)
     },
 
-    async action({ get }) {
-      let db = get(Database)
-      let render = get(Renderer)
-      let session = get(Session)
-      let formData = get(FormData)
+    async action({ db, formData, render, session }) {
       let { email, name, password } = s.parse(registrationSchema, formData)
       let normalizedEmail = normalizeEmail(email)
 

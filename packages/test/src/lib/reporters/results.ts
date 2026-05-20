@@ -1,4 +1,4 @@
-import type { V8CoverageEntry } from '../coverage'
+import type { V8CoverageEntry } from '../coverage.ts'
 
 export interface TestResult {
   name: string

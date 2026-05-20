@@ -6,32 +6,11 @@ export type IsEqual<A, B> =
 export type Simplify<T> = { [K in keyof T]: T[K] } & {}
 
 /**
- * Function arguments are contravariant, so unknown args must be typed as `Array<any>`
- *
- * Usage:
- *
- * ```ts
- * type UnknownFunction = (args: UnknownArgs) => unknown
- * ```
- */
-export type UnknownArgs = Array<any>
-
-/**
- * Force TS to distribute a union with `T extends ForceDistributeUnion ? ... : ...`
- * as a more explicit alias of the common `T extends any ? ... : ...` pattern.
- *
- * See: https://www.typescriptlang.org/docs/handbook/2/conditional-types.html#distributive-conditional-types
- *
- * Usage:
- *
- * ```ts
- * type Stuff<T> =
- *   T extends ForceDistributive ?
- *     // Now, operate on each member of the union separately
- *     string extends T ? 'string' :
- *     T
- *   :
- *   never
- * ```
+ * Forces TypeScript to distribute a conditional type over a union by
+ * substituting `T extends ForceDistributive ? ... : ...` for the more cryptic
+ * `T extends any ? ... : ...` pattern.
  */
 export type ForceDistributive = any
+
+/** Distributive utility for creating mutable versions of readonly union types. */
+export type Mutable<T> = T extends ForceDistributive ? { -readonly [K in keyof T]: T[K] } : never

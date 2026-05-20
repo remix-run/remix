@@ -1,46 +1,44 @@
-import { RoutePattern, type Match, type Matcher } from '@remix-run/route-pattern'
+import { createMatcher } from '@remix-run/route-pattern/match'
+import type { Match, Matcher, MultiMatcher } from '@remix-run/route-pattern/match'
 import * as Specificity from '@remix-run/route-pattern/specificity'
+import type { RoutePattern } from '@remix-run/route-pattern'
 
 /**
  * Matcher implementation that checks patterns in insertion order and sorts matches by specificity.
  *
- * Kept here in the bench project for benchmark comparison only; the published package now ships
- * a single trie-based matcher via `createMatcher`.
+ * Kept here in the bench project for benchmark comparison only.
  */
-export class ArrayMatcher<data> implements Matcher<data> {
+export class ArrayMatcher implements MultiMatcher<unknown> {
   readonly ignoreCase: boolean
-  #patterns: Array<{ pattern: RoutePattern; data: data }> = []
+  #patterns: Array<Matcher> = []
 
   constructor(options?: { ignoreCase?: boolean }) {
     this.ignoreCase = options?.ignoreCase ?? false
   }
 
-  add(pattern: string | RoutePattern, data: data): void {
-    pattern = typeof pattern === 'string' ? new RoutePattern(pattern) : pattern
-    this.#patterns.push({ pattern, data })
+  add(pattern: string | RoutePattern): void {
+    this.#patterns.push(createMatcher(pattern, { ignoreCase: this.ignoreCase }))
   }
 
-  match(url: string | URL, compareFn = Specificity.descending): Match<string, data> | null {
-    let bestMatch: Match<string, data> | null = null
-    for (let entry of this.#patterns) {
-      let match = entry.pattern.match(url, { ignoreCase: this.ignoreCase })
-      if (match) {
-        if (bestMatch === null || compareFn(match, bestMatch) < 0) {
-          bestMatch = { ...match, data: entry.data }
-        }
+  match(url: string | URL): Match<string> | null {
+    let bestMatch: Match<string> | null = null
+    for (let pattern of this.#patterns) {
+      let match = pattern.match(url)
+      if (match && (bestMatch === null || Specificity.descending(match, bestMatch) < 0)) {
+        bestMatch = match
       }
     }
     return bestMatch
   }
 
-  matchAll(url: string | URL, compareFn = Specificity.descending): Array<Match<string, data>> {
-    let matches: Array<Match<string, data>> = []
-    for (let entry of this.#patterns) {
-      let match = entry.pattern.match(url, { ignoreCase: this.ignoreCase })
+  matchAll(url: string | URL): Array<Match<string>> {
+    let matches: Array<Match<string>> = []
+    for (let pattern of this.#patterns) {
+      let match = pattern.match(url)
       if (match) {
-        matches.push({ ...match, data: entry.data })
+        matches.push(match)
       }
     }
-    return matches.sort(compareFn)
+    return matches.sort(Specificity.descending)
   }
 }

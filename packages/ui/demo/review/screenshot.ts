@@ -149,7 +149,7 @@ async function isServerAvailable() {
 }
 
 function startServer() {
-  let serverProcess = spawn(process.execPath, ['--import', 'tsx', 'server.ts'], {
+  let serverProcess = spawn(process.execPath, ['--import', 'remix/node-tsx', 'server.ts'], {
     cwd: DEMO_DIR,
     stdio: 'pipe',
   })

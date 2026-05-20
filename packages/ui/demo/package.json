@@ -12,18 +12,17 @@
     "@typescript/native-preview": "catalog:",
     "esbuild": "^0.25.10",
     "node-html-parser": "^7.0.2",
-    "playwright": "catalog:",
-    "tsx": "catalog:"
+    "playwright": "catalog:"
   },
   "scripts": {
-    "build:browser": "node --import tsx scripts/build-browser.ts",
+    "build:browser": "node --import remix/node-tsx scripts/build-browser.ts",
     "dev": "pnpm run --filter \".\" --parallel \"/^dev:/\"",
-    "dev:server": "NODE_ENV=development tsx watch server.ts",
-    "dev:browser": "node --import tsx scripts/build-browser.ts --watch",
-    "prerender": "pnpm run build:browser && tsx scripts/prerender.ts",
+    "dev:server": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+    "dev:browser": "node --watch --import remix/node-tsx scripts/build-browser.ts",
+    "prerender": "pnpm run build:browser && node --import remix/node-tsx scripts/prerender.ts",
     "prerender:serve": "npx http-server -p 3000 build/site",
-    "screenshot": "node --import tsx review/screenshot.ts",
-    "start": "pnpm run build:browser && tsx server.ts",
+    "screenshot": "node --import remix/node-tsx review/screenshot.ts",
+    "start": "pnpm run build:browser && node --import remix/node-tsx server.ts",
     "typecheck": "tsc --noEmit"
   }
 }

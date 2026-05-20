@@ -68,18 +68,18 @@ fail fast when the secret is missing.
 
 ```typescript
 // Filesystem storage
-import { createFsSessionStorage } from 'remix/session/fs-storage'
+import { createFsSessionStorage } from 'remix/session-storage/fs'
 export let sessionStorage = createFsSessionStorage('./tmp/sessions')
 
 // Memory storage (for tests)
-import { createMemorySessionStorage } from 'remix/session/memory-storage'
+import { createMemorySessionStorage } from 'remix/session-storage/memory'
 export let sessionStorage = createMemorySessionStorage()
 ```
 
 ### Add session middleware
 
 ```typescript
-import { session } from 'remix/session-middleware'
+import { session } from 'remix/middleware/session'
 
 let router = createRouter({
   middleware: [
@@ -151,7 +151,7 @@ bypassable by clearing cookies; if the guarantee needs to survive that, you also
 ### Basic setup
 
 ```typescript
-import { auth, createSessionAuthScheme } from 'remix/auth-middleware'
+import { auth, createSessionAuthScheme } from 'remix/middleware/auth'
 import { Session } from 'remix/session'
 import { Database } from 'remix/data-table'
 
@@ -179,7 +179,7 @@ export function loadAuth() {
 ### Reading auth state
 
 ```typescript
-import { Auth } from 'remix/auth-middleware'
+import { Auth } from 'remix/middleware/auth'
 
 function handler({ get }) {
   let auth = get(Auth)
@@ -303,7 +303,7 @@ module-scope provider to `finishExternalAuth(...)` and `refreshExternalAuth(...)
 ### OAuth controller
 
 ```typescript
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 
 export default createController(routes.auth.google, {
   actions: {
@@ -361,8 +361,8 @@ async function refreshGoogleTokens({ get }) {
 Apply `requireAuth()` to every action in one controller:
 
 ```typescript
-import { createController } from 'remix/fetch-router'
-import { requireAuth } from 'remix/auth-middleware'
+import { createController } from 'remix/router'
+import { requireAuth } from 'remix/middleware/auth'
 
 export default createController(routes.account, {
   middleware: [requireAuth()],
@@ -415,7 +415,7 @@ export default createController(routes.admin, {
 Apply middleware to a single route:
 
 ```typescript
-import { Auth, requireAuth } from 'remix/auth-middleware'
+import { Auth, requireAuth } from 'remix/middleware/auth'
 
 router.get(routes.account.index, {
   middleware: [requireAuth()],
@@ -429,7 +429,7 @@ router.get(routes.account.index, {
 ### Redirect on auth failure
 
 ```typescript
-import { requireAuth } from 'remix/auth-middleware'
+import { requireAuth } from 'remix/middleware/auth'
 import { redirect } from 'remix/response/redirect'
 
 export function requireAuthRedirect() {

@@ -1,9 +1,7 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import * as coerce from 'remix/data-schema/coerce'
-import { Database } from 'remix/data-table'
-import { Renderer } from 'remix/render-middleware'
 import { redirect } from 'remix/response/redirect'
 
 import { books } from '../../../data/schema.ts'
@@ -40,17 +38,13 @@ const bookSchema = f.object({
 export default createController(routes.admin.books, {
   middleware: [requireAuth(), requireAdmin()],
   actions: {
-    async index({ get }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async index({ db, render }) {
       let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })
 
       return render(<AdminBooksIndexPage books={allBooks} />)
     },
 
-    async show({ get, params }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async show({ db, params, render }) {
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
 
@@ -61,8 +55,7 @@ export default createController(routes.admin.books, {
       return render(<AdminBookShowPage book={book} />)
     },
 
-    new({ get }) {
-      let render = get(Renderer)
+    new({ render }) {
       return render(
         <AdminBookFormPage
           title="Add New Book"
@@ -73,9 +66,7 @@ export default createController(routes.admin.books, {
       )
     },
 
-    async create({ get }) {
-      let db = get(Database)
-      let formData = get(FormData)
+    async create({ db, formData }) {
       let { author, cover, description, genre, inStock, isbn, price, publishedYear, slug, title } =
         s.parse(bookSchema, formData)
 
@@ -96,9 +87,7 @@ export default createController(routes.admin.books, {
       return redirect(routes.admin.books.index.href())
     },
 
-    async edit({ get, params }) {
-      let db = get(Database)
-      let render = get(Renderer)
+    async edit({ db, params, render }) {
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
 
@@ -118,9 +107,7 @@ export default createController(routes.admin.books, {
       )
     },
 
-    async update({ get, params }) {
-      let db = get(Database)
-      let formData = get(FormData)
+    async update({ db, formData, params }) {
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
       if (!book) {
@@ -147,8 +134,7 @@ export default createController(routes.admin.books, {
       return redirect(routes.admin.books.index.href())
     },
 
-    async destroy({ get, params }) {
-      let db = get(Database)
+    async destroy({ db, params }) {
       let bookId = parseId(params.bookId)
       let book = bookId === undefined ? undefined : await db.find(books, bookId)
       if (book) {

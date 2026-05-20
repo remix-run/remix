@@ -43,6 +43,7 @@ export type AuthState<identity = unknown> = GoodAuth<identity> | BadAuth
 
 /**
  * Context key used to read auth state with `context.get(Auth)`.
+ * The `auth()` middleware also installs auth state as `context.auth`.
  */
 export const Auth = createContextKey<AuthState>()
 
@@ -114,11 +115,11 @@ export interface AuthOptions<schemes extends readonly AuthScheme<any>[] = AuthSc
  * Loads auth state for the current request by running each configured auth scheme in order.
  *
  * @param options Auth scheme configuration for the middleware.
- * @returns Middleware that resolves auth state into `context.get(Auth)`.
+ * @returns Middleware that resolves auth state into `context.auth` and `context.get(Auth)`.
  */
 export function auth<schemes extends readonly AuthScheme<any>[]>(
   options: AuthOptions<schemes>,
-): Middleware<readonly [typeof Auth, AuthForSchemes<schemes>]> {
+): Middleware<{ key: typeof Auth; value: AuthForSchemes<schemes>; property: 'auth' }> {
   if (options.schemes.length === 0) {
     throw new Error('auth() requires at least one authentication scheme')
   }
@@ -132,11 +133,11 @@ export function auth<schemes extends readonly AuthScheme<any>[]>(
       }
 
       if (result.status === 'success') {
-        context.set(Auth, {
+        setAuthState(context, {
           ok: true,
           identity: result.identity,
           method: scheme.name,
-        } satisfies AuthState)
+        })
 
         return next()
       }
@@ -147,20 +148,24 @@ export function auth<schemes extends readonly AuthScheme<any>[]>(
         )
       }
 
-      context.set(Auth, {
+      setAuthState(context, {
         ok: false,
         error: createFailure(scheme, result),
-      } satisfies AuthState)
+      })
 
       return next()
     }
 
-    context.set(Auth, {
+    setAuthState(context, {
       ok: false,
-    } satisfies AuthState)
+    })
 
     return next()
   }
+}
+
+function setAuthState(context: RequestContext<any, any>, auth: AuthState): void {
+  context.set(Auth, auth, { property: 'auth' })
 }
 
 function createFailure(scheme: AuthScheme<any>, result: AuthSchemeFailure): AuthFailure {

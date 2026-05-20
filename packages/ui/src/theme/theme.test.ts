@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { createElement } from '@remix-run/ui'
+import { createElement, createRoot, css } from '@remix-run/ui'
 import { renderToString } from '@remix-run/ui/server'
 
 import * as accordion from '../components/accordion/accordion.tsx'
@@ -155,6 +155,8 @@ describe('createTheme', () => {
     expect(Theme.cssText).toMatch(/--rmx-control-height-sm: 28px;/)
     expect(Theme.cssText).toMatch(/--rmx-surface-lvl3: #f1f5f9;/)
     expect(Theme.cssText).toMatch(/--rmx-color-text-primary: #111827;/)
+    expect(Theme.cssText).toMatch(/@layer rmx-reset, rmx;/)
+    expect(Theme.cssText).toMatch(/@layer rmx-reset \{/)
     expect(Theme.cssText).toMatch(/html, body \{/)
     expect(Theme.cssText).toMatch(/font-family: var\(--rmx-font-family-sans\);/)
     expect(Theme.cssText).toMatch(/background-color: var\(--rmx-surface-lvl0\);/)
@@ -184,8 +186,36 @@ describe('createTheme', () => {
     })
 
     expect(Theme.cssText).toMatch(/:root \{/)
+    expect(Theme.cssText).not.toMatch(/@layer rmx-reset \{/)
     expect(Theme.cssText).not.toMatch(/html, body \{/)
     expect(Theme.cssText).not.toMatch(/box-sizing: border-box;/)
+  })
+
+  it('keeps the theme reset below generated styles', () => {
+    let Theme = createTheme(sampleTheme)
+    let container = document.createElement('div')
+    document.body.appendChild(container)
+    let root = createRoot(container)
+
+    try {
+      root.render(
+        createElement(
+          'div',
+          {},
+          createElement(Theme, {}),
+          createElement('h1', { mix: [css({ marginTop: 24, marginBottom: 24 })] }, 'Dashboard'),
+        ),
+      )
+      root.flush()
+
+      let heading = container.querySelector('h1')
+      if (!heading) throw new Error('Expected heading to be rendered')
+      expect(getComputedStyle(heading).marginTop).toBe('24px')
+      expect(getComputedStyle(heading).marginBottom).toBe('24px')
+    } finally {
+      root.dispose()
+      container.remove()
+    }
   })
 
   it('renders a style tag component', async () => {

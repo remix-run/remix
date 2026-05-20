@@ -35,7 +35,6 @@
     "@remix-run/assert": "workspace:*",
     "@remix-run/cookie": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
-    "@remix-run/routes": "workspace:*",
     "@remix-run/session": "workspace:*",
     "@remix-run/session-middleware": "workspace:*",
     "@remix-run/test": "workspace:*",

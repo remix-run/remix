@@ -1,5 +1,3 @@
-// @jsxRuntime classic
-// @jsx createElement
 import {
   attrs,
   createElement,
@@ -8,6 +6,7 @@ import {
   on,
   ref,
   type CSSMixinDescriptor,
+  type Dispatched,
   type ElementProps,
   type Handle,
   type MixinHandle,
@@ -28,7 +27,10 @@ import type { AnchorOptions } from '../anchor/anchor.ts'
 const SELECT_CHANGE_EVENT = 'rmx:select-change' as const
 const LABEL_SWAP_DELAY_MS = 75
 
-type SelectChangeHandler = (event: SelectChangeEvent, signal: AbortSignal) => void | Promise<void>
+type SelectChangeHandler<target extends HTMLElement> = (
+  event: Dispatched<SelectChangeEvent, target>,
+  signal: AbortSignal,
+) => void | Promise<void>
 
 declare global {
   interface HTMLElementEventMap {
@@ -74,12 +76,7 @@ export interface SelectProps extends Omit<Props<'button'>, 'children' | 'name'> 
 
 export type SelectOptionProps = Props<'div'> & Omit<listbox.ListboxOption, 'id'>
 
-enum State {
-  Initializing = 'initializing',
-  Closed = 'closed',
-  Open = 'open',
-  Selecting = 'selecting',
-}
+type State = 'initializing' | 'closed' | 'open' | 'selecting'
 
 type PendingChange = {
   label: string | null
@@ -115,7 +112,7 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>) 
   let surfaceRef: HTMLElement | undefined
   let popoverContextRef: popover.PopoverContext | undefined
 
-  let state: State = State.Initializing
+  let state: State = 'initializing'
 
   let value: listbox.ListboxValue = null
   let activeValue: listbox.ListboxValue = null
@@ -128,14 +125,14 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>) 
   let listId = `${handle.id}-list`
 
   function open() {
-    if (state !== State.Closed || handle.props.disabled) return
-    state = State.Open
+    if (state !== 'closed' || handle.props.disabled) return
+    state = 'open'
     activeValue = value
     handle.update()
   }
 
   function syncPopoverMinWidth() {
-    if (state !== State.Open || !surfaceRef || !triggerRef) {
+    if (state !== 'open' || !surfaceRef || !triggerRef) {
       return
     }
 
@@ -165,8 +162,8 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>) 
   }
 
   function close() {
-    if (state !== State.Open) return
-    state = State.Closed
+    if (state !== 'open') return
+    state = 'closed'
     handle.update()
   }
 
@@ -215,22 +212,22 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>) 
     nextValue: listbox.ListboxValue,
     option: listbox.ListboxOption | undefined,
   ) {
-    if (state !== State.Open) return
+    if (state !== 'open') return
     pendingChange = getPendingChange(nextValue, option)
     setSelectedOption(nextValue, option)
     handle.update()
   }
 
   async function settleSelectedOption() {
-    if (state !== State.Open) return
+    if (state !== 'open') return
 
     let change = pendingChange
     pendingChange = null
-    state = State.Selecting
+    state = 'selecting'
 
     if (!surfaceRef) {
       displayedLabel = selectedLabel
-      state = State.Closed
+      state = 'closed'
       let signal = await handle.update()
       if (signal.aborted) return
       dispatchChange(change)
@@ -241,14 +238,14 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>) 
     await wait(LABEL_SWAP_DELAY_MS) // UX delay label swap for clear value change
     if (handle.signal.aborted) return
     displayedLabel = selectedLabel
-    state = State.Closed
+    state = 'closed'
     let signal = await handle.update()
     if (signal.aborted) return
     dispatchChange(change)
   }
 
   function selectTypeaheadMatch(text: string) {
-    if (state !== State.Closed || handle.props.disabled) return
+    if (state !== 'closed' || handle.props.disabled) return
 
     let option = listboxRef?.matchSearchText(text, value)
     if (!option) return
@@ -266,7 +263,7 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>) 
     nextActiveValue: listbox.ListboxValue,
     option: listbox.ListboxOption | undefined,
   ) {
-    if (state !== State.Open) return
+    if (state !== 'open') return
     activeValue = nextActiveValue
     activeId = option?.id
     handle.update()
@@ -286,11 +283,11 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>) 
     },
 
     get isExpanded() {
-      return state === State.Open || state === State.Selecting
+      return state === 'open' || state === 'selecting'
     },
 
     get isOpen() {
-      return state === State.Open
+      return state === 'open'
     },
 
     get listId() {
@@ -356,11 +353,11 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>) 
   })
 
   return () => {
-    if (state === State.Initializing) {
+    if (state === 'initializing') {
       selectedLabel = displayedLabel = handle.props.defaultLabel
       value = handle.props.defaultValue ?? null
       activeValue = value
-      state = State.Closed
+      state = 'closed'
 
       handle.queueTask(() => {
         if (selectedId || !surfaceRef) {
@@ -532,8 +529,11 @@ const select = {
   trigger,
 } as const
 
-export function onSelectChange(handler: SelectChangeHandler, captureBoolean?: boolean) {
-  return on<HTMLElement, typeof SELECT_CHANGE_EVENT>(SELECT_CHANGE_EVENT, handler, captureBoolean)
+export function onSelectChange<target extends HTMLElement>(
+  handler: SelectChangeHandler<target>,
+  captureBoolean?: boolean,
+) {
+  return on(SELECT_CHANGE_EVENT, handler, captureBoolean)
 }
 
 function SelectLabel(handle: Handle) {
