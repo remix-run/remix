@@ -118,7 +118,7 @@ try {
 }
 ```
 
-If you're looking for a more flexible storage solution for uploaded file-like values, this library pairs really well with [the `file-storage` library](https://github.com/remix-run/remix/tree/main/packages/file-storage) for keeping files in various storage backends.
+If you're looking for a more flexible storage solution for `FileUpload` objects, this library pairs really well with [the `file-storage` library](https://github.com/remix-run/remix/tree/main/packages/file-storage) for keeping files in various storage backends.
 
 ```ts
 import { createFsFileStorage } from 'remix/file-storage/fs'
@@ -152,7 +152,7 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/fo
 
 - [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Tiny,
   standards-aligned validation with a `form-data` export for `FormData` and `URLSearchParams`
-- [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - A simple key/value interface for storing file-like values you get from the parser
+- [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - A simple key/value interface for storing `FileUpload` objects you get from the parser
 - [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
 
 ## License

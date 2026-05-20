@@ -5,11 +5,11 @@
 export type FileLike = File
 
 /**
- * A key/value interface for storing file-like objects.
+ * A key/value interface for storing `File` objects.
  */
 export interface FileStorage<file extends FileLike = FileLike> {
   /**
-   * Get the file-like object at the given key.
+   * Get the file at the given key.
    *
    * @param key The key to look up
    * @returns The file with the given key, or `null` if no such key exists
@@ -83,11 +83,11 @@ export interface FileStorage<file extends FileLike = FileLike> {
    */
   list<T extends ListOptions>(options?: T): ListResult<T> | Promise<ListResult<T>>
   /**
-   * Put a file-like object in storage and return a new file backed by this storage.
+   * Put a `File` in storage and return a new file backed by this storage.
    *
    * @param key The key to store the file under
    * @param file The file to store
-   * @returns A new file-like object backed by this storage
+   * @returns A new file backed by this storage
    */
   put(key: string, file: FileLike): file | Promise<file>
   /**
@@ -97,7 +97,7 @@ export interface FileStorage<file extends FileLike = FileLike> {
    */
   remove(key: string): void | Promise<void>
   /**
-   * Put a file-like object in storage at the given key.
+   * Put a `File` in storage at the given key.
    *
    * @param key The key to store the file under
    * @param file The file to store
