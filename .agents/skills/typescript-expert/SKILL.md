@@ -1,9 +1,9 @@
 ---
-name: expert-typescript-programmer
+name: typescript-expert
 description: Write, refactor, or review TypeScript code with strict, precise, maintainable types and without unnecessary `any`, type assertions, or type suppressions. Use when working on `.ts` or `.tsx` files, public APIs, generics, discriminated unions, type guards, tsconfig/module settings, declaration-facing code, or any change where TypeScript type quality affects correctness in the Remix repo.
 ---
 
-# Expert TypeScript Programmer
+# TypeScript Expert
 
 ## Overview
 
