@@ -170,8 +170,7 @@ export function Home() {
       <h1>Welcome to Remix 3!</h1>
       <p>
         Remix is a batteries-included, ultra-productive, zero-dependency, bundler-free framework,
-        ready for development in a model-first world. Remix 3 is built on the following
-        principles:
+        ready for development in a model-first world. Remix 3 is built on the following principles:
       </p>
 
       <ol>
