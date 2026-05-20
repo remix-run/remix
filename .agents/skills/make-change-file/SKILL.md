@@ -53,7 +53,7 @@ Write release notes that match this repository's `.changes` conventions. Use it 
 - Document user-visible behavior, public API changes, exports, migrations, or upgrade work.
 - Do not write release notes for internal refactors unless they surface as real API or behavior changes.
 - Keep each note self-contained. A reader should understand the shipped behavior from the note itself, with links adding context rather than replacing the explanation.
-- When a change is tied to a public issue, PR, RFC, decision doc, spec, or external bug report, include a short reference in the note. Prefer inline same-repo references like `(see #1234)` and use full URLs for external repositories, specs, or reports.
+- When a change is tied to a public issue, PR, RFC, decision doc, spec, or external bug report, include a short reference in the note. Prefer the PR that actually addressed the issue or feature over the source issue because the source issue remains reachable from the PR. Use inline same-repo references like `(see #1234)` and full URLs for external repositories, specs, or reports.
 - Name the affected API, route convention, package, entrypoint, runtime, browser, or tool version when that detail helps users recognize whether the note applies to them.
 - For bug fixes, describe the user-visible symptom or failing scenario instead of only describing the implementation fix.
 - For breaking changes, include the old behavior, new behavior, and migration path.
@@ -79,7 +79,7 @@ Write release notes that match this repository's `.changes` conventions. Use it 
 - Is the bump type correct for the package version?
 - Did you reuse any deterministic filename the repo already expects?
 - Does the note describe user-facing changes instead of implementation details?
-- Did you include related issue, PR, RFC, decision, spec, or external report references when they add useful context?
+- Did you include related issue, PR, RFC, decision, spec, or external report references when they add useful context, preferring the implementation PR over the source issue when both exist?
 - For bug fixes, does the note describe the failing scenario or symptom?
 - For breaking changes or deprecations, does the note include the migration path or replacement API?
 - Does each paragraph or bullet stay on one source line without manual hard wrapping?
