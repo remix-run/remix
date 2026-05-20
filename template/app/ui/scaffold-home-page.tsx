@@ -4,14 +4,12 @@ import { css, type RemixNode } from 'remix/ui'
 import { PromptButton } from '../assets/prompt-button.tsx'
 import { Document } from './document.tsx'
 
-const APP_DISPLAY_NAME = readAppDisplayName('%%RMX_APP_DISPLAY_NAME_URI_COMPONENT%%')
-
 const FONT_STACK =
   "'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
 
 export function HomePage() {
   return () => (
-    <Document head={<HomeHead />} title={`Welcome to ${APP_DISPLAY_NAME}`}>
+    <Document head={<HomeHead />}>
       <main
         mix={css({
           // Light-mode design tokens (default).
@@ -333,10 +331,6 @@ function Footer() {
       </div>
     </footer>
   )
-}
-
-function readAppDisplayName(value: string): string {
-  return value.startsWith('%%') ? 'Remix App' : decodeURIComponent(value)
 }
 
 const cardStyle = css({

@@ -518,7 +518,7 @@ describe('run', () => {
     }
   })
 
-  it('escapes scaffold app names in generated TSX string literals', async () => {
+  it('escapes scaffold app names in generated document title defaults', async () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-'))
     try {
       let appDir = path.join(tmpDir, 'quoted-app')
@@ -538,10 +538,8 @@ describe('run', () => {
         documentSource,
         new RegExp(`readAppDisplayName\\('${escapeRegExp(encodedAppName)}'\\)`),
       )
-      assert.match(
-        scaffoldHomePageSource,
-        new RegExp(`readAppDisplayName\\('${escapeRegExp(encodedAppName)}'\\)`),
-      )
+      assert.ok(!scaffoldHomePageSource.includes('readAppDisplayName'))
+      assert.ok(!scaffoldHomePageSource.includes(encodedAppName))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
