@@ -12,12 +12,11 @@
     "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "playwright": "catalog:",
-    "tsx": "catalog:"
+    "playwright": "catalog:"
   },
   "scripts": {
-    "dev": "NODE_ENV=development tsx watch server.ts",
-    "start": "tsx server.ts",
+    "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+    "start": "node --import remix/node-tsx server.ts",
     "test": "NODE_ENV=test remix test",
     "typecheck": "tsc --noEmit"
   }

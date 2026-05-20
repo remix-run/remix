@@ -1,5 +1,3 @@
-// @jsxRuntime classic
-// @jsx createElement
 import {
   css,
   createElement,

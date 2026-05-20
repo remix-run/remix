@@ -44,6 +44,8 @@
   "remix/node-fetch-server": "@remix-run/node-fetch-server",
   "remix/node-fetch-server/test": "@remix-run/node-fetch-server/test",
   "remix/node-serve": "@remix-run/node-serve",
+  "remix/node-tsx": "@remix-run/node-tsx",
+  "remix/node-tsx/load-module": "@remix-run/node-tsx/load-module",
   "remix/response/compress": "@remix-run/response/compress",
   "remix/response/file": "@remix-run/response/file",
   "remix/response/html": "@remix-run/response/html",

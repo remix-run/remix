@@ -22,15 +22,16 @@
   },
   "scripts": {
     "build": "pnpm run --filter \".\" --parallel \"/^build:/\"",
-    "build:demos": "tsx src/generate/build-demos.ts",
+    "build:demos": "node --import remix/node-tsx src/generate/build-demos.ts",
     "build:public": "mkdir -p build/public && cp public/* build/public",
     "predev": "pnpm run build",
-    "dev": "NODE_ENV=development tsx --watch src/server/index.ts",
+    "dev:server": "node --watch --import remix/node-tsx src/server/index.ts",
+    "dev": "NODE_ENV=development pnpm run dev:server",
     "docs": "node src/generate/index.ts",
     "docs:debug": "DEBUG=1 node src/generate/index.ts",
-    "prerender": "tsx src/server/prerender.ts",
+    "prerender": "node --import remix/node-tsx src/server/prerender.ts",
     "prerender:serve": "npx http-server -p 44100 build/site",
-    "serve": "tsx src/server/index.ts",
+    "serve": "node --import remix/node-tsx src/server/index.ts",
     "typecheck": "tsc --noEmit"
   }
 }

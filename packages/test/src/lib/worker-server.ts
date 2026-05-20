@@ -18,11 +18,9 @@ export async function runServerTestFile(value: unknown): Promise<TestResults> {
   try {
     workerData = parseServerTestWorkerData(value)
 
-    // When coverage is enabled in Node, we use a coverage-friendly TypeScript loader which
-    // replaces tsx's minified transformation with a non-minified esbuild transform
-    // so V8 coverage byte offsets align with readable source lines. This hook runs
-    // before the inherited tsx hook (hooks are LIFO), so it intercepts .ts imports and
-    // short-circuits before tsx transforms them.
+    // When coverage is enabled in Node, we use a coverage-friendly TypeScript loader with
+    // an un-minified esbuild transform so V8 coverage byte offsets align with readable
+    // source lines.
     if (workerData.coverage && !IS_BUN) {
       // Ensure we load the right file whether we're running in the monorepo (TS) or
       // from a published package (JS)

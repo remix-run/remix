@@ -145,7 +145,6 @@ async function writeScaffoldPackageJson(targetDir: string, config: BootstrapConf
   packageJson.dependencies = {
     ...packageJson.dependencies,
     remix: config.remixVersion,
-    tsx: 'latest',
   }
   packageJson.devDependencies = {
     ...packageJson.devDependencies,

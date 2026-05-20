@@ -15,9 +15,6 @@ catalogs:
     playwright:
       specifier: ^1.59.0
       version: 1.59.0
-    tsx:
-      specifier: ^4.21.0
-      version: 4.21.0
     typescript:
       specifier: ^5.9.3
       version: 5.9.3
@@ -35,6 +32,9 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      oxc-parser:
+        specifier: ^0.121.0
+        version: 0.121.0
       oxlint:
         specifier: ^1.57.0
         version: 1.57.0(oxlint-tsgolint@0.17.4)
@@ -44,9 +44,6 @@ importers:
       prettier:
         specifier: ^3.3.3
         version: 3.3.3
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
@@ -69,9 +66,6 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
 
   demos/bookstore:
     dependencies:
@@ -91,9 +85,6 @@ importers:
       playwright:
         specifier: 'catalog:'
         version: 1.59.0
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
 
   demos/frame-navigation:
     dependencies:
@@ -113,9 +104,6 @@ importers:
       esbuild:
         specifier: ^0.25.10
         version: 0.25.12
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
 
   demos/frames:
     dependencies:
@@ -135,9 +123,6 @@ importers:
       esbuild:
         specifier: ^0.25.10
         version: 0.25.12
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
 
   demos/social-auth:
     dependencies:
@@ -151,9 +136,6 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
 
   demos/sse:
     dependencies:
@@ -173,9 +155,6 @@ importers:
       esbuild:
         specifier: ^0.25.10
         version: 0.25.12
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
 
   demos/unpkg:
     dependencies:
@@ -195,9 +174,6 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
 
   docs:
     dependencies:
@@ -1326,6 +1302,22 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/node-tsx:
+    dependencies:
+      get-tsconfig:
+        specifier: ^4.13.6
+        version: 4.13.6
+      oxc-transform:
+        specifier: ^0.121.0
+        version: 0.121.0
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
   packages/remix:
     dependencies:
       '@remix-run/assert':
@@ -1424,6 +1416,9 @@ importers:
       '@remix-run/node-serve':
         specifier: workspace:^
         version: link:../node-serve
+      '@remix-run/node-tsx':
+        specifier: workspace:^
+        version: link:../node-tsx
       '@remix-run/render-middleware':
         specifier: workspace:^
         version: link:../render-middleware
@@ -1767,6 +1762,9 @@ importers:
 
   packages/test:
     dependencies:
+      '@remix-run/node-tsx':
+        specifier: workspace:^
+        version: link:../node-tsx
       '@remix-run/terminal':
         specifier: workspace:^
         version: link:../terminal
@@ -1794,9 +1792,6 @@ importers:
       source-map-js:
         specifier: ^1.2.1
         version: 1.2.1
-      tsx:
-        specifier: ^4.21.0
-        version: 4.21.0
       v8-to-istanbul:
         specifier: ^9.3.0
         version: 9.3.0
@@ -1871,6 +1866,9 @@ importers:
       '@remix-run/static-middleware':
         specifier: workspace:*
         version: link:../../static-middleware
+      remix:
+        specifier: workspace:*
+        version: link:../../remix
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -1878,9 +1876,6 @@ importers:
       playwright:
         specifier: ^1.49.1
         version: 1.59.0
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
 
   packages/ui/bench/frameworks/preact:
     dependencies:
@@ -1974,9 +1969,6 @@ importers:
       playwright:
         specifier: 'catalog:'
         version: 1.59.0
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
 
   packages/ui/demos:
     dependencies:
@@ -2032,9 +2024,6 @@ importers:
       remix:
         specifier: workspace:^
         version: link:../packages/remix
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
@@ -8672,6 +8661,7 @@ snapshots:
       get-tsconfig: 4.13.6
     optionalDependencies:
       fsevents: 2.3.3
+    optional: true
 
   type-is@2.0.1:
     dependencies:

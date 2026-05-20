@@ -450,7 +450,6 @@ describe('run', () => {
 
       assert.equal(packageJson.name, 'my-app')
       assert.equal(packageJson.dependencies.remix, `^${await readRepoRemixVersion()}`)
-      assert.equal(packageJson.dependencies.tsx, 'latest')
       assert.equal(packageJson.devDependencies['@types/node'], 'latest')
       assert.equal(packageJson.devDependencies.typescript, 'latest')
       assert.equal(packageJson.engines.node, '>=24.3.0')
