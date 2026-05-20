@@ -107,22 +107,39 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
       return next()
     }
 
+    let rootRealPath: string
+    try {
+      rootRealPath = await fsp.realpath(root)
+    } catch {
+      return next()
+    }
+
     let targetPath = path.join(root, relativePath)
+    let containedTargetPath = await resolveContainedPath(rootRealPath, targetPath)
+    if (containedTargetPath == null) {
+      return next()
+    }
+
     let filePath: string | undefined
 
     try {
-      let stats = await fsp.stat(targetPath)
+      let stats = await fsp.stat(containedTargetPath)
 
       if (stats.isFile()) {
-        filePath = targetPath
+        filePath = containedTargetPath
       } else if (stats.isDirectory()) {
         // Try each index file in turn
         for (let indexFile of index) {
-          let indexPath = path.join(targetPath, indexFile)
+          let indexPath = path.join(containedTargetPath, indexFile)
+          let containedIndexPath = await resolveContainedPath(rootRealPath, indexPath)
+          if (containedIndexPath == null) {
+            continue
+          }
+
           try {
-            let indexStats = await fsp.stat(indexPath)
+            let indexStats = await fsp.stat(containedIndexPath)
             if (indexStats.isFile()) {
-              filePath = indexPath
+              filePath = containedIndexPath
               break
             }
           } catch {
@@ -132,7 +149,7 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
 
         // If no index file found and listFiles is enabled, show directory listing
         if (!filePath && listFiles) {
-          return generateDirectoryListing(targetPath, context.url.pathname)
+          return generateDirectoryListing(containedTargetPath, context.url.pathname)
         }
       }
     } catch {
@@ -158,4 +175,21 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
 
     return next()
   }
+}
+
+async function resolveContainedPath(
+  rootRealPath: string,
+  targetPath: string,
+): Promise<string | null> {
+  try {
+    let realPath = await fsp.realpath(targetPath)
+    return isContainedPath(rootRealPath, realPath) ? realPath : null
+  } catch {
+    return null
+  }
+}
+
+function isContainedPath(rootPath: string, targetPath: string): boolean {
+  let relativePath = path.relative(rootPath, targetPath)
+  return relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath))
 }

@@ -395,6 +395,66 @@ describe('staticFiles middleware', () => {
     }
   })
 
+  it('does not serve symlinked files outside the root', async () => {
+    let publicDir = path.join(tmpDir, 'public')
+    fs.mkdirSync(publicDir)
+    createTestFile('secret.txt', 'Secret content')
+    fs.symlinkSync(path.join(tmpDir, 'secret.txt'), path.join(publicDir, 'leak.txt'))
+
+    let router = createRouter()
+    router.get('/*', {
+      middleware: [staticFiles(publicDir)],
+      handler() {
+        return new Response('Fallback Handler', { status: 404 })
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/leak.txt')
+
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Fallback Handler')
+  })
+
+  it('does not serve files from symlinked directories outside the root', async () => {
+    let publicDir = path.join(tmpDir, 'public')
+    fs.mkdirSync(publicDir)
+    createTestFile('private/secret.txt', 'Secret content')
+    fs.symlinkSync(path.join(tmpDir, 'private'), path.join(publicDir, 'private'), 'dir')
+
+    let router = createRouter()
+    router.get('/*', {
+      middleware: [staticFiles(publicDir)],
+      handler() {
+        return new Response('Fallback Handler', { status: 404 })
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/private/secret.txt')
+
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Fallback Handler')
+  })
+
+  it('does not serve index files from symlinked directories outside the root', async () => {
+    let publicDir = path.join(tmpDir, 'public')
+    fs.mkdirSync(publicDir)
+    createTestFile('private/index.html', 'Secret index')
+    fs.symlinkSync(path.join(tmpDir, 'private'), path.join(publicDir, 'private'), 'dir')
+
+    let router = createRouter()
+    router.get('/*', {
+      middleware: [staticFiles(publicDir)],
+      handler() {
+        return new Response('Fallback Handler', { status: 404 })
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/private')
+
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Fallback Handler')
+  })
+
   describe('filter option', () => {
     it('filters files based on custom filter function', async () => {
       createTestFile('index.html', '<h1>Home</h1>')
