@@ -8,7 +8,7 @@ Use it when the user should type draft text, filter a popup list, and still comm
 
 ```tsx
 import { css, type Handle } from 'remix/ui'
-import { Combobox, ComboboxOption, onComboboxChange } from 'remix/ui'
+import { Combobox, ComboboxOption, onComboboxChange } from 'remix/ui/combobox'
 
 let airports = [
   {

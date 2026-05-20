@@ -1,6 +1,6 @@
 # Server
 
-Remix Component can render to HTML on the server using two APIs:
+Remix UI can render to HTML on the server using two APIs:
 
 - `renderToString` - Returns a complete HTML string. Simple, but buffers the entire response.
 - `renderToStream` - Returns a `ReadableStream<Uint8Array>`. Sends the initial HTML immediately and streams frame content as it resolves.
@@ -80,7 +80,7 @@ function ProductPage() {
 
 ## CSS
 
-Components using the `css` prop have their styles collected during rendering and emitted as a single `<style>` tag in the `<head>`. No client-side style injection is needed for server-rendered content.
+Components using the `css(...)` mixin through `mix` have their styles collected during rendering and emitted as a single `<style>` tag in the `<head>`. No client-side style injection is needed for server-rendered content.
 
 ## See Also
 
