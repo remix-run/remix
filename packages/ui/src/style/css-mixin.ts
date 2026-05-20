@@ -1,4 +1,5 @@
 import { createMixin, renderMixinElement } from '../runtime/mixins/mixin.ts'
+import type { MixinFactory } from '../runtime/mixins/mixin.ts'
 import type { MixinDescriptor } from '../runtime/mixins/mixin.ts'
 import type { ElementProps } from '../runtime/jsx.ts'
 import { invariant } from '../runtime/invariant.ts'
@@ -20,7 +21,11 @@ const clientStyleCache: StyleCache = new Map()
 /**
  * Applies generated class names for CSS object styles.
  */
-export const css = createMixin<Element, [styles: CSSProps], ElementProps>((handle) => {
+export const css: MixinFactory<Element, [styles: CSSProps], ElementProps> = createMixin<
+  Element,
+  [styles: CSSProps],
+  ElementProps
+>((handle) => {
   let activeSelector = ''
   let activeGeneration = -1
   let currentStyles: CSSProps = {}

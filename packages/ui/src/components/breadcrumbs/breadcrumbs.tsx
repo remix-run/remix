@@ -72,7 +72,7 @@ const textCss = css({
   whiteSpace: 'nowrap',
 })
 
-export function Breadcrumbs(handle: Handle<BreadcrumbsProps>) {
+export function Breadcrumbs(handle: Handle<BreadcrumbsProps>): () => RemixNode {
   return () => {
     let { 'aria-label': ariaLabel, items, separator, mix, ...navProps } = handle.props
     let currentIndex = items.findIndex((item) => item.current)

@@ -1,5 +1,13 @@
 import { attrs, createElement, createMixin, css } from '@remix-run/ui'
-import type { CSSMixinDescriptor, ElementProps, Handle, Props, RemixNode } from '@remix-run/ui'
+import type {
+  CSSMixinDescriptor,
+  ElementProps,
+  Handle,
+  MixinDescriptor,
+  MixinFactory,
+  Props,
+  RemixNode,
+} from '@remix-run/ui'
 
 import { theme } from '../../theme/theme.ts'
 
@@ -74,22 +82,26 @@ const buttonIconCss: CSSMixinDescriptor = css({
   },
 })
 
-const buttonIconAttrsCss = attrs({ 'aria-hidden': true })
+const buttonIconAttrsCss: MixinDescriptor<Element, [Partial<ElementProps>], ElementProps> = attrs({
+  'aria-hidden': true,
+})
 
-const buttonDefaultsMixin = createMixin<Element, [], ElementProps>(
-  (handle, hostType) => (props) => {
-    if (hostType !== 'button' || props.type !== undefined) {
-      return handle.element
-    }
+const buttonDefaultsMixin: MixinFactory<Element, [], ElementProps> = createMixin<
+  Element,
+  [],
+  ElementProps
+>((handle, hostType) => (props) => {
+  if (hostType !== 'button' || props.type !== undefined) {
+    return handle.element
+  }
 
-    return createElement(handle.element as unknown as string, {
-      ...props,
-      type: 'button',
-    })
-  },
-)
+  return createElement(handle.element as unknown as string, {
+    ...props,
+    type: 'button',
+  })
+})
 
-const buttonDefaultsCss = buttonDefaultsMixin()
+const buttonDefaultsCss: MixinDescriptor<Element, [], ElementProps> = buttonDefaultsMixin()
 
 /**
  * Base button styling with the default `type="button"` behavior for `<button>`
@@ -121,7 +133,7 @@ export const labelStyle = buttonLabelCss
  *
  * @category mixin
  */
-export const primaryStyle = createButtonCss(theme.colors.action.primary)
+export const primaryStyle: CSSMixinDescriptor = createButtonCss(theme.colors.action.primary)
 
 /**
  * Secondary visual treatment for buttons. Combine with {@link baseStyle} when
@@ -129,7 +141,7 @@ export const primaryStyle = createButtonCss(theme.colors.action.primary)
  *
  * @category mixin
  */
-export const secondaryStyle = createButtonCss(theme.colors.action.secondary)
+export const secondaryStyle: CSSMixinDescriptor = createButtonCss(theme.colors.action.secondary)
 
 /**
  * Ghost visual treatment for buttons — transparent background with a hover
@@ -146,7 +158,7 @@ export const ghostStyle = ghostButtonToneCss
  *
  * @category mixin
  */
-export const dangerStyle = createButtonCss(theme.colors.action.danger)
+export const dangerStyle: CSSMixinDescriptor = createButtonCss(theme.colors.action.danger)
 
 const toneStyleByTone = {
   primary: primaryStyle,
@@ -203,7 +215,7 @@ export type ButtonProps = Omit<Props<'button'>, 'children'> & {
  * </Button>
  * ```
  */
-export function Button(handle: Handle<ButtonProps>) {
+export function Button(handle: Handle<ButtonProps>): () => RemixNode {
   return () => {
     let { children, endIcon, mix, startIcon, tone = 'secondary', ...buttonProps } = handle.props
 

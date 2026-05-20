@@ -1,4 +1,4 @@
-import { createMixin } from './mixin.ts'
+import { createMixin, type MixinFactory } from './mixin.ts'
 import type { ElementProps } from '../jsx.ts'
 
 /**
@@ -9,8 +9,8 @@ export type RefCallback<node extends EventTarget> = (node: node, signal: AbortSi
 /**
  * Calls a callback when an element is inserted and aborts it when removed.
  */
-export const ref = createMixin<Element, [callback: RefCallback<Element>], ElementProps>(
-  (handle) => {
+export const ref: MixinFactory<Element, [callback: RefCallback<Element>], ElementProps> =
+  createMixin<Element, [callback: RefCallback<Element>], ElementProps>((handle) => {
     let controller: AbortController | undefined
 
     handle.addEventListener('insert', (event) => {
@@ -28,5 +28,4 @@ export const ref = createMixin<Element, [callback: RefCallback<Element>], Elemen
       callback = nextCallback
       return handle.element
     }
-  },
-)
+  })

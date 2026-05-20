@@ -4,7 +4,38 @@ export interface ThemeVariableTree {
   [key: string]: string | ThemeVariableTree
 }
 
-const themeVariableNames = {
+type ThemeVariableGroup<key extends string> = Readonly<Record<key, string>>
+type ThemeActionVariableGroup = ThemeVariableGroup<
+  'background' | 'backgroundHover' | 'backgroundActive' | 'foreground' | 'border'
+>
+
+type ThemeVariableNames = {
+  readonly space: ThemeVariableGroup<'none' | 'px' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl'>
+  readonly radius: ThemeVariableGroup<'none' | 'sm' | 'md' | 'lg' | 'xl' | 'full'>
+  readonly fontFamily: ThemeVariableGroup<'sans' | 'mono'>
+  readonly fontSize: ThemeVariableGroup<'xxxs' | 'xxs' | 'xs' | 'sm' | 'md' | 'lg' | 'xl' | 'xxl'>
+  readonly lineHeight: ThemeVariableGroup<'tight' | 'normal' | 'relaxed'>
+  readonly letterSpacing: ThemeVariableGroup<'tight' | 'normal' | 'meta' | 'wide'>
+  readonly fontWeight: ThemeVariableGroup<'normal' | 'medium' | 'semibold' | 'bold'>
+  readonly control: {
+    readonly height: ThemeVariableGroup<'sm' | 'md' | 'lg'>
+  }
+  readonly surface: ThemeVariableGroup<'lvl0' | 'lvl1' | 'lvl2' | 'lvl3' | 'lvl4'>
+  readonly shadow: ThemeVariableGroup<'xs' | 'sm' | 'md' | 'lg' | 'xl'>
+  readonly colors: {
+    readonly text: ThemeVariableGroup<'primary' | 'secondary' | 'muted' | 'link'>
+    readonly border: ThemeVariableGroup<'subtle' | 'default' | 'strong'>
+    readonly focus: ThemeVariableGroup<'ring'>
+    readonly overlay: ThemeVariableGroup<'scrim'>
+    readonly action: {
+      readonly primary: ThemeActionVariableGroup
+      readonly secondary: ThemeActionVariableGroup
+      readonly danger: ThemeActionVariableGroup
+    }
+  }
+}
+
+const themeVariableNamesSource: ThemeVariableNames = {
   space: {
     none: '--rmx-space-none',
     px: '--rmx-space-px',
@@ -117,7 +148,9 @@ const themeVariableNames = {
       },
     },
   },
-} as const satisfies ThemeVariableTree
+} satisfies ThemeVariableTree
+
+export const themeVariableNames: ThemeVariableNames = themeVariableNamesSource
 
 type MapLeaves<source, leaf> = source extends string
   ? leaf
@@ -126,6 +159,7 @@ type MapLeaves<source, leaf> = source extends string
     }
 
 export type ThemeValue = string | number
+export type ThemeContract = MapLeaves<ThemeVariableNames, string>
 export type ThemeValues = MapLeaves<typeof themeVariableNames, ThemeValue>
 export type ThemeVars = Readonly<Record<string, string>>
 export type CreateThemeOptions = {
@@ -146,7 +180,7 @@ export type ThemeComponent = ThemeRenderer & {
   vars: ThemeVars
 }
 
-export const theme = createThemeContract(themeVariableNames)
+export const theme: ThemeContract = createThemeContract(themeVariableNames)
 
 export type ThemeUtility = ReturnType<typeof css>
 
@@ -157,8 +191,6 @@ type NestedThemeMix<value, depth extends number = 4> = depth extends 0
   : value | ReadonlyArray<NestedThemeMix<value, PreviousThemeMixDepth[depth]>>
 
 export type ThemeMix = NestedThemeMix<ThemeMixLeaf>
-
-export { themeVariableNames }
 
 function createThemeContract<tree extends ThemeVariableTree>(tree: tree): MapLeaves<tree, string> {
   return mapTreeLeaves(tree, (variableName) => `var(${variableName})`) as MapLeaves<tree, string>

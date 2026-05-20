@@ -1,9 +1,11 @@
 import { createGlyphSheet } from '../../../components/glyph/glyph.tsx'
 import { createTheme } from '../../runtime.ts'
+import type { GlyphSheetComponent } from '../../../components/glyph/glyph.tsx'
+import type { ThemeComponent } from '../../contract.ts'
 
 import { glyphValues } from './glyphs.tsx'
 
-export const RMX_01 = createTheme({
+export const RMX_01: ThemeComponent = createTheme({
   space: {
     none: '0px',
     px: '1px',
@@ -118,4 +120,4 @@ export const RMX_01 = createTheme({
   },
 })
 
-export const RMX_01_GLYPHS = createGlyphSheet(glyphValues)
+export const RMX_01_GLYPHS: GlyphSheetComponent = createGlyphSheet(glyphValues)

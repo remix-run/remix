@@ -32,7 +32,9 @@ export type GlyphContract = Readonly<Record<GlyphName, { id: string }>>
 
 const DEFAULT_GLYPH_ID_PREFIX = 'rmx-glyph'
 
-export const glyphContract = Object.freeze(createGlyphContract(DEFAULT_GLYPH_ID_PREFIX))
+export const glyphContract: GlyphContract = Object.freeze(
+  createGlyphContract(DEFAULT_GLYPH_ID_PREFIX),
+)
 
 function createGlyphIds(idPrefix: string): Record<GlyphName, string> {
   return Object.fromEntries(glyphNames.map((name) => [name, `${idPrefix}-${name}`])) as Record<

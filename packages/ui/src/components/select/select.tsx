@@ -10,6 +10,7 @@ import {
   type ElementProps,
   type Handle,
   type MixinHandle,
+  type MixinFactory,
   type Props,
   type RemixNode,
 } from '@remix-run/ui'
@@ -106,7 +107,7 @@ interface SelectContextValue {
   unregisterTrigger: (node: HTMLButtonElement) => void
 }
 
-function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>) {
+function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>): () => RemixNode {
   let triggerRef: HTMLButtonElement | undefined
   let listboxRef: listbox.ListboxRef | undefined
   let surfaceRef: HTMLElement | undefined
@@ -396,7 +397,11 @@ function getSelectContext(handle: Handle | MixinHandle) {
   return handle.context.get(SelectProvider)
 }
 
-const triggerMixin = createMixin<HTMLButtonElement, [], ElementProps>((handle) => {
+const triggerMixin: MixinFactory<HTMLButtonElement, [], ElementProps> = createMixin<
+  HTMLButtonElement,
+  [],
+  ElementProps
+>((handle) => {
   let context = getSelectContext(handle)
 
   return (props) => [
@@ -428,7 +433,11 @@ const triggerMixin = createMixin<HTMLButtonElement, [], ElementProps>((handle) =
   ]
 })
 
-const popoverMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
+const popoverMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
+  HTMLElement,
+  [],
+  ElementProps
+>((handle) => {
   let context = getSelectContext(handle)
   let popoverState = handle.context.get(popover.Context)
 
@@ -453,7 +462,11 @@ const popoverMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
   ]
 })
 
-const listMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
+const listMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
+  HTMLElement,
+  [],
+  ElementProps
+>((handle) => {
   let context = getSelectContext(handle)
 
   return () => [
@@ -466,7 +479,11 @@ const listMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
   ]
 })
 
-const hiddenInputMixin = createMixin<HTMLInputElement, [], ElementProps>((handle) => {
+const hiddenInputMixin: MixinFactory<HTMLInputElement, [], ElementProps> = createMixin<
+  HTMLInputElement,
+  [],
+  ElementProps
+>((handle) => {
   let context = getSelectContext(handle)
 
   return () =>
@@ -532,17 +549,17 @@ const select = {
 export function onSelectChange<target extends HTMLElement>(
   handler: SelectChangeHandler<target>,
   captureBoolean?: boolean,
-) {
+): ReturnType<typeof on<target, typeof SELECT_CHANGE_EVENT>> {
   return on(SELECT_CHANGE_EVENT, handler, captureBoolean)
 }
 
-function SelectLabel(handle: Handle) {
+function SelectLabel(handle: Handle): () => RemixNode {
   let context = getSelectContext(handle)
 
   return () => <span mix={button.labelStyle}>{context.displayedLabel}</span>
 }
 
-export function Select(handle: Handle<SelectProps>) {
+export function Select(handle: Handle<SelectProps>): () => RemixNode {
   return () => {
     let { children, defaultLabel, defaultValue, disabled, name, mix, ...buttonProps } = handle.props
 
@@ -568,7 +585,7 @@ export function Select(handle: Handle<SelectProps>) {
   }
 }
 
-export function Option(handle: Handle<SelectOptionProps>) {
+export function Option(handle: Handle<SelectOptionProps>): () => RemixNode {
   return () => {
     let { label, value, disabled, textValue, children, mix, ...divProps } = handle.props
 

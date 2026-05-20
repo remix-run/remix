@@ -4,7 +4,9 @@ import {
   css,
   on,
   type CSSMixinDescriptor,
+  type ElementProps,
   type Handle,
+  type MixinFactory,
   type RemixNode,
 } from '@remix-run/ui'
 import { theme } from '../../theme/theme.ts'
@@ -149,7 +151,7 @@ export const optionStyle = itemCss
 export const glyphStyle = itemGlyphCss
 export const labelStyle = itemLabelCss
 
-function ListboxProvider(handle: Handle<ListboxProviderProps, ListboxContext>) {
+function ListboxProvider(handle: Handle<ListboxProviderProps, ListboxContext>): () => RemixNode {
   let options: RegisteredOption[] = []
   let state: State = 'idle'
 
@@ -336,49 +338,51 @@ function ListboxProvider(handle: Handle<ListboxProviderProps, ListboxContext>) {
   }
 }
 
-const listMixin = createMixin<HTMLElement>((handle) => (props) => {
-  let context = handle.context.get(ListboxProvider)
-  return [
-    attrs({
-      tabIndex: props.tabIndex ?? -1,
-      role: props.role ?? 'listbox',
-    }),
-    on('focus', () => {
-      context.scrollActiveOptionIntoView()
-    }),
-    on('keydown', (event) => {
-      switch (event.key) {
-        case 'ArrowDown':
-          event.preventDefault()
-          context.navigate('next')
-          break
-        case 'ArrowUp':
-          event.preventDefault()
-          context.navigate('previous')
-          break
-        case 'Tab':
-          event.preventDefault()
-          context.navigate('first')
-          break
-        case 'Enter':
-        case ' ':
-          event.preventDefault()
-          void context.select(context.activeValue)
-          break
-        case 'Home':
-          event.preventDefault()
-          context.navigate('first')
-          break
-        case 'End':
-          event.preventDefault()
-          context.navigate('last')
-      }
-    }),
-    hiddenTypeahead((text) => {
-      context.highlightSearchMatch(text)
-    }),
-  ]
-})
+const listMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<HTMLElement>(
+  (handle) => (props) => {
+    let context = handle.context.get(ListboxProvider)
+    return [
+      attrs({
+        tabIndex: props.tabIndex ?? -1,
+        role: props.role ?? 'listbox',
+      }),
+      on('focus', () => {
+        context.scrollActiveOptionIntoView()
+      }),
+      on('keydown', (event) => {
+        switch (event.key) {
+          case 'ArrowDown':
+            event.preventDefault()
+            context.navigate('next')
+            break
+          case 'ArrowUp':
+            event.preventDefault()
+            context.navigate('previous')
+            break
+          case 'Tab':
+            event.preventDefault()
+            context.navigate('first')
+            break
+          case 'Enter':
+          case ' ':
+            event.preventDefault()
+            void context.select(context.activeValue)
+            break
+          case 'Home':
+            event.preventDefault()
+            context.navigate('first')
+            break
+          case 'End':
+            event.preventDefault()
+            context.navigate('last')
+        }
+      }),
+      hiddenTypeahead((text) => {
+        context.highlightSearchMatch(text)
+      }),
+    ]
+  },
+)
 
 export interface ListboxOption {
   id: string
@@ -388,50 +392,51 @@ export interface ListboxOption {
   textValue?: SearchValue
 }
 
-const optionMixin = createMixin<HTMLElement, [option: Omit<ListboxOption, 'id'>]>((handle) => {
-  let optionRef: HTMLElement | undefined
+const optionMixin: MixinFactory<HTMLElement, [option: Omit<ListboxOption, 'id'>], ElementProps> =
+  createMixin<HTMLElement, [option: Omit<ListboxOption, 'id'>]>((handle) => {
+    let optionRef: HTMLElement | undefined
 
-  handle.queueTask((node) => {
-    optionRef = node
-  })
-
-  return (option) => {
-    let context = handle.context.get(ListboxProvider)
-    context.registerOption({
-      ...option,
-      id: handle.id,
-      get hidden() {
-        return optionRef?.hidden === true
-      },
-      get node() {
-        return optionRef as HTMLElement
-      },
+    handle.queueTask((node) => {
+      optionRef = node
     })
 
-    return [
-      attrs({
-        role: 'option',
+    return (option) => {
+      let context = handle.context.get(ListboxProvider)
+      context.registerOption({
+        ...option,
         id: handle.id,
-        'aria-selected': context.value === option.value ? 'true' : 'false',
-        'aria-disabled': option.disabled ? 'true' : 'false',
-        'data-highlighted': context.activeValue === option.value ? 'true' : 'false',
-      }),
-      !option.disabled && [
-        on('click', () => {
-          context.select(option.value)
+        get hidden() {
+          return optionRef?.hidden === true
+        },
+        get node() {
+          return optionRef as HTMLElement
+        },
+      })
+
+      return [
+        attrs({
+          role: 'option',
+          id: handle.id,
+          'aria-selected': context.value === option.value ? 'true' : 'false',
+          'aria-disabled': option.disabled ? 'true' : 'false',
+          'data-highlighted': context.activeValue === option.value ? 'true' : 'false',
         }),
-        on('mousemove', () => {
-          if (context.activeValue === option.value) return
-          context.highlight(option.value)
-        }),
-        on('mouseleave', () => {
-          if (context.activeValue !== option.value) return
-          context.highlight(null)
-        }),
-      ],
-    ]
-  }
-})
+        !option.disabled && [
+          on('click', () => {
+            context.select(option.value)
+          }),
+          on('mousemove', () => {
+            if (context.activeValue === option.value) return
+            context.highlight(option.value)
+          }),
+          on('mouseleave', () => {
+            if (context.activeValue !== option.value) return
+            context.highlight(null)
+          }),
+        ],
+      ]
+    }
+  })
 
 export const Context = ListboxProvider
 export const list = listMixin

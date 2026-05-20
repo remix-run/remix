@@ -38,6 +38,17 @@ export interface SpringIterator extends IterableIterator<number> {
   toString(): string
 }
 
+export interface SpringFunction {
+  (preset: SpringPreset, overrides?: Omit<SpringOptions, 'bounce'>): SpringIterator
+  (options?: SpringOptions): SpringIterator
+  transition(
+    property: string | string[],
+    presetOrOptions?: SpringPreset | SpringOptions,
+    overrides?: Omit<SpringOptions, 'bounce'>,
+  ): string
+  presets: Record<SpringPreset, { duration: number; bounce: number }>
+}
+
 const presets: Record<SpringPreset, { duration: number; bounce: number }> = {
   smooth: { duration: 400, bounce: -0.3 },
   snappy: { duration: 200, bounce: 0 },
@@ -74,7 +85,7 @@ const frameMs = 1000 / 60 // ~16.67ms per frame
  * @param overrides Optional preset overrides.
  * @returns A spring iterator.
  */
-export function spring(
+function createSpring(
   preset: SpringPreset,
   overrides?: Omit<SpringOptions, 'bounce'>,
 ): SpringIterator
@@ -84,8 +95,8 @@ export function spring(
  * @param options Spring parameters.
  * @returns A spring iterator.
  */
-export function spring(options?: SpringOptions): SpringIterator
-export function spring(
+function createSpring(options?: SpringOptions): SpringIterator
+function createSpring(
   presetOrOptions?: SpringPreset | SpringOptions,
   overrides?: Omit<SpringOptions, 'bounce'>,
 ): SpringIterator {
@@ -119,23 +130,24 @@ export function spring(
   return iter as unknown as SpringIterator
 }
 
-// Transition helper for CSS transition property
-spring.transition = function transition(
+function transition(
   property: string | string[],
   presetOrOptions?: SpringPreset | SpringOptions,
   overrides?: Omit<SpringOptions, 'bounce'>,
 ): string {
   let s =
     typeof presetOrOptions === 'string'
-      ? spring(presetOrOptions, overrides)
-      : spring(presetOrOptions)
+      ? createSpring(presetOrOptions, overrides)
+      : createSpring(presetOrOptions)
 
   let properties = Array.isArray(property) ? property : [property]
   return properties.map((p) => `${p} ${s}`).join(', ')
 }
 
-// Access preset defaults
-spring.presets = presets
+export const spring: SpringFunction = Object.assign(createSpring, {
+  transition,
+  presets,
+})
 
 function resolveOptions(
   presetOrOptions?: SpringPreset | SpringOptions,

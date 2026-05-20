@@ -9,6 +9,7 @@ import {
   type Dispatched,
   type ElementProps,
   type Handle,
+  type MixinFactory,
   type Props,
   type RemixNode,
 } from '@remix-run/ui'
@@ -416,7 +417,7 @@ function focusNode(node: HTMLElement | undefined) {
   }
 }
 
-function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
+function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>): () => RemixNode {
   let parent = handle.context.get(MenuProvider)
 
   let activeId: string | null = null
@@ -957,8 +958,8 @@ function MenuProvider(handle: Handle<MenuProviderProps, MenuContextValue>) {
   }
 }
 
-const triggerMixin = createMixin<HTMLElement, [options?: MenuTriggerOptions], ElementProps>(
-  (handle) => {
+const triggerMixin: MixinFactory<HTMLElement, [options?: MenuTriggerOptions], ElementProps> =
+  createMixin<HTMLElement, [options?: MenuTriggerOptions], ElementProps>((handle) => {
     let context = handle.context.get(MenuProvider)
 
     return (options = {}) => [
@@ -1005,10 +1006,13 @@ const triggerMixin = createMixin<HTMLElement, [options?: MenuTriggerOptions], El
         }
       }),
     ]
-  },
-)
+  })
 
-const popoverMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
+const popoverMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
+  HTMLElement,
+  [],
+  ElementProps
+>((handle) => {
   let context = handle.context.get(MenuProvider)
 
   return () => [
@@ -1045,7 +1049,11 @@ const popoverMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
   ]
 })
 
-const listMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
+const listMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
+  HTMLElement,
+  [],
+  ElementProps
+>((handle) => {
   let context = handle.context.get(MenuProvider)
 
   return () => [
@@ -1146,7 +1154,11 @@ const listMixin = createMixin<HTMLElement, [], ElementProps>((handle) => {
   ]
 })
 
-const itemMixin = createMixin<HTMLElement, [options: MenuItemOptions], ElementProps>((handle) => {
+const itemMixin: MixinFactory<HTMLElement, [options: MenuItemOptions], ElementProps> = createMixin<
+  HTMLElement,
+  [options: MenuItemOptions],
+  ElementProps
+>((handle) => {
   let itemRef: HTMLElement | undefined
 
   handle.queueTask((node) => {
@@ -1226,11 +1238,11 @@ const itemMixin = createMixin<HTMLElement, [options: MenuItemOptions], ElementPr
   }
 })
 
-const submenuTriggerMixin = createMixin<
+const submenuTriggerMixin: MixinFactory<
   HTMLElement,
   [options: SubmenuTriggerOptions],
   ElementProps
->((handle) => {
+> = createMixin<HTMLElement, [options: SubmenuTriggerOptions], ElementProps>((handle) => {
   let itemRef: HTMLElement | undefined
   let openTimeoutId = 0
   let aborted = false
@@ -1400,7 +1412,7 @@ const menu = {
 export function onMenuSelect<target extends HTMLElement>(
   handler: MenuSelectHandler<target>,
   captureBoolean?: boolean,
-) {
+): ReturnType<typeof on<target, typeof MENU_SELECT_EVENT>> {
   return on(MENU_SELECT_EVENT, handler, captureBoolean)
 }
 
@@ -1425,7 +1437,7 @@ export interface SubmenuProps
   menuLabel?: string
 }
 
-export function Menu(handle: Handle<MenuProps>) {
+export function Menu(handle: Handle<MenuProps>): () => RemixNode {
   let buttonRef: HTMLButtonElement | undefined
 
   return () => {
@@ -1472,7 +1484,7 @@ export function Menu(handle: Handle<MenuProps>) {
   }
 }
 
-export function MenuList(handle: Handle<MenuListProps>) {
+export function MenuList(handle: Handle<MenuListProps>): () => RemixNode {
   return () => {
     let { children, mix, ...divProps } = handle.props
 
@@ -1486,7 +1498,7 @@ export function MenuList(handle: Handle<MenuListProps>) {
   }
 }
 
-export function MenuItem(handle: Handle<MenuItemProps>) {
+export function MenuItem(handle: Handle<MenuItemProps>): () => RemixNode {
   return () => {
     let { checked, children, disabled, label, mix, name, searchValue, type, value, ...divProps } =
       handle.props
@@ -1509,7 +1521,7 @@ export function MenuItem(handle: Handle<MenuItemProps>) {
   }
 }
 
-export function Submenu(handle: Handle<SubmenuProps>) {
+export function Submenu(handle: Handle<SubmenuProps>): () => RemixNode {
   return () => {
     let { children, disabled, label, listProps, menuLabel, mix, searchValue, value, ...divProps } =
       handle.props

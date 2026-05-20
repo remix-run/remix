@@ -55,7 +55,7 @@ export class IfNoneMatch implements HeaderValue, IfNoneMatchInit {
    *
    * @returns The header value as a string
    */
-  toString() {
+  toString(): string {
     return this.tags.join(', ')
   }
 
