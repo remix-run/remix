@@ -143,6 +143,14 @@ describe('createHref', () => {
         assert.equal(createHref('/posts/:id', { id: '..' }), '/posts/%252E%252E')
       })
 
+      it('does not generate scheme-relative URLs from dynamic path params', () => {
+        let href = createHref('/:next', { next: '/evil.example.com' })
+        let url = new URL(href, 'https://app.example.com')
+
+        assert.equal(href, '/%2Fevil.example.com')
+        assert.equal(url.origin, 'https://app.example.com')
+      })
+
       it('works with number params', () => {
         assert.equal(createHref('/posts/:id', { id: 123 }), '/posts/123')
       })
@@ -197,6 +205,14 @@ describe('createHref', () => {
         createHref('/assets/*path', { path: 'node_modules/@remix-run/ui/jsx-runtime.ts' }),
         '/assets/node_modules/@remix-run/ui/jsx-runtime.ts',
       )
+    })
+
+    it('does not generate scheme-relative URLs from leading wildcard separators', () => {
+      let href = createHref('/*path', { path: '/evil.example.com' })
+      let url = new URL(href, 'https://app.example.com')
+
+      assert.equal(href, '/%2Fevil.example.com')
+      assert.equal(url.origin, 'https://app.example.com')
     })
 
     it('supports wildcard with number param', () => {

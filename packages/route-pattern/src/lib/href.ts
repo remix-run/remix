@@ -150,10 +150,16 @@ function hrefParam(part: PartPattern, tokenType: ':' | '*', value: unknown): str
   }
 
   if (tokenType === '*') {
-    return stringValue.split('/').map(encodePathSegment).join('/')
+    return encodeWildcardPathParam(stringValue)
   }
 
   return encodePathSegment(stringValue)
+}
+
+function encodeWildcardPathParam(value: string): string {
+  let encoded = value.split('/').map(encodePathSegment).join('/')
+
+  return encoded.replace(/^\/+/, (slashes) => '%2F'.repeat(slashes.length))
 }
 
 function encodePathSegment(segment: string): string {
