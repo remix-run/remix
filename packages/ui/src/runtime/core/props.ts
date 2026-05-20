@@ -69,11 +69,11 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
     if (name === 'class' || name === 'className') continue
     if (name in next && next[name] != null) continue
 
-    if (canUseProperty(dom, name, isSvg)) {
+    let { ns, attr } = normalizeAttributeName(name, isSvg)
+    if (canUseProperty(dom, name, isSvg, attr)) {
       clearRuntimePropertyOnRemoval(dom, name)
     }
 
-    let { ns, attr } = normalizeAttributeName(name, isSvg)
     if (ns) dom.removeAttributeNS(ns, toLocalName(attr))
     else dom.removeAttribute(attr)
   }
@@ -115,7 +115,7 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
     return
   }
 
-  if (canUseProperty(dom, name, isSvg)) {
+  if (canUseProperty(dom, name, isSvg, attr)) {
     try {
       dom[name] = value == null ? '' : value
       return

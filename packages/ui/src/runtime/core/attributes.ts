@@ -3,9 +3,6 @@ import { normalizeSvgAttribute } from '../svg-attributes.ts'
 import type { ElementProps } from '../jsx.ts'
 
 const ATTRIBUTE_FALLBACK_NAMES = new Set([
-  'contentEditable',
-  'contenteditable',
-  'draggable',
   'width',
   'height',
   'href',
@@ -17,8 +14,6 @@ const ATTRIBUTE_FALLBACK_NAMES = new Set([
   'colSpan',
   'role',
   'popover',
-  'spellCheck',
-  'spellcheck',
   'translate',
 ])
 
@@ -30,7 +25,6 @@ const BOOLEANISH_STRING_ATTRIBUTES = new Set([
   'focusable',
   'preserveAlpha',
   'spellcheck',
-  'value',
 ])
 
 export const FRAMEWORK_PROPS = new Set(['children', 'mix', 'key', 'animate', 'innerHTML', 'on'])
@@ -60,9 +54,11 @@ export function canUseProperty(
   element: Element,
   name: string,
   isSvg: boolean,
+  attr: string,
 ): element is Element & Record<string, unknown> {
   if (isSvg) return false
   if (ATTRIBUTE_FALLBACK_NAMES.has(name)) return false
+  if (isBooleanishStringAttribute(attr)) return false
   return name in element
 }
 
@@ -87,6 +83,10 @@ export function normalizeAttributeName(
 
 export function isBooleanishStringAttribute(name: string): boolean {
   return BOOLEANISH_STRING_ATTRIBUTES.has(name)
+}
+
+export function shouldStringifyBooleanAttribute(name: string): boolean {
+  return isBooleanishStringAttribute(name) || name === 'value'
 }
 
 export function serializeStyleObject(style: Record<string, unknown>): string {

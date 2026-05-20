@@ -5,9 +5,9 @@ import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
   FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
   SELF_CLOSING_TAGS,
-  isBooleanishStringAttribute,
   normalizeAttributeName,
   serializeStyleObject,
+  shouldStringifyBooleanAttribute,
 } from '../runtime/core/attributes.ts'
 import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
@@ -531,12 +531,14 @@ function renderAttributes(props: any, isSvg: boolean, excludedProps?: Set<string
 
     let value = props[key]
     let attrName = transformAttributeName(key, isSvg)
-    let isBooleanishString = isBooleanishStringAttribute(attrName)
-    if (value === undefined || value === null || (value === false && !isBooleanishString)) {
+    let shouldStringifyBoolean = shouldStringifyBooleanAttribute(attrName)
+    if (value === undefined || value === null || (value === false && !shouldStringifyBoolean)) {
       continue
     }
 
-    if (value === true && !isBooleanishString) {
+    if (typeof value === 'boolean' && shouldStringifyBoolean) {
+      attrs += ` ${attrName}="${escapeHtml(String(value))}"`
+    } else if (value === true) {
       attrs += ` ${attrName}`
     } else {
       attrs += ` ${attrName}="${escapeHtml(String(value))}"`
