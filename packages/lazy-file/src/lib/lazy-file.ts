@@ -430,11 +430,21 @@ class BlobContent {
   }
 
   slice(start = 0, end?: number, contentType = ''): LazyBlob {
-    let range: ByteRange =
-      this.range != null
-        ? // file.slice().slice() is additive
-          { start: this.range.start + start, end: this.range.end + (end ?? 0) }
-        : { start, end: end ?? this.size }
+    let sourceStart = 0
+    let sourceEnd = this.totalSize
+
+    if (this.range != null) {
+      let sourceRange = getIndexes(this.range, this.totalSize)
+      sourceStart = sourceRange[0]
+      sourceEnd = sourceRange[1]
+    }
+
+    let sourceSize = sourceEnd - sourceStart
+    let [sliceStart, sliceEnd] = getIndexes({ start, end: end ?? sourceSize }, sourceSize)
+    let range: ByteRange = {
+      start: sourceStart + sliceStart,
+      end: sourceStart + sliceEnd,
+    }
 
     return new LazyBlob(this.source, { range, type: contentType })
   }
