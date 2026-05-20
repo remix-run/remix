@@ -12,8 +12,6 @@ import type {
   ListResult,
 } from '../file-storage.ts'
 
-type MetadataJson = Omit<FileMetadata, 'size'>
-
 /**
  * Creates a {@link FileStorage} that is backed by a filesystem directory using `node:fs`.
  *
@@ -66,10 +64,11 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
 
     await writeFile(filePath, file)
 
-    let meta: MetadataJson = {
+    let meta: FileMetadata = {
       key,
       lastModified: file.lastModified,
       name: file.name,
+      size: file.size,
       type: file.type,
     }
     await fsp.writeFile(metaPath, JSON.stringify(meta))
@@ -142,8 +141,7 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
             }
 
             if (includeMetadata) {
-              let size = (await fsp.stat(path.join(rootDir, subdir.name, `${hash}.dat`))).size
-              files.push({ ...meta, size })
+              files.push(meta)
             } else {
               files.push({ key: meta.key })
             }
@@ -186,7 +184,7 @@ export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
   }
 }
 
-async function readMetadata(metaPath: string): Promise<MetadataJson> {
+async function readMetadata(metaPath: string): Promise<FileMetadata> {
   return JSON.parse(await fsp.readFile(metaPath, 'utf-8'))
 }
 

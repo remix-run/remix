@@ -20,6 +20,21 @@ function normalizeFileType(type: string): string {
   return new File([''], '', { type }).type
 }
 
+function findMetadataPath(directory: string): string {
+  for (let subdir of fs.readdirSync(directory)) {
+    let subdirPath = path.join(directory, subdir)
+    if (!fs.statSync(subdirPath).isDirectory()) continue
+
+    for (let entry of fs.readdirSync(subdirPath)) {
+      if (entry.endsWith('.meta.json')) {
+        return path.join(subdirPath, entry)
+      }
+    }
+  }
+
+  assert.fail('Expected metadata file')
+}
+
 describe('fs file storage', () => {
   let tmpDir: string
   beforeEach(() => {
@@ -59,6 +74,19 @@ describe('fs file storage', () => {
 
     assert.ok(!(await storage.has('hello')))
     assert.equal(await storage.get('hello'), null)
+  })
+
+  it('stores file size in metadata', async () => {
+    let storage = createFsFileStorage(tmpDir)
+    let file = new File(['Hello, world!'], 'hello.txt', { type: 'text/plain' })
+
+    await storage.set('hello', file)
+
+    let metadata: unknown = JSON.parse(fs.readFileSync(findMetadataPath(tmpDir), 'utf-8'))
+
+    assert.ok(metadata != null && typeof metadata === 'object')
+    assert.ok('size' in metadata)
+    assert.equal(metadata.size, file.size)
   })
 
   it('removes empty hash directories after removing files', async () => {

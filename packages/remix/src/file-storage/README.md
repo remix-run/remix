@@ -7,7 +7,7 @@ Key/value storage interfaces for server-side file-like objects that implement th
 - **Simple API** - Intuitive key/value API (like [Web Storage](https://developer.mozilla.org/en-US/docs/Web/API/Web_Storage_API), but for file-like values instead of strings)
 - **Multiple Backends** - Built-in filesystem and memory backends
 - **Streaming Support** - Stream file content to and from storage
-- **Metadata Preservation** - Preserves all `File` metadata including `file.name`, `file.type`, and `file.lastModified`
+- **Metadata Preservation** - Preserves all `File` metadata including `file.name`, `file.type`, `file.size`, and `file.lastModified`
 
 ## Installation
 

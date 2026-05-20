@@ -1,1 +1,1 @@
-Expose the updated `remix/file-storage` types, including the new `FileLike` alias and filesystem storage `LazyFile` return types. Also refresh file-storage examples in the bundled README docs.
+Expose the updated `remix/file-storage` types, including the new `FileLike` alias and filesystem storage `LazyFile` return types. Also refresh file-storage examples and metadata descriptions in the bundled README docs.
