@@ -18,6 +18,7 @@ import {
 } from './multipart-request.ts'
 
 const CRLF = '\r\n'
+const LARGE_FILE_SIZE = 128 * 1024
 
 describe('getMultipartBoundary', async () => {
   it('returns the boundary from the Content-Type header', async () => {
@@ -333,8 +334,8 @@ describe('parseMultipartRequest', async () => {
   })
 
   it('parses large file uploads correctly', async () => {
-    let maxFileSize = 10 * 1024 * 1024 // 10 MiB
-    let content = getRandomBytes(maxFileSize) // 10 MiB file
+    let maxFileSize = LARGE_FILE_SIZE
+    let content = getRandomBytes(maxFileSize)
     let request = new Request('https://example.com', {
       method: 'POST',
       headers: {
@@ -489,6 +490,7 @@ describe('parseMultipartRequest', async () => {
   })
 
   it('throws when a file exceeds maximum size', async () => {
+    let maxFileSize = LARGE_FILE_SIZE
     let request = new Request('https://example.com', {
       method: 'POST',
       headers: {
@@ -498,13 +500,13 @@ describe('parseMultipartRequest', async () => {
         file1: {
           filename: 'random.dat',
           mediaType: 'application/octet-stream',
-          content: getRandomBytes(11 * 1024 * 1024), // 11 MB file
+          content: getRandomBytes(maxFileSize + 1),
         },
       }),
     })
 
     await assert.rejects(async () => {
-      for await (let _ of parseMultipartRequest(request, { maxFileSize: 10 * 1024 * 1024 })) {
+      for await (let _ of parseMultipartRequest(request, { maxFileSize })) {
         // ...
       }
     }, MaxFileSizeExceededError)

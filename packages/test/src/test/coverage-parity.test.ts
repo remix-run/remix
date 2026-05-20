@@ -73,13 +73,16 @@ describe('coverage parity', () => {
   it('all three runners produce identical coverage for the fixture', { skip: IS_BUN }, async () => {
     await fsp.rm(PARITY_DIR, { recursive: true, force: true })
 
-    let records = new Map<string, string>()
-    for (let spec of RUNS) {
-      let dir = path.join(PARITY_DIR, spec.type)
-      await runWithCoverage(spec, dir)
-      let lcov = await fsp.readFile(path.join(dir, 'lcov.info'), 'utf-8')
-      records.set(spec.type, extractFixtureRecord(lcov))
-    }
+    let records = new Map(
+      await Promise.all(
+        RUNS.map(async (spec) => {
+          let dir = path.join(PARITY_DIR, spec.type)
+          await runWithCoverage(spec, dir)
+          let lcov = await fsp.readFile(path.join(dir, 'lcov.info'), 'utf-8')
+          return [spec.type, extractFixtureRecord(lcov)] as const
+        }),
+      ),
+    )
 
     let server = records.get('server')!
     let browser = records.get('browser')!

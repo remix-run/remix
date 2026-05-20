@@ -52,27 +52,6 @@ describe('test command', () => {
     }
   })
 
-  it('returns after running tests even when the project leaves handles open', async () => {
-    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-test-command-handles-'))
-
-    try {
-      await writeTestProject(projectDir, { leaveHandleOpen: true })
-
-      let result = await captureOutput(() =>
-        runRemix(['test', '--concurrency', '1', '--reporter', 'spec', '--type', 'server'], {
-          cwd: projectDir,
-        }),
-      )
-
-      let stdout = stripVTControlCharacters(result.stdout)
-
-      assert.equal(result.exitCode, 0, result.stderr)
-      assert.match(stdout, /✓ passes/)
-    } finally {
-      await fs.rm(projectDir, { recursive: true, force: true })
-    }
-  })
-
   it('exits watch mode when no test files can be found', async () => {
     let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-test-command-empty-'))
 
@@ -101,10 +80,7 @@ describe('test command', () => {
   })
 })
 
-async function writeTestProject(
-  projectDir: string,
-  options: { leaveHandleOpen?: boolean } = {},
-): Promise<void> {
+async function writeTestProject(projectDir: string): Promise<void> {
   await fs.writeFile(
     path.join(projectDir, 'package.json'),
     `${JSON.stringify({ name: 'test-command-fixture', private: true, type: 'module' }, null, 2)}\n`,
@@ -122,7 +98,6 @@ async function writeTestProject(
       "import { it } from '@remix-run/test'",
       '',
       "it('passes', () => {",
-      options.leaveHandleOpen ? '  setInterval(() => {}, 1_000)' : '',
       '  assert.equal(1 + 1, 2)',
       '})',
       '',

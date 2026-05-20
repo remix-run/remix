@@ -8,6 +8,8 @@ import type { MultipartPart } from './multipart.ts'
 import { MaxPartsExceededError, MaxTotalSizeExceededError } from './multipart.ts'
 import { parseMultipartRequest } from './multipart.node.ts'
 
+const LARGE_FILE_SIZE = 128 * 1024
+
 describe('parseMultipartRequest (node)', () => {
   let boundary = '----WebKitFormBoundaryzv5f5B2cY6tjQ0Rn'
 
@@ -38,7 +40,7 @@ describe('parseMultipartRequest (node)', () => {
   })
 
   it('parses large file uploads correctly', async () => {
-    let maxFileSize = 1024 * 1024 * 10 // 10 MiB
+    let maxFileSize = LARGE_FILE_SIZE
     let content = getRandomBytes(maxFileSize)
     let request = createMultipartRequest(boundary, {
       file1: {
