@@ -226,6 +226,64 @@ describe('createRequestListener', () => {
     assert.equal(end.mock.calls.length, 0)
   })
 
+  it('drops a late response after close when the handler does not read the request signal', async (t) => {
+    let resolveResponse!: (response: Response) => void
+    let handlerResponse = new Promise<Response>((resolve) => {
+      resolveResponse = resolve
+    })
+    let handler: FetchHandler = (_request) => handlerResponse
+    let errorHandler = t.mock.fn()
+
+    let listener = createRequestListener(handler, { onError: errorHandler })
+    assert.ok(listener)
+
+    let req = createMockRequest()
+    let res = createMockResponse({ req })
+    let writeHead = t.mock.method(res, 'writeHead')
+    let write = t.mock.method(res, 'write')
+    let end = t.mock.method(res, 'end')
+
+    listener(req, res)
+    res.emit('close')
+    resolveResponse(new Response('late'))
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.equal(errorHandler.mock.calls.length, 0)
+    assert.equal(writeHead.mock.calls.length, 0)
+    assert.equal(write.mock.calls.length, 0)
+    assert.equal(end.mock.calls.length, 0)
+  })
+
+  it('drops a late zero-argument handler response after close', async (t) => {
+    let resolveResponse!: (response: Response) => void
+    let handlerResponse = new Promise<Response>((resolve) => {
+      resolveResponse = resolve
+    })
+    let handler: FetchHandler = () => handlerResponse
+    let errorHandler = t.mock.fn()
+
+    let listener = createRequestListener(handler, { onError: errorHandler })
+    assert.ok(listener)
+
+    let req = createMockRequest()
+    let res = createMockResponse({ req })
+    let writeHead = t.mock.method(res, 'writeHead')
+    let write = t.mock.method(res, 'write')
+    let end = t.mock.method(res, 'end')
+
+    listener(req, res)
+    res.emit('close')
+    resolveResponse(new Response('late'))
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.equal(errorHandler.mock.calls.length, 0)
+    assert.equal(writeHead.mock.calls.length, 0)
+    assert.equal(write.mock.calls.length, 0)
+    assert.equal(end.mock.calls.length, 0)
+  })
+
   it('does not forward request abort errors to onError while streaming the response body', async (t) => {
     let encoder = new TextEncoder()
     let errorHandler = t.mock.fn()

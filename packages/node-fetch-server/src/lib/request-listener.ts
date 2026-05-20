@@ -78,6 +78,7 @@ export function createRequestListener(
     let handlerWithoutArgs = handler as () => Response | Promise<Response>
 
     return async (_req, res) => {
+      let isResponseClosed = observeResponseClose(res)
       let response: Response
       try {
         response = await handlerWithoutArgs()
@@ -85,7 +86,7 @@ export function createRequestListener(
         response = await createErrorResponse(onError, error)
       }
 
-      await sendResponse(res, response)
+      await sendResponseIfOpen(res, response, isResponseClosed)
     }
   }
 
@@ -93,33 +94,35 @@ export function createRequestListener(
     let requestHandler = handler as (request: Request) => Response | Promise<Response>
 
     return (req, res) => {
+      let isResponseClosed = observeResponseClose(res)
       let request = createLazyRequest(req, res)
 
       let response: Response | Promise<Response>
       try {
         response = requestHandler(request)
       } catch (error) {
-        void sendErrorResponse(res, onError, error)
+        void sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
         return
       }
 
       if (isPromiseLike(response)) {
         void response.then(
           (response) => {
-            void sendResponseForRequest(res, response, request, onError)
+            void sendResponseForRequest(res, response, request, onError, isResponseClosed)
           },
           (error) => {
             if (isRequestAbortError(request, error)) return
-            void sendErrorResponse(res, onError, error)
+            void sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
           },
         )
       } else {
-        void sendResponseForRequest(res, response, request, onError)
+        void sendResponseForRequest(res, response, request, onError, isResponseClosed)
       }
     }
   }
 
   return async (req, res) => {
+    let isResponseClosed = observeResponseClose(res)
     let request = createLazyRequest(req, res)
     let client = {
       address: req.socket.remoteAddress!,
@@ -135,16 +138,38 @@ export function createRequestListener(
       response = await createErrorResponse(onError, error)
     }
 
-    await sendResponseForRequest(res, response, request, onError)
+    await sendResponseForRequest(res, response, request, onError, isResponseClosed)
   }
 }
 
-async function sendErrorResponse(
+function observeResponseClose(
   res: http.ServerResponse | http2.Http2ServerResponse,
+): () => boolean {
+  let responseClosed = false
+  res.once('close', () => {
+    responseClosed = true
+  })
+  return () => responseClosed || res.destroyed
+}
+
+async function sendResponseIfOpen(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  response: Response,
+  isResponseClosed: () => boolean,
+): Promise<void> {
+  if (isResponseClosed()) return
+  await sendResponse(res, response)
+}
+
+async function sendErrorResponseForRequest(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  request: Request,
   onError: ErrorHandler,
   error: unknown,
+  isResponseClosed: () => boolean,
 ): Promise<void> {
   let response = await createErrorResponse(onError, error)
+  if (isResponseClosed() || request.signal.aborted) return
   await sendResponse(res, response)
 }
 
@@ -153,13 +178,15 @@ async function sendResponseForRequest(
   response: Response,
   request: Request,
   onError: ErrorHandler,
+  isResponseClosed: () => boolean,
 ): Promise<void> {
-  if (request.signal.aborted) return
+  if (isResponseClosed() || request.signal.aborted) return
   try {
     await sendResponse(res, response)
   } catch (error) {
+    if (isResponseClosed()) return
     if (isRequestAbortError(request, error)) return
-    await sendErrorResponse(res, onError, error)
+    await sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
   }
 }
 
