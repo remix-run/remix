@@ -398,6 +398,24 @@ describe('stream', () => {
       )
     })
 
+    it('renders booleanish string attributes as explicit false values', async () => {
+      let stream = renderToStream(
+        <div contentEditable={false} draggable={false} spellCheck={false}>
+          {createElement('input', { value: false })}
+        </div>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<div contenteditable="false" draggable="false" spellcheck="false"><input value="false" /></div>',
+      )
+    })
+
+    it('renders translate with yes/no attribute values', async () => {
+      let stream = renderToStream(<div translate="no" />)
+      let html = await drain(stream)
+      expect(html).toBe('<div translate="no"></div>')
+    })
+
     it('renders input defaultValue as a value attribute', async () => {
       let stream = renderToStream(<input defaultValue={'Hello "Ryan" & friends'} />)
       let html = await drain(stream)
@@ -713,6 +731,21 @@ describe('stream', () => {
       expect(html).not.toContain('gradient-units=')
       expect(html).toContain('stdDeviation="2.5"')
       expect(html).not.toContain('std-deviation=')
+    })
+
+    it('renders SVG booleanish string attributes as explicit values', async () => {
+      let stream = renderToStream(
+        <svg>
+          <animate autoReverse={false} />
+          <rect externalResourcesRequired={false} focusable={false} />
+          <feColorMatrix preserveAlpha={false} />
+        </svg>,
+      )
+      let html = await drain(stream)
+      expect(html).toContain('autoReverse="false"')
+      expect(html).toContain('externalResourcesRequired="false"')
+      expect(html).toContain('focusable="false"')
+      expect(html).toContain('preserveAlpha="false"')
     })
   })
 

@@ -5,6 +5,7 @@ const CANONICAL_CAMEL_SVG_ATTRS = new Set([
   'accentHeight',
   'attributeName',
   'attributeType',
+  'autoReverse',
   'baseFrequency',
   'baseProfile',
   'calcMode',

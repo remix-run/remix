@@ -67,6 +67,24 @@ describe('jsx', () => {
       // @ts-expect-error textarea content should come from value/defaultValue
       let alsoBad = <textarea innerHTML="Hello" />
     })
+
+    it('accepts booleanish string attributes', () => {
+      let contentEditable = <div contentEditable="false" />
+      let draggable = <img alt="" draggable="false" />
+      let spellCheck = <div spellCheck="false" />
+      let spellcheck = <div spellcheck="false" />
+      let svg = (
+        <svg>
+          <animate autoReverse="false" />
+          <rect externalResourcesRequired="false" focusable="false" />
+          <feColorMatrix preserveAlpha="false" />
+        </svg>
+      )
+      let translate = <div translate="no" />
+
+      // @ts-expect-error translate uses yes/no attribute values, not true/false strings
+      let badTranslate = <div translate="false" />
+    })
   })
 
   describe('library managed attributes', () => {

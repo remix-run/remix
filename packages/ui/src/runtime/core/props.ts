@@ -2,6 +2,7 @@ import type { ElementProps } from '../jsx.ts'
 import {
   canUseProperty,
   getMergedClassName,
+  isBooleanishStringAttribute,
   normalizeAttributeName,
   serializeStyleObject,
   toKebabCase,
@@ -68,11 +69,11 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
     if (name === 'class' || name === 'className') continue
     if (name in next && next[name] != null) continue
 
-    if (canUseProperty(dom, name, isSvg)) {
+    let { ns, attr } = normalizeAttributeName(name, isSvg)
+    if (canUseProperty(dom, name, isSvg, attr)) {
       clearRuntimePropertyOnRemoval(dom, name)
     }
 
-    let { ns, attr } = normalizeAttributeName(name, isSvg)
     if (ns) dom.removeAttributeNS(ns, toLocalName(attr))
     else dom.removeAttribute(attr)
   }
@@ -114,7 +115,7 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
     return
   }
 
-  if (canUseProperty(dom, name, isSvg)) {
+  if (canUseProperty(dom, name, isSvg, attr)) {
     try {
       dom[name] = value == null ? '' : value
       return
@@ -124,7 +125,8 @@ function patchHostProp(dom: Element, name: string, value: unknown, isSvg: boolea
   if (typeof value === 'function') return
 
   let isAriaOrData = name.startsWith('aria-') || name.startsWith('data-')
-  if (value != null && (value !== false || isAriaOrData)) {
+  let isBooleanishString = isBooleanishStringAttribute(attr)
+  if (value != null && (value !== false || isAriaOrData || isBooleanishString)) {
     let attrValue = name === 'popover' && value === true ? '' : String(value)
     if (ns) dom.setAttributeNS(ns, attr, attrValue)
     else dom.setAttribute(attr, attrValue)

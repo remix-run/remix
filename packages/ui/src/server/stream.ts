@@ -7,6 +7,7 @@ import {
   SELF_CLOSING_TAGS,
   normalizeAttributeName,
   serializeStyleObject,
+  shouldStringifyBooleanAttribute,
 } from '../runtime/core/attributes.ts'
 import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
@@ -582,11 +583,15 @@ function renderAttributes(props: any, isSvg: boolean, excludedProps?: Set<string
     if (excludedProps?.has(key)) continue
 
     let value = props[key]
-    if (value === undefined || value === null || value === false) continue
-
     let attrName = transformAttributeName(key, isSvg)
+    let shouldStringifyBoolean = shouldStringifyBooleanAttribute(attrName)
+    if (value === undefined || value === null || (value === false && !shouldStringifyBoolean)) {
+      continue
+    }
 
-    if (value === true) {
+    if (typeof value === 'boolean' && shouldStringifyBoolean) {
+      attrs += ` ${attrName}="${escapeHtml(String(value))}"`
+    } else if (value === true) {
       attrs += ` ${attrName}`
     } else {
       attrs += ` ${attrName}="${escapeHtml(String(value))}"`
