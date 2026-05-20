@@ -22,6 +22,7 @@ jobs:
   wait_for_green_checks:
     name: Wait for required PR checks
     if: |
+      vars.ENABLE_CODEX_PR_REVIEW == 'true' &&
       github.repository == 'remix-run/remix' &&
       github.event.pull_request.head.repo.full_name != github.repository
     runs-on: ubuntu-latest
