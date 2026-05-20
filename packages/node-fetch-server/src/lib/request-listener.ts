@@ -142,9 +142,7 @@ export function createRequestListener(
   }
 }
 
-function observeResponseClose(
-  res: http.ServerResponse | http2.Http2ServerResponse,
-): () => boolean {
+function observeResponseClose(res: http.ServerResponse | http2.Http2ServerResponse): () => boolean {
   let responseClosed = false
   res.once('close', () => {
     responseClosed = true
