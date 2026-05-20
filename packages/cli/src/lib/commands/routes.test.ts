@@ -48,14 +48,8 @@ describe('routes command', () => {
     assert.equal(result.exitCode, 0, result.stderr)
     assert.match(result.stdout, /home\s+ANY\s+\/\s+-> controller\.tsx/)
     assert.match(result.stdout, /auth\s+ANY\s+\/auth\s+-> controller\.tsx/)
-    assert.equal(result.stderr, '')
-  })
-
-  it('does not print color when output is not a tty', async () => {
-    let result = await runRoutes([], getFixturePath('routes-basic'))
-
-    assert.equal(result.exitCode, 0, result.stderr)
     assert.equal(result.stdout.includes(ANSI_CSI), false)
+    assert.equal(result.stderr, '')
   })
 
   it('works from a nested directory inside an app', async () => {
@@ -114,13 +108,6 @@ describe('routes command', () => {
       /auth\.login\.action\s+POST\s+\/login\s+auth\/login\/controller\.tsx/,
     )
     assert.equal(result.stderr, '')
-  })
-
-  it('accepts the global no-color flag', async () => {
-    let result = await runRoutes(['--no-color'], getFixturePath('routes-missing'))
-
-    assert.equal(result.exitCode, 0, result.stderr)
-    assert.equal(result.stdout.includes(ANSI_CSI), false)
   })
 
   it('resolves owner files with js, jsx, and ts extensions', async () => {
@@ -213,9 +200,10 @@ describe('routes command', () => {
   })
 
   it('annotates missing owners without failing the command', async () => {
-    let result = await runRoutes([], getFixturePath('routes-missing'))
+    let result = await runRoutes(['--no-color'], getFixturePath('routes-missing'))
 
     assert.equal(result.exitCode, 0, result.stderr)
+    assert.equal(result.stdout.includes(ANSI_CSI), false)
     assert.match(result.stdout, /home\s+ANY\s+\/\s+-> controller\.tsx \[missing\]/)
     assert.match(result.stdout, /auth -> auth \[missing\]/)
     assert.match(result.stdout, /login -> auth\/login\/controller\.tsx \[missing\]/)
