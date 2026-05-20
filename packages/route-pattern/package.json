@@ -22,37 +22,27 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/route-pattern.ts",
-    "./href": "./src/href.ts",
-    "./join": "./src/join.ts",
-    "./match": "./src/match.ts",
-    "./specificity": "./src/specificity.ts",
+    ".": {
+      "types": "./dist/route-pattern.d.ts",
+      "default": "./dist/route-pattern.js"
+    },
+    "./href": {
+      "types": "./dist/href.d.ts",
+      "default": "./dist/href.js"
+    },
+    "./join": {
+      "types": "./dist/join.d.ts",
+      "default": "./dist/join.js"
+    },
+    "./match": {
+      "types": "./dist/match.d.ts",
+      "default": "./dist/match.js"
+    },
+    "./specificity": {
+      "types": "./dist/specificity.d.ts",
+      "default": "./dist/specificity.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/route-pattern.d.ts",
-        "default": "./dist/route-pattern.js"
-      },
-      "./href": {
-        "types": "./dist/href.d.ts",
-        "default": "./dist/href.js"
-      },
-      "./join": {
-        "types": "./dist/join.d.ts",
-        "default": "./dist/join.js"
-      },
-      "./match": {
-        "types": "./dist/match.d.ts",
-        "default": "./dist/match.js"
-      },
-      "./specificity": {
-        "types": "./dist/specificity.d.ts",
-        "default": "./dist/specificity.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
