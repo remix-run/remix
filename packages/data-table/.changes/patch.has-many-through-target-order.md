@@ -1,0 +1,1 @@
+Preserve target relation ordering before applying per-parent pagination for `hasManyThrough` eager loads, so `orderBy(...).limit(...)` returns the correct related rows across multiple through records.

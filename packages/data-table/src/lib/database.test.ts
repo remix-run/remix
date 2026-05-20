@@ -351,6 +351,48 @@ describe('queries', () => {
     assert.equal(secondTaskPerAccount[1].tasks[0].id, 2001)
   })
 
+  it('orders hasManyThrough target rows before per-parent pagination', async () => {
+    let adapter = createAdapter({
+      accounts: [
+        { id: 1, email: 'amy@studio.test', status: 'active' },
+        { id: 2, email: 'brad@studio.test', status: 'active' },
+      ],
+      projects: [
+        { id: 100, account_id: 1, name: 'A-1', archived: false },
+        { id: 101, account_id: 1, name: 'A-2', archived: false },
+        { id: 200, account_id: 2, name: 'B-1', archived: false },
+        { id: 201, account_id: 2, name: 'B-2', archived: false },
+      ],
+      tasks: [
+        { id: 1000, project_id: 100, title: 'Zulu', state: 'open' },
+        { id: 1001, project_id: 101, title: 'Alpha', state: 'open' },
+        { id: 2000, project_id: 200, title: 'Delta', state: 'open' },
+        { id: 2001, project_id: 201, title: 'Beta', state: 'open' },
+      ],
+      memberships: [],
+    })
+
+    let db = createTestDatabase(adapter)
+    let tasksThroughProjects = hasManyThrough(accounts, tasks, {
+      through: accountProjects.orderBy('id', 'asc'),
+    })
+
+    let accountRows = await db
+      .query(accounts)
+      .orderBy('id', 'asc')
+      .with({
+        tasks: tasksThroughProjects.orderBy('title', 'asc').limit(1),
+      })
+      .all()
+
+    assert.equal(accountRows[0].tasks.length, 1)
+    assert.equal(accountRows[0].tasks[0].id, 1001)
+    assert.equal(accountRows[0].tasks[0].title, 'Alpha')
+    assert.equal(accountRows[1].tasks.length, 1)
+    assert.equal(accountRows[1].tasks[0].id, 2001)
+    assert.equal(accountRows[1].tasks[0].title, 'Beta')
+  })
+
   it('applies hasManyThrough through-relation pagination per parent row', async () => {
     let adapter = createAdapter({
       accounts: [
