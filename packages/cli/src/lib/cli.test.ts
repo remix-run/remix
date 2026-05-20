@@ -472,6 +472,8 @@ describe('run', () => {
       await assertPathExists(path.join(appDir, 'app', 'actions', 'controller.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'middleware', 'render.tsx'))
       await assertPathExists(path.join(appDir, 'public', 'favicon.svg'))
+      await assertPathExists(path.join(appDir, '.gitignore'))
+      await assertPathMissing(path.join(appDir, 'gitignore'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'assets.ts'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'render.tsx'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'home.tsx'))
