@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { stripVTControlCharacters } from 'node:util'
 import { fileURLToPath } from 'node:url'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
@@ -39,10 +40,12 @@ describe('test command', () => {
         }),
       )
 
+      let stdout = stripVTControlCharacters(result.stdout)
+
       assert.equal(result.exitCode, 0, result.stderr)
-      assert.match(result.stdout, /Found 1 test file\(s\) \(1 server, 0 browser, 0 e2e\)/)
-      assert.match(result.stdout, /✓ passes/)
-      assert.match(result.stdout, /ℹ pass 1/)
+      assert.match(stdout, /Found 1 test file\(s\) \(1 server, 0 browser, 0 e2e\)/)
+      assert.match(stdout, /✓ passes/)
+      assert.match(stdout, /ℹ pass 1/)
       assert.equal(result.stderr, '')
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
@@ -61,8 +64,10 @@ describe('test command', () => {
         }),
       )
 
+      let stdout = stripVTControlCharacters(result.stdout)
+
       assert.equal(result.exitCode, 0, result.stderr)
-      assert.match(result.stdout, /✓ passes/)
+      assert.match(stdout, /✓ passes/)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
