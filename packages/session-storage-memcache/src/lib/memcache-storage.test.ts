@@ -195,6 +195,12 @@ async function startFakeMemcacheServer(): Promise<FakeMemcacheServer> {
     let store = new Map<string, Buffer>()
 
     let server = net.createServer((socket) => {
+      socket.on('error', () => {
+        // The client closes each request socket with socket.destroy() after it
+        // reads a response. On Windows, that close can show up here as a reset
+        // on the fake server socket after the test already asserted the response.
+      })
+
       let buffer = Buffer.alloc(0)
       let pendingSet: { key: string; bytes: number } | undefined
 
