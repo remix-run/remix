@@ -1226,9 +1226,7 @@ describe('run', () => {
 
     async function renderCartItems(): Promise<string> {
       return await drain(
-        renderToStream(
-          showCartItems ? <CartItems /> : <p id="empty-cart">Your cart is empty.</p>,
-        ),
+        renderToStream(showCartItems ? <CartItems /> : <p id="empty-cart">Your cart is empty.</p>),
       )
     }
 
