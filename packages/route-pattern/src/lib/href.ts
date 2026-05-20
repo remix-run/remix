@@ -157,16 +157,46 @@ function hrefParamValue(
     return encodeWildcardPathParam(stringValue)
   }
 
-  return encodeURIComponent(stringValue)
+  return encodePathSegment(stringValue)
 }
 
 function encodeWildcardPathParam(value: string): string {
   let encoded = value
     .split('/')
-    .map((segment) => encodeURIComponent(segment))
+    .map((segment) => encodePathSegment(segment))
     .join('/')
 
   return encoded.replace(/^\/+/, (slashes) => '%2F'.repeat(slashes.length))
+}
+
+function encodePathSegment(value: string): string {
+  return encodeURIComponent(value).replace(
+    /%(24|26|2B|2C|3A|3B|3D|40)/g,
+    decodePathSegmentSafeCharacter,
+  )
+}
+
+function decodePathSegmentSafeCharacter(encodedChar: string): string {
+  switch (encodedChar) {
+    case '%24':
+      return '$'
+    case '%26':
+      return '&'
+    case '%2B':
+      return '+'
+    case '%2C':
+      return ','
+    case '%3A':
+      return ':'
+    case '%3B':
+      return ';'
+    case '%3D':
+      return '='
+    case '%40':
+      return '@'
+    default:
+      return encodedChar
+  }
 }
 
 function hrefSearch(pattern: RoutePattern, searchParams: SearchParams): string | undefined {

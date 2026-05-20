@@ -139,6 +139,13 @@ describe('createHref', () => {
         )
       })
 
+      it('preserves path-safe characters in dynamic path params', () => {
+        assert.equal(
+          createHref('/packages/:name', { name: '@remix-run/ui' }),
+          '/packages/@remix-run%2Fui',
+        )
+      })
+
       it('does not generate scheme-relative URLs from dynamic path params', () => {
         let href = createHref('/:next', { next: '/evil.example.com' })
         let url = new URL(href, 'https://app.example.com')
@@ -189,6 +196,13 @@ describe('createHref', () => {
       assert.equal(
         createHref('/files/*path', { path: 'docs/read me.md?raw#top' }),
         '/files/docs/read%20me.md%3Fraw%23top',
+      )
+    })
+
+    it('preserves path-safe characters in named wildcard path params', () => {
+      assert.equal(
+        createHref('/assets/*path', { path: '@remix-run/ui/jsx-runtime.js' }),
+        '/assets/@remix-run/ui/jsx-runtime.js',
       )
     })
 
