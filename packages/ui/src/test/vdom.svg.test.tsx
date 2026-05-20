@@ -207,6 +207,32 @@ describe('vnode rendering', () => {
       expect(clipPath.clipPathUnits.baseVal).toBe(2)
     })
 
+    it('sets SVG booleanish string attributes as explicit values', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(
+        <svg>
+          <animate id="a" autoReverse={false} />
+          <rect id="r" externalResourcesRequired={false} focusable={false} />
+          <feColorMatrix id="m" preserveAlpha={false} />
+        </svg>,
+      )
+
+      let animate = container.querySelector('#a')
+      invariant(animate instanceof SVGElement)
+      expect(animate.getAttribute('autoReverse')).toBe('false')
+
+      let rect = container.querySelector('#r')
+      invariant(rect instanceof SVGElement)
+      expect(rect.getAttribute('externalResourcesRequired')).toBe('false')
+      expect(rect.getAttribute('focusable')).toBe('false')
+
+      let matrix = container.querySelector('#m')
+      invariant(matrix instanceof SVGElement)
+      expect(matrix.getAttribute('preserveAlpha')).toBe('false')
+    })
+
     it('attaches events on SVG elements', () => {
       let container = document.createElement('div')
       let root = createRoot(container)

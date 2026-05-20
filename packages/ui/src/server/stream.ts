@@ -5,6 +5,7 @@ import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
   FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
   SELF_CLOSING_TAGS,
+  isBooleanishStringAttribute,
   normalizeAttributeName,
   serializeStyleObject,
 } from '../runtime/core/attributes.ts'
@@ -529,11 +530,13 @@ function renderAttributes(props: any, isSvg: boolean, excludedProps?: Set<string
     if (excludedProps?.has(key)) continue
 
     let value = props[key]
-    if (value === undefined || value === null || value === false) continue
-
     let attrName = transformAttributeName(key, isSvg)
+    let isBooleanishString = isBooleanishStringAttribute(attrName)
+    if (value === undefined || value === null || (value === false && !isBooleanishString)) {
+      continue
+    }
 
-    if (value === true) {
+    if (value === true && !isBooleanishString) {
       attrs += ` ${attrName}`
     } else {
       attrs += ` ${attrName}="${escapeHtml(String(value))}"`

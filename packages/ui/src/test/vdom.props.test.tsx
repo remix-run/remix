@@ -35,6 +35,45 @@ describe('vnode rendering', () => {
     it.todo('does not render acceptCharset')
   })
 
+  describe('enumerated attributes', () => {
+    it('sets booleanish string attributes as explicit false values', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<img alt="" contentEditable={false} draggable={false} spellCheck={false} />)
+
+      let img = container.querySelector('img')
+      invariant(img instanceof HTMLImageElement)
+      expect(img.getAttribute('contenteditable')).toBe('false')
+      expect(img.getAttribute('draggable')).toBe('false')
+      expect(img.getAttribute('spellcheck')).toBe('false')
+    })
+
+    it('sets translate with yes/no attribute values', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<div translate="no" />)
+
+      let div = container.querySelector('div')
+      invariant(div instanceof HTMLDivElement)
+      expect(div.getAttribute('translate')).toBe('no')
+    })
+
+    it('preserves string false values for booleanish string attributes', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      root.render(<img alt="" contentEditable="false" draggable="false" spellcheck="false" />)
+
+      let img = container.querySelector('img')
+      invariant(img instanceof HTMLImageElement)
+      expect(img.getAttribute('contenteditable')).toBe('false')
+      expect(img.getAttribute('draggable')).toBe('false')
+      expect(img.getAttribute('spellcheck')).toBe('false')
+    })
+  })
+
   describe('innerHTML prop', () => {
     it('sets innerHTML on element', () => {
       let container = document.createElement('div')
