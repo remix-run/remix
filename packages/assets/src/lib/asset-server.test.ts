@@ -2547,9 +2547,7 @@ describe('asset-server', () => {
 
       let assetServer = createNodeModulesTestServer(caseDir)
       try {
-        let servedUrls = await assertRecursivelyServedImports(assetServer, [
-          '/assets/app/entry.ts',
-        ])
+        let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
 
         assert.ok(servedUrls.has('/assets/node_modules/remix/src/ui.ts'))
         assert.ok(servedUrls.has('/assets/node_modules/remix/src/shared.ts'))
