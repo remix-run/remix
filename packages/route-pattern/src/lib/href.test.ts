@@ -132,6 +132,21 @@ describe('createHref', () => {
         assert.equal(createHref('/posts/:id', { id: 123 }), '/posts/123')
       })
 
+      it('percent-encodes dynamic path params', () => {
+        assert.equal(
+          createHref('/posts/:id', { id: 'a/b?x#top\\end' }),
+          '/posts/a%2Fb%3Fx%23top%5Cend',
+        )
+      })
+
+      it('does not generate scheme-relative URLs from dynamic path params', () => {
+        let href = createHref('/:next', { next: '/evil.example.com' })
+        let url = new URL(href, 'https://app.example.com')
+
+        assert.equal(href, '/%2Fevil.example.com')
+        assert.equal(url.origin, 'https://app.example.com')
+      })
+
       it('ignores extra params', () => {
         assert.equal(createHref('/posts/:id', { id: '123', page: '2', sort: 'desc' }), '/posts/123')
       })
@@ -168,6 +183,21 @@ describe('createHref', () => {
         createHref('images/*path.png', { path: 'images/hero' }),
         '/images/images/hero.png',
       )
+    })
+
+    it('percent-encodes named wildcard path params while preserving separators', () => {
+      assert.equal(
+        createHref('/files/*path', { path: 'docs/read me.md?raw#top' }),
+        '/files/docs/read%20me.md%3Fraw%23top',
+      )
+    })
+
+    it('does not generate scheme-relative URLs from leading wildcard separators', () => {
+      let href = createHref('/*path', { path: '/evil.example.com' })
+      let url = new URL(href, 'https://app.example.com')
+
+      assert.equal(href, '/%2Fevil.example.com')
+      assert.equal(url.origin, 'https://app.example.com')
     })
 
     it('supports wildcard with number param', () => {
