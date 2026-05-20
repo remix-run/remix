@@ -10,14 +10,18 @@ export async function loadModule(specifier: string, parent: string | URL): Promi
   let parentURL = toParentURL(parent)
   let resolvedSpecifier = path.isAbsolute(specifier) ? pathToFileURL(specifier).href : specifier
 
-  process.setSourceMapsEnabled(true)
-  register(
-    new URL(`./register-hooks.ts?namespace=${encodeURIComponent(namespace)}`, import.meta.url),
-    {
-      data: { namespace },
-      parentURL: import.meta.url,
-    },
+  let loadModuleURL = new URL(import.meta.url)
+  let registerHooksURL = new URL(
+    loadModuleURL.pathname.endsWith('.ts') ? './register-hooks.ts' : './register-hooks.js',
+    loadModuleURL,
   )
+  registerHooksURL.searchParams.set('namespace', namespace)
+
+  process.setSourceMapsEnabled(true)
+  register(registerHooksURL, {
+    data: { namespace },
+    parentURL: import.meta.url,
+  })
 
   return import(createLoadModuleSpecifier(resolvedSpecifier, parentURL, namespace))
 }
