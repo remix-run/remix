@@ -2595,31 +2595,7 @@ describe('asset-server', () => {
     }
   })
 
-  it('resolves bare package dependencies from pnpm package realpaths', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await writePnpmSymlinkedPackageFixture(caseDir)
-
-      let assetServer = createNodeModulesTestServer(caseDir)
-      try {
-        let response = await get(assetServer, '/assets/node_modules/remix/dist/ui.js')
-        assert.ok(response)
-        assert.equal(response.status, 200)
-        let body = await response.text()
-
-        assert.match(
-          body,
-          /\/assets\/node_modules\/\.pnpm\/remix@1\.0\.0\/node_modules\/@remix-run\/ui\/dist\/index\.js/,
-        )
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('serves app imports through pnpm symlinked package dependencies', async () => {
+  it('serves pnpm symlinked package dependencies from package realpaths', async () => {
     let caseDir = await makeTmpDir()
     try {
       await writePnpmSymlinkedPackageFixture(caseDir)
