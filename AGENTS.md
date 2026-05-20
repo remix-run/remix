@@ -42,6 +42,10 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 - **README/install conventions**: use `npm i remix` in install snippets and import from `remix`, not `@remix-run/*`
 - **README link conventions**: use full GitHub URLs for cross-file or cross-package repo links so copied docs render correctly; keep same-document anchors and README self-links relative
 
+## GitHub
+
+- **GitHub work**: when commenting on issues or pull requests, inspecting GitHub state, or otherwise working with GitHub, always use the `gh` command line tool when possible instead of an agent-specific connector
+
 ## Release Notes
 
 - If a change affects published packages, add or update the appropriate change file.
