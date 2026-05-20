@@ -1,0 +1,42 @@
+import * as path from "node:path";
+import { createAssetServer } from "remix/assets";
+import type { Controller } from "remix/fetch-router";
+
+import type { routes } from "../routes.ts";
+
+export const assetServer = createAssetServer({
+  basePath: "/assets",
+  rootDir: path.resolve(import.meta.dirname, "../../../.."),
+  fileMap: {
+    "/app/*path": "demos/timebox-ai/app/*path",
+    "/packages/*path": "packages/*path",
+  },
+  allow: [
+    "demos/timebox-ai/app/assets/**",
+    "demos/timebox-ai/app/routes.ts",
+    "demos/timebox-ai/app/ui/**",
+    "packages/*/src/**",
+  ],
+  deny: ["demos/timebox-ai/app/**/*.server.*"],
+  sourceMaps: process.env.NODE_ENV === "development" ? "external" : undefined,
+  scripts: {
+    define: {
+      "process.env.NODE_ENV": JSON.stringify(
+        process.env.NODE_ENV ?? "development",
+      ),
+    },
+  },
+});
+
+export const assets = {
+  actions: {
+    index: {
+      async handler({ request }) {
+        return (
+          (await assetServer.fetch(request)) ??
+          new Response("Not Found", { status: 404 })
+        );
+      },
+    },
+  },
+} satisfies Controller<typeof routes.assets>;

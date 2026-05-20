@@ -1,0 +1,22 @@
+{
+  "name": "timebox-ai-demo",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "dependencies": {
+    "remix": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "tsx": "catalog:"
+  },
+  "scripts": {
+    "dev": "NODE_ENV=development node --env-file-if-exists=.env --import tsx --watch server.ts",
+    "start": "node --env-file-if-exists=.env --import tsx server.ts",
+    "test": "NODE_ENV=test remix test",
+    "typecheck": "tsc --noEmit"
+  }
+}

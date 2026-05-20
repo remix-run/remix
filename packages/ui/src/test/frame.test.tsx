@@ -1,6 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
-import type { Handle } from '../runtime/component.ts'
+import type { Handle, RemixNode } from '../runtime/component.ts'
 import { Frame } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import { getTopFrame, run } from '../runtime/run.ts'
@@ -197,6 +197,106 @@ describe('run', () => {
     expect(buttons[1]?.textContent).toBe('Second')
 
     frame.dispose()
+  })
+
+  it('hydrates nested client entries without duplicating events or DOM ownership', async () => {
+    let outerSetupCount = 0
+    let toggleSetupCount = 0
+    let toggleClickCount = 0
+
+    let Outer = clientEntry(
+      '/js/outer.js#Outer',
+      function Outer(handle: Handle<{ children?: RemixNode }>) {
+        outerSetupCount++
+        return () => handle.props.children ?? null
+      },
+    )
+
+    let Toggle = clientEntry('/js/toggle.js#Toggle', function Toggle(handle: Handle) {
+      toggleSetupCount++
+      let wrapped = false
+
+      function toggle() {
+        toggleClickCount++
+        wrapped = !wrapped
+        handle.update()
+      }
+
+      return () =>
+        wrapped ? (
+          <div id="wrapper">
+            <button id="wrapped-button" type="button" mix={[on('click', toggle)]}>
+              Wrapped
+            </button>
+          </div>
+        ) : (
+          <button id="bare-button" type="button" mix={[on('click', toggle)]}>
+            Bare
+          </button>
+        )
+    })
+
+    let html = await drain(
+      renderToStream(
+        <Outer>
+          <Toggle />
+        </Outer>,
+      ),
+    )
+    document.body.innerHTML = html
+    outerSetupCount = 0
+    toggleSetupCount = 0
+    toggleClickCount = 0
+
+    let outerStart = document.body.firstChild
+    invariant(outerStart instanceof Comment)
+    let outerId = outerStart.data.trim().slice('rmx:h:'.length)
+    let innerStart = outerStart.nextSibling
+    invariant(innerStart instanceof Comment)
+    let innerId = innerStart.data.trim().slice('rmx:h:'.length)
+
+    function expectBodyHtml(innerHtml: string) {
+      expect(document.body.innerHTML).toBe(
+        `<!-- rmx:h:${outerId} --><!-- rmx:h:${innerId} -->${innerHtml}<!-- /rmx:h --><!-- /rmx:h -->`,
+      )
+    }
+
+    function getButton(id: string): HTMLButtonElement {
+      let button = document.getElementById(id)
+      invariant(button instanceof HTMLButtonElement)
+      return button
+    }
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/outer.js' && exportName === 'Outer') return Outer
+        if (moduleUrl === '/js/toggle.js' && exportName === 'Toggle') return Toggle
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+    })
+
+    await app.ready()
+
+    expect(outerSetupCount).toBe(1)
+    expect(toggleSetupCount).toBe(1)
+    expect(toggleClickCount).toBe(0)
+    expectBodyHtml('<button id="bare-button" type="button">Bare</button>')
+
+    getButton('bare-button').click()
+    app.flush()
+
+    expect(toggleClickCount).toBe(1)
+    expectBodyHtml(
+      '<div id="wrapper"><button id="wrapped-button" type="button">Wrapped</button></div>',
+    )
+
+    getButton('wrapped-button').click()
+    app.flush()
+
+    expect(toggleClickCount).toBe(2)
+    expectBodyHtml('<button id="bare-button" type="button">Bare</button>')
+
+    app.dispose()
   })
 
   it('removes orphaned hydration end markers after full-document reloads of adjacent client entries', async () => {
