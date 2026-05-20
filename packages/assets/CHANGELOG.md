@@ -2,6 +2,22 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.0
+
+### Minor Changes
+
+- Add support for serving configured leaf file assets via a new `files` option in `createAssetServer()`.
+
+  Relative CSS `url()` references are now resolved through the asset server, rewriting supported file assets to asset server URLs and surfacing errors for missing or unsupported files.
+
+### Patch Changes
+
+- Preserve `node_modules` package symlink identity paths when rewriting script imports, while still reading, caching, and invalidating modules through their canonical real paths.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.20.0`](https://github.com/remix-run/remix/releases/tag/headers@0.20.0)
+  - [`route-pattern@0.21.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.21.0)
+
 ## v0.3.0
 
 ### Minor Changes

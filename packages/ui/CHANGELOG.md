@@ -2,6 +2,82 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.2
+
+### Patch Changes
+
+- Fix a bug in Safari where cross-origin links to a new subdomain incorrectly set `event.canIntercept=true` and try to opt-into a `<Frame>` navigation which fails. Cross-origin links now correctly fall through to a document navigation in Safari.
+
+- Keep streamed frame content in its template when a resolved frame stream starts with a doctype-only chunk.
+
+- Emit the built-in theme reset in `rmx-reset` so generated Remix UI component styles can override it. Document where app layers should sit relative to Remix UI layers.
+
+- Fixed layout animation interruptions so they restart from their current position and don't restart for updates that don't change their final position.
+
+- Improved type inference for `on` mixin
+
+  When defining a wrapper for `on`, use `target` generic on your handler type:
+
+  ```ts
+  import { on, type Dispatched } from '@remix-run/ui'
+
+  const ACCORDION_CHANGE_EVENT = 'rmx:accordion-change' as const
+
+  type AccordionChangeEvent = Event & {
+    accordionType: 'single' | 'multiple'
+    itemValue: string
+    value: string | null | string[]
+  }
+
+  declare global {
+    interface HTMLElementEventMap {
+      [ACCORDION_CHANGE_EVENT]: AccordionChangeEvent
+    }
+  }
+
+  type AccordionChangeHandler<target extends HTMLElement> = (
+    event: Dispatched<AccordionChangeEvent, target>,
+    signal: AbortSignal,
+  ) => void | Promise<void>
+
+  export function onAccordionChange<target extends HTMLElement>(
+    handler: AccordionChangeHandler<target>,
+    captureBoolean?: boolean,
+  ) {
+    return on(ACCORDION_CHANGE_EVENT, handler, captureBoolean)
+  }
+
+  let button = (
+    <button
+      mix={[
+        onAccordionChange((event, signal) => {
+          event
+          // ^? Dispatched<AccordionChangeEvent, HTMLButtonElement>
+          event.currentTarget
+          //    ^? HTMLButtonElement
+        }),
+      ]}
+    />
+  )
+  ```
+
+- Preserve hydrated client entry instances and nested frame resolution during full-document root frame reloads.
+
+- Document the `run()` `loadModule` and `resolveFrame` hooks so editor hints explain how to hydrate client entries and resolve browser-loaded frames.
+
+- Optimize UI runtime hot paths.
+
+  - Fast path for plain `on()` mixins that patches host listeners in place.
+  - Lazy direct listener closures for event listeners managed by the runtime.
+  - Lazy mixin scope signals to avoid unnecessary AbortController work.
+  - Faster keyed reconciliation for in-order, append-only, single-removal, and pair-swap lists.
+  - Property-level patching for object styles during updates.
+  - Bulk clearing for removable child lists, with an innerHTML guard.
+
+- Fix a flash of unstyled content when navigating between two pages whose hydrated client entries use different `css()` rules. Style adoption now releases prior-page server styles by refcount instead of resetting the adopted stylesheet, so DOM preserved across a reload (e.g. inside a still-hydrated client-entry boundary) keeps its rules until the new module finishes loading and replaces it.
+
+- Fix server rendering for `<textarea value>`, `<textarea defaultValue>`, `<input defaultValue>`, and `<input defaultChecked>` so initial form control content matches client rendering, and disallow textarea children in JSX types.
+
 ## v0.1.1
 
 ### Patch Changes

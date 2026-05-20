@@ -1,1 +1,0 @@
-Avoid using Web Encoding globals while importing the multipart parser and while scanning multipart syntax. Header and text decoding now creates the UTF-8 decoder lazily when decoded part fields are accessed.
