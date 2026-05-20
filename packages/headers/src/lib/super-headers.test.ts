@@ -70,6 +70,84 @@ describe('SuperHeaders', () => {
     assert.deepEqual(headers.getSetCookie(), ['session=abc; Path=/', 'theme=dark'])
   })
 
+  it('applies typed property values to existing headers', () => {
+    let headers = new SuperHeaders({
+      allow: 'GET',
+      contentType: 'text/html',
+      cookie: 'session=abc',
+      setCookie: { name: 'session', value: 'abc' },
+      vary: 'Accept-Encoding',
+    })
+
+    let result = headers.apply({
+      allow: ['POST'],
+      contentType: { mediaType: 'application/json', charset: 'utf-8' },
+      cookie: { theme: 'dark' },
+      setCookie: { name: 'theme', value: 'dark' },
+      vary: ['Accept-Encoding', 'Accept-Language'],
+    })
+
+    assert.equal(result, headers)
+    assert.equal(headers.get('Allow'), 'GET, POST')
+    assert.equal(headers.get('Content-Type'), 'application/json; charset=utf-8')
+    assert.equal(headers.get('Cookie'), 'session=abc; theme=dark')
+    assert.deepEqual(headers.getSetCookie(), ['session=abc', 'theme=dark'])
+    assert.equal(headers.get('Vary'), 'accept-encoding, accept-language')
+  })
+
+  it('applies raw header values with header-specific semantics', () => {
+    let headers = new SuperHeaders({
+      'Content-Type': 'text/html',
+      Link: '</style.css>; rel=preload',
+      'Set-Cookie': 'session=abc',
+      Vary: 'Accept-Encoding',
+      'X-Test': 'old',
+    })
+
+    headers.apply(
+      new Headers([
+        ['Content-Type', 'application/json'],
+        ['Link', '</script.js>; rel=preload'],
+        ['Set-Cookie', 'theme=dark'],
+        ['Vary', 'Accept-Language'],
+        ['X-Test', 'new'],
+      ]),
+    )
+
+    headers.apply({
+      Link: '</image.png>; rel=preload',
+      'Set-Cookie': 'locale=en',
+      Vary: 'User-Agent',
+    })
+
+    assert.equal(headers.get('Content-Type'), 'application/json')
+    assert.equal(
+      headers.get('Link'),
+      '</style.css>; rel=preload, </script.js>; rel=preload, </image.png>; rel=preload',
+    )
+    assert.deepEqual(headers.getSetCookie(), ['session=abc', 'theme=dark', 'locale=en'])
+    assert.equal(headers.get('Vary'), 'accept-encoding, accept-language, user-agent')
+    assert.equal(headers.get('X-Test'), 'new')
+  })
+
+  it('deletes headers from nullish applied values', () => {
+    let headers = new SuperHeaders({
+      contentType: 'text/html',
+      setCookie: { name: 'session', value: 'abc' },
+      'X-Test': 'yes',
+    })
+
+    headers.apply({
+      contentType: null,
+      setCookie: null,
+      'X-Test': null,
+    })
+
+    assert.equal(headers.has('Content-Type'), false)
+    assert.deepEqual(headers.getSetCookie(), [])
+    assert.equal(headers.has('X-Test'), false)
+  })
+
   it('does not parse raw header strings', () => {
     assert.throws(() => Reflect.construct(SuperHeaders, ['Content-Type: text/html']), TypeError)
   })
