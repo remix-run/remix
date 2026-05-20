@@ -1,6 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
-import type { Handle } from '../runtime/component.ts'
+import type { Handle, RemixNode } from '../runtime/component.ts'
 import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
@@ -162,6 +162,49 @@ describe('hydration', () => {
       root.flush()
 
       expect(existingButton.textContent).toBe('Count: 6')
+    })
+
+    it('hydrates null elements without breaking sibling ordering when they become renderable', async () => {
+      let secondElement: RemixNode = null
+      let capturedUpdate = () => {}
+      let NullChanging = clientEntry('/with-null.js#WithNull', function WithNull(handle: Handle) {
+        capturedUpdate = () => handle.update()
+        return () => (
+          <div>
+            <span>First</span>
+            {secondElement}
+            <span>Second</span>
+          </div>
+        )
+      })
+
+      let html = await renderToString(<NullChanging />)
+      container.innerHTML = html
+
+      let existingSpans = container.querySelectorAll('span')
+      expect(existingSpans).toHaveLength(2)
+      invariant(existingSpans[0] && existingSpans[1])
+      expect(existingSpans[0].textContent).toBe('First')
+      expect(existingSpans[1].textContent).toBe('Second')
+
+      let root = createRoot(container)
+      root.render(<NullChanging />)
+      root.flush()
+
+      let hydratedSpans = container.querySelectorAll('span')
+      expect(hydratedSpans).toHaveLength(2)
+      expect(hydratedSpans[0]).toBe(existingSpans[0])
+      expect(hydratedSpans[1]).toBe(existingSpans[1])
+
+      secondElement = <span>after First</span>
+      capturedUpdate()
+      root.flush()
+
+      let updatedSpans = container.querySelectorAll('span')
+      expect(updatedSpans).toHaveLength(3)
+      expect(updatedSpans[0]).toBe(existingSpans[0])
+      expect(updatedSpans[1].textContent).toBe('after First')
+      expect(updatedSpans[2]).toBe(existingSpans[1])
     })
   })
 

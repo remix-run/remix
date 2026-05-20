@@ -20,6 +20,7 @@ import {
   isCommittedTextNode,
   isFragmentNode,
   isHostNode,
+  isNonRenderNode,
   isTextNode,
   findContextFromAncestry,
 } from './vnode.ts'
@@ -421,6 +422,10 @@ export function diffVNodes(
     return rootCursor
   }
 
+  if (isNonRenderNode(curr) && isNonRenderNode(next)) {
+    return rootCursor
+  }
+
   if (isCommittedTextNode(curr) && isTextNode(next)) {
     diffText(curr, next, vParent)
     return rootCursor
@@ -444,7 +449,7 @@ export function diffVNodes(
       frame,
       scheduler,
       styles,
-      vParent,
+      next,
       rootTarget,
       undefined,
       anchor,
@@ -484,7 +489,7 @@ function replace(
     return
   }
 
-  let replacementAnchor = findNextSiblingDomAnchor(curr, vParent) ?? anchor
+  let replacementAnchor = findNextSiblingDomAnchor(curr) ?? anchor
   remove(curr, domParent, scheduler, styles)
   insert(next, domParent, frame, scheduler, styles, vParent, rootTarget, replacementAnchor)
 }
@@ -709,6 +714,10 @@ function insert(
     ? (dom: Node) => domParent.insertBefore(dom, anchor)
     : (dom: Node) => domParent.appendChild(dom)
 
+  if (isNonRenderNode(node)) {
+    return cursor
+  }
+
   if (isTextNode(node)) {
     if (cursor instanceof Text) {
       node._parent = vParent
@@ -878,17 +887,7 @@ function insert(
   if (isFragmentNode(node)) {
     // Insert fragment children in order before the same anchor
     for (let child of node._children) {
-      cursor = insert(
-        child,
-        domParent,
-        frame,
-        scheduler,
-        styles,
-        vParent,
-        rootTarget,
-        anchor,
-        cursor,
-      )
+      cursor = insert(child, domParent, frame, scheduler, styles, node, rootTarget, anchor, cursor)
     }
     return cursor
   }
@@ -2020,15 +2019,23 @@ function shouldDispatchInlineMixinLifecycle(node: Node): boolean {
   return true
 }
 
-export function findNextSiblingDomAnchor(curr: VNode, vParent?: VNode): Node | null {
+export function findNextSiblingDomAnchor(curr: VNode): Node | null {
+  let vParent = curr._parent
   if (!vParent || !Array.isArray(vParent._children)) return null
   let children = vParent._children
+  if (children.length === 0) return findNextSiblingDomAnchor(vParent)
+
   let idx = children.indexOf(curr)
   if (idx === -1) return null
   for (let i = idx + 1; i < children.length; i++) {
     let dom = findFirstDomAnchor(children[i])
     if (dom) return dom
   }
+
+  if (isFragmentNode(vParent)) {
+    return findNextSiblingDomAnchor(vParent)
+  }
+
   return null
 }
 
