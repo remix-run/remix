@@ -105,7 +105,7 @@ export async function resolveModule(
       transformed.unresolvedImports.length > 0
         ? await batchResolveSpecifiers(
             getUniqueSpecifiers(transformed.unresolvedImports),
-            transformed.resolvedPath,
+            transformed.identityPath,
             args.resolverFactory,
           )
         : new Map<string, ResolvedSpec>()
@@ -196,8 +196,10 @@ export async function resolveModule(
     deps.add(resolvedImport.identityPath)
 
     if (transformed.packageSpecifiers.includes(unresolved.specifier)) {
-      let packageJsonPath =
-        resolvedSpec.packageJsonPath ?? findNearestPackageJsonPath(resolvedImport.resolvedPath)
+      let packageJsonPath = resolvePackageJsonPath(
+        resolvedSpec.packageJsonPath,
+        resolvedImport.resolvedPath,
+      )
       if (packageJsonPath && !args.isWatchIgnored(packageJsonPath)) {
         trackedFiles.add(packageJsonPath)
       }
@@ -235,6 +237,25 @@ export async function resolveModule(
   }
 }
 
+function resolvePackageJsonPath(
+  packageJsonPath: string | null,
+  resolvedPath: string,
+): string | null {
+  return (
+    (packageJsonPath ? resolveExistingPath(packageJsonPath) : null) ??
+    findNearestPackageJsonPath(resolvedPath)
+  )
+}
+
+function resolveExistingPath(filePath: string): string | null {
+  try {
+    return normalizeFilePath(fs.realpathSync(filePath))
+  } catch (error) {
+    if (isNoEntityError(error)) return null
+    throw error
+  }
+}
+
 function findNearestPackageJsonPath(filePath: string): string | null {
   let directory = path.dirname(filePath)
 
@@ -248,6 +269,17 @@ function findNearestPackageJsonPath(filePath: string): string | null {
     if (parentDirectory === directory) return null
     directory = parentDirectory
   }
+}
+
+function isNoEntityError(
+  error: unknown,
+): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
+  return (
+    error instanceof Error &&
+    'code' in error &&
+    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
+      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
+  )
 }
 
 function isRelativeImportSpecifier(specifier: string): boolean {

@@ -261,7 +261,7 @@ export async function transformModule(
                 content: sourceText,
               }),
         identityPath: record.identityPath,
-        importerDir: path.dirname(resolvedPath),
+        importerDir: path.dirname(record.identityPath),
         packageSpecifiers: analysis.unresolvedImports
           .filter((unresolved) => isPackageImportSpecifier(unresolved.specifier))
           .map((unresolved) => unresolved.specifier),
