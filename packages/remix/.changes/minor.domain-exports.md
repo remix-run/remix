@@ -1,8 +1,6 @@
-Updated the `remix` package to use domain-oriented exports, no longer always mapping
-1:1 to underlying `@remix-run/*` packages. 1:1 package exports are left to ease migrations
-and will be removed before a Remix 3.0.0 stable release.
+Updated the `remix` package with domain-oriented exports, no longer only mapping 1:1 to underlying `@remix-run/*` packages. Existing 1:1 package exports remain available during the beta migration and will be removed before a Remix 3.0.0 stable release.
 
-Changed package mappings:
+Preferred package mappings:
 
 - `remix/async-context-middleware` → `remix/middleware/async-context`
 - `remix/auth-middleware` → `remix/middleware/auth`
