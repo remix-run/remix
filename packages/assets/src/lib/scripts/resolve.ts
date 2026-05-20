@@ -17,6 +17,7 @@ import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { ResolveModuleResult, TransformedModule } from './transform.ts'
 import type { EmittedModule } from './emit.ts'
+import { isBareImportSpecifier } from './specifiers.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -91,6 +92,11 @@ type NormalizedSpecifierResolution = {
   specifier: string
 }
 
+type SpecifierResolutionImporter = {
+  identityPath: string
+  resolvedPath: string
+}
+
 export async function resolveModule(
   record: ScriptRecord,
   transformed: TransformedModule,
@@ -105,7 +111,10 @@ export async function resolveModule(
       transformed.unresolvedImports.length > 0
         ? await batchResolveSpecifiers(
             getUniqueSpecifiers(transformed.unresolvedImports),
-            transformed.identityPath,
+            {
+              identityPath: transformed.identityPath,
+              resolvedPath: transformed.resolvedPath,
+            },
             args.resolverFactory,
           )
         : new Map<string, ResolvedSpec>()
@@ -358,7 +367,7 @@ function resolveCandidateBasePath(importerDir: string, specifier: string): strin
 
 async function batchResolveSpecifiers(
   specifiers: string[],
-  importerPath: string,
+  importer: SpecifierResolutionImporter,
   resolverFactory: ResolveArgs['resolverFactory'],
 ): Promise<Map<string, ResolvedSpec>> {
   let resolvedBySpecifier = new Map<string, ResolvedSpec>()
@@ -366,7 +375,7 @@ async function batchResolveSpecifiers(
 
   try {
     for (let specifier of specifiers) {
-      let normalizedResolution = normalizeSpecifierResolution(specifier, importerPath)
+      let normalizedResolution = normalizeSpecifierResolution(specifier, importer)
       let resolutionResult = await resolverFactory.resolveFileAsync(
         normalizedResolution.importerPath,
         normalizedResolution.specifier,
@@ -400,7 +409,7 @@ async function batchResolveSpecifiers(
     }
 
     throw createAssetServerCompilationError(
-      `Failed to resolve imports in ${importerPath}. ${formatUnknownError(error)}`,
+      `Failed to resolve imports in ${importer.identityPath}. ${formatUnknownError(error)}`,
       {
         cause: error,
         code: 'IMPORT_RESOLUTION_FAILED',
@@ -421,12 +430,12 @@ function formatUnknownError(error: unknown): string {
 
 function normalizeSpecifierResolution(
   specifier: string,
-  importerPath: string,
+  importer: SpecifierResolutionImporter,
 ): NormalizedSpecifierResolution {
   let authoredInjectedPackageSpecifier = restoreAuthoredInjectedPackageSpecifier(specifier)
   if (authoredInjectedPackageSpecifier) {
     return {
-      importerPath,
+      importerPath: getSpecifierImporterPath(authoredInjectedPackageSpecifier, importer),
       specifier: authoredInjectedPackageSpecifier,
     }
   }
@@ -439,9 +448,16 @@ function normalizeSpecifierResolution(
   }
 
   return {
-    importerPath,
+    importerPath: getSpecifierImporterPath(specifier, importer),
     specifier,
   }
+}
+
+function getSpecifierImporterPath(
+  specifier: string,
+  importer: SpecifierResolutionImporter,
+): string {
+  return isBareImportSpecifier(specifier) ? importer.resolvedPath : importer.identityPath
 }
 
 function getDisplayImportSpecifier(specifier: string): string {
