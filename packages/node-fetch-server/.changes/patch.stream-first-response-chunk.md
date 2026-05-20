@@ -1,0 +1,1 @@
+Start writing the first response stream chunk immediately instead of waiting for another chunk. Streaming responses with a delayed second chunk now flush their initial data without unnecessary blocking.
