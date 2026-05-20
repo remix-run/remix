@@ -6,6 +6,7 @@ import type { ElementProps, RemixNode } from './jsx.ts'
 export { isRemixElement }
 
 export const TEXT_NODE = Symbol('TEXT_NODE')
+export const NON_RENDER_NODE = Symbol('NON_RENDER_NODE')
 export const ROOT_VNODE = Symbol('ROOT_VNODE')
 
 export type VNodeType =
@@ -13,6 +14,7 @@ export type VNodeType =
   | string // host element
   | Function // component
   | typeof TEXT_NODE
+  | typeof NON_RENDER_NODE
   | typeof Fragment
   | typeof Frame
 
@@ -66,6 +68,10 @@ export type TextNode = VNode & {
   _text: string
 }
 
+export type NonRenderNode = VNode & {
+  type: typeof NON_RENDER_NODE
+}
+
 export type CommittedTextNode = TextNode & {
   _dom: Text
 }
@@ -100,6 +106,10 @@ export function isFragmentNode(node: VNode): node is FragmentNode {
 
 export function isTextNode(node: VNode): node is TextNode {
   return node.type === TEXT_NODE
+}
+
+export function isNonRenderNode(node: VNode): node is NonRenderNode {
+  return node.type === NON_RENDER_NODE
 }
 
 export function isCommittedTextNode(node: VNode): node is CommittedTextNode {
