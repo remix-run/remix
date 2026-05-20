@@ -3,7 +3,8 @@ import { describe, it } from '@remix-run/test'
 
 import { type LazyContent, LazyBlob, LazyFile } from './lazy-file.ts'
 
-// Type assertions: ensure LazyBlob and LazyFile remain assignable to native Blob/File APIs.
+// Compile-time API contract checks. These expressions are never executed, but TypeScript will
+// fail this file if LazyBlob or LazyFile stop satisfying the native Blob/File interfaces.
 null as unknown as LazyBlob satisfies Blob
 null as unknown as LazyFile satisfies File
 

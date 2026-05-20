@@ -9,6 +9,9 @@ import { LazyFile } from '@remix-run/lazy-file'
 import type { FileLike, FileStorage } from '../file-storage.ts'
 import { createFsFileStorage } from './fs.ts'
 
+// Compile-time API contract checks. These expressions are never executed, but TypeScript will
+// fail this file if FileLike stops accepting native File/LazyFile values, or if the filesystem
+// backend stops advertising LazyFile return values through FileStorage.
 null as unknown as File satisfies FileLike
 null as unknown as LazyFile satisfies FileLike
 null as unknown as ReturnType<typeof createFsFileStorage> satisfies FileStorage<LazyFile>

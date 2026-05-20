@@ -4,6 +4,8 @@ import type { FileStorage } from '@remix-run/file-storage'
 
 import { createS3FileStorage } from './s3.ts'
 
+// Compile-time API contract check. This expression is never executed, but TypeScript will fail
+// this file if the S3 backend stops advertising native File return values through FileStorage.
 null as unknown as ReturnType<typeof createS3FileStorage> satisfies FileStorage<File>
 
 const BUCKET = 'test-bucket'
