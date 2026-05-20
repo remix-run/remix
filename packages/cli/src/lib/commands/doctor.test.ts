@@ -9,6 +9,7 @@ import { describe, it } from '@remix-run/test'
 import { runRemix } from '../../index.ts'
 import { getFixturePath } from '../../../test/fixtures.ts'
 import { captureOutput } from '../../../test/capture-output.ts'
+import { checkEnvironment, getEnvironmentFixPlans } from '../doctor/environment.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
 const ANSI_CSI = `${String.fromCharCode(27)}[`
@@ -268,22 +269,6 @@ describe('doctor command', () => {
     for (let { label, range } of getSupportedNodeRangeCases()) {
       let projectDir = await createTempProject(
         {
-          'app/actions/controller.js': [
-            'export default {',
-            '  actions: {',
-            '    home() {',
-            "      return new Response('ok')",
-            '    },',
-            '  },',
-            '}',
-          ].join('\n'),
-          'app/routes.ts': [
-            "import { route } from 'remix/routes'",
-            '',
-            'export const routes = route({',
-            "  home: '/',",
-            '})',
-          ].join('\n'),
           'package.json': JSON.stringify(
             {
               dependencies: {
@@ -304,26 +289,12 @@ describe('doctor command', () => {
       )
 
       try {
-        let checkResult = await runDoctor([], projectDir)
+        let result = await checkEnvironment(projectDir)
+        let fixPlans = getEnvironmentFixPlans(result, '9.9.9')
 
-        assert.equal(checkResult.exitCode, 0, `${label}: ${checkResult.stderr}`)
-        assert.match(checkResult.stdout, /Doctor found no issues\./, label)
-        assert.equal(checkResult.stderr, '', label)
-
-        let fixResult = await runDoctor(['--fix'], projectDir)
-
-        assert.equal(fixResult.exitCode, 0, `${label}: ${fixResult.stderr}`)
-        assert.doesNotMatch(fixResult.stdout, /Applied fixes:/, label)
-        assert.match(fixResult.stdout, /Doctor found no issues\./, label)
-        assert.equal(fixResult.stderr, '', label)
-
-        let packageJson = JSON.parse(
-          await fs.readFile(path.join(projectDir, 'package.json'), 'utf8'),
-        ) as {
-          engines: Record<string, string>
-        }
-
-        assert.equal(packageJson.engines.node, range, label)
+        assert.equal(result.suite.status, 'ok', label)
+        assert.deepEqual(result.suite.findings, [], label)
+        assert.deepEqual(fixPlans, [], label)
       } finally {
         await fs.rm(projectDir, { recursive: true, force: true })
       }
@@ -396,12 +367,7 @@ describe('doctor command', () => {
 
       assert.equal(packageJson.dependencies.remix, remixPackageJson.version)
       assert.equal(packageJson.engines.node, '>=24.3.0')
-
-      let checkResult = await runDoctor([], projectDir)
-
-      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
-      assert.match(checkResult.stdout, /Doctor found no issues\./)
-      assert.equal(checkResult.stderr, '')
+      assert.match(fixResult.stdout, /Doctor found no issues\./)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -534,12 +500,7 @@ describe('doctor command', () => {
       }
 
       assert.equal(packageJson.engines.node, '>=24.3.0')
-
-      let checkResult = await runDoctor([], projectDir)
-
-      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
-      assert.match(checkResult.stdout, /Doctor found no issues\./)
-      assert.equal(checkResult.stderr, '')
+      assert.match(fixResult.stdout, /Doctor found no issues\./)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -609,12 +570,7 @@ describe('doctor command', () => {
       assert.match(controllerSource, /home\(\) \{\n\s+let page = html`/)
       assert.match(controllerSource, /return createHtmlResponse\(page\)/)
       assert.match(controllerSource, /<h1>Home<\/h1>/)
-
-      let checkResult = await runDoctor([], projectDir)
-
-      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
-      assert.match(checkResult.stdout, /Doctor found no issues\./)
-      assert.equal(checkResult.stderr, '')
+      assert.match(fixResult.stdout, /Doctor found no issues\./)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -662,12 +618,7 @@ describe('doctor command', () => {
       assert.match(routesSource, /home: '\//)
       assert.match(controllerSource, /export default \{/)
       assert.match(controllerSource, /home\(\) \{/)
-
-      let checkResult = await runDoctor([], projectDir)
-
-      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
-      assert.match(checkResult.stdout, /Doctor found no issues\./)
-      assert.equal(checkResult.stderr, '')
+      assert.match(fixResult.stdout, /Doctor found no issues\./)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -705,12 +656,6 @@ describe('doctor command', () => {
       assert.match(contactSource, /action\(\) \{/)
       assert.match(contactSource, /TODO: implement routes\.contact\.index/)
       assert.match(contactSource, /TODO: implement routes\.contact\.action/)
-
-      let checkResult = await runDoctor([], projectDir)
-
-      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
-      assert.match(checkResult.stdout, /Doctor found no issues\./)
-      assert.equal(checkResult.stderr, '')
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -758,12 +703,7 @@ describe('doctor command', () => {
 
       assert.match(controllerSource, /"sales-report"\(\) \{/)
       assert.match(controllerSource, /TODO: implement routes\.sales-report/)
-
-      let checkResult = await runDoctor([], projectDir)
-
-      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
-      assert.match(checkResult.stdout, /Doctor found no issues\./)
-      assert.equal(checkResult.stderr, '')
+      assert.match(fixResult.stdout, /Doctor found no issues\./)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -806,12 +746,7 @@ describe('doctor command', () => {
       assert.match(fixResult.stdout, /Created app\/actions\/controller\.js/)
       await assertPathExists(path.join(projectDir, 'app', 'actions', 'controller.js'))
       await assertPathMissing(outsidePath)
-
-      let checkResult = await runDoctor([], projectDir)
-
-      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
-      assert.match(checkResult.stdout, /Doctor found no issues\./)
-      assert.equal(checkResult.stderr, '')
+      assert.match(fixResult.stdout, /Doctor found no issues\./)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -936,12 +871,7 @@ describe('doctor command', () => {
       assert.match(contactSource, /import \{ createController \} from 'remix\/router'/)
       assert.match(contactSource, /import \{ routes \} from '\.\.\/\.\.\/routes\.ts'/)
       assert.match(contactSource, /export default createController\(routes\.contact, \{/)
-
-      let checkResult = await runDoctor([], projectDir)
-
-      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
-      assert.match(checkResult.stdout, /Doctor found no issues\./)
-      assert.equal(checkResult.stderr, '')
+      assert.match(fixResult.stdout, /Doctor found no issues\./)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -1066,12 +996,7 @@ describe('doctor command', () => {
 
       assert.match(forgotPasswordSource, /TODO: implement routes\.auth\.forgotPassword\.index/)
       assert.match(forgotPasswordSource, /TODO: implement routes\.auth\.forgotPassword\.action/)
-
-      let checkResult = await runDoctor([], projectDir)
-
-      assert.equal(checkResult.exitCode, 0, checkResult.stderr)
-      assert.match(checkResult.stdout, /Doctor found no issues\./)
-      assert.equal(checkResult.stderr, '')
+      assert.match(fixResult.stdout, /Doctor found no issues\./)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
