@@ -2,8 +2,15 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { openLazyFile, writeFile } from '@remix-run/fs'
+import type { LazyFile } from '@remix-run/lazy-file'
 
-import type { FileStorage, FileMetadata, ListOptions, ListResult } from '../file-storage.ts'
+import type {
+  FileStorage,
+  FileLike,
+  FileMetadata,
+  ListOptions,
+  ListResult,
+} from '../file-storage.ts'
 
 type MetadataJson = Omit<FileMetadata, 'size'>
 
@@ -21,7 +28,7 @@ type MetadataJson = Omit<FileMetadata, 'size'>
  * @param directory The directory where files are stored
  * @returns A new {@link FileStorage} backed by a filesystem directory
  */
-export function createFsFileStorage(directory: string): FileStorage {
+export function createFsFileStorage(directory: string): FileStorage<LazyFile> {
   let rootDir = path.resolve(directory)
 
   try {
@@ -51,7 +58,7 @@ export function createFsFileStorage(directory: string): FileStorage {
     }
   }
 
-  async function putFile(key: string, file: File): Promise<File> {
+  async function putFile(key: string, file: FileLike): Promise<LazyFile> {
     let { directory, filePath, metaPath } = await getPaths(key)
 
     // Ensure directory exists
@@ -77,7 +84,7 @@ export function createFsFileStorage(directory: string): FileStorage {
   }
 
   return {
-    async get(key: string): Promise<File | null> {
+    async get(key: string): Promise<LazyFile | null> {
       let { filePath, metaPath } = await getPaths(key)
 
       try {
@@ -153,7 +160,7 @@ export function createFsFileStorage(directory: string): FileStorage {
         files,
       }
     },
-    put(key: string, file: File): Promise<File> {
+    put(key: string, file: FileLike): Promise<LazyFile> {
       return putFile(key, file)
     },
     async remove(key: string): Promise<void> {
@@ -173,7 +180,7 @@ export function createFsFileStorage(directory: string): FileStorage {
         }
       }
     },
-    async set(key: string, file: File): Promise<void> {
+    async set(key: string, file: FileLike): Promise<void> {
       await putFile(key, file)
     },
   }

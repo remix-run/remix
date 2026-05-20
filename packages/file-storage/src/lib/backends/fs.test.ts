@@ -4,8 +4,14 @@ import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { parseFormData } from '@remix-run/form-data-parser'
+import { LazyFile } from '@remix-run/lazy-file'
 
+import type { FileLike, FileStorage } from '../file-storage.ts'
 import { createFsFileStorage } from './fs.ts'
+
+null as unknown as File satisfies FileLike
+null as unknown as LazyFile satisfies FileLike
+null as unknown as ReturnType<typeof createFsFileStorage> satisfies FileStorage<LazyFile>
 
 function normalizeFileType(type: string): string {
   return new File([''], '', { type }).type
@@ -36,6 +42,7 @@ describe('fs file storage', () => {
     let retrieved = await storage.get('hello')
 
     assert.ok(retrieved)
+    assert.equal(retrieved instanceof LazyFile, true)
     assert.equal(retrieved.name, 'hello.txt')
     assert.equal(retrieved.type, file.type)
     assert.equal(retrieved.lastModified, lastModified)

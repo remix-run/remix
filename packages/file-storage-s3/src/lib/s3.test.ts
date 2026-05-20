@@ -1,7 +1,10 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
+import type { FileStorage } from '@remix-run/file-storage'
 
 import { createS3FileStorage } from './s3.ts'
+
+null as unknown as ReturnType<typeof createS3FileStorage> satisfies FileStorage<File>
 
 const BUCKET = 'test-bucket'
 const ENDPOINT = 'https://s3.us-east-1.amazonaws.com'

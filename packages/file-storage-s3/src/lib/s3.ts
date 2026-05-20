@@ -1,6 +1,12 @@
 import { AwsClient } from 'aws4fetch'
 
-import type { FileMetadata, FileStorage, ListOptions, ListResult } from '@remix-run/file-storage'
+import type {
+  FileLike,
+  FileMetadata,
+  FileStorage,
+  ListOptions,
+  ListResult,
+} from '@remix-run/file-storage'
 
 const CONTENTS_PATTERN = /<Contents>([\s\S]*?)<\/Contents>/g
 
@@ -58,7 +64,7 @@ export interface S3FileStorageOptions {
  * @param options Configuration for the S3 backend
  * @returns A `FileStorage` implementation backed by S3
  */
-export function createS3FileStorage(options: S3FileStorageOptions): FileStorage {
+export function createS3FileStorage(options: S3FileStorageOptions): FileStorage<File> {
   let endpoint = new URL(options.endpoint ?? `https://s3.${options.region}.amazonaws.com`)
   let forcePathStyle = options.forcePathStyle ?? options.endpoint != null
 
@@ -88,7 +94,7 @@ export function createS3FileStorage(options: S3FileStorageOptions): FileStorage 
     return createObjectUrl(endpoint, options.bucket, forcePathStyle, key)
   }
 
-  async function putFile(key: string, file: File): Promise<File> {
+  async function putFile(key: string, file: FileLike): Promise<File> {
     let body = await file.arrayBuffer()
     let headers = new Headers()
 
@@ -218,7 +224,7 @@ export function createS3FileStorage(options: S3FileStorageOptions): FileStorage 
         files: files as ListResult<opts>['files'],
       }
     },
-    put(key: string, file: File): Promise<File> {
+    put(key: string, file: FileLike): Promise<File> {
       return putFile(key, file)
     },
     async remove(key: string): Promise<void> {
@@ -230,7 +236,7 @@ export function createS3FileStorage(options: S3FileStorageOptions): FileStorage 
 
       await assertOk(response, `DELETE "${key}"`)
     },
-    async set(key: string, file: File): Promise<void> {
+    async set(key: string, file: FileLike): Promise<void> {
       await putFile(key, file)
     },
   }
