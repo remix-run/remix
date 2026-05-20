@@ -123,7 +123,7 @@ function hrefPart(
         i = part.optionals.get(frame.begin!)! + 1
         continue
       }
-      stack[stack.length - 1].href += typeof value === 'string' ? value : String(value)
+      stack[stack.length - 1].href += hrefParam(part, token.type, value)
       i += 1
       continue
     }
@@ -140,6 +140,27 @@ function hrefPart(
   }
   if (stack.length !== 1) unreachable()
   return stack[0].href
+}
+
+function hrefParam(part: PartPattern, tokenType: ':' | '*', value: unknown): string {
+  let stringValue = typeof value === 'string' ? value : String(value)
+
+  if (part.type !== 'pathname') {
+    return stringValue
+  }
+
+  if (tokenType === '*') {
+    return stringValue.split('/').map(encodePathSegment).join('/')
+  }
+
+  return encodePathSegment(stringValue)
+}
+
+function encodePathSegment(segment: string): string {
+  if (segment === '.') return '%252E'
+  if (segment === '..') return '%252E%252E'
+
+  return encodeURIComponent(segment)
 }
 
 function hrefSearch(pattern: RoutePattern, searchParams: SearchParams): string | undefined {

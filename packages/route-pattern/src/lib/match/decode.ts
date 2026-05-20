@@ -1,18 +1,21 @@
 export { toUnicode as decodeHostname } from './punycode.ts'
 
-/**
- * Decodes valid percent-escape sequences, or returns the input unchanged when
- * it contains invalid ones.
- *
- * @param source String to decode.
- * @returns Decoded string, or `source` when it contains invalid percent-escape sequences.
- */
-export function decodePathname(source: string): string {
-  // coarse check for percent-encoded sequences; skip if none found.
+const ENCODED_SLASH = /%2f/gi
+const SLASH_PLACEHOLDER = '\uFDD0'
+
+export function decodePathnameSegments(source: string): Array<string> {
+  return source.split('/').map(decodePathnameSegment)
+}
+
+export function restorePathnameParam(value: string): string {
+  return value.replaceAll(SLASH_PLACEHOLDER, '/')
+}
+
+function decodePathnameSegment(source: string): string {
   if (!source.includes('%')) return source
 
   try {
-    return decodeURI(source)
+    return decodeURIComponent(source.replace(ENCODED_SLASH, SLASH_PLACEHOLDER))
   } catch {
     return source
   }

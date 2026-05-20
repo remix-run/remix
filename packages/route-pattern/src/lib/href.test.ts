@@ -128,6 +128,14 @@ describe('createHref', () => {
         assert.equal(createHref('/posts/:id', { id: '123' }), '/posts/123')
       })
 
+      it('encodes reserved URL syntax in params', () => {
+        assert.equal(createHref('/posts/:id', { id: 'a/b?c#d' }), '/posts/a%2Fb%3Fc%23d')
+      })
+
+      it('encodes dot segment params', () => {
+        assert.equal(createHref('/posts/:id', { id: '..' }), '/posts/%252E%252E')
+      })
+
       it('works with number params', () => {
         assert.equal(createHref('/posts/:id', { id: 123 }), '/posts/123')
       })
@@ -167,6 +175,13 @@ describe('createHref', () => {
       assert.equal(
         createHref('images/*path.png', { path: 'images/hero' }),
         '/images/images/hero.png',
+      )
+    })
+
+    it('encodes each wildcard path segment independently', () => {
+      assert.equal(
+        createHref('/files/*path', { path: '../draft docs/readme.md?raw#intro' }),
+        '/files/%252E%252E/draft%20docs/readme.md%3Fraw%23intro',
       )
     })
 

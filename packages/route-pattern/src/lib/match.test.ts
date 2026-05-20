@@ -1,6 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
+import { createHref } from './href.ts'
 import { createMultiMatcher } from './match.ts'
 
 describe('Matcher', () => {
@@ -351,6 +352,17 @@ describe('Matcher', () => {
         assert.deepEqual(match.params, { filename: 'my-file_v2.txt' })
       })
 
+      it('decodes reserved URL syntax in variable values', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('/files/:filename', null)
+
+        let href = createHref('/files/:filename', { filename: 'docs/readme?raw#intro' })
+        let match = matcher.match(new URL(href, 'https://example.com'))
+
+        assert.ok(match)
+        assert.deepEqual(match.params, { filename: 'docs/readme?raw#intro' })
+      })
+
       it('does not partially match variable segments after a static suffix', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/report-:format.pdf', null)
@@ -400,6 +412,17 @@ describe('Matcher', () => {
         let match = matcher.match('http://example.com/files/docs/api/status')
         assert.ok(match)
         assert.deepEqual(match.params, { path: 'docs/api' })
+      })
+
+      it('decodes reserved URL syntax in wildcard values', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('/files/*path', null)
+
+        let href = createHref('/files/*path', { path: 'draft docs/readme?raw#intro' })
+        let match = matcher.match(new URL(href, 'https://example.com'))
+
+        assert.ok(match)
+        assert.deepEqual(match.params, { path: 'draft docs/readme?raw#intro' })
       })
 
       it('does not partially match wildcard segments before a static suffix', () => {

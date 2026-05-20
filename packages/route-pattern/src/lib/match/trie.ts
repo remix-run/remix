@@ -1,5 +1,5 @@
 import type { RoutePattern } from '../route-pattern.ts'
-import { decodeHostname, decodePathname } from './decode.ts'
+import { decodeHostname, decodePathnameSegments, restorePathnameParam } from './decode.ts'
 import { generateVariants, type Param } from './variant.ts'
 import { unreachable } from '../unreachable.ts'
 
@@ -149,7 +149,7 @@ export class Trie<data = unknown> {
     }
 
     let results: Array<Match<string, data>> = []
-    let urlSegments = decodePathname(url.pathname.slice(1)).split('/')
+    let urlSegments = decodePathnameSegments(url.pathname.slice(1))
 
     for (let origin of origins) {
       let stack: Array<{
@@ -230,7 +230,7 @@ export class Trie<data = unknown> {
             let span = m.indices![i]
             if (span === undefined) unreachable()
             captures.push({
-              value: m[i],
+              value: restorePathnameParam(m[i]),
               begin: current.charOffset + span[0],
               end: current.charOffset + span[1],
             })
@@ -252,7 +252,7 @@ export class Trie<data = unknown> {
             let span = m.indices![i]
             if (span === undefined) continue
             captures.push({
-              value: m[i],
+              value: restorePathnameParam(m[i]),
               begin: current.charOffset + span[0],
               end: current.charOffset + span[1],
             })
