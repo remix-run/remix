@@ -9,6 +9,8 @@ import { fileURLToPath } from 'node:url'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../..')
 const REMIX_PACKAGE_PATH = path.join(ROOT_DIR, 'packages', 'remix')
+const NODE_TSX_PACKAGE_PATH = path.join(ROOT_DIR, 'packages', 'node-tsx')
+let builtNodeTsxPackage = false
 
 describe('node-tsx', () => {
   it('runs ts entrypoints that import tsx modules through remix/node-tsx', async () => {
@@ -757,6 +759,45 @@ describe('node-tsx', () => {
     })
   })
 
+  it('loads ts entrypoints through the built load-module export', async () => {
+    await ensureBuiltNodeTsxPackage()
+
+    await withProject(async (projectPath) => {
+      await linkBuiltNodeTsxPackage(projectPath)
+      await writeJsxRuntime(projectPath)
+      await writeProjectFile(
+        projectPath,
+        'start.mjs',
+        [
+          "import { loadModule } from '@remix-run/node-tsx/load-module'",
+          '',
+          "let { render } = await loadModule('./server.ts', import.meta.url)",
+          'console.log(JSON.stringify(render()))',
+          '',
+        ].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'server.ts',
+        ["import { render } from './view.tsx'", '', 'export { render }', ''].join('\n'),
+      )
+      await writeProjectFile(
+        projectPath,
+        'view.tsx',
+        ['export function render() {', '  return <div>Built</div>', '}', ''].join('\n'),
+      )
+
+      let result = await runNode(['./start.mjs'], projectPath)
+
+      assert.equal(result.exitCode, 0, result.stderr)
+      assert.equal(result.stderr, '')
+      assert.deepEqual(JSON.parse(result.stdout.trim()), {
+        props: { children: 'Built' },
+        type: 'div',
+      })
+    })
+  })
+
   it('loads TypeScript modules with transform-only syntax through remix/node-tsx/load-module', async () => {
     await withProject(async (projectPath) => {
       await linkRemixPackage(projectPath)
@@ -1265,7 +1306,15 @@ async function runNode(
   argv: string[],
   cwd: string,
 ): Promise<{ exitCode: number; stderr: string; stdout: string }> {
-  let child = spawn(process.execPath, argv, {
+  return await runProcess(process.execPath, argv, cwd)
+}
+
+async function runProcess(
+  command: string,
+  argv: string[],
+  cwd: string,
+): Promise<{ exitCode: number; stderr: string; stdout: string }> {
+  let child = spawn(command, argv, {
     cwd,
     stdio: ['ignore', 'pipe', 'pipe'],
   })
@@ -1323,6 +1372,53 @@ async function waitForClose(
 async function linkRemixPackage(projectDir: string): Promise<void> {
   await fs.mkdir(path.join(projectDir, 'node_modules'), { recursive: true })
   await fs.symlink(REMIX_PACKAGE_PATH, path.join(projectDir, 'node_modules', 'remix'))
+}
+
+async function linkBuiltNodeTsxPackage(projectDir: string): Promise<void> {
+  let packageDir = path.join(projectDir, 'node_modules', '@remix-run', 'node-tsx')
+  await fs.mkdir(packageDir, { recursive: true })
+  await fs.symlink(path.join(NODE_TSX_PACKAGE_PATH, 'dist'), path.join(packageDir, 'dist'))
+  await fs.writeFile(
+    path.join(packageDir, 'package.json'),
+    [
+      '{',
+      '  "name": "@remix-run/node-tsx",',
+      '  "type": "module",',
+      '  "exports": {',
+      '    ".": {',
+      '      "types": "./dist/index.d.ts",',
+      '      "default": "./dist/index.js"',
+      '    },',
+      '    "./load-module": {',
+      '      "types": "./dist/load-module.d.ts",',
+      '      "default": "./dist/load-module.js"',
+      '    }',
+      '  }',
+      '}',
+      '',
+    ].join('\n'),
+    'utf8',
+  )
+}
+
+async function ensureBuiltNodeTsxPackage(): Promise<void> {
+  if (builtNodeTsxPackage) {
+    return
+  }
+
+  let npmExecPath = process.env.npm_execpath
+  if (npmExecPath == null) {
+    throw new Error('Expected npm_execpath to be set while running package tests')
+  }
+
+  let result = await runProcess(
+    process.execPath,
+    [npmExecPath, '--filter', '@remix-run/node-tsx', 'run', 'build'],
+    ROOT_DIR,
+  )
+  assert.equal(result.exitCode, 0, result.stderr)
+  assert.equal(result.stderr, '')
+  builtNodeTsxPackage = true
 }
 
 async function writeJsxRuntime(projectDir: string): Promise<void> {

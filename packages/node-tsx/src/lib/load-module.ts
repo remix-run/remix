@@ -12,7 +12,7 @@ export async function loadModule(specifier: string, parent: string | URL): Promi
 
   process.setSourceMapsEnabled(true)
   register(
-    new URL(`./register-hooks.ts?namespace=${encodeURIComponent(namespace)}`, import.meta.url),
+    new URL(`./register-hooks.js?namespace=${encodeURIComponent(namespace)}`, import.meta.url),
     {
       data: { namespace },
       parentURL: import.meta.url,
