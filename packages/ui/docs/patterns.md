@@ -117,9 +117,9 @@ function Toggle(handle: Handle) {
 }
 ```
 
-## Component Scope Use Cases
+## Setup Scope Use Cases
 
-The component scope is perfect for one-time initialization:
+The setup scope is perfect for one-time initialization:
 
 ### Initializing Instances
 
@@ -520,16 +520,16 @@ function DataLoader(handle: Handle<{ url: string }>) {
 }
 ```
 
-### Using Component Scope for Initial Data
+### Using Setup Scope for Initial Data
 
-Load initial data in the component scope:
+Load initial data in the setup scope:
 
 ```tsx
 function UserProfile(handle: Handle<{ userId: string; showEmail?: boolean }>) {
   let user: User | null = null
   let loading = true
 
-  // Load initial data in component scope using queueTask
+  // Load initial data in setup scope using queueTask
   handle.queueTask(async (signal) => {
     let response = await fetch(`/api/users/${handle.props.userId}`, { signal })
     let data = await response.json()
@@ -552,7 +552,7 @@ function UserProfile(handle: Handle<{ userId: string; showEmail?: boolean }>) {
 }
 ```
 
-Note that by fetching this data in the component scope, parent updates that change `userId` will not restart the request unless you add that behavior yourself.
+Note that by fetching this data in the setup scope, parent updates that change `userId` will not restart the request unless you add that behavior yourself.
 
 ## See Also
 

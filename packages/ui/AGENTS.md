@@ -87,12 +87,12 @@ root.dispose()
 
 All components follow a consistent two-phase structure:
 
-1. **Component Phase** - Runs once when the component is first created
+1. **Setup Phase** - Runs once when the component is first created
 2. **Render Phase** - Runs on initial render and every update afterward
 
 ```tsx
 function MyComponent(handle: Handle<Props>) {
-  // Component phase: runs once
+  // Setup phase: runs once
   let state = initializeState(handle.props)
 
   // Return render function: runs on every update
@@ -116,7 +116,7 @@ When a component is rendered:
 2. **Subsequent Updates**:
 
    - Only the render function is called
-   - Component phase is skipped, and the closure persists for the lifetime of the component instance
+   - Setup phase is skipped, and the closure persists for the lifetime of the component instance
    - `handle.props` is updated before the render function is called
    - Tasks queued during the update are executed after rendering
 
@@ -1504,9 +1504,9 @@ function ThemedContent(handle: Handle) {
 
 ## Common Patterns and Use Cases
 
-### Component Scope Use Cases
+### Setup Scope Use Cases
 
-The component scope is perfect for one-time initialization:
+The setup scope is perfect for one-time initialization:
 
 #### Initializing Instances
 
@@ -1941,16 +1941,16 @@ The render signal is aborted when:
 
 This ensures only the latest data loading request completes. If the `url` prop changes while a request is in flight, the previous request is automatically cancelled.
 
-#### Using Component Scope for Initial Data
+#### Using Setup Scope for Initial Data
 
-Load initial data in the component scope:
+Load initial data in the setup scope:
 
 ```tsx
 function UserProfile(handle: Handle<{ userId: string; showEmail?: boolean }>) {
   let user: User | null = null
   let loading = true
 
-  // Load initial data in component scope using queueTask
+  // Load initial data in setup scope using queueTask
   handle.queueTask(async (signal) => {
     let response = await fetch(`/api/users/${handle.props.userId}`, { signal })
     let data = await response.json()
@@ -1973,7 +1973,7 @@ function UserProfile(handle: Handle<{ userId: string; showEmail?: boolean }>) {
 }
 ```
 
-Note that by fetching this data in the component scope any parent updates that change `handle.props.userId` will have no effect.
+Note that by fetching this data in the setup scope any parent updates that change `handle.props.userId` will have no effect.
 
 ## Testing
 
@@ -2020,7 +2020,7 @@ You should also flush after the initial `root.render()` to ensure event listener
 - **Components** have two phases: setup (runs once) and render (runs after setup and on updates)
 - **State** is managed with plain JavaScript variables
 - **Updates** are explicit via `handle.update()`
-- **Setup prop** initialization values and excluded from props
+- **Setup phase** can initialize stable state from initial `handle.props` values
 - **Context** enables indirect composition without prop drilling
 - **TypedEventTarget** provides granular updates for better performance
 - **State management best practices:**

@@ -1,6 +1,6 @@
 # Getting Started
 
-Create interactive UIs with Remix UI using a two-phase component model: the component function runs once, and its render function runs on every update.
+Create interactive UIs with Remix UI using a two-phase component model: setup runs once, and render runs on every update.
 
 ## Client-Only Root
 
