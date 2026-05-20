@@ -222,10 +222,12 @@ describe('SuperHeaders', () => {
     headers.accept.set('text/html')
     headers.accept.set('application/json', 0.8)
     headers.cookie.set('theme', 'dark')
+    headers.cookie.append('theme', 'light')
     headers.vary.add('Accept-Encoding')
 
     assert.equal(headers.get('Accept'), 'text/html,application/json;q=0.8')
-    assert.equal(headers.get('Cookie'), 'theme=dark')
+    assert.equal(headers.get('Cookie'), 'theme=dark; theme=light')
+    assert.deepEqual(headers.cookie.getAll('theme'), ['dark', 'light'])
     assert.equal(headers.get('Vary'), 'accept-encoding')
     assert.equal(getResponseHeaders(headers).get('Accept'), 'text/html,application/json;q=0.8')
 
@@ -362,6 +364,21 @@ describe('SuperHeaders', () => {
 
     assert.deepEqual(Array.from(headers), [['content-type', 'text/html']])
     assert.equal(stringify(headers), 'Content-Type: text/html')
+  })
+
+  it('preserves duplicate Cookie values', () => {
+    let headers = new SuperHeaders({
+      Cookie: 'session=child; session=parent; theme=dark',
+    })
+
+    assert.equal(headers.cookie.get('session'), 'child')
+    assert.deepEqual(headers.cookie.getAll('session'), ['child', 'parent'])
+    assert.deepEqual(Array.from(headers.cookie), [
+      ['session', 'child'],
+      ['session', 'parent'],
+      ['theme', 'dark'],
+    ])
+    assert.equal(headers.get('Cookie'), 'session=child; session=parent; theme=dark')
   })
 
   it('preserves and syncs multiple Set-Cookie values', () => {

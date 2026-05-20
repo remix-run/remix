@@ -83,10 +83,64 @@ describe('describe.skip', () => {
   })
 })
 
+describe('describe.skip inheritance', () => {
+  it('propagates skip to nested describes', () => {
+    let captured = captureRegistration(() =>
+      describe.skip('parent', () => {
+        describe('child', () => {
+          it('test', () => {})
+        })
+      }),
+    )
+    let [parent, child] = captured
+    assert.equal(parent.skip, true)
+    assert.equal(child.name, 'parent > child')
+    assert.equal(child.skip, true)
+  })
+
+  it('propagates skip through multiple levels of nesting', () => {
+    let captured = captureRegistration(() =>
+      describe.skip('a', () => {
+        describe('b', () => {
+          describe('c', () => {
+            it('test', () => {})
+          })
+        })
+      }),
+    )
+    for (let suite of captured) {
+      assert.equal(suite.skip, true, `${suite.name} should be skipped`)
+    }
+  })
+
+  it('does not infect sibling describes registered after the skipped one', () => {
+    let captured = captureRegistration(() => {
+      describe.skip('skipped', () => {})
+      describe('not skipped', () => {})
+    })
+    let [skipped, notSkipped] = captured
+    assert.equal(skipped.skip, true)
+    assert.equal(notSkipped.skip, undefined)
+  })
+})
+
 describe('describe.only', () => {
   it('marks the suite as only', () => {
     let [s] = captureRegistration(() => describe.only('suite', () => {}))
     assert.equal(s.only, true)
+  })
+
+  it('propagates only to nested describes', () => {
+    let captured = captureRegistration(() =>
+      describe.only('parent', () => {
+        describe('child', () => {
+          it('test', () => {})
+        })
+      }),
+    )
+    let [parent, child] = captured
+    assert.equal(parent.only, true)
+    assert.equal(child.only, true)
   })
 })
 

@@ -1,6 +1,22 @@
-import type { Middleware } from '@remix-run/fetch-router'
+import { createContextKey, type Middleware } from '@remix-run/fetch-router'
 
 import { createStyles } from '@remix-run/terminal'
+
+/**
+ * Function used to write log messages.
+ */
+export interface LoggerFunction {
+  /**
+   * Writes a log message.
+   */
+  (message: string): void
+}
+
+/**
+ * Context key used to read the current request logger with `context.get(Logger)`.
+ * The `logger()` middleware also installs the logger as `context.logger`.
+ */
+export const Logger = createContextKey<LoggerFunction>()
 
 /**
  * Options for the {@link logger} middleware.
@@ -38,7 +54,7 @@ export interface LoggerOptions {
    *
    * @default console.log
    */
-  log?: (message: string) => void
+  log?: LoggerFunction
   /**
    * Enables ANSI colors for high-signal log tokens.
    *
@@ -64,7 +80,9 @@ export interface LoggerOptions {
  * @param options Options for the logger
  * @returns The logger middleware
  */
-export function logger(options: LoggerOptions = {}): Middleware {
+export function logger(
+  options: LoggerOptions = {},
+): Middleware<{ key: typeof Logger; value: LoggerFunction; property: 'logger' }> {
   let {
     colors,
     format = '[%date] %method %path %status %contentLength',
@@ -72,7 +90,10 @@ export function logger(options: LoggerOptions = {}): Middleware {
   } = options
   let colorizer = getColorizer(colors)
 
-  return async ({ request, url }, next) => {
+  return async (context, next) => {
+    context.set(Logger, log, { property: 'logger' })
+
+    let { request, url } = context
     let start = new Date()
     let response = await next()
     let end = new Date()

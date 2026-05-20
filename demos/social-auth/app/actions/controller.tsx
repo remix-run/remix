@@ -1,10 +1,7 @@
-import { Auth } from 'remix/auth-middleware'
-import { createController } from 'remix/fetch-router'
-import { Renderer } from 'remix/render-middleware'
+import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
 import { getReturnToQuery, requireAuth } from '../middleware/auth.ts'
-import { Session } from '../middleware/session.ts'
 import { routes } from '../routes.ts'
 import { AccountPage } from '../ui/account-page.tsx'
 import { LoginPage } from '../ui/home/page.tsx'
@@ -19,17 +16,14 @@ export function createRootController(
 ) {
   return createController(routes, {
     actions: {
-      home({ get, url }) {
-        let auth = get(Auth)
+      home({ auth, render, session, url }) {
         if (auth.ok) {
           return redirect(routes.account.href())
         }
 
-        let session = get(Session)
         let error = session.get('error')
         let success = session.get('success')
         let returnToQuery = getReturnToQuery(url)
-        let render = get(Renderer)
 
         return render(
           <LoginPage
@@ -43,14 +37,11 @@ export function createRootController(
         )
       },
       account: {
-        middleware: [requireAuth],
-        handler({ get }) {
-          let auth = get(Auth)
+        middleware: [requireAuth()],
+        handler({ auth, render }) {
           if (!auth.ok) {
             return new Response('Unauthorized', { status: 401 })
           }
-
-          let render = get(Renderer)
 
           return render(
             <AccountPage identity={auth.identity} logoutAction={routes.auth.logout.href()} />,

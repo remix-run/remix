@@ -1,4 +1,6 @@
 import { RoutePattern } from '@remix-run/route-pattern'
+import { createHref } from '@remix-run/route-pattern/href'
+import { createMatcher, type Matcher } from '@remix-run/route-pattern/match'
 
 import {
   getRelativeFilePath,
@@ -21,7 +23,9 @@ interface RouteConfig {
 interface CompiledRoute {
   rootDir: string
   urlPattern: RoutePattern
+  urlMatcher: Matcher
   filePattern: RoutePattern
+  fileMatcher: Matcher
 }
 
 export interface CompiledRoutes {
@@ -67,9 +71,9 @@ export function compileRoutes(
       let normalizedPathname = normalizePathname(pathname)
 
       for (let route of compiledRoutes) {
-        let match = route.urlPattern.match(`http://remix.run${normalizedPathname}`)
+        let match = route.urlMatcher.match(`http://remix.run${normalizedPathname}`)
         if (!match) continue
-        let relativeFilePath = route.filePattern.href(match.params).replace(/^\/+/, '')
+        let relativeFilePath = createHref(route.filePattern, match.params).replace(/^\/+/, '')
         return resolveFilePath(route.rootDir, relativeFilePath)
       }
 
@@ -80,9 +84,9 @@ export function compileRoutes(
 
       for (let route of compiledRoutes) {
         let relativeFilePath = getRelativeFilePath(route.rootDir, normalizedFilePath)
-        let match = route.filePattern.ast.pathname.match(relativeFilePath)
+        let match = route.fileMatcher.match(`http://remix.run/${relativeFilePath}`)
         if (!match) continue
-        return normalizePathname(route.urlPattern.href(getPathnameParams(route.filePattern, match)))
+        return normalizePathname(createHref(route.urlPattern, match.params))
       }
 
       return null
@@ -104,8 +108,8 @@ function compileRoute(
   )
   let filePatternSource = normalizeFilePattern(route.filePattern)
 
-  let urlPattern = new RoutePattern(urlPatternSource)
-  let filePattern = new RoutePattern(filePatternSource)
+  let urlPattern = RoutePattern.parse(urlPatternSource)
+  let filePattern = RoutePattern.parse(filePatternSource)
 
   validateNoUnnamedWildcards(urlPattern, 'URL')
   validateNoUnnamedWildcards(filePattern, 'File')
@@ -114,37 +118,30 @@ function compileRoute(
   return {
     rootDir: normalizeFilePath(options.rootDir).replace(/\/+$/, ''),
     urlPattern,
+    urlMatcher: createMatcher(urlPattern),
     filePattern,
+    fileMatcher: createMatcher(stripDotSegments(filePatternSource)),
   }
 }
 
-function getPathnameParams(
-  pattern: RoutePattern,
-  match: Array<{ name: string; type: ':' | '*'; value: string }>,
-): Record<string, string | undefined> {
-  let params: Record<string, string | undefined> = {}
+function stripDotSegments(pattern: string): string {
+  let segments: string[] = []
 
-  for (let param of pattern.ast.pathname.params) {
-    if (param.name === '*') continue
-    params[param.name] = undefined
+  for (let segment of pattern.split('/')) {
+    if (segment === '' || segment === '.') continue
+    if (segment === '..') {
+      segments.pop()
+      continue
+    }
+    segments.push(segment)
   }
 
-  for (let param of match) {
-    if (param.name === '*') continue
-    params[param.name] = param.value
-  }
-
-  return params
+  return segments.join('/')
 }
 
 function validateRoutePatterns(urlPattern: RoutePattern, filePattern: RoutePattern): void {
-  let urlParams = urlPattern.ast.pathname.params.map(
-    (param: { name: string; type: ':' | '*' }) => `${param.type}:${param.name}`,
-  )
-  let fileParams = filePattern.ast.pathname.params.map(
-    (param: { name: string; type: ':' | '*' }) => `${param.type}:${param.name}`,
-  )
-
+  let urlParams = getPathnameParams(urlPattern)
+  let fileParams = getPathnameParams(filePattern)
   if (urlParams.length !== fileParams.length) {
     throw new Error(
       `Route patterns must have matching capture structure.\nURL: ${urlPattern}\nFile: ${filePattern}`,
@@ -152,7 +149,9 @@ function validateRoutePatterns(urlPattern: RoutePattern, filePattern: RoutePatte
   }
 
   for (let i = 0; i < urlParams.length; i++) {
-    if (urlParams[i] !== fileParams[i]) {
+    let urlParam = urlParams[i]
+    let fileParam = fileParams[i]
+    if (urlParam.type !== fileParam.type || urlParam.name !== fileParam.name) {
       throw new Error(
         `Route patterns must have matching capture structure.\nURL: ${urlPattern}\nFile: ${filePattern}`,
       )
@@ -161,13 +160,17 @@ function validateRoutePatterns(urlPattern: RoutePattern, filePattern: RoutePatte
 }
 
 function validateNoUnnamedWildcards(pattern: RoutePattern, label: string): void {
-  if (
-    pattern.ast.pathname.params.some(
-      (param: { name: string; type: ':' | '*' }) => param.type === '*' && param.name === '*',
-    )
-  ) {
+  if (pattern.pathname.tokens.some((token) => token.type === '*' && token.name === '*')) {
     throw new Error(
       `${label} route patterns must use named wildcards for reversible mapping.\nPattern: ${pattern}`,
     )
   }
+}
+
+type PathnameParam = Extract<RoutePattern['pathname']['tokens'][number], { type: ':' | '*' }>
+
+function getPathnameParams(pattern: RoutePattern): Array<PathnameParam> {
+  return pattern.pathname.tokens.filter(
+    (token): token is PathnameParam => token.type === ':' || token.type === '*',
+  )
 }

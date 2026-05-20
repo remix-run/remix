@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/auth-middleware",
-  "version": "0.1.2",
+  "version": "0.2.0",
   "description": "Pluggable authentication middleware for Remix",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -35,7 +35,6 @@
     "@remix-run/assert": "workspace:*",
     "@remix-run/cookie": "workspace:*",
     "@remix-run/fetch-router": "workspace:*",
-    "@remix-run/routes": "workspace:*",
     "@remix-run/session": "workspace:*",
     "@remix-run/session-middleware": "workspace:*",
     "@remix-run/test": "workspace:*",

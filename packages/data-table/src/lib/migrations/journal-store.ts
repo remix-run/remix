@@ -2,32 +2,36 @@ import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
 import { rawSql } from '../sql.ts'
 import type { MigrationDescriptor, MigrationJournalRow } from '../migrations.ts'
 
-export function normalizeChecksum(migration: MigrationDescriptor): string {
-  if (migration.checksum) {
-    return migration.checksum
+export async function computeChecksum(migration: MigrationDescriptor): Promise<string> {
+  let digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(migration.up))
+  return bytesToHex(new Uint8Array(digest))
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  let hex = ''
+
+  for (let byte of bytes) {
+    hex += byte.toString(16).padStart(2, '0')
   }
 
-  return migration.id + ':' + migration.name
+  return hex
 }
 
 export async function ensureMigrationJournal(
   adapter: DatabaseAdapter,
   tableName: string,
 ): Promise<void> {
-  await adapter.migrate({
-    operation: {
-      kind: 'createTable',
-      table: { name: tableName },
-      ifNotExists: true,
-      columns: {
-        id: { type: 'varchar', length: 64, nullable: false, primaryKey: true },
-        name: { type: 'varchar', length: 255, nullable: false },
-        checksum: { type: 'varchar', length: 128, nullable: false },
-        batch: { type: 'integer', nullable: false },
-        applied_at: { type: 'timestamp', nullable: false, default: { kind: 'now' } },
-      },
-    },
-  })
+  await adapter.executeScript(
+    'create table if not exists ' +
+      tableName +
+      ' (' +
+      'id varchar(64) not null primary key, ' +
+      'name varchar(255) not null, ' +
+      'checksum varchar(128) not null, ' +
+      'batch integer not null, ' +
+      'applied_at timestamp not null default current_timestamp' +
+      ')',
+  )
 }
 
 export async function hasMigrationJournal(

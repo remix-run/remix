@@ -12,7 +12,7 @@ This repository includes the source code for Remix 3, a web framework for buildi
 
 ## Default Development Loop
 
-- **Fast local loop**: `pnpm run lint`, `pnpm run test:changed`, `pnpm run typecheck:changed`
+- **Fast local loop**: `pnpm run validate-package-meta`, `pnpm run lint`, `pnpm run test:changed`, `pnpm run typecheck:changed`
 - **Full CI-style validation**: `pnpm test` and `pnpm run typecheck`
 - **When to use full runs locally**: broad cross-workspace changes, shared root config changes, release/publish flow changes, or anything that could affect the whole repo
 - **Single package commands**: `pnpm --filter @remix-run/<package> run test`, `pnpm --filter @remix-run/<package> run typecheck`, `pnpm --filter @remix-run/<package> run build`
@@ -40,6 +40,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 - **Test guidance**: use the `write-tests` skill when adding, refactoring, or reviewing tests, fixtures, test scripts, or test-only dependencies
 - **Docs and examples**: if you change a public API, update the related docs, JSDoc, README examples, and tests in the same change
 - **README/install conventions**: use `npm i remix` in install snippets and import from `remix`, not `@remix-run/*`
+- **README link conventions**: use full GitHub URLs for cross-file or cross-package repo links so copied docs render correctly; keep same-document anchors and README self-links relative
 
 ## Release Notes
 
@@ -53,23 +54,24 @@ For work on this repository itself, use the skills in `.agents/skills/`:
 
 - `add-package` at `.agents/skills/add-package/SKILL.md`: Create or align a package under `packages/` with repo conventions.
 - `author-ui-modules` at `.agents/skills/author-ui-modules/SKILL.md`: Build idiomatic `packages/ui` modules, including first-party UI primitives, headless controls, and mixin-based modules.
-- `expert-typescript-programmer` at `.agents/skills/expert-typescript-programmer/SKILL.md`: Write, refactor, or review TypeScript with strict, precise, maintainable types.
 - `fix-issue` at `.agents/skills/fix-issue/SKILL.md`: Fix bugs reported in GitHub issues.
-- `write-tests` at `.agents/skills/write-tests/SKILL.md`: Write, refactor, or review tests with repo runner, fixture, assertion, dependency, and validation conventions.
 - `make-change-file` at `.agents/skills/make-change-file/SKILL.md`: Create or update package change files under `packages/*/.changes`.
 - `make-decision-doc` at `.agents/skills/make-decision-doc/SKILL.md`: Add a numbered decision document under `decisions/` capturing a non-obvious architectural choice.
 - `make-demo` at `.agents/skills/make-demo/SKILL.md`: Create or revise demos in this repository with production-quality Remix patterns.
 - `make-pr` at `.agents/skills/make-pr/SKILL.md`: Prepare and open clear, reviewer-friendly pull requests.
 - `publish-placeholder-package` at `.agents/skills/publish-placeholder-package/SKILL.md`: Publish a `0.0.0` placeholder package to reserve an npm name.
 - `review-pr` at `.agents/skills/review-pr/SKILL.md`: Review Remix pull requests from a local checkout.
+- `remix` at `.agents/skills/remix/SKILL.md`: Build, review, and refactor Remix apps end to end, including project layout, routes, controllers, middleware, validation, data access, auth, sessions, uploads, UI, hydration, navigation, animations, and tests.
 - `supersede-pr` at `.agents/skills/supersede-pr/SKILL.md`: Replace one pull request with another and close the superseded PR safely.
+- `typescript-expert` at `.agents/skills/typescript-expert/SKILL.md`: Write, refactor, or review TypeScript with strict, precise, maintainable types.
 - `update-pr` at `.agents/skills/update-pr/SKILL.md`: Rewrite an existing pull request title and body to match the current diff.
 - `write-api-docs` at `.agents/skills/write-api-docs/SKILL.md`: Write or tighten JSDoc for exported public APIs.
 - `write-readme` at `.agents/skills/write-readme/SKILL.md`: Draft or revise package READMEs in the repo's style.
+- `write-tests` at `.agents/skills/write-tests/SKILL.md`: Write, refactor, or review tests with repo runner, fixture, assertion, dependency, and validation conventions.
 - `write-ui-module-readme` at `.agents/skills/write-ui-module-readme/SKILL.md`: Write concise module README files for `packages/ui/src/lib/*` primitives.
 
 ## App And Demo Skills
 
-For working on Remix code in demos or writing Remix app code, use the skills in `skills/`:
+For working on Remix code in demos or writing Remix app code, use the root `remix` skill listed above.
 
-- `remix` at `skills/remix/SKILL.md`: Build, review, and refactor Remix apps end to end, including project layout, routes, controllers, middleware, validation, data access, auth, sessions, uploads, UI, hydration, navigation, animations, and tests.
+The CLI prepack step copies `.agents/skills/remix` into the default app template so scaffolded apps can refer to `./.agents/skills/remix/SKILL.md`.

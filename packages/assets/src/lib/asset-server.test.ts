@@ -5,6 +5,7 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
+import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
 import { isAssetServerCompilationError } from './compilation-error.ts'
@@ -14,18 +15,22 @@ import {
   getInternalChokidarWatcher,
   getInternalWatchTargets,
 } from './asset-server.ts'
-import type { AssetServerOptions } from './asset-server.ts'
+import type { AssetServer, AssetServerOptions } from './asset-server.ts'
+import type { AssetRequestTransformMap } from './files/config.ts'
+import { defineFileTransform } from './files/config.ts'
 
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
 
 function createAssetServerForTest(
-  options: Omit<AssetServerOptions, 'basePath'> & { basePath?: string },
-): ReturnType<typeof createAssetServer> {
+  options: Omit<AssetServerOptions<AssetRequestTransformMap>, 'basePath'> & {
+    basePath?: string
+  },
+): AssetServer<AssetRequestTransformMap> {
   return createAssetServer({
     basePath: options.basePath ?? '/assets',
     ...options,
     watch: options.watch ?? false,
-  })
+  } as any) as AssetServer<AssetRequestTransformMap>
 }
 
 async function makeTmpDir(): Promise<string> {
@@ -43,6 +48,12 @@ function writeJson(dir: string, rel: string, value: unknown): Promise<string> {
   return write(dir, rel, JSON.stringify(value, null, 2))
 }
 
+async function symlinkDirectory(target: string, link: string): Promise<void> {
+  await fs.mkdir(path.dirname(link), { recursive: true })
+  await fs.rm(link, { recursive: true, force: true })
+  await fs.symlink(target, link, process.platform === 'win32' ? 'junction' : 'dir')
+}
+
 function getLineAndColumn(source: string, search: string): { line: number; column: number } {
   let index = source.indexOf(search)
   assert.notEqual(index, -1, `Expected to find "${search}" in:\n${source}`)
@@ -54,7 +65,7 @@ function getLineAndColumn(source: string, search: string): { line: number; colum
   }
 }
 
-function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions> = {}) {
+function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions<any>> = {}) {
   return createAssetServerForTest({
     allow: ['app/**', 'app/node_modules/**'],
     basePath: '/assets',
@@ -68,7 +79,27 @@ function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions
   })
 }
 
-function createWatchedTestServer(rootDir: string, overrides: Partial<AssetServerOptions> = {}) {
+function createNodeModulesTestServer(
+  rootDir: string,
+  overrides: Partial<AssetServerOptions<any>> = {},
+) {
+  return createAssetServerForTest({
+    allow: ['app/entry.ts', 'app/node_modules/**'],
+    basePath: '/assets',
+    fileMap: {
+      '/node_modules/*path': 'app/node_modules/*path',
+      '/app/*path': 'app/*path',
+    },
+    rootDir,
+    watch: overrides.watch ?? false,
+    ...overrides,
+  })
+}
+
+function createWatchedTestServer(
+  rootDir: string,
+  overrides: Partial<AssetServerOptions<any>> = {},
+) {
   return createTestServer(rootDir, {
     ...overrides,
     watch: overrides.watch ?? true,
@@ -76,31 +107,31 @@ function createWatchedTestServer(rootDir: string, overrides: Partial<AssetServer
 }
 
 function get(
-  assetServer: ReturnType<typeof createAssetServer>,
+  assetServer: AssetServer<AssetRequestTransformMap>,
   pathname: string,
   headers?: Record<string, string>,
 ) {
   return assetServer.fetch(new Request(`http://localhost${pathname}`, { headers }))
 }
 
-function head(assetServer: ReturnType<typeof createAssetServer>, pathname: string) {
+function head(assetServer: AssetServer<AssetRequestTransformMap>, pathname: string) {
   return assetServer.fetch(new Request(`http://localhost${pathname}`, { method: 'HEAD' }))
 }
 
 async function getByFile(
-  assetServer: ReturnType<typeof createAssetServer>,
+  assetServer: AssetServer<AssetRequestTransformMap>,
   filePath: string,
   headers?: Record<string, string>,
 ) {
   return get(assetServer, await assetServer.getHref(filePath), headers)
 }
 
-function post(assetServer: ReturnType<typeof createAssetServer>, pathname: string) {
+function post(assetServer: AssetServer<AssetRequestTransformMap>, pathname: string) {
   return assetServer.fetch(new Request(`http://localhost${pathname}`, { method: 'POST' }))
 }
 
 async function emitWatchEvent(
-  assetServer: ReturnType<typeof createAssetServer>,
+  assetServer: AssetServer<AssetRequestTransformMap>,
   filePath: string,
   event: 'add' | 'change' | 'unlink',
 ): Promise<void> {
@@ -129,7 +160,7 @@ function isNoEntityError(error: unknown): error is NodeJS.ErrnoException {
 }
 
 async function getCompiledCodeAndSourceMap(
-  assetServer: ReturnType<typeof createAssetServer>,
+  assetServer: AssetServer<AssetRequestTransformMap>,
   filePath: string,
 ): Promise<{ compiledCode: string; sourceMap: RawSourceMap }> {
   let entryResponse = await getByFile(assetServer, filePath)
@@ -232,12 +263,12 @@ async function withTsconfigTransformCase(
   files: Record<string, unknown>,
   callback: (context: {
     caseDir: string
-    assetServer: ReturnType<typeof createAssetServer>
+    assetServer: AssetServer<AssetRequestTransformMap>
   }) => Promise<void>,
-  serverOverrides: Partial<AssetServerOptions> = {},
+  serverOverrides: Partial<AssetServerOptions<any>> = {},
 ): Promise<void> {
   let caseDir = await makeTmpDir()
-  let assetServer: ReturnType<typeof createAssetServer> | null = null
+  let assetServer: AssetServer<AssetRequestTransformMap> | null = null
 
   try {
     for (let [rel, value] of Object.entries(files)) {
@@ -248,8 +279,9 @@ async function withTsconfigTransformCase(
       }
     }
 
-    assetServer = createTestServer(caseDir, serverOverrides)
-    await callback({ caseDir, assetServer })
+    let createdAssetServer = createTestServer(caseDir, serverOverrides)
+    assetServer = createdAssetServer
+    await callback({ caseDir, assetServer: createdAssetServer })
   } finally {
     if (assetServer) {
       await assetServer.close()
@@ -424,7 +456,893 @@ describe('asset-server', () => {
     assert.equal(notModified.status, 304)
   })
 
-  it('rewrites CSS imports to served URLs and preserves authored asset URLs', async () => {
+  it('serves configured file assets with no-cache, ETags, and HEAD support', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/images/logo.svg')
+    assert.ok(response)
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('Content-Type'), 'image/svg+xml')
+    assert.equal(response.headers.get('Cache-Control'), 'no-cache')
+    assert.ok(response.headers.get('ETag'))
+    assert.match(await response.text(), /<svg/)
+
+    let headResponse = await head(assetServer, '/assets/app/images/logo.svg')
+    assert.ok(headResponse)
+    assert.equal(headResponse.status, 200)
+    assert.equal(headResponse.headers.get('Content-Type'), 'image/svg+xml')
+    assert.equal(await headResponse.text(), '')
+
+    let notModified = await get(assetServer, '/assets/app/images/logo.svg', {
+      'If-None-Match': response.headers.get('ETag')!,
+    })
+    assert.ok(notModified)
+    assert.equal(notModified.status, 304)
+  })
+
+  it('picks up source file changes without watch mode', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+      },
+    })
+
+    let firstResponse = await get(assetServer, '/assets/app/content/value.txt')
+    assert.ok(firstResponse)
+    let firstEtag = firstResponse.headers.get('ETag')
+    assert.ok(firstEtag)
+    assert.equal(await firstResponse.text(), 'hello\n')
+
+    await write(dir, 'app/content/value.txt', 'world\n')
+
+    let secondResponse = await get(assetServer, '/assets/app/content/value.txt')
+    assert.ok(secondResponse)
+    let secondEtag = secondResponse.headers.get('ETag')
+    assert.ok(secondEtag)
+    assert.equal(await secondResponse.text(), 'world\n')
+    assert.notEqual(secondEtag, firstEtag)
+  })
+
+  it('serves request-transformed file assets', async () => {
+    await write(
+      dir,
+      'app/images/logo.svg',
+      '<svg xmlns="http://www.w3.org/2000/svg" color="#0EA5E9"><title>Demo image</title><rect fill="currentColor" /></svg>\n',
+    )
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          recolor: defineFileTransform<string>({
+            param: true,
+            async transform(bytes, { extension, param }) {
+              assert.equal(extension, '.svg')
+              return new TextDecoder().decode(bytes).replace('currentColor', param)
+            },
+          }),
+          retitle: defineFileTransform<string>({
+            param: true,
+            async transform(bytes, { param }) {
+              return new TextDecoder()
+                .decode(bytes)
+                .replace('<title>Demo image</title>', `<title>${param}</title>`)
+            },
+          }),
+        },
+      },
+    })
+
+    let href = await assetServer.getHref('app/images/logo.svg', {
+      transform: [
+        ['recolor', '#8B5CF6'],
+        ['retitle', 'Purple demo image'],
+      ],
+    })
+    let response = await get(assetServer, href)
+    assert.ok(response)
+    assert.equal(response.status, 200)
+    assert.equal(response.headers.get('Content-Type'), 'image/svg+xml')
+
+    let body = await response.text()
+    assert.match(body, /#8B5CF6/i)
+    assert.match(body, /Purple demo image/)
+  })
+
+  it('serializes typed transform arguments and no-arg shorthand in hrefs', async () => {
+    await write(dir, 'app/content/value.txt', 'base\n')
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+        transforms: {
+          upper: defineFileTransform({
+            async transform(bytes) {
+              return new TextDecoder().decode(bytes).toUpperCase()
+            },
+          }),
+          repeat: defineFileTransform<`${number}`>({
+            param: true,
+            async transform(bytes, { param }) {
+              let count = Number(param)
+              if (!Number.isInteger(count)) {
+                throw new TypeError('Expected an integer repeat count')
+              }
+
+              let text = new TextDecoder().decode(bytes).trim()
+              return Array.from({ length: count }, () => text).join('|')
+            },
+          }),
+        },
+      },
+    })
+
+    let href = await assetServer.getHref('app/content/value.txt', {
+      transform: [['repeat', '3'], 'upper'],
+    })
+    assert.equal(href, '/assets/app/content/value.txt?transform=repeat%3A3&transform=upper')
+
+    let response = await get(assetServer, href)
+    assert.ok(response)
+    assert.equal(await response.text(), 'BASE|BASE|BASE')
+  })
+
+  it('supports transform params with delimiter-like characters', async () => {
+    await write(
+      dir,
+      'app/images/logo.svg',
+      '<svg xmlns="http://www.w3.org/2000/svg"><title>Demo image</title></svg>\n',
+    )
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          retitle: defineFileTransform<string>({
+            param: true,
+            async transform(bytes, { param }) {
+              return new TextDecoder()
+                .decode(bytes)
+                .replace('<title>Demo image</title>', `<title>${param}</title>`)
+            },
+          }),
+        },
+      },
+    })
+
+    let href = await assetServer.getHref('app/images/logo.svg', {
+      transform: [['retitle', 'Purple | demo (v2)']],
+    })
+    assert.equal(href, '/assets/app/images/logo.svg?transform=retitle%3APurple+%7C+demo+%28v2%29')
+
+    let response = await get(assetServer, href)
+    assert.ok(response)
+    assert.match(await response.text(), /Purple \| demo \(v2\)/)
+  })
+
+  it('treats an empty transform array in getHref as no transform', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          optimize: defineFileTransform({
+            async transform(bytes) {
+              return bytes
+            },
+          }),
+        },
+      },
+    })
+
+    let directHref = await assetServer.getHref('app/images/logo.svg')
+    let emptyTransformHref = await assetServer.getHref('app/images/logo.svg', {
+      transform: [],
+    })
+
+    assert.equal(emptyTransformHref, directHref)
+    assert.equal(emptyTransformHref, '/assets/app/images/logo.svg')
+  })
+
+  it('returns 400 for malformed file transform queries without calling onError', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let onErrorCalls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          optimize: defineFileTransform({
+            async transform(bytes) {
+              return bytes
+            },
+          }),
+        },
+      },
+      onError() {
+        onErrorCalls += 1
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/images/logo.svg?transform=:wat')
+    assert.ok(response)
+    assert.equal(response.status, 400)
+    assert.equal(response.headers.get('Content-Type'), 'text/plain; charset=utf-8')
+    assert.match(
+      await response.text(),
+      /Expected each transform name to use "transform-name" format/,
+    )
+    assert.equal(onErrorCalls, 0)
+  })
+
+  it('returns 400 for invalid file transform requests without calling onError', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let onErrorCalls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          recolor: defineFileTransform<string>({
+            param: true,
+            async transform(bytes) {
+              return bytes
+            },
+          }),
+        },
+      },
+      onError() {
+        onErrorCalls += 1
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/images/logo.svg?transform=recolor')
+    assert.ok(response)
+    assert.equal(response.status, 400)
+    assert.equal(response.headers.get('Content-Type'), 'text/plain; charset=utf-8')
+    assert.match(await response.text(), /File transform "recolor" requires a param/)
+    assert.equal(onErrorCalls, 0)
+  })
+
+  it('returns 400 for transform queries on served script assets', async () => {
+    await write(dir, 'app/entry.ts', 'export const entry = true')
+    let assetServer = createTestServer(dir)
+
+    let directResponse = await get(assetServer, '/assets/app/entry.ts')
+    assert.ok(directResponse)
+    assert.equal(directResponse.status, 200)
+
+    let transformedResponse = await get(assetServer, '/assets/app/entry.ts?transform=resize')
+    assert.ok(transformedResponse)
+    assert.equal(transformedResponse.status, 400)
+    assert.equal(transformedResponse.headers.get('Content-Type'), 'text/plain; charset=utf-8')
+    assert.match(
+      await transformedResponse.text(),
+      /Asset request transforms are only supported for configured file assets/,
+    )
+  })
+
+  it('returns 400 for transform queries on served style assets', async () => {
+    await write(dir, 'app/styles.css', 'body { color: red; }\n')
+    let assetServer = createTestServer(dir)
+
+    let directResponse = await get(assetServer, '/assets/app/styles.css')
+    assert.ok(directResponse)
+    assert.equal(directResponse.status, 200)
+
+    let transformedResponse = await get(assetServer, '/assets/app/styles.css?transform=resize')
+    assert.ok(transformedResponse)
+    assert.equal(transformedResponse.status, 400)
+    assert.equal(transformedResponse.headers.get('Content-Type'), 'text/plain; charset=utf-8')
+    assert.match(
+      await transformedResponse.text(),
+      /Asset request transforms are only supported for configured file assets/,
+    )
+  })
+
+  it('validates transform params when generating hrefs', async () => {
+    await write(
+      dir,
+      'app/images/logo.svg',
+      '<svg xmlns="http://www.w3.org/2000/svg" color="#0EA5E9"><rect fill="currentColor" /></svg>\n',
+    )
+    let assetServer = createAssetServer({
+      allow: ['app/**'],
+      basePath: '/assets',
+      fileMap: {
+        '/assets/app/*path': 'app/*path',
+      },
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          recolor: defineFileTransform<string>({
+            param: true,
+            async transform(bytes, { param }) {
+              return new TextDecoder().decode(bytes).replace('currentColor', param)
+            },
+          }),
+        },
+      },
+      rootDir: dir,
+      watch: false,
+    })
+
+    await assert.rejects(
+      () =>
+        assetServer.getHref('app/images/logo.svg', {
+          transform: [
+            [
+              'recolor',
+              // @ts-expect-error - recolor expects a string param
+              123,
+            ],
+          ],
+        }),
+      /Invalid param for file transform "recolor": expected a string/,
+    )
+  })
+
+  it('allows global file transforms to skip by returning null', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    await write(dir, 'app/content/info.txt', 'plain text file\n')
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg', '.txt'],
+        globalTransforms: [
+          async (bytes, { extension }) => {
+            if (extension !== '.svg') return null
+            return new TextDecoder().decode(bytes).replace('</svg>', '<!-- transformed --></svg>')
+          },
+        ],
+      },
+    })
+
+    let svgResponse = await get(assetServer, '/assets/app/images/logo.svg')
+    assert.ok(svgResponse)
+    assert.match(await svgResponse.text(), /transformed/)
+
+    let textResponse = await get(assetServer, '/assets/app/content/info.txt')
+    assert.ok(textResponse)
+    assert.equal(await textResponse.text(), 'plain text file\n')
+  })
+
+  it('skips global file transforms when configured extensions do not match', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    await write(dir, 'app/content/info.txt', 'plain text file\n')
+    let transformCalls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg', '.txt'],
+        globalTransforms: [
+          {
+            extensions: ['.svg'],
+            async transform(bytes) {
+              transformCalls += 1
+              return new TextDecoder().decode(bytes).replace('</svg>', '<!-- transformed --></svg>')
+            },
+          },
+        ],
+      },
+    })
+
+    let svgResponse = await get(assetServer, '/assets/app/images/logo.svg')
+    assert.ok(svgResponse)
+    assert.match(await svgResponse.text(), /transformed/)
+
+    let textResponse = await get(assetServer, '/assets/app/content/info.txt')
+    assert.ok(textResponse)
+    assert.equal(await textResponse.text(), 'plain text file\n')
+    assert.equal(transformCalls, 1)
+  })
+
+  it('reports named global file transform result errors with the function name', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let receivedError: unknown
+
+    async function annotateFile() {
+      return undefined
+    }
+
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+        // @ts-expect-error - exercise runtime validation for invalid global transform returns
+        globalTransforms: [annotateFile],
+      },
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/content/value.txt')
+
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'FILE_TRANSFORM_RESULT_INVALID')
+    assert.match(
+      normalizeWindowsPath(receivedError.message),
+      /Global file transform "annotateFile" must return a string, Uint8Array, or object for .*app\/content\/value\.txt/,
+    )
+  })
+
+  it('reports anonymous global file transform result errors with the transform index', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let receivedError: unknown
+    let anonymousTransform = async function () {
+      return undefined
+    }
+    // Force the function name to be empty to simulate truly anonymous function
+    Object.defineProperty(anonymousTransform, 'name', { value: '' })
+
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+        globalTransforms: [
+          {
+            async transform() {
+              return 'hello\n'
+            },
+          },
+          {
+            // @ts-expect-error - exercise runtime validation for invalid global transform returns
+            transform: anonymousTransform,
+          },
+        ],
+      },
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/content/value.txt')
+
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'FILE_TRANSFORM_RESULT_INVALID')
+    assert.match(
+      normalizeWindowsPath(receivedError.message),
+      /Global file transform at index 1 must return a string, Uint8Array, or object for .*app\/content\/value\.txt/,
+    )
+  })
+
+  it('allows request file transforms to return string content directly', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+        transforms: {
+          upper: defineFileTransform({
+            async transform(bytes) {
+              return new TextDecoder().decode(bytes).toUpperCase()
+            },
+          }),
+        },
+      },
+    })
+
+    let response = await get(
+      assetServer,
+      await assetServer.getHref('app/content/value.txt', {
+        transform: ['upper'],
+      }),
+    )
+
+    assert.ok(response)
+    assert.equal(await response.text(), 'HELLO\n')
+  })
+
+  it('rejects request file transforms when configured extensions do not match', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+        transforms: {
+          annotate: defineFileTransform({
+            extensions: ['.svg'],
+            async transform(bytes) {
+              return `${new TextDecoder().decode(bytes)}!`
+            },
+          }),
+        },
+      },
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(
+      assetServer,
+      await assetServer.getHref('app/content/value.txt', {
+        transform: ['annotate'],
+      }),
+    )
+
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'FILE_TRANSFORM_NOT_SUPPORTED')
+    assert.match(
+      normalizeWindowsPath(receivedError.message),
+      /File transform "annotate" does not support \.txt inputs for .*app\/content\/value\.txt/,
+    )
+  })
+
+  it('reports invalid request file transform results with a specific error code', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+        transforms: {
+          broken: defineFileTransform({
+            // @ts-expect-error - exercise runtime validation for invalid user transform returns
+            async transform() {
+              return undefined
+            },
+          }),
+        },
+      },
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/content/value.txt?transform=broken')
+
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'FILE_TRANSFORM_RESULT_INVALID')
+    assert.match(
+      normalizeWindowsPath(receivedError.message),
+      /File transform "broken" must return a string, Uint8Array, or object for .*app\/content\/value\.txt/,
+    )
+  })
+
+  it('reports thrown request file transform errors as transform failures', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+        transforms: {
+          broken: defineFileTransform({
+            async transform() {
+              throw new Error('boom')
+            },
+          }),
+        },
+      },
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/content/value.txt?transform=broken')
+
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'FILE_TRANSFORM_FAILED')
+    assert.match(
+      normalizeWindowsPath(receivedError.message),
+      /File transform "broken" failed for .*app\/content\/value\.txt\. boom/,
+    )
+    assert.ok(receivedError.cause instanceof Error)
+    assert.equal(receivedError.cause.message, 'boom')
+  })
+
+  it('matches transform extension filters against the current extension in the pipeline', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+        globalTransforms: [
+          {
+            extensions: ['.done'],
+            async transform(bytes, { extension }) {
+              return {
+                content: `${new TextDecoder().decode(bytes)}|global:${extension}`,
+              }
+            },
+          },
+        ],
+        transforms: {
+          finalize: defineFileTransform({
+            extensions: ['.txt'],
+            async transform(bytes, { extension }) {
+              return {
+                content: `${new TextDecoder().decode(bytes)}|finalize:${extension}`,
+                extension: '.done',
+              }
+            },
+          }),
+          publish: defineFileTransform({
+            extensions: ['.done'],
+            async transform(bytes, { extension }) {
+              return `${new TextDecoder().decode(bytes)}|publish:${extension}`
+            },
+          }),
+        },
+      },
+    })
+
+    let response = await get(
+      assetServer,
+      await assetServer.getHref('app/content/value.txt', {
+        transform: ['finalize', 'publish'],
+      }),
+    )
+
+    assert.ok(response)
+    assert.equal(response.headers.get('Content-Type'), 'text/plain; charset=utf-8')
+    assert.equal(await response.text(), 'hello\n|finalize:.txt|publish:.done|global:.done')
+  })
+
+  it('allows request file transforms to return string content in object form', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.txt'],
+        transforms: {
+          upper: defineFileTransform({
+            async transform(bytes) {
+              return new TextDecoder().decode(bytes).toUpperCase()
+            },
+          }),
+        },
+      },
+    })
+
+    let response = await get(
+      assetServer,
+      await assetServer.getHref('app/content/value.txt', {
+        transform: ['upper'],
+      }),
+    )
+
+    assert.ok(response)
+    assert.equal(await response.text(), 'HELLO\n')
+  })
+
+  it('recomputes transformed file outputs on each request when no cache is configured', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let transformCalls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          optimize: defineFileTransform({
+            async transform(bytes) {
+              transformCalls += 1
+              return bytes
+            },
+          }),
+        },
+      },
+    })
+
+    let href = await assetServer.getHref('app/images/logo.svg', {
+      transform: ['optimize'],
+    })
+    let firstResponse = await get(assetServer, href)
+    assert.ok(firstResponse)
+    assert.equal(firstResponse.status, 200)
+
+    let secondResponse = await get(assetServer, href)
+    assert.ok(secondResponse)
+    assert.equal(secondResponse.status, 200)
+    assert.equal(transformCalls, 2)
+  })
+
+  it('uses configured file storage for transformed asset caching', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let transformCalls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        cache: createMemoryFileStorage(),
+        extensions: ['.svg'],
+        transforms: {
+          optimize: defineFileTransform({
+            async transform(bytes) {
+              transformCalls += 1
+              return bytes
+            },
+          }),
+        },
+      },
+    })
+
+    let href = await assetServer.getHref('app/images/logo.svg', {
+      transform: ['optimize'],
+    })
+    let firstResponse = await get(assetServer, href)
+    assert.ok(firstResponse)
+    assert.equal(firstResponse.status, 200)
+
+    let secondResponse = await get(assetServer, href)
+    assert.ok(secondResponse)
+    assert.equal(secondResponse.status, 200)
+    assert.equal(transformCalls, 1)
+  })
+
+  it('invalidates transformed file cache entries when source files change without watch mode', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let transformCalls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        cache: createMemoryFileStorage(),
+        extensions: ['.txt'],
+        transforms: {
+          upper: defineFileTransform({
+            async transform(bytes) {
+              transformCalls += 1
+              return new TextDecoder().decode(bytes).toUpperCase()
+            },
+          }),
+        },
+      },
+    })
+
+    let href = await assetServer.getHref('app/content/value.txt', {
+      transform: ['upper'],
+    })
+    let firstResponse = await get(assetServer, href)
+    assert.ok(firstResponse)
+    assert.equal(await firstResponse.text(), 'HELLO\n')
+    assert.equal(transformCalls, 1)
+
+    await write(dir, 'app/content/value.txt', 'world\n')
+
+    let secondResponse = await get(assetServer, href)
+    assert.ok(secondResponse)
+    assert.equal(await secondResponse.text(), 'WORLD\n')
+    assert.equal(transformCalls, 2)
+  })
+
+  it('does not reuse stale transformed cache entries after delete and recreate in watch mode', async () => {
+    await write(dir, 'app/content/value.txt', 'hello\n')
+    let transformCalls = 0
+    let assetServer = createWatchedTestServer(dir, {
+      files: {
+        cache: createMemoryFileStorage(),
+        extensions: ['.txt'],
+        transforms: {
+          upper: defineFileTransform({
+            async transform(bytes) {
+              transformCalls += 1
+              return new TextDecoder().decode(bytes).toUpperCase()
+            },
+          }),
+        },
+      },
+    })
+
+    let href = await assetServer.getHref('app/content/value.txt', {
+      transform: ['upper'],
+    })
+
+    let firstResponse = await get(assetServer, href)
+    assert.ok(firstResponse)
+    assert.equal(await firstResponse.text(), 'HELLO\n')
+    assert.equal(transformCalls, 1)
+
+    let filePath = path.join(dir, 'app/content/value.txt')
+    await fs.unlink(filePath)
+    await emitWatchEvent(assetServer, filePath, 'unlink')
+    await write(dir, 'app/content/value.txt', 'world\n')
+    await emitWatchEvent(assetServer, filePath, 'add')
+
+    let secondResponse = await get(assetServer, href)
+    assert.ok(secondResponse)
+    assert.equal(await secondResponse.text(), 'WORLD\n')
+    assert.equal(transformCalls, 2)
+  })
+
+  it('accepts one-item tuples for no-arg transforms and serializes them as strings', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          optimize: defineFileTransform({
+            async transform(bytes) {
+              return bytes
+            },
+          }),
+        },
+      },
+    })
+
+    let href = await assetServer.getHref('app/images/logo.svg', {
+      transform: [['optimize']],
+    })
+
+    assert.equal(href, '/assets/app/images/logo.svg?transform=optimize')
+  })
+
+  it('limits request transforms to 5 by default when generating hrefs', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          optimize: defineFileTransform({
+            async transform(bytes) {
+              return bytes
+            },
+          }),
+        },
+      },
+    })
+
+    await assert.rejects(
+      () =>
+        assetServer.getHref('app/images/logo.svg', {
+          transform: ['optimize', 'optimize', 'optimize', 'optimize', 'optimize', 'optimize'],
+        }),
+      /Expected at most 5 request transforms/,
+    )
+  })
+
+  it('limits request transforms to 5 by default when parsing requests', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let onErrorCalls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          optimize: defineFileTransform({
+            async transform(bytes) {
+              return bytes
+            },
+          }),
+        },
+      },
+      onError() {
+        onErrorCalls += 1
+      },
+    })
+
+    let response = await get(
+      assetServer,
+      '/assets/app/images/logo.svg?transform=optimize&transform=optimize&transform=optimize&transform=optimize&transform=optimize&transform=optimize',
+    )
+    assert.ok(response)
+    assert.equal(response.status, 400)
+    assert.match(await response.text(), /Expected at most 5 request transforms/)
+    assert.equal(onErrorCalls, 0)
+  })
+
+  it('supports overriding files.maxRequestTransforms', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        maxRequestTransforms: 6,
+        transforms: {
+          optimize: defineFileTransform({
+            async transform(bytes) {
+              return bytes
+            },
+          }),
+        },
+      },
+    })
+
+    let href = await assetServer.getHref('app/images/logo.svg', {
+      transform: ['optimize', 'optimize', 'optimize', 'optimize', 'optimize', 'optimize'],
+    })
+    let response = await get(assetServer, href)
+    assert.ok(response)
+    assert.equal(response.status, 200)
+  })
+
+  it('rewrites CSS imports and relative file URLs to served URLs', async () => {
     await write(
       dir,
       'app/styles/app.css',
@@ -432,7 +1350,11 @@ describe('asset-server', () => {
     )
     await write(dir, 'app/styles/reset.css', 'body { color: red; }\n')
     await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
-    let assetServer = createTestServer(dir)
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+      },
+    })
 
     let response = await getByFile(assetServer, 'app/styles/app.css')
     assert.ok(response)
@@ -441,11 +1363,177 @@ describe('asset-server', () => {
 
     let css = await response.text()
     assert.match(css, /@import "\/assets\/app\/styles\/reset\.css";/)
-    assert.match(css, /url\("\.\.\/images\/logo\.svg"\)/)
+    assert.match(css, /url\("\/assets\/app\/images\/logo\.svg"\)/)
 
     let preloads = await assetServer.getPreloads('app/styles/app.css')
     assert.deepEqual(preloads, ['/assets/app/styles/app.css', '/assets/app/styles/reset.css'])
-    assert.equal(await get(assetServer, '/assets/app/images/logo.svg'), null)
+
+    let fileResponse = await get(assetServer, '/assets/app/images/logo.svg')
+    assert.ok(fileResponse)
+    assert.equal(fileResponse.status, 200)
+  })
+
+  it('encodes handwritten query syntax when rewriting CSS file URLs', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      ".hero { background-image: url('../images/logo.svg?transform=recolor:red'); }\n",
+    )
+    await write(
+      dir,
+      'app/images/logo.svg',
+      '<svg xmlns="http://www.w3.org/2000/svg" color="#0EA5E9"><rect fill="currentColor" /></svg>\n',
+    )
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          recolor: defineFileTransform<string>({
+            param: true,
+            async transform(bytes, { param }) {
+              return new TextDecoder().decode(bytes).replace('currentColor', param)
+            },
+          }),
+        },
+      },
+    })
+
+    let response = await getByFile(assetServer, 'app/styles/app.css')
+    assert.ok(response)
+    assert.equal(response.status, 200)
+
+    let css = await response.text()
+    assert.match(css, /url\("\/assets\/app\/images\/logo\.svg\?transform=recolor%3Ared"\)/)
+
+    let fileResponse = await get(assetServer, '/assets/app/images/logo.svg?transform=recolor:red')
+    assert.ok(fileResponse)
+    assert.match(await fileResponse.text(), /red/i)
+  })
+
+  it('rewrites fingerprinted CSS file URLs through the file href pipeline', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      ".hero { background-image: url('../images/logo.svg?transform=recolor:red#icon'); }\n",
+    )
+    await write(
+      dir,
+      'app/images/logo.svg',
+      '<svg xmlns="http://www.w3.org/2000/svg" color="#0EA5E9"><rect fill="currentColor" /></svg>\n',
+    )
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          recolor: defineFileTransform<string>({
+            param: true,
+            async transform(bytes, { param }) {
+              return new TextDecoder().decode(bytes).replace('currentColor', param)
+            },
+          }),
+        },
+      },
+      fingerprint: { buildId: 'build' },
+    })
+
+    let response = await getByFile(assetServer, 'app/styles/app.css')
+    assert.ok(response)
+    let css = await response.text()
+
+    let rewrittenUrl = css.match(
+      /url\("(?<url>\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg\?transform=[^"]+#icon)"\)/,
+    )?.groups?.url
+    assert.ok(rewrittenUrl)
+
+    let fileResponse = await get(assetServer, rewrittenUrl)
+    assert.ok(fileResponse)
+    assert.equal(fileResponse.status, 200)
+    assert.equal(fileResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
+    assert.match(await fileResponse.text(), /red/i)
+  })
+
+  it('preserves non-transform CSS file query params when rewriting transformed URLs', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      ".hero { background-image: url('../images/logo.svg?transform=recolor:red&v=1&mode=dark'); }\n",
+    )
+    await write(
+      dir,
+      'app/images/logo.svg',
+      '<svg xmlns="http://www.w3.org/2000/svg" color="#0EA5E9"><rect fill="currentColor" /></svg>\n',
+    )
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          recolor: defineFileTransform<string>({
+            param: true,
+            async transform(bytes, { param }) {
+              return new TextDecoder().decode(bytes).replace('currentColor', param)
+            },
+          }),
+        },
+      },
+    })
+
+    let response = await getByFile(assetServer, 'app/styles/app.css')
+    assert.ok(response)
+    let css = await response.text()
+    assert.match(
+      css,
+      /url\("\/assets\/app\/images\/logo\.svg\?transform=recolor%3Ared&v=1&mode=dark"\)/,
+    )
+
+    let fileResponse = await get(
+      assetServer,
+      '/assets/app/images/logo.svg?transform=recolor:red&v=1&mode=dark',
+    )
+    assert.ok(fileResponse)
+    assert.equal(fileResponse.status, 200)
+    assert.match(await fileResponse.text(), /red/i)
+  })
+
+  it('preserves non-transform CSS file query params and hashes for fingerprinted rewritten URLs', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      ".hero { background-image: url('../images/logo.svg?transform=recolor:red&v=1#icon'); }\n",
+    )
+    await write(
+      dir,
+      'app/images/logo.svg',
+      '<svg xmlns="http://www.w3.org/2000/svg" color="#0EA5E9"><rect fill="currentColor" /></svg>\n',
+    )
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          recolor: defineFileTransform<string>({
+            param: true,
+            async transform(bytes, { param }) {
+              return new TextDecoder().decode(bytes).replace('currentColor', param)
+            },
+          }),
+        },
+      },
+      fingerprint: { buildId: 'build' },
+    })
+
+    let response = await getByFile(assetServer, 'app/styles/app.css')
+    assert.ok(response)
+    let css = await response.text()
+
+    let rewrittenUrl = css.match(
+      /url\("(?<url>\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg\?transform=[^"]+&v=1#icon)"\)/,
+    )?.groups?.url
+    assert.ok(rewrittenUrl)
+
+    let fileResponse = await get(assetServer, rewrittenUrl)
+    assert.ok(fileResponse)
+    assert.equal(fileResponse.status, 200)
+    assert.equal(fileResponse.headers.get('Cache-Control'), 'public, max-age=31536000, immutable')
+    assert.match(await fileResponse.text(), /red/i)
   })
 
   it('leaves external CSS imports unchanged', async () => {
@@ -485,7 +1573,6 @@ describe('asset-server', () => {
         '.http { background-image: url("http://example.com/bg.png"); }',
         '.https { background-image: url("https://example.com/bg.png"); }',
         '.root { background-image: url("/images/bg.png"); }',
-        '.relative { background-image: url("../images/logo.svg"); }',
         '.fragment { filter: url("#my-filter"); }',
       ].join('\n') + '\n',
     )
@@ -503,8 +1590,208 @@ describe('asset-server', () => {
     assert.match(css, /url\("http:\/\/example\.com\/bg\.png"\)/)
     assert.match(css, /url\("https:\/\/example\.com\/bg\.png"\)/)
     assert.match(css, /url\("\/images\/bg\.png"\)/)
-    assert.match(css, /url\("\.\.\/images\/logo\.svg"\)/)
     assert.match(css, /url\("#my-filter"\)/)
+  })
+
+  it('getHref returns fingerprinted URLs for configured file assets when fingerprinting is enabled', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+      },
+      fingerprint: { buildId: 'build' },
+    })
+
+    let href = await assetServer.getHref('app/images/logo.svg')
+    assert.match(href, /^\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg$/)
+
+    let fingerprintedResponse = await get(assetServer, href)
+    assert.ok(fingerprintedResponse)
+    assert.equal(
+      fingerprintedResponse.headers.get('Cache-Control'),
+      'public, max-age=31536000, immutable',
+    )
+
+    let stableResponse = await get(assetServer, '/assets/app/images/logo.svg')
+    assert.equal(stableResponse, null)
+  })
+
+  it('uses immutable caching for fingerprinted file requests and returns null on mismatch', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+      },
+      fingerprint: { buildId: 'build' },
+    })
+
+    let href = await assetServer.getHref('app/images/logo.svg')
+    assert.match(href, /^\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg$/)
+
+    let fingerprintedResponse = await get(assetServer, href)
+    assert.ok(fingerprintedResponse)
+    assert.equal(
+      fingerprintedResponse.headers.get('Cache-Control'),
+      'public, max-age=31536000, immutable',
+    )
+    assert.ok(fingerprintedResponse.headers.get('ETag'))
+
+    let mismatch = await get(assetServer, '/assets/app/images/logo.@wronghash.svg')
+    assert.equal(mismatch, null)
+  })
+
+  it('updates source file fingerprints when source files change without watch mode', async () => {
+    await write(
+      dir,
+      'app/images/logo.svg',
+      '<svg xmlns="http://www.w3.org/2000/svg"><title>hello</title></svg>\n',
+    )
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+      },
+      fingerprint: { buildId: 'build' },
+    })
+
+    let firstHref = await assetServer.getHref('app/images/logo.svg')
+    let firstResponse = await get(assetServer, firstHref)
+    assert.ok(firstResponse)
+    assert.match(await firstResponse.text(), /hello/)
+
+    await write(
+      dir,
+      'app/images/logo.svg',
+      '<svg xmlns="http://www.w3.org/2000/svg"><title>world</title></svg>\n',
+    )
+
+    let secondHref = await assetServer.getHref('app/images/logo.svg')
+    assert.notEqual(secondHref, firstHref)
+
+    let secondResponse = await get(assetServer, secondHref)
+    assert.ok(secondResponse)
+    assert.match(await secondResponse.text(), /world/)
+  })
+
+  it('getHref returns fingerprinted URLs for transformed file assets when fingerprinting is enabled', async () => {
+    await write(
+      dir,
+      'app/images/logo.svg',
+      '<svg xmlns="http://www.w3.org/2000/svg" color="#0EA5E9"><rect fill="currentColor" /></svg>\n',
+    )
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          recolor: defineFileTransform<string>({
+            param: true,
+            async transform(bytes, { param }) {
+              return new TextDecoder().decode(bytes).replace('currentColor', param)
+            },
+          }),
+        },
+      },
+      fingerprint: { buildId: 'build' },
+    })
+
+    let href = await assetServer.getHref('app/images/logo.svg', {
+      transform: [['recolor', '#8B5CF6']],
+    })
+    assert.match(
+      href,
+      /^\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg\?transform=recolor%3A%238B5CF6$/,
+    )
+
+    let fingerprintedResponse = await get(assetServer, href)
+    assert.ok(fingerprintedResponse)
+    assert.equal(
+      fingerprintedResponse.headers.get('Cache-Control'),
+      'public, max-age=31536000, immutable',
+    )
+    assert.match(await fingerprintedResponse.text(), /#8B5CF6/i)
+
+    let stableResponse = await get(
+      assetServer,
+      '/assets/app/images/logo.svg?transform=recolor:%238B5CF6',
+    )
+    assert.equal(stableResponse, null)
+  })
+
+  it('returns null for fingerprint mismatches on transformed file requests', async () => {
+    await write(
+      dir,
+      'app/images/logo.svg',
+      '<svg xmlns="http://www.w3.org/2000/svg" color="#0EA5E9"><rect fill="currentColor" /></svg>\n',
+    )
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          recolor: defineFileTransform<string>({
+            param: true,
+            async transform(bytes, { param }) {
+              return new TextDecoder().decode(bytes).replace('currentColor', param)
+            },
+          }),
+        },
+      },
+      fingerprint: { buildId: 'build' },
+    })
+
+    let href = await assetServer.getHref('app/images/logo.svg', {
+      transform: [['recolor', '#8B5CF6']],
+    })
+    assert.match(
+      href,
+      /^\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg\?transform=recolor%3A%238B5CF6$/,
+    )
+
+    let fingerprintedResponse = await get(assetServer, href)
+    assert.ok(fingerprintedResponse)
+    assert.equal(
+      fingerprintedResponse.headers.get('Cache-Control'),
+      'public, max-age=31536000, immutable',
+    )
+    assert.ok(fingerprintedResponse.headers.get('ETag'))
+
+    let mismatch = await get(
+      assetServer,
+      '/assets/app/images/logo.@wronghash.svg?transform=recolor:%238B5CF6',
+    )
+    assert.equal(mismatch, null)
+  })
+
+  it('reuses the source fingerprint across transformed file variants', async () => {
+    await write(
+      dir,
+      'app/images/logo.svg',
+      '<svg xmlns="http://www.w3.org/2000/svg" color="#0EA5E9"><rect fill="currentColor" /></svg>\n',
+    )
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          recolor: defineFileTransform<string>({
+            param: true,
+            async transform(bytes, { param }) {
+              return new TextDecoder().decode(bytes).replace('currentColor', param)
+            },
+          }),
+        },
+      },
+      fingerprint: { buildId: 'build' },
+    })
+
+    let purpleHref = await assetServer.getHref('app/images/logo.svg', {
+      transform: [['recolor', '#8B5CF6']],
+    })
+    let redHref = await assetServer.getHref('app/images/logo.svg', {
+      transform: [['recolor', '#ef4444']],
+    })
+
+    let purpleFingerprint = purpleHref.match(/\.@([A-Za-z0-9_-]+)\.svg/)?.[1]
+    let redFingerprint = redHref.match(/\.@([A-Za-z0-9_-]+)\.svg/)?.[1]
+    assert.ok(purpleFingerprint)
+    assert.equal(purpleFingerprint, redFingerprint)
   })
 
   it('fingerprints CSS import graphs when fingerprinting is enabled', async () => {
@@ -1236,9 +2523,176 @@ describe('asset-server', () => {
     assert.ok(!body.includes('/assets/app/alias/value.@'))
   })
 
+  it('preserves package symlink identity paths for imports through node_modules', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'packages/remix/package.json', {
+        name: 'remix',
+        type: 'module',
+        exports: {
+          './ui': './src/ui.ts',
+        },
+      })
+      await write(caseDir, 'packages/remix/src/shared.ts', 'export const shared = "shared"')
+      await write(
+        caseDir,
+        'packages/remix/src/ui.ts',
+        'import { shared } from "./shared.ts"\nexport const ui = shared',
+      )
+      await symlinkDirectory(
+        path.join(caseDir, 'packages/remix'),
+        path.join(caseDir, 'app/node_modules/remix'),
+      )
+      await write(caseDir, 'app/entry.ts', 'import { ui } from "remix/ui"\nexport { ui }')
+
+      let assetServer = createNodeModulesTestServer(caseDir)
+      try {
+        let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+
+        assert.ok(servedUrls.has('/assets/node_modules/remix/src/ui.ts'))
+        assert.ok(servedUrls.has('/assets/node_modules/remix/src/shared.ts'))
+        assert.equal(servedUrls.has('/assets/packages/remix/src/ui.ts'), false)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps arbitrary app symlink escapes blocked', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'private/secret.ts', 'export const secret = true')
+      await fs.mkdir(path.join(caseDir, 'app/assets'), { recursive: true })
+      await fs.symlink(
+        path.join(caseDir, 'private/secret.ts'),
+        path.join(caseDir, 'app/assets/secret.ts'),
+      )
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { secret } from "./assets/secret.ts"\nexport { secret }',
+      )
+
+      let assetServer = createAssetServerForTest({
+        allow: ['app/entry.ts', 'app/assets/**'],
+        basePath: '/assets',
+        fileMap: {
+          '/app/*path': 'app/*path',
+        },
+        onError: () => undefined,
+        rootDir: caseDir,
+      })
+      try {
+        let directResponse = await get(assetServer, '/assets/app/assets/secret.ts')
+        assert.equal(directResponse, null)
+
+        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(entryResponse)
+        await assertInternalServerError(entryResponse)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('respects absolute deny rules for real package symlink targets', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'packages/remix/package.json', {
+        name: 'remix',
+        type: 'module',
+        exports: {
+          './ui': './src/ui.ts',
+        },
+      })
+      let deniedPath = await write(
+        caseDir,
+        'packages/remix/src/ui.ts',
+        'export const ui = "blocked"',
+      )
+      await symlinkDirectory(
+        path.join(caseDir, 'packages/remix'),
+        path.join(caseDir, 'app/node_modules/remix'),
+      )
+      await write(caseDir, 'app/entry.ts', 'import { ui } from "remix/ui"\nexport { ui }')
+
+      let assetServer = createNodeModulesTestServer(caseDir, {
+        allow: ['app/entry.ts', 'app/node_modules/**', 'packages/remix/**'],
+        deny: [deniedPath],
+        fileMap: {
+          '/app/*path': 'app/*path',
+          '/node_modules/*path': 'app/node_modules/*path',
+          '/packages/*path': 'packages/*path',
+        },
+        onError: () => undefined,
+      })
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        await assertInternalServerError(response)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('keeps distinct package identities that point to the same real file', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'packages/shared/package.json', {
+        name: 'shared',
+        type: 'module',
+        exports: {
+          './ui': './src/ui.ts',
+        },
+      })
+      await write(caseDir, 'packages/shared/src/ui.ts', 'export const ui = "shared"')
+      await symlinkDirectory(
+        path.join(caseDir, 'packages/shared'),
+        path.join(caseDir, 'app/node_modules/package-a'),
+      )
+      await symlinkDirectory(
+        path.join(caseDir, 'packages/shared'),
+        path.join(caseDir, 'app/node_modules/package-b'),
+      )
+      await write(
+        caseDir,
+        'app/entry.ts',
+        [
+          'import { ui as a } from "package-a/ui"',
+          'import { ui as b } from "package-b/ui"',
+          'export const values = [a, b]',
+        ].join('\n'),
+      )
+
+      let assetServer = createNodeModulesTestServer(caseDir)
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        let body = await response.text()
+
+        assert.match(body, /\/assets\/node_modules\/package-a\/src\/ui\.ts/)
+        assert.match(body, /\/assets\/node_modules\/package-b\/src\/ui\.ts/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('getHref returns fingerprinted URLs for served script files when fingerprinting is enabled', async () => {
     await write(dir, 'app/entry.ts', 'export const entry = true')
     let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let entryUrl = new URL(`file://${path.join(dir, 'app/entry.ts')}`)
+    entryUrl.searchParams.set('tsx-namespace', '123')
 
     assert.match(
       await assetServer.getHref('app/entry.ts'),
@@ -1250,6 +2704,10 @@ describe('asset-server', () => {
     )
     assert.match(
       await assetServer.getHref(new URL(`file://${path.join(dir, 'app/entry.ts')}`).href),
+      /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/,
+    )
+    assert.match(
+      await assetServer.getHref(entryUrl.href),
       /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/,
     )
   })
@@ -1329,6 +2787,21 @@ describe('asset-server', () => {
     )
   })
 
+  it('getPreloads returns file asset roots as direct hrefs', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+      },
+      fingerprint: { buildId: 'build' },
+    })
+
+    let urls = await assetServer.getPreloads('app/images/logo.svg')
+    assert.equal(urls.length, 1)
+    assert.match(urls[0] ?? '', /\/assets\/app\/images\/logo\.@[A-Za-z0-9_-]+\.svg/)
+  })
+
   it('getPreloads stays shallowest-first across mixed asset roots', async () => {
     await write(dir, 'app/a.ts', 'import "./a-1.ts"\nexport const a = true')
     await write(dir, 'app/a-1.ts', 'import "./shared.ts"\nexport const a1 = true')
@@ -1341,11 +2814,22 @@ describe('asset-server', () => {
     )
     await write(dir, 'app/styles/reset.css', '@import "./shared.css";\nbody { color: red; }\n')
     await write(dir, 'app/styles/shared.css', 'body { color: purple; }\n')
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
     await write(dir, 'app/shared.ts', 'export const shared = true')
 
-    let assetServer = createTestServer(dir, { fingerprint: { buildId: 'build' } })
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+      },
+      fingerprint: { buildId: 'build' },
+    })
 
-    let urls = await assetServer.getPreloads(['app/a.ts', 'app/styles/app.css', 'app/b.ts'])
+    let urls = await assetServer.getPreloads([
+      'app/a.ts',
+      'app/styles/app.css',
+      'app/images/logo.svg',
+      'app/b.ts',
+    ])
 
     assert.deepEqual(
       urls.map((url) => url.replace(/\.@[A-Za-z0-9_-]+(?=\.)/, '')),
@@ -1353,6 +2837,7 @@ describe('asset-server', () => {
         '/assets/app/a.ts',
         '/assets/app/b.ts',
         '/assets/app/styles/app.css',
+        '/assets/app/images/logo.svg',
         '/assets/app/a-1.ts',
         '/assets/app/b-1.ts',
         '/assets/app/styles/reset.css',
@@ -1693,6 +3178,51 @@ describe('asset-server', () => {
     }
   })
 
+  it('invalidates package symlink modules from real file watch events', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await writeJson(caseDir, 'packages/remix/package.json', {
+        name: 'remix',
+        type: 'module',
+        exports: {
+          './ui': './src/ui.ts',
+        },
+      })
+      let packageFilePath = await write(
+        caseDir,
+        'packages/remix/src/ui.ts',
+        'export const ui = "one"',
+      )
+      await symlinkDirectory(
+        path.join(caseDir, 'packages/remix'),
+        path.join(caseDir, 'app/node_modules/remix'),
+      )
+      await write(caseDir, 'app/entry.ts', 'import { ui } from "remix/ui"\nexport { ui }')
+      let assetServer = createNodeModulesTestServer(caseDir, { watch: true })
+
+      try {
+        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(entryResponse)
+        assert.equal(entryResponse.status, 200)
+
+        let firstPackageResponse = await get(assetServer, '/assets/node_modules/remix/src/ui.ts')
+        assert.ok(firstPackageResponse)
+        assert.match(await firstPackageResponse.text(), /ui = "one"/)
+
+        await write(caseDir, 'packages/remix/src/ui.ts', 'export const ui = "two"')
+        await emitWatchEvent(assetServer, packageFilePath, 'change')
+
+        let secondPackageResponse = await get(assetServer, '/assets/node_modules/remix/src/ui.ts')
+        assert.ok(secondPackageResponse)
+        assert.match(await secondPackageResponse.text(), /ui = "two"/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('ignores source changes that match watch.ignore in watch mode', async () => {
     let caseDir = await makeTmpDir()
     try {
@@ -1805,6 +3335,192 @@ describe('asset-server', () => {
         assert.ok(after)
         assert.equal(after.status, 200)
         assert.match(await after.text(), /@import "\/assets\/app\/styles\/missing\.css";/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('recovers in watch mode when a previously missing CSS url file is created', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(
+        caseDir,
+        'app/styles/app.css',
+        'body { background-image: url("../images/logo.svg"); }\n',
+      )
+      let errorCodes: string[] = []
+      let assetServer = createWatchedTestServer(caseDir, {
+        files: {
+          extensions: ['.svg'],
+        },
+        onError(error) {
+          if (isAssetServerCompilationError(error)) {
+            errorCodes.push(error.code)
+          }
+        },
+      })
+
+      try {
+        let before = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(before)
+        await assertInternalServerError(before)
+        assert.equal(errorCodes.at(-1), 'URL_RESOLUTION_FAILED')
+
+        let missingPath = await write(
+          caseDir,
+          'app/images/logo.svg',
+          '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n',
+        )
+        await emitWatchEvent(assetServer, missingPath, 'add')
+
+        let after = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(after)
+        assert.equal(after.status, 200)
+        assert.match(await after.text(), /url\("\/assets\/app\/images\/logo\.svg"\)/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not watch style dependency ancestor directories in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(
+        caseDir,
+        'app/styles/app.css',
+        'body { background-image: url("../images/logo.svg"); }\n',
+      )
+      await write(
+        caseDir,
+        'app/images/logo.svg',
+        '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n',
+      )
+      let assetServer = createWatchedTestServer(caseDir, {
+        files: {
+          extensions: ['.svg'],
+        },
+      })
+      let appDir = normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app')))
+      let imagesDir = normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app/images')))
+      let rootDir = normalizeWindowsPath(nodeFs.realpathSync(caseDir))
+      let stylesDir = normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app/styles')))
+
+      try {
+        let response = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        await response.text()
+
+        let targets = getInternalWatchTargets(assetServer).map((target) =>
+          normalizeWindowsPath(target),
+        )
+
+        assert.ok(targets.includes(imagesDir))
+        assert.ok(targets.includes(stylesDir))
+        assert.ok(!targets.includes(appDir))
+        assert.ok(!targets.includes(rootDir))
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails in watch mode when a CSS url file is deleted', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(
+        caseDir,
+        'app/styles/app.css',
+        'body { background-image: url("../images/logo.svg"); }\n',
+      )
+      let logoPath = await write(
+        caseDir,
+        'app/images/logo.svg',
+        '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n',
+      )
+      let errorCodes: string[] = []
+      let assetServer = createWatchedTestServer(caseDir, {
+        files: {
+          extensions: ['.svg'],
+        },
+        onError(error) {
+          if (isAssetServerCompilationError(error)) {
+            errorCodes.push(error.code)
+          }
+        },
+      })
+
+      try {
+        let before = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(before)
+        assert.equal(before.status, 200)
+        assert.match(await before.text(), /url\("\/assets\/app\/images\/logo\.svg"\)/)
+
+        await fs.rm(logoPath)
+        await emitWatchEvent(assetServer, logoPath, 'unlink')
+
+        let after = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(after)
+        await assertInternalServerError(after)
+        assert.equal(errorCodes.at(-1), 'URL_RESOLUTION_FAILED')
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails in watch mode when a CSS url file ancestor directory is deleted', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(
+        caseDir,
+        'app/styles/app.css',
+        'body { background-image: url("../assets/images/logo.svg"); }\n',
+      )
+      let logoPath = await write(
+        caseDir,
+        'app/assets/images/logo.svg',
+        '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n',
+      )
+      let logoWatchPath = nodeFs.realpathSync(logoPath)
+      let errorCodes: string[] = []
+      let assetServer = createWatchedTestServer(caseDir, {
+        files: {
+          extensions: ['.svg'],
+        },
+        onError(error) {
+          if (isAssetServerCompilationError(error)) {
+            errorCodes.push(error.code)
+          }
+        },
+      })
+
+      try {
+        let before = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(before)
+        assert.equal(before.status, 200)
+        assert.match(await before.text(), /url\("\/assets\/app\/assets\/images\/logo\.svg"\)/)
+
+        await fs.rm(path.join(caseDir, 'app/assets'), { recursive: true })
+        let chokidarWatcher = getInternalChokidarWatcher(assetServer)
+        assert.ok(chokidarWatcher)
+        chokidarWatcher.emit('unlink', logoWatchPath)
+        await Promise.resolve()
+
+        let after = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(after)
+        await assertInternalServerError(after)
+        assert.equal(errorCodes.at(-1), 'URL_RESOLUTION_FAILED')
       } finally {
         await assetServer.close()
       }
@@ -3806,6 +5522,88 @@ describe('asset-server', () => {
     )
   })
 
+  it('rejects files extensions for compiled asset types', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          files: {
+            extensions: ['.css'],
+          },
+        }),
+      /files\.extensions cannot include compiled asset extensions/,
+    )
+  })
+
+  it('rejects files extensions for script module types', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          files: {
+            extensions: ['.ts'],
+          },
+        }),
+      /files\.extensions cannot include compiled asset extensions/,
+    )
+  })
+
+  it('rejects non-positive files.maxRequestTransforms values', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          files: {
+            extensions: ['.svg'],
+            maxRequestTransforms: 0,
+          },
+        }),
+      /files\.maxRequestTransforms must be a positive integer/,
+    )
+  })
+
+  it('rejects invalid request transform extension filters', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          files: {
+            extensions: ['.svg'],
+            transforms: {
+              optimize: defineFileTransform({
+                extensions: ['svg'],
+                async transform(bytes) {
+                  return bytes
+                },
+              }),
+            },
+          },
+        }),
+      /files\.transforms\.optimize\.extensions values must use "\.ext" format/,
+    )
+  })
+
+  it('rejects empty global transform extension filters', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          files: {
+            extensions: ['.svg'],
+            globalTransforms: [
+              {
+                extensions: [],
+                async transform(bytes) {
+                  return bytes
+                },
+              },
+            ],
+          },
+        }),
+      /files\.globalTransforms\[0\]\.extensions must include at least one extension/,
+    )
+  })
+
   it('calls onError for unexpected compilation failures', async () => {
     await write(dir, 'app/entry.ts', 'import "./broken.ts"\nexport const entry = true')
     await write(dir, 'app/broken.ts', 'export const nope =')
@@ -3884,6 +5682,231 @@ describe('asset-server', () => {
     assert.match(receivedError.message, /"\.\/missing\.css"/)
   })
 
+  it('calls onError for unsupported CSS url dependencies when files are not configured', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      'body { background-image: url("../images/logo.svg"); }\n',
+    )
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'URL_NOT_SUPPORTED')
+    assert.match(receivedError.message, /files\.extensions/)
+    assert.match(receivedError.message, /"\.\.\/images\/logo\.svg"/)
+  })
+
+  it('calls onError for CSS url resolution failures', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      'body { background-image: url("../images/missing.svg"); }\n',
+    )
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+      },
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'URL_RESOLUTION_FAILED')
+    assert.match(receivedError.message, /Failed to resolve url/)
+    assert.match(receivedError.message, /"\.\.\/images\/missing\.svg"/)
+  })
+
+  it('warns for malformed CSS-authored file transform queries without failing the stylesheet', async (t) => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      'body { background-image: url("../images/logo.svg?transform=wat"); }\n',
+    )
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let onErrorCalls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          optimize: defineFileTransform({
+            async transform(bytes) {
+              return bytes
+            },
+          }),
+        },
+      },
+      onError() {
+        onErrorCalls += 1
+      },
+    })
+    let consoleWarn = t.mock.method(console, 'warn', () => {})
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    assert.equal(response.status, 200)
+    assert.equal(onErrorCalls, 0)
+    assert.match(await response.text(), /url\("\/assets\/app\/images\/logo\.svg\?transform=wat"\)/)
+
+    let warning = consoleWarn.mock.calls.at(-1)
+    assert.ok(warning)
+    assert.match(
+      normalizeWindowsPath(String(warning.arguments[0])),
+      /Invalid file transform request "wat" in CSS asset .*app\/styles\/app\.css.*Unknown file transform "wat"/,
+    )
+
+    let assetResponse = await get(assetServer, '/assets/app/images/logo.svg?transform=wat')
+    assert.ok(assetResponse)
+    assert.equal(assetResponse.status, 400)
+    assert.match(await assetResponse.text(), /Unknown file transform "wat"/)
+  })
+
+  it('treats inherited object property names as unknown file transform requests', async () => {
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let onErrorCalls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          optimize: defineFileTransform({
+            async transform(bytes) {
+              return bytes
+            },
+          }),
+        },
+      },
+      onError() {
+        onErrorCalls += 1
+      },
+    })
+
+    let constructorResponse = await get(
+      assetServer,
+      '/assets/app/images/logo.svg?transform=constructor',
+    )
+    assert.ok(constructorResponse)
+    assert.equal(constructorResponse.status, 400)
+    assert.match(await constructorResponse.text(), /Unknown file transform "constructor"/)
+
+    let toStringResponse = await get(assetServer, '/assets/app/images/logo.svg?transform=toString')
+    assert.ok(toStringResponse)
+    assert.equal(toStringResponse.status, 400)
+    assert.match(await toStringResponse.text(), /Unknown file transform "toString"/)
+
+    let protoResponse = await get(assetServer, '/assets/app/images/logo.svg?transform=__proto__')
+    assert.ok(protoResponse)
+    assert.equal(protoResponse.status, 400)
+    assert.match(await protoResponse.text(), /Unknown file transform "__proto__"/)
+    assert.equal(onErrorCalls, 0)
+  })
+
+  it('warns for invalid CSS-authored file transform requests without failing the stylesheet', async (t) => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      'body { background-image: url("../images/logo.svg?transform=recolor"); }\n',
+    )
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let onErrorCalls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          recolor: defineFileTransform<string>({
+            param: true,
+            async transform(bytes) {
+              return bytes
+            },
+          }),
+        },
+      },
+      onError() {
+        onErrorCalls += 1
+      },
+    })
+    let consoleWarn = t.mock.method(console, 'warn', () => {})
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    assert.equal(response.status, 200)
+    assert.equal(onErrorCalls, 0)
+    assert.match(
+      await response.text(),
+      /url\("\/assets\/app\/images\/logo\.svg\?transform=recolor"\)/,
+    )
+
+    let warning = consoleWarn.mock.calls.at(-1)
+    assert.ok(warning)
+    assert.match(
+      normalizeWindowsPath(String(warning.arguments[0])),
+      /Invalid file transform request "recolor" in CSS asset .*app\/styles\/app\.css.*File transform "recolor" requires a param/,
+    )
+
+    let assetResponse = await get(assetServer, '/assets/app/images/logo.svg?transform=recolor')
+    assert.ok(assetResponse)
+    assert.equal(assetResponse.status, 400)
+    assert.match(await assetResponse.text(), /File transform "recolor" requires a param/)
+  })
+
+  it('warns for over-limit CSS-authored file transform requests without failing the stylesheet', async (t) => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      'body { background-image: url("../images/logo.svg?transform=optimize&transform=optimize&transform=optimize&transform=optimize&transform=optimize&transform=optimize"); }\n',
+    )
+    await write(dir, 'app/images/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let onErrorCalls = 0
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+        transforms: {
+          optimize: defineFileTransform({
+            async transform(bytes) {
+              return bytes
+            },
+          }),
+        },
+      },
+      onError() {
+        onErrorCalls += 1
+      },
+    })
+    let consoleWarn = t.mock.method(console, 'warn', () => {})
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    assert.equal(response.status, 200)
+    assert.equal(onErrorCalls, 0)
+
+    let warning = consoleWarn.mock.calls.at(-1)
+    assert.ok(warning)
+    assert.match(
+      normalizeWindowsPath(String(warning.arguments[0])),
+      /Invalid file transform request "optimize,optimize,optimize,optimize,optimize,optimize" in CSS asset .*app\/styles\/app\.css.*Expected at most 5 request transforms/,
+    )
+
+    let assetResponse = await get(
+      assetServer,
+      '/assets/app/images/logo.svg?transform=optimize&transform=optimize&transform=optimize&transform=optimize&transform=optimize&transform=optimize',
+    )
+    assert.ok(assetResponse)
+    assert.equal(assetResponse.status, 400)
+    assert.match(await assetResponse.text(), /Expected at most 5 request transforms/)
+  })
+
   it('calls onError for malformed CSS transforms', async () => {
     await write(dir, 'app/styles/app.css', 'body { background: url("foo); }\n')
     let receivedError: unknown
@@ -3925,6 +5948,30 @@ describe('asset-server', () => {
     assert.match(normalizeWindowsPath(receivedError.message), /secret\.css/)
   })
 
+  it('calls onError for disallowed CSS url dependencies', async () => {
+    await write(dir, 'app/styles/app.css', 'body { background-image: url("../../secret.svg"); }\n')
+    await write(dir, 'secret.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      files: {
+        extensions: ['.svg'],
+      },
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'URL_NOT_ALLOWED')
+    assert.match(receivedError.message, /not allowed by the asset server allow\/deny configuration/)
+    assert.match(receivedError.message, /"\.\.\/\.\.\/secret\.svg"/)
+    assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
+    assert.match(normalizeWindowsPath(receivedError.message), /secret\.svg/)
+  })
+
   it('calls onError when a CSS import is outside configured fileMap entries', async () => {
     await write(
       dir,
@@ -3949,6 +5996,35 @@ describe('asset-server', () => {
     assert.match(receivedError.message, /"\.\.\/\.\.\/shared\/reset\.css"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
     assert.match(normalizeWindowsPath(receivedError.message), /shared\/reset\.css/)
+  })
+
+  it('calls onError when a CSS url dependency is outside configured fileMap entries', async () => {
+    await write(
+      dir,
+      'app/styles/app.css',
+      'body { background-image: url("../../shared/logo.svg"); }\n',
+    )
+    await write(dir, 'shared/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      allow: ['app/**', 'shared/**'],
+      files: {
+        extensions: ['.svg'],
+      },
+      onError(error) {
+        receivedError = error
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/styles/app.css')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'URL_OUTSIDE_FILE_MAP')
+    assert.match(receivedError.message, /outside all configured fileMap entries/)
+    assert.match(receivedError.message, /"\.\.\/\.\.\/shared\/logo\.svg"/)
+    assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
+    assert.match(normalizeWindowsPath(receivedError.message), /shared\/logo\.svg/)
   })
 
   it('calls onError for CommonJS modules', async () => {

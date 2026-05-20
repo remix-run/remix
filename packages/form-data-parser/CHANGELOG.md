@@ -2,6 +2,13 @@
 
 This is the changelog for [`form-data-parser`](https://github.com/remix-run/remix/tree/main/packages/form-data-parser). It follows [semantic versioning](https://semver.org/).
 
+## v0.17.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`multipart-parser@0.16.1`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.1)
+
 ## v0.17.0
 
 ### Minor Changes

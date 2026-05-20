@@ -1,1 +1,0 @@
-BREAKING CHANGE: `formData()` now always stores a `FormData` value when the middleware runs successfully. Requests without a form body, including `GET` and `HEAD` requests, receive an empty `FormData` so downstream handlers can rely on `context.get(FormData)` after the middleware has run.

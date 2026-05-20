@@ -1275,6 +1275,8 @@ export function renderComponent(
   anchor?: Node,
   cursor?: Node | null,
 ): Node | null | undefined {
+  if (handle.isRemoved()) return cursor
+
   let [element, tasks] = handle.render(next.props)
   let content = toVNode(element)
   let newCursor = diffVNodes(

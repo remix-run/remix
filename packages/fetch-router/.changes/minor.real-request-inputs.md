@@ -1,1 +1,0 @@
-BREAKING CHANGE: `router.fetch()` no longer clones `Request` inputs or supports `Request` facades that only become native requests through `clone()`. Pass a real `Request` object to `router.fetch()` when dispatching an existing request.

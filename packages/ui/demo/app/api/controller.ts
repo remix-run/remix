@@ -1,4 +1,4 @@
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 
 import { routes } from '../../config/routes.ts'
 import { AIRPORTS, searchAirports } from './airports.ts'

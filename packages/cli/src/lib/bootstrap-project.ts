@@ -145,7 +145,6 @@ async function writeScaffoldPackageJson(targetDir: string, config: BootstrapConf
   packageJson.dependencies = {
     ...packageJson.dependencies,
     remix: config.remixVersion,
-    tsx: 'latest',
   }
   packageJson.devDependencies = {
     ...packageJson.devDependencies,
@@ -194,7 +193,7 @@ async function copyTemplateDirectory({
 
   for (let entry of entries) {
     let sourcePath = path.join(sourceDir, entry.name)
-    let targetPath = path.join(targetDir, entry.name)
+    let targetPath = path.join(targetDir, entry.name === 'gitignore' ? '.gitignore' : entry.name)
 
     if (TEMPLATE_EXCLUDED_NAMES.has(entry.name)) {
       continue

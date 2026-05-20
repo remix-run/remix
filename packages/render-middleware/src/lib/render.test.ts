@@ -28,8 +28,11 @@ describe('renderWith', () => {
       expectTypeEquality<
         IsEqual<typeof renderer, (value: string, init?: ResponseInit) => Response>
       >()
+      expectTypeEquality<
+        IsEqual<typeof context.render, (value: string, init?: ResponseInit) => Response>
+      >()
 
-      return renderer('Hello', { status: 201 })
+      return context.render('Hello', { status: 201 })
     })
 
     let response = await router.fetch('https://remix.run/')
@@ -47,7 +50,7 @@ describe('renderWith', () => {
     )
     let router = createRouter({ middleware: [middleware] as const })
 
-    router.get('/rendered', (context) => context.get(Renderer)('OK'))
+    router.get('/rendered', (context) => context.render('OK'))
 
     let response = await router.fetch('https://remix.run/rendered')
 
@@ -72,7 +75,7 @@ describe('renderWith', () => {
     )
     let router = createRouter({ middleware: [middleware] as const })
 
-    router.get('/json', (context) => context.get(Renderer)({ ok: true }, { pretty: true }))
+    router.get('/json', (context) => context.render({ ok: true }, { pretty: true }))
 
     let response = await router.fetch('https://remix.run/json')
 
@@ -94,11 +97,12 @@ describe('renderWith', () => {
       let renderer = context.get(Renderer)
 
       expectTypeEquality<IsEqual<typeof renderer, (value: { ok: boolean }) => Response>>()
+      expectTypeEquality<IsEqual<typeof context.render, (value: { ok: boolean }) => Response>>()
 
-      renderer({ ok: true })
+      context.render({ ok: true })
 
       // @ts-expect-error Renderer input is checked.
-      renderer('no')
+      context.render('no')
     }
 
     void assertContext
@@ -118,9 +122,10 @@ if (false as boolean) {
     let renderer = context.get(Renderer)
 
     renderer(1)
+    context.render(1)
 
     // @ts-expect-error Renderer input is checked.
-    renderer('1')
+    context.render('1')
   }
 
   let renderer: AnyRenderer = function render(_value: never) {

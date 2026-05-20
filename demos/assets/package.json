@@ -6,16 +6,16 @@
     "node": ">=24.3.0"
   },
   "dependencies": {
-    "remix": "workspace:*"
+    "remix": "workspace:*",
+    "svgo": "^4.0.1"
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
-    "tsx": "catalog:"
+    "@typescript/native-preview": "catalog:"
   },
   "scripts": {
-    "dev": "NODE_ENV=development tsx server.ts",
-    "start": "tsx server.ts",
+    "dev": "NODE_ENV=development node --import remix/node-tsx server.ts",
+    "start": "node --import remix/node-tsx server.ts",
     "typecheck": "tsgo --noEmit"
   }
 }

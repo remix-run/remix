@@ -1,14 +1,11 @@
-import { getContext } from 'remix/async-context-middleware'
-import { Auth } from 'remix/auth-middleware'
-import type { AuthState } from 'remix/auth-middleware'
+import { getContext } from 'remix/middleware/async-context'
+import type { AuthState } from 'remix/middleware/auth'
+import type { Session } from 'remix/session'
 
 import type { User } from '../data/schema.ts'
-import { Session } from '../middleware/session.ts'
 import { getCart, type Cart } from './cart.ts'
 
-export function getCurrentUser(): User {
-  let auth = getCurrentAuth()
-
+export function getCurrentUser(auth: AuthState<User> = getContext().auth): User {
   if (!auth.ok) {
     throw new Error(
       'Expected an authenticated user. Make sure requireAuth() runs before this code.',
@@ -18,16 +15,10 @@ export function getCurrentUser(): User {
   return auth.identity
 }
 
-export function getCurrentUserSafely(): User | null {
-  let auth = getCurrentAuth()
-
+export function getCurrentUserSafely(auth: AuthState<User> = getContext().auth): User | null {
   return auth.ok ? auth.identity : null
 }
 
-export function getCurrentCart(): Cart {
-  return getCart(getContext().get(Session).get('cart'))
-}
-
-function getCurrentAuth(): AuthState<User> {
-  return getContext().get(Auth)
+export function getCurrentCart(session: Session = getContext().session): Cart {
+  return getCart(session.get('cart'))
 }

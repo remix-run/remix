@@ -66,6 +66,7 @@ type ScriptCompilerOptions = {
   external: string[]
   fingerprintAssets: boolean
   isAllowed(absolutePath: string): boolean
+  isDenied(absolutePath: string): boolean
   minify: boolean
   onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
   rootDir: string
@@ -117,8 +118,14 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     extensionAlias: resolverExtensionAlias,
     extensions: resolverExtensions,
     mainFields: ['browser', 'module', 'main'],
+    symlinks: false,
     tsconfig: 'auto',
   })
+  let resolveModulePathOptions = {
+    isAllowed: resolvedOptions.isAllowed,
+    isDenied: resolvedOptions.isDenied,
+    routes: resolvedOptions.routes,
+  }
   let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedModule>>()
   let emitInFlightByCacheKey = new Map<string, Promise<EmittedModule>>()
 
@@ -138,7 +145,9 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   let resolveArgs: ResolveArgs = {
     isAllowed: resolvedOptions.isAllowed,
     isWatchIgnored,
-    resolveModulePath,
+    resolveModulePath(absolutePath) {
+      return resolveModulePath(absolutePath, resolveModulePathOptions)
+    },
     resolverFactory,
     routes: resolvedOptions.routes,
   }
@@ -253,7 +262,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   }
 
   function resolveServedScriptOrThrow(absolutePath: string): ResolveModuleResult {
-    let resolvedModule = resolveModulePath(absolutePath)
+    let resolvedModule = resolveModulePath(absolutePath, resolveModulePathOptions)
     if (!resolvedModule) {
       throw createAssetServerCompilationError(`File not found: ${absolutePath}`, {
         code: 'FILE_NOT_FOUND',
@@ -548,11 +557,19 @@ function shouldClearResolverCacheForFileEvent(filePath: string, event: ModuleWat
   return event !== 'change' || isPackageJsonPath(filePath) || isTsconfigPath(filePath)
 }
 
-function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
+function resolveModulePath(
+  absolutePath: string,
+  options: {
+    isAllowed(absolutePath: string): boolean
+    isDenied(absolutePath: string): boolean
+    routes: CompiledRoutes
+  },
+): ResolveModuleResult | null {
+  let candidateIdentityPath = normalizeFilePath(absolutePath)
   let resolvedPath: string
 
   try {
-    resolvedPath = normalizeFilePath(fs.realpathSync(normalizeFilePath(absolutePath)))
+    resolvedPath = normalizeFilePath(fs.realpathSync(candidateIdentityPath))
   } catch (error) {
     if (isNoEntityError(error)) return null
     throw error
@@ -563,9 +580,30 @@ function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
   }
 
   return {
-    identityPath: resolvedPath,
+    identityPath: getModuleIdentityPath(candidateIdentityPath, resolvedPath, options),
     resolvedPath,
   }
+}
+
+function getModuleIdentityPath(
+  candidateIdentityPath: string,
+  resolvedPath: string,
+  options: {
+    isAllowed(absolutePath: string): boolean
+    isDenied(absolutePath: string): boolean
+    routes: CompiledRoutes
+  },
+): string {
+  if (candidateIdentityPath === resolvedPath) return resolvedPath
+  if (!containsNodeModulesPathSegment(candidateIdentityPath)) return resolvedPath
+  if (!options.routes.toUrlPathname(candidateIdentityPath)) return resolvedPath
+  if (!options.isAllowed(candidateIdentityPath)) return resolvedPath
+  if (options.isDenied(resolvedPath)) return resolvedPath
+  return candidateIdentityPath
+}
+
+function containsNodeModulesPathSegment(filePath: string): boolean {
+  return filePath.split('/').includes('node_modules')
 }
 
 function resolveActualPath(identityPath: string): string | null {

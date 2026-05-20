@@ -434,7 +434,7 @@ const operations: Operation[] = [
 // Start the benchmark server
 function startServer(): Promise<ChildProcess> {
   return new Promise((resolve, reject) => {
-    let server = spawn('tsx', ['server.ts'], {
+    let server = spawn(process.execPath, ['--import', 'remix/node-tsx', 'server.ts'], {
       cwd: import.meta.dirname,
       stdio: ['ignore', 'pipe', 'pipe'],
     })

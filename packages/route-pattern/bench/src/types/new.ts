@@ -2,17 +2,17 @@ import { bench } from '@ark/attest'
 import { RoutePattern } from '@remix-run/route-pattern'
 
 bench.baseline(() => {
-  new RoutePattern('')
+  RoutePattern.parse('')
 })
 
 bench('new > simple route', () => {
-  let pattern = new RoutePattern('/posts/:id')
-  pattern.source
+  let pattern = RoutePattern.parse('/posts/:id')
+  pattern.toString()
 }).types([3, 'instantiations'])
 
 bench('new > complex route', () => {
-  let pattern = new RoutePattern('/api(/v:major(.:minor))/*path/help')
-  pattern.source
+  let pattern = RoutePattern.parse('/api(/v:major(.:minor))/*path/help')
+  pattern.toString()
 }).types([3, 'instantiations'])
 
 bench('new > mediarss', async () => {

@@ -1,8 +1,11 @@
 import type { Route } from 'remix/routes'
 import { createCredentialsAuthProvider } from 'remix/auth'
-import { Auth, auth, createSessionAuthScheme, type GoodAuth } from 'remix/auth-middleware'
+import {
+  auth,
+  createSessionAuthScheme,
+  requireAuth as requireAuthenticated,
+} from 'remix/middleware/auth'
 import { Database } from 'remix/data-table'
-import type { Middleware } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { users } from '../data/schema.ts'
@@ -25,7 +28,7 @@ export function loadAuth() {
         async verify(value, context) {
           let db = context.get(Database)
           if (db == null) {
-            throw new Error('Expected database middleware before auth middleware')
+            throw new Error('Expected loadDatabase() middleware before loadAuth()')
           }
 
           return (await db.find(users, value.userId)) ?? null
@@ -53,7 +56,7 @@ export const passwordProvider = createCredentialsAuthProvider({
   async verify({ email, password }, context) {
     let db = context.get(Database)
     if (db == null) {
-      throw new Error('Expected database middleware before password auth provider')
+      throw new Error('Expected loadDatabase() middleware before password auth provider')
     }
 
     let user = await db.findOne(users, { where: { email } })
@@ -70,29 +73,20 @@ export interface RequireAuthOptions {
   redirectTo?: Route
 }
 
-export function requireAuth(
-  options?: RequireAuthOptions,
-): Middleware<readonly [typeof Auth, GoodAuth<User>]> {
+export function requireAuth(options?: RequireAuthOptions) {
   let redirectTo = options?.redirectTo ?? routes.auth.login.index
 
-  return (context, next) => {
-    let authState = context.get(Auth)
-    if (authState == null) {
-      throw new Error('Auth state not found. Make sure loadAuth() runs before requireAuth().')
-    }
-
-    if (authState.ok) {
-      return next()
-    }
-
-    return redirect(
-      redirectTo.href(undefined, {
-        returnTo:
-          getSafeReturnTo(context.url.searchParams.get('returnTo')) ??
-          context.url.pathname + context.url.search,
-      }),
-    )
-  }
+  return requireAuthenticated<User>({
+    onFailure(context) {
+      return redirect(
+        redirectTo.href(undefined, {
+          returnTo:
+            getSafeReturnTo(context.url.searchParams.get('returnTo')) ??
+            context.url.pathname + context.url.search,
+        }),
+      )
+    },
+  })
 }
 
 export function getPostAuthRedirect(url: URL, fallback = routes.account.index.href()): string {

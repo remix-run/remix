@@ -9,10 +9,11 @@
   "dependencies": {
     "@remix-run/route-pattern": "workspace:^",
     "find-my-way": "^9.1.0",
-    "path-to-regexp": "^8.2.0"
+    "path-to-regexp": "^8.4.2"
   },
   "devDependencies": {
     "@ark/attest": "^0.56.0",
-    "vitest": "4.0.15"
+    "vite": "7.3.3",
+    "vitest": "4.1.6"
   }
 }

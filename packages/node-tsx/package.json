@@ -1,0 +1,65 @@
+{
+  "name": "@remix-run/node-tsx",
+  "version": "0.1.0",
+  "description": "Run Node.js with TypeScript and JSX syntax support",
+  "author": "Michael Jackson <mjjackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/node-tsx"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/node-tsx#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=24.3.0"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json",
+    "./load-module": "./src/load-module.ts"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json",
+      "./load-module": {
+        "types": "./dist/load-module.d.ts",
+        "default": "./dist/load-module.js"
+      }
+    }
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "typecheck": "tsgo --noEmit"
+  },
+  "dependencies": {
+    "get-tsconfig": "^4.13.6",
+    "oxc-transform": "^0.121.0"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  },
+  "keywords": [
+    "remix",
+    "node",
+    "jsx",
+    "tsx",
+    "loader",
+    "test"
+  ]
+}

@@ -1,17 +1,17 @@
 import FindMyWay from 'find-my-way'
 import { match } from 'path-to-regexp'
-import { createMatcher, type Matcher } from '@remix-run/route-pattern'
+import { createMultiMatcher, type MultiMatcher } from '@remix-run/route-pattern/match'
 
 import { ArrayMatcher } from './array-matcher.ts'
 
 export let matchers = {
+  routePattern: {
+    name: 'route-pattern',
+    createMatcher: () => createMultiMatcher<null>(),
+  },
   routePatternArray: {
     name: 'route-pattern/array',
-    createMatcher: () => new ArrayMatcher<null>(),
-  },
-  routePatternTrie: {
-    name: 'route-pattern/trie',
-    createMatcher: () => createMatcher<null>(),
+    createMatcher: () => new ArrayMatcher(),
   },
   findMyWay: {
     name: 'find-my-way',
@@ -28,13 +28,13 @@ export let matchers = {
             .replaceAll('*path', '*')
           router.on('GET', translated, () => {}, null)
         },
-        match(url) {
+        match(url: string | URL) {
           let pathname = typeof url === 'string' ? new URL(url).pathname : url.pathname
           let result = router.find('GET', pathname)
           if (!result) return null
           return { params: result.params } as any
         },
-        matchAll(url) {
+        matchAll(url: string | URL) {
           let result = this.match(url)
           return result ? [result] : []
         },
@@ -60,7 +60,7 @@ export let matchers = {
           // Simulate arbitrary ordering of patterns
           matchers.reverse()
         },
-        match(url) {
+        match(url: string | URL) {
           let pathname = typeof url === 'string' ? new URL(url).pathname : url.pathname
           for (let match of matchers) {
             let result = match(pathname)
@@ -70,7 +70,7 @@ export let matchers = {
           }
           return null
         },
-        matchAll(url) {
+        matchAll(url: string | URL) {
           let result = this.match(url)
           return result ? [result] : []
         },
@@ -81,6 +81,12 @@ export let matchers = {
   string,
   {
     name: string
-    createMatcher: () => Matcher<null>
+    createMatcher: () => MultiMatcher<unknown>
+    // createMatcher: () => {
+    //   readonly ignoreCase: boolean
+    //   add(pattern: string, data: null): void
+    //   match(url: string | URL): Match<string, null> | null
+    //   matchAll(url: string | URL): Array<Match<string, null>>
+    // }
   }
 >

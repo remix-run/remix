@@ -1,6 +1,7 @@
 {
   "name": "fetch-router-cf-workers-demo",
   "private": true,
+  "type": "module",
   "dependencies": {
     "@remix-run/cookie": "workspace:*",
     "@remix-run/data-schema": "workspace:*",
@@ -9,14 +10,13 @@
     "@remix-run/html-template": "workspace:*",
     "@remix-run/logger-middleware": "workspace:*",
     "@remix-run/response": "workspace:*",
-    "@remix-run/routes": "workspace:*",
     "@remix-run/session": "workspace:*",
     "@remix-run/session-middleware": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:",
-    "wrangler": "^4.50.0"
+    "wrangler": "^4.90.1"
   },
   "scripts": {
     "deploy": "wrangler deploy",

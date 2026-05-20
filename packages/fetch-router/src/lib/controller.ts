@@ -1,8 +1,9 @@
-import type { Params, RoutePattern } from '@remix-run/route-pattern'
-import type { Route, RouteMap } from '@remix-run/routes'
+import type { RoutePattern } from '@remix-run/route-pattern'
+import type { MatchParams } from '@remix-run/route-pattern/match'
 
-import type { AnyMiddleware } from './middleware.ts'
+import type { AnyMiddleware, MiddlewareContext } from './middleware.ts'
 import type { ContextWithParams, RequestContext } from './request-context.ts'
+import type { Route, RouteMap } from './route-map.ts'
 import type { DefaultContext } from './router-types.ts'
 
 /**
@@ -31,18 +32,35 @@ type ActionPattern<route extends ActionRoute> =
   route extends Route<any, infer pattern extends string> ? pattern :
   never
 
-type ActionObject<
+type ActionContext<
+  route extends ActionRoute,
+  context extends RequestContext<any, any>,
+> = ContextWithParams<context, MatchParams<ActionPattern<route>>>
+
+export type ActionObjectWithoutMiddleware<
   route extends ActionRoute,
   context extends RequestContext<any, any> = DefaultContext,
+> = {
+  middleware?: undefined
+  /**
+   * The handler that runs for this action.
+   */
+  handler: RequestHandler<ActionContext<route, context>>
+}
+
+export type ActionObjectWithMiddleware<
+  route extends ActionRoute,
+  context extends RequestContext<any, any> = DefaultContext,
+  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
 > = {
   /**
    * Middleware that runs before this action's handler.
    */
-  middleware?: readonly AnyMiddleware[] | undefined
+  middleware: readonly [...middleware]
   /**
    * The handler that runs after this action's middleware.
    */
-  handler: RequestHandler<ContextWithParams<context, Params<ActionPattern<route>>>>
+  handler: RequestHandler<MiddlewareContext<middleware, ActionContext<route, context>>>
 }
 
 /**
@@ -56,8 +74,9 @@ export type Action<
   route extends ActionRoute,
   context extends RequestContext<any, any> = DefaultContext,
 > =
-  | RequestHandler<ContextWithParams<context, Params<ActionPattern<route>>>>
-  | ActionObject<route, context>
+  | RequestHandler<ActionContext<route, context>>
+  | ActionObjectWithoutMiddleware<route, context>
+  | ActionObjectWithMiddleware<route, context>
 
 /**
  * Defines a route handler with route-aware params and the default router context.
@@ -87,6 +106,41 @@ export function isActionObject(obj: unknown): obj is ActionObject<any, any> {
   return isRecord(obj) && typeof obj.handler === 'function'
 }
 
+type ActionObject<
+  route extends ActionRoute,
+  context extends RequestContext<any, any> = DefaultContext,
+> = ActionObjectWithoutMiddleware<route, context> | ActionObjectWithMiddleware<route, context>
+
+type ControllerActions<
+  routes extends RouteMap,
+  context extends RequestContext<any, any>,
+> = routes extends any
+  ? {
+      [name in keyof routes as routes[name] extends Route<any, any>
+        ? name
+        : never]: routes[name] extends Route<any, any> ? Action<routes[name], context> : never
+    } & {
+      [name in keyof routes as routes[name] extends RouteMap ? name : never]?: never
+    }
+  : never
+
+export type ControllerWithoutMiddleware<
+  routes extends RouteMap,
+  context extends RequestContext<any, any> = DefaultContext,
+> = {
+  middleware?: undefined
+  actions: ControllerActions<routes, context>
+}
+
+export type ControllerWithMiddleware<
+  routes extends RouteMap,
+  context extends RequestContext<any, any> = DefaultContext,
+  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+> = {
+  middleware: readonly [...middleware]
+  actions: ControllerActions<routes, MiddlewareContext<middleware, context>>
+}
+
 /**
  * A controller maps route leaves in a route map to actions.
  *
@@ -98,18 +152,7 @@ export function isActionObject(obj: unknown): obj is ActionObject<any, any> {
 export type Controller<
   routes extends RouteMap,
   context extends RequestContext<any, any> = DefaultContext,
-> = {
-  middleware?: readonly AnyMiddleware[] | undefined
-  actions: routes extends any
-    ? {
-        [name in keyof routes as routes[name] extends Route<any, any>
-          ? name
-          : never]: routes[name] extends Route<any, any> ? Action<routes[name], context> : never
-      } & {
-        [name in keyof routes as routes[name] extends RouteMap ? name : never]?: never
-      }
-    : never
-}
+> = ControllerWithoutMiddleware<routes, context> | ControllerWithMiddleware<routes, context>
 
 /**
  * Defines a controller whose action keys and params are checked against a route map.

@@ -1,5 +1,5 @@
 /**
- * This file benchmarks the `href` method of the `RoutePattern` class.
+ * This file benchmarks href generation for parsed route patterns.
  *
  * The purpose of this benchmark is to capture current performance with `pnpm bench href --outputJson=main.json`
  * on the `main` branch, and then compare that to the performance of a feature branch with `pnpm bench href --compare=main.json`.
@@ -10,6 +10,7 @@
 import { execSync } from 'node:child_process'
 import { bench, describe } from 'vitest'
 import { RoutePattern } from '@remix-run/route-pattern'
+import { createHref } from '@remix-run/route-pattern/href'
 
 let benchName = getBenchName()
 
@@ -28,53 +29,53 @@ function getBenchName(): string {
 }
 
 describe('static', () => {
-  let pattern = new RoutePattern('/posts/new')
+  let pattern = RoutePattern.parse('/posts/new')
   bench(benchName, () => {
-    pattern.href()
+    createHref(pattern)
   })
 })
 
 describe('one variable', () => {
-  let pattern = new RoutePattern('/posts/:id')
+  let pattern = RoutePattern.parse('/posts/:id')
   bench(benchName, () => {
-    pattern.href({ id: '123' })
+    createHref(pattern, { id: '123' })
   })
 })
 
 describe('one wildcard', () => {
-  let pattern = new RoutePattern('/files/*path')
+  let pattern = RoutePattern.parse('/files/*path')
   bench(benchName, () => {
-    pattern.href({ path: 'docs/readme.md' })
+    createHref(pattern, { path: 'docs/readme.md' })
   })
 })
 
 describe('multiple variables', () => {
-  let pattern = new RoutePattern('/users/:userId/posts/:postId')
+  let pattern = RoutePattern.parse('/users/:userId/posts/:postId')
   bench(benchName, () => {
-    pattern.href({ userId: '42', postId: '123' })
+    createHref(pattern, { userId: '42', postId: '123' })
   })
 })
 
 describe('optional, all params', () => {
-  let pattern = new RoutePattern('/posts(/:id)')
+  let pattern = RoutePattern.parse('/posts(/:id)')
   bench(benchName, () => {
-    pattern.href({ id: '123' })
+    createHref(pattern, { id: '123' })
   })
 })
 
 describe('optional, omit', () => {
-  let pattern = new RoutePattern('/posts(/:id)')
+  let pattern = RoutePattern.parse('/posts(/:id)')
   bench(benchName, () => {
-    pattern.href()
+    createHref(pattern)
   })
 })
 
 describe('complex (8 variants), all params', () => {
-  let pattern = new RoutePattern(
+  let pattern = RoutePattern.parse(
     '/dashboard/:tenant/files/*path/view(/:year(/:month(/:day)))(/format/:fmt)',
   )
   bench(benchName, () => {
-    pattern.href({
+    createHref(pattern, {
       tenant: 'acme',
       path: 'client/reports',
       year: '2024',
@@ -86,11 +87,11 @@ describe('complex (8 variants), all params', () => {
 })
 
 describe('complex (8 variants), no optionals', () => {
-  let pattern = new RoutePattern(
+  let pattern = RoutePattern.parse(
     '/dashboard/:tenant/files/*path/view(/:year(/:month(/:day)))(/format/:fmt)',
   )
   bench(benchName, () => {
-    pattern.href({
+    createHref(pattern, {
       tenant: 'acme',
       path: 'client/reports',
     })
@@ -98,8 +99,8 @@ describe('complex (8 variants), no optionals', () => {
 })
 
 describe('with search params', () => {
-  let pattern = new RoutePattern('/posts/:id?tag=featured&tag=popular')
+  let pattern = RoutePattern.parse('/posts/:id?tag=featured&tag=popular')
   bench(benchName, () => {
-    pattern.href({ id: '123' }, { tag: 'tutorial' })
+    createHref(pattern, { id: '123' }, { tag: 'tutorial' })
   })
 })

@@ -3,14 +3,15 @@
     "strict": true,
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
     "types": ["node"],
-    "module": "ES2022",
-    "moduleResolution": "Bundler",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
     "noEmit": true,
     "target": "ESNext",
     "allowJs": true,
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
+    "isolatedModules": true,
     "skipLibCheck": true
   },
   "exclude": ["dist"]

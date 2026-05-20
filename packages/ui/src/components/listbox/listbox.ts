@@ -17,17 +17,8 @@ import { flashAttribute } from '../../utils/flash-attribute.ts'
 
 export type ListboxValue = string | null
 
-enum NavigationStrategy {
-  Next = 0,
-  Previous = 1,
-  First = 2,
-  Last = 3,
-}
-
-enum State {
-  Idle = 'idle',
-  Selecting = 'selecting',
-}
+type NavigationStrategy = 'next' | 'previous' | 'first' | 'last'
+type State = 'idle' | 'selecting'
 
 interface Values {
   value: ListboxValue
@@ -160,7 +151,7 @@ export const labelStyle = itemLabelCss
 
 function ListboxProvider(handle: Handle<ListboxProviderProps, ListboxContext>) {
   let options: RegisteredOption[] = []
-  let state = State.Idle
+  let state: State = 'idle'
 
   function getOption(value: ListboxValue) {
     return options.find((option) => option.value === value)
@@ -221,16 +212,16 @@ function ListboxProvider(handle: Handle<ListboxProviderProps, ListboxContext>) {
       return findSearchMatch(text, fromValue)
     },
     navigateFirst() {
-      context.navigate(NavigationStrategy.First)
+      context.navigate('first')
     },
     navigateLast() {
-      context.navigate(NavigationStrategy.Last)
+      context.navigate('last')
     },
     navigateNext() {
-      context.navigate(NavigationStrategy.Next)
+      context.navigate('next')
     },
     navigatePrevious() {
-      context.navigate(NavigationStrategy.Previous)
+      context.navigate('previous')
     },
     scrollActiveOptionIntoView() {
       context.scrollActiveOptionIntoView()
@@ -261,13 +252,13 @@ function ListboxProvider(handle: Handle<ListboxProviderProps, ListboxContext>) {
     },
 
     async select(value) {
-      if (state === State.Selecting) {
+      if (state === 'selecting') {
         return
       }
-      state = State.Selecting
+      state = 'selecting'
       let option = getOption(value)
       if (!isInteractableOption(option)) {
-        state = State.Idle
+        state = 'idle'
         return
       }
       handle.props.onSelect(value, option)
@@ -279,17 +270,17 @@ function ListboxProvider(handle: Handle<ListboxProviderProps, ListboxContext>) {
         )
       }
       await handle.props.onSelectSettled?.(value, option)
-      state = State.Idle
+      state = 'idle'
     },
 
     highlight(value) {
-      if (state === State.Selecting) return
+      if (state === 'selecting') return
       let option = getOption(value)
       handle.props.onHighlight(value, option)
     },
 
     highlightSearchMatch(text) {
-      if (state === State.Selecting) return
+      if (state === 'selecting') return
 
       let option = findSearchMatch(text, handle.props.activeValue)
 
@@ -300,7 +291,7 @@ function ListboxProvider(handle: Handle<ListboxProviderProps, ListboxContext>) {
     },
 
     navigate(strategy: NavigationStrategy) {
-      if (state === State.Selecting) return
+      if (state === 'selecting') return
 
       let option: RegisteredOption | undefined
       let interactableOptions = getInteractableOptions()
@@ -309,19 +300,19 @@ function ListboxProvider(handle: Handle<ListboxProviderProps, ListboxContext>) {
       )
 
       switch (strategy) {
-        case NavigationStrategy.Next:
+        case 'next':
           option = interactableOptions[activeIndex + 1] ?? interactableOptions[0]
           break
-        case NavigationStrategy.Previous:
+        case 'previous':
           option =
             activeIndex === -1
               ? interactableOptions[interactableOptions.length - 1]
               : interactableOptions[activeIndex - 1]
           break
-        case NavigationStrategy.First:
+        case 'first':
           option = interactableOptions[0]
           break
-        case NavigationStrategy.Last:
+        case 'last':
           option = interactableOptions[interactableOptions.length - 1]
           break
       }
@@ -359,15 +350,15 @@ const listMixin = createMixin<HTMLElement>((handle) => (props) => {
       switch (event.key) {
         case 'ArrowDown':
           event.preventDefault()
-          context.navigate(NavigationStrategy.Next)
+          context.navigate('next')
           break
         case 'ArrowUp':
           event.preventDefault()
-          context.navigate(NavigationStrategy.Previous)
+          context.navigate('previous')
           break
         case 'Tab':
           event.preventDefault()
-          context.navigate(NavigationStrategy.First)
+          context.navigate('first')
           break
         case 'Enter':
         case ' ':
@@ -376,11 +367,11 @@ const listMixin = createMixin<HTMLElement>((handle) => (props) => {
           break
         case 'Home':
           event.preventDefault()
-          context.navigate(NavigationStrategy.First)
+          context.navigate('first')
           break
         case 'End':
           event.preventDefault()
-          context.navigate(NavigationStrategy.Last)
+          context.navigate('last')
       }
     }),
     hiddenTypeahead((text) => {

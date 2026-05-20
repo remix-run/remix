@@ -6,10 +6,10 @@
   "dependencies": {
     "@oxlint/plugins": "^1.57.0",
     "@typescript/native-preview": "catalog:",
+    "oxc-parser": "^0.121.0",
     "oxlint": "^1.57.0",
     "oxlint-tsgolint": "^0.17.4",
     "prettier": "^3.3.3",
-    "tsx": "catalog:",
     "typescript": "catalog:",
     "typescript-language-server": "catalog:"
   },
@@ -32,6 +32,7 @@
     "lint:fix": "oxlint . -A all --fix --quiet",
     "pr-preview": "node ./scripts/pr-preview.ts",
     "setup-installable-branch": "node ./scripts/setup-installable-branch.ts",
+    "validate-package-meta": "node ./scripts/validate-package-meta.ts",
     "test": "pnpm --parallel run test",
     "test:bun": "pnpm --parallel --if-present run test:bun",
     "test:changed": "node ./scripts/run-changed-workspaces.ts test",

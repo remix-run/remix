@@ -24,13 +24,13 @@ async function run(): Promise<void> {
 }
 
 async function loadRawRouteTree(routesFile: string): Promise<RawRouteTreeNode[]> {
-  let routeModule = await import(pathToFileURL(routesFile).href)
+  let routeModule: object = await import(pathToFileURL(routesFile).href)
 
   if (!('routes' in routeModule)) {
     throw new Error(`Route module ${routesFile} must export a named "routes" value.`)
   }
 
-  return normalizeRouteGroup(Reflect.get(routeModule, 'routes'), [], new Map())
+  return normalizeRouteGroup(routeModule.routes, [], new Map())
 }
 
 function normalizeRouteGroup(
@@ -55,15 +55,16 @@ function normalizeRouteGroup(
     return Object.entries(value).map(([key, entryValue]) => {
       let nameSegments = [...parentSegments, key]
       let name = nameSegments.join('.')
+      let routeLeaf = readRouteLeaf(entryValue)
 
-      if (isRouteLeaf(entryValue)) {
+      if (routeLeaf !== undefined) {
         return {
           children: [],
           key,
           kind: 'route',
-          method: entryValue.method,
+          method: routeLeaf.method,
           name,
-          pattern: entryValue.pattern.source,
+          pattern: routeLeaf.pattern,
         } satisfies RawRouteTreeNode
       }
 
@@ -85,14 +86,22 @@ function normalizeRouteGroup(
   }
 }
 
-function isRouteLeaf(value: unknown): value is { method: string; pattern: { source: string } } {
+function readRouteLeaf(value: unknown): { method: string; pattern: string } | undefined {
+  if (typeof value !== 'object' || value == null) return undefined
+
+  let method = Reflect.get(value, 'method')
+  let pattern = Reflect.get(value, 'pattern')
+  if (typeof method !== 'string' || !hasToString(pattern)) return undefined
+
+  return { method, pattern: pattern.toString() }
+}
+
+function hasToString(value: unknown): value is { toString(): string } {
   return (
     typeof value === 'object' &&
     value != null &&
-    typeof Reflect.get(value, 'method') === 'string' &&
-    typeof Reflect.get(value, 'pattern') === 'object' &&
-    Reflect.get(value, 'pattern') != null &&
-    typeof Reflect.get(Reflect.get(value, 'pattern'), 'source') === 'string'
+    'toString' in value &&
+    typeof value.toString === 'function'
   )
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/assets",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Fetch-based server for compiling browser JS/TS and CSS assets on demand",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -33,7 +33,9 @@
   },
   "dependencies": {
     "@oxc-project/runtime": "^0.121.0",
+    "@remix-run/file-storage": "workspace:*",
     "@remix-run/headers": "workspace:*",
+    "@remix-run/mime": "workspace:*",
     "@remix-run/route-pattern": "workspace:*",
     "chokidar": "^5.0.0",
     "es-module-lexer": "^2.0.0",

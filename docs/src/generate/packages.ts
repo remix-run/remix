@@ -1,5 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
+import * as s from 'remix/data-schema'
+import { hasRemixPackage, mapToRemixPackage } from './manifest.ts'
 import { info, invariant, warn } from './utils.ts'
 
 type PackageOverview = {
@@ -7,6 +9,13 @@ type PackageOverview = {
   packageDir: string
   readmePath?: string
 }
+
+const PackageJsonSchema = s.object({
+  name: s.string(),
+  exports: s.optional(s.record(s.string(), s.any())),
+})
+
+type PackageJson = s.InferOutput<typeof PackageJsonSchema>
 
 const PACKAGES_DIR = path.resolve('..', 'packages')
 const JAVASCRIPT_CODE_FENCE_LANGUAGES = new Set(['js', 'jsx', 'ts', 'tsx'])
@@ -23,7 +32,8 @@ export async function discoverPackageOverviews(): Promise<PackageOverview[]> {
     let packageJsonPath = path.join(packageDir, 'package.json')
 
     try {
-      let packageName = await readPackageName(packageJsonPath)
+      let packageJson = await readPackageJson(packageJsonPath)
+      let packageName = packageJson.name
 
       let readmePath = path.join(packageDir, 'README.md')
       let hasReadme = await isFile(readmePath)
@@ -40,6 +50,9 @@ export async function discoverPackageOverviews(): Promise<PackageOverview[]> {
         overview.readmePath = readmePath
       }
       overviews.push(overview)
+
+      let subpathOverviews = await discoverPackageSubpathOverviews(packageDir, packageJson)
+      overviews.push(...subpathOverviews)
     } catch (error) {
       if (!isErrnoException(error) || error.code !== 'ENOENT') {
         throw error
@@ -48,6 +61,46 @@ export async function discoverPackageOverviews(): Promise<PackageOverview[]> {
   }
 
   return overviews.sort((a, b) => a.docsPackage.localeCompare(b.docsPackage))
+}
+
+async function discoverPackageSubpathOverviews(
+  packageDir: string,
+  packageJson: PackageJson,
+): Promise<PackageOverview[]> {
+  let exports = packageJson.exports
+  if (!exports) return []
+
+  let overviews: PackageOverview[] = []
+  for (let [exportPath, exportConfig] of Object.entries(exports)) {
+    if (!exportPath.startsWith('./') || exportPath === './package.json') continue
+
+    let exportSubpath = exportPath.slice(2) // e.g. "fetch-router/routes"
+    let candidateDocsPackage = `${getDocsPackageName(packageJson.name)}/${exportSubpath}`
+
+    // For the remix umbrella, skip legacy alias exports (e.g. ./fetch-router/routes)
+    // that resolve to a different canonical path (e.g. remix/routes). The canonical
+    // sub-package discovery will create the correct sidebar entry.
+    if (packageJson.name === 'remix') {
+      let specifier = `@remix-run/${exportSubpath}`
+      if (hasRemixPackage(specifier) && mapToRemixPackage(specifier) !== candidateDocsPackage) {
+        continue
+      }
+    }
+
+    let entryPath = getExportEntryPath(exportConfig)
+    if (!entryPath) continue
+
+    let readmePath = path.join(packageDir, path.dirname(entryPath), 'README.md')
+    if (!(await isFile(readmePath))) continue
+
+    overviews.push({
+      docsPackage: candidateDocsPackage,
+      packageDir,
+      readmePath,
+    })
+  }
+
+  return overviews
 }
 
 export async function writePackageOverviewFiles(overviews: PackageOverview[], docsDir: string) {
@@ -60,7 +113,7 @@ export async function writePackageOverviewFiles(overviews: PackageOverview[], do
     if (overview.readmePath) {
       body = await fs.readFile(overview.readmePath, 'utf-8')
       warnOnInvalidReadmeSyntax(body, overview.readmePath)
-      body = normalizeReadmeMarkdown(body)
+      body = normalizeReadmeMarkdown(body, overview.docsPackage)
     } else {
       body = getMissingReadmeMarkdown(overview.docsPackage, overview.packageDir)
     }
@@ -70,20 +123,35 @@ export async function writePackageOverviewFiles(overviews: PackageOverview[], do
   }
 }
 
-async function readPackageName(packageJsonPath: string): Promise<string> {
+async function readPackageJson(packageJsonPath: string): Promise<PackageJson> {
   let packageJson: unknown = JSON.parse(await fs.readFile(packageJsonPath, 'utf-8'))
-  invariant(
-    packageJson !== null && typeof packageJson === 'object' && 'name' in packageJson,
-    `Missing package name: ${packageJsonPath}`,
-  )
-  invariant(typeof packageJson.name === 'string', `Invalid package name: ${packageJsonPath}`)
-  return packageJson.name
+  let result = s.parseSafe(PackageJsonSchema, packageJson)
+  invariant(result.success, `Invalid package.json: ${packageJsonPath}`)
+  return result.value
 }
 
-function normalizeReadmeMarkdown(markdown: string): string {
-  return markdown.replace(/\]\((?:\.\/)?README\.md(#[^)]+)?\)/g, (_, hash: string | undefined) => {
-    return `](${hash ?? './'})`
-  })
+const ExportConfigSchema = s.union([
+  s.string(),
+  s.object({
+    default: s.optional(s.string()),
+    types: s.optional(s.string()),
+  }),
+])
+
+function getExportEntryPath(exportConfig: unknown): string | undefined {
+  let result = s.parseSafe(ExportConfigSchema, exportConfig)
+  if (!result.success) return undefined
+
+  let config = result.value
+  return typeof config === 'string' ? config : (config.types ?? config.default)
+}
+
+function normalizeReadmeMarkdown(markdown: string, docsPackage: string): string {
+  return markdown
+    .replace(/^# .*(?:\r?\n|$)/, `# ${docsPackage}\n`)
+    .replace(/\]\((?:\.\/)?README\.md(#[^)]+)?\)/g, (_, hash: string | undefined) => {
+      return `](${hash ?? './'})`
+    })
 }
 
 function warnOnInvalidReadmeSyntax(markdown: string, readmePath: string) {
@@ -148,10 +216,8 @@ function getDocsPackageName(packageName: string): string {
     return 'remix'
   }
 
-  let match = packageName.match(/^@remix-run\/(.+)$/)
-  invariant(match, `Unexpected package name: ${packageName}`)
-
-  return `remix/${match[1]}`
+  invariant(packageName.startsWith('@remix-run/'), `Unexpected package name: ${packageName}`)
+  return mapToRemixPackage(packageName)
 }
 
 function frontmatter(overview: PackageOverview): string {

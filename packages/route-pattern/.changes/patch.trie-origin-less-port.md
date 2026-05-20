@@ -1,1 +1,0 @@
-Fix matcher to match origin-less patterns (e.g. `/`, `/about`) against URLs that have an explicit port. Previously a pattern like `/` would not match `http://localhost:44199/`, diverging from `RoutePattern.match` which ignores port checks when the pattern has no origin.

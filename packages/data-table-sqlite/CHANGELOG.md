@@ -2,6 +2,19 @@
 
 This is the changelog for [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.0
+
+### Minor Changes
+
+- BREAKING CHANGE: removed `migrate(request)` and `compileSql(DataMigrationOperation)`
+
+  The DDL operation ADT has been removed from `@remix-run/data-table`, so this adapter no longer implements `migrate()` and `compileSql()` only accepts `DataManipulationOperation`. SQL-file migrations run through the new `executeScript(sql, transaction?)` method, which delegates to the SQLite client's native `exec()`.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`data-table@0.3.0`](https://github.com/remix-run/remix/releases/tag/data-table@0.3.0)
+
 ## v0.4.1
 
 ### Patch Changes

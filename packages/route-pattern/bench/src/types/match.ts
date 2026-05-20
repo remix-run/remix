@@ -1,20 +1,20 @@
 import { bench } from '@ark/attest'
-import { RoutePattern, type RoutePatternMatch } from '@remix-run/route-pattern'
+import { createMatcher, type Match, type Matcher } from '@remix-run/route-pattern/match'
 
 bench.baseline(() => {
-  let pattern = new RoutePattern('/:var/*wild')
-  pattern.match('')?.params
+  let matcher = createMatcher('/:var/*wild')
+  matcher.match('')?.params
 })
 
 bench('match > simple route', () => {
-  let pattern = new RoutePattern('/posts/:id')
-  let match = pattern.match('https://example.com/posts/123')
+  let matcher = createMatcher('/posts/:id')
+  let match = matcher.match('https://example.com/posts/123')
   match?.params.id
 }).types([268, 'instantiations'])
 
 bench('match > complex route', () => {
-  let pattern = new RoutePattern('/api(/v:major(.:minor))/*path/help')
-  pattern.match('https://example.com/api/v1/users/123')?.params
+  let matcher = createMatcher('/api(/v:major(.:minor))/*path/help')
+  matcher.match('https://example.com/api/v1/users/123')?.params
 }).types([971, 'instantiations'])
 
 bench('match > mediarss', async () => {
@@ -34,13 +34,13 @@ bench('match > mediarss', async () => {
 function eagerlyEvaluateTypesForMatchParams<patterns extends ReadonlyArray<string>>(
   // prettier-ignore
   _: patterns & (
-    { [pattern in patterns[number]]: GetMatchParams<ReturnType<RoutePattern<pattern>['match']>> } extends
+    { [pattern in patterns[number]]: GetMatchParams<ReturnType<Matcher<pattern>['match']>> } extends
     { [pattern in patterns[number]]: Record<string, unknown> | null }
     ? patterns : never
   ),
 ): void {}
 
 // prettier-ignore
-type GetMatchParams<match extends RoutePatternMatch<string> | null> =
-  match extends RoutePatternMatch<string> ? match['params'] :
+type GetMatchParams<match> =
+  match extends Match<string, unknown> ? match['params'] :
   null

@@ -36,19 +36,16 @@ export function split(source: string): SplitResult {
   let solidusIndex = source.indexOf('://')
 
   if (solidusIndex === -1) {
-    // path/without/solidus
     result.pathname = pathnameSpan(source, 0, source.length)
     return result
   }
 
   let slashIndex = source.indexOf('/')
   if (slashIndex === solidusIndex + 1) {
-    // first slash is from solidus, find next slash
     slashIndex = source.indexOf('/', solidusIndex + 3)
   }
 
   if (slashIndex === -1) {
-    // (protocol)://(host)
     result.protocol = span(0, solidusIndex)
     let host = span(solidusIndex + 3, source.length)
     if (host) {
@@ -60,12 +57,10 @@ export function split(source: string): SplitResult {
   }
 
   if (slashIndex < solidusIndex) {
-    // pathname/with://solidus
     result.pathname = pathnameSpan(source, 0, source.length)
     return result
   }
 
-  // (protocol)://(host)/(pathname)
   result.protocol = span(0, solidusIndex)
   let host = span(solidusIndex + 3, slashIndex)
   if (host) {

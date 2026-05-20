@@ -422,6 +422,127 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('keeps the prior entry styled while its replacement module is loading', async () => {
+    // Regression test for the demo-to-demo navigation FOUC: when a full-document
+    // reload replaces one client entry with another, `diffNodes` preserves the
+    // old DOM inside the hydration markers until the new module finishes
+    // loading. Style adoption must therefore be refcount-aware — the old
+    // entry's css-mixin rule has to stay live while its DOM is still visible.
+
+    function rulePresent(selector: string): boolean {
+      return Array.from(document.adoptedStyleSheets).some((sheet) =>
+        Array.from(sheet.cssRules).some((rule) => rule.cssText.includes(`.${selector}`)),
+      )
+    }
+
+    function findClassByPrefix(host: ParentNode, idAttr: string): string | undefined {
+      let el = host.querySelector(`#${idAttr}`)
+      let classes = el?.getAttribute('class')?.split(/\s+/).filter(Boolean) ?? []
+      return classes.find((c) => c.startsWith('rmxc-'))
+    }
+
+    function adoptInitialDocument(html: string): void {
+      let parsed = new DOMParser().parseFromString(html, 'text/html')
+      let live = document.documentElement
+      while (live.firstChild) live.removeChild(live.firstChild)
+      for (let child of Array.from(parsed.documentElement.childNodes)) {
+        live.appendChild(document.importNode(child, true))
+      }
+    }
+
+    let aStyle = css({ color: 'rgb(10, 20, 30)' })
+    let bStyle = css({ color: 'rgb(40, 50, 60)' })
+
+    let EntryA = clientEntry('/js/entry-a.js#EntryA', function EntryA() {
+      return () => (
+        <div id="entry-a" mix={[aStyle]}>
+          A
+        </div>
+      )
+    })
+
+    let EntryB = clientEntry('/js/entry-b.js#EntryB', function EntryB() {
+      return () => (
+        <div id="entry-b" mix={[bStyle]}>
+          B
+        </div>
+      )
+    })
+
+    async function renderDocument(useA: boolean) {
+      return await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>{useA ? <EntryA /> : <EntryB />}</main>
+            </body>
+          </html>,
+        ),
+      )
+    }
+
+    adoptInitialDocument(await renderDocument(true))
+
+    // Capture the SSR class names from the live document before hydration, so
+    // we can assert against the actual hashed selectors the css() calls
+    // produced rather than recomputing them.
+    let aSelector = findClassByPrefix(document, 'entry-a')
+    invariant(aSelector, 'expected SSR markup to carry an rmxc-* class for entry-a')
+
+    let [bModuleGate, allowBModule] = withResolvers<void>()
+    let app = run({
+      async loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/entry-a.js' && exportName === 'EntryA') return EntryA
+        if (moduleUrl === '/js/entry-b.js' && exportName === 'EntryB') {
+          await bModuleGate
+          return EntryB
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      async resolveFrame(src: string) {
+        if (src === '/b') return await renderDocument(false)
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    expect(rulePresent(aSelector)).toBe(true)
+
+    // Begin the reload but hold EntryB's module load so the old DOM stays
+    // inside the hydration markers — this is the FOUC window in production.
+    let topFrame = getTopFrame()
+    topFrame.src = '/b'
+    await topFrame.reload()
+
+    // Pull EntryB's hashed selector from the SSR markup that replaceServerStyles
+    // just adopted into adoptedStyleSheets.
+    let bDocHtml = await renderDocument(false)
+    let bDoc = new DOMParser().parseFromString(bDocHtml, 'text/html')
+    let bSelectorFromB = findClassByPrefix(bDoc, 'entry-b')
+    invariant(bSelectorFromB, 'expected SSR markup to carry an rmxc-* class for entry-b')
+
+    // Old DOM is still visible (entry-a div still in the document).
+    expect(document.getElementById('entry-a')).not.toBeNull()
+    // Its rule must still be live — otherwise we'd flash unstyled.
+    expect(rulePresent(aSelector)).toBe(true)
+    // The new entry's rule is already adopted from the streamed style tags.
+    expect(rulePresent(bSelectorFromB)).toBe(true)
+
+    // Allow the module load to finish and let hydration swap the DOM.
+    allowBModule()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('entry-a')).toBeNull()
+    expect(document.getElementById('entry-b')).not.toBeNull()
+    // Now that entry-a's mixin is torn down, its adoption ref + mixin ref
+    // both decrement to 0 and the rule is finally dropped.
+    expect(rulePresent(aSelector)).toBe(false)
+    expect(rulePresent(bSelectorFromB)).toBe(true)
+
+    app.dispose()
+  })
+
   it('disposes named frames replaced by client entries during full-document reloads', async () => {
     let readNamedFrame: (() => unknown) | undefined
 
@@ -1063,6 +1184,91 @@ describe('run', () => {
 
     expect(document.getElementById('frame-content')).toBeNull()
     expect(document.getElementById('frame-value')).toBeNull()
+
+    clientFrame.dispose()
+  })
+
+  it('ignores updates from a client entry removed by a frame reload', async () => {
+    let pending = false
+    let showCartItems = true
+    let removeLastItem: undefined | (() => Promise<void>)
+
+    let CartItems = clientEntry(
+      '/assets/cart-items.js#CartItems',
+      function CartItems(handle: Handle) {
+        removeLastItem = async () => {
+          pending = true
+          await handle.update()
+          showCartItems = false
+          await handle.frame.reload()
+          pending = false
+          handle.update()
+        }
+
+        return () => (
+          <>
+            {pending ? <p id="cart-pending">Updating your cart...</p> : null}
+            <table id="cart-items">
+              <tbody>
+                <tr>
+                  <td>Book</td>
+                  <td>
+                    <button>Remove</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div id="cart-total">Total: $16.99</div>
+          </>
+        )
+      },
+    )
+
+    async function renderCartItems(): Promise<string> {
+      return await drain(
+        renderToStream(showCartItems ? <CartItems /> : <p id="empty-cart">Your cart is empty.</p>),
+      )
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/cart-items" />
+        </main>,
+        { resolveFrame: renderCartItems },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let errors: unknown[] = []
+    let clientFrame = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/cart-items.js' && exportName === 'CartItems') {
+          return CartItems
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/cart-items') return renderCartItems()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+    clientFrame.addEventListener('error', (event) => {
+      errors.push(event.error)
+    })
+
+    await clientFrame.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('cart-items')).toBeInstanceOf(HTMLElement)
+    invariant(removeLastItem)
+
+    await removeLastItem()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('cart-items')).toBeNull()
+    expect(document.getElementById('empty-cart')?.textContent).toBe('Your cart is empty.')
+    expect(errors).toEqual([])
 
     clientFrame.dispose()
   })

@@ -220,6 +220,7 @@ const ObjectHeaderDescriptors: readonly ObjectHeaderDescriptor[] = [
     ContentType.from(value),
   ),
   objectHeader<CookieInit, Cookie>('cookie', 'Cookie', (value) => Cookie.from(value), [
+    'append',
     'clear',
     'delete',
     'set',

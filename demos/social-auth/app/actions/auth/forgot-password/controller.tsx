@@ -1,7 +1,5 @@
-import { createController } from 'remix/fetch-router'
-import { Database } from 'remix/data-table'
+import { createController } from 'remix/router'
 import * as s from 'remix/data-schema'
-import { Renderer } from 'remix/render-middleware'
 
 import { ForgotPasswordPage, ForgotPasswordSentPage } from './page.tsx'
 import { getIssueMessage, readField } from '../form-utils.ts'
@@ -12,9 +10,7 @@ import { routes } from '../../../routes.ts'
 
 export const forgotPasswordController = createController(routes.auth.forgotPassword, {
   actions: {
-    index({ get, url }) {
-      let render = get(Renderer)
-
+    index({ render, url }) {
       return render(
         <ForgotPasswordPage
           formAction={routes.auth.forgotPassword.action.href(undefined, getReturnToQuery(url))}
@@ -23,12 +19,9 @@ export const forgotPasswordController = createController(routes.auth.forgotPassw
       )
     },
 
-    async action({ get, url }) {
-      let db = get(Database)
-      let formData = get(FormData)
+    async action({ db, formData, render, url }) {
       let returnToQuery = getReturnToQuery(url)
       let result = s.parseSafe(forgotPasswordSchema, formData)
-      let render = get(Renderer)
 
       if (!result.success) {
         return render(
