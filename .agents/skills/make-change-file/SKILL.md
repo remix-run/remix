@@ -11,16 +11,18 @@ Write release notes that match this repository's `.changes` conventions. Use it 
 
 ## Workflow
 
-1. Read the package's `package.json`, `.changes/` directory, and any relevant PR diff or commit range before writing anything.
+1. Read the package's `package.json`, existing `.changes/` directory if present, and any relevant PR diff or commit range before writing anything.
 2. Check whether an unpublished change file already exists for the same work. If it does, update it in place instead of creating a duplicate note.
 3. Choose the bump type from the package version and the user-facing impact.
-4. Write concise, user-facing release notes that describe shipped behavior, APIs, or exports.
-5. Run `pnpm changes:preview` to verify the rendered changelog output.
-6. Run `pnpm run lint` before finishing.
+4. Create `packages/<package>/.changes/` on demand if it does not already exist.
+5. Write concise, user-facing release notes that describe shipped behavior, APIs, or exports.
+6. Run `pnpm changes:preview` to verify the rendered changelog output.
+7. Run `pnpm run lint` before finishing.
 
 ## Naming
 
 - Use `packages/<package>/.changes/[major|minor|patch].short-description.md`.
+- The `.changes/` directory is optional until a package has a change file or `.changes/config.json`.
 - Keep the slug short, specific, and stable.
 - Reuse existing deterministic names when the repo already has a pattern for that class of note.
 - For brand-new package releases, prefer `minor.initial-release.md`.

@@ -739,6 +739,8 @@ async function outputExportsChangeFiles(
   let legacyChangeFilePattern = /^(major|minor)\.remix\.update-exports-\d+\.md$/
   let changes = ''
 
+  await fs.mkdir(remixChangesDir, { recursive: true })
+
   // Remove any old timestamped exports change files from prior runs.
   for (let fileName of await fs.readdir(remixChangesDir)) {
     if (!legacyChangeFilePattern.test(fileName)) {

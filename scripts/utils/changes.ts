@@ -161,30 +161,6 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
   let changes: ChangeFile[] = []
   let errors: ValidationError[] = []
 
-  // Changes directory should exist (with at least README.md)
-  if (!fs.existsSync(changesDir)) {
-    return {
-      valid: false,
-      errors: [
-        {
-          packageDirName,
-          file: '.changes/',
-          error: 'Changes directory does not exist',
-        },
-      ],
-    }
-  }
-
-  // README.md should exist in .changes directory so it persists between releases
-  let readmePath = path.join(changesDir, 'README.md')
-  if (!fs.existsSync(readmePath)) {
-    errors.push({
-      packageDirName,
-      file: '.changes/README.md',
-      error: 'README.md is missing from .changes directory',
-    })
-  }
-
   // Get package version to determine validation rules
   let packageJsonPath = getPackageFile(packageDirName, 'package.json')
   let packageJson = readJson(packageJsonPath)
@@ -193,6 +169,36 @@ function parsePackageChanges(packageDirName: string): ParsedPackageChanges {
   let isV1Plus = majorVersion >= 1
   let currentVersionPrereleaseId = getPrereleaseIdentifier(currentVersion)
   let isCurrentVersionPrerelease = currentVersionPrereleaseId !== null
+
+  if (!fs.existsSync(changesDir)) {
+    if (isCurrentVersionPrerelease) {
+      return {
+        valid: false,
+        errors: [
+          {
+            packageDirName,
+            file: '.changes/config.json',
+            error: `Version ${currentVersion} is a prerelease but no .changes/config.json exists. Either add .changes/config.json with { "prereleaseChannel": "${currentVersionPrereleaseId}" }, or add a change file to graduate to stable.`,
+          },
+        ],
+      }
+    }
+
+    return { valid: true, changes, changesConfig: null }
+  }
+
+  if (!fs.statSync(changesDir).isDirectory()) {
+    return {
+      valid: false,
+      errors: [
+        {
+          packageDirName,
+          file: '.changes/',
+          error: '.changes exists but is not a directory',
+        },
+      ],
+    }
+  }
 
   // Handle .changes/config.json for packages in prerelease mode
   let changesConfig: ChangesConfig | null = null

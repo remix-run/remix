@@ -58,16 +58,25 @@ function updateChangelog(packageDirName: string, newContent: string) {
 }
 
 /**
- * Deletes all change files (except README.md)
+ * Deletes all pending markdown change files.
  */
 function deleteChangeFiles(packageDirName: string) {
   let changesDir = path.join(getPackagePath(packageDirName), '.changes')
+  if (!fs.existsSync(changesDir)) {
+    console.log('  ✓ No change files to delete')
+    return
+  }
+
   let files = fs.readdirSync(changesDir)
   let changeFiles = files.filter((file) => file !== 'README.md' && file.endsWith('.md'))
 
   for (let file of changeFiles) {
     let filePath = path.join(changesDir, file)
     fs.unlinkSync(filePath)
+  }
+
+  if (fs.readdirSync(changesDir).length === 0) {
+    fs.rmdirSync(changesDir)
   }
 
   console.log(`  ✓ Deleted ${changeFiles.length} change file${changeFiles.length === 1 ? '' : 's'}`)
