@@ -714,6 +714,11 @@ const sidebarIntroCss = css({
   [MOBILE_NAV_MEDIA_RULE]: {
     display: 'none',
   },
+  // Style the Pagefind trigger button to blend with the sidebar
+  '& pagefind-modal-trigger': {
+    '--pf-background': 'transparent',
+    '--pf-border': 'light-dark(#313539, #DEE2E6)',
+  },
 })
 
 const sidebarPanelCss = css({
@@ -1003,6 +1008,11 @@ const mobileLogoBannerCss = css({
     padding: `${theme.space.lg}`,
     backgroundColor: theme.surface.lvl3,
     borderBottom: `1px solid ${theme.colors.border.subtle}`,
+  },
+  // Style the Pagefind trigger button to blend with the banner background
+  '& pagefind-modal-trigger': {
+    '--pf-background': 'transparent',
+    '--pf-border': 'light-dark(#313539, #DEE2E6)',
   },
 })
 
