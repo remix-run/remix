@@ -2,9 +2,15 @@ import * as path from 'node:path'
 import * as fsp from 'node:fs/promises'
 import { openLazyFile } from '@remix-run/fs'
 import type { Middleware } from '@remix-run/fetch-router'
+import { detectMimeType } from '@remix-run/mime'
 import { createFileResponse as sendFile, type FileResponseOptions } from '@remix-run/response/file'
 
 import { generateDirectoryListing } from './directory-listing.ts'
+
+interface StaticFileMatch {
+  realPath: string
+  requestedPath: string
+}
 
 /**
  * Function that determines if HTTP Range requests should be supported for a given file.
@@ -120,17 +126,20 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
       return next()
     }
 
-    let filePath: string | undefined
+    let file: StaticFileMatch | undefined
 
     try {
       let stats = await fsp.stat(containedTargetPath)
 
       if (stats.isFile()) {
-        filePath = containedTargetPath
+        file = {
+          realPath: containedTargetPath,
+          requestedPath: targetPath,
+        }
       } else if (stats.isDirectory()) {
         // Try each index file in turn
         for (let indexFile of index) {
-          let indexPath = path.join(containedTargetPath, indexFile)
+          let indexPath = path.join(targetPath, indexFile)
           let containedIndexPath = await resolveContainedPath(rootRealPath, indexPath)
           if (containedIndexPath == null) {
             continue
@@ -139,7 +148,10 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
           try {
             let indexStats = await fsp.stat(containedIndexPath)
             if (indexStats.isFile()) {
-              filePath = containedIndexPath
+              file = {
+                realPath: containedIndexPath,
+                requestedPath: indexPath,
+              }
               break
             }
           } catch {
@@ -148,7 +160,7 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
         }
 
         // If no index file found and listFiles is enabled, show directory listing
-        if (!filePath && listFiles) {
+        if (!file && listFiles) {
           return generateDirectoryListing(containedTargetPath, context.url.pathname)
         }
       }
@@ -156,9 +168,12 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
       // Path doesn't exist or isn't accessible, fall through
     }
 
-    if (filePath) {
-      let fileName = path.relative(root, filePath)
-      let lazyFile = openLazyFile(filePath, { name: fileName })
+    if (file) {
+      let fileName = path.relative(root, file.requestedPath)
+      let lazyFile = openLazyFile(file.realPath, {
+        name: fileName,
+        type: detectMimeType(file.requestedPath) ?? '',
+      })
 
       let finalFileOptions: FileResponseOptions = { ...fileOptions }
 

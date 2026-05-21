@@ -395,6 +395,36 @@ describe('staticFiles middleware', () => {
     }
   })
 
+  it('serves symlinked files inside the root using the requested path metadata', async () => {
+    let publicDir = path.join(tmpDir, 'public')
+    fs.mkdirSync(publicDir)
+    fs.writeFileSync(path.join(publicDir, 'asset.txt'), 'console.log("safe")')
+    fs.symlinkSync(path.join(publicDir, 'asset.txt'), path.join(publicDir, 'asset.js'))
+    let files: Array<{ name: string; type: string }> = []
+
+    let router = createRouter()
+    router.get('/*', {
+      middleware: [
+        staticFiles(publicDir, {
+          acceptRanges(file) {
+            files.push({ name: file.name, type: file.type })
+            return false
+          },
+        }),
+      ],
+      handler() {
+        return new Response('Fallback Handler', { status: 404 })
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/asset.js')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'console.log("safe")')
+    assert.equal(response.headers.get('Content-Type'), 'text/javascript; charset=utf-8')
+    assert.deepEqual(files, [{ name: 'asset.js', type: 'text/javascript' }])
+  })
+
   it('does not serve symlinked files outside the root', async () => {
     let publicDir = path.join(tmpDir, 'public')
     fs.mkdirSync(publicDir)
