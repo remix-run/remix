@@ -1,5 +1,5 @@
-import assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
+import * as assert from 'remix/assert'
+import { describe, it } from 'remix/test'
 
 import {
   previewCopyBlockAcrossDays,
@@ -377,6 +377,119 @@ describe('ScheduleLayout', () => {
       ['tuesday-existing', 1, 570, 600],
       ['breakfast-2', 2, 540, 570],
     ])
+  })
+
+  it('keeps successful horizontal copies when another target day is unresolved', () => {
+    let blocks = [
+      block('daily', 0, 0, 30),
+      block('full-day-start', 1, 0, 30),
+      block('full-day-end', 1, 30, 60),
+    ]
+    let before = timesFromBlocks(blocks)
+
+    let result = previewCopyBlockAcrossDays(
+      blocks,
+      'daily',
+      {
+        createId: (_source, dayOfWeek) => `daily-${dayOfWeek}`,
+        firstDay: 0,
+        lastDay: 2,
+      },
+      { dayMinutes: 60 },
+    )
+
+    assert.equal(result.unresolved, true)
+    assert.deepEqual(timesFromBlocks(result.blocks), [
+      ['daily', 0, 0, 30],
+      ['full-day-start', 1, 0, 30],
+      ['full-day-end', 1, 30, 60],
+      ['daily-2', 2, 0, 30],
+    ])
+    assert.deepEqual(
+      result.changes.map((change) => [change.id, change.kind]),
+      [['daily-2', 'created']],
+    )
+    assert.deepEqual(timesFromBlocks(blocks), before)
+  })
+
+  it('honors exact first and last day time boundaries when moving', () => {
+    let blocks = [block('meeting', 3, 600, 630)]
+    let before = timesFromBlocks(blocks)
+
+    let firstBoundary = previewMoveBlock(blocks, 'meeting', {
+      dayOfWeek: 0,
+      startMinute: 0,
+    })
+    let lastBoundary = previewMoveBlock(blocks, 'meeting', {
+      dayOfWeek: 6,
+      startMinute: 1410,
+    })
+
+    assert.deepEqual(timesFromBlocks(firstBoundary.blocks), [['meeting', 0, 0, 30]])
+    assert.deepEqual(timesFromBlocks(lastBoundary.blocks), [['meeting', 6, 1410, 1440]])
+    assert.deepEqual(timesFromBlocks(blocks), before)
+  })
+
+  it('clamps moves outside the start and end of the day', () => {
+    let blocks = [block('meeting', 3, 600, 630)]
+    let before = timesFromBlocks(blocks)
+
+    let startClamped = previewMoveBlock(blocks, 'meeting', {
+      dayOfWeek: -2,
+      startMinute: -45,
+    })
+    let endClamped = previewMoveBlock(blocks, 'meeting', {
+      dayOfWeek: 8,
+      startMinute: 1500,
+    })
+
+    assert.deepEqual(timesFromBlocks(startClamped.blocks), [['meeting', 0, 0, 30]])
+    assert.deepEqual(timesFromBlocks(endClamped.blocks), [['meeting', 6, 1410, 1440]])
+    assert.deepEqual(timesFromBlocks(blocks), before)
+  })
+
+  it('snaps resize minutes to slots while preserving minimum duration', () => {
+    let blocks = [block('task', 0, 60, 120)]
+    let before = timesFromBlocks(blocks)
+
+    let snappedEnd = previewResizeBlockTime(
+      blocks,
+      'task',
+      { edge: 'end', minute: 101 },
+      { minimumDuration: 30, slotMinutes: 15 },
+    )
+    let minimumStart = previewResizeBlockTime(
+      blocks,
+      'task',
+      { edge: 'start', minute: 104 },
+      { minimumDuration: 30, slotMinutes: 15 },
+    )
+
+    assert.deepEqual(timesFromBlocks(snappedEnd.blocks), [['task', 0, 60, 105]])
+    assert.deepEqual(timesFromBlocks(minimumStart.blocks), [['task', 0, 90, 120]])
+    assert.deepEqual(timesFromBlocks(blocks), before)
+  })
+
+  it('clamps resize edges to configured visible day bounds', () => {
+    let blocks = [block('task', 0, 60, 120)]
+    let before = timesFromBlocks(blocks)
+
+    let clampedStart = previewResizeBlockTime(
+      blocks,
+      'task',
+      { edge: 'start', minute: -30 },
+      { minimumMinute: 30 },
+    )
+    let clampedEnd = previewResizeBlockTime(
+      blocks,
+      'task',
+      { edge: 'end', minute: 240 },
+      { dayMinutes: 180 },
+    )
+
+    assert.deepEqual(timesFromBlocks(clampedStart.blocks), [['task', 0, 30, 120]])
+    assert.deepEqual(timesFromBlocks(clampedEnd.blocks), [['task', 0, 60, 180]])
+    assert.deepEqual(timesFromBlocks(blocks), before)
   })
 
   it('deletes one block without changing the others', () => {
