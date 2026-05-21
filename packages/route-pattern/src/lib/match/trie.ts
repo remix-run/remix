@@ -1,5 +1,5 @@
 import type { RoutePattern } from '../route-pattern.ts'
-import { decodeHostname, decodePathname } from './decode.ts'
+import { decodeHostname } from './decode.ts'
 import { generateVariants, type Param } from './variant.ts'
 import { unreachable } from '../unreachable.ts'
 
@@ -149,7 +149,7 @@ export class Trie<data = unknown> {
     }
 
     let results: Array<Match<string, data>> = []
-    let urlSegments = decodePathname(url.pathname.slice(1)).split('/')
+    let urlSegments = url.pathname.slice(1).split('/')
 
     for (let origin of origins) {
       let stack: Array<{
@@ -173,7 +173,7 @@ export class Trie<data = unknown> {
               pathnameMatch.push({
                 type: param.type,
                 name: param.name,
-                value: cap.value,
+                value: decodeURIComponent(cap.value),
                 begin: cap.begin,
                 end: cap.end,
               })

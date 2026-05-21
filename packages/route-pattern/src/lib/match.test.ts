@@ -1,6 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
+import { createHref } from './href.ts'
 import { createMultiMatcher } from './match.ts'
 
 describe('Matcher', () => {
@@ -308,6 +309,13 @@ describe('Matcher', () => {
         matcher.add('://example.com/users', null)
 
         assert.equal(matcher.match('http://example.com/posts'), null)
+      })
+
+      it('does not match encoded slashes as pathname separators', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('://example.com/files/:dir/:name', null)
+
+        assert.equal(matcher.match('http://example.com/files/docs%2Freadme.md'), null)
       })
 
       it('returns null when URL is shorter than pattern', () => {
@@ -815,6 +823,56 @@ describe('Matcher', () => {
         assert.equal(match.paramsMeta.pathname.length, 1)
         assert.equal(match.paramsMeta.pathname[0].name, 'version')
         assert.equal(match.paramsMeta.pathname[0].value, 'v1')
+      })
+    })
+
+    describe('roundtrip with createHref', () => {
+      it('matches pathname variables with structural URL chars encoded by createHref', () => {
+        let matcher = createMultiMatcher<null>()
+        let pattern = '://example.com/posts/:slug' as const
+        matcher.add(pattern, null)
+
+        let href = createHref(pattern, { slug: 'hello/world?draft=true#preview' })
+        let match = matcher.match(href)
+
+        assert.ok(match)
+        assert.deepEqual(match.params, { slug: 'hello/world?draft=true#preview' })
+      })
+
+      it('matches pathname wildcards with structural URL chars encoded by createHref', () => {
+        let matcher = createMultiMatcher<null>()
+        let pattern = '://example.com/files/*path' as const
+        matcher.add(pattern, null)
+
+        let href = createHref(pattern, { path: 'docs/@remix-run/ui?raw#v1' })
+        let match = matcher.match(href)
+
+        assert.ok(match)
+        assert.deepEqual(match.params, { path: 'docs/@remix-run/ui?raw#v1' })
+      })
+
+      it('matches hostname variables with params validated by createHref', () => {
+        let matcher = createMultiMatcher<null>()
+        let pattern = '://:tenant.example.com/path' as const
+        matcher.add(pattern, null)
+
+        let href = createHref(pattern, { tenant: 'acme-staging' })
+        let match = matcher.match(href)
+
+        assert.ok(match)
+        assert.deepEqual(match.params, { tenant: 'acme-staging' })
+      })
+
+      it('matches hostname wildcards with params validated by createHref', () => {
+        let matcher = createMultiMatcher<null>()
+        let pattern = '://*tenant.example.com/path' as const
+        matcher.add(pattern, null)
+
+        let href = createHref(pattern, { tenant: 'preview.acme' })
+        let match = matcher.match(href)
+
+        assert.ok(match)
+        assert.deepEqual(match.params, { tenant: 'preview.acme' })
       })
     })
 
