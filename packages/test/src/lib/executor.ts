@@ -1,8 +1,4 @@
-import {
-  createTestContext,
-  type CreateTestContextOptions,
-  type TestContext,
-} from './context.ts'
+import { createTestContext, type CreateTestContextOptions, type TestContext } from './context.ts'
 import type { V8CoverageEntry } from './coverage.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
 
@@ -78,12 +74,7 @@ export async function runTests(
         await suite.beforeAll()
       } catch (error) {
         results.tests.push(
-          createFailedHookResult(
-            'beforeAll',
-            suite.name,
-            error,
-            performance.now() - startTime,
-          ),
+          createFailedHookResult('beforeAll', suite.name, error, performance.now() - startTime),
         )
         results.failed++
         continue
