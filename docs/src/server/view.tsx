@@ -49,7 +49,11 @@ export function Document(
               versions={versions}
               activeVersion={activeVersion}
             />
-            <MainContent page={page} header={<PageHeader page={page} sourceUrl={sourceUrl} />}>
+            <MainContent
+              page={page}
+              header={<PageHeader page={page} sourceUrl={sourceUrl} />}
+              activeVersion={activeVersion}
+            >
               {children}
             </MainContent>
           </div>
@@ -170,10 +174,15 @@ function Head(
 }
 
 function MainContent(
-  handle: Handle<{ page: PageDefinition; header?: RemixNode; children: RemixNode | RemixNode[] }>,
+  handle: Handle<{
+    page: PageDefinition
+    header?: RemixNode
+    children: RemixNode | RemixNode[]
+    activeVersion?: string
+  }>,
 ) {
   return () => (
-    <main mix={mainCss}>
+    <main mix={mainCss} data-pagefind-body={handle.props.activeVersion == null || undefined}>
       <div mix={pageWrapCss}>
         <div mix={[pageContentCss, handle.props.page.css]}>
           {handle.props.header}
@@ -301,6 +310,8 @@ function Sidebar(
                 <RemixLogos />
               </a>
             </div>
+
+            <div id="search" mix={searchContainerCss} />
 
             <VersionSwitcher versions={versions} activeVersion={activeVersion} />
 
@@ -654,6 +665,18 @@ const sidebarIntroCss = css({
   [MOBILE_NAV_MEDIA_RULE]: {
     display: 'none',
   },
+})
+
+const searchContainerCss = css({
+  marginBottom: theme.space.sm,
+  '--pagefind-ui-scale': '0.8',
+  '--pagefind-ui-primary': theme.colors.text.link,
+  '--pagefind-ui-text': theme.colors.text.primary,
+  '--pagefind-ui-background': theme.surface.lvl0,
+  '--pagefind-ui-border': theme.colors.border.subtle,
+  '--pagefind-ui-border-width': '1px',
+  '--pagefind-ui-border-radius': theme.radius.md,
+  '--pagefind-ui-font': theme.fontFamily.sans,
 })
 
 const sidebarPanelCss = css({
