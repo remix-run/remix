@@ -79,7 +79,7 @@ function MobileHeader(handle: Handle<{ page: PageDefinition }>) {
           <a href="https://remix.run">
             <RemixLogos />
           </a>
-          <pagefind-modal-trigger compact />
+          <pagefind-modal-trigger compact hide-shortcut />
         </div>
         <label
           for="nav-toggle"
@@ -293,7 +293,7 @@ function Sidebar(
               <a href="https://remix.run" class="logo">
                 <RemixLogos />
               </a>
-              <pagefind-modal-trigger compact />
+              <pagefind-modal-trigger compact hide-shortcut />
             </div>
 
             <VersionSwitcher versions={versions} activeVersion={activeVersion} />
