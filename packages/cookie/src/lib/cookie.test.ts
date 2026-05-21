@@ -1,4 +1,4 @@
-import { SetCookie } from '@remix-run/headers'
+import { SetCookie } from '@remix-run/headers/set-cookie'
 
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'

@@ -1,4 +1,5 @@
-import { ContentDisposition, ContentType } from '@remix-run/headers'
+import { ContentDisposition } from '@remix-run/headers/content-disposition'
+import { ContentType } from '@remix-run/headers/content-type'
 
 import {
   encodeAsciiPattern,

@@ -9,7 +9,9 @@ import {
 } from 'node:zlib'
 import type { BrotliOptions, ZlibOptions } from 'node:zlib'
 
-import { AcceptEncoding, CacheControl, Vary } from '@remix-run/headers'
+import { AcceptEncoding } from '@remix-run/headers/accept-encoding'
+import { CacheControl } from '@remix-run/headers/cache-control'
+import { Vary } from '@remix-run/headers/vary'
 
 /**
  * Encodings supported by {@link compressResponse}.

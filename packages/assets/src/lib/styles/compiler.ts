@@ -1,7 +1,7 @@
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { IfNoneMatch } from '@remix-run/headers'
+import { IfNoneMatch } from '@remix-run/headers/if-none-match'
 import { createFileMatcher } from '../file-matcher.ts'
 import { formatFingerprintedPathname } from '../fingerprint.ts'
 import { createModuleStore } from '../module-store.ts'

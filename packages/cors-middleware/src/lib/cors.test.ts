@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createRouter } from '@remix-run/fetch-router'
-import { Vary } from '@remix-run/headers'
+import { Vary } from '@remix-run/headers/vary'
 
 import { cors } from './cors.ts'
 
