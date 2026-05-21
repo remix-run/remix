@@ -57,6 +57,7 @@ export function Document(
               {children}
             </MainContent>
           </div>
+          <pagefind-modal />
         </body>
       </html>
     )
@@ -311,7 +312,7 @@ function Sidebar(
               </a>
             </div>
 
-            <div id="search" mix={searchContainerCss} />
+            <pagefind-modal-trigger mix={searchTriggerCss} />
 
             <VersionSwitcher versions={versions} activeVersion={activeVersion} />
 
@@ -667,16 +668,9 @@ const sidebarIntroCss = css({
   },
 })
 
-const searchContainerCss = css({
+const searchTriggerCss = css({
   marginBottom: theme.space.sm,
-  '--pagefind-ui-scale': '0.8',
-  '--pagefind-ui-primary': theme.colors.text.link,
-  '--pagefind-ui-text': theme.colors.text.primary,
-  '--pagefind-ui-background': theme.surface.lvl0,
-  '--pagefind-ui-border': theme.colors.border.subtle,
-  '--pagefind-ui-border-width': '1px',
-  '--pagefind-ui-border-radius': theme.radius.md,
-  '--pagefind-ui-font': theme.fontFamily.sans,
+  width: '100%',
 })
 
 const sidebarPanelCss = css({

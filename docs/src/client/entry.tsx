@@ -28,26 +28,16 @@ app.ready().catch((error: unknown) => {
   console.error('Frame adoption failed:', error)
 })
 
-// Initialize Pagefind search UI
-let searchEl = document.getElementById('search')
-if (searchEl) {
-  let link = document.createElement('link')
-  link.rel = 'stylesheet'
-  link.href = '/pagefind/pagefind-ui.css'
-  document.head.appendChild(link)
+// Load Pagefind Component UI (modal trigger + modal)
+let link = document.createElement('link')
+link.rel = 'stylesheet'
+link.href = '/pagefind/pagefind-component-ui.css'
+document.head.appendChild(link)
 
-  let script = document.createElement('script')
-  script.src = '/pagefind/pagefind-ui.js'
-  script.onload = () => {
-    new (window as any).PagefindUI({
-      element: '#search',
-      showSubResults: true,
-      showImages: false,
-      resetStyles: false,
-    })
-  }
-  document.head.appendChild(script)
-}
+let script = document.createElement('script')
+script.type = 'module'
+script.src = '/pagefind/pagefind-component-ui.js'
+document.head.appendChild(script)
 
 let navToggle = document.getElementById('nav-toggle')
 if (navToggle instanceof HTMLInputElement) {
