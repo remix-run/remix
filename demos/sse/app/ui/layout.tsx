@@ -1,11 +1,12 @@
-import { css, type RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/ui'
+import { css } from 'remix/ui'
 
 import { routes } from '../routes.ts'
 
 const rawCss = String.raw
 
-export function Layout() {
-  return ({ children }: { children?: RemixNode }) => (
+export function Layout(handle: Handle<{ children?: RemixNode }>) {
+  return () => (
     <html lang="en">
       <head>
         <meta charSet="UTF-8" />
@@ -55,7 +56,7 @@ export function Layout() {
           background: '#f5f5f5',
         })}
       >
-        {children}
+        {handle.props.children}
       </body>
     </html>
   )

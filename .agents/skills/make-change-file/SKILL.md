@@ -67,6 +67,12 @@ Write release notes that match this repository's `.changes` conventions. Use it 
 - Do not manually hard-wrap prose in `.changes/*.md` files. Keep each paragraph or bullet on a single source line and let rendered changelogs wrap naturally.
 - Use flat bullets only when they add clarity. Short paragraphs are usually better.
 
+## Historical Changelogs
+
+- Treat existing `CHANGELOG.md` files and historical changelog docs as records of what was true at the time. Do not rewrite old entries to match current APIs, terminology, or guidance.
+- If current guidance is stale or confusing, update current docs, README files, skills, or add a new `.changes` file instead of editing historical release prose.
+- Only edit historical changelog entries for narrow corrections such as broken links, typos, or clearly invalid references, and prefer doing so only when the user explicitly asks.
+
 ## Remix-Specific Rules
 
 - `packages/remix/src/*` re-export files are generated. Do not hand-edit them unless the task explicitly requires generated output.

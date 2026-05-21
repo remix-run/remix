@@ -1,3 +1,4 @@
+import type { Handle } from 'remix/ui'
 import { css } from 'remix/ui'
 
 import { AuthCard } from './auth-card.tsx'
@@ -17,8 +18,9 @@ interface AccountPageProps {
   logoutAction: string
 }
 
-export function AccountPage() {
-  return ({ identity, logoutAction }: AccountPageProps) => {
+export function AccountPage(handle: Handle<AccountPageProps>) {
+  return () => {
+    let { identity, logoutAction } = handle.props
     let displayName =
       identity.user.name ??
       identity.authAccount?.display_name ??

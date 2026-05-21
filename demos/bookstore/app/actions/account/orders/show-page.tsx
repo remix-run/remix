@@ -1,3 +1,4 @@
+import type { Handle } from 'remix/ui'
 import { css } from 'remix/ui'
 
 import type { Order } from '../../../data/schema.ts'
@@ -26,61 +27,67 @@ export function AccountOrderNotFoundPage() {
   )
 }
 
-export function AccountOrderShowPage() {
-  return ({ order, shippingAddress }: { order: Order; shippingAddress: ShippingAddress }) => (
-    <Layout>
-      <h1>Order #{order.id}</h1>
+export function AccountOrderShowPage(
+  handle: Handle<{ order: Order; shippingAddress: ShippingAddress }>,
+) {
+  return () => {
+    let { order, shippingAddress } = handle.props
 
-      <div class="card">
-        <p>
-          <strong>Order Date:</strong> {new Date(order.created_at).toLocaleDateString()}
-        </p>
-        <p>
-          <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
-        </p>
+    return (
+      <Layout>
+        <h1>Order #{order.id}</h1>
 
-        <h2 mix={css({ marginTop: '2rem' })}>Items</h2>
-        <table mix={css({ marginTop: '1rem' })}>
-          <thead>
-            <tr>
-              <th>Book</th>
-              <th>Quantity</th>
-              <th>Price</th>
-              <th>Subtotal</th>
-            </tr>
-          </thead>
-          <tbody>
-            {order.items.map((item) => (
+        <div class="card">
+          <p>
+            <strong>Order Date:</strong> {new Date(order.created_at).toLocaleDateString()}
+          </p>
+          <p>
+            <strong>Status:</strong> <span class="badge badge-info">{order.status}</span>
+          </p>
+
+          <h2 mix={css({ marginTop: '2rem' })}>Items</h2>
+          <table mix={css({ marginTop: '1rem' })}>
+            <thead>
               <tr>
-                <td>{item.title}</td>
-                <td>{item.quantity}</td>
-                <td>${item.unit_price.toFixed(2)}</td>
-                <td>${(item.unit_price * item.quantity).toFixed(2)}</td>
+                <th>Book</th>
+                <th>Quantity</th>
+                <th>Price</th>
+                <th>Subtotal</th>
               </tr>
-            ))}
-          </tbody>
-          <tfoot>
-            <tr>
-              <td colSpan={3} mix={css({ textAlign: 'right', fontWeight: 'bold' })}>
-                Total:
-              </td>
-              <td mix={css({ fontWeight: 'bold' })}>${order.total.toFixed(2)}</td>
-            </tr>
-          </tfoot>
-        </table>
+            </thead>
+            <tbody>
+              {order.items.map((item) => (
+                <tr>
+                  <td>{item.title}</td>
+                  <td>{item.quantity}</td>
+                  <td>${item.unit_price.toFixed(2)}</td>
+                  <td>${(item.unit_price * item.quantity).toFixed(2)}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <td colSpan={3} mix={css({ textAlign: 'right', fontWeight: 'bold' })}>
+                  Total:
+                </td>
+                <td mix={css({ fontWeight: 'bold' })}>${order.total.toFixed(2)}</td>
+              </tr>
+            </tfoot>
+          </table>
 
-        <h2 mix={css({ marginTop: '2rem' })}>Shipping Address</h2>
-        <p>{shippingAddress.street}</p>
-        <p>
-          {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
+          <h2 mix={css({ marginTop: '2rem' })}>Shipping Address</h2>
+          <p>{shippingAddress.street}</p>
+          <p>
+            {shippingAddress.city}, {shippingAddress.state} {shippingAddress.zip}
+          </p>
+        </div>
+
+        <p mix={css({ marginTop: '1.5rem' })}>
+          <a href={routes.account.orders.index.href()} class="btn btn-secondary">
+            Back to Orders
+          </a>
         </p>
-      </div>
-
-      <p mix={css({ marginTop: '1.5rem' })}>
-        <a href={routes.account.orders.index.href()} class="btn btn-secondary">
-          Back to Orders
-        </a>
-      </p>
-    </Layout>
-  )
+      </Layout>
+    )
+  }
 }
