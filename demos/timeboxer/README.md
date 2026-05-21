@@ -1,11 +1,11 @@
-# Timebox AI Demo
+# Timeboxer Demo
 
 A small schedule-planning app that demonstrates username/password authentication, session-backed route protection, SQLite persistence, JSON schedule endpoints, ICS export, and progressively enhanced Remix UI.
 
 ## Running the Demo
 
 ```sh
-cd demos/timebox-ai
+cd demos/timeboxer
 cp .env.example .env
 pnpm install
 pnpm start

@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
 import { theme } from 'remix/ui/theme'
 
@@ -10,27 +10,31 @@ export interface LayoutProps {
   title?: string
 }
 
-export function Layout() {
-  return ({ title, children }: LayoutProps) => (
-    <Document title={title}>
-      <header mix={headerStyle}>
-        <nav mix={navStyle}>
-          <a href={routes.home.index.href()} mix={brandStyle}>
-            Timebox Ai
-          </a>
-          <div mix={navLinksStyle}>
-            <a href={routes.home.index.href()} mix={navLinkStyle}>
-              Home
+export function Layout(handle: Handle<LayoutProps>) {
+  return () => {
+    let { title, children } = handle.props
+
+    return (
+      <Document title={title}>
+        <header mix={headerStyle}>
+          <nav mix={navStyle}>
+            <a href={routes.home.index.href()} mix={brandStyle}>
+              Timeboxer
             </a>
-            <a href={routes.auth.index.href()} mix={navLinkStyle}>
-              Account
-            </a>
-          </div>
-        </nav>
-      </header>
-      <main>{children}</main>
-    </Document>
-  )
+            <div mix={navLinksStyle}>
+              <a href={routes.home.index.href()} mix={navLinkStyle}>
+                Home
+              </a>
+              <a href={routes.auth.index.href()} mix={navLinkStyle}>
+                Account
+              </a>
+            </div>
+          </nav>
+        </header>
+        <main>{children}</main>
+      </Document>
+    )
+  }
 }
 
 const headerStyle = css({

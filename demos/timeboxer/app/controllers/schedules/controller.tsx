@@ -187,12 +187,12 @@ export const schedulesController = {
         let schedules = await listSchedules(db, authUserId(auth))
 
         return render(
-          SchedulePage()({
-            activeScheduleId: schedule.id,
-            csrfToken: getCsrfToken(context),
-            schedule,
-            schedules,
-          }),
+          <SchedulePage
+            activeScheduleId={schedule.id}
+            csrfToken={getCsrfToken(context)}
+            schedule={schedule}
+            schedules={schedules}
+          />,
           context.request,
         )
       } catch (error) {

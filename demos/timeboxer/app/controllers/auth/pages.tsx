@@ -1,4 +1,4 @@
-import { css, type RemixNode } from 'remix/ui'
+import { css, type Handle, type RemixNode } from 'remix/ui'
 import { Button } from 'remix/ui/button'
 import { theme } from 'remix/ui/theme'
 
@@ -11,172 +11,197 @@ export type AuthFormErrors = {
   username?: string
 }
 
-export function AuthStatusPage() {
-  return ({ csrfToken, username }: { csrfToken: string; username: string }) => (
-    <Layout title="Account">
+type AuthStatusPageProps = {
+  csrfToken: string
+  username: string
+}
+
+export function AuthStatusPage(handle: Handle<AuthStatusPageProps>) {
+  return () => {
+    let { csrfToken, username } = handle.props
+
+    return (
+      <Layout title="Account">
+        <section mix={pageStyle}>
+          <div mix={cardStyle}>
+            <p mix={eyebrowStyle}>Signed in</p>
+            <h1 mix={titleStyle}>Welcome back, {username}.</h1>
+            <p mix={bodyStyle}>Your session is active and backed by the local SQLite user record.</p>
+            <LogoutForm csrfToken={csrfToken} />
+          </div>
+        </section>
+      </Layout>
+    )
+  }
+}
+
+type LoginPageProps = {
+  csrfToken: string
+  error?: string
+  errors?: AuthFormErrors
+}
+
+export function LoginPage(handle: Handle<LoginPageProps>) {
+  return () => {
+    let { csrfToken, error, errors } = handle.props
+
+    return (
+      <Layout title="Sign in">
+        <AuthShell
+          eyebrow="Welcome back"
+          title="Sign in to Timeboxer"
+          description="Use your username and password to continue."
+        >
+          <AuthForm
+            action={routes.auth.login.action.href()}
+            csrfToken={csrfToken}
+            submitLabel="Sign in"
+            error={error ?? errors?.form}
+            errors={errors}
+          />
+          <p mix={footerTextStyle}>
+            Need an account? <a href={routes.auth.signup.index.href()}>Create one</a>.
+          </p>
+        </AuthShell>
+      </Layout>
+    )
+  }
+}
+
+type SignupPageProps = {
+  csrfToken: string
+  errors?: AuthFormErrors
+}
+
+export function SignupPage(handle: Handle<SignupPageProps>) {
+  return () => {
+    let { csrfToken, errors } = handle.props
+
+    return (
+      <Layout title="Create account">
+        <AuthShell
+          eyebrow="Get started"
+          title="Create your account"
+          description="Pick a username and password. Passwords are stored separately from user profiles."
+        >
+          <AuthForm
+            action={routes.auth.signup.action.href()}
+            csrfToken={csrfToken}
+            submitLabel="Create account"
+            errors={errors}
+          />
+          <p mix={footerTextStyle}>
+            Already have an account? <a href={routes.auth.login.index.href()}>Sign in</a>.
+          </p>
+        </AuthShell>
+      </Layout>
+    )
+  }
+}
+
+type AuthShellProps = {
+  children?: RemixNode
+  description: string
+  eyebrow: string
+  title: string
+}
+
+function AuthShell(handle: Handle<AuthShellProps>) {
+  return () => {
+    let { children, description, eyebrow, title } = handle.props
+
+    return (
       <section mix={pageStyle}>
         <div mix={cardStyle}>
-          <p mix={eyebrowStyle}>Signed in</p>
-          <h1 mix={titleStyle}>Welcome back, {username}.</h1>
-          <p mix={bodyStyle}>Your session is active and backed by the local SQLite user record.</p>
-          <LogoutForm csrfToken={csrfToken} />
+          <p mix={eyebrowStyle}>{eyebrow}</p>
+          <h1 mix={titleStyle}>{title}</h1>
+          <p mix={bodyStyle}>{description}</p>
+          {children}
         </div>
       </section>
-    </Layout>
-  )
+    )
+  }
 }
 
-export function LoginPage() {
-  return ({
-    csrfToken,
-    error,
-    errors,
-  }: {
-    csrfToken: string
-    error?: string
-    errors?: AuthFormErrors
-  }) => (
-    <Layout title="Sign in">
-      <AuthShell
-        eyebrow="Welcome back"
-        title="Sign in to Timebox Ai"
-        description="Use your username and password to continue."
-      >
-        <AuthForm
-          action={routes.auth.login.action.href()}
-          csrfToken={csrfToken}
-          submitLabel="Sign in"
-          error={error ?? errors?.form}
-          errors={errors}
-        />
-        <p mix={footerTextStyle}>
-          Need an account? <a href={routes.auth.signup.index.href()}>Create one</a>.
-        </p>
-      </AuthShell>
-    </Layout>
-  )
+type AuthFormProps = {
+  action: string
+  csrfToken: string
+  error?: string
+  errors?: AuthFormErrors
+  submitLabel: string
 }
 
-export function SignupPage() {
-  return ({ csrfToken, errors }: { csrfToken: string; errors?: AuthFormErrors }) => (
-    <Layout title="Create account">
-      <AuthShell
-        eyebrow="Get started"
-        title="Create your account"
-        description="Pick a username and password. Passwords are stored separately from user profiles."
-      >
-        <AuthForm
-          action={routes.auth.signup.action.href()}
-          csrfToken={csrfToken}
-          submitLabel="Create account"
-          errors={errors}
-        />
-        <p mix={footerTextStyle}>
-          Already have an account? <a href={routes.auth.login.index.href()}>Sign in</a>.
-        </p>
-      </AuthShell>
-    </Layout>
-  )
-}
+function AuthForm(handle: Handle<AuthFormProps>) {
+  return () => {
+    let { action, csrfToken, error, errors, submitLabel } = handle.props
 
-function AuthShell() {
-  return ({
-    children,
-    description,
-    eyebrow,
-    title,
-  }: {
-    children?: RemixNode
-    description: string
-    eyebrow: string
-    title: string
-  }) => (
-    <section mix={pageStyle}>
-      <div mix={cardStyle}>
-        <p mix={eyebrowStyle}>{eyebrow}</p>
-        <h1 mix={titleStyle}>{title}</h1>
-        <p mix={bodyStyle}>{description}</p>
-        {children}
-      </div>
-    </section>
-  )
-}
-
-function AuthForm() {
-  return ({
-    action,
-    csrfToken,
-    error,
-    errors,
-    submitLabel,
-  }: {
-    action: string
-    csrfToken: string
-    error?: string
-    errors?: AuthFormErrors
-    submitLabel: string
-  }) => (
-    <form action={action} method="post" mix={formStyle}>
-      <input type="hidden" name="_csrf" value={csrfToken} />
-      {error ? (
-        <p role="alert" mix={errorStyle}>
-          {error}
-        </p>
-      ) : null}
-      <label mix={fieldStyle}>
-        <span>Username</span>
-        <input
-          aria-describedby={errors?.username ? 'username-error' : undefined}
-          aria-invalid={errors?.username ? true : undefined}
-          autoComplete="username"
-          maxLength={32}
-          minLength={3}
-          name="username"
-          required
-          type="text"
-          mix={inputStyle}
-        />
-        {errors?.username ? (
-          <small id="username-error" mix={fieldErrorStyle}>
-            {errors.username}
-          </small>
+    return (
+      <form action={action} method="post" mix={formStyle}>
+        <input type="hidden" name="_csrf" value={csrfToken} />
+        {error ? (
+          <p role="alert" mix={errorStyle}>
+            {error}
+          </p>
         ) : null}
-      </label>
-      <label mix={fieldStyle}>
-        <span>Password</span>
-        <input
-          aria-describedby={errors?.password ? 'password-error' : undefined}
-          aria-invalid={errors?.password ? true : undefined}
-          autoComplete="current-password"
-          maxLength={128}
-          minLength={8}
-          name="password"
-          required
-          type="password"
-          mix={inputStyle}
-        />
-        {errors?.password ? (
-          <small id="password-error" mix={fieldErrorStyle}>
-            {errors.password}
-          </small>
-        ) : null}
-      </label>
-      <Button type="submit" tone="primary">
-        {submitLabel}
-      </Button>
-    </form>
-  )
+        <label mix={fieldStyle}>
+          <span>Username</span>
+          <input
+            aria-describedby={errors?.username ? 'username-error' : undefined}
+            aria-invalid={errors?.username ? true : undefined}
+            autoComplete="username"
+            maxLength={32}
+            minLength={3}
+            name="username"
+            required
+            type="text"
+            mix={inputStyle}
+          />
+          {errors?.username ? (
+            <small id="username-error" mix={fieldErrorStyle}>
+              {errors.username}
+            </small>
+          ) : null}
+        </label>
+        <label mix={fieldStyle}>
+          <span>Password</span>
+          <input
+            aria-describedby={errors?.password ? 'password-error' : undefined}
+            aria-invalid={errors?.password ? true : undefined}
+            autoComplete="current-password"
+            maxLength={128}
+            minLength={8}
+            name="password"
+            required
+            type="password"
+            mix={inputStyle}
+          />
+          {errors?.password ? (
+            <small id="password-error" mix={fieldErrorStyle}>
+              {errors.password}
+            </small>
+          ) : null}
+        </label>
+        <Button type="submit" tone="primary">
+          {submitLabel}
+        </Button>
+      </form>
+    )
+  }
 }
 
-function LogoutForm() {
-  return ({ csrfToken }: { csrfToken: string }) => (
-    <form action={routes.auth.logout.href()} method="post">
-      <input type="hidden" name="_csrf" value={csrfToken} />
-      <Button type="submit" tone="secondary">
-        Sign out
-      </Button>
-    </form>
-  )
+function LogoutForm(handle: Handle<{ csrfToken: string }>) {
+  return () => {
+    let { csrfToken } = handle.props
+
+    return (
+      <form action={routes.auth.logout.href()} method="post">
+        <input type="hidden" name="_csrf" value={csrfToken} />
+        <Button type="submit" tone="secondary">
+          Sign out
+        </Button>
+      </form>
+    )
+  }
 }
 
 const pageStyle = css({

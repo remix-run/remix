@@ -156,7 +156,7 @@ importers:
         specifier: ^0.25.10
         version: 0.25.12
 
-  demos/timebox-ai:
+  demos/timeboxer:
     dependencies:
       remix:
         specifier: workspace:*
@@ -168,9 +168,6 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-      tsx:
-        specifier: 'catalog:'
-        version: 4.21.0
 
   demos/unpkg:
     dependencies:
@@ -8644,7 +8641,7 @@ snapshots:
 
   tsx@4.21.0:
     dependencies:
-      esbuild: 0.27.1
+      esbuild: 0.27.7
       get-tsconfig: 4.13.6
     optionalDependencies:
       fsevents: 2.3.3

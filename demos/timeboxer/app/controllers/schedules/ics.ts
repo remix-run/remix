@@ -1,10 +1,10 @@
 import type { ScheduleDocument } from "../../data/schedules.ts"
 
-const calendarProductId = "-//Timebox AI//Schedule Export//EN"
+const calendarProductId = "-//Timeboxer//Schedule Export//EN"
 const dayCodes = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"] as const
-const referenceMonday = Date.UTC(2026, 0, 5)
 
 export function createScheduleIcs(schedule: ScheduleDocument, now = new Date()) {
+  let referenceMonday = mondayOfWeek(now)
   let lines = [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
@@ -20,11 +20,11 @@ export function createScheduleIcs(schedule: ScheduleDocument, now = new Date()) 
 
     lines.push(
       "BEGIN:VEVENT",
-      `UID:${escapeIcsText(`${schedule.id}-${block.id}@timebox-ai`)}`,
+      `UID:${escapeIcsText(`${schedule.id}-${block.id}@timeboxer`)}`,
       `DTSTAMP:${formatUtcDateTime(now)}`,
       `SUMMARY:${escapeIcsText(block.name)}`,
-      `DTSTART:${formatFloatingDateTime(block.dayOfWeek, block.startMinute)}`,
-      `DTEND:${formatFloatingDateTime(block.dayOfWeek, block.endMinute)}`,
+      `DTSTART:${formatFloatingDateTime(referenceMonday, block.dayOfWeek, block.startMinute)}`,
+      `DTEND:${formatFloatingDateTime(referenceMonday, block.dayOfWeek, block.endMinute)}`,
       `RRULE:FREQ=WEEKLY;BYDAY=${dayCode}`,
       "END:VEVENT",
     )
@@ -35,8 +35,14 @@ export function createScheduleIcs(schedule: ScheduleDocument, now = new Date()) 
   return `${foldIcsLines(lines).join("\r\n")}\r\n`
 }
 
-function formatFloatingDateTime(dayOfWeek: number, minuteOfDay: number) {
-  let date = new Date(referenceMonday + dayOfWeek * 24 * 60 * 60 * 1000)
+function mondayOfWeek(date: Date) {
+  let utcMidnight = Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+  let daysFromMonday = (date.getUTCDay() + 6) % 7
+  return utcMidnight - daysFromMonday * 86_400_000
+}
+
+function formatFloatingDateTime(referenceMonday: number, dayOfWeek: number, minuteOfDay: number) {
+  let date = new Date(referenceMonday + dayOfWeek * 86_400_000)
   let hour = Math.floor(minuteOfDay / 60)
   let minute = minuteOfDay % 60
 

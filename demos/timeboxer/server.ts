@@ -18,7 +18,7 @@ const server = http.createServer(
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
 server.listen(port, () => {
-  console.log(`Timebox AI demo is running on http://localhost:${port}`)
+  console.log(`Timeboxer demo is running on http://localhost:${port}`)
 })
 
 let shuttingDown = false

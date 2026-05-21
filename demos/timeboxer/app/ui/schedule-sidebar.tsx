@@ -44,7 +44,7 @@ export const ScheduleSidebar = clientEntry(
         <aside aria-label="Schedules" mix={sidebarStyle}>
           <div mix={sidebarHeaderStyle}>
             <a href="/" mix={appTitleStyle}>
-              Timebox AI
+              Timeboxer
             </a>
             <form
               action={handle.props.logoutHref}

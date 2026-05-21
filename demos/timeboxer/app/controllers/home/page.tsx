@@ -1,13 +1,13 @@
-import { css } from 'remix/ui'
+import { css, type Handle } from 'remix/ui'
 import { theme } from 'remix/ui/theme'
 
 import { Layout } from '../../ui/layout.tsx'
 
-export function HomePage() {
+export function HomePage(_handle: Handle) {
   return () => (
-    <Layout title="Timebox Ai">
+    <Layout title="Timeboxer">
       <section mix={heroStyle}>
-        <p mix={eyebrowStyle}>Timebox Ai</p>
+        <p mix={eyebrowStyle}>Timeboxer</p>
         <h1 mix={titleStyle}>Plan your focused work.</h1>
         <p mix={bodyStyle}>
           Authentication is ready with SQLite users, separate password records, and session-backed

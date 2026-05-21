@@ -1,5 +1,5 @@
 {
-  "name": "timebox-ai-demo",
+  "name": "timeboxer-demo",
   "private": true,
   "type": "module",
   "engines": {
@@ -10,12 +10,11 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:",
-    "tsx": "catalog:"
+    "@typescript/native-preview": "catalog:"
   },
   "scripts": {
-    "dev": "NODE_ENV=development node --env-file-if-exists=.env --import tsx --watch server.ts",
-    "start": "node --env-file-if-exists=.env --import tsx server.ts",
+    "dev": "NODE_ENV=development node --env-file-if-exists=.env --watch --import remix/node-tsx server.ts",
+    "start": "node --env-file-if-exists=.env --import remix/node-tsx server.ts",
     "test": "NODE_ENV=test remix test",
     "typecheck": "tsc --noEmit"
   }
