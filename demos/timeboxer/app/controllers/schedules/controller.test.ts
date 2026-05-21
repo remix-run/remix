@@ -148,7 +148,10 @@ describe('schedule endpoints', () => {
     )
     assert.equal(downloadResponse.status, 200)
     assert.equal(downloadResponse.headers.get('cache-control'), 'no-store')
-    assert.equal(downloadResponse.headers.get('content-disposition'), 'attachment; filename="regular-schedule.ics"')
+    assert.equal(
+      downloadResponse.headers.get('content-disposition'),
+      'attachment; filename="regular-schedule.ics"',
+    )
     assert.equal(downloadResponse.headers.get('content-type'), 'text/calendar; charset=utf-8')
 
     let ics = await downloadResponse.text()
@@ -170,10 +173,7 @@ describe('schedule endpoints', () => {
         body: {
           name: 'regular schedule',
           baseRevision: savedSchedule.revision,
-          blocks: [
-            { ...readBlock, name: 'reading' },
-            workoutBlock,
-          ],
+          blocks: [{ ...readBlock, name: 'reading' }, workoutBlock],
         },
       },
     )
@@ -224,12 +224,10 @@ describe('schedule endpoints', () => {
     let persistedSchedule = await getSchedule(client, createdSchedule.id)
     assert.equal(persistedSchedule.revision, 2)
     assert.deepEqual(
-      persistedSchedule.blocks.map(
-        (block: { endMinute: number; startMinute: number }) => [
-          block.startMinute,
-          block.endMinute,
-        ],
-      ),
+      persistedSchedule.blocks.map((block: { endMinute: number; startMinute: number }) => [
+        block.startMinute,
+        block.endMinute,
+      ]),
       [
         [390, 450],
         [480, 540],
@@ -359,13 +357,11 @@ describe('schedule endpoints', () => {
 
     let { schedule: savedSchedule } = await replaceScheduleResponse.json()
     assert.deepEqual(
-      savedSchedule.blocks.map(
-        (block: { dayOfWeek: number; id: string; name: string }) => [
-          block.id,
-          block.name,
-          block.dayOfWeek,
-        ],
-      ),
+      savedSchedule.blocks.map((block: { dayOfWeek: number; id: string; name: string }) => [
+        block.id,
+        block.name,
+        block.dayOfWeek,
+      ]),
       [
         ['breakfast-monday', 'breakfast', 0],
         ['breakfast-tuesday', 'breakfast', 1],
@@ -380,10 +376,7 @@ describe('schedule endpoints', () => {
         body: {
           name: 'multi-day schedule',
           baseRevision: savedSchedule.revision,
-          blocks: [
-            { ...mondayBreakfast, name: 'early breakfast' },
-            tuesdayBreakfast,
-          ],
+          blocks: [{ ...mondayBreakfast, name: 'early breakfast' }, tuesdayBreakfast],
         },
       },
     )
@@ -391,13 +384,11 @@ describe('schedule endpoints', () => {
 
     let { schedule: renamedSchedule } = await renameOneDuplicateResponse.json()
     assert.deepEqual(
-      renamedSchedule.blocks.map(
-        (block: { dayOfWeek: number; id: string; name: string }) => [
-          block.id,
-          block.name,
-          block.dayOfWeek,
-        ],
-      ),
+      renamedSchedule.blocks.map((block: { dayOfWeek: number; id: string; name: string }) => [
+        block.id,
+        block.name,
+        block.dayOfWeek,
+      ]),
       [
         ['breakfast-monday', 'early breakfast', 0],
         ['breakfast-tuesday', 'breakfast', 1],
@@ -484,9 +475,12 @@ async function getSchedule(
   client: Awaited<ReturnType<typeof createAuthenticatedClient>>,
   scheduleId: number,
 ) {
-  let response = await client.fetchJson(routes.schedules.show.href({ scheduleId: String(scheduleId) }), {
-    method: 'GET',
-  })
+  let response = await client.fetchJson(
+    routes.schedules.show.href({ scheduleId: String(scheduleId) }),
+    {
+      method: 'GET',
+    },
+  )
   assert.equal(response.status, 200)
   let json = await response.json()
   return json.schedule
@@ -509,10 +503,7 @@ async function createScheduleAt(
   return schedule
 }
 
-async function withMockedNow<T>(
-  timestamp: number,
-  callback: () => Promise<T>,
-): Promise<T> {
+async function withMockedNow<T>(timestamp: number, callback: () => Promise<T>): Promise<T> {
   let originalNow = Date.now
   Date.now = () => timestamp
 

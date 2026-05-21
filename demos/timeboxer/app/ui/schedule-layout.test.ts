@@ -13,11 +13,7 @@ import {
 describe('ScheduleLayout', () => {
   it('moves a block later in a stack by reordering the stack', () => {
     let result = previewMoveBlock(
-      [
-        block('one', 0, 555, 570),
-        block('two', 0, 570, 585),
-        block('three', 0, 585, 630),
-      ],
+      [block('one', 0, 555, 570), block('two', 0, 570, 585), block('three', 0, 585, 630)],
       'one',
       { dayOfWeek: 0, startMinute: 570 },
     )
@@ -31,11 +27,7 @@ describe('ScheduleLayout', () => {
 
   it('moves a block to the dragged cell and shifts the destination chain', () => {
     let result = previewMoveBlock(
-      [
-        block('one', 0, 555, 570),
-        block('two', 0, 570, 585),
-        block('three', 0, 585, 630),
-      ],
+      [block('one', 0, 555, 570), block('two', 0, 570, 585), block('three', 0, 585, 630)],
       'two',
       { dayOfWeek: 0, startMinute: 585 },
     )
@@ -49,10 +41,7 @@ describe('ScheduleLayout', () => {
 
   it('moves a block upward and slides the collided block into the nearest open slot', () => {
     let result = previewMoveBlock(
-      [
-        block('one', 0, 570, 585),
-        block('make-breakfast', 0, 600, 630),
-      ],
+      [block('one', 0, 570, 585), block('make-breakfast', 0, 600, 630)],
       'make-breakfast',
       { dayOfWeek: 0, startMinute: 570 },
     )
@@ -118,10 +107,7 @@ describe('ScheduleLayout', () => {
   })
 
   it('swaps days for a clean horizontal move without mutating the source blocks', () => {
-    let blocks = [
-      block('monday', 0, 540, 570),
-      block('tuesday', 1, 540, 570),
-    ]
+    let blocks = [block('monday', 0, 540, 570), block('tuesday', 1, 540, 570)]
 
     let result = previewMoveBlock(blocks, 'monday', {
       dayOfWeek: 1,
@@ -204,11 +190,7 @@ describe('ScheduleLayout', () => {
 
   it('keeps grouped block offsets when moving selected blocks across days', () => {
     let result = previewMoveBlockGroup(
-      [
-        block('plan', 0, 540, 555),
-        block('read', 0, 555, 585),
-        block('friday-work', 4, 555, 600),
-      ],
+      [block('plan', 0, 540, 555), block('read', 0, 555, 585), block('friday-work', 4, 555, 600)],
       ['plan', 'read'],
       'read',
       { dayOfWeek: 4, startMinute: 600 },
@@ -222,27 +204,19 @@ describe('ScheduleLayout', () => {
   })
 
   it('marks grouped moves unresolved when selected blocks span multiple days', () => {
-    let blocks = [
-      block('monday', 0, 540, 570),
-      block('tuesday', 1, 540, 570),
-    ]
+    let blocks = [block('monday', 0, 540, 570), block('tuesday', 1, 540, 570)]
 
-    let result = previewMoveBlockGroup(
-      blocks,
-      ['monday', 'tuesday'],
-      'monday',
-      { dayOfWeek: 2, startMinute: 540 },
-    )
+    let result = previewMoveBlockGroup(blocks, ['monday', 'tuesday'], 'monday', {
+      dayOfWeek: 2,
+      startMinute: 540,
+    })
 
     assert.equal(result.unresolved, true)
     assert.deepEqual(timesFromBlocks(result.blocks), timesFromBlocks(blocks))
   })
 
   it('marks impossible resizes unresolved without returning an overlapping layout', () => {
-    let blocks = [
-      block('one', 0, 1380, 1425),
-      block('two', 0, 1425, 1440),
-    ]
+    let blocks = [block('one', 0, 1380, 1425), block('two', 0, 1425, 1440)]
 
     let result = previewResizeBlockTime(blocks, 'one', {
       edge: 'end',
@@ -284,10 +258,7 @@ describe('ScheduleLayout', () => {
   })
 
   it('does not squeeze collided blocks by default', () => {
-    let blocks = [
-      block('one', 0, 1380, 1425),
-      block('two', 0, 1425, 1440),
-    ]
+    let blocks = [block('one', 0, 1380, 1425), block('two', 0, 1425, 1440)]
 
     let result = previewResizeBlockTime(
       blocks,
@@ -309,11 +280,7 @@ describe('ScheduleLayout', () => {
 
   it('moves a block deeper and uses nearby open space for displaced items', () => {
     let result = previewMoveBlock(
-      [
-        block('early', 0, 540, 570),
-        block('middle', 0, 570, 600),
-        block('late', 0, 660, 690),
-      ],
+      [block('early', 0, 540, 570), block('middle', 0, 570, 600), block('late', 0, 660, 690)],
       'early',
       { dayOfWeek: 0, startMinute: 660 },
     )
@@ -327,10 +294,7 @@ describe('ScheduleLayout', () => {
 
   it('pushes blocks down when resizing the bottom edge into them', () => {
     let result = previewResizeBlockTime(
-      [
-        block('one', 0, 540, 570),
-        block('two', 0, 570, 600),
-      ],
+      [block('one', 0, 540, 570), block('two', 0, 570, 600)],
       'one',
       { edge: 'end', minute: 585 },
     )
@@ -343,10 +307,7 @@ describe('ScheduleLayout', () => {
 
   it('pushes blocks up when resizing the top edge into them', () => {
     let result = previewResizeBlockTime(
-      [
-        block('one', 0, 540, 570),
-        block('two', 0, 570, 600),
-      ],
+      [block('one', 0, 540, 570), block('two', 0, 570, 600)],
       'two',
       { edge: 'start', minute: 555 },
     )
@@ -359,10 +320,7 @@ describe('ScheduleLayout', () => {
 
   it('copies blocks across days as independent events and reflows each target day', () => {
     let result = previewCopyBlockAcrossDays(
-      [
-        block('breakfast', 0, 540, 570),
-        block('tuesday-existing', 1, 540, 570),
-      ],
+      [block('breakfast', 0, 540, 570), block('tuesday-existing', 1, 540, 570)],
       'breakfast',
       {
         createId: (_source, dayOfWeek) => `breakfast-${dayOfWeek}`,
@@ -493,13 +451,7 @@ describe('ScheduleLayout', () => {
   })
 
   it('deletes one block without changing the others', () => {
-    let result = previewDeleteBlock(
-      [
-        block('one', 0, 540, 570),
-        block('two', 0, 570, 600),
-      ],
-      'one',
-    )
+    let result = previewDeleteBlock([block('one', 0, 540, 570), block('two', 0, 570, 600)], 'one')
 
     assert.deepEqual(timesFromBlocks(result.blocks), [['two', 0, 570, 600]])
   })
@@ -522,10 +474,5 @@ function block(
 }
 
 function timesFromBlocks(blocks: ScheduleLayoutBlock[]) {
-  return blocks.map((block) => [
-    block.id,
-    block.dayOfWeek,
-    block.startMinute,
-    block.endMinute,
-  ])
+  return blocks.map((block) => [block.id, block.dayOfWeek, block.startMinute, block.endMinute])
 }

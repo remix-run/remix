@@ -44,14 +44,17 @@ describe('schedule input validation', () => {
   it('rejects invalid integer schedule ids', async () => {
     let client = await createAuthenticatedClient()
 
-    let response = await client.fetchJson(routes.schedules.update.href({ scheduleId: 'not-an-int' }), {
-      method: 'PUT',
-      body: {
-        name: 'integer validation schedule',
-        baseRevision: 0,
-        blocks: [],
+    let response = await client.fetchJson(
+      routes.schedules.update.href({ scheduleId: 'not-an-int' }),
+      {
+        method: 'PUT',
+        body: {
+          name: 'integer validation schedule',
+          baseRevision: 0,
+          blocks: [],
+        },
       },
-    })
+    )
 
     assert.equal(response.status, 400)
     assert.deepEqual(await response.json(), {
@@ -381,9 +384,12 @@ async function createSchedule(client: TestClient, name: string): Promise<TestSch
 }
 
 async function getSchedule(client: TestClient, scheduleId: number): Promise<TestSchedule> {
-  let response = await client.fetchJson(routes.schedules.show.href({ scheduleId: String(scheduleId) }), {
-    method: 'GET',
-  })
+  let response = await client.fetchJson(
+    routes.schedules.show.href({ scheduleId: String(scheduleId) }),
+    {
+      method: 'GET',
+    },
+  )
   assert.equal(response.status, 200)
 
   let { schedule } = await response.json()

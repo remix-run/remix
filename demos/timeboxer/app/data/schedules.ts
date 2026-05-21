@@ -1,11 +1,6 @@
 import type { Database } from 'remix/data-table'
 
-import {
-  scheduleBlocks,
-  schedules,
-  type Schedule,
-  type ScheduleBlock,
-} from './schema.ts'
+import { scheduleBlocks, schedules, type Schedule, type ScheduleBlock } from './schema.ts'
 
 export type ScheduleInputId = string
 
@@ -147,10 +142,7 @@ export async function replaceScheduleDocument(
   })
 }
 
-async function listScheduleBlocks(
-  db: Database,
-  scheduleId: number,
-): Promise<ScheduleBlock[]> {
+async function listScheduleBlocks(db: Database, scheduleId: number): Promise<ScheduleBlock[]> {
   return await db.findMany(scheduleBlocks, {
     where: { schedule_id: scheduleId },
     orderBy: [
@@ -237,10 +229,7 @@ async function syncScheduledBlocks(
   }
 }
 
-function toScheduleDocument(
-  schedule: Schedule,
-  blockRows: ScheduleBlock[],
-): ScheduleDocument {
+function toScheduleDocument(schedule: Schedule, blockRows: ScheduleBlock[]): ScheduleDocument {
   return {
     id: schedule.id,
     name: schedule.name,
@@ -295,4 +284,3 @@ function assertNoOverlaps(blocks: ScheduleBlockInput[]) {
     }
   }
 }
-

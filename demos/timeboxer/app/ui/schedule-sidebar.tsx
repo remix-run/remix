@@ -1,8 +1,8 @@
-import { clientEntry, css, navigate, on, type Handle } from "remix/ui"
-import { Button } from "remix/ui/button"
-import { theme } from "remix/ui/theme"
+import { clientEntry, css, navigate, on, type Handle } from 'remix/ui'
+import { Button } from 'remix/ui/button'
+import { theme } from 'remix/ui/theme'
 
-import { NewScheduleActionComponent } from "./new-schedule-action.tsx"
+import { NewScheduleActionComponent } from './new-schedule-action.tsx'
 
 type SidebarSchedule = {
   deleteHref: string
@@ -46,11 +46,7 @@ export const ScheduleSidebar = clientEntry(
             <a href="/" mix={appTitleStyle}>
               Timeboxer
             </a>
-            <form
-              action={handle.props.logoutHref}
-              method="post"
-              mix={logoutFormStyle}
-            >
+            <form action={handle.props.logoutHref} method="post" mix={logoutFormStyle}>
               <input type="hidden" name="_csrf" value={handle.props.csrfToken} />
               <Button type="submit" tone="ghost" mix={logoutButtonStyle}>
                 Logout
@@ -92,10 +88,10 @@ export const ScheduleSidebar = clientEntry(
         let [result] = await Promise.all([
           fetch(schedule.deleteHref, {
             headers: {
-              accept: "application/json",
-              "x-csrf-token": handle.props.csrfToken,
+              accept: 'application/json',
+              'x-csrf-token': handle.props.csrfToken,
             },
-            method: "DELETE",
+            method: 'DELETE',
             signal: handle.signal,
           }).then(
             (response) => ({ response }),
@@ -105,7 +101,7 @@ export const ScheduleSidebar = clientEntry(
         ])
 
         if (handle.signal.aborted) return
-        if ("error" in result) throw result.error
+        if ('error' in result) throw result.error
 
         let { response } = result
 
@@ -118,7 +114,7 @@ export const ScheduleSidebar = clientEntry(
 
         let json = (await response.json()) as { nextScheduleHref?: unknown }
         let nextScheduleHref =
-          typeof json.nextScheduleHref === "string" ? json.nextScheduleHref : "/"
+          typeof json.nextScheduleHref === 'string' ? json.nextScheduleHref : '/'
 
         if (schedule.id === handle.props.activeScheduleId) {
           await navigate(nextScheduleHref)
@@ -131,10 +127,7 @@ export const ScheduleSidebar = clientEntry(
       } catch {
         if (handle.signal.aborted) return
 
-        errorMessages.set(
-          schedule.id,
-          "Could not delete schedule. Please try again.",
-        )
+        errorMessages.set(schedule.id, 'Could not delete schedule. Please try again.')
         deletingScheduleIds.delete(schedule.id)
         await handle.update()
       }
@@ -160,9 +153,9 @@ function scheduleSidebarRow({
   return (
     <div key={schedule.id} mix={scheduleItemStyle}>
       <a
-        aria-current={active ? "page" : undefined}
-        data-active={active ? "true" : undefined}
-        data-deleting={deleting ? "true" : undefined}
+        aria-current={active ? 'page' : undefined}
+        data-active={active ? 'true' : undefined}
+        data-deleting={deleting ? 'true' : undefined}
         href={schedule.href}
         mix={scheduleLinkStyle}
       >
@@ -174,7 +167,7 @@ function scheduleSidebarRow({
           type="button"
           mix={[
             deleteButtonStyle,
-            on("click", (event) => {
+            on('click', (event) => {
               event.preventDefault()
               event.stopPropagation()
               onDelete()
@@ -230,37 +223,37 @@ function sleep(durationMs: number) {
 }
 
 async function deleteScheduleErrorMessage(response: Response) {
-  let contentType = response.headers.get("content-type") ?? ""
+  let contentType = response.headers.get('content-type') ?? ''
 
-  if (contentType.includes("application/json")) {
+  if (contentType.includes('application/json')) {
     try {
       let body = (await response.json()) as { error?: unknown }
-      if (typeof body.error === "string") return body.error
+      if (typeof body.error === 'string') return body.error
     } catch {
       // Fall through to the status-based fallback below.
     }
   }
 
-  if (response.status === 401) return "Please sign in before deleting this schedule."
-  if (response.status === 403) return "Could not verify this request. Please refresh and try again."
-  if (response.status === 404) return "Schedule was already deleted."
+  if (response.status === 401) return 'Please sign in before deleting this schedule.'
+  if (response.status === 403) return 'Could not verify this request. Please refresh and try again.'
+  if (response.status === 404) return 'Schedule was already deleted.'
 
-  return "Could not delete schedule. Please try again."
+  return 'Could not delete schedule. Please try again.'
 }
 
 const sidebarStyle = css({
   backgroundColor: theme.surface.lvl0,
   borderRight: `1px solid ${theme.colors.border.strong}`,
-  display: "grid",
-  gridTemplateRows: "56px 32px minmax(0, 1fr)",
+  display: 'grid',
+  gridTemplateRows: '56px 32px minmax(0, 1fr)',
   minHeight: 0,
 })
 
 const sidebarHeaderStyle = css({
-  alignItems: "center",
-  display: "flex",
+  alignItems: 'center',
+  display: 'flex',
   gap: theme.space.sm,
-  justifyContent: "space-between",
+  justifyContent: 'space-between',
   padding: `${theme.space.sm} ${theme.space.md}`,
 })
 
@@ -269,8 +262,8 @@ const appTitleStyle = css({
   fontSize: theme.fontSize.xl,
   fontWeight: theme.fontWeight.bold,
   letterSpacing: theme.letterSpacing.tight,
-  textDecoration: "none",
-  whiteSpace: "nowrap",
+  textDecoration: 'none',
+  whiteSpace: 'nowrap',
 })
 
 const logoutFormStyle = css({
@@ -283,12 +276,12 @@ const logoutButtonStyle = css({
 
 const scheduleScrollerStyle = css({
   minHeight: 0,
-  overflowY: "auto",
+  overflowY: 'auto',
   padding: `${theme.space.xl} ${theme.space.lg}`,
 })
 
 const scheduleListStyle = css({
-  display: "grid",
+  display: 'grid',
   gap: theme.space.sm,
 })
 
@@ -298,44 +291,44 @@ const newScheduleRegionStyle = css({
 })
 
 const scheduleItemStyle = css({
-  display: "grid",
+  display: 'grid',
   gap: theme.space.xs,
 })
 
 const scheduleLinkStyle = css({
-  alignItems: "center",
+  alignItems: 'center',
   borderRadius: theme.radius.md,
   color: theme.colors.text.primary,
-  display: "grid",
+  display: 'grid',
   gap: theme.space.xs,
-  gridTemplateColumns: "minmax(0, 1fr) auto",
+  gridTemplateColumns: 'minmax(0, 1fr) auto',
   minWidth: 0,
   padding: `${theme.space.xs} ${theme.space.xs} ${theme.space.xs} ${theme.space.sm}`,
-  textDecoration: "none",
-  "& > button": {
+  textDecoration: 'none',
+  '& > button': {
     opacity: 0,
-    pointerEvents: "none",
+    pointerEvents: 'none',
   },
-  "&:hover": {
+  '&:hover': {
     backgroundColor: theme.surface.lvl2,
   },
-  "&:hover > button": {
+  '&:hover > button': {
     opacity: 1,
-    pointerEvents: "auto",
+    pointerEvents: 'auto',
   },
-  "&:focus-within": {
+  '&:focus-within': {
     backgroundColor: theme.surface.lvl2,
   },
-  "&:focus-within > button": {
+  '&:focus-within > button': {
     opacity: 1,
-    pointerEvents: "auto",
+    pointerEvents: 'auto',
   },
   "&[data-active='true']": {
     backgroundColor: theme.surface.lvl2,
   },
-  "&:focus-visible": {
+  '&:focus-visible': {
     outline: `2px solid ${theme.colors.focus.ring}`,
-    outlineOffset: "2px",
+    outlineOffset: '2px',
   },
   "&[data-active='true'] > span": {
     fontWeight: theme.fontWeight.medium,
@@ -345,56 +338,56 @@ const scheduleLinkStyle = css({
   },
   "&[data-deleting='true'] > button": {
     opacity: 1,
-    pointerEvents: "auto",
+    pointerEvents: 'auto',
   },
 })
 
 const scheduleNameStyle = css({
   minWidth: 0,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
 })
 
 const deleteButtonStyle = css({
-  alignItems: "center",
-  backgroundColor: "transparent",
+  alignItems: 'center',
+  backgroundColor: 'transparent',
   border: 0,
   borderRadius: theme.radius.sm,
   color: theme.colors.text.secondary,
-  cursor: "pointer",
-  display: "inline-flex",
-  height: "1.5rem",
-  justifyContent: "center",
+  cursor: 'pointer',
+  display: 'inline-flex',
+  height: '1.5rem',
+  justifyContent: 'center',
   margin: 0,
   padding: 0,
-  width: "1.5rem",
-  "&:hover": {
+  width: '1.5rem',
+  '&:hover': {
     color: theme.colors.action.danger.background,
   },
-  "&:focus-visible": {
+  '&:focus-visible': {
     outline: `2px solid ${theme.colors.focus.ring}`,
-    outlineOffset: "2px",
+    outlineOffset: '2px',
   },
-  "&:disabled": {
-    cursor: "default",
+  '&:disabled': {
+    cursor: 'default',
   },
 })
 
 const iconStyle = css({
-  display: "block",
-  height: "1rem",
-  width: "1rem",
+  display: 'block',
+  height: '1rem',
+  width: '1rem',
 })
 
 const spinnerStyle = css({
-  animation: "timebox-sidebar-spin 700ms linear infinite",
-  "@keyframes timebox-sidebar-spin": {
+  animation: 'timebox-sidebar-spin 700ms linear infinite',
+  '@keyframes timebox-sidebar-spin': {
     from: {
-      transform: "rotate(0deg)",
+      transform: 'rotate(0deg)',
     },
     to: {
-      transform: "rotate(360deg)",
+      transform: 'rotate(360deg)',
     },
   },
 })
@@ -402,5 +395,5 @@ const spinnerStyle = css({
 const deleteErrorStyle = css({
   color: theme.colors.action.danger.background,
   fontSize: theme.fontSize.xs,
-  gridColumn: "1 / -1",
+  gridColumn: '1 / -1',
 })

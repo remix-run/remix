@@ -1,16 +1,16 @@
-import type { ScheduleDocument } from "../../data/schedules.ts"
+import type { ScheduleDocument } from '../../data/schedules.ts'
 
-const calendarProductId = "-//Timeboxer//Schedule Export//EN"
-const dayCodes = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"] as const
+const calendarProductId = '-//Timeboxer//Schedule Export//EN'
+const dayCodes = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'] as const
 
 export function createScheduleIcs(schedule: ScheduleDocument, now = new Date()) {
   let referenceMonday = mondayOfWeek(now)
   let lines = [
-    "BEGIN:VCALENDAR",
-    "VERSION:2.0",
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
     `PRODID:${calendarProductId}`,
-    "CALSCALE:GREGORIAN",
-    "METHOD:PUBLISH",
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
     `X-WR-CALNAME:${escapeIcsText(schedule.name)}`,
   ]
 
@@ -19,20 +19,20 @@ export function createScheduleIcs(schedule: ScheduleDocument, now = new Date()) 
     if (!dayCode) continue
 
     lines.push(
-      "BEGIN:VEVENT",
+      'BEGIN:VEVENT',
       `UID:${escapeIcsText(`${schedule.id}-${block.id}@timeboxer`)}`,
       `DTSTAMP:${formatUtcDateTime(now)}`,
       `SUMMARY:${escapeIcsText(block.name)}`,
       `DTSTART:${formatFloatingDateTime(referenceMonday, block.dayOfWeek, block.startMinute)}`,
       `DTEND:${formatFloatingDateTime(referenceMonday, block.dayOfWeek, block.endMinute)}`,
       `RRULE:FREQ=WEEKLY;BYDAY=${dayCode}`,
-      "END:VEVENT",
+      'END:VEVENT',
     )
   }
 
-  lines.push("END:VCALENDAR")
+  lines.push('END:VCALENDAR')
 
-  return `${foldIcsLines(lines).join("\r\n")}\r\n`
+  return `${foldIcsLines(lines).join('\r\n')}\r\n`
 }
 
 function mondayOfWeek(date: Date) {
@@ -50,11 +50,11 @@ function formatFloatingDateTime(referenceMonday: number, dayOfWeek: number, minu
     date.getUTCFullYear(),
     pad(date.getUTCMonth() + 1),
     pad(date.getUTCDate()),
-    "T",
+    'T',
     pad(hour),
     pad(minute),
-    "00",
-  ].join("")
+    '00',
+  ].join('')
 }
 
 function formatUtcDateTime(date: Date) {
@@ -62,22 +62,22 @@ function formatUtcDateTime(date: Date) {
     date.getUTCFullYear(),
     pad(date.getUTCMonth() + 1),
     pad(date.getUTCDate()),
-    "T",
+    'T',
     pad(date.getUTCHours()),
     pad(date.getUTCMinutes()),
     pad(date.getUTCSeconds()),
-    "Z",
-  ].join("")
+    'Z',
+  ].join('')
 }
 
 function escapeIcsText(value: string) {
   return value
-    .replaceAll("\\", "\\\\")
-    .replaceAll(";", "\\;")
-    .replaceAll(",", "\\,")
-    .replaceAll("\r\n", "\\n")
-    .replaceAll("\n", "\\n")
-    .replaceAll("\r", "\\n")
+    .replaceAll('\\', '\\\\')
+    .replaceAll(';', '\\;')
+    .replaceAll(',', '\\,')
+    .replaceAll('\r\n', '\\n')
+    .replaceAll('\n', '\\n')
+    .replaceAll('\r', '\\n')
 }
 
 function foldIcsLines(lines: string[]) {
@@ -95,5 +95,5 @@ function foldIcsLines(lines: string[]) {
 }
 
 function pad(value: number) {
-  return String(value).padStart(2, "0")
+  return String(value).padStart(2, '0')
 }

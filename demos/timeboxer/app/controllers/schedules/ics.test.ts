@@ -20,10 +20,7 @@ describe('createScheduleIcs', () => {
       fixedNow,
     )
 
-    assertIcsIncludes(
-      ics,
-      'X-WR-CALNAME:Planning\\, review\\; C\\\\D\\nNext\\nAgain\\nDone\r\n',
-    )
+    assertIcsIncludes(ics, 'X-WR-CALNAME:Planning\\, review\\; C\\\\D\\nNext\\nAgain\\nDone\r\n')
     assertIcsIncludes(ics, 'SUMMARY:Focus\\, plan\\; ship\\\\code\\nNext\r\n')
   })
 
@@ -67,34 +64,13 @@ describe('createScheduleIcs', () => {
       fixedNow,
     )
 
-    assertIcsIncludes(
-      ics,
-      eventFields('Monday', '20260105T090000', '20260105T100000', 'MO'),
-    )
-    assertIcsIncludes(
-      ics,
-      eventFields('Tuesday', '20260106T090000', '20260106T100000', 'TU'),
-    )
-    assertIcsIncludes(
-      ics,
-      eventFields('Wednesday', '20260107T090000', '20260107T100000', 'WE'),
-    )
-    assertIcsIncludes(
-      ics,
-      eventFields('Thursday', '20260108T090000', '20260108T100000', 'TH'),
-    )
-    assertIcsIncludes(
-      ics,
-      eventFields('Friday', '20260109T090000', '20260109T100000', 'FR'),
-    )
-    assertIcsIncludes(
-      ics,
-      eventFields('Saturday', '20260110T090000', '20260110T100000', 'SA'),
-    )
-    assertIcsIncludes(
-      ics,
-      eventFields('Sunday', '20260111T090000', '20260111T100000', 'SU'),
-    )
+    assertIcsIncludes(ics, eventFields('Monday', '20260105T090000', '20260105T100000', 'MO'))
+    assertIcsIncludes(ics, eventFields('Tuesday', '20260106T090000', '20260106T100000', 'TU'))
+    assertIcsIncludes(ics, eventFields('Wednesday', '20260107T090000', '20260107T100000', 'WE'))
+    assertIcsIncludes(ics, eventFields('Thursday', '20260108T090000', '20260108T100000', 'TH'))
+    assertIcsIncludes(ics, eventFields('Friday', '20260109T090000', '20260109T100000', 'FR'))
+    assertIcsIncludes(ics, eventFields('Saturday', '20260110T090000', '20260110T100000', 'SA'))
+    assertIcsIncludes(ics, eventFields('Sunday', '20260111T090000', '20260111T100000', 'SU'))
   })
 
   it('renders an empty schedule as a calendar without events', () => {
@@ -163,12 +139,14 @@ function assertIcsIncludes(ics: string, expected: string) {
 }
 
 function eventFields(summary: string, start: string, end: string, day: string) {
-  return [
-    `SUMMARY:${summary}`,
-    `DTSTART:${start}`,
-    `DTEND:${end}`,
-    `RRULE:FREQ=WEEKLY;BYDAY=${day}`,
-  ].join('\r\n') + '\r\n'
+  return (
+    [
+      `SUMMARY:${summary}`,
+      `DTSTART:${start}`,
+      `DTEND:${end}`,
+      `RRULE:FREQ=WEEKLY;BYDAY=${day}`,
+    ].join('\r\n') + '\r\n'
+  )
 }
 
 function schedule(overrides: Partial<ScheduleDocument> = {}): ScheduleDocument {

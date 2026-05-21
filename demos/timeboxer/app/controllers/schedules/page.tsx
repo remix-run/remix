@@ -1,23 +1,23 @@
-import { css, type Handle } from "remix/ui";
-import { theme } from "remix/ui/theme";
+import { css, type Handle } from 'remix/ui'
+import { theme } from 'remix/ui/theme'
 
-import type { ScheduleDocument } from "../../data/schedules.ts";
-import type { Schedule } from "../../data/schema.ts";
-import { routes } from "../../routes.ts";
-import { Document } from "../../ui/document.tsx";
-import { ScheduleGrid, type GridScheduleDocument } from "../../ui/schedule-grid.tsx";
-import { ScheduleSidebar } from "../../ui/schedule-sidebar.tsx";
+import type { ScheduleDocument } from '../../data/schedules.ts'
+import type { Schedule } from '../../data/schema.ts'
+import { routes } from '../../routes.ts'
+import { Document } from '../../ui/document.tsx'
+import { ScheduleGrid, type GridScheduleDocument } from '../../ui/schedule-grid.tsx'
+import { ScheduleSidebar } from '../../ui/schedule-sidebar.tsx'
 
 type SchedulePageProps = {
-  activeScheduleId?: number;
-  csrfToken: string;
-  schedules: Schedule[];
-  schedule?: ScheduleDocument;
-};
+  activeScheduleId?: number
+  csrfToken: string
+  schedules: Schedule[]
+  schedule?: ScheduleDocument
+}
 
 export function SchedulePage(handle: Handle<SchedulePageProps>) {
   return () => {
-    let { activeScheduleId, csrfToken, schedules, schedule } = handle.props;
+    let { activeScheduleId, csrfToken, schedules, schedule } = handle.props
 
     return (
       <Document title="Timeboxer">
@@ -53,28 +53,28 @@ export function SchedulePage(handle: Handle<SchedulePageProps>) {
           </main>
         </div>
       </Document>
-    );
-  };
+    )
+  }
 }
 
 const appShellStyle = css({
   backgroundColor: theme.surface.lvl0,
-  display: "grid",
-  gridTemplateColumns: "240px minmax(0, 1fr)",
-  height: "100vh",
-  overflow: "hidden",
-});
+  display: 'grid',
+  gridTemplateColumns: '240px minmax(0, 1fr)',
+  height: '100vh',
+  overflow: 'hidden',
+})
 
 const workspaceStyle = css({
   minHeight: 0,
-  overflow: "hidden",
-});
+  overflow: 'hidden',
+})
 
 const emptyWorkspaceStyle = css({
-  alignItems: "center",
+  alignItems: 'center',
   color: theme.colors.text.secondary,
-  display: "flex",
+  display: 'flex',
   fontSize: theme.fontSize.lg,
-  height: "100%",
-  justifyContent: "center",
-});
+  height: '100%',
+  justifyContent: 'center',
+})

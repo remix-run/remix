@@ -50,9 +50,9 @@ sqlite.exec(`
     ON schedules (user_id);
 `)
 
-const scheduleColumns = sqlite
-  .prepare('PRAGMA table_info(schedules)')
-  .all() as Array<{ name: string }>
+const scheduleColumns = sqlite.prepare('PRAGMA table_info(schedules)').all() as Array<{
+  name: string
+}>
 
 if (!scheduleColumns.some((column) => column.name === 'revision')) {
   sqlite.exec('ALTER TABLE schedules ADD COLUMN revision INTEGER NOT NULL DEFAULT 0')
@@ -62,17 +62,12 @@ if (!scheduleColumns.some((column) => column.name === 'status')) {
   sqlite.exec("ALTER TABLE schedules ADD COLUMN status TEXT NOT NULL DEFAULT 'active'")
 }
 
-const scheduleBlockColumns = sqlite
-  .prepare('PRAGMA table_info(schedule_blocks)')
-  .all() as Array<{ name: string }>
+const scheduleBlockColumns = sqlite.prepare('PRAGMA table_info(schedule_blocks)').all() as Array<{
+  name: string
+}>
 
-const hasFlatScheduleBlocks = [
-  'client_id',
-  'day_of_week',
-  'start_minute',
-  'end_minute',
-].every((columnName) =>
-  scheduleBlockColumns.some((column) => column.name === columnName),
+const hasFlatScheduleBlocks = ['client_id', 'day_of_week', 'start_minute', 'end_minute'].every(
+  (columnName) => scheduleBlockColumns.some((column) => column.name === columnName),
 )
 
 if (!hasFlatScheduleBlocks) {

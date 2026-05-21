@@ -7,8 +7,8 @@ export interface ScheduleLayoutBlock {
   startMinute: number
 }
 
-export type ResizeEdge = "start" | "end"
-export type ReflowDirection = "down" | "up"
+export type ResizeEdge = 'start' | 'end'
+export type ReflowDirection = 'down' | 'up'
 
 export interface ScheduleLayoutPolicy {
   dayMinutes: number
@@ -17,11 +17,7 @@ export interface ScheduleLayoutPolicy {
   slotMinutes: number
 }
 
-export type ScheduleLayoutChangeKind =
-  | "created"
-  | "deleted"
-  | "moved"
-  | "resized"
+export type ScheduleLayoutChangeKind = 'created' | 'deleted' | 'moved' | 'resized'
 
 export interface ScheduleLayoutChange {
   after?: ScheduleLayoutBlock
@@ -143,7 +139,7 @@ export function previewResizeBlockTime(
   let blocks = originalBlocks.map(copyBlock)
   let resizedBlock = requireBlock(blocks, blockId)
 
-  if (resize.edge === "start") {
+  if (resize.edge === 'start') {
     resizedBlock.startMinute = clampMinute(
       resize.minute,
       policy.minimumMinute,
@@ -159,7 +155,7 @@ export function previewResizeBlockTime(
     )
   }
 
-  let direction: ReflowDirection = resize.edge === "start" ? "up" : "down"
+  let direction: ReflowDirection = resize.edge === 'start' ? 'up' : 'down'
   let resolved = resolvePush(blocks, resizedBlock, direction, policy)
   return toResult(sourceBlocks, resolved ?? originalBlocks, resolved === null)
 }
@@ -246,12 +242,14 @@ function insertBlock(
     })
   }
 
-  return candidates.sort(
-    (left, right) =>
-      left.movedCount - right.movedCount ||
-      left.totalDistance - right.totalDistance ||
-      left.naturalDistance - right.naturalDistance,
-  )[0]?.blocks ?? null
+  return (
+    candidates.sort(
+      (left, right) =>
+        left.movedCount - right.movedCount ||
+        left.totalDistance - right.totalDistance ||
+        left.naturalDistance - right.naturalDistance,
+    )[0]?.blocks ?? null
+  )
 }
 
 function previewHorizontalDaySwap(
@@ -331,12 +329,14 @@ function insertBlockGroup(
     })
   }
 
-  return candidates.sort(
-    (left, right) =>
-      left.movedCount - right.movedCount ||
-      left.totalDistance - right.totalDistance ||
-      left.naturalDistance - right.naturalDistance,
-  )[0]?.blocks ?? null
+  return (
+    candidates.sort(
+      (left, right) =>
+        left.movedCount - right.movedCount ||
+        left.totalDistance - right.totalDistance ||
+        left.naturalDistance - right.naturalDistance,
+    )[0]?.blocks ?? null
+  )
 }
 
 function insertionIndex(
@@ -416,10 +416,7 @@ function layoutAfterAnchor(
   return placed
 }
 
-function countMoved(
-  placedBlocks: ScheduleLayoutBlock[],
-  originalBlocks: ScheduleLayoutBlock[],
-) {
+function countMoved(placedBlocks: ScheduleLayoutBlock[], originalBlocks: ScheduleLayoutBlock[]) {
   let originalById = new Map(originalBlocks.map((block) => [block.id, block]))
   return placedBlocks.filter((block) => {
     let original = originalById.get(block.id)
@@ -427,10 +424,7 @@ function countMoved(
   }).length
 }
 
-function totalMovement(
-  placedBlocks: ScheduleLayoutBlock[],
-  originalBlocks: ScheduleLayoutBlock[],
-) {
+function totalMovement(placedBlocks: ScheduleLayoutBlock[], originalBlocks: ScheduleLayoutBlock[]) {
   let originalById = new Map(originalBlocks.map((block) => [block.id, block]))
   return placedBlocks.reduce((total, block) => {
     let original = originalById.get(block.id)
@@ -453,7 +447,7 @@ function resolvePush(
     (block) => block.id !== anchor.id && block.dayOfWeek === anchor.dayOfWeek,
   )
 
-  if (direction === "down") {
+  if (direction === 'down') {
     placeBlocksDown(anchor, dayBlocks)
   } else {
     placeBlocksUp(anchor, dayBlocks)
@@ -462,10 +456,7 @@ function resolvePush(
   return isValidLayout(candidate, policy) ? candidate : null
 }
 
-function placeBlocksDown(
-  anchorBlock: ScheduleLayoutBlock,
-  dayBlocks: ScheduleLayoutBlock[],
-) {
+function placeBlocksDown(anchorBlock: ScheduleLayoutBlock, dayBlocks: ScheduleLayoutBlock[]) {
   let cursor = anchorBlock.endMinute
 
   for (let block of dayBlocks.sort((left, right) => left.startMinute - right.startMinute)) {
@@ -478,10 +469,7 @@ function placeBlocksDown(
   }
 }
 
-function placeBlocksUp(
-  anchorBlock: ScheduleLayoutBlock,
-  dayBlocks: ScheduleLayoutBlock[],
-) {
+function placeBlocksUp(anchorBlock: ScheduleLayoutBlock, dayBlocks: ScheduleLayoutBlock[]) {
   let cursor = anchorBlock.startMinute
 
   for (let block of dayBlocks.sort((left, right) => right.startMinute - left.startMinute)) {
@@ -507,10 +495,7 @@ function toResult(
   }
 }
 
-function getChanges(
-  beforeBlocks: ScheduleLayoutBlock[],
-  afterBlocks: ScheduleLayoutBlock[],
-) {
+function getChanges(beforeBlocks: ScheduleLayoutBlock[], afterBlocks: ScheduleLayoutBlock[]) {
   let beforeById = new Map(beforeBlocks.map((block) => [block.id, block]))
   let afterById = new Map(afterBlocks.map((block) => [block.id, block]))
   let changes: ScheduleLayoutChange[] = []
@@ -518,7 +503,7 @@ function getChanges(
   for (let before of beforeBlocks) {
     let after = afterById.get(before.id)
     if (!after) {
-      changes.push({ before: copyBlock(before), id: before.id, kind: "deleted" })
+      changes.push({ before: copyBlock(before), id: before.id, kind: 'deleted' })
       continue
     }
 
@@ -528,13 +513,13 @@ function getChanges(
       after: copyBlock(after),
       before: copyBlock(before),
       id: before.id,
-      kind: durationOf(before) === durationOf(after) ? "moved" : "resized",
+      kind: durationOf(before) === durationOf(after) ? 'moved' : 'resized',
     })
   }
 
   for (let after of afterBlocks) {
     if (beforeById.has(after.id)) continue
-    changes.push({ after: copyBlock(after), id: after.id, kind: "created" })
+    changes.push({ after: copyBlock(after), id: after.id, kind: 'created' })
   }
 
   return changes
@@ -544,9 +529,9 @@ function moveDirection(
   movedBlock: ScheduleLayoutBlock,
   primaryCollision: ScheduleLayoutBlock,
 ): ReflowDirection {
-  if (movedBlock.startMinute <= primaryCollision.startMinute) return "down"
-  if (movedBlock.endMinute >= primaryCollision.endMinute) return "up"
-  return blockCenter(movedBlock) <= blockCenter(primaryCollision) ? "down" : "up"
+  if (movedBlock.startMinute <= primaryCollision.startMinute) return 'down'
+  if (movedBlock.endMinute >= primaryCollision.endMinute) return 'up'
+  return blockCenter(movedBlock) <= blockCenter(primaryCollision) ? 'down' : 'up'
 }
 
 function getCollisions(blocks: ScheduleLayoutBlock[], anchorBlock: ScheduleLayoutBlock) {
@@ -560,7 +545,7 @@ function getCollisions(blocks: ScheduleLayoutBlock[], anchorBlock: ScheduleLayou
 
 function createBlockGroup(blocks: ScheduleLayoutBlock[]): ScheduleBlockGroup {
   let firstBlock = blocks[0]
-  if (!firstBlock) throw new Error("Cannot create a schedule block group without blocks.")
+  if (!firstBlock) throw new Error('Cannot create a schedule block group without blocks.')
 
   let dayOfWeek = firstBlock.dayOfWeek
   let startMinute = firstBlock.startMinute
@@ -568,7 +553,7 @@ function createBlockGroup(blocks: ScheduleLayoutBlock[]): ScheduleBlockGroup {
 
   for (let block of blocks) {
     if (block.dayOfWeek !== dayOfWeek) {
-      throw new Error("Schedule block groups must be on one day.")
+      throw new Error('Schedule block groups must be on one day.')
     }
 
     startMinute = Math.min(startMinute, block.startMinute)
@@ -580,9 +565,7 @@ function createBlockGroup(blocks: ScheduleLayoutBlock[]): ScheduleBlockGroup {
 
 function blocksShareDay(blocks: ScheduleLayoutBlock[]) {
   let firstBlock = blocks[0]
-  return firstBlock
-    ? blocks.every((block) => block.dayOfWeek === firstBlock.dayOfWeek)
-    : false
+  return firstBlock ? blocks.every((block) => block.dayOfWeek === firstBlock.dayOfWeek) : false
 }
 
 function isValidLayout(blocks: ScheduleLayoutBlock[], policy: ScheduleLayoutPolicy) {
@@ -638,8 +621,7 @@ function blocksOverlap(left: ScheduleLayoutBlock, right: ScheduleLayoutBlock) {
 function overlapMinutes(left: ScheduleLayoutBlock, right: ScheduleLayoutBlock) {
   return Math.max(
     0,
-    Math.min(left.endMinute, right.endMinute) -
-      Math.max(left.startMinute, right.startMinute),
+    Math.min(left.endMinute, right.endMinute) - Math.max(left.startMinute, right.startMinute),
   )
 }
 
@@ -686,12 +668,7 @@ function clampDay(value: number) {
   return clamp(Math.round(value), 0, 6)
 }
 
-function clampMinute(
-  value: number,
-  min: number,
-  max: number,
-  policy: ScheduleLayoutPolicy,
-) {
+function clampMinute(value: number, min: number, max: number, policy: ScheduleLayoutPolicy) {
   let snapped = Math.round(value / policy.slotMinutes) * policy.slotMinutes
   return clamp(snapped, min, Math.max(min, max))
 }

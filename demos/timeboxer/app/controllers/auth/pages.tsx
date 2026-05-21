@@ -26,7 +26,9 @@ export function AuthStatusPage(handle: Handle<AuthStatusPageProps>) {
           <div mix={cardStyle}>
             <p mix={eyebrowStyle}>Signed in</p>
             <h1 mix={titleStyle}>Welcome back, {username}.</h1>
-            <p mix={bodyStyle}>Your session is active and backed by the local SQLite user record.</p>
+            <p mix={bodyStyle}>
+              Your session is active and backed by the local SQLite user record.
+            </p>
             <LogoutForm csrfToken={csrfToken} />
           </div>
         </section>
