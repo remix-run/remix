@@ -1,3 +1,4 @@
+import type { Handle } from 'remix/ui'
 import { css } from 'remix/ui'
 
 import { designSystem } from '../design-system.ts'
@@ -8,8 +9,8 @@ import type { ExternalProviderLink } from '../../utils/external-auth.ts'
 
 const { theme } = designSystem
 
-export function ExternalAuthSection() {
-  return ({ providers }: { providers: ExternalProviderLink[] }) => (
+export function ExternalAuthSection(handle: Handle<{ providers: ExternalProviderLink[] }>) {
+  return () => (
     <>
       <div mix={styles.divider}>
         <div mix={css({ flex: '1', borderTop: theme.border.subtle })}></div>
@@ -18,7 +19,7 @@ export function ExternalAuthSection() {
       </div>
 
       <div mix={styles.socialButtons}>
-        {providers.map((provider) => (
+        {handle.props.providers.map((provider) => (
           <SocialProviderButton
             key={provider.name}
             label={formatProviderLabel(provider.name)}

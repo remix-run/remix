@@ -1,4 +1,4 @@
-import type { MixValue, RemixNode } from 'remix/ui'
+import type { Handle, MixValue, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
 
 import * as styles from './styles.ts'
@@ -16,8 +16,9 @@ interface TextFieldProps {
   mix?: MixValue<HTMLInputElement>
 }
 
-export function TextField() {
-  return (props: TextFieldProps) => {
+export function TextField(handle: Handle<TextFieldProps>) {
+  return () => {
+    let props = handle.props
     let inputMix =
       props.mix == null
         ? [styles.fieldInput]

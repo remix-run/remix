@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/ui'
 
 import { getAssetEntry } from '../middleware/asset-entry.ts'
 
@@ -7,8 +7,9 @@ export interface DocumentProps {
   children?: RemixNode
 }
 
-export function Document() {
-  return ({ title = 'Bookstore', children }: DocumentProps) => {
+export function Document(handle: Handle<DocumentProps>) {
+  return () => {
+    let { title = 'Bookstore', children } = handle.props
     let { scriptSrc, scriptPreloads, stylesheetHref } = getAssetEntry()
 
     return (
