@@ -50,7 +50,7 @@ sqlite.exec(`
     ON schedules (user_id);
 `)
 
-let scheduleColumns = sqlite
+const scheduleColumns = sqlite
   .prepare('PRAGMA table_info(schedules)')
   .all() as Array<{ name: string }>
 
@@ -62,11 +62,11 @@ if (!scheduleColumns.some((column) => column.name === 'status')) {
   sqlite.exec("ALTER TABLE schedules ADD COLUMN status TEXT NOT NULL DEFAULT 'active'")
 }
 
-let scheduleBlockColumns = sqlite
+const scheduleBlockColumns = sqlite
   .prepare('PRAGMA table_info(schedule_blocks)')
   .all() as Array<{ name: string }>
 
-let hasFlatScheduleBlocks = [
+const hasFlatScheduleBlocks = [
   'client_id',
   'day_of_week',
   'start_minute',

@@ -12,7 +12,6 @@
     "skipLibCheck": true,
     "jsx": "react-jsx",
     "jsxImportSource": "remix/ui",
-    "baseUrl": ".",
     "paths": {
       "remix/*": ["../../packages/remix/src/*"]
     }

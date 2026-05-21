@@ -1,4 +1,4 @@
-import { Database } from 'remix/data-table'
+import type { Database } from 'remix/data-table'
 
 import {
   scheduleBlocks,
