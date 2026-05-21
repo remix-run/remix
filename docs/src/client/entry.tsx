@@ -28,17 +28,6 @@ app.ready().catch((error: unknown) => {
   console.error('Frame adoption failed:', error)
 })
 
-// Load Pagefind Component UI (modal trigger + modal)
-let link = document.createElement('link')
-link.rel = 'stylesheet'
-link.href = '/pagefind/pagefind-component-ui.css'
-document.head.appendChild(link)
-
-let script = document.createElement('script')
-script.type = 'module'
-script.src = '/pagefind/pagefind-component-ui.js'
-document.head.appendChild(script)
-
 let navToggle = document.getElementById('nav-toggle')
 if (navToggle instanceof HTMLInputElement) {
   navToggle.addEventListener('change', () => {

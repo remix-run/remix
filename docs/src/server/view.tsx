@@ -172,6 +172,8 @@ function Head(
           <link key={href} rel="modulepreload" href={href} />
         ))}
         <script type="module" src={entryHref} />
+        <link href="/pagefind/pagefind-component-ui.css" rel="stylesheet" />
+        <script src="/pagefind/pagefind-component-ui.js" type="module" />
       </head>
     )
   }
