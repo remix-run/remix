@@ -1,0 +1,16 @@
+Added `package.json` `exports`:
+ - `remix/headers/accept` to re-export APIs from `@remix-run/headers/accept`
+ - `remix/headers/accept-encoding` to re-export APIs from `@remix-run/headers/accept-encoding`
+ - `remix/headers/accept-language` to re-export APIs from `@remix-run/headers/accept-language`
+ - `remix/headers/cache-control` to re-export APIs from `@remix-run/headers/cache-control`
+ - `remix/headers/content-disposition` to re-export APIs from `@remix-run/headers/content-disposition`
+ - `remix/headers/content-range` to re-export APIs from `@remix-run/headers/content-range`
+ - `remix/headers/content-type` to re-export APIs from `@remix-run/headers/content-type`
+ - `remix/headers/cookie` to re-export APIs from `@remix-run/headers/cookie`
+ - `remix/headers/if-match` to re-export APIs from `@remix-run/headers/if-match`
+ - `remix/headers/if-none-match` to re-export APIs from `@remix-run/headers/if-none-match`
+ - `remix/headers/if-range` to re-export APIs from `@remix-run/headers/if-range`
+ - `remix/headers/range` to re-export APIs from `@remix-run/headers/range`
+ - `remix/headers/raw-headers` to re-export APIs from `@remix-run/headers/raw-headers`
+ - `remix/headers/set-cookie` to re-export APIs from `@remix-run/headers/set-cookie`
+ - `remix/headers/vary` to re-export APIs from `@remix-run/headers/vary`
