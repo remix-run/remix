@@ -95,6 +95,28 @@ describe('createHref', () => {
     it('includes optional with static content', () => {
       assert.equal(createHref('://(www.)example.com/path'), 'https://www.example.com/path')
     })
+
+    it('rejects structural URL chars and `.` in hostname variables', () => {
+      assert.throws(
+        () => createHref('://:tenant.example.com/path', { tenant: 'acme.dev' }),
+        hrefError('invalid-hostname-variable'),
+      )
+      assert.throws(
+        () => createHref('://:tenant.example.com/path', { tenant: 'acme:staging' }),
+        hrefError('invalid-hostname-variable'),
+      )
+    })
+
+    it('allows `.` but rejects structural URL chars in hostname wildcards', () => {
+      assert.equal(
+        createHref('://*tenant.example.com/path', { tenant: 'preview.acme' }),
+        'https://preview.acme.example.com/path',
+      )
+      assert.throws(
+        () => createHref('://*tenant.example.com/path', { tenant: 'preview:acme' }),
+        hrefError('invalid-hostname-wildcard'),
+      )
+    })
   })
 
   describe('port', () => {
@@ -188,6 +210,20 @@ describe('createHref', () => {
           postId: '123',
         }),
         '/en/users/42/en/posts/123',
+      )
+    })
+
+    it('encodes structural URL chars including `/` for variables', () => {
+      assert.equal(
+        createHref('/posts/:slug', { slug: 'hello/world?draft=true#preview' }),
+        '/posts/hello%2Fworld%3Fdraft=true%23preview',
+      )
+    })
+
+    it('encodes structural URL chars except `/` for wildcards', () => {
+      assert.equal(
+        createHref('/files/*path', { path: 'docs/@remix-run/ui?raw#v1' }),
+        '/files/docs/@remix-run/ui%3Fraw%23v1',
       )
     })
   })
