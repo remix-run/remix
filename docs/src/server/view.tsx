@@ -76,9 +76,12 @@ function MobileHeader(handle: Handle<{ page: PageDefinition }>) {
           aria-hidden="true"
           tabIndex={-1}
         />
-        <a href="https://remix.run" mix={mobileLogoBannerCss}>
-          <RemixLogos />
-        </a>
+        <div mix={mobileLogoBannerCss}>
+          <a href="https://remix.run">
+            <RemixLogos />
+          </a>
+          <pagefind-modal-trigger compact />
+        </div>
         <label
           for="nav-toggle"
           mix={mobileTopBarCss}
@@ -310,9 +313,8 @@ function Sidebar(
               <a href="https://remix.run" class="logo">
                 <RemixLogos />
               </a>
+              <pagefind-modal-trigger compact />
             </div>
-
-            <pagefind-modal-trigger mix={searchTriggerCss} />
 
             <VersionSwitcher versions={versions} activeVersion={activeVersion} />
 
@@ -659,18 +661,14 @@ const sidebarStickyCss = css({
 
 const sidebarIntroCss = css({
   display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xs,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
   paddingBottom: theme.space.sm,
   marginBottom: theme.space.sm,
   [MOBILE_NAV_MEDIA_RULE]: {
     display: 'none',
   },
-})
-
-const searchTriggerCss = css({
-  marginBottom: theme.space.lg,
-  width: '100%',
 })
 
 const sidebarPanelCss = css({

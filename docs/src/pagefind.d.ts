@@ -2,6 +2,13 @@
 declare namespace JSX {
   interface IntrinsicElements {
     'pagefind-modal': { instance?: string; 'reset-on-close'?: boolean; mix?: unknown }
-    'pagefind-modal-trigger': { instance?: string; mix?: unknown }
+    'pagefind-modal-trigger': {
+      instance?: string
+      compact?: boolean
+      placeholder?: string
+      shortcut?: string
+      'hide-shortcut'?: boolean
+      mix?: unknown
+    }
   }
 }
