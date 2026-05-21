@@ -47,7 +47,7 @@ export type EntryMetadata = {
  */
 export type EntryComponent<props extends SerializableProps = {}, context = NoContext> = ((
   handle: Handle<props, context>,
-) => RenderFn<props>) &
+) => RenderFn) &
   EntryMetadata
 
 /**
@@ -85,10 +85,6 @@ export type EntryComponent<props extends SerializableProps = {}, context = NoCon
 export function clientEntry<props extends SerializableProps = {}, context = NoContext>(
   entryId: string,
   component: (handle: Handle<props, context>) => RenderFn,
-): EntryComponent<props, context>
-export function clientEntry<props extends SerializableProps = {}, context = NoContext>(
-  entryId: string,
-  component: (handle: Handle<Record<string, never>, context>) => RenderFn<props>,
 ): EntryComponent<props, context>
 
 // Implementation

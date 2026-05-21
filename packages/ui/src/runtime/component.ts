@@ -179,9 +179,9 @@ export type ComponentFn<Props = Record<string, never>, ContextValue = NoContext>
 ) => RenderFn
 
 /**
- * Render function returned by a component factory.
+ * Zero-argument render function returned by a component factory.
  */
-export type RenderFn<Props = ElementProps> = (props: Props) => RemixNode
+export type RenderFn = () => RemixNode
 
 export type { RemixNode } from './jsx.ts'
 
@@ -287,7 +287,7 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
       this.#renderFn = renderFn
     }
 
-    return [renderFn(this.#props), this.#dequeueTasks()]
+    return [renderFn(), this.#dequeueTasks()]
   }
 
   remove = (): Array<() => void> => {
