@@ -19,6 +19,10 @@ type SaveCall = {
   url: string
 }
 
+type SaveRecorder = SaveCall[] & {
+  next: () => Promise<SaveCall>
+}
+
 suite('ScheduleGrid', () => {
   test('renders a weekly grid with time cells and scheduled blocks', (t) => {
     let { cleanup, container } = renderScheduleGrid()
@@ -79,13 +83,13 @@ suite('ScheduleGrid', () => {
       input.value = 'Deep work'
       input.dispatchEvent(inputEvent())
       input.dispatchEvent(keydown('Enter'))
-      await settleAsyncWork()
+      await saves.next()
     })
 
     equal(saves.length, 1)
     equal(saves[0]!.url, '/schedules/7')
     equal(saves[0]!.method, 'PUT')
-    equal(saves[0]!.headers.get('x-csrf-token'), 'csrf-token')
+    equal(saves[0]!.headers.get('X-Csrf-Token'), 'csrf-token')
     deepEqual(blockSummaries(saves[0]!.body.blocks), [
       {
         dayOfWeek: 2,
@@ -107,7 +111,7 @@ suite('ScheduleGrid', () => {
 
     await act(async () => {
       getByLabel(container, 'Morning focus').dispatchEvent(keydown('Delete'))
-      await settleAsyncWork()
+      await saves.next()
     })
 
     equal(queryByLabel(container, 'Morning focus'), null)
@@ -138,7 +142,7 @@ suite('ScheduleGrid', () => {
       input.value = 'Planning'
       input.dispatchEvent(inputEvent())
       input.blur()
-      await settleAsyncWork()
+      await saves.next()
     })
 
     equal(queryByLabel(container, 'Morning focus'), null)
@@ -167,18 +171,37 @@ function renderScheduleGrid(schedule = scheduleDocument()) {
   )
 }
 
-function captureScheduleSaves(t: { after(cleanup: () => void): void }) {
+function captureScheduleSaves(t: { after(cleanup: () => void): void }): SaveRecorder {
   let originalFetch = globalThis.fetch
   let calls: SaveCall[] = []
+  let nextCallIndex = 0
+  let pendingNextCalls: Array<(call: SaveCall) => void> = []
+
+  let recorder = Object.assign(calls, {
+    next() {
+      if (nextCallIndex < calls.length) {
+        return Promise.resolve(calls[nextCallIndex++]!)
+      }
+
+      return new Promise<SaveCall>((resolve) => {
+        pendingNextCalls.push((call) => {
+          nextCallIndex++
+          resolve(call)
+        })
+      })
+    },
+  })
 
   globalThis.fetch = (async (input, init) => {
     let body = parseSaveBody(init?.body)
-    calls.push({
+    let call = {
       body,
       headers: new Headers(init?.headers),
       method: init?.method,
       url: String(input),
-    })
+    }
+    calls.push(call)
+    pendingNextCalls.shift()?.(call)
 
     let scheduleId = Number(new URL(String(input), window.location.href).pathname.split('/').pop())
     return new Response(
@@ -193,7 +216,7 @@ function captureScheduleSaves(t: { after(cleanup: () => void): void }) {
       }),
       {
         headers: {
-          'content-type': 'application/json',
+          'Content-Type': 'application/json',
         },
         status: 200,
       },
@@ -204,7 +227,7 @@ function captureScheduleSaves(t: { after(cleanup: () => void): void }) {
     globalThis.fetch = originalFetch
   })
 
-  return calls
+  return recorder
 }
 
 function scheduleDocument(blocks = defaultBlocks()): GridScheduleDocument {
@@ -284,10 +307,4 @@ function blockSummaries(blocks: ScheduleBlockDocument[]) {
     name: block.name,
     startMinute: block.startMinute,
   }))
-}
-
-async function settleAsyncWork() {
-  await Promise.resolve()
-  await Promise.resolve()
-  await Promise.resolve()
 }
