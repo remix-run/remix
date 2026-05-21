@@ -1,11 +1,37 @@
-import { createTestContext, type CreateTestContextOptions } from './context.ts'
+import {
+  createTestContext,
+  type CreateTestContextOptions,
+  type TestContext,
+} from './context.ts'
 import type { V8CoverageEntry } from './coverage.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
+
+type LifecycleHook = () => void | Promise<void>
+
+interface RegisteredSuite {
+  name: string
+  tests: RegisteredTest[]
+  only?: boolean
+  skip?: boolean
+  todo?: boolean
+  beforeEach?: LifecycleHook
+  afterEach?: LifecycleHook
+  beforeAll?: LifecycleHook
+  afterAll?: LifecycleHook
+}
+
+interface RegisteredTest {
+  name: string
+  fn: (t: TestContext) => void | Promise<void>
+  only?: boolean
+  skip?: boolean
+  todo?: boolean
+}
 
 export async function runTests(
   options?: Omit<CreateTestContextOptions, 'addE2ECoverageEntries'>,
 ): Promise<TestResults> {
-  let suites = (globalThis as any).__testSuites || []
+  let suites = getRegisteredSuites()
   let e2eCoverageEntries: Array<{ entries: V8CoverageEntry[]; baseUrl: string }> = []
   let results: TestResults = {
     passed: 0,
@@ -15,7 +41,7 @@ export async function runTests(
     tests: [],
   }
 
-  let hasOnlySuites = suites.some((s: any) => s.only)
+  let hasOnlySuites = suites.some((suite) => suite.only)
 
   for (let suite of suites) {
     // If any suite uses .only, skip all non-only suites
@@ -47,15 +73,24 @@ export async function runTests(
     }
 
     if (suite.beforeAll) {
+      let startTime = performance.now()
       try {
         await suite.beforeAll()
       } catch (error) {
-        console.error(`beforeAll failed in suite "${suite.name}":`, error)
+        results.tests.push(
+          createFailedHookResult(
+            'beforeAll',
+            suite.name,
+            error,
+            performance.now() - startTime,
+          ),
+        )
+        results.failed++
         continue
       }
     }
 
-    let hasOnlyTests = suite.tests.some((t: any) => t.only)
+    let hasOnlyTests = suite.tests.some((test) => test.only)
 
     for (let test of suite.tests) {
       // If any test uses .only, skip all non-only tests in this suite
@@ -84,6 +119,10 @@ export async function runTests(
         status: 'passed',
         duration: 0,
       }
+      let testError: unknown
+      let afterEachError: unknown
+      let testFailed = false
+      let afterEachFailed = false
 
       let contextOpts: CreateTestContextOptions | undefined = options
         ? {
@@ -99,24 +138,29 @@ export async function runTests(
         }
 
         await test.fn(testContext)
-
-        result.status = 'passed'
-        results.passed++
-      } catch (error: any) {
-        result.status = 'failed'
-        result.error = {
-          message: error.message || String(error),
-          stack: error.stack,
-        }
-        results.failed++
+      } catch (error) {
+        testFailed = true
+        testError = error
       } finally {
         await cleanup()
         if (suite.afterEach) {
           try {
             await suite.afterEach()
           } catch (error) {
-            console.error('afterEach failed:', error)
+            afterEachFailed = true
+            afterEachError = error
           }
+        }
+
+        if (testFailed || afterEachFailed) {
+          result.status = 'failed'
+          result.error = createTestError(
+            testFailed ? testError : undefined,
+            afterEachFailed ? createHookFailure('afterEach', afterEachError) : undefined,
+          )
+          results.failed++
+        } else {
+          results.passed++
         }
 
         result.duration = performance.now() - startTime
@@ -125,10 +169,14 @@ export async function runTests(
     }
 
     if (suite.afterAll) {
+      let startTime = performance.now()
       try {
         await suite.afterAll()
       } catch (error) {
-        console.error(`afterAll failed in suite "${suite.name}":`, error)
+        results.tests.push(
+          createFailedHookResult('afterAll', suite.name, error, performance.now() - startTime),
+        )
+        results.failed++
       }
     }
   }
@@ -142,4 +190,54 @@ export async function runTests(
   }
 
   return results
+}
+
+function getRegisteredSuites(): RegisteredSuite[] {
+  let global = globalThis as typeof globalThis & { __testSuites?: RegisteredSuite[] }
+  return global.__testSuites ?? []
+}
+
+function createFailedHookResult(
+  hookName: string,
+  suiteName: string,
+  error: unknown,
+  duration: number,
+): TestResult {
+  return {
+    name: hookName,
+    suiteName,
+    status: 'failed',
+    error: createTestError(createHookFailure(hookName, error)),
+    duration,
+  }
+}
+
+function createHookFailure(hookName: string, error: unknown): Error {
+  let cause = error instanceof Error ? error : new Error(String(error))
+  return new Error(`${hookName} failed: ${cause.message}`, { cause })
+}
+
+function createTestError(
+  primaryError: unknown,
+  secondaryError: Error | undefined = undefined,
+): TestResult['error'] {
+  let message = primaryError !== undefined ? getErrorMessage(primaryError) : undefined
+  let stack = primaryError instanceof Error ? primaryError.stack : undefined
+
+  if (secondaryError) {
+    message = message ? `${message}\n${secondaryError.message}` : secondaryError.message
+    stack =
+      stack && secondaryError.stack
+        ? `${stack}\n${secondaryError.stack}`
+        : (stack ?? secondaryError.stack)
+  }
+
+  return {
+    message: message ?? 'Test failed',
+    stack,
+  }
+}
+
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
