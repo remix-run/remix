@@ -3,7 +3,7 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import type { FileStorage } from '@remix-run/file-storage'
-import { IfNoneMatch } from '@remix-run/headers'
+import { IfNoneMatch } from '@remix-run/headers/if-none-match'
 import { detectContentType } from '@remix-run/mime'
 import {
   createAssetServerCompilationError,

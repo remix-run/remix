@@ -94,6 +94,16 @@ The following headers are currently supported:
 - [Set-Cookie](./README.md#set-cookie)
 - [Vary](./README.md#vary)
 
+If you only need a specific header parser (for example, just `Content-Type`), import that parser directly from its subpath. This avoids pulling the package barrel and `SuperHeaders`:
+
+```ts
+import { ContentType } from 'remix/headers/content-type'
+import { SetCookie } from 'remix/headers/set-cookie'
+
+let contentType = ContentType.from('text/plain; charset=utf-8')
+let setCookie = new SetCookie('session=abc; Path=/')
+```
+
 ### Accept
 
 Parse, manipulate and stringify [`Accept` headers](https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Accept).

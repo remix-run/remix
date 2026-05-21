@@ -44,7 +44,8 @@ describe('parseMultipart', async () => {
   it('does not eagerly use Web Encoding globals while importing and parsing', async () => {
     let moduleUrl = new URL('./multipart.ts', import.meta.url).href
     let script = `
-      await import('@remix-run/headers')
+      await import('@remix-run/headers/content-disposition')
+      await import('@remix-run/headers/content-type')
 
       let TextEncoderConstructor = globalThis.TextEncoder
       let TextDecoderConstructor = globalThis.TextDecoder
