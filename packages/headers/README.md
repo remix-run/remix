@@ -94,8 +94,7 @@ The following headers are currently supported:
 - [Set-Cookie](./README.md#set-cookie)
 - [Vary](./README.md#vary)
 
-If you only need a specific header parser (for example, just `Content-Type`), import that parser directly from its
-subpath. This avoids pulling the package barrel and `SuperHeaders`:
+If you only need a specific header parser (for example, just `Content-Type`), import that parser directly from its subpath. This avoids pulling the package barrel and `SuperHeaders`:
 
 ```ts
 import { ContentType } from 'remix/headers/content-type'
