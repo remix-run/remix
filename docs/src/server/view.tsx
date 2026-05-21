@@ -669,7 +669,7 @@ const sidebarIntroCss = css({
 })
 
 const searchTriggerCss = css({
-  marginBottom: theme.space.sm,
+  marginBottom: theme.space.lg,
   width: '100%',
 })
 
