@@ -160,11 +160,7 @@ const surfaceMixin: MixinFactory<HTMLElement, [options: PopoverSurfaceOptions], 
               throw new Error('popover.surface() requires a registered anchor before opening')
             }
 
-            cleanupAnchor = positionAnchor(
-              event.currentTarget,
-              anchor.target,
-              anchor.options,
-            )
+            cleanupAnchor = positionAnchor(event.currentTarget, anchor.target, anchor.options)
             unlockScroll = lockScroll()
           } else if (event.newState === 'closed') {
             cleanupAnchor()
@@ -192,7 +188,8 @@ const surfaceMixin: MixinFactory<HTMLElement, [options: PopoverSurfaceOptions], 
           (target) => {
             options.onHide({ reason: 'outside-click', target })
           },
-          (target) => options.closeOnAnchorClick === false && anchorContains(context.anchor, target),
+          (target) =>
+            options.closeOnAnchorClick === false && anchorContains(context.anchor, target),
           options.stopOutsideClickPropagation ?? true,
         ),
       ]
