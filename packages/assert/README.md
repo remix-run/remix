@@ -93,14 +93,14 @@ await expect(loadModule()).resolves.toBeUndefined()
 
 Available matchers:
 
-| Group           | Matchers                                                                                                                 |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| Equality        | `toBe`, `toEqual`, `toBeNull`, `toBeUndefined`, `toBeDefined`, `toBeTruthy`, `toBeInstanceOf`                            |
-| Numbers         | `toBeGreaterThan`, `toBeGreaterThanOrEqual`, `toBeLessThan`, `toBeLessThanOrEqual`, `toBeCloseTo`                        |
-| String/iterable | `toContain`, `toMatch`, `toHaveLength`                                                                                   |
-| Object shape    | `toHaveProperty(path, value?)`, `toMatchObject(partial)`                                                                 |
-| Throwing        | `toThrow(expected?)`                                                                                                     |
-| Mock-aware      | `toHaveBeenCalled`, `toHaveBeenCalledTimes(n)`, `toHaveBeenCalledWith(...args)`, `toHaveBeenNthCalledWith(nth, ...args)` |
+| Group | Matchers |
+| --- | --- |
+| Equality | `toBe`, `toEqual`, `toBeNull`, `toBeUndefined`, `toBeDefined`, `toBeTruthy`, `toBeInstanceOf` |
+| Numbers | `toBeGreaterThan`, `toBeGreaterThanOrEqual`, `toBeLessThan`, `toBeLessThanOrEqual`, `toBeCloseTo` |
+| String/iterable | `toContain`, `toMatch`, `toHaveLength` |
+| Object shape | `toHaveProperty(path, value?)`, `toMatchObject(partial)` |
+| Throwing | `toThrow(expected?)` |
+| Mock-aware | `toHaveBeenCalled`, `toHaveBeenCalledTimes(n)`, `toHaveBeenCalledWith(...args)`, `toHaveBeenNthCalledWith(nth, ...args)` |
 
 `expect.objectContaining(partial)` is an asymmetric matcher recognized by `toEqual` (and any matcher that uses deep equality under the hood). It passes when the actual value has at least the keys in `partial` with matching values — extra keys are allowed.
 

@@ -1,7 +1,6 @@
 # file-storage-s3
 
-S3 backend for [`remix/file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage).
-Use this package when you want the `FileStorage` API backed by AWS S3 or an S3-compatible provider.
+S3 backend for [`remix/file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage). Use this package when you want the `FileStorage` API backed by AWS S3 or an S3-compatible provider.
 
 ## Features
 

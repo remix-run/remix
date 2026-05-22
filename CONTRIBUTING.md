@@ -75,8 +75,7 @@ Write your change as a bullet point (without the leading `-` or `*`). This conte
 ```markdown
 Add support for X feature
 
-This is an optional longer explanation that will be indented
-under the main bullet point in the CHANGELOG.
+This is an optional longer explanation that will be indented under the main bullet point in the CHANGELOG.
 ```
 
 For breaking changes in v0.x packages, any change files that begin with `BREAKING CHANGE: ` will be hoisted to the top of the release notes:

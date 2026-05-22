@@ -2,16 +2,14 @@
 
 ## What This Covers
 
-How input becomes a value the app trusts, and how that value reaches storage. Read this when the
-task involves:
+How input becomes a value the app trusts, and how that value reaches storage. Read this when the task involves:
 
 - Defining database tables, columns, relations, and migrations
 - Querying or mutating persisted data with `Database`
 - Parsing and validating user input from forms, query strings, or external payloads
 - Choosing between schema-level checks, table validation hooks, and migration-level constraints
 
-For where validation runs in the request lifecycle, see `routing-and-controllers.md`. For session
-or identity-bound writes, see `auth-and-sessions.md`.
+For where validation runs in the request lifecycle, see `routing-and-controllers.md`. For session or identity-bound writes, see `auth-and-sessions.md`.
 
 ## Table Definitions (`remix/data-table`)
 
@@ -65,22 +63,16 @@ export type OrderWithItems = TableRowWith<typeof orders, 'items'>
 | `c.uuid()`                    | UUID / TEXT        |
 | `c.varchar(length)`           | VARCHAR            |
 
-Column modifiers: `.primaryKey()`, `.autoIncrement()`, `.notNull()`, `.unique()`,
-`.references(table, column, fkName?)`, `.onDelete(action)`, `.default(value)`.
+Column modifiers: `.primaryKey()`, `.autoIncrement()`, `.notNull()`, `.unique()`, `.references(table, column, fkName?)`, `.onDelete(action)`, `.default(value)`.
 
 Composite primary keys go on the table option, not the column: `primaryKey: ['order_id', 'book_id']`.
 
 ### Schema vs migrations
 
-Column modifiers describe SQL constraints — the source of truth for them is your **migration**
-files, where they generate the actual DDL. Runtime `table(...)` definitions in `app/data/schema.ts`
-can use the same modifiers, or they can stay minimal (`c.integer()`, `c.text()`, ...) since the
-runtime only needs the column shape and validation hooks. Two valid patterns:
+Column modifiers describe SQL constraints — the source of truth for them is your **migration** files, where they generate the actual DDL. Runtime `table(...)` definitions in `app/data/schema.ts` can use the same modifiers, or they can stay minimal (`c.integer()`, `c.text()`, ...) since the runtime only needs the column shape and validation hooks. Two valid patterns:
 
-- **Modifiers in both** — schema and migrations stay in sync visually; useful when you want
-  schema-level docs.
-- **Bare columns in schema, full modifiers in migrations** — schema describes what the app reads
-  and writes; migrations own the DDL and constraints.
+- **Modifiers in both** — schema and migrations stay in sync visually; useful when you want schema-level docs.
+- **Bare columns in schema, full modifiers in migrations** — schema describes what the app reads and writes; migrations own the DDL and constraints.
 
 Pick one and apply it consistently across the app.
 
@@ -88,8 +80,7 @@ Pick one and apply it consistently across the app.
 
 Tables can define validation and lifecycle hooks:
 
-- `validate` runs before `create` and `update` writes and should return either `{ value }` or
-  `{ issues }`
+- `validate` runs before `create` and `update` writes and should return either `{ value }` or `{ issues }`
 - `beforeWrite` can normalize or veto `create`/`update` values
 - `afterWrite` observes completed `create`/`update` operations
 - `beforeDelete` and `afterDelete` observe or veto deletes
@@ -135,9 +126,7 @@ let adapter = createSqliteDatabaseAdapter(sqlite)
 export let db = createDatabase(adapter)
 ```
 
-`createSqliteDatabaseAdapter` accepts synchronous SQLite clients with a shared `prepare`/`exec`
-surface, including Node's `node:sqlite`, Bun's `bun:sqlite`, and compatible clients. Use whichever
-client fits the runtime instead of assuming `better-sqlite3` is required.
+`createSqliteDatabaseAdapter` accepts synchronous SQLite clients with a shared `prepare`/`exec` surface, including Node's `node:sqlite`, Bun's `bun:sqlite`, and compatible clients. Use whichever client fits the runtime instead of assuming `better-sqlite3` is required.
 
 ### Database middleware
 
@@ -248,13 +237,11 @@ await runner.up()
 
 ### Migration file naming
 
-Name migration files with a timestamp prefix: `20260228090000_create_users.ts`. Place them in
-`db/migrations/`.
+Name migration files with a timestamp prefix: `20260228090000_create_users.ts`. Place them in `db/migrations/`.
 
 ## Input Validation (`remix/data-schema`)
 
-Use `data-schema` to validate user input (forms, query params, API payloads). This is separate from
-table-level `validate` hooks which run at persistence.
+Use `data-schema` to validate user input (forms, query params, API payloads). This is separate from table-level `validate` hooks which run at persistence.
 
 ### Schema builders
 
@@ -295,9 +282,7 @@ let { name, email, password } = s.parse(signupSchema, formData)
 
 There are two ways to get a `FormData` value inside an action.
 
-The recommended way: register `formData()` middleware in the root stack and read with
-`get(FormData)`. The body is parsed once per request, and the typed `FormData` value flows through
-the context system. This also lets `methodOverride()` and CSRF middleware work uniformly.
+The recommended way: register `formData()` middleware in the root stack and read with `get(FormData)`. The body is parsed once per request, and the typed `FormData` value flows through the context system. This also lets `methodOverride()` and CSRF middleware work uniformly.
 
 ```typescript
 import { formData } from 'remix/middleware/form-data'
@@ -310,15 +295,11 @@ let router = createRouter({
 let parsed = s.parseSafe(signupSchema, get(FormData))
 ```
 
-The fallback: `await request.formData()` directly. This works without middleware and is fine for
-small one-off cases, but it bypasses the context system, runs once per call site, and doesn't
-compose with middleware that depends on parsed form fields.
+The fallback: `await request.formData()` directly. This works without middleware and is fine for small one-off cases, but it bypasses the context system, runs once per call site, and doesn't compose with middleware that depends on parsed form fields.
 
 ### Safe parsing
 
-`s.parse` throws on invalid input. `s.parseSafe` returns a tagged result and is usually what an
-action wants, since validation failure is an expected outcome (re-render the form with errors)
-rather than an exception:
+`s.parse` throws on invalid input. `s.parseSafe` returns a tagged result and is usually what an action wants, since validation failure is an expected outcome (re-render the form with errors) rather than an exception:
 
 ```typescript
 let result = s.parseSafe(signupSchema, get(FormData))
@@ -328,13 +309,11 @@ if (!result.success) {
 let { name, email, password } = result.value
 ```
 
-Returning a `Response` for validation failures keeps the route contract honest: the same action
-returns 200 on success, 400 with errors on bad input, no out-of-band exception flow.
+Returning a `Response` for validation failures keeps the route contract honest: the same action returns 200 on success, 400 with errors on bad input, no out-of-band exception flow.
 
 ### Transforming validated output
 
-Use `.transform(...)` when a schema should validate one shape but return another value or output
-type. Transforms run after validation and compose with `.pipe(...)` and `.refine(...)`:
+Use `.transform(...)` when a schema should validate one shape but return another value or output type. Transforms run after validation and compose with `.pipe(...)` and `.refine(...)`:
 
 ```typescript
 import * as coerce from 'remix/data-schema/coerce'
@@ -356,14 +335,9 @@ let { page, q } = s.parse(pageSchema, formData)
 
 Avoid these shapes when reading and validating input:
 
-- **Raw `formData.get('name')` plus an `if (typeof name !== 'string')` guard**, then a thrown
-  custom error. This reinvents what `data-schema` already does, loses the typed result, and
-  pushes error translation into a `try/catch` instead of a return value.
-- **Letting route-local domain errors leak out of the action.** Translate expected outcomes (bad
-  input, missing record, duplicate entry) into the `Response` the route means to return instead of
-  throwing a custom `Error` subclass with a `status` field and catching it later.
-- **Trusting `params`, query strings, or external payloads without a schema.** Anything that
-  crosses a trust boundary should be parsed before it reaches business logic.
+- **Raw `formData.get('name')` plus an `if (typeof name !== 'string')` guard**, then a thrown custom error. This reinvents what `data-schema` already does, loses the typed result, and pushes error translation into a `try/catch` instead of a return value.
+- **Letting route-local domain errors leak out of the action.** Translate expected outcomes (bad input, missing record, duplicate entry) into the `Response` the route means to return instead of throwing a custom `Error` subclass with a `status` field and catching it later.
+- **Trusting `params`, query strings, or external payloads without a schema.** Anything that crosses a trust boundary should be parsed before it reaches business logic.
 
 ### Common patterns
 

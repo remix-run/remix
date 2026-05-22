@@ -122,9 +122,7 @@ pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
 
 ## Agent Skills For Building Apps
 
-Agents that are starting a Remix 3 app from this repository should use the
-[`remix` app skill](./.agents/skills/remix/SKILL.md). The CLI prepack step copies this skill into
-the app template so generated apps can use the same guidance.
+Agents that are starting a Remix 3 app from this repository should use the [`remix` app skill](./.agents/skills/remix/SKILL.md). The CLI prepack step copies this skill into the app template so generated apps can use the same guidance.
 
 ## Contributing
 

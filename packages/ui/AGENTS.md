@@ -152,8 +152,7 @@ The `Handle` object provides the component's interface to the framework:
 
 ### `handle.update()`
 
-Schedules a component update and returns a promise that resolves with an `AbortSignal` after
-the update completes.
+Schedules a component update and returns a promise that resolves with an `AbortSignal` after the update completes.
 
 ```tsx
 function Counter(handle: Handle) {
@@ -292,8 +291,7 @@ function GoodExample(handle: Handle) {
 
 **Pattern: await `handle.update()` when showing loading state before async work:**
 
-When you need to show loading UI before async work starts, set loading state, call
-`await handle.update()`, and use the returned signal for async APIs.
+When you need to show loading UI before async work starts, set loading state, call `await handle.update()`, and use the returned signal for async APIs.
 
 ```tsx
 function GoodAsyncExample(handle: Handle) {

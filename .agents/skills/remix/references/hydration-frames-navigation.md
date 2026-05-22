@@ -2,8 +2,7 @@
 
 ## What This Covers
 
-How server-rendered UI becomes interactive in the browser, and how the page updates without a full
-navigation. Read this when the task involves:
+How server-rendered UI becomes interactive in the browser, and how the page updates without a full navigation. Read this when the task involves:
 
 - Marking a component for client-side hydration with `clientEntry`
 - Booting the client runtime with `run`
@@ -12,19 +11,13 @@ navigation. Read this when the task involves:
 - Server rendering with `renderToStream` or `renderToString`
 - Managing the document `<head>`
 
-For component-local state and updates, see `component-model.md`. For host-element behavior and
-events, see `mixins-styling-events.md`.
+For component-local state and updates, see `component-model.md`. For host-element behavior and events, see `mixins-styling-events.md`.
 
 ## Server First, Then Hydrate
 
-Make the server route correct before adding `clientEntry(...)`. A POST should already do the right
-thing on its own — return HTML, a redirect, or an error response — and a GET should already render
-the page the user expects. `clientEntry` exists to layer interactivity on top of UI that already
-works without it.
+Make the server route correct before adding `clientEntry(...)`. A POST should already do the right thing on its own — return HTML, a redirect, or an error response — and a GET should already render the page the user expects. `clientEntry` exists to layer interactivity on top of UI that already works without it.
 
-When server state changes after a mutation, prefer reloading a `<Frame>` when the UI region already
-maps cleanly to a server-rendered route. Frames re-fetch the same route, so the rendering logic
-stays in one place and the client does not need a parallel "state" API.
+When server state changes after a mutation, prefer reloading a `<Frame>` when the UI region already maps cleanly to a server-rendered route. Frames re-fetch the same route, so the rendering logic stays in one place and the client does not need a parallel "state" API.
 
 ```tsx
 on('submit', async (event, signal) => {
@@ -39,15 +32,11 @@ on('submit', async (event, signal) => {
 })
 ```
 
-Use polling or a small JSON state endpoint when the data changes outside this page, or when a tiny
-shared widget would be heavier to model as a frame. Pick the lightest sync mechanism that preserves
-clear ownership of rendering logic.
+Use polling or a small JSON state endpoint when the data changes outside this page, or when a tiny shared widget would be heavier to model as a frame. Pick the lightest sync mechanism that preserves clear ownership of rendering logic.
 
 ## Client Entries
 
-Use `clientEntry` to mark a component for client-side hydration. In source-served apps, prefer the
-source module's `import.meta.url` as the entry ID and let server rendering map it to the public
-asset URL:
+Use `clientEntry` to mark a component for client-side hydration. In source-served apps, prefer the source module's `import.meta.url` as the entry ID and let server rendering map it to the public asset URL:
 
 ```tsx
 import { clientEntry, on, type Handle } from 'remix/ui'
@@ -76,9 +65,7 @@ export const Counter = clientEntry(
 )
 ```
 
-On the server, provide `resolveClientEntry` to `renderToStream(...)` so source file URLs become
-browser-loadable asset URLs. Keep this resolution in the render helper so component modules do not
-hard-code deployment-specific asset paths:
+On the server, provide `resolveClientEntry` to `renderToStream(...)` so source file URLs become browser-loadable asset URLs. Keep this resolution in the render helper so component modules do not hard-code deployment-specific asset paths:
 
 ```tsx
 let stream = renderToStream(<App />, {
@@ -96,21 +83,15 @@ let stream = renderToStream(<App />, {
 })
 ```
 
-If the module export name differs from the component function name, include `#ExportName` in the
-entry ID or return the exact export name from `resolveClientEntry`. A render helper that only
-supports source-owned entries can also fail fast when `entryId` is not a `file://` URL.
+If the module export name differs from the component function name, include `#ExportName` in the entry ID or return the exact export name from `resolveClientEntry`. A render helper that only supports source-owned entries can also fail fast when `entryId` is not a `file://` URL.
 
-On the server, `clientEntry` components render like any other component. The server wraps their
-output in comment markers and serializes props into a `<script type="application/json">` tag.
+On the server, `clientEntry` components render like any other component. The server wraps their output in comment markers and serializes props into a `<script type="application/json">` tag.
 
-Client entry props must be serializable: strings, numbers, booleans, `null`, `undefined`, plain
-objects/arrays of the above, JSX elements, and `<Frame>` elements. Functions and class instances
-cannot be passed.
+Client entry props must be serializable: strings, numbers, booleans, `null`, `undefined`, plain objects/arrays of the above, JSX elements, and `<Frame>` elements. Functions and class instances cannot be passed.
 
 ## Booting the Client
 
-Use `run` to start the client runtime. It scans the document for client entry markers, loads
-modules, and hydrates each one:
+Use `run` to start the client runtime. It scans the document for client entry markers, loads modules, and hydrates each one:
 
 ```tsx
 import { run } from 'remix/ui'
@@ -137,10 +118,8 @@ await app.ready()
 
 ### `run` options
 
-- **`loadModule(moduleUrl, exportName)`** (required) — return the component function for each
-  client entry. Typically uses dynamic `import()`.
-- **`resolveFrame(src, signal, target)`** (optional) — called when a `<Frame>` loads or reloads
-  content. `target` is available when frame targeting matters.
+- **`loadModule(moduleUrl, exportName)`** (required) — return the component function for each client entry. Typically uses dynamic `import()`.
+- **`resolveFrame(src, signal, target)`** (optional) — called when a `<Frame>` loads or reloads content. `target` is available when frame targeting matters.
 
 ### `app` methods
 
@@ -152,8 +131,7 @@ await app.ready()
 
 ## Frames
 
-A `<Frame>` renders server content into the page. Frames stream after the initial HTML, nest inside
-other frames, contain client entries, and can be reloaded without full page navigation.
+A `<Frame>` renders server content into the page. Frames stream after the initial HTML, nest inside other frames, contain client entries, and can be reloaded without full page navigation.
 
 ```tsx
 import { Frame } from 'remix/ui'
@@ -177,10 +155,8 @@ function App() {
 
 ### Blocking vs non-blocking
 
-- **Without `fallback`** (blocking) — the server waits for frame content before sending the initial
-  HTML chunk
-- **With `fallback`** (non-blocking) — the fallback renders immediately; real content streams in
-  later and replaces it
+- **Without `fallback`** (blocking) — the server waits for frame content before sending the initial HTML chunk
+- **With `fallback`** (non-blocking) — the fallback renders immediately; real content streams in later and replaces it
 
 ### Reloading frames
 
@@ -197,21 +173,17 @@ await handle.frames.get('cart-summary')?.reload()
 handle.frames.top.reload()
 ```
 
-When a frame reloads, matching DOM nodes are updated in place. Client entries receive updated props
-while preserving their local component state.
+When a frame reloads, matching DOM nodes are updated in place. Client entries receive updated props while preserving their local component state.
 
 ### Nested frames
 
-Frames can nest. Each frame owns its own DOM region and hydrates client entries independently.
-During SSR, `handle.frame.src` points at the frame being rendered, while
-`handle.frames.top.src` stays fixed at the outer document URL.
+Frames can nest. Each frame owns its own DOM region and hydrates client entries independently. During SSR, `handle.frame.src` points at the frame being rendered, while `handle.frames.top.src` stays fixed at the outer document URL.
 
 ## Server Rendering
 
 ### `renderToStream`
 
-Renders a component tree to a `ReadableStream<Uint8Array>`. Sends initial HTML immediately and
-streams frame content as it resolves:
+Renders a component tree to a `ReadableStream<Uint8Array>`. Sends initial HTML immediately and streams frame content as it resolves:
 
 ```tsx
 import { renderToStream } from 'remix/ui/server'
@@ -235,11 +207,8 @@ return new Response(stream, {
 Options:
 
 - **`frameSrc`** — seeds SSR frame state; populates `handle.frame.src` and `handle.frames.top.src`
-- **`topFrameSrc`** — overrides the root frame URL for nested frame renders (carry forward from
-  `resolveFrame` context)
-- **`resolveFrame(src, target, context)`** — return HTML string, `ReadableStream<Uint8Array>`, or a
-  promise of either. `context.currentFrameSrc` is the containing frame URL; `context.topFrameSrc`
-  is the outer document URL
+- **`topFrameSrc`** — overrides the root frame URL for nested frame renders (carry forward from `resolveFrame` context)
+- **`resolveFrame(src, target, context)`** — return HTML string, `ReadableStream<Uint8Array>`, or a promise of either. `context.currentFrameSrc` is the containing frame URL; `context.topFrameSrc` is the outer document URL
 - **`onError(error)`** — called on rendering errors
 
 ### `renderToString`
@@ -253,8 +222,7 @@ let html = await renderToString(<App />)
 
 ### CSS in SSR
 
-Components using the `css` mixin have styles collected during rendering and emitted as a single
-`<style>` tag in `<head>`. No client-side style injection needed.
+Components using the `css` mixin have styles collected during rendering and emitted as a single `<style>` tag in `<head>`. No client-side style injection needed.
 
 ## Navigation
 
@@ -293,5 +261,4 @@ function App() {
 }
 ```
 
-Put `title`, `meta`, `link`, and `style` tags inside an explicit `<head>`. Bare head-like tags
-rendered outside `<head>` stay where they are — they are not moved into the document head for you.
+Put `title`, `meta`, `link`, and `style` tags inside an explicit `<head>`. Bare head-like tags rendered outside `<head>` stay where they are — they are not moved into the document head for you.
