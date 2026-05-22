@@ -156,7 +156,7 @@ function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>):
     popoverContextRef.hideFocusTarget = triggerRef ?? null
     popoverContextRef.anchor = triggerRef
       ? {
-          node: triggerRef,
+          target: triggerRef,
           options: getPopoverAnchorOptions(),
         }
       : null
