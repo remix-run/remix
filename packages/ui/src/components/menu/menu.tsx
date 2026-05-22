@@ -13,7 +13,7 @@ import {
   type Props,
   type RemixNode,
 } from '@remix-run/ui'
-import { type AnchorOptions } from '../anchor/anchor.ts'
+import { type AnchorOptions, type AnchorPoint } from '../anchor/anchor.ts'
 import * as button from '../button/button.tsx'
 import { Glyph } from '../glyph/glyph.tsx'
 import * as popover from '../popover/popover.ts'
@@ -249,6 +249,8 @@ export interface MenuProviderProps {
 }
 
 export interface MenuTriggerOptions extends AnchorOptions {}
+
+export interface MenuContextTriggerOptions extends AnchorOptions {}
 
 export interface MenuItemOptions {
   checked?: boolean
@@ -1008,6 +1010,74 @@ const triggerMixin: MixinFactory<HTMLElement, [options?: MenuTriggerOptions], El
     ]
   })
 
+const contextTriggerMixin: MixinFactory<
+  HTMLElement,
+  [options?: MenuContextTriggerOptions],
+  ElementProps
+> = createMixin<HTMLElement, [options?: MenuContextTriggerOptions], ElementProps>((handle) => {
+  let context = handle.context.get(MenuProvider)
+  let popoverContext = handle.context.get(popover.Context)
+  let anchorPoint: AnchorPoint = { x: 0, y: 0, width: 0, height: 0 }
+
+  function setAnchorPoint(
+    { x, y, width = 0, height = 0 }: AnchorPoint,
+    options: MenuContextTriggerOptions,
+  ) {
+    anchorPoint.x = x
+    anchorPoint.y = y
+    anchorPoint.width = width
+    anchorPoint.height = height
+    popoverContext.anchor = {
+      target: anchorPoint,
+      options: {
+        placement: 'bottom-start',
+        ...options,
+      },
+    }
+  }
+
+  return (options = {}) => [
+    attrs({
+      id: handle.id,
+      'aria-controls': context.listId,
+      'aria-expanded': context.isOpen ? 'true' : 'false',
+      'aria-haspopup': 'menu',
+    }),
+    ref((node: HTMLElement, signal) => {
+      context.registerTrigger(node, handle.id)
+      signal.addEventListener('abort', () => {
+        context.unregisterTrigger(node)
+      })
+    }),
+    on('contextmenu', (event) => {
+      event.preventDefault()
+      event.stopPropagation()
+      setAnchorPoint({ x: event.clientX, y: event.clientY }, options)
+      void context.open({ strategy: 'list' })
+    }),
+    on('keydown', (event) => {
+      if (event.key !== 'ContextMenu' && !(event.shiftKey && event.key === 'F10')) {
+        return
+      }
+
+      event.preventDefault()
+      event.stopPropagation()
+
+      let rect = event.currentTarget.getBoundingClientRect()
+      setAnchorPoint(
+        {
+          x: rect.left,
+          y: rect.top,
+          width: rect.width,
+          height: rect.height,
+        },
+        options,
+      )
+      void context.open({ strategy: 'list' })
+    }),
+  ]
+})
+
 const popoverMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
   HTMLElement,
   [],
@@ -1394,6 +1464,7 @@ type MenuListChildProps = Omit<
 >
 
 export const Context = MenuProvider
+export const contextTrigger = contextTriggerMixin
 export const item = itemMixin
 export const list = listMixin
 export { popoverMixin as popover }
@@ -1402,6 +1473,7 @@ export const trigger = triggerMixin
 
 const menu = {
   Context,
+  contextTrigger,
   item,
   list,
   popover: popoverMixin,

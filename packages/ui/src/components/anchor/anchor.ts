@@ -24,6 +24,15 @@ export type AnchorPlacement =
 
 type AnchorOffsetValue = number | ((floating: HTMLElement) => number)
 
+export interface AnchorPoint {
+  height?: number
+  width?: number
+  x: number
+  y: number
+}
+
+export type AnchorTarget = HTMLElement | AnchorPoint
+
 export type AnchorOptions = {
   placement?: ExtendedAnchorPlacement
   inset?: boolean
@@ -123,6 +132,39 @@ function resolveOffsetValue(offset: AnchorOffsetValue | undefined, floating: HTM
   }
 
   return offset ?? 0
+}
+
+function isAnchorPoint(value: unknown): value is AnchorPoint {
+  if (typeof value !== 'object' || value === null) {
+    return false
+  }
+
+  if (!('x' in value) || !('y' in value)) {
+    return false
+  }
+
+  let width = 'width' in value ? value.width : undefined
+  let height = 'height' in value ? value.height : undefined
+
+  return (
+    typeof value.x === 'number' &&
+    typeof value.y === 'number' &&
+    (width === undefined || typeof width === 'number') &&
+    (height === undefined || typeof height === 'number')
+  )
+}
+
+function readAnchorRect(anchorTarget: AnchorTarget) {
+  if (anchorTarget instanceof HTMLElement) {
+    return anchorTarget.getBoundingClientRect()
+  }
+
+  return new DOMRect(
+    anchorTarget.x,
+    anchorTarget.y,
+    anchorTarget.width ?? 0,
+    anchorTarget.height ?? 0,
+  )
 }
 
 function calculatePosition(
@@ -468,7 +510,7 @@ function getFlippedPlacement(
   placementHeight: number,
   collisionWidth: number,
   collisionHeight: number,
-  anchor: HTMLElement,
+  anchorIsAbsolutePositioned: boolean,
   inset: boolean,
   offset: number,
   offsetX: number,
@@ -476,11 +518,9 @@ function getFlippedPlacement(
   relativeOffsetX?: number | null,
   relativeOffsetY?: number | null,
 ) {
-  let computedStyle = getComputedStyle(anchor)
-  let isAbsolutePositioned = computedStyle.position !== 'fixed'
   let hasScroll = window.scrollY > 0
 
-  if (placement.startsWith('top') && isAbsolutePositioned && hasScroll) {
+  if (placement.startsWith('top') && anchorIsAbsolutePositioned && hasScroll) {
     if (anchorRect.top - placementHeight < 0) {
       return placement
     }
@@ -641,7 +681,7 @@ function solveRelativeAlignmentAxis(options: {
 
 export function anchor(
   floating: HTMLElement,
-  anchorElement: HTMLElement,
+  anchorTarget: AnchorTarget,
   options: AnchorOptions = {},
 ): () => void {
   let lastAnchorRect: DOMRect
@@ -651,8 +691,8 @@ export function anchor(
     throw new TypeError('anchor() expected a floating HTMLElement')
   }
 
-  if (!(anchorElement instanceof HTMLElement)) {
-    throw new TypeError('anchor() expected an anchor HTMLElement')
+  if (!(anchorTarget instanceof HTMLElement) && !isAnchorPoint(anchorTarget)) {
+    throw new TypeError('anchor() expected an anchor HTMLElement or coordinates')
   }
 
   let {
@@ -664,12 +704,13 @@ export function anchor(
     offsetY: rawOffsetY = 0,
   } = options
 
-  let isFixed =
-    floating.hasAttribute('popover') || getComputedStyle(anchorElement).position === 'fixed'
+  let anchorIsAbsolutePositioned =
+    anchorTarget instanceof HTMLElement && getComputedStyle(anchorTarget).position !== 'fixed'
+  let isFixed = floating.hasAttribute('popover') || !anchorIsAbsolutePositioned
   let animationFrameId = 0
 
   function updatePosition(
-    anchorRect = anchorElement.getBoundingClientRect(),
+    anchorRect = readAnchorRect(anchorTarget),
     naturalDimensions = getFloatingDimensions(floating, relativeTo, {
       ignoreInlineMaxSize: true,
     }),
@@ -695,7 +736,7 @@ export function anchor(
       placementHeight,
       naturalDimensions.width,
       naturalDimensions.height,
-      anchorElement,
+      anchorIsAbsolutePositioned,
       inset,
       offset,
       offsetX,
@@ -872,7 +913,7 @@ export function anchor(
   updatePosition()
 
   function pollForPositionChanges() {
-    let currentRect = anchorElement.getBoundingClientRect()
+    let currentRect = readAnchorRect(anchorTarget)
     let currentDimensions = getFloatingDimensions(floating, relativeTo)
     if (
       hasRectChanged(currentRect, lastAnchorRect) ||

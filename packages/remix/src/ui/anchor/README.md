@@ -1,6 +1,6 @@
 # anchor
 
-`anchor` positions a floating element against an anchor element and keeps it constrained to the viewport. Use it for custom floating surfaces that need placement, flipping, offsets, and optional relative alignment.
+`anchor` positions a floating element against an anchor element or viewport coordinates and keeps it constrained to the viewport. Use it for custom floating surfaces that need placement, flipping, offsets, and optional relative alignment.
 
 ## Usage
 
@@ -49,11 +49,19 @@ popover.addEventListener('beforetoggle', (event) => {
 })
 ```
 
+Anchor to coordinates when the surface should open at a pointer location.
+
+```tsx
+let cleanup = anchor(popover, { x: event.clientX, y: event.clientY }, { placement: 'bottom-start' })
+```
+
 ## `anchor.*`
 
-- `anchor(floatingElement, anchorElement, options)`: positions `floatingElement` against `anchorElement`, starts animation-frame polling for geometry changes, and returns a cleanup function.
+- `anchor(floatingElement, anchorTarget, options)`: positions `floatingElement` against an element or coordinate target, starts animation-frame polling for geometry changes, and returns a cleanup function.
 - `AnchorOptions`: placement, inset, relative alignment, and offset options.
+- `AnchorPoint`: viewport coordinate target with `x`, `y`, and optional `width`/`height`.
 - `AnchorPlacement`: exported placement names for the main sides and top/bottom start/end alignment.
+- `AnchorTarget`: an `HTMLElement` or `AnchorPoint`.
 
 ## Placements
 
@@ -149,5 +157,5 @@ anchor(listbox, trigger, {
 - Oversized inset surfaces with `relativeTo` preserve alignment by scrolling the nearest scrollable descendant when possible.
 - `offset`, `offsetX`, and `offsetY` may be numbers or functions that receive the floating element.
 - `relativeTo` lets a surface align to an inner element, which is useful for selected options inside popovers.
-- `anchor` polls on animation frames for anchor or floating geometry changes and repositions when either changes.
+- `anchor` polls on animation frames for anchor target or floating geometry changes and repositions when either changes.
 - The returned cleanup function cancels animation-frame polling.
