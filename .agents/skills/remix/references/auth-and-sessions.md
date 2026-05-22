@@ -22,12 +22,12 @@ If a malicious user editing the value would be a bug, or if the value needs serv
 
 ### Quick chooser
 
-| Need | Best fit | Why |
-| --- | --- | --- |
-| Theme, locale, dismissed banner | `remix/cookie` | Browser-controlled preference |
-| Small signed hint with minimal lifecycle | `remix/cookie` | One value, no `Session` helpers needed |
+| Need                                                                | Best fit        | Why                                                |
+| ------------------------------------------------------------------- | --------------- | -------------------------------------------------- |
+| Theme, locale, dismissed banner                                     | `remix/cookie`  | Browser-controlled preference                      |
+| Small signed hint with minimal lifecycle                            | `remix/cookie`  | One value, no `Session` helpers needed             |
 | "This browser already submitted", cart, flash messages, login state | `remix/session` | Tamper-sensitive, server-managed per-browser state |
-| "One real person only", ownership, durable identity | account/auth | Cookies or sessions alone do not prove personhood |
+| "One real person only", ownership, durable identity                 | account/auth    | Cookies or sessions alone do not prove personhood  |
 
 ## Session Setup
 

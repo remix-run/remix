@@ -42,19 +42,19 @@ Classify the task first, then load the smallest useful reference set. Each refer
 
 Use the table below to find candidates. Loading more than two or three files at once is usually a sign that the task hasn't been narrowed enough yet.
 
-| Task involves... | Start with |
-| --- | --- |
-| Defining URLs, writing controllers and actions, returning responses | `references/routing-and-controllers.md` |
-| Composing the request lifecycle, ordering middleware, bridging to a server | `references/middleware-and-server.md` |
-| Compiling and serving browser modules, asset URL namespaces, preloads | `references/assets-and-browser-modules.md` |
-| Parsing input, validating with schemas, defining tables, querying, migrations | `references/data-and-validation.md` |
-| Per-browser state, login flows, route protection, identity | `references/auth-and-sessions.md` |
-| Component setup, state, lifecycle, updates, `queueTask`, context | `references/component-model.md` |
-| Event handlers, styles, refs, click/key behavior, simple animations | `references/mixins-styling-events.md` |
-| `clientEntry`, `run`, `<Frame>`, navigation, `<head>` | `references/hydration-frames-navigation.md` |
-| Router tests, component tests, test isolation | `references/testing-patterns.md` |
-| Spring physics, tweens, layout transitions | `references/animate-elements.md` |
-| Authoring custom reusable mixins | `references/create-mixins.md` |
+| Task involves...                                                              | Start with                                  |
+| ----------------------------------------------------------------------------- | ------------------------------------------- |
+| Defining URLs, writing controllers and actions, returning responses           | `references/routing-and-controllers.md`     |
+| Composing the request lifecycle, ordering middleware, bridging to a server    | `references/middleware-and-server.md`       |
+| Compiling and serving browser modules, asset URL namespaces, preloads         | `references/assets-and-browser-modules.md`  |
+| Parsing input, validating with schemas, defining tables, querying, migrations | `references/data-and-validation.md`         |
+| Per-browser state, login flows, route protection, identity                    | `references/auth-and-sessions.md`           |
+| Component setup, state, lifecycle, updates, `queueTask`, context              | `references/component-model.md`             |
+| Event handlers, styles, refs, click/key behavior, simple animations           | `references/mixins-styling-events.md`       |
+| `clientEntry`, `run`, `<Frame>`, navigation, `<head>`                         | `references/hydration-frames-navigation.md` |
+| Router tests, component tests, test isolation                                 | `references/testing-patterns.md`            |
+| Spring physics, tweens, layout transitions                                    | `references/animate-elements.md`            |
+| Authoring custom reusable mixins                                              | `references/create-mixins.md`               |
 
 Common bundles:
 
