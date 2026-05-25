@@ -153,6 +153,9 @@ export type Frame = {
   render: (content: InternalFrameContent, options?: RenderOptions) => Promise<void>
   ready: () => Promise<void>
   flush: () => void
+  clearPendingTemplateWatch: () => void
+  isDisplayingResolvedContent: () => boolean
+  updateMarker: (marker: FrameMarkerData, options?: RenderOptions) => Promise<void>
   dispose: () => void
   handle: FrameHandle
 }
@@ -161,15 +164,19 @@ type RenderOptions = {
   flushKind?: FlushKind
   initialHydrationTracker?: InitialHydrationTracker
   signal?: AbortSignal
+  contentStatus?: 'pending' | 'resolved'
 }
 
 export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let container = createContainer(root)
-  let observers: MutationObserver[] = []
-  let subscriptions: Array<() => void> = []
   let contentRoot: VirtualRoot | undefined
   let reloadController: AbortController | undefined
   let styleManager = init.styleManager ?? createStyleManager()
+  let currentMarker = init.marker
+  let displayedContentStatus: 'pending' | 'resolved' = init.marker?.status ?? 'resolved'
+  let pendingTemplateMarkerId: string | undefined
+  let pendingTemplateObserver: MutationObserver | undefined
+  let pendingTemplateUnsubscribe: (() => void) | undefined
 
   // Merge any rmx-data found in the current document once at startup.
   mergeRmxDataFromDocument(init.data, container.doc)
@@ -250,6 +257,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
       if (options?.signal?.aborted) return
       contentRoot.render(content)
+      displayedContentStatus = options?.contentStatus ?? 'resolved'
       return
     }
 
@@ -300,7 +308,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       let bodyContainer = createElementContainer(container.doc.body)
       if (options?.signal?.aborted) return
       scheduleHydrationInContainer(bodyContainer, context, options?.initialHydrationTracker)
-      createSubFrames(bodyContainer.childNodes, context)
+      await createSubFrames(bodyContainer.childNodes, context, options)
+      displayedContentStatus = options?.contentStatus ?? 'resolved'
       return
     }
 
@@ -324,7 +333,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     if (options?.signal?.aborted) return
     scheduleHydrationInContainer(container, context, options?.initialHydrationTracker)
-    createSubFrames(container.childNodes, context)
+    await createSubFrames(container.childNodes, context, options)
+    displayedContentStatus = options?.contentStatus ?? 'resolved'
   }
 
   function createFrameContentRoot(): VirtualRoot {
@@ -368,30 +378,11 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     let initialHydrationTracker = createInitialHydrationTracker()
 
     context.styleManager.replaceServerStyles(collectFrameServerStyleTags(container))
-    createSubFrames(container.childNodes, context)
+    await createSubFrames(container.childNodes, context)
     scheduleHydrationInContainer(container, context, initialHydrationTracker)
 
-    if (init.marker?.status === 'pending') {
-      let markerId = init.marker.id
-      let early = consumeFrameTemplate(markerId) ?? getEarlyFrameContent(markerId)
-      if (early) {
-        await render(early, { initialHydrationTracker })
-      } else {
-        let observer = setupTemplateObserver()
-        let unsubscribe = subscribeFrameTemplate(markerId, async (fragment) => {
-          unsubscribe()
-          await render(fragment)
-          observer.disconnect()
-        })
-        subscriptions.push(unsubscribe)
-        let buffered = consumeFrameTemplate(markerId)
-        if (buffered) {
-          unsubscribe()
-          await render(buffered)
-          observer.disconnect()
-        }
-        observers.push(observer)
-      }
+    if (currentMarker?.status === 'pending') {
+      await watchPendingFrameTemplate(currentMarker, initialHydrationTracker)
     }
 
     initialHydrationTracker.finalize()
@@ -403,16 +394,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     reloadController = undefined
     contentRoot?.dispose()
     contentRoot = undefined
-
-    // Disconnect any MutationObservers waiting for templates.
-    for (let observer of observers) {
-      observer.disconnect()
-    }
-    observers.length = 0
-    for (let unsubscribe of subscriptions) {
-      unsubscribe()
-    }
-    subscriptions.length = 0
+    clearPendingFrameTemplateWatch()
 
     // Remove hydrated virtual roots in this frame's region.
     removeVirtualRoots(container.childNodes)
@@ -434,8 +416,79 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     render,
     ready: () => readyPromise,
     flush: () => context.scheduler.dequeue(),
+    clearPendingTemplateWatch: clearPendingFrameTemplateWatch,
+    isDisplayingResolvedContent: () => displayedContentStatus === 'resolved',
+    updateMarker,
     dispose,
     handle: frame,
+  }
+
+  async function updateMarker(marker: FrameMarkerData, options?: RenderOptions): Promise<void> {
+    if (options?.signal?.aborted) return
+    currentMarker = marker
+    if (marker.status === 'pending') {
+      await watchPendingFrameTemplate(marker, options?.initialHydrationTracker, options?.signal)
+    } else {
+      clearPendingFrameTemplateWatch()
+    }
+  }
+
+  function clearPendingFrameTemplateWatch(): void {
+    pendingTemplateUnsubscribe?.()
+    pendingTemplateUnsubscribe = undefined
+    pendingTemplateObserver?.disconnect()
+    pendingTemplateObserver = undefined
+    pendingTemplateMarkerId = undefined
+  }
+
+  async function watchPendingFrameTemplate(
+    marker: FrameMarkerData,
+    initialHydrationTracker?: InitialHydrationTracker,
+    signal?: AbortSignal,
+  ): Promise<void> {
+    if (signal?.aborted) return
+    if (pendingTemplateMarkerId === marker.id) return
+
+    clearPendingFrameTemplateWatch()
+    pendingTemplateMarkerId = marker.id
+
+    let early = consumeFrameTemplate(marker.id) ?? getEarlyFrameContent(marker.id)
+    if (early) {
+      clearPendingFrameTemplateWatch()
+      await render(early, { initialHydrationTracker, signal, contentStatus: 'resolved' })
+      return
+    }
+
+    if (signal?.aborted) {
+      clearPendingFrameTemplateWatch()
+      return
+    }
+
+    let observer = setupTemplateObserver()
+    pendingTemplateObserver = observer
+    let unsubscribe = subscribeFrameTemplate(marker.id, async (fragment) => {
+      if (signal?.aborted) return
+      if (pendingTemplateMarkerId !== marker.id) return
+      clearPendingFrameTemplateWatch()
+      await render(fragment, { signal, contentStatus: 'resolved' })
+    })
+    pendingTemplateUnsubscribe = unsubscribe
+
+    signal?.addEventListener(
+      'abort',
+      () => {
+        if (pendingTemplateMarkerId === marker.id) {
+          clearPendingFrameTemplateWatch()
+        }
+      },
+      { once: true },
+    )
+
+    let buffered = consumeFrameTemplate(marker.id)
+    if (buffered) {
+      clearPendingFrameTemplateWatch()
+      await render(buffered, { initialHydrationTracker, signal, contentStatus: 'resolved' })
+    }
   }
 }
 
@@ -752,16 +805,32 @@ function hydrateRegion(
   root.render(vElement)
 }
 
-function createSubFrames(nodes: Node[], context: FrameContext) {
+async function createSubFrames(
+  nodes: Node[],
+  context: FrameContext,
+  options?: RenderOptions,
+): Promise<void> {
+  let tasks: Promise<void>[] = []
+
   for (let i = 0; i < nodes.length; i++) {
+    if (options?.signal?.aborted) break
+
     let node = nodes[i]
 
     if (isFrameStart(node)) {
       let end = findEndMarker(node, isFrameStart, isFrameEnd)
+      let existingFrame = context.frameInstances.get(node)
+      let id = getFrameId(node)
+      let marker = context.data.f?.[id]
 
-      if (!context.frameInstances.has(node)) {
-        let id = getFrameId(node)
-        let marker = context.data.f?.[id]
+      if (existingFrame) {
+        if (marker) {
+          let frameMarker: FrameMarkerData = { ...marker, id }
+          tasks.push(existingFrame.updateMarker(frameMarker, options))
+        } else {
+          existingFrame.clearPendingTemplateWatch()
+        }
+      } else {
         if (marker) {
           let frameMarker: FrameMarkerData = { ...marker, id }
           let subFrame = createFrame([node, end], {
@@ -788,9 +857,11 @@ function createSubFrames(nodes: Node[], context: FrameContext) {
     }
 
     if (node.childNodes && node.childNodes.length > 0) {
-      createSubFrames(Array.from(node.childNodes), context)
+      tasks.push(createSubFrames(Array.from(node.childNodes), context, options))
     }
   }
+
+  await Promise.all(tasks)
 }
 
 function isHydrationMarkerLive(marker: HydrationMarker, context: FrameContext): boolean {
