@@ -17,7 +17,6 @@ import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { ResolveModuleResult, TransformedModule } from './transform.ts'
 import type { EmittedModule } from './emit.ts'
-import { isBareImportSpecifier } from './specifiers.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -92,11 +91,6 @@ type NormalizedSpecifierResolution = {
   specifier: string
 }
 
-type SpecifierResolutionImporter = {
-  identityPath: string
-  resolvedPath: string
-}
-
 export async function resolveModule(
   record: ScriptRecord,
   transformed: TransformedModule,
@@ -111,10 +105,7 @@ export async function resolveModule(
       transformed.unresolvedImports.length > 0
         ? await batchResolveSpecifiers(
             getUniqueSpecifiers(transformed.unresolvedImports),
-            {
-              identityPath: transformed.identityPath,
-              resolvedPath: transformed.resolvedPath,
-            },
+            transformed.resolvedPath,
             args.resolverFactory,
           )
         : new Map<string, ResolvedSpec>()
@@ -205,10 +196,8 @@ export async function resolveModule(
     deps.add(resolvedImport.identityPath)
 
     if (transformed.packageSpecifiers.includes(unresolved.specifier)) {
-      let packageJsonPath = resolvePackageJsonPath(
-        resolvedSpec.packageJsonPath,
-        resolvedImport.resolvedPath,
-      )
+      let packageJsonPath =
+        resolvedSpec.packageJsonPath ?? findNearestPackageJsonPath(resolvedImport.resolvedPath)
       if (packageJsonPath && !args.isWatchIgnored(packageJsonPath)) {
         trackedFiles.add(packageJsonPath)
       }
@@ -246,25 +235,6 @@ export async function resolveModule(
   }
 }
 
-function resolvePackageJsonPath(
-  packageJsonPath: string | null,
-  resolvedPath: string,
-): string | null {
-  return (
-    (packageJsonPath ? resolveExistingPath(packageJsonPath) : null) ??
-    findNearestPackageJsonPath(resolvedPath)
-  )
-}
-
-function resolveExistingPath(filePath: string): string | null {
-  try {
-    return normalizeFilePath(fs.realpathSync(filePath))
-  } catch (error) {
-    if (isNoEntityError(error)) return null
-    throw error
-  }
-}
-
 function findNearestPackageJsonPath(filePath: string): string | null {
   let directory = path.dirname(filePath)
 
@@ -278,17 +248,6 @@ function findNearestPackageJsonPath(filePath: string): string | null {
     if (parentDirectory === directory) return null
     directory = parentDirectory
   }
-}
-
-function isNoEntityError(
-  error: unknown,
-): error is NodeJS.ErrnoException & { code: 'ENOENT' | 'ENOTDIR' } {
-  return (
-    error instanceof Error &&
-    'code' in error &&
-    ((error as NodeJS.ErrnoException).code === 'ENOENT' ||
-      (error as NodeJS.ErrnoException).code === 'ENOTDIR')
-  )
 }
 
 function isRelativeImportSpecifier(specifier: string): boolean {
@@ -367,7 +326,7 @@ function resolveCandidateBasePath(importerDir: string, specifier: string): strin
 
 async function batchResolveSpecifiers(
   specifiers: string[],
-  importer: SpecifierResolutionImporter,
+  importerPath: string,
   resolverFactory: ResolveArgs['resolverFactory'],
 ): Promise<Map<string, ResolvedSpec>> {
   let resolvedBySpecifier = new Map<string, ResolvedSpec>()
@@ -375,7 +334,7 @@ async function batchResolveSpecifiers(
 
   try {
     for (let specifier of specifiers) {
-      let normalizedResolution = normalizeSpecifierResolution(specifier, importer)
+      let normalizedResolution = normalizeSpecifierResolution(specifier, importerPath)
       let resolutionResult = await resolverFactory.resolveFileAsync(
         normalizedResolution.importerPath,
         normalizedResolution.specifier,
@@ -409,7 +368,7 @@ async function batchResolveSpecifiers(
     }
 
     throw createAssetServerCompilationError(
-      `Failed to resolve imports in ${importer.identityPath}. ${formatUnknownError(error)}`,
+      `Failed to resolve imports in ${importerPath}. ${formatUnknownError(error)}`,
       {
         cause: error,
         code: 'IMPORT_RESOLUTION_FAILED',
@@ -430,12 +389,12 @@ function formatUnknownError(error: unknown): string {
 
 function normalizeSpecifierResolution(
   specifier: string,
-  importer: SpecifierResolutionImporter,
+  importerPath: string,
 ): NormalizedSpecifierResolution {
   let authoredInjectedPackageSpecifier = restoreAuthoredInjectedPackageSpecifier(specifier)
   if (authoredInjectedPackageSpecifier) {
     return {
-      importerPath: getSpecifierImporterPath(authoredInjectedPackageSpecifier, importer),
+      importerPath,
       specifier: authoredInjectedPackageSpecifier,
     }
   }
@@ -448,16 +407,9 @@ function normalizeSpecifierResolution(
   }
 
   return {
-    importerPath: getSpecifierImporterPath(specifier, importer),
+    importerPath,
     specifier,
   }
-}
-
-function getSpecifierImporterPath(
-  specifier: string,
-  importer: SpecifierResolutionImporter,
-): string {
-  return isBareImportSpecifier(specifier) ? importer.resolvedPath : importer.identityPath
 }
 
 function getDisplayImportSpecifier(specifier: string): string {

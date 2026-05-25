@@ -16,6 +16,7 @@ interface PackageJsonWithEngines {
 
 interface CliPackageJson extends PackageJsonWithEngines {
   bin?: Record<string, string>
+  dependencies?: Record<string, string>
   publishConfig: {
     bin?: Record<string, string>
   }
@@ -47,6 +48,10 @@ describe('cli entrypoint', () => {
     assert.equal(cliPackageJson.publishConfig.bin, undefined)
     assert.equal(cliPackageJson.scripts.cli, undefined)
     assert.equal(fs.existsSync(resolve(PACKAGE_DIR, 'src', 'cli.ts')), false)
+  })
+
+  it('does not publish Prettier as a runtime dependency', () => {
+    assert.equal(readCliPackageJson().dependencies?.prettier, undefined)
   })
 
   it('declares the Node.js floor for published CLI entrypoints', () => {
