@@ -166,7 +166,7 @@ describe('Matcher', () => {
         assert.deepEqual(match.params, { sub: 'api', version: 'v2', tld: 'dev' })
       })
 
-      it('matches mixed static/variable/wildcard segments', () => {
+      it('matches mixed static/variable/wildcards', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://*prefix.:env.example.com/api', null)
 
@@ -303,7 +303,7 @@ describe('Matcher', () => {
         assert.equal(matcher.match('http://example.com/users/'), null)
       })
 
-      it('matches variable segments', () => {
+      it('matches variables', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users/:id', null)
 
@@ -330,14 +330,14 @@ describe('Matcher', () => {
         assert.deepEqual(match.params, { filename: 'my-file_v2.txt' })
       })
 
-      it('does not partially match variable segments after a static suffix', () => {
+      it('does not partially match variables after a static suffix', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/report-:format.pdf', null)
 
         assert.equal(matcher.match('http://example.com/files/report-json.pdf.backup'), null)
       })
 
-      it('matches wildcard segments', () => {
+      it('matches wildcards', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/*path', null)
 
@@ -355,7 +355,7 @@ describe('Matcher', () => {
         assert.deepEqual(match.params, { path: 'docs/api' })
       })
 
-      it('does not partially match wildcard segments before a static suffix', () => {
+      it('does not partially match wildcards before a static suffix', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/*path/status', null)
 
@@ -428,7 +428,7 @@ describe('Matcher', () => {
         assert.deepEqual(match2.params, { id: 'doc123', format: undefined })
       })
 
-      it('matches mixed static/variable/wildcard segments', () => {
+      it('matches mixed static/variable/wildcards', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/api/:version/files/*path', null)
 
@@ -708,7 +708,18 @@ describe('Matcher', () => {
           'ｗｉｄｅ', // fullwidth
         ]
 
-        it('decodes percent-encoded Unicode variable segments', () => {
+        it('matches percent-encoded Unicode static segments', () => {
+          for (let value of pathnameCodec) {
+            let matcher = createMultiMatcher<null>()
+            matcher.add(`://example.com/${value}`, null)
+
+            let url = new URL(`https://example.com/${value}`)
+            let match = matcher.match(url.href)
+            assert.deepEqual(match?.params, {})
+          }
+        })
+
+        it('decodes percent-encoded Unicode variables', () => {
           for (let value of pathnameCodec) {
             let matcher = createMultiMatcher<null>()
             matcher.add('://example.com/:value', null)
@@ -719,7 +730,7 @@ describe('Matcher', () => {
           }
         })
 
-        it('decodes percent-encoded Unicode wildcard segments', () => {
+        it('decodes percent-encoded Unicode wildcards', () => {
           for (let value of pathnameCodec) {
             let matcher = createMultiMatcher<null>()
             matcher.add('://example.com/files/*path', null)
@@ -730,11 +741,74 @@ describe('Matcher', () => {
           }
         })
 
+        it('normalizes percent-encoded ASCII in static segments', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/a', null)
+
+          let match = matcher.match('https://example.com/%61')
+          assert.deepEqual(match?.params, {})
+        })
+
+        it('treats raw and percent-encoded URL path-safe static text as equivalent', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('/packages/@scope+name,semi;equals=/file', null)
+
+          assert.deepEqual(
+            matcher.match('https://example.com/packages/@scope+name,semi;equals=/file')?.params,
+            {},
+          )
+          assert.deepEqual(
+            matcher.match('https://example.com/packages/%40scope%2Bname%2Csemi%3Bequals%3D/file')
+              ?.params,
+            {},
+          )
+        })
+
+        it('decodes percent-encoded ASCII in variables', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/:value', null)
+
+          let match = matcher.match('https://example.com/%61')
+          assert.deepEqual(match?.params, { value: 'a' })
+        })
+
+        it('decodes percent-encoded ASCII in wildcards', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/*path', null)
+
+          let match = matcher.match('https://example.com/files/%61')
+          assert.deepEqual(match?.params, { path: 'a' })
+        })
+
         it('does not match encoded slashes as pathname separators', () => {
           let matcher = createMultiMatcher<null>()
           matcher.add('://example.com/files/:dir/:name', null)
 
           assert.equal(matcher.match('http://example.com/files/docs%2Freadme.md'), null)
+        })
+
+        it('decodes encoded slashes in variables', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/:name', null)
+
+          let match = matcher.match('https://example.com/files/docs%2Freadme.md')
+          assert.deepEqual(match?.params, { name: 'docs/readme.md' })
+        })
+
+        it('decodes encoded slashes in wildcards with continuation', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/*path/status', null)
+
+          let match = matcher.match('https://example.com/files/docs%2Freadme.md/status')
+          assert.deepEqual(match?.params, { path: 'docs/readme.md' })
+        })
+
+        it('decodes structural slashes in wildcards with continuation', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/*path/status', null)
+
+          let match = matcher.match('https://example.com/files/docs/readme.md/status')
+          assert.deepEqual(match?.params, { path: 'docs/readme.md' })
         })
 
         it('decodes structural URL chars in variables encoded by createHref', () => {
