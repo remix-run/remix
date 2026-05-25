@@ -1,6 +1,5 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import * as prettier from 'prettier'
 
 import { processTemplateFile } from './process-template-file.ts'
 
@@ -70,14 +69,7 @@ async function processTemplateDirectory(directory: string): Promise<void> {
     }
 
     let content = await fs.readFile(entryPath, 'utf8')
-    let processed = processTemplateFile(content)
-    let fileInfo = await prettier.getFileInfo(entryPath)
-
-    if (fileInfo.inferredParser) {
-      let config = await prettier.resolveConfig(entryPath)
-      processed = await prettier.format(processed, { ...config, filepath: entryPath })
-    }
-
+    let processed = await processTemplateFile(content, entryPath)
     await fs.writeFile(entryPath, processed, 'utf8')
   }
 }
