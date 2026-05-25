@@ -63,3 +63,10 @@ test('processTemplateFile throws when an end marker is unmatched', async () => {
     /Unmatched template remove marker/,
   )
 })
+
+test('processTemplateFile throws when a template directive is unknown', async () => {
+  await assert.rejects(
+    () => processTemplateFile('before /* remix-template:remove-strat */ after', 'template.txt'),
+    /Unknown template directive/,
+  )
+})
