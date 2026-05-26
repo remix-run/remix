@@ -3,6 +3,7 @@ import MagicString from 'magic-string'
 import * as fsp from 'node:fs/promises'
 import * as http from 'node:http'
 import { createRequire } from 'node:module'
+import type { AddressInfo } from 'node:net'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
@@ -14,40 +15,45 @@ const logError = (str: string, e: unknown) => console.error(`[remix:test] Error:
 
 export async function startServer(
   browserFiles: string[],
-): Promise<{ server: http.Server; port: number }> {
+): Promise<{ server: http.Server; port: number; baseUrl: string }> {
   let handle = createRequestHandler(browserFiles)
-  let port = 44101
 
-  let lastError: unknown
-  for (let i = 0; i < 5; i++) {
-    try {
-      let server = http.createServer((req, res) => {
-        handle(req, res).catch((error) => {
-          logError(`Unhandled error for ${req.url}`, error)
-          if (!res.headersSent) {
-            res.writeHead(500, { 'Content-Type': 'text/plain' })
-          }
-          if (!res.writableEnded) res.end()
-        })
+  let server = http.createServer((req, res) => {
+    handle(req, res).catch((error) => {
+      logError(`Unhandled error for ${req.url}`, error)
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' })
+      }
+      if (!res.writableEnded) res.end()
+    })
+  })
+
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, () => {
+      server.removeListener('error', reject)
+      resolve()
+    })
+  })
+
+  let address = server.address()
+  if (!isAddressInfo(address)) {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) reject(error)
+        else resolve()
       })
-      await new Promise<void>((resolve, reject) => {
-        server.once('error', reject)
-        server.listen(port, () => {
-          server.removeListener('error', reject)
-          log(`Test server running on http://localhost:${port}`)
-          resolve()
-        })
-      })
-      return { server, port }
-    } catch (error: any) {
-      if (error.code !== 'EADDRINUSE') throw error
-      lastError = error
-      log(`Port ${port} is in use, trying another port...`)
-      port += 1
-    }
+    })
+    throw new Error('Test server did not bind to a TCP port')
   }
 
-  throw lastError
+  let baseUrl = `http://localhost:${address.port}`
+  log(`Test server running on ${baseUrl}`)
+  return { server, port: address.port, baseUrl }
+}
+
+function isAddressInfo(address: ReturnType<http.Server['address']>): address is AddressInfo {
+  return address != null && typeof address === 'object'
 }
 
 function createRequestHandler(
