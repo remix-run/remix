@@ -8,8 +8,17 @@ export const assetServer = createAssetServer({
   fileMap: {
     'app/*path': 'app/*path',
     'node_modules/*path': 'node_modules/*path',
+    /* remix-template:remove-start This is only needed inside the Remix monorepo. */
+    'packages/*path': '../packages/*path',
+    /* remix-template:remove-end */
   },
-  allow: ['app/assets/**', 'node_modules/**'],
+  allow: [
+    'app/assets/**',
+    'node_modules/**',
+    /* remix-template:remove-start This is only needed inside the Remix monorepo. */
+    '../packages/**',
+    /* remix-template:remove-end */
+  ],
   deny: ['app/**/*.server.*'],
   sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
   scripts: {

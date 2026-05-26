@@ -30,7 +30,6 @@ import { composeSourceMaps, rewriteSourceMapSources, stringifySourceMap } from '
 import type { EmittedModule } from './emit.ts'
 import type { ResolvedScriptTarget } from '../target.ts'
 import type { ResolvedModule } from './resolve.ts'
-import { isBareImportSpecifier } from './specifiers.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -262,7 +261,7 @@ export async function transformModule(
                 content: sourceText,
               }),
         identityPath: record.identityPath,
-        importerDir: path.dirname(record.identityPath),
+        importerDir: path.dirname(resolvedPath),
         packageSpecifiers: analysis.unresolvedImports
           .filter((unresolved) => isBareImportSpecifier(unresolved.specifier))
           .map((unresolved) => unresolved.specifier),
@@ -298,6 +297,18 @@ function findNearestTsconfigPath(directory: string): string | null {
     if (parentDirectory === currentDirectory) return null
     currentDirectory = parentDirectory
   }
+}
+
+function isBareImportSpecifier(specifier: string): boolean {
+  return (
+    !specifier.startsWith('./') &&
+    !specifier.startsWith('../') &&
+    !specifier.startsWith('/') &&
+    !specifier.startsWith('file:') &&
+    !specifier.startsWith('data:') &&
+    !specifier.startsWith('http://') &&
+    !specifier.startsWith('https://')
+  )
 }
 
 async function analyzeModuleSource(
