@@ -69,10 +69,10 @@ Composite primary keys go on the table option, not the column: `primaryKey: ['or
 
 ### Schema vs migrations
 
-Column modifiers describe SQL constraints — the source of truth for them is your **migration** files, where they generate the actual DDL. Runtime `table(...)` definitions in `app/data/schema.ts` can use the same modifiers, or they can stay minimal (`c.integer()`, `c.text()`, ...) since the runtime only needs the column shape and validation hooks. Two valid patterns:
+Column modifiers on runtime `table(...)` definitions in `app/data/schema.ts` describe app-facing column metadata. They do not create or update database tables by themselves. The source of truth for actual DDL and constraints is your hand-written SQL migration files. Two valid patterns:
 
-- **Modifiers in both** — schema and migrations stay in sync visually; useful when you want schema-level docs.
-- **Bare columns in schema, full modifiers in migrations** — schema describes what the app reads and writes; migrations own the DDL and constraints.
+- **Mirror constraints in schema and SQL** — table definitions stay useful as schema-level docs, and migrations still own the actual DDL.
+- **Bare columns in schema, constraints in SQL** — schema describes what the app reads and writes; migrations own the DDL and constraints.
 
 Pick one and apply it consistently across the app.
 
@@ -184,45 +184,50 @@ let featured = await db.findMany(books, {
 
 ## Migrations
 
+Migrations are plain SQL files. Each migration is a directory named `YYYYMMDDHHmmss_<slug>/` containing a hand-written `up.sql` (required) and an optional `down.sql` (omit for irreversible migrations).
+
+```txt
+db/
+  migrations/
+    20260228090000_create_users/
+      up.sql
+      down.sql
+    20260301083000_add_books_search_index/
+      up.sql
+```
+
 ### Writing migrations
 
-```typescript
-import { column as c, createMigration } from 'remix/data-table/migrations'
-import { table } from 'remix/data-table'
+Write standard SQL in `up.sql` and `down.sql`:
 
-export default createMigration({
-  async up({ schema }) {
-    let users = table({
-      name: 'users',
-      columns: {
-        id: c.integer().primaryKey().autoIncrement(),
-        email: c.text().notNull().unique(),
-        name: c.text().notNull(),
-      },
-    })
-    await schema.createTable(users)
-    await schema.createIndex(users, 'email', { name: 'users_email_idx', unique: true })
-  },
+```sql
+-- up.sql
+create table users (
+  id integer primary key autoincrement,
+  email text not null unique,
+  name text not null
+);
 
-  async down({ schema }) {
-    await schema.dropTable('users')
-  },
-})
+create index users_email_idx on users (email);
 ```
 
-Migrations can also import table definitions from the app schema to avoid duplication:
-
-```typescript
-import { createMigration } from 'remix/data-table/migrations'
-import { users, authAccounts } from '../../app/data/schema.ts'
-
-export default createMigration({
-  async up({ schema }) {
-    await schema.createTable(users)
-    await schema.createTable(authAccounts)
-  },
-})
+```sql
+-- down.sql
+drop table if exists users;
 ```
+
+Do **not** import app code (e.g. `app/data/schema.ts`) into migration files. Migrations must be stable, immutable artifacts — importing live schema definitions creates drift between what the migration meant when it was written and what it does when replayed later. SQL files guarantee stability because they cannot import anything.
+
+### Transaction modes
+
+Migrations run inside a transaction by default (when the adapter supports transactional DDL). Override per migration with a directive comment in `up.sql`:
+
+```sql
+-- data-table/transaction: none
+create index concurrently users_email_idx on users (email);
+```
+
+Modes: `auto` (default — wrap when supported), `required` (wrap; throw if unsupported), `none` (never wrap).
 
 ### Running migrations
 
@@ -235,9 +240,7 @@ let runner = createMigrationRunner(adapter, migrations)
 await runner.up()
 ```
 
-### Migration file naming
-
-Name migration files with a timestamp prefix: `20260228090000_create_users.ts`. Place them in `db/migrations/`.
+The runner checksums each `up.sql` and detects drift if a previously applied migration changes. Use `runner.status()` to inspect applied/pending/drifted state, and `runner.down()` to revert.
 
 ## Input Validation (`remix/data-schema`)
 
