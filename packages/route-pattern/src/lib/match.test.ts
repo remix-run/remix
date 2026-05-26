@@ -653,6 +653,30 @@ describe('Matcher', () => {
       })
     })
 
+    describe('escaping', () => {
+      describe('hostname', () => {
+        it('matches escaped special chars in static text', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://a\\*b.c\\(d\\).example.com/users', null)
+
+          let match = matcher.match('https://a*b.c(d).example.com/users')
+          assert.ok(match)
+          assert.deepEqual(match.params, {})
+        })
+      })
+
+      describe('pathname', () => {
+        it('matches escaped special chars in static text', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('/a\\:b/c\\*d/e\\(f\\)/g\\\\h', null)
+
+          let match = matcher.match('https://example.com/a%3Ab/c*d/e(f)/g%5Ch')
+          assert.ok(match)
+          assert.deepEqual(match.params, {})
+        })
+      })
+    })
+
     describe('codec', () => {
       // Unlike pathname params, hostname labels can't use the emoji, zwj,
       // nbsp, or fullwidth cases; see:
