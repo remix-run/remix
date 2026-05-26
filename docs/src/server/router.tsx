@@ -55,16 +55,6 @@ export function createRouter(versions: Versions) {
       let body = await stream(router, request, node, init)
       return createHtmlResponse(body, init)
     },
-    async fragment(request: Request, node: RemixNode, init?: ResponseInit) {
-      let body = await stream(router, request, node, init)
-      return new Response(body, {
-        ...init,
-        headers: {
-          'Content-Type': 'text/html; charset=utf-8',
-          ...init?.headers,
-        },
-      })
-    },
   }
 
   router.map(routes, {

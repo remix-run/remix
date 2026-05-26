@@ -8,6 +8,7 @@ catalog:
 packages:
   - demos/*
   - docs
+  - docs/src/prerender/bench
   - packages/*
   - packages/*/demo
   - packages/assets/bench
