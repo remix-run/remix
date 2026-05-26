@@ -2,7 +2,6 @@ import * as cp from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
-import { createMatcher } from 'remix/route-pattern/match'
 import * as semver from 'semver'
 import { assetServer } from '../server/asset-server.ts'
 import { createRouter, getDefaultVersions } from '../server/router.tsx'
@@ -10,9 +9,6 @@ import { routes } from '../server/routes.ts'
 import type { Versions } from '../server/view.tsx'
 import { crawl } from './crawl.ts'
 import { parse } from './html-parser.ts'
-
-let docsMatcher = createMatcher(routes.docs.pattern)
-let markdownMatcher = createMatcher(routes.markdown.pattern)
 
 let { values: cliArgs } = util.parseArgs({
   options: {
@@ -39,29 +35,19 @@ const docsRouter = createRouter(versions)
 // unversioned so a single copy at the output root covers every version.
 await fs.cp(publicDir, outputDir, { recursive: true })
 
-// First pass: spider the site and collect markdown variant paths
-let paths = [
-  '/',
-  '/api.json',
+// Spider the site
+const paths = [
+  routes.home.href(),
+  routes.lookup.href(),
   ...(versions
     ?.filter((v) => v.crawl)
-    .flatMap((v) => [`/${v.version}/api.json`, `/${v.version}/`]) || []),
+    .flatMap((v) => [
+      routes.home.href({ version: v.version }),
+      routes.lookup.href({ version: v.version }),
+    ]) || []),
 ]
-let variantPaths: string[] = []
-for await (let { pathname, filepath, response } of crawl(docsRouter, { paths })) {
-  await writeResult(pathname, filepath, response)
-  let url = `http://localhost${pathname}`
-  let match = docsMatcher.match(url)
-  if (match && !markdownMatcher.match(url)) {
-    variantPaths.push(routes.markdown.href(match.params))
-  }
-}
 
-// Second pass: fetch variant paths without spidering
-for await (let { pathname, filepath, response } of crawl(docsRouter, {
-  paths: variantPaths,
-  spider: false,
-})) {
+for await (let { pathname, filepath, response } of crawl(docsRouter, { paths })) {
   await writeResult(pathname, filepath, response)
 }
 
@@ -75,15 +61,14 @@ async function writeResult(pathname: string, filepath: string, response: Respons
   let outputPath = path.join(outputDir, outputFilepath)
   await fs.mkdir(path.dirname(outputPath), { recursive: true })
 
-  // GitHub Pages serves `.ts`/`.tsx`/`.jsx`/`.mts` with a non-JS MIME type, which
-  // browsers refuse to execute as ES modules. HTML URL references, JS import
-  // strings, and emitted script filenames are rewritten in `writeResult` before
-  // anything is written to disk.
   if (response.headers.get('Content-Type')?.includes('text/html')) {
     let html = await response.text()
-    await fs.writeFile(outputPath, rewriteHtmlScriptExtensionsToJs(html), 'utf-8')
+    // Update all HTML script references to reference JS files for static HTML hosting
+    let updated = rewriteExtensionsToJs(html)
+    await fs.writeFile(outputPath, updated, 'utf-8')
   } else if (SCRIPT_FILE_EXT.test(filepath)) {
     let content = await response.text()
+    // Write all script files to disk as JS files
     await fs.writeFile(outputPath, content.replace(SCRIPT_EXT_IN_JS_IMPORT, '.js'), 'utf-8')
   } else {
     await fs.writeFile(outputPath, new Uint8Array(await response.arrayBuffer()))
@@ -92,7 +77,7 @@ async function writeResult(pathname: string, filepath: string, response: Respons
   console.log(`Crawled ${pathname} -> ./${path.relative(process.cwd(), outputPath)}`)
 }
 
-function rewriteHtmlScriptExtensionsToJs(html: string): string {
+function rewriteExtensionsToJs(html: string): string {
   // Parse and rewrite *only* link/script asset attributes, plus inline
   // <script> bodies (clientEntry's hydration JSON carries module URLs as
   // `"moduleUrl":"/assets/.../foo.tsx"` strings). A regex over the whole
