@@ -69,10 +69,10 @@ Composite primary keys go on the table option, not the column: `primaryKey: ['or
 
 ### Schema vs migrations
 
-Column modifiers describe SQL constraints — the source of truth for them is your **migration** files, where they generate the actual DDL. Runtime `table(...)` definitions in `app/data/schema.ts` can use the same modifiers, or they can stay minimal (`c.integer()`, `c.text()`, ...) since the runtime only needs the column shape and validation hooks. Two valid patterns:
+Column modifiers on runtime `table(...)` definitions in `app/data/schema.ts` describe app-facing column metadata. They do not create or update database tables by themselves. The source of truth for actual DDL and constraints is your hand-written SQL migration files. Two valid patterns:
 
-- **Modifiers in both** — schema and migrations stay in sync visually; useful when you want schema-level docs.
-- **Bare columns in schema, full modifiers in migrations** — schema describes what the app reads and writes; migrations own the DDL and constraints.
+- **Mirror constraints in schema and SQL** — table definitions stay useful as schema-level docs, and migrations still own the actual DDL.
+- **Bare columns in schema, constraints in SQL** — schema describes what the app reads and writes; migrations own the DDL and constraints.
 
 Pick one and apply it consistently across the app.
 
