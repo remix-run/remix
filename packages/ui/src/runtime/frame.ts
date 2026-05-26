@@ -129,6 +129,7 @@ export type FrameContext = {
   namedFrames: Map<string, FrameHandle>
   regionTailRef?: ChildNode | null
   regionParent?: ParentNode | null
+  signal?: AbortSignal
 }
 
 type FrameInit = {
@@ -155,7 +156,13 @@ export type Frame = {
   flush: () => void
   clearPendingTemplateWatch: () => void
   isDisplayingResolvedContent: () => boolean
+  startInheritedReload: (signal?: AbortSignal) => void
   updateMarker: (marker: FrameMarkerData, options?: RenderOptions) => Promise<void>
+  renderMarkerContent: (
+    marker: FrameMarkerData,
+    content: InternalFrameContent,
+    options?: RenderOptions,
+  ) => Promise<void>
   dispose: () => void
   handle: FrameHandle
 }
@@ -177,6 +184,8 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let pendingTemplateMarkerId: string | undefined
   let pendingTemplateObserver: MutationObserver | undefined
   let pendingTemplateUnsubscribe: (() => void) | undefined
+  let inheritedReloadPending = false
+  let inheritedReloadAbortUnsubscribe: (() => void) | undefined
 
   // Merge any rmx-data found in the current document once at startup.
   mergeRmxDataFromDocument(init.data, container.doc)
@@ -191,6 +200,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       let controller = new AbortController()
       reloadController = controller
       frame.dispatchEvent(new Event('reloadStart'))
+      startSubFrameInheritedReloads(getContentNodes(), controller.signal)
       try {
         let content = await init.resolveFrame(frame.src, controller.signal, frameName)
         if (reloadController !== controller || controller.signal.aborted) return controller.signal
@@ -298,11 +308,13 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         ...context,
         regionParent: container.doc.documentElement,
         regionTailRef: null,
+        signal: options?.signal,
       })
       diffNodes([container.doc.body], [parsed.body], {
         ...context,
         regionParent: container.doc.documentElement,
         regionTailRef: null,
+        signal: options?.signal,
       })
 
       let bodyContainer = createElementContainer(container.doc.body)
@@ -329,6 +341,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       ...context,
       regionTailRef: container.regionTailRef,
       regionParent: container.regionParent,
+      signal: options?.signal,
     })
 
     if (options?.signal?.aborted) return
@@ -418,18 +431,107 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     flush: () => context.scheduler.dequeue(),
     clearPendingTemplateWatch: clearPendingFrameTemplateWatch,
     isDisplayingResolvedContent: () => displayedContentStatus === 'resolved',
+    startInheritedReload,
     updateMarker,
+    renderMarkerContent,
     dispose,
     handle: frame,
   }
 
   async function updateMarker(marker: FrameMarkerData, options?: RenderOptions): Promise<void> {
     if (options?.signal?.aborted) return
+    let previousMarker = currentMarker
+    let isInheritedReload = previousMarker !== undefined && previousMarker.id !== marker.id
     currentMarker = marker
+
+    if (isInheritedReload) {
+      startInheritedReload(options?.signal)
+    }
+
     if (marker.status === 'pending') {
-      await watchPendingFrameTemplate(marker, options?.initialHydrationTracker, options?.signal)
+      await watchPendingFrameTemplate(
+        marker,
+        options?.initialHydrationTracker,
+        options?.signal,
+        isInheritedReload
+          ? () => {
+              completeInheritedReload()
+            }
+          : undefined,
+      )
     } else {
       clearPendingFrameTemplateWatch()
+      if (isInheritedReload && !options?.signal?.aborted) {
+        completeInheritedReload()
+      }
+    }
+  }
+
+  async function renderMarkerContent(
+    marker: FrameMarkerData,
+    content: InternalFrameContent,
+    options?: RenderOptions,
+  ): Promise<void> {
+    if (options?.signal?.aborted) return
+    let previousMarker = currentMarker
+    let isInheritedReload = previousMarker !== undefined && previousMarker.id !== marker.id
+    currentMarker = marker
+
+    if (isInheritedReload) {
+      startInheritedReload(options?.signal)
+    }
+
+    clearPendingFrameTemplateWatch()
+    await render(content, { ...options, contentStatus: 'resolved' })
+
+    if (isInheritedReload && !options?.signal?.aborted) {
+      completeInheritedReload()
+    }
+  }
+
+  function startInheritedReload(signal?: AbortSignal): void {
+    if (signal?.aborted) return
+    if (!inheritedReloadPending) {
+      inheritedReloadPending = true
+      frame.dispatchEvent(new Event('reloadStart'))
+      startSubFrameInheritedReloads(getContentNodes(), signal)
+    }
+
+    inheritedReloadAbortUnsubscribe?.()
+    inheritedReloadAbortUnsubscribe = undefined
+    if (signal) {
+      let abort = () => completeInheritedReload()
+      signal.addEventListener('abort', abort, { once: true })
+      inheritedReloadAbortUnsubscribe = () => {
+        signal.removeEventListener('abort', abort)
+      }
+    }
+  }
+
+  function completeInheritedReload(): void {
+    if (!inheritedReloadPending) return
+    inheritedReloadPending = false
+    inheritedReloadAbortUnsubscribe?.()
+    inheritedReloadAbortUnsubscribe = undefined
+    frame.dispatchEvent(new Event('reloadComplete'))
+  }
+
+  function startSubFrameInheritedReloads(nodes: Node[], signal?: AbortSignal): void {
+    for (let i = 0; i < nodes.length; i++) {
+      if (signal?.aborted) break
+
+      let node = nodes[i]
+
+      if (isFrameStart(node)) {
+        let end = findEndMarker(node, isFrameStart, isFrameEnd)
+        context.frameInstances.get(node)?.startInheritedReload(signal)
+        i = nodes.indexOf(end)
+        continue
+      }
+
+      if (node.childNodes && node.childNodes.length > 0) {
+        startSubFrameInheritedReloads(Array.from(node.childNodes), signal)
+      }
     }
   }
 
@@ -445,6 +547,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     marker: FrameMarkerData,
     initialHydrationTracker?: InitialHydrationTracker,
     signal?: AbortSignal,
+    onResolved?: () => void,
   ): Promise<void> {
     if (signal?.aborted) return
     if (pendingTemplateMarkerId === marker.id) return
@@ -456,6 +559,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (early) {
       clearPendingFrameTemplateWatch()
       await render(early, { initialHydrationTracker, signal, contentStatus: 'resolved' })
+      if (!signal?.aborted) onResolved?.()
       return
     }
 
@@ -471,6 +575,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       if (pendingTemplateMarkerId !== marker.id) return
       clearPendingFrameTemplateWatch()
       await render(fragment, { signal, contentStatus: 'resolved' })
+      if (!signal?.aborted) onResolved?.()
     })
     pendingTemplateUnsubscribe = unsubscribe
 
@@ -488,6 +593,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (buffered) {
       clearPendingFrameTemplateWatch()
       await render(buffered, { initialHydrationTracker, signal, contentStatus: 'resolved' })
+      if (!signal?.aborted) onResolved?.()
     }
   }
 }

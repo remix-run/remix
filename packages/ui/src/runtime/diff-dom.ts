@@ -122,12 +122,23 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
 
           let frame = context.frameInstances.get(current)
           let nextMarkerData = getFrameMarkerData(next, context)
-          if (
-            frame &&
-            nextMarkerData?.status === 'pending' &&
-            frame.isDisplayingResolvedContent()
-          ) {
-            return findFrameEndMarker(next)
+          if (frame && nextMarkerData) {
+            if (nextMarkerData.status === 'resolved') {
+              let nextEnd = findFrameEndMarker(next)
+              let nextContent = collectFrameContentFragment(current.ownerDocument, next, nextEnd)
+              void frame.renderMarkerContent(
+                { ...nextMarkerData, id: getFrameId(next) },
+                nextContent,
+                {
+                  signal: context.signal,
+                },
+              )
+              return nextEnd
+            }
+
+            if (frame.isDisplayingResolvedContent()) {
+              return findFrameEndMarker(next)
+            }
           }
         } else {
           disposeFrameStartMarker(current, context)
@@ -608,6 +619,23 @@ function collectNodeRange(start: Node, end: Node): Node[] {
   }
 
   return nodes
+}
+
+function collectFrameContentFragment(
+  doc: Document,
+  start: Comment,
+  end: Comment,
+): DocumentFragment {
+  let fragment = doc.createDocumentFragment()
+  let node = start.nextSibling
+
+  while (node && node !== end) {
+    let next = node.nextSibling
+    fragment.appendChild(node)
+    node = next
+  }
+
+  return fragment
 }
 
 function removeNode(node: Node, parent: ParentNode, context: FrameContext): void {

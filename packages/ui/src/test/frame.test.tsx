@@ -1587,6 +1587,131 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('dispatches reloadStart and reloadComplete events for non-blocking child frames during top frame reloads', async () => {
+    let childReloadStartEvents = 0
+    let childReloadCompleteEvents = 0
+    let reloadTopFromChild: undefined | (() => Promise<AbortSignal>)
+
+    let ChildReloadObserver = clientEntry(
+      '/assets/child-reload-observer.js#ChildReloadObserver',
+      function ChildReloadObserver(handle: Handle) {
+        reloadTopFromChild = async () => {
+          handle.frame.addEventListener(
+            'reloadStart',
+            () => {
+              childReloadStartEvents++
+            },
+            { once: true },
+          )
+          handle.frame.addEventListener(
+            'reloadComplete',
+            () => {
+              childReloadCompleteEvents++
+            },
+            { once: true },
+          )
+          return await handle.frames.top.reload()
+        }
+
+        return () => <button id="reload-top-from-child">Reload top</button>
+      },
+    )
+
+    async function renderChildFrame(label: string) {
+      return await drain(
+        renderToStream(
+          <section id="event-child-frame-content">
+            <p id="event-child-frame-label">{label}</p>
+            <ChildReloadObserver />
+          </section>,
+        ),
+      )
+    }
+
+    function renderDocument(childContent: string | Promise<string>) {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <main>
+              <p id="event-top-frame-label">Top frame</p>
+              <Frame
+                name="event-child"
+                src="/event-child"
+                fallback={<span id="event-child-frame-fallback">Loading child...</span>}
+              />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/event-child') return childContent
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(renderDocument(renderChildFrame('Initial child'))),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [childReloadPromise, resolveChildReload] = withResolvers<string>()
+    let streamedReload = renderDocument(childReloadPromise)
+    let streamedChunks = readChunks(streamedReload)
+    let firstChunk = await streamedChunks.next()
+    invariant(!firstChunk.done)
+    resolveChildReload(await renderChildFrame('Reloaded child'))
+    let secondChunk = await streamedChunks.next()
+    invariant(!secondChunk.done)
+    let [secondChunkPromise, releaseSecondChunk] = withResolvers<string>()
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/child-reload-observer.js' &&
+          exportName === 'ChildReloadObserver'
+        ) {
+          return ChildReloadObserver
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks(['<!DOCTYPE html>', firstChunk.value, secondChunkPromise])
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Initial child')
+
+    invariant(reloadTopFromChild)
+    let reloadPromise = reloadTopFromChild()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(childReloadStartEvents).toBe(1)
+    expect(childReloadCompleteEvents).toBe(0)
+    expect(document.getElementById('event-child-frame-fallback')).toBeNull()
+    expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Initial child')
+
+    releaseSecondChunk(secondChunk.value)
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(childReloadStartEvents).toBe(1)
+    expect(childReloadCompleteEvents).toBe(1)
+    expect(document.getElementById('event-child-frame-fallback')).toBeNull()
+    expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Reloaded child')
+
+    app.dispose()
+  })
+
   it('reloads a frame region when the response uses css mixins', async () => {
     let renderCount = 0
 
@@ -3353,6 +3478,36 @@ describe('run', () => {
   it('diffs pending child frame fallbacks and ignores stale templates during top frame reloads', async () => {
     let [initialChildPromise] = withResolvers<string>()
     let [reloadedChildPromise] = withResolvers<string>()
+    let childReloadStartEvents = 0
+    let childReloadCompleteEvents = 0
+    let reloadTopWithPendingChild: undefined | (() => Promise<AbortSignal>)
+
+    let PendingChildFrameObserver = clientEntry(
+      '/assets/pending-child-frame-observer.js#PendingChildFrameObserver',
+      function PendingChildFrameObserver(handle: Handle) {
+        reloadTopWithPendingChild = async () => {
+          let childFrame = handle.frames.get('child')
+          invariant(childFrame)
+          childFrame.addEventListener(
+            'reloadStart',
+            () => {
+              childReloadStartEvents++
+            },
+            { once: true },
+          )
+          childFrame.addEventListener(
+            'reloadComplete',
+            () => {
+              childReloadCompleteEvents++
+            },
+            { once: true },
+          )
+          return await handle.frames.top.reload()
+        }
+
+        return () => <button id="reload-top-with-pending-child">Reload top</button>
+      },
+    )
 
     function renderDocument(childContent: Promise<string>, fallbackLabel: string) {
       return renderToStream(
@@ -3361,6 +3516,7 @@ describe('run', () => {
           <body>
             <main>
               <p id="top-frame-label">Top frame</p>
+              <PendingChildFrameObserver />
               <Frame
                 name="child"
                 src="/child"
@@ -3396,7 +3552,15 @@ describe('run', () => {
     let reloadedMarkerId = getCommentMarkerId(reloadedChunk.value, 'rmx:f:')
 
     let app = run({
-      loadModule: mock.fn(),
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/pending-child-frame-observer.js' &&
+          exportName === 'PendingChildFrameObserver'
+        ) {
+          return PendingChildFrameObserver
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
       resolveFrame(src: string) {
         if (src === document.location.href) {
           return streamFromChunks(['<!DOCTYPE html>', reloadedChunk.value])
@@ -3413,10 +3577,13 @@ describe('run', () => {
     expect(fallback.textContent).toBe('Initial fallback')
     expect(fallback.getAttribute('data-label')).toBe('Initial fallback')
 
-    let reloadPromise = getTopFrame().reload()
+    invariant(reloadTopWithPendingChild)
+    let reloadPromise = reloadTopWithPendingChild()
     await reloadPromise
     await new Promise((resolve) => setTimeout(resolve, 0))
 
+    expect(childReloadStartEvents).toBe(1)
+    expect(childReloadCompleteEvents).toBe(0)
     expect(document.getElementById('child-frame-fallback')).toBe(fallback)
     expect(fallback.textContent).toBe('Reloaded fallback')
     expect(fallback.getAttribute('data-label')).toBe('Reloaded fallback')
@@ -3440,6 +3607,8 @@ describe('run', () => {
     expect(document.getElementById('stale-child-content')).toBeNull()
     expect(document.getElementById('fresh-child-content')?.textContent).toBe('Fresh child')
     expect(document.getElementById('child-frame-fallback')).toBeNull()
+    expect(childReloadStartEvents).toBe(1)
+    expect(childReloadCompleteEvents).toBe(1)
 
     app.dispose()
   })
@@ -3572,6 +3741,130 @@ describe('run', () => {
     )
     expect(input.value).toBe('typed direct child value')
     expect(document.getElementById('direct-parent-sibling')?.textContent).toBe('Parent sibling')
+
+    app.dispose()
+  })
+
+  it('keeps blocking child frame handles reloadable after top frame reloads', async () => {
+    let childReloadCount = 0
+
+    let ReloadBlockingChild = clientEntry(
+      '/assets/reload-blocking-child.js#ReloadBlockingChild',
+      function ReloadBlockingChild(handle: Handle) {
+        let pending = false
+
+        handle.frame.addEventListener('reloadStart', () => {
+          pending = true
+          handle.update()
+        })
+
+        handle.frame.addEventListener('reloadComplete', () => {
+          pending = false
+          handle.update()
+        })
+
+        return () => (
+          <button
+            id="reload-blocking-child"
+            mix={on('click', () => {
+              void handle.frame.reload()
+            })}
+          >
+            {pending ? 'Reloading child' : 'Reload child'}
+          </button>
+        )
+      },
+    )
+
+    async function renderChildFrame(label: string) {
+      return await drain(
+        renderToStream(
+          <>
+            <p id="blocking-child-frame-label">{label}</p>
+            <ReloadBlockingChild />
+          </>,
+        ),
+      )
+    }
+
+    function renderDocument(childLabel: string) {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <main>
+              <Frame name="blocking-child" src="/blocking-child" />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/blocking-child') return renderChildFrame(childLabel)
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(renderDocument('Initial blocking child')),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [topReloadPromise, resolveTopReload] = withResolvers<ReadableStream<Uint8Array>>()
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/reload-blocking-child.js' &&
+          exportName === 'ReloadBlockingChild'
+        ) {
+          return ReloadBlockingChild
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return topReloadPromise
+        }
+        if (src === '/blocking-child') {
+          childReloadCount++
+          return renderChildFrame(`Reloaded by child frame ${childReloadCount}`)
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('blocking-child-frame-label')?.textContent).toBe(
+      'Initial blocking child',
+    )
+
+    let topReload = getTopFrame().reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('reload-blocking-child')?.textContent).toBe('Reloading child')
+
+    resolveTopReload(renderDocument('Reloaded by top frame'))
+    await topReload
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('blocking-child-frame-label')?.textContent).toBe(
+      'Reloaded by top frame',
+    )
+    expect(document.getElementById('reload-blocking-child')?.textContent).toBe('Reload child')
+
+    let reloadChildButton = document.getElementById('reload-blocking-child')
+    invariant(reloadChildButton instanceof HTMLButtonElement)
+    reloadChildButton.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('blocking-child-frame-label')?.textContent).toBe(
+      'Reloaded by child frame 1',
+    )
 
     app.dispose()
   })
