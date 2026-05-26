@@ -249,8 +249,7 @@ Return behavior:
 
 ### Validation and Lifecycle
 
-Validation is optional and table-scoped. Define `validate(context)` to validate/coerce write
-payloads, and add lifecycle callbacks when you need custom read/write/delete behavior.
+Validation is optional and table-scoped. Define `validate(context)` to validate/coerce write payloads, and add lifecycle callbacks when you need custom read/write/delete behavior.
 
 ```ts
 import { column as c, fail, table } from 'remix/data-table'
@@ -344,10 +343,7 @@ await db.transaction(async (tx) => {
 
 ## Migrations
 
-`data-table` ships a SQL-first migration system under `remix/data-table/migrations`. Each migration
-is a directory containing hand-written `up.sql` and (optionally) `down.sql`. The runner journals
-applied migrations, detects checksum drift, and wraps each migration in a transaction when the
-adapter supports transactional DDL.
+`data-table` ships a SQL-first migration system under `remix/data-table/migrations`. Each migration is a directory containing hand-written `up.sql` and (optionally) `down.sql`. The runner journals applied migrations, detects checksum drift, and wraps each migration in a transaction when the adapter supports transactional DDL.
 
 ### Example Setup
 
@@ -392,8 +388,7 @@ drop table if exists users;
 
 ### Multi-Statement Driver Configuration
 
-The runner sends each migration to the adapter as a single multi-statement script. Make sure the
-underlying driver accepts multiple statements:
+The runner sends each migration to the adapter as a single multi-statement script. Make sure the underlying driver accepts multiple statements:
 
 - `better-sqlite3`: works out of the box (`db.exec`).
 - `pg`: works out of the box when no parameter array is passed.
@@ -476,8 +471,7 @@ for (let script of plan.sql) {
 
 ### Transaction Modes
 
-By default each migration is wrapped in a transaction when the adapter supports transactional DDL.
-Override per migration with a directive on the first non-blank line of `up.sql`:
+By default each migration is wrapped in a transaction when the adapter supports transactional DDL. Override per migration with a directive on the first non-blank line of `up.sql`:
 
 ```sql
 -- data-table/transaction: none
@@ -488,11 +482,9 @@ Supported modes:
 
 - `auto` (default): wrap when the adapter supports transactional DDL.
 - `required`: wrap; the runner throws if the adapter cannot support it.
-- `none`: never wrap. Use this for statements like postgres `CREATE INDEX CONCURRENTLY` that
-  cannot run inside a transaction.
+- `none`: never wrap. Use this for statements like postgres `CREATE INDEX CONCURRENTLY` that cannot run inside a transaction.
 
-You can also set `transaction` directly on a `MigrationDescriptor` when registering migrations
-programmatically.
+You can also set `transaction` directly on a `MigrationDescriptor` when registering migrations programmatically.
 
 ### Programmatic Registration
 

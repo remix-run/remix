@@ -73,6 +73,11 @@ const EXAMPLE_COPY_BY_SLUG = {
       '`onMenuSelect(...)` keeps action handling flexible at the item, menu, or app level.',
     title: 'Item and parent events',
   },
+  'menu-context-trigger': {
+    description:
+      '`menu.contextTrigger()` lets a menu open from right-click coordinates while reusing the existing menu list, items, submenus, and selection events.',
+    title: 'Context menu trigger',
+  },
   'start-here-theme': {
     description:
       'Theme is the shared value contract for spacing, color, typography, surfaces, and control sizing.',

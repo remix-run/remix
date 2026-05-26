@@ -2,8 +2,7 @@
 
 This is the changelog for [`component`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
-Historical examples below may show legacy component APIs from the release being described. Current
-components read props from `handle.props` and return a zero-argument render function.
+Historical examples below may show legacy component APIs from the release being described. Current components read props from `handle.props` and return a zero-argument render function.
 
 ## v0.7.0
 

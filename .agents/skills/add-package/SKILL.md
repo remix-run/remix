@@ -7,8 +7,7 @@ description: Create or align a package in the Remix monorepo to match existing p
 
 ## Overview
 
-Use this skill to scaffold and standardize packages so they look and behave like the existing `@remix-run/*` packages.
-Follow this exactly when creating package files, public exports, tests, and docs.
+Use this skill to scaffold and standardize packages so they look and behave like the existing `@remix-run/*` packages. Follow this exactly when creating package files, public exports, tests, and docs.
 
 ## Workflow
 

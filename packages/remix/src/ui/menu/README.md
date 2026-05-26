@@ -68,6 +68,29 @@ Use `menuLabel` when the menu surface needs a different accessible label from th
 </Menu>
 ```
 
+Use `menu.contextTrigger()` with `menu.Context` and `MenuList` when a menu should open at the right-click location of an element.
+
+```tsx
+import * as menu from 'remix/ui/menu'
+import { MenuItem, MenuList } from 'remix/ui/menu'
+
+export function FileContextMenu(handle: Handle) {
+  return () => (
+    <menu.Context label="File actions">
+      <div mix={menu.contextTrigger()} tabIndex={0}>
+        File.txt
+      </div>
+      <MenuList>
+        <MenuItem name="rename">Rename</MenuItem>
+        <MenuItem name="delete">Delete</MenuItem>
+      </MenuList>
+    </menu.Context>
+  )
+}
+```
+
+Attach `onMenuSelect(...)` to `MenuList` or a shared ancestor when using lower-level context menu composition.
+
 ## `menu.*`
 
 - `Menu`: composed trigger, popover, and list component for the common menu case.
@@ -77,13 +100,14 @@ Use `menuLabel` when the menu surface needs a different accessible label from th
 - `onMenuSelect(...)`: event mixin for the bubbling `MenuSelectEvent`.
 - `MenuSelectEvent`: bubbling event class whose `item` describes the selected item.
 - `MenuSelectItem`: selected item shape with `checked`, `id`, `label`, `name`, `type`, and `value`.
-- `menu.Context`, `menu.trigger()`, `menu.popover()`, `menu.list()`, `menu.item(...)`, and `menu.submenuTrigger(...)`: lower-level composition primitives.
+- `menu.Context`, `menu.trigger()`, `menu.contextTrigger()`, `menu.popover()`, `menu.list()`, `menu.item(...)`, and `menu.submenuTrigger(...)`: lower-level composition primitives.
 - `buttonStyle`, `popoverStyle`, `listStyle`, `itemStyle`, `itemSlotStyle`, `itemLabelStyle`, `itemGlyphStyle`, and `triggerGlyphStyle`: flat style mixins used by the wrappers.
-- `MenuProps`, `MenuItemProps`, `MenuListProps`, `MenuProviderProps`, `MenuTriggerOptions`, `MenuItemOptions`, and `SubmenuProps`: public TypeScript props and option types.
+- `MenuProps`, `MenuItemProps`, `MenuListProps`, `MenuProviderProps`, `MenuTriggerOptions`, `MenuContextTriggerOptions`, `MenuItemOptions`, and `SubmenuProps`: public TypeScript props and option types.
 
 ## Behavior Notes
 
 - Click opens the root menu and focuses the list; clicking the trigger again closes it and restores focus.
+- `menu.contextTrigger()` opens the root menu from a `contextmenu` event at the pointer coordinates and supports keyboard opening with the Context Menu key or Shift+F10.
 - `ArrowDown` opens from the trigger at the first enabled item. `ArrowUp` opens at the last enabled item. Enter and Space open the menu with focus on the list.
 - Keyboard navigation skips disabled items and does not wrap past the first or last enabled item.
 - `Home` and `End` move to the first and last enabled item. Enter and Space activate the highlighted item.

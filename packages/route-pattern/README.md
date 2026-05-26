@@ -175,8 +175,7 @@ When multiple patterns match the same URL, `route-pattern` chooses the most spec
 
 This is the same ranking used by `createMultiMatcher`.
 
-For advanced use cases, `/specificity` provides comparison utilities: `lessThan`, `greaterThan`, `equal`, `descending`, `ascending`, `compare`.
-For example:
+For advanced use cases, `/specificity` provides comparison utilities: `lessThan`, `greaterThan`, `equal`, `descending`, `ascending`, `compare`. For example:
 
 ```ts
 import { createMultiMatcher } from 'remix/route-pattern/match'
@@ -195,8 +194,7 @@ matches.sort(descending).map((match) => match.pattern.toString())
 
 ## Generate hrefs
 
-`createHref` turns a pattern and params into a URL string.
-Required variables and wildcards must be provided, while params inside optional groups may be omitted.
+`createHref` turns a pattern and params into a URL string. Required variables and wildcards must be provided, while params inside optional groups may be omitted.
 
 ```ts
 import { createHref } from 'remix/route-pattern/href'

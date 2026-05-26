@@ -7,8 +7,7 @@ description: Write, refactor, or review TypeScript code with strict, precise, ma
 
 ## Overview
 
-Use this skill to write TypeScript that is simple at runtime and precise at compile time.
-Prefer local repo conventions first, then apply the official TypeScript guidance summarized here.
+Use this skill to write TypeScript that is simple at runtime and precise at compile time. Prefer local repo conventions first, then apply the official TypeScript guidance summarized here.
 
 ## Workflow
 

@@ -9,7 +9,11 @@ import {
   type MixinFactory,
   type RemixNode,
 } from '@remix-run/ui'
-import { anchor as positionAnchor, type AnchorOptions } from '../anchor/anchor.ts'
+import {
+  anchor as positionAnchor,
+  type AnchorOptions,
+  type AnchorTarget,
+} from '../anchor/anchor.ts'
 import { onOutsideClick } from '../../interactions/outside-click/outside-click-mixin.ts'
 import { theme } from '../../theme/theme.ts'
 import { lockScroll } from '../../utils/scroll-lock.ts'
@@ -26,7 +30,7 @@ export interface PopoverProps {
 }
 
 interface AnchorRef {
-  node: HTMLElement
+  target: AnchorTarget
   options: AnchorOptions
 }
 
@@ -108,10 +112,14 @@ const anchorMixin: MixinFactory<HTMLElement, [options: AnchorOptions], ElementPr
   let context = handle.context.get(PopoverProvider)
   return (options) => {
     handle.queueTask((node) => {
-      context.anchor = { node, options }
+      context.anchor = { target: node, options }
     })
   }
 })
+
+function anchorContains(anchor: AnchorRef | null, target: Node) {
+  return anchor?.target instanceof HTMLElement && anchor.target.contains(target)
+}
 
 const surfaceMixin: MixinFactory<HTMLElement, [options: PopoverSurfaceOptions], ElementProps> =
   createMixin<HTMLElement, [options: PopoverSurfaceOptions]>((handle) => {
@@ -147,11 +155,12 @@ const surfaceMixin: MixinFactory<HTMLElement, [options: PopoverSurfaceOptions], 
 
         on('beforetoggle', (event) => {
           if (event.newState === 'open') {
-            cleanupAnchor = positionAnchor(
-              event.currentTarget,
-              context.anchor!.node,
-              context.anchor!.options,
-            )
+            let anchor = context.anchor
+            if (!anchor) {
+              throw new Error('popover.surface() requires a registered anchor before opening')
+            }
+
+            cleanupAnchor = positionAnchor(event.currentTarget, anchor.target, anchor.options)
             unlockScroll = lockScroll()
           } else if (event.newState === 'closed') {
             cleanupAnchor()
@@ -180,7 +189,7 @@ const surfaceMixin: MixinFactory<HTMLElement, [options: PopoverSurfaceOptions], 
             options.onHide({ reason: 'outside-click', target })
           },
           (target) =>
-            options.closeOnAnchorClick === false && !!context.anchor?.node.contains(target),
+            options.closeOnAnchorClick === false && anchorContains(context.anchor, target),
           options.stopOutsideClickPropagation ?? true,
         ),
       ]

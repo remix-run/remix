@@ -308,6 +308,7 @@ describe('modules', () => {
       'MenuSelectEvent',
       'Submenu',
       'buttonStyle',
+      'contextTrigger',
       'item',
       'itemGlyphStyle',
       'itemLabelStyle',

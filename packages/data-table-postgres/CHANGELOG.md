@@ -38,8 +38,7 @@ This is the changelog for [`data-table-postgres`](https://github.com/remix-run/r
 
   **Why**
 
-  Adapter options existed solely for tests to override adapter capabilities.
-  If you must override capabilities, you can do so directly via mutation:
+  Adapter options existed solely for tests to override adapter capabilities. If you must override capabilities, you can do so directly via mutation:
 
   ```ts
   let adapter = createPostgresDatabaseAdapter(postgres)

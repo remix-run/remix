@@ -7,9 +7,7 @@ description: Create GitHub pull requests with clear, reviewer-friendly descripti
 
 ## Overview
 
-Use this skill to draft and open a PR with consistent, high-signal writing.
-Keep headings sparse and focus on the problem/feature explanation, context links, and practical code examples.
-Optimize for the shortest path to a credible PR, not the fullest possible context-gathering pass.
+Use this skill to draft and open a PR with consistent, high-signal writing. Keep headings sparse and focus on the problem/feature explanation, context links, and practical code examples. Optimize for the shortest path to a credible PR, not the fullest possible context-gathering pass.
 
 ## Workflow
 
