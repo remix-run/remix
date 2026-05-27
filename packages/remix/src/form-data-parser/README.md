@@ -72,8 +72,7 @@ async function requestHandler(request: Request) {
 }
 ```
 
-To validate the resulting `FormData` object with `remix/data-schema`, use the
-`remix/data-schema/form-data` helpers.
+To validate the resulting `FormData` object with `remix/data-schema`, use the `remix/data-schema/form-data` helpers.
 
 To limit the overall shape of multipart requests, use the `maxHeaderSize`, `maxFileSize`, `maxFiles`, `maxParts`, and `maxTotalSize` options. By default, `parseFormData()` uses `maxFiles = 20`, `maxParts = 1000`, and `maxTotalSize = maxFiles * maxFileSize + 1 MiB`.
 
@@ -118,15 +117,15 @@ try {
 }
 ```
 
-If you're looking for a more flexible storage solution for `File` objects that are uploaded, this library pairs really well with [the `file-storage` library](https://github.com/remix-run/remix/tree/main/packages/file-storage) for keeping files in various storage backends.
+If you're looking for a more flexible storage solution for `FileUpload` objects, this library pairs really well with [the `file-storage` library](https://github.com/remix-run/remix/tree/main/packages/file-storage) for keeping files in various storage backends.
 
 ```ts
-import { LocalFileStorage } from 'remix/file-storage/local'
+import { createFsFileStorage } from 'remix/file-storage/fs'
 import type { FileUpload } from 'remix/form-data-parser'
 import { parseFormData } from 'remix/form-data-parser'
 
 // Set up storage for uploaded files
-const fileStorage = new LocalFileStorage('/uploads/user-avatars')
+const fileStorage = createFsFileStorage('/uploads/user-avatars')
 
 // Define how to handle incoming file uploads
 async function uploadHandler(fileUpload: FileUpload) {
@@ -134,11 +133,8 @@ async function uploadHandler(fileUpload: FileUpload) {
   if (fileUpload.fieldName === 'user-avatar') {
     let storageKey = `user-${user.id}-avatar`
 
-    // Put the file in storage
-    await fileStorage.set(storageKey, fileUpload)
-
-    // Return a lazy File object that can access the stored file when needed
-    return fileStorage.get(storageKey)
+    // Put the file in storage and return the stored LazyFile
+    return fileStorage.put(storageKey, fileUpload)
   }
 
   // Ignore unrecognized fields
@@ -153,8 +149,7 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/fo
 
 ## Related Packages
 
-- [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Tiny,
-  standards-aligned validation with a `form-data` export for `FormData` and `URLSearchParams`
+- [`data-schema`](https://github.com/remix-run/remix/tree/main/packages/data-schema) - Tiny, standards-aligned validation with a `form-data` export for `FormData` and `URLSearchParams`
 - [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage) - A simple key/value interface for storing `FileUpload` objects you get from the parser
 - [`multipart-parser`](https://github.com/remix-run/remix/tree/main/packages/multipart-parser) - The parser used internally for parsing `multipart/form-data` HTTP messages
 

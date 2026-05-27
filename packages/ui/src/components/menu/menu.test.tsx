@@ -3,7 +3,8 @@ import { afterEach, beforeEach, describe, it, mock, type FakeTimers } from '@rem
 
 import { createRoot, type RemixNode } from '@remix-run/ui'
 
-import { Menu, MenuItem, onMenuSelect, Submenu, type MenuSelectEvent } from './menu.tsx'
+import * as menu from './menu.tsx'
+import { Menu, MenuItem, MenuList, onMenuSelect, Submenu, type MenuSelectEvent } from './menu.tsx'
 
 const flashDurationMs = 60
 let roots: Array<ReturnType<typeof createRoot>> = []
@@ -83,6 +84,20 @@ function renderMenuWithSubmenuSeparator() {
   )
 }
 
+function renderContextMenu() {
+  return renderApp(
+    <menu.Context label="File actions">
+      <div id="context-target" tabIndex={0} mix={menu.contextTrigger()}>
+        File.txt
+      </div>
+      <MenuList>
+        <MenuItem name="rename">Rename</MenuItem>
+        <MenuItem name="delete">Delete</MenuItem>
+      </MenuList>
+    </menu.Context>,
+  )
+}
+
 function normalizeText(text: string | null | undefined) {
   return (text ?? '').replace(/\s+/g, ' ').trim()
 }
@@ -123,8 +138,19 @@ function click(target: HTMLElement) {
   target.dispatchEvent(new MouseEvent('click', { bubbles: true, button: 0 }))
 }
 
-function key(target: HTMLElement, key: string) {
-  let event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key })
+function contextMenu(target: HTMLElement, x: number, y: number) {
+  let event = new MouseEvent('contextmenu', {
+    bubbles: true,
+    cancelable: true,
+    clientX: x,
+    clientY: y,
+  })
+  target.dispatchEvent(event)
+  return event
+}
+
+function key(target: HTMLElement, key: string, init: KeyboardEventInit = {}) {
+  let event = new KeyboardEvent('keydown', { bubbles: true, cancelable: true, key, ...init })
   target.dispatchEvent(event)
   return event
 }
@@ -227,6 +253,66 @@ describe('menu', () => {
 
     expect(rootSurface.matches(':popover-open')).toBe(false)
     expect(document.activeElement).toBe(trigger)
+  })
+
+  it('opens from contextmenu at the pointer coordinates', async () => {
+    let { container, root } = renderContextMenu()
+    let trigger = container.querySelector('#context-target') as HTMLElement
+    let [rootSurface] = getSurfaces(container)
+    let [rootList] = getLists(container)
+
+    mockRect(rootSurface, 0, 0, 160, 96)
+
+    let event = contextMenu(trigger, 220, 140)
+    await settleFrames(root)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(rootSurface.matches(':popover-open')).toBe(true)
+    expect(rootSurface.style.left).toBe('220px')
+    expect(rootSurface.style.top).toBe('140px')
+    expect(rootSurface.getAttribute('data-anchor-placement')).toBe('bottom-start')
+    expect(trigger.getAttribute('aria-expanded')).toBe('true')
+    expect(document.activeElement).toBe(rootList)
+  })
+
+  it('repositions an open context menu when right-clicked again', async () => {
+    let { container, root } = renderContextMenu()
+    let trigger = container.querySelector('#context-target') as HTMLElement
+    let [rootSurface] = getSurfaces(container)
+
+    mockRect(rootSurface, 0, 0, 160, 96)
+
+    contextMenu(trigger, 220, 140)
+    await settleFrames(root)
+
+    expect(rootSurface.style.left).toBe('220px')
+    expect(rootSurface.style.top).toBe('140px')
+
+    contextMenu(trigger, 260, 180)
+    await settleFrames(root)
+
+    expect(rootSurface.matches(':popover-open')).toBe(true)
+    expect(rootSurface.style.left).toBe('260px')
+    expect(rootSurface.style.top).toBe('180px')
+  })
+
+  it('opens a context menu from the keyboard at the trigger bounds', async () => {
+    let { container, root } = renderContextMenu()
+    let trigger = container.querySelector('#context-target') as HTMLElement
+    let [rootSurface] = getSurfaces(container)
+    let [rootList] = getLists(container)
+
+    mockRect(trigger, 80, 70, 200, 40)
+    mockRect(rootSurface, 0, 0, 160, 96)
+
+    let event = key(trigger, 'F10', { shiftKey: true })
+    await settleFrames(root)
+
+    expect(event.defaultPrevented).toBe(true)
+    expect(rootSurface.matches(':popover-open')).toBe(true)
+    expect(rootSurface.style.left).toBe('80px')
+    expect(rootSurface.style.top).toBe('110px')
+    expect(document.activeElement).toBe(rootList)
   })
 
   it('opens from ArrowDown and skips disabled items during keyboard navigation', async () => {

@@ -48,6 +48,12 @@ function writeJson(dir: string, rel: string, value: unknown): Promise<string> {
   return write(dir, rel, JSON.stringify(value, null, 2))
 }
 
+async function symlinkDirectory(target: string, link: string): Promise<void> {
+  await fs.mkdir(path.dirname(link), { recursive: true })
+  await fs.rm(link, { recursive: true, force: true })
+  await fs.symlink(target, link, process.platform === 'win32' ? 'junction' : 'dir')
+}
+
 function getLineAndColumn(source: string, search: string): { line: number; column: number } {
   let index = source.indexOf(search)
   assert.notEqual(index, -1, `Expected to find "${search}" in:\n${source}`)
@@ -2498,6 +2504,86 @@ describe('asset-server', () => {
     let body = await response.text()
     assert.ok(body.includes('/assets/app/shared/value.@'))
     assert.ok(!body.includes('/assets/app/alias/value.@'))
+  })
+
+  it('uses one canonical URL when app and package imports resolve to the same pnpm package', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      let uiStorePath = path.join(
+        caseDir,
+        'app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui',
+      )
+      await writeJson(
+        caseDir,
+        'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/package.json',
+        {
+          name: 'remix',
+          type: 'module',
+          exports: {
+            './ui': './dist/ui.js',
+          },
+        },
+      )
+      await write(
+        caseDir,
+        'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/dist/ui.js',
+        'import { ui } from "@remix-run/ui"\nexport { ui }',
+      )
+      await writeJson(
+        caseDir,
+        'app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui/package.json',
+        {
+          name: '@remix-run/ui',
+          type: 'module',
+          exports: {
+            '.': './dist/index.js',
+          },
+        },
+      )
+      await write(
+        caseDir,
+        'app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui/dist/index.js',
+        'export const ui = true',
+      )
+      await symlinkDirectory(
+        path.join(caseDir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix'),
+        path.join(caseDir, 'app/node_modules/remix'),
+      )
+      await symlinkDirectory(uiStorePath, path.join(caseDir, 'app/node_modules/@remix-run/ui'))
+      await symlinkDirectory(
+        uiStorePath,
+        path.join(caseDir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/@remix-run/ui'),
+      )
+      await write(
+        caseDir,
+        'app/entry.ts',
+        [
+          'import { ui as appUi } from "@remix-run/ui"',
+          'import { ui as packageUi } from "remix/ui"',
+          'export const values = [appUi, packageUi]',
+        ].join('\n'),
+      )
+
+      let assetServer = createTestServer(caseDir, {
+        fileMap: {
+          '/app/*path': 'app/*path',
+          '/node_modules/*path': 'app/node_modules/*path',
+        },
+      })
+      try {
+        let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+        let uiUrls = [...servedUrls].filter((url) => url.includes('@remix-run/ui/dist/index.js'))
+
+        let expectedUiUrls = [
+          '/assets/app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui/dist/index.js',
+        ]
+        assert.deepEqual(uiUrls, expectedUiUrls)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
   })
 
   it('getHref returns fingerprinted URLs for served script files when fingerprinting is enabled', async () => {

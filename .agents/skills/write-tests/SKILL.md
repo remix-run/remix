@@ -7,9 +7,7 @@ description: Write, refactor, or review tests in the Remix repository. Use when 
 
 ## Overview
 
-Write tests that prove behavior with the smallest useful fixture surface. Use Remix's own
-test/assert packages and `describe`/`it` style by default, keep package dependency graphs clean, and
-validate with the narrowest reliable commands.
+Write tests that prove behavior with the smallest useful fixture surface. Use Remix's own test/assert packages and `describe`/`it` style by default, keep package dependency graphs clean, and validate with the narrowest reliable commands.
 
 ## Workflow
 

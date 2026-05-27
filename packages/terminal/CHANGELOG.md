@@ -2,6 +2,12 @@
 
 This is the changelog for [`terminal`](https://github.com/remix-run/remix/tree/main/packages/terminal). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.1
+
+### Patch Changes
+
+- Add explicit public API types for ANSI helper objects so generated declarations no longer depend on inference through assigned helper objects (see #11433).
+
 ## v0.1.0
 
 ### Minor Changes

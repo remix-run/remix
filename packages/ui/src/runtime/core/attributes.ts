@@ -14,6 +14,17 @@ const ATTRIBUTE_FALLBACK_NAMES = new Set([
   'colSpan',
   'role',
   'popover',
+  'translate',
+])
+
+const BOOLEANISH_STRING_ATTRIBUTES = new Set([
+  'autoReverse',
+  'contenteditable',
+  'draggable',
+  'externalResourcesRequired',
+  'focusable',
+  'preserveAlpha',
+  'spellcheck',
 ])
 
 export const FRAMEWORK_PROPS = new Set(['children', 'mix', 'key', 'animate', 'innerHTML', 'on'])
@@ -43,9 +54,11 @@ export function canUseProperty(
   element: Element,
   name: string,
   isSvg: boolean,
+  attr: string,
 ): element is Element & Record<string, unknown> {
   if (isSvg) return false
   if (ATTRIBUTE_FALLBACK_NAMES.has(name)) return false
+  if (isBooleanishStringAttribute(attr)) return false
   return name in element
 }
 
@@ -66,6 +79,14 @@ export function normalizeAttributeName(
   }
 
   return normalizeSvgAttribute(name)
+}
+
+export function isBooleanishStringAttribute(name: string): boolean {
+  return BOOLEANISH_STRING_ATTRIBUTES.has(name)
+}
+
+export function shouldStringifyBooleanAttribute(name: string): boolean {
+  return isBooleanishStringAttribute(name) || name === 'value'
 }
 
 export function serializeStyleObject(style: Record<string, unknown>): string {

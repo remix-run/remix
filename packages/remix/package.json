@@ -1,6 +1,6 @@
 {
   "name": "remix",
-  "version": "3.0.0-beta.0",
+  "version": "3.0.0-beta.2",
   "description": "The Remix web framework",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
@@ -60,6 +60,21 @@
     "./form-data-parser": "./src/form-data-parser.ts",
     "./fs": "./src/fs.ts",
     "./headers": "./src/headers.ts",
+    "./headers/accept": "./src/headers/accept.ts",
+    "./headers/accept-encoding": "./src/headers/accept-encoding.ts",
+    "./headers/accept-language": "./src/headers/accept-language.ts",
+    "./headers/cache-control": "./src/headers/cache-control.ts",
+    "./headers/content-disposition": "./src/headers/content-disposition.ts",
+    "./headers/content-range": "./src/headers/content-range.ts",
+    "./headers/content-type": "./src/headers/content-type.ts",
+    "./headers/cookie": "./src/headers/cookie.ts",
+    "./headers/if-match": "./src/headers/if-match.ts",
+    "./headers/if-none-match": "./src/headers/if-none-match.ts",
+    "./headers/if-range": "./src/headers/if-range.ts",
+    "./headers/range": "./src/headers/range.ts",
+    "./headers/raw-headers": "./src/headers/raw-headers.ts",
+    "./headers/set-cookie": "./src/headers/set-cookie.ts",
+    "./headers/vary": "./src/headers/vary.ts",
     "./html-template": "./src/html-template.ts",
     "./lazy-file": "./src/lazy-file.ts",
     "./logger-middleware": "./src/logger-middleware.ts",
@@ -81,7 +96,6 @@
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
     "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
-    "./node-serve": "./src/node-serve.ts",
     "./node-tsx": "./src/node-tsx.ts",
     "./node-tsx/load-module": "./src/node-tsx/load-module.ts",
     "./render-middleware": "./src/render-middleware.ts",
@@ -292,6 +306,66 @@
         "types": "./dist/headers.d.ts",
         "default": "./dist/headers.js"
       },
+      "./headers/accept": {
+        "types": "./dist/headers/accept.d.ts",
+        "default": "./dist/headers/accept.js"
+      },
+      "./headers/accept-encoding": {
+        "types": "./dist/headers/accept-encoding.d.ts",
+        "default": "./dist/headers/accept-encoding.js"
+      },
+      "./headers/accept-language": {
+        "types": "./dist/headers/accept-language.d.ts",
+        "default": "./dist/headers/accept-language.js"
+      },
+      "./headers/cache-control": {
+        "types": "./dist/headers/cache-control.d.ts",
+        "default": "./dist/headers/cache-control.js"
+      },
+      "./headers/content-disposition": {
+        "types": "./dist/headers/content-disposition.d.ts",
+        "default": "./dist/headers/content-disposition.js"
+      },
+      "./headers/content-range": {
+        "types": "./dist/headers/content-range.d.ts",
+        "default": "./dist/headers/content-range.js"
+      },
+      "./headers/content-type": {
+        "types": "./dist/headers/content-type.d.ts",
+        "default": "./dist/headers/content-type.js"
+      },
+      "./headers/cookie": {
+        "types": "./dist/headers/cookie.d.ts",
+        "default": "./dist/headers/cookie.js"
+      },
+      "./headers/if-match": {
+        "types": "./dist/headers/if-match.d.ts",
+        "default": "./dist/headers/if-match.js"
+      },
+      "./headers/if-none-match": {
+        "types": "./dist/headers/if-none-match.d.ts",
+        "default": "./dist/headers/if-none-match.js"
+      },
+      "./headers/if-range": {
+        "types": "./dist/headers/if-range.d.ts",
+        "default": "./dist/headers/if-range.js"
+      },
+      "./headers/range": {
+        "types": "./dist/headers/range.d.ts",
+        "default": "./dist/headers/range.js"
+      },
+      "./headers/raw-headers": {
+        "types": "./dist/headers/raw-headers.d.ts",
+        "default": "./dist/headers/raw-headers.js"
+      },
+      "./headers/set-cookie": {
+        "types": "./dist/headers/set-cookie.d.ts",
+        "default": "./dist/headers/set-cookie.js"
+      },
+      "./headers/vary": {
+        "types": "./dist/headers/vary.d.ts",
+        "default": "./dist/headers/vary.js"
+      },
       "./html-template": {
         "types": "./dist/html-template.d.ts",
         "default": "./dist/html-template.js"
@@ -375,10 +449,6 @@
       "./node-fetch-server/test": {
         "types": "./dist/node-fetch-server/test.d.ts",
         "default": "./dist/node-fetch-server/test.js"
-      },
-      "./node-serve": {
-        "types": "./dist/node-serve.d.ts",
-        "default": "./dist/node-serve.js"
       },
       "./node-tsx": {
         "types": "./dist/node-tsx.d.ts",
@@ -635,7 +705,6 @@
     "@remix-run/cli": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@remix-run/terminal": "workspace:^",
-    "@remix-run/node-serve": "workspace:^",
     "@remix-run/render-middleware": "workspace:^"
   },
   "scripts": {

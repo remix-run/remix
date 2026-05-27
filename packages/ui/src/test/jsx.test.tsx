@@ -51,7 +51,7 @@ describe('jsx', () => {
       )
     })
 
-    it('accepts nested mix values for host element JSX while render props still see arrays', () => {
+    it('accepts nested mix values for host element JSX while runtime props still see arrays', () => {
       let passthrough = createMixin((_handle) => {})
       let descriptor = passthrough()
 
@@ -66,6 +66,24 @@ describe('jsx', () => {
       let bad = <textarea>Hello</textarea>
       // @ts-expect-error textarea content should come from value/defaultValue
       let alsoBad = <textarea innerHTML="Hello" />
+    })
+
+    it('accepts booleanish string attributes', () => {
+      let contentEditable = <div contentEditable="false" />
+      let draggable = <img alt="" draggable="false" />
+      let spellCheck = <div spellCheck="false" />
+      let spellcheck = <div spellcheck="false" />
+      let svg = (
+        <svg>
+          <animate autoReverse="false" />
+          <rect externalResourcesRequired="false" focusable="false" />
+          <feColorMatrix preserveAlpha="false" />
+        </svg>
+      )
+      let translate = <div translate="no" />
+
+      // @ts-expect-error translate uses yes/no attribute values, not true/false strings
+      let badTranslate = <div translate="false" />
     })
   })
 
@@ -131,7 +149,7 @@ describe('jsx', () => {
       let good = <Counter initialCount={10} label="Count" />
     })
 
-    it('accepts single or array mix values for component JSX while render props see arrays', () => {
+    it('accepts single or array mix values for component JSX while handle props see arrays', () => {
       let passthrough = createMixin((handle) => {})
 
       function Button(handle: Handle<Props<'button'>>) {
@@ -153,6 +171,16 @@ describe('jsx', () => {
       expect(withArray.props.mix).toEqual([descriptor])
       expect(withNested.props.mix).toEqual([descriptor, descriptor])
       expect(withoutMix.props.mix).toBeUndefined()
+    })
+
+    it('rejects component props typed on the render callback', () => {
+      function InvalidComponent(handle: Handle) {
+        void handle
+        return (props: { label: string }) => <div>{props.label}</div>
+      }
+
+      // @ts-expect-error - component props must be typed on Handle<Props>
+      let invalid = <InvalidComponent label="Count" />
     })
   })
 

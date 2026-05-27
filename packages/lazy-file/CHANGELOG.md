@@ -2,6 +2,12 @@
 
 This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
+## v5.0.4
+
+### Patch Changes
+
+- Declare `LazyBlob` and `LazyFile` as implementations of the native `Blob` and `File` interfaces so their type contracts are checked as the classes evolve (see #11430).
+
 ## v5.0.3
 
 ### Patch Changes

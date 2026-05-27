@@ -1,3 +1,5 @@
+import type { Handle } from 'remix/ui'
+
 import type { ExternalProviderLink } from '../../utils/external-auth.ts'
 import { AuthCard } from '../auth-card.tsx'
 import { Document } from '../document.tsx'
@@ -17,64 +19,61 @@ interface LoginPageProps {
   success?: string
 }
 
-export function LoginPage() {
-  return ({
-    formAction,
-    signupHref,
-    forgotPasswordHref,
-    providers,
-    error,
-    success,
-  }: LoginPageProps) => (
-    <Document title="Social Auth Demo">
-      <AuthCard
-        title="Welcome Back"
-        subtitle="Sign in to your account"
-        footer={<LoginFooter signupHref={signupHref} />}
-      >
-        {error ? <Notice tone="error">{error}</Notice> : null}
-        {success ? <Notice tone="success">{success}</Notice> : null}
+export function LoginPage(handle: Handle<LoginPageProps>) {
+  return () => {
+    let { formAction, signupHref, forgotPasswordHref, providers, error, success } = handle.props
 
-        <form method="POST" action={formAction} mix={styles.form}>
-          <TextField
-            id="email"
-            name="email"
-            type="email"
-            label="Email"
-            placeholder="Enter your email"
-            autoComplete="email"
-            required
-            icon={<EmailIcon mix={styles.fieldIcon} />}
-          />
+    return (
+      <Document title="Social Auth Demo">
+        <AuthCard
+          title="Welcome Back"
+          subtitle="Sign in to your account"
+          footer={<LoginFooter signupHref={signupHref} />}
+        >
+          {error ? <Notice tone="error">{error}</Notice> : null}
+          {success ? <Notice tone="success">{success}</Notice> : null}
 
-          <TextField
-            id="password"
-            name="password"
-            type="password"
-            label="Password"
-            placeholder="Enter your password"
-            autoComplete="current-password"
-            required
-            icon={<PasswordIcon mix={styles.fieldIcon} />}
-          />
+          <form method="POST" action={formAction} mix={styles.form}>
+            <TextField
+              id="email"
+              name="email"
+              type="email"
+              label="Email"
+              placeholder="Enter your email"
+              autoComplete="email"
+              required
+              icon={<EmailIcon mix={styles.fieldIcon} />}
+            />
 
-          <div mix={styles.formOptions}>
-            <label mix={styles.rememberMe}>
-              <input type="checkbox" name="remember" value="yes" mix={styles.rememberCheckbox} />
-              <span>Remember me</span>
-            </label>
-            <a href={forgotPasswordHref} mix={styles.helperLink}>
-              Forgot password?
-            </a>
-          </div>
+            <TextField
+              id="password"
+              name="password"
+              type="password"
+              label="Password"
+              placeholder="Enter your password"
+              autoComplete="current-password"
+              required
+              icon={<PasswordIcon mix={styles.fieldIcon} />}
+            />
 
-          <button type="submit" mix={styles.submitButton}>
-            Sign In
-          </button>
-        </form>
+            <div mix={styles.formOptions}>
+              <label mix={styles.rememberMe}>
+                <input type="checkbox" name="remember" value="yes" mix={styles.rememberCheckbox} />
+                <span>Remember me</span>
+              </label>
+              <a href={forgotPasswordHref} mix={styles.helperLink}>
+                Forgot password?
+              </a>
+            </div>
 
-        <ExternalAuthSection providers={providers} />
-      </AuthCard>
-    </Document>
-  )
+            <button type="submit" mix={styles.submitButton}>
+              Sign In
+            </button>
+          </form>
+
+          <ExternalAuthSection providers={providers} />
+        </AuthCard>
+      </Document>
+    )
+  }
 }

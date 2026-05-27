@@ -1,4 +1,4 @@
-import { SetCookie } from '@remix-run/headers'
+import { SetCookie } from '@remix-run/headers/set-cookie'
 
 /**
  * Options for {@link createFetchProxy}.

@@ -2,6 +2,20 @@
 
 This is the changelog for [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server). It follows [semantic versioning](https://semver.org/).
 
+## v0.13.3
+
+### Patch Changes
+
+- Cancel unfinished streaming response bodies when the client connection closes before the response completes so user-provided `ReadableStream.cancel()` hooks run for aborted requests (see #11432).
+
+- Drop handler responses when the client has already disconnected, and do not forward request abort errors from handlers or response streams to `onError` or write them to a closed socket (see #11431).
+
+## v0.13.2
+
+### Patch Changes
+
+- Start writing the first response stream chunk immediately instead of waiting for another chunk. Streaming responses with a delayed second chunk now flush their initial data without unnecessary blocking.
+
 ## v0.13.1
 
 ### Patch Changes

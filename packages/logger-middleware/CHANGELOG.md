@@ -2,6 +2,25 @@
 
 This is the changelog for [`logger-middleware`](https://github.com/remix-run/remix/tree/main/packages/logger-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.19.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.19.1)
+  - [`terminal@0.1.1`](https://github.com/remix-run/remix/releases/tag/terminal@0.1.1)
+
+## v0.3.0
+
+### Minor Changes
+
+- `logger()` now installs the configured log function as `context.logger` in addition to using it for request/response access logs.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.19.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.19.0)
+
 ## v0.2.1
 
 ### Patch Changes

@@ -9,7 +9,9 @@ const server = http.createServer(
     try {
       return await router.fetch(request)
     } catch (error) {
-      console.error(error)
+      if (!(request.signal.aborted && error === request.signal.reason)) {
+        console.error(error)
+      }
       return new Response('Internal Server Error', { status: 500 })
     }
   }),

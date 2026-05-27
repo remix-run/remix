@@ -1,6 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
-import type { Handle } from '../runtime/component.ts'
+import type { Handle, RemixNode } from '../runtime/component.ts'
 import { Frame } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
 import { getTopFrame, run } from '../runtime/run.ts'
@@ -197,6 +197,106 @@ describe('run', () => {
     expect(buttons[1]?.textContent).toBe('Second')
 
     frame.dispose()
+  })
+
+  it('hydrates nested client entries without duplicating events or DOM ownership', async () => {
+    let outerSetupCount = 0
+    let toggleSetupCount = 0
+    let toggleClickCount = 0
+
+    let Outer = clientEntry(
+      '/js/outer.js#Outer',
+      function Outer(handle: Handle<{ children?: RemixNode }>) {
+        outerSetupCount++
+        return () => handle.props.children ?? null
+      },
+    )
+
+    let Toggle = clientEntry('/js/toggle.js#Toggle', function Toggle(handle: Handle) {
+      toggleSetupCount++
+      let wrapped = false
+
+      function toggle() {
+        toggleClickCount++
+        wrapped = !wrapped
+        handle.update()
+      }
+
+      return () =>
+        wrapped ? (
+          <div id="wrapper">
+            <button id="wrapped-button" type="button" mix={[on('click', toggle)]}>
+              Wrapped
+            </button>
+          </div>
+        ) : (
+          <button id="bare-button" type="button" mix={[on('click', toggle)]}>
+            Bare
+          </button>
+        )
+    })
+
+    let html = await drain(
+      renderToStream(
+        <Outer>
+          <Toggle />
+        </Outer>,
+      ),
+    )
+    document.body.innerHTML = html
+    outerSetupCount = 0
+    toggleSetupCount = 0
+    toggleClickCount = 0
+
+    let outerStart = document.body.firstChild
+    invariant(outerStart instanceof Comment)
+    let outerId = outerStart.data.trim().slice('rmx:h:'.length)
+    let innerStart = outerStart.nextSibling
+    invariant(innerStart instanceof Comment)
+    let innerId = innerStart.data.trim().slice('rmx:h:'.length)
+
+    function expectBodyHtml(innerHtml: string) {
+      expect(document.body.innerHTML).toBe(
+        `<!-- rmx:h:${outerId} --><!-- rmx:h:${innerId} -->${innerHtml}<!-- /rmx:h --><!-- /rmx:h -->`,
+      )
+    }
+
+    function getButton(id: string): HTMLButtonElement {
+      let button = document.getElementById(id)
+      invariant(button instanceof HTMLButtonElement)
+      return button
+    }
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/outer.js' && exportName === 'Outer') return Outer
+        if (moduleUrl === '/js/toggle.js' && exportName === 'Toggle') return Toggle
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+    })
+
+    await app.ready()
+
+    expect(outerSetupCount).toBe(1)
+    expect(toggleSetupCount).toBe(1)
+    expect(toggleClickCount).toBe(0)
+    expectBodyHtml('<button id="bare-button" type="button">Bare</button>')
+
+    getButton('bare-button').click()
+    app.flush()
+
+    expect(toggleClickCount).toBe(1)
+    expectBodyHtml(
+      '<div id="wrapper"><button id="wrapped-button" type="button">Wrapped</button></div>',
+    )
+
+    getButton('wrapped-button').click()
+    app.flush()
+
+    expect(toggleClickCount).toBe(2)
+    expectBodyHtml('<button id="bare-button" type="button">Bare</button>')
+
+    app.dispose()
   })
 
   it('removes orphaned hydration end markers after full-document reloads of adjacent client entries', async () => {
@@ -1188,6 +1288,91 @@ describe('run', () => {
     clientFrame.dispose()
   })
 
+  it('ignores updates from a client entry removed by a frame reload', async () => {
+    let pending = false
+    let showCartItems = true
+    let removeLastItem: undefined | (() => Promise<void>)
+
+    let CartItems = clientEntry(
+      '/assets/cart-items.js#CartItems',
+      function CartItems(handle: Handle) {
+        removeLastItem = async () => {
+          pending = true
+          await handle.update()
+          showCartItems = false
+          await handle.frame.reload()
+          pending = false
+          handle.update()
+        }
+
+        return () => (
+          <>
+            {pending ? <p id="cart-pending">Updating your cart...</p> : null}
+            <table id="cart-items">
+              <tbody>
+                <tr>
+                  <td>Book</td>
+                  <td>
+                    <button>Remove</button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+            <div id="cart-total">Total: $16.99</div>
+          </>
+        )
+      },
+    )
+
+    async function renderCartItems(): Promise<string> {
+      return await drain(
+        renderToStream(showCartItems ? <CartItems /> : <p id="empty-cart">Your cart is empty.</p>),
+      )
+    }
+
+    let html = await drain(
+      renderToStream(
+        <main>
+          <Frame src="/cart-items" />
+        </main>,
+        { resolveFrame: renderCartItems },
+      ),
+    )
+    document.body.innerHTML = html
+
+    let errors: unknown[] = []
+    let clientFrame = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/cart-items.js' && exportName === 'CartItems') {
+          return CartItems
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/cart-items') return renderCartItems()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+    clientFrame.addEventListener('error', (event) => {
+      errors.push(event.error)
+    })
+
+    await clientFrame.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('cart-items')).toBeInstanceOf(HTMLElement)
+    invariant(removeLastItem)
+
+    await removeLastItem()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('cart-items')).toBeNull()
+    expect(document.getElementById('empty-cart')?.textContent).toBe('Your cart is empty.')
+    expect(errors).toEqual([])
+
+    clientFrame.dispose()
+  })
+
   it('looks up named adjacent frames from handle.frames.get(name)', async () => {
     let summaryRenderCount = 0
     let reloadSummary: undefined | (() => Promise<void>)
@@ -1490,12 +1675,12 @@ describe('run', () => {
 
     let CartItems = clientEntry(
       '/assets/cart-items-css.js#CartItemsCss',
-      function CartItemsCss(handle: Handle) {
+      function CartItemsCss(handle: Handle<{ items: Item[] }>) {
         reload = () => handle.frame.reload()
 
-        return (props: { items: Item[] }) => (
+        return () => (
           <section>
-            {props.items.map((item) => (
+            {handle.props.items.map((item) => (
               <form
                 key={item.id}
                 data-row={item.id}
@@ -1586,7 +1771,7 @@ describe('run', () => {
 
     let CartSummary = clientEntry(
       '/assets/cart-summary-css.js#CartSummaryCss',
-      function CartSummaryCss(handle: Handle) {
+      function CartSummaryCss(handle: Handle<{ itemCount: number }>) {
         let pending = false
 
         startPendingReload = async () => {
@@ -1595,7 +1780,7 @@ describe('run', () => {
           return await handle.frame.reload()
         }
 
-        return (props: { itemCount: number }) => (
+        return () => (
           <section>
             {pending ? (
               <p id="pending-message" mix={[css({ color: 'rgb(200, 0, 0)' })]}>
@@ -1603,7 +1788,7 @@ describe('run', () => {
               </p>
             ) : null}
             <p id="item-count" mix={[css({ color: 'rgb(0, 0, 200)' })]}>
-              Items: {props.itemCount}
+              Items: {handle.props.itemCount}
             </p>
           </section>
         )

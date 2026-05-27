@@ -2,6 +2,18 @@
 
 This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
+## v0.13.5
+
+### Patch Changes
+
+- Add a `FileLike` alias and make `FileStorage` generic over the concrete `File` value returned by each backend. `createFsFileStorage()` now exposes `LazyFile` return types from `get()` and `put()` (see #11430).
+
+  Filesystem storage now persists file sizes in metadata instead of deriving them separately when listing files with metadata.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fs@0.4.4`](https://github.com/remix-run/remix/releases/tag/fs@0.4.4)
+  - [`lazy-file@5.0.4`](https://github.com/remix-run/remix/releases/tag/lazy-file@5.0.4)
+
 ## v0.13.4
 
 ### Patch Changes

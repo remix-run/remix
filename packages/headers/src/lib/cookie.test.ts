@@ -15,6 +15,23 @@ describe('Cookie', () => {
     assert.equal(header.get('name2'), 'value2')
   })
 
+  it('preserves duplicate cookie names in order', () => {
+    let header = new Cookie('session=child; session=parent; theme=dark')
+
+    assert.equal(header.get('session'), 'child')
+    assert.deepEqual(header.getAll('session'), ['child', 'parent'])
+    assert.deepEqual(header.getAll('missing'), [])
+    assert.deepEqual(header.names, ['session', 'session', 'theme'])
+    assert.deepEqual(header.values, ['child', 'parent', 'dark'])
+    assert.equal(header.size, 3)
+    assert.deepEqual(Array.from(header), [
+      ['session', 'child'],
+      ['session', 'parent'],
+      ['theme', 'dark'],
+    ])
+    assert.equal(header.toString(), 'session=child; session=parent; theme=dark')
+  })
+
   it('initializes with an array', () => {
     let header = new Cookie([
       ['name1', 'value1'],
@@ -58,16 +75,26 @@ describe('Cookie', () => {
     assert.equal(header.get('name'), 'value')
   })
 
+  it('appends values', () => {
+    let header = new Cookie('name=value1')
+
+    header.append('name', 'value2')
+
+    assert.deepEqual(header.getAll('name'), ['value1', 'value2'])
+    assert.equal(header.toString(), 'name=value1; name=value2')
+  })
+
   it('returns `null` for nonexistent values', () => {
     let header = new Cookie()
     assert.equal(header.get('name'), null)
   })
 
   it('deletes values', () => {
-    let header = new Cookie('name=value')
+    let header = new Cookie('name=value1; other=value; name=value2')
     assert.equal(header.has('name'), true)
     header.delete('name')
     assert.equal(header.has('name'), false)
+    assert.deepEqual(Array.from(header), [['other', 'value']])
   })
 
   it('checks if value exists', () => {
@@ -137,9 +164,14 @@ describe('Cookie', () => {
   })
 
   it('overwrites existing values', () => {
-    let header = new Cookie('name=value1')
+    let header = new Cookie('name=value1; other=value; name=value2')
     header.set('name', 'value2')
     assert.equal(header.get('name'), 'value2')
+    assert.deepEqual(header.getAll('name'), ['value2'])
+    assert.deepEqual(Array.from(header), [
+      ['name', 'value2'],
+      ['other', 'value'],
+    ])
   })
 })
 

@@ -1,6 +1,7 @@
 ---
 name: fix-issue
-description: Fix a reported issue in Remix from a GitHub issue. Use when the user provides a GitHub issue URL and asks to fix a bug, investigate an issue, or reproduce a problem. Handles the full workflow: fetching the issue, finding the reproduction, writing a failing test, and implementing the fix.
+description: |
+  Fix a reported issue in Remix from a GitHub issue. Use when the user provides a GitHub issue URL and asks to fix a bug, investigate an issue, or reproduce a problem. Handles the full workflow: fetching the issue, finding the reproduction, writing a failing test, and implementing the fix.
 disable-model-invocation: true
 ---
 
@@ -100,7 +101,7 @@ pnpm run typecheck
 
 ### 6. Create a Change File
 
-If the fix is user-facing, add a change file under `packages/<package>/.changes/`. Use the `make-change-file` skill at `.agents/skills/make-change-file/SKILL.md` — do not re-derive the naming, bump rules, or content rules here.
+If the fix is user-facing, create `packages/<package>/.changes/` on demand and add a change file there. Use the `make-change-file` skill at `.agents/skills/make-change-file/SKILL.md` — do not re-derive the naming, bump rules, or content rules here.
 
 For `0.x` packages, bug fixes are `patch`. For Remix export-only changes, update `packages/remix/.changes/minor.remix.update-exports.md` in place.
 

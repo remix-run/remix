@@ -92,7 +92,7 @@ describe('clientEntry', () => {
       expect(typeof renderFn).toBe('function')
 
       if (typeof renderFn === 'function') {
-        let element = renderFn(mockHandle.props)
+        let element = renderFn()
         expect(element).toEqual({
           $rmx: true,
           type: 'button',

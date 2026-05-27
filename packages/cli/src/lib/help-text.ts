@@ -82,7 +82,8 @@ function formatHeading(title: string, target: NodeJS.WriteStream): string {
 }
 
 function highlightSyntax(text: string, target: NodeJS.WriteStream): string {
-  return text.replace(/(--[A-Za-z0-9-]+|-[A-Za-z]|\[[A-Za-z][A-Za-z0-9-]*\]|<[^>\n]+>)/g, (token) =>
-    lightYellow(token, target),
+  return text.replace(
+    /(?<![^\s[,|])(--[A-Za-z0-9-]+|-[A-Za-z])(?=$|[\s,\]|])|\[[A-Za-z][A-Za-z0-9-]*\]|<[^>\n]+>/g,
+    (token) => lightYellow(token, target),
   )
 }

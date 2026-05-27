@@ -44,7 +44,7 @@ export type Renderable = RemixElement | string | number | bigint | boolean | nul
  * Particularly useful for `props.children`.
  *
  * ```tsx
- * function MyComponent({ children }: { children: RemixNode }) {}
+ * function MyComponent(handle: Handle<{ children: RemixNode }>) {}
  * ```
  */
 export type RemixNode = Renderable | RemixNode[]
@@ -76,10 +76,6 @@ type MixinElementType = ((
 ) => (props: any) => RemixElement) & {
   __rmxMixinElementType: string
 }
-
-type MergeComponentProps<handleProps, renderProps> = [handleProps] extends [Record<string, never>]
-  ? renderProps
-  : handleProps & renderProps
 
 /**
  * Get the props for a specific element type.
@@ -120,7 +116,7 @@ declare global {
       // host elements
       | keyof IntrinsicElements
       // Factory component
-      | ((handle: Handle<any, any>) => RenderFn<any>)
+      | ((handle: Handle<any, any>) => RenderFn)
       // Mixin element used internally by mixin render callbacks
       | MixinElementType
 
@@ -134,11 +130,11 @@ declare global {
 
     type LibraryManagedAttributes<component, props> = component extends MixinElementType
       ? ExpandMixProp<Parameters<ReturnType<component>>[0]>
-      : component extends (handle: Handle<infer P, any>) => RenderFn<infer R>
-        ? // It's a ComponentFactory - infer props from the handle
-          ExpandMixProp<MergeComponentProps<P, R>>
-        : component extends () => RenderFn<infer P>
-          ? ExpandMixProp<P>
+      : component extends () => RenderFn
+        ? ExpandMixProp<Record<string, never>>
+        : component extends (handle: Handle<infer P, any>) => RenderFn
+          ? // It's a ComponentFactory - infer props from the handle
+            ExpandMixProp<P>
           : // Otherwise use props as-is (simple function component)
             ExpandMixProp<props>
 

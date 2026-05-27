@@ -147,6 +147,19 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  demos/timeboxer:
+    dependencies:
+      remix:
+        specifier: workspace:*
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
   demos/unpkg:
     dependencies:
       remix:
@@ -1250,9 +1263,6 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:^
         version: link:..
-      '@remix-run/node-serve':
-        specifier: workspace:^
-        version: link:../../node-serve
       express:
         specifier: ^5.2.1
         version: 5.2.1
@@ -1267,25 +1277,6 @@ importers:
         specifier: workspace:^
         version: link:../..
     devDependencies:
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
-
-  packages/node-serve:
-    dependencies:
-      uWebSockets.js:
-        specifier: github:uNetworking/uWebSockets.js#v20.66.0
-        version: https://codeload.github.com/uNetworking/uWebSockets.js/tar.gz/a63031f40f76dc2422e8da736c04217053e9db2b
-    devDependencies:
-      '@remix-run/assert':
-        specifier: workspace:*
-        version: link:../assert
-      '@remix-run/test':
-        specifier: workspace:*
-        version: link:../test
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -1404,9 +1395,6 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:^
         version: link:../node-fetch-server
-      '@remix-run/node-serve':
-        specifier: workspace:^
-        version: link:../node-serve
       '@remix-run/node-tsx':
         specifier: workspace:^
         version: link:../node-tsx
@@ -5448,10 +5436,6 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  uWebSockets.js@https://codeload.github.com/uNetworking/uWebSockets.js/tar.gz/a63031f40f76dc2422e8da736c04217053e9db2b:
-    resolution: {tarball: https://codeload.github.com/uNetworking/uWebSockets.js/tar.gz/a63031f40f76dc2422e8da736c04217053e9db2b}
-    version: 20.66.0
-
   uc.micro@2.1.0:
     resolution: {integrity: sha512-ARDJmphmdvUk6Glw7y9DQ2bFkKBHwQHLi2lsaH6PPmz/Ka9sFOBsBluozhDltWmnv9u/cF6Rt87znRTPV+yp/A==}
 
@@ -8648,7 +8632,7 @@ snapshots:
 
   tsx@4.21.0:
     dependencies:
-      esbuild: 0.27.1
+      esbuild: 0.27.7
       get-tsconfig: 4.13.6
     optionalDependencies:
       fsevents: 2.3.3
@@ -8675,8 +8659,6 @@ snapshots:
       vscode-languageserver-protocol: 3.17.5
 
   typescript@5.9.3: {}
-
-  uWebSockets.js@https://codeload.github.com/uNetworking/uWebSockets.js/tar.gz/a63031f40f76dc2422e8da736c04217053e9db2b: {}
 
   uc.micro@2.1.0: {}
 

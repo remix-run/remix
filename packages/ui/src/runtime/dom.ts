@@ -9,6 +9,7 @@ import type { MixInput } from './mixins/mixin.ts'
  * - Copyright (c) 2015-present Jason Miller
  */
 type Booleanish = boolean | 'true' | 'false'
+type TranslateValue = 'yes' | 'no'
 
 /**
  * Layout animation configuration for FLIP-based position animations.
@@ -109,6 +110,8 @@ export interface SVGProps<eventTarget extends EventTarget = SVGElement>
   attributeName?: Trackable<string | undefined>
   /** The `attributeType` SVG attribute. */
   attributeType?: Trackable<string | undefined>
+  /** The `autoReverse` SVG attribute. */
+  autoReverse?: Trackable<Booleanish | undefined>
   /** The `azimuth` SVG attribute. */
   azimuth?: Trackable<number | string | undefined>
   /** The `baseFrequency` SVG attribute. */
@@ -212,7 +215,7 @@ export interface SVGProps<eventTarget extends EventTarget = SVGElement>
   /** The `exponent` SVG attribute. */
   exponent?: Trackable<number | string | undefined>
   /** The `externalResourcesRequired` SVG attribute. */
-  externalResourcesRequired?: Trackable<number | string | undefined>
+  externalResourcesRequired?: Trackable<Booleanish | undefined>
   /** The `fill` SVG attribute. */
   fill?: Trackable<string | undefined>
   /** The `fillOpacity` SVG attribute. */
@@ -238,7 +241,7 @@ export interface SVGProps<eventTarget extends EventTarget = SVGElement>
   /** The `flood-opacity` SVG attribute. */
   'flood-opacity'?: Trackable<number | string | undefined>
   /** The `focusable` SVG attribute. */
-  focusable?: Trackable<number | string | undefined>
+  focusable?: Trackable<Booleanish | undefined>
   /** The `fontFamily` SVG attribute. */
   fontFamily?: Trackable<string | undefined>
   /** The `font-family` SVG attribute. */
@@ -446,7 +449,7 @@ export interface SVGProps<eventTarget extends EventTarget = SVGElement>
   /** The `pointsAtZ` SVG attribute. */
   pointsAtZ?: Trackable<number | string | undefined>
   /** The `preserveAlpha` SVG attribute. */
-  preserveAlpha?: Trackable<number | string | undefined>
+  preserveAlpha?: Trackable<Booleanish | undefined>
   /** The `preserveAspectRatio` SVG attribute. */
   preserveAspectRatio?: Trackable<string | undefined>
   /** The `primitiveUnits` SVG attribute. */
@@ -1263,7 +1266,7 @@ export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
   /** The `decoding` HTML attribute. */
   decoding?: Trackable<'sync' | 'async' | 'auto' | undefined>
   /** The `draggable` HTML attribute. */
-  draggable?: Trackable<boolean | undefined>
+  draggable?: Trackable<Booleanish | undefined>
   /** The `encType` HTML attribute. */
   encType?: Trackable<string | undefined>
   /** The `enctype` HTML attribute. */
@@ -1487,7 +1490,9 @@ export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
   /** The `span` HTML attribute. */
   span?: Trackable<number | undefined>
   /** The `spellcheck` HTML attribute. */
-  spellcheck?: Trackable<boolean | undefined>
+  spellcheck?: Trackable<Booleanish | undefined>
+  /** The `spellCheck` HTML attribute. */
+  spellCheck?: Trackable<Booleanish | undefined>
   /** The `src` HTML attribute. */
   src?: Trackable<string | undefined>
   /** The `srcDoc` HTML attribute. */
@@ -1551,7 +1556,7 @@ export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
   /** The `results` HTML attribute. */
   results?: Trackable<number | undefined>
   /** The `translate` HTML attribute. */
-  translate?: Trackable<boolean | undefined>
+  translate?: Trackable<TranslateValue | undefined>
 
   // RDFa Attributes
   /** The `about` HTML attribute. */
@@ -1632,7 +1637,7 @@ export interface HTMLProps<eventTarget extends EventTarget = EventTarget>
   /** The `dir` HTML attribute. */
   dir?: Trackable<'auto' | 'rtl' | 'ltr' | undefined>
   /** The `draggable` HTML attribute. */
-  draggable?: Trackable<boolean | undefined>
+  draggable?: Trackable<Booleanish | undefined>
   /** The `enterkeyhint` HTML attribute. */
   enterkeyhint?: Trackable<
     'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send' | undefined
@@ -1662,7 +1667,9 @@ export interface HTMLProps<eventTarget extends EventTarget = EventTarget>
   /** The `slot` HTML attribute. */
   slot?: Trackable<string | undefined>
   /** The `spellcheck` HTML attribute. */
-  spellcheck?: Trackable<boolean | undefined>
+  spellcheck?: Trackable<Booleanish | undefined>
+  /** The `spellCheck` HTML attribute. */
+  spellCheck?: Trackable<Booleanish | undefined>
   /** The `style` HTML attribute. */
   style?: Trackable<string | StyleProps | undefined>
   /** The `tabindex` HTML attribute. */
@@ -1672,7 +1679,7 @@ export interface HTMLProps<eventTarget extends EventTarget = EventTarget>
   /** The `title` HTML attribute. */
   title?: Trackable<string | undefined>
   /** The `translate` HTML attribute. */
-  translate?: Trackable<boolean | undefined>
+  translate?: Trackable<TranslateValue | undefined>
 
   // WAI-ARIA Attributes
   // Most elements only allow a subset of roles and so this

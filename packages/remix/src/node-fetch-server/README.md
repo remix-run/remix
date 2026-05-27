@@ -124,8 +124,7 @@ async function handler(request: Request) {
 
 ### Custom Hostname Configuration
 
-Configure custom hostnames for deployment on VPS or custom environments. `node-fetch-server` uses
-the `host` option when constructing `request.url`.
+Configure custom hostnames for deployment on VPS or custom environments. `node-fetch-server` uses the `host` option when constructing `request.url`.
 
 ```ts
 import * as http from 'node:http'
@@ -291,7 +290,6 @@ The [`demos` directory](https://github.com/remix-run/remix/tree/main/packages/no
 
 ## Related Packages
 
-- [`node-serve`](https://github.com/remix-run/remix/tree/main/packages/node-serve) - Build high-performance Fetch API servers for Node.js
 - [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Build HTTP proxy servers using the web fetch API
 
 ## Benchmarks
@@ -322,7 +320,6 @@ Simple HTML response benchmarks without inspecting the incoming request.
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `remix/node-serve`        |   `0.0.0` |     `62,225` |    `6.45ms` |     `9.85MB` |
 | `node:http`               | `24.15.0` |     `47,110` |   `10.66ms` |     `9.66MB` |
 | `remix/node-fetch-server` |  `0.13.0` |     `43,317` |   `11.69ms` |     `8.80MB` |
 | `express`                 |   `5.2.1` |     `39,752` |   `13.69ms` |     `9.59MB` |
@@ -333,7 +330,6 @@ POST benchmarks that read and print the request method, headers, and a small bod
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `remix/node-serve`        |   `0.0.0` |     `31,213` |   `12.75ms` |     `4.94MB` |
 | `remix/node-fetch-server` |  `0.13.0` |     `25,430` |   `24.25ms` |     `5.17MB` |
 | `node:http`               | `24.15.0` |     `25,088` |   `23.89ms` |     `5.14MB` |
 | `express`                 |   `5.2.1` |     `22,845` |   `27.16ms` |     `5.51MB` |
@@ -344,7 +340,6 @@ POST benchmarks that read and print the request method, headers, and a 1 MB body
 
 | Server                    |   Version | Requests/sec | Avg latency | Transfer/sec |
 | ------------------------- | --------: | -----------: | ----------: | -----------: |
-| `remix/node-serve`        |   `0.0.0` |      `1,148` |  `327.72ms` |   `186.03KB` |
 | `remix/node-fetch-server` |  `0.13.0` |      `1,086` |  `217.69ms` |   `225.87KB` |
 | `node:http`               | `24.15.0` |      `1,079` |  `198.67ms` |   `226.54KB` |
 | `express`                 |   `5.2.1` |      `1,022` |  `216.07ms` |   `252.51KB` |

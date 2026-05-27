@@ -14,7 +14,7 @@ import { runProgressStep, type StepProgressReporter } from './reporter.ts'
 
 const MODULE_DIRECTORY = path.dirname(fileURLToPath(import.meta.url))
 const PACKAGE_TEMPLATE_DIRECTORY = path.resolve(MODULE_DIRECTORY, '../../template')
-const REPO_TEMPLATE_DIRECTORY = path.resolve(MODULE_DIRECTORY, '../../../../template')
+const IS_RUNNING_FROM_SRC = path.extname(new URL(import.meta.url).pathname) === '.ts'
 const TEMPLATE_EXCLUDED_NAMES = new Set(['.gitkeep', 'node_modules'])
 export const MINIMUM_SUPPORTED_NODE_VERSION = '24.3.0'
 
@@ -109,13 +109,16 @@ async function resolveTemplateDirectory(): Promise<string> {
     return PACKAGE_TEMPLATE_DIRECTORY
   }
 
-  if (await isDirectory(REPO_TEMPLATE_DIRECTORY)) {
-    return REPO_TEMPLATE_DIRECTORY
+  if (IS_RUNNING_FROM_SRC) {
+    throw new Error(
+      [
+        `Could not find the prepared Remix app template at ${PACKAGE_TEMPLATE_DIRECTORY}.`,
+        'Run `pnpm --filter @remix-run/cli run prepack` from the repository root to generate it.',
+      ].join('\n'),
+    )
   }
 
-  throw new Error(
-    `Could not find the Remix app template at ${PACKAGE_TEMPLATE_DIRECTORY} or ${REPO_TEMPLATE_DIRECTORY}.`,
-  )
+  throw new Error(`Could not find the Remix app template at ${PACKAGE_TEMPLATE_DIRECTORY}.`)
 }
 
 async function isDirectory(directory: string): Promise<boolean> {
@@ -193,7 +196,7 @@ async function copyTemplateDirectory({
 
   for (let entry of entries) {
     let sourcePath = path.join(sourceDir, entry.name)
-    let targetPath = path.join(targetDir, entry.name)
+    let targetPath = path.join(targetDir, entry.name === 'gitignore' ? '.gitignore' : entry.name)
 
     if (TEMPLATE_EXCLUDED_NAMES.has(entry.name)) {
       continue

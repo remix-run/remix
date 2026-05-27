@@ -15,6 +15,7 @@ export function render() {
 
     return function render(node: RemixNode, init?: ResponseInit): Response {
       let stream = renderToStream(node, {
+        signal: request.signal,
         resolveFrame: (src) => resolveFrameViaRouter(router, request, src),
         async resolveClientEntry(entryId, component) {
           if (!entryId.startsWith('file://')) {

@@ -25,6 +25,24 @@ describe('vnode rendering', () => {
       expect(container.innerHTML).toBe('<div>Hello, world!</div>')
     })
 
+    it('does not pass props to the component render function', () => {
+      let container = document.createElement('div')
+      let renderArg: unknown = 'unset'
+
+      function App(handle: Handle<{ label: string }>) {
+        return (...args: unknown[]) => {
+          renderArg = args[0]
+          return <div>{handle.props.label}</div>
+        }
+      }
+
+      let { render } = createRoot(container)
+      render(<App label="Count" />)
+
+      expect(container.innerHTML).toBe('<div>Count</div>')
+      expect(renderArg).toBeUndefined()
+    })
+
     it('updates a component', () => {
       let container = document.createElement('div')
 

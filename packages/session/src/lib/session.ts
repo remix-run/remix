@@ -22,7 +22,7 @@ export class Session<valueData extends Data = Data, flashData extends Data = Dat
    * @param id The session ID
    * @param initialData The initial session data
    */
-  constructor(id = createSessionId(), initialData?: SessionData<valueData, flashData>) {
+  constructor(id: string = createSessionId(), initialData?: SessionData<valueData, flashData>) {
     this.#originalId = id
     this.#currentId = id
     this.#valueMap = toMap(initialData?.[0])
@@ -183,7 +183,7 @@ function toMap<data extends Data>(data?: data): Map<keyof data, data[keyof data]
  * @returns The new session
  */
 export function createSession<valueData extends Data = Data, flashData extends Data = Data>(
-  id = createSessionId(),
+  id: string = createSessionId(),
   initialData?: SessionData<valueData, flashData>,
 ): Session<valueData, flashData> {
   return new Session(id, initialData)

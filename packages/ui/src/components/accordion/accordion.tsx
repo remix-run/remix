@@ -230,7 +230,7 @@ function isMultipleProps(props: AccordionProps | null): props is AccordionMultip
   return props?.type === 'multiple'
 }
 
-function AccordionImpl(handle: Handle<AccordionProps, AccordionContext>) {
+function AccordionImpl(handle: Handle<AccordionProps, AccordionContext>): () => RemixNode {
   let rootNode: HTMLElement | null = null
   let registeredItems: RegisteredItem[] = []
   let uncontrolledSingleValue: string | null = null
@@ -418,13 +418,15 @@ function AccordionImpl(handle: Handle<AccordionProps, AccordionContext>) {
 export function onAccordionChange<target extends HTMLElement>(
   handler: AccordionChangeHandler<target>,
   captureBoolean?: boolean,
-) {
+): ReturnType<typeof on<target, typeof ACCORDION_CHANGE_EVENT>> {
   return on(ACCORDION_CHANGE_EVENT, handler, captureBoolean)
 }
 
 export const Accordion = AccordionImpl
 
-export function AccordionItem(handle: Handle<AccordionItemProps, AccordionItemContext>) {
+export function AccordionItem(
+  handle: Handle<AccordionItemProps, AccordionItemContext>,
+): () => RemixNode {
   let triggerNode: HTMLButtonElement | null = null
   let triggerId = `${handle.id}-trigger`
   let panelId = `${handle.id}-panel`
@@ -468,7 +470,7 @@ export function AccordionItem(handle: Handle<AccordionItemProps, AccordionItemCo
   }
 }
 
-export function AccordionTrigger(handle: Handle<AccordionTriggerProps>) {
+export function AccordionTrigger(handle: Handle<AccordionTriggerProps>): () => RemixNode {
   return () => {
     let accordion = handle.context.get(Accordion)
     let item = handle.context.get(AccordionItem)
@@ -539,7 +541,7 @@ export function AccordionTrigger(handle: Handle<AccordionTriggerProps>) {
   }
 }
 
-export function AccordionContent(handle: Handle<AccordionContentProps>) {
+export function AccordionContent(handle: Handle<AccordionContentProps>): () => RemixNode {
   return () => {
     let item = handle.context.get(AccordionItem)
     let { children, mix, ...panelProps } = handle.props

@@ -11,16 +11,18 @@ Write release notes that match this repository's `.changes` conventions. Use it 
 
 ## Workflow
 
-1. Read the package's `package.json`, `.changes/` directory, and any relevant PR diff or commit range before writing anything.
+1. Read the package's `package.json`, existing `.changes/` directory if present, and any relevant PR diff or commit range before writing anything.
 2. Check whether an unpublished change file already exists for the same work. If it does, update it in place instead of creating a duplicate note.
 3. Choose the bump type from the package version and the user-facing impact.
-4. Write concise, user-facing release notes that describe shipped behavior, APIs, or exports.
-5. Run `pnpm changes:preview` to verify the rendered changelog output.
-6. Run `pnpm run lint` before finishing.
+4. Create `packages/<package>/.changes/` on demand if it does not already exist.
+5. Write concise, user-facing release notes that describe shipped behavior, APIs, or exports.
+6. Run `pnpm changes:preview` to verify the rendered changelog output.
+7. Run `pnpm run lint` before finishing.
 
 ## Naming
 
 - Use `packages/<package>/.changes/[major|minor|patch].short-description.md`.
+- The `.changes/` directory is optional until a package has a change file or `.changes/config.json`.
 - Keep the slug short, specific, and stable.
 - Reuse existing deterministic names when the repo already has a pattern for that class of note.
 - For brand-new package releases, prefer `minor.initial-release.md`.
@@ -50,6 +52,13 @@ Write release notes that match this repository's `.changes` conventions. Use it 
 
 - Document user-visible behavior, public API changes, exports, migrations, or upgrade work.
 - Do not write release notes for internal refactors unless they surface as real API or behavior changes.
+- Keep each note self-contained. A reader should understand the shipped behavior from the note itself, with links adding context rather than replacing the explanation.
+- When a change is tied to a public issue, PR, RFC, decision doc, spec, or external bug report, include a short reference in the note. Prefer the PR that actually addressed the issue or feature over the source issue because the source issue remains reachable from the PR. Use inline same-repo references like `(see #1234)` and full URLs for external repositories, specs, or reports.
+- Name the affected API, route convention, package, entrypoint, runtime, browser, or tool version when that detail helps users recognize whether the note applies to them.
+- For bug fixes, describe the user-visible symptom or failing scenario instead of only describing the implementation fix.
+- For breaking changes, include the old behavior, new behavior, and migration path.
+- For deprecations, mention the replacement API when one exists.
+- Avoid linking every implementation PR when it does not add useful reader context.
 - Prefer a small number of logically grouped notes over many tiny files.
 - Add a manual change file to the package that owns the changed API, behavior, or implementation.
 - If another package directly re-exports a newly added, removed, renamed, or otherwise changed public API surface, add a change file for the re-exporting package when users can consume that API through the re-exported entrypoint.
@@ -57,6 +66,12 @@ Write release notes that match this repository's `.changes` conventions. Use it 
 - For bug fixes in an underlying package, usually add a change file only to the package that owns the fix. Add a re-export package note only when the re-exporting package's own changelog needs to call out the behavior directly, not merely because the fixed dependency is reachable from that package.
 - Do not manually hard-wrap prose in `.changes/*.md` files. Keep each paragraph or bullet on a single source line and let rendered changelogs wrap naturally.
 - Use flat bullets only when they add clarity. Short paragraphs are usually better.
+
+## Historical Changelogs
+
+- Treat existing `CHANGELOG.md` files and historical changelog docs as records of what was true at the time. Do not rewrite old entries to match current APIs, terminology, or guidance.
+- If current guidance is stale or confusing, update current docs, README files, skills, or add a new `.changes` file instead of editing historical release prose.
+- Only edit historical changelog entries for narrow corrections such as broken links, typos, or clearly invalid references, and prefer doing so only when the user explicitly asks.
 
 ## Remix-Specific Rules
 
@@ -70,5 +85,8 @@ Write release notes that match this repository's `.changes` conventions. Use it 
 - Is the bump type correct for the package version?
 - Did you reuse any deterministic filename the repo already expects?
 - Does the note describe user-facing changes instead of implementation details?
+- Did you include related issue, PR, RFC, decision, spec, or external report references when they add useful context, preferring the implementation PR over the source issue when both exist?
+- For bug fixes, does the note describe the failing scenario or symptom?
+- For breaking changes or deprecations, does the note include the migration path or replacement API?
 - Does each paragraph or bullet stay on one source line without manual hard wrapping?
 - Did `pnpm changes:preview` render the expected changelog entry?

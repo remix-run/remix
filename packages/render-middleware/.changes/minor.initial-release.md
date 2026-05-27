@@ -1,1 +1,0 @@
-Initial release of `@remix-run/render-middleware`, which provides the `Renderer` context key, `Renderer` type, and `renderWith()` middleware for adding request-scoped renderers to `fetch-router` request context. Renderers are available as both `context.render` and `context.get(Renderer)`.

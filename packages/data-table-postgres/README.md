@@ -1,7 +1,6 @@
 # data-table-postgres
 
-PostgreSQL adapter for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table).
-Use this package when you want `data-table` APIs backed by `pg`.
+PostgreSQL adapter for [`remix/data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table). Use this package when you want `data-table` APIs backed by `pg`.
 
 ## Features
 
@@ -36,8 +35,7 @@ let pool = new Pool({
 let db = createDatabase(createPostgresDatabaseAdapter(pool))
 ```
 
-Use `db.query(...)`, relation loading, and transactions from `remix/data-table`.
-Import any driver-specific types you need directly from `pg`.
+Use `db.query(...)`, relation loading, and transactions from `remix/data-table`. Import any driver-specific types you need directly from `pg`.
 
 ## Adapter Capabilities
 

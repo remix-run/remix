@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { createCookie } from '@remix-run/cookie'
-import { SetCookie } from '@remix-run/headers'
+import { SetCookie } from '@remix-run/headers/set-cookie'
 import { createSession, Session } from '@remix-run/session'
 import { createCookieSessionStorage } from '@remix-run/session/cookie-storage'
 import { createRouter } from '@remix-run/fetch-router'

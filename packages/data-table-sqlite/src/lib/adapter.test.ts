@@ -196,6 +196,22 @@ describe('sqlite adapter', () => {
       /Unknown transaction token: tx_missing/,
     )
     await assert.rejects(
+      () =>
+        adapter.execute({
+          operation: {
+            kind: 'insert',
+            table: accounts,
+            values: {
+              id: 1,
+              email: 'a@example.com',
+              status: 'active',
+            },
+          },
+          transaction: { id: 'tx_missing' },
+        }),
+      /Unknown transaction token: tx_missing/,
+    )
+    await assert.rejects(
       () => adapter.hasTable({ name: 'users' }, { id: 'tx_missing' }),
       /Unknown transaction token: tx_missing/,
     )

@@ -80,7 +80,6 @@ Most packages in this repository are standalone JavaScript/TypeScript tools. The
 - [mime](packages/mime): Utilities for working with MIME types
 - [multipart-parser](packages/multipart-parser): A fast, efficient parser for multipart streams in any JavaScript environment
 - [node-fetch-server](packages/node-fetch-server): Build servers for Node.js using the web fetch API
-- [node-serve](packages/node-serve): Build high-performance Fetch API servers for Node.js
 - [node-tsx](packages/node-tsx): Run Node.js with TypeScript and JSX syntax support
 - [remix](packages/remix): The Remix web framework
 - [response](packages/response): Response helpers for the web Fetch API
@@ -123,8 +122,7 @@ pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
 
 ## Agent Skills For Building Apps
 
-Agents that are starting a Remix 3 app from this repository should use the skill that ships with
-the [app template](./template/.agents/skills/remix/SKILL.md).
+Agents that are starting a Remix 3 app from this repository should use the [`remix` app skill](./.agents/skills/remix/SKILL.md). The CLI prepack step copies this skill into the app template so generated apps can use the same guidance.
 
 ## Contributing
 

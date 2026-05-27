@@ -7,8 +7,7 @@ description: Create or align a package in the Remix monorepo to match existing p
 
 ## Overview
 
-Use this skill to scaffold and standardize packages so they look and behave like the existing `@remix-run/*` packages.
-Follow this exactly when creating package files, public exports, tests, and docs.
+Use this skill to scaffold and standardize packages so they look and behave like the existing `@remix-run/*` packages. Follow this exactly when creating package files, public exports, tests, and docs.
 
 ## Workflow
 
@@ -22,7 +21,6 @@ Follow this exactly when creating package files, public exports, tests, and docs
   - `CHANGELOG.md`
   - `README.md`
   - `LICENSE`
-  - `.changes/README.md`
   - `src/`
 - For new packages, start `CHANGELOG.md` with `## Unreleased` as the first section to indicate changes are not released yet.
 
@@ -171,7 +169,7 @@ npm i remix <peer-dependency>
   - `pnpm --filter @remix-run/<package-name> run build`
 - Run repo lint (required):
   - `pnpm run lint`
-- Add or update a change file under `packages/<package-name>/.changes/` when requested by contribution workflow.
+- Create `packages/<package-name>/.changes/` on demand and add or update a change file when requested by contribution workflow.
 - For a brand-new package, the initial change file should use a `minor.` filename (for example, `minor.initial-release.md`) so the first release bumps `0.0.0` to `0.1.0`.
 
 ## Templates

@@ -1,6 +1,6 @@
-# Remix Component - Agent Guide
+# Remix UI - Agent Guide
 
-This guide provides a comprehensive overview of the Remix Component API, its runtime behavior, and practical use cases for building interactive UIs.
+This guide provides a comprehensive overview of the Remix UI API, its runtime behavior, and practical use cases for building interactive UIs.
 
 > Note: Host-element `on`, `css`, `animate`, and `connect` props were removed. Use `mix={[on('event', handler)]}`, `mix={[css(...)]}`, animation mixins, and `mix={[ref(...)]}` instead.
 
@@ -8,7 +8,7 @@ This guide provides a comprehensive overview of the Remix Component API, its run
 
 ### Creating a Root
 
-To start using Remix Component, create a root and render your top-level component:
+To start using Remix UI, create a root and render your top-level component:
 
 ```tsx
 import { createRoot, on } from 'remix/ui'
@@ -91,12 +91,12 @@ All components follow a consistent two-phase structure:
 2. **Render Phase** - Runs on initial render and every update afterward
 
 ```tsx
-function MyComponent(handle: Handle, setup: SetupType) {
+function MyComponent(handle: Handle<Props>) {
   // Setup phase: runs once
-  let state = initializeState(setup)
+  let state = initializeState(handle.props)
 
   // Return render function: runs on every update
-  return (props: Props) => {
+  return () => {
     return <div>{/* render content */}</div>
   }
 }
@@ -108,17 +108,16 @@ When a component is rendered:
 
 1. **First Render**:
 
-   - The component function is called with `handle` and the `setup` prop
+   - The component function is called with `handle`
    - The returned render function is stored
-   - The render function is called with regular props
+   - The render function is called after `handle.props` is populated
    - Any tasks queued via `handle.queueTask()` are executed after rendering
 
 2. **Subsequent Updates**:
 
    - Only the render function is called
-   - Setup phase is skipped, setup closure persists for the lifetime of the component instance
-   - Props are passed to the render function
-   - The `setup` prop is stripped from props
+   - Setup phase is skipped, and the closure persists for the lifetime of the component instance
+   - `handle.props` is updated before the render function is called
    - Tasks queued during the update are executed after rendering
 
 3. **Component Removal**:
@@ -126,27 +125,25 @@ When a component is rendered:
    - Listeners registered with `addEventListeners(..., handle.signal, ...)` are automatically cleaned up
    - Any queued tasks are executed with an aborted signal
 
-### Setup vs Props
+### Props On The Handle
 
-The `setup` prop is special - it's only available in the setup phase and is automatically excluded from props. This prevents accidental stale captures:
+Props are available on `handle.props`. The object is stable, and its values are updated before each render:
 
 ```tsx
-function Counter(handle: Handle, setup: number) {
-  // setup prop (e.g., initialCount) only available here
-  let count = setup
+function Counter(handle: Handle<{ initialCount: number; label: string }>) {
+  let count = handle.props.initialCount
 
-  return (props: { label: string }) => {
-    // props only receives { label } - setup is excluded
+  return () => {
     return (
       <div>
-        {props.label}: {count}
+        {handle.props.label}: {count}
       </div>
     )
   }
 }
 
 // Usage
-let element = <Counter setup={10} label="Count" />
+let element = <Counter initialCount={10} label="Count" />
 ```
 
 ## Handle API
@@ -155,8 +152,7 @@ The `Handle` object provides the component's interface to the framework:
 
 ### `handle.update()`
 
-Schedules a component update and returns a promise that resolves with an `AbortSignal` after
-the update completes.
+Schedules a component update and returns a promise that resolves with an `AbortSignal` after the update completes.
 
 ```tsx
 function Counter(handle: Handle) {
@@ -295,8 +291,7 @@ function GoodExample(handle: Handle) {
 
 **Pattern: await `handle.update()` when showing loading state before async work:**
 
-When you need to show loading UI before async work starts, set loading state, call
-`await handle.update()`, and use the returned signal for async APIs.
+When you need to show loading UI before async work starts, set loading state, call `await handle.update()`, and use the returned signal for async APIs.
 
 ```tsx
 function GoodAsyncExample(handle: Handle) {
@@ -399,8 +394,10 @@ Context API for ancestor/descendant communication. Use `handle.context.set()` to
 
 **Important:** `handle.context.set()` does not cause any updates - it simply stores a value. If you need the component tree to update when context changes, call `handle.update()` after setting the context, or use an `EventTarget` on context for descendants to subscribe to changes (see the TypedEventTarget example in the Context section).
 
+Context lookup is keyed by component identity. `handle.context.get(Component)` reads the nearest ancestor instance whose component function is exactly `Component`, so nested instances of the same provider shadow outer instances while different component types remain independent.
+
 ```tsx
-function App(handle: Handle<{ theme: string }>) {
+function App(handle: Handle<Record<string, never>, { theme: string }>) {
   handle.context.set({ theme: 'dark' })
 
   return () => (
@@ -434,8 +431,8 @@ function Header(handle: Handle) {
 The simplest component just returns JSX:
 
 ```tsx
-function Greeting() {
-  return (props: { name: string }) => <div>Hello, {props.name}!</div>
+function Greeting(handle: Handle<{ name: string }>) {
+  return () => <div>Hello, {handle.props.name}!</div>
 }
 
 let el = <Greeting name="World" />
@@ -450,11 +447,11 @@ function Parent() {
   return () => <Child message="Hello from parent" count={42} />
 }
 
-function Child() {
-  return (props: { message: string; count: number }) => (
+function Child(handle: Handle<{ message: string; count: number }>) {
+  return () => (
     <div>
-      <p>{props.message}</p>
-      <p>Count: {props.count}</p>
+      <p>{handle.props.message}</p>
+      <p>Count: {handle.props.count}</p>
     </div>
   )
 }
@@ -824,8 +821,8 @@ function Button() {
 Use `&::before` and `&::after` for pseudo-elements:
 
 ```tsx
-function Badge() {
-  return (props: { count: number }) => (
+function Badge(handle: Handle<{ count: number }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -844,7 +841,7 @@ function Badge() {
         }),
       ]}
     >
-      {props.count > 0 && <span>{props.count}</span>}
+      {handle.props.count > 0 && <span>{handle.props.count}</span>}
     </div>
   )
 }
@@ -855,10 +852,10 @@ function Badge() {
 Use `&[attribute]` for attribute selectors:
 
 ```tsx
-function Input() {
-  return (props: { required?: boolean }) => (
+function Input(handle: Handle<{ required?: boolean }>) {
+  return () => (
     <input
-      required={props.required}
+      required={handle.props.required}
       mix={[
         css({
           padding: '8px',
@@ -883,8 +880,8 @@ function Input() {
 Use class names or element selectors directly for descendant selectors:
 
 ```tsx
-function Card() {
-  return (props: { children: RemixNode }) => (
+function Card(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -914,7 +911,7 @@ function Card() {
         }),
       ]}
     >
-      {props.children}
+      {handle.props.children}
     </div>
   )
 }
@@ -940,10 +937,10 @@ Use nested selectors when **parent state affects children**. Don't nest when you
 
 ```tsx
 // ❌ Avoid: Managing hover state in JavaScript
-function CardWithJSState(handle: Handle) {
+function CardWithJSState(handle: Handle<{ children: RemixNode }>) {
   let isHovered = false
 
-  return (props: { children: RemixNode }) => (
+  return () => (
     <div
       mix={[
         on('mouseenter', () => {
@@ -967,8 +964,8 @@ function CardWithJSState(handle: Handle) {
 }
 
 // ✅ Prefer: CSS nested selectors handle state declaratively
-function Card(handle: Handle) {
-  return (props: { children: RemixNode }) => (
+function Card(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -1076,8 +1073,8 @@ function Navigation() {
 Use `@media` for responsive design:
 
 ```tsx
-function ResponsiveGrid() {
-  return (props: { children: RemixNode }) => (
+function ResponsiveGrid(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -1093,7 +1090,7 @@ function ResponsiveGrid() {
         }),
       ]}
     >
-      {props.children}
+      {handle.props.children}
     </div>
   )
 }
@@ -1104,8 +1101,8 @@ function ResponsiveGrid() {
 Here's a comprehensive example demonstrating parent-state-affecting-children and media queries, with styles applied directly to elements:
 
 ```tsx
-function ProductCard() {
-  return (props: { title: string; price: number; image: string }) => (
+function ProductCard(handle: Handle<{ title: string; price: number; image: string }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -1134,8 +1131,8 @@ function ProductCard() {
       ]}
     >
       <img
-        src={props.image}
-        alt={props.title}
+        src={handle.props.image}
+        alt={handle.props.title}
         mix={[
           css({
             width: '100%',
@@ -1170,7 +1167,7 @@ function ProductCard() {
             }),
           ]}
         >
-          {props.title}
+          {handle.props.title}
         </h3>
         <div
           className="price"
@@ -1182,7 +1179,7 @@ function ProductCard() {
             }),
           ]}
         >
-          ${props.price}
+          ${handle.props.price}
         </div>
         <button
           mix={[
@@ -1359,8 +1356,8 @@ Keys can be any type (string, number, bigint, object, symbol), but should be sta
 Components can compose other components via `children`:
 
 ```tsx
-function Layout() {
-  return (props: { children: RemixNode }) => (
+function Layout(handle: Handle<{ children: RemixNode }>) {
+  return () => (
     <div
       mix={[
         css({
@@ -1371,7 +1368,7 @@ function Layout() {
       ]}
     >
       <header>My App</header>
-      <main>{props.children}</main>
+      <main>{handle.props.children}</main>
       <footer>© 2024</footer>
     </div>
   )
@@ -1394,12 +1391,12 @@ Context enables components to communicate without direct prop passing:
 #### Basic Context
 
 ```tsx
-function ThemeProvider(handle: Handle<{ theme: 'light' | 'dark' }>) {
+function ThemeProvider(handle: Handle<{ children?: RemixNode }, { theme: 'light' | 'dark' }>) {
   let theme: 'light' | 'dark' = 'light'
 
   handle.context.set({ theme })
 
-  return (props: { children: RemixNode }) => (
+  return () => (
     <div>
       <button
         mix={[
@@ -1412,7 +1409,7 @@ function ThemeProvider(handle: Handle<{ theme: 'light' | 'dark' }>) {
       >
         Toggle Theme
       </button>
-      {props.children}
+      {handle.props.children}
     </div>
   )
 }
@@ -1436,6 +1433,8 @@ function ThemedContent(handle: Handle) {
 
 **Note:** `handle.context.set()` does not cause any updates - it simply stores a value. If you want the component tree to update when context changes, you must call `handle.update()` after setting the context (as shown above), or use an `EventTarget` on context for descendants to subscribe to changes (as shown in the TypedEventTarget example below).
 
+Context lookup is keyed by component identity. `handle.context.get(Component)` reads the nearest ancestor instance whose component function is exactly `Component`.
+
 #### TypedEventTarget for Granular Updates
 
 For better performance, use `TypedEventTarget` to avoid updating the entire subtree:
@@ -1456,11 +1455,11 @@ class Theme extends TypedEventTarget<{ change: Event }> {
   }
 }
 
-function ThemeProvider(handle: Handle<Theme>) {
+function ThemeProvider(handle: Handle<{ children?: RemixNode }, Theme>) {
   let theme = new Theme()
   handle.context.set(theme)
 
-  return (props: { children: RemixNode }) => (
+  return () => (
     <div>
       <button
         mix={[
@@ -1472,7 +1471,7 @@ function ThemeProvider(handle: Handle<Theme>) {
       >
         Toggle Theme
       </button>
-      {props.children}
+      {handle.props.children}
     </div>
   )
 }
@@ -1510,22 +1509,22 @@ The setup scope is perfect for one-time initialization:
 #### Initializing Instances
 
 ```tsx
-function CacheExample(handle: Handle, setup: { cacheSize: number }) {
+function CacheExample(handle: Handle<{ cacheSize: number; key: string; value: any }>) {
   // Initialize cache once
   let cache = new Map<string, any>()
-  let maxSize = setup.cacheSize
+  let maxSize = handle.props.cacheSize
 
-  return (props: { key: string; value: any }) => {
+  return () => {
     // Use cache in render
-    if (cache.has(props.key)) {
-      return <div>Cached: {cache.get(props.key)}</div>
+    if (cache.has(handle.props.key)) {
+      return <div>Cached: {cache.get(handle.props.key)}</div>
     }
-    cache.set(props.key, props.value)
+    cache.set(handle.props.key, handle.props.value)
     if (cache.size > maxSize) {
       let firstKey = cache.keys().next().value
       cache.delete(firstKey)
     }
-    return <div>New: {props.value}</div>
+    return <div>New: {handle.props.value}</div>
   }
 }
 ```
@@ -1533,18 +1532,18 @@ function CacheExample(handle: Handle, setup: { cacheSize: number }) {
 #### Third-Party SDKs
 
 ```tsx
-function Analytics(handle: Handle, setup: { apiKey: string }) {
+function Analytics(handle: Handle<{ apiKey: string; event: string; data?: any }>) {
   // Initialize SDK once
-  let analytics = new AnalyticsSDK(setup.apiKey)
+  let analytics = new AnalyticsSDK(handle.props.apiKey)
 
   // Cleanup on disconnect
   handle.signal.addEventListener('abort', () => {
     analytics.disconnect()
   })
 
-  return (props: { event: string; data?: any }) => {
+  return () => {
     // SDK is ready to use
-    return <div>Tracking: {props.event}</div>
+    return <div>Tracking: {handle.props.event}</div>
   }
 }
 ```
@@ -1566,9 +1565,9 @@ class DataEmitter extends TypedEventTarget<{ data: DataEvent }> {
   }
 }
 
-function EventListener(handle: Handle, setup: DataEmitter) {
+function EventListener(handle: Handle<{ emitter: DataEmitter }>) {
   // Set up listeners once with automatic cleanup
-  addEventListeners(setup, handle.signal, {
+  addEventListeners(handle.props.emitter, handle.signal, {
     data(event) {
       // Handle data
       handle.update()
@@ -1606,9 +1605,9 @@ function WindowResizeTracker(handle: Handle) {
 #### Initializing State from Props
 
 ```tsx
-function Timer(handle: Handle, setup: { initialSeconds: number }) {
-  // Initialize from setup prop
-  let seconds = setup.initialSeconds
+function Timer(handle: Handle<{ initialSeconds: number; paused?: boolean }>) {
+  // Initialize from props
+  let seconds = handle.props.initialSeconds
   let interval: number | null = null
 
   function start() {
@@ -1632,10 +1631,10 @@ function Timer(handle: Handle, setup: { initialSeconds: number }) {
   // Cleanup on disconnect
   handle.signal.addEventListener('abort', stop)
 
-  return (props: { paused?: boolean }) => {
-    if (!props.paused && !interval) {
+  return () => {
+    if (!handle.props.paused && !interval) {
       start()
-    } else if (props.paused && interval) {
+    } else if (handle.props.paused && interval) {
       stop()
     }
 
@@ -1904,19 +1903,19 @@ This ensures only the latest search request completes, preventing stale results 
 Use `handle.queueTask()` in the render function for reactive data loading that responds to prop changes. The signal will be aborted if props change or the component is removed:
 
 ```tsx
-function DataLoader(handle: Handle) {
+function DataLoader(handle: Handle<{ url: string }>) {
   let data: any = null
   let loading = false
   let error: Error | null = null
 
-  return (props: { url: string }) => {
+  return () => {
     // Queue data loading task that responds to prop changes
     handle.queueTask(async (signal) => {
       loading = true
       error = null
       handle.update()
 
-      let response = await fetch(props.url, { signal })
+      let response = await fetch(handle.props.url, { signal })
       let json = await response.json()
       if (signal.aborted) return
       data = json
@@ -1945,13 +1944,13 @@ This ensures only the latest data loading request completes. If the `url` prop c
 Load initial data in the setup scope:
 
 ```tsx
-function UserProfile(handle: Handle, setup: { userId: string }) {
+function UserProfile(handle: Handle<{ userId: string; showEmail?: boolean }>) {
   let user: User | null = null
   let loading = true
 
   // Load initial data in setup scope using queueTask
   handle.queueTask(async (signal) => {
-    let response = await fetch(`/api/users/${setup.userId}`, { signal })
+    let response = await fetch(`/api/users/${handle.props.userId}`, { signal })
     let data = await response.json()
     if (signal.aborted) return
     user = data
@@ -1959,20 +1958,20 @@ function UserProfile(handle: Handle, setup: { userId: string }) {
     handle.update()
   })
 
-  return (props: { showEmail?: boolean }) => {
+  return () => {
     if (loading) return <div>Loading user...</div>
 
     return (
       <div>
         <h1>{user.name}</h1>
-        {props.showEmail && <p>{user.email}</p>}
+        {handle.props.showEmail && <p>{user.email}</p>}
       </div>
     )
   }
 }
 ```
 
-Note that by fetching this data in the setup scope any parent updates that change `setup.userId` will have no effect.
+Note that by fetching this data in the setup scope any parent updates that change `handle.props.userId` will have no effect.
 
 ## Testing
 
@@ -2019,7 +2018,7 @@ You should also flush after the initial `root.render()` to ensure event listener
 - **Components** have two phases: setup (runs once) and render (runs after setup and on updates)
 - **State** is managed with plain JavaScript variables
 - **Updates** are explicit via `handle.update()`
-- **Setup prop** initialization values and excluded from props
+- **Setup phase** can initialize stable state from initial `handle.props` values
 - **Context** enables indirect composition without prop drilling
 - **TypedEventTarget** provides granular updates for better performance
 - **State management best practices:**

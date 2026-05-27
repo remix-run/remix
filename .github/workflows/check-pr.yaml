@@ -628,6 +628,7 @@ jobs:
     if: >
       always() &&
       !cancelled() &&
+      vars.ENABLE_CODEX_PR_REVIEW == 'true' &&
       github.event.pull_request.head.repo.full_name == github.repository &&
       needs.detect_changes.result == 'success' &&
       needs.build_ubuntu.result == 'success' &&

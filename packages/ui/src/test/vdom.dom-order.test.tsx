@@ -2,6 +2,7 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import type { Handle } from '../runtime/component.ts'
+import { invariant } from '../runtime/invariant.ts'
 
 describe('vnode rendering', () => {
   describe('conditional rendering and DOM order', () => {
@@ -349,6 +350,135 @@ describe('vnode rendering', () => {
       expect(container.innerHTML).toBe(
         '<main><span>0</span><span>1</span><span>2</span><footer>Footer</footer></main>',
       )
+    })
+
+    it('maintains DOM order when fragment component has multiple renders before changing', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+
+      let showMiddle = false
+      let capturedUpdate = () => {}
+
+      function Dynamic(handle: Handle) {
+        capturedUpdate = () => handle.update()
+        return () => (showMiddle ? <span id="middle">Middle</span> : null)
+      }
+
+      function App() {
+        return () => (
+          <main>
+            <>
+              <Dynamic />
+              <span id="tail">Tail</span>
+            </>
+            <footer id="footer">Footer</footer>
+          </main>
+        )
+      }
+
+      root.render(<App />)
+      let originalTail = container.querySelector('#tail')
+      let originalFooter = container.querySelector('#footer')
+      expect(container.innerHTML).toBe(
+        '<main><span id="tail">Tail</span><footer id="footer">Footer</footer></main>',
+      )
+
+      root.render(<App />)
+      root.flush()
+      expect(container.querySelector('#tail')).toBe(originalTail)
+      expect(container.querySelector('#footer')).toBe(originalFooter)
+
+      showMiddle = true
+      capturedUpdate()
+      root.flush()
+
+      expect(container.innerHTML).toBe(
+        '<main><span id="middle">Middle</span><span id="tail">Tail</span><footer id="footer">Footer</footer></main>',
+      )
+      expect(container.querySelector('#tail')).toBe(originalTail)
+      expect(container.querySelector('#footer')).toBe(originalFooter)
+    })
+
+    it('maintains DOM order with non-render content in nested fragments after self-updates', () => {
+      let container = document.createElement('div')
+      let root = createRoot(container)
+      let capturedUpdates: (() => void)[] = []
+      let showMiddle = false
+
+      function Middle(handle: Handle<{ id: string }>) {
+        capturedUpdates.push(() => handle.update())
+        return () => (showMiddle ? <span id={handle.props.id}>Middle</span> : undefined)
+      }
+
+      function App() {
+        return () => (
+          <>
+            <span id="first">First</span>
+            <Middle id="middle-1" />
+            <span id="second">Second</span>
+            <>
+              <span id="third">Third</span>
+              <>
+                <>
+                  <Middle id="middle-2" />
+                </>
+              </>
+              <span id="fourth">Fourth</span>
+            </>
+            <div id="div">
+              <>
+                <span id="fifth">Fifth</span>
+                <Middle id="middle-3" />
+                <span id="sixth">Sixth</span>
+              </>
+            </div>
+            <span id="seventh">Seventh</span>
+          </>
+        )
+      }
+
+      root.render(<App />)
+
+      let first = container.querySelector('#first')
+      let second = container.querySelector('#second')
+      invariant(first && second)
+      expect(first.nextSibling).toBe(second)
+
+      let third = container.querySelector('#third')
+      let fourth = container.querySelector('#fourth')
+      invariant(third && fourth)
+      expect(second.nextSibling).toBe(third)
+      expect(third.nextSibling).toBe(fourth)
+
+      let div = container.querySelector('#div')
+      let fifth = container.querySelector('#fifth')
+      let sixth = container.querySelector('#sixth')
+      invariant(div && fifth && sixth)
+      expect(fourth.nextSibling).toBe(div)
+      expect(fifth.parentNode).toBe(div)
+      expect(fifth.nextSibling).toBe(sixth)
+
+      let seventh = container.querySelector('#seventh')
+      invariant(seventh)
+      expect(div.nextSibling).toBe(seventh)
+
+      showMiddle = true
+      for (let update of capturedUpdates) {
+        update()
+      }
+      root.flush()
+
+      let middle1 = container.querySelector('#middle-1')
+      let middle2 = container.querySelector('#middle-2')
+      let middle3 = container.querySelector('#middle-3')
+      invariant(middle1 && middle2 && middle3)
+      expect(middle1.previousSibling).toBe(first)
+      expect(middle1.nextSibling).toBe(second)
+      expect(middle2.previousSibling).toBe(third)
+      expect(middle2.nextSibling).toBe(fourth)
+      expect(middle3.parentNode).toBe(div)
+      expect(middle3.previousSibling).toBe(fifth)
+      expect(middle3.nextSibling).toBe(sixth)
     })
   })
 })

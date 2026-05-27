@@ -51,6 +51,7 @@ export type { HostProps, LayoutAnimationConfig } from './runtime/dom.ts'
 export { createMixin } from './runtime/mixins/mixin.ts'
 export type {
   MixinDescriptor,
+  MixinFactory,
   MixinHandle,
   MixinType,
   MixInput,

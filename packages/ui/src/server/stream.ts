@@ -7,6 +7,7 @@ import {
   SELF_CLOSING_TAGS,
   normalizeAttributeName,
   serializeStyleObject,
+  shouldStringifyBooleanAttribute,
 } from '../runtime/core/attributes.ts'
 import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
@@ -31,6 +32,8 @@ export interface RenderToStreamOptions {
   frameSrc?: string | URL
   /** Source URL for the top-level frame in nested frame renders. */
   topFrameSrc?: string | URL
+  /** Signal that cancels pending server rendering work. */
+  signal?: AbortSignal
   /** Error hook invoked when rendering work throws. */
   onError?: (error: unknown) => void
   /** Callback used to resolve nested frame content during streaming SSR. */
@@ -97,6 +100,7 @@ interface RenderContext {
   unresolvedHydrationData: Map<string, UnresolvedHydrationData>
   frameData: Map<string, FrameData>
   blockingFrameTails: ReadableStream<Uint8Array>[]
+  signal: AbortSignal
   flushKind: FlushKind
   serverIdScope: string
   serverIdCounter: number
@@ -192,6 +196,7 @@ export function renderToStream(
   let currentFrameSrc = normalizeFrameSrc(options?.frameSrc ?? options?.topFrameSrc)
   let topFrameSrc = normalizeFrameSrc(options?.topFrameSrc ?? currentFrameSrc)
   let rootFrameState = createSsrFrameState(currentFrameSrc, topFrameSrc)
+  let renderAbortController = new AbortController()
 
   let context: RenderContext = {
     insideSvg: false,
@@ -204,9 +209,23 @@ export function renderToStream(
     unresolvedHydrationData: new Map(),
     frameData: new Map(),
     blockingFrameTails: [],
+    signal: renderAbortController.signal,
     flushKind: 'fragment',
     serverIdScope: crypto.randomUUID().slice(0, 8),
     serverIdCounter: 0,
+  }
+
+  function cancel(reason: unknown): void {
+    if (!renderAbortController.signal.aborted) {
+      renderAbortController.abort(reason)
+    }
+  }
+
+  let signal = options?.signal
+  if (signal?.aborted) {
+    cancel(signal.reason)
+  } else {
+    signal?.addEventListener('abort', () => cancel(signal.reason), { once: true })
   }
 
   return new ReadableStream({
@@ -214,11 +233,14 @@ export function renderToStream(
       try {
         let root = buildSegment(node, context, rootFrameState)
         await resolveBlocking(root)
+        if (closeIfCancelled(controller, context)) return
         await resolveClientEntries(context, options?.resolveClientEntry)
+        if (closeIfCancelled(controller, context)) return
         validateClientEntriesForHydration(context)
         let html = serializeSegment(root)
         let finalHtml = finalizeHtml(html, context)
         let bytes = encoder.encode(appendFlushMarker(finalHtml, context.flushKind))
+        if (closeIfCancelled(controller, context)) return
         controller.enqueue(bytes)
 
         // If we have any tails from blocking frame streams, stream them now.
@@ -226,7 +248,7 @@ export function renderToStream(
         // that must come after the initial document chunk.
         let tailPromise =
           context.blockingFrameTails.length > 0
-            ? streamByteStreams(context.blockingFrameTails, controller, context.onError)
+            ? streamByteStreams(context.blockingFrameTails, controller, context)
             : Promise.resolve()
 
         // If we have pending non-blocking frames, stream them as they resolve
@@ -237,13 +259,42 @@ export function renderToStream(
 
         await Promise.all([tailPromise, pendingPromise])
 
+        if (closeIfCancelled(controller, context)) return
         controller.close()
       } catch (error) {
+        if (isSignalAbortError(context.signal, error)) {
+          closeStream(controller)
+          return
+        }
         onError(error)
         controller.error(error)
       }
     },
+    cancel(reason) {
+      cancel(reason)
+    },
   })
+}
+
+function isSignalAbortError(signal: AbortSignal, error: unknown): boolean {
+  return signal.aborted && error === signal.reason
+}
+
+function closeIfCancelled(
+  controller: ReadableStreamDefaultController,
+  context: RenderContext,
+): boolean {
+  if (!context.signal.aborted) return false
+  closeStream(controller)
+  return true
+}
+
+function closeStream(controller: ReadableStreamDefaultController): void {
+  try {
+    controller.close()
+  } catch {
+    // The consumer may already have cancelled the stream.
+  }
 }
 
 function defaultResolveFrame(): never {
@@ -428,6 +479,9 @@ function buildFrameSegment(props: any, context: RenderContext, frameState: SsrFr
     let framePromise = Promise.resolve(
       context.resolveFrame(props.src, props.name, resolveFrameContext),
     ).then(async (resolved) => resolveFrameHtml(resolved))
+    // The response stream can be cancelled before pending frames are drained.
+    // Keep the promise observed so request aborts don't become unhandled.
+    framePromise.catch(() => {})
     context.pendingFrames.push({ frameId, promise: framePromise })
   } else {
     seg.pending = Promise.resolve(
@@ -529,11 +583,15 @@ function renderAttributes(props: any, isSvg: boolean, excludedProps?: Set<string
     if (excludedProps?.has(key)) continue
 
     let value = props[key]
-    if (value === undefined || value === null || value === false) continue
-
     let attrName = transformAttributeName(key, isSvg)
+    let shouldStringifyBoolean = shouldStringifyBooleanAttribute(attrName)
+    if (value === undefined || value === null || (value === false && !shouldStringifyBoolean)) {
+      continue
+    }
 
-    if (value === true) {
+    if (typeof value === 'boolean' && shouldStringifyBoolean) {
+      attrs += ` ${attrName}="${escapeHtml(String(value))}"`
+    } else if (value === true) {
       attrs += ` ${attrName}`
     } else {
       attrs += ` ${attrName}="${escapeHtml(String(value))}"`
@@ -1248,26 +1306,33 @@ async function streamPendingFrames(
   let processedFrames = new Set<string>()
 
   while (true) {
+    if (context.signal.aborted) break
+
     let batch = context.pendingFrames.filter(({ frameId }) => !processedFrames.has(frameId))
     if (batch.length === 0) break
 
     await Promise.all(
       batch.map(async ({ frameId, promise }) => {
+        if (context.signal.aborted) return
         processedFrames.add(frameId)
         try {
           let { html, tail } = await promise
+          if (context.signal.aborted) return
           html = dedupeServerStyleTagsInHtml(html, context.emittedStyles)
 
           // Stream as a template element (first chunk only)
           let templateHtml = `<template id="${frameId}">${escapeTemplateContent(html)}</template>`
+          if (context.signal.aborted) return
           controller.enqueue(encoder.encode(templateHtml))
 
           // Forward any additional chunks from a stream-valued resolveFrame result.
           if (tail) {
-            await streamByteStreams([tail], controller, context.onError)
+            await streamByteStreams([tail], controller, context)
           }
         } catch (error) {
-          context.onError(error)
+          if (!isSignalAbortError(context.signal, error)) {
+            context.onError(error)
+          }
         }
       }),
     )
@@ -1277,19 +1342,23 @@ async function streamPendingFrames(
 async function streamByteStreams(
   streams: ReadableStream<Uint8Array>[],
   controller: ReadableStreamDefaultController,
-  onError: (error: unknown) => void,
+  context: RenderContext,
 ): Promise<void> {
   await Promise.all(
     streams.map(async (stream) => {
       let reader = stream.getReader()
       try {
         while (true) {
+          if (context.signal.aborted) break
           let { done, value } = await reader.read()
           if (done) break
+          if (context.signal.aborted) break
           controller.enqueue(value)
         }
       } catch (error) {
-        onError(error)
+        if (!isSignalAbortError(context.signal, error)) {
+          context.onError(error)
+        }
       } finally {
         reader.releaseLock()
       }

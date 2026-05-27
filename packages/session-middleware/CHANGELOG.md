@@ -2,6 +2,27 @@
 
 This is the changelog for [`session-middleware`](https://github.com/remix-run/remix/tree/main/packages/session-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cookie@0.5.3`](https://github.com/remix-run/remix/releases/tag/cookie@0.5.3)
+  - [`fetch-router@0.19.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.19.1)
+  - [`session@0.4.2`](https://github.com/remix-run/remix/releases/tag/session@0.4.2)
+
+## v0.3.0
+
+### Minor Changes
+
+- Added `context.session` as a direct property installed by the session middleware. `context.get(Session)` remains supported for keyed context access.
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`cookie@0.5.2`](https://github.com/remix-run/remix/releases/tag/cookie@0.5.2)
+  - [`fetch-router@0.19.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.19.0)
+
 ## v0.2.2
 
 ### Patch Changes

@@ -130,6 +130,14 @@ export type MixinDescriptor<
   readonly __node?: (node: node) => void
 }
 
+export type MixinFactory<
+  node extends EventTarget = Element,
+  args extends unknown[] = [],
+  props extends ElementProps = ElementProps,
+> = <boundNode extends node = node>(
+  ...args: RebindTuple<args, node, boundNode>
+) => MixinDescriptor<boundNode, RebindTuple<args, node, boundNode>, props>
+
 type PreviousMixDepth = [0, 0, 1, 2, 3, 4]
 type FalsyMixValue = false | 0 | 0n | '' | null | undefined
 type NullableMixValue<descriptor> = descriptor | FalsyMixValue
@@ -244,7 +252,7 @@ export function createMixin<
   node extends EventTarget = Element,
   args extends unknown[] = [],
   props extends ElementProps = ElementProps,
->(type: MixinType<node, args, props>) {
+>(type: MixinType<node, args, props>): MixinFactory<node, args, props> {
   return <boundNode extends node = node>(
     ...args: RebindTuple<args, node, boundNode>
   ): MixinDescriptor<boundNode, RebindTuple<args, node, boundNode>, props> => ({

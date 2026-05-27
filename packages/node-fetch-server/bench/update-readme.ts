@@ -8,10 +8,6 @@ const benchDir = path.dirname(fileURLToPath(import.meta.url))
 const packageDir = path.resolve(benchDir, '..')
 const readmePath = path.join(packageDir, 'README.md')
 const packageJsonPath = path.join(packageDir, 'package.json')
-const nodeServePackageJsonPath = path.join(
-  benchDir,
-  'node_modules/@remix-run/node-serve/package.json',
-)
 const expressPackageJsonPath = path.join(benchDir, 'node_modules/express/package.json')
 
 const benchmarkStart = '<!-- benchmarks:start -->'
@@ -55,7 +51,6 @@ main().catch((error: unknown) => {
 
 async function main(): Promise<void> {
   let nodeFetchServerVersion = await readPackageVersion(packageJsonPath)
-  let nodeServeVersion = await readPackageVersion(nodeServePackageJsonPath)
   let expressVersion = await readPackageVersion(expressPackageJsonPath)
   let nodeVersion = process.version.slice(1)
 
@@ -73,11 +68,6 @@ async function main(): Promise<void> {
           name: 'remix/node-fetch-server',
           version: nodeFetchServerVersion,
           server: './raw-throughput/servers/node-fetch-server.ts',
-        },
-        {
-          name: 'remix/node-serve',
-          version: nodeServeVersion,
-          server: './raw-throughput/servers/node-serve.ts',
         },
         { name: 'express', version: expressVersion, server: './raw-throughput/servers/express.ts' },
       ],
@@ -97,11 +87,6 @@ async function main(): Promise<void> {
           name: 'remix/node-fetch-server',
           version: nodeFetchServerVersion,
           server: './small-body/servers/node-fetch-server.ts',
-        },
-        {
-          name: 'remix/node-serve',
-          version: nodeServeVersion,
-          server: './small-body/servers/node-serve.ts',
         },
         {
           name: 'express',
@@ -125,11 +110,6 @@ async function main(): Promise<void> {
           name: 'remix/node-fetch-server',
           version: nodeFetchServerVersion,
           server: './large-body/servers/node-fetch-server.ts',
-        },
-        {
-          name: 'remix/node-serve',
-          version: nodeServeVersion,
-          server: './large-body/servers/node-serve.ts',
         },
         {
           name: 'express',

@@ -1,3 +1,28 @@
+## v0.4.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`node-tsx@0.1.1`](https://github.com/remix-run/remix/releases/tag/node-tsx@0.1.1)
+  - [`terminal@0.1.1`](https://github.com/remix-run/remix/releases/tag/terminal@0.1.1)
+
+## v0.4.0
+
+### Minor Changes
+
+- Migrated `@remix-run/test` from the `tsx` package to Remix's internal `@remix-run/node-tsx` module loader.
+
+  BREAKING CHANGE: `.ts`, `.tsx`, and `.jsx` module loading in `@remix-run/test` now uses Remix's internal `@remix-run/node-tsx` loader. Test modules are still transformed before execution, including JSX and TypeScript syntax that requires JavaScript output, but the loader is now maintained inside Remix.
+
+### Patch Changes
+
+- Fix browser test runs so large suites can exceed the per-file timeout as long as individual test files keep reporting progress.
+
+- Fix `describe.skip` and `describe.only` so they propagate to nested `describe` blocks. Previously the skipped/focused state was set only on the outer suite, so tests inside nested describes still ran (or were incorrectly skipped under `only`).
+
+- Bumped `@remix-run/*` dependencies:
+  - [`node-tsx@0.1.0`](https://github.com/remix-run/remix/releases/tag/node-tsx@0.1.0)
+
 ## v0.3.0
 
 ### Minor Changes

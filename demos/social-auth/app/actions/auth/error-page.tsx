@@ -1,4 +1,4 @@
-import type { RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/ui'
 
 import { AuthCard } from '../../ui/auth-card.tsx'
 import { Document } from '../../ui/document.tsx'
@@ -11,15 +11,19 @@ interface ErrorPageProps {
   loginHref: string
 }
 
-export function ErrorPage() {
-  return ({ title, message, loginHref }: ErrorPageProps) => (
-    <Document title={title}>
-      <AuthCard title={title} subtitle="This request could not be completed.">
-        <Notice tone="error">{message}</Notice>
-        <a href={loginHref} mix={styles.secondaryButton}>
-          Back to Sign In
-        </a>
-      </AuthCard>
-    </Document>
-  )
+export function ErrorPage(handle: Handle<ErrorPageProps>) {
+  return () => {
+    let { title, message, loginHref } = handle.props
+
+    return (
+      <Document title={title}>
+        <AuthCard title={title} subtitle="This request could not be completed.">
+          <Notice tone="error">{message}</Notice>
+          <a href={loginHref} mix={styles.secondaryButton}>
+            Back to Sign In
+          </a>
+        </AuthCard>
+      </Document>
+    )
+  }
 }

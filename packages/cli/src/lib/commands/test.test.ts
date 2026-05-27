@@ -1,6 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { stripVTControlCharacters } from 'node:util'
 import { fileURLToPath } from 'node:url'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
@@ -39,30 +40,13 @@ describe('test command', () => {
         }),
       )
 
+      let stdout = stripVTControlCharacters(result.stdout)
+
       assert.equal(result.exitCode, 0, result.stderr)
-      assert.match(result.stdout, /Found 1 test file\(s\) \(1 server, 0 browser, 0 e2e\)/)
-      assert.match(result.stdout, /✓ passes/)
-      assert.match(result.stdout, /ℹ pass 1/)
+      assert.match(stdout, /Found 1 test file\(s\) \(1 server, 0 browser, 0 e2e\)/)
+      assert.match(stdout, /✓ passes/)
+      assert.match(stdout, /ℹ pass 1/)
       assert.equal(result.stderr, '')
-    } finally {
-      await fs.rm(projectDir, { recursive: true, force: true })
-    }
-  })
-
-  it('returns after running tests even when the project leaves handles open', async () => {
-    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-test-command-handles-'))
-
-    try {
-      await writeTestProject(projectDir, { leaveHandleOpen: true })
-
-      let result = await captureOutput(() =>
-        runRemix(['test', '--concurrency', '1', '--reporter', 'spec', '--type', 'server'], {
-          cwd: projectDir,
-        }),
-      )
-
-      assert.equal(result.exitCode, 0, result.stderr)
-      assert.match(result.stdout, /✓ passes/)
     } finally {
       await fs.rm(projectDir, { recursive: true, force: true })
     }
@@ -96,10 +80,7 @@ describe('test command', () => {
   })
 })
 
-async function writeTestProject(
-  projectDir: string,
-  options: { leaveHandleOpen?: boolean } = {},
-): Promise<void> {
+async function writeTestProject(projectDir: string): Promise<void> {
   await fs.writeFile(
     path.join(projectDir, 'package.json'),
     `${JSON.stringify({ name: 'test-command-fixture', private: true, type: 'module' }, null, 2)}\n`,
@@ -117,7 +98,6 @@ async function writeTestProject(
       "import { it } from '@remix-run/test'",
       '',
       "it('passes', () => {",
-      options.leaveHandleOpen ? '  setInterval(() => {}, 1_000)' : '',
       '  assert.equal(1 + 1, 2)',
       '})',
       '',

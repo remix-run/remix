@@ -9,9 +9,10 @@ import { assetServer } from '../utils/assets.ts'
 
 export function render() {
   return renderWith(
-    () =>
+    ({ request }) =>
       function render(node: RemixNode, init?: ResponseInit) {
         let stream = renderToStream(node, {
+          signal: request.signal,
           async resolveClientEntry(entryId, component) {
             if (!entryId.startsWith('file://')) {
               throw new Error(

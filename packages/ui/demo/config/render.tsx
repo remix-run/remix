@@ -6,6 +6,7 @@ import type { RequestContext, Router } from 'remix/router'
 export function render(context: RequestContext, node: RemixNode, init?: ResponseInit) {
   let stream = renderToStream(node, {
     frameSrc: context.request.url,
+    signal: context.request.signal,
     resolveFrame: (src, target, frameContext) => resolveFrame(context, src, target, frameContext),
     onError(error) {
       console.error(error)

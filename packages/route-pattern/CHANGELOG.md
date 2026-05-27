@@ -2,6 +2,72 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.21.1
+
+### Patch Changes
+
+- Add an explicit public API type for serialized route pattern JSON so generated declarations no longer depend on inferred object shapes (see #11433).
+
+## v0.21.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Remove the `compareFn` parameter from `match` and `matchAll` methods
+
+  Matches always sort by specificity (most specific first). If you need a different order, sort the result of `matchAll` yourself.
+
+  ```ts
+  import * as Specificity from 'remix/route-pattern/specificity'
+
+  // before
+  matcher.matchAll(url, Specificity.ascending)
+
+  // after
+  matcher.matchAll(url).sort(Specificity.ascending)
+  ```
+
+- BREAKING CHANGE: New modular APIs and subpath exports
+
+  Previously, this package shipped the default export and a `/specificity` export. A typical Remix app does not do any client-side matching but all the matching logic would ship to the browser anyway causing JS bloat.
+
+  Now, features are organized into separate subpath exports, so even without a bundler, only the code you need ends up in the browser. For example, this reduced JS from `route-pattern` in `demos/bookstore` from 25kB (14.9kB compressed) to 8.8kb (7kB compressed) which amounts to ~65% reduction (~53% reduction compressed).
+
+  To achieve this, we've reworked our core APIs to be simpler and more independently useful. So instead of a single `RoutePattern` class that does it all (`.href`, `.match`, ...), the new `RoutePattern` class is a thin layer around the parsed pattern that includes `RoutePattern.parse` static method for parsing and `.source`, `.toString()` and `.toJSON()` for serialization.
+
+  The rest of the functionality comes from dedicated subpath exports:
+
+  - **remix/route-pattern/href** : Generate hrefs for patterns with type safe params.
+  - **remix/route-pattern/match** : Match against one pattern with type inference for params. Or match against many patterns with deterministic ranking and attached data.
+  - **remix/route-pattern/join** : Combine two patterns into one. Override protocol, hostname, port. Join pathnames. Merge search constraints.
+
+  **remix/route-pattern/specificity** remains the same as before, providing utilities for ranking matches.
+
+  Additionally, `ArrayMatcher` and `TrieMatcher` have been replaced by `createMultiMatcher` (which is now always backed by trie-based matching). To match against only a single pattern while receiving type safe `params` from the match, use `createMatcher`.
+
+  See the new README for details.
+
+### Patch Changes
+
+- Encode href params so pathname params cannot inject URL path, dot segment, query, or hash syntax. Wildcard pathname params now preserve slash-separated structure while encoding each segment, and hostname params are normalized or rejected when they would inject URL authority, path, query, or hash syntax. Matchers now decode generated pathname params so reserved characters like `/`, `?`, and `#` round-trip as param content.
+
+- Do not allow partial matches for variables and wildcards in pathname
+
+  ```ts
+  let matcher = createMultiMatcher<string>()
+  matcher.add('/files/:name.md', 'original')
+  matcher.add('/files/:name.md.backup', 'backup')
+
+  // before: 'original' included since `:name.md` partially matches `readme.md.backup`
+  matcher.matchAll('https://example.com/files/readme.md.backup').map((match) => match.data)
+  // ❌ ['backup', 'original']
+
+  // after: only matches when the pattern covers the whole segment
+  matcher.matchAll('https://example.com/files/readme.md.backup').map((match) => match.data)
+  // ✅ ['backup']
+  ```
+
+- Fix matcher to match origin-less patterns (e.g. `/`, `/about`) against URLs that have an explicit port. Previously a pattern like `/` would not match `http://localhost:44199/`.
+
 ## v0.20.1
 
 ### Patch Changes
@@ -95,9 +161,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   new RoutePattern('?q=').search // ✅ 'q='
   ```
 
-  As a result, `RoutePattern`s can no longer represent a "key and any value" constraint.
-  In practice, this was a niche use-case so we chose correctness and consistency with `URLSearchParams`.
-  If the need for "key and any value" constraints arises, we can later introduce a separate syntax for that without the unintuitive shortcoming of `?q=`.
+  As a result, `RoutePattern`s can no longer represent a "key and any value" constraint. In practice, this was a niche use-case so we chose correctness and consistency with `URLSearchParams`. If the need for "key and any value" constraints arises, we can later introduce a separate syntax for that without the unintuitive shortcoming of `?q=`.
 
   With "key and any value" constraints removed, the `missing-search-param` error type thrown by `RoutePattern.href` was made obsolete and was removed.
 
@@ -199,9 +263,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - Faster type inference for `RoutePattern.href`, `RoutePattern.match`, and `Params`
 
-  Reduced type instantiations for parsing param types, resulting in
-  ~2-5x faster in relevant [type benchmarks](https://github.com/remix-run/remix/tree/main/packages/route-pattern/bench/types), but varies depending on your route patterns.
-  May fix `"Type instantiation is excessively deep and possibly infinite" (ts2589)` for some apps.
+  Reduced type instantiations for parsing param types, resulting in ~2-5x faster in relevant [type benchmarks](https://github.com/remix-run/remix/tree/main/packages/route-pattern/bench/types), but varies depending on your route patterns. May fix `"Type instantiation is excessively deep and possibly infinite" (ts2589)` for some apps.
 
 ## v0.19.0
 
@@ -324,13 +386,9 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 ### Patch Changes
 
-- Previously, `href` was throwing an `HrefError` with `missing-params` type when a nameless wildcard was encountered outside of an optional.
-  But that was misleading since nameless optionals aren't something the user should be passing in values for.
-  Instead, `href` now throws an `HrefError` with the correct `nameless-wildcard` type for this case.
+- Previously, `href` was throwing an `HrefError` with `missing-params` type when a nameless wildcard was encountered outside of an optional. But that was misleading since nameless optionals aren't something the user should be passing in values for. Instead, `href` now throws an `HrefError` with the correct `nameless-wildcard` type for this case.
 
-  Error messages have also been improved for many of the `HrefError` types.
-  Notably, the variants shown in `missing-params` were confusing since they leaked internal formatting for params.
-  That has been removed and the resulting error message is now shorter and simpler.
+  Error messages have also been improved for many of the `HrefError` types. Notably, the variants shown in `missing-params` were confusing since they leaked internal formatting for params. That has been removed and the resulting error message is now shorter and simpler.
 
 - Previously, including extra params in `RoutePattern.href` resulted in a type error:
 
@@ -351,8 +409,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   //             ^ autocomplete suggests `id`
   ```
 
-- `ArrayMatcher.match` (optimized for small apps) got ~1.06x faster for our small app benchmark.
-  `TrieMatcher.match` (optimized for large apps) got ~1.17x faster across the board.
+- `ArrayMatcher.match` (optimized for small apps) got ~1.06x faster for our small app benchmark. `TrieMatcher.match` (optimized for large apps) got ~1.17x faster across the board.
 
 - Patterns with omitted port only match URLs with empty port `''`
 
@@ -360,9 +417,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - `paramsMeta` shows a nameless wildcard match for omitted hostname
 
-  An omitted hostname is already coerced to `*` (nameless wildcard) to represent "match any hostname" during matching.
-  Previously, `paramsMeta` did not distinguish between a fully static hostname and an omitted hostname as both had `hostname` set to `[]`.
-  Now, `paramsMeta` returns a nameless wildcard match for the entire hostname when the hostname is omitted.
+  An omitted hostname is already coerced to `*` (nameless wildcard) to represent "match any hostname" during matching. Previously, `paramsMeta` did not distinguish between a fully static hostname and an omitted hostname as both had `hostname` set to `[]`. Now, `paramsMeta` returns a nameless wildcard match for the entire hostname when the hostname is omitted.
 
   Example:
 
@@ -396,8 +451,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - BREAKING CHANGE: Remove `createHrefBuilder`, `type HrefBuilder`, `type HrefBuilderArg`
 
-  `createHrefBuilder` was the original design and implementation of href generation,
-  but with the new `RoutePattern.href` method it is now obsolete.
+  `createHrefBuilder` was the original design and implementation of href generation, but with the new `RoutePattern.href` method it is now obsolete.
 
   Use `HrefArgs` instead of `HrefBuilderArgs`:
 
@@ -564,8 +618,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - BREAKING CHANGE: Remove exports for `TrieMatcher` and `TrieMatcherOptions`
 
-  `TrieMatcher` prototype produces inconsistent matches based on ad hoc scoring.
-  That means that swapping `ArrayMatcher` for `TrieMatcher` could alter which route was picked as the best match for a given URL.
+  `TrieMatcher` prototype produces inconsistent matches based on ad hoc scoring. That means that swapping `ArrayMatcher` for `TrieMatcher` could alter which route was picked as the best match for a given URL.
 
   We'll restore the `TrieMatcher` export after it produces correct, consistent matches.
 
@@ -660,8 +713,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   href('/blog/:slug', { slug: 'my-post' }) // "/blog/my-post"
   ```
 
-- Add `pattern.join(input, options)`, which allows a pattern to be built relative
-  to another pattern
+- Add `pattern.join(input, options)`, which allows a pattern to be built relative to another pattern
 
   ```tsx
   import { RoutePattern } from '@remix-run/route-pattern'

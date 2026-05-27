@@ -4,8 +4,7 @@ The `Handle` object provides the component's interface to the framework.
 
 ## `handle.update()`
 
-Schedules a component update and returns a promise that resolves with an `AbortSignal` after
-the update completes.
+Schedules a component update and returns a promise that resolves with an `AbortSignal` after the update completes.
 
 ```tsx
 function Counter(handle: Handle) {
@@ -285,7 +284,7 @@ function LabeledInput(handle: Handle) {
 Context API for ancestor/descendant communication. See [Context](./context.md) for full documentation.
 
 ```tsx
-function App(handle: Handle<{ theme: string }>) {
+function App(handle: Handle<Record<string, never>, { theme: string }>) {
   handle.context.set({ theme: 'dark' })
 
   return () => (

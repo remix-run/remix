@@ -2,6 +2,32 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
+## v0.21.0
+
+### Minor Changes
+
+- Add `SuperHeaders#apply(init)` to apply `SuperHeadersInit` values to an existing instance with header-aware behavior, replacing singleton headers while preserving additive headers like `Cookie`, `Set-Cookie`, and `Vary` (see #11398).
+
+### Patch Changes
+
+- Add explicit public API return types to header value serialization methods so generated declarations no longer depend on inferred method signatures (see #11433).
+
+- Fix `Cookie` and `SuperHeaders.cookie` so duplicate cookie names from path- or domain-specific cookies are preserved in order. `Cookie#get(name)` now returns the first matching value, `Cookie#getAll(name)` can be used to read every matching value, and `Cookie#append(name, value)` can be used to add another cookie with the same name (see #11423).
+
+## v0.20.0
+
+### Minor Changes
+
+- Added `SuperHeaders` as the default and named export from `@remix-run/headers`. `SuperHeaders` extends the native `Headers` class and restores lazy, typed property accessors while keeping native `Headers` storage synchronized for platform APIs like `Response`.
+
+  This restores the property accessor behavior that existed before it was removed in [#10911](https://github.com/remix-run/remix/pull/10911).
+
+  Supported accessors include `Accept`, `Accept-Charset`, `Accept-Encoding`, `Accept-Language`, `Accept-Patch`, `Accept-Post`, `Accept-Ranges`, `Access-Control-Allow-Credentials`, `Access-Control-Allow-Headers`, `Access-Control-Allow-Methods`, `Access-Control-Allow-Origin`, `Access-Control-Expose-Headers`, `Access-Control-Max-Age`, `Access-Control-Request-Headers`, `Access-Control-Request-Method`, `Age`, `Allow`, `Authorization`, `Cache-Control`, `Connection`, `Content-Disposition`, `Content-Encoding`, `Content-Language`, `Content-Length`, `Content-Location`, `Content-Range`, `Content-Security-Policy`, `Content-Security-Policy-Report-Only`, `Content-Type`, `Cookie`, `Cross-Origin-Embedder-Policy`, `Cross-Origin-Embedder-Policy-Report-Only`, `Cross-Origin-Opener-Policy`, `Cross-Origin-Opener-Policy-Report-Only`, `Cross-Origin-Resource-Policy`, `Date`, `ETag`, `Expect`, `Expires`, `Forwarded`, `From`, `Host`, `Idempotency-Key`, `If-Match`, `If-Modified-Since`, `If-None-Match`, `If-Range`, `If-Unmodified-Since`, `Keep-Alive`, `Last-Modified`, `Link`, `Location`, `Max-Forwards`, `Origin`, `Permissions-Policy`, `Pragma`, `Prefer`, `Preference-Applied`, `Range`, `Referer`, `Referrer-Policy`, `Refresh`, `Retry-After`, `Server`, `Set-Cookie`, `Strict-Transport-Security`, `Traceparent`, `Tracestate`, `Upgrade-Insecure-Requests`, `User-Agent`, `Vary`, `Via`, `WWW-Authenticate`, `X-Content-Type-Options`, `X-Forwarded-For`, `X-Forwarded-Host`, `X-Forwarded-Proto`, `X-Frame-Options`, `X-Powered-By`, and `X-Robots-Tag`.
+
+### Patch Changes
+
+- Preserve literal `+` characters when decoding RFC 8187 `filename*` values for `ContentDisposition.preferredFilename`.
+
 ## v0.19.0
 
 ### Minor Changes
@@ -313,8 +339,7 @@ let headers = new SuperHeaders({ lastModified: ms })
 headers.date = ms
 ```
 
-- Added `AcceptLanguage.prototype.accepts(language)`, `AcceptLanguage.prototype.getWeight(language)`,
-  `AcceptLanguage.prototype.getPreferred(languages)`
+- Added `AcceptLanguage.prototype.accepts(language)`, `AcceptLanguage.prototype.getWeight(language)`, `AcceptLanguage.prototype.getPreferred(languages)`
 
 ```ts
 import { AcceptLanguage } from '@remix-run/headers'

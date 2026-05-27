@@ -118,13 +118,18 @@ export type ContextFrom<ComponentType> =
 
 /**
  * Context storage API exposed on component handles.
+ *
+ * Context values are keyed by provider component identity. `get(Component)`
+ * reads the nearest ancestor instance whose component function is exactly
+ * `Component`, so nested instances of the same provider shadow outer instances
+ * while different component types remain independent.
  */
 export interface Context<C> {
   /** Replaces the current context value for this component instance. */
   set(values: C): void
-  /** Reads the context value associated with the given component type. */
+  /** Reads the context value from the nearest ancestor instance of the given component type. */
   get<ComponentType>(component: ComponentType): ContextFrom<ComponentType>
-  /** Reads the context value associated with the given component key. */
+  /** Reads an unknown context value for an untyped lookup. */
   get(component: ElementType | symbol): unknown | undefined
 }
 
@@ -174,9 +179,9 @@ export type ComponentFn<Props = Record<string, never>, ContextValue = NoContext>
 ) => RenderFn
 
 /**
- * Render function returned by a component factory.
+ * Zero-argument render function returned by a component factory.
  */
-export type RenderFn<Props = ElementProps> = (props: Props) => RemixNode
+export type RenderFn = () => RemixNode
 
 export type { RemixNode } from './jsx.ts'
 
@@ -218,7 +223,14 @@ type ComponentConfig = {
 /**
  * Runtime handle returned by {@link createComponent}.
  */
-export type ComponentHandle = ReturnType<typeof createComponent>
+export interface ComponentHandle<C = NoContext> {
+  frame: FrameHandle
+  render(nextProps: ElementProps): [RemixNode, Array<() => void>]
+  remove(): Array<() => void>
+  setScheduleUpdate(nextScheduleUpdate: () => void): void
+  getContextValue(): C | undefined
+  isRemoved(): boolean
+}
 
 /**
  * Creates the internal runtime wrapper for a component instance.
@@ -226,11 +238,11 @@ export type ComponentHandle = ReturnType<typeof createComponent>
  * @param config Component runtime configuration.
  * @returns Component runtime helpers used by the reconciler.
  */
-export function createComponent<C = NoContext>(config: ComponentConfig) {
+export function createComponent<C = NoContext>(config: ComponentConfig): ComponentHandle<C> {
   return new ComponentRuntime<C>(config)
 }
 
-class ComponentRuntime<C = NoContext> {
+class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
   frame: FrameHandle
 
   #config: ComponentConfig
@@ -240,6 +252,7 @@ class ComponentRuntime<C = NoContext> {
   #props = {} as ElementProps
   #renderController: AbortController | undefined
   #renderFn: RenderFn | undefined
+  #removed = false
   #scheduleUpdate: () => void = () => {
     throw new Error('scheduleUpdate not implemented')
   }
@@ -252,7 +265,7 @@ class ComponentRuntime<C = NoContext> {
   }
 
   render = (nextProps: ElementProps): [RemixNode, Array<() => void>] => {
-    if (this.#connectedController?.signal.aborted) {
+    if (this.#removed) {
       console.warn('render called after component was removed, potential application memory leak')
       return [null, []]
     }
@@ -274,13 +287,15 @@ class ComponentRuntime<C = NoContext> {
       this.#renderFn = renderFn
     }
 
-    return [renderFn(this.#props), this.#dequeueTasks()]
+    return [renderFn(), this.#dequeueTasks()]
   }
 
   remove = (): Array<() => void> => {
+    if (this.#removed) return []
+    this.#removed = true
     this.#connectedController?.abort()
     this.#abortRenderSignal()
-    return this.#dequeueTasks()
+    return this.#dequeueTasks(AbortSignal.abort())
   }
 
   setScheduleUpdate = (nextScheduleUpdate: () => void): void => {
@@ -288,6 +303,8 @@ class ComponentRuntime<C = NoContext> {
   }
 
   getContextValue = (): C | undefined => this.#contextValue
+
+  isRemoved = (): boolean => this.#removed
 
   #createHandle(): Handle<ElementProps, C> {
     let component = this
@@ -303,6 +320,11 @@ class ComponentRuntime<C = NoContext> {
       props: this.#props,
       update: () =>
         new Promise((resolve) => {
+          if (component.#removed) {
+            resolve(AbortSignal.abort())
+            return
+          }
+
           this.#tasks.push((signal) => resolve(signal))
           this.#scheduleUpdate()
         }),
@@ -335,14 +357,14 @@ class ComponentRuntime<C = NoContext> {
     this.#renderController = undefined
   }
 
-  #dequeueTasks(): Array<() => void> {
-    let needsSignal = this.#tasks.some((task) => task.length >= 1)
+  #dequeueTasks(signal?: AbortSignal): Array<() => void> {
+    let needsSignal = signal === undefined && this.#tasks.some((task) => task.length >= 1)
 
     if (needsSignal) {
       this.#renderController ??= new AbortController()
     }
 
-    let signal = this.#renderController?.signal
+    signal ??= this.#renderController?.signal
     let tasks = this.#tasks.splice(0, this.#tasks.length)
     return tasks.map((task) => () => task(signal!))
   }
@@ -366,7 +388,7 @@ function syncProps(target: ElementProps, next: ElementProps): void {
  * @param handle Component handle for the frame instance.
  * @returns A placeholder render function handled by the reconciler.
  */
-export function Frame(handle: Handle<FrameProps, FrameHandle>) {
+export function Frame(handle: Handle<FrameProps, FrameHandle>): RenderFn {
   void handle
   return () => null // reconciler renders
 }
@@ -377,7 +399,7 @@ export function Frame(handle: Handle<FrameProps, FrameHandle>) {
  * @param handle Component handle for the fragment instance.
  * @returns A placeholder render function handled by the reconciler.
  */
-export function Fragment(handle: Handle<FragmentProps>) {
+export function Fragment(handle: Handle<FragmentProps>): RenderFn {
   void handle
   return () => null // reconciler renders
 }

@@ -53,7 +53,12 @@ describe('help text', () => {
 
         return formatHelpText(
           {
-            examples: ['remix demo --json'],
+            examples: [
+              'remix demo --json',
+              'remix new ./my-remix-app --force',
+              'remix new ./my-a --force',
+              'remix new ./foo--bar --force',
+            ],
             options: [{ description: 'Print JSON output', label: '--dir <path>' }],
             usage: ['remix demo [options]'],
           },
@@ -66,6 +71,9 @@ describe('help text', () => {
     assert.ok(output.includes(`remix demo ${ANSI_CSI}93m[options]${ANSI_CSI}0m`))
     assert.ok(output.includes(`${ANSI_CSI}93m--dir${ANSI_CSI}0m ${ANSI_CSI}93m<path>${ANSI_CSI}0m`))
     assert.ok(output.includes(`remix demo ${ANSI_CSI}93m--json${ANSI_CSI}0m`))
+    assert.ok(output.includes(`remix new ./my-remix-app ${ANSI_CSI}93m--force${ANSI_CSI}0m`))
+    assert.ok(output.includes(`remix new ./my-a ${ANSI_CSI}93m--force${ANSI_CSI}0m`))
+    assert.ok(output.includes(`remix new ./foo--bar ${ANSI_CSI}93m--force${ANSI_CSI}0m`))
   })
 
   it('colors help for stderr independently of stdout capability', () => {

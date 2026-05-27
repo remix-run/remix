@@ -1,4 +1,4 @@
-import { createMixin, on, type ElementProps } from '@remix-run/ui'
+import { createMixin, on, type ElementProps, type MixinFactory } from '@remix-run/ui'
 
 type ScrollLockState = {
   count: number
@@ -10,7 +10,7 @@ type ScrollLockState = {
 
 const scrollLocks = new WeakMap<Document, ScrollLockState>()
 
-export function lockScroll(targetDocument = globalThis.document) {
+export function lockScroll(targetDocument: Document | undefined = globalThis.document): () => void {
   if (!targetDocument?.body || !targetDocument.defaultView) {
     return () => {}
   }
@@ -74,7 +74,11 @@ export function lockScroll(targetDocument = globalThis.document) {
   }
 }
 
-export const lockScrollOnToggle = createMixin<HTMLElement, [], ElementProps>((handle) => {
+export const lockScrollOnToggle: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
+  HTMLElement,
+  [],
+  ElementProps
+>((handle) => {
   let unlockScroll = () => {}
 
   handle.signal.addEventListener('abort', () => {

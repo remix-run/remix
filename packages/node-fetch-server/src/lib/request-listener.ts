@@ -78,6 +78,7 @@ export function createRequestListener(
     let handlerWithoutArgs = handler as () => Response | Promise<Response>
 
     return async (_req, res) => {
+      let isResponseClosed = observeResponseClose(res)
       let response: Response
       try {
         response = await handlerWithoutArgs()
@@ -85,7 +86,7 @@ export function createRequestListener(
         response = await createErrorResponse(onError, error)
       }
 
-      await sendResponse(res, response)
+      await sendResponseIfOpen(res, response, isResponseClosed)
     }
   }
 
@@ -93,32 +94,35 @@ export function createRequestListener(
     let requestHandler = handler as (request: Request) => Response | Promise<Response>
 
     return (req, res) => {
+      let isResponseClosed = observeResponseClose(res)
       let request = createLazyRequest(req, res)
 
       let response: Response | Promise<Response>
       try {
         response = requestHandler(request)
       } catch (error) {
-        void sendErrorResponse(res, onError, error)
+        void sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
         return
       }
 
       if (isPromiseLike(response)) {
         void response.then(
           (response) => {
-            void sendResponse(res, response)
+            void sendResponseForRequest(res, response, request, onError, isResponseClosed)
           },
           (error) => {
-            void sendErrorResponse(res, onError, error)
+            if (isRequestAbortError(request, error)) return
+            void sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
           },
         )
       } else {
-        void sendResponse(res, response)
+        void sendResponseForRequest(res, response, request, onError, isResponseClosed)
       }
     }
   }
 
   return async (req, res) => {
+    let isResponseClosed = observeResponseClose(res)
     let request = createLazyRequest(req, res)
     let client = {
       address: req.socket.remoteAddress!,
@@ -130,20 +134,58 @@ export function createRequestListener(
     try {
       response = await handler(request, client)
     } catch (error) {
+      if (isRequestAbortError(request, error)) return
       response = await createErrorResponse(onError, error)
     }
 
-    await sendResponse(res, response)
+    await sendResponseForRequest(res, response, request, onError, isResponseClosed)
   }
 }
 
-async function sendErrorResponse(
+function observeResponseClose(res: http.ServerResponse | http2.Http2ServerResponse): () => boolean {
+  let responseClosed = false
+  res.once('close', () => {
+    responseClosed = true
+  })
+  return () => responseClosed || res.destroyed
+}
+
+async function sendResponseIfOpen(
   res: http.ServerResponse | http2.Http2ServerResponse,
+  response: Response,
+  isResponseClosed: () => boolean,
+): Promise<void> {
+  if (isResponseClosed()) return
+  await sendResponse(res, response)
+}
+
+async function sendErrorResponseForRequest(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  request: Request,
   onError: ErrorHandler,
   error: unknown,
+  isResponseClosed: () => boolean,
 ): Promise<void> {
   let response = await createErrorResponse(onError, error)
+  if (isResponseClosed() || request.signal.aborted) return
   await sendResponse(res, response)
+}
+
+async function sendResponseForRequest(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  response: Response,
+  request: Request,
+  onError: ErrorHandler,
+  isResponseClosed: () => boolean,
+): Promise<void> {
+  if (isResponseClosed() || request.signal.aborted) return
+  try {
+    await sendResponse(res, response)
+  } catch (error) {
+    if (isResponseClosed()) return
+    if (isRequestAbortError(request, error)) return
+    await sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
+  }
 }
 
 async function createErrorResponse(onError: ErrorHandler, error: unknown): Promise<Response> {
@@ -171,6 +213,10 @@ function internalServerError(): Response {
 
 function isPromiseLike<value>(value: value | PromiseLike<value>): value is PromiseLike<value> {
   return typeof (value as { then?: unknown }).then === 'function'
+}
+
+function isRequestAbortError(request: Request, error: unknown): boolean {
+  return request.signal.aborted && error === request.signal.reason
 }
 
 /**
@@ -295,34 +341,59 @@ export async function sendResponse(
 
   if (response.body != null && res.req.method !== 'HEAD') {
     let reader = response.body.getReader()
-    let first = await reader.read()
-    if (first.done) {
-      reader.releaseLock()
-    } else {
-      try {
-        // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
-        if (res.write(first.value) === false) {
-          await new Promise<void>((resolve) => {
-            res.once('drain', resolve)
-          })
-        }
+    let responseClosed = false
 
-        while (true) {
-          let result = await reader.read()
-          if (result.done) break
-
-          // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
-          if (res.write(result.value) === false) {
-            await new Promise<void>((resolve) => {
-              res.once('drain', resolve)
-            })
-          }
-        }
-      } finally {
-        reader.releaseLock()
-      }
+    function cancelBody() {
+      responseClosed = true
+      void reader.cancel().catch(() => undefined)
     }
+
+    res.once('close', cancelBody)
+
+    try {
+      while (!responseClosed) {
+        let result = await reader.read()
+        if (result.done) break
+
+        // @ts-expect-error - Node typings for http2 require a 2nd parameter to write but it's optional
+        if (res.write(result.value) === false) {
+          await waitForDrainOrClose(res)
+          if (responseClosed || res.destroyed) return
+        }
+      }
+    } finally {
+      res.removeListener('close', cancelBody)
+      reader.releaseLock()
+    }
+
+    if (responseClosed) return
   }
 
   res.end()
+}
+
+async function waitForDrainOrClose(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+): Promise<void> {
+  if (res.destroyed) return
+
+  await new Promise<void>((resolve) => {
+    function cleanup() {
+      res.removeListener('close', onClose)
+      res.removeListener('drain', onDrain)
+    }
+
+    function onClose() {
+      cleanup()
+      resolve()
+    }
+
+    function onDrain() {
+      cleanup()
+      resolve()
+    }
+
+    res.once('close', onClose)
+    res.once('drain', onDrain)
+  })
 }

@@ -2,7 +2,11 @@ import { ExplorerExampleCard } from '../example-card.tsx'
 import { exampleGridCss, PageSection, pageStackCss } from '../page-primitives.tsx'
 import { EXAMPLES } from '../../examples/index.tsx'
 
-const menuExamples = [EXAMPLES.menuButtonOverview, EXAMPLES.menuButtonBubbling]
+const menuExamples = [
+  EXAMPLES.menuButtonOverview,
+  EXAMPLES.menuContextTrigger,
+  EXAMPLES.menuButtonBubbling,
+]
 
 export function renderComponentMenuPage() {
   return (

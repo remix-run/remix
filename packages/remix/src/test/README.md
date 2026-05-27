@@ -209,8 +209,7 @@ suite('My Test Suite', () => {
 
 ### Programmatic runner
 
-`remix/test/cli` exports `runRemixTest()` for tools that want to run the test runner without
-exiting the current process:
+`remix/test/cli` exports `runRemixTest()` for tools that want to run the test runner without exiting the current process:
 
 ```ts
 import { runRemixTest } from 'remix/test/cli'
@@ -221,9 +220,7 @@ let exitCode = await runRemixTest({
 })
 ```
 
-`runRemixTest()` returns the runner exit code. The `remix test` bin wrapper calls
-`process.exit()` with that code when the run finishes so open workers, browsers, or project handles
-cannot keep the CLI alive.
+`runRemixTest()` returns the runner exit code. The `remix test` bin wrapper calls `process.exit()` with that code when the run finishes so open workers, browsers, or project handles cannot keep the CLI alive.
 
 ### Test Context
 

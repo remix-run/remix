@@ -37,6 +37,11 @@ function escapeHtml(text: string): string {
 
 type Interpolation = SafeHtml | string | number | boolean | null | undefined | Array<Interpolation>
 
+export interface HtmlTemplateTag {
+  (strings: TemplateStringsArray, ...values: Interpolation[]): SafeHtml
+  raw(strings: TemplateStringsArray, ...values: Interpolation[]): SafeHtml
+}
+
 function stringifyInterpolation(value: Interpolation): string {
   if (value == null) return ''
   if (Array.isArray(value)) return value.map(stringifyInterpolation).join('')
@@ -96,7 +101,7 @@ function htmlHelper(strings: TemplateStringsArray, ...values: Interpolation[]): 
  * @param values The values to interpolate
  * @returns A `SafeHtml` value
  */
-export const html = Object.assign(htmlHelper, {
+export const html: HtmlTemplateTag = Object.assign(htmlHelper, {
   raw(strings: TemplateStringsArray, ...values: Interpolation[]): SafeHtml {
     if (!isTemplateStringsArray(strings)) {
       throw new TypeError('html.raw must be used as a template tag')

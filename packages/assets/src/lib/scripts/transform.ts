@@ -263,7 +263,7 @@ export async function transformModule(
         identityPath: record.identityPath,
         importerDir: path.dirname(resolvedPath),
         packageSpecifiers: analysis.unresolvedImports
-          .filter((unresolved) => isPackageImportSpecifier(unresolved.specifier))
+          .filter((unresolved) => isBareImportSpecifier(unresolved.specifier))
           .map((unresolved) => unresolved.specifier),
         rawCode: analysis.rawCode,
         resolvedPath,
@@ -299,8 +299,16 @@ function findNearestTsconfigPath(directory: string): string | null {
   }
 }
 
-function isPackageImportSpecifier(specifier: string): boolean {
-  return !specifier.startsWith('./') && !specifier.startsWith('../') && !specifier.startsWith('/')
+function isBareImportSpecifier(specifier: string): boolean {
+  return (
+    !specifier.startsWith('./') &&
+    !specifier.startsWith('../') &&
+    !specifier.startsWith('/') &&
+    !specifier.startsWith('file:') &&
+    !specifier.startsWith('data:') &&
+    !specifier.startsWith('http://') &&
+    !specifier.startsWith('https://')
+  )
 }
 
 async function analyzeModuleSource(

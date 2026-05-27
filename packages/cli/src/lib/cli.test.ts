@@ -4,8 +4,9 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import * as assert from '@remix-run/assert'
-import { describe, it } from '@remix-run/test'
+import { after, before, describe, it } from '@remix-run/test'
 
+import { cleanCliTemplate, syncCliTemplate } from '../../../../scripts/utils/cli-template.ts'
 import { getFixturePath } from '../../test/fixtures.ts'
 import { captureOutput } from '../../test/capture-output.ts'
 import { withEnv } from '../../test/with-env.ts'
@@ -170,6 +171,14 @@ const UNKNOWN_HELP_TOPIC_ERROR_TEXT = [
 ].join('\n')
 
 describe('run', () => {
+  before(async () => {
+    await syncCliTemplate(ROOT_DIR)
+  })
+
+  after(async () => {
+    await cleanCliTemplate(ROOT_DIR)
+  })
+
   it('prints root help', async () => {
     let result = await captureOutput(() => run(['--help']))
 
@@ -442,7 +451,13 @@ describe('run', () => {
       let agentsGuide = await fs.readFile(path.join(appDir, 'AGENTS.md'), 'utf8')
       let readme = await fs.readFile(path.join(appDir, 'README.md'), 'utf8')
       let server = await fs.readFile(path.join(appDir, 'server.ts'), 'utf8')
+      let assets = await fs.readFile(path.join(appDir, 'app', 'assets.ts'), 'utf8')
       let routes = await fs.readFile(path.join(appDir, 'app', 'routes.ts'), 'utf8')
+      let entry = await fs.readFile(path.join(appDir, 'app', 'assets', 'entry.ts'), 'utf8')
+      let renderMiddleware = await fs.readFile(
+        path.join(appDir, 'app', 'middleware', 'render.tsx'),
+        'utf8',
+      )
       let controller = await fs.readFile(
         path.join(appDir, 'app', 'actions', 'controller.tsx'),
         'utf8',
@@ -463,7 +478,17 @@ describe('run', () => {
       assert.match(server, /http\.createServer/)
       assert.match(server, /createRequestListener/)
       assert.doesNotMatch(server, /remix\/node-serve/)
+      assert.doesNotMatch(assets, /remix-template:remove-/)
+      assert.doesNotMatch(assets, /\.\.\/packages/)
+      assert.doesNotMatch(assets, /usesWorkspaceRemix/)
+      assert.doesNotMatch(assets, /workspacePackagesDir/)
       assert.doesNotMatch(routes, /auth/)
+      assert.match(entry, /loadModule/)
+      assert.doesNotMatch(entry, /resolveFrame/)
+      assert.doesNotMatch(entry, /X-Remix-Frame/)
+      assert.match(renderMiddleware, /resolveClientEntry/)
+      assert.doesNotMatch(renderMiddleware, /resolveFrame/)
+      assert.doesNotMatch(renderMiddleware, /X-Remix-Frame/)
       assert.match(controller, /context\.render\(<HomePage \/>/)
       assert.doesNotMatch(controller, /AuthPage/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
@@ -472,6 +497,8 @@ describe('run', () => {
       await assertPathExists(path.join(appDir, 'app', 'actions', 'controller.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'middleware', 'render.tsx'))
       await assertPathExists(path.join(appDir, 'public', 'favicon.svg'))
+      await assertPathExists(path.join(appDir, '.gitignore'))
+      await assertPathMissing(path.join(appDir, 'gitignore'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'assets.ts'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'render.tsx'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'home.tsx'))
@@ -518,7 +545,7 @@ describe('run', () => {
     }
   })
 
-  it('escapes scaffold app names in generated TSX string literals', async () => {
+  it('escapes scaffold app names in generated document title defaults', async () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-'))
     try {
       let appDir = path.join(tmpDir, 'quoted-app')
@@ -538,10 +565,8 @@ describe('run', () => {
         documentSource,
         new RegExp(`readAppDisplayName\\('${escapeRegExp(encodedAppName)}'\\)`),
       )
-      assert.match(
-        scaffoldHomePageSource,
-        new RegExp(`readAppDisplayName\\('${escapeRegExp(encodedAppName)}'\\)`),
-      )
+      assert.ok(!scaffoldHomePageSource.includes('readAppDisplayName'))
+      assert.ok(!scaffoldHomePageSource.includes(encodedAppName))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }

@@ -398,6 +398,24 @@ describe('stream', () => {
       )
     })
 
+    it('renders booleanish string attributes as explicit false values', async () => {
+      let stream = renderToStream(
+        <div contentEditable={false} draggable={false} spellCheck={false}>
+          {createElement('input', { value: false })}
+        </div>,
+      )
+      let html = await drain(stream)
+      expect(html).toBe(
+        '<div contenteditable="false" draggable="false" spellcheck="false"><input value="false" /></div>',
+      )
+    })
+
+    it('renders translate with yes/no attribute values', async () => {
+      let stream = renderToStream(<div translate="no" />)
+      let html = await drain(stream)
+      expect(html).toBe('<div translate="no"></div>')
+    })
+
     it('renders input defaultValue as a value attribute', async () => {
       let stream = renderToStream(<input defaultValue={'Hello "Ryan" & friends'} />)
       let html = await drain(stream)
@@ -713,6 +731,21 @@ describe('stream', () => {
       expect(html).not.toContain('gradient-units=')
       expect(html).toContain('stdDeviation="2.5"')
       expect(html).not.toContain('std-deviation=')
+    })
+
+    it('renders SVG booleanish string attributes as explicit values', async () => {
+      let stream = renderToStream(
+        <svg>
+          <animate autoReverse={false} />
+          <rect externalResourcesRequired={false} focusable={false} />
+          <feColorMatrix preserveAlpha={false} />
+        </svg>,
+      )
+      let html = await drain(stream)
+      expect(html).toContain('autoReverse="false"')
+      expect(html).toContain('externalResourcesRequired="false"')
+      expect(html).toContain('focusable="false"')
+      expect(html).toContain('preserveAlpha="false"')
     })
   })
 
@@ -2037,6 +2070,107 @@ describe('stream', () => {
       // Stream should complete
       let done = await chunks.next()
       expect(done.done).toBe(true)
+    })
+
+    it('cancels blocking frame rendering when signal aborts without calling onError', async () => {
+      let controller = new AbortController()
+      let errors: unknown[] = []
+
+      let stream = renderToStream(<Frame src="/fragments/product" />, {
+        onError(error) {
+          errors.push(error)
+        },
+        resolveFrame: () =>
+          new Promise<string>((_resolve, reject) => {
+            controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
+              once: true,
+            })
+          }),
+        signal: controller.signal,
+      })
+
+      let reader = stream.getReader()
+      let read = reader.read()
+
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      controller.abort(abortError)
+
+      await expect(read).resolves.toEqual({ done: true, value: undefined })
+      expect(errors).toEqual([])
+    })
+
+    it('cancels non-blocking frame rendering when signal aborts without calling onError', async () => {
+      let controller = new AbortController()
+      let errors: unknown[] = []
+
+      let stream = renderToStream(
+        <Frame src="/fragments/product" fallback={<div>Loading...</div>} />,
+        {
+          onError(error) {
+            errors.push(error)
+          },
+          resolveFrame: () =>
+            new Promise<string>((_resolve, reject) => {
+              controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
+                once: true,
+              })
+            }),
+          signal: controller.signal,
+        },
+      )
+
+      let reader = stream.getReader()
+      let first = await reader.read()
+      expect(first.done).toBe(false)
+
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      controller.abort(abortError)
+
+      await expect(reader.read()).resolves.toEqual({ done: true, value: undefined })
+      expect(errors).toEqual([])
+    })
+
+    it('calls onError for AbortError when the request was not canceled', async () => {
+      let abortError = new DOMException('This operation was aborted', 'AbortError')
+      let errors: unknown[] = []
+
+      let stream = renderToStream(<Frame src="/fragments/product" />, {
+        onError(error) {
+          errors.push(error)
+        },
+        resolveFrame() {
+          throw abortError
+        },
+      })
+
+      await expect(drain(stream)).rejects.toThrow('This operation was aborted')
+      expect(errors).toEqual([abortError])
+    })
+
+    it('closes immediately when signal is already aborted before rendering starts', async () => {
+      let controller = new AbortController()
+      let abortError = new DOMException('Already aborted', 'AbortError')
+      controller.abort(abortError)
+
+      let errors: unknown[] = []
+
+      let stream = renderToStream(<Frame src="/fragments/product" />, {
+        onError(error) {
+          errors.push(error)
+        },
+        resolveFrame: () =>
+          new Promise<string>((_resolve, reject) => {
+            controller.signal.addEventListener('abort', () => reject(controller.signal.reason), {
+              once: true,
+            })
+            if (controller.signal.aborted) reject(controller.signal.reason)
+          }),
+        signal: controller.signal,
+      })
+
+      let reader = stream.getReader()
+      await expect(reader.read()).resolves.toEqual({ done: true, value: undefined })
+      expect(errors).toEqual([])
     })
 
     it('escapes frame template content to prevent template breakouts', async () => {

@@ -220,6 +220,7 @@ const ObjectHeaderDescriptors: readonly ObjectHeaderDescriptor[] = [
     ContentType.from(value),
   ),
   objectHeader<CookieInit, Cookie>('cookie', 'Cookie', (value) => Cookie.from(value), [
+    'append',
     'clear',
     'delete',
     'set',
@@ -332,6 +333,24 @@ const HeaderDescriptorByProperty = new Map(
   HeaderDescriptors.map((descriptor) => [descriptor.property, descriptor]),
 )
 
+const ApplyAppendObjectHeaderProperties = new Set([
+  'accept',
+  'acceptEncoding',
+  'acceptLanguage',
+  'cacheControl',
+  'ifMatch',
+  'ifNoneMatch',
+])
+
+const ApplyAppendHeaderNames = new Set(
+  [
+    ...ObjectHeaderDescriptors.filter((descriptor) =>
+      ApplyAppendObjectHeaderProperties.has(descriptor.property),
+    ),
+    ...StringHeaderDescriptors.filter((descriptor) => descriptor.list),
+  ].map((descriptor) => descriptor.name.toLowerCase()),
+)
+
 /**
  * An enhanced JavaScript `Headers` interface with lazy, type-safe property accessors.
  */
@@ -363,6 +382,44 @@ export class SuperHeaders extends Headers {
     this.#invalidate(name)
   }
 
+  /**
+   * Applies header values to this instance using header-aware merge semantics.
+   *
+   * @param init Header values to apply.
+   * @returns This `SuperHeaders` instance.
+   */
+  apply(init: SuperHeadersInit): this {
+    if (typeof init === 'string') {
+      throw new TypeError('SuperHeaders does not parse raw header strings; use parse() instead')
+    }
+
+    if (isIterable<[string, string]>(init)) {
+      for (let [name, value] of init) {
+        this.#applyHeaderValue(name, value)
+      }
+      return this
+    }
+
+    for (let name of Object.getOwnPropertyNames(init)) {
+      let value = init[name]
+      let descriptor = HeaderDescriptorByProperty.get(name)
+
+      if (value == null) {
+        this.delete(descriptor?.name ?? name)
+      } else if (descriptor && this.#shouldSetHeaderDescriptorValue(descriptor)) {
+        this.#setHeaderDescriptorValue(descriptor, value)
+      } else if (descriptor) {
+        for (let [headerName, headerValue] of new SuperHeaders({ [name]: value })) {
+          this.#applyHeaderValue(headerName, headerValue)
+        }
+      } else {
+        this.#applyHeaderValue(name, String(value))
+      }
+    }
+
+    return this
+  }
+
   #initialize(init: SuperHeadersInit): void {
     if (typeof init === 'string') {
       throw new TypeError('SuperHeaders does not parse raw header strings; use parse() instead')
@@ -385,6 +442,54 @@ export class SuperHeaders extends Headers {
         Headers.prototype.set.call(this, name, String(value))
       }
     }
+  }
+
+  #applyHeaderValue(name: string, value: string): void {
+    let key = name.toLowerCase()
+
+    if (key === SetCookieKey) {
+      if (value !== '') this.append(name, value)
+      return
+    }
+
+    if (key === 'cookie') {
+      let incoming = Cookie.from(value)
+      if (incoming.size === 0) return
+
+      let current = Cookie.from(this.get(name))
+      for (let [cookieName, cookieValue] of incoming) {
+        current.append(cookieName, cookieValue)
+      }
+
+      this.set(name, current.toString())
+      return
+    }
+
+    if (key === 'vary') {
+      let incoming = Vary.from(value)
+      if (incoming.size === 0) return
+
+      let current = Vary.from(this.get(name))
+      for (let headerName of incoming) {
+        current.add(headerName)
+      }
+
+      this.set(name, current.toString())
+      return
+    }
+
+    if (ApplyAppendHeaderNames.has(key)) {
+      if (value !== '') this.append(name, value)
+    } else {
+      this.set(name, value)
+    }
+  }
+
+  #shouldSetHeaderDescriptorValue(descriptor: HeaderDescriptor): boolean {
+    let key = descriptor.name.toLowerCase()
+    return (
+      key !== SetCookieKey && key !== 'cookie' && key !== 'vary' && !ApplyAppendHeaderNames.has(key)
+    )
   }
 
   #getHeaderDescriptorValue(descriptor: HeaderDescriptor): unknown {

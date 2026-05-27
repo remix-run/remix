@@ -38,17 +38,18 @@ All packages are published with TypeScript types along with both ESM and CJS mod
 
 Packages live in the [`packages` directory](https://github.com/remix-run/remix/tree/v3/packages). At a minimum, each package includes:
 
-- `.changes/`: Directory containing change files for the next release
 - `CHANGELOG.md`: A log of what's changed
 - `package.json`: Package metadata and dependencies
 - `README.md`: Information about the package
 - `src/`: The package's source code
 
-When you make changes to a package, please make sure you add a few relevant tests and run the whole test suite to make sure everything still works. Then, [add a change file](#adding-a-change-file) describing your changes and [make a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request). We will take a look at it as soon as we can.
+Packages may also include a `.changes/` directory when they have unreleased changes or prerelease configuration.
+
+When you make changes to a package, please make sure you add a few relevant tests and run the whole test suite to make sure everything still works. Then, [add a change file](#adding-a-change-file) when the change affects published behavior and [make a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request). We will take a look at it as soon as we can.
 
 ### Adding a Change File
 
-When making changes to a package, create a markdown file in the package's `.changes/` directory following this naming convention:
+When making user-facing changes to a package, create a markdown file in the package's `.changes/` directory following this naming convention. If the package does not already have a `.changes/` directory, create it when you add the change file.
 
 ```
 [major|minor|patch].short-description.md
@@ -57,6 +58,8 @@ When making changes to a package, create a markdown file in the package's `.chan
 - `major` - Breaking changes for v1.x+ packages
 - `minor` - Breaking changes for v0.x packages, new features
 - `patch` - Bug fixes
+
+Do not add change files for internal-only refactors, test-only changes, or packages that are released only because one of their dependencies changed. The release scripts automatically include dependent packages and generate dependency bump changelog entries.
 
 #### Examples
 
@@ -72,8 +75,7 @@ Write your change as a bullet point (without the leading `-` or `*`). This conte
 ```markdown
 Add support for X feature
 
-This is an optional longer explanation that will be indented
-under the main bullet point in the CHANGELOG.
+This is an optional longer explanation that will be indented under the main bullet point in the CHANGELOG.
 ```
 
 For breaking changes in v0.x packages, any change files that begin with `BREAKING CHANGE: ` will be hoisted to the top of the release notes:
@@ -96,7 +98,7 @@ pnpm changes:validate
 
 Releases are automated via the [release-pr workflow](/.github/workflows/release-pr.yaml) and [publish workflow](/.github/workflows/publish.yaml).
 
-1. **You push changes to `main`** with change files in `packages/*/.changes/`
+1. **You push changes to `main`** with change files in `packages/<package>/.changes/`
 
 2. **A "Release" PR is automatically opened** (or updated if one exists)
 
@@ -128,7 +130,7 @@ Tags and GitHub releases are created automatically by the publish workflow after
 
 ### Prerelease Mode
 
-Packages can opt into prerelease mode via an optional `.changes/config.json` file:
+Packages can opt into prerelease mode by creating an optional `.changes/config.json` file:
 
 ```json
 {
@@ -140,7 +142,7 @@ The `prereleaseChannel` field determines the version suffix (e.g. `alpha`, `beta
 
 #### Bumping prerelease versions
 
-While in prerelease mode, add change files as normal. The prerelease counter increments (e.g. `3.0.0-alpha.1` → `3.0.0-alpha.2`). Changelog entries still get proper "Major Changes" / "Minor Changes" / "Patch Changes" sections, but the bump type is otherwise ignored—only the prerelease counter is bumped.
+While in prerelease mode, add change files as normal. The prerelease counter increments (e.g. `3.0.0-alpha.1` → `3.0.0-alpha.2`). Changelog entries are grouped under "Pre-release Changes", and the bump type is otherwise ignored—only the prerelease counter is bumped.
 
 #### Transitioning between prerelease channels
 

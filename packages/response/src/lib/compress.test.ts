@@ -13,7 +13,7 @@ import { Readable } from 'node:stream'
 import { EventEmitter } from 'node:events'
 import { describe, it } from '@remix-run/test'
 
-import { Vary } from '@remix-run/headers'
+import { Vary } from '@remix-run/headers/vary'
 import { compressResponse, compressStream, type Encoding } from './compress.ts'
 
 const isWindows = process.platform === 'win32'

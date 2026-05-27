@@ -31,7 +31,7 @@ export function createGlyphSheet(values: GlyphValues): GlyphSheetComponent {
     >,
   )
 
-  function GlyphSheet(handle: Handle<GlyphSheetProps>) {
+  function GlyphSheet(handle: Handle<GlyphSheetProps>): () => RemixElement {
     return () => {
       let { style, ...svgProps } = handle.props
       let hiddenStyle = {
@@ -70,7 +70,7 @@ export function createGlyphSheet(values: GlyphValues): GlyphSheetComponent {
   })
 }
 
-export function Glyph(handle: Handle<GlyphProps>) {
+export function Glyph(handle: Handle<GlyphProps>): () => RemixElement {
   return () => {
     let { fill, name, ...svgProps } = handle.props
     let glyphId = glyphContract[name].id

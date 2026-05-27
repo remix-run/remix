@@ -1,11 +1,6 @@
-import * as fs from 'node:fs'
-import * as path from 'node:path'
-
 import { createAssetServer } from 'remix/assets'
 
 const rootDir = process.cwd()
-const workspacePackagesDir = path.resolve(rootDir, '..', 'packages')
-const usesWorkspaceRemix = fs.existsSync(path.join(workspacePackagesDir, 'remix', 'src', 'ui.ts'))
 
 export const assetServer = createAssetServer({
   basePath: '/assets',
@@ -13,9 +8,17 @@ export const assetServer = createAssetServer({
   fileMap: {
     'app/*path': 'app/*path',
     'node_modules/*path': 'node_modules/*path',
-    ...(usesWorkspaceRemix ? { 'packages/*path': '../packages/*path' } : {}),
+    /* remix-template:remove-start This is only needed inside the Remix monorepo. */
+    'packages/*path': '../packages/*path',
+    /* remix-template:remove-end */
   },
-  allow: ['app/assets/**', 'node_modules/**', ...(usesWorkspaceRemix ? ['../packages/**'] : [])],
+  allow: [
+    'app/assets/**',
+    'node_modules/**',
+    /* remix-template:remove-start This is only needed inside the Remix monorepo. */
+    '../packages/**',
+    /* remix-template:remove-end */
+  ],
   deny: ['app/**/*.server.*'],
   sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
   scripts: {

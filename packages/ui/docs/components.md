@@ -4,12 +4,12 @@ All components follow a consistent two-phase structure.
 
 ## Component Structure
 
-1. **Component Phase** - Runs once when the component is first created
+1. **Setup Phase** - Runs once when the component is first created
 2. **Render Phase** - Runs on initial render and every update afterward
 
 ```tsx
 function MyComponent(handle: Handle<Props>) {
-  // Component phase: runs once
+  // Setup phase: runs once
   let state = initializeState(handle.props)
 
   // Return render function: runs on every update
@@ -33,7 +33,7 @@ When a component is rendered:
 2. **Subsequent Updates**:
 
    - Only the render function is called
-   - Component phase is skipped, and the closure persists for the lifetime of the component instance
+   - Setup phase is skipped, and the closure persists for the lifetime of the component instance
    - `handle.props` is updated before the render function is called
    - Tasks queued during the update are executed after rendering
 
@@ -84,11 +84,11 @@ function Parent() {
   return () => <Child message="Hello from parent" count={42} />
 }
 
-function Child() {
-  return (props: { message: string; count: number }) => (
+function Child(handle: Handle<{ message: string; count: number }>) {
+  return () => (
     <div>
-      <p>{props.message}</p>
-      <p>Count: {props.count}</p>
+      <p>{handle.props.message}</p>
+      <p>Count: {handle.props.count}</p>
     </div>
   )
 }

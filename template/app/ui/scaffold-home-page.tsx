@@ -1,17 +1,16 @@
 // Delete this file and put your own home page in app/actions/controller.tsx
-import { css, type RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/ui'
+import { css } from 'remix/ui'
 
 import { PromptButton } from '../assets/prompt-button.tsx'
 import { Document } from './document.tsx'
-
-const APP_DISPLAY_NAME = readAppDisplayName('%%RMX_APP_DISPLAY_NAME_URI_COMPONENT%%')
 
 const FONT_STACK =
   "'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
 
 export function HomePage() {
   return () => (
-    <Document head={<HomeHead />} title={`Welcome to ${APP_DISPLAY_NAME}`}>
+    <Document head={<HomeHead />}>
       <main
         mix={css({
           // Light-mode design tokens (default).
@@ -205,54 +204,62 @@ function CodingWithAiCard() {
   )
 }
 
-function CardLink() {
-  return ({ href, icon, label }: { href: string; icon: RemixNode; label: string }) => (
-    <a
-      href={href}
-      mix={css({
-        display: 'flex',
-        gap: '16px',
-        alignItems: 'center',
-        padding: '16px',
-        borderRadius: '12px',
-        color: 'var(--text-primary)',
-        textDecoration: 'none',
-        background: 'transparent',
-        transition: 'background-color 150ms ease, color 150ms ease',
-        '&:hover, &:focus-visible': {
-          background: 'var(--surface-4)',
-          color: 'var(--brand-blue)',
-          outline: 'none',
-        },
-      })}
-    >
-      <IconSlot>{icon}</IconSlot>
-      <span mix={css({ fontSize: '14px', lineHeight: 1.5, whiteSpace: 'nowrap' })}>{label}</span>
-    </a>
-  )
+function CardLink(handle: Handle<{ href: string; icon: RemixNode; label: string }>) {
+  return () => {
+    let { href, icon, label } = handle.props
+
+    return (
+      <a
+        href={href}
+        mix={css({
+          display: 'flex',
+          gap: '16px',
+          alignItems: 'center',
+          padding: '16px',
+          borderRadius: '12px',
+          color: 'var(--text-primary)',
+          textDecoration: 'none',
+          background: 'transparent',
+          transition: 'background-color 150ms ease, color 150ms ease',
+          '&:hover, &:focus-visible': {
+            background: 'var(--surface-4)',
+            color: 'var(--brand-blue)',
+            outline: 'none',
+          },
+        })}
+      >
+        <IconSlot>{icon}</IconSlot>
+        <span mix={css({ fontSize: '14px', lineHeight: 1.5, whiteSpace: 'nowrap' })}>{label}</span>
+      </a>
+    )
+  }
 }
 
-function IconSlot() {
-  return ({ children, rotated = false }: { children: RemixNode; rotated?: boolean }) => (
-    <span
-      aria-hidden="true"
-      mix={css({
-        flex: '0 0 24px',
-        width: '24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: rotated ? 'center' : 'flex-start',
-        '& svg': {
-          width: '20px',
-          height: '20px',
-          display: 'block',
-          ...(rotated ? { transform: 'rotate(180deg)' } : {}),
-        },
-      })}
-    >
-      {children}
-    </span>
-  )
+function IconSlot(handle: Handle<{ children: RemixNode; rotated?: boolean }>) {
+  return () => {
+    let { children, rotated = false } = handle.props
+
+    return (
+      <span
+        aria-hidden="true"
+        mix={css({
+          flex: '0 0 24px',
+          width: '24px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: rotated ? 'center' : 'flex-start',
+          '& svg': {
+            width: '20px',
+            height: '20px',
+            display: 'block',
+            ...(rotated ? { transform: 'rotate(180deg)' } : {}),
+          },
+        })}
+      >
+        {children}
+      </span>
+    )
+  }
 }
 
 function Footer() {
@@ -333,10 +340,6 @@ function Footer() {
       </div>
     </footer>
   )
-}
-
-function readAppDisplayName(value: string): string {
-  return value.startsWith('%%') ? 'Remix App' : decodeURIComponent(value)
 }
 
 const cardStyle = css({
