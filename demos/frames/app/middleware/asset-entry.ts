@@ -18,7 +18,11 @@ export function loadAssetEntry(
   return async (context, next) => {
     let [scriptSrc, scriptPreloads] = await Promise.all([
       assetServer.getHref(scriptEntry),
-      assetServer.getPreloads(scriptEntry).catch(() => []),
+      assetServer.getPreloads(scriptEntry).catch((error) => {
+        // Surface asset compilation errors without breaking HTML rendering.
+        console.error(error)
+        return []
+      }),
     ])
 
     context.set(assetEntryKey, { scriptSrc, scriptPreloads })
