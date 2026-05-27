@@ -5,6 +5,7 @@ import { separatorStyle } from '@remix-run/ui/separator'
 /**
  * @name Menu Overview
  * @description A hierarchical menu with checkboxes, radio groups, submenus, and separators.
+ * @layout center
  */
 export default function Example(handle: Handle) {
   type Density = 'comfortable' | 'compact'
