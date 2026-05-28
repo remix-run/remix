@@ -35,6 +35,13 @@ describe('processStyleClass', () => {
       {
         color: 'black',
         ':hover': { color: 'red' },
+        '& div': {
+          color: 'green',
+          '& p': { color: 'blue' },
+          '@media (hover: hover)': {
+            '& a': { color: 'purple' },
+          },
+        },
         '@media (min-width: 768px)': {
           fontSize: '16px',
         },
@@ -42,8 +49,14 @@ describe('processStyleClass', () => {
       cache,
     )
 
-    expect(result.css).toContain(':hover')
+    let css = result.css.replace(/\s+/g, ' ')
+
+    expect(css).toContain(':hover { color: red; }')
+    expect(css).toContain(
+      '& div { color: green; & p { color: blue; } @media (hover: hover) { & a { color: purple; } } }',
+    )
     expect(result.css).toContain('@media (min-width: 768px)')
     expect(result.css).toContain('font-size: 16px')
+    expect(result.css).not.toContain('[object Object]')
   })
 })
