@@ -1818,7 +1818,7 @@ importers:
         specifier: 2.1.1
         version: 2.1.1
       decamelize:
-        specifier: ^6.0.1
+        specifier: 6.0.1
         version: 6.0.1
       playwright:
         specifier: 'catalog:'
