@@ -107,6 +107,8 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
       })
       let targetsToAdd = [...nextTargets].filter((target) => !watchedTargets.has(target))
       let targetsToRemove = [...watchedTargets].filter((target) => !nextTargets.has(target))
+      targetsToAdd.sort(compareFilePathDepth)
+      targetsToRemove.sort(compareFilePathDepth).reverse()
       logWatchDebug('update', {
         delta,
         includeAncestors,
@@ -195,6 +197,14 @@ function getErrorDetails(error: unknown): Record<string, unknown> {
   if ('syscall' in error) details.syscall = error.syscall
 
   return details
+}
+
+function compareFilePathDepth(a: string, b: string): number {
+  return getPathDepth(a) - getPathDepth(b)
+}
+
+function getPathDepth(filePath: string): number {
+  return normalizeFilePath(filePath).split('/').length
 }
 
 function resolveChokidarWatchOptions(
