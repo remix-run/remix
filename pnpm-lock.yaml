@@ -1815,7 +1815,7 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
       clsx:
-        specifier: ^2.1.1
+        specifier: 2.1.1
         version: 2.1.1
       decamelize:
         specifier: ^6.0.1
