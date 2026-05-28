@@ -24,7 +24,7 @@ import { supportedScriptExtensions } from './scripts/resolve.ts'
 import { createResponseForStyle, createStyleCompiler, isStyleFilePath } from './styles/compiler.ts'
 import { resolveScriptTarget, resolveStyleTarget } from './target.ts'
 import type { AssetTarget, ResolvedScriptTarget, ResolvedStyleTarget } from './target.ts'
-import { createAssetServerWatcher } from './watch.ts'
+// import { createAssetServerWatcher } from './watch.ts'
 import type { AssetServerWatcher, ChokidarWatcher } from './watch.ts'
 
 interface AssetServerWatchOptions {
@@ -255,7 +255,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     minify: resolvedOptions.minify,
     onWatchDirectoriesChange: (delta) => {
       if (!watcher) return
-      watcher.updateWatchedDirectories(delta)
+      // watcher.updateWatchedDirectories(delta)
     },
     rootDir: resolvedOptions.rootDir,
     routes: resolvedOptions.routes,
@@ -288,7 +288,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     minify: resolvedOptions.minify,
     onWatchDirectoriesChange: (delta) => {
       if (!watcher) return
-      watcher.updateWatchedDirectories(delta, { includeAncestors: false })
+      // watcher.updateWatchedDirectories(delta, { includeAncestors: false })
     },
     rootDir: resolvedOptions.rootDir,
     routes: resolvedOptions.routes,
@@ -311,16 +311,16 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       routes: resolvedOptions.routes,
     })
   }
-  if (resolvedOptions.watchOptions) {
-    watcher = createAssetServerWatcher({
-      ...resolvedOptions.watchOptions,
-      onChokidarWatcherCreated(createdWatcher) {
-        chokidarWatcher = createdWatcher
-      },
-      onFileEvent: handleWatchEvent,
-      rootDir: resolvedOptions.rootDir,
-    })
-  }
+  // if (resolvedOptions.watchOptions) {
+  //   watcher = createAssetServerWatcher({
+  //     ...resolvedOptions.watchOptions,
+  //     onChokidarWatcherCreated(createdWatcher) {
+  //       chokidarWatcher = createdWatcher
+  //     },
+  //     onFileEvent: handleWatchEvent,
+  //     rootDir: resolvedOptions.rootDir,
+  //   })
+  // }
 
   async function responseForError(error: unknown): Promise<Response> {
     try {
@@ -571,7 +571,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       return mergePreloadLayers(await Promise.all(preloadLayerGroupPromises))
     },
     async close() {
-      await watcher?.close()
+      // await watcher?.close()
     },
   }
 
