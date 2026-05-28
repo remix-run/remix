@@ -12,14 +12,9 @@ export const assetServer = createAssetServer({
     'packages/*path': '../packages/*path',
     /* remix-template:remove-end */
   },
-  allow: [
-    'app/assets/**',
-    'node_modules/**',
-    /* remix-template:remove-start This is only needed inside the Remix monorepo. */
-    '../packages/**',
-    /* remix-template:remove-end */
-  ],
-  deny: ['app/**/*.server.*'],
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
+  denyFiles: ['app/**/*.server.*'],
   sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
   scripts: {
     define: {

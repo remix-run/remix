@@ -33,7 +33,8 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allow: ['app/assets/**', 'node_modules/**'],
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
   },
@@ -46,7 +47,7 @@ router.get('/assets/*', ({ request }) => {
 })
 ```
 
-This example gives you an `/assets/*` endpoint that serves compiled browser assets from `app/assets` and `node_modules`.
+This example gives you an `/assets/*` endpoint that serves compiled browser assets from `app/assets` and the `remix` package.
 
 ## Root Directory
 
@@ -63,26 +64,33 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allow: ['app/assets/**', 'node_modules/**'],
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
 })
 ```
 
 ## Access Control
 
-You must provide an `allow` list to specify which files are allowed to be served. `deny` is optional and takes precedence over `allow`.
+You must provide an `allowFiles` list to specify which files are allowed to be served. You can also allow whole packages by name with `allowPackages`. `denyFiles` and `denyPackages` are optional and take precedence over both `allowFiles` and `allowPackages`.
 
 ```ts
 import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
-  deny: ['app/**/*.server.*'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
+  denyFiles: ['app/**/*.server.*'],
 })
 ```
 
-Rules for `allow` and `deny` are file paths or globs. Relative values are resolved from `rootDir`. Absolute file paths match exactly, and absolute directory paths also match their descendants.
+Rules for `allowFiles` and `denyFiles` are file paths or globs. Relative values are resolved from `rootDir`. Absolute file paths match exactly, and absolute directory paths also match their descendants.
+
+Values for `allowPackages` and `denyPackages` are package names. Dependencies of packages in `allowPackages` are also allowed automatically. Allowed package files must still be reachable through `fileMap`.
 
 ## File Map
 
@@ -95,9 +103,10 @@ let assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: {
     '/app/*path': 'app/*path',
-    '/packages/*path': '../packages/*path',
+    '/npm/*path': 'node_modules/*path',
   },
-  allow: ['app/assets/**', '../packages/**'],
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
 })
 ```
 
@@ -112,8 +121,12 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**', 'app/node_modules/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
 })
 ```
 
@@ -130,8 +143,12 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**', 'app/node_modules/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   watch: false,
 })
 ```
@@ -143,8 +160,12 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**', 'app/node_modules/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   watch: {
     ignore: ['**/node_modules/**'],
   },
@@ -195,8 +216,12 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   watch: false,
   fingerprint: {
     buildId: process.env.GITHUB_SHA,
@@ -217,8 +242,12 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   target: {
     chrome: '109',
     ios: '15.6',
@@ -238,8 +267,12 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   sourceMaps: 'external',
 })
 ```
@@ -251,8 +284,12 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   sourceMaps: 'inline',
   sourceMapSourcePaths: 'absolute',
 })
@@ -267,8 +304,12 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   minify: true,
 })
 ```
@@ -284,8 +325,12 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**', 'app/node_modules/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   scripts: {
     define: {
       'process.env.NODE_ENV': '"production"',
@@ -305,8 +350,12 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   scripts: {
     external: ['my-external-import'],
   },
@@ -322,8 +371,12 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
   },
@@ -344,8 +397,12 @@ import sharp from 'sharp'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
     transforms: {
@@ -374,8 +431,12 @@ import { createAssetServer, defineFileTransform } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
     transforms: {
@@ -418,8 +479,12 @@ import { optimize as optimizeSvg } from 'svgo'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
     globalTransforms: [
@@ -450,8 +515,12 @@ import { createFsFileStorage } from 'remix/file-storage/fs'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   files: {
     cache: createFsFileStorage(path.resolve('.tmp/assets-cache')),
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
@@ -471,8 +540,12 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   files: {
     maxRequestTransforms: 5,
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
@@ -518,8 +591,12 @@ import { createAssetServer } from 'remix/assets'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
-  fileMap: { '/app/*path': 'app/*path' },
-  allow: ['app/assets/**'],
+  fileMap: {
+    '/app/*path': 'app/*path',
+    '/npm/*path': 'node_modules/*path',
+  },
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
   onError(error) {
     console.error('Failed to build client assets', error)
     return new Response('Client asset build failed', { status: 500 })
