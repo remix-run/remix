@@ -36,10 +36,15 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
 
   for (let event of ['add', 'change', 'unlink'] as const) {
     watcher.on(event, (filePath) => {
+      logWatchDebug('event', { event, filePath })
       options.onFileEvent(filePath, event)
     })
   }
   watcher.on('error', (error) => {
+    logWatchDebug('error', {
+      error: getErrorDetails(error),
+      watchedTargets: [...watchedTargets],
+    })
     console.error('Asset server file system watcher encountered an error.', error)
   })
 
@@ -77,17 +82,53 @@ export function createAssetServerWatcher(options: AssetServerWatcherOptions): As
       })
       let targetsToAdd = [...nextTargets].filter((target) => !watchedTargets.has(target))
       let targetsToRemove = [...watchedTargets].filter((target) => !nextTargets.has(target))
+      logWatchDebug('update', {
+        delta,
+        includeAncestors,
+        nextTargets: [...nextTargets],
+        rootDir: options.rootDir,
+        targetsToAdd,
+        targetsToRemove,
+        watchedFileDirectories: [...watchedFileDirectories],
+        watchedResolutionDirectories: [...watchedResolutionDirectories],
+      })
 
       if (targetsToRemove.length > 0) {
+        logWatchDebug('unwatch', { targets: targetsToRemove })
         watcher.unwatch(targetsToRemove)
       }
       if (targetsToAdd.length > 0) {
+        logWatchDebug('add', { targets: targetsToAdd })
         watcher.add(targetsToAdd)
       }
 
       watchedTargets = nextTargets
     },
   }
+}
+
+function logWatchDebug(label: string, details: Record<string, unknown>): void {
+  console.error(`[asset-watch:${label}] ${JSON.stringify(details)}`)
+}
+
+function getErrorDetails(error: unknown): Record<string, unknown> {
+  if (!(error instanceof Error)) {
+    return { value: error }
+  }
+
+  let details: Record<string, unknown> = {
+    message: error.message,
+    name: error.name,
+    stack: error.stack,
+  }
+
+  if ('code' in error) details.code = error.code
+  if ('errno' in error) details.errno = error.errno
+  if ('filename' in error) details.filename = error.filename
+  if ('path' in error) details.path = error.path
+  if ('syscall' in error) details.syscall = error.syscall
+
+  return details
 }
 
 function resolveChokidarWatchOptions(
