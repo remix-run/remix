@@ -83,10 +83,7 @@ async function createWatchState() {
   }
 }
 
-async function waitForStop(
-  getContext: () => esbuild.BuildContext,
-  watcher?: { close(): void },
-) {
+async function waitForStop(getContext: () => esbuild.BuildContext, watcher?: { close(): void }) {
   await new Promise<void>((resolve) => {
     let shuttingDown = false
 

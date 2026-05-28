@@ -34,7 +34,9 @@ export function getDemoDirectory() {
   return UI_DIRECTORY
 }
 
-export async function loadDemoModule(demo: Pick<DemoFile, 'absolutePath' | 'importHref' | 'title'>) {
+export async function loadDemoModule(
+  demo: Pick<DemoFile, 'absolutePath' | 'importHref' | 'title'>,
+) {
   let version = fs.statSync(demo.absolutePath).mtimeMs.toString(36)
   let mod = await import(`${demo.importHref}?v=${version}`)
 
