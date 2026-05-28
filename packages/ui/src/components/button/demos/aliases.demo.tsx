@@ -5,6 +5,7 @@ import { theme } from '@remix-run/ui/theme'
 /**
  * @name Button Component
  * @description The Button component wraps the low-level style primitives and accepts a tone prop for quick theming.
+ * @layout center
  * @order 2
  */
 export default function Example() {

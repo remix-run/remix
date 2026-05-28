@@ -14,7 +14,6 @@ packages:
   - packages/cli/test/fixtures/*
   - packages/fetch-router/demos/*
   - packages/form-data-parser/demos/*
-  - packages/ui/demos
   - packages/ui/bench
   - packages/ui/bench/frameworks/*
   - packages/lazy-file/scripts
