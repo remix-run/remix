@@ -13,8 +13,8 @@ catalogs:
       specifier: 7.0.0-dev.20251125.1
       version: 7.0.0-dev.20251125.1
     playwright:
-      specifier: ^1.59.0
-      version: 1.59.0
+      specifier: ^1.60.0
+      version: 1.60.0
     typescript:
       specifier: ^5.9.3
       version: 5.9.3
@@ -84,7 +84,7 @@ importers:
         version: 7.0.0-dev.20251125.1
       playwright:
         specifier: 'catalog:'
-        version: 1.59.0
+        version: 1.60.0
 
   demos/frame-navigation:
     dependencies:
@@ -1816,7 +1816,7 @@ importers:
         version: 6.0.1
       playwright:
         specifier: 'catalog:'
-        version: 1.59.0
+        version: 1.60.0
 
   packages/ui:
     dependencies:
@@ -1838,7 +1838,7 @@ importers:
         version: 7.0.0-dev.20251125.1
       playwright:
         specifier: 'catalog:'
-        version: 1.59.0
+        version: 1.60.0
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -1863,7 +1863,7 @@ importers:
         version: 24.10.4
       playwright:
         specifier: ^1.49.1
-        version: 1.59.0
+        version: 1.60.0
 
   packages/ui/bench/frameworks/preact:
     dependencies:
@@ -4992,8 +4992,18 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
+  playwright-core@1.60.0:
+    resolution: {integrity: sha512-9bW6zvX/m0lEbgTKJ6YppOKx8H3VOPBMOCFh2irXFOT4BbHgrx5hPjwJYLT40Lu+4qtD36qKc/Hn56StUW57IA==}
+    engines: {node: '>=18'}
+    hasBin: true
+
   playwright@1.59.0:
     resolution: {integrity: sha512-wihGScriusvATUxmhfENxg0tj1vHEFeIwxlnPFKQTOQVd7aG08mUfvvniRP/PtQOC+2Bs52kBOC/Up1jTXeIbw==}
+    engines: {node: '>=18'}
+    hasBin: true
+
+  playwright@1.60.0:
+    resolution: {integrity: sha512-hheHdokM8cdqCb0lcE3s+zT4t4W+vvjpGxsZlDnikarzx8tSzMebh3UiFtgqwFwnTnjYQcsyMF8ei2mCO/tpeA==}
     engines: {node: '>=18'}
     hasBin: true
 
@@ -8086,9 +8096,17 @@ snapshots:
 
   playwright-core@1.59.0: {}
 
+  playwright-core@1.60.0: {}
+
   playwright@1.59.0:
     dependencies:
       playwright-core: 1.59.0
+    optionalDependencies:
+      fsevents: 2.3.2
+
+  playwright@1.60.0:
+    dependencies:
+      playwright-core: 1.60.0
     optionalDependencies:
       fsevents: 2.3.2
 
