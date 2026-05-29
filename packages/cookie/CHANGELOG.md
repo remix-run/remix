@@ -2,6 +2,13 @@
 
 This is the changelog for [`cookie`](https://github.com/remix-run/remix/tree/main/packages/cookie). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.4
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`headers@0.21.1`](https://github.com/remix-run/remix/releases/tag/headers@0.21.1)
+
 ## v0.5.3
 
 ### Patch Changes

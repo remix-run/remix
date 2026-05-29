@@ -2,6 +2,12 @@
 
 This is the changelog for [`session-storage-memcache`](https://github.com/remix-run/remix/tree/main/packages/session-storage-memcache). It follows [semantic versioning](https://semver.org/).
 
+## v0.1.2
+
+### Patch Changes
+
+- Fixed Memcache session storage so `ttlSeconds` values longer than 30 days remain relative durations instead of being interpreted by Memcached as already-expired Unix timestamps.
+
 ## v0.1.1
 
 ### Patch Changes
