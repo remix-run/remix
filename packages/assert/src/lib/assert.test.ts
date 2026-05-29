@@ -46,6 +46,7 @@ describe('default export', () => {
     defaultAssert.equal(1, 1)
     defaultAssert.deepEqual({ a: 1 }, { a: 1 })
     defaultAssert.partialDeepEqual({ a: 1, b: 2 }, { a: 1 })
+    defaultAssert.ifError(null)
     defaultAssert.match('hello world', /world/)
   })
 })
@@ -134,6 +135,8 @@ describe('assert.deepEqual', () => {
       () => assert.deepEqual(new Error('boom'), new Error('bad')),
       assert.AssertionError,
     )
+
+    assert.deepEqual(new URLSearchParams('a=1'), new URLSearchParams('b=2'))
   })
 
   it('compares maps, sets, typed arrays, and symbol properties', () => {
@@ -190,18 +193,21 @@ describe('assert.partialDeepEqual', () => {
     nodeAssert.throws(() => assert.partialDeepEqual({}, { a: undefined }), assert.AssertionError)
   })
 
-  it('matches array and typed array prefixes', () => {
+  it('matches array and byte subsequences', () => {
     assert.partialDeepEqual([1, 2, 3], [1, 2])
+    assert.partialDeepEqual([1, 2, 3, 4, 5, 6, 7, 8, 9], [4, 5, 8])
     nodeAssert.throws(() => assert.partialDeepEqual([1], [1, 2]), assert.AssertionError)
+    nodeAssert.throws(() => assert.partialDeepEqual([1, 2, 3], [2, 1]), assert.AssertionError)
 
     assert.partialDeepEqual(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2]))
+    assert.partialDeepEqual(new Uint8Array([1, 2, 3]), new Uint8Array([2, 3]))
     nodeAssert.throws(
       () => assert.partialDeepEqual(new Uint8Array([1, 3, 3]), new Uint8Array([1, 2])),
       assert.AssertionError,
     )
 
     let actualBuffer = Object.assign(new Uint8Array([1, 2, 3]).buffer, { label: 'ok' })
-    let expectedBuffer = Object.assign(new Uint8Array([1, 2]).buffer, { label: 'ok' })
+    let expectedBuffer = Object.assign(new Uint8Array([2, 3]).buffer, { label: 'ok' })
     assert.partialDeepEqual(actualBuffer, expectedBuffer)
   })
 
@@ -264,6 +270,22 @@ describe('assert.notDeepEqual', () => {
 
   it('throws for deeply strictly equal objects', () => {
     nodeAssert.throws(() => assert.notDeepEqual({ a: 1 }, { a: 1 }), assert.AssertionError)
+  })
+})
+
+describe('assert.ifError', () => {
+  it('passes for null and undefined', () => {
+    assert.ifError(null)
+    assert.ifError(undefined)
+  })
+
+  it('throws for any other value', () => {
+    let err = capture(() => assert.ifError(new Error('boom')))
+    nodeAssert.equal(err?.operator, 'ifError')
+    nodeAssert.equal(err?.actual instanceof Error, true)
+    nodeAssert.equal(err?.expected, null)
+
+    nodeAssert.throws(() => assert.ifError(false), assert.AssertionError)
   })
 })
 
@@ -339,6 +361,10 @@ describe('assert.throws', () => {
 
   it('validates error constructor', () => {
     assert.throws(() => {
+      throw new Error('bad')
+    }, Error)
+
+    assert.throws(() => {
       throw new TypeError('bad type')
     }, TypeError)
   })
@@ -364,6 +390,27 @@ describe('assert.throws', () => {
     )
   })
 
+  it('validates error instances with their own properties', () => {
+    let expected = new Error('boom') as NodeJS.ErrnoException
+    expected.code = 'ERR_INVALID_ARG_VALUE'
+
+    assert.throws(() => {
+      let err = new Error('boom') as NodeJS.ErrnoException
+      err.code = 'ERR_INVALID_ARG_VALUE'
+      throw err
+    }, expected)
+
+    nodeAssert.throws(
+      () =>
+        assert.throws(() => {
+          let err = new Error('boom') as NodeJS.ErrnoException
+          err.code = 'ERR_OTHER'
+          throw err
+        }, expected),
+      assert.AssertionError,
+    )
+  })
+
   it('matches RegExp values inside an object validator against string properties', () => {
     assert.throws(
       () => {
@@ -385,6 +432,24 @@ describe('assert.throws', () => {
           { code: 'ERR_INVALID_ARG_VALUE' },
         ),
       assert.AssertionError,
+    )
+  })
+
+  it('validates expected error argument shapes', () => {
+    nodeAssert.throws(() => assert.throws(123 as any), TypeError)
+    nodeAssert.throws(
+      () =>
+        assert.throws(() => {
+          throw new Error('oops')
+        }, {}),
+      TypeError,
+    )
+    nodeAssert.throws(
+      () =>
+        assert.throws(() => {
+          throw new Error('oops')
+        }, true),
+      TypeError,
     )
   })
 
@@ -413,6 +478,27 @@ describe('assert.doesNotThrow', () => {
         assert.doesNotThrow(() => {
           throw new Error('oops')
         }),
+      assert.AssertionError,
+    )
+  })
+
+  it('validates arguments after an unwanted throw', () => {
+    nodeAssert.throws(() => assert.doesNotThrow(123 as any), TypeError)
+    nodeAssert.throws(
+      () =>
+        assert.doesNotThrow(() => {
+          throw new Error('oops')
+        }, {}),
+      TypeError,
+    )
+  })
+
+  it('treats Error constructors as expected matchers', () => {
+    nodeAssert.throws(
+      () =>
+        assert.doesNotThrow(() => {
+          throw new Error('oops')
+        }, Error),
       assert.AssertionError,
     )
   })
@@ -458,6 +544,7 @@ describe('assert.rejects', () => {
   })
 
   it('validates error constructor', async () => {
+    await assert.rejects(() => Promise.reject(new Error('bad')), Error)
     await assert.rejects(() => Promise.reject(new TypeError('bad type')), TypeError)
   })
 
@@ -469,6 +556,19 @@ describe('assert.rejects', () => {
       code: 'ERR_INVALID_ARG_VALUE',
       message: /boom/,
     })
+  })
+
+  it('validates promise and expected error argument shapes', async () => {
+    await nodeAssert.rejects(() => assert.rejects(123 as any), TypeError)
+    await nodeAssert.rejects(() => assert.rejects(() => 123 as any), TypeError)
+    await nodeAssert.rejects(
+      () => assert.rejects(() => Promise.reject(new Error('oops')), {}),
+      TypeError,
+    )
+    await nodeAssert.rejects(
+      () => assert.rejects(() => Promise.reject(new Error('oops')), true),
+      TypeError,
+    )
   })
 })
 
@@ -484,6 +584,15 @@ describe('assert.doesNotReject', () => {
     )
   })
 
+  it('validates promise and expected error argument shapes', async () => {
+    await nodeAssert.rejects(() => assert.doesNotReject(123 as any), TypeError)
+    await nodeAssert.rejects(() => assert.doesNotReject(() => 123 as any), TypeError)
+    await nodeAssert.rejects(
+      () => assert.doesNotReject(() => Promise.reject(new Error('oops')), {}),
+      TypeError,
+    )
+  })
+
   it('rethrows when rejection errors do not match the expected error', async () => {
     let error = new TypeError('oops')
     await nodeAssert.rejects(
@@ -495,7 +604,7 @@ describe('assert.doesNotReject', () => {
 
 // ---------------------------------------------------------------------------
 // node:assert/strict compatibility — verifies that our errors match node's
-// on the fields that matter: name, operator, actual, expected.
+// on the fields that matter: name, code, operator, generatedMessage, actual, expected.
 // ---------------------------------------------------------------------------
 
 describe('node:assert/strict compatibility', () => {
@@ -584,8 +693,19 @@ describe('node:assert/strict compatibility', () => {
       capture(() => nodeAssert.partialDeepStrictEqual({ x: 1 }, { x: 1, y: 2 })),
     )
     assertCompatibleError(
-      capture(() => assert.partialDeepEqual([1, 2, 3], [1, 2])),
-      capture(() => nodeAssert.partialDeepStrictEqual([1, 2, 3], [1, 2])),
+      capture(() => assert.partialDeepEqual([1, 2, 3, 4, 5, 6, 7, 8, 9], [4, 5, 8])),
+      capture(() => nodeAssert.partialDeepStrictEqual([1, 2, 3, 4, 5, 6, 7, 8, 9], [4, 5, 8])),
+    )
+  })
+
+  it('ifError — pass and fail cases', () => {
+    assertCompatibleError(
+      capture(() => assert.ifError(null)),
+      capture(() => nodeAssert.ifError(null)),
+    )
+    assertCompatibleError(
+      capture(() => assert.ifError(new Error('oops'))),
+      capture(() => nodeAssert.ifError(new Error('oops'))),
     )
   })
 
@@ -700,7 +820,9 @@ function assertCompatibleError(
   nodeAssert.equal(ours === null, nodes === null, 'throw/pass disagrees with node:assert/strict')
   if (ours && nodes) {
     nodeAssert.equal(ours.name, nodes.name)
+    nodeAssert.equal(ours.code, nodes.code)
     nodeAssert.equal(ours.operator, nodes.operator)
+    nodeAssert.equal(ours.generatedMessage, nodes.generatedMessage)
     nodeAssert.deepEqual(ours.actual, nodes.actual)
     nodeAssert.deepEqual(ours.expected, nodes.expected)
   }

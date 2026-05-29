@@ -7,6 +7,7 @@ import {
   doesNotThrow,
   equal,
   fail,
+  ifError,
   match,
   notDeepEqual,
   notEqual,
@@ -20,7 +21,7 @@ export * from './lib/assert.ts'
 export { expect, type Expect, type Expectation } from './lib/expect.ts'
 
 interface Assert {
-  (value: unknown, message?: string): asserts value
+  (value: unknown, message?: string | Error): asserts value
   AssertionError: typeof AssertionError
   assert: typeof assertFn
   ok: typeof ok
@@ -30,6 +31,7 @@ interface Assert {
   partialDeepEqual: typeof partialDeepEqual
   notDeepEqual: typeof notDeepEqual
   fail: typeof fail
+  ifError: typeof ifError
   match: typeof match
   doesNotMatch: typeof doesNotMatch
   throws: typeof throws
@@ -48,6 +50,7 @@ const assert: Assert = Object.assign(assertFn, {
   partialDeepEqual,
   notDeepEqual,
   fail,
+  ifError,
   match,
   doesNotMatch,
   throws,

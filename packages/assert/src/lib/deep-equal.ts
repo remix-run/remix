@@ -38,6 +38,40 @@ function rememberComparison(memo: Memo, actual: object, expected: object): void 
   expectedSet.add(expected)
 }
 
+function compareBytes(
+  actualBytes: Uint8Array,
+  expectedBytes: Uint8Array,
+  mode: CompareMode,
+): boolean {
+  if (mode === 'full' && actualBytes.length !== expectedBytes.length) return false
+  if (mode === 'partial' && actualBytes.length < expectedBytes.length) return false
+
+  if (mode === 'full') {
+    for (let index = 0; index < actualBytes.length; index++) {
+      if (actualBytes[index] !== expectedBytes[index]) return false
+    }
+
+    return true
+  }
+
+  let actualIndex = 0
+  for (let expectedByte of expectedBytes) {
+    let matched = false
+    while (actualIndex < actualBytes.length) {
+      if (actualBytes[actualIndex] === expectedByte) {
+        matched = true
+        actualIndex++
+        break
+      }
+      actualIndex++
+    }
+
+    if (!matched) return false
+  }
+
+  return true
+}
+
 function compareArrayBuffer(
   actual: ArrayBufferLike,
   expected: ArrayBufferLike,
@@ -46,14 +80,7 @@ function compareArrayBuffer(
   if (mode === 'full' && actual.byteLength !== expected.byteLength) return false
   if (mode === 'partial' && actual.byteLength < expected.byteLength) return false
 
-  let actualBytes = new Uint8Array(actual)
-  let expectedBytes = new Uint8Array(expected)
-
-  for (let index = 0; index < expectedBytes.length; index++) {
-    if (actualBytes[index] !== expectedBytes[index]) return false
-  }
-
-  return true
+  return compareBytes(new Uint8Array(actual), new Uint8Array(expected), mode)
 }
 
 function getViewBytes(value: ArrayBufferView): Uint8Array {
@@ -69,14 +96,19 @@ function compareArrayBufferView(
   if (mode === 'full' && actual.byteLength !== expected.byteLength) return false
   if (mode === 'partial' && actual.byteLength < expected.byteLength) return false
 
-  let actualBytes = getViewBytes(actual)
-  let expectedBytes = getViewBytes(expected)
+  return compareBytes(getViewBytes(actual), getViewBytes(expected), mode)
+}
 
-  for (let index = 0; index < expectedBytes.length; index++) {
-    if (actualBytes[index] !== expectedBytes[index]) return false
-  }
+function isArrayIndexKey(key: Key): key is string {
+  if (typeof key !== 'string') return false
+  if (key === '') return false
 
-  return true
+  let index = Number(key)
+  return Number.isInteger(index) && index >= 0 && index < 2 ** 32 - 1 && String(index) === key
+}
+
+function getEnumerableArrayIndexKeys(value: object): string[] {
+  return Object.keys(value).filter(isArrayIndexKey)
 }
 
 function compareOwnEnumerable(
@@ -152,6 +184,36 @@ function compareSet(
 
     if (matchIndex === -1) return false
     unmatched.splice(matchIndex, 1)
+  }
+
+  return true
+}
+
+function comparePartialArrayItems(
+  actual: unknown[],
+  expected: unknown[],
+  memo: Memo,
+  mode: CompareMode,
+): boolean {
+  let actualKeys = getEnumerableArrayIndexKeys(actual)
+  let actualKeyIndex = 0
+
+  for (let expectedKey of getEnumerableArrayIndexKeys(expected)) {
+    let matched = false
+    while (actualKeyIndex < actualKeys.length) {
+      let actualKey = actualKeys[actualKeyIndex]
+      actualKeyIndex++
+
+      if (
+        actualKey !== undefined &&
+        compare(actual[Number(actualKey)], expected[Number(expectedKey)], memo, mode)
+      ) {
+        matched = true
+        break
+      }
+    }
+
+    if (!matched) return false
   }
 
   return true
@@ -234,7 +296,16 @@ function compare(actual: unknown, expected: unknown, memo: Memo, mode: CompareMo
     if (!Array.isArray(actual) || !Array.isArray(expected)) return false
     if (mode === 'full' && actual.length !== expected.length) return false
     if (mode === 'partial' && actual.length < expected.length) return false
-    return compareOwnEnumerable(actual, expected, memo, mode)
+    if (mode === 'full') return compareOwnEnumerable(actual, expected, memo, mode)
+
+    let skip = new Set<Key>([
+      ...getEnumerableArrayIndexKeys(actual),
+      ...getEnumerableArrayIndexKeys(expected),
+    ])
+    return (
+      comparePartialArrayItems(actual, expected, memo, mode) &&
+      compareOwnEnumerable(actual, expected, memo, mode, skip)
+    )
   }
 
   if (actual instanceof Date && expected instanceof Date) {
@@ -278,9 +349,17 @@ function compare(actual: unknown, expected: unknown, memo: Memo, mode: CompareMo
 
   if (ArrayBuffer.isView(actual) || ArrayBuffer.isView(expected)) {
     if (!ArrayBuffer.isView(actual) || !ArrayBuffer.isView(expected)) return false
+    let skip =
+      mode === 'partial'
+        ? new Set<Key>([
+            ...getEnumerableArrayIndexKeys(actual),
+            ...getEnumerableArrayIndexKeys(expected),
+          ])
+        : new Set<Key>()
+
     return (
       compareArrayBufferView(actual, expected, mode) &&
-      compareOwnEnumerable(actual, expected, memo, mode)
+      compareOwnEnumerable(actual, expected, memo, mode, skip)
     )
   }
 
@@ -309,7 +388,7 @@ function compare(actual: unknown, expected: unknown, memo: Memo, mode: CompareMo
   }
 
   if (actual instanceof URLSearchParams && expected instanceof URLSearchParams) {
-    return String(actual) === String(expected) && compareOwnEnumerable(actual, expected, memo, mode)
+    return compareOwnEnumerable(actual, expected, memo, mode)
   }
 
   return compareOwnEnumerable(actual, expected, memo, mode)
