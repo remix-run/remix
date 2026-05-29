@@ -1,6 +1,7 @@
 import * as nodeAssert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 
+import defaultAssert from '../index.ts'
 import * as assert from './assert.ts'
 
 describe('AssertionError', () => {
@@ -30,6 +31,19 @@ describe('assert.ok', () => {
     nodeAssert.throws(() => assert.ok(false), assert.AssertionError)
     nodeAssert.throws(() => assert.ok(0), assert.AssertionError)
     nodeAssert.throws(() => assert.ok(''), assert.AssertionError)
+  })
+})
+
+describe('default export', () => {
+  it('is callable as an alias for ok', () => {
+    defaultAssert(true)
+    nodeAssert.throws(() => defaultAssert(false), assert.AssertionError)
+  })
+
+  it('exposes assertion methods as properties', () => {
+    defaultAssert.equal(1, 1)
+    defaultAssert.deepEqual({ a: 1 }, { a: 1 })
+    defaultAssert.match('hello world', /world/)
   })
 })
 
