@@ -1,5 +1,5 @@
-import { Glyph } from '@remix-run/ui/glyph'
-import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
+import { Glyph } from 'remix/ui/glyph'
+import { RMX_01, RMX_01_GLYPHS, theme } from 'remix/ui/theme'
 import type { Handle, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
 import {
