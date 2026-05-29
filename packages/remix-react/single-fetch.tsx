@@ -123,7 +123,7 @@ export function getSingleFetchDataStrategy(
 ): DataStrategyFunction {
   return async ({ request, matches, fetcherKey }) => {
     // Actions are simple and behave the same for navigations and fetchers
-    if (request.method !== "GET") {
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
       return singleFetchActionStrategy(request, matches);
     }
 
