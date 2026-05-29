@@ -144,7 +144,7 @@ export const createRequestHandler: CreateRequestHandlerFunction = (
       /\/+/g,
       "/"
     );
-    if (url.pathname === manifestUrl) {
+    if (url.pathname === manifestUrl && _build.future.v3_lazyRouteDiscovery) {
       try {
         let res = await handleManifestRequest(_build, routes, url);
         return res;
@@ -305,6 +305,17 @@ async function handleManifestRequest(
       headers: {
         "X-Remix-Reload-Document": "true",
       },
+    });
+  }
+
+  // 7.5k to come in under the ~8k limit for most browsers
+  // https://stackoverflow.com/a/417184
+  let URL_LIMIT = 7680;
+
+  if (url.toString().length > URL_LIMIT) {
+    return new Response(null, {
+      statusText: "Bad Request",
+      status: 400,
     });
   }
 
@@ -490,7 +501,7 @@ async function handleDocumentRequest(
 ) {
   let context;
   try {
-    if (request.method === "POST") {
+    if (["POST", "PUT", "PATCH", "DELETE"].includes(request.method)) {
       throwIfPotentialCSRFAttack(request.headers);
     }
     context = await staticHandler.query(request, {
