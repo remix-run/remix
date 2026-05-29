@@ -46,7 +46,6 @@ describe('default export', () => {
     defaultAssert.equal(1, 1)
     defaultAssert.deepEqual({ a: 1 }, { a: 1 })
     defaultAssert.partialDeepEqual({ a: 1, b: 2 }, { a: 1 })
-    defaultAssert.ifError(null)
     defaultAssert.match('hello world', /world/)
   })
 })
@@ -270,22 +269,6 @@ describe('assert.notDeepEqual', () => {
 
   it('throws for deeply strictly equal objects', () => {
     nodeAssert.throws(() => assert.notDeepEqual({ a: 1 }, { a: 1 }), assert.AssertionError)
-  })
-})
-
-describe('assert.ifError', () => {
-  it('passes for null and undefined', () => {
-    assert.ifError(null)
-    assert.ifError(undefined)
-  })
-
-  it('throws for any other value', () => {
-    let err = capture(() => assert.ifError(new Error('boom')))
-    nodeAssert.equal(err?.operator, 'ifError')
-    nodeAssert.equal(err?.actual instanceof Error, true)
-    nodeAssert.equal(err?.expected, null)
-
-    nodeAssert.throws(() => assert.ifError(false), assert.AssertionError)
   })
 })
 
@@ -695,17 +678,6 @@ describe('node:assert/strict compatibility', () => {
     assertCompatibleError(
       capture(() => assert.partialDeepEqual([1, 2, 3, 4, 5, 6, 7, 8, 9], [4, 5, 8])),
       capture(() => nodeAssert.partialDeepStrictEqual([1, 2, 3, 4, 5, 6, 7, 8, 9], [4, 5, 8])),
-    )
-  })
-
-  it('ifError — pass and fail cases', () => {
-    assertCompatibleError(
-      capture(() => assert.ifError(null)),
-      capture(() => nodeAssert.ifError(null)),
-    )
-    assertCompatibleError(
-      capture(() => assert.ifError(new Error('oops'))),
-      capture(() => nodeAssert.ifError(new Error('oops'))),
     )
   })
 

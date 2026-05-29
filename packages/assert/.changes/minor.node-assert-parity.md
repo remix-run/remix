@@ -6,4 +6,4 @@ Strict equality now uses `Object.is`, so `NaN` equals `NaN` and `0` does not equ
 
 Added `assert.partialDeepEqual(actual, expected)`, a strict-by-default counterpart to Node's `assert.partialDeepStrictEqual` that passes when `actual` contains the partial deep structure in `expected`.
 
-Added `assert.ifError(value)` and tightened Node compatibility for assertion behavior, including generated-message metadata, expected-error argument validation, `Error` constructor and instance matching, partial array and byte-sequence matching, `URLSearchParams` comparisons, and invalid-argument handling for `match`/`doesNotMatch`.
+Tightened Node compatibility for assertion behavior, including generated-message metadata, expected-error argument validation, `Error` constructor and instance matching, partial array and byte-sequence matching, `URLSearchParams` comparisons, and invalid-argument handling for `match`/`doesNotMatch`.

@@ -7,7 +7,6 @@ import {
   doesNotThrow,
   equal,
   fail,
-  ifError,
   match,
   notDeepEqual,
   notEqual,
@@ -31,7 +30,6 @@ interface Assert {
   partialDeepEqual: typeof partialDeepEqual
   notDeepEqual: typeof notDeepEqual
   fail: typeof fail
-  ifError: typeof ifError
   match: typeof match
   doesNotMatch: typeof doesNotMatch
   throws: typeof throws
@@ -50,7 +48,6 @@ const assert: Assert = Object.assign(assertFn, {
   partialDeepEqual,
   notDeepEqual,
   fail,
-  ifError,
   match,
   doesNotMatch,
   throws,

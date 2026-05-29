@@ -431,29 +431,6 @@ export function fail(message?: AssertionMessage): never {
 }
 
 /**
- * Throws when `value` is not `null` or `undefined`.
- *
- * @example
- * assert.ifError(callbackError)
- *
- * @param value - The error-like value to check.
- */
-export function ifError(value: unknown): asserts value is null | undefined {
-  if (value !== null && value !== undefined) {
-    throwAssertion(
-      {
-        message: `ifError got unwanted exception: ${stringify(value)}`,
-        actual: value,
-        expected: null,
-        operator: 'ifError',
-        generatedMessage: false,
-      },
-      false,
-    )
-  }
-}
-
-/**
  * Asserts that `string` matches the given `regexp`.
  *
  * @example

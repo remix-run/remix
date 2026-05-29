@@ -12,7 +12,6 @@ Uses strict equality (`Object.is`) for all comparisons — no type coercion.
 - `assert.deepEqual` / `assert.partialDeepEqual` / `assert.notDeepEqual` — recursive strict deep equality
 - `assert.match` — string matches a regexp
 - `assert.fail` — unconditional failure
-- `assert.ifError` — throws when a value is not `null` or `undefined`
 - `assert.throws` — synchronous throw assertion with optional error validation
 - `assert.rejects` — async rejection assertion with optional error validation
 - `expect(value)` — chainable matchers with `.not`, `.rejects`, `.resolves`, plus `expect.objectContaining(...)` for partial matches
@@ -40,7 +39,6 @@ assert.deepEqual({ a: 1 }, { a: 1 })
 assert.deepEqual({ a: 1 }, { a: '1' }) // throws — different types
 assert.partialDeepEqual({ a: 1, b: 2 }, { a: 1 })
 assert.match('hello world', /world/)
-assert.ifError(null)
 assert.fail('should not reach here')
 
 await assert.rejects(() => Promise.reject(new Error('oops')))
@@ -74,7 +72,6 @@ import {
   match,
   doesNotMatch,
   fail,
-  ifError,
   throws,
   doesNotThrow,
   rejects,
