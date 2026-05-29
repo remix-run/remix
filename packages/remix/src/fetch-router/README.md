@@ -504,6 +504,8 @@ type Routes = typeof routes
 
 Middleware functions run code before and/or after actions. They are a powerful way to add functionality to your app.
 
+Every middleware must either return a `Response`, return the response from `next()`, or call `await next()` before it returns. Middleware that returns without calling `next()` throws at runtime.
+
 A basic logging middleware might look like this:
 
 ```ts
@@ -567,8 +569,9 @@ function loadDatabase(): Middleware<{
   value: Database
   property: 'db'
 }> {
-  return async (context) => {
+  return async (context, next) => {
     context.set(Database, await connectDatabase(), { property: 'db' })
+    return next()
   }
 }
 

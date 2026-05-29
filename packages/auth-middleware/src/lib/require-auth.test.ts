@@ -38,12 +38,14 @@ describe('requireAuth middleware', () => {
   it('installs context.auth when auth state was set without a direct property', async () => {
     let loadAuth: Middleware<{ key: typeof Auth; value: AuthState<{ id: number }> }> = (
       context,
+      next,
     ) => {
       context.set(Auth, {
         ok: true,
         identity: { id: 123 },
         method: 'custom',
       })
+      return next()
     }
     let router = createRouter({
       middleware: [loadAuth, requireAuth<{ id: number }>()] as const,
