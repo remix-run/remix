@@ -131,10 +131,7 @@ describe('MobileMenu (using clsx)', () => {
     let { $, cleanup } = render(<MobileMenu isOpen />)
     t.after(cleanup)
 
-    assert.equal(
-      $('[aria-label="Mobile navigation"]')?.className,
-      'mobile-menu mobile-menu--open',
-    )
+    assert.equal($('[aria-label="Mobile navigation"]')?.className, 'mobile-menu mobile-menu--open')
   })
 })
 
