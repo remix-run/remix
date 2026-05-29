@@ -3,9 +3,11 @@
  * `assert.AssertionError` so that test reporters can treat them uniformly.
  */
 export class AssertionError extends Error {
-  actual: any
-  expected: any
+  actual: unknown
+  expected: unknown
   operator: string
+  generatedMessage: boolean
+  code = 'ERR_ASSERTION'
 
   /**
    * Creates a new AssertionError with the given message, actual/expected values, and operator.
@@ -14,13 +16,128 @@ export class AssertionError extends Error {
    * @param options.expected - The expected value that the actual value was compared against.
    * @param options.operator - A string describing the assertion operator (e.g. '==', '===', 'deepEqual').
    */
-  constructor(options: { message?: string; actual?: any; expected?: any; operator: string }) {
-    super(options.message)
+  constructor(options: {
+    message?: string | Error
+    actual?: unknown
+    expected?: unknown
+    operator: string
+    generatedMessage?: boolean
+  }) {
+    let generatedMessage = options.generatedMessage ?? options.message == null
+    let message =
+      options.message == null
+        ? getGeneratedMessage(options.actual, options.expected, options.operator)
+        : String(options.message)
+
+    super(message)
     this.name = 'AssertionError'
     this.actual = options.actual
     this.expected = options.expected
     this.operator = options.operator
+    this.generatedMessage = generatedMessage
   }
+}
+
+type AssertionMessage = string | Error
+
+interface AssertionOptions {
+  message?: AssertionMessage
+  actual?: unknown
+  expected?: unknown
+  operator: string
+  generatedMessage?: boolean
+}
+
+function getGeneratedMessage(actual: unknown, expected: unknown, operator: string): string {
+  if (operator === 'fail') return 'Failed'
+  return `${stringify(actual)} ${operator} ${stringify(expected)}`
+}
+
+function throwAssertion(options: AssertionOptions, directErrorMessage = true): never {
+  if (directErrorMessage && options.message instanceof Error) {
+    throw options.message
+  }
+
+  throw new AssertionError(options)
+}
+
+function stringify(value: unknown): string {
+  if (value === undefined) return 'undefined'
+  if (typeof value === 'string') return JSON.stringify(value)
+  if (typeof value === 'function') return `[Function${value.name ? ': ' + value.name : ''}]`
+  if (value instanceof Error) return `${value.name}: ${value.message}`
+
+  try {
+    return JSON.stringify(value)
+  } catch {
+    return String(value)
+  }
+}
+
+function formatMessage(message: AssertionMessage | undefined): string | undefined {
+  return message === undefined ? undefined : String(message)
+}
+
+function appendMessage(base: string, message: AssertionMessage | undefined): string {
+  let messageText = formatMessage(message)
+  return messageText === undefined ? base : `${base}: ${messageText}`
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error != null && typeof error === 'object' && 'message' in error) {
+    let message = (error as { message?: unknown }).message
+    if (typeof message === 'string') return message
+  }
+
+  return String(error)
+}
+
+function getExpectedErrorName(expectedError: unknown): string | undefined {
+  if (typeof expectedError === 'function') {
+    return expectedError.name || undefined
+  }
+
+  if (expectedError instanceof Error) {
+    return expectedError.name
+  }
+
+  return undefined
+}
+
+function parseExpectedError(
+  expectedErrorOrMessage: unknown,
+  message: AssertionMessage | undefined,
+): { expectedError: unknown; message: AssertionMessage | undefined } {
+  if (typeof expectedErrorOrMessage === 'string' && message === undefined) {
+    return { expectedError: undefined, message: expectedErrorOrMessage }
+  }
+
+  return { expectedError: expectedErrorOrMessage, message }
+}
+
+function getMissingExceptionMessage(
+  operator: 'throws' | 'rejects',
+  expectedError: unknown,
+  message: AssertionMessage | undefined,
+): string {
+  let expectedName = getExpectedErrorName(expectedError)
+  let kind = operator === 'throws' ? 'exception' : 'rejection'
+  let base =
+    expectedName === undefined
+      ? `Missing expected ${kind}`
+      : `Missing expected ${kind} (${expectedName})`
+
+  return message === undefined ? `${base}.` : appendMessage(base, message)
+}
+
+function getUnwantedExceptionMessage(
+  operator: 'doesNotThrow' | 'doesNotReject',
+  error: unknown,
+  message: AssertionMessage | undefined,
+): string {
+  let noun = operator === 'doesNotThrow' ? 'exception' : 'rejection'
+  let base = appendMessage(`Got unwanted ${noun}`, message)
+  return `${base}\nActual message: "${getErrorMessage(error)}"`
 }
 
 // Strict deep equality — uses === at primitive leaves (no type coercion).
@@ -57,10 +174,10 @@ function isDeepEqual(a: any, b: any): boolean {
  * @param value - The value to test for truthiness.
  * @param message - Optional failure message.
  */
-export function ok(value: unknown, message?: string): asserts value {
+export function ok(value: unknown, message?: AssertionMessage): asserts value {
   if (!value) {
-    throw new AssertionError({
-      message: message || `Expected ${value} to be truthy`,
+    throwAssertion({
+      message: message ?? `Expected ${stringify(value)} to be truthy`,
       actual: value,
       expected: true,
       operator: '==',
@@ -78,10 +195,14 @@ export function ok(value: unknown, message?: string): asserts value {
  * @param expected - The value to compare against.
  * @param message - Optional failure message.
  */
-export function equal<T>(actual: unknown, expected: T, message?: string): asserts actual is T {
+export function equal<T>(
+  actual: unknown,
+  expected: T,
+  message?: AssertionMessage,
+): asserts actual is T {
   if (actual !== expected) {
-    throw new AssertionError({
-      message: message || `${actual} !== ${expected}`,
+    throwAssertion({
+      message: message ?? `${stringify(actual)} !== ${stringify(expected)}`,
       actual,
       expected,
       operator: 'strictEqual',
@@ -99,10 +220,14 @@ export function equal<T>(actual: unknown, expected: T, message?: string): assert
  * @param expected - The value that `actual` must not equal.
  * @param message - Optional failure message.
  */
-export function notEqual<_value>(actual: unknown, expected: unknown, message?: string): void {
+export function notEqual<_value>(
+  actual: unknown,
+  expected: unknown,
+  message?: AssertionMessage,
+): void {
   if (actual === expected) {
-    throw new AssertionError({
-      message: message || `${actual} === ${expected}`,
+    throwAssertion({
+      message: message ?? `${stringify(actual)} === ${stringify(expected)}`,
       actual,
       expected,
       operator: 'notStrictEqual',
@@ -121,10 +246,14 @@ export function notEqual<_value>(actual: unknown, expected: unknown, message?: s
  * @param expected - The value to compare against.
  * @param message - Optional failure message.
  */
-export function deepEqual<T>(actual: unknown, expected: T, message?: string): asserts actual is T {
+export function deepEqual<T>(
+  actual: unknown,
+  expected: T,
+  message?: AssertionMessage,
+): asserts actual is T {
   if (!isDeepEqual(actual, expected)) {
-    throw new AssertionError({
-      message: message || `Objects not deeply equal`,
+    throwAssertion({
+      message: message ?? `Objects not deeply equal`,
       actual,
       expected,
       operator: 'deepStrictEqual',
@@ -142,10 +271,14 @@ export function deepEqual<T>(actual: unknown, expected: T, message?: string): as
  * @param expected - The value that `actual` must not deeply equal.
  * @param message - Optional failure message.
  */
-export function notDeepEqual<_value>(actual: unknown, expected: unknown, message?: string): void {
+export function notDeepEqual<_value>(
+  actual: unknown,
+  expected: unknown,
+  message?: AssertionMessage,
+): void {
   if (isDeepEqual(actual, expected)) {
-    throw new AssertionError({
-      message: message || `Objects are deeply equal`,
+    throwAssertion({
+      message: message ?? `Objects are deeply equal`,
       actual,
       expected,
       operator: 'notDeepStrictEqual',
@@ -161,9 +294,9 @@ export function notDeepEqual<_value>(actual: unknown, expected: unknown, message
  *
  * @param message - Optional failure message.
  */
-export function fail(message?: string): never {
-  throw new AssertionError({
-    message: message || 'Test failed',
+export function fail(message?: AssertionMessage): never {
+  throwAssertion({
+    message: message ?? 'Failed',
     operator: 'fail',
   })
 }
@@ -178,10 +311,10 @@ export function fail(message?: string): never {
  * @param regexp - The pattern to match against.
  * @param message - Optional failure message.
  */
-export function match(string: string, regexp: RegExp, message?: string): void {
+export function match(string: string, regexp: RegExp, message?: AssertionMessage): void {
   if (!regexp.test(string)) {
-    throw new AssertionError({
-      message: message || `${string} does not match ${regexp}`,
+    throwAssertion({
+      message: message ?? `${stringify(string)} does not match ${regexp}`,
       actual: string,
       expected: regexp,
       operator: 'match',
@@ -199,10 +332,10 @@ export function match(string: string, regexp: RegExp, message?: string): void {
  * @param regexp - The pattern that must not match.
  * @param message - Optional failure message.
  */
-export function doesNotMatch(string: string, regexp: RegExp, message?: string): void {
+export function doesNotMatch(string: string, regexp: RegExp, message?: AssertionMessage): void {
   if (regexp.test(string)) {
-    throw new AssertionError({
-      message: message || `${string} matches ${regexp}`,
+    throwAssertion({
+      message: message ?? `${stringify(string)} matches ${regexp}`,
       actual: string,
       expected: regexp,
       operator: 'doesNotMatch',
@@ -224,12 +357,20 @@ export function doesNotMatch(string: string, regexp: RegExp, message?: string): 
  * assert.throws(() => riskyOp(), { code: 'ERR_INVALID_ARG_VALUE' })
  *
  * @param fn - The function expected to throw.
- * @param expectedError - Optional error constructor, instance, RegExp, object, or validator.
- * @param message - Optional failure message.
+ * @param expectedErrorOrMessage - Optional error constructor, instance, RegExp, object, validator, or failure message.
+ * @param message - Optional failure message when `expectedErrorOrMessage` is an error matcher.
  */
-export function throws(fn: () => any, expectedError?: any, message?: string): void {
+export function throws(
+  fn: () => unknown,
+  expectedErrorOrMessage?: unknown,
+  message?: AssertionMessage,
+): void {
+  let { expectedError, message: failureMessage } = parseExpectedError(
+    expectedErrorOrMessage,
+    message,
+  )
   let thrown = false
-  let error: any
+  let error: unknown
 
   try {
     fn()
@@ -239,14 +380,19 @@ export function throws(fn: () => any, expectedError?: any, message?: string): vo
   }
 
   if (!thrown) {
-    throw new AssertionError({
-      message: message || 'Expected function to throw',
-      operator: 'throws',
-    })
+    throwAssertion(
+      {
+        message: getMissingExceptionMessage('throws', expectedError, failureMessage),
+        expected: expectedError,
+        operator: 'throws',
+        generatedMessage: false,
+      },
+      false,
+    )
   }
 
-  if (expectedError) {
-    checkError(error, expectedError, 'throws')
+  if (expectedError !== undefined) {
+    checkError(error, expectedError, 'throws', failureMessage)
   }
 }
 
@@ -257,19 +403,55 @@ export function throws(fn: () => any, expectedError?: any, message?: string): vo
  * assert.doesNotThrow(() => JSON.parse('{}'))
  *
  * @param fn - The function expected not to throw.
- * @param message - Optional failure message.
+ * @param expectedErrorOrMessage - Optional error constructor, instance, RegExp, object, validator, or failure message.
+ * @param message - Optional failure message when `expectedErrorOrMessage` is an error matcher.
  */
-export function doesNotThrow(fn: () => any, message?: string): void {
+export function doesNotThrow(
+  fn: () => unknown,
+  expectedErrorOrMessage?: unknown,
+  message?: AssertionMessage,
+): void {
+  let { expectedError, message: failureMessage } = parseExpectedError(
+    expectedErrorOrMessage,
+    message,
+  )
+
   try {
     fn()
   } catch (e) {
-    throw new AssertionError({
-      message: message || `Expected function not to throw, but it threw: ${e}`,
-      actual: e,
-      expected: undefined,
-      operator: 'doesNotThrow',
-    })
+    if (expectedError === undefined || errorMatches(e, expectedError)) {
+      throwAssertion(
+        {
+          message: getUnwantedExceptionMessage('doesNotThrow', e, failureMessage),
+          actual: e,
+          expected: expectedError,
+          operator: 'doesNotThrow',
+          generatedMessage: false,
+        },
+        false,
+      )
+    }
+
+    throw e
   }
+}
+
+function getPromise(value: (() => Promise<unknown>) | Promise<unknown>): Promise<unknown> {
+  if (typeof value === 'function') {
+    let promise = value()
+
+    if (!(promise instanceof Promise)) {
+      throw new TypeError(
+        `Expected instance of Promise to be returned from the "promiseFn" function but got ${typeof promise} (${stringify(
+          promise,
+        )}).`,
+      )
+    }
+
+    return promise
+  }
+
+  return value
 }
 
 /**
@@ -281,33 +463,43 @@ export function doesNotThrow(fn: () => any, message?: string): void {
  * await assert.rejects(fetch('/missing'), { code: 'ERR_INVALID_ARG_VALUE' })
  *
  * @param fn - A function returning a promise, or a promise directly.
- * @param expectedError - Optional error constructor, instance, RegExp, object, or validator.
- * @param message - Optional failure message.
+ * @param expectedErrorOrMessage - Optional error constructor, instance, RegExp, object, validator, or failure message.
+ * @param message - Optional failure message when `expectedErrorOrMessage` is an error matcher.
  */
 export async function rejects(
-  fn: (() => Promise<any>) | Promise<any>,
-  expectedError?: any,
-  message?: string,
+  fn: (() => Promise<unknown>) | Promise<unknown>,
+  expectedErrorOrMessage?: unknown,
+  message?: AssertionMessage,
 ): Promise<void> {
+  let { expectedError, message: failureMessage } = parseExpectedError(
+    expectedErrorOrMessage,
+    message,
+  )
   let rejected = false
-  let error: any
+  let error: unknown
+  let promise = getPromise(fn)
 
   try {
-    await (typeof fn === 'function' ? fn() : fn)
+    await promise
   } catch (e) {
     rejected = true
     error = e
   }
 
   if (!rejected) {
-    throw new AssertionError({
-      message: message || 'Expected promise to reject',
-      operator: 'rejects',
-    })
+    throwAssertion(
+      {
+        message: getMissingExceptionMessage('rejects', expectedError, failureMessage),
+        expected: expectedError,
+        operator: 'rejects',
+        generatedMessage: false,
+      },
+      false,
+    )
   }
 
-  if (expectedError) {
-    checkError(error, expectedError, 'rejects')
+  if (expectedError !== undefined) {
+    checkError(error, expectedError, 'rejects', failureMessage)
   }
 }
 
@@ -318,18 +510,37 @@ export async function rejects(
  * await assert.doesNotReject(() => fetch('/healthy'))
  *
  * @param fn - A function returning a promise.
- * @param message - Optional failure message.
+ * @param expectedErrorOrMessage - Optional error constructor, instance, RegExp, object, validator, or failure message.
+ * @param message - Optional failure message when `expectedErrorOrMessage` is an error matcher.
  */
-export async function doesNotReject(fn: () => Promise<any>, message?: string): Promise<void> {
+export async function doesNotReject(
+  fn: (() => Promise<unknown>) | Promise<unknown>,
+  expectedErrorOrMessage?: unknown,
+  message?: AssertionMessage,
+): Promise<void> {
+  let { expectedError, message: failureMessage } = parseExpectedError(
+    expectedErrorOrMessage,
+    message,
+  )
+  let promise = getPromise(fn)
+
   try {
-    await fn()
+    await promise
   } catch (e) {
-    throw new AssertionError({
-      message: message || `Expected promise not to reject, but it rejected with: ${e}`,
-      actual: e,
-      expected: undefined,
-      operator: 'doesNotReject',
-    })
+    if (expectedError === undefined || errorMatches(e, expectedError)) {
+      throwAssertion(
+        {
+          message: getUnwantedExceptionMessage('doesNotReject', e, failureMessage),
+          actual: e,
+          expected: expectedError,
+          operator: 'doesNotReject',
+          generatedMessage: false,
+        },
+        false,
+      )
+    }
+
+    throw e
   }
 }
 
@@ -337,63 +548,131 @@ function isErrorConstructor(fn: Function): boolean {
   return fn.prototype != null && fn.prototype instanceof Error
 }
 
-function checkError(error: any, expectedError: any, operator: string): void {
+function errorMatches(error: unknown, expectedError: unknown): boolean {
+  if (typeof expectedError === 'function') {
+    if (isErrorConstructor(expectedError)) {
+      return error instanceof expectedError
+    }
+
+    return expectedError(error) === true
+  }
+
+  if (expectedError instanceof Error) {
+    return (
+      error instanceof Error &&
+      error.name === expectedError.name &&
+      error.message === expectedError.message
+    )
+  }
+
+  if (expectedError instanceof RegExp) {
+    return expectedError.test(String(error))
+  }
+
+  if (expectedError !== null && typeof expectedError === 'object') {
+    let expectedRecord = expectedError as Record<string, unknown>
+    return Object.keys(expectedRecord).every((key) => {
+      let expectedValue = expectedRecord[key]
+      let actualValue = error == null ? undefined : (error as Record<string, unknown>)[key]
+      return expectedValue instanceof RegExp
+        ? typeof actualValue === 'string' && expectedValue.test(actualValue)
+        : isDeepEqual(actualValue, expectedValue)
+    })
+  }
+
+  return true
+}
+
+function checkError(
+  error: unknown,
+  expectedError: unknown,
+  operator: string,
+  message: AssertionMessage | undefined,
+): void {
   if (typeof expectedError === 'function') {
     if (isErrorConstructor(expectedError)) {
       if (!(error instanceof expectedError)) {
-        throw new AssertionError({
-          message: `Expected error to be instance of ${expectedError.name}`,
-          actual: error,
-          expected: expectedError,
-          operator,
-        })
+        throwAssertion(
+          {
+            message:
+              formatMessage(message) ?? `Expected error to be instance of ${expectedError.name}`,
+            actual: error,
+            expected: expectedError,
+            operator,
+            generatedMessage: message === undefined,
+          },
+          false,
+        )
       }
     } else {
-      // Validator function (arrow function or plain function returning boolean)
-      if (!expectedError(error)) {
-        throw new AssertionError({
-          message: `Error did not pass validation function`,
-          actual: error,
-          expected: expectedError,
-          operator,
-        })
+      let result = expectedError(error)
+      // Validator functions must return true specifically, matching Node's
+      // assertion contract. Truthy non-boolean values are assertion failures.
+      if (result !== true) {
+        throwAssertion(
+          {
+            message:
+              formatMessage(message) ??
+              `The validation function is expected to return "true". Received ${stringify(
+                result,
+              )}\n\nCaught error:\n\n${String(error)}`,
+            actual: error,
+            expected: expectedError,
+            operator,
+            generatedMessage: message === undefined,
+          },
+          false,
+        )
       }
     }
   } else if (expectedError instanceof Error) {
-    if (error.message !== expectedError.message) {
-      throw new AssertionError({
-        message: `Error message doesn't match`,
-        actual: error.message,
-        expected: expectedError.message,
-        operator,
-      })
+    if (!errorMatches(error, expectedError)) {
+      throwAssertion(
+        {
+          message: formatMessage(message) ?? `Error doesn't match expected error`,
+          actual: error,
+          expected: expectedError,
+          operator,
+          generatedMessage: message === undefined,
+        },
+        false,
+      )
     }
   } else if (expectedError instanceof RegExp) {
-    if (!expectedError.test(error.message)) {
-      throw new AssertionError({
-        message: `Error message doesn't match pattern`,
-        actual: error.message,
-        expected: expectedError,
-        operator,
-      })
+    if (!expectedError.test(String(error))) {
+      throwAssertion(
+        {
+          message: formatMessage(message) ?? `Error message doesn't match pattern`,
+          actual: error,
+          expected: expectedError,
+          operator,
+          generatedMessage: message === undefined,
+        },
+        false,
+      )
     }
   } else if (expectedError !== null && typeof expectedError === 'object') {
     // Validate each property on the expected object against the error.
     // RegExp values match string properties; everything else uses deep equality.
-    for (let key of Object.keys(expectedError)) {
-      let expectedValue = expectedError[key]
-      let actualValue = error == null ? undefined : error[key]
+    let expectedRecord = expectedError as Record<string, unknown>
+    for (let key of Object.keys(expectedRecord)) {
+      let expectedValue = expectedRecord[key]
+      let actualValue = error == null ? undefined : (error as Record<string, unknown>)[key]
       let matches =
         expectedValue instanceof RegExp
           ? typeof actualValue === 'string' && expectedValue.test(actualValue)
           : isDeepEqual(actualValue, expectedValue)
       if (!matches) {
-        throw new AssertionError({
-          message: `Error property "${key}" doesn't match`,
-          actual: actualValue,
-          expected: expectedValue,
-          operator,
-        })
+        throwAssertion(
+          {
+            message: formatMessage(message) ?? `Error property "${key}" doesn't match`,
+            actual: error,
+            expected: expectedError,
+            operator,
+            generatedMessage: message === undefined,
+          },
+          false,
+        )
       }
     }
   }

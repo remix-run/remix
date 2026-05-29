@@ -17,6 +17,8 @@ describe('AssertionError', () => {
     nodeAssert.equal(err.actual, 1)
     nodeAssert.equal(err.expected, 2)
     nodeAssert.equal(err.operator, 'equal')
+    nodeAssert.equal(err.generatedMessage, false)
+    nodeAssert.equal(err.code, 'ERR_ASSERTION')
   })
 })
 
@@ -61,6 +63,11 @@ describe('assert.equal', () => {
 
   it('throws for unequal values', () => {
     nodeAssert.throws(() => assert.equal(1, 2), assert.AssertionError)
+  })
+
+  it('throws a custom Error message directly', () => {
+    let error = new Error('custom')
+    nodeAssert.throws(() => assert.equal(1, 2, error), error)
   })
 })
 
@@ -127,6 +134,11 @@ describe('assert.fail', () => {
     }
     nodeAssert.equal(err?.message, 'custom fail')
   })
+
+  it('throws a custom Error message directly', () => {
+    let error = new Error('custom fail')
+    nodeAssert.throws(() => assert.fail(error), error)
+  })
 })
 
 describe('assert.match', () => {
@@ -158,6 +170,16 @@ describe('assert.throws', () => {
 
   it('throws AssertionError when function does not throw', () => {
     nodeAssert.throws(() => assert.throws(() => {}), assert.AssertionError)
+  })
+
+  it('treats a string second argument as the failure message', () => {
+    assert.throws(() => {
+      throw new Error('oops')
+    }, 'custom failure')
+
+    let err = capture(() => assert.throws(() => {}, 'custom failure'))
+    nodeAssert.equal(err?.message, 'Missing expected exception: custom failure')
+    nodeAssert.equal(err?.generatedMessage, false)
   })
 
   it('validates error constructor', () => {
@@ -210,6 +232,19 @@ describe('assert.throws', () => {
       assert.AssertionError,
     )
   })
+
+  it('requires validator functions to return true', () => {
+    nodeAssert.throws(
+      () =>
+        assert.throws(
+          () => {
+            throw new Error('oops')
+          },
+          () => 'truthy',
+        ),
+      assert.AssertionError,
+    )
+  })
 })
 
 describe('assert.doesNotThrow', () => {
@@ -226,6 +261,17 @@ describe('assert.doesNotThrow', () => {
       assert.AssertionError,
     )
   })
+
+  it('rethrows when thrown errors do not match the expected error', () => {
+    let error = new TypeError('oops')
+    nodeAssert.throws(
+      () =>
+        assert.doesNotThrow(() => {
+          throw error
+        }, SyntaxError),
+      error,
+    )
+  })
 })
 
 describe('assert.rejects', () => {
@@ -235,6 +281,25 @@ describe('assert.rejects', () => {
 
   it('throws AssertionError when promise resolves', async () => {
     await nodeAssert.rejects(() => assert.rejects(() => Promise.resolve()), assert.AssertionError)
+  })
+
+  it('treats a string second argument as the failure message', async () => {
+    await assert.rejects(() => Promise.reject(new Error('oops')), 'custom failure')
+
+    let err = await captureAsync(() => assert.rejects(() => Promise.resolve(), 'custom failure'))
+    nodeAssert.equal(err?.message, 'Missing expected rejection: custom failure')
+    nodeAssert.equal(err?.generatedMessage, false)
+  })
+
+  it('propagates errors thrown synchronously by the promise function', async () => {
+    let error = new Error('sync')
+    await nodeAssert.rejects(
+      () =>
+        assert.rejects(() => {
+          throw error
+        }),
+      error,
+    )
   })
 
   it('validates error constructor', async () => {
@@ -261,6 +326,14 @@ describe('assert.doesNotReject', () => {
     await nodeAssert.rejects(
       () => assert.doesNotReject(() => Promise.reject(new Error('oops'))),
       assert.AssertionError,
+    )
+  })
+
+  it('rethrows when rejection errors do not match the expected error', async () => {
+    let error = new TypeError('oops')
+    await nodeAssert.rejects(
+      () => assert.doesNotReject(() => Promise.reject(error), SyntaxError),
+      error,
     )
   })
 })
