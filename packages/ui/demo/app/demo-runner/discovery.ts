@@ -11,6 +11,7 @@ export type DemoFile = {
   layout?: DemoLayout
   order?: number
   relativePath: string
+  ssr: boolean
   title: string
 }
 
@@ -61,6 +62,7 @@ function createDemoFile(absolutePath: string): DemoFile {
     layout: metadata.layout,
     order: metadata.order,
     relativePath,
+    ssr: metadata.ssr ?? true,
     title: metadata.name ?? humanizeDemoPath(relativePath),
   }
 }
@@ -110,6 +112,7 @@ function readDemoMetadata(source: string) {
     layout?: DemoLayout
     name?: string
     order?: number
+    ssr?: boolean
   } = {}
 
   for (let key of ['description', 'layout', 'name', 'order'] as const) {
@@ -129,6 +132,9 @@ function readDemoMetadata(source: string) {
 
     metadata[key] = value
   }
+
+  let ssrValue = comment.match(/@ssr\s+([^\n]+)/)?.[1]?.trim().toLowerCase()
+  if (ssrValue === 'false') metadata.ssr = false
 
   return metadata
 }

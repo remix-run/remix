@@ -28,7 +28,8 @@ const demosController = createController(routes.demos, {
         })
       }
 
-      let DemoComponent = clientEntry(`${demo.assetHref}#default`, await loadDemoModule(demo))
+      let serverComponent = demo.ssr ? await loadDemoModule(demo) : () => () => null
+      let DemoComponent = clientEntry(`${demo.assetHref}#default`, serverComponent)
 
       return render(context, <DemoDocument DemoComponent={DemoComponent} demo={demo} />, {
         headers: {

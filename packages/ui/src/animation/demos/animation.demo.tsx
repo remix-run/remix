@@ -109,6 +109,7 @@ function Tile(handle: Handle<{ title: string; children: RemixNode; notes?: strin
 /**
  * @name Animation Gallery
  * @description A collection of motion and animation experiments adapted from the standalone demos.
+ * @ssr false
  */
 export default function AnimationGallery() {
   return () => (
