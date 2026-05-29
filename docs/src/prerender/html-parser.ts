@@ -264,7 +264,10 @@ export function parse(html: string, options?: ParseOptions): Document {
         break
       }
 
-      let tagName = html.slice(lt + 2, end).trim().split(/\s+/, 1)[0]
+      let tagName = html
+        .slice(lt + 2, end)
+        .trim()
+        .split(/\s+/, 1)[0]
       if (tagName) closeElement(tagName)
       i = end + 1
       continue
@@ -286,7 +289,11 @@ export function parse(html: string, options?: ParseOptions): Document {
     appendElement(element)
     i = end + 1
 
-    if (element.name.startsWith('!') || VOID_ELEMENTS.has(element.name) || element.isSelfClosing()) {
+    if (
+      element.name.startsWith('!') ||
+      VOID_ELEMENTS.has(element.name) ||
+      element.isSelfClosing()
+    ) {
       continue
     }
 
