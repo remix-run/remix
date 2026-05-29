@@ -1,3 +1,5 @@
+import { isDeepEqual } from './deep-equal.ts'
+
 /**
  * Thrown when an assertion fails. Mirrors the shape of Node.js's built-in
  * `assert.AssertionError` so that test reporters can treat them uniformly.
@@ -140,30 +142,6 @@ function getUnwantedExceptionMessage(
   return `${base}\nActual message: "${getErrorMessage(error)}"`
 }
 
-// Strict deep equality — uses === at primitive leaves (no type coercion).
-function hasOwn(value: object, key: string): boolean {
-  return Object.prototype.hasOwnProperty.call(value, key)
-}
-
-function isDeepEqual(a: any, b: any): boolean {
-  if (a === b) return true
-  if (a == null || b == null) return false
-  if (typeof a !== typeof b) return false
-
-  if (typeof a === 'object') {
-    if (Array.isArray(a) !== Array.isArray(b)) return false
-
-    let keysA = Object.keys(a)
-    let keysB = Object.keys(b)
-
-    if (keysA.length !== keysB.length) return false
-
-    return keysA.every((key) => hasOwn(b, key) && isDeepEqual(a[key], b[key]))
-  }
-
-  return false
-}
-
 /**
  * Asserts that `value` is truthy. Narrows the type of `value` after the call.
  *
@@ -186,7 +164,7 @@ export function ok(value: unknown, message?: AssertionMessage): asserts value {
 }
 
 /**
- * Asserts strict equality (`===`) between `actual` and `expected`.
+ * Asserts strict equality (`Object.is`) between `actual` and `expected`.
  *
  * @example
  * assert.equal(response.status, 200)
@@ -200,7 +178,7 @@ export function equal<T>(
   expected: T,
   message?: AssertionMessage,
 ): asserts actual is T {
-  if (actual !== expected) {
+  if (!Object.is(actual, expected)) {
     throwAssertion({
       message: message ?? `${stringify(actual)} !== ${stringify(expected)}`,
       actual,
@@ -211,7 +189,7 @@ export function equal<T>(
 }
 
 /**
- * Asserts strict inequality (`!==`) between `actual` and `expected`.
+ * Asserts strict inequality (`!Object.is`) between `actual` and `expected`.
  *
  * @example
  * assert.notEqual(response.status, 404)
@@ -225,7 +203,7 @@ export function notEqual<_value>(
   expected: unknown,
   message?: AssertionMessage,
 ): void {
-  if (actual === expected) {
+  if (Object.is(actual, expected)) {
     throwAssertion({
       message: message ?? `${stringify(actual)} === ${stringify(expected)}`,
       actual,
@@ -312,6 +290,8 @@ export function fail(message?: AssertionMessage): never {
  * @param message - Optional failure message.
  */
 export function match(string: string, regexp: RegExp, message?: AssertionMessage): void {
+  checkMatchArguments(string, regexp, 'match')
+
   if (!regexp.test(string)) {
     throwAssertion({
       message: message ?? `${stringify(string)} does not match ${regexp}`,
@@ -333,6 +313,8 @@ export function match(string: string, regexp: RegExp, message?: AssertionMessage
  * @param message - Optional failure message.
  */
 export function doesNotMatch(string: string, regexp: RegExp, message?: AssertionMessage): void {
+  checkMatchArguments(string, regexp, 'doesNotMatch')
+
   if (regexp.test(string)) {
     throwAssertion({
       message: message ?? `${stringify(string)} matches ${regexp}`,
@@ -340,6 +322,33 @@ export function doesNotMatch(string: string, regexp: RegExp, message?: Assertion
       expected: regexp,
       operator: 'doesNotMatch',
     })
+  }
+}
+
+function checkMatchArguments(
+  string: unknown,
+  regexp: unknown,
+  operator: 'match' | 'doesNotMatch',
+): asserts string is string {
+  if (!(regexp instanceof RegExp)) {
+    throw new TypeError(
+      `The "regexp" argument must be an instance of RegExp. Received ${typeof regexp}`,
+    )
+  }
+
+  if (typeof string !== 'string') {
+    throwAssertion(
+      {
+        message: `The "string" argument must be of type string. Received type ${typeof string} (${stringify(
+          string,
+        )})`,
+        actual: string,
+        expected: regexp,
+        operator,
+        generatedMessage: true,
+      },
+      false,
+    )
   }
 }
 

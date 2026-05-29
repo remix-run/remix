@@ -53,12 +53,14 @@ describe('assert.equal', () => {
   it('passes for strictly equal values', () => {
     assert.equal(1, 1)
     assert.equal('a', 'a')
+    assert.equal(NaN, NaN)
   })
 
   it('throws for type-coerced values', () => {
     nodeAssert.throws(() => assert.equal(1 as any, '1'), assert.AssertionError)
     nodeAssert.throws(() => assert.equal(null as any, undefined), assert.AssertionError)
     nodeAssert.throws(() => assert.equal(0 as any, false), assert.AssertionError)
+    nodeAssert.throws(() => assert.equal(0, -0), assert.AssertionError)
   })
 
   it('throws for unequal values', () => {
@@ -76,11 +78,13 @@ describe('assert.notEqual', () => {
     assert.notEqual(1, 2)
     assert.notEqual(1 as any, '1')
     assert.notEqual(null as any, undefined)
+    assert.notEqual(0, -0)
   })
 
   it('throws for strictly equal values', () => {
     nodeAssert.throws(() => assert.notEqual(1, 1), assert.AssertionError)
     nodeAssert.throws(() => assert.notEqual('a', 'a'), assert.AssertionError)
+    nodeAssert.throws(() => assert.notEqual(NaN, NaN), assert.AssertionError)
   })
 })
 
@@ -105,6 +109,68 @@ describe('assert.deepEqual', () => {
       () => assert.deepEqual({ a: undefined }, { b: undefined }),
       assert.AssertionError,
     )
+  })
+
+  it('matches Node strict equality edge cases', () => {
+    assert.deepEqual(NaN, NaN)
+    nodeAssert.throws(() => assert.deepEqual(0, -0), assert.AssertionError)
+  })
+
+  it('compares built-in object values', () => {
+    assert.deepEqual(new Date(1), new Date(1))
+    nodeAssert.throws(() => assert.deepEqual(new Date(1), new Date(2)), assert.AssertionError)
+
+    let actualRegExp = /hello/g
+    let expectedRegExp = /hello/g
+    actualRegExp.lastIndex = 1
+    expectedRegExp.lastIndex = 1
+    assert.deepEqual(actualRegExp, expectedRegExp)
+    expectedRegExp.lastIndex = 2
+    nodeAssert.throws(() => assert.deepEqual(actualRegExp, expectedRegExp), assert.AssertionError)
+
+    assert.deepEqual(new Error('boom'), new Error('boom'))
+    nodeAssert.throws(
+      () => assert.deepEqual(new Error('boom'), new Error('bad')),
+      assert.AssertionError,
+    )
+  })
+
+  it('compares maps, sets, typed arrays, and symbol properties', () => {
+    assert.deepEqual(new Map([[{ a: 1 }, new Set([2, 3])]]), new Map([[{ a: 1 }, new Set([3, 2])]]))
+    nodeAssert.throws(
+      () => assert.deepEqual(new Map([['a', 1]]), new Map([['a', 2]])),
+      assert.AssertionError,
+    )
+
+    assert.deepEqual(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2, 3]))
+    nodeAssert.throws(
+      () => assert.deepEqual(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2, 4])),
+      assert.AssertionError,
+    )
+
+    let symbol = Symbol('key')
+    assert.deepEqual({ [symbol]: 1 }, { [symbol]: 1 })
+    nodeAssert.throws(
+      () => assert.deepEqual({ [symbol]: 1 }, { [symbol]: 2 }),
+      assert.AssertionError,
+    )
+  })
+
+  it('compares prototypes and cycles', () => {
+    nodeAssert.throws(() => assert.deepEqual(Object.create(null), {}), assert.AssertionError)
+
+    interface CyclicValue {
+      name: string
+      self?: CyclicValue
+    }
+
+    let actual: CyclicValue = { name: 'actual' }
+    actual.self = actual
+
+    let expected: CyclicValue = { name: 'actual' }
+    expected.self = expected
+
+    assert.deepEqual(actual, expected)
   })
 })
 
@@ -149,6 +215,10 @@ describe('assert.match', () => {
   it('throws when string does not match regexp', () => {
     nodeAssert.throws(() => assert.match('hello world', /foo/), assert.AssertionError)
   })
+
+  it('throws AssertionError when the input is not a string', () => {
+    nodeAssert.throws(() => assert.match(123 as any, /foo/), assert.AssertionError)
+  })
 })
 
 describe('assert.doesNotMatch', () => {
@@ -158,6 +228,10 @@ describe('assert.doesNotMatch', () => {
 
   it('throws when string matches regexp', () => {
     nodeAssert.throws(() => assert.doesNotMatch('hello world', /world/), assert.AssertionError)
+  })
+
+  it('throws AssertionError when the input is not a string', () => {
+    nodeAssert.throws(() => assert.doesNotMatch(123 as any, /foo/), assert.AssertionError)
   })
 })
 
