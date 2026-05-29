@@ -206,7 +206,10 @@ jobs:
       - name: Install Node.js
         uses: actions/setup-node@v6
         with:
-          node-version-file: 'package.json'
+          # Pin Windows to 24.15.0 to avoid libuv 1.52.x assertion bug on file watching.
+          # See https://github.com/libuv/libuv/issues/5010
+          # node-version-file: 'package.json'
+          node-version: '24.15.0'
           cache: pnpm
 
       - name: Install dependencies
