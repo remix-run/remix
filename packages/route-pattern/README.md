@@ -55,15 +55,13 @@ createHref('http(s)://:region.cdn.com/assets/*file.:ext', {
 
 ## API at a glance
 
-**remix/route-pattern** - Parse and stringify patterns.
-
-**remix/route-pattern/href** - Generate hrefs for patterns with type safe params.
-
-**remix/route-pattern/match** - Match against one pattern with type inference for params. Or match against many patterns with deterministic ranking and attached data.
-
-**remix/route-pattern/join** - Combine two patterns into one. Override protocol, hostname, port. Join pathnames. Merge search constraints.
-
-**remix/route-pattern/specificity** - Rank matches by [specificity](#ranking-matches-by-specificity).
+| Import | Description |
+| --- | --- |
+| `remix/route-pattern` | Parse and stringify patterns. |
+| `remix/route-pattern/href` | Generate hrefs for patterns with type safe params. |
+| `remix/route-pattern/match` | Match against one pattern with type inference for params, or match against many patterns with deterministic ranking and attached data. |
+| `remix/route-pattern/join` | Combine two patterns into one. Override protocol, hostname, port. Join pathnames. Merge search constraints. |
+| `remix/route-pattern/specificity` | Rank matches by [specificity](#ranking-matches-by-specificity). |
 
 For in-depth reference, visit the [`route-pattern` API docs](https://api.remix.run/api/remix/route-pattern)
 
@@ -111,6 +109,15 @@ While variables, wilcards, and optionals are most prevalent in pathnames, you ca
 '(www.)example.com/blog/:slug(.html)' // matches example.com/blog/hello, www.example.com/blog/hello.html
 '*.example.com/files/*path' // matches cdn.example.com/files/images/logo.png
 '(:locale.)example.com/docs(/:section)' // matches en.example.com/docs, en.example.com/docs/guides
+```
+
+**Escape characters** with `\`:
+
+```ts
+'time/12\\:30' // matches /time/12:30
+'calculator/2\\*3' // matches /calculator/2*3
+'wiki/Mercury_\\(planet\\)' // matches /wiki/Mercury_(planet)
+'wiki/AC\\/DC' // matches /wiki/AC%2FDC
 ```
 
 ### Search

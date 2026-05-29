@@ -123,7 +123,13 @@ function hrefPart(
         i = part.optionals.get(frame.begin!)! + 1
         continue
       }
-      stack[stack.length - 1].href += typeof value === 'string' ? value : String(value)
+      // prettier-ignore
+      stack[stack.length - 1].href +=
+        part.type === 'pathname' && token.type === ':' ? encodePathnameVariable(value) :
+        part.type === 'pathname' && token.type === '*' ? encodePathnameWildcard(value) :
+        part.type === 'hostname' && token.type === ':' ? validateHostnameVariable(value) :
+        part.type === 'hostname' && token.type === '*' ? validateHostnameWildcard(value) :
+        unreachable()
       i += 1
       continue
     }
@@ -186,6 +192,16 @@ type CreateHrefErrorDetails =
       params: Record<string, unknown>
     }
   | { type: 'nameless-wildcard'; pattern: RoutePattern }
+  | {
+      type: 'invalid-hostname-variable'
+      value: string
+      char: string
+    }
+  | {
+      type: 'invalid-hostname-wildcard'
+      value: string
+      char: string
+    }
 
 /** Error thrown when a route pattern cannot generate an href from the supplied args. */
 export class CreateHrefError extends Error {
@@ -198,21 +214,99 @@ export class CreateHrefError extends Error {
   }
 
   static message(details: CreateHrefErrorDetails): string {
-    let pattern = details.pattern.toString()
-
     if (details.type === 'missing-hostname') {
-      return `pattern requires hostname\n\nPattern: ${pattern}`
+      return `pattern requires hostname\n\nPattern: ${details.pattern}`
     }
 
     if (details.type === 'nameless-wildcard') {
-      return `pattern contains nameless wildcard\n\nPattern: ${pattern}`
+      return `pattern contains nameless wildcard\n\nPattern: ${details.pattern}`
     }
 
     if (details.type === 'missing-params') {
       let params = details.missingParams.map((p) => `'${p}'`).join(', ')
-      return `missing param(s): ${params}\n\nPattern: ${pattern}\nParams: ${JSON.stringify(details.params)}`
+      return `missing param(s): ${params}\n\nPattern: ${details.pattern}\nParams: ${JSON.stringify(details.params)}`
+    }
+
+    if (details.type === 'invalid-hostname-variable') {
+      return `invalid hostname variable param: ${JSON.stringify(details.value)} contains ${JSON.stringify(details.char)}`
+    }
+
+    if (details.type === 'invalid-hostname-wildcard') {
+      return `invalid hostname wildcard param: ${JSON.stringify(details.value)} contains ${JSON.stringify(details.char)}`
     }
 
     unreachable(details)
   }
+}
+
+export function encodePathnameVariable(value: unknown) {
+  return encodePathnameSegment(String(value))
+}
+
+export function encodePathnameWildcard(value: unknown) {
+  return String(value).split('/').map(encodePathnameSegment).join('/')
+}
+
+/**
+ * Keep pathname params from changing URL structure when parsed. `/`, `?`, and `#` are
+ * path/query/fragment delimiters; `%` begins percent-encoded bytes; and `\\` is treated as a
+ * path separator by special URL parsing.
+ *
+ * @see https://url.spec.whatwg.org/#path-percent-encode-set
+ * @see https://url.spec.whatwg.org/#percent-encoded-bytes
+ */
+const PATHNAME_PARAM_STRUCTURAL_CHARS: Record<string, string> = {
+  '/': '%2F',
+  '?': '%3F',
+  '#': '%23',
+  '%': '%25',
+  '\\': '%5C',
+}
+
+function encodePathnameSegment(value: string): string {
+  let encoded = ''
+  for (let char of value) {
+    let encodedChar = PATHNAME_PARAM_STRUCTURAL_CHARS[char]
+    encoded += encodedChar === undefined ? char : encodedChar
+  }
+  return encoded
+}
+
+/**
+ * Keep hostname params from changing URL authority structure when parsed. `@` ends userinfo,
+ * `:` starts the port, and `/`, `?`, and `#` start the path, query, and fragment. Hostname
+ * variables also reject `.` because dots separate host labels; hostname wildcards allow `.` to
+ * span labels intentionally.
+ *
+ * @see https://url.spec.whatwg.org/#authority-state
+ * @see https://url.spec.whatwg.org/#host-parsing
+ */
+const HOSTNAME_PARAM_STRUCTURAL_CHARS = ['@', ':', '/', '?', '#']
+
+export function validateHostnameVariable(value: unknown): string {
+  let serialized = String(value)
+  for (let char of serialized) {
+    if (char === '.' || HOSTNAME_PARAM_STRUCTURAL_CHARS.includes(char)) {
+      throw new CreateHrefError({
+        type: 'invalid-hostname-variable',
+        value: serialized,
+        char,
+      })
+    }
+  }
+  return serialized
+}
+
+export function validateHostnameWildcard(value: unknown): string {
+  let serialized = String(value)
+  for (let char of serialized) {
+    if (HOSTNAME_PARAM_STRUCTURAL_CHARS.includes(char)) {
+      throw new CreateHrefError({
+        type: 'invalid-hostname-wildcard',
+        value: serialized,
+        char,
+      })
+    }
+  }
+  return serialized
 }

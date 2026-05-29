@@ -1,5 +1,5 @@
 import type { RoutePattern } from '../route-pattern.ts'
-import { decodeHostname, decodePathname } from './decode.ts'
+import { decodeHostname } from './decode.ts'
 import { generateVariants, type Param } from './variant.ts'
 import { unreachable } from '../unreachable.ts'
 
@@ -149,7 +149,7 @@ export class Trie<data = unknown> {
     }
 
     let results: Array<Match<string, data>> = []
-    let urlSegments = decodePathname(url.pathname.slice(1)).split('/')
+    let urlSegments = url.pathname.slice(1).split('/').map(normalizePathnameText)
 
     for (let origin of origins) {
       let stack: Array<{
@@ -173,7 +173,7 @@ export class Trie<data = unknown> {
               pathnameMatch.push({
                 type: param.type,
                 name: param.name,
-                value: cap.value,
+                value: fastDecodeURIComponent(cap.value),
                 begin: cap.begin,
                 end: cap.end,
               })
@@ -269,6 +269,19 @@ export class Trie<data = unknown> {
 
     return results
   }
+}
+
+// Pathname codec ----------------------------------------------------------------------------------
+
+// Pathname matching uses canonical percent-encoded text. URL pathnames are split on structural
+// "/" before normalization so encoded slashes like "%2F" remain data within a segment instead of
+// becoming separators. Pattern static text is encoded the same way when variants are generated.
+function normalizePathnameText(text: string): string {
+  return encodeURIComponent(fastDecodeURIComponent(text))
+}
+
+function fastDecodeURIComponent(text: string): string {
+  return text.includes('%') ? decodeURIComponent(text) : text
 }
 
 // Search ------------------------------------------------------------------------------------------

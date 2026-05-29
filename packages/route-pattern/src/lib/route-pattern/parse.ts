@@ -102,9 +102,9 @@ export function parsePart(
       if (i + 1 === span[1]) {
         throw new ParseError('dangling escape', source, i)
       }
-      let text = source.slice(i, i + 2)
+      let text = source.slice(i + 1, i + 2)
       appendText(text)
-      i += text.length
+      i += 2
       continue
     }
 
