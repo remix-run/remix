@@ -15,10 +15,11 @@ const packageStateFileNames = new Set([
   'bun.lockb',
   'npm-shrinkwrap.json',
   'package-lock.json',
-  'package.json',
   'pnpm-lock.yaml',
+  'pnpm-workspace.yaml',
   'yarn.lock',
 ])
+const packageManagerRootFileNames = packageStateFileNames
 const packageNamePartPattern = /^[A-Za-z0-9._~-]+$/
 
 export function createAccessPolicy(options: {
@@ -278,12 +279,10 @@ function getPackageStateDirectories(searchRoots: readonly string[]): string[] {
   let packageStateDirectories = new Set<string>()
 
   for (let searchRoot of searchRoots) {
-    let normalizedSearchRoot = normalizeFilePath(searchRoot)
-    packageStateDirectories.add(
-      path.basename(normalizedSearchRoot) === 'node_modules'
-        ? path.dirname(normalizedSearchRoot)
-        : normalizedSearchRoot,
-    )
+    let packageManagerRoot = findPackageManagerRoot(searchRoot)
+    if (packageManagerRoot !== null) {
+      packageStateDirectories.add(packageManagerRoot)
+    }
   }
 
   return [...packageStateDirectories]
@@ -296,12 +295,44 @@ function isPackageStateFileEvent(
   let normalizedFilePath = normalizeFilePath(filePath)
   let fileName = path.basename(normalizedFilePath)
   if (!packageStateFileNames.has(fileName)) return false
-  if (fileName === 'package.json') return true
 
   let directory = path.dirname(normalizedFilePath)
   return packageStateDirectories.some(
     (packageStateDirectory) => directory === packageStateDirectory,
   )
+}
+
+function findPackageManagerRoot(startDirectory: string): string | null {
+  let directory = normalizePackageStateSearchRoot(startDirectory)
+
+  while (true) {
+    if (hasPackageManagerRootFile(directory)) return directory
+
+    let parentDirectory = path.dirname(directory)
+    if (parentDirectory === directory) return null
+    directory = parentDirectory
+  }
+}
+
+function normalizePackageStateSearchRoot(searchRoot: string): string {
+  let normalizedSearchRoot = normalizeFilePath(searchRoot)
+  return path.basename(normalizedSearchRoot) === 'node_modules'
+    ? path.dirname(normalizedSearchRoot)
+    : normalizedSearchRoot
+}
+
+function hasPackageManagerRootFile(directory: string): boolean {
+  for (let fileName of packageManagerRootFileNames) {
+    try {
+      let stat = fs.statSync(path.join(directory, fileName))
+      if (stat.isFile()) return true
+    } catch (error) {
+      if (isPathNotFoundError(error)) continue
+      throw error
+    }
+  }
+
+  return false
 }
 
 function findPackageJsonPath(packageName: string, startDirectory: string): string | null {

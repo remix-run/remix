@@ -5545,7 +5545,8 @@ describe('asset-server', () => {
     assert.equal(response, null)
   })
 
-  it('updates allowed package dependencies when package state changes in watch mode', async () => {
+  it('updates allowed package dependencies when workspace lockfiles change in watch mode', async () => {
+    await write(dir, 'pnpm-lock.yaml', 'lockfile')
     await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
       name: '@remix-run/__allowed-package',
       type: 'module',
@@ -5588,12 +5589,21 @@ describe('asset-server', () => {
         'app/node_modules/@remix-run/__new-dep-of-allowed-package/index.ts',
         'export const dep = true',
       )
-      let appPackageJsonPath = await writeJson(dir, 'app/package.json', {
+      let appPackageJsonPath = await writeJson(dir, 'package.json', {
         dependencies: {
           '@remix-run/__allowed-package': '1.0.0',
         },
       })
       await emitWatchEvent(assetServer, appPackageJsonPath, 'change')
+
+      let unchangedResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__new-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(unchangedResponse, null)
+
+      let lockfilePath = await write(dir, 'pnpm-lock.yaml', 'changed')
+      await emitWatchEvent(assetServer, lockfilePath, 'change')
 
       let afterResponse = await get(
         assetServer,
@@ -5606,7 +5616,38 @@ describe('asset-server', () => {
     }
   })
 
-  it('watches package state files for allowed packages without watching all of node_modules', async () => {
+  it('watches workspace package state files for allowed packages without watching all of node_modules', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await write(caseDir, 'pnpm-lock.yaml', 'lockfile')
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+      })
+
+      assetServer = createWatchedTestServer(caseDir, {
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+        fileMap: { '/app/*path': 'app/*path' },
+      })
+
+      let targets = getInternalWatchTargets(assetServer).map((target) =>
+        normalizeWindowsPath(target),
+      )
+      assert.ok(targets.includes(normalizeWindowsPath(nodeFs.realpathSync(caseDir))))
+      assert.ok(
+        !targets.includes(
+          normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app/node_modules'))),
+        ),
+      )
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not watch package state files for allowed packages when no package manager root is found', async () => {
     let caseDir = await makeTmpDir()
     let assetServer: AssetServer<AssetRequestTransformMap> | null = null
     try {
@@ -5624,9 +5665,9 @@ describe('asset-server', () => {
       let targets = getInternalWatchTargets(assetServer).map((target) =>
         normalizeWindowsPath(target),
       )
-      assert.ok(targets.includes(normalizeWindowsPath(nodeFs.realpathSync(caseDir))))
+      assert.ok(!targets.includes(normalizeWindowsPath(nodeFs.realpathSync(caseDir))))
       assert.ok(
-        targets.includes(normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app')))),
+        !targets.includes(normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app')))),
       )
       assert.ok(
         !targets.includes(
@@ -5639,10 +5680,11 @@ describe('asset-server', () => {
     }
   })
 
-  it('updates installed optional package dependencies when lockfiles change in watch mode', async () => {
+  it('updates installed optional package dependencies when workspace lockfiles change in watch mode', async () => {
     let caseDir = await makeTmpDir()
     let assetServer: AssetServer<AssetRequestTransformMap> | null = null
     try {
+      await write(caseDir, 'pnpm-lock.yaml', 'lockfile')
       await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
         name: '@remix-run/__allowed-package',
         type: 'module',
@@ -5691,6 +5733,94 @@ describe('asset-server', () => {
       assert.equal(unchangedResponse, null)
 
       let lockfilePath = await write(caseDir, 'pnpm-lock.yaml', 'changed')
+      await emitWatchEvent(assetServer, lockfilePath, 'change')
+
+      let afterResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.ok(afterResponse)
+      assert.equal(afterResponse.status, 200)
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('traverses out of a nested asset server root to watch workspace lockfiles', async () => {
+    let caseDir = await makeTmpDir()
+    let workspaceDir = path.join(caseDir, 'workspace')
+    let appDir = path.join(workspaceDir, 'packages/app')
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await write(caseDir, 'workspace/pnpm-lock.yaml', 'lockfile')
+      await writeJson(
+        caseDir,
+        'workspace/packages/app/app/node_modules/@remix-run/__allowed-package/package.json',
+        {
+          name: '@remix-run/__allowed-package',
+          type: 'module',
+          optionalDependencies: {
+            '@remix-run/__optional-dep-of-allowed-package': '1.0.0',
+          },
+        },
+      )
+      await write(
+        caseDir,
+        'workspace/packages/app/app/node_modules/@remix-run/__allowed-package/index.ts',
+        'export const value = true',
+      )
+
+      assetServer = createWatchedTestServer(appDir, {
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+        fileMap: { '/app/*path': 'app/*path' },
+      })
+
+      let targets = getInternalWatchTargets(assetServer).map((target) =>
+        normalizeWindowsPath(target),
+      )
+      assert.ok(targets.includes(normalizeWindowsPath(nodeFs.realpathSync(workspaceDir))))
+      assert.ok(!targets.includes(normalizeWindowsPath(nodeFs.realpathSync(appDir))))
+      assert.ok(
+        !targets.includes(
+          normalizeWindowsPath(nodeFs.realpathSync(path.join(appDir, 'app/node_modules'))),
+        ),
+      )
+
+      let beforeResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(beforeResponse, null)
+
+      await writeJson(
+        caseDir,
+        'workspace/packages/app/app/node_modules/@remix-run/__optional-dep-of-allowed-package/package.json',
+        {
+          name: '@remix-run/__optional-dep-of-allowed-package',
+          type: 'module',
+        },
+      )
+      await write(
+        caseDir,
+        'workspace/packages/app/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+        'export const optionalDep = true',
+      )
+      let appPackageJsonPath = await writeJson(caseDir, 'workspace/packages/app/package.json', {
+        dependencies: {
+          '@remix-run/__allowed-package': '1.0.0',
+        },
+      })
+      await emitWatchEvent(assetServer, appPackageJsonPath, 'change')
+
+      let unchangedResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(unchangedResponse, null)
+
+      let lockfilePath = await write(caseDir, 'workspace/pnpm-lock.yaml', 'changed')
       await emitWatchEvent(assetServer, lockfilePath, 'change')
 
       let afterResponse = await get(
