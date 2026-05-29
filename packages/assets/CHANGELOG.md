@@ -2,6 +2,19 @@
 
 This is the changelog for [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.2
+
+### Patch Changes
+
+- Use canonical realpath asset URLs for package imports so symlinked package paths and their real paths do not produce duplicate browser modules.
+
+- Use polling for asset server file watching by default on Windows to avoid native filesystem watcher crashes while still allowing explicit `watch.poll` overrides.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`file-storage@0.13.6`](https://github.com/remix-run/remix/releases/tag/file-storage@0.13.6)
+  - [`headers@0.21.1`](https://github.com/remix-run/remix/releases/tag/headers@0.21.1)
+  - [`route-pattern@0.22.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.22.0)
+
 ## v0.4.1
 
 ### Patch Changes

@@ -2,6 +2,12 @@
 
 This is the changelog for [`lazy-file`](https://github.com/remix-run/remix/tree/main/packages/lazy-file). It follows [semantic versioning](https://semver.org/).
 
+## v5.0.5
+
+### Patch Changes
+
+- Fix `LazyBlob.slice()` and `LazyFile.slice()` so slicing an existing slice is calculated relative to the current slice instead of the original source content.
+
 ## v5.0.4
 
 ### Patch Changes

@@ -2,6 +2,14 @@
 
 This is the changelog for [`file-storage`](https://github.com/remix-run/remix/tree/main/packages/file-storage). It follows [semantic versioning](https://semver.org/).
 
+## v0.13.6
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fs@0.4.5`](https://github.com/remix-run/remix/releases/tag/fs@0.4.5)
+  - [`lazy-file@5.0.5`](https://github.com/remix-run/remix/releases/tag/lazy-file@5.0.5)
+
 ## v0.13.5
 
 ### Patch Changes

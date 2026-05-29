@@ -1,1 +1,0 @@
-BREAKING CHANGE: Remix UI component render functions no longer receive props as an argument. Type component props on `Handle<Props>` and read current values from `handle.props` in both setup and render code.

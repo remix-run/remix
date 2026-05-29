@@ -2,6 +2,15 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.2
+
+### Patch Changes
+
+- Remove Remix-repo specific logic from template.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`test@0.4.2`](https://github.com/remix-run/remix/releases/tag/test@0.4.2)
+
 ## v0.3.1
 
 ### Patch Changes
