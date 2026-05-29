@@ -7,6 +7,13 @@ type HydratedVirtualRootStartMarker = Comment & {
   }
 }
 
+type CommentMarkerRangeReplacement = {
+  currentStart: Comment
+  nextStart: Comment
+  currentEndIndex: number
+  nextEndIndex: number
+}
+
 export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
   let parent = curr[0]?.parentNode ?? context.regionParent ?? null
   invariant(parent, 'Parent node not found')
@@ -17,10 +24,11 @@ export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
     context.regionTailRef ??
     (curr.length > 0 ? (curr[curr.length - 1].nextSibling as ChildNode | null) : null)
 
-  let max = Math.max(curr.length, next.length)
-  for (let i = 0; i < max; i++) {
-    let c = curr[i]
-    let n = next[i]
+  let currentIndex = 0
+  let nextIndex = 0
+  while (currentIndex < curr.length || nextIndex < next.length) {
+    let c = curr[currentIndex]
+    let n = next[nextIndex]
 
     if (!c && n) {
       if (regionTailRef) {
@@ -28,10 +36,28 @@ export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
       } else {
         parent.appendChild(n)
       }
+      nextIndex++
     } else if (c && !n) {
       removeNode(c, parent, context)
+      currentIndex++
     } else if (c && n) {
-      // Skip hydrated client-entry boundary ranges; hydration pass re-renders
+      let replacement = getCommentMarkerRangeReplacement(
+        c,
+        n,
+        curr,
+        next,
+        currentIndex,
+        nextIndex,
+        context,
+      )
+      if (replacement) {
+        replaceCommentMarkerRange(replacement, parent, context)
+        currentIndex = replacement.currentEndIndex + 1
+        nextIndex = replacement.nextEndIndex + 1
+        continue
+      }
+
+      // Skip hydrated client-entry marker ranges; hydration pass re-renders
       // roots with new props from incoming payload
       if (isVirtualRootStartMarker(c) && isVirtualRootStartMarker(n)) {
         let currentEnd = findHydrationEndMarker(c)
@@ -41,14 +67,25 @@ export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
 
         let currentEndIndex = curr.indexOf(currentEnd)
         let nextEndIndex = next.indexOf(nextEnd)
-        i = Math.max(currentEndIndex, nextEndIndex)
+        currentIndex = currentEndIndex + 1
+        nextIndex = nextEndIndex + 1
         continue
       }
 
       let cursor = diffNode(c, n, context)
       if (cursor) {
-        i = next.indexOf(cursor)
+        let nextEndIndex = next.indexOf(cursor)
+        let currentEndIndex =
+          isFrameStartMarker(c) && isFrameEndMarker(cursor)
+            ? findFrameEndIndex(curr, currentIndex)
+            : currentIndex
+        currentIndex = currentEndIndex + 1
+        nextIndex = nextEndIndex + 1
+        continue
       }
+
+      currentIndex++
+      nextIndex++
     }
   }
 }
@@ -61,7 +98,7 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
     return
   }
 
-  // Hydration boundary -> Hydration boundary
+  // Hydration marker range -> Hydration marker range
   if (isVirtualRootStartMarker(current) && isVirtualRootStartMarker(next)) {
     let nextData = next.data
     if (current.data !== nextData) {
@@ -77,8 +114,41 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
   if (isCommentNode(current) && isCommentNode(next)) {
     let newData = next.data
     if (current.data !== newData) {
-      if (isFrameStartMarker(current)) disposeFrameStartMarker(current, context)
-      current.data = newData
+      let updated = false
+      if (isFrameStartMarker(current)) {
+        if (shouldPreserveFrameStartMarker(current, next, context)) {
+          current.data = newData
+          updated = true
+
+          let frame = context.frameInstances.get(current)
+          let nextMarkerData = getFrameMarkerData(next, context)
+          if (frame && nextMarkerData) {
+            if (nextMarkerData.status === 'resolved') {
+              let nextEnd = findFrameEndMarker(next)
+              let nextContent = collectFrameContentFragment(current.ownerDocument, next, nextEnd)
+              void frame.renderMarkerContent(
+                { ...nextMarkerData, id: getFrameId(next) },
+                nextContent,
+                {
+                  signal: context.signal,
+                },
+              )
+              return nextEnd
+            }
+
+            if (frame.isDisplayingResolvedContent()) {
+              return findFrameEndMarker(next)
+            }
+          }
+        } else {
+          disposeFrameStartMarker(current, context)
+          current.data = newData
+          updated = true
+        }
+      }
+      if (!updated) {
+        current.data = newData
+      }
     }
     return
   }
@@ -224,7 +294,14 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
     let nextChild = nextChildren[i]
     let matchIndex = -1
 
-    if (isElement(nextChild)) {
+    if (isFrameEndMarker(nextChild)) {
+      for (let j = 0; j < currentChildren.length; j++) {
+        if (!used[j] && isFrameEndMarker(currentChildren[j])) {
+          matchIndex = j
+          break
+        }
+      }
+    } else if (isElement(nextChild)) {
       let key = nextChild.getAttribute('data-key')
       if (key != null && keyToIndex.has(key)) {
         let idx = keyToIndex.get(key)!
@@ -253,14 +330,42 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
     let mi = matchIndexForNext[i]
     if (mi !== -1) {
       let curChild = currentChildren[mi]
-      let cursor = diffNode(curChild, nextChildren[i], context)
-      if (cursor) {
-        // Fast-forward across a hydrated virtual root region.
-        let nextEndIdx = nextChildren.indexOf(cursor)
-        let currEndIdx = findHydrationEndIndex(currentChildren, mi)
+      let nextChild = nextChildren[i]
 
-        // Adjacent hydration regions can pre-match into the next region and leave
-        // an orphaned `<!-- /rmx:h -->` behind. Clear those stale matches first.
+      let replacement = getCommentMarkerRangeReplacement(
+        curChild,
+        nextChild,
+        currentChildren,
+        nextChildren,
+        mi,
+        i,
+        context,
+      )
+      if (replacement) {
+        replaceCommentMarkerRange(replacement, current, context)
+
+        for (let k = mi; k <= replacement.currentEndIndex; k++) used[k] = true
+
+        committed[i] = replacement.nextStart
+        committed[replacement.nextEndIndex] = nextChildren[replacement.nextEndIndex]
+        for (let j = i + 1; j < replacement.nextEndIndex; j++) committed[j] = undefined
+
+        i = replacement.nextEndIndex
+        continue
+      }
+
+      let cursor = diffNode(curChild, nextChild, context)
+      if (cursor) {
+        // `diffNode` can preserve hydration and frame marker ranges by returning
+        // the next end marker, so skip the owned interior nodes here.
+        let nextEndIdx = nextChildren.indexOf(cursor)
+        let currEndIdx =
+          isFrameStartMarker(curChild) && isFrameEndMarker(cursor)
+            ? findFrameEndIndex(currentChildren, mi)
+            : findHydrationEndIndex(currentChildren, mi)
+
+        // Adjacent marker ranges can pre-match into the next range and leave an
+        // orphaned end marker behind. Clear those stale matches first.
         for (let j = i + 1; j <= nextEndIdx; j++) {
           let matchedIndex = matchIndexForNext[j]
           if (matchedIndex > currEndIdx) {
@@ -272,7 +377,7 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
         // Mark the entire current region as used to avoid removals.
         for (let k = mi; k <= currEndIdx; k++) used[k] = true
 
-        // Preserve both boundary markers in committed; skip interior in reorder pass.
+        // Preserve both comment markers in committed; skip interior in reorder pass.
         committed[i] = curChild // start marker
         committed[nextEndIdx] = currentChildren[currEndIdx] // end marker
         for (let j = i + 1; j < nextEndIdx; j++) committed[j] = undefined
@@ -296,9 +401,15 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
     // Use only an anchor that is actually a child of the current parent
     let ref = anchor && anchor.parentNode === current ? anchor : null
 
-    // Do not move hydration boundary markers; keep region stable.
-    // If a boundary marker is new, ensure it is inserted before using it as an anchor.
-    if (isVirtualRootStartMarker(node) || isVirtualRootEndMarker(node)) {
+    // Existing comment markers delimit live ranges, so do not reorder them
+    // independently from their contents. New markers still need to be inserted
+    // before they can be used as anchors.
+    if (
+      isVirtualRootStartMarker(node) ||
+      isVirtualRootEndMarker(node) ||
+      isFrameStartMarker(node) ||
+      isFrameEndMarker(node)
+    ) {
       if (node.parentNode !== current) {
         current.insertBefore(node, ref)
       }
@@ -372,6 +483,37 @@ function findHydrationEndIndex(nodes: Node[], startIdx: number): number {
   return startIdx
 }
 
+function findFrameEndMarker(start: Comment): Comment {
+  let node: Node | null = start.nextSibling
+  let depth = 1
+
+  while (node) {
+    if (isFrameStartMarker(node)) depth++
+    if (isFrameEndMarker(node)) {
+      depth--
+      if (depth === 0) return node
+    }
+    node = node.nextSibling
+  }
+
+  throw new Error('Frame end marker not found')
+}
+
+function findFrameEndIndex(nodes: Node[], startIdx: number): number {
+  let depth = 1
+
+  for (let j = startIdx + 1; j < nodes.length; j++) {
+    let node = nodes[j]
+    if (isFrameStartMarker(node)) depth++
+    if (isFrameEndMarker(node)) {
+      depth--
+      if (depth === 0) return j
+    }
+  }
+
+  return startIdx
+}
+
 function isTextNode(node: Node): node is Text {
   return node.nodeType === Node.TEXT_NODE
 }
@@ -386,6 +528,114 @@ function isCommentNode(node: Node): node is Comment {
 
 function isFrameStartMarker(node: Node): node is Comment {
   return node instanceof Comment && node.data.trim().startsWith('rmx:f:')
+}
+
+function isFrameEndMarker(node: Node): node is Comment {
+  return node instanceof Comment && node.data.trim() === '/rmx:f'
+}
+
+function shouldPreserveFrameStartMarker(
+  current: Comment,
+  next: Comment,
+  context: FrameContext,
+): boolean {
+  if (!isFrameStartMarker(next)) return false
+
+  let currentData = getFrameMarkerData(current, context)
+  let nextData = getFrameMarkerData(next, context)
+
+  return (
+    currentData !== undefined &&
+    nextData !== undefined &&
+    currentData.src === nextData.src &&
+    currentData.name === nextData.name
+  )
+}
+
+function getCommentMarkerRangeReplacement(
+  current: Node,
+  next: Node,
+  currentNodes: Node[],
+  nextNodes: Node[],
+  currentIndex: number,
+  nextIndex: number,
+  context: FrameContext,
+): CommentMarkerRangeReplacement | undefined {
+  // Comment markers can represent owned DOM ranges, not standalone comments. If
+  // the incoming range no longer has the same identity, replace the whole range
+  // before regular node diffing mutates either marker.
+  if (
+    isFrameStartMarker(current) &&
+    isFrameStartMarker(next) &&
+    !shouldPreserveFrameStartMarker(current, next, context)
+  ) {
+    return {
+      currentStart: current,
+      nextStart: next,
+      currentEndIndex: findFrameEndIndex(currentNodes, currentIndex),
+      nextEndIndex: findFrameEndIndex(nextNodes, nextIndex),
+    }
+  }
+}
+
+function getFrameMarkerData(marker: Comment, context: FrameContext) {
+  let id = getFrameId(marker)
+  return context.data.f?.[id]
+}
+
+function getFrameId(marker: Comment): string {
+  let trimmed = marker.data.trim()
+  invariant(trimmed.startsWith('rmx:f:'), 'Invalid frame start marker')
+  return trimmed.slice('rmx:f:'.length)
+}
+
+function replaceCommentMarkerRange(
+  replacement: CommentMarkerRangeReplacement,
+  parent: ParentNode,
+  context: FrameContext,
+): void {
+  let currentEnd = findFrameEndMarker(replacement.currentStart)
+  let nextEnd = findFrameEndMarker(replacement.nextStart)
+  let nextNodes = collectNodeRange(replacement.nextStart, nextEnd)
+  let currentNodes = collectNodeRange(replacement.currentStart, currentEnd)
+
+  for (let node of nextNodes) {
+    parent.insertBefore(node, replacement.currentStart)
+  }
+
+  for (let node of currentNodes) {
+    removeNode(node, parent, context)
+  }
+}
+
+function collectNodeRange(start: Node, end: Node): Node[] {
+  let nodes: Node[] = []
+  let node: Node | null = start
+
+  while (node) {
+    nodes.push(node)
+    if (node === end) break
+    node = node.nextSibling
+  }
+
+  return nodes
+}
+
+function collectFrameContentFragment(
+  doc: Document,
+  start: Comment,
+  end: Comment,
+): DocumentFragment {
+  let fragment = doc.createDocumentFragment()
+  let node = start.nextSibling
+
+  while (node && node !== end) {
+    let next = node.nextSibling
+    fragment.appendChild(node)
+    node = next
+  }
+
+  return fragment
 }
 
 function removeNode(node: Node, parent: ParentNode, context: FrameContext): void {
