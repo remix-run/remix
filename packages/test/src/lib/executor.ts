@@ -1,31 +1,38 @@
-import { createTestContext, type CreateTestContextOptions, type TestContext } from './context.ts'
+import { createTestContext, type CreateTestContextE2EOptions, type TestContext } from './context.ts'
 import type { V8CoverageEntry } from './coverage.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
 
-type LifecycleHook = () => void | Promise<void>
+interface RunnableOptions {
+  timeout?: number
+  signal?: AbortSignal
+}
+
+interface LifecycleHook extends RunnableOptions {
+  fn: () => void | Promise<void>
+}
 
 interface RegisteredSuite {
   name: string
   tests: RegisteredTest[]
   only?: boolean
-  skip?: boolean
-  todo?: boolean
-  beforeEach?: LifecycleHook
-  afterEach?: LifecycleHook
-  beforeAll?: LifecycleHook
-  afterAll?: LifecycleHook
+  skip?: boolean | string
+  todo?: boolean | string
+  beforeEach?: LifecycleHook[]
+  afterEach?: LifecycleHook[]
+  beforeAll?: LifecycleHook[]
+  afterAll?: LifecycleHook[]
 }
 
-interface RegisteredTest {
+interface RegisteredTest extends RunnableOptions {
   name: string
   fn: (t: TestContext) => void | Promise<void>
   only?: boolean
-  skip?: boolean
-  todo?: boolean
+  skip?: boolean | string
+  todo?: boolean | string
 }
 
 export async function runTests(
-  options?: Omit<CreateTestContextOptions, 'addE2ECoverageEntries'>,
+  options?: Omit<CreateTestContextE2EOptions, 'addE2ECoverageEntries'>,
 ): Promise<TestResults> {
   let suites = getRegisteredSuites()
   let e2eCoverageEntries: Array<{ entries: V8CoverageEntry[]; baseUrl: string }> = []
@@ -71,7 +78,7 @@ export async function runTests(
     if (suite.beforeAll) {
       let startTime = performance.now()
       try {
-        await suite.beforeAll()
+        await runLifecycleHooks('beforeAll', suite.beforeAll)
       } catch (error) {
         results.tests.push(
           createFailedHookResult('beforeAll', suite.name, error, performance.now() - startTime),
@@ -115,20 +122,29 @@ export async function runTests(
       let testFailed = false
       let afterEachFailed = false
 
-      let contextOpts: CreateTestContextOptions | undefined = options
-        ? {
-            ...options,
-            addE2ECoverageEntries: (e) => e2eCoverageEntries.push(e),
-          }
-        : undefined
-      let { testContext, cleanup } = createTestContext(contextOpts)
+      let testAbortController = new AbortController()
+      let { testContext, cleanup } = createTestContext({
+        signal: testAbortController.signal,
+        e2e: options
+          ? {
+              ...options,
+              addE2ECoverageEntries: (e) => e2eCoverageEntries.push(e),
+            }
+          : undefined,
+      })
 
       try {
         if (suite.beforeEach) {
-          await suite.beforeEach()
+          await runLifecycleHooks('beforeEach', suite.beforeEach, testAbortController, test.signal)
         }
 
-        await test.fn(testContext)
+        await runRunnable(
+          'Test',
+          () => test.fn(testContext),
+          test,
+          testAbortController,
+          test.signal,
+        )
       } catch (error) {
         testFailed = true
         testError = error
@@ -136,7 +152,7 @@ export async function runTests(
         await cleanup()
         if (suite.afterEach) {
           try {
-            await suite.afterEach()
+            await runLifecycleHooks('afterEach', suite.afterEach, undefined, undefined, true)
           } catch (error) {
             afterEachFailed = true
             afterEachError = error
@@ -162,7 +178,7 @@ export async function runTests(
     if (suite.afterAll) {
       let startTime = performance.now()
       try {
-        await suite.afterAll()
+        await runLifecycleHooks('afterAll', suite.afterAll, undefined, undefined, true)
       } catch (error) {
         results.tests.push(
           createFailedHookResult('afterAll', suite.name, error, performance.now() - startTime),
@@ -186,6 +202,90 @@ export async function runTests(
 function getRegisteredSuites(): RegisteredSuite[] {
   let global = globalThis as typeof globalThis & { __testSuites?: RegisteredSuite[] }
   return global.__testSuites ?? []
+}
+
+async function runLifecycleHooks(
+  hookName: string,
+  hooks: LifecycleHook[],
+  abortController?: AbortController,
+  inheritedSignal?: AbortSignal,
+  reverse = false,
+): Promise<void> {
+  let orderedHooks = reverse ? [...hooks].reverse() : hooks
+  for (let hook of orderedHooks) {
+    await runRunnable(hookName, hook.fn, hook, abortController, inheritedSignal, hook.signal)
+  }
+}
+
+async function runRunnable(
+  label: string,
+  fn: () => void | Promise<void>,
+  options: RunnableOptions,
+  abortController?: AbortController,
+  ...signals: Array<AbortSignal | undefined>
+): Promise<void> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  let abortCleanups: Array<() => void> = []
+  let abortSignals = [...new Set([...signals, options.signal])].filter(
+    (signal): signal is AbortSignal => signal != null,
+  )
+
+  for (let signal of abortSignals) {
+    if (signal.aborted) {
+      let error = createAbortError(label, signal.reason)
+      abortController?.abort(error)
+      throw error
+    }
+  }
+
+  let abortPromise = new Promise<never>((_, reject) => {
+    for (let signal of abortSignals) {
+      let onAbort = () => {
+        let error = createAbortError(label, signal.reason)
+        abortController?.abort(error)
+        reject(error)
+      }
+      signal.addEventListener('abort', onAbort, { once: true })
+      abortCleanups.push(() => signal.removeEventListener('abort', onAbort))
+    }
+  })
+
+  let timeout = options.timeout
+  let timeoutPromise =
+    timeout && timeout > 0
+      ? new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            let error = createTimeoutError(label, timeout)
+            reject(error)
+            abortController?.abort(error)
+          }, timeout)
+        })
+      : undefined
+
+  try {
+    await Promise.race([
+      Promise.resolve().then(fn),
+      abortPromise,
+      ...(timeoutPromise ? [timeoutPromise] : []),
+    ])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+    for (let cleanup of abortCleanups) cleanup()
+  }
+}
+
+function createTimeoutError(label: string, timeout: number): Error {
+  let error = new Error(`${label} timed out after ${timeout}ms`)
+  error.name = 'TimeoutError'
+  return error
+}
+
+function createAbortError(label: string, reason: unknown): Error {
+  let message =
+    reason instanceof Error ? reason.message : String(reason ?? 'This operation was aborted')
+  let error = new Error(`${label} aborted: ${message}`)
+  error.name = 'AbortError'
+  return error
 }
 
 function createFailedHookResult(

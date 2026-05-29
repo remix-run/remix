@@ -1,30 +1,47 @@
 import type { TestContext } from './context.ts'
 
+type LifecycleHookName = 'beforeEach' | 'afterEach' | 'beforeAll' | 'afterAll'
+type LifecycleHookFn = () => void | Promise<void>
+
+interface TestOptions {
+  timeout?: number
+  signal?: AbortSignal
+}
+
+interface HookOptions {
+  timeout?: number
+  signal?: AbortSignal
+}
+
+interface LifecycleHook extends HookOptions {
+  fn: LifecycleHookFn
+}
+
 interface TestSuite {
   name: string
   tests: Test[]
   only?: boolean
-  skip?: boolean
-  todo?: boolean
-  beforeEach?: () => void | Promise<void>
-  afterEach?: () => void | Promise<void>
-  beforeAll?: () => void | Promise<void>
-  afterAll?: () => void | Promise<void>
+  skip?: boolean | string
+  todo?: boolean | string
+  beforeEach?: LifecycleHook[]
+  afterEach?: LifecycleHook[]
+  beforeAll?: LifecycleHook[]
+  afterAll?: LifecycleHook[]
 }
 
-interface Test {
+interface Test extends TestOptions {
   name: string
-  fn: (t?: any) => void | Promise<void>
+  fn: TestFn
   suite: TestSuite
   only?: boolean
-  skip?: boolean
-  todo?: boolean
+  skip?: boolean | string
+  todo?: boolean | string
 }
 
 // Holds lifecycle hooks registered at the top level (outside any describe).
 // Top-level describes inherit these hooks just like nested describes inherit
 // from their parent.
-const rootHooks: Pick<TestSuite, 'beforeEach' | 'afterEach' | 'beforeAll' | 'afterAll'> = {}
+const rootHooks: Pick<TestSuite, LifecycleHookName> = {}
 
 let currentSuite: TestSuite | null = null
 const rootSuites: TestSuite[] = []
@@ -36,7 +53,8 @@ const rootSuites: TestSuite[] = []
 let implicitRootSuite: TestSuite | null = null
 function getImplicitRootSuite(): TestSuite {
   if (!implicitRootSuite || !rootSuites.includes(implicitRootSuite)) {
-    implicitRootSuite = { name: '', tests: [], ...rootHooks }
+    implicitRootSuite = { name: '', tests: [] }
+    copyLifecycleHooks(rootHooks, implicitRootSuite)
     rootSuites.push(implicitRootSuite)
   }
   return implicitRootSuite
@@ -45,11 +63,7 @@ function getImplicitRootSuite(): TestSuite {
 // Expose for executor.ts which reads this global
 ;(globalThis as any).__testSuites = rootSuites
 
-function registerDescribe(
-  name: string,
-  fn: () => void,
-  flags?: { only?: boolean; skip?: boolean },
-) {
+function registerDescribe(name: string, fn: () => void, flags?: SuiteMeta) {
   // Nested describes are flattened: "Parent > Child"
   let fullName = currentSuite ? `${currentSuite.name} > ${name}` : name
   if (rootSuites.some((s) => s.name === fullName)) {
@@ -64,12 +78,7 @@ function registerDescribe(
   if (currentSuite?.skip) suite.skip = true
   if (currentSuite?.only) suite.only = true
 
-  // Inherit lifecycle hooks from parent suite (or root hooks if at top level)
-  let parent = currentSuite ?? rootHooks
-  if (parent.beforeEach) suite.beforeEach = parent.beforeEach
-  if (parent.afterEach) suite.afterEach = parent.afterEach
-  if (parent.beforeAll) suite.beforeAll = parent.beforeAll
-  if (parent.afterAll) suite.afterAll = parent.afterAll
+  copyLifecycleHooks(currentSuite ?? rootHooks, suite)
 
   let insertedAt = rootSuites.length
   rootSuites.push(suite)
@@ -130,14 +139,19 @@ export const describe = Object.assign(describeImpl, {
 })
 
 type SuiteMeta = { skip?: boolean; only?: boolean }
-type TestMeta = { skip?: boolean; only?: boolean }
+type TestMeta = TestOptions & {
+  skip?: boolean | string
+  only?: boolean
+  todo?: boolean | string
+}
 type TestFn = (t: TestContext) => void | Promise<void>
 
-function registerIt(name: string, fn: TestFn, flags?: { only?: boolean; skip?: boolean }) {
+function registerIt(name: string, fn: TestFn, flags?: TestMeta) {
   let suite = currentSuite ?? getImplicitRootSuite()
   if (suite.tests.some((t) => t.name === name)) {
     throw new Error(`Duplicate test name: "${name}" in suite "${suite.name || 'Global'}"`)
   }
+  validateTimeout(flags?.timeout)
   suite.tests.push({ name, fn, suite, ...flags })
 }
 
@@ -166,9 +180,12 @@ function itImpl(name: string, metaOrFn: TestMeta | TestFn, fn?: TestFn): void {
  * it.skip('not ready yet', () => { ... })
  * it.only('focused test', () => { ... })
  * it.todo('coming soon')
+ * it('fails if it takes too long', { timeout: 5_000 }, async (t) => {
+ *   await fetch('/api/data', { signal: t.signal })
+ * })
  *
  * @param name - The test name shown in reporter output.
- * @param meta - Test metadata such as `skip` or `only`.
+ * @param meta - Test metadata such as `skip`, `only`, `todo`, `timeout`, or `signal`.
  * @param fn - The test body, receiving a {@link TestContext} as its first argument.
  */
 export const it = Object.assign(itImpl, {
@@ -188,78 +205,86 @@ export const suite = describe
 /** Alias for {@link it}. */
 export const test = it
 
-function chainBefore(
-  existing: (() => void | Promise<void>) | undefined,
-  fn: () => void | Promise<void>,
-) {
-  return existing
-    ? async () => {
-        await existing()
-        await fn()
-      }
-    : fn
+function copyLifecycleHooks(source: Pick<TestSuite, LifecycleHookName>, target: TestSuite): void {
+  if (source.beforeEach) target.beforeEach = [...source.beforeEach]
+  if (source.afterEach) target.afterEach = [...source.afterEach]
+  if (source.beforeAll) target.beforeAll = [...source.beforeAll]
+  if (source.afterAll) target.afterAll = [...source.afterAll]
 }
 
-function chainAfter(
-  existing: (() => void | Promise<void>) | undefined,
-  fn: () => void | Promise<void>,
-) {
-  // Child/later runs first, then earlier (reverse order)
-  return existing
-    ? async () => {
-        await fn()
-        await existing()
-      }
-    : fn
+function registerLifecycleHook(
+  name: LifecycleHookName,
+  fn?: LifecycleHookFn,
+  options: HookOptions = {},
+): void {
+  if (!fn) {
+    throw new TypeError(`${name} requires a function`)
+  }
+
+  validateTimeout(options.timeout)
+
+  let target = currentSuite ?? rootHooks
+  target[name] ??= []
+  target[name].push({ fn, ...options })
+}
+
+function validateTimeout(timeout: number | undefined): void {
+  if (timeout !== undefined && (!Number.isFinite(timeout) || timeout < 0)) {
+    throw new RangeError('Test timeout must be a non-negative finite number')
+  }
 }
 
 /**
  * Registers a hook that runs before **each** test in the current suite (or
  * globally if called outside a `describe`). Multiple calls are chained in
- * registration order.
+ * registration order. Pass `{ timeout, signal }` after the function to limit
+ * how long the hook may run.
  *
  * @param fn - The setup function to run before each test.
+ * @param options - Optional timeout and abort signal configuration.
  */
-export function beforeEach(fn: () => void | Promise<void>) {
-  let target = currentSuite ?? rootHooks
-  target.beforeEach = chainBefore(target.beforeEach, fn)
+export function beforeEach(fn: LifecycleHookFn, options?: HookOptions): void {
+  registerLifecycleHook('beforeEach', fn, options)
 }
 
 /**
  * Registers a hook that runs after **each** test in the current suite (or
  * globally if called outside a `describe`). Multiple calls are chained in
  * reverse registration order.  To run logic after a singular test, use
- * `t.after()` from the {@link TestContext}
+ * `t.after()` from the {@link TestContext}. Pass `{ timeout, signal }` after
+ * the function to limit how long the hook may run.
  *
  * @param fn - The teardown function to run after each test.
+ * @param options - Optional timeout and abort signal configuration.
  */
-export function afterEach(fn: () => void | Promise<void>) {
-  let target = currentSuite ?? rootHooks
-  target.afterEach = chainAfter(target.afterEach, fn)
+export function afterEach(fn: LifecycleHookFn, options?: HookOptions): void {
+  registerLifecycleHook('afterEach', fn, options)
 }
 
 /**
  * Registers a hook that runs once before **all** tests in the current suite
  * (or globally if called outside a `describe`). Multiple calls are chained in
- * registration order.
+ * registration order. Pass `{ timeout, signal }` after the function to limit
+ * how long the hook may run.
  *
  * @param fn - The setup function to run once before all tests in the suite.
+ * @param options - Optional timeout and abort signal configuration.
  */
-export function beforeAll(fn: () => void | Promise<void>) {
-  let target = currentSuite ?? rootHooks
-  target.beforeAll = chainBefore(target.beforeAll, fn)
+export function beforeAll(fn: LifecycleHookFn, options?: HookOptions): void {
+  registerLifecycleHook('beforeAll', fn, options)
 }
 
 /**
  * Registers a hook that runs once after **all** tests in the current suite (or
  * globally if called outside a `describe`). Multiple calls are chained in
- * reverse registration order.
+ * reverse registration order. Pass `{ timeout, signal }` after the function
+ * to limit how long the hook may run.
  *
  * @param fn - The teardown function to run once after all tests in the suite.
+ * @param options - Optional timeout and abort signal configuration.
  */
-export function afterAll(fn: () => void | Promise<void>) {
-  let target = currentSuite ?? rootHooks
-  target.afterAll = chainAfter(target.afterAll, fn)
+export function afterAll(fn: LifecycleHookFn, options?: HookOptions): void {
+  registerLifecycleHook('afterAll', fn, options)
 }
 
 /** Alias for {@link beforeAll} — matches the `node:test` API. */

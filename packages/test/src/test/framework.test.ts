@@ -185,6 +185,29 @@ describe('it', () => {
     assert.equal(s.tests[0].name, 'my test')
     assert.equal(s.tests[0].fn, fn)
   })
+
+  it('registers timeout and signal options', () => {
+    let signal = new AbortController().signal
+    let [s] = captureRegistration(() =>
+      describe('suite', () => {
+        it('my test', { timeout: 100, signal }, () => {})
+      }),
+    )
+    assert.equal(s.tests[0].timeout, 100)
+    assert.equal(s.tests[0].signal, signal)
+  })
+
+  it('throws on invalid timeout values', () => {
+    assert.throws(
+      () =>
+        captureRegistration(() =>
+          describe('suite', () => {
+            it('my test', { timeout: -1 }, () => {})
+          }),
+        ),
+      /Test timeout must be a non-negative finite number/,
+    )
+  })
 })
 
 describe('it.skip', () => {
@@ -318,7 +341,7 @@ describe('lifecycle hooks', () => {
         beforeEach(fn)
       }),
     )
-    assert.equal(s.beforeEach, fn)
+    assert.equal(s.beforeEach[0].fn, fn)
   })
 
   it('afterEach registers on the current suite', () => {
@@ -328,7 +351,7 @@ describe('lifecycle hooks', () => {
         afterEach(fn)
       }),
     )
-    assert.equal(s.afterEach, fn)
+    assert.equal(s.afterEach[0].fn, fn)
   })
 
   it('beforeAll registers on the current suite', () => {
@@ -338,7 +361,7 @@ describe('lifecycle hooks', () => {
         beforeAll(fn)
       }),
     )
-    assert.equal(s.beforeAll, fn)
+    assert.equal(s.beforeAll[0].fn, fn)
   })
 
   it('afterAll registers on the current suite', () => {
@@ -348,7 +371,20 @@ describe('lifecycle hooks', () => {
         afterAll(fn)
       }),
     )
-    assert.equal(s.afterAll, fn)
+    assert.equal(s.afterAll[0].fn, fn)
+  })
+
+  it('registers timeout and signal options for hooks', () => {
+    let signal = new AbortController().signal
+    let fn = () => {}
+    let [s] = captureRegistration(() =>
+      describe('suite', () => {
+        beforeEach(fn, { timeout: 50, signal })
+      }),
+    )
+    assert.equal(s.beforeEach[0].fn, fn)
+    assert.equal(s.beforeEach[0].timeout, 50)
+    assert.equal(s.beforeEach[0].signal, signal)
   })
 
   it('beforeEach can be called outside describe (registers on root hooks)', () => {
@@ -358,7 +394,7 @@ describe('lifecycle hooks', () => {
         beforeEach(() => {})
         describe('suite', () => {})
       })
-      assert.equal(typeof s.beforeEach, 'function')
+      assert.equal(typeof s.beforeEach[0].fn, 'function')
     })
   })
 
@@ -368,7 +404,7 @@ describe('lifecycle hooks', () => {
         afterEach(() => {})
         describe('suite', () => {})
       })
-      assert.equal(typeof s.afterEach, 'function')
+      assert.equal(typeof s.afterEach[0].fn, 'function')
     })
   })
 
@@ -378,7 +414,7 @@ describe('lifecycle hooks', () => {
         beforeAll(() => {})
         describe('suite', () => {})
       })
-      assert.equal(typeof s.beforeAll, 'function')
+      assert.equal(typeof s.beforeAll[0].fn, 'function')
     })
   })
 
@@ -388,7 +424,7 @@ describe('lifecycle hooks', () => {
         afterAll(() => {})
         describe('suite', () => {})
       })
-      assert.equal(typeof s.afterAll, 'function')
+      assert.equal(typeof s.afterAll[0].fn, 'function')
     })
   })
 })
