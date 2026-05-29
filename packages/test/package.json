@@ -69,7 +69,7 @@
     "v8-to-istanbul": "^9.3.0"
   },
   "peerDependencies": {
-    "playwright": "^1.59.0"
+    "playwright": "^1.60.0"
   },
   "peerDependenciesMeta": {
     "playwright": {
