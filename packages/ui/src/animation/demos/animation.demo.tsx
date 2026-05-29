@@ -116,7 +116,7 @@ export default function AnimationGallery() {
     <>
       <h1 mix={[css({ marginBottom: 0, '& + p': { marginTop: 0 } })]}>Animations</h1>
       <p>
-        Most animations are adapted from <a href="https://www.motion.dev">Motion</a>. Thank you for
+        Most animations are adapted from <a href="https://motion.dev">Motion</a>. Thank you for
         your work <a href="https://motion.dev/@matt">Matt Perry</a>!
       </p>
       <div
