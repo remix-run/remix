@@ -55,13 +55,13 @@ createHref('http(s)://:region.cdn.com/assets/*file.:ext', {
 
 ## API at a glance
 
-| Import | Description |
-| --- | --- |
-| `remix/route-pattern` | Parse and stringify patterns. |
-| `remix/route-pattern/href` | Generate hrefs for patterns with type safe params. |
-| `remix/route-pattern/match` | Match against one pattern with type inference for params, or match against many patterns with deterministic ranking and attached data. |
-| `remix/route-pattern/join` | Combine two patterns into one. Override protocol, hostname, port. Join pathnames. Merge search constraints. |
-| `remix/route-pattern/specificity` | Rank matches by [specificity](#ranking-matches-by-specificity). |
+| Import                            | Description                                                                                                                            |
+| --------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| `remix/route-pattern`             | Parse and stringify patterns.                                                                                                          |
+| `remix/route-pattern/href`        | Generate hrefs for patterns with type safe params.                                                                                     |
+| `remix/route-pattern/match`       | Match against one pattern with type inference for params, or match against many patterns with deterministic ranking and attached data. |
+| `remix/route-pattern/join`        | Combine two patterns into one. Override protocol, hostname, port. Join pathnames. Merge search constraints.                            |
+| `remix/route-pattern/specificity` | Rank matches by [specificity](#ranking-matches-by-specificity).                                                                        |
 
 For in-depth reference, visit the [`route-pattern` API docs](https://api.remix.run/api/remix/route-pattern)
 
