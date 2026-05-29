@@ -10,6 +10,7 @@ import { theme } from '@remix-run/ui/theme'
 /**
  * @name Accordion Overview
  * @description A single-open disclosure list that keeps settings, billing, or notification rules in one calm section.
+ * @layout center
  * @order 1
  */
 export default function Example() {

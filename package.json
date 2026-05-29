@@ -17,7 +17,7 @@
     "node": ">=24.3.0"
   },
   "scripts": {
-    "postinstall": "test -n \"${CI:-}\" || pnpm --filter @remix-run/ui exec playwright install",
+    "postinstall": "node ./scripts/postinstall.ts",
     "build": "pnpm -r build",
     "changes:preview": "node ./scripts/changes-preview.ts",
     "changes:validate": "node ./scripts/changes-validate.ts",
@@ -33,7 +33,7 @@
     "pr-preview": "node ./scripts/pr-preview.ts",
     "setup-installable-branch": "node ./scripts/setup-installable-branch.ts",
     "validate-package-meta": "node ./scripts/validate-package-meta.ts",
-    "test": "pnpm --parallel run test",
+    "test": "pnpm --recursive --workspace-concurrency=4 --stream run test",
     "test:bun": "pnpm --parallel --if-present run test:bun",
     "test:changed": "node ./scripts/run-changed-workspaces.ts test",
     "typecheck": "pnpm -r typecheck",

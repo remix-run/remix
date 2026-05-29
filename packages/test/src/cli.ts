@@ -260,9 +260,9 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
             }
           }
 
-          let [browserResult, e2eResult] = await Promise.all([
+          let browserResult =
             runBrowserTests != null
-              ? runBrowserTests({
+              ? await runBrowserTests({
                   baseUrl: `http://localhost:${browserPort}`,
                   console: config.browser?.echo,
                   coverage: !!config.coverage,
@@ -272,9 +272,11 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
                   reporter,
                   testFiles: browserFiles,
                 })
-              : null,
+              : null
+
+          let e2eResult =
             e2eFiles.length > 0
-              ? runServerTests(e2eFiles, reporter, config.concurrency, 'e2e', {
+              ? await runServerTests(e2eFiles, reporter, config.concurrency, 'e2e', {
                   open: config.browser?.open,
                   playwrightUseOpts: project.playwrightUseOpts,
                   projectName: project.name,
@@ -282,8 +284,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
                   cwd,
                   pool: config.pool,
                 })
-              : null,
-          ])
+              : null
 
           counts.passed += (browserResult?.results.passed ?? 0) + (e2eResult?.passed ?? 0)
           counts.failed += (browserResult?.results.failed ?? 0) + (e2eResult?.failed ?? 0)

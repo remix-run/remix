@@ -25,7 +25,7 @@ await fs.mkdir(outputDir, { recursive: true })
 // fonts, etc.) still ship even if the crawler doesn't discover them.
 await fs.cp(publicDir, outputDir, { recursive: true })
 
-await spider(router, outputDir, new Set(['/', '/api/airports', '/theme-builder']))
+await spider(router, outputDir)
 
 async function spider(router: Router, outputDir: string, urlQueue = new Set(['/'])) {
   await fs.mkdir(outputDir, { recursive: true })
