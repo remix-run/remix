@@ -148,6 +148,21 @@ describe('anchor', () => {
     cleanup()
   })
 
+  it('positions a floating element from coordinates', () => {
+    let floating = document.createElement('div')
+    document.body.append(floating)
+
+    mockLayout(floating, { top: 0, left: 0, width: 120, height: 80 })
+
+    let cleanup = anchor(floating, { x: 200, y: 40 }, { placement: 'bottom-start' })
+
+    expect(floating.style.position).toBe('fixed')
+    expect(floating.style.top).toBe('40px')
+    expect(floating.style.left).toBe('200px')
+
+    cleanup()
+  })
+
   it('supports horizontal and vertical offsets independently', () => {
     let floating = document.createElement('div')
     let anchorElement = document.createElement('button')
@@ -339,6 +354,41 @@ describe('anchor', () => {
 
     expect(floating.style.top).toBe('420px')
     expect(floating.style.left).toBe('180px')
+
+    cleanup()
+  })
+
+  it('repositions when a coordinate target changes during animation-frame polling', () => {
+    let pollForPositionChanges: ((time: number) => void) | null = null
+    rafSpy.mock.restore!()
+    rafSpy = mock.method(globalThis, 'requestAnimationFrame', (callback) => {
+      pollForPositionChanges = callback
+      return 1
+    })
+
+    let floating = document.createElement('div')
+    let anchorPoint = { x: 200, y: 40 }
+    document.body.append(floating)
+
+    mockLayout(floating, { top: 0, left: 0, width: 120, height: 80 })
+
+    let cleanup = anchor(floating, anchorPoint, {
+      placement: 'bottom-start',
+    })
+
+    expect(floating.style.top).toBe('40px')
+    expect(floating.style.left).toBe('200px')
+
+    anchorPoint.x = 240
+    anchorPoint.y = 90
+    if (!pollForPositionChanges) {
+      throw new Error('Expected anchor() to schedule polling')
+    }
+
+    ;(pollForPositionChanges as (time: number) => void)(16)
+
+    expect(floating.style.top).toBe('90px')
+    expect(floating.style.left).toBe('240px')
 
     cleanup()
   })

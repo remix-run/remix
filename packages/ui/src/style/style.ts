@@ -141,22 +141,15 @@ function styleToCss(styles: StyleObject, selector: string = ''): string {
         continue
       }
 
-      // For nested selectors, keep them wholesale inside the base block
       // Allow nested selectors to be conditionally disabled.
       // e.g. { '&:hover': condition ? undefined : { ... } }
       let record = toRecord(value)
       if (!record) continue
 
-      let nestedContent = ''
-      for (let [prop, propValue] of Object.entries(record)) {
-        if (propValue != null) {
-          let normalizedValue = normalizeCssValue(prop, propValue)
-          nestedContent += `    ${camelToKebab(prop)}: ${normalizedValue};\n`
-        }
-      }
-      if (nestedContent) {
+      let nestedContent = nestedStyleBodyToCss(record, 4)
+      if (nestedContent.trim().length > 0) {
         // Preserve key verbatim (e.g., '&[aria-selected], &[rmx-focus]')
-        nestedBlocks.push(`  ${key} {\n${nestedContent}  }`)
+        nestedBlocks.push(`  ${key} {\n${nestedContent}\n  }`)
       }
     } else {
       // Base declaration
@@ -187,6 +180,32 @@ function styleToCss(styles: StyleObject, selector: string = ''): string {
   }
 
   return css
+}
+
+function nestedStyleBodyToCss(styles: StyleObject, spaces: number): string {
+  // This renders content that is already inside a style rule. Nested selectors
+  // and nested at-rules can stay in that rule body; root at-rule placement is
+  // handled by styleToCss before entering a nested style body.
+  let pad = ' '.repeat(spaces)
+  let declarations: string[] = []
+  let nestedBlocks: string[] = []
+
+  for (let [key, value] of Object.entries(styles)) {
+    if (isComplexSelector(key)) {
+      let record = toRecord(value)
+      if (!record) continue
+
+      let nestedContent = nestedStyleBodyToCss(record, spaces + 2)
+      if (nestedContent.trim().length > 0) {
+        nestedBlocks.push(`${pad}${key} {\n${nestedContent}\n${pad}}`)
+      }
+    } else if (value != null) {
+      let normalizedValue = normalizeCssValue(key, value)
+      declarations.push(`${pad}${camelToKebab(key)}: ${normalizedValue};`)
+    }
+  }
+
+  return [...declarations, ...nestedBlocks].join('\n')
 }
 
 function indent(text: string, spaces: number): string {

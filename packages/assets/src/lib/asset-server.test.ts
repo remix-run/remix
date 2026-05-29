@@ -54,41 +54,6 @@ async function symlinkDirectory(target: string, link: string): Promise<void> {
   await fs.symlink(target, link, process.platform === 'win32' ? 'junction' : 'dir')
 }
 
-async function writePnpmSymlinkedPackageFixture(dir: string): Promise<void> {
-  await writeJson(dir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/package.json', {
-    name: 'remix',
-    type: 'module',
-    exports: {
-      './ui': './dist/ui.js',
-    },
-  })
-  await write(
-    dir,
-    'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/dist/ui.js',
-    'export * from "@remix-run/ui"',
-  )
-  await writeJson(
-    dir,
-    'app/node_modules/.pnpm/remix@1.0.0/node_modules/@remix-run/ui/package.json',
-    {
-      name: '@remix-run/ui',
-      type: 'module',
-      exports: {
-        '.': './dist/index.js',
-      },
-    },
-  )
-  await write(
-    dir,
-    'app/node_modules/.pnpm/remix@1.0.0/node_modules/@remix-run/ui/dist/index.js',
-    'export const ui = true',
-  )
-  await symlinkDirectory(
-    path.join(dir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix'),
-    path.join(dir, 'app/node_modules/remix'),
-  )
-}
-
 function getLineAndColumn(source: string, search: string): { line: number; column: number } {
   let index = source.indexOf(search)
   assert.notEqual(index, -1, `Expected to find "${search}" in:\n${source}`)
@@ -107,23 +72,6 @@ function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions
     fileMap: {
       '/app/*path': 'app/*path',
       '/npm/*path': 'app/node_modules/*path',
-    },
-    rootDir,
-    watch: overrides.watch ?? false,
-    ...overrides,
-  })
-}
-
-function createNodeModulesTestServer(
-  rootDir: string,
-  overrides: Partial<AssetServerOptions<any>> = {},
-) {
-  return createAssetServerForTest({
-    allow: ['app/entry.ts', 'app/node_modules/**'],
-    basePath: '/assets',
-    fileMap: {
-      '/node_modules/*path': 'app/node_modules/*path',
-      '/app/*path': 'app/*path',
     },
     rootDir,
     watch: overrides.watch ?? false,
@@ -1257,25 +1205,29 @@ describe('asset-server', () => {
       },
     })
 
-    let href = await assetServer.getHref('app/content/value.txt', {
-      transform: ['upper'],
-    })
+    try {
+      let href = await assetServer.getHref('app/content/value.txt', {
+        transform: ['upper'],
+      })
 
-    let firstResponse = await get(assetServer, href)
-    assert.ok(firstResponse)
-    assert.equal(await firstResponse.text(), 'HELLO\n')
-    assert.equal(transformCalls, 1)
+      let firstResponse = await get(assetServer, href)
+      assert.ok(firstResponse)
+      assert.equal(await firstResponse.text(), 'HELLO\n')
+      assert.equal(transformCalls, 1)
 
-    let filePath = path.join(dir, 'app/content/value.txt')
-    await fs.unlink(filePath)
-    await emitWatchEvent(assetServer, filePath, 'unlink')
-    await write(dir, 'app/content/value.txt', 'world\n')
-    await emitWatchEvent(assetServer, filePath, 'add')
+      let filePath = path.join(dir, 'app/content/value.txt')
+      await fs.unlink(filePath)
+      await emitWatchEvent(assetServer, filePath, 'unlink')
+      await write(dir, 'app/content/value.txt', 'world\n')
+      await emitWatchEvent(assetServer, filePath, 'add')
 
-    let secondResponse = await get(assetServer, href)
-    assert.ok(secondResponse)
-    assert.equal(await secondResponse.text(), 'WORLD\n')
-    assert.equal(transformCalls, 2)
+      let secondResponse = await get(assetServer, href)
+      assert.ok(secondResponse)
+      assert.equal(await secondResponse.text(), 'WORLD\n')
+      assert.equal(transformCalls, 2)
+    } finally {
+      await assetServer.close()
+    }
   })
 
   it('accepts one-item tuples for no-arg transforms and serializes them as strings', async () => {
@@ -2558,187 +2510,78 @@ describe('asset-server', () => {
     assert.ok(!body.includes('/assets/app/alias/value.@'))
   })
 
-  it('preserves package symlink identity paths for imports through node_modules', async () => {
+  it('uses one canonical URL when app and package imports resolve to the same pnpm package', async () => {
     let caseDir = await makeTmpDir()
     try {
-      await writeJson(caseDir, 'packages/remix/package.json', {
-        name: 'remix',
-        type: 'module',
-        exports: {
-          './ui': './src/ui.ts',
-        },
-      })
-      await write(caseDir, 'packages/remix/src/shared.ts', 'export const shared = "shared"')
-      await write(
+      let uiStorePath = path.join(
         caseDir,
-        'packages/remix/src/ui.ts',
-        'import { shared } from "./shared.ts"\nexport const ui = shared',
+        'app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui',
       )
-      await symlinkDirectory(
-        path.join(caseDir, 'packages/remix'),
-        path.join(caseDir, 'app/node_modules/remix'),
-      )
-      await write(caseDir, 'app/entry.ts', 'import { ui } from "remix/ui"\nexport { ui }')
-
-      let assetServer = createNodeModulesTestServer(caseDir)
-      try {
-        let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
-
-        assert.ok(servedUrls.has('/assets/node_modules/remix/src/ui.ts'))
-        assert.ok(servedUrls.has('/assets/node_modules/remix/src/shared.ts'))
-        assert.equal(servedUrls.has('/assets/packages/remix/src/ui.ts'), false)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('serves pnpm symlinked package dependencies from package realpaths', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await writePnpmSymlinkedPackageFixture(caseDir)
-      await write(caseDir, 'app/entry.ts', 'import { ui } from "remix/ui"\nexport { ui }')
-
-      let assetServer = createNodeModulesTestServer(caseDir)
-      try {
-        let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
-
-        assert.ok(servedUrls.has('/assets/node_modules/remix/dist/ui.js'))
-        assert.ok(
-          servedUrls.has(
-            '/assets/node_modules/.pnpm/remix@1.0.0/node_modules/@remix-run/ui/dist/index.js',
-          ),
-        )
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('keeps arbitrary app symlink escapes blocked', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await write(caseDir, 'private/secret.ts', 'export const secret = true')
-      await fs.mkdir(path.join(caseDir, 'app/assets'), { recursive: true })
-      await fs.symlink(
-        path.join(caseDir, 'private/secret.ts'),
-        path.join(caseDir, 'app/assets/secret.ts'),
+      await writeJson(
+        caseDir,
+        'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/package.json',
+        {
+          name: 'remix',
+          type: 'module',
+          exports: {
+            './ui': './dist/ui.js',
+          },
+        },
       )
       await write(
         caseDir,
-        'app/entry.ts',
-        'import { secret } from "./assets/secret.ts"\nexport { secret }',
+        'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/dist/ui.js',
+        'import { ui } from "@remix-run/ui"\nexport { ui }',
       )
-
-      let assetServer = createAssetServerForTest({
-        allow: ['app/entry.ts', 'app/assets/**'],
-        basePath: '/assets',
-        fileMap: {
-          '/app/*path': 'app/*path',
-        },
-        onError: () => undefined,
-        rootDir: caseDir,
-      })
-      try {
-        let directResponse = await get(assetServer, '/assets/app/assets/secret.ts')
-        assert.equal(directResponse, null)
-
-        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(entryResponse)
-        await assertInternalServerError(entryResponse)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('respects absolute deny rules for real package symlink targets', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await writeJson(caseDir, 'packages/remix/package.json', {
-        name: 'remix',
-        type: 'module',
-        exports: {
-          './ui': './src/ui.ts',
-        },
-      })
-      let deniedPath = await write(
+      await writeJson(
         caseDir,
-        'packages/remix/src/ui.ts',
-        'export const ui = "blocked"',
+        'app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui/package.json',
+        {
+          name: '@remix-run/ui',
+          type: 'module',
+          exports: {
+            '.': './dist/index.js',
+          },
+        },
+      )
+      await write(
+        caseDir,
+        'app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui/dist/index.js',
+        'export const ui = true',
       )
       await symlinkDirectory(
-        path.join(caseDir, 'packages/remix'),
+        path.join(caseDir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix'),
         path.join(caseDir, 'app/node_modules/remix'),
       )
-      await write(caseDir, 'app/entry.ts', 'import { ui } from "remix/ui"\nexport { ui }')
-
-      let assetServer = createNodeModulesTestServer(caseDir, {
-        allow: ['app/entry.ts', 'app/node_modules/**', 'packages/remix/**'],
-        deny: [deniedPath],
-        fileMap: {
-          '/app/*path': 'app/*path',
-          '/node_modules/*path': 'app/node_modules/*path',
-          '/packages/*path': 'packages/*path',
-        },
-        onError: () => undefined,
-      })
-      try {
-        let response = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(response)
-        await assertInternalServerError(response)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('keeps distinct package identities that point to the same real file', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await writeJson(caseDir, 'packages/shared/package.json', {
-        name: 'shared',
-        type: 'module',
-        exports: {
-          './ui': './src/ui.ts',
-        },
-      })
-      await write(caseDir, 'packages/shared/src/ui.ts', 'export const ui = "shared"')
+      await symlinkDirectory(uiStorePath, path.join(caseDir, 'app/node_modules/@remix-run/ui'))
       await symlinkDirectory(
-        path.join(caseDir, 'packages/shared'),
-        path.join(caseDir, 'app/node_modules/package-a'),
-      )
-      await symlinkDirectory(
-        path.join(caseDir, 'packages/shared'),
-        path.join(caseDir, 'app/node_modules/package-b'),
+        uiStorePath,
+        path.join(caseDir, 'app/node_modules/.pnpm/remix@1.0.0/node_modules/@remix-run/ui'),
       )
       await write(
         caseDir,
         'app/entry.ts',
         [
-          'import { ui as a } from "package-a/ui"',
-          'import { ui as b } from "package-b/ui"',
-          'export const values = [a, b]',
+          'import { ui as appUi } from "@remix-run/ui"',
+          'import { ui as packageUi } from "remix/ui"',
+          'export const values = [appUi, packageUi]',
         ].join('\n'),
       )
 
-      let assetServer = createNodeModulesTestServer(caseDir)
+      let assetServer = createTestServer(caseDir, {
+        fileMap: {
+          '/app/*path': 'app/*path',
+          '/node_modules/*path': 'app/node_modules/*path',
+        },
+      })
       try {
-        let response = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(response)
-        assert.equal(response.status, 200)
-        let body = await response.text()
+        let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+        let uiUrls = [...servedUrls].filter((url) => url.includes('@remix-run/ui/dist/index.js'))
 
-        assert.match(body, /\/assets\/node_modules\/package-a\/src\/ui\.ts/)
-        assert.match(body, /\/assets\/node_modules\/package-b\/src\/ui\.ts/)
+        let expectedUiUrls = [
+          '/assets/app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui/dist/index.js',
+        ]
+        assert.deepEqual(uiUrls, expectedUiUrls)
       } finally {
         await assetServer.close()
       }
@@ -3229,51 +3072,6 @@ describe('asset-server', () => {
         let secondBody = await secondResponse.text()
 
         assert.match(secondBody, /value = 2/)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('invalidates package symlink modules from real file watch events', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await writeJson(caseDir, 'packages/remix/package.json', {
-        name: 'remix',
-        type: 'module',
-        exports: {
-          './ui': './src/ui.ts',
-        },
-      })
-      let packageFilePath = await write(
-        caseDir,
-        'packages/remix/src/ui.ts',
-        'export const ui = "one"',
-      )
-      await symlinkDirectory(
-        path.join(caseDir, 'packages/remix'),
-        path.join(caseDir, 'app/node_modules/remix'),
-      )
-      await write(caseDir, 'app/entry.ts', 'import { ui } from "remix/ui"\nexport { ui }')
-      let assetServer = createNodeModulesTestServer(caseDir, { watch: true })
-
-      try {
-        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(entryResponse)
-        assert.equal(entryResponse.status, 200)
-
-        let firstPackageResponse = await get(assetServer, '/assets/node_modules/remix/src/ui.ts')
-        assert.ok(firstPackageResponse)
-        assert.match(await firstPackageResponse.text(), /ui = "one"/)
-
-        await write(caseDir, 'packages/remix/src/ui.ts', 'export const ui = "two"')
-        await emitWatchEvent(assetServer, packageFilePath, 'change')
-
-        let secondPackageResponse = await get(assetServer, '/assets/node_modules/remix/src/ui.ts')
-        assert.ok(secondPackageResponse)
-        assert.match(await secondPackageResponse.text(), /ui = "two"/)
       } finally {
         await assetServer.close()
       }

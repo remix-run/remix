@@ -9,14 +9,16 @@ import {
   createInflate,
 } from 'node:zlib'
 import { promisify } from 'node:util'
-import { Readable } from 'node:stream'
 import { EventEmitter } from 'node:events'
 import { describe, it } from '@remix-run/test'
 
 import { Vary } from '@remix-run/headers/vary'
-import { compressResponse, compressStream, type Encoding } from './compress.ts'
-
-const isWindows = process.platform === 'win32'
+import {
+  compressResponse,
+  compressStream,
+  createCompressionOptions,
+  type Encoding,
+} from './compress.ts'
 
 const gunzipAsync = promisify(gunzip)
 const brotliDecompressAsync = promisify(brotliDecompress)
@@ -698,25 +700,61 @@ describe('compressResponse()', () => {
   })
 
   describe('Server-Sent Events', () => {
-    async function testSSEFlush(
-      encodingName: Encoding,
-      createDecompressor: () => ReturnType<
-        typeof createBrotliDecompress | typeof createGunzip | typeof createInflate
-      >,
-    ) {
-      let sendEvent: ((data: string) => void) | undefined
-      let controller: ReadableStreamDefaultController<Uint8Array> | undefined
-
-      let stream = new ReadableStream({
-        start(c) {
-          controller = c
-          sendEvent = (data: string) => {
-            controller!.enqueue(new TextEncoder().encode(data))
-          }
+    it('applies flush defaults while preserving custom compression options', () => {
+      let options = createCompressionOptions(new Headers({ 'Content-Type': 'text/event-stream' }), {
+        // Provide custom options without flush. compressResponse() should
+        // automatically apply flush for SSE.
+        zlib: {
+          level: 9,
+        },
+        brotli: {
+          params: {
+            [constants.BROTLI_PARAM_QUALITY]: 11,
+          },
         },
       })
 
-      let response = new Response(stream, {
+      assert.equal(options.zlib?.level, 9)
+      assert.equal(options.zlib?.flush, constants.Z_SYNC_FLUSH)
+      assert.equal(options.brotli?.params?.[constants.BROTLI_PARAM_QUALITY], 11)
+      assert.equal(options.brotli?.flush, constants.BROTLI_OPERATION_FLUSH)
+    })
+
+    it('preserves explicit flush options', () => {
+      let options = createCompressionOptions(new Headers({ 'Content-Type': 'text/event-stream' }), {
+        zlib: {
+          flush: constants.Z_FULL_FLUSH,
+        },
+        brotli: {
+          flush: constants.BROTLI_OPERATION_PROCESS,
+        },
+      })
+
+      assert.equal(options.zlib?.flush, constants.Z_FULL_FLUSH)
+      assert.equal(options.brotli?.flush, constants.BROTLI_OPERATION_PROCESS)
+    })
+
+    it('does not apply flush defaults for non-SSE responses', () => {
+      let options = createCompressionOptions(new Headers({ 'Content-Type': 'text/plain' }), {
+        zlib: {
+          level: 9,
+        },
+        brotli: {
+          params: {
+            [constants.BROTLI_PARAM_QUALITY]: 11,
+          },
+        },
+      })
+
+      assert.equal(options.zlib?.level, 9)
+      assert.equal(options.zlib?.flush, undefined)
+      assert.equal(options.brotli?.params?.[constants.BROTLI_PARAM_QUALITY], 11)
+      assert.equal(options.brotli?.flush, undefined)
+    })
+
+    async function assertSSECompression(encodingName: Encoding) {
+      let body = 'event: message\ndata: test-payload\n\n'
+      let response = new Response(body, {
         headers: { 'Content-Type': 'text/event-stream' },
       })
 
@@ -726,8 +764,6 @@ describe('compressResponse()', () => {
 
       let compressed = await compressResponse(response, request, {
         encodings: [encodingName],
-        // Provide custom options WITHOUT flush
-        // compressResponse() should automatically apply flush for SSE
         zlib: {
           level: 9,
         },
@@ -739,54 +775,28 @@ describe('compressResponse()', () => {
       })
 
       assert.equal(compressed.headers.get('Content-Encoding'), encodingName)
-      assert.ok(compressed.body)
 
-      let decompressor = createDecompressor()
-      let nodeReadable = Readable.fromWeb(compressed.body as any)
-      let decompressed = nodeReadable.pipe(decompressor)
+      let buffer = Buffer.from(await compressed.arrayBuffer())
+      let decompressed =
+        encodingName === 'br'
+          ? await brotliDecompressAsync(buffer)
+          : encodingName === 'gzip'
+            ? await gunzipAsync(buffer)
+            : await inflateAsync(buffer)
 
-      // Test that data arrives before stream closes AND is valid SSE format
-      let receivedData = await new Promise<string>((resolve, reject) => {
-        let timeout = setTimeout(
-          () => {
-            reject(new Error(`Timeout: data not flushed - flush may not be working`))
-          },
-          isWindows ? 2_000 : 500,
-        )
-
-        decompressed.once('data', (chunk) => {
-          clearTimeout(timeout)
-          resolve(chunk.toString())
-        })
-
-        decompressed.resume()
-
-        // Send SSE event - with flush, it should arrive immediately
-        // Without flush, stream stays open and data buffers, causing timeout
-        setImmediate(() => {
-          sendEvent!('event: message\ndata: test-payload\n\n')
-        })
-      })
-
-      // Verify the decompressed data is valid SSE format
-      assert.ok(receivedData.includes('event: message'), 'Missing event type')
-      assert.ok(receivedData.includes('data: test-payload'), 'Missing data payload')
-      assert.ok(receivedData.includes('\n\n'), 'Missing SSE message terminator')
-
-      controller!.close()
-      decompressed.destroy()
+      assert.equal(decompressed.toString(), body)
     }
 
-    it('automatically applies flush for SSE with br', async () => {
-      await testSSEFlush('br', createBrotliDecompress)
+    it('compresses SSE with br', async () => {
+      await assertSSECompression('br')
     })
 
-    it('automatically applies flush for SSE with gzip', async () => {
-      await testSSEFlush('gzip', createGunzip)
+    it('compresses SSE with gzip', async () => {
+      await assertSSECompression('gzip')
     })
 
-    it('automatically applies flush for SSE with deflate', async () => {
-      await testSSEFlush('deflate', createInflate)
+    it('compresses SSE with deflate', async () => {
+      await assertSSECompression('deflate')
     })
   })
 

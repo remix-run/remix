@@ -4,8 +4,9 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
 import * as assert from '@remix-run/assert'
-import { describe, it } from '@remix-run/test'
+import { after, before, describe, it } from '@remix-run/test'
 
+import { cleanCliTemplate, syncCliTemplate } from '../../../../scripts/utils/cli-template.ts'
 import { getFixturePath } from '../../test/fixtures.ts'
 import { captureOutput } from '../../test/capture-output.ts'
 import { withEnv } from '../../test/with-env.ts'
@@ -170,6 +171,14 @@ const UNKNOWN_HELP_TOPIC_ERROR_TEXT = [
 ].join('\n')
 
 describe('run', () => {
+  before(async () => {
+    await syncCliTemplate(ROOT_DIR)
+  })
+
+  after(async () => {
+    await cleanCliTemplate(ROOT_DIR)
+  })
+
   it('prints root help', async () => {
     let result = await captureOutput(() => run(['--help']))
 
@@ -468,6 +477,8 @@ describe('run', () => {
       assert.match(server, /import \{ createRequestListener \} from 'remix\/node-fetch-server'/)
       assert.match(server, /http\.createServer/)
       assert.match(server, /createRequestListener/)
+      assert.doesNotMatch(server, /remix\/node-serve/)
+      assert.doesNotMatch(assets, /remix-template:remove-/)
       assert.doesNotMatch(assets, /\.\.\/packages/)
       assert.doesNotMatch(assets, /usesWorkspaceRemix/)
       assert.doesNotMatch(assets, /workspacePackagesDir/)

@@ -71,8 +71,7 @@ if (!result.success) {
 
 Both `parse` and `parseSafe` accept any [Standard Schema](https://standardschema.dev/) v1 schema, not just data-schema's own schemas. You can pass a Zod, Valibot, or ArkType schema and they'll work.
 
-For `FormData` and `URLSearchParams`, use the `remix/data-schema/form-data` helpers to build
-schemas that plug into the same `parse()` / `parseSafe()` flow:
+For `FormData` and `URLSearchParams`, use the `remix/data-schema/form-data` helpers to build schemas that plug into the same `parse()` / `parseSafe()` flow:
 
 ```ts
 import * as s from 'remix/data-schema'
@@ -95,11 +94,7 @@ let filters = s.parse(
 )
 ```
 
-`f.object(...)` is the root schema for `FormData` and `URLSearchParams`.
-Use `f.field(...)` for one text value, `f.fields(...)` for repeated text values,
-`f.file(...)` for one uploaded file, and `f.files(...)` for repeated files.
-When you want a fallback value, prefer `s.defaulted(s.string(), '')`.
-File helpers are intended for `FormData`; `URLSearchParams` only supports text values.
+`f.object(...)` is the root schema for `FormData` and `URLSearchParams`. Use `f.field(...)` for one text value, `f.fields(...)` for repeated text values, `f.file(...)` for one uploaded file, and `f.files(...)` for repeated files. When you want a fallback value, prefer `s.defaulted(s.string(), '')`. File helpers are intended for `FormData`; `URLSearchParams` only supports text values.
 
 You can also customize built-in validation messages with `errorMap`:
 
@@ -127,8 +122,7 @@ let result = parseSafe(User, input, {
 })
 ```
 
-`errorMap` receives `{ code, defaultMessage, path, values, input, locale }`.
-Return `undefined` to keep the default message.
+`errorMap` receives `{ code, defaultMessage, path, values, input, locale }`. Return `undefined` to keep the default message.
 
 ## Primitives
 

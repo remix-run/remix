@@ -7,8 +7,7 @@ description: Publish a placeholder npm package at version 0.0.0 so package names
 
 ## Overview
 
-Use this skill to publish a minimal placeholder package to npm at `0.0.0`.
-This is used to reserve the package name and unblock npm-side OIDC configuration for CI publishing.
+Use this skill to publish a minimal placeholder package to npm at `0.0.0`. This is used to reserve the package name and unblock npm-side OIDC configuration for CI publishing.
 
 ## Workflow
 

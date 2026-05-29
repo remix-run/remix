@@ -69,8 +69,7 @@ let router = createRouter({
 
 ### Limit Multipart Growth
 
-`formData()` forwards multipart limit options to `parseFormData()`, so you can cap uploads with
-`maxHeaderSize`, `maxFiles`, `maxFileSize`, `maxParts`, and `maxTotalSize`.
+`formData()` forwards multipart limit options to `parseFormData()`, so you can cap uploads with `maxHeaderSize`, `maxFiles`, `maxFileSize`, `maxParts`, and `maxTotalSize`.
 
 ```ts
 let router = createRouter({

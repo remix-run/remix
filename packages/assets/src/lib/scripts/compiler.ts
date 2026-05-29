@@ -34,7 +34,6 @@ import { createTsconfigTransformOptionsResolver, transformModule } from './trans
 import type { ResolveModuleResult, TransformArgs, TransformedModule } from './transform.ts'
 import { ResolverFactory } from 'oxc-resolver'
 import type { EmittedAsset, EmittedModule } from './emit.ts'
-import { isBareImportSpecifier } from './specifiers.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 type ScriptStore = ModuleStore<TransformedModule, ResolvedModule, EmittedModule>
@@ -67,7 +66,6 @@ type ScriptCompilerOptions = {
   external: string[]
   fingerprintAssets: boolean
   isAllowed(absolutePath: string): boolean
-  isDenied(absolutePath: string): boolean
   minify: boolean
   onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
   rootDir: string
@@ -119,14 +117,8 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     extensionAlias: resolverExtensionAlias,
     extensions: resolverExtensions,
     mainFields: ['browser', 'module', 'main'],
-    symlinks: false,
     tsconfig: 'auto',
   })
-  let resolveModulePathOptions = {
-    isAllowed: resolvedOptions.isAllowed,
-    isDenied: resolvedOptions.isDenied,
-    routes: resolvedOptions.routes,
-  }
   let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedModule>>()
   let emitInFlightByCacheKey = new Map<string, Promise<EmittedModule>>()
 
@@ -146,9 +138,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   let resolveArgs: ResolveArgs = {
     isAllowed: resolvedOptions.isAllowed,
     isWatchIgnored,
-    resolveModulePath(absolutePath) {
-      return resolveModulePath(absolutePath, resolveModulePathOptions)
-    },
+    resolveModulePath,
     resolverFactory,
     routes: resolvedOptions.routes,
   }
@@ -263,7 +253,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   }
 
   function resolveServedScriptOrThrow(absolutePath: string): ResolveModuleResult {
-    let resolvedModule = resolveModulePath(absolutePath, resolveModulePathOptions)
+    let resolvedModule = resolveModulePath(absolutePath)
     if (!resolvedModule) {
       throw createAssetServerCompilationError(`File not found: ${absolutePath}`, {
         code: 'FILE_NOT_FOUND',
@@ -558,19 +548,11 @@ function shouldClearResolverCacheForFileEvent(filePath: string, event: ModuleWat
   return event !== 'change' || isPackageJsonPath(filePath) || isTsconfigPath(filePath)
 }
 
-function resolveModulePath(
-  absolutePath: string,
-  options: {
-    isAllowed(absolutePath: string): boolean
-    isDenied(absolutePath: string): boolean
-    routes: CompiledRoutes
-  },
-): ResolveModuleResult | null {
-  let candidateIdentityPath = normalizeFilePath(absolutePath)
+function resolveModulePath(absolutePath: string): ResolveModuleResult | null {
   let resolvedPath: string
 
   try {
-    resolvedPath = normalizeFilePath(fs.realpathSync(candidateIdentityPath))
+    resolvedPath = normalizeFilePath(fs.realpathSync(normalizeFilePath(absolutePath)))
   } catch (error) {
     if (isNoEntityError(error)) return null
     throw error
@@ -581,30 +563,9 @@ function resolveModulePath(
   }
 
   return {
-    identityPath: getModuleIdentityPath(candidateIdentityPath, resolvedPath, options),
+    identityPath: resolvedPath,
     resolvedPath,
   }
-}
-
-function getModuleIdentityPath(
-  candidateIdentityPath: string,
-  resolvedPath: string,
-  options: {
-    isAllowed(absolutePath: string): boolean
-    isDenied(absolutePath: string): boolean
-    routes: CompiledRoutes
-  },
-): string {
-  if (candidateIdentityPath === resolvedPath) return resolvedPath
-  if (!containsNodeModulesPathSegment(candidateIdentityPath)) return resolvedPath
-  if (!options.routes.toUrlPathname(candidateIdentityPath)) return resolvedPath
-  if (!options.isAllowed(candidateIdentityPath)) return resolvedPath
-  if (options.isDenied(resolvedPath)) return resolvedPath
-  return candidateIdentityPath
-}
-
-function containsNodeModulesPathSegment(filePath: string): boolean {
-  return filePath.split('/').includes('node_modules')
 }
 
 function resolveActualPath(identityPath: string): string | null {
@@ -614,6 +575,18 @@ function resolveActualPath(identityPath: string): string | null {
     if (isNoEntityError(error)) return null
     throw error
   }
+}
+
+function isBareImportSpecifier(specifier: string): boolean {
+  return (
+    !specifier.startsWith('./') &&
+    !specifier.startsWith('../') &&
+    !specifier.startsWith('/') &&
+    !specifier.startsWith('file:') &&
+    !specifier.startsWith('data:') &&
+    !specifier.startsWith('http://') &&
+    !specifier.startsWith('https://')
+  )
 }
 
 function isNoEntityError(

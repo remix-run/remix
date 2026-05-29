@@ -339,8 +339,7 @@ let headers = new SuperHeaders({ lastModified: ms })
 headers.date = ms
 ```
 
-- Added `AcceptLanguage.prototype.accepts(language)`, `AcceptLanguage.prototype.getWeight(language)`,
-  `AcceptLanguage.prototype.getPreferred(languages)`
+- Added `AcceptLanguage.prototype.accepts(language)`, `AcceptLanguage.prototype.getWeight(language)`, `AcceptLanguage.prototype.getPreferred(languages)`
 
 ```ts
 import { AcceptLanguage } from '@remix-run/headers'

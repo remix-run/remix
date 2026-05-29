@@ -4,8 +4,7 @@ The `Handle` object provides the component's interface to the framework.
 
 ## `handle.update()`
 
-Schedules a component update and returns a promise that resolves with an `AbortSignal` after
-the update completes.
+Schedules a component update and returns a promise that resolves with an `AbortSignal` after the update completes.
 
 ```tsx
 function Counter(handle: Handle) {

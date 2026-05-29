@@ -204,23 +204,7 @@ function applyCompression(
     return response
   }
 
-  // Detect SSE for automatic flush configuration
-  let contentTypeHeader = response.headers.get('Content-Type')
-  let mediaType = contentTypeHeader?.split(';')[0].trim()
-  let isSSE = mediaType === 'text/event-stream'
-
-  let compressor = createCompressor(encoding, {
-    ...options,
-    // Apply SSE flush defaults if not explicitly set
-    brotli: {
-      ...options.brotli,
-      ...(isSSE && options.brotli?.flush === undefined ? brotliFlushOptions : null),
-    },
-    zlib: {
-      ...options.zlib,
-      ...(isSSE && options.zlib?.flush === undefined ? zlibFlushOptions : null),
-    },
-  })
+  let compressor = createCompressor(encoding, createCompressionOptions(response.headers, options))
 
   setCompressionHeaders(responseHeaders, encoding)
 
@@ -229,6 +213,27 @@ function applyCompression(
     statusText: response.statusText,
     headers: responseHeaders,
   })
+}
+
+export function createCompressionOptions(
+  responseHeaders: Headers,
+  options: CompressResponseOptions,
+): CompressResponseOptions {
+  let contentTypeHeader = responseHeaders.get('Content-Type')
+  let mediaType = contentTypeHeader?.split(';')[0].trim()
+  let isSSE = mediaType === 'text/event-stream'
+
+  return {
+    ...options,
+    brotli: {
+      ...options.brotli,
+      ...(isSSE && options.brotli?.flush === undefined ? brotliFlushOptions : null),
+    },
+    zlib: {
+      ...options.zlib,
+      ...(isSSE && options.zlib?.flush === undefined ? zlibFlushOptions : null),
+    },
+  }
 }
 
 /**
