@@ -1,4 +1,4 @@
-import { isDeepEqual } from './deep-equal.ts'
+import { isDeepEqual, isPartialDeepEqual } from './deep-equal.ts'
 
 /**
  * Thrown when an assertion fails. Mirrors the shape of Node.js's built-in
@@ -235,6 +235,31 @@ export function deepEqual<T>(
       actual,
       expected,
       operator: 'deepStrictEqual',
+    })
+  }
+}
+
+/**
+ * Asserts that `actual` contains the partial deep structure in `expected`.
+ *
+ * @example
+ * assert.partialDeepEqual(result, { id: 1 })
+ *
+ * @param actual - The value produced by the code under test.
+ * @param expected - The partial structure that must be present in `actual`.
+ * @param message - Optional failure message.
+ */
+export function partialDeepEqual(
+  actual: unknown,
+  expected: unknown,
+  message?: AssertionMessage,
+): void {
+  if (!isPartialDeepEqual(actual, expected)) {
+    throwAssertion({
+      message: message ?? `Objects not partially deeply equal`,
+      actual,
+      expected,
+      operator: 'partialDeepStrictEqual',
     })
   }
 }

@@ -45,6 +45,7 @@ describe('default export', () => {
   it('exposes assertion methods as properties', () => {
     defaultAssert.equal(1, 1)
     defaultAssert.deepEqual({ a: 1 }, { a: 1 })
+    defaultAssert.partialDeepEqual({ a: 1, b: 2 }, { a: 1 })
     defaultAssert.match('hello world', /world/)
   })
 })
@@ -171,6 +172,86 @@ describe('assert.deepEqual', () => {
     expected.self = expected
 
     assert.deepEqual(actual, expected)
+  })
+})
+
+describe('assert.partialDeepEqual', () => {
+  it('passes when actual contains the expected object structure', () => {
+    let key = Symbol('key')
+
+    assert.partialDeepEqual({ a: { b: 1, c: 2 }, d: 3, [key]: 4 }, { a: { b: 1 }, [key]: 4 })
+  })
+
+  it('throws when expected properties are missing or different', () => {
+    nodeAssert.throws(
+      () => assert.partialDeepEqual({ a: { b: 1 } }, { a: { b: 2 } }),
+      assert.AssertionError,
+    )
+    nodeAssert.throws(() => assert.partialDeepEqual({}, { a: undefined }), assert.AssertionError)
+  })
+
+  it('matches array and typed array prefixes', () => {
+    assert.partialDeepEqual([1, 2, 3], [1, 2])
+    nodeAssert.throws(() => assert.partialDeepEqual([1], [1, 2]), assert.AssertionError)
+
+    assert.partialDeepEqual(new Uint8Array([1, 2, 3]), new Uint8Array([1, 2]))
+    nodeAssert.throws(
+      () => assert.partialDeepEqual(new Uint8Array([1, 3, 3]), new Uint8Array([1, 2])),
+      assert.AssertionError,
+    )
+
+    let actualBuffer = Object.assign(new Uint8Array([1, 2, 3]).buffer, { label: 'ok' })
+    let expectedBuffer = Object.assign(new Uint8Array([1, 2]).buffer, { label: 'ok' })
+    assert.partialDeepEqual(actualBuffer, expectedBuffer)
+  })
+
+  it('matches map and set subsets with partial keys and values', () => {
+    assert.partialDeepEqual(
+      new Map([
+        [
+          { a: 1, b: 2 },
+          { c: 3, d: 4 },
+        ],
+      ]),
+      new Map([[{ a: 1 }, { c: 3 }]]),
+    )
+    nodeAssert.throws(
+      () => assert.partialDeepEqual(new Map([[{ a: 1 }, 'value']]), new Map([[{ b: 1 }, 'value']])),
+      assert.AssertionError,
+    )
+
+    assert.partialDeepEqual(new Set([{ a: 1, b: 2 }]), new Set([{ a: 1 }]))
+    nodeAssert.throws(
+      () => assert.partialDeepEqual(new Set([{ a: 1 }]), new Set([{ a: 2 }])),
+      assert.AssertionError,
+    )
+  })
+
+  it('matches Error cause and AggregateError errors partially', () => {
+    assert.partialDeepEqual(
+      new Error('boom', { cause: { code: 'ERR_TEST', detail: 'extra' } }),
+      new Error('boom', { cause: { code: 'ERR_TEST' } }),
+    )
+    nodeAssert.throws(
+      () => assert.partialDeepEqual(new Error('boom'), new Error('boom', { cause: 'missing' })),
+      assert.AssertionError,
+    )
+
+    assert.partialDeepEqual(new AggregateError([1, 2], 'boom'), new AggregateError([1], 'boom'))
+  })
+
+  it('does not require matching object prototypes', () => {
+    class Result {
+      id = 1
+      name = 'Alice'
+    }
+
+    assert.partialDeepEqual(new Result(), { id: 1 })
+  })
+
+  it('throws a custom Error message directly', () => {
+    let error = new Error('custom partial failure')
+    nodeAssert.throws(() => assert.partialDeepEqual({ a: 1 }, { a: 2 }, error), error)
   })
 })
 
@@ -490,6 +571,21 @@ describe('node:assert/strict compatibility', () => {
     assertCompatibleError(
       capture(() => assert.notDeepEqual({ x: 1 } as any, { x: '1' })),
       capture(() => nodeAssert.notDeepStrictEqual({ x: 1 }, { x: '1' } as any)),
+    )
+  })
+
+  it('partialDeepEqual (partialDeepStrictEqual) — pass and fail cases', () => {
+    assertCompatibleError(
+      capture(() => assert.partialDeepEqual({ x: 1, y: 2 }, { x: 1 })),
+      capture(() => nodeAssert.partialDeepStrictEqual({ x: 1, y: 2 }, { x: 1 })),
+    )
+    assertCompatibleError(
+      capture(() => assert.partialDeepEqual({ x: 1 }, { x: 1, y: 2 })),
+      capture(() => nodeAssert.partialDeepStrictEqual({ x: 1 }, { x: 1, y: 2 })),
+    )
+    assertCompatibleError(
+      capture(() => assert.partialDeepEqual([1, 2, 3], [1, 2])),
+      capture(() => nodeAssert.partialDeepStrictEqual([1, 2, 3], [1, 2])),
     )
   })
 

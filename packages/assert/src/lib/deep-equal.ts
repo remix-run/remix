@@ -1,5 +1,6 @@
 type Key = string | symbol
 type Memo = WeakMap<object, WeakSet<object>>
+type CompareMode = 'full' | 'partial'
 
 function isObject(value: unknown): value is object {
   return (typeof value === 'object' && value !== null) || typeof value === 'function'
@@ -37,13 +38,18 @@ function rememberComparison(memo: Memo, actual: object, expected: object): void 
   expectedSet.add(expected)
 }
 
-function compareArrayBuffer(actual: ArrayBufferLike, expected: ArrayBufferLike): boolean {
-  if (actual.byteLength !== expected.byteLength) return false
+function compareArrayBuffer(
+  actual: ArrayBufferLike,
+  expected: ArrayBufferLike,
+  mode: CompareMode,
+): boolean {
+  if (mode === 'full' && actual.byteLength !== expected.byteLength) return false
+  if (mode === 'partial' && actual.byteLength < expected.byteLength) return false
 
   let actualBytes = new Uint8Array(actual)
   let expectedBytes = new Uint8Array(expected)
 
-  for (let index = 0; index < actualBytes.length; index++) {
+  for (let index = 0; index < expectedBytes.length; index++) {
     if (actualBytes[index] !== expectedBytes[index]) return false
   }
 
@@ -54,14 +60,19 @@ function getViewBytes(value: ArrayBufferView): Uint8Array {
   return new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
 }
 
-function compareArrayBufferView(actual: ArrayBufferView, expected: ArrayBufferView): boolean {
+function compareArrayBufferView(
+  actual: ArrayBufferView,
+  expected: ArrayBufferView,
+  mode: CompareMode,
+): boolean {
   if (actual.constructor !== expected.constructor) return false
-  if (actual.byteLength !== expected.byteLength) return false
+  if (mode === 'full' && actual.byteLength !== expected.byteLength) return false
+  if (mode === 'partial' && actual.byteLength < expected.byteLength) return false
 
   let actualBytes = getViewBytes(actual)
   let expectedBytes = getViewBytes(expected)
 
-  for (let index = 0; index < actualBytes.length; index++) {
+  for (let index = 0; index < expectedBytes.length; index++) {
     if (actualBytes[index] !== expectedBytes[index]) return false
   }
 
@@ -72,17 +83,24 @@ function compareOwnEnumerable(
   actual: object,
   expected: object,
   memo: Memo,
+  mode: CompareMode,
   skip: ReadonlySet<Key> = new Set(),
 ): boolean {
   let actualKeys = getEnumerableKeys(actual, skip)
   let expectedKeys = getEnumerableKeys(expected, skip)
 
-  if (actualKeys.length !== expectedKeys.length) return false
+  if (mode === 'full' && actualKeys.length !== expectedKeys.length) return false
+  if (mode === 'partial' && actualKeys.length < expectedKeys.length) return false
 
-  for (let key of actualKeys) {
-    if (!hasOwn(expected, key)) return false
+  for (let key of expectedKeys) {
+    if (!hasOwn(actual, key)) return false
     if (
-      !compare((actual as Record<Key, unknown>)[key], (expected as Record<Key, unknown>)[key], memo)
+      !compare(
+        (actual as Record<Key, unknown>)[key],
+        (expected as Record<Key, unknown>)[key],
+        memo,
+        mode,
+      )
     ) {
       return false
     }
@@ -95,15 +113,18 @@ function compareMap(
   actual: Map<unknown, unknown>,
   expected: Map<unknown, unknown>,
   memo: Memo,
+  mode: CompareMode,
 ): boolean {
-  if (actual.size !== expected.size) return false
+  if (mode === 'full' && actual.size !== expected.size) return false
+  if (mode === 'partial' && actual.size < expected.size) return false
 
-  let unmatched = Array.from(expected.entries())
+  let unmatched = Array.from(actual.entries())
 
-  for (let [actualKey, actualValue] of actual) {
+  for (let [expectedKey, expectedValue] of expected) {
     let matchIndex = unmatched.findIndex(
-      ([expectedKey, expectedValue]) =>
-        compare(actualKey, expectedKey, memo) && compare(actualValue, expectedValue, memo),
+      ([actualKey, actualValue]) =>
+        compare(actualKey, expectedKey, memo, mode) &&
+        compare(actualValue, expectedValue, memo, mode),
     )
 
     if (matchIndex === -1) return false
@@ -113,14 +134,20 @@ function compareMap(
   return true
 }
 
-function compareSet(actual: Set<unknown>, expected: Set<unknown>, memo: Memo): boolean {
-  if (actual.size !== expected.size) return false
+function compareSet(
+  actual: Set<unknown>,
+  expected: Set<unknown>,
+  memo: Memo,
+  mode: CompareMode,
+): boolean {
+  if (mode === 'full' && actual.size !== expected.size) return false
+  if (mode === 'partial' && actual.size < expected.size) return false
 
-  let unmatched = Array.from(expected.values())
+  let unmatched = Array.from(actual.values())
 
-  for (let actualValue of actual) {
-    let matchIndex = unmatched.findIndex((expectedValue) =>
-      compare(actualValue, expectedValue, memo),
+  for (let expectedValue of expected) {
+    let matchIndex = unmatched.findIndex((actualValue) =>
+      compare(actualValue, expectedValue, memo, mode),
     )
 
     if (matchIndex === -1) return false
@@ -141,19 +168,21 @@ function compareBoxedPrimitive(actual: object, expected: object): boolean {
   }
 }
 
-function compareError(actual: Error, expected: Error, memo: Memo): boolean {
+function compareError(actual: Error, expected: Error, memo: Memo, mode: CompareMode): boolean {
   if (actual.name !== expected.name) return false
   if (actual.message !== expected.message) return false
 
   let actualHasCause = hasOwn(actual, 'cause')
   let expectedHasCause = hasOwn(expected, 'cause')
-  if (actualHasCause !== expectedHasCause) return false
+  if (mode === 'full' && actualHasCause !== expectedHasCause) return false
+  if (expectedHasCause && !actualHasCause) return false
   if (
-    actualHasCause &&
+    expectedHasCause &&
     !compare(
       (actual as Error & { cause?: unknown }).cause,
       (expected as Error & { cause?: unknown }).cause,
       memo,
+      mode,
     )
   ) {
     return false
@@ -161,13 +190,15 @@ function compareError(actual: Error, expected: Error, memo: Memo): boolean {
 
   let actualHasErrors = hasOwn(actual, 'errors')
   let expectedHasErrors = hasOwn(expected, 'errors')
-  if (actualHasErrors !== expectedHasErrors) return false
+  if (mode === 'full' && actualHasErrors !== expectedHasErrors) return false
+  if (expectedHasErrors && !actualHasErrors) return false
   if (
-    actualHasErrors &&
+    expectedHasErrors &&
     !compare(
       (actual as Error & { errors?: unknown }).errors,
       (expected as Error & { errors?: unknown }).errors,
       memo,
+      mode,
     )
   ) {
     return false
@@ -177,11 +208,12 @@ function compareError(actual: Error, expected: Error, memo: Memo): boolean {
     actual,
     expected,
     memo,
+    mode,
     new Set(['cause', 'errors', 'message', 'name', 'stack']),
   )
 }
 
-function compare(actual: unknown, expected: unknown, memo: Memo): boolean {
+function compare(actual: unknown, expected: unknown, memo: Memo, mode: CompareMode): boolean {
   if (Object.is(actual, expected)) return true
   if (!isObject(actual) || !isObject(expected)) return false
   if (typeof actual !== typeof expected) return false
@@ -189,7 +221,7 @@ function compare(actual: unknown, expected: unknown, memo: Memo): boolean {
 
   if (hasCompared(memo, actual, expected)) return true
 
-  if (Object.getPrototypeOf(actual) !== Object.getPrototypeOf(expected)) {
+  if (mode === 'full' && Object.getPrototypeOf(actual) !== Object.getPrototypeOf(expected)) {
     return false
   }
 
@@ -200,14 +232,15 @@ function compare(actual: unknown, expected: unknown, memo: Memo): boolean {
 
   if (Array.isArray(actual) || Array.isArray(expected)) {
     if (!Array.isArray(actual) || !Array.isArray(expected)) return false
-    if (actual.length !== expected.length) return false
-    return compareOwnEnumerable(actual, expected, memo)
+    if (mode === 'full' && actual.length !== expected.length) return false
+    if (mode === 'partial' && actual.length < expected.length) return false
+    return compareOwnEnumerable(actual, expected, memo, mode)
   }
 
   if (actual instanceof Date && expected instanceof Date) {
     return (
       Object.is(actual.getTime(), expected.getTime()) &&
-      compareOwnEnumerable(actual, expected, memo)
+      compareOwnEnumerable(actual, expected, memo, mode)
     )
   }
 
@@ -216,29 +249,39 @@ function compare(actual: unknown, expected: unknown, memo: Memo): boolean {
       actual.source === expected.source &&
       actual.flags === expected.flags &&
       actual.lastIndex === expected.lastIndex &&
-      compareOwnEnumerable(actual, expected, memo)
+      compareOwnEnumerable(actual, expected, memo, mode)
     )
   }
 
   if (actual instanceof Error && expected instanceof Error) {
-    return compareError(actual, expected, memo)
+    return compareError(actual, expected, memo, mode)
   }
 
   if (actual instanceof Map && expected instanceof Map) {
-    return compareMap(actual, expected, memo) && compareOwnEnumerable(actual, expected, memo)
+    return (
+      compareMap(actual, expected, memo, mode) && compareOwnEnumerable(actual, expected, memo, mode)
+    )
   }
 
   if (actual instanceof Set && expected instanceof Set) {
-    return compareSet(actual, expected, memo) && compareOwnEnumerable(actual, expected, memo)
+    return (
+      compareSet(actual, expected, memo, mode) && compareOwnEnumerable(actual, expected, memo, mode)
+    )
   }
 
   if (actualTag === '[object ArrayBuffer]' || actualTag === '[object SharedArrayBuffer]') {
-    return compareArrayBuffer(actual as ArrayBufferLike, expected as ArrayBufferLike)
+    return (
+      compareArrayBuffer(actual as ArrayBufferLike, expected as ArrayBufferLike, mode) &&
+      compareOwnEnumerable(actual, expected, memo, mode)
+    )
   }
 
   if (ArrayBuffer.isView(actual) || ArrayBuffer.isView(expected)) {
     if (!ArrayBuffer.isView(actual) || !ArrayBuffer.isView(expected)) return false
-    return compareArrayBufferView(actual, expected) && compareOwnEnumerable(actual, expected, memo)
+    return (
+      compareArrayBufferView(actual, expected, mode) &&
+      compareOwnEnumerable(actual, expected, memo, mode)
+    )
   }
 
   if (
@@ -248,7 +291,9 @@ function compare(actual: unknown, expected: unknown, memo: Memo): boolean {
     actualTag === '[object BigInt]' ||
     actualTag === '[object Symbol]'
   ) {
-    return compareBoxedPrimitive(actual, expected) && compareOwnEnumerable(actual, expected, memo)
+    return (
+      compareBoxedPrimitive(actual, expected) && compareOwnEnumerable(actual, expected, memo, mode)
+    )
   }
 
   if (
@@ -260,16 +305,20 @@ function compare(actual: unknown, expected: unknown, memo: Memo): boolean {
   }
 
   if (actual instanceof URL && expected instanceof URL) {
-    return String(actual) === String(expected) && compareOwnEnumerable(actual, expected, memo)
+    return String(actual) === String(expected) && compareOwnEnumerable(actual, expected, memo, mode)
   }
 
   if (actual instanceof URLSearchParams && expected instanceof URLSearchParams) {
-    return String(actual) === String(expected) && compareOwnEnumerable(actual, expected, memo)
+    return String(actual) === String(expected) && compareOwnEnumerable(actual, expected, memo, mode)
   }
 
-  return compareOwnEnumerable(actual, expected, memo)
+  return compareOwnEnumerable(actual, expected, memo, mode)
 }
 
 export function isDeepEqual(actual: unknown, expected: unknown): boolean {
-  return compare(actual, expected, new WeakMap())
+  return compare(actual, expected, new WeakMap(), 'full')
+}
+
+export function isPartialDeepEqual(actual: unknown, expected: unknown): boolean {
+  return compare(actual, expected, new WeakMap(), 'partial')
 }

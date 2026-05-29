@@ -11,6 +11,7 @@ import {
   notDeepEqual,
   notEqual,
   ok,
+  partialDeepEqual,
   rejects,
   throws,
 } from './lib/assert.ts'
@@ -26,6 +27,7 @@ interface Assert {
   equal: typeof equal
   notEqual: typeof notEqual
   deepEqual: typeof deepEqual
+  partialDeepEqual: typeof partialDeepEqual
   notDeepEqual: typeof notDeepEqual
   fail: typeof fail
   match: typeof match
@@ -43,6 +45,7 @@ const assert: Assert = Object.assign(assertFn, {
   equal,
   notEqual,
   deepEqual,
+  partialDeepEqual,
   notDeepEqual,
   fail,
   match,

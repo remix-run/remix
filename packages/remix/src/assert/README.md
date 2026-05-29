@@ -9,7 +9,7 @@ Uses strict equality (`Object.is`) for all comparisons — no type coercion.
 - `AssertionError` — compatible with `node:assert.AssertionError` (`actual`, `expected`, `operator`, `name`)
 - `assert.ok` — truthy check
 - `assert.equal` / `assert.notEqual` — strict equality (`Object.is` / `!Object.is`)
-- `assert.deepEqual` / `assert.notDeepEqual` — recursive strict deep equality
+- `assert.deepEqual` / `assert.partialDeepEqual` / `assert.notDeepEqual` — recursive strict deep equality
 - `assert.match` — string matches a regexp
 - `assert.fail` — unconditional failure
 - `assert.throws` — synchronous throw assertion with optional error validation
@@ -37,6 +37,7 @@ assert.equal(NaN, NaN)
 assert.notEqual('a', 'b')
 assert.deepEqual({ a: 1 }, { a: 1 })
 assert.deepEqual({ a: 1 }, { a: '1' }) // throws — different types
+assert.partialDeepEqual({ a: 1, b: 2 }, { a: 1 })
 assert.match('hello world', /world/)
 assert.fail('should not reach here')
 
@@ -66,6 +67,7 @@ import {
   equal,
   notEqual,
   deepEqual,
+  partialDeepEqual,
   notDeepEqual,
   match,
   doesNotMatch,
