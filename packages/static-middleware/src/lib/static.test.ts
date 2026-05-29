@@ -395,6 +395,96 @@ describe('staticFiles middleware', () => {
     }
   })
 
+  it('serves symlinked files inside the root using the requested path metadata', async () => {
+    let publicDir = path.join(tmpDir, 'public')
+    fs.mkdirSync(publicDir)
+    fs.writeFileSync(path.join(publicDir, 'asset.txt'), 'console.log("safe")')
+    fs.symlinkSync(path.join(publicDir, 'asset.txt'), path.join(publicDir, 'asset.js'))
+    let files: Array<{ name: string; type: string }> = []
+
+    let router = createRouter()
+    router.get('/*', {
+      middleware: [
+        staticFiles(publicDir, {
+          acceptRanges(file) {
+            files.push({ name: file.name, type: file.type })
+            return false
+          },
+        }),
+      ],
+      handler() {
+        return new Response('Fallback Handler', { status: 404 })
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/asset.js')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'console.log("safe")')
+    assert.equal(response.headers.get('Content-Type'), 'text/javascript; charset=utf-8')
+    assert.deepEqual(files, [{ name: 'asset.js', type: 'text/javascript' }])
+  })
+
+  it('does not serve symlinked files outside the root', async () => {
+    let publicDir = path.join(tmpDir, 'public')
+    fs.mkdirSync(publicDir)
+    createTestFile('secret.txt', 'Secret content')
+    fs.symlinkSync(path.join(tmpDir, 'secret.txt'), path.join(publicDir, 'leak.txt'))
+
+    let router = createRouter()
+    router.get('/*', {
+      middleware: [staticFiles(publicDir)],
+      handler() {
+        return new Response('Fallback Handler', { status: 404 })
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/leak.txt')
+
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Fallback Handler')
+  })
+
+  it('does not serve files from symlinked directories outside the root', async () => {
+    let publicDir = path.join(tmpDir, 'public')
+    fs.mkdirSync(publicDir)
+    createTestFile('private/secret.txt', 'Secret content')
+    fs.symlinkSync(path.join(tmpDir, 'private'), path.join(publicDir, 'private'), 'dir')
+
+    let router = createRouter()
+    router.get('/*', {
+      middleware: [staticFiles(publicDir)],
+      handler() {
+        return new Response('Fallback Handler', { status: 404 })
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/private/secret.txt')
+
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Fallback Handler')
+  })
+
+  it('does not serve index files from symlinked directories outside the root', async () => {
+    let publicDir = path.join(tmpDir, 'public')
+    fs.mkdirSync(publicDir)
+    createTestFile('private/index.html', 'Secret index')
+    fs.symlinkSync(path.join(tmpDir, 'private'), path.join(publicDir, 'private'), 'dir')
+
+    let router = createRouter()
+    router.get('/*', {
+      middleware: [staticFiles(publicDir)],
+      handler() {
+        return new Response('Fallback Handler', { status: 404 })
+      },
+    })
+
+    let response = await router.fetch('https://remix.run/private')
+
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Fallback Handler')
+  })
+
   describe('filter option', () => {
     it('filters files based on custom filter function', async () => {
       createTestFile('index.html', '<h1>Home</h1>')
