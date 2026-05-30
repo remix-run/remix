@@ -7,6 +7,9 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   check:
     name: Check release readiness
@@ -51,10 +54,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          package-manager-cache: false
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
