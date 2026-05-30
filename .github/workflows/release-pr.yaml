@@ -7,7 +7,6 @@ on:
 
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
-
 jobs:
   update:
     runs-on: ubuntu-latest

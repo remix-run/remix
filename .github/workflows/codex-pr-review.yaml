@@ -15,7 +15,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request.number }}
   cancel-in-progress: true
 
-
 jobs:
   wait_for_green_checks:
     name: Wait for required PR checks

@@ -13,7 +13,6 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-
 jobs:
   test-ubuntu:
     name: test (ubuntu-latest)
