@@ -1205,25 +1205,29 @@ describe('asset-server', () => {
       },
     })
 
-    let href = await assetServer.getHref('app/content/value.txt', {
-      transform: ['upper'],
-    })
+    try {
+      let href = await assetServer.getHref('app/content/value.txt', {
+        transform: ['upper'],
+      })
 
-    let firstResponse = await get(assetServer, href)
-    assert.ok(firstResponse)
-    assert.equal(await firstResponse.text(), 'HELLO\n')
-    assert.equal(transformCalls, 1)
+      let firstResponse = await get(assetServer, href)
+      assert.ok(firstResponse)
+      assert.equal(await firstResponse.text(), 'HELLO\n')
+      assert.equal(transformCalls, 1)
 
-    let filePath = path.join(dir, 'app/content/value.txt')
-    await fs.unlink(filePath)
-    await emitWatchEvent(assetServer, filePath, 'unlink')
-    await write(dir, 'app/content/value.txt', 'world\n')
-    await emitWatchEvent(assetServer, filePath, 'add')
+      let filePath = path.join(dir, 'app/content/value.txt')
+      await fs.unlink(filePath)
+      await emitWatchEvent(assetServer, filePath, 'unlink')
+      await write(dir, 'app/content/value.txt', 'world\n')
+      await emitWatchEvent(assetServer, filePath, 'add')
 
-    let secondResponse = await get(assetServer, href)
-    assert.ok(secondResponse)
-    assert.equal(await secondResponse.text(), 'WORLD\n')
-    assert.equal(transformCalls, 2)
+      let secondResponse = await get(assetServer, href)
+      assert.ok(secondResponse)
+      assert.equal(await secondResponse.text(), 'WORLD\n')
+      assert.equal(transformCalls, 2)
+    } finally {
+      await assetServer.close()
+    }
   })
 
   it('accepts one-item tuples for no-arg transforms and serializes them as strings', async () => {

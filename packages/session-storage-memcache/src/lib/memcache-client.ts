@@ -4,6 +4,7 @@ const CRLF = '\r\n'
 const CRLF_BUFFER = Buffer.from(CRLF)
 const END_RESPONSE = Buffer.from(`END${CRLF}`)
 const DEFAULT_PORT = 11211
+const MAX_RELATIVE_EXPIRATION_SECONDS = 60 * 60 * 24 * 30
 const SOCKET_TIMEOUT_MS = 5_000
 
 type MemcacheAddress = {
@@ -83,8 +84,9 @@ async function setMemcacheValue(
   ttlSeconds: number,
 ): Promise<void> {
   let valueBuffer = Buffer.from(value, 'utf8')
+  let expires = getMemcacheExpiration(ttlSeconds)
   let commandBuffer = Buffer.from(
-    `set ${key} 0 ${ttlSeconds} ${valueBuffer.byteLength}${CRLF}`,
+    `set ${key} 0 ${expires} ${valueBuffer.byteLength}${CRLF}`,
     'utf8',
   )
   let payload = Buffer.concat([commandBuffer, valueBuffer, CRLF_BUFFER])
@@ -259,6 +261,14 @@ function parseSingleLineResponse(response: Buffer, command: string): string {
   }
 
   return response.subarray(0, lineEnd).toString('utf8')
+}
+
+function getMemcacheExpiration(ttlSeconds: number): number {
+  if (ttlSeconds <= MAX_RELATIVE_EXPIRATION_SECONDS) {
+    return ttlSeconds
+  }
+
+  return Math.floor(Date.now() / 1000) + ttlSeconds
 }
 
 function isGetResponseComplete(response: Buffer): boolean {

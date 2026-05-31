@@ -1,20 +1,20 @@
 catalog:
   '@types/node': ^24.6.0
   '@typescript/native-preview': 7.0.0-dev.20251125.1
-  playwright: ^1.59.0
+  playwright: ^1.60.0
   typescript: ^5.9.3
   typescript-language-server: ^5.1.3
 
 packages:
   - demos/*
   - docs
+  - docs/src/prerender/bench
   - packages/*
   - packages/*/demo
   - packages/assets/bench
   - packages/cli/test/fixtures/*
   - packages/fetch-router/demos/*
   - packages/form-data-parser/demos/*
-  - packages/ui/demos
   - packages/ui/bench
   - packages/ui/bench/frameworks/*
   - packages/lazy-file/scripts

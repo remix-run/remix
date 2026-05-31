@@ -101,7 +101,7 @@ function resolveChokidarWatchOptions(
     depth: 0,
     ignored: ['**/.git/**', ...(options.ignore ?? [])],
     interval: options.pollInterval ?? 100,
-    usePolling: options.poll ?? false,
+    usePolling: options.poll ?? process.platform === 'win32',
   }
 }
 

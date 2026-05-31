@@ -438,7 +438,7 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
 
     if (typeof type === 'function') {
       if (type === Frame) {
-        return buildFrameSegment(props, context, frameState)
+        return buildFrameSegment(node, context, frameState)
       }
       if (isEntry(type)) {
         return buildEntrySegment(type, props, context, frameState)
@@ -456,7 +456,12 @@ function buildSegment(node: RemixNode, context: RenderContext, frameState: SsrFr
   return staticSeg('')
 }
 
-function buildFrameSegment(props: any, context: RenderContext, frameState: SsrFrameState): Segment {
+function buildFrameSegment(
+  node: RemixElement,
+  context: RenderContext,
+  frameState: SsrFrameState,
+): Segment {
+  let props = node.props
   let frameId = randomId('f')
 
   // Store frame data in context for aggregation

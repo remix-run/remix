@@ -2,6 +2,12 @@
 
 This is the changelog for [`data-table-sqlite`](https://github.com/remix-run/remix/tree/main/packages/data-table-sqlite). It follows [semantic versioning](https://semver.org/).
 
+## v0.5.1
+
+### Patch Changes
+
+- Reject stale or unknown transaction tokens before executing SQLite data operations.
+
 ## v0.5.0
 
 ### Minor Changes

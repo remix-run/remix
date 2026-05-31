@@ -153,8 +153,10 @@ function generatePathnameVariants(
       }
 
       if (token.type === 'text') {
-        key += token.text
-        reSource += escape(token.text)
+        // Encode to comply with URL pathname normalization in trie matcher
+        let text = encodeURIComponent(token.text)
+        key += text
+        reSource += escape(text)
         continue
       }
 

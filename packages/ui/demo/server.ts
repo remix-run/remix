@@ -17,7 +17,7 @@ const server = http.createServer(
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
 server.listen(port, () => {
-  console.log(`RMX_01 theme demo is running on http://localhost:${port}`)
+  console.log(`Remix UI demos are running on http://localhost:${port}`)
 })
 
 let shuttingDown = false

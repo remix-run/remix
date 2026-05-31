@@ -99,7 +99,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
   let rerunTimer: NodeJS.Timeout | undefined
   let browserServer: http.Server | undefined
   let browserServerFilesKey: string | undefined
-  let browserPort: number | undefined
+  let browserBaseUrl: string | undefined
   let resolveRun: ((exitCode: number) => void) | undefined
 
   let runPromise = new Promise<number>((resolve) => {
@@ -127,7 +127,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
     )
     browserServer = undefined
     browserServerFilesKey = undefined
-    browserPort = undefined
+    browserBaseUrl = undefined
   }
 
   let queueRerun = (reason: string) => {
@@ -189,7 +189,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
         let result = await startServer(browserFiles)
         browserServer = result.server
         browserServerFilesKey = browserFilesKey
-        browserPort = result.port
+        browserBaseUrl = result.baseUrl
       }
 
       let reporter = createReporter(config.reporter)
@@ -260,21 +260,28 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
             }
           }
 
-          let [browserResult, e2eResult] = await Promise.all([
-            runBrowserTests != null
-              ? runBrowserTests({
-                  baseUrl: `http://localhost:${browserPort}`,
-                  console: config.browser?.echo,
-                  coverage: !!config.coverage,
-                  open: config.browser?.open,
-                  playwrightUseOpts: project.playwrightUseOpts,
-                  projectName: project.name,
-                  reporter,
-                  testFiles: browserFiles,
-                })
-              : null,
+          let browserResult: Awaited<ReturnType<RunBrowserTests>> | null = null
+          if (runBrowserTests != null) {
+            let activeBrowserBaseUrl = browserBaseUrl
+            if (activeBrowserBaseUrl == null) {
+              throw new Error('Browser test server was not started')
+            }
+
+            browserResult = await runBrowserTests({
+              baseUrl: activeBrowserBaseUrl,
+              console: config.browser?.echo,
+              coverage: !!config.coverage,
+              open: config.browser?.open,
+              playwrightUseOpts: project.playwrightUseOpts,
+              projectName: project.name,
+              reporter,
+              testFiles: browserFiles,
+            })
+          }
+
+          let e2eResult =
             e2eFiles.length > 0
-              ? runServerTests(e2eFiles, reporter, config.concurrency, 'e2e', {
+              ? await runServerTests(e2eFiles, reporter, config.concurrency, 'e2e', {
                   open: config.browser?.open,
                   playwrightUseOpts: project.playwrightUseOpts,
                   projectName: project.name,
@@ -282,8 +289,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
                   cwd,
                   pool: config.pool,
                 })
-              : null,
-          ])
+              : null
 
           counts.passed += (browserResult?.results.passed ?? 0) + (e2eResult?.passed ?? 0)
           counts.failed += (browserResult?.results.failed ?? 0) + (e2eResult?.failed ?? 0)

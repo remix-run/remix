@@ -2,52 +2,65 @@ import { init as initEsModuleLexer, parse as parseEsModule } from 'es-module-lex
 import MagicString from 'magic-string'
 import * as fsp from 'node:fs/promises'
 import * as http from 'node:http'
-import { createRequire } from 'node:module'
+import type { AddressInfo } from 'node:net'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { ResolverFactory } from 'oxc-resolver'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
 import { getBrowserTestRootDir, IS_RUNNING_FROM_SRC } from '../lib/config.ts'
 import { transformTypeScript } from '../lib/ts-transform.ts'
 
 const log = (str: string) => console.log(`[remix:test] ${str}`)
 const logError = (str: string, e: unknown) => console.error(`[remix:test] Error: ${str}\n`, e)
+const browserResolver = new ResolverFactory({
+  aliasFields: [['browser']],
+  conditionNames: ['browser', 'import', 'module', 'default'],
+  extensions: ['.ts', '.tsx', '.mts', '.cts', '.js', '.jsx', '.mjs', '.cjs', '.json'],
+  mainFields: ['browser', 'module', 'main'],
+  tsconfig: 'auto',
+})
 
 export async function startServer(
   browserFiles: string[],
-): Promise<{ server: http.Server; port: number }> {
+): Promise<{ server: http.Server; port: number; baseUrl: string }> {
   let handle = createRequestHandler(browserFiles)
-  let port = 44101
 
-  let lastError: unknown
-  for (let i = 0; i < 5; i++) {
-    try {
-      let server = http.createServer((req, res) => {
-        handle(req, res).catch((error) => {
-          logError(`Unhandled error for ${req.url}`, error)
-          if (!res.headersSent) {
-            res.writeHead(500, { 'Content-Type': 'text/plain' })
-          }
-          if (!res.writableEnded) res.end()
-        })
+  let server = http.createServer((req, res) => {
+    handle(req, res).catch((error) => {
+      logError(`Unhandled error for ${req.url}`, error)
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'text/plain' })
+      }
+      if (!res.writableEnded) res.end()
+    })
+  })
+
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, () => {
+      server.removeListener('error', reject)
+      resolve()
+    })
+  })
+
+  let address = server.address()
+  if (!isAddressInfo(address)) {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) reject(error)
+        else resolve()
       })
-      await new Promise<void>((resolve, reject) => {
-        server.once('error', reject)
-        server.listen(port, () => {
-          server.removeListener('error', reject)
-          log(`Test server running on http://localhost:${port}`)
-          resolve()
-        })
-      })
-      return { server, port }
-    } catch (error: any) {
-      if (error.code !== 'EADDRINUSE') throw error
-      lastError = error
-      log(`Port ${port} is in use, trying another port...`)
-      port += 1
-    }
+    })
+    throw new Error('Test server did not bind to a TCP port')
   }
 
-  throw lastError
+  let baseUrl = `http://localhost:${address.port}`
+  log(`Test server running on ${baseUrl}`)
+  return { server, port: address.port, baseUrl }
+}
+
+function isAddressInfo(address: ReturnType<http.Server['address']>): address is AddressInfo {
+  return address != null && typeof address === 'object'
 }
 
 function createRequestHandler(
@@ -280,19 +293,10 @@ function resolveSpecifier(spec: string, importerFile: string, rootDir: string): 
   if (spec.startsWith('.') || spec.startsWith('/')) {
     resolvedPath = path.resolve(path.dirname(importerFile), spec)
   } else {
-    // Bare specifiers must be resolved from the importer's filesystem
-    // location, not this module's. `import.meta.resolve(spec, parent)` looks
-    // like the right tool but its `parent` argument is gated behind
-    // `--experimental-import-meta-resolve` through at least Node 24 —
-    // without the flag, the parent argument is silently ignored and
-    // resolution happens from `import.meta.url` of the calling module. That
-    // made bare specifiers only resolvable when they were direct deps of
-    // `@remix-run/test` itself (so `remix/assert` failed even when the
-    // importing package depended on `remix`). `createRequire` walks
-    // node_modules from the importer's actual location and has been stable
-    // since Node 12 with no flags.
     try {
-      resolvedPath = createRequire(importerFile).resolve(spec)
+      let resolutionResult = browserResolver.resolveFileSync(importerFile, spec)
+      if (!resolutionResult.path) return null
+      resolvedPath = resolutionResult.path
     } catch {
       return null
     }

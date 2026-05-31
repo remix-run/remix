@@ -4,6 +4,7 @@ import { Menu, MenuItem, onMenuSelect } from '@remix-run/ui/menu'
 /**
  * @name Menu Event Bubbling
  * @description Item-level handlers fire before the root handler, letting individual items intercept events while others bubble up.
+ * @layout center
  */
 export default function Example() {
   return () => (

@@ -75,10 +75,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -88,7 +85,7 @@ jobs:
 
   build_windows:
     name: build (windows-latest)
-    runs-on: windows-latest
+    runs-on: windows-2025
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -97,10 +94,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -119,10 +113,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -159,10 +150,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
@@ -175,7 +163,7 @@ jobs:
 
   test_windows:
     name: test (windows-latest)
-    runs-on: windows-latest
+    runs-on: windows-2025
     steps:
       - name: Checkout
         uses: actions/checkout@v6
@@ -184,10 +172,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -223,10 +208,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -248,10 +230,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -292,10 +271,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -331,10 +307,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -360,10 +333,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -414,10 +384,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -456,10 +423,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -485,10 +449,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -513,10 +474,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -550,10 +508,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
