@@ -504,6 +504,8 @@ type Routes = typeof routes
 
 Middleware functions run code before and/or after actions. They are a powerful way to add functionality to your app.
 
+Every middleware must either return a `Response`, return the response from `next()`, or call `await next()` before it returns. Middleware that returns without calling `next()` throws at runtime.
+
 A basic logging middleware might look like this:
 
 ```ts
@@ -567,8 +569,9 @@ function loadDatabase(): Middleware<{
   value: Database
   property: 'db'
 }> {
-  return async (context) => {
+  return async (context, next) => {
     context.set(Database, await connectDatabase(), { property: 'db' })
+    return next()
   }
 }
 
@@ -586,7 +589,7 @@ Global middleware is added to the router when it is created using the `createRou
 
 Controller middleware runs for every direct action in a controller. Action middleware runs only for one action, whether that action is registered in a controller or directly with `router.map()` or one of the method-specific helpers like `router.get()`, `router.post()`, `router.put()`, `router.delete()`, etc. The object form for actions is `{ handler, middleware? }`, so you can omit `middleware` entirely when you do not need it.
 
-A controller's `middleware` applies only to the direct route actions in that controller, and its `actions` object may not include nested route-map keys. Map nested route maps explicitly so each controller owns the direct route actions for one route map.
+A controller's `middleware` applies only to the direct route actions in that controller, and its `actions` object may not include nested route-map keys. This is the router's scoped middleware model: map nested route maps explicitly so each controller owns the direct route actions for one route map, and share middleware arrays between controllers that need the same boundary.
 
 ```tsx
 let routes = route({
@@ -602,11 +605,13 @@ let router = createRouter({
   middleware: [staticFiles('./public')],
 })
 
+let adminMiddleware = [auth({ token: 'secret' })]
+
 router.map(routes.home, () => new Response('Home'))
 
 router.map(routes.admin, {
   // This middleware applies to all actions in this controller.
-  middleware: [auth({ token: 'secret' })],
+  middleware: adminMiddleware,
   actions: {
     dashboard() {
       return new Response('Dashboard')

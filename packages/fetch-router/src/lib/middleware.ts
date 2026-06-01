@@ -61,7 +61,7 @@ export type MiddlewareContext<
  *
  * @param context The request context
  * @param next A function that invokes the next middleware or request handler in the chain
- * @returns A response to short-circuit the chain, or `undefined`/`void` to continue
+ * @returns A response to short-circuit the chain, or the response from `next()` to continue
  *
  * The generic describes the context effect this middleware has. Use a `{ key, value }` object for
  * middleware that provides one context value, add a `property` field to install a direct context
@@ -71,10 +71,7 @@ export interface Middleware<transform extends ContextTransform = EmptyContextTra
   /**
    * Handles a request and optionally delegates to the next middleware or handler.
    */
-  (
-    context: RequestContext<any>,
-    next: NextFunction,
-  ): Response | undefined | void | Promise<Response | undefined | void>
+  (context: RequestContext<any>, next: NextFunction): Response | Promise<Response>
 
   /**
    * Type-only metadata that carries the middleware's declared context effect.
@@ -127,8 +124,7 @@ export function runMiddleware(
       return nextPromise
     }
 
-    // If it did not call next(), invoke downstream automatically
-    return next()
+    throw new Error('Middleware must return a Response or call next()')
   }
 
   return dispatch(0)
