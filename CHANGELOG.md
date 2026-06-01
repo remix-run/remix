@@ -254,7 +254,7 @@ Date: YYYY-MM-DD
 
 ## v2.17.5
 
-Date: 2026-05-29
+Date: 2026-06-01
 
 ### Patch Changes
 
@@ -266,7 +266,7 @@ Date: 2026-05-29
 - [`react-router-dom@6.30.4`](https://github.com/remix-run/react-router/releases/tag/react-router%406.30.4)
 - [`@remix-run/router@1.23.3`](https://github.com/remix-run/react-router/blob/v6/packages/router/CHANGELOG.md#1233)
 
-**Full Changelog**: [`v2.17.3...v2.17.4`](https://github.com/remix-run/remix/compare/remix@2.17.4...remix@2.17.5)
+**Full Changelog**: [`v2.17.4...v2.17.5`](https://github.com/remix-run/remix/compare/remix@2.17.4...remix@2.17.5)
 
 ## v2.17.4
 
