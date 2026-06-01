@@ -1,4 +1,4 @@
-import { createController } from 'remix/router'
+import { createController, createMiddleware } from 'remix/router'
 
 import { orders, orderItemsWithBook } from '../../../data/schema.ts'
 import { requireAdmin } from '../../../middleware/admin.ts'
@@ -9,7 +9,7 @@ import { AdminOrdersIndexPage } from './index-page.tsx'
 import { AdminOrderNotFoundPage, AdminOrderShowPage } from './show-page.tsx'
 
 export default createController(routes.admin.orders, {
-  middleware: [requireAuth(), requireAdmin()],
+  middleware: createMiddleware(requireAuth(), requireAdmin()),
   actions: {
     async index({ db, render }) {
       let allOrders = await db.findMany(orders, {

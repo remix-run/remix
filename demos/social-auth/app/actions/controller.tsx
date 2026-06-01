@@ -1,4 +1,4 @@
-import { createController } from 'remix/router'
+import { createController, createMiddleware } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
 import { getReturnToQuery, requireAuth } from '../middleware/auth.ts'
@@ -37,7 +37,7 @@ export function createRootController(
         )
       },
       account: {
-        middleware: [requireAuth()],
+        middleware: createMiddleware(requireAuth()),
         handler({ auth, render }) {
           if (!auth.ok) {
             return new Response('Unauthorized', { status: 401 })

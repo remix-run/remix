@@ -68,13 +68,14 @@ export let sessionStorage = createMemorySessionStorage()
 ### Add session middleware
 
 ```typescript
+import { createMiddleware } from 'remix/router'
 import { session } from 'remix/middleware/session'
 
 let router = createRouter({
-  middleware: [
+  middleware: createMiddleware(
     session(sessionCookie, sessionStorage),
     // ... other middleware
-  ],
+  ),
 })
 ```
 
@@ -335,16 +336,16 @@ async function refreshGoogleTokens({ get }) {
 
 ## Protecting Routes
 
-### Controller-level protection
+### Controller middleware protection
 
-Apply `requireAuth()` to every action in one controller:
+Apply `requireAuth()` as controller middleware to every action in one controller:
 
 ```typescript
-import { createController } from 'remix/router'
+import { createController, createMiddleware } from 'remix/router'
 import { requireAuth } from 'remix/middleware/auth'
 
 export default createController(routes.account, {
-  middleware: [requireAuth()],
+  middleware: createMiddleware(requireAuth()),
   actions: {
     index() {
       /* guaranteed authenticated */
@@ -362,7 +363,7 @@ router.map(routes.account.settings, accountSettingsController)
 
 // app/actions/account/settings/controller.tsx
 export default createController(routes.account.settings, {
-  middleware: [requireAuth()],
+  middleware: createMiddleware(requireAuth()),
   actions: {
     index() {
       /* guaranteed authenticated */
@@ -380,7 +381,7 @@ Combine auth checks with role checks:
 
 ```typescript
 export default createController(routes.admin, {
-  middleware: [requireAuth(), requireAdmin()],
+  middleware: createMiddleware(requireAuth(), requireAdmin()),
   actions: {
     index() {
       /* requires auth + admin */
@@ -389,7 +390,7 @@ export default createController(routes.admin, {
 })
 ```
 
-### Action-level protection
+### Action middleware protection
 
 Apply middleware to a single route:
 
@@ -397,7 +398,7 @@ Apply middleware to a single route:
 import { Auth, requireAuth } from 'remix/middleware/auth'
 
 router.get(routes.account.index, {
-  middleware: [requireAuth()],
+  middleware: createMiddleware(requireAuth()),
   handler(context) {
     let auth = context.get(Auth)
     return render(<AccountPage identity={auth.identity} />)

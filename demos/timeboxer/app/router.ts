@@ -1,5 +1,5 @@
 import { csrf } from 'remix/csrf-middleware'
-import { createRouter, type MiddlewareContext } from 'remix/fetch-router'
+import { createMiddleware, createRouter, type MiddlewareContext } from 'remix/fetch-router'
 import { formData } from 'remix/form-data-middleware'
 import { session } from 'remix/session-middleware'
 
@@ -12,13 +12,13 @@ import { loadDatabase } from './middleware/database.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { routes } from './routes.ts'
 
-const middleware = [
+const middleware = createMiddleware(
   session(sessionCookie, sessionStorage),
   formData(),
   csrf(),
   loadDatabase(),
   loadAuth(),
-] as const
+)
 
 export type AppContext = MiddlewareContext<typeof middleware>
 

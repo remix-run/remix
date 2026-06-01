@@ -9,6 +9,7 @@ export type {
   ContextWithEntries,
   ContextWithEntry,
   ContextWithParams,
+  RequestRouter,
 } from './lib/request-context.ts'
 
 export type { RouterTypes } from './lib/router-types.ts'
@@ -16,6 +17,7 @@ export type { RouterTypes } from './lib/router-types.ts'
 export { createAction, createController } from './lib/controller.ts'
 export type { RequestHandler, Action, Controller } from './lib/controller.ts'
 
+export { createMiddleware } from './lib/middleware.ts'
 export type { Middleware, MiddlewareContext, NextFunction } from './lib/middleware.ts'
 
 export { RequestMethods, isRequestMethod } from './lib/request-methods.ts'
@@ -27,6 +29,8 @@ export type {
   MapTarget,
   MatchData,
   RouteEntry,
+  RouteBuilder,
+  RouteInstaller,
   Router,
   RouterOptions,
 } from './lib/router.ts'

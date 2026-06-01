@@ -2,6 +2,7 @@ import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
 import type { Controller } from 'remix/fetch-router'
 
+import type { AppContext } from '../router.ts'
 import type { routes } from '../routes.ts'
 
 export const assetServer = createAssetServer({
@@ -34,4 +35,4 @@ export const assets = {
       },
     },
   },
-} satisfies Controller<typeof routes.assets>
+} satisfies Controller<typeof routes.assets, AppContext>

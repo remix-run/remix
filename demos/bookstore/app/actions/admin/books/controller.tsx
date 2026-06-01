@@ -1,4 +1,4 @@
-import { createController } from 'remix/router'
+import { createController, createMiddleware } from 'remix/router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import * as coerce from 'remix/data-schema/coerce'
@@ -36,7 +36,7 @@ const bookSchema = f.object({
 })
 
 export default createController(routes.admin.books, {
-  middleware: [requireAuth(), requireAdmin()],
+  middleware: createMiddleware(requireAuth(), requireAdmin()),
   actions: {
     async index({ db, render }) {
       let allBooks = await db.findMany(books, { orderBy: ['id', 'asc'] })

@@ -1,4 +1,4 @@
-import { createController } from 'remix/router'
+import { createController, createMiddleware } from 'remix/router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { minLength } from 'remix/data-schema/checks'
@@ -22,7 +22,7 @@ const accountSettingsSchema = f.object({
 })
 
 export default createController(routes.account.settings, {
-  middleware: [requireAuth()],
+  middleware: createMiddleware(requireAuth()),
   actions: {
     index({ auth, render }) {
       let user = getCurrentUser(auth)

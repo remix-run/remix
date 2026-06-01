@@ -71,7 +71,7 @@ Common bundles:
 2. **Start from the server contract.** Add or update `app/routes.ts` before wiring handlers or UI.
 3. **Put code in the narrowest owner.** Favor route-local code first, then promote only when reuse is real.
 4. **Make the server path correct before adding browser behavior.** A route should return the right `Response` via `router.fetch(...)` before you add `clientEntry(...)`, animations, or DOM effects.
-5. **Add middleware deliberately.** Keep fast-exit middleware early and request-enriching middleware later. Export a typed `AppContext` from the root middleware stack and use it in controllers.
+5. **Add middleware deliberately.** Keep fast-exit middleware early and request-enriching middleware later. Export a typed `AppContext` from the middleware stack and use it in controllers.
 6. **Validate input at the boundary.** Parse and validate `Request`, `FormData`, params, cookies, and external payloads before they reach rendering or persistence logic.
 7. **Hydrate only when necessary.** Prefer server-rendered UI. Use `clientEntry(...)` and `run(...)` only for real browser interactivity or browser-only APIs.
 8. **Test the narrowest meaningful layer.** Prefer router tests for route behavior. Use component tests when the behavior is truly interactive or DOM-specific.
@@ -113,7 +113,7 @@ When code could live in multiple places:
 
 - Put top-level leaf actions in `app/actions/controller.tsx`
 - A controller's `actions` object contains only direct leaf route keys from the route map passed to `router.map(...)`
-- Add `app/actions/<route-key>/controller.tsx` for each nested route map that needs actions or middleware, and map it explicitly with `router.map(routes.<routeKey>, controller)`
+- Add `app/actions/<route-key>/controller.tsx` for each nested route map that needs actions or controller middleware, and map it explicitly with `router.map(routes.<routeKey>, controller)`
 - Name directories under `app/actions/` after route-map keys, not URL path segments
 - Keep route-local UI and helpers next to the controller that owns them
 - Move shared cross-route UI to `app/ui/`
@@ -135,7 +135,7 @@ When code could live in multiple places:
 - Do not create standalone root action files; put root route actions in `app/actions/controller.tsx`
 - Do not put nested route-map keys in a controller's `actions`
 - Do not register normal app leaf routes directly in `app/router.ts` when they belong in a controller
-- Do not rely on middleware from one controller to protect another controller; map middleware explicitly in each controller that needs it
+- Do not rely on controller middleware from one controller to protect another controller; add controller middleware explicitly in each controller that needs it
 - Do not put middleware or persistence helpers in `app/utils/` when they have a clearer home
 
 ## Core Remix Rules
@@ -147,7 +147,7 @@ When code could live in multiple places:
 - Model HTTP behavior explicitly. Status codes, headers, redirects, cache rules, and content types are part of the route contract
 - Make the server route correct first. A POST should already return the right HTML, redirect, or error response on its own before `clientEntry(...)` layers interactivity on top
 - Validate input at the boundary using `remix/data-schema` (and `remix/data-schema/form-data` for forms). `parseSafe` makes the failure path a return value instead of an exception
-- Derive `AppContext` from the root middleware stack so `get(Database)`, `get(Session)`, `get(Auth)`, and similar keys stay typed. If the controller never reads from context, it doesn't need the harness
+- Derive `AppContext` from the middleware stack so `get(Database)`, `get(Session)`, `get(Auth)`, and similar keys stay typed. If the controller never reads from context, it doesn't need the harness
 - Outside actions and controllers, only use `getContext()` when `asyncContext()` is in the middleware stack
 - Remix Component is not React: write `function Name(handle: Handle<Props>) { return () => ... }`, read props from `handle.props`, keep state in setup-scope variables, call `handle.update()` explicitly, and do DOM-sensitive work in event handlers or `queueTask(...)`, not in render
 - Prefer host-element mixins via `mix={mixin(...)}` for behavior and styling instead of inventing custom host prop conventions. Use `mix={[...]}` only when composing multiple mixins
@@ -202,14 +202,14 @@ Use this map to find the right package quickly. Each entry says what the package
 
 ### Routing, Server, and Responses
 
-- `remix/router` — the router itself. Use for `createRouter`, controller and middleware types, and registering routes
+- `remix/router` — the router itself. Use for `createRouter`, controllers, middleware types, and registering routes
 - `remix/routes` — declarative route builders. Use for `route`, `get`, `post`, `put`, `del`, `form`, `resources` when defining `app/routes.ts`
 - `remix/node-fetch-server` — default Node adapter for new apps. Use `createRequestListener` with `node:http`, `node:https`, or `node:http2` in `server.ts` when booting the template-style app
 - `remix/assets` — browser asset server. Use for `createAssetServer` when serving compiled scripts and styles, getting public hrefs, and emitting preloads. Configure a `basePath`, and keep `fileMap` URL patterns relative to it. Shared compiler options such as `target`, `sourceMaps`, `sourceMapSourcePaths`, and `minify` live at the top level
 - `remix/headers` — `SuperHeaders` plus typed header parsers and builders. Use the default export when you want a `Headers` subclass with typed accessors like `headers.contentType`, `headers.cacheControl`, and `headers.setCookie`; use named classes such as `CacheControl`, `ContentDisposition`, and `Vary` when working with individual header values
 - `remix/response/redirect` — `redirect(href, status?)`. Use for the canonical "POST then redirect" pattern and other location changes
 - `remix/response/html` — `createHtmlResponse`. Use when you need an HTML `Response` from a string or stream without rendering through `remix/ui`
-- `remix/response/compress` — `compressResponse`. Use when compressing one-off responses outside the global `compression()` middleware
+- `remix/response/compress` — `compressResponse`. Use when compressing one-off responses outside `compression()` middleware
 - `remix/response/file` — file-download responses. Use for `Content-Disposition: attachment` responses
 - `remix/route-pattern` — low-level URL matching and generation. Use `RoutePattern` or `createMatcher` when working with raw patterns outside the router. `href(...)` encodes pathname and search params for you, and `match(...)` returns decoded params
 - `remix/route-pattern/specificity` — pattern ranking helpers. Use only when building custom matcher or reporting logic outside the normal router/matcher APIs
@@ -232,7 +232,7 @@ Use this map to find the right package quickly. Each entry says what the package
 ### Auth, Sessions, and Cookies
 
 - `remix/session` — the `Session` object: `get`, `set`, `flash`, `unset`, `regenerateId`. Use for any per-browser state where tampering would be a bug (login, "I submitted this form already", cart, flash messages)
-- `remix/middleware/session` — `session(cookie, storage)`. Use to wire a session cookie and storage backend into the root middleware stack
+- `remix/middleware/session` — `session(cookie, storage)`. Use to wire a session cookie and storage backend into the middleware stack
 - `remix/session-storage/fs`, `remix/session-storage/memory`, `remix/session-storage/cookie` — storage backends. Use `fs-storage` for single-process apps, `memory-storage` for tests, `cookie-storage` for stateless deployments where data fits in a cookie
 - `remix/session-storage/redis` — Redis-backed storage. Use for multi-process or multi-host deployments
 - `remix/session-storage/memcache` — Memcache-backed storage. Same multi-host use case as Redis
@@ -258,7 +258,7 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/middleware/form-data` — `formData()`. Use to parse `FormData` once and expose it via `get(FormData)` instead of calling `await request.formData()` in each action
 - `remix/form-data-parser` — lower-level `parseFormData`, `FileUpload`. Use when implementing custom upload handlers. Upload handler errors propagate directly
 - `remix/multipart-parser` and `remix/multipart-parser/node` — low-level multipart stream parsing. `MultipartPart.headers` is a plain object keyed by lower-case header name; read values with bracket notation such as `part.headers['content-type']`
-- `remix/middleware/compression` — `compression()`. Use globally for text-like responses
+- `remix/middleware/compression` — `compression()`. Use for text-like responses
 - `remix/middleware/logger` — `logger()`. Use in development for request logs; pass `colors` to force terminal color output on or off
 - `remix/middleware/method-override` — `methodOverride()`. Use when HTML forms need `PUT`, `PATCH`, or `DELETE`
 - `remix/middleware/async-context` — `asyncContext()`, `getContext()`. Use when helpers outside actions need request context without threading it through every call

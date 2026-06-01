@@ -1,4 +1,4 @@
-import { createController } from 'remix/router'
+import { createController, createMiddleware } from 'remix/router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { redirect } from 'remix/response/redirect'
@@ -21,7 +21,7 @@ const shippingAddressSchema = f.object({
 })
 
 export default createController(routes.checkout, {
-  middleware: [requireAuth()],
+  middleware: createMiddleware(requireAuth()),
   actions: {
     index({ render, session }) {
       let cart = getCurrentCart(session)

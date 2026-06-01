@@ -108,14 +108,17 @@ The handler receives a context object with:
 - `url` — the request URL
 - `request` — the raw `Request`
 
-Actions with inline middleware:
+Actions with action middleware:
 
 ```typescript
+import { createAction, createMiddleware } from 'remix/router'
 import { requireAuth } from 'remix/middleware/auth'
 
-router.get(routes.account.index, {
-  middleware: [requireAuth()],
-  handler: accountAction.handler,
+export const account = createAction(routes.account.index, {
+  middleware: createMiddleware(requireAuth()),
+  handler(context) {
+    return render(<AccountPage />)
+  },
 })
 ```
 
@@ -267,7 +270,7 @@ Nested route maps use their own controllers under `app/actions/<route-key>/contr
 ```typescript
 // app/actions/account/controller.tsx
 export default createController(routes.account, {
-  middleware: [requireAuth()],
+  middleware: createMiddleware(requireAuth()),
   actions: {
     index() {
       return render(<AccountPage />)
@@ -277,7 +280,7 @@ export default createController(routes.account, {
 
 // app/actions/account/settings/controller.tsx
 export default createController(routes.account.settings, {
-  middleware: [requireAuth()],
+  middleware: createMiddleware(requireAuth()),
   actions: {
     index() {
       return render(<SettingsPage />)
@@ -305,11 +308,11 @@ router.map(routes.account.settings, accountSettingsController)
 
 ### Controller middleware
 
-The `middleware` array on a controller runs only for the direct actions in that controller, before action-level middleware. It does not apply to other controllers.
+The `middleware` array on a controller runs only for the direct actions in that controller, before action middleware. It does not apply to other controllers.
 
 ```typescript
 export default createController(routes.admin, {
-  middleware: [requireAuth(), requireAdmin()],
+  middleware: createMiddleware(requireAuth(), requireAdmin()),
   actions: {
     /* all actions require auth + admin */
   },
@@ -341,17 +344,22 @@ router.post(routes.logout, logoutAction)
 Define an `AppContext` type from your middleware stack, then make it the default context used by `createAction()` and `createController()`:
 
 ```typescript
-import type { MiddlewareContext, ContextWithParams, AnyParams } from 'remix/router'
+import {
+  createMiddleware,
+  type MiddlewareContext,
+  type ContextWithParams,
+  type AnyParams,
+} from 'remix/router'
 
-type RootMiddleware = [
-  ReturnType<typeof formData>,
-  ReturnType<typeof session>,
-  ReturnType<typeof loadDatabase>,
-  ReturnType<typeof loadAuth>,
-]
+let rootMiddleware = createMiddleware(
+  formData(),
+  session(cookie, storage),
+  loadDatabase(),
+  loadAuth(),
+)
 
 export type AppContext<params extends AnyParams = {}> = ContextWithParams<
-  MiddlewareContext<RootMiddleware>,
+  MiddlewareContext<typeof rootMiddleware>,
   params
 >
 

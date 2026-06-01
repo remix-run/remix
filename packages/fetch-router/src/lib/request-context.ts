@@ -1,5 +1,3 @@
-import type { Router } from './router.ts'
-
 import type { Simplify } from './type-utils.ts'
 
 /**
@@ -71,35 +69,53 @@ type ContextFallbackValue<key> = [ContextDefaultValue<key>] extends [never]
   ? ContextValue<key> | undefined
   : ContextDefaultValue<key>
 
+export declare const requestContextTypes: unique symbol
+
+interface RequestContextTypes<params extends Record<string, any>, entries extends ContextEntries> {
+  readonly [requestContextTypes]?: {
+    params: params
+    entries: entries
+  }
+}
+
 /**
  * Extracts the route params type from a {@link RequestContext}.
  */
 export type ContextParams<context> =
-  context extends RequestContext<infer params extends Record<string, any>, any> ? params : {}
+  context extends RequestContextTypes<infer params extends Record<string, any>, any> ? params : {}
 
-type DuplicateParamNames<
-  left extends Record<string, any>,
-  right extends Record<string, any>,
-> = Extract<keyof left, keyof right>
+type RequestContextEntries<context> =
+  context extends RequestContextTypes<any, infer entries extends ContextEntries> ? entries : []
 
 /**
- * Merges two params objects and fails with `never` when they define the same param name.
+ * Resolves duplicate route params. Values in `right` win when present, but optional right-side
+ * params may fall back to values in `left`, matching route-pattern's right-most param behavior.
+ */
+type MergeParamValue<left, right> = undefined extends right
+  ? Exclude<right, undefined> | left
+  : right
+
+type MergeParamValues<left extends Record<string, any>, right extends Record<string, any>> = {
+  [key in keyof right]: key extends keyof left ? MergeParamValue<left[key], right[key]> : right[key]
+}
+
+/**
+ * Merges two params objects, matching route-pattern's right-most param behavior.
  */
 export type MergeContextParams<
   left extends Record<string, any>,
   right extends Record<string, any>,
-> = [DuplicateParamNames<left, right>] extends [never] ? Simplify<left & right> : never
+> = Simplify<Omit<left, keyof right> & MergeParamValues<left, right>>
 
 /**
  * Adds route params to a {@link RequestContext} while preserving its existing context values.
  */
 export type ContextWithParams<context, params extends Record<string, any>> =
-  context extends RequestContext<any, infer entries extends ContextEntries>
-    ? MergeContextParams<ContextParams<context>, params> extends infer merged
-      ? [merged] extends [never]
-        ? never
-        : RequestContextWithEntries<Extract<merged, Record<string, any>>, entries>
-      : never
+  context extends RequestContextTypes<any, any>
+    ? RequestContextWithEntries<
+        MergeContextParams<ContextParams<context>, params>,
+        RequestContextEntries<context>
+      >
     : RequestContextWithEntries<params, []>
 
 type ResolveEntryValue<
@@ -118,8 +134,8 @@ type ResolveEntryValue<
  * Resolves the value type returned by `context.get(key)` for the given context and key.
  */
 export type GetContextValue<context, key extends object> =
-  context extends RequestContext<any, infer entries extends ContextEntries>
-    ? ResolveEntryValue<entries, key, ContextFallbackValue<key>>
+  context extends RequestContextTypes<any, any>
+    ? ResolveEntryValue<RequestContextEntries<context>, key, ContextFallbackValue<key>>
     : ContextFallbackValue<key>
 
 type ContextEntryProperty<entry extends ContextEntry> = entry extends {
@@ -151,11 +167,11 @@ type RequestContextWithEntries<
  * This is useful when deriving a context shape without a middleware tuple.
  */
 export type ContextWithEntries<context, additions extends ContextEntries> =
-  context extends RequestContext<
-    infer params extends Record<string, any>,
-    infer entries extends ContextEntries
-  >
-    ? RequestContextWithEntries<params, [...entries, ...additions]>
+  context extends RequestContextTypes<any, any>
+    ? RequestContextWithEntries<
+        ContextParams<context>,
+        [...RequestContextEntries<context>, ...additions]
+      >
     : never
 
 /**
@@ -166,6 +182,23 @@ export type ContextWithEntry<context, entry extends ContextEntry> = ContextWithE
   context,
   [entry]
 >
+
+/**
+ * The router reference available while handling a request.
+ *
+ * Request-time code can fetch through the active router, but route registration belongs to setup
+ * code that has access to the full {@link Router} object.
+ */
+export interface RequestRouter {
+  /**
+   * Fetch a response from the active router.
+   *
+   * @param input The request input to fetch
+   * @param init The request init options
+   * @returns The response from the route that matched the request
+   */
+  fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>
+}
 
 /**
  * A context object that contains information about the current request. Every request
@@ -316,20 +349,20 @@ export class RequestContext<
     })
   }
 
-  #router?: Router<any>
+  #router?: RequestRouter
 
   /**
    * The router handling this request.
    */
-  get router(): Router<RequestContext<any, entries>> {
+  get router(): RequestRouter {
     if (this.#router == null) {
       throw new Error('No router found in request context.')
     }
 
-    return this.#router as Router<RequestContext<any, entries>>
+    return this.#router
   }
 
-  set router(router: Router<any>) {
+  set router(router: RequestRouter) {
     this.#router = router
   }
 
@@ -338,3 +371,8 @@ export class RequestContext<
    */
   url: URL
 }
+
+export interface RequestContext<
+  params extends Record<string, any> = {},
+  entries extends ContextEntries = [],
+> extends RequestContextTypes<params, entries> {}
