@@ -46,6 +46,16 @@ export class FilesReporter implements Reporter {
         this.#failures.push({ suiteName: test.suiteName, name: test.name, error: test.error })
       }
     }
+
+    for (let test of results.tests) {
+      if ((test.status !== 'skipped' && test.status !== 'todo') || !test.reason) continue
+      let fullName = test.name ? `${test.suiteName} > ${test.name}` : test.suiteName
+      let marker =
+        test.status === 'skipped'
+          ? `${colors.dim('↓')} ${colors.dim(`${fullName} # skipped: ${test.reason}`)}`
+          : `${colors.yellow('…')} ${colors.yellow(`${fullName} # todo: ${test.reason}`)}`
+      console.log(`  ${marker}`)
+    }
   }
 
   onSummary(counts: Counts, durationMs: number) {
