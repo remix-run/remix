@@ -1,17 +1,9 @@
 export function throwIfPotentialCSRFAttack(headers: Headers) {
   let originHeader = headers.get("origin");
-  let originDomain: string | null = null;
-
-  try {
-    originDomain =
-      typeof originHeader === "string" && originHeader !== "null"
-        ? new URL(originHeader).host
-        : originHeader;
-  } catch {
-    throw new Error(
-      `\`origin\` header is not a valid URL. Aborting the action.`
-    );
-  }
+  let originDomain =
+    typeof originHeader === "string" && originHeader !== "null"
+      ? new URL(originHeader).host
+      : originHeader;
   let host = parseHostHeader(headers);
 
   if (originDomain && (!host || originDomain !== host.value)) {
