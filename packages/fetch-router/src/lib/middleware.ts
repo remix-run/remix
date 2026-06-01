@@ -71,10 +71,7 @@ export interface Middleware<transform extends ContextTransform = EmptyContextTra
   /**
    * Handles a request and optionally delegates to the next middleware or handler.
    */
-  (
-    context: RequestContext<any>,
-    next: NextFunction,
-  ): Response | Promise<Response>
+  (context: RequestContext<any>, next: NextFunction): Response | Promise<Response>
 
   /**
    * Type-only metadata that carries the middleware's declared context effect.
