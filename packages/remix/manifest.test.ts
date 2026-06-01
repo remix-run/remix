@@ -5,6 +5,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as url from 'node:url'
 import { buildSpecifierToRemixPath } from '../../scripts/utils/manifest.ts'
+import { getRemixReadmeCopies } from '../../scripts/utils/remix-readmes.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '..')
@@ -37,6 +38,7 @@ function exportSpecifier(packageName: string, exportPath: string): string {
 }
 
 const referencedPackages = new Set([...specifierMap.keys()].map(packageNameFromSpecifier))
+const readmeCopies = getRemixReadmeCopies()
 
 // All @remix-run/* packages in the workspace (excluding remix itself).
 const allRemixRunPackages: string[] = fs
@@ -142,5 +144,30 @@ describe('manifest', () => {
         `${path.relative(packagesDir, readmePath)} should use "# ${short}" as its H1`,
       )
     }
+  })
+
+  it('generates README mirrors for representative published remix docs', () => {
+    let sourceByMirrorPath = new Map(
+      readmeCopies.map((copy) => [
+        path.relative(packagesDir, copy.remixReadmePath),
+        path.relative(packagesDir, copy.sourceReadmePath),
+      ]),
+    )
+
+    assert.equal(sourceByMirrorPath.get('remix/src/assert/README.md'), 'assert/README.md')
+    assert.equal(
+      sourceByMirrorPath.get('remix/src/fetch-router/README.md'),
+      'fetch-router/README.md',
+    )
+    assert.equal(
+      sourceByMirrorPath.get('remix/src/ui/popover/README.md'),
+      'ui/src/components/popover/README.md',
+    )
+    assert.equal(sourceByMirrorPath.get('remix/src/cli/README.md'), 'cli/README.md')
+  })
+
+  it('generates one README mirror per remix source path', () => {
+    let mirrorPaths = readmeCopies.map((copy) => copy.remixReadmePath)
+    assert.equal(new Set(mirrorPaths).size, mirrorPaths.length)
   })
 })
