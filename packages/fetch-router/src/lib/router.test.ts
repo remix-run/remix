@@ -4,6 +4,7 @@ import { describe, it } from '@remix-run/test'
 
 import { createRoutes as route } from '../routes.ts'
 import type { Action, Controller } from './controller.ts'
+import type { NextFunction } from './middleware.ts'
 import type { RequestContext } from './request-context.ts'
 import { createRouter, type MatchData } from './router.ts'
 
@@ -43,8 +44,9 @@ describe('router.fetch()', () => {
 
     router.get(routes.home, {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('middleware')
+          return next()
         },
       ],
       handler() {
@@ -69,16 +71,18 @@ describe('router.fetch()', () => {
     let requestLog: string[] = []
     let router = createRouter({
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('router middleware')
+          return next()
         },
       ],
     })
 
     router.get(routes.home, {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('route middleware')
+          return next()
         },
       ],
       handler() {
@@ -120,8 +124,9 @@ describe('router.fetch()', () => {
 
     router.get('/', {
       middleware: [
-        ({ headers }) => {
+        ({ headers }, next) => {
           requestLog.push(headers.get('From'))
+          return next()
         },
       ],
       handler() {
@@ -142,8 +147,9 @@ describe('router.fetch()', () => {
     let requestLog: string[] = []
     let router = createRouter({
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('middleware')
+          return next()
         },
       ],
     })
@@ -158,8 +164,9 @@ describe('router.fetch()', () => {
     let requestLog: string[] = []
     let router = createRouter({
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('middleware')
+          return next()
         },
       ],
     })
@@ -197,8 +204,9 @@ describe('router.map() with single routes', () => {
     let requestLog: string[] = []
     let router = createRouter()
 
-    function middleware(context: RequestContext<{ id: string }>) {
+    function middleware(context: RequestContext<{ id: string }>, next: NextFunction) {
       requestLog.push(`middleware ${context.params.id}`)
+      return next()
     }
 
     router.map(routes.profile, {
@@ -289,8 +297,9 @@ describe('router.map()', () => {
     let requestLog: string[] = []
     let router = createRouter()
 
-    function middleware() {
+    function middleware(_: RequestContext, next: NextFunction) {
       requestLog.push('middleware')
+      return next()
     }
 
     router.map(routes, {
@@ -454,8 +463,9 @@ describe('router.map()', () => {
 
     router.map(routes, {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('outer middleware')
+          return next()
         },
       ],
       actions: {
@@ -509,8 +519,9 @@ describe('router.map()', () => {
     // Admin routes - with auth middleware
     router.map(routes.admin, {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('auth')
+          return next()
         },
       ],
       actions: {
@@ -551,16 +562,18 @@ describe('router.map()', () => {
     let requestLog: string[] = []
     let router = createRouter({
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('global')
+          return next()
         },
       ],
     })
 
     router.map(routes, {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('inline')
+          return next()
         },
       ],
       actions: {
@@ -594,8 +607,9 @@ describe('router.get()', () => {
     let router = createRouter()
     router.get('/', {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('middleware')
+          return next()
         },
       ],
       handler() {
@@ -614,19 +628,22 @@ describe('inline middleware', () => {
     let requestLog: string[] = []
     let router = createRouter({
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('global')
+          return next()
         },
       ],
     })
 
     router.get('/', {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('inline-1')
+          return next()
         },
-        () => {
+        (_, next) => {
           requestLog.push('inline-2')
+          return next()
         },
       ],
       handler() {
@@ -646,8 +663,9 @@ describe('inline middleware', () => {
 
     router.get('/a', {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('inline-a')
+          return next()
         },
       ],
       handler() {
@@ -712,15 +730,17 @@ describe('inline middleware', () => {
 
     router.get('/', {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('m1')
+          return next()
         },
         () => {
           requestLog.push('m2-short-circuit')
           return new Response('Blocked', { status: 403 })
         },
-        () => {
+        (_, next) => {
           requestLog.push('m3')
+          return next()
         },
       ],
       handler() {
@@ -748,11 +768,13 @@ describe('inline middleware', () => {
 
     router.map(routes.admin, {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('auth')
+          return next()
         },
-        () => {
+        (_, next) => {
           requestLog.push('admin')
+          return next()
         },
       ],
       actions: {
@@ -762,8 +784,9 @@ describe('inline middleware', () => {
         },
         users: {
           middleware: [
-            () => {
+            (_, next) => {
               requestLog.push('users-middleware')
+              return next()
             },
           ],
           handler() {
