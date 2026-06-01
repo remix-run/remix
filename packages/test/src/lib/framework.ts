@@ -2,6 +2,7 @@ import type { TestContext } from './context.ts'
 
 type LifecycleHookName = 'beforeEach' | 'afterEach' | 'beforeAll' | 'afterAll'
 type LifecycleHookFn = () => void | Promise<void>
+type PendingMeta = boolean | string
 
 interface TestOptions {
   timeout?: number
@@ -21,8 +22,8 @@ interface TestSuite {
   name: string
   tests: Test[]
   only?: boolean
-  skip?: boolean | string
-  todo?: boolean | string
+  skip?: PendingMeta
+  todo?: PendingMeta
   beforeEach?: LifecycleHook[]
   afterEach?: LifecycleHook[]
   beforeAll?: LifecycleHook[]
@@ -34,8 +35,8 @@ interface Test extends TestOptions {
   fn: TestFn
   suite: TestSuite
   only?: boolean
-  skip?: boolean | string
-  todo?: boolean | string
+  skip?: PendingMeta
+  todo?: PendingMeta
 }
 
 // Holds lifecycle hooks registered at the top level (outside any describe).
@@ -71,11 +72,12 @@ function registerDescribe(name: string, fn: () => void, flags?: SuiteMeta) {
   }
   let suite: TestSuite = { name: fullName, tests: [], ...flags }
 
-  // Children inherit `skip`/`only` from their parent so that
+  // Children inherit `skip`/`todo`/`only` from their parent so that
   // `describe.skip('parent', () => describe('child', () => it(...)))` actually
   // skips the child's tests. The executor walks `rootSuites` as a flat list and
   // only inspects each suite's own flag, so the propagation has to happen here.
-  if (currentSuite?.skip) suite.skip = true
+  if (isPending(currentSuite?.skip)) suite.skip = currentSuite.skip
+  if (isPending(currentSuite?.todo)) suite.todo = currentSuite.todo
   if (currentSuite?.only) suite.only = true
 
   copyLifecycleHooks(currentSuite ?? rootHooks, suite)
@@ -116,33 +118,30 @@ function describeImpl(name: string, metaOrFn: SuiteMeta | (() => void), fn?: () 
  * describe('auth', () => {
  *   it('logs in', async () => { ... })
  * })
+ * describe('external service', { skip: 'requires API credentials' }, () => { ... })
  *
  * // Modifiers
  * describe.skip('skipped suite', () => { ... })
+ * describe.skip('skipped suite', 'blocked by missing fixture', () => { ... })
  * describe.only('focused suite', () => { ... })
  * describe.todo('planned suite')
+ * describe.todo('planned suite', 'needs design input')
  *
  * @param name - The suite name shown in reporter output.
- * @param meta - Suite metadata such as `skip` or `only`.
+ * @param meta - Suite metadata such as `skip`, `only`, or `todo`.
  * @param fn - A function that registers the tests and lifecycle hooks in this suite.
  */
 export const describe = Object.assign(describeImpl, {
-  skip: (name: string, fn: () => void) => registerDescribe(name, fn, { skip: true }),
+  skip: describeSkip,
   only: (name: string, fn: () => void) => registerDescribe(name, fn, { only: true }),
-  todo: (name: string) => {
-    let fullName = currentSuite ? `${currentSuite.name} > ${name}` : name
-    if (rootSuites.some((s) => s.name === fullName)) {
-      throw new Error(`Duplicate suite name: "${fullName}"`)
-    }
-    rootSuites.push({ name: fullName, tests: [], todo: true })
-  },
+  todo: describeTodo,
 })
 
-type SuiteMeta = { skip?: boolean; only?: boolean }
+type SuiteMeta = { skip?: PendingMeta; only?: boolean; todo?: PendingMeta }
 type TestMeta = TestOptions & {
-  skip?: boolean | string
+  skip?: PendingMeta
   only?: boolean
-  todo?: boolean | string
+  todo?: PendingMeta
 }
 type TestFn = (t: TestContext) => void | Promise<void>
 
@@ -178,8 +177,10 @@ function itImpl(name: string, metaOrFn: TestMeta | TestFn, fn?: TestFn): void {
  *
  * // Modifiers
  * it.skip('not ready yet', () => { ... })
+ * it.skip('not ready yet', 'blocked by missing fixture')
  * it.only('focused test', () => { ... })
  * it.todo('coming soon')
+ * it.todo('coming soon', 'needs retry coverage')
  * it('fails if it takes too long', { timeout: 5_000 }, async (t) => {
  *   await fetch('/api/data', { signal: t.signal })
  * })
@@ -189,15 +190,9 @@ function itImpl(name: string, metaOrFn: TestMeta | TestFn, fn?: TestFn): void {
  * @param fn - The test body, receiving a {@link TestContext} as its first argument.
  */
 export const it = Object.assign(itImpl, {
-  skip: (name: string, fn?: TestFn) => registerIt(name, fn ?? (() => {}), { skip: true }),
+  skip: itSkip,
   only: (name: string, fn: TestFn) => registerIt(name, fn, { only: true }),
-  todo: (name: string) => {
-    let suite = currentSuite ?? getImplicitRootSuite()
-    if (suite.tests.some((t) => t.name === name)) {
-      throw new Error(`Duplicate test name: "${name}" in suite "${suite.name || 'Global'}"`)
-    }
-    suite.tests.push({ name, fn: () => {}, suite, todo: true })
-  },
+  todo: itTodo,
 })
 
 /** Alias for {@link describe}. */
@@ -210,6 +205,39 @@ function copyLifecycleHooks(source: Pick<TestSuite, LifecycleHookName>, target: 
   if (source.afterEach) target.afterEach = [...source.afterEach]
   if (source.beforeAll) target.beforeAll = [...source.beforeAll]
   if (source.afterAll) target.afterAll = [...source.afterAll]
+}
+
+function describeSkip(name: string, fn: () => void): void
+function describeSkip(name: string, reason: string, fn: () => void): void
+function describeSkip(name: string, reasonOrFn: string | (() => void), fn?: () => void): void {
+  let suiteFn = typeof reasonOrFn === 'function' ? reasonOrFn : fn
+  if (!suiteFn) {
+    throw new TypeError('describe.skip requires a function')
+  }
+  registerDescribe(name, suiteFn, { skip: typeof reasonOrFn === 'string' ? reasonOrFn : true })
+}
+
+function describeTodo(name: string, reason?: string): void {
+  registerDescribe(name, () => {}, { todo: reason ?? true })
+}
+
+function itSkip(name: string): void
+function itSkip(name: string, fn: TestFn): void
+function itSkip(name: string, reason: string): void
+function itSkip(name: string, reason: string, fn: TestFn): void
+function itSkip(name: string, reasonOrFn?: string | TestFn, fn?: TestFn): void {
+  let testFn = typeof reasonOrFn === 'function' ? reasonOrFn : fn
+  registerIt(name, testFn ?? (() => {}), {
+    skip: typeof reasonOrFn === 'string' ? reasonOrFn : true,
+  })
+}
+
+function itTodo(name: string, reason?: string): void {
+  registerIt(name, () => {}, { todo: reason ?? true })
+}
+
+function isPending(value: PendingMeta | undefined): value is true | string {
+  return value === true || typeof value === 'string'
 }
 
 function registerLifecycleHook(

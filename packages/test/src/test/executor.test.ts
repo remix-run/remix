@@ -9,6 +9,8 @@ interface RunnableOptions {
   signal?: AbortSignal
 }
 
+type PendingMeta = boolean | string
+
 interface LifecycleHook extends RunnableOptions {
   fn: () => void | Promise<void>
 }
@@ -17,8 +19,8 @@ interface SuiteFixture {
   name: string
   tests: TestFixture[]
   only?: boolean
-  skip?: boolean
-  todo?: boolean
+  skip?: PendingMeta
+  todo?: PendingMeta
   beforeEach?: LifecycleHook[]
   afterEach?: LifecycleHook[]
   beforeAll?: LifecycleHook[]
@@ -29,8 +31,8 @@ interface TestFixture extends RunnableOptions {
   name: string
   fn: (t: TestContext) => void | Promise<void>
   only?: boolean
-  skip?: boolean
-  todo?: boolean
+  skip?: PendingMeta
+  todo?: PendingMeta
 }
 
 type TestSuitesGlobal = typeof globalThis & { __testSuites?: SuiteFixture[] }
@@ -293,6 +295,88 @@ describe('runTests timeouts and signals', () => {
     assert.equal(results.tests.length, 1)
     assert.equal(results.tests[0]?.name, 'test')
     assert.match(results.tests[0]?.error?.message ?? '', /afterEach failed: afterEach timed out/)
+  })
+})
+
+describe('runTests skip and todo reasons', () => {
+  it('preserves suite skip reasons on skipped test results', async () => {
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        skip: 'requires database credentials',
+        tests: [
+          {
+            name: 'test',
+            fn() {},
+          },
+        ],
+      },
+    ])
+
+    assert.equal(results.skipped, 1)
+    assert.equal(results.tests[0]?.status, 'skipped')
+    assert.equal(results.tests[0]?.reason, 'requires database credentials')
+  })
+
+  it('preserves test skip and todo reasons on pending test results', async () => {
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        tests: [
+          {
+            name: 'skipped test',
+            skip: 'needs a fixture',
+            fn() {},
+          },
+          {
+            name: 'todo test',
+            todo: 'needs retry coverage',
+            fn() {},
+          },
+        ],
+      },
+    ])
+
+    assert.equal(results.skipped, 1)
+    assert.equal(results.todo, 1)
+    assert.equal(results.tests[0]?.status, 'skipped')
+    assert.equal(results.tests[0]?.reason, 'needs a fixture')
+    assert.equal(results.tests[1]?.status, 'todo')
+    assert.equal(results.tests[1]?.reason, 'needs retry coverage')
+  })
+
+  it('preserves todo suite reasons on placeholder results', async () => {
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        todo: 'waiting on design',
+        tests: [],
+      },
+    ])
+
+    assert.equal(results.todo, 1)
+    assert.equal(results.tests[0]?.name, '')
+    assert.equal(results.tests[0]?.status, 'todo')
+    assert.equal(results.tests[0]?.reason, 'waiting on design')
+  })
+
+  it('treats an empty string skip reason as skipped without a displayed reason', async () => {
+    let results = await runWithSuites([
+      {
+        name: 'suite',
+        tests: [
+          {
+            name: 'skipped test',
+            skip: '',
+            fn() {},
+          },
+        ],
+      },
+    ])
+
+    assert.equal(results.skipped, 1)
+    assert.equal(results.tests[0]?.status, 'skipped')
+    assert.equal(results.tests[0]?.reason, undefined)
   })
 })
 

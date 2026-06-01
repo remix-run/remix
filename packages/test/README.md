@@ -194,6 +194,8 @@ describe('My Test Suite', () => {
   afterEach(() => {})
 
   it('tests something', () => {})
+  it('skips with a reason', { skip: 'requires API credentials' }, () => {})
+  it('tracks planned work', { todo: 'add retry coverage' }, () => {})
   it('fails if it takes too long', { timeout: 5_000 }, async (t) => {
     await fetchSomething({ signal: t.signal })
   })

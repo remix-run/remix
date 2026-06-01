@@ -2,6 +2,8 @@ import { createTestContext, type CreateTestContextE2EOptions, type TestContext }
 import type { V8CoverageEntry } from './coverage.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
 
+type PendingMeta = boolean | string
+
 interface RunnableOptions {
   timeout?: number
   signal?: AbortSignal
@@ -15,8 +17,8 @@ interface RegisteredSuite {
   name: string
   tests: RegisteredTest[]
   only?: boolean
-  skip?: boolean | string
-  todo?: boolean | string
+  skip?: PendingMeta
+  todo?: PendingMeta
   beforeEach?: LifecycleHook[]
   afterEach?: LifecycleHook[]
   beforeAll?: LifecycleHook[]
@@ -27,8 +29,8 @@ interface RegisteredTest extends RunnableOptions {
   name: string
   fn: (t: TestContext) => void | Promise<void>
   only?: boolean
-  skip?: boolean | string
-  todo?: boolean | string
+  skip?: PendingMeta
+  todo?: PendingMeta
 }
 
 export async function runTests(
@@ -50,27 +52,23 @@ export async function runTests(
     // If any suite uses .only, skip all non-only suites
     if (hasOnlySuites && !suite.only) {
       for (let test of suite.tests) {
-        results.tests.push({
-          name: test.name,
-          suiteName: suite.name,
-          status: 'skipped',
-          duration: 0,
-        })
+        results.tests.push(createPendingResult(test.name, suite.name, 'skipped'))
         results.skipped++
       }
       continue
     }
 
-    if (suite.skip || suite.todo) {
-      let status: 'skipped' | 'todo' = suite.todo ? 'todo' : 'skipped'
+    let suitePendingStatus = getPendingStatus(suite)
+    if (suitePendingStatus) {
+      let reason = getPendingReason(suite, suitePendingStatus)
       for (let test of suite.tests) {
-        results.tests.push({ name: test.name, suiteName: suite.name, status, duration: 0 })
-        results[status]++
+        results.tests.push(createPendingResult(test.name, suite.name, suitePendingStatus, reason))
+        results[suitePendingStatus]++
       }
       // describe.todo('name') with no tests — add placeholder so suite appears in output
       if (suite.tests.length === 0) {
-        results.tests.push({ name: '', suiteName: suite.name, status, duration: 0 })
-        results[status]++
+        results.tests.push(createPendingResult('', suite.name, suitePendingStatus, reason))
+        results[suitePendingStatus]++
       }
       continue
     }
@@ -93,20 +91,22 @@ export async function runTests(
     for (let test of suite.tests) {
       // If any test uses .only, skip all non-only tests in this suite
       if (hasOnlyTests && !test.only) {
-        results.tests.push({
-          name: test.name,
-          suiteName: suite.name,
-          status: 'skipped',
-          duration: 0,
-        })
+        results.tests.push(createPendingResult(test.name, suite.name, 'skipped'))
         results.skipped++
         continue
       }
 
-      if (test.skip || test.todo) {
-        let status: 'skipped' | 'todo' = test.todo ? 'todo' : 'skipped'
-        results.tests.push({ name: test.name, suiteName: suite.name, status, duration: 0 })
-        results[status]++
+      let testPendingStatus = getPendingStatus(test)
+      if (testPendingStatus) {
+        results.tests.push(
+          createPendingResult(
+            test.name,
+            suite.name,
+            testPendingStatus,
+            getPendingReason(test, testPendingStatus),
+          ),
+        )
+        results[testPendingStatus]++
         continue
       }
 
@@ -202,6 +202,43 @@ export async function runTests(
 function getRegisteredSuites(): RegisteredSuite[] {
   let global = globalThis as typeof globalThis & { __testSuites?: RegisteredSuite[] }
   return global.__testSuites ?? []
+}
+
+function getPendingStatus(value: {
+  skip?: PendingMeta
+  todo?: PendingMeta
+}): 'skipped' | 'todo' | undefined {
+  if (isPending(value.todo)) return 'todo'
+  if (isPending(value.skip)) return 'skipped'
+  return undefined
+}
+
+function isPending(value: PendingMeta | undefined): value is true | string {
+  return value === true || typeof value === 'string'
+}
+
+function getPendingReason(
+  value: { skip?: PendingMeta; todo?: PendingMeta },
+  status: 'skipped' | 'todo',
+): string | undefined {
+  let reason = status === 'todo' ? value.todo : value.skip
+  return typeof reason === 'string' && reason.length > 0 ? reason : undefined
+}
+
+function createPendingResult(
+  name: string,
+  suiteName: string,
+  status: 'skipped' | 'todo',
+  reason?: string,
+): TestResult {
+  let result: TestResult = {
+    name,
+    suiteName,
+    status,
+    duration: 0,
+  }
+  if (reason) result.reason = reason
+  return result
 }
 
 async function runLifecycleHooks(
