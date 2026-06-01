@@ -1,0 +1,1 @@
+Added narrow browser-facing entrypoints for Remix UI runtime APIs: `@remix-run/ui/run`, `@remix-run/ui/client-entry`, `@remix-run/ui/on`, and `@remix-run/ui/css`. These let source-served browser modules import only the client runtime pieces they need instead of loading the full `@remix-run/ui` barrel.

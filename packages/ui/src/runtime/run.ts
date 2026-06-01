@@ -1,6 +1,6 @@
 import { createFrame, type Frame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
-import { createStyleManager } from '../style/index.ts'
+import { createStyleManager } from '../style/stylesheet.ts'
 import type { FrameHandle } from './component.ts'
 import { createComponentErrorEvent } from './error-event.ts'
 import type { ComponentErrorEvent } from './error-event.ts'

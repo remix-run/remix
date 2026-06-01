@@ -26,7 +26,7 @@ import {
 } from './vnode.ts'
 import { invariant } from './invariant.ts'
 import { patchHostProps } from './core/props.ts'
-import type { StyleManager } from '../style/index.ts'
+import type { StyleManager } from '../style/stylesheet.ts'
 import type { ElementProps } from './jsx.ts'
 import { skipComments, logHydrationMismatch } from './client-entries.ts'
 import type { Scheduler } from './scheduler.ts'

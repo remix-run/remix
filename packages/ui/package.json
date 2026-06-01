@@ -49,6 +49,14 @@
       "types": "./src/components/combobox/combobox.tsx",
       "default": "./src/components/combobox/combobox.tsx"
     },
+    "./client-entry": {
+      "types": "./src/client-entry.ts",
+      "default": "./src/client-entry.ts"
+    },
+    "./css": {
+      "types": "./src/css.ts",
+      "default": "./src/css.ts"
+    },
     "./jsx-dev-runtime": {
       "types": "./src/jsx-runtime.ts",
       "default": "./src/jsx-runtime.ts"
@@ -72,6 +80,14 @@
     "./popover": {
       "types": "./src/components/popover/popover.ts",
       "default": "./src/components/popover/popover.ts"
+    },
+    "./on": {
+      "types": "./src/on.ts",
+      "default": "./src/on.ts"
+    },
+    "./run": {
+      "types": "./src/run.ts",
+      "default": "./src/run.ts"
     },
     "./select": {
       "types": "./src/components/select/select.tsx",
@@ -129,6 +145,14 @@
         "types": "./dist/components/combobox/combobox.d.ts",
         "default": "./dist/components/combobox/combobox.js"
       },
+      "./client-entry": {
+        "types": "./dist/client-entry.d.ts",
+        "default": "./dist/client-entry.js"
+      },
+      "./css": {
+        "types": "./dist/css.d.ts",
+        "default": "./dist/css.js"
+      },
       "./jsx-dev-runtime": {
         "types": "./dist/jsx-runtime.d.ts",
         "default": "./dist/jsx-runtime.js"
@@ -152,6 +176,14 @@
       "./popover": {
         "types": "./dist/components/popover/popover.d.ts",
         "default": "./dist/components/popover/popover.js"
+      },
+      "./on": {
+        "types": "./dist/on.d.ts",
+        "default": "./dist/on.js"
+      },
+      "./run": {
+        "types": "./dist/run.d.ts",
+        "default": "./dist/run.js"
       },
       "./select": {
         "types": "./dist/components/select/select.d.ts",

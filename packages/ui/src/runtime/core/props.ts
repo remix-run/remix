@@ -7,7 +7,7 @@ import {
   serializeStyleObject,
   toKebabCase,
 } from './attributes.ts'
-import { normalizeCssValue } from '../../style/style.ts'
+import { normalizeCssValue } from '../../style/values.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 

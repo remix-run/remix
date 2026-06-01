@@ -71,7 +71,8 @@ When a server frame response is itself rendered with `renderToStream()`, pass `f
 Client entries inside a frame can trigger a reload via `handle.frame.reload()`:
 
 ```tsx
-import { clientEntry, on, type Handle } from 'remix/ui'
+import { clientEntry, type Handle } from 'remix/ui/client-entry'
+import { on } from 'remix/ui/on'
 
 export let RefreshButton = clientEntry(
   '/assets/refresh.js#RefreshButton',

@@ -193,6 +193,48 @@ function Layout(handle: Handle<{ children: RemixNode }>) {
 }
 ```
 
+## Browser Entry Imports
+
+For browser-served modules, import the narrow Remix UI subpaths you need instead of the full
+`remix/ui` entry. This keeps source-served browser graphs focused on hydration code and avoids
+shipping unrelated server rendering, theme, component, or primitive exports.
+
+```tsx
+import { clientEntry, type Handle } from 'remix/ui/client-entry'
+import { on } from 'remix/ui/on'
+
+export const Counter = clientEntry(
+  import.meta.url,
+  function Counter(handle: Handle<{ initialCount: number }>) {
+    let count = handle.props.initialCount
+
+    return () => (
+      <button
+        mix={on('click', () => {
+          count++
+          handle.update()
+        })}
+      >
+        Count: {count}
+      </button>
+    )
+  },
+)
+```
+
+Use `remix/ui/run` for the app browser entrypoint:
+
+```ts
+import { run } from 'remix/ui/run'
+
+run({
+  async loadModule(moduleUrl, exportName) {
+    let mod = await import(moduleUrl)
+    return mod[exportName]
+  },
+})
+```
+
 ## Cascade Layers
 
 Remix UI emits its built-in theme reset in `rmx-reset` and generated `css(...)` rules under `rmx`. Unlayered CSS outranks layered component CSS, so use explicit layer order when mixing Remix UI with global styles.

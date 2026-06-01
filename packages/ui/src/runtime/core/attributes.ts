@@ -1,4 +1,4 @@
-import { normalizeCssValue } from '../../style/style.ts'
+import { normalizeCssValue } from '../../style/values.ts'
 import { normalizeSvgAttribute } from '../svg-attributes.ts'
 import type { ElementProps } from '../jsx.ts'
 

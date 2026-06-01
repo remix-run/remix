@@ -133,13 +133,17 @@
     "./ui/animation": "./src/ui/animation.ts",
     "./ui/breadcrumbs": "./src/ui/breadcrumbs.ts",
     "./ui/button": "./src/ui/button.ts",
+    "./ui/client-entry": "./src/ui/client-entry.ts",
     "./ui/combobox": "./src/ui/combobox.ts",
+    "./ui/css": "./src/ui/css.ts",
     "./ui/glyph": "./src/ui/glyph.ts",
     "./ui/jsx-dev-runtime": "./src/ui/jsx-dev-runtime.ts",
     "./ui/jsx-runtime": "./src/ui/jsx-runtime.ts",
     "./ui/listbox": "./src/ui/listbox.ts",
     "./ui/menu": "./src/ui/menu.ts",
+    "./ui/on": "./src/ui/on.ts",
     "./ui/popover": "./src/ui/popover.ts",
+    "./ui/run": "./src/ui/run.ts",
     "./ui/scroll-lock": "./src/ui/scroll-lock.ts",
     "./ui/select": "./src/ui/select.ts",
     "./ui/separator": "./src/ui/separator.ts",
@@ -598,9 +602,17 @@
         "types": "./dist/ui/button.d.ts",
         "default": "./dist/ui/button.js"
       },
+      "./ui/client-entry": {
+        "types": "./dist/ui/client-entry.d.ts",
+        "default": "./dist/ui/client-entry.js"
+      },
       "./ui/combobox": {
         "types": "./dist/ui/combobox.d.ts",
         "default": "./dist/ui/combobox.js"
+      },
+      "./ui/css": {
+        "types": "./dist/ui/css.d.ts",
+        "default": "./dist/ui/css.js"
       },
       "./ui/glyph": {
         "types": "./dist/ui/glyph.d.ts",
@@ -622,9 +634,17 @@
         "types": "./dist/ui/menu.d.ts",
         "default": "./dist/ui/menu.js"
       },
+      "./ui/on": {
+        "types": "./dist/ui/on.d.ts",
+        "default": "./dist/ui/on.js"
+      },
       "./ui/popover": {
         "types": "./dist/ui/popover.d.ts",
         "default": "./dist/ui/popover.js"
+      },
+      "./ui/run": {
+        "types": "./dist/ui/run.d.ts",
+        "default": "./dist/ui/run.js"
       },
       "./ui/scroll-lock": {
         "types": "./dist/ui/scroll-lock.d.ts",

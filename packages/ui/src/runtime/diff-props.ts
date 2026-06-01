@@ -1,6 +1,5 @@
 import { invariant } from './invariant.ts'
-import { createStyleManager } from '../style/index.ts'
-import type { StyleManager } from '../style/index.ts'
+import { createStyleManager, type StyleManager } from '../style/stylesheet.ts'
 
 let globalStyleManager =
   typeof window !== 'undefined' ? createStyleManager() : (null as unknown as StyleManager)
