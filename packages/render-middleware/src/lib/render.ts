@@ -36,7 +36,8 @@ type RendererFactory<renderer extends AnyRenderer> = (context: RequestContext<an
 export function renderWith<const renderer extends AnyRenderer>(
   createRenderer: RendererFactory<renderer>,
 ): Middleware<{ key: typeof Renderer; value: renderer; property: 'render' }> {
-  return (context) => {
+  return (context, next) => {
     context.set(Renderer, createRenderer(context), { property: 'render' })
+    return next()
   }
 }
