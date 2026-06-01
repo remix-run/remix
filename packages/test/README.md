@@ -9,6 +9,7 @@ A test framework for JavaScript and TypeScript projects.
 - Playwright E2E testing via `t.serve`
 - In-browser component testing (pair with `render` from `remix/ui/test`)
 - Mock functions and method spies via `t.mock.fn` / `t.mock.method`
+- Per-test and hook timeouts with `t.signal` abort support
 - Unified code coverage reporting across unit and E2E tests
 - Watch mode
 - Config file support (`remix-test.config.ts`)
@@ -193,6 +194,11 @@ describe('My Test Suite', () => {
   afterEach(() => {})
 
   it('tests something', () => {})
+  it('skips with a reason', { skip: 'requires API credentials' }, () => {})
+  it('tracks planned work', { todo: 'add retry coverage' }, () => {})
+  it('fails if it takes too long', { timeout: 5_000 }, async (t) => {
+    await fetchSomething({ signal: t.signal })
+  })
   it('tests something else', () => {})
 })
 ```
@@ -229,6 +235,9 @@ Each test callback receives a `TestContext` (`t`) as its first argument with hel
 ```ts
 // from 'remix/test'
 interface TestContext {
+  // Aborts when the test times out or when the user-provided test signal aborts
+  signal: AbortSignal
+
   // Register a cleanup function to run after the test completes
   after(fn: () => void): void
 
@@ -282,6 +291,24 @@ it('cleanup', (t) => {
   t.after(() => conn.close())
   // ...
 })
+```
+
+#### Timeouts and Signals
+
+Pass `{ timeout: ms }` to `it()` or after any lifecycle hook callback to fail that work if it takes too long. Timed-out tests abort `t.signal`, so async code that accepts an `AbortSignal` can cancel promptly.
+
+```ts
+it('loads data', { timeout: 5_000 }, async (t) => {
+  let response = await fetch('/api/data', { signal: t.signal })
+  assert.equal(response.status, 200)
+})
+
+beforeEach(
+  async () => {
+    await resetDatabase()
+  },
+  { timeout: 1_000 },
+)
 ```
 
 #### Fake Timers

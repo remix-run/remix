@@ -32,6 +32,8 @@
     "lint:fix": "oxlint . -A all --fix --quiet",
     "pr-preview": "node ./scripts/pr-preview.ts",
     "setup-installable-branch": "node ./scripts/setup-installable-branch.ts",
+    "sync-remix-readmes": "node ./scripts/sync-remix-readmes.ts",
+    "validate-remix-package-readmes": "node ./scripts/validate-remix-package-readmes.ts",
     "validate-package-meta": "node ./scripts/validate-package-meta.ts",
     "test": "pnpm --recursive --workspace-concurrency=4 --stream run test",
     "test:bun": "pnpm --parallel --if-present run test:bun",

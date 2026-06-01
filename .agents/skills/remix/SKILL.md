@@ -9,7 +9,7 @@ Use this skill for end-to-end Remix app work. This skill helps you choose the ri
 
 ## Full Package Documentation
 
-This skill is the quick guide. When you need fuller API documentation, examples, or package-specific details for a `remix/*` subpath, first look for a README next to the relevant generated source file in the published `remix` package: `node_modules/remix/src/<subpath>/README.md`. If that README does not exist, look for the nearest parent README because some subpaths share their parent package documentation.
+This skill is the quick guide. When you need fuller API documentation, examples, or package-specific details for a `remix/*` subpath, first look for a README next to the relevant generated source file in the published `remix` package: `node_modules/remix/src/<subpath>/README.md`. These published README files are generated mirrors; in the Remix source repository, the canonical README lives in the owning `packages/*` package and the `packages/remix/src/**/README.md` mirrors are intentionally ignored. If that README does not exist, look for the nearest parent README because some subpaths share their parent package documentation.
 
 Examples:
 
