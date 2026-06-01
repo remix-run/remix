@@ -37,6 +37,10 @@ function exportSpecifier(packageName: string, exportPath: string): string {
   return exportPath === '.' ? packageName : `${packageName}/${exportPath.replace('./', '')}`
 }
 
+function packageRelativePath(filePath: string): string {
+  return path.relative(packagesDir, filePath).split(path.sep).join('/')
+}
+
 const referencedPackages = new Set([...specifierMap.keys()].map(packageNameFromSpecifier))
 const readmeCopies = getRemixReadmeCopies()
 
@@ -149,8 +153,8 @@ describe('manifest', () => {
   it('generates README mirrors for representative published remix docs', () => {
     let sourceByMirrorPath = new Map(
       readmeCopies.map((copy) => [
-        path.relative(packagesDir, copy.remixReadmePath),
-        path.relative(packagesDir, copy.sourceReadmePath),
+        packageRelativePath(copy.remixReadmePath),
+        packageRelativePath(copy.sourceReadmePath),
       ]),
     )
 
