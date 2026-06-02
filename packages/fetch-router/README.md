@@ -741,12 +741,7 @@ Route params are only half of a handler's type contract. In many apps, handlers 
 
 ```ts
 import { Auth, requireAuth } from 'remix/middleware/auth'
-import {
-  createAction,
-  createController,
-  createRouter,
-  type RouterContext,
-} from 'remix/router'
+import { createAction, createController, createRouter, type RouterContext } from 'remix/router'
 import { route } from 'remix/routes'
 import { loadDatabase } from './middleware/database.ts'
 import { loadSession } from './middleware/session.ts'

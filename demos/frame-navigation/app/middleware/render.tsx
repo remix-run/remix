@@ -53,12 +53,7 @@ async function resolveFrame(
   return res.text()
 }
 
-async function followFrameRedirects(
-  router: Router,
-  request: Request,
-  url: URL,
-  headers: Headers,
-) {
+async function followFrameRedirects(router: Router, request: Request, url: URL, headers: Headers) {
   let currentUrl = url
   let redirectsRemaining = 10
 

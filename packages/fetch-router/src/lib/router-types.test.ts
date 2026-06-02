@@ -4,12 +4,13 @@ import { describe, it } from '@remix-run/test'
 import { createRoutes as route } from '../routes.ts'
 import { createAction, createController, type Action, type Controller } from './controller.ts'
 import { createMiddleware, type Middleware, type MiddlewareContext } from './middleware.ts'
+import { createContextKey, type ContextWithEntry, type RequestContext } from './request-context.ts'
 import {
-  createContextKey,
-  type ContextWithEntry,
-  type RequestContext,
-} from './request-context.ts'
-import { createRouter, type RouteBuilder, type RouteInstaller, type RouterContext } from './router.ts'
+  createRouter,
+  type RouteBuilder,
+  type RouteInstaller,
+  type RouterContext,
+} from './router.ts'
 import type { IsEqual } from './type-utils.ts'
 
 function expectTypeEquality<_check extends true>() {}
