@@ -60,6 +60,7 @@ export function createHref<source extends string>(
     parsedPattern = pattern
   }
   let [params, searchParams] = args
+  let hrefParams: Record<string, unknown> = params ?? {}
   searchParams ??= {}
 
   let hasOrigin =
@@ -81,13 +82,13 @@ export function createHref<source extends string>(
         source: patternSource,
       })
     }
-    let hostname = hrefPart(parsedPattern, parsedPattern.hostname, params ?? {}, patternSource)
+    let hostname = hrefPart(parsedPattern, parsedPattern.hostname, hrefParams, patternSource)
 
     let port = parsedPattern.port === null ? '' : `:${parsedPattern.port}`
     result += `${protocol}://${hostname}${port}`
   }
 
-  let pathname = hrefPart(parsedPattern, parsedPattern.pathname, params ?? {}, patternSource)
+  let pathname = hrefPart(parsedPattern, parsedPattern.pathname, hrefParams, patternSource)
   result += '/' + pathname
 
   let search = hrefSearch(parsedPattern, searchParams)
@@ -191,8 +192,7 @@ function hrefSearch(pattern: ParsedRoutePattern, searchParams: SearchParams): st
       urlSearchParams.append(key, '')
     } else {
       for (let value of requiredValues) {
-        if (urlSearchParams.getAll(key).includes(value)) continue
-        urlSearchParams.append(key, value)
+        if (!urlSearchParams.has(key, value)) urlSearchParams.append(key, value)
       }
     }
   }

@@ -63,12 +63,12 @@ The committed checkpoint before the current internal runtime cleanup was
 `95,692 raw / 39,526 gzip / 34,984 brotli / 60 modules` for all bookstore browser assets.
 
 The current working-tree checkpoint is
-`95,200 raw / 39,427 gzip / 34,915 brotli / 60 modules`. That is a
-`492 raw / 99 gzip / 69 brotli` improvement over the committed checkpoint and comes from removing
-internal runtime export/factory bytes from modules already downloaded by hydrated pages, not from a
-new graph split. The largest remaining package targets are still `reconcile.ts`, `frame.ts`,
-`mixin.ts`, `diff-dom.ts`, route-map/href generation, SVG attribute normalization, and the runtime
-CSS serializer.
+`95,147 raw / 39,410 gzip / 34,895 brotli / 60 modules`. That is a
+`53 raw / 17 gzip / 20 brotli` improvement over the last committed checkpoint and comes from small
+actual-byte reductions in already-downloaded route href and reconciler code, not from a new graph
+split. The largest remaining package targets are still `reconcile.ts`, `frame.ts`, `mixin.ts`,
+`diff-dom.ts`, route-map/href generation, SVG attribute normalization, and the runtime CSS
+serializer.
 
 ## Measurement fixture
 
@@ -811,15 +811,50 @@ added a source-served module and regressed the full compressed set:
 This should stay reverted unless there is a no-extra-module design with a measured full-set gzip and
 brotli win. It is the same kind of module-splitting churn this investigation is trying to avoid.
 
+## Route href and reconciler follow-up cleanup
+
+The next kept follow-up is intentionally small. It keeps the same module graph and removes bytes from
+two already-downloaded modules:
+
+- `createHref()` now normalizes missing params once and uses `URLSearchParams.has(key, value)` when
+  deduplicating route-pattern search constraints against user-provided search params.
+- the reconciler's internal `<head>` host check now uses the single lowercase comparison path instead
+  of a special exact-match/length branch.
+
+Measured on top of the internal runtime export and factory cleanup:
+
+| Browser asset set | Before | After | Savings |
+| ----------------- | -----: | ----: | ------: |
+| all bookstore browser assets | 95,200 raw / 39,427 gzip / 34,915 brotli / 60 modules | 95,147 raw / 39,410 gzip / 34,895 brotli / 60 modules | 53 raw / 17 gzip / 20 brotli |
+
+`route-pattern/src/lib/href.ts` moved from `3,147 raw / 1,245 gzip / 1,108 brotli` to
+`3,134 raw / 1,237 gzip / 1,102 brotli`. `runtime/reconcile.ts` moved from
+`17,904 raw / 5,986 gzip / 5,435 brotli` to `17,864 raw / 5,975 gzip / 5,418 brotli`.
+
+## Tried and rejected: additional route/style/SVG micro-shapes
+
+Several adjacent micro-experiments failed the full compressed-set gate and should stay reverted
+unless new evidence changes the shape:
+
+- Rewriting `fetch-router`'s `joinPathname()` from `findLastIndex()`/`forEach()` into manual loops
+  grew the full set to `95,224 raw / 39,436 gzip / 34,920 brotli`.
+- Reusing `Object.entries(styleObj)` between `processStyleClass()`'s empty check and hash path grew
+  `style.ts` and moved the full set to `95,182 raw / 39,411 gzip / 34,892 brotli`.
+- Collapsing SVG attribute-name normalization into a ternary expression preserved raw size but moved
+  the full set to `95,146 raw / 39,408 gzip / 34,914 brotli`.
+- Unifying scalar and array search-param serialization in `createHref()` saved raw/gzip but regressed
+  brotli versus the kept search-param cleanup (`95,120 raw / 39,403 gzip / 34,891 brotli` before the
+  type-safe params local, but still worse than the same local with the kept search loop).
+
 The largest package modules in the current full downloaded set are now:
 
 | Module | Bytes |
 | ------ | ----: |
-| `packages/ui/src/runtime/reconcile.ts` | 17,904 raw / 5,986 gzip / 5,435 brotli |
+| `packages/ui/src/runtime/reconcile.ts` | 17,864 raw / 5,975 gzip / 5,418 brotli |
 | `packages/ui/src/runtime/frame.ts` | 14,242 raw / 4,879 gzip / 4,402 brotli |
 | `packages/ui/src/runtime/mixins/mixin.ts` | 7,739 raw / 2,615 gzip / 2,393 brotli |
 | `packages/ui/src/runtime/diff-dom.ts` | 6,152 raw / 2,332 gzip / 2,105 brotli |
-| `packages/route-pattern/src/lib/href.ts` | 3,147 raw / 1,245 gzip / 1,108 brotli |
+| `packages/route-pattern/src/lib/href.ts` | 3,134 raw / 1,237 gzip / 1,102 brotli |
 | `packages/fetch-router/src/lib/route-map.ts` | 3,033 raw / 1,187 gzip / 1,092 brotli |
 | `packages/ui/src/style/style.ts` | 2,473 raw / 1,001 gzip / 897 brotli |
 | `packages/ui/src/runtime/svg-attributes.ts` | 2,469 raw / 872 gzip / 739 brotli |

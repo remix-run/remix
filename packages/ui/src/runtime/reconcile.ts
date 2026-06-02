@@ -284,8 +284,6 @@ function bindNodeMixRuntime(
 }
 
 function isHeadHostNode(node: HostNode): boolean {
-  if (node.type === 'head') return true
-  if (node.type.length !== 4) return false
   return node.type.toLowerCase() === 'head'
 }
 

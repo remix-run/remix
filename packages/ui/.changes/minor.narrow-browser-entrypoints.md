@@ -27,3 +27,5 @@ Reduced a few more browser runtime bytes by removing unused internal virtual-roo
 Reduced browser mixin runtime bytes by inlining one-use runtime helpers, sharing insert/reclaimed event dispatch, and calling the shared mixin update dispatcher directly from the reconciler.
 
 Reduced a few more browser runtime bytes by removing internal source-served runtime exports and inlining the one-use frame runtime factory.
+
+Reduced a few more browser reconciler bytes by simplifying the internal head-element host check.

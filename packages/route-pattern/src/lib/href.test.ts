@@ -383,6 +383,15 @@ describe('createHref', () => {
         )
       })
 
+      it('deduplicates when a later repeated user param matches the pattern value', () => {
+        assert.equal(
+          createHref('/posts?tag=featured', undefined, {
+            tag: ['tutorial', 'featured'],
+          }),
+          '/posts?tag=tutorial&tag=featured',
+        )
+      })
+
       it('handles array values', () => {
         assert.equal(
           createHref('/posts?tag=featured&tag=popular', undefined, {
