@@ -7,7 +7,6 @@ import { createHtmlResponse } from 'remix/response/html'
 import { createRouter as _createRouter, type Router } from 'remix/router'
 import { clientEntry, type RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
-import * as semver from 'semver'
 import { assetServer, entryPreloads } from './asset-server.ts'
 import { discoverDemoFiles, loadDemoComponent, renderDemoSource } from './demos.tsx'
 import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
@@ -40,7 +39,7 @@ function getRegistry(version?: string): DocsRegistry {
 
 export const getDefaultVersions = (): Versions => {
   let version = JSON.parse(fs.readFileSync(REMIX_PKG_JSON, 'utf-8')).version
-  return [{ version, crawl: semver.prerelease(version) === null }]
+  return [{ version }]
 }
 
 export function createRouter(versions: Versions) {
@@ -134,9 +133,10 @@ export function createRouter(versions: Versions) {
         if (!params.version) {
           return respond.file(request, jsonPath)
         }
+
         let content = JSON.parse(await fs.promises.readFile(jsonPath, 'utf-8'))
         for (let key in content) {
-          content[key] = `/${params.version}${content[key]}`
+          content[key] = getLookupHref(content[key], params.version)
         }
         return Response.json(content)
       },
@@ -162,6 +162,15 @@ export function createRouter(versions: Versions) {
 }
 
 // Response helpers
+
+function getLookupHref(href: string, version: string): string {
+  if (!href.startsWith('/api/')) return href
+
+  return routes.docs.href({
+    version,
+    slug: href.slice('/api/'.length).replace(/\/$/, ''),
+  })
+}
 
 function stream(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
   return renderToStream(node, {

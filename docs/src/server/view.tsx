@@ -13,7 +13,7 @@ import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
 import { routes } from './routes.ts'
 
-export type Versions = { version: string; crawl: boolean }[]
+export type Versions = { version: string }[]
 
 const entryHref = await assetServer.getHref('docs/src/client/entry.tsx')
 
@@ -99,6 +99,7 @@ function Head(
 ) {
   return () => {
     let { page, activeVersion, entryPreloads } = handle.props
+    let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
     return (
       <head>
         <meta charSet="utf-8" />
@@ -107,10 +108,10 @@ function Head(
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
         {activeVersion != null ? (
           <>
-            <meta name="robots" content="noindex,nofollow" />
-            <meta name="googlebot" content="noindex,nofollow" />
+            <meta name="robots" content={shouldNofollow ? 'noindex,nofollow' : 'noindex'} />
+            <meta name="googlebot" content={shouldNofollow ? 'noindex,nofollow' : 'noindex'} />
           </>
-        ) : page.docFile?.kind === 'package' || page.docFile?.kind === 'demo' ? (
+        ) : shouldNofollow ? (
           // Overview pages (package READMEs) link densely to every API page
           // in the package; those are already reachable via the sidebar, so
           // tell crawlers — including our prerender spider — not to follow
@@ -261,7 +262,7 @@ function Sidebar(
   handle: Handle<{
     registry: DocsRegistry
     currentPath: string
-    versions: { version: string; crawl: boolean }[]
+    versions: Versions
     activeVersion?: string
   }>,
 ) {
@@ -363,7 +364,7 @@ function RemixLogos() {
 
 function VersionSwitcher(
   handle: Handle<{
-    versions: { version: string; crawl: boolean }[]
+    versions: Versions
     activeVersion?: string
   }>,
 ) {
@@ -388,11 +389,12 @@ function VersionSwitcher(
                 (versions.length === 0 || v.version === versions[0]?.version) && !activeVersion
               let active = v.version === activeVersion || latest
               let href = routes.home.href({ version: !latest ? v.version : undefined })
+              let rel = active ? undefined : 'nofollow'
               return (
                 <a
                   key={v.version}
                   href={href}
-                  rel={!latest && !v.crawl ? 'nofollow' : undefined}
+                  rel={rel}
                   aria-current={active ? 'page' : undefined}
                   mix={navItemCss}
                 >

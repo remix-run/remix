@@ -217,6 +217,13 @@ function getShikiExtension(
       code(code) {
         return code.text
       },
+      link(token) {
+        let href = getDocsRouteHref(token.href, version)
+        if (!href) return false
+
+        let title = token.title ? ` title="${escapeHtml(token.title)}"` : ''
+        return `<a href="${escapeHtml(href)}"${title}>${this.parser.parseInline(token.tokens)}</a>`
+      },
     },
   }
 
@@ -246,4 +253,38 @@ function getShikiExtension(
       ],
     }
   }
+}
+
+function getDocsRouteHref(href: string, version: string | undefined): string | undefined {
+  if (!href.startsWith('/api/')) return undefined
+
+  let url = new URL(href, 'http://localhost')
+  let slug = url.pathname.slice('/api/'.length)
+  if (slug.length === 0) return undefined
+
+  let routeHref: string
+  if (slug.endsWith('.md')) {
+    routeHref = routes.markdown.href({ version, slug: slug.slice(0, -'.md'.length) })
+  } else {
+    routeHref = routes.docs.href({ version, slug: slug.replace(/\/$/, '') })
+  }
+
+  return `${routeHref}${url.search}${url.hash}`
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"]/g, (char) => {
+    switch (char) {
+      case '&':
+        return '&amp;'
+      case '<':
+        return '&lt;'
+      case '>':
+        return '&gt;'
+      case '"':
+        return '&quot;'
+      default:
+        return char
+    }
+  })
 }

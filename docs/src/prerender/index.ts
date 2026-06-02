@@ -17,8 +17,16 @@ let { values: cliArgs } = util.parseArgs({
       short: 'd',
       default: 'build/site',
     },
+    version: {
+      type: 'string',
+    },
   },
 })
+
+const buildVersion = cliArgs.version
+if (buildVersion != null && (buildVersion.length === 0 || buildVersion.includes('/'))) {
+  throw new Error(`Invalid --version value: ${buildVersion}`)
+}
 
 const publicDir = path.join(process.cwd(), 'build', 'public')
 const outputDir = path.join(process.cwd(), cliArgs.dir)
@@ -26,8 +34,9 @@ const SCRIPT_FILE_EXT = /\.(?:tsx?|jsx|mts)$/
 const SCRIPT_EXT_IN_PATH = /\.(?:tsx?|jsx|mts)(?=[?#]|$)/
 const SCRIPT_EXT_IN_JS_IMPORT = /\.(?:tsx?|jsx|mts)(?=["'?#])/g
 
-const versions = await getVersionsToBuild()
-console.log('Prerendering versions:\n', JSON.stringify(versions, null, 2))
+const versions = await getVersionsForPicker(buildVersion)
+console.log(`Prerendering ${buildVersion ? buildVersion : 'root'} docs`)
+console.log('Version picker options:\n', JSON.stringify(versions, null, 2))
 
 const docsRouter = createRouter(versions)
 
@@ -37,14 +46,8 @@ await fs.cp(publicDir, outputDir, { recursive: true })
 
 // Spider the site
 const paths = [
-  routes.home.href(),
-  routes.lookup.href(),
-  ...(versions
-    ?.filter((v) => v.crawl)
-    .flatMap((v) => [
-      routes.home.href({ version: v.version }),
-      routes.lookup.href({ version: v.version }),
-    ]) || []),
+  routes.home.href({ version: buildVersion }),
+  routes.lookup.href({ version: buildVersion }),
 ]
 
 for await (let { pathname, filepath, response } of crawl(docsRouter, { paths })) {
@@ -61,9 +64,11 @@ async function writeResult(pathname: string, filepath: string, response: Respons
   let outputPath = path.join(outputDir, outputFilepath)
   await fs.mkdir(path.dirname(outputPath), { recursive: true })
 
-  if (response.headers.get('Content-Type')?.includes('text/html')) {
+  let contentType = response.headers.get('Content-Type')
+
+  if (contentType?.includes('text/html')) {
     let html = await response.text()
-    // Update all HTML script references to reference JS files for static HTML hosting
+    // Update script references for static HTML hosting.
     let updated = rewriteExtensionsToJs(html)
     await fs.writeFile(outputPath, updated, 'utf-8')
   } else if (SCRIPT_FILE_EXT.test(filepath)) {
@@ -128,9 +133,9 @@ function rewriteExtensionsToJs(html: string): string {
   return changed ? dom.toString() : html
 }
 
-async function getVersionsToBuild(): Promise<Versions> {
+async function getVersionsForPicker(activeVersion?: string): Promise<Versions> {
   // Get all Remix v3 tags, transform them to vX.Y.Z format, sort newest to oldest
-  const remixVersions = cp
+  let remixVersions = cp
     .execSync('git tag', { encoding: 'utf-8' })
     .trim()
     .split('\n')
@@ -139,8 +144,19 @@ async function getVersionsToBuild(): Promise<Versions> {
     .filter((tag) => semver.valid(tag) && !semver.prerelease(tag))
     .sort((a, b) => semver.rcompare(a, b))
 
-  // Crawl only the most recent tag
+  if (activeVersion && !remixVersions.includes(activeVersion)) {
+    remixVersions.push(activeVersion)
+    remixVersions.sort((a, b) => {
+      let aValid = semver.valid(a)
+      let bValid = semver.valid(b)
+      if (aValid && bValid) return semver.rcompare(a, b)
+      if (aValid) return -1
+      if (bValid) return 1
+      return a.localeCompare(b)
+    })
+  }
+
   return remixVersions.length > 0
-    ? remixVersions.map((tag, i) => ({ version: tag, crawl: i === 0 }))
+    ? remixVersions.map((version) => ({ version }))
     : getDefaultVersions()
 }
