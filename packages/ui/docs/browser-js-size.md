@@ -1,13 +1,17 @@
 # Browser JavaScript Size Findings
 
-## Goals
+## Goal and decision rule
 
-Reduce the actual JavaScript bytes downloaded by typical hydrated Remix apps.
+Reduce the actual compressed JavaScript bytes downloaded by typical hydrated Remix apps.
 
-This investigation should prioritize changes that make the browser-loaded module bodies themselves
-smaller, especially modules that are already downloaded by a normal hydrated page. The goal is not to
-make isolated entry graphs look better if those bytes still arrive through another asset on the same
-page.
+This phase is about making the browser-loaded module bodies themselves smaller, especially modules
+that are already downloaded by a normal hydrated page. Per-entry graph wins are useful diagnostics,
+but they are not enough if the same bytes still arrive through another asset on the same page.
+
+A change is worth keeping when it reduces the full de-duped bookstore browser asset set in gzip and
+brotli, keeps public/API churn low, and is not just another version of a rejected split below. Raw
+bytes are useful for finding bloated code paths, but raw-only wins should be reverted when compressed
+downloads regress.
 
 Primary goals:
 
@@ -49,19 +53,22 @@ These paths have either been measured as low-value or are outside the current go
 - static-route entry omission;
 - passing concrete route strings into component props for bookstore-only savings;
 - raw-only rewrites that regress gzip or brotli;
-- cosmetic private-name shortening as a primary strategy.
+- cosmetic private-name shortening as a primary strategy;
+- splitting `clientEntry` into another source-served runtime module unless there is a no-extra-module
+  design with a measured full-set compressed win.
 
 ## Current checkpoint
 
-The previous checkpoint before the current route cleanup was
-`95,954 raw / 39,611 gzip / 35,065 brotli / 60 modules` for all bookstore browser assets.
+The committed checkpoint before the current internal runtime cleanup was
+`95,692 raw / 39,526 gzip / 34,984 brotli / 60 modules` for all bookstore browser assets.
 
-The current working-tree route cleanup checkpoint is
-`95,692 raw / 39,526 gzip / 34,984 brotli / 60 modules`. That is a `262 raw / 85 gzip / 81 brotli`
-improvement over the committed checkpoint and comes from smaller route href generation and
-route-map serialization code, not new graph splits. The largest remaining targets are still
-`reconcile.ts`, `frame.ts`, `mixin.ts`, `diff-dom.ts`, route-map/href generation, SVG attribute
-normalization, and the runtime CSS serializer.
+The current working-tree checkpoint is
+`95,200 raw / 39,427 gzip / 34,915 brotli / 60 modules`. That is a
+`492 raw / 99 gzip / 69 brotli` improvement over the committed checkpoint and comes from removing
+internal runtime export/factory bytes from modules already downloaded by hydrated pages, not from a
+new graph split. The largest remaining package targets are still `reconcile.ts`, `frame.ts`,
+`mixin.ts`, `diff-dom.ts`, route-map/href generation, SVG attribute normalization, and the runtime
+CSS serializer.
 
 ## Measurement fixture
 
@@ -770,19 +777,53 @@ Measured on top of the previous route href cleanup:
 `3,147 raw / 1,245 gzip / 1,108 brotli`. `fetch-router/src/lib/route-map.ts` moved from
 `3,089 raw / 1,215 gzip / 1,124 brotli` to `3,033 raw / 1,187 gzip / 1,092 brotli`.
 
-The largest modules in the current full downloaded set are now:
+## UI internal runtime export and factory cleanup
+
+The next kept UI-runtime pass removes bytes from modules already downloaded by hydrated pages without
+changing the module graph:
+
+- `frame.ts` inlines the one-use `createFrameRuntime()` factory into `createFrame()`.
+- frame template buffering helpers, reconciler DOM-anchor helpers, and SVG attribute normalization
+  are now private implementation details instead of source-served exports.
+
+Measured on top of the route href and route-map cleanup:
+
+| Browser asset set | Before | After | Savings |
+| ----------------- | -----: | ----: | ------: |
+| all bookstore browser assets | 95,692 raw / 39,526 gzip / 34,984 brotli / 60 modules | 95,200 raw / 39,427 gzip / 34,915 brotli / 60 modules | 492 raw / 99 gzip / 69 brotli |
+
+`runtime/frame.ts` moved from `14,486 raw / 4,962 gzip / 4,458 brotli` to
+`14,242 raw / 4,879 gzip / 4,402 brotli`. `runtime/reconcile.ts` moved from
+`18,097 raw / 6,001 gzip / 5,444 brotli` to `17,904 raw / 5,986 gzip / 5,435 brotli`, and
+`runtime/svg-attributes.ts` moved from `2,524 raw / 873 gzip / 741 brotli` to
+`2,469 raw / 872 gzip / 739 brotli`.
+
+## Tried and rejected: clientEntry source-module split
+
+A follow-up experiment split `clientEntry` into a new `runtime/client-entry.ts` module while leaving
+`client-entries.ts` for the hydration/server helpers. This made the graph more granular, but it
+added a source-served module and regressed the full compressed set:
+
+| Browser asset set | Before | Split `clientEntry` module | Delta |
+| ----------------- | -----: | -------------------------: | ----: |
+| all bookstore browser assets | 95,200 raw / 39,427 gzip / 34,915 brotli / 60 modules | 95,249 raw / 39,520 gzip / 35,007 brotli / 61 modules | +49 raw / +93 gzip / +92 brotli |
+
+This should stay reverted unless there is a no-extra-module design with a measured full-set gzip and
+brotli win. It is the same kind of module-splitting churn this investigation is trying to avoid.
+
+The largest package modules in the current full downloaded set are now:
 
 | Module | Bytes |
 | ------ | ----: |
-| `packages/ui/src/runtime/reconcile.ts` | 18,097 raw / 6,001 gzip / 5,444 brotli |
-| `packages/ui/src/runtime/frame.ts` | 14,486 raw / 4,962 gzip / 4,458 brotli |
+| `packages/ui/src/runtime/reconcile.ts` | 17,904 raw / 5,986 gzip / 5,435 brotli |
+| `packages/ui/src/runtime/frame.ts` | 14,242 raw / 4,879 gzip / 4,402 brotli |
 | `packages/ui/src/runtime/mixins/mixin.ts` | 7,739 raw / 2,615 gzip / 2,393 brotli |
 | `packages/ui/src/runtime/diff-dom.ts` | 6,152 raw / 2,332 gzip / 2,105 brotli |
 | `packages/route-pattern/src/lib/href.ts` | 3,147 raw / 1,245 gzip / 1,108 brotli |
 | `packages/fetch-router/src/lib/route-map.ts` | 3,033 raw / 1,187 gzip / 1,092 brotli |
-| `packages/ui/src/runtime/svg-attributes.ts` | 2,524 raw / 873 gzip / 741 brotli |
 | `packages/ui/src/style/style.ts` | 2,473 raw / 1,001 gzip / 897 brotli |
-| `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,156 gzip / 1,021 brotli |
+| `packages/ui/src/runtime/svg-attributes.ts` | 2,469 raw / 872 gzip / 739 brotli |
+| `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,156 gzip / 1,022 brotli |
 | `packages/ui/src/runtime/component.ts` | 2,357 raw / 965 gzip / 848 brotli |
 
 This keeps the main opportunity map pointed at actual byte reductions:
@@ -791,10 +832,10 @@ This keeps the main opportunity map pointed at actual byte reductions:
   still dominate the hydrated page set. The worthwhile wins so far have deleted duplicate or unused
   branches from these modules. Future changes should keep looking for behavior that is duplicated,
   unconditionally downloaded, or owned by the wrong runtime boundary.
-- **Frame runtime boundary**: `run()` currently downloads document reload diffing, streamed frame
+- **Frame runtime boundary**: `run()` still downloads document reload diffing, streamed frame
   template parsing, nested frame lifecycle, client-entry hydration, module loading, and navigation
-  reload semantics together. A larger win would need a cohesive smaller runtime boundary, not just
-  more narrow subpaths.
+  reload semantics together. A larger win would need a cohesive smaller runtime boundary, not another
+  standalone helper split.
 - **Route map/href code shape**: browser route-map usage still downloads href generation, pattern
   joining, and `Route.pattern` support even when a client asset only calls `.href()`. Further route
   wins need to reduce that code or separate advanced pattern materialization without breaking the

@@ -105,7 +105,7 @@ const NAMESPACED_SVG_ALIASES = new Map([
   ['xmlns-xlink', { attr: 'xmlns:xlink' }],
 ])
 
-export function normalizeSvgAttributeName(name: string): string {
+function normalizeSvgAttributeName(name: string): string {
   let alias = SVG_ATTR_ALIASES.get(name)
   if (alias) return alias
 

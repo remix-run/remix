@@ -1714,7 +1714,7 @@ function placeVNode(node: VNode, domParent: ParentNode, anchor: Node | null): vo
   moveDomRange(domParent, firstDom, lastDom, anchor)
 }
 
-export function findFirstDomAnchor(node: VNode | null | undefined): Node | null {
+function findFirstDomAnchor(node: VNode | null | undefined): Node | null {
   if (!node) return null
   if (isCommittedTextNode(node)) return node._dom
   if (isCommittedHostNode(node)) return node._dom
@@ -1729,7 +1729,7 @@ export function findFirstDomAnchor(node: VNode | null | undefined): Node | null 
   return null
 }
 
-export function findLastDomAnchor(node: VNode | null | undefined): Node | null {
+function findLastDomAnchor(node: VNode | null | undefined): Node | null {
   if (!node) return null
   if (isCommittedTextNode(node)) return node._dom
   if (isCommittedHostNode(node)) return node._dom

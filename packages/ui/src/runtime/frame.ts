@@ -190,7 +190,20 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   // Merge any rmx-data found in the current document once at startup.
   mergeRmxDataFromRoot(init.data, container.doc)
 
-  let runtime = createFrameRuntime({ ...init, styleManager })
+  let runtime: FrameRuntime = {
+    topFrame: init.topFrame,
+    errorTarget: init.errorTarget,
+    loadModule: init.loadModule,
+    resolveFrame: init.resolveFrame,
+    pendingClientEntries: init.pendingClientEntries,
+    scheduler: init.scheduler,
+    styleManager,
+    data: init.data,
+    moduleCache: init.moduleCache,
+    moduleLoads: init.moduleLoads,
+    frameInstances: init.frameInstances,
+    namedFrames: init.namedFrames,
+  }
 
   let frame = createFrameHandle({
     src: init.src,
@@ -590,36 +603,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       await render(buffered, { initialHydrationTracker, signal, contentStatus: 'resolved' })
       if (!signal?.aborted) onResolved?.()
     }
-  }
-}
-
-export function createFrameRuntime(init: {
-  topFrame?: FrameHandle
-  errorTarget: EventTarget
-  loadModule: LoadModule
-  resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
-  scheduler: Scheduler
-  styleManager: StyleManager
-  data: RmxData
-  moduleCache: Map<string, Function>
-  moduleLoads: Map<string, Promise<Function | undefined>>
-  frameInstances: WeakMap<Comment, Frame>
-  namedFrames: Map<string, FrameHandle>
-}): FrameRuntime {
-  return {
-    topFrame: init.topFrame,
-    errorTarget: init.errorTarget,
-    loadModule: init.loadModule,
-    resolveFrame: init.resolveFrame,
-    pendingClientEntries: init.pendingClientEntries,
-    scheduler: init.scheduler,
-    styleManager: init.styleManager,
-    data: init.data,
-    moduleCache: init.moduleCache,
-    moduleLoads: init.moduleLoads,
-    frameInstances: init.frameInstances,
-    namedFrames: init.namedFrames,
   }
 }
 
@@ -1046,7 +1029,7 @@ function publishFrameTemplateElement(template: HTMLTemplateElement): void {
   publishFrameTemplate(template.id, template.content)
 }
 
-export function publishFrameTemplate(id: string, fragment: DocumentFragment): void {
+function publishFrameTemplate(id: string, fragment: DocumentFragment): void {
   let listeners = frameTemplateListeners.get(id)
   if (!listeners || listeners.size === 0) {
     let queue = bufferedFrameTemplates.get(id)
@@ -1063,7 +1046,7 @@ export function publishFrameTemplate(id: string, fragment: DocumentFragment): vo
   }
 }
 
-export function consumeFrameTemplate(id: string): DocumentFragment | null {
+function consumeFrameTemplate(id: string): DocumentFragment | null {
   let queue = bufferedFrameTemplates.get(id)
   if (!queue || queue.length === 0) return null
 

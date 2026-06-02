@@ -25,3 +25,5 @@ Reduced browser DOM diff and style runtime bytes by removing temporary attribute
 Reduced a few more browser runtime bytes by removing unused internal virtual-root re-exports and passing frame accessors into the navigation listener instead of importing them back from the app runtime.
 
 Reduced browser mixin runtime bytes by inlining one-use runtime helpers, sharing insert/reclaimed event dispatch, and calling the shared mixin update dispatcher directly from the reconciler.
+
+Reduced a few more browser runtime bytes by removing internal source-served runtime exports and inlining the one-use frame runtime factory.
