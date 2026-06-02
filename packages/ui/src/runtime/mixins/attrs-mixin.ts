@@ -1,6 +1,6 @@
-import { createMixin } from './mixin.ts'
 import type { ElementProps } from '../jsx.ts'
-import type { MixinDescriptor } from './mixin.ts'
+import { createMixin } from './mixin-descriptor.ts'
+import type { MixinDescriptor } from './mixin-descriptor.ts'
 import { createElement } from '../create-element.ts'
 
 const attrsMixin = createMixin<Element, [defaults: ElementProps], ElementProps>(

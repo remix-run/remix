@@ -48,6 +48,28 @@ const sourceLanguageByExtension = new Map<string, SourceLanguage>(
   scriptModuleTypes.map(({ extension, lang }) => [extension, lang] as const),
 )
 
+const importNarrowingConfigs = [
+  createImportNarrowingConfig('remix/ui', {
+    clientEntry: 'remix/ui/client-entry',
+    css: 'remix/ui/css',
+    on: 'remix/ui/on',
+    run: 'remix/ui/run',
+  }),
+  createImportNarrowingConfig('remix/routes', {
+    del: 'remix/routes/method',
+    form: 'remix/routes/form',
+    get: 'remix/routes/method',
+    head: 'remix/routes/method',
+    options: 'remix/routes/method',
+    patch: 'remix/routes/method',
+    post: 'remix/routes/method',
+    put: 'remix/routes/method',
+    resource: 'remix/routes/resource',
+    resources: 'remix/routes/resources',
+    route: 'remix/routes/route',
+  }),
+] as const
+
 const supportedTsconfigTransformCompilerOptions = {
   allowNamespaces: 'allowNamespaces',
   emitDecoratorMetadata: 'emitDecoratorMetadata',
@@ -96,6 +118,16 @@ type TransformResult = {
       error: AssetServerCompilationError
     }
 )
+
+interface ImportNarrowingExport {
+  name: string
+  specifier: string
+}
+
+interface ImportNarrowingConfig {
+  exportByName: ReadonlyMap<string, ImportNarrowingExport>
+  specifier: string
+}
 
 type TsconfigTransformOptions = {
   trackedFiles: string[]
@@ -207,6 +239,7 @@ export async function transformModule(
   try {
     let analysis = await analyzeModuleSource(sourceText, resolvedPath, transformOptions, {
       define: args.define ?? undefined,
+      externalSet: args.externalSet,
       minify: args.minify,
       sourceMaps: args.sourceMaps ?? undefined,
       target: args.target ?? undefined,
@@ -317,6 +350,7 @@ async function analyzeModuleSource(
   transformOptions: TsconfigTransformOptions,
   options: {
     define?: Record<string, string>
+    externalSet: ReadonlySet<string>
     minify: boolean
     sourceMaps?: 'external' | 'inline'
     target?: ResolvedScriptTarget
@@ -344,6 +378,12 @@ async function analyzeModuleSource(
 
   let rawCode = transformResult.code.trimEnd()
   let sourceMap = stringifySourceMap(transformResult.map)
+  let narrowingResult = narrowPackageImports(rawCode, resolvedPath, options.externalSet)
+  rawCode = narrowingResult.code
+
+  if (sourceMap && narrowingResult.sourceMap) {
+    sourceMap = composeSourceMaps(narrowingResult.sourceMap, sourceMap)
+  }
 
   if (options.minify) {
     let minifyResult = await minifyModule(rawCode, resolvedPath, options.target, options.sourceMaps)
@@ -506,6 +546,147 @@ function getDecoratorOptions(
     emitDecoratorMetadata,
     legacy,
   }
+}
+
+function createImportNarrowingConfig(
+  specifier: string,
+  exportSpecifiers: Record<string, string>,
+): ImportNarrowingConfig {
+  let exportByName = new Map(
+    Object.entries(exportSpecifiers).map(([name, narrowedSpecifier]) => [
+      name,
+      {
+        name,
+        specifier: narrowedSpecifier,
+      },
+    ]),
+  )
+  return {
+    exportByName,
+    specifier,
+  }
+}
+
+function narrowPackageImports(
+  rawCode: string,
+  resolvedPath: string,
+  externalSet: ReadonlySet<string>,
+): {
+  code: string
+  sourceMap: string | null
+} {
+  if (!mayContainNarrowableSpecifier(rawCode)) {
+    return {
+      code: rawCode,
+      sourceMap: null,
+    }
+  }
+
+  let parseResult = parseSync(resolvedPath, rawCode, {
+    lang: getSourceLanguageForPath(resolvedPath),
+    sourceType: 'module',
+  })
+
+  assertNoCompilerErrors(parseResult.errors, resolvedPath, 'transform')
+
+  let replacements: Array<{ end: number; source: string; start: number }> = []
+
+  for (let node of parseResult.program.body) {
+    if (node.type !== 'ImportDeclaration') continue
+
+    let source = node.source
+    if (!isStringLiteralNode(source)) continue
+
+    let config = importNarrowingConfigs.find((nextConfig) => nextConfig.specifier === source.value)
+    if (!config || node.specifiers.length === 0) continue
+    if (externalSet.has(config.specifier)) continue
+
+    let narrowedSpecifiers = new Map<string, string[]>()
+    let remainingSpecifiers: string[] = []
+    let changed = false
+
+    for (let specifier of node.specifiers) {
+      if (specifier.type !== 'ImportSpecifier') {
+        remainingSpecifiers.push(rawCode.slice(specifier.start, specifier.end))
+        continue
+      }
+
+      let imported = getImportSpecifierName(specifier.imported)
+      let narrowedExport = imported ? config.exportByName.get(imported) : undefined
+
+      if (!narrowedExport) {
+        remainingSpecifiers.push(rawCode.slice(specifier.start, specifier.end))
+        continue
+      }
+
+      let imports = narrowedSpecifiers.get(narrowedExport.specifier)
+      if (!imports) {
+        imports = []
+        narrowedSpecifiers.set(narrowedExport.specifier, imports)
+      }
+      imports.push(formatNarrowedImport(narrowedExport.name, specifier.local.name))
+      changed = true
+    }
+
+    if (!changed) continue
+
+    let statements: string[] = []
+
+    if (remainingSpecifiers.length > 0) {
+      statements.push(`import ${formatImportSpecifiers(remainingSpecifiers)} from ${source.raw}`)
+    }
+
+    for (let [specifier, imports] of narrowedSpecifiers) {
+      statements.push(`import ${formatImportSpecifiers(imports)} from ${JSON.stringify(specifier)}`)
+    }
+
+    replacements.push({
+      start: node.start,
+      end: node.end,
+      source: statements.join('\n'),
+    })
+  }
+
+  if (replacements.length === 0) {
+    return {
+      code: rawCode,
+      sourceMap: null,
+    }
+  }
+
+  let rewrittenSource = new MagicString(rawCode)
+  for (let replacement of replacements) {
+    rewrittenSource.overwrite(replacement.start, replacement.end, replacement.source)
+  }
+
+  return {
+    code: rewrittenSource.toString().trimEnd(),
+    sourceMap: rewrittenSource.generateMap({ hires: true }).toString(),
+  }
+}
+
+function mayContainNarrowableSpecifier(rawCode: string): boolean {
+  return importNarrowingConfigs.some((config) => rawCode.includes(config.specifier))
+}
+
+function getImportSpecifierName(node: Node): string | undefined {
+  if (node.type === 'Identifier') {
+    return node.name
+  }
+
+  if (node.type === 'Literal' && typeof node.value === 'string') {
+    return node.value
+  }
+
+  return undefined
+}
+
+function formatNarrowedImport(imported: string, local: string): string {
+  return imported === local ? imported : `${imported} as ${local}`
+}
+
+function formatImportSpecifiers(specifiers: readonly string[]): string {
+  return specifiers.length === 1 ? `{ ${specifiers[0]} }` : `{\n${specifiers.join(',\n')}\n}`
 }
 
 function getBooleanOption(

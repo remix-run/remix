@@ -1,5 +1,9 @@
 import type { ElementProps, ElementType, RemixNode, Renderable } from './jsx.ts'
+import type { FragmentProps } from './fragment.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
+
+export { Fragment } from './fragment.ts'
+export type { FragmentProps } from './fragment.ts'
 
 /**
  * Task queued to run after a component update completes.
@@ -186,14 +190,6 @@ export type RenderFn = () => RemixNode
 export type { RemixNode } from './jsx.ts'
 
 // Handle is already exported as an interface above, no need to re-export
-
-/**
- * Props accepted by the built-in {@link Fragment} component.
- */
-export interface FragmentProps {
-  /** Child nodes to render without adding an extra host element. */
-  children?: RemixNode
-}
 
 /**
  * Mapping of built-in component names to their prop shapes.
@@ -389,17 +385,6 @@ function syncProps(target: ElementProps, next: ElementProps): void {
  * @returns A placeholder render function handled by the reconciler.
  */
 export function Frame(handle: Handle<FrameProps, FrameHandle>): RenderFn {
-  void handle
-  return () => null // reconciler renders
-}
-
-/**
- * Built-in component used to group children without adding a host element.
- *
- * @param handle Component handle for the fragment instance.
- * @returns A placeholder render function handled by the reconciler.
- */
-export function Fragment(handle: Handle<FragmentProps>): RenderFn {
   void handle
   return () => null // reconciler renders
 }

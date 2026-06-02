@@ -2472,6 +2472,114 @@ describe('asset-server', () => {
     assert.match(body, /from "@remix-run\/ui"/)
   })
 
+  it('narrows broad Remix package imports to browser-sized subpaths', async () => {
+    await writeJson(dir, 'app/node_modules/remix/package.json', {
+      name: 'remix',
+      type: 'module',
+      exports: {
+        './routes': './routes.js',
+        './routes/form': './routes-form.js',
+        './routes/method': './routes-method.js',
+        './routes/resource': './routes-resource.js',
+        './routes/resources': './routes-resources.js',
+        './routes/route': './routes-route.js',
+        './ui': './ui.js',
+        './ui/client-entry': './ui-client-entry.js',
+        './ui/css': './ui-css.js',
+        './ui/on': './ui-on.js',
+        './ui/run': './ui-run.js',
+      },
+    })
+    await write(
+      dir,
+      'app/node_modules/remix/ui.js',
+      'export const clientEntry = "wide-client-entry"; export const css = "wide-css"; export const on = "wide-on"; export const run = "wide-run"; export const Frame = "wide-frame"',
+    )
+    await write(dir, 'app/node_modules/remix/ui-client-entry.js', 'export const clientEntry = true')
+    await write(dir, 'app/node_modules/remix/ui-css.js', 'export const css = true')
+    await write(dir, 'app/node_modules/remix/ui-on.js', 'export const on = true')
+    await write(dir, 'app/node_modules/remix/ui-run.js', 'export const run = true')
+    await write(
+      dir,
+      'app/node_modules/remix/routes.js',
+      'export const form = "wide-form"; export const get = "wide-get"; export const head = "wide-head"; export const options = "wide-options"; export const patch = "wide-patch"; export const post = "wide-post"; export const resource = "wide-resource"; export const resources = "wide-resources"; export const route = "wide-route"; export const Route = "wide-Route"',
+    )
+    await write(dir, 'app/node_modules/remix/routes-form.js', 'export const form = true')
+    await write(
+      dir,
+      'app/node_modules/remix/routes-method.js',
+      'export const get = true; export const head = true; export const options = true; export const patch = true; export const post = true',
+    )
+    await write(dir, 'app/node_modules/remix/routes-resource.js', 'export const resource = true')
+    await write(dir, 'app/node_modules/remix/routes-resources.js', 'export const resources = true')
+    await write(dir, 'app/node_modules/remix/routes-route.js', 'export const route = true')
+    await write(
+      dir,
+      'app/entry.ts',
+      [
+        'import { clientEntry, css as style, on, run } from "remix/ui"',
+        'import { form, get, head, options, patch, post as submit, resource, resources, route } from "remix/routes"',
+        'export const values = [clientEntry, style, on, run, form, get, head, options, patch, submit, resource, resources, route]',
+      ].join('\n'),
+    )
+
+    let assetServer = createTestServer(dir)
+    let response = await getByFile(assetServer, 'app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+    let importSpecifiers = await getAbsoluteImportSpecifiers(body)
+
+    assert.doesNotMatch(body, /from ["'][^"']*\/ui\.js/)
+    assert.doesNotMatch(body, /from ["'][^"']*\/routes\.js/)
+    assert.match(body, /ui-client-entry/)
+    assert.match(body, /ui-css/)
+    assert.match(body, /ui-on/)
+    assert.match(body, /ui-run/)
+    assert.match(body, /routes-form/)
+    assert.match(body, /routes-method/)
+    assert.match(body, /routes-resource/)
+    assert.match(body, /routes-resources/)
+    assert.match(body, /routes-route/)
+    assert.equal(
+      importSpecifiers.some((specifier) => specifier.includes('/assets/npm/remix/ui.js')),
+      false,
+    )
+    assert.equal(
+      importSpecifiers.some((specifier) => specifier.includes('/assets/npm/remix/routes.js')),
+      false,
+    )
+  })
+
+  it('keeps mixed broad Remix imports for exports without a narrow subpath', async () => {
+    await writeJson(dir, 'app/node_modules/remix/package.json', {
+      name: 'remix',
+      type: 'module',
+      exports: {
+        './ui': './ui.js',
+        './ui/css': './ui-css.js',
+      },
+    })
+    await write(
+      dir,
+      'app/node_modules/remix/ui.js',
+      'export const Frame = true; export const css = true',
+    )
+    await write(dir, 'app/node_modules/remix/ui-css.js', 'export const css = true')
+    await write(
+      dir,
+      'app/entry.ts',
+      'import { css, Frame } from "remix/ui"\nexport const values = [css, Frame]',
+    )
+
+    let assetServer = createTestServer(dir)
+    let response = await getByFile(assetServer, 'app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.match(body, /from ["'][^"']*\/ui\.js/)
+    assert.match(body, /from ["'][^"']*\/ui-css\.js/)
+  })
+
   it('leaves data and http(s) URL imports unchanged', async () => {
     await write(
       dir,

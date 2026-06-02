@@ -1,4 +1,4 @@
-import { Fragment } from './component.ts'
+import { Fragment } from './fragment.ts'
 import { invariant } from './invariant.ts'
 import { isEmptyChild, isPrimitiveChild, normalizeChildren } from './core/children.ts'
 import type { RemixElement, RemixNode } from './jsx.ts'

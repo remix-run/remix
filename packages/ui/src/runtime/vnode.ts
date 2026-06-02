@@ -1,5 +1,6 @@
 import type { ComponentHandle, Component } from './component.ts'
-import { Fragment, Frame } from './component.ts'
+import { Frame } from './component.ts'
+import { Fragment } from './fragment.ts'
 import { isRemixElement } from './core/vnode.ts'
 import type { ElementProps, RemixNode } from './jsx.ts'
 

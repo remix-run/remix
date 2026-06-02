@@ -1,4 +1,4 @@
-import { createMixin, renderMixinElement, type MixinFactory } from './mixin.ts'
+import { createMixin, renderMixinElement, type MixinFactory } from './mixin-descriptor.ts'
 import { navigate } from '../navigation.ts'
 import { on } from './on-mixin.ts'
 import type { ElementProps } from '../jsx.ts'

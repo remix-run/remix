@@ -25,7 +25,8 @@ export type {
 } from './runtime/client-entries.ts'
 
 // -- Components --
-export { Fragment, Frame } from './runtime/component.ts'
+export { Fragment } from './runtime/fragment.ts'
+export { Frame } from './runtime/component.ts'
 export type {
   Task,
   Handle,
@@ -48,7 +49,7 @@ export type {
   Props,
 } from './runtime/jsx.ts'
 export type { HostProps, LayoutAnimationConfig } from './runtime/dom.ts'
-export { createMixin } from './runtime/mixins/mixin.ts'
+export { createMixin } from './runtime/mixins/mixin-descriptor.ts'
 export type {
   MixinDescriptor,
   MixinFactory,
@@ -56,7 +57,7 @@ export type {
   MixinType,
   MixInput,
   MixValue,
-} from './runtime/mixins/mixin.ts'
+} from './runtime/mixins/mixin-descriptor.ts'
 export { TypedEventTarget } from './runtime/typed-event-target.ts'
 export { addEventListeners } from './runtime/event-listeners.ts'
 export type { Dispatched } from './runtime/event-listeners.ts'

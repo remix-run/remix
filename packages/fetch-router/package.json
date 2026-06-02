@@ -22,6 +22,11 @@
   "exports": {
     ".": "./src/index.ts",
     "./routes": "./src/routes.ts",
+    "./routes/form": "./src/routes-form.ts",
+    "./routes/method": "./src/routes-method.ts",
+    "./routes/resource": "./src/routes-resource.ts",
+    "./routes/resources": "./src/routes-resources.ts",
+    "./routes/route": "./src/routes-route.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -33,6 +38,26 @@
       "./routes": {
         "types": "./dist/routes.d.ts",
         "default": "./dist/routes.js"
+      },
+      "./routes/form": {
+        "types": "./dist/routes-form.d.ts",
+        "default": "./dist/routes-form.js"
+      },
+      "./routes/method": {
+        "types": "./dist/routes-method.d.ts",
+        "default": "./dist/routes-method.js"
+      },
+      "./routes/resource": {
+        "types": "./dist/routes-resource.d.ts",
+        "default": "./dist/routes-resource.js"
+      },
+      "./routes/resources": {
+        "types": "./dist/routes-resources.d.ts",
+        "default": "./dist/routes-resources.js"
+      },
+      "./routes/route": {
+        "types": "./dist/routes-route.d.ts",
+        "default": "./dist/routes-route.js"
       },
       "./package.json": "./package.json"
     }

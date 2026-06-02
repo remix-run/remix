@@ -1,0 +1,16 @@
+export {
+  createDeleteRoute,
+  createDeleteRoute as del,
+  createGetRoute,
+  createGetRoute as get,
+  createHeadRoute,
+  createHeadRoute as head,
+  createOptionsRoute,
+  createOptionsRoute as options,
+  createPatchRoute,
+  createPatchRoute as patch,
+  createPostRoute,
+  createPostRoute as post,
+  createPutRoute,
+  createPutRoute as put,
+} from './lib/route-helpers/method.ts'

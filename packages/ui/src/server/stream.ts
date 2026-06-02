@@ -1,6 +1,7 @@
 import type { ComponentHandle, FrameHandle, Key, RemixNode } from '../runtime/component.ts'
 import type { ElementType, ElementProps, RemixElement } from '../runtime/jsx.ts'
-import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
+import { createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
+import { Fragment } from '../runtime/fragment.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
   FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,

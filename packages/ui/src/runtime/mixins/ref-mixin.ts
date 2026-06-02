@@ -1,4 +1,4 @@
-import { createMixin, type MixinFactory } from './mixin.ts'
+import { createMixin, type MixinFactory } from './mixin-descriptor.ts'
 import type { ElementProps } from '../jsx.ts'
 
 /**

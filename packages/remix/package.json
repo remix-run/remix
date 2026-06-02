@@ -110,6 +110,11 @@
     "./route-pattern/specificity": "./src/route-pattern/specificity.ts",
     "./router": "./src/fetch-router.ts",
     "./routes": "./src/fetch-router/routes.ts",
+    "./routes/form": "./src/fetch-router/routes/form.ts",
+    "./routes/method": "./src/fetch-router/routes/method.ts",
+    "./routes/resource": "./src/fetch-router/routes/resource.ts",
+    "./routes/resources": "./src/fetch-router/routes/resources.ts",
+    "./routes/route": "./src/fetch-router/routes/route.ts",
     "./session": "./src/session.ts",
     "./session-middleware": "./src/session-middleware.ts",
     "./session-storage-memcache": "./src/session-storage-memcache.ts",
@@ -509,6 +514,26 @@
       "./routes": {
         "types": "./dist/fetch-router/routes.d.ts",
         "default": "./dist/fetch-router/routes.js"
+      },
+      "./routes/form": {
+        "types": "./dist/fetch-router/routes/form.d.ts",
+        "default": "./dist/fetch-router/routes/form.js"
+      },
+      "./routes/method": {
+        "types": "./dist/fetch-router/routes/method.d.ts",
+        "default": "./dist/fetch-router/routes/method.js"
+      },
+      "./routes/resource": {
+        "types": "./dist/fetch-router/routes/resource.d.ts",
+        "default": "./dist/fetch-router/routes/resource.js"
+      },
+      "./routes/resources": {
+        "types": "./dist/fetch-router/routes/resources.d.ts",
+        "default": "./dist/fetch-router/routes/resources.js"
+      },
+      "./routes/route": {
+        "types": "./dist/fetch-router/routes/route.d.ts",
+        "default": "./dist/fetch-router/routes/route.js"
       },
       "./session": {
         "types": "./dist/session.d.ts",
