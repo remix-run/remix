@@ -34,8 +34,7 @@ import { toVNode } from './to-vnode.ts'
 import {
   bindMixinRuntime,
   cancelPendingMixinRemoval,
-  dispatchMixinBeforeUpdate,
-  dispatchMixinCommit,
+  dispatchMixinUpdateEvent,
   getMixinRuntimeSignal,
   prepareMixinRemoval,
   resolveMixedProps,
@@ -250,12 +249,12 @@ function enqueueMixinBindingUpdate(
         return
       }
 
-      dispatchMixinBeforeUpdate(state)
+      dispatchMixinUpdateEvent(state, 'beforeUpdate')
       let prevProps = getHostProps(node)
       let nextProps = resolveNodeMixProps(node, this.frame, this.scheduler, state)
       patchHostProps(prevProps, nextProps, this.node)
 
-      dispatchMixinCommit(state)
+      dispatchMixinUpdateEvent(state, 'commit')
       done(state ? getMixinRuntimeSignal(state) : AbortSignal.abort())
     },
   ])
@@ -423,7 +422,7 @@ function diffHost(
   let shouldDispatchMixinLifecycle =
     (nextMixState?.runners.length ?? 0) > 0 && shouldDispatchInlineMixinLifecycle(curr._dom)
   if (shouldDispatchMixinLifecycle) {
-    dispatchMixinBeforeUpdate(nextMixState)
+    dispatchMixinUpdateEvent(nextMixState, 'beforeUpdate')
   }
 
   // Handle innerHTML prop BEFORE diffChildren to avoid clearing children
@@ -463,7 +462,7 @@ function diffHost(
     bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler)
   }
   if (shouldDispatchMixinLifecycle) {
-    scheduler.enqueueCommitPhase([() => dispatchMixinCommit(nextMixState)])
+    scheduler.enqueueCommitPhase([() => dispatchMixinUpdateEvent(nextMixState, 'commit')])
   }
 
   return
@@ -1826,7 +1825,7 @@ function reclaimPersistedMixinNode(
     newNode._mixState as MixinRuntimeState | undefined,
   )
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
-    dispatchMixinBeforeUpdate(newNode._mixState as MixinRuntimeState | undefined)
+    dispatchMixinUpdateEvent(newNode._mixState as MixinRuntimeState | undefined, 'beforeUpdate')
   }
   patchHostProps(prevProps, nextProps, persistedNode._dom)
   ensureControlledReflection(newNode as CommittedHostNode, scheduler)
@@ -1848,7 +1847,7 @@ function reclaimPersistedMixinNode(
   }
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
     scheduler.enqueueCommitPhase([
-      () => dispatchMixinCommit(newNode._mixState as MixinRuntimeState | undefined),
+      () => dispatchMixinUpdateEvent(newNode._mixState as MixinRuntimeState | undefined, 'commit'),
     ])
   }
 }

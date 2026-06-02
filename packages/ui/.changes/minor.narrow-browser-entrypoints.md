@@ -23,3 +23,5 @@ Reduced browser virtual root runtime by sharing root scheduling, error forwardin
 Reduced browser DOM diff and style runtime bytes by removing temporary attribute-set construction, using smaller selector checks, and dropping an unused internal style-cache export.
 
 Reduced a few more browser runtime bytes by removing unused internal virtual-root re-exports and passing frame accessors into the navigation listener instead of importing them back from the app runtime.
+
+Reduced browser mixin runtime bytes by inlining one-use runtime helpers, sharing insert/reclaimed event dispatch, and calling the shared mixin update dispatcher directly from the reconciler.
