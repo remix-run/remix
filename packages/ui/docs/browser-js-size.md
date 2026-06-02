@@ -603,7 +603,7 @@ from the normal hydrated bookstore page set. Compared to the maximal patch befor
 intentionally gives back `861 raw / 151 gzip / 124 brotli` to avoid adding low-value route-helper
 subpath APIs.
 
-The largest modules in the current full downloaded set are:
+The largest modules at this curated checkpoint were:
 
 | Module | Bytes |
 | ------ | ----: |
@@ -617,6 +617,86 @@ The largest modules in the current full downloaded set are:
 | `packages/ui/src/style/style.ts` | 2,473 raw / 1,001 gzip / 897 brotli |
 | `packages/ui/src/runtime/component.ts` | 2,357 raw / 965 gzip / 848 brotli |
 | `packages/ui/src/style/stylesheet.ts` | 2,248 raw / 1,052 gzip / 941 brotli |
+
+## UI mixin runtime helper and private-name cleanup
+
+The next kept pass reduces `runtime/mixins/mixin.ts`, the third-largest UI runtime file in the
+hydrated page set. This pass avoids another module split and instead removes or merges one-use
+runtime helpers and shortens private names that the source-server compiler preserves in emitted
+JavaScript:
+
+- inline the one-call mixin runtime state and handle factories;
+- inline the one-call composed-props helper;
+- share insert and reclaimed node event construction;
+- export the existing mixin phase dispatcher directly instead of keeping separate
+  `dispatchMixinBeforeUpdate()` and `dispatchMixinCommit()` wrappers.
+- shorten private mixin handle field/method names while keeping them readable in source.
+
+Measured on top of the curated patch checkpoint:
+
+| Browser asset set | Before | After | Savings |
+| ----------------- | -----: | ----: | ------: |
+| all bookstore browser assets | 96,740 raw / 39,713 gzip / 35,150 brotli / 60 modules | 95,963 raw / 39,617 gzip / 35,074 brotli / 60 modules | 777 raw / 96 gzip / 76 brotli |
+
+`runtime/mixins/mixin.ts` moved from `8,560 raw / 2,718 gzip / 2,481 brotli` to `7,739 raw /
+2,615 gzip / 2,393 brotli`. The shared phase dispatcher makes `reconcile.ts` grow from `18,053 raw
+/ 5,991 gzip / 5,433 brotli` to `18,097 raw / 6,001 gzip / 5,444 brotli`, but the actual de-duped
+page total still improves.
+
+## Tried and rejected: frame context and child-existence micro-cleanup
+
+A small `frame.ts` experiment reused the already-created frame runtime object when constructing the
+frame context and replaced a few `childNodes.length` checks with `firstChild`. This saved raw bytes
+in `frame.ts`, but it was not a compressed network win:
+
+| Browser asset set | Before | Frame micro-cleanup experiment | Delta |
+| ----------------- | -----: | -----------------------------: | ----: |
+| all bookstore browser assets | 96,511 raw / 39,680 gzip / 35,122 brotli / 60 modules | 96,425 raw / 39,712 gzip / 35,125 brotli / 60 modules | -86 raw / +32 gzip / +3 brotli |
+
+The experiment was reverted. The lesson matches the earlier SVG and scheduler experiments: in these
+runtime files, raw-byte reductions that disturb repeated compressed shapes are not enough.
+
+## Route href search-param cleanup
+
+`route-pattern/src/lib/href.ts` still used `Object.keys(searchParams)` for its no-search early
+return and then used `Object.entries(searchParams)` to serialize user-provided search params.
+Reusing the entries array removes one emitted object enumeration from a module downloaded by browser
+route-map href calls.
+
+Measured on top of the UI mixin cleanup:
+
+| Browser asset set | Before | After | Savings |
+| ----------------- | -----: | ----: | ------: |
+| all bookstore browser assets | 95,963 raw / 39,617 gzip / 35,074 brotli / 60 modules | 95,954 raw / 39,611 gzip / 35,065 brotli / 60 modules | 9 raw / 6 gzip / 9 brotli |
+
+`route-pattern/src/lib/href.ts` moved from `3,362 raw / 1,316 gzip / 1,171 brotli` at the curated
+checkpoint to `3,353 raw / 1,310 gzip / 1,162 brotli`.
+
+Also tried shortening `Route`'s private `#source`/`#pattern` fields in `fetch-router` route maps.
+That got the full set to `95,912 raw / 39,609 gzip / 35,066 brotli`, which saved raw and gzip but
+regressed brotli by 1 byte versus the href-search cleanup alone. It was reverted as too small and
+too name-churny.
+
+Current measurements after the kept mixin and route href cleanups:
+
+| Browser asset set | Modules | Bytes |
+| ----------------- | ------: | ----: |
+| all bookstore browser assets | 60 | 95,954 raw / 39,611 gzip / 35,065 brotli |
+
+The largest modules in the current full downloaded set are now:
+
+| Module | Bytes |
+| ------ | ----: |
+| `packages/ui/src/runtime/reconcile.ts` | 18,097 raw / 6,001 gzip / 5,444 brotli |
+| `packages/ui/src/runtime/frame.ts` | 14,486 raw / 4,962 gzip / 4,458 brotli |
+| `packages/ui/src/runtime/mixins/mixin.ts` | 7,739 raw / 2,615 gzip / 2,393 brotli |
+| `packages/ui/src/runtime/diff-dom.ts` | 6,152 raw / 2,332 gzip / 2,105 brotli |
+| `packages/route-pattern/src/lib/href.ts` | 3,353 raw / 1,310 gzip / 1,162 brotli |
+| `packages/fetch-router/src/lib/route-map.ts` | 3,089 raw / 1,215 gzip / 1,124 brotli |
+| `packages/ui/src/runtime/svg-attributes.ts` | 2,524 raw / 873 gzip / 741 brotli |
+| `packages/ui/src/style/style.ts` | 2,473 raw / 1,001 gzip / 897 brotli |
+| `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,156 gzip / 1,021 brotli |
+| `packages/ui/src/runtime/component.ts` | 2,357 raw / 965 gzip / 848 brotli |
 
 This keeps the main opportunity map pointed at actual byte reductions:
 
