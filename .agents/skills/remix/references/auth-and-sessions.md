@@ -68,14 +68,13 @@ export let sessionStorage = createMemorySessionStorage()
 ### Add session middleware
 
 ```typescript
-import { createMiddleware } from 'remix/router'
 import { session } from 'remix/middleware/session'
 
 let router = createRouter({
-  middleware: createMiddleware(
+  middleware: [
     session(sessionCookie, sessionStorage),
     // ... other middleware
-  ),
+  ],
 })
 ```
 
@@ -341,11 +340,11 @@ async function refreshGoogleTokens({ get }) {
 Apply `requireAuth()` as controller middleware to every action in one controller:
 
 ```typescript
-import { createController, createMiddleware } from 'remix/router'
+import { createController } from 'remix/router'
 import { requireAuth } from 'remix/middleware/auth'
 
 export default createController(routes.account, {
-  middleware: createMiddleware(requireAuth()),
+  middleware: [requireAuth()],
   actions: {
     index() {
       /* guaranteed authenticated */
@@ -363,7 +362,7 @@ router.map(routes.account.settings, accountSettingsController)
 
 // app/actions/account/settings/controller.tsx
 export default createController(routes.account.settings, {
-  middleware: createMiddleware(requireAuth()),
+  middleware: [requireAuth()],
   actions: {
     index() {
       /* guaranteed authenticated */
@@ -381,7 +380,7 @@ Combine auth checks with role checks:
 
 ```typescript
 export default createController(routes.admin, {
-  middleware: createMiddleware(requireAuth(), requireAdmin()),
+  middleware: [requireAuth(), requireAdmin()],
   actions: {
     index() {
       /* requires auth + admin */
@@ -398,7 +397,7 @@ Apply middleware to a single route:
 import { Auth, requireAuth } from 'remix/middleware/auth'
 
 router.get(routes.account.index, {
-  middleware: createMiddleware(requireAuth()),
+  middleware: [requireAuth()],
   handler(context) {
     let auth = context.get(Auth)
     return render(<AccountPage identity={auth.identity} />)

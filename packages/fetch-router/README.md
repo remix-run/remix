@@ -21,13 +21,13 @@ npm i remix
 
 The main purpose of the router is to map incoming requests to request handlers and middleware. The router uses the `fetch()` API to accept a [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) and return a [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
 
-Import route definition helpers (`route`, `form`, `resource`, `resources`, etc.) from `remix/routes` and runtime APIs (`createRouter`, `createMiddleware`, `Middleware`, etc.) from `remix/router`.
+Import route definition helpers (`route`, `form`, `resource`, `resources`, etc.) from `remix/routes` and runtime APIs (`createRouter`, `Middleware`, etc.) from `remix/router`.
 
 The example below is a small site with a home page, an "about" page, and a blog.
 
 ```ts
 import { route } from 'remix/routes'
-import { createMiddleware, createRouter } from 'remix/router'
+import { createRouter } from 'remix/router'
 import { logger } from 'remix/middleware/logger'
 
 // `route()` creates a "route map" that organizes routes by name. The keys
@@ -44,7 +44,7 @@ let routes = route({
 let router = createRouter({
   // Middleware is used to run code before and/or after actions run.
   // In this case, the `logger()` middleware logs the request to the console.
-  middleware: createMiddleware(logger()),
+  middleware: [logger()],
 })
 
 // Map a controller that supplies actions for the root routes.
@@ -244,7 +244,7 @@ As applications grow, it is useful to let one file own the routes for a specific
 A route installer receives a `RouteBuilder`, not a full `Router`, so it can register routes but cannot dispatch requests. The parent router remains the only router that owns request dispatch, the matcher, and the default handler.
 
 ```ts
-import { createMiddleware, createRouter, type RouteBuilder } from 'remix/router'
+import { createRouter, type RouteBuilder } from 'remix/router'
 import { get, route } from 'remix/routes'
 
 const adminRouteDefs = {
@@ -304,7 +304,7 @@ Middleware stays on routers, controllers, and actions. If an entire route group 
 ```ts
 function installAdminRoutes<context extends AppContext>(router: RouteBuilder<context>) {
   router.map(adminRouteGroup, {
-    middleware: createMiddleware(requireAdmin()),
+    middleware: [requireAdmin()],
     actions: {
       index({ admin }) {
         return new Response(admin.id)
@@ -588,7 +588,7 @@ Every middleware must either return a `Response`, return the response from `next
 A basic logging middleware might look like this:
 
 ```ts
-import { createMiddleware, type Middleware } from 'remix/router'
+import { type Middleware } from 'remix/router'
 
 // You can use the `Middleware` type to type middleware functions.
 function logger(): Middleware {
@@ -609,7 +609,7 @@ function logger(): Middleware {
 
 // Use it like this:
 let router = createRouter({
-  middleware: createMiddleware(logger()),
+  middleware: [logger()],
 })
 ```
 
@@ -681,23 +681,21 @@ let routes = route({
 
 let router = createRouter({
   // Router middleware runs on all requests.
-  middleware: createMiddleware(staticFiles('./public')),
+  middleware: [staticFiles('./public')],
 })
-
-let adminMiddleware = createMiddleware(auth({ token: 'secret' }))
 
 router.map(routes.home, () => new Response('Home'))
 
 router.map(routes.admin, {
   // Controller middleware applies to all direct actions in this controller.
-  middleware: adminMiddleware,
+  middleware: [auth({ token: 'secret' })],
   actions: {
     dashboard() {
       return new Response('Dashboard')
     },
     settings: {
       // Action middleware applies only to this action.
-      middleware: createMiddleware(requireAdmin()),
+      middleware: [requireAdmin()],
       handler() {
         return new Response('Settings')
       },
@@ -776,7 +774,7 @@ declare module 'remix/router' {
 }
 
 let accountAction = createAction(routes.account, {
-  middleware: createMiddleware(requireAuth<AuthIdentity>()),
+  middleware: [requireAuth<AuthIdentity>()],
   handler(context) {
     let auth = context.get(Auth)
     return Response.json({ id: auth.identity.id })
@@ -784,7 +782,7 @@ let accountAction = createAction(routes.account, {
 })
 
 let accountController = createController(routes, {
-  middleware: createMiddleware(requireAuth<AuthIdentity>()),
+  middleware: [requireAuth<AuthIdentity>()],
   actions: {
     account(context) {
       let auth = context.get(Auth)
@@ -794,9 +792,11 @@ let accountController = createController(routes, {
 })
 ```
 
-In this example, `rootMiddleware` is the middleware tuple that defines the app context contract. It should include middleware instances, not middleware factory function types. `createMiddleware()` preserves the ordered tuple type, so `MiddlewareContext<typeof rootMiddleware>` can derive the context produced by the chain. `createAction()` and direct action objects infer action middleware into handler context, and `createController()` infers controller middleware into each handler's context, so `context.get(Auth)` returns the authenticated value after the middleware runs.
+In this example, `rootMiddleware` is the middleware tuple that defines the app context contract. It should include middleware instances, not middleware factory function types. `createMiddleware()` preserves the ordered tuple type, so `MiddlewareContext<typeof rootMiddleware>` can derive the context produced by the chain.
 
-For small apps with a stable middleware chain, `MiddlewareContext<typeof middleware>` is a fine shortcut. Use `createMiddleware()` when declaring the chain so TypeScript preserves the ordered middleware tuple; otherwise a standalone array widens to a normal array and the ordered middleware context is not preserved. For larger apps, prefer the named middleware chain and `AppContext` pattern so runtime middleware assembly and context typing can evolve independently.
+Prefer plain inline arrays for `middleware` options on routers, controllers, actions, and route helpers. Inline arrays already give TypeScript enough information to infer middleware-provided context for downstream handlers, so `createAction()` and direct action objects see action middleware context, and `createController()` sees controller middleware context without `createMiddleware()`.
+
+Use `createMiddleware()` only when a middleware chain is stored somewhere and its exact tuple type needs to survive that boundary. The common cases are deriving `MiddlewareContext<typeof rootMiddleware>`, exporting a reusable chain, or returning a chain from a factory. A standalone array like `let middleware = [loadSession(), loadDatabase()]` widens to a normal array, so `MiddlewareContext<typeof middleware>` cannot derive the ordered middleware context.
 
 When manually annotating stored handlers with `Action<typeof route, Context>` or `Controller<typeof routes, Context>`, compose any action or controller middleware chain into `Context` with `MiddlewareContext<typeof actionOrControllerMiddleware, AppContext>`.
 

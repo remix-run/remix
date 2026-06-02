@@ -1,4 +1,4 @@
-import { createController, createMiddleware } from 'remix/router'
+import { createController } from 'remix/router'
 
 import { requireAuth } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
@@ -9,7 +9,7 @@ import { MainCoursesPage } from './courses-page.tsx'
 import { MainIndexPage } from './index-page.tsx'
 
 export default createController(routes.main, {
-  middleware: createMiddleware(requireAuth),
+  middleware: [requireAuth],
   actions: {
     index({ render }) {
       return render(

@@ -182,14 +182,14 @@ Middleware has three API-owned forms:
 1. **Router middleware** — runs for every request:
 
    ```typescript
-   let router = createRouter({ middleware: createMiddleware(...) })
+   let router = createRouter({ middleware: [logger(), session(cookie, storage)] })
    ```
 
 2. **Controller middleware** — runs for the direct actions in one controller:
 
    ```typescript
    export default createController(routes.account, {
-     middleware: createMiddleware(requireAuth()),
+     middleware: [requireAuth()],
      actions: { ... },
    })
    ```
@@ -200,12 +200,14 @@ Middleware has three API-owned forms:
 
    ```typescript
    router.get(routes.account.index, {
-     middleware: createMiddleware(requireAuth()),
+     middleware: [requireAuth()],
      handler(context) {
        return render(<AccountPage identity={context.auth.identity} />)
      },
    })
    ```
+
+Prefer inline arrays for `middleware` options. Use `createMiddleware()` only when a chain is stored in a variable and its exact tuple type needs to be preserved, such as when deriving `MiddlewareContext<typeof rootMiddleware>`, exporting a reusable chain, or returning a chain from a factory.
 
 ## Node Server Setup
 

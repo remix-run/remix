@@ -1,4 +1,4 @@
-import { createController, createMiddleware } from 'remix/router'
+import { createController } from 'remix/router'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { redirect } from 'remix/response/redirect'
@@ -24,7 +24,7 @@ const userSchema = f.object({
 })
 
 export default createController(routes.admin.users, {
-  middleware: createMiddleware(requireAuth(), requireAdmin()),
+  middleware: [requireAuth(), requireAdmin()],
   actions: {
     async index({ auth, db, render }) {
       let currentUser = getCurrentUser(auth)

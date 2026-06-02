@@ -1,4 +1,4 @@
-import { createController, createMiddleware } from 'remix/router'
+import { createController } from 'remix/router'
 
 import { orders, orderItemsWithBook } from '../../../data/schema.ts'
 import { requireAuth } from '../../../middleware/auth.ts'
@@ -9,7 +9,7 @@ import { AccountOrdersIndexPage } from './index-page.tsx'
 import { AccountOrderNotFoundPage, AccountOrderShowPage } from './show-page.tsx'
 
 export default createController(routes.account.orders, {
-  middleware: createMiddleware(requireAuth()),
+  middleware: [requireAuth()],
   actions: {
     async index({ auth, db, render }) {
       let user = getCurrentUser(auth)

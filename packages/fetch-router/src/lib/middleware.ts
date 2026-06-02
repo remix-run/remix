@@ -80,10 +80,12 @@ export interface Middleware<transform extends ContextTransform = EmptyContextTra
 }
 
 /**
- * Creates an ordered middleware chain and preserves its tuple type.
+ * Creates a reusable middleware chain while preserving its exact tuple type.
  *
- * Use this helper when deriving a {@link MiddlewareContext} from middleware values, or when
- * middleware on a router, controller, or action should add typed context for downstream handlers.
+ * Prefer plain inline arrays for `middleware` options on routers, controllers, and actions. Use
+ * this helper when a middleware chain is stored in a variable and its exact type must be preserved,
+ * such as when deriving {@link MiddlewareContext} from the chain, exporting the chain for reuse, or
+ * returning it from a factory.
  *
  * @param middleware The middleware functions to run in order.
  * @returns The middleware chain with its tuple type preserved.

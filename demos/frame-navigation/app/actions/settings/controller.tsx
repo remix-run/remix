@@ -1,4 +1,4 @@
-import { createController, createMiddleware } from 'remix/router'
+import { createController } from 'remix/router'
 import type { Handle, RemixNode } from 'remix/ui'
 import { Frame } from 'remix/ui'
 
@@ -15,7 +15,7 @@ import { Privacy } from './privacy-page.tsx'
 import { Profile } from './profile-page.tsx'
 
 export default createController(routes.settings, {
-  middleware: createMiddleware(requireAuth),
+  middleware: [requireAuth],
   actions: {
     index({ render, request }) {
       return render(

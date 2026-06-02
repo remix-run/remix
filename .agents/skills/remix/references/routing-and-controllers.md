@@ -111,11 +111,11 @@ The handler receives a context object with:
 Actions with action middleware:
 
 ```typescript
-import { createAction, createMiddleware } from 'remix/router'
+import { createAction } from 'remix/router'
 import { requireAuth } from 'remix/middleware/auth'
 
 export const account = createAction(routes.account.index, {
-  middleware: createMiddleware(requireAuth()),
+  middleware: [requireAuth()],
   handler(context) {
     return render(<AccountPage />)
   },
@@ -270,7 +270,7 @@ Nested route maps use their own controllers under `app/actions/<route-key>/contr
 ```typescript
 // app/actions/account/controller.tsx
 export default createController(routes.account, {
-  middleware: createMiddleware(requireAuth()),
+  middleware: [requireAuth()],
   actions: {
     index() {
       return render(<AccountPage />)
@@ -280,7 +280,7 @@ export default createController(routes.account, {
 
 // app/actions/account/settings/controller.tsx
 export default createController(routes.account.settings, {
-  middleware: createMiddleware(requireAuth()),
+  middleware: [requireAuth()],
   actions: {
     index() {
       return render(<SettingsPage />)
@@ -312,7 +312,7 @@ The `middleware` array on a controller runs only for the direct actions in that 
 
 ```typescript
 export default createController(routes.admin, {
-  middleware: createMiddleware(requireAuth(), requireAdmin()),
+  middleware: [requireAuth(), requireAdmin()],
   actions: {
     /* all actions require auth + admin */
   },

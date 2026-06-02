@@ -41,9 +41,9 @@ router.mount('/orgs/:orgId', (org) => {
 
 If a mount prefix and child route use the same param name, the right-most route param wins, matching `route-pattern` behavior.
 
-Add `createMiddleware()` for creating ordered middleware chains that preserve their tuple type without `as const`. Use it with router, controller, or action middleware whenever downstream handlers or `MiddlewareContext` should see the typed values produced by the chain.
+Add `createMiddleware()` for creating reusable middleware chains that preserve their tuple type without `as const`. Prefer inline arrays for `middleware` options on routers, controllers, and actions; use `createMiddleware()` when a chain is stored in a variable and its exact tuple type needs to survive that boundary, such as when deriving `MiddlewareContext<typeof rootMiddleware>`, exporting a reusable chain, or returning a chain from a factory.
 
-`createAction()` and action objects registered directly with `route()`, single-route `map()`, or method helpers also infer action middleware into handler context. `createController()` infers controller middleware into its action handlers, so middleware-provided values are available from a `createMiddleware()` chain without manually composing a separate context type.
+`createAction()` and action objects registered directly with `route()`, single-route `map()`, or method helpers also infer action middleware into handler context. `createController()` infers controller middleware into its action handlers, so middleware-provided values are available from inline middleware arrays without manually composing a separate context type.
 
 `context.router` is now typed as `RequestRouter`, a request-time router reference with `fetch()` only. This keeps request handlers and middleware focused on dispatching through the active router while route installation remains a setup-time concern handled by `Router` and `RouteBuilder`.
 
@@ -63,25 +63,25 @@ let adminAction = createAction<typeof routes.admin, AdminContext>(routes.admin, 
 })
 ```
 
-Now the middleware tuple on the action or controller is enough for the handler to see the values it provides:
+Now the inline middleware array on the action or controller is enough for the handler to see the values it provides:
 
 ```ts
 let adminAction = createAction(routes.admin, {
-  middleware: createMiddleware(requireAdmin()),
+  middleware: [requireAdmin()],
   handler({ admin }) {
     return new Response(admin.id)
   },
 })
 
 router.get(routes.admin, {
-  middleware: createMiddleware(requireAdmin()),
+  middleware: [requireAdmin()],
   handler({ admin }) {
     return new Response(admin.id)
   },
 })
 
 let adminController = createController(routes.admin, {
-  middleware: createMiddleware(requireAdmin()),
+  middleware: [requireAdmin()],
   actions: {
     dashboard({ admin }) {
       return new Response(admin.id)
