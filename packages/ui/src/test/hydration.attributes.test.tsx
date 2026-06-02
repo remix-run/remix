@@ -166,6 +166,22 @@ describe('hydration', () => {
       expect(existingDiv.getAttribute('data-value')).toBe('42')
     })
 
+    it('hydrates rmx-ignore as a boolean attribute', async () => {
+      let html = await renderToString(<div rmx-ignore />)
+      expect(html).toBe('<div rmx-ignore></div>')
+      container.innerHTML = html
+
+      let existingDiv = container.querySelector('div')
+      invariant(existingDiv)
+
+      let root = createRoot(container)
+      root.render(<div rmx-ignore />)
+      root.flush()
+
+      expect(container.querySelector('div')).toBe(existingDiv)
+      expect(existingDiv.hasAttribute('rmx-ignore')).toBe(true)
+    })
+
     it('hydrates SVG xlinkHref as xlink:href', async () => {
       let html = await renderToString(
         <svg>
