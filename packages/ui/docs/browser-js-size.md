@@ -1,8 +1,42 @@
 # Browser JavaScript Size Findings
 
-The bookstore demo is a useful fixture for measuring the JavaScript fetched by source-served Remix UI browser assets. These numbers use the demo's production asset server settings and sum the raw byte length of the requested entry module plus every module returned by `assetServer.getPreloads(...)`.
+## Investigation brief
 
-The goal of this investigation is to reduce actual JavaScript bytes downloaded by typical hydrated Remix apps. Package changes are preferred over bookstore-only changes, and static-only no-JS wins are out of scope unless they also reduce the bytes sent for normal hydrated pages. Isolated per-entry graph reductions are useful diagnostics, but the page-level or multi-entry de-duped module set is the measurement that matters most because source-served modules eventually share the same browser cache.
+The goal is to reduce actual JavaScript bytes downloaded by typical hydrated Remix apps. This is not
+an investigation into static-only pages, demo-only app policy, or one-off per-entry graph wins that
+disappear once a page downloads the shared runtime.
+
+Primary measurement is the de-duped module set fetched by the bookstore demo's hydrated browser
+assets: the browser entry plus hydrated component assets and every URL returned by
+`assetServer.getPreloads(...)`, using production asset-server settings. Raw bytes are useful for
+diagnostics, but gzip and brotli are the network decision points. A change that saves raw bytes while
+regressing gzip or brotli should not land without a stronger product reason.
+
+Prefer changes that make already-downloaded modules smaller:
+
+- delete duplicate or unused runtime behavior;
+- move server-only code out of browser-loaded modules;
+- reduce source-served module bodies without changing public API shape;
+- keep public subpaths or compiler rewrites only when the de-duped page-level win is meaningful.
+
+Avoid repeating these low-value paths unless new evidence changes the tradeoff:
+
+- more fine-grained route helper subpaths;
+- narrow helper/shim splits that add public exports but only move bytes around;
+- raw-only rewrites that regress gzip or brotli;
+- bookstore-only changes such as omitting entry scripts from static routes or passing concrete route
+  strings into component props;
+- cosmetic private-name shortening as a primary strategy. It can save source-served bytes, but it is
+  readability-churn and should be reserved for clear, worthwhile compressed-byte wins.
+
+The current committed checkpoint is `95,954 raw / 39,611 gzip / 35,065 brotli / 60 modules` for all
+bookstore browser assets. The largest remaining targets are still
+`reconcile.ts`, `frame.ts`, `mixin.ts`, `diff-dom.ts`, route-map/href generation, SVG attribute
+normalization, and the runtime CSS serializer.
+
+## Measurement fixture
+
+The bookstore demo is a useful fixture for measuring the JavaScript fetched by source-served Remix UI browser assets. These numbers use the demo's production asset server settings and sum the raw byte length of the requested entry module plus every module returned by `assetServer.getPreloads(...)`.
 
 ## Browser import narrowing
 
