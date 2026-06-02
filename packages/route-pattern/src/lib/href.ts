@@ -171,13 +171,14 @@ function hrefPart(
 
 function hrefSearch(pattern: ParsedRoutePattern, searchParams: SearchParams): string | undefined {
   let constraints = pattern.search
-  if (constraints.size === 0 && Object.keys(searchParams).length === 0) {
+  let entries = Object.entries(searchParams)
+  if (constraints.size === 0 && entries.length === 0) {
     return undefined
   }
 
   let urlSearchParams = new URLSearchParams()
 
-  for (let [key, value] of Object.entries(searchParams)) {
+  for (let [key, value] of entries) {
     if (Array.isArray(value)) {
       for (let v of value) {
         if (v != null) urlSearchParams.append(key, String(v))
