@@ -1,36 +1,65 @@
 # Browser JavaScript Size Findings
 
-## Investigation brief
+## Goals
 
-The goal is to reduce actual JavaScript bytes downloaded by typical hydrated Remix apps. This is not
-an investigation into static-only pages, demo-only app policy, or one-off per-entry graph wins that
-disappear once a page downloads the shared runtime.
+Reduce the actual JavaScript bytes downloaded by typical hydrated Remix apps.
+
+This investigation should prioritize changes that make the browser-loaded module bodies themselves
+smaller, especially modules that are already downloaded by a normal hydrated page. The goal is not to
+make isolated entry graphs look better if those bytes still arrive through another asset on the same
+page.
+
+Primary goals:
+
+- reduce de-duped downloaded JavaScript bytes for the bookstore hydrated browser asset set;
+- judge wins by gzip and brotli first, with raw bytes used as a diagnostic;
+- keep meaningful changes that shrink already-downloaded modules without broad public API churn;
+- identify the next high-leverage runtime or route modules worth investigating.
+
+Non-goals:
+
+- optimizing static-only pages;
+- changing bookstore app authoring policy just to improve this fixture;
+- splitting code into more public subpaths or helper modules when the de-duped page-level bytes do
+  not improve meaningfully;
+- landing raw-only rewrites that regress gzip or brotli;
+- relying on compiler-only transformations unless they fit Remix's source-served asset philosophy.
+
+## Measurement rules
 
 Primary measurement is the de-duped module set fetched by the bookstore demo's hydrated browser
 assets: the browser entry plus hydrated component assets and every URL returned by
-`assetServer.getPreloads(...)`, using production asset-server settings. Raw bytes are useful for
-diagnostics, but gzip and brotli are the network decision points. A change that saves raw bytes while
-regressing gzip or brotli should not land without a stronger product reason.
+`assetServer.getPreloads(...)`, using production asset-server settings.
 
-Prefer changes that make already-downloaded modules smaller:
+Before keeping an experiment, answer these questions:
 
-- delete duplicate or unused runtime behavior;
-- move server-only code out of browser-loaded modules;
-- reduce source-served module bodies without changing public API shape;
-- keep public subpaths or compiler rewrites only when the de-duped page-level win is meaningful.
+- Which downloaded module body actually gets smaller?
+- Does the full de-duped bookstore set improve in gzip and brotli?
+- Is the change still valuable after shared modules are counted only once?
+- Does it avoid new public API surface or compiler behavior unless the compressed-byte win justifies
+  that cost?
+- Is this materially different from a path already tried and rejected below?
 
-Avoid repeating these low-value paths unless new evidence changes the tradeoff:
+## Do not revisit without new evidence
+
+These paths have either been measured as low-value or are outside the current goal:
 
 - more fine-grained route helper subpaths;
 - narrow helper/shim splits that add public exports but only move bytes around;
+- static-route entry omission;
+- passing concrete route strings into component props for bookstore-only savings;
 - raw-only rewrites that regress gzip or brotli;
-- bookstore-only changes such as omitting entry scripts from static routes or passing concrete route
-  strings into component props;
-- cosmetic private-name shortening as a primary strategy. It can save source-served bytes, but it is
-  readability-churn and should be reserved for clear, worthwhile compressed-byte wins.
+- cosmetic private-name shortening as a primary strategy.
 
-The current committed checkpoint is `95,954 raw / 39,611 gzip / 35,065 brotli / 60 modules` for all
-bookstore browser assets. The largest remaining targets are still
+## Current checkpoint
+
+The previous checkpoint before the current route cleanup was
+`95,954 raw / 39,611 gzip / 35,065 brotli / 60 modules` for all bookstore browser assets.
+
+The current working-tree route cleanup checkpoint is
+`95,692 raw / 39,526 gzip / 34,984 brotli / 60 modules`. That is a `262 raw / 85 gzip / 81 brotli`
+improvement over the committed checkpoint and comes from smaller route href generation and
+route-map serialization code, not new graph splits. The largest remaining targets are still
 `reconcile.ts`, `frame.ts`, `mixin.ts`, `diff-dom.ts`, route-map/href generation, SVG attribute
 normalization, and the runtime CSS serializer.
 
@@ -717,6 +746,30 @@ Current measurements after the kept mixin and route href cleanups:
 | ----------------- | ------: | ----: |
 | all bookstore browser assets | 60 | 95,954 raw / 39,611 gzip / 35,065 brotli |
 
+## Route href and route-map serialization cleanup
+
+The next route pass keeps the same public route APIs and module graph, but removes bytes from the
+two route modules already downloaded by browser route-map assets:
+
+- `createHref()` now chooses the pathname/hostname param encoder once per route part instead of
+  repeating the part-type branch for every variable token.
+- pathname param encoding uses `String.replace()` with `encodeURIComponent` directly instead of a
+  manual structural-character table.
+- hostname param validation uses the first regex match to preserve `CreateHrefError.details.char`
+  without carrying two manual structural-character loops.
+- `fetch-router` route-map serialization inlines tiny one-use `RoutePattern` serializer wrappers
+  and passes the search constraint map directly to the search serializer.
+
+Measured on top of the previous route href cleanup:
+
+| Browser asset set | Before | After | Savings |
+| ----------------- | -----: | ----: | ------: |
+| all bookstore browser assets | 95,954 raw / 39,611 gzip / 35,065 brotli / 60 modules | 95,692 raw / 39,526 gzip / 34,984 brotli / 60 modules | 262 raw / 85 gzip / 81 brotli |
+
+`route-pattern/src/lib/href.ts` moved from `3,353 raw / 1,310 gzip / 1,162 brotli` to
+`3,147 raw / 1,245 gzip / 1,108 brotli`. `fetch-router/src/lib/route-map.ts` moved from
+`3,089 raw / 1,215 gzip / 1,124 brotli` to `3,033 raw / 1,187 gzip / 1,092 brotli`.
+
 The largest modules in the current full downloaded set are now:
 
 | Module | Bytes |
@@ -725,8 +778,8 @@ The largest modules in the current full downloaded set are now:
 | `packages/ui/src/runtime/frame.ts` | 14,486 raw / 4,962 gzip / 4,458 brotli |
 | `packages/ui/src/runtime/mixins/mixin.ts` | 7,739 raw / 2,615 gzip / 2,393 brotli |
 | `packages/ui/src/runtime/diff-dom.ts` | 6,152 raw / 2,332 gzip / 2,105 brotli |
-| `packages/route-pattern/src/lib/href.ts` | 3,353 raw / 1,310 gzip / 1,162 brotli |
-| `packages/fetch-router/src/lib/route-map.ts` | 3,089 raw / 1,215 gzip / 1,124 brotli |
+| `packages/route-pattern/src/lib/href.ts` | 3,147 raw / 1,245 gzip / 1,108 brotli |
+| `packages/fetch-router/src/lib/route-map.ts` | 3,033 raw / 1,187 gzip / 1,092 brotli |
 | `packages/ui/src/runtime/svg-attributes.ts` | 2,524 raw / 873 gzip / 741 brotli |
 | `packages/ui/src/style/style.ts` | 2,473 raw / 1,001 gzip / 897 brotli |
 | `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,156 gzip / 1,021 brotli |

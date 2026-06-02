@@ -233,11 +233,11 @@ function createRoutePattern<source extends string>(
     },
     toJSON() {
       return {
-        protocol: serializeProtocol(parsed),
-        hostname: serializeHostname(parsed),
-        port: serializePort(parsed),
-        pathname: serializePathname(parsed),
-        search: serializeSearch(parsed),
+        protocol: parsed.protocol ?? '',
+        hostname: parsed.hostname ? serializePart(parsed.hostname) : '',
+        port: parsed.port ?? '',
+        pathname: serializePart(parsed.pathname),
+        search: serializeSearch(parsed.search),
       }
     },
   } as RoutePattern<source>
@@ -313,11 +313,11 @@ function joinSearch(
 }
 
 function serializeRoutePattern(pattern: ParsedRoutePattern): string {
-  let protocol = serializeProtocol(pattern)
-  let hostname = serializeHostname(pattern)
-  let port = serializePort(pattern)
-  let pathname = serializePathname(pattern)
-  let search = serializeSearch(pattern)
+  let protocol = pattern.protocol ?? ''
+  let hostname = pattern.hostname ? serializePart(pattern.hostname) : ''
+  let port = pattern.port ?? ''
+  let pathname = serializePart(pattern.pathname)
+  let search = serializeSearch(pattern.search)
 
   let result = ''
   if (protocol || hostname || port) {
@@ -328,26 +328,10 @@ function serializeRoutePattern(pattern: ParsedRoutePattern): string {
   return result
 }
 
-function serializeProtocol(pattern: ParsedRoutePattern): string {
-  return pattern.protocol ?? ''
-}
-
-function serializeHostname(pattern: ParsedRoutePattern): string {
-  return pattern.hostname ? serializePart(pattern.hostname) : ''
-}
-
-function serializePort(pattern: ParsedRoutePattern): string {
-  return pattern.port ?? ''
-}
-
-function serializePathname(pattern: ParsedRoutePattern): string {
-  return serializePart(pattern.pathname)
-}
-
-function serializeSearch(pattern: ParsedRoutePattern): string {
-  if (pattern.search.size === 0) return ''
+function serializeSearch(search: ParsedRoutePattern['search']): string {
+  if (search.size === 0) return ''
   let searchParams = new URLSearchParams()
-  for (let [key, constraint] of pattern.search) {
+  for (let [key, constraint] of search) {
     if (constraint.size === 0) {
       searchParams.append(key, '')
     } else {

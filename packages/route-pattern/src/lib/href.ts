@@ -103,6 +103,8 @@ function hrefPart(
   source?: string,
 ): string {
   let separator = part.type === 'hostname' ? '.' : '/'
+  let encodeVariable = part.type === 'pathname' ? encodePathnameVariable : validateHostnameVariable
+  let encodeWildcard = part.type === 'pathname' ? encodePathnameWildcard : validateHostnameWildcard
   let missingParams: Array<string> = []
 
   let stack: Array<{ begin?: number; href: string }> = [{ href: '' }]
@@ -143,13 +145,8 @@ function hrefPart(
         i = part.optionals.get(frame.begin!)! + 1
         continue
       }
-      // prettier-ignore
       stack[stack.length - 1].href +=
-        part.type === 'pathname' && token.type === ':' ? encodePathnameVariable(value) :
-        part.type === 'pathname' && token.type === '*' ? encodePathnameWildcard(value) :
-        part.type === 'hostname' && token.type === ':' ? validateHostnameVariable(value) :
-        part.type === 'hostname' && token.type === '*' ? validateHostnameWildcard(value) :
-        unreachable()
+        token.type === ':' ? encodeVariable(value) : encodeWildcard(value)
       i += 1
       continue
     }
@@ -282,21 +279,8 @@ function encodePathnameWildcard(value: unknown) {
  * @see https://url.spec.whatwg.org/#path-percent-encode-set
  * @see https://url.spec.whatwg.org/#percent-encoded-bytes
  */
-const PATHNAME_PARAM_STRUCTURAL_CHARS: Record<string, string> = {
-  '/': '%2F',
-  '?': '%3F',
-  '#': '%23',
-  '%': '%25',
-  '\\': '%5C',
-}
-
 function encodePathnameSegment(value: string): string {
-  let encoded = ''
-  for (let char of value) {
-    let encodedChar = PATHNAME_PARAM_STRUCTURAL_CHARS[char]
-    encoded += encodedChar === undefined ? char : encodedChar
-  }
-  return encoded
+  return value.replace(/[/?#%\\]/g, encodeURIComponent)
 }
 
 /**
@@ -308,32 +292,28 @@ function encodePathnameSegment(value: string): string {
  * @see https://url.spec.whatwg.org/#authority-state
  * @see https://url.spec.whatwg.org/#host-parsing
  */
-const HOSTNAME_PARAM_STRUCTURAL_CHARS = ['@', ':', '/', '?', '#']
-
 function validateHostnameVariable(value: unknown): string {
   let serialized = String(value)
-  for (let char of serialized) {
-    if (char === '.' || HOSTNAME_PARAM_STRUCTURAL_CHARS.includes(char)) {
-      throw new CreateHrefError({
-        type: 'invalid-hostname-variable',
-        value: serialized,
-        char,
-      })
-    }
+  let invalid = /[.@:/?#]/.exec(serialized)
+  if (invalid) {
+    throw new CreateHrefError({
+      type: 'invalid-hostname-variable',
+      value: serialized,
+      char: invalid[0],
+    })
   }
   return serialized
 }
 
 function validateHostnameWildcard(value: unknown): string {
   let serialized = String(value)
-  for (let char of serialized) {
-    if (HOSTNAME_PARAM_STRUCTURAL_CHARS.includes(char)) {
-      throw new CreateHrefError({
-        type: 'invalid-hostname-wildcard',
-        value: serialized,
-        char,
-      })
-    }
+  let invalid = /[@:/?#]/.exec(serialized)
+  if (invalid) {
+    throw new CreateHrefError({
+      type: 'invalid-hostname-wildcard',
+      value: serialized,
+      char: invalid[0],
+    })
   }
   return serialized
 }
