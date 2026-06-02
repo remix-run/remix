@@ -13,7 +13,7 @@ import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
 import { routes } from './routes.ts'
 
-export type Versions = { version: string }[]
+export type Versions = string[]
 
 const entryHref = await assetServer.getHref('docs/src/client/entry.tsx')
 
@@ -373,7 +373,7 @@ function VersionSwitcher(
 
     let navVersions = versions
     if (activeVersion) {
-      let idx = versions.findIndex((v) => v.version === activeVersion)
+      let idx = versions.findIndex((version) => version === activeVersion)
       if (idx >= 0) navVersions = versions.slice(idx)
     }
 
@@ -384,21 +384,20 @@ function VersionSwitcher(
         </summary>
         <div mix={sectionContentCss}>
           <nav aria-label="Versions" mix={sidebarNavCss}>
-            {navVersions.map((v) => {
-              let latest =
-                (versions.length === 0 || v.version === versions[0]?.version) && !activeVersion
-              let active = v.version === activeVersion || latest
-              let href = routes.home.href({ version: !latest ? v.version : undefined })
+            {navVersions.map((version) => {
+              let latest = (versions.length === 0 || version === versions[0]) && !activeVersion
+              let active = version === activeVersion || latest
+              let href = routes.home.href({ version: !latest ? version : undefined })
               let rel = active ? undefined : 'nofollow'
               return (
                 <a
-                  key={v.version}
+                  key={version}
                   href={href}
                   rel={rel}
                   aria-current={active ? 'page' : undefined}
                   mix={navItemCss}
                 >
-                  {v.version}
+                  {version}
                   {latest ? ' (latest)' : null}
                 </a>
               )

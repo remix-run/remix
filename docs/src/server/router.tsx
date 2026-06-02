@@ -39,7 +39,7 @@ function getRegistry(version?: string): DocsRegistry {
 
 export const getDefaultVersions = (): Versions => {
   let version = JSON.parse(fs.readFileSync(REMIX_PKG_JSON, 'utf-8')).version
-  return [{ version }]
+  return [version]
 }
 
 export function createRouter(versions: Versions) {

@@ -156,7 +156,5 @@ async function getVersionsForPicker(activeVersion?: string): Promise<Versions> {
     })
   }
 
-  return remixVersions.length > 0
-    ? remixVersions.map((version) => ({ version }))
-    : getDefaultVersions()
+  return remixVersions.length > 0 ? remixVersions : getDefaultVersions()
 }
