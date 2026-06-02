@@ -57,7 +57,7 @@ export function Document(
               {children}
             </MainContent>
           </div>
-          <pagefind-modal />
+          <pagefind-modal data-key="pagefind-modal" rmx-ignore />
         </body>
       </html>
     )
@@ -80,7 +80,12 @@ function MobileHeader(handle: Handle<{ page: PageDefinition }>) {
           <a href="https://remix.run">
             <RemixLogos />
           </a>
-          <pagefind-modal-trigger compact hide-shortcut />
+          <pagefind-modal-trigger
+            compact
+            data-key="pagefind-modal-trigger-mobile"
+            hide-shortcut
+            rmx-ignore
+          />
         </div>
         <label
           for="nav-toggle"
@@ -315,7 +320,12 @@ function Sidebar(
               <a href="https://remix.run" class="logo">
                 <RemixLogos />
               </a>
-              <pagefind-modal-trigger compact hide-shortcut />
+              <pagefind-modal-trigger
+                compact
+                data-key="pagefind-modal-trigger-sidebar"
+                hide-shortcut
+                rmx-ignore
+              />
             </div>
 
             <VersionSwitcher versions={versions} activeVersion={activeVersion} />
