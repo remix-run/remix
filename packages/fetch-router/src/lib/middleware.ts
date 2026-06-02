@@ -67,12 +67,10 @@ export type MiddlewareContext<
  * middleware that provides one context value, add a `property` field to install a direct context
  * property, or use {@link ContextEntries} for multiple values.
  */
-export interface Middleware<transform extends ContextTransform = EmptyContextTransform> {
-  /**
-   * Handles a request and optionally delegates to the next middleware or handler.
-   */
-  (context: RequestContext<any>, next: NextFunction): Response | Promise<Response>
-
+export type Middleware<transform extends ContextTransform = EmptyContextTransform> = ((
+  context: RequestContext<any>,
+  next: NextFunction,
+) => Response | Promise<Response>) & {
   /**
    * Type-only metadata that carries the middleware's declared context effect.
    */

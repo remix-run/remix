@@ -61,6 +61,8 @@ Add `createMiddleware()` for creating reusable middleware chains that preserve t
 
 `createAction()` and action objects registered directly with `route()`, single-route `map()`, or method helpers also infer action middleware into handler context. `createController()` infers controller middleware into its action handlers, so middleware-provided values are available from inline middleware arrays without manually composing a separate context type.
 
+`Middleware` is now modeled as a callable type alias with type-only context metadata instead of an interface call signature. This keeps middleware provider APIs the same while allowing TypeScript to preserve middleware context transforms in inline action and controller middleware arrays.
+
 `context.router` is now typed as `RequestRouter`, a request-time router reference with `fetch()` only. This keeps request handlers and middleware focused on dispatching through the active router while route installation remains a setup-time concern handled by `Router` and `RouteBuilder`.
 
 The public router type surface is also simpler: `createRouter()` and `router.map()` each use a single call signature while preserving the same route params, middleware context inference, and stored action/controller compatibility checks.

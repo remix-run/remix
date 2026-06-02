@@ -312,7 +312,7 @@ describe('router type inference', () => {
     } satisfies Action<typeof routes.reports, AdminAppContext>
 
     let elevatedReportActionWithMiddleware = createAction(routes.reports, {
-      middleware: createMiddleware(setRole('admin')),
+      middleware: [setRole('admin')],
       handler(context) {
         let user = context.get(CurrentUser)
         let role = context.get(CurrentRole)
@@ -338,7 +338,7 @@ describe('router type inference', () => {
     let router = createAppRouter()
 
     router.get(routes.reports, {
-      middleware: createMiddleware(setRole('admin')),
+      middleware: [setRole('admin')],
       handler(context) {
         let user = context.get(CurrentUser)
         let role = context.get(CurrentRole)
@@ -358,7 +358,7 @@ describe('router type inference', () => {
     })
 
     router.route('GET', routes.reports, {
-      middleware: createMiddleware(setRole('admin')),
+      middleware: [setRole('admin')],
       handler(context) {
         let role = context.get(CurrentRole)
         let reportId: string = context.params.reportId
@@ -374,7 +374,7 @@ describe('router type inference', () => {
     })
 
     router.map(routes.reports, {
-      middleware: createMiddleware(setRole('admin')),
+      middleware: [setRole('admin')],
       handler(context) {
         let role = context.get(CurrentRole)
         let reportId: string = context.params.reportId
@@ -394,7 +394,7 @@ describe('router type inference', () => {
     let elevatedReportsControllerWithMiddleware = createController(
       { reports: routes.reports },
       {
-        middleware: createMiddleware(setRole('admin')),
+        middleware: [setRole('admin')],
         actions: {
           reports(context) {
             let user = context.get(CurrentUser)
@@ -475,7 +475,7 @@ describe('router type inference', () => {
 
   it('does not leak action middleware results into the base router context', () => {
     let elevatedReportAction = createAction(routes.reports, {
-      middleware: createMiddleware(setRole('admin')),
+      middleware: [setRole('admin')],
       handler(context) {
         let role = context.get(CurrentRole)
         let reportId: string = context.params.reportId
@@ -491,7 +491,7 @@ describe('router type inference', () => {
     let elevatedReportsController = createController(
       { reports: routes.reports },
       {
-        middleware: createMiddleware(setRole('admin')),
+        middleware: [setRole('admin')],
         actions: {
           reports(context) {
             let role = context.get(CurrentRole)
