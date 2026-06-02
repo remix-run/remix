@@ -27,29 +27,6 @@ const BOOLEANISH_STRING_ATTRIBUTES = new Set([
   'spellcheck',
 ])
 
-export const FRAMEWORK_PROPS = new Set(['children', 'mix', 'key', 'animate', 'innerHTML', 'on'])
-
-export const SELF_CLOSING_TAGS = new Set([
-  'area',
-  'base',
-  'br',
-  'col',
-  'embed',
-  'hr',
-  'img',
-  'input',
-  'link',
-  'meta',
-  'param',
-  'source',
-  'track',
-  'wbr',
-])
-
-export function isChildlessElement(name: string): boolean {
-  return SELF_CLOSING_TAGS.has(name)
-}
-
 export function canUseProperty(
   element: Element,
   name: string,
@@ -83,10 +60,6 @@ export function normalizeAttributeName(
 
 export function isBooleanishStringAttribute(name: string): boolean {
   return BOOLEANISH_STRING_ATTRIBUTES.has(name)
-}
-
-export function shouldStringifyBooleanAttribute(name: string): boolean {
-  return isBooleanishStringAttribute(name) || name === 'value'
 }
 
 export function serializeStyleObject(style: Record<string, unknown>): string {

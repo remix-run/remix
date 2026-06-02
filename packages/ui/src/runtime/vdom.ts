@@ -12,7 +12,7 @@ import { diffVNodes, remove as removeVNode } from './reconcile.ts'
 import { toVNode } from './to-vnode.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 import { ROOT_VNODE, type VNode } from './vnode.ts'
-import { resetStyleState, defaultStyleManager } from './diff-props.ts'
+import { defaultStyleManager } from './diff-props.ts'
 import type { StyleManager } from '../style/stylesheet.ts'
 
 /**
@@ -50,8 +50,6 @@ export type VirtualRootOptions = {
 }
 
 export { createScheduler, type Scheduler }
-export { diffVNodes, toVNode }
-export { resetStyleState }
 
 function getHydrationComponentIdFromRangeStart(start: Node): string | undefined {
   if (!(start instanceof Comment)) return undefined
@@ -73,15 +71,52 @@ export function createRangeRoot(
   options: VirtualRootOptions = {},
 ): VirtualRoot {
   let [start, end] = boundaries
-  let vroot: VNode | null = null
-  let styles = options.styleManager ?? defaultStyleManager
-
   let container = end.parentNode
   invariant(container, 'Expected parent node')
   invariant(start.parentNode === container, 'Boundaries must share parent')
-  let parent = container
 
-  let hydrationCursor = start.nextSibling
+  return createVirtualRoot(
+    container,
+    options,
+    () => ({
+      type: ROOT_VNODE,
+      _svg: false,
+      _rangeStart: start,
+      _rangeEnd: end,
+      _pendingHydrationComponentId: getHydrationComponentIdFromRangeStart(start),
+    }),
+    end,
+    start.nextSibling,
+  )
+}
+
+/**
+ * Creates a virtual root for a host container element.
+ *
+ * @param container Host element to render into.
+ * @param options Root configuration.
+ * @returns A virtual root controller.
+ */
+export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
+  return createVirtualRoot(
+    container,
+    options,
+    () => ({ type: ROOT_VNODE, _svg: false }),
+    undefined,
+    container.innerHTML.trim() !== '' ? container.firstChild : undefined,
+  )
+}
+
+function createVirtualRoot(
+  parent: ParentNode & Node,
+  options: VirtualRootOptions,
+  createParentVNode: () => VNode,
+  anchor?: Node,
+  initialHydrationCursor?: Node | null,
+): VirtualRoot {
+  let vroot: VNode | null = null
+  let styles = options.styleManager ?? defaultStyleManager
+  let hydrationCursor = initialHydrationCursor
 
   let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
   let scheduler =
@@ -118,13 +153,6 @@ export function createRangeRoot(
       attachDomErrorForwarding()
 
       let vnode = toVNode(element)
-      let vParent: VNode = {
-        type: ROOT_VNODE,
-        _svg: false,
-        _rangeStart: start,
-        _rangeEnd: end,
-        _pendingHydrationComponentId: getHydrationComponentIdFromRangeStart(start),
-      }
       scheduler.enqueueWork([
         () => {
           diffVNodes(
@@ -134,94 +162,9 @@ export function createRangeRoot(
             frameStub,
             scheduler,
             styles,
-            vParent,
+            createParentVNode(),
             eventTarget,
-            end,
-            hydrationCursor,
-          )
-          vroot = vnode
-          hydrationCursor = null
-        },
-      ])
-      scheduler.dequeue()
-    },
-
-    dispose() {
-      detachDomErrorForwarding()
-
-      if (!vroot) return
-      let current = vroot
-      vroot = null
-      scheduler.enqueueWork([() => removeVNode(current, parent, scheduler, styles)])
-      scheduler.dequeue()
-    },
-
-    flush() {
-      scheduler.dequeue()
-    },
-  })
-}
-
-/**
- * Creates a virtual root for a host container element.
- *
- * @param container Host element to render into.
- * @param options Root configuration.
- * @returns A virtual root controller.
- */
-export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
-  let vroot: VNode | null = null
-  let styles = options.styleManager ?? defaultStyleManager
-  let hydrationCursor = container.innerHTML.trim() !== '' ? container.firstChild : undefined
-
-  let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
-  let scheduler =
-    options.scheduler ?? createScheduler(container.ownerDocument ?? document, eventTarget, styles)
-  let frameStub =
-    options.frame ??
-    createRootFrameHandle({
-      src: options.frameInit?.src,
-      resolveFrame: options.frameInit?.resolveFrame,
-      loadModule: options.frameInit?.loadModule,
-      errorTarget: eventTarget,
-      scheduler,
-      styleManager: styles,
-    })
-
-  let isErrorForwardingAttached = false
-  function forwardDomError(event: Event) {
-    eventTarget.dispatchEvent(createComponentErrorEvent(getComponentError(event)))
-  }
-  function attachDomErrorForwarding() {
-    if (isErrorForwardingAttached) return
-    container.addEventListener('error', forwardDomError)
-    isErrorForwardingAttached = true
-  }
-  function detachDomErrorForwarding() {
-    if (!isErrorForwardingAttached) return
-    container.removeEventListener('error', forwardDomError)
-    isErrorForwardingAttached = false
-  }
-  attachDomErrorForwarding()
-
-  return Object.assign(eventTarget, {
-    render(element: RemixNode) {
-      attachDomErrorForwarding()
-
-      let vnode = toVNode(element)
-      let vParent: VNode = { type: ROOT_VNODE, _svg: false }
-      scheduler.enqueueWork([
-        () => {
-          diffVNodes(
-            vroot,
-            vnode,
-            container,
-            frameStub,
-            scheduler,
-            styles,
-            vParent,
-            eventTarget,
-            undefined,
+            anchor,
             hydrationCursor,
           )
           vroot = vnode
@@ -237,7 +180,7 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
       if (!vroot) return
       let current = vroot
       vroot = null
-      scheduler.enqueueWork([() => removeVNode(current, container, scheduler, styles)])
+      scheduler.enqueueWork([() => removeVNode(current, parent, scheduler, styles)])
       scheduler.dequeue()
     },
 

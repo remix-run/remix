@@ -188,7 +188,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let inheritedReloadAbortUnsubscribe: (() => void) | undefined
 
   // Merge any rmx-data found in the current document once at startup.
-  mergeRmxDataFromDocument(init.data, container.doc)
+  mergeRmxDataFromRoot(init.data, container.doc)
 
   let runtime = createFrameRuntime({ ...init, styleManager })
 
@@ -259,8 +259,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (isRemixNodeFrameContent(content)) {
       if (!contentRoot) {
         let currentNodes = getContentNodes()
-        removeVirtualRoots(currentNodes)
-        disposeSubFrames(currentNodes, context)
+        cleanupFrameRuntimeNodes(currentNodes, context)
         clearFrameContent()
         contentRoot = createFrameContentRoot()
       }
@@ -297,7 +296,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
-      mergeRmxDataFromDocument(context.data, parsed)
+      mergeRmxDataFromRoot(context.data, parsed)
       context.styleManager.replaceServerStyles(
         collectFrameServerStyleTags(createElementContainer(parsed)),
       )
@@ -331,7 +330,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       collectFrameServerStyleTags(createElementContainer(fragment)),
     )
     removeEmptyHeads(fragment)
-    mergeRmxDataFromFragment(context.data, fragment)
+    mergeRmxDataFromRoot(context.data, fragment)
 
     let nextContainer = createContainer(fragment)
 
@@ -409,11 +408,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     contentRoot = undefined
     clearPendingFrameTemplateWatch()
 
-    // Remove hydrated virtual roots in this frame's region.
-    removeVirtualRoots(container.childNodes)
-
-    // Dispose sub-frames recursively.
-    disposeSubFrames(container.childNodes, context)
+    cleanupFrameRuntimeNodes(container.childNodes, context)
     context.styleManager.dispose()
 
     if (frameName) {
@@ -671,18 +666,8 @@ function createInitialHydrationTracker(): InitialHydrationTracker {
   }
 }
 
-function mergeRmxDataFromDocument(into: RmxData, doc: Document): void {
-  let scripts = Array.from(doc.querySelectorAll('script#rmx-data'))
-  for (let script of scripts) {
-    if (!(script instanceof HTMLScriptElement)) continue
-    mergeRmxData(into, parseRmxDataScript(script))
-    script.remove()
-  }
-}
-
-function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): void {
-  let scripts = Array.from(fragment.querySelectorAll('script#rmx-data'))
-  for (let script of scripts) {
+function mergeRmxDataFromRoot(into: RmxData, root: Document | DocumentFragment): void {
+  for (let script of root.querySelectorAll('script#rmx-data')) {
     if (!(script instanceof HTMLScriptElement)) continue
     mergeRmxData(into, parseRmxDataScript(script))
     script.remove()
@@ -690,8 +675,7 @@ function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): vo
 }
 
 function removeEmptyHeads(fragment: DocumentFragment): void {
-  let heads = Array.from(fragment.querySelectorAll('head'))
-  for (let head of heads) {
+  for (let head of fragment.querySelectorAll('head')) {
     if (!head.childNodes.length) {
       head.remove()
     }
@@ -754,7 +738,6 @@ function mergeRmxData(into: RmxData, from: RmxData): void {
 function copyOwnRmxEntries<T>(target: Record<string, T>, source: Record<string, T>): void {
   for (let key of Object.keys(source)) {
     if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue
-    if (!Object.hasOwn(source, key)) continue
     target[key] = source[key]!
   }
 }
@@ -992,7 +975,7 @@ function isHydrationMarkerLive(marker: HydrationMarker, context: FrameContext): 
   return true
 }
 
-function removeVirtualRoots(nodes: Node[]): void {
+function cleanupFrameRuntimeNodes(nodes: Node[], context: FrameContext): void {
   for (let i = 0; i < nodes.length; i++) {
     let node = nodes[i]
 
@@ -1002,16 +985,6 @@ function removeVirtualRoots(nodes: Node[]): void {
       i = nodes.indexOf(end)
       continue
     }
-
-    if (node.childNodes && node.childNodes.length > 0) {
-      removeVirtualRoots(Array.from(node.childNodes))
-    }
-  }
-}
-
-function disposeSubFrames(nodes: Node[], context: FrameContext): void {
-  for (let i = 0; i < nodes.length; i++) {
-    let node = nodes[i]
 
     if (isFrameStart(node)) {
       let end = findEndMarker(node, isFrameStart, isFrameEnd)
@@ -1025,7 +998,7 @@ function disposeSubFrames(nodes: Node[], context: FrameContext): void {
     }
 
     if (node.childNodes && node.childNodes.length > 0) {
-      disposeSubFrames(Array.from(node.childNodes), context)
+      cleanupFrameRuntimeNodes(Array.from(node.childNodes), context)
     }
   }
 }
@@ -1061,8 +1034,7 @@ function collectAndPublishTemplates(node: Node): void {
   }
 
   if (!(node instanceof Element)) return
-  let templates = Array.from(node.querySelectorAll('template'))
-  for (let template of templates) {
+  for (let template of node.querySelectorAll('template')) {
     if (!(template instanceof HTMLTemplateElement)) continue
     publishFrameTemplateElement(template)
   }

@@ -184,11 +184,9 @@ function diffElementAttributes(current: Element, next: Element): void {
   let prevAttrNames = current.getAttributeNames()
   let nextAttrNames = next.getAttributeNames()
 
-  let nextNameSet = new Set(nextAttrNames)
-
   // Removals
   for (let name of prevAttrNames) {
-    if (!nextNameSet.has(name)) {
+    if (!next.hasAttribute(name)) {
       if (shouldPreserveLiveAttribute(current, next, name)) continue
       current.removeAttribute(name)
     }
@@ -448,14 +446,8 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
 function nodeTypesComparable(a: Node, b: Node): boolean {
   if (isTextNode(a) && isTextNode(b)) return true
   if (isElement(a) && isElement(b)) return a.tagName === b.tagName
-  if (isVirtualRootStartMarker(a) && isVirtualRootStartMarker(b)) return true
-  if (isVirtualRootEndMarker(a) && isVirtualRootEndMarker(b)) return true
   if (isCommentNode(a) && isCommentNode(b)) return true
   return false
-}
-
-function isHydrationEndComment(node: Node): node is Comment {
-  return isCommentNode(node) && node.data.trim() === '/rmx:h'
 }
 
 function findHydrationEndMarker(start: Comment): Comment {
@@ -478,7 +470,8 @@ function findHydrationEndMarker(start: Comment): Comment {
 
 function findHydrationEndIndex(nodes: Node[], startIdx: number): number {
   for (let j = startIdx + 1; j < nodes.length; j++) {
-    if (isHydrationEndComment(nodes[j])) return j
+    let node = nodes[j]
+    if (isCommentNode(node) && node.data.trim() === '/rmx:h') return j
   }
   return startIdx
 }
@@ -639,43 +632,31 @@ function collectFrameContentFragment(
 }
 
 function removeNode(node: Node, parent: ParentNode, context: FrameContext): void {
-  disposeRemovedVirtualRoots(node)
-  disposeRemovedSubFrames(node, context)
+  disposeRemovedRuntimeNodes(node, context)
 
   if (node.parentNode === parent) {
     parent.removeChild(node)
   }
 }
 
-function disposeRemovedVirtualRoots(node: Node): void {
-  let stack: Node[] = [node]
+function disposeRemovedRuntimeNodes(node: Node, context: FrameContext): void {
+  let stack: Array<[Node, boolean]> = [[node, false]]
   while (stack.length > 0) {
-    let next = stack.pop()
-    if (!next) continue
+    let item = stack.pop()
+    if (!item) continue
+    let [next, insideDisposedRoot] = item
 
-    if (isHydratedVirtualRootStartMarker(next)) {
+    if (!insideDisposedRoot && isHydratedVirtualRootStartMarker(next)) {
       next.$rmx.dispose()
-      continue
+      insideDisposedRoot = true
     }
-
-    for (let child of Array.from(next.childNodes)) {
-      stack.push(child)
-    }
-  }
-}
-
-function disposeRemovedSubFrames(node: Node, context: FrameContext): void {
-  let stack: Node[] = [node]
-  while (stack.length > 0) {
-    let next = stack.pop()
-    if (!next) continue
 
     if (isFrameStartMarker(next)) {
       disposeFrameStartMarker(next, context)
     }
 
     for (let child of Array.from(next.childNodes)) {
-      stack.push(child)
+      stack.push([child, insideDisposedRoot])
     }
   }
 }
@@ -693,7 +674,7 @@ function isVirtualRootStartMarker(node: Node): node is Comment {
 }
 
 function isHydratedVirtualRootStartMarker(node: Node): node is HydratedVirtualRootStartMarker {
-  return isVirtualRootStartMarker(node) && '$rmx' in node
+  return isCommentNode(node) && '$rmx' in node
 }
 
 function isVirtualRootEndMarker(node: Node): node is Comment {

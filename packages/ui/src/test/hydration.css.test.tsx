@@ -1,6 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it } from '@remix-run/test'
-import { createRoot, resetStyleState } from '../runtime/vdom.ts'
+import { resetStyleState } from '../runtime/diff-props.ts'
+import { createRoot } from '../runtime/vdom.ts'
 import { renderToString } from '../server/stream.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { css } from '../index.ts'

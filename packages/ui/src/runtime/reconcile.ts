@@ -43,7 +43,6 @@ import {
   type MixinRuntimeBinding,
   type MixinRuntimeState,
 } from './mixins/mixin.ts'
-import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -102,42 +101,12 @@ function findMatchingPersistedMixinNode(
 
 type ControlledReflectionState = {
   disposed: boolean
-  listenersAttached: boolean
-  pendingRestoreVersion: number
-  managesValue: boolean
-  managesChecked: boolean
-  hasControlledValue: boolean
-  controlledValue: unknown
-  hasControlledChecked: boolean
-  controlledChecked: unknown
-  onInput: () => void
-  onChange: () => void
-}
-
-type DirectEventBinding = {
-  type: string
-  handler: (event: Event, signal: AbortSignal) => void | Promise<void>
-  capture: boolean
-  stableHandler: ((event: Event) => void) | null
-  reentry: AbortController | null
-}
-
-type DirectEventState = {
-  bindings: DirectEventBinding[]
-}
-
-const EMPTY_DIRECT_EVENT_DESCRIPTORS: OnMixinDescriptor[] = []
-
-function shouldRestoreControlledReflectionOnInput(
-  node: CommittedHostNode,
-  state: ControlledReflectionState,
-): boolean {
-  // Some controls dispatch `input` before `change` for the same interaction.
-  // When checked/value state is typically handled on `change`, restoring on the
-  // earlier `input` can race and clobber the value observed by app handlers.
-  if (state.hasControlledChecked) return false
-  if (node.type === 'select') return false
-  return true
+  version: number
+  hasValue: boolean
+  value: unknown
+  hasChecked: boolean
+  checked: unknown
+  onInputOrChange: (event: Event) => void
 }
 
 function ensureControlledReflection(
@@ -149,19 +118,16 @@ function ensureControlledReflection(
 
   let state: ControlledReflectionState = {
     disposed: false,
-    listenersAttached: false,
-    pendingRestoreVersion: 0,
-    managesValue: false,
-    managesChecked: false,
-    hasControlledValue: false,
-    controlledValue: undefined,
-    hasControlledChecked: false,
-    controlledChecked: undefined,
-    onInput: () => {
-      if (!shouldRestoreControlledReflectionOnInput(node, state)) return
-      scheduleControlledRestore(node, state)
-    },
-    onChange: () => {
+    version: 0,
+    hasValue: false,
+    value: undefined,
+    hasChecked: false,
+    checked: undefined,
+    onInputOrChange: (event) => {
+      // Some controls dispatch `input` before `change` for the same interaction.
+      // When checked/value state is typically handled on `change`, restoring on the
+      // earlier `input` can race and clobber the value observed by app handlers.
+      if (event.type === 'input' && (state.hasChecked || node.type === 'select')) return
       scheduleControlledRestore(node, state)
     },
   }
@@ -170,9 +136,8 @@ function ensureControlledReflection(
   scheduler.enqueueTasks([
     () => {
       if (state.disposed) return
-      node._dom.addEventListener('input', state.onInput)
-      node._dom.addEventListener('change', state.onChange)
-      state.listenersAttached = true
+      node._dom.addEventListener('input', state.onInputOrChange)
+      node._dom.addEventListener('change', state.onInputOrChange)
     },
   ])
   return state
@@ -182,13 +147,12 @@ function syncControlledReflection(node: CommittedHostNode, props: ElementProps):
   let state = node._controlledState as ControlledReflectionState | undefined
   if (!state || state.disposed) return
 
-  state.managesValue = canManageValue(node.type, node._dom)
-  state.managesChecked = canReflectProperty(node._dom, 'checked')
-  state.hasControlledValue = state.managesValue && hasControlledValueProp(props)
-  state.controlledValue = props.value
-  state.hasControlledChecked = state.managesChecked && hasControlledCheckedProp(props)
-  state.controlledChecked = props.checked
-  state.pendingRestoreVersion++
+  let element = node._dom
+  state.hasValue = node.type !== 'progress' && 'value' in element && hasControlledValueProp(props)
+  state.value = props.value
+  state.hasChecked = 'checked' in element && hasControlledCheckedProp(props)
+  state.checked = props.checked
+  state.version++
 }
 
 function shouldTrackControlledReflection(props: ElementProps): boolean {
@@ -200,10 +164,10 @@ function scheduleControlledRestore(
   state: ControlledReflectionState,
 ): void {
   if (state.disposed) return
-  let version = ++state.pendingRestoreVersion
+  let version = ++state.version
   queueMicrotask(() => {
     if (state.disposed) return
-    if (state.pendingRestoreVersion !== version) return
+    if (state.version !== version) return
     restoreControlledReflections(node, state)
   })
 }
@@ -212,12 +176,15 @@ function restoreControlledReflections(
   node: CommittedHostNode,
   state: ControlledReflectionState,
 ): void {
-  let element = node._dom
-  if (state.hasControlledValue && readDomProp(element, 'value') !== state.controlledValue) {
-    setPropertyReflection(element, 'value', state.controlledValue)
+  let element = node._dom as Element & {
+    value: unknown
+    checked: unknown
   }
-  if (state.hasControlledChecked && readDomProp(element, 'checked') !== state.controlledChecked) {
-    setPropertyReflection(element, 'checked', state.controlledChecked)
+  if (state.hasValue && element.value !== state.value) {
+    element.value = state.value == null ? '' : state.value
+  }
+  if (state.hasChecked && element.checked !== state.checked) {
+    element.checked = state.checked == null ? '' : state.checked
   }
 }
 
@@ -225,17 +192,9 @@ function teardownControlledReflection(node: CommittedHostNode): void {
   let state = node._controlledState as ControlledReflectionState | undefined
   if (!state) return
   state.disposed = true
-  state.pendingRestoreVersion++
-  if (state.listenersAttached) {
-    node._dom.removeEventListener('input', state.onInput)
-    node._dom.removeEventListener('change', state.onChange)
-    state.listenersAttached = false
-  }
-}
-
-function canManageValue(type: string, element: Element): boolean {
-  if (type === 'progress') return false
-  return canReflectProperty(element, 'value')
+  state.version++
+  node._dom.removeEventListener('input', state.onInputOrChange)
+  node._dom.removeEventListener('change', state.onInputOrChange)
 }
 
 function hasControlledValueProp(props: ElementProps): boolean {
@@ -246,23 +205,6 @@ function hasControlledCheckedProp(props: ElementProps): boolean {
   return 'checked' in props && props.checked !== undefined
 }
 
-function canReflectProperty(
-  element: Element,
-  key: string,
-): element is Element & Record<string, unknown> {
-  return key in element && !key.includes('-')
-}
-
-function readDomProp(element: Element, key: string): unknown {
-  if (!canReflectProperty(element, key)) return undefined
-  return element[key]
-}
-
-function setPropertyReflection(element: Element, key: string, value: unknown): void {
-  if (!canReflectProperty(element, key)) return
-  element[key] = value == null ? '' : value
-}
-
 function resolveNodeMixProps(
   node: HostNode,
   frame: FrameHandle,
@@ -270,18 +212,6 @@ function resolveNodeMixProps(
   state?: MixinRuntimeState,
 ): ElementProps {
   let mix = node.props.mix
-  let directEventDescriptors = resolveDirectEventDescriptors(mix)
-  if (directEventDescriptors) {
-    if (state) {
-      teardownMixins(state)
-    }
-    node._mixState = undefined
-    node._mixedProps = node.props
-    node._directEventDescriptors = directEventDescriptors
-    return node.props
-  }
-
-  node._directEventDescriptors = undefined
   if (state == null && (mix == null || (Array.isArray(mix) && mix.length === 0))) {
     node._mixState = undefined
     node._mixedProps = node.props
@@ -305,22 +235,6 @@ function resolveNodeMixProps(
   node._mixState = resolved.state
   node._mixedProps = resolved.props
   return resolved.props
-}
-
-function resolveDirectEventDescriptors(mix: ElementProps['mix']): OnMixinDescriptor[] | null {
-  if (!mix) return EMPTY_DIRECT_EVENT_DESCRIPTORS
-  if (!Array.isArray(mix)) {
-    return isOnMixinDescriptor(mix) ? [mix] : null
-  }
-
-  return areOnMixinDescriptors(mix) ? mix : null
-}
-
-function areOnMixinDescriptors(descriptors: unknown[]): descriptors is OnMixinDescriptor[] {
-  for (let item of descriptors) {
-    if (!isOnMixinDescriptor(item)) return false
-  }
-  return true
 }
 
 function enqueueMixinBindingUpdate(
@@ -351,7 +265,6 @@ function bindNodeMixRuntime(
   node: CommittedHostNode,
   frame: FrameHandle,
   scheduler: Scheduler,
-  styles: StyleManager,
   reclaimed: boolean = false,
   parent?: ParentNode,
 ) {
@@ -539,9 +452,7 @@ function diffHost(
   next._dom = curr._dom
   next._parent = vParent
   next._controller = curr._controller
-  next._directEventState = curr._directEventState
   next._controlledState = curr._controlledState
-  syncDirectEventListeners(next as CommittedHostNode)
 
   if (next._controlledState || shouldTrackControlledReflection(nextProps)) {
     ensureControlledReflection(next as CommittedHostNode, scheduler)
@@ -549,7 +460,7 @@ function diffHost(
   }
 
   if (next._mixState) {
-    bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler, styles)
+    bindNodeMixRuntime(next as CommittedHostNode, frame, scheduler)
   }
   if (shouldDispatchMixinLifecycle) {
     scheduler.enqueueCommitPhase([() => dispatchMixinCommit(nextMixState)])
@@ -563,113 +474,10 @@ function setupHostNode(node: HostNode, dom: Element, scheduler: Scheduler): void
   let props = getHostProps(node)
   let committedNode = node as CommittedHostNode
 
-  syncDirectEventListeners(committedNode)
-
   if (shouldTrackControlledReflection(props)) {
     ensureControlledReflection(committedNode, scheduler)
     syncControlledReflection(committedNode, props)
   }
-}
-
-function syncDirectEventListeners(node: CommittedHostNode): void {
-  let descriptors = node._directEventDescriptors as OnMixinDescriptor[] | undefined
-  if (!descriptors) {
-    teardownDirectEventListeners(node)
-    return
-  }
-  if (descriptors.length === 0) {
-    teardownDirectEventListeners(node)
-    return
-  }
-
-  let state = node._directEventState as DirectEventState | undefined
-  if (!state) {
-    state = { bindings: [] }
-    node._directEventState = state
-  }
-
-  let bindings = state.bindings
-  for (let index = 0; index < descriptors.length; index++) {
-    let descriptor = descriptors[index]
-    let [type, handler, captureBoolean = false] = descriptor.args
-    let binding = bindings[index]
-
-    if (!binding) {
-      binding = createDirectEventBinding(type, handler, captureBoolean)
-      bindings[index] = binding
-      attachDirectEventBinding(node._dom, binding)
-      continue
-    }
-
-    if (binding.type !== type || binding.capture !== captureBoolean) {
-      removeDirectEventBinding(node._dom, binding)
-      binding.type = type
-      binding.capture = captureBoolean
-      attachDirectEventBinding(node._dom, binding)
-    }
-
-    binding.handler = handler
-  }
-
-  for (let index = descriptors.length; index < bindings.length; index++) {
-    removeDirectEventBinding(node._dom, bindings[index])
-  }
-  bindings.length = descriptors.length
-}
-
-function createDirectEventBinding(
-  type: string,
-  handler: DirectEventBinding['handler'],
-  capture: boolean,
-): DirectEventBinding {
-  let binding: DirectEventBinding = {
-    type,
-    handler,
-    capture,
-    reentry: null,
-    stableHandler: null,
-  }
-
-  return binding
-}
-
-function getStableDirectEventHandler(binding: DirectEventBinding): (event: Event) => void {
-  if (binding.stableHandler) return binding.stableHandler
-
-  binding.stableHandler = (event) => {
-    invokeDirectEventBinding(binding, event)
-  }
-  return binding.stableHandler
-}
-
-function attachDirectEventBinding(dom: Element, binding: DirectEventBinding): void {
-  dom.addEventListener(binding.type, getStableDirectEventHandler(binding), binding.capture)
-}
-
-function removeDirectEventBinding(dom: Element, binding: DirectEventBinding): void {
-  if (binding.stableHandler) {
-    dom.removeEventListener(binding.type, binding.stableHandler, binding.capture)
-  }
-  binding.reentry?.abort(new DOMException('', 'AbortError'))
-  binding.reentry = null
-}
-
-function teardownDirectEventListeners(node: CommittedHostNode): void {
-  let state = node._directEventState as DirectEventState | undefined
-  if (!state) return
-
-  for (let binding of state.bindings) {
-    removeDirectEventBinding(node._dom, binding)
-  }
-
-  state.bindings.length = 0
-  node._directEventState = undefined
-}
-
-function invokeDirectEventBinding(binding: DirectEventBinding, event: Event): void {
-  binding.reentry?.abort(new DOMException('', 'EventReentry'))
-  binding.reentry = new AbortController()
-  void binding.handler(event, binding.reentry.signal)
 }
 
 function diffText(curr: CommittedTextNode, next: TextNode, vParent: VNode) {
@@ -779,7 +587,7 @@ function insert(
         patchHostProps({}, hostProps, targetHead)
         setupHostNode(node, targetHead, scheduler)
         if (node._mixState) {
-          bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
+          bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler)
         }
         return cursor
       }
@@ -821,7 +629,7 @@ function insert(
 
         setupHostNode(node, cursor, scheduler)
         if (node._mixState) {
-          bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
+          bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler)
         }
         return nextCursor
       } else {
@@ -854,7 +662,7 @@ function insert(
 
             setupHostNode(node, nextSibling, scheduler)
             if (node._mixState) {
-              bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles)
+              bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler)
             }
             return nextCursor
           }
@@ -878,7 +686,7 @@ function insert(
 
     setupHostNode(node, dom, scheduler)
     if (node._mixState) {
-      bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, styles, false, domParent)
+      bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, false, domParent)
     }
     doInsert(dom)
     return cursor
@@ -1381,7 +1189,6 @@ function cleanupDescendants(node: VNode, scheduler: Scheduler, styles: StyleMana
     }
 
     teardownMixins(node._mixState as MixinRuntimeState | undefined)
-    teardownDirectEventListeners(node)
     teardownControlledReflection(node)
     if (node._controller) node._controller.abort()
     return
@@ -1479,7 +1286,6 @@ function performHostNodeRemoval(
   }
 
   teardownMixins(node._mixState as MixinRuntimeState | undefined)
-  teardownDirectEventListeners(node)
   teardownControlledReflection(node)
   // Never remove the real document.head node when reconciling a <head> vnode.
   if (!isHeadHostNode(node)) {
@@ -1521,20 +1327,6 @@ function diffChildren(
     }
     vParent._children = next
     return cursor
-  }
-
-  if (
-    next.length === 0 &&
-    anchor === undefined &&
-    !parentUsesInnerHTML(vParent) &&
-    canBulkClearChildren(curr)
-  ) {
-    for (let node of curr) {
-      cleanupDescendants(node, scheduler, styles)
-    }
-    domParent.textContent = ''
-    vParent._children = next
-    return
   }
 
   if (!hasKeys) {
@@ -1579,39 +1371,6 @@ function diffChildren(
   )
 
   return
-}
-
-function parentUsesInnerHTML(parent: VNode): boolean {
-  return isHostNode(parent) && getHostProps(parent).innerHTML != null
-}
-
-function canBulkClearChildren(children: VNode[]): boolean {
-  for (let child of children) {
-    if (!canBulkClearNode(child)) return false
-  }
-  return true
-}
-
-function canBulkClearNode(node: VNode): boolean {
-  if (isCommittedTextNode(node)) return true
-
-  if (isCommittedHostNode(node)) {
-    if (node._mixState) return false
-    for (let child of node._children) {
-      if (!canBulkClearNode(child)) return false
-    }
-    return true
-  }
-
-  if (isFragmentNode(node)) {
-    return canBulkClearChildren(node._children)
-  }
-
-  if (isCommittedComponentNode(node)) {
-    return canBulkClearNode(node._content)
-  }
-
-  return false
 }
 
 function hasKeyedChildren(children: VNode[]): boolean {
@@ -2057,7 +1816,6 @@ function reclaimPersistedMixinNode(
   newNode._parent = vParent
   newNode._controller = persistedNode._controller
   newNode._mixState = persistedNode._mixState
-  newNode._directEventState = persistedNode._directEventState
   newNode._controlledState = persistedNode._controlledState
 
   let prevProps = getHostProps(persistedNode)
@@ -2071,7 +1829,6 @@ function reclaimPersistedMixinNode(
     dispatchMixinBeforeUpdate(newNode._mixState as MixinRuntimeState | undefined)
   }
   patchHostProps(prevProps, nextProps, persistedNode._dom)
-  syncDirectEventListeners(newNode as CommittedHostNode)
   ensureControlledReflection(newNode as CommittedHostNode, scheduler)
   syncControlledReflection(newNode as CommittedHostNode, nextProps)
 
@@ -2087,7 +1844,7 @@ function reclaimPersistedMixinNode(
   )
 
   if (newNode._mixState) {
-    bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, styles, true)
+    bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, true)
   }
   if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
     scheduler.enqueueCommitPhase([

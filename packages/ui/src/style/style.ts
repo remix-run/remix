@@ -4,25 +4,12 @@ type StyleObject = Record<string, unknown>
 
 // Check if a style property is a nested selector or media query
 function isComplexSelector(key: string): boolean {
-  return (
-    key.startsWith('&') ||
-    key.startsWith('@') ||
-    key.startsWith(':') ||
-    key.startsWith('[') ||
-    key.startsWith('.')
-  )
+  return /^[&@:\[.]/.test(key)
 }
 
 // Detect @keyframes (including vendor-prefixed variants)
 function isKeyframesAtRule(key: string): boolean {
-  if (!key.startsWith('@')) return false
-  let lower = key.toLowerCase()
-  return (
-    lower.startsWith('@keyframes') ||
-    lower.startsWith('@-webkit-keyframes') ||
-    lower.startsWith('@-moz-keyframes') ||
-    lower.startsWith('@-o-keyframes')
-  )
+  return /^@(?:-(?:webkit|moz|o)-)?keyframes/i.test(key)
 }
 
 // Generate a hash for style objects to create unique class names
@@ -267,9 +254,4 @@ export function processStyleClass(
   styleCache.set(hash, result)
 
   return result
-}
-
-// Clear style cache (useful for testing)
-export function clearStyleCache(styleCache: Map<string, { selector: string; css: string }>): void {
-  styleCache.clear()
 }
