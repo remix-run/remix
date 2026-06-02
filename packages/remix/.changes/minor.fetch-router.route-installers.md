@@ -4,8 +4,6 @@ Add `router.mount()` and the `RouteBuilder`/`RouteInstaller` types to `remix/rou
 
 `createMiddleware()` creates reusable middleware chains that preserve their tuple type without `as const` in the specific cases where a chain crosses an inference boundary: deriving `MiddlewareContext<typeof rootMiddleware>` without a router value, exporting a reusable chain, or returning a chain from a factory. Prefer inline arrays for ordinary `middleware` options on routers, controllers, actions, and route helpers. `Middleware` is now a callable type alias with type-only context metadata, which preserves inline middleware context transforms more reliably than an interface call signature.
 
-`context.router` is now typed as `RequestRouter`, which exposes request-time `fetch()` without route-registration methods. Use `Router` or `RouteBuilder` in setup code that installs routes.
-
 The re-exported router types also keep `createRouter()` and `router.map()` to single call signatures while preserving route params, middleware context inference, and stored action/controller compatibility checks, making the public type surface smaller while everyday route setup gets more expressive.
 
 BREAKING CHANGE: `MapTarget` and `MapHandler` are no longer re-exported from `remix/router` or `remix/fetch-router`. Use the public `Router`, `RouteBuilder`, `RouteInstaller`, `Action`, and `Controller` types instead.

@@ -1,3 +1,5 @@
+import type { Router } from './router.ts'
+
 import type { Simplify } from './type-utils.ts'
 
 /**
@@ -184,23 +186,6 @@ export type ContextWithEntry<context, entry extends ContextEntry> = ContextWithE
 >
 
 /**
- * The router reference available while handling a request.
- *
- * Request-time code can fetch through the active router, but route registration belongs to setup
- * code that has access to the full {@link Router} object.
- */
-export interface RequestRouter {
-  /**
-   * Fetch a response from the active router.
-   *
-   * @param input The request input to fetch
-   * @param init The request init options
-   * @returns The response from the route that matched the request
-   */
-  fetch(input: string | URL | Request, init?: RequestInit): Promise<Response>
-}
-
-/**
  * A context object that contains information about the current request. Every request
  * handler or middleware in the lifecycle of a request receives the same context object.
  */
@@ -349,20 +334,20 @@ export class RequestContext<
     })
   }
 
-  #router?: RequestRouter
+  #router?: Router<any>
 
   /**
    * The router handling this request.
    */
-  get router(): RequestRouter {
+  get router(): Router<RequestContext<any, entries>> {
     if (this.#router == null) {
       throw new Error('No router found in request context.')
     }
 
-    return this.#router
+    return this.#router as Router<RequestContext<any, entries>>
   }
 
-  set router(router: RequestRouter) {
+  set router(router: Router<any>) {
     this.#router = router
   }
 

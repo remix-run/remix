@@ -1,4 +1,4 @@
-import type { RequestRouter } from 'remix/router'
+import type { Router } from 'remix/router'
 import { renderWith } from 'remix/middleware/render'
 import { createHtmlResponse } from 'remix/response/html'
 import type { RemixNode } from 'remix/ui'
@@ -29,7 +29,7 @@ export function render() {
   })
 }
 
-async function resolveFrameViaRouter(router: RequestRouter, request: Request, src: string) {
+async function resolveFrameViaRouter(router: Router, request: Request, src: string) {
   let url = new URL(src, request.url)
   let headers = new Headers(request.headers)
 

@@ -104,8 +104,6 @@ Add `createMiddleware()` for the few cases where a reusable middleware chain mus
 
 `Middleware` is now modeled as a callable type alias with type-only context metadata instead of an interface call signature. Middleware provider APIs stay the same, but inline middleware arrays preserve their context transforms more reliably for action and controller handlers.
 
-`context.router` is now typed as `RequestRouter`, a request-time router reference with `fetch()` only. This keeps request handlers and middleware focused on dispatching through the active router while route installation remains a setup-time concern handled by `Router` and `RouteBuilder`.
-
 The public router type surface is also smaller and easier to explain: `createRouter()` and `router.map()` each use a single call signature while preserving route params, middleware context inference, and stored action/controller compatibility checks.
 
 BREAKING CHANGE: `MapTarget` and `MapHandler` are no longer exported. These helper types existed to express the implementation of `router.map()` and were not needed for application code. Use the public `Router`, `RouteBuilder`, `RouteInstaller`, `Action`, and `Controller` types to describe router setup code.

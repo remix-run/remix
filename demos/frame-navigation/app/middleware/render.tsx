@@ -1,4 +1,4 @@
-import type { RequestRouter } from 'remix/router'
+import type { Router } from 'remix/router'
 import { renderWith } from 'remix/middleware/render'
 import { createHtmlResponse } from 'remix/response/html'
 import type { RemixNode } from 'remix/ui'
@@ -25,7 +25,7 @@ export function render() {
 }
 
 async function resolveFrame(
-  router: RequestRouter,
+  router: Router,
   request: Request,
   src: string,
   target?: string,
@@ -54,7 +54,7 @@ async function resolveFrame(
 }
 
 async function followFrameRedirects(
-  router: RequestRouter,
+  router: Router,
   request: Request,
   url: URL,
   headers: Headers,

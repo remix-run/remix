@@ -739,8 +739,6 @@ Route params are only half of a handler's type contract. In many apps, handlers 
 
 `fetch-router` lets you carry that context contract through the router and into direct route registration, stored controllers, and stored actions. A common pattern is to derive one application context type from your middleware, augment `RouterTypes.context` with it, then use `createAction()` and `createController()` to type stored handlers.
 
-During request handling, `context.router` is a `RequestRouter`: it can call `fetch()` on the active router, but it does not expose route-registration APIs like `map()` or `mount()`. Use the full `Router` or `RouteBuilder` types in setup code that installs routes.
-
 ```ts
 import { Auth, requireAuth } from 'remix/middleware/auth'
 import {

@@ -9,7 +9,6 @@ export type {
   ContextWithEntries,
   ContextWithEntry,
   ContextWithParams,
-  RequestRouter,
 } from './lib/request-context.ts'
 
 export type { RouterTypes } from './lib/router-types.ts'

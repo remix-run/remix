@@ -8,7 +8,6 @@ import {
   createContextKey,
   type ContextWithEntry,
   type RequestContext,
-  type RequestRouter,
 } from './request-context.ts'
 import { createRouter, type RouteBuilder, type RouteInstaller, type RouterContext } from './router.ts'
 import type { IsEqual } from './type-utils.ts'
@@ -595,24 +594,6 @@ describe('router type inference', () => {
 
     void adminReportAction
     void adminController
-  })
-
-  it('exposes only request-time routing from request context', () => {
-    let router = createAppRouter()
-
-    router.get(routes.account, (context) => {
-      let requestRouter: RequestRouter = context.router
-
-      if (false as boolean) {
-        // @ts-expect-error - request-time router references do not register routes
-        context.router.get('/nested', () => new Response('Nested'))
-        // @ts-expect-error - request-time router references do not mount route installers
-        context.router.mount('/nested', () => {})
-      }
-
-      void requestRouter
-      return new Response(context.params.accountId)
-    })
   })
 
   it('types mounted route installers with the parent router context', async () => {
