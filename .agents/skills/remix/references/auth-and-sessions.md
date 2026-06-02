@@ -335,9 +335,9 @@ async function refreshGoogleTokens({ get }) {
 
 ## Protecting Routes
 
-### Controller-level protection
+### Controller middleware protection
 
-Apply `requireAuth()` to every action in one controller:
+Apply `requireAuth()` as controller middleware to every action in one controller:
 
 ```typescript
 import { createController } from 'remix/router'
@@ -389,7 +389,7 @@ export default createController(routes.admin, {
 })
 ```
 
-### Action-level protection
+### Action middleware protection
 
 Apply middleware to a single route:
 

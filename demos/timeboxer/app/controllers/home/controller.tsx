@@ -1,17 +1,16 @@
 import { Auth } from 'remix/auth-middleware'
 import { getCsrfToken } from 'remix/csrf-middleware'
 import { Database } from 'remix/data-table'
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 
 import { listSchedules } from '../../data/schedules.ts'
-import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { render } from '../../utils/render.tsx'
 import { SchedulePage } from '../schedules/page.tsx'
 import { HomePage } from './page.tsx'
 
-export const home = {
+export const home = createController(routes.home, {
   actions: {
     async index(context) {
       let { get, request } = context
@@ -39,4 +38,4 @@ export const home = {
       return render(<HomePage />, request)
     },
   },
-} satisfies Controller<typeof routes.home, AppContext>
+})
