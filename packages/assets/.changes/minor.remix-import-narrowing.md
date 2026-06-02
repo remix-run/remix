@@ -1,1 +1,1 @@
-Source-served script assets now narrow selected `remix/ui` and `remix/routes` named imports to smaller browser-facing subpaths during compilation. Apps can keep importing from the broad barrels while hydrated browser assets download less unrelated Remix package code.
+Source-served script assets now narrow selected `remix/ui` named imports to smaller browser-facing subpaths during compilation. Apps can keep importing from the broad barrel while hydrated browser assets download less unrelated Remix package code.

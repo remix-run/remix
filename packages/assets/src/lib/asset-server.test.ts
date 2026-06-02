@@ -159,13 +159,25 @@ async function getCompiledCodeAndSourceMap(
   }
 }
 
-async function getAbsoluteImportSpecifiers(source: string): Promise<string[]> {
+async function getImportSpecifiers(source: string): Promise<string[]> {
   await esModuleLexerInit
   let [imports] = esModuleLexer(source)
 
   return imports
     .map((imported) => imported.n)
-    .filter((specifier): specifier is string => specifier?.startsWith('/') === true)
+    .filter((specifier): specifier is string => specifier !== undefined)
+}
+
+async function getServedImportUrls(source: string, basePathname: string): Promise<string[]> {
+  let specifiers = await getImportSpecifiers(source)
+
+  return specifiers
+    .filter((specifier) => isServedImportSpecifier(specifier))
+    .map((specifier) => new URL(specifier, `http://localhost${basePathname}`).pathname)
+}
+
+function isServedImportSpecifier(specifier: string): boolean {
+  return specifier.startsWith('/') || specifier.startsWith('./') || specifier.startsWith('../')
 }
 
 async function assertRecursivelyServedImports(
@@ -185,10 +197,10 @@ async function assertRecursivelyServedImports(
     assert.equal(response.status, 200, `Expected ${url} to be served`)
 
     let body = await response.text()
-    let importSpecifiers = await getAbsoluteImportSpecifiers(body)
-    for (let specifier of importSpecifiers) {
-      if (!seen.has(specifier)) {
-        queue.push(specifier)
+    let importUrls = await getServedImportUrls(body, url)
+    for (let importUrl of importUrls) {
+      if (!seen.has(importUrl)) {
+        queue.push(importUrl)
       }
     }
   }
@@ -212,7 +224,7 @@ async function assertCharacterAccurateImportRewriteSourceMap(
     let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(assetServer, 'app/entry.ts')
     let consumer = new SourceMapConsumer(sourceMap)
 
-    let rewrittenImport = getLineAndColumn(compiledCode, '/assets/app/dep.@')
+    let rewrittenImport = getLineAndColumn(compiledCode, 'dep.@')
     let originalImport = consumer.originalPositionFor(rewrittenImport)
     let expectedImport = getLineAndColumn(sourceText, '"./dep.ts"')
     assert.equal(originalImport.line, expectedImport.line)
@@ -360,7 +372,7 @@ describe('asset-server', () => {
 
     let response = await get(assetServer, '/assets/app/entry.ts')
     assert.ok(response)
-    assert.match(await response.text(), /\/assets\/app\/dep\.ts/)
+    assert.match(await response.text(), /\.\/dep\.ts/)
   })
 
   it('resolves explicit .js imports to directory indexes when needed', async () => {
@@ -372,7 +384,7 @@ describe('asset-server', () => {
 
       let response = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(response)
-      assert.match(await response.text(), /\/assets\/app\/dep\.js\/index\.js/)
+      assert.match(await response.text(), /\.\/dep\.js\/index\.js/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -385,7 +397,7 @@ describe('asset-server', () => {
 
     let response = await get(assetServer, '/assets/app/entry.tsx')
     assert.ok(response)
-    assert.match(await response.text(), /\/assets\/app\/dep\.tsx/)
+    assert.match(await response.text(), /\.\/dep\.tsx/)
   })
 
   it('resolves explicit .mjs imports to .mts files when needed', async () => {
@@ -395,7 +407,7 @@ describe('asset-server', () => {
 
     let response = await get(assetServer, '/assets/app/entry.mts')
     assert.ok(response)
-    assert.match(await response.text(), /\/assets\/app\/dep\.mts/)
+    assert.match(await response.text(), /\.\/dep\.mts/)
   })
 
   it('serves CSS assets directly and ignores unsupported direct requests for other non-compiled files', async () => {
@@ -2078,7 +2090,7 @@ describe('asset-server', () => {
     let entryResponse = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(entryResponse)
     let entryBody = await entryResponse.text()
-    let depMatch = entryBody.match(/\/assets\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
+    let depMatch = entryBody.match(/dep\.@([A-Za-z0-9_-]+)\.ts/)
     assert.ok(depMatch)
 
     let depResponse = await get(assetServer, `/assets/app/dep.@${depMatch[1]}.ts`)
@@ -2096,7 +2108,7 @@ describe('asset-server', () => {
     let entryResponse = await get(assetServer, entryHref)
     assert.ok(entryResponse)
     let body = await entryResponse.text()
-    let match = body.match(/\/assets\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
+    let match = body.match(/dep\.@([A-Za-z0-9_-]+)\.ts/)
     assert.ok(match, `expected fingerprinted dep import, got:\n${body}`)
     assert.match(entryHref, /\/assets\/app\/entry\.@[A-Za-z0-9_-]+\.ts/)
 
@@ -2142,8 +2154,8 @@ describe('asset-server', () => {
 
     let bodyA = await (await getByFile(serverA, 'app/entry.ts'))!.text()
     let bodyB = await (await getByFile(serverB, 'app/entry.ts'))!.text()
-    let matchA = bodyA.match(/\/assets\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
-    let matchB = bodyB.match(/\/assets\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
+    let matchA = bodyA.match(/dep\.@([A-Za-z0-9_-]+)\.ts/)
+    let matchB = bodyB.match(/dep\.@([A-Za-z0-9_-]+)\.ts/)
 
     assert.ok(matchA && matchB)
     assert.notEqual(matchA[1], matchB[1])
@@ -2199,7 +2211,7 @@ describe('asset-server', () => {
     let response = await getByFile(assetServer, 'app/a.ts')
     assert.ok(response)
     let body = await response.text()
-    assert.ok(body.includes('/assets/app/b.@'))
+    assert.ok(body.includes('b.@'))
   })
 
   it('supports external source maps for fingerprinted request URLs', async () => {
@@ -2213,16 +2225,16 @@ describe('asset-server', () => {
     let entryResponse = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(entryResponse)
     let entryBody = await entryResponse.text()
-    let entryMapMatch = entryBody.match(/\/assets\/app\/entry\.@([A-Za-z0-9_-]+)\.ts\.map/)
+    let entryMapMatch = entryBody.match(/entry\.@([A-Za-z0-9_-]+)\.ts\.map/)
     assert.ok(entryMapMatch)
 
-    let depMatch = entryBody.match(/\/assets\/app\/dep\.@([A-Za-z0-9_-]+)\.ts/)
+    let depMatch = entryBody.match(/dep\.@([A-Za-z0-9_-]+)\.ts/)
     assert.ok(depMatch)
 
     let depResponse = await get(assetServer, `/assets/app/dep.@${depMatch[1]}.ts`)
     assert.ok(depResponse)
     let depBody = await depResponse.text()
-    assert.ok(depBody.includes(`/assets/app/dep.@${depMatch[1]}.ts.map`))
+    assert.ok(depBody.includes(`dep.@${depMatch[1]}.ts.map`))
 
     let entryMap = await get(assetServer, `/assets/app/entry.@${entryMapMatch[1]}.ts.map`)
     let depMap = await get(assetServer, `/assets/app/dep.@${depMatch[1]}.ts.map`)
@@ -2325,7 +2337,7 @@ describe('asset-server', () => {
     assert.ok(response)
     let body = await response.text()
 
-    assert.match(body, /import\("\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts"\)/)
+    assert.match(body, /import\("\.\/dep\.@[A-Za-z0-9_-]+\.ts"\)/)
   })
 
   it('rewrites static template-literal dynamic imports', async () => {
@@ -2341,7 +2353,7 @@ describe('asset-server', () => {
     assert.ok(response)
     let body = await response.text()
 
-    assert.match(body, /import\((["`])\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts\1\)/)
+    assert.match(body, /import\((["`])\.\/dep\.@[A-Za-z0-9_-]+\.ts\1\)/)
   })
 
   it('rewrites re-exported package specifiers', async () => {
@@ -2358,7 +2370,7 @@ describe('asset-server', () => {
     assert.ok(response)
     let body = await response.text()
 
-    assert.match(body, /export \* from "\/assets\/app\/node_modules\/example\/index\.ts"/)
+    assert.match(body, /export \* from "\.\/node_modules\/example\/index\.ts"/)
   })
 
   it('leaves variable dynamic imports unchanged', async () => {
@@ -2426,7 +2438,7 @@ describe('asset-server', () => {
     let sourceMap = JSON.parse(await sourceMapResponse.text()) as RawSourceMap
     let consumer = new SourceMapConsumer(sourceMap)
 
-    let rewrittenImport = getLineAndColumn(compiledCode, '/assets/app/dep.@')
+    let rewrittenImport = getLineAndColumn(compiledCode, 'dep.@')
     let originalImport = consumer.originalPositionFor(rewrittenImport)
     assert.equal(originalImport.line, 1)
     assert.equal(originalImport.column, 31)
@@ -2472,17 +2484,11 @@ describe('asset-server', () => {
     assert.match(body, /from "@remix-run\/ui"/)
   })
 
-  it('narrows broad Remix package imports to browser-sized subpaths', async () => {
+  it('narrows broad Remix UI imports to browser-sized subpaths', async () => {
     await writeJson(dir, 'app/node_modules/remix/package.json', {
       name: 'remix',
       type: 'module',
       exports: {
-        './routes': './routes.js',
-        './routes/form': './routes-form.js',
-        './routes/method': './routes-method.js',
-        './routes/resource': './routes-resource.js',
-        './routes/resources': './routes-resources.js',
-        './routes/route': './routes-route.js',
         './ui': './ui.js',
         './ui/client-entry': './ui-client-entry.js',
         './ui/css': './ui-css.js',
@@ -2501,25 +2507,10 @@ describe('asset-server', () => {
     await write(dir, 'app/node_modules/remix/ui-run.js', 'export const run = true')
     await write(
       dir,
-      'app/node_modules/remix/routes.js',
-      'export const form = "wide-form"; export const get = "wide-get"; export const head = "wide-head"; export const options = "wide-options"; export const patch = "wide-patch"; export const post = "wide-post"; export const resource = "wide-resource"; export const resources = "wide-resources"; export const route = "wide-route"; export const Route = "wide-Route"',
-    )
-    await write(dir, 'app/node_modules/remix/routes-form.js', 'export const form = true')
-    await write(
-      dir,
-      'app/node_modules/remix/routes-method.js',
-      'export const get = true; export const head = true; export const options = true; export const patch = true; export const post = true',
-    )
-    await write(dir, 'app/node_modules/remix/routes-resource.js', 'export const resource = true')
-    await write(dir, 'app/node_modules/remix/routes-resources.js', 'export const resources = true')
-    await write(dir, 'app/node_modules/remix/routes-route.js', 'export const route = true')
-    await write(
-      dir,
       'app/entry.ts',
       [
         'import { clientEntry, css as style, on, run } from "remix/ui"',
-        'import { form, get, head, options, patch, post as submit, resource, resources, route } from "remix/routes"',
-        'export const values = [clientEntry, style, on, run, form, get, head, options, patch, submit, resource, resources, route]',
+        'export const values = [clientEntry, style, on, run]',
       ].join('\n'),
     )
 
@@ -2527,25 +2518,15 @@ describe('asset-server', () => {
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
     let body = await response.text()
-    let importSpecifiers = await getAbsoluteImportSpecifiers(body)
+    let importUrls = await getServedImportUrls(body, '/assets/app/entry.ts')
 
     assert.doesNotMatch(body, /from ["'][^"']*\/ui\.js/)
-    assert.doesNotMatch(body, /from ["'][^"']*\/routes\.js/)
     assert.match(body, /ui-client-entry/)
     assert.match(body, /ui-css/)
     assert.match(body, /ui-on/)
     assert.match(body, /ui-run/)
-    assert.match(body, /routes-form/)
-    assert.match(body, /routes-method/)
-    assert.match(body, /routes-resource/)
-    assert.match(body, /routes-resources/)
-    assert.match(body, /routes-route/)
     assert.equal(
-      importSpecifiers.some((specifier) => specifier.includes('/assets/npm/remix/ui.js')),
-      false,
-    )
-    assert.equal(
-      importSpecifiers.some((specifier) => specifier.includes('/assets/npm/remix/routes.js')),
+      importUrls.some((specifier) => specifier.includes('/assets/npm/remix/ui.js')),
       false,
     )
   })
@@ -2614,8 +2595,8 @@ describe('asset-server', () => {
     let response = await getByFile(assetServer, 'app/entry.ts')
     assert.ok(response)
     let body = await response.text()
-    assert.ok(body.includes('/assets/app/shared/value.@'))
-    assert.ok(!body.includes('/assets/app/alias/value.@'))
+    assert.ok(body.includes('./shared/value.@'))
+    assert.ok(!body.includes('./alias/value.@'))
   })
 
   it('uses one canonical URL when app and package imports resolve to the same pnpm package', async () => {
@@ -3046,7 +3027,7 @@ describe('asset-server', () => {
 
       let before = await get(firstServer, '/assets/app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/dep\/index\.js/)
+      assert.match(await before.text(), /\.\/dep\/index\.js/)
 
       await fs.rm(path.join(caseDir, 'app/dep/index.js'))
       await write(caseDir, 'app/dep/index.ts', 'export const dep = "ts"')
@@ -3055,8 +3036,8 @@ describe('asset-server', () => {
       let afterRestart = await get(secondServer, '/assets/app/entry.ts')
       assert.ok(afterRestart)
       let afterRestartBody = await afterRestart.text()
-      assert.doesNotMatch(afterRestartBody, /\/assets\/app\/dep\/index\.js/)
-      assert.match(afterRestartBody, /\/assets\/app\/dep\/index\.ts/)
+      assert.doesNotMatch(afterRestartBody, /\.\/dep\/index\.js/)
+      assert.match(afterRestartBody, /\.\/dep\/index\.ts/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -3073,15 +3054,15 @@ describe('asset-server', () => {
 
       let before = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/dep\/index\.js/)
+      assert.match(await before.text(), /\.\/dep\/index\.js/)
 
       await fs.rm(path.join(caseDir, 'app/dep/index.js'))
       await write(caseDir, 'app/dep/index.ts', 'export const dep = "ts"')
       let after = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/assets\/app\/dep\/index\.js/)
-      assert.doesNotMatch(afterBody, /\/assets\/app\/dep\/index\.ts/)
+      assert.match(afterBody, /\.\/dep\/index\.js/)
+      assert.doesNotMatch(afterBody, /\.\/dep\/index\.ts/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -3240,7 +3221,7 @@ describe('asset-server', () => {
         assert.equal(after.status, 200)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/missing\.ts/)
+        assert.match(afterBody, /\.\/missing\.ts/)
       } finally {
         await assetServer.close()
       }
@@ -3578,7 +3559,7 @@ describe('asset-server', () => {
       try {
         let firstResponse = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(firstResponse)
-        assert.match(await firstResponse.text(), /\/assets\/app\/dep-a\.ts/)
+        assert.match(await firstResponse.text(), /\.\/dep-a\.ts/)
 
         let packageJsonPath = await writeJson(caseDir, 'package.json', {
           imports: {
@@ -3593,8 +3574,8 @@ describe('asset-server', () => {
         assert.ok(secondResponse)
         let secondBody = await secondResponse.text()
 
-        assert.match(secondBody, /\/assets\/app\/dep-b\.ts/)
-        assert.doesNotMatch(secondBody, /\/assets\/app\/dep-a\.ts/)
+        assert.match(secondBody, /\.\/dep-b\.ts/)
+        assert.doesNotMatch(secondBody, /\.\/dep-a\.ts/)
       } finally {
         await assetServer.close()
       }
@@ -3625,7 +3606,7 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep-a\.ts/)
+        assert.match(await before.text(), /\.\/dep-a\.ts/)
 
         let packageJsonPath = await writeJson(caseDir, 'package.json', {
           imports: {
@@ -3639,8 +3620,8 @@ describe('asset-server', () => {
         let after = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(after)
         let afterBody = await after.text()
-        assert.match(afterBody, /\/assets\/app\/dep-a\.ts/)
-        assert.doesNotMatch(afterBody, /\/assets\/app\/dep-b\.ts/)
+        assert.match(afterBody, /\.\/dep-a\.ts/)
+        assert.doesNotMatch(afterBody, /\.\/dep-b\.ts/)
       } finally {
         await assetServer.close()
       }
@@ -3678,7 +3659,7 @@ describe('asset-server', () => {
         assert.ok(response)
         let body = await response.text()
 
-        assert.match(body, /\/assets\/app\/dep\.ts/)
+        assert.match(body, /\.\/dep\.ts/)
       } finally {
         await assetServer.close()
       }
@@ -3711,7 +3692,7 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+        assert.match(await before.text(), /\.\/dep\.ts/)
 
         let packageJsonPath = path.join(caseDir, 'package.json')
         await fs.rm(packageJsonPath)
@@ -3840,7 +3821,7 @@ describe('asset-server', () => {
       try {
         for (let index = 0; index < 8; index++) {
           let useA = index % 2 === 0
-          let expected = useA ? /\/assets\/app\/dep-a\.ts/ : /\/assets\/app\/dep-b\.ts/
+          let expected = useA ? /\.\/dep-a\.ts/ : /\.\/dep-b\.ts/
           let packageJsonPath = await writeJson(caseDir, 'package.json', {
             imports: {
               '#dep': useA ? './app/dep-a.ts' : './app/dep-b.ts',
@@ -3891,7 +3872,7 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/broken\.ts/)
+        assert.match(afterBody, /\.\/broken\.ts/)
       } finally {
         await assetServer.close()
       }
@@ -3950,7 +3931,7 @@ describe('asset-server', () => {
         assert.ok(recovered)
         let recoveredBody = await recovered.text()
 
-        assert.match(recoveredBody, /\/assets\/app\/broken\.ts/)
+        assert.match(recoveredBody, /\.\/broken\.ts/)
         assert.match(recoveredBody, /entry = true/)
         assert.ok(errorCodes.includes('TRANSFORM_FAILED'))
         assert.ok(errorCodes.includes('IMPORT_RESOLUTION_FAILED'))
@@ -4084,7 +4065,7 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep-a\.ts/)
+        assert.match(await before.text(), /\.\/dep-a\.ts/)
 
         let tsconfigPath = await writeJson(caseDir, 'tsconfig.json', {
           compilerOptions: {
@@ -4100,8 +4081,8 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/dep-b\.ts/)
-        assert.doesNotMatch(afterBody, /\/assets\/app\/dep-a\.ts/)
+        assert.match(afterBody, /\.\/dep-b\.ts/)
+        assert.doesNotMatch(afterBody, /\.\/dep-a\.ts/)
       } finally {
         await assetServer.close()
       }
@@ -4140,7 +4121,7 @@ describe('asset-server', () => {
         assert.ok(response)
         let body = await response.text()
 
-        assert.match(body, /\/assets\/app\/dep\.ts/)
+        assert.match(body, /\.\/dep\.ts/)
       } finally {
         await assetServer.close()
       }
@@ -4174,7 +4155,7 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+        assert.match(await before.text(), /\.\/dep\.ts/)
 
         let tsconfigPath = path.join(caseDir, 'tsconfig.json')
         await fs.rm(tsconfigPath)
@@ -4216,7 +4197,7 @@ describe('asset-server', () => {
       try {
         for (let index = 0; index < 8; index++) {
           let useA = index % 2 === 0
-          let expected = useA ? /\/assets\/app\/dep-a\.ts/ : /\/assets\/app\/dep-b\.ts/
+          let expected = useA ? /\.\/dep-a\.ts/ : /\.\/dep-b\.ts/
           let tsconfigPath = await writeJson(caseDir, 'tsconfig.json', {
             compilerOptions: {
               baseUrl: '.',
@@ -4336,7 +4317,7 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep\.js/)
+        assert.match(await before.text(), /\.\/dep\.js/)
 
         let depPath = await write(caseDir, 'app/dep.ts', 'export const dep = "ts"')
         await emitWatchEvent(assetServer, depPath, 'add')
@@ -4345,7 +4326,7 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/dep\.ts/)
+        assert.match(afterBody, /\.\/dep\.ts/)
       } finally {
         await assetServer.close()
       }
@@ -4366,7 +4347,7 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+        assert.match(await before.text(), /\.\/dep\.ts/)
 
         let depPath = path.join(caseDir, 'app/dep.ts')
         await fs.rm(depPath)
@@ -4376,7 +4357,7 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/dep\.js/)
+        assert.match(afterBody, /\.\/dep\.js/)
       } finally {
         await assetServer.close()
       }
@@ -4460,7 +4441,7 @@ describe('asset-server', () => {
 
       let before = await getByFile(assetServer, 'app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/dep\/index\.@[A-Za-z0-9_-]+\.js/)
+      assert.match(await before.text(), /\.\/dep\/index\.@[A-Za-z0-9_-]+\.js/)
 
       await fs.rm(path.join(caseDir, 'app/dep/index.js'))
       await write(caseDir, 'app/dep/index.ts', 'export const dep = "ts"')
@@ -4468,8 +4449,8 @@ describe('asset-server', () => {
       let after = await getByFile(assetServer, 'app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/assets\/app\/dep\/index\.@[A-Za-z0-9_-]+\.js/)
-      assert.doesNotMatch(afterBody, /\/assets\/app\/dep\/index\.@[A-Za-z0-9_-]+\.ts/)
+      assert.match(afterBody, /\.\/dep\/index\.@[A-Za-z0-9_-]+\.js/)
+      assert.doesNotMatch(afterBody, /\.\/dep\/index\.@[A-Za-z0-9_-]+\.ts/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -4485,7 +4466,7 @@ describe('asset-server', () => {
 
       let before = await get(firstServer, '/assets/app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/styles\.css\.js/)
+      assert.match(await before.text(), /\.\/styles\.css\.js/)
 
       await fs.rm(path.join(caseDir, 'app/styles.css.js'))
       await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
@@ -4494,8 +4475,8 @@ describe('asset-server', () => {
       let afterRestart = await get(secondServer, '/assets/app/entry.ts')
       assert.ok(afterRestart)
       let afterRestartBody = await afterRestart.text()
-      assert.doesNotMatch(afterRestartBody, /\/assets\/app\/styles\.css\.js/)
-      assert.match(afterRestartBody, /\/assets\/app\/styles\.css\.ts/)
+      assert.doesNotMatch(afterRestartBody, /\.\/styles\.css\.js/)
+      assert.match(afterRestartBody, /\.\/styles\.css\.ts/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -4511,7 +4492,7 @@ describe('asset-server', () => {
 
       let before = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/styles\.css\.js/)
+      assert.match(await before.text(), /\.\/styles\.css\.js/)
 
       await fs.rm(path.join(caseDir, 'app/styles.css.js'))
       await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
@@ -4519,8 +4500,8 @@ describe('asset-server', () => {
       let after = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/assets\/app\/styles\.css\.js/)
-      assert.doesNotMatch(afterBody, /\/assets\/app\/styles\.css\.ts/)
+      assert.match(afterBody, /\.\/styles\.css\.js/)
+      assert.doesNotMatch(afterBody, /\.\/styles\.css\.ts/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -4537,7 +4518,7 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/styles\.css\.js/)
+        assert.match(await before.text(), /\.\/styles\.css\.js/)
 
         let stylesPath = await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
         await emitWatchEvent(assetServer, stylesPath, 'add')
@@ -4546,8 +4527,8 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/styles\.css\.ts/)
-        assert.doesNotMatch(afterBody, /\/assets\/app\/styles\.css\.js/)
+        assert.match(afterBody, /\.\/styles\.css\.ts/)
+        assert.doesNotMatch(afterBody, /\.\/styles\.css\.js/)
       } finally {
         await assetServer.close()
       }
@@ -4568,7 +4549,7 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/styles\.css\.ts/)
+        assert.match(await before.text(), /\.\/styles\.css\.ts/)
 
         let stylesPath = path.join(caseDir, 'app/styles.css.ts')
         await fs.rm(stylesPath)
@@ -4578,8 +4559,8 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/styles\.css\.js/)
-        assert.doesNotMatch(afterBody, /\/assets\/app\/styles\.css\.ts/)
+        assert.match(afterBody, /\.\/styles\.css\.js/)
+        assert.doesNotMatch(afterBody, /\.\/styles\.css\.ts/)
       } finally {
         await assetServer.close()
       }
@@ -4600,7 +4581,7 @@ describe('asset-server', () => {
 
       let before = await getByFile(assetServer, 'app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/styles\.css\.@[A-Za-z0-9_-]+\.js/)
+      assert.match(await before.text(), /\.\/styles\.css\.@[A-Za-z0-9_-]+\.js/)
 
       await fs.rm(path.join(caseDir, 'app/styles.css.js'))
       await write(caseDir, 'app/styles.css.ts', 'export const styles = "ts"')
@@ -4608,8 +4589,8 @@ describe('asset-server', () => {
       let after = await getByFile(assetServer, 'app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/assets\/app\/styles\.css\.@[A-Za-z0-9_-]+\.js/)
-      assert.doesNotMatch(afterBody, /\/assets\/app\/styles\.css\.@[A-Za-z0-9_-]+\.ts/)
+      assert.match(afterBody, /\.\/styles\.css\.@[A-Za-z0-9_-]+\.js/)
+      assert.doesNotMatch(afterBody, /\.\/styles\.css\.@[A-Za-z0-9_-]+\.ts/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -4625,7 +4606,7 @@ describe('asset-server', () => {
 
       let before = await get(firstServer, '/assets/app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+      assert.match(await before.text(), /\.\/dep\.ts/)
 
       await write(caseDir, 'app/dep.js', 'export const dep = "js"')
 
@@ -4633,8 +4614,8 @@ describe('asset-server', () => {
       let afterRestart = await get(secondServer, '/assets/app/entry.ts')
       assert.ok(afterRestart)
       let afterRestartBody = await afterRestart.text()
-      assert.doesNotMatch(afterRestartBody, /\/assets\/app\/dep\.ts/)
-      assert.match(afterRestartBody, /\/assets\/app\/dep\.js/)
+      assert.doesNotMatch(afterRestartBody, /\.\/dep\.ts/)
+      assert.match(afterRestartBody, /\.\/dep\.js/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -4650,7 +4631,7 @@ describe('asset-server', () => {
 
       let before = await get(firstServer, '/assets/app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+      assert.match(await before.text(), /\.\/dep\.ts/)
 
       await fs.rm(path.join(caseDir, 'app/dep.ts'))
       await write(caseDir, 'app/dep.js/index.js', 'export const dep = "dir"')
@@ -4659,8 +4640,8 @@ describe('asset-server', () => {
       let afterRestart = await get(secondServer, '/assets/app/entry.ts')
       assert.ok(afterRestart)
       let afterRestartBody = await afterRestart.text()
-      assert.doesNotMatch(afterRestartBody, /\/assets\/app\/dep\.ts/)
-      assert.match(afterRestartBody, /\/assets\/app\/dep\.js\/index\.js/)
+      assert.doesNotMatch(afterRestartBody, /\.\/dep\.ts/)
+      assert.match(afterRestartBody, /\.\/dep\.js\/index\.js/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -4676,15 +4657,15 @@ describe('asset-server', () => {
 
       let before = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+      assert.match(await before.text(), /\.\/dep\.ts/)
 
       await write(caseDir, 'app/dep.js', 'export const dep = "js"')
 
       let after = await get(assetServer, '/assets/app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/assets\/app\/dep\.ts/)
-      assert.doesNotMatch(afterBody, /\/assets\/app\/dep\.js/)
+      assert.match(afterBody, /\.\/dep\.ts/)
+      assert.doesNotMatch(afterBody, /\.\/dep\.js/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -4701,7 +4682,7 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+        assert.match(await before.text(), /\.\/dep\.ts/)
 
         let depPath = await write(caseDir, 'app/dep.js', 'export const dep = "js"')
         await emitWatchEvent(assetServer, depPath, 'add')
@@ -4710,8 +4691,8 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/dep\.js/)
-        assert.doesNotMatch(afterBody, /\/assets\/app\/dep\.ts/)
+        assert.match(afterBody, /\.\/dep\.js/)
+        assert.doesNotMatch(afterBody, /\.\/dep\.ts/)
       } finally {
         await assetServer.close()
       }
@@ -4732,7 +4713,7 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep\.js/)
+        assert.match(await before.text(), /\.\/dep\.js/)
 
         let depPath = path.join(caseDir, 'app/dep.js')
         await fs.rm(depPath)
@@ -4742,8 +4723,8 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/dep\.ts/)
-        assert.doesNotMatch(afterBody, /\/assets\/app\/dep\.js/)
+        assert.match(afterBody, /\.\/dep\.ts/)
+        assert.doesNotMatch(afterBody, /\.\/dep\.js/)
       } finally {
         await assetServer.close()
       }
@@ -4763,7 +4744,7 @@ describe('asset-server', () => {
       try {
         let before = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(before)
-        assert.match(await before.text(), /\/assets\/app\/dep\.ts/)
+        assert.match(await before.text(), /\.\/dep\.ts/)
 
         let depPath = path.join(caseDir, 'app/dep.ts')
         await fs.rm(depPath)
@@ -4775,8 +4756,8 @@ describe('asset-server', () => {
         assert.ok(after)
         let afterBody = await after.text()
 
-        assert.match(afterBody, /\/assets\/app\/dep\.js\/index\.js/)
-        assert.doesNotMatch(afterBody, /\/assets\/app\/dep\.ts/)
+        assert.match(afterBody, /\.\/dep\.js\/index\.js/)
+        assert.doesNotMatch(afterBody, /\.\/dep\.ts/)
       } finally {
         await assetServer.close()
       }
@@ -4797,15 +4778,15 @@ describe('asset-server', () => {
 
       let before = await getByFile(assetServer, 'app/entry.ts')
       assert.ok(before)
-      assert.match(await before.text(), /\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts/)
+      assert.match(await before.text(), /\.\/dep\.@[A-Za-z0-9_-]+\.ts/)
 
       await write(caseDir, 'app/dep.js', 'export const dep = "js"')
 
       let after = await getByFile(assetServer, 'app/entry.ts')
       assert.ok(after)
       let afterBody = await after.text()
-      assert.match(afterBody, /\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts/)
-      assert.doesNotMatch(afterBody, /\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.js/)
+      assert.match(afterBody, /\.\/dep\.@[A-Za-z0-9_-]+\.ts/)
+      assert.doesNotMatch(afterBody, /\.\/dep\.@[A-Za-z0-9_-]+\.js/)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -5058,14 +5039,14 @@ describe('asset-server', () => {
     assert.equal(response.status, 200)
 
     let body = await response.text()
-    let entryImportSpecifiers = await getAbsoluteImportSpecifiers(body)
-    let helperPaths = entryImportSpecifiers.filter((specifier) =>
+    let entryImportUrls = await getServedImportUrls(body, '/assets/app/entry.ts')
+    let helperPaths = entryImportUrls.filter((specifier) =>
       specifier.startsWith('/assets/__@remix/injected/@oxc-project/runtime/'),
     )
 
     assert.doesNotMatch(body, /from ["']@oxc-project\/runtime/)
     assert.ok(
-      entryImportSpecifiers.includes(
+      entryImportUrls.includes(
         '/assets/npm/@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
       ),
     )

@@ -55,19 +55,6 @@ const importNarrowingConfigs = [
     on: 'remix/ui/on',
     run: 'remix/ui/run',
   }),
-  createImportNarrowingConfig('remix/routes', {
-    del: 'remix/routes/method',
-    form: 'remix/routes/form',
-    get: 'remix/routes/method',
-    head: 'remix/routes/method',
-    options: 'remix/routes/method',
-    patch: 'remix/routes/method',
-    post: 'remix/routes/method',
-    put: 'remix/routes/method',
-    resource: 'remix/routes/resource',
-    resources: 'remix/routes/resources',
-    route: 'remix/routes/route',
-  }),
 ] as const
 
 const supportedTsconfigTransformCompilerOptions = {
