@@ -207,7 +207,7 @@ Middleware has three API-owned forms:
    })
    ```
 
-Prefer inline arrays for `middleware` options. Use `createMiddleware()` only when a chain is stored in a variable and its exact tuple type needs to be preserved, such as when deriving `MiddlewareContext<typeof rootMiddleware>`, exporting a reusable chain, or returning a chain from a factory.
+Prefer inline arrays for `middleware` options. Use `RouterContext<typeof router>` to derive an app context from a router that uses inline middleware. Use `createMiddleware()` only when a chain is stored in a variable and its exact tuple type needs to be preserved, such as when deriving `MiddlewareContext<typeof rootMiddleware>` without a router value, exporting a reusable chain, or returning a chain from a factory.
 
 ## Node Server Setup
 

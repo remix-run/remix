@@ -38,18 +38,18 @@ type RouteContext<context extends AnyContext, pattern extends string> = ContextW
 
 type ContextShape<context extends AnyContext> = Omit<context, 'router' | typeof requestContextTypes>
 
-type ProvidesContext<provided extends AnyContext, required extends AnyContext> =
+type ContextProvides<provided extends AnyContext, required extends AnyContext> =
   ContextShape<provided> extends ContextShape<required> ? true : false
 
-type ContextGuard<
+type ContextCompatibility<
   providedContext extends AnyContext,
   requiredContext extends AnyContext,
   middleware extends readonly AnyMiddleware[],
 > = [providedContext] extends [requiredContext]
   ? unknown
-  : ProvidesContext<providedContext, requiredContext> extends true
+  : ContextProvides<providedContext, requiredContext> extends true
     ? unknown
-    : ProvidesContext<MiddlewareContext<middleware, providedContext>, requiredContext> extends true
+    : ContextProvides<MiddlewareContext<middleware, providedContext>, requiredContext> extends true
       ? unknown
       : never
 
@@ -61,7 +61,7 @@ type VerbMethod<method extends RequestMethod, context extends AnyContext> = {
   >(
     route: RouteTarget<pattern, method>,
     action: Action<RouteTarget<pattern, method>, actionContext, middleware> &
-      ContextGuard<context, actionContext, middleware>,
+      ContextCompatibility<context, actionContext, middleware>,
   ): void
 }
 
@@ -94,16 +94,10 @@ type NormalizedAction = {
   middleware: AnyMiddleware[] | undefined
 }
 
-/**
- * The valid types for the first argument to `router.map()`.
- */
-export type MapTarget = RouteTarget | RouteMap
+type MapTarget = RouteTarget | RouteMap
 
-/**
- * Infer the correct handler type (Action or Controller) based on the map target.
- */
 // prettier-ignore
-export type MapHandler<
+type MapHandler<
   target extends MapTarget,
   context extends AnyContext = RequestContext,
   middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
@@ -114,7 +108,7 @@ export type MapHandler<
   target extends RouteMap ? Controller<target, context, middleware> :
   never
 
-const routeBuilderContext: unique symbol = Symbol('RouteBuilder.context')
+declare const routeBuilderContext: unique symbol
 
 /**
  * A route builder registers routes into a router.
@@ -123,7 +117,7 @@ const routeBuilderContext: unique symbol = Symbol('RouteBuilder.context')
  * {@link Router}, a route builder cannot dispatch requests.
  */
 export interface RouteBuilder<context extends AnyContext = RequestContext> {
-  readonly [routeBuilderContext]: () => context
+  readonly [routeBuilderContext]?: context
   /**
    * Registers a handler for a specific request method and route target.
    *
@@ -138,7 +132,7 @@ export interface RouteBuilder<context extends AnyContext = RequestContext> {
     method: method,
     pattern: RouteTarget<pattern, method>,
     action: Action<RouteTarget<pattern, method>, actionContext, middleware> &
-      ContextGuard<context, actionContext, middleware>,
+      ContextCompatibility<context, actionContext, middleware>,
   ): void
   /**
    * Maps either a single route target to an action or a route map to a controller.
@@ -150,7 +144,7 @@ export interface RouteBuilder<context extends AnyContext = RequestContext> {
   >(
     target: target,
     handler: MapHandler<target, handlerContext, middleware> &
-      ContextGuard<context, handlerContext, middleware>,
+      ContextCompatibility<context, handlerContext, middleware>,
   ): void
   /**
    * Mounts a route installer at a route pattern prefix.
@@ -197,6 +191,15 @@ export interface RouteInstaller<context extends AnyContext = RequestContext> {
 }
 
 /**
+ * Extracts the request-context type handled by a router or route builder.
+ *
+ * This is useful when you want to configure `RouterTypes.context` from a router that uses inline
+ * middleware arrays.
+ */
+export type RouterContext<router extends RouteBuilder<any>> =
+  router extends RouteBuilder<infer context> ? context : never
+
+/**
  * Options for creating a router.
  */
 export interface RouterOptions<
@@ -217,8 +220,8 @@ export interface RouterOptions<
   /**
    * Middleware to run for every request handled by this router.
    *
-   * Keep this array tuple-typed when you want `MiddlewareContext<typeof middleware>` to preserve
-   * the exact context contributions of each middleware.
+   * Inline arrays are preferred. Use `createMiddleware()` only when a middleware chain is stored
+   * before it is passed here and its exact tuple type must survive that boundary.
    */
   middleware?: readonly [...middleware]
 }
@@ -465,16 +468,13 @@ export function createRouter<
       >(
         route: RouteTarget<pattern, method>,
         action: Action<RouteTarget<pattern, method>, actionContext, middleware> &
-          ContextGuard<builderContext, actionContext, middleware>,
+          ContextCompatibility<builderContext, actionContext, middleware>,
       ): void => {
         addRoute(method, route, action, state)
       }
     }
 
     return {
-      [routeBuilderContext]: () => {
-        throw new Error('RouteBuilder context marker is type-only.')
-      },
       route<
         method extends RequestMethod | 'ANY',
         pattern extends string,
@@ -484,7 +484,7 @@ export function createRouter<
         method: method,
         route: RouteTarget<pattern, method>,
         action: Action<RouteTarget<pattern, method>, actionContext, middleware> &
-          ContextGuard<builderContext, actionContext, middleware>,
+          ContextCompatibility<builderContext, actionContext, middleware>,
       ): void {
         addRoute(method, route, action, state)
       },

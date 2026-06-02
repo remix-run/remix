@@ -10,7 +10,7 @@ import {
   type RequestContext,
   type RequestRouter,
 } from './request-context.ts'
-import { createRouter, type RouteBuilder, type RouteInstaller } from './router.ts'
+import { createRouter, type RouteBuilder, type RouteInstaller, type RouterContext } from './router.ts'
 import type { IsEqual } from './type-utils.ts'
 
 function expectTypeEquality<_check extends true>() {}
@@ -60,8 +60,11 @@ const routes = route({
   reports: '/reports/:reportId',
 })
 
-const appMiddleware = createMiddleware(requireUser(), setRole('viewer'))
-type AppContext = MiddlewareContext<typeof appMiddleware>
+function createAppRouter() {
+  return createRouter({ middleware: [requireUser(), setRole('viewer')] })
+}
+
+type AppContext = RouterContext<ReturnType<typeof createAppRouter>>
 
 declare module './router-types.ts' {
   interface RouterTypes {
@@ -107,7 +110,7 @@ describe('router type inference', () => {
   })
 
   it('propagates router middleware context into route handlers', async () => {
-    let router = createRouter({ middleware: appMiddleware })
+    let router = createAppRouter()
 
     router.get(routes.account, (context) => {
       let user = context.get(CurrentUser)
@@ -143,6 +146,23 @@ describe('router type inference', () => {
 
     assert.equal(response.status, 200)
     assert.equal(await response.text(), '')
+  })
+
+  it('derives app context from a router with inline middleware', () => {
+    let router = createRouter({ middleware: [requireUser(), setRole('viewer')] })
+    type DerivedContext = RouterContext<typeof router>
+
+    function assertContext(context: DerivedContext) {
+      let user = context.get(CurrentUser)
+      let role = context.get(CurrentRole)
+
+      expectTypeEquality<IsEqual<typeof user, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof role, 'viewer'>>()
+      expectTypeEquality<IsEqual<typeof context.currentUser, { id: string }>>()
+      expectTypeEquality<IsEqual<typeof context.role, 'viewer'>>()
+    }
+
+    void assertContext
   })
 
   it('derives context from middleware factory return types', () => {
@@ -315,7 +335,7 @@ describe('router type inference', () => {
   })
 
   it('infers action middleware results in direct route handlers', () => {
-    let router = createRouter({ middleware: appMiddleware })
+    let router = createAppRouter()
 
     router.get(routes.reports, {
       middleware: createMiddleware(setRole('admin')),
@@ -487,7 +507,7 @@ describe('router type inference', () => {
       },
     )
 
-    let router = createRouter({ middleware: appMiddleware })
+    let router = createAppRouter()
 
     router.get(routes.reports, (context) => {
       // @ts-expect-error - route handlers still only see the router's base context
@@ -524,7 +544,7 @@ describe('router type inference', () => {
       },
     )
 
-    let router = createRouter({ middleware: appMiddleware })
+    let router = createAppRouter()
 
     router.get(routes.reports, publicReportAction)
     router.route('GET', routes.reports, publicReportAction)
@@ -566,7 +586,7 @@ describe('router type inference', () => {
       // @ts-expect-error - plain routers do not provide the admin context
       plainRouter.map(routes.admin, adminController)
 
-      let appRouter = createRouter({ middleware: appMiddleware })
+      let appRouter = createAppRouter()
       // @ts-expect-error - the app router only provides the viewer role
       appRouter.get(routes.reports, adminReportAction)
       // @ts-expect-error - the app router only provides the viewer role
@@ -578,7 +598,7 @@ describe('router type inference', () => {
   })
 
   it('exposes only request-time routing from request context', () => {
-    let router = createRouter({ middleware: appMiddleware })
+    let router = createAppRouter()
 
     router.get(routes.account, (context) => {
       let requestRouter: RequestRouter = context.router
@@ -631,7 +651,7 @@ describe('router type inference', () => {
       })
     }
 
-    let router = createRouter({ middleware: appMiddleware })
+    let router = createAppRouter()
     router.mount('/accounts', installAccountRoutes)
 
     let indexResponse = await router.fetch('https://remix.run/accounts')
@@ -650,7 +670,7 @@ describe('router type inference', () => {
       duplicate: '/duplicate/:orgId',
     })
 
-    let router = createRouter({ middleware: appMiddleware })
+    let router = createAppRouter()
 
     router.mount('/orgs/:orgId', (org) => {
       org.get(projectRoutes.index, (context) => {
@@ -722,7 +742,7 @@ describe('router type inference', () => {
       // @ts-expect-error - plain routers do not provide the app middleware context
       plainRouter.mount('/accounts', installAccountRoutes)
 
-      let appRouter = createRouter({ middleware: appMiddleware })
+      let appRouter = createAppRouter()
       // @ts-expect-error - app routers provide a viewer role, not an admin role
       appRouter.mount('/admin', installAdminRoutes)
     }
@@ -743,7 +763,7 @@ describe('router type inference', () => {
       })
     }
 
-    let appRouter = createRouter({ middleware: appMiddleware })
+    let appRouter = createAppRouter()
     appRouter.mount('/base', installBaseRoutes)
 
     let adminRouter = createRouter<AdminAppContext>()
@@ -808,7 +828,7 @@ describe('router type inference', () => {
       let functionAction: Action<typeof routes.reports, AppContext> = (context) =>
         new Response(context.params.reportId)
 
-      let router = createRouter({ middleware: appMiddleware })
+      let router = createAppRouter()
 
       router.get(routes.reports, (context) => {
         // @ts-expect-error - the base app context still only guarantees the inherited viewer role

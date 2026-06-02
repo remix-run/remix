@@ -341,27 +341,16 @@ router.post(routes.logout, logoutAction)
 
 ## Typed Context
 
-Define an `AppContext` type from your middleware stack, then make it the default context used by `createAction()` and `createController()`:
+Define an `AppContext` type from your router, then make it the default context used by `createAction()` and `createController()`:
 
 ```typescript
-import {
-  createMiddleware,
-  type MiddlewareContext,
-  type ContextWithParams,
-  type AnyParams,
-} from 'remix/router'
+import { createRouter, type RouterContext } from 'remix/router'
 
-let rootMiddleware = createMiddleware(
-  formData(),
-  session(cookie, storage),
-  loadDatabase(),
-  loadAuth(),
-)
+export const router = createRouter({
+  middleware: [formData(), session(cookie, storage), loadDatabase(), loadAuth()],
+})
 
-export type AppContext<params extends AnyParams = {}> = ContextWithParams<
-  MiddlewareContext<typeof rootMiddleware>,
-  params
->
+export type AppContext = RouterContext<typeof router>
 
 declare module 'remix/router' {
   interface RouterTypes {

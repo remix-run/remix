@@ -25,12 +25,11 @@ export type { RequestMethod } from './lib/request-methods.ts'
 
 export { createRouter } from './lib/router.ts'
 export type {
-  MapHandler,
-  MapTarget,
   MatchData,
   RouteEntry,
   RouteBuilder,
   RouteInstaller,
   Router,
+  RouterContext,
   RouterOptions,
 } from './lib/router.ts'
