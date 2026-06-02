@@ -196,6 +196,21 @@ describe('router.map() with single routes', () => {
     assert.equal(await response.text(), 'Home')
   })
 
+  it('maps a route pattern object to a request handler', async () => {
+    let routes = route({
+      profile: '/profile/:id',
+    })
+
+    let router = createRouter()
+
+    router.map(routes.profile.pattern, ({ params }) => new Response(params.id))
+
+    let response = await router.fetch('https://remix.run/profile/1')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), '1')
+  })
+
   it('maps a single route to an action with middleware', async () => {
     let routes = route({
       profile: '/profile/:id',

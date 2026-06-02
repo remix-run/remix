@@ -26,6 +26,7 @@
     "./href": "./src/href.ts",
     "./join": "./src/join.ts",
     "./match": "./src/match.ts",
+    "./parse": "./src/parse.ts",
     "./specificity": "./src/specificity.ts",
     "./package.json": "./package.json"
   },
@@ -46,6 +47,10 @@
       "./match": {
         "types": "./dist/match.d.ts",
         "default": "./dist/match.js"
+      },
+      "./parse": {
+        "types": "./dist/parse.d.ts",
+        "default": "./dist/parse.js"
       },
       "./specificity": {
         "types": "./dist/specificity.d.ts",

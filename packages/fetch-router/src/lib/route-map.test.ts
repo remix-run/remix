@@ -9,7 +9,15 @@ describe('createRoutes', () => {
     let route = new Route('GET', '/users/:id')
 
     assert.equal(route.method, 'GET')
+    assert.equal(route.source, '/users/:id')
     assert.equal(route.pattern.toString(), '/users/:id')
+  })
+
+  it('creates route hrefs without materializing the parsed pattern', () => {
+    let route = new Route('GET', '/users/:id')
+
+    assert.equal(route.href({ id: '123' }), '/users/123')
+    assert.equal(route.source, '/users/:id')
   })
 
   it('creates a route map', () => {

@@ -226,7 +226,7 @@ function mergeMiddleware(
 }
 
 function isRouteTarget(target: MapTarget): target is RouteTarget {
-  return typeof target === 'string' || target instanceof Route || target instanceof RoutePattern
+  return typeof target === 'string' || target instanceof Route || isRoutePattern(target)
 }
 
 function createRequestContext(input: string | URL | Request, init?: RequestInit): RequestContext {
@@ -249,6 +249,19 @@ function getRoutePattern(target: RouteTarget): RoutePattern {
   }
 
   return target
+}
+
+function isRoutePattern(value: unknown): value is RoutePattern {
+  return (
+    value instanceof RoutePattern ||
+    (typeof value === 'object' &&
+      value !== null &&
+      'protocol' in value &&
+      'hostname' in value &&
+      'port' in value &&
+      'pathname' in value &&
+      'search' in value)
+  )
 }
 
 function getMappedRouteMethod(target: RouteTarget): RequestMethod | 'ANY' {

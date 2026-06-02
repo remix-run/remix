@@ -1,8 +1,9 @@
-import { RoutePattern, type PartPattern } from './route-pattern.ts'
+import type { PartPattern, RoutePattern } from './route-pattern.ts'
+import { parsePatternParts } from './route-pattern/parse-parts.ts'
+import type { ParsedRoutePattern } from './route-pattern/types.ts'
 import type { ParseParams } from './types/params.ts'
 import type { Split, SplitPattern } from './types/split.ts'
 import type { Simplify } from './types/utils.ts'
-import { unreachable } from './unreachable.ts'
 
 /** Tuple of arguments accepted by `createHref` for a given pattern source. */
 export type CreateHrefArgs<source extends string> = _CreateHrefArgs<ParseHrefParams<source>>
@@ -36,6 +37,8 @@ type Optionalize<record extends Record<string, string | undefined>> =
   & { [key in keyof record as undefined extends record[key] ? never : key]: string | number }
   & { [key in keyof record as undefined extends record[key] ? key : never]?: string | number | null | undefined }
 
+type HrefPattern = Pick<RoutePattern, 'protocol' | 'hostname' | 'port' | 'pathname' | 'search'>
+
 /**
  * Generate an href from a route pattern and the supplied params.
  *
@@ -48,39 +51,56 @@ export function createHref<source extends string>(
   pattern: source | RoutePattern<source>,
   ...args: CreateHrefArgs<source>
 ): string {
-  pattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
+  let parsedPattern: ParsedRoutePattern
+  let patternSource: string | undefined
+  if (typeof pattern === 'string') {
+    patternSource = pattern
+    parsedPattern = parsePatternParts(pattern)
+  } else {
+    parsedPattern = pattern
+  }
   let [params, searchParams] = args
   searchParams ??= {}
 
-  let hasOrigin = pattern.protocol !== null || pattern.hostname !== null || pattern.port !== null
+  let hasOrigin =
+    parsedPattern.protocol !== null ||
+    parsedPattern.hostname !== null ||
+    parsedPattern.port !== null
   let result = ''
 
   if (hasOrigin) {
     let protocol =
-      pattern.protocol === null || pattern.protocol === 'http(s)' ? 'https' : pattern.protocol
+      parsedPattern.protocol === null || parsedPattern.protocol === 'http(s)'
+        ? 'https'
+        : parsedPattern.protocol
 
-    if (pattern.hostname === null) {
-      throw new CreateHrefError({ type: 'missing-hostname', pattern })
+    if (parsedPattern.hostname === null) {
+      throw new CreateHrefError({
+        type: 'missing-hostname',
+        pattern: parsedPattern,
+        source: patternSource,
+      })
     }
-    let hostname = hrefPart(pattern, pattern.hostname, params ?? {})
+    let hostname = hrefPart(parsedPattern, parsedPattern.hostname, params ?? {}, patternSource)
 
-    let port = pattern.port === null ? '' : `:${pattern.port}`
+    let port = parsedPattern.port === null ? '' : `:${parsedPattern.port}`
     result += `${protocol}://${hostname}${port}`
   }
 
-  let pathname = hrefPart(pattern, pattern.pathname, params ?? {})
+  let pathname = hrefPart(parsedPattern, parsedPattern.pathname, params ?? {}, patternSource)
   result += '/' + pathname
 
-  let search = hrefSearch(pattern, searchParams)
+  let search = hrefSearch(parsedPattern, searchParams)
   if (search) result += `?${search}`
 
   return result
 }
 
 function hrefPart(
-  pattern: RoutePattern,
+  pattern: ParsedRoutePattern,
   part: PartPattern,
   params: Record<string, unknown>,
+  source?: string,
 ): string {
   let separator = part.type === 'hostname' ? '.' : '/'
   let missingParams: Array<string> = []
@@ -115,7 +135,7 @@ function hrefPart(
       if (value === undefined) {
         if (stack.length <= 1) {
           if (token.name === '*') {
-            throw new CreateHrefError({ type: 'nameless-wildcard', pattern })
+            throw new CreateHrefError({ type: 'nameless-wildcard', pattern, source })
           }
           missingParams.push(token.name)
         }
@@ -139,6 +159,7 @@ function hrefPart(
     throw new CreateHrefError({
       type: 'missing-params',
       pattern,
+      source,
       part,
       missingParams,
       params,
@@ -148,7 +169,7 @@ function hrefPart(
   return stack[0].href
 }
 
-function hrefSearch(pattern: RoutePattern, searchParams: SearchParams): string | undefined {
+function hrefSearch(pattern: ParsedRoutePattern, searchParams: SearchParams): string | undefined {
   let constraints = pattern.search
   if (constraints.size === 0 && Object.keys(searchParams).length === 0) {
     return undefined
@@ -183,15 +204,16 @@ function hrefSearch(pattern: RoutePattern, searchParams: SearchParams): string |
 }
 
 type CreateHrefErrorDetails =
-  | { type: 'missing-hostname'; pattern: RoutePattern }
+  | { type: 'missing-hostname'; pattern: HrefPattern; source?: string }
   | {
       type: 'missing-params'
-      pattern: RoutePattern
+      pattern: HrefPattern
+      source?: string
       part: PartPattern
       missingParams: Array<string>
       params: Record<string, unknown>
     }
-  | { type: 'nameless-wildcard'; pattern: RoutePattern }
+  | { type: 'nameless-wildcard'; pattern: HrefPattern; source?: string }
   | {
       type: 'invalid-hostname-variable'
       value: string
@@ -215,16 +237,16 @@ export class CreateHrefError extends Error {
 
   static message(details: CreateHrefErrorDetails): string {
     if (details.type === 'missing-hostname') {
-      return `pattern requires hostname\n\nPattern: ${details.pattern}`
+      return `pattern requires hostname\n\nPattern: ${formatPattern(details)}`
     }
 
     if (details.type === 'nameless-wildcard') {
-      return `pattern contains nameless wildcard\n\nPattern: ${details.pattern}`
+      return `pattern contains nameless wildcard\n\nPattern: ${formatPattern(details)}`
     }
 
     if (details.type === 'missing-params') {
       let params = details.missingParams.map((p) => `'${p}'`).join(', ')
-      return `missing param(s): ${params}\n\nPattern: ${details.pattern}\nParams: ${JSON.stringify(details.params)}`
+      return `missing param(s): ${params}\n\nPattern: ${formatPattern(details)}\nParams: ${JSON.stringify(details.params)}`
     }
 
     if (details.type === 'invalid-hostname-variable') {
@@ -239,11 +261,15 @@ export class CreateHrefError extends Error {
   }
 }
 
-export function encodePathnameVariable(value: unknown) {
+function formatPattern(details: { pattern: HrefPattern; source?: string }): string {
+  return details.source ?? String(details.pattern)
+}
+
+function encodePathnameVariable(value: unknown) {
   return encodePathnameSegment(String(value))
 }
 
-export function encodePathnameWildcard(value: unknown) {
+function encodePathnameWildcard(value: unknown) {
   return String(value).split('/').map(encodePathnameSegment).join('/')
 }
 
@@ -283,7 +309,7 @@ function encodePathnameSegment(value: string): string {
  */
 const HOSTNAME_PARAM_STRUCTURAL_CHARS = ['@', ':', '/', '?', '#']
 
-export function validateHostnameVariable(value: unknown): string {
+function validateHostnameVariable(value: unknown): string {
   let serialized = String(value)
   for (let char of serialized) {
     if (char === '.' || HOSTNAME_PARAM_STRUCTURAL_CHARS.includes(char)) {
@@ -297,7 +323,7 @@ export function validateHostnameVariable(value: unknown): string {
   return serialized
 }
 
-export function validateHostnameWildcard(value: unknown): string {
+function validateHostnameWildcard(value: unknown): string {
   let serialized = String(value)
   for (let char of serialized) {
     if (HOSTNAME_PARAM_STRUCTURAL_CHARS.includes(char)) {
@@ -309,4 +335,8 @@ export function validateHostnameWildcard(value: unknown): string {
     }
   }
   return serialized
+}
+
+function unreachable(_value?: never): never {
+  throw new Error('Unreachable')
 }

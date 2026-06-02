@@ -5,12 +5,8 @@ Added narrow browser-facing Remix UI subpath exports:
 - `remix/ui/on`
 - `remix/ui/run`
 
-Added narrow route helper subpath exports:
+Added a narrow route pattern parse subpath export:
 
-- `remix/routes/route`
-- `remix/routes/method`
-- `remix/routes/form`
-- `remix/routes/resource`
-- `remix/routes/resources`
+- `remix/route-pattern/parse`
 
-Source-served browser assets now compile selected broad `remix/ui` and `remix/routes` named imports to those narrower subpaths automatically.
+Source-served browser assets now compile selected broad `remix/ui` named imports to those narrower subpaths automatically.
