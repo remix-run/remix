@@ -3,3 +3,5 @@ Add `router.mount()` and the `RouteBuilder`/`RouteInstaller` types to `remix/rou
 `createMiddleware()` creates ordered middleware chains that preserve their tuple type without `as const`. `createAction()` and direct action objects infer action middleware context into handlers, and `createController()` infers controller middleware context into handlers. This means handlers can read middleware-provided values like `context.admin` from the `createMiddleware()` chain on the action or controller without manually composing a separate `MiddlewareContext<typeof middleware, AppContext>` type for the common case.
 
 `context.router` is now typed as `RequestRouter`, which exposes request-time `fetch()` without route-registration methods. Use `Router` or `RouteBuilder` in setup code that installs routes.
+
+The re-exported router types also keep `createRouter()` and `router.map()` to single call signatures while preserving route params, middleware context inference, and stored action/controller compatibility checks.

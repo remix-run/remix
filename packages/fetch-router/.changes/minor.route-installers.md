@@ -47,6 +47,8 @@ Add `createMiddleware()` for creating ordered middleware chains that preserve th
 
 `context.router` is now typed as `RequestRouter`, a request-time router reference with `fetch()` only. This keeps request handlers and middleware focused on dispatching through the active router while route installation remains a setup-time concern handled by `Router` and `RouteBuilder`.
 
+The public router type surface is also simpler: `createRouter()` and `router.map()` each use a single call signature while preserving the same route params, middleware context inference, and stored action/controller compatibility checks.
+
 Before this inference, stored actions and controllers that depended on middleware-provided values had to manually compose an intermediate context type:
 
 ```ts

@@ -144,22 +144,13 @@ export interface RouteBuilder<context extends AnyContext = RequestContext> {
    * Maps either a single route target to an action or a route map to a controller.
    */
   map<
-    pattern extends string,
-    actionContext extends AnyContext = context,
-    const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
-  >(
-    target: RouteTarget<pattern>,
-    action: Action<RouteTarget<pattern>, actionContext, middleware> &
-      ContextGuard<context, actionContext, middleware>,
-  ): void
-  map<
-    target extends RouteMap,
-    controllerContext extends AnyContext = context,
+    target extends MapTarget,
+    handlerContext extends AnyContext = context,
     const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
   >(
     target: target,
-    controller: Controller<target, controllerContext, middleware> &
-      ContextGuard<context, controllerContext, middleware>,
+    handler: MapHandler<target, handlerContext, middleware> &
+      ContextGuard<context, handlerContext, middleware>,
   ): void
   /**
    * Mounts a route installer at a route pattern prefix.
@@ -336,11 +327,6 @@ function getPrefixedRoutePattern(target: RouteTarget, state: BuilderState): Rout
  * @param options Options to configure the router
  * @returns The new router
  */
-export function createRouter<context extends AnyContext = RequestContext>(): Router<context>
-export function createRouter<
-  context extends AnyContext = RequestContext,
-  const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
->(options: RouterOptions<context, middleware>): Router<MiddlewareContext<middleware, context>>
 export function createRouter<
   context extends AnyContext = RequestContext,
   const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
@@ -398,15 +384,10 @@ export function createRouter<
     matcher.add(pattern, entry)
   }
 
-  function addRoute<
-    method extends RequestMethod | 'ANY',
-    pattern extends string,
-    actionContext extends AnyContext,
-    const middleware extends readonly AnyMiddleware[],
-  >(
-    method: method,
-    route: RouteTarget<pattern, method>,
-    action: Action<RouteTarget<pattern, method>, actionContext, middleware>,
+  function addRoute(
+    method: RequestMethod | 'ANY',
+    route: RouteTarget,
+    action: unknown,
     state: BuilderState,
   ): void {
     registerRoute(method, route, normalizeAction(action), state)
