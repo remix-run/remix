@@ -21,7 +21,13 @@ export const router = createRouter({
     loadAuth(),
   ],
 })
-export type AppContext = RouterContext<typeof router>
+type AppContext = RouterContext<typeof router>
+
+declare module 'remix/fetch-router' {
+  interface RouterTypes {
+    context: AppContext
+  }
+}
 
 router.map(routes.assets, assets)
 router.map(routes.home, home)
