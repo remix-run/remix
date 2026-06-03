@@ -268,16 +268,6 @@ function isHeadHostNode(node: HostNode): boolean {
   return node.type.toLowerCase() === 'head'
 }
 
-function getDocumentHead(domParent: ParentNode): HTMLHeadElement | null {
-  if (domParent instanceof Document) {
-    return domParent.head
-  }
-  if (domParent instanceof Node) {
-    return domParent.ownerDocument?.head ?? null
-  }
-  return null
-}
-
 export function diffVNodes(
   curr: VNode | null,
   next: VNode,
@@ -447,21 +437,6 @@ function diffHost(
   return
 }
 
-function setupHostNode(
-  node: HostNode,
-  dom: Element,
-  scheduler: Scheduler,
-  props: ElementProps,
-): void {
-  node._dom = dom
-  let committedNode = node as CommittedHostNode
-
-  if (shouldTrackControlledReflection(props)) {
-    ensureControlledReflection(committedNode, scheduler)
-    syncControlledReflection(committedNode, props)
-  }
-}
-
 function adoptHostElement(
   node: HostNode,
   dom: Element,
@@ -481,9 +456,14 @@ function adoptHostElement(
     diffChildren(null, node._children, dom, frame, scheduler, styles, node, rootTarget, cursor)
   }
 
-  setupHostNode(node, dom, scheduler, hostProps)
+  node._dom = dom
+  let committedNode = node as CommittedHostNode
+  if (shouldTrackControlledReflection(hostProps)) {
+    ensureControlledReflection(committedNode, scheduler)
+    syncControlledReflection(committedNode, hostProps)
+  }
   if (node._mixState) {
-    bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, false, parent)
+    bindNodeMixRuntime(committedNode, frame, scheduler, false, parent)
   }
 }
 
@@ -564,7 +544,7 @@ function insert(
     let hostProps = resolveNodeMixProps(node, frame, scheduler)
 
     if (isHeadHostNode(node)) {
-      let targetHead = getDocumentHead(domParent)
+      let targetHead = domParent instanceof Document ? domParent.head : domParent.ownerDocument?.head
       if (targetHead) {
         let childCursor = cursor
         if (cursor instanceof Element && cursor.tagName.toLowerCase() === 'head') {
@@ -858,15 +838,18 @@ function resolveClientFrame(node: VNode, runtime: FrameRuntime): void {
   node._frameResolveController?.abort()
   let resolveController = new AbortController()
   node._frameResolveController = resolveController
+  let signal = resolveController.signal
 
-  Promise.resolve(runtime.resolveFrame(frameSrc, resolveController.signal))
+  Promise.resolve(runtime.resolveFrame(frameSrc, signal))
     .then(async (content) => {
-      if (node._frameResolveToken !== token || resolveController.signal.aborted) return
+      if (node._frameResolveToken !== token || signal.aborted) return
       node._frameFallbackRoot?.dispose()
       node._frameFallbackRoot = undefined
-      let nextContent = asAbortableFrameContent(content, resolveController.signal)
-      await instance.render(nextContent, { signal: resolveController.signal })
-      if (node._frameResolveToken !== token || resolveController.signal.aborted) return
+      await instance.render(
+        content instanceof ReadableStream ? createAbortableReadableStream(content, signal) : content,
+        { signal },
+      )
+      if (node._frameResolveToken !== token || signal.aborted) return
       node._frameResolved = true
     })
     .catch(() => {})
@@ -889,11 +872,6 @@ function disposeFrameResources(node: VNode): void {
     frameInstance.dispose()
     node._frameInstance = undefined
   }
-}
-
-function asAbortableFrameContent(content: FrameContent, signal: AbortSignal): FrameContent {
-  if (!(content instanceof ReadableStream)) return content
-  return createAbortableReadableStream(content, signal)
 }
 
 function createAbortableReadableStream(

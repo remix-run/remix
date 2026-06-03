@@ -47,3 +47,9 @@ Reduced a few more browser runtime bytes by sharing explicit head host adoption 
 Reduced a few more browser reconciler bytes by inlining one-use controlled prop checks.
 
 Reduced browser frame and DOM diff runtime bytes by sharing frame replacement branches, simplifying marker fast-forwarding, and removing redundant frame-id checks after marker guards.
+
+Reduced a few more browser DOM diff bytes by streaming comment-marker range replacement and inlining one-use textarea child preservation checks.
+
+Reduced a few more browser reconciler bytes by inlining one-use client frame content wrapping during frame resolution.
+
+Reduced a few more browser reconciler bytes by inlining host-node setup and document-head lookup in the host adoption path.

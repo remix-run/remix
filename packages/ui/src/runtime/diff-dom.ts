@@ -150,7 +150,13 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
 
     // Same tag: update attributes then children
     diffElementAttributes(current, next)
-    if (shouldPreserveElementChildren(current, next)) return
+    if (
+      current instanceof HTMLTextAreaElement &&
+      next instanceof HTMLTextAreaElement &&
+      current.value !== next.value
+    ) {
+      return
+    }
     diffElementChildren(current, next, context)
     return
   }
@@ -221,14 +227,6 @@ function shouldPreserveLiveAttribute(current: Element, next: Element, name: stri
 
   if (name === 'popover') {
     return isPopoverOpen(current) !== isPopoverOpen(next)
-  }
-
-  return false
-}
-
-function shouldPreserveElementChildren(current: Element, next: Element): boolean {
-  if (current instanceof HTMLTextAreaElement && next instanceof HTMLTextAreaElement) {
-    return current.value !== next.value
   }
 
   return false
@@ -566,29 +564,22 @@ function replaceCommentMarkerRange(
 ): void {
   let currentEnd = findFrameEndMarker(replacement.currentStart)
   let nextEnd = findFrameEndMarker(replacement.nextStart)
-  let nextNodes = collectNodeRange(replacement.nextStart, nextEnd)
-  let currentNodes = collectNodeRange(replacement.currentStart, currentEnd)
 
-  for (let node of nextNodes) {
-    parent.insertBefore(node, replacement.currentStart)
-  }
-
-  for (let node of currentNodes) {
-    removeNode(node, parent, context)
-  }
-}
-
-function collectNodeRange(start: Node, end: Node): Node[] {
-  let nodes: Node[] = []
-  let node: Node | null = start
-
+  let node: Node | null = replacement.nextStart
   while (node) {
-    nodes.push(node)
-    if (node === end) break
-    node = node.nextSibling
+    let next: Node | null = node.nextSibling
+    parent.insertBefore(node, replacement.currentStart)
+    if (node === nextEnd) break
+    node = next
   }
 
-  return nodes
+  node = replacement.currentStart
+  while (node) {
+    let next: Node | null = node.nextSibling
+    removeNode(node, parent, context)
+    if (node === currentEnd) break
+    node = next
+  }
 }
 
 function collectFrameContentFragment(
