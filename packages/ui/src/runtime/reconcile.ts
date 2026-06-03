@@ -585,22 +585,16 @@ function insert(
         }
 
         // Render explicit <head> children directly into document.head.
-        diffChildren(
-          null,
-          node._children,
+        adoptHostElement(
+          node,
           targetHead,
+          hostProps,
           frame,
           scheduler,
           styles,
-          node,
           rootTarget,
           childCursor,
         )
-        patchHostProps({}, hostProps, targetHead)
-        setupHostNode(node, targetHead, scheduler, hostProps)
-        if (node._mixState) {
-          bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler)
-        }
         return cursor
       }
     }

@@ -41,3 +41,5 @@ Reduced a few more browser reconciler bytes by sharing host-element adoption acr
 Reduced a few more browser scheduler bytes by trimming redundant document selection preservation checks.
 
 Reduced a few more browser vnode conversion bytes by sharing the safe child-flattening path for array and single children.
+
+Reduced a few more browser runtime bytes by sharing explicit head host adoption with the regular host adoption path and trimming an empty mixin-descriptor branch.

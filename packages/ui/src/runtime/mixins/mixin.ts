@@ -617,10 +617,7 @@ function isBindingInUpdateScope(binding: MixinRuntimeBinding, parents: ParentNod
 function resolveMixDescriptors(props: ElementProps): AnyMixinDescriptor[] {
   let mix = props.mix
   if (!mix) return []
-  if (Array.isArray(mix)) {
-    if (mix.length === 0) return []
-    return mix.filter(Boolean) as AnyMixinDescriptor[]
-  }
+  if (Array.isArray(mix)) return mix.filter(Boolean) as AnyMixinDescriptor[]
   return [mix] as AnyMixinDescriptor[]
 }
 

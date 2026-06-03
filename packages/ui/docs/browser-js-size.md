@@ -48,29 +48,29 @@ If an experiment saves raw bytes but regresses gzip or brotli, revert it and log
 
 ## Current checkpoint
 
-Current checkpoint, after the vnode child-flattening cleanup:
+Current checkpoint, after the head-adoption and mixin-descriptor cleanups:
 
 | Browser asset set | Modules | Bytes |
 | ----------------- | ------: | ----: |
-| all bookstore browser assets | 60 | 94,721 raw / 39,291 gzip / 34,798 brotli |
+| all bookstore browser assets | 60 | 94,647 raw / 39,261 gzip / 34,782 brotli |
 
 The latest delta is small but valid:
-`19 raw / 10 gzip / 9 brotli`, from sharing the safe child-flattening path in the already-downloaded
-vnode conversion helper. It is not a new graph split.
+`74 raw / 30 gzip / 16 brotli`, from deleting duplicate explicit-`<head>` host adoption code and an
+empty-array branch in the already-downloaded mixin descriptor resolver. It is not a new graph split.
 
 The largest remaining downloaded modules are:
 
 | Module | Bytes |
 | ------ | ----: |
-| `packages/ui/src/runtime/reconcile.ts` | 17,623 raw / 5,950 gzip / 5,393 brotli |
+| `packages/ui/src/runtime/reconcile.ts` | 17,565 raw / 5,930 gzip / 5,383 brotli |
 | `packages/ui/src/runtime/frame.ts` | 14,242 raw / 4,878 gzip / 4,403 brotli |
-| `packages/ui/src/runtime/mixins/mixin.ts` | 7,739 raw / 2,615 gzip / 2,393 brotli |
+| `packages/ui/src/runtime/mixins/mixin.ts` | 7,723 raw / 2,608 gzip / 2,388 brotli |
 | `packages/ui/src/runtime/diff-dom.ts` | 6,155 raw / 2,329 gzip / 2,099 brotli |
 | `packages/route-pattern/src/lib/href.ts` | 3,134 raw / 1,237 gzip / 1,102 brotli |
 | `packages/fetch-router/src/lib/route-map.ts` | 3,033 raw / 1,187 gzip / 1,092 brotli |
 | `packages/ui/src/style/style.ts` | 2,473 raw / 1,001 gzip / 897 brotli |
 | `packages/ui/src/runtime/svg-attributes.ts` | 2,469 raw / 872 gzip / 739 brotli |
-| `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,154 gzip / 1,023 brotli |
+| `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,153 gzip / 1,022 brotli |
 | `packages/ui/src/runtime/component.ts` | 2,348 raw / 961 gzip / 844 brotli |
 
 ## Next targets
@@ -112,6 +112,8 @@ These ideas have already been measured as low-value, regressive, or outside this
 - ignored-prop `Set` rewrites;
 - frame context/child-existence micro-cleanups;
 - frame `syncElementAttributes()` `getAttributeNames()` rewrites;
+- frame `createFragmentFromString()` duplicate-doctype-strip removal, which saved raw and brotli but
+  regressed the full-set gzip total;
 - document-state selectable-input regex rewrite;
 - unconditional `normalizeChildren(node.props.children)` in `to-vnode.ts`, which saves bytes but
   breaks non-array, null, and boolean children;
