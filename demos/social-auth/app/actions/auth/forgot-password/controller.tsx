@@ -6,9 +6,9 @@ import { getIssueMessage, readField } from '../form-utils.ts'
 import { forgotPasswordSchema } from '../schemas.ts'
 import { normalizeEmail, passwordResetTokens, users } from '../../../data/schema.ts'
 import { getReturnToQuery } from '../../../middleware/auth.ts'
-import { routes } from '../../../routes.ts'
+import { authRoutes, routes } from '../../../routes.ts'
 
-export const forgotPasswordController = createController(routes.auth.forgotPassword, {
+export const forgotPasswordController = createController(authRoutes.forgotPassword, {
   actions: {
     index({ render, url }) {
       return render(
