@@ -735,7 +735,10 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
+    "postpack": "pnpm run sync-readmes -- --clean",
+    "prepack": "pnpm run sync-readmes",
     "prepublishOnly": "pnpm run build",
+    "sync-readmes": "node ../../scripts/sync-remix-readmes.ts",
     "test": "remix-test",
     "typecheck": "tsc --noEmit"
   },
