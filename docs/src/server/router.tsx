@@ -9,8 +9,13 @@ import { clientEntry, type RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
 import { assetServer, entryPreloads } from './asset-server.ts'
 import { discoverDemoFiles, loadDemoComponent, renderDemoSource } from './demos.tsx'
-import { discoverMarkdownFiles, renderMarkdownFile } from './markdown.ts'
-import { buildRegistry, type DocsRegistry } from './registry.ts'
+import { getVersionedLookupHref } from './lookup.ts'
+import {
+  discoverMarkdownFiles,
+  renderMarkdownFile,
+  type DocFile as MarkdownDocFile,
+} from './markdown.ts'
+import { buildRegistry, type DocFile, type DocsRegistry } from './registry.ts'
 import { routes } from './routes.ts'
 import { DemoContent, Document, Home, MarkdownContent, NotFound, type Versions } from './view.tsx'
 
@@ -21,20 +26,10 @@ const MD_DIR = path.join(BUILD_DIR, 'md')
 const PUBLIC_DIR = path.join(BUILD_DIR, 'public')
 const REMIX_PKG_JSON = path.join(REPO_DIR, 'packages', 'remix', 'package.json')
 
-const { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
-const demoFiles = await discoverDemoFiles()
-const docFiles = [...markdownFiles, ...demoFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
-
-const registryByVersion = new Map<string | undefined, DocsRegistry>()
-registryByVersion.set(undefined, buildRegistry(docFiles))
-
-function getRegistry(version?: string): DocsRegistry {
-  let registry = registryByVersion.get(version)
-  if (!registry) {
-    registry = buildRegistry(docFiles, version)
-    registryByVersion.set(version, registry)
-  }
-  return registry
+type DocsContext = {
+  docFiles: DocFile[]
+  docFilesLookup: Map<string, MarkdownDocFile>
+  getRegistry(version?: string): DocsRegistry
 }
 
 export const getDefaultVersions = (): Versions => {
@@ -43,7 +38,14 @@ export const getDefaultVersions = (): Versions => {
 }
 
 export function createRouter(versions: Versions) {
+  let docsContextPromise: Promise<DocsContext> | undefined
+
   const router = _createRouter({ middleware: [staticFiles(PUBLIC_DIR)] })
+
+  function getDocsContext(): Promise<DocsContext> {
+    docsContextPromise ??= loadDocsContext()
+    return docsContextPromise
+  }
 
   const respond = {
     async file(request: Request, filePath: string, name?: string) {
@@ -66,9 +68,10 @@ export function createRouter(versions: Versions) {
         return response ?? new Response('Not Found', { status: 404 })
       },
       async docs({ request, params }) {
-        let docFile = docFiles.find((file) => file.urlPath === params.slug)
+        let docsContext = await getDocsContext()
+        let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
         let docProps = {
-          registry: getRegistry(params.version),
+          registry: docsContext.getRegistry(params.version),
           versions: versions,
           slug: params.slug,
           activeVersion: params.version,
@@ -94,7 +97,7 @@ export function createRouter(versions: Versions) {
 
           let { html, source } = await renderMarkdownFile(
             docFile.path,
-            docFilesLookup,
+            docsContext.docFilesLookup,
             params.version,
             // Don't auto-link code symbols in README - too many false positives.
             docFile.kind !== 'package',
@@ -116,10 +119,11 @@ export function createRouter(versions: Versions) {
         )
       },
       async home({ request, params }) {
+        let docsContext = await getDocsContext()
         return respond.document(
           request,
           <Document
-            registry={getRegistry(params.version)}
+            registry={docsContext.getRegistry(params.version)}
             versions={versions}
             activeVersion={params.version}
             entryPreloads={entryPreloads}
@@ -136,12 +140,13 @@ export function createRouter(versions: Versions) {
 
         let content = JSON.parse(await fs.promises.readFile(jsonPath, 'utf-8'))
         for (let key in content) {
-          content[key] = getLookupHref(content[key], params.version)
+          content[key] = getVersionedLookupHref(content[key], params.version)
         }
         return Response.json(content)
       },
       async markdown({ request, params }) {
-        let docFile = docFiles.find((file) => file.urlPath === params.slug)
+        let docsContext = await getDocsContext()
+        let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
         if (!docFile) {
           return new Response('Not Found', { status: 404 })
         }
@@ -163,21 +168,28 @@ export function createRouter(versions: Versions) {
 
 // Response helpers
 
-function getLookupHref(href: string, version: string): string {
-  if (!href.startsWith('/api/')) return href
+async function loadDocsContext(): Promise<DocsContext> {
+  let { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
+  let demoFiles = await discoverDemoFiles()
+  let docFiles = [...markdownFiles, ...demoFiles].sort((a, b) =>
+    a.urlPath.localeCompare(b.urlPath),
+  )
 
-  let url = new URL(href, 'http://localhost')
-  let slug = url.pathname.slice('/api/'.length)
-  if (slug.length === 0) return href
+  let registryByVersion = new Map<string | undefined, DocsRegistry>()
+  registryByVersion.set(undefined, buildRegistry(docFiles))
 
-  let routeHref: string
-  if (slug.endsWith('.md')) {
-    routeHref = routes.markdown.href({ version, slug: slug.slice(0, -'.md'.length) })
-  } else {
-    routeHref = routes.docs.href({ version, slug: slug.replace(/\/$/, '') })
+  return {
+    docFiles,
+    docFilesLookup,
+    getRegistry(version?: string): DocsRegistry {
+      let registry = registryByVersion.get(version)
+      if (!registry) {
+        registry = buildRegistry(docFiles, version)
+        registryByVersion.set(version, registry)
+      }
+      return registry
+    },
   }
-
-  return `${routeHref}${url.search}${url.hash}`
 }
 
 function stream(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {

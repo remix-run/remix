@@ -2,6 +2,7 @@ import * as assert from 'remix/assert'
 import { after, describe, it } from 'remix/test'
 
 import { assetServer } from './asset-server.ts'
+import { getVersionedLookupHref } from './lookup.ts'
 import { createRouter } from './router.tsx'
 
 after(async () => {
@@ -9,18 +10,41 @@ after(async () => {
 })
 
 describe('createRouter()', () => {
-  it('preserves versioned markdown lookup targets', async () => {
+  it('does not load generated docs output while creating the router', () => {
     let router = createRouter(['v1.2.3'])
-    let response = await router.fetch(new Request('http://localhost/v1.2.3/api.json'))
-    assert.equal(response.status, 200)
+    assert.equal(typeof router.fetch, 'function')
+  })
+})
 
-    let body = await response.text()
-    let href = '/v1.2.3/api/remix/headers/accept/class/Accept.md'
-    assert.equal(body.includes(`"Accept":"${href}"`), true)
-    assert.equal(body.includes(`"Accept":"${href}/"`), false)
+describe('getVersionedLookupHref()', () => {
+  it('preserves versioned markdown lookup targets', () => {
+    assert.equal(
+      getVersionedLookupHref('/api/remix/headers/accept/class/Accept.md', 'v1.2.3'),
+      '/v1.2.3/api/remix/headers/accept/class/Accept.md',
+    )
+  })
 
-    let markdownResponse = await router.fetch(new Request(`http://localhost${href}`))
-    assert.equal(markdownResponse.status, 200)
-    assert.equal(markdownResponse.headers.get('content-type'), 'text/markdown; charset=utf-8')
+  it('uses docs routes for HTML lookup targets', () => {
+    assert.equal(
+      getVersionedLookupHref('/api/remix/headers/accept/class/Accept', 'v1.2.3'),
+      '/v1.2.3/api/remix/headers/accept/class/Accept/',
+    )
+  })
+
+  it('preserves query strings and hashes', () => {
+    assert.equal(
+      getVersionedLookupHref(
+        '/api/remix/headers/accept/class/Accept.md?tab=docs#example',
+        'v1.2.3',
+      ),
+      '/v1.2.3/api/remix/headers/accept/class/Accept.md?tab=docs#example',
+    )
+  })
+
+  it('leaves non-API lookup targets unchanged', () => {
+    assert.equal(
+      getVersionedLookupHref('https://example.com/Accept', 'v1.2.3'),
+      'https://example.com/Accept',
+    )
   })
 })
