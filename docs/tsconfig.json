@@ -17,5 +17,5 @@
       "remix/ui/jsx-dev-runtime": ["../packages/remix/src/ui/jsx-dev-runtime.ts"]
     }
   },
-  "exclude": ["dist"]
+  "exclude": ["dist", "src/prerender/bench"]
 }

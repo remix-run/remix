@@ -4,7 +4,7 @@
 
 How to compose the request lifecycle and bridge the router to a runtime. Read this when the task involves:
 
-- Choosing or ordering built-in middleware in the root stack
+- Choosing or ordering built-in middleware in the stack
 - Writing custom middleware that sets typed context values
 - Adding fast-exit handling (static files, CORS preflights) versus request-enriching layers (sessions, auth, data loading)
 - Choosing when to keep the generated Node server versus switching server adapters
@@ -50,7 +50,7 @@ let router = createRouter({ middleware })
 | Middleware                 | Import                             | Use when                                                                      | Notes                                                          |
 | -------------------------- | ---------------------------------- | ----------------------------------------------------------------------------- | -------------------------------------------------------------- |
 | `staticFiles(dir, opts?)`  | `remix/middleware/static`          | Serve files from `public/` or another directory exactly as they exist on disk | Fast exit; usually near the top                                |
-| `compression()`            | `remix/middleware/compression`     | Compress text-like responses                                                  | Usually global                                                 |
+| `compression()`            | `remix/middleware/compression`     | Compress text-like responses                                                  | Usually app-wide                                               |
 | `logger()`                 | `remix/middleware/logger`          | Log requests and responses                                                    | Often development-only; `colors` can force color output on/off |
 | `cors(opts?)`              | `remix/middleware/cors`            | Endpoints must serve cross-origin browsers or preflight `OPTIONS` requests    | Usually early so preflights can short-circuit                  |
 | `cop(opts?)`               | `remix/middleware/cop`             | Reject unsafe cross-origin browser requests without synchronizer tokens       | Put before session or CSRF when used                           |
@@ -60,7 +60,7 @@ let router = createRouter({ middleware })
 | `csrf(opts?)`              | `remix/middleware/csrf`            | Session-backed form workflows need synchronizer-token CSRF protection         | Requires `session()` before it                                 |
 | `asyncContext()`           | `remix/middleware/async-context`   | Helpers outside handlers need request context via `getContext()`              | Add before helpers rely on it                                  |
 | `auth({ schemes })`        | `remix/middleware/auth`            | Resolve auth state into `context.get(Auth)`                                   | Run after `session()` for session-backed auth                  |
-| `requireAuth()`            | `remix/middleware/auth`            | A controller or action must reject anonymous access                           | Usually controller-level or action-level, not global           |
+| `requireAuth()`            | `remix/middleware/auth`            | A controller or action must reject anonymous access                           | Usually controller middleware or action middleware             |
 
 ### Static files vs browser modules
 
@@ -73,7 +73,7 @@ let router = createRouter({ middleware })
 - Parse request bodies before middleware that depends on them, such as `methodOverride()` and form field token extraction in `csrf()`
 - Run `session()` before `csrf()` and before session-backed `auth()`
 - Add `asyncContext()` before helpers or shared code call `getContext()`
-- Keep route protection like `requireAuth()` at controller or action scope unless the entire app is private
+- Keep route protection like `requireAuth()` as controller middleware or action middleware unless the entire app is private
 
 ### Common stacks
 
@@ -175,17 +175,17 @@ export function getCurrentUserSafely() {
 }
 ```
 
-## Middleware Layers
+## Middleware Types
 
-Middleware can be applied at three levels:
+Middleware has three API-owned forms:
 
-1. **Router-level** — runs for every request:
+1. **Router middleware** — runs for every request:
 
    ```typescript
-   let router = createRouter({ middleware: [...] })
+   let router = createRouter({ middleware: [logger(), session(cookie, storage)] })
    ```
 
-2. **Controller-level** — runs for the direct actions in one controller:
+2. **Controller middleware** — runs for the direct actions in one controller:
 
    ```typescript
    export default createController(routes.account, {
@@ -196,13 +196,18 @@ Middleware can be applied at three levels:
 
    Controller middleware does not flow into other controllers. Add the middleware to each controller that needs it.
 
-3. **Action-level** — runs for a single route:
+3. **Action middleware** — runs for a single action:
+
    ```typescript
    router.get(routes.account.index, {
      middleware: [requireAuth()],
-     handler: accountAction.handler,
+     handler(context) {
+       return render(<AccountPage identity={context.auth.identity} />)
+     },
    })
    ```
+
+Prefer inline arrays for `middleware` options. Use `RouterContext<typeof router>` to derive an app context from a router that uses inline middleware. Use `createMiddleware()` only when a chain is stored in a variable and its exact tuple type needs to be preserved, such as when deriving `MiddlewareContext<typeof rootMiddleware>` without a router value, exporting a reusable chain, or returning a chain from a factory.
 
 ## Node Server Setup
 

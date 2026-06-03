@@ -3,7 +3,7 @@ import { getCsrfToken } from 'remix/csrf-middleware'
 import { DataTableConstraintError, Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 import { maxLength, minLength } from 'remix/data-schema/checks'
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 
 import {
   createSchedule,
@@ -13,7 +13,6 @@ import {
   replaceScheduleDocument,
   ScheduleDataError,
 } from '../../data/schedules.ts'
-import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { render } from '../../utils/render.tsx'
 import { createScheduleIcs } from './ics.ts'
@@ -48,7 +47,7 @@ const replaceScheduleSchema = s.object({
   name: scheduleNameSchema,
 })
 
-export const schedulesController = {
+export const schedulesController = createController(routes.schedules, {
   actions: {
     async index(context) {
       let auth = context.get(Auth)!
@@ -185,7 +184,7 @@ export const schedulesController = {
       }
     },
   },
-} satisfies Controller<typeof routes.schedules, AppContext>
+})
 
 async function parseJsonRequest<input, output>(schema: s.Schema<input, output>, request: Request) {
   try {

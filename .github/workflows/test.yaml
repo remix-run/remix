@@ -26,10 +26,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -68,10 +65,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install Bun
         uses: oven-sh/setup-bun@v2
@@ -85,7 +79,7 @@ jobs:
   test-windows-pr:
     name: test (windows-latest, changed packages)
     if: github.event_name == 'pull_request'
-    runs-on: windows-latest
+    runs-on: windows-2025
 
     steps:
       - name: Checkout
@@ -97,13 +91,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          # Pin Windows to 24.15.0 to avoid libuv 1.52.x assertion bug on file watching.
-          # See https://github.com/libuv/libuv/issues/5010
-          # node-version-file: 'package.json'
-          node-version: '24.15.0'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -131,7 +119,7 @@ jobs:
   test-windows-main:
     name: test (windows-latest)
     if: github.event_name == 'push'
-    runs-on: windows-latest
+    runs-on: windows-2025
 
     steps:
       - name: Checkout
@@ -141,13 +129,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          # Pin Windows to 24.15.0 to avoid libuv 1.52.x assertion bug on file watching.
-          # See https://github.com/libuv/libuv/issues/5010
-          # node-version-file: 'package.json'
-          node-version: '24.15.0'
-          cache: pnpm
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
