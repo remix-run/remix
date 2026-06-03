@@ -57,28 +57,15 @@ export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
         continue
       }
 
-      // Skip hydrated client-entry marker ranges; hydration pass re-renders
-      // roots with new props from incoming payload
-      if (isVirtualRootStartMarker(c) && isVirtualRootStartMarker(n)) {
-        let currentEnd = findHydrationEndMarker(c)
-        let nextEnd = findHydrationEndMarker(n)
-        let nextData = n.data
-        if (c.data !== nextData) c.data = nextData
-
-        let currentEndIndex = curr.indexOf(currentEnd)
-        let nextEndIndex = next.indexOf(nextEnd)
-        currentIndex = currentEndIndex + 1
-        nextIndex = nextEndIndex + 1
-        continue
-      }
-
       let cursor = diffNode(c, n, context)
       if (cursor) {
         let nextEndIndex = next.indexOf(cursor)
         let currentEndIndex =
           isFrameStartMarker(c) && isFrameEndMarker(cursor)
             ? findFrameEndIndex(curr, currentIndex)
-            : currentIndex
+            : isVirtualRootStartMarker(c) && isVirtualRootEndMarker(cursor)
+              ? curr.indexOf(findHydrationEndMarker(c))
+              : currentIndex
         currentIndex = currentEndIndex + 1
         nextIndex = nextEndIndex + 1
         continue
@@ -114,11 +101,9 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
   if (isCommentNode(current) && isCommentNode(next)) {
     let newData = next.data
     if (current.data !== newData) {
-      let updated = false
-      if (isFrameStartMarker(current)) {
+      if (current.data.trim().startsWith('rmx:f:')) {
         if (shouldPreserveFrameStartMarker(current, next, context)) {
           current.data = newData
-          updated = true
 
           let frame = context.frameInstances.get(current)
           let nextMarkerData = getFrameMarkerData(next, context)
@@ -143,10 +128,8 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
         } else {
           disposeFrameStartMarker(current, context)
           current.data = newData
-          updated = true
         }
-      }
-      if (!updated) {
+      } else {
         current.data = newData
       }
     }
@@ -308,13 +291,12 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
     }
 
     if (matchIndex === -1) {
-      let candidateIndex = i
       if (
-        candidateIndex < currentChildren.length &&
-        !used[candidateIndex] &&
-        nodeTypesComparable(currentChildren[candidateIndex], nextChild)
+        i < currentChildren.length &&
+        !used[i] &&
+        nodeTypesComparable(currentChildren[i], nextChild)
       ) {
-        matchIndex = candidateIndex
+        matchIndex = i
       }
     }
 
@@ -417,11 +399,8 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
 
     if (node.parentNode === current) {
       // Node already in parent: move only if its nextSibling is not the desired ref.
-      let targetNext = ref
-      let alreadyInPlace =
-        (targetNext === null && node.nextSibling === null) || node.nextSibling === targetNext
-      if (!alreadyInPlace) {
-        current.insertBefore(node, targetNext)
+      if (node.nextSibling !== ref) {
+        current.insertBefore(node, ref)
       }
     } else {
       // New node: insert relative to a valid ref or append
@@ -577,9 +556,7 @@ function getFrameMarkerData(marker: Comment, context: FrameContext) {
 }
 
 function getFrameId(marker: Comment): string {
-  let trimmed = marker.data.trim()
-  invariant(trimmed.startsWith('rmx:f:'), 'Invalid frame start marker')
-  return trimmed.slice('rmx:f:'.length)
+  return marker.data.trim().slice('rmx:f:'.length)
 }
 
 function replaceCommentMarkerRange(

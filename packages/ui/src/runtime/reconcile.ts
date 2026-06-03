@@ -709,16 +709,9 @@ function diffFrame(
   let currName = getFrameName(curr)
   let nextName = getFrameName(next)
 
-  if (currName !== nextName) {
-    let replaceAnchor = curr._rangeEnd?.nextSibling ?? anchor
-    remove(curr, domParent, scheduler, styles)
-    insert(next, domParent, frame, scheduler, styles, vParent, rootTarget, replaceAnchor)
-    return
-  }
-
   // If the frame hasn't resolved yet, preserve existing cancel/remount behavior
   // so pending streams from the old src cannot take over the new src.
-  if (currSrc !== nextSrc && !curr._frameResolved) {
+  if (currName !== nextName || (currSrc !== nextSrc && !curr._frameResolved)) {
     let replaceAnchor = curr._rangeEnd?.nextSibling ?? anchor
     remove(curr, domParent, scheduler, styles)
     insert(next, domParent, frame, scheduler, styles, vParent, rootTarget, replaceAnchor)
@@ -783,7 +776,7 @@ function insertFrame(
       node._frameResolved = true
 
       let frameId = getFrameIdFromComment(start)
-      let marker = frameId ? runtime.data.f?.[frameId] : undefined
+      let marker = runtime.data.f?.[frameId]
       let src = marker?.src ?? getFrameSrc(node)
       let instance = runtime.frameInstances.get(start)
       if (!instance) {
@@ -1008,10 +1001,8 @@ function isFrameEndComment(node: Node | null | undefined): node is Comment {
   return node instanceof Comment && node.data.trim() === '/rmx:f'
 }
 
-function getFrameIdFromComment(comment: Comment): string | undefined {
-  let text = comment.data.trim()
-  if (!text.startsWith('rmx:f:')) return undefined
-  return text.slice('rmx:f:'.length)
+function getFrameIdFromComment(comment: Comment): string {
+  return comment.data.trim().slice('rmx:f:'.length)
 }
 
 function findFrameEndComment(start: Comment): Comment | null {

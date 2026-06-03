@@ -48,24 +48,25 @@ If an experiment saves raw bytes but regresses gzip or brotli, revert it and log
 
 ## Current checkpoint
 
-Current checkpoint, after the controlled-prop helper cleanup:
+Current checkpoint, after the DOM diff and frame marker cleanup:
 
 | Browser asset set | Modules | Bytes |
 | ----------------- | ------: | ----: |
-| all bookstore browser assets | 60 | 94,616 raw / 39,244 gzip / 34,762 brotli |
+| all bookstore browser assets | 60 | 94,225 raw / 39,121 gzip / 34,654 brotli |
 
 The latest delta is small but valid:
-`31 raw / 17 gzip / 20 brotli`, from inlining the controlled `value`/`checked` defined checks and
-removing the one-use helper in the already-downloaded reconciler. It is not a new graph split.
+`391 raw / 123 gzip / 108 brotli`, from removing duplicate frame replacement and DOM diff marker
+branches, simplifying DOM child placement checks, and dropping redundant frame-id validation after
+frame-start guards. The module graph is unchanged.
 
 The largest remaining downloaded modules are:
 
 | Module | Bytes |
 | ------ | ----: |
-| `packages/ui/src/runtime/reconcile.ts` | 17,534 raw / 5,909 gzip / 5,366 brotli |
-| `packages/ui/src/runtime/frame.ts` | 14,242 raw / 4,878 gzip / 4,403 brotli |
+| `packages/ui/src/runtime/reconcile.ts` | 17,412 raw / 5,898 gzip / 5,352 brotli |
+| `packages/ui/src/runtime/frame.ts` | 14,179 raw / 4,859 gzip / 4,384 brotli |
 | `packages/ui/src/runtime/mixins/mixin.ts` | 7,723 raw / 2,608 gzip / 2,388 brotli |
-| `packages/ui/src/runtime/diff-dom.ts` | 6,155 raw / 2,329 gzip / 2,099 brotli |
+| `packages/ui/src/runtime/diff-dom.ts` | 5,949 raw / 2,236 gzip / 2,018 brotli |
 | `packages/route-pattern/src/lib/href.ts` | 3,134 raw / 1,237 gzip / 1,102 brotli |
 | `packages/fetch-router/src/lib/route-map.ts` | 3,033 raw / 1,187 gzip / 1,092 brotli |
 | `packages/ui/src/style/style.ts` | 2,473 raw / 1,001 gzip / 897 brotli |
@@ -1043,14 +1044,36 @@ unless new evidence changes the shape:
   regressed brotli (`94,606 raw / 39,235 gzip / 34,764 brotli`), so the existing batch-size check
   stayed.
 
+## DOM diff and frame marker cleanup
+
+The next kept pass reduced already-downloaded frame and DOM diff code without changing the module
+graph:
+
+- shared the frame replacement branch for name changes and unresolved `src` changes;
+- let the existing `diffNode()` hydration-marker path handle top-level marker fast-forwarding;
+- removed temporary DOM child placement and comment-update flags;
+- removed redundant frame-id validation in helpers that only run after frame-start guards.
+
+Measured on top of the controlled-prop helper cleanup:
+
+| Browser asset set | Before | After | Savings |
+| ----------------- | -----: | ----: | ------: |
+| all bookstore browser assets | 94,616 raw / 39,244 gzip / 34,762 brotli / 60 modules | 94,225 raw / 39,121 gzip / 34,654 brotli / 60 modules | 391 raw / 123 gzip / 108 brotli |
+
+`runtime/reconcile.ts` moved from `17,534 raw / 5,909 gzip / 5,366 brotli` to
+`17,412 raw / 5,898 gzip / 5,352 brotli`; `runtime/frame.ts` moved from
+`14,242 raw / 4,878 gzip / 4,403 brotli` to `14,179 raw / 4,859 gzip / 4,384 brotli`; and
+`runtime/diff-dom.ts` moved from `6,155 raw / 2,329 gzip / 2,099 brotli` to
+`5,949 raw / 2,236 gzip / 2,018 brotli`.
+
 The largest package modules in the current full downloaded set are now:
 
 | Module | Bytes |
 | ------ | ----: |
-| `packages/ui/src/runtime/reconcile.ts` | 17,623 raw / 5,951 gzip / 5,397 brotli |
-| `packages/ui/src/runtime/frame.ts` | 14,242 raw / 4,878 gzip / 4,403 brotli |
-| `packages/ui/src/runtime/mixins/mixin.ts` | 7,739 raw / 2,615 gzip / 2,393 brotli |
-| `packages/ui/src/runtime/diff-dom.ts` | 6,155 raw / 2,329 gzip / 2,099 brotli |
+| `packages/ui/src/runtime/reconcile.ts` | 17,412 raw / 5,898 gzip / 5,352 brotli |
+| `packages/ui/src/runtime/frame.ts` | 14,179 raw / 4,859 gzip / 4,384 brotli |
+| `packages/ui/src/runtime/mixins/mixin.ts` | 7,723 raw / 2,608 gzip / 2,388 brotli |
+| `packages/ui/src/runtime/diff-dom.ts` | 5,949 raw / 2,236 gzip / 2,018 brotli |
 | `packages/route-pattern/src/lib/href.ts` | 3,134 raw / 1,237 gzip / 1,102 brotli |
 | `packages/fetch-router/src/lib/route-map.ts` | 3,033 raw / 1,187 gzip / 1,092 brotli |
 | `packages/ui/src/style/style.ts` | 2,473 raw / 1,001 gzip / 897 brotli |

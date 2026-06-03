@@ -45,3 +45,5 @@ Reduced a few more browser vnode conversion bytes by sharing the safe child-flat
 Reduced a few more browser runtime bytes by sharing explicit head host adoption with the regular host adoption path and trimming an empty mixin-descriptor branch.
 
 Reduced a few more browser reconciler bytes by inlining one-use controlled prop checks.
+
+Reduced browser frame and DOM diff runtime bytes by sharing frame replacement branches, simplifying marker fast-forwarding, and removing redundant frame-id checks after marker guards.

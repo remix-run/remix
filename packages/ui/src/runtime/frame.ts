@@ -1337,9 +1337,7 @@ function isFrameEnd(node: Comment): boolean {
 }
 
 function getFrameId(start: Comment): string {
-  let trimmed = start.data.trim()
-  invariant(trimmed.startsWith('rmx:f:'), 'Invalid frame start marker')
-  return trimmed.slice('rmx:f:'.length)
+  return start.data.trim().slice('rmx:f:'.length)
 }
 
 function findEndMarker(
