@@ -47,6 +47,7 @@ export async function navigate(href: string, options?: NavigationOptions) {
  * Starts listening for Navigation API transitions and routes them through frame reloads.
  *
  * @param signal Abort signal used to remove the listener.
+ * @param options Frame accessors used to resolve the navigation target.
  * @returns void
  */
 export function startNavigationListener(signal: AbortSignal, options: NavigationFrameAccessors) {

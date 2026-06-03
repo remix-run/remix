@@ -276,6 +276,8 @@ function encodePathnameWildcard(value: unknown) {
  * path/query/fragment delimiters; `%` begins percent-encoded bytes; and `\\` is treated as a
  * path separator by special URL parsing.
  *
+ * @param value Pathname segment value to encode.
+ * @returns Encoded pathname segment.
  * @see https://url.spec.whatwg.org/#path-percent-encode-set
  * @see https://url.spec.whatwg.org/#percent-encoded-bytes
  */
@@ -289,6 +291,8 @@ function encodePathnameSegment(value: string): string {
  * variables also reject `.` because dots separate host labels; hostname wildcards allow `.` to
  * span labels intentionally.
  *
+ * @param value Hostname variable value to validate.
+ * @returns Serialized hostname variable value.
  * @see https://url.spec.whatwg.org/#authority-state
  * @see https://url.spec.whatwg.org/#host-parsing
  */
