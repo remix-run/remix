@@ -8,7 +8,7 @@ import { ResetPasswordCompletePage, ResetPasswordPage } from './page.tsx'
 import { resetPasswordSchema } from '../schemas.ts'
 import { passwordResetTokens, users } from '../../../data/schema.ts'
 import { getReturnToQuery } from '../../../middleware/auth.ts'
-import { routes } from '../../../routes.ts'
+import { authRoutes, routes } from '../../../routes.ts'
 import { hashPassword } from '../../../utils/password-hash.ts'
 
 async function loadResetToken(db: Database, token: string) {
@@ -25,7 +25,7 @@ async function loadResetToken(db: Database, token: string) {
   return resetToken
 }
 
-export const resetPasswordController = createController(routes.auth.resetPassword, {
+export const resetPasswordController = createController(authRoutes.resetPassword, {
   actions: {
     async index(context) {
       let { db, params, render, url } = context

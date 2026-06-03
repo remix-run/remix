@@ -4,7 +4,7 @@ import { redirect } from 'remix/response/redirect'
 
 import { resolveExternalAuth } from '../resolve-external-auth.ts'
 import { getReturnToQuery } from '../../../middleware/auth.ts'
-import { routes } from '../../../routes.ts'
+import { authRoutes, routes } from '../../../routes.ts'
 import {
   externalProviderRegistry,
   getExternalProviderLabel,
@@ -18,7 +18,7 @@ export function createGitHubAuthController(
 ) {
   let provider = registry.github
 
-  return createController(routes.auth.github, {
+  return createController(authRoutes.github, {
     actions: {
       async login(context) {
         let { session, url } = context
