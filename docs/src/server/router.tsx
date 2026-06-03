@@ -96,7 +96,7 @@ export function createRouter(versions: Versions) {
             docFile.path,
             docFilesLookup,
             params.version,
-            // Don't transform links in README - too many false positives
+            // Don't auto-link code symbols in README - too many false positives.
             docFile.kind !== 'package',
           )
           return await respond.document(
