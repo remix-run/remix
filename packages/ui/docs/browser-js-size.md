@@ -8,10 +8,10 @@ Keep a change only when the full set improves in both gzip and brotli. Ignore ra
 static-only wins, bookstore-only authoring changes, and module-splitting churn that does not shrink
 the downloaded bytes.
 
-Current checkpoint: `60 modules / 94,011 raw / 39,071 gzip / 34,611 brotli`.
+Current checkpoint: `60 modules / 93,903 raw / 39,043 gzip / 34,588 brotli`.
 
 First full checkpoint: `69 modules / 104,263 raw / 42,600 gzip`. The measured downloaded set is down
-`10,252 raw / 3,529 gzip / 9 modules` from that point. Brotli was added later, so early wins do not
+`10,360 raw / 3,557 gzip / 9 modules` from that point. Brotli was added later, so early wins do not
 all have brotli deltas.
 
 ## Goals To Try Next
@@ -21,7 +21,7 @@ Probe the four largest downloaded UI runtime modules first:
 | Module                                    | Current size                          | What to look for                                                                                       |
 | ----------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | `ui/src/runtime/reconcile.ts`             | `17,255 raw / 5,863 gzip / 5,322 br`  | Duplicate host/frame adoption paths, redundant controlled-reflection branches, and cleanup paths.      |
-| `ui/src/runtime/frame.ts`                 | `14,179 raw / 4,859 gzip / 4,383 br`  | Duplicated frame-region traversal, marker/template handling, and rare frame modes on the `run()` path. |
+| `ui/src/runtime/frame.ts`                 | `14,071 raw / 4,835 gzip / 4,362 br`  | Duplicated frame-region traversal, marker/template handling, and rare frame modes on the `run()` path. |
 | `ui/src/runtime/mixins/mixin.ts`          | `7,723 raw / 2,608 gzip / 2,388 br`   | Lifecycle event dispatch, teardown/persist branches, descriptor normalization, and handle bookkeeping. |
 | `ui/src/runtime/diff-dom.ts`              | `5,892 raw / 2,222 gzip / 2,002 br`   | Marker-range handling, child matching/reorder branches, live-state preservation, and subtree cleanup.  |
 
@@ -44,7 +44,7 @@ Secondary probes after those:
 | Reconciler deletion cleanup               | Removed recursive bulk-clear and direct-event fast paths that were larger than the normal runtime paths.          | `381 raw / 99 gzip`, then `1,567 raw / 491 gzip`                                                                            |
 | Reconciler adoption and micro-cleanups    | Shared host adoption and compacted one-use helper shapes around SVG context, client frame resolution, head adoption, persisted mixins, and controlled props. | Kept deltas include `90 raw / 27 gzip / 22 brotli`, `67 raw / 9 gzip / 22 brotli`, and `173 raw / 17 gzip / 17 brotli`     |
 | DOM diff cleanup                          | Merged removed-subtree cleanup and simplified keyed lookup, marker fast-forwarding, child placement, comments, and marker-range replacement. | `57 raw / 14 gzip / 17 brotli`, `391 raw / 123 gzip / 108 brotli`; earlier cleanup: `131 raw / 28 gzip`                    |
-| Frame runtime cleanup                     | Merged frame-region cleanup passes, rmx-data scanning, runtime factory setup, and redundant marker/helper paths.  | Kept deltas include `153 raw / 27 gzip`, `214 raw / 20 gzip / 24 brotli`, and part of `492 raw / 99 gzip / 69 brotli`      |
+| Frame runtime cleanup                     | Merged frame-region cleanup passes, rmx-data scanning, runtime factory setup, child traversal, template watching, and redundant marker/helper paths. | Kept deltas include `108 raw / 28 gzip / 23 brotli`, `153 raw / 27 gzip`, and `214 raw / 20 gzip / 24 brotli`              |
 | Mixin runtime cleanup                     | Inlined one-use helpers, shared insert/reclaimed event dispatch, and called the update dispatcher directly.       | `777 raw / 96 gzip / 76 brotli`                                                                                            |
 | Controlled reflection cleanup             | Simplified controlled form reflection state and inlined one-use value/checked detection helpers.                  | `388 raw / 93 gzip / 115 brotli`, `173 raw / 61 gzip / 73 brotli`, and `31 raw / 17 gzip / 20 brotli`                      |
 | Attribute, prop, and style helper cleanup | Moved SSR-only attribute tables out of browser helpers and shared style-value/CSS property helpers.               | `401 raw / 161 gzip / 158 brotli` and `146 raw / 63 gzip / 52 brotli`                                                      |
@@ -68,6 +68,8 @@ Do not retry these without new full-set gzip and brotli evidence.
 | Style serialization reshapes              | `Object.entries()` reuse, ignored-prop `Set`, style-value module moves, and CSSRule tracking all regressed compression. |
 | Scheduler bookkeeping reshapes            | Indexed flushing, parent-list reuse, and mixin phase-count storage measured worse or regressed one compressed format.   |
 | Frame micro-shapes                        | Context/child checks, `getAttributeNames()`, and duplicate doctype-strip removal saved local/raw bytes but regressed compression. |
+| Frame end-marker local inlining           | Saved raw/gzip in traversal loops, but regressed brotli: `93,911 raw / 39,048 gzip / 34,605 brotli`.                   |
+| Frame template queue truthiness           | Saved raw and local frame gzip/brotli, but regressed full-set brotli by 1 byte.                                        |
 | Shared client frame init helper           | Saved raw bytes in `reconcile.ts`, but regressed gzip: `93,867 raw / 39,103 gzip / 34,632 brotli`.                      |
 | Document-state regex/gating reshapes      | Selectable-input regex and render-batch selection gating were smaller in one metric but worse overall.                  |
 | Unsafe child normalization shortcut       | Saved bytes but broke non-array, null, and boolean children.                                                            |

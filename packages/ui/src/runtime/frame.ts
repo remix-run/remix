@@ -293,7 +293,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         await render(html, { ...options, flushKind })
       })
       if (flushed.applied) {
-        if (flushed.remainder !== '') {
+        if (flushed.remainder) {
           await render(flushed.remainder, { ...options, flushKind: 'fragment' })
         }
         return
@@ -537,7 +537,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         continue
       }
 
-      if (node.childNodes && node.childNodes.length > 0) {
+      if (node.childNodes.length) {
         startSubFrameInheritedReloads(Array.from(node.childNodes), signal)
       }
     }
@@ -576,16 +576,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       return
     }
 
-    let observer = setupTemplateObserver()
-    pendingTemplateObserver = observer
-    let unsubscribe = subscribeFrameTemplate(marker.id, async (fragment) => {
+    pendingTemplateObserver = setupTemplateObserver()
+    pendingTemplateUnsubscribe = subscribeFrameTemplate(marker.id, async (fragment) => {
       if (signal?.aborted) return
       if (pendingTemplateMarkerId !== marker.id) return
       clearPendingFrameTemplateWatch()
       await render(fragment, { signal, contentStatus: 'resolved' })
       if (!signal?.aborted) onResolved?.()
     })
-    pendingTemplateUnsubscribe = unsubscribe
 
     signal?.addEventListener(
       'abort',
@@ -708,13 +706,11 @@ function parseRmxDataScript(script: HTMLScriptElement): RmxData {
 
 function mergeRmxData(into: RmxData, from: RmxData): void {
   if (from.h) {
-    if (!into.h) into.h = {}
-    copyOwnRmxEntries(into.h, from.h)
+    copyOwnRmxEntries((into.h ??= {}), from.h)
   }
 
   if (from.f) {
-    if (!into.f) into.f = {}
-    copyOwnRmxEntries(into.f, from.f)
+    copyOwnRmxEntries((into.f ??= {}), from.f)
   }
 }
 
@@ -731,7 +727,7 @@ function scheduleHydrationInContainer(
   initialHydrationTracker?: InitialHydrationTracker,
 ): void {
   let hydrationMarkers = findHydrationMarkers(container)
-  if (hydrationMarkers.length === 0) return
+  if (!hydrationMarkers.length) return
 
   let hydrationData = context.data.h
   if (!hydrationData) return
@@ -928,7 +924,7 @@ async function createSubFrames(
       continue
     }
 
-    if (node.childNodes && node.childNodes.length > 0) {
+    if (node.childNodes.length) {
       tasks.push(createSubFrames(Array.from(node.childNodes), context, options))
     }
   }
@@ -980,7 +976,7 @@ function cleanupFrameRuntimeNodes(nodes: Node[], context: FrameContext): void {
       continue
     }
 
-    if (node.childNodes && node.childNodes.length > 0) {
+    if (node.childNodes.length) {
       cleanupFrameRuntimeNodes(Array.from(node.childNodes), context)
     }
   }
@@ -1117,7 +1113,7 @@ function extractTemplatesFromBuffer(
   }
 
   let tail = buffer.slice(cursor)
-  if (tail === '') return { html, remainder: '' }
+  if (!tail) return { html, remainder: '' }
 
   let tailStart = tail.toLowerCase().lastIndexOf('<template')
   if (tailStart === -1) {
@@ -1157,7 +1153,7 @@ async function renderFrameStream(
       let parsed = extractTemplatesFromBuffer(doc, buffer, publishFrameTemplate)
       buffer = parsed.remainder
 
-      if (parsed.html !== '') {
+      if (parsed.html) {
         html += parsed.html
         let flushed = await consumeFlushBatches(html, applyHtml)
         appliedOnce = flushed.applied || appliedOnce
@@ -1169,19 +1165,19 @@ async function renderFrameStream(
     let parsed = extractTemplatesFromBuffer(doc, buffer, publishFrameTemplate)
     html += parsed.html
     buffer = parsed.remainder
-    if (buffer !== '') {
+    if (buffer) {
       html += buffer
       buffer = ''
     }
 
-    if (html !== '') {
+    if (html) {
       await applyHtml(html, 'fragment')
       appliedOnce = true
     }
 
     // A frame stream can legitimately resolve to empty content. Ensure the
     // existing frame region is cleared instead of treated as a no-op.
-    if (html === '' && !appliedOnce) {
+    if (!html && !appliedOnce) {
       await applyHtml('', 'fragment')
     }
   } finally {
@@ -1310,7 +1306,7 @@ function walkCommentsInNodes(nodes: Node[], cb: (comment: Comment) => void): voi
     }
 
     if (node.nodeType === Node.COMMENT_NODE) cb(node as Comment)
-    if (node.childNodes && node.childNodes.length > 0) {
+    if (node.childNodes.length) {
       walkCommentsInNodes(Array.from(node.childNodes), cb)
     }
   }
