@@ -33,3 +33,5 @@ Reduced a few more browser reconciler bytes by simplifying the internal head-ele
 Reduced a few more browser prop-patching bytes by sharing style-value normalization and CSS property-name helpers across already-downloaded runtime modules.
 
 Reduced a few more browser component and DOM diff bytes by compacting component task draining and keyed child lookup in already-downloaded runtime modules.
+
+Reduced a few more browser reconciler bytes by compacting SVG context, persisted mixin node, and controlled prop helper paths.

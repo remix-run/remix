@@ -63,13 +63,13 @@ These paths have either been measured as low-value or are outside the current go
 
 ## Current checkpoint
 
-The previous committed checkpoint before the latest component/diff runtime cleanup was
-`95,001 raw / 39,347 gzip / 34,843 brotli / 60 modules` for all bookstore browser assets.
+The previous committed checkpoint before the latest reconciler cleanup was
+`94,995 raw / 39,334 gzip / 34,832 brotli / 60 modules` for all bookstore browser assets.
 
 The current committed checkpoint is
-`94,995 raw / 39,334 gzip / 34,832 brotli / 60 modules`. That latest `6 raw / 13 gzip /
-11 brotli` improvement comes from reducing component task queue and DOM diff lookup bytes in
-already-downloaded browser runtime modules, not from a new graph split.
+`94,927 raw / 39,327 gzip / 34,828 brotli / 60 modules`. That latest `68 raw / 7 gzip /
+4 brotli` improvement comes from small reductions in the already-downloaded reconciler, not from a
+new graph split.
 
 The largest remaining downloaded modules are still:
 
@@ -888,6 +888,25 @@ Measured on top of the prop/style helper cleanup:
 2,105 brotli` to `6,155 raw / 2,329 gzip / 2,099 brotli`, but the full compressed set still
 improves.
 
+## UI reconciler micro-cleanup
+
+The next kept reconciler pass keeps the module graph unchanged and removes small duplicated or
+branch-heavy helper shapes from the already-downloaded reconciler:
+
+- SVG context inheritance is represented as one expression instead of a branch chain.
+- persisted mixin node matching uses one combined predicate instead of three `continue` branches.
+- controlled `value` and `checked` prop detection shares one helper.
+
+Measured on top of the component/diff runtime cleanup:
+
+| Browser asset set | Before | After | Savings |
+| ----------------- | -----: | ----: | ------: |
+| all bookstore browser assets | 94,995 raw / 39,334 gzip / 34,832 brotli / 60 modules | 94,927 raw / 39,327 gzip / 34,828 brotli / 60 modules | 68 raw / 7 gzip / 4 brotli |
+
+`runtime/reconcile.ts` moved from `17,864 raw / 5,976 gzip / 5,416 brotli` to
+`17,796 raw / 5,970 gzip / 5,419 brotli`. The module-local brotli result is slightly larger, but
+the full downloaded set still improves after import specifiers and shared compression are counted.
+
 ## Tried and rejected: additional route/style/SVG micro-shapes
 
 Several adjacent micro-experiments failed the full compressed-set gate and should stay reverted
@@ -918,7 +937,7 @@ The largest package modules in the current full downloaded set are now:
 
 | Module | Bytes |
 | ------ | ----: |
-| `packages/ui/src/runtime/reconcile.ts` | 17,864 raw / 5,976 gzip / 5,416 brotli |
+| `packages/ui/src/runtime/reconcile.ts` | 17,796 raw / 5,970 gzip / 5,419 brotli |
 | `packages/ui/src/runtime/frame.ts` | 14,242 raw / 4,878 gzip / 4,403 brotli |
 | `packages/ui/src/runtime/mixins/mixin.ts` | 7,739 raw / 2,615 gzip / 2,393 brotli |
 | `packages/ui/src/runtime/diff-dom.ts` | 6,155 raw / 2,329 gzip / 2,099 brotli |

@@ -50,18 +50,8 @@ let persistedRemovalToken = 0
 const persistedMixinNodes = new Set<CommittedHostNode>()
 let activeSchedulerUpdateParents: ParentNode[] | undefined
 
-// Compute SVG context for a node based on its parent and type.
-// Returns true if the node is within an SVG subtree, false otherwise.
 function getSvgContext(vParent: VNode, nodeType: VNodeType): boolean {
-  // Only host elements (strings) can affect SVG context
-  if (typeof nodeType === 'string') {
-    // svg element creates SVG context
-    if (nodeType === 'svg') return true
-    // foreignObject switches back to HTML context
-    if (nodeType === 'foreignObject') return false
-  }
-  // Otherwise inherit from parent
-  return vParent._svg ?? false
+  return nodeType === 'svg' || (nodeType !== 'foreignObject' && (vParent._svg ?? false))
 }
 
 function getHostProps(node: HostNode | CommittedHostNode): ElementProps {
@@ -90,10 +80,9 @@ function findMatchingPersistedMixinNode(
 ): CommittedHostNode | null {
   if (key == null) return null
   for (let node of persistedMixinNodes) {
-    if (node._persistedParentByMixins !== domParent) continue
-    if (node.type !== type) continue
-    if (node.key !== key) continue
-    return node
+    if (node._persistedParentByMixins === domParent && node.type === type && node.key === key) {
+      return node
+    }
   }
   return null
 }
@@ -147,15 +136,16 @@ function syncControlledReflection(node: CommittedHostNode, props: ElementProps):
   if (!state || state.disposed) return
 
   let element = node._dom
-  state.hasValue = node.type !== 'progress' && 'value' in element && hasControlledValueProp(props)
+  state.hasValue =
+    node.type !== 'progress' && 'value' in element && hasControlledProp(props, 'value')
   state.value = props.value
-  state.hasChecked = 'checked' in element && hasControlledCheckedProp(props)
+  state.hasChecked = 'checked' in element && hasControlledProp(props, 'checked')
   state.checked = props.checked
   state.version++
 }
 
 function shouldTrackControlledReflection(props: ElementProps): boolean {
-  return hasControlledValueProp(props) || hasControlledCheckedProp(props)
+  return hasControlledProp(props, 'value') || hasControlledProp(props, 'checked')
 }
 
 function scheduleControlledRestore(
@@ -196,12 +186,8 @@ function teardownControlledReflection(node: CommittedHostNode): void {
   node._dom.removeEventListener('change', state.onInputOrChange)
 }
 
-function hasControlledValueProp(props: ElementProps): boolean {
-  return 'value' in props && props.value !== undefined
-}
-
-function hasControlledCheckedProp(props: ElementProps): boolean {
-  return 'checked' in props && props.checked !== undefined
+function hasControlledProp(props: ElementProps, name: 'value' | 'checked'): boolean {
+  return name in props && props[name] !== undefined
 }
 
 function resolveNodeMixProps(
