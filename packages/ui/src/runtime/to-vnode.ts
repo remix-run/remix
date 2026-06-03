@@ -5,17 +5,20 @@ import type { RemixElement, RemixNode } from './jsx.ts'
 import { isRemixElement, NON_RENDER_NODE, TEXT_NODE, type VNode } from './vnode.ts'
 
 function flatMapChildrenToVNodes(node: RemixElement): VNode[] {
-  if (!('children' in node.props)) return []
-  let children = node.props.children
-  if (!Array.isArray(children)) return [toVNode(children)]
   let vnodes: VNode[] = []
-  flattenChildrenToVNodes(children, vnodes)
+  if ('children' in node.props) {
+    flattenChildrenToVNodes(node.props.children, vnodes)
+  }
   return vnodes
 }
 
-function flattenChildrenToVNodes(nodes: RemixNode[], out: VNode[]): void {
-  for (let child of normalizeChildren(nodes)) {
-    out.push(toVNode(child))
+function flattenChildrenToVNodes(node: RemixNode, out: VNode[]): void {
+  if (Array.isArray(node)) {
+    for (let child of normalizeChildren(node)) {
+      out.push(toVNode(child))
+    }
+  } else {
+    out.push(toVNode(node))
   }
 }
 

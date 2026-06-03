@@ -1,15 +1,22 @@
 # Browser JavaScript Size Findings
 
-## Investigation goal
+## Current objective
 
-Reduce the actual compressed JavaScript bytes downloaded by a typical hydrated Remix app.
+Reduce the actual compressed JavaScript bytes downloaded by a typical hydrated Remix app. The goal
+is smaller file bodies or code that normal hydrated pages no longer download, not smaller-looking
+entry graphs.
 
-The primary measurement is the full de-duped bookstore browser asset set: the main browser entry,
-the hydrated component assets, and every module returned by `assetServer.getPreloads(...)` under
-production asset-server settings. Per-entry graph size is only a diagnostic; it does not count as a
-win when the same bytes are still downloaded elsewhere on the page.
+The primary measurement is the full de-duped bookstore browser asset set:
 
-Optimize for:
+- the main browser entry;
+- all hydrated component assets;
+- every module returned by `assetServer.getPreloads(...)`;
+- production asset-server settings.
+
+Per-entry graph size is only a diagnostic. It does not count as a win when the same bytes are still
+downloaded elsewhere on the page.
+
+Optimize for actual downloaded-byte reductions:
 
 - smaller downloaded module bodies;
 - code no longer downloaded by normal hydrated pages;
@@ -17,7 +24,7 @@ Optimize for:
 - raw bytes only as a clue for finding bloated code;
 - low public/API/compiler churn unless the compressed-byte win is large enough to justify it.
 
-Do not optimize for:
+Do not optimize for apparent wins that leave the downloaded set unchanged:
 
 - static-only pages;
 - bookstore-only authoring changes;
@@ -41,21 +48,21 @@ If an experiment saves raw bytes but regresses gzip or brotli, revert it and log
 
 ## Current checkpoint
 
-Current checkpoint, after the document-state cleanup:
+Current checkpoint, after the vnode child-flattening cleanup:
 
 | Browser asset set | Modules | Bytes |
 | ----------------- | ------: | ----: |
-| all bookstore browser assets | 60 | 94,740 raw / 39,301 gzip / 34,807 brotli |
+| all bookstore browser assets | 60 | 94,721 raw / 39,291 gzip / 34,798 brotli |
 
 The latest delta is small but valid:
-`14 raw / 9 gzip / 4 brotli`, from trimming redundant selection-restore checks in the
-already-downloaded document-state helper. It is not a new graph split.
+`19 raw / 10 gzip / 9 brotli`, from sharing the safe child-flattening path in the already-downloaded
+vnode conversion helper. It is not a new graph split.
 
 The largest remaining downloaded modules are:
 
 | Module | Bytes |
 | ------ | ----: |
-| `packages/ui/src/runtime/reconcile.ts` | 17,623 raw / 5,951 gzip / 5,397 brotli |
+| `packages/ui/src/runtime/reconcile.ts` | 17,623 raw / 5,950 gzip / 5,393 brotli |
 | `packages/ui/src/runtime/frame.ts` | 14,242 raw / 4,878 gzip / 4,403 brotli |
 | `packages/ui/src/runtime/mixins/mixin.ts` | 7,739 raw / 2,615 gzip / 2,393 brotli |
 | `packages/ui/src/runtime/diff-dom.ts` | 6,155 raw / 2,329 gzip / 2,099 brotli |
@@ -63,7 +70,7 @@ The largest remaining downloaded modules are:
 | `packages/fetch-router/src/lib/route-map.ts` | 3,033 raw / 1,187 gzip / 1,092 brotli |
 | `packages/ui/src/style/style.ts` | 2,473 raw / 1,001 gzip / 897 brotli |
 | `packages/ui/src/runtime/svg-attributes.ts` | 2,469 raw / 872 gzip / 739 brotli |
-| `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,155 gzip / 1,021 brotli |
+| `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,154 gzip / 1,023 brotli |
 | `packages/ui/src/runtime/component.ts` | 2,348 raw / 961 gzip / 844 brotli |
 
 ## Next targets
@@ -82,6 +89,10 @@ Keep looking for actual body-size reductions in this order:
   stylesheet management. Micro rewrites must improve gzip and brotli, not just raw bytes.
 - **SVG/attribute normalization**: SVG alias handling is still visible in the browser prop patcher,
   but the smaller parser/table experiments regressed compressed bytes.
+
+Do not start by adding more public subpaths, more source-served modules, or bookstore-only authoring
+changes. Those can be useful diagnostics, but the remaining likely wins are in code bodies that are
+already downloaded by a normal hydrated page.
 
 ## Do not retry without new evidence
 
@@ -102,6 +113,8 @@ These ideas have already been measured as low-value, regressive, or outside this
 - frame context/child-existence micro-cleanups;
 - frame `syncElementAttributes()` `getAttributeNames()` rewrites;
 - document-state selectable-input regex rewrite;
+- unconditional `normalizeChildren(node.props.children)` in `to-vnode.ts`, which saves bytes but
+  breaks non-array, null, and boolean children;
 - mixin scheduler phase-count storage and scheduler indexed flush loops;
 - scheduler selection-capture gating on scheduled component batches;
 - cosmetic private-name shortening as a primary strategy.
