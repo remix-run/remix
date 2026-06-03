@@ -136,16 +136,15 @@ function syncControlledReflection(node: CommittedHostNode, props: ElementProps):
   if (!state || state.disposed) return
 
   let element = node._dom
-  state.hasValue =
-    node.type !== 'progress' && 'value' in element && hasControlledProp(props, 'value')
+  state.hasValue = node.type !== 'progress' && 'value' in element && props.value !== undefined
   state.value = props.value
-  state.hasChecked = 'checked' in element && hasControlledProp(props, 'checked')
+  state.hasChecked = 'checked' in element && props.checked !== undefined
   state.checked = props.checked
   state.version++
 }
 
 function shouldTrackControlledReflection(props: ElementProps): boolean {
-  return hasControlledProp(props, 'value') || hasControlledProp(props, 'checked')
+  return props.value !== undefined || props.checked !== undefined
 }
 
 function scheduleControlledRestore(
@@ -184,10 +183,6 @@ function teardownControlledReflection(node: CommittedHostNode): void {
   state.version++
   node._dom.removeEventListener('input', state.onInputOrChange)
   node._dom.removeEventListener('change', state.onInputOrChange)
-}
-
-function hasControlledProp(props: ElementProps, name: 'value' | 'checked'): boolean {
-  return name in props && props[name] !== undefined
 }
 
 function resolveNodeMixProps(

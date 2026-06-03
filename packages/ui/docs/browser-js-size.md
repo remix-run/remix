@@ -48,21 +48,21 @@ If an experiment saves raw bytes but regresses gzip or brotli, revert it and log
 
 ## Current checkpoint
 
-Current checkpoint, after the head-adoption and mixin-descriptor cleanups:
+Current checkpoint, after the controlled-prop helper cleanup:
 
 | Browser asset set | Modules | Bytes |
 | ----------------- | ------: | ----: |
-| all bookstore browser assets | 60 | 94,647 raw / 39,261 gzip / 34,782 brotli |
+| all bookstore browser assets | 60 | 94,616 raw / 39,244 gzip / 34,762 brotli |
 
 The latest delta is small but valid:
-`74 raw / 30 gzip / 16 brotli`, from deleting duplicate explicit-`<head>` host adoption code and an
-empty-array branch in the already-downloaded mixin descriptor resolver. It is not a new graph split.
+`31 raw / 17 gzip / 20 brotli`, from inlining the controlled `value`/`checked` defined checks and
+removing the one-use helper in the already-downloaded reconciler. It is not a new graph split.
 
 The largest remaining downloaded modules are:
 
 | Module | Bytes |
 | ------ | ----: |
-| `packages/ui/src/runtime/reconcile.ts` | 17,565 raw / 5,930 gzip / 5,383 brotli |
+| `packages/ui/src/runtime/reconcile.ts` | 17,534 raw / 5,909 gzip / 5,366 brotli |
 | `packages/ui/src/runtime/frame.ts` | 14,242 raw / 4,878 gzip / 4,403 brotli |
 | `packages/ui/src/runtime/mixins/mixin.ts` | 7,723 raw / 2,608 gzip / 2,388 brotli |
 | `packages/ui/src/runtime/diff-dom.ts` | 6,155 raw / 2,329 gzip / 2,099 brotli |
@@ -70,7 +70,7 @@ The largest remaining downloaded modules are:
 | `packages/fetch-router/src/lib/route-map.ts` | 3,033 raw / 1,187 gzip / 1,092 brotli |
 | `packages/ui/src/style/style.ts` | 2,473 raw / 1,001 gzip / 897 brotli |
 | `packages/ui/src/runtime/svg-attributes.ts` | 2,469 raw / 872 gzip / 739 brotli |
-| `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,153 gzip / 1,022 brotli |
+| `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,154 gzip / 1,022 brotli |
 | `packages/ui/src/runtime/component.ts` | 2,348 raw / 961 gzip / 844 brotli |
 
 ## Next targets
@@ -106,6 +106,8 @@ These ideas have already been measured as low-value, regressive, or outside this
 - parsed href helper subpaths;
 - raw-only SVG alias parser/table rewrites or SVG ternary micro-shapes;
 - route-map manual loop rewrites and private `Route` field shortening;
+- route-map `createRoutes()` base-pattern boolean-local removal, which improved gzip but regressed
+  brotli;
 - route-map `joinPathname()` boolean-local removal;
 - style rule factoring, style hash/entries reuse, stylesheet `CSSRule` object tracking, and moving
   `styleValueToCss()` into another module;
@@ -1030,6 +1032,11 @@ unless new evidence changes the shape:
 - Capturing/restoring document selection only when a scheduler flush had a component render batch
   made task-only flush semantics less direct and moved the full set to
   `94,750 raw / 39,305 gzip / 34,808 brotli`, worse than the kept document-state cleanup.
+- Leaving `createHref()` search params undefined until needed saved raw and brotli but regressed gzip
+  (`94,644 raw / 39,263 gzip / 34,780 brotli`), so the existing eager default object stayed.
+- Removing `createRoutes()`'s `baseIsPattern` local in `fetch-router` improved gzip but regressed
+  brotli (`94,647 raw / 39,254 gzip / 34,787 brotli`), so the existing compressed-friendlier branch
+  shape stayed.
 
 The largest package modules in the current full downloaded set are now:
 
