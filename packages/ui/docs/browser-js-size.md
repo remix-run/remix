@@ -120,6 +120,8 @@ These ideas have already been measured as low-value, regressive, or outside this
 - unconditional `normalizeChildren(node.props.children)` in `to-vnode.ts`, which saves bytes but
   breaks non-array, null, and boolean children;
 - mixin scheduler phase-count storage and scheduler indexed flush loops;
+- scheduler update-parent list reuse for render-batch checks, which improved raw/gzip but regressed
+  brotli;
 - scheduler selection-capture gating on scheduled component batches;
 - cosmetic private-name shortening as a primary strategy.
 
@@ -1037,6 +1039,9 @@ unless new evidence changes the shape:
 - Removing `createRoutes()`'s `baseIsPattern` local in `fetch-router` improved gzip but regressed
   brotli (`94,647 raw / 39,254 gzip / 34,787 brotli`), so the existing compressed-friendlier branch
   shape stayed.
+- Reusing the scheduler's computed update-parent list as the render-batch check improved raw/gzip but
+  regressed brotli (`94,606 raw / 39,235 gzip / 34,764 brotli`), so the existing batch-size check
+  stayed.
 
 The largest package modules in the current full downloaded set are now:
 
