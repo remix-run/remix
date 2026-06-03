@@ -5,20 +5,22 @@ import {
   isBooleanishStringAttribute,
   normalizeAttributeName,
   serializeStyleObject,
-  toKebabCase,
+  styleValueToCss,
 } from './attributes.ts'
-import { normalizeCssValue } from '../../style/values.ts'
+import { toCssPropertyName } from '../../style/values.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
-function isFrameworkProp(name: string): boolean {
+function isIgnoredProp(name: string): boolean {
   return (
     name === 'children' ||
     name === 'mix' ||
     name === 'key' ||
     name === 'animate' ||
     name === 'innerHTML' ||
-    name === 'on'
+    name === 'on' ||
+    name === 'class' ||
+    name === 'className'
   )
 }
 
@@ -65,8 +67,7 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
   }
 
   for (let name in curr) {
-    if (isFrameworkProp(name)) continue
-    if (name === 'class' || name === 'className') continue
+    if (isIgnoredProp(name)) continue
     if (name in next && next[name] != null) continue
 
     let { ns, attr } = normalizeAttributeName(name, isSvg)
@@ -79,8 +80,7 @@ export function patchHostProps(curr: ElementProps, next: ElementProps, dom: Elem
   }
 
   for (let name in next) {
-    if (isFrameworkProp(name)) continue
-    if (name === 'class' || name === 'className') continue
+    if (isIgnoredProp(name)) continue
 
     let nextValue = next[name]
     if (nextValue == null) continue
@@ -159,7 +159,7 @@ function patchStyleObject(
       let prevCssValue = styleValueToCss(name, curr[name])
       if (prevCssValue === undefined) continue
 
-      style.removeProperty(toKebabCase(name))
+      style.removeProperty(toCssPropertyName(name))
     }
   }
 
@@ -170,18 +170,6 @@ function patchStyleObject(
     let prevCssValue = curr ? styleValueToCss(name, curr[name]) : undefined
     if (prevCssValue === nextCssValue) continue
 
-    style.setProperty(toKebabCase(name), nextCssValue)
+    style.setProperty(toCssPropertyName(name), nextCssValue)
   }
-}
-
-function styleValueToCss(name: string, value: unknown): string | undefined {
-  if (value == null) return undefined
-  if (typeof value === 'boolean') return undefined
-  if (typeof value === 'number' && !Number.isFinite(value)) return undefined
-
-  if (Array.isArray(value)) {
-    return value.join(', ')
-  }
-
-  return normalizeCssValue(name, value)
 }

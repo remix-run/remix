@@ -29,3 +29,5 @@ Reduced browser mixin runtime bytes by inlining one-use runtime helpers, sharing
 Reduced a few more browser runtime bytes by removing internal source-served runtime exports and inlining the one-use frame runtime factory.
 
 Reduced a few more browser reconciler bytes by simplifying the internal head-element host check.
+
+Reduced a few more browser prop-patching bytes by sharing style-value normalization and CSS property-name helpers across already-downloaded runtime modules.

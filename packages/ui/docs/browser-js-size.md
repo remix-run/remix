@@ -63,13 +63,13 @@ These paths have either been measured as low-value or are outside the current go
 
 ## Current checkpoint
 
-The previous committed checkpoint before the latest route href and reconciler follow-up was
-`95,692 raw / 39,526 gzip / 34,984 brotli / 60 modules` for all bookstore browser assets.
+The previous committed checkpoint before the latest prop/style helper cleanup was
+`95,147 raw / 39,410 gzip / 34,895 brotli / 60 modules` for all bookstore browser assets.
 
 The current committed checkpoint is
-`95,147 raw / 39,410 gzip / 34,895 brotli / 60 modules`. That latest `53 raw / 17 gzip /
-20 brotli` improvement comes from small actual-byte reductions in already-downloaded route href and
-reconciler code, not from a new graph split.
+`95,001 raw / 39,347 gzip / 34,843 brotli / 60 modules`. That latest `146 raw / 63 gzip /
+52 brotli` improvement comes from reducing duplicated prop/style helper code in already-downloaded
+browser runtime modules, not from a new graph split.
 
 The largest remaining downloaded modules are still:
 
@@ -842,6 +842,32 @@ Measured on top of the internal runtime export and factory cleanup:
 `3,134 raw / 1,237 gzip / 1,102 brotli`. `runtime/reconcile.ts` moved from
 `17,904 raw / 5,986 gzip / 5,435 brotli` to `17,864 raw / 5,975 gzip / 5,418 brotli`.
 
+## UI prop/style helper cleanup
+
+`runtime/core/props.ts` and `runtime/core/attributes.ts` were both carrying the same inline style
+value filtering and normalization logic, and both are downloaded by typical hydrated pages. The prop
+patcher also carried its own camel-to-kebab CSS property helper even though `style/values.ts` is
+already downloaded and already exports the same transformation.
+
+This pass keeps the module graph unchanged and removes duplicate helper bodies:
+
+- `serializeStyleObject()` and `patchStyleObject()` now share `styleValueToCss()`;
+- `runtime/core/attributes.ts` and `runtime/core/props.ts` use the existing
+  `toCssPropertyName()` helper instead of a duplicate runtime helper;
+- `class` and `className` are included in the existing ignored-prop predicate instead of being
+  checked separately in both prop loops.
+
+Measured on top of the route href and reconciler follow-up:
+
+| Browser asset set | Before | After | Savings |
+| ----------------- | -----: | ----: | ------: |
+| all bookstore browser assets | 95,147 raw / 39,410 gzip / 34,895 brotli / 60 modules | 95,001 raw / 39,347 gzip / 34,843 brotli / 60 modules | 146 raw / 63 gzip / 52 brotli |
+
+`runtime/core/props.ts` moved from `2,117 raw / 1,019 gzip / 906 brotli` to
+`1,955 raw / 947 gzip / 849 brotli`. `runtime/core/attributes.ts` grew slightly from
+`1,372 raw / 737 gzip / 625 brotli` to `1,388 raw / 742 gzip / 630 brotli`, but the full
+downloaded set still improves because the larger duplicate helper was removed from `props.ts`.
+
 ## Tried and rejected: additional route/style/SVG micro-shapes
 
 Several adjacent micro-experiments failed the full compressed-set gate and should stay reverted
@@ -856,12 +882,18 @@ unless new evidence changes the shape:
 - Unifying scalar and array search-param serialization in `createHref()` saved raw/gzip but regressed
   brotli versus the kept search-param cleanup (`95,120 raw / 39,403 gzip / 34,891 brotli` before the
   type-safe params local, but still worse than the same local with the kept search loop).
+- Replacing the ignored-prop string comparisons in `runtime/core/props.ts` with a `Set` saved raw
+  bytes but regressed compressed bytes in the measured full set (`95,011 raw / 39,367 gzip /
+  34,887 brotli` at the time of the experiment).
+- Moving the shared `styleValueToCss()` helper into `style/values.ts` instead of keeping it in
+  `runtime/core/attributes.ts` improved gzip by 2 bytes but regressed brotli by 6 bytes
+  (`95,001 raw / 39,345 gzip / 34,849 brotli`), so the brotli-friendlier shape stayed.
 
 The largest package modules in the current full downloaded set are now:
 
 | Module | Bytes |
 | ------ | ----: |
-| `packages/ui/src/runtime/reconcile.ts` | 17,864 raw / 5,975 gzip / 5,418 brotli |
+| `packages/ui/src/runtime/reconcile.ts` | 17,864 raw / 5,976 gzip / 5,418 brotli |
 | `packages/ui/src/runtime/frame.ts` | 14,242 raw / 4,879 gzip / 4,402 brotli |
 | `packages/ui/src/runtime/mixins/mixin.ts` | 7,739 raw / 2,615 gzip / 2,393 brotli |
 | `packages/ui/src/runtime/diff-dom.ts` | 6,152 raw / 2,332 gzip / 2,105 brotli |
@@ -869,7 +901,7 @@ The largest package modules in the current full downloaded set are now:
 | `packages/fetch-router/src/lib/route-map.ts` | 3,033 raw / 1,187 gzip / 1,092 brotli |
 | `packages/ui/src/style/style.ts` | 2,473 raw / 1,001 gzip / 897 brotli |
 | `packages/ui/src/runtime/svg-attributes.ts` | 2,469 raw / 872 gzip / 739 brotli |
-| `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,156 gzip / 1,022 brotli |
+| `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,157 gzip / 1,021 brotli |
 | `packages/ui/src/runtime/component.ts` | 2,357 raw / 965 gzip / 848 brotli |
 
 This keeps the main opportunity map pointed at actual byte reductions:

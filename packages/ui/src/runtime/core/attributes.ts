@@ -1,4 +1,4 @@
-import { normalizeCssValue } from '../../style/values.ts'
+import { normalizeCssValue, toCssPropertyName } from '../../style/values.ts'
 import { normalizeSvgAttribute } from '../svg-attributes.ts'
 import type { ElementProps } from '../jsx.ts'
 
@@ -66,12 +66,10 @@ export function serializeStyleObject(style: Record<string, unknown>): string {
   let parts: string[] = []
 
   for (let [key, value] of Object.entries(style)) {
-    if (value == null) continue
-    if (typeof value === 'boolean') continue
-    if (typeof value === 'number' && !Number.isFinite(value)) continue
+    let cssValue = styleValueToCss(key, value)
+    if (cssValue === undefined) continue
 
-    let cssKey = toKebabCase(key)
-    let cssValue = Array.isArray(value) ? value.join(', ') : normalizeCssValue(key, value)
+    let cssKey = toCssPropertyName(key)
 
     parts.push(`${cssKey}: ${cssValue};`)
   }
@@ -79,13 +77,21 @@ export function serializeStyleObject(style: Record<string, unknown>): string {
   return parts.join(' ')
 }
 
+export function styleValueToCss(name: string, value: unknown): string | undefined {
+  if (value == null) return undefined
+  if (typeof value === 'boolean') return undefined
+  if (typeof value === 'number' && !Number.isFinite(value)) return undefined
+
+  if (Array.isArray(value)) {
+    return value.join(', ')
+  }
+
+  return normalizeCssValue(name, value)
+}
+
 export function getMergedClassName(props: ElementProps): string | undefined {
   let classAttr = typeof props.class === 'string' ? props.class : ''
   let className = typeof props.className === 'string' ? props.className : ''
   let merged = classAttr && className ? `${classAttr} ${className}` : classAttr || className
   return merged || undefined
-}
-
-export function toKebabCase(value: string): string {
-  return value.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)
 }
