@@ -12,9 +12,9 @@ export type Variant = {
 
 export function generateVariants(pattern: RoutePattern): ReadonlyArray<Variant> {
   let result: Array<Variant> = []
-  let port = pattern.port ?? ''
 
   for (let protocol of generateProtocolVariants(pattern.protocol)) {
+    let port = normalizePort(protocol, pattern.port)
     for (let hostname of generateHostnameVariants(pattern.hostname)) {
       for (let pathname of generatePathnameVariants(pattern.pathname)) {
         result.push({ protocol, hostname, port, pathname })
@@ -33,6 +33,13 @@ function generateProtocolVariants(
 ): ReadonlyArray<ProtocolVariant> {
   if (protocol === null || protocol === 'http(s)') return ['http', 'https']
   return [protocol]
+}
+
+function normalizePort(protocol: ProtocolVariant, port: string | null): string {
+  if (port === null) return ''
+  if (protocol === 'http' && port === '80') return ''
+  if (protocol === 'https' && port === '443') return ''
+  return port
 }
 
 // Hostname ----------------------------------------------------------------------------------------
