@@ -1,14 +1,12 @@
-import * as cp from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
-import * as semver from 'semver'
 import { assetServer } from '../server/asset-server.ts'
 import { createRouter, getDefaultVersions } from '../server/router.tsx'
 import { routes } from '../server/routes.ts'
-import type { Versions } from '../server/view.tsx'
 import { crawl } from './crawl.ts'
 import { parse } from './html-parser.ts'
+import { getVersionsForPicker } from './versions.ts'
 
 let { values: cliArgs } = util.parseArgs({
   options: {
@@ -34,7 +32,7 @@ const SCRIPT_FILE_EXT = /\.(?:tsx?|jsx|mts)$/
 const SCRIPT_EXT_IN_PATH = /\.(?:tsx?|jsx|mts)(?=[?#]|$)/
 const SCRIPT_EXT_IN_JS_IMPORT = /\.(?:tsx?|jsx|mts)(?=["'?#])/g
 
-const versions = await getVersionsForPicker(buildVersion)
+const versions = getVersionsForPicker(buildVersion, getDefaultVersions())
 console.log(`Prerendering ${buildVersion ? buildVersion : 'root'} docs`)
 console.log('Version picker options:\n', JSON.stringify(versions, null, 2))
 
@@ -135,30 +133,4 @@ function rewriteExtensionsToJs(html: string): string {
   }
 
   return changed ? dom.toString() : html
-}
-
-async function getVersionsForPicker(activeVersion?: string): Promise<Versions> {
-  // Get all Remix v3 tags, transform them to vX.Y.Z format, sort newest to oldest
-  let remixVersions = cp
-    .execSync('git tag', { encoding: 'utf-8' })
-    .trim()
-    .split('\n')
-    .filter((tag) => tag.startsWith('remix@3'))
-    .map((tag) => tag.replace('remix@', 'v'))
-    .filter((tag) => semver.valid(tag) && !semver.prerelease(tag))
-    .sort((a, b) => semver.rcompare(a, b))
-
-  if (activeVersion && !remixVersions.includes(activeVersion)) {
-    remixVersions.push(activeVersion)
-    remixVersions.sort((a, b) => {
-      let aValid = semver.valid(a)
-      let bValid = semver.valid(b)
-      if (aValid && bValid) return semver.rcompare(a, b)
-      if (aValid) return -1
-      if (bValid) return 1
-      return a.localeCompare(b)
-    })
-  }
-
-  return remixVersions.length > 0 ? remixVersions : getDefaultVersions()
 }
