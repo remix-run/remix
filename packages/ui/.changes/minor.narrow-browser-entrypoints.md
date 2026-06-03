@@ -57,3 +57,7 @@ Reduced a few more browser reconciler bytes by inlining host-node setup and docu
 Reduced a few more browser frame runtime bytes by trimming recursive child traversal checks, template watch setup, stream empty-string checks, and rmx-data merge initialization.
 
 Reduced a few more browser mixin runtime bytes by using anonymous mixin scopes, removing a dense-runner guard, and compacting mix descriptor resolution.
+
+Reduced browser SVG attribute runtime bytes by generating repeated namespaced attribute aliases from grouped names instead of shipping every alias literal.
+
+Reduced browser component runtime compressed bytes by reading cached render functions directly after initialization instead of carrying a local alias through the render path.

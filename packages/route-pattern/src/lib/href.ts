@@ -106,7 +106,7 @@ function hrefPart(
   let separator = part.type === 'hostname' ? '.' : '/'
   let encodeVariable = part.type === 'pathname' ? encodePathnameVariable : validateHostnameVariable
   let encodeWildcard = part.type === 'pathname' ? encodePathnameWildcard : validateHostnameWildcard
-  let missingParams: Array<string> = []
+  let missingParams: Array<string> | undefined
 
   let stack: Array<{ begin?: number; href: string }> = [{ href: '' }]
   let i = 0
@@ -140,7 +140,7 @@ function hrefPart(
           if (token.name === '*') {
             throw new CreateHrefError({ type: 'nameless-wildcard', pattern, source })
           }
-          missingParams.push(token.name)
+          ;(missingParams ??= []).push(token.name)
         }
         let frame = stack.pop()!
         i = part.optionals.get(frame.begin!)! + 1
@@ -153,7 +153,7 @@ function hrefPart(
     }
     unreachable(token.type)
   }
-  if (missingParams.length > 0) {
+  if (missingParams) {
     throw new CreateHrefError({
       type: 'missing-params',
       pattern,

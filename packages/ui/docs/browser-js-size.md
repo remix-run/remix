@@ -1,78 +1,76 @@
 # Browser JavaScript Size Notes
 
-Goal: shrink the actual JavaScript downloaded by a typical hydrated Remix app. Measure the full
-de-duped bookstore browser asset set: the main browser entry, hydrated component assets, and every
-module returned by `assetServer.getPreloads(...)`.
+Goal: shrink the actual JavaScript downloaded by a typical hydrated Remix app.
 
-Keep a change only when the full set improves in both gzip and brotli. Ignore raw-only wins,
-static-only wins, bookstore-only authoring changes, and module-splitting churn that does not shrink
-the downloaded bytes.
+Measurement target: the full de-duped bookstore browser asset set: the main browser entry, hydrated
+component assets, and every module returned by `assetServer.getPreloads(...)`.
 
-Current checkpoint: `60 modules / 93,885 raw / 39,032 gzip / 34,576 brotli`.
+Keep a change only when the full set improves in both gzip and brotli. Do not chase raw-only wins,
+static-only wins, bookstore-only authoring changes, or module-splitting churn that does not shrink
+downloaded bytes.
 
-First full checkpoint: `69 modules / 104,263 raw / 42,600 gzip`. The measured downloaded set is down
-`10,378 raw / 3,568 gzip / 9 modules` from that point. Brotli was added later, so early wins do not
+Current checkpoint: `60 modules / 92,830 raw / 38,966 gzip / 34,508 brotli`.
+
+First full checkpoint: `69 modules / 104,263 raw / 42,600 gzip`. The downloaded set is down
+`11,433 raw / 3,634 gzip / 9 modules` from that point. Brotli was added later, so early wins do not
 all have brotli deltas.
 
 ## Goals To Try Next
 
-Probe the four largest downloaded UI runtime modules first:
+Probe these downloaded package modules next. Use small in-place changes and measure the full set
+after every candidate.
 
-| Module                                    | Current size                          | What to look for                                                                                       |
-| ----------------------------------------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------ |
-| `ui/src/runtime/reconcile.ts`             | `17,255 raw / 5,863 gzip / 5,322 br`  | Duplicate host/frame adoption paths, redundant controlled-reflection branches, and cleanup paths.      |
-| `ui/src/runtime/frame.ts`                 | `14,071 raw / 4,835 gzip / 4,362 br`  | Duplicated frame-region traversal, marker/template handling, and rare frame modes on the `run()` path. |
-| `ui/src/runtime/mixins/mixin.ts`          | `7,705 raw / 2,600 gzip / 2,382 br`   | Lifecycle event dispatch, teardown/persist branches, descriptor normalization, and handle bookkeeping. |
-| `ui/src/runtime/diff-dom.ts`              | `5,892 raw / 2,222 gzip / 2,002 br`   | Marker-range handling, child matching/reorder branches, live-state preservation, and subtree cleanup.  |
+| Module                                      | Current size                         | Goal                                                                 |
+| ------------------------------------------- | ------------------------------------ | -------------------------------------------------------------------- |
+| `fetch-router/src/lib/route-map.ts`         | `3,033 raw / 1,187 gzip / 1,092 br`  | Shrink route-map serialization and path joining without broad API churn. |
+| `ui/src/style/style.ts`                     | `2,473 raw / 1,001 gzip / 897 br`    | Reduce runtime CSS object serialization without changing object-key semantics. |
+| `ui/src/runtime/vdom.ts`                    | `2,374 raw / 1,154 gzip / 1,023 br`  | Look for duplicated element/component construction paths already loaded by JSX. |
+| `ui/src/runtime/component.ts`               | `2,349 raw / 954 gzip / 836 br`      | Look for compact component task/state handling without changing lifecycle behavior. |
+| `ui/src/style/stylesheet.ts`                | `2,248 raw / 1,052 gzip / 941 br`    | Reduce stylesheet insertion/cache bookkeeping in place.              |
+| `route-pattern/src/lib/route-pattern/parse-parts.ts` | `1,997 raw / 906 gzip / 827 br` | Shrink parser helpers only if it improves the full hydrated asset set. |
 
-Secondary probes after those:
-
-- `route-pattern/src/lib/href.ts` and `fetch-router/src/lib/route-map.ts`: reduce route href and
-  route-map body size without adding public subpaths or compiler rewrites.
-- `ui/src/style/style.ts` and related already-downloaded style modules: reduce runtime CSS object
-  serialization in place.
-- `ui/src/runtime/svg-attributes.ts`: only revisit SVG/attribute normalization if the new shape
-  improves the full-set compressed bytes.
+The largest UI runtime modules (`reconcile.ts`, `frame.ts`, `mixin.ts`, `diff-dom.ts`) already had
+focused cleanup passes. Revisit them only with a concrete new candidate that has not been rejected
+below.
 
 ## Successful Improvements
 
-| Improvement                               | What changed                                                                                                      | Measured improvement                                                                                                       |
-| ----------------------------------------- | ----------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Asset import URLs                         | Emitted relative served import specifiers while keeping public href/preload URLs absolute.                         | `2,577 raw / 949 gzip / 702 brotli`                                                                                        |
-| Route href stack                          | Made browser route maps string-first/lazy and avoided downloading the full `RoutePattern` class path for hrefs.   | `1,131 raw / 767 gzip / 5 modules`                                                                                         |
-| Route href and route-map cleanup          | Reduced href encoding/validation branches, reused search-param entries, and compacted serialization helpers.      | `262 raw / 85 gzip / 81 brotli`, plus smaller follow-ups of `9 raw / 6 gzip / 9 brotli` and `53 raw / 17 gzip / 20 brotli` |
-| Reconciler deletion cleanup               | Removed recursive bulk-clear and direct-event fast paths that were larger than the normal runtime paths.          | `381 raw / 99 gzip`, then `1,567 raw / 491 gzip`                                                                            |
-| Reconciler adoption and micro-cleanups    | Shared host adoption and compacted one-use helper shapes around SVG context, client frame resolution, head adoption, persisted mixins, and controlled props. | Kept deltas include `90 raw / 27 gzip / 22 brotli`, `67 raw / 9 gzip / 22 brotli`, and `173 raw / 17 gzip / 17 brotli`     |
-| DOM diff cleanup                          | Merged removed-subtree cleanup and simplified keyed lookup, marker fast-forwarding, child placement, comments, and marker-range replacement. | `57 raw / 14 gzip / 17 brotli`, `391 raw / 123 gzip / 108 brotli`; earlier cleanup: `131 raw / 28 gzip`                    |
-| Frame runtime cleanup                     | Merged frame-region cleanup passes, rmx-data scanning, runtime factory setup, child traversal, template watching, and redundant marker/helper paths. | Kept deltas include `108 raw / 28 gzip / 23 brotli`, `153 raw / 27 gzip`, and `214 raw / 20 gzip / 24 brotli`              |
-| Mixin runtime cleanup                     | Inlined one-use helpers, shared insert/reclaimed event dispatch, compacted descriptor handling, and called the update dispatcher directly. | `18 raw / 11 gzip / 12 brotli` and `777 raw / 96 gzip / 76 brotli`                                                         |
-| Controlled reflection cleanup             | Simplified controlled form reflection state and inlined one-use value/checked detection helpers.                  | `388 raw / 93 gzip / 115 brotli`, `173 raw / 61 gzip / 73 brotli`, and `31 raw / 17 gzip / 20 brotli`                      |
-| Attribute, prop, and style helper cleanup | Moved SSR-only attribute tables out of browser helpers and shared style-value/CSS property helpers.               | `401 raw / 161 gzip / 158 brotli` and `146 raw / 63 gzip / 52 brotli`                                                      |
-| Virtual root/navigation/internal exports  | Shared root scheduling/error/disposal/frame-stub setup and removed unused internal runtime exports.               | `541 raw / 153 gzip / 103 brotli`, `242 raw / 92 gzip / 96 brotli`, and `492 raw / 99 gzip / 69 brotli`                    |
-| VNode/document-state/scheduler cleanup    | Shared safe child flattening and trimmed redundant selection/document-state/scheduler branches.                   | Known kept deltas include `146 raw / 63 gzip / 52 brotli` and `14 raw / 9 gzip / 4 brotli`                                 |
+| Area                         | What changed                                                                 | Measured improvement |
+| ---------------------------- | ---------------------------------------------------------------------------- | -------------------- |
+| Asset import URLs            | Emitted relative served import specifiers while keeping public href/preload URLs absolute. | `2,577 raw / 949 gzip / 702 brotli` |
+| Route href stack             | Made browser route maps string-first/lazy and avoided downloading the full `RoutePattern` class path for hrefs. | `1,131 raw / 767 gzip / 5 modules` |
+| Route helper cleanup         | Reduced href encoding/validation branches, reused search-param entries, lazily allocated missing-param errors, and compacted serialization helpers. | `329 raw / 109 gzip / 116 brotli` |
+| Route parser cleanup         | Removed an unreachable empty-protocol branch from parsed route-pattern protocol handling. | `20 raw / 4 gzip / 3 brotli` |
+| SVG namespaced aliases       | Generated the repeated `xlink`, `xml`, and `xmlns` alias table from grouped names instead of shipping every alias literal. | `1,031 raw / 54 gzip / 54 brotli` |
+| Component render cache       | Removed a local render-function alias so cached component render functions are read directly after initialization. | `+1 raw / 7 gzip / 5 brotli` |
+| Reconciler and DOM diff      | Removed larger deletion paths, compacted host/frame adoption, and simplified marker-range replacement. | Known kept deltas include `2,857 raw / 808 gzip / 186 brotli` |
+| Frame runtime                | Merged frame-region cleanup paths, trimmed redundant traversal guards, and simplified template/rmx-data handling. | Known kept deltas include `475 raw / 75 gzip / 47 brotli` |
+| Mixin runtime                | Inlined one-use helpers, shared insert/reclaimed event dispatch, and compacted descriptor handling. | `795 raw / 107 gzip / 88 brotli` |
+| Controlled props/state       | Simplified controlled form reflection and inlined one-use value/checked helpers. | `592 raw / 171 gzip / 208 brotli` |
+| Attribute/style helpers      | Moved SSR-only attribute tables out of browser helpers and shared style-value/CSS property helpers. | `547 raw / 224 gzip / 210 brotli` |
+| Runtime miscellany           | Shared virtual-root/navigation setup, removed unused internal exports, and trimmed vnode/document/scheduler branches. | Known kept deltas include `1,435 raw / 416 gzip / 324 brotli` |
 
 ## Rejected Experiments
 
 Do not retry these without new full-set gzip and brotli evidence.
 
-| Rejected path                             | Why it was rejected                                                                                                      |
-| ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
-| More public route helper subpaths         | Required five new public subpaths plus compiler rewrites for only `861 raw / 151 gzip / 124 brotli` in the full set.    |
-| Shared marker/helper modules              | Shrunk some individual files but grew the downloaded set; one marker helper attempt regressed by `435 raw / 179 gzip`.  |
-| Splitting source-served runtime modules   | Added requests/modules and regressed bytes; `clientEntry` splitting was `+49 raw / +93 gzip / +92 brotli`.              |
-| Static-only entry omission                | Helps static pages, but not the hydrated-app target.                                                                     |
-| Bookstore-only route prop authoring       | Reduced the fixture by hand, but was not a package/runtime improvement.                                                  |
-| SVG alias/parser/table rewrites           | Raw bytes sometimes improved, but compressed bytes regressed; one measured shape was `-783 raw / +1 gzip / +8 brotli`.  |
-| Route href/search-param branch reshapes   | Several versions improved one metric but regressed another, especially brotli or gzip.                                  |
-| Fetch-router manual path-join loops       | Grew the full set to `95,224 raw / 39,436 gzip / 34,920 brotli`.                                                        |
-| Style serialization reshapes              | `Object.entries()` reuse, ignored-prop `Set`, style-value module moves, and CSSRule tracking all regressed compression. |
-| Scheduler bookkeeping reshapes            | Indexed flushing, parent-list reuse, and mixin phase-count storage measured worse or regressed one compressed format.   |
-| Mixin `Math.max` phase counter rewrite    | Saved raw bytes, but regressed gzip/brotli versus the kept mixin shape.                                                  |
-| Mixin update-dispatch guard reorder       | Kept raw unchanged but regressed gzip/brotli versus the smaller mixin batch.                                             |
-| Frame micro-shapes                        | Context/child checks, `getAttributeNames()`, and duplicate doctype-strip removal saved local/raw bytes but regressed compression. |
-| Frame end-marker local inlining           | Saved raw/gzip in traversal loops, but regressed brotli: `93,911 raw / 39,048 gzip / 34,605 brotli`.                   |
-| Frame template queue truthiness           | Saved raw and local frame gzip/brotli, but regressed full-set brotli by 1 byte.                                        |
-| Shared client frame init helper           | Saved raw bytes in `reconcile.ts`, but regressed gzip: `93,867 raw / 39,103 gzip / 34,632 brotli`.                      |
-| Document-state regex/gating reshapes      | Selectable-input regex and render-batch selection gating were smaller in one metric but worse overall.                  |
-| Unsafe child normalization shortcut       | Saved bytes but broke non-array, null, and boolean children.                                                            |
-| Cosmetic private-name shortening          | Too much churn for tiny or mixed compressed-byte wins.                                                                   |
+| Rejected path                         | Why it was rejected |
+| ------------------------------------- | ------------------- |
+| More route subpaths/compiler rewrites | Too much public API/compiler churn for a small full-set win (`861 raw / 151 gzip / 124 brotli`). |
+| Module splitting/shared helper churn  | Often shrank one file but grew the downloaded set; source-served apps pay for the extra modules. |
+| Static-only or bookstore-only changes | Not the target; the goal is a typical hydrated app and package/runtime improvements. |
+| Route branch/manual-loop rewrites     | Several href/search-param/path-join rewrites regressed gzip or brotli in the full set. |
+| Route-map local fast paths            | Empty-search fast paths and `replaceAll` serialization changes shrank or helped one module but regressed the full asset set. |
+| VDOM frame-init local                 | Saved raw bytes but regressed gzip and brotli in the full set. |
+| Style hash bitwise rewrite            | Improved brotli but regressed raw and gzip. |
+| Component task-signal inline check     | Improved brotli but regressed gzip versus the kept component render-cache shape. |
+| Parser `.at()` to index access         | Replacing `.at(-1)` with manual indexing regressed compressed bytes in the full set. |
+| Parser escaped-character indexing      | Raw/gzip improved after the protocol cleanup, but full-set brotli regressed by 2 bytes. |
+| VDOM implicit undefined returns        | Did not shrink the served module and regressed gzip. |
+| Stylesheet truthy empty-css check      | Saved raw/gzip locally but tied full-set brotli, so it failed the keep gate. |
+| SVG/style table reshapes              | Raw or local wins repeatedly regressed compressed bytes; the kept SVG alias generator is the exception with full-set evidence. |
+| Style empty-check rewrites             | `for...in` saved bytes but changed inherited-key semantics; preserving own-key semantics gave up the win. |
+| Frame/mixin/scheduler micro-shapes    | Truthiness, guard reordering, phase counters, marker locals, and traversal rewrites mostly moved bytes around or regressed one compressed format. |
+| Shared client-frame init helper       | Saved raw bytes in `reconcile.ts` but regressed gzip (`93,867 raw / 39,103 gzip / 34,632 brotli`). |
+| Unsafe child normalization shortcut   | Saved bytes but broke non-array, null, and boolean children. |
+| Cosmetic private-name shortening      | Too much churn for tiny or mixed compressed-byte wins. |

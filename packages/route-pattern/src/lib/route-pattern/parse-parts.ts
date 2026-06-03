@@ -113,8 +113,8 @@ export function parsePart(
 function parseProtocol(source: string, span: Span | null): ParsedRoutePattern['protocol'] {
   if (!span) return null
   let protocol = source.slice(...span)
-  if (protocol === '' || protocol === 'http' || protocol === 'https' || protocol === 'http(s)') {
-    return protocol === '' ? null : protocol
+  if (protocol === 'http' || protocol === 'https' || protocol === 'http(s)') {
+    return protocol
   }
   throw new ParseError('invalid protocol', source, span[0])
 }

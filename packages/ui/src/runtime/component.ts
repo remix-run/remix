@@ -269,9 +269,7 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
     this.#abortRenderSignal()
     syncProps(this.#props, nextProps)
 
-    let renderFn = this.#renderFn
-
-    if (renderFn === undefined) {
+    if (this.#renderFn === undefined) {
       let result = this.#config.type(this.#handle)
 
       if (typeof result !== 'function') {
@@ -279,11 +277,10 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
         throw new Error(`${name} must return a render function, received ${typeof result}`)
       }
 
-      renderFn = result as RenderFn
-      this.#renderFn = renderFn
+      this.#renderFn = result as RenderFn
     }
 
-    return [renderFn(), this.#dequeueTasks()]
+    return [this.#renderFn(), this.#dequeueTasks()]
   }
 
   remove = (): Array<() => void> => {

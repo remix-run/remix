@@ -7,3 +7,7 @@ Reduced browser-served href generation bytes by reusing search-param entries dur
 Reduced browser-served href generation bytes further by compacting pathname encoding, hostname validation, and per-part param encoder selection.
 
 Reduced browser-served href generation bytes a little more by normalizing missing params once and using native search-param value checks when deduplicating pattern search constraints.
+
+Reduced browser-served href generation bytes a little more by lazily allocating missing-param error details only when params are actually missing.
+
+Reduced browser-served route parser bytes by removing an unreachable empty-protocol branch from protocol handling.

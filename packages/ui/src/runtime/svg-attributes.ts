@@ -69,41 +69,20 @@ for (let attr of CANONICAL_CAMEL_SVG_ATTRS) {
   SVG_ATTR_ALIASES.set(camelToKebab(attr), attr)
 }
 
-const NAMESPACED_SVG_ALIASES = new Map([
-  ['xlinkHref', { ns: XLINK_NS, attr: 'xlink:href' }],
-  ['xlink:href', { ns: XLINK_NS, attr: 'xlink:href' }],
-  ['xlink-href', { ns: XLINK_NS, attr: 'xlink:href' }],
-  ['xlinkActuate', { ns: XLINK_NS, attr: 'xlink:actuate' }],
-  ['xlink:actuate', { ns: XLINK_NS, attr: 'xlink:actuate' }],
-  ['xlink-actuate', { ns: XLINK_NS, attr: 'xlink:actuate' }],
-  ['xlinkArcrole', { ns: XLINK_NS, attr: 'xlink:arcrole' }],
-  ['xlink:arcrole', { ns: XLINK_NS, attr: 'xlink:arcrole' }],
-  ['xlink-arcrole', { ns: XLINK_NS, attr: 'xlink:arcrole' }],
-  ['xlinkRole', { ns: XLINK_NS, attr: 'xlink:role' }],
-  ['xlink:role', { ns: XLINK_NS, attr: 'xlink:role' }],
-  ['xlink-role', { ns: XLINK_NS, attr: 'xlink:role' }],
-  ['xlinkShow', { ns: XLINK_NS, attr: 'xlink:show' }],
-  ['xlink:show', { ns: XLINK_NS, attr: 'xlink:show' }],
-  ['xlink-show', { ns: XLINK_NS, attr: 'xlink:show' }],
-  ['xlinkTitle', { ns: XLINK_NS, attr: 'xlink:title' }],
-  ['xlink:title', { ns: XLINK_NS, attr: 'xlink:title' }],
-  ['xlink-title', { ns: XLINK_NS, attr: 'xlink:title' }],
-  ['xlinkType', { ns: XLINK_NS, attr: 'xlink:type' }],
-  ['xlink:type', { ns: XLINK_NS, attr: 'xlink:type' }],
-  ['xlink-type', { ns: XLINK_NS, attr: 'xlink:type' }],
-  ['xmlBase', { ns: XML_NS, attr: 'xml:base' }],
-  ['xml:base', { ns: XML_NS, attr: 'xml:base' }],
-  ['xml-base', { ns: XML_NS, attr: 'xml:base' }],
-  ['xmlLang', { ns: XML_NS, attr: 'xml:lang' }],
-  ['xml:lang', { ns: XML_NS, attr: 'xml:lang' }],
-  ['xml-lang', { ns: XML_NS, attr: 'xml:lang' }],
-  ['xmlSpace', { ns: XML_NS, attr: 'xml:space' }],
-  ['xml:space', { ns: XML_NS, attr: 'xml:space' }],
-  ['xml-space', { ns: XML_NS, attr: 'xml:space' }],
-  ['xmlnsXlink', { attr: 'xmlns:xlink' }],
-  ['xmlns:xlink', { attr: 'xmlns:xlink' }],
-  ['xmlns-xlink', { attr: 'xmlns:xlink' }],
-])
+const NAMESPACED_SVG_ALIASES = new Map<string, { ns?: string; attr: string }>()
+addNamespacedSvgAliases('xlink', XLINK_NS, 'href actuate arcrole role show title type')
+addNamespacedSvgAliases('xml', XML_NS, 'base lang space')
+addNamespacedSvgAliases('xmlns', undefined, 'xlink')
+
+function addNamespacedSvgAliases(prefix: string, ns: string | undefined, names: string) {
+  for (let name of names.split(' ')) {
+    let attr = `${prefix}:${name}`
+    let alias = ns ? { ns, attr } : { attr }
+    NAMESPACED_SVG_ALIASES.set(`${prefix}${name.charAt(0).toUpperCase()}${name.slice(1)}`, alias)
+    NAMESPACED_SVG_ALIASES.set(attr, alias)
+    NAMESPACED_SVG_ALIASES.set(`${prefix}-${name}`, alias)
+  }
+}
 
 function normalizeSvgAttributeName(name: string): string {
   let alias = SVG_ATTR_ALIASES.get(name)
