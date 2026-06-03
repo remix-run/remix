@@ -273,18 +273,5 @@ function getDocsRouteHref(href: string, version: string | undefined): string | u
 }
 
 function escapeHtml(value: string): string {
-  return value.replace(/[&<>"]/g, (char) => {
-    switch (char) {
-      case '&':
-        return '&amp;'
-      case '<':
-        return '&lt;'
-      case '>':
-        return '&gt;'
-      case '"':
-        return '&quot;'
-      default:
-        return char
-    }
-  })
+  return value.replace(/[&<>"]/g, (char) => `&#${char.charCodeAt(0)};`)
 }
