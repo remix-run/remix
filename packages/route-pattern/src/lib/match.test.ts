@@ -804,6 +804,22 @@ describe('Matcher', () => {
           assert.deepEqual(match?.params, { path: 'a' })
         })
 
+        it('returns null for malformed percent-encoded pathnames', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/:name', null)
+
+          assert.equal(matcher.match('https://example.com/files/%E0%A4%A'), null)
+          assert.equal(matcher.match('https://example.com/files/%'), null)
+        })
+
+        it('returns no matches for malformed percent-encoded pathnames', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/:name', null)
+          matcher.add('://example.com/files/*path', null)
+
+          assert.deepEqual(matcher.matchAll('https://example.com/files/%E0%A4%A'), [])
+        })
+
         it('does not match encoded slashes as pathname separators', () => {
           let matcher = createMultiMatcher<null>()
           matcher.add('://example.com/files/:dir/:name', null)

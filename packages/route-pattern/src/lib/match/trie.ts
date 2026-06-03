@@ -149,7 +149,8 @@ export class Trie<data = unknown> {
     }
 
     let results: Array<Match<string, data>> = []
-    let urlSegments = url.pathname.slice(1).split('/').map(normalizePathnameText)
+    let urlSegments = normalizePathname(url.pathname)
+    if (urlSegments === null) return results
 
     for (let origin of origins) {
       let stack: Array<{
@@ -276,12 +277,34 @@ export class Trie<data = unknown> {
 // Pathname matching uses canonical percent-encoded text. URL pathnames are split on structural
 // "/" before normalization so encoded slashes like "%2F" remain data within a segment instead of
 // becoming separators. Pattern static text is encoded the same way when variants are generated.
-function normalizePathnameText(text: string): string {
-  return encodeURIComponent(fastDecodeURIComponent(text))
+function normalizePathname(pathname: string): string[] | null {
+  let segments: string[] = []
+
+  for (let segment of pathname.slice(1).split('/')) {
+    let normalized = normalizePathnameText(segment)
+    if (normalized === null) return null
+    segments.push(normalized)
+  }
+
+  return segments
+}
+
+function normalizePathnameText(text: string): string | null {
+  let decoded = safeDecodeURIComponent(text)
+  return decoded === null ? null : encodeURIComponent(decoded)
 }
 
 function fastDecodeURIComponent(text: string): string {
   return text.includes('%') ? decodeURIComponent(text) : text
+}
+
+function safeDecodeURIComponent(text: string): string | null {
+  try {
+    return fastDecodeURIComponent(text)
+  } catch (error) {
+    if (error instanceof URIError) return null
+    throw error
+  }
 }
 
 // Search ------------------------------------------------------------------------------------------
