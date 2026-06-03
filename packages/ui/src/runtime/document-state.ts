@@ -15,7 +15,7 @@ export function createDocumentState(_doc?: Document) {
   let doc = _doc ?? document
 
   function getActiveElement(): Element | null {
-    return doc.activeElement || doc.body
+    return doc.activeElement
   }
 
   function hasSelectionCapabilities(elem: Element): boolean {
@@ -96,7 +96,7 @@ export function createDocumentState(_doc?: Document) {
       }
 
       // Restore selection if applicable
-      if (priorSelectionRange !== null && hasSelectionCapabilities(priorFocusedElem)) {
+      if (priorSelectionRange !== null) {
         setSelection(priorFocusedElem, priorSelectionRange)
       }
 

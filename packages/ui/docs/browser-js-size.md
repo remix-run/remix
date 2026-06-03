@@ -41,15 +41,15 @@ If an experiment saves raw bytes but regresses gzip or brotli, revert it and log
 
 ## Current checkpoint
 
-Current checkpoint, after the host adoption cleanup:
+Current checkpoint, after the document-state cleanup:
 
 | Browser asset set | Modules | Bytes |
 | ----------------- | ------: | ----: |
-| all bookstore browser assets | 60 | 94,754 raw / 39,310 gzip / 34,811 brotli |
+| all bookstore browser assets | 60 | 94,740 raw / 39,301 gzip / 34,807 brotli |
 
 The latest delta is small but valid:
-`173 raw / 17 gzip / 17 brotli`, from consolidating already-downloaded reconciler host adoption
-paths. It is not a new graph split.
+`14 raw / 9 gzip / 4 brotli`, from trimming redundant selection-restore checks in the
+already-downloaded document-state helper. It is not a new graph split.
 
 The largest remaining downloaded modules are:
 
@@ -101,7 +101,9 @@ These ideas have already been measured as low-value, regressive, or outside this
 - ignored-prop `Set` rewrites;
 - frame context/child-existence micro-cleanups;
 - frame `syncElementAttributes()` `getAttributeNames()` rewrites;
+- document-state selectable-input regex rewrite;
 - mixin scheduler phase-count storage and scheduler indexed flush loops;
+- scheduler selection-capture gating on scheduled component batches;
 - cosmetic private-name shortening as a primary strategy.
 
 Before starting another experiment, search this document for the same shape and only repeat it if
@@ -954,6 +956,26 @@ Measured on top of the reconciler micro-cleanup:
 `runtime/reconcile.ts` moved from `17,796 raw / 5,970 gzip / 5,419 brotli` to
 `17,623 raw / 5,951 gzip / 5,397 brotli`.
 
+## UI document-state cleanup
+
+The next kept cleanup removes two redundant checks from the always-downloaded selection preservation
+helper used by the scheduler:
+
+- `getActiveElement()` now returns `document.activeElement` directly instead of falling back to
+  `document.body`; the restore path already handles a missing focused element.
+- `restoreSelection()` no longer re-runs the selectable-element predicate before setting a captured
+  selection range; ranges are only captured for selectable elements, and `setSelection()` still
+  guards the actual DOM property writes.
+
+Measured on top of the host adoption cleanup:
+
+| Browser asset set | Before | After | Savings |
+| ----------------- | -----: | ----: | ------: |
+| all bookstore browser assets | 94,754 raw / 39,310 gzip / 34,811 brotli / 60 modules | 94,740 raw / 39,301 gzip / 34,807 brotli / 60 modules | 14 raw / 9 gzip / 4 brotli |
+
+`runtime/document-state.ts` moved from `1,278 raw / 610 gzip / 521 brotli` at the previous hot-module
+checkpoint to `1,264 raw / 601 gzip / 517 brotli`.
+
 ## Tried and rejected: additional route/style/SVG micro-shapes
 
 Several adjacent micro-experiments failed the full compressed-set gate and should stay reverted
@@ -987,6 +1009,12 @@ unless new evidence changes the shape:
   `94,788 raw / 39,313 gzip / 34,819 brotli` to
   `94,780 raw / 39,313 gzip / 34,823 brotli`; brotli regressed, so the attribute-object snapshot
   stayed.
+- Rewriting document-state selectable input-type checks to a regular expression saved raw and brotli
+  but regressed gzip versus the kept document-state cleanup (`94,700 raw / 39,307 gzip /
+  34,805 brotli`), so the explicit comparisons stayed.
+- Capturing/restoring document selection only when a scheduler flush had a component render batch
+  made task-only flush semantics less direct and moved the full set to
+  `94,750 raw / 39,305 gzip / 34,808 brotli`, worse than the kept document-state cleanup.
 
 The largest package modules in the current full downloaded set are now:
 

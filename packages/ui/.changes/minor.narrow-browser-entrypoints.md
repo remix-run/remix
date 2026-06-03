@@ -37,3 +37,5 @@ Reduced a few more browser component and DOM diff bytes by compacting component 
 Reduced a few more browser reconciler bytes by compacting SVG context, persisted mixin node, and controlled prop helper paths.
 
 Reduced a few more browser reconciler bytes by sharing host-element adoption across hydration matches, hydration retry matches, and newly-created host elements.
+
+Reduced a few more browser scheduler bytes by trimming redundant document selection preservation checks.
