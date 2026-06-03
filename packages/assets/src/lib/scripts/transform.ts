@@ -587,16 +587,14 @@ function narrowPackageImports(
     let config = importNarrowingConfigs.find((nextConfig) => nextConfig.specifier === source.value)
     if (!config || node.specifiers.length === 0) continue
     if (externalSet.has(config.specifier)) continue
+    if (node.specifiers.some((specifier) => specifier.type !== 'ImportSpecifier')) continue
 
     let narrowedSpecifiers = new Map<string, string[]>()
     let remainingSpecifiers: string[] = []
     let changed = false
 
     for (let specifier of node.specifiers) {
-      if (specifier.type !== 'ImportSpecifier') {
-        remainingSpecifiers.push(rawCode.slice(specifier.start, specifier.end))
-        continue
-      }
+      if (specifier.type !== 'ImportSpecifier') continue
 
       let imported = getImportSpecifierName(specifier.imported)
       let narrowedExport = imported ? config.exportByName.get(imported) : undefined

@@ -9,8 +9,7 @@ Only the components you mark are hydrated. The rest of the page stays as static 
 Use `clientEntry` to mark a component for hydration. The first argument is the module URL and export name the client will use to load the component:
 
 ```tsx
-import { clientEntry, type Handle } from 'remix/ui/client-entry'
-import { on } from 'remix/ui/on'
+import { clientEntry, on, type Handle } from 'remix/ui'
 
 export let Counter = clientEntry(
   '/assets/counter.js#Counter',
@@ -47,7 +46,7 @@ On the server, `clientEntry` components render like any other component. The ser
 Use `run` to start the client. It scans the document for client entry markers, loads the corresponding modules, and hydrates each one:
 
 ```tsx
-import { run } from 'remix/ui/run'
+import { run } from 'remix/ui'
 
 let app = run({
   async loadModule(moduleUrl, exportName) {
@@ -105,13 +104,6 @@ This means:
 - The page is fully rendered and interactive as soon as modules load. No blank flash.
 - Only marked components ship JavaScript. Static content stays static.
 - Client entries can appear anywhere in the tree, including inside frames.
-
-## Keeping browser code small
-
-Browser entry modules should import narrow Remix UI subpaths such as `remix/ui/client-entry`,
-`remix/ui/on`, `remix/ui/css`, and `remix/ui/run`. Use the full `remix/ui` entry when a module needs
-the broader component API, but avoid it in small browser-only entrypoints so source-served assets do
-not preload unrelated UI modules.
 
 ## See Also
 

@@ -2561,6 +2561,37 @@ describe('asset-server', () => {
     assert.match(body, /from ["'][^"']*\/ui-css\.js/)
   })
 
+  it('leaves Remix UI default imports unchanged when narrowing named imports', async () => {
+    await writeJson(dir, 'app/node_modules/remix/package.json', {
+      name: 'remix',
+      type: 'module',
+      exports: {
+        './ui': './ui.js',
+        './ui/css': './ui-css.js',
+      },
+    })
+    await write(
+      dir,
+      'app/node_modules/remix/ui.js',
+      'export default "wide"; export const css = true',
+    )
+    await write(dir, 'app/node_modules/remix/ui-css.js', 'export const css = true')
+    await write(
+      dir,
+      'app/entry.ts',
+      'import RemixUI, { css } from "remix/ui"\nexport const values = [RemixUI, css]',
+    )
+
+    let assetServer = createTestServer(dir)
+    let response = await getByFile(assetServer, 'app/entry.ts')
+    assert.ok(response)
+    let body = await response.text()
+
+    assert.match(body, /RemixUI/)
+    assert.match(body, /from ["'][^"']*\/ui\.js/)
+    assert.doesNotMatch(body, /from ["'][^"']*\/ui-css\.js/)
+  })
+
   it('leaves data and http(s) URL imports unchanged', async () => {
     await write(
       dir,
