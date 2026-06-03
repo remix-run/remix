@@ -45,12 +45,16 @@ const docsRouter = createRouter(versions)
 await fs.cp(publicDir, outputDir, { recursive: true })
 
 // Spider the site
-const paths = [
-  routes.home.href({ version: buildVersion }),
-  routes.lookup.href({ version: buildVersion }),
-]
+const homePath = routes.home.href({ version: buildVersion })
+const paths = [homePath, routes.lookup.href({ version: buildVersion })]
 
-for await (let { pathname, filepath, response } of crawl(docsRouter, { paths })) {
+for await (let { pathname, filepath, response } of crawl(docsRouter, {
+  paths,
+  // Versioned pages stay noindex,nofollow for public crawlers, but the
+  // prerender spider needs the versioned home page's sidebar links to seed
+  // the static docs graph.
+  ignorePageNofollow: buildVersion ? (pathname) => pathname === homePath : undefined,
+})) {
   await writeResult(pathname, filepath, response)
 }
 

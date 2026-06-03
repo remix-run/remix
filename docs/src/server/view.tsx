@@ -108,8 +108,8 @@ function Head(
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
         {activeVersion != null ? (
           <>
-            <meta name="robots" content={shouldNofollow ? 'noindex,nofollow' : 'noindex'} />
-            <meta name="googlebot" content={shouldNofollow ? 'noindex,nofollow' : 'noindex'} />
+            <meta name="robots" content="noindex,nofollow" />
+            <meta name="googlebot" content="noindex,nofollow" />
           </>
         ) : shouldNofollow ? (
           // Overview pages (package READMEs) link densely to every API page
