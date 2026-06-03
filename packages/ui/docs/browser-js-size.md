@@ -1,85 +1,109 @@
 # Browser JavaScript Size Findings
 
-## Current focus
+## Investigation goal
 
-Keep reducing the actual compressed JavaScript bytes downloaded by typical hydrated Remix apps.
-This is not an entry-splitting exercise. The next useful changes should make already-downloaded
-module bodies smaller or remove code that should not be downloaded by those pages in the first
-place.
+Reduce the actual compressed JavaScript bytes downloaded by a typical hydrated Remix app.
 
-Primary target:
+The primary measurement is the full de-duped bookstore browser asset set: the main browser entry,
+the hydrated component assets, and every module returned by `assetServer.getPreloads(...)` under
+production asset-server settings. Per-entry graph size is only a diagnostic; it does not count as a
+win when the same bytes are still downloaded elsewhere on the page.
 
-- the full de-duped bookstore hydrated browser asset set;
-- gzip and brotli bytes first;
-- raw bytes only as a diagnostic for finding bloated code;
-- low public/API churn unless the compressed-byte win is large enough to justify it.
+Optimize for:
 
-## Decision rule
+- smaller downloaded module bodies;
+- code no longer downloaded by normal hydrated pages;
+- gzip and brotli first;
+- raw bytes only as a clue for finding bloated code;
+- low public/API/compiler churn unless the compressed-byte win is large enough to justify it.
 
-Per-entry graph wins are useful diagnostics, but they are not enough if the same bytes still arrive
-through another asset on the same page.
+Do not optimize for:
 
-A change is worth keeping when it reduces the full de-duped bookstore browser asset set in gzip and
-brotli, keeps public/API churn low, and is not just another version of a rejected split below. Raw
-bytes are useful for finding bloated code paths, but raw-only wins should be reverted when compressed
-downloads regress.
-
-Non-goals:
-
-- optimizing static-only pages;
-- changing bookstore app authoring policy just to improve this fixture;
-- splitting code into more public subpaths or helper modules when the de-duped page-level bytes do
-  not improve meaningfully;
-- landing raw-only rewrites that regress gzip or brotli;
-- relying on compiler-only transformations unless they fit Remix's source-served asset philosophy.
-
-## Measurement rules
-
-Primary measurement is the de-duped module set fetched by the bookstore demo's hydrated browser
-assets: the browser entry plus hydrated component assets and every URL returned by
-`assetServer.getPreloads(...)`, using production asset-server settings.
-
-Before keeping an experiment, answer these questions:
-
-- Which downloaded module body actually gets smaller?
-- Does the full de-duped bookstore set improve in gzip and brotli?
-- Is the change still valuable after shared modules are counted only once?
-- Does it avoid new public API surface or compiler behavior unless the compressed-byte win justifies
-  that cost?
-- Is this materially different from a path already tried and rejected below?
-
-## Do not revisit without new evidence
-
-These paths have either been measured as low-value or are outside the current goal:
-
-- more fine-grained route helper subpaths;
-- narrow helper/shim splits that add public exports but only move bytes around;
-- static-route entry omission;
-- passing concrete route strings into component props for bookstore-only savings;
+- static-only pages;
+- bookstore-only authoring changes;
+- new helper subpaths or module splits that only move bytes between assets;
 - raw-only rewrites that regress gzip or brotli;
-- cosmetic private-name shortening as a primary strategy;
-- splitting `clientEntry` into another source-served runtime module unless there is a no-extra-module
-  design with a measured full-set compressed win.
+- compiler-only transformations unless they fit Remix's source-served asset model and reduce the
+  compressed downloaded set.
+
+## Keep or revert rule
+
+A change is worth keeping only when it passes all of these checks:
+
+- the full de-duped bookstore browser set improves in both gzip and brotli;
+- the improvement survives counting shared modules once;
+- the win comes from smaller downloaded code or code no longer downloaded;
+- the change avoids new public API surface, compiler behavior, or app policy changes unless the
+  compressed-byte win clearly pays for that cost;
+- the idea is materially different from the rejected experiments below.
+
+If an experiment saves raw bytes but regresses gzip or brotli, revert it and log the result.
 
 ## Current checkpoint
 
-The previous committed checkpoint before the latest reconciler cleanup was
-`94,995 raw / 39,334 gzip / 34,832 brotli / 60 modules` for all bookstore browser assets.
+Current committed checkpoint, after `5e088c78b Reduce reconciler browser bytes`:
 
-The current committed checkpoint is
-`94,927 raw / 39,327 gzip / 34,828 brotli / 60 modules`. That latest `68 raw / 7 gzip /
-4 brotli` improvement comes from small reductions in the already-downloaded reconciler, not from a
+| Browser asset set | Modules | Bytes |
+| ----------------- | ------: | ----: |
+| all bookstore browser assets | 60 | 94,927 raw / 39,327 gzip / 34,828 brotli |
+
+The latest committed delta was small but valid:
+`68 raw / 7 gzip / 4 brotli`, from reducing the already-downloaded reconciler body. It was not a
 new graph split.
 
-The largest remaining downloaded modules are still:
+The largest remaining downloaded modules are:
 
-- `packages/ui/src/runtime/reconcile.ts`;
-- `packages/ui/src/runtime/frame.ts`;
-- `packages/ui/src/runtime/mixins/mixin.ts`;
-- `packages/ui/src/runtime/diff-dom.ts`;
-- route-map and href generation;
-- runtime CSS serialization;
-- SVG and DOM attribute normalization.
+| Module | Bytes |
+| ------ | ----: |
+| `packages/ui/src/runtime/reconcile.ts` | 17,796 raw / 5,970 gzip / 5,419 brotli |
+| `packages/ui/src/runtime/frame.ts` | 14,242 raw / 4,878 gzip / 4,403 brotli |
+| `packages/ui/src/runtime/mixins/mixin.ts` | 7,739 raw / 2,615 gzip / 2,393 brotli |
+| `packages/ui/src/runtime/diff-dom.ts` | 6,155 raw / 2,329 gzip / 2,099 brotli |
+| `packages/route-pattern/src/lib/href.ts` | 3,134 raw / 1,237 gzip / 1,102 brotli |
+| `packages/fetch-router/src/lib/route-map.ts` | 3,033 raw / 1,187 gzip / 1,092 brotli |
+| `packages/ui/src/style/style.ts` | 2,473 raw / 1,001 gzip / 897 brotli |
+| `packages/ui/src/runtime/svg-attributes.ts` | 2,469 raw / 872 gzip / 739 brotli |
+| `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,155 gzip / 1,021 brotli |
+| `packages/ui/src/runtime/component.ts` | 2,348 raw / 961 gzip / 844 brotli |
+
+## Next targets
+
+Keep looking for actual body-size reductions in this order:
+
+- **UI runtime behavior breadth**: delete duplicate or obsolete paths in `reconcile.ts`, `frame.ts`,
+  `mixin.ts`, and `diff-dom.ts`. This has produced the best actual downloaded-byte wins so far.
+- **Frame runtime boundary**: `run()` still brings document reload diffing, streamed frame template
+  parsing, nested frame lifecycle, hydration, module loading, and navigation together. A larger win
+  needs a cohesive smaller runtime boundary, not another helper split.
+- **Route map/href code shape**: route-map browser usage still downloads href generation, pattern
+  joining, and `Route.pattern` support. Further wins need less algorithm/error-path code or a real
+  route API boundary.
+- **Runtime CSS object serialization**: `css()` users still download style object serialization and
+  stylesheet management. Micro rewrites must improve gzip and brotli, not just raw bytes.
+- **SVG/attribute normalization**: SVG alias handling is still visible in the browser prop patcher,
+  but the smaller parser/table experiments regressed compressed bytes.
+
+## Do not retry without new evidence
+
+These ideas have already been measured as low-value, regressive, or outside this goal:
+
+- more fine-grained route helper subpaths or narrow public helper/shim splits;
+- static-route entry omission;
+- passing concrete route strings into component props for bookstore-only savings;
+- splitting `clientEntry` into another source-served runtime module;
+- shared marker helpers;
+- parsed href helper subpaths;
+- raw-only SVG alias parser/table rewrites or SVG ternary micro-shapes;
+- route-map manual loop rewrites and private `Route` field shortening;
+- style rule factoring, style hash/entries reuse, stylesheet `CSSRule` object tracking, and moving
+  `styleValueToCss()` into another module;
+- ignored-prop `Set` rewrites;
+- frame context/child-existence micro-cleanups;
+- mixin scheduler phase-count storage and scheduler indexed flush loops;
+- cosmetic private-name shortening as a primary strategy.
+
+Before starting another experiment, search this document for the same shape and only repeat it if
+there is new evidence that changes the full-set gzip and brotli outcome.
 
 ## Measurement fixture
 
