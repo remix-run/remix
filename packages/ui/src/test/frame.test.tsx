@@ -3092,6 +3092,67 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('adopts a Fragment-nested Frame hydration marker at a clientEntry boundary', async () => {
+    // Regression test for #11501: a <Frame> that is the first child of a bare
+    // Fragment returned by a clientEntry must adopt its server-rendered hydration
+    // marker rather than taking the fresh-insert path (which re-fetches src on the
+    // client and duplicates the streamed subtree). A host-element wrapper already
+    // works (see the test above); this covers the bare-Fragment-first-child case,
+    // where the clientEntry boundary's comment-skip would otherwise swallow the
+    // frame-start marker.
+    let FragmentFrame = clientEntry(
+      '/js/fragment-frame.js#FragmentFrame',
+      function FragmentFrame() {
+        return () => (
+          <>
+            <Frame name="frag" src="/frag" fallback={<p id="frag-fallback">Loading frag…</p>} />
+            <span id="frag-sibling">sibling</span>
+          </>
+        )
+      },
+    )
+
+    // Leave the frame pending on the server so the first chunk carries the frame's
+    // fallback and its rmx:f start/end markers.
+    let [framePromise] = withResolvers<string>()
+    let pageStream = renderToStream(<FragmentFrame />, {
+      resolveFrame(src: string) {
+        if (src === '/frag') return framePromise
+        throw new Error(`Unexpected src during page render: ${src}`)
+      },
+    })
+    let pageChunks = readChunks(pageStream)
+    let first = await pageChunks.next()
+    invariant(!first.done)
+    document.body.innerHTML = first.value
+
+    expect(document.querySelectorAll('#frag-fallback')).toHaveLength(1)
+    expect(document.querySelectorAll('#frag-sibling')).toHaveLength(1)
+
+    let clientResolveFrame = mock.fn(async (src: string) => `<p data-client="${src}">client</p>`)
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/fragment-frame.js' && exportName === 'FragmentFrame') {
+          return FragmentFrame
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame: clientResolveFrame,
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Marker adopted: no client re-fetch, fallback not duplicated, sibling intact.
+    expect(clientResolveFrame).not.toHaveBeenCalled()
+    expect(document.querySelectorAll('#frag-fallback')).toHaveLength(1)
+    expect(document.querySelectorAll('#frag-sibling')).toHaveLength(1)
+    expect(document.querySelectorAll('[data-client]')).toHaveLength(0)
+
+    app.dispose()
+  })
+
   it('renders Frame semantics from entry children during initial hydration', async () => {
     let Card = clientEntry('/js/card.js#Card', function Card(handle: Handle<{ children?: any }>) {
       return () => <section>{handle.props.children}</section>
