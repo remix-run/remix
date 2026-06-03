@@ -3013,6 +3013,72 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('forwards the frame name as the resolve target when mounting a named Frame on the client', async () => {
+    // Regression test for #11500: the client fresh-insert path (resolveClientFrame)
+    // must forward the frame's name as the third `target` argument, like the reload
+    // path (frame.ts) and the server path (server/stream.ts) already do.
+    let mounted = false
+    let showFrame: undefined | (() => void)
+
+    let NamedFrameMount = clientEntry(
+      '/js/named-frame-mount.js#NamedFrameMount',
+      function NamedFrameMount(handle: Handle) {
+        showFrame = () => {
+          mounted = true
+          handle.update()
+        }
+
+        return () => (
+          <section>
+            {mounted ? (
+              <Frame
+                name="probe"
+                src="/named-frame"
+                fallback={<p id="named-frame-fallback">Loading…</p>}
+              />
+            ) : (
+              <p id="before-named-frame">Before frame</p>
+            )}
+          </section>
+        )
+      },
+    )
+
+    let pageHtml = await drain(renderToStream(<NamedFrameMount />))
+    document.body.innerHTML = pageHtml
+
+    let resolveTargets: Array<string | undefined> = []
+    let resolveFrame = mock.fn(async (_src: string, _signal?: AbortSignal, target?: string) => {
+      resolveTargets.push(target)
+      return '<p id="named-frame-loaded">Loaded</p>'
+    })
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/js/named-frame-mount.js' && exportName === 'NamedFrameMount') {
+          return NamedFrameMount
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame,
+    })
+
+    await app.ready()
+    expect(resolveFrame).not.toHaveBeenCalled()
+
+    invariant(showFrame)
+    showFrame()
+    app.flush()
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('named-frame-loaded')?.textContent).toBe('Loaded')
+    expect(resolveFrame).toHaveBeenCalledTimes(1)
+    // The fresh-insert path resolves the named frame with its name as `target`.
+    expect(resolveTargets).toEqual(['probe'])
+    app.dispose()
+  })
+
   it('does not duplicate initially-mounted Frame hydration in a client entry', async () => {
     let MountedFrame = clientEntry('/js/mounted-frame.js#MountedFrame', function MountedFrame() {
       let showFrame = true
@@ -4187,6 +4253,128 @@ describe('run', () => {
     )
     expect(document.getElementById('nested-src-child-input')).toBeNull()
     expect(document.getElementById('nested-src-parent-sibling')?.textContent).toBe('Parent sibling')
+
+    app.dispose()
+  })
+
+  it('re-resolves a nested clientEntry frame with its target on a non-root ancestor reload', async () => {
+    // Regression test for #11502: a <Frame> wrapped in a clientEntry and nested
+    // inside a parent (non-root ancestor) frame re-resolves on the *client* when
+    // the parent reloads and the clientEntry remounts it (key change). That client
+    // re-resolve must carry the frame's name as its `target` (the same
+    // resolveClientFrame path as #11500) instead of resolving target-less.
+    let reloadParent: undefined | (() => Promise<AbortSignal>)
+    let issue = 'a'
+    let islandClientTargets: Array<string | undefined> = []
+
+    let CommentsIsland = clientEntry(
+      '/assets/comments-island.js#CommentsIsland',
+      function CommentsIsland(handle: Handle<{ issue: string }>) {
+        return () => (
+          <div className="comments-island">
+            <Frame
+              name="island"
+              key={handle.props.issue}
+              src={`/comments?issue=${handle.props.issue}`}
+              fallback={<span id="island-fallback">Loading island…</span>}
+            />
+          </div>
+        )
+      },
+    )
+
+    let IslandParent = clientEntry(
+      '/assets/island-parent.js#IslandParent',
+      function IslandParent(handle: Handle) {
+        reloadParent = async () => {
+          issue = 'b'
+          return await handle.frame.reload()
+        }
+        return () => <button id="reload-island-parent">Reload detail</button>
+      },
+    )
+
+    function renderParentFrame() {
+      return renderToStream(
+        <>
+          <section id="island-shell">
+            <CommentsIsland issue={issue} />
+          </section>
+          <IslandParent />
+        </>,
+        {
+          // Server resolves the island in-stream with its target.
+          resolveFrame(src: string) {
+            if (src.startsWith('/comments')) {
+              return `<p id="island-content" data-server-issue="${issue}">island ${issue}</p>`
+            }
+            throw new Error(`Unexpected frame src during parent render: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>
+                <Frame name="detail" src="/detail" />
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/detail') return renderParentFrame()
+              throw new Error(`Unexpected frame src: ${src}`)
+            },
+          },
+        ),
+      ),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/comments-island.js' && exportName === 'CommentsIsland') {
+          return CommentsIsland
+        }
+        if (moduleUrl === '/assets/island-parent.js' && exportName === 'IslandParent') {
+          return IslandParent
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string, _signal?: AbortSignal, target?: string) {
+        if (src === '/detail') return renderParentFrame()
+        if (src.startsWith('/comments')) {
+          // The client re-resolve of the nested clientEntry frame on ancestor reload.
+          islandClientTargets.push(target)
+          return `<p id="island-content" data-client-issue="${issue}">island ${issue} (client)</p>`
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // Initial load: the island was server-resolved and adopted (no client re-resolve).
+    expect(islandClientTargets).toEqual([])
+    expect(document.getElementById('island-content')?.getAttribute('data-server-issue')).toBe('a')
+
+    invariant(reloadParent)
+    let reloadPromise = reloadParent()
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    // The ancestor reload remounts the clientEntry's keyed frame, which re-resolves
+    // on the client exactly once. That re-resolve must carry the frame's name as its
+    // target; pinning the count also guards against a silent marker-adoption regression.
+    expect(islandClientTargets).toEqual(['island'])
 
     app.dispose()
   })
