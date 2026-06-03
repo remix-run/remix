@@ -63,13 +63,13 @@ These paths have either been measured as low-value or are outside the current go
 
 ## Current checkpoint
 
-The previous committed checkpoint before the latest prop/style helper cleanup was
-`95,147 raw / 39,410 gzip / 34,895 brotli / 60 modules` for all bookstore browser assets.
+The previous committed checkpoint before the latest component/diff runtime cleanup was
+`95,001 raw / 39,347 gzip / 34,843 brotli / 60 modules` for all bookstore browser assets.
 
 The current committed checkpoint is
-`95,001 raw / 39,347 gzip / 34,843 brotli / 60 modules`. That latest `146 raw / 63 gzip /
-52 brotli` improvement comes from reducing duplicated prop/style helper code in already-downloaded
-browser runtime modules, not from a new graph split.
+`94,995 raw / 39,334 gzip / 34,832 brotli / 60 modules`. That latest `6 raw / 13 gzip /
+11 brotli` improvement comes from reducing component task queue and DOM diff lookup bytes in
+already-downloaded browser runtime modules, not from a new graph split.
 
 The largest remaining downloaded modules are still:
 
@@ -868,6 +868,26 @@ Measured on top of the route href and reconciler follow-up:
 `1,372 raw / 737 gzip / 625 brotli` to `1,388 raw / 742 gzip / 630 brotli`, but the full
 downloaded set still improves because the larger duplicate helper was removed from `props.ts`.
 
+## UI component and DOM diff micro-cleanup
+
+The next kept runtime cleanup is intentionally small and keeps the module graph unchanged:
+
+- `ComponentRuntime` now swaps out its owned task array when draining tasks instead of splicing the
+  entire array in place.
+- `diffElementChildren()` uses one `Map.get()` result for keyed child lookup instead of a
+  `has()`/`get()` pair.
+
+Measured on top of the prop/style helper cleanup:
+
+| Browser asset set | Before | After | Savings |
+| ----------------- | -----: | ----: | ------: |
+| all bookstore browser assets | 95,001 raw / 39,347 gzip / 34,843 brotli / 60 modules | 94,995 raw / 39,334 gzip / 34,832 brotli / 60 modules | 6 raw / 13 gzip / 11 brotli |
+
+`runtime/component.ts` moved from `2,357 raw / 965 gzip / 848 brotli` to
+`2,348 raw / 961 gzip / 844 brotli`. `runtime/diff-dom.ts` grew from `6,152 raw / 2,332 gzip /
+2,105 brotli` to `6,155 raw / 2,329 gzip / 2,099 brotli`, but the full compressed set still
+improves.
+
 ## Tried and rejected: additional route/style/SVG micro-shapes
 
 Several adjacent micro-experiments failed the full compressed-set gate and should stay reverted
@@ -888,21 +908,26 @@ unless new evidence changes the shape:
 - Moving the shared `styleValueToCss()` helper into `style/values.ts` instead of keeping it in
   `runtime/core/attributes.ts` improved gzip by 2 bytes but regressed brotli by 6 bytes
   (`95,001 raw / 39,345 gzip / 34,849 brotli`), so the brotli-friendlier shape stayed.
+- Tracking inserted stylesheet `CSSRule` objects and searching for the rule on removal passed
+  behavior tests, but moved the full set to `95,028 raw / 39,344 gzip / 34,849 brotli`; brotli
+  regressed, so the indexed rule map stayed.
+- Rewriting scheduler task flushing from `shift()` to an indexed loop grew the full set to
+  `95,011 raw / 39,353 gzip / 34,849 brotli`, so the existing queue-draining shape stayed.
 
 The largest package modules in the current full downloaded set are now:
 
 | Module | Bytes |
 | ------ | ----: |
-| `packages/ui/src/runtime/reconcile.ts` | 17,864 raw / 5,976 gzip / 5,418 brotli |
-| `packages/ui/src/runtime/frame.ts` | 14,242 raw / 4,879 gzip / 4,402 brotli |
+| `packages/ui/src/runtime/reconcile.ts` | 17,864 raw / 5,976 gzip / 5,416 brotli |
+| `packages/ui/src/runtime/frame.ts` | 14,242 raw / 4,878 gzip / 4,403 brotli |
 | `packages/ui/src/runtime/mixins/mixin.ts` | 7,739 raw / 2,615 gzip / 2,393 brotli |
-| `packages/ui/src/runtime/diff-dom.ts` | 6,152 raw / 2,332 gzip / 2,105 brotli |
+| `packages/ui/src/runtime/diff-dom.ts` | 6,155 raw / 2,329 gzip / 2,099 brotli |
 | `packages/route-pattern/src/lib/href.ts` | 3,134 raw / 1,237 gzip / 1,102 brotli |
 | `packages/fetch-router/src/lib/route-map.ts` | 3,033 raw / 1,187 gzip / 1,092 brotli |
 | `packages/ui/src/style/style.ts` | 2,473 raw / 1,001 gzip / 897 brotli |
 | `packages/ui/src/runtime/svg-attributes.ts` | 2,469 raw / 872 gzip / 739 brotli |
-| `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,157 gzip / 1,021 brotli |
-| `packages/ui/src/runtime/component.ts` | 2,357 raw / 965 gzip / 848 brotli |
+| `packages/ui/src/runtime/vdom.ts` | 2,374 raw / 1,155 gzip / 1,021 brotli |
+| `packages/ui/src/runtime/component.ts` | 2,348 raw / 961 gzip / 844 brotli |
 
 This keeps the main opportunity map pointed at actual byte reductions:
 

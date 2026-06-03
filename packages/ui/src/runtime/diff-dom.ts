@@ -301,9 +301,9 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
       }
     } else if (isElement(nextChild)) {
       let key = nextChild.getAttribute('data-key')
-      if (key != null && keyToIndex.has(key)) {
-        let idx = keyToIndex.get(key)!
-        if (!used[idx]) matchIndex = idx
+      if (key != null) {
+        let idx = keyToIndex.get(key)
+        if (idx !== undefined && !used[idx]) matchIndex = idx
       }
     }
 

@@ -354,14 +354,15 @@ class ComponentRuntime<C = NoContext> implements ComponentHandle<C> {
   }
 
   #dequeueTasks(signal?: AbortSignal): Array<() => void> {
-    let needsSignal = signal === undefined && this.#tasks.some((task) => task.length >= 1)
+    let needsSignal = signal === undefined && this.#tasks.some((task) => task.length)
 
     if (needsSignal) {
       this.#renderController ??= new AbortController()
     }
 
     signal ??= this.#renderController?.signal
-    let tasks = this.#tasks.splice(0, this.#tasks.length)
+    let tasks = this.#tasks
+    this.#tasks = []
     return tasks.map((task) => () => task(signal!))
   }
 }
