@@ -5,7 +5,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { codeToHtml } from 'shiki'
 import { IGNORE_SYMBOLS, MDN_SYMBOLS } from '../generate/symbols.ts'
-import { routes } from './routes.ts'
+import { getDocsRouteHref, routes } from './routes.ts'
 
 // No types exist for the `frontmatter` package
 const parseFrontmatter = frontmatter.default as unknown as (md: string) => {
@@ -105,13 +105,13 @@ export async function renderMarkdownFile(
   filePath: string,
   docFilesLookup: Map<string, DocFile>,
   version: string | undefined,
-  addLinks: boolean,
+  addCodeLinks: boolean,
 ): Promise<{ html: string; source?: string }> {
   try {
     let markdown = fs.readFileSync(filePath, 'utf-8')
     let { attributes, body } = parseFrontmatter(markdown)
     let marked = new Marked(
-      getShikiExtension(attributes.title || '', docFilesLookup, version, addLinks),
+      getShikiExtension(attributes.title || '', docFilesLookup, version, addCodeLinks),
     )
     let html = await marked.parse(body)
     return { html, source: typeof attributes.source === 'string' ? attributes.source : undefined }
@@ -131,7 +131,7 @@ function getShikiExtension(
   apiName: string,
   docFilesLookup: Map<string, DocFile>,
   version: string | undefined,
-  addLinks: boolean,
+  addCodeLinks: boolean,
 ): MarkedExtension {
   return {
     async: true,
@@ -150,7 +150,7 @@ function getShikiExtension(
               // Insert cross-links to known APIs
               {
                 span(node, line, col) {
-                  if (!addLinks) {
+                  if (!addCodeLinks) {
                     return
                   }
 
@@ -217,6 +217,13 @@ function getShikiExtension(
       code(code) {
         return code.text
       },
+      link(token) {
+        let href = getDocsRouteHref(token.href, version)
+        if (!href) return false
+
+        let title = token.title ? ` title="${escapeHtml(token.title)}"` : ''
+        return `<a href="${escapeHtml(href)}"${title}>${this.parser.parseInline(token.tokens)}</a>`
+      },
     },
   }
 
@@ -246,4 +253,8 @@ function getShikiExtension(
       ],
     }
   }
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"]/g, (char) => `&#${char.charCodeAt(0)};`)
 }
