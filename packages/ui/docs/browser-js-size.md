@@ -1,24 +1,28 @@
 # Browser JavaScript Size Findings
 
-## Goal and decision rule
+## Current focus
 
-Reduce the actual compressed JavaScript bytes downloaded by typical hydrated Remix apps.
+Keep reducing the actual compressed JavaScript bytes downloaded by typical hydrated Remix apps.
+This is not an entry-splitting exercise. The next useful changes should make already-downloaded
+module bodies smaller or remove code that should not be downloaded by those pages in the first
+place.
 
-This phase is about making the browser-loaded module bodies themselves smaller, especially modules
-that are already downloaded by a normal hydrated page. Per-entry graph wins are useful diagnostics,
-but they are not enough if the same bytes still arrive through another asset on the same page.
+Primary target:
+
+- the full de-duped bookstore hydrated browser asset set;
+- gzip and brotli bytes first;
+- raw bytes only as a diagnostic for finding bloated code;
+- low public/API churn unless the compressed-byte win is large enough to justify it.
+
+## Decision rule
+
+Per-entry graph wins are useful diagnostics, but they are not enough if the same bytes still arrive
+through another asset on the same page.
 
 A change is worth keeping when it reduces the full de-duped bookstore browser asset set in gzip and
 brotli, keeps public/API churn low, and is not just another version of a rejected split below. Raw
 bytes are useful for finding bloated code paths, but raw-only wins should be reverted when compressed
 downloads regress.
-
-Primary goals:
-
-- reduce de-duped downloaded JavaScript bytes for the bookstore hydrated browser asset set;
-- judge wins by gzip and brotli first, with raw bytes used as a diagnostic;
-- keep meaningful changes that shrink already-downloaded modules without broad public API churn;
-- identify the next high-leverage runtime or route modules worth investigating.
 
 Non-goals:
 
@@ -59,16 +63,23 @@ These paths have either been measured as low-value or are outside the current go
 
 ## Current checkpoint
 
-The committed checkpoint before the current internal runtime cleanup was
+The previous committed checkpoint before the latest route href and reconciler follow-up was
 `95,692 raw / 39,526 gzip / 34,984 brotli / 60 modules` for all bookstore browser assets.
 
-The current working-tree checkpoint is
-`95,147 raw / 39,410 gzip / 34,895 brotli / 60 modules`. That is a
-`53 raw / 17 gzip / 20 brotli` improvement over the last committed checkpoint and comes from small
-actual-byte reductions in already-downloaded route href and reconciler code, not from a new graph
-split. The largest remaining package targets are still `reconcile.ts`, `frame.ts`, `mixin.ts`,
-`diff-dom.ts`, route-map/href generation, SVG attribute normalization, and the runtime CSS
-serializer.
+The current committed checkpoint is
+`95,147 raw / 39,410 gzip / 34,895 brotli / 60 modules`. That latest `53 raw / 17 gzip /
+20 brotli` improvement comes from small actual-byte reductions in already-downloaded route href and
+reconciler code, not from a new graph split.
+
+The largest remaining downloaded modules are still:
+
+- `packages/ui/src/runtime/reconcile.ts`;
+- `packages/ui/src/runtime/frame.ts`;
+- `packages/ui/src/runtime/mixins/mixin.ts`;
+- `packages/ui/src/runtime/diff-dom.ts`;
+- route-map and href generation;
+- runtime CSS serialization;
+- SVG and DOM attribute normalization.
 
 ## Measurement fixture
 
