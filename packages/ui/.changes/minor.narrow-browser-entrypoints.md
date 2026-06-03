@@ -35,3 +35,5 @@ Reduced a few more browser prop-patching bytes by sharing style-value normalizat
 Reduced a few more browser component and DOM diff bytes by compacting component task draining and keyed child lookup in already-downloaded runtime modules.
 
 Reduced a few more browser reconciler bytes by compacting SVG context, persisted mixin node, and controlled prop helper paths.
+
+Reduced a few more browser reconciler bytes by sharing host-element adoption across hydration matches, hydration retry matches, and newly-created host elements.

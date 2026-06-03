@@ -452,14 +452,43 @@ function diffHost(
   return
 }
 
-function setupHostNode(node: HostNode, dom: Element, scheduler: Scheduler): void {
+function setupHostNode(
+  node: HostNode,
+  dom: Element,
+  scheduler: Scheduler,
+  props: ElementProps,
+): void {
   node._dom = dom
-  let props = getHostProps(node)
   let committedNode = node as CommittedHostNode
 
   if (shouldTrackControlledReflection(props)) {
     ensureControlledReflection(committedNode, scheduler)
     syncControlledReflection(committedNode, props)
+  }
+}
+
+function adoptHostElement(
+  node: HostNode,
+  dom: Element,
+  hostProps: ElementProps,
+  frame: FrameHandle,
+  scheduler: Scheduler,
+  styles: StyleManager,
+  rootTarget: EventTarget,
+  cursor?: Node | null,
+  parent?: ParentNode,
+): void {
+  patchHostProps({}, hostProps, dom)
+
+  if (hostProps.innerHTML != null) {
+    dom.innerHTML = hostProps.innerHTML as string
+  } else {
+    diffChildren(null, node._children, dom, frame, scheduler, styles, node, rootTarget, cursor)
+  }
+
+  setupHostNode(node, dom, scheduler, hostProps)
+  if (node._mixState) {
+    bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, false, parent)
   }
 }
 
@@ -568,7 +597,7 @@ function insert(
           childCursor,
         )
         patchHostProps({}, hostProps, targetHead)
-        setupHostNode(node, targetHead, scheduler)
+        setupHostNode(node, targetHead, scheduler, hostProps)
         if (node._mixState) {
           bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler)
         }
@@ -589,31 +618,16 @@ function insert(
       let cursorTag = node._svg ? cursor.tagName : cursor.tagName.toLowerCase()
       if (cursorTag === node.type) {
         let nextCursor = cursor.nextSibling
-        patchHostProps({}, hostProps, cursor)
-
-        // Handle innerHTML prop
-        if (hostProps.innerHTML != null) {
-          cursor.innerHTML = hostProps.innerHTML as string
-        } else {
-          let childCursor = cursor.firstChild
-          // Ignore excess nodes - browser extensions may inject content
-          diffChildren(
-            null,
-            node._children,
-            cursor,
-            frame,
-            scheduler,
-            styles,
-            node,
-            rootTarget,
-            childCursor,
-          )
-        }
-
-        setupHostNode(node, cursor, scheduler)
-        if (node._mixState) {
-          bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler)
-        }
+        adoptHostElement(
+          node,
+          cursor,
+          hostProps,
+          frame,
+          scheduler,
+          styles,
+          rootTarget,
+          cursor.firstChild,
+        )
         return nextCursor
       } else {
         // Type mismatch - try single-advance retry to handle browser extension injections
@@ -624,29 +638,16 @@ function insert(
           if (nextTag === node.type) {
             let nextCursor = nextSibling.nextSibling
             // Found a match after skipping - adopt it and leave skipped node in place
-            patchHostProps({}, hostProps, nextSibling)
-
-            if (hostProps.innerHTML != null) {
-              nextSibling.innerHTML = hostProps.innerHTML as string
-            } else {
-              let childCursor = nextSibling.firstChild
-              diffChildren(
-                null,
-                node._children,
-                nextSibling,
-                frame,
-                scheduler,
-                styles,
-                node,
-                rootTarget,
-                childCursor,
-              )
-            }
-
-            setupHostNode(node, nextSibling, scheduler)
-            if (node._mixState) {
-              bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler)
-            }
+            adoptHostElement(
+              node,
+              nextSibling,
+              hostProps,
+              frame,
+              scheduler,
+              styles,
+              rootTarget,
+              nextSibling.firstChild,
+            )
             return nextCursor
           }
         }
@@ -658,19 +659,7 @@ function insert(
     let dom = node._svg
       ? document.createElementNS(SVG_NS, node.type)
       : document.createElement(node.type)
-    patchHostProps({}, hostProps, dom)
-
-    // Handle innerHTML prop
-    if (hostProps.innerHTML != null) {
-      dom.innerHTML = hostProps.innerHTML as string
-    } else {
-      diffChildren(null, node._children, dom, frame, scheduler, styles, node, rootTarget)
-    }
-
-    setupHostNode(node, dom, scheduler)
-    if (node._mixState) {
-      bindNodeMixRuntime(node as CommittedHostNode, frame, scheduler, false, domParent)
-    }
+    adoptHostElement(node, dom, hostProps, frame, scheduler, styles, rootTarget, undefined, domParent)
     doInsert(dom)
     return cursor
   }
@@ -1808,7 +1797,8 @@ function reclaimPersistedMixinNode(
     scheduler,
     newNode._mixState as MixinRuntimeState | undefined,
   )
-  if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
+  let dispatchMixinLifecycle = shouldDispatchInlineMixinLifecycle(persistedNode._dom)
+  if (dispatchMixinLifecycle) {
     dispatchMixinUpdateEvent(newNode._mixState as MixinRuntimeState | undefined, 'beforeUpdate')
   }
   patchHostProps(prevProps, nextProps, persistedNode._dom)
@@ -1829,7 +1819,7 @@ function reclaimPersistedMixinNode(
   if (newNode._mixState) {
     bindNodeMixRuntime(newNode as CommittedHostNode, frame, scheduler, true)
   }
-  if (shouldDispatchInlineMixinLifecycle(persistedNode._dom)) {
+  if (dispatchMixinLifecycle) {
     scheduler.enqueueCommitPhase([
       () => dispatchMixinUpdateEvent(newNode._mixState as MixinRuntimeState | undefined, 'commit'),
     ])

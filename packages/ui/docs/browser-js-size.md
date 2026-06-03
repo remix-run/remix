@@ -41,21 +41,21 @@ If an experiment saves raw bytes but regresses gzip or brotli, revert it and log
 
 ## Current checkpoint
 
-Current committed checkpoint, after `5e088c78b Reduce reconciler browser bytes`:
+Current checkpoint, after the host adoption cleanup:
 
 | Browser asset set | Modules | Bytes |
 | ----------------- | ------: | ----: |
-| all bookstore browser assets | 60 | 94,927 raw / 39,327 gzip / 34,828 brotli |
+| all bookstore browser assets | 60 | 94,754 raw / 39,310 gzip / 34,811 brotli |
 
-The latest committed delta was small but valid:
-`68 raw / 7 gzip / 4 brotli`, from reducing the already-downloaded reconciler body. It was not a
-new graph split.
+The latest delta is small but valid:
+`173 raw / 17 gzip / 17 brotli`, from consolidating already-downloaded reconciler host adoption
+paths. It is not a new graph split.
 
 The largest remaining downloaded modules are:
 
 | Module | Bytes |
 | ------ | ----: |
-| `packages/ui/src/runtime/reconcile.ts` | 17,796 raw / 5,970 gzip / 5,419 brotli |
+| `packages/ui/src/runtime/reconcile.ts` | 17,623 raw / 5,951 gzip / 5,397 brotli |
 | `packages/ui/src/runtime/frame.ts` | 14,242 raw / 4,878 gzip / 4,403 brotli |
 | `packages/ui/src/runtime/mixins/mixin.ts` | 7,739 raw / 2,615 gzip / 2,393 brotli |
 | `packages/ui/src/runtime/diff-dom.ts` | 6,155 raw / 2,329 gzip / 2,099 brotli |
@@ -95,10 +95,12 @@ These ideas have already been measured as low-value, regressive, or outside this
 - parsed href helper subpaths;
 - raw-only SVG alias parser/table rewrites or SVG ternary micro-shapes;
 - route-map manual loop rewrites and private `Route` field shortening;
+- route-map `joinPathname()` boolean-local removal;
 - style rule factoring, style hash/entries reuse, stylesheet `CSSRule` object tracking, and moving
   `styleValueToCss()` into another module;
 - ignored-prop `Set` rewrites;
 - frame context/child-existence micro-cleanups;
+- frame `syncElementAttributes()` `getAttributeNames()` rewrites;
 - mixin scheduler phase-count storage and scheduler indexed flush loops;
 - cosmetic private-name shortening as a primary strategy.
 
@@ -931,6 +933,27 @@ Measured on top of the component/diff runtime cleanup:
 `17,796 raw / 5,970 gzip / 5,419 brotli`. The module-local brotli result is slightly larger, but
 the full downloaded set still improves after import specifiers and shared compression are counted.
 
+## UI host adoption cleanup
+
+The next kept reconciler pass consolidates the host-element adoption path used when hydration matches
+the current cursor, when the single-advance mismatch retry finds the intended element, and when a new
+host element is created. Those paths previously repeated prop patching, `innerHTML` handling, child
+diffing, controlled-reflection setup, and mixin runtime binding in the already-downloaded
+reconciler.
+
+This pass keeps the module graph unchanged and preserves the special document `<head>` path, but
+makes the normal host adoption flow share one helper and reuses the already-resolved host props
+during controlled-reflection setup.
+
+Measured on top of the reconciler micro-cleanup:
+
+| Browser asset set | Before | After | Savings |
+| ----------------- | -----: | ----: | ------: |
+| all bookstore browser assets | 94,927 raw / 39,327 gzip / 34,828 brotli / 60 modules | 94,754 raw / 39,310 gzip / 34,811 brotli / 60 modules | 173 raw / 17 gzip / 17 brotli |
+
+`runtime/reconcile.ts` moved from `17,796 raw / 5,970 gzip / 5,419 brotli` to
+`17,623 raw / 5,951 gzip / 5,397 brotli`.
+
 ## Tried and rejected: additional route/style/SVG micro-shapes
 
 Several adjacent micro-experiments failed the full compressed-set gate and should stay reverted
@@ -938,6 +961,9 @@ unless new evidence changes the shape:
 
 - Rewriting `fetch-router`'s `joinPathname()` from `findLastIndex()`/`forEach()` into manual loops
   grew the full set to `95,224 raw / 39,436 gzip / 34,920 brotli`.
+- Removing the `joinPathname()` `needsSeparator` boolean local preserved raw/gzip at the time of the
+  experiment but regressed brotli by 1 byte (`94,788 raw / 39,313 gzip / 34,820 brotli`), so the
+  previous compressed-friendlier shape stayed.
 - Reusing `Object.entries(styleObj)` between `processStyleClass()`'s empty check and hash path grew
   `style.ts` and moved the full set to `95,182 raw / 39,411 gzip / 34,892 brotli`.
 - Collapsing SVG attribute-name normalization into a ternary expression preserved raw size but moved
@@ -956,12 +982,17 @@ unless new evidence changes the shape:
   regressed, so the indexed rule map stayed.
 - Rewriting scheduler task flushing from `shift()` to an indexed loop grew the full set to
   `95,011 raw / 39,353 gzip / 34,849 brotli`, so the existing queue-draining shape stayed.
+- Rewriting frame document attribute syncing from `Array.from(attributes)` to `getAttributeNames()`
+  kept removal-safe snapshot semantics and saved raw bytes, but moved the full set from
+  `94,788 raw / 39,313 gzip / 34,819 brotli` to
+  `94,780 raw / 39,313 gzip / 34,823 brotli`; brotli regressed, so the attribute-object snapshot
+  stayed.
 
 The largest package modules in the current full downloaded set are now:
 
 | Module | Bytes |
 | ------ | ----: |
-| `packages/ui/src/runtime/reconcile.ts` | 17,796 raw / 5,970 gzip / 5,419 brotli |
+| `packages/ui/src/runtime/reconcile.ts` | 17,623 raw / 5,951 gzip / 5,397 brotli |
 | `packages/ui/src/runtime/frame.ts` | 14,242 raw / 4,878 gzip / 4,403 brotli |
 | `packages/ui/src/runtime/mixins/mixin.ts` | 7,739 raw / 2,615 gzip / 2,393 brotli |
 | `packages/ui/src/runtime/diff-dom.ts` | 6,155 raw / 2,329 gzip / 2,099 brotli |
