@@ -166,10 +166,18 @@ export function createRouter(versions: Versions) {
 function getLookupHref(href: string, version: string): string {
   if (!href.startsWith('/api/')) return href
 
-  return routes.docs.href({
-    version,
-    slug: href.slice('/api/'.length).replace(/\/$/, ''),
-  })
+  let url = new URL(href, 'http://localhost')
+  let slug = url.pathname.slice('/api/'.length)
+  if (slug.length === 0) return href
+
+  let routeHref: string
+  if (slug.endsWith('.md')) {
+    routeHref = routes.markdown.href({ version, slug: slug.slice(0, -'.md'.length) })
+  } else {
+    routeHref = routes.docs.href({ version, slug: slug.replace(/\/$/, '') })
+  }
+
+  return `${routeHref}${url.search}${url.hash}`
 }
 
 function stream(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
