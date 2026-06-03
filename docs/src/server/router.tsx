@@ -171,9 +171,7 @@ export function createRouter(versions: Versions) {
 async function loadDocsContext(): Promise<DocsContext> {
   let { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
   let demoFiles = await discoverDemoFiles()
-  let docFiles = [...markdownFiles, ...demoFiles].sort((a, b) =>
-    a.urlPath.localeCompare(b.urlPath),
-  )
+  let docFiles = [...markdownFiles, ...demoFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
 
   let registryByVersion = new Map<string | undefined, DocsRegistry>()
   registryByVersion.set(undefined, buildRegistry(docFiles))
