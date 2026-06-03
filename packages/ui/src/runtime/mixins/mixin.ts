@@ -136,7 +136,7 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
       if (entry) {
         queueMixinRemove(handle, entry.scope)
       }
-      let scope = Symbol('mixin-scope')
+      let scope = Symbol()
       handle.setActiveScope(scope)
       entry = {
         scope,
@@ -195,10 +195,8 @@ export function resolveMixedProps(input: ResolveMixedPropsInput): ResolveMixedPr
 
   for (let index = descriptors.length; index < state.runners.length; index++) {
     let entry = state.runners[index]
-    if (entry) {
-      handle.dispatchScopedEvent(entry.scope, new Event('remove'))
-      handle.releaseScope(entry.scope)
-    }
+    handle.dispatchScopedEvent(entry.scope, new Event('remove'))
+    handle.releaseScope(entry.scope)
   }
 
   if (state.runners.length > descriptors.length) {
@@ -617,8 +615,7 @@ function isBindingInUpdateScope(binding: MixinRuntimeBinding, parents: ParentNod
 function resolveMixDescriptors(props: ElementProps): AnyMixinDescriptor[] {
   let mix = props.mix
   if (!mix) return []
-  if (Array.isArray(mix)) return mix.filter(Boolean) as AnyMixinDescriptor[]
-  return [mix] as AnyMixinDescriptor[]
+  return (Array.isArray(mix) ? mix.filter(Boolean) : [mix]) as AnyMixinDescriptor[]
 }
 
 function withoutMix(props: ElementProps): ElementProps {

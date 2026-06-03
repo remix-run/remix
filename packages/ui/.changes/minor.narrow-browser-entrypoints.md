@@ -55,3 +55,5 @@ Reduced a few more browser reconciler bytes by inlining one-use client frame con
 Reduced a few more browser reconciler bytes by inlining host-node setup and document-head lookup in the host adoption path.
 
 Reduced a few more browser frame runtime bytes by trimming recursive child traversal checks, template watch setup, stream empty-string checks, and rmx-data merge initialization.
+
+Reduced a few more browser mixin runtime bytes by using anonymous mixin scopes, removing a dense-runner guard, and compacting mix descriptor resolution.
