@@ -1,6 +1,8 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
+import * as path from 'node:path'
 import process from 'node:process'
+import { pathToFileURL } from 'node:url'
 
 import { buildNodeArgs, parseNodeHmrCommand, shouldIgnoreWatchPath } from './cli.ts'
 import { getNodeHmrEndpoint, getNodeHmrEventUrl } from './index.ts'
@@ -56,19 +58,23 @@ describe('parseNodeHmrCommand', () => {
 
 describe('buildNodeArgs', () => {
   it('preloads node-tsx and the node-hmr register hook', () => {
+    let entryPath = path.resolve('app/server.ts')
+    let nodeTsxImportUrl = pathToFileURL(path.resolve('packages/node-tsx/src/index.ts')).href
+    let registerPath = path.resolve('app/register.ts')
+
     let args = buildNodeArgs({
-      entry: '/app/server.ts',
+      entry: entryPath,
       entryArgs: ['--debug'],
-      nodeTsxImportUrl: 'file:///packages/node-tsx/src/index.ts',
-      registerPath: '/app/register.ts',
+      nodeTsxImportUrl,
+      registerPath,
     })
 
     assert.deepEqual(args, [
       '--import',
-      'file:///packages/node-tsx/src/index.ts',
+      nodeTsxImportUrl,
       '--import',
-      'file:///app/register.ts',
-      '/app/server.ts',
+      pathToFileURL(registerPath).href,
+      entryPath,
       '--debug',
     ])
   })
