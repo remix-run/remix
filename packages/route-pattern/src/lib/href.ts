@@ -42,7 +42,8 @@ type Optionalize<record extends Record<string, string | undefined>> =
  * @param pattern The parsed route pattern.
  * @param args Path params and optional search params.
  * @returns The generated href string.
- * @throws {CreateHrefError} When the pattern requires a hostname, contains a nameless wildcard, or is missing required params.
+ * @throws {CreateHrefError} When the pattern requires a hostname, contains a nameless wildcard,
+ * is missing required params, or receives invalid params.
  */
 export function createHref<source extends string>(
   pattern: source | RoutePattern<source>,
@@ -112,7 +113,7 @@ function hrefPart(
     }
     if (token.type === ':' || token.type === '*') {
       let value = params[token.name]
-      if (value === undefined) {
+      if (value == null) {
         if (stack.length <= 1) {
           if (token.name === '*') {
             throw new CreateHrefError({ type: 'nameless-wildcard', pattern })
@@ -125,7 +126,7 @@ function hrefPart(
       }
       // prettier-ignore
       stack[stack.length - 1].href +=
-        part.type === 'pathname' && token.type === ':' ? encodePathnameVariable(value) :
+        part.type === 'pathname' && token.type === ':' ? encodePathnameVariableParam(pattern, token.name, value) :
         part.type === 'pathname' && token.type === '*' ? encodePathnameWildcard(value) :
         part.type === 'hostname' && token.type === ':' ? validateHostnameVariable(value) :
         part.type === 'hostname' && token.type === '*' ? validateHostnameWildcard(value) :
@@ -202,6 +203,12 @@ type CreateHrefErrorDetails =
       value: string
       char: string
     }
+  | {
+      type: 'invalid-pathname-variable'
+      pattern: RoutePattern
+      paramName: string
+      value: string
+    }
 
 /** Error thrown when a route pattern cannot generate an href from the supplied args. */
 export class CreateHrefError extends Error {
@@ -235,8 +242,25 @@ export class CreateHrefError extends Error {
       return `invalid hostname wildcard param: ${JSON.stringify(details.value)} contains ${JSON.stringify(details.char)}`
     }
 
+    if (details.type === 'invalid-pathname-variable') {
+      return `invalid pathname variable param: '${details.paramName}' cannot be empty\n\nPattern: ${details.pattern}\nValue: ${JSON.stringify(details.value)}`
+    }
+
     unreachable(details)
   }
+}
+
+function encodePathnameVariableParam(pattern: RoutePattern, paramName: string, value: unknown) {
+  let serialized = String(value)
+  if (serialized.length === 0) {
+    throw new CreateHrefError({
+      type: 'invalid-pathname-variable',
+      pattern,
+      paramName,
+      value: serialized,
+    })
+  }
+  return encodePathnameSegment(serialized)
 }
 
 export function encodePathnameVariable(value: unknown) {

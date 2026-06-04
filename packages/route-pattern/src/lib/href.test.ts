@@ -154,6 +154,13 @@ describe('createHref', () => {
         assert.equal(createHref('/posts/:id', { id: 123 }), '/posts/123')
       })
 
+      it('throws when provided an empty string', () => {
+        assert.throws(
+          () => createHref('/posts/:id', { id: '' }),
+          hrefError('invalid-pathname-variable'),
+        )
+      })
+
       it('ignores extra params', () => {
         assert.equal(createHref('/posts/:id', { id: '123', page: '2', sort: 'desc' }), '/posts/123')
       })
@@ -194,6 +201,10 @@ describe('createHref', () => {
 
     it('supports wildcard with number param', () => {
       assert.equal(createHref('/files/*path', { path: 123 }), '/files/123')
+    })
+
+    it('supports wildcard with empty string param', () => {
+      assert.equal(createHref('/files/*path', { path: '' }), '/files/')
     })
 
     it('throws for unnamed wildcard', () => {
@@ -244,6 +255,14 @@ describe('createHref', () => {
       assert.equal(createHref(pattern, {}), '/posts')
       assert.equal(createHref(pattern, null), '/posts')
       assert.equal(createHref(pattern, undefined), '/posts')
+      assert.equal(createHref(pattern, { id: null }), '/posts')
+    })
+
+    it('throws for empty optional variable when provided', () => {
+      assert.throws(
+        () => createHref('/posts(/:id)', { id: '' }),
+        hrefError('invalid-pathname-variable'),
+      )
     })
 
     it('includes optional with wildcard when provided', () => {
@@ -259,6 +278,7 @@ describe('createHref', () => {
       assert.equal(createHref(pattern, {}), '/files')
       assert.equal(createHref(pattern, null), '/files')
       assert.equal(createHref(pattern, undefined), '/files')
+      assert.equal(createHref(pattern, { path: null }), '/files')
     })
 
     it('omits optional with nameless wildcard', () => {
@@ -291,6 +311,17 @@ describe('createHref', () => {
       it('omits both when only inner provided', () => {
         assert.equal(
           createHref('/blog/:year(/:month(/:day))', { year: '2024', day: '15' }),
+          '/blog/2024',
+        )
+      })
+
+      it('omits nested optionals when outer variable is null', () => {
+        assert.equal(
+          createHref('/blog/:year(/:month(/:day))', {
+            year: '2024',
+            month: null,
+            day: '15',
+          }),
           '/blog/2024',
         )
       })
@@ -468,6 +499,27 @@ describe('CreateHrefError', () => {
           CreateHrefError: pattern contains nameless wildcard
 
           Pattern: https://example.com/api/*/users
+        `,
+      )
+    })
+  })
+
+  describe('invalid-pathname-variable', () => {
+    it('shows param, pattern, and value', () => {
+      let pattern = RoutePattern.parse('/posts/:id')
+      let error = new CreateHrefError({
+        type: 'invalid-pathname-variable',
+        pattern,
+        paramName: 'id',
+        value: '',
+      })
+      assert.equal(
+        error.toString(),
+        dedent`
+          CreateHrefError: invalid pathname variable param: 'id' cannot be empty
+
+          Pattern: /posts/:id
+          Value: ""
         `,
       )
     })
