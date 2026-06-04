@@ -255,6 +255,9 @@ importers:
       '@oxc-project/runtime':
         specifier: ^0.121.0
         version: 0.121.0
+      '@remix-run/component-hmr':
+        specifier: workspace:^
+        version: link:../component-hmr
       '@remix-run/file-storage':
         specifier: workspace:*
         version: link:../file-storage
@@ -307,6 +310,9 @@ importers:
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
+      '@remix-run/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
@@ -422,6 +428,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@remix-run/node-hmr':
+        specifier: workspace:^
+        version: link:../node-hmr
       '@remix-run/terminal':
         specifier: workspace:^
         version: link:../terminal
@@ -536,6 +545,28 @@ importers:
       remix:
         specifier: workspace:*
         version: link:../../../../remix
+
+  packages/component-hmr:
+    dependencies:
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../ui
+      magic-string:
+        specifier: ^0.30.21
+        version: 0.30.21
+      oxc-parser:
+        specifier: ^0.121.0
+        version: 0.121.0
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
 
   packages/compression-middleware:
     dependencies:
@@ -1300,6 +1331,34 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/node-hmr:
+    dependencies:
+      '@remix-run/component-hmr':
+        specifier: workspace:^
+        version: link:../component-hmr
+      '@remix-run/node-tsx':
+        specifier: workspace:^
+        version: link:../node-tsx
+      '@remix-run/terminal':
+        specifier: workspace:^
+        version: link:../terminal
+      chokidar:
+        specifier: ^5.0.0
+        version: 5.0.0
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:^
+        version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
   packages/node-tsx:
     dependencies:
       get-tsconfig:
@@ -1336,6 +1395,9 @@ importers:
       '@remix-run/cli':
         specifier: workspace:^
         version: link:../cli
+      '@remix-run/component-hmr':
+        specifier: workspace:^
+        version: link:../component-hmr
       '@remix-run/compression-middleware':
         specifier: workspace:^
         version: link:../compression-middleware
@@ -1411,6 +1473,9 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:^
         version: link:../node-fetch-server
+      '@remix-run/node-hmr':
+        specifier: workspace:^
+        version: link:../node-hmr
       '@remix-run/node-tsx':
         specifier: workspace:^
         version: link:../node-tsx
@@ -8622,7 +8687,6 @@ snapshots:
       get-tsconfig: 4.13.6
     optionalDependencies:
       fsevents: 2.3.3
-    optional: true
 
   type-is@2.0.1:
     dependencies:

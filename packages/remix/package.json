@@ -27,6 +27,9 @@
     "./auth": "./src/auth.ts",
     "./auth-middleware": "./src/auth-middleware.ts",
     "./cli": "./src/cli.ts",
+    "./component-hmr": "./src/component-hmr.ts",
+    "./component-hmr/runtime": "./src/component-hmr/runtime.ts",
+    "./component-hmr/transform": "./src/component-hmr/transform.ts",
     "./compression-middleware": "./src/compression-middleware.ts",
     "./cookie": "./src/cookie.ts",
     "./cop-middleware": "./src/cop-middleware.ts",
@@ -96,6 +99,9 @@
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
     "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
+    "./node-hmr": "./src/node-hmr.ts",
+    "./node-hmr/cli": "./src/node-hmr/cli.ts",
+    "./node-hmr/register": "./src/node-hmr/register.ts",
     "./node-tsx": "./src/node-tsx.ts",
     "./node-tsx/load-module": "./src/node-tsx/load-module.ts",
     "./render-middleware": "./src/render-middleware.ts",
@@ -134,6 +140,7 @@
     "./ui/breadcrumbs": "./src/ui/breadcrumbs.ts",
     "./ui/button": "./src/ui/button.ts",
     "./ui/combobox": "./src/ui/combobox.ts",
+    "./ui/dev": "./src/ui/dev.ts",
     "./ui/glyph": "./src/ui/glyph.ts",
     "./ui/jsx-dev-runtime": "./src/ui/jsx-dev-runtime.ts",
     "./ui/jsx-runtime": "./src/ui/jsx-runtime.ts",
@@ -173,6 +180,18 @@
       "./cli": {
         "types": "./dist/cli.d.ts",
         "default": "./dist/cli.js"
+      },
+      "./component-hmr": {
+        "types": "./dist/component-hmr.d.ts",
+        "default": "./dist/component-hmr.js"
+      },
+      "./component-hmr/runtime": {
+        "types": "./dist/component-hmr/runtime.d.ts",
+        "default": "./dist/component-hmr/runtime.js"
+      },
+      "./component-hmr/transform": {
+        "types": "./dist/component-hmr/transform.d.ts",
+        "default": "./dist/component-hmr/transform.js"
       },
       "./compression-middleware": {
         "types": "./dist/compression-middleware.d.ts",
@@ -450,6 +469,18 @@
         "types": "./dist/node-fetch-server/test.d.ts",
         "default": "./dist/node-fetch-server/test.js"
       },
+      "./node-hmr": {
+        "types": "./dist/node-hmr.d.ts",
+        "default": "./dist/node-hmr.js"
+      },
+      "./node-hmr/cli": {
+        "types": "./dist/node-hmr/cli.d.ts",
+        "default": "./dist/node-hmr/cli.js"
+      },
+      "./node-hmr/register": {
+        "types": "./dist/node-hmr/register.d.ts",
+        "default": "./dist/node-hmr/register.js"
+      },
       "./node-tsx": {
         "types": "./dist/node-tsx.d.ts",
         "default": "./dist/node-tsx.js"
@@ -602,6 +633,10 @@
         "types": "./dist/ui/combobox.d.ts",
         "default": "./dist/ui/combobox.js"
       },
+      "./ui/dev": {
+        "types": "./dist/ui/dev.d.ts",
+        "default": "./dist/ui/dev.js"
+      },
       "./ui/glyph": {
         "types": "./dist/ui/glyph.d.ts",
         "default": "./dist/ui/glyph.js"
@@ -667,6 +702,7 @@
     "@remix-run/auth": "workspace:^",
     "@remix-run/auth-middleware": "workspace:^",
     "@remix-run/ui": "workspace:^",
+    "@remix-run/component-hmr": "workspace:^",
     "@remix-run/compression-middleware": "workspace:^",
     "@remix-run/cop-middleware": "workspace:^",
     "@remix-run/cors-middleware": "workspace:^",
@@ -692,6 +728,7 @@
     "@remix-run/mime": "workspace:^",
     "@remix-run/multipart-parser": "workspace:^",
     "@remix-run/node-fetch-server": "workspace:^",
+    "@remix-run/node-hmr": "workspace:^",
     "@remix-run/node-tsx": "workspace:^",
     "@remix-run/response": "workspace:^",
     "@remix-run/route-pattern": "workspace:^",

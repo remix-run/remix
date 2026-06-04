@@ -1,27 +1,65 @@
-import { run } from 'remix/ui'
+import { getTopFrame, run } from 'remix/ui'
+import type { AppRuntime } from 'remix/ui'
 
-const app = run({
-  async loadModule(moduleUrl: string, exportName: string) {
-    let mod = await import(moduleUrl)
-    let Component = (mod as any)[exportName]
-    if (!Component) {
-      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
+let app = start()
+
+export function start(): AppRuntime {
+  return run({
+    async loadModule(moduleUrl: string, exportName: string) {
+      let mod = (await import(moduleUrl)) as Record<string, unknown>
+      let Component = mod[exportName]
+      if (typeof Component !== 'function') {
+        throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
+      }
+      return Component
+    },
+    async resolveFrame(src, signal) {
+      let response = await fetch(src, { headers: { Accept: 'text/html' }, signal })
+      if (!response.ok) {
+        return `<pre>Frame error: ${response.status} ${response.statusText}</pre>`
+      }
+      // let text = await response.text()
+      // console.log(text)
+      // return text
+      if (response.body) return response.body
+      return response.text()
+    },
+  })
+}
+
+if (import.meta.hot) {
+  import.meta.hot.accept((mod) => {
+    if (!isEntryModule(mod)) {
+      import.meta.hot?.invalidate('Updated bookstore entry module did not export start()')
+      return
     }
-    return Component
-  },
-  async resolveFrame(src, signal) {
-    let response = await fetch(src, { headers: { Accept: 'text/html' }, signal })
-    if (!response.ok) {
-      return `<pre>Frame error: ${response.status} ${response.statusText}</pre>`
+    app.dispose()
+    app = mod.start()
+  })
+
+  import.meta.hot.dispose(() => {
+    app.dispose()
+  })
+
+  import.meta.hot.on('remix:server-update', async () => {
+    try {
+      await app.ready()
+      await getTopFrame().reload()
+    } catch (error) {
+      console.error('Top frame reload failed on server update', error)
     }
-    // let text = await response.text()
-    // console.log(text)
-    // return text
-    if (response.body) return response.body
-    return response.text()
-  },
-})
+  })
+}
 
 app.ready().catch((error: unknown) => {
   console.error('Frame adoption failed:', error)
 })
+
+function isEntryModule(value: unknown): value is { start(): AppRuntime } {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'start' in value &&
+    typeof value.start === 'function'
+  )
+}

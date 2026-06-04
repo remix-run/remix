@@ -50,6 +50,9 @@ type StyleCompilerOptions = {
       transform: readonly string[] | null
     },
   ): Promise<string>
+  hmr?: {
+    send(pathname: string): void
+  }
   isAllowed(absolutePath: string): boolean
   isServedFilePath(filePath: string): boolean
   minify: boolean
@@ -162,7 +165,14 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     async handleFileEvent(filePath, event) {
       let normalizedFilePath = normalizeFilePath(filePath)
       if (isWatchIgnored(normalizedFilePath)) return
+      let record = styleStore.get(normalizedFilePath)
+      let updatePathname = record.resolved?.stableUrlPathname
+
       styleStore.invalidateForFileEvent(normalizedFilePath, event)
+
+      if (event === 'change' && updatePathname) {
+        resolvedOptions.hmr?.send(updatePathname)
+      }
     },
   }
 

@@ -1,0 +1,68 @@
+{
+  "name": "@remix-run/component-hmr",
+  "version": "0.0.0",
+  "description": "Hot module replacement runtime and transforms for Remix UI components",
+  "author": "Shopify Inc.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/component-hmr"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/component-hmr#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./runtime": "./src/runtime.ts",
+    "./transform": "./src/transform.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./runtime": {
+        "types": "./dist/runtime.d.ts",
+        "default": "./dist/runtime.js"
+      },
+      "./transform": {
+        "types": "./dist/transform.d.ts",
+        "default": "./dist/transform.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "dependencies": {
+    "@remix-run/ui": "workspace:^",
+    "magic-string": "^0.30.21",
+    "oxc-parser": "^0.121.0"
+  },
+  "devDependencies": {
+    "@types/dom-navigation": "^1.0.7",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "typecheck": "tsgo --noEmit"
+  },
+  "keywords": [
+    "remix",
+    "component",
+    "hmr",
+    "transform",
+    "ui"
+  ]
+}

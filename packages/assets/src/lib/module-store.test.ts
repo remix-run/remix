@@ -10,6 +10,11 @@ import type { TransformedModule } from './scripts/transform.ts'
 function createTransformedModule(): TransformedModule {
   return {
     fingerprint: null,
+    hmr: {
+      acceptedDeps: [],
+      selfAccepting: false,
+      usesImportMetaHot: false,
+    },
     identityPath: '/app/entry.ts',
     importerDir: '/app',
     packageSpecifiers: [],
@@ -38,6 +43,11 @@ function createResolvedModule(): ResolvedModule {
   return {
     deps: [],
     fingerprint: null,
+    hmr: {
+      acceptedDeps: [],
+      selfAccepting: false,
+      usesImportMetaHot: false,
+    },
     identityPath: '/app/entry.ts',
     imports: [],
     trackedFiles: ['/app/entry.ts'],

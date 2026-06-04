@@ -3,6 +3,7 @@ import { createAssetServer } from 'remix/assets'
 import { assetsBase } from '../routes.ts'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
+const nodeHmr = isDevelopment ? await import('remix/node-hmr') : undefined
 
 export const assetServer = createAssetServer({
   basePath: assetsBase,
@@ -17,5 +18,6 @@ export const assetServer = createAssetServer({
   fingerprint: isDevelopment
     ? undefined
     : { buildId: process.env.GITHUB_SHA || String(Date.now()) },
-  watch: false,
+  hmr: nodeHmr?.browserEventChannel,
+  watch: isDevelopment,
 })

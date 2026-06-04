@@ -8,7 +8,7 @@ type ResolvedInjectedPackage = {
   packageRoot: string
 }
 
-const injectedPackageNames = ['@oxc-project/runtime'] as const
+const injectedPackageNames = ['@oxc-project/runtime', '@remix-run/component-hmr'] as const
 const injectedPackagesBasePath = '/__@remix/injected'
 
 const resolvedInjectedPackages = new Map<string, ResolvedInjectedPackage>()
@@ -32,12 +32,13 @@ export function getInjectedPackageRouteConfigs(): {
 }[] {
   return injectedPackageNames.map((packageName) => {
     let { packageRoot } = getResolvedInjectedPackage(packageName)
+    let { filePattern, routeRoot } = getInjectedPackageRoute(packageRoot, packageName)
 
     return {
       fileMap: {
-        [getInjectedPackageRoutePattern(packageName)]: `${packageName}/*path`,
+        [getInjectedPackageRoutePattern(packageName)]: filePattern,
       },
-      rootDir: getInjectedPackageRouteRoot(packageRoot, packageName),
+      rootDir: routeRoot,
     }
   })
 }
@@ -106,12 +107,25 @@ function getInjectedPackageRoutePattern(packageName: string): string {
   return `${injectedPackagesBasePath}/${packageName}/*path`
 }
 
-function getInjectedPackageRouteRoot(packageRoot: string, packageName: string): string {
+function getInjectedPackageRoute(
+  packageRoot: string,
+  packageName: string,
+): { filePattern: string; routeRoot: string } {
+  if (!packageRoot.endsWith(`/${packageName}`)) {
+    return {
+      filePattern: `${packageRoot.slice(getFilePathDirectory(packageRoot).length + 1)}/*path`,
+      routeRoot: getFilePathDirectory(packageRoot),
+    }
+  }
+
   let routeRoot = packageRoot
 
   for (let _segment of packageName.split('/')) {
     routeRoot = getFilePathDirectory(routeRoot)
   }
 
-  return routeRoot
+  return {
+    filePattern: `${packageName}/*path`,
+    routeRoot,
+  }
 }

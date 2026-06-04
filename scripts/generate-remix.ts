@@ -324,7 +324,7 @@ async function updateRemixPackage() {
 
   // Generate bin wrapper files and update sub-package exports
   for (let bin of allBins) {
-    if (isRemixCliBin(bin) || isRemixTestBin(bin)) {
+    if (isRemixCliBin(bin) || isRemixTestBin(bin) || isRemixNodeHmrBin(bin)) {
       continue
     }
 
@@ -375,7 +375,7 @@ async function updateRemixPackage() {
     }
 
     for (let bin of allBins) {
-      if (isRemixCliBin(bin) || isRemixTestBin(bin)) {
+      if (isRemixCliBin(bin) || isRemixTestBin(bin) || isRemixNodeHmrBin(bin)) {
         continue
       }
 
@@ -437,6 +437,10 @@ function isRemixCliBin(bin: { command: string; packageName: string }): boolean {
 
 function isRemixTestBin(bin: { command: string; packageName: string }): boolean {
   return bin.packageName === '@remix-run/test' && bin.command === 'remix-test'
+}
+
+function isRemixNodeHmrBin(bin: { command: string; packageName: string }): boolean {
+  return bin.packageName === '@remix-run/node-hmr' && bin.command === 'remix-node-hmr'
 }
 
 function createExportSource(entry: ExportEntry): string {

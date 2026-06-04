@@ -84,6 +84,7 @@ describe('completion command', () => {
         'doctor',
         'help',
         'new',
+        'node-hmr',
         'routes',
         'test',
         'version',

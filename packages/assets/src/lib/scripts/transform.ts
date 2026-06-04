@@ -2,6 +2,7 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { getTsconfig } from 'get-tsconfig'
+import { transformComponentHmr } from '@remix-run/component-hmr/transform'
 import MagicString from 'magic-string'
 import { minify } from 'oxc-minify'
 import { parseSync, visitorKeys } from 'oxc-parser'
@@ -71,8 +72,15 @@ type UnresolvedImport = {
   start: number
 }
 
+type HmrAcceptedDependency = UnresolvedImport
+
 export type TransformedModule = {
   fingerprint: string | null
+  hmr: {
+    acceptedDeps: HmrAcceptedDependency[]
+    selfAccepting: boolean
+    usesImportMetaHot: boolean
+  }
   identityPath: string
   importerDir: string
   packageSpecifiers: string[]
@@ -106,6 +114,7 @@ type TsconfigTransformOptionsResolver = ReturnType<typeof createTsconfigTransfor
 
 export type TransformArgs = {
   buildId: string | null
+  componentHmr: boolean
   define: Record<string, string> | null
   externalSet: ReadonlySet<string>
   isWatchIgnored(filePath: string): boolean
@@ -205,7 +214,18 @@ export async function transformModule(
   }
 
   try {
+    let stableUrlPathname = args.routes.toUrlPathname(record.identityPath)
+    if (!stableUrlPathname) {
+      throw createAssetServerCompilationError(
+        `File ${record.identityPath} is outside all configured fileMap entries.`,
+        {
+          code: 'FILE_OUTSIDE_FILE_MAP',
+        },
+      )
+    }
+
     let analysis = await analyzeModuleSource(sourceText, resolvedPath, transformOptions, {
+      componentHmrModuleUrl: args.componentHmr ? stableUrlPathname : undefined,
       define: args.define ?? undefined,
       minify: args.minify,
       sourceMaps: args.sourceMaps ?? undefined,
@@ -223,16 +243,6 @@ export async function transformModule(
           `Please use an ESM-compatible module.`,
         {
           code: 'COMMONJS_NOT_SUPPORTED',
-        },
-      )
-    }
-
-    let stableUrlPathname = args.routes.toUrlPathname(record.identityPath)
-    if (!stableUrlPathname) {
-      throw createAssetServerCompilationError(
-        `File ${record.identityPath} is outside all configured fileMap entries.`,
-        {
-          code: 'FILE_OUTSIDE_FILE_MAP',
         },
       )
     }
@@ -260,6 +270,7 @@ export async function transformModule(
                 buildId: args.buildId,
                 content: sourceText,
               }),
+        hmr: getHmrAnalysis(analysis.rawCode),
         identityPath: record.identityPath,
         importerDir: path.dirname(resolvedPath),
         packageSpecifiers: analysis.unresolvedImports
@@ -282,6 +293,100 @@ export async function transformModule(
       },
     }
   }
+}
+
+function getHmrAnalysis(rawCode: string): TransformedModule['hmr'] {
+  let usesImportMetaHot = rawCode.includes('import.meta.hot')
+  let acceptedDeps: HmrAcceptedDependency[] = []
+  let selfAccepting = false
+
+  if (usesImportMetaHot) {
+    try {
+      let parseResult = parseSync('hmr-analysis.js', rawCode, {
+        lang: 'js',
+        sourceType: 'module',
+      })
+
+      if (parseResult.errors.length === 0) {
+        walkAst(parseResult.program, (node) => {
+          if (node.type !== 'CallExpression') return
+          if (!isImportMetaHotAcceptCallee(node.callee)) return
+
+          let [firstArgument] = node.arguments
+          if (firstArgument === undefined || !isAcceptedDependencyArgument(firstArgument)) {
+            selfAccepting = true
+            return
+          }
+
+          acceptedDeps.push(...getAcceptedDependencies(firstArgument, rawCode))
+        })
+      }
+    } catch {
+      selfAccepting = /import\.meta\.hot\s*\??\.\s*accept\s*\(/.test(rawCode)
+    }
+  }
+
+  return {
+    acceptedDeps,
+    selfAccepting,
+    usesImportMetaHot,
+  }
+}
+
+function isImportMetaHotAcceptCallee(node: Node): boolean {
+  let callee = unwrapChainExpression(node)
+  if (callee.type !== 'MemberExpression') return false
+  if (callee.computed || !isIdentifierNode(callee.property, 'accept')) return false
+
+  let object = unwrapChainExpression(callee.object)
+  if (object.type !== 'MemberExpression') return false
+  if (object.computed || !isIdentifierNode(object.property, 'hot')) return false
+
+  let meta = unwrapChainExpression(object.object)
+  return (
+    meta.type === 'MetaProperty' &&
+    isIdentifierNode(meta.meta, 'import') &&
+    isIdentifierNode(meta.property, 'meta')
+  )
+}
+
+function unwrapChainExpression(node: Node): Node {
+  return node.type === 'ChainExpression' ? node.expression : node
+}
+
+function isIdentifierNode(node: Node, name: string): boolean {
+  return node.type === 'Identifier' && node.name === name
+}
+
+function isAcceptedDependencyArgument(node: Node): boolean {
+  return isStringLiteralNode(node) || node.type === 'ArrayExpression'
+}
+
+function getAcceptedDependencies(node: Node, source: string): HmrAcceptedDependency[] {
+  if (isStringLiteralNode(node)) {
+    return [
+      {
+        end: node.end - 1,
+        quote: getImportQuote(source, node.start),
+        specifier: node.value,
+        start: node.start + 1,
+      },
+    ]
+  }
+
+  if (node.type !== 'ArrayExpression') return []
+
+  let deps: HmrAcceptedDependency[] = []
+  for (let element of node.elements) {
+    if (!isStringLiteralNode(element)) continue
+    deps.push({
+      end: element.end - 1,
+      quote: getImportQuote(source, element.start),
+      specifier: element.value,
+      start: element.start + 1,
+    })
+  }
+  return deps
 }
 
 function findNearestTsconfigPath(directory: string): string | null {
@@ -316,6 +421,7 @@ async function analyzeModuleSource(
   resolvedPath: string,
   transformOptions: TsconfigTransformOptions,
   options: {
+    componentHmrModuleUrl?: string
     define?: Record<string, string>
     minify: boolean
     sourceMaps?: 'external' | 'inline'
@@ -344,6 +450,23 @@ async function analyzeModuleSource(
 
   let rawCode = transformResult.code.trimEnd()
   let sourceMap = stringifySourceMap(transformResult.map)
+
+  if (options.componentHmrModuleUrl) {
+    let componentHmrResult = transformComponentHmr(rawCode, {
+      moduleUrl: options.componentHmrModuleUrl,
+      sourceMap: options.sourceMaps != null,
+    })
+
+    if (componentHmrResult.transformed) {
+      rawCode = componentHmrResult.code.trimEnd()
+      sourceMap =
+        componentHmrResult.map == null
+          ? sourceMap
+          : sourceMap == null
+            ? componentHmrResult.map
+            : composeSourceMaps(componentHmrResult.map, sourceMap)
+    }
+  }
 
   if (options.minify) {
     let minifyResult = await minifyModule(rawCode, resolvedPath, options.target, options.sourceMaps)

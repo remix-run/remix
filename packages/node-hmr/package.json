@@ -1,0 +1,76 @@
+{
+  "name": "@remix-run/node-hmr",
+  "version": "0.0.0",
+  "description": "Run Node.js applications with TypeScript syntax support and a Remix HMR runtime",
+  "author": "Shopify Inc.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/node-hmr"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/node-hmr#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "bin": {
+    "remix-node-hmr": "./src/cli-entry.ts"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./cli": "./src/cli.ts",
+    "./register": "./src/register.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "bin": {
+      "remix-node-hmr": "./dist/cli-entry.js"
+    },
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./cli": {
+        "types": "./dist/cli.d.ts",
+        "default": "./dist/cli.js"
+      },
+      "./register": {
+        "types": "./dist/register.d.ts",
+        "default": "./dist/register.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "dependencies": {
+    "@remix-run/component-hmr": "workspace:^",
+    "@remix-run/node-tsx": "workspace:^",
+    "@remix-run/terminal": "workspace:^",
+    "chokidar": "^5.0.0"
+  },
+  "devDependencies": {
+    "@remix-run/assert": "workspace:^",
+    "@remix-run/test": "workspace:^",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "remix-test",
+    "test:bun": "bun x --bun remix-test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "keywords": [
+    "remix",
+    "node",
+    "hmr",
+    "watch"
+  ]
+}

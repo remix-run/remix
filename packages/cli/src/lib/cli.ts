@@ -23,7 +23,7 @@ export interface RunRemixOptions {
 
 /**
  * Entry point for the `remix` CLI. Parses `argv`, dispatches to the matching
- * subcommand (`new`, `doctor`, `routes`, `test`, `version`, `completion`,
+ * subcommand (`new`, `doctor`, `routes`, `node-hmr`, `test`, `version`, `completion`,
  * `help`), and resolves with the exit code the process should use.
  *
  * @param argv Argument vector to parse, excluding the node and script paths
@@ -106,6 +106,11 @@ async function runCommand(command: string, argv: string[], context: CliContext):
   if (command === 'routes') {
     let { runRoutesCommand } = await import('./commands/routes.ts')
     return runRoutesCommand(argv, context)
+  }
+
+  if (command === 'node-hmr') {
+    let { runNodeHmrCommand } = await import('./commands/node-hmr.ts')
+    return runNodeHmrCommand(argv, context)
   }
 
   if (command === 'test') {
