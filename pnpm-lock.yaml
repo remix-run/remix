@@ -196,9 +196,6 @@ importers:
       marked:
         specifier: ^17.0.1
         version: 17.0.6
-      node-html-parser:
-        specifier: ^7.0.2
-        version: 7.1.0
       oxfmt:
         specifier: ^0.51.0
         version: 0.51.0
