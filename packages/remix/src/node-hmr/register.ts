@@ -1,2 +1,3 @@
 // IMPORTANT: This file is auto-generated, please do not edit manually.
-export * from '@remix-run/node-hmr/register'
+import '@remix-run/node-hmr/register'
+export {}
