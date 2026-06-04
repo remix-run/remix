@@ -775,7 +775,7 @@ function processApiComment(parts: typedoc.CommentDisplayPart[]): string {
             throw new Error(`Unsupported @link target: ${target.qualifiedName}`)
           }
         } else if (target instanceof typedoc.Reflection) {
-          // prettier-ignore
+          // oxfmt-ignore
           let type: DocumentedAPI['type'] | (typeof VARIABLE_CATEGORIES)[number] | null =
             target.kind === typedoc.ReflectionKind.Function ? 'function' :
             target.kind === typedoc.ReflectionKind.Class ? 'class' :

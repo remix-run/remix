@@ -75,7 +75,7 @@ export type MapTarget = RouteTarget | RouteMap
 /**
  * Infer the correct handler type (Action or Controller) based on the map target.
  */
-// prettier-ignore
+// oxfmt-ignore
 export type MapHandler<
   target extends MapTarget,
   context extends AnyContext = RequestContext,

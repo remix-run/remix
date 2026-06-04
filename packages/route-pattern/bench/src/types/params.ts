@@ -27,7 +27,7 @@ bench('mediarss > MatchParams', async () => {
 // }).types([1424185, 'instantiations'])
 
 function eagerlyEvaluateTypesForParams<patterns extends ReadonlyArray<string>>(
-  // prettier-ignore
+  // oxfmt-ignore
   _: patterns & (
     { [pattern in patterns[number]]: MatchParams<pattern> } extends
     { [pattern in patterns[number]]: Record<string, unknown> }

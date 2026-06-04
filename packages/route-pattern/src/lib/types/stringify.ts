@@ -1,12 +1,12 @@
 import type { ParsedPattern, Token } from './parse.ts'
 
-// prettier-ignore
+// oxfmt-ignore
 export type Stringify<T extends ParsedPattern> =
   T['hostname'] extends Token[] ?
     `${StringifyTokens<T['protocol'], ''>}://${StringifyTokens<T['hostname'], '.'>}${StringifyPort<T['port']>}${StringifyPathname<T['pathname']>}${StringifySearch<T['search']>}` :
     `${StringifyPathname<T['pathname']>}${StringifySearch<T['search']>}`
 
-// prettier-ignore
+// oxfmt-ignore
 type StringifyTokens<T extends Token[] | undefined, Sep extends string> =
   T extends undefined ? '' :
   T extends [] ? '' :
@@ -14,7 +14,7 @@ type StringifyTokens<T extends Token[] | undefined, Sep extends string> =
     `${StringifyToken<Head, Sep>}${StringifyTokens<Tail, Sep>}` :
     never
 
-// prettier-ignore
+// oxfmt-ignore
 type StringifyToken<T extends Token, Sep extends string> =
   T extends { type: 'text', value: infer V extends string } ? V :
   T extends { type: 'variable', name: infer N extends string } ? `:${N}` :
@@ -24,7 +24,7 @@ type StringifyToken<T extends Token, Sep extends string> =
   T extends { type: 'optional', tokens: infer Tokens extends Token[] } ? `(${StringifyTokens<Tokens, Sep>})` :
   never
 
-// prettier-ignore
+// oxfmt-ignore
 type StringifyPathname<T extends Token[] | undefined> =
   T extends undefined ? '/' :
   T extends [] ? '/' :
@@ -38,7 +38,7 @@ type StringifyPort<T extends string | undefined> = T extends string ? `:${T}` : 
 
 type StringifySearch<T extends string | undefined> = T extends string ? `?${T}` : ''
 
-// prettier-ignore
+// oxfmt-ignore
 export type StartsWithSeparator<T extends Token[]> =
   T extends [] ? false :
   T extends [{ type: 'separator' }, ...Token[]] ? true :
