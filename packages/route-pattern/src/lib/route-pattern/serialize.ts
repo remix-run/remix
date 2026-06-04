@@ -64,6 +64,10 @@ export function serializeSearch(pattern: RoutePattern): string {
   return searchParams.toString()
 }
 
+function escapeText(text: string): string {
+  return text.replaceAll(/[:*()\\]/g, '\\$&')
+}
+
 export function serializePart(part: PartPattern): string {
   let separator = part.type === 'hostname' ? '.' : '/'
   let result = ''
@@ -74,7 +78,7 @@ export function serializePart(part: PartPattern): string {
     }
 
     if (token.type === 'text') {
-      result += token.text
+      result += escapeText(token.text)
       continue
     }
 

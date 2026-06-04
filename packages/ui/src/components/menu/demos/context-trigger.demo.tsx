@@ -18,6 +18,7 @@ const actionLabelByName: Record<FileAction, string> = {
 /**
  * @name Context Menu Trigger
  * @description A lower-level menu composition that opens from right-click coordinates while keeping standard menu selection and submenu behavior.
+ * @layout center
  */
 export default function Example(handle: Handle) {
   let latestAction = 'Right-click the card.'

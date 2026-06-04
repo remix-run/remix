@@ -1,0 +1,860 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>API Reference - Authentication | Documentation</title>
+    <link rel="stylesheet" href="/docs/styles/main.css" />
+    <link rel="stylesheet" href="/docs/styles/docs.css" />
+    <link rel="stylesheet" href="/docs/styles/code.css" />
+    <link rel="icon" href="/favicon.ico" />
+    <script src="/docs/scripts/search.js" defer></script>
+    <script src="/docs/scripts/navigation.js" defer></script>
+    <script src="/docs/scripts/code-examples.js" defer></script>
+  </head>
+  <body>
+    <header class="docs-header">
+      <div class="header-content">
+        <a href="/" class="logo">
+          <img src="/images/logo.svg" alt="Logo" width="120" height="32" />
+        </a>
+        <nav class="main-nav">
+          <a href="/docs">Documentation</a>
+          <a href="/docs/api">API Reference</a>
+          <a href="/docs/guides">Guides</a>
+          <a href="/blog">Blog</a>
+        </nav>
+        <div class="header-actions">
+          <input type="search" placeholder="Search docs..." class="search-input" />
+          <a href="https://github.com/company/repo" rel="nofollow">GitHub</a>
+        </div>
+      </div>
+    </header>
+
+    <div class="docs-layout">
+      <aside class="docs-sidebar">
+        <nav>
+          <div class="nav-section">
+            <h3>Getting Started</h3>
+            <ul>
+              <li><a href="/docs/introduction">Introduction</a></li>
+              <li><a href="/docs/quickstart">Quickstart</a></li>
+              <li><a href="/docs/installation">Installation</a></li>
+              <li><a href="/docs/configuration">Configuration</a></li>
+            </ul>
+          </div>
+
+          <div class="nav-section">
+            <h3>Core Concepts</h3>
+            <ul>
+              <li><a href="/docs/architecture">Architecture</a></li>
+              <li><a href="/docs/routing">Routing</a></li>
+              <li><a href="/docs/data-loading">Data Loading</a></li>
+              <li><a href="/docs/forms">Forms</a></li>
+              <li><a href="/docs/error-handling">Error Handling</a></li>
+            </ul>
+          </div>
+
+          <div class="nav-section active">
+            <h3>API Reference</h3>
+            <ul>
+              <li><a href="/docs/api/overview">Overview</a></li>
+              <li><a href="/docs/api/authentication" class="active">Authentication</a></li>
+              <li><a href="/docs/api/users">Users</a></li>
+              <li><a href="/docs/api/projects">Projects</a></li>
+              <li><a href="/docs/api/teams">Teams</a></li>
+              <li><a href="/docs/api/webhooks">Webhooks</a></li>
+              <li><a href="/docs/api/errors">Error Codes</a></li>
+            </ul>
+          </div>
+
+          <div class="nav-section">
+            <h3>Guides</h3>
+            <ul>
+              <li><a href="/docs/guides/deployment">Deployment</a></li>
+              <li><a href="/docs/guides/testing">Testing</a></li>
+              <li><a href="/docs/guides/performance">Performance</a></li>
+              <li><a href="/docs/guides/security">Security</a></li>
+              <li><a href="/docs/guides/migrations">Migrations</a></li>
+            </ul>
+          </div>
+
+          <div class="nav-section">
+            <h3>Advanced</h3>
+            <ul>
+              <li><a href="/docs/advanced/caching">Caching Strategies</a></li>
+              <li><a href="/docs/advanced/rate-limiting">Rate Limiting</a></li>
+              <li><a href="/docs/advanced/webhooks">Webhook Security</a></li>
+              <li><a href="/docs/advanced/batching">Request Batching</a></li>
+            </ul>
+          </div>
+
+          <div class="nav-section">
+            <h3>Resources</h3>
+            <ul>
+              <li><a href="/docs/changelog">Changelog</a></li>
+              <li><a href="/docs/examples">Examples</a></li>
+              <li><a href="/docs/faq">FAQ</a></li>
+              <li><a href="/docs/support">Support</a></li>
+            </ul>
+          </div>
+        </nav>
+      </aside>
+
+      <main class="docs-content">
+        <div class="breadcrumbs">
+          <a href="/docs">Documentation</a>
+          <span>/</span>
+          <a href="/docs/api">API Reference</a>
+          <span>/</span>
+          <span>Authentication</span>
+        </div>
+
+        <article>
+          <h1>Authentication</h1>
+          <p class="lead">
+            Learn how to authenticate your API requests using API keys, OAuth 2.0, or JWT tokens.
+          </p>
+
+          <div class="table-of-contents">
+            <h2>On This Page</h2>
+            <ul>
+              <li><a href="#api-keys">API Keys</a></li>
+              <li><a href="#oauth">OAuth 2.0</a></li>
+              <li><a href="#jwt">JWT Tokens</a></li>
+              <li><a href="#examples">Code Examples</a></li>
+              <li><a href="#best-practices">Best Practices</a></li>
+            </ul>
+          </div>
+
+          <h2 id="api-keys">API Keys</h2>
+          <p>
+            API keys are the simplest way to authenticate. Include your API key in the
+            <code>Authorization</code> header of every request.
+          </p>
+
+          <h3>Getting Your API Key</h3>
+          <ol>
+            <li>Navigate to your <a href="/dashboard/settings/api-keys">API Keys settings</a></li>
+            <li>Click "Create New Key"</li>
+            <li>Give your key a descriptive name</li>
+            <li>Copy and securely store your key (it won't be shown again)</li>
+          </ol>
+
+          <div class="code-example">
+            <pre><code class="language-bash">curl https://api.example.com/v1/users \
+  -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
+          </div>
+
+          <div class="callout callout-warning">
+            <strong>Security Note:</strong> Never commit API keys to version control or expose them
+            in client-side code. Use environment variables and
+            <a href="/docs/guides/security#secrets">secure secret management</a>.
+          </div>
+
+          <h3>API Key Permissions</h3>
+          <p>API keys can be scoped to specific permissions. Available scopes include:</p>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Scope</th>
+                <th>Description</th>
+                <th>Operations</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>users:read</code></td>
+                <td>Read user data</td>
+                <td>GET /users, GET /users/:id</td>
+              </tr>
+              <tr>
+                <td><code>users:write</code></td>
+                <td>Create and update users</td>
+                <td>POST /users, PUT /users/:id, PATCH /users/:id</td>
+              </tr>
+              <tr>
+                <td><code>users:delete</code></td>
+                <td>Delete users</td>
+                <td>DELETE /users/:id</td>
+              </tr>
+              <tr>
+                <td><code>projects:read</code></td>
+                <td>Read project data</td>
+                <td>GET /projects, GET /projects/:id</td>
+              </tr>
+              <tr>
+                <td><code>projects:write</code></td>
+                <td>Create and update projects</td>
+                <td>POST /projects, PUT /projects/:id</td>
+              </tr>
+              <tr>
+                <td><code>teams:admin</code></td>
+                <td>Full team management</td>
+                <td>All team endpoints</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h2 id="oauth">OAuth 2.0</h2>
+          <p>
+            For applications that need to access user data on behalf of users, use OAuth 2.0. We
+            support the authorization code flow with PKCE for maximum security.
+          </p>
+
+          <h3>OAuth Flow</h3>
+          <p>The OAuth 2.0 flow involves several steps:</p>
+
+          <ol>
+            <li>
+              <strong>Register your application</strong>
+              <p>
+                Create an OAuth application in your
+                <a href="/dashboard/settings/oauth-apps">OAuth Apps settings</a>. You'll receive a
+                client ID and client secret.
+              </p>
+            </li>
+            <li>
+              <strong>Redirect users to authorize</strong>
+              <div class="code-example">
+                <pre><code class="language-typescript">let params = new URLSearchParams({
+  client_id: 'YOUR_CLIENT_ID',
+  redirect_uri: 'https://yourapp.com/callback',
+  response_type: 'code',
+  scope: 'users:read projects:write',
+  state: 'random_state_value'
+})
+
+window.location.href = `https://api.example.com/oauth/authorize?${params}`</code></pre>
+              </div>
+            </li>
+            <li>
+              <strong>Handle the callback</strong>
+              <p>After authorization, users are redirected back with an authorization code:</p>
+              <div class="code-example">
+                <pre><code class="language-typescript">// In your callback handler
+let code = new URL(window.location.href).searchParams.get('code')
+
+// Exchange code for access token
+let response = await fetch('https://api.example.com/oauth/token', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    client_id: 'YOUR_CLIENT_ID',
+    client_secret: 'YOUR_CLIENT_SECRET',
+    code: code,
+    grant_type: 'authorization_code'
+  })
+})
+
+let { access_token, refresh_token } = await response.json()</code></pre>
+              </div>
+            </li>
+            <li>
+              <strong>Use the access token</strong>
+              <div class="code-example">
+                <pre><code class="language-typescript">let response = await fetch('https://api.example.com/v1/users/me', {
+  headers: {
+    'Authorization': `Bearer ${access_token}`
+  }
+})</code></pre>
+              </div>
+            </li>
+          </ol>
+
+          <h3>Refreshing Tokens</h3>
+          <p>Access tokens expire after 1 hour. Use refresh tokens to obtain new access tokens:</p>
+
+          <div class="code-example">
+            <pre><code class="language-typescript">let response = await fetch('https://api.example.com/oauth/token', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    client_id: 'YOUR_CLIENT_ID',
+    client_secret: 'YOUR_CLIENT_SECRET',
+    refresh_token: refresh_token,
+    grant_type: 'refresh_token'
+  })
+})
+
+let { access_token } = await response.json()</code></pre>
+          </div>
+
+          <h2 id="jwt">JWT Tokens</h2>
+          <p>
+            For service-to-service authentication, you can use JWT tokens signed with RS256. This is
+            useful for <a href="/docs/guides/webhooks">webhook validation</a> and server-side
+            integrations.
+          </p>
+
+          <h3>Creating a JWT</h3>
+          <div class="code-example">
+            <pre><code class="language-typescript">import jwt from 'jsonwebtoken'
+import fs from 'fs'
+
+let privateKey = fs.readFileSync('private-key.pem')
+
+let token = jwt.sign(
+  {
+    iss: 'YOUR_CLIENT_ID',
+    sub: 'user-id',
+    aud: 'https://api.example.com',
+    exp: Math.floor(Date.now() / 1000) + 3600
+  },
+  privateKey,
+  { algorithm: 'RS256' }
+)</code></pre>
+          </div>
+
+          <h3>Verifying a JWT</h3>
+          <p>
+            When you receive a JWT from our API (such as in webhook payloads), verify it using our
+            public key:
+          </p>
+
+          <div class="code-example">
+            <pre><code class="language-typescript">import jwt from 'jsonwebtoken'
+
+// Fetch our public key from /.well-known/jwks.json
+let publicKey = await fetchPublicKey()
+
+try {
+  let decoded = jwt.verify(token, publicKey, {
+    algorithms: ['RS256'],
+    audience: 'https://yourapp.com',
+    issuer: 'https://api.example.com'
+  })
+  console.log('Valid token:', decoded)
+} catch (err) {
+  console.error('Invalid token:', err)
+}</code></pre>
+          </div>
+
+          <h2 id="examples">Code Examples</h2>
+
+          <h3>JavaScript/TypeScript</h3>
+          <div class="code-example">
+            <pre><code class="language-typescript">import { ApiClient } from '@example/api-client'
+
+let client = new ApiClient({
+  apiKey: process.env.API_KEY
+})
+
+// List users
+let users = await client.users.list({ limit: 10 })
+
+// Create a user
+let newUser = await client.users.create({
+  email: 'user@example.com',
+  name: 'John Doe'
+})</code></pre>
+          </div>
+
+          <h3>Python</h3>
+          <div class="code-example">
+            <pre><code class="language-python">from example_api import ApiClient
+
+client = ApiClient(api_key=os.environ['API_KEY'])
+
+# List users
+users = client.users.list(limit=10)
+
+# Create a user
+new_user = client.users.create(
+    email='user@example.com',
+    name='John Doe'
+)</code></pre>
+          </div>
+
+          <h3>Ruby</h3>
+          <div class="code-example">
+            <pre><code class="language-ruby">require 'example_api'
+
+client = ExampleApi::Client.new(api_key: ENV['API_KEY'])
+
+# List users
+users = client.users.list(limit: 10)
+
+# Create a user
+new_user = client.users.create(
+  email: 'user@example.com',
+  name: 'John Doe'
+)</code></pre>
+          </div>
+
+          <h2 id="best-practices">Best Practices</h2>
+
+          <h3>Security Recommendations</h3>
+          <ul>
+            <li>
+              <strong>Rotate keys regularly</strong> - Set up a rotation schedule for API keys
+              (every 90 days recommended). See
+              <a href="/docs/guides/key-rotation">key rotation guide</a>.
+            </li>
+            <li>
+              <strong>Use separate keys per environment</strong> - Never use production keys in
+              development. Create
+              <a href="/dashboard/settings/api-keys">environment-specific keys</a>.
+            </li>
+            <li>
+              <strong>Implement rate limiting</strong> - Protect your integration with
+              <a href="/docs/advanced/rate-limiting">client-side rate limiting</a>.
+            </li>
+            <li>
+              <strong>Monitor API usage</strong> - Set up alerts for unusual activity in your
+              <a href="/dashboard/usage">usage dashboard</a>.
+            </li>
+            <li>
+              <strong>Use HTTPS only</strong> - Never send credentials over unencrypted connections
+            </li>
+          </ul>
+
+          <h3>Error Handling</h3>
+          <p>
+            Authentication errors return specific status codes. See our
+            <a href="/docs/api/errors">error reference</a> for details:
+          </p>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Status Code</th>
+                <th>Error</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>401</td>
+                <td>Unauthorized</td>
+                <td>Invalid or missing API key</td>
+              </tr>
+              <tr>
+                <td>403</td>
+                <td>Forbidden</td>
+                <td>Valid key but insufficient permissions</td>
+              </tr>
+              <tr>
+                <td>429</td>
+                <td>Rate Limited</td>
+                <td>Too many requests, see <a href="/docs/api/rate-limits">rate limits</a></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="next-steps">
+            <h3>Next Steps</h3>
+            <ul>
+              <li><a href="/docs/api/users">Explore the Users API →</a></li>
+              <li><a href="/docs/guides/security">Read the Security Guide →</a></li>
+              <li><a href="/docs/examples">Browse Code Examples →</a></li>
+            </ul>
+          </div>
+        </article>
+
+        <div class="breadcrumbs">
+          <a href="/docs">Documentation</a>
+          <span>/</span>
+          <a href="/docs/api">API Reference</a>
+          <span>/</span>
+          <span>Authentication</span>
+        </div>
+
+        <article>
+          <h1>Authentication</h1>
+          <p class="lead">
+            Learn how to authenticate your API requests using API keys, OAuth 2.0, or JWT tokens.
+          </p>
+
+          <div class="table-of-contents">
+            <h2>On This Page</h2>
+            <ul>
+              <li><a href="#api-keys">API Keys</a></li>
+              <li><a href="#oauth">OAuth 2.0</a></li>
+              <li><a href="#jwt">JWT Tokens</a></li>
+              <li><a href="#examples">Code Examples</a></li>
+              <li><a href="#best-practices">Best Practices</a></li>
+            </ul>
+          </div>
+
+          <h2 id="api-keys">API Keys</h2>
+          <p>
+            API keys are the simplest way to authenticate. Include your API key in the
+            <code>Authorization</code> header of every request.
+          </p>
+
+          <h3>Getting Your API Key</h3>
+          <ol>
+            <li>Navigate to your <a href="/dashboard/settings/api-keys">API Keys settings</a></li>
+            <li>Click "Create New Key"</li>
+            <li>Give your key a descriptive name</li>
+            <li>Copy and securely store your key (it won't be shown again)</li>
+          </ol>
+
+          <div class="code-example">
+            <pre><code class="language-bash">curl https://api.example.com/v1/users \
+  -H "Authorization: Bearer YOUR_API_KEY"</code></pre>
+          </div>
+
+          <div class="callout callout-warning">
+            <strong>Security Note:</strong> Never commit API keys to version control or expose them
+            in client-side code. Use environment variables and
+            <a href="/docs/guides/security#secrets">secure secret management</a>.
+          </div>
+
+          <h3>API Key Permissions</h3>
+          <p>API keys can be scoped to specific permissions. Available scopes include:</p>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Scope</th>
+                <th>Description</th>
+                <th>Operations</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>users:read</code></td>
+                <td>Read user data</td>
+                <td>GET /users, GET /users/:id</td>
+              </tr>
+              <tr>
+                <td><code>users:write</code></td>
+                <td>Create and update users</td>
+                <td>POST /users, PUT /users/:id, PATCH /users/:id</td>
+              </tr>
+              <tr>
+                <td><code>users:delete</code></td>
+                <td>Delete users</td>
+                <td>DELETE /users/:id</td>
+              </tr>
+              <tr>
+                <td><code>projects:read</code></td>
+                <td>Read project data</td>
+                <td>GET /projects, GET /projects/:id</td>
+              </tr>
+              <tr>
+                <td><code>projects:write</code></td>
+                <td>Create and update projects</td>
+                <td>POST /projects, PUT /projects/:id</td>
+              </tr>
+              <tr>
+                <td><code>teams:admin</code></td>
+                <td>Full team management</td>
+                <td>All team endpoints</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <h2 id="oauth">OAuth 2.0</h2>
+          <p>
+            For applications that need to access user data on behalf of users, use OAuth 2.0. We
+            support the authorization code flow with PKCE for maximum security.
+          </p>
+
+          <h3>OAuth Flow</h3>
+          <p>The OAuth 2.0 flow involves several steps:</p>
+
+          <ol>
+            <li>
+              <strong>Register your application</strong>
+              <p>
+                Create an OAuth application in your
+                <a href="/dashboard/settings/oauth-apps">OAuth Apps settings</a>. You'll receive a
+                client ID and client secret.
+              </p>
+            </li>
+            <li>
+              <strong>Redirect users to authorize</strong>
+              <div class="code-example">
+                <pre><code class="language-typescript">let params = new URLSearchParams({
+  client_id: 'YOUR_CLIENT_ID',
+  redirect_uri: 'https://yourapp.com/callback',
+  response_type: 'code',
+  scope: 'users:read projects:write',
+  state: 'random_state_value'
+})
+
+window.location.href = `https://api.example.com/oauth/authorize?${params}`</code></pre>
+              </div>
+            </li>
+            <li>
+              <strong>Handle the callback</strong>
+              <p>After authorization, users are redirected back with an authorization code:</p>
+              <div class="code-example">
+                <pre><code class="language-typescript">// In your callback handler
+let code = new URL(window.location.href).searchParams.get('code')
+
+// Exchange code for access token
+let response = await fetch('https://api.example.com/oauth/token', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    client_id: 'YOUR_CLIENT_ID',
+    client_secret: 'YOUR_CLIENT_SECRET',
+    code: code,
+    grant_type: 'authorization_code'
+  })
+})
+
+let { access_token, refresh_token } = await response.json()</code></pre>
+              </div>
+            </li>
+            <li>
+              <strong>Use the access token</strong>
+              <div class="code-example">
+                <pre><code class="language-typescript">let response = await fetch('https://api.example.com/v1/users/me', {
+  headers: {
+    'Authorization': `Bearer ${access_token}`
+  }
+})</code></pre>
+              </div>
+            </li>
+          </ol>
+
+          <h3>Refreshing Tokens</h3>
+          <p>Access tokens expire after 1 hour. Use refresh tokens to obtain new access tokens:</p>
+
+          <div class="code-example">
+            <pre><code class="language-typescript">let response = await fetch('https://api.example.com/oauth/token', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    client_id: 'YOUR_CLIENT_ID',
+    client_secret: 'YOUR_CLIENT_SECRET',
+    refresh_token: refresh_token,
+    grant_type: 'refresh_token'
+  })
+})
+
+let { access_token } = await response.json()</code></pre>
+          </div>
+
+          <h2 id="jwt">JWT Tokens</h2>
+          <p>
+            For service-to-service authentication, you can use JWT tokens signed with RS256. This is
+            useful for <a href="/docs/guides/webhooks">webhook validation</a> and server-side
+            integrations.
+          </p>
+
+          <h3>Creating a JWT</h3>
+          <div class="code-example">
+            <pre><code class="language-typescript">import jwt from 'jsonwebtoken'
+import fs from 'fs'
+
+let privateKey = fs.readFileSync('private-key.pem')
+
+let token = jwt.sign(
+  {
+    iss: 'YOUR_CLIENT_ID',
+    sub: 'user-id',
+    aud: 'https://api.example.com',
+    exp: Math.floor(Date.now() / 1000) + 3600
+  },
+  privateKey,
+  { algorithm: 'RS256' }
+)</code></pre>
+          </div>
+
+          <h3>Verifying a JWT</h3>
+          <p>
+            When you receive a JWT from our API (such as in webhook payloads), verify it using our
+            public key:
+          </p>
+
+          <div class="code-example">
+            <pre><code class="language-typescript">import jwt from 'jsonwebtoken'
+
+// Fetch our public key from /.well-known/jwks.json
+let publicKey = await fetchPublicKey()
+
+try {
+  let decoded = jwt.verify(token, publicKey, {
+    algorithms: ['RS256'],
+    audience: 'https://yourapp.com',
+    issuer: 'https://api.example.com'
+  })
+  console.log('Valid token:', decoded)
+} catch (err) {
+  console.error('Invalid token:', err)
+}</code></pre>
+          </div>
+
+          <h2 id="examples">Code Examples</h2>
+
+          <h3>JavaScript/TypeScript</h3>
+          <div class="code-example">
+            <pre><code class="language-typescript">import { ApiClient } from '@example/api-client'
+
+let client = new ApiClient({
+  apiKey: process.env.API_KEY
+})
+
+// List users
+let users = await client.users.list({ limit: 10 })
+
+// Create a user
+let newUser = await client.users.create({
+  email: 'user@example.com',
+  name: 'John Doe'
+})</code></pre>
+          </div>
+
+          <h3>Python</h3>
+          <div class="code-example">
+            <pre><code class="language-python">from example_api import ApiClient
+
+client = ApiClient(api_key=os.environ['API_KEY'])
+
+# List users
+users = client.users.list(limit=10)
+
+# Create a user
+new_user = client.users.create(
+    email='user@example.com',
+    name='John Doe'
+)</code></pre>
+          </div>
+
+          <h3>Ruby</h3>
+          <div class="code-example">
+            <pre><code class="language-ruby">require 'example_api'
+
+client = ExampleApi::Client.new(api_key: ENV['API_KEY'])
+
+# List users
+users = client.users.list(limit: 10)
+
+# Create a user
+new_user = client.users.create(
+  email: 'user@example.com',
+  name: 'John Doe'
+)</code></pre>
+          </div>
+
+          <h2 id="best-practices">Best Practices</h2>
+
+          <h3>Security Recommendations</h3>
+          <ul>
+            <li>
+              <strong>Rotate keys regularly</strong> - Set up a rotation schedule for API keys
+              (every 90 days recommended). See
+              <a href="/docs/guides/key-rotation">key rotation guide</a>.
+            </li>
+            <li>
+              <strong>Use separate keys per environment</strong> - Never use production keys in
+              development. Create
+              <a href="/dashboard/settings/api-keys">environment-specific keys</a>.
+            </li>
+            <li>
+              <strong>Implement rate limiting</strong> - Protect your integration with
+              <a href="/docs/advanced/rate-limiting">client-side rate limiting</a>.
+            </li>
+            <li>
+              <strong>Monitor API usage</strong> - Set up alerts for unusual activity in your
+              <a href="/dashboard/usage">usage dashboard</a>.
+            </li>
+            <li>
+              <strong>Use HTTPS only</strong> - Never send credentials over unencrypted connections
+            </li>
+          </ul>
+
+          <h3>Error Handling</h3>
+          <p>
+            Authentication errors return specific status codes. See our
+            <a href="/docs/api/errors">error reference</a> for details:
+          </p>
+
+          <table>
+            <thead>
+              <tr>
+                <th>Status Code</th>
+                <th>Error</th>
+                <th>Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>401</td>
+                <td>Unauthorized</td>
+                <td>Invalid or missing API key</td>
+              </tr>
+              <tr>
+                <td>403</td>
+                <td>Forbidden</td>
+                <td>Valid key but insufficient permissions</td>
+              </tr>
+              <tr>
+                <td>429</td>
+                <td>Rate Limited</td>
+                <td>Too many requests, see <a href="/docs/api/rate-limits">rate limits</a></td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="next-steps">
+            <h3>Next Steps</h3>
+            <ul>
+              <li><a href="/docs/api/users">Explore the Users API →</a></li>
+              <li><a href="/docs/guides/security">Read the Security Guide →</a></li>
+              <li><a href="/docs/examples">Browse Code Examples →</a></li>
+            </ul>
+          </div>
+        </article>
+      </main>
+
+      <aside class="docs-toc">
+        <h4>On This Page</h4>
+        <nav>
+          <ul>
+            <li><a href="#api-keys">API Keys</a></li>
+            <li><a href="#oauth">OAuth 2.0</a></li>
+            <li><a href="#jwt">JWT Tokens</a></li>
+            <li><a href="#examples">Code Examples</a></li>
+            <li><a href="#best-practices">Best Practices</a></li>
+          </ul>
+        </nav>
+        <div class="toc-footer">
+          <a href="https://github.com/company/repo/blob/main/docs/authentication.md" rel="nofollow"
+            >Edit this page</a
+          >
+        </div>
+      </aside>
+    </div>
+
+    <footer class="docs-footer">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h4>Documentation</h4>
+          <ul>
+            <li><a href="/docs/introduction">Introduction</a></li>
+            <li><a href="/docs/quickstart">Quickstart</a></li>
+            <li><a href="/docs/api">API Reference</a></li>
+            <li><a href="/docs/guides">Guides</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h4>Community</h4>
+          <ul>
+            <li><a href="https://github.com/company/repo" rel="nofollow">GitHub</a></li>
+            <li><a href="https://discord.gg/company" rel="nofollow">Discord</a></li>
+            <li><a href="https://twitter.com/company" rel="nofollow">Twitter</a></li>
+            <li><a href="/blog">Blog</a></li>
+          </ul>
+        </div>
+        <div class="footer-section">
+          <h4>Support</h4>
+          <ul>
+            <li><a href="/docs/faq">FAQ</a></li>
+            <li><a href="/support">Contact Support</a></li>
+            <li><a href="/status">System Status</a></li>
+            <li><a href="/changelog">Changelog</a></li>
+          </ul>
+        </div>
+      </div>
+      <p>&copy; 2024 Company. <a href="/privacy">Privacy</a> | <a href="/terms">Terms</a></p>
+    </footer>
+  </body>
+</html>

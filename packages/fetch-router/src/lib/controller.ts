@@ -37,18 +37,7 @@ type ActionContext<
   context extends RequestContext<any, any>,
 > = ContextWithParams<context, MatchParams<ActionPattern<route>>>
 
-export type ActionObjectWithoutMiddleware<
-  route extends ActionRoute,
-  context extends RequestContext<any, any> = DefaultContext,
-> = {
-  middleware?: undefined
-  /**
-   * The handler that runs for this action.
-   */
-  handler: RequestHandler<ActionContext<route, context>>
-}
-
-export type ActionObjectWithMiddleware<
+export type ActionObject<
   route extends ActionRoute,
   context extends RequestContext<any, any> = DefaultContext,
   middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
@@ -56,7 +45,7 @@ export type ActionObjectWithMiddleware<
   /**
    * Middleware that runs before this action's handler.
    */
-  middleware: readonly [...middleware]
+  middleware?: readonly [...middleware]
   /**
    * The handler that runs after this action's middleware.
    */
@@ -66,24 +55,22 @@ export type ActionObjectWithMiddleware<
 /**
  * An individual route action.
  *
- * Actions may be plain request handler functions or objects with optional inline middleware.
+ * Actions may be plain request handler functions or objects with optional action middleware.
  * Most app code should use {@link createAction}; use this type directly when you need
  * to describe an action for an explicit RequestContext type.
  */
 export type Action<
   route extends ActionRoute,
   context extends RequestContext<any, any> = DefaultContext,
-> =
-  | RequestHandler<ActionContext<route, context>>
-  | ActionObjectWithoutMiddleware<route, context>
-  | ActionObjectWithMiddleware<route, context>
+  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+> = RequestHandler<ActionContext<route, context>> | ActionObject<route, context, middleware>
 
 /**
  * Defines a route handler with route-aware params and the default router context.
  *
  * This helper returns the action unchanged while giving TypeScript the route pattern it needs to
- * type `context.params`. If local middleware adds context values, compose those values into the
- * action context type and pass it as the second generic.
+ * type `context.params`. If action middleware adds context values, those values are available to
+ * the action handler.
  *
  * @param route The route pattern or route object this action handles.
  * @param action The handler function or action object to type-check.
@@ -92,8 +79,8 @@ export type Action<
 export function createAction<
   route extends ActionRoute,
   context extends RequestContext<any, any> = DefaultContext,
-  action extends Action<route, context> = Action<route, context>,
->(route: route, action: action): action {
+  const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+>(route: route, action: Action<route, context, middleware>): Action<route, context, middleware> {
   void route
   return action
 }
@@ -105,11 +92,6 @@ export function isAction(obj: unknown): obj is Action<any, any> {
 export function isActionObject(obj: unknown): obj is ActionObject<any, any> {
   return isRecord(obj) && typeof obj.handler === 'function'
 }
-
-type ActionObject<
-  route extends ActionRoute,
-  context extends RequestContext<any, any> = DefaultContext,
-> = ActionObjectWithoutMiddleware<route, context> | ActionObjectWithMiddleware<route, context>
 
 type ControllerActions<
   routes extends RouteMap,
@@ -124,23 +106,6 @@ type ControllerActions<
     }
   : never
 
-export type ControllerWithoutMiddleware<
-  routes extends RouteMap,
-  context extends RequestContext<any, any> = DefaultContext,
-> = {
-  middleware?: undefined
-  actions: ControllerActions<routes, context>
-}
-
-export type ControllerWithMiddleware<
-  routes extends RouteMap,
-  context extends RequestContext<any, any> = DefaultContext,
-  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
-> = {
-  middleware: readonly [...middleware]
-  actions: ControllerActions<routes, MiddlewareContext<middleware, context>>
-}
-
 /**
  * A controller maps route leaves in a route map to actions.
  *
@@ -152,14 +117,18 @@ export type ControllerWithMiddleware<
 export type Controller<
   routes extends RouteMap,
   context extends RequestContext<any, any> = DefaultContext,
-> = ControllerWithoutMiddleware<routes, context> | ControllerWithMiddleware<routes, context>
+  middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+> = {
+  middleware?: readonly [...middleware]
+  actions: ControllerActions<routes, MiddlewareContext<middleware, context>>
+}
 
 /**
  * Defines a controller whose action keys and params are checked against a route map.
  *
  * This helper returns the controller unchanged while giving TypeScript the route map it needs to
- * type each action's `context.params`. If local middleware adds context values, compose those
- * values into the controller context type and pass it as the second generic.
+ * type each action's `context.params`. If controller middleware adds context values, those values are
+ * available to the controller actions.
  *
  * @param routes The route map this controller handles.
  * @param controller The controller object to type-check.
@@ -168,8 +137,11 @@ export type Controller<
 export function createController<
   routes extends RouteMap,
   context extends RequestContext<any, any> = DefaultContext,
-  controller extends Controller<routes, context> = Controller<routes, context>,
->(routes: routes, controller: controller): controller {
+  const middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],
+>(
+  routes: routes,
+  controller: Controller<routes, context, middleware>,
+): Controller<routes, context, middleware> {
   void routes
   return controller
 }

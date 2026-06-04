@@ -10,6 +10,13 @@ type FakeMemcacheServer = {
   close: () => Promise<void>
 }
 
+type FakeMemcacheEntry = {
+  value: Buffer
+  expiresAt: number | undefined
+}
+
+const MAX_RELATIVE_EXPIRATION_SECONDS = 60 * 60 * 24 * 30
+
 describe('memcache session storage', () => {
   let server: FakeMemcacheServer
 
@@ -125,6 +132,19 @@ describe('memcache session storage', () => {
     assert.equal(response4.session.get('count'), 1, 'old session data should be deleted')
   })
 
+  it('preserves sessions when ttlSeconds exceeds Memcache relative expiration limit', async () => {
+    let storage = createMemcacheSessionStorage(server.address, {
+      ttlSeconds: MAX_RELATIVE_EXPIRATION_SECONDS + 1,
+    })
+    let requests = createRequestHelpers(storage)
+
+    let response1 = await requests.requestIndex()
+    assert.equal(response1.session.get('count'), 1)
+
+    let response2 = await requests.requestIndex(response1.cookie)
+    assert.equal(response2.session.get('count'), 2)
+  })
+
   it('throws for invalid configuration', () => {
     assert.throws(
       () => createMemcacheSessionStorage(server.address, { ttlSeconds: -1 }),
@@ -192,7 +212,7 @@ function createRequestHelpers(storage: SessionStorage) {
 
 async function startFakeMemcacheServer(): Promise<FakeMemcacheServer> {
   return await new Promise((resolve, reject) => {
-    let store = new Map<string, Buffer>()
+    let store = new Map<string, FakeMemcacheEntry>()
 
     let server = net.createServer((socket) => {
       socket.on('error', () => {
@@ -202,7 +222,7 @@ async function startFakeMemcacheServer(): Promise<FakeMemcacheServer> {
       })
 
       let buffer = Buffer.alloc(0)
-      let pendingSet: { key: string; bytes: number } | undefined
+      let pendingSet: { key: string; expiresAt: number | undefined; bytes: number } | undefined
 
       socket.on('data', (chunk) => {
         buffer = Buffer.concat([buffer, chunk])
@@ -225,7 +245,10 @@ async function startFakeMemcacheServer(): Promise<FakeMemcacheServer> {
               return
             }
 
-            store.set(pendingSet.key, Buffer.from(value))
+            store.set(pendingSet.key, {
+              value: Buffer.from(value),
+              expiresAt: pendingSet.expiresAt,
+            })
             pendingSet = undefined
             socket.write('STORED\r\n')
             continue
@@ -242,7 +265,7 @@ async function startFakeMemcacheServer(): Promise<FakeMemcacheServer> {
           let getMatch = /^get (\S+)$/.exec(line)
           if (getMatch) {
             let key = getMatch[1]
-            let value = store.get(key)
+            let value = readStoredValue(store, key)
 
             if (value == null) {
               socket.write('END\r\n')
@@ -265,6 +288,7 @@ async function startFakeMemcacheServer(): Promise<FakeMemcacheServer> {
 
             pendingSet = {
               key: setMatch[1],
+              expiresAt: parseMemcacheExpiration(setMatch[3]),
               bytes,
             }
             continue
@@ -311,4 +335,37 @@ async function startFakeMemcacheServer(): Promise<FakeMemcacheServer> {
       })
     })
   })
+}
+
+function readStoredValue(store: Map<string, FakeMemcacheEntry>, key: string): Buffer | undefined {
+  let entry = store.get(key)
+
+  if (entry == null) {
+    return undefined
+  }
+
+  if (entry.expiresAt != null && entry.expiresAt <= getCurrentTimeSeconds()) {
+    store.delete(key)
+    return undefined
+  }
+
+  return entry.value
+}
+
+function parseMemcacheExpiration(exptime: string): number | undefined {
+  let seconds = Number(exptime)
+
+  if (seconds === 0) {
+    return undefined
+  }
+
+  if (seconds > MAX_RELATIVE_EXPIRATION_SECONDS) {
+    return seconds
+  }
+
+  return getCurrentTimeSeconds() + seconds
+}
+
+function getCurrentTimeSeconds(): number {
+  return Math.floor(Date.now() / 1000)
 }

@@ -10,7 +10,9 @@ export type MatchParamMeta = {
   type: ':' | '*'
   name: string
   value: string
+  /** Start offset after pathname is normalized. */
   begin: number
+  /** End offset after pathname is normalized. */
   end: number
 }
 

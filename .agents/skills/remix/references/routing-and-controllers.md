@@ -108,14 +108,17 @@ The handler receives a context object with:
 - `url` — the request URL
 - `request` — the raw `Request`
 
-Actions with inline middleware:
+Actions with action middleware:
 
 ```typescript
+import { createAction } from 'remix/router'
 import { requireAuth } from 'remix/middleware/auth'
 
-router.get(routes.account.index, {
+export const account = createAction(routes.account.index, {
   middleware: [requireAuth()],
-  handler: accountAction.handler,
+  handler(context) {
+    return render(<AccountPage />)
+  },
 })
 ```
 
@@ -305,7 +308,7 @@ router.map(routes.account.settings, accountSettingsController)
 
 ### Controller middleware
 
-The `middleware` array on a controller runs only for the direct actions in that controller, before action-level middleware. It does not apply to other controllers.
+The `middleware` array on a controller runs only for the direct actions in that controller, before action middleware. It does not apply to other controllers.
 
 ```typescript
 export default createController(routes.admin, {
@@ -338,22 +341,16 @@ router.post(routes.logout, logoutAction)
 
 ## Typed Context
 
-Define an `AppContext` type from your middleware stack, then make it the default context used by `createAction()` and `createController()`:
+Define an `AppContext` type from your router, then make it the default context used by `createAction()` and `createController()`:
 
 ```typescript
-import type { MiddlewareContext, ContextWithParams, AnyParams } from 'remix/router'
+import { createRouter, type RouterContext } from 'remix/router'
 
-type RootMiddleware = [
-  ReturnType<typeof formData>,
-  ReturnType<typeof session>,
-  ReturnType<typeof loadDatabase>,
-  ReturnType<typeof loadAuth>,
-]
+export const router = createRouter({
+  middleware: [formData(), session(cookie, storage), loadDatabase(), loadAuth()],
+})
 
-export type AppContext<params extends AnyParams = {}> = ContextWithParams<
-  MiddlewareContext<RootMiddleware>,
-  params
->
+export type AppContext = RouterContext<typeof router>
 
 declare module 'remix/router' {
   interface RouterTypes {

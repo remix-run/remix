@@ -2,14 +2,14 @@
 
 A compatible subset of `node:assert/strict` that works in any JavaScript environment, including browsers — plus a vitest-/jest-style `expect` API for tests that prefer chainable matchers.
 
-Uses strict equality (`===`) for all comparisons — no type coercion.
+Uses strict equality (`Object.is`) for all comparisons — no type coercion.
 
 ## Features
 
 - `AssertionError` — compatible with `node:assert.AssertionError` (`actual`, `expected`, `operator`, `name`)
 - `assert.ok` — truthy check
-- `assert.equal` / `assert.notEqual` — strict equality (`===` / `!==`)
-- `assert.deepEqual` / `assert.notDeepEqual` — recursive strict deep equality
+- `assert.equal` / `assert.notEqual` — strict equality (`Object.is` / `!Object.is`)
+- `assert.deepEqual` / `assert.partialDeepEqual` / `assert.notDeepEqual` — recursive strict deep equality
 - `assert.match` — string matches a regexp
 - `assert.fail` — unconditional failure
 - `assert.throws` — synchronous throw assertion with optional error validation
@@ -24,17 +24,20 @@ npm i remix
 
 ## Usage
 
-Mirrors `node:assert/strict` — uses strict equality (`===`), so `1 !== '1'` and `null !== undefined`.
+Mirrors `node:assert/strict` — uses strict equality (`Object.is`), so `1 !== '1'`, `null !== undefined`, `NaN` equals `NaN`, and `0` does not equal `-0`.
 
 ```ts
 import assert from 'remix/assert'
 
 assert.ok(true)
+assert(true)
 assert.equal(1, 1)
 assert.equal(1, '1') // throws — different types
+assert.equal(NaN, NaN)
 assert.notEqual('a', 'b')
 assert.deepEqual({ a: 1 }, { a: 1 })
 assert.deepEqual({ a: 1 }, { a: '1' }) // throws — different types
+assert.partialDeepEqual({ a: 1, b: 2 }, { a: 1 })
 assert.match('hello world', /world/)
 assert.fail('should not reach here')
 
@@ -64,11 +67,15 @@ import {
   equal,
   notEqual,
   deepEqual,
+  partialDeepEqual,
   notDeepEqual,
   match,
+  doesNotMatch,
   fail,
   throws,
+  doesNotThrow,
   rejects,
+  doesNotReject,
 } from 'remix/assert'
 ```
 

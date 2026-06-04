@@ -51,19 +51,19 @@ export function formData(
   let suppressErrors = options?.suppressErrors ?? false
   let uploadHandler = options?.uploadHandler
 
-  return async (context) => {
+  return async (context, next) => {
     if (context.has(FormData)) {
       let formData = context.get(FormData)
       if (formData != null) {
         context.set(FormData, formData, { property: 'formData' })
       }
 
-      return
+      return next()
     }
 
     if (context.method === 'GET' || context.method === 'HEAD') {
       context.set(FormData, new FormData(), { property: 'formData' })
-      return
+      return next()
     }
 
     let contentType = context.headers.get('Content-Type')
@@ -73,7 +73,7 @@ export function formData(
         !contentType.startsWith('application/x-www-form-urlencoded'))
     ) {
       context.set(FormData, new FormData(), { property: 'formData' })
-      return
+      return next()
     }
 
     try {
@@ -87,5 +87,7 @@ export function formData(
 
       context.set(FormData, new FormData(), { property: 'formData' })
     }
+
+    return next()
   }
 }

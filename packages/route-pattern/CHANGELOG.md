@@ -2,6 +2,115 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.22.0
+
+### Minor Changes
+
+- Matchers now normalize percent-encoded pathname during matching
+
+  Pathname matching now uses the URL parser's normalized pathname, splits it into segments, and canonicalizes each segment as percent-encoded text before matching. This allows equivalent path text like `a` and `%61`, or `café` and `caf%C3%A9`, to match consistently:
+
+  ```ts
+  let matcher = createMatcher('/a')
+
+  matcher.match('https://example.com/%61')
+  // before: null
+  // after:  { params: {} }
+  ```
+
+  ```ts
+  let matcher = createMatcher('/café')
+
+  matcher.match('https://example.com/caf%C3%A9')
+  // before: null
+  // after:  { params: {} }
+  ```
+
+  Also keeps encoded path separators like `%2F` inside the segment where they appear instead of treating them as `/` separators during matching:
+
+  ```ts
+  let matcher = createMatcher('/files/:dir/:name')
+
+  matcher.match('https://example.com/files/docs/readme.md')
+  // before: { params: { dir: 'docs', name: 'readme.md' } }
+  // after:  { params: { dir: 'docs', name: 'readme.md' } }
+
+  matcher.match('https://example.com/files/docs%2Freadme.md')
+  // before: { params: { dir: 'docs', name: 'readme.md' } }
+  // after:  null
+  ```
+
+  Matched pathname params are still returned decoded.
+
+  ```ts
+  let matcher = createMatcher('/posts/:slug')
+  let href = createHref('/posts/:slug', { slug: 'hello/world?draft=true#preview' })
+
+  matcher.match(`https://example.com${href}`)
+  // before: null
+  // after:  { params: { slug: 'hello/world?draft=true#preview' } }
+  ```
+
+- `createHref` now encodes pathname params and validates hostname params
+
+  Pathname params now encode characters that would otherwise change URL structure when parsed. Variables encode `/`, `?`, `#`, `%`, and `\\`; wildcards preserve `/` as a path separator but encode the other structural characters.
+
+  ```ts
+  createHref('/posts/:slug', { slug: 'hello/world?draft=true#preview' })
+  // before: '/posts/hello/world?draft=true#preview'
+  // after:  '/posts/hello%2Fworld%3Fdraft=true%23preview'
+
+  createHref('/files/*path', { path: 'docs/@remix-run/ui?raw#v1' })
+  // before: '/files/docs/@remix-run/ui?raw#v1'
+  // after:  '/files/docs/@remix-run/ui%3Fraw%23v1'
+  ```
+
+  Hostname params are now validated so structural URL characters cannot change the URL authority when parsed. Hostname variables reject `.`, `@`, `:`, `/`, `?`, and `#`; hostname wildcards allow `.` to span labels but reject the other structural characters.
+
+  ```ts
+  createHref('://:tenant.example.com/path', { tenant: 'acme.dev' })
+  // before: 'https://acme%2Edev.example.com/path'
+  // after:  throws CreateHrefError
+
+  createHref('://*tenant.example.com/path', { tenant: 'preview.acme' })
+  // before: 'https://preview.acme.example.com/path'
+  // after:  'https://preview.acme.example.com/path'
+
+  createHref('://*tenant.example.com/path', { tenant: 'preview:acme' })
+  // before: 'https://preview%3Aacme.example.com/path'
+  // after:  throws CreateHrefError
+  ```
+
+### Patch Changes
+
+- Route pattern parsing now stores escaped static text without the escape marker
+
+  Escaped pattern characters in static text are now parsed into text tokens that contain the literal character without the leading `\\`. Serialization keeps emitting the escape marker so the pattern string still round-trips as escaped static text.
+
+  ```ts
+  let pattern = RoutePattern.parse('/docs/npm\\:@scope/package')
+
+  pattern.pathname.tokens
+  // before: [{ type: 'text', text: 'docs' }, { type: 'separator' }, { type: 'text', text: 'npm\\:' }, ...]
+  // after:  [{ type: 'text', text: 'docs' }, { type: 'separator' }, { type: 'text', text: 'npm:' }, ...]
+
+  pattern.toString()
+  // before: '/docs/npm\\:@scope/package'
+  // after:  '/docs/npm\\:@scope/package'
+  ```
+
+  ```ts
+  let pattern = RoutePattern.parse('/files/report-\\(final\\).pdf')
+
+  pattern.pathname.tokens
+  // before: text tokens included '\\(' and '\\)'
+  // after:  text tokens include '(' and ')'
+
+  pattern.toString()
+  // before: '/files/report-\\(final\\).pdf'
+  // after:  '/files/report-\\(final\\).pdf'
+  ```
+
 ## v0.21.1
 
 ### Patch Changes

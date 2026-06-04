@@ -2,6 +2,12 @@
 
 This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/main/packages/headers). It follows [semantic versioning](https://semver.org/).
 
+## v0.21.1
+
+### Patch Changes
+
+- Expose parser-specific header modules from `@remix-run/headers` via dedicated subpath exports and migrate internal header-parser consumers (including multipart parser) to import from those subpaths.
+
 ## v0.21.0
 
 ### Minor Changes

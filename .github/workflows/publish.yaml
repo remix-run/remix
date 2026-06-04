@@ -51,10 +51,7 @@ jobs:
         uses: pnpm/action-setup@v4
 
       - name: Install Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version-file: 'package.json'
-          package-manager-cache: false
+        uses: ./.github/actions/setup-node-pnpm-cache
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -80,6 +77,9 @@ jobs:
 
       - name: Build packages
         run: pnpm build
+
+      - name: Validate remix package README mirrors
+        run: pnpm run validate-remix-package-readmes
 
       - name: Publish to npm and create releases
         run: node ./scripts/publish.ts

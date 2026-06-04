@@ -1,2 +1,0 @@
-Added `remix/ui/menu` `menu.contextTrigger()` so menus can open from right-click pointer locations while keeping existing keyboard navigation, submenus, and selection behavior.
-Updated `remix/ui/anchor` `anchor(floating, anchorTarget, options)` to accept either an `HTMLElement` or coordinate target via the new `AnchorPoint`/`AnchorTarget` types, and added `remix/ui/menu` `menu.contextTrigger()` so menus can open from right-click pointer locations while keeping existing menu behavior.

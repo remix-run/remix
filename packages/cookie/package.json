@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/cookie",
-  "version": "0.5.3",
+  "version": "0.5.4",
   "description": "A toolkit for working with cookies in JavaScript",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",

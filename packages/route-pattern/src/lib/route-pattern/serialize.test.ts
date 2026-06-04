@@ -84,6 +84,11 @@ describe('serializeHostname', () => {
   it('preserves hostname structure', () => {
     assert.equal(hostnameOf('://:tenant.example.com'), ':tenant.example.com')
   })
+
+  it('escapes special chars in hostname text', () => {
+    let pattern = 'a\\:b.c\\*d.e\\(f\\).g\\\\h'
+    assert.equal(hostnameOf(`://${pattern}`), pattern)
+  })
 })
 
 describe('serializePort', () => {
@@ -123,6 +128,11 @@ describe('serializePathname', () => {
 
   it('emits nameless wildcard as bare *', () => {
     assert.equal(pathnameOf('*'), '*')
+  })
+
+  it('escapes special chars in pathname text', () => {
+    let pattern = 'a\\:b/c\\*d/e\\(f\\)/g\\\\h'
+    assert.equal(pathnameOf(`/${pattern}`), pattern)
   })
 })
 

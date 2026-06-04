@@ -71,9 +71,9 @@ export class SpecReporter implements Reporter {
                 ? colors.yellow(parts[i])
                 : colors.green(parts[i])
           let suiteComment = suiteAllSkipped
-            ? colors.dim(' # skipped')
+            ? colors.dim(` ${formatPendingComment('skipped', getCommonReason(suiteTests))}`)
             : suiteAllTodo
-              ? colors.yellow(' # todo')
+              ? colors.yellow(` ${formatPendingComment('todo', getCommonReason(suiteTests))}`)
               : ''
           let duration = suiteComment ? '' : ` (${totalDuration.toFixed(2)}ms)`
           let label2 = envLabel
@@ -95,9 +95,9 @@ export class SpecReporter implements Reporter {
                 : colors.green
           let prefixDuration = prefixTestList.reduce((sum, t) => sum + t.duration, 0)
           let prefixComment = prefixAllSkipped
-            ? colors.dim(' # skipped')
+            ? colors.dim(` ${formatPendingComment('skipped', getCommonReason(prefixTestList))}`)
             : prefixAllTodo
-              ? colors.yellow(' # todo')
+              ? colors.yellow(` ${formatPendingComment('todo', getCommonReason(prefixTestList))}`)
               : ''
           let prefixDurationStr = prefixComment ? '' : ` (${prefixDuration.toFixed(2)}ms)`
           console.log(
@@ -134,11 +134,17 @@ export class SpecReporter implements Reporter {
           this.#failures.push({ suiteName: test.suiteName, name: test.name, error: test.error })
         } else if (test.status === 'skipped') {
           if (test.name)
-            console.log(`${testIndent}${colors.dim('↓')} ${colors.dim(`${test.name} # skipped`)}`)
+            console.log(
+              `${testIndent}${colors.dim('↓')} ${colors.dim(
+                `${test.name} ${formatPendingComment('skipped', test.reason)}`,
+              )}`,
+            )
         } else if (test.status === 'todo') {
           if (test.name)
             console.log(
-              `${testIndent}${colors.yellow('…')} ${colors.yellow(`${test.name} # todo`)}`,
+              `${testIndent}${colors.yellow('…')} ${colors.yellow(
+                `${test.name} ${formatPendingComment('todo', test.reason)}`,
+              )}`,
             )
         }
       }
@@ -180,4 +186,19 @@ export class SpecReporter implements Reporter {
     console.log(`${info} duration_ms ${durationMs.toFixed(5)}`)
     console.log()
   }
+}
+
+function formatPendingComment(status: 'skipped' | 'todo', reason: string | undefined): string {
+  let comment = status === 'skipped' ? '# skipped' : '# todo'
+  return reason ? `${comment}: ${reason}` : comment
+}
+
+function getCommonReason(tests: TestResult[]): string | undefined {
+  let reason: string | undefined
+  for (let test of tests) {
+    if (!test.reason) return undefined
+    reason ??= test.reason
+    if (reason !== test.reason) return undefined
+  }
+  return reason
 }

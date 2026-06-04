@@ -2,6 +2,68 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-beta.3
+
+### Pre-release Changes
+
+- Added `package.json` `exports`:
+
+  - `remix/headers/accept` to re-export APIs from `@remix-run/headers/accept`
+  - `remix/headers/accept-encoding` to re-export APIs from `@remix-run/headers/accept-encoding`
+  - `remix/headers/accept-language` to re-export APIs from `@remix-run/headers/accept-language`
+  - `remix/headers/cache-control` to re-export APIs from `@remix-run/headers/cache-control`
+  - `remix/headers/content-disposition` to re-export APIs from `@remix-run/headers/content-disposition`
+  - `remix/headers/content-range` to re-export APIs from `@remix-run/headers/content-range`
+  - `remix/headers/content-type` to re-export APIs from `@remix-run/headers/content-type`
+  - `remix/headers/cookie` to re-export APIs from `@remix-run/headers/cookie`
+  - `remix/headers/if-match` to re-export APIs from `@remix-run/headers/if-match`
+  - `remix/headers/if-none-match` to re-export APIs from `@remix-run/headers/if-none-match`
+  - `remix/headers/if-range` to re-export APIs from `@remix-run/headers/if-range`
+  - `remix/headers/range` to re-export APIs from `@remix-run/headers/range`
+  - `remix/headers/raw-headers` to re-export APIs from `@remix-run/headers/raw-headers`
+  - `remix/headers/set-cookie` to re-export APIs from `@remix-run/headers/set-cookie`
+  - `remix/headers/vary` to re-export APIs from `@remix-run/headers/vary`
+
+- Updated `remix/ui/anchor` `anchor(floating, anchorTarget, options)` to accept either an `HTMLElement` or coordinate target via the new `AnchorPoint`/`AnchorTarget` types.
+
+- Added `remix/ui/menu` `menu.contextTrigger()` so menus can open from right-click pointer locations while keeping existing keyboard navigation, submenus, and selection behavior.
+  Updated `remix/ui/anchor` `anchor(floating, anchorTarget, options)` to accept either an `HTMLElement` or coordinate target via the new `AnchorPoint`/`AnchorTarget` types, and added `remix/ui/menu` `menu.contextTrigger()` so menus can open from right-click pointer locations while keeping existing menu behavior.
+
+- Update the optional `playwright` peer dependency range to match the workspace Playwright catalog version.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.4.2`](https://github.com/remix-run/remix/releases/tag/assets@0.4.2)
+  - [`async-context-middleware@0.3.2`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.3.2)
+  - [`auth@0.2.4`](https://github.com/remix-run/remix/releases/tag/auth@0.2.4)
+  - [`auth-middleware@0.2.2`](https://github.com/remix-run/remix/releases/tag/auth-middleware@0.2.2)
+  - [`cli@0.3.2`](https://github.com/remix-run/remix/releases/tag/cli@0.3.2)
+  - [`compression-middleware@0.1.10`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.10)
+  - [`cookie@0.5.4`](https://github.com/remix-run/remix/releases/tag/cookie@0.5.4)
+  - [`cop-middleware@0.1.5`](https://github.com/remix-run/remix/releases/tag/cop-middleware@0.1.5)
+  - [`cors-middleware@0.1.5`](https://github.com/remix-run/remix/releases/tag/cors-middleware@0.1.5)
+  - [`csrf-middleware@0.1.5`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@0.1.5)
+  - [`data-table-sqlite@0.5.1`](https://github.com/remix-run/remix/releases/tag/data-table-sqlite@0.5.1)
+  - [`fetch-proxy@0.8.3`](https://github.com/remix-run/remix/releases/tag/fetch-proxy@0.8.3)
+  - [`fetch-router@0.19.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.19.2)
+  - [`file-storage@0.13.6`](https://github.com/remix-run/remix/releases/tag/file-storage@0.13.6)
+  - [`file-storage-s3@0.1.3`](https://github.com/remix-run/remix/releases/tag/file-storage-s3@0.1.3)
+  - [`form-data-middleware@0.3.2`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.3.2)
+  - [`form-data-parser@0.17.3`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.17.3)
+  - [`fs@0.4.5`](https://github.com/remix-run/remix/releases/tag/fs@0.4.5)
+  - [`headers@0.21.1`](https://github.com/remix-run/remix/releases/tag/headers@0.21.1)
+  - [`lazy-file@5.0.5`](https://github.com/remix-run/remix/releases/tag/lazy-file@5.0.5)
+  - [`logger-middleware@0.3.2`](https://github.com/remix-run/remix/releases/tag/logger-middleware@0.3.2)
+  - [`method-override-middleware@0.1.10`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@0.1.10)
+  - [`multipart-parser@0.16.3`](https://github.com/remix-run/remix/releases/tag/multipart-parser@0.16.3)
+  - [`render-middleware@0.1.2`](https://github.com/remix-run/remix/releases/tag/render-middleware@0.1.2)
+  - [`response@0.3.6`](https://github.com/remix-run/remix/releases/tag/response@0.3.6)
+  - [`route-pattern@0.22.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.22.0)
+  - [`session-middleware@0.3.2`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.3.2)
+  - [`session-storage-memcache@0.1.2`](https://github.com/remix-run/remix/releases/tag/session-storage-memcache@0.1.2)
+  - [`static-middleware@0.4.11`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.11)
+  - [`test@0.4.2`](https://github.com/remix-run/remix/releases/tag/test@0.4.2)
+  - [`ui@0.3.0`](https://github.com/remix-run/remix/releases/tag/ui@0.3.0)
+
 ## v3.0.0-beta.2
 
 ### Pre-release Changes

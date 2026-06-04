@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Building Scalable Web Applications in 2024 | Engineering Blog</title>
+    <meta
+      name="description"
+      content="A comprehensive guide to building scalable web applications using modern tools and best practices."
+    />
+    <link rel="stylesheet" href="/styles/main.css" />
+    <link rel="stylesheet" href="/styles/blog.css" />
+    <link rel="stylesheet" href="/styles/syntax-highlighting.css" />
+    <link rel="canonical" href="https://example.com/blog/scalable-web-apps-2024" />
+    <script src="/scripts/analytics.js"></script>
+    <script src="/scripts/reading-time.js" defer></script>
+    <script src="/scripts/code-copy.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <nav>
+        <a href="/" class="logo">
+          <img src="/images/logo.svg" alt="Company Logo" width="120" height="32" />
+        </a>
+        <ul>
+          <li><a href="/blog">Blog</a></li>
+          <li><a href="/docs">Docs</a></li>
+          <li><a href="/about">About</a></li>
+        </ul>
+      </nav>
+    </header>
+
+    <main class="blog-post">
+      <article>
+        <header class="post-header">
+          <div class="post-meta">
+            <a href="/blog/category/engineering" class="category">Engineering</a>
+            <time datetime="2024-01-15">January 15, 2024</time>
+            <span class="reading-time">12 min read</span>
+          </div>
+          <h1>Building Scalable Web Applications in 2024</h1>
+          <p class="post-subtitle">
+            A comprehensive guide to modern architecture, performance optimization, and best
+            practices
+          </p>
+          <div class="post-author">
+            <img src="/images/authors/jane-smith.jpg" alt="Jane Smith" width="48" height="48" />
+            <div>
+              <strong><a href="/authors/jane-smith">Jane Smith</a></strong>
+              <span>Senior Engineering Manager</span>
+            </div>
+          </div>
+          <img
+            src="/images/blog/scalable-apps-hero.jpg"
+            alt="Architecture diagram"
+            class="post-hero-image"
+            loading="lazy"
+          />
+        </header>
+
+        <div class="post-content">
+          <p>
+            Building scalable web applications has become increasingly complex as user expectations
+            rise and technology evolves. In this comprehensive guide, we'll explore the essential
+            principles, patterns, and tools you need to build applications that can grow with your
+            business.
+          </p>
+
+          <h2 id="introduction">Introduction</h2>
+          <p>
+            Scalability isn't just about handling more users—it's about maintaining performance,
+            reliability, and developer productivity as your application grows. Whether you're
+            building a startup MVP or an enterprise platform, understanding scalability from day one
+            will save you countless hours of refactoring later.
+          </p>
+
+          <h2 id="architecture">Modern Application Architecture</h2>
+          <p>
+            The foundation of any scalable application is its architecture. Let's explore the key
+            components:
+          </p>
+
+          <h3>Microservices vs Monoliths</h3>
+          <p>
+            The debate between <a href="/blog/microservices-guide">microservices</a> and
+            <a href="/blog/monolith-patterns">monolithic architectures</a> continues, but the
+            reality is nuanced. Start with a modular monolith and extract services only when you
+            have clear boundaries and organizational support.
+          </p>
+
+          <h3>API Design</h3>
+          <p>Your API is the contract between your frontend and backend. Design it carefully:</p>
+          <ul>
+            <li>
+              Use <a href="https://restfulapi.net/" rel="nofollow">RESTful principles</a> for
+              resource-based APIs
+            </li>
+            <li>
+              Consider <a href="https://graphql.org/" rel="nofollow">GraphQL</a> for complex data
+              requirements
+            </li>
+            <li>Implement proper <a href="/blog/api-versioning">versioning strategies</a></li>
+            <li>
+              Document everything with
+              <a href="https://www.openapis.org/" rel="nofollow">OpenAPI</a>
+            </li>
+          </ul>
+
+          <h2 id="database">Database Strategy</h2>
+          <p>Your database is often the first bottleneck. Here's how to design for scale:</p>
+
+          <h3>Choosing the Right Database</h3>
+          <p>Not all databases are created equal. Consider your access patterns:</p>
+          <ul>
+            <li>
+              <strong>PostgreSQL</strong> - Excellent for relational data with complex queries. See
+              our <a href="/blog/postgres-optimization">PostgreSQL optimization guide</a>.
+            </li>
+            <li>
+              <strong>MongoDB</strong> - Great for document-oriented data and flexible schemas
+            </li>
+            <li><strong>Redis</strong> - Perfect for caching and real-time features</li>
+            <li><strong>Elasticsearch</strong> - Essential for full-text search at scale</li>
+          </ul>
+
+          <h3>Indexing Strategy</h3>
+          <p>
+            Proper indexing can make the difference between milliseconds and seconds. Here's a basic
+            example:
+          </p>
+
+          <pre><code class="language-sql">-- Create a composite index for common queries
+CREATE INDEX idx_users_email_status
+ON users(email, status)
+WHERE deleted_at IS NULL;
+
+-- Add partial index for active users
+CREATE INDEX idx_active_users
+ON users(created_at)
+WHERE status = 'active';</code></pre>
+
+          <h2 id="caching">Caching Strategies</h2>
+          <p>
+            Implement caching at multiple layers to reduce database load and improve response times.
+            Learn more in our <a href="/blog/caching-patterns">caching patterns guide</a>.
+          </p>
+
+          <h3>Application-Level Caching</h3>
+          <pre><code class="language-typescript">import { createCache } from '@/lib/cache'
+
+const userCache = createCache({
+  ttl: 300, // 5 minutes
+  maxSize: 1000
+})
+
+async function getUser(id: string) {
+  let cached = userCache.get(id)
+  if (cached) return cached
+
+  let user = await db.users.findById(id)
+  userCache.set(id, user)
+  return user
+}</code></pre>
+
+          <h2 id="performance">Performance Optimization</h2>
+          <p>Performance is a feature, not an afterthought. Here are key areas to focus on:</p>
+
+          <h3>Frontend Performance</h3>
+          <ul>
+            <li><a href="/blog/code-splitting">Code splitting</a> to reduce initial bundle size</li>
+            <li><a href="/blog/lazy-loading">Lazy loading</a> images and routes</li>
+            <li>
+              Implement <a href="/blog/service-workers">service workers</a> for offline support
+            </li>
+            <li>
+              Use <a href="https://web.dev/vitals/" rel="nofollow">Core Web Vitals</a> as metrics
+            </li>
+          </ul>
+
+          <h3>Backend Performance</h3>
+          <pre><code class="language-typescript">// Use connection pooling
+import { Pool } from 'pg'
+
+const pool = new Pool({
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+})
+
+// Implement request batching
+async function batchGetUsers(ids: string[]) {
+  let query = 'SELECT * FROM users WHERE id = ANY($1)'
+  let result = await pool.query(query, [ids])
+  return result.rows
+}</code></pre>
+
+          <h2 id="monitoring">Monitoring and Observability</h2>
+          <p>You can't improve what you don't measure. Essential monitoring includes:</p>
+          <ul>
+            <li>
+              <strong>Application metrics</strong> - Request rates, error rates, latency (see
+              <a href="/blog/metrics-guide">our metrics guide</a>)
+            </li>
+            <li><strong>Infrastructure metrics</strong> - CPU, memory, disk, network</li>
+            <li><strong>Business metrics</strong> - Conversion rates, user engagement</li>
+            <li><strong>Logs</strong> - Structured logging with context</li>
+          </ul>
+
+          <h2 id="deployment">Deployment and DevOps</h2>
+          <p>Modern deployment practices enable rapid iteration while maintaining stability:</p>
+
+          <h3>CI/CD Pipeline</h3>
+          <pre><code class="language-yaml"># .github/workflows/deploy.yml
+name: Deploy
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run tests
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Deploy
+        run: npm run deploy</code></pre>
+
+          <h2 id="conclusion">Conclusion</h2>
+          <p>
+            Building scalable web applications is a journey, not a destination. Start with solid
+            foundations, measure everything, and iterate based on real user data. For more insights,
+            check out our <a href="/blog/series/scalability">scalability series</a>.
+          </p>
+
+          <p>Want to learn more? Read our related articles:</p>
+          <ul>
+            <li><a href="/blog/microservices-guide">The Complete Microservices Guide</a></li>
+            <li><a href="/blog/database-sharding">Database Sharding Strategies</a></li>
+            <li><a href="/blog/load-balancing">Load Balancing Best Practices</a></li>
+            <li><a href="/blog/disaster-recovery">Disaster Recovery Planning</a></li>
+          </ul>
+
+          <p>
+            Building scalable web applications has become increasingly complex as user expectations
+            rise and technology evolves. In this comprehensive guide, we'll explore the essential
+            principles, patterns, and tools you need to build applications that can grow with your
+            business.
+          </p>
+
+          <h2 id="introduction">Introduction</h2>
+          <p>
+            Scalability isn't just about handling more users—it's about maintaining performance,
+            reliability, and developer productivity as your application grows. Whether you're
+            building a startup MVP or an enterprise platform, understanding scalability from day one
+            will save you countless hours of refactoring later.
+          </p>
+
+          <h2 id="architecture">Modern Application Architecture</h2>
+          <p>
+            The foundation of any scalable application is its architecture. Let's explore the key
+            components:
+          </p>
+
+          <h3>Microservices vs Monoliths</h3>
+          <p>
+            The debate between <a href="/blog/microservices-guide">microservices</a> and
+            <a href="/blog/monolith-patterns">monolithic architectures</a> continues, but the
+            reality is nuanced. Start with a modular monolith and extract services only when you
+            have clear boundaries and organizational support.
+          </p>
+
+          <h3>API Design</h3>
+          <p>Your API is the contract between your frontend and backend. Design it carefully:</p>
+          <ul>
+            <li>
+              Use <a href="https://restfulapi.net/" rel="nofollow">RESTful principles</a> for
+              resource-based APIs
+            </li>
+            <li>
+              Consider <a href="https://graphql.org/" rel="nofollow">GraphQL</a> for complex data
+              requirements
+            </li>
+            <li>Implement proper <a href="/blog/api-versioning">versioning strategies</a></li>
+            <li>
+              Document everything with
+              <a href="https://www.openapis.org/" rel="nofollow">OpenAPI</a>
+            </li>
+          </ul>
+
+          <h2 id="database">Database Strategy</h2>
+          <p>Your database is often the first bottleneck. Here's how to design for scale:</p>
+
+          <h3>Choosing the Right Database</h3>
+          <p>Not all databases are created equal. Consider your access patterns:</p>
+          <ul>
+            <li>
+              <strong>PostgreSQL</strong> - Excellent for relational data with complex queries. See
+              our <a href="/blog/postgres-optimization">PostgreSQL optimization guide</a>.
+            </li>
+            <li>
+              <strong>MongoDB</strong> - Great for document-oriented data and flexible schemas
+            </li>
+            <li><strong>Redis</strong> - Perfect for caching and real-time features</li>
+            <li><strong>Elasticsearch</strong> - Essential for full-text search at scale</li>
+          </ul>
+
+          <h3>Indexing Strategy</h3>
+          <p>
+            Proper indexing can make the difference between milliseconds and seconds. Here's a basic
+            example:
+          </p>
+
+          <pre><code class="language-sql">-- Create a composite index for common queries
+CREATE INDEX idx_users_email_status
+ON users(email, status)
+WHERE deleted_at IS NULL;
+
+-- Add partial index for active users
+CREATE INDEX idx_active_users
+ON users(created_at)
+WHERE status = 'active';</code></pre>
+
+          <h2 id="caching">Caching Strategies</h2>
+          <p>
+            Implement caching at multiple layers to reduce database load and improve response times.
+            Learn more in our <a href="/blog/caching-patterns">caching patterns guide</a>.
+          </p>
+
+          <h3>Application-Level Caching</h3>
+          <pre><code class="language-typescript">import { createCache } from '@/lib/cache'
+
+const userCache = createCache({
+  ttl: 300, // 5 minutes
+  maxSize: 1000
+})
+
+async function getUser(id: string) {
+  let cached = userCache.get(id)
+  if (cached) return cached
+
+  let user = await db.users.findById(id)
+  userCache.set(id, user)
+  return user
+}</code></pre>
+
+          <h2 id="performance">Performance Optimization</h2>
+          <p>Performance is a feature, not an afterthought. Here are key areas to focus on:</p>
+
+          <h3>Frontend Performance</h3>
+          <ul>
+            <li><a href="/blog/code-splitting">Code splitting</a> to reduce initial bundle size</li>
+            <li><a href="/blog/lazy-loading">Lazy loading</a> images and routes</li>
+            <li>
+              Implement <a href="/blog/service-workers">service workers</a> for offline support
+            </li>
+            <li>
+              Use <a href="https://web.dev/vitals/" rel="nofollow">Core Web Vitals</a> as metrics
+            </li>
+          </ul>
+
+          <h3>Backend Performance</h3>
+          <pre><code class="language-typescript">// Use connection pooling
+import { Pool } from 'pg'
+
+const pool = new Pool({
+  max: 20,
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+})
+
+// Implement request batching
+async function batchGetUsers(ids: string[]) {
+  let query = 'SELECT * FROM users WHERE id = ANY($1)'
+  let result = await pool.query(query, [ids])
+  return result.rows
+}</code></pre>
+
+          <h2 id="monitoring">Monitoring and Observability</h2>
+          <p>You can't improve what you don't measure. Essential monitoring includes:</p>
+          <ul>
+            <li>
+              <strong>Application metrics</strong> - Request rates, error rates, latency (see
+              <a href="/blog/metrics-guide">our metrics guide</a>)
+            </li>
+            <li><strong>Infrastructure metrics</strong> - CPU, memory, disk, network</li>
+            <li><strong>Business metrics</strong> - Conversion rates, user engagement</li>
+            <li><strong>Logs</strong> - Structured logging with context</li>
+          </ul>
+
+          <h2 id="deployment">Deployment and DevOps</h2>
+          <p>Modern deployment practices enable rapid iteration while maintaining stability:</p>
+
+          <h3>CI/CD Pipeline</h3>
+          <pre><code class="language-yaml"># .github/workflows/deploy.yml
+name: Deploy
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run tests
+        run: npm test
+      - name: Build
+        run: npm run build
+      - name: Deploy
+        run: npm run deploy</code></pre>
+
+          <h2 id="conclusion">Conclusion</h2>
+          <p>
+            Building scalable web applications is a journey, not a destination. Start with solid
+            foundations, measure everything, and iterate based on real user data. For more insights,
+            check out our <a href="/blog/series/scalability">scalability series</a>.
+          </p>
+
+          <p>Want to learn more? Read our related articles:</p>
+          <ul>
+            <li><a href="/blog/microservices-guide">The Complete Microservices Guide</a></li>
+            <li><a href="/blog/database-sharding">Database Sharding Strategies</a></li>
+            <li><a href="/blog/load-balancing">Load Balancing Best Practices</a></li>
+            <li><a href="/blog/disaster-recovery">Disaster Recovery Planning</a></li>
+          </ul>
+        </div>
+
+        <footer class="post-footer">
+          <div class="post-tags">
+            <a href="/blog/tag/architecture" class="tag">Architecture</a>
+            <a href="/blog/tag/scalability" class="tag">Scalability</a>
+            <a href="/blog/tag/performance" class="tag">Performance</a>
+            <a href="/blog/tag/databases" class="tag">Databases</a>
+          </div>
+          <div class="post-share">
+            <span>Share:</span>
+            <a href="https://twitter.com/share" rel="nofollow">Twitter</a>
+            <a href="https://linkedin.com/share" rel="nofollow">LinkedIn</a>
+            <a href="https://news.ycombinator.com/submit" rel="nofollow">HN</a>
+          </div>
+        </footer>
+      </article>
+
+      <aside class="sidebar">
+        <div class="author-bio">
+          <h3>About the Author</h3>
+          <img src="/images/authors/jane-smith.jpg" alt="Jane Smith" width="80" height="80" />
+          <p>
+            <strong><a href="/authors/jane-smith">Jane Smith</a></strong> is a Senior Engineering
+            Manager with 15 years of experience building scalable systems.
+          </p>
+          <a href="https://twitter.com/janesmith" rel="nofollow">Follow on Twitter</a>
+        </div>
+
+        <div class="related-posts">
+          <h3>Related Posts</h3>
+          <ul>
+            <li>
+              <a href="/blog/microservices-guide">
+                <img src="/images/blog/microservices-thumb.jpg" alt="" width="60" height="60" />
+                <span>The Complete Microservices Guide</span>
+              </a>
+            </li>
+            <li>
+              <a href="/blog/database-optimization">
+                <img src="/images/blog/database-thumb.jpg" alt="" width="60" height="60" />
+                <span>Database Optimization Techniques</span>
+              </a>
+            </li>
+            <li>
+              <a href="/blog/caching-patterns">
+                <img src="/images/blog/caching-thumb.jpg" alt="" width="60" height="60" />
+                <span>Advanced Caching Patterns</span>
+              </a>
+            </li>
+          </ul>
+        </div>
+
+        <div class="newsletter">
+          <h3>Subscribe to our Newsletter</h3>
+          <p>Get the latest posts delivered right to your inbox.</p>
+          <form action="/api/subscribe" method="post">
+            <input type="email" name="email" placeholder="your@email.com" required />
+            <button type="submit" class="btn">Subscribe</button>
+          </form>
+        </div>
+      </aside>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-links">
+        <div>
+          <h4>Product</h4>
+          <ul>
+            <li><a href="/features">Features</a></li>
+            <li><a href="/pricing">Pricing</a></li>
+            <li><a href="/docs">Documentation</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4>Company</h4>
+          <ul>
+            <li><a href="/about">About</a></li>
+            <li><a href="/blog">Blog</a></li>
+            <li><a href="/careers">Careers</a></li>
+          </ul>
+        </div>
+      </div>
+      <p>&copy; 2024 Company. <a href="/privacy">Privacy</a> | <a href="/terms">Terms</a></p>
+    </footer>
+  </body>
+</html>

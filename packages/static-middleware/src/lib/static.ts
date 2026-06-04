@@ -2,9 +2,15 @@ import * as path from 'node:path'
 import * as fsp from 'node:fs/promises'
 import { openLazyFile } from '@remix-run/fs'
 import type { Middleware } from '@remix-run/fetch-router'
+import { detectMimeType } from '@remix-run/mime'
 import { createFileResponse as sendFile, type FileResponseOptions } from '@remix-run/response/file'
 
 import { generateDirectoryListing } from './directory-listing.ts'
+
+interface StaticFileMatch {
+  realPath: string
+  requestedPath: string
+}
 
 /**
  * Function that determines if HTTP Range requests should be supported for a given file.
@@ -107,22 +113,45 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
       return next()
     }
 
+    let rootRealPath: string
+    try {
+      rootRealPath = await fsp.realpath(root)
+    } catch {
+      return next()
+    }
+
     let targetPath = path.join(root, relativePath)
-    let filePath: string | undefined
+    let containedTargetPath = await resolveContainedPath(rootRealPath, targetPath)
+    if (containedTargetPath == null) {
+      return next()
+    }
+
+    let file: StaticFileMatch | undefined
 
     try {
-      let stats = await fsp.stat(targetPath)
+      let stats = await fsp.stat(containedTargetPath)
 
       if (stats.isFile()) {
-        filePath = targetPath
+        file = {
+          realPath: containedTargetPath,
+          requestedPath: targetPath,
+        }
       } else if (stats.isDirectory()) {
         // Try each index file in turn
         for (let indexFile of index) {
           let indexPath = path.join(targetPath, indexFile)
+          let containedIndexPath = await resolveContainedPath(rootRealPath, indexPath)
+          if (containedIndexPath == null) {
+            continue
+          }
+
           try {
-            let indexStats = await fsp.stat(indexPath)
+            let indexStats = await fsp.stat(containedIndexPath)
             if (indexStats.isFile()) {
-              filePath = indexPath
+              file = {
+                realPath: containedIndexPath,
+                requestedPath: indexPath,
+              }
               break
             }
           } catch {
@@ -131,17 +160,20 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
         }
 
         // If no index file found and listFiles is enabled, show directory listing
-        if (!filePath && listFiles) {
-          return generateDirectoryListing(targetPath, context.url.pathname)
+        if (!file && listFiles) {
+          return generateDirectoryListing(containedTargetPath, context.url.pathname)
         }
       }
     } catch {
       // Path doesn't exist or isn't accessible, fall through
     }
 
-    if (filePath) {
-      let fileName = path.relative(root, filePath)
-      let lazyFile = openLazyFile(filePath, { name: fileName })
+    if (file) {
+      let fileName = path.relative(root, file.requestedPath)
+      let lazyFile = openLazyFile(file.realPath, {
+        name: fileName,
+        type: detectMimeType(file.requestedPath) ?? '',
+      })
 
       let finalFileOptions: FileResponseOptions = { ...fileOptions }
 
@@ -158,4 +190,21 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
 
     return next()
   }
+}
+
+async function resolveContainedPath(
+  rootRealPath: string,
+  targetPath: string,
+): Promise<string | null> {
+  try {
+    let realPath = await fsp.realpath(targetPath)
+    return isContainedPath(rootRealPath, realPath) ? realPath : null
+  } catch {
+    return null
+  }
+}
+
+function isContainedPath(rootPath: string, targetPath: string): boolean {
+  let relativePath = path.relative(rootPath, targetPath)
+  return relativePath === '' || (!relativePath.startsWith('..') && !path.isAbsolute(relativePath))
 }

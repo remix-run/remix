@@ -243,7 +243,11 @@ function buildSuite(suiteName: string, tests: TestResult[], baseDir: string): HT
         ? 'rt-todo'
         : 'rt-passed'
   let icon = suiteFailed ? '✗' : suiteAllSkipped ? '↓' : suiteAllTodo ? '…' : '✓'
-  let suffix = suiteAllSkipped ? ' # skipped' : suiteAllTodo ? ' # todo' : ''
+  let suffix = suiteAllSkipped
+    ? ` ${formatPendingComment('skipped', getCommonReason(tests))}`
+    : suiteAllTodo
+      ? ` ${formatPendingComment('todo', getCommonReason(tests))}`
+      : ''
 
   let details = el('details', { className: 'rt-suite-details' })
   if (suiteFailed) details.open = true
@@ -297,12 +301,33 @@ function buildTestItem(test: TestResult, baseDir: string): HTMLElement | null {
     return row
   }
   if (test.status === 'skipped' && test.name) {
-    return el('div', { className: 'rt-muted', textContent: `↓ ${test.name} # skipped` })
+    return el('div', {
+      className: 'rt-muted',
+      textContent: `↓ ${test.name} ${formatPendingComment('skipped', test.reason)}`,
+    })
   }
   if (test.status === 'todo' && test.name) {
-    return el('div', { className: 'rt-todo', textContent: `… ${test.name} # todo` })
+    return el('div', {
+      className: 'rt-todo',
+      textContent: `… ${test.name} ${formatPendingComment('todo', test.reason)}`,
+    })
   }
   return null
+}
+
+function formatPendingComment(status: 'skipped' | 'todo', reason: string | undefined): string {
+  let comment = status === 'skipped' ? '# skipped' : '# todo'
+  return reason ? `${comment}: ${reason}` : comment
+}
+
+function getCommonReason(tests: TestResult[]): string | undefined {
+  let reason: string | undefined
+  for (let test of tests) {
+    if (!test.reason) return undefined
+    reason ??= test.reason
+    if (reason !== test.reason) return undefined
+  }
+  return reason
 }
 
 function buildStack(stack: string, baseDir: string): DocumentFragment {

@@ -1,4 +1,4 @@
-import { createRouter, type MiddlewareContext } from 'remix/router'
+import { createMiddleware, createRouter, type MiddlewareContext } from 'remix/router'
 import { logger } from 'remix/middleware/logger'
 import { staticFiles } from 'remix/middleware/static'
 
@@ -7,7 +7,8 @@ import { framesController } from './actions/frames/controller.tsx'
 import { render } from './middleware/render.ts'
 import { routes } from './routes.ts'
 
-type AppContext = MiddlewareContext<[ReturnType<typeof render>]>
+const appMiddleware = createMiddleware(render())
+type AppContext = MiddlewareContext<typeof appMiddleware>
 
 declare module 'remix/router' {
   interface RouterTypes {
@@ -29,7 +30,7 @@ middleware.push(
     index: false,
   }),
 )
-middleware.push(render())
+middleware.push(...appMiddleware)
 
 export const router = createRouter<AppContext>({ middleware })
 router.map(routes, rootController)

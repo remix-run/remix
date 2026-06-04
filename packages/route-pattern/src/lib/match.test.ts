@@ -1,6 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
+import { createHref } from './href.ts'
 import { createMultiMatcher } from './match.ts'
 
 describe('Matcher', () => {
@@ -75,28 +76,6 @@ describe('Matcher', () => {
         let match = matcher.match('https://example.com/users')
         assert.ok(match)
         assert.deepEqual(match.params, {})
-      })
-
-      it('matches non-ASCII hostname param values', () => {
-        let matcher = createMultiMatcher<null>()
-        matcher.add('://:accented.:cjk.:rtl.:combining.example.com/users', null)
-
-        let params = {
-          // Unlike pathname params, hostname labels can't use the emoji, zwj,
-          // nbsp, or fullwidth cases; see:
-          // https://unicode.org/reports/tr46/#Validity_Criteria
-          accented: 'café',
-          cjk: '北京',
-          rtl: 'مرحبا',
-          combining: 'hà-nội',
-        }
-        let url = new URL(
-          `https://${params.accented}.${params.cjk}.${params.rtl}.${params.combining}.example.com/users`,
-        )
-
-        let match = matcher.match(url.href)
-        assert.ok(match)
-        assert.deepEqual(match.params, params)
       })
 
       it('returns null when static hostname does not match', () => {
@@ -187,7 +166,7 @@ describe('Matcher', () => {
         assert.deepEqual(match.params, { sub: 'api', version: 'v2', tld: 'dev' })
       })
 
-      it('matches mixed static/variable/wildcard segments', () => {
+      it('matches mixed static/variable/wildcards', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://*prefix.:env.example.com/api', null)
 
@@ -243,6 +222,46 @@ describe('Matcher', () => {
         let match = matcher.match('http://example.com:8080/users')
         assert.ok(match)
         assert.deepEqual(match.params, {})
+      })
+
+      it('matches explicit HTTP default port', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('http://example.com:80/users', null)
+
+        let match = matcher.match('http://example.com:80/users')
+        assert.ok(match)
+        assert.deepEqual(match.params, {})
+      })
+
+      it('matches explicit HTTPS default port', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('https://example.com:443/users', null)
+
+        let match = matcher.match('https://example.com:443/users')
+        assert.ok(match)
+        assert.deepEqual(match.params, {})
+      })
+
+      it('normalizes default ports per protocol variant', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('http(s)://example.com:443/users', null)
+
+        assert.ok(matcher.match('http://example.com:443/users'))
+        assert.ok(matcher.match('https://example.com:443/users'))
+        assert.ok(matcher.match('https://example.com/users'))
+        assert.equal(matcher.match('http://example.com/users'), null)
+      })
+
+      it('matches hrefs generated from patterns with explicit default ports', () => {
+        let matcher = createMultiMatcher<null>()
+        let httpPattern = 'http://example.com:80/users' as const
+        let httpsPattern = 'https://example.com:443/users' as const
+
+        matcher.add(httpPattern, null)
+        matcher.add(httpsPattern, null)
+
+        assert.ok(matcher.match(createHref(httpPattern)))
+        assert.ok(matcher.match(createHref(httpsPattern)))
       })
 
       it('returns null when explicit port does not match', () => {
@@ -324,7 +343,7 @@ describe('Matcher', () => {
         assert.equal(matcher.match('http://example.com/users/'), null)
       })
 
-      it('matches variable segments', () => {
+      it('matches variables', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users/:id', null)
 
@@ -351,40 +370,14 @@ describe('Matcher', () => {
         assert.deepEqual(match.params, { filename: 'my-file_v2.txt' })
       })
 
-      it('does not partially match variable segments after a static suffix', () => {
+      it('does not partially match variables after a static suffix', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/report-:format.pdf', null)
 
         assert.equal(matcher.match('http://example.com/files/report-json.pdf.backup'), null)
       })
 
-      it('matches non-ASCII param values', () => {
-        let matcher = createMultiMatcher<null>()
-        matcher.add(
-          '://example.com/:accented/:cjk/:rtl/:combining/:emoji/:zwj/:nbsp/:fullwidth',
-          null,
-        )
-
-        let params = {
-          accented: 'café',
-          cjk: '北京-とうきょう-서울',
-          rtl: 'مرحبا-עולם',
-          combining: 'Hà-Nội',
-          emoji: '💿',
-          zwj: '🧑‍🚀', // 🚀 + zero-width joiner + 👨
-          nbsp: 'acme\u00A0corp',
-          fullwidth: 'ｗｉｄｅ',
-        }
-        let url = new URL(
-          `https://example.com/${params.accented}/${params.cjk}/${params.rtl}/${params.combining}/${params.emoji}/${params.zwj}/${params.nbsp}/${params.fullwidth}`,
-        )
-
-        let match = matcher.match(url.href)
-        assert.ok(match)
-        assert.deepEqual(match.params, params)
-      })
-
-      it('matches wildcard segments', () => {
+      it('matches wildcards', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/*path', null)
 
@@ -402,7 +395,7 @@ describe('Matcher', () => {
         assert.deepEqual(match.params, { path: 'docs/api' })
       })
 
-      it('does not partially match wildcard segments before a static suffix', () => {
+      it('does not partially match wildcards before a static suffix', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/files/*path/status', null)
 
@@ -475,7 +468,7 @@ describe('Matcher', () => {
         assert.deepEqual(match2.params, { id: 'doc123', format: undefined })
       })
 
-      it('matches mixed static/variable/wildcard segments', () => {
+      it('matches mixed static/variable/wildcards', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/api/:version/files/*path', null)
 
@@ -611,14 +604,6 @@ describe('Matcher', () => {
         assert.ok(match)
       })
 
-      it('preserves URL encoding in search parameter values', () => {
-        let matcher = createMultiMatcher<null>()
-        matcher.add('://example.com/search?q=hello%20world', null)
-
-        let match = matcher.match('http://example.com/search?q=hello%20world')
-        assert.ok(match)
-      })
-
       it('matches repeated parameter values', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/filter?tags', null)
@@ -705,6 +690,240 @@ describe('Matcher', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('/Posts/:id', null)
         assert.equal(matcher.match('https://example.com/posts/123'), null)
+      })
+    })
+
+    describe('escaping', () => {
+      describe('hostname', () => {
+        it('matches escaped special chars in static text', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://a\\*b.c\\(d\\).example.com/users', null)
+
+          let match = matcher.match('https://a*b.c(d).example.com/users')
+          assert.ok(match)
+          assert.deepEqual(match.params, {})
+        })
+      })
+
+      describe('pathname', () => {
+        it('matches escaped special chars in static text', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('/a\\:b/c\\*d/e\\(f\\)/g\\\\h', null)
+
+          let match = matcher.match('https://example.com/a%3Ab/c*d/e(f)/g%5Ch')
+          assert.ok(match)
+          assert.deepEqual(match.params, {})
+        })
+      })
+    })
+
+    describe('codec', () => {
+      // Unlike pathname params, hostname labels can't use the emoji, zwj,
+      // nbsp, or fullwidth cases; see:
+      // https://unicode.org/reports/tr46/#Validity_Criteria
+      let hostnameCodec = [
+        'café', // accented
+        '北京-とうきょう-서울', // cjk
+        /* rtl */ 'مرحبا-עולם',
+        'Hà-Nội', // combining
+      ]
+
+      describe('hostname', () => {
+        it('matches punycode-encoded Unicode static labels', () => {
+          for (let value of Object.values(hostnameCodec)) {
+            let matcher = createMultiMatcher<null>()
+            matcher.add(`://${value}.example.com/users`, null)
+
+            let url = new URL(`https://${value}.example.com/users`)
+            let match = matcher.match(url.href)
+            assert.deepEqual(match?.params, {})
+          }
+        })
+
+        it('decodes punycode-encoded Unicode variable labels', () => {
+          for (let value of Object.values(hostnameCodec)) {
+            let matcher = createMultiMatcher<null>()
+            matcher.add('://:value.example.com/users', null)
+
+            let url = new URL(`https://${value}.example.com/users`)
+            let match = matcher.match(url.href)
+            assert.deepEqual(match?.params, { value: value.toLowerCase() })
+          }
+        })
+
+        it('decodes punycode-encoded Unicode wildcard labels', () => {
+          for (let value of Object.values(hostnameCodec)) {
+            let matcher = createMultiMatcher<null>()
+            matcher.add('://*host.example.com/users', null)
+
+            let url = new URL(`https://${value}.example.com/users`)
+            let match = matcher.match(url.href)
+            assert.deepEqual(match?.params, { host: value.toLowerCase() })
+          }
+        })
+      })
+
+      describe('pathname', () => {
+        let pathnameCodec = [
+          ...hostnameCodec,
+          '💿', // emoji
+          '🧑‍🚀', // zwj (🚀 + zero-width joiner + 👨)
+          'acme\u00A0corp', // nbsp
+          'ｗｉｄｅ', // fullwidth
+        ]
+
+        it('matches percent-encoded Unicode static segments', () => {
+          for (let value of pathnameCodec) {
+            let matcher = createMultiMatcher<null>()
+            matcher.add(`://example.com/${value}`, null)
+
+            let url = new URL(`https://example.com/${value}`)
+            let match = matcher.match(url.href)
+            assert.deepEqual(match?.params, {})
+          }
+        })
+
+        it('decodes percent-encoded Unicode variables', () => {
+          for (let value of pathnameCodec) {
+            let matcher = createMultiMatcher<null>()
+            matcher.add('://example.com/:value', null)
+
+            let url = new URL(`https://example.com/${value}`)
+            let match = matcher.match(url.href)
+            assert.deepEqual(match?.params, { value })
+          }
+        })
+
+        it('decodes percent-encoded Unicode wildcards', () => {
+          for (let value of pathnameCodec) {
+            let matcher = createMultiMatcher<null>()
+            matcher.add('://example.com/files/*path', null)
+
+            let url = new URL(`https://example.com/files/${value}`)
+            let match = matcher.match(url.href)
+            assert.deepEqual(match?.params, { path: value })
+          }
+        })
+
+        it('normalizes percent-encoded ASCII in static segments', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/a', null)
+
+          let match = matcher.match('https://example.com/%61')
+          assert.deepEqual(match?.params, {})
+        })
+
+        it('treats raw and percent-encoded URL path-safe static text as equivalent', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('/packages/@scope+name,semi;equals=/file', null)
+
+          assert.deepEqual(
+            matcher.match('https://example.com/packages/@scope+name,semi;equals=/file')?.params,
+            {},
+          )
+          assert.deepEqual(
+            matcher.match('https://example.com/packages/%40scope%2Bname%2Csemi%3Bequals%3D/file')
+              ?.params,
+            {},
+          )
+        })
+
+        it('decodes percent-encoded ASCII in variables', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/:value', null)
+
+          let match = matcher.match('https://example.com/%61')
+          assert.deepEqual(match?.params, { value: 'a' })
+        })
+
+        it('decodes percent-encoded ASCII in wildcards', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/*path', null)
+
+          let match = matcher.match('https://example.com/files/%61')
+          assert.deepEqual(match?.params, { path: 'a' })
+        })
+
+        it('returns null for malformed percent-encoded pathnames', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/:name', null)
+
+          assert.equal(matcher.match('https://example.com/files/%E0%A4%A'), null)
+          assert.equal(matcher.match('https://example.com/files/%'), null)
+        })
+
+        it('returns no matches for malformed percent-encoded pathnames', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/:name', null)
+          matcher.add('://example.com/files/*path', null)
+
+          assert.deepEqual(matcher.matchAll('https://example.com/files/%E0%A4%A'), [])
+        })
+
+        it('does not match encoded slashes as pathname separators', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/:dir/:name', null)
+
+          assert.equal(matcher.match('http://example.com/files/docs%2Freadme.md'), null)
+        })
+
+        it('decodes encoded slashes in variables', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/:name', null)
+
+          let match = matcher.match('https://example.com/files/docs%2Freadme.md')
+          assert.deepEqual(match?.params, { name: 'docs/readme.md' })
+        })
+
+        it('decodes encoded slashes in wildcards with continuation', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/*path/status', null)
+
+          let match = matcher.match('https://example.com/files/docs%2Freadme.md/status')
+          assert.deepEqual(match?.params, { path: 'docs/readme.md' })
+        })
+
+        it('decodes structural slashes in wildcards with continuation', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/*path/status', null)
+
+          let match = matcher.match('https://example.com/files/docs/readme.md/status')
+          assert.deepEqual(match?.params, { path: 'docs/readme.md' })
+        })
+
+        it('decodes structural URL chars in variables encoded by createHref', () => {
+          let matcher = createMultiMatcher<null>()
+          let pattern = '://example.com/posts/:slug' as const
+          matcher.add(pattern, null)
+
+          let slug = 'hello/world?draft=true#preview'
+          let href = createHref(pattern, { slug })
+          let match = matcher.match(href)
+
+          assert.deepEqual(match?.params, { slug })
+        })
+
+        it('decodes structural URL chars in wildcards encoded by createHref', () => {
+          let matcher = createMultiMatcher<null>()
+          let pattern = '://example.com/files/*path' as const
+          matcher.add(pattern, null)
+
+          let path = 'docs/@remix-run/ui?raw#v1'
+          let href = createHref(pattern, { path })
+          let match = matcher.match(href)
+
+          assert.deepEqual(match?.params, { path })
+        })
+      })
+
+      describe('search', () => {
+        it('preserves URL encoding in parameter values', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/search?q=hello%20world', null)
+
+          let match = matcher.match('http://example.com/search?q=hello%20world')
+          assert.ok(match)
+        })
       })
     })
 
