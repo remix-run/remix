@@ -687,6 +687,28 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/data-table-d1:
+    dependencies:
+      '@cloudflare/workers-types':
+        specifier: ^4.20260511.1
+        version: 4.20260511.1
+      '@remix-run/data-table':
+        specifier: workspace:^
+        version: link:../data-table
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:*
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:*
+        version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
   packages/data-table-mysql:
     dependencies:
       '@remix-run/data-table':
