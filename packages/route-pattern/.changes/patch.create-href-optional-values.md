@@ -1,0 +1,1 @@
+Fixed `createHref()` so optional route params set to `null` are omitted instead of serialized as `"null"`, and empty pathname variables throw instead of generating hrefs that cannot match their pattern.
