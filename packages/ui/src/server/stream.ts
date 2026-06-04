@@ -3,11 +3,9 @@ import type { ElementType, ElementProps, RemixElement } from '../runtime/jsx.ts'
 import { Fragment, createComponent, createFrameHandle, Frame } from '../runtime/component.ts'
 import { isEntry, type EntryComponent } from '../runtime/client-entries.ts'
 import {
-  FRAMEWORK_PROPS as RUNTIME_FRAMEWORK_PROPS,
-  SELF_CLOSING_TAGS,
   normalizeAttributeName,
   serializeStyleObject,
-  shouldStringifyBooleanAttribute,
+  isBooleanishStringAttribute,
 } from '../runtime/core/attributes.ts'
 import { appendFlushMarker, type FlushKind, stripFlushMarkers } from '../runtime/stream-protocol.ts'
 import { REMIX_UI_STYLE_LAYER } from '../style/layers.ts'
@@ -128,6 +126,23 @@ type Segment =
 
 const TEXTAREA_VALUE_PROPS = new Set(['value', 'defaultValue'])
 const INPUT_DEFAULT_PROPS = new Set(['defaultValue', 'defaultChecked'])
+const SSR_OMITTED_PROPS = new Set(['children', 'mix', 'key', 'animate', 'innerHTML', 'on'])
+const SELF_CLOSING_TAGS = new Set([
+  'area',
+  'base',
+  'br',
+  'col',
+  'embed',
+  'hr',
+  'img',
+  'input',
+  'link',
+  'meta',
+  'param',
+  'source',
+  'track',
+  'wbr',
+])
 
 const DOCTYPE_PATTERN = /<!doctype(?:\s[^>]*)?>/gi
 
@@ -150,8 +165,6 @@ function emptyReadableStream(): ReadableStream<Uint8Array> {
 function getStyleLayerName(selector: string, layer: string = REMIX_UI_STYLE_LAYER): string {
   return `${layer}.${selector}`
 }
-
-const SSR_OMITTED_PROPS = RUNTIME_FRAMEWORK_PROPS
 
 const ssrSignal = Object.freeze({
   get aborted() {
@@ -589,7 +602,7 @@ function renderAttributes(props: any, isSvg: boolean, excludedProps?: Set<string
 
     let value = props[key]
     let attrName = transformAttributeName(key, isSvg)
-    let shouldStringifyBoolean = shouldStringifyBooleanAttribute(attrName)
+    let shouldStringifyBoolean = isBooleanishStringAttribute(attrName) || attrName === 'value'
     if (value === undefined || value === null || (value === false && !shouldStringifyBoolean)) {
       continue
     }

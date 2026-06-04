@@ -7,7 +7,7 @@ import type { FrameHandle } from './component.ts'
 import type { Scheduler, VirtualRoot } from './vdom.ts'
 import { createRangeRoot, createRoot } from './vdom.ts'
 import { diffNodes } from './diff-dom.ts'
-import { createStyleManager, type StyleManager } from '../style/index.ts'
+import { createStyleManager, type StyleManager } from '../style/stylesheet.ts'
 import { findFlushMarker, type FlushKind } from './stream-protocol.ts'
 
 type FrameRoot = [Comment, Comment] | Element | Document | DocumentFragment
