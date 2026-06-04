@@ -15,7 +15,8 @@
     "README.md",
     "dist",
     "src",
-    "!src/**/*.test.ts"
+    "!src/**/*.test.ts",
+    "!src/**/*.test-helper.ts"
   ],
   "type": "module",
   "sideEffects": false,
@@ -37,7 +38,8 @@
     "@remix-run/data-table": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "@typescript/native-preview": "catalog:",
+    "miniflare": "^4.20260603.0"
   },
   "dependencies": {
     "@cloudflare/workers-types": "^4.20260511.1",

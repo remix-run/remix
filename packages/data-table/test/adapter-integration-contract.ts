@@ -44,6 +44,7 @@ const accountTasks = hasManyThrough(accounts, tasks, {
 
 export type IntegrationContractOptions = {
   integrationEnabled: boolean
+  supportsTransactions?: boolean
   createDatabase: () => Database
   resetDatabase: () => Promise<void>
 }
@@ -184,7 +185,9 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
 
   it(
     'scopes update/delete writes with orderBy and limit',
-    { skip: !options.integrationEnabled },
+    {
+      skip: !options.integrationEnabled || options.supportsTransactions === false,
+    },
     async function () {
       let db = options.createDatabase()
 
@@ -217,7 +220,10 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
 
   it(
     'supports transactions and nested savepoints',
-    { skip: !options.integrationEnabled },
+    {
+      // D1 supports atomic batches, but not data-table's interactive transaction contract.
+      skip: !options.integrationEnabled || options.supportsTransactions === false,
+    },
     async function () {
       let db = options.createDatabase()
 
