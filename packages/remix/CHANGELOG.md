@@ -7,7 +7,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 ### Pre-release Changes
 
 - Added `package.json` `exports`:
-
   - `remix/headers/accept` to re-export APIs from `@remix-run/headers/accept`
   - `remix/headers/accept-encoding` to re-export APIs from `@remix-run/headers/accept-encoding`
   - `remix/headers/accept-language` to re-export APIs from `@remix-run/headers/accept-language`
