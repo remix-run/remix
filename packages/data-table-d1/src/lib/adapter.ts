@@ -14,6 +14,35 @@ import { compileD1Operation } from './sql-compiler.ts'
 
 export type D1Value = ArrayBuffer | number | string | null
 
+export interface D1Database {
+  prepare(query: string): D1PreparedStatement
+  batch<row = unknown>(statements: D1PreparedStatement[]): Promise<Array<D1Result<row>>>
+  exec(query: string): Promise<D1ExecResult>
+}
+
+export interface D1PreparedStatement {
+  bind(...values: unknown[]): D1PreparedStatement
+  first<row = unknown>(colName: string): Promise<row | null>
+  first<row = Record<string, unknown>>(): Promise<row | null>
+  run<row = Record<string, unknown>>(): Promise<D1Result<row>>
+  all<row = Record<string, unknown>>(): Promise<D1Result<row>>
+}
+
+export interface D1Result<row = unknown> {
+  results?: row[]
+  meta: D1Meta
+}
+
+export interface D1Meta {
+  changes?: number
+  last_row_id?: number
+}
+
+export interface D1ExecResult {
+  count: number
+  duration: number
+}
+
 /**
  * `DatabaseAdapter` implementation for Cloudflare D1 database bindings.
  */
@@ -74,7 +103,7 @@ export class D1DatabaseAdapter implements DatabaseAdapter {
       .prepare(statement.text)
       .bind(...normalizeStatementValues(statement.values))
       .run<Record<string, unknown>>()
-    let rows = normalizeRows(result.results)
+    let rows = normalizeRows(result.results ?? [])
 
     if (request.operation.kind === 'count' || request.operation.kind === 'exists') {
       rows = normalizeCountRows(rows)
@@ -120,7 +149,7 @@ export class D1DatabaseAdapter implements DatabaseAdapter {
       .bind('table', table.name)
       .run<Record<string, unknown>>()
 
-    return normalizeRows(result.results).length > 0
+    return normalizeRows(result.results ?? []).length > 0
   }
 
   async hasColumn(
@@ -137,7 +166,7 @@ export class D1DatabaseAdapter implements DatabaseAdapter {
       .prepare('pragma ' + schemaPrefix + 'table_info(' + quoteIdentifier(table.name) + ')')
       .run<Record<string, unknown>>()
 
-    return normalizeRows(result.results).some((row) => row.name === column)
+    return normalizeRows(result.results ?? []).some((row) => row.name === column)
   }
 
   async beginTransaction(_options?: TransactionOptions): Promise<TransactionToken> {

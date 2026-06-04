@@ -42,7 +42,6 @@
     "miniflare": "^4.20260603.0"
   },
   "dependencies": {
-    "@cloudflare/workers-types": "^4.20260511.1",
     "@remix-run/data-table": "workspace:^"
   },
   "scripts": {

@@ -1,5 +1,12 @@
 import { Miniflare } from 'miniflare'
 
+import type {
+  D1Database,
+  D1ExecResult,
+  D1PreparedStatement,
+  D1Result,
+} from './adapter.ts'
+
 export type TestD1Database = D1Database & {
   prepareCalls: number
   dispose(): Promise<void>
@@ -39,14 +46,6 @@ class TestD1DatabaseWrapper implements TestD1Database {
 
   exec(query: string): Promise<D1ExecResult> {
     return this.#database.exec(query)
-  }
-
-  withSession(constraintOrBookmark?: D1SessionBookmark | D1SessionConstraint): D1DatabaseSession {
-    return this.#database.withSession(constraintOrBookmark)
-  }
-
-  dump(): Promise<ArrayBuffer> {
-    return this.#database.dump()
   }
 
   async dispose(): Promise<void> {
