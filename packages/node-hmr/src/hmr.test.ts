@@ -10,7 +10,7 @@ const packageRoot = fileURLToPath(new URL('../', import.meta.url))
 const cliEntryPath = fileURLToPath(new URL('./cli-entry.ts', import.meta.url))
 const nodeTsxImportUrl = import.meta.resolve('@remix-run/node-tsx')
 
-describe('remix-node-hmr', () => {
+describe('node-hmr', () => {
   it('hot updates self-accepting modules without restarting the server', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./message.ts', 'getMessage()'),
@@ -534,14 +534,18 @@ async function waitForOutput(server: ReturnType<typeof startFixtureServer>, patt
 }
 
 function startFixtureServer(cwd: string) {
-  let child = spawn(process.execPath, ['--import', nodeTsxImportUrl, cliEntryPath, 'server.ts'], {
-    cwd,
-    env: {
-      ...process.env,
-      NODE_ENV: 'development',
+  let child = spawn(
+    process.execPath,
+    ['--import', nodeTsxImportUrl, cliEntryPath, '--import', nodeTsxImportUrl, 'server.ts'],
+    {
+      cwd,
+      env: {
+        ...process.env,
+        NODE_ENV: 'development',
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
     },
-    stdio: ['ignore', 'pipe', 'pipe'],
-  })
+  )
   let readyEvents: Array<{ pid: number; port: number }> = []
   let hmrUrlEvents: Array<{ pid: number; url: string }> = []
   let readyWaiters: Array<() => void> = []

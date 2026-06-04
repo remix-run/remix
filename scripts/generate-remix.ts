@@ -440,7 +440,7 @@ function isRemixTestBin(bin: { command: string; packageName: string }): boolean 
 }
 
 function isRemixNodeHmrBin(bin: { command: string; packageName: string }): boolean {
-  return bin.packageName === '@remix-run/node-hmr' && bin.command === 'remix-node-hmr'
+  return bin.packageName === '@remix-run/node-hmr' && bin.command === 'node-hmr'
 }
 
 function createExportSource(entry: ExportEntry): string {

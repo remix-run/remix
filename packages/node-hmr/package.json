@@ -1,8 +1,8 @@
 {
   "name": "@remix-run/node-hmr",
   "version": "0.0.0",
-  "description": "Run Node.js applications with TypeScript syntax support and a Remix HMR runtime",
-  "author": "Shopify Inc.",
+  "description": "Run Node.js applications with Hot Module Reloading",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -19,7 +19,7 @@
   ],
   "type": "module",
   "bin": {
-    "remix-node-hmr": "./src/cli-entry.ts"
+    "node-hmr": "./src/cli-entry.ts"
   },
   "exports": {
     ".": "./src/index.ts",
@@ -29,7 +29,7 @@
   },
   "publishConfig": {
     "bin": {
-      "remix-node-hmr": "./dist/cli-entry.js"
+      "node-hmr": "./dist/cli-entry.js"
     },
     "exports": {
       ".": {
@@ -49,12 +49,12 @@
   },
   "dependencies": {
     "@remix-run/component-hmr": "workspace:^",
-    "@remix-run/node-tsx": "workspace:^",
     "@remix-run/terminal": "workspace:^",
     "chokidar": "^5.0.0"
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:^",
+    "@remix-run/node-tsx": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@types/node": "catalog:",
     "@typescript/native-preview": "catalog:"
@@ -64,7 +64,6 @@
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix-test",
-    "test:bun": "bun x --bun remix-test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

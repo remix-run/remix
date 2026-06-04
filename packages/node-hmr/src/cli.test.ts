@@ -16,6 +16,7 @@ describe('parseNodeHmrCommand', () => {
         entry: 'server.ts',
         entryArgs: ['--port', '3000'],
         host: '127.0.0.1',
+        nodeArgs: [],
         port: 0,
       },
       help: false,
@@ -37,7 +38,51 @@ describe('parseNodeHmrCommand', () => {
         entry: 'server.ts',
         entryArgs: ['--port', '3000'],
         host: '0.0.0.0',
+        nodeArgs: [],
         port: 12345,
+      },
+      help: false,
+    })
+  })
+
+  it('forwards node options before the entry', () => {
+    let result = parseNodeHmrCommand([
+      '--import',
+      'remix/node-tsx',
+      '--enable-source-maps',
+      '--conditions=development',
+      'server.ts',
+      '--port',
+      '3000',
+    ])
+
+    assert.deepEqual(result, {
+      command: {
+        entry: 'server.ts',
+        entryArgs: ['--port', '3000'],
+        host: '127.0.0.1',
+        nodeArgs: [
+          '--import',
+          'remix/node-tsx',
+          '--enable-source-maps',
+          '--conditions=development',
+        ],
+        port: 0,
+      },
+      help: false,
+    })
+  })
+
+  it('uses -- to separate node options from entries that start with a dash', () => {
+    let result = parseNodeHmrCommand(['--inspect', '--', '--entry.ts', '--debug'])
+
+    assert.deepEqual(result, {
+      command: {
+        entry: '--entry.ts',
+        entryArgs: ['--debug'],
+        host: '127.0.0.1',
+        nodeArgs: ['--inspect'],
+        port: 0,
       },
       help: false,
     })
@@ -49,6 +94,30 @@ describe('parseNodeHmrCommand', () => {
     })
   })
 
+  it('rejects unsupported node execution modes', () => {
+    assert.throws(() => parseNodeHmrCommand(['--watch', 'server.ts']), {
+      message: 'Node option --watch is not supported by node-hmr',
+    })
+    assert.throws(() => parseNodeHmrCommand(['--watch-path=app', 'server.ts']), {
+      message: 'Node option --watch-path is not supported by node-hmr',
+    })
+    assert.throws(() => parseNodeHmrCommand(['--test', 'server.ts']), {
+      message: 'Node option --test is not supported by node-hmr',
+    })
+    assert.throws(() => parseNodeHmrCommand(['--test-reporter', 'spec', 'server.ts']), {
+      message: 'Node option --test-reporter is not supported by node-hmr',
+    })
+    assert.throws(() => parseNodeHmrCommand(['--eval', 'console.log(1)']), {
+      message: 'Node option --eval is not supported by node-hmr',
+    })
+  })
+
+  it('rejects node options that are missing required values', () => {
+    assert.throws(() => parseNodeHmrCommand(['--import']), {
+      message: 'Missing value for Node option: --import',
+    })
+  })
+
   it('detects help flags', () => {
     let result = parseNodeHmrCommand(['--help'])
 
@@ -57,21 +126,21 @@ describe('parseNodeHmrCommand', () => {
 })
 
 describe('buildNodeArgs', () => {
-  it('preloads node-tsx and the node-hmr register hook', () => {
+  it('forwards node options and preloads the node-hmr register hook', () => {
     let entryPath = path.resolve('app/server.ts')
-    let nodeTsxImportUrl = pathToFileURL(path.resolve('packages/node-tsx/src/index.ts')).href
     let registerPath = path.resolve('app/register.ts')
 
     let args = buildNodeArgs({
       entry: entryPath,
       entryArgs: ['--debug'],
-      nodeTsxImportUrl,
+      nodeArgs: ['--import', 'remix/node-tsx', '--enable-source-maps'],
       registerPath,
     })
 
     assert.deepEqual(args, [
       '--import',
-      nodeTsxImportUrl,
+      'remix/node-tsx',
+      '--enable-source-maps',
       '--import',
       pathToFileURL(registerPath).href,
       entryPath,

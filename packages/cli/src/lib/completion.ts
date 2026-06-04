@@ -349,10 +349,16 @@ function completeNodeHmr(
   let hasHmrHost = false
   let hasHmrPort = false
   let expectsOptionValue = false
+  let expectsNodeOptionValue = false
 
   for (let token of filteredTokens) {
     if (expectsOptionValue) {
       expectsOptionValue = false
+      continue
+    }
+
+    if (expectsNodeOptionValue) {
+      expectsNodeOptionValue = false
       continue
     }
 
@@ -383,18 +389,26 @@ function completeNodeHmr(
     }
 
     if (token.startsWith('-')) {
-      return completeValues([], currentWord)
+      if (nodeHmrForwardedNodeOptionConsumesValue(token)) {
+        expectsNodeOptionValue = true
+      }
+      continue
     }
 
     hasEntry = true
   }
 
-  if (expectsOptionValue) {
+  if (expectsOptionValue || expectsNodeOptionValue) {
     return { mode: 'none' }
   }
 
   let flags = withHelpFlags(
-    [...(!hasHmrHost ? ['--hmr-host'] : []), ...(!hasHmrPort ? ['--hmr-port'] : [])],
+    [
+      '--import',
+      '--require',
+      ...(!hasHmrHost ? ['--hmr-host'] : []),
+      ...(!hasHmrPort ? ['--hmr-port'] : []),
+    ],
     usedGlobalFlags,
   )
 
@@ -403,6 +417,11 @@ function completeNodeHmr(
   }
 
   return completeValues(flags, currentWord)
+}
+
+function nodeHmrForwardedNodeOptionConsumesValue(token: string): boolean {
+  if (token.includes('=')) return false
+  return token === '--import' || token === '--require' || token === '-r'
 }
 
 function completeCompletionCommand(

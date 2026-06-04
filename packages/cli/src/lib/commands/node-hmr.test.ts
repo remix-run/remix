@@ -21,6 +21,9 @@ describe('node-hmr command', () => {
 
     assert.equal(result.exitCode, 1)
     assert.equal(result.stdout, '')
-    assert.equal(result.stderr, 'Usage: remix node-hmr <entry> [...args]\n')
+    assert.equal(
+      result.stderr,
+      'Usage: remix node-hmr [options] [node options] <entry> [...args]\n',
+    )
   })
 })

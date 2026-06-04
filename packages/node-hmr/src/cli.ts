@@ -26,6 +26,7 @@ export interface NodeHmrCommand {
   entry: string
   entryArgs: Array<string>
   host: string
+  nodeArgs: Array<string>
   port: number
 }
 
@@ -87,7 +88,7 @@ const styles = createStyles()
 
 export async function runNodeHmr(options: RunNodeHmrOptions): Promise<number> {
   let result = parseNodeHmrCommand(options.argv)
-  let commandName = options.commandName ?? 'remix-node-hmr'
+  let commandName = options.commandName ?? 'node-hmr'
 
   if (result.help) {
     console.log(getNodeHmrHelpText(commandName))
@@ -95,7 +96,7 @@ export async function runNodeHmr(options: RunNodeHmrOptions): Promise<number> {
   }
 
   if (result.command === undefined) {
-    console.error(`Usage: ${commandName} <entry> [...args]`)
+    console.error(`Usage: ${commandName} [options] [node options] <entry> [...args]`)
     return 1
   }
 
@@ -103,17 +104,13 @@ export async function runNodeHmr(options: RunNodeHmrOptions): Promise<number> {
     command: result.command,
     cwd: options.cwd,
     env: options.env ?? process.env,
-    nodeTsxImportUrl: resolveNodeTsxImportUrl(),
     registerPath: resolveRegisterPath(),
   })
 }
 
 export function parseNodeHmrCommand(argv: Array<string>): NodeHmrCommandResult {
-  if (argv.includes('--help') || argv.includes('-h')) {
-    return { help: true }
-  }
-
   let host = '127.0.0.1'
+  let nodeArgs: Array<string> = []
   let port = 0
   let entry: string | undefined
   let entryArgs: Array<string> = []
@@ -125,6 +122,16 @@ export function parseNodeHmrCommand(argv: Array<string>): NodeHmrCommandResult {
     if (entry !== undefined) {
       entryArgs.push(arg)
       continue
+    }
+
+    if (arg === '--help' || arg === '-h') {
+      return { help: true }
+    }
+
+    if (arg === '--') {
+      entry = argv[index + 1]
+      entryArgs = argv.slice(index + 2)
+      break
     }
 
     if (arg === '--hmr-host') {
@@ -155,6 +162,20 @@ export function parseNodeHmrCommand(argv: Array<string>): NodeHmrCommandResult {
       continue
     }
 
+    assertSupportedNodeArg(arg)
+    if (arg.startsWith('-')) {
+      nodeArgs.push(arg)
+      if (nodeArgConsumesValue(arg)) {
+        let value = argv[index + 1]
+        if (value === undefined) {
+          throw new TypeError(`Missing value for Node option: ${arg}`)
+        }
+        nodeArgs.push(value)
+        index++
+      }
+      continue
+    }
+
     entry = arg
   }
 
@@ -163,7 +184,7 @@ export function parseNodeHmrCommand(argv: Array<string>): NodeHmrCommandResult {
   }
 
   return {
-    command: { entry, entryArgs, host, port },
+    command: { entry, entryArgs, host, nodeArgs, port },
     help: false,
   }
 }
@@ -171,12 +192,11 @@ export function parseNodeHmrCommand(argv: Array<string>): NodeHmrCommandResult {
 export function buildNodeArgs(options: {
   entry: string
   entryArgs: Array<string>
-  nodeTsxImportUrl: string
+  nodeArgs: Array<string>
   registerPath: string
 }): Array<string> {
   return [
-    '--import',
-    options.nodeTsxImportUrl,
+    ...options.nodeArgs,
     '--import',
     pathToFileURL(options.registerPath).href,
     options.entry,
@@ -192,18 +212,19 @@ export function shouldIgnoreWatchPath(path: string): boolean {
   )
 }
 
-export function getNodeHmrHelpText(commandName = 'remix-node-hmr'): string {
-  return `Usage: ${commandName} <entry> [...args]
+export function getNodeHmrHelpText(commandName = 'node-hmr'): string {
+  return `Usage: ${commandName} [options] [node options] <entry> [...args]
 
-Run a Node.js entry file with TypeScript syntax support, file watching, restart fallback, and an import.meta.hot runtime.
+Run a Node.js entry file with file watching, restart fallback, and an import.meta.hot runtime.
+
+Options and Node options can be provided before the entry. Node options are forwarded to the child process. Node execution modes such as --watch and --test are not supported.
 
 Options:
   --hmr-host <host>  Host used for the parent browser HMR endpoint. Defaults to 127.0.0.1.
-  --hmr-port <port>  Port used for the parent browser HMR endpoint. Defaults to 0, which picks a free port.`
-}
+  --hmr-port <port>  Port used for the parent browser HMR endpoint. Defaults to 0, which picks a free port.
 
-function resolveNodeTsxImportUrl(): string {
-  return import.meta.resolve('@remix-run/node-tsx')
+Examples:
+  ${commandName} --import remix/node-tsx server.ts`
 }
 
 function resolveRegisterPath(): string {
@@ -220,11 +241,81 @@ function parsePort(value: string): number {
   return port
 }
 
+const nodeOptionsWithValues = new Set([
+  '--conditions',
+  '--cpu-prof-dir',
+  '--cpu-prof-interval',
+  '--cpu-prof-name',
+  '--diagnostic-dir',
+  '--disable-proto',
+  '--dns-result-order',
+  '--env-file',
+  '--env-file-if-exists',
+  '--experimental-config-file',
+  '--experimental-loader',
+  '--heap-prof-dir',
+  '--heap-prof-interval',
+  '--heap-prof-name',
+  '--heapsnapshot-near-heap-limit',
+  '--heapsnapshot-signal',
+  '--icu-data-dir',
+  '--import',
+  '--loader',
+  '--max-http-header-size',
+  '--openssl-config',
+  '--policy-integrity',
+  '--redirect-warnings',
+  '--require',
+  '--secure-heap',
+  '--secure-heap-min',
+  '--security-revert',
+  '--snapshot-blob',
+  '--snapshot-config',
+  '--title',
+  '--tls-cipher-list',
+  '--trace-event-categories',
+  '--trace-event-file-pattern',
+  '--unhandled-rejections',
+  '-C',
+  '-r',
+])
+
+function nodeArgConsumesValue(arg: string): boolean {
+  if (arg.includes('=')) return false
+  return nodeOptionsWithValues.has(arg)
+}
+
+function assertSupportedNodeArg(arg: string): void {
+  let flag = arg.split('=', 1)[0]!
+
+  if (
+    flag === '--watch' ||
+    flag.startsWith('--watch-') ||
+    flag === '--test' ||
+    flag.startsWith('--test-') ||
+    flag.startsWith('--experimental-test-') ||
+    flag === '--run' ||
+    flag === '--check' ||
+    flag === '--eval' ||
+    flag === '--print' ||
+    flag === '--interactive' ||
+    flag === '-c' ||
+    flag === '-i' ||
+    isShortExecutionModeArg(arg, '-e') ||
+    isShortExecutionModeArg(arg, '-p')
+  ) {
+    throw new TypeError(`Node option ${flag} is not supported by node-hmr`)
+  }
+}
+
+function isShortExecutionModeArg(arg: string, flag: '-e' | '-p'): boolean {
+  return arg === flag || (arg.startsWith(flag) && !arg.startsWith('--'))
+}
+
 async function runWatchedProcess(options: {
   command: NodeHmrCommand
   cwd: string
   env: NodeJS.ProcessEnv
-  nodeTsxImportUrl: string
   registerPath: string
 }): Promise<number> {
   let browserHmrEndpoint = await createBrowserHmrEndpoint({
@@ -256,7 +347,7 @@ async function runWatchedProcess(options: {
       buildNodeArgs({
         entry,
         entryArgs: options.command.entryArgs,
-        nodeTsxImportUrl: options.nodeTsxImportUrl,
+        nodeArgs: options.command.nodeArgs,
         registerPath: options.registerPath,
       }),
       {

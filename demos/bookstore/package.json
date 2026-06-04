@@ -15,7 +15,7 @@
     "playwright": "catalog:"
   },
   "scripts": {
-    "dev": "NODE_ENV=development remix node-hmr server.ts",
+    "dev": "NODE_ENV=development remix node-hmr --import remix/node-tsx server.ts",
     "start": "node --import remix/node-tsx server.ts",
     "test": "NODE_ENV=test remix test",
     "typecheck": "tsc --noEmit"

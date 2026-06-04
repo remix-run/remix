@@ -18,9 +18,6 @@ export function start(): AppRuntime {
       if (!response.ok) {
         return `<pre>Frame error: ${response.status} ${response.statusText}</pre>`
       }
-      // let text = await response.text()
-      // console.log(text)
-      // return text
       if (response.body) return response.body
       return response.text()
     },
@@ -46,7 +43,7 @@ if (import.meta.hot) {
       await app.ready()
       await getTopFrame().reload()
     } catch (error) {
-      console.error('Top frame reload failed on server update', error)
+      console.error('Error reloading top frame on server update', error)
     }
   })
 }

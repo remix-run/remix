@@ -120,7 +120,20 @@ describe('completion engine', () => {
     let result = getCompletionResult(['remix', 'node-hmr', '--hmr-host', '127.0.0.1', '-'], 4)
 
     assert.equal(result.mode, 'values')
-    assert.deepEqual(result.values, ['--hmr-port', '-h', '--help', '--no-color'])
+    assert.deepEqual(result.values, [
+      '--import',
+      '--require',
+      '--hmr-port',
+      '-h',
+      '--help',
+      '--no-color',
+    ])
+  })
+
+  it('does not complete entry files while a node-hmr node option expects a value', () => {
+    let result = getCompletionResult(['remix', 'node-hmr', '--import', ''], 3)
+
+    assert.deepEqual(result, { mode: 'none' })
   })
 })
 

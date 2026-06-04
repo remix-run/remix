@@ -2,7 +2,7 @@
   "name": "@remix-run/component-hmr",
   "version": "0.0.0",
   "description": "Hot module replacement runtime and transforms for Remix UI components",
-  "author": "Shopify Inc.",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",

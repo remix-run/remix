@@ -1,25 +1,22 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
+import { renderToStream } from '@remix-run/ui/server'
 import * as fs from 'node:fs/promises'
 import * as http from 'node:http'
-import * as os from 'node:os'
 import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { clientEntry } from '../../../ui/src/runtime/client-entries.ts'
-import { Fragment } from '../../../ui/src/runtime/component.ts'
-import { createElement } from '../../../ui/src/runtime/create-element.ts'
-import { renderToStream } from '../../../ui/src/server/stream.ts'
-import { createAssetServer, type AssetServer } from '../lib/asset-server.ts'
+import { createAssetServer, type AssetServer } from '../src/lib/asset-server.ts'
 
-const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..')
+const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const workspaceDir = path.resolve(packageDir, '../..')
+const isBun = 'Bun' in globalThis
 
 declare global {
   var __counterInitialValue: number
 }
 
-describe('asset server HMR', () => {
+describe('asset server HMR', { skip: isBun }, () => {
   it('updates component render output without losing setup state', async (t) => {
     let fixture = await createHmrFixture()
     t.after(fixture.close)
@@ -270,39 +267,31 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
     async renderDocument(assetServer) {
       let message = await fs.readFile(path.join(rootDir, 'server-message.txt'), 'utf-8')
       let clientFieldPath = path.join(rootDir, 'app/ClientField.tsx')
-      let ClientField = clientEntry(
+      let ClientField = createTestClientEntry(
         pathToFileURL(clientFieldPath).href,
-        function ClientField(handle) {
+        function ClientField(handle: unknown) {
           void handle
-          return () =>
-            createElement(
-              Fragment,
-              undefined,
-              createElement('input', { 'data-testid': 'server-client-field' }),
-              createElement('span', { 'data-testid': 'server-client-label' }, 'Client: before'),
-            )
+          return () => (
+            <>
+              <input data-testid="server-client-field" />
+              <span data-testid="server-client-label">Client: before</span>
+            </>
+          )
         },
       )
       return renderToStream(
-        createElement(
-          'html',
-          undefined,
-          createElement('head', undefined, createElement('title', undefined, 'Server HMR Test')),
-          createElement(
-            'body',
-            undefined,
-            createElement(
-              'main',
-              undefined,
-              createElement('p', { 'data-testid': 'server-message' }, message),
-              createElement(ClientField),
-            ),
-            createElement('script', {
-              src: '/assets/app/entry.tsx',
-              type: 'module',
-            }),
-          ),
-        ),
+        <html>
+          <head>
+            <title>Server HMR Test</title>
+          </head>
+          <body>
+            <main>
+              <p data-testid="server-message">{message}</p>
+              <ClientField />
+            </main>
+            <script src="/assets/app/entry.tsx" type="module" />
+          </body>
+        </html>,
         {
           async resolveClientEntry(entryId, component) {
             return {
@@ -318,6 +307,13 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
       await fs.rm(rootDir, { force: true, recursive: true })
     },
   }
+}
+
+function createTestClientEntry<component extends (handle: unknown) => unknown>(
+  entryId: string,
+  component: component,
+): component & { $entry: true; $entryId: string } {
+  return Object.assign(component, { $entry: true as const, $entryId: entryId })
 }
 
 async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> {

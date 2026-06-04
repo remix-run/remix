@@ -1336,9 +1336,6 @@ importers:
       '@remix-run/component-hmr':
         specifier: workspace:^
         version: link:../component-hmr
-      '@remix-run/node-tsx':
-        specifier: workspace:^
-        version: link:../node-tsx
       '@remix-run/terminal':
         specifier: workspace:^
         version: link:../terminal
@@ -1349,6 +1346,9 @@ importers:
       '@remix-run/assert':
         specifier: workspace:^
         version: link:../assert
+      '@remix-run/node-tsx':
+        specifier: workspace:^
+        version: link:../node-tsx
       '@remix-run/test':
         specifier: workspace:^
         version: link:../test
