@@ -7,15 +7,12 @@ import {
   MOBILE_NAV_MEDIA_RULE,
   MOBILE_TOP_BAR_HEIGHT_PX,
 } from '../shared/breakpoints.ts'
-import { assetServer } from './asset-server.ts'
 import type { DemoDocFile } from './demos.tsx'
 import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
 import { routes } from './routes.ts'
 
 export type Versions = string[]
-
-const entryHref = await assetServer.getHref('docs/src/client/entry.tsx')
 
 export function Document(
   handle: Handle<{
@@ -25,11 +22,12 @@ export function Document(
     registry: DocsRegistry
     children?: RemixNode | RemixNode[]
     sourceUrl?: string
-    entryPreloads: readonly string[]
+    entryHref: string
+    preloads: readonly string[]
   }>,
 ) {
   return () => {
-    let { registry, versions, activeVersion, slug, sourceUrl, children, entryPreloads } =
+    let { registry, versions, activeVersion, slug, sourceUrl, children, entryHref, preloads } =
       handle.props
     let page = slug
       ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug, activeVersion))
@@ -37,7 +35,12 @@ export function Document(
 
     return (
       <html lang="en" style={{ colorScheme: 'light dark' }}>
-        <Head page={page} activeVersion={activeVersion} entryPreloads={entryPreloads} />
+        <Head
+          page={page}
+          activeVersion={activeVersion}
+          entryHref={entryHref}
+          preloads={preloads}
+        />
         <body mix={bodyCss}>
           <RMX_01_GLYPHS />
           <MobileHeader page={page} />
@@ -94,11 +97,12 @@ function Head(
   handle: Handle<{
     page: PageDefinition
     activeVersion?: string
-    entryPreloads: readonly string[]
+    entryHref: string
+    preloads: readonly string[]
   }>,
 ) {
   return () => {
-    let { page, activeVersion, entryPreloads } = handle.props
+    let { page, activeVersion, entryHref, preloads } = handle.props
     let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
     return (
       <head>
@@ -134,12 +138,7 @@ function Head(
             title={`Markdown docs for ${page.docFile.name ?? page.title}`}
           />
         ) : null}
-        {[
-          ...new Set([
-            ...entryPreloads,
-            ...(page.docFile?.kind === 'demo' ? page.docFile.preloads : []),
-          ]),
-        ].map((href) => (
+        {[...new Set(preloads)].map((href) => (
           <link key={href} rel="modulepreload" href={href} />
         ))}
         <script type="module" src={entryHref} />

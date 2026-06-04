@@ -7,7 +7,7 @@ import { createHtmlResponse } from 'remix/response/html'
 import { createRouter as _createRouter, type Router } from 'remix/router'
 import { clientEntry, type RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
-import { assetServer, entryPreloads } from './asset-server.ts'
+import { defaultPreloads, entryPath, getAssetServer } from './asset-server.ts'
 import { discoverDemoFiles, loadDemoComponent, renderDemoSource } from './demos.tsx'
 import { getVersionedLookupHref } from './lookup.ts'
 import {
@@ -61,29 +61,26 @@ export function createRouter(versions: Versions) {
   router.map(routes, {
     actions: {
       assets: async ({ request, params }) => {
-        // Drop the optional version prefix so the asset server sees a stable URL space.
-        let url = new URL(request.url)
-        url.pathname = routes.assets.href({ asset: params.asset })
-        let response = await assetServer.fetch(new Request(url, request))
+        let response = await getAssetServer(params.version).fetch(request)
         return response ?? new Response('Not Found', { status: 404 })
       },
       async docs({ request, params }) {
         let docsContext = await getDocsContext()
         let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
-        let docProps = {
-          registry: docsContext.getRegistry(params.version),
-          versions: versions,
-          slug: params.slug,
-          activeVersion: params.version,
-          entryPreloads,
-        }
+        let docProps = await getDocumentProps(docsContext, versions, params.version, params.slug)
 
         if (docFile) {
           if (docFile.kind === 'demo') {
+            let assetServer = getAssetServer(params.version)
+            let [assetHref, demoPreloads] = await Promise.all([
+              assetServer.getHref(docFile.path),
+              assetServer.getPreloads(docFile.path),
+            ])
             let ExampleComponent = clientEntry(
-              `${docFile.assetHref}#default`,
+              `${assetHref}#default`,
               await loadDemoComponent(docFile),
             )
+            docProps.preloads = [...docProps.preloads, ...demoPreloads]
             let sourceHtml = await renderDemoSource(docFile.source)
             return await respond.document(
               request,
@@ -120,14 +117,10 @@ export function createRouter(versions: Versions) {
       },
       async home({ request, params }) {
         let docsContext = await getDocsContext()
+        let docProps = await getDocumentProps(docsContext, versions, params.version)
         return respond.document(
           request,
-          <Document
-            registry={docsContext.getRegistry(params.version)}
-            versions={versions}
-            activeVersion={params.version}
-            entryPreloads={entryPreloads}
-          >
+          <Document {...docProps}>
             <Home />
           </Document>,
         )
@@ -187,6 +180,28 @@ async function loadDocsContext(): Promise<DocsContext> {
       }
       return registry
     },
+  }
+}
+
+async function getDocumentProps(
+  docsContext: DocsContext,
+  versions: Versions,
+  activeVersion?: string,
+  slug?: string,
+) {
+  let assetServer = getAssetServer(activeVersion)
+  let [entryHref, preloads] = await Promise.all([
+    assetServer.getHref(entryPath),
+    activeVersion ? assetServer.getPreloads(entryPath) : defaultPreloads,
+  ])
+
+  return {
+    registry: docsContext.getRegistry(activeVersion),
+    versions,
+    slug,
+    activeVersion,
+    entryHref,
+    preloads,
   }
 }
 
