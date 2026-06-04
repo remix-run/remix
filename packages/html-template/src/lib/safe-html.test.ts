@@ -89,9 +89,8 @@ describe('html.raw', () => {
 
   it('flattens arrays without escaping', () => {
     let items = ['<li>A</li>', '<li>B</li>', '<li>C</li>']
-    let value = html.raw`<ul>
-      ${items}
-    </ul>`
+    // oxfmt-ignore
+    let value = html.raw`<ul>${items}</ul>`
     assert.equal(String(value), '<ul><li>A</li><li>B</li><li>C</li></ul>')
   })
 
