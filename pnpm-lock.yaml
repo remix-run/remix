@@ -1991,9 +1991,6 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-      oxfmt:
-        specifier: ^0.51.0
-        version: 0.51.0
       semver:
         specifier: ^7.6.3
         version: 7.6.3

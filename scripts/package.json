@@ -9,7 +9,6 @@
     "@types/node": "catalog:",
     "@types/semver": "^7.5.8",
     "@typescript/native-preview": "catalog:",
-    "oxfmt": "^0.51.0",
     "semver": "^7.6.3",
     "yaml": "^2.9.0"
   },
