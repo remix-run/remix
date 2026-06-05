@@ -1800,9 +1800,6 @@ importers:
       '@remix-run/node-fetch-server':
         specifier: workspace:^
         version: link:../node-fetch-server
-      '@remix-run/ui':
-        specifier: workspace:^
-        version: link:../ui
       '@types/dom-navigation':
         specifier: 1.0.6
         version: 1.0.6
