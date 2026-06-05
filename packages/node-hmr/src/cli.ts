@@ -3,7 +3,7 @@ import { createServer, type Server, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import process from 'node:process'
 import { fileURLToPath, pathToFileURL } from 'node:url'
-import { relative, resolve } from 'node:path'
+import { dirname, relative, resolve } from 'node:path'
 
 import { createStyles } from '@remix-run/terminal'
 import { watch } from 'chokidar'
@@ -328,6 +328,8 @@ async function runWatchedProcess(options: {
   let moduleInfoByFilePath = new Map<string, NodeHmrModuleInfo[]>()
   let moduleInfoByUrl = new Map<string, NodeHmrModuleInfo>()
   let moduleDepsByUrl = new Map<string, Set<string>>()
+  let watchedFilePaths = new Set<string>()
+  let watchedDirectoryRefCounts = new Map<string, number>()
   let pendingChangedPaths = new Set<string>()
   let pendingRestartPaths = new Set<string>()
   let restarting = false
@@ -335,13 +337,19 @@ async function runWatchedProcess(options: {
   let waitingForFileChangeAfterExit = false
   let pendingBrowserServerUpdate: { message?: string; reason: 'restart' } | undefined
 
+  function getEntryPath(): string {
+    return resolve(options.cwd, options.command.entry)
+  }
+
   function start() {
     moduleInfoByFilePath = new Map()
     moduleInfoByUrl = new Map()
     moduleDepsByUrl = new Map()
+    unwatchKnownModuleFiles()
+    watchKnownModuleFile(getEntryPath())
     waitingForFileChangeAfterExit = false
 
-    let entry = resolve(options.cwd, options.command.entry)
+    let entry = getEntryPath()
     let nextChild = spawn(
       process.execPath,
       buildNodeArgs({
@@ -444,6 +452,75 @@ async function runWatchedProcess(options: {
       moduleInfoByFilePath.set(message.filePath, existingModules)
     }
     moduleInfoByUrl.set(message.url, nextInfo)
+    syncWatchedModuleFiles()
+  }
+
+  function watchKnownModuleFile(filePath: string): void {
+    syncWatchedModuleFiles(new Set([resolve(filePath)]))
+  }
+
+  function syncWatchedModuleFiles(requiredFilePaths: Set<string> = new Set()): void {
+    let nextWatchedFilePaths = new Set(requiredFilePaths)
+
+    for (let url of getReachableModuleUrls()) {
+      let moduleInfo = moduleInfoByUrl.get(url)
+      if (moduleInfo !== undefined) {
+        nextWatchedFilePaths.add(moduleInfo.filePath)
+      }
+    }
+
+    let nextWatchedDirectoryRefCounts = new Map<string, number>()
+    for (let filePath of nextWatchedFilePaths) {
+      let directory = dirname(filePath)
+      nextWatchedDirectoryRefCounts.set(
+        directory,
+        (nextWatchedDirectoryRefCounts.get(directory) ?? 0) + 1,
+      )
+    }
+
+    let directoriesToAdd = [...nextWatchedDirectoryRefCounts.keys()].filter(
+      (directory) => !watchedDirectoryRefCounts.has(directory),
+    )
+    let directoriesToRemove = [...watchedDirectoryRefCounts.keys()].filter(
+      (directory) => !nextWatchedDirectoryRefCounts.has(directory),
+    )
+
+    if (directoriesToRemove.length > 0) {
+      watcher.unwatch(directoriesToRemove)
+    }
+    if (directoriesToAdd.length > 0) {
+      watcher.add(directoriesToAdd)
+    }
+
+    watchedFilePaths = nextWatchedFilePaths
+    watchedDirectoryRefCounts = nextWatchedDirectoryRefCounts
+  }
+
+  function getReachableModuleUrls(): Set<string> {
+    let entryUrl = pathToFileURL(getEntryPath()).href
+    let reachable = new Set<string>()
+    visit(entryUrl)
+    return reachable
+
+    function visit(url: string): void {
+      if (reachable.has(url)) return
+      if (!moduleInfoByUrl.has(url)) return
+
+      reachable.add(url)
+      for (let depUrl of moduleDepsByUrl.get(url) ?? []) {
+        visit(depUrl)
+      }
+    }
+  }
+
+  function unwatchKnownModuleFiles(): void {
+    let directories = [...watchedDirectoryRefCounts.keys()]
+    watchedFilePaths = new Set()
+    watchedDirectoryRefCounts = new Map()
+
+    if (directories.length > 0) {
+      watcher.unwatch(directories)
+    }
   }
 
   function handleWatchEvent(event: string, changedPath: string) {
@@ -479,6 +556,8 @@ async function runWatchedProcess(options: {
       return
     }
 
+    restartPaths = restartPaths.filter((changedPath) => watchedFilePaths.has(changedPath))
+
     if (restartPaths.length > 0) {
       logRestart(formatChangedPaths(restartPaths, options.cwd))
       pendingBrowserServerUpdate = {
@@ -491,6 +570,8 @@ async function runWatchedProcess(options: {
 
     let hotUpdates: NodeHmrUpdate[] = []
     for (let changedPath of changedPaths) {
+      if (!watchedFilePaths.has(changedPath)) continue
+
       let modules = moduleInfoByFilePath.get(changedPath)
       if (modules === undefined || modules.length === 0) {
         logRestart(formatChangedPath(changedPath, options.cwd))
@@ -638,7 +719,7 @@ async function runWatchedProcess(options: {
     })
   }
 
-  let watcher = watch('.', {
+  let watcher = watch([], {
     cwd: options.cwd,
     ignoreInitial: true,
     ignored: (path) => shouldIgnoreWatchPath(path),

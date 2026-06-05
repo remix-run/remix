@@ -97,7 +97,7 @@ describe('node-hmr', () => {
     }
   })
 
-  it('does not hot update through import edges removed by a module update', async () => {
+  it('ignores files that leave the imported module graph after a module update', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./message.ts', 'getMessage()'),
       'message.ts': [
@@ -153,10 +153,34 @@ describe('node-hmr', () => {
 
       await fs.writeFile(path.join(fixture.path, 'value.ts'), `export const message = 'stale'`)
 
-      let restarted = await server.waitForReady(1)
-      assert.notEqual(restarted.pid, ready.pid)
-      assert.equal(await fetchText(restarted.port), 'two')
-      assert.match(server.output, /restart value\.ts/)
+      await new Promise((resolve) => setTimeout(resolve, 250))
+      assert.equal(server.readyCount, 1)
+      assert.doesNotMatch(server.output, /restart value\.ts/)
+      assert.equal(await fetchText(ready.port), 'two')
+    } finally {
+      await server.stop()
+    }
+  })
+
+  it('ignores file changes outside the imported module graph', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getServerSource('./message.ts', 'getMessage()'),
+      'message.ts': [`export function getMessage() {`, `  return 'one'`, `}`].join('\n'),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'one')
+
+      let sessionPath = path.join(fixture.path, 'tmp/sessions/session-id')
+      await fs.mkdir(path.dirname(sessionPath), { recursive: true })
+      await fs.writeFile(sessionPath, 'session data')
+
+      await new Promise((resolve) => setTimeout(resolve, 250))
+      assert.equal(server.readyCount, 1)
+      assert.doesNotMatch(server.output, /restart tmp/)
+      assert.equal(await fetchText(ready.port), 'one')
     } finally {
       await server.stop()
     }

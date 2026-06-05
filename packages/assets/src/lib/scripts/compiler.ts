@@ -130,6 +130,12 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     ResolvedModule,
     EmittedModule
   >({
+    getAcceptedDependencies(resolvedModule) {
+      return resolvedModule.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+    },
+    getDependencies(resolvedModule) {
+      return resolvedModule.deps
+    },
     onWatchDirectoriesChange: options.onWatchDirectoriesChange,
   })
   let tsconfigTransformOptionsResolver = createTsconfigTransformOptionsResolver()
@@ -143,9 +149,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   })
   let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedModule>>()
   let emitInFlightByCacheKey = new Map<string, Promise<EmittedModule>>()
-  let hmrImportersByDepPath = new Map<string, Set<string>>()
-  let hmrAcceptedImportersByDepPath = new Map<string, Set<string>>()
-  let hmrImportTimestampByDepPath = new Map<string, number>()
 
   let transformArgs: TransformArgs = {
     buildId: resolvedOptions.buildId ?? null,
@@ -247,12 +250,12 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
         return
       }
 
-      let record = scriptStore.get(normalizedFilePath)
-      let updatePathname = record.resolved?.stableUrlPathname
+      let resolvedModule = scriptStore.getLastResolved(normalizedFilePath)
+      let updatePathname = resolvedModule?.stableUrlPathname
       let timestamp = Date.now()
       let hmrUpdate =
         event === 'change' && updatePathname
-          ? getHmrUpdatesForChange(record.resolved, updatePathname, timestamp)
+          ? getHmrUpdatesForChange(resolvedModule, updatePathname, timestamp)
           : []
 
       scriptStore.invalidateForFileEvent(normalizedFilePath, event)
@@ -365,7 +368,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
         scriptStore.setResolved(record.identityPath, resolveModuleResult.value, [
           resolveModuleResult.tracking,
         ])
-        updateHmrGraph(resolveModuleResult.value)
       }
 
       return resolveModuleResult.value
@@ -475,32 +477,11 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   }
 
   function getHmrImportTimestamp(identityPath: string): number | null {
-    return hmrImportTimestampByDepPath.get(identityPath) ?? null
+    return scriptStore.getHmrUpdateTimestamp(identityPath) ?? null
   }
 
   function hasHmrTimestampedDependency(resolvedModule: ResolvedModule | undefined): boolean {
     return resolvedModule?.deps.some((depPath) => getHmrImportTimestamp(depPath) !== null) === true
-  }
-
-  function updateHmrGraph(resolvedModule: ResolvedModule): void {
-    removeFromHmrGraph(resolvedModule.identityPath)
-
-    for (let depPath of resolvedModule.deps) {
-      addToIndexedSet(hmrImportersByDepPath, depPath, resolvedModule.identityPath)
-    }
-
-    for (let acceptedDep of resolvedModule.hmr.acceptedDeps) {
-      addToIndexedSet(
-        hmrAcceptedImportersByDepPath,
-        acceptedDep.depPath,
-        resolvedModule.identityPath,
-      )
-    }
-  }
-
-  function removeFromHmrGraph(identityPath: string): void {
-    removeFromIndexedSets(hmrImportersByDepPath, identityPath)
-    removeFromIndexedSets(hmrAcceptedImportersByDepPath, identityPath)
   }
 
   function getHmrUpdatesForChange(
@@ -509,7 +490,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     timestamp: number,
   ): ScriptHmrUpdate[] {
     if (resolvedModule) {
-      hmrImportTimestampByDepPath.set(resolvedModule.identityPath, timestamp)
+      scriptStore.setHmrUpdateTimestamp(resolvedModule.identityPath, timestamp)
     }
 
     if (resolvedModule?.hmr.selfAccepting === true) {
@@ -554,7 +535,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     if (traversed.has(identityPath)) return []
     traversed.add(identityPath)
 
-    let resolvedModule = scriptStore.get(identityPath).resolved
+    let resolvedModule = scriptStore.getLastResolved(identityPath)
     if (!resolvedModule) return null
 
     if (resolvedModule.hmr.selfAccepting) {
@@ -566,13 +547,13 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       ]
     }
 
-    let importerPaths = hmrImportersByDepPath.get(identityPath)
+    let importerPaths = scriptStore.getImporters(identityPath)
     if (!importerPaths || importerPaths.size === 0) return null
 
-    let acceptedImporterPaths = hmrAcceptedImportersByDepPath.get(identityPath)
+    let acceptedImporterPaths = scriptStore.getAcceptedImporters(identityPath)
     let boundaries: ScriptHmrBoundary[] = []
     for (let importerPath of importerPaths) {
-      let importer = scriptStore.get(importerPath).resolved
+      let importer = scriptStore.getLastResolved(importerPath)
       if (!importer) return null
 
       if (acceptedImporterPaths?.has(importerPath)) {
@@ -593,24 +574,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
   function isWatchIgnored(filePath: string): boolean {
     return resolvedOptions.watchIgnoreMatchers.some((matcher) => matcher(filePath))
-  }
-}
-
-function addToIndexedSet(map: Map<string, Set<string>>, key: string, value: string): void {
-  let values = map.get(key)
-  if (!values) {
-    values = new Set()
-    map.set(key, values)
-  }
-  values.add(value)
-}
-
-function removeFromIndexedSets(map: Map<string, Set<string>>, value: string): void {
-  for (let [key, values] of map) {
-    values.delete(value)
-    if (values.size === 0) {
-      map.delete(key)
-    }
   }
 }
 

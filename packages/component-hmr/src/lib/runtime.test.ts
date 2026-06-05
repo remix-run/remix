@@ -8,6 +8,7 @@ import {
   getCurrentComponentForHmr,
   registerComponentForHmr,
   registerComponentRenderForHmr,
+  setupComponentForHmr,
   updateComponentModuleForHmr,
 } from './runtime.ts'
 import { componentStalenessCheck } from '../../../ui/src/runtime/refresh.ts'
@@ -79,6 +80,141 @@ describe('component HMR runtime', () => {
     assert.equal(getComponentHmrState(nextHandle).message, 'hello')
   })
 
+  it('runs setup once for each component handle', () => {
+    let firstHandle = createTestHandle()
+    let secondHandle = createTestHandle()
+    let firstState = getComponentHmrState(firstHandle)
+    let secondState = getComponentHmrState(secondHandle)
+
+    function Component() {
+      return () => 'component'
+    }
+
+    assert.equal(
+      setupComponentForHmr(
+        firstHandle,
+        firstState,
+        '/app/setup.tsx',
+        'Component',
+        'h1',
+        (state) => {
+          state.value = 'first'
+        },
+        Component,
+      ),
+      false,
+    )
+    assert.equal(
+      setupComponentForHmr(
+        secondHandle,
+        secondState,
+        '/app/setup.tsx',
+        'Component',
+        'h1',
+        (state) => {
+          state.value = 'second'
+        },
+        Component,
+      ),
+      false,
+    )
+
+    assert.equal(firstState.value, 'first')
+    assert.equal(secondState.value, 'second')
+  })
+
+  it('runs changed setup for every remounted component handle', () => {
+    let firstHandle = createTestHandle()
+    let secondHandle = createTestHandle()
+
+    function Component() {
+      return () => 'component'
+    }
+
+    setupComponentForHmr(
+      firstHandle,
+      getComponentHmrState(firstHandle),
+      '/app/remount.tsx',
+      'Component',
+      'h1',
+      (state) => {
+        state.value = 'before'
+      },
+      Component,
+    )
+    setupComponentForHmr(
+      secondHandle,
+      getComponentHmrState(secondHandle),
+      '/app/remount.tsx',
+      'Component',
+      'h1',
+      (state) => {
+        state.value = 'before'
+      },
+      Component,
+    )
+
+    assert.equal(
+      setupComponentForHmr(
+        firstHandle,
+        getComponentHmrState(firstHandle),
+        '/app/remount.tsx',
+        'Component',
+        'h2',
+        (state) => {
+          state.value = 'stale'
+        },
+        Component,
+      ),
+      true,
+    )
+    assert.equal(
+      setupComponentForHmr(
+        secondHandle,
+        getComponentHmrState(secondHandle),
+        '/app/remount.tsx',
+        'Component',
+        'h2',
+        (state) => {
+          state.value = 'stale'
+        },
+        Component,
+      ),
+      true,
+    )
+
+    let remountedFirstHandle = createTestHandle()
+    let remountedSecondHandle = createTestHandle()
+    let remountedFirstState = getComponentHmrState(remountedFirstHandle)
+    let remountedSecondState = getComponentHmrState(remountedSecondHandle)
+
+    setupComponentForHmr(
+      remountedFirstHandle,
+      remountedFirstState,
+      '/app/remount.tsx',
+      'Component',
+      'h2',
+      (state) => {
+        state.value = 'after first'
+      },
+      Component,
+    )
+    setupComponentForHmr(
+      remountedSecondHandle,
+      remountedSecondState,
+      '/app/remount.tsx',
+      'Component',
+      'h2',
+      (state) => {
+        state.value = 'after second'
+      },
+      Component,
+    )
+
+    assert.equal(remountedFirstState.value, 'after first')
+    assert.equal(remountedSecondState.value, 'after second')
+  })
+
   it('tracks server-rendered component renders without UI handles', () => {
     function Greeting() {
       return () => 'hello'
@@ -100,3 +236,7 @@ describe('component HMR runtime', () => {
     assert.equal(callComponentRenderForHmr(handle), 'updated')
   })
 })
+
+function createTestHandle(): { signal: AbortSignal } {
+  return { signal: new AbortController().signal }
+}

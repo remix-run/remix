@@ -20,9 +20,9 @@ const persistentAbortController = new AbortController()
 const components = new Map<string, ComponentEntry>()
 const componentKeys = new WeakMap<Function, string>()
 const componentState = new WeakMap<ComponentHmrHandle, ComponentHmrState>()
+const componentSetupHashes = new WeakMap<ComponentHmrHandle, Map<string, string>>()
 const renderFunctions = new WeakMap<ComponentHmrHandle, ComponentFunction>()
 const serverHandles = new Map<string, ComponentHmrHandle>()
-const setupHashes = new Map<string, string>()
 const staleComponentKeys = new Set<string>()
 
 let isStalenessCheckInstalled = false
@@ -101,6 +101,12 @@ export function setupComponentForHmr(
   let key = getComponentKey(moduleUrl, componentName)
   componentKeys.set(wrapper, key)
 
+  let setupHashes = componentSetupHashes.get(handle)
+  if (!setupHashes) {
+    setupHashes = new Map()
+    componentSetupHashes.set(handle, setupHashes)
+  }
+
   let currentSetupHash = setupHashes.get(key)
   if (currentSetupHash === undefined) {
     setup(state)
@@ -119,6 +125,7 @@ export function setupComponentForHmr(
   }
 
   clearComponentHmrState(handle)
+  setupHashes.delete(key)
   staleComponentKeys.add(key)
   return true
 }

@@ -3278,6 +3278,79 @@ describe('asset-server', () => {
     }
   })
 
+  it('sends an HMR js-update payload after a transform error is fixed', async () => {
+    let caseDir = await makeTmpDir()
+    let payloads: HmrPayload[] = []
+    let errorCodes: string[] = []
+    try {
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 1',
+      )
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: {
+          eventUrl: 'http://127.0.0.1:1234/hmr',
+          send(payload) {
+            payloads.push(payload)
+          },
+        },
+        onError(error) {
+          if (isAssetServerCompilationError(error)) {
+            errorCodes.push(error.code)
+          }
+        },
+      })
+
+      try {
+        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(entryResponse)
+        assert.equal(entryResponse.status, 200)
+
+        let brokenEntryPath = await write(caseDir, 'app/entry.ts', 'export const value =')
+        await emitWatchEvent(assetServer, brokenEntryPath, 'change')
+
+        assert.equal(payloads.length, 1)
+        let brokenUpdate = payloads[0]
+        assert.ok(brokenUpdate)
+        assert.equal(brokenUpdate.type, 'js-update')
+
+        let failedUpdateResponse = await get(
+          assetServer,
+          `/assets/app/entry.ts?t=${brokenUpdate.timestamp}`,
+        )
+        assert.ok(failedUpdateResponse)
+        assert.equal(failedUpdateResponse.status, 500)
+        assert.equal(errorCodes.at(-1), 'TRANSFORM_FAILED')
+
+        let fixedEntryPath = await write(
+          caseDir,
+          'app/entry.ts',
+          'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 2',
+        )
+        await emitWatchEvent(assetServer, fixedEntryPath, 'change')
+
+        assert.equal(payloads.length, 2)
+        let fixedUpdate = payloads[1]
+        assert.ok(fixedUpdate)
+        assert.equal(fixedUpdate.type, 'js-update')
+        assert.equal(fixedUpdate.path, '/assets/app/entry.ts')
+
+        let fixedUpdateResponse = await get(
+          assetServer,
+          `/assets/app/entry.ts?t=${fixedUpdate.timestamp}`,
+        )
+        assert.ok(fixedUpdateResponse)
+        assert.equal(fixedUpdateResponse.status, 200)
+        assert.match(await fixedUpdateResponse.text(), /value = 2/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('sends HMR js-update payloads through importers that accept dependency changes', async () => {
     let caseDir = await makeTmpDir()
     try {
@@ -3566,6 +3639,128 @@ describe('asset-server', () => {
           path: '/assets/app/styles/app.css',
           type: 'css-update',
         })
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('sends HMR css-update payloads for linked styles when an imported style changes', async () => {
+    let caseDir = await makeTmpDir()
+    let payloads: HmrPayload[] = []
+    try {
+      await write(caseDir, 'app/styles/app.css', '@import "./theme.css";\nbody { color: red; }\n')
+      await write(caseDir, 'app/styles/theme.css', 'body { background: white; }\n')
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: {
+          eventUrl: 'http://127.0.0.1:1234/hmr',
+          send(payload) {
+            payloads.push(payload)
+          },
+        },
+      })
+
+      try {
+        let styleResponse = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(styleResponse)
+        assert.equal(styleResponse.status, 200)
+        assert.doesNotMatch(await styleResponse.text(), /theme\.css\?t=/)
+
+        let themePath = await write(
+          caseDir,
+          'app/styles/theme.css',
+          'body { background: black; }\n',
+        )
+        await emitWatchEvent(assetServer, themePath, 'change')
+
+        assert.equal(payloads.length, 1)
+        let payload = payloads[0]
+        assert.ok(payload)
+        assert.equal(payload.type, 'css-update')
+        assert.equal(payload.path, '/assets/app/styles/app.css')
+
+        let updatedStyleResponse = await get(
+          assetServer,
+          `/assets/app/styles/app.css?t=${payload.timestamp}`,
+        )
+        assert.ok(updatedStyleResponse)
+        assert.equal(updatedStyleResponse.status, 200)
+        assert.match(
+          await updatedStyleResponse.text(),
+          new RegExp(`/assets/app/styles/theme\\.css\\?t=${payload.timestamp}`),
+        )
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('sends an HMR css-update payload after a transform error is fixed', async () => {
+    let caseDir = await makeTmpDir()
+    let payloads: HmrPayload[] = []
+    let errorCodes: string[] = []
+    try {
+      await write(caseDir, 'app/styles/app.css', 'body { color: red; }\n')
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: {
+          eventUrl: 'http://127.0.0.1:1234/hmr',
+          send(payload) {
+            payloads.push(payload)
+          },
+        },
+        onError(error) {
+          if (isAssetServerCompilationError(error)) {
+            errorCodes.push(error.code)
+          }
+        },
+      })
+
+      try {
+        let styleResponse = await get(assetServer, '/assets/app/styles/app.css')
+        assert.ok(styleResponse)
+        assert.equal(styleResponse.status, 200)
+
+        let brokenStylePath = await write(
+          caseDir,
+          'app/styles/app.css',
+          'body { background: url("foo); }\n',
+        )
+        await emitWatchEvent(assetServer, brokenStylePath, 'change')
+
+        assert.equal(payloads.length, 1)
+        let brokenUpdate = payloads[0]
+        assert.ok(brokenUpdate)
+        assert.equal(brokenUpdate.type, 'css-update')
+        assert.equal(brokenUpdate.path, '/assets/app/styles/app.css')
+
+        let failedUpdateResponse = await get(
+          assetServer,
+          `/assets/app/styles/app.css?t=${brokenUpdate.timestamp}`,
+        )
+        assert.ok(failedUpdateResponse)
+        assert.equal(failedUpdateResponse.status, 500)
+        assert.equal(errorCodes.at(-1), 'TRANSFORM_FAILED')
+
+        let fixedStylePath = await write(caseDir, 'app/styles/app.css', 'body { color: blue; }\n')
+        await emitWatchEvent(assetServer, fixedStylePath, 'change')
+
+        assert.equal(payloads.length, 2)
+        let fixedUpdate = payloads[1]
+        assert.ok(fixedUpdate)
+        assert.equal(fixedUpdate.type, 'css-update')
+        assert.equal(fixedUpdate.path, '/assets/app/styles/app.css')
+
+        let fixedUpdateResponse = await get(
+          assetServer,
+          `/assets/app/styles/app.css?t=${fixedUpdate.timestamp}`,
+        )
+        assert.ok(fixedUpdateResponse)
+        assert.equal(fixedUpdateResponse.status, 200)
+        assert.match(await fixedUpdateResponse.text(), /color: #00f/)
       } finally {
         await assetServer.close()
       }

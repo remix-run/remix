@@ -117,6 +117,23 @@ export {
     assert.match(result.code, /import\.meta\.hot\.accept/)
   })
 
+  it('hoists client entry setup variables into persistent HMR state', () => {
+    let result = transformComponentHmr(
+      `export const Counter = clientEntry(import.meta.url, function Counter(handle) {
+  let label = "Initial"
+  let count = 0
+  return () => jsx('button', { children: label + count })
+})
+`,
+      { moduleUrl: '/app/Counter.tsx' },
+    )
+
+    assert.equal(result.transformed, true)
+    assert.match(result.code, /__s\.label = "Initial"/)
+    assert.match(result.code, /__s\.count = 0/)
+    assert.match(result.code, /children: __s\.label \+ __s\.count/)
+  })
+
   it('rewrites client entry function components with separate named exports', () => {
     let result = transformComponentHmr(
       `const Counter = clientEntry(import.meta.url, function Counter(handle) {

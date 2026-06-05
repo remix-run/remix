@@ -39,22 +39,34 @@ function createEmittedModule(): EmittedModule {
   }
 }
 
-function createResolvedModule(): ResolvedModule {
+function createResolvedModule(
+  options: {
+    acceptedDeps?: string[]
+    deps?: string[]
+    identityPath?: string
+  } = {},
+): ResolvedModule {
+  let identityPath = options.identityPath ?? '/app/entry.ts'
+
   return {
-    deps: [],
+    deps: options.deps ?? [],
     fingerprint: null,
     hmr: {
-      acceptedDeps: [],
+      acceptedDeps: (options.acceptedDeps ?? []).map((depPath, index) => ({
+        depPath,
+        end: index,
+        start: index,
+      })),
       selfAccepting: false,
       usesImportMetaHot: false,
     },
-    identityPath: '/app/entry.ts',
+    identityPath,
     imports: [],
-    trackedFiles: ['/app/entry.ts'],
+    trackedFiles: [identityPath],
     rawCode: 'export const value = 1',
-    resolvedPath: '/app/entry.ts',
+    resolvedPath: identityPath,
     sourceMap: null,
-    stableUrlPathname: '/assets/app/entry.ts',
+    stableUrlPathname: `/assets${identityPath}`,
   }
 }
 
@@ -113,7 +125,7 @@ describe('createModuleStore', () => {
     assert.equal(record.staleEmittedSnapshot, snapshot)
   })
 
-  it('clears stale emitted modules across structural invalidations', () => {
+  it('clears stale emitted modules across graph invalidations', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>()
     let record = store.get('/app/entry.ts')
 
@@ -166,5 +178,210 @@ describe('createModuleStore', () => {
 
     store.invalidateForFileEvent('/app/foo/bar.ts', 'unlink')
     assert.equal(record.invalidationVersion, 2)
+  })
+
+  it('clears the last resolved module and links when a candidate file is added', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      getAcceptedDependencies(resolved) {
+        return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+      },
+      getDependencies(resolved) {
+        return resolved.deps
+      },
+    })
+    let resolved = createResolvedModule({
+      acceptedDeps: ['/app/value.ts'],
+      deps: ['/app/value.ts'],
+    })
+
+    store.setResolved('/app/entry.ts', resolved, [
+      resolved,
+      {
+        trackedDirectories: ['/app/foo/'],
+        trackedFiles: ['/app/foo.ts'],
+      },
+    ])
+    store.invalidateForFileEvent('/app/foo.ts', 'add')
+
+    let record = store.get('/app/entry.ts')
+    assert.equal(store.getLastResolved('/app/entry.ts'), undefined)
+    assert.deepEqual([...record.links.dependencies], [])
+    assert.deepEqual([...record.links.acceptedDependencies], [])
+    assert.deepEqual([...store.getImporters('/app/value.ts')], [])
+    assert.deepEqual([...store.getAcceptedImporters('/app/value.ts')], [])
+  })
+
+  it('retains the last resolved module and links across content invalidations', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      getAcceptedDependencies(resolved) {
+        return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+      },
+      getDependencies(resolved) {
+        return resolved.deps
+      },
+    })
+    let resolved = createResolvedModule({
+      acceptedDeps: ['/app/accepted.ts'],
+      deps: ['/app/value.ts'],
+    })
+
+    store.setResolved('/app/entry.ts', resolved, [resolved])
+    store.invalidateForFileEvent('/app/entry.ts', 'change')
+
+    let record = store.get('/app/entry.ts')
+    assert.equal(record.resolved, undefined)
+    assert.equal(store.getLastResolved('/app/entry.ts'), resolved)
+    assert.deepEqual([...record.links.dependencies], ['/app/value.ts'])
+    assert.deepEqual([...record.links.acceptedDependencies], ['/app/accepted.ts'])
+    assert.deepEqual([...store.getImporters('/app/value.ts')], ['/app/entry.ts'])
+    assert.deepEqual([...store.getAcceptedImporters('/app/accepted.ts')], ['/app/entry.ts'])
+  })
+
+  it('retains HMR update timestamps across content invalidations', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>()
+    let transformed = createTransformedModule()
+
+    store.setTransformed('/app/entry.ts', transformed, [transformed])
+    store.setHmrUpdateTimestamp('/app/entry.ts', 123)
+    store.invalidateForFileEvent('/app/entry.ts', 'change')
+
+    assert.equal(store.getHmrUpdateTimestamp('/app/entry.ts'), 123)
+  })
+
+  it('retains the last resolved module when the current transform fails', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>()
+    let resolved = createResolvedModule()
+    let transformed = createTransformedModule()
+
+    store.setResolved('/app/entry.ts', resolved, [resolved])
+    store.clearTransformed('/app/entry.ts', [transformed])
+
+    assert.equal(store.get('/app/entry.ts').resolved, undefined)
+    assert.equal(store.getLastResolved('/app/entry.ts'), resolved)
+  })
+
+  it('indexes importers from resolved module dependencies', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      getDependencies(resolved) {
+        return resolved.deps
+      },
+    })
+    let resolved = createResolvedModule({
+      deps: ['/app/value.ts'],
+      identityPath: '/app/entry.ts',
+    })
+
+    store.setResolved('/app/entry.ts', resolved, [resolved])
+
+    assert.deepEqual([...store.getImporters('/app/value.ts')], ['/app/entry.ts'])
+  })
+
+  it('indexes accepted importers from resolved module dependencies', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      getAcceptedDependencies(resolved) {
+        return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+      },
+    })
+    let resolved = createResolvedModule({
+      acceptedDeps: ['/app/value.ts'],
+      identityPath: '/app/entry.ts',
+    })
+
+    store.setResolved('/app/entry.ts', resolved, [resolved])
+
+    assert.deepEqual([...store.getAcceptedImporters('/app/value.ts')], ['/app/entry.ts'])
+  })
+
+  it('replaces links and importer indexes when a module resolves again', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      getAcceptedDependencies(resolved) {
+        return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+      },
+      getDependencies(resolved) {
+        return resolved.deps
+      },
+    })
+    let first = createResolvedModule({
+      acceptedDeps: ['/app/one.ts'],
+      deps: ['/app/one.ts'],
+      identityPath: '/app/entry.ts',
+    })
+    let second = createResolvedModule({
+      acceptedDeps: ['/app/two.ts'],
+      deps: ['/app/two.ts'],
+      identityPath: '/app/entry.ts',
+    })
+
+    store.setResolved('/app/entry.ts', first, [first])
+    store.setResolved('/app/entry.ts', second, [second])
+
+    let record = store.get('/app/entry.ts')
+    assert.deepEqual([...record.links.dependencies], ['/app/two.ts'])
+    assert.deepEqual([...record.links.acceptedDependencies], ['/app/two.ts'])
+    assert.deepEqual([...store.getImporters('/app/one.ts')], [])
+    assert.deepEqual([...store.getAcceptedImporters('/app/one.ts')], [])
+    assert.deepEqual([...store.getImporters('/app/two.ts')], ['/app/entry.ts'])
+    assert.deepEqual([...store.getAcceptedImporters('/app/two.ts')], ['/app/entry.ts'])
+  })
+
+  it('clears the last resolved module and links across graph invalidations', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      getAcceptedDependencies(resolved) {
+        return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+      },
+      getDependencies(resolved) {
+        return resolved.deps
+      },
+    })
+    let resolved = createResolvedModule({
+      acceptedDeps: ['/app/value.ts'],
+      deps: ['/app/value.ts'],
+      identityPath: '/app/entry.ts',
+    })
+
+    store.setResolved('/app/entry.ts', resolved, [resolved])
+    store.invalidateForFileEvent('/app/entry.ts', 'unlink')
+
+    let record = store.get('/app/entry.ts')
+    assert.equal(store.getLastResolved('/app/entry.ts'), undefined)
+    assert.deepEqual([...record.links.dependencies], [])
+    assert.deepEqual([...record.links.acceptedDependencies], [])
+    assert.deepEqual([...store.getImporters('/app/value.ts')], [])
+    assert.deepEqual([...store.getAcceptedImporters('/app/value.ts')], [])
+  })
+
+  it('clears HMR update timestamps across graph invalidations', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>()
+
+    store.setHmrUpdateTimestamp('/app/entry.ts', 123)
+    store.invalidateAll()
+
+    assert.equal(store.getHmrUpdateTimestamp('/app/entry.ts'), undefined)
+  })
+
+  it('clears the last resolved module and links when all records are invalidated', () => {
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      getAcceptedDependencies(resolved) {
+        return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+      },
+      getDependencies(resolved) {
+        return resolved.deps
+      },
+    })
+    let resolved = createResolvedModule({
+      acceptedDeps: ['/app/value.ts'],
+      deps: ['/app/value.ts'],
+      identityPath: '/app/entry.ts',
+    })
+
+    store.setResolved('/app/entry.ts', resolved, [resolved])
+    store.invalidateAll()
+
+    let record = store.get('/app/entry.ts')
+    assert.equal(store.getLastResolved('/app/entry.ts'), undefined)
+    assert.deepEqual([...record.links.dependencies], [])
+    assert.deepEqual([...record.links.acceptedDependencies], [])
+    assert.deepEqual([...store.getImporters('/app/value.ts')], [])
+    assert.deepEqual([...store.getAcceptedImporters('/app/value.ts')], [])
   })
 })

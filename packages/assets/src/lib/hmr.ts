@@ -150,6 +150,8 @@ export function createHotContext(path) {
 let connected = false
 let reconnectPending = false
 let pageReloadTimer
+let failedJavaScriptUpdates = new Map()
+let stylesheetUpdatePromise = Promise.resolve()
 
 let events = new EventSource(${JSON.stringify(options.eventPathname)})
 
@@ -159,9 +161,12 @@ events.onerror = () => {
 }
 
 events.onmessage = (event) => {
-  handlePayload(JSON.parse(event.data)).catch((error) => {
+  let payload = JSON.parse(event.data)
+  handlePayload(payload).catch((error) => {
     console.error('[remix] HMR update failed', error)
-    reloadPage()
+    if (payload.type !== 'js-update') {
+      reloadPage()
+    }
   })
 }
 
@@ -170,10 +175,13 @@ async function handlePayload(payload) {
     console.info('[remix] HMR connected')
     if (reconnectPending) {
       reconnectPending = false
-      await dispatchCustomEvent('remix:server-update', {
+      let data = {
         reason: 'reconnect',
         timestamp: Date.now(),
-      })
+      }
+      await reloadCurrentStylesheets(data)
+      await retryFailedJavaScriptUpdates(data)
+      await dispatchCustomEvent('remix:server-update', data)
     }
     connected = true
     return
@@ -189,20 +197,67 @@ async function handlePayload(payload) {
 
   if (payload.type === 'custom') {
     console.info('[remix] HMR custom event', payload.event)
+    if (payload.event === 'remix:server-update') {
+      await retryFailedJavaScriptUpdates(payload.data)
+    }
     await dispatchCustomEvent(payload.event, payload.data)
     return
   }
 
   if (payload.type === 'css-update') {
     console.info('[remix] HMR updating stylesheet', payload.path)
-    reloadStylesheet(payload.path, payload.timestamp)
+    await queueStylesheetUpdate(payload.path, payload.timestamp)
     return
   }
 
   if (payload.type === 'js-update') {
-    await updateJavaScriptModule(payload.path, payload.acceptedPath ?? payload.path, payload.timestamp)
+    try {
+      await updateJavaScriptModule(payload.path, payload.acceptedPath ?? payload.path, payload.timestamp)
+      failedJavaScriptUpdates.delete(payload.path)
+    } catch (error) {
+      failedJavaScriptUpdates.set(payload.path, payload.acceptedPath ?? payload.path)
+      throw error
+    }
     console.info('[remix] HMR accepted update', payload.path)
   }
+}
+
+async function retryFailedJavaScriptUpdates(data) {
+  if (failedJavaScriptUpdates.size === 0) return
+
+  let timestamp = getTimestamp(data)
+  for (let [path, acceptedPath] of Array.from(failedJavaScriptUpdates)) {
+    try {
+      await updateJavaScriptModule(path, acceptedPath, timestamp)
+      failedJavaScriptUpdates.delete(path)
+      console.info('[remix] HMR recovered update', path)
+    } catch (error) {
+      console.error('[remix] HMR recovery update failed', error)
+    }
+  }
+}
+
+async function reloadCurrentStylesheets(data) {
+  let timestamp = getTimestamp(data)
+  let paths = new Set()
+  for (let link of document.querySelectorAll('link[rel="stylesheet"]')) {
+    if (link.dataset.remixHmrStylesheet === 'true') continue
+    let url = new URL(link.href)
+    if (url.origin !== location.origin) continue
+    paths.add(url.pathname)
+  }
+
+  for (let path of paths) {
+    await queueStylesheetUpdate(path, timestamp)
+  }
+}
+
+function getTimestamp(data) {
+  if (data && typeof data === 'object' && typeof data.timestamp === 'number') {
+    return data.timestamp
+  }
+
+  return Date.now()
 }
 
 async function updateJavaScriptModule(path, acceptedPath, timestamp) {
@@ -276,17 +331,43 @@ async function dispatchCustomEvent(event, data) {
   }
 }
 
-function reloadStylesheet(path, timestamp) {
+async function reloadStylesheet(path, timestamp) {
   let links = document.querySelectorAll('link[rel="stylesheet"]')
+  let updates = []
   for (let link of links) {
     let url = new URL(link.href)
     if (url.pathname !== path) continue
+    if (link.dataset.remixHmrStylesheet === 'true') continue
 
-    let next = link.cloneNode()
-    next.href = withTimestamp(path, timestamp)
-    next.onload = () => link.remove()
-    link.after(next)
+    updates.push(loadStylesheet(link, path, timestamp))
   }
+
+  if (updates.length === 0) return true
+  return (await Promise.all(updates)).some(Boolean)
+}
+
+async function queueStylesheetUpdate(path, timestamp) {
+  let update = stylesheetUpdatePromise.then(() => reloadStylesheet(path, timestamp))
+  stylesheetUpdatePromise = update.catch(() => {})
+  return update
+}
+
+function loadStylesheet(link, path, timestamp) {
+  return new Promise((resolve) => {
+    let next = link.cloneNode()
+    next.dataset.remixHmrStylesheet = 'true'
+    next.href = withTimestamp(path, timestamp)
+    next.onload = () => {
+      delete next.dataset.remixHmrStylesheet
+      link.remove()
+      resolve(true)
+    }
+    next.onerror = () => {
+      next.remove()
+      resolve(false)
+    }
+    link.after(next)
+  })
 }
 
 function withTimestamp(path, timestamp) {

@@ -329,10 +329,10 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     },
     hmr: sendHmrPayload
       ? {
-          send(pathname) {
+          send(pathname, timestamp) {
             sendHmrPayload({
               path: pathname,
-              timestamp: Date.now(),
+              timestamp,
               type: 'css-update',
             })
           },
