@@ -793,6 +793,11 @@ function assertCompatibleError(
   if (ours && nodes) {
     nodeAssert.equal(ours.name, nodes.name)
     nodeAssert.equal(ours.code, nodes.code)
+    // Bun's node:assert shim omits diagnostic fields for some newer assertions.
+    if (nodes.operator === undefined) {
+      return
+    }
+
     nodeAssert.equal(ours.operator, nodes.operator)
     nodeAssert.equal(ours.generatedMessage, nodes.generatedMessage)
     nodeAssert.deepEqual(ours.actual, nodes.actual)
