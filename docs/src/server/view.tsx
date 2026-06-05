@@ -1,5 +1,5 @@
-import { Glyph } from '@remix-run/ui/glyph'
-import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
+import { Glyph } from 'remix/ui/glyph'
+import { RMX_01, RMX_01_GLYPHS, theme } from 'remix/ui/theme'
 import type { Handle, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
 import {
@@ -13,7 +13,7 @@ import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
 import { routes } from './routes.ts'
 
-export type Versions = { version: string; crawl: boolean }[]
+export type Versions = string[]
 
 const entryHref = await assetServer.getHref('docs/src/client/entry.tsx')
 
@@ -99,6 +99,7 @@ function Head(
 ) {
   return () => {
     let { page, activeVersion, entryPreloads } = handle.props
+    let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
     return (
       <head>
         <meta charSet="utf-8" />
@@ -110,7 +111,7 @@ function Head(
             <meta name="robots" content="noindex,nofollow" />
             <meta name="googlebot" content="noindex,nofollow" />
           </>
-        ) : page.docFile?.kind === 'package' || page.docFile?.kind === 'demo' ? (
+        ) : shouldNofollow ? (
           // Overview pages (package READMEs) link densely to every API page
           // in the package; those are already reachable via the sidebar, so
           // tell crawlers — including our prerender spider — not to follow
@@ -261,7 +262,7 @@ function Sidebar(
   handle: Handle<{
     registry: DocsRegistry
     currentPath: string
-    versions: { version: string; crawl: boolean }[]
+    versions: Versions
     activeVersion?: string
   }>,
 ) {
@@ -363,7 +364,7 @@ function RemixLogos() {
 
 function VersionSwitcher(
   handle: Handle<{
-    versions: { version: string; crawl: boolean }[]
+    versions: Versions
     activeVersion?: string
   }>,
 ) {
@@ -372,7 +373,7 @@ function VersionSwitcher(
 
     let navVersions = versions
     if (activeVersion) {
-      let idx = versions.findIndex((v) => v.version === activeVersion)
+      let idx = versions.findIndex((version) => version === activeVersion)
       if (idx >= 0) navVersions = versions.slice(idx)
     }
 
@@ -383,20 +384,20 @@ function VersionSwitcher(
         </summary>
         <div mix={sectionContentCss}>
           <nav aria-label="Versions" mix={sidebarNavCss}>
-            {navVersions.map((v) => {
-              let latest =
-                (versions.length === 0 || v.version === versions[0]?.version) && !activeVersion
-              let active = v.version === activeVersion || latest
-              let href = routes.home.href({ version: !latest ? v.version : undefined })
+            {navVersions.map((version) => {
+              let latest = (versions.length === 0 || version === versions[0]) && !activeVersion
+              let active = version === activeVersion || latest
+              let href = routes.home.href({ version: !latest ? version : undefined })
+              let rel = active ? undefined : 'nofollow'
               return (
                 <a
-                  key={v.version}
+                  key={version}
                   href={href}
-                  rel={!latest && !v.crawl ? 'nofollow' : undefined}
+                  rel={rel}
                   aria-current={active ? 'page' : undefined}
                   mix={navItemCss}
                 >
-                  {v.version}
+                  {version}
                   {latest ? ' (latest)' : null}
                 </a>
               )

@@ -15,6 +15,8 @@
     "**/coverage/**",
     "**/bench/**",
     "**/examples/**",
+    "**/*.demo.ts",
+    "**/*.demo.tsx",
     "**/*.min.js",
     "**/*.bundled.*",
     "**/public/assets/**",

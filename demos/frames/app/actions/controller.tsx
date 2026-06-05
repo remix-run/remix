@@ -40,6 +40,6 @@ export default createController(routes, {
       return render(<ClientMountedPage />)
     },
 
-    rootReloadClientEntries: rootReloadClientEntriesAction.handler,
+    rootReloadClientEntries: rootReloadClientEntriesAction,
   },
 })

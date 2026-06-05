@@ -2,6 +2,24 @@
 
 This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.0
+
+### Minor Changes
+
+- BREAKING CHANGE: Remix UI component render functions no longer receive props as an argument. Type component props on `Handle<Props>` and read current values from `handle.props` in both setup and render code.
+
+- Updated `anchor(floating, anchorTarget, options)` to accept either an `HTMLElement` or coordinate target via the new `AnchorPoint`/`AnchorTarget` types.
+
+- Added `menu.contextTrigger()` so menus can open from right-click pointer locations while keeping existing keyboard navigation, submenus, and selection behavior.
+
+### Patch Changes
+
+- Fixed `css(...)` so nested selector objects render recursively instead of serializing deeper nested rules as `[object Object]` (see #11459).
+
+- Dispatch reload events for nested frames when an ancestor frame reloads
+
+- Prevent non-blocking frames from displaying their fallback when an ancestor frame is reloaded
+
 ## v0.2.0
 
 ### Minor Changes

@@ -32,7 +32,7 @@ Use this skill to draft and open a PR with consistent, high-signal writing. Keep
 
 - Do not assume every PR needs one.
 - Before opening the PR, decide whether the change is user-facing enough to require release notes in `packages/*/.changes`.
-- If a change file is needed or likely needed, use the `make-change-file` skill instead of re-deriving that workflow here.
+- If a change file is needed or likely needed, use the `make-changes` skill instead of re-deriving that workflow here.
 
 1. Draft the PR body with minimal structure.
 

@@ -2,6 +2,15 @@
 
 This is the changelog for [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.4
+
+### Patch Changes
+
+- Reject OAuth `returnTo` values that resolve outside the current origin when browsers normalize backslashes in redirect locations.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.19.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.19.2)
+
 ## v0.2.3
 
 ### Patch Changes

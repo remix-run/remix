@@ -2,6 +2,17 @@
 
 This is the changelog for [`static-middleware`](https://github.com/remix-run/remix/tree/main/packages/static-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.4.11
+
+### Patch Changes
+
+- Prevent `staticFiles()` from serving files outside its configured root through symlinks.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.19.2`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.19.2)
+  - [`fs@0.4.5`](https://github.com/remix-run/remix/releases/tag/fs@0.4.5)
+  - [`response@0.3.6`](https://github.com/remix-run/remix/releases/tag/response@0.3.6)
+
 ## v0.4.10
 
 ### Patch Changes

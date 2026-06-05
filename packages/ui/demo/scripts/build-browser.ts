@@ -1,15 +1,12 @@
 import * as esbuild from 'esbuild'
-import fs from 'node:fs'
 import path from 'node:path'
 import url from 'node:url'
 
-import { discoverExampleFiles } from '../app/examples/discovery.ts'
+import { discoverDemoFiles } from '../app/demo-runner/discovery.ts'
 
 const DEMO_DIRECTORY = url.fileURLToPath(new URL('..', import.meta.url))
 const OUTPUT_DIRECTORY = path.join(DEMO_DIRECTORY, 'public/assets')
 const ENTRY_FILE = path.join(DEMO_DIRECTORY, 'app/assets/entry.tsx')
-const THEME_BUILDER_ENTRY_FILE = path.join(DEMO_DIRECTORY, 'app/theme-builder.tsx')
-const EXAMPLES_DIRECTORY = path.join(DEMO_DIRECTORY, 'app/examples')
 
 const buildOptions: esbuild.BuildOptions = {
   bundle: true,
@@ -24,7 +21,7 @@ const buildOptions: esbuild.BuildOptions = {
 
 if (process.argv.includes('--watch')) {
   let watchState = await createWatchState()
-  let watcher = watchExampleDirectory(() => {
+  let watcher = watchDemoFiles(() => {
     void refreshWatchState()
   })
 
@@ -34,7 +31,7 @@ if (process.argv.includes('--watch')) {
     if (refreshPromise) return refreshPromise
 
     refreshPromise = (async () => {
-      let nextFingerprint = createExampleFingerprint()
+      let nextFingerprint = createDemoFingerprint()
       if (nextFingerprint === watchState.fingerprint) return
 
       console.log('Refreshing browser entry points...')
@@ -59,17 +56,16 @@ if (process.argv.includes('--watch')) {
 function createEntryPoints() {
   return Object.fromEntries([
     ['entry', ENTRY_FILE],
-    ['theme-builder', THEME_BUILDER_ENTRY_FILE],
-    ...discoverExampleFiles().map((example) => [
-      path.posix.join('examples', example.relativePath.replace(/\.tsx$/, '')),
-      example.absolutePath,
+    ...discoverDemoFiles().map((demo) => [
+      path.posix.join('demos', demo.relativePath.replace(/\.demo\.(tsx|ts)$/, '')),
+      demo.absolutePath,
     ]),
   ]) as Record<string, string>
 }
 
-function createExampleFingerprint() {
-  return discoverExampleFiles()
-    .map((example) => example.relativePath)
+function createDemoFingerprint() {
+  return discoverDemoFiles()
+    .map((demo) => demo.relativePath)
     .join('|')
 }
 
@@ -83,11 +79,11 @@ async function createWatchState() {
 
   return {
     context,
-    fingerprint: createExampleFingerprint(),
+    fingerprint: createDemoFingerprint(),
   }
 }
 
-async function waitForStop(getContext: () => esbuild.BuildContext, watcher?: fs.FSWatcher) {
+async function waitForStop(getContext: () => esbuild.BuildContext, watcher?: { close(): void }) {
   await new Promise<void>((resolve) => {
     let shuttingDown = false
 
@@ -104,8 +100,14 @@ async function waitForStop(getContext: () => esbuild.BuildContext, watcher?: fs.
   })
 }
 
-function watchExampleDirectory(onChange: () => void) {
-  return fs.watch(EXAMPLES_DIRECTORY, { recursive: true }, () => {
+function watchDemoFiles(onChange: () => void) {
+  let interval = setInterval(() => {
     onChange()
-  })
+  }, 1000)
+
+  return {
+    close() {
+      clearInterval(interval)
+    },
+  }
 }

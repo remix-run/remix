@@ -545,8 +545,9 @@ describe('formData middleware', () => {
     let parsedFormData = new FormData()
     parsedFormData.set('name', 'test')
 
-    let setFormData: Middleware<{ key: typeof FormData; value: FormData }> = (context) => {
+    let setFormData: Middleware<{ key: typeof FormData; value: FormData }> = (context, next) => {
       context.set(FormData, parsedFormData)
+      return next()
     }
 
     let router = createRouter({

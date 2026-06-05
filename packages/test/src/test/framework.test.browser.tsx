@@ -1,4 +1,5 @@
 import decamelize from 'decamelize'
+import cx from 'clsx'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { on, type Handle } from '@remix-run/ui'
@@ -103,6 +104,34 @@ describe('FieldLabel (using decamelize)', () => {
     let { $, cleanup } = render(<FieldLabel name="dateOfBirth" />)
     t.after(cleanup)
     assert.equal($('[data-testid="label"]')?.textContent, 'date of birth')
+  })
+})
+
+describe('MobileMenu (using clsx)', () => {
+  function MobileMenu(handle: Handle<{ isOpen: boolean }>) {
+    return () => {
+      let { isOpen } = handle.props
+
+      return (
+        <nav
+          aria-label="Mobile navigation"
+          className={cx('mobile-menu', {
+            'mobile-menu--open': isOpen,
+            'mobile-menu--closed': !isOpen,
+          })}
+        >
+          <a href="/docs">Docs</a>
+          <a href="/blog">Blog</a>
+        </nav>
+      )
+    }
+  }
+
+  it('resolves browser-oriented package exports for default imports', (t) => {
+    let { $, cleanup } = render(<MobileMenu isOpen />)
+    t.after(cleanup)
+
+    assert.equal($('[aria-label="Mobile navigation"]')?.className, 'mobile-menu mobile-menu--open')
   })
 })
 

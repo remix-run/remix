@@ -19,9 +19,5 @@ if (platform !== 'win32') {
 export default {
   playwrightConfig: {
     projects,
-    use: {
-      navigationTimeout: 5_000,
-      actionTimeout: 5_000,
-    },
   },
 } satisfies RemixTestConfig

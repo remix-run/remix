@@ -1587,6 +1587,131 @@ describe('run', () => {
     app.dispose()
   })
 
+  it('dispatches reloadStart and reloadComplete events for non-blocking child frames during top frame reloads', async () => {
+    let childReloadStartEvents = 0
+    let childReloadCompleteEvents = 0
+    let reloadTopFromChild: undefined | (() => Promise<AbortSignal>)
+
+    let ChildReloadObserver = clientEntry(
+      '/assets/child-reload-observer.js#ChildReloadObserver',
+      function ChildReloadObserver(handle: Handle) {
+        reloadTopFromChild = async () => {
+          handle.frame.addEventListener(
+            'reloadStart',
+            () => {
+              childReloadStartEvents++
+            },
+            { once: true },
+          )
+          handle.frame.addEventListener(
+            'reloadComplete',
+            () => {
+              childReloadCompleteEvents++
+            },
+            { once: true },
+          )
+          return await handle.frames.top.reload()
+        }
+
+        return () => <button id="reload-top-from-child">Reload top</button>
+      },
+    )
+
+    async function renderChildFrame(label: string) {
+      return await drain(
+        renderToStream(
+          <section id="event-child-frame-content">
+            <p id="event-child-frame-label">{label}</p>
+            <ChildReloadObserver />
+          </section>,
+        ),
+      )
+    }
+
+    function renderDocument(childContent: string | Promise<string>) {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <main>
+              <p id="event-top-frame-label">Top frame</p>
+              <Frame
+                name="event-child"
+                src="/event-child"
+                fallback={<span id="event-child-frame-fallback">Loading child...</span>}
+              />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/event-child') return childContent
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(renderDocument(renderChildFrame('Initial child'))),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [childReloadPromise, resolveChildReload] = withResolvers<string>()
+    let streamedReload = renderDocument(childReloadPromise)
+    let streamedChunks = readChunks(streamedReload)
+    let firstChunk = await streamedChunks.next()
+    invariant(!firstChunk.done)
+    resolveChildReload(await renderChildFrame('Reloaded child'))
+    let secondChunk = await streamedChunks.next()
+    invariant(!secondChunk.done)
+    let [secondChunkPromise, releaseSecondChunk] = withResolvers<string>()
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/child-reload-observer.js' &&
+          exportName === 'ChildReloadObserver'
+        ) {
+          return ChildReloadObserver
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks(['<!DOCTYPE html>', firstChunk.value, secondChunkPromise])
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Initial child')
+
+    invariant(reloadTopFromChild)
+    let reloadPromise = reloadTopFromChild()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(childReloadStartEvents).toBe(1)
+    expect(childReloadCompleteEvents).toBe(0)
+    expect(document.getElementById('event-child-frame-fallback')).toBeNull()
+    expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Initial child')
+
+    releaseSecondChunk(secondChunk.value)
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(childReloadStartEvents).toBe(1)
+    expect(childReloadCompleteEvents).toBe(1)
+    expect(document.getElementById('event-child-frame-fallback')).toBeNull()
+    expect(document.getElementById('event-child-frame-label')?.textContent).toBe('Reloaded child')
+
+    app.dispose()
+  })
+
   it('reloads a frame region when the response uses css mixins', async () => {
     let renderCount = 0
 
@@ -3256,6 +3381,813 @@ describe('run', () => {
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('nested')?.textContent).toBe('Nested loaded')
+    app.dispose()
+  })
+
+  it('preserves resolved non-blocking child frame content during top frame reloads', async () => {
+    async function renderChildFrame(label: string) {
+      return await drain(
+        renderToStream(
+          <section id="child-frame-content">
+            <p id="child-frame-label">{label}</p>
+            <input id="child-frame-input" />
+          </section>,
+        ),
+      )
+    }
+
+    function renderDocument(childContent: string | Promise<string>) {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <main>
+              <p id="top-frame-label">Top frame</p>
+              <Frame
+                name="child"
+                src="/child"
+                fallback={<span id="child-frame-fallback">Loading child...</span>}
+              />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/child') return childContent
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(renderDocument(renderChildFrame('Initial child'))),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [childReloadPromise, resolveChildReload] = withResolvers<string>()
+    let streamedReload = renderDocument(childReloadPromise)
+    let streamedChunks = readChunks(streamedReload)
+    let firstChunk = await streamedChunks.next()
+    invariant(!firstChunk.done)
+    resolveChildReload(await renderChildFrame('Reloaded child'))
+    let secondChunk = await streamedChunks.next()
+    invariant(!secondChunk.done)
+    let [secondChunkPromise, releaseSecondChunk] = withResolvers<string>()
+
+    let app = run({
+      loadModule: mock.fn(),
+      resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks(['<!DOCTYPE html>', firstChunk.value, secondChunkPromise])
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let input = document.getElementById('child-frame-input')
+    invariant(input instanceof HTMLInputElement)
+    expect(document.getElementById('child-frame-label')?.textContent).toBe('Initial child')
+    input.value = 'typed child value'
+
+    let topFrame = getTopFrame()
+    let reloadPromise = topFrame.reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('child-frame-fallback')).toBeNull()
+    expect(document.getElementById('child-frame-input')).toBe(input)
+    expect(document.getElementById('child-frame-label')?.textContent).toBe('Initial child')
+    expect(input.value).toBe('typed child value')
+
+    releaseSecondChunk(secondChunk.value)
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('child-frame-fallback')).toBeNull()
+    expect(document.getElementById('child-frame-input')).toBe(input)
+    expect(document.getElementById('child-frame-label')?.textContent).toBe('Reloaded child')
+    expect(input.value).toBe('typed child value')
+
+    app.dispose()
+  })
+
+  it('diffs pending child frame fallbacks and ignores stale templates during top frame reloads', async () => {
+    let [initialChildPromise] = withResolvers<string>()
+    let [reloadedChildPromise] = withResolvers<string>()
+    let childReloadStartEvents = 0
+    let childReloadCompleteEvents = 0
+    let reloadTopWithPendingChild: undefined | (() => Promise<AbortSignal>)
+
+    let PendingChildFrameObserver = clientEntry(
+      '/assets/pending-child-frame-observer.js#PendingChildFrameObserver',
+      function PendingChildFrameObserver(handle: Handle) {
+        reloadTopWithPendingChild = async () => {
+          let childFrame = handle.frames.get('child')
+          invariant(childFrame)
+          childFrame.addEventListener(
+            'reloadStart',
+            () => {
+              childReloadStartEvents++
+            },
+            { once: true },
+          )
+          childFrame.addEventListener(
+            'reloadComplete',
+            () => {
+              childReloadCompleteEvents++
+            },
+            { once: true },
+          )
+          return await handle.frames.top.reload()
+        }
+
+        return () => <button id="reload-top-with-pending-child">Reload top</button>
+      },
+    )
+
+    function renderDocument(childContent: Promise<string>, fallbackLabel: string) {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <main>
+              <p id="top-frame-label">Top frame</p>
+              <PendingChildFrameObserver />
+              <Frame
+                name="child"
+                src="/child"
+                fallback={
+                  <span id="child-frame-fallback" data-label={fallbackLabel}>
+                    {fallbackLabel}
+                  </span>
+                }
+              />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/child') return childContent
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialChunks = readChunks(renderDocument(initialChildPromise, 'Initial fallback'))
+    let initialChunk = await initialChunks.next()
+    invariant(!initialChunk.done)
+    let initialMarkerId = getCommentMarkerId(initialChunk.value, 'rmx:f:')
+
+    let initialDocument = new DOMParser().parseFromString(initialChunk.value, 'text/html')
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let reloadedChunks = readChunks(renderDocument(reloadedChildPromise, 'Reloaded fallback'))
+    let reloadedChunk = await reloadedChunks.next()
+    invariant(!reloadedChunk.done)
+    let reloadedMarkerId = getCommentMarkerId(reloadedChunk.value, 'rmx:f:')
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/pending-child-frame-observer.js' &&
+          exportName === 'PendingChildFrameObserver'
+        ) {
+          return PendingChildFrameObserver
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return streamFromChunks(['<!DOCTYPE html>', reloadedChunk.value])
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let fallback = document.getElementById('child-frame-fallback')
+    invariant(fallback instanceof HTMLSpanElement)
+    expect(fallback.textContent).toBe('Initial fallback')
+    expect(fallback.getAttribute('data-label')).toBe('Initial fallback')
+
+    invariant(reloadTopWithPendingChild)
+    let reloadPromise = reloadTopWithPendingChild()
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(childReloadStartEvents).toBe(1)
+    expect(childReloadCompleteEvents).toBe(0)
+    expect(document.getElementById('child-frame-fallback')).toBe(fallback)
+    expect(fallback.textContent).toBe('Reloaded fallback')
+    expect(fallback.getAttribute('data-label')).toBe('Reloaded fallback')
+
+    let staleTemplate = document.createElement('template')
+    staleTemplate.id = initialMarkerId
+    staleTemplate.innerHTML = '<span id="stale-child-content">Stale child</span>'
+    document.body.appendChild(staleTemplate)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('stale-child-content')).toBeNull()
+    expect(document.getElementById('child-frame-fallback')).toBe(fallback)
+    expect(fallback.textContent).toBe('Reloaded fallback')
+
+    let freshTemplate = document.createElement('template')
+    freshTemplate.id = reloadedMarkerId
+    freshTemplate.innerHTML = '<span id="fresh-child-content">Fresh child</span>'
+    document.body.appendChild(freshTemplate)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('stale-child-content')).toBeNull()
+    expect(document.getElementById('fresh-child-content')?.textContent).toBe('Fresh child')
+    expect(document.getElementById('child-frame-fallback')).toBeNull()
+    expect(childReloadStartEvents).toBe(1)
+    expect(childReloadCompleteEvents).toBe(1)
+
+    app.dispose()
+  })
+
+  it('preserves resolved direct child frame content during parent frame reloads', async () => {
+    let reloadParent: undefined | (() => Promise<AbortSignal>)
+
+    let ReloadDirectParent = clientEntry(
+      '/assets/reload-direct-parent.js#ReloadDirectParent',
+      function ReloadDirectParent(handle: Handle) {
+        reloadParent = () => handle.frame.reload()
+        return () => <button id="reload-direct-parent">Reload parent</button>
+      },
+    )
+
+    async function renderChildFrame(label: string) {
+      return await drain(
+        renderToStream(
+          <>
+            <p id="direct-child-frame-label">{label}</p>
+            <input id="direct-child-frame-input" />
+          </>,
+        ),
+      )
+    }
+
+    function renderParentFrame(childContent: string | Promise<string>) {
+      return renderToStream(
+        <>
+          <Frame
+            name="direct-child"
+            src="/direct-child"
+            fallback={<span id="direct-child-frame-fallback">Loading child...</span>}
+          />
+          <p id="direct-parent-sibling">Parent sibling</p>
+          <ReloadDirectParent />
+        </>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/direct-child') return childContent
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>
+                <Frame name="direct-parent" src="/direct-parent" />
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/direct-parent') {
+                return renderParentFrame(renderChildFrame('Initial direct child'))
+              }
+              throw new Error(`Unexpected frame src: ${src}`)
+            },
+          },
+        ),
+      ),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [childReloadPromise, resolveChildReload] = withResolvers<string>()
+    let streamedReload = renderParentFrame(childReloadPromise)
+    let streamedChunks = readChunks(streamedReload)
+    let firstChunk = await streamedChunks.next()
+    invariant(!firstChunk.done)
+    resolveChildReload(await renderChildFrame('Reloaded direct child'))
+    let secondChunk = await streamedChunks.next()
+    invariant(!secondChunk.done)
+    let [secondChunkPromise, releaseSecondChunk] = withResolvers<string>()
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/reload-direct-parent.js' &&
+          exportName === 'ReloadDirectParent'
+        ) {
+          return ReloadDirectParent
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/direct-parent') {
+          return streamFromChunks([firstChunk.value, secondChunkPromise])
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let input = document.getElementById('direct-child-frame-input')
+    invariant(input instanceof HTMLInputElement)
+    expect(document.getElementById('direct-child-frame-label')?.textContent).toBe(
+      'Initial direct child',
+    )
+    input.value = 'typed direct child value'
+
+    invariant(reloadParent)
+    let reloadPromise = reloadParent()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('direct-child-frame-fallback')).toBeNull()
+    expect(document.getElementById('direct-child-frame-input')).toBe(input)
+    expect(document.getElementById('direct-child-frame-label')?.textContent).toBe(
+      'Initial direct child',
+    )
+    expect(input.value).toBe('typed direct child value')
+    expect(document.getElementById('direct-parent-sibling')?.textContent).toBe('Parent sibling')
+
+    releaseSecondChunk(secondChunk.value)
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('direct-child-frame-fallback')).toBeNull()
+    expect(document.getElementById('direct-child-frame-input')).toBe(input)
+    expect(document.getElementById('direct-child-frame-label')?.textContent).toBe(
+      'Reloaded direct child',
+    )
+    expect(input.value).toBe('typed direct child value')
+    expect(document.getElementById('direct-parent-sibling')?.textContent).toBe('Parent sibling')
+
+    app.dispose()
+  })
+
+  it('keeps blocking child frame handles reloadable after top frame reloads', async () => {
+    let childReloadCount = 0
+
+    let ReloadBlockingChild = clientEntry(
+      '/assets/reload-blocking-child.js#ReloadBlockingChild',
+      function ReloadBlockingChild(handle: Handle) {
+        let pending = false
+
+        handle.frame.addEventListener('reloadStart', () => {
+          pending = true
+          handle.update()
+        })
+
+        handle.frame.addEventListener('reloadComplete', () => {
+          pending = false
+          handle.update()
+        })
+
+        return () => (
+          <button
+            id="reload-blocking-child"
+            mix={on('click', () => {
+              void handle.frame.reload()
+            })}
+          >
+            {pending ? 'Reloading child' : 'Reload child'}
+          </button>
+        )
+      },
+    )
+
+    async function renderChildFrame(label: string) {
+      return await drain(
+        renderToStream(
+          <>
+            <p id="blocking-child-frame-label">{label}</p>
+            <ReloadBlockingChild />
+          </>,
+        ),
+      )
+    }
+
+    function renderDocument(childLabel: string) {
+      return renderToStream(
+        <html>
+          <head />
+          <body>
+            <main>
+              <Frame name="blocking-child" src="/blocking-child" />
+            </main>
+          </body>
+        </html>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/blocking-child') return renderChildFrame(childLabel)
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(renderDocument('Initial blocking child')),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [topReloadPromise, resolveTopReload] = withResolvers<ReadableStream<Uint8Array>>()
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/reload-blocking-child.js' &&
+          exportName === 'ReloadBlockingChild'
+        ) {
+          return ReloadBlockingChild
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === document.location.href) {
+          return topReloadPromise
+        }
+        if (src === '/blocking-child') {
+          childReloadCount++
+          return renderChildFrame(`Reloaded by child frame ${childReloadCount}`)
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('blocking-child-frame-label')?.textContent).toBe(
+      'Initial blocking child',
+    )
+
+    let topReload = getTopFrame().reload()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('reload-blocking-child')?.textContent).toBe('Reloading child')
+
+    resolveTopReload(renderDocument('Reloaded by top frame'))
+    await topReload
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('blocking-child-frame-label')?.textContent).toBe(
+      'Reloaded by top frame',
+    )
+    expect(document.getElementById('reload-blocking-child')?.textContent).toBe('Reload child')
+
+    let reloadChildButton = document.getElementById('reload-blocking-child')
+    invariant(reloadChildButton instanceof HTMLButtonElement)
+    reloadChildButton.click()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('blocking-child-frame-label')?.textContent).toBe(
+      'Reloaded by child frame 1',
+    )
+
+    app.dispose()
+  })
+
+  it('removes direct child frame content during parent frame reloads', async () => {
+    let reloadParent: undefined | (() => Promise<AbortSignal>)
+    let showChildFrame = true
+
+    let ReloadDirectParent = clientEntry(
+      '/assets/remove-direct-child-frame.js#RemoveDirectChildFrame',
+      function RemoveDirectChildFrame(handle: Handle) {
+        reloadParent = async () => {
+          showChildFrame = false
+          return await handle.frame.reload()
+        }
+        return () => <button id="remove-direct-child-frame">Remove child</button>
+      },
+    )
+
+    function renderParentFrame() {
+      return renderToStream(
+        <>
+          {showChildFrame ? <Frame name="removed-child" src="/removed-child" /> : null}
+          <p id="remove-direct-parent-sibling">Parent sibling</p>
+          <ReloadDirectParent />
+        </>,
+        {
+          resolveFrame(src: string) {
+            if (src === '/removed-child') {
+              return '<p id="removed-child-content">Child content</p><input id="removed-child-input" />'
+            }
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>
+                <Frame name="remove-direct-parent" src="/remove-direct-parent" />
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/remove-direct-parent') return renderParentFrame()
+              throw new Error(`Unexpected frame src: ${src}`)
+            },
+          },
+        ),
+      ),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/remove-direct-child-frame.js' &&
+          exportName === 'RemoveDirectChildFrame'
+        ) {
+          return ReloadDirectParent
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/remove-direct-parent') return renderParentFrame()
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('removed-child-content')?.textContent).toBe('Child content')
+    expect(document.getElementById('remove-direct-parent-sibling')?.textContent).toBe(
+      'Parent sibling',
+    )
+
+    invariant(reloadParent)
+    await reloadParent()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('removed-child-content')).toBeNull()
+    expect(document.getElementById('removed-child-input')).toBeNull()
+    expect(document.getElementById('remove-direct-parent-sibling')?.textContent).toBe(
+      'Parent sibling',
+    )
+
+    app.dispose()
+  })
+
+  it('replaces direct child frame content when frame src changes during parent frame reloads', async () => {
+    let reloadParent: undefined | (() => Promise<AbortSignal>)
+    let childSrc = '/direct-src-a'
+
+    let ReloadDirectParent = clientEntry(
+      '/assets/replace-direct-child-frame.js#ReplaceDirectChildFrame',
+      function ReplaceDirectChildFrame(handle: Handle) {
+        reloadParent = async () => {
+          childSrc = '/direct-src-b'
+          return await handle.frame.reload()
+        }
+        return () => <button id="replace-direct-child-frame">Replace child</button>
+      },
+    )
+
+    function renderParentFrame(childContent: string | Promise<string>) {
+      return renderToStream(
+        <>
+          <Frame
+            name="direct-src-child"
+            src={childSrc}
+            fallback={<span id="direct-src-child-fallback">Loading replacement...</span>}
+          />
+          <p id="direct-src-parent-sibling">Parent sibling</p>
+          <ReloadDirectParent />
+        </>,
+        {
+          resolveFrame(src: string) {
+            if (src === childSrc) return childContent
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>
+                <Frame name="direct-src-parent" src="/direct-src-parent" />
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/direct-src-parent') {
+                return renderParentFrame(
+                  '<p id="direct-src-child-content">Initial child</p><input id="direct-src-child-input" />',
+                )
+              }
+              throw new Error(`Unexpected frame src: ${src}`)
+            },
+          },
+        ),
+      ),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [childReloadPromise, resolveChildReload] = withResolvers<string>()
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/replace-direct-child-frame.js' &&
+          exportName === 'ReplaceDirectChildFrame'
+        ) {
+          return ReloadDirectParent
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/direct-src-parent') {
+          return renderParentFrame(childReloadPromise)
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let input = document.getElementById('direct-src-child-input')
+    invariant(input instanceof HTMLInputElement)
+    input.value = 'typed value'
+    expect(document.getElementById('direct-src-child-content')?.textContent).toBe('Initial child')
+
+    invariant(reloadParent)
+    let reloadPromise = reloadParent()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('direct-src-child-content')).toBeNull()
+    expect(document.getElementById('direct-src-child-input')).toBeNull()
+    expect(document.getElementById('direct-src-child-fallback')?.textContent).toBe(
+      'Loading replacement...',
+    )
+    expect(document.getElementById('direct-src-parent-sibling')?.textContent).toBe('Parent sibling')
+
+    resolveChildReload('<p id="direct-src-child-content">Replacement child</p>')
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('direct-src-child-fallback')).toBeNull()
+    expect(document.getElementById('direct-src-child-content')?.textContent).toBe(
+      'Replacement child',
+    )
+    expect(document.getElementById('direct-src-parent-sibling')?.textContent).toBe('Parent sibling')
+
+    app.dispose()
+  })
+
+  it('replaces nested child frame content when frame src changes during parent frame reloads', async () => {
+    let reloadParent: undefined | (() => Promise<AbortSignal>)
+    let childSrc = '/nested-src-a'
+
+    let ReloadNestedParent = clientEntry(
+      '/assets/replace-nested-child-frame.js#ReplaceNestedChildFrame',
+      function ReplaceNestedChildFrame(handle: Handle) {
+        reloadParent = async () => {
+          childSrc = '/nested-src-b'
+          return await handle.frame.reload()
+        }
+        return () => <button id="replace-nested-child-frame">Replace child</button>
+      },
+    )
+
+    function renderParentFrame(childContent: string | Promise<string>) {
+      return renderToStream(
+        <>
+          <section id="nested-src-child-shell">
+            <Frame
+              name="nested-src-child"
+              src={childSrc}
+              fallback={<span id="nested-src-child-fallback">Loading replacement...</span>}
+            />
+          </section>
+          <p id="nested-src-parent-sibling">Parent sibling</p>
+          <ReloadNestedParent />
+        </>,
+        {
+          resolveFrame(src: string) {
+            if (src === childSrc) return childContent
+            throw new Error(`Unexpected frame src: ${src}`)
+          },
+        },
+      )
+    }
+
+    let initialDocument = new DOMParser().parseFromString(
+      await drainWithProtocol(
+        renderToStream(
+          <html>
+            <head />
+            <body>
+              <main>
+                <Frame name="nested-src-parent" src="/nested-src-parent" />
+              </main>
+            </body>
+          </html>,
+          {
+            resolveFrame(src: string) {
+              if (src === '/nested-src-parent') {
+                return renderParentFrame(
+                  '<p id="nested-src-child-content">Initial child</p><input id="nested-src-child-input" />',
+                )
+              }
+              throw new Error(`Unexpected frame src: ${src}`)
+            },
+          },
+        ),
+      ),
+      'text/html',
+    )
+    document.documentElement.innerHTML = initialDocument.documentElement.innerHTML
+
+    let [childReloadPromise, resolveChildReload] = withResolvers<string>()
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (
+          moduleUrl === '/assets/replace-nested-child-frame.js' &&
+          exportName === 'ReplaceNestedChildFrame'
+        ) {
+          return ReloadNestedParent
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+      resolveFrame(src: string) {
+        if (src === '/nested-src-parent') {
+          return renderParentFrame(childReloadPromise)
+        }
+        throw new Error(`Unexpected frame src: ${src}`)
+      },
+    })
+
+    await app.ready()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    let input = document.getElementById('nested-src-child-input')
+    invariant(input instanceof HTMLInputElement)
+    input.value = 'typed value'
+    expect(document.getElementById('nested-src-child-content')?.textContent).toBe('Initial child')
+
+    invariant(reloadParent)
+    let reloadPromise = reloadParent()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('nested-src-child-content')).toBeNull()
+    expect(document.getElementById('nested-src-child-input')).toBeNull()
+    expect(document.getElementById('nested-src-child-fallback')?.textContent).toBe(
+      'Loading replacement...',
+    )
+    expect(document.getElementById('nested-src-parent-sibling')?.textContent).toBe('Parent sibling')
+
+    resolveChildReload('<p id="nested-src-child-content">Replacement child</p>')
+    await reloadPromise
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(document.getElementById('nested-src-child-fallback')).toBeNull()
+    expect(document.getElementById('nested-src-child-content')?.textContent).toBe(
+      'Replacement child',
+    )
+    expect(document.getElementById('nested-src-child-input')).toBeNull()
+    expect(document.getElementById('nested-src-parent-sibling')?.textContent).toBe('Parent sibling')
+
     app.dispose()
   })
 
