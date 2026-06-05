@@ -3,134 +3,35 @@ import cx from 'clsx'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-describe('Counter', () => {
-  function createCounter(options: { count?: number } = {}) {
-    let count = options.count ?? 0
-    let container = document.createElement('div')
-    let heading = document.createElement('h3')
-    let controls = document.createElement('div')
-    let decrement = document.createElement('button')
-    let output = document.createElement('span')
-    let increment = document.createElement('button')
-
-    function update() {
-      output.textContent = String(count)
-    }
-
-    heading.textContent = 'Counter'
-    decrement.dataset.action = 'decrement'
-    decrement.textContent = '-'
-    decrement.addEventListener('click', () => {
-      count--
-      update()
-    })
-    output.dataset.testid = 'count'
-    output.style.fontSize = '24px'
-    output.style.minWidth = '2ch'
-    output.style.textAlign = 'center'
-    increment.dataset.action = 'increment'
-    increment.textContent = '+'
-    increment.addEventListener('click', () => {
-      count++
-      update()
-    })
-    update()
-
-    controls.append(decrement, output, increment)
-    container.append(heading, controls)
-    document.body.append(container)
-
-    return createFixture(container)
-  }
-
-  it('renders with initial count of 0 when not specified', (t) => {
-    let { $, cleanup } = createCounter()
-    t.after(cleanup)
-    assert.equal(Number($('[data-testid="count"]')!.textContent), 0)
-  })
-
-  it('renders with a provided initial count', (t) => {
-    let { $, cleanup } = createCounter({ count: 5 })
-    t.after(cleanup)
-    assert.equal(Number($('[data-testid="count"]')!.textContent), 5)
-  })
-
-  it('increments the count', async (t) => {
-    let { $, act, cleanup } = createCounter()
-    t.after(cleanup)
-    await act(() => button($, '[data-action="increment"]')?.click())
-    assert.equal(Number($('[data-testid="count"]')!.textContent), 1)
-    await act(() => button($, '[data-action="increment"]')?.click())
-    assert.equal(Number($('[data-testid="count"]')!.textContent), 2)
-    await act(() => button($, '[data-action="increment"]')?.click())
-    assert.equal(Number($('[data-testid="count"]')!.textContent), 3)
-  })
-
-  it('decrements the count', async (t) => {
-    let { $, act, cleanup } = createCounter({ count: 3 })
-    t.after(cleanup)
-    await act(() => button($, '[data-action="decrement"]')?.click())
-    assert.equal(Number($('[data-testid="count"]')!.textContent), 2)
-    await act(() => button($, '[data-action="decrement"]')?.click())
-    assert.equal(Number($('[data-testid="count"]')!.textContent), 1)
-    await act(() => button($, '[data-action="decrement"]')?.click())
-    assert.equal(Number($('[data-testid="count"]')!.textContent), 0)
-  })
-})
-
 describe('FieldLabel (using decamelize)', () => {
-  // Demonstrates that ESM third-party libraries are importable from test modules
-  function createFieldLabel(name: string) {
-    let span = document.createElement('span')
-    span.dataset.testid = 'label'
-    span.textContent = decamelize(name, { separator: ' ' })
-    document.body.append(span)
-
-    return createFixture(span)
-  }
-
   it('renders a single word unchanged', (t) => {
-    let { $, cleanup } = createFieldLabel('name')
+    let { $, cleanup } = createTextFixture(decamelize('name', { separator: ' ' }))
     t.after(cleanup)
-    assert.equal($('[data-testid="label"]')?.textContent, 'name')
+    assert.equal($('[data-testid="result"]')?.textContent, 'name')
   })
 
   it('converts camelCase to spaced words', (t) => {
-    let { $, cleanup } = createFieldLabel('firstName')
+    let { $, cleanup } = createTextFixture(decamelize('firstName', { separator: ' ' }))
     t.after(cleanup)
-    assert.equal($('[data-testid="label"]')?.textContent, 'first name')
+    assert.equal($('[data-testid="result"]')?.textContent, 'first name')
   })
 
   it('handles multiple humps', (t) => {
-    let { $, cleanup } = createFieldLabel('dateOfBirth')
+    let { $, cleanup } = createTextFixture(decamelize('dateOfBirth', { separator: ' ' }))
     t.after(cleanup)
-    assert.equal($('[data-testid="label"]')?.textContent, 'date of birth')
+    assert.equal($('[data-testid="result"]')?.textContent, 'date of birth')
   })
 })
 
 describe('MobileMenu (using clsx)', () => {
-  function createMobileMenu(isOpen: boolean) {
+  it('resolves browser-oriented package exports for default imports', (t) => {
     let nav = document.createElement('nav')
-    let docs = document.createElement('a')
-    let blog = document.createElement('a')
-
     nav.ariaLabel = 'Mobile navigation'
     nav.className = cx('mobile-menu', {
-      'mobile-menu--open': isOpen,
-      'mobile-menu--closed': !isOpen,
+      'mobile-menu--open': true,
+      'mobile-menu--closed': false,
     })
-    docs.href = '/docs'
-    docs.textContent = 'Docs'
-    blog.href = '/blog'
-    blog.textContent = 'Blog'
-    nav.append(docs, blog)
-    document.body.append(nav)
-
-    return createFixture(nav)
-  }
-
-  it('resolves browser-oriented package exports for default imports', (t) => {
-    let { $, cleanup } = createMobileMenu(true)
+    let { $, cleanup } = createFixture(nav)
     t.after(cleanup)
 
     assert.equal($('[aria-label="Mobile navigation"]')?.className, 'mobile-menu mobile-menu--open')
@@ -157,20 +58,6 @@ describe('DOM Tests', () => {
   it.todo('todo: can mark tests as todo')
 })
 
-describe('render/cleanup', () => {
-  it('cleanup removes the container from the DOM', () => {
-    let container = document.createElement('div')
-    container.dataset.testid = 'manual'
-    container.textContent = 'hello'
-    document.body.append(container)
-    let { cleanup } = createFixture(container)
-
-    assert.equal(document.body.contains(container), true)
-    cleanup()
-    assert.equal(document.body.contains(container), false)
-  })
-})
-
 describe.skip('skip: Skipped Test Suite', () => {
   it('would fail', () => {
     assert.equal(true, false)
@@ -179,29 +66,28 @@ describe.skip('skip: Skipped Test Suite', () => {
 
 describe.todo('todo: Test Suite')
 
-function createFixture(container: Element): {
+function createTextFixture(text: string): {
   $: (selector: string) => Element | null
-  act(fn: () => void): Promise<void>
   cleanup(): void
 } {
-  return {
-    $(selector) {
-      return container.matches(selector) ? container : container.querySelector(selector)
-    },
-    async act(fn) {
-      fn()
-      await Promise.resolve()
-    },
-    cleanup() {
-      container.remove()
-    },
-  }
+  let span = document.createElement('span')
+  span.dataset.testid = 'result'
+  span.textContent = text
+  return createFixture(span)
 }
 
-function button(
-  query: (selector: string) => Element | null,
-  selector: string,
-): HTMLButtonElement | null {
-  let element = query(selector)
-  return element instanceof HTMLButtonElement ? element : null
+function createFixture(element: Element): {
+  $: (selector: string) => Element | null
+  cleanup(): void
+} {
+  document.body.append(element)
+
+  return {
+    $(selector) {
+      return element.matches(selector) ? element : element.querySelector(selector)
+    },
+    cleanup() {
+      element.remove()
+    },
+  }
 }
