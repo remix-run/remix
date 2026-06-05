@@ -29,7 +29,7 @@ export type DemoDocFile = {
   urlPath: string
 }
 
-export async function discoverDemoFiles(): Promise<DemoDocFile[]> {
+export async function discoverDemoFiles(version?: string): Promise<DemoDocFile[]> {
   if (!fs.existsSync(DEMO_BUILD_DIR)) {
     throw new Error(
       `Demo build directory not found: ${DEMO_BUILD_DIR}. Run "pnpm build:demos" first.`,
@@ -37,7 +37,7 @@ export async function discoverDemoFiles(): Promise<DemoDocFile[]> {
   }
 
   let demoPaths = walkBuiltDemos(DEMO_BUILD_DIR).sort()
-  let demoFiles = await Promise.all(demoPaths.map((demoPath) => getDemoFile(demoPath)))
+  let demoFiles = await Promise.all(demoPaths.map((demoPath) => getDemoFile(demoPath, version)))
 
   let seenUrls = new Map<string, string>()
   for (let demo of demoFiles) {
@@ -76,7 +76,7 @@ export async function renderDemoSource(source: string): Promise<string> {
   })
 }
 
-async function getDemoFile(filePath: string): Promise<DemoDocFile> {
+async function getDemoFile(filePath: string, version?: string): Promise<DemoDocFile> {
   // build/demos/ui/<comp>/<slug>.demo.tsx, mirrors source layout one-to-one.
   let parts = path.relative(DEMO_BUILD_DIR, filePath).split(path.sep)
   if (parts.length !== 3 || parts[0] !== 'ui' || !parts[2].endsWith('.demo.tsx')) {
@@ -91,8 +91,8 @@ async function getDemoFile(filePath: string): Promise<DemoDocFile> {
   let { name, description, order, displaySource } = extractDemoMetadata(source, relativePath)
   let formattedSource = await formatDemoSource(displaySource, filePath)
   let [assetHref, preloads] = await Promise.all([
-    assetServer.getHref(filePath),
-    assetServer.getPreloads(filePath),
+    assetServer.getHref(filePath, { version }),
+    assetServer.getPreloads(filePath, { version }),
   ])
   let importHref = url.pathToFileURL(filePath).href
 

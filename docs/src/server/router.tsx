@@ -7,7 +7,7 @@ import { createHtmlResponse } from 'remix/response/html'
 import { createRouter as _createRouter, type Router } from 'remix/router'
 import { clientEntry, type RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
-import { assetServer, entryPreloads } from './asset-server.ts'
+import { assetServer } from './asset-server.ts'
 import { discoverDemoFiles, loadDemoComponent, renderDemoSource } from './demos.tsx'
 import { getVersionedLookupHref } from './lookup.ts'
 import {
@@ -29,7 +29,9 @@ const REMIX_PKG_JSON = path.join(REPO_DIR, 'packages', 'remix', 'package.json')
 type DocsContext = {
   docFiles: DocFile[]
   docFilesLookup: Map<string, MarkdownDocFile>
-  getRegistry(version?: string): DocsRegistry
+  entryHref: string
+  entryPreloads: readonly string[]
+  registry: DocsRegistry
 }
 
 export const getDefaultVersions = (): Versions => {
@@ -38,13 +40,17 @@ export const getDefaultVersions = (): Versions => {
 }
 
 export function createRouter(versions: Versions) {
-  let docsContextPromise: Promise<DocsContext> | undefined
+  let docsContextPromises = new Map<string | undefined, Promise<DocsContext>>()
 
   const router = _createRouter({ middleware: [staticFiles(PUBLIC_DIR)] })
 
-  function getDocsContext(): Promise<DocsContext> {
-    docsContextPromise ??= loadDocsContext()
-    return docsContextPromise
+  function getDocsContext(version?: string): Promise<DocsContext> {
+    let promise = docsContextPromises.get(version)
+    if (!promise) {
+      promise = loadDocsContext(version)
+      docsContextPromises.set(version, promise)
+    }
+    return promise
   }
 
   const respond = {
@@ -60,22 +66,20 @@ export function createRouter(versions: Versions) {
 
   router.map(routes, {
     actions: {
-      assets: async ({ request, params }) => {
-        // Drop the optional version prefix so the asset server sees a stable URL space.
-        let url = new URL(request.url)
-        url.pathname = routes.assets.href({ asset: params.asset })
-        let response = await assetServer.fetch(new Request(url, request))
+      assets: async ({ request }) => {
+        let response = await assetServer.fetch(request)
         return response ?? new Response('Not Found', { status: 404 })
       },
       async docs({ request, params }) {
-        let docsContext = await getDocsContext()
+        let docsContext = await getDocsContext(params.version)
         let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
         let docProps = {
-          registry: docsContext.getRegistry(params.version),
+          registry: docsContext.registry,
           versions: versions,
           slug: params.slug,
           activeVersion: params.version,
-          entryPreloads,
+          entryHref: docsContext.entryHref,
+          entryPreloads: docsContext.entryPreloads,
         }
 
         if (docFile) {
@@ -119,14 +123,15 @@ export function createRouter(versions: Versions) {
         )
       },
       async home({ request, params }) {
-        let docsContext = await getDocsContext()
+        let docsContext = await getDocsContext(params.version)
         return respond.document(
           request,
           <Document
-            registry={docsContext.getRegistry(params.version)}
+            registry={docsContext.registry}
             versions={versions}
             activeVersion={params.version}
-            entryPreloads={entryPreloads}
+            entryHref={docsContext.entryHref}
+            entryPreloads={docsContext.entryPreloads}
           >
             <Home />
           </Document>,
@@ -145,7 +150,7 @@ export function createRouter(versions: Versions) {
         return Response.json(content)
       },
       async markdown({ request, params }) {
-        let docsContext = await getDocsContext()
+        let docsContext = await getDocsContext(params.version)
         let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
         if (!docFile) {
           return new Response('Not Found', { status: 404 })
@@ -168,25 +173,21 @@ export function createRouter(versions: Versions) {
 
 // Response helpers
 
-async function loadDocsContext(): Promise<DocsContext> {
+async function loadDocsContext(version?: string): Promise<DocsContext> {
   let { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
-  let demoFiles = await discoverDemoFiles()
+  let demoFiles = await discoverDemoFiles(version)
   let docFiles = [...markdownFiles, ...demoFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
-
-  let registryByVersion = new Map<string | undefined, DocsRegistry>()
-  registryByVersion.set(undefined, buildRegistry(docFiles))
+  let [entryHref, entryPreloads] = await Promise.all([
+    assetServer.getHref('docs/src/client/entry.tsx', { version }),
+    assetServer.getPreloads('docs/src/client/entry.tsx', { version }),
+  ])
 
   return {
     docFiles,
     docFilesLookup,
-    getRegistry(version?: string): DocsRegistry {
-      let registry = registryByVersion.get(version)
-      if (!registry) {
-        registry = buildRegistry(docFiles, version)
-        registryByVersion.set(version, registry)
-      }
-      return registry
-    },
+    entryHref,
+    entryPreloads,
+    registry: buildRegistry(docFiles, version),
   }
 }
 
