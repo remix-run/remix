@@ -167,7 +167,13 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
 
     // Same tag: update attributes then children
     diffElementAttributes(current, next)
-    if (shouldPreserveElementChildren(current, next)) return
+    if (
+      current instanceof HTMLTextAreaElement &&
+      next instanceof HTMLTextAreaElement &&
+      current.value !== next.value
+    ) {
+      return
+    }
     diffElementChildren(current, next, context)
     return
   }
@@ -184,11 +190,9 @@ function diffElementAttributes(current: Element, next: Element): void {
   let prevAttrNames = current.getAttributeNames()
   let nextAttrNames = next.getAttributeNames()
 
-  let nextNameSet = new Set(nextAttrNames)
-
   // Removals
   for (let name of prevAttrNames) {
-    if (!nextNameSet.has(name)) {
+    if (!next.hasAttribute(name)) {
       if (shouldPreserveLiveAttribute(current, next, name)) continue
       current.removeAttribute(name)
     }
@@ -245,14 +249,6 @@ function shouldPreserveLiveAttribute(current: Element, next: Element, name: stri
   return false
 }
 
-function shouldPreserveElementChildren(current: Element, next: Element): boolean {
-  if (current instanceof HTMLTextAreaElement && next instanceof HTMLTextAreaElement) {
-    return current.value !== next.value
-  }
-
-  return false
-}
-
 function shouldPreserveInputValue(input: HTMLInputElement): boolean {
   return (
     input.type !== 'button' &&
@@ -303,20 +299,19 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
       }
     } else if (isElement(nextChild)) {
       let key = nextChild.getAttribute('data-key')
-      if (key != null && keyToIndex.has(key)) {
-        let idx = keyToIndex.get(key)!
-        if (!used[idx]) matchIndex = idx
+      if (key != null) {
+        let idx = keyToIndex.get(key)
+        if (idx !== undefined && !used[idx]) matchIndex = idx
       }
     }
 
     if (matchIndex === -1) {
-      let candidateIndex = i
       if (
-        candidateIndex < currentChildren.length &&
-        !used[candidateIndex] &&
-        nodeTypesComparable(currentChildren[candidateIndex], nextChild)
+        i < currentChildren.length &&
+        !used[i] &&
+        nodeTypesComparable(currentChildren[i], nextChild)
       ) {
-        matchIndex = candidateIndex
+        matchIndex = i
       }
     }
 
@@ -419,11 +414,8 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
 
     if (node.parentNode === current) {
       // Node already in parent: move only if its nextSibling is not the desired ref.
-      let targetNext = ref
-      let alreadyInPlace =
-        (targetNext === null && node.nextSibling === null) || node.nextSibling === targetNext
-      if (!alreadyInPlace) {
-        current.insertBefore(node, targetNext)
+      if (node.nextSibling !== ref) {
+        current.insertBefore(node, ref)
       }
     } else {
       // New node: insert relative to a valid ref or append
@@ -448,14 +440,8 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
 function nodeTypesComparable(a: Node, b: Node): boolean {
   if (isTextNode(a) && isTextNode(b)) return true
   if (isElement(a) && isElement(b)) return a.tagName === b.tagName
-  if (isVirtualRootStartMarker(a) && isVirtualRootStartMarker(b)) return true
-  if (isVirtualRootEndMarker(a) && isVirtualRootEndMarker(b)) return true
   if (isCommentNode(a) && isCommentNode(b)) return true
   return false
-}
-
-function isHydrationEndComment(node: Node): node is Comment {
-  return isCommentNode(node) && node.data.trim() === '/rmx:h'
 }
 
 function findHydrationEndMarker(start: Comment): Comment {
@@ -478,7 +464,8 @@ function findHydrationEndMarker(start: Comment): Comment {
 
 function findHydrationEndIndex(nodes: Node[], startIdx: number): number {
   for (let j = startIdx + 1; j < nodes.length; j++) {
-    if (isHydrationEndComment(nodes[j])) return j
+    let node = nodes[j]
+    if (isCommentNode(node) && node.data.trim() === '/rmx:h') return j
   }
   return startIdx
 }
@@ -596,29 +583,22 @@ function replaceCommentMarkerRange(
 ): void {
   let currentEnd = findFrameEndMarker(replacement.currentStart)
   let nextEnd = findFrameEndMarker(replacement.nextStart)
-  let nextNodes = collectNodeRange(replacement.nextStart, nextEnd)
-  let currentNodes = collectNodeRange(replacement.currentStart, currentEnd)
 
-  for (let node of nextNodes) {
-    parent.insertBefore(node, replacement.currentStart)
-  }
-
-  for (let node of currentNodes) {
-    removeNode(node, parent, context)
-  }
-}
-
-function collectNodeRange(start: Node, end: Node): Node[] {
-  let nodes: Node[] = []
-  let node: Node | null = start
-
+  let node: Node | null = replacement.nextStart
   while (node) {
-    nodes.push(node)
-    if (node === end) break
-    node = node.nextSibling
+    let next: Node | null = node.nextSibling
+    parent.insertBefore(node, replacement.currentStart)
+    if (node === nextEnd) break
+    node = next
   }
 
-  return nodes
+  node = replacement.currentStart
+  while (node) {
+    let next: Node | null = node.nextSibling
+    removeNode(node, parent, context)
+    if (node === currentEnd) break
+    node = next
+  }
 }
 
 function collectFrameContentFragment(
@@ -639,43 +619,31 @@ function collectFrameContentFragment(
 }
 
 function removeNode(node: Node, parent: ParentNode, context: FrameContext): void {
-  disposeRemovedVirtualRoots(node)
-  disposeRemovedSubFrames(node, context)
+  disposeRemovedRuntimeNodes(node, context)
 
   if (node.parentNode === parent) {
     parent.removeChild(node)
   }
 }
 
-function disposeRemovedVirtualRoots(node: Node): void {
-  let stack: Node[] = [node]
+function disposeRemovedRuntimeNodes(node: Node, context: FrameContext): void {
+  let stack: Array<[Node, boolean]> = [[node, false]]
   while (stack.length > 0) {
-    let next = stack.pop()
-    if (!next) continue
+    let item = stack.pop()
+    if (!item) continue
+    let [next, insideDisposedRoot] = item
 
-    if (isHydratedVirtualRootStartMarker(next)) {
+    if (!insideDisposedRoot && isHydratedVirtualRootStartMarker(next)) {
       next.$rmx.dispose()
-      continue
+      insideDisposedRoot = true
     }
-
-    for (let child of Array.from(next.childNodes)) {
-      stack.push(child)
-    }
-  }
-}
-
-function disposeRemovedSubFrames(node: Node, context: FrameContext): void {
-  let stack: Node[] = [node]
-  while (stack.length > 0) {
-    let next = stack.pop()
-    if (!next) continue
 
     if (isFrameStartMarker(next)) {
       disposeFrameStartMarker(next, context)
     }
 
     for (let child of Array.from(next.childNodes)) {
-      stack.push(child)
+      stack.push([child, insideDisposedRoot])
     }
   }
 }
