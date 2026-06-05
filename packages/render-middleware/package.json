@@ -1,6 +1,6 @@
 {
   "name": "@remix-run/render-middleware",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Middleware for adding request-scoped renderers to fetch-router context",
   "author": "Michael Jackson <mjijackson@gmail.com>",
   "license": "MIT",
