@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
-import { closeAssetServers } from '../server/asset-server.ts'
+import { assetServer } from '../server/asset-server.ts'
 import { createRouter, getDefaultVersions } from '../server/router.tsx'
 import { routes } from '../server/routes.ts'
 import { crawl } from './crawl.ts'
@@ -56,8 +56,8 @@ for await (let { pathname, filepath, response } of crawl(docsRouter, {
   await writeResult(pathname, filepath, response)
 }
 
-// Release the asset servers' file watchers so the process can exit cleanly.
-await closeAssetServers()
+// Release the asset server's file watcher so the process can exit cleanly.
+await assetServer.close()
 
 async function writeResult(pathname: string, filepath: string, response: Response) {
   let outputFilepath = SCRIPT_FILE_EXT.test(filepath)
