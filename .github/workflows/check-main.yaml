@@ -72,7 +72,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -91,7 +91,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -110,7 +110,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -147,7 +147,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -169,7 +169,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -205,7 +205,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -227,7 +227,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -268,7 +268,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -304,7 +304,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -330,7 +330,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -381,7 +381,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -420,7 +420,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -446,7 +446,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -471,7 +471,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -505,7 +505,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache

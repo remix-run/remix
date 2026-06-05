@@ -32,7 +32,7 @@ jobs:
     steps:
       - name: Wait for required PR checks
         id: wait
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         with:
@@ -206,7 +206,7 @@ jobs:
 
       - name: Write review context
         if: steps.config.outputs.enabled == 'true'
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           CURRENT_CHECK_NAME: Codex PR review
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -526,7 +526,7 @@ jobs:
       pull-requests: write
     steps:
       - name: Create or update review comment
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         env:
           CODEX_FINAL_MESSAGE: ${{ needs.review.outputs.final_message }}
           PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
