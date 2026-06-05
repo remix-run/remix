@@ -6691,9 +6691,10 @@ describe('asset-server', () => {
     assert.equal(await response.text(), 'Custom build error')
   })
 
-  it('falls back to the default 500 when onError throws', async () => {
+  it('falls back to the default 500 when onError throws', async (t) => {
     await write(dir, 'app/entry.ts', 'import "./broken.ts"\nexport const entry = true')
     await write(dir, 'app/broken.ts', 'export const nope =')
+    let consoleError = t.mock.method(console, 'error', () => {})
     let assetServer = createTestServer(dir, {
       onError() {
         throw new Error('error handler failed')
@@ -6703,6 +6704,8 @@ describe('asset-server', () => {
     let response = await get(assetServer, '/assets/app/entry.ts')
     assert.ok(response)
     await assertInternalServerError(response)
+    assert.equal(consoleError.mock.calls.length, 1)
+    assert.match(String(consoleError.mock.calls[0]?.arguments[0]), /error handler failed/)
   })
 
   it('logs watcher errors', async (t) => {

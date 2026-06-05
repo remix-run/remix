@@ -685,6 +685,7 @@ async function createHmrTestServer(
             },
           }
         : true,
+      onError() {},
       rootDir: workspaceDir,
       watch: {
         poll: true,
