@@ -1,0 +1,14 @@
+import type { PartPatternToken } from '../route-pattern.ts';
+/**
+ * Emulates the `RegExp.escape()` available in all latest browsers and runtimes, but not in Node 22.
+ * See: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/RegExp/escape#browser_compatibility
+ *
+ * @param text The text to escape.
+ * @returns The escaped text.
+ */
+export declare function escape(text: string): string;
+export declare function toRegExp(tokens: ReadonlyArray<PartPatternToken>, options: {
+    separator: '.' | '/';
+    ignoreCase: boolean;
+}): RegExp;
+//# sourceMappingURL=regexp.d.ts.map
