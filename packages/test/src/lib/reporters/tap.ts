@@ -32,9 +32,9 @@ export class TapReporter implements Reporter {
       if (test.status === 'passed') {
         console.log(`ok ${this.#counter} - ${fullName}`)
       } else if (test.status === 'skipped') {
-        console.log(`ok ${this.#counter} - ${fullName} # SKIP`)
+        console.log(`ok ${this.#counter} - ${fullName} ${formatDirective('SKIP', test.reason)}`)
       } else if (test.status === 'todo') {
-        console.log(`ok ${this.#counter} - ${fullName} # TODO`)
+        console.log(`ok ${this.#counter} - ${fullName} ${formatDirective('TODO', test.reason)}`)
       } else {
         console.log(`not ok ${this.#counter} - ${fullName}`)
         console.log('  ---')
@@ -64,4 +64,8 @@ export class TapReporter implements Reporter {
     if (todo > 0) console.log(`# todo ${todo}`)
     console.log(`# duration_ms ${durationMs.toFixed(5)}`)
   }
+}
+
+function formatDirective(name: 'SKIP' | 'TODO', reason: string | undefined): string {
+  return reason ? `# ${name} ${reason}` : `# ${name}`
 }

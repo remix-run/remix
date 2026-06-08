@@ -71,19 +71,19 @@ describe('runMiddleware', () => {
     assert.deepEqual(requestLog, ['one'])
   })
 
-  it('invokes downstream automatically when a middleware does not call next()', async () => {
+  it('uses the downstream response when middleware calls next()', async () => {
     let requestLog: string[] = []
 
     let middleware = [
-      () => {
+      async (_: any, next: NextFunction) => {
         requestLog.push('one')
-        // no next()
+        await next()
       },
-      () => {
+      async (_: any, next: NextFunction) => {
         requestLog.push('two')
-        // no next()
+        await next()
       },
-    ]
+    ] as any
     let context = mockContext('https://remix.run')
     let handler = () => new Response('Hello, world!')
 
@@ -94,13 +94,27 @@ describe('runMiddleware', () => {
     assert.deepEqual(requestLog, ['one', 'two'])
   })
 
+  it('rejects when a middleware neither returns a response nor calls next()', async () => {
+    let middleware = [
+      () => {
+        // no response, no next()
+      },
+    ] as any
+    let context = mockContext('https://remix.run')
+    let handler = () => new Response('Hello, world!')
+
+    await assert.rejects(async () => {
+      await runMiddleware(middleware, context, handler)
+    }, new Error('Middleware must return a Response or call next()'))
+  })
+
   it('rejects when a middleware calls next() multiple times', async () => {
     let middleware = [
       async (_: any, next: NextFunction) => {
         await next()
         await next() // error
       },
-    ]
+    ] as any
     let context = mockContext('https://remix.run')
     let handler = () => new Response('Hello, world!')
 
@@ -110,7 +124,7 @@ describe('runMiddleware', () => {
   })
 
   it('rejects when a handler throws an error', async () => {
-    let middleware = [() => {}]
+    let middleware = [(_: any, next: NextFunction) => next()]
     let context = mockContext('https://remix.run')
     let handler = () => {
       throw new Error('Handler error!')

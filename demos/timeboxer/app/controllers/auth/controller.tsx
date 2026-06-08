@@ -5,14 +5,13 @@ import { Database } from 'remix/data-table'
 import * as s from 'remix/data-schema'
 import * as f from 'remix/data-schema/form-data'
 import { maxLength, minLength } from 'remix/data-schema/checks'
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 import { redirect } from 'remix/response/redirect'
 import { Session } from 'remix/session'
 
 import { hashPassword } from '../../data/passwords.ts'
 import { userPasswords, users } from '../../data/schema.ts'
 import { credentialsSchema, passwordProvider } from '../../middleware/auth.ts'
-import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { render } from '../../utils/render.tsx'
 import { AuthStatusPage, LoginPage, SignupPage, type AuthFormErrors } from './pages.tsx'
@@ -31,7 +30,7 @@ const signupSchema = f.object({
   password: f.field(s.defaulted(s.string(), '').pipe(minLength(8), maxLength(128))),
 })
 
-export const auth = {
+export const auth = createController(routes.auth, {
   actions: {
     async index(context) {
       let auth = context.get(Auth)
@@ -54,9 +53,9 @@ export const auth = {
       return redirect(routes.auth.login.index.href(), 303)
     },
   },
-} satisfies Controller<typeof routes.auth, AppContext>
+})
 
-export const authLogin = {
+export const authLogin = createController(routes.auth.login, {
   actions: {
     async index(context) {
       let auth = context.get(Auth)
@@ -99,9 +98,9 @@ export const authLogin = {
       return redirect(routes.home.index.href(), 303)
     },
   },
-} satisfies Controller<typeof routes.auth.login, AppContext>
+})
 
-export const authSignup = {
+export const authSignup = createController(routes.auth.signup, {
   actions: {
     async index(context) {
       let auth = context.get(Auth)
@@ -160,7 +159,7 @@ export const authSignup = {
       return redirect(routes.home.index.href(), 303)
     },
   },
-} satisfies Controller<typeof routes.auth.signup, AppContext>
+})
 
 function issuesToErrors(issues: ReadonlyArray<{ message: string; path?: ReadonlyArray<unknown> }>) {
   return issues.reduce<AuthFormErrors>((errors, issue) => {

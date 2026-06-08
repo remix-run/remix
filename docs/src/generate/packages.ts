@@ -18,6 +18,7 @@ const PackageJsonSchema = s.object({
 type PackageJson = s.InferOutput<typeof PackageJsonSchema>
 
 const PACKAGES_DIR = path.resolve('..', 'packages')
+const REMIX_PACKAGE_NAME = 'remix'
 const JAVASCRIPT_CODE_FENCE_LANGUAGES = new Set(['js', 'jsx', 'ts', 'tsx'])
 const SHELL_CODE_FENCE_LANGUAGES = new Set(['', 'bash', 'sh', 'shell'])
 
@@ -51,8 +52,10 @@ export async function discoverPackageOverviews(): Promise<PackageOverview[]> {
       }
       overviews.push(overview)
 
-      let subpathOverviews = await discoverPackageSubpathOverviews(packageDir, packageJson)
-      overviews.push(...subpathOverviews)
+      if (packageJson.name !== REMIX_PACKAGE_NAME) {
+        let subpathOverviews = await discoverPackageSubpathOverviews(packageDir, packageJson)
+        overviews.push(...subpathOverviews)
+      }
     } catch (error) {
       if (!isErrnoException(error) || error.code !== 'ENOENT') {
         throw error
@@ -75,26 +78,19 @@ async function discoverPackageSubpathOverviews(
     if (!exportPath.startsWith('./') || exportPath === './package.json') continue
 
     let exportSubpath = exportPath.slice(2) // e.g. "fetch-router/routes"
-    let candidateDocsPackage = `${getDocsPackageName(packageJson.name)}/${exportSubpath}`
-
-    // For the remix umbrella, skip legacy alias exports (e.g. ./fetch-router/routes)
-    // that resolve to a different canonical path (e.g. remix/routes). The canonical
-    // sub-package discovery will create the correct sidebar entry.
-    if (packageJson.name === 'remix') {
-      let specifier = `@remix-run/${exportSubpath}`
-      if (hasRemixPackage(specifier) && mapToRemixPackage(specifier) !== candidateDocsPackage) {
-        continue
-      }
-    }
-
+    let docsPackage = getDocsPackageName(`${packageJson.name}/${exportSubpath}`)
     let entryPath = getExportEntryPath(exportConfig)
     if (!entryPath) continue
 
-    let readmePath = path.join(packageDir, path.dirname(entryPath), 'README.md')
-    if (!(await isFile(readmePath))) continue
+    let readmePath = await findReadmePath(
+      packageDir,
+      entryPath,
+      shouldUsePackageReadmeForSubpath(packageJson.name, exportSubpath),
+    )
+    if (!readmePath) continue
 
     overviews.push({
-      docsPackage: candidateDocsPackage,
+      docsPackage,
       packageDir,
       readmePath,
     })
@@ -144,6 +140,40 @@ function getExportEntryPath(exportConfig: unknown): string | undefined {
 
   let config = result.value
   return typeof config === 'string' ? config : (config.types ?? config.default)
+}
+
+function shouldUsePackageReadmeForSubpath(packageName: string, exportSubpath: string): boolean {
+  return hasRemixPackage(packageName) && !exportSubpath.includes('/')
+}
+
+async function findReadmePath(
+  packageDir: string,
+  entryPath: string,
+  fallbackToPackageReadme = false,
+): Promise<string | undefined> {
+  let colocatedReadmePath = path.join(packageDir, path.dirname(entryPath), 'README.md')
+  if (await isFile(colocatedReadmePath)) {
+    return colocatedReadmePath
+  }
+
+  let nestedReadmePath = path.join(
+    packageDir,
+    path.dirname(entryPath),
+    path.basename(entryPath, path.extname(entryPath)),
+    'README.md',
+  )
+  if (await isFile(nestedReadmePath)) {
+    return nestedReadmePath
+  }
+
+  if (fallbackToPackageReadme) {
+    let packageReadmePath = path.join(packageDir, 'README.md')
+    if (await isFile(packageReadmePath)) {
+      return packageReadmePath
+    }
+  }
+
+  return undefined
 }
 
 function normalizeReadmeMarkdown(markdown: string, docsPackage: string): string {

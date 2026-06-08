@@ -1,8 +1,8 @@
 import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
-import type { Controller } from 'remix/fetch-router'
+import { createController } from 'remix/fetch-router'
 
-import type { routes } from '../routes.ts'
+import { routes } from '../routes.ts'
 
 export const assetServer = createAssetServer({
   basePath: '/assets',
@@ -26,7 +26,7 @@ export const assetServer = createAssetServer({
   },
 })
 
-export const assets = {
+export const assets = createController(routes.assets, {
   actions: {
     index: {
       async handler({ request }) {
@@ -34,4 +34,4 @@ export const assets = {
       },
     },
   },
-} satisfies Controller<typeof routes.assets>
+})
