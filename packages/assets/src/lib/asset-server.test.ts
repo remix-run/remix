@@ -3668,11 +3668,7 @@ describe('asset-server', () => {
         assert.equal(styleResponse.status, 200)
         assert.doesNotMatch(await styleResponse.text(), /theme\.css\?t=/)
 
-        let themePath = await write(
-          caseDir,
-          'app/styles/theme.css',
-          'body { background: black; }\n',
-        )
+        let themePath = path.join(caseDir, 'app/styles/theme.css')
         await emitWatchEvent(assetServer, themePath, 'change')
 
         assert.equal(payloads.length, 1)
