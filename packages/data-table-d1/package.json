@@ -1,0 +1,64 @@
+{
+  "name": "@remix-run/data-table-d1",
+  "version": "0.0.0",
+  "description": "Cloudflare D1 adapter for remix/data-table",
+  "author": "Lucas Castro <lcastro@cloudflare.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/data-table-d1"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/data-table-d1#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts",
+    "!src/**/*.test-helper.ts"
+  ],
+  "type": "module",
+  "sideEffects": false,
+  "exports": {
+    ".": "./src/index.ts",
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "devDependencies": {
+    "@remix-run/assert": "workspace:*",
+    "@remix-run/data-table": "workspace:*",
+    "@remix-run/test": "workspace:*",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:",
+    "miniflare": "^4.20260603.0"
+  },
+  "dependencies": {
+    "@remix-run/data-table": "workspace:^"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "remix-test",
+    "test:bun": "bun x --bun remix-test",
+    "test:coverage": "remix-test --coverage",
+    "typecheck": "tsgo --noEmit"
+  },
+  "keywords": [
+    "remix",
+    "orm",
+    "d1",
+    "cloudflare",
+    "database",
+    "sql"
+  ]
+}

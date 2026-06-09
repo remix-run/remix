@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "target": "ESNext",
+    "types": ["node"],
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": true,
+    "erasableSyntaxOnly": true,
+    "isolatedModules": true,
+    "skipLibCheck": true
+  },
+  "exclude": ["vendor", "dist"]
+}
