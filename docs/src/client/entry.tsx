@@ -31,7 +31,7 @@ app.ready().catch((error: unknown) => {
 let navToggle = document.getElementById('nav-toggle')
 if (navToggle instanceof HTMLInputElement) {
   navToggle.addEventListener('change', () => {
-    if (!navToggle.checked || !isMobileNav()) return
+    if (!navToggle.checked || !window.matchMedia(MOBILE_NAV_MEDIA_QUERY).matches) return
 
     let sidebar = document.getElementById('docs-sidebar')
     let activeLink = sidebar?.querySelector('[data-active-doc="true"]')
@@ -52,8 +52,15 @@ window.navigation.addEventListener('navigate', () => {
   if (navToggle instanceof HTMLInputElement) {
     navToggle.checked = false
   }
-})
 
-function isMobileNav() {
-  return window.matchMedia(MOBILE_NAV_MEDIA_QUERY).matches
-}
+  let pagefindModal = document.querySelector('pagefind-modal')
+  if (pagefindModal && pagefindModal instanceof HTMLElement) {
+    let modal = pagefindModal as HTMLElement & { close: () => void }
+    modal.close()
+  }
+
+  let pagefindButton = document.querySelector('pagefind-modal-trigger button')
+  if (pagefindButton && pagefindButton instanceof HTMLElement) {
+    pagefindButton.blur()
+  }
+})

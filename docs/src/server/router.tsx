@@ -41,15 +41,7 @@ export const getDefaultVersions = (): Versions => {
 export function createRouter(versions: Versions) {
   let docsContextPromise: Promise<DocsContext> | undefined
 
-  const middleware = [staticFiles(PUBLIC_DIR)]
-
-  // Serve pre-built Pagefind bundle if available. Falls back gracefully when
-  // the site hasn't been prerendered yet (search simply won't initialize).
-  if (fs.existsSync(path.join(SITE_DIR, 'pagefind'))) {
-    middleware.push(staticFiles(SITE_DIR, { filter: (p) => p.startsWith('pagefind/') }))
-  }
-
-  const router = _createRouter({ middleware })
+  const router = _createRouter({ middleware: [staticFiles(PUBLIC_DIR)] })
 
   function getDocsContext(): Promise<DocsContext> {
     docsContextPromise ??= loadDocsContext()
@@ -70,6 +62,21 @@ export function createRouter(versions: Versions) {
   router.map(routes, {
     actions: {
       assets: async ({ request, params }) => {
+        // Serve versioned pagefind assets manually
+        if (params.asset.startsWith('pagefind/')) {
+          let assetPath = path.resolve(SITE_DIR, params.asset)
+
+          try {
+            let stats = await fs.promises.stat(assetPath)
+            if (stats.isFile()) {
+              return respond.file(request, assetPath)
+            }
+          } catch {}
+
+          console.warn(`[WARN] Pagefind asset not found: ${new URL(request.url).pathname}`)
+          return new Response(null, { status: 204 })
+        }
+
         // Drop the optional version prefix so the asset server sees a stable URL space.
         let url = new URL(request.url)
         url.pathname = routes.assets.href({ asset: params.asset })

@@ -29,7 +29,6 @@
     "docs": "node src/generate/index.ts",
     "docs:debug": "DEBUG=1 node src/generate/index.ts",
     "prerender": "node --import remix/node-tsx src/prerender/index.ts",
-    "postprerender": "pagefind --site build/site",
     "prerender:serve": "npx http-server -p 44100 build/site",
     "serve": "node --import remix/node-tsx src/server/index.ts",
     "test": "remix test",

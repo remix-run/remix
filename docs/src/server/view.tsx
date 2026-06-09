@@ -56,7 +56,11 @@ export function Document(
               {children}
             </MainContent>
           </div>
-          <pagefind-modal data-key="pagefind-modal" rmx-ignore />
+          <pagefind-config
+            base-url={routes.home.href({ version: activeVersion })}
+            bundle-path={routes.assets.href({ version: activeVersion, asset: 'pagefind/' })}
+          ></pagefind-config>
+          <pagefind-modal data-key="pagefind-modal" rmx-ignore reset-on-close />
         </body>
       </html>
     )
@@ -156,8 +160,20 @@ function Head(
           <link key={href} rel="modulepreload" href={href} />
         ))}
         <script type="module" src={entryHref} />
-        <link href="/pagefind/pagefind-component-ui.css" rel="stylesheet" />
-        <script src="/pagefind/pagefind-component-ui.js" type="module" />
+        <link
+          href={routes.assets.href({
+            version: activeVersion,
+            asset: 'pagefind/pagefind-component-ui.css',
+          })}
+          rel="stylesheet"
+        />
+        <script
+          src={routes.assets.href({
+            version: activeVersion,
+            asset: 'pagefind/pagefind-component-ui.js',
+          })}
+          type="module"
+        />
         <RMX_01 />
       </head>
     )
