@@ -1390,7 +1390,12 @@ async function ensureBuiltNodeTsxPackage(): Promise<void> {
     ROOT_DIR,
   )
   assert.equal(result.exitCode, 0, result.stderr)
-  assert.equal(result.stderr, '\x1B[2m$ tsgo -p tsconfig.build.json\x1B[22m\n')
+  assert.equal(
+    result.stderr,
+    process.env.CI
+      ? '$ tsgo -p tsconfig.build.json\n'
+      : '\x1B[2m$ tsgo -p tsconfig.build.json\x1B[22m\n',
+  )
   builtNodeTsxPackage = true
 }
 
