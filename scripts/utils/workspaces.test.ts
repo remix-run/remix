@@ -16,7 +16,7 @@ test('getChangedWorkspaceDirs prefers the most specific nested workspace', () =>
       scripts: ['test', 'typecheck'],
     },
     {
-      dir: 'packages/ui/demos',
+      dir: 'packages/ui/demo',
       name: 'ui-demos',
       dependencies: ['@remix-run/ui'],
       scripts: ['typecheck'],
@@ -24,8 +24,8 @@ test('getChangedWorkspaceDirs prefers the most specific nested workspace', () =>
   ]
 
   assert.deepEqual(
-    [...getChangedWorkspaceDirs(['packages/ui/demos/app/root.tsx'], workspaces)],
-    ['packages/ui/demos'],
+    [...getChangedWorkspaceDirs(['packages/ui/demo/app/root.tsx'], workspaces)],
+    ['packages/ui/demo'],
   )
 })
 

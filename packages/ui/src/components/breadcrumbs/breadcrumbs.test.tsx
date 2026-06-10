@@ -27,7 +27,7 @@ describe('Breadcrumbs', () => {
       <Breadcrumbs items={[{ href: '/', label: 'Home' }, { label: 'Breadcrumbs' }]} />,
     )
 
-    expect(html).toContain('rmx-glyph-chevronRight')
+    expect(html).toContain('m6 4 4 4-4 4')
   })
 
   it('renders a custom separator', async () => {

@@ -1,6 +1,5 @@
-import { Button } from '@remix-run/ui/button'
+import { Button } from '@remix-run/ui/components/button'
 import { css } from '@remix-run/ui'
-import { theme } from '@remix-run/ui/theme'
 
 /**
  * @name Button Component
@@ -24,5 +23,5 @@ export default function Example() {
 const buttonRowCss = css({
   display: 'flex',
   alignItems: 'center',
-  gap: theme.space.sm,
+  gap: '8px',
 })

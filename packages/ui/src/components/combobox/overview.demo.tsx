@@ -1,6 +1,6 @@
 import { css, type Handle } from '@remix-run/ui'
-import { Combobox, ComboboxOption, onComboboxChange } from '@remix-run/ui/combobox'
-import { theme } from '@remix-run/ui/theme'
+import { Combobox, ComboboxOption } from '@remix-run/ui/components/combobox'
+import { onComboboxChange } from '@remix-run/ui/combobox'
 
 /**
  * @name Combobox Overview
@@ -169,32 +169,33 @@ const comboboxCss = css({
 const stackCss = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.space.sm,
+  gap: '8px',
   width: '100%',
 })
 
 const fieldCss = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.space.xs,
+  gap: '4px',
 })
 
 const labelCss = css({
   margin: 0,
-  fontSize: theme.fontSize.xs,
-  fontWeight: theme.fontWeight.semibold,
-  color: theme.colors.text.primary,
+  fontSize: '12px',
+  fontWeight: '600',
+  color: '#151515',
 })
 
 const helpCss = css({
-  fontSize: theme.fontSize.xs,
-  lineHeight: theme.lineHeight.relaxed,
-  color: theme.colors.text.secondary,
+  fontSize: '12px',
+  lineHeight: '1.65',
+  color: '#4f4f4f',
 })
 
 const valueCss = css({
   margin: 0,
-  fontFamily: theme.fontFamily.mono,
-  fontSize: theme.fontSize.xs,
-  color: theme.colors.text.secondary,
+  fontFamily:
+    'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+  fontSize: '12px',
+  color: '#4f4f4f',
 })
