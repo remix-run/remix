@@ -328,6 +328,8 @@ function readRequestBody(req: IncomingRequest): Promise<Buffer> {
       req.off('data', onData)
       req.off('end', onEnd)
       req.off('error', onError)
+      req.off('aborted', onClose)
+      req.off('close', onClose)
     }
 
     function onData(buffer: Buffer) {
@@ -357,9 +359,29 @@ function readRequestBody(req: IncomingRequest): Promise<Buffer> {
       reject(error)
     }
 
+    // A 'close' (or legacy 'aborted') before 'end' means the client went away
+    // before the body was fully received; a close after 'end' never reaches
+    // this handler because 'end' removes these listeners.
+    function onClose() {
+      cleanup()
+      reject(new Error('Client disconnected before the request body was fully received'))
+    }
+
+    if (req.readableEnded) {
+      resolve(Buffer.alloc(0))
+      return
+    }
+
+    if (req.destroyed) {
+      reject(new Error('Client disconnected before the request body was fully received'))
+      return
+    }
+
     req.on('data', onData)
     req.once('end', onEnd)
     req.once('error', onError)
+    req.once('aborted', onClose)
+    req.once('close', onClose)
   })
 }
 
@@ -373,6 +395,8 @@ function readRequestText(req: IncomingRequest): Promise<string> {
       req.off('data', onData)
       req.off('end', onEnd)
       req.off('error', onError)
+      req.off('aborted', onClose)
+      req.off('close', onClose)
     }
 
     function onData(buffer: Buffer) {
@@ -402,8 +426,26 @@ function readRequestText(req: IncomingRequest): Promise<string> {
       reject(error)
     }
 
+    // Same early-disconnect handling as readRequestBody above.
+    function onClose() {
+      cleanup()
+      reject(new Error('Client disconnected before the request body was fully received'))
+    }
+
+    if (req.readableEnded) {
+      resolve('')
+      return
+    }
+
+    if (req.destroyed) {
+      reject(new Error('Client disconnected before the request body was fully received'))
+      return
+    }
+
     req.on('data', onData)
     req.once('end', onEnd)
     req.once('error', onError)
+    req.once('aborted', onClose)
+    req.once('close', onClose)
   })
 }

@@ -260,16 +260,7 @@ export function createRequest(
   let init: RequestInit = { method, headers, signal: controller.signal }
 
   if (method !== 'GET' && method !== 'HEAD') {
-    init.body = new ReadableStream({
-      start(controller) {
-        req.on('data', (chunk) => {
-          controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
-        })
-        req.on('end', () => {
-          controller.close()
-        })
-      },
-    })
+    init.body = createBodyStream(req, (error) => controller?.abort(error))
 
     // init.duplex = 'half' must be set when body is a ReadableStream, and Node follows the spec.
     // However, this property is not defined in the TypeScript types for RequestInit, so we have
@@ -279,6 +270,80 @@ export function createRequest(
   }
 
   return new Request(url, init)
+}
+
+function createBodyStream(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  onBodyError: (error: Error) => void,
+): ReadableStream<Uint8Array> {
+  let done = false
+  let streamController!: ReadableStreamDefaultController<Uint8Array>
+
+  function onData(chunk: Buffer) {
+    streamController.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+  }
+
+  function onEnd() {
+    if (done) return
+    done = true
+    cleanup()
+    streamController.close()
+  }
+
+  function onError(error: Error) {
+    fail(error)
+  }
+
+  // A 'close' (or legacy 'aborted') before 'end' means the client went away
+  // before the body was fully received. A close after a normal 'end' never
+  // reaches this handler because 'end' removes these listeners.
+  function onClose() {
+    fail(new Error('Client disconnected before the request body was fully received'))
+  }
+
+  function fail(error: Error) {
+    if (done) return
+    done = true
+    cleanup()
+    streamController.error(error)
+    onBodyError(error)
+  }
+
+  function cleanup() {
+    req.off('data', onData)
+    req.off('end', onEnd)
+    req.off('error', onError)
+    req.off('aborted', onClose)
+    req.off('close', onClose)
+  }
+
+  return new ReadableStream({
+    start(controller) {
+      streamController = controller
+
+      if (req.readableEnded) {
+        done = true
+        controller.close()
+        return
+      }
+
+      if (req.destroyed) {
+        onClose()
+        return
+      }
+
+      req.on('data', onData)
+      req.once('end', onEnd)
+      req.once('error', onError)
+      req.once('aborted', onClose)
+      req.once('close', onClose)
+    },
+    cancel() {
+      if (done) return
+      done = true
+      cleanup()
+    },
+  })
 }
 
 /**
