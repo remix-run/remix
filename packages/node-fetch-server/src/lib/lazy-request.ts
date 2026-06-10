@@ -1,6 +1,7 @@
 import type * as http from 'node:http'
 import type * as http2 from 'node:http2'
 
+import { ClientDisconnectError } from './client-disconnect-error.ts'
 import { createLazyHeaders } from './lazy-headers.ts'
 
 type IncomingRequest = http.IncomingMessage | http2.Http2ServerRequest
@@ -354,9 +355,12 @@ function readRequestBody(req: IncomingRequest): Promise<Buffer> {
       }
     }
 
+    // An 'error' before 'end' means the body cannot complete, so it is
+    // reported as a disconnect (with the original error as `cause`) to match
+    // the request-abort handling in `createRequestListener`.
     function onError(error: Error) {
       cleanup()
-      reject(error)
+      reject(new ClientDisconnectError(error))
     }
 
     // A 'close' (or legacy 'aborted') before 'end' means the client went away
@@ -364,7 +368,7 @@ function readRequestBody(req: IncomingRequest): Promise<Buffer> {
     // this handler because 'end' removes these listeners.
     function onClose() {
       cleanup()
-      reject(new Error('Client disconnected before the request body was fully received'))
+      reject(new ClientDisconnectError())
     }
 
     if (req.readableEnded) {
@@ -373,7 +377,7 @@ function readRequestBody(req: IncomingRequest): Promise<Buffer> {
     }
 
     if (req.destroyed) {
-      reject(new Error('Client disconnected before the request body was fully received'))
+      reject(new ClientDisconnectError())
       return
     }
 
@@ -421,15 +425,15 @@ function readRequestText(req: IncomingRequest): Promise<string> {
       }
     }
 
+    // Same early-disconnect handling as readRequestBody above.
     function onError(error: Error) {
       cleanup()
-      reject(error)
+      reject(new ClientDisconnectError(error))
     }
 
-    // Same early-disconnect handling as readRequestBody above.
     function onClose() {
       cleanup()
-      reject(new Error('Client disconnected before the request body was fully received'))
+      reject(new ClientDisconnectError())
     }
 
     if (req.readableEnded) {
@@ -438,7 +442,7 @@ function readRequestText(req: IncomingRequest): Promise<string> {
     }
 
     if (req.destroyed) {
-      reject(new Error('Client disconnected before the request body was fully received'))
+      reject(new ClientDisconnectError())
       return
     }
 

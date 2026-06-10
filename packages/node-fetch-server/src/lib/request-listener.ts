@@ -1,6 +1,7 @@
 import type * as http from 'node:http'
 import type * as http2 from 'node:http2'
 
+import { ClientDisconnectError, isClientDisconnectError } from './client-disconnect-error.ts'
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
 import { createLazyRequestFactory } from './lazy-request.ts'
 
@@ -216,7 +217,12 @@ function isPromiseLike<value>(value: value | PromiseLike<value>): value is Promi
 }
 
 function isRequestAbortError(request: Request, error: unknown): boolean {
-  return request.signal.aborted && error === request.signal.reason
+  // Lazy body reads reject with a ClientDisconnectError before the request's
+  // signal is materialized, so a disconnect is recognized by type as well as
+  // by signal reason identity.
+  return (
+    isClientDisconnectError(error) || (request.signal.aborted && error === request.signal.reason)
+  )
 }
 
 /**
@@ -298,7 +304,7 @@ function createBodyStream(
   // before the body was fully received. A close after a normal 'end' never
   // reaches this handler because 'end' removes these listeners.
   function onClose() {
-    fail(new Error('Client disconnected before the request body was fully received'))
+    fail(new ClientDisconnectError())
   }
 
   function fail(error: Error) {
