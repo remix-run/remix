@@ -14,16 +14,10 @@ import {
 
 import { createSqliteDatabaseAdapter } from './adapter.ts'
 
-const integrationEnabled = process.env.DATA_TABLE_INTEGRATION === '1'
-
-describe('sqlite adapter integration', () => {
+describe('sqlite adapter integration', { skip: process.env.DATA_TABLE_INTEGRATION !== '1' }, () => {
   let sqlite: NativeSqliteDatabase
 
   before(async () => {
-    if (!integrationEnabled) {
-      return
-    }
-
     sqlite = createNativeSqliteDatabase()
     await setupAdapterIntegrationSchema(async (statement) => {
       sqlite.exec(statement)
@@ -31,10 +25,6 @@ describe('sqlite adapter integration', () => {
   })
 
   after(async () => {
-    if (!integrationEnabled) {
-      return
-    }
-
     await teardownAdapterIntegrationSchema(async (statement) => {
       sqlite.exec(statement)
     }, 'sqlite')
@@ -42,7 +32,6 @@ describe('sqlite adapter integration', () => {
   })
 
   runAdapterIntegrationContract({
-    integrationEnabled,
     createDatabase: () => createDatabase(createSqliteDatabaseAdapter(sqlite)),
     resetDatabase: async () => {
       await resetAdapterIntegrationSchema(async (statement) => {

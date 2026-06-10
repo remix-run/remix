@@ -12,27 +12,18 @@ import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-
 import { createPostgresDatabaseAdapter } from './adapter.ts'
 
 const DATABASE_URL = process.env.REMIX_DATA_TABLE_POSTGRES_TEST_URL
-const integrationEnabled = typeof DATABASE_URL === 'string'
 
-describe('postgres adapter integration', () => {
+describe('postgres adapter integration', { skip: typeof DATABASE_URL !== 'string' }, () => {
   let pool: Pool
 
   before(async () => {
-    if (!integrationEnabled) {
-      return
-    }
-
-    pool = new Pool({ connectionString: DATABASE_URL })
+    pool = new Pool({ connectionString: DATABASE_URL! })
     await setupAdapterIntegrationSchema(async (statement) => {
       await pool.query(statement)
     }, 'postgres')
   })
 
   after(async () => {
-    if (!integrationEnabled) {
-      return
-    }
-
     await teardownAdapterIntegrationSchema(async (statement) => {
       await pool.query(statement)
     }, 'postgres')
@@ -40,7 +31,6 @@ describe('postgres adapter integration', () => {
   })
 
   runAdapterIntegrationContract({
-    integrationEnabled,
     createDatabase: () => createDatabase(createPostgresDatabaseAdapter(pool)),
     resetDatabase: async () => {
       await resetAdapterIntegrationSchema(async (statement) => {
