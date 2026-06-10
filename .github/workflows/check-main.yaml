@@ -454,7 +454,7 @@ jobs:
 
       - name: Run sqlite adapter tests
         env:
-          DATA_TABLE_INTEGRATION: '1'
+          REMIX_DATA_TABLE_SQLITE_TEST: '1'
         run: |
           cd packages/data-table-sqlite
           pnpm test src/lib/adapter.integration.test.ts

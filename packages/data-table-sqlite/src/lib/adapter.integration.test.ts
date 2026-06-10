@@ -14,29 +14,33 @@ import {
 
 import { createSqliteDatabaseAdapter } from './adapter.ts'
 
-describe('sqlite adapter integration', { skip: process.env.DATA_TABLE_INTEGRATION !== '1' }, () => {
-  let sqlite: NativeSqliteDatabase
+describe(
+  'sqlite adapter integration',
+  { skip: process.env.REMIX_DATA_TABLE_SQLITE_TEST !== '1' },
+  () => {
+    let sqlite: NativeSqliteDatabase
 
-  before(async () => {
-    sqlite = createNativeSqliteDatabase()
-    await setupAdapterIntegrationSchema(async (statement) => {
-      sqlite.exec(statement)
-    }, 'sqlite')
-  })
-
-  after(async () => {
-    await teardownAdapterIntegrationSchema(async (statement) => {
-      sqlite.exec(statement)
-    }, 'sqlite')
-    sqlite.close()
-  })
-
-  runAdapterIntegrationContract({
-    createDatabase: () => createDatabase(createSqliteDatabaseAdapter(sqlite)),
-    resetDatabase: async () => {
-      await resetAdapterIntegrationSchema(async (statement) => {
+    before(async () => {
+      sqlite = createNativeSqliteDatabase()
+      await setupAdapterIntegrationSchema(async (statement) => {
         sqlite.exec(statement)
       }, 'sqlite')
-    },
-  })
-})
+    })
+
+    after(async () => {
+      await teardownAdapterIntegrationSchema(async (statement) => {
+        sqlite.exec(statement)
+      }, 'sqlite')
+      sqlite.close()
+    })
+
+    runAdapterIntegrationContract({
+      createDatabase: () => createDatabase(createSqliteDatabaseAdapter(sqlite)),
+      resetDatabase: async () => {
+        await resetAdapterIntegrationSchema(async (statement) => {
+          sqlite.exec(statement)
+        }, 'sqlite')
+      },
+    })
+  },
+)
