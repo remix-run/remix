@@ -24,6 +24,7 @@ const REPO_DIR = path.resolve(DOCS_DIR, '..')
 const BUILD_DIR = path.join(REPO_DIR, 'docs', 'build')
 const MD_DIR = path.join(BUILD_DIR, 'md')
 const PUBLIC_DIR = path.join(BUILD_DIR, 'public')
+const SITE_DIR = path.join(BUILD_DIR, 'site')
 const REMIX_PKG_JSON = path.join(REPO_DIR, 'packages', 'remix', 'package.json')
 
 type DocsContext = {
@@ -61,6 +62,21 @@ export function createRouter(versions: Versions) {
   router.map(routes, {
     actions: {
       assets: async ({ request, params }) => {
+        // Serve versioned pagefind assets manually
+        if (params.asset.startsWith('pagefind/')) {
+          let assetPath = path.resolve(SITE_DIR, params.asset)
+
+          try {
+            let stats = await fs.promises.stat(assetPath)
+            if (stats.isFile()) {
+              return respond.file(request, assetPath)
+            }
+          } catch {}
+
+          console.warn(`[WARN] Pagefind asset not found: ${new URL(request.url).pathname}`)
+          return new Response(null, { status: 204 })
+        }
+
         // Drop the optional version prefix so the asset server sees a stable URL space.
         let url = new URL(request.url)
         url.pathname = routes.assets.href({ asset: params.asset })
