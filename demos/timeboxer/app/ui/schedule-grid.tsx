@@ -8,8 +8,8 @@ import {
   type SerializableValue,
 } from 'remix/ui'
 import { animateLayout, spring } from 'remix/ui/animation'
-import * as btn from 'remix/ui/button'
-import { theme } from 'remix/ui/theme'
+import * as btn from 'remix/components/button'
+import { theme } from './design.ts'
 
 import {
   previewCopyBlockAcrossDays,
@@ -1628,7 +1628,7 @@ const blockGhostGridItemStyle = css({
 const blockGhostBoxStyle = css({
   backgroundColor: 'rgb(209 213 219 / 0.72)',
   border: `2px dashed ${theme.colors.text.secondary}`,
-  borderRadius: theme.radius.md,
+  borderRadius: theme.radius,
   margin: '2px 4px',
   opacity: 0.5,
 })
@@ -1637,8 +1637,8 @@ const blockBoxStyle = css({
   alignItems: 'center',
   backgroundColor: theme.surface.lvl1,
   border: `1px solid ${theme.colors.border.default}`,
-  borderRadius: theme.radius.md,
-  boxShadow: theme.shadow.xs,
+  borderRadius: theme.radius,
+  boxShadow: '0 1px 1px rgb(0 0 0 / 0.05)',
   color: '#111111',
   cursor: 'grab',
   display: 'flex',
@@ -1667,8 +1667,8 @@ const blockBoxStyle = css({
     cursor: 'text',
   },
   '&:focus, &[data-selected="true"]': {
-    borderColor: theme.colors.focus.ring,
-    outline: `2px solid ${theme.colors.focus.ring}`,
+    borderColor: theme.colors.focusRing,
+    outline: `2px solid ${theme.colors.focusRing}`,
     outlineOffset: 0,
   },
 })
@@ -1676,9 +1676,9 @@ const blockBoxStyle = css({
 const draggingBlockBoxStyle = css({
   '&[data-dragging="true"]': {
     backgroundColor: theme.surface.lvl2,
-    borderColor: theme.colors.focus.ring,
+    borderColor: theme.colors.focusRing,
     cursor: 'grabbing',
-    outline: `2px solid ${theme.colors.focus.ring}`,
+    outline: `2px solid ${theme.colors.focusRing}`,
     outlineOffset: 0,
     zIndex: 2,
     '& .resize-handle': {
@@ -1697,7 +1697,7 @@ const resizeHandleStyle = css({
   touchAction: 'none',
   zIndex: 3,
   '&::before': {
-    backgroundColor: theme.colors.focus.ring,
+    backgroundColor: theme.colors.focusRing,
     borderRadius: '999px',
     content: '""',
     height: '3px',
@@ -1735,7 +1735,7 @@ const horizontalResizeHandleStyle = css({
   width: '12px',
   zIndex: 3,
   '&::before': {
-    backgroundColor: theme.colors.focus.ring,
+    backgroundColor: theme.colors.focusRing,
     borderRadius: '999px',
     content: '""',
     height: '20px',

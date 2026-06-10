@@ -1,6 +1,6 @@
 import { css } from 'remix/ui'
 import type { Handle } from 'remix/ui'
-import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
+import { theme } from './design.ts'
 
 import type { DemoFile } from './discovery.ts'
 
@@ -14,16 +14,16 @@ export function DemoIndexDocument(handle: Handle<{ demos: DemoFile[] }>) {
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>Remix UI Demos</title>
-          <RMX_01 />
+          <title>Remix Interface Demos</title>
         </head>
         <body mix={bodyCss}>
-          <RMX_01_GLYPHS />
           <main mix={indexShellCss}>
             <header mix={indexHeaderCss}>
-              <p mix={eyebrowCss}>Remix UI</p>
+              <p mix={eyebrowCss}>Remix interface</p>
               <h1 mix={titleCss}>Demos</h1>
-              <p mix={descriptionCss}>{demos.length} demo files found in packages/ui.</p>
+              <p mix={descriptionCss}>
+                {demos.length} demo files found across UI primitives and components.
+              </p>
             </header>
             <div mix={demoGroupsCss}>
               {demoGroups.map((group) => (
@@ -57,11 +57,9 @@ export function DemoDocument(handle: Handle<{ DemoComponent: any; demo: DemoFile
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <script async type="module" src="/assets/entry.js" />
-          <title>{`${demo.title} | Remix UI Demo`}</title>
-          <RMX_01 />
+          <title>{`${demo.title} | Remix Interface Demo`}</title>
         </head>
         <body mix={bodyCss}>
-          <RMX_01_GLYPHS />
           <main mix={getDemoStageMix(demo)}>
             {demo.layout === 'center' ? (
               <div mix={centerDemoCanvasCss}>
@@ -218,15 +216,24 @@ function getDemoModuleName(demo: DemoFile) {
   let segments = demo.relativePath.split('/')
 
   if (segments[0] === 'src') {
-    if (segments[1] === 'components' && segments[2]) return humanizeModuleName(segments[2])
-    if (segments[1]) return humanizeModuleName(segments[1])
+    let sourceRoot = segments[1]
+    let moduleName = getSourceDemoModuleName(sourceRoot, segments[2])
+    if (moduleName) return moduleName
   }
 
-  if (segments[0] === 'demo' && segments[1] === 'cases' && segments[2]) {
-    return humanizeModuleName(segments[2])
+  if (segments[0] === 'cases' && segments[1]) {
+    return humanizeModuleName(segments[1])
   }
 
   return 'Other'
+}
+
+function getSourceDemoModuleName(sourceRoot: string | undefined, moduleName: string | undefined) {
+  if (!sourceRoot || !moduleName) {
+    return undefined
+  }
+
+  return humanizeModuleName(moduleName)
 }
 
 function humanizeModuleName(name: string) {

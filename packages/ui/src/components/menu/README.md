@@ -6,8 +6,9 @@
 
 ```tsx
 import type { Handle } from 'remix/ui'
-import { Menu, MenuItem, Submenu, onMenuSelect } from 'remix/ui/menu'
-import { separatorStyle } from 'remix/ui/separator'
+import { css } from 'remix/ui'
+import { Menu, MenuItem, Submenu } from 'remix/components/menu'
+import { onMenuSelect } from 'remix/ui/menu'
 
 export function ViewMenu(handle: Handle) {
   let wordWrap = false
@@ -50,6 +51,12 @@ export function ViewMenu(handle: Handle) {
     </Menu>
   )
 }
+
+let separatorStyle = css({
+  border: 0,
+  borderBlockStart: '1px solid #e5e7eb',
+  marginBlock: '4px',
+})
 ```
 
 Use `label` or `searchValue` when the rendered item content is not the text that should be used for event labels or typeahead.
@@ -71,8 +78,8 @@ Use `menuLabel` when the menu surface needs a different accessible label from th
 Use `menu.contextTrigger()` with `menu.Context` and `MenuList` when a menu should open at the right-click location of an element.
 
 ```tsx
+import { MenuItem, MenuList } from 'remix/components/menu'
 import * as menu from 'remix/ui/menu'
-import { MenuItem, MenuList } from 'remix/ui/menu'
 
 export function FileContextMenu(handle: Handle) {
   return () => (
@@ -89,19 +96,19 @@ export function FileContextMenu(handle: Handle) {
 }
 ```
 
-Attach `onMenuSelect(...)` to `MenuList` or a shared ancestor when using lower-level context menu composition.
+Attach `onMenuSelect(...)` from `remix/ui/menu` to `MenuList` or a shared ancestor when using lower-level context menu composition.
 
 ## `menu.*`
 
 - `Menu`: composed trigger, popover, and list component for the common menu case.
-- `MenuItem`: menu item wrapper. Supports regular, checkbox, and radio item roles through `type`, `checked`, `name`, `value`, `label`, `disabled`, and `searchValue`.
-- `Submenu`: nested menu wrapper with its own trigger and child menu surface.
-- `MenuList`: lower-level list wrapper for custom composition.
-- `onMenuSelect(...)`: event mixin for the bubbling `MenuSelectEvent`.
-- `MenuSelectEvent`: bubbling event class whose `item` describes the selected item.
-- `MenuSelectItem`: selected item shape with `checked`, `id`, `label`, `name`, `type`, and `value`.
-- `menu.Context`, `menu.trigger()`, `menu.contextTrigger()`, `menu.popover()`, `menu.list()`, `menu.item(...)`, and `menu.submenuTrigger(...)`: lower-level composition primitives.
-- `buttonStyle`, `popoverStyle`, `listStyle`, `itemStyle`, `itemSlotStyle`, `itemLabelStyle`, `itemGlyphStyle`, and `triggerGlyphStyle`: flat style mixins used by the wrappers.
+- `MenuItem`: menu item component. Supports regular, checkbox, and radio item roles through `type`, `checked`, `name`, `value`, `label`, `disabled`, and `searchValue`.
+- `Submenu`: nested menu component with its own trigger and child menu surface.
+- `MenuList`: lower-level list component for custom composition.
+- `onMenuSelect(...)`: event mixin from `remix/ui/menu` for the bubbling `MenuSelectEvent`.
+- `MenuSelectEvent`: bubbling event class from `remix/ui/menu` whose `item` describes the selected item.
+- `MenuSelectItem`: selected item shape from `remix/ui/menu` with `checked`, `id`, `label`, `name`, `type`, and `value`.
+- `menu.Context`, `menu.trigger()`, `menu.contextTrigger()`, `menu.popover()`, `menu.list()`, `menu.item(...)`, and `menu.submenuTrigger(...)`: lower-level composition primitives from `remix/ui/menu`.
+- `buttonStyle`, `popoverStyle`, `listStyle`, `itemStyle`, `itemSlotStyle`, `itemLabelStyle`, `itemIndicatorStyle`, and `triggerIndicatorStyle`: flat style mixins used by the component markup.
 - `MenuProps`, `MenuItemProps`, `MenuListProps`, `MenuProviderProps`, `MenuTriggerOptions`, `MenuContextTriggerOptions`, `MenuItemOptions`, and `SubmenuProps`: public TypeScript props and option types.
 
 ## Behavior Notes

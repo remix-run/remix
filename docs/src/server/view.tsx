@@ -1,6 +1,5 @@
-import { Glyph } from 'remix/ui/glyph'
-import { RMX_01, RMX_01_GLYPHS, theme } from 'remix/ui/theme'
-import type { Handle, RemixNode } from 'remix/ui'
+import { theme } from './design.ts'
+import type { Handle, Props, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
 import {
   MOBILE_NAV_MAX_HEIGHT,
@@ -39,7 +38,6 @@ export function Document(
       <html lang="en" style={{ colorScheme: 'light dark' }}>
         <Head page={page} activeVersion={activeVersion} entryPreloads={entryPreloads} />
         <body mix={bodyCss}>
-          <RMX_01_GLYPHS />
           <MobileHeader page={page} />
           <div mix={shellCss}>
             <Sidebar
@@ -83,11 +81,30 @@ function MobileHeader(handle: Handle<{ page: PageDefinition }>) {
             {page.eyebrow ? <span mix={eyebrowTextCss}>{page.eyebrow}</span> : null}
             <span mix={mobileTopBarTitleCss}>{page.navLabel || page.title || 'Overview'}</span>
           </span>
-          <Glyph name="menu" mix={mobileTopBarIconCss} aria-hidden="true" />
+          <MenuIcon mix={mobileTopBarIconCss} aria-hidden="true" />
         </label>
       </>
     )
   }
+}
+
+function MenuIcon(handle: Handle<Props<'svg'>>) {
+  return () => (
+    <svg
+      {...handle.props}
+      aria-hidden={handle.props['aria-hidden']}
+      fill="none"
+      viewBox="0 0 16 16"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M2.5 4h11M2.5 8h11M2.5 12h11"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-width="1.5"
+      />
+    </svg>
+  )
 }
 
 function Head(
@@ -143,7 +160,6 @@ function Head(
           <link key={href} rel="modulepreload" href={href} />
         ))}
         <script type="module" src={entryHref} />
-        <RMX_01 />
       </head>
     )
   }
@@ -445,52 +461,9 @@ function DocsFooter() {
   )
 }
 
-// Dark and light theme variable overrides used in both the system-preference
-// Single set of CSS custom property definitions using light-dark(lightVal, darkVal).
-// The browser picks the right value automatically based on the `color-scheme` on <html>,
-// which defaults to `light dark` (system preference) and is overridden to `light` or
-// `dark` by the init script / toggle button when the user has an explicit preference.
-const COLOR_VARS = {
-  '--rmx-surface-lvl0': 'light-dark(#ffffff, #1a1a1a)',
-  '--rmx-surface-lvl1': 'light-dark(#f8f8f8, #1f1f1f)',
-  '--rmx-surface-lvl2': 'light-dark(#f5f5f5, #232323)',
-  '--rmx-surface-lvl3': 'light-dark(#f3f3f3, #272727)',
-  '--rmx-surface-lvl4': 'light-dark(#efefef, #2c2c2c)',
-  '--rmx-color-text-primary': 'light-dark(#151515, #ececec)',
-  '--rmx-color-text-secondary': 'light-dark(#4f4f4f, #b3b3b3)',
-  '--rmx-color-text-muted': 'light-dark(#6d6d6d, #b3b3b3)',
-  '--rmx-color-text-link': 'light-dark(#1A72FF, #6eaaff)',
-  '--rmx-color-border-subtle': 'light-dark(#e7e7e7, #333333)',
-  '--rmx-color-border-default': 'light-dark(#d1d1d1, #444444)',
-  '--rmx-color-border-strong': 'light-dark(#b0b0b0, #666666)',
-  '--rmx-color-focus-ring': 'light-dark(#1A72FF, #6eaaff)',
-  '--rmx-color-overlay-scrim': 'light-dark(rgb(0 0 0 / 0.28), rgb(0 0 0 / 0.55))',
-  '--rmx-color-action-primary-background': 'light-dark(#1A72FF, #4d94ff)',
-  '--rmx-color-action-primary-background-hover': 'light-dark(#1463e0, #3d84ef)',
-  '--rmx-color-action-primary-background-active': 'light-dark(#0f55c9, #2d74df)',
-  '--rmx-color-action-primary-foreground': 'rgb(255 255 255 / 0.92)',
-  '--rmx-color-action-primary-border': 'light-dark(#1A72FF, #4d94ff)',
-  '--rmx-color-action-secondary-background': 'light-dark(#ffffff, #2c2c2c)',
-  '--rmx-color-action-secondary-background-hover': 'light-dark(#fbfbfb, #333333)',
-  '--rmx-color-action-secondary-background-active': 'light-dark(#f3f3f3, #3a3a3a)',
-  '--rmx-color-action-secondary-foreground': 'light-dark(#202020, #ececec)',
-  '--rmx-color-action-secondary-border': 'light-dark(#d1d1d1, #444444)',
-  '--rmx-color-action-danger-background': 'light-dark(#FF3000, #ff4d2e)',
-  '--rmx-color-action-danger-background-hover': 'light-dark(#e12b00, #e6432a)',
-  '--rmx-color-action-danger-background-active': 'light-dark(#c52600, #cc3b25)',
-  '--rmx-color-action-danger-foreground': 'rgb(255 255 255 / 0.92)',
-  '--rmx-color-action-danger-border': 'light-dark(#FF3000, #ff4d2e)',
-  '--rmx-shadow-xs': 'light-dark(0 1px 1px rgb(0 0 0 / 0.05), 0 1px 1px rgb(0 0 0 / 0.2))',
-  '--rmx-shadow-sm': 'light-dark(0 1px 2px rgb(0 0 0 / 0.07), 0 1px 2px rgb(0 0 0 / 0.25))',
-  '--rmx-shadow-md': 'light-dark(0 6px 18px rgb(0 0 0 / 0.08), 0 6px 18px rgb(0 0 0 / 0.3))',
-  '--rmx-shadow-lg': 'light-dark(0 16px 34px rgb(0 0 0 / 0.10), 0 16px 34px rgb(0 0 0 / 0.35))',
-  '--rmx-shadow-xl': 'light-dark(0 24px 52px rgb(0 0 0 / 0.14), 0 24px 52px rgb(0 0 0 / 0.4))',
-} as const
-
 // Typography mirrors the `.md-prose` rules from the remix.run blog
 // (`/styles/md.css`) and is applied site-wide.
 const bodyCss = css({
-  ...COLOR_VARS,
   margin: 0,
   backgroundColor: theme.surface.lvl0,
   color: theme.colors.text.primary,
@@ -585,28 +558,6 @@ const bodyCss = css({
     fontSize: '90%',
     padding: '0.125em 0.25em',
   },
-
-  // Not sure why this multiple levels of nesting doesn't work but it produces the following in the document HTML
-  //
-  // & .shiki {
-  //   background-color: light-dark(var(--rmx-surface-lvl4), var(--shiki-dark-bg)) !important;
-  //   & span: [object Object];
-  //   & a: [object Object];
-  // }
-  //
-  // '& .shiki': {
-  //   backgroundColor: `light-dark(${theme.surface.lvl4}, var(--shiki-dark-bg)) !important`,
-  //   '& span': {
-  //     color: 'light-dark(var(--shiki-light), var(--shiki-dark)) !important',
-  //   },
-  //   '& a': {
-  //     color: 'inherit',
-  //     textDecoration: `none`,
-  //     '&:hover, &:focus': {
-  //       textDecoration: `underline`,
-  //     },
-  //   },
-  // },
 
   '& .shiki': {
     backgroundColor: `light-dark(${theme.surface.lvl4}, var(--shiki-dark-bg)) !important`,

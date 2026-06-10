@@ -5,7 +5,8 @@
 ## Usage
 
 ```tsx
-import { Option, Select, onSelectChange } from 'remix/ui/select'
+import { Option, Select } from 'remix/components/select'
+import { onSelectChange } from 'remix/ui/select'
 
 export function FrameworkSelect() {
   return (
@@ -48,9 +49,10 @@ Use the lower-level primitives when the trigger or popup structure needs to be o
 
 ```tsx
 import type { Handle } from 'remix/ui'
-import * as button from 'remix/ui/button'
+import * as button from 'remix/components/button'
 import * as listbox from 'remix/ui/listbox'
 import * as popover from 'remix/ui/popover'
+import { triggerStyle } from 'remix/components/select'
 import * as select from 'remix/ui/select'
 
 function SelectValue(handle: Handle) {
@@ -62,7 +64,7 @@ function SelectValue(handle: Handle) {
 function IssueTypeSelect() {
   return () => (
     <select.Context defaultLabel="Select a type" name="issueType">
-      <button type="button" mix={[button.baseStyle, select.triggerStyle, select.trigger()]}>
+      <button type="button" mix={[button.baseStyle, triggerStyle, select.trigger()]}>
         <SelectValue />
       </button>
       <popover.Context>
@@ -86,12 +88,12 @@ function IssueTypeSelect() {
 ## `select.*`
 
 - `Select`: composed trigger, popover, listbox, option list, and optional hidden input for form participation. Accepts `defaultLabel`, `defaultValue`, `disabled`, `name`, and button props.
-- `Option`: option wrapper that renders the standard check glyph and label slot. Accepts `label`, `value`, optional `disabled`, and optional `textValue`.
-- `onSelectChange(...)`: event mixin for the bubbling `SelectChangeEvent`.
-- `Context`, `trigger()`, `popover()`, `list()`, `option(...)`, and `hiddenInput()`: lower-level composition primitives.
+- `Option`: option component that renders the standard check indicator and label slot. Accepts `label`, `value`, optional `disabled`, and optional `textValue`.
+- `onSelectChange(...)`: event mixin from `remix/ui/select` for the bubbling `SelectChangeEvent`.
+- `Context`, `trigger()`, `popover()`, `list()`, `option(...)`, and `hiddenInput()`: lower-level composition primitives from `remix/ui/select`.
 - `triggerStyle`: standard select trigger style.
-- `SelectChangeEvent`: event with `value`, `label`, and `optionId`.
-- `SelectProps`, `SelectContextProps`, and `SelectOptionProps`: public TypeScript props for the composed and lower-level APIs.
+- `SelectChangeEvent`: event from `remix/ui/select` with `value`, `label`, and `optionId`.
+- `SelectProps` and `SelectOptionProps`: public TypeScript props for the composed APIs.
 
 ## Behavior Notes
 

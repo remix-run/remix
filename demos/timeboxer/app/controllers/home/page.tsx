@@ -1,5 +1,5 @@
 import { css, type Handle } from 'remix/ui'
-import { theme } from 'remix/ui/theme'
+import { theme } from '../../ui/design.ts'
 
 import { Layout } from '../../ui/layout.tsx'
 
@@ -21,7 +21,7 @@ export function HomePage(_handle: Handle) {
 const heroStyle = css({
   margin: '0 auto',
   maxWidth: '760px',
-  padding: `${theme.space.xxl} ${theme.space.xl}`,
+  padding: `32px ${theme.space.xl}`,
 })
 
 const eyebrowStyle = css({
