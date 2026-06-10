@@ -60,6 +60,32 @@ await db.transaction(async (txDb) => txDb.exec('select 1'), {
 })
 ```
 
+## Running integration tests locally
+
+To start a local Postgres container matching CI:
+
+```sh
+podman run --name postgres \
+  -e POSTGRES_USER=postgres \
+  -e POSTGRES_PASSWORD=postgres \
+  -e POSTGRES_DB=remix \
+  -p 5432:5432 \
+  -d postgres:16
+```
+
+Then run:
+
+```sh
+REMIX_DATA_TABLE_POSTGRES_TEST_URL=postgres://postgres:postgres@127.0.0.1:5432/remix \
+pnpm test src/lib/adapter.integration.test.ts
+```
+
+Remove the container when you are done:
+
+```sh
+podman rm -f postgres
+```
+
 ## Related Packages
 
 - [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) - Core query/relations API
