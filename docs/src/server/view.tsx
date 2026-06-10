@@ -189,7 +189,7 @@ function MainContent(
   }>,
 ) {
   return () => (
-    <main mix={mainCss} data-pagefind-body={handle.props.activeVersion == null || undefined}>
+    <main mix={mainCss} data-pagefind-body>
       <div mix={pageWrapCss}>
         <div mix={[pageContentCss, handle.props.page.css]}>
           {handle.props.header}
