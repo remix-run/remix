@@ -94,8 +94,7 @@ podman run --name mysql \
 Then run:
 
 ```sh
-DATA_TABLE_INTEGRATION=1 \
-DATA_TABLE_MYSQL_URL=mysql://root:root@127.0.0.1:3306/remix \
+REMIX_DATA_TABLE_MYSQL_TEST_URL=mysql://root:root@127.0.0.1:3306/remix \
 pnpm test src/lib/adapter.integration.test.ts
 ```
 

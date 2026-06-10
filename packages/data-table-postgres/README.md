@@ -76,8 +76,7 @@ podman run --name postgres \
 Then run:
 
 ```sh
-DATA_TABLE_INTEGRATION=1 \
-DATA_TABLE_POSTGRES_URL=postgres://postgres:postgres@127.0.0.1:5432/remix \
+REMIX_DATA_TABLE_POSTGRES_TEST_URL=postgres://postgres:postgres@127.0.0.1:5432/remix \
 pnpm test src/lib/adapter.integration.test.ts
 ```
 

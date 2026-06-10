@@ -415,8 +415,7 @@ jobs:
 
       - name: Run postgres integration tests
         env:
-          DATA_TABLE_INTEGRATION: '1'
-          DATA_TABLE_POSTGRES_URL: postgres://postgres:postgres@127.0.0.1:5432/remix
+          REMIX_DATA_TABLE_POSTGRES_TEST_URL: postgres://postgres:postgres@127.0.0.1:5432/remix
         run: |
           cd packages/data-table-postgres
           pnpm test src/lib/adapter.integration.test.ts
@@ -454,8 +453,7 @@ jobs:
 
       - name: Run mysql integration tests
         env:
-          DATA_TABLE_INTEGRATION: '1'
-          DATA_TABLE_MYSQL_URL: mysql://root:root@127.0.0.1:3306/remix
+          REMIX_DATA_TABLE_MYSQL_TEST_URL: mysql://root:root@127.0.0.1:3306/remix
         run: |
           cd packages/data-table-mysql
           pnpm test src/lib/adapter.integration.test.ts

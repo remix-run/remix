@@ -11,8 +11,8 @@ import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-
 
 import { createMysqlDatabaseAdapter } from './adapter.ts'
 
-const integrationEnabled =
-  process.env.DATA_TABLE_INTEGRATION === '1' && typeof process.env.DATA_TABLE_MYSQL_URL === 'string'
+const DATABASE_URL = process.env.REMIX_DATA_TABLE_MYSQL_TEST_URL
+const integrationEnabled = typeof DATABASE_URL === 'string'
 
 describe('mysql adapter integration', () => {
   let pool: Pool
@@ -22,7 +22,7 @@ describe('mysql adapter integration', () => {
       return
     }
 
-    pool = createPool(process.env.DATA_TABLE_MYSQL_URL as string)
+    pool = createPool(DATABASE_URL)
     await setupAdapterIntegrationSchema(async (statement) => {
       await pool.query(statement)
     }, 'mysql')
