@@ -13,10 +13,6 @@ const DEMO_SOURCES = [
     packageName: 'ui',
     sourceDir: path.join(REPO_DIR, 'packages', 'ui', 'src'),
   },
-  {
-    packageName: 'components',
-    sourceDir: path.join(REPO_DIR, 'packages', 'components', 'src'),
-  },
 ]
 
 function rewriteImports(source: string): string {
