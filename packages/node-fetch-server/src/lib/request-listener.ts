@@ -1,6 +1,7 @@
 import type * as http from 'node:http'
 import type * as http2 from 'node:http2'
 
+import { ClientDisconnectError, isClientDisconnectError } from './client-disconnect-error.ts'
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
 import { createLazyRequestFactory } from './lazy-request.ts'
 
@@ -216,7 +217,12 @@ function isPromiseLike<value>(value: value | PromiseLike<value>): value is Promi
 }
 
 function isRequestAbortError(request: Request, error: unknown): boolean {
-  return request.signal.aborted && error === request.signal.reason
+  // Lazy body reads reject with a ClientDisconnectError before the request's
+  // signal is materialized, so a disconnect is recognized by type as well as
+  // by signal reason identity.
+  return (
+    isClientDisconnectError(error) || (request.signal.aborted && error === request.signal.reason)
+  )
 }
 
 /**
@@ -260,16 +266,7 @@ export function createRequest(
   let init: RequestInit = { method, headers, signal: controller.signal }
 
   if (method !== 'GET' && method !== 'HEAD') {
-    init.body = new ReadableStream({
-      start(controller) {
-        req.on('data', (chunk) => {
-          controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
-        })
-        req.on('end', () => {
-          controller.close()
-        })
-      },
-    })
+    init.body = createBodyStream(req, (error) => controller?.abort(error))
 
     // init.duplex = 'half' must be set when body is a ReadableStream, and Node follows the spec.
     // However, this property is not defined in the TypeScript types for RequestInit, so we have
@@ -279,6 +276,80 @@ export function createRequest(
   }
 
   return new Request(url, init)
+}
+
+function createBodyStream(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  onBodyError: (error: Error) => void,
+): ReadableStream<Uint8Array> {
+  let done = false
+  let streamController!: ReadableStreamDefaultController<Uint8Array>
+
+  function onData(chunk: Buffer) {
+    streamController.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+  }
+
+  function onEnd() {
+    if (done) return
+    done = true
+    cleanup()
+    streamController.close()
+  }
+
+  function onError(error: Error) {
+    fail(error)
+  }
+
+  // A 'close' (or legacy 'aborted') before 'end' means the client went away
+  // before the body was fully received. A close after a normal 'end' never
+  // reaches this handler because 'end' removes these listeners.
+  function onClose() {
+    fail(new ClientDisconnectError())
+  }
+
+  function fail(error: Error) {
+    if (done) return
+    done = true
+    cleanup()
+    streamController.error(error)
+    onBodyError(error)
+  }
+
+  function cleanup() {
+    req.off('data', onData)
+    req.off('end', onEnd)
+    req.off('error', onError)
+    req.off('aborted', onClose)
+    req.off('close', onClose)
+  }
+
+  return new ReadableStream({
+    start(controller) {
+      streamController = controller
+
+      if (req.readableEnded) {
+        done = true
+        controller.close()
+        return
+      }
+
+      if (req.destroyed) {
+        onClose()
+        return
+      }
+
+      req.on('data', onData)
+      req.once('end', onEnd)
+      req.once('error', onError)
+      req.once('aborted', onClose)
+      req.once('close', onClose)
+    },
+    cancel() {
+      if (done) return
+      done = true
+      cleanup()
+    },
+  })
 }
 
 /**

@@ -1,10 +1,12 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import type * as http from 'node:http'
+import * as net from 'node:net'
 import * as stream from 'node:stream'
 
 import { type FetchHandler } from './fetch-handler.ts'
 import { createRequest, createRequestListener } from './request-listener.ts'
+import { createTestServer } from './test-server.ts'
 
 describe('createRequestListener', () => {
   it('returns a request listener', async (t) => {
@@ -704,6 +706,201 @@ describe('createRequest abort behavior', () => {
     assert.equal(request.signal.aborted, false)
   })
 })
+
+describe('createRequest body abort behavior', () => {
+  it('rejects body reads and aborts the signal when the request errors mid-body', async () => {
+    let req = createStreamingMockRequest()
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res)
+
+    let textPromise = request.text()
+    req.push(Buffer.from('partial'))
+    let error = new Error('socket hang up')
+    req.destroy(error)
+
+    await assert.rejects(textPromise)
+    assert.equal(request.signal.aborted, true)
+    assert.equal(request.signal.reason, error)
+  })
+
+  it('rejects body reads and aborts the signal when the request closes before the body ends', async () => {
+    let req = createStreamingMockRequest()
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res)
+
+    let textPromise = request.text()
+    req.push(Buffer.from('partial'))
+    req.destroy()
+
+    await assert.rejects(textPromise, /disconnected before the request body/)
+    assert.equal(request.signal.aborted, true)
+  })
+
+  it('rejects body reads when the legacy aborted event fires', async () => {
+    let req = createStreamingMockRequest()
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res)
+
+    let textPromise = request.text()
+    req.emit('aborted')
+
+    await assert.rejects(textPromise, /disconnected before the request body/)
+    assert.equal(request.signal.aborted, true)
+  })
+
+  it('does not abort the signal when the body ends normally and the request closes afterwards', async () => {
+    let req = createMockRequest({ method: 'POST', body: 'Hello, world!' })
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res)
+
+    assert.equal(await request.text(), 'Hello, world!')
+
+    // Let the mock request emit its trailing 'close' after 'end'
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    assert.equal(request.signal.aborted, false)
+  })
+
+  it('rejects a pending lazy text() read when the client disconnects mid-body', async () => {
+    let reportResult!: (value: unknown) => void
+    let handlerResult = new Promise<unknown>((resolve) => {
+      reportResult = resolve
+    })
+
+    let handler: FetchHandler = async (request: Request) => {
+      try {
+        await request.text()
+        reportResult(null)
+      } catch (error) {
+        reportResult(error)
+      }
+      return new Response('ok')
+    }
+
+    let listener = createRequestListener(handler)
+    let req = createStreamingMockRequest()
+    let res = createMockResponse({ req })
+
+    listener(req, res)
+    req.push(Buffer.from('partial'))
+    req.destroy()
+
+    let error = await handlerResult
+    assert.ok(error instanceof Error)
+    assert.equal(error.name, 'ClientDisconnectError')
+    assert.match(error.message, /disconnected before the request body/)
+  })
+
+  it('does not call onError when a lazy body read is cut off by a client disconnect', async (t) => {
+    let errorHandler = t.mock.fn()
+    let handler: FetchHandler = async (request: Request) => {
+      await request.text()
+      return new Response('ok')
+    }
+
+    let listener = createRequestListener(handler, { onError: errorHandler })
+    let req = createStreamingMockRequest()
+    let res = createMockResponse({ req })
+    let writeHead = t.mock.method(res, 'writeHead')
+
+    listener(req, res)
+    req.push(Buffer.from('partial'))
+    req.destroy()
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.equal(errorHandler.mock.calls.length, 0)
+    assert.equal(writeHead.mock.calls.length, 0)
+  })
+
+  it('does not call onError when a lazy body read fails with a request error', async (t) => {
+    let errorHandler = t.mock.fn()
+    let handler: FetchHandler = async (request: Request) => {
+      await request.text()
+      return new Response('ok')
+    }
+
+    let listener = createRequestListener(handler, { onError: errorHandler })
+    let req = createStreamingMockRequest()
+    let res = createMockResponse({ req })
+    let writeHead = t.mock.method(res, 'writeHead')
+
+    listener(req, res)
+    req.push(Buffer.from('partial'))
+    req.destroy(new Error('socket hang up'))
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.equal(errorHandler.mock.calls.length, 0)
+    assert.equal(writeHead.mock.calls.length, 0)
+  })
+
+  it('rejects a pending body read when a real client socket is destroyed mid-upload', async () => {
+    let reportResult!: (value: unknown) => void
+    let handlerResult = new Promise<unknown>((resolve) => {
+      reportResult = resolve
+    })
+    let reportStarted!: () => void
+    let handlerStarted = new Promise<void>((resolve) => {
+      reportStarted = resolve
+    })
+
+    let server = await createTestServer(async (request) => {
+      reportStarted()
+      try {
+        await request.text()
+        reportResult(null)
+      } catch (error) {
+        reportResult(error)
+      }
+      return new Response('ok')
+    })
+
+    try {
+      let port = Number(new URL(server.baseUrl).port)
+      let socket = net.connect(port, '127.0.0.1')
+      await new Promise<void>((resolve) => socket.once('connect', resolve))
+
+      socket.write(
+        'POST / HTTP/1.1\r\nHost: 127.0.0.1\r\nContent-Type: text/plain\r\nContent-Length: 1000\r\n\r\npartial body',
+      )
+
+      // Drop the client only once the handler is awaiting the body read
+      await handlerStarted
+      socket.destroy()
+
+      let error = await handlerResult
+      assert.ok(error instanceof Error)
+      assert.match(error.message, /disconnected before the request body/)
+    } finally {
+      await server.close()
+    }
+  })
+})
+
+function createStreamingMockRequest({
+  url = '/',
+  method = 'POST',
+  headers = {},
+}: {
+  url?: string
+  method?: string
+  headers?: Record<string, string>
+} = {}): http.IncomingMessage {
+  let rawHeaders = Object.entries(headers).flatMap(([key, value]) => [key, value])
+
+  return Object.assign(
+    new stream.Readable({
+      read() {},
+    }),
+    {
+      url,
+      method,
+      rawHeaders,
+      socket: {},
+      headers,
+    },
+  ) as http.IncomingMessage
+}
 
 function createMockRequest({
   url = '/',

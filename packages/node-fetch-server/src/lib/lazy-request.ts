@@ -1,6 +1,7 @@
 import type * as http from 'node:http'
 import type * as http2 from 'node:http2'
 
+import { ClientDisconnectError } from './client-disconnect-error.ts'
 import { createLazyHeaders } from './lazy-headers.ts'
 
 type IncomingRequest = http.IncomingMessage | http2.Http2ServerRequest
@@ -328,6 +329,8 @@ function readRequestBody(req: IncomingRequest): Promise<Buffer> {
       req.off('data', onData)
       req.off('end', onEnd)
       req.off('error', onError)
+      req.off('aborted', onClose)
+      req.off('close', onClose)
     }
 
     function onData(buffer: Buffer) {
@@ -352,14 +355,37 @@ function readRequestBody(req: IncomingRequest): Promise<Buffer> {
       }
     }
 
+    // An 'error' before 'end' means the body cannot complete, so it is
+    // reported as a disconnect (with the original error as `cause`) to match
+    // the request-abort handling in `createRequestListener`.
     function onError(error: Error) {
       cleanup()
-      reject(error)
+      reject(new ClientDisconnectError(error))
+    }
+
+    // A 'close' (or legacy 'aborted') before 'end' means the client went away
+    // before the body was fully received; a close after 'end' never reaches
+    // this handler because 'end' removes these listeners.
+    function onClose() {
+      cleanup()
+      reject(new ClientDisconnectError())
+    }
+
+    if (req.readableEnded) {
+      resolve(Buffer.alloc(0))
+      return
+    }
+
+    if (req.destroyed) {
+      reject(new ClientDisconnectError())
+      return
     }
 
     req.on('data', onData)
     req.once('end', onEnd)
     req.once('error', onError)
+    req.once('aborted', onClose)
+    req.once('close', onClose)
   })
 }
 
@@ -373,6 +399,8 @@ function readRequestText(req: IncomingRequest): Promise<string> {
       req.off('data', onData)
       req.off('end', onEnd)
       req.off('error', onError)
+      req.off('aborted', onClose)
+      req.off('close', onClose)
     }
 
     function onData(buffer: Buffer) {
@@ -397,13 +425,31 @@ function readRequestText(req: IncomingRequest): Promise<string> {
       }
     }
 
+    // Same early-disconnect handling as readRequestBody above.
     function onError(error: Error) {
       cleanup()
-      reject(error)
+      reject(new ClientDisconnectError(error))
+    }
+
+    function onClose() {
+      cleanup()
+      reject(new ClientDisconnectError())
+    }
+
+    if (req.readableEnded) {
+      resolve('')
+      return
+    }
+
+    if (req.destroyed) {
+      reject(new ClientDisconnectError())
+      return
     }
 
     req.on('data', onData)
     req.once('end', onEnd)
     req.once('error', onError)
+    req.once('aborted', onClose)
+    req.once('close', onClose)
   })
 }
