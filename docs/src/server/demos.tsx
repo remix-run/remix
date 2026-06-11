@@ -5,6 +5,7 @@ import * as prettier from 'prettier'
 import type { RemixNode } from 'remix/ui'
 import { codeToHtml } from 'shiki'
 import ts from 'typescript'
+import { mapToRemixPackage } from '../generate/manifest.ts'
 import { assetServer } from './asset-server.ts'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
@@ -88,7 +89,8 @@ async function getDemoFile(filePath: string): Promise<DemoDocFile> {
   let slug = parts.at(-1)!.slice(0, -'.demo.tsx'.length)
   let moduleParts = parts.slice(1, -1)
   let modulePath = moduleParts.filter((part) => part !== 'demos').join('/')
-  let packageName = `remix/${packageSegment}/${modulePath}`
+  let packageSpecifier = `@remix-run/${packageSegment}/${modulePath}`
+  let packageName = mapToRemixPackage(packageSpecifier)
   let relativePath = `packages/${packageSegment}/src/${parts.slice(1).join('/')}`
 
   let source = fs.readFileSync(filePath, 'utf-8')

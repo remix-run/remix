@@ -5,6 +5,8 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
+import { hasRemixPackage, mapToRemixPackage } from './manifest.ts'
+
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const REPO_DIR = path.resolve(DOCS_DIR, '..')
 const DEMO_BUILD_DIR = path.join(DOCS_DIR, 'build', 'demos')
@@ -14,12 +16,16 @@ const DEMO_SOURCES = [
     sourceDir: path.join(REPO_DIR, 'packages', 'ui', 'src'),
   },
 ]
+const REMIX_RUN_IMPORT_RE =
+  /(from\s+['"]|import\s*\(\s*['"]|import\s+['"])(@remix-run\/[^'"]+)/g
 
 function rewriteImports(source: string): string {
-  return source.replace(
-    /(from\s+['"]|import\s*\(\s*['"])@remix-run\//g,
-    (_match, prefix) => `${prefix}remix/`,
-  )
+  return source.replace(REMIX_RUN_IMPORT_RE, (_match, prefix: string, specifier: string) => {
+    if (!hasRemixPackage(specifier)) {
+      throw new Error(`No remix manifest entry found for import "${specifier}"`)
+    }
+    return `${prefix}${mapToRemixPackage(specifier)}`
+  })
 }
 
 function isDemoSourceFile(filename: string) {

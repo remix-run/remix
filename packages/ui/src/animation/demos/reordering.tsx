@@ -15,16 +15,19 @@ function shuffle<T>(array: T[]): T[] {
 export function Reordering(handle: Handle) {
   let order = initialOrder
 
-  function scheduleNextShuffle() {
-    setTimeout(() => {
-      if (handle.signal.aborted) return
+  function scheduleNextShuffle(signal: AbortSignal) {
+    let timeoutId = setTimeout(async () => {
+      if (signal.aborted) return
       order = shuffle(order)
-      handle.update()
-      scheduleNextShuffle()
+      let nextSignal = await handle.update()
+      if (nextSignal.aborted) return
+      scheduleNextShuffle(nextSignal)
     }, 1000)
+
+    signal.addEventListener('abort', () => clearTimeout(timeoutId), { once: true })
   }
 
-  scheduleNextShuffle()
+  handle.queueTask(scheduleNextShuffle)
 
   return () => (
     <ul
