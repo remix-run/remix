@@ -17,8 +17,10 @@ describe('transformComponentHmr', () => {
     assert.deepEqual(result.componentNames, ['Counter'])
     assert.match(result.code, /function __remixHmrImpl_Counter\(\)/)
     assert.match(result.code, /export function Counter\(\)/)
+    assert.match(result.code, /import \* as __remixHmr from "@remix-run\/ui-hmr\/runtime"/)
+    assert.match(result.code, /import \* as __remixUIRefresh from "@remix-run\/ui\/dev\/refresh"/)
     assert.match(result.code, /import\.meta\.hot\.accept/)
-    assert.match(result.code, /__remixHmrRegisterComponent/)
+    assert.match(result.code, /__remixHmr\.registerComponentForHmr\(__remixUIRefresh/)
   })
 
   it('hoists setup variables into persistent HMR state', () => {
@@ -32,10 +34,10 @@ describe('transformComponentHmr', () => {
     )
 
     assert.equal(result.transformed, true)
-    assert.match(result.code, /__remixHmrGetState/)
+    assert.match(result.code, /__remixHmr\.getComponentHmrState/)
     assert.match(result.code, /__s\.count = 0/)
     assert.match(result.code, /<button>\{__s\.count\}<\/button>/)
-    assert.match(result.code, /__remixHmrCallRender/)
+    assert.match(result.code, /__remixHmr\.callComponentRenderForHmr/)
   })
 
   it('hoists destructured setup variables into persistent HMR state', () => {
@@ -113,7 +115,7 @@ export {
       result.code,
       /export const Counter = clientEntry\(import\.meta\.url, function Counter\(handle\)/,
     )
-    assert.match(result.code, /__remixHmrRegisterComponent/)
+    assert.match(result.code, /__remixHmr\.registerComponentForHmr\(__remixUIRefresh/)
     assert.match(result.code, /import\.meta\.hot\.accept/)
   })
 

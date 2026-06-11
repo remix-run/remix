@@ -2,6 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
 import { renderToStream } from '@remix-run/ui/server'
+import { spawn, type ChildProcess } from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as http from 'node:http'
 import * as path from 'node:path'
@@ -10,6 +11,10 @@ import { createAssetServer, type AssetServer, type HmrPayload } from '../src/ass
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const workspaceDir = path.resolve(packageDir, '../..')
+const nodeHmrCliEntryPath = path.resolve(workspaceDir, 'packages/node-hmr/src/cli-entry.ts')
+const nodeTsxImportUrl = pathToFileURL(
+  path.resolve(workspaceDir, 'packages/node-tsx/src/index.ts'),
+).href
 const isBun = 'Bun' in globalThis
 
 declare global {
@@ -108,51 +113,38 @@ describe('asset server HMR', { skip: isBun }, () => {
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(0, 128, 0)')
   })
 
-  it('does not refresh stylesheets after external server updates', async (t) => {
-    let fixture = await createHmrFixture()
+  it('does not refresh stylesheets after server updates from node-hmr', async (t) => {
+    let fixture = await createNodeHmrFixture()
     t.after(fixture.close)
 
-    let server = await createHmrTestServer(fixture, { externalHmr: true })
+    let server = await startNodeHmrFixtureServer(fixture)
     let page = await t.serve(server)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
     await page.goto('/')
     await connected
-    await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
+    await waitForComputedStyle(
+      page,
+      '[data-testid="server-client-label"]',
+      'color',
+      'rgb(255, 0, 0)',
+    )
 
     let unexpectedStyleRequest = waitForStylesheetResponse(page, 200, { timeout: 250 }).then(
       () => true,
       () => false,
     )
-    server.sendHmrPayload({
-      data: {
-        reason: 'change',
-        timestamp: Date.now(),
-      },
-      event: 'remix:server-update',
-      type: 'custom',
-    })
+    await get(page, '/__test_emit_server_update')
 
     assert.equal(await unexpectedStyleRequest, false)
     await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
-    await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
-
-    unexpectedStyleRequest = waitForStylesheetResponse(page, 200, { timeout: 250 }).then(
-      () => true,
-      () => false,
+    await waitForComputedStyle(
+      page,
+      '[data-testid="server-client-label"]',
+      'color',
+      'rgb(255, 0, 0)',
     )
-    server.sendHmrPayload({
-      data: {
-        reason: 'restart',
-        timestamp: Date.now(),
-      },
-      event: 'remix:server-update',
-      type: 'custom',
-    })
-
-    assert.equal(await unexpectedStyleRequest, false)
-    await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
-    await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
+    assert.equal(server.readyCount, 1)
   })
 
   it('recovers failed stylesheet updates after the HMR event stream reconnects', async (t) => {
@@ -382,11 +374,11 @@ describe('asset server HMR', { skip: isBun }, () => {
     await waitForText(page, '[data-testid="server-client-label"]', 'Client: after reconnect!!!!!')
   })
 
-  it('recovers failed client entry updates after an external server update', async (t) => {
-    let fixture = await createServerFrameHmrFixture()
+  it('recovers failed client entry updates after a server update from node-hmr', async (t) => {
+    let fixture = await createNodeHmrFixture()
     t.after(fixture.close)
 
-    let server = await createHmrTestServer(fixture, { externalHmr: true })
+    let server = await startNodeHmrFixtureServer(fixture)
     let page = await t.serve(server)
     let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
@@ -400,29 +392,95 @@ describe('asset server HMR', { skip: isBun }, () => {
     await fs.writeFile(clientFieldPath, clientFieldSource.replace("'Client: before'", "'Client:"))
     await waitForConsoleMessage(page, '[remix] HMR update failed')
 
-    await server.stopAssets()
     await fs.writeFile(
       clientFieldPath,
       clientFieldSource.replace('Client: before', 'Client: after server update!!!!!'),
     )
-    await server.startAssets()
 
-    let recovered = waitForConsoleMessage(page, '[remix] HMR recovered update')
-    server.sendHmrPayload({
-      data: {
-        reason: 'restart',
-        timestamp: Date.now(),
-      },
-      event: 'remix:server-update',
-      type: 'custom',
-    })
-    await recovered
+    await get(page, '/__test_emit_server_update')
+    await waitForConsoleMessage(page, '[remix] HMR recovered update')
 
     await waitForText(
       page,
       '[data-testid="server-client-label"]',
       'Client: after server update!!!!!',
     )
+    assert.equal(server.readyCount, 1)
+  })
+
+  it('handles component, stylesheet, and server updates through node-hmr', async (t) => {
+    let fixture = await createNodeHmrFixture()
+    t.after(fixture.close)
+
+    let server = await startNodeHmrFixtureServer(fixture)
+    let page = await t.serve(server)
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await waitForText(page, '[data-testid="server-message"]', 'Server: before')
+    await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
+    await waitForComputedStyle(
+      page,
+      '[data-testid="server-client-label"]',
+      'color',
+      'rgb(255, 0, 0)',
+    )
+
+    let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
+    let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
+    await fs.writeFile(
+      clientFieldPath,
+      clientFieldSource.replace('Client: before', 'Client: component update'),
+    )
+    await waitForText(page, '[data-testid="server-client-label"]', 'Client: component update')
+    assert.equal(server.readyCount, 1)
+
+    let styleRequest = waitForStylesheetResponse(page, 200)
+    await write(
+      fixture.rootDir,
+      'app/styles.css',
+      '[data-testid="server-client-label"] { color: blue; }\n',
+    )
+    await styleRequest
+    await waitForComputedStyle(
+      page,
+      '[data-testid="server-client-label"]',
+      'color',
+      'rgb(0, 0, 255)',
+    )
+    assert.equal(server.readyCount, 1)
+
+    await get(page, '/__test_emit_server_update')
+    await waitForConsoleMessage(page, 'Server frame reload complete')
+    assert.equal(server.readyCount, 1)
+  })
+
+  it('reloads server-rendered content after a node-hmr server update', async (t) => {
+    let fixture = await createNodeHmrFixture()
+    t.after(fixture.close)
+
+    let server = await startNodeHmrFixtureServer(fixture)
+    let page = await t.serve(server)
+    let ready = await server.waitForReady(0)
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await waitForText(page, '[data-testid="server-message"]', 'Server: before')
+
+    let serverReload = waitForConsoleMessage(page, 'Server frame reload complete')
+    await write(
+      fixture.rootDir,
+      'server-message.ts',
+      `export const serverMessage = 'Server: after restart'\n`,
+    )
+
+    let restarted = await server.waitForReady(1)
+    assert.equal(restarted.pid, ready.pid)
+    await serverReload
+    await waitForText(page, '[data-testid="server-message"]', 'Server: after restart')
+    assert.equal(server.readyCount, 2)
   })
 })
 
@@ -432,17 +490,24 @@ type HmrFixture = {
   rootDir: string
 }
 
+type NodeHmrFixture = {
+  close(): Promise<void>
+  rootDir: string
+}
+
 type HmrTestServer = {
   baseUrl: string
   close(): Promise<void>
   restartAssets(): Promise<void>
-  sendHmrPayload(payload: HmrPayload): void
   startAssets(): Promise<void>
   stopAssets(): Promise<void>
 }
 
-type HmrTestServerOptions = {
-  externalHmr?: boolean
+type NodeHmrTestServer = {
+  baseUrl: string
+  close(): Promise<void>
+  readyCount: number
+  waitForReady(index: number): Promise<{ pid: number; port: number }>
 }
 
 type TestPage = Awaited<ReturnType<TestContext['serve']>>
@@ -655,6 +720,282 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
   }
 }
 
+async function createNodeHmrFixture(): Promise<NodeHmrFixture> {
+  let tmpDir = path.join(packageDir, '.tmp')
+  await fs.mkdir(tmpDir, { recursive: true })
+  let rootDir = await fs.mkdtemp(path.join(tmpDir, 'node-hmr-e2e-'))
+
+  await writeWorkspacePackageLinks(rootDir, [
+    '@remix-run/assets',
+    '@remix-run/node-hmr',
+    '@remix-run/node-tsx',
+    '@remix-run/ui',
+    '@remix-run/ui-hmr',
+  ])
+  await write(
+    rootDir,
+    'tsconfig.json',
+    JSON.stringify({
+      compilerOptions: {
+        jsx: 'react-jsx',
+        jsxImportSource: '@remix-run/ui',
+      },
+    }),
+  )
+  await write(rootDir, 'server-message.ts', `export const serverMessage = 'Server: before'\n`)
+  await write(rootDir, 'server-side-effect.ts', `export const sideEffect = 'initial'\n`)
+  await write(rootDir, 'app/styles.css', '[data-testid="server-client-label"] { color: red; }\n')
+  await write(
+    rootDir,
+    'app/ClientField.tsx',
+    [
+      "import { type Handle, clientEntry } from '@remix-run/ui'",
+      '',
+      'export const ClientField = clientEntry(import.meta.url, function ClientField(handle: Handle) {',
+      '  void handle',
+      '  return () => (',
+      '    <>',
+      '      <input data-testid="server-client-field" />',
+      '      <span data-testid="server-client-label">{\'Client: before\'}</span>',
+      '    </>',
+      '  )',
+      '})',
+      '',
+    ].join('\n'),
+  )
+  await write(
+    rootDir,
+    'app/entry.tsx',
+    [
+      "import { getTopFrame, run } from '@remix-run/ui'",
+      '',
+      'let app = run({',
+      '  async loadModule(moduleUrl: string, exportName: string) {',
+      '    let mod = (await import(moduleUrl)) as Record<string, unknown>',
+      '    let Component = mod[exportName]',
+      '    if (typeof Component !== "function") {',
+      '      throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)',
+      '    }',
+      '    return Component',
+      '  },',
+      '  async resolveFrame(src, signal) {',
+      '    let response = await fetch(src, { headers: { Accept: "text/html" }, signal })',
+      '    if (!response.ok) return `<pre>Frame error: ${response.status}</pre>`',
+      '    return response.body ?? response.text()',
+      '  },',
+      '})',
+      '',
+      'if (import.meta.hot) {',
+      '  import.meta.hot.accept()',
+      '  async function reloadTopFrame() {',
+      '    await app.ready()',
+      '    await getTopFrame().reload()',
+      '    console.info("Server frame reload complete")',
+      '  }',
+      '  import.meta.hot.on("remix:server-update", reloadTopFrame)',
+      '}',
+      '',
+      'app.ready().catch((error: unknown) => {',
+      '  console.error("Frame adoption failed:", error)',
+      '})',
+      '',
+    ].join('\n'),
+  )
+  await write(rootDir, 'server.tsx', getNodeHmrServerSource(rootDir))
+
+  return {
+    rootDir,
+    async close() {
+      await fs.rm(rootDir, { force: true, recursive: true })
+    },
+  }
+}
+
+function getNodeHmrServerSource(rootDir: string, options: { title?: string } = {}): string {
+  let appDir = path.relative(workspaceDir, path.join(rootDir, 'app'))
+
+  return [
+    "import { createServer } from 'node:http'",
+    "import { createAssetServer } from '@remix-run/assets'",
+    "import { eventChannel } from '@remix-run/node-hmr/runtime'",
+    "import { renderToStream } from '@remix-run/ui/server'",
+    "import { serverMessage } from './server-message.ts'",
+    "import { sideEffect } from './server-side-effect.ts'",
+    '',
+    "let title = '" + (options.title ?? 'Initial') + "'",
+    'void sideEffect',
+    'let assetServer = createAssetServer({',
+    `  allow: [${JSON.stringify(`${appDir}/**`)}, 'packages/ui/**', 'packages/ui-hmr/**'],`,
+    "  basePath: '/assets',",
+    '  fileMap: {',
+    `    '/app/*path': ${JSON.stringify(`${appDir}/*path`)},`,
+    "    '/packages/*path': 'packages/*path',",
+    '  },',
+    '  hmr: { eventChannel },',
+    '  onError(error) {',
+    '    console.error(error)',
+    '  },',
+    `  rootDir: ${JSON.stringify(workspaceDir)},`,
+    '  watch: {',
+    '    poll: true,',
+    '    pollInterval: 50,',
+    '  },',
+    '})',
+    '',
+    'function ClientField(handle: unknown) {',
+    '  void handle',
+    '  return () => (',
+    '    <>',
+    '      <input data-testid="server-client-field" />',
+    '      <span data-testid="server-client-label">Client: before</span>',
+    '    </>',
+    '  )',
+    '}',
+    'Object.assign(ClientField, {',
+    '  $entry: true,',
+    `  $entryId: ${JSON.stringify(pathToFileURL(path.join(rootDir, 'app/ClientField.tsx')).href)},`,
+    '})',
+    '',
+    'async function renderDocument() {',
+    '  return renderToStream(',
+    '    <html>',
+    '      <head>',
+    '        <title>{title}</title>',
+    '        <link rel="stylesheet" href="/assets/app/styles.css" />',
+    '      </head>',
+    '      <body>',
+    '        <main>',
+    '          <p data-testid="server-message">{serverMessage}</p>',
+    '          <ClientField />',
+    '        </main>',
+    '        <script src="/assets/app/entry.tsx" type="module" />',
+    '      </body>',
+    '    </html>,',
+    '    {',
+    '      async resolveClientEntry(entryId, component) {',
+    '        return {',
+    "          exportName: component.name || 'ClientField',",
+    '          href: await assetServer.getHref(entryId),',
+    '        }',
+    '      },',
+    '    },',
+    '  )',
+    '}',
+    '',
+    'let server = createServer(async (request, response) => {',
+    '  try {',
+    "    let host = request.headers.host ?? '127.0.0.1'",
+    "    let url = new URL(request.url ?? '/', `http://${host}`)",
+    '',
+    "    if (url.pathname === '/') {",
+    '      await writeFetchResponse(',
+    '        response,',
+    '        new Response(await renderDocument(), {',
+    '          headers: {',
+    "            'Cache-Control': 'no-cache',",
+    "            'Content-Type': 'text/html; charset=utf-8',",
+    '          },',
+    '        }),',
+    '      )',
+    '      return',
+    '    }',
+    '',
+    "    if (url.pathname === '/__test_emit_server_update') {",
+    '      eventChannel?.send({',
+    '        data: {',
+    "          reason: 'change',",
+    '          timestamp: Date.now(),',
+    '        },',
+    "        event: 'remix:server-update',",
+    "        type: 'custom',",
+    '      })',
+    '      response.writeHead(204).end()',
+    '      return',
+    '    }',
+    '',
+    "    if (url.pathname.startsWith('/assets/')) {",
+    '      let assetResponse = await assetServer.fetch(',
+    '        new Request(url, {',
+    '          headers: toFetchHeaders(request.headers),',
+    '          method: request.method,',
+    '        }),',
+    '      )',
+    '      if (assetResponse) {',
+    '        await writeFetchResponse(response, assetResponse)',
+    '        return',
+    '      }',
+    '    }',
+    '',
+    "    response.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' })",
+    "    response.end('Not Found')",
+    '  } catch (error) {',
+    "    response.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' })",
+    '    response.end(error instanceof Error ? error.stack : String(error))',
+    '  }',
+    '})',
+    '',
+    'server.listen(Number(process.env.TEST_SERVER_PORT ?? 0), "127.0.0.1", () => {',
+    '  let address = server.address()',
+    "  if (address && typeof address === 'object') {",
+    "    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))",
+    '  }',
+    '})',
+    '',
+    'if (import.meta.hot) {',
+    '  import.meta.hot.accept()',
+    '  import.meta.hot.dispose(async () => {',
+    '    await assetServer.close()',
+    '    server.closeAllConnections()',
+    '    await new Promise((resolve) => server.close(resolve))',
+    '  })',
+    '}',
+    '',
+    'function toFetchHeaders(headers) {',
+    '  let result = new Headers()',
+    '  for (let [name, value] of Object.entries(headers)) {',
+    '    if (value === undefined) continue',
+    '    if (Array.isArray(value)) {',
+    '      for (let item of value) result.append(name, item)',
+    '    } else {',
+    '      result.set(name, value)',
+    '    }',
+    '  }',
+    '  return result',
+    '}',
+    '',
+    'async function writeFetchResponse(response, fetchResponse) {',
+    '  response.writeHead(fetchResponse.status, Object.fromEntries(fetchResponse.headers))',
+    '  if (!fetchResponse.body) {',
+    '    response.end()',
+    '    return',
+    '  }',
+    '  let reader = fetchResponse.body.getReader()',
+    '  try {',
+    '    while (true) {',
+    '      let { done, value } = await reader.read()',
+    '      if (done) break',
+    '      response.write(value)',
+    '    }',
+    '  } finally {',
+    '    response.end()',
+    '    reader.releaseLock()',
+    '  }',
+    '}',
+    '',
+  ].join('\n')
+}
+
+async function writeWorkspacePackageLinks(rootDir: string, packageNames: string[]): Promise<void> {
+  await Promise.all(
+    packageNames.map(async (packageName) => {
+      let packagePath = path.join(workspaceDir, 'packages', packageName.replace('@remix-run/', ''))
+      let linkPath = path.join(rootDir, 'node_modules', ...packageName.split('/'))
+      await fs.mkdir(path.dirname(linkPath), { recursive: true })
+      await fs.symlink(packagePath, linkPath, process.platform === 'win32' ? 'junction' : 'dir')
+    }),
+  )
+}
+
 function createTestClientEntry<component extends (handle: unknown) => unknown>(
   entryId: string,
   component: component,
@@ -662,29 +1003,26 @@ function createTestClientEntry<component extends (handle: unknown) => unknown>(
   return Object.assign(component, { $entry: true as const, $entryId: entryId })
 }
 
-async function createHmrTestServer(
-  fixture: HmrFixture,
-  options: HmrTestServerOptions = {},
-): Promise<HmrTestServer> {
+async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> {
   let appDir = path.relative(workspaceDir, path.join(fixture.rootDir, 'app'))
-  let hmrEventStream = options.externalHmr ? createTestHmrEventStream() : undefined
+  let hmrEventStream: ReturnType<typeof createTestHmrEventStream> | undefined
 
   let createCurrentAssetServer = () =>
     createAssetServer({
-      allow: [`${appDir}/**`, 'packages/ui/**'],
+      allow: [`${appDir}/**`, 'packages/ui/**', 'packages/ui-hmr/**'],
       basePath: '/assets',
       fileMap: {
         '/app/*path': `${appDir}/*path`,
         '/packages/*path': 'packages/*path',
       },
-      hmr: hmrEventStream
-        ? {
-            eventUrl: '/hmr/events',
-            send(payload) {
-              hmrEventStream.send(payload)
-            },
-          }
-        : true,
+      hmr: {
+        eventChannel: {
+          url: '/hmr/events',
+          send(payload) {
+            hmrEventStream?.send(payload)
+          },
+        },
+      },
       onError() {},
       rootDir: workspaceDir,
       watch: {
@@ -696,13 +1034,18 @@ async function createHmrTestServer(
 
   async function startAssets(): Promise<void> {
     if (assetServer) return
+    hmrEventStream = createTestHmrEventStream()
     assetServer = createCurrentAssetServer()
   }
 
   async function stopAssets(): Promise<void> {
     await assetServer?.close()
     assetServer = undefined
+    hmrEventStream?.close()
+    hmrEventStream = undefined
   }
+
+  hmrEventStream = createTestHmrEventStream()
 
   let server = http.createServer(async (request, response) => {
     try {
@@ -730,12 +1073,6 @@ async function createHmrTestServer(
       await stopAssets()
       await startAssets()
     },
-    sendHmrPayload(payload) {
-      if (!hmrEventStream) {
-        throw new Error('Cannot send external HMR payload without externalHmr enabled.')
-      }
-      hmrEventStream.send(payload)
-    },
     startAssets,
     stopAssets,
     async close() {
@@ -750,6 +1087,106 @@ async function createHmrTestServer(
       })
     },
   }
+}
+
+async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeHmrTestServer> {
+  let { NODE_PATH: _nodePath, ...env } = process.env
+  let port = await getAvailablePort()
+  let child = spawn(
+    process.execPath,
+    ['--import', nodeTsxImportUrl, nodeHmrCliEntryPath, '--import', nodeTsxImportUrl, 'server.tsx'],
+    {
+      cwd: fixture.rootDir,
+      env: {
+        ...env,
+        NODE_ENV: 'development',
+        TEST_SERVER_PORT: String(port),
+      },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    },
+  )
+  let readyEvents: Array<{ pid: number; port: number }> = []
+  let readyWaiters: Array<() => void> = []
+  let lineBuffer = ''
+  let processOutput = ''
+  let exit: { code: number | null; signal: NodeJS.Signals | null } | null = null
+
+  child.stdout?.setEncoding('utf-8')
+  child.stdout?.on('data', (chunk: string) => {
+    processOutput += chunk
+    lineBuffer += chunk
+
+    let lines = lineBuffer.split('\n')
+    lineBuffer = lines.pop() ?? ''
+
+    for (let line of lines) {
+      let event = parseReadyEvent(line)
+      if (event === null) continue
+
+      readyEvents.push(event)
+      for (let waiter of readyWaiters) waiter()
+      readyWaiters = []
+    }
+  })
+
+  child.stderr?.setEncoding('utf-8')
+  child.stderr?.on('data', (chunk: string) => {
+    processOutput += chunk
+  })
+
+  child.once('exit', (code, signal) => {
+    exit = { code, signal }
+  })
+
+  await waitForReadyEvent(0)
+
+  return {
+    baseUrl: `http://127.0.0.1:${port}`,
+    async close() {
+      await stopProcess(child)
+    },
+    get readyCount() {
+      return readyEvents.length
+    },
+    waitForReady: waitForReadyEvent,
+  }
+
+  async function waitForReadyEvent(index: number): Promise<{ pid: number; port: number }> {
+    await waitFor(
+      () => readyEvents[index] !== undefined,
+      () => {
+        let exitText = exit
+          ? ` Process exited with code ${exit.code} and signal ${exit.signal}.`
+          : ''
+        return `Timed out waiting for node-hmr fixture server.${exitText}\n${processOutput}`
+      },
+    )
+
+    let event = readyEvents[index]
+    assert.ok(event)
+    return event
+  }
+}
+
+async function getAvailablePort(): Promise<number> {
+  let server = http.createServer()
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', () => {
+      server.off('error', reject)
+      resolve()
+    })
+  })
+  let address = server.address()
+  assert.ok(address && typeof address === 'object')
+  let port = address.port
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => {
+      if (error) reject(error)
+      else resolve()
+    })
+  })
+  return port
 }
 
 async function handleRequest(
@@ -886,16 +1323,36 @@ async function writeFetchResponse(
 
 function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
   return new Promise((resolve, reject) => {
+    let consoleMessages: string[] = []
+    let pageErrors: string[] = []
     let timeout = setTimeout(() => {
-      reject(new Error(`Timed out waiting for console message: ${text}`))
+      reject(
+        new Error(
+          [
+            `Timed out waiting for console message: ${text}`,
+            ...consoleMessages.map((message) => `console: ${message}`),
+            ...pageErrors.map((message) => `pageerror: ${message}`),
+          ].join('\n'),
+        ),
+      )
     }, 5000)
 
-    page.on('console', (message) => {
+    page.on('console', handleConsole)
+    page.on('pageerror', handlePageError)
+
+    function handleConsole(message: { text(): string }) {
+      consoleMessages.push(message.text())
       if (message.text().includes(text)) {
         clearTimeout(timeout)
+        page.off('console', handleConsole)
+        page.off('pageerror', handlePageError)
         resolve()
       }
-    })
+    }
+
+    function handlePageError(error: Error) {
+      pageErrors.push(error.stack ?? error.message)
+    }
   })
 }
 
@@ -991,6 +1448,11 @@ async function getStylesheetLinkHasTimestamp(page: TestPage, pathname: string): 
   }, pathname)
 }
 
+async function get(page: TestPage, pathname: string): Promise<void> {
+  let response = await page.request.get(pathname)
+  assert.ok(response.ok())
+}
+
 async function waitForStylesheetLinkCount(
   page: TestPage,
   pathname: string,
@@ -1005,6 +1467,63 @@ async function waitForStylesheetLinkCount(
     { count, pathname },
     { timeout: 5000 },
   )
+}
+
+async function waitFor(
+  check: () => boolean | Promise<boolean>,
+  getTimeoutMessage: () => string = () => 'Timed out waiting for condition',
+): Promise<void> {
+  let start = Date.now()
+
+  while (Date.now() - start < 5_000) {
+    if (await check()) return
+    await new Promise((resolve) => setTimeout(resolve, 25))
+  }
+
+  throw new Error(getTimeoutMessage())
+}
+
+function parseReadyEvent(line: string): { pid: number; port: number } | null {
+  try {
+    let event: unknown = JSON.parse(line)
+    if (
+      typeof event === 'object' &&
+      event !== null &&
+      'type' in event &&
+      event.type === 'ready' &&
+      'port' in event &&
+      typeof event.port === 'number' &&
+      'pid' in event &&
+      typeof event.pid === 'number'
+    ) {
+      return {
+        pid: event.pid,
+        port: event.port,
+      }
+    }
+  } catch {
+    // Ignore non-JSON process output.
+  }
+
+  return null
+}
+
+async function stopProcess(child: ChildProcess): Promise<void> {
+  if (child.exitCode !== null || child.signalCode !== null) return
+
+  await new Promise<void>((resolve) => {
+    let timeout = setTimeout(() => {
+      child.kill('SIGKILL')
+      resolve()
+    }, 5_000)
+
+    child.once('exit', () => {
+      clearTimeout(timeout)
+      resolve()
+    })
+
+    child.kill('SIGTERM')
+  })
 }
 
 async function write(rootDir: string, rel: string, content: string): Promise<void> {

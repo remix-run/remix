@@ -151,28 +151,24 @@ if (import.meta.hot) {
 }
 ```
 
-### Browser Event Channel
+### Event Channel
 
-Browser HMR clients can also connect to the `node-hmr` process.
+If you want to have other systems integrate with `node-hmr`, responding to HMR events and sending custom payloads, the `node-hmr` runtime provides an `eventChannel` export. This exposes a `url` for an [EventSource](https://developer.mozilla.org/en-US/docs/Web/API/EventSource) and a `send` function for sending custom events.
 
-Import `browserEventChannel` to get access to the `eventUrl` and a `send` function for sending additional HMR events to the browser runtime.
-
-This channel can also be passed directly to `createAssetServer` from `remix/assets`.
+This allows for easy integration with `remix/assets` via its `hmr` option so that the HMR endpoint used in the browser remains stable even during server restarts.
 
 ```ts
 import { createAssetServer } from 'remix/assets'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
-const nodeHmr = isDevelopment ? await import('remix/node-hmr') : undefined
-
 export const assetServer = createAssetServer({
   // ...
-  hmr: nodeHmr?.browserEventChannel,
+  hmr: isDevelopment ? await import('remix/node-hmr/runtime') : undefined,
   watch: isDevelopment,
 })
 ```
 
-In the browser entry, the bookstore demo listens for server updates and reloads the top frame so the browser can fetch fresh server output after server code changes:
+When integrated in this way, browser modules in `remix/assets` can use the `import.meta.hot` API to respond to server updates and reload the app.
 
 ```ts
 import { getTopFrame } from 'remix/ui'

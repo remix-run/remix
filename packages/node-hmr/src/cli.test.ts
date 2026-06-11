@@ -4,8 +4,8 @@ import * as path from 'node:path'
 import process from 'node:process'
 import { pathToFileURL } from 'node:url'
 
-import { buildNodeArgs, parseNodeHmrCommand, shouldIgnoreWatchPath } from './cli.ts'
-import { getNodeHmrEndpoint, getNodeHmrEventUrl } from './index.ts'
+import { buildNodeArgs, parseNodeHmrCommand, shouldIgnoreWatchPath } from './lib/cli-args.ts'
+import { getNodeHmrEndpoint, getNodeHmrEventUrl } from './lib/browser-events.ts'
 
 describe('parseNodeHmrCommand', () => {
   it('parses an entry and entry arguments', () => {

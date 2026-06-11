@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 
 import {
   callComponentRenderForHmr,
+  type ComponentHmrRefresh,
   getComponentHandleForHmr,
   getComponentHmrState,
   getCurrentComponentForHmr,
@@ -11,7 +12,18 @@ import {
   setupComponentForHmr,
   updateComponentModuleForHmr,
 } from './runtime.ts'
-import { componentStalenessCheck } from '../../../ui/src/runtime/refresh.ts'
+
+let componentStalenessCheck: ((component: Function) => boolean) | undefined
+let reconciliationCount = 0
+
+const refresh: ComponentHmrRefresh = {
+  requestReconciliation() {
+    reconciliationCount++
+  },
+  setComponentStalenessCheck(check) {
+    componentStalenessCheck = check
+  },
+}
 
 describe('component HMR runtime', () => {
   it('returns the latest registered component implementation', () => {
@@ -25,8 +37,8 @@ describe('component HMR runtime', () => {
       return () => 'wrapper'
     }
 
-    registerComponentForHmr('/app/component.tsx', 'Component', first, 'h1', Component)
-    registerComponentForHmr('/app/component.tsx', 'Component', second, 'h1', Component)
+    registerComponentForHmr(refresh, '/app/component.tsx', 'Component', first, 'h1', Component)
+    registerComponentForHmr(refresh, '/app/component.tsx', 'Component', second, 'h1', Component)
 
     assert.equal(getCurrentComponentForHmr('/app/component.tsx', 'Component'), second)
   })
@@ -36,10 +48,11 @@ describe('component HMR runtime', () => {
       return () => 'component'
     }
 
-    registerComponentForHmr('/app/update.tsx', 'Component', Component, 'h1', Component)
-    updateComponentModuleForHmr('/app/update.tsx', { Component })
+    registerComponentForHmr(refresh, '/app/update.tsx', 'Component', Component, 'h1', Component)
+    updateComponentModuleForHmr(refresh, '/app/update.tsx', { Component })
 
     assert.equal(getCurrentComponentForHmr('/app/update.tsx', 'Component'), Component)
+    assert.equal(reconciliationCount, 1)
   })
 
   it('does not mark accepted component exports stale when setup is unchanged', async () => {
@@ -53,12 +66,12 @@ describe('component HMR runtime', () => {
       return () => 'wrapper'
     }
 
-    registerComponentForHmr('/app/stale.tsx', 'Component', first, 'h1', Component)
-    registerComponentForHmr('/app/stale.tsx', 'Component', second, 'h1', Component)
+    registerComponentForHmr(refresh, '/app/stale.tsx', 'Component', first, 'h1', Component)
+    registerComponentForHmr(refresh, '/app/stale.tsx', 'Component', second, 'h1', Component)
 
     assert.equal(componentStalenessCheck?.(Component), false)
 
-    updateComponentModuleForHmr('/app/stale.tsx', { Component })
+    updateComponentModuleForHmr(refresh, '/app/stale.tsx', { Component })
 
     assert.equal(getCurrentComponentForHmr('/app/stale.tsx', 'Component'), second)
     assert.equal(componentStalenessCheck?.(Component), false)
@@ -221,8 +234,15 @@ describe('component HMR runtime', () => {
     }
 
     let handle = getComponentHandleForHmr(undefined, '/app/render.tsx', 'Greeting')
-    registerComponentForHmr('/app/render.tsx', 'Greeting', Greeting, 'h1', Greeting)
-    registerComponentRenderForHmr('/app/render.tsx', 'Greeting', handle, () => 'hello', Greeting)
+    registerComponentForHmr(refresh, '/app/render.tsx', 'Greeting', Greeting, 'h1', Greeting)
+    registerComponentRenderForHmr(
+      refresh,
+      '/app/render.tsx',
+      'Greeting',
+      handle,
+      () => 'hello',
+      Greeting,
+    )
 
     assert.equal(callComponentRenderForHmr(handle), 'hello')
 
@@ -230,8 +250,15 @@ describe('component HMR runtime', () => {
       return () => 'updated'
     }
 
-    updateComponentModuleForHmr('/app/render.tsx', { Greeting: UpdatedGreeting })
-    registerComponentRenderForHmr('/app/render.tsx', 'Greeting', handle, () => 'updated', Greeting)
+    updateComponentModuleForHmr(refresh, '/app/render.tsx', { Greeting: UpdatedGreeting })
+    registerComponentRenderForHmr(
+      refresh,
+      '/app/render.tsx',
+      'Greeting',
+      handle,
+      () => 'updated',
+      Greeting,
+    )
 
     assert.equal(callComponentRenderForHmr(handle), 'updated')
   })

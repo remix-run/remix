@@ -27,12 +27,12 @@ export type NodeHmrBrowserPayload =
       type: 'css-update' | 'full-reload' | 'js-update'
     }
 
-export interface BrowserEventChannel {
-  eventUrl: string
+export interface HmrEventChannel {
+  url: string
   send(payload: NodeHmrBrowserPayload): void
 }
 
-export const browserEventChannel: BrowserEventChannel | undefined = createBrowserEventChannel()
+export const eventChannel: HmrEventChannel | undefined = createBrowserEventChannel()
 
 export function getNodeHmrEndpoint(): NodeHmrEndpoint | undefined {
   let eventUrl = getNodeHmrEventUrl()
@@ -51,16 +51,16 @@ export function getNodeHmrEndpoint(): NodeHmrEndpoint | undefined {
 }
 
 export function getNodeHmrEventUrl(): string | undefined {
-  let eventUrl = process.env[eventUrlEnv]
-  return eventUrl && isHttpUrl(eventUrl) ? eventUrl : undefined
+  let url = process.env[eventUrlEnv]
+  return url && isHttpUrl(url) ? url : undefined
 }
 
-function createBrowserEventChannel(): BrowserEventChannel | undefined {
-  let eventUrl = getNodeHmrEventUrl()
-  if (eventUrl === undefined) return undefined
+function createBrowserEventChannel(): HmrEventChannel | undefined {
+  let url = getNodeHmrEventUrl()
+  if (url === undefined) return undefined
 
   return {
-    eventUrl,
+    url,
     send: sendNodeHmrBrowserPayload,
   }
 }
@@ -74,10 +74,10 @@ export function sendNodeHmrBrowserPayload(payload: NodeHmrBrowserPayload): void 
   })
 }
 
-export function setNodeHmrEventUrlEnv(env: NodeJS.ProcessEnv, eventUrl: string): NodeJS.ProcessEnv {
+export function setNodeHmrEventUrlEnv(env: NodeJS.ProcessEnv, url: string): NodeJS.ProcessEnv {
   return {
     ...env,
-    [eventUrlEnv]: eventUrl,
+    [eventUrlEnv]: url,
   }
 }
 

@@ -27,9 +27,6 @@
     "./auth": "./src/auth.ts",
     "./auth-middleware": "./src/auth-middleware.ts",
     "./cli": "./src/cli.ts",
-    "./component-hmr": "./src/component-hmr.ts",
-    "./component-hmr/runtime": "./src/component-hmr/runtime.ts",
-    "./component-hmr/transform": "./src/component-hmr/transform.ts",
     "./compression-middleware": "./src/compression-middleware.ts",
     "./cookie": "./src/cookie.ts",
     "./cop-middleware": "./src/cop-middleware.ts",
@@ -99,9 +96,7 @@
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
     "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
-    "./node-hmr": "./src/node-hmr.ts",
-    "./node-hmr/cli": "./src/node-hmr/cli.ts",
-    "./node-hmr/register": "./src/node-hmr/register.ts",
+    "./node-hmr/runtime": "./src/node-hmr/runtime.ts",
     "./node-tsx": "./src/node-tsx.ts",
     "./node-tsx/load-module": "./src/node-tsx/load-module.ts",
     "./render-middleware": "./src/render-middleware.ts",
@@ -134,13 +129,15 @@
     "./test": "./src/test.ts",
     "./test/cli": "./src/test/cli.ts",
     "./ui": "./src/ui.ts",
+    "./ui-hmr/runtime": "./src/ui-hmr/runtime.ts",
+    "./ui-hmr/transform": "./src/ui-hmr/transform.ts",
     "./ui/accordion": "./src/ui/accordion.ts",
     "./ui/anchor": "./src/ui/anchor.ts",
     "./ui/animation": "./src/ui/animation.ts",
     "./ui/breadcrumbs": "./src/ui/breadcrumbs.ts",
     "./ui/button": "./src/ui/button.ts",
     "./ui/combobox": "./src/ui/combobox.ts",
-    "./ui/dev": "./src/ui/dev.ts",
+    "./ui/dev/refresh": "./src/ui/dev/refresh.ts",
     "./ui/glyph": "./src/ui/glyph.ts",
     "./ui/jsx-dev-runtime": "./src/ui/jsx-dev-runtime.ts",
     "./ui/jsx-runtime": "./src/ui/jsx-runtime.ts",
@@ -180,18 +177,6 @@
       "./cli": {
         "types": "./dist/cli.d.ts",
         "default": "./dist/cli.js"
-      },
-      "./component-hmr": {
-        "types": "./dist/component-hmr.d.ts",
-        "default": "./dist/component-hmr.js"
-      },
-      "./component-hmr/runtime": {
-        "types": "./dist/component-hmr/runtime.d.ts",
-        "default": "./dist/component-hmr/runtime.js"
-      },
-      "./component-hmr/transform": {
-        "types": "./dist/component-hmr/transform.d.ts",
-        "default": "./dist/component-hmr/transform.js"
       },
       "./compression-middleware": {
         "types": "./dist/compression-middleware.d.ts",
@@ -469,17 +454,9 @@
         "types": "./dist/node-fetch-server/test.d.ts",
         "default": "./dist/node-fetch-server/test.js"
       },
-      "./node-hmr": {
-        "types": "./dist/node-hmr.d.ts",
-        "default": "./dist/node-hmr.js"
-      },
-      "./node-hmr/cli": {
-        "types": "./dist/node-hmr/cli.d.ts",
-        "default": "./dist/node-hmr/cli.js"
-      },
-      "./node-hmr/register": {
-        "types": "./dist/node-hmr/register.d.ts",
-        "default": "./dist/node-hmr/register.js"
+      "./node-hmr/runtime": {
+        "types": "./dist/node-hmr/runtime.d.ts",
+        "default": "./dist/node-hmr/runtime.js"
       },
       "./node-tsx": {
         "types": "./dist/node-tsx.d.ts",
@@ -609,6 +586,14 @@
         "types": "./dist/ui.d.ts",
         "default": "./dist/ui.js"
       },
+      "./ui-hmr/runtime": {
+        "types": "./dist/ui-hmr/runtime.d.ts",
+        "default": "./dist/ui-hmr/runtime.js"
+      },
+      "./ui-hmr/transform": {
+        "types": "./dist/ui-hmr/transform.d.ts",
+        "default": "./dist/ui-hmr/transform.js"
+      },
       "./ui/accordion": {
         "types": "./dist/ui/accordion.d.ts",
         "default": "./dist/ui/accordion.js"
@@ -633,9 +618,9 @@
         "types": "./dist/ui/combobox.d.ts",
         "default": "./dist/ui/combobox.js"
       },
-      "./ui/dev": {
-        "types": "./dist/ui/dev.d.ts",
-        "default": "./dist/ui/dev.js"
+      "./ui/dev/refresh": {
+        "types": "./dist/ui/dev/refresh.d.ts",
+        "default": "./dist/ui/dev/refresh.js"
       },
       "./ui/glyph": {
         "types": "./dist/ui/glyph.d.ts",
@@ -702,7 +687,6 @@
     "@remix-run/auth": "workspace:^",
     "@remix-run/auth-middleware": "workspace:^",
     "@remix-run/ui": "workspace:^",
-    "@remix-run/component-hmr": "workspace:^",
     "@remix-run/compression-middleware": "workspace:^",
     "@remix-run/cop-middleware": "workspace:^",
     "@remix-run/cors-middleware": "workspace:^",
@@ -742,7 +726,8 @@
     "@remix-run/cli": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@remix-run/terminal": "workspace:^",
-    "@remix-run/render-middleware": "workspace:^"
+    "@remix-run/render-middleware": "workspace:^",
+    "@remix-run/ui-hmr": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

@@ -15,8 +15,8 @@ import type {
   ResolvedAssetServerFilesOptions,
 } from './files/config.ts'
 import { getFingerprintRequestCacheControl, parseFingerprintSuffix } from './fingerprint.ts'
-import { createHmrBroadcaster, createHmrClientSource } from './hmr.ts'
-import type { HmrBroadcaster, HmrPayload } from './hmr.ts'
+import { createHmrClientSource } from './hmr.ts'
+import type { HmrPayload } from './hmr.ts'
 import { getInjectedPackageRouteConfigs } from './injected-packages.ts'
 import { normalizeFilePath, normalizePathname } from './paths.ts'
 import { compileRoutes } from './routes.ts'
@@ -47,14 +47,15 @@ interface AssetServerWatchOptions {
 
 export interface AssetServerHmrOptions {
   /**
-   * Optional browser EventSource URL. When omitted, the asset server serves its
-   * own HMR event stream under `basePath`.
+   * External HMR event channel, e.g. `eventChannel` exported by
+   * `remix/node-hmr/runtime`
    */
-  eventUrl?: string
-  /**
-   * Optional payload sink for an external HMR event stream.
-   */
-  send?: (payload: HmrPayload) => void
+  eventChannel: HmrEventChannel | undefined
+}
+
+export interface HmrEventChannel {
+  url: string
+  send(payload: HmrPayload): void
 }
 
 interface FingerprintOptions {
@@ -140,10 +141,10 @@ export interface AssetServerOptions<transforms extends AssetRequestTransformMap 
    */
   files?: AssetServerFilesOptions<transforms>
   /**
-   * Enable the prototype browser HMR transport and import.meta.hot runtime injection.
-   * This is intended for development and requires active watch mode.
+   * Enable HMR via the import.meta.hot API using an external event channel such
+   * as `remix/node-hmr/runtime`. HMR requires `watch` to be enabled.
    */
-  hmr?: boolean | AssetServerHmrOptions
+  hmr?: AssetServerHmrOptions
   /**
    * Enable filesystem-backed cache invalidation for long-lived server instances.
    * Enabled by default. Pass `true` to use the default watcher options, an options
@@ -266,15 +267,10 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   let watcher: AssetServerWatcher | null = null
   let chokidarWatcher: ChokidarWatcher | null = null
   let fileCompiler: FileCompiler | null = null
-  let hmrBroadcaster =
-    resolvedOptions.hmr && resolvedOptions.hmr.eventUrl === undefined
-      ? createHmrBroadcaster()
-      : null
-  let sendHmrPayload = resolvedOptions.hmr
-    ? createHmrPayloadSender(resolvedOptions.hmr, hmrBroadcaster)
-    : null
+  let hmrEventChannel = resolvedOptions.hmr?.eventChannel
+  let sendHmrPayload = resolvedOptions.hmr ? createHmrPayloadSender(resolvedOptions.hmr) : null
   let hmrPathnames = getHmrPathnames(resolvedOptions.basePath)
-  let hmrEventUrl = resolvedOptions.hmr?.eventUrl ?? hmrPathnames.events
+  let hmrEventUrl = hmrEventChannel?.url
   let scriptCompiler = createScriptCompiler({
     buildId: resolvedOptions.buildId,
     define: resolvedOptions.define,
@@ -405,11 +401,8 @@ export function createAssetServer<const transforms extends AssetRequestTransform
 
       if (resolvedOptions.hmr) {
         if (requestPathname === hmrPathnames.client) {
+          assertHmrEventUrl(hmrEventUrl)
           return createHmrClientResponse(hmrEventUrl, request.method)
-        }
-
-        if (hmrBroadcaster && requestPathname === hmrPathnames.events) {
-          return hmrBroadcaster.connect()
         }
       }
 
@@ -638,7 +631,6 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       return mergePreloadLayers(await Promise.all(preloadLayerGroupPromises))
     },
     async close() {
-      hmrBroadcaster?.close()
       await watcher?.close()
     },
   }
@@ -702,13 +694,15 @@ function createHmrClientResponse(eventPathname: string, method: string): Respons
   })
 }
 
-function createHmrPayloadSender(
-  options: AssetServerHmrOptions,
-  broadcaster: HmrBroadcaster | null,
-): (payload: HmrPayload) => void {
+function assertHmrEventUrl(url: string | undefined): asserts url is string {
+  if (url === undefined) {
+    throw new TypeError('hmr.eventChannel must be provided')
+  }
+}
+
+function createHmrPayloadSender(options: AssetServerHmrOptions): (payload: HmrPayload) => void {
   return (payload) => {
-    broadcaster?.send(payload)
-    options.send?.(payload)
+    options.eventChannel?.send(payload)
   }
 }
 
@@ -804,12 +798,18 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
 
 function normalizeHmrOptions(options: AssetServerOptions['hmr']): AssetServerHmrOptions | null {
   if (!options) return null
-  if (options === true) return {}
-  if (options.eventUrl !== undefined && typeof options.eventUrl !== 'string') {
-    throw new TypeError('hmr.eventUrl must be a string')
+
+  let { eventChannel } = options
+  if (eventChannel === undefined) return null
+
+  if (eventChannel === null || typeof eventChannel !== 'object') {
+    throw new TypeError('hmr.eventChannel must be an object')
   }
-  if (options.send !== undefined && typeof options.send !== 'function') {
-    throw new TypeError('hmr.send must be a function')
+  if (typeof eventChannel.url !== 'string') {
+    throw new TypeError('hmr.eventChannel.url must be a string')
+  }
+  if (typeof eventChannel.send !== 'function') {
+    throw new TypeError('hmr.eventChannel.send must be a function')
   }
   return options
 }

@@ -301,6 +301,7 @@ describe('node-hmr', () => {
         `  return () => 'Hello from component'`,
         `}`,
       ].join('\n'),
+      ...getRemixUiRefreshFixtureFiles(),
     })
     let server = startFixtureServer(fixture.path)
 
@@ -321,6 +322,35 @@ describe('node-hmr', () => {
     }
   })
 
+  it('hot updates transformed component modules with a symlinked remix package', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
+      'greeting.tsx': [
+        `export function Greeting() {`,
+        `  return () => 'Hello from component'`,
+        `}`,
+      ].join('\n'),
+    })
+    await writeSymlinkedRemixUiRefreshFixture(fixture.path)
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+
+      await fs.writeFile(
+        path.join(fixture.path, 'greeting.tsx'),
+        [`export function Greeting() {`, `  return () => 'Updated from component'`, `}`].join('\n'),
+      )
+
+      await waitForResponse(ready.port, `${ready.pid}:Updated from component`, () => server.output)
+      assert.equal(server.readyCount, 1)
+      assert.match(server.output, /hmr update greeting\.tsx/)
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('hot updates transformed client entry components without restarting the server', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./greeting.tsx', 'Greeting()()'),
@@ -332,6 +362,7 @@ describe('node-hmr', () => {
         `  return () => 'Hello from client entry'`,
         `})`,
       ].join('\n'),
+      ...getScopedUiRefreshFixtureFiles(),
     })
     let server = startFixtureServer(fixture.path)
 
@@ -485,6 +516,17 @@ describe('node-hmr', () => {
 })
 
 function getServerSource(importSpecifier: string, responseExpression: string): string {
+  return getFixtureServerSource(importSpecifier, `String(${responseExpression})`)
+}
+
+function getPidServerSource(importSpecifier: string, responseExpression: string): string {
+  return getFixtureServerSource(
+    importSpecifier,
+    `String(process.pid) + ':' + String(${responseExpression})`,
+  )
+}
+
+function getFixtureServerSource(importSpecifier: string, responseExpression: string): string {
   return [
     `import { createServer } from 'node:http'`,
     `import { ${importSpecifier.includes('greeting') ? 'Greeting' : 'getMessage'} } from ${JSON.stringify(
@@ -492,7 +534,7 @@ function getServerSource(importSpecifier: string, responseExpression: string): s
     )}`,
     ``,
     `let server = createServer((_request, response) => {`,
-    `  response.end(String(${responseExpression}))`,
+    `  response.end(${responseExpression})`,
     `})`,
     ``,
     `server.listen(0, () => {`,
@@ -505,13 +547,13 @@ function getServerSource(importSpecifier: string, responseExpression: string): s
 }
 
 function getBrowserHmrServerSource(message: string): string {
-  let nodeHmrIndexUrl = pathToFileURL(path.join(packageRoot, 'src/index.ts')).href
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.ts')).href
 
   return [
     `import { createServer } from 'node:http'`,
-    `import { getNodeHmrEventUrl } from ${JSON.stringify(nodeHmrIndexUrl)}`,
+    `import { eventChannel } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
     ``,
-    `console.log(JSON.stringify({ type: 'hmr-url', url: getNodeHmrEventUrl(), pid: process.pid }))`,
+    `console.log(JSON.stringify({ type: 'hmr-url', url: eventChannel?.url, pid: process.pid }))`,
     ``,
     `let server = createServer((_request, response) => {`,
     `  response.end(${JSON.stringify(message)})`,
@@ -526,6 +568,60 @@ function getBrowserHmrServerSource(message: string): string {
   ].join('\n')
 }
 
+function getScopedUiRefreshFixtureFiles(): Record<string, string> {
+  return {
+    'node_modules/@remix-run/ui/package.json': JSON.stringify({
+      exports: {
+        './dev/refresh': './dev/refresh.ts',
+        './package.json': './package.json',
+      },
+      name: '@remix-run/ui',
+      type: 'module',
+    }),
+    'node_modules/@remix-run/ui/dev/refresh.ts': [
+      `export function requestReconciliation() {}`,
+      `export function setComponentStalenessCheck(_check) {}`,
+    ].join('\n'),
+  }
+}
+
+async function writeSymlinkedRemixUiRefreshFixture(fixturePath: string): Promise<void> {
+  let packagePath = path.join(fixturePath, 'linked/remix')
+  await writeFixtureFiles(packagePath, getRemixUiRefreshPackageFiles())
+  await fs.mkdir(path.join(fixturePath, 'node_modules'), { recursive: true })
+  await fs.symlink(
+    packagePath,
+    path.join(fixturePath, 'node_modules/remix'),
+    process.platform === 'win32' ? 'junction' : 'dir',
+  )
+}
+
+function getRemixUiRefreshFixtureFiles(): Record<string, string> {
+  return Object.fromEntries(
+    Object.entries(getRemixUiRefreshPackageFiles()).map(([filePath, contents]) => [
+      `node_modules/remix/${filePath}`,
+      contents,
+    ]),
+  )
+}
+
+function getRemixUiRefreshPackageFiles(): Record<string, string> {
+  return {
+    'package.json': JSON.stringify({
+      exports: {
+        './package.json': './package.json',
+        './ui/dev/refresh': './ui/dev/refresh.ts',
+      },
+      name: 'remix',
+      type: 'module',
+    }),
+    'ui/dev/refresh.ts': [
+      `export function requestReconciliation() {}`,
+      `export function setComponentStalenessCheck(_check) {}`,
+    ].join('\n'),
+  }
+}
+
 async function createFixture(
   files: Record<string, string>,
 ): Promise<AsyncDisposable & { entryPath: string; path: string }> {
@@ -533,13 +629,7 @@ async function createFixture(
   await fs.mkdir(fixtureRoot, { recursive: true })
 
   let fixturePath = await fs.mkdtemp(path.join(fixtureRoot, 'node-hmr-'))
-  await Promise.all(
-    Object.entries(files).map(async ([filePath, contents]) => {
-      let absolutePath = path.join(fixturePath, filePath)
-      await fs.mkdir(path.dirname(absolutePath), { recursive: true })
-      await fs.writeFile(absolutePath, contents)
-    }),
-  )
+  await writeFixtureFiles(fixturePath, files)
 
   return {
     entryPath: path.join(fixturePath, 'server.ts'),
@@ -550,6 +640,16 @@ async function createFixture(
   }
 }
 
+async function writeFixtureFiles(root: string, files: Record<string, string>): Promise<void> {
+  await Promise.all(
+    Object.entries(files).map(async ([filePath, contents]) => {
+      let absolutePath = path.join(root, filePath)
+      await fs.mkdir(path.dirname(absolutePath), { recursive: true })
+      await fs.writeFile(absolutePath, contents)
+    }),
+  )
+}
+
 async function waitForOutput(server: ReturnType<typeof startFixtureServer>, pattern: RegExp) {
   await waitFor(
     () => pattern.test(server.output),
@@ -558,13 +658,16 @@ async function waitForOutput(server: ReturnType<typeof startFixtureServer>, patt
 }
 
 function startFixtureServer(cwd: string) {
+  // pnpm's binary shims set NODE_PATH to the workspace virtual store, which lets
+  // CJS resolution find workspace packages that the fixture app cannot import via ESM.
+  let { NODE_PATH: _nodePath, ...env } = process.env
   let child = spawn(
     process.execPath,
     ['--import', nodeTsxImportUrl, cliEntryPath, '--import', nodeTsxImportUrl, 'server.ts'],
     {
       cwd,
       env: {
-        ...process.env,
+        ...env,
         NODE_ENV: 'development',
       },
       stdio: ['ignore', 'pipe', 'pipe'],

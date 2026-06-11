@@ -43,12 +43,14 @@ type ClientEntryMatch = {
   statementStart: number
 }
 
-const runtimeSpecifier = '@remix-run/component-hmr/runtime'
+const runtimeSpecifier = '@remix-run/ui-hmr/runtime'
+const refreshSpecifier = '@remix-run/ui/dev/refresh'
 
 export function transformComponentHmr(
   source: string,
   options: {
     moduleUrl: string
+    refreshSpecifier?: string
     runtimeSpecifier?: string
     sourceMap?: boolean
   },
@@ -73,13 +75,15 @@ export function transformComponentHmr(
     let replacement = [
       `function ${implementationName}(${match.params}) ${body}`,
       `${exportPrefix}function ${match.name}(${match.params}) {`,
-      `  return __remixHmrGetComponent(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(
-        match.name,
-      )}).apply(undefined, arguments);`,
+      `  return __remixHmr.getCurrentComponentForHmr(${JSON.stringify(
+        options.moduleUrl,
+      )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
       `}`,
-      `__remixHmrRegisterComponent(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(
-        match.name,
-      )}, ${implementationName}, ${JSON.stringify(match.setupHash)}, ${match.name});`,
+      `__remixHmr.registerComponentForHmr(__remixUIRefresh, ${JSON.stringify(
+        options.moduleUrl,
+      )}, ${JSON.stringify(match.name)}, ${implementationName}, ${JSON.stringify(
+        match.setupHash,
+      )}, ${match.name});`,
     ].join('\n')
 
     rewritten.overwrite(match.fullStart, match.fullEnd, replacement)
@@ -92,9 +96,9 @@ export function transformComponentHmr(
     let implementationName = `__remixHmrImpl_${match.name}`
     let wrapperSource = [
       `function ${match.functionName}(${match.params}) {`,
-      `  return __remixHmrGetComponent(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(
-        match.name,
-      )}).apply(undefined, arguments);`,
+      `  return __remixHmr.getCurrentComponentForHmr(${JSON.stringify(
+        options.moduleUrl,
+      )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
       `}`,
     ].join('\n')
 
@@ -105,24 +109,20 @@ export function transformComponentHmr(
     rewritten.overwrite(match.functionStart, match.functionEnd, wrapperSource)
     rewritten.appendLeft(
       match.statementEnd,
-      `\n__remixHmrRegisterComponent(${JSON.stringify(options.moduleUrl)}, ${JSON.stringify(
-        match.name,
-      )}, ${implementationName}, ${JSON.stringify(match.setupHash)}, ${match.name});`,
+      `\n__remixHmr.registerComponentForHmr(__remixUIRefresh, ${JSON.stringify(
+        options.moduleUrl,
+      )}, ${JSON.stringify(match.name)}, ${implementationName}, ${JSON.stringify(
+        match.setupHash,
+      )}, ${match.name});`,
     )
   }
 
   rewritten.prepend(
     [
-      `import {`,
-      `  callComponentRenderForHmr as __remixHmrCallRender,`,
-      `  getComponentHandleForHmr as __remixHmrGetHandle,`,
-      `  getCurrentComponentForHmr as __remixHmrGetComponent,`,
-      `  getComponentHmrState as __remixHmrGetState,`,
-      `  registerComponentForHmr as __remixHmrRegisterComponent,`,
-      `  registerComponentRenderForHmr as __remixHmrRegisterRender,`,
-      `  setupComponentForHmr as __remixHmrSetup,`,
-      `  updateComponentModuleForHmr as __remixHmrUpdateComponentModule,`,
-      `} from ${JSON.stringify(options.runtimeSpecifier ?? runtimeSpecifier)};`,
+      `import * as __remixHmr from ${JSON.stringify(options.runtimeSpecifier ?? runtimeSpecifier)};`,
+      `import * as __remixUIRefresh from ${JSON.stringify(
+        options.refreshSpecifier ?? refreshSpecifier,
+      )};`,
       ``,
     ].join('\n'),
   )
@@ -132,7 +132,9 @@ export function transformComponentHmr(
       `if (import.meta.hot) {`,
       `  import.meta.hot.accept((module) => {`,
       `    if (module && typeof module === 'object') {`,
-      `      __remixHmrUpdateComponentModule(${JSON.stringify(options.moduleUrl)}, module);`,
+      `      __remixHmr.updateComponentModuleForHmr(__remixUIRefresh, ${JSON.stringify(
+        options.moduleUrl,
+      )}, module);`,
       `    } else {`,
       `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
       `    }`,
@@ -383,22 +385,22 @@ function createHmrImplementationBody(
 
   return [
     `{`,
-    `  let __remixHmrHandle = __remixHmrGetHandle(arguments[0], ${JSON.stringify(
+    `  let __remixHmrHandle = __remixHmr.getComponentHandleForHmr(arguments[0], ${JSON.stringify(
       moduleUrl,
     )}, ${JSON.stringify(match.name)});`,
-    `  let __s = __remixHmrGetState(__remixHmrHandle);`,
-    `  if (__remixHmrSetup(__remixHmrHandle, __s, ${JSON.stringify(moduleUrl)}, ${JSON.stringify(
-      match.name,
-    )}, ${JSON.stringify(match.setupHash)}, (__s) => {`,
+    `  let __s = __remixHmr.getComponentHmrState(__remixHmrHandle);`,
+    `  if (__remixHmr.setupComponentForHmr(__remixHmrHandle, __s, ${JSON.stringify(
+      moduleUrl,
+    )}, ${JSON.stringify(match.name)}, ${JSON.stringify(match.setupHash)}, (__s) => {`,
     indent(setupSource, 4),
     `  }, ${match.name})) {`,
     `    return () => null;`,
     `  }`,
-    `  __remixHmrRegisterRender(${JSON.stringify(moduleUrl)}, ${JSON.stringify(
-      match.name,
-    )}, __remixHmrHandle, ${renderSource}, ${match.name});`,
+    `  __remixHmr.registerComponentRenderForHmr(__remixUIRefresh, ${JSON.stringify(
+      moduleUrl,
+    )}, ${JSON.stringify(match.name)}, __remixHmrHandle, ${renderSource}, ${match.name});`,
     `  return function () {`,
-    `    return __remixHmrCallRender(__remixHmrHandle, ...arguments);`,
+    `    return __remixHmr.callComponentRenderForHmr(__remixHmrHandle, ...arguments);`,
     `  };`,
     `}`,
   ].join('\n')

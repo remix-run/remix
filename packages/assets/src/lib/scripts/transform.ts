@@ -2,7 +2,7 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { getTsconfig } from 'get-tsconfig'
-import { transformComponentHmr } from '@remix-run/component-hmr/transform'
+import { transformComponentHmr } from '@remix-run/ui-hmr/transform'
 import MagicString from 'magic-string'
 import { minify } from 'oxc-minify'
 import { parseSync, visitorKeys } from 'oxc-parser'
@@ -10,6 +10,7 @@ import { transform as oxcTransform } from 'oxc-transform'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
 import type { Cache, TsConfigJsonResolved } from 'get-tsconfig'
 import type { Node, Program } from 'oxc-parser'
+import type { ResolverFactory } from 'oxc-resolver'
 import type { TransformOptions as OxcTransformOptions } from 'oxc-transform'
 
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
@@ -59,6 +60,9 @@ const supportedTsconfigTransformCompilerOptions = {
   jsxImportSource: 'jsxImportSource',
   useDefineForClassFields: 'useDefineForClassFields',
 } as const
+
+const componentHmrRuntimeSpecifier = '@remix-run/ui-hmr/runtime'
+const componentHmrRefreshSpecifiers = ['remix/ui/dev/refresh', '@remix-run/ui/dev/refresh'] as const
 
 export type ResolveModuleResult = {
   identityPath: string
@@ -117,9 +121,11 @@ export type TransformArgs = {
   componentHmr: boolean
   define: Record<string, string> | null
   externalSet: ReadonlySet<string>
+  isAllowed(absolutePath: string): boolean
   isWatchIgnored(filePath: string): boolean
   minify: boolean
   resolveActualPath(identityPath: string): string | null
+  resolverFactory: ResolverFactory
   routes: CompiledRoutes
   sourceMapSourcePaths: 'absolute' | 'url'
   sourceMaps: 'external' | 'inline' | null
@@ -224,8 +230,22 @@ export async function transformModule(
       )
     }
 
+    let componentHmrRefreshSpecifier = args.componentHmr
+      ? await resolveComponentHmrRefreshSpecifier(resolvedPath, {
+          isAllowed: args.isAllowed,
+          resolverFactory: args.resolverFactory,
+        })
+      : null
+
     let analysis = await analyzeModuleSource(sourceText, resolvedPath, transformOptions, {
-      componentHmrModuleUrl: args.componentHmr ? stableUrlPathname : undefined,
+      componentHmr:
+        componentHmrRefreshSpecifier === null
+          ? undefined
+          : {
+              moduleUrl: stableUrlPathname,
+              refreshSpecifier: componentHmrRefreshSpecifier,
+              runtimeSpecifier: componentHmrRuntimeSpecifier,
+            },
       define: args.define ?? undefined,
       minify: args.minify,
       sourceMaps: args.sourceMaps ?? undefined,
@@ -333,6 +353,32 @@ function getHmrAnalysis(rawCode: string): TransformedModule['hmr'] {
   }
 }
 
+export async function resolveComponentHmrRefreshSpecifier(
+  importerPath: string,
+  options: {
+    isAllowed(absolutePath: string): boolean
+    resolverFactory: ResolverFactory
+  },
+): Promise<string | null> {
+  for (let refreshSpecifier of componentHmrRefreshSpecifiers) {
+    let refreshResult = await options.resolverFactory.resolveFileAsync(
+      importerPath,
+      refreshSpecifier,
+    )
+
+    if (
+      !refreshResult.error &&
+      refreshResult.path !== undefined &&
+      path.isAbsolute(refreshResult.path) &&
+      options.isAllowed(normalizeFilePath(refreshResult.path))
+    ) {
+      return refreshSpecifier
+    }
+  }
+
+  return null
+}
+
 function isImportMetaHotAcceptCallee(node: Node): boolean {
   let callee = unwrapChainExpression(node)
   if (callee.type !== 'MemberExpression') return false
@@ -421,7 +467,11 @@ async function analyzeModuleSource(
   resolvedPath: string,
   transformOptions: TsconfigTransformOptions,
   options: {
-    componentHmrModuleUrl?: string
+    componentHmr?: {
+      moduleUrl: string
+      refreshSpecifier: string
+      runtimeSpecifier: string
+    }
     define?: Record<string, string>
     minify: boolean
     sourceMaps?: 'external' | 'inline'
@@ -451,9 +501,11 @@ async function analyzeModuleSource(
   let rawCode = transformResult.code.trimEnd()
   let sourceMap = stringifySourceMap(transformResult.map)
 
-  if (options.componentHmrModuleUrl) {
+  if (options.componentHmr) {
     let componentHmrResult = transformComponentHmr(rawCode, {
-      moduleUrl: options.componentHmrModuleUrl,
+      moduleUrl: options.componentHmr.moduleUrl,
+      refreshSpecifier: options.componentHmr.refreshSpecifier,
+      runtimeSpecifier: options.componentHmr.runtimeSpecifier,
       sourceMap: options.sourceMaps != null,
     })
 

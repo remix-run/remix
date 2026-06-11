@@ -1,3 +1,2 @@
 // IMPORTANT: This file is auto-generated, please do not edit manually.
-import '@remix-run/node-hmr/register'
-export {}
+export * from '@remix-run/ui-hmr/runtime'

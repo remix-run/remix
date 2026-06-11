@@ -1,16 +1,19 @@
 import { registerHooks } from 'node:module'
+import { createRequire } from 'node:module'
 import { Server } from 'node:net'
-import { isAbsolute, relative } from 'node:path'
+import { dirname, isAbsolute, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { transformComponentHmr } from '@remix-run/component-hmr/transform'
+import { transformComponentHmr } from '@remix-run/ui-hmr/transform'
 
 import { installNodeHmrRuntime } from './lib/runtime.ts'
 
 const runtime = installNodeHmrRuntime()
 const rootPath = process.env.REMIX_NODE_HMR_ROOT
-const componentHmrRuntimeUrl = import.meta.resolve('@remix-run/component-hmr/runtime')
 let invalidatedUrlTimestamps = new Map<string, number>()
+const componentHmrRuntimeUrl = import.meta.resolve('@remix-run/ui-hmr/runtime')
+
+const componentHmrRefreshSpecifiers = ['remix/ui/dev/refresh', '@remix-run/ui/dev/refresh'] as const
 
 patchServerListen()
 
@@ -89,12 +92,31 @@ function transformSource(url: string, source: string): string {
     return source
   }
 
+  let componentHmrRefreshSpecifier = resolveComponentHmrRefreshSpecifier(url)
+  if (componentHmrRefreshSpecifier === null) return source
+
   let result = transformComponentHmr(source, {
     moduleUrl: url,
+    refreshSpecifier: componentHmrRefreshSpecifier,
     runtimeSpecifier: componentHmrRuntimeUrl,
   })
 
   return result.code
+}
+
+function resolveComponentHmrRefreshSpecifier(url: string): string | null {
+  let filePath = fileURLToPath(url)
+  let require = createRequire(url)
+  let paths = [dirname(filePath)]
+
+  for (let refreshSpecifier of componentHmrRefreshSpecifiers) {
+    try {
+      require.resolve(refreshSpecifier, { paths })
+      return refreshSpecifier
+    } catch {}
+  }
+
+  return null
 }
 
 function rewriteInvalidatedImports(url: string, source: string): string {

@@ -24,68 +24,6 @@ export type HmrPayload =
       type: 'css-update' | 'full-reload' | 'js-update'
     }
 
-type HmrClient = {
-  close(): void
-  send(payload: HmrPayload): void
-}
-
-export type HmrBroadcaster = {
-  close(): void
-  connect(): Response
-  send(payload: HmrPayload): void
-}
-
-export function createHmrBroadcaster(): HmrBroadcaster {
-  let clients = new Set<HmrClient>()
-
-  return {
-    close() {
-      for (let client of clients) {
-        client.close()
-      }
-      clients.clear()
-    },
-
-    connect() {
-      let encoder = new TextEncoder()
-      let client: HmrClient
-
-      let stream = new ReadableStream<Uint8Array>({
-        start(controller) {
-          client = {
-            close() {
-              controller.close()
-              clients.delete(client)
-            },
-            send(payload) {
-              controller.enqueue(encoder.encode(formatServerSentEvent(payload)))
-            },
-          }
-
-          clients.add(client)
-          client.send({ type: 'connected' })
-        },
-        cancel() {
-          clients.delete(client)
-        },
-      })
-
-      return new Response(stream, {
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Content-Type': 'text/event-stream; charset=utf-8',
-        },
-      })
-    },
-
-    send(payload) {
-      for (let client of clients) {
-        client.send(payload)
-      }
-    },
-  }
-}
-
 export function createHmrClientSource(options: { eventPathname: string }): string {
   return `
 const contexts = new Map()
@@ -383,8 +321,4 @@ function reloadPage() {
   }, 20)
 }
 `.trimStart()
-}
-
-export function formatServerSentEvent(payload: HmrPayload): string {
-  return `data: ${JSON.stringify(payload)}\n\n`
 }

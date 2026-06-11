@@ -1,7 +1,10 @@
-import { requestReconciliation, setComponentStalenessCheck } from '@remix-run/ui/dev'
-
 export interface ComponentHmrState {
   [key: string]: unknown
+}
+
+export interface ComponentHmrRefresh {
+  requestReconciliation(): void
+  setComponentStalenessCheck(check: (component: Function) => boolean): void
 }
 
 type ComponentFunction = (...args: unknown[]) => unknown
@@ -28,13 +31,14 @@ const staleComponentKeys = new Set<string>()
 let isStalenessCheckInstalled = false
 
 export function registerComponentForHmr(
+  refresh: ComponentHmrRefresh,
   moduleUrl: string,
   componentName: string,
   implementation: ComponentFunction,
   setupHash: string,
   wrapper: Function,
 ): void {
-  installStalenessCheck()
+  installStalenessCheck(refresh)
 
   let key = getComponentKey(moduleUrl, componentName)
   let existing = components.get(key)
@@ -136,6 +140,7 @@ export function clearComponentHmrState(handle: ComponentHmrHandle): void {
 }
 
 export function registerComponentRenderForHmr(
+  refresh: ComponentHmrRefresh,
   moduleUrl: string,
   componentName: string,
   handle: ComponentHmrHandle,
@@ -143,7 +148,7 @@ export function registerComponentRenderForHmr(
   wrapper: Function,
 ): void {
   let key = getComponentKey(moduleUrl, componentName)
-  installStalenessCheck()
+  installStalenessCheck(refresh)
   componentKeys.set(wrapper, key)
   renderFunctions.set(handle, render)
 
@@ -180,7 +185,11 @@ export function registerComponentInstanceForHmr(
   handle.signal.addEventListener('abort', cleanup, { once: true })
 }
 
-export function updateComponentModuleForHmr(moduleUrl: string, module: object): void {
+export function updateComponentModuleForHmr(
+  refresh: ComponentHmrRefresh,
+  moduleUrl: string,
+  module: object,
+): void {
   let modulePrefix = `${moduleUrl}:`
   let updated = false
 
@@ -206,18 +215,18 @@ export function updateComponentModuleForHmr(moduleUrl: string, module: object): 
     staleComponentKeys.add(modulePrefix)
   }
 
-  requestReconciliation()
+  refresh.requestReconciliation()
 
   queueMicrotask(() => {
     staleComponentKeys.clear()
   })
 }
 
-function installStalenessCheck() {
+function installStalenessCheck(refresh: ComponentHmrRefresh) {
   if (isStalenessCheckInstalled) return
   isStalenessCheckInstalled = true
 
-  setComponentStalenessCheck((component) => {
+  refresh.setComponentStalenessCheck((component) => {
     let key = componentKeys.get(component)
     return key !== undefined && staleComponentKeys.has(key)
   })

@@ -1,5 +1,5 @@
 {
-  "name": "@remix-run/component-hmr",
+  "name": "@remix-run/ui-hmr",
   "version": "0.0.0",
   "description": "Hot module replacement runtime and transforms for Remix UI components",
   "author": "Michael Jackson <mjijackson@gmail.com>",
@@ -7,9 +7,9 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/remix-run/remix.git",
-    "directory": "packages/component-hmr"
+    "directory": "packages/ui-hmr"
   },
-  "homepage": "https://github.com/remix-run/remix/tree/main/packages/component-hmr#readme",
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/ui-hmr#readme",
   "files": [
     "LICENSE",
     "README.md",
@@ -19,17 +19,12 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/index.ts",
     "./runtime": "./src/runtime.ts",
     "./transform": "./src/transform.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
       "./runtime": {
         "types": "./dist/runtime.d.ts",
         "default": "./dist/runtime.js"
@@ -42,7 +37,6 @@
     }
   },
   "dependencies": {
-    "@remix-run/ui": "workspace:^",
     "magic-string": "^0.30.21",
     "oxc-parser": "^0.121.0"
   },

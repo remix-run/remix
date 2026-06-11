@@ -8,7 +8,9 @@ type ResolvedInjectedPackage = {
   packageRoot: string
 }
 
-const injectedPackageNames = ['@oxc-project/runtime', '@remix-run/component-hmr'] as const
+const injectedPackageNames = ['@oxc-project/runtime', '@remix-run/ui-hmr'] as const
+const authoredInjectedPackageNames = ['@oxc-project/runtime'] as const
+const generatedInjectedPackageSpecifiers = ['@remix-run/ui-hmr/runtime'] as const
 const injectedPackagesBasePath = '/__@remix/injected'
 
 const resolvedInjectedPackages = new Map<string, ResolvedInjectedPackage>()
@@ -44,7 +46,13 @@ export function getInjectedPackageRouteConfigs(): {
 }
 
 export function getInjectedPackageNameForSpecifier(specifier: string): string | null {
-  for (let packageName of injectedPackageNames) {
+  for (let injectedSpecifier of generatedInjectedPackageSpecifiers) {
+    if (specifier === injectedSpecifier) {
+      return getPackageName(injectedSpecifier)
+    }
+  }
+
+  for (let packageName of authoredInjectedPackageNames) {
     if (specifier === packageName || specifier.startsWith(`${packageName}/`)) {
       return packageName
     }
@@ -54,19 +62,22 @@ export function getInjectedPackageNameForSpecifier(specifier: string): string | 
 }
 
 export function mayContainInjectedPackageSpecifier(sourceText: string): boolean {
-  return injectedPackageNames.some((packageName) => sourceText.includes(packageName))
+  return authoredInjectedPackageNames.some((packageName) => sourceText.includes(packageName))
 }
 
 export function maskAuthoredInjectedPackageSpecifier(specifier: string): string | null {
-  let packageName = getInjectedPackageNameForSpecifier(specifier)
-  if (!packageName) return null
+  for (let packageName of authoredInjectedPackageNames) {
+    if (specifier !== packageName && !specifier.startsWith(`${packageName}/`)) continue
 
-  let maskedPackageName = getMaskedInjectedPackageName(packageName)
-  return `${maskedPackageName}${specifier.slice(packageName.length)}`
+    let maskedPackageName = getMaskedInjectedPackageName(packageName)
+    return `${maskedPackageName}${specifier.slice(packageName.length)}`
+  }
+
+  return null
 }
 
 export function restoreAuthoredInjectedPackageSpecifier(specifier: string): string | null {
-  for (let packageName of injectedPackageNames) {
+  for (let packageName of authoredInjectedPackageNames) {
     let maskedPackageName = getMaskedInjectedPackageName(packageName)
     if (specifier === maskedPackageName) {
       return packageName
@@ -81,6 +92,11 @@ export function restoreAuthoredInjectedPackageSpecifier(specifier: string): stri
 
 function getMaskedInjectedPackageName(packageName: string): string {
   return `~${packageName.slice(1)}`
+}
+
+function getPackageName(specifier: string): string {
+  let parts = specifier.split('/')
+  return parts[0]?.startsWith('@') ? `${parts[0]}/${parts[1]}` : (parts[0] ?? specifier)
 }
 
 export function getInjectedPackageImporterPath(): string {
