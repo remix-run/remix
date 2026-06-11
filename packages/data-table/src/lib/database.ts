@@ -331,6 +331,11 @@ type DatabaseOptions = {
   now?: () => unknown
 }
 
+export type DatabaseResource = AsyncDisposable & {
+  connect(): Promise<Database>
+  close(): Promise<void>
+}
+
 type DatabaseInternalState = {
   token?: TransactionToken
   savepointCounter: SavepointCounter

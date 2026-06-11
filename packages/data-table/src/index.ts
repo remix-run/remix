@@ -140,6 +140,7 @@ export { rawSql, sql } from './lib/sql.ts'
 
 export type {
   CountOptions,
+  DatabaseResource,
   CreateManyResultOptions,
   CreateManyRowsOptions,
   CreateResultOptions,
