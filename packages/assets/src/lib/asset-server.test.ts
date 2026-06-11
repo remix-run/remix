@@ -3304,6 +3304,7 @@ describe('asset-server', () => {
     let caseDir = await makeTmpDir()
     let payloads: HmrPayload[] = []
     let errorCodes: string[] = []
+    let debugEvents: unknown[] = []
     try {
       await write(
         caseDir,
@@ -3316,12 +3317,23 @@ describe('asset-server', () => {
             url: 'http://127.0.0.1:1234/hmr',
             send(payload) {
               payloads.push(payload)
+              debugEvents.push({
+                event: 'payload',
+                payload,
+                payloadCount: payloads.length,
+              })
             },
           },
         },
         onError(error) {
           if (isAssetServerCompilationError(error)) {
             errorCodes.push(error.code)
+            debugEvents.push({
+              code: error.code,
+              errorCount: errorCodes.length,
+              event: 'error',
+              message: error.message,
+            })
           }
         },
       })
@@ -3330,9 +3342,19 @@ describe('asset-server', () => {
         let entryResponse = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(entryResponse)
         assert.equal(entryResponse.status, 200)
+        debugEvents.push({
+          event: 'initial-request',
+          payloadCount: payloads.length,
+          status: entryResponse.status,
+        })
 
         let brokenEntryPath = await write(caseDir, 'app/entry.ts', 'export const value =')
+        debugEvents.push({ event: 'broken-write', path: brokenEntryPath })
         await emitWatchEvent(assetServer, brokenEntryPath, 'change')
+        debugEvents.push({
+          event: 'broken-watch-event',
+          payloadCount: payloads.length,
+        })
 
         assert.equal(payloads.length, 1)
         let brokenUpdate = payloads[0]
@@ -3346,15 +3368,34 @@ describe('asset-server', () => {
         assert.ok(failedUpdateResponse)
         assert.equal(failedUpdateResponse.status, 500)
         assert.equal(errorCodes.at(-1), 'TRANSFORM_FAILED')
+        debugEvents.push({
+          errorCodes,
+          event: 'broken-request',
+          payloadCount: payloads.length,
+          status: failedUpdateResponse.status,
+        })
 
         let fixedEntryPath = await write(
           caseDir,
           'app/entry.ts',
           'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 2',
         )
+        debugEvents.push({ event: 'fixed-write', path: fixedEntryPath })
         await emitWatchEvent(assetServer, fixedEntryPath, 'change')
+        debugEvents.push({
+          event: 'fixed-watch-event',
+          payloadCount: payloads.length,
+        })
 
-        assert.equal(payloads.length, 2)
+        assert.equal(
+          payloads.length,
+          2,
+          `Expected exactly two HMR payloads after fixing transform error.\n${JSON.stringify(
+            { debugEvents, errorCodes, payloads },
+            null,
+            2,
+          )}`,
+        )
         let fixedUpdate = payloads[1]
         assert.ok(fixedUpdate)
         assert.equal(fixedUpdate.type, 'js-update')
