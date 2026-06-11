@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { column, createDatabase, table, eq } from '@remix-run/data-table'
 
-import { createNativeSqliteDatabase } from '../../../data-table/test/native-sqlite.ts'
+import { createNativeSqliteDatabase } from '../../test/native-sqlite.ts'
 
 import { createSqliteDatabaseAdapter, type SqliteDatabase } from './adapter.ts'
 
