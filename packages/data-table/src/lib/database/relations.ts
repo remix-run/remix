@@ -116,11 +116,13 @@ async function loadHasManyThroughValues(
     throw new DataTableQueryError('hasManyThrough relation is missing through metadata')
   }
 
+  let through = relation.through
+
   if (sourceRows.length === 0) {
     return []
   }
 
-  let throughRelation = relation.through.relation
+  let throughRelation = through.relation
   let sourceTuples = uniqueTuples(sourceRows, throughRelation.sourceKey)
 
   if (sourceTuples.length === 0) {
@@ -163,14 +165,14 @@ async function loadHasManyThroughValues(
     pagedThroughRows.push(...pagedMatchedRows)
   }
 
-  let throughTuples = uniqueTuples(pagedThroughRows, relation.through.throughSourceKey)
+  let throughTuples = uniqueTuples(pagedThroughRows, through.throughSourceKey)
 
   if (throughTuples.length === 0) {
     return sourceRows.map(() => [])
   }
 
   let targetQuery = createQuery(relation.targetTable)
-  let targetPredicate = buildLinkPredicate(relation.through.throughTargetKey, throughTuples)
+  let targetPredicate = buildLinkPredicate(through.throughTargetKey, throughTuples)
 
   if (targetPredicate) {
     targetQuery = targetQuery.where(
@@ -183,27 +185,58 @@ async function loadHasManyThroughValues(
   })
 
   let relatedRows = await loadRowsWithRelationsForQuery(database, targetQuery)
-  let targetRowsByThrough = groupRowsByTuple(relatedRows, relation.through.throughTargetKey)
+  let sourceKeysByThroughKey = new Map<string, Set<string>>()
+  let outputRowsBySourceKey = new Map<string, Record<string, unknown>[]>()
+  let seenTargetRowsBySourceKey = new Map<string, Set<string>>()
+
+  for (let sourceRow of sourceRows) {
+    let sourceKey = getCompositeKey(sourceRow, throughRelation.sourceKey)
+    let matchedThroughRows = pagedThroughRowsBySource.get(sourceKey) ?? []
+
+    outputRowsBySourceKey.set(sourceKey, [])
+    seenTargetRowsBySourceKey.set(sourceKey, new Set())
+
+    for (let throughRow of matchedThroughRows) {
+      let throughKey = getCompositeKey(throughRow, through.throughSourceKey)
+      let sourceKeys = sourceKeysByThroughKey.get(throughKey)
+
+      if (!sourceKeys) {
+        sourceKeys = new Set()
+        sourceKeysByThroughKey.set(throughKey, sourceKeys)
+      }
+
+      sourceKeys.add(sourceKey)
+    }
+  }
+
+  let targetPrimaryKey = getTablePrimaryKey(relation.targetTable)
+
+  for (let row of relatedRows) {
+    let throughKey = getCompositeKey(row, through.throughTargetKey)
+    let sourceKeys = sourceKeysByThroughKey.get(throughKey)
+
+    if (!sourceKeys) {
+      continue
+    }
+
+    let rowIdentity = getCompositeKey(row, targetPrimaryKey)
+
+    for (let sourceKey of sourceKeys) {
+      let seenTargetRows = seenTargetRowsBySourceKey.get(sourceKey)
+      let outputRows = outputRowsBySourceKey.get(sourceKey)
+
+      if (!seenTargetRows || !outputRows || seenTargetRows.has(rowIdentity)) {
+        continue
+      }
+
+      seenTargetRows.add(rowIdentity)
+      outputRows.push(row)
+    }
+  }
 
   return sourceRows.map((sourceRow) => {
     let sourceKey = getCompositeKey(sourceRow, throughRelation.sourceKey)
-    let matchedThroughRows = pagedThroughRowsBySource.get(sourceKey) ?? []
-    let outputRows: Record<string, unknown>[] = []
-    let seen = new Set<string>()
-
-    for (let throughRow of matchedThroughRows) {
-      let throughKey = getCompositeKey(throughRow, relation.through!.throughSourceKey)
-      let rowsForThrough = targetRowsByThrough.get(throughKey) ?? []
-
-      for (let row of rowsForThrough) {
-        let rowIdentity = getCompositeKey(row, getTablePrimaryKey(relation.targetTable))
-
-        if (!seen.has(rowIdentity)) {
-          seen.add(rowIdentity)
-          outputRows.push(row)
-        }
-      }
-    }
+    let outputRows = outputRowsBySourceKey.get(sourceKey) ?? []
 
     return applyPagination(outputRows, relation.modifiers.limit, relation.modifiers.offset)
   })
