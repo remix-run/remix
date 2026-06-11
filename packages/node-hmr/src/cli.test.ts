@@ -25,9 +25,9 @@ describe('parseNodeHmrCommand', () => {
 
   it('parses HMR endpoint options before the entry', () => {
     let result = parseNodeHmrCommand([
-      '--hmr-host',
+      '--hmr-event-host',
       '0.0.0.0',
-      '--hmr-port=12345',
+      '--hmr-event-port=12345',
       'server.ts',
       '--port',
       '3000',
@@ -89,8 +89,8 @@ describe('parseNodeHmrCommand', () => {
   })
 
   it('rejects invalid HMR ports', () => {
-    assert.throws(() => parseNodeHmrCommand(['--hmr-port', '70000', 'server.ts']), {
-      message: 'Invalid HMR port: 70000',
+    assert.throws(() => parseNodeHmrCommand(['--hmr-event-port', '70000', 'server.ts']), {
+      message: 'Invalid HMR event port: 70000',
     })
   })
 
@@ -160,7 +160,7 @@ describe('shouldIgnoreWatchPath', () => {
   })
 })
 
-describe('node HMR browser endpoint helpers', () => {
+describe('node HMR event endpoint helpers', () => {
   it('returns undefined outside the node HMR child process', () => {
     let originalEventUrl = process.env.REMIX_NODE_HMR_EVENT_URL
     try {
@@ -177,7 +177,7 @@ describe('node HMR browser endpoint helpers', () => {
     }
   })
 
-  it('describes the parent browser HMR endpoint from env', () => {
+  it('describes the parent HMR event endpoint from env', () => {
     let originalEventUrl = process.env.REMIX_NODE_HMR_EVENT_URL
     try {
       process.env.REMIX_NODE_HMR_EVENT_URL = 'http://127.0.0.1:4567/hmr'

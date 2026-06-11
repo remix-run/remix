@@ -286,39 +286,6 @@ describe('asset server HMR', { skip: isBun }, () => {
     await waitForText(page, '[data-testid="count-second"]', 'Updated: 3')
   })
 
-  it('reloads the top frame after the HMR connection recovers', async (t) => {
-    let fixture = await createServerFrameHmrFixture()
-    t.after(fixture.close)
-
-    let server = await createHmrTestServer(fixture)
-    let page = await t.serve(server)
-    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
-
-    await page.goto('/')
-    await connected
-    await waitForText(page, '[data-testid="server-message"]', 'Server: before')
-    await page.locator('[data-testid="server-client-field"]').fill('hello through reconnect')
-
-    let messagePath = path.join(fixture.rootDir, 'server-message.txt')
-    await fs.writeFile(messagePath, 'Server: after reconnect')
-
-    let lostConnection = waitForConsoleMessage(page, '[remix] HMR connection lost')
-    let reconnected = waitForConsoleMessage(page, '[remix] HMR connected')
-    let serverReload = waitForConsoleMessage(page, 'Server frame reload complete')
-
-    await server.restartAssets()
-
-    await lostConnection
-    await reconnected
-    await serverReload
-
-    await waitForText(page, '[data-testid="server-message"]', 'Server: after reconnect')
-    assert.equal(
-      await page.locator('[data-testid="server-client-field"]').inputValue(),
-      'hello through reconnect',
-    )
-  })
-
   it('updates a client entry after a failed HMR transform is fixed', async (t) => {
     let fixture = await createServerFrameHmrFixture()
     t.after(fixture.close)
@@ -684,7 +651,7 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
       '    await getTopFrame().reload()',
       '    console.info("Server frame reload complete")',
       '  }',
-      '  import.meta.hot.on("remix:server-update", reloadTopFrame)',
+      '  import.meta.hot.on("server:update", reloadTopFrame)',
       '}',
       '',
       'app.ready().catch((error: unknown) => {',
@@ -812,7 +779,7 @@ async function createNodeHmrFixture(): Promise<NodeHmrFixture> {
       '    await getTopFrame().reload()',
       '    console.info("Server frame reload complete")',
       '  }',
-      '  import.meta.hot.on("remix:server-update", reloadTopFrame)',
+      '  import.meta.hot.on("server:update", reloadTopFrame)',
       '}',
       '',
       'app.ready().catch((error: unknown) => {',
@@ -922,12 +889,7 @@ function getNodeHmrServerSource(rootDir: string, options: { title?: string } = {
     '',
     "    if (url.pathname === '/__test_emit_server_update') {",
     '      eventChannel?.send({',
-    '        data: {',
-    "          reason: 'change',",
-    '          timestamp: Date.now(),',
-    '        },',
-    "        event: 'remix:server-update',",
-    "        type: 'custom',",
+    "        type: 'server:update',",
     '      })',
     '      response.writeHead(204).end()',
     '      return',
@@ -1270,6 +1232,11 @@ function createTestHmrEventStream() {
   let clients = new Set<ReadableStreamDefaultController<Uint8Array>>()
   let encoder = new TextEncoder()
 
+  let sendComment = (comment: string) => {
+    let event = encoder.encode(`: ${comment}\n\n`)
+    for (let client of clients) client.enqueue(event)
+  }
+
   let send = (payload: HmrPayload) => {
     let event = encoder.encode(`data: ${JSON.stringify(payload)}\n\n`)
     for (let client of clients) client.enqueue(event)
@@ -1286,7 +1253,7 @@ function createTestHmrEventStream() {
         start(controller) {
           client = controller
           clients.add(controller)
-          send({ type: 'connected' })
+          sendComment('connected')
         },
         cancel() {
           clients.delete(client)

@@ -39,7 +39,7 @@ export function parseNodeHmrCommand(argv: Array<string>): NodeHmrCommandResult {
       break
     }
 
-    if (arg === '--hmr-host') {
+    if (arg === '--hmr-event-host') {
       let value = argv[index + 1]
       if (value !== undefined) {
         host = value
@@ -48,12 +48,12 @@ export function parseNodeHmrCommand(argv: Array<string>): NodeHmrCommandResult {
       continue
     }
 
-    if (arg.startsWith('--hmr-host=')) {
-      host = arg.slice('--hmr-host='.length)
+    if (arg.startsWith('--hmr-event-host=')) {
+      host = arg.slice('--hmr-event-host='.length)
       continue
     }
 
-    if (arg === '--hmr-port') {
+    if (arg === '--hmr-event-port') {
       let value = argv[index + 1]
       if (value !== undefined) {
         port = parsePort(value)
@@ -62,8 +62,8 @@ export function parseNodeHmrCommand(argv: Array<string>): NodeHmrCommandResult {
       continue
     }
 
-    if (arg.startsWith('--hmr-port=')) {
-      port = parsePort(arg.slice('--hmr-port='.length))
+    if (arg.startsWith('--hmr-event-port=')) {
+      port = parsePort(arg.slice('--hmr-event-port='.length))
       continue
     }
 
@@ -120,7 +120,7 @@ export function shouldIgnoreWatchPath(path: string): boolean {
 function parsePort(value: string): number {
   let port = Number(value)
   if (!Number.isInteger(port) || port < 0 || port > 65_535) {
-    throw new TypeError(`Invalid HMR port: ${value}`)
+    throw new TypeError(`Invalid HMR event port: ${value}`)
   }
   return port
 }

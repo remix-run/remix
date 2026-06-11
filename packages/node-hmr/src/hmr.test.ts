@@ -441,9 +441,9 @@ describe('node-hmr', () => {
     }
   })
 
-  it('keeps the browser HMR endpoint alive while the child process crashes and recovers', async () => {
+  it('keeps the HMR event endpoint alive while the child process crashes and recovers', async () => {
     await using fixture = await createFixture({
-      'server.ts': getBrowserHmrServerSource('one'),
+      'server.ts': getEventChannelServerSource('one'),
     })
     let server = startFixtureServer(fixture.path)
 
@@ -451,26 +451,19 @@ describe('node-hmr', () => {
       let hmrUrl = await server.waitForHmrUrl(0)
       let events = await connectHmrEvents(hmrUrl.url)
       try {
-        assert.deepEqual(await events.read(), { type: 'connected' })
-
         let ready = await server.waitForReady(0)
         assert.equal(await fetchText(ready.port), 'one')
 
         await fs.writeFile(fixture.entryPath, `export function broken( {\n`)
         await waitForOutput(server, /Failed running server\.ts\. Waiting for file changes/)
 
-        await fs.writeFile(fixture.entryPath, getBrowserHmrServerSource('two'))
+        await fs.writeFile(fixture.entryPath, getEventChannelServerSource('two'))
 
         let restarted = await server.waitForReady(1)
         assert.notEqual(restarted.pid, ready.pid)
         assert.equal(await fetchText(restarted.port), 'two')
         let payload = await events.read()
-        assert.equal(payload.type, 'custom')
-        assert.equal('event' in payload && payload.event, 'remix:server-update')
-        let data = 'data' in payload ? payload.data : undefined
-        assert.ok(isRecord(data))
-        assert.equal(data.reason, 'restart')
-        assert.equal(typeof data.timestamp, 'number')
+        assert.deepEqual(payload, { type: 'server:update' })
       } finally {
         await events.close()
       }
@@ -481,7 +474,7 @@ describe('node-hmr', () => {
 
   it('signals server restart recovery after fresh content can be fetched', async () => {
     await using fixture = await createFixture({
-      'server.ts': getBrowserHmrServerSource('one'),
+      'server.ts': getEventChannelServerSource('one'),
     })
     let server = startFixtureServer(fixture.path)
 
@@ -489,19 +482,16 @@ describe('node-hmr', () => {
       let hmrUrl = await server.waitForHmrUrl(0)
       let events = await connectHmrEvents(hmrUrl.url)
       try {
-        assert.deepEqual(await events.read(), { type: 'connected' })
-
         let ready = await server.waitForReady(0)
         assert.equal(await fetchText(ready.port), 'one')
 
         await fs.writeFile(fixture.entryPath, `export function broken( {\n`)
         await waitForOutput(server, /Failed running server\.ts\. Waiting for file changes/)
 
-        await fs.writeFile(fixture.entryPath, getBrowserHmrServerSource('two!!!'))
+        await fs.writeFile(fixture.entryPath, getEventChannelServerSource('two!!!'))
 
         let payload = await events.read()
-        assert.equal(payload.type, 'custom')
-        assert.equal('event' in payload && payload.event, 'remix:server-update')
+        assert.deepEqual(payload, { type: 'server:update' })
 
         let restarted = await server.waitForReady(1)
         assert.notEqual(restarted.pid, ready.pid)
@@ -546,7 +536,7 @@ function getFixtureServerSource(importSpecifier: string, responseExpression: str
   ].join('\n')
 }
 
-function getBrowserHmrServerSource(message: string): string {
+function getEventChannelServerSource(message: string): string {
   let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.ts')).href
 
   return [
@@ -783,25 +773,14 @@ async function fetchText(port: number): Promise<string> {
   return await response.text()
 }
 
-type BrowserHmrPayload =
-  | {
-      type: 'connected'
-    }
-  | {
-      data?: unknown
-      event: string
-      type: 'custom'
-    }
-  | {
-      acceptedPath?: string
-      path: string
-      timestamp: number
-      type: 'css-update' | 'full-reload' | 'js-update'
-    }
+interface HmrEventPayload {
+  type: string
+  [key: string]: unknown
+}
 
 async function connectHmrEvents(url: string): Promise<{
   close(): Promise<void>
-  read(): Promise<BrowserHmrPayload>
+  read(): Promise<HmrEventPayload>
 }> {
   let response = await fetch(url)
   assert.ok(response.body)
@@ -821,7 +800,8 @@ async function connectHmrEvents(url: string): Promise<{
         if (eventEnd !== -1) {
           let eventText = buffer.slice(0, eventEnd)
           buffer = buffer.slice(eventEnd + 2)
-          return parseBrowserHmrPayload(eventText)
+          if (eventText.startsWith(':')) continue
+          return parseHmrEventPayload(eventText)
         }
 
         let { done, value } = await reader.read()
@@ -835,24 +815,16 @@ async function connectHmrEvents(url: string): Promise<{
   }
 }
 
-function parseBrowserHmrPayload(eventText: string): BrowserHmrPayload {
+function parseHmrEventPayload(eventText: string): HmrEventPayload {
   let dataPrefix = 'data: '
   assert.ok(eventText.startsWith(dataPrefix), eventText)
   let payload: unknown = JSON.parse(eventText.slice(dataPrefix.length))
-  assert.ok(isBrowserHmrPayload(payload), eventText)
+  assert.ok(isHmrEventPayload(payload), eventText)
   return payload
 }
 
-function isBrowserHmrPayload(value: unknown): value is BrowserHmrPayload {
-  if (!isRecord(value) || typeof value.type !== 'string') return false
-  if (value.type === 'connected') return true
-  if (value.type === 'custom') return typeof value.event === 'string'
-  return (
-    (value.type === 'css-update' || value.type === 'full-reload' || value.type === 'js-update') &&
-    typeof value.path === 'string' &&
-    typeof value.timestamp === 'number' &&
-    (value.acceptedPath === undefined || typeof value.acceptedPath === 'string')
-  )
+function isHmrEventPayload(value: unknown): value is HmrEventPayload {
+  return isRecord(value) && typeof value.type === 'string'
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

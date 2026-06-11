@@ -6,8 +6,8 @@ Run Node.js applications with Hot Module Reloading.
 
 - **Drop-in Node.js replacement**: Run an entry file directly with `remix node-hmr server.js` along with supported Node flags
 - **HMR Runtime**: Provides an `import.meta.hot` API for modules that can handle hot updates
-- **Browser HMR channel:** Serves an endpoint for browser HMR clients and an API for relaying custom events
 - **Restart Fallback**: Restarts the child Node process when updates aren't accepted
+- **Browser HMR Integration:** Exposes high-level server HMR events to the client
 
 ## Installation
 
@@ -151,11 +151,19 @@ if (import.meta.hot) {
 }
 ```
 
-### Event Channel
+### Browser HMR Integration
 
-If you want to have other systems integrate with `node-hmr`, responding to HMR events and sending custom payloads, the `node-hmr` runtime provides an `eventChannel` export. This exposes a `url` for an [EventSource](https://developer.mozilla.org/en-US/docs/Web/API/EventSource) and a `send` function for sending custom events.
+To support co-ordination between server and browser HMR, the `node-hmr` runtime provides an `eventChannel` export. This exposes a `url` for an [EventSource](https://developer.mozilla.org/en-US/docs/Web/API/EventSource) and a `send` function for sending additional events through the same endpoint.
 
-This allows for easy integration with `remix/assets` via its `hmr` option so that the HMR endpoint used in the browser remains stable even during server restarts.
+When `node-hmr` hot updates or restarts the server, it sends a `server:update` event to connected clients:
+
+```ts
+type ServerUpdateEvent = {
+  type: 'server:update'
+}
+```
+
+This allows for easy integration with `remix/assets` via its `hmr` option. This allows browser HMR events to be sent through the same channel and ensures that the HMR endpoint used by your server code survives server restarts.
 
 ```ts
 import { createAssetServer } from 'remix/assets'
@@ -168,13 +176,13 @@ export const assetServer = createAssetServer({
 })
 ```
 
-When integrated in this way, browser modules in `remix/assets` can use the `import.meta.hot` API to respond to server updates and reload the app.
+Browser modules in `remix/assets` can then use the `import.meta.hot` API to respond to server updates and reload the app.
 
 ```ts
 import { getTopFrame } from 'remix/ui'
 
 if (import.meta.hot) {
-  import.meta.hot.on('remix:server-update', async () => {
+  import.meta.hot.on('server:update', async () => {
     await getTopFrame().reload()
   })
 }

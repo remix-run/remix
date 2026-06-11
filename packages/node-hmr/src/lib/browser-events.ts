@@ -11,28 +11,17 @@ export interface NodeHmrEndpoint {
   url: string
 }
 
-export type NodeHmrBrowserPayload =
-  | {
-      type: 'connected'
-    }
-  | {
-      data?: unknown
-      event: string
-      type: 'custom'
-    }
-  | {
-      acceptedPath?: string
-      path: string
-      timestamp: number
-      type: 'css-update' | 'full-reload' | 'js-update'
-    }
+export interface HmrEventPayload {
+  type: string
+  [key: string]: unknown
+}
 
 export interface HmrEventChannel {
   url: string
-  send(payload: NodeHmrBrowserPayload): void
+  send(payload: HmrEventPayload): void
 }
 
-export const eventChannel: HmrEventChannel | undefined = createBrowserEventChannel()
+export const eventChannel: HmrEventChannel | undefined = createHmrEventChannel()
 
 export function getNodeHmrEndpoint(): NodeHmrEndpoint | undefined {
   let eventUrl = getNodeHmrEventUrl()
@@ -55,22 +44,22 @@ export function getNodeHmrEventUrl(): string | undefined {
   return url && isHttpUrl(url) ? url : undefined
 }
 
-function createBrowserEventChannel(): HmrEventChannel | undefined {
+function createHmrEventChannel(): HmrEventChannel | undefined {
   let url = getNodeHmrEventUrl()
   if (url === undefined) return undefined
 
   return {
     url,
-    send: sendNodeHmrBrowserPayload,
+    send: sendHmrEventPayload,
   }
 }
 
-export function sendNodeHmrBrowserPayload(payload: NodeHmrBrowserPayload): void {
+export function sendHmrEventPayload(payload: HmrEventPayload): void {
   if (process.env.REMIX_NODE_HMR !== '1') return
 
   process.send?.({
     payload,
-    type: 'browser-hmr:send',
+    type: 'hmr-event:send',
   })
 }
 

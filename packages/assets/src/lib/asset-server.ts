@@ -280,14 +280,26 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       ? {
           clientPathname: hmrPathnames.client,
           send(updates) {
-            for (let update of updates) {
+            let timestamp = updates[0]?.timestamp ?? Date.now()
+            let acceptedUpdates = updates.filter((update) => update.accepted)
+            if (acceptedUpdates.length > 0) {
               sendHmrPayload({
-                ...(update.accepted && update.acceptedPath !== update.path
-                  ? { acceptedPath: update.acceptedPath }
-                  : {}),
-                path: update.path,
-                timestamp: update.timestamp,
-                type: update.accepted ? 'js-update' : 'full-reload',
+                timestamp,
+                type: 'assets:update',
+                updates: acceptedUpdates.map((update) => ({
+                  ...(update.acceptedPath === update.path
+                    ? {}
+                    : { acceptedPath: update.acceptedPath }),
+                  path: update.path,
+                  type: 'js',
+                })),
+              })
+            }
+
+            if (acceptedUpdates.length !== updates.length) {
+              sendHmrPayload({
+                path: updates.find((update) => !update.accepted)?.path,
+                type: 'assets:full-reload',
               })
             }
           },
@@ -327,9 +339,14 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       ? {
           send(pathname, timestamp) {
             sendHmrPayload({
-              path: pathname,
               timestamp,
-              type: 'css-update',
+              type: 'assets:update',
+              updates: [
+                {
+                  path: pathname,
+                  type: 'css',
+                },
+              ],
             })
           },
         }

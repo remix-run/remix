@@ -10,18 +10,26 @@ export interface RemixHotContext {
 
 export type HmrPayload =
   | {
-      type: 'connected'
+      type: 'server:update'
     }
   | {
-      data?: unknown
-      event: string
-      type: 'custom'
-    }
-  | {
-      acceptedPath?: string
-      path: string
+      updates: Array<
+        | {
+            acceptedPath?: string
+            path: string
+            type: 'js'
+          }
+        | {
+            path: string
+            type: 'css'
+          }
+      >
       timestamp: number
-      type: 'css-update' | 'full-reload' | 'js-update'
+      type: 'assets:update'
+    }
+  | {
+      path?: string
+      type: 'assets:full-reload'
     }
 
 export function createHmrClientSource(options: { eventPathname: string }): string {
@@ -93,6 +101,18 @@ let stylesheetUpdatePromise = Promise.resolve()
 
 let events = new EventSource(${JSON.stringify(options.eventPathname)})
 
+events.onopen = () => {
+  console.info('[remix] HMR connected')
+  if (reconnectPending) {
+    reconnectPending = false
+    handleReconnect().catch((error) => {
+      console.error('[remix] HMR reconnect recovery failed', error)
+      reloadPage()
+    })
+  }
+  connected = true
+}
+
 events.onerror = () => {
   if (connected) reconnectPending = true
   console.warn('[remix] HMR connection lost, retrying...')
@@ -102,62 +122,51 @@ events.onmessage = (event) => {
   let payload = JSON.parse(event.data)
   handlePayload(payload).catch((error) => {
     console.error('[remix] HMR update failed', error)
-    if (payload.type !== 'js-update') {
+    if (payload.type !== 'assets:update' || payload.updates.some((update) => update.type !== 'js')) {
       reloadPage()
     }
   })
 }
 
 async function handlePayload(payload) {
-  if (payload.type === 'connected') {
-    console.info('[remix] HMR connected')
-    if (reconnectPending) {
-      reconnectPending = false
-      let data = {
-        reason: 'reconnect',
-        timestamp: Date.now(),
-      }
-      await reloadCurrentStylesheets(data)
-      await retryFailedJavaScriptUpdates(data)
-      await dispatchCustomEvent('remix:server-update', data)
-    }
-    connected = true
-    return
-  }
-
   console.info('[remix] HMR payload', payload)
 
-  if (payload.type === 'full-reload') {
+  if (payload.type === 'assets:full-reload') {
     console.info('[remix] HMR reloading page', payload.path)
     reloadPage()
     return
   }
 
-  if (payload.type === 'custom') {
-    console.info('[remix] HMR custom event', payload.event)
-    if (payload.event === 'remix:server-update') {
-      await retryFailedJavaScriptUpdates(payload.data)
-    }
-    await dispatchCustomEvent(payload.event, payload.data)
+  if (payload.type === 'server:update') {
+    await retryFailedJavaScriptUpdates(payload)
+    await dispatchCustomEvent(payload.type, payload)
     return
   }
 
-  if (payload.type === 'css-update') {
-    console.info('[remix] HMR updating stylesheet', payload.path)
-    await queueStylesheetUpdate(payload.path, payload.timestamp)
-    return
-  }
+  if (payload.type === 'assets:update') {
+    for (let update of payload.updates) {
+      if (update.type === 'css') {
+        console.info('[remix] HMR updating stylesheet', update.path)
+        await queueStylesheetUpdate(update.path, payload.timestamp)
+        continue
+      }
 
-  if (payload.type === 'js-update') {
-    try {
-      await updateJavaScriptModule(payload.path, payload.acceptedPath ?? payload.path, payload.timestamp)
-      failedJavaScriptUpdates.delete(payload.path)
-    } catch (error) {
-      failedJavaScriptUpdates.set(payload.path, payload.acceptedPath ?? payload.path)
-      throw error
+      try {
+        await updateJavaScriptModule(update.path, update.acceptedPath ?? update.path, payload.timestamp)
+        failedJavaScriptUpdates.delete(update.path)
+      } catch (error) {
+        failedJavaScriptUpdates.set(update.path, update.acceptedPath ?? update.path)
+        throw error
+      }
+      console.info('[remix] HMR accepted update', update.path)
     }
-    console.info('[remix] HMR accepted update', payload.path)
   }
+}
+
+async function handleReconnect() {
+  let data = { timestamp: Date.now() }
+  await reloadCurrentStylesheets(data)
+  await retryFailedJavaScriptUpdates(data)
 }
 
 async function retryFailedJavaScriptUpdates(data) {

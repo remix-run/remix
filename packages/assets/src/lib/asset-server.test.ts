@@ -158,24 +158,26 @@ function createTestHmrOptions(payloads: HmrPayload[]): AssetServerHmrOptions {
   }
 }
 
-function hmrPayloadWithoutTimestamp(payload: HmrPayload | undefined): {
-  acceptedPath?: string
-  path?: string
-  type: string
-} {
+function hmrPayloadWithoutTimestamp(payload: HmrPayload | undefined): unknown {
   assert.ok(payload)
-  let result: {
-    acceptedPath?: string
-    path?: string
-    type: string
-  } = {
+
+  if (payload.type === 'assets:update') {
+    return {
+      type: payload.type,
+      updates: payload.updates,
+    }
+  }
+
+  if (payload.type === 'assets:full-reload') {
+    return {
+      ...(payload.path === undefined ? {} : { path: payload.path }),
+      type: payload.type,
+    }
+  }
+
+  return {
     type: payload.type,
   }
-  if ('acceptedPath' in payload && payload.acceptedPath !== undefined) {
-    result.acceptedPath = payload.acceptedPath
-  }
-  if ('path' in payload) result.path = payload.path
-  return result
 }
 
 function getWatchEventFilePath(filePath: string): string {
@@ -3176,9 +3178,15 @@ describe('asset-server', () => {
 
         assert.equal(payloads.length, 1)
         let payload = payloads[0]
-        assert.ok(payload)
-        assert.equal(payload.type, 'js-update')
-        assert.equal('path' in payload && payload.path, '/assets/app/entry.ts')
+        assert.deepEqual(hmrPayloadWithoutTimestamp(payload), {
+          type: 'assets:update',
+          updates: [
+            {
+              path: '/assets/app/entry.ts',
+              type: 'js',
+            },
+          ],
+        })
       } finally {
         await assetServer.close()
       }
@@ -3289,8 +3297,13 @@ describe('asset-server', () => {
         await emitWatchEvent(assetServer, entryPath, 'change')
 
         assert.deepEqual(hmrPayloadWithoutTimestamp(payloads[0]), {
-          path: '/assets/app/entry.ts',
-          type: 'js-update',
+          type: 'assets:update',
+          updates: [
+            {
+              path: '/assets/app/entry.ts',
+              type: 'js',
+            },
+          ],
         })
       } finally {
         await assetServer.close()
@@ -3359,7 +3372,7 @@ describe('asset-server', () => {
         assert.equal(payloads.length, 1)
         let brokenUpdate = payloads[0]
         assert.ok(brokenUpdate)
-        assert.equal(brokenUpdate.type, 'js-update')
+        assert.equal(brokenUpdate.type, 'assets:update')
 
         let failedUpdateResponse = await get(
           assetServer,
@@ -3398,9 +3411,17 @@ describe('asset-server', () => {
         )
         let fixedUpdate = payloads[1]
         assert.ok(fixedUpdate)
-        assert.equal(fixedUpdate.type, 'js-update')
-        assert.equal(fixedUpdate.path, '/assets/app/entry.ts')
+        assert.deepEqual(hmrPayloadWithoutTimestamp(fixedUpdate), {
+          type: 'assets:update',
+          updates: [
+            {
+              path: '/assets/app/entry.ts',
+              type: 'js',
+            },
+          ],
+        })
 
+        assert.equal(fixedUpdate.type, 'assets:update')
         let fixedUpdateResponse = await get(
           assetServer,
           `/assets/app/entry.ts?t=${fixedUpdate.timestamp}`,
@@ -3454,9 +3475,14 @@ describe('asset-server', () => {
         await emitWatchEvent(assetServer, depPath, 'change')
 
         assert.deepEqual(hmrPayloadWithoutTimestamp(payloads[0]), {
-          acceptedPath: '/assets/app/dep.ts',
-          path: '/assets/app/entry.ts',
-          type: 'js-update',
+          type: 'assets:update',
+          updates: [
+            {
+              acceptedPath: '/assets/app/dep.ts',
+              path: '/assets/app/entry.ts',
+              type: 'js',
+            },
+          ],
         })
       } finally {
         await assetServer.close()
@@ -3485,7 +3511,7 @@ describe('asset-server', () => {
 
         assert.deepEqual(hmrPayloadWithoutTimestamp(payloads[0]), {
           path: '/assets/app/entry.ts',
-          type: 'full-reload',
+          type: 'assets:full-reload',
         })
       } finally {
         await assetServer.close()
@@ -3523,7 +3549,7 @@ describe('asset-server', () => {
 
         assert.deepEqual(hmrPayloadWithoutTimestamp(payloads[0]), {
           path: '/assets/app/dep.ts',
-          type: 'full-reload',
+          type: 'assets:full-reload',
         })
       } finally {
         await assetServer.close()
@@ -3588,7 +3614,7 @@ describe('asset-server', () => {
 
         assert.deepEqual(hmrPayloadWithoutTimestamp(payloads[0]), {
           path: '/assets/app/dep.ts',
-          type: 'full-reload',
+          type: 'assets:full-reload',
         })
       } finally {
         await assetServer.close()
@@ -3645,9 +3671,16 @@ describe('asset-server', () => {
         await emitWatchEvent(assetServer, depPath, 'change')
 
         let payload = hmrPayloadWithoutTimestamp(payloads[0])
-        assert.equal(payload.type, 'js-update')
-        assert.equal(payload.path, '/assets/app/entry.ts')
-        assert.equal(payload.acceptedPath, '/assets/app/intermediate.ts')
+        assert.deepEqual(payload, {
+          type: 'assets:update',
+          updates: [
+            {
+              acceptedPath: '/assets/app/intermediate.ts',
+              path: '/assets/app/entry.ts',
+              type: 'js',
+            },
+          ],
+        })
 
         let updatedIntermediateResponse = await get(
           assetServer,
@@ -3683,8 +3716,13 @@ describe('asset-server', () => {
         await emitWatchEvent(assetServer, stylePath, 'change')
 
         assert.deepEqual(hmrPayloadWithoutTimestamp(payloads[0]), {
-          path: '/assets/app/styles/app.css',
-          type: 'css-update',
+          type: 'assets:update',
+          updates: [
+            {
+              path: '/assets/app/styles/app.css',
+              type: 'css',
+            },
+          ],
         })
       } finally {
         await assetServer.close()
@@ -3723,8 +3761,16 @@ describe('asset-server', () => {
         assert.equal(payloads.length, 1)
         let payload = payloads[0]
         assert.ok(payload)
-        assert.equal(payload.type, 'css-update')
-        assert.equal(payload.path, '/assets/app/styles/app.css')
+        assert.equal(payload.type, 'assets:update')
+        assert.deepEqual(hmrPayloadWithoutTimestamp(payload), {
+          type: 'assets:update',
+          updates: [
+            {
+              path: '/assets/app/styles/app.css',
+              type: 'css',
+            },
+          ],
+        })
 
         let updatedStyleResponse = await get(
           assetServer,
@@ -3781,8 +3827,16 @@ describe('asset-server', () => {
         assert.equal(payloads.length, 1)
         let brokenUpdate = payloads[0]
         assert.ok(brokenUpdate)
-        assert.equal(brokenUpdate.type, 'css-update')
-        assert.equal(brokenUpdate.path, '/assets/app/styles/app.css')
+        assert.equal(brokenUpdate.type, 'assets:update')
+        assert.deepEqual(hmrPayloadWithoutTimestamp(brokenUpdate), {
+          type: 'assets:update',
+          updates: [
+            {
+              path: '/assets/app/styles/app.css',
+              type: 'css',
+            },
+          ],
+        })
 
         let failedUpdateResponse = await get(
           assetServer,
@@ -3798,8 +3852,16 @@ describe('asset-server', () => {
         assert.equal(payloads.length, 2)
         let fixedUpdate = payloads[1]
         assert.ok(fixedUpdate)
-        assert.equal(fixedUpdate.type, 'css-update')
-        assert.equal(fixedUpdate.path, '/assets/app/styles/app.css')
+        assert.equal(fixedUpdate.type, 'assets:update')
+        assert.deepEqual(hmrPayloadWithoutTimestamp(fixedUpdate), {
+          type: 'assets:update',
+          updates: [
+            {
+              path: '/assets/app/styles/app.css',
+              type: 'css',
+            },
+          ],
+        })
 
         let fixedUpdateResponse = await get(
           assetServer,

@@ -11,7 +11,7 @@ import { watch } from 'chokidar'
 import {
   nodeHmrEventPathname,
   setNodeHmrEventUrlEnv,
-  type NodeHmrBrowserPayload,
+  type HmrEventPayload,
 } from './lib/browser-events.ts'
 import {
   buildNodeArgs,
@@ -47,8 +47,8 @@ interface NodeHmrUpdate {
 
 type ChildMessage =
   | {
-      payload: NodeHmrBrowserPayload
-      type: 'browser-hmr:send'
+      payload: HmrEventPayload
+      type: 'hmr-event:send'
     }
   | {
       type: 'hmr:restart'
@@ -109,8 +109,8 @@ Run a Node.js entry file with file watching, restart fallback, and an import.met
 Options and Node options can be provided before the entry. Node options are forwarded to the child process. Node execution modes such as --watch and --test are not supported.
 
 Options:
-  --hmr-host <host>  Host used for the parent browser HMR endpoint. Defaults to 127.0.0.1.
-  --hmr-port <port>  Port used for the parent browser HMR endpoint. Defaults to 0, which picks a free port.
+  --hmr-event-host <host>  Host used for the HMR event channel endpoint. Defaults to 127.0.0.1.
+  --hmr-event-port <port>  Port used for the HMR event channel endpoint. Defaults to 0, which picks a free port.
 
 Examples:
   ${commandName} --import remix/node-tsx server.ts`
@@ -128,7 +128,7 @@ async function runWatchedProcess(options: {
   env: NodeJS.ProcessEnv
   registerPath: string
 }): Promise<number> {
-  let browserHmrEndpoint = await createBrowserHmrEndpoint({
+  let hmrEventEndpoint = await createHmrEventEndpoint({
     host: options.command.host,
     port: options.command.port,
   })
@@ -145,7 +145,7 @@ async function runWatchedProcess(options: {
   let restarting = false
   let stopping = false
   let waitingForFileChangeAfterExit = false
-  let pendingBrowserServerUpdate: { message?: string; reason: 'restart' } | undefined
+  let pendingServerUpdateEvent = false
 
   function getEntryPath(): string {
     return resolve(options.cwd, options.command.entry)
@@ -171,7 +171,7 @@ async function runWatchedProcess(options: {
       {
         cwd: options.cwd,
         env: {
-          ...setNodeHmrEventUrlEnv(options.env, browserHmrEndpoint.url),
+          ...setNodeHmrEventUrlEnv(options.env, hmrEventEndpoint.url),
           REMIX_NODE_HMR: '1',
           REMIX_NODE_HMR_ROOT: options.cwd,
         },
@@ -189,7 +189,7 @@ async function runWatchedProcess(options: {
     nextChild.once('exit', (code, signal) => {
       if (stopping || restarting || child !== nextChild) return
       waitingForFileChangeAfterExit = true
-      pendingBrowserServerUpdate = { reason: 'restart' }
+      pendingServerUpdateEvent = true
       child = undefined
       console.log(
         `Failed running ${options.command.entry}. Waiting for file changes before restarting...`,
@@ -208,18 +208,18 @@ async function runWatchedProcess(options: {
   function handleChildMessage(message: unknown) {
     if (!isChildMessage(message)) return
 
-    if (message.type === 'browser-hmr:send') {
-      browserHmrEndpoint.send(message.payload)
+    if (message.type === 'hmr-event:send') {
+      hmrEventEndpoint.send(message.payload)
       return
     }
 
     if (message.type === 'server-hmr:event') {
-      browserHmrEndpoint.send(toBrowserServerHmrPayload(message.event))
+      hmrEventEndpoint.send(toServerUpdatePayload(message.event))
       return
     }
 
     if (message.type === 'server-ready') {
-      flushPendingBrowserServerUpdate()
+      flushPendingServerUpdateEvent()
       return
     }
 
@@ -228,7 +228,7 @@ async function runWatchedProcess(options: {
         console.warn(message.message)
       }
 
-      pendingBrowserServerUpdate = { message: message.message, reason: 'restart' }
+      pendingServerUpdateEvent = true
       logRestart(message.message ?? 'import.meta.hot.invalidate()')
       restart().catch((error: unknown) => {
         console.error(error)
@@ -361,7 +361,7 @@ async function runWatchedProcess(options: {
 
     if (waitingForFileChangeAfterExit) {
       logRestart(formatChangedPaths([...restartPaths, ...changedPaths], options.cwd))
-      pendingBrowserServerUpdate = { reason: 'restart' }
+      pendingServerUpdateEvent = true
       start()
       return
     }
@@ -370,10 +370,7 @@ async function runWatchedProcess(options: {
 
     if (restartPaths.length > 0) {
       logRestart(formatChangedPaths(restartPaths, options.cwd))
-      pendingBrowserServerUpdate = {
-        message: formatChangedPaths(restartPaths, options.cwd),
-        reason: 'restart',
-      }
+      pendingServerUpdateEvent = true
       await restart()
       return
     }
@@ -385,10 +382,7 @@ async function runWatchedProcess(options: {
       let modules = moduleInfoByFilePath.get(changedPath)
       if (modules === undefined || modules.length === 0) {
         logRestart(formatChangedPath(changedPath, options.cwd))
-        pendingBrowserServerUpdate = {
-          message: formatChangedPath(changedPath, options.cwd),
-          reason: 'restart',
-        }
+        pendingServerUpdateEvent = true
         await restart()
         return
       }
@@ -407,10 +401,7 @@ async function runWatchedProcess(options: {
         let propagation = findHmrPropagation(moduleInfo.url, Date.now())
         if (!propagation) {
           logRestart(formatChangedPath(changedPath, options.cwd))
-          pendingBrowserServerUpdate = {
-            message: formatChangedPath(changedPath, options.cwd),
-            reason: 'restart',
-          }
+          pendingServerUpdateEvent = true
           await restart()
           return
         }
@@ -424,10 +415,7 @@ async function runWatchedProcess(options: {
     for (let moduleInfo of hotUpdates) {
       if (!sendHotUpdate(moduleInfo)) {
         logRestart(formatChangedPath(moduleInfo.filePath, options.cwd))
-        pendingBrowserServerUpdate = {
-          message: formatChangedPath(moduleInfo.filePath, options.cwd),
-          reason: 'restart',
-        }
+        pendingServerUpdateEvent = true
         await restart()
         return
       }
@@ -443,21 +431,13 @@ async function runWatchedProcess(options: {
     }
   }
 
-  function flushPendingBrowserServerUpdate(): void {
-    if (pendingBrowserServerUpdate === undefined) return
+  function flushPendingServerUpdateEvent(): void {
+    if (!pendingServerUpdateEvent) return
 
-    browserHmrEndpoint.send({
-      data: {
-        ...(pendingBrowserServerUpdate.message === undefined
-          ? {}
-          : { message: pendingBrowserServerUpdate.message }),
-        reason: pendingBrowserServerUpdate.reason,
-        timestamp: Date.now(),
-      },
-      event: 'remix:server-update',
-      type: 'custom',
+    hmrEventEndpoint.send({
+      type: 'server:update',
     })
-    pendingBrowserServerUpdate = undefined
+    pendingServerUpdateEvent = false
   }
 
   function findHmrPropagation(
@@ -549,7 +529,7 @@ async function runWatchedProcess(options: {
 
       watcher.close().finally(() => {
         stopChild(child, signal).then(() => {
-          browserHmrEndpoint.close().then(() => resolvePromise(0))
+          hmrEventEndpoint.close().then(() => resolvePromise(0))
         })
       })
     }
@@ -559,22 +539,22 @@ async function runWatchedProcess(options: {
   })
 }
 
-interface BrowserHmrEndpoint {
+interface HmrEventEndpoint {
   close(): Promise<void>
-  send(payload: NodeHmrBrowserPayload): void
+  send(payload: HmrEventPayload): void
   url: string
 }
 
-interface BrowserHmrClient {
+interface HmrEventClient {
   close(): void
-  send(payload: NodeHmrBrowserPayload): void
+  send(payload: HmrEventPayload): void
 }
 
-async function createBrowserHmrEndpoint(options: {
+async function createHmrEventEndpoint(options: {
   host: string
   port: number
-}): Promise<BrowserHmrEndpoint> {
-  let clients = new Set<BrowserHmrClient>()
+}): Promise<HmrEventEndpoint> {
+  let clients = new Set<HmrEventClient>()
   let server: Server
 
   server = createServer((request, response) => {
@@ -605,7 +585,7 @@ async function createBrowserHmrEndpoint(options: {
     })
     response.flushHeaders()
 
-    let client: BrowserHmrClient = {
+    let client: HmrEventClient = {
       close() {
         response.end()
         clients.delete(client)
@@ -619,7 +599,7 @@ async function createBrowserHmrEndpoint(options: {
     response.once('close', () => {
       clients.delete(client)
     })
-    client.send({ type: 'connected' })
+    response.write(': connected\n\n')
   })
 
   let url = await new Promise<string>((resolvePromise, reject) => {
@@ -672,32 +652,15 @@ function writeCorsHeaders(response: ServerResponse, status: number): void {
   })
 }
 
-function toBrowserServerHmrPayload(event: ServerHmrEvent): NodeHmrBrowserPayload {
-  if (event.type === 'restart') {
-    return {
-      data: {
-        ...(event.reason === undefined ? {} : { message: event.reason }),
-        ...(event.filePath === undefined ? {} : { path: event.filePath }),
-        reason: 'restart',
-        timestamp: event.timestamp,
-      },
-      event: 'remix:server-update',
-      type: 'custom',
-    }
-  }
+function toServerUpdatePayload(event: ServerHmrEvent): HmrEventPayload {
+  void event
 
   return {
-    data: {
-      path: event.filePath,
-      reason: 'change',
-      timestamp: event.timestamp,
-    },
-    event: 'remix:server-update',
-    type: 'custom',
+    type: 'server:update',
   }
 }
 
-function formatServerSentEvent(payload: NodeHmrBrowserPayload): string {
+function formatServerSentEvent(payload: HmrEventPayload): string {
   return `data: ${JSON.stringify(payload)}\n\n`
 }
 
@@ -759,8 +722,8 @@ async function stopChild(child: ChildProcess | undefined, signal: NodeJS.Signals
 function isChildMessage(message: unknown): message is ChildMessage {
   if (typeof message !== 'object' || message === null || !('type' in message)) return false
 
-  if (message.type === 'browser-hmr:send') {
-    return 'payload' in message && isNodeHmrBrowserPayload(message.payload)
+  if (message.type === 'hmr-event:send') {
+    return 'payload' in message && isHmrEventPayload(message.payload)
   }
 
   if (message.type === 'server-hmr:event') {
@@ -837,24 +800,8 @@ function isServerHmrEvent(value: unknown): value is ServerHmrEvent {
   )
 }
 
-function isNodeHmrBrowserPayload(value: unknown): value is NodeHmrBrowserPayload {
-  if (typeof value !== 'object' || value === null || !('type' in value)) return false
-
-  if (value.type === 'connected') return true
-
-  if (value.type === 'custom') {
-    return 'event' in value && typeof value.event === 'string'
-  }
-
-  if (value.type === 'css-update' || value.type === 'full-reload' || value.type === 'js-update') {
-    return (
-      'path' in value &&
-      typeof value.path === 'string' &&
-      'timestamp' in value &&
-      typeof value.timestamp === 'number' &&
-      (!('acceptedPath' in value) || typeof value.acceptedPath === 'string')
-    )
-  }
-
-  return false
+function isHmrEventPayload(value: unknown): value is HmrEventPayload {
+  return (
+    typeof value === 'object' && value !== null && 'type' in value && typeof value.type === 'string'
+  )
 }
