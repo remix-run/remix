@@ -3,7 +3,7 @@ import { renderToString } from '@remix-run/ui/server'
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { Glyph } from '../glyph/glyph.tsx'
+import { AddIcon, ChevronRightIcon } from '../shared/icons.tsx'
 import {
   Button,
   baseStyle,
@@ -16,7 +16,7 @@ import {
 } from './button.tsx'
 
 describe('button', () => {
-  it('exposes css tokens for base, slots, and tones', () => {
+  it('exposes style mixins for base, slots, and tones', () => {
     let styles = {
       baseStyle,
       dangerStyle,
@@ -65,17 +65,17 @@ describe('button', () => {
     expect(composedHtml).toMatch(/type="button"/)
     expect(composedHtml).toMatch(/width: 1em/)
     expect(composedHtml).toMatch(/padding-inline: var\(--rmx-button-label-padding-inline\)/)
-    expect(composedHtml).toMatch(/min-height: var\(--rmx-control-height-sm\)/)
-    expect(composedHtml).toMatch(/font-size: var\(--rmx-font-size-xs\)/)
+    expect(composedHtml).toMatch(/min-height: 28px/)
+    expect(composedHtml).toMatch(/font-size: 12px/)
     expect(composedHtml).toMatch(/aria-hidden\b/)
   })
 
-  it('renders the Button wrapper with slotted label and icons', async () => {
+  it('renders the Button component with slotted label and icons', async () => {
     let html = await renderToString(
       <Button
         aria-label="Create project"
-        endIcon={<Glyph name="chevronRight" />}
-        startIcon={<Glyph name="add" />}
+        endIcon={<ChevronRightIcon />}
+        startIcon={<AddIcon />}
         tone="primary"
       >
         Create
@@ -84,7 +84,7 @@ describe('button', () => {
 
     expect(html).toMatch(/type="button"/)
     expect(html).toMatch(/Create/)
-    expect(html).toMatch(/background-color: var\(--rmx-color-action-primary-background\)/)
+    expect(html).toMatch(/background-color: #1A72FF/)
     expect(html).toMatch(/padding-inline: var\(--rmx-button-label-padding-inline\)/)
     expect(html.match(/aria-hidden/g)).toHaveLength(4)
   })

@@ -1,4 +1,4 @@
-import { Breadcrumbs } from '@remix-run/ui/breadcrumbs'
+import { Breadcrumbs } from '@remix-run/ui/components/breadcrumbs'
 
 /**
  * @name Breadcrumbs with Separator
@@ -11,7 +11,7 @@ export default function Example() {
       items={[
         { href: '/', label: 'Workspace' },
         { href: '/projects', label: 'Projects' },
-        { label: 'RMX_01' },
+        { label: 'Components' },
       ]}
       separator="/"
     />

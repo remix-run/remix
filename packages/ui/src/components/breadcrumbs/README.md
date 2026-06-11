@@ -5,7 +5,7 @@
 ## Usage
 
 ```tsx
-import { Breadcrumbs } from 'remix/ui/breadcrumbs'
+import { Breadcrumbs } from 'remix/components/breadcrumbs'
 
 export function ProjectBreadcrumbs() {
   return (
@@ -32,7 +32,7 @@ Mark an earlier item as current when the page belongs to a parent section but th
 />
 ```
 
-Pass `separator` to replace the default chevron glyph.
+Pass `separator` to replace the default chevron icon.
 
 ```tsx
 <Breadcrumbs items={[{ href: '/', label: 'Home' }, { label: 'Breadcrumbs' }]} separator="/" />
@@ -52,4 +52,4 @@ Pass `separator` to replace the default chevron glyph.
 - An explicit current item wins over the last-item default.
 - Current items render as text with `aria-current="page"`, even when they include `href`.
 - Non-current items with `href` render as links; non-current items without `href` render as text.
-- The default separator is the `chevronRight` glyph. Separators render between items and are hidden from assistive technology.
+- The default separator is a chevron icon. Separators render between items and are hidden from assistive technology.
