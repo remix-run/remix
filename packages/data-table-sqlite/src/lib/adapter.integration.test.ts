@@ -7,10 +7,7 @@ import {
   teardownAdapterIntegrationSchema,
 } from '../../../data-table/test/adapter-integration-schema.ts'
 import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-integration-contract.ts'
-import {
-  createNativeSqliteDatabase,
-  type NativeSqliteDatabase,
-} from '../../../data-table/test/native-sqlite.ts'
+import { createNativeSqliteDatabase, type NativeSqliteDatabase } from '../../test/native-sqlite.ts'
 
 import { createSqliteDatabaseAdapter } from './adapter.ts'
 
