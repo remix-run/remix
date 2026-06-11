@@ -1,6 +1,5 @@
 import * as path from 'node:path'
 import * as fs from 'node:fs'
-import type { MatchParams } from '@remix-run/route-pattern/match'
 import { createAccessPolicy } from './access.ts'
 import {
   createAssetServerCompilationError,
@@ -70,12 +69,9 @@ const scriptExtensionSet = new Set<string>(supportedScriptExtensions)
 /**
  * Options used to construct an {@link AssetServer} via {@link createAssetServer}.
  */
-export interface AssetServerOptions<
-  transforms extends AssetRequestTransformMap = {},
-  basePath extends string = string,
-> {
+export interface AssetServerOptions<transforms extends AssetRequestTransformMap = {}> {
   /** Public mount path for this asset server, e.g. `'/assets'`. */
-  basePath: basePath
+  basePath: string
   /** File patterns keyed by public URL patterns relative to `basePath`. */
   /** File patterns keyed by public URL patterns. */
   fileMap: Readonly<Record<string, string>>
@@ -142,36 +138,26 @@ export interface AssetServerOptions<
   onError?: (error: unknown) => void | Response | Promise<void | Response>
 }
 
-type AssetServerCreateOptions<
-  transforms extends AssetRequestTransformMap,
-  basePath extends string,
-> = Omit<AssetServerOptions<transforms, basePath>, 'files'> & {
+type AssetServerCreateOptions<transforms extends AssetRequestTransformMap> = Omit<
+  AssetServerOptions<transforms>,
+  'files'
+> & {
   files?: Omit<AssetServerFilesOptions<transforms>, 'transforms'> & {
     transforms?: transforms
   }
 }
 
-export type AssetServerGetHrefOptions<
-  transforms extends AssetRequestTransformMap,
-  basePath extends string = string,
-> =
+export type AssetServerGetHrefOptions<transforms extends AssetRequestTransformMap> =
   | undefined
-  | (AssetServerBasePathOptions<basePath> & {
-      transform?: readonly AssetTransformInvocation<transforms>[]
-    })
-
-export type AssetServerBasePathOptions<basePath extends string = string> = string extends basePath
-  ? Record<string, unknown>
-  : Partial<MatchParams<basePath>>
+  | {
+      transform: readonly AssetTransformInvocation<transforms>[]
+    }
 
 /**
  * Serves compiled scripts and styles for asset requests routed to it.
  * Construct with {@link createAssetServer}.
  */
-export interface AssetServer<
-  transforms extends AssetRequestTransformMap = {},
-  basePath extends string = string,
-> {
+export interface AssetServer<transforms extends AssetRequestTransformMap = {}> {
   /**
    * Serves a script or style request. Returns `Response | null` — null means the request
    * was not handled by this server, letting the router fall through to a 404.
@@ -180,17 +166,11 @@ export interface AssetServer<
   /**
    * Returns the request href for a served asset file.
    */
-  getHref(
-    filePath: string,
-    options?: AssetServerGetHrefOptions<transforms, basePath>,
-  ): Promise<string>
+  getHref(filePath: string, options?: AssetServerGetHrefOptions<transforms>): Promise<string>
   /**
    * Returns preload URLs for one or more served asset files, ordered shallowest-first.
    */
-  getPreloads(
-    filePath: string | readonly string[],
-    options?: AssetServerBasePathOptions<basePath>,
-  ): Promise<string[]>
+  getPreloads(filePath: string | readonly string[]): Promise<string[]>
   /**
    * Closes any watcher resources owned by this server instance.
    */
@@ -220,17 +200,15 @@ type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
 const chokidarWatcherByAssetServer = new WeakMap<object, ChokidarWatcher>()
 const watcherByAssetServer = new WeakMap<object, AssetServerWatcher>()
 
-export function getInternalChokidarWatcher<
-  transforms extends AssetRequestTransformMap,
-  basePath extends string,
->(assetServer: AssetServer<transforms, basePath>): ChokidarWatcher | undefined {
+export function getInternalChokidarWatcher<transforms extends AssetRequestTransformMap>(
+  assetServer: AssetServer<transforms>,
+): ChokidarWatcher | undefined {
   return chokidarWatcherByAssetServer.get(assetServer)
 }
 
-export function getInternalWatchTargets<
-  transforms extends AssetRequestTransformMap,
-  basePath extends string,
->(assetServer: AssetServer<transforms, basePath>): readonly string[] {
+export function getInternalWatchTargets<transforms extends AssetRequestTransformMap>(
+  assetServer: AssetServer<transforms>,
+): readonly string[] {
   return watcherByAssetServer.get(assetServer)?.getWatchedTargets() ?? []
 }
 
@@ -256,10 +234,9 @@ export function getInternalWatchTargets<
  * route('/assets/*path', ({ request }) => assetServer.fetch(request))
  * ```
  */
-export function createAssetServer<
-  const basePath extends string = string,
-  const transforms extends AssetRequestTransformMap = {},
->(options: AssetServerCreateOptions<transforms, basePath>): AssetServer<transforms, basePath> {
+export function createAssetServer<const transforms extends AssetRequestTransformMap = {}>(
+  options: AssetServerCreateOptions<transforms>,
+): AssetServer<transforms> {
   let resolvedOptions = resolveAssetServerOptions(options)
   let accessPolicy = createAccessPolicy({
     allow: resolvedOptions.allow,
@@ -291,10 +268,7 @@ export function createAssetServer<
   let styleCompiler = createStyleCompiler({
     buildId: resolvedOptions.buildId,
     fingerprintAssets: resolvedOptions.fingerprintAssets,
-    getServedFileUrl: (
-      identityPath: string,
-      options: { basePathname?: string; transform: readonly string[] | null },
-    ) => {
+    getServedFileUrl: (identityPath: string, options: { transform: readonly string[] | null }) => {
       if (!fileCompiler) {
         throw createAssetServerCompilationError(`File type is not supported: ${identityPath}`, {
           code: 'FILE_NOT_SUPPORTED',
@@ -305,10 +279,7 @@ export function createAssetServer<
         fileCompiler.validateTransformQuery(options.transform)
       }
 
-      return fileCompiler.getHref(identityPath, {
-        ...(options.basePathname === undefined ? {} : { basePathname: options.basePathname }),
-        transform: options.transform,
-      })
+      return fileCompiler.getHref(identityPath, { transform: options.transform })
     },
     isAllowed: accessPolicy.isAllowed,
     isServedFilePath(filePath) {
@@ -371,7 +342,7 @@ export function createAssetServer<
     }
   }
 
-  let assetServer: AssetServer<transforms, basePath> = {
+  let assetServer: AssetServer<transforms> = {
     async fetch(request) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return null
 
@@ -393,7 +364,6 @@ export function createAssetServer<
             )
           }
           let styleResult = await styleCompiler.getStyle(parsedRequestPathname.filePath, {
-            basePathname: parsedRequestPathname.basePathname,
             ifNoneMatch,
             isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
             requestedFingerprint: parsedRequestPathname.requestedFingerprint,
@@ -459,7 +429,6 @@ export function createAssetServer<
           )
         }
         let scriptResult = await scriptCompiler.getScript(parsedRequestPathname.filePath, {
-          basePathname: parsedRequestPathname.basePathname,
           ifNoneMatch,
           isSourceMapRequest: parsedRequestPathname.isSourceMapRequest,
           requestedFingerprint: parsedRequestPathname.requestedFingerprint,
@@ -514,15 +483,11 @@ export function createAssetServer<
             'assetServer.getHref() only supports transforms for configured file assets',
           )
         }
-        return styleCompiler.getHref(
-          filePath,
-          getBasePathOptions(hrefOptions, resolvedOptions.routes),
-        )
+        return styleCompiler.getHref(filePath)
       }
 
       if (fileCompiler?.isServedFilePath(typeCheckFilePath)) {
         return fileCompiler.getHref(filePath, {
-          ...getBasePathOptions(hrefOptions, resolvedOptions.routes),
           transform,
         })
       }
@@ -539,13 +504,9 @@ export function createAssetServer<
         )
       }
 
-      return scriptCompiler.getHref(
-        filePath,
-        getBasePathOptions(hrefOptions, resolvedOptions.routes),
-      )
+      return scriptCompiler.getHref(filePath)
     },
-    async getPreloads(filePath, preloadOptions) {
-      let basePathOptions = getBasePathOptions(preloadOptions, resolvedOptions.routes)
+    async getPreloads(filePath) {
       let filePaths = Array.isArray(filePath) ? filePath : [filePath]
       let fileAssetFiles: string[] = []
       let styleFiles: string[] = []
@@ -582,35 +543,27 @@ export function createAssetServer<
       }
 
       if (styleFiles.length === 0 && fileAssetFiles.length === 0) {
-        return flattenPreloadLayers(
-          await scriptCompiler.getPreloadLayers(filePath, basePathOptions),
-        )
+        return flattenPreloadLayers(await scriptCompiler.getPreloadLayers(filePath))
       }
 
       if (scriptFiles.length === 0 && fileAssetFiles.length === 0) {
-        return flattenPreloadLayers(await styleCompiler.getPreloadLayers(filePath, basePathOptions))
+        return flattenPreloadLayers(await styleCompiler.getPreloadLayers(filePath))
       }
 
       if (scriptFiles.length === 0 && styleFiles.length === 0) {
-        return flattenPreloadLayers(
-          await getFilePreloadLayers(fileCompiler, fileAssetFiles, basePathOptions),
-        )
+        return flattenPreloadLayers(await getFilePreloadLayers(fileCompiler, fileAssetFiles))
       }
 
       // Mixed asset type preloads need to be merged, so we merge in order of first asset type seen.
       let preloadLayerGroupPromises = groupedAssetTypes.flatMap((assetType) => {
         switch (assetType) {
           case 'script':
-            return scriptFiles.length > 0
-              ? [scriptCompiler.getPreloadLayers(scriptFiles, basePathOptions)]
-              : []
+            return scriptFiles.length > 0 ? [scriptCompiler.getPreloadLayers(scriptFiles)] : []
           case 'style':
-            return styleFiles.length > 0
-              ? [styleCompiler.getPreloadLayers(styleFiles, basePathOptions)]
-              : []
+            return styleFiles.length > 0 ? [styleCompiler.getPreloadLayers(styleFiles)] : []
           case 'file':
             return fileAssetFiles.length > 0
-              ? [getFilePreloadLayers(fileCompiler, fileAssetFiles, basePathOptions)]
+              ? [getFilePreloadLayers(fileCompiler, fileAssetFiles)]
               : []
         }
       })
@@ -632,46 +585,17 @@ export function createAssetServer<
   return assetServer
 }
 
-function getHrefTransform<
-  transforms extends AssetRequestTransformMap,
-  basePath extends string = string,
->(
-  options: AssetServerGetHrefOptions<transforms, basePath> | undefined,
+function getHrefTransform<transforms extends AssetRequestTransformMap>(
+  options: AssetServerGetHrefOptions<transforms> | undefined,
   files: ResolvedAssetServerFilesOptions,
 ): readonly string[] | null {
-  if (!options?.transform) return null
+  if (!options) return null
   let transform = options.transform
   if (transform.length === 0) {
     return null
   }
 
   return serializeAssetTransformInvocations(transform, files.transforms, files.maxRequestTransforms)
-}
-
-interface ResolvedAssetServerBasePathOptions {
-  basePathname?: string
-}
-
-function getBasePathOptions<basePath extends string>(
-  options: AssetServerBasePathOptions<basePath> | undefined,
-  routes: CompiledRoutes,
-): ResolvedAssetServerBasePathOptions {
-  if (options === undefined) return {}
-
-  let params: Record<string, string | number | null | undefined> = {}
-  for (let [key, value] of Object.entries(options)) {
-    if (key === 'transform') continue
-    if (
-      value === undefined ||
-      value === null ||
-      typeof value === 'string' ||
-      typeof value === 'number'
-    ) {
-      params[key] = value
-    }
-  }
-
-  return { basePathname: routes.toBasePathname(params) }
 }
 
 function normalizeRequestedTransformQuery(searchParams: URLSearchParams): readonly string[] | null {
@@ -718,7 +642,6 @@ function flattenPreloadLayers(preloadLayers: readonly (readonly string[])[]): st
 async function getFilePreloadLayers<transforms extends AssetRequestTransformMap>(
   fileCompiler: FileCompiler | null,
   filePaths: readonly string[],
-  options: ResolvedAssetServerBasePathOptions = {},
 ): Promise<string[][]> {
   if (filePaths.length === 0) {
     return []
@@ -734,7 +657,6 @@ async function getFilePreloadLayers<transforms extends AssetRequestTransformMap>
     await Promise.all(
       filePaths.map((filePath) =>
         fileCompiler.getHref(filePath, {
-          ...options,
           transform: null,
         }),
       ),
@@ -746,10 +668,9 @@ function defaultErrorHandler(error: unknown): void {
   console.error(error)
 }
 
-function resolveAssetServerOptions<
-  transforms extends AssetRequestTransformMap,
-  basePath extends string,
->(options: AssetServerCreateOptions<transforms, basePath>): ResolvedAssetServerOptions<transforms> {
+function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
+  options: AssetServerCreateOptions<transforms>,
+): ResolvedAssetServerOptions<transforms> {
   let rootDir = normalizeFilePath(fs.realpathSync(path.resolve(options.rootDir ?? process.cwd())))
   let basePath = normalizeBasePath(options.basePath)
   let scriptOptions = options.scripts ?? {}
@@ -844,7 +765,6 @@ function parseAssetRequestPathname(
     routes: CompiledRoutes
   },
 ): {
-  basePathname: string
   cacheControl: string
   filePath: string
   isSourceMapRequest: boolean
@@ -853,14 +773,13 @@ function parseAssetRequestPathname(
   let isSourceMapRequest = pathname.endsWith('.map')
   let pathWithoutMap = isSourceMapRequest ? pathname.slice(0, -4) : pathname
   let fingerprint = parseFingerprintSuffix(pathWithoutMap)
-  let resolvedPathname = options.routes.resolveUrlPathname(fingerprint.pathname)
-  if (!resolvedPathname) return null
+  let filePath = options.routes.resolveUrlPathname(fingerprint.pathname)
+  if (!filePath) return null
   if (options.fingerprintAssets && fingerprint.requestedFingerprint === null) return null
 
   return {
-    basePathname: resolvedPathname.basePathname,
     cacheControl: getFingerprintRequestCacheControl(fingerprint.requestedFingerprint),
-    filePath: resolvedPathname.filePath,
+    filePath,
     isSourceMapRequest,
     requestedFingerprint: fingerprint.requestedFingerprint,
   }

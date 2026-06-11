@@ -2,8 +2,6 @@ import * as os from 'node:os'
 import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { IfNoneMatch } from '@remix-run/headers/if-none-match'
-import { createBaseVariantCache } from '../base-variant-cache.ts'
-import { createAssetServerCompilationError } from '../compilation-error.ts'
 import { createFileMatcher } from '../file-matcher.ts'
 import { formatFingerprintedPathname } from '../fingerprint.ts'
 import { createModuleStore } from '../module-store.ts'
@@ -38,7 +36,6 @@ type StyleGetResult =
     }
 
 type StyleGetOptions = {
-  basePathname: string
   ifNoneMatch: string | null
   isSourceMapRequest: boolean
   requestedFingerprint: string | null
@@ -50,7 +47,6 @@ type StyleCompilerOptions = {
   getServedFileUrl?(
     identityPath: string,
     options: {
-      basePathname?: string
       transform: readonly string[] | null
     },
   ): Promise<string>
@@ -67,11 +63,8 @@ type StyleCompilerOptions = {
 }
 
 type StyleCompiler = {
-  getHref(filePath: string, options?: { basePathname?: string }): Promise<string>
-  getPreloadLayers(
-    filePath: string | readonly string[],
-    options?: { basePathname?: string },
-  ): Promise<string[][]>
+  getHref(filePath: string): Promise<string>
+  getPreloadLayers(filePath: string | readonly string[]): Promise<string[][]>
   getStyle(filePath: string, options: StyleGetOptions): Promise<StyleGetResult>
   handleFileEvent(filePath: string, event: 'add' | 'change' | 'unlink'): Promise<void>
 }
@@ -91,9 +84,6 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
   })
   let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedStyle>>()
   let emitInFlightByCacheKey = new Map<string, Promise<EmittedStyle>>()
-  let baseEmittedCache = createBaseVariantCache<StyleRecord, EmittedStyle>({
-    getRecord: (identityPath) => styleStore.get(identityPath),
-  })
   let resolveArgs: ResolveArgs = {
     isAllowed: resolvedOptions.isAllowed,
     isServedFilePath: resolvedOptions.isServedFilePath,
@@ -111,12 +101,12 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
   }
 
   return {
-    async getHref(filePath, hrefOptions) {
+    async getHref(filePath) {
       let resolvedStyle = resolveServedStyleOrThrow(resolveInputFilePath(filePath), resolveArgs)
-      return getServedUrl(resolvedStyle.identityPath, hrefOptions?.basePathname)
+      return getServedUrl(resolvedStyle.identityPath)
     },
 
-    async getPreloadLayers(filePath, preloadOptions) {
+    async getPreloadLayers(filePath) {
       let resolvedEntries: string[] = []
       let seen = new Set<string>()
 
@@ -141,7 +131,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
         let layer: string[] = []
 
         for (let resolvedStyle of resolvedStyles) {
-          layer.push(getServedUrlForResolvedStyle(resolvedStyle, preloadOptions?.basePathname))
+          layer.push(getServedUrlForResolvedStyle(resolvedStyle))
 
           for (let dep of resolvedStyle.deps) {
             if (visited.has(dep)) continue
@@ -159,10 +149,10 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     async getStyle(filePath, getOptions) {
       let resolvedStyle = resolveServedStyleOrThrow(resolveInputFilePath(filePath), resolveArgs)
       let record = styleStore.get(resolvedStyle.identityPath)
-      let emitted = await getOrCreateEmittedStyle(record, getOptions.basePathname)
-      let notModified = getNotModifiedStyle(emitted, getOptions)
+      let notModified = getNotModifiedStyle(record.emitted, getOptions)
       if (notModified) return notModified
 
+      let emitted = await getOrCreateEmittedStyle(record)
       return {
         style: toStyleCompileResult(emitted),
         type: 'style',
@@ -173,7 +163,6 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       let normalizedFilePath = normalizeFilePath(filePath)
       if (isWatchIgnored(normalizedFilePath)) return
       styleStore.invalidateForFileEvent(normalizedFilePath, event)
-      baseEmittedCache.prune()
     },
   }
 
@@ -256,23 +245,32 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     return transformStyleResult.value
   }
 
-  async function getOrCreateEmittedStyle(
-    record: StyleRecord,
-    basePathname = resolvedOptions.routes.basePathname,
-  ): Promise<EmittedStyle> {
-    if (record.emitted && basePathname === resolvedOptions.routes.basePathname) {
-      return record.emitted
-    }
-
-    if (basePathname !== resolvedOptions.routes.basePathname) {
-      return baseEmittedCache.get(record, basePathname, () => emitStyle(record, basePathname))
-    }
+  async function getOrCreateEmittedStyle(record: StyleRecord): Promise<EmittedStyle> {
+    if (record.emitted) return record.emitted
 
     let cacheKey = getRecordCacheKey(record)
     let existing = emitInFlightByCacheKey.get(cacheKey)
     if (existing) return existing
 
-    let promise = emitStyle(record, basePathname)
+    let promise = (async () => {
+      let startedVersion = record.invalidationVersion
+      let resolvedStyle = await getOrCreateResolvedStyle(record)
+      let emitResolvedStyleResult = await emitResolvedStyle(resolvedStyle, {
+        getServedFileUrl: resolvedOptions.getServedFileUrl,
+        getServedUrl,
+        sourceMaps: resolvedOptions.sourceMaps,
+      })
+
+      if (!emitResolvedStyleResult.ok) {
+        throw emitResolvedStyleResult.error
+      }
+
+      if (isFresh(record, startedVersion)) {
+        styleStore.setEmitted(record.identityPath, emitResolvedStyleResult.value, null)
+      }
+
+      return emitResolvedStyleResult.value
+    })()
 
     emitInFlightByCacheKey.set(cacheKey, promise)
 
@@ -285,61 +283,15 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     }
   }
 
-  async function emitStyle(record: StyleRecord, basePathname: string): Promise<EmittedStyle> {
-    let startedVersion = record.invalidationVersion
-    let resolvedStyle = await getOrCreateResolvedStyle(record)
-    let getServedFileUrl = resolvedOptions.getServedFileUrl
-    let emitResolvedStyleResult = await emitResolvedStyle(resolvedStyle, {
-      getServedFileUrl: getServedFileUrl
-        ? (identityPath, options) =>
-            getServedFileUrl(identityPath, {
-              basePathname,
-              transform: options.transform,
-            })
-        : undefined,
-      getServedUrl: (identityPath) => getServedUrl(identityPath, basePathname),
-      sourceMaps: resolvedOptions.sourceMaps,
-    })
-
-    if (!emitResolvedStyleResult.ok) {
-      throw emitResolvedStyleResult.error
-    }
-
-    if (isFresh(record, startedVersion) && basePathname === resolvedOptions.routes.basePathname) {
-      styleStore.setEmitted(record.identityPath, emitResolvedStyleResult.value, null)
-    }
-
-    return emitResolvedStyleResult.value
-  }
-
-  async function getServedUrl(
-    identityPath: string,
-    basePathname = resolvedOptions.routes.basePathname,
-  ): Promise<string> {
+  async function getServedUrl(identityPath: string): Promise<string> {
     return getServedUrlForResolvedStyle(
       await getOrCreateResolvedStyle(styleStore.get(identityPath)),
-      basePathname,
     )
   }
 
-  function getServedUrlForResolvedStyle(
-    resolvedStyle: ResolvedStyle,
-    basePathname = resolvedOptions.routes.basePathname,
-  ): string {
-    let urlPathname = resolvedOptions.routes.toUrlPathname(resolvedStyle.identityPath, {
-      basePathname,
-    })
-    if (!urlPathname) {
-      throw createAssetServerCompilationError(
-        `File ${resolvedStyle.identityPath} is outside all configured fileMap entries.`,
-        {
-          code: 'FILE_OUTSIDE_FILE_MAP',
-        },
-      )
-    }
-
+  function getServedUrlForResolvedStyle(resolvedStyle: ResolvedStyle): string {
     return formatFingerprintedPathname(
-      urlPathname,
+      resolvedStyle.stableUrlPathname,
       resolvedOptions.fingerprintAssets ? resolvedStyle.fingerprint : null,
     )
   }

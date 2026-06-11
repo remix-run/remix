@@ -89,38 +89,32 @@ function createWatchedTestServer(
   })
 }
 
-function get<transforms extends AssetRequestTransformMap, basePath extends string>(
-  assetServer: AssetServer<transforms, basePath>,
+function get(
+  assetServer: AssetServer<AssetRequestTransformMap>,
   pathname: string,
   headers?: Record<string, string>,
 ) {
   return assetServer.fetch(new Request(`http://localhost${pathname}`, { headers }))
 }
 
-function head<transforms extends AssetRequestTransformMap, basePath extends string>(
-  assetServer: AssetServer<transforms, basePath>,
-  pathname: string,
-) {
+function head(assetServer: AssetServer<AssetRequestTransformMap>, pathname: string) {
   return assetServer.fetch(new Request(`http://localhost${pathname}`, { method: 'HEAD' }))
 }
 
-async function getByFile<transforms extends AssetRequestTransformMap, basePath extends string>(
-  assetServer: AssetServer<transforms, basePath>,
+async function getByFile(
+  assetServer: AssetServer<AssetRequestTransformMap>,
   filePath: string,
   headers?: Record<string, string>,
 ) {
   return get(assetServer, await assetServer.getHref(filePath), headers)
 }
 
-function post<transforms extends AssetRequestTransformMap, basePath extends string>(
-  assetServer: AssetServer<transforms, basePath>,
-  pathname: string,
-) {
+function post(assetServer: AssetServer<AssetRequestTransformMap>, pathname: string) {
   return assetServer.fetch(new Request(`http://localhost${pathname}`, { method: 'POST' }))
 }
 
-async function emitWatchEvent<transforms extends AssetRequestTransformMap, basePath extends string>(
-  assetServer: AssetServer<transforms, basePath>,
+async function emitWatchEvent(
+  assetServer: AssetServer<AssetRequestTransformMap>,
   filePath: string,
   event: 'add' | 'change' | 'unlink',
 ): Promise<void> {
@@ -2332,49 +2326,6 @@ describe('asset-server', () => {
     let body = await response.text()
 
     assert.match(body, /import\("\/assets\/app\/dep\.@[A-Za-z0-9_-]+\.ts"\)/)
-  })
-
-  it('rewrites imports under the resolved base pathname for complex optional base paths', async () => {
-    await write(dir, 'app/dep.ts', 'export const dep = 1')
-    await write(dir, 'app/entry.ts', 'import { dep } from "./dep.ts"; export { dep }')
-    let assetServer = createTestServer(dir, {
-      basePath: '/(:a/)b/(:c/)d',
-    })
-
-    let fullBaseResponse = await get(assetServer, '/a/b/c/d/app/entry.ts')
-    assert.ok(fullBaseResponse)
-    assert.equal(fullBaseResponse.status, 200)
-    let fullBaseBody = await fullBaseResponse.text()
-    assert.match(fullBaseBody, /from "\/a\/b\/c\/d\/app\/dep\.ts"/)
-    assert.doesNotMatch(fullBaseBody, /from "\/assets\/app\/dep\.ts"/)
-
-    let partialBaseResponse = await get(assetServer, '/b/c/d/app/entry.ts')
-    assert.ok(partialBaseResponse)
-    assert.equal(partialBaseResponse.status, 200)
-    let partialBaseBody = await partialBaseResponse.text()
-    assert.match(partialBaseBody, /from "\/b\/c\/d\/app\/dep\.ts"/)
-    assert.doesNotMatch(partialBaseBody, /from "\/assets\/app\/dep\.ts"/)
-  })
-
-  it('generates hrefs and preloads from base path params', async () => {
-    await write(dir, 'app/entry.ts', 'import "./dep.ts"; export const entry = 1')
-    await write(dir, 'app/dep.ts', 'export const dep = 1')
-    let assetServer = createTestServer(dir, {
-      basePath: '/(:a/)b/(:c/)d',
-    })
-
-    assert.equal(
-      await assetServer.getHref('app/entry.ts', {
-        a: 'a',
-        c: 'c',
-      }),
-      '/a/b/c/d/app/entry.ts',
-    )
-
-    assert.deepEqual(await assetServer.getPreloads('app/entry.ts', { c: 'c' }), [
-      '/b/c/d/app/entry.ts',
-      '/b/c/d/app/dep.ts',
-    ])
   })
 
   it('rewrites static template-literal dynamic imports', async () => {

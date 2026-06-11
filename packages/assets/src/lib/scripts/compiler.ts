@@ -4,7 +4,6 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { IfNoneMatch } from '@remix-run/headers/if-none-match'
 
-import { createBaseVariantCache } from '../base-variant-cache.ts'
 import { createAssetServerCompilationError } from '../compilation-error.ts'
 import { createFileMatcher } from '../file-matcher.ts'
 import {
@@ -56,7 +55,6 @@ type ScriptGetResult =
     }
 
 type ScriptGetOptions = {
-  basePathname: string
   ifNoneMatch: string | null
   isSourceMapRequest: boolean
   requestedFingerprint: string | null
@@ -81,17 +79,13 @@ type ScriptCompilerOptions = {
 
 type ScriptCompiler = {
   getScript(filePath: string, options: ScriptGetOptions): Promise<ScriptGetResult>
-  getPreloadLayers(
-    filePath: string | readonly string[],
-    options?: { basePathname?: string },
-  ): Promise<string[][]>
-  getHref(filePath: string, options?: { basePathname?: string }): Promise<string>
+  getPreloadLayers(filePath: string | readonly string[]): Promise<string[][]>
+  getHref(filePath: string): Promise<string>
   handleFileEvent(filePath: string, event: ModuleWatchEvent): Promise<void>
   parseRequestPathname(pathname: string): ParsedRequestPathname | null
 }
 
 type ParsedRequestPathname = {
-  basePathname: string
   cacheControl: string
   filePath: string
   isSourceMapRequest: boolean
@@ -127,9 +121,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   })
   let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedModule>>()
   let emitInFlightByCacheKey = new Map<string, Promise<EmittedModule>>()
-  let baseEmittedCache = createBaseVariantCache<ScriptRecord, EmittedModule>({
-    getRecord: (identityPath) => scriptStore.get(identityPath),
-  })
 
   let transformArgs: TransformArgs = {
     buildId: resolvedOptions.buildId ?? null,
@@ -156,30 +147,17 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     async getScript(filePath, getOptions) {
       let resolvedModule = resolveServedScriptOrThrow(resolveInputFilePath(filePath))
       let record = scriptStore.get(resolvedModule.identityPath)
-
-      if (getOptions.basePathname === resolvedOptions.routes.basePathname) {
-        let notModified = getNotModifiedScript(record, getOptions)
-        if (notModified) return notModified
-
-        return {
-          script: toScriptCompileResult(await getOrCreateEmittedScript(record)),
-          type: 'script',
-        }
-      }
-
-      let emitted = await baseEmittedCache.get(record, getOptions.basePathname, () =>
-        emitScript(record, getOptions.basePathname),
-      )
-      let notModified = getNotModifiedResult(emitted, getOptions)
+      let notModified = getNotModifiedScript(record, getOptions)
       if (notModified) return notModified
 
+      let emitted = await getOrCreateEmittedScript(record)
       return {
         script: toScriptCompileResult(emitted),
         type: 'script',
       }
     },
 
-    async getPreloadLayers(filePath, preloadOptions) {
+    async getPreloadLayers(filePath) {
       let resolvedEntries: string[] = []
       let seen = new Set<string>()
 
@@ -204,7 +182,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
         let layer: string[] = []
 
         for (let resolvedModule of resolvedModules) {
-          layer.push(getServedUrlForResolvedScript(resolvedModule, preloadOptions?.basePathname))
+          layer.push(getServedUrlForResolvedScript(resolvedModule))
 
           for (let dep of resolvedModule.deps) {
             if (visited.has(dep)) continue
@@ -219,9 +197,9 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       return layers
     },
 
-    async getHref(filePath, hrefOptions) {
+    async getHref(filePath) {
       let resolvedModule = resolveServedScriptOrThrow(resolveInputFilePath(filePath))
-      return getServedUrl(resolvedModule.identityPath, hrefOptions?.basePathname)
+      return getServedUrl(resolvedModule.identityPath)
     },
 
     async handleFileEvent(filePath, event) {
@@ -235,33 +213,27 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       if (isTsconfigPath(normalizedFilePath)) {
         tsconfigTransformOptionsResolver.clear()
         scriptStore.invalidateAll()
-        baseEmittedCache.prune()
         return
       }
 
       if (isPackageJsonPath(normalizedFilePath)) {
         scriptStore.invalidateAll()
-        baseEmittedCache.prune()
         return
       }
 
       scriptStore.invalidateForFileEvent(normalizedFilePath, event)
-      baseEmittedCache.prune()
     },
 
     parseRequestPathname(pathname) {
       let parsedPathname = parseServedPathname(pathname)
-      let resolvedPathname = resolvedOptions.routes.resolveUrlPathname(
-        parsedPathname.stablePathname,
-      )
-      if (!resolvedPathname) return null
+      let filePath = resolvedOptions.routes.resolveUrlPathname(parsedPathname.stablePathname)
+      if (!filePath) return null
       if (resolvedOptions.fingerprintAssets && parsedPathname.requestedFingerprint === null)
         return null
 
       return {
-        basePathname: resolvedPathname.basePathname,
         cacheControl: getFingerprintRequestCacheControl(parsedPathname.requestedFingerprint),
-        filePath: resolvedPathname.filePath,
+        filePath,
         isSourceMapRequest: parsedPathname.isSourceMapRequest,
         requestedFingerprint: parsedPathname.requestedFingerprint,
       }
@@ -430,55 +402,15 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     }
   }
 
-  async function emitScript(record: ScriptRecord, basePathname: string): Promise<EmittedModule> {
-    let emitResolvedModuleResult = await emitScriptResult(record, basePathname)
-
-    if (!emitResolvedModuleResult.ok) {
-      throw emitResolvedModuleResult.error
-    }
-
-    return emitResolvedModuleResult.value
-  }
-
-  async function emitScriptResult(
-    record: ScriptRecord,
-    basePathname = resolvedOptions.routes.basePathname,
-  ) {
-    let resolvedModule = await getOrCreateResolvedScript(record)
-    return emitResolvedModule(resolvedModule, {
-      getServedUrl: (identityPath) => getServedUrl(identityPath, basePathname),
-      sourceMaps: resolvedOptions.sourceMaps,
-    })
-  }
-
-  async function getServedUrl(
-    identityPath: string,
-    basePathname = resolvedOptions.routes.basePathname,
-  ): Promise<string> {
+  async function getServedUrl(identityPath: string): Promise<string> {
     return getServedUrlForResolvedScript(
       await getOrCreateResolvedScript(scriptStore.get(identityPath)),
-      basePathname,
     )
   }
 
-  function getServedUrlForResolvedScript(
-    resolvedModule: ResolvedModule,
-    basePathname = resolvedOptions.routes.basePathname,
-  ): string {
-    let urlPathname = resolvedOptions.routes.toUrlPathname(resolvedModule.identityPath, {
-      basePathname,
-    })
-    if (!urlPathname) {
-      throw createAssetServerCompilationError(
-        `File ${resolvedModule.identityPath} is outside all configured fileMap entries.`,
-        {
-          code: 'FILE_OUTSIDE_FILE_MAP',
-        },
-      )
-    }
-
+  function getServedUrlForResolvedScript(resolvedModule: ResolvedModule): string {
     return formatFingerprintedPathname(
-      urlPathname,
+      resolvedModule.stableUrlPathname,
       resolvedOptions.fingerprintAssets ? resolvedModule.fingerprint : null,
     )
   }

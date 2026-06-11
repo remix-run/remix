@@ -52,7 +52,6 @@ type FileGetOptions = {
 }
 
 type FileGetHrefOptions = {
-  basePathname?: string
   transform: readonly string[] | null
 }
 
@@ -180,27 +179,12 @@ export function createFileCompiler(options: FileCompilerOptions): FileCompiler {
     async getHref(filePath, hrefOptions) {
       let resolvedFile = resolveServedFileOrThrow(resolveInputFilePath(filePath), resolveArgs)
       let record = getFreshSourceFileRecord(resolvedFile.identityPath)
-      let urlPathname =
-        hrefOptions.basePathname === undefined
-          ? resolvedFile.stableUrlPathname
-          : resolvedOptions.routes.toUrlPathname(resolvedFile.identityPath, {
-              basePathname: hrefOptions.basePathname,
-            })
-      if (!urlPathname) {
-        throw createAssetServerCompilationError(
-          `File ${resolvedFile.identityPath} is outside all configured fileMap entries.`,
-          {
-            code: 'FILE_OUTSIDE_FILE_MAP',
-          },
-        )
-      }
-
       let href = resolvedOptions.fingerprintAssets
         ? formatFingerprintedPathname(
-            urlPathname,
+            resolvedFile.stableUrlPathname,
             (await getOrCreateSourceFileMetadata(record)).fingerprint,
           )
-        : urlPathname
+        : resolvedFile.stableUrlPathname
 
       if (shouldUseTransformPipeline(hrefOptions.transform)) {
         return appendTransformQuery(href, hrefOptions.transform)
