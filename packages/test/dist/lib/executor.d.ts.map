@@ -1,0 +1,1 @@
+{"version":3,"file":"executor.d.ts","sourceRoot":"","sources":["../../src/lib/executor.ts"],"names":[],"mappings":"AAAA,OAAO,EAAqB,KAAK,2BAA2B,EAAoB,MAAM,cAAc,CAAA;AAEpG,OAAO,KAAK,EAAc,WAAW,EAAE,MAAM,wBAAwB,CAAA;AAiCrE,wBAAsB,QAAQ,CAC5B,OAAO,CAAC,EAAE,IAAI,CAAC,2BAA2B,EAAE,uBAAuB,CAAC,GACnE,OAAO,CAAC,WAAW,CAAC,CAkKtB"}
