@@ -251,6 +251,39 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
     )
   })
 
+  it('supports write returning rows', async function () {
+    let db = options.createDatabase()
+
+    let inserted = await db.query(accounts).insertMany(
+      [
+        { id: 1, email: 'a@example.com', status: 'active', nickname: null },
+        { id: 2, email: 'b@example.com', status: 'active', nickname: null },
+      ],
+      { returning: ['id', 'email'] },
+    )
+
+    assert.ok('rows' in inserted)
+    if ('rows' in inserted) {
+      assert.deepEqual(
+        inserted.rows.map((row) => ({ id: row.id, email: row.email })),
+        [
+          { id: 1, email: 'a@example.com' },
+          { id: 2, email: 'b@example.com' },
+        ],
+      )
+    }
+
+    let deleted = await db
+      .query(accounts)
+      .where({ id: 2 })
+      .delete({ returning: ['id'] })
+
+    assert.ok('rows' in deleted)
+    if ('rows' in deleted) {
+      assert.deepEqual(deleted.rows, [{ id: 2 }])
+    }
+  })
+
   it('supports upsert with conflict target', async function () {
     let db = options.createDatabase()
 
