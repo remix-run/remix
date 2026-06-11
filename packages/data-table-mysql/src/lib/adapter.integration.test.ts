@@ -37,5 +37,6 @@ describe('mysql adapter integration', { skip: typeof DATABASE_URL !== 'string' }
         await pool.query(statement)
       }, 'mysql')
     },
+    supportsReturning: false,
   })
 })

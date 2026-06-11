@@ -3,6 +3,7 @@ import { beforeEach, it } from '@remix-run/test'
 
 import { column } from '../src/lib/column.ts'
 import type { Database } from '../src/lib/database.ts'
+import { DataTableQueryError } from '../src/lib/errors.ts'
 import { createMigrationRunner } from '../src/lib/migrations/runner.ts'
 import { table, hasMany, hasManyThrough } from '../src/lib/table.ts'
 import { between, eq, ilike, inList, ne } from '../src/lib/operators.ts'
@@ -45,6 +46,7 @@ const accountTasks = hasManyThrough(accounts, tasks, {
 export type IntegrationContractOptions = {
   createDatabase: () => Database
   resetDatabase: () => Promise<void>
+  supportsReturning?: boolean
 }
 
 export function runAdapterIntegrationContract(options: IntegrationContractOptions): void {
@@ -251,8 +253,46 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
     )
   })
 
-  it('supports write returning rows', async function () {
+  it('handles write returning rows', async function () {
     let db = options.createDatabase()
+
+    if (options.supportsReturning === false) {
+      await assert.rejects(
+        async () => {
+          await db.query(accounts).insertMany(
+            [
+              { id: 1, email: 'a@example.com', status: 'active', nickname: null },
+              { id: 2, email: 'b@example.com', status: 'active', nickname: null },
+            ],
+            { returning: ['id', 'email'] },
+          )
+        },
+        (error: unknown) =>
+          error instanceof DataTableQueryError &&
+          error.message === 'insertMany() returning is not supported by this adapter',
+      )
+
+      await db.query(accounts).insert({
+        id: 2,
+        email: 'b@example.com',
+        status: 'active',
+        nickname: null,
+      })
+
+      await assert.rejects(
+        async () => {
+          await db
+            .query(accounts)
+            .where({ id: 2 })
+            .delete({ returning: ['id'] })
+        },
+        (error: unknown) =>
+          error instanceof DataTableQueryError &&
+          error.message === 'delete() returning is not supported by this adapter',
+      )
+
+      return
+    }
 
     let inserted = await db.query(accounts).insertMany(
       [
