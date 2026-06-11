@@ -2,6 +2,13 @@
 
 This is the changelog for [`auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.3
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.20.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.20.0)
+
 ## v0.2.2
 
 ### Patch Changes

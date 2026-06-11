@@ -79,6 +79,31 @@ try {
 }
 ```
 
+## Running integration tests locally
+
+To start a local MySQL container matching CI:
+
+```sh
+podman run --name mysql \
+  -e MYSQL_ROOT_PASSWORD=root \
+  -e MYSQL_DATABASE=remix \
+  -p 3306:3306 \
+  -d mysql:8
+```
+
+Then run:
+
+```sh
+REMIX_DATA_TABLE_MYSQL_TEST_URL=mysql://root:root@127.0.0.1:3306/remix \
+pnpm test src/lib/adapter.integration.test.ts
+```
+
+Remove the container when you are done:
+
+```sh
+podman rm -f mysql
+```
+
 ## Related Packages
 
 - [`data-table`](https://github.com/remix-run/remix/tree/main/packages/data-table) - Core query/relations API
