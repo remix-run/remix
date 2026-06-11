@@ -36,6 +36,7 @@ type DocsContext = {
 
 export interface DocsRouterOptions {
   assetServer: DocsAssetServer
+  docsContext?: DocsContext
   versions: Versions
 }
 
@@ -45,8 +46,10 @@ export const getDefaultVersions = (): Versions => {
 }
 
 export function createRouter(options: DocsRouterOptions): Router {
-  let { assetServer, versions } = options
-  let docsContextPromise: Promise<DocsContext> | undefined
+  let { assetServer, docsContext, versions } = options
+  let docsContextPromise: Promise<DocsContext> | undefined = docsContext
+    ? Promise.resolve(docsContext)
+    : undefined
 
   const router = _createRouter({ middleware: [staticFiles(PUBLIC_DIR)] })
 

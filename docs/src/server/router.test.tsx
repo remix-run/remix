@@ -3,6 +3,7 @@ import { describe, it } from 'remix/test'
 
 import { createAssetServer } from './asset-server.ts'
 import { getVersionedLookupHref } from './lookup.ts'
+import { buildRegistry } from './registry.ts'
 import { createRouter } from './router.tsx'
 import { getDocsRouteHref } from './routes.ts'
 
@@ -22,6 +23,7 @@ describe('createRouter()', () => {
     t.after(() => assetServer.close())
     let router = createRouter({
       assetServer,
+      docsContext: await getTestDocsContext(assetServer),
       versions: ['v1.2.3'],
     })
 
@@ -40,6 +42,7 @@ describe('createRouter()', () => {
     t.after(() => assetServer.close())
     let router = createRouter({
       assetServer,
+      docsContext: await getTestDocsContext(assetServer),
       versions: ['v1.2.3'],
     })
 
@@ -97,6 +100,23 @@ function shouldVersionAssetUrl(url: string): boolean {
     return false
   }
   return true
+}
+
+async function getTestDocsContext(assetServer: ReturnType<typeof createAssetServer>) {
+  let [entryHref, entryPreloads] = await Promise.all([
+    assetServer.getHref('docs/src/client/entry.tsx'),
+    assetServer.getPreloads('docs/src/client/entry.tsx'),
+  ])
+
+  return {
+    docFiles: [],
+    docFilesLookup: new Map(),
+    entryHref,
+    entryPreloads,
+    getRegistry() {
+      return buildRegistry([])
+    },
+  }
 }
 
 describe('getVersionedLookupHref()', () => {
