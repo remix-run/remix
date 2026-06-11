@@ -30,6 +30,7 @@
     "generate-remix": "node ./scripts/generate-remix.ts",
     "lint": "oxlint . -A all --quiet",
     "lint:fix": "oxlint . -A all --fix --quiet",
+    "pr-preview": "node ./scripts/pr-preview.ts",
     "setup-installable-branch": "node ./scripts/setup-installable-branch.ts",
     "sync-remix-readmes": "node ./scripts/sync-remix-readmes.ts",
     "validate-remix-package-readmes": "node ./scripts/validate-remix-package-readmes.ts",
@@ -42,5 +43,13 @@
   },
   "workspaces": [
     "packages/*"
-  ]
+  ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
+  }
 }
