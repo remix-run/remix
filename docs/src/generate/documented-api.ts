@@ -209,6 +209,7 @@ function getDocumentedInterfaceFunction(
   return {
     ...getDocumentedFunction(fullName, node),
     type: 'interface-function',
+    path: getApiFilePath(fullName, 'interface'),
   }
 }
 

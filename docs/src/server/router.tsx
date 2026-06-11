@@ -7,7 +7,7 @@ import { createHtmlResponse } from 'remix/response/html'
 import { createRouter as _createRouter, type Router } from 'remix/router'
 import { clientEntry, type RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
-import { assetServer, entryPreloads } from './asset-server.ts'
+import { CLIENT_ENTRY_PATH, type DocsAssetServer } from './asset-server.ts'
 import { discoverDemoFiles, loadDemoComponent, renderDemoSource } from './demos.tsx'
 import { getVersionedLookupHref } from './lookup.ts'
 import {
@@ -29,7 +29,14 @@ const REMIX_PKG_JSON = path.join(REPO_DIR, 'packages', 'remix', 'package.json')
 type DocsContext = {
   docFiles: DocFile[]
   docFilesLookup: Map<string, MarkdownDocFile>
+  entryHref: string
+  entryPreloads: readonly string[]
   getRegistry(version?: string): DocsRegistry
+}
+
+export interface DocsRouterOptions {
+  assetServer: DocsAssetServer
+  versions: Versions
 }
 
 export const getDefaultVersions = (): Versions => {
@@ -37,13 +44,14 @@ export const getDefaultVersions = (): Versions => {
   return [version]
 }
 
-export function createRouter(versions: Versions) {
+export function createRouter(options: DocsRouterOptions): Router {
+  let { assetServer, versions } = options
   let docsContextPromise: Promise<DocsContext> | undefined
 
   const router = _createRouter({ middleware: [staticFiles(PUBLIC_DIR)] })
 
   function getDocsContext(): Promise<DocsContext> {
-    docsContextPromise ??= loadDocsContext()
+    docsContextPromise ??= loadDocsContext(assetServer)
     return docsContextPromise
   }
 
@@ -60,11 +68,8 @@ export function createRouter(versions: Versions) {
 
   router.map(routes, {
     actions: {
-      assets: async ({ request, params }) => {
-        // Drop the optional version prefix so the asset server sees a stable URL space.
-        let url = new URL(request.url)
-        url.pathname = routes.assets.href({ asset: params.asset })
-        let response = await assetServer.fetch(new Request(url, request))
+      assets: async ({ request }) => {
+        let response = await assetServer.fetch(request)
         return response ?? new Response('Not Found', { status: 404 })
       },
       async docs({ request, params }) {
@@ -75,7 +80,8 @@ export function createRouter(versions: Versions) {
           versions: versions,
           slug: params.slug,
           activeVersion: params.version,
-          entryPreloads,
+          entryHref: docsContext.entryHref,
+          entryPreloads: docsContext.entryPreloads,
         }
 
         if (docFile) {
@@ -126,7 +132,8 @@ export function createRouter(versions: Versions) {
             registry={docsContext.getRegistry(params.version)}
             versions={versions}
             activeVersion={params.version}
-            entryPreloads={entryPreloads}
+            entryHref={docsContext.entryHref}
+            entryPreloads={docsContext.entryPreloads}
           >
             <Home />
           </Document>,
@@ -168,10 +175,14 @@ export function createRouter(versions: Versions) {
 
 // Response helpers
 
-async function loadDocsContext(): Promise<DocsContext> {
+async function loadDocsContext(assetServer: DocsAssetServer): Promise<DocsContext> {
   let { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
-  let demoFiles = await discoverDemoFiles()
+  let demoFiles = await discoverDemoFiles(assetServer)
   let docFiles = [...markdownFiles, ...demoFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
+  let [entryHref, entryPreloads] = await Promise.all([
+    assetServer.getHref(CLIENT_ENTRY_PATH),
+    assetServer.getPreloads(CLIENT_ENTRY_PATH),
+  ])
 
   let registryByVersion = new Map<string | undefined, DocsRegistry>()
   registryByVersion.set(undefined, buildRegistry(docFiles))
@@ -179,6 +190,8 @@ async function loadDocsContext(): Promise<DocsContext> {
   return {
     docFiles,
     docFilesLookup,
+    entryHref,
+    entryPreloads,
     getRegistry(version?: string): DocsRegistry {
       let registry = registryByVersion.get(version)
       if (!registry) {
