@@ -813,8 +813,8 @@ export const ScheduleGrid = clientEntry(
           name: schedule.name,
         }),
         headers: {
-          'content-type': 'application/json',
-          'x-csrf-token': handle.props.csrfToken,
+          'Content-Type': 'application/json',
+          'X-Csrf-Token': handle.props.csrfToken,
         },
         method: 'PUT',
       })
