@@ -67,7 +67,7 @@ function getLineAndColumn(source: string, search: string): { line: number; colum
 
 function createTestServer(rootDir: string, overrides: Partial<AssetServerOptions<any>> = {}) {
   return createAssetServerForTest({
-    allow: ['app/**', 'app/node_modules/**'],
+    allowFiles: ['app/**', 'app/node_modules/**'],
     basePath: '/assets',
     fileMap: {
       '/app/*path': 'app/*path',
@@ -731,7 +731,7 @@ describe('asset-server', () => {
       '<svg xmlns="http://www.w3.org/2000/svg" color="#0EA5E9"><rect fill="currentColor" /></svg>\n',
     )
     let assetServer = createAssetServer({
-      allow: ['app/**'],
+      allowFiles: ['app/**'],
       basePath: '/assets',
       fileMap: {
         '/assets/app/*path': 'app/*path',
@@ -2345,20 +2345,23 @@ describe('asset-server', () => {
   })
 
   it('rewrites re-exported package specifiers', async () => {
-    await writeJson(dir, 'app/node_modules/example/package.json', {
-      name: 'example',
+    await writeJson(dir, 'app/node_modules/@remix-run/__example/package.json', {
+      name: '@remix-run/__example',
       type: 'module',
       exports: './index.ts',
     })
-    await write(dir, 'app/node_modules/example/index.ts', 'export const value = 1')
-    await write(dir, 'app/bridge.ts', 'export * from "example"')
+    await write(dir, 'app/node_modules/@remix-run/__example/index.ts', 'export const value = 1')
+    await write(dir, 'app/bridge.ts', 'export * from "@remix-run/__example"')
     let assetServer = createTestServer(dir)
 
     let response = await getByFile(assetServer, 'app/bridge.ts')
     assert.ok(response)
     let body = await response.text()
 
-    assert.match(body, /export \* from "\/assets\/app\/node_modules\/example\/index\.ts"/)
+    assert.match(
+      body,
+      /export \* from "\/assets\/app\/node_modules\/@remix-run\/__example\/index\.ts"/,
+    )
   })
 
   it('leaves variable dynamic imports unchanged', async () => {
@@ -2521,6 +2524,9 @@ describe('asset-server', () => {
         caseDir,
         'app/node_modules/.pnpm/remix@1.0.0/node_modules/remix/package.json',
         {
+          dependencies: {
+            '@remix-run/ui': '1.0.0',
+          },
           name: 'remix',
           type: 'module',
           exports: {
@@ -2777,14 +2783,17 @@ describe('asset-server', () => {
     await write(dir, 'other.ts', 'export const value = 1')
     let assetServer = createTestServer(dir)
 
-    await assert.rejects(() => assetServer.getHref('other.ts'), /File is not allowed:/)
+    await assert.rejects(
+      () => assetServer.getHref('other.ts'),
+      /not allowed by the asset server access configuration/,
+    )
   })
 
   it('getPreloads rejects denied modules', async () => {
     await write(dir, 'app/entry.ts', 'export const entry = true')
     let assetServer = createAssetServerForTest({
-      allow: ['app/**'],
-      deny: ['app/entry.ts'],
+      allowFiles: ['app/**'],
+      denyFiles: ['app/entry.ts'],
       rootDir: dir,
       fileMap: { '/app/*path': 'app/*path' },
     })
@@ -2794,7 +2803,7 @@ describe('asset-server', () => {
       (error: unknown) => {
         assert.ok(isAssetServerCompilationError(error))
         assert.equal(error.code, 'FILE_NOT_ALLOWED')
-        assert.match(error.message, /File is not allowed/)
+        assert.match(error.message, /not allowed by the asset server access configuration/)
         return true
       },
     )
@@ -3011,7 +3020,7 @@ describe('asset-server', () => {
     try {
       await write(caseDir, 'app/entry.ts', 'export const value = 1')
       let assetServer = createAssetServer({
-        allow: ['app/**'],
+        allowFiles: ['app/**'],
         basePath: '/assets',
         fileMap: {
           '/app/*path': 'app/*path',
@@ -3051,7 +3060,7 @@ describe('asset-server', () => {
       )
       await fs.mkdir(projectDir, { recursive: true })
       let assetServer = createAssetServer({
-        allow: ['../packages/**'],
+        allowFiles: ['../packages/**'],
         basePath: '/assets',
         fileMap: {
           '/packages/*path': '../packages/*path',
@@ -3459,7 +3468,7 @@ describe('asset-server', () => {
         imports: {
           '#dep': './app/dep-a.ts',
         },
-        name: 'watch-test',
+        name: '@remix-run/__watch-test',
         type: 'module',
       })
       await write(caseDir, 'app/dep-a.ts', 'export const dep = "a"')
@@ -3476,7 +3485,7 @@ describe('asset-server', () => {
           imports: {
             '#dep': './app/dep-b.ts',
           },
-          name: 'watch-test',
+          name: '@remix-run/__watch-test',
           type: 'module',
         })
         await emitWatchEvent(assetServer, packageJsonPath, 'change')
@@ -3502,7 +3511,7 @@ describe('asset-server', () => {
         imports: {
           '#dep': './app/dep-a.ts',
         },
-        name: 'watch-test',
+        name: '@remix-run/__watch-test',
         type: 'module',
       })
       await write(caseDir, 'app/dep-a.ts', 'export const dep = "a"')
@@ -3523,7 +3532,7 @@ describe('asset-server', () => {
           imports: {
             '#dep': './app/dep-b.ts',
           },
-          name: 'watch-test',
+          name: '@remix-run/__watch-test',
           type: 'module',
         })
         await emitWatchEvent(assetServer, packageJsonPath, 'change')
@@ -3561,7 +3570,7 @@ describe('asset-server', () => {
           imports: {
             '#dep': './app/dep.ts',
           },
-          name: 'watch-test',
+          name: '@remix-run/__watch-test',
           type: 'module',
         })
         await emitWatchEvent(assetServer, packageJsonPath, 'add')
@@ -3586,7 +3595,7 @@ describe('asset-server', () => {
         imports: {
           '#dep': './app/dep.ts',
         },
-        name: 'watch-test',
+        name: '@remix-run/__watch-test',
         type: 'module',
       })
       await write(caseDir, 'app/dep.ts', 'export const dep = "dep"')
@@ -3721,7 +3730,7 @@ describe('asset-server', () => {
         imports: {
           '#dep': './app/dep-a.ts',
         },
-        name: 'watch-test',
+        name: '@remix-run/__watch-test',
         type: 'module',
       })
       await write(caseDir, 'app/dep-a.ts', 'export const dep = "a"')
@@ -3737,7 +3746,7 @@ describe('asset-server', () => {
             imports: {
               '#dep': useA ? './app/dep-a.ts' : './app/dep-b.ts',
             },
-            name: 'watch-test',
+            name: '@remix-run/__watch-test',
             type: 'module',
           })
           await emitWatchEvent(assetServer, packageJsonPath, 'change')
@@ -4136,37 +4145,47 @@ describe('asset-server', () => {
   it('picks up package resolution changes in watch mode', async () => {
     let caseDir = await makeTmpDir()
     try {
-      await writeJson(caseDir, 'app/node_modules/example/package.json', {
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__example/package.json', {
         exports: {
           '.': './a.ts',
         },
-        name: 'example',
+        name: '@remix-run/__example',
       })
-      await write(caseDir, 'app/node_modules/example/a.ts', 'export const value = "a"')
-      await write(caseDir, 'app/node_modules/example/b.ts', 'export const value = "b"')
-      await write(caseDir, 'app/entry.ts', 'import { value } from "example"\nexport { value }')
+      await write(caseDir, 'app/node_modules/@remix-run/__example/a.ts', 'export const value = "a"')
+      await write(caseDir, 'app/node_modules/@remix-run/__example/b.ts', 'export const value = "b"')
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "@remix-run/__example"\nexport { value }',
+      )
 
-      let assetServer = createWatchedTestServer(caseDir)
+      let assetServer = createWatchedTestServer(caseDir, {
+        allowPackages: ['@remix-run/__example'],
+      })
 
       try {
         let firstResponse = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(firstResponse)
-        assert.match(await firstResponse.text(), /example\/a\.ts/)
+        assert.match(await firstResponse.text(), /@remix-run\/__example\/a\.ts/)
 
-        let packageJsonPath = await writeJson(caseDir, 'app/node_modules/example/package.json', {
-          exports: {
-            '.': './b.ts',
+        let packageJsonPath = await writeJson(
+          caseDir,
+          'app/node_modules/@remix-run/__example/package.json',
+          {
+            exports: {
+              '.': './b.ts',
+            },
+            name: '@remix-run/__example',
           },
-          name: 'example',
-        })
+        )
         await emitWatchEvent(assetServer, packageJsonPath, 'change')
 
         let secondResponse = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(secondResponse)
         let secondBody = await secondResponse.text()
 
-        assert.match(secondBody, /example\/b\.ts/)
-        assert.doesNotMatch(secondBody, /example\/a\.ts/)
+        assert.match(secondBody, /@remix-run\/__example\/b\.ts/)
+        assert.doesNotMatch(secondBody, /@remix-run\/__example\/a\.ts/)
       } finally {
         await assetServer.close()
       }
@@ -4178,29 +4197,39 @@ describe('asset-server', () => {
   it('converges across repeated package exports toggles in watch mode', async () => {
     let caseDir = await makeTmpDir()
     try {
-      await writeJson(caseDir, 'app/node_modules/example/package.json', {
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__example/package.json', {
         exports: {
           '.': './a.ts',
         },
-        name: 'example',
+        name: '@remix-run/__example',
       })
-      await write(caseDir, 'app/node_modules/example/a.ts', 'export const value = "a"')
-      await write(caseDir, 'app/node_modules/example/b.ts', 'export const value = "b"')
-      await write(caseDir, 'app/entry.ts', 'import { value } from "example"\nexport { value }')
+      await write(caseDir, 'app/node_modules/@remix-run/__example/a.ts', 'export const value = "a"')
+      await write(caseDir, 'app/node_modules/@remix-run/__example/b.ts', 'export const value = "b"')
+      await write(
+        caseDir,
+        'app/entry.ts',
+        'import { value } from "@remix-run/__example"\nexport { value }',
+      )
 
-      let assetServer = createWatchedTestServer(caseDir)
+      let assetServer = createWatchedTestServer(caseDir, {
+        allowPackages: ['@remix-run/__example'],
+      })
 
       try {
         for (let index = 0; index < 8; index++) {
           let useA = index % 2 === 0
-          let expected = useA ? /example\/a\.ts/ : /example\/b\.ts/
+          let expected = useA ? /@remix-run\/__example\/a\.ts/ : /@remix-run\/__example\/b\.ts/
 
-          let packageJsonPath = await writeJson(caseDir, 'app/node_modules/example/package.json', {
-            exports: {
-              '.': useA ? './a.ts' : './b.ts',
+          let packageJsonPath = await writeJson(
+            caseDir,
+            'app/node_modules/@remix-run/__example/package.json',
+            {
+              exports: {
+                '.': useA ? './a.ts' : './b.ts',
+              },
+              name: '@remix-run/__example',
             },
-            name: 'example',
-          })
+          )
           await emitWatchEvent(assetServer, packageJsonPath, 'change')
 
           let response = await get(assetServer, '/assets/app/entry.ts')
@@ -4721,7 +4750,7 @@ describe('asset-server', () => {
     await write(dir, 'app/entry.ts', 'export const value = 1')
 
     let assetServer = createAssetServer({
-      allow: ['app/**'],
+      allowFiles: ['app/**'],
       basePath: '',
       fileMap: {
         '/app/*path': 'app/*path',
@@ -4739,11 +4768,172 @@ describe('asset-server', () => {
     assert.throws(
       () =>
         createAssetServerForTest({
-          allow: ['app/\0allowed-realpath.ts'],
+          allowFiles: ['app/\0allowed-realpath.ts'],
           rootDir: dir,
           fileMap: { '/app/*path': 'app/*path' },
         }),
       { code: 'ERR_INVALID_ARG_VALUE' },
+    )
+  })
+
+  it('rejects invalid allowed package names', async () => {
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['.'],
+          rootDir: dir,
+          fileMap: { '/app/*path': 'app/*path' },
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['..'],
+          rootDir: dir,
+          fileMap: { '/app/*path': 'app/*path' },
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@remix-run/__allowed-package/subpath'],
+          rootDir: dir,
+          fileMap: { '/app/*path': 'app/*path' },
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@scope/.'],
+          rootDir: dir,
+          fileMap: { '/app/*path': 'app/*path' },
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@scope/..'],
+          rootDir: dir,
+          fileMap: { '/app/*path': 'app/*path' },
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['../@remix-run/__allowed-package'],
+          rootDir: dir,
+          fileMap: { '/app/*path': 'app/*path' },
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@remix-run/__allowed-package\\subpath'],
+          rootDir: dir,
+          fileMap: { '/app/*path': 'app/*path' },
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@scope'],
+          rootDir: dir,
+          fileMap: { '/app/*path': 'app/*path' },
+        }),
+      /allowPackages values must be package names/,
+    )
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@scope/@remix-run/__allowed-package/subpath'],
+          rootDir: dir,
+          fileMap: { '/app/*path': 'app/*path' },
+        }),
+      /allowPackages values must be package names/,
+    )
+  })
+
+  it('does not treat Node builtin names as installed packages', async () => {
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['path'],
+          rootDir: dir,
+          fileMap: { '/app/*path': 'app/*path' },
+        }),
+      /Could not resolve allowed package "path"/,
+    )
+  })
+
+  it('rejects invalid denied package names', async () => {
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          denyPackages: ['.'],
+          rootDir: dir,
+          fileMap: { '/app/*path': 'app/*path' },
+        }),
+      /denyPackages values must be package names/,
+    )
+  })
+
+  it('rejects invalid allowed package dependency names', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      dependencies: {
+        '..': '1.0.0',
+      },
+    })
+
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@remix-run/__allowed-package'],
+          rootDir: dir,
+          fileMap: { '/app/*path': 'app/*path' },
+        }),
+      /Dependency "\.\." .* must be a package name/,
+    )
+  })
+
+  it('rejects invalid allowed optional package dependency names', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      optionalDependencies: {
+        '@scope/..': '1.0.0',
+      },
+    })
+
+    assert.throws(
+      () =>
+        createAssetServerForTest({
+          allowFiles: [],
+          allowPackages: ['@remix-run/__allowed-package'],
+          rootDir: dir,
+          fileMap: { '/app/*path': 'app/*path' },
+        }),
+      /Optional dependency "@scope\/\.\." .* must be a package name/,
     )
   })
 
@@ -4752,7 +4942,7 @@ describe('asset-server', () => {
     assert.throws(
       () =>
         createAssetServerForTest({
-          allow: [path.join(dir, 'app')],
+          allowFiles: [path.join(dir, 'app')],
           rootDir: dir,
           fileMap: {
             '/app/*path': `${path.join(dir, 'app')}/*path`,
@@ -4764,13 +4954,13 @@ describe('asset-server', () => {
     )
   })
 
-  it('supports absolute allow rules and deny overrides', async () => {
+  it('supports absolute allowFiles rules and denyFiles overrides', async () => {
     let allowedPath = await write(dir, 'app/allowed.ts', 'export const allowed = true')
     await write(dir, 'app/blocked.ts', 'export const blocked = true')
     await write(dir, 'app/.dotfile.ts', 'export const dotfile = true')
     let assetServer = createAssetServerForTest({
-      allow: [allowedPath, path.join(dir, 'app')],
-      deny: [path.join(dir, 'app/blocked.ts')],
+      allowFiles: [allowedPath, path.join(dir, 'app')],
+      denyFiles: [path.join(dir, 'app/blocked.ts')],
       rootDir: dir,
       fileMap: { '/app/*path': 'app/*path' },
     })
@@ -4789,7 +4979,7 @@ describe('asset-server', () => {
     assert.throws(
       () =>
         createAssetServerForTest({
-          allow: ['app/**'],
+          allowFiles: ['app/**'],
           rootDir: dir,
           fileMap: { '/app/*': 'app/*path' },
         }),
@@ -4797,12 +4987,12 @@ describe('asset-server', () => {
     )
   })
 
-  it('supports glob-style allow and deny rules', async () => {
+  it('supports glob-style allowFiles and denyFiles rules', async () => {
     await write(dir, 'app/features/allowed.ts', 'export const allowed = true')
     await write(dir, 'app/features/private/blocked.ts', 'export const blocked = true')
     let assetServer = createAssetServerForTest({
-      allow: ['app/**/*.ts'],
-      deny: ['app/**/private/**'],
+      allowFiles: ['app/**/*.ts'],
+      denyFiles: ['app/**/private/**'],
       rootDir: dir,
       fileMap: { '/app/*path': 'app/*path' },
     })
@@ -4814,11 +5004,1020 @@ describe('asset-server', () => {
     assert.equal(blockedResponse, null)
   })
 
-  it('matches dot-prefixed files and directories in glob-style allow rules', async () => {
+  it('allows package files by package name', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      exports: {
+        '.': './index.ts',
+      },
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__allowed-package/index.ts',
+      'export const value = true',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: ['@remix-run/__allowed-package'],
+      rootDir: dir,
+      fileMap: { '/node_modules/*path': 'app/node_modules/*path' },
+    })
+
+    let response = await get(
+      assetServer,
+      '/assets/node_modules/@remix-run/__allowed-package/index.ts',
+    )
+    assert.ok(response)
+    assert.equal(response.status, 200)
+  })
+
+  it('allows imported package files by package name', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      exports: {
+        '.': './index.ts',
+      },
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__allowed-package/index.ts',
+      'export const value = true',
+    )
+    await write(
+      dir,
+      'app/entry.ts',
+      'import { value } from "@remix-run/__allowed-package"\nexport { value }',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['app/entry.ts'],
+      allowPackages: ['@remix-run/__allowed-package'],
+      rootDir: dir,
+      fileMap: {
+        '/app/*path': 'app/*path',
+        '/node_modules/*path': 'app/node_modules/*path',
+      },
+    })
+
+    let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+    assert.ok(servedUrls.has('/assets/app/node_modules/@remix-run/__allowed-package/index.ts'))
+  })
+
+  it('allows package dependency files by package name without prior importer requests', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      dependencies: {
+        '@remix-run/__dep-of-allowed-package': '1.0.0',
+      },
+      optionalDependencies: {
+        '@remix-run/__optional-dep-of-allowed-package': '1.0.0',
+      },
+      peerDependencies: {
+        '@remix-run/__peer-of-allowed-package': '1.0.0',
+      },
+      devDependencies: {
+        '@remix-run/__dev-dep-of-allowed-package': '1.0.0',
+      },
+    })
+    await writeJson(dir, 'app/node_modules/@remix-run/__dep-of-allowed-package/package.json', {
+      name: '@remix-run/__dep-of-allowed-package',
+      type: 'module',
+      dependencies: {
+        '@remix-run/__nested-dep-of-allowed-package': '1.0.0',
+      },
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+      'export const dep = true',
+    )
+    await writeJson(
+      dir,
+      'app/node_modules/@remix-run/__nested-dep-of-allowed-package/package.json',
+      {
+        name: '@remix-run/__nested-dep-of-allowed-package',
+        type: 'module',
+      },
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__nested-dep-of-allowed-package/index.ts',
+      'export const nestedDep = true',
+    )
+    await writeJson(
+      dir,
+      'app/node_modules/@remix-run/__optional-dep-of-allowed-package/package.json',
+      {
+        name: '@remix-run/__optional-dep-of-allowed-package',
+        type: 'module',
+      },
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      'export const optionalDep = true',
+    )
+    await writeJson(dir, 'app/node_modules/@remix-run/__peer-of-allowed-package/package.json', {
+      name: '@remix-run/__peer-of-allowed-package',
+      type: 'module',
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__peer-of-allowed-package/index.ts',
+      'export const peer = true',
+    )
+    await writeJson(dir, 'app/node_modules/@remix-run/__dev-dep-of-allowed-package/package.json', {
+      name: '@remix-run/__dev-dep-of-allowed-package',
+      type: 'module',
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__dev-dep-of-allowed-package/index.ts',
+      'export const dev = true',
+    )
+
+    let createServer = () =>
+      createAssetServerForTest({
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+        rootDir: dir,
+        fileMap: { '/app/*path': 'app/*path' },
+      })
+
+    let firstAssetServer = createServer()
+    await firstAssetServer.close()
+
+    let restartedAssetServer = createServer()
+    try {
+      let dependencyResponse = await get(
+        restartedAssetServer,
+        '/assets/app/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+      )
+      let nestedDependencyResponse = await get(
+        restartedAssetServer,
+        '/assets/app/node_modules/@remix-run/__nested-dep-of-allowed-package/index.ts',
+      )
+      let optionalDependencyResponse = await get(
+        restartedAssetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      let peerDependencyResponse = await get(
+        restartedAssetServer,
+        '/assets/app/node_modules/@remix-run/__peer-of-allowed-package/index.ts',
+      )
+      let devDependencyResponse = await get(
+        restartedAssetServer,
+        '/assets/app/node_modules/@remix-run/__dev-dep-of-allowed-package/index.ts',
+      )
+
+      assert.ok(dependencyResponse)
+      assert.equal(dependencyResponse.status, 200)
+      assert.ok(nestedDependencyResponse)
+      assert.equal(nestedDependencyResponse.status, 200)
+      assert.ok(optionalDependencyResponse)
+      assert.equal(optionalDependencyResponse.status, 200)
+      assert.equal(peerDependencyResponse, null)
+      assert.equal(devDependencyResponse, null)
+    } finally {
+      await restartedAssetServer.close()
+    }
+  })
+
+  it('does not allow installed package files outside allowed package dependencies', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+        dependencies: {
+          '@remix-run/__dep-of-allowed-package': '1.0.0',
+        },
+      })
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__allowed-package/index.ts',
+        'export const value = true',
+      )
+      await writeJson(
+        caseDir,
+        'app/node_modules/@remix-run/__dep-of-allowed-package/package.json',
+        {
+          name: '@remix-run/__dep-of-allowed-package',
+          type: 'module',
+        },
+      )
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+        'export const dep = true',
+      )
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__non-allowed-package/package.json', {
+        name: '@remix-run/__non-allowed-package',
+        type: 'module',
+        dependencies: {
+          '@remix-run/__dep-of-non-allowed-package': '1.0.0',
+        },
+      })
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__non-allowed-package/index.ts',
+        'export const nonAllowed = true',
+      )
+      await writeJson(
+        caseDir,
+        'app/node_modules/@remix-run/__dep-of-non-allowed-package/package.json',
+        {
+          name: '@remix-run/__dep-of-non-allowed-package',
+          type: 'module',
+        },
+      )
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__dep-of-non-allowed-package/index.ts',
+        'export const depOfNonAllowed = true',
+      )
+
+      assetServer = createAssetServerForTest({
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+        rootDir: caseDir,
+        fileMap: { '/app/*path': 'app/*path' },
+      })
+
+      let allowedPackageResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__allowed-package/index.ts',
+      )
+      let allowedDependencyResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+      )
+      let nonAllowedPackageResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__non-allowed-package/index.ts',
+      )
+      let nonAllowedDependencyResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__dep-of-non-allowed-package/index.ts',
+      )
+
+      assert.ok(allowedPackageResponse)
+      assert.equal(allowedPackageResponse.status, 200)
+      assert.ok(allowedDependencyResponse)
+      assert.equal(allowedDependencyResponse.status, 200)
+      assert.equal(nonAllowedPackageResponse, null)
+      assert.equal(nonAllowedDependencyResponse, null)
+      let currentAssetServer = assetServer
+      assert.ok(currentAssetServer)
+      await assert.rejects(
+        () =>
+          currentAssetServer.getHref('app/node_modules/@remix-run/__non-allowed-package/index.ts'),
+        /not allowed by the asset server access configuration/,
+      )
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not allow installed peer dependency files unless they are explicitly allowed', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+        peerDependencies: {
+          '@remix-run/__peer-of-allowed-package': '1.0.0',
+        },
+      })
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__allowed-package/index.ts',
+        'import { peer } from "@remix-run/__peer-of-allowed-package"\nexport { peer }',
+      )
+      await writeJson(
+        caseDir,
+        'app/node_modules/@remix-run/__peer-of-allowed-package/package.json',
+        {
+          name: '@remix-run/__peer-of-allowed-package',
+          type: 'module',
+        },
+      )
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__peer-of-allowed-package/index.ts',
+        'export const peer = true',
+      )
+      let errors: unknown[] = []
+
+      assetServer = createAssetServerForTest({
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+        onError(error) {
+          errors.push(error)
+          return new Response('Blocked import', { status: 500 })
+        },
+        rootDir: caseDir,
+        fileMap: { '/app/*path': 'app/*path' },
+      })
+
+      let peerDependencyResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__peer-of-allowed-package/index.ts',
+      )
+      let importerResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__allowed-package/index.ts',
+      )
+
+      assert.equal(peerDependencyResponse, null)
+      assert.ok(importerResponse)
+      assert.equal(importerResponse.status, 500)
+      assert.equal(await importerResponse.text(), 'Blocked import')
+      assert.equal(errors.length, 1)
+      assert.ok(isAssetServerCompilationError(errors[0]))
+      assert.equal(errors[0].code, 'IMPORT_NOT_ALLOWED')
+      assert.match(errors[0].message, /Import "@remix-run\/__peer-of-allowed-package"/)
+      let currentAssetServer = assetServer
+      assert.ok(currentAssetServer)
+      await assert.rejects(
+        () =>
+          currentAssetServer.getHref(
+            'app/node_modules/@remix-run/__peer-of-allowed-package/index.ts',
+          ),
+        /not allowed by the asset server access configuration/,
+      )
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('allows peer dependency files when they are explicitly allowed by package name', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      peerDependencies: {
+        '@remix-run/__peer-of-allowed-package': '1.0.0',
+      },
+    })
+    await writeJson(dir, 'app/node_modules/@remix-run/__peer-of-allowed-package/package.json', {
+      name: '@remix-run/__peer-of-allowed-package',
+      type: 'module',
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__peer-of-allowed-package/index.ts',
+      'export const peer = true',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: ['@remix-run/__allowed-package', '@remix-run/__peer-of-allowed-package'],
+      rootDir: dir,
+      fileMap: { '/app/*path': 'app/*path' },
+    })
+
+    let response = await get(
+      assetServer,
+      '/assets/app/node_modules/@remix-run/__peer-of-allowed-package/index.ts',
+    )
+    assert.ok(response)
+    assert.equal(response.status, 200)
+  })
+
+  it('denies package files by package name', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__denied-package/package.json', {
+      name: '@remix-run/__denied-package',
+      type: 'module',
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__denied-package/index.ts',
+      'export const value = true',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['app/node_modules/**'],
+      denyPackages: ['@remix-run/__denied-package'],
+      rootDir: dir,
+      fileMap: { '/app/*path': 'app/*path' },
+    })
+
+    let response = await get(
+      assetServer,
+      '/assets/app/node_modules/@remix-run/__denied-package/index.ts',
+    )
+    assert.equal(response, null)
+  })
+
+  it('does not require denied packages to be installed', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = true')
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['app/**'],
+      denyPackages: ['@remix-run/__missing-package'],
+      rootDir: dir,
+      fileMap: { '/app/*path': 'app/*path' },
+    })
+
+    let response = await get(assetServer, '/assets/app/entry.ts')
+    assert.ok(response)
+    assert.equal(response.status, 200)
+  })
+
+  it('does not deny package dependencies by denied package name', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__denied-package/package.json', {
+      name: '@remix-run/__denied-package',
+      type: 'module',
+      dependencies: {
+        '@remix-run/__dep-of-denied-package': '1.0.0',
+      },
+    })
+    await writeJson(dir, 'app/node_modules/@remix-run/__dep-of-denied-package/package.json', {
+      name: '@remix-run/__dep-of-denied-package',
+      type: 'module',
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__denied-package/index.ts',
+      'export const value = true',
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__dep-of-denied-package/index.ts',
+      'export const dep = true',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['app/node_modules/**'],
+      denyPackages: ['@remix-run/__denied-package'],
+      rootDir: dir,
+      fileMap: { '/app/*path': 'app/*path' },
+    })
+
+    let deniedPackageResponse = await get(
+      assetServer,
+      '/assets/app/node_modules/@remix-run/__denied-package/index.ts',
+    )
+    let dependencyResponse = await get(
+      assetServer,
+      '/assets/app/node_modules/@remix-run/__dep-of-denied-package/index.ts',
+    )
+    assert.equal(deniedPackageResponse, null)
+    assert.ok(dependencyResponse)
+    assert.equal(dependencyResponse.status, 200)
+  })
+
+  it('allows shared dependencies of allowed and denied packages', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      dependencies: {
+        '@remix-run/__shared-dependency': '1.0.0',
+      },
+    })
+    await writeJson(dir, 'app/node_modules/@remix-run/__denied-package/package.json', {
+      name: '@remix-run/__denied-package',
+      type: 'module',
+      dependencies: {
+        '@remix-run/__shared-dependency': '1.0.0',
+      },
+    })
+    await writeJson(dir, 'app/node_modules/@remix-run/__shared-dependency/package.json', {
+      name: '@remix-run/__shared-dependency',
+      type: 'module',
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__allowed-package/index.ts',
+      'export const value = true',
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__denied-package/index.ts',
+      'export const value = true',
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__shared-dependency/index.ts',
+      'export const shared = true',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: ['@remix-run/__allowed-package'],
+      denyPackages: ['@remix-run/__denied-package'],
+      rootDir: dir,
+      fileMap: { '/app/*path': 'app/*path' },
+    })
+
+    let deniedPackageResponse = await get(
+      assetServer,
+      '/assets/app/node_modules/@remix-run/__denied-package/index.ts',
+    )
+    let sharedDependencyResponse = await get(
+      assetServer,
+      '/assets/app/node_modules/@remix-run/__shared-dependency/index.ts',
+    )
+    assert.equal(deniedPackageResponse, null)
+    assert.ok(sharedDependencyResponse)
+    assert.equal(sharedDependencyResponse.status, 200)
+  })
+
+  it('applies denyPackages rules to allowed package files', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__denied-package/package.json', {
+      name: '@remix-run/__denied-package',
+      type: 'module',
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__denied-package/index.ts',
+      'export const value = true',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: ['@remix-run/__denied-package'],
+      denyPackages: ['@remix-run/__denied-package'],
+      rootDir: dir,
+      fileMap: { '/app/*path': 'app/*path' },
+    })
+
+    let response = await get(
+      assetServer,
+      '/assets/app/node_modules/@remix-run/__denied-package/index.ts',
+    )
+    assert.equal(response, null)
+  })
+
+  it('updates allowed package dependencies when workspace lockfiles change in watch mode', async () => {
+    await write(dir, 'pnpm-lock.yaml', 'lockfile')
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__allowed-package/index.ts',
+      'export const value = true',
+    )
+
+    let assetServer = createWatchedTestServer(dir, {
+      allowFiles: [],
+      allowPackages: ['@remix-run/__allowed-package'],
+      fileMap: { '/app/*path': 'app/*path' },
+    })
+    try {
+      let beforeResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__new-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(beforeResponse, null)
+
+      await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+        dependencies: {
+          '@remix-run/__new-dep-of-allowed-package': '1.0.0',
+        },
+      })
+      await writeJson(
+        dir,
+        'app/node_modules/@remix-run/__new-dep-of-allowed-package/package.json',
+        {
+          name: '@remix-run/__new-dep-of-allowed-package',
+          type: 'module',
+        },
+      )
+      await write(
+        dir,
+        'app/node_modules/@remix-run/__new-dep-of-allowed-package/index.ts',
+        'export const dep = true',
+      )
+      let appPackageJsonPath = await writeJson(dir, 'package.json', {
+        dependencies: {
+          '@remix-run/__allowed-package': '1.0.0',
+        },
+      })
+      await emitWatchEvent(assetServer, appPackageJsonPath, 'change')
+
+      let unchangedResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__new-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(unchangedResponse, null)
+
+      let lockfilePath = await write(dir, 'pnpm-lock.yaml', 'changed')
+      await emitWatchEvent(assetServer, lockfilePath, 'change')
+
+      let afterResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__new-dep-of-allowed-package/index.ts',
+      )
+      assert.ok(afterResponse)
+      assert.equal(afterResponse.status, 200)
+    } finally {
+      await assetServer.close()
+    }
+  })
+
+  it('watches workspace package state files for allowed packages without watching all of node_modules', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await write(caseDir, 'pnpm-lock.yaml', 'lockfile')
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+      })
+
+      assetServer = createWatchedTestServer(caseDir, {
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+        fileMap: { '/app/*path': 'app/*path' },
+      })
+
+      let targets = getInternalWatchTargets(assetServer).map((target) =>
+        normalizeWindowsPath(target),
+      )
+      assert.ok(targets.includes(normalizeWindowsPath(nodeFs.realpathSync(caseDir))))
+      assert.ok(
+        !targets.includes(
+          normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app/node_modules'))),
+        ),
+      )
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('does not watch package state files for allowed packages when no package manager root is found', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+      })
+
+      assetServer = createWatchedTestServer(caseDir, {
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+        fileMap: { '/app/*path': 'app/*path' },
+      })
+
+      let targets = getInternalWatchTargets(assetServer).map((target) =>
+        normalizeWindowsPath(target),
+      )
+      assert.ok(!targets.includes(normalizeWindowsPath(nodeFs.realpathSync(caseDir))))
+      assert.ok(
+        !targets.includes(normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app')))),
+      )
+      assert.ok(
+        !targets.includes(
+          normalizeWindowsPath(nodeFs.realpathSync(path.join(caseDir, 'app/node_modules'))),
+        ),
+      )
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('updates installed optional package dependencies when workspace lockfiles change in watch mode', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await write(caseDir, 'pnpm-lock.yaml', 'lockfile')
+      await writeJson(caseDir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+        optionalDependencies: {
+          '@remix-run/__optional-dep-of-allowed-package': '1.0.0',
+        },
+      })
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__allowed-package/index.ts',
+        'export const value = true',
+      )
+
+      assetServer = createWatchedTestServer(caseDir, {
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+        fileMap: { '/app/*path': 'app/*path' },
+      })
+
+      let beforeResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(beforeResponse, null)
+
+      await writeJson(
+        caseDir,
+        'app/node_modules/@remix-run/__optional-dep-of-allowed-package/package.json',
+        {
+          name: '@remix-run/__optional-dep-of-allowed-package',
+          type: 'module',
+        },
+      )
+      await write(
+        caseDir,
+        'app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+        'export const optionalDep = true',
+      )
+      let installStatePath = await write(caseDir, 'app/node_modules/.install-state', 'changed')
+      await emitWatchEvent(assetServer, installStatePath, 'change')
+
+      let unchangedResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(unchangedResponse, null)
+
+      let lockfilePath = await write(caseDir, 'pnpm-lock.yaml', 'changed')
+      await emitWatchEvent(assetServer, lockfilePath, 'change')
+
+      let afterResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.ok(afterResponse)
+      assert.equal(afterResponse.status, 200)
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('traverses out of a nested asset server root to watch workspace lockfiles', async () => {
+    let caseDir = await makeTmpDir()
+    let workspaceDir = path.join(caseDir, 'workspace')
+    let appDir = path.join(workspaceDir, 'packages/app')
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+    try {
+      await write(caseDir, 'workspace/pnpm-lock.yaml', 'lockfile')
+      await writeJson(
+        caseDir,
+        'workspace/packages/app/app/node_modules/@remix-run/__allowed-package/package.json',
+        {
+          name: '@remix-run/__allowed-package',
+          type: 'module',
+          optionalDependencies: {
+            '@remix-run/__optional-dep-of-allowed-package': '1.0.0',
+          },
+        },
+      )
+      await write(
+        caseDir,
+        'workspace/packages/app/app/node_modules/@remix-run/__allowed-package/index.ts',
+        'export const value = true',
+      )
+
+      assetServer = createWatchedTestServer(appDir, {
+        allowFiles: [],
+        allowPackages: ['@remix-run/__allowed-package'],
+        fileMap: { '/app/*path': 'app/*path' },
+      })
+
+      let targets = getInternalWatchTargets(assetServer).map((target) =>
+        normalizeWindowsPath(target),
+      )
+      assert.ok(targets.includes(normalizeWindowsPath(nodeFs.realpathSync(workspaceDir))))
+      assert.ok(!targets.includes(normalizeWindowsPath(nodeFs.realpathSync(appDir))))
+      assert.ok(
+        !targets.includes(
+          normalizeWindowsPath(nodeFs.realpathSync(path.join(appDir, 'app/node_modules'))),
+        ),
+      )
+
+      let beforeResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(beforeResponse, null)
+
+      await writeJson(
+        caseDir,
+        'workspace/packages/app/app/node_modules/@remix-run/__optional-dep-of-allowed-package/package.json',
+        {
+          name: '@remix-run/__optional-dep-of-allowed-package',
+          type: 'module',
+        },
+      )
+      await write(
+        caseDir,
+        'workspace/packages/app/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+        'export const optionalDep = true',
+      )
+      let appPackageJsonPath = await writeJson(caseDir, 'workspace/packages/app/package.json', {
+        dependencies: {
+          '@remix-run/__allowed-package': '1.0.0',
+        },
+      })
+      await emitWatchEvent(assetServer, appPackageJsonPath, 'change')
+
+      let unchangedResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.equal(unchangedResponse, null)
+
+      let lockfilePath = await write(caseDir, 'workspace/pnpm-lock.yaml', 'changed')
+      await emitWatchEvent(assetServer, lockfilePath, 'change')
+
+      let afterResponse = await get(
+        assetServer,
+        '/assets/app/node_modules/@remix-run/__optional-dep-of-allowed-package/index.ts',
+      )
+      assert.ok(afterResponse)
+      assert.equal(afterResponse.status, 200)
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('applies denyFiles rules to allowed package files', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__allowed-package/public.ts',
+      'export const value = true',
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__allowed-package/private.ts',
+      'export const secret = true',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: ['@remix-run/__allowed-package'],
+      denyFiles: ['app/node_modules/@remix-run/__allowed-package/private.ts'],
+      rootDir: dir,
+      fileMap: { '/node_modules/*path': 'app/node_modules/*path' },
+    })
+
+    let publicResponse = await get(
+      assetServer,
+      '/assets/node_modules/@remix-run/__allowed-package/public.ts',
+    )
+    let privateResponse = await get(
+      assetServer,
+      '/assets/node_modules/@remix-run/__allowed-package/private.ts',
+    )
+    assert.ok(publicResponse)
+    assert.equal(publicResponse.status, 200)
+    assert.equal(privateResponse, null)
+  })
+
+  it('allows pnpm package realpaths by package name', async () => {
+    let allowedPackageStorePath = path.join(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package',
+    )
+    await writeJson(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package/package.json',
+      {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+        exports: {
+          '.': './index.ts',
+        },
+      },
+    )
+    await write(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package/index.ts',
+      'export const value = true',
+    )
+    await symlinkDirectory(
+      allowedPackageStorePath,
+      path.join(dir, 'app/node_modules/@remix-run/__allowed-package'),
+    )
+    await write(
+      dir,
+      'app/entry.ts',
+      'import { value } from "@remix-run/__allowed-package"\nexport { value }',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: ['app/entry.ts'],
+      allowPackages: ['@remix-run/__allowed-package'],
+      rootDir: dir,
+      fileMap: {
+        '/app/*path': 'app/*path',
+        '/node_modules/*path': 'app/node_modules/*path',
+      },
+    })
+
+    let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
+    assert.ok(
+      servedUrls.has(
+        '/assets/app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package/index.ts',
+      ),
+    )
+  })
+
+  it('does not allow other installed copies of transitive dependencies by package name', async () => {
+    let depOfAllowedPackageStorePath = path.join(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@1.0.0/node_modules/@remix-run/__dep-of-allowed-package',
+    )
+    let otherDepOfAllowedPackageStorePath = path.join(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@2.0.0/node_modules/@remix-run/__dep-of-allowed-package',
+    )
+    await writeJson(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package/package.json',
+      {
+        name: '@remix-run/__allowed-package',
+        type: 'module',
+        dependencies: {
+          '@remix-run/__dep-of-allowed-package': '1.0.0',
+        },
+      },
+    )
+    await writeJson(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@1.0.0/node_modules/@remix-run/__dep-of-allowed-package/package.json',
+      {
+        name: '@remix-run/__dep-of-allowed-package',
+        type: 'module',
+      },
+    )
+    await write(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@1.0.0/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+      'export const allowedDep = true',
+    )
+    await writeJson(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@2.0.0/node_modules/@remix-run/__dep-of-allowed-package/package.json',
+      {
+        name: '@remix-run/__dep-of-allowed-package',
+        type: 'module',
+      },
+    )
+    await write(
+      dir,
+      'app/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@2.0.0/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+      'export const otherDep = true',
+    )
+    await symlinkDirectory(
+      path.join(
+        dir,
+        'app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package',
+      ),
+      path.join(dir, 'app/node_modules/@remix-run/__allowed-package'),
+    )
+    await symlinkDirectory(
+      depOfAllowedPackageStorePath,
+      path.join(
+        dir,
+        'app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__dep-of-allowed-package',
+      ),
+    )
+    await symlinkDirectory(
+      otherDepOfAllowedPackageStorePath,
+      path.join(dir, 'app/node_modules/@remix-run/__dep-of-allowed-package'),
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: ['@remix-run/__allowed-package'],
+      rootDir: dir,
+      fileMap: { '/node_modules/*path': 'app/node_modules/*path' },
+    })
+
+    let allowedDependencyResponse = await get(
+      assetServer,
+      '/assets/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@1.0.0/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+    )
+    let otherDependencyResponse = await get(
+      assetServer,
+      '/assets/node_modules/.pnpm/@remix-run+__dep-of-allowed-package@2.0.0/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+    )
+    let appDependencyResponse = await get(
+      assetServer,
+      '/assets/node_modules/@remix-run/__dep-of-allowed-package/index.ts',
+    )
+
+    assert.ok(allowedDependencyResponse)
+    assert.equal(allowedDependencyResponse.status, 200)
+    assert.equal(otherDependencyResponse, null)
+    assert.equal(appDependencyResponse, null)
+  })
+
+  it('matches dot-prefixed files and directories in glob-style allowFiles rules', async () => {
     await write(dir, 'app/.dotfile.ts', 'export const dotfile = true')
     await write(dir, 'node_modules/.dotdir/example/index.ts', 'export const dotdir = true')
     let assetServer = createAssetServerForTest({
-      allow: ['app/**/*', 'node_modules/**/*'],
+      allowFiles: ['app/**/*', 'node_modules/**/*'],
       rootDir: dir,
       fileMap: {
         '/app/*path': 'app/*path',
@@ -4838,8 +6037,8 @@ describe('asset-server', () => {
     await write(dir, 'app/blocked.ts', 'export const blocked = true')
     let receivedError: unknown
     let assetServer = createAssetServerForTest({
-      allow: ['app/**'],
-      deny: ['app/blocked.ts'],
+      allowFiles: ['app/**'],
+      denyFiles: ['app/blocked.ts'],
       rootDir: dir,
       fileMap: { '/app/*path': 'app/*path' },
       onError(error) {
@@ -5367,7 +6566,7 @@ describe('asset-server', () => {
     assert.throws(
       () =>
         createAssetServer({
-          allow: ['app/**'],
+          allowFiles: ['app/**'],
           basePath: '/assets',
           fileMap: {
             '/app/*path': 'app/*path',
@@ -5799,7 +6998,9 @@ describe('asset-server', () => {
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
     assert.equal(receivedError.code, 'IMPORT_NOT_ALLOWED')
-    assert.match(receivedError.message, /not allowed by the asset server allow\/deny configuration/)
+    assert.match(receivedError.message, /not allowed by the asset server access configuration/)
+    assert.match(receivedError.message, /allowFiles or allowPackages/)
+    assert.match(receivedError.message, /denyFiles or denyPackages/)
     assert.match(receivedError.message, /"\.\.\/\.\.\/secret\.css"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
     assert.match(normalizeWindowsPath(receivedError.message), /secret\.css/)
@@ -5823,7 +7024,9 @@ describe('asset-server', () => {
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
     assert.equal(receivedError.code, 'URL_NOT_ALLOWED')
-    assert.match(receivedError.message, /not allowed by the asset server allow\/deny configuration/)
+    assert.match(receivedError.message, /not allowed by the asset server access configuration/)
+    assert.match(receivedError.message, /allowFiles or allowPackages/)
+    assert.match(receivedError.message, /denyFiles or denyPackages/)
     assert.match(receivedError.message, /"\.\.\/\.\.\/secret\.svg"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/styles\/app\.css/)
     assert.match(normalizeWindowsPath(receivedError.message), /secret\.svg/)
@@ -5838,7 +7041,7 @@ describe('asset-server', () => {
     await write(dir, 'shared/reset.css', 'body { color: black; }\n')
     let receivedError: unknown
     let assetServer = createTestServer(dir, {
-      allow: ['app/**', 'shared/**'],
+      allowFiles: ['app/**', 'shared/**'],
       onError(error) {
         receivedError = error
       },
@@ -5864,7 +7067,7 @@ describe('asset-server', () => {
     await write(dir, 'shared/logo.svg', '<svg xmlns="http://www.w3.org/2000/svg"></svg>\n')
     let receivedError: unknown
     let assetServer = createTestServer(dir, {
-      allow: ['app/**', 'shared/**'],
+      allowFiles: ['app/**', 'shared/**'],
       files: {
         extensions: ['.svg'],
       },
@@ -5919,7 +7122,9 @@ describe('asset-server', () => {
     await assertInternalServerError(response)
     assert.ok(isAssetServerCompilationError(receivedError))
     assert.equal(receivedError.code, 'IMPORT_NOT_ALLOWED')
-    assert.match(receivedError.message, /not allowed by the asset server allow\/deny configuration/)
+    assert.match(receivedError.message, /not allowed by the asset server access configuration/)
+    assert.match(receivedError.message, /allowFiles or allowPackages/)
+    assert.match(receivedError.message, /denyFiles or denyPackages/)
     assert.match(receivedError.message, /"\.\.\/secret\.ts"/)
     assert.match(normalizeWindowsPath(receivedError.message), /app\/entry\.ts/)
     assert.match(normalizeWindowsPath(receivedError.message), /secret\.ts/)
@@ -5930,7 +7135,7 @@ describe('asset-server', () => {
     await write(dir, 'shared/util.ts', 'export const util = true')
     let receivedError: unknown
     let assetServer = createTestServer(dir, {
-      allow: ['app/**', 'shared/**'],
+      allowFiles: ['app/**', 'shared/**'],
       onError(error) {
         receivedError = error
       },

@@ -14,7 +14,8 @@ export const assetServer = createAssetServer({
     '/client/*path': 'docs/src/client/*path',
     '/shared/*path': 'docs/src/shared/*path',
   },
-  allow: ['docs/build/demos/**', 'docs/src/client/**', 'docs/src/shared/**', 'packages/**'],
+  allowFiles: ['docs/build/demos/**', 'docs/src/client/**', 'docs/src/shared/**'],
+  allowPackages: ['remix'],
   watch: process.env.NODE_ENV !== 'production',
 })
 
