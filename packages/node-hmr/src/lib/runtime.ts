@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url'
 
+import { sendHmrEventPayload, type HmrEventChannel } from './browser-events.ts'
 import { emitServerHmrEvent } from './events.ts'
 
 export interface RemixNodeHotContext {
@@ -13,6 +14,7 @@ export interface RemixNodeHotContext {
 }
 
 export interface RemixNodeHmrRuntime {
+  readonly eventChannel: HmrEventChannel | undefined
   createHotContext(url: string): RemixNodeHotContext
   disposeAll(): void
   update(url: string, timestamp: number, acceptedUrl?: string): Promise<void>
@@ -123,7 +125,14 @@ class NodeHotContext implements RemixNodeHotContext {
   }
 }
 
-export function installNodeHmrRuntime(): RemixNodeHmrRuntime {
+export function getNodeHmrRuntime(): RemixNodeHmrRuntime | undefined {
+  let runtimeGlobal = globalThis as RuntimeGlobal
+  return runtimeGlobal.__remixNodeHmr
+}
+
+export function installNodeHmrRuntime(options: {
+  eventUrl?: string
+} = {}): RemixNodeHmrRuntime {
   let runtimeGlobal = globalThis as RuntimeGlobal
   if (runtimeGlobal.__remixNodeHmr) return runtimeGlobal.__remixNodeHmr
 
@@ -131,6 +140,14 @@ export function installNodeHmrRuntime(): RemixNodeHmrRuntime {
   let contextsByUrl = new Map<string, NodeHotContext>()
 
   let runtime: RemixNodeHmrRuntime = {
+    eventChannel:
+      options.eventUrl === undefined
+        ? undefined
+        : {
+            send: sendHmrEventPayload,
+            url: options.eventUrl,
+          },
+
     createHotContext(url) {
       let data = dataByUrl.get(url)
       if (data === undefined) {

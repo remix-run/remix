@@ -10,7 +10,6 @@ import { watch } from 'chokidar'
 
 import {
   nodeHmrEventPathname,
-  setNodeHmrEventUrlEnv,
   type HmrEventPayload,
 } from './lib/browser-events.ts'
 import {
@@ -165,13 +164,14 @@ async function runWatchedProcess(options: {
       buildNodeArgs({
         entry,
         entryArgs: options.command.entryArgs,
+        hmrEventUrl: hmrEventEndpoint.url,
         nodeArgs: options.command.nodeArgs,
         registerPath: options.registerPath,
       }),
       {
         cwd: options.cwd,
         env: {
-          ...setNodeHmrEventUrlEnv(options.env, hmrEventEndpoint.url),
+          ...options.env,
           REMIX_NODE_HMR: '1',
           REMIX_NODE_HMR_ROOT: options.cwd,
         },

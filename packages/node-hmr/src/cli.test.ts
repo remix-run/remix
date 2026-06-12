@@ -1,11 +1,15 @@
-import * as assert from '@remix-run/assert'
-import { describe, it } from '@remix-run/test'
+import { execFile } from 'node:child_process'
 import * as path from 'node:path'
 import process from 'node:process'
 import { pathToFileURL } from 'node:url'
+import { promisify } from 'node:util'
+
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
 
 import { buildNodeArgs, parseNodeHmrCommand, shouldIgnoreWatchPath } from './lib/cli-args.ts'
-import { getNodeHmrEndpoint, getNodeHmrEventUrl } from './lib/browser-events.ts'
+
+const execFileAsync = promisify(execFile)
 
 describe('parseNodeHmrCommand', () => {
   it('parses an entry and entry arguments', () => {
@@ -133,16 +137,20 @@ describe('buildNodeArgs', () => {
     let args = buildNodeArgs({
       entry: entryPath,
       entryArgs: ['--debug'],
+      hmrEventUrl: 'http://127.0.0.1:1234/hmr',
       nodeArgs: ['--import', 'remix/node-tsx', '--enable-source-maps'],
       registerPath,
     })
+
+    let registerUrl = pathToFileURL(registerPath)
+    registerUrl.searchParams.set('hmrEventUrl', 'http://127.0.0.1:1234/hmr')
 
     assert.deepEqual(args, [
       '--import',
       'remix/node-tsx',
       '--enable-source-maps',
       '--import',
-      pathToFileURL(registerPath).href,
+      registerUrl.href,
       entryPath,
       '--debug',
     ])
@@ -160,41 +168,24 @@ describe('shouldIgnoreWatchPath', () => {
   })
 })
 
-describe('node HMR event endpoint helpers', () => {
-  it('returns undefined outside the node HMR child process', () => {
-    let originalEventUrl = process.env.REMIX_NODE_HMR_EVENT_URL
-    try {
-      delete process.env.REMIX_NODE_HMR_EVENT_URL
+describe('node HMR runtime', () => {
+  it('safely imports the public runtime outside the node HMR child process', async () => {
+    let script = `
+      process.env.REMIX_NODE_HMR_EVENT_URL = 'http://127.0.0.1:1234/hmr'
+      let runtime = await import('@remix-run/node-hmr/runtime')
 
-      assert.equal(getNodeHmrEventUrl(), undefined)
-      assert.equal(getNodeHmrEndpoint(), undefined)
-    } finally {
-      if (originalEventUrl === undefined) {
-        delete process.env.REMIX_NODE_HMR_EVENT_URL
-      } else {
-        process.env.REMIX_NODE_HMR_EVENT_URL = originalEventUrl
+      if (runtime.eventChannel !== undefined) {
+        throw new Error('expected eventChannel to be undefined outside node-hmr')
       }
-    }
-  })
+    `
 
-  it('describes the parent HMR event endpoint from env', () => {
-    let originalEventUrl = process.env.REMIX_NODE_HMR_EVENT_URL
-    try {
-      process.env.REMIX_NODE_HMR_EVENT_URL = 'http://127.0.0.1:4567/hmr'
-
-      assert.equal(getNodeHmrEventUrl(), 'http://127.0.0.1:4567/hmr')
-      assert.deepEqual(getNodeHmrEndpoint(), {
-        hostname: '127.0.0.1',
-        pathname: '/hmr',
-        port: 4567,
-        url: 'http://127.0.0.1:4567/hmr',
-      })
-    } finally {
-      if (originalEventUrl === undefined) {
-        delete process.env.REMIX_NODE_HMR_EVENT_URL
-      } else {
-        process.env.REMIX_NODE_HMR_EVENT_URL = originalEventUrl
-      }
-    }
+    await execFileAsync(process.execPath, [
+      '--disable-warning=ExperimentalWarning',
+      '--import',
+      '@remix-run/node-tsx',
+      '--input-type=module',
+      '--eval',
+      script,
+    ])
   })
 })

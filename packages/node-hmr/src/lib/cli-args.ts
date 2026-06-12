@@ -97,13 +97,17 @@ export function parseNodeHmrCommand(argv: Array<string>): NodeHmrCommandResult {
 export function buildNodeArgs(options: {
   entry: string
   entryArgs: Array<string>
+  hmrEventUrl: string
   nodeArgs: Array<string>
   registerPath: string
 }): Array<string> {
+  let registerUrl = pathToFileURL(options.registerPath)
+  registerUrl.searchParams.set('hmrEventUrl', options.hmrEventUrl)
+
   return [
     ...options.nodeArgs,
     '--import',
-    pathToFileURL(options.registerPath).href,
+    registerUrl.href,
     options.entry,
     ...options.entryArgs,
   ]

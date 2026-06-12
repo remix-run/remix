@@ -8,7 +8,7 @@ import { transformComponentHmr } from '@remix-run/ui-hmr/transform'
 
 import { installNodeHmrRuntime } from './lib/runtime.ts'
 
-const runtime = installNodeHmrRuntime()
+const runtime = installNodeHmrRuntime({ eventUrl: getHmrEventUrl() })
 const rootPath = process.env.REMIX_NODE_HMR_ROOT
 let invalidatedUrlTimestamps = new Map<string, number>()
 const componentHmrRuntimeUrl = import.meta.resolve('@remix-run/ui-hmr/runtime')
@@ -48,6 +48,21 @@ registerHooks({
     }
   },
 })
+
+function getHmrEventUrl(): string | undefined {
+  let eventUrl = new URL(import.meta.url).searchParams.get('hmrEventUrl')
+  if (eventUrl === null) return undefined
+  return isHttpUrl(eventUrl) ? eventUrl : undefined
+}
+
+function isHttpUrl(value: string): boolean {
+  try {
+    let url = new URL(value)
+    return url.protocol === 'http:' || url.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
 
 process.on('message', (message: unknown) => {
   if (!isHmrUpdateMessage(message)) return
