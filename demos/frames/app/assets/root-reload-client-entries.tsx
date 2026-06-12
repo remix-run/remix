@@ -13,7 +13,7 @@ let persistentSetupCount = 0
 let removableSetupCount = 0
 
 export const RootReloadControls = clientEntry(
-  '/assets/root-reload-client-entries.js#RootReloadControls',
+  import.meta.url,
   function RootReloadControls(handle: Handle<RootReloadControlsProps>) {
     let pendingHref: string | null = null
     let removedDisposeEvents = 0
@@ -112,7 +112,7 @@ export const RootReloadControls = clientEntry(
 )
 
 export const PersistentRootReloadEntry = clientEntry(
-  '/assets/root-reload-client-entries.js#PersistentRootReloadEntry',
+  import.meta.url,
   function PersistentRootReloadEntry(handle: Handle<{ serverVersion: string }>) {
     let setupId = 0
     let localCount = 0
@@ -157,7 +157,7 @@ export const PersistentRootReloadEntry = clientEntry(
 )
 
 export const RemovableRootReloadEntry = clientEntry(
-  '/assets/root-reload-client-entries.js#RemovableRootReloadEntry',
+  import.meta.url,
   function RemovableRootReloadEntry(handle: Handle<{ serverVersion: string }>) {
     let setupId = 0
     let localCount = 0
