@@ -451,6 +451,7 @@ describe('asset server HMR', { skip: isBun }, () => {
       await page.goto('/')
       await connected
       await waitForText(page, '[data-testid="server-message"]', 'Server: before')
+      await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
 
       let serverReload = waitForConsoleMessage(page, 'Server frame reload complete')
       await write(
@@ -463,6 +464,10 @@ describe('asset server HMR', { skip: isBun }, () => {
       assert.equal(restarted.pid, ready.pid)
       await serverReload
       await waitForText(page, '[data-testid="server-message"]', 'Server: after restart')
+      assert.equal(
+        await page.locator('[data-testid="server-client-field"]').inputValue(),
+        'typed before reload',
+      )
       assert.equal(server.readyCount, 2)
     } finally {
       await server?.close()

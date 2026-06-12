@@ -38,7 +38,7 @@ if (import.meta.hot) {
     app.dispose()
   })
 
-  import.meta.hot.on('remix:server-update', async () => {
+  import.meta.hot.on('server:update', async () => {
     try {
       await app.ready()
       await app.frames.top.reload()
