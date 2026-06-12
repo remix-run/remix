@@ -100,7 +100,6 @@ This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/pa
 - Document the `run()` `loadModule` and `resolveFrame` hooks so editor hints explain how to hydrate client entries and resolve browser-loaded frames.
 
 - Optimize UI runtime hot paths.
-
   - Fast path for plain `on()` mixins that patches host listeners in place.
   - Lazy direct listener closures for event listeners managed by the runtime.
   - Lazy mixin scope signals to avoid unnecessary AbortController work.

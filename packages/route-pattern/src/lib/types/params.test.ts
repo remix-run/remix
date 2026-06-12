@@ -1,7 +1,7 @@
 import type { Assert, IsEqual } from '../types/utils.ts'
 import type { MatchParams } from '../match/types.ts'
 
-// prettier-ignore
+// oxfmt-ignore
 export type Tests = [
   // No params
   Assert<IsEqual<

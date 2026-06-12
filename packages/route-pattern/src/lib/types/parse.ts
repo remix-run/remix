@@ -9,7 +9,7 @@ export interface ParsedPattern {
   search: string | undefined
 }
 
-// prettier-ignore
+// oxfmt-ignore
 export type Parse<T extends string> =
   T extends ForceDistributive ?
     Split<T> extends infer S extends SplitPattern ?
@@ -46,7 +46,7 @@ type ParsePart<T extends string, Sep extends string = ''> = _ParsePart<
   Sep
 >
 
-// prettier-ignore
+// oxfmt-ignore
 type _ParsePart<S extends ParsePartState, Sep extends string = ''> =
   S extends { rest: `${infer Head}${infer Tail}` } ?
     Head extends Sep ? _ParsePart<AppendToken<S, { type: 'separator' }, Tail>, Sep> :
@@ -69,7 +69,7 @@ type _ParsePart<S extends ParsePartState, Sep extends string = ''> =
   S['optionals'] extends [] ? S['tokens'] :
   never
 
-// prettier-ignore
+// oxfmt-ignore
 type AppendToken<S extends ParsePartState, token extends Token, rest extends string> =
   S['optionals'] extends [...infer O extends Array<Token[]>, infer Top extends Token[]] ?
     {
@@ -83,7 +83,7 @@ type AppendToken<S extends ParsePartState, token extends Token, rest extends str
       rest: rest;
     }
 
-// prettier-ignore
+// oxfmt-ignore
 type AppendText<S extends ParsePartState, text extends string, rest extends string> =
   S['optionals'] extends [...infer O extends Array<Token[]>, infer Top extends Token[]] ?
     (
@@ -116,7 +116,7 @@ type PopOptional<S extends ParsePartState, R extends string> = S['optionals'] ex
     : { tokens: [...S['tokens'], { type: 'optional'; tokens: Top }]; optionals: []; rest: R }
   : never
 
-// prettier-ignore
+// oxfmt-ignore
 type _a_z = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z'
 type _A_Z = Uppercase<_a_z>
 type _0_9 = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
@@ -126,7 +126,7 @@ type IdentifierTail = IdentifierHead | _0_9
 
 type IdentifierParse<T extends string> = _IdentifierParse<{ identifier: ''; rest: T }>
 
-// prettier-ignore
+// oxfmt-ignore
 type _IdentifierParse<S extends { identifier: string, rest: string }> =
   S extends { identifier: '', rest: `${infer Head extends IdentifierHead}${infer Tail}` } ?
     _IdentifierParse<{ identifier: Head, rest: Tail }> :

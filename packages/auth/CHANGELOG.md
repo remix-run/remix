@@ -68,7 +68,6 @@ This is the changelog for [`auth`](https://github.com/remix-run/remix/tree/main/
 - Add `auth`, a high-level browser authentication package for Remix.
 
   Includes:
-
   - generic `oidc()` support for standards-based providers
   - thin `microsoft()`, `okta()`, and `auth0()` wrappers on top of OIDC
   - OAuth provider helpers for Google, GitHub, and Facebook

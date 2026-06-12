@@ -7,7 +7,7 @@ import { unreachable } from './unreachable.ts'
 /** Tuple of arguments accepted by `createHref` for a given pattern source. */
 export type CreateHrefArgs<source extends string> = _CreateHrefArgs<ParseHrefParams<source>>
 
-// prettier-ignore
+// oxfmt-ignore
 type _CreateHrefArgs<params> =
   {} extends params ?
     [params?: Simplify<params & Record<string, unknown>> | null | undefined, searchParams?: SearchParams]
@@ -19,7 +19,7 @@ type SearchParams = Record<
   string | number | null | undefined | Array<string | number | null | undefined>
 >
 
-// prettier-ignore
+// oxfmt-ignore
 type ParseHrefParams<source extends string> =
   Split<source> extends infer split extends SplitPattern ?
     split extends ({ protocol: string, hostname: undefined } | { hostname: undefined, port: string }) ? never :
@@ -31,7 +31,7 @@ type ParseHrefParams<source extends string> =
   :
   never
 
-// prettier-ignore
+// oxfmt-ignore
 type Optionalize<record extends Record<string, string | undefined>> =
   & { [key in keyof record as undefined extends record[key] ? never : key]: string | number }
   & { [key in keyof record as undefined extends record[key] ? key : never]?: string | number | null | undefined }

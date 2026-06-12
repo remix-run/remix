@@ -1495,13 +1495,13 @@ export interface MenuProps extends Omit<Props<'button'>, 'children'> {
 }
 
 export interface MenuItemProps
-  extends Omit<Props<'div'>, 'children' | 'name' | 'type' | 'value'>,
-    MenuItemOptions {
+  extends Omit<Props<'div'>, 'children' | 'name' | 'type' | 'value'>, MenuItemOptions {
   children?: RemixNode
 }
 
 export interface SubmenuProps
-  extends Omit<Props<'div'>, 'children' | 'name' | 'type' | 'value'>,
+  extends
+    Omit<Props<'div'>, 'children' | 'name' | 'type' | 'value'>,
     Omit<SubmenuTriggerOptions, 'label'> {
   children?: RemixNode
   label: RemixNode

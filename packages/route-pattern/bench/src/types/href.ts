@@ -31,7 +31,7 @@ bench('href > mediarss', async () => {
 
 /** Type-only utility to force eager evaluation of href param types */
 function eagerlyEvaluateTypesForHrefParams<patterns extends ReadonlyArray<string>>(
-  // prettier-ignore
+  // oxfmt-ignore
   _: patterns & (
     { [pattern in patterns[number]]: CreateHrefArgs<pattern>[0] } extends
     { [pattern in patterns[number]]: Record<string, unknown> | null | undefined }

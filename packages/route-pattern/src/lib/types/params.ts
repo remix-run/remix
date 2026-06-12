@@ -1,6 +1,6 @@
 import type { SplitPattern } from './split.ts'
 
-// prettier-ignore
+// oxfmt-ignore
 export type ParseParams<split extends SplitPattern> =
   split extends { hostname: infer hostname, pathname: infer pathname } ?
     & (hostname extends string ? ParsePartParams<hostname> : {})
@@ -8,7 +8,7 @@ export type ParseParams<split extends SplitPattern> =
   :
   never
 
-// prettier-ignore
+// oxfmt-ignore
 type ParsePartParams<source, stack extends Array<null> = []> =
   string extends source ? Record<string, string | undefined> :
   source extends `${infer char extends '\\' | ':' | '*' | '(' | ')'}${infer rest}` ?
@@ -49,7 +49,7 @@ type IdentifierTail = IdentifierHead | _0_9
 
 type IdentifierParse<source extends string> = _IdentifierParse<{ identifier: ''; rest: source }>
 
-// prettier-ignore
+// oxfmt-ignore
 type _IdentifierParse<state extends { identifier: string, rest: string }> =
   state extends { identifier: '', rest: `${infer head extends IdentifierHead}${infer tail}` } ?
     _IdentifierParse<{ identifier: head, rest: tail }>
@@ -59,7 +59,7 @@ type _IdentifierParse<state extends { identifier: string, rest: string }> =
   :
   state
 
-// prettier-ignore
+// oxfmt-ignore
 type a_z = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm' | 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z'
 type A_Z = Uppercase<a_z>
 type _0_9 = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'

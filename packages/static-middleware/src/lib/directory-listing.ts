@@ -60,8 +60,25 @@ export async function generateDirectoryListing(
   // Build table rows
   let tableRows = []
 
-  let folderIcon = html.raw`<svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 3.5h4.5l1.5 1.5h6v8h-12z"/></svg>`
-  let fileIcon = html.raw`<svg class="icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 2h7l3 3v9H3z"/><path d="M10 2v3h3"/></svg>`
+  let folderIcon = html.raw`<svg
+    class="icon"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.5"
+  >
+    <path d="M2 3.5h4.5l1.5 1.5h6v8h-12z" />
+  </svg>`
+  let fileIcon = html.raw`<svg
+    class="icon"
+    viewBox="0 0 16 16"
+    fill="none"
+    stroke="currentColor"
+    stroke-width="1.5"
+  >
+    <path d="M3 2h7l3 3v9H3z" />
+    <path d="M10 2v3h3" />
+  </svg>`
 
   // Add parent directory link if not at root
   if (pathname !== '/' && pathname !== '') {
@@ -105,8 +122,9 @@ export async function generateDirectoryListing(
             box-sizing: border-box;
           }
           body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu,
-              Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            font-family:
+              -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell,
+              'Open Sans', 'Helvetica Neue', sans-serif;
             margin: 0;
             padding: 2rem 1rem;
             background: #fff;
