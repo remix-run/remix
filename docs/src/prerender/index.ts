@@ -1,14 +1,12 @@
-import * as cp from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
-import * as semver from 'semver'
 import { assetServer } from '../server/asset-server.ts'
 import { createRouter, getDefaultVersions } from '../server/router.tsx'
 import { routes } from '../server/routes.ts'
-import type { Versions } from '../server/view.tsx'
 import { crawl } from './crawl.ts'
 import { parse } from './html-parser.ts'
+import { getVersionsForPicker } from './versions.ts'
 
 let { values: cliArgs } = util.parseArgs({
   options: {
@@ -17,8 +15,16 @@ let { values: cliArgs } = util.parseArgs({
       short: 'd',
       default: 'build/site',
     },
+    version: {
+      type: 'string',
+    },
   },
 })
+
+const buildVersion = cliArgs.version
+if (buildVersion != null && (buildVersion.length === 0 || buildVersion.includes('/'))) {
+  throw new Error(`Invalid --version value: ${buildVersion}`)
+}
 
 const publicDir = path.join(process.cwd(), 'build', 'public')
 const outputDir = path.join(process.cwd(), cliArgs.dir)
@@ -26,8 +32,9 @@ const SCRIPT_FILE_EXT = /\.(?:tsx?|jsx|mts)$/
 const SCRIPT_EXT_IN_PATH = /\.(?:tsx?|jsx|mts)(?=[?#]|$)/
 const SCRIPT_EXT_IN_JS_IMPORT = /\.(?:tsx?|jsx|mts)(?=["'?#])/g
 
-const versions = await getVersionsToBuild()
-console.log('Prerendering versions:\n', JSON.stringify(versions, null, 2))
+const versions = getVersionsForPicker(buildVersion, getDefaultVersions())
+console.log(`Prerendering ${buildVersion ? buildVersion : 'root'} docs`)
+console.log('Version picker options:\n', JSON.stringify(versions, null, 2))
 
 const docsRouter = createRouter(versions)
 
@@ -36,18 +43,16 @@ const docsRouter = createRouter(versions)
 await fs.cp(publicDir, outputDir, { recursive: true })
 
 // Spider the site
-const paths = [
-  routes.home.href(),
-  routes.lookup.href(),
-  ...(versions
-    ?.filter((v) => v.crawl)
-    .flatMap((v) => [
-      routes.home.href({ version: v.version }),
-      routes.lookup.href({ version: v.version }),
-    ]) || []),
-]
+const homePath = routes.home.href({ version: buildVersion })
+const paths = [homePath, routes.lookup.href({ version: buildVersion })]
 
-for await (let { pathname, filepath, response } of crawl(docsRouter, { paths })) {
+for await (let { pathname, filepath, response } of crawl(docsRouter, {
+  paths,
+  // Versioned pages stay noindex,nofollow for public crawlers, but the
+  // prerender spider needs the versioned home page's sidebar links to seed
+  // the static docs graph.
+  ignorePageNofollow: buildVersion ? (pathname) => pathname === homePath : undefined,
+})) {
   await writeResult(pathname, filepath, response)
 }
 
@@ -61,9 +66,11 @@ async function writeResult(pathname: string, filepath: string, response: Respons
   let outputPath = path.join(outputDir, outputFilepath)
   await fs.mkdir(path.dirname(outputPath), { recursive: true })
 
-  if (response.headers.get('Content-Type')?.includes('text/html')) {
+  let contentType = response.headers.get('Content-Type')
+
+  if (contentType?.includes('text/html')) {
     let html = await response.text()
-    // Update all HTML script references to reference JS files for static HTML hosting
+    // Update script references for static HTML hosting.
     let updated = rewriteExtensionsToJs(html)
     await fs.writeFile(outputPath, updated, 'utf-8')
   } else if (SCRIPT_FILE_EXT.test(filepath)) {
@@ -126,21 +133,4 @@ function rewriteExtensionsToJs(html: string): string {
   }
 
   return changed ? dom.toString() : html
-}
-
-async function getVersionsToBuild(): Promise<Versions> {
-  // Get all Remix v3 tags, transform them to vX.Y.Z format, sort newest to oldest
-  const remixVersions = cp
-    .execSync('git tag', { encoding: 'utf-8' })
-    .trim()
-    .split('\n')
-    .filter((tag) => tag.startsWith('remix@3'))
-    .map((tag) => tag.replace('remix@', 'v'))
-    .filter((tag) => semver.valid(tag) && !semver.prerelease(tag))
-    .sort((a, b) => semver.rcompare(a, b))
-
-  // Crawl only the most recent tag
-  return remixVersions.length > 0
-    ? remixVersions.map((tag, i) => ({ version: tag, crawl: i === 0 }))
-    : getDefaultVersions()
 }

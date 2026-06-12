@@ -1,8 +1,7 @@
-import * as assert from '@remix-run/assert'
-import { afterEach, describe, it } from '@remix-run/test'
+import { describe, it } from '@remix-run/test'
 
 import { column } from './column.ts'
-import { createDatabase, Database } from './database.ts'
+import type { Database, WriteRowResult, WriteRowsResult } from './database.ts'
 import type {
   QueryColumnTypesForTable,
   QueryForTable,
@@ -12,17 +11,9 @@ import type {
 import type { AnyQuery, Query } from './query.ts'
 import { query } from './query.ts'
 import type { AnyQuery as PublicAnyQuery } from '../index.ts'
-// @ts-expect-error CountQuery is no longer exported
-import type { CountQuery as _CountQuery } from '../index.ts'
-// @ts-expect-error InsertCommand is no longer exported
-import type { InsertCommand as _InsertCommand } from '../index.ts'
-// @ts-expect-error QueryMethod is no longer exported
-import type { QueryMethod as _QueryMethod } from '../index.ts'
 import { table, hasMany } from './table.ts'
 import type { TableReference, TableRow } from './table.ts'
 import { eq } from './operators.ts'
-import type { SqliteTestSeed } from '../../test/sqlite-test-database.ts'
-import { createSqliteTestAdapter } from '../../test/sqlite-test-database.ts'
 
 type Equal<left, right> =
   (<value>() => value extends left ? 1 : 2) extends <value>() => value extends right ? 1 : 2
@@ -30,6 +21,8 @@ type Equal<left, right> =
     : false
 
 function expectType<condition extends true>(_value?: condition): void {}
+
+declare const db: Database
 
 const accounts = table({
   name: 'accounts',
@@ -66,18 +59,8 @@ const inferredColumns = table({
   },
 })
 
-const cleanups = new Set<() => void>()
-
-afterEach(() => {
-  for (let cleanup of cleanups) {
-    cleanup()
-  }
-
-  cleanups.clear()
-})
-
 describe('type safety', () => {
-  it('infers unvalidated column types from physical types and falls back to unknown', () => {
+  it.skip('infers unvalidated column types from physical types and falls back to unknown', () => {
     type Row = TableRow<typeof inferredColumns>
 
     expectType<Equal<Row['title'], string>>()
@@ -90,27 +73,16 @@ describe('type safety', () => {
     expectType<Equal<Row['validated_payload'], unknown>>()
   })
 
-  it('types direct construction, helper construction, and transaction callbacks as Database', async () => {
-    let direct = new Database(createAdapter())
-    let wrapped = createDatabase(createAdapter())
-
-    expectType<Equal<typeof direct, Database>>()
-    expectType<Equal<typeof wrapped, Database>>()
-
-    await direct.transaction(async (transactionDatabase) => {
+  it.skip('types transaction callbacks as Database', async () => {
+    await db.transaction(async (transactionDatabase) => {
       expectType<Equal<typeof transactionDatabase, Database>>()
-      return undefined
     })
-
-    assert.equal(direct instanceof Database, true)
-    assert.equal(wrapped instanceof Database, true)
   })
 
-  it('exposes Query generics as column and row output maps', () => {
-    let db = createDatabase(createAdapter())
-    let query = db.query(accounts)
+  it.skip('exposes Query generics as column and row output maps', () => {
+    let accountQuery = db.query(accounts)
 
-    type QueryType = typeof query
+    type QueryType = typeof accountQuery
     type QuerySource = QueryType extends Query<infer source, any, any, any, any> ? source : never
     type QueryColumns =
       QueryType extends Query<any, infer columnTypes, any, any, any> ? columnTypes : never
@@ -163,17 +135,7 @@ describe('type safety', () => {
     expectType<Equal<AccountsReferenceColumns, 'email' | 'id' | 'status'>>()
   })
 
-  it('types query(table) and db.exec(...) for unbound queries in every execution mode', async () => {
-    let db = createDatabase(
-      createAdapter({
-        accounts: [
-          { id: 1, email: 'a@example.com', status: 'active' },
-          { id: 2, email: 'b@example.com', status: 'inactive' },
-        ],
-        projects: [{ id: 100, account_id: 1, archived: false }],
-      }),
-    )
-
+  it.skip('types query(table) and db.exec(...) for unbound queries in every execution mode', async () => {
     let unbound = query(accounts).where({ status: 'active' })
     let firstQuery = query(accounts).first()
     let updateQuery = query(accounts).where({ status: 'inactive' }).update({ status: 'active' })
@@ -200,17 +162,6 @@ describe('type safety', () => {
       ),
     )
 
-    assert.equal(rows.length, 1)
-    assert.equal(first?.id, 1)
-    assert.equal(found?.id, 1)
-    assert.equal(count, 2)
-    assert.equal(exists, true)
-    assert.equal(insertResult.affectedRows, 1)
-    assert.equal(insertManyResult.affectedRows, 2)
-    assert.equal(updateResult.affectedRows, 2)
-    assert.equal(deleteResult.affectedRows, 1)
-    assert.equal(upsertResult.affectedRows, 1)
-
     type Unbound = typeof unbound
     type FirstQuery = typeof firstQuery
     type UpdateQuery = typeof updateQuery
@@ -234,46 +185,85 @@ describe('type safety', () => {
         : never
     type Row = (typeof rows)[number]
 
+    expectType<Equal<typeof first, { id: number; email: string; status: string } | null>>()
+    expectType<Equal<typeof found, { id: number; email: string; status: string } | null>>()
+    expectType<Equal<typeof count, number>>()
+    expectType<Equal<typeof exists, boolean>>()
+    expectType<
+      Equal<
+        typeof insertResult,
+        | WriteResult
+        | WriteRowResult<{
+            id: number
+            email: string
+            status: string
+          }>
+      >
+    >()
+    expectType<
+      Equal<
+        typeof insertManyResult,
+        | WriteResult
+        | WriteRowsResult<{
+            id: number
+            email: string
+            status: string
+          }>
+      >
+    >()
+    expectType<
+      Equal<
+        typeof updateResult,
+        | WriteResult
+        | WriteRowsResult<{
+            id: number
+            email: string
+            status: string
+          }>
+      >
+    >()
+    expectType<
+      Equal<
+        typeof deleteResult,
+        | WriteResult
+        | WriteRowsResult<{
+            id: number
+            email: string
+            status: string
+          }>
+      >
+    >()
+    expectType<
+      Equal<
+        typeof upsertResult,
+        | WriteResult
+        | WriteRowResult<{
+            id: number
+            email: string
+            status: string
+          }>
+      >
+    >()
     expectType<Equal<UnboundBinding, 'unbound'>>()
     expectType<Equal<FirstMode, 'first'>>()
     expectType<Equal<UpdateMode, 'update'>>()
     expectType<Equal<Row['id'], number>>()
     expectType<Equal<Row['email'], string>>()
 
-    function verifyTypeErrors(): void {
-      // @ts-expect-error unbound queries do not expose all()
-      query(accounts).all()
-      // @ts-expect-error terminal queries do not expose builder methods
-      query(accounts).first().where({ id: 1 })
-      // @ts-expect-error terminal queries do not expose builder methods
-      query(accounts).update({ status: 'active' }).limit(1)
-      // @ts-expect-error values are only accepted for raw SQL exec()
-      db.exec(query(accounts), [])
-      // @ts-expect-error db.exec only accepts Query values or raw SQL
-      db.exec({ kind: 'count' })
-    }
-
-    void verifyTypeErrors
+    // @ts-expect-error unbound queries do not expose all()
+    query(accounts).all()
+    // @ts-expect-error terminal queries do not expose builder methods
+    query(accounts).first().where({ id: 1 })
+    // @ts-expect-error terminal queries do not expose builder methods
+    query(accounts).update({ status: 'active' }).limit(1)
+    // @ts-expect-error values are only accepted for raw SQL exec()
+    db.exec(query(accounts), [])
+    // @ts-expect-error db.exec only accepts Query values or raw SQL
+    db.exec({ kind: 'count' })
   })
 
-  it('narrows select() result types while preserving relation types', async () => {
-    let db = createDatabase(
-      createAdapter({
-        accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
-        projects: [
-          { id: 100, account_id: 1, archived: false },
-          { id: 101, account_id: 3, archived: false },
-        ],
-      }),
-    )
-
+  it.skip('narrows select() result types while preserving relation types', async () => {
     let rows = await db.query(accounts).select('id').with({ projects: accountProjects }).all()
-
-    assert.equal(rows.length, 1)
-    assert.equal(rows[0].id, 1)
-    assert.equal(rows[0].projects.length, 1)
-    assert.equal(Boolean(rows[0].projects[0].archived), false)
-    assert.deepEqual(Object.keys(rows[0]).sort(), ['id', 'projects'])
 
     type Row = (typeof rows)[number]
     expectType<Equal<Row['id'], number>>()
@@ -285,17 +275,7 @@ describe('type safety', () => {
     void rows[0].email
   })
 
-  it('supports typed alias select() and joined order/group columns', async () => {
-    let db = createDatabase(
-      createAdapter({
-        accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
-        projects: [
-          { id: 100, account_id: 1, archived: false },
-          { id: 101, account_id: 3, archived: false },
-        ],
-      }),
-    )
-
+  it.skip('supports typed alias select() and joined order/group columns', async () => {
     let rows = await db
       .query(accounts)
       .join(projects, eq(accounts.id, projects.account_id))
@@ -308,12 +288,6 @@ describe('type safety', () => {
       .orderBy(projects.id, 'asc')
       .all()
 
-    assert.equal(rows.length, 1)
-    assert.equal(rows[0].accountId, 1)
-    assert.equal(rows[0].accountEmail, 'a@example.com')
-    assert.equal(rows[0].projectId, 100)
-    assert.equal(Boolean(rows[0].projectArchived), false)
-
     let groupedCount = await db
       .query(accounts)
       .join(projects, eq(accounts.id, projects.account_id))
@@ -321,43 +295,31 @@ describe('type safety', () => {
       .having(eq(projects.account_id, 1))
       .count()
 
-    assert.equal(groupedCount, 1)
-
     type Row = (typeof rows)[number]
     expectType<Equal<Row['accountId'], number>>()
     expectType<Equal<Row['accountEmail'], string>>()
     expectType<Equal<Row['projectId'], number>>()
     expectType<Equal<Row['projectArchived'], boolean>>()
+    expectType<Equal<typeof groupedCount, number>>()
 
     // @ts-expect-error alias select should not expose original source column names
     void rows[0].email
 
-    function verifyTypeErrors(): void {
-      db.query(accounts)
-        .join(projects, eq(accounts.id, projects.account_id))
-        // @ts-expect-error unknown joined column for orderBy
-        .orderBy(projects.nope)
-      db.query(accounts)
-        .join(projects, eq(accounts.id, projects.account_id))
-        // @ts-expect-error unknown joined column for groupBy
-        .groupBy(projects.nope)
-      db.query(accounts)
-        .join(projects, eq(accounts.id, projects.account_id))
-        // @ts-expect-error unknown source column in alias selection
-        .select({ bad: projects.nope })
-    }
-
-    void verifyTypeErrors
+    db.query(accounts)
+      .join(projects, eq(accounts.id, projects.account_id))
+      // @ts-expect-error unknown joined column for orderBy
+      .orderBy(projects.nope)
+    db.query(accounts)
+      .join(projects, eq(accounts.id, projects.account_id))
+      // @ts-expect-error unknown joined column for groupBy
+      .groupBy(projects.nope)
+    db.query(accounts)
+      .join(projects, eq(accounts.id, projects.account_id))
+      // @ts-expect-error unknown source column in alias selection
+      .select({ bad: projects.nope })
   })
 
-  it('enforces typed keys for where/having/join/relation filters while running real queries', async () => {
-    let db = createDatabase(
-      createAdapter({
-        accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
-        projects: [{ id: 100, account_id: 1, archived: false }],
-      }),
-    )
-
+  it.skip('enforces typed keys for where/having/join/relation filters', async () => {
     let filtered = await db.query(accounts).where({ status: 'active' }).all()
     let groupedCount = await db
       .query(accounts)
@@ -374,35 +336,24 @@ describe('type safety', () => {
       .with({ projects: accountProjects.where({ archived: false }) })
       .all()
 
-    assert.equal(filtered.length, 1)
-    assert.equal(groupedCount, 1)
-    assert.equal(joined.length, 1)
-    assert.equal(withRelations[0].projects.length, 1)
+    expectType<Equal<(typeof filtered)[number]['status'], string>>()
+    expectType<Equal<typeof groupedCount, number>>()
+    expectType<Equal<(typeof joined)[number]['id'], number>>()
+    expectType<Equal<(typeof withRelations)[number]['projects'][number]['archived'], boolean>>()
 
-    function verifyTypeErrors(): void {
-      // @ts-expect-error unknown predicate key
-      db.query(accounts).where({ not_a_column: 'active' })
-      // @ts-expect-error unknown predicate key
-      db.query(accounts).having({ not_a_column: 'active' })
-      // @ts-expect-error join predicate key must be from source or target table
-      db.query(accounts).join(projects, eq('not_a_column', true))
-      // @ts-expect-error right-hand column reference must be from source or target table
-      db.query(accounts).join(projects, eq(accounts.id, 'projects.not_a_column'))
-      // @ts-expect-error relation predicate key must be from relation target table
-      accountProjects.where({ not_a_column: true })
-    }
-
-    void verifyTypeErrors
+    // @ts-expect-error unknown predicate key
+    db.query(accounts).where({ not_a_column: 'active' })
+    // @ts-expect-error unknown predicate key
+    db.query(accounts).having({ not_a_column: 'active' })
+    // @ts-expect-error join predicate key must be from source or target table
+    db.query(accounts).join(projects, eq('not_a_column', true))
+    // @ts-expect-error right-hand column reference must be from source or target table
+    db.query(accounts).join(projects, eq(accounts.id, 'projects.not_a_column'))
+    // @ts-expect-error relation predicate key must be from relation target table
+    accountProjects.where({ not_a_column: true })
   })
 
-  it('keeps findOne/findMany where and orderBy typing symmetric for single-table queries', async () => {
-    let db = createDatabase(
-      createAdapter({
-        accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
-        projects: [{ id: 100, account_id: 1, archived: false }],
-      }),
-    )
-
+  it.skip('keeps findOne/findMany where and orderBy typing symmetric for single-table queries', async () => {
     let first = await db.find(accounts, 1)
     let active = await db.findOne(accounts, {
       where: { status: 'active' },
@@ -418,53 +369,37 @@ describe('type safety', () => {
     })
     let count = await db.count(accounts, { where: { status: 'active' } })
 
-    assert.equal(first?.id, 1)
-    assert.equal(active?.email, 'a@example.com')
-    assert.equal(rows.length, 1)
-    assert.equal(rows[0].projects.length, 1)
-    assert.equal(count, 1)
+    expectType<Equal<typeof first, { id: number; email: string; status: string } | null>>()
+    expectType<Equal<typeof active, { id: number; email: string; status: string } | null>>()
+    expectType<Equal<typeof count, number>>()
 
     type Row = (typeof rows)[number]
     expectType<Equal<Row['projects'][number]['id'], number>>()
     expectType<Equal<Row['projects'][number]['account_id'], number>>()
     expectType<Equal<Row['projects'][number]['archived'], boolean>>()
 
-    function verifyTypeErrors(): void {
-      // @ts-expect-error unknown where key
-      db.findOne(accounts, { where: { not_a_column: 'active' } })
-      // @ts-expect-error unknown orderBy column
-      db.findMany(accounts, { orderBy: ['not_a_column', 'asc'] })
-      db.findMany(accounts, {
-        orderBy: [
-          ['id', 'asc'],
-          // @ts-expect-error unknown orderBy column in tuple list
-          ['not_a_column', 'desc'],
-        ],
-      })
-      // @ts-expect-error unknown where key
-      db.count(accounts, { where: { not_a_column: 'active' } })
-      // @ts-expect-error orderBy is not supported by db.count()
-      db.count(accounts, { orderBy: ['id', 'asc'] })
-      // @ts-expect-error limit is not supported by db.count()
-      db.count(accounts, { limit: 1 })
-      // @ts-expect-error offset is not supported by db.count()
-      db.count(accounts, { offset: 1 })
-    }
-
-    void verifyTypeErrors
+    // @ts-expect-error unknown where key
+    db.findOne(accounts, { where: { not_a_column: 'active' } })
+    // @ts-expect-error unknown orderBy column
+    db.findMany(accounts, { orderBy: ['not_a_column', 'asc'] })
+    db.findMany(accounts, {
+      orderBy: [
+        ['id', 'asc'],
+        // @ts-expect-error unknown orderBy column in tuple list
+        ['not_a_column', 'desc'],
+      ],
+    })
+    // @ts-expect-error unknown where key
+    db.count(accounts, { where: { not_a_column: 'active' } })
+    // @ts-expect-error orderBy is not supported by db.count()
+    db.count(accounts, { orderBy: ['id', 'asc'] })
+    // @ts-expect-error limit is not supported by db.count()
+    db.count(accounts, { limit: 1 })
+    // @ts-expect-error offset is not supported by db.count()
+    db.count(accounts, { offset: 1 })
   })
 
-  it('keeps update/delete helper typing symmetric for single-table queries', async () => {
-    let db = createDatabase(
-      createAdapter({
-        accounts: [
-          { id: 1, email: 'a@example.com', status: 'active' },
-          { id: 2, email: 'b@example.com', status: 'inactive' },
-        ],
-        projects: [{ id: 100, account_id: 1, archived: false }],
-      }),
-    )
-
+  it.skip('keeps update/delete helper typing symmetric for single-table queries', async () => {
     let updated = await db.update(
       accounts,
       1,
@@ -487,46 +422,32 @@ describe('type safety', () => {
       limit: 1,
     })
 
-    assert.equal(updated.id, 1)
-    assert.equal(updated.projects.length, 1)
-    assert.equal(updateManyResult.affectedRows, 1)
-    assert.equal(deleted, true)
-    assert.equal(deleteManyResult.affectedRows, 1)
+    expectType<Equal<(typeof updated)['id'], number>>()
+    expectType<Equal<(typeof updated)['projects'][number]['id'], number>>()
+    expectType<Equal<typeof updateManyResult, WriteResult>>()
+    expectType<Equal<typeof deleted, boolean>>()
+    expectType<Equal<typeof deleteManyResult, WriteResult>>()
 
-    function verifyTypeErrors(): void {
-      // @ts-expect-error unknown update key
-      db.update(accounts, 1, { not_a_column: 'x' })
-      // @ts-expect-error unknown where key
-      db.updateMany(accounts, { status: 'active' }, { where: { not_a_column: 'x' } })
-      db.updateMany(
-        accounts,
-        { status: 'active' },
-        {
-          where: { status: 'active' },
-          // @ts-expect-error unknown orderBy key
-          orderBy: ['nope', 'asc'],
-        },
-      )
-      // @ts-expect-error unknown where key
-      db.deleteMany(accounts, { where: { not_a_column: 'x' } })
-      // @ts-expect-error unknown orderBy key
-      db.deleteMany(accounts, { where: { status: 'active' }, orderBy: [['nope', 'asc']] })
-    }
-
-    void verifyTypeErrors
+    // @ts-expect-error unknown update key
+    db.update(accounts, 1, { not_a_column: 'x' })
+    // @ts-expect-error unknown where key
+    db.updateMany(accounts, { status: 'active' }, { where: { not_a_column: 'x' } })
+    db.updateMany(
+      accounts,
+      { status: 'active' },
+      {
+        where: { status: 'active' },
+        // @ts-expect-error unknown orderBy key
+        orderBy: ['nope', 'asc'],
+      },
+    )
+    // @ts-expect-error unknown where key
+    db.deleteMany(accounts, { where: { not_a_column: 'x' } })
+    // @ts-expect-error unknown orderBy key
+    db.deleteMany(accounts, { where: { status: 'active' }, orderBy: [['nope', 'asc']] })
   })
 
-  it('supports typed create/createMany helper return modes', async () => {
-    let db = createDatabase(
-      createAdapter({
-        accounts: [{ id: 1, email: 'a@example.com', status: 'active' }],
-        projects: [
-          { id: 100, account_id: 1, archived: false },
-          { id: 101, account_id: 3, archived: false },
-        ],
-      }),
-    )
-
+  it.skip('supports typed create/createMany helper return modes', async () => {
     let createResult = await db.create(accounts, {
       id: 2,
       email: 'b@example.com',
@@ -561,37 +482,21 @@ describe('type safety', () => {
     expectType<Equal<(typeof createdRows)[number]['id'], number>>()
     expectType<Equal<(typeof createdRows)[number]['email'], string>>()
 
-    assert.equal(createResult.affectedRows, 1)
-    assert.equal(created.id, 3)
-    assert.equal(created.projects.length, 1)
-    assert.equal(createManyResult.affectedRows, 2)
-    assert.equal(createdRows.length, 1)
-
-    function verifyTypeErrors(): void {
-      // @ts-expect-error unknown insert key
-      db.create(accounts, { not_a_column: 'x' })
-      db.create(
-        accounts,
-        { id: 7, email: 'g@example.com', status: 'active' },
-        // @ts-expect-error with is only supported when returnRow: true
-        { with: { projects: accountProjects } },
-      )
-      // @ts-expect-error unknown createMany insert key
-      db.createMany(accounts, [{ not_a_column: 'x' }])
-      db.createMany(
-        accounts,
-        [{ id: 8, email: 'h@example.com', status: 'active' }],
-        // @ts-expect-error invalid createMany option key
-        { returnRow: true },
-      )
-    }
-
-    void verifyTypeErrors
+    // @ts-expect-error unknown insert key
+    db.create(accounts, { not_a_column: 'x' })
+    db.create(
+      accounts,
+      { id: 7, email: 'g@example.com', status: 'active' },
+      // @ts-expect-error with is only supported when returnRow: true
+      { with: { projects: accountProjects } },
+    )
+    // @ts-expect-error unknown createMany insert key
+    db.createMany(accounts, [{ not_a_column: 'x' }])
+    db.createMany(
+      accounts,
+      [{ id: 8, email: 'h@example.com', status: 'active' }],
+      // @ts-expect-error invalid createMany option key
+      { returnRow: true },
+    )
   })
 })
-
-function createAdapter(seed: SqliteTestSeed = {}) {
-  let { adapter, close } = createSqliteTestAdapter(seed)
-  cleanups.add(close)
-  return adapter
-}

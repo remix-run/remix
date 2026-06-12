@@ -14,6 +14,7 @@ import path from 'node:path'
 import url from 'node:url'
 import { parseSync } from 'oxc-parser'
 import { logAndExec } from './utils/process.ts'
+import { findReadmeForSpecifier } from './utils/remix-readmes.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 const packagesDir = path.resolve(__dirname, '../packages')
@@ -178,7 +179,7 @@ async function buildExportsFromManifest(
   // Add CLI entry — handled separately from the manifest
   let cliPkg = packages.find((p) => p.name === CLI_PACKAGE_NAME)
   if (cliPkg) {
-    let readmePath = findReadmePath(CLI_PACKAGE_NAME.replace('@remix-run/', ''))
+    let readmePath = findReadmeForSpecifier(CLI_PACKAGE_NAME, pkgJsonByName)
     let exportMode = await getExportModeForSpecifier(CLI_PACKAGE_NAME, pkgJsonByName)
     exports.push({
       sourceFile: 'cli.ts',
@@ -208,68 +209,6 @@ async function getExportModeForSpecifier(
   ]
 
   return getPackageExportMode(packageDirName, exportConfig)
-}
-
-function findReadmeForSpecifier(
-  specifier: string,
-  pkgJsonByName: Map<string, Record<string, unknown>>,
-): string | undefined {
-  // '@remix-run/fetch-router' → packageName='@remix-run/fetch-router', subExport=undefined
-  // '@remix-run/data-schema/checks' → packageName='@remix-run/data-schema', subExport='./checks'
-  let parts = specifier.split('/')
-  let packageName = parts[0].startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0]
-  let packageDirName = packageName.replace('@remix-run/', '')
-  let subPath = parts.slice(packageName.split('/').length).join('/')
-
-  if (!subPath) {
-    return findReadmePath(packageDirName)
-  }
-
-  let pkgJson = pkgJsonByName.get(packageName)
-  let exportConfig = (pkgJson?.exports as Record<string, unknown>)?.[`./${subPath}`]
-  let sourceEntryPath = getSourceEntryPath(exportConfig)
-  return sourceEntryPath ? findReadmePath(packageDirName, sourceEntryPath) : undefined
-}
-
-function getSourceEntryPath(exportConfig: unknown): string | undefined {
-  if (typeof exportConfig === 'string') {
-    return exportConfig
-  }
-
-  if (exportConfig === null || typeof exportConfig !== 'object' || Array.isArray(exportConfig)) {
-    return undefined
-  }
-
-  if ('types' in exportConfig && typeof exportConfig.types === 'string') {
-    return exportConfig.types
-  }
-
-  if ('default' in exportConfig && typeof exportConfig.default === 'string') {
-    return exportConfig.default
-  }
-
-  return undefined
-}
-
-function findReadmePath(packageDirName: string, sourceEntryPath?: string): string | undefined {
-  let packageDir = path.join(packagesDir, packageDirName)
-  if (sourceEntryPath) {
-    let colocatedReadmePath = path.join(packageDir, path.dirname(sourceEntryPath), 'README.md')
-    if (isFile(colocatedReadmePath)) {
-      return colocatedReadmePath
-    }
-
-    let nestedReadmePath = path.join(
-      packageDir,
-      path.dirname(sourceEntryPath),
-      path.basename(sourceEntryPath, path.extname(sourceEntryPath)),
-      'README.md',
-    )
-    return isFile(nestedReadmePath) ? nestedReadmePath : undefined
-  }
-
-  let readmePath = path.join(packageDir, 'README.md')
-  return isFile(readmePath) ? readmePath : undefined
 }
 
 function isFile(filePath: string): boolean {

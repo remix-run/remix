@@ -31,8 +31,9 @@ const sessionStorage = createCookieSessionStorage()
 const Database = createContextKey<D1Database>()
 
 function loadDatabase(): Middleware<{ key: typeof Database; value: D1Database; property: 'db' }> {
-  return (context) => {
+  return (context, next) => {
     context.set(Database, env.DB, { property: 'db' })
+    return next()
   }
 }
 

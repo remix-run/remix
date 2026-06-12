@@ -4,6 +4,7 @@ import { describe, it } from '@remix-run/test'
 
 import { createRoutes as route } from '../routes.ts'
 import type { Action, Controller } from './controller.ts'
+import type { NextFunction } from './middleware.ts'
 import type { RequestContext } from './request-context.ts'
 import { createRouter, type MatchData } from './router.ts'
 
@@ -43,8 +44,9 @@ describe('router.fetch()', () => {
 
     router.get(routes.home, {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('middleware')
+          return next()
         },
       ],
       handler() {
@@ -69,16 +71,18 @@ describe('router.fetch()', () => {
     let requestLog: string[] = []
     let router = createRouter({
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('router middleware')
+          return next()
         },
       ],
     })
 
     router.get(routes.home, {
       middleware: [
-        () => {
-          requestLog.push('route middleware')
+        (_, next) => {
+          requestLog.push('action middleware')
+          return next()
         },
       ],
       handler() {
@@ -89,7 +93,7 @@ describe('router.fetch()', () => {
     let response = await router.fetch('https://remix.run')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'Home')
-    assert.deepEqual(requestLog, ['router middleware', 'route middleware'])
+    assert.deepEqual(requestLog, ['router middleware', 'action middleware'])
   })
 
   it('fetches a route with specific method actions', async () => {
@@ -120,8 +124,9 @@ describe('router.fetch()', () => {
 
     router.get('/', {
       middleware: [
-        ({ headers }) => {
+        ({ headers }, next) => {
           requestLog.push(headers.get('From'))
+          return next()
         },
       ],
       handler() {
@@ -142,8 +147,9 @@ describe('router.fetch()', () => {
     let requestLog: string[] = []
     let router = createRouter({
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('middleware')
+          return next()
         },
       ],
     })
@@ -158,8 +164,9 @@ describe('router.fetch()', () => {
     let requestLog: string[] = []
     let router = createRouter({
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('middleware')
+          return next()
         },
       ],
     })
@@ -197,8 +204,9 @@ describe('router.map() with single routes', () => {
     let requestLog: string[] = []
     let router = createRouter()
 
-    function middleware(context: RequestContext<{ id: string }>) {
+    function middleware(context: RequestContext<{ id: string }>, next: NextFunction) {
       requestLog.push(`middleware ${context.params.id}`)
+      return next()
     }
 
     router.map(routes.profile, {
@@ -289,8 +297,9 @@ describe('router.map()', () => {
     let requestLog: string[] = []
     let router = createRouter()
 
-    function middleware() {
+    function middleware(_: RequestContext, next: NextFunction) {
       requestLog.push('middleware')
+      return next()
     }
 
     router.map(routes, {
@@ -320,7 +329,7 @@ describe('router.map()', () => {
     // This is a compile-time type check only - we use a never-executed block
     // to verify that TypeScript catches the error without running the code.
     if (false as boolean) {
-      let invalidController: Controller<typeof routes> = {
+      let invalidController: Controller<typeof routes, RequestContext> = {
         // @ts-expect-error - controllers must define actions under `actions`
         home() {
           return new Response('OK')
@@ -454,8 +463,9 @@ describe('router.map()', () => {
 
     router.map(routes, {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('outer middleware')
+          return next()
         },
       ],
       actions: {
@@ -509,8 +519,9 @@ describe('router.map()', () => {
     // Admin routes - with auth middleware
     router.map(routes.admin, {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('auth')
+          return next()
         },
       ],
       actions: {
@@ -543,7 +554,7 @@ describe('router.map()', () => {
     assert.deepEqual(requestLog, ['auth', 'users'])
   })
 
-  it('runs both global and inline middleware', async () => {
+  it('runs both router and controller middleware', async () => {
     let routes = route({
       home: '/',
     })
@@ -551,16 +562,18 @@ describe('router.map()', () => {
     let requestLog: string[] = []
     let router = createRouter({
       middleware: [
-        () => {
-          requestLog.push('global')
+        (_, next) => {
+          requestLog.push('router middleware')
+          return next()
         },
       ],
     })
 
     router.map(routes, {
       middleware: [
-        () => {
-          requestLog.push('inline')
+        (_, next) => {
+          requestLog.push('controller middleware')
+          return next()
         },
       ],
       actions: {
@@ -575,7 +588,7 @@ describe('router.map()', () => {
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'OK')
 
-    assert.deepEqual(requestLog, ['global', 'inline', 'action'])
+    assert.deepEqual(requestLog, ['router middleware', 'controller middleware', 'action'])
   })
 })
 
@@ -594,8 +607,9 @@ describe('router.get()', () => {
     let router = createRouter()
     router.get('/', {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('middleware')
+          return next()
         },
       ],
       handler() {
@@ -609,24 +623,27 @@ describe('router.get()', () => {
   })
 })
 
-describe('inline middleware', () => {
-  it('runs after global middleware', async () => {
+describe('action middleware', () => {
+  it('runs after router middleware', async () => {
     let requestLog: string[] = []
     let router = createRouter({
       middleware: [
-        () => {
-          requestLog.push('global')
+        (_, next) => {
+          requestLog.push('router middleware')
+          return next()
         },
       ],
     })
 
     router.get('/', {
       middleware: [
-        () => {
-          requestLog.push('inline-1')
+        (_, next) => {
+          requestLog.push('action middleware 1')
+          return next()
         },
-        () => {
-          requestLog.push('inline-2')
+        (_, next) => {
+          requestLog.push('action middleware 2')
+          return next()
         },
       ],
       handler() {
@@ -637,7 +654,12 @@ describe('inline middleware', () => {
 
     let response = await router.fetch('https://remix.run/')
     assert.equal(response.status, 200)
-    assert.deepEqual(requestLog, ['global', 'inline-1', 'inline-2', 'action'])
+    assert.deepEqual(requestLog, [
+      'router middleware',
+      'action middleware 1',
+      'action middleware 2',
+      'action',
+    ])
   })
 
   it('runs only on the route it is defined on', async () => {
@@ -646,8 +668,9 @@ describe('inline middleware', () => {
 
     router.get('/a', {
       middleware: [
-        () => {
-          requestLog.push('inline-a')
+        (_, next) => {
+          requestLog.push('action middleware a')
+          return next()
         },
       ],
       handler() {
@@ -664,7 +687,7 @@ describe('inline middleware', () => {
     let response = await router.fetch('https://remix.run/a')
     assert.equal(response.status, 200)
     assert.equal(await response.text(), 'A')
-    assert.deepEqual(requestLog, ['inline-a', 'action-a'])
+    assert.deepEqual(requestLog, ['action middleware a', 'action-a'])
 
     requestLog = []
     response = await router.fetch('https://remix.run/b')
@@ -712,15 +735,17 @@ describe('inline middleware', () => {
 
     router.get('/', {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('m1')
+          return next()
         },
         () => {
           requestLog.push('m2-short-circuit')
           return new Response('Blocked', { status: 403 })
         },
-        () => {
+        (_, next) => {
           requestLog.push('m3')
+          return next()
         },
       ],
       handler() {
@@ -735,7 +760,7 @@ describe('inline middleware', () => {
     assert.deepEqual(requestLog, ['m1', 'm2-short-circuit'])
   })
 
-  it('runs both global and inline middleware', async () => {
+  it('runs both controller and action middleware', async () => {
     let routes = route({
       admin: {
         dashboard: '/admin/dashboard',
@@ -748,11 +773,13 @@ describe('inline middleware', () => {
 
     router.map(routes.admin, {
       middleware: [
-        () => {
+        (_, next) => {
           requestLog.push('auth')
+          return next()
         },
-        () => {
+        (_, next) => {
           requestLog.push('admin')
+          return next()
         },
       ],
       actions: {
@@ -762,8 +789,9 @@ describe('inline middleware', () => {
         },
         users: {
           middleware: [
-            () => {
-              requestLog.push('users-middleware')
+            (_, next) => {
+              requestLog.push('users-action-middleware')
+              return next()
             },
           ],
           handler() {
@@ -784,7 +812,7 @@ describe('inline middleware', () => {
     let response2 = await router.fetch('https://remix.run/admin/users')
     assert.equal(response2.status, 200)
     assert.equal(await response2.text(), 'Users')
-    assert.deepEqual(requestLog, ['auth', 'admin', 'users-middleware', 'users-action'])
+    assert.deepEqual(requestLog, ['auth', 'admin', 'users-action-middleware', 'users-action'])
   })
 
   it('supports route-map action objects that omit middleware', async () => {
@@ -915,13 +943,13 @@ describe('error handling', () => {
     }, new Error('Router middleware error'))
   })
 
-  it('propagates errors thrown in route middleware', async () => {
+  it('propagates errors thrown in action middleware', async () => {
     let router = createRouter()
 
     router.get('/', {
       middleware: [
         () => {
-          throw new Error('Route middleware error')
+          throw new Error('Action middleware error')
         },
       ],
       handler() {
@@ -931,7 +959,7 @@ describe('error handling', () => {
 
     await assert.rejects(async () => {
       await router.fetch('https://remix.run/')
-    }, new Error('Route middleware error'))
+    }, new Error('Action middleware error'))
   })
 
   it('propagates errors thrown in the default handler', async () => {
@@ -1073,6 +1101,291 @@ describe('trailing slash handling', () => {
 
     let response6 = await router.fetch('https://remix.run/admin/users/123/')
     assert.equal(response6.status, 404) // Trailing slash doesn't match
+  })
+})
+
+describe('router.mount()', () => {
+  it('registers routes below a static pathname prefix', async () => {
+    let router = createRouter()
+
+    router.mount('/admin', (admin) => {
+      admin.get('/', () => new Response('Admin'))
+      admin.get('/users/:id', ({ params }) => new Response(`User ${params.id}`))
+    })
+
+    let indexResponse = await router.fetch('https://remix.run/admin')
+    assert.equal(indexResponse.status, 200)
+    assert.equal(await indexResponse.text(), 'Admin')
+
+    let userResponse = await router.fetch('https://remix.run/admin/users/123')
+    assert.equal(userResponse.status, 200)
+    assert.equal(await userResponse.text(), 'User 123')
+
+    let outsideResponse = await router.fetch('https://remix.run/users/123')
+    assert.equal(outsideResponse.status, 404)
+  })
+
+  it('registers routes below a route pattern prefix with params', async () => {
+    let router = createRouter()
+
+    router.mount('/orgs/:orgId', (org) => {
+      org.get('/', ({ params }) => new Response(`Org ${params.orgId}`))
+      org.get(
+        '/users/:userId',
+        ({ params }) => new Response(`Org ${params.orgId} User ${params.userId}`),
+      )
+    })
+
+    let indexResponse = await router.fetch('https://remix.run/orgs/acme')
+    assert.equal(indexResponse.status, 200)
+    assert.equal(await indexResponse.text(), 'Org acme')
+
+    let userResponse = await router.fetch('https://remix.run/orgs/acme/users/123')
+    assert.equal(userResponse.status, 200)
+    assert.equal(await userResponse.text(), 'Org acme User 123')
+  })
+
+  it('uses route-pattern semantics for mounted route patterns', async () => {
+    let router = createRouter()
+
+    router.mount('/files/*path?download=true', (files) => {
+      files.get('/raw/:id', ({ params }) => new Response(`Path ${params.path} File ${params.id}`))
+    })
+
+    let response = await router.fetch('https://remix.run/files/a/b/raw/123?download=true')
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Path a/b File 123')
+
+    let missingSearchResponse = await router.fetch('https://remix.run/files/a/b/raw/123')
+    assert.equal(missingSearchResponse.status, 404)
+  })
+
+  it('uses the right-most param when mounted and child routes share a param name', async () => {
+    let router = createRouter()
+
+    router.mount('/orgs/:id', (org) => {
+      org.get('/users/:id', ({ params }) => new Response(`User ${params.id}`))
+    })
+
+    let response = await router.fetch('https://remix.run/orgs/acme/users/123')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'User 123')
+  })
+
+  it('maps route maps and controllers below the mount prefix', async () => {
+    let adminRoutes = route({
+      index: '/',
+      users: {
+        show: '/users/:id',
+      },
+    })
+
+    let router = createRouter()
+
+    router.mount('/admin', (admin) => {
+      admin.map(adminRoutes, {
+        actions: {
+          index() {
+            return new Response('Admin')
+          },
+        },
+      })
+
+      admin.map(adminRoutes.users, {
+        actions: {
+          show({ params }) {
+            return new Response(`User ${params.id}`)
+          },
+        },
+      })
+    })
+
+    let indexResponse = await router.fetch('https://remix.run/admin')
+    assert.equal(indexResponse.status, 200)
+    assert.equal(await indexResponse.text(), 'Admin')
+
+    let userResponse = await router.fetch('https://remix.run/admin/users/123')
+    assert.equal(userResponse.status, 200)
+    assert.equal(await userResponse.text(), 'User 123')
+  })
+
+  it('composes nested mount prefixes', async () => {
+    let router = createRouter()
+
+    router.mount('/api', (api) => {
+      api.mount('/v1', (v1) => {
+        v1.get('/status', () => new Response('ok'))
+      })
+    })
+
+    let response = await router.fetch('https://remix.run/api/v1/status')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'ok')
+  })
+
+  it('preserves router, controller, and action middleware order', async () => {
+    let events: string[] = []
+    let routes = route({
+      update: { method: 'POST', pattern: '/update' },
+    })
+
+    let router = createRouter({
+      middleware: [
+        async (_, next) => {
+          events.push('router before')
+          let response = await next()
+          events.push('router after')
+          return response
+        },
+      ],
+    })
+
+    router.mount('/admin', (admin) => {
+      admin.map(routes, {
+        middleware: [
+          async (_, next) => {
+            events.push('controller before')
+            let response = await next()
+            events.push('controller after')
+            return response
+          },
+        ],
+        actions: {
+          update: {
+            middleware: [
+              async (_, next) => {
+                events.push('action before')
+                let response = await next()
+                events.push('action after')
+                return response
+              },
+            ],
+            handler() {
+              events.push('handler')
+              return new Response('Updated')
+            },
+          },
+        },
+      })
+    })
+
+    let response = await router.fetch('https://remix.run/admin/update', { method: 'POST' })
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Updated')
+    assert.deepEqual(events, [
+      'router before',
+      'controller before',
+      'action before',
+      'handler',
+      'action after',
+      'controller after',
+      'router after',
+    ])
+  })
+
+  it('lets existing controller middleware short-circuit mounted handlers', async () => {
+    let router = createRouter()
+    let handled = false
+
+    router.mount('/admin', (admin) => {
+      admin.get('/dashboard', {
+        middleware: [() => new Response('Unauthorized', { status: 401 })],
+        handler() {
+          handled = true
+          return new Response('Dashboard')
+        },
+      })
+    })
+
+    let response = await router.fetch('https://remix.run/admin/dashboard')
+
+    assert.equal(response.status, 401)
+    assert.equal(await response.text(), 'Unauthorized')
+    assert.equal(handled, false)
+  })
+
+  it('shares matcher specificity between parent and mounted routes', async () => {
+    let router = createRouter()
+
+    router.mount('/api', (api) => {
+      api.get('/:id', ({ params }) => new Response(`Mounted ${params.id}`))
+    })
+
+    router.get('/api/health', () => new Response('Parent health'))
+
+    let healthResponse = await router.fetch('https://remix.run/api/health')
+    assert.equal(healthResponse.status, 200)
+    assert.equal(await healthResponse.text(), 'Parent health')
+
+    let mountedResponse = await router.fetch('https://remix.run/api/users')
+    assert.equal(mountedResponse.status, 200)
+    assert.equal(await mountedResponse.text(), 'Mounted users')
+  })
+
+  it('uses the parent default handler for unknown mounted paths', async () => {
+    let router = createRouter({
+      defaultHandler({ url }) {
+        return new Response(`Missing ${url.pathname}`, { status: 404 })
+      },
+    })
+
+    router.mount('/admin', (admin) => {
+      admin.get('/', () => new Response('Admin'))
+    })
+
+    let response = await router.fetch('https://remix.run/admin/missing')
+
+    assert.equal(response.status, 404)
+    assert.equal(await response.text(), 'Missing /admin/missing')
+  })
+
+  it('sets context.router to the parent router in mounted handlers', async () => {
+    let router = createRouter()
+
+    router.mount('/admin', (admin) => {
+      admin.get('/', (context) => {
+        assert.equal(context.router, router)
+        return new Response('Admin')
+      })
+    })
+
+    let response = await router.fetch('https://remix.run/admin')
+
+    assert.equal(response.status, 200)
+    assert.equal(await response.text(), 'Admin')
+  })
+
+  it('adds mounted routes to custom matchers with their prefixed patterns', () => {
+    let addedPatterns: string[] = []
+    let inner = createMultiMatcher<MatchData>()
+    let customMatcher: MultiMatcher<MatchData> = {
+      ignoreCase: inner.ignoreCase,
+      add(pattern, data) {
+        addedPatterns.push(typeof pattern === 'string' ? pattern : pattern.toString())
+        inner.add(pattern, data)
+      },
+      match: inner.match.bind(inner),
+      matchAll: inner.matchAll.bind(inner),
+    }
+
+    let router = createRouter({ matcher: customMatcher })
+
+    router.mount('/admin/:adminId', (admin) => {
+      admin.get('/', () => new Response('Admin'))
+      admin.get('/users/:id', () => new Response('User'))
+      admin.mount('/settings', (settings) => {
+        settings.get('/profile', () => new Response('Profile'))
+      })
+    })
+
+    assert.deepEqual(addedPatterns, [
+      '/admin/:adminId',
+      '/admin/:adminId/users/:id',
+      '/admin/:adminId/settings/profile',
+    ])
   })
 })
 

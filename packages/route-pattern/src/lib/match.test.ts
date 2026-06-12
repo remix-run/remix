@@ -224,6 +224,46 @@ describe('Matcher', () => {
         assert.deepEqual(match.params, {})
       })
 
+      it('matches explicit HTTP default port', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('http://example.com:80/users', null)
+
+        let match = matcher.match('http://example.com:80/users')
+        assert.ok(match)
+        assert.deepEqual(match.params, {})
+      })
+
+      it('matches explicit HTTPS default port', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('https://example.com:443/users', null)
+
+        let match = matcher.match('https://example.com:443/users')
+        assert.ok(match)
+        assert.deepEqual(match.params, {})
+      })
+
+      it('normalizes default ports per protocol variant', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('http(s)://example.com:443/users', null)
+
+        assert.ok(matcher.match('http://example.com:443/users'))
+        assert.ok(matcher.match('https://example.com:443/users'))
+        assert.ok(matcher.match('https://example.com/users'))
+        assert.equal(matcher.match('http://example.com/users'), null)
+      })
+
+      it('matches hrefs generated from patterns with explicit default ports', () => {
+        let matcher = createMultiMatcher<null>()
+        let httpPattern = 'http://example.com:80/users' as const
+        let httpsPattern = 'https://example.com:443/users' as const
+
+        matcher.add(httpPattern, null)
+        matcher.add(httpsPattern, null)
+
+        assert.ok(matcher.match(createHref(httpPattern)))
+        assert.ok(matcher.match(createHref(httpsPattern)))
+      })
+
       it('returns null when explicit port does not match', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com:8080/users', null)
@@ -802,6 +842,22 @@ describe('Matcher', () => {
 
           let match = matcher.match('https://example.com/files/%61')
           assert.deepEqual(match?.params, { path: 'a' })
+        })
+
+        it('returns null for malformed percent-encoded pathnames', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/:name', null)
+
+          assert.equal(matcher.match('https://example.com/files/%E0%A4%A'), null)
+          assert.equal(matcher.match('https://example.com/files/%'), null)
+        })
+
+        it('returns no matches for malformed percent-encoded pathnames', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/:name', null)
+          matcher.add('://example.com/files/*path', null)
+
+          assert.deepEqual(matcher.matchAll('https://example.com/files/%E0%A4%A'), [])
         })
 
         it('does not match encoded slashes as pathname separators', () => {
