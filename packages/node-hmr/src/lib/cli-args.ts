@@ -104,13 +104,7 @@ export function buildNodeArgs(options: {
   let registerUrl = pathToFileURL(options.registerPath)
   registerUrl.searchParams.set('hmrEventUrl', options.hmrEventUrl)
 
-  return [
-    ...options.nodeArgs,
-    '--import',
-    registerUrl.href,
-    options.entry,
-    ...options.entryArgs,
-  ]
+  return [...options.nodeArgs, '--import', registerUrl.href, options.entry, ...options.entryArgs]
 }
 
 export function shouldIgnoreWatchPath(path: string): boolean {

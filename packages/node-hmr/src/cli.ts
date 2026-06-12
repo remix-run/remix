@@ -8,10 +8,7 @@ import { dirname, relative, resolve } from 'node:path'
 import { createStyles } from '@remix-run/terminal'
 import { watch } from 'chokidar'
 
-import {
-  nodeHmrEventPathname,
-  type HmrEventPayload,
-} from './lib/browser-events.ts'
+import { nodeHmrEventPathname, type HmrEventPayload } from './lib/browser-events.ts'
 import {
   buildNodeArgs,
   parseNodeHmrCommand,

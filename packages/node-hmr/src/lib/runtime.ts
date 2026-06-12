@@ -130,9 +130,11 @@ export function getNodeHmrRuntime(): RemixNodeHmrRuntime | undefined {
   return runtimeGlobal.__remixNodeHmr
 }
 
-export function installNodeHmrRuntime(options: {
-  eventUrl?: string
-} = {}): RemixNodeHmrRuntime {
+export function installNodeHmrRuntime(
+  options: {
+    eventUrl?: string
+  } = {},
+): RemixNodeHmrRuntime {
   let runtimeGlobal = globalThis as RuntimeGlobal
   if (runtimeGlobal.__remixNodeHmr) return runtimeGlobal.__remixNodeHmr
 
