@@ -188,9 +188,22 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
   let inheritedReloadAbortUnsubscribe: (() => void) | undefined
 
   // Merge any rmx-data found in the current document once at startup.
-  mergeRmxDataFromDocument(init.data, container.doc)
+  mergeRmxDataFromRoot(init.data, container.doc)
 
-  let runtime = createFrameRuntime({ ...init, styleManager })
+  let runtime: FrameRuntime = {
+    topFrame: init.topFrame,
+    errorTarget: init.errorTarget,
+    loadModule: init.loadModule,
+    resolveFrame: init.resolveFrame,
+    pendingClientEntries: init.pendingClientEntries,
+    scheduler: init.scheduler,
+    styleManager,
+    data: init.data,
+    moduleCache: init.moduleCache,
+    moduleLoads: init.moduleLoads,
+    frameInstances: init.frameInstances,
+    namedFrames: init.namedFrames,
+  }
 
   let frame = createFrameHandle({
     src: init.src,
@@ -259,8 +272,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     if (isRemixNodeFrameContent(content)) {
       if (!contentRoot) {
         let currentNodes = getContentNodes()
-        removeVirtualRoots(currentNodes)
-        disposeSubFrames(currentNodes, context)
+        cleanupFrameRuntimeNodes(currentNodes, context)
         clearFrameContent()
         contentRoot = createFrameContentRoot()
       }
@@ -281,7 +293,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         await render(html, { ...options, flushKind })
       })
       if (flushed.applied) {
-        if (flushed.remainder !== '') {
+        if (flushed.remainder) {
           await render(flushed.remainder, { ...options, flushKind: 'fragment' })
         }
         return
@@ -297,7 +309,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
 
     if (isFullDocumentReload && htmlContent !== undefined) {
       let parsed = new DOMParser().parseFromString(htmlContent, 'text/html')
-      mergeRmxDataFromDocument(context.data, parsed)
+      mergeRmxDataFromRoot(context.data, parsed)
       context.styleManager.replaceServerStyles(
         collectFrameServerStyleTags(createElementContainer(parsed)),
       )
@@ -331,7 +343,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       collectFrameServerStyleTags(createElementContainer(fragment)),
     )
     removeEmptyHeads(fragment)
-    mergeRmxDataFromFragment(context.data, fragment)
+    mergeRmxDataFromRoot(context.data, fragment)
 
     let nextContainer = createContainer(fragment)
 
@@ -409,11 +421,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
     contentRoot = undefined
     clearPendingFrameTemplateWatch()
 
-    // Remove hydrated virtual roots in this frame's region.
-    removeVirtualRoots(container.childNodes)
-
-    // Dispose sub-frames recursively.
-    disposeSubFrames(container.childNodes, context)
+    cleanupFrameRuntimeNodes(container.childNodes, context)
     context.styleManager.dispose()
 
     if (frameName) {
@@ -529,7 +537,7 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
         continue
       }
 
-      if (node.childNodes && node.childNodes.length > 0) {
+      if (node.childNodes.length) {
         startSubFrameInheritedReloads(Array.from(node.childNodes), signal)
       }
     }
@@ -568,16 +576,14 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       return
     }
 
-    let observer = setupTemplateObserver()
-    pendingTemplateObserver = observer
-    let unsubscribe = subscribeFrameTemplate(marker.id, async (fragment) => {
+    pendingTemplateObserver = setupTemplateObserver()
+    pendingTemplateUnsubscribe = subscribeFrameTemplate(marker.id, async (fragment) => {
       if (signal?.aborted) return
       if (pendingTemplateMarkerId !== marker.id) return
       clearPendingFrameTemplateWatch()
       await render(fragment, { signal, contentStatus: 'resolved' })
       if (!signal?.aborted) onResolved?.()
     })
-    pendingTemplateUnsubscribe = unsubscribe
 
     signal?.addEventListener(
       'abort',
@@ -595,36 +601,6 @@ export function createFrame(root: FrameRoot, init: FrameInit): Frame {
       await render(buffered, { initialHydrationTracker, signal, contentStatus: 'resolved' })
       if (!signal?.aborted) onResolved?.()
     }
-  }
-}
-
-export function createFrameRuntime(init: {
-  topFrame?: FrameHandle
-  errorTarget: EventTarget
-  loadModule: LoadModule
-  resolveFrame: ResolveFrame
-  pendingClientEntries: PendingClientEntries
-  scheduler: Scheduler
-  styleManager: StyleManager
-  data: RmxData
-  moduleCache: Map<string, Function>
-  moduleLoads: Map<string, Promise<Function | undefined>>
-  frameInstances: WeakMap<Comment, Frame>
-  namedFrames: Map<string, FrameHandle>
-}): FrameRuntime {
-  return {
-    topFrame: init.topFrame,
-    errorTarget: init.errorTarget,
-    loadModule: init.loadModule,
-    resolveFrame: init.resolveFrame,
-    pendingClientEntries: init.pendingClientEntries,
-    scheduler: init.scheduler,
-    styleManager: init.styleManager,
-    data: init.data,
-    moduleCache: init.moduleCache,
-    moduleLoads: init.moduleLoads,
-    frameInstances: init.frameInstances,
-    namedFrames: init.namedFrames,
   }
 }
 
@@ -671,18 +647,8 @@ function createInitialHydrationTracker(): InitialHydrationTracker {
   }
 }
 
-function mergeRmxDataFromDocument(into: RmxData, doc: Document): void {
-  let scripts = Array.from(doc.querySelectorAll('script#rmx-data'))
-  for (let script of scripts) {
-    if (!(script instanceof HTMLScriptElement)) continue
-    mergeRmxData(into, parseRmxDataScript(script))
-    script.remove()
-  }
-}
-
-function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): void {
-  let scripts = Array.from(fragment.querySelectorAll('script#rmx-data'))
-  for (let script of scripts) {
+function mergeRmxDataFromRoot(into: RmxData, root: Document | DocumentFragment): void {
+  for (let script of root.querySelectorAll('script#rmx-data')) {
     if (!(script instanceof HTMLScriptElement)) continue
     mergeRmxData(into, parseRmxDataScript(script))
     script.remove()
@@ -690,8 +656,7 @@ function mergeRmxDataFromFragment(into: RmxData, fragment: DocumentFragment): vo
 }
 
 function removeEmptyHeads(fragment: DocumentFragment): void {
-  let heads = Array.from(fragment.querySelectorAll('head'))
-  for (let head of heads) {
+  for (let head of fragment.querySelectorAll('head')) {
     if (!head.childNodes.length) {
       head.remove()
     }
@@ -741,20 +706,17 @@ function parseRmxDataScript(script: HTMLScriptElement): RmxData {
 
 function mergeRmxData(into: RmxData, from: RmxData): void {
   if (from.h) {
-    if (!into.h) into.h = {}
-    copyOwnRmxEntries(into.h, from.h)
+    copyOwnRmxEntries((into.h ??= {}), from.h)
   }
 
   if (from.f) {
-    if (!into.f) into.f = {}
-    copyOwnRmxEntries(into.f, from.f)
+    copyOwnRmxEntries((into.f ??= {}), from.f)
   }
 }
 
 function copyOwnRmxEntries<T>(target: Record<string, T>, source: Record<string, T>): void {
   for (let key of Object.keys(source)) {
     if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue
-    if (!Object.hasOwn(source, key)) continue
     target[key] = source[key]!
   }
 }
@@ -765,7 +727,7 @@ function scheduleHydrationInContainer(
   initialHydrationTracker?: InitialHydrationTracker,
 ): void {
   let hydrationMarkers = findHydrationMarkers(container)
-  if (hydrationMarkers.length === 0) return
+  if (!hydrationMarkers.length) return
 
   let hydrationData = context.data.h
   if (!hydrationData) return
@@ -962,7 +924,7 @@ async function createSubFrames(
       continue
     }
 
-    if (node.childNodes && node.childNodes.length > 0) {
+    if (node.childNodes.length) {
       tasks.push(createSubFrames(Array.from(node.childNodes), context, options))
     }
   }
@@ -992,7 +954,7 @@ function isHydrationMarkerLive(marker: HydrationMarker, context: FrameContext): 
   return true
 }
 
-function removeVirtualRoots(nodes: Node[]): void {
+function cleanupFrameRuntimeNodes(nodes: Node[], context: FrameContext): void {
   for (let i = 0; i < nodes.length; i++) {
     let node = nodes[i]
 
@@ -1002,16 +964,6 @@ function removeVirtualRoots(nodes: Node[]): void {
       i = nodes.indexOf(end)
       continue
     }
-
-    if (node.childNodes && node.childNodes.length > 0) {
-      removeVirtualRoots(Array.from(node.childNodes))
-    }
-  }
-}
-
-function disposeSubFrames(nodes: Node[], context: FrameContext): void {
-  for (let i = 0; i < nodes.length; i++) {
-    let node = nodes[i]
 
     if (isFrameStart(node)) {
       let end = findEndMarker(node, isFrameStart, isFrameEnd)
@@ -1024,8 +976,8 @@ function disposeSubFrames(nodes: Node[], context: FrameContext): void {
       continue
     }
 
-    if (node.childNodes && node.childNodes.length > 0) {
-      disposeSubFrames(Array.from(node.childNodes), context)
+    if (node.childNodes.length) {
+      cleanupFrameRuntimeNodes(Array.from(node.childNodes), context)
     }
   }
 }
@@ -1061,8 +1013,7 @@ function collectAndPublishTemplates(node: Node): void {
   }
 
   if (!(node instanceof Element)) return
-  let templates = Array.from(node.querySelectorAll('template'))
-  for (let template of templates) {
+  for (let template of node.querySelectorAll('template')) {
     if (!(template instanceof HTMLTemplateElement)) continue
     publishFrameTemplateElement(template)
   }
@@ -1074,7 +1025,7 @@ function publishFrameTemplateElement(template: HTMLTemplateElement): void {
   publishFrameTemplate(template.id, template.content)
 }
 
-export function publishFrameTemplate(id: string, fragment: DocumentFragment): void {
+function publishFrameTemplate(id: string, fragment: DocumentFragment): void {
   let listeners = frameTemplateListeners.get(id)
   if (!listeners || listeners.size === 0) {
     let queue = bufferedFrameTemplates.get(id)
@@ -1091,7 +1042,7 @@ export function publishFrameTemplate(id: string, fragment: DocumentFragment): vo
   }
 }
 
-export function consumeFrameTemplate(id: string): DocumentFragment | null {
+function consumeFrameTemplate(id: string): DocumentFragment | null {
   let queue = bufferedFrameTemplates.get(id)
   if (!queue || queue.length === 0) return null
 
@@ -1162,7 +1113,7 @@ function extractTemplatesFromBuffer(
   }
 
   let tail = buffer.slice(cursor)
-  if (tail === '') return { html, remainder: '' }
+  if (!tail) return { html, remainder: '' }
 
   let tailStart = tail.toLowerCase().lastIndexOf('<template')
   if (tailStart === -1) {
@@ -1202,7 +1153,7 @@ async function renderFrameStream(
       let parsed = extractTemplatesFromBuffer(doc, buffer, publishFrameTemplate)
       buffer = parsed.remainder
 
-      if (parsed.html !== '') {
+      if (parsed.html) {
         html += parsed.html
         let flushed = await consumeFlushBatches(html, applyHtml)
         appliedOnce = flushed.applied || appliedOnce
@@ -1214,19 +1165,19 @@ async function renderFrameStream(
     let parsed = extractTemplatesFromBuffer(doc, buffer, publishFrameTemplate)
     html += parsed.html
     buffer = parsed.remainder
-    if (buffer !== '') {
+    if (buffer) {
       html += buffer
       buffer = ''
     }
 
-    if (html !== '') {
+    if (html) {
       await applyHtml(html, 'fragment')
       appliedOnce = true
     }
 
     // A frame stream can legitimately resolve to empty content. Ensure the
     // existing frame region is cleared instead of treated as a no-op.
-    if (html === '' && !appliedOnce) {
+    if (!html && !appliedOnce) {
       await applyHtml('', 'fragment')
     }
   } finally {
@@ -1355,7 +1306,7 @@ function walkCommentsInNodes(nodes: Node[], cb: (comment: Comment) => void): voi
     }
 
     if (node.nodeType === Node.COMMENT_NODE) cb(node as Comment)
-    if (node.childNodes && node.childNodes.length > 0) {
+    if (node.childNodes.length) {
       walkCommentsInNodes(Array.from(node.childNodes), cb)
     }
   }
@@ -1382,9 +1333,7 @@ function isFrameEnd(node: Comment): boolean {
 }
 
 function getFrameId(start: Comment): string {
-  let trimmed = start.data.trim()
-  invariant(trimmed.startsWith('rmx:f:'), 'Invalid frame start marker')
-  return trimmed.slice('rmx:f:'.length)
+  return start.data.trim().slice('rmx:f:'.length)
 }
 
 function findEndMarker(

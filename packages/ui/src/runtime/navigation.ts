@@ -1,4 +1,4 @@
-import { getTopFrame, getNamedFrame } from './run.ts'
+import type { FrameHandle } from './component.ts'
 
 type NavigationState = {
   target: string | undefined
@@ -9,6 +9,11 @@ type NavigationState = {
 
 type SourceElementNavigateEvent = NavigateEvent & {
   sourceElement?: Element | null
+}
+
+type NavigationFrameAccessors = {
+  getTopFrame: () => FrameHandle
+  getNamedFrame: (name: string) => FrameHandle
 }
 
 /**
@@ -42,20 +47,10 @@ export async function navigate(href: string, options?: NavigationOptions) {
  * Starts listening for Navigation API transitions and routes them through frame reloads.
  *
  * @param signal Abort signal used to remove the listener.
+ * @param options Frame accessors used to resolve the navigation target.
  * @returns void
  */
-export function startNavigationListener(signal: AbortSignal) {
-  return startNavigationListenerImpl(signal, { getTopFrame, getNamedFrame })
-}
-
-// Internal version used by unit tests so we can inject stub frames
-export function startNavigationListenerImpl(
-  signal: AbortSignal,
-  options: {
-    getTopFrame: typeof getTopFrame
-    getNamedFrame: typeof getNamedFrame
-  },
-) {
+export function startNavigationListener(signal: AbortSignal, options: NavigationFrameAccessors) {
   let navigation = window.navigation
 
   navigation.updateCurrentEntry({
