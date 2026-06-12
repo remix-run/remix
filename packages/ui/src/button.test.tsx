@@ -24,6 +24,23 @@ describe('button', () => {
     expect(html).toMatch(/text-shadow: 0 1px 1px #000000/)
   })
 
+  it('includes hover, focus, active, and pressed states without transitions', async () => {
+    let html = await renderToString(
+      <>
+        <button mix={button()}>Neutral</button>
+        <button aria-pressed="true" mix={button({ tone: 'primary' })}>
+          Primary
+        </button>
+      </>,
+    )
+
+    expect(html).toMatch(/:hover:not\(:disabled\):not\(\[aria-disabled="true"\]\)/)
+    expect(html).toMatch(/:focus-visible/)
+    expect(html).toMatch(/:active:not\(:disabled\):not\(\[aria-disabled="true"\]\)/)
+    expect(html).toMatch(/\[aria-pressed="true"\]:not\(:disabled\)/)
+    expect(html).not.toMatch(/transition/)
+  })
+
   it('preserves explicit button type overrides and supports non-button hosts', async () => {
     let explicitHtml = await renderToString(
       <button mix={button()} type="submit">

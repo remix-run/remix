@@ -58,7 +58,7 @@ function createDemoFile(absolutePath: string): DemoFile {
 
   return {
     absolutePath,
-    assetHref: `/assets/demos/${toAssetPath(relativePath)}`,
+    assetHref: `/assets/demos/${toAssetPath(relativePath)}?v=${createFileVersion(absolutePath)}`,
     description: metadata.description,
     href: `/demo/${relativePath}`,
     importHref: url.pathToFileURL(absolutePath).href,
@@ -67,6 +67,10 @@ function createDemoFile(absolutePath: string): DemoFile {
     relativePath,
     title: metadata.name ?? humanizeDemoPath(relativePath),
   }
+}
+
+function createFileVersion(absolutePath: string) {
+  return fs.statSync(absolutePath).mtimeMs.toString(36)
 }
 
 function getRelativeDemoPath(absolutePath: string) {

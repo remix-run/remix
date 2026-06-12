@@ -13,6 +13,9 @@ export default function Example() {
       <button mix={button({ size: 'lg' })}>Export</button>
       <button mix={button({ tone: 'primary' })}>Save changes</button>
       <button mix={button({ size: 'lg', tone: 'primary' })}>Create project</button>
+      <button aria-pressed="true" mix={button({ tone: 'primary' })}>
+        Selected
+      </button>
     </div>
   )
 }

@@ -53,8 +53,11 @@ const baseStyle: CSSMixinDescriptor = css({
   userSelect: 'none',
   WebkitUserSelect: 'none',
   verticalAlign: 'top',
+  '&:hover:not(:disabled):not([aria-disabled="true"])': {
+    cursor: 'pointer',
+  },
   '&:focus-visible': {
-    outline: '2px solid color-mix(in oklab, #101010 35%, white)',
+    outline: '2px solid rgba(16, 16, 16, 0.32)',
     outlineOffset: '2px',
   },
   '&:disabled, &[aria-disabled="true"]': {
@@ -88,6 +91,20 @@ const neutralStyle: CSSMixinDescriptor = css({
     '0 -2px 0 -2px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.75), 0 1px 0 #FFFFFF, 0 2px 4px -1px rgb(0 0 0 / var(--rmx-button-neutral-shadow-alpha)), inset 0 2px 0 #FFFFFF, inset 0 -1px 0 rgba(0, 0, 0, 0.05)',
   color: '#101010',
   textShadow: '0 1px 0 #FFFFFF',
+  '&:hover:not(:disabled):not([aria-disabled="true"])': {
+    background: '#FFFFFF',
+    borderColor: 'rgba(0, 0, 0, 0.1)',
+    boxShadow:
+      '0 -2px 0 -2px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(255, 255, 255, 0.8), 0 1px 0 #FFFFFF, 0 3px 6px -2px rgb(0 0 0 / calc(var(--rmx-button-neutral-shadow-alpha) + 0.03)), inset 0 2px 0 #FFFFFF, inset 0 -1px 0 rgba(0, 0, 0, 0.05)',
+  },
+  '&:active:not(:disabled):not([aria-disabled="true"]), &[aria-pressed="true"]:not(:disabled):not([aria-disabled="true"])':
+    {
+      background: '#F7F7F7',
+      borderColor: 'rgba(0, 0, 0, 0.12)',
+      boxShadow:
+        '0 0 0 1px rgba(255, 255, 255, 0.65), inset 0 1px 2px rgba(0, 0, 0, 0.08), inset 0 -1px 0 rgba(255, 255, 255, 0.8)',
+      textShadow: 'none',
+    },
 })
 
 const primaryStyle: CSSMixinDescriptor = css({
@@ -98,6 +115,20 @@ const primaryStyle: CSSMixinDescriptor = css({
     '0 16px 16px -8px rgba(0, 0, 0, 0.1), 0 8px 8px -4px rgba(0, 0, 0, 0.1), 0 4px 4px -2px rgba(0, 0, 0, 0.1), 0 2px 2px -1px rgba(0, 0, 0, 0.1), inset 0 0 4px 2px #101010, inset 0 0 4px 2px rgba(255, 255, 255, 0.1), inset 0 0 12px -6px rgba(255, 255, 255, 0.75)',
   color: '#FFFFFF',
   textShadow: '0 1px 1px #000000',
+  '&:hover:not(:disabled):not([aria-disabled="true"])': {
+    background:
+      'radial-gradient(50% 50% at 50% 0%, rgba(255, 255, 255, 0.24) 0%, rgba(255, 255, 255, 0) 100%), radial-gradient(49.59% 37.11% at 50.41% 101.56%, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 66.46%), #171717',
+    boxShadow:
+      '0 18px 18px -10px rgba(0, 0, 0, 0.14), 0 8px 8px -4px rgba(0, 0, 0, 0.12), 0 4px 4px -2px rgba(0, 0, 0, 0.1), 0 2px 2px -1px rgba(0, 0, 0, 0.1), inset 0 0 4px 2px #101010, inset 0 0 4px 2px rgba(255, 255, 255, 0.13), inset 0 0 12px -6px rgba(255, 255, 255, 0.85)',
+  },
+  '&:active:not(:disabled):not([aria-disabled="true"]), &[aria-pressed="true"]:not(:disabled):not([aria-disabled="true"])':
+    {
+      background:
+        'radial-gradient(50% 50% at 50% 0%, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0) 100%), radial-gradient(49.59% 37.11% at 50.41% 101.56%, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 66.46%), #080808',
+      boxShadow:
+        '0 2px 2px -1px rgba(0, 0, 0, 0.14), inset 0 0 4px 2px #050505, inset 0 1px 2px rgba(0, 0, 0, 0.45), inset 0 0 10px -6px rgba(255, 255, 255, 0.55)',
+      textShadow: '0 1px 1px #000000',
+    },
 })
 
 const sizeStyles = {
