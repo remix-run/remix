@@ -25,13 +25,13 @@ export function start(): AppRuntime {
 }
 
 if (import.meta.hot) {
-  import.meta.hot.accept((mod) => {
-    if (!isEntryModule(mod)) {
+  import.meta.hot.accept((module) => {
+    if (typeof module.start !== 'function') {
       import.meta.hot?.invalidate('Updated bookstore entry module did not export start()')
       return
     }
     app.dispose()
-    app = mod.start()
+    app = module.start()
   })
 
   import.meta.hot.dispose(() => {
@@ -51,12 +51,3 @@ if (import.meta.hot) {
 app.ready().catch((error: unknown) => {
   console.error('Frame adoption failed:', error)
 })
-
-function isEntryModule(value: unknown): value is { start(): AppRuntime } {
-  return (
-    typeof value === 'object' &&
-    value !== null &&
-    'start' in value &&
-    typeof value.start === 'function'
-  )
-}

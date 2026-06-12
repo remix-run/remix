@@ -1,8 +1,12 @@
+export type HmrModule = Readonly<Record<string, unknown>> & {
+  readonly [Symbol.toStringTag]: 'Module'
+}
+
 export interface RemixHotContext {
   readonly data: Record<string, unknown>
-  accept(callback?: (module: unknown) => void): void
-  accept(dep: string, callback?: (module: unknown) => void): void
-  accept(deps: string[], callback?: (modules: unknown[]) => void): void
+  accept(callback?: (module: HmrModule) => void): void
+  accept(dep: string, callback?: (module: HmrModule) => void): void
+  accept(deps: readonly string[], callback?: (modules: HmrModule[]) => void): void
   dispose(callback: (data: Record<string, unknown>) => void): void
   invalidate(message?: string): void
   on(event: string, callback: (data: unknown) => void | Promise<void>): void

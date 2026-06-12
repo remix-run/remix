@@ -5,12 +5,16 @@ import { emitServerHmrEvent } from './events.ts'
 
 export interface RemixNodeHotContext {
   readonly data: Record<string, unknown>
-  accept(callback?: (module: unknown) => void): void
-  accept(dep: string, callback?: (module: unknown) => void): void
-  accept(deps: string[], callback?: (modules: unknown[]) => void): void
+  accept(callback?: (module: HmrModule) => void): void
+  accept(dep: string, callback?: (module: HmrModule) => void): void
+  accept(deps: readonly string[], callback?: (modules: HmrModule[]) => void): void
   dispose(callback: (data: Record<string, unknown>) => void): void
   invalidate(message?: string): void
   on(event: string, callback: (data: unknown) => void | Promise<void>): void
+}
+
+export type HmrModule = Readonly<Record<string, unknown>> & {
+  readonly [Symbol.toStringTag]: 'Module'
 }
 
 export interface RemixNodeHmrRuntime {
@@ -24,11 +28,13 @@ type RuntimeGlobal = typeof globalThis & {
   __remixNodeHmr?: RemixNodeHmrRuntime
 }
 
-type HotCallback = (module: unknown) => void
-type HotDependencyCallbackFunction = (module: unknown) => void
-type HotDependencyArrayCallbackFunction = (modules: unknown[]) => void
+type HotCallback = (module: HmrModule) => void
+type HotDependencyCallbackFunction = (module: HmrModule) => void
+type HotDependencyArrayCallbackFunction = (modules: HmrModule[]) => void
+type HotDependencyArrayUpdateCallbackFunction = (modules: Array<HmrModule | undefined>) => void
+type HotDependencyUpdateCallback = (module: HmrModule, acceptedUrl: string) => void
 type HotDependencyCallback = {
-  callback: HotDependencyCallbackFunction | HotDependencyArrayCallbackFunction
+  callback: HotDependencyUpdateCallback
   deps: string[]
 }
 type DisposeCallback = (data: Record<string, unknown>) => void
@@ -46,25 +52,35 @@ class NodeHotContext implements RemixNodeHotContext {
     this.url = url
   }
 
-  accept(callback?: (module: unknown) => void): void
-  accept(dep: string, callback?: (module: unknown) => void): void
-  accept(deps: string[], callback?: (modules: unknown[]) => void): void
+  accept(callback?: (module: HmrModule) => void): void
+  accept(dep: string, callback?: (module: HmrModule) => void): void
+  accept(deps: readonly string[], callback?: (modules: HmrModule[]) => void): void
   accept(
-    deps?: string | string[] | HotCallback,
+    deps?: string | readonly string[] | HotCallback,
     callback: HotDependencyCallbackFunction | HotDependencyArrayCallbackFunction = () => {},
   ) {
     if (typeof deps === 'string') {
+      let normalizedDeps = [normalizeAcceptedDependency(this.url, deps)]
+      let dependencyCallback = callback as HotDependencyCallbackFunction
       this.#acceptDependencyCallbacks.push({
-        callback,
-        deps: [normalizeAcceptedDependency(this.url, deps)],
+        callback(module) {
+          dependencyCallback(module)
+        },
+        deps: normalizedDeps,
       })
       return
     }
 
-    if (Array.isArray(deps)) {
+    if (isDependencyArray(deps)) {
+      let normalizedDeps = deps.map((dep) => normalizeAcceptedDependency(this.url, dep))
+      let dependencyCallback = callback as HotDependencyArrayUpdateCallbackFunction
       this.#acceptDependencyCallbacks.push({
-        callback,
-        deps: deps.map((dep) => normalizeAcceptedDependency(this.url, dep)),
+        callback(module, acceptedUrl) {
+          dependencyCallback(
+            normalizedDeps.map((dep) => (dep === acceptedUrl ? module : undefined)),
+          )
+        },
+        deps: normalizedDeps,
       })
       return
     }
@@ -115,14 +131,16 @@ class NodeHotContext implements RemixNodeHotContext {
     }
 
     let updatedModule = await import(`${acceptedUrl}?t=${timestamp}`)
-    for (let { callback, deps } of callbacks) {
-      if (deps.length === 1) {
-        callback(updatedModule)
-      } else {
-        callback(deps.map((dep) => (dep === acceptedUrl ? updatedModule : undefined)))
-      }
+    for (let { callback } of callbacks) {
+      callback(updatedModule, acceptedUrl)
     }
   }
+}
+
+function isDependencyArray(
+  deps: string | readonly string[] | HotCallback | undefined,
+): deps is readonly string[] {
+  return Array.isArray(deps)
 }
 
 export function getNodeHmrRuntime(): RemixNodeHmrRuntime | undefined {

@@ -31,25 +31,7 @@ Use `remix node-hmr` in development where you would otherwise use `node` with a 
 
 ### `import.meta.hot`
 
-When a module references `import.meta.hot`, `node-hmr` injects a hot context for that module. Use it to tell the runtime which updates can be handled without restarting the process.
-
-```ts
-let message = 'Hello'
-
-export function getMessage() {
-  return message
-}
-
-if (import.meta.hot) {
-  import.meta.hot.accept((module) => {
-    if (module && typeof module === 'object' && 'message' in module) {
-      message = String(module.message)
-    }
-  })
-}
-```
-
-If a changed module does not accept the update, and the update cannot be accepted by one of its importers, `node-hmr` restarts the child process.
+An `import.meta.hot` API is provided for managing hot updates.
 
 #### `import.meta.hot.accept()`
 
@@ -60,14 +42,14 @@ export let greeting = 'Hello'
 
 if (import.meta.hot) {
   import.meta.hot.accept((module) => {
-    if (module && typeof module === 'object' && 'greeting' in module) {
+    if (typeof module.greeting === 'string') {
       greeting = String(module.greeting)
     }
   })
 }
 ```
 
-You can also accept updates from a dependency. This is useful when a module owns long-lived state but imports small values or helpers that can be replaced in place.
+You can also accept updates from a dependency. This is useful when a module owns long-lived state that has imports which be replaced in place.
 
 ```ts
 import { message } from './message.ts'
@@ -80,7 +62,7 @@ export function render() {
 
 if (import.meta.hot) {
   import.meta.hot.accept('./message.ts', (module) => {
-    if (module && typeof module === 'object' && 'message' in module) {
+    if (typeof module.message === 'string') {
       currentMessage = String(module.message)
     }
   })
@@ -92,11 +74,11 @@ Multiple dependencies can be accepted at once:
 ```ts
 if (import.meta.hot) {
   import.meta.hot.accept(['./one.ts', './two.ts'], ([one, two]) => {
-    if (one && typeof one === 'object') {
+    if (typeof one.value === 'string') {
       // Update state that depends on ./one.ts
     }
 
-    if (two && typeof two === 'object') {
+    if (typeof two.value === 'string') {
       // Update state that depends on ./two.ts
     }
   })
@@ -143,7 +125,7 @@ Call `invalidate()` when a module accepts an update but discovers that it cannot
 ```ts
 if (import.meta.hot) {
   import.meta.hot.accept((module) => {
-    if (!module || typeof module !== 'object' || !('createServer' in module)) {
+    if (typeof module.createServer !== 'function') {
       import.meta.hot?.invalidate('Updated server module is missing createServer')
       return
     }
