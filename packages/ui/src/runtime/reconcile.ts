@@ -700,10 +700,12 @@ function insert(
     cursor = null
   }
 
-  cursor =
-    node.type === Frame
-      ? skipCommentsExceptFrameStart(cursor ?? null)
-      : skipComments(cursor ?? null)
+  // Preserve frame-start markers for non-Frame nodes too, so a following <Frame>
+  // (e.g. the first child of a bare Fragment at a clientEntry boundary) can still
+  // claim its rmx:f marker during hydration instead of being re-inserted fresh.
+  // A rmx:f marker always belongs to a <Frame>, so no non-Frame node should
+  // consume one.
+  cursor = skipCommentsExceptFrameStart(cursor ?? null)
 
   // Also check after skipComments in case we skipped past the anchor
   if (cursor && anchor && cursor === anchor) {
