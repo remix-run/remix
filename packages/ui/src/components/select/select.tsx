@@ -1,9 +1,9 @@
 import { createElement, css } from '@remix-run/ui'
 import type { CSSMixinDescriptor, Handle, Props, RemixNode, SearchValue } from '@remix-run/ui'
 
+import button from '@remix-run/ui/button'
 import * as popover from '@remix-run/ui/popover'
 import * as select from '@remix-run/ui/select'
-import * as button from '../button/button.tsx'
 import { CheckIcon, ChevronVerticalIcon } from '../shared/icons.tsx'
 import {
   listboxIndicatorStyle,
@@ -64,12 +64,33 @@ const selectTriggerCss: CSSMixinDescriptor = css({
   },
 })
 
+const triggerLabelCss: CSSMixinDescriptor = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  minWidth: 0,
+})
+
+const triggerIconCss: CSSMixinDescriptor = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: styles.fontSize.md,
+  height: styles.fontSize.md,
+  color: 'currentColor',
+  flexShrink: 0,
+  '& > svg': {
+    display: 'block',
+    width: '100%',
+    height: '100%',
+  },
+})
+
 export const triggerStyle = selectTriggerCss
 
 function SelectLabel(handle: Handle): () => RemixNode {
   let context = handle.context.get(select.Context)
 
-  return () => <span mix={button.labelStyle}>{context.displayedLabel}</span>
+  return () => <span mix={triggerLabelCss}>{context.displayedLabel}</span>
 }
 
 export function Select(handle: Handle<SelectProps>): () => RemixNode {
@@ -83,9 +104,9 @@ export function Select(handle: Handle<SelectProps>): () => RemixNode {
         disabled={disabled}
         name={name}
       >
-        <button {...buttonProps} mix={[button.baseStyle, triggerStyle, select.trigger(), mix]}>
+        <button {...buttonProps} mix={[button(), triggerStyle, select.trigger(), mix]}>
           <SelectLabel />
-          <ChevronVerticalIcon mix={button.iconStyle} />
+          <ChevronVerticalIcon mix={triggerIconCss} />
         </button>
         <popover.Context>
           <div mix={[popoverSurfaceStyle, select.popover()]}>

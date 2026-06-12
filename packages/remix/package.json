@@ -29,7 +29,6 @@
     "./cli": "./src/cli.ts",
     "./components/accordion": "./src/components/accordion.ts",
     "./components/breadcrumbs": "./src/components/breadcrumbs.ts",
-    "./components/button": "./src/components/button.ts",
     "./components/combobox": "./src/components/combobox.ts",
     "./components/menu": "./src/components/menu.ts",
     "./components/select": "./src/components/select.ts",
@@ -138,6 +137,7 @@
     "./ui/accordion": "./src/ui/accordion.ts",
     "./ui/anchor": "./src/ui/anchor.ts",
     "./ui/animation": "./src/ui/animation.ts",
+    "./ui/button": "./src/ui/button.ts",
     "./ui/combobox": "./src/ui/combobox.ts",
     "./ui/jsx-dev-runtime": "./src/ui/jsx-dev-runtime.ts",
     "./ui/jsx-runtime": "./src/ui/jsx-runtime.ts",
@@ -184,10 +184,6 @@
       "./components/breadcrumbs": {
         "types": "./dist/components/breadcrumbs.d.ts",
         "default": "./dist/components/breadcrumbs.js"
-      },
-      "./components/button": {
-        "types": "./dist/components/button.d.ts",
-        "default": "./dist/components/button.js"
       },
       "./components/combobox": {
         "types": "./dist/components/combobox.d.ts",
@@ -620,6 +616,10 @@
       "./ui/animation": {
         "types": "./dist/ui/animation.d.ts",
         "default": "./dist/ui/animation.js"
+      },
+      "./ui/button": {
+        "types": "./dist/ui/button.d.ts",
+        "default": "./dist/ui/button.js"
       },
       "./ui/combobox": {
         "types": "./dist/ui/combobox.d.ts",

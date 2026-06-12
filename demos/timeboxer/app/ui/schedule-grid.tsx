@@ -8,7 +8,7 @@ import {
   type SerializableValue,
 } from 'remix/ui'
 import { animateLayout, spring } from 'remix/ui/animation'
-import * as btn from 'remix/components/button'
+import button from 'remix/ui/button'
 import { theme } from './design.ts'
 
 import {
@@ -201,7 +201,7 @@ export const ScheduleGrid = clientEntry(
               <a
                 download
                 href={handle.props.downloadIcsHref}
-                mix={[btn.baseStyle, btn.secondaryStyle]}
+                mix={button()}
               >
                 Download ICS
               </a>

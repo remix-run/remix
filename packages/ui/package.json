@@ -31,6 +31,10 @@
       "types": "./src/animation/index.ts",
       "default": "./src/animation/index.ts"
     },
+    "./button": {
+      "types": "./src/button.ts",
+      "default": "./src/button.ts"
+    },
     "./accordion": {
       "types": "./src/primitives/accordion/accordion.tsx",
       "default": "./src/primitives/accordion/accordion.tsx"
@@ -50,10 +54,6 @@
     "./components/breadcrumbs": {
       "types": "./src/components/breadcrumbs/breadcrumbs.tsx",
       "default": "./src/components/breadcrumbs/breadcrumbs.tsx"
-    },
-    "./components/button": {
-      "types": "./src/components/button/button.tsx",
-      "default": "./src/components/button/button.tsx"
     },
     "./components/combobox": {
       "types": "./src/components/combobox/combobox.tsx",
@@ -123,6 +123,10 @@
         "types": "./dist/animation/index.d.ts",
         "default": "./dist/animation/index.js"
       },
+      "./button": {
+        "types": "./dist/button.d.ts",
+        "default": "./dist/button.js"
+      },
       "./accordion": {
         "types": "./dist/primitives/accordion/accordion.d.ts",
         "default": "./dist/primitives/accordion/accordion.js"
@@ -142,10 +146,6 @@
       "./components/breadcrumbs": {
         "types": "./dist/components/breadcrumbs/breadcrumbs.d.ts",
         "default": "./dist/components/breadcrumbs/breadcrumbs.js"
-      },
-      "./components/button": {
-        "types": "./dist/components/button/button.d.ts",
-        "default": "./dist/components/button/button.js"
       },
       "./components/combobox": {
         "types": "./dist/components/combobox/combobox.d.ts",

@@ -49,7 +49,7 @@ Use the lower-level primitives when the trigger or popup structure needs to be o
 
 ```tsx
 import type { Handle } from 'remix/ui'
-import * as button from 'remix/components/button'
+import button from 'remix/ui/button'
 import * as listbox from 'remix/ui/listbox'
 import * as popover from 'remix/ui/popover'
 import { triggerStyle } from 'remix/components/select'
@@ -58,13 +58,13 @@ import * as select from 'remix/ui/select'
 function SelectValue(handle: Handle) {
   let context = handle.context.get(select.Context)
 
-  return () => <span mix={button.labelStyle}>{context.displayedLabel}</span>
+  return () => <span>{context.displayedLabel}</span>
 }
 
 function IssueTypeSelect() {
   return () => (
     <select.Context defaultLabel="Select a type" name="issueType">
-      <button type="button" mix={[button.baseStyle, triggerStyle, select.trigger()]}>
+      <button type="button" mix={[button(), triggerStyle, select.trigger()]}>
         <SelectValue />
       </button>
       <popover.Context>

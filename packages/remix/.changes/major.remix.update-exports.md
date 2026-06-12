@@ -1,12 +1,12 @@
-Added `package.json` `exports` for the styled component entrypoints:
+Added `package.json` `exports`:
 
 - `remix/components/accordion`
 - `remix/components/breadcrumbs`
-- `remix/components/button`
 - `remix/components/combobox`
 - `remix/components/menu`
 - `remix/components/select`
 - `remix/components/tabs`
+- `remix/ui/button` to re-export APIs from `@remix-run/ui/button`
 
 Updated `remix/route-pattern` exports for the `RoutePattern` API:
 
@@ -16,8 +16,8 @@ Updated `remix/route-pattern` exports for the `RoutePattern` API:
 
 Removed `package.json` `exports`:
 
+- `remix/components/button`
 - `remix/ui/breadcrumbs`
-- `remix/ui/button`
 - `remix/ui/glyph`
 - `remix/ui/separator`
 - `remix/ui/theme`

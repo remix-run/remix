@@ -69,13 +69,13 @@ function ViewOptions() {
 }
 ```
 
-Styled, fully formed components live in `remix/components/*`:
+Button styling is available as a composable mixin:
 
 ```tsx
-import { Button } from 'remix/components/button'
+import button from 'remix/ui/button'
 
 function Actions() {
-  return () => <Button tone="primary">Create project</Button>
+  return () => <button mix={button({ tone: 'primary' })}>Create project</button>
 }
 ```
 

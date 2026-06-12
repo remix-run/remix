@@ -88,7 +88,7 @@ The listener mixin from `remix/ui/tabs` for bubbled tab selection changes.
 
 - `Tabs` provides the default component root around `tabs.Context` from `remix/ui/tabs`.
 - `TabsList` applies `tabs.list()` from `remix/ui/tabs` with `tabs.listStyle`.
-- `Tab` applies `tabs.trigger(...)` from `remix/ui/tabs` with `button.baseStyle` and `tabs.triggerStyle`.
+- `Tab` applies `tabs.trigger(...)` from `remix/ui/tabs` with the `remix/ui/button` mixin and `tabs.triggerStyle`.
 - `TabsPanel` applies `tabs.panel(...)` from `remix/ui/tabs` without adding panel styling.
 
 ## Behavior Notes

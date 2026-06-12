@@ -1,8 +1,8 @@
 import { createElement, css } from '@remix-run/ui'
 import type { CSSMixinDescriptor, Handle, Props, RemixNode } from '@remix-run/ui'
 
+import button from '@remix-run/ui/button'
 import * as tabs from '@remix-run/ui/tabs'
-import * as button from '../button/button.tsx'
 import { componentStyleValues as styles } from '../shared/style-values.ts'
 
 export interface TabsProps {
@@ -97,7 +97,7 @@ export function Tab(handle: Handle<TabProps>) {
       <button
         {...buttonProps}
         disabled={disabled ? true : undefined}
-        mix={[button.baseStyle, triggerStyle, tabs.trigger({ disabled, value }), mix]}
+        mix={[button(), triggerStyle, tabs.trigger({ disabled, value }), mix]}
         type={type ?? 'button'}
       >
         {children}

@@ -1,5 +1,5 @@
 import { css, type Handle, type Props } from '@remix-run/ui'
-import * as button from '@remix-run/ui/components/button'
+import button from '@remix-run/ui/button'
 import * as listbox from '@remix-run/ui/listbox'
 import * as popover from '@remix-run/ui/popover'
 import * as select from '@remix-run/ui/select'
@@ -39,10 +39,10 @@ export default function Example(handle: Handle) {
         <button
           id={triggerId}
           type="button"
-          mix={[button.baseStyle, triggerStyle, select.trigger(), selectCss]}
+          mix={[button(), triggerStyle, select.trigger(), selectCss]}
         >
-          <span mix={button.labelStyle}>{label}</span>
-          <ChevronVerticalIcon mix={button.iconStyle} />
+          <span mix={triggerLabelCss}>{label}</span>
+          <ChevronVerticalIcon mix={triggerIconCss} />
         </button>
 
         <popover.Context>
@@ -103,6 +103,27 @@ const environmentOptions = [
 
 const selectCss = css({
   width: '16rem',
+})
+
+const triggerLabelCss = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  minWidth: 0,
+})
+
+const triggerIconCss = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: '16px',
+  height: '16px',
+  color: 'currentColor',
+  flexShrink: 0,
+  '& > svg': {
+    display: 'block',
+    width: '100%',
+    height: '100%',
+  },
 })
 
 const stackCss = css({

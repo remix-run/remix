@@ -1,8 +1,8 @@
 import { createElement, css, ref } from '@remix-run/ui'
 import type { CSSMixinDescriptor, Handle, Props, RemixNode, SearchValue } from '@remix-run/ui'
 
+import button from '@remix-run/ui/button'
 import * as menu from '@remix-run/ui/menu'
-import * as button from '../button/button.tsx'
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from '../shared/icons.tsx'
 import { popoverSurfaceStyle } from '../shared/listbox-popover-styles.ts'
 import { componentStyleValues as styles } from '../shared/style-values.ts'
@@ -17,6 +17,27 @@ const menuButtonCss: CSSMixinDescriptor = css({
   '&[aria-expanded="true"], &[aria-expanded="true"]:hover, &[aria-expanded="true"]:focus-visible': {
     backgroundColor: styles.surface.lvl3,
     color: styles.colors.text.primary,
+  },
+})
+
+const menuButtonLabelCss: CSSMixinDescriptor = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  minWidth: 0,
+})
+
+const menuButtonIconCss: CSSMixinDescriptor = css({
+  display: 'inline-flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: styles.fontSize.md,
+  height: styles.fontSize.md,
+  color: 'currentColor',
+  flexShrink: 0,
+  '& > svg': {
+    display: 'block',
+    width: '100%',
+    height: '100%',
   },
 })
 
@@ -229,8 +250,7 @@ export function Menu(handle: Handle<MenuProps>): () => RemixNode {
           {...buttonProps}
           type={type ?? 'button'}
           mix={[
-            button.baseStyle,
-            button.ghostStyle,
+            button(),
             buttonStyle,
             menu.trigger(),
             ref((node: HTMLButtonElement, signal) => {
@@ -244,8 +264,8 @@ export function Menu(handle: Handle<MenuProps>): () => RemixNode {
             mix,
           ]}
         >
-          <span mix={button.labelStyle}>{label}</span>
-          <ChevronDownIcon mix={button.iconStyle} />
+          <span mix={menuButtonLabelCss}>{label}</span>
+          <ChevronDownIcon mix={menuButtonIconCss} />
         </button>
         <MenuList
           mix={menu.onMenuSelect((event) => {
