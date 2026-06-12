@@ -179,11 +179,16 @@ export const assetServer = createAssetServer({
 Browser modules in `remix/assets` can then use the `import.meta.hot` API to respond to server updates and reload the app.
 
 ```ts
-import { getTopFrame } from 'remix/ui'
+import { run } from 'remix/ui'
+
+let app = run({
+  // ...
+})
 
 if (import.meta.hot) {
   import.meta.hot.on('server:update', async () => {
-    await getTopFrame().reload()
+    await app.ready()
+    await app.frames.top.reload()
   })
 }
 ```

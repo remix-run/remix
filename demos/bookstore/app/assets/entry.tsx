@@ -1,4 +1,4 @@
-import { getTopFrame, run } from 'remix/ui'
+import { run } from 'remix/ui'
 import type { AppRuntime } from 'remix/ui'
 
 let app = start()
@@ -41,7 +41,7 @@ if (import.meta.hot) {
   import.meta.hot.on('remix:server-update', async () => {
     try {
       await app.ready()
-      await getTopFrame().reload()
+      await app.frames.top.reload()
     } catch (error) {
       console.error('Error reloading top frame on server update', error)
     }
