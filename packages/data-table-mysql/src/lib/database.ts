@@ -1,7 +1,7 @@
 import { createDatabase, type Database, type DatabaseResource } from '@remix-run/data-table'
 import { createPool } from 'mysql2/promise'
 
-import { createMysqlDatabaseAdapter } from './adapter.ts'
+import { createMysqlDatabaseAdapter, type MysqlDatabaseAdapter } from './adapter.ts'
 
 type MysqlDatabaseOptions = (UrlConnectionOptions | SplitConnectionOptions) & {
   ssl?:
@@ -47,7 +47,13 @@ export function createMysqlDatabase(options: MysqlDatabaseOptions): DatabaseReso
   return {
     async connect(): Promise<Database> {
       let connection = await pool.getConnection()
-      return createDatabase(createMysqlDatabaseAdapter(connection), { now: options.now })
+      let adapter = createMysqlDatabaseAdapter(connection) as MysqlDatabaseAdapter & {
+        close(): Promise<void>
+      }
+      adapter.close = async () => {
+        connection.release()
+      }
+      return createDatabase(adapter, { now: options.now })
     },
 
     async close(): Promise<void> {

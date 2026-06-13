@@ -1,6 +1,5 @@
 import { after, before, describe } from '@remix-run/test'
-import { createDatabase } from '@remix-run/data-table'
-import { createPool, type Pool } from 'mysql2/promise'
+import type { Database, DatabaseResource } from '@remix-run/data-table'
 
 import {
   resetAdapterIntegrationSchema,
@@ -9,32 +8,35 @@ import {
 } from '../../../data-table/test/adapter-integration-schema.ts'
 import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-integration-contract.ts'
 
-import { createMysqlDatabaseAdapter } from './adapter.ts'
+import { createMysqlDatabase } from './database.ts'
 
 const DATABASE_URL = process.env.REMIX_DATA_TABLE_MYSQL_TEST_URL
 
 describe('mysql adapter integration', { skip: typeof DATABASE_URL !== 'string' }, () => {
-  let pool: Pool
+  let database: DatabaseResource
+  let client: Database
 
   before(async () => {
-    pool = createPool(DATABASE_URL!)
+    database = createMysqlDatabase({ url: DATABASE_URL! })
+    client = await database.connect()
     await setupAdapterIntegrationSchema(async (statement) => {
-      await pool.query(statement)
+      await client.exec(statement)
     }, 'mysql')
   })
 
   after(async () => {
     await teardownAdapterIntegrationSchema(async (statement) => {
-      await pool.query(statement)
+      await client.exec(statement)
     }, 'mysql')
-    await pool.end()
+    await client.close()
+    await database.close()
   })
 
   runAdapterIntegrationContract({
-    createDatabase: () => createDatabase(createMysqlDatabaseAdapter(pool)),
+    createDatabase: () => database.connect(),
     resetDatabase: async () => {
       await resetAdapterIntegrationSchema(async (statement) => {
-        await pool.query(statement)
+        await client.exec(statement)
       }, 'mysql')
     },
     supportsReturning: false,

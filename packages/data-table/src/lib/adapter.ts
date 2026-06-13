@@ -330,4 +330,6 @@ export interface DatabaseAdapter {
   acquireMigrationLock?(): Promise<void>
   /** Releases the adapter's migration lock when supported. */
   releaseMigrationLock?(): Promise<void>
+  /** Closes adapter-owned resources for this database client. */
+  close?(): Promise<void>
 }

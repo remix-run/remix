@@ -311,7 +311,7 @@ export function createPostgresDatabaseAdapter(client: PostgresQueryable): Postgr
 }
 
 function isPostgresPool(client: PostgresQueryable): client is PostgresPool {
-  return 'connect' in client && typeof client.connect === 'function'
+  return 'connect' in client && typeof client.connect === 'function' && !('release' in client)
 }
 
 function releasePostgresClient(client: PostgresClient | PostgresPoolClient): void {

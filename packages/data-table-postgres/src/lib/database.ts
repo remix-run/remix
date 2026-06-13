@@ -1,7 +1,7 @@
 import { createDatabase, type Database, type DatabaseResource } from '@remix-run/data-table'
 import { Pool } from 'pg'
 
-import { createPostgresDatabaseAdapter } from './adapter.ts'
+import { createPostgresDatabaseAdapter, type PostgresDatabaseAdapter } from './adapter.ts'
 
 type PostgresDatabaseOptions = (UrlConnectionOptions | SplitConnectionOptions) & {
   ssl?:
@@ -45,7 +45,13 @@ export function createPostgresDatabase(options: PostgresDatabaseOptions): Databa
   return {
     async connect(): Promise<Database> {
       let client = await pool.connect()
-      return createDatabase(createPostgresDatabaseAdapter(client), { now: options.now })
+      let adapter = createPostgresDatabaseAdapter(client) as PostgresDatabaseAdapter & {
+        close(): Promise<void>
+      }
+      adapter.close = async () => {
+        client.release()
+      }
+      return createDatabase(adapter, { now: options.now })
     },
 
     async close(): Promise<void> {

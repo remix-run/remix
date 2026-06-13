@@ -44,9 +44,22 @@ const accountTasks = hasManyThrough(accounts, tasks, {
 })
 
 export type IntegrationContractOptions = {
-  createDatabase: () => Database
+  createDatabase: () => Database | Promise<Database>
   resetDatabase: () => Promise<void>
   supportsReturning?: boolean
+}
+
+async function withDatabase<result>(
+  options: IntegrationContractOptions,
+  callback: (database: Database) => Promise<result>,
+): Promise<result> {
+  let database = await options.createDatabase()
+
+  try {
+    return await callback(database)
+  } finally {
+    await database.close()
+  }
 }
 
 export function runAdapterIntegrationContract(options: IntegrationContractOptions): void {
@@ -55,7 +68,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
   })
 
   it('supports joined alias select with groupBy/having', async function () {
-    let db = options.createDatabase()
+    await withDatabase(options, async (db) => {
 
     await db.query(accounts).insertMany([
       {
@@ -129,10 +142,11 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
       .count()
 
     assert.equal(groupedCount, 1)
+    })
   })
 
   it('supports eager relations with per-parent relation pagination', async function () {
-    let db = options.createDatabase()
+    await withDatabase(options, async (db) => {
 
     await db.query(accounts).insertMany([
       { id: 1, email: 'a@example.com', status: 'active', nickname: null },
@@ -169,10 +183,11 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
     assert.equal(accountRows[0].tasks[0].id, 1000)
     assert.equal(accountRows[1].tasks.length, 1)
     assert.equal(accountRows[1].tasks[0].id, 2000)
+    })
   })
 
   it('scopes update/delete writes with orderBy and limit', async function () {
-    let db = options.createDatabase()
+    await withDatabase(options, async (db) => {
 
     await db.query(accounts).insertMany([
       { id: 1, email: 'a@example.com', status: 'active', nickname: null },
@@ -198,10 +213,11 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
         { id: 2, status: 'active' },
       ],
     )
+    })
   })
 
   it('supports transactions and nested savepoints', async function () {
-    let db = options.createDatabase()
+    await withDatabase(options, async (db) => {
 
     await db.query(accounts).insert({
       id: 1,
@@ -251,10 +267,11 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
       rows.map((row) => row.id),
       [1, 2],
     )
+    })
   })
 
   it('handles write returning rows', async function () {
-    let db = options.createDatabase()
+    await withDatabase(options, async (db) => {
 
     if (options.supportsReturning === false) {
       await assert.rejects(
@@ -322,10 +339,11 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
     if ('rows' in deleted) {
       assert.deepEqual(deleted.rows, [{ id: 2 }])
     }
+    })
   })
 
   it('supports upsert with conflict target', async function () {
-    let db = options.createDatabase()
+    await withDatabase(options, async (db) => {
 
     await db.query(accounts).insert({
       id: 1,
@@ -359,10 +377,11 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
     assert.equal(rows[0].status, 'inactive')
     assert.equal(rows[0].nickname, 'alpha')
     assert.equal(rows[1].id, 2)
+    })
   })
 
   it('supports null and value operators in real queries', async function () {
-    let db = options.createDatabase()
+    await withDatabase(options, async (db) => {
 
     await db.query(accounts).insertMany([
       {
@@ -425,10 +444,11 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
       ilikeRows.map((row) => row.id),
       [1, 2, 3],
     )
+    })
   })
 
   it('supports migration up/down with lifecycle hooks and returned reads', async function () {
-    let db = options.createDatabase()
+    await withDatabase(options, async (db) => {
     let lifecycleEvents: string[] = []
     let lifecycleAccounts = table({
       name: 'lifecycle_accounts',
@@ -512,5 +532,6 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
     let statusAfterDown = await runner.status()
     assert.equal(statusAfterDown.length, 1)
     assert.equal(statusAfterDown[0].status, 'pending')
+    })
   })
 }

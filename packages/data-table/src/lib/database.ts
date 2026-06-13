@@ -380,6 +380,10 @@ export class Database implements QueryExecutionContext {
     return this.#now()
   }
 
+  async close(): Promise<void> {
+    await this.#adapter.close?.()
+  }
+
   query<
     tableName extends string,
     row extends Record<string, unknown>,

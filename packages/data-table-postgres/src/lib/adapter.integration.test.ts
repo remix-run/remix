@@ -1,6 +1,5 @@
 import { after, before, describe } from '@remix-run/test'
-import { createDatabase } from '@remix-run/data-table'
-import { Pool } from 'pg'
+import type { Database, DatabaseResource } from '@remix-run/data-table'
 
 import {
   resetAdapterIntegrationSchema,
@@ -9,32 +8,35 @@ import {
 } from '../../../data-table/test/adapter-integration-schema.ts'
 import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-integration-contract.ts'
 
-import { createPostgresDatabaseAdapter } from './adapter.ts'
+import { createPostgresDatabase } from './database.ts'
 
 const DATABASE_URL = process.env.REMIX_DATA_TABLE_POSTGRES_TEST_URL
 
 describe('postgres adapter integration', { skip: typeof DATABASE_URL !== 'string' }, () => {
-  let pool: Pool
+  let database: DatabaseResource
+  let client: Database
 
   before(async () => {
-    pool = new Pool({ connectionString: DATABASE_URL! })
+    database = createPostgresDatabase({ url: DATABASE_URL! })
+    client = await database.connect()
     await setupAdapterIntegrationSchema(async (statement) => {
-      await pool.query(statement)
+      await client.exec(statement)
     }, 'postgres')
   })
 
   after(async () => {
     await teardownAdapterIntegrationSchema(async (statement) => {
-      await pool.query(statement)
+      await client.exec(statement)
     }, 'postgres')
-    await pool.end()
+    await client.close()
+    await database.close()
   })
 
   runAdapterIntegrationContract({
-    createDatabase: () => createDatabase(createPostgresDatabaseAdapter(pool)),
+    createDatabase: () => database.connect(),
     resetDatabase: async () => {
       await resetAdapterIntegrationSchema(async (statement) => {
-        await pool.query(statement)
+        await client.exec(statement)
       }, 'postgres')
     },
   })
