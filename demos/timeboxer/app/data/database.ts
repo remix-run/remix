@@ -1,17 +1,16 @@
 import { mkdirSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { DatabaseSync } from 'node:sqlite'
 
-import { createDatabase } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
+import { createSqliteDatabase } from 'remix/data-table-sqlite'
 
 const databasePath = process.env.DATABASE_URL ?? './db/timebox.sqlite'
 
 mkdirSync(dirname(databasePath), { recursive: true })
 
-const sqlite = new DatabaseSync(databasePath)
-sqlite.exec('PRAGMA foreign_keys = ON')
-sqlite.exec(`
+export const database = createSqliteDatabase({ path: databasePath })
+export const db = await database.connect()
+
+await db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
@@ -50,19 +49,19 @@ sqlite.exec(`
     ON schedules (user_id);
 `)
 
-const scheduleColumns = sqlite.prepare('PRAGMA table_info(schedules)').all() as Array<{
+const scheduleColumns = (await db.exec('PRAGMA table_info(schedules)')).rows as Array<{
   name: string
 }>
 
 if (!scheduleColumns.some((column) => column.name === 'revision')) {
-  sqlite.exec('ALTER TABLE schedules ADD COLUMN revision INTEGER NOT NULL DEFAULT 0')
+  await db.exec('ALTER TABLE schedules ADD COLUMN revision INTEGER NOT NULL DEFAULT 0')
 }
 
 if (!scheduleColumns.some((column) => column.name === 'status')) {
-  sqlite.exec("ALTER TABLE schedules ADD COLUMN status TEXT NOT NULL DEFAULT 'active'")
+  await db.exec("ALTER TABLE schedules ADD COLUMN status TEXT NOT NULL DEFAULT 'active'")
 }
 
-const scheduleBlockColumns = sqlite.prepare('PRAGMA table_info(schedule_blocks)').all() as Array<{
+const scheduleBlockColumns = (await db.exec('PRAGMA table_info(schedule_blocks)')).rows as Array<{
   name: string
 }>
 
@@ -71,13 +70,13 @@ const hasFlatScheduleBlocks = ['client_id', 'day_of_week', 'start_minute', 'end_
 )
 
 if (!hasFlatScheduleBlocks) {
-  sqlite.exec(`
+  await db.exec(`
     DROP TABLE IF EXISTS schedule_block_instances;
     DROP TABLE IF EXISTS schedule_blocks;
   `)
 }
 
-sqlite.exec(`
+await db.exec(`
   CREATE TABLE IF NOT EXISTS schedule_blocks (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     client_id TEXT NOT NULL,
@@ -111,5 +110,3 @@ sqlite.exec(`
   CREATE INDEX IF NOT EXISTS schedule_blocks_schedule_day_idx
     ON schedule_blocks (schedule_id, day_of_week);
 `)
-
-export const db = createDatabase(createSqliteDatabaseAdapter(sqlite))

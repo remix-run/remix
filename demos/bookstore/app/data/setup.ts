@@ -1,12 +1,10 @@
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
-import { createDatabase } from 'remix/data-table'
 import { createMigrationRunner } from 'remix/data-table/migrations'
 import { loadMigrations } from 'remix/data-table/migrations/node'
-import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
+import { createSqliteDatabase } from 'remix/data-table/sqlite'
 
 import { books, orderItems, orders, users } from './schema.ts'
 import { hashPassword } from '../utils/password-hash.ts'
@@ -26,11 +24,8 @@ if (process.env.NODE_ENV === 'test') {
 
 const migrationsDirectoryPath = fileURLToPath(new URL('../../db/migrations/', import.meta.url))
 
-const sqlite = new DatabaseSync(databaseFilePath)
-sqlite.exec('PRAGMA foreign_keys = ON')
-const adapter = createSqliteDatabaseAdapter(sqlite)
-
-export const db = createDatabase(adapter)
+export const database = createSqliteDatabase({ path: databaseFilePath })
+export const db = await database.connect()
 
 let initializePromise: Promise<void> | null = null
 
@@ -44,14 +39,12 @@ export async function initializeBookstoreDatabase(): Promise<void> {
 
 export function closeBookstoreDatabase(): void {
   if (process.env.NODE_ENV === 'test' && process.platform === 'win32') {
-    // DatabaseSync.close() can crash during Windows test process shutdown.
     // Each test file runs in its own process, and the runner discards temp files.
     return
   }
 
-  if (sqlite.isOpen) {
-    sqlite.close()
-  }
+  void db.close()
+  void database.close()
 
   if (testDatabaseDirectoryPath) {
     fs.rmSync(testDatabaseDirectoryPath, { recursive: true, force: true })
@@ -65,7 +58,7 @@ if (process.env.NODE_ENV === 'test') {
 
 async function initialize(): Promise<void> {
   let migrations = await loadMigrations(migrationsDirectoryPath)
-  let migrationRunner = createMigrationRunner(adapter, migrations)
+  let migrationRunner = createMigrationRunner(db.adapter, migrations)
   await migrationRunner.up()
 
   let booksCount = await db.count(books)

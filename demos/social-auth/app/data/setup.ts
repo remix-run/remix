@@ -1,10 +1,8 @@
 import * as fs from 'node:fs'
-import { DatabaseSync } from 'node:sqlite'
 import { fileURLToPath } from 'node:url'
-import { createDatabase } from 'remix/data-table'
 import { createMigrationRunner } from 'remix/data-table/migrations'
 import { loadMigrations } from 'remix/data-table/migrations/node'
-import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
+import { createSqliteDatabase } from 'remix/data-table/sqlite'
 
 import { hashPassword } from '../utils/password-hash.ts'
 import { authAccounts, passwordResetTokens, users } from './schema.ts'
@@ -23,11 +21,8 @@ if (process.env.NODE_ENV === 'test') {
 
 const migrationsDirectoryPath = fileURLToPath(new URL('../../db/migrations/', import.meta.url))
 
-const sqlite = new DatabaseSync(databaseFilePath)
-sqlite.exec('PRAGMA foreign_keys = ON')
-const adapter = createSqliteDatabaseAdapter(sqlite)
-
-export const db = createDatabase(adapter)
+export const database = createSqliteDatabase({ path: databaseFilePath })
+export const db = await database.connect()
 
 let initializePromise: Promise<void> | null = null
 
@@ -41,7 +36,7 @@ export async function initializeSocialAuthDatabase(): Promise<void> {
 
 async function initialize(): Promise<void> {
   let migrations = await loadMigrations(migrationsDirectoryPath)
-  let migrationRunner = createMigrationRunner(adapter, migrations)
+  let migrationRunner = createMigrationRunner(db.adapter, migrations)
   await migrationRunner.up()
 
   if ((await db.count(users)) === 0) {
@@ -52,9 +47,9 @@ async function initialize(): Promise<void> {
 export async function resetSocialAuthDatabase(): Promise<void> {
   await initializeSocialAuthDatabase()
 
-  sqlite.exec('DELETE FROM password_reset_tokens')
-  sqlite.exec('DELETE FROM auth_accounts')
-  sqlite.exec('DELETE FROM users')
+  await db.exec('DELETE FROM password_reset_tokens')
+  await db.exec('DELETE FROM auth_accounts')
+  await db.exec('DELETE FROM users')
   await seedBaseData()
 }
 
@@ -77,4 +72,4 @@ async function seedBaseData(): Promise<void> {
   ])
 }
 
-export { sqlite, authAccounts, passwordResetTokens, users }
+export { authAccounts, passwordResetTokens, users }

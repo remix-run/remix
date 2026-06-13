@@ -1,8 +1,10 @@
-import { DatabaseSync } from 'node:sqlite'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { join } from 'node:path'
+import { tmpdir } from 'node:os'
 
 import * as assert from 'remix/assert'
-import { createDatabase, type Database } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
+import { type Database } from 'remix/data-table'
+import { createSqliteDatabase } from 'remix/data-table-sqlite'
 import { describe, it } from 'remix/test'
 
 import {
@@ -144,15 +146,30 @@ describe('schedule persistence lifecycle', () => {
 })
 
 async function withTestDatabase<T>(callback: (db: Database) => Promise<T>): Promise<T> {
-  let sqlite = new DatabaseSync(':memory:')
-  sqlite.exec('PRAGMA foreign_keys = ON')
-  sqlite.exec(`
+  let databaseDirectory = await mkdtemp(join(tmpdir(), 'remix-timeboxer-'))
+  let database = createSqliteDatabase({ path: join(databaseDirectory, 'test.sqlite') })
+  let db = await database.connect()
+  await db.exec(`
     CREATE TABLE users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT NOT NULL UNIQUE,
       created_at INTEGER NOT NULL
-    );
-
+    )
+  `)
+  await db.exec(`
+    CREATE TABLE user_passwords (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      user_id INTEGER NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      updated_at INTEGER NOT NULL,
+      CONSTRAINT user_passwords_user_id_fk
+        FOREIGN KEY (user_id)
+        REFERENCES users (id)
+        ON DELETE CASCADE
+    )
+  `)
+  await db.exec(`
     CREATE TABLE schedules (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL,
@@ -167,8 +184,9 @@ async function withTestDatabase<T>(callback: (db: Database) => Promise<T>): Prom
         ON DELETE CASCADE,
       CONSTRAINT schedules_user_id_name_unique
         UNIQUE (user_id, name)
-    );
-
+    )
+  `)
+  await db.exec(`
     CREATE TABLE schedule_blocks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       client_id TEXT NOT NULL,
@@ -194,13 +212,15 @@ async function withTestDatabase<T>(callback: (db: Database) => Promise<T>): Prom
           end_minute <= 1440 AND
           start_minute < end_minute
         )
-    );
+    )
   `)
 
   try {
-    return await callback(createDatabase(createSqliteDatabaseAdapter(sqlite)))
+    return await callback(db)
   } finally {
-    sqlite.close()
+    await db.close()
+    await database.close()
+    await rm(databaseDirectory, { force: true, recursive: true })
   }
 }
 
