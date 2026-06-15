@@ -19,8 +19,12 @@ export type HmrModule = Readonly<Record<string, unknown>> & {
 
 export interface RemixNodeHmrRuntime {
   readonly browserEventChannel: BrowserEventChannel | undefined
-  createHotContext(url: string): RemixNodeHotContext
+  createHotContext(
+    url: string,
+    resolveDependency?: (specifier: string) => string,
+  ): RemixNodeHotContext
   disposeAll(): void
+  reportAcceptedDependencies(url: string, acceptedDeps: string[]): void
   update(url: string, timestamp: number, acceptedUrl?: string): Promise<void>
 }
 
@@ -46,10 +50,16 @@ class NodeHotContext implements RemixNodeHotContext {
   #acceptCallbacks: Array<HotCallback> = []
   #acceptDependencyCallbacks: Array<HotDependencyCallback> = []
   #disposeCallbacks: Array<DisposeCallback> = []
+  #resolveDependency: (specifier: string) => string
 
-  constructor(url: string, data: Record<string, unknown>) {
+  constructor(
+    url: string,
+    data: Record<string, unknown>,
+    resolveDependency: (specifier: string) => string,
+  ) {
     this.data = data
     this.url = url
+    this.#resolveDependency = resolveDependency
   }
 
   accept(callback?: (module: HmrModule) => void): void
@@ -60,7 +70,7 @@ class NodeHotContext implements RemixNodeHotContext {
     callback: HotDependencyCallbackFunction | HotDependencyArrayCallbackFunction = () => {},
   ) {
     if (typeof deps === 'string') {
-      let normalizedDeps = [normalizeAcceptedDependency(this.url, deps)]
+      let normalizedDeps = [this.#normalizeAcceptedDependency(deps)]
       let dependencyCallback = callback as HotDependencyCallbackFunction
       this.#acceptDependencyCallbacks.push({
         callback(module) {
@@ -72,7 +82,7 @@ class NodeHotContext implements RemixNodeHotContext {
     }
 
     if (isDependencyArray(deps)) {
-      let normalizedDeps = deps.map((dep) => normalizeAcceptedDependency(this.url, dep))
+      let normalizedDeps = deps.map((dep) => this.#normalizeAcceptedDependency(dep))
       let dependencyCallback = callback as HotDependencyArrayUpdateCallbackFunction
       this.#acceptDependencyCallbacks.push({
         callback(module, acceptedUrl) {
@@ -140,6 +150,14 @@ class NodeHotContext implements RemixNodeHotContext {
       callback(updatedModule, acceptedUrl)
     }
   }
+
+  #normalizeAcceptedDependency(dep: string): string {
+    let resolved = this.#resolveDependency(dep)
+    let url = new URL(resolved)
+    url.search = ''
+    url.hash = ''
+    return url.href
+  }
 }
 
 function isDependencyArray(
@@ -173,16 +191,26 @@ export function installNodeHmrRuntime(
             url: options.browserEventUrl,
           },
 
-    createHotContext(url) {
+    createHotContext(url, resolveDependency = (specifier) => new URL(specifier, url).href) {
       let data = dataByUrl.get(url)
       if (data === undefined) {
         data = {}
         dataByUrl.set(url, data)
       }
 
-      let context = new NodeHotContext(url, data)
+      let context = new NodeHotContext(url, data, resolveDependency)
       contextsByUrl.set(url, context)
       return context
+    },
+
+    reportAcceptedDependencies(url, acceptedDeps) {
+      if (process.env.REMIX_NODE_HMR !== '1') return
+
+      process.send?.({
+        type: 'module-accepted-deps-resolved',
+        url,
+        acceptedDeps,
+      })
     },
 
     disposeAll() {
@@ -217,10 +245,6 @@ export function installNodeHmrRuntime(
 
   runtimeGlobal.__remixNodeHmr = runtime
   return runtime
-}
-
-function normalizeAcceptedDependency(importerUrl: string, dep: string): string {
-  return new URL(dep, importerUrl).href
 }
 
 function requestRestart(message?: string): void {

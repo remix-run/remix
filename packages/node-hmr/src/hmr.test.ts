@@ -138,6 +138,62 @@ describe('node-hmr', () => {
     }
   })
 
+  it('hot updates bare dependency changes through accepting importers without restarting the server', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getServerSource('./message.ts', 'getMessage()'),
+      'message.ts': [
+        `import { message as importedMessage } from 'fixture-message'`,
+        ``,
+        `let message = importedMessage`,
+        ``,
+        `export function getMessage() {`,
+        `  return message`,
+        `}`,
+        ``,
+        `if (import.meta.hot) {`,
+        `  import.meta.hot.accept('fixture-message', (module) => {`,
+        `    if (module && typeof module === 'object' && 'message' in module) {`,
+        `      message = String(module.message)`,
+        `    }`,
+        `  })`,
+        `}`,
+      ].join('\n'),
+      'packages/fixture-message/index.ts': `export const message = 'one'`,
+      'packages/fixture-message/require.ts': `export const message = 'require'`,
+      'packages/fixture-message/package.json': JSON.stringify({
+        exports: {
+          import: './index.ts',
+          require: './require.ts',
+        },
+        name: 'fixture-message',
+        type: 'module',
+      }),
+    })
+    await fs.mkdir(path.join(fixture.path, 'node_modules'), { recursive: true })
+    await fs.symlink(
+      path.join(fixture.path, 'packages/fixture-message'),
+      path.join(fixture.path, 'node_modules/fixture-message'),
+      process.platform === 'win32' ? 'junction' : 'dir',
+    )
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'one')
+
+      await fs.writeFile(
+        path.join(fixture.path, 'packages/fixture-message/index.ts'),
+        `export const message = 'two'`,
+      )
+
+      await waitForResponse(ready.port, 'two')
+      assert.equal(server.readyCount, 1)
+      assert.match(server.output, /hmr update packages\/fixture-message\/index\.ts/)
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('ignores files that leave the imported module graph after a module update', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./message.ts', 'getMessage()'),

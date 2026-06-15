@@ -64,6 +64,11 @@ type ChildMessage =
       importerUrl: string
     }
   | {
+      type: 'module-accepted-deps-resolved'
+      acceptedDeps: string[]
+      url: string
+    }
+  | {
       type: 'module-update'
       filePath: string
       hmr: NodeHmrModuleInfo['hmr']
@@ -246,6 +251,14 @@ function createWatchedProcessController(options: {
         moduleDepsByUrl.set(message.importerUrl, deps)
       }
       deps.add(message.depUrl)
+      return
+    }
+
+    if (message.type === 'module-accepted-deps-resolved') {
+      let moduleInfo = moduleInfoByUrl.get(message.url)
+      if (moduleInfo !== undefined) {
+        moduleInfo.hmr.acceptedDeps = message.acceptedDeps
+      }
       return
     }
 
@@ -802,6 +815,16 @@ function isChildMessage(message: unknown): message is ChildMessage {
       typeof message.importerFilePath === 'string' &&
       'importerUrl' in message &&
       typeof message.importerUrl === 'string'
+    )
+  }
+
+  if (message.type === 'module-accepted-deps-resolved') {
+    return (
+      'url' in message &&
+      typeof message.url === 'string' &&
+      'acceptedDeps' in message &&
+      Array.isArray(message.acceptedDeps) &&
+      message.acceptedDeps.every((dep) => typeof dep === 'string')
     )
   }
 

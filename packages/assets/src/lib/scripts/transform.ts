@@ -413,7 +413,6 @@ function getAcceptedDependencies(node: Node, source: string): HmrAcceptedDepende
     return [
       {
         end: node.end - 1,
-        quote: getImportQuote(source, node.start),
         specifier: node.value,
         start: node.start + 1,
       },
@@ -427,7 +426,6 @@ function getAcceptedDependencies(node: Node, source: string): HmrAcceptedDepende
     if (!isStringLiteralNode(element)) continue
     deps.push({
       end: element.end - 1,
-      quote: getImportQuote(source, element.start),
       specifier: element.value,
       start: element.start + 1,
     })

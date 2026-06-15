@@ -2,9 +2,21 @@ import { parseSync, visitorKeys } from 'oxc-parser'
 import type { Node, Program } from 'oxc-parser'
 
 export interface NodeHmrAnalysis {
+  acceptedDeps: NodeHmrAcceptedDependency[]
+  selfAccepting: boolean
+  usesImportMetaHot: boolean
+}
+
+export interface ResolvedNodeHmrAnalysis {
   acceptedDeps: string[]
   selfAccepting: boolean
   usesImportMetaHot: boolean
+}
+
+export interface NodeHmrAcceptedDependency {
+  end: number
+  specifier: string
+  start: number
 }
 
 const invalidAcceptMessage =
@@ -19,7 +31,7 @@ export function analyzeNodeHmrSource(importerUrl: string, source: string): NodeH
     }
   }
 
-  let acceptedDeps = new Set<string>()
+  let acceptedDeps: NodeHmrAcceptedDependency[] = []
   let selfAccepting = false
   let usesImportMetaHot = false
   let parseResult = parseSync('node-hmr-analysis.js', source, {
@@ -54,13 +66,11 @@ export function analyzeNodeHmrSource(importerUrl: string, source: string): NodeH
       throw new TypeError(invalidAcceptMessage)
     }
 
-    for (let dep of deps) {
-      acceptedDeps.add(new URL(dep, importerUrl).href)
-    }
+    acceptedDeps.push(...deps)
   })
 
   return {
-    acceptedDeps: [...acceptedDeps],
+    acceptedDeps,
     selfAccepting,
     usesImportMetaHot,
   }
@@ -103,19 +113,27 @@ function isSelfAcceptArgument(node: Node): boolean {
   )
 }
 
-function getAcceptedDependencies(node: Node): string[] | null {
+function getAcceptedDependencies(node: Node): NodeHmrAcceptedDependency[] | null {
   if (isStringLiteralNode(node)) {
-    return [node.value]
+    return [toAcceptedDependency(node)]
   }
 
   if (node.type !== 'ArrayExpression') return null
 
-  let deps: string[] = []
+  let deps: NodeHmrAcceptedDependency[] = []
   for (let element of node.elements) {
     if (!isStringLiteralNode(element)) return null
-    deps.push(element.value)
+    deps.push(toAcceptedDependency(element))
   }
   return deps
+}
+
+function toAcceptedDependency(node: Node & { end: number; start: number; value: string }) {
+  return {
+    end: node.end - 1,
+    specifier: node.value,
+    start: node.start + 1,
+  }
 }
 
 function walkAst(node: Program | Node, visit: (node: Program | Node) => void): void {
@@ -147,7 +165,14 @@ function isAstNode(value: unknown): value is Node {
 }
 
 function isStringLiteralNode(node: Node | null | undefined): node is Node & {
+  end: number
+  start: number
   value: string
 } {
-  return node?.type === 'Literal' && typeof node.value === 'string'
+  return (
+    node?.type === 'Literal' &&
+    typeof node.end === 'number' &&
+    typeof node.start === 'number' &&
+    typeof node.value === 'string'
+  )
 }

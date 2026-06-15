@@ -6,7 +6,11 @@ import { fileURLToPath } from 'node:url'
 
 import { transformComponentHmr } from '@remix-run/ui-hmr/transform'
 
-import { analyzeNodeHmrSource, type NodeHmrAnalysis } from './lib/hmr-analysis.ts'
+import {
+  analyzeNodeHmrSource,
+  type NodeHmrAnalysis,
+  type ResolvedNodeHmrAnalysis,
+} from './lib/hmr-analysis.ts'
 import { installNodeHmrRuntime } from './lib/runtime.ts'
 
 const runtime = installNodeHmrRuntime({ browserEventUrl: getBrowserEventUrl() })
@@ -35,18 +39,29 @@ registerHooks({
     let transformedSource = transformSource(canonicalUrl, source)
     transformedSource = rewriteInvalidatedImports(canonicalUrl, transformedSource)
     let hmrAnalysis = analyzeNodeHmrSource(canonicalUrl, transformedSource)
-    reportModuleUpdate(canonicalUrl, hmrAnalysis)
 
     if (!hmrAnalysis.usesImportMetaHot) {
+      reportModuleUpdate(canonicalUrl, {
+        acceptedDeps: [],
+        selfAccepting: false,
+        usesImportMetaHot: false,
+      })
+
       return {
         ...result,
         source: transformedSource,
       }
     }
 
+    reportModuleUpdate(canonicalUrl, {
+      acceptedDeps: [],
+      selfAccepting: hmrAnalysis.selfAccepting,
+      usesImportMetaHot: true,
+    })
+
     return {
       ...result,
-      source: injectHotContext(canonicalUrl, transformedSource),
+      source: injectHotContext(canonicalUrl, transformedSource, hmrAnalysis),
     }
   },
 })
@@ -93,11 +108,23 @@ function shouldTransformModule(
   return true
 }
 
-function injectHotContext(url: string, source: string): string {
+function injectHotContext(url: string, source: string, hmr: NodeHmrAnalysis): string {
+  let resolveDependencyExpression = `(specifier) => { let url = new URL(import.meta.resolve(specifier)); url.search = ''; url.hash = ''; return url.href }`
+
   return [
-    `import.meta.hot = globalThis.__remixNodeHmr.createHotContext(${JSON.stringify(url)});`,
+    `const __remixNodeHmrResolveDependency = ${resolveDependencyExpression};`,
+    `globalThis.__remixNodeHmr.reportAcceptedDependencies(${JSON.stringify(url)}, ${getAcceptedDependencyExpression(hmr)});`,
+    `import.meta.hot = globalThis.__remixNodeHmr.createHotContext(${JSON.stringify(url)}, __remixNodeHmrResolveDependency);`,
     source,
   ].join('\n')
+}
+
+function getAcceptedDependencyExpression(hmr: NodeHmrAnalysis): string {
+  return `[${hmr.acceptedDeps
+    .map(
+      (acceptedDep) => `__remixNodeHmrResolveDependency(${JSON.stringify(acceptedDep.specifier)})`,
+    )
+    .join(', ')}]`
 }
 
 function transformSource(url: string, source: string): string {
@@ -173,7 +200,7 @@ function rewriteInvalidatedImports(url: string, source: string): string {
   return rewrittenSource
 }
 
-function reportModuleUpdate(url: string, hmr: NodeHmrAnalysis): void {
+function reportModuleUpdate(url: string, hmr: ResolvedNodeHmrAnalysis): void {
   process.send?.({
     type: 'module-update',
     url,

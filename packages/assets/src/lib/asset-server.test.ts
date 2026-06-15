@@ -3572,6 +3572,85 @@ describe('asset-server', () => {
     }
   })
 
+  it('resolves bare accepted HMR dependencies like imports', async () => {
+    let caseDir = await makeTmpDir()
+    let payloads: HmrPayload[] = []
+    try {
+      await write(
+        caseDir,
+        'app/entry.ts',
+        [
+          `import { value } from 'fixture-message'`,
+          `let currentValue = value`,
+          `if (import.meta.hot) {`,
+          `  import.meta.hot.accept('fixture-message', (module) => {`,
+          `    currentValue = module.value`,
+          `  })`,
+          `}`,
+          `export function getValue() {`,
+          `  return currentValue`,
+          `}`,
+        ].join('\n'),
+      )
+      await writeJson(caseDir, 'app/node_modules/fixture-message/package.json', {
+        exports: './index.ts',
+        name: 'fixture-message',
+        type: 'module',
+      })
+      await write(caseDir, 'app/node_modules/fixture-message/index.ts', `export const value = 1`)
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: createTestHmrOptions(payloads),
+      })
+
+      try {
+        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(entryResponse)
+        assert.equal(entryResponse.status, 200)
+        assert.match(
+          await entryResponse.text(),
+          /import\.meta\.hot\.accept\("\/assets\/app\/node_modules\/fixture-message\/index\.ts"/,
+        )
+
+        let depResponse = await get(
+          assetServer,
+          '/assets/app/node_modules/fixture-message/index.ts',
+        )
+        assert.ok(depResponse)
+        assert.equal(depResponse.status, 200)
+
+        let depPath = await write(
+          caseDir,
+          'app/node_modules/fixture-message/index.ts',
+          `export const value = 2`,
+        )
+        await emitWatchEvent(assetServer, depPath, 'change')
+
+        let expectedPayload = {
+          type: 'assets:update',
+          updates: [
+            {
+              acceptedPath: '/assets/app/node_modules/fixture-message/index.ts',
+              path: '/assets/app/entry.ts',
+              type: 'js',
+            },
+          ],
+        }
+        let result = findHmrPayload({
+          expectedPayload,
+          payloads,
+          startIndex: 0,
+        })
+        let payload = result.payload
+        assert.ok(payload, result.failureMessage)
+        assert.deepEqual(hmrPayloadWithoutTimestamp(payload), expectedPayload)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('sends HMR full reload payloads for non-accepting script changes', async () => {
     let caseDir = await makeTmpDir()
     let payloads: HmrPayload[] = []
