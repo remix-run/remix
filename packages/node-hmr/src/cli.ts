@@ -750,7 +750,7 @@ function formatChangedPaths(paths: string[], cwd: string): string {
 }
 
 function formatChangedPath(path: string, cwd: string): string {
-  return relative(cwd, path) || path
+  return (relative(cwd, path) || path).replace(/\\/g, '/')
 }
 
 function dedupeNodeHmrUpdates(
