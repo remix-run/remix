@@ -5,6 +5,7 @@ Run Node.js applications with Hot Module Reloading.
 ## Features
 
 - **HMR Runtime**: Provides an `import.meta.hot` API for modules that can handle hot updates
+- **Remix UI Support**: When `remix/ui` is detected, instantly update components without a full server restart
 - **Restart Fallback**: Restarts the child Node process when updates aren't accepted
 - **Browser HMR Integration**: Optionally hosts a browser HMR event channel that survives child restarts
 
@@ -16,9 +17,10 @@ npm i remix
 
 ## Usage
 
-Create a development script that starts your app server with HMR enabled:
+Create a development script that starts your app server with HMR enabled, along with any additional Node args:
 
 ```ts
+// dev.ts
 import { run } from 'remix/node-hmr'
 
 run('./server.ts', {
@@ -36,9 +38,13 @@ Then run the script with Node:
 }
 ```
 
+## Remix UI Support
+
+Remix UI component HMR is built in and automatically enabled when the `remix/ui` package is detected, allowing exported Remix UI components to be updated instantly without a full server restart.
+
 ## Browser HMR Integration
 
-If your app needs browser HMR coordination, enable a browser event channel in the parent process:
+If your app needs browser HMR coordination, enable `browserEventChannel` when running your server:
 
 ```ts
 import { run } from 'remix/node-hmr'
@@ -49,86 +55,69 @@ run('./server.ts', {
 })
 ```
 
-The browser event channel is hosted by the parent process, so it stays online when the child app
-server restarts.
+The browser event channel is hosted by the parent process so it stays online when the app server restarts. When `node-hmr` hot updates or restarts the server, it sends a `server:update` event to connected clients.
 
-When `node-hmr` hot updates or restarts the server, it sends a `server:update` event to connected
-clients through the browser event channel:
+Access to the browser event channel is available within the `node-hmr` runtime via the `remix/node-hmr/runtime` import:
 
 ```ts
-type ServerUpdateEvent = {
-  type: 'server:update'
-}
-```
-
-Access to the browser event channel is available in the `node-hmr` runtime via the `remix/node-hmr/runtime` import:
-
-```ts
-import { browserEventChanel } from 'remix/node-hmr/runtime'
+import { browserEventChannel } from 'remix/node-hmr/runtime'
 ```
 
 The `browserEventChannel` object provides a `url` for the EventSource URL, and a `send(payload)` function for sending custom events through the same endpoint.
 
-This browser event channel is supported by the - [`remix/assets`](https://github.com/remix-run/remix/tree/main/packages/assets) package, supporting built-in co-ordination between server and browser code updates.
-
-## Lifecycle
-
-`run()` creates a long-lived parent process supervisor:
-
-1. The parent starts a file watcher and optionally hosts the browser event channel.
-2. The parent spawns your app server as a child process.
-3. The child process is started with Remix's internal HMR register hook and your explicit `nodeArgs`.
-4. The register hook installs `import.meta.hot`, reports the module graph to the parent, and proxies browser HMR payloads back to the parent over IPC.
-5. When a watched file changes, the parent either sends a hot update to the child or restarts it.
-6. If a browser event channel is enabled, connected browser clients stay connected to the parent while the child restarts.
-
-`run()` starts the HMR runner immediately. Most dev scripts can ignore the returned runner, but a
-larger development process can use it to close the runner itself:
-
-```ts
-let runner = run('./server.ts')
-
-await runner.close() // stops the watcher, child process, and browser event channel
-```
+The browser event channel is supported by the [`remix/assets`](https://github.com/remix-run/remix/tree/main/packages/assets) package, supporting built-in co-ordination between server and browser code updates.
 
 ## `import.meta.hot`
 
-When a module references `import.meta.hot`, `node-hmr` injects a hot context for that module. Use
-it to tell the runtime which updates can be handled without restarting the process.
+The `import.meta.hot` API provided by `node-hmr` is primarily intended as a target for code transformations like [remix/ui-hmr](https://github.com/remix-run/remix/tree/main/packages/ui-hmr).
+
+### `import.meta.hot.accept()`
+
+Mark the current module as safe to hot update. Calling `accept()` makes the module an HMR boundary, so updates do not continue propagating to importers.
+
+Without a callback, the updated module is still evaluated, but the previous module instance does not copy values from it. Use this when re-running the module's top-level code applies the update.
 
 ```ts
-let message = 'Hello'
+let dispose = start()
 
-export function getMessage() {
-  return message
+function start() {
+  let timer = setInterval(() => {
+    console.log('tick')
+  }, 1_000)
+
+  return () => {
+    clearInterval(timer)
+  }
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    dispose()
+  })
+
+  import.meta.hot.accept()
+}
+```
+
+You can pass a callback to receive the updated module. This is useful when the previous module instance owns long-lived state and needs to copy values from the updated module. Export values that need to be copied as `let` bindings.
+
+```ts
+export let greeting = 'Hello'
+
+export function getGreeting() {
+  return greeting
 }
 
 if (import.meta.hot) {
   import.meta.hot.accept((module) => {
-    if (typeof module.message === 'string') {
-      message = module.message
+    if (typeof module.greeting === 'string') {
+      greeting = module.greeting
     }
   })
 }
 ```
 
-If a changed module does not accept the update, and the update cannot be accepted by one of its
-importers, `node-hmr` restarts the child process.
-
-### `import.meta.hot.accept()`
-
-Mark the current module as safe to hot update.
-
-```ts
-export let greeting = 'Hello'
-
-if (import.meta.hot) {
-  import.meta.hot.accept()
-}
-```
-
-You can also accept updates from a dependency. This is useful when a module owns long-lived state
-but imports small values or helpers that can be replaced in place.
+You can also accept updates from a dependency. This is useful when a module owns long-lived state but imports small values or helpers that can be replaced in place.
 
 ```ts
 import { message } from './message.ts'
@@ -151,8 +140,25 @@ if (import.meta.hot) {
 Multiple dependencies can be accepted at once:
 
 ```ts
+import { one } from './one.ts'
+import { two } from './two.ts'
+
+let values = { one, two }
+
+export function render() {
+  return `${values.one} ${values.two}`
+}
+
 if (import.meta.hot) {
-  import.meta.hot.accept(['./one.ts', './two.ts'])
+  import.meta.hot.accept(['./one.ts', './two.ts'], ([oneModule, twoModule]) => {
+    if (typeof oneModule.one === 'string') {
+      values.one = oneModule.one
+    }
+
+    if (typeof twoModule.two === 'string') {
+      values.two = twoModule.two
+    }
+  })
 }
 ```
 
@@ -172,8 +178,7 @@ if (import.meta.hot) {
 }
 ```
 
-The `data` object is preserved across updates for the same module, which lets a replacement module
-recover small pieces of state.
+The `data` object is preserved across updates for the same module, which lets a replacement module recover small pieces of state.
 
 ```ts
 let count = Number(import.meta.hot?.data.count ?? 0)
@@ -192,8 +197,7 @@ if (import.meta.hot) {
 
 ### `import.meta.hot.invalidate()`
 
-Call `invalidate()` when a module accepts an update but discovers that it cannot apply it safely.
-This asks `node-hmr` to fall back to a process restart.
+Call `invalidate()` when a module accepts an update but discovers that it cannot apply it safely. This asks `node-hmr` to fall back to a process restart.
 
 ```ts
 if (import.meta.hot) {
@@ -208,8 +212,8 @@ if (import.meta.hot) {
 
 ## Related Packages
 
-- [`remix/assets`](https://github.com/remix-run/remix/tree/main/packages/assets) supports the
-  browser event channel for coordinating server and browser HMR updates.
+- [`remix/ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) provides code transforms and runtime for HMR for Remix UI components.
+- [`remix/assets`](https://github.com/remix-run/remix/tree/main/packages/assets) supports the browser event channel for coordinating server and browser HMR updates.
 
 ## License
 
