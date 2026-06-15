@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 
 import { transformComponentHmr } from '@remix-run/ui-hmr/transform'
 
+import { analyzeNodeHmrSource, type NodeHmrAnalysis } from './lib/hmr-analysis.ts'
 import { installNodeHmrRuntime } from './lib/runtime.ts'
 
 const runtime = installNodeHmrRuntime({ browserEventUrl: getBrowserEventUrl() })
@@ -33,9 +34,10 @@ registerHooks({
     let canonicalUrl = getCanonicalUrl(url)
     let transformedSource = transformSource(canonicalUrl, source)
     transformedSource = rewriteInvalidatedImports(canonicalUrl, transformedSource)
-    reportModuleUpdate(canonicalUrl, transformedSource)
+    let hmrAnalysis = analyzeNodeHmrSource(canonicalUrl, transformedSource)
+    reportModuleUpdate(canonicalUrl, hmrAnalysis)
 
-    if (!transformedSource.includes('import.meta.hot')) {
+    if (!hmrAnalysis.usesImportMetaHot) {
       return {
         ...result,
         source: transformedSource,
@@ -171,16 +173,12 @@ function rewriteInvalidatedImports(url: string, source: string): string {
   return rewrittenSource
 }
 
-function reportModuleUpdate(url: string, source: string): void {
+function reportModuleUpdate(url: string, hmr: NodeHmrAnalysis): void {
   process.send?.({
     type: 'module-update',
     url,
     filePath: fileURLToPath(url),
-    hmr: {
-      acceptedDeps: getAcceptedDependencyUrls(url, source),
-      selfAccepting: isSelfAccepting(source),
-      usesImportMetaHot: source.includes('import.meta.hot'),
-    },
+    hmr,
   })
 }
 
@@ -245,39 +243,6 @@ function isInvalidatedUrls(value: unknown): value is Record<string, number> {
   }
 
   return true
-}
-
-function isSelfAccepting(source: string): boolean {
-  return /import\.meta\.hot\s*\??\.\s*accept\s*\(\s*(?:\)|(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>|function\b)/.test(
-    source,
-  )
-}
-
-function getAcceptedDependencyUrls(importerUrl: string, source: string): string[] {
-  let acceptedDeps = new Set<string>()
-  let acceptCallPattern =
-    /import\.meta\.hot\s*\??\.\s*accept\s*\(\s*(["'])([^"']+)\1|import\.meta\.hot\s*\??\.\s*accept\s*\(\s*\[([^\]]*)\]/g
-
-  for (let match of source.matchAll(acceptCallPattern)) {
-    let singleSpecifier = match[2]
-    if (singleSpecifier !== undefined) {
-      acceptedDeps.add(new URL(singleSpecifier, importerUrl).href)
-      continue
-    }
-
-    let arrayContents = match[3]
-    if (arrayContents === undefined) continue
-
-    let stringPattern = /(["'])([^"']+)\1/g
-    for (let stringMatch of arrayContents.matchAll(stringPattern)) {
-      let specifier = stringMatch[2]
-      if (specifier !== undefined) {
-        acceptedDeps.add(new URL(specifier, importerUrl).href)
-      }
-    }
-  }
-
-  return [...acceptedDeps]
 }
 
 function disposeOnSignal(signal: NodeJS.Signals) {

@@ -58,6 +58,48 @@ describe('node-hmr', () => {
     }
   })
 
+  it('restarts when a statically self-accepting module does not register an accept handler', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getServerSource('./message.ts', 'getMessage()'),
+      'message.ts': [
+        `export function getMessage() {`,
+        `  return 'one'`,
+        `}`,
+        ``,
+        `if (globalThis.__enableMessageHmr) {`,
+        `  import.meta.hot.accept()`,
+        `}`,
+      ].join('\n'),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'one')
+
+      await fs.writeFile(
+        path.join(fixture.path, 'message.ts'),
+        [
+          `export function getMessage() {`,
+          `  return 'two'`,
+          `}`,
+          ``,
+          `if (globalThis.__enableMessageHmr) {`,
+          `  import.meta.hot.accept()`,
+          `}`,
+        ].join('\n'),
+      )
+
+      let restarted = await server.waitForReady(1)
+      assert.notEqual(restarted.pid, ready.pid)
+      assert.equal(await fetchText(restarted.port), 'two')
+      assert.match(server.output, /No HMR accept handler found for .*message\.ts/)
+      assert.match(server.output, /restart No HMR accept handler found for .*message\.ts/)
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('hot updates dependency changes through accepting importers without restarting the server', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./message.ts', 'getMessage()'),

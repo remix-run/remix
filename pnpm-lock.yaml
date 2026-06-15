@@ -1323,6 +1323,9 @@ importers:
       chokidar:
         specifier: ^5.0.0
         version: 5.0.0
+      oxc-parser:
+        specifier: ^0.121.0
+        version: 0.121.0
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:^

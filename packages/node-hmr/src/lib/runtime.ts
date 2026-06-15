@@ -113,6 +113,11 @@ class NodeHotContext implements RemixNodeHotContext {
       return
     }
 
+    if (this.#acceptCallbacks.length === 0) {
+      requestRestart(`No HMR accept handler found for ${this.url}`)
+      return
+    }
+
     this.disposeAll()
 
     let updatedModule = await import(`${this.url}?t=${timestamp}`)
