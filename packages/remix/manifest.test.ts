@@ -97,8 +97,6 @@ describe('manifest', () => {
   })
 
   it('all exports of every referenced package are covered', () => {
-    let packageExportsNotCoveredByManifest = new Set<string>()
-
     for (let pkgName of referencedPackages) {
       let short = shortName(pkgName)
       let pkgJsonPath = path.join(packagesDir, short, 'package.json')
@@ -110,7 +108,6 @@ describe('manifest', () => {
         if (exportPath === './package.json') continue
 
         let specifier = exportSpecifier(pkgName, exportPath)
-        if (packageExportsNotCoveredByManifest.has(specifier)) continue
 
         // Every export of a package that appears anywhere in the manifest must
         // itself appear as a value in the manifest. There is no mechanical

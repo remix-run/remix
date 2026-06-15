@@ -434,9 +434,6 @@ importers:
 
   packages/cli:
     dependencies:
-      '@remix-run/node-hmr':
-        specifier: workspace:^
-        version: link:../node-hmr
       '@remix-run/terminal':
         specifier: workspace:^
         version: link:../terminal
