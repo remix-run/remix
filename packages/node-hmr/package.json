@@ -19,26 +19,19 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/node-hmr.ts",
-    "./runtime": "./src/runtime.ts",
+    ".": {
+      "types": "./dist/node-hmr.d.ts",
+      "default": "./dist/node-hmr.js"
+    },
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "default": "./dist/runtime.js"
+    },
     "./package.json": "./package.json"
   },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/node-hmr.d.ts",
-        "default": "./dist/node-hmr.js"
-      },
-      "./runtime": {
-        "types": "./dist/runtime.d.ts",
-        "default": "./dist/runtime.js"
-      },
-      "./package.json": "./package.json"
-    }
-  },
   "dependencies": {
-    "@remix-run/terminal": "workspace:^",
-    "@remix-run/ui-hmr": "workspace:^",
+    "@remix-run/terminal": "remix-run/remix#preview/pr-11515&path:packages/terminal",
+    "@remix-run/ui-hmr": "remix-run/remix#preview/pr-11515&path:packages/ui-hmr",
     "chokidar": "^5.0.0",
     "oxc-parser": "^0.121.0"
   },

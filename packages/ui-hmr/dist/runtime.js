@@ -1,0 +1,1 @@
+export { callComponentRenderForHmr, getComponentHandleForHmr, getComponentHmrState, getCurrentComponentForHmr, registerComponentForHmr, registerComponentRenderForHmr, setupComponentForHmr, updateComponentModuleForHmr, } from "./lib/runtime.js";

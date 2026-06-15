@@ -19,22 +19,15 @@
   ],
   "type": "module",
   "exports": {
-    "./runtime": "./src/runtime.ts",
-    "./transform": "./src/transform.ts",
+    "./runtime": {
+      "types": "./dist/runtime.d.ts",
+      "default": "./dist/runtime.js"
+    },
+    "./transform": {
+      "types": "./dist/transform.d.ts",
+      "default": "./dist/transform.js"
+    },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      "./runtime": {
-        "types": "./dist/runtime.d.ts",
-        "default": "./dist/runtime.js"
-      },
-      "./transform": {
-        "types": "./dist/transform.d.ts",
-        "default": "./dist/transform.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "dependencies": {
     "magic-string": "^0.30.21",
