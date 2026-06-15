@@ -5,10 +5,10 @@ import { emitServerHmrEvent } from './events.ts'
 
 export interface RemixNodeHotContext {
   readonly data: Record<string, unknown>
-  accept(callback?: (module: HmrModule) => void): void
-  accept(dep: string, callback?: (module: HmrModule) => void): void
-  accept(deps: readonly string[], callback?: (modules: HmrModule[]) => void): void
-  dispose(callback: (data: Record<string, unknown>) => void): void
+  accept(callback?: (module: HmrModule) => HotCallbackResult): void
+  accept(dep: string, callback?: (module: HmrModule) => HotCallbackResult): void
+  accept(deps: readonly string[], callback?: (modules: HmrModule[]) => HotCallbackResult): void
+  dispose(callback: (data: Record<string, unknown>) => HotCallbackResult): void
   invalidate(message?: string): void
   on(event: string, callback: (data: unknown) => void | Promise<void>): void
 }
@@ -23,7 +23,7 @@ export interface RemixNodeHmrRuntime {
     url: string,
     resolveDependency?: (specifier: string) => string,
   ): RemixNodeHotContext
-  disposeAll(): void
+  disposeAll(): Promise<void>
   reportAcceptedDependencies(url: string, acceptedDeps: string[]): void
   update(url: string, timestamp: number, acceptedUrl?: string): Promise<void>
 }
@@ -32,16 +32,22 @@ type RuntimeGlobal = typeof globalThis & {
   __remixNodeHmr?: RemixNodeHmrRuntime
 }
 
-type HotCallback = (module: HmrModule) => void
-type HotDependencyCallbackFunction = (module: HmrModule) => void
-type HotDependencyArrayCallbackFunction = (modules: HmrModule[]) => void
-type HotDependencyArrayUpdateCallbackFunction = (modules: Array<HmrModule | undefined>) => void
-type HotDependencyUpdateCallback = (module: HmrModule, acceptedUrl: string) => void
+type HotCallbackResult = void | Promise<void>
+type HotCallback = (module: HmrModule) => HotCallbackResult
+type HotDependencyCallbackFunction = (module: HmrModule) => HotCallbackResult
+type HotDependencyArrayCallbackFunction = (modules: HmrModule[]) => HotCallbackResult
+type HotDependencyArrayUpdateCallbackFunction = (
+  modules: Array<HmrModule | undefined>,
+) => HotCallbackResult
+type HotDependencyUpdateCallback = (
+  module: HmrModule,
+  acceptedUrl: string,
+) => HotCallbackResult
 type HotDependencyCallback = {
   callback: HotDependencyUpdateCallback
   deps: string[]
 }
-type DisposeCallback = (data: Record<string, unknown>) => void
+type DisposeCallback = (data: Record<string, unknown>) => HotCallbackResult
 
 class NodeHotContext implements RemixNodeHotContext {
   readonly data: Record<string, unknown>
@@ -62,9 +68,9 @@ class NodeHotContext implements RemixNodeHotContext {
     this.#resolveDependency = resolveDependency
   }
 
-  accept(callback?: (module: HmrModule) => void): void
-  accept(dep: string, callback?: (module: HmrModule) => void): void
-  accept(deps: readonly string[], callback?: (modules: HmrModule[]) => void): void
+  accept(callback?: (module: HmrModule) => HotCallbackResult): void
+  accept(dep: string, callback?: (module: HmrModule) => HotCallbackResult): void
+  accept(deps: readonly string[], callback?: (modules: HmrModule[]) => HotCallbackResult): void
   accept(
     deps?: string | readonly string[] | HotCallback,
     callback: HotDependencyCallbackFunction | HotDependencyArrayCallbackFunction = () => {},
@@ -74,7 +80,7 @@ class NodeHotContext implements RemixNodeHotContext {
       let dependencyCallback = callback as HotDependencyCallbackFunction
       this.#acceptDependencyCallbacks.push({
         callback(module) {
-          dependencyCallback(module)
+          return dependencyCallback(module)
         },
         deps: normalizedDeps,
       })
@@ -86,7 +92,7 @@ class NodeHotContext implements RemixNodeHotContext {
       let dependencyCallback = callback as HotDependencyArrayUpdateCallbackFunction
       this.#acceptDependencyCallbacks.push({
         callback(module, acceptedUrl) {
-          dependencyCallback(
+          return dependencyCallback(
             normalizedDeps.map((dep) => (dep === acceptedUrl ? module : undefined)),
           )
         },
@@ -111,9 +117,9 @@ class NodeHotContext implements RemixNodeHotContext {
     void _callback
   }
 
-  disposeAll() {
+  async disposeAll() {
     for (let callback of this.#disposeCallbacks) {
-      callback(this.data)
+      await callback(this.data)
     }
   }
 
@@ -128,11 +134,11 @@ class NodeHotContext implements RemixNodeHotContext {
       return
     }
 
-    this.disposeAll()
+    await this.disposeAll()
 
     let updatedModule = await import(`${this.url}?t=${timestamp}`)
     for (let callback of this.#acceptCallbacks) {
-      callback(updatedModule)
+      await callback(updatedModule)
     }
   }
 
@@ -147,7 +153,7 @@ class NodeHotContext implements RemixNodeHotContext {
 
     let updatedModule = await import(`${acceptedUrl}?t=${timestamp}`)
     for (let { callback } of callbacks) {
-      callback(updatedModule, acceptedUrl)
+      await callback(updatedModule, acceptedUrl)
     }
   }
 
@@ -213,9 +219,9 @@ export function installNodeHmrRuntime(
       })
     },
 
-    disposeAll() {
+    async disposeAll() {
       for (let context of contextsByUrl.values()) {
-        context.disposeAll()
+        await context.disposeAll()
       }
 
       contextsByUrl.clear()

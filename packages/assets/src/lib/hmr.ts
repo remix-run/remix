@@ -4,10 +4,10 @@ export type HmrModule = Readonly<Record<string, unknown>> & {
 
 export interface RemixHotContext {
   readonly data: Record<string, unknown>
-  accept(callback?: (module: HmrModule) => void): void
-  accept(dep: string, callback?: (module: HmrModule) => void): void
-  accept(deps: readonly string[], callback?: (modules: HmrModule[]) => void): void
-  dispose(callback: (data: Record<string, unknown>) => void): void
+  accept(callback?: (module: HmrModule) => void | Promise<void>): void
+  accept(dep: string, callback?: (module: HmrModule) => void | Promise<void>): void
+  accept(deps: readonly string[], callback?: (modules: HmrModule[]) => void | Promise<void>): void
+  dispose(callback: (data: Record<string, unknown>) => void | Promise<void>): void
   invalidate(message?: string): void
   on(event: string, callback: (data: unknown) => void | Promise<void>): void
 }
@@ -231,7 +231,7 @@ async function updateJavaScriptModule(path, acceptedPath, timestamp) {
 
   if (isSelfUpdate) {
     for (let callback of previousContext.disposeCallbacks) {
-      callback(previousContext.data)
+      await callback(previousContext.data)
     }
 
     let updatedModule = await import(withTimestamp(path, timestamp))
@@ -242,7 +242,7 @@ async function updateJavaScriptModule(path, acceptedPath, timestamp) {
         : previousContext.acceptCallbacks
 
     for (let callback of callbacks) {
-      callback(updatedModule)
+      await callback(updatedModule)
     }
     return
   }
@@ -250,16 +250,16 @@ async function updateJavaScriptModule(path, acceptedPath, timestamp) {
   let acceptedContext = contexts.get(acceptedPath)
   if (acceptedContext) {
     for (let callback of acceptedContext.disposeCallbacks) {
-      callback(acceptedContext.data)
+      await callback(acceptedContext.data)
     }
   }
 
   let updatedModule = await import(withTimestamp(acceptedPath, timestamp))
   for (let { deps, callback } of dependencyCallbacks) {
     if (deps.length === 1) {
-      callback(updatedModule)
+      await callback(updatedModule)
     } else {
-      callback(deps.map((dep) => (dep === acceptedPath ? updatedModule : undefined)))
+      await callback(deps.map((dep) => (dep === acceptedPath ? updatedModule : undefined)))
     }
   }
 }

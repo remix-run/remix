@@ -273,11 +273,11 @@ function isInvalidatedUrls(value: unknown): value is Record<string, number> {
 }
 
 function disposeOnSignal(signal: NodeJS.Signals) {
-  runtime.disposeAll()
-
-  if (process.listenerCount(signal) === 0) {
-    process.exit(signal === 'SIGINT' ? 130 : 143)
-  }
+  runtime.disposeAll().finally(() => {
+    if (process.listenerCount(signal) === 0) {
+      process.exit(signal === 'SIGINT' ? 130 : 143)
+    }
+  })
 }
 
 function patchServerListen(): void {

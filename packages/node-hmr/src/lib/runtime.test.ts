@@ -27,7 +27,7 @@ describe('installNodeHmrRuntime', () => {
     assert.equal(second.data.count, 1)
   })
 
-  it('runs dispose callbacks with persistent data', () => {
+  it('runs dispose callbacks with persistent data', async () => {
     let runtime = installNodeHmrRuntime()
     let context = runtime.createHotContext('file:///app/dispose.ts')
     let disposed = false
@@ -37,9 +37,35 @@ describe('installNodeHmrRuntime', () => {
       disposed = data.value === 'hello'
     })
 
-    runtime.disposeAll()
+    await runtime.disposeAll()
 
     assert.equal(disposed, true)
+  })
+
+  it('awaits dispose callbacks before accept callbacks during updates', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'node-hmr-runtime-test-'))
+    try {
+      let modulePath = path.join(tmpDir, 'server-module.mjs')
+      await fs.writeFile(modulePath, 'export const value = 1\n')
+      let moduleUrl = pathToFileURL(modulePath).href
+      let runtime = installNodeHmrRuntime()
+      let events: string[] = []
+      let context = runtime.createHotContext(moduleUrl)
+
+      context.dispose(async () => {
+        await Promise.resolve()
+        events.push('dispose')
+      })
+      context.accept(async () => {
+        events.push('accept')
+      })
+
+      await runtime.update(moduleUrl, 123)
+
+      assert.deepEqual(events, ['dispose', 'accept'])
+    } finally {
+      await fs.rm(tmpDir, { force: true, recursive: true })
+    }
   })
 
   it('emits server update events after successful hot updates', async () => {

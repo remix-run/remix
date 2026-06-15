@@ -4,6 +4,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { ResolveResult, ResolverFactory } from 'oxc-resolver'
 
+import { createHmrClientSource } from '../hmr.ts'
 import { normalizeFilePath } from '../paths.ts'
 import { getHmrAnalysis, resolveComponentHmrRefreshSpecifier } from './transform.ts'
 
@@ -56,6 +57,17 @@ describe('getHmrAnalysis', () => {
       () => getHmrAnalysis(`if (import.meta.hot) { import.meta.hot.accept(() => {})`),
       /Failed to analyze HMR usage in transformed script/,
     )
+  })
+})
+
+describe('createHmrClientSource', () => {
+  it('awaits async dispose and accept callbacks during JavaScript updates', () => {
+    let source = createHmrClientSource({ eventPathname: '/__hmr' })
+
+    assert.match(source, /await callback\(previousContext\.data\)/)
+    assert.match(source, /await callback\(updatedModule\)/)
+    assert.match(source, /await callback\(acceptedContext\.data\)/)
+    assert.match(source, /await callback\(deps\.map\(\(dep\) =>/)
   })
 })
 
