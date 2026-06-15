@@ -65,6 +65,10 @@ type ScriptCompilerOptions = {
   define?: Record<string, string>
   external: string[]
   fingerprintAssets: boolean
+  hmr?: {
+    clientPathname: string
+    send(updates: ScriptHmrUpdate[]): void
+  }
   isAllowed(absolutePath: string): boolean
   minify: boolean
   onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
@@ -92,6 +96,24 @@ type ParsedRequestPathname = {
   requestedFingerprint: string | null
 }
 
+type ScriptHmrUpdate =
+  | {
+      accepted: false
+      path: string
+      timestamp: number
+    }
+  | {
+      accepted: true
+      acceptedPath: string
+      path: string
+      timestamp: number
+    }
+
+type ScriptHmrBoundary = {
+  acceptedModule: ResolvedModule
+  boundaryModule: ResolvedModule
+}
+
 const supportedScriptExtensionSet = new Set<string>(supportedScriptExtensions)
 const preloadConcurrency = Math.max(1, Math.min(8, os.availableParallelism() - 1))
 
@@ -108,6 +130,12 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     ResolvedModule,
     EmittedModule
   >({
+    getAcceptedDependencies(resolvedModule) {
+      return resolvedModule.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
+    },
+    getDependencies(resolvedModule) {
+      return resolvedModule.deps
+    },
     onWatchDirectoriesChange: options.onWatchDirectoriesChange,
   })
   let tsconfigTransformOptionsResolver = createTsconfigTransformOptionsResolver()
@@ -124,11 +152,14 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
   let transformArgs: TransformArgs = {
     buildId: resolvedOptions.buildId ?? null,
+    componentHmr: resolvedOptions.hmr != null,
     define: resolvedOptions.define ?? null,
     externalSet: resolvedOptions.externalSet,
+    isAllowed: resolvedOptions.isAllowed,
     isWatchIgnored,
     minify: resolvedOptions.minify,
     resolveActualPath,
+    resolverFactory,
     routes: resolvedOptions.routes,
     sourceMapSourcePaths: resolvedOptions.sourceMapSourcePaths,
     sourceMaps: resolvedOptions.sourceMaps ?? null,
@@ -221,7 +252,19 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
         return
       }
 
+      let resolvedModule = scriptStore.getLastResolved(normalizedFilePath)
+      let updatePathname = resolvedModule?.stableUrlPathname
+      let timestamp = Date.now()
+      let hmrUpdate =
+        event === 'change' && updatePathname
+          ? getHmrUpdatesForChange(resolvedModule, updatePathname, timestamp)
+          : []
+
       scriptStore.invalidateForFileEvent(normalizedFilePath, event)
+
+      if (hmrUpdate.length > 0) {
+        resolvedOptions.hmr?.send(hmrUpdate)
+      }
     },
 
     parseRequestPathname(pathname) {
@@ -276,6 +319,10 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     record: ScriptRecord,
     options: ScriptGetOptions,
   ): ScriptGetResult | null {
+    if (hasHmrTimestampedDependency(record.resolved)) {
+      return null
+    }
+
     let current = getNotModifiedResult(record.emitted, options)
     if (current) return current
 
@@ -362,7 +409,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   }
 
   async function getOrCreateEmittedScript(record: ScriptRecord): Promise<EmittedModule> {
-    if (record.emitted) return record.emitted
+    if (record.emitted && !hasHmrTimestampedDependency(record.resolved)) return record.emitted
 
     let cacheKey = getRecordCacheKey(record)
     let existing = emitInFlightByCacheKey.get(cacheKey)
@@ -373,6 +420,9 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       let resolvedModule = await getOrCreateResolvedScript(record)
       let emitResolvedModuleResult = await emitResolvedModule(resolvedModule, {
         getServedUrl,
+        getStableUrl,
+        getHmrImportTimestamp,
+        hmrClientPathname: resolvedOptions.hmr?.clientPathname,
         sourceMaps: resolvedOptions.sourceMaps,
       })
 
@@ -415,9 +465,132 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     )
   }
 
+  function getStableUrl(identityPath: string): string {
+    let stableUrlPathname = resolvedOptions.routes.toUrlPathname(identityPath)
+    if (!stableUrlPathname) {
+      throw createAssetServerCompilationError(
+        `File ${identityPath} is outside all configured fileMap entries.`,
+        {
+          code: 'FILE_OUTSIDE_FILE_MAP',
+        },
+      )
+    }
+    return stableUrlPathname
+  }
+
+  function getHmrImportTimestamp(identityPath: string): number | null {
+    return scriptStore.getHmrUpdateTimestamp(identityPath) ?? null
+  }
+
+  function hasHmrTimestampedDependency(resolvedModule: ResolvedModule | undefined): boolean {
+    return resolvedModule?.deps.some((depPath) => getHmrImportTimestamp(depPath) !== null) === true
+  }
+
+  function getHmrUpdatesForChange(
+    resolvedModule: ResolvedModule | undefined,
+    updatePathname: string,
+    timestamp: number,
+  ): ScriptHmrUpdate[] {
+    if (resolvedModule) {
+      scriptStore.setHmrUpdateTimestamp(resolvedModule.identityPath, timestamp)
+    }
+
+    if (resolvedModule?.hmr.selfAccepting === true) {
+      return [
+        {
+          accepted: true,
+          acceptedPath: updatePathname,
+          path: updatePathname,
+          timestamp,
+        },
+      ]
+    }
+
+    let boundaries = findHmrBoundaries(resolvedModule?.identityPath)
+    if (boundaries) {
+      return dedupeHmrBoundaries(boundaries).map(({ acceptedModule, boundaryModule }) => ({
+        accepted: true,
+        acceptedPath: acceptedModule.stableUrlPathname,
+        path: boundaryModule.stableUrlPathname,
+        timestamp,
+      }))
+    }
+
+    return [
+      {
+        accepted: false,
+        path: updatePathname,
+        timestamp,
+      },
+    ]
+  }
+
+  function findHmrBoundaries(identityPath: string | undefined): ScriptHmrBoundary[] | null {
+    if (identityPath === undefined) return null
+    return propagateHmrUpdate(identityPath, new Set())
+  }
+
+  function propagateHmrUpdate(
+    identityPath: string,
+    traversed: Set<string>,
+  ): ScriptHmrBoundary[] | null {
+    if (traversed.has(identityPath)) return []
+    traversed.add(identityPath)
+
+    let resolvedModule = scriptStore.getLastResolved(identityPath)
+    if (!resolvedModule) return null
+
+    if (resolvedModule.hmr.selfAccepting) {
+      return [
+        {
+          acceptedModule: resolvedModule,
+          boundaryModule: resolvedModule,
+        },
+      ]
+    }
+
+    let importerPaths = scriptStore.getImporters(identityPath)
+    if (!importerPaths || importerPaths.size === 0) return null
+
+    let acceptedImporterPaths = scriptStore.getAcceptedImporters(identityPath)
+    let boundaries: ScriptHmrBoundary[] = []
+    for (let importerPath of importerPaths) {
+      let importer = scriptStore.getLastResolved(importerPath)
+      if (!importer) return null
+
+      if (acceptedImporterPaths?.has(importerPath)) {
+        boundaries.push({
+          acceptedModule: resolvedModule,
+          boundaryModule: importer,
+        })
+        continue
+      }
+
+      let importerBoundaries = propagateHmrUpdate(importerPath, traversed)
+      if (!importerBoundaries) return null
+      boundaries.push(...importerBoundaries)
+    }
+
+    return boundaries
+  }
+
   function isWatchIgnored(filePath: string): boolean {
     return resolvedOptions.watchIgnoreMatchers.some((matcher) => matcher(filePath))
   }
+}
+
+function dedupeHmrBoundaries(boundaries: ScriptHmrBoundary[]): ScriptHmrBoundary[] {
+  let seen = new Set<string>()
+  let result: ScriptHmrBoundary[] = []
+
+  for (let boundary of boundaries) {
+    let key = `${boundary.boundaryModule.identityPath}\0${boundary.acceptedModule.identityPath}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    result.push(boundary)
+  }
+
+  return result
 }
 
 function getRecordCacheKey(record: ScriptRecord): string {

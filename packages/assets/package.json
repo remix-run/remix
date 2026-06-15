@@ -37,6 +37,7 @@
     "@remix-run/headers": "workspace:*",
     "@remix-run/mime": "workspace:*",
     "@remix-run/route-pattern": "workspace:*",
+    "@remix-run/ui-hmr": "workspace:^",
     "chokidar": "^5.0.0",
     "es-module-lexer": "^2.0.0",
     "get-tsconfig": "^4.13.6",
@@ -51,7 +52,10 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
+    "@remix-run/node-hmr": "workspace:^",
+    "@remix-run/node-tsx": "workspace:^",
     "@remix-run/test": "workspace:*",
+    "@remix-run/ui": "workspace:*",
     "@types/node": "catalog:",
     "@types/picomatch": "^4.0.3",
     "@typescript/native-preview": "catalog:"

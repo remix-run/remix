@@ -1,7 +1,7 @@
 import { createFrame, type Frame } from './frame.ts'
 import { createScheduler } from './vdom.ts'
 import { createStyleManager } from '../style/index.ts'
-import type { FrameHandle } from './component.ts'
+import type { FrameHandle, Handle } from './component.ts'
 import { createComponentErrorEvent } from './error-event.ts'
 import type { ComponentErrorEvent } from './error-event.ts'
 import type { LoadModule, ResolveFrame } from './frame.ts'
@@ -40,6 +40,8 @@ export type AppRuntimeEventMap = {
  * Client runtime returned by {@link run}.
  */
 export type AppRuntime = TypedEventTarget<AppRuntimeEventMap> & {
+  /** Access top-level and named frames in the application runtime. */
+  frames: Handle['frames']
   /** Resolves after the current document finishes hydrating. */
   ready(): Promise<void>
   /** Flushes any queued component updates synchronously. */
@@ -99,6 +101,12 @@ export function run(init: RunInit): AppRuntime {
   })
 
   let appController = new AbortController()
+  let frames: Handle['frames'] = {
+    top: topFrame.handle,
+    get(name) {
+      return namedFrames.get(name)
+    },
+  }
   startNavigationListener(appController.signal)
   let readyPromise = topFrame.ready().catch((error) => {
     errorTarget.dispatchEvent(createComponentErrorEvent(error))
@@ -106,6 +114,7 @@ export function run(init: RunInit): AppRuntime {
   })
 
   return Object.assign(errorTarget, {
+    frames,
     ready: () => readyPromise,
     flush: () => topFrame.flush(),
     dispose: () => {

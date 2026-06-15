@@ -49,6 +49,10 @@
       "types": "./src/components/combobox/combobox.tsx",
       "default": "./src/components/combobox/combobox.tsx"
     },
+    "./dev/refresh": {
+      "types": "./src/dev/refresh.ts",
+      "default": "./src/dev/refresh.ts"
+    },
     "./jsx-dev-runtime": {
       "types": "./src/jsx-runtime.ts",
       "default": "./src/jsx-runtime.ts"
@@ -128,6 +132,10 @@
       "./combobox": {
         "types": "./dist/components/combobox/combobox.d.ts",
         "default": "./dist/components/combobox/combobox.js"
+      },
+      "./dev/refresh": {
+        "types": "./dist/dev/refresh.d.ts",
+        "default": "./dist/dev/refresh.js"
       },
       "./jsx-dev-runtime": {
         "types": "./dist/jsx-runtime.d.ts",

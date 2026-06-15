@@ -50,6 +50,9 @@ type StyleCompilerOptions = {
       transform: readonly string[] | null
     },
   ): Promise<string>
+  hmr?: {
+    send(pathname: string, timestamp: number): void
+  }
   isAllowed(absolutePath: string): boolean
   isServedFilePath(filePath: string): boolean
   minify: boolean
@@ -80,6 +83,9 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     ),
   }
   let styleStore: StyleStore = createModuleStore<TransformedStyle, ResolvedStyle, EmittedStyle>({
+    getDependencies(resolvedStyle) {
+      return resolvedStyle.deps
+    },
     onWatchDirectoriesChange: options.onWatchDirectoriesChange,
   })
   let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedStyle>>()
@@ -149,7 +155,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     async getStyle(filePath, getOptions) {
       let resolvedStyle = resolveServedStyleOrThrow(resolveInputFilePath(filePath), resolveArgs)
       let record = styleStore.get(resolvedStyle.identityPath)
-      let notModified = getNotModifiedStyle(record.emitted, getOptions)
+      let notModified = getNotModifiedStyle(record, getOptions, hasHmrTimestampedDependency)
       if (notModified) return notModified
 
       let emitted = await getOrCreateEmittedStyle(record)
@@ -162,7 +168,15 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     async handleFileEvent(filePath, event) {
       let normalizedFilePath = normalizeFilePath(filePath)
       if (isWatchIgnored(normalizedFilePath)) return
+      let timestamp = Date.now()
+      let updatePathnames =
+        event === 'change' ? getHmrUpdatePathnames(normalizedFilePath, timestamp) : []
+
       styleStore.invalidateForFileEvent(normalizedFilePath, event)
+
+      for (let updatePathname of updatePathnames) {
+        resolvedOptions.hmr?.send(updatePathname, timestamp)
+      }
     },
   }
 
@@ -246,7 +260,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
   }
 
   async function getOrCreateEmittedStyle(record: StyleRecord): Promise<EmittedStyle> {
-    if (record.emitted) return record.emitted
+    if (record.emitted && !hasHmrTimestampedDependency(record.resolved)) return record.emitted
 
     let cacheKey = getRecordCacheKey(record)
     let existing = emitInFlightByCacheKey.get(cacheKey)
@@ -290,9 +304,48 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
   }
 
   function getServedUrlForResolvedStyle(resolvedStyle: ResolvedStyle): string {
-    return formatFingerprintedPathname(
+    let pathname = formatFingerprintedPathname(
       resolvedStyle.stableUrlPathname,
       resolvedOptions.fingerprintAssets ? resolvedStyle.fingerprint : null,
+    )
+    let timestamp = styleStore.getHmrUpdateTimestamp(resolvedStyle.identityPath)
+    return timestamp ? appendTimestamp(pathname, timestamp) : pathname
+  }
+
+  function getHmrUpdatePathnames(identityPath: string, timestamp: number): string[] {
+    let resolvedStyles = findHmrUpdateStyles(identityPath, new Set())
+    // Mark update timestamps before invalidating so re-emitted importer stylesheets
+    // can rewrite imports to the changed dependency with this HMR timestamp.
+    for (let resolvedStyle of resolvedStyles) {
+      styleStore.setHmrUpdateTimestamp(resolvedStyle.identityPath, timestamp)
+    }
+
+    return dedupeHmrUpdatePathnames(
+      resolvedStyles
+        .filter((resolvedStyle) => styleStore.getImporters(resolvedStyle.identityPath).size === 0)
+        .map((resolvedStyle) => resolvedStyle.stableUrlPathname),
+    )
+  }
+
+  function findHmrUpdateStyles(identityPath: string, traversed: Set<string>): ResolvedStyle[] {
+    if (traversed.has(identityPath)) return []
+    traversed.add(identityPath)
+
+    let resolvedStyle = styleStore.getLastResolved(identityPath)
+    if (!resolvedStyle) return []
+
+    let resolvedStyles = [resolvedStyle]
+    for (let importerPath of styleStore.getImporters(identityPath)) {
+      resolvedStyles.push(...findHmrUpdateStyles(importerPath, traversed))
+    }
+
+    return resolvedStyles
+  }
+
+  function hasHmrTimestampedDependency(resolvedStyle: ResolvedStyle | undefined): boolean {
+    return (
+      resolvedStyle?.deps.some((depPath) => styleStore.getHmrUpdateTimestamp(depPath) != null) ===
+      true
     )
   }
 
@@ -310,9 +363,12 @@ function isFresh(record: StyleRecord, version: number): boolean {
 }
 
 function getNotModifiedStyle(
-  emittedStyle: EmittedStyle | undefined,
+  record: StyleRecord,
   options: StyleGetOptions,
+  hasHmrTimestampedDependency: (resolvedStyle: ResolvedStyle | undefined) => boolean,
 ): StyleGetResult | null {
+  if (hasHmrTimestampedDependency(record.resolved)) return null
+  let emittedStyle = record.emitted
   if (!emittedStyle || options.ifNoneMatch === null) return null
 
   if (
@@ -327,6 +383,14 @@ function getNotModifiedStyle(
 
   if (!IfNoneMatch.from(options.ifNoneMatch).matches(asset.etag)) return null
   return { etag: asset.etag, type: 'not-modified' }
+}
+
+function appendTimestamp(pathname: string, timestamp: number): string {
+  return `${pathname}${pathname.includes('?') ? '&' : '?'}t=${timestamp}`
+}
+
+function dedupeHmrUpdatePathnames(pathnames: string[]): string[] {
+  return [...new Set(pathnames)]
 }
 
 function getEmittedAssetForRequest(

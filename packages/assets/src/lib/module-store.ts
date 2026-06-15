@@ -14,11 +14,24 @@ export type FileSnapshot = {
 
 export type ModuleSnapshot = ReadonlyMap<string, FileSnapshot>
 
+type ModuleLinksState = {
+  acceptedDependencies: ReadonlySet<string>
+  dependencies: ReadonlySet<string>
+}
+
+type MutableModuleLinks = {
+  acceptedDependencies: Set<string>
+  dependencies: Set<string>
+}
+
 type ModuleRecordState<transformed, resolved, emitted> = {
+  hmrUpdateTimestamp?: number
   identityPath: string
   invalidationVersion: number
   transformed?: transformed
   resolved?: resolved
+  lastResolved?: resolved
+  links: ModuleLinksState
   emitted?: emitted
   emittedSnapshot?: ModuleSnapshot
   staleEmitted?: emitted
@@ -32,10 +45,13 @@ export type ModuleRecord<transformed, resolved, emitted> = Readonly<
 >
 
 type MutableModuleRecord<transformed, resolved, emitted> = {
+  hmrUpdateTimestamp?: number
   identityPath: string
   invalidationVersion: number
   transformed?: transformed
   resolved?: resolved
+  lastResolved?: resolved
+  links: MutableModuleLinks
   emitted?: emitted
   emittedSnapshot?: ModuleSnapshot
   staleEmitted?: emitted
@@ -46,6 +62,11 @@ type MutableModuleRecord<transformed, resolved, emitted> = {
 
 export type ModuleStore<transformed, resolved, emitted> = {
   get(identityPath: string): ModuleRecord<transformed, resolved, emitted>
+  getAcceptedImporters(identityPath: string): ReadonlySet<string>
+  getHmrUpdateTimestamp(identityPath: string): number | undefined
+  getImporters(identityPath: string): ReadonlySet<string>
+  getLastResolved(identityPath: string): resolved | undefined
+  setHmrUpdateTimestamp(identityPath: string, timestamp: number): void
   clearTransformed(identityPath: string, tracking: readonly ModuleTracking[]): void
   setTransformed(
     identityPath: string,
@@ -61,12 +82,17 @@ export type ModuleStore<transformed, resolved, emitted> = {
 
 export function createModuleStore<transformed, resolved, emitted>(
   options: {
+    getAcceptedDependencies?: (resolved: resolved) => readonly string[]
+    getDependencies?: (resolved: resolved) => readonly string[]
     onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
   } = {},
 ): ModuleStore<transformed, resolved, emitted> {
   let recordsByIdentityPath = new Map<string, MutableModuleRecord<transformed, resolved, emitted>>()
+  let importersByDepPath = new Map<string, Set<string>>()
+  let acceptedImportersByDepPath = new Map<string, Set<string>>()
   let recordsByTrackedFile = new Map<string, Set<string>>()
   let watchDirectoryRefCountByPath = new Map<string, number>()
+  let emptyImporters = new Set<string>()
 
   return {
     get(identityPath) {
@@ -76,12 +102,35 @@ export function createModuleStore<transformed, resolved, emitted>(
       let record: MutableModuleRecord<transformed, resolved, emitted> = {
         identityPath,
         invalidationVersion: 0,
+        links: createEmptyLinks(),
         trackedFiles: new Set(),
         trackedDirectories: new Set(),
       }
       recordsByIdentityPath.set(identityPath, record)
       return record
     },
+
+    getAcceptedImporters(identityPath) {
+      return acceptedImportersByDepPath.get(identityPath) ?? emptyImporters
+    },
+
+    getHmrUpdateTimestamp(identityPath) {
+      return recordsByIdentityPath.get(identityPath)?.hmrUpdateTimestamp
+    },
+
+    getImporters(identityPath) {
+      return importersByDepPath.get(identityPath) ?? emptyImporters
+    },
+
+    getLastResolved(identityPath) {
+      return recordsByIdentityPath.get(identityPath)?.lastResolved
+    },
+
+    setHmrUpdateTimestamp(identityPath, timestamp) {
+      let record = getOrCreateMutableRecord(identityPath)
+      record.hmrUpdateTimestamp = timestamp
+    },
+
     clearTransformed(identityPath, tracking) {
       let record = getOrCreateMutableRecord(identityPath)
       record.transformed = undefined
@@ -106,12 +155,16 @@ export function createModuleStore<transformed, resolved, emitted>(
 
     setResolved(identityPath, resolved, tracking) {
       let record = getOrCreateMutableRecord(identityPath)
+      removeResolvedIndexes(record)
       record.resolved = resolved
+      record.lastResolved = resolved
+      record.links = createLinks(resolved)
       record.emitted = undefined
       record.emittedSnapshot = undefined
       record.staleEmitted = undefined
       record.staleEmittedSnapshot = undefined
       setTracking(record, tracking)
+      addResolvedIndexes(record)
     },
 
     clearResolved(identityPath, tracking) {
@@ -145,12 +198,21 @@ export function createModuleStore<transformed, resolved, emitted>(
 
       for (let identityPath of affected) {
         let record = recordsByIdentityPath.get(identityPath)
-        if (record) invalidateRecord(record, { retainStale: event === 'change' })
+        if (record) {
+          if (event === 'change') {
+            invalidateContent(record, { retainStale: true })
+          } else {
+            invalidateGraph(record)
+          }
+        }
       }
 
       if (event === 'unlink') {
         let deletedRecord = recordsByIdentityPath.get(filePath)
         if (deletedRecord) {
+          if (!affected.has(filePath)) {
+            invalidateGraph(deletedRecord)
+          }
           clearTracking(deletedRecord)
         }
       }
@@ -158,7 +220,7 @@ export function createModuleStore<transformed, resolved, emitted>(
 
     invalidateAll() {
       for (let record of recordsByIdentityPath.values()) {
-        invalidateRecord(record, { retainStale: false })
+        invalidateGraph(record)
       }
     },
   }
@@ -172,6 +234,7 @@ export function createModuleStore<transformed, resolved, emitted>(
     let record: MutableModuleRecord<transformed, resolved, emitted> = {
       identityPath,
       invalidationVersion: 0,
+      links: createEmptyLinks(),
       trackedFiles: new Set(),
       trackedDirectories: new Set(),
     }
@@ -179,7 +242,7 @@ export function createModuleStore<transformed, resolved, emitted>(
     return record
   }
 
-  function invalidateRecord(
+  function invalidateContent(
     record: MutableModuleRecord<transformed, resolved, emitted>,
     options: { retainStale: boolean },
   ) {
@@ -199,6 +262,49 @@ export function createModuleStore<transformed, resolved, emitted>(
     record.resolved = undefined
     record.transformed = undefined
     record.invalidationVersion += 1
+  }
+
+  function invalidateGraph(record: MutableModuleRecord<transformed, resolved, emitted>) {
+    clearLastResolved(record)
+    record.hmrUpdateTimestamp = undefined
+    invalidateContent(record, { retainStale: false })
+  }
+
+  function createLinks(resolved: resolved): MutableModuleLinks {
+    return {
+      acceptedDependencies: new Set(options.getAcceptedDependencies?.(resolved) ?? []),
+      dependencies: new Set(options.getDependencies?.(resolved) ?? []),
+    }
+  }
+
+  function createEmptyLinks(): MutableModuleLinks {
+    return {
+      acceptedDependencies: new Set(),
+      dependencies: new Set(),
+    }
+  }
+
+  function addResolvedIndexes(record: MutableModuleRecord<transformed, resolved, emitted>): void {
+    for (let depPath of record.links.dependencies) {
+      addToIndexedSet(importersByDepPath, depPath, record.identityPath)
+    }
+
+    for (let depPath of record.links.acceptedDependencies) {
+      addToIndexedSet(acceptedImportersByDepPath, depPath, record.identityPath)
+    }
+  }
+
+  function clearLastResolved(record: MutableModuleRecord<transformed, resolved, emitted>): void {
+    record.lastResolved = undefined
+    record.links = createEmptyLinks()
+    removeResolvedIndexes(record)
+  }
+
+  function removeResolvedIndexes(
+    record: MutableModuleRecord<transformed, resolved, emitted>,
+  ): void {
+    removeFromIndexedSets(importersByDepPath, record.identityPath)
+    removeFromIndexedSets(acceptedImportersByDepPath, record.identityPath)
   }
 
   function setTracking(
@@ -281,6 +387,15 @@ function removeFromIndexedSet(map: Map<string, Set<string>>, key: string, value:
   existing.delete(value)
   if (existing.size === 0) {
     map.delete(key)
+  }
+}
+
+function removeFromIndexedSets(map: Map<string, Set<string>>, value: string): void {
+  for (let [key, values] of map) {
+    values.delete(value)
+    if (values.size === 0) {
+      map.delete(key)
+    }
   }
 }
 

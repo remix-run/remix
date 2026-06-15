@@ -15,6 +15,8 @@ import type {
   ResolvedAssetServerFilesOptions,
 } from './files/config.ts'
 import { getFingerprintRequestCacheControl, parseFingerprintSuffix } from './fingerprint.ts'
+import { createHmrClientSource } from './hmr.ts'
+import type { HmrPayload } from './hmr.ts'
 import { getInjectedPackageRouteConfigs } from './injected-packages.ts'
 import { normalizeFilePath, normalizePathname } from './paths.ts'
 import { compileRoutes } from './routes.ts'
@@ -41,6 +43,19 @@ interface AssetServerWatchOptions {
    * Polling interval in milliseconds when `poll` is enabled. Defaults to `100`.
    */
   pollInterval?: number
+}
+
+export interface AssetServerHmrOptions {
+  /**
+   * Browser-facing HMR event channel, e.g. `browserEventChannel` exported by
+   * `remix/node-hmr/runtime`
+   */
+  browserEventChannel: BrowserEventChannel | undefined
+}
+
+export interface BrowserEventChannel {
+  url: string
+  send(payload: HmrPayload): void
 }
 
 interface FingerprintOptions {
@@ -126,6 +141,11 @@ export interface AssetServerOptions<transforms extends AssetRequestTransformMap 
    */
   files?: AssetServerFilesOptions<transforms>
   /**
+   * Enable HMR via the import.meta.hot API using an external event channel such
+   * as `remix/node-hmr/runtime`. HMR requires `watch` to be enabled.
+   */
+  hmr?: AssetServerHmrOptions
+  /**
    * Enable filesystem-backed cache invalidation for long-lived server instances.
    * Enabled by default. Pass `true` to use the default watcher options, an options
    * object to customize watcher behavior, or `false` to disable watching.
@@ -186,6 +206,7 @@ type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
   external: string[]
   files: ResolvedAssetServerFilesOptions
   fingerprintAssets: boolean
+  hmr: AssetServerHmrOptions | null
   minify: boolean
   onError: NonNullable<AssetServerOptions['onError']>
   rootDir: string
@@ -246,11 +267,44 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   let watcher: AssetServerWatcher | null = null
   let chokidarWatcher: ChokidarWatcher | null = null
   let fileCompiler: FileCompiler | null = null
+  let browserEventChannel = resolvedOptions.hmr?.browserEventChannel
+  let sendHmrPayload = resolvedOptions.hmr ? createHmrPayloadSender(resolvedOptions.hmr) : null
+  let hmrPathnames = getHmrPathnames(resolvedOptions.basePath)
+  let browserEventUrl = browserEventChannel?.url
   let scriptCompiler = createScriptCompiler({
     buildId: resolvedOptions.buildId,
     define: resolvedOptions.define,
     external: resolvedOptions.external,
     fingerprintAssets: resolvedOptions.fingerprintAssets,
+    hmr: sendHmrPayload
+      ? {
+          clientPathname: hmrPathnames.client,
+          send(updates) {
+            let timestamp = updates[0]?.timestamp ?? Date.now()
+            let acceptedUpdates = updates.filter((update) => update.accepted)
+            if (acceptedUpdates.length > 0) {
+              sendHmrPayload({
+                timestamp,
+                type: 'assets:update',
+                updates: acceptedUpdates.map((update) => ({
+                  ...(update.acceptedPath === update.path
+                    ? {}
+                    : { acceptedPath: update.acceptedPath }),
+                  path: update.path,
+                  type: 'js',
+                })),
+              })
+            }
+
+            if (acceptedUpdates.length !== updates.length) {
+              sendHmrPayload({
+                path: updates.find((update) => !update.accepted)?.path,
+                type: 'assets:full-reload',
+              })
+            }
+          },
+        }
+      : undefined,
     isAllowed: accessPolicy.isAllowed,
     minify: resolvedOptions.minify,
     onWatchDirectoriesChange: (delta) => {
@@ -281,6 +335,22 @@ export function createAssetServer<const transforms extends AssetRequestTransform
 
       return fileCompiler.getHref(identityPath, { transform: options.transform })
     },
+    hmr: sendHmrPayload
+      ? {
+          send(pathname, timestamp) {
+            sendHmrPayload({
+              timestamp,
+              type: 'assets:update',
+              updates: [
+                {
+                  path: pathname,
+                  type: 'css',
+                },
+              ],
+            })
+          },
+        }
+      : undefined,
     isAllowed: accessPolicy.isAllowed,
     isServedFilePath(filePath) {
       return fileCompiler?.isServedFilePath(filePath) ?? false
@@ -321,7 +391,6 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       rootDir: resolvedOptions.rootDir,
     })
   }
-
   async function responseForError(error: unknown): Promise<Response> {
     try {
       return (await resolvedOptions.onError(error)) ?? internalServerError()
@@ -345,10 +414,18 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   let assetServer: AssetServer<transforms> = {
     async fetch(request) {
       if (request.method !== 'GET' && request.method !== 'HEAD') return null
+      let requestPathname = new URL(request.url).pathname
+
+      if (resolvedOptions.hmr) {
+        if (requestPathname === hmrPathnames.client) {
+          assertBrowserEventUrl(browserEventUrl)
+          return createHmrClientResponse(browserEventUrl, request.method)
+        }
+      }
 
       let requestUrl = new URL(request.url)
       let requestedTransform = normalizeRequestedTransformQuery(requestUrl.searchParams)
-      let parsedRequestPathname = parseAssetRequestPathname(requestUrl.pathname, {
+      let parsedRequestPathname = parseAssetRequestPathname(requestPathname, {
         fingerprintAssets: resolvedOptions.fingerprintAssets,
         routes: resolvedOptions.routes,
       })
@@ -617,6 +694,35 @@ function badRequest(message: string): Response {
   })
 }
 
+function getHmrPathnames(basePath: string): { client: string; events: string } {
+  let hmrBase = `${basePath}/__remix_hmr`
+  return {
+    client: `${hmrBase}/client.js`,
+    events: `${hmrBase}/events`,
+  }
+}
+
+function createHmrClientResponse(eventPathname: string, method: string): Response {
+  return new Response(method === 'HEAD' ? null : createHmrClientSource({ eventPathname }), {
+    headers: {
+      'Cache-Control': 'no-cache',
+      'Content-Type': 'application/javascript; charset=utf-8',
+    },
+  })
+}
+
+function assertBrowserEventUrl(url: string | undefined): asserts url is string {
+  if (url === undefined) {
+    throw new TypeError('hmr.browserEventChannel must be provided')
+  }
+}
+
+function createHmrPayloadSender(options: AssetServerHmrOptions): (payload: HmrPayload) => void {
+  return (payload) => {
+    options.browserEventChannel?.send(payload)
+  }
+}
+
 function mergePreloadLayers(preloadLayersByRoot: readonly (readonly string[][])[]): string[] {
   let urls: string[] = []
   let seen = new Set<string>()
@@ -688,6 +794,7 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
     external: scriptOptions.external ?? [],
     files: normalizeFilesOptions(options.files),
     fingerprintAssets: fingerprintOptions.enabled,
+    hmr: normalizeHmrOptions(options.hmr),
     minify: options.minify ?? false,
     onError: options.onError ?? defaultErrorHandler,
     rootDir,
@@ -704,6 +811,24 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
     stylesTarget: resolveStyleTarget(options.target),
     watchOptions: normalizeWatchOptions(options.watch),
   }
+}
+
+function normalizeHmrOptions(options: AssetServerOptions['hmr']): AssetServerHmrOptions | null {
+  if (!options) return null
+
+  let { browserEventChannel } = options
+  if (browserEventChannel === undefined) return null
+
+  if (browserEventChannel === null || typeof browserEventChannel !== 'object') {
+    throw new TypeError('hmr.browserEventChannel must be an object')
+  }
+  if (typeof browserEventChannel.url !== 'string') {
+    throw new TypeError('hmr.browserEventChannel.url must be a string')
+  }
+  if (typeof browserEventChannel.send !== 'function') {
+    throw new TypeError('hmr.browserEventChannel.send must be a function')
+  }
+  return options
 }
 
 function normalizeBasePath(basePath: string): string {

@@ -37,6 +37,8 @@ type ResolvedImport = {
   start: number
 }
 
+type ResolvedHmrAcceptedDependency = ResolvedImport
+
 type RelativeImportResolution = {
   candidatePaths: readonly string[]
   candidatePrefixes: readonly string[]
@@ -50,6 +52,9 @@ type TrackedResolution = RelativeImportResolution & {
 export type ResolvedModule = {
   deps: string[]
   fingerprint: string | null
+  hmr: Omit<TransformedModule['hmr'], 'acceptedDeps'> & {
+    acceptedDeps: ResolvedHmrAcceptedDependency[]
+  }
   identityPath: string
   imports: ResolvedImport[]
   trackedFiles: string[]
@@ -116,6 +121,7 @@ export async function resolveModule(
   }
 
   let importsWithPaths: ResolvedImport[] = []
+  let acceptedDepsWithPaths: ResolvedHmrAcceptedDependency[] = []
   let deps = new Set<string>()
 
   for (let unresolved of transformed.unresolvedImports) {
@@ -218,12 +224,122 @@ export async function resolveModule(
     })
   }
 
+  for (let unresolved of transformed.hmr.acceptedDeps) {
+    let displaySpecifier = getDisplayImportSpecifier(unresolved.specifier)
+    let trackedResolution = getTrackedRelativeImportResolution(
+      transformed.importerDir,
+      displaySpecifier,
+      args.isWatchIgnored,
+    )
+
+    let resolvedSpec = resolvedImports.get(unresolved.specifier)
+    if (!resolvedSpec) {
+      try {
+        resolvedSpec = await batchResolveSpecifiers(
+          [unresolved.specifier],
+          transformed.resolvedPath,
+          args.resolverFactory,
+        ).then((resolved) => resolved.get(unresolved.specifier))
+      } catch (error) {
+        return failResolve(error, trackedFiles, trackedResolutions, transformed.resolvedPath, {
+          isWatchIgnored: args.isWatchIgnored,
+          trackedResolution,
+        })
+      }
+    }
+
+    if (!resolvedSpec?.absolutePath) {
+      return failResolve(
+        createAssetServerCompilationError(
+          `Failed to resolve accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}. ` +
+            `Ensure it resolves to a file within the configured asset server fileMap, or mark it as external.`,
+          {
+            code: 'IMPORT_RESOLUTION_FAILED',
+          },
+        ),
+        trackedFiles,
+        trackedResolutions,
+        transformed.resolvedPath,
+        { isWatchIgnored: args.isWatchIgnored, trackedResolution },
+      )
+    }
+
+    let resolvedImport = args.resolveModulePath(resolvedSpec.absolutePath)
+    if (!resolvedImport) {
+      return failResolve(
+        createAssetServerCompilationError(
+          `Accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedSpec.absolutePath}", is not a supported script file. ` +
+            `Supported extensions are ${supportedScriptExtensions.join(', ')}.`,
+          {
+            code: 'IMPORT_NOT_SUPPORTED',
+          },
+        ),
+        trackedFiles,
+        trackedResolutions,
+        transformed.resolvedPath,
+        { isWatchIgnored: args.isWatchIgnored, trackedResolution },
+      )
+    }
+
+    if (!args.isAllowed(resolvedImport.identityPath)) {
+      return failResolve(
+        createAssetServerCompilationError(
+          `Accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is not allowed by the asset server allow/deny configuration. ` +
+            `Add a matching allow rule for this file path, remove a conflicting deny rule for this file path, or mark this import as external.`,
+          {
+            code: 'IMPORT_NOT_ALLOWED',
+          },
+        ),
+        trackedFiles,
+        trackedResolutions,
+        transformed.resolvedPath,
+        { isWatchIgnored: args.isWatchIgnored, trackedResolution },
+      )
+    }
+
+    let stableUrlPathname = args.routes.toUrlPathname(resolvedImport.identityPath)
+    if (!stableUrlPathname) {
+      return failResolve(
+        createAssetServerCompilationError(
+          `Accepted HMR dependency "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is outside all configured fileMap entries. ` +
+            `Add a matching fileMap entry for this file path, or mark this import as external.`,
+          {
+            code: 'IMPORT_OUTSIDE_FILE_MAP',
+          },
+        ),
+        trackedFiles,
+        trackedResolutions,
+        transformed.resolvedPath,
+        { isWatchIgnored: args.isWatchIgnored, trackedResolution },
+      )
+    }
+
+    if (trackedResolution) {
+      trackedResolutions.push({
+        ...trackedResolution,
+        resolvedIdentityPath: resolvedImport.identityPath,
+      })
+    }
+
+    acceptedDepsWithPaths.push({
+      depPath: resolvedImport.identityPath,
+      end: unresolved.end,
+      quote: unresolved.quote,
+      start: unresolved.start,
+    })
+  }
+
   return {
     ok: true,
     tracking: toResolveTracking(trackedFiles, trackedResolutions),
     value: {
       deps: [...deps],
       fingerprint: transformed.fingerprint,
+      hmr: {
+        acceptedDeps: acceptedDepsWithPaths,
+        selfAccepting: transformed.hmr.selfAccepting,
+        usesImportMetaHot: transformed.hmr.usesImportMetaHot,
+      },
       identityPath: record.identityPath,
       imports: importsWithPaths,
       trackedFiles: [...trackedFiles],

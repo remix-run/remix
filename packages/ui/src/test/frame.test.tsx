@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
 import type { Handle, RemixNode } from '../runtime/component.ts'
 import { Frame } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
-import { getTopFrame, run } from '../runtime/run.ts'
+import { run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { renderToStream } from '../server/stream.ts'
@@ -344,7 +344,7 @@ describe('run', () => {
 
     await app.ready()
 
-    let topFrame = getTopFrame()
+    let topFrame = app.frames.top
 
     topFrame.src = '/b'
     await topFrame.reload()
@@ -442,7 +442,7 @@ describe('run', () => {
     app.flush()
     expect(button.textContent).toBe('Initial: 1')
 
-    let topFrame = getTopFrame()
+    let topFrame = app.frames.top
     topFrame.src = '/root'
     await topFrame.reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -510,7 +510,7 @@ describe('run', () => {
     expect(document.getElementById('removed-entry')).toBeInstanceOf(HTMLButtonElement)
     expect(removeCount).toBe(0)
 
-    let topFrame = getTopFrame()
+    let topFrame = app.frames.top
     topFrame.src = '/without-entry'
     await topFrame.reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -611,7 +611,7 @@ describe('run', () => {
 
     // Begin the reload but hold EntryB's module load so the old DOM stays
     // inside the hydration markers — this is the FOUC window in production.
-    let topFrame = getTopFrame()
+    let topFrame = app.frames.top
     topFrame.src = '/b'
     await topFrame.reload()
 
@@ -706,7 +706,7 @@ describe('run', () => {
     invariant(readNamedFrame)
     expect(readNamedFrame()).toBeDefined()
 
-    let topFrame = getTopFrame()
+    let topFrame = app.frames.top
     topFrame.src = '/without-frame'
     await topFrame.reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -3454,7 +3454,7 @@ describe('run', () => {
     expect(document.getElementById('child-frame-label')?.textContent).toBe('Initial child')
     input.value = 'typed child value'
 
-    let topFrame = getTopFrame()
+    let topFrame = app.frames.top
     let reloadPromise = topFrame.reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -3843,7 +3843,7 @@ describe('run', () => {
       'Initial blocking child',
     )
 
-    let topReload = getTopFrame().reload()
+    let topReload = app.frames.top.reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('reload-blocking-child')?.textContent).toBe('Reloading child')

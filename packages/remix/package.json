@@ -96,6 +96,8 @@
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
     "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
+    "./node-hmr": "./src/node-hmr.ts",
+    "./node-hmr/runtime": "./src/node-hmr/runtime.ts",
     "./node-tsx": "./src/node-tsx.ts",
     "./node-tsx/load-module": "./src/node-tsx/load-module.ts",
     "./render-middleware": "./src/render-middleware.ts",
@@ -128,12 +130,15 @@
     "./test": "./src/test.ts",
     "./test/cli": "./src/test/cli.ts",
     "./ui": "./src/ui.ts",
+    "./ui-hmr/runtime": "./src/ui-hmr/runtime.ts",
+    "./ui-hmr/transform": "./src/ui-hmr/transform.ts",
     "./ui/accordion": "./src/ui/accordion.ts",
     "./ui/anchor": "./src/ui/anchor.ts",
     "./ui/animation": "./src/ui/animation.ts",
     "./ui/breadcrumbs": "./src/ui/breadcrumbs.ts",
     "./ui/button": "./src/ui/button.ts",
     "./ui/combobox": "./src/ui/combobox.ts",
+    "./ui/dev/refresh": "./src/ui/dev/refresh.ts",
     "./ui/glyph": "./src/ui/glyph.ts",
     "./ui/jsx-dev-runtime": "./src/ui/jsx-dev-runtime.ts",
     "./ui/jsx-runtime": "./src/ui/jsx-runtime.ts",
@@ -450,6 +455,14 @@
         "types": "./dist/node-fetch-server/test.d.ts",
         "default": "./dist/node-fetch-server/test.js"
       },
+      "./node-hmr": {
+        "types": "./dist/node-hmr.d.ts",
+        "default": "./dist/node-hmr.js"
+      },
+      "./node-hmr/runtime": {
+        "types": "./dist/node-hmr/runtime.d.ts",
+        "default": "./dist/node-hmr/runtime.js"
+      },
       "./node-tsx": {
         "types": "./dist/node-tsx.d.ts",
         "default": "./dist/node-tsx.js"
@@ -578,6 +591,14 @@
         "types": "./dist/ui.d.ts",
         "default": "./dist/ui.js"
       },
+      "./ui-hmr/runtime": {
+        "types": "./dist/ui-hmr/runtime.d.ts",
+        "default": "./dist/ui-hmr/runtime.js"
+      },
+      "./ui-hmr/transform": {
+        "types": "./dist/ui-hmr/transform.d.ts",
+        "default": "./dist/ui-hmr/transform.js"
+      },
       "./ui/accordion": {
         "types": "./dist/ui/accordion.d.ts",
         "default": "./dist/ui/accordion.js"
@@ -601,6 +622,10 @@
       "./ui/combobox": {
         "types": "./dist/ui/combobox.d.ts",
         "default": "./dist/ui/combobox.js"
+      },
+      "./ui/dev/refresh": {
+        "types": "./dist/ui/dev/refresh.d.ts",
+        "default": "./dist/ui/dev/refresh.js"
       },
       "./ui/glyph": {
         "types": "./dist/ui/glyph.d.ts",
@@ -692,6 +717,7 @@
     "@remix-run/mime": "workspace:^",
     "@remix-run/multipart-parser": "workspace:^",
     "@remix-run/node-fetch-server": "workspace:^",
+    "@remix-run/node-hmr": "workspace:^",
     "@remix-run/node-tsx": "workspace:^",
     "@remix-run/response": "workspace:^",
     "@remix-run/route-pattern": "workspace:^",
@@ -705,7 +731,8 @@
     "@remix-run/cli": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@remix-run/terminal": "workspace:^",
-    "@remix-run/render-middleware": "workspace:^"
+    "@remix-run/render-middleware": "workspace:^",
+    "@remix-run/ui-hmr": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

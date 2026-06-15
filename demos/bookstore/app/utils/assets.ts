@@ -17,5 +17,6 @@ export const assetServer = createAssetServer({
   fingerprint: isDevelopment
     ? undefined
     : { buildId: process.env.GITHUB_SHA || String(Date.now()) },
-  watch: false,
+  hmr: isDevelopment ? await import('remix/node-hmr/runtime') : undefined,
+  watch: isDevelopment,
 })

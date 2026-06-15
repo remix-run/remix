@@ -34,7 +34,10 @@ type EmitResult =
 export async function emitResolvedModule(
   resolvedModule: ResolvedModule,
   options: {
+    getHmrImportTimestamp(identityPath: string): number | null
     getServedUrl(identityPath: string): Promise<string>
+    getStableUrl(identityPath: string): string
+    hmrClientPathname?: string
     sourceMaps?: 'external' | 'inline'
   },
 ): Promise<EmitResult> {
@@ -43,7 +46,7 @@ export async function emitResolvedModule(
       resolvedModule.deps.map((depPath) => options.getServedUrl(depPath)),
     )
     let rewriteResult = await rewriteImports(resolvedModule, options)
-    let finalCode = rewriteResult.code
+    let finalCode = prependHmrContext(resolvedModule, rewriteResult.code, options)
 
     if (rewriteResult.sourceMap) {
       if (options.sourceMaps === 'inline') {
@@ -76,13 +79,19 @@ export async function emitResolvedModule(
 async function rewriteImports(
   resolvedModule: ResolvedModule,
   options: {
+    getHmrImportTimestamp(identityPath: string): number | null
     getServedUrl(identityPath: string): Promise<string>
+    getStableUrl(identityPath: string): string
   },
 ): Promise<{ code: string; sourceMap: string | null }> {
   let rewrittenSource = new MagicString(resolvedModule.rawCode)
 
   for (let imported of resolvedModule.imports) {
     let url = await options.getServedUrl(imported.depPath)
+    let hmrImportTimestamp = options.getHmrImportTimestamp(imported.depPath)
+    if (hmrImportTimestamp !== null) {
+      url = addTimestampQuery(url, hmrImportTimestamp)
+    }
     rewrittenSource.overwrite(
       imported.start,
       imported.end,
@@ -90,9 +99,19 @@ async function rewriteImports(
     )
   }
 
+  for (let acceptedDep of resolvedModule.hmr.acceptedDeps) {
+    let url = options.getStableUrl(acceptedDep.depPath)
+    rewrittenSource.overwrite(
+      acceptedDep.start,
+      acceptedDep.end,
+      acceptedDep.quote ? `${acceptedDep.quote}${url}${acceptedDep.quote}` : url,
+    )
+  }
+
   let code = rewrittenSource.toString()
   let sourceMap =
-    resolvedModule.sourceMap && resolvedModule.imports.length > 0
+    resolvedModule.sourceMap &&
+    (resolvedModule.imports.length > 0 || resolvedModule.hmr.acceptedDeps.length > 0)
       ? composeSourceMaps(
           rewrittenSource.generateMap({ hires: true }).toString(),
           resolvedModule.sourceMap,
@@ -100,6 +119,30 @@ async function rewriteImports(
       : resolvedModule.sourceMap
 
   return { code, sourceMap }
+}
+
+function addTimestampQuery(pathname: string, timestamp: number): string {
+  return `${pathname}${pathname.includes('?') ? '&' : '?'}t=${timestamp}`
+}
+
+function prependHmrContext(
+  resolvedModule: ResolvedModule,
+  code: string,
+  options: {
+    hmrClientPathname?: string
+  },
+): string {
+  if (!options.hmrClientPathname || !resolvedModule.hmr.usesImportMetaHot) return code
+
+  return (
+    `import { createHotContext as __remixCreateHotContext } from ${JSON.stringify(
+      options.hmrClientPathname,
+    )};\n` +
+    `import.meta.hot = __remixCreateHotContext(${JSON.stringify(
+      resolvedModule.stableUrlPathname,
+    )});\n` +
+    code
+  )
 }
 
 async function createEmittedAsset(content: string): Promise<EmittedAsset> {

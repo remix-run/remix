@@ -12,6 +12,7 @@ Fetch-based server for compiling browser assets on demand.
 - **Caching** - Conservative caching by default with stable URLs, ETags, and revalidation
 - **Optional Fingerprinting** - Source-based fingerprinted URLs for long-lived browser caching
 - **Source Maps** - Serve inline or external sourcemaps
+- **Hot Module Reloading** - Handle live code updates in development
 
 ## Installation
 
@@ -528,6 +529,64 @@ let assetServer = createAssetServer({
 ```
 
 If `onError` returns nothing, the asset server responds with the default `500 Internal Server Error` response.
+
+## Hot Module Reloading
+
+Use `hmr` with `watch` to enable the `import.meta.hot` API for browser modules.
+
+The HMR event channel is usually provided by `remix/node-hmr/runtime` so browser asset updates and server updates share the same endpoint that survives server restarts.
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let isDevelopment = process.env.NODE_ENV === 'development'
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  hmr: isDevelopment ? await import('remix/node-hmr/runtime') : undefined,
+  watch: isDevelopment,
+})
+```
+
+Browser modules can accept their own updates. Accept callbacks receive the updated module.
+
+```ts
+let dispose = start()
+
+function start() {
+  // Start or restart client state
+  return () => {
+    // Clean up client state
+  }
+}
+
+if (import.meta.hot) {
+  import.meta.hot.accept((module) => {
+    if (typeof module.start !== 'function') {
+      import.meta.hot?.invalidate('Updated entry module did not export start()')
+      return
+    }
+    dispose()
+    dispose = module.start()
+  })
+
+  import.meta.hot.dispose(() => {
+    app.dispose()
+  })
+}
+```
+
+Browser modules can also listen for custom HMR events. When the HMR event channel comes from `remix/node-hmr/runtime`, server updates are sent as `server:update` events.
+
+```ts
+if (import.meta.hot) {
+  import.meta.hot.on('server:update', async () => {
+    await app.ready()
+    await app.frames.top.reload()
+  })
+}
+```
 
 ## Related Packages
 
