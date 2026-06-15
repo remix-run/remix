@@ -11,9 +11,9 @@ import { serverHmrEvents } from './events.ts'
 
 describe('installNodeHmrRuntime', () => {
   it('installs an HMR event channel for the process runtime', () => {
-    let runtime = installNodeHmrRuntime({ eventUrl: 'http://127.0.0.1:1234/hmr' })
+    let runtime = installNodeHmrRuntime({ browserEventUrl: 'http://127.0.0.1:1234/hmr' })
 
-    assert.equal(runtime.eventChannel?.url, 'http://127.0.0.1:1234/hmr')
+    assert.equal(runtime.browserEventChannel?.url, 'http://127.0.0.1:1234/hmr')
   })
 
   it('preserves data for repeated hot contexts with the same URL', () => {

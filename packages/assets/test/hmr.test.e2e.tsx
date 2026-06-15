@@ -11,7 +11,9 @@ import { createAssetServer, type AssetServer, type HmrPayload } from '../src/ass
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const workspaceDir = path.resolve(packageDir, '../..')
-const nodeHmrCliEntryPath = path.resolve(workspaceDir, 'packages/node-hmr/src/cli-entry.ts')
+const nodeHmrImportUrl = pathToFileURL(
+  path.resolve(workspaceDir, 'packages/node-hmr/src/node-hmr.ts'),
+).href
 const nodeTsxImportUrl = pathToFileURL(
   path.resolve(workspaceDir, 'packages/node-tsx/src/index.ts'),
 ).href
@@ -794,6 +796,18 @@ async function createNodeHmrFixture(): Promise<NodeHmrFixture> {
     ].join('\n'),
   )
   await write(rootDir, 'server.tsx', getNodeHmrServerSource(rootDir))
+  await write(
+    rootDir,
+    'dev.ts',
+    [
+      `import { run } from ${JSON.stringify(nodeHmrImportUrl)}`,
+      ``,
+      `run('server.tsx', {`,
+      `  browserEventChannel: true,`,
+      `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
+      `})`,
+    ].join('\n'),
+  )
 
   return {
     rootDir,
@@ -809,7 +823,7 @@ function getNodeHmrServerSource(rootDir: string, options: { title?: string } = {
   return [
     "import { createServer } from 'node:http'",
     "import { createAssetServer } from '@remix-run/assets'",
-    "import { eventChannel } from '@remix-run/node-hmr/runtime'",
+    "import { browserEventChannel } from '@remix-run/node-hmr/runtime'",
     "import { renderToStream } from '@remix-run/ui/server'",
     "import { serverMessage } from './server-message.ts'",
     "import { sideEffect } from './server-side-effect.ts'",
@@ -823,7 +837,7 @@ function getNodeHmrServerSource(rootDir: string, options: { title?: string } = {
     `    '/app/*path': ${JSON.stringify(`${appDir}/*path`)},`,
     "    '/packages/*path': 'packages/*path',",
     '  },',
-    '  hmr: { eventChannel },',
+    '  hmr: { browserEventChannel },',
     '  onError(error) {',
     '    console.error(error)',
     '  },',
@@ -893,7 +907,7 @@ function getNodeHmrServerSource(rootDir: string, options: { title?: string } = {
     '    }',
     '',
     "    if (url.pathname === '/__test_emit_server_update') {",
-    '      eventChannel?.send({',
+    '      browserEventChannel?.send({',
     "        type: 'server:update',",
     '      })',
     '      response.writeHead(204).end()',
@@ -1003,7 +1017,7 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
         '/packages/*path': 'packages/*path',
       },
       hmr: {
-        eventChannel: {
+        browserEventChannel: {
           url: '/hmr/events',
           send(payload) {
             hmrEventStream?.send(payload)
@@ -1079,19 +1093,15 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
 async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeHmrTestServer> {
   let { NODE_PATH: _nodePath, ...env } = process.env
   let port = await getAvailablePort()
-  let child = spawn(
-    process.execPath,
-    ['--import', nodeTsxImportUrl, nodeHmrCliEntryPath, '--import', nodeTsxImportUrl, 'server.tsx'],
-    {
-      cwd: fixture.rootDir,
-      env: {
-        ...env,
-        NODE_ENV: 'development',
-        TEST_SERVER_PORT: String(port),
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
+  let child = spawn(process.execPath, ['dev.ts'], {
+    cwd: fixture.rootDir,
+    env: {
+      ...env,
+      NODE_ENV: 'development',
+      TEST_SERVER_PORT: String(port),
     },
-  )
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
   let readyEvents: Array<{ pid: number; port: number }> = []
   let readyWaiters: Array<() => void> = []
   let lineBuffer = ''

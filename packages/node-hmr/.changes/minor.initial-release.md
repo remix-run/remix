@@ -1,1 +1,1 @@
-Added the initial `@remix-run/node-hmr` package with a `remix-node-hmr` development CLI for running Node.js applications with an `import.meta.hot` API.
+Added the initial `@remix-run/node-hmr` package for supervising Node.js applications in development with an `import.meta.hot` API. Apps now start HMR from a normal Node dev script via `run()` instead of a Remix-flavored Node replacement CLI, with optional parent-owned browser HMR coordination through `browserEventChannel`.

@@ -1,13 +1,13 @@
 import process from 'node:process'
 
-export const nodeHmrEventPathname = '/hmr'
+export const defaultBrowserEventChannelPathname = '/hmr'
 
 export interface HmrEventPayload {
   type: string
   [key: string]: unknown
 }
 
-export interface HmrEventChannel {
+export interface BrowserEventChannel {
   url: string
   send(payload: HmrEventPayload): void
 }

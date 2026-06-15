@@ -58,6 +58,7 @@
   "remix/multipart-parser/node": "@remix-run/multipart-parser/node",
   "remix/node-fetch-server": "@remix-run/node-fetch-server",
   "remix/node-fetch-server/test": "@remix-run/node-fetch-server/test",
+  "remix/node-hmr": "@remix-run/node-hmr",
   "remix/node-hmr/runtime": "@remix-run/node-hmr/runtime",
   "remix/node-tsx": "@remix-run/node-tsx",
   "remix/node-tsx/load-module": "@remix-run/node-tsx/load-module",

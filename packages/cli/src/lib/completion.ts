@@ -4,26 +4,8 @@ export interface CompletionResult {
 }
 
 const COMPLETION_SHELLS = ['bash', 'zsh'] as const
-const HELP_COMMANDS = [
-  'completion',
-  'doctor',
-  'help',
-  'new',
-  'node-hmr',
-  'routes',
-  'test',
-  'version',
-] as const
-const ROOT_COMMANDS = [
-  'completion',
-  'doctor',
-  'help',
-  'new',
-  'node-hmr',
-  'routes',
-  'test',
-  'version',
-] as const
+const HELP_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'test', 'version'] as const
+const ROOT_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'test', 'version'] as const
 
 export type CompletionShell = (typeof COMPLETION_SHELLS)[number]
 
@@ -182,10 +164,6 @@ function completeCommand(
     return completeRoutes(tokens, currentWord, usedGlobalFlags)
   }
 
-  if (command === 'node-hmr') {
-    return completeNodeHmr(tokens, currentWord, usedGlobalFlags)
-  }
-
   if (command === 'version') {
     return completeSimpleFlags(tokens, currentWord, usedGlobalFlags, [])
   }
@@ -333,95 +311,6 @@ function completeRoutes(
   )
 
   return completeValues(flags, currentWord)
-}
-
-function completeNodeHmr(
-  tokens: string[],
-  currentWord: string,
-  usedGlobalFlags: Set<string>,
-): CompletionResult {
-  let filteredTokens = filterGlobalCommandTokens(tokens, usedGlobalFlags)
-  if (filteredTokens == null) {
-    return completeValues([], currentWord)
-  }
-
-  let hasEntry = false
-  let hasHmrHost = false
-  let hasHmrPort = false
-  let expectsOptionValue = false
-  let expectsNodeOptionValue = false
-
-  for (let token of filteredTokens) {
-    if (expectsOptionValue) {
-      expectsOptionValue = false
-      continue
-    }
-
-    if (expectsNodeOptionValue) {
-      expectsNodeOptionValue = false
-      continue
-    }
-
-    if (hasEntry) {
-      return { mode: 'files' }
-    }
-
-    if (token === '--hmr-host') {
-      hasHmrHost = true
-      expectsOptionValue = true
-      continue
-    }
-
-    if (token.startsWith('--hmr-host=')) {
-      hasHmrHost = true
-      continue
-    }
-
-    if (token === '--hmr-port') {
-      hasHmrPort = true
-      expectsOptionValue = true
-      continue
-    }
-
-    if (token.startsWith('--hmr-port=')) {
-      hasHmrPort = true
-      continue
-    }
-
-    if (token.startsWith('-')) {
-      if (nodeHmrForwardedNodeOptionConsumesValue(token)) {
-        expectsNodeOptionValue = true
-      }
-      continue
-    }
-
-    hasEntry = true
-  }
-
-  if (expectsOptionValue || expectsNodeOptionValue) {
-    return { mode: 'none' }
-  }
-
-  let flags = withHelpFlags(
-    [
-      '--import',
-      '--require',
-      ...(!hasHmrHost ? ['--hmr-host'] : []),
-      ...(!hasHmrPort ? ['--hmr-port'] : []),
-    ],
-    usedGlobalFlags,
-  )
-
-  if (!hasEntry && !currentWord.startsWith('-')) {
-    return { mode: 'files' }
-  }
-
-  return completeValues(flags, currentWord)
-}
-
-function nodeHmrForwardedNodeOptionConsumesValue(token: string): boolean {
-  if (token.includes('=')) return false
-  return token === '--import' || token === '--require' || token === '-r'
 }
 
 function completeCompletionCommand(

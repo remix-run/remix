@@ -18,22 +18,16 @@
     "!src/**/*.test.ts"
   ],
   "type": "module",
-  "bin": {
-    "node-hmr": "./src/cli-entry.ts"
-  },
   "exports": {
-    "./cli": "./src/cli.ts",
+    ".": "./src/node-hmr.ts",
     "./runtime": "./src/runtime.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
-    "bin": {
-      "node-hmr": "./dist/cli-entry.js"
-    },
     "exports": {
-      "./cli": {
-        "types": "./dist/cli.d.ts",
-        "default": "./dist/cli.js"
+      ".": {
+        "types": "./dist/node-hmr.d.ts",
+        "default": "./dist/node-hmr.js"
       },
       "./runtime": {
         "types": "./dist/runtime.d.ts",

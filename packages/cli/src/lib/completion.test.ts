@@ -13,7 +13,6 @@ describe('completion engine', () => {
       'doctor',
       'help',
       'new',
-      'node-hmr',
       'routes',
       'test',
       'version',
@@ -34,7 +33,6 @@ describe('completion engine', () => {
       'doctor',
       'help',
       'new',
-      'node-hmr',
       'routes',
       'test',
       'version',
@@ -48,12 +46,6 @@ describe('completion engine', () => {
     let newResult = getCompletionResult(['remix', 'new', ''], 2)
 
     assert.equal(newResult.mode, 'files')
-  })
-
-  it('uses file completion for node-hmr entry files', () => {
-    let result = getCompletionResult(['remix', 'node-hmr', ''], 2)
-
-    assert.equal(result.mode, 'files')
   })
 
   it('returns no completions for free-text --app-name values', () => {
@@ -114,26 +106,6 @@ describe('completion engine', () => {
 
     assert.equal(result.mode, 'values')
     assert.deepEqual(result.values, ['--coverage', '--watch', '-h', '--help', '--no-color'])
-  })
-
-  it('completes node-hmr flags before the entry', () => {
-    let result = getCompletionResult(['remix', 'node-hmr', '--hmr-host', '127.0.0.1', '-'], 4)
-
-    assert.equal(result.mode, 'values')
-    assert.deepEqual(result.values, [
-      '--import',
-      '--require',
-      '--hmr-port',
-      '-h',
-      '--help',
-      '--no-color',
-    ])
-  })
-
-  it('does not complete entry files while a node-hmr node option expects a value', () => {
-    let result = getCompletionResult(['remix', 'node-hmr', '--import', ''], 3)
-
-    assert.deepEqual(result, { mode: 'none' })
   })
 })
 

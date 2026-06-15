@@ -8,20 +8,26 @@ import { dirname, relative, resolve } from 'node:path'
 import { createStyles } from '@remix-run/terminal'
 import { watch } from 'chokidar'
 
-import { nodeHmrEventPathname, type HmrEventPayload } from './lib/browser-events.ts'
-import {
-  buildNodeArgs,
-  parseNodeHmrCommand,
-  shouldIgnoreWatchPath,
-  type NodeHmrCommand,
-} from './lib/cli-args.ts'
+import { defaultBrowserEventChannelPathname, type HmrEventPayload } from './lib/browser-events.ts'
+import { shouldIgnoreWatchPath } from './lib/cli-args.ts'
 import type { ServerHmrEvent } from './lib/events.ts'
 
-export interface RunNodeHmrOptions {
-  argv: Array<string>
-  commandName?: string
-  cwd: string
+export interface RunOptions {
+  browserEventChannel?: boolean | BrowserEventChannelOptions
+  cwd?: string
+  entryArgs?: readonly string[]
   env?: NodeJS.ProcessEnv
+  nodeArgs?: readonly string[]
+}
+
+export interface BrowserEventChannelOptions {
+  host?: string
+  port?: number
+  pathname?: string
+}
+
+export interface NodeHmrRunner {
+  close(): Promise<void>
 }
 
 interface NodeHmrModuleInfo {
@@ -75,62 +81,64 @@ const restartDelayMs = 50
 const shutdownTimeoutMs = 5_000
 const styles = createStyles()
 
-export async function runNodeHmr(options: RunNodeHmrOptions): Promise<number> {
-  let result = parseNodeHmrCommand(options.argv)
-  let commandName = options.commandName ?? 'node-hmr'
-
-  if (result.help) {
-    console.log(getNodeHmrHelpText(commandName))
-    return 0
-  }
-
-  if (result.command === undefined) {
-    console.error(`Usage: ${commandName} [options] [node options] <entry> [...args]`)
-    return 1
-  }
-
-  return await runWatchedProcess({
-    command: result.command,
-    cwd: options.cwd,
-    env: options.env ?? process.env,
-    registerPath: resolveRegisterPath(),
-  })
-}
-
-export function getNodeHmrHelpText(commandName = 'node-hmr'): string {
-  return `Usage: ${commandName} [options] [node options] <entry> [...args]
-
-Run a Node.js entry file with file watching, restart fallback, and an import.meta.hot runtime.
-
-Options and Node options can be provided before the entry. Node options are forwarded to the child process. Node execution modes such as --watch and --test are not supported.
-
-Options:
-  --hmr-event-host <host>  Host used for the HMR event channel endpoint. Defaults to 127.0.0.1.
-  --hmr-event-port <port>  Port used for the HMR event channel endpoint. Defaults to 0, which picks a free port.
-
-Examples:
-  ${commandName} --import remix/node-tsx server.ts`
-}
-
 function resolveRegisterPath(): string {
   let extension = import.meta.url.endsWith('.ts') ? 'ts' : 'js'
 
   return fileURLToPath(new URL(`./register.${extension}`, import.meta.url))
 }
 
-async function runWatchedProcess(options: {
-  command: NodeHmrCommand
-  cwd: string
-  env: NodeJS.ProcessEnv
-  registerPath: string
-}): Promise<number> {
-  let hmrEventEndpoint = await createHmrEventEndpoint({
-    host: options.command.host,
-    port: options.command.port,
+export function run(entry: string, options: RunOptions = {}): NodeHmrRunner {
+  let controller = createWatchedProcessController({
+    browserEventChannel: normalizeBrowserEventChannelOptions(options.browserEventChannel),
+    cwd: options.cwd ?? process.cwd(),
+    entry,
+    entryArgs: [...(options.entryArgs ?? [])],
+    env: options.env ?? process.env,
+    nodeArgs: [...(options.nodeArgs ?? [])],
+    registerPath: resolveRegisterPath(),
   })
+
+  let closed = controller.start()
+  closed.catch((error: unknown) => {
+    console.error(error)
+  })
+
+  return {
+    close() {
+      return controller.stop()
+    },
+  }
+}
+
+function normalizeBrowserEventChannelOptions(
+  options: RunOptions['browserEventChannel'],
+): BrowserEventChannelOptions | null {
+  if (!options) return null
+  if (options === true) return {}
+
+  if (options.port !== undefined) {
+    assertValidPort(options.port)
+  }
+
+  return options
+}
+
+function createWatchedProcessController(options: {
+  browserEventChannel: BrowserEventChannelOptions | null
+  cwd: string
+  entry: string
+  entryArgs: string[]
+  env: NodeJS.ProcessEnv
+  nodeArgs: string[]
+  registerPath: string
+}): {
+  start(): Promise<void>
+  stop(signal?: NodeJS.Signals): Promise<void>
+} {
+  let browserEventChannel: BrowserEventChannel | null = null
   let child: ChildProcess | undefined
   let restartTimer: NodeJS.Timeout | undefined
-  let resolveRun: ((code: number) => void) | undefined
+  let resolveRun: (() => void) | undefined
   let moduleInfoByFilePath = new Map<string, NodeHmrModuleInfo[]>()
   let moduleInfoByUrl = new Map<string, NodeHmrModuleInfo>()
   let moduleDepsByUrl = new Map<string, Set<string>>()
@@ -144,7 +152,7 @@ async function runWatchedProcess(options: {
   let pendingServerUpdateEvent = false
 
   function getEntryPath(): string {
-    return resolve(options.cwd, options.command.entry)
+    return resolve(options.cwd, options.entry)
   }
 
   function start() {
@@ -160,9 +168,9 @@ async function runWatchedProcess(options: {
       process.execPath,
       buildNodeArgs({
         entry,
-        entryArgs: options.command.entryArgs,
-        hmrEventUrl: hmrEventEndpoint.url,
-        nodeArgs: options.command.nodeArgs,
+        browserEventUrl: browserEventChannel?.url,
+        entryArgs: options.entryArgs,
+        nodeArgs: options.nodeArgs,
         registerPath: options.registerPath,
       }),
       {
@@ -188,9 +196,7 @@ async function runWatchedProcess(options: {
       waitingForFileChangeAfterExit = true
       pendingServerUpdateEvent = true
       child = undefined
-      console.log(
-        `Failed running ${options.command.entry}. Waiting for file changes before restarting...`,
-      )
+      console.log(`Failed running ${options.entry}. Waiting for file changes before restarting...`)
     })
   }
 
@@ -206,12 +212,12 @@ async function runWatchedProcess(options: {
     if (!isChildMessage(message)) return
 
     if (message.type === 'hmr-event:send') {
-      hmrEventEndpoint.send(message.payload)
+      browserEventChannel?.send(message.payload)
       return
     }
 
     if (message.type === 'server-hmr:event') {
-      hmrEventEndpoint.send(toServerUpdatePayload(message.event))
+      browserEventChannel?.send(toServerUpdatePayload(message.event))
       return
     }
 
@@ -431,7 +437,7 @@ async function runWatchedProcess(options: {
   function flushPendingServerUpdateEvent(): void {
     if (!pendingServerUpdateEvent) return
 
-    hmrEventEndpoint.send({
+    browserEventChannel?.send({
       type: 'server:update',
     })
     pendingServerUpdateEvent = false
@@ -514,29 +520,59 @@ async function runWatchedProcess(options: {
 
   watcher.on('all', handleWatchEvent)
 
-  return await new Promise<number>((resolvePromise) => {
-    resolveRun = resolvePromise
-    start()
+  let stopPromise: Promise<void> | undefined
 
-    function stop(signal: NodeJS.Signals) {
-      stopping = true
-      if (restartTimer !== undefined) {
-        clearTimeout(restartTimer)
-      }
-
-      watcher.close().finally(() => {
-        stopChild(child, signal).then(() => {
-          hmrEventEndpoint.close().then(() => resolvePromise(0))
-        })
-      })
+  async function stop(signal: NodeJS.Signals = 'SIGTERM'): Promise<void> {
+    stopping = true
+    if (restartTimer !== undefined) {
+      clearTimeout(restartTimer)
     }
 
-    process.once('SIGINT', () => stop('SIGINT'))
-    process.once('SIGTERM', () => stop('SIGTERM'))
-  })
+    stopPromise ??= Promise.resolve()
+      .then(() => watcher.close())
+      .then(() => stopChild(child, signal))
+      .then(() => browserEventChannel?.close())
+      .then(() => {
+        resolveRun?.()
+      })
+
+    await stopPromise
+  }
+
+  return {
+    async start() {
+      try {
+        browserEventChannel =
+          options.browserEventChannel === null
+            ? null
+            : await createBrowserEventChannel(options.browserEventChannel)
+      } catch (error) {
+        await watcher.close()
+        throw error
+      }
+
+      return await new Promise<void>((resolvePromise) => {
+        resolveRun = resolvePromise
+        start()
+
+        process.once('SIGINT', () => {
+          stop('SIGINT').catch((error: unknown) => {
+            console.error(error)
+          })
+        })
+        process.once('SIGTERM', () => {
+          stop('SIGTERM').catch((error: unknown) => {
+            console.error(error)
+          })
+        })
+      })
+    },
+
+    stop,
+  }
 }
 
-interface HmrEventEndpoint {
+interface BrowserEventChannel {
   close(): Promise<void>
   send(payload: HmrEventPayload): void
   url: string
@@ -547,10 +583,12 @@ interface HmrEventClient {
   send(payload: HmrEventPayload): void
 }
 
-async function createHmrEventEndpoint(options: {
-  host: string
-  port: number
-}): Promise<HmrEventEndpoint> {
+async function createBrowserEventChannel(
+  options: BrowserEventChannelOptions,
+): Promise<BrowserEventChannel> {
+  let host = options.host ?? '127.0.0.1'
+  let pathname = options.pathname ?? defaultBrowserEventChannelPathname
+  let port = options.port ?? 0
   let clients = new Set<HmrEventClient>()
   let server: Server
 
@@ -560,15 +598,15 @@ async function createHmrEventEndpoint(options: {
       return
     }
 
-    let requestUrl = new URL(request.url, `http://${options.host}`)
+    let requestUrl = new URL(request.url, `http://${host}`)
 
-    if (request.method === 'OPTIONS' && requestUrl.pathname === nodeHmrEventPathname) {
+    if (request.method === 'OPTIONS' && requestUrl.pathname === pathname) {
       writeCorsHeaders(response, 204)
       response.end()
       return
     }
 
-    if (request.method !== 'GET' || requestUrl.pathname !== nodeHmrEventPathname) {
+    if (request.method !== 'GET' || requestUrl.pathname !== pathname) {
       response.writeHead(404).end()
       return
     }
@@ -601,15 +639,15 @@ async function createHmrEventEndpoint(options: {
 
   let url = await new Promise<string>((resolvePromise, reject) => {
     server.once('error', reject)
-    server.listen(options.port, options.host, () => {
+    server.listen(port, host, () => {
       server.off('error', reject)
       let address = server.address()
       if (!isAddressInfo(address)) {
-        reject(new Error('Failed to start node HMR event endpoint.'))
+        reject(new Error('Failed to start node HMR browser event channel.'))
         return
       }
 
-      resolvePromise(`http://${options.host}:${address.port}${nodeHmrEventPathname}`)
+      resolvePromise(`http://${host}:${address.port}${pathname}`)
     })
   })
 
@@ -659,6 +697,27 @@ function toServerUpdatePayload(event: ServerHmrEvent): HmrEventPayload {
 
 function formatServerSentEvent(payload: HmrEventPayload): string {
   return `data: ${JSON.stringify(payload)}\n\n`
+}
+
+export function buildNodeArgs(options: {
+  browserEventUrl?: string
+  entry: string
+  entryArgs: Array<string>
+  nodeArgs: Array<string>
+  registerPath: string
+}): Array<string> {
+  let registerUrl = pathToFileURL(options.registerPath)
+  if (options.browserEventUrl !== undefined) {
+    registerUrl.searchParams.set('browserEventUrl', options.browserEventUrl)
+  }
+
+  return [...options.nodeArgs, '--import', registerUrl.href, options.entry, ...options.entryArgs]
+}
+
+function assertValidPort(port: number): void {
+  if (!Number.isInteger(port) || port < 0 || port > 65_535) {
+    throw new TypeError(`Invalid browser event channel port: ${port}`)
+  }
 }
 
 function isAddressInfo(value: string | AddressInfo | null): value is AddressInfo {

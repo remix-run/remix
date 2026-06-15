@@ -7,7 +7,6 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url))
-const cliEntryPath = fileURLToPath(new URL('./cli-entry.ts', import.meta.url))
 const nodeTsxImportUrl = import.meta.resolve('@remix-run/node-tsx')
 
 describe('node-hmr', () => {
@@ -541,9 +540,9 @@ function getEventChannelServerSource(message: string): string {
 
   return [
     `import { createServer } from 'node:http'`,
-    `import { eventChannel } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    `import { browserEventChannel } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
     ``,
-    `console.log(JSON.stringify({ type: 'hmr-url', url: eventChannel?.url, pid: process.pid }))`,
+    `console.log(JSON.stringify({ type: 'hmr-url', url: browserEventChannel?.url, pid: process.pid }))`,
     ``,
     `let server = createServer((_request, response) => {`,
     `  response.end(${JSON.stringify(message)})`,
@@ -619,7 +618,18 @@ async function createFixture(
   await fs.mkdir(fixtureRoot, { recursive: true })
 
   let fixturePath = await fs.mkdtemp(path.join(fixtureRoot, 'node-hmr-'))
-  await writeFixtureFiles(fixturePath, files)
+  let nodeHmrImportUrl = pathToFileURL(path.join(packageRoot, 'src/node-hmr.ts')).href
+  await writeFixtureFiles(fixturePath, {
+    ...files,
+    'dev.ts': [
+      `import { run } from ${JSON.stringify(nodeHmrImportUrl)}`,
+      ``,
+      `run('server.ts', {`,
+      `  browserEventChannel: true,`,
+      `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
+      `})`,
+    ].join('\n'),
+  })
 
   return {
     entryPath: path.join(fixturePath, 'server.ts'),
@@ -651,18 +661,14 @@ function startFixtureServer(cwd: string) {
   // pnpm's binary shims set NODE_PATH to the workspace virtual store, which lets
   // CJS resolution find workspace packages that the fixture app cannot import via ESM.
   let { NODE_PATH: _nodePath, ...env } = process.env
-  let child = spawn(
-    process.execPath,
-    ['--import', nodeTsxImportUrl, cliEntryPath, '--import', nodeTsxImportUrl, 'server.ts'],
-    {
-      cwd,
-      env: {
-        ...env,
-        NODE_ENV: 'development',
-      },
-      stdio: ['ignore', 'pipe', 'pipe'],
+  let child = spawn(process.execPath, ['dev.ts'], {
+    cwd,
+    env: {
+      ...env,
+      NODE_ENV: 'development',
     },
-  )
+    stdio: ['ignore', 'pipe', 'pipe'],
+  })
   let readyEvents: Array<{ pid: number; port: number }> = []
   let hmrUrlEvents: Array<{ pid: number; url: string }> = []
   let readyWaiters: Array<() => void> = []

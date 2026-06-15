@@ -28,10 +28,6 @@ export function getCliHelpText(target: NodeJS.WriteStream = process.stdout): str
         { description: 'Show help for Remix commands', label: 'help [command]' },
         { description: 'Create a new Remix project', label: 'new <name>' },
         { description: 'Check project health for the current project', label: 'doctor' },
-        {
-          description: 'Run a Node.js entry with HMR enabled',
-          label: 'node-hmr [options] <entry>',
-        },
         { description: 'Show the route tree for the current project', label: 'routes' },
         { description: 'Run tests for the current project', label: 'test [glob]' },
         { description: 'Show the current Remix version', label: 'version' },
@@ -44,7 +40,6 @@ export function getCliHelpText(target: NodeJS.WriteStream = process.stdout): str
         'remix doctor',
         'remix new my-remix-app',
         'remix new my-remix-app --app-name "My Remix App"',
-        'remix node-hmr --import remix/node-tsx server.ts',
         'remix routes',
         'remix test',
         'remix version',
@@ -69,7 +64,6 @@ export function getHelpCommandHelpText(target: NodeJS.WriteStream = process.stdo
         'remix help completion',
         'remix help doctor',
         'remix help new',
-        'remix help node-hmr',
         'remix help routes',
         'remix help test',
         'remix help version',
@@ -109,11 +103,6 @@ async function getCommandHelpText(argv: string[]): Promise<string> {
   if (command === 'routes' && rest.length === 0) {
     let { getRoutesCommandHelpText } = await import('./routes.ts')
     return getRoutesCommandHelpText()
-  }
-
-  if (command === 'node-hmr' && rest.length === 0) {
-    let { getNodeHmrCommandHelpText } = await import('./node-hmr.ts')
-    return await getNodeHmrCommandHelpText()
   }
 
   if (command === 'test' && rest.length === 0) {

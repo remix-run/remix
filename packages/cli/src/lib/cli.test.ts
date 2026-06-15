@@ -11,7 +11,6 @@ import { getFixturePath } from '../../test/fixtures.ts'
 import { captureOutput } from '../../test/capture-output.ts'
 import { withEnv } from '../../test/with-env.ts'
 import { runRemix, type RunRemixOptions } from '../index.ts'
-import { getNodeHmrCommandHelpText } from './commands/node-hmr.ts'
 import { getTestCommandHelpText } from './commands/test.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..')
@@ -28,14 +27,13 @@ const ROOT_HELP_TEXT = [
   '  remix <command> [options]',
   '',
   'Commands:',
-  '  completion                  Print shell completion scripts for Remix',
-  '  help [command]              Show help for Remix commands',
-  '  new <name>                  Create a new Remix project',
-  '  doctor                      Check project health for the current project',
-  '  node-hmr [options] <entry>  Run a Node.js entry with HMR enabled',
-  '  routes                      Show the route tree for the current project',
-  '  test [glob]                 Run tests for the current project',
-  '  version                     Show the current Remix version',
+  '  completion      Print shell completion scripts for Remix',
+  '  help [command]  Show help for Remix commands',
+  '  new <name>      Create a new Remix project',
+  '  doctor          Check project health for the current project',
+  '  routes          Show the route tree for the current project',
+  '  test [glob]     Run tests for the current project',
+  '  version         Show the current Remix version',
   '',
   'Options:',
   '  -h, --help     Show help',
@@ -50,7 +48,6 @@ const ROOT_HELP_TEXT = [
   '  remix doctor',
   '  remix new my-remix-app',
   '  remix new my-remix-app --app-name "My Remix App"',
-  '  remix node-hmr --import remix/node-tsx server.ts',
   '  remix routes',
   '  remix test',
   '  remix version',
@@ -99,7 +96,6 @@ const HELP_COMMAND_HELP_TEXT = [
   '  remix help completion',
   '  remix help doctor',
   '  remix help new',
-  '  remix help node-hmr',
   '  remix help routes',
   '  remix help test',
   '  remix help version',
@@ -118,8 +114,6 @@ const NEW_COMMAND_HELP_TEXT = [
   '  remix new ./my-remix-app --force',
   '',
 ].join('\n')
-
-const NODE_HMR_COMMAND_HELP_TEXT = await getNodeHmrCommandHelpText()
 
 const ROUTES_COMMAND_HELP_TEXT = [
   'Usage:',
@@ -304,11 +298,6 @@ describe('run', () => {
       assert.equal(test.exitCode, 0)
       assert.equal(test.stdout, `${TEST_COMMAND_HELP_TEXT}\n`)
       assert.equal(test.stderr, '')
-
-      let nodeHmr = await captureOutput(() => run(['node-hmr', '--help']))
-      assert.equal(nodeHmr.exitCode, 0)
-      assert.equal(nodeHmr.stdout, `${NODE_HMR_COMMAND_HELP_TEXT}\n`)
-      assert.equal(nodeHmr.stderr, '')
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
@@ -334,7 +323,6 @@ describe('run', () => {
     let doctorHelp = await captureOutput(() => run(['help', 'doctor']))
     let completionHelp = await captureOutput(() => run(['help', 'completion']))
     let newHelp = await captureOutput(() => run(['help', 'new']))
-    let nodeHmrHelp = await captureOutput(() => run(['help', 'node-hmr']))
     let helpHelp = await captureOutput(() => run(['help', 'help']))
     let routesHelp = await captureOutput(() => run(['help', 'routes']))
     let testHelp = await captureOutput(() => run(['help', 'test']))
@@ -349,9 +337,6 @@ describe('run', () => {
     assert.equal(newHelp.exitCode, 0)
     assert.equal(newHelp.stdout, NEW_COMMAND_HELP_TEXT)
     assert.equal(newHelp.stderr, '')
-    assert.equal(nodeHmrHelp.exitCode, 0)
-    assert.equal(nodeHmrHelp.stdout, NODE_HMR_COMMAND_HELP_TEXT)
-    assert.equal(nodeHmrHelp.stderr, '')
     assert.equal(helpHelp.exitCode, 0)
     assert.equal(helpHelp.stdout, HELP_COMMAND_HELP_TEXT)
     assert.equal(helpHelp.stderr, '')

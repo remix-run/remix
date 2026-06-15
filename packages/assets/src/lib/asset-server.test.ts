@@ -149,7 +149,7 @@ async function emitWatchEvent(
 
 function createTestHmrOptions(payloads: HmrPayload[]): AssetServerHmrOptions {
   return {
-    eventChannel: {
+    browserEventChannel: {
       url: 'http://127.0.0.1:1234/hmr',
       send(payload) {
         payloads.push(payload)
@@ -3146,7 +3146,7 @@ describe('asset-server', () => {
       )
       let assetServer = createWatchedTestServer(caseDir, {
         hmr: {
-          eventChannel: {
+          browserEventChannel: {
             url: 'http://127.0.0.1:1234/hmr',
             send(payload) {
               payloads.push(payload)
@@ -3326,7 +3326,7 @@ describe('asset-server', () => {
       )
       let assetServer = createWatchedTestServer(caseDir, {
         hmr: {
-          eventChannel: {
+          browserEventChannel: {
             url: 'http://127.0.0.1:1234/hmr',
             send(payload) {
               payloads.push(payload)
@@ -3740,7 +3740,7 @@ describe('asset-server', () => {
       await write(caseDir, 'app/styles/theme.css', 'body { background: white; }\n')
       let assetServer = createWatchedTestServer(caseDir, {
         hmr: {
-          eventChannel: {
+          browserEventChannel: {
             url: 'http://127.0.0.1:1234/hmr',
             send(payload) {
               payloads.push(payload)
@@ -3798,7 +3798,7 @@ describe('asset-server', () => {
       await write(caseDir, 'app/styles/app.css', 'body { color: red; }\n')
       let assetServer = createWatchedTestServer(caseDir, {
         hmr: {
-          eventChannel: {
+          browserEventChannel: {
             url: 'http://127.0.0.1:1234/hmr',
             send(payload) {
               payloads.push(payload)

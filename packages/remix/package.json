@@ -96,6 +96,7 @@
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
     "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
+    "./node-hmr": "./src/node-hmr.ts",
     "./node-hmr/runtime": "./src/node-hmr/runtime.ts",
     "./node-tsx": "./src/node-tsx.ts",
     "./node-tsx/load-module": "./src/node-tsx/load-module.ts",
@@ -453,6 +454,10 @@
       "./node-fetch-server/test": {
         "types": "./dist/node-fetch-server/test.d.ts",
         "default": "./dist/node-fetch-server/test.js"
+      },
+      "./node-hmr": {
+        "types": "./dist/node-hmr.d.ts",
+        "default": "./dist/node-hmr.js"
       },
       "./node-hmr/runtime": {
         "types": "./dist/node-hmr/runtime.d.ts",

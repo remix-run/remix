@@ -97,11 +97,7 @@ describe('manifest', () => {
   })
 
   it('all exports of every referenced package are covered', () => {
-    let packageExportsNotCoveredByManifest = new Set([
-      // Used internally by @remix-run/cli to implement the `remix node-hmr`
-      // command. Users should consume this through the CLI, not a remix/* import.
-      '@remix-run/node-hmr/cli',
-    ])
+    let packageExportsNotCoveredByManifest = new Set<string>()
 
     for (let pkgName of referencedPackages) {
       let short = shortName(pkgName)
