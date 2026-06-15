@@ -11,10 +11,12 @@ import {
   type NodeHmrAnalysis,
   type ResolvedNodeHmrAnalysis,
 } from './lib/hmr-analysis.ts'
+import { markNodeHmrParentProcess } from './lib/process-state.ts'
 import { installNodeHmrRuntime } from './lib/runtime.ts'
 
+markNodeHmrParentProcess()
 const runtime = installNodeHmrRuntime({ browserEventUrl: getBrowserEventUrl() })
-const rootPath = process.env.REMIX_NODE_HMR_ROOT
+const rootPath = getRegisterUrlParam('rootPath')
 let invalidatedUrlTimestamps = new Map<string, number>()
 const componentHmrRuntimeUrl = import.meta.resolve('@remix-run/ui-hmr/runtime')
 
@@ -66,9 +68,14 @@ registerHooks({
   },
 })
 
+function getRegisterUrlParam(name: string): string | undefined {
+  let value = new URL(import.meta.url).searchParams.get(name)
+  return value ?? undefined
+}
+
 function getBrowserEventUrl(): string | undefined {
-  let eventUrl = new URL(import.meta.url).searchParams.get('browserEventUrl')
-  if (eventUrl === null) return undefined
+  let eventUrl = getRegisterUrlParam('browserEventUrl')
+  if (eventUrl === undefined) return undefined
   return isHttpUrl(eventUrl) ? eventUrl : undefined
 }
 

@@ -1,5 +1,7 @@
 import process from 'node:process'
 
+import { hasNodeHmrParentProcess } from './process-state.ts'
+
 export const defaultBrowserEventChannelPathname = '/hmr'
 
 export interface HmrEventPayload {
@@ -13,7 +15,7 @@ export interface BrowserEventChannel {
 }
 
 export function sendHmrEventPayload(payload: HmrEventPayload): void {
-  if (process.env.REMIX_NODE_HMR !== '1') return
+  if (!hasNodeHmrParentProcess()) return
 
   process.send?.({
     payload,

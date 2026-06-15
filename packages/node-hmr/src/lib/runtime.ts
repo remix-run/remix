@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url'
 
 import { sendHmrEventPayload, type BrowserEventChannel } from './browser-events.ts'
 import { emitServerHmrEvent } from './events.ts'
+import { hasNodeHmrParentProcess } from './process-state.ts'
 
 export interface RemixNodeHotContext {
   readonly data: Record<string, unknown>
@@ -39,10 +40,7 @@ type HotDependencyArrayCallbackFunction = (modules: HmrModule[]) => HotCallbackR
 type HotDependencyArrayUpdateCallbackFunction = (
   modules: Array<HmrModule | undefined>,
 ) => HotCallbackResult
-type HotDependencyUpdateCallback = (
-  module: HmrModule,
-  acceptedUrl: string,
-) => HotCallbackResult
+type HotDependencyUpdateCallback = (module: HmrModule, acceptedUrl: string) => HotCallbackResult
 type HotDependencyCallback = {
   callback: HotDependencyUpdateCallback
   deps: string[]
@@ -210,7 +208,7 @@ export function installNodeHmrRuntime(
     },
 
     reportAcceptedDependencies(url, acceptedDeps) {
-      if (process.env.REMIX_NODE_HMR !== '1') return
+      if (!hasNodeHmrParentProcess()) return
 
       process.send?.({
         type: 'module-accepted-deps-resolved',

@@ -1,5 +1,7 @@
 import process from 'node:process'
 
+import { hasNodeHmrParentProcess } from './process-state.ts'
+
 export type ServerHmrEvent =
   | {
       acceptedUrl?: string
@@ -43,10 +45,10 @@ export const serverHmrEvents = new ServerHmrEvents()
 
 export function emitServerHmrEvent(event: ServerHmrEvent): void {
   serverHmrEvents.emit(event)
-  if (process.env.REMIX_NODE_HMR === '1') {
-    process.send?.({
-      event,
-      type: 'server-hmr:event',
-    })
-  }
+  if (!hasNodeHmrParentProcess()) return
+
+  process.send?.({
+    event,
+    type: 'server-hmr:event',
+  })
 }

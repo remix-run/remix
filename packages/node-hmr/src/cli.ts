@@ -177,14 +177,11 @@ function createWatchedProcessController(options: {
         entryArgs: options.entryArgs,
         nodeArgs: options.nodeArgs,
         registerPath: options.registerPath,
+        rootPath: options.cwd,
       }),
       {
         cwd: options.cwd,
-        env: {
-          ...options.env,
-          REMIX_NODE_HMR: '1',
-          REMIX_NODE_HMR_ROOT: options.cwd,
-        },
+        env: options.env,
         stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
       },
     )
@@ -718,10 +715,14 @@ export function buildNodeArgs(options: {
   entryArgs: Array<string>
   nodeArgs: Array<string>
   registerPath: string
+  rootPath?: string
 }): Array<string> {
   let registerUrl = pathToFileURL(options.registerPath)
   if (options.browserEventUrl !== undefined) {
     registerUrl.searchParams.set('browserEventUrl', options.browserEventUrl)
+  }
+  if (options.rootPath !== undefined) {
+    registerUrl.searchParams.set('rootPath', options.rootPath)
   }
 
   return [...options.nodeArgs, '--import', registerUrl.href, options.entry, ...options.entryArgs]
