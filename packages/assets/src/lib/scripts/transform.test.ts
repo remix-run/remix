@@ -5,7 +5,7 @@ import * as path from 'node:path'
 import type { ResolveResult, ResolverFactory } from 'oxc-resolver'
 
 import { normalizeFilePath } from '../paths.ts'
-import { resolveComponentHmrRefreshSpecifier } from './transform.ts'
+import { getHmrAnalysis, resolveComponentHmrRefreshSpecifier } from './transform.ts'
 
 const packageRoot = path.resolve(import.meta.dirname, '../../..')
 const repoPackagesRoot = path.resolve(packageRoot, '..')
@@ -24,6 +24,40 @@ function createResolverFactory(resolvedPaths: Record<string, string>): ResolverF
     },
   } as ResolverFactory
 }
+
+describe('getHmrAnalysis', () => {
+  it('ignores comments and strings that mention import.meta.hot', () => {
+    assert.deepEqual(
+      getHmrAnalysis(
+        [
+          `// import.meta.hot.accept()`,
+          `const text = "import.meta.hot.accept('./dep.ts')"`,
+          `export const value = 1`,
+        ].join('\n'),
+      ),
+      {
+        acceptedDeps: [],
+        selfAccepting: false,
+        usesImportMetaHot: false,
+      },
+    )
+  })
+
+  it('detects real import.meta.hot usage', () => {
+    assert.deepEqual(getHmrAnalysis(`import.meta.hot?.accept()`), {
+      acceptedDeps: [],
+      selfAccepting: true,
+      usesImportMetaHot: true,
+    })
+  })
+
+  it('throws when transformed code mentions import.meta.hot but cannot be parsed', () => {
+    assert.throws(
+      () => getHmrAnalysis(`if (import.meta.hot) { import.meta.hot.accept(() => {})`),
+      /Failed to analyze HMR usage in transformed script/,
+    )
+  })
+})
 
 describe('resolveComponentHmrRefreshSpecifier', () => {
   let importerPath = path.resolve('/app/component.ts')

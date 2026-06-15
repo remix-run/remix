@@ -315,34 +315,53 @@ export async function transformModule(
   }
 }
 
-function getHmrAnalysis(rawCode: string): TransformedModule['hmr'] {
-  let usesImportMetaHot = rawCode.includes('import.meta.hot')
+export function getHmrAnalysis(rawCode: string): TransformedModule['hmr'] {
+  let mayUseImportMetaHot = rawCode.includes('import.meta.hot')
+  let usesImportMetaHot = false
   let acceptedDeps: HmrAcceptedDependency[] = []
   let selfAccepting = false
 
-  if (usesImportMetaHot) {
+  if (mayUseImportMetaHot) {
     try {
       let parseResult = parseSync('hmr-analysis.js', rawCode, {
         lang: 'js',
         sourceType: 'module',
       })
 
-      if (parseResult.errors.length === 0) {
-        walkAst(parseResult.program, (node) => {
-          if (node.type !== 'CallExpression') return
-          if (!isImportMetaHotAcceptCallee(node.callee)) return
-
-          let [firstArgument] = node.arguments
-          if (firstArgument === undefined || !isAcceptedDependencyArgument(firstArgument)) {
-            selfAccepting = true
-            return
-          }
-
-          acceptedDeps.push(...getAcceptedDependencies(firstArgument, rawCode))
-        })
+      if (parseResult.errors.length > 0) {
+        throw createAssetServerCompilationError(
+          `Failed to analyze HMR usage in transformed script. ${parseResult.errors[0]?.message ?? 'Unknown parse error'}`,
+          {
+            code: 'TRANSFORM_FAILED',
+          },
+        )
       }
-    } catch {
-      selfAccepting = /import\.meta\.hot\s*\??\.\s*accept\s*\(/.test(rawCode)
+
+      walkAst(parseResult.program, (node) => {
+        if (isImportMetaHotNode(node)) {
+          usesImportMetaHot = true
+        }
+
+        if (node.type !== 'CallExpression') return
+        if (!isImportMetaHotAcceptCallee(node.callee)) return
+
+        let [firstArgument] = node.arguments
+        if (firstArgument === undefined || !isAcceptedDependencyArgument(firstArgument)) {
+          selfAccepting = true
+          return
+        }
+
+        acceptedDeps.push(...getAcceptedDependencies(firstArgument, rawCode))
+      })
+    } catch (error) {
+      if (isAssetServerCompilationError(error)) throw error
+      throw createAssetServerCompilationError(
+        `Failed to analyze HMR usage in transformed script.`,
+        {
+          cause: error,
+          code: 'TRANSFORM_FAILED',
+        },
+      )
     }
   }
 
@@ -384,11 +403,15 @@ function isImportMetaHotAcceptCallee(node: Node): boolean {
   if (callee.type !== 'MemberExpression') return false
   if (callee.computed || !isIdentifierNode(callee.property, 'accept')) return false
 
-  let object = unwrapChainExpression(callee.object)
-  if (object.type !== 'MemberExpression') return false
-  if (object.computed || !isIdentifierNode(object.property, 'hot')) return false
+  return isImportMetaHotNode(callee.object)
+}
 
-  let meta = unwrapChainExpression(object.object)
+function isImportMetaHotNode(node: Node): boolean {
+  let hot = unwrapChainExpression(node)
+  if (hot.type !== 'MemberExpression') return false
+  if (hot.computed || !isIdentifierNode(hot.property, 'hot')) return false
+
+  let meta = unwrapChainExpression(hot.object)
   return (
     meta.type === 'MetaProperty' &&
     isIdentifierNode(meta.meta, 'import') &&
