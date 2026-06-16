@@ -1,3 +1,6 @@
+import * as fs from 'node:fs/promises'
+import * as path from 'node:path'
+
 import { createDatabase, type Database, type DatabaseResource } from '@remix-run/data-table'
 
 import {
@@ -28,6 +31,16 @@ export function createSqliteDatabase(options: {
   let isInMemoryDatabase = false
 
   return {
+    async create(): Promise<void> {
+      if (options.path === ':memory:') {
+        throw new Error('SQLite :memory: database resources do not support create()')
+      }
+
+      await fs.mkdir(path.dirname(options.path), { recursive: true })
+      let conn = await createNativeSqliteDatabase(options.path)
+      conn.close?.()
+    },
+
     async connect(): Promise<Database> {
       if (closed) {
         throw new Error('Cannot connect to a closed SQLite database resource')
@@ -52,6 +65,17 @@ export function createSqliteDatabase(options: {
       adapter.close = async () => conn.close?.()
 
       return createDatabase(adapter, { now: options.now })
+    },
+
+    async drop(): Promise<void> {
+      if (options.path === ':memory:') {
+        throw new Error('SQLite :memory: database resources do not support drop()')
+      }
+
+      await fs.rm(options.path, { force: true })
+      await fs.rm(options.path + '-shm', { force: true })
+      await fs.rm(options.path + '-wal', { force: true })
+      await fs.rm(options.path + '-journal', { force: true })
     },
 
     async close(): Promise<void> {

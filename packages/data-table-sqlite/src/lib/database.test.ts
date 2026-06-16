@@ -38,6 +38,23 @@ describe('sqlite database resource', () => {
     }
   })
 
+  it('rejects create and drop for a memory sqlite database resource', async () => {
+    let database = createSqliteDatabase({ path: ':memory:' })
+
+    await assert.rejects(
+      () => database.create(),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.message === 'SQLite :memory: database resources do not support create()',
+    )
+    await assert.rejects(
+      () => database.drop(),
+      (error: unknown) =>
+        error instanceof Error &&
+        error.message === 'SQLite :memory: database resources do not support drop()',
+    )
+  })
+
   it('rejects multiple connections to a memory sqlite database resource', async () => {
     let database = createSqliteDatabase({ path: ':memory:' })
     let client = await database.connect()

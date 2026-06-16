@@ -332,6 +332,8 @@ type DatabaseOptions = {
 }
 
 export type DatabaseResource = AsyncDisposable & {
+  create(): Promise<void>
+  drop(): Promise<void>
   connect(): Promise<Database>
   close(): Promise<void>
 }

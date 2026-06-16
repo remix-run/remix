@@ -1,5 +1,5 @@
 import { createDatabase, type Database, type DatabaseResource } from '@remix-run/data-table'
-import { Pool } from 'pg'
+import { Client, Pool } from 'pg'
 
 import { createPostgresDatabaseAdapter, type PostgresDatabaseAdapter } from './adapter.ts'
 
@@ -43,6 +43,18 @@ export function createPostgresDatabase(options: PostgresDatabaseOptions): Databa
   let pool = new Pool(toPoolConfig(options))
 
   return {
+    async create(): Promise<void> {
+      let database = getDatabaseName(options)
+      let client = new Client(toMaintenanceClientConfig(options))
+
+      try {
+        await client.connect()
+        await client.query('create database ' + quoteIdentifier(database))
+      } finally {
+        await client.end()
+      }
+    },
+
     async connect(): Promise<Database> {
       let client = await pool.connect()
       let adapter = createPostgresDatabaseAdapter(client) as PostgresDatabaseAdapter & {
@@ -52,6 +64,18 @@ export function createPostgresDatabase(options: PostgresDatabaseOptions): Databa
         client.release()
       }
       return createDatabase(adapter, { now: options.now })
+    },
+
+    async drop(): Promise<void> {
+      let database = getDatabaseName(options)
+      let client = new Client(toMaintenanceClientConfig(options))
+
+      try {
+        await client.connect()
+        await client.query('drop database if exists ' + quoteIdentifier(database) + ' with (force)')
+      } finally {
+        await client.end()
+      }
     },
 
     async close(): Promise<void> {
@@ -78,4 +102,44 @@ function toPoolConfig(options: PostgresDatabaseOptions) {
     connectionTimeoutMillis: options.pool?.connectTimeoutMs,
     statement_timeout: options.statementTimeoutMs,
   }
+}
+
+function toMaintenanceClientConfig(options: PostgresDatabaseOptions) {
+  if (options.url) {
+    let url = new URL(options.url)
+    url.pathname = '/postgres'
+    return {
+      connectionString: url.toString(),
+      ssl: options.ssl,
+      statement_timeout: options.statementTimeoutMs,
+    }
+  }
+
+  return {
+    host: options.host,
+    port: options.port,
+    database: 'postgres',
+    user: options.user,
+    password: options.password,
+    ssl: options.ssl,
+    statement_timeout: options.statementTimeoutMs,
+  }
+}
+
+function getDatabaseName(options: PostgresDatabaseOptions): string {
+  if (options.url === undefined) {
+    return options.database
+  }
+
+  let database = decodeURIComponent(new URL(options.url).pathname.slice(1))
+
+  if (!database) {
+    throw new Error('Postgres database URL must include a database name')
+  }
+
+  return database
+}
+
+function quoteIdentifier(identifier: string): string {
+  return '"' + identifier.replaceAll('"', '""') + '"'
 }
