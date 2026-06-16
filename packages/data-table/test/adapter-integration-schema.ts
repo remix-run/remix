@@ -5,7 +5,6 @@ export type AdapterIntegrationStatementRunner = (statement: string) => Promise<v
 type AdapterIntegrationSchemaStatements = {
   drop: string[]
   create: string[]
-  reset: string[]
 }
 
 const mysqlSchemaStatements: AdapterIntegrationSchemaStatements = {
@@ -40,7 +39,6 @@ const mysqlSchemaStatements: AdapterIntegrationSchemaStatements = {
       ')',
     ].join('\n'),
   ],
-  reset: ['delete from tasks', 'delete from projects', 'delete from accounts'],
 }
 
 const postgresSchemaStatements: AdapterIntegrationSchemaStatements = {
@@ -75,7 +73,6 @@ const postgresSchemaStatements: AdapterIntegrationSchemaStatements = {
       ')',
     ].join('\n'),
   ],
-  reset: ['delete from tasks', 'delete from projects', 'delete from accounts'],
 }
 
 const sqliteSchemaStatements: AdapterIntegrationSchemaStatements = {
@@ -110,7 +107,6 @@ const sqliteSchemaStatements: AdapterIntegrationSchemaStatements = {
       ')',
     ].join('\n'),
   ],
-  reset: ['delete from tasks', 'delete from projects', 'delete from accounts'],
 }
 
 export async function setupAdapterIntegrationSchema(
@@ -127,14 +123,6 @@ export async function teardownAdapterIntegrationSchema(
 ): Promise<void> {
   let statements = getAdapterIntegrationSchemaStatements(dialect)
   await runStatements(runStatement, statements.drop)
-}
-
-export async function resetAdapterIntegrationSchema(
-  runStatement: AdapterIntegrationStatementRunner,
-  dialect: AdapterIntegrationDialect,
-): Promise<void> {
-  let statements = getAdapterIntegrationSchemaStatements(dialect)
-  await runStatements(runStatement, statements.reset)
 }
 
 function getAdapterIntegrationSchemaStatements(

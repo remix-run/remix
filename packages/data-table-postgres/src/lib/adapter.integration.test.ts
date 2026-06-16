@@ -2,7 +2,6 @@ import { after, before, describe } from '@remix-run/test'
 import type { Database, DatabaseResource } from '@remix-run/data-table'
 
 import {
-  resetAdapterIntegrationSchema,
   setupAdapterIntegrationSchema,
   teardownAdapterIntegrationSchema,
 } from '../../../data-table/test/adapter-integration-schema.ts'
@@ -33,11 +32,6 @@ describe('postgres adapter integration', { skip: typeof DATABASE_URL !== 'string
   })
 
   runAdapterIntegrationContract({
-    createDatabase: () => database.connect(),
-    resetDatabase: async () => {
-      await resetAdapterIntegrationSchema(async (statement) => {
-        await client.exec(statement)
-      }, 'postgres')
-    },
+    getDatabase: () => client,
   })
 })
