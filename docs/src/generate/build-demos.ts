@@ -16,8 +16,7 @@ const DEMO_SOURCES = [
     sourceDir: path.join(REPO_DIR, 'packages', 'ui', 'src'),
   },
 ]
-const REMIX_RUN_IMPORT_RE =
-  /(from\s+['"]|import\s*\(\s*['"]|import\s+['"])(@remix-run\/[^'"]+)/g
+const REMIX_RUN_IMPORT_RE = /(from\s+['"]|import\s*\(\s*['"]|import\s+['"])(@remix-run\/[^'"]+)/g
 
 function rewriteImports(source: string): string {
   return source.replace(REMIX_RUN_IMPORT_RE, (_match, prefix: string, specifier: string) => {

@@ -28,12 +28,17 @@ export function ViewMenu(handle: Handle) {
             }),
           ]}
         >
-          <div mix={menu.item({ checked: wordWrap, label: 'Word wrap', name: 'wordWrap', type: 'checkbox' })}>
+          <div
+            mix={menu.item({
+              checked: wordWrap,
+              label: 'Word wrap',
+              name: 'wordWrap',
+              type: 'checkbox',
+            })}
+          >
             Word wrap
           </div>
-          <div mix={menu.item({ disabled: true, label: 'Minimap', name: 'minimap' })}>
-            Minimap
-          </div>
+          <div mix={menu.item({ disabled: true, label: 'Minimap', name: 'minimap' })}>Minimap</div>
         </div>
       </div>
     </menu.Context>

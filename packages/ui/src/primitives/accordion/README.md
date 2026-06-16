@@ -42,7 +42,12 @@ export function SettingsAccordion() {
 Styled, fully formed accordion components live in `remix/components/accordion`:
 
 ```tsx
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from 'remix/components/accordion'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from 'remix/components/accordion'
 ```
 
 ## `accordion.*`

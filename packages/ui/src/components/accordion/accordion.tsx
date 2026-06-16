@@ -233,7 +233,9 @@ export function AccordionItem(handle: Handle<AccordionItemProps>): () => RemixNo
 
     return (
       <accordion.ItemContext disabled={disabled} value={value}>
-        <div {...divProps} mix={[itemStyle, accordion.item(), mix]}>{children}</div>
+        <div {...divProps} mix={[itemStyle, accordion.item(), mix]}>
+          {children}
+        </div>
       </accordion.ItemContext>
     )
   }

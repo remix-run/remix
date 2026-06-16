@@ -70,7 +70,10 @@ export type { CSSMixinDescriptor } from './style/css-mixin.ts'
 
 // -- UI helpers used by headless primitives and composed components --
 export { onKeyDown } from './interactions/keydown/keydown.ts'
-export { hiddenTypeahead, matchNextItemBySearchText } from './interactions/typeahead/typeahead-mixin.ts'
+export {
+  hiddenTypeahead,
+  matchNextItemBySearchText,
+} from './interactions/typeahead/typeahead-mixin.ts'
 export type { SearchValue } from './interactions/typeahead/typeahead-mixin.ts'
 export { flashAttribute } from './utils/flash-attribute.ts'
 export { wait } from './utils/wait.ts'

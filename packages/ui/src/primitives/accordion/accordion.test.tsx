@@ -28,7 +28,9 @@ function TestAccordionItem(handle: Handle<accordion.AccordionItemProps>) {
 
     return (
       <accordion.ItemContext disabled={disabled} value={value}>
-        <div {...divProps} mix={accordion.item()}>{children}</div>
+        <div {...divProps} mix={accordion.item()}>
+          {children}
+        </div>
       </accordion.ItemContext>
     )
   }
@@ -42,11 +44,7 @@ function TestAccordionTrigger(handle: Handle<accordion.AccordionTriggerProps>) {
     void mix
 
     let button = (
-      <button
-        {...buttonProps}
-        mix={accordion.trigger({ disabled })}
-        type={type ?? 'button'}
-      >
+      <button {...buttonProps} mix={accordion.trigger({ disabled })} type={type ?? 'button'}>
         {children}
       </button>
     )
@@ -60,7 +58,11 @@ function TestAccordionContent(handle: Handle<accordion.AccordionContentProps>) {
     let { children, mix, ...divProps } = handle.props
     void mix
 
-    return <div {...divProps} mix={accordion.content()}>{children}</div>
+    return (
+      <div {...divProps} mix={accordion.content()}>
+        {children}
+      </div>
+    )
   }
 }
 

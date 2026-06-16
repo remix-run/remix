@@ -66,9 +66,7 @@ function TestOption(
   return () => {
     let { children, disabled, label, textValue, value } = handle.props
 
-    return (
-      <div mix={select.option({ disabled, label, textValue, value })}>{children ?? label}</div>
-    )
+    return <div mix={select.option({ disabled, label, textValue, value })}>{children ?? label}</div>
   }
 }
 

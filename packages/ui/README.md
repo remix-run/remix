@@ -43,11 +43,7 @@ function ViewOptions() {
   return () => (
     <popover.Context>
       <button
-        mix={[
-          triggerCss,
-          popover.anchor({ placement: 'bottom-end' }),
-          popover.focusOnHide(),
-        ]}
+        mix={[triggerCss, popover.anchor({ placement: 'bottom-end' }), popover.focusOnHide()]}
         onClick={() => {
           open = true
         }}

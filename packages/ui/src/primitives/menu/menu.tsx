@@ -1273,7 +1273,6 @@ const submenuTriggerMixin: MixinFactory<
   }
 })
 
-
 export const Context = MenuProvider
 export const contextTrigger = contextTriggerMixin
 export const item = itemMixin

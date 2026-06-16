@@ -760,7 +760,11 @@ describe('Combobox', () => {
         <TestCombobox inputId="environment" name="environment" placeholder="Search an environment">
           <TestComboboxOption label="Production" value="production" />
           <TestComboboxOption label="Staging" searchValue={['staging', 'beta']} value="staging" />
-          <TestComboboxOption label="Local" searchValue={['local', 'dev', 'workbench']} value="local" />
+          <TestComboboxOption
+            label="Local"
+            searchValue={['local', 'dev', 'workbench']}
+            value="local"
+          />
         </TestCombobox>
       </div>,
     )
@@ -807,7 +811,11 @@ describe('Combobox', () => {
         <TestComboboxOption label="Production" value="production" />
         <TestComboboxOption label="Staging" searchValue={['staging', 'beta']} value="staging" />
         <TestComboboxOption disabled label="Dev Null" searchValue="dev" value="dev-null" />
-        <TestComboboxOption label="Local" searchValue={['local', 'dev', 'workbench']} value="local" />
+        <TestComboboxOption
+          label="Local"
+          searchValue={['local', 'dev', 'workbench']}
+          value="local"
+        />
       </TestCombobox>,
     )
     let input = container.querySelector('input[type="text"]') as HTMLInputElement

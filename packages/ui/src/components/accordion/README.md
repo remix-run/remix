@@ -5,7 +5,12 @@
 ## Usage
 
 ```tsx
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from 'remix/components/accordion'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from 'remix/components/accordion'
 
 export function SettingsAccordion() {
   return (
@@ -27,7 +32,12 @@ export function SettingsAccordion() {
 Use `type="multiple"` when more than one panel may stay open. `defaultValue` and `value` are arrays in multiple mode.
 
 ```tsx
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from 'remix/components/accordion'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from 'remix/components/accordion'
 
 export function StatusAccordion() {
   return (
@@ -55,7 +65,12 @@ Control the open value when state should live in the owning component. Single mo
 
 ```tsx
 import type { Handle } from 'remix/ui'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from 'remix/components/accordion'
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from 'remix/components/accordion'
 
 export function ControlledAccordion(handle: Handle) {
   let value: string | null = 'account'

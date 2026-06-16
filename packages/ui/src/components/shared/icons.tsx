@@ -54,8 +54,5 @@ export function ChevronRightIcon(handle: Handle<IconProps>): () => RemixElement 
 
 export function ChevronVerticalIcon(handle: Handle<IconProps>): () => RemixElement {
   return () =>
-    icon(handle, [
-      strokedPath('m3.75 6.5 4.25-4 4.25 4'),
-      strokedPath('m3.75 9.5 4.25 4 4.25-4'),
-    ])
+    icon(handle, [strokedPath('m3.75 6.5 4.25-4 4.25 4'), strokedPath('m3.75 9.5 4.25 4 4.25-4')])
 }

@@ -123,9 +123,10 @@ export interface AccordionContentOptions {}
 
 export type AccordionProps = Props<'div'> & AccordionContextProps
 
-export type AccordionItemProps = Omit<Props<'div'>, 'children'> & AccordionItemOptions & {
-  children?: RemixNode
-}
+export type AccordionItemProps = Omit<Props<'div'>, 'children'> &
+  AccordionItemOptions & {
+    children?: RemixNode
+  }
 
 export type AccordionTriggerProps = Omit<Props<'button'>, 'children' | 'type'> &
   AccordionTriggerOptions & {

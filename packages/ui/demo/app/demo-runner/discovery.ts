@@ -22,7 +22,9 @@ const DEMO_ROOTS = [path.join(DEMO_DIRECTORY, 'cases'), path.join(UI_DIRECTORY, 
 const DEMO_FILE_REGEX = /\.demo\.(tsx|ts)$/
 
 export function discoverDemoFiles(): DemoFile[] {
-  return DEMO_ROOTS.flatMap((root) => walkDemoFiles(root)).map(createDemoFile).sort(compareDemoFiles)
+  return DEMO_ROOTS.flatMap((root) => walkDemoFiles(root))
+    .map(createDemoFile)
+    .sort(compareDemoFiles)
 }
 
 export function findDemoFile(filename: string) {

@@ -26,7 +26,11 @@ export function ViewOptions(handle: Handle) {
   return () => (
     <popover.Context>
       <button
-        mix={[popover.anchor({ placement: 'bottom-end' }), popover.focusOnHide(), on('click', openPopover)]}
+        mix={[
+          popover.anchor({ placement: 'bottom-end' }),
+          popover.focusOnHide(),
+          on('click', openPopover),
+        ]}
         type="button"
       >
         View options
