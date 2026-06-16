@@ -659,14 +659,14 @@ function getScopedUiRefreshFixtureFiles(): Record<string, string> {
   return {
     'node_modules/@remix-run/ui/package.json': JSON.stringify({
       exports: {
-        './dev/refresh': './dev/refresh.ts',
+        './dev/refresh': './src/dev-refresh.ts',
         './package.json': './package.json',
       },
       name: '@remix-run/ui',
       type: 'module',
     }),
-    'node_modules/@remix-run/ui/dev/refresh.ts': [
-      `export function requestReconciliation() {}`,
+    'node_modules/@remix-run/ui/src/dev-refresh.ts': [
+      `export function reconcileRoots() {}`,
       `export function setComponentStalenessCheck(_check) {}`,
     ].join('\n'),
   }
@@ -703,7 +703,7 @@ function getRemixUiRefreshPackageFiles(): Record<string, string> {
       type: 'module',
     }),
     'ui/dev/refresh.ts': [
-      `export function requestReconciliation() {}`,
+      `export function reconcileRoots() {}`,
       `export function setComponentStalenessCheck(_check) {}`,
     ].join('\n'),
   }

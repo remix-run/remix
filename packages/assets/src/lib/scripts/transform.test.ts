@@ -74,7 +74,7 @@ describe('createHmrClientSource', () => {
 describe('resolveComponentHmrRefreshSpecifier', () => {
   let importerPath = path.resolve('/app/component.ts')
   let remixRefreshPath = path.resolve('/app/node_modules/remix/src/ui/dev/refresh.ts')
-  let uiRefreshPath = path.resolve('/app/node_modules/@remix-run/ui/src/dev/refresh.ts')
+  let uiRefreshPath = path.resolve('/app/node_modules/@remix-run/ui/src/dev-refresh.ts')
 
   it('matches the real package refresh export contracts', () => {
     assert.ok(

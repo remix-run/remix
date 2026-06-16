@@ -3,7 +3,7 @@ export interface ComponentHmrState {
 }
 
 export interface ComponentHmrRefresh {
-  requestReconciliation(): void
+  reconcileRoots(): void
   setComponentStalenessCheck(check: (component: Function) => boolean): void
 }
 
@@ -215,7 +215,7 @@ export function updateComponentModuleForHmr(
     staleComponentKeys.add(modulePrefix)
   }
 
-  refresh.requestReconciliation()
+  refresh.reconcileRoots()
 
   queueMicrotask(() => {
     staleComponentKeys.clear()

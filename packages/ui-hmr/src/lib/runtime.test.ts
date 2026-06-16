@@ -17,7 +17,7 @@ let componentStalenessCheck: ((component: Function) => boolean) | undefined
 let reconciliationCount = 0
 
 const refresh: ComponentHmrRefresh = {
-  requestReconciliation() {
+  reconcileRoots() {
     reconciliationCount++
   },
   setComponentStalenessCheck(check) {

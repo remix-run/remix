@@ -419,9 +419,10 @@ export function diffVNodes(
   }
 
   if (
+    componentStalenessCheck !== null &&
     isCommittedComponentNode(curr) &&
     isComponentNode(next) &&
-    componentStalenessCheck?.(curr.type) === true
+    componentStalenessCheck(curr.type) === true
   ) {
     replace(curr, next, domParent, frame, scheduler, styles, vParent, rootTarget, anchor)
     return rootCursor

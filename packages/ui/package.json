@@ -50,8 +50,8 @@
       "default": "./src/components/combobox/combobox.tsx"
     },
     "./dev/refresh": {
-      "types": "./src/dev/refresh.ts",
-      "default": "./src/dev/refresh.ts"
+      "types": "./src/dev-refresh.ts",
+      "default": "./src/dev-refresh.ts"
     },
     "./jsx-dev-runtime": {
       "types": "./src/jsx-runtime.ts",
@@ -134,8 +134,8 @@
         "default": "./dist/components/combobox/combobox.js"
       },
       "./dev/refresh": {
-        "types": "./dist/dev/refresh.d.ts",
-        "default": "./dist/dev/refresh.js"
+        "types": "./dist/dev-refresh.d.ts",
+        "default": "./dist/dev-refresh.js"
       },
       "./jsx-dev-runtime": {
         "types": "./dist/jsx-runtime.d.ts",

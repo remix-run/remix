@@ -18,7 +18,7 @@ export function unregisterRoot(root: VirtualRoot): void {
   roots.delete(root)
 }
 
-export function reconcileAllRoots(): void {
+export function reconcileRoots(): void {
   for (let root of roots) {
     root.reconcile()
   }
