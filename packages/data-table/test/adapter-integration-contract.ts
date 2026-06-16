@@ -6,11 +6,7 @@ import type { Database, DatabaseResource } from '../src/lib/database.ts'
 import { DataTableQueryError } from '../src/lib/errors.ts'
 import { table, hasMany, hasManyThrough } from '../src/lib/table.ts'
 import { between, eq, ilike, inList, ne } from '../src/lib/operators.ts'
-
-import {
-  setupAdapterIntegrationSchema,
-  teardownAdapterIntegrationSchema,
-} from './adapter-integration-schema.ts'
+import { sql, type SqlStatement } from '../src/lib/sql.ts'
 
 const accounts = table({
   name: 'accounts',
@@ -47,12 +43,63 @@ const accountTasks = hasManyThrough(accounts, tasks, {
   through: accountProjects,
 })
 
+const schemaStatements = {
+  drop: [
+    sql`drop table if exists tasks`,
+    sql`drop table if exists projects`,
+    sql`drop table if exists accounts`,
+  ],
+  create: [
+    sql`
+      create table accounts (
+        id integer primary key,
+        email text not null,
+        status text not null,
+        nickname text
+      )
+    `,
+    sql`
+      create table projects (
+        id integer primary key,
+        account_id integer not null,
+        name text not null,
+        archived boolean not null
+      )
+    `,
+    sql`
+      create table tasks (
+        id integer primary key,
+        project_id integer not null,
+        title text not null,
+        state text not null
+      )
+    `,
+  ],
+} satisfies {
+  drop: SqlStatement[]
+  create: SqlStatement[]
+}
+
 type IntegrationContractState = {
   database: DatabaseResource
   client: Database
 }
 
 const rollbackTestTransaction = Symbol('rollbackTestTransaction')
+
+async function setupAdapterIntegrationSchema(client: Database): Promise<void> {
+  await runStatements(client, [...schemaStatements.drop, ...schemaStatements.create])
+}
+
+async function teardownAdapterIntegrationSchema(client: Database): Promise<void> {
+  await runStatements(client, schemaStatements.drop)
+}
+
+async function runStatements(client: Database, statements: SqlStatement[]): Promise<void> {
+  for (let statement of statements) {
+    await client.exec(statement)
+  }
+}
 
 async function withRollback<result>(
   state: IntegrationContractState,
@@ -79,16 +126,12 @@ export function runAdapterIntegrationContract(database: DatabaseResource): void 
 
   before(async () => {
     let client = await database.connect()
-    await setupAdapterIntegrationSchema(async (statement) => {
-      await client.exec(statement)
-    })
+    await setupAdapterIntegrationSchema(client)
     state = { database, client }
   })
 
   after(async () => {
-    await teardownAdapterIntegrationSchema(async (statement) => {
-      await state.client.exec(statement)
-    })
+    await teardownAdapterIntegrationSchema(state.client)
     await state.client.close()
     await state.database.close()
   })
