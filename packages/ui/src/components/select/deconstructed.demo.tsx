@@ -1,10 +1,16 @@
-import { css, type Handle } from '@remix-run/ui'
-import * as button from '@remix-run/ui/button'
-import { Glyph } from '@remix-run/ui/glyph'
+import { css, type Handle, type Props } from '@remix-run/ui'
+import * as button from '@remix-run/ui/components/button'
 import * as listbox from '@remix-run/ui/listbox'
 import * as popover from '@remix-run/ui/popover'
 import * as select from '@remix-run/ui/select'
-import { theme } from '@remix-run/ui/theme'
+import { triggerStyle } from '@remix-run/ui/components/select'
+import {
+  listboxIndicatorStyle,
+  listboxLabelStyle,
+  listboxListStyle,
+  listboxOptionStyle,
+  popoverSurfaceStyle,
+} from '../shared/listbox-popover-styles.ts'
 
 /**
  * @name Select Deconstructed
@@ -33,22 +39,19 @@ export default function Example(handle: Handle) {
         <button
           id={triggerId}
           type="button"
-          mix={[button.baseStyle, select.triggerStyle, select.trigger(), selectCss]}
+          mix={[button.baseStyle, triggerStyle, select.trigger(), selectCss]}
         >
           <span mix={button.labelStyle}>{label}</span>
-          <Glyph mix={button.iconStyle} name="chevronVertical" />
+          <ChevronVerticalIcon mix={button.iconStyle} />
         </button>
 
         <popover.Context>
-          <div mix={[popover.surfaceStyle, select.popover()]}>
-            <div
-              aria-labelledby={triggerId}
-              mix={[popover.contentStyle, listbox.listStyle, select.list()]}
-            >
+          <div mix={[popoverSurfaceStyle, select.popover()]}>
+            <div aria-labelledby={triggerId} mix={[listboxListStyle, select.list()]}>
               {environmentOptions.map((option) => (
-                <div key={option.value} mix={[listbox.optionStyle, select.option(option)]}>
-                  <Glyph mix={listbox.glyphStyle} name="check" />
-                  <span mix={listbox.labelStyle}>{option.label}</span>
+                <div key={option.value} mix={[listboxOptionStyle, select.option(option)]}>
+                  <CheckIcon mix={listboxIndicatorStyle} />
+                  <span mix={listboxLabelStyle}>{option.label}</span>
                 </div>
               ))}
             </div>
@@ -60,6 +63,34 @@ export default function Example(handle: Handle) {
 
       <p mix={valueCss}>{`value=${value}`}</p>
     </div>
+  )
+}
+
+function ChevronVerticalIcon(handle: Handle<Props<'svg'>>) {
+  return () => (
+    <svg {...handle.props} aria-hidden="true" fill="none" viewBox="0 0 16 16">
+      <path
+        d="m5 6 3-3 3 3M5 10l3 3 3-3"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="1.5"
+      />
+    </svg>
+  )
+}
+
+function CheckIcon(handle: Handle<Props<'svg'>>) {
+  return () => (
+    <svg {...handle.props} aria-hidden="true" fill="none" viewBox="0 0 16 16">
+      <path
+        d="m3.5 8.5 2.75 2.75 6.25-6.5"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="1.5"
+      />
+    </svg>
   )
 }
 
@@ -77,20 +108,21 @@ const selectCss = css({
 const stackCss = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.space.sm,
+  gap: '8px',
   width: '100%',
 })
 
 const labelCss = css({
   margin: 0,
-  fontSize: theme.fontSize.xs,
-  fontWeight: theme.fontWeight.semibold,
-  color: theme.colors.text.primary,
+  fontSize: '12px',
+  fontWeight: '600',
+  color: '#151515',
 })
 
 const valueCss = css({
   margin: 0,
-  fontFamily: theme.fontFamily.mono,
-  fontSize: theme.fontSize.xs,
-  color: theme.colors.text.secondary,
+  fontFamily:
+    'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+  fontSize: '12px',
+  color: '#4f4f4f',
 })

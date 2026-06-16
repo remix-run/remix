@@ -1,5 +1,4 @@
 import type { Handle, RemixNode } from 'remix/ui'
-import { RMX_01, RMX_01_GLYPHS } from 'remix/ui/theme'
 
 import { routes } from '../routes.ts'
 
@@ -21,10 +20,8 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <meta name="color-scheme" content="light" />
           <title>{title}</title>
-          <RMX_01.Style />
         </head>
         <body>
-          <RMX_01_GLYPHS />
           {children}
           <script
             type="module"

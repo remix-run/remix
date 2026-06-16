@@ -1,35 +1,70 @@
-// Copy `*.demo.tsx` files from `packages/ui/src/components/<comp>/demos/` into
-// `docs/build/demos/ui/<comp>/`, rewriting `@remix-run/*` imports to `remix/*`
-// (the docs app depends on `remix`, not `@remix-run/ui`). The runtime server
-// reads from `docs/build/demos/` — see `src/server/demos.tsx`.
+// Copy package demo source files into `docs/build/demos/`, rewriting
+// `@remix-run/*` imports to `remix/*` (the docs app depends on `remix`). The
+// runtime server reads from `docs/build/demos/` — see `src/server/demos.tsx`.
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 
+import { hasRemixPackage, mapToRemixPackage } from './manifest.ts'
+
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const REPO_DIR = path.resolve(DOCS_DIR, '..')
-const UI_COMPONENTS_DIR = path.join(REPO_DIR, 'packages', 'ui', 'src', 'components')
 const DEMO_BUILD_DIR = path.join(DOCS_DIR, 'build', 'demos')
+const DEMO_SOURCES = [
+  {
+    packageName: 'ui',
+    sourceDir: path.join(REPO_DIR, 'packages', 'ui', 'src'),
+  },
+]
+const REMIX_RUN_IMPORT_RE =
+  /(from\s+['"]|import\s*\(\s*['"]|import\s+['"])(@remix-run\/[^'"]+)/g
 
 function rewriteImports(source: string): string {
-  return source.replace(
-    /(from\s+['"]|import\s*\(\s*['"])@remix-run\//g,
-    (_match, prefix) => `${prefix}remix/`,
-  )
+  return source.replace(REMIX_RUN_IMPORT_RE, (_match, prefix: string, specifier: string) => {
+    if (!hasRemixPackage(specifier)) {
+      throw new Error(`No remix manifest entry found for import "${specifier}"`)
+    }
+    return `${prefix}${mapToRemixPackage(specifier)}`
+  })
+}
+
+function isDemoSourceFile(filename: string) {
+  return (filename.endsWith('.ts') || filename.endsWith('.tsx')) && !filename.endsWith('.test.ts')
+}
+
+function* walkDemoDirectory(dir: string): Generator<string> {
+  for (let entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    let absolutePath = path.join(dir, entry.name)
+
+    if (entry.isDirectory()) {
+      yield* walkDemoDirectory(absolutePath)
+      continue
+    }
+
+    if (entry.isFile() && isDemoSourceFile(entry.name)) {
+      yield absolutePath
+    }
+  }
 }
 
 function* walkDemoSources(dir: string): Generator<string> {
   for (let entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    if (!entry.isDirectory()) continue
     let absolutePath = path.join(dir, entry.name)
-    if (entry.name === 'demos') {
-      for (let demoEntry of fs.readdirSync(absolutePath, { withFileTypes: true })) {
-        if (demoEntry.isFile() && demoEntry.name.endsWith('.demo.tsx')) {
-          yield path.join(absolutePath, demoEntry.name)
-        }
+
+    if (entry.isFile()) {
+      if (entry.name.endsWith('.demo.tsx')) {
+        yield absolutePath
       }
       continue
     }
+
+    if (!entry.isDirectory()) continue
+
+    if (entry.name === 'demos' || entry.name === 'shared') {
+      yield* walkDemoDirectory(absolutePath)
+      continue
+    }
+
     yield* walkDemoSources(absolutePath)
   }
 }
@@ -37,24 +72,14 @@ function* walkDemoSources(dir: string): Generator<string> {
 fs.rmSync(DEMO_BUILD_DIR, { recursive: true, force: true })
 
 let count = 0
-for (let sourcePath of walkDemoSources(UI_COMPONENTS_DIR)) {
-  // packages/ui/src/components/<comp>/demos/<slug>.demo.tsx
-  let parts = path.relative(REPO_DIR, sourcePath).split(path.sep)
-  if (
-    parts.length !== 7 ||
-    parts[0] !== 'packages' ||
-    parts[1] !== 'ui' ||
-    parts[2] !== 'src' ||
-    parts[3] !== 'components' ||
-    parts[5] !== 'demos' ||
-    !parts[6].endsWith('.demo.tsx')
-  ) {
-    throw new Error(`Invalid demo location: ${sourcePath}`)
+for (let source of DEMO_SOURCES) {
+  for (let sourcePath of walkDemoSources(source.sourceDir)) {
+    let relativePath = path.relative(source.sourceDir, sourcePath)
+    let outPath = path.join(DEMO_BUILD_DIR, source.packageName, relativePath)
+    fs.mkdirSync(path.dirname(outPath), { recursive: true })
+    fs.writeFileSync(outPath, rewriteImports(fs.readFileSync(sourcePath, 'utf-8')))
+    count++
   }
-  let outPath = path.join(DEMO_BUILD_DIR, 'ui', parts[4], parts[6])
-  fs.mkdirSync(path.dirname(outPath), { recursive: true })
-  fs.writeFileSync(outPath, rewriteImports(fs.readFileSync(sourcePath, 'utf-8')))
-  count++
 }
 
 console.log(`build-demos: wrote ${count} files to ${path.relative(DOCS_DIR, DEMO_BUILD_DIR)}`)

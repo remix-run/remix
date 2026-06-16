@@ -5,7 +5,7 @@
 ## Usage
 
 ```tsx
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from 'remix/ui/accordion'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from 'remix/components/accordion'
 
 export function SettingsAccordion() {
   return (
@@ -27,7 +27,7 @@ export function SettingsAccordion() {
 Use `type="multiple"` when more than one panel may stay open. `defaultValue` and `value` are arrays in multiple mode.
 
 ```tsx
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from 'remix/ui/accordion'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from 'remix/components/accordion'
 
 export function StatusAccordion() {
   return (
@@ -55,7 +55,7 @@ Control the open value when state should live in the owning component. Single mo
 
 ```tsx
 import type { Handle } from 'remix/ui'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from 'remix/ui/accordion'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from 'remix/components/accordion'
 
 export function ControlledAccordion(handle: Handle) {
   let value: string | null = 'account'
@@ -82,16 +82,16 @@ export function ControlledAccordion(handle: Handle) {
 }
 ```
 
-Listen for bubbling `AccordionChangeEvent` events with `onAccordionChange`.
+Listen for bubbling `AccordionChangeEvent` events with `onAccordionChange` from `remix/ui/accordion`.
 
 ```tsx
+import { onAccordionChange } from 'remix/ui/accordion'
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-  onAccordionChange,
-} from 'remix/ui/accordion'
+} from 'remix/components/accordion'
 
 export function TrackedAccordion() {
   return (
@@ -124,7 +124,7 @@ Set `collapsible={false}` in single mode when the open item must stay open. The 
 </Accordion>
 ```
 
-Use `headingLevel` to choose the heading wrapper rendered around each trigger. The default level is `3`.
+Use `headingLevel` to choose the heading element rendered around each trigger. The default level is `3`.
 
 ```tsx
 <Accordion defaultValue="shipping" headingLevel={2}>
@@ -148,10 +148,10 @@ Pass `indicator={null}` to remove the default chevron, or pass a custom node to 
 - `AccordionItem`: registers one accordion item by `value`. Pass `disabled` to prevent that item from opening or receiving keyboard focus.
 - `AccordionTrigger`: heading-wrapped button for an item. It wires `aria-expanded`, `aria-controls`, keyboard navigation, and the default chevron indicator.
 - `AccordionContent`: panel for an item. It wires the panel id, `aria-labelledby`, `aria-hidden`, inert state, and open/closed state attributes.
-- `onAccordionChange(...)`: event mixin for the bubbling `AccordionChangeEvent`.
-- `AccordionChangeEvent`: bubbling event class with `value`, `itemValue`, and `accordionType`.
+- `onAccordionChange(...)`: event mixin from `remix/ui/accordion` for the bubbling `AccordionChangeEvent`.
+- `AccordionChangeEvent`: bubbling event class from `remix/ui/accordion` with `value`, `itemValue`, and `accordionType`.
 - `AccordionProps`, `AccordionSingleProps`, `AccordionMultipleProps`, `AccordionItemProps`, `AccordionTriggerProps`, and `AccordionContentProps`: public TypeScript props.
-- `rootStyle`, `itemStyle`, `triggerStyle`, `indicatorStyle`, `panelStyle`, and `bodyStyle`: flat style mixins used by the component wrappers.
+- `rootStyle`, `itemStyle`, `triggerStyle`, `indicatorStyle`, `panelStyle`, and `bodyStyle`: flat style mixins used by the component markup.
 
 ## Behavior Notes
 

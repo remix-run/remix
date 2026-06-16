@@ -1,5 +1,5 @@
-import { on } from '@remix-run/ui'
-import { Menu, MenuItem, onMenuSelect } from '@remix-run/ui/menu'
+import { Menu, MenuItem } from '@remix-run/ui/components/menu'
+import { onMenuSelect } from '@remix-run/ui/menu'
 
 /**
  * @name Menu Event Bubbling
