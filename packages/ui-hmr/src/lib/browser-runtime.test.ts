@@ -11,7 +11,7 @@ import {
   registerComponentRenderForHmr,
   setupComponentForHmr,
   updateComponentModuleForHmr,
-} from './runtime.ts'
+} from './browser-runtime.ts'
 
 let componentStalenessCheck: ((component: Function) => boolean) | undefined
 let reconciliationCount = 0
@@ -81,16 +81,11 @@ describe('component HMR runtime', () => {
     assert.equal(componentStalenessCheck?.(Component), false)
   })
 
-  it('creates a stable HMR handle for server-rendered components without UI handles', () => {
-    let handle = getComponentHandleForHmr(undefined, '/app/server.tsx', 'Greeting')
-    let nextHandle = getComponentHandleForHmr(undefined, '/app/server.tsx', 'Greeting')
-
-    assert.equal(nextHandle, handle)
-
-    let state = getComponentHmrState(handle)
-    state.message = 'hello'
-
-    assert.equal(getComponentHmrState(nextHandle).message, 'hello')
+  it('rejects missing component handles', () => {
+    assert.throws(
+      () => getComponentHandleForHmr(undefined, '/app/server.tsx', 'Greeting'),
+      /Expected HMR component handle for \/app\/server\.tsx:Greeting/,
+    )
   })
 
   it('runs setup once for each component handle', () => {
@@ -228,12 +223,12 @@ describe('component HMR runtime', () => {
     assert.equal(remountedSecondState.value, 'after second')
   })
 
-  it('tracks server-rendered component renders without UI handles', () => {
+  it('tracks component renders by handle', () => {
     function Greeting() {
       return () => 'hello'
     }
 
-    let handle = getComponentHandleForHmr(undefined, '/app/render.tsx', 'Greeting')
+    let handle = getComponentHandleForHmr(createTestHandle(), '/app/render.tsx', 'Greeting')
     registerComponentForHmr(refresh, '/app/render.tsx', 'Greeting', Greeting, 'h1', Greeting)
     registerComponentRenderForHmr(
       refresh,

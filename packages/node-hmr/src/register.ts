@@ -3,7 +3,7 @@ import { createRequire } from 'node:module'
 import { dirname, isAbsolute, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { transformComponentHmr } from '@remix-run/ui-hmr/transform'
+import { transformComponentsForServer } from '@remix-run/ui-hmr'
 
 import {
   analyzeNodeHmrSource,
@@ -17,7 +17,7 @@ markNodeHmrParentProcess()
 const runtime = installNodeHmrRuntime({ browserEventUrl: getBrowserEventUrl() })
 const rootPath = getRegisterUrlParam('rootPath')
 let invalidatedUrlTimestamps = new Map<string, number>()
-const componentHmrRuntimeUrl = import.meta.resolve('@remix-run/ui-hmr/runtime')
+const componentHmrRuntimeUrl = import.meta.resolve('@remix-run/ui-hmr/server-runtime')
 
 const componentHmrRefreshSpecifiers = ['remix/ui/dev/refresh', '@remix-run/ui/dev/refresh'] as const
 
@@ -143,9 +143,8 @@ function transformSource(url: string, source: string): string {
   let componentHmrRefreshSpecifier = resolveComponentHmrRefreshSpecifier(url)
   if (componentHmrRefreshSpecifier === null) return source
 
-  let result = transformComponentHmr(source, {
+  let result = transformComponentsForServer(source, {
     moduleUrl: url,
-    refreshSpecifier: componentHmrRefreshSpecifier,
     runtimeSpecifier: componentHmrRuntimeUrl,
   })
 

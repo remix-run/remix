@@ -19,19 +19,24 @@
   ],
   "type": "module",
   "exports": {
-    "./runtime": "./src/runtime.ts",
-    "./transform": "./src/transform.ts",
+    ".": "./src/index.ts",
+    "./browser-runtime": "./src/browser-runtime.ts",
+    "./server-runtime": "./src/server-runtime.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
     "exports": {
-      "./runtime": {
-        "types": "./dist/runtime.d.ts",
-        "default": "./dist/runtime.js"
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
       },
-      "./transform": {
-        "types": "./dist/transform.d.ts",
-        "default": "./dist/transform.js"
+      "./browser-runtime": {
+        "types": "./dist/browser-runtime.d.ts",
+        "default": "./dist/browser-runtime.js"
+      },
+      "./server-runtime": {
+        "types": "./dist/server-runtime.d.ts",
+        "default": "./dist/server-runtime.js"
       },
       "./package.json": "./package.json"
     }

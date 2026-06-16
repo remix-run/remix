@@ -3262,7 +3262,7 @@ describe('asset-server', () => {
         assert.equal(response.status, 200)
         let body = await response.text()
 
-        assert.match(body, /__@remix\/injected\/@remix-run\/ui-hmr\/src\/runtime\.ts/)
+        assert.match(body, /__@remix\/injected\/@remix-run\/ui-hmr\/src\/browser-runtime\.ts/)
         assert.match(body, /app\/node_modules\/remix\/ui\/dev\/refresh\.ts/)
         assert.match(body, /__remixHmr\.registerComponentForHmr\(__remixUIRefresh/)
         assert.match(body, /import\.meta\.hot\.accept/)

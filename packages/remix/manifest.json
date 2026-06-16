@@ -105,8 +105,9 @@
   "remix/ui/server": "@remix-run/ui/server",
   "remix/ui/test": "@remix-run/ui/test",
   "remix/ui/theme": "@remix-run/ui/theme",
-  "remix/ui-hmr/runtime": "@remix-run/ui-hmr/runtime",
-  "remix/ui-hmr/transform": "@remix-run/ui-hmr/transform",
+  "remix/ui-hmr": "@remix-run/ui-hmr",
+  "remix/ui-hmr/browser-runtime": "@remix-run/ui-hmr/browser-runtime",
+  "remix/ui-hmr/server-runtime": "@remix-run/ui-hmr/server-runtime",
 
   "_comment": "Legacy aliases: mechanical paths kept for backwards compatibility. Canonical entries above take precedence.",
   "remix/async-context-middleware": "@remix-run/async-context-middleware",

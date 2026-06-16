@@ -1,11 +1,13 @@
 export {
   callComponentRenderForHmr,
+  clearComponentHmrState,
   getComponentHandleForHmr,
   getComponentHmrState,
   getCurrentComponentForHmr,
   registerComponentForHmr,
+  registerComponentInstanceForHmr,
   registerComponentRenderForHmr,
   setupComponentForHmr,
   updateComponentModuleForHmr,
-} from './lib/runtime.ts'
-export type { ComponentHmrRefresh, ComponentHmrState } from './lib/runtime.ts'
+} from './lib/browser-runtime.ts'
+export type { ComponentHmrRefresh, ComponentHmrState } from './lib/browser-runtime.ts'

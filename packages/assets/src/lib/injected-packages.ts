@@ -10,7 +10,7 @@ type ResolvedInjectedPackage = {
 
 const injectedPackageNames = ['@oxc-project/runtime', '@remix-run/ui-hmr'] as const
 const authoredInjectedPackageNames = ['@oxc-project/runtime'] as const
-const generatedInjectedPackageSpecifiers = ['@remix-run/ui-hmr/runtime'] as const
+const generatedInjectedPackageSpecifiers = ['@remix-run/ui-hmr/browser-runtime'] as const
 const injectedPackagesBasePath = '/__@remix/injected'
 
 const resolvedInjectedPackages = new Map<string, ResolvedInjectedPackage>()

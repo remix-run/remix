@@ -1,7 +1,7 @@
 import MagicString from 'magic-string'
 import { parseSync } from 'oxc-parser'
 
-export interface ComponentHmrTransformResult {
+export interface ComponentsHmrTransformResult {
   code: string
   componentNames: string[]
   map: string | null
@@ -43,10 +43,11 @@ type ClientEntryMatch = {
   statementStart: number
 }
 
-const runtimeSpecifier = '@remix-run/ui-hmr/runtime'
+const browserRuntimeSpecifier = '@remix-run/ui-hmr/browser-runtime'
+const serverRuntimeSpecifier = '@remix-run/ui-hmr/server-runtime'
 const refreshSpecifier = '@remix-run/ui/dev/refresh'
 
-export function transformComponentHmr(
+export function transformComponentsForBrowser(
   source: string,
   options: {
     moduleUrl: string
@@ -54,7 +55,7 @@ export function transformComponentHmr(
     runtimeSpecifier?: string
     sourceMap?: boolean
   },
-): ComponentHmrTransformResult {
+): ComponentsHmrTransformResult {
   let ast = parseModule(source)
   if (!ast) return createUnchangedResult(source)
 
@@ -119,7 +120,7 @@ export function transformComponentHmr(
 
   rewritten.prepend(
     [
-      `import * as __remixHmr from ${JSON.stringify(options.runtimeSpecifier ?? runtimeSpecifier)};`,
+      `import * as __remixHmr from ${JSON.stringify(options.runtimeSpecifier ?? browserRuntimeSpecifier)};`,
       `import * as __remixUIRefresh from ${JSON.stringify(
         options.refreshSpecifier ?? refreshSpecifier,
       )};`,
@@ -157,6 +158,95 @@ export function transformComponentHmr(
   }
 }
 
+export function transformComponentsForServer(
+  source: string,
+  options: {
+    moduleUrl: string
+    runtimeSpecifier?: string
+    sourceMap?: boolean
+  },
+): ComponentsHmrTransformResult {
+  let ast = parseModule(source)
+  if (!ast) return createUnchangedResult(source)
+
+  let { componentMatches, clientEntryMatches } = findMatches(ast, source)
+  if (componentMatches.length === 0 && clientEntryMatches.length === 0) {
+    return createUnchangedResult(source)
+  }
+
+  let rewritten = new MagicString(source)
+  let componentNames: string[] = []
+
+  for (let match of componentMatches) {
+    componentNames.push(match.name)
+
+    let implementationName = `__remixHmrImpl_${match.name}`
+    let exportPrefix = match.directExport ? 'export ' : ''
+    let replacement = [
+      `function ${implementationName}(${match.params}) ${source.slice(match.bodyStart, match.bodyEnd)}`,
+      `${exportPrefix}function ${match.name}(${match.params}) {`,
+      `  return __remixHmr.getCurrentComponentForHmr(${JSON.stringify(
+        options.moduleUrl,
+      )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
+      `}`,
+      `__remixHmr.registerComponentForHmr(${JSON.stringify(
+        options.moduleUrl,
+      )}, ${JSON.stringify(match.name)}, ${implementationName});`,
+    ].join('\n')
+
+    rewritten.overwrite(match.fullStart, match.fullEnd, replacement)
+  }
+
+  for (let match of clientEntryMatches) {
+    componentNames.push(match.name)
+
+    let implementationName = `__remixHmrImpl_${match.name}`
+    let wrapperSource = [
+      `function ${match.functionName}(${match.params}) {`,
+      `  return __remixHmr.getCurrentComponentForHmr(${JSON.stringify(
+        options.moduleUrl,
+      )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
+      `}`,
+    ].join('\n')
+
+    rewritten.prependLeft(
+      match.statementStart,
+      `function ${implementationName}(${match.params}) ${source.slice(
+        match.bodyStart,
+        match.bodyEnd,
+      )}\n`,
+    )
+    rewritten.overwrite(match.functionStart, match.functionEnd, wrapperSource)
+    rewritten.appendLeft(
+      match.statementEnd,
+      `\n__remixHmr.registerComponentForHmr(${JSON.stringify(
+        options.moduleUrl,
+      )}, ${JSON.stringify(match.name)}, ${implementationName});`,
+    )
+  }
+
+  rewritten.prepend(
+    [
+      `import * as __remixHmr from ${JSON.stringify(options.runtimeSpecifier ?? serverRuntimeSpecifier)};`,
+      ``,
+    ].join('\n'),
+  )
+  rewritten.append([``, `if (import.meta.hot) {`, `  import.meta.hot.accept();`, `}`].join('\n'))
+
+  return {
+    code: rewritten.toString(),
+    componentNames,
+    map: options.sourceMap
+      ? rewritten
+          .generateMap({
+            hires: true,
+          })
+          .toString()
+      : null,
+    transformed: true,
+  }
+}
+
 function parseModule(source: string): AstNode | null {
   try {
     let result = parseSync('module.tsx', source, {
@@ -169,7 +259,7 @@ function parseModule(source: string): AstNode | null {
   }
 }
 
-function createUnchangedResult(source: string): ComponentHmrTransformResult {
+function createUnchangedResult(source: string): ComponentsHmrTransformResult {
   return {
     code: source,
     componentNames: [],

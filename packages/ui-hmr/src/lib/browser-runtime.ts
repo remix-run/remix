@@ -19,13 +19,11 @@ type ComponentEntry = {
   setupHash: string
 }
 
-const persistentAbortController = new AbortController()
 const components = new Map<string, ComponentEntry>()
 const componentKeys = new WeakMap<Function, string>()
 const componentState = new WeakMap<ComponentHmrHandle, ComponentHmrState>()
 const componentSetupHashes = new WeakMap<ComponentHmrHandle, Map<string, string>>()
 const renderFunctions = new WeakMap<ComponentHmrHandle, ComponentFunction>()
-const serverHandles = new Map<string, ComponentHmrHandle>()
 const staleComponentKeys = new Set<string>()
 
 let isStalenessCheckInstalled = false
@@ -72,16 +70,9 @@ export function getComponentHandleForHmr(
   componentName: string,
 ): ComponentHmrHandle {
   if (isComponentHmrHandle(handle)) return handle
-
-  let key = getComponentKey(moduleUrl, componentName)
-  let existing = serverHandles.get(key)
-  if (existing) return existing
-
-  let serverHandle: ComponentHmrHandle = {
-    signal: persistentAbortController.signal,
-  }
-  serverHandles.set(key, serverHandle)
-  return serverHandle
+  throw new Error(
+    `[remix] Expected HMR component handle for ${getComponentKey(moduleUrl, componentName)}`,
+  )
 }
 
 export function getComponentHmrState(handle: ComponentHmrHandle): ComponentHmrState {

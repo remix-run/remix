@@ -2,7 +2,7 @@ import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { getTsconfig } from 'get-tsconfig'
-import { transformComponentHmr } from '@remix-run/ui-hmr/transform'
+import { transformComponentsForBrowser } from '@remix-run/ui-hmr'
 import MagicString from 'magic-string'
 import { minify } from 'oxc-minify'
 import { parseSync, visitorKeys } from 'oxc-parser'
@@ -61,7 +61,7 @@ const supportedTsconfigTransformCompilerOptions = {
   useDefineForClassFields: 'useDefineForClassFields',
 } as const
 
-const componentHmrRuntimeSpecifier = '@remix-run/ui-hmr/runtime'
+const componentHmrRuntimeSpecifier = '@remix-run/ui-hmr/browser-runtime'
 const componentHmrRefreshSpecifiers = ['remix/ui/dev/refresh', '@remix-run/ui/dev/refresh'] as const
 
 export type ResolveModuleResult = {
@@ -523,7 +523,7 @@ async function analyzeModuleSource(
   let sourceMap = stringifySourceMap(transformResult.map)
 
   if (options.componentHmr) {
-    let componentHmrResult = transformComponentHmr(rawCode, {
+    let componentHmrResult = transformComponentsForBrowser(rawCode, {
       moduleUrl: options.componentHmr.moduleUrl,
       refreshSpecifier: options.componentHmr.refreshSpecifier,
       runtimeSpecifier: options.componentHmr.runtimeSpecifier,

@@ -20,13 +20,13 @@ npm i remix
 This package is primarily consumed by Remix development tooling. The transform rewrites supported Remix UI component declarations and injects `import.meta.hot` usage so the generic assets HMR transport can deliver updates.
 
 ```ts
-import { transformComponentHmr } from '@remix-run/ui-hmr/transform'
+import { transformComponentsForBrowser, transformComponentsForServer } from '@remix-run/ui-hmr'
 ```
 
 The browser runtime is imported by transformed modules:
 
 ```ts
-import { registerComponentForHmr } from '@remix-run/ui-hmr/runtime'
+import { registerComponentForHmr } from '@remix-run/ui-hmr/browser-runtime'
 ```
 
 ## License

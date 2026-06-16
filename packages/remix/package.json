@@ -136,8 +136,9 @@
     "./test": "./src/test.ts",
     "./test/cli": "./src/test/cli.ts",
     "./ui": "./src/ui.ts",
-    "./ui-hmr/runtime": "./src/ui-hmr/runtime.ts",
-    "./ui-hmr/transform": "./src/ui-hmr/transform.ts",
+    "./ui-hmr": "./src/ui-hmr.ts",
+    "./ui-hmr/browser-runtime": "./src/ui-hmr/browser-runtime.ts",
+    "./ui-hmr/server-runtime": "./src/ui-hmr/server-runtime.ts",
     "./ui/accordion": "./src/ui/accordion.ts",
     "./ui/anchor": "./src/ui/anchor.ts",
     "./ui/animation": "./src/ui/animation.ts",
@@ -603,13 +604,17 @@
         "types": "./dist/ui.d.ts",
         "default": "./dist/ui.js"
       },
-      "./ui-hmr/runtime": {
-        "types": "./dist/ui-hmr/runtime.d.ts",
-        "default": "./dist/ui-hmr/runtime.js"
+      "./ui-hmr": {
+        "types": "./dist/ui-hmr.d.ts",
+        "default": "./dist/ui-hmr.js"
       },
-      "./ui-hmr/transform": {
-        "types": "./dist/ui-hmr/transform.d.ts",
-        "default": "./dist/ui-hmr/transform.js"
+      "./ui-hmr/browser-runtime": {
+        "types": "./dist/ui-hmr/browser-runtime.d.ts",
+        "default": "./dist/ui-hmr/browser-runtime.js"
+      },
+      "./ui-hmr/server-runtime": {
+        "types": "./dist/ui-hmr/server-runtime.d.ts",
+        "default": "./dist/ui-hmr/server-runtime.js"
       },
       "./ui/accordion": {
         "types": "./dist/ui/accordion.d.ts",
