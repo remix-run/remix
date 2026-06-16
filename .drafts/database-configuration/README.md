@@ -11,7 +11,7 @@ export let database = createSqliteDatabase({
 })
 ```
 
-The database resource owns the underlying database. It knows how to connect to and close without making Remix core dynamically choose an adapter.
+The database resource owns the underlying database configuration. It knows how to connect to and close without making Remix core dynamically choose an adapter.
 
 ```ts
 type DatabaseResource = AsyncDisposable & {
@@ -43,7 +43,9 @@ my-app/
 
 ## SQLite
 
-SQLite uses a file-backed database resource. It owns the file path, opens the SQLite client when connecting, and can delete/recreate the database file for lifecycle commands.
+SQLite uses a file-backed database resource by default. It owns the file path and opens a new SQLite client for each `connect()` call. Multiple file-backed clients connect to the same database file, so they have independent transaction state while still sharing committed database state.
+
+SQLite `:memory:` databases are different: each SQLite client gets its own private database. To avoid pretending that multiple clients share state, a `:memory:` SQLite resource should throw if `connect()` is called more than once. Tests or apps that want in-memory SQLite should use a single database client for that resource. Tests that need persistent state across multiple clients should use a temporary file-backed SQLite database.
 
 ```ts
 import { createSqliteDatabase } from 'remix/data-table/sqlite'
@@ -87,7 +89,7 @@ Postgres accepts a URL or split connection fields, but not both. It exposes SSL,
 import { createPostgresDatabase } from 'remix/data-table/postgres'
 
 export let database = createPostgresDatabase({
-  url: process.env.DATABASE_URL,
+  url: process.env.DATABASE_URL!,
   ssl: true,
   pool: {
     max: 10,
@@ -147,7 +149,7 @@ MySQL accepts a URL or split connection fields, but not both. It exposes SSL, po
 import { createMysqlDatabase } from 'remix/data-table/mysql'
 
 export let database = createMysqlDatabase({
-  url: process.env.DATABASE_URL,
+  url: process.env.DATABASE_URL!,
   pool: {
     max: 10,
     idleTimeoutMs: 30_000,
