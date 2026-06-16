@@ -25,6 +25,9 @@ import { run } from 'remix/node-hmr'
 
 run('./server.ts', {
   nodeArgs: ['--import', 'remix/node-tsx'],
+  watch: {
+    ignore: ['**/node_modules/**'],
+  },
 })
 ```
 
@@ -36,6 +39,37 @@ Then run the script with Node:
     "dev": "NODE_ENV=development node dev.ts"
   }
 }
+```
+
+## File Watching
+
+The file system is watched automatically so server source changes can hot update or restart the child process.
+
+You can optionally provide an array of glob patterns to the `watch.ignore` option.
+
+```ts
+import { run } from 'remix/node-hmr'
+
+run('./server.ts', {
+  nodeArgs: ['--import', 'remix/node-tsx'],
+  watch: {
+    ignore: ['**/node_modules/**'],
+  },
+})
+```
+
+You can also configure polling behavior. Polling defaults to `true` on Windows and `false` elsewhere:
+
+```ts
+import { run } from 'remix/node-hmr'
+
+run('./server.ts', {
+  nodeArgs: ['--import', 'remix/node-tsx'],
+  watch: {
+    poll: true,
+    pollInterval: 100,
+  },
+})
 ```
 
 ## Remix UI Support

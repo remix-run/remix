@@ -9,7 +9,8 @@ import { createStyles } from '@remix-run/terminal'
 import { watch } from 'chokidar'
 
 import { defaultBrowserEventChannelPathname, type HmrEventPayload } from './lib/browser-events.ts'
-import { shouldIgnoreWatchPath } from './lib/cli-args.ts'
+import { resolveChokidarWatchOptions } from './lib/cli-args.ts'
+import type { NodeHmrWatchOptions } from './lib/cli-args.ts'
 
 export interface RunOptions {
   browserEventChannel?: boolean | BrowserEventChannelOptions
@@ -17,6 +18,7 @@ export interface RunOptions {
   entryArgs?: readonly string[]
   env?: NodeJS.ProcessEnv
   nodeArgs?: readonly string[]
+  watch?: NodeHmrWatchOptions
 }
 
 export interface BrowserEventChannelOptions {
@@ -103,6 +105,7 @@ export function run(entry: string, options: RunOptions = {}): NodeHmrRunner {
     env: options.env ?? process.env,
     nodeArgs: [...(options.nodeArgs ?? [])],
     registerPath: resolveRegisterPath(),
+    watch: options.watch,
   })
 
   let closed = controller.start()
@@ -138,6 +141,7 @@ function createWatchedProcessController(options: {
   env: NodeJS.ProcessEnv
   nodeArgs: string[]
   registerPath: string
+  watch?: NodeHmrWatchOptions
 }): {
   start(): Promise<void>
   stop(signal?: NodeJS.Signals): Promise<void>
@@ -528,8 +532,7 @@ function createWatchedProcessController(options: {
 
   let watcher = watch([], {
     cwd: options.cwd,
-    ignoreInitial: true,
-    ignored: (path) => shouldIgnoreWatchPath(path),
+    ...resolveChokidarWatchOptions(options.watch),
   })
 
   watcher.on('all', handleWatchEvent)

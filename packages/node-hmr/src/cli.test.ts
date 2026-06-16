@@ -5,7 +5,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { buildNodeArgs } from './cli.ts'
-import { shouldIgnoreWatchPath } from './lib/cli-args.ts'
+import { resolveChokidarWatchOptions } from './lib/cli-args.ts'
 
 describe('buildNodeArgs', () => {
   it('preloads the node-hmr register hook after explicit child node options', () => {
@@ -53,13 +53,41 @@ describe('buildNodeArgs', () => {
   })
 })
 
-describe('shouldIgnoreWatchPath', () => {
-  it('ignores dependency and build output directories', () => {
-    assert.equal(shouldIgnoreWatchPath('node_modules/pkg/index.js'), true)
-    assert.equal(shouldIgnoreWatchPath('dist/server.js'), true)
+describe('resolveChokidarWatchOptions', () => {
+  it('uses graph-scoped watch defaults', () => {
+    assert.deepEqual(resolveChokidarWatchOptions(), {
+      awaitWriteFinish: {
+        pollInterval: 10,
+        stabilityThreshold: 10,
+      },
+      depth: 0,
+      ignorePermissionErrors: true,
+      ignored: ['**/.git/**'],
+      ignoreInitial: true,
+      interval: 100,
+      usePolling: process.platform === 'win32',
+    })
   })
 
-  it('does not ignore application source files', () => {
-    assert.equal(shouldIgnoreWatchPath('app/router.ts'), false)
+  it('applies custom watch options', () => {
+    assert.deepEqual(
+      resolveChokidarWatchOptions({
+        ignore: ['**/node_modules/**', '**/dist/**'],
+        poll: true,
+        pollInterval: 250,
+      }),
+      {
+        awaitWriteFinish: {
+          pollInterval: 10,
+          stabilityThreshold: 10,
+        },
+        depth: 0,
+        ignorePermissionErrors: true,
+        ignored: ['**/.git/**', '**/node_modules/**', '**/dist/**'],
+        ignoreInitial: true,
+        interval: 250,
+        usePolling: true,
+      },
+    )
   })
 })
