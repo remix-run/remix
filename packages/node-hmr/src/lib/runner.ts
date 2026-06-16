@@ -2,34 +2,13 @@ import { spawn, type ChildProcess } from 'node:child_process'
 import { createServer, type Server, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import process from 'node:process'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { pathToFileURL } from 'node:url'
 import { dirname, relative, resolve } from 'node:path'
 
 import { createStyles } from '@remix-run/terminal'
 import { watch } from 'chokidar'
 
-import { defaultBrowserEventChannelPathname, type HmrEventPayload } from './lib/browser-events.ts'
-import { resolveChokidarWatchOptions } from './lib/cli-args.ts'
-import type { NodeHmrWatchOptions } from './lib/cli-args.ts'
-
-export interface RunOptions {
-  browserEventChannel?: boolean | BrowserEventChannelOptions
-  cwd?: string
-  entryArgs?: readonly string[]
-  env?: NodeJS.ProcessEnv
-  nodeArgs?: readonly string[]
-  watch?: NodeHmrWatchOptions
-}
-
-export interface BrowserEventChannelOptions {
-  host?: string
-  port?: number
-  pathname?: string
-}
-
-export interface NodeHmrRunner {
-  close(): Promise<void>
-}
+import { defaultBrowserEventChannelPathname, type HmrEventPayload } from './browser-events.ts'
 
 interface NodeHmrModuleInfo {
   filePath: string
@@ -90,50 +69,32 @@ const restartDelayMs = 50
 const shutdownTimeoutMs = 5_000
 const styles = createStyles()
 
-function resolveRegisterPath(): string {
-  let extension = import.meta.url.endsWith('.ts') ? 'ts' : 'js'
-
-  return fileURLToPath(new URL(`./register.${extension}`, import.meta.url))
+interface BrowserEventChannelOptions {
+  host?: string
+  port?: number
+  pathname?: string
 }
 
-export function run(entry: string, options: RunOptions = {}): NodeHmrRunner {
-  let controller = createWatchedProcessController({
-    browserEventChannel: normalizeBrowserEventChannelOptions(options.browserEventChannel),
-    cwd: options.cwd ?? process.cwd(),
-    entry,
-    entryArgs: [...(options.entryArgs ?? [])],
-    env: options.env ?? process.env,
-    nodeArgs: [...(options.nodeArgs ?? [])],
-    registerPath: resolveRegisterPath(),
-    watch: options.watch,
-  })
+interface NodeHmrWatchOptions {
+  ignore?: readonly string[]
+  poll?: boolean
+  pollInterval?: number
+}
 
-  let closed = controller.start()
-  closed.catch((error: unknown) => {
-    console.error(error)
-  })
-
-  return {
-    close() {
-      return controller.stop()
-    },
+interface ResolvedChokidarWatchOptions {
+  awaitWriteFinish: {
+    pollInterval: number
+    stabilityThreshold: number
   }
+  depth: number
+  ignorePermissionErrors: boolean
+  ignored: string[]
+  ignoreInitial: boolean
+  interval: number
+  usePolling: boolean
 }
 
-function normalizeBrowserEventChannelOptions(
-  options: RunOptions['browserEventChannel'],
-): BrowserEventChannelOptions | null {
-  if (!options) return null
-  if (options === true) return {}
-
-  if (options.port !== undefined) {
-    assertValidPort(options.port)
-  }
-
-  return options
-}
-
-function createWatchedProcessController(options: {
+export function createWatchedProcessController(options: {
   browserEventChannel: BrowserEventChannelOptions | null
   cwd: string
   entry: string
@@ -177,7 +138,7 @@ function createWatchedProcessController(options: {
     let entry = getEntryPath()
     let nextChild = spawn(
       process.execPath,
-      buildNodeArgs({
+      buildChildProcessArgs({
         entry,
         browserEventUrl: browserEventChannel?.url,
         entryArgs: options.entryArgs,
@@ -708,7 +669,24 @@ function formatServerSentEvent(payload: HmrEventPayload): string {
   return `data: ${JSON.stringify(payload)}\n\n`
 }
 
-export function buildNodeArgs(options: {
+export function resolveChokidarWatchOptions(
+  options: NodeHmrWatchOptions = {},
+): ResolvedChokidarWatchOptions {
+  return {
+    awaitWriteFinish: {
+      pollInterval: 10,
+      stabilityThreshold: 10,
+    },
+    depth: 0,
+    ignorePermissionErrors: true,
+    ignored: ['**/.git/**', ...(options.ignore ?? [])],
+    ignoreInitial: true,
+    interval: options.pollInterval ?? 100,
+    usePolling: options.poll ?? process.platform === 'win32',
+  }
+}
+
+export function buildChildProcessArgs(options: {
   browserEventUrl?: string
   entry: string
   entryArgs: Array<string>
@@ -725,12 +703,6 @@ export function buildNodeArgs(options: {
   }
 
   return [...options.nodeArgs, '--import', registerUrl.href, options.entry, ...options.entryArgs]
-}
-
-function assertValidPort(port: number): void {
-  if (!Number.isInteger(port) || port < 0 || port > 65_535) {
-    throw new TypeError(`Invalid browser event channel port: ${port}`)
-  }
 }
 
 function isAddressInfo(value: string | AddressInfo | null): value is AddressInfo {

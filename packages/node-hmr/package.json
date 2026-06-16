@@ -19,7 +19,7 @@
   ],
   "type": "module",
   "exports": {
-    ".": "./src/node-hmr.ts",
+    ".": "./src/index.ts",
     "./runtime": "./src/runtime.ts",
     "./types": {
       "types": "./src/types.d.ts"
@@ -29,8 +29,8 @@
   "publishConfig": {
     "exports": {
       ".": {
-        "types": "./dist/node-hmr.d.ts",
-        "default": "./dist/node-hmr.js"
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
       },
       "./runtime": {
         "types": "./dist/runtime.d.ts",

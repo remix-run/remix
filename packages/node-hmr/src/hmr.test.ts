@@ -716,7 +716,7 @@ async function createFixture(
   await fs.mkdir(fixtureRoot, { recursive: true })
 
   let fixturePath = await fs.mkdtemp(path.join(fixtureRoot, 'node-hmr-'))
-  let nodeHmrImportUrl = pathToFileURL(path.join(packageRoot, 'src/node-hmr.ts')).href
+  let nodeHmrImportUrl = pathToFileURL(path.join(packageRoot, 'src/index.ts')).href
   await writeFixtureFiles(fixturePath, {
     ...files,
     'dev.ts': [

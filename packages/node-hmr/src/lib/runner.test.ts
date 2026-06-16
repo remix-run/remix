@@ -4,15 +4,14 @@ import { pathToFileURL } from 'node:url'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { buildNodeArgs } from './cli.ts'
-import { resolveChokidarWatchOptions } from './lib/cli-args.ts'
+import { buildChildProcessArgs, resolveChokidarWatchOptions } from './runner.ts'
 
-describe('buildNodeArgs', () => {
+describe('buildChildProcessArgs', () => {
   it('preloads the node-hmr register hook after explicit child node options', () => {
     let entryPath = path.resolve('app/server.ts')
     let registerPath = path.resolve('app/register.ts')
 
-    let args = buildNodeArgs({
+    let args = buildChildProcessArgs({
       browserEventUrl: 'http://127.0.0.1:1234/hmr',
       entry: entryPath,
       entryArgs: ['--debug'],
@@ -38,7 +37,7 @@ describe('buildNodeArgs', () => {
 
   it('omits the browser event channel URL when browser events are disabled', () => {
     let registerPath = path.resolve('app/register.ts')
-    let args = buildNodeArgs({
+    let args = buildChildProcessArgs({
       entry: 'server.ts',
       entryArgs: [],
       nodeArgs: [],

@@ -12,7 +12,7 @@ import { createAssetServer, type AssetServer, type HmrPayload } from '../src/ass
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const workspaceDir = path.resolve(packageDir, '../..')
 const nodeHmrImportUrl = pathToFileURL(
-  path.resolve(workspaceDir, 'packages/node-hmr/src/node-hmr.ts'),
+  path.resolve(workspaceDir, 'packages/node-hmr/src/index.ts'),
 ).href
 const nodeTsxImportUrl = pathToFileURL(
   path.resolve(workspaceDir, 'packages/node-tsx/src/index.ts'),
