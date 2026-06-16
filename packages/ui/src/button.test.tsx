@@ -26,6 +26,15 @@ describe('button', () => {
     expect(html).toMatch(/text-shadow: 0 1px 1px #000000/)
   })
 
+  it('supports ghost styling', async () => {
+    let html = await renderToString(<button mix={button({ tone: 'ghost' })}>Cancel</button>)
+
+    expect(html).toMatch(/background: transparent/)
+    expect(html).toMatch(/border: 1px solid transparent/)
+    expect(html).toMatch(/box-shadow: none/)
+    expect(html).toMatch(/background: rgba\(16, 16, 16, 0\.05\)/)
+  })
+
   it('includes hover, focus, active, and pressed states without transitions', async () => {
     let html = await renderToString(
       <>
@@ -44,6 +53,26 @@ describe('button', () => {
     expect(html).not.toMatch(/transition/)
     expect(html).not.toMatch(/cursor: pointer/)
     expect(html).not.toMatch(/all: unset/)
+  })
+
+  it('includes disabled styling for every tone', async () => {
+    let html = await renderToString(
+      <>
+        <button disabled mix={button()}>
+          Neutral
+        </button>
+        <button disabled mix={button({ tone: 'primary' })}>
+          Primary
+        </button>
+        <button disabled mix={button({ tone: 'ghost' })}>
+          Ghost
+        </button>
+      </>,
+    )
+
+    expect(html).toMatch(/&:disabled, &\[aria-disabled="true"\]/)
+    expect(html).toMatch(/cursor: not-allowed/)
+    expect(html).toMatch(/opacity: 0\.55/)
   })
 
   it('preserves explicit button type overrides and supports non-button hosts', async () => {

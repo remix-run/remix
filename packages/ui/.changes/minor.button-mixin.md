@@ -7,4 +7,5 @@ import button from '@remix-run/ui/button'
 
 <button mix={button()}>Edit order</button>
 <button mix={button({ size: 'lg', tone: 'primary' })}>Add product</button>
+<button mix={button({ tone: 'ghost' })}>Cancel</button>
 ```

@@ -3,7 +3,7 @@ import type { CSSMixinDescriptor, ElementProps, MixinDescriptor } from '@remix-r
 import { renderMixinElement } from './runtime/mixins/mixin.ts'
 
 export type ButtonSize = 'md' | 'lg'
-export type ButtonTone = 'neutral' | 'primary'
+export type ButtonTone = 'neutral' | 'primary' | 'ghost'
 
 export interface ButtonOptions {
   size?: ButtonSize
@@ -130,6 +130,21 @@ const primaryStyle: CSSMixinDescriptor = css({
   },
 })
 
+const ghostStyle: CSSMixinDescriptor = css({
+  background: 'transparent',
+  border: '1px solid transparent',
+  boxShadow: 'none',
+  color: '#101010',
+  textShadow: 'none',
+  '&:hover:not(:disabled):not([aria-disabled="true"])': {
+    background: 'rgba(16, 16, 16, 0.05)',
+  },
+  '&:active:not(:disabled):not([aria-disabled="true"]), &[aria-pressed="true"]:not(:disabled):not([aria-disabled="true"])':
+    {
+      background: 'rgba(16, 16, 16, 0.08)',
+    },
+})
+
 const sizeStyles = {
   md: mediumStyle,
   lg: largeStyle,
@@ -138,6 +153,7 @@ const sizeStyles = {
 const toneStyles = {
   neutral: neutralStyle,
   primary: primaryStyle,
+  ghost: ghostStyle,
 } as const satisfies Record<ButtonTone, CSSMixinDescriptor>
 
 export function button(options: ButtonOptions = {}): ButtonMixin {
