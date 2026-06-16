@@ -534,7 +534,17 @@ If `onError` returns nothing, the asset server responds with the default `500 In
 
 Use `hmr` with `watch` to enable the `import.meta.hot` API for browser modules.
 
-The HMR event channel is usually provided by `remix/node-hmr/runtime` so browser asset updates and server updates share the same endpoint that survives server restarts.
+To type `import.meta.hot` in browser asset modules, add the HMR types to your TypeScript config:
+
+```json
+{
+  "compilerOptions": {
+    "types": ["remix/assets/types/hmr"]
+  }
+}
+```
+
+The `hmr` option accepts an object with a `browserEventChannel` object. In order to co-ordinate updates between server and browser code changes with an SSE event endpoint that survives server restarts, you can run your server in development with [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) with provides a `browserEventChannel` within its runtime via `remix/node-hmr/runtime`:
 
 ```ts
 import { createAssetServer } from 'remix/assets'
@@ -547,34 +557,6 @@ let assetServer = createAssetServer({
   hmr: isDevelopment ? await import('remix/node-hmr/runtime') : undefined,
   watch: isDevelopment,
 })
-```
-
-Browser modules can accept their own updates. Accept callbacks receive the updated module.
-
-```ts
-let dispose = start()
-
-function start() {
-  // Start or restart client state
-  return () => {
-    // Clean up client state
-  }
-}
-
-if (import.meta.hot) {
-  import.meta.hot.accept((module) => {
-    if (typeof module.start !== 'function') {
-      import.meta.hot?.invalidate('Updated entry module did not export start()')
-      return
-    }
-    dispose()
-    dispose = module.start()
-  })
-
-  import.meta.hot.dispose(() => {
-    app.dispose()
-  })
-}
 ```
 
 Browser modules can also listen for custom HMR events. When the HMR event channel comes from `remix/node-hmr/runtime`, server updates are sent as `server:update` events.

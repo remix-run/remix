@@ -1,6 +1,7 @@
 {
   "remix/assert": "@remix-run/assert",
   "remix/assets": "@remix-run/assets",
+  "remix/assets/types/hmr": "@remix-run/assets/types/hmr",
   "remix/auth": "@remix-run/auth",
   "remix/cookie": "@remix-run/cookie",
   "remix/data-schema": "@remix-run/data-schema",
@@ -60,6 +61,7 @@
   "remix/node-fetch-server/test": "@remix-run/node-fetch-server/test",
   "remix/node-hmr": "@remix-run/node-hmr",
   "remix/node-hmr/runtime": "@remix-run/node-hmr/runtime",
+  "remix/node-hmr/types": "@remix-run/node-hmr/types",
   "remix/node-tsx": "@remix-run/node-tsx",
   "remix/node-tsx/load-module": "@remix-run/node-tsx/load-module",
   "remix/response/compress": "@remix-run/response/compress",

@@ -264,6 +264,9 @@ importers:
       '@remix-run/mime':
         specifier: workspace:*
         version: link:../mime
+      '@remix-run/node-hmr':
+        specifier: workspace:^
+        version: link:../node-hmr
       '@remix-run/route-pattern':
         specifier: workspace:*
         version: link:../route-pattern
@@ -307,9 +310,6 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
-      '@remix-run/node-hmr':
-        specifier: workspace:^
-        version: link:../node-hmr
       '@remix-run/node-tsx':
         specifier: workspace:^
         version: link:../node-tsx

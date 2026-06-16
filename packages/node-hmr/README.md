@@ -71,6 +71,16 @@ The browser event channel is supported by the [`remix/assets`](https://github.co
 
 The `import.meta.hot` API provided by `node-hmr` is primarily intended as a target for code transformations like [remix/ui-hmr](https://github.com/remix-run/remix/tree/main/packages/ui-hmr).
 
+To type `import.meta.hot`, add the HMR types to your TypeScript config:
+
+```json
+{
+  "compilerOptions": {
+    "types": ["remix/node-hmr/types"]
+  }
+}
+```
+
 ### `import.meta.hot.accept()`
 
 Mark the current module as safe to hot update. Calling `accept()` makes the module an HMR boundary, so updates do not continue propagating to importers.
@@ -151,11 +161,11 @@ export function render() {
 
 if (import.meta.hot) {
   import.meta.hot.accept(['./one.ts', './two.ts'], ([oneModule, twoModule]) => {
-    if (typeof oneModule.one === 'string') {
+    if (oneModule && typeof oneModule.one === 'string') {
       values.one = oneModule.one
     }
 
-    if (typeof twoModule.two === 'string') {
+    if (twoModule && typeof twoModule.two === 'string') {
       values.two = twoModule.two
     }
   })

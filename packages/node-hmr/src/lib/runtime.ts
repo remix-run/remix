@@ -4,26 +4,26 @@ import { sendHmrEventPayload, type BrowserEventChannel } from './browser-events.
 import { emitServerHmrEvent } from './events.ts'
 import { hasNodeHmrParentProcess } from './process-state.ts'
 
-export interface RemixNodeHotContext {
+export interface ImportMetaHot {
   readonly data: Record<string, unknown>
-  accept(callback?: (module: HmrModule) => HotCallbackResult): void
-  accept(dep: string, callback?: (module: HmrModule) => HotCallbackResult): void
-  accept(deps: readonly string[], callback?: (modules: HmrModule[]) => HotCallbackResult): void
+  accept(callback?: (module: HotModule) => HotCallbackResult): void
+  accept(dep: string, callback?: (module: HotModule) => HotCallbackResult): void
+  accept(
+    deps: readonly string[],
+    callback?: (modules: Array<HotModule | undefined>) => HotCallbackResult,
+  ): void
   dispose(callback: (data: Record<string, unknown>) => HotCallbackResult): void
   invalidate(message?: string): void
   on(event: string, callback: (data: unknown) => void | Promise<void>): void
 }
 
-export type HmrModule = Readonly<Record<string, unknown>> & {
+type HotModule = Readonly<Record<string, unknown>> & {
   readonly [Symbol.toStringTag]: 'Module'
 }
 
 export interface RemixNodeHmrRuntime {
   readonly browserEventChannel: BrowserEventChannel | undefined
-  createHotContext(
-    url: string,
-    resolveDependency?: (specifier: string) => string,
-  ): RemixNodeHotContext
+  createHotContext(url: string, resolveDependency?: (specifier: string) => string): ImportMetaHot
   disposeAll(): Promise<void>
   reportAcceptedDependencies(url: string, acceptedDeps: string[]): void
   update(url: string, timestamp: number, acceptedUrl?: string): Promise<void>
@@ -34,20 +34,19 @@ type RuntimeGlobal = typeof globalThis & {
 }
 
 type HotCallbackResult = void | Promise<void>
-type HotCallback = (module: HmrModule) => HotCallbackResult
-type HotDependencyCallbackFunction = (module: HmrModule) => HotCallbackResult
-type HotDependencyArrayCallbackFunction = (modules: HmrModule[]) => HotCallbackResult
+type HotCallback = (module: HotModule) => HotCallbackResult
+type HotDependencyCallbackFunction = (module: HotModule) => HotCallbackResult
 type HotDependencyArrayUpdateCallbackFunction = (
-  modules: Array<HmrModule | undefined>,
+  modules: Array<HotModule | undefined>,
 ) => HotCallbackResult
-type HotDependencyUpdateCallback = (module: HmrModule, acceptedUrl: string) => HotCallbackResult
+type HotDependencyUpdateCallback = (module: HotModule, acceptedUrl: string) => HotCallbackResult
 type HotDependencyCallback = {
   callback: HotDependencyUpdateCallback
   deps: string[]
 }
 type DisposeCallback = (data: Record<string, unknown>) => HotCallbackResult
 
-class NodeHotContext implements RemixNodeHotContext {
+class NodeHotContext implements ImportMetaHot {
   readonly data: Record<string, unknown>
   readonly url: string
 
@@ -66,12 +65,15 @@ class NodeHotContext implements RemixNodeHotContext {
     this.#resolveDependency = resolveDependency
   }
 
-  accept(callback?: (module: HmrModule) => HotCallbackResult): void
-  accept(dep: string, callback?: (module: HmrModule) => HotCallbackResult): void
-  accept(deps: readonly string[], callback?: (modules: HmrModule[]) => HotCallbackResult): void
+  accept(callback?: (module: HotModule) => HotCallbackResult): void
+  accept(dep: string, callback?: (module: HotModule) => HotCallbackResult): void
+  accept(
+    deps: readonly string[],
+    callback?: (modules: Array<HotModule | undefined>) => HotCallbackResult,
+  ): void
   accept(
     deps?: string | readonly string[] | HotCallback,
-    callback: HotDependencyCallbackFunction | HotDependencyArrayCallbackFunction = () => {},
+    callback: HotDependencyCallbackFunction | HotDependencyArrayUpdateCallbackFunction = () => {},
   ) {
     if (typeof deps === 'string') {
       let normalizedDeps = [this.#normalizeAcceptedDependency(deps)]

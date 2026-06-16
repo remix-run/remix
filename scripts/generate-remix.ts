@@ -55,7 +55,7 @@ type ExportEntry = {
   readmePath?: string
 }
 
-type ExportMode = 'value' | 'type' | 'side-effect' | 'type-and-side-effect'
+type ExportMode = 'value' | 'type' | 'side-effect' | 'type-and-side-effect' | 'type-reference'
 
 type ExportClassification = {
   hasRuntimeCode: boolean
@@ -163,7 +163,11 @@ async function buildExportsFromManifest(
 
   for (let [remixPath, specifier] of Object.entries(manifest)) {
     if (remixPath.startsWith('_')) continue // skip comment/metadata keys
-    let sourceFile = specifier.replace('@remix-run/', '') + '.ts'
+    let exportMode = await getExportModeForSpecifier(specifier, pkgJsonByName)
+    let sourceFile =
+      exportMode === 'type-reference'
+        ? specifier.replace('@remix-run/', '') + '.d.ts'
+        : specifier.replace('@remix-run/', '') + '.ts'
     let exportPath = './' + remixPath.replace('remix/', '')
 
     let readmePath: string | undefined
@@ -171,8 +175,6 @@ async function buildExportsFromManifest(
       readmePath = findReadmeForSpecifier(specifier, pkgJsonByName)
       if (readmePath) readmesWritten.add(sourceFile)
     }
-    let exportMode = await getExportModeForSpecifier(specifier, pkgJsonByName)
-
     exports.push({ sourceFile, exportPath, reExportFrom: specifier, exportMode, readmePath })
   }
 
@@ -293,13 +295,23 @@ async function updateRemixPackage() {
 
   for (let entry of allExports) {
     let exportPath = path.join(SOURCE_FOLDER, entry.sourceFile)
-    remixPackageJson.exports[entry.exportPath] = `./${exportPath}`
+    remixPackageJson.exports[entry.exportPath] =
+      entry.exportMode === 'type-reference'
+        ? {
+            types: `./${exportPath}`,
+          }
+        : `./${exportPath}`
 
-    let distFile = path.join(entry.sourceFile.replace(/\.ts$/, ''))
-    remixPackageJson.publishConfig.exports[entry.exportPath] = {
-      types: `./dist/${distFile}.d.ts`,
-      default: `./dist/${distFile}.js`,
-    }
+    let distFile = path.join(entry.sourceFile.replace(/\.d\.ts$/, '').replace(/\.ts$/, ''))
+    remixPackageJson.publishConfig.exports[entry.exportPath] =
+      entry.exportMode === 'type-reference'
+        ? {
+            types: `./dist/${distFile}.d.ts`,
+          }
+        : {
+            types: `./dist/${distFile}.d.ts`,
+            default: `./dist/${distFile}.js`,
+          }
   }
 
   remixPackageJson.exports['./package.json'] = './package.json'
@@ -393,7 +405,7 @@ function createExportSource(entry: ExportEntry): string {
     ].join('\n')
   }
 
-  if (entry.exportMode === 'type') {
+  if (entry.exportMode === 'type' || entry.exportMode === 'type-reference') {
     return [
       `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
       `export type * from '${entry.reExportFrom}'\n`,
@@ -435,6 +447,10 @@ async function getPackageExportMode(
     return 'value'
   }
 
+  if (exportTarget.endsWith('.d.ts')) {
+    return 'type-reference'
+  }
+
   let sourceFilePath = path.join(packagesDir, packageDirName, exportTarget)
   let source = await fs.readFile(sourceFilePath, 'utf-8')
   let classification = classifyExports(sourceFilePath, source)
@@ -471,7 +487,7 @@ function getPackageExportTarget(exportConfig: unknown): string | null {
     return null
   }
 
-  let target = exportConfig.default ?? exportConfig.import ?? exportConfig.types
+  let target = exportConfig.types ?? exportConfig.default ?? exportConfig.import
   return typeof target === 'string' ? target : null
 }
 

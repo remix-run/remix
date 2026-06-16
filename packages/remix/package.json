@@ -23,6 +23,9 @@
   "exports": {
     "./assert": "./src/assert.ts",
     "./assets": "./src/assets.ts",
+    "./assets/types/hmr": {
+      "types": "./src/assets/types/hmr.d.ts"
+    },
     "./async-context-middleware": "./src/async-context-middleware.ts",
     "./auth": "./src/auth.ts",
     "./auth-middleware": "./src/auth-middleware.ts",
@@ -98,6 +101,9 @@
     "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
     "./node-hmr": "./src/node-hmr.ts",
     "./node-hmr/runtime": "./src/node-hmr/runtime.ts",
+    "./node-hmr/types": {
+      "types": "./src/node-hmr/types.d.ts"
+    },
     "./node-tsx": "./src/node-tsx.ts",
     "./node-tsx/load-module": "./src/node-tsx/load-module.ts",
     "./render-middleware": "./src/render-middleware.ts",
@@ -162,6 +168,9 @@
       "./assets": {
         "types": "./dist/assets.d.ts",
         "default": "./dist/assets.js"
+      },
+      "./assets/types/hmr": {
+        "types": "./dist/assets/types/hmr.d.ts"
       },
       "./async-context-middleware": {
         "types": "./dist/async-context-middleware.d.ts",
@@ -463,6 +472,9 @@
         "types": "./dist/node-hmr/runtime.d.ts",
         "default": "./dist/node-hmr/runtime.js"
       },
+      "./node-hmr/types": {
+        "types": "./dist/node-hmr/types.d.ts"
+      },
       "./node-tsx": {
         "types": "./dist/node-tsx.d.ts",
         "default": "./dist/node-tsx.js"
@@ -735,7 +747,7 @@
     "@remix-run/ui-hmr": "workspace:^"
   },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
     "clean": "git clean -fdX",
     "postpack": "pnpm run sync-readmes -- --clean",
     "prepack": "pnpm run sync-readmes",

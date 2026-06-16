@@ -21,6 +21,9 @@
   "exports": {
     ".": "./src/node-hmr.ts",
     "./runtime": "./src/runtime.ts",
+    "./types": {
+      "types": "./src/types.d.ts"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -32,6 +35,9 @@
       "./runtime": {
         "types": "./dist/runtime.d.ts",
         "default": "./dist/runtime.js"
+      },
+      "./types": {
+        "types": "./dist/types.d.ts"
       },
       "./package.json": "./package.json"
     }
@@ -50,7 +56,7 @@
     "@typescript/native-preview": "catalog:"
   },
   "scripts": {
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsgo -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix-test",

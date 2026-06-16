@@ -20,6 +20,9 @@
   "type": "module",
   "exports": {
     ".": "./src/assets.ts",
+    "./types/hmr": {
+      "types": "./src/types-hmr.d.ts"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -27,6 +30,9 @@
       ".": {
         "types": "./dist/assets.d.ts",
         "default": "./dist/assets.js"
+      },
+      "./types/hmr": {
+        "types": "./dist/types-hmr.d.ts"
       },
       "./package.json": "./package.json"
     }
@@ -36,6 +42,7 @@
     "@remix-run/file-storage": "workspace:*",
     "@remix-run/headers": "workspace:*",
     "@remix-run/mime": "workspace:*",
+    "@remix-run/node-hmr": "workspace:^",
     "@remix-run/route-pattern": "workspace:*",
     "@remix-run/ui-hmr": "workspace:^",
     "chokidar": "^5.0.0",
@@ -52,7 +59,6 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
-    "@remix-run/node-hmr": "workspace:^",
     "@remix-run/node-tsx": "workspace:^",
     "@remix-run/test": "workspace:*",
     "@remix-run/ui": "workspace:*",
@@ -62,7 +68,7 @@
   },
   "scripts": {
     "bench": "pnpm --dir ./bench run bench",
-    "build": "tsgo -p tsconfig.build.json",
+    "build": "tsgo -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
     "test": "remix-test",
