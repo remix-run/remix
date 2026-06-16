@@ -1275,11 +1275,11 @@ describe('asset-server', () => {
     assert.equal(await firstResponse.text(), 'HELLO\n')
     assert.equal(transformCalls, 1)
 
-    await write(dir, 'app/content/value.txt', 'world\n')
+    await write(dir, 'app/content/value.txt', 'world!\n')
 
     let secondResponse = await get(assetServer, href)
     assert.ok(secondResponse)
-    assert.equal(await secondResponse.text(), 'WORLD\n')
+    assert.equal(await secondResponse.text(), 'WORLD!\n')
     assert.equal(transformCalls, 2)
   })
 
