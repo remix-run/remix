@@ -20,13 +20,13 @@ describe('postgres adapter integration', { skip: typeof DATABASE_URL !== 'string
     client = await database.connect()
     await setupAdapterIntegrationSchema(async (statement) => {
       await client.exec(statement)
-    }, 'postgres')
+    })
   })
 
   after(async () => {
     await teardownAdapterIntegrationSchema(async (statement) => {
       await client.exec(statement)
-    }, 'postgres')
+    })
     await client.close()
     await database.close()
   })

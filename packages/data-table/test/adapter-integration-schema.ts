@@ -1,147 +1,61 @@
-export type AdapterIntegrationDialect = 'mysql' | 'postgres' | 'sqlite'
+import { sql, type SqlStatement } from '../src/lib/sql.ts'
 
-export type AdapterIntegrationStatementRunner = (statement: string) => Promise<void>
+export type AdapterIntegrationStatementRunner = (statement: SqlStatement) => Promise<void>
 
 type AdapterIntegrationSchemaStatements = {
-  drop: string[]
-  create: string[]
+  drop: SqlStatement[]
+  create: SqlStatement[]
 }
 
-const mysqlSchemaStatements: AdapterIntegrationSchemaStatements = {
+const schemaStatements: AdapterIntegrationSchemaStatements = {
   drop: [
-    'drop table if exists tasks',
-    'drop table if exists projects',
-    'drop table if exists accounts',
+    sql`drop table if exists tasks`,
+    sql`drop table if exists projects`,
+    sql`drop table if exists accounts`,
   ],
   create: [
-    [
-      'create table accounts (',
-      '  id int primary key,',
-      '  email varchar(255) not null,',
-      '  status varchar(32) not null,',
-      '  nickname varchar(255) null',
-      ')',
-    ].join('\n'),
-    [
-      'create table projects (',
-      '  id int primary key,',
-      '  account_id int not null,',
-      '  name varchar(255) not null,',
-      '  archived boolean not null',
-      ')',
-    ].join('\n'),
-    [
-      'create table tasks (',
-      '  id int primary key,',
-      '  project_id int not null,',
-      '  title varchar(255) not null,',
-      '  state varchar(32) not null',
-      ')',
-    ].join('\n'),
-  ],
-}
-
-const postgresSchemaStatements: AdapterIntegrationSchemaStatements = {
-  drop: [
-    'drop table if exists tasks',
-    'drop table if exists projects',
-    'drop table if exists accounts',
-  ],
-  create: [
-    [
-      'create table accounts (',
-      '  id integer primary key,',
-      '  email text not null,',
-      '  status text not null,',
-      '  nickname text',
-      ')',
-    ].join('\n'),
-    [
-      'create table projects (',
-      '  id integer primary key,',
-      '  account_id integer not null,',
-      '  name text not null,',
-      '  archived boolean not null',
-      ')',
-    ].join('\n'),
-    [
-      'create table tasks (',
-      '  id integer primary key,',
-      '  project_id integer not null,',
-      '  title text not null,',
-      '  state text not null',
-      ')',
-    ].join('\n'),
-  ],
-}
-
-const sqliteSchemaStatements: AdapterIntegrationSchemaStatements = {
-  drop: [
-    'drop table if exists tasks',
-    'drop table if exists projects',
-    'drop table if exists accounts',
-  ],
-  create: [
-    [
-      'create table accounts (',
-      '  id integer primary key,',
-      '  email text not null,',
-      '  status text not null,',
-      '  nickname text',
-      ')',
-    ].join('\n'),
-    [
-      'create table projects (',
-      '  id integer primary key,',
-      '  account_id integer not null,',
-      '  name text not null,',
-      '  archived boolean not null',
-      ')',
-    ].join('\n'),
-    [
-      'create table tasks (',
-      '  id integer primary key,',
-      '  project_id integer not null,',
-      '  title text not null,',
-      '  state text not null',
-      ')',
-    ].join('\n'),
+    sql`
+      create table accounts (
+        id integer primary key,
+        email text not null,
+        status text not null,
+        nickname text
+      )
+    `,
+    sql`
+      create table projects (
+        id integer primary key,
+        account_id integer not null,
+        name text not null,
+        archived boolean not null
+      )
+    `,
+    sql`
+      create table tasks (
+        id integer primary key,
+        project_id integer not null,
+        title text not null,
+        state text not null
+      )
+    `,
   ],
 }
 
 export async function setupAdapterIntegrationSchema(
   runStatement: AdapterIntegrationStatementRunner,
-  dialect: AdapterIntegrationDialect,
 ): Promise<void> {
-  let statements = getAdapterIntegrationSchemaStatements(dialect)
-  await runStatements(runStatement, [...statements.drop, ...statements.create])
+  await runStatements(runStatement, [...schemaStatements.drop, ...schemaStatements.create])
 }
 
 export async function teardownAdapterIntegrationSchema(
   runStatement: AdapterIntegrationStatementRunner,
-  dialect: AdapterIntegrationDialect,
 ): Promise<void> {
-  let statements = getAdapterIntegrationSchemaStatements(dialect)
-  await runStatements(runStatement, statements.drop)
-}
-
-function getAdapterIntegrationSchemaStatements(
-  dialect: AdapterIntegrationDialect,
-): AdapterIntegrationSchemaStatements {
-  if (dialect === 'mysql') {
-    return mysqlSchemaStatements
-  }
-
-  if (dialect === 'postgres') {
-    return postgresSchemaStatements
-  }
-
-  return sqliteSchemaStatements
+  await runStatements(runStatement, schemaStatements.drop)
 }
 
 async function runStatements(
   runStatement: AdapterIntegrationStatementRunner,
-  statements: string[],
+  statements: SqlStatement[],
 ): Promise<void> {
   for (let statement of statements) {
     await runStatement(statement)

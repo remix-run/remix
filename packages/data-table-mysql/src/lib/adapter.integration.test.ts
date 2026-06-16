@@ -20,13 +20,13 @@ describe('mysql adapter integration', { skip: typeof DATABASE_URL !== 'string' }
     client = await database.connect()
     await setupAdapterIntegrationSchema(async (statement) => {
       await client.exec(statement)
-    }, 'mysql')
+    })
   })
 
   after(async () => {
     await teardownAdapterIntegrationSchema(async (statement) => {
       await client.exec(statement)
-    }, 'mysql')
+    })
     await client.close()
     await database.close()
   })

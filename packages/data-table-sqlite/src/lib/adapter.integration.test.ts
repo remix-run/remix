@@ -21,13 +21,13 @@ describe(
       client = await database.connect()
       await setupAdapterIntegrationSchema(async (statement) => {
         await client.exec(statement)
-      }, 'sqlite')
+      })
     })
 
     after(async () => {
       await teardownAdapterIntegrationSchema(async (statement) => {
         await client.exec(statement)
-      }, 'sqlite')
+      })
       await client.close()
       await database.close()
     })
