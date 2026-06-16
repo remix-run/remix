@@ -1,11 +1,16 @@
 import * as assert from '@remix-run/assert'
-import { it } from '@remix-run/test'
+import { after, before, it } from '@remix-run/test'
 
 import { column } from '../src/lib/column.ts'
-import type { Database } from '../src/lib/database.ts'
+import type { Database, DatabaseResource } from '../src/lib/database.ts'
 import { DataTableQueryError } from '../src/lib/errors.ts'
 import { table, hasMany, hasManyThrough } from '../src/lib/table.ts'
 import { between, eq, ilike, inList, ne } from '../src/lib/operators.ts'
+
+import {
+  setupAdapterIntegrationSchema,
+  teardownAdapterIntegrationSchema,
+} from './adapter-integration-schema.ts'
 
 const accounts = table({
   name: 'accounts',
@@ -42,20 +47,21 @@ const accountTasks = hasManyThrough(accounts, tasks, {
   through: accountProjects,
 })
 
-export type IntegrationContractOptions = {
-  getDatabase: () => Database
+type IntegrationContractState = {
+  database: DatabaseResource
+  client: Database
 }
 
 const rollbackTestTransaction = Symbol('rollbackTestTransaction')
 
 async function withRollback<result>(
-  options: IntegrationContractOptions,
+  state: IntegrationContractState,
   callback: (database: Database) => Promise<result>,
 ): Promise<result> {
   let result: result | undefined
 
   try {
-    await options.getDatabase().transaction(async (database) => {
+    await state.client.transaction(async (database) => {
       result = await callback(database)
       throw rollbackTestTransaction
     })
@@ -68,9 +74,27 @@ async function withRollback<result>(
   return result as result
 }
 
-export function runAdapterIntegrationContract(options: IntegrationContractOptions): void {
+export function runAdapterIntegrationContract(database: DatabaseResource): void {
+  let state: IntegrationContractState
+
+  before(async () => {
+    let client = await database.connect()
+    await setupAdapterIntegrationSchema(async (statement) => {
+      await client.exec(statement)
+    })
+    state = { database, client }
+  })
+
+  after(async () => {
+    await teardownAdapterIntegrationSchema(async (statement) => {
+      await state.client.exec(statement)
+    })
+    await state.client.close()
+    await state.database.close()
+  })
+
   it('supports joined alias select with groupBy/having', async function () {
-    await withRollback(options, async (db) => {
+    await withRollback(state, async (db) => {
       await db.query(accounts).insertMany([
         {
           id: 1,
@@ -147,7 +171,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
   })
 
   it('supports eager relations with per-parent relation pagination', async function () {
-    await withRollback(options, async (db) => {
+    await withRollback(state, async (db) => {
       await db.query(accounts).insertMany([
         { id: 1, email: 'a@example.com', status: 'active', nickname: null },
         { id: 2, email: 'b@example.com', status: 'active', nickname: null },
@@ -187,7 +211,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
   })
 
   it('scopes update/delete writes with orderBy and limit', async function () {
-    await withRollback(options, async (db) => {
+    await withRollback(state, async (db) => {
       await db.query(accounts).insertMany([
         { id: 1, email: 'a@example.com', status: 'active', nickname: null },
         { id: 2, email: 'b@example.com', status: 'active', nickname: null },
@@ -216,7 +240,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
   })
 
   it('supports transactions and nested savepoints', async function () {
-    await withRollback(options, async (db) => {
+    await withRollback(state, async (db) => {
       await db.query(accounts).insert({
         id: 1,
         email: 'a@example.com',
@@ -269,7 +293,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
   })
 
   it('handles write returning rows', async function () {
-    await withRollback(options, async (db) => {
+    await withRollback(state, async (db) => {
       if (!db.adapter.capabilities.returning) {
         await assert.rejects(
           async () => {
@@ -340,7 +364,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
   })
 
   it('supports upsert with conflict target', async function () {
-    await withRollback(options, async (db) => {
+    await withRollback(state, async (db) => {
       await db.query(accounts).insert({
         id: 1,
         email: 'a@example.com',
@@ -377,7 +401,7 @@ export function runAdapterIntegrationContract(options: IntegrationContractOption
   })
 
   it('supports null and value operators in real queries', async function () {
-    await withRollback(options, async (db) => {
+    await withRollback(state, async (db) => {
       await db.query(accounts).insertMany([
         {
           id: 1,
