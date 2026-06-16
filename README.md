@@ -1,11 +1,9 @@
 # Welcome to Remix!
 
-> [!IMPORTANT]
-> With the release of [React Router v7](https://remix.run/blog/react-router-v7) we are sun-setting continued development/maintenance on Remix v2. If you have not already [upgraded to React Router v7](https://reactrouter.com/upgrading/remix), we recommend you do so. We've tried to make the upgrade process as smooth as possible with our [Future Flags](https://remix.run/docs/en/main/start/future-flags).
+> [!WARNING]
+> With the release of [React Router v8](https://remix.run/blog/react-router-v8), Remix v2 has officially reached End of Life (EOL) and will no longer be receiving further updates.
 >
-> We plan to continue to address bugs that pose security concerns or prevent upgrading to React Router v7. If you have a bug in one of those categories, please open an issue in this repository and prefix the title with `(v2):`.
->
-> For all other issues, ongoing maintenance will be happening in React Router v7, so please open issues (bugs) and/or discussions (feature requests) [in that repo](https://github.com/remix-run/react-router/issues/new?template=bug_report.yml).
+> If you have not already upgraded to React Router, you can upgrade to [React Router v7](https://reactrouter.com/v7/upgrading/remix) and then [React Router v8](https://reactrouter.com/v8/upgrading/v7). We've tried to make the upgrade process as smooth as possible via [Future Flags](https://reactrouter.com/community/api-development-strategy).
 
 We are happy you're here!
 
