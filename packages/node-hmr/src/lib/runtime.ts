@@ -25,6 +25,7 @@ export interface RemixNodeHmrRuntime {
   readonly browserEventChannel: BrowserEventChannel | undefined
   createHotContext(url: string, resolveDependency?: (specifier: string) => string): ImportMetaHot
   disposeAll(): Promise<void>
+  emitServerReady(): void
   reportAcceptedDependencies(url: string, acceptedDeps: string[]): void
   update(url: string, timestamp: number, acceptedUrl?: string): Promise<void>
 }
@@ -177,6 +178,10 @@ export function getNodeHmrRuntime(): RemixNodeHmrRuntime | undefined {
   return runtimeGlobal.__remixNodeHmr
 }
 
+export function emitServerReady(): void {
+  getNodeHmrRuntime()?.emitServerReady()
+}
+
 export function installNodeHmrRuntime(
   options: {
     browserEventUrl?: string
@@ -207,6 +212,14 @@ export function installNodeHmrRuntime(
       let context = new NodeHotContext(url, data, resolveDependency)
       contextsByUrl.set(url, context)
       return context
+    },
+
+    emitServerReady() {
+      if (!hasNodeHmrParentProcess()) return
+
+      process.send?.({
+        type: 'node-hmr:child:server-ready',
+      })
     },
 
     reportAcceptedDependencies(url, acceptedDeps) {

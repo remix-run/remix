@@ -91,7 +91,17 @@ run('./server.ts', {
 
 The browser event channel is hosted by the parent process so it stays online when the app server restarts. When `node-hmr` hot updates or restarts the server, it sends a `server:update` event to connected clients.
 
-Access to the browser event channel is available within the `node-hmr` runtime via the `remix/node-hmr/runtime` import:
+Call `emitServerReady()` when your app server is ready to receive requests. This lets the parent process delay browser `server:update` events until a restarted app server has finished listening:
+
+```ts
+server.listen(port, () => {
+  if (isDevelopment) {
+    import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
+  }
+})
+```
+
+Access to the browser event channel is also available within the `node-hmr` runtime via the `remix/node-hmr/runtime` import:
 
 ```ts
 import { browserEventChannel } from 'remix/node-hmr/runtime'

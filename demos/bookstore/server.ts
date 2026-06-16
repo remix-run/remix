@@ -4,6 +4,8 @@ import { createRequestListener } from 'remix/node-fetch-server'
 import { createBookstoreRouter } from './app/router.ts'
 import { initializeBookstoreDatabase } from './app/data/setup.ts'
 
+const isDevelopment = process.env.NODE_ENV === 'development'
+
 await initializeBookstoreDatabase()
 
 const router = createBookstoreRouter()
@@ -24,6 +26,10 @@ const server = http.createServer(
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 
 server.listen(port, () => {
+  if (isDevelopment) {
+    import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
+  }
+
   console.log(`Bookstore is running on http://localhost:${port}`)
   console.log('')
   console.log('Demo accounts:')

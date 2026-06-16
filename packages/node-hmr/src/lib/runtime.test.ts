@@ -6,8 +6,12 @@ import * as path from 'node:path'
 import process from 'node:process'
 import { pathToFileURL } from 'node:url'
 
-import { installNodeHmrRuntime } from './runtime.ts'
+import { emitServerReady, installNodeHmrRuntime, type RemixNodeHmrRuntime } from './runtime.ts'
 import { serverHmrEvents } from './events.ts'
+
+type TestRuntimeGlobal = typeof globalThis & {
+  __remixNodeHmr?: RemixNodeHmrRuntime
+}
 
 describe('installNodeHmrRuntime', () => {
   it('installs an HMR event channel for the process runtime', () => {
@@ -118,5 +122,29 @@ describe('installNodeHmrRuntime', () => {
     assert.equal('type' in event && event.type, 'restart')
     assert.equal('reason' in event && event.reason, 'server graph restart')
     assert.equal('timestamp' in event && typeof event.timestamp, 'number')
+  })
+})
+
+describe('emitServerReady', () => {
+  it('does nothing outside the HMR runtime', () => {
+    let runtimeGlobal = globalThis as TestRuntimeGlobal
+    let originalRuntime = runtimeGlobal.__remixNodeHmr
+    let originalSend = process.send
+    let sentMessages: unknown[] = []
+
+    try {
+      delete runtimeGlobal.__remixNodeHmr
+      process.send = ((message: unknown) => {
+        sentMessages.push(message)
+        return true
+      }) as typeof process.send
+
+      emitServerReady()
+    } finally {
+      runtimeGlobal.__remixNodeHmr = originalRuntime
+      process.send = originalSend
+    }
+
+    assert.deepEqual(sentMessages, [])
   })
 })

@@ -1,6 +1,5 @@
 import { registerHooks } from 'node:module'
 import { createRequire } from 'node:module'
-import { Server } from 'node:net'
 import { dirname, isAbsolute, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -21,8 +20,6 @@ let invalidatedUrlTimestamps = new Map<string, number>()
 const componentHmrRuntimeUrl = import.meta.resolve('@remix-run/ui-hmr/runtime')
 
 const componentHmrRefreshSpecifiers = ['remix/ui/dev/refresh', '@remix-run/ui/dev/refresh'] as const
-
-patchServerListen()
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -285,21 +282,4 @@ function disposeOnSignal(signal: NodeJS.Signals) {
       process.exit(signal === 'SIGINT' ? 130 : 143)
     }
   })
-}
-
-function patchServerListen(): void {
-  let originalListen = Server.prototype.listen
-
-  function listen(this: Server): Server {
-    let server = this
-    server.once('listening', () => {
-      process.send?.({
-        type: 'node-hmr:child:server-ready',
-      })
-    })
-
-    return Reflect.apply(originalListen, server, Array.from(arguments)) as Server
-  }
-
-  Server.prototype.listen = listen as typeof Server.prototype.listen
 }

@@ -614,8 +614,11 @@ function getPidServerSource(importSpecifier: string, responseExpression: string)
 }
 
 function getFixtureServerSource(importSpecifier: string, responseExpression: string): string {
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.ts')).href
+
   return [
     `import { createServer } from 'node:http'`,
+    `import { emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
     `import { ${importSpecifier.includes('greeting') ? 'Greeting' : 'getMessage'} } from ${JSON.stringify(
       importSpecifier,
     )}`,
@@ -627,6 +630,7 @@ function getFixtureServerSource(importSpecifier: string, responseExpression: str
     `server.listen(0, () => {`,
     `  let address = server.address()`,
     `  if (address && typeof address === 'object') {`,
+    `    emitServerReady()`,
     `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
     `  }`,
     `})`,
@@ -638,7 +642,7 @@ function getEventChannelServerSource(message: string): string {
 
   return [
     `import { createServer } from 'node:http'`,
-    `import { browserEventChannel } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    `import { browserEventChannel, emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
     ``,
     `console.log(JSON.stringify({ type: 'hmr-url', url: browserEventChannel?.url, pid: process.pid }))`,
     ``,
@@ -649,6 +653,7 @@ function getEventChannelServerSource(message: string): string {
     `server.listen(0, () => {`,
     `  let address = server.address()`,
     `  if (address && typeof address === 'object') {`,
+    `    emitServerReady()`,
     `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
     `  }`,
     `})`,
