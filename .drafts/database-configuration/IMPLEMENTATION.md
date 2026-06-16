@@ -17,18 +17,16 @@
   - File-backed SQLite should create a new SQLite client for each `connect()` call.
   - `:memory:` should throw if `connect()` is called more than once for the same resource.
   - Do not add shared-cache or connection-reuse behavior for `:memory:`.
-- [ ] Update Postgres/MySQL resource options to support mutually exclusive connection modes
-  - Accept an opaque `url` and pass it through to the driver without database-name overrides.
-  - Accept structured fields like `host`, `port`, `database`, `user`, and `password` for tests and explicit configuration.
-  - Reject options that mix `url` with structured connection identity fields.
-  - Keep pool creation as the default implementation.
+
 - [x] Replace `createDatabase(adapter)` usages in tests with `create{Sqlite,Postgres,Mysql}Database`
-- [ ] Refactor adapter integration contract helper around database resources
-  - Generate a unique database name per test.
-  - Let each dialect-specific test create a resource from that name.
-  - Use temporary file-backed SQLite for contract tests that rely on state persisting across multiple clients.
+- [x] Refactor adapter integration contract helper to use transaction rollback
+  - Remove migration/DDL coverage from the adapter integration contract; cover migrations separately later.
+  - Keep the existing one-env-var-per-provider integration test enablement model for Postgres/MySQL.
+  - Use an in-memory SQLite database resource for the SQLite adapter contract, since these tests use a single database client and do not need multiple connections.
+  - Create contract tables once in suite setup and drop them in suite teardown.
+  - Run each contract test inside an outer transaction that always rolls back.
+  - Ensure tests use the transaction-scoped `Database` client so nested `transaction()` calls become savepoints.
   - Read feature support from `db.adapter.capabilities` instead of passing separate flags like `supportsReturning`.
-  - Keep database create/drop lifecycle in test utilities for now; do not add `create()`/`drop()` to `DatabaseResource` yet.
 - [x] Update demos to use database resources instead of `createDatabase(adapter)` directly
 
 
