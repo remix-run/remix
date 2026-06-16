@@ -17,22 +17,20 @@ type ButtonMixin = readonly [
   CSSMixinDescriptor,
 ]
 
-const buttonDefaultAttrs = createMixin<Element, [], ElementProps>(
-  (handle, hostType) => (props) => {
-    if (hostType !== 'button' || props.type !== undefined) {
-      return handle.element
-    }
+const buttonDefaultAttrs = createMixin<Element, [], ElementProps>((handle, hostType) => (props) => {
+  if (hostType !== 'button' || props.type !== undefined) {
+    return handle.element
+  }
 
-    return renderMixinElement(handle.element, {
-      ...props,
-      type: 'button',
-    })
-  },
-)()
+  return renderMixinElement(handle.element, {
+    ...props,
+    type: 'button',
+  })
+})()
 
 const baseStyle: CSSMixinDescriptor = css({
-  all: 'unset',
   appearance: 'none',
+  margin: 0,
   boxSizing: 'border-box',
   cursor: 'revert',
   display: 'inline-flex',
@@ -40,6 +38,7 @@ const baseStyle: CSSMixinDescriptor = css({
   justifyContent: 'center',
   flexDirection: 'row',
   gap: '4px',
+  paddingBlock: 0,
   width: 'max-content',
   maxWidth: '100%',
   borderRadius: '999px',
@@ -53,9 +52,6 @@ const baseStyle: CSSMixinDescriptor = css({
   userSelect: 'none',
   WebkitUserSelect: 'none',
   verticalAlign: 'top',
-  '&:hover:not(:disabled):not([aria-disabled="true"])': {
-    cursor: 'pointer',
-  },
   '&:focus-visible': {
     outline: '2px solid rgba(16, 16, 16, 0.32)',
     outlineOffset: '2px',
@@ -129,6 +125,9 @@ const primaryStyle: CSSMixinDescriptor = css({
         '0 2px 2px -1px rgba(0, 0, 0, 0.14), inset 0 0 4px 2px #050505, inset 0 1px 2px rgba(0, 0, 0, 0.45), inset 0 0 10px -6px rgba(255, 255, 255, 0.55)',
       textShadow: '0 1px 1px #000000',
     },
+  '&:active:not(:disabled):not([aria-disabled="true"])': {
+    transform: 'translateY(1px)',
+  },
 })
 
 const sizeStyles = {

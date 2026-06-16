@@ -16,7 +16,9 @@ describe('button', () => {
   })
 
   it('supports primary and large variants', async () => {
-    let html = await renderToString(<button mix={button({ size: 'lg', tone: 'primary' })}>Add</button>)
+    let html = await renderToString(
+      <button mix={button({ size: 'lg', tone: 'primary' })}>Add</button>,
+    )
 
     expect(html).toMatch(/height: 30px/)
     expect(html).toMatch(/font-size: 13px/)
@@ -37,8 +39,11 @@ describe('button', () => {
     expect(html).toMatch(/:hover:not\(:disabled\):not\(\[aria-disabled="true"\]\)/)
     expect(html).toMatch(/:focus-visible/)
     expect(html).toMatch(/:active:not\(:disabled\):not\(\[aria-disabled="true"\]\)/)
+    expect(html).toMatch(/transform: translateY\(1px\)/)
     expect(html).toMatch(/\[aria-pressed="true"\]:not\(:disabled\)/)
     expect(html).not.toMatch(/transition/)
+    expect(html).not.toMatch(/cursor: pointer/)
+    expect(html).not.toMatch(/all: unset/)
   })
 
   it('preserves explicit button type overrides and supports non-button hosts', async () => {
@@ -48,11 +53,7 @@ describe('button', () => {
       </button>,
     )
     let anchorHtml = await renderToString(
-      createElement(
-        'a',
-        { href: '/orders', mix: button({ tone: 'primary' }) },
-        'View orders',
-      ),
+      createElement('a', { href: '/orders', mix: button({ tone: 'primary' }) }, 'View orders'),
     )
 
     expect(explicitHtml).toMatch(/type="submit"/)
