@@ -94,7 +94,7 @@ process.on('message', (message: unknown) => {
   invalidatedUrlTimestamps = new Map(Object.entries(message.invalidatedUrls ?? {}))
   runtime.update(message.url, message.timestamp, message.acceptedUrl).catch((error: unknown) => {
     process.send?.({
-      type: 'hmr:restart',
+      type: 'node-hmr:child:restart-requested',
       message: error instanceof Error ? error.message : String(error),
     })
   })
@@ -209,7 +209,7 @@ function rewriteInvalidatedImports(url: string, source: string): string {
 
 function reportModuleUpdate(url: string, hmr: ResolvedNodeHmrAnalysis): void {
   process.send?.({
-    type: 'module-update',
+    type: 'node-hmr:child:module-analyzed',
     url,
     filePath: fileURLToPath(url),
     hmr,
@@ -224,7 +224,7 @@ function reportModuleImport(parentUrl: string | undefined, url: string): void {
   if (!canonicalParentUrl.startsWith('file:') || !canonicalUrl.startsWith('file:')) return
 
   process.send?.({
-    type: 'module-import',
+    type: 'node-hmr:child:module-imported',
     importerFilePath: fileURLToPath(canonicalParentUrl),
     importerUrl: canonicalParentUrl,
     depFilePath: fileURLToPath(canonicalUrl),
@@ -252,14 +252,14 @@ function isHmrUpdateMessage(message: unknown): message is {
   acceptedUrl?: string
   invalidatedUrls?: Record<string, number>
   timestamp: number
-  type: 'hmr:update'
+  type: 'node-hmr:parent:hot-module-changed'
   url: string
 } {
   return (
     typeof message === 'object' &&
     message !== null &&
     'type' in message &&
-    message.type === 'hmr:update' &&
+    message.type === 'node-hmr:parent:hot-module-changed' &&
     'url' in message &&
     typeof message.url === 'string' &&
     'timestamp' in message &&
@@ -294,7 +294,7 @@ function patchServerListen(): void {
     let server = this
     server.once('listening', () => {
       process.send?.({
-        type: 'server-ready',
+        type: 'node-hmr:child:server-ready',
       })
     })
 

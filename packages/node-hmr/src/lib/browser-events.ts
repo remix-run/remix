@@ -19,6 +19,6 @@ export function sendHmrEventPayload(payload: HmrEventPayload): void {
 
   process.send?.({
     payload,
-    type: 'hmr-event:send',
+    type: 'node-hmr:child:browser-event-emitted',
   })
 }

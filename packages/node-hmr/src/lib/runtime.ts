@@ -1,7 +1,7 @@
 import { fileURLToPath } from 'node:url'
 
 import { sendHmrEventPayload, type BrowserEventChannel } from './browser-events.ts'
-import { emitServerHmrEvent } from './events.ts'
+import { emitServerHmrEvent, emitServerHmrUpdate } from './events.ts'
 import { hasNodeHmrParentProcess } from './process-state.ts'
 
 export interface ImportMetaHot {
@@ -213,7 +213,7 @@ export function installNodeHmrRuntime(
       if (!hasNodeHmrParentProcess()) return
 
       process.send?.({
-        type: 'module-accepted-deps-resolved',
+        type: 'node-hmr:child:accepted-deps-resolved',
         url,
         acceptedDeps,
       })
@@ -236,7 +236,7 @@ export function installNodeHmrRuntime(
 
       try {
         await context.update(timestamp, acceptedUrl)
-        emitServerHmrEvent({
+        emitServerHmrUpdate({
           ...(acceptedUrl === url ? {} : { acceptedUrl }),
           filePath: acceptedUrl.startsWith('file:') ? fileURLToPath(acceptedUrl) : acceptedUrl,
           timestamp,
@@ -266,7 +266,7 @@ function requestRestart(message?: string): void {
 
   if (process.send) {
     process.send({
-      type: 'hmr:restart',
+      type: 'node-hmr:child:restart-requested',
       message,
     })
     return

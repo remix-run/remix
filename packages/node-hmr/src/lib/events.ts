@@ -45,10 +45,17 @@ export const serverHmrEvents = new ServerHmrEvents()
 
 export function emitServerHmrEvent(event: ServerHmrEvent): void {
   serverHmrEvents.emit(event)
+}
+
+export function emitServerHmrUpdate(event: Extract<ServerHmrEvent, { type: 'update' }>): void {
+  emitServerHmrEvent(event)
   if (!hasNodeHmrParentProcess()) return
 
   process.send?.({
-    event,
-    type: 'server-hmr:event',
+    acceptedUrl: event.acceptedUrl,
+    filePath: event.filePath,
+    timestamp: event.timestamp,
+    type: 'node-hmr:child:hot-module-updated',
+    url: event.url,
   })
 }

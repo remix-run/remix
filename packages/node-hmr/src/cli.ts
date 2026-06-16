@@ -10,7 +10,6 @@ import { watch } from 'chokidar'
 
 import { defaultBrowserEventChannelPathname, type HmrEventPayload } from './lib/browser-events.ts'
 import { shouldIgnoreWatchPath } from './lib/cli-args.ts'
-import type { ServerHmrEvent } from './lib/events.ts'
 
 export interface RunOptions {
   browserEventChannel?: boolean | BrowserEventChannelOptions
@@ -50,36 +49,39 @@ interface NodeHmrUpdate {
 type ChildMessage =
   | {
       payload: HmrEventPayload
-      type: 'hmr-event:send'
+      type: 'node-hmr:child:browser-event-emitted'
     }
   | {
-      type: 'hmr:restart'
+      type: 'node-hmr:child:restart-requested'
       message?: string
     }
   | {
-      type: 'module-import'
+      type: 'node-hmr:child:module-imported'
       depFilePath: string
       depUrl: string
       importerFilePath: string
       importerUrl: string
     }
   | {
-      type: 'module-accepted-deps-resolved'
+      type: 'node-hmr:child:accepted-deps-resolved'
       acceptedDeps: string[]
       url: string
     }
   | {
-      type: 'module-update'
+      type: 'node-hmr:child:module-analyzed'
       filePath: string
       hmr: NodeHmrModuleInfo['hmr']
       url: string
     }
   | {
-      event: ServerHmrEvent
-      type: 'server-hmr:event'
+      acceptedUrl?: string
+      filePath: string
+      timestamp: number
+      type: 'node-hmr:child:hot-module-updated'
+      url: string
     }
   | {
-      type: 'server-ready'
+      type: 'node-hmr:child:server-ready'
     }
 
 const restartDelayMs = 50
@@ -213,22 +215,24 @@ function createWatchedProcessController(options: {
   function handleChildMessage(message: unknown) {
     if (!isChildMessage(message)) return
 
-    if (message.type === 'hmr-event:send') {
+    if (message.type === 'node-hmr:child:browser-event-emitted') {
       browserEventChannel?.send(message.payload)
       return
     }
 
-    if (message.type === 'server-hmr:event') {
-      browserEventChannel?.send(toServerUpdatePayload(message.event))
+    if (message.type === 'node-hmr:child:hot-module-updated') {
+      browserEventChannel?.send({
+        type: 'server:update',
+      })
       return
     }
 
-    if (message.type === 'server-ready') {
+    if (message.type === 'node-hmr:child:server-ready') {
       flushPendingServerUpdateEvent()
       return
     }
 
-    if (message.type === 'hmr:restart') {
+    if (message.type === 'node-hmr:child:restart-requested') {
       if (message.message !== undefined) {
         console.warn(message.message)
       }
@@ -241,7 +245,7 @@ function createWatchedProcessController(options: {
       return
     }
 
-    if (message.type === 'module-import') {
+    if (message.type === 'node-hmr:child:module-imported') {
       let deps = moduleDepsByUrl.get(message.importerUrl)
       if (!deps) {
         deps = new Set()
@@ -251,7 +255,7 @@ function createWatchedProcessController(options: {
       return
     }
 
-    if (message.type === 'module-accepted-deps-resolved') {
+    if (message.type === 'node-hmr:child:accepted-deps-resolved') {
       let moduleInfo = moduleInfoByUrl.get(message.url)
       if (moduleInfo !== undefined) {
         moduleInfo.hmr.acceptedDeps = message.acceptedDeps
@@ -516,7 +520,7 @@ function createWatchedProcessController(options: {
     return child.send({
       acceptedUrl: moduleInfo.acceptedUrl,
       invalidatedUrls: moduleInfo.invalidatedUrls,
-      type: 'hmr:update',
+      type: 'node-hmr:parent:hot-module-changed',
       url: moduleInfo.url,
       timestamp: Date.now(),
     })
@@ -697,14 +701,6 @@ function writeCorsHeaders(response: ServerResponse, status: number): void {
   })
 }
 
-function toServerUpdatePayload(event: ServerHmrEvent): HmrEventPayload {
-  void event
-
-  return {
-    type: 'server:update',
-  }
-}
-
 function formatServerSentEvent(payload: HmrEventPayload): string {
   return `data: ${JSON.stringify(payload)}\n\n`
 }
@@ -792,21 +788,29 @@ async function stopChild(child: ChildProcess | undefined, signal: NodeJS.Signals
 function isChildMessage(message: unknown): message is ChildMessage {
   if (typeof message !== 'object' || message === null || !('type' in message)) return false
 
-  if (message.type === 'hmr-event:send') {
+  if (message.type === 'node-hmr:child:browser-event-emitted') {
     return 'payload' in message && isHmrEventPayload(message.payload)
   }
 
-  if (message.type === 'server-hmr:event') {
-    return 'event' in message && isServerHmrEvent(message.event)
+  if (message.type === 'node-hmr:child:hot-module-updated') {
+    return (
+      'filePath' in message &&
+      typeof message.filePath === 'string' &&
+      'timestamp' in message &&
+      typeof message.timestamp === 'number' &&
+      'url' in message &&
+      typeof message.url === 'string' &&
+      (!('acceptedUrl' in message) || typeof message.acceptedUrl === 'string')
+    )
   }
 
-  if (message.type === 'server-ready') return true
+  if (message.type === 'node-hmr:child:server-ready') return true
 
-  if (message.type === 'hmr:restart') {
+  if (message.type === 'node-hmr:child:restart-requested') {
     return !('message' in message) || typeof message.message === 'string'
   }
 
-  if (message.type === 'module-import') {
+  if (message.type === 'node-hmr:child:module-imported') {
     return (
       'depFilePath' in message &&
       typeof message.depFilePath === 'string' &&
@@ -819,7 +823,7 @@ function isChildMessage(message: unknown): message is ChildMessage {
     )
   }
 
-  if (message.type === 'module-accepted-deps-resolved') {
+  if (message.type === 'node-hmr:child:accepted-deps-resolved') {
     return (
       'url' in message &&
       typeof message.url === 'string' &&
@@ -829,7 +833,7 @@ function isChildMessage(message: unknown): message is ChildMessage {
     )
   }
 
-  if (message.type !== 'module-update') return false
+  if (message.type !== 'node-hmr:child:module-analyzed') return false
 
   return (
     'filePath' in message &&
@@ -852,31 +856,6 @@ function isHmrInfo(value: unknown): value is NodeHmrModuleInfo['hmr'] {
     typeof value.selfAccepting === 'boolean' &&
     'usesImportMetaHot' in value &&
     typeof value.usesImportMetaHot === 'boolean'
-  )
-}
-
-function isServerHmrEvent(value: unknown): value is ServerHmrEvent {
-  if (typeof value !== 'object' || value === null || !('type' in value)) return false
-
-  if (value.type === 'restart') {
-    return (
-      'timestamp' in value &&
-      typeof value.timestamp === 'number' &&
-      (!('filePath' in value) || typeof value.filePath === 'string') &&
-      (!('reason' in value) || typeof value.reason === 'string') &&
-      (!('url' in value) || typeof value.url === 'string')
-    )
-  }
-
-  return (
-    value.type === 'update' &&
-    'filePath' in value &&
-    typeof value.filePath === 'string' &&
-    'timestamp' in value &&
-    typeof value.timestamp === 'number' &&
-    'url' in value &&
-    typeof value.url === 'string' &&
-    (!('acceptedUrl' in value) || typeof value.acceptedUrl === 'string')
   )
 }
 
