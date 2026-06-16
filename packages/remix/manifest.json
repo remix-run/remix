@@ -117,6 +117,7 @@
   "remix/ui/animation": "@remix-run/ui/animation",
   "remix/ui/button": "@remix-run/ui/button",
   "remix/ui/combobox": "@remix-run/ui/combobox",
+  "remix/ui/input": "@remix-run/ui/input",
   "remix/ui/jsx-dev-runtime": "@remix-run/ui/jsx-dev-runtime",
   "remix/ui/jsx-runtime": "@remix-run/ui/jsx-runtime",
   "remix/ui/listbox": "@remix-run/ui/listbox",

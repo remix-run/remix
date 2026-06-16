@@ -436,7 +436,11 @@ function createExportSource(entry: ExportEntry): string {
       `export * from '${entry.reExportFrom}'`,
     ]
 
-    if (entry.hasDefaultValueExport && entry.reExportFrom === '@remix-run/ui/button') {
+    if (
+      entry.hasDefaultValueExport &&
+      (entry.reExportFrom === '@remix-run/ui/button' ||
+        entry.reExportFrom === '@remix-run/ui/input')
+    ) {
       lines.push(`export { default } from '${entry.reExportFrom}'`)
     }
 

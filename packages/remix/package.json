@@ -139,6 +139,7 @@
     "./ui/animation": "./src/ui/animation.ts",
     "./ui/button": "./src/ui/button.ts",
     "./ui/combobox": "./src/ui/combobox.ts",
+    "./ui/input": "./src/ui/input.ts",
     "./ui/jsx-dev-runtime": "./src/ui/jsx-dev-runtime.ts",
     "./ui/jsx-runtime": "./src/ui/jsx-runtime.ts",
     "./ui/listbox": "./src/ui/listbox.ts",
@@ -624,6 +625,10 @@
       "./ui/combobox": {
         "types": "./dist/ui/combobox.d.ts",
         "default": "./dist/ui/combobox.js"
+      },
+      "./ui/input": {
+        "types": "./dist/ui/input.d.ts",
+        "default": "./dist/ui/input.js"
       },
       "./ui/jsx-dev-runtime": {
         "types": "./dist/ui/jsx-dev-runtime.d.ts",

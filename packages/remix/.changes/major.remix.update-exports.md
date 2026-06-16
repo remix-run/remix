@@ -7,6 +7,7 @@ Added `package.json` `exports`:
 - `remix/components/select`
 - `remix/components/tabs`
 - `remix/ui/button` to re-export APIs from `@remix-run/ui/button`
+- `remix/ui/input` to re-export APIs from `@remix-run/ui/input`
 
 Updated `remix/route-pattern` exports for the `RoutePattern` API:
 

@@ -35,6 +35,10 @@
       "types": "./src/button.ts",
       "default": "./src/button.ts"
     },
+    "./input": {
+      "types": "./src/input.ts",
+      "default": "./src/input.ts"
+    },
     "./accordion": {
       "types": "./src/primitives/accordion/accordion.tsx",
       "default": "./src/primitives/accordion/accordion.tsx"
@@ -126,6 +130,10 @@
       "./button": {
         "types": "./dist/button.d.ts",
         "default": "./dist/button.js"
+      },
+      "./input": {
+        "types": "./dist/input.d.ts",
+        "default": "./dist/input.js"
       },
       "./accordion": {
         "types": "./dist/primitives/accordion/accordion.d.ts",
