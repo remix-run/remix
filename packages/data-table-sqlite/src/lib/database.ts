@@ -1,6 +1,10 @@
 import { createDatabase, type Database, type DatabaseResource } from '@remix-run/data-table'
 
-import { createSqliteDatabaseAdapter, type SqliteDatabase } from './adapter.ts'
+import {
+  createSqliteDatabaseAdapter,
+  SqliteDatabaseAdapter,
+  type SqliteDatabase,
+} from './adapter.ts'
 
 const IS_BUN = typeof process.versions.bun === 'string'
 
@@ -15,34 +19,43 @@ type NativeSqliteDatabase = SqliteDatabase & {
   close?: () => void
 }
 
-type NativeSqliteDatabaseConstructor = {
-  new (path: string): NativeSqliteDatabase
-}
-
 export function createSqliteDatabase(options: {
   path: string
   pragmas?: Partial<Pragmas>
   now?: () => unknown
 }): DatabaseResource {
-  let database: NativeSqliteDatabase | undefined
-  let connected: Database | undefined
+  let closed = false
+  let isInMemoryDatabase = false
 
   return {
     async connect(): Promise<Database> {
-      if (connected) {
-        return connected
+      if (closed) {
+        throw new Error('Cannot connect to a closed SQLite database resource')
       }
 
-      let database = await createNativeSqliteDatabase(options.path)
-      applyPragmas(database, options.pragmas)
-      connected = createDatabase(createSqliteDatabaseAdapter(database), { now: options.now })
-      return connected
+      if (options.path === ':memory:') {
+        if (isInMemoryDatabase) {
+          throw new Error(
+            'SQLite :memory: database resources only support one connection. Use a file-backed SQLite database when multiple connections need to share state.',
+          )
+        }
+
+        isInMemoryDatabase = true
+      }
+
+      let conn = await createNativeSqliteDatabase(options.path)
+      applyPragmas(conn, options.pragmas)
+
+      let adapter = createSqliteDatabaseAdapter(conn) as SqliteDatabaseAdapter & {
+        close(): Promise<void>
+      }
+      adapter.close = async () => conn.close?.()
+
+      return createDatabase(adapter, { now: options.now })
     },
 
     async close(): Promise<void> {
-      database?.close?.()
-      database = undefined
-      connected = undefined
+      closed = true
     },
 
     async [Symbol.asyncDispose](): Promise<void> {
@@ -51,7 +64,7 @@ export function createSqliteDatabase(options: {
   }
 }
 
-async function createNativeSqliteDatabase(path: string): Promise<SqliteDatabase> {
+async function createNativeSqliteDatabase(path: string): Promise<NativeSqliteDatabase> {
   if (IS_BUN) {
     // @ts-expect-error TypeScript does not resolve Bun built-in modules in this repo yet.
     let { Database } = await import('bun:sqlite')
