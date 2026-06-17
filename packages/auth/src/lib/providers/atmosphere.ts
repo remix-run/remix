@@ -208,16 +208,6 @@ interface AtmosphereTokenResponse {
   sub: string
 }
 
-interface HandleResolutionBranch {
-  source: 'dns' | 'https'
-  promise: Promise<string | undefined>
-}
-
-interface HandleResolutionAttempt {
-  branch: HandleResolutionBranch
-  result: PromiseSettledResult<string | undefined>
-}
-
 /**
  * Creates an Atmosphere auth provider with shared client options.
  *
@@ -794,44 +784,34 @@ async function resolveAtmosphereIdentity(
 }
 
 async function resolveHandleToDid(handle: string): Promise<string> {
-  let pendingAttempts = new Set([
-    { source: 'dns' as const, promise: resolveHandleViaDns(handle) },
-    { source: 'https' as const, promise: resolveHandleViaHttps(handle) },
-  ])
-  let dnsRejection: PromiseRejectedResult | undefined
-  let httpsRejection: PromiseRejectedResult | undefined
+  let httpsAbortController = new AbortController()
+  let httpsResultPromise = resolveHandleViaHttps(handle, httpsAbortController.signal).then(
+    (value): PromiseSettledResult<string | undefined> => ({ status: 'fulfilled', value }),
+    (reason: unknown): PromiseSettledResult<string | undefined> => ({ status: 'rejected', reason }),
+  )
+  let dnsResult = await resolveHandleViaDns(handle).then(
+    (value): PromiseSettledResult<string | undefined> => ({ status: 'fulfilled', value }),
+    (reason: unknown): PromiseSettledResult<string | undefined> => ({ status: 'rejected', reason }),
+  )
 
-  while (pendingAttempts.size > 0) {
-    let attempt = await Promise.race(
-      Array.from(pendingAttempts, async (branch): Promise<HandleResolutionAttempt> => {
-        let result = await branch.promise.then(
-          (value) => ({ status: 'fulfilled' as const, value }),
-          (reason: unknown) => ({ status: 'rejected' as const, reason }),
-        )
-
-        return { branch, result }
-      }),
-    )
-
-    pendingAttempts.delete(attempt.branch)
-
-    if (attempt.result.status === 'fulfilled') {
-      if (attempt.result.value != null) {
-        return attempt.result.value
-      }
-    } else if (attempt.branch.source === 'dns') {
-      dnsRejection = attempt.result
-    } else {
-      httpsRejection = attempt.result
-    }
+  if (dnsResult.status === 'fulfilled' && dnsResult.value != null) {
+    httpsAbortController.abort()
+    void httpsResultPromise
+    return dnsResult.value
   }
 
-  if (dnsRejection != null) {
-    throw dnsRejection.reason
+  let httpsResult = await httpsResultPromise
+
+  if (httpsResult.status === 'fulfilled' && httpsResult.value != null) {
+    return httpsResult.value
   }
 
-  if (httpsRejection != null) {
-    throw httpsRejection.reason
+  if (dnsResult.status === 'rejected') {
+    throw dnsResult.reason
+  }
+
+  if (httpsResult.status === 'rejected') {
+    throw httpsResult.reason
   }
 
   throw new Error(`Atmosphere handle resolution failed for "${handle}".`)
@@ -881,8 +861,11 @@ async function resolveHandleViaDns(handle: string): Promise<string | undefined> 
   return did
 }
 
-async function resolveHandleViaHttps(handle: string): Promise<string | undefined> {
-  let response = await fetch(`https://${handle}/.well-known/atproto-did`)
+async function resolveHandleViaHttps(
+  handle: string,
+  signal?: AbortSignal,
+): Promise<string | undefined> {
+  let response = await fetch(`https://${handle}/.well-known/atproto-did`, { signal })
 
   if (!response.ok) {
     return

@@ -472,9 +472,13 @@ describe('atmosphere provider', () => {
     }
   })
 
-  it('does not wait for slow HTTPS handle resolution after DNS returns a DID', async () => {
-    let releaseHttpsHandleResolution: (() => void) | undefined
-    let restoreFetch = mockFetch(async (input) => {
+  it('aborts slow HTTPS handle resolution after DNS returns a DID', async () => {
+    let httpsHandleRequests = 0
+    let resolveHttpsHandleAbort: (() => void) | undefined
+    let httpsHandleAbortPromise = new Promise<void>((resolve) => {
+      resolveHttpsHandleAbort = resolve
+    })
+    let restoreFetch = mockFetch(async (input, init) => {
       let url = toRequestUrl(input)
 
       if (url.origin === 'https://1.1.1.1' && url.pathname === '/dns-query') {
@@ -489,10 +493,19 @@ describe('atmosphere provider', () => {
       }
 
       if (url.toString() === 'https://dns.example.com/.well-known/atproto-did') {
-        await new Promise<void>((resolve) => {
-          releaseHttpsHandleResolution = resolve
+        httpsHandleRequests += 1
+        let signal = toRequestSignal(input, init)
+
+        if (signal == null) {
+          throw new Error('Expected HTTPS handle resolution to receive an abort signal')
+        }
+
+        return await new Promise<Response>((_, reject) => {
+          signal.addEventListener('abort', () => {
+            resolveHttpsHandleAbort?.()
+            reject(signal.reason)
+          })
         })
-        return new Response('did:plc:https')
       }
 
       if (url.toString() === 'https://plc.directory/did%3Aplc%3Adns') {
@@ -531,15 +544,80 @@ describe('atmosphere provider', () => {
         sessionSecret: 'atmosphere-session-secret',
       })
       let preparePromise = atmosphereProvider.prepare('dns.example.com')
-      let result = await Promise.race([
-        preparePromise.then(() => 'prepared' as const),
-        sleep(25).then(() => 'timed out' as const),
-      ])
 
-      releaseHttpsHandleResolution?.()
       await preparePromise
+      await httpsHandleAbortPromise
 
-      assert.equal(result, 'prepared')
+      assert.equal(httpsHandleRequests, 1)
+    } finally {
+      restoreFetch()
+    }
+  })
+
+  it('prefers DNS handle resolution when HTTPS returns a different DID first', async () => {
+    let resolveDnsHandle: (() => void) | undefined
+    let dnsHandlePromise = new Promise<void>((resolve) => {
+      resolveDnsHandle = resolve
+    })
+    let restoreFetch = mockFetch(async (input) => {
+      let url = toRequestUrl(input)
+
+      if (url.origin === 'https://1.1.1.1' && url.pathname === '/dns-query') {
+        await dnsHandlePromise
+        return Response.json({
+          Answer: [
+            {
+              type: 16,
+              data: '"did=did:plc:dns"',
+            },
+          ],
+        })
+      }
+
+      if (url.toString() === 'https://dns-preferred.example.com/.well-known/atproto-did') {
+        return new Response('did:plc:https')
+      }
+
+      if (url.toString() === 'https://plc.directory/did%3Aplc%3Adns') {
+        return Response.json({
+          id: 'did:plc:dns',
+          alsoKnownAs: ['at://dns-preferred.example.com'],
+          service: [
+            {
+              id: '#atproto_pds',
+              type: 'AtprotoPersonalDataServer',
+              serviceEndpoint: 'https://pds.example.com',
+            },
+          ],
+        })
+      }
+
+      if (url.toString() === 'https://pds.example.com/.well-known/oauth-protected-resource') {
+        return Response.json({
+          authorization_servers: ['https://auth.example.com'],
+        })
+      }
+
+      if (url.toString() === 'https://auth.example.com/.well-known/oauth-authorization-server') {
+        return Response.json(
+          createAtmosphereAuthorizationServerMetadata('https://auth.example.com'),
+        )
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let atmosphereProvider = createAtmosphereAuthProvider({
+        clientId: 'https://app.example.com/oauth/client-metadata.json',
+        redirectUri: 'https://app.example.com/auth/atmosphere/callback',
+        sessionSecret: 'atmosphere-session-secret',
+      })
+      let preparePromise = atmosphereProvider.prepare('dns-preferred.example.com')
+
+      await Promise.resolve()
+      resolveDnsHandle?.()
+      await preparePromise
     } finally {
       restoreFetch()
     }
@@ -681,6 +759,18 @@ function toRequestUrl(input: RequestInfo | URL): URL {
   return new URL(input.url)
 }
 
+function toRequestSignal(input: RequestInfo | URL, init?: RequestInit): AbortSignal | undefined {
+  if (init?.signal != null) {
+    return init.signal
+  }
+
+  if (input instanceof Request) {
+    return input.signal
+  }
+
+  return undefined
+}
+
 function decodeJwt(token: string): {
   header: Record<string, unknown>
   payload: Record<string, unknown>
@@ -697,8 +787,4 @@ function decodeBase64Url(value: string): string {
   let base64 = value.replace(/-/g, '+').replace(/_/g, '/') + padding
   let bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
   return new TextDecoder().decode(bytes)
-}
-
-function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms))
 }
