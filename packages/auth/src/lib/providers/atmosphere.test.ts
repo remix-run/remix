@@ -472,6 +472,79 @@ describe('atmosphere provider', () => {
     }
   })
 
+  it('does not wait for slow HTTPS handle resolution after DNS returns a DID', async () => {
+    let releaseHttpsHandleResolution: (() => void) | undefined
+    let restoreFetch = mockFetch(async (input) => {
+      let url = toRequestUrl(input)
+
+      if (url.origin === 'https://1.1.1.1' && url.pathname === '/dns-query') {
+        return Response.json({
+          Answer: [
+            {
+              type: 16,
+              data: '"did=did:plc:dns"',
+            },
+          ],
+        })
+      }
+
+      if (url.toString() === 'https://dns.example.com/.well-known/atproto-did') {
+        await new Promise<void>((resolve) => {
+          releaseHttpsHandleResolution = resolve
+        })
+        return new Response('did:plc:https')
+      }
+
+      if (url.toString() === 'https://plc.directory/did%3Aplc%3Adns') {
+        return Response.json({
+          id: 'did:plc:dns',
+          alsoKnownAs: ['at://dns.example.com'],
+          service: [
+            {
+              id: '#atproto_pds',
+              type: 'AtprotoPersonalDataServer',
+              serviceEndpoint: 'https://pds.example.com',
+            },
+          ],
+        })
+      }
+
+      if (url.toString() === 'https://pds.example.com/.well-known/oauth-protected-resource') {
+        return Response.json({
+          authorization_servers: ['https://auth.example.com'],
+        })
+      }
+
+      if (url.toString() === 'https://auth.example.com/.well-known/oauth-authorization-server') {
+        return Response.json(
+          createAtmosphereAuthorizationServerMetadata('https://auth.example.com'),
+        )
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let atmosphereProvider = createAtmosphereAuthProvider({
+        clientId: 'https://app.example.com/oauth/client-metadata.json',
+        redirectUri: 'https://app.example.com/auth/atmosphere/callback',
+        sessionSecret: 'atmosphere-session-secret',
+      })
+      let preparePromise = atmosphereProvider.prepare('dns.example.com')
+      let result = await Promise.race([
+        preparePromise.then(() => 'prepared' as const),
+        sleep(25).then(() => 'timed out' as const),
+      ])
+
+      releaseHttpsHandleResolution?.()
+      await preparePromise
+
+      assert.equal(result, 'prepared')
+    } finally {
+      restoreFetch()
+    }
+  })
+
   it('resolves path-based did:web documents', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let sessionStorage = createMemorySessionStorage()
@@ -624,4 +697,8 @@ function decodeBase64Url(value: string): string {
   let base64 = value.replace(/-/g, '+').replace(/_/g, '/') + padding
   let bytes = Uint8Array.from(atob(base64), (char) => char.charCodeAt(0))
   return new TextDecoder().decode(bytes)
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
