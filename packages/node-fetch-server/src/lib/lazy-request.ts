@@ -1,7 +1,13 @@
 import type * as http from 'node:http'
 import type * as http2 from 'node:http2'
+import type { RequestLifecycle } from './request-abort.ts'
 
 import { createLazyHeaders } from './lazy-headers.ts'
+import {
+  createRequestAbortError,
+  isRequestAlreadyAborted,
+  markRequestAbortReason,
+} from './request-abort.ts'
 
 type IncomingRequest = http.IncomingMessage | http2.Http2ServerRequest
 type ServerResponse = http.ServerResponse | http2.Http2ServerResponse
@@ -10,7 +16,19 @@ type RequestFactory<requestOptions> = (
   res: ServerResponse,
   options: requestOptions | undefined,
 ) => Request
+type LifecycleRequestFactory<requestOptions> = (
+  req: IncomingRequest,
+  res: ServerResponse,
+  options: requestOptions | undefined,
+  lifecycle: RequestLifecycle,
+) => Request
 type HeadersFactory = (req: IncomingRequest) => Headers
+type RequestLifecycleFactory = () => RequestLifecycle
+type ResponseLifecycleObserver = (res: ServerResponse, lifecycle: RequestLifecycle) => void
+interface RequestLifecycleOptions {
+  createLifecycle: RequestLifecycleFactory
+  observeResponseForLifecycle: ResponseLifecycleObserver
+}
 
 export function createLazyRequest<requestOptions>(
   req: IncomingRequest,
@@ -24,8 +42,9 @@ export function createLazyRequest<requestOptions>(
 
 export function createLazyRequestFactory<requestOptions>(
   options: requestOptions | undefined,
-  createRequest: RequestFactory<requestOptions>,
+  createRequest: LifecycleRequestFactory<requestOptions>,
   createHeaders: HeadersFactory,
+  lifecycleOptions: RequestLifecycleOptions,
 ): (req: IncomingRequest, res: ServerResponse) => Request {
   class BoundLazyRequest implements Request {
     #request: Request | undefined
@@ -34,15 +53,18 @@ export function createLazyRequestFactory<requestOptions>(
     #req: IncomingRequest
     #res: ServerResponse
     #method: string
+    #lifecycle: RequestLifecycle
 
     constructor(req: IncomingRequest, res: ServerResponse) {
       this.#req = req
       this.#res = res
       this.#method = req.method ?? 'GET'
+      this.#lifecycle = lifecycleOptions.createLifecycle()
+      lifecycleOptions.observeResponseForLifecycle(res, this.#lifecycle)
     }
 
     #materialize(): Request {
-      return (this.#request ??= createRequest(this.#req, this.#res, options))
+      return (this.#request ??= createRequest(this.#req, this.#res, options, this.#lifecycle))
     }
 
     get body() {
@@ -98,7 +120,7 @@ export function createLazyRequestFactory<requestOptions>(
     }
 
     get signal() {
-      return this.#materialize().signal
+      return this.#lifecycle.signal
     }
 
     get url() {
@@ -143,14 +165,14 @@ export function createLazyRequestFactory<requestOptions>(
       if (!requestMethodCanHaveBody(this.#method)) return Promise.resolve(Buffer.alloc(0))
       if (this.#bodyUsed) return Promise.reject(bodyUnusable())
       this.#bodyUsed = true
-      return readRequestBody(this.#req)
+      return readRequestBody(this.#req, this.#lifecycle)
     }
 
     #consumeTextBody(): Promise<string> {
       if (!requestMethodCanHaveBody(this.#method)) return Promise.resolve('')
       if (this.#bodyUsed) return Promise.reject(bodyUnusable())
       this.#bodyUsed = true
-      return readRequestText(this.#req)
+      return readRequestText(this.#req, this.#lifecycle)
     }
   }
 
@@ -287,14 +309,14 @@ class LazyRequest<requestOptions> implements Request {
     if (!requestMethodCanHaveBody(this.#method)) return Promise.resolve(Buffer.alloc(0))
     if (this.#bodyUsed) return Promise.reject(bodyUnusable())
     this.#bodyUsed = true
-    return readRequestBody(this.#req)
+    return readRequestBody(this.#req, undefined)
   }
 
   #consumeTextBody(): Promise<string> {
     if (!requestMethodCanHaveBody(this.#method)) return Promise.resolve('')
     if (this.#bodyUsed) return Promise.reject(bodyUnusable())
     this.#bodyUsed = true
-    return readRequestText(this.#req)
+    return readRequestText(this.#req, undefined)
   }
 }
 
@@ -318,19 +340,27 @@ function bodyUnusable(): TypeError {
   return new TypeError('Body is unusable: Body has already been read')
 }
 
-function readRequestBody(req: IncomingRequest): Promise<Buffer> {
+function readRequestBody(
+  req: IncomingRequest,
+  lifecycle: RequestLifecycle | undefined,
+): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     let firstChunk: Buffer | undefined
     let chunks: Buffer[] | undefined
     let length = 0
+    let requestEnded = false
+    let settled = false
 
-    function cleanup() {
+    function cleanup({ keepErrorListener = false }: { keepErrorListener?: boolean } = {}) {
       req.off('data', onData)
       req.off('end', onEnd)
-      req.off('error', onError)
+      if (!keepErrorListener) req.off('error', onError)
+      req.off('aborted', onAborted)
+      req.off('close', onClose)
     }
 
     function onData(buffer: Buffer) {
+      if (settled) return
       length += buffer.byteLength
 
       if (firstChunk == null) {
@@ -342,6 +372,9 @@ function readRequestBody(req: IncomingRequest): Promise<Buffer> {
     }
 
     function onEnd() {
+      if (settled) return
+      requestEnded = true
+      settled = true
       cleanup()
       if (firstChunk == null) {
         resolve(Buffer.alloc(0))
@@ -353,29 +386,68 @@ function readRequestBody(req: IncomingRequest): Promise<Buffer> {
     }
 
     function onError(error: Error) {
+      if (settled) return
+      settled = true
+      markRequestAbortReason(error)
+      lifecycle?.abort(error)
       cleanup()
       reject(error)
     }
 
+    function onAborted() {
+      rejectRequestAbort()
+    }
+
+    function onClose() {
+      if (!requestEnded) rejectRequestAbort()
+    }
+
+    function rejectRequestAbort() {
+      if (settled) return
+      settled = true
+      let error = createRequestAbortError()
+      cleanup({ keepErrorListener: true })
+      lifecycle?.abort(error)
+      reject(error)
+    }
+
+    req.once('error', onError)
+
+    if (isRequestAlreadyAborted(req)) {
+      rejectRequestAbort()
+      return
+    }
+
     req.on('data', onData)
     req.once('end', onEnd)
-    req.once('error', onError)
+    req.once('aborted', onAborted)
+    req.once('close', onClose)
+
+    if (isRequestAlreadyAborted(req)) rejectRequestAbort()
   })
 }
 
-function readRequestText(req: IncomingRequest): Promise<string> {
+function readRequestText(
+  req: IncomingRequest,
+  lifecycle: RequestLifecycle | undefined,
+): Promise<string> {
   return new Promise((resolve, reject) => {
     let firstChunk: Buffer | undefined
     let chunks: Buffer[] | undefined
     let length = 0
+    let requestEnded = false
+    let settled = false
 
-    function cleanup() {
+    function cleanup({ keepErrorListener = false }: { keepErrorListener?: boolean } = {}) {
       req.off('data', onData)
       req.off('end', onEnd)
-      req.off('error', onError)
+      if (!keepErrorListener) req.off('error', onError)
+      req.off('aborted', onAborted)
+      req.off('close', onClose)
     }
 
     function onData(buffer: Buffer) {
+      if (settled) return
       length += buffer.byteLength
 
       if (firstChunk == null) {
@@ -387,6 +459,9 @@ function readRequestText(req: IncomingRequest): Promise<string> {
     }
 
     function onEnd() {
+      if (settled) return
+      requestEnded = true
+      settled = true
       cleanup()
       if (firstChunk == null) {
         resolve('')
@@ -398,12 +473,43 @@ function readRequestText(req: IncomingRequest): Promise<string> {
     }
 
     function onError(error: Error) {
+      if (settled) return
+      settled = true
+      markRequestAbortReason(error)
+      lifecycle?.abort(error)
       cleanup()
       reject(error)
     }
 
+    function onAborted() {
+      rejectRequestAbort()
+    }
+
+    function onClose() {
+      if (!requestEnded) rejectRequestAbort()
+    }
+
+    function rejectRequestAbort() {
+      if (settled) return
+      settled = true
+      let error = createRequestAbortError()
+      cleanup({ keepErrorListener: true })
+      lifecycle?.abort(error)
+      reject(error)
+    }
+
+    req.once('error', onError)
+
+    if (isRequestAlreadyAborted(req)) {
+      rejectRequestAbort()
+      return
+    }
+
     req.on('data', onData)
     req.once('end', onEnd)
-    req.once('error', onError)
+    req.once('aborted', onAborted)
+    req.once('close', onClose)
+
+    if (isRequestAlreadyAborted(req)) rejectRequestAbort()
   })
 }
