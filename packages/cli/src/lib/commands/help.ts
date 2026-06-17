@@ -25,6 +25,10 @@ export function getCliHelpText(target: NodeJS.WriteStream = process.stdout): str
     {
       commands: [
         { description: 'Print shell completion scripts for Remix', label: 'completion' },
+        {
+          description: 'Manage the configured database for the current project',
+          label: 'db <command>',
+        },
         { description: 'Show help for Remix commands', label: 'help [command]' },
         { description: 'Create a new Remix project', label: 'new <name>' },
         { description: 'Check project health for the current project', label: 'doctor' },
@@ -36,7 +40,9 @@ export function getCliHelpText(target: NodeJS.WriteStream = process.stdout): str
         'remix completion bash',
         'remix help',
         'remix help completion',
+        'remix help db',
         'remix help doctor',
+        'remix db create',
         'remix doctor',
         'remix new my-remix-app',
         'remix new my-remix-app --app-name "My Remix App"',
@@ -62,6 +68,7 @@ export function getHelpCommandHelpText(target: NodeJS.WriteStream = process.stdo
       examples: [
         'remix help',
         'remix help completion',
+        'remix help db',
         'remix help doctor',
         'remix help new',
         'remix help routes',
@@ -98,6 +105,11 @@ async function getCommandHelpText(argv: string[]): Promise<string> {
   if (command === 'doctor' && rest.length === 0) {
     let { getDoctorCommandHelpText } = await import('./doctor.ts')
     return getDoctorCommandHelpText()
+  }
+
+  if (command === 'db' && rest.length === 0) {
+    let { getDbCommandHelpText } = await import('./db.ts')
+    return getDbCommandHelpText()
   }
 
   if (command === 'routes' && rest.length === 0) {
