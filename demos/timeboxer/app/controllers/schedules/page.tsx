@@ -1,5 +1,5 @@
 import { css, type Handle } from 'remix/ui'
-import { theme } from 'remix/ui/theme'
+import { theme } from '../../ui/design.ts'
 
 import type { ScheduleDocument } from '../../data/schedules.ts'
 import type { Schedule } from '../../data/schema.ts'
@@ -74,7 +74,7 @@ const emptyWorkspaceStyle = css({
   alignItems: 'center',
   color: theme.colors.text.secondary,
   display: 'flex',
-  fontSize: theme.fontSize.lg,
+  fontSize: '16px',
   height: '100%',
   justifyContent: 'center',
 })

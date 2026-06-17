@@ -28,7 +28,7 @@ export function getRemixReadmeCopies(): RemixReadmeCopy[] {
   for (let [remixPath, specifier] of Object.entries(manifest)) {
     if (remixPath.startsWith('_')) continue
 
-    let sourceFile = getRemixSourceFile(specifier)
+    let sourceFile = getRemixSourceFile(remixPath, specifier)
     if (readmesWritten.has(sourceFile)) continue
 
     let sourceReadmePath = findReadmeForSpecifier(specifier, packageJsonByName)
@@ -89,7 +89,11 @@ export function findReadmeForSpecifier(
   return sourceEntryPath ? findReadmePath(packageDirName, sourceEntryPath) : undefined
 }
 
-function getRemixSourceFile(specifier: string): string {
+function getRemixSourceFile(remixPath: string, specifier: string): string {
+  if (specifier.startsWith('@remix-run/ui/components/')) {
+    return remixPath.replace('remix/', '') + '.ts'
+  }
+
   return specifier.replace('@remix-run/', '') + '.ts'
 }
 

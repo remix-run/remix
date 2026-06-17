@@ -1,66 +1,20 @@
-import {
-  attrs,
-  createElement,
-  createMixin,
-  css,
-  on,
-  ref,
-  type CSSMixinDescriptor,
-  type Dispatched,
-  type ElementProps,
-  type Handle,
-  type MixinHandle,
-  type MixinFactory,
-  type Props,
-  type RemixNode,
-} from '@remix-run/ui'
+import { createElement, css } from '@remix-run/ui'
+import type { CSSMixinDescriptor, Handle, Props, RemixNode, SearchValue } from '@remix-run/ui'
+
+import * as popover from '@remix-run/ui/popover'
+import * as select from '@remix-run/ui/select'
 import * as button from '../button/button.tsx'
-import { Glyph } from '../glyph/glyph.tsx'
-import * as listbox from '../listbox/listbox.ts'
-import * as popover from '../popover/popover.ts'
-import { theme } from '../../theme/theme.ts'
-import { hiddenTypeahead } from '../../interactions/typeahead/typeahead-mixin.ts'
-import { onKeyDown } from '../../interactions/keydown/keydown.ts'
-import { waitForCssTransition } from '../../utils/wait-for-css-transition.ts'
-import { wait } from '../../utils/wait.ts'
-import type { AnchorOptions } from '../anchor/anchor.ts'
+import { CheckIcon, ChevronVerticalIcon } from '../shared/icons.tsx'
+import {
+  listboxIndicatorStyle,
+  listboxLabelStyle,
+  listboxListStyle,
+  listboxOptionStyle,
+  popoverSurfaceStyle,
+} from '../shared/listbox-popover-styles.ts'
+import { componentStyleValues as styles } from '../shared/style-values.ts'
 
-const SELECT_CHANGE_EVENT = 'rmx:select-change' as const
-const LABEL_SWAP_DELAY_MS = 75
-
-type SelectChangeHandler<target extends HTMLElement> = (
-  event: Dispatched<SelectChangeEvent, target>,
-  signal: AbortSignal,
-) => void | Promise<void>
-
-declare global {
-  interface HTMLElementEventMap {
-    [SELECT_CHANGE_EVENT]: SelectChangeEvent
-  }
-}
-
-export class SelectChangeEvent extends Event {
-  readonly label: string | null
-  readonly optionId: string | null
-  readonly value: string | null
-
-  constructor({
-    label,
-    optionId,
-    value,
-  }: {
-    label: string | null
-    optionId: string | null
-    value: string | null
-  }) {
-    super(SELECT_CHANGE_EVENT, { bubbles: true })
-    this.label = label
-    this.optionId = optionId
-    this.value = value
-  }
-}
-
-export interface SelectContextProps {
+export interface SelectProps extends Omit<Props<'button'>, 'children' | 'name'> {
   children?: RemixNode
   defaultLabel: string
   defaultValue?: string | null
@@ -68,460 +22,41 @@ export interface SelectContextProps {
   name?: string
 }
 
-export interface SelectProps extends Omit<Props<'button'>, 'children' | 'name'> {
+export type SelectOptionProps = Props<'div'> & {
   children?: RemixNode
-  defaultLabel: string
-  defaultValue?: string | null
-  name?: string
+  disabled?: boolean
+  label: string
+  textValue?: SearchValue
+  value: string
 }
-
-export type SelectOptionProps = Props<'div'> & Omit<listbox.ListboxOption, 'id'>
-
-type State = 'initializing' | 'closed' | 'open' | 'selecting'
-
-type PendingChange = {
-  label: string | null
-  optionId: string | null
-  value: string | null
-} | null
-
-interface SelectContextValue {
-  readonly activeId: string | undefined
-  readonly disabled: boolean
-  readonly displayedLabel: string
-  readonly isExpanded: boolean
-  readonly isOpen: boolean
-  readonly listId: string
-  readonly name: string | undefined
-  readonly selectedId: string | undefined
-  readonly value: listbox.ListboxValue
-  close: () => void
-  open: () => void
-  registerPopoverContext: (context: popover.PopoverContext) => void
-  registerSurface: (node: HTMLElement) => void
-  registerTrigger: (node: HTMLButtonElement) => void
-  selectTypeaheadMatch: (text: string) => void
-  syncPopoverMinWidth: () => void
-  unregisterPopoverContext: (context: popover.PopoverContext) => void
-  unregisterSurface: (node: HTMLElement) => void
-  unregisterTrigger: (node: HTMLButtonElement) => void
-}
-
-function SelectProvider(handle: Handle<SelectContextProps, SelectContextValue>): () => RemixNode {
-  let triggerRef: HTMLButtonElement | undefined
-  let listboxRef: listbox.ListboxRef | undefined
-  let surfaceRef: HTMLElement | undefined
-  let popoverContextRef: popover.PopoverContext | undefined
-
-  let state: State = 'initializing'
-
-  let value: listbox.ListboxValue = null
-  let activeValue: listbox.ListboxValue = null
-  let activeId: string | undefined = undefined
-  let selectedId: string | undefined = undefined
-  let selectedLabel = ''
-  let displayedLabel = ''
-  let pendingChange: PendingChange = null
-
-  let listId = `${handle.id}-list`
-
-  function open() {
-    if (state !== 'closed' || handle.props.disabled) return
-    state = 'open'
-    activeValue = value
-    handle.update()
-  }
-
-  function syncPopoverMinWidth() {
-    if (state !== 'open' || !surfaceRef || !triggerRef) {
-      return
-    }
-
-    surfaceRef.style.minWidth = `${triggerRef.offsetWidth}px`
-  }
-
-  function getPopoverAnchorOptions(): AnchorOptions {
-    return {
-      placement: 'left',
-      inset: true,
-      relativeTo: selectedId ? `#${selectedId}` : '[role="option"]',
-    }
-  }
-
-  function syncPopoverContext() {
-    if (!popoverContextRef) {
-      return
-    }
-
-    popoverContextRef.hideFocusTarget = triggerRef ?? null
-    popoverContextRef.anchor = triggerRef
-      ? {
-          target: triggerRef,
-          options: getPopoverAnchorOptions(),
-        }
-      : null
-  }
-
-  function close() {
-    if (state !== 'open') return
-    state = 'closed'
-    handle.update()
-  }
-
-  function setSelectedOption(
-    nextValue: listbox.ListboxValue,
-    option: listbox.ListboxOption | undefined,
-    syncDisplayedLabel = false,
-  ) {
-    value = nextValue
-    activeValue = nextValue
-    activeId = option?.id
-    selectedId = option?.id
-    selectedLabel = option ? option.label : handle.props.defaultLabel
-    syncPopoverContext()
-
-    if (syncDisplayedLabel) {
-      displayedLabel = selectedLabel
-    }
-  }
-
-  function getPendingChange(
-    nextValue: listbox.ListboxValue,
-    option: listbox.ListboxOption | undefined,
-  ): PendingChange {
-    if (!option || value === nextValue) {
-      return null
-    }
-
-    return {
-      label: option.label,
-      optionId: option.id,
-      value: option.value,
-    }
-  }
-
-  function dispatchChange(change: PendingChange) {
-    if (!change) {
-      return
-    }
-
-    let target = triggerRef ?? surfaceRef
-    target?.dispatchEvent(new SelectChangeEvent(change))
-  }
-
-  function selectOption(
-    nextValue: listbox.ListboxValue,
-    option: listbox.ListboxOption | undefined,
-  ) {
-    if (state !== 'open') return
-    pendingChange = getPendingChange(nextValue, option)
-    setSelectedOption(nextValue, option)
-    handle.update()
-  }
-
-  async function settleSelectedOption() {
-    if (state !== 'open') return
-
-    let change = pendingChange
-    pendingChange = null
-    state = 'selecting'
-
-    if (!surfaceRef) {
-      displayedLabel = selectedLabel
-      state = 'closed'
-      let signal = await handle.update()
-      if (signal.aborted) return
-      dispatchChange(change)
-      return
-    }
-
-    await Promise.all([handle.update(), waitForCssTransition(surfaceRef, handle.signal)])
-    await wait(LABEL_SWAP_DELAY_MS) // UX delay label swap for clear value change
-    if (handle.signal.aborted) return
-    displayedLabel = selectedLabel
-    state = 'closed'
-    let signal = await handle.update()
-    if (signal.aborted) return
-    dispatchChange(change)
-  }
-
-  function selectTypeaheadMatch(text: string) {
-    if (state !== 'closed' || handle.props.disabled) return
-
-    let option = listboxRef?.matchSearchText(text, value)
-    if (!option) return
-
-    let change = getPendingChange(option.value, option)
-    pendingChange = null
-    setSelectedOption(option.value, option, true)
-    void handle.update().then((signal) => {
-      if (signal.aborted) return
-      dispatchChange(change)
-    })
-  }
-
-  function highlightOption(
-    nextActiveValue: listbox.ListboxValue,
-    option: listbox.ListboxOption | undefined,
-  ) {
-    if (state !== 'open') return
-    activeValue = nextActiveValue
-    activeId = option?.id
-    handle.update()
-  }
-
-  handle.context.set({
-    get activeId() {
-      return activeId
-    },
-
-    get disabled() {
-      return !!handle.props.disabled
-    },
-
-    get displayedLabel() {
-      return displayedLabel
-    },
-
-    get isExpanded() {
-      return state === 'open' || state === 'selecting'
-    },
-
-    get isOpen() {
-      return state === 'open'
-    },
-
-    get listId() {
-      return listId
-    },
-
-    get name() {
-      return handle.props.name
-    },
-
-    get selectedId() {
-      return selectedId
-    },
-
-    get value() {
-      return value
-    },
-
-    close,
-
-    open,
-
-    registerSurface(node) {
-      surfaceRef = node
-    },
-
-    registerTrigger(node) {
-      triggerRef = node
-      syncPopoverContext()
-    },
-
-    registerPopoverContext(context) {
-      popoverContextRef = context
-      syncPopoverContext()
-    },
-
-    selectTypeaheadMatch,
-
-    syncPopoverMinWidth,
-
-    unregisterSurface(node) {
-      if (surfaceRef === node) {
-        surfaceRef = undefined
-      }
-    },
-
-    unregisterPopoverContext(context) {
-      if (popoverContextRef !== context) {
-        return
-      }
-
-      popoverContextRef.anchor = null
-      popoverContextRef.hideFocusTarget = null
-      popoverContextRef = undefined
-    },
-
-    unregisterTrigger(node) {
-      if (triggerRef === node) {
-        triggerRef = undefined
-        syncPopoverContext()
-      }
-    },
-  })
-
-  return () => {
-    if (state === 'initializing') {
-      selectedLabel = displayedLabel = handle.props.defaultLabel
-      value = handle.props.defaultValue ?? null
-      activeValue = value
-      state = 'closed'
-
-      handle.queueTask(() => {
-        if (selectedId || !surfaceRef) {
-          return
-        }
-
-        let selected = surfaceRef.querySelector(`[aria-selected="true"]`)
-        if (selected && !selectedId) {
-          selectedId = selected.id
-          syncPopoverContext()
-          handle.update()
-        }
-      })
-    }
-
-    return (
-      <listbox.Context
-        flashSelection
-        ref={(nextListboxRef: listbox.ListboxRef) => {
-          listboxRef = nextListboxRef
-        }}
-        value={value}
-        activeValue={activeValue}
-        onSelectSettled={settleSelectedOption}
-        onSelect={selectOption}
-        onHighlight={highlightOption}
-        selectionFlashAttribute="data-select-flash"
-      >
-        {handle.props.children}
-      </listbox.Context>
-    )
-  }
-}
-
-function getSelectContext(handle: Handle | MixinHandle) {
-  return handle.context.get(SelectProvider)
-}
-
-const triggerMixin: MixinFactory<HTMLButtonElement, [], ElementProps> = createMixin<
-  HTMLButtonElement,
-  [],
-  ElementProps
->((handle) => {
-  let context = getSelectContext(handle)
-
-  return (props) => [
-    attrs({
-      'aria-haspopup': 'listbox',
-      'aria-expanded': context.isExpanded ? 'true' : 'false',
-      'aria-controls': context.listId,
-      'aria-describedby': context.selectedId,
-      disabled: context.disabled ? true : props.disabled,
-    }),
-    ref((node: HTMLButtonElement, signal) => {
-      context.registerTrigger(node)
-      signal.addEventListener('abort', () => {
-        context.unregisterTrigger(node)
-      })
-    }),
-    hiddenTypeahead((text) => {
-      context.selectTypeaheadMatch(text)
-    }),
-    on('click', () => {
-      context.open()
-    }),
-    onKeyDown('ArrowDown', () => {
-      context.open()
-    }),
-    onKeyDown('ArrowUp', () => {
-      context.open()
-    }),
-  ]
-})
-
-const popoverMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
-  HTMLElement,
-  [],
-  ElementProps
->((handle) => {
-  let context = getSelectContext(handle)
-  let popoverState = handle.context.get(popover.Context)
-
-  return () => [
-    ref((node: HTMLElement, signal) => {
-      context.registerSurface(node)
-      context.registerPopoverContext(popoverState)
-      signal.addEventListener('abort', () => {
-        context.unregisterSurface(node)
-        context.unregisterPopoverContext(popoverState)
-      })
-    }),
-    popover.surface({
-      open: context.isOpen,
-      onHide: context.close,
-    }),
-    on('beforetoggle', (event) => {
-      if (event.newState === 'open') {
-        context.syncPopoverMinWidth()
-      }
-    }),
-  ]
-})
-
-const listMixin: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
-  HTMLElement,
-  [],
-  ElementProps
->((handle) => {
-  let context = getSelectContext(handle)
-
-  return () => [
-    attrs({
-      id: context.listId,
-      'aria-activedescendant': context.activeId,
-    }),
-    popover.focusOnShow(),
-    listbox.list(),
-  ]
-})
-
-const hiddenInputMixin: MixinFactory<HTMLInputElement, [], ElementProps> = createMixin<
-  HTMLInputElement,
-  [],
-  ElementProps
->((handle) => {
-  let context = getSelectContext(handle)
-
-  return () =>
-    attrs({
-      disabled: context.disabled ? true : undefined,
-      name: context.name,
-      type: 'hidden',
-      value: context.value ?? '',
-    })
-})
 
 const selectTriggerCss: CSSMixinDescriptor = css({
-  minHeight: theme.control.height.sm,
+  minHeight: styles.control.height.sm,
   width: '100%',
-  paddingInline: theme.space.md,
-  paddingInlineEnd: theme.space.sm,
+  paddingInline: styles.space.md,
+  paddingInlineEnd: styles.space.sm,
   display: 'grid',
   gridTemplateColumns: 'minmax(0, 1fr) auto',
   alignItems: 'center',
-  gap: theme.space.sm,
-  borderRadius: theme.radius.md,
+  gap: styles.space.sm,
+  borderRadius: styles.radius.md,
   backgroundImage: 'none',
   border: '0.5px solid transparent',
   boxShadow: 'none',
-  fontSize: theme.fontSize.xs,
+  fontSize: styles.fontSize.xs,
   textAlign: 'left',
-  backgroundColor: theme.surface.lvl3,
-  color: theme.colors.text.secondary,
+  backgroundColor: styles.surface.lvl3,
+  color: styles.colors.text.secondary,
   '&:hover, &:focus-visible, &[aria-expanded="true"], &[aria-expanded="true"]:hover, &[aria-expanded="true"]:focus-visible':
     {
-      backgroundColor: theme.surface.lvl4,
-      color: theme.colors.text.primary,
+      backgroundColor: styles.surface.lvl4,
+      color: styles.colors.text.primary,
     },
   '&:active': {
-    backgroundColor: theme.surface.lvl3,
+    backgroundColor: styles.surface.lvl3,
   },
   '&:focus-visible': {
-    outline: `2px solid ${theme.colors.focus.ring}`,
+    outline: `2px solid ${styles.colors.focus.ring}`,
     outlineOffset: '2px',
   },
   '&:disabled': {
@@ -530,31 +65,9 @@ const selectTriggerCss: CSSMixinDescriptor = css({
 })
 
 export const triggerStyle = selectTriggerCss
-export const Context = SelectProvider
-export const hiddenInput = hiddenInputMixin
-export const list = listMixin
-export const option = listbox.option
-export { popoverMixin as popover }
-export const trigger = triggerMixin
-
-const select = {
-  Context,
-  hiddenInput,
-  list,
-  option,
-  popover: popoverMixin,
-  trigger,
-} as const
-
-export function onSelectChange<target extends HTMLElement>(
-  handler: SelectChangeHandler<target>,
-  captureBoolean?: boolean,
-): ReturnType<typeof on<target, typeof SELECT_CHANGE_EVENT>> {
-  return on(SELECT_CHANGE_EVENT, handler, captureBoolean)
-}
 
 function SelectLabel(handle: Handle): () => RemixNode {
-  let context = getSelectContext(handle)
+  let context = handle.context.get(select.Context)
 
   return () => <span mix={button.labelStyle}>{context.displayedLabel}</span>
 }
@@ -572,11 +85,11 @@ export function Select(handle: Handle<SelectProps>): () => RemixNode {
       >
         <button {...buttonProps} mix={[button.baseStyle, triggerStyle, select.trigger(), mix]}>
           <SelectLabel />
-          <Glyph mix={button.iconStyle} name="chevronVertical" />
+          <ChevronVerticalIcon mix={button.iconStyle} />
         </button>
         <popover.Context>
-          <div mix={[popover.surfaceStyle, select.popover()]}>
-            <div mix={[popover.contentStyle, listbox.listStyle, select.list()]}>{children}</div>
+          <div mix={[popoverSurfaceStyle, select.popover()]}>
+            <div mix={[listboxListStyle, select.list()]}>{children}</div>
           </div>
         </popover.Context>
         {name && <input mix={select.hiddenInput()} />}
@@ -592,10 +105,10 @@ export function Option(handle: Handle<SelectOptionProps>): () => RemixNode {
     return (
       <div
         {...divProps}
-        mix={[listbox.optionStyle, select.option({ value, label, disabled, textValue }), mix]}
+        mix={[listboxOptionStyle, select.option({ value, label, disabled, textValue }), mix]}
       >
-        <Glyph mix={listbox.glyphStyle} name="check" />
-        <span mix={listbox.labelStyle}>{children ?? handle.props.label}</span>
+        <CheckIcon mix={listboxIndicatorStyle} />
+        <span mix={listboxLabelStyle}>{children ?? label}</span>
       </div>
     )
   }

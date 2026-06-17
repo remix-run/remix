@@ -1671,6 +1671,34 @@ describe('stream', () => {
       expect(entries.every((entry) => entry.exportName === 'Counter')).toBe(true)
     })
 
+    it('resolves two clientEntries sharing one entry id to distinct exports during SSR', async () => {
+      let entryId = 'file:///app/widgets.tsx'
+      let AlphaEntry = clientEntry(entryId, function Alpha() {
+        return () => <div>I am Alpha</div>
+      })
+      let BetaEntry = clientEntry(entryId, function Beta() {
+        return () => <div>I am Beta</div>
+      })
+
+      let html = await drain(
+        renderToStream(
+          <div>
+            <AlphaEntry />
+            <BetaEntry />
+          </div>,
+        ),
+      )
+
+      expect(html).toContain('I am Alpha')
+      expect(html).toContain('I am Beta')
+
+      let data = parseRmxDataFromHtml(html)
+      let entries = Object.values<any>(data.h)
+      expect(entries).toHaveLength(2)
+      let exportNames = entries.map((entry) => entry.exportName).sort()
+      expect(exportNames).toEqual(['Alpha', 'Beta'])
+    })
+
     it('uses the component name as the default export name during SSR', async () => {
       let Counter = clientEntry(
         '/js/counter.js',
