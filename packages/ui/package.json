@@ -35,6 +35,10 @@
       "types": "./src/button.ts",
       "default": "./src/button.ts"
     },
+    "./checkbox": {
+      "types": "./src/primitives/checkbox/checkbox.ts",
+      "default": "./src/primitives/checkbox/checkbox.ts"
+    },
     "./input": {
       "types": "./src/input.ts",
       "default": "./src/input.ts"
@@ -58,6 +62,10 @@
     "./components/breadcrumbs": {
       "types": "./src/components/breadcrumbs/breadcrumbs.tsx",
       "default": "./src/components/breadcrumbs/breadcrumbs.tsx"
+    },
+    "./components/checkbox": {
+      "types": "./src/components/checkbox/checkbox.tsx",
+      "default": "./src/components/checkbox/checkbox.tsx"
     },
     "./components/combobox": {
       "types": "./src/components/combobox/combobox.tsx",
@@ -131,6 +139,10 @@
         "types": "./dist/button.d.ts",
         "default": "./dist/button.js"
       },
+      "./checkbox": {
+        "types": "./dist/primitives/checkbox/checkbox.d.ts",
+        "default": "./dist/primitives/checkbox/checkbox.js"
+      },
       "./input": {
         "types": "./dist/input.d.ts",
         "default": "./dist/input.js"
@@ -154,6 +166,10 @@
       "./components/breadcrumbs": {
         "types": "./dist/components/breadcrumbs/breadcrumbs.d.ts",
         "default": "./dist/components/breadcrumbs/breadcrumbs.js"
+      },
+      "./components/checkbox": {
+        "types": "./dist/components/checkbox/checkbox.d.ts",
+        "default": "./dist/components/checkbox/checkbox.js"
       },
       "./components/combobox": {
         "types": "./dist/components/combobox/combobox.d.ts",

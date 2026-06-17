@@ -2,11 +2,13 @@ Added `package.json` `exports`:
 
 - `remix/components/accordion`
 - `remix/components/breadcrumbs`
+- `remix/components/checkbox`
 - `remix/components/combobox`
 - `remix/components/menu`
 - `remix/components/select`
 - `remix/components/tabs`
 - `remix/ui/button` to re-export APIs from `@remix-run/ui/button`
+- `remix/ui/checkbox` to re-export APIs from `@remix-run/ui/checkbox`
 - `remix/ui/input` to re-export APIs from `@remix-run/ui/input`
 
 Updated `remix/route-pattern` exports for the `RoutePattern` API:

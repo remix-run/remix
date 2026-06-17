@@ -29,6 +29,7 @@
     "./cli": "./src/cli.ts",
     "./components/accordion": "./src/components/accordion.ts",
     "./components/breadcrumbs": "./src/components/breadcrumbs.ts",
+    "./components/checkbox": "./src/components/checkbox.ts",
     "./components/combobox": "./src/components/combobox.ts",
     "./components/menu": "./src/components/menu.ts",
     "./components/select": "./src/components/select.ts",
@@ -138,6 +139,7 @@
     "./ui/anchor": "./src/ui/anchor.ts",
     "./ui/animation": "./src/ui/animation.ts",
     "./ui/button": "./src/ui/button.ts",
+    "./ui/checkbox": "./src/ui/checkbox.ts",
     "./ui/combobox": "./src/ui/combobox.ts",
     "./ui/input": "./src/ui/input.ts",
     "./ui/jsx-dev-runtime": "./src/ui/jsx-dev-runtime.ts",
@@ -185,6 +187,10 @@
       "./components/breadcrumbs": {
         "types": "./dist/components/breadcrumbs.d.ts",
         "default": "./dist/components/breadcrumbs.js"
+      },
+      "./components/checkbox": {
+        "types": "./dist/components/checkbox.d.ts",
+        "default": "./dist/components/checkbox.js"
       },
       "./components/combobox": {
         "types": "./dist/components/combobox.d.ts",
@@ -621,6 +627,10 @@
       "./ui/button": {
         "types": "./dist/ui/button.d.ts",
         "default": "./dist/ui/button.js"
+      },
+      "./ui/checkbox": {
+        "types": "./dist/ui/checkbox.d.ts",
+        "default": "./dist/ui/checkbox.js"
       },
       "./ui/combobox": {
         "types": "./dist/ui/combobox.d.ts",
