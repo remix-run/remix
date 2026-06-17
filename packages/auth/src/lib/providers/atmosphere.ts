@@ -816,10 +816,7 @@ async function resolveHandleToDid(handle: string): Promise<string> {
   let dnsPreferenceTimeoutPromise = new Promise<undefined>((resolve) => {
     dnsPreferenceTimeout = setTimeout(resolve, DNS_HANDLE_RESOLUTION_PREFERENCE_MS)
   })
-  let dnsPreferenceAttempt = await Promise.race([
-    dnsAttemptPromise,
-    dnsPreferenceTimeoutPromise,
-  ])
+  let dnsPreferenceAttempt = await Promise.race([dnsAttemptPromise, dnsPreferenceTimeoutPromise])
   if (dnsPreferenceTimeout != null) {
     clearTimeout(dnsPreferenceTimeout)
   }
