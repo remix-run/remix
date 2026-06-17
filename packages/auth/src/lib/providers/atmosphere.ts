@@ -8,6 +8,7 @@ const ATMOSPHERE_PROVIDER_NAME = 'atmosphere'
 const CLOUDFLARE_DNS_ENDPOINT = 'https://1.1.1.1/dns-query'
 const PLC_DIRECTORY_URL = 'https://plc.directory/'
 const DEFAULT_ATMOSPHERE_SCOPES = ['atproto']
+const DNS_HANDLE_RESOLUTION_PREFERENCE_MS = 500
 const ATPROTO_PDS_SERVICE_ID = '#atproto_pds'
 const ATPROTO_PDS_SERVICE_TYPE = 'AtprotoPersonalDataServer'
 const LOOPBACK_HOSTS = new Set(['127.0.0.1', '[::1]'])
@@ -206,6 +207,11 @@ interface AtmosphereTokenResponse {
   expires_in?: number
   scope?: string
   sub: string
+}
+
+interface HandleResolutionAttempt {
+  source: 'dns' | 'https'
+  result: PromiseSettledResult<string | undefined>
 }
 
 /**
@@ -784,40 +790,100 @@ async function resolveAtmosphereIdentity(
 }
 
 async function resolveHandleToDid(handle: string): Promise<string> {
+  let dnsAbortController = new AbortController()
   let httpsAbortController = new AbortController()
-  let httpsResultPromise = resolveHandleViaHttps(handle, httpsAbortController.signal).then(
-    (value): PromiseSettledResult<string | undefined> => ({ status: 'fulfilled', value }),
-    (reason: unknown): PromiseSettledResult<string | undefined> => ({ status: 'rejected', reason }),
+  let dnsAttemptPromise = resolveHandleViaDns(handle, dnsAbortController.signal).then(
+    (value): HandleResolutionAttempt => ({
+      source: 'dns',
+      result: { status: 'fulfilled', value },
+    }),
+    (reason: unknown): HandleResolutionAttempt => ({
+      source: 'dns',
+      result: { status: 'rejected', reason },
+    }),
   )
-  let dnsResult = await resolveHandleViaDns(handle).then(
-    (value): PromiseSettledResult<string | undefined> => ({ status: 'fulfilled', value }),
-    (reason: unknown): PromiseSettledResult<string | undefined> => ({ status: 'rejected', reason }),
+  let httpsAttemptPromise = resolveHandleViaHttps(handle, httpsAbortController.signal).then(
+    (value): HandleResolutionAttempt => ({
+      source: 'https',
+      result: { status: 'fulfilled', value },
+    }),
+    (reason: unknown): HandleResolutionAttempt => ({
+      source: 'https',
+      result: { status: 'rejected', reason },
+    }),
   )
+  let dnsPreferenceTimeout: number | undefined
+  let dnsPreferenceTimeoutPromise = new Promise<undefined>((resolve) => {
+    dnsPreferenceTimeout = setTimeout(resolve, DNS_HANDLE_RESOLUTION_PREFERENCE_MS)
+  })
+  let dnsPreferenceAttempt = await Promise.race([
+    dnsAttemptPromise,
+    dnsPreferenceTimeoutPromise,
+  ])
+  if (dnsPreferenceTimeout != null) {
+    clearTimeout(dnsPreferenceTimeout)
+  }
+  let dnsRejection: PromiseRejectedResult | undefined
+  let httpsRejection: PromiseRejectedResult | undefined
 
-  if (dnsResult.status === 'fulfilled' && dnsResult.value != null) {
-    httpsAbortController.abort()
-    void httpsResultPromise
-    return dnsResult.value
+  if (dnsPreferenceAttempt != null) {
+    if (
+      dnsPreferenceAttempt.result.status === 'fulfilled' &&
+      dnsPreferenceAttempt.result.value != null
+    ) {
+      httpsAbortController.abort()
+      void httpsAttemptPromise
+      return dnsPreferenceAttempt.result.value
+    }
+
+    if (dnsPreferenceAttempt.result.status === 'rejected') {
+      dnsRejection = dnsPreferenceAttempt.result
+    }
   }
 
-  let httpsResult = await httpsResultPromise
+  let pendingAttempts = new Map([
+    ['https' as const, httpsAttemptPromise],
+    ...(dnsPreferenceAttempt == null ? [['dns' as const, dnsAttemptPromise] as const] : []),
+  ])
 
-  if (httpsResult.status === 'fulfilled' && httpsResult.value != null) {
-    return httpsResult.value
+  while (pendingAttempts.size > 0) {
+    let attempt = await Promise.race(pendingAttempts.values())
+    pendingAttempts.delete(attempt.source)
+
+    if (attempt.result.status === 'fulfilled') {
+      if (attempt.result.value != null) {
+        if (attempt.source === 'dns') {
+          httpsAbortController.abort()
+          void httpsAttemptPromise
+        } else {
+          dnsAbortController.abort()
+          void dnsAttemptPromise
+        }
+
+        return attempt.result.value
+      }
+    } else if (attempt.source === 'dns') {
+      dnsRejection = attempt.result
+    } else {
+      httpsRejection = attempt.result
+    }
   }
 
-  if (dnsResult.status === 'rejected') {
-    throw dnsResult.reason
+  if (dnsRejection != null) {
+    throw dnsRejection.reason
   }
 
-  if (httpsResult.status === 'rejected') {
-    throw httpsResult.reason
+  if (httpsRejection != null) {
+    throw httpsRejection.reason
   }
 
   throw new Error(`Atmosphere handle resolution failed for "${handle}".`)
 }
 
-async function resolveHandleViaDns(handle: string): Promise<string | undefined> {
+async function resolveHandleViaDns(
+  handle: string,
+  signal?: AbortSignal,
+): Promise<string | undefined> {
   let url = new URL(CLOUDFLARE_DNS_ENDPOINT)
   url.searchParams.set('name', `_atproto.${handle}`)
   url.searchParams.set('type', 'TXT')
@@ -826,6 +892,7 @@ async function resolveHandleViaDns(handle: string): Promise<string | undefined> 
     headers: {
       Accept: 'application/dns-json',
     },
+    signal,
   })
 
   if (!response.ok) {

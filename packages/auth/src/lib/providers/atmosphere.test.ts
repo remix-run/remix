@@ -623,6 +623,79 @@ describe('atmosphere provider', () => {
     }
   })
 
+  it('falls back to HTTPS handle resolution when DNS is slow', async (t) => {
+    let timers = t.useFakeTimers()
+    let resolveDnsHandleAbort: (() => void) | undefined
+    let dnsHandleAbortPromise = new Promise<void>((resolve) => {
+      resolveDnsHandleAbort = resolve
+    })
+    let restoreFetch = mockFetch(async (input, init) => {
+      let url = toRequestUrl(input)
+
+      if (url.origin === 'https://1.1.1.1' && url.pathname === '/dns-query') {
+        let signal = toRequestSignal(input, init)
+
+        if (signal == null) {
+          throw new Error('Expected DNS handle resolution to receive an abort signal')
+        }
+
+        return await new Promise<Response>((_, reject) => {
+          signal.addEventListener('abort', () => {
+            resolveDnsHandleAbort?.()
+            reject(signal.reason)
+          })
+        })
+      }
+
+      if (url.toString() === 'https://slow-dns.example.com/.well-known/atproto-did') {
+        return new Response('did:plc:https')
+      }
+
+      if (url.toString() === 'https://plc.directory/did%3Aplc%3Ahttps') {
+        return Response.json({
+          id: 'did:plc:https',
+          alsoKnownAs: ['at://slow-dns.example.com'],
+          service: [
+            {
+              id: '#atproto_pds',
+              type: 'AtprotoPersonalDataServer',
+              serviceEndpoint: 'https://pds.example.com',
+            },
+          ],
+        })
+      }
+
+      if (url.toString() === 'https://pds.example.com/.well-known/oauth-protected-resource') {
+        return Response.json({
+          authorization_servers: ['https://auth.example.com'],
+        })
+      }
+
+      if (url.toString() === 'https://auth.example.com/.well-known/oauth-authorization-server') {
+        return Response.json(
+          createAtmosphereAuthorizationServerMetadata('https://auth.example.com'),
+        )
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let atmosphereProvider = createAtmosphereAuthProvider({
+        clientId: 'https://app.example.com/oauth/client-metadata.json',
+        redirectUri: 'https://app.example.com/auth/atmosphere/callback',
+        sessionSecret: 'atmosphere-session-secret',
+      })
+      let preparePromise = atmosphereProvider.prepare('slow-dns.example.com')
+
+      await timers.advanceAsync(500)
+      await preparePromise
+      await dnsHandleAbortPromise
+    } finally {
+      restoreFetch()
+    }
+  })
+
   it('resolves path-based did:web documents', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let sessionStorage = createMemorySessionStorage()
