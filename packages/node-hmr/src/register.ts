@@ -14,7 +14,9 @@ import { markNodeHmrParentProcess } from './lib/process-state.ts'
 import { installNodeHmrRuntime } from './lib/runtime.ts'
 
 markNodeHmrParentProcess()
-const runtime = installNodeHmrRuntime({ browserEventUrl: getBrowserEventUrl() })
+const runtime = installNodeHmrRuntime({
+  browserEventUrl: getBrowserEventUrl(),
+})
 const rootPath = getRegisterUrlParam('rootPath')
 let invalidatedUrlTimestamps = new Map<string, number>()
 const componentHmrRuntimeUrl = import.meta.resolve('@remix-run/ui-hmr/server-runtime')
@@ -86,6 +88,11 @@ function isHttpUrl(value: string): boolean {
 }
 
 process.on('message', (message: unknown) => {
+  if (isBrowserHmrFileEventsMessage(message)) {
+    runtime.handleBrowserHmrFileEvents(message.requestId, message.events)
+    return
+  }
+
   if (!isHmrUpdateMessage(message)) return
 
   invalidatedUrlTimestamps = new Map(Object.entries(message.invalidatedUrls ?? {}))
@@ -262,6 +269,32 @@ function isHmrUpdateMessage(message: unknown): message is {
     typeof message.timestamp === 'number' &&
     (!('acceptedUrl' in message) || typeof message.acceptedUrl === 'string') &&
     (!('invalidatedUrls' in message) || isInvalidatedUrls(message.invalidatedUrls))
+  )
+}
+
+function isBrowserHmrFileEventsMessage(message: unknown): message is {
+  events: Array<{ event: 'add' | 'change' | 'unlink'; filePath: string }>
+  requestId: number
+  type: 'node-hmr:parent:browser-hmr-file-events'
+} {
+  return (
+    typeof message === 'object' &&
+    message !== null &&
+    'type' in message &&
+    message.type === 'node-hmr:parent:browser-hmr-file-events' &&
+    'requestId' in message &&
+    typeof message.requestId === 'number' &&
+    'events' in message &&
+    Array.isArray(message.events) &&
+    message.events.every(
+      (event) =>
+        typeof event === 'object' &&
+        event !== null &&
+        'filePath' in event &&
+        typeof event.filePath === 'string' &&
+        'event' in event &&
+        (event.event === 'add' || event.event === 'change' || event.event === 'unlink'),
+    )
   )
 }
 

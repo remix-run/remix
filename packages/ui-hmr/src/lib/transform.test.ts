@@ -21,6 +21,8 @@ describe('transformComponentsForBrowser', () => {
     assert.match(result.code, /import \* as __remixUIRefresh from "@remix-run\/ui\/dev\/refresh"/)
     assert.match(result.code, /import\.meta\.hot\.accept/)
     assert.match(result.code, /__remixHmr\.registerComponentForHmr\(__remixUIRefresh/)
+    assert.match(result.code, /__remixHmrComponentNames = \["Counter"\]/)
+    assert.match(result.code, /Updated component module changed its exports/)
   })
 
   it('hoists setup variables into persistent HMR state', () => {
@@ -191,6 +193,49 @@ export {
     assert.equal(result.transformed, false)
     assert.equal(result.code, source)
   })
+
+  it('does not transform component modules with non-component runtime exports', () => {
+    let source = `export function Counter() {
+  return () => <button>Count</button>
+}
+
+export const loader = () => new Response('ok')
+`
+    let result = transformComponentsForBrowser(source, { moduleUrl: '/app/Counter.tsx' })
+
+    assert.equal(result.transformed, false)
+    assert.equal(result.code, source)
+  })
+
+  it('does not transform component modules with runtime re-exports', () => {
+    let source = `export function Counter() {
+  return () => <button>Count</button>
+}
+
+export { loader } from './loader.ts'
+`
+    let result = transformComponentsForBrowser(source, { moduleUrl: '/app/Counter.tsx' })
+
+    assert.equal(result.transformed, false)
+    assert.equal(result.code, source)
+  })
+
+  it('allows component modules with type-only exports', () => {
+    let result = transformComponentsForBrowser(
+      `export interface CounterProps {
+  count: number
+}
+
+export function Counter() {
+  return ({ count }: CounterProps) => <button>{count}</button>
+}
+`,
+      { moduleUrl: '/app/Counter.tsx' },
+    )
+
+    assert.equal(result.transformed, true)
+    assert.deepEqual(result.componentNames, ['Counter'])
+  })
 })
 
 describe('transformComponentsForServer', () => {
@@ -219,6 +264,8 @@ describe('transformComponentsForServer', () => {
     assert.doesNotMatch(result.code, /getComponentHmrState/)
     assert.doesNotMatch(result.code, /setupComponentForHmr/)
     assert.doesNotMatch(result.code, /__remixUIRefresh/)
+    assert.match(result.code, /__remixHmrComponentNames = \["Counter"\]/)
+    assert.match(result.code, /Updated component module changed its exports/)
   })
 
   it('rewrites exported client entry function components without hoisting setup state', () => {
@@ -254,5 +301,35 @@ describe('transformComponentsForServer', () => {
 
     assert.equal(result.transformed, false)
     assert.equal(result.code, source)
+  })
+
+  it('does not transform component modules with non-component runtime exports', () => {
+    let source = `export function Counter() {
+  return () => <button>Count</button>
+}
+
+export const loader = () => new Response('ok')
+`
+    let result = transformComponentsForServer(source, { moduleUrl: 'file:///app/Counter.tsx' })
+
+    assert.equal(result.transformed, false)
+    assert.equal(result.code, source)
+  })
+
+  it('allows component modules with type-only exports', () => {
+    let result = transformComponentsForServer(
+      `export type CounterProps = {
+  count: number
+}
+
+export function Counter() {
+  return ({ count }: CounterProps) => <button>{count}</button>
+}
+`,
+      { moduleUrl: 'file:///app/Counter.tsx' },
+    )
+
+    assert.equal(result.transformed, true)
+    assert.deepEqual(result.componentNames, ['Counter'])
   })
 })

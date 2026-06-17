@@ -79,6 +79,7 @@ type UnresolvedImport = {
 type HmrAcceptedDependency = UnresolvedImport
 
 export type TransformedModule = {
+  componentHmrExportNames: string[] | null
   fingerprint: string | null
   hmr: {
     acceptedDeps: HmrAcceptedDependency[]
@@ -283,6 +284,7 @@ export async function transformModule(
         trackedFiles,
       },
       value: {
+        componentHmrExportNames: analysis.componentHmrExportNames,
         fingerprint:
           args.buildId === null
             ? null
@@ -521,6 +523,7 @@ async function analyzeModuleSource(
 
   let rawCode = transformResult.code.trimEnd()
   let sourceMap = stringifySourceMap(transformResult.map)
+  let componentHmrExportNames: string[] | null = null
 
   if (options.componentHmr) {
     let componentHmrResult = transformComponentsForBrowser(rawCode, {
@@ -531,6 +534,7 @@ async function analyzeModuleSource(
     })
 
     if (componentHmrResult.transformed) {
+      componentHmrExportNames = [...componentHmrResult.componentNames]
       rawCode = componentHmrResult.code.trimEnd()
       sourceMap =
         componentHmrResult.map == null
@@ -554,6 +558,7 @@ async function analyzeModuleSource(
   }
 
   return {
+    componentHmrExportNames,
     rawCode,
     sourceMap,
     unresolvedImports: await getUnresolvedImportsFromLexer(rawCode),

@@ -25,11 +25,14 @@ type MutableModuleLinks = {
 }
 
 type ModuleRecordState<transformed, resolved, emitted> = {
+  emittedVersion?: number
   hmrUpdateTimestamp?: number
   identityPath: string
   invalidationVersion: number
   transformed?: transformed
+  transformedVersion?: number
   resolved?: resolved
+  resolvedVersion?: number
   lastResolved?: resolved
   links: ModuleLinksState
   emitted?: emitted
@@ -45,11 +48,14 @@ export type ModuleRecord<transformed, resolved, emitted> = Readonly<
 >
 
 type MutableModuleRecord<transformed, resolved, emitted> = {
+  emittedVersion?: number
   hmrUpdateTimestamp?: number
   identityPath: string
   invalidationVersion: number
   transformed?: transformed
+  transformedVersion?: number
   resolved?: resolved
+  resolvedVersion?: number
   lastResolved?: resolved
   links: MutableModuleLinks
   emitted?: emitted
@@ -66,6 +72,9 @@ export type ModuleStore<transformed, resolved, emitted> = {
   getHmrUpdateTimestamp(identityPath: string): number | undefined
   getImporters(identityPath: string): ReadonlySet<string>
   getLastResolved(identityPath: string): resolved | undefined
+  isEmittedFresh(record: ModuleRecord<transformed, resolved, emitted>): boolean
+  isResolvedFresh(record: ModuleRecord<transformed, resolved, emitted>): boolean
+  isTransformedFresh(record: ModuleRecord<transformed, resolved, emitted>): boolean
   setHmrUpdateTimestamp(identityPath: string, timestamp: number): void
   clearTransformed(identityPath: string, tracking: readonly ModuleTracking[]): void
   setTransformed(
@@ -126,6 +135,18 @@ export function createModuleStore<transformed, resolved, emitted>(
       return recordsByIdentityPath.get(identityPath)?.lastResolved
     },
 
+    isEmittedFresh(record) {
+      return record.emittedVersion === record.invalidationVersion
+    },
+
+    isResolvedFresh(record) {
+      return record.resolvedVersion === record.invalidationVersion
+    },
+
+    isTransformedFresh(record) {
+      return record.transformedVersion === record.invalidationVersion
+    },
+
     setHmrUpdateTimestamp(identityPath, timestamp) {
       let record = getOrCreateMutableRecord(identityPath)
       record.hmrUpdateTimestamp = timestamp
@@ -134,8 +155,11 @@ export function createModuleStore<transformed, resolved, emitted>(
     clearTransformed(identityPath, tracking) {
       let record = getOrCreateMutableRecord(identityPath)
       record.transformed = undefined
+      record.transformedVersion = undefined
       record.resolved = undefined
+      record.resolvedVersion = undefined
       record.emitted = undefined
+      record.emittedVersion = undefined
       record.emittedSnapshot = undefined
       record.staleEmitted = undefined
       record.staleEmittedSnapshot = undefined
@@ -145,8 +169,11 @@ export function createModuleStore<transformed, resolved, emitted>(
     setTransformed(identityPath, transformed, tracking) {
       let record = getOrCreateMutableRecord(identityPath)
       record.transformed = transformed
+      record.transformedVersion = record.invalidationVersion
       record.resolved = undefined
+      record.resolvedVersion = undefined
       record.emitted = undefined
+      record.emittedVersion = undefined
       record.emittedSnapshot = undefined
       record.staleEmitted = undefined
       record.staleEmittedSnapshot = undefined
@@ -157,9 +184,11 @@ export function createModuleStore<transformed, resolved, emitted>(
       let record = getOrCreateMutableRecord(identityPath)
       removeResolvedIndexes(record)
       record.resolved = resolved
+      record.resolvedVersion = record.invalidationVersion
       record.lastResolved = resolved
       record.links = createLinks(resolved)
       record.emitted = undefined
+      record.emittedVersion = undefined
       record.emittedSnapshot = undefined
       record.staleEmitted = undefined
       record.staleEmittedSnapshot = undefined
@@ -170,7 +199,9 @@ export function createModuleStore<transformed, resolved, emitted>(
     clearResolved(identityPath, tracking) {
       let record = getOrCreateMutableRecord(identityPath)
       record.resolved = undefined
+      record.resolvedVersion = undefined
       record.emitted = undefined
+      record.emittedVersion = undefined
       record.emittedSnapshot = undefined
       record.staleEmitted = undefined
       record.staleEmittedSnapshot = undefined
@@ -180,6 +211,7 @@ export function createModuleStore<transformed, resolved, emitted>(
     setEmitted(identityPath, emitted, snapshot) {
       let record = getOrCreateMutableRecord(identityPath)
       record.emitted = emitted
+      record.emittedVersion = record.invalidationVersion
       record.emittedSnapshot = snapshot ?? undefined
       record.staleEmitted = undefined
       record.staleEmittedSnapshot = undefined
@@ -257,15 +289,10 @@ export function createModuleStore<transformed, resolved, emitted>(
       record.staleEmittedSnapshot = undefined
     }
 
-    record.emitted = undefined
-    record.emittedSnapshot = undefined
-    record.resolved = undefined
-    record.transformed = undefined
     record.invalidationVersion += 1
   }
 
   function invalidateGraph(record: MutableModuleRecord<transformed, resolved, emitted>) {
-    clearLastResolved(record)
     record.hmrUpdateTimestamp = undefined
     invalidateContent(record, { retainStale: false })
   }
@@ -292,12 +319,6 @@ export function createModuleStore<transformed, resolved, emitted>(
     for (let depPath of record.links.acceptedDependencies) {
       addToIndexedSet(acceptedImportersByDepPath, depPath, record.identityPath)
     }
-  }
-
-  function clearLastResolved(record: MutableModuleRecord<transformed, resolved, emitted>): void {
-    record.lastResolved = undefined
-    record.links = createEmptyLinks()
-    removeResolvedIndexes(record)
   }
 
   function removeResolvedIndexes(

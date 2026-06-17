@@ -35,7 +35,7 @@ describe('buildChildProcessArgs', () => {
     ])
   })
 
-  it('omits the browser event channel URL when browser events are disabled', () => {
+  it('omits the browser event controller URL when browser events are disabled', () => {
     let registerPath = path.resolve('app/register.ts')
     let args = buildChildProcessArgs({
       entry: 'server.ts',

@@ -69,7 +69,17 @@ type StyleCompiler = {
   getHref(filePath: string): Promise<string>
   getPreloadLayers(filePath: string | readonly string[]): Promise<string[][]>
   getStyle(filePath: string, options: StyleGetOptions): Promise<StyleGetResult>
-  handleFileEvent(filePath: string, event: 'add' | 'change' | 'unlink'): Promise<void>
+  classifyHmrFileEvent(
+    filePath: string,
+    event: 'add' | 'change' | 'unlink',
+  ): Promise<StyleHmrUpdate[]>
+  invalidateFileEvent(filePath: string, event: 'add' | 'change' | 'unlink'): void
+}
+
+export type StyleHmrUpdate = {
+  filePath: string
+  path: string
+  timestamp: number
 }
 
 const preloadConcurrency = Math.max(1, Math.min(8, os.availableParallelism() - 1))
@@ -155,7 +165,12 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
     async getStyle(filePath, getOptions) {
       let resolvedStyle = resolveServedStyleOrThrow(resolveInputFilePath(filePath), resolveArgs)
       let record = styleStore.get(resolvedStyle.identityPath)
-      let notModified = getNotModifiedStyle(record, getOptions, hasHmrTimestampedDependency)
+      let notModified = getNotModifiedStyle(
+        record,
+        styleStore,
+        getOptions,
+        hasHmrTimestampedDependency,
+      )
       if (notModified) return notModified
 
       let emitted = await getOrCreateEmittedStyle(record)
@@ -165,9 +180,9 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       }
     },
 
-    async handleFileEvent(filePath, event) {
+    async classifyHmrFileEvent(filePath, event) {
       let normalizedFilePath = normalizeFilePath(filePath)
-      if (isWatchIgnored(normalizedFilePath)) return
+      if (isWatchIgnored(normalizedFilePath)) return []
       let timestamp = Date.now()
       let updatePathnames =
         event === 'change' ? getHmrUpdatePathnames(normalizedFilePath, timestamp) : []
@@ -177,6 +192,17 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       for (let updatePathname of updatePathnames) {
         resolvedOptions.hmr?.send(updatePathname, timestamp)
       }
+      return updatePathnames.map((path) => ({
+        filePath: normalizedFilePath,
+        path,
+        timestamp,
+      }))
+    },
+
+    invalidateFileEvent(filePath, event) {
+      let normalizedFilePath = normalizeFilePath(filePath)
+      if (isWatchIgnored(normalizedFilePath)) return
+      styleStore.invalidateForFileEvent(normalizedFilePath, event)
     },
   }
 
@@ -199,7 +225,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
   }
 
   async function getOrCreateResolvedStyle(record: StyleRecord): Promise<ResolvedStyle> {
-    if (record.resolved) return record.resolved
+    if (record.resolved && styleStore.isResolvedFresh(record)) return record.resolved
 
     let cacheKey = getRecordCacheKey(record)
     let existing = resolveInFlightByCacheKey.get(cacheKey)
@@ -238,7 +264,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
   }
 
   async function getOrCreateTransformedStyle(record: StyleRecord): Promise<TransformedStyle> {
-    if (record.transformed) return record.transformed
+    if (record.transformed && styleStore.isTransformedFresh(record)) return record.transformed
 
     let startedVersion = record.invalidationVersion
     let transformStyleResult = await transformStyle(record, transformArgs)
@@ -260,7 +286,13 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
   }
 
   async function getOrCreateEmittedStyle(record: StyleRecord): Promise<EmittedStyle> {
-    if (record.emitted && !hasHmrTimestampedDependency(record.resolved)) return record.emitted
+    if (
+      record.emitted &&
+      styleStore.isEmittedFresh(record) &&
+      !hasHmrTimestampedDependency(record.resolved)
+    ) {
+      return record.emitted
+    }
 
     let cacheKey = getRecordCacheKey(record)
     let existing = emitInFlightByCacheKey.get(cacheKey)
@@ -364,10 +396,12 @@ function isFresh(record: StyleRecord, version: number): boolean {
 
 function getNotModifiedStyle(
   record: StyleRecord,
+  styleStore: StyleStore,
   options: StyleGetOptions,
   hasHmrTimestampedDependency: (resolvedStyle: ResolvedStyle | undefined) => boolean,
 ): StyleGetResult | null {
   if (hasHmrTimestampedDependency(record.resolved)) return null
+  if (!styleStore.isEmittedFresh(record)) return null
   let emittedStyle = record.emitted
   if (!emittedStyle || options.ifNoneMatch === null) return null
 

@@ -1,6 +1,12 @@
 import { fileURLToPath } from 'node:url'
 
-import { sendHmrEventPayload, type BrowserEventChannel } from './browser-events.ts'
+import {
+  type BrowserEventController,
+  type BrowserEventSource,
+  type BrowserEventSourceRegistration,
+  type BrowserHmrFileEvent,
+  sendHmrEventPayload,
+} from './browser-events.ts'
 import { emitServerHmrEvent, emitServerHmrUpdate } from './events.ts'
 import { hasNodeHmrParentProcess } from './process-state.ts'
 
@@ -22,10 +28,12 @@ type HotModule = Readonly<Record<string, unknown>> & {
 }
 
 export interface RemixNodeHmrRuntime {
-  readonly browserEventChannel: BrowserEventChannel | undefined
+  readonly browserEventController: BrowserEventController | undefined
   createHotContext(url: string, resolveDependency?: (specifier: string) => string): ImportMetaHot
   disposeAll(): Promise<void>
   emitServerReady(): void
+  handleBrowserHmrFileEvents(requestId: number, events: readonly BrowserHmrFileEvent[]): void
+  registerBrowserEventSource(source: BrowserEventSource): BrowserEventSourceRegistration
   reportAcceptedDependencies(url: string, acceptedDeps: string[]): void
   update(url: string, timestamp: number, acceptedUrl?: string): Promise<void>
 }
@@ -46,6 +54,7 @@ type HotDependencyCallback = {
   deps: string[]
 }
 type DisposeCallback = (data: Record<string, unknown>) => HotCallbackResult
+type HotUpdateResult = 'accepted' | 'invalidated' | 'restart-requested'
 
 class NodeHotContext implements ImportMetaHot {
   readonly data: Record<string, unknown>
@@ -54,6 +63,8 @@ class NodeHotContext implements ImportMetaHot {
   #acceptCallbacks: Array<HotCallback> = []
   #acceptDependencyCallbacks: Array<HotDependencyCallback> = []
   #disposeCallbacks: Array<DisposeCallback> = []
+  #invalidated = false
+  #isUpdating = false
   #resolveDependency: (specifier: string) => string
 
   constructor(
@@ -110,6 +121,11 @@ class NodeHotContext implements ImportMetaHot {
   }
 
   invalidate(message?: string) {
+    this.#invalidated = true
+    if (this.#isUpdating) {
+      if (message !== undefined) console.warn(message)
+      return
+    }
     requestRestart(message)
   }
 
@@ -124,38 +140,53 @@ class NodeHotContext implements ImportMetaHot {
     }
   }
 
-  async update(timestamp: number, acceptedUrl: string) {
+  async update(timestamp: number, acceptedUrl: string): Promise<HotUpdateResult> {
+    this.#invalidated = false
+
     if (acceptedUrl !== this.url) {
-      await this.updateDependency(timestamp, acceptedUrl)
-      return
+      return await this.updateDependency(timestamp, acceptedUrl)
     }
 
     if (this.#acceptCallbacks.length === 0) {
       requestRestart(`No HMR accept handler found for ${this.url}`)
-      return
+      return 'restart-requested'
     }
 
     await this.disposeAll()
 
-    let updatedModule = await import(`${this.url}?t=${timestamp}`)
-    for (let callback of this.#acceptCallbacks) {
-      await callback(updatedModule)
+    this.#isUpdating = true
+    try {
+      let updatedModule = await import(`${this.url}?t=${timestamp}`)
+      for (let callback of this.#acceptCallbacks) {
+        await callback(updatedModule)
+      }
+    } finally {
+      this.#isUpdating = false
     }
+
+    return this.#invalidated ? 'invalidated' : 'accepted'
   }
 
-  async updateDependency(timestamp: number, acceptedUrl: string) {
+  async updateDependency(timestamp: number, acceptedUrl: string): Promise<HotUpdateResult> {
     let callbacks = this.#acceptDependencyCallbacks.filter((callback) =>
       callback.deps.includes(acceptedUrl),
     )
     if (callbacks.length === 0) {
       requestRestart(`No HMR accept handler found for ${acceptedUrl} via ${this.url}`)
-      return
+      return 'restart-requested'
     }
 
-    let updatedModule = await import(`${acceptedUrl}?t=${timestamp}`)
-    for (let { callback } of callbacks) {
-      await callback(updatedModule, acceptedUrl)
+    this.#isUpdating = true
+    try {
+      let updatedModule = await import(`${acceptedUrl}?t=${timestamp}`)
+      for (let { callback } of callbacks) {
+        await callback(updatedModule, acceptedUrl)
+      }
+    } finally {
+      this.#isUpdating = false
     }
+
+    return this.#invalidated ? 'invalidated' : 'accepted'
   }
 
   #normalizeAcceptedDependency(dep: string): string {
@@ -192,13 +223,17 @@ export function installNodeHmrRuntime(
 
   let dataByUrl = new Map<string, Record<string, unknown>>()
   let contextsByUrl = new Map<string, NodeHotContext>()
+  let browserHmrRuntimeId = 0
+  let browserEventSources = new Map<number, BrowserEventSource>()
 
   let runtime: RemixNodeHmrRuntime = {
-    browserEventChannel:
+    browserEventController:
       options.browserEventUrl === undefined
         ? undefined
         : {
-            send: sendHmrEventPayload,
+            register(source) {
+              return runtime.registerBrowserEventSource(source)
+            },
             url: options.browserEventUrl,
           },
 
@@ -220,6 +255,63 @@ export function installNodeHmrRuntime(
       process.send?.({
         type: 'node-hmr:child:server-ready',
       })
+    },
+
+    handleBrowserHmrFileEvents(requestId, events) {
+      if (!hasNodeHmrParentProcess()) return
+
+      Promise.all(
+        [...browserEventSources.values()].map((browserEventSource) =>
+          browserEventSource.handleFileEvents(events),
+        ),
+      )
+        .then((intentGroups) => {
+          process.send?.({
+            intents: intentGroups.flat(),
+            requestId,
+            type: 'node-hmr:child:browser-hmr-file-events-handled',
+          })
+        })
+        .catch((error: unknown) => {
+          process.send?.({
+            error: formatUnknownError(error),
+            intents: [],
+            requestId,
+            type: 'node-hmr:child:browser-hmr-file-events-handled',
+          })
+        })
+    },
+
+    registerBrowserEventSource(browserEventSource) {
+      let id = browserHmrRuntimeId++
+      browserEventSources.set(id, browserEventSource)
+      let watchedDirectories = new Set<string>()
+
+      return {
+        close() {
+          browserEventSources.delete(id)
+          let remove = [...watchedDirectories]
+          watchedDirectories.clear()
+          process.send?.({
+            id,
+            delta: { add: [], remove },
+            type: 'node-hmr:child:browser-hmr-watch-directories-changed',
+          })
+        },
+        updateWatchedDirectories(delta) {
+          for (let directory of delta.add) {
+            watchedDirectories.add(directory)
+          }
+          for (let directory of delta.remove) {
+            watchedDirectories.delete(directory)
+          }
+          process.send?.({
+            id,
+            delta,
+            type: 'node-hmr:child:browser-hmr-watch-directories-changed',
+          })
+        },
+      }
     },
 
     reportAcceptedDependencies(url, acceptedDeps) {
@@ -248,7 +340,18 @@ export function installNodeHmrRuntime(
       }
 
       try {
-        await context.update(timestamp, acceptedUrl)
+        let updateResult = await context.update(timestamp, acceptedUrl)
+        if (updateResult === 'invalidated') {
+          process.send?.({
+            acceptedUrl,
+            timestamp,
+            type: 'node-hmr:child:hot-module-invalidated',
+            url,
+          })
+          return
+        }
+        if (updateResult === 'restart-requested') return
+
         emitServerHmrUpdate({
           ...(acceptedUrl === url ? {} : { acceptedUrl }),
           filePath: acceptedUrl.startsWith('file:') ? fileURLToPath(acceptedUrl) : acceptedUrl,

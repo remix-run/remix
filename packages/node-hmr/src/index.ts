@@ -6,7 +6,7 @@ import { createWatchedProcessController } from './lib/runner.ts'
 export type { ImportMetaHot } from './lib/runtime.ts'
 
 export interface RunOptions {
-  browserEventChannel?: boolean | BrowserEventChannelOptions
+  browserEventController?: boolean | BrowserEventControllerOptions
   cwd?: string
   entryArgs?: readonly string[]
   env?: NodeJS.ProcessEnv
@@ -14,7 +14,7 @@ export interface RunOptions {
   watch?: NodeHmrWatchOptions
 }
 
-export interface BrowserEventChannelOptions {
+export interface BrowserEventControllerOptions {
   host?: string
   port?: number
   pathname?: string
@@ -43,7 +43,7 @@ export interface NodeHmrRunner {
 
 export function run(entry: string, options: RunOptions = {}): NodeHmrRunner {
   let controller = createWatchedProcessController({
-    browserEventChannel: normalizeBrowserEventChannelOptions(options.browserEventChannel),
+    browserEventController: normalizeBrowserEventControllerOptions(options.browserEventController),
     cwd: options.cwd ?? process.cwd(),
     entry,
     entryArgs: [...(options.entryArgs ?? [])],
@@ -65,9 +65,9 @@ export function run(entry: string, options: RunOptions = {}): NodeHmrRunner {
   }
 }
 
-function normalizeBrowserEventChannelOptions(
-  options: RunOptions['browserEventChannel'],
-): BrowserEventChannelOptions | null {
+function normalizeBrowserEventControllerOptions(
+  options: RunOptions['browserEventController'],
+): BrowserEventControllerOptions | null {
   if (!options) return null
   if (options === true) return {}
 
@@ -86,6 +86,6 @@ function resolveRegisterPath(): string {
 
 function assertValidPort(port: number): void {
   if (!Number.isInteger(port) || port < 0 || port > 65_535) {
-    throw new TypeError(`Invalid browser event channel port: ${port}`)
+    throw new TypeError(`Invalid browser event controller port: ${port}`)
   }
 }

@@ -14,10 +14,10 @@ type TestRuntimeGlobal = typeof globalThis & {
 }
 
 describe('installNodeHmrRuntime', () => {
-  it('installs an HMR event channel for the process runtime', () => {
+  it('installs a browser event controller for the process runtime', () => {
     let runtime = installNodeHmrRuntime({ browserEventUrl: 'http://127.0.0.1:1234/hmr' })
 
-    assert.equal(runtime.browserEventChannel?.url, 'http://127.0.0.1:1234/hmr')
+    assert.equal(runtime.browserEventController?.url, 'http://127.0.0.1:1234/hmr')
   })
 
   it('preserves data for repeated hot contexts with the same URL', () => {

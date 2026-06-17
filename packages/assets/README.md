@@ -544,7 +544,7 @@ To type `import.meta.hot` in browser asset modules, add the HMR types to your Ty
 }
 ```
 
-The `hmr` option accepts an object with a `browserEventChannel` object. In order to co-ordinate updates between server and browser code changes with an SSE event endpoint that survives server restarts, you can run your server in development with [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) with provides a `browserEventChannel` within its runtime via `remix/node-hmr/runtime`:
+The `hmr` option accepts an object with a `browserEventController` object. To coordinate server and browser code changes with an event controller that survives server restarts, run your server in development with [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr), which provides a `browserEventController` from `remix/node-hmr/runtime`:
 
 ```ts
 import { createAssetServer } from 'remix/assets'
@@ -559,7 +559,7 @@ let assetServer = createAssetServer({
 })
 ```
 
-Browser modules can also listen for custom HMR events. When the HMR event channel comes from `remix/node-hmr/runtime`, server updates are sent as `server:update` events.
+Browser modules can also listen for HMR events. When the browser event controller comes from `remix/node-hmr/runtime`, server updates are sent as `server:update` events.
 
 ```ts
 if (import.meta.hot) {

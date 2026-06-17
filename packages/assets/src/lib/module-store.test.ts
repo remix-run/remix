@@ -9,6 +9,7 @@ import type { TransformedModule } from './scripts/transform.ts'
 
 function createTransformedModule(): TransformedModule {
   return {
+    componentHmrExportNames: null,
     fingerprint: null,
     hmr: {
       acceptedDeps: [],
@@ -49,6 +50,7 @@ function createResolvedModule(
   let identityPath = options.identityPath ?? '/app/entry.ts'
 
   return {
+    componentHmrExportNames: null,
     deps: options.deps ?? [],
     fingerprint: null,
     hmr: {
@@ -94,12 +96,15 @@ describe('createModuleStore', () => {
 
     store.invalidateForFileEvent('/app/entry.ts', 'change')
     assert.equal(record.invalidationVersion, 1)
-    assert.equal(record.transformed, undefined)
+    assert.equal(record.transformed, transformed)
+    assert.equal(store.isTransformedFresh(record), false)
 
     store.setTransformed('/app/entry.ts', transformed, [transformed])
+    assert.equal(store.isTransformedFresh(record), true)
     store.invalidateForFileEvent('/app/entry.ts', 'change')
     assert.equal(record.invalidationVersion, 2)
-    assert.equal(record.transformed, undefined)
+    assert.equal(record.transformed, transformed)
+    assert.equal(store.isTransformedFresh(record), false)
   })
 
   it('retains stale emitted modules across change invalidations', () => {
@@ -114,27 +119,32 @@ describe('createModuleStore', () => {
 
     store.invalidateForFileEvent('/app/entry.ts', 'change')
 
-    assert.equal(record.emitted, undefined)
+    assert.equal(record.emitted, emitted)
+    assert.equal(store.isEmittedFresh(record), false)
     assert.equal(record.staleEmitted, emitted)
     assert.equal(record.staleEmittedSnapshot, snapshot)
 
     store.invalidateForFileEvent('/app/entry.ts', 'change')
 
-    assert.equal(record.emitted, undefined)
+    assert.equal(record.emitted, emitted)
+    assert.equal(store.isEmittedFresh(record), false)
     assert.equal(record.staleEmitted, emitted)
     assert.equal(record.staleEmittedSnapshot, snapshot)
   })
 
-  it('clears stale emitted modules across graph invalidations', () => {
+  it('retains stale emitted modules but clears conditional snapshots across graph invalidations', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>()
     let record = store.get('/app/entry.ts')
+    let emitted = createEmittedModule()
 
     let transformed = createTransformedModule()
     store.setTransformed('/app/entry.ts', transformed, [transformed])
-    store.setEmitted('/app/entry.ts', createEmittedModule(), createModuleSnapshot())
+    store.setEmitted('/app/entry.ts', emitted, createModuleSnapshot())
     store.invalidateForFileEvent('/app/entry.ts', 'change')
     store.invalidateForFileEvent('/app/entry.ts', 'unlink')
 
+    assert.equal(record.emitted, emitted)
+    assert.equal(store.isEmittedFresh(record), false)
     assert.equal(record.staleEmitted, undefined)
     assert.equal(record.staleEmittedSnapshot, undefined)
   })
@@ -180,7 +190,7 @@ describe('createModuleStore', () => {
     assert.equal(record.invalidationVersion, 2)
   })
 
-  it('clears the last resolved module and links when a candidate file is added', () => {
+  it('retains stale resolved modules and links when a candidate file is added', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
       getAcceptedDependencies(resolved) {
         return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
@@ -204,11 +214,13 @@ describe('createModuleStore', () => {
     store.invalidateForFileEvent('/app/foo.ts', 'add')
 
     let record = store.get('/app/entry.ts')
-    assert.equal(store.getLastResolved('/app/entry.ts'), undefined)
-    assert.deepEqual([...record.links.dependencies], [])
-    assert.deepEqual([...record.links.acceptedDependencies], [])
-    assert.deepEqual([...store.getImporters('/app/value.ts')], [])
-    assert.deepEqual([...store.getAcceptedImporters('/app/value.ts')], [])
+    assert.equal(record.resolved, resolved)
+    assert.equal(store.isResolvedFresh(record), false)
+    assert.equal(store.getLastResolved('/app/entry.ts'), resolved)
+    assert.deepEqual([...record.links.dependencies], ['/app/value.ts'])
+    assert.deepEqual([...record.links.acceptedDependencies], ['/app/value.ts'])
+    assert.deepEqual([...store.getImporters('/app/value.ts')], ['/app/entry.ts'])
+    assert.deepEqual([...store.getAcceptedImporters('/app/value.ts')], ['/app/entry.ts'])
   })
 
   it('retains the last resolved module and links across content invalidations', () => {
@@ -229,7 +241,8 @@ describe('createModuleStore', () => {
     store.invalidateForFileEvent('/app/entry.ts', 'change')
 
     let record = store.get('/app/entry.ts')
-    assert.equal(record.resolved, undefined)
+    assert.equal(record.resolved, resolved)
+    assert.equal(store.isResolvedFresh(record), false)
     assert.equal(store.getLastResolved('/app/entry.ts'), resolved)
     assert.deepEqual([...record.links.dependencies], ['/app/value.ts'])
     assert.deepEqual([...record.links.acceptedDependencies], ['/app/accepted.ts'])
@@ -324,7 +337,7 @@ describe('createModuleStore', () => {
     assert.deepEqual([...store.getAcceptedImporters('/app/two.ts')], ['/app/entry.ts'])
   })
 
-  it('clears the last resolved module and links across graph invalidations', () => {
+  it('retains stale resolved modules and links across graph invalidations', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
       getAcceptedDependencies(resolved) {
         return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
@@ -343,11 +356,13 @@ describe('createModuleStore', () => {
     store.invalidateForFileEvent('/app/entry.ts', 'unlink')
 
     let record = store.get('/app/entry.ts')
-    assert.equal(store.getLastResolved('/app/entry.ts'), undefined)
-    assert.deepEqual([...record.links.dependencies], [])
-    assert.deepEqual([...record.links.acceptedDependencies], [])
-    assert.deepEqual([...store.getImporters('/app/value.ts')], [])
-    assert.deepEqual([...store.getAcceptedImporters('/app/value.ts')], [])
+    assert.equal(record.resolved, resolved)
+    assert.equal(store.isResolvedFresh(record), false)
+    assert.equal(store.getLastResolved('/app/entry.ts'), resolved)
+    assert.deepEqual([...record.links.dependencies], ['/app/value.ts'])
+    assert.deepEqual([...record.links.acceptedDependencies], ['/app/value.ts'])
+    assert.deepEqual([...store.getImporters('/app/value.ts')], ['/app/entry.ts'])
+    assert.deepEqual([...store.getAcceptedImporters('/app/value.ts')], ['/app/entry.ts'])
   })
 
   it('clears HMR update timestamps across graph invalidations', () => {
@@ -359,7 +374,7 @@ describe('createModuleStore', () => {
     assert.equal(store.getHmrUpdateTimestamp('/app/entry.ts'), undefined)
   })
 
-  it('clears the last resolved module and links when all records are invalidated', () => {
+  it('retains stale resolved modules and links when all records are invalidated', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
       getAcceptedDependencies(resolved) {
         return resolved.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath)
@@ -378,10 +393,12 @@ describe('createModuleStore', () => {
     store.invalidateAll()
 
     let record = store.get('/app/entry.ts')
-    assert.equal(store.getLastResolved('/app/entry.ts'), undefined)
-    assert.deepEqual([...record.links.dependencies], [])
-    assert.deepEqual([...record.links.acceptedDependencies], [])
-    assert.deepEqual([...store.getImporters('/app/value.ts')], [])
-    assert.deepEqual([...store.getAcceptedImporters('/app/value.ts')], [])
+    assert.equal(record.resolved, resolved)
+    assert.equal(store.isResolvedFresh(record), false)
+    assert.equal(store.getLastResolved('/app/entry.ts'), resolved)
+    assert.deepEqual([...record.links.dependencies], ['/app/value.ts'])
+    assert.deepEqual([...record.links.acceptedDependencies], ['/app/value.ts'])
+    assert.deepEqual([...store.getImporters('/app/value.ts')], ['/app/entry.ts'])
+    assert.deepEqual([...store.getAcceptedImporters('/app/value.ts')], ['/app/entry.ts'])
   })
 })

@@ -50,6 +50,7 @@ type TrackedResolution = RelativeImportResolution & {
 }
 
 export type ResolvedModule = {
+  componentHmrExportNames: string[] | null
   deps: string[]
   fingerprint: string | null
   hmr: Omit<TransformedModule['hmr'], 'acceptedDeps'> & {
@@ -333,6 +334,7 @@ export async function resolveModule(
     ok: true,
     tracking: toResolveTracking(trackedFiles, trackedResolutions),
     value: {
+      componentHmrExportNames: transformed.componentHmrExportNames,
       deps: [...deps],
       fingerprint: transformed.fingerprint,
       hmr: {

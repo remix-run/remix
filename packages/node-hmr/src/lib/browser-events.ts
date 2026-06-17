@@ -2,16 +2,54 @@ import process from 'node:process'
 
 import { hasNodeHmrParentProcess } from './process-state.ts'
 
-export const defaultBrowserEventChannelPathname = '/hmr'
+export const defaultBrowserEventControllerPathname = '/hmr'
 
 export interface HmrEventPayload {
   type: string
   [key: string]: unknown
 }
 
-export interface BrowserEventChannel {
+export type HmrBrowserUpdate =
+  | {
+      acceptedPath?: string
+      path: string
+      type: 'js'
+    }
+  | {
+      path: string
+      type: 'css'
+    }
+
+export type HmrBrowserIntent =
+  | {
+      files?: string[]
+      timestamp: number
+      type: 'update'
+      updates: HmrBrowserUpdate[]
+    }
+  | {
+      files?: string[]
+      reason?: string
+      type: 'reload'
+    }
+
+export type BrowserHmrFileEvent = {
+  event: 'add' | 'change' | 'unlink'
+  filePath: string
+}
+
+export interface BrowserEventSource {
+  handleFileEvents(events: readonly BrowserHmrFileEvent[]): Promise<readonly HmrBrowserIntent[]>
+}
+
+export interface BrowserEventSourceRegistration {
+  close(): void
+  updateWatchedDirectories(delta: { add: readonly string[]; remove: readonly string[] }): void
+}
+
+export interface BrowserEventController {
+  register(source: BrowserEventSource): BrowserEventSourceRegistration
   url: string
-  send(payload: HmrEventPayload): void
 }
 
 export function sendHmrEventPayload(payload: HmrEventPayload): void {

@@ -4,7 +4,6 @@ import * as nodeFs from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
-import { isDeepStrictEqual } from 'node:util'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
 import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
 import type { RawSourceMap } from 'source-map-js'
@@ -19,10 +18,8 @@ import {
 import type { AssetServer, AssetServerHmrOptions, AssetServerOptions } from './asset-server.ts'
 import type { AssetRequestTransformMap } from './files/config.ts'
 import { defineFileTransform } from './files/config.ts'
-import type { HmrPayload } from './hmr.ts'
 
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
-type HmrUpdatePayload = Extract<HmrPayload, { type: 'assets:update' }>
 
 const packageRoot = path.resolve(import.meta.dirname, '../..')
 const repoPackagesRoot = path.resolve(packageRoot, '..')
@@ -146,78 +143,21 @@ async function emitWatchEvent(
   let chokidarWatcher = getInternalChokidarWatcher(assetServer)
   assert.ok(chokidarWatcher)
   chokidarWatcher.emit(event, getWatchEventFilePath(filePath))
-  await Promise.resolve()
+  await new Promise((resolve) => setTimeout(resolve, 25))
 }
 
-function createTestHmrOptions(payloads: HmrPayload[]): AssetServerHmrOptions {
+function createTestHmrOptions(): AssetServerHmrOptions {
   return {
-    browserEventChannel: {
+    browserEventController: {
       url: 'http://127.0.0.1:1234/hmr',
-      send(payload) {
-        payloads.push(payload)
+      register() {
+        return {
+          close() {},
+          updateWatchedDirectories() {},
+        }
       },
     },
   }
-}
-
-function hmrPayloadWithoutTimestamp(payload: HmrPayload | undefined): unknown {
-  assert.ok(payload)
-
-  if (payload.type === 'assets:update') {
-    return {
-      type: payload.type,
-      updates: payload.updates,
-    }
-  }
-
-  if (payload.type === 'assets:full-reload') {
-    return {
-      ...(payload.path === undefined ? {} : { path: payload.path }),
-      type: payload.type,
-    }
-  }
-
-  return {
-    type: payload.type,
-  }
-}
-
-function getHmrPayloadsAfter(payloads: HmrPayload[], startIndex: number): HmrPayload[] {
-  return payloads.slice(startIndex)
-}
-
-function matchesHmrPayload(payload: HmrPayload, expectedPayload: unknown): boolean {
-  return isDeepStrictEqual(hmrPayloadWithoutTimestamp(payload), expectedPayload)
-}
-
-function findHmrPayload(options: {
-  debugInfo?: unknown
-  expectedPayload: unknown
-  payloads: HmrPayload[]
-  startIndex: number
-}): { failureMessage: string; payload: HmrPayload | undefined } {
-  let payloadsAfterStart = getHmrPayloadsAfter(options.payloads, options.startIndex)
-  let payload = payloadsAfterStart.find((payload) =>
-    matchesHmrPayload(payload, options.expectedPayload),
-  )
-
-  return {
-    failureMessage: `Expected HMR payload after index ${options.startIndex}.\n${JSON.stringify(
-      {
-        ...(options.debugInfo === undefined ? {} : { debugInfo: options.debugInfo }),
-        expectedPayload: options.expectedPayload,
-        payloads: options.payloads,
-        payloadsAfterStart,
-      },
-      null,
-      2,
-    )}`,
-    payload,
-  }
-}
-
-function assertHmrUpdatePayload(payload: HmrPayload): asserts payload is HmrUpdatePayload {
-  assert.equal(payload.type, 'assets:update')
 }
 
 function getWatchEventFilePath(filePath: string): string {
@@ -3138,7 +3078,6 @@ describe('asset-server', () => {
 
   it('serves the HMR client and injects import.meta.hot contexts', async () => {
     let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
     try {
       await write(
         caseDir,
@@ -3146,7 +3085,7 @@ describe('asset-server', () => {
         'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 1',
       )
       let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(payloads),
+        hmr: createTestHmrOptions(),
       })
 
       try {
@@ -3175,9 +3114,8 @@ describe('asset-server', () => {
     }
   })
 
-  it('can use an external HMR event stream and payload sink', async () => {
+  it('can use an external HMR event stream', async () => {
     let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
     try {
       await write(
         caseDir,
@@ -3185,14 +3123,7 @@ describe('asset-server', () => {
         'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 1',
       )
       let assetServer = createWatchedTestServer(caseDir, {
-        hmr: {
-          browserEventChannel: {
-            url: 'http://127.0.0.1:1234/hmr',
-            send(payload) {
-              payloads.push(payload)
-            },
-          },
-        },
+        hmr: createTestHmrOptions(),
       })
 
       try {
@@ -3208,32 +3139,6 @@ describe('asset-server', () => {
 
         let entryResponse = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(entryResponse)
-
-        let payloadStartIndex = payloads.length
-        let entryPath = await write(
-          caseDir,
-          'app/entry.ts',
-          'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 2',
-        )
-        await emitWatchEvent(assetServer, entryPath, 'change')
-
-        let expectedPayload = {
-          type: 'assets:update',
-          updates: [
-            {
-              path: '/assets/app/entry.ts',
-              type: 'js',
-            },
-          ],
-        }
-        let result = findHmrPayload({
-          expectedPayload,
-          payloads,
-          startIndex: payloadStartIndex,
-        })
-        let payload = result.payload
-        assert.ok(payload, result.failureMessage)
-        assert.deepEqual(hmrPayloadWithoutTimestamp(payload), expectedPayload)
       } finally {
         await assetServer.close()
       }
@@ -3244,7 +3149,6 @@ describe('asset-server', () => {
 
   it('applies the component HMR transform when HMR is enabled', async () => {
     let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
     try {
       await writeComponentHmrPackageFixture(caseDir)
       await write(
@@ -3253,7 +3157,7 @@ describe('asset-server', () => {
         'export function TestComponent() {\n  return () => "Test"\n}',
       )
       let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(payloads),
+        hmr: createTestHmrOptions(),
       })
 
       try {
@@ -3277,7 +3181,6 @@ describe('asset-server', () => {
 
   it('applies the component HMR transform to client entry components', async () => {
     let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
     try {
       await writeComponentHmrPackageFixture(caseDir)
       await write(
@@ -3293,7 +3196,7 @@ describe('asset-server', () => {
         ].join('\n'),
       )
       let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(payloads),
+        hmr: createTestHmrOptions(),
       })
 
       try {
@@ -3318,775 +3221,32 @@ describe('asset-server', () => {
     }
   })
 
-  it('sends HMR js-update payloads for self-accepting script changes', async () => {
+  it('does not apply the component HMR transform to modules with non-component exports', async () => {
     let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
     try {
+      await writeComponentHmrPackageFixture(caseDir)
       await write(
         caseDir,
-        'app/entry.ts',
-        'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 1',
-      )
-      let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(payloads),
-      })
-
-      try {
-        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(entryResponse)
-        assert.equal(entryResponse.status, 200)
-
-        let payloadStartIndex = payloads.length
-        let entryPath = await write(
-          caseDir,
-          'app/entry.ts',
-          'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 2',
-        )
-        await emitWatchEvent(assetServer, entryPath, 'change')
-
-        let expectedPayload = {
-          type: 'assets:update',
-          updates: [
-            {
-              path: '/assets/app/entry.ts',
-              type: 'js',
-            },
-          ],
-        }
-        let result = findHmrPayload({
-          expectedPayload,
-          payloads,
-          startIndex: payloadStartIndex,
-        })
-        let payload = result.payload
-        assert.ok(payload, result.failureMessage)
-        assert.deepEqual(hmrPayloadWithoutTimestamp(payload), expectedPayload)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('sends an HMR js-update payload after a transform error is fixed', async () => {
-    let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
-    let errorCodes: string[] = []
-    let debugEvents: unknown[] = []
-    try {
-      await write(
-        caseDir,
-        'app/entry.ts',
-        'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 1',
-      )
-      let assetServer = createWatchedTestServer(caseDir, {
-        hmr: {
-          browserEventChannel: {
-            url: 'http://127.0.0.1:1234/hmr',
-            send(payload) {
-              payloads.push(payload)
-              debugEvents.push({
-                event: 'payload',
-                payload,
-                payloadCount: payloads.length,
-              })
-            },
-          },
-        },
-        onError(error) {
-          if (isAssetServerCompilationError(error)) {
-            errorCodes.push(error.code)
-            debugEvents.push({
-              code: error.code,
-              errorCount: errorCodes.length,
-              event: 'error',
-              message: error.message,
-            })
-          }
-        },
-      })
-
-      try {
-        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(entryResponse)
-        assert.equal(entryResponse.status, 200)
-        debugEvents.push({
-          event: 'initial-request',
-          payloadCount: payloads.length,
-          status: entryResponse.status,
-        })
-
-        let brokenPayloadStartIndex = payloads.length
-        let brokenEntryPath = await write(caseDir, 'app/entry.ts', 'export const value =')
-        debugEvents.push({ event: 'broken-write', path: brokenEntryPath })
-        await emitWatchEvent(assetServer, brokenEntryPath, 'change')
-        debugEvents.push({
-          event: 'broken-watch-event',
-          payloadCount: payloads.length,
-        })
-
-        let expectedBrokenPayload = {
-          type: 'assets:update',
-          updates: [
-            {
-              path: '/assets/app/entry.ts',
-              type: 'js',
-            },
-          ],
-        }
-        let brokenResult = findHmrPayload({
-          debugInfo: { debugEvents, errorCodes },
-          expectedPayload: expectedBrokenPayload,
-          payloads,
-          startIndex: brokenPayloadStartIndex,
-        })
-        let brokenUpdate = brokenResult.payload
-        assert.ok(brokenUpdate, brokenResult.failureMessage)
-        assert.deepEqual(hmrPayloadWithoutTimestamp(brokenUpdate), expectedBrokenPayload)
-        assertHmrUpdatePayload(brokenUpdate)
-
-        let failedUpdateResponse = await get(
-          assetServer,
-          `/assets/app/entry.ts?t=${brokenUpdate.timestamp}`,
-        )
-        assert.ok(failedUpdateResponse)
-        assert.equal(failedUpdateResponse.status, 500)
-        assert.equal(errorCodes.at(-1), 'TRANSFORM_FAILED')
-        debugEvents.push({
-          errorCodes,
-          event: 'broken-request',
-          payloadCount: payloads.length,
-          status: failedUpdateResponse.status,
-        })
-
-        let fixedPayloadStartIndex = payloads.length
-        let fixedEntryPath = await write(
-          caseDir,
-          'app/entry.ts',
-          'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 2',
-        )
-        debugEvents.push({ event: 'fixed-write', path: fixedEntryPath })
-        await emitWatchEvent(assetServer, fixedEntryPath, 'change')
-        debugEvents.push({
-          event: 'fixed-watch-event',
-          payloadCount: payloads.length,
-        })
-
-        let expectedFixedPayload = {
-          type: 'assets:update',
-          updates: [
-            {
-              path: '/assets/app/entry.ts',
-              type: 'js',
-            },
-          ],
-        }
-        let fixedResult = findHmrPayload({
-          debugInfo: { debugEvents, errorCodes },
-          expectedPayload: expectedFixedPayload,
-          payloads,
-          startIndex: fixedPayloadStartIndex,
-        })
-        let fixedUpdate = fixedResult.payload
-        assert.ok(fixedUpdate, fixedResult.failureMessage)
-        assert.deepEqual(hmrPayloadWithoutTimestamp(fixedUpdate), expectedFixedPayload)
-        assertHmrUpdatePayload(fixedUpdate)
-
-        assert.equal(fixedUpdate.type, 'assets:update')
-        let fixedUpdateResponse = await get(
-          assetServer,
-          `/assets/app/entry.ts?t=${fixedUpdate.timestamp}`,
-        )
-        assert.ok(fixedUpdateResponse)
-        assert.equal(fixedUpdateResponse.status, 200)
-        assert.match(await fixedUpdateResponse.text(), /value = 2/)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('sends HMR js-update payloads through importers that accept dependency changes', async () => {
-    let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
-    try {
-      await write(
-        caseDir,
-        'app/entry.ts',
+        'app/component.ts',
         [
-          `import { value } from './dep.ts'`,
-          `let currentValue = value`,
-          `if (import.meta.hot) {`,
-          `  import.meta.hot.accept('./dep.ts', (module) => {`,
-          `    currentValue = module.value`,
-          `  })`,
-          `}`,
-          `export function getValue() {`,
-          `  return currentValue`,
-          `}`,
+          'export function TestComponent() {',
+          '  return () => "Test"',
+          '}',
+          'export const loader = () => new Response("ok")',
         ].join('\n'),
       )
-      await write(caseDir, 'app/dep.ts', `export const value = 1`)
       let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(payloads),
+        hmr: createTestHmrOptions(),
       })
 
       try {
-        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(entryResponse)
-        assert.equal(entryResponse.status, 200)
+        let response = await get(assetServer, '/assets/app/component.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        let body = await response.text()
 
-        let depResponse = await get(assetServer, '/assets/app/dep.ts')
-        assert.ok(depResponse)
-        assert.equal(depResponse.status, 200)
-
-        let depPath = await write(caseDir, 'app/dep.ts', `export const value = 2`)
-        await emitWatchEvent(assetServer, depPath, 'change')
-
-        let expectedPayload = {
-          type: 'assets:update',
-          updates: [
-            {
-              acceptedPath: '/assets/app/dep.ts',
-              path: '/assets/app/entry.ts',
-              type: 'js',
-            },
-          ],
-        }
-        let result = findHmrPayload({
-          expectedPayload,
-          payloads,
-          startIndex: 0,
-        })
-        let payload = result.payload
-        assert.ok(payload, result.failureMessage)
-        assert.deepEqual(hmrPayloadWithoutTimestamp(payload), expectedPayload)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('resolves bare accepted HMR dependencies like imports', async () => {
-    let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
-    try {
-      await write(
-        caseDir,
-        'app/entry.ts',
-        [
-          `import { value } from 'fixture-message'`,
-          `let currentValue = value`,
-          `if (import.meta.hot) {`,
-          `  import.meta.hot.accept('fixture-message', (module) => {`,
-          `    currentValue = module.value`,
-          `  })`,
-          `}`,
-          `export function getValue() {`,
-          `  return currentValue`,
-          `}`,
-        ].join('\n'),
-      )
-      await writeJson(caseDir, 'app/node_modules/fixture-message/package.json', {
-        exports: './index.ts',
-        name: 'fixture-message',
-        type: 'module',
-      })
-      await write(caseDir, 'app/node_modules/fixture-message/index.ts', `export const value = 1`)
-      let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(payloads),
-      })
-
-      try {
-        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(entryResponse)
-        assert.equal(entryResponse.status, 200)
-        assert.match(
-          await entryResponse.text(),
-          /import\.meta\.hot\.accept\("\/assets\/app\/node_modules\/fixture-message\/index\.ts"/,
-        )
-
-        let depResponse = await get(
-          assetServer,
-          '/assets/app/node_modules/fixture-message/index.ts',
-        )
-        assert.ok(depResponse)
-        assert.equal(depResponse.status, 200)
-
-        let depPath = await write(
-          caseDir,
-          'app/node_modules/fixture-message/index.ts',
-          `export const value = 2`,
-        )
-        await emitWatchEvent(assetServer, depPath, 'change')
-
-        let expectedPayload = {
-          type: 'assets:update',
-          updates: [
-            {
-              acceptedPath: '/assets/app/node_modules/fixture-message/index.ts',
-              path: '/assets/app/entry.ts',
-              type: 'js',
-            },
-          ],
-        }
-        let result = findHmrPayload({
-          expectedPayload,
-          payloads,
-          startIndex: 0,
-        })
-        let payload = result.payload
-        assert.ok(payload, result.failureMessage)
-        assert.deepEqual(hmrPayloadWithoutTimestamp(payload), expectedPayload)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('sends HMR full reload payloads for non-accepting script changes', async () => {
-    let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
-    try {
-      await write(caseDir, 'app/entry.ts', 'export const value = 1')
-      let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(payloads),
-      })
-
-      try {
-        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(entryResponse)
-        assert.equal(entryResponse.status, 200)
-
-        let entryPath = await write(caseDir, 'app/entry.ts', 'export const value = 2')
-        await emitWatchEvent(assetServer, entryPath, 'change')
-
-        let expectedPayload = {
-          path: '/assets/app/entry.ts',
-          type: 'assets:full-reload',
-        }
-        let result = findHmrPayload({
-          expectedPayload,
-          payloads,
-          startIndex: 0,
-        })
-        let payload = result.payload
-        assert.ok(payload, result.failureMessage)
-        assert.deepEqual(hmrPayloadWithoutTimestamp(payload), expectedPayload)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('sends HMR full reload payloads for imported dependency changes without an accepting importer', async () => {
-    let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
-    try {
-      await write(
-        caseDir,
-        'app/entry.ts',
-        [`import { value } from './dep.ts'`, `export const entryValue = value`].join('\n'),
-      )
-      await write(caseDir, 'app/dep.ts', `export const value = 1`)
-      let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(payloads),
-      })
-
-      try {
-        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(entryResponse)
-        assert.equal(entryResponse.status, 200)
-
-        let depResponse = await get(assetServer, '/assets/app/dep.ts')
-        assert.ok(depResponse)
-        assert.equal(depResponse.status, 200)
-
-        let depPath = await write(caseDir, 'app/dep.ts', `export const value = 2`)
-        await emitWatchEvent(assetServer, depPath, 'change')
-
-        let expectedPayload = {
-          path: '/assets/app/dep.ts',
-          type: 'assets:full-reload',
-        }
-        let result = findHmrPayload({
-          expectedPayload,
-          payloads,
-          startIndex: 0,
-        })
-        let payload = result.payload
-        assert.ok(payload, result.failureMessage)
-        assert.deepEqual(hmrPayloadWithoutTimestamp(payload), expectedPayload)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('sends HMR full reload payloads when a dependency has both accepting and non-accepting importer paths', async () => {
-    let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
-    try {
-      await write(
-        caseDir,
-        'app/accepting.ts',
-        [
-          `import { value } from './dep.ts'`,
-          `let currentValue = value`,
-          `if (import.meta.hot) {`,
-          `  import.meta.hot.accept('./dep.ts', (module) => {`,
-          `    currentValue = module.value`,
-          `  })`,
-          `}`,
-          `export function getValue() {`,
-          `  return currentValue`,
-          `}`,
-        ].join('\n'),
-      )
-      await write(
-        caseDir,
-        'app/entry.ts',
-        [`import { value } from './non-accepting.ts'`, `export const entryValue = value`].join(
-          '\n',
-        ),
-      )
-      await write(
-        caseDir,
-        'app/non-accepting.ts',
-        [`import { value } from './dep.ts'`, `export { value }`].join('\n'),
-      )
-      await write(caseDir, 'app/dep.ts', `export const value = 1`)
-      let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(payloads),
-      })
-
-      try {
-        let acceptingResponse = await get(assetServer, '/assets/app/accepting.ts')
-        assert.ok(acceptingResponse)
-        assert.equal(acceptingResponse.status, 200)
-
-        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(entryResponse)
-        assert.equal(entryResponse.status, 200)
-
-        let depResponse = await get(assetServer, '/assets/app/dep.ts')
-        assert.ok(depResponse)
-        assert.equal(depResponse.status, 200)
-
-        let depPath = await write(caseDir, 'app/dep.ts', `export const value = 2`)
-        await emitWatchEvent(assetServer, depPath, 'change')
-
-        let expectedPayload = {
-          path: '/assets/app/dep.ts',
-          type: 'assets:full-reload',
-        }
-        let result = findHmrPayload({
-          expectedPayload,
-          payloads,
-          startIndex: 0,
-        })
-        let payload = result.payload
-        assert.ok(payload, result.failureMessage)
-        assert.deepEqual(hmrPayloadWithoutTimestamp(payload), expectedPayload)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('sends HMR js-update payloads when a transitive importer accepts updates', async () => {
-    let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
-    try {
-      await write(
-        caseDir,
-        'app/entry.ts',
-        [
-          `import { value } from './intermediate.ts'`,
-          `let currentValue = value`,
-          `if (import.meta.hot) {`,
-          `  import.meta.hot.accept('./intermediate.ts', (module) => {`,
-          `    currentValue = module.value`,
-          `  })`,
-          `}`,
-          `export function getValue() {`,
-          `  return currentValue`,
-          `}`,
-        ].join('\n'),
-      )
-      await write(
-        caseDir,
-        'app/intermediate.ts',
-        [`import { value } from './dep.ts'`, `export { value }`].join('\n'),
-      )
-      await write(caseDir, 'app/dep.ts', `export const value = 1`)
-      let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(payloads),
-      })
-
-      try {
-        let entryResponse = await get(assetServer, '/assets/app/entry.ts')
-        assert.ok(entryResponse)
-        assert.equal(entryResponse.status, 200)
-
-        let intermediateResponse = await get(assetServer, '/assets/app/intermediate.ts')
-        assert.ok(intermediateResponse)
-        assert.equal(intermediateResponse.status, 200)
-
-        let depResponse = await get(assetServer, '/assets/app/dep.ts')
-        assert.ok(depResponse)
-        assert.equal(depResponse.status, 200)
-
-        let depPath = await write(caseDir, 'app/dep.ts', `export const value = 2`)
-        await emitWatchEvent(assetServer, depPath, 'change')
-
-        let expectedPayload = {
-          type: 'assets:update',
-          updates: [
-            {
-              acceptedPath: '/assets/app/intermediate.ts',
-              path: '/assets/app/entry.ts',
-              type: 'js',
-            },
-          ],
-        }
-        let result = findHmrPayload({
-          expectedPayload,
-          payloads,
-          startIndex: 0,
-        })
-        let payload = result.payload
-        assert.ok(payload, result.failureMessage)
-        assert.deepEqual(hmrPayloadWithoutTimestamp(payload), expectedPayload)
-
-        let updatedIntermediateResponse = await get(
-          assetServer,
-          `/assets/app/intermediate.ts?t=${Date.now()}`,
-        )
-        assert.ok(updatedIntermediateResponse)
-        assert.equal(updatedIntermediateResponse.status, 200)
-        let updatedIntermediateBody = await updatedIntermediateResponse.text()
-        assert.match(updatedIntermediateBody, /from "\/assets\/app\/dep\.ts\?t=\d+"/)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('sends HMR css-update payloads for style changes', async () => {
-    let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
-    try {
-      await write(caseDir, 'app/styles/app.css', 'body { color: red; }\n')
-      let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(payloads),
-      })
-
-      try {
-        let styleResponse = await get(assetServer, '/assets/app/styles/app.css')
-        assert.ok(styleResponse)
-        assert.equal(styleResponse.status, 200)
-
-        let stylePath = await write(caseDir, 'app/styles/app.css', 'body { color: blue; }\n')
-        await emitWatchEvent(assetServer, stylePath, 'change')
-
-        let expectedPayload = {
-          type: 'assets:update',
-          updates: [
-            {
-              path: '/assets/app/styles/app.css',
-              type: 'css',
-            },
-          ],
-        }
-        let result = findHmrPayload({
-          expectedPayload,
-          payloads,
-          startIndex: 0,
-        })
-        let payload = result.payload
-        assert.ok(payload, result.failureMessage)
-        assert.deepEqual(hmrPayloadWithoutTimestamp(payload), expectedPayload)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('sends HMR css-update payloads for linked styles when an imported style changes', async () => {
-    let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
-    try {
-      await write(caseDir, 'app/styles/app.css', '@import "./theme.css";\nbody { color: red; }\n')
-      await write(caseDir, 'app/styles/theme.css', 'body { background: white; }\n')
-      let assetServer = createWatchedTestServer(caseDir, {
-        hmr: {
-          browserEventChannel: {
-            url: 'http://127.0.0.1:1234/hmr',
-            send(payload) {
-              payloads.push(payload)
-            },
-          },
-        },
-      })
-
-      try {
-        let styleResponse = await get(assetServer, '/assets/app/styles/app.css')
-        assert.ok(styleResponse)
-        assert.equal(styleResponse.status, 200)
-        assert.doesNotMatch(await styleResponse.text(), /theme\.css\?t=/)
-
-        let themePath = path.join(caseDir, 'app/styles/theme.css')
-        await emitWatchEvent(assetServer, themePath, 'change')
-
-        let expectedPayload = {
-          type: 'assets:update',
-          updates: [
-            {
-              path: '/assets/app/styles/app.css',
-              type: 'css',
-            },
-          ],
-        }
-        let result = findHmrPayload({
-          expectedPayload,
-          payloads,
-          startIndex: 0,
-        })
-        let payload = result.payload
-        assert.ok(payload, result.failureMessage)
-        assert.deepEqual(hmrPayloadWithoutTimestamp(payload), expectedPayload)
-        assertHmrUpdatePayload(payload)
-
-        let updatedStyleResponse = await get(
-          assetServer,
-          `/assets/app/styles/app.css?t=${payload.timestamp}`,
-        )
-        assert.ok(updatedStyleResponse)
-        assert.equal(updatedStyleResponse.status, 200)
-        assert.match(
-          await updatedStyleResponse.text(),
-          new RegExp(`/assets/app/styles/theme\\.css\\?t=${payload.timestamp}`),
-        )
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('sends an HMR css-update payload after a transform error is fixed', async () => {
-    let caseDir = await makeTmpDir()
-    let payloads: HmrPayload[] = []
-    let errorCodes: string[] = []
-    try {
-      await write(caseDir, 'app/styles/app.css', 'body { color: red; }\n')
-      let assetServer = createWatchedTestServer(caseDir, {
-        hmr: {
-          browserEventChannel: {
-            url: 'http://127.0.0.1:1234/hmr',
-            send(payload) {
-              payloads.push(payload)
-            },
-          },
-        },
-        onError(error) {
-          if (isAssetServerCompilationError(error)) {
-            errorCodes.push(error.code)
-          }
-        },
-      })
-
-      try {
-        let styleResponse = await get(assetServer, '/assets/app/styles/app.css')
-        assert.ok(styleResponse)
-        assert.equal(styleResponse.status, 200)
-
-        let brokenPayloadStartIndex = payloads.length
-        let brokenStylePath = await write(
-          caseDir,
-          'app/styles/app.css',
-          'body { background: url("foo); }\n',
-        )
-        await emitWatchEvent(assetServer, brokenStylePath, 'change')
-
-        let expectedBrokenPayload = {
-          type: 'assets:update',
-          updates: [
-            {
-              path: '/assets/app/styles/app.css',
-              type: 'css',
-            },
-          ],
-        }
-        let brokenResult = findHmrPayload({
-          debugInfo: { errorCodes },
-          expectedPayload: expectedBrokenPayload,
-          payloads,
-          startIndex: brokenPayloadStartIndex,
-        })
-        let brokenUpdate = brokenResult.payload
-        assert.ok(brokenUpdate, brokenResult.failureMessage)
-        assert.deepEqual(hmrPayloadWithoutTimestamp(brokenUpdate), expectedBrokenPayload)
-        assertHmrUpdatePayload(brokenUpdate)
-
-        let failedUpdateResponse = await get(
-          assetServer,
-          `/assets/app/styles/app.css?t=${brokenUpdate.timestamp}`,
-        )
-        assert.ok(failedUpdateResponse)
-        assert.equal(failedUpdateResponse.status, 500)
-        assert.equal(errorCodes.at(-1), 'TRANSFORM_FAILED')
-
-        let fixedPayloadStartIndex = payloads.length
-        let fixedStylePath = await write(caseDir, 'app/styles/app.css', 'body { color: blue; }\n')
-        await emitWatchEvent(assetServer, fixedStylePath, 'change')
-
-        let expectedFixedPayload = {
-          type: 'assets:update',
-          updates: [
-            {
-              path: '/assets/app/styles/app.css',
-              type: 'css',
-            },
-          ],
-        }
-        let fixedResult = findHmrPayload({
-          debugInfo: { errorCodes },
-          expectedPayload: expectedFixedPayload,
-          payloads,
-          startIndex: fixedPayloadStartIndex,
-        })
-        let fixedUpdate = fixedResult.payload
-        assert.ok(fixedUpdate, fixedResult.failureMessage)
-        assert.deepEqual(hmrPayloadWithoutTimestamp(fixedUpdate), expectedFixedPayload)
-        assertHmrUpdatePayload(fixedUpdate)
-
-        let fixedUpdateResponse = await get(
-          assetServer,
-          `/assets/app/styles/app.css?t=${fixedUpdate.timestamp}`,
-        )
-        assert.ok(fixedUpdateResponse)
-        assert.equal(fixedUpdateResponse.status, 200)
-        assert.match(await fixedUpdateResponse.text(), /color: #00f/)
+        assert.doesNotMatch(body, /__remixHmr\.registerComponentForHmr/)
+        assert.doesNotMatch(body, /__@remix\/injected\/@remix-run\/ui-hmr/)
       } finally {
         await assetServer.close()
       }

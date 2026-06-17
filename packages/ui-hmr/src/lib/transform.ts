@@ -59,10 +59,11 @@ export function transformComponentsForBrowser(
   let ast = parseModule(source)
   if (!ast) return createUnchangedResult(source)
 
-  let { componentMatches, clientEntryMatches } = findMatches(ast, source)
-  if (componentMatches.length === 0 && clientEntryMatches.length === 0) {
+  let matchResult = findMatches(ast, source)
+  if (!isSafeComponentHmrBoundary(matchResult)) {
     return createUnchangedResult(source)
   }
+  let { componentMatches, clientEntryMatches } = matchResult
 
   let rewritten = new MagicString(source)
   let componentNames: string[] = []
@@ -131,7 +132,15 @@ export function transformComponentsForBrowser(
     [
       ``,
       `if (import.meta.hot) {`,
+      `  let __remixHmrAcceptComponentModule = ${createComponentNamesCheckSource(
+        options.moduleUrl,
+        componentNames,
+        {
+          spaces: 0,
+        },
+      )};`,
       `  import.meta.hot.accept((module) => {`,
+      `    if (!__remixHmrAcceptComponentModule) return;`,
       `    if (module && typeof module === 'object') {`,
       `      __remixHmr.updateComponentModuleForHmr(__remixUIRefresh, ${JSON.stringify(
         options.moduleUrl,
@@ -169,10 +178,11 @@ export function transformComponentsForServer(
   let ast = parseModule(source)
   if (!ast) return createUnchangedResult(source)
 
-  let { componentMatches, clientEntryMatches } = findMatches(ast, source)
-  if (componentMatches.length === 0 && clientEntryMatches.length === 0) {
+  let matchResult = findMatches(ast, source)
+  if (!isSafeComponentHmrBoundary(matchResult)) {
     return createUnchangedResult(source)
   }
+  let { componentMatches, clientEntryMatches } = matchResult
 
   let rewritten = new MagicString(source)
   let componentNames: string[] = []
@@ -231,7 +241,18 @@ export function transformComponentsForServer(
       ``,
     ].join('\n'),
   )
-  rewritten.append([``, `if (import.meta.hot) {`, `  import.meta.hot.accept();`, `}`].join('\n'))
+  rewritten.append(
+    [
+      ``,
+      `if (import.meta.hot) {`,
+      `  if (${createComponentNamesCheckSource(options.moduleUrl, componentNames, {
+        spaces: 0,
+      })}) {`,
+      `    import.meta.hot.accept();`,
+      `  }`,
+      `}`,
+    ].join('\n'),
+  )
 
   return {
     code: rewritten.toString(),
@@ -274,8 +295,12 @@ function findMatches(
 ): {
   componentMatches: ComponentMatch[]
   clientEntryMatches: ClientEntryMatch[]
+  runtimeExportNames: Set<string>
+  unsafeRuntimeExports: boolean
 } {
   let exportedNames = getExportedNames(program)
+  let runtimeExportNames = getRuntimeExportNames(program)
+  let unsafeRuntimeExports = hasUnsafeRuntimeExports(program)
   let componentMatches: ComponentMatch[] = []
   let clientEntryMatches: ClientEntryMatch[] = []
 
@@ -328,7 +353,63 @@ function findMatches(
       ),
   )
 
-  return { componentMatches, clientEntryMatches }
+  return { componentMatches, clientEntryMatches, runtimeExportNames, unsafeRuntimeExports }
+}
+
+function isSafeComponentHmrBoundary(matchResult: {
+  componentMatches: readonly ComponentMatch[]
+  clientEntryMatches: readonly ClientEntryMatch[]
+  runtimeExportNames: ReadonlySet<string>
+  unsafeRuntimeExports: boolean
+}): boolean {
+  if (matchResult.unsafeRuntimeExports) return false
+
+  let componentNames = new Set<string>()
+  for (let match of matchResult.componentMatches) {
+    componentNames.add(match.name)
+  }
+  for (let match of matchResult.clientEntryMatches) {
+    componentNames.add(match.name)
+  }
+
+  if (componentNames.size === 0) return false
+  if (componentNames.size !== matchResult.runtimeExportNames.size) return false
+
+  for (let name of matchResult.runtimeExportNames) {
+    if (!componentNames.has(name)) return false
+  }
+
+  return true
+}
+
+function createComponentNamesCheckSource(
+  moduleUrl: string,
+  componentNames: readonly string[],
+  options: {
+    spaces: number
+  },
+): string {
+  let indent = ' '.repeat(options.spaces)
+  let lines = [
+    `${indent}let __remixHmrComponentNames = ${JSON.stringify(componentNames)};`,
+    `${indent}let __remixHmrPreviousComponentNames = import.meta.hot.data.componentNamesByModuleUrl?.[${JSON.stringify(
+      moduleUrl,
+    )}];`,
+    `${indent}if (__remixHmrPreviousComponentNames && (__remixHmrPreviousComponentNames.length !== __remixHmrComponentNames.length || __remixHmrPreviousComponentNames.some((name, index) => name !== __remixHmrComponentNames[index]))) {`,
+    `${indent}  import.meta.hot.invalidate('Updated component module changed its exports');`,
+    `${indent}  return false;`,
+    `${indent}}`,
+    `${indent}import.meta.hot.data.componentNamesByModuleUrl = {`,
+    `${indent}  ...import.meta.hot.data.componentNamesByModuleUrl,`,
+    `${indent}  [${JSON.stringify(moduleUrl)}]: __remixHmrComponentNames,`,
+    `${indent}};`,
+    `${indent}return true;`,
+  ]
+
+  lines.unshift(`(() => {`)
+  lines.push(`})()`)
+
+  return lines.join('\n')
 }
 
 function getFunctionDeclarationMatch(
@@ -792,6 +873,79 @@ function getExportedNames(program: AstNode): Set<string> {
   }
 
   return names
+}
+
+function getRuntimeExportNames(program: AstNode): Set<string> {
+  let names = new Set<string>()
+
+  for (let item of getNodeArray(program, 'body')) {
+    if (item.type !== 'ExportNamedDeclaration') continue
+    if (isTypeOnlyExport(item)) continue
+
+    let declaration = getNode(item, 'declaration')
+    if (declaration) {
+      addDeclarationExportNames(declaration, names)
+      continue
+    }
+
+    for (let specifier of getNodeArray(item, 'specifiers')) {
+      if (specifier.exportKind === 'type') continue
+      let name = getIdentifierName(getNode(specifier, 'exported'))
+      if (name) names.add(name)
+    }
+  }
+
+  return names
+}
+
+function hasUnsafeRuntimeExports(program: AstNode): boolean {
+  for (let item of getNodeArray(program, 'body')) {
+    if (item.type === 'ExportAllDeclaration' && item.exportKind !== 'type') {
+      return true
+    }
+
+    if (item.type !== 'ExportNamedDeclaration') continue
+    if (isTypeOnlyExport(item)) continue
+
+    if (getNode(item, 'source')) return true
+
+    let declaration = getNode(item, 'declaration')
+    if (declaration && !isRuntimeValueDeclaration(declaration)) {
+      return true
+    }
+  }
+
+  return false
+}
+
+function isTypeOnlyExport(node: AstNode): boolean {
+  return node.exportKind === 'type'
+}
+
+function addDeclarationExportNames(declaration: AstNode, names: Set<string>): void {
+  if (declaration.type === 'FunctionDeclaration' || declaration.type === 'ClassDeclaration') {
+    let name = getIdentifierName(getNode(declaration, 'id'))
+    if (name) names.add(name)
+    return
+  }
+
+  if (declaration.type === 'VariableDeclaration') {
+    for (let declarator of getNodeArray(declaration, 'declarations')) {
+      let id = getNode(declarator, 'id')
+      if (!id) continue
+      for (let name of getBindingNames(id)) {
+        names.add(name)
+      }
+    }
+  }
+}
+
+function isRuntimeValueDeclaration(declaration: AstNode): boolean {
+  return (
+    declaration.type === 'FunctionDeclaration' ||
+    declaration.type === 'ClassDeclaration' ||
+    declaration.type === 'VariableDeclaration'
+  )
 }
 
 function isComponentExport(

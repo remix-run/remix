@@ -138,6 +138,117 @@ describe('node-hmr', () => {
     }
   })
 
+  it('bubbles runtime invalidation to accepting importers without restarting the server', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getServerSource('./parent.ts', 'getMessage()'),
+      'parent.ts': [
+        `import { getMessage as getImportedMessage } from './message.ts'`,
+        ``,
+        `let getMessage = getImportedMessage`,
+        ``,
+        `if (import.meta.hot) {`,
+        `  import.meta.hot.accept('./message.ts', (module) => {`,
+        `    if (module && typeof module === 'object' && 'getMessage' in module) {`,
+        `      getMessage = module.getMessage as typeof getMessage`,
+        `    }`,
+        `  })`,
+        `}`,
+        ``,
+        `export { getMessage }`,
+      ].join('\n'),
+      'message.ts': [
+        `export function getMessage() {`,
+        `  return 'one'`,
+        `}`,
+        ``,
+        `if (import.meta.hot) {`,
+        `  import.meta.hot.accept((module) => {`,
+        `    if (module && typeof module === 'object' && 'getMessage' in module) {`,
+        `      import.meta.hot.invalidate('message boundary declined update')`,
+        `    }`,
+        `  })`,
+        `}`,
+      ].join('\n'),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'one')
+
+      await fs.writeFile(
+        path.join(fixture.path, 'message.ts'),
+        [
+          `export function getMessage() {`,
+          `  return 'two'`,
+          `}`,
+          ``,
+          `if (import.meta.hot) {`,
+          `  import.meta.hot.accept((module) => {`,
+          `    if (module && typeof module === 'object' && 'getMessage' in module) {`,
+          `      import.meta.hot.invalidate('message boundary declined update')`,
+          `    }`,
+          `  })`,
+          `}`,
+        ].join('\n'),
+      )
+
+      await waitForResponse(ready.port, 'two', () => server.output)
+      assert.equal(server.readyCount, 1)
+      assert.match(server.output, /message boundary declined update/)
+      assert.match(server.output, /hmr update message\.ts/)
+      assert.doesNotMatch(server.output, /restart message boundary declined update/)
+    } finally {
+      await server.stop()
+    }
+  })
+
+  it('restarts when runtime invalidation cannot bubble to an accepting importer', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getPidServerSource('./message.ts', 'getMessage()'),
+      'message.ts': [
+        `export function getMessage() {`,
+        `  return 'one'`,
+        `}`,
+        ``,
+        `if (import.meta.hot) {`,
+        `  import.meta.hot.accept(() => {`,
+        `    import.meta.hot.invalidate('message boundary declined update')`,
+        `  })`,
+        `}`,
+      ].join('\n'),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), `${ready.pid}:one`)
+
+      await fs.writeFile(
+        path.join(fixture.path, 'message.ts'),
+        [
+          `export function getMessage() {`,
+          `  return 'two'`,
+          `}`,
+          ``,
+          `if (import.meta.hot) {`,
+          `  import.meta.hot.accept(() => {`,
+          `    import.meta.hot.invalidate('message boundary declined update')`,
+          `  })`,
+          `}`,
+        ].join('\n'),
+      )
+
+      let restarted = await server.waitForReady(1)
+      assert.notEqual(restarted.pid, ready.pid)
+      assert.equal(await fetchText(restarted.port), `${restarted.pid}:two`)
+      assert.match(server.output, /message boundary declined update/)
+      assert.match(server.output, /restart message\.ts/)
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('hot updates bare dependency changes through accepting importers without restarting the server', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./message.ts', 'getMessage()'),
@@ -419,6 +530,91 @@ describe('node-hmr', () => {
     }
   })
 
+  it('restarts once when transformed component module exports change', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
+      'greeting.tsx': [
+        `export function Greeting() {`,
+        `  return () => 'Hello from component'`,
+        `}`,
+      ].join('\n'),
+      ...getRemixUiRefreshFixtureFiles(),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+
+      await fs.writeFile(
+        path.join(fixture.path, 'greeting.tsx'),
+        [
+          `export function Greeting() {`,
+          `  return () => 'Updated after restart'`,
+          `}`,
+          `export function AddedComponent() {`,
+          `  return () => 'Added component'`,
+          `}`,
+        ].join('\n'),
+      )
+
+      let restarted = await server.waitForReady(1)
+      assert.notEqual(restarted.pid, ready.pid)
+      assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
+      assert.match(server.output, /restart Updated component module changed its exports/)
+      assert.doesNotMatch(server.output, /Failed to hot update/)
+      assert.equal(server.readyCount, 2)
+    } finally {
+      await server.stop()
+    }
+  })
+
+  it('sends one readiness-gated server update when transformed component module exports change', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getEventChannelComponentServerSource(),
+      'greeting.tsx': [
+        `export function Greeting() {`,
+        `  return () => 'Hello from component'`,
+        `}`,
+      ].join('\n'),
+      ...getRemixUiRefreshFixtureFiles(),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let hmrUrl = await server.waitForHmrUrl(0)
+      let events = await connectHmrEvents(hmrUrl.url)
+      try {
+        let ready = await server.waitForReady(0)
+        assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+
+        await fs.writeFile(
+          path.join(fixture.path, 'greeting.tsx'),
+          [
+            `export function Greeting() {`,
+            `  return () => 'Updated after restart'`,
+            `}`,
+            `export function AddedComponent() {`,
+            `  return () => 'Added component'`,
+            `}`,
+          ].join('\n'),
+        )
+
+        let restarted = await server.waitForReady(1)
+        assert.notEqual(restarted.pid, ready.pid)
+        assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
+
+        let payload = await events.read()
+        assert.deepEqual(payload, { type: 'server:update' })
+        await assertNoHmrEvent(events)
+      } finally {
+        await events.close()
+      }
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('hot updates transformed component modules with a symlinked remix package', async () => {
     await using fixture = await createFixture({
       'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
@@ -642,12 +838,36 @@ function getEventChannelServerSource(message: string): string {
 
   return [
     `import { createServer } from 'node:http'`,
-    `import { browserEventChannel, emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    `import { browserEventController, emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
     ``,
-    `console.log(JSON.stringify({ type: 'hmr-url', url: browserEventChannel?.url, pid: process.pid }))`,
+    `console.log(JSON.stringify({ type: 'hmr-url', url: browserEventController?.url, pid: process.pid }))`,
     ``,
     `let server = createServer((_request, response) => {`,
     `  response.end(${JSON.stringify(message)})`,
+    `})`,
+    ``,
+    `server.listen(0, () => {`,
+    `  let address = server.address()`,
+    `  if (address && typeof address === 'object') {`,
+    `    emitServerReady()`,
+    `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
+    `  }`,
+    `})`,
+  ].join('\n')
+}
+
+function getEventChannelComponentServerSource(): string {
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.ts')).href
+
+  return [
+    `import { createServer } from 'node:http'`,
+    `import { browserEventController, emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    `import { Greeting } from './greeting.tsx'`,
+    ``,
+    `console.log(JSON.stringify({ type: 'hmr-url', url: browserEventController?.url, pid: process.pid }))`,
+    ``,
+    `let server = createServer((_request, response) => {`,
+    `  response.end(String(process.pid) + ':' + Greeting()())`,
     `})`,
     ``,
     `server.listen(0, () => {`,
@@ -728,7 +948,7 @@ async function createFixture(
       `import { run } from ${JSON.stringify(nodeHmrImportUrl)}`,
       ``,
       `run('server.ts', {`,
-      `  browserEventChannel: true,`,
+      `  browserEventController: true,`,
       `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
       `})`,
     ].join('\n'),
@@ -922,6 +1142,15 @@ async function connectHmrEvents(url: string): Promise<{
       }
     },
   }
+}
+
+async function assertNoHmrEvent(events: { read(): Promise<HmrEventPayload> }): Promise<void> {
+  let timeout = Symbol('timeout')
+  let result = await Promise.race([
+    events.read(),
+    new Promise<typeof timeout>((resolve) => setTimeout(() => resolve(timeout), 100)),
+  ])
+  assert.equal(result, timeout)
 }
 
 function parseHmrEventPayload(eventText: string): HmrEventPayload {

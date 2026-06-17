@@ -15,11 +15,10 @@ export type HmrPayload =
           }
       >
       timestamp: number
-      type: 'assets:update'
+      type: 'browser:update'
     }
   | {
-      path?: string
-      type: 'assets:full-reload'
+      type: 'browser:reload'
     }
 
 export function createHmrClientSource(options: { eventPathname: string }): string {
@@ -35,6 +34,8 @@ class RemixHmrContext {
     this.acceptDependencyCallbacks = []
     this.disposeCallbacks = []
     this.customEventCallbacks = new Map()
+    this.invalidated = false
+    this.updating = false
     dataByPath.set(path, this.data)
   }
 
@@ -63,6 +64,11 @@ class RemixHmrContext {
   }
 
   invalidate(message) {
+    this.invalidated = true
+    if (this.updating) {
+      if (message) console.warn(message)
+      return
+    }
     if (message) console.warn(message)
     reloadPage()
   }
@@ -112,7 +118,7 @@ events.onmessage = (event) => {
   let payload = JSON.parse(event.data)
   handlePayload(payload).catch((error) => {
     console.error('[remix] HMR update failed', error)
-    if (payload.type !== 'assets:update' || payload.updates.some((update) => update.type !== 'js')) {
+    if (payload.type !== 'browser:update' || payload.updates.some((update) => update.type !== 'js')) {
       reloadPage()
     }
   })
@@ -121,8 +127,8 @@ events.onmessage = (event) => {
 async function handlePayload(payload) {
   console.info('[remix] HMR payload', payload)
 
-  if (payload.type === 'assets:full-reload') {
-    console.info('[remix] HMR reloading page', payload.path)
+  if (payload.type === 'browser:reload') {
+    console.info('[remix] HMR reloading page')
     reloadPage()
     return
   }
@@ -133,7 +139,7 @@ async function handlePayload(payload) {
     return
   }
 
-  if (payload.type === 'assets:update') {
+  if (payload.type === 'browser:update') {
     for (let update of payload.updates) {
       if (update.type === 'css') {
         console.info('[remix] HMR updating stylesheet', update.path)
@@ -227,8 +233,17 @@ async function updateJavaScriptModule(path, acceptedPath, timestamp) {
         ? nextContext.acceptCallbacks
         : previousContext.acceptCallbacks
 
-    for (let callback of callbacks) {
-      await callback(updatedModule)
+    nextContext.invalidated = false
+    nextContext.updating = true
+    try {
+      for (let callback of callbacks) {
+        await callback(updatedModule)
+      }
+    } finally {
+      nextContext.updating = false
+    }
+    if (nextContext.invalidated) {
+      await propagateInvalidatedJavaScriptModule(path, timestamp)
     }
     return
   }
@@ -241,13 +256,58 @@ async function updateJavaScriptModule(path, acceptedPath, timestamp) {
   }
 
   let updatedModule = await import(withTimestamp(acceptedPath, timestamp))
-  for (let { deps, callback } of dependencyCallbacks) {
-    if (deps.length === 1) {
-      await callback(updatedModule)
-    } else {
-      await callback(deps.map((dep) => (dep === acceptedPath ? updatedModule : undefined)))
+  previousContext.invalidated = false
+  previousContext.updating = true
+  try {
+    for (let { deps, callback } of dependencyCallbacks) {
+      if (deps.length === 1) {
+        await callback(updatedModule)
+      } else {
+        await callback(deps.map((dep) => (dep === acceptedPath ? updatedModule : undefined)))
+      }
+    }
+  } finally {
+    previousContext.updating = false
+  }
+  if (previousContext.invalidated) {
+    await propagateInvalidatedJavaScriptModule(path, timestamp)
+  }
+}
+
+async function propagateInvalidatedJavaScriptModule(path, timestamp) {
+  let updated = false
+  for (let [importerPath, importerContext] of contexts) {
+    if (importerPath === path) continue
+    let callbacks = getAcceptDependencyCallbacks(importerContext, path)
+    if (callbacks.length === 0) continue
+
+    for (let callback of importerContext.disposeCallbacks) {
+      await callback(importerContext.data)
+    }
+
+    let updatedModule = await import(withTimestamp(path, timestamp))
+    importerContext.invalidated = false
+    importerContext.updating = true
+    try {
+      for (let { deps, callback } of callbacks) {
+        if (deps.length === 1) {
+          await callback(updatedModule)
+        } else {
+          await callback(deps.map((dep) => (dep === path ? updatedModule : undefined)))
+        }
+      }
+    } finally {
+      importerContext.updating = false
+    }
+    updated = true
+
+    if (importerContext.invalidated) {
+      reloadPage()
+      return
     }
   }
+
+  if (!updated) reloadPage()
 }
 
 function getAcceptDependencyCallbacks(context, acceptedPath) {
@@ -316,7 +376,7 @@ function withTimestamp(path, timestamp) {
 function reloadPage() {
   if (pageReloadTimer) clearTimeout(pageReloadTimer)
   pageReloadTimer = setTimeout(() => {
-    location.reload()
+    window.location.href = window.location.href
   }, 20)
 }
 `.trimStart()

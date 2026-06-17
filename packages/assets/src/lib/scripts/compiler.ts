@@ -85,7 +85,8 @@ type ScriptCompiler = {
   getScript(filePath: string, options: ScriptGetOptions): Promise<ScriptGetResult>
   getPreloadLayers(filePath: string | readonly string[]): Promise<string[][]>
   getHref(filePath: string): Promise<string>
-  handleFileEvent(filePath: string, event: ModuleWatchEvent): Promise<void>
+  classifyHmrFileEvent(filePath: string, event: ModuleWatchEvent): Promise<ScriptHmrUpdate[]>
+  invalidateFileEvent(filePath: string, event: ModuleWatchEvent): void
   parseRequestPathname(pathname: string): ParsedRequestPathname | null
 }
 
@@ -96,15 +97,17 @@ type ParsedRequestPathname = {
   requestedFingerprint: string | null
 }
 
-type ScriptHmrUpdate =
+export type ScriptHmrUpdate =
   | {
       accepted: false
+      filePath: string
       path: string
       timestamp: number
     }
   | {
       accepted: true
       acceptedPath: string
+      filePath: string
       path: string
       timestamp: number
     }
@@ -233,38 +236,38 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       return getServedUrl(resolvedModule.identityPath)
     },
 
-    async handleFileEvent(filePath, event) {
+    async classifyHmrFileEvent(filePath, event) {
       let normalizedFilePath = normalizeFilePath(filePath)
-      if (isWatchIgnored(normalizedFilePath)) return
+      if (isWatchIgnored(normalizedFilePath)) return []
 
-      if (shouldClearResolverCacheForFileEvent(normalizedFilePath, event)) {
-        resolverFactory.clearCache()
-      }
-
-      if (isTsconfigPath(normalizedFilePath)) {
-        tsconfigTransformOptionsResolver.clear()
-        scriptStore.invalidateAll()
-        return
-      }
-
-      if (isPackageJsonPath(normalizedFilePath)) {
-        scriptStore.invalidateAll()
-        return
-      }
-
-      let resolvedModule = scriptStore.getLastResolved(normalizedFilePath)
-      let updatePathname = resolvedModule?.stableUrlPathname
       let timestamp = Date.now()
+      let previousResolvedModule = scriptStore.getLastResolved(normalizedFilePath)
+      let updatePathname = previousResolvedModule?.stableUrlPathname
+
+      invalidateScriptFileEvent(normalizedFilePath, event)
+
+      let resolvedModule =
+        event === 'change' && updatePathname
+          ? await tryGetOrCreateResolvedScript(scriptStore.get(normalizedFilePath))
+          : undefined
       let hmrUpdate =
         event === 'change' && updatePathname
-          ? getHmrUpdatesForChange(resolvedModule, updatePathname, timestamp)
+          ? getHmrUpdatesForChange(
+              resolvedModule ?? previousResolvedModule,
+              previousResolvedModule,
+              updatePathname,
+              timestamp,
+            )
           : []
-
-      scriptStore.invalidateForFileEvent(normalizedFilePath, event)
 
       if (hmrUpdate.length > 0) {
         resolvedOptions.hmr?.send(hmrUpdate)
       }
+      return hmrUpdate
+    },
+
+    invalidateFileEvent(filePath, event) {
+      invalidateScriptFileEvent(normalizeFilePath(filePath), event)
     },
 
     parseRequestPathname(pathname) {
@@ -295,6 +298,27 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     return resolveFilePath(resolvedOptions.rootDir, filePath)
   }
 
+  function invalidateScriptFileEvent(normalizedFilePath: string, event: ModuleWatchEvent): void {
+    if (isWatchIgnored(normalizedFilePath)) return
+
+    if (shouldClearResolverCacheForFileEvent(normalizedFilePath, event)) {
+      resolverFactory.clearCache()
+    }
+
+    if (isTsconfigPath(normalizedFilePath)) {
+      tsconfigTransformOptionsResolver.clear()
+      scriptStore.invalidateAll()
+      return
+    }
+
+    if (isPackageJsonPath(normalizedFilePath)) {
+      scriptStore.invalidateAll()
+      return
+    }
+
+    scriptStore.invalidateForFileEvent(normalizedFilePath, event)
+  }
+
   function resolveServedScriptOrThrow(absolutePath: string): ResolveModuleResult {
     let resolvedModule = resolveModulePath(absolutePath)
     if (!resolvedModule) {
@@ -323,8 +347,10 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       return null
     }
 
-    let current = getNotModifiedResult(record.emitted, options)
-    if (current) return current
+    if (scriptStore.isEmittedFresh(record)) {
+      let current = getNotModifiedResult(record.emitted, options)
+      if (current) return current
+    }
 
     if (!record.staleEmittedSnapshot || !isModuleSnapshotFresh(record.staleEmittedSnapshot)) {
       return null
@@ -340,7 +366,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   }
 
   async function getOrCreateResolvedScript(record: ScriptRecord): Promise<ResolvedModule> {
-    if (record.resolved) return record.resolved
+    if (record.resolved && scriptStore.isResolvedFresh(record)) return record.resolved
 
     let cacheKey = getRecordCacheKey(record)
     let existing = resolveInFlightByCacheKey.get(cacheKey)
@@ -386,8 +412,18 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     }
   }
 
+  async function tryGetOrCreateResolvedScript(
+    record: ScriptRecord,
+  ): Promise<ResolvedModule | undefined> {
+    try {
+      return await getOrCreateResolvedScript(record)
+    } catch {
+      return undefined
+    }
+  }
+
   async function getOrCreateTransformedScript(record: ScriptRecord): Promise<TransformedModule> {
-    if (record.transformed) return record.transformed
+    if (record.transformed && scriptStore.isTransformedFresh(record)) return record.transformed
 
     let startedVersion = record.invalidationVersion
     let transformModuleResult = await transformModule(record, transformArgs)
@@ -409,7 +445,13 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   }
 
   async function getOrCreateEmittedScript(record: ScriptRecord): Promise<EmittedModule> {
-    if (record.emitted && !hasHmrTimestampedDependency(record.resolved)) return record.emitted
+    if (
+      record.emitted &&
+      scriptStore.isEmittedFresh(record) &&
+      !hasHmrTimestampedDependency(record.resolved)
+    ) {
+      return record.emitted
+    }
 
     let cacheKey = getRecordCacheKey(record)
     let existing = emitInFlightByCacheKey.get(cacheKey)
@@ -488,6 +530,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
   function getHmrUpdatesForChange(
     resolvedModule: ResolvedModule | undefined,
+    previousResolvedModule: ResolvedModule | undefined,
     updatePathname: string,
     timestamp: number,
   ): ScriptHmrUpdate[] {
@@ -495,22 +538,37 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       scriptStore.setHmrUpdateTimestamp(resolvedModule.identityPath, timestamp)
     }
 
-    if (resolvedModule?.hmr.selfAccepting === true) {
+    if (hasComponentHmrBoundaryChanged(previousResolvedModule, resolvedModule)) {
       return [
         {
-          accepted: true,
-          acceptedPath: updatePathname,
+          accepted: false,
+          filePath:
+            resolvedModule?.identityPath ?? previousResolvedModule?.identityPath ?? updatePathname,
           path: updatePathname,
           timestamp,
         },
       ]
     }
 
-    let boundaries = findHmrBoundaries(resolvedModule?.identityPath)
-    if (boundaries) {
+    if (resolvedModule?.hmr.selfAccepting === true) {
+      return [
+        {
+          accepted: true,
+          acceptedPath: updatePathname,
+          filePath: resolvedModule.identityPath,
+          path: updatePathname,
+          timestamp,
+        },
+      ]
+    }
+
+    let sourceFilePath = resolvedModule?.identityPath
+    let boundaries = findHmrBoundaries(sourceFilePath)
+    if (sourceFilePath !== undefined && boundaries) {
       return dedupeHmrBoundaries(boundaries).map(({ acceptedModule, boundaryModule }) => ({
         accepted: true,
         acceptedPath: acceptedModule.stableUrlPathname,
+        filePath: sourceFilePath,
         path: boundaryModule.stableUrlPathname,
         timestamp,
       }))
@@ -519,10 +577,36 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
     return [
       {
         accepted: false,
+        filePath:
+          resolvedModule?.identityPath ?? previousResolvedModule?.identityPath ?? updatePathname,
         path: updatePathname,
         timestamp,
       },
     ]
+  }
+
+  function hasComponentHmrExportNamesChanged(
+    previousResolvedModule: ResolvedModule | undefined,
+    resolvedModule: ResolvedModule | undefined,
+  ): boolean {
+    let previousNames = previousResolvedModule?.componentHmrExportNames
+    let nextNames = resolvedModule?.componentHmrExportNames
+    if (!previousNames || !nextNames) return false
+    if (previousNames.length !== nextNames.length) return true
+
+    return previousNames.some((name, index) => name !== nextNames[index])
+  }
+
+  function hasComponentHmrBoundaryChanged(
+    previousResolvedModule: ResolvedModule | undefined,
+    resolvedModule: ResolvedModule | undefined,
+  ): boolean {
+    let previousNames = previousResolvedModule?.componentHmrExportNames
+    let nextNames = resolvedModule?.componentHmrExportNames
+    if (!previousNames && !nextNames) return false
+    if (!previousNames || !nextNames) return true
+
+    return hasComponentHmrExportNamesChanged(previousResolvedModule, resolvedModule)
   }
 
   function findHmrBoundaries(identityPath: string | undefined): ScriptHmrBoundary[] | null {

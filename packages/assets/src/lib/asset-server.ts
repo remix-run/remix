@@ -22,6 +22,7 @@ import { normalizeFilePath, normalizePathname } from './paths.ts'
 import { compileRoutes } from './routes.ts'
 import type { CompiledRoutes } from './routes.ts'
 import { createResponseForScript, createScriptCompiler } from './scripts/compiler.ts'
+import type { ScriptHmrUpdate } from './scripts/compiler.ts'
 import { supportedScriptExtensions } from './scripts/resolve.ts'
 import { createResponseForStyle, createStyleCompiler, isStyleFilePath } from './styles/compiler.ts'
 import { resolveScriptTarget, resolveStyleTarget } from './target.ts'
@@ -47,16 +48,43 @@ interface AssetServerWatchOptions {
 
 export interface AssetServerHmrOptions {
   /**
-   * Browser-facing HMR event channel, e.g. `browserEventChannel` exported by
+   * Browser HMR event controller, e.g. `browserEventController` exported by
    * `remix/node-hmr/runtime`
    */
-  browserEventChannel: BrowserEventChannel | undefined
+  browserEventController: BrowserEventController | undefined
 }
 
-export interface BrowserEventChannel {
+export interface BrowserEventController {
+  register(source: BrowserEventSource): BrowserEventSourceRegistration
   url: string
-  send(payload: HmrPayload): void
 }
+
+interface BrowserEventSource {
+  handleFileEvents(events: readonly BrowserHmrFileEvent[]): Promise<readonly BrowserHmrIntent[]>
+}
+
+interface BrowserEventSourceRegistration {
+  close(): void
+  updateWatchedDirectories(delta: { add: readonly string[]; remove: readonly string[] }): void
+}
+
+type BrowserHmrFileEvent = {
+  event: 'add' | 'change' | 'unlink'
+  filePath: string
+}
+
+type BrowserHmrIntent =
+  | {
+      files?: string[]
+      timestamp: number
+      type: 'update'
+      updates: Extract<HmrPayload, { type: 'browser:update' }>['updates']
+    }
+  | {
+      files?: string[]
+      reason?: string
+      type: 'reload'
+    }
 
 interface FingerprintOptions {
   /**
@@ -141,8 +169,9 @@ export interface AssetServerOptions<transforms extends AssetRequestTransformMap 
    */
   files?: AssetServerFilesOptions<transforms>
   /**
-   * Enable HMR via the import.meta.hot API using an external event channel such
-   * as `remix/node-hmr/runtime`. HMR requires `watch` to be enabled.
+   * Enable HMR via the import.meta.hot API using a browser event controller such
+   * as `browserEventController` from `remix/node-hmr/runtime`. HMR requires
+   * `watch` to be enabled.
    */
   hmr?: AssetServerHmrOptions
   /**
@@ -267,10 +296,11 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   let watcher: AssetServerWatcher | null = null
   let chokidarWatcher: ChokidarWatcher | null = null
   let fileCompiler: FileCompiler | null = null
-  let browserEventChannel = resolvedOptions.hmr?.browserEventChannel
+  let browserEventController = resolvedOptions.hmr?.browserEventController
+  let browserEventSourceRegistration: BrowserEventSourceRegistration | undefined
   let sendHmrPayload = resolvedOptions.hmr ? createHmrPayloadSender(resolvedOptions.hmr) : null
   let hmrPathnames = getHmrPathnames(resolvedOptions.basePath)
-  let browserEventUrl = browserEventChannel?.url
+  let browserEventUrl = browserEventController?.url
   let scriptCompiler = createScriptCompiler({
     buildId: resolvedOptions.buildId,
     define: resolvedOptions.define,
@@ -280,28 +310,8 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       ? {
           clientPathname: hmrPathnames.client,
           send(updates) {
-            let timestamp = updates[0]?.timestamp ?? Date.now()
-            let acceptedUpdates = updates.filter((update) => update.accepted)
-            if (acceptedUpdates.length > 0) {
-              sendHmrPayload({
-                timestamp,
-                type: 'assets:update',
-                updates: acceptedUpdates.map((update) => ({
-                  ...(update.acceptedPath === update.path
-                    ? {}
-                    : { acceptedPath: update.acceptedPath }),
-                  path: update.path,
-                  type: 'js',
-                })),
-              })
-            }
-
-            if (acceptedUpdates.length !== updates.length) {
-              sendHmrPayload({
-                path: updates.find((update) => !update.accepted)?.path,
-                type: 'assets:full-reload',
-              })
-            }
+            let payload = createScriptHmrPayload(updates)
+            if (payload) sendHmrPayload(payload)
           },
         }
       : undefined,
@@ -310,6 +320,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     onWatchDirectoriesChange: (delta) => {
       if (!watcher) return
       watcher.updateWatchedDirectories(delta)
+      browserEventSourceRegistration?.updateWatchedDirectories(delta)
     },
     rootDir: resolvedOptions.rootDir,
     routes: resolvedOptions.routes,
@@ -340,7 +351,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
           send(pathname, timestamp) {
             sendHmrPayload({
               timestamp,
-              type: 'assets:update',
+              type: 'browser:update',
               updates: [
                 {
                   path: pathname,
@@ -359,6 +370,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     onWatchDirectoriesChange: (delta) => {
       if (!watcher) return
       watcher.updateWatchedDirectories(delta, { includeAncestors: false })
+      browserEventSourceRegistration?.updateWatchedDirectories(delta)
     },
     rootDir: resolvedOptions.rootDir,
     routes: resolvedOptions.routes,
@@ -381,6 +393,9 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       routes: resolvedOptions.routes,
     })
   }
+  browserEventSourceRegistration = browserEventController?.register({
+    handleFileEvents: handleBrowserHmrFileEvents,
+  })
   if (resolvedOptions.watchOptions) {
     watcher = createAssetServerWatcher({
       ...resolvedOptions.watchOptions,
@@ -403,12 +418,50 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   async function handleWatchEvent(filePath: string, event: 'add' | 'change' | 'unlink') {
     try {
       let normalizedFilePath = normalizeFilePath(filePath)
-      await scriptCompiler.handleFileEvent(normalizedFilePath, event)
-      await styleCompiler.handleFileEvent(normalizedFilePath, event)
+      scriptCompiler.invalidateFileEvent(normalizedFilePath, event)
+      styleCompiler.invalidateFileEvent(normalizedFilePath, event)
       await fileCompiler?.handleFileEvent(normalizedFilePath, event)
     } catch (error) {
       console.error(`There was an error invalidating the asset server cache: ${error}`)
     }
+  }
+
+  async function handleBrowserHmrFileEvents(
+    events: readonly BrowserHmrFileEvent[],
+  ): Promise<readonly BrowserHmrIntent[]> {
+    let intents: BrowserHmrIntent[] = []
+
+    for (let event of events) {
+      let normalizedFilePath = normalizeFilePath(event.filePath)
+      let scriptUpdates = await scriptCompiler.classifyHmrFileEvent(normalizedFilePath, event.event)
+      let scriptPayload = createScriptHmrPayload(scriptUpdates)
+      if (scriptPayload) {
+        intents.push(createBrowserHmrIntent(scriptPayload, getScriptHmrUpdateFiles(scriptUpdates)))
+      }
+
+      let styleUpdates = await styleCompiler.classifyHmrFileEvent(normalizedFilePath, event.event)
+      for (let styleUpdate of styleUpdates) {
+        intents.push(
+          createBrowserHmrIntent(
+            {
+              timestamp: styleUpdate.timestamp,
+              type: 'browser:update',
+              updates: [
+                {
+                  path: styleUpdate.path,
+                  type: 'css',
+                },
+              ],
+            },
+            [styleUpdate.filePath],
+          ),
+        )
+      }
+
+      await fileCompiler?.handleFileEvent(normalizedFilePath, event.event)
+    }
+
+    return intents
   }
 
   let assetServer: AssetServer<transforms> = {
@@ -648,6 +701,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
       return mergePreloadLayers(await Promise.all(preloadLayerGroupPromises))
     },
     async close() {
+      browserEventSourceRegistration?.close()
       await watcher?.close()
     },
   }
@@ -713,13 +767,61 @@ function createHmrClientResponse(eventPathname: string, method: string): Respons
 
 function assertBrowserEventUrl(url: string | undefined): asserts url is string {
   if (url === undefined) {
-    throw new TypeError('hmr.browserEventChannel must be provided')
+    throw new TypeError('hmr.browserEventController must be provided')
   }
 }
 
 function createHmrPayloadSender(options: AssetServerHmrOptions): (payload: HmrPayload) => void {
-  return (payload) => {
-    options.browserEventChannel?.send(payload)
+  void options
+  return () => {}
+}
+
+function createBrowserHmrIntent(
+  payload: Extract<HmrPayload, { type: 'browser:reload' | 'browser:update' }>,
+  files: readonly string[],
+): BrowserHmrIntent {
+  if (payload.type === 'browser:reload') {
+    return {
+      ...(files.length === 0 ? {} : { files: [...files] }),
+      reason: 'browser reload required',
+      type: 'reload',
+    }
+  }
+
+  return {
+    ...(files.length === 0 ? {} : { files: [...files] }),
+    timestamp: payload.timestamp,
+    type: 'update',
+    updates: payload.updates,
+  }
+}
+
+function getScriptHmrUpdateFiles(updates: ScriptHmrUpdate[]): string[] {
+  return [...new Set(updates.map((update) => update.filePath))]
+}
+
+export function createScriptHmrPayload(
+  updates: ScriptHmrUpdate[],
+): Extract<HmrPayload, { type: 'browser:reload' | 'browser:update' }> | null {
+  let timestamp = updates[0]?.timestamp ?? Date.now()
+  let rejectedUpdate = updates.find((update) => !update.accepted)
+  if (rejectedUpdate) {
+    return {
+      type: 'browser:reload',
+    }
+  }
+
+  let acceptedUpdates = updates.filter((update) => update.accepted)
+  if (acceptedUpdates.length === 0) return null
+
+  return {
+    timestamp,
+    type: 'browser:update',
+    updates: acceptedUpdates.map((update) => ({
+      ...(update.acceptedPath === update.path ? {} : { acceptedPath: update.acceptedPath }),
+      path: update.path,
+      type: 'js',
+    })),
   }
 }
 
@@ -816,17 +918,17 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
 function normalizeHmrOptions(options: AssetServerOptions['hmr']): AssetServerHmrOptions | null {
   if (!options) return null
 
-  let { browserEventChannel } = options
-  if (browserEventChannel === undefined) return null
+  let { browserEventController } = options
+  if (browserEventController === undefined) return null
 
-  if (browserEventChannel === null || typeof browserEventChannel !== 'object') {
-    throw new TypeError('hmr.browserEventChannel must be an object')
+  if (browserEventController === null || typeof browserEventController !== 'object') {
+    throw new TypeError('hmr.browserEventController must be an object')
   }
-  if (typeof browserEventChannel.url !== 'string') {
-    throw new TypeError('hmr.browserEventChannel.url must be a string')
+  if (typeof browserEventController.url !== 'string') {
+    throw new TypeError('hmr.browserEventController.url must be a string')
   }
-  if (typeof browserEventChannel.send !== 'function') {
-    throw new TypeError('hmr.browserEventChannel.send must be a function')
+  if (typeof browserEventController.register !== 'function') {
+    throw new TypeError('hmr.browserEventController.register must be a function')
   }
   return options
 }
