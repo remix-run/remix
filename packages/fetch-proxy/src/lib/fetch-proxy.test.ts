@@ -113,6 +113,19 @@ describe('fetch proxy', () => {
     assert.equal(request.headers.get('X-Forwarded-Port'), null)
   })
 
+  it('does not forward the incoming Host header', async () => {
+    let { request } = await testProxy(
+      new Request('http://shopify.com/search?q=remix', {
+        headers: {
+          Host: 'shopify.com',
+        },
+      }),
+      'https://remix.run:3000/dest',
+    )
+
+    assert.equal(request.headers.get('Host'), null)
+  })
+
   it('appends X-Forwarded headers when desired', async () => {
     let { request } = await testProxy(
       new Request('http://shopify.com:8080/search?q=remix'),

@@ -77,6 +77,7 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
     }
 
     let proxyHeaders = new Headers(request.headers)
+    proxyHeaders.delete('Host')
     if (xForwardedHeaders) {
       proxyHeaders.append('X-Forwarded-Proto', url.protocol.replace(/:$/, ''))
       proxyHeaders.append('X-Forwarded-Host', url.host)
