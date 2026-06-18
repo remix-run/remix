@@ -45,6 +45,7 @@ describe('createHref', () => {
 
       it('throws when port specified', () => {
         let pattern = '://:8080/path' as const
+        // @ts-expect-error - missing hostname
         assert.throws(() => createHref(pattern), hrefError('missing-hostname'))
       })
     })

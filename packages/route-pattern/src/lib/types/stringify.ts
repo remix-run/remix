@@ -2,9 +2,17 @@ import type { ParsedPattern, Token } from './parse.ts'
 
 // prettier-ignore
 export type Stringify<T extends ParsedPattern> =
-  T['hostname'] extends Token[] ?
+  HasOrigin<T> extends true ?
     `${StringifyTokens<T['protocol'], ''>}://${StringifyTokens<T['hostname'], '.'>}${StringifyPort<T['port']>}${StringifyPathname<T['pathname']>}${StringifySearch<T['search']>}` :
     `${StringifyPathname<T['pathname']>}${StringifySearch<T['search']>}`
+
+type HasOrigin<T extends ParsedPattern> = T['protocol'] extends Token[]
+  ? true
+  : T['hostname'] extends Token[]
+    ? true
+    : T['port'] extends string
+      ? true
+      : false
 
 // prettier-ignore
 type StringifyTokens<T extends Token[] | undefined, Sep extends string> =
