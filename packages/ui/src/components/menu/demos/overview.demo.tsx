@@ -1,6 +1,7 @@
 import { type Handle } from '@remix-run/ui'
-import { Menu, MenuItem, onMenuSelect, Submenu } from '@remix-run/ui/menu'
-import { separatorStyle } from '@remix-run/ui/separator'
+import { css } from '@remix-run/ui'
+import { Menu, MenuItem, Submenu } from '@remix-run/ui/components/menu'
+import { onMenuSelect } from '@remix-run/ui/menu'
 
 /**
  * @name Menu Overview
@@ -46,7 +47,7 @@ export default function Example(handle: Handle) {
         Show gutter
       </MenuItem>
 
-      <hr mix={separatorStyle} />
+      <hr mix={separatorCss} />
       <Submenu label="Zoom">
         <MenuItem name="zoomIn" value="zoom-in">
           Zoom In
@@ -75,3 +76,10 @@ export default function Example(handle: Handle) {
     </Menu>
   )
 }
+
+const separatorCss = css({
+  marginBlock: '4px',
+  marginInline: '8px',
+  border: 0,
+  borderTop: '1px solid #e7e7e7',
+})

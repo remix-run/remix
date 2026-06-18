@@ -167,7 +167,7 @@ async function buildExportsFromManifest(
     let sourceFile =
       exportMode === 'type-reference'
         ? specifier.replace('@remix-run/', '') + '.d.ts'
-        : specifier.replace('@remix-run/', '') + '.ts'
+        : getSourceFileForManifestEntry(remixPath, specifier)
     let exportPath = './' + remixPath.replace('remix/', '')
 
     let readmePath: string | undefined
@@ -195,6 +195,14 @@ async function buildExportsFromManifest(
   exports.sort((a, b) => a.exportPath.localeCompare(b.exportPath))
   console.log(`Built ${exports.length} exports from manifest.`)
   return exports
+}
+
+function getSourceFileForManifestEntry(remixPath: string, specifier: string): string {
+  if (specifier.startsWith('@remix-run/ui/components/')) {
+    return remixPath.replace('remix/', '') + '.ts'
+  }
+
+  return specifier.replace('@remix-run/', '') + '.ts'
 }
 
 async function getExportModeForSpecifier(
@@ -336,6 +344,13 @@ async function updateRemixPackage() {
   } else {
     delete remixPackageJson.bin
     delete remixPackageJson.publishConfig.bin
+  }
+
+  let remixRunPackageNames = new Set(remixRunPackages.map((packageInfo) => packageInfo.name))
+  for (let dependencyName of Object.keys(remixPackageJson.dependencies)) {
+    if (dependencyName.startsWith('@remix-run/') && !remixRunPackageNames.has(dependencyName)) {
+      delete remixPackageJson.dependencies[dependencyName]
+    }
   }
 
   for (let packageInfo of remixRunPackages) {

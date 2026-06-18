@@ -1,6 +1,6 @@
 import { clientEntry, css, navigate, on, type Handle } from 'remix/ui'
-import { Button } from 'remix/ui/button'
-import { theme } from 'remix/ui/theme'
+import { Button } from 'remix/components/button'
+import { theme } from './design.ts'
 
 import { NewScheduleActionComponent } from './new-schedule-action.tsx'
 
@@ -297,7 +297,7 @@ const scheduleItemStyle = css({
 
 const scheduleLinkStyle = css({
   alignItems: 'center',
-  borderRadius: theme.radius.md,
+  borderRadius: theme.radius,
   color: theme.colors.text.primary,
   display: 'grid',
   gap: theme.space.xs,
@@ -327,7 +327,7 @@ const scheduleLinkStyle = css({
     backgroundColor: theme.surface.lvl2,
   },
   '&:focus-visible': {
-    outline: `2px solid ${theme.colors.focus.ring}`,
+    outline: `2px solid ${theme.colors.focusRing}`,
     outlineOffset: '2px',
   },
   "&[data-active='true'] > span": {
@@ -353,7 +353,7 @@ const deleteButtonStyle = css({
   alignItems: 'center',
   backgroundColor: 'transparent',
   border: 0,
-  borderRadius: theme.radius.sm,
+  borderRadius: '4px',
   color: theme.colors.text.secondary,
   cursor: 'pointer',
   display: 'inline-flex',
@@ -363,10 +363,10 @@ const deleteButtonStyle = css({
   padding: 0,
   width: '1.5rem',
   '&:hover': {
-    color: theme.colors.action.danger.background,
+    color: theme.colors.danger,
   },
   '&:focus-visible': {
-    outline: `2px solid ${theme.colors.focus.ring}`,
+    outline: `2px solid ${theme.colors.focusRing}`,
     outlineOffset: '2px',
   },
   '&:disabled': {
@@ -393,7 +393,7 @@ const spinnerStyle = css({
 })
 
 const deleteErrorStyle = css({
-  color: theme.colors.action.danger.background,
+  color: theme.colors.danger,
   fontSize: theme.fontSize.xs,
   gridColumn: '1 / -1',
 })

@@ -1902,6 +1902,31 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
+  packages/ui/demo:
+    dependencies:
+      '@remix-run/ui':
+        specifier: workspace:*
+        version: link:..
+      remix:
+        specifier: workspace:*
+        version: link:../../remix
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.12
+      node-html-parser:
+        specifier: ^7.0.2
+        version: 7.1.0
+
   packages/ui-hmr:
     dependencies:
       magic-string:
@@ -2007,31 +2032,6 @@ importers:
       esbuild-plugin-solid:
         specifier: ^0.6.0
         version: 0.6.0(esbuild@0.27.1)(solid-js@1.9.12)
-
-  packages/ui/demo:
-    dependencies:
-      '@remix-run/ui':
-        specifier: workspace:*
-        version: link:..
-      remix:
-        specifier: workspace:*
-        version: link:../../remix
-    devDependencies:
-      '@types/dom-navigation':
-        specifier: ^1.0.7
-        version: 1.0.7
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
-      esbuild:
-        specifier: ^0.25.10
-        version: 0.25.12
-      node-html-parser:
-        specifier: ^7.0.2
-        version: 7.1.0
 
   scripts:
     dependencies:
@@ -4538,12 +4538,12 @@ packages:
     hasBin: true
 
   esbuild@0.27.3:
-    resolution: {integrity: sha512-8VwMnyGCONIs6cWue2IdpHxHnAjzxnw2Zr7MkVxB2vjmQ2ivqGFb4LEG3SMnv0Gb2F/G/2yA8zUaiL1gywDCCg==}
+    resolution: {integrity: sha512-8VwMnyGCONIs6cWue2IdpHxHnAjzxnw2Zr7MkVxB2vjmQ2ivqGFb4LEG3SMnv0Gb2F/G/2yA8zUaiL1gywDCCg==, tarball: https://registry.npmjs.org/esbuild/-/esbuild-0.27.3.tgz}
     engines: {node: '>=18'}
     hasBin: true
 
   esbuild@0.27.7:
-    resolution: {integrity: sha512-IxpibTjyVnmrIQo5aqNpCgoACA/dTKLTlhMHihVHhdkxKyPO1uBBthumT0rdHmcsk9uMonIWS0m4FljWzILh3w==}
+    resolution: {integrity: sha512-IxpibTjyVnmrIQo5aqNpCgoACA/dTKLTlhMHihVHhdkxKyPO1uBBthumT0rdHmcsk9uMonIWS0m4FljWzILh3w==, tarball: https://registry.npmjs.org/esbuild/-/esbuild-0.27.7.tgz}
     engines: {node: '>=18'}
     hasBin: true
 

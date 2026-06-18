@@ -4,8 +4,7 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@remix-run/ui/accordion'
-import { theme } from '@remix-run/ui/theme'
+} from '@remix-run/ui/components/accordion'
 
 /**
  * @name Accordion Overview
@@ -51,7 +50,7 @@ export default function Example() {
 
 const bodyTextCss = css({
   margin: 0,
-  fontSize: theme.fontSize.sm,
-  lineHeight: theme.lineHeight.relaxed,
-  color: theme.colors.text.secondary,
+  fontSize: '13px',
+  lineHeight: '1.65',
+  color: '#4f4f4f',
 })

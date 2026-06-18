@@ -9,27 +9,27 @@ import type {
   RemixNode,
 } from '@remix-run/ui'
 
-import { theme } from '../../theme/theme.ts'
+import { componentStyleValues as styles } from '../shared/style-values.ts'
 
 const ghostButtonToneCss: CSSMixinDescriptor = css({
   backgroundColor: 'transparent',
   backgroundImage: 'none',
-  color: theme.colors.text.secondary,
+  color: styles.colors.text.secondary,
   border: '0.5px solid transparent',
   boxShadow: 'none',
   '&:hover': {
-    backgroundColor: theme.surface.lvl3,
-    color: theme.colors.text.primary,
+    backgroundColor: styles.surface.lvl3,
+    color: styles.colors.text.primary,
   },
   '&:active': {
-    backgroundColor: `color-mix(in oklab, ${theme.surface.lvl3} 94%, black)`,
-    color: `color-mix(in oklab, ${theme.colors.text.primary} 94%, black)`,
+    backgroundColor: `color-mix(in oklab, ${styles.surface.lvl3} 94%, black)`,
+    color: `color-mix(in oklab, ${styles.colors.text.primary} 94%, black)`,
   },
   '&:focus-visible': {
-    outline: `2px solid ${theme.colors.focus.ring}`,
+    outline: `2px solid ${styles.colors.focus.ring}`,
     outlineOffset: '2px',
-    backgroundColor: theme.surface.lvl3,
-    color: theme.colors.text.primary,
+    backgroundColor: styles.surface.lvl3,
+    color: styles.colors.text.primary,
   },
   '&:disabled': {
     opacity: 0.6,
@@ -37,7 +37,7 @@ const ghostButtonToneCss: CSSMixinDescriptor = css({
 })
 
 const buttonBaseStyleCss: CSSMixinDescriptor = css({
-  '--rmx-button-label-padding-inline': theme.space.xs,
+  '--rmx-button-label-padding-inline': styles.space.xs,
   all: 'unset',
   boxSizing: 'border-box',
   cursor: 'revert',
@@ -47,13 +47,13 @@ const buttonBaseStyleCss: CSSMixinDescriptor = css({
   alignItems: 'center',
   justifyContent: 'center',
   overflow: 'hidden',
-  borderRadius: theme.radius.full,
-  fontFamily: theme.fontFamily.sans,
-  minHeight: theme.control.height.sm,
-  paddingInline: theme.space.md,
-  fontSize: theme.fontSize.xs,
+  borderRadius: styles.radius.full,
+  fontFamily: styles.fontFamily.sans,
+  minHeight: styles.control.height.sm,
+  paddingInline: styles.space.md,
+  fontSize: styles.fontSize.xs,
   lineHeight: '1',
-  fontWeight: theme.fontWeight.medium,
+  fontWeight: styles.fontWeight.medium,
   whiteSpace: 'nowrap',
   textDecoration: 'none',
   userSelect: 'none',
@@ -133,7 +133,7 @@ export const labelStyle = buttonLabelCss
  *
  * @category mixin
  */
-export const primaryStyle: CSSMixinDescriptor = createButtonCss(theme.colors.action.primary)
+export const primaryStyle: CSSMixinDescriptor = createButtonCss(styles.colors.action.primary)
 
 /**
  * Secondary visual treatment for buttons. Combine with {@link baseStyle} when
@@ -141,7 +141,7 @@ export const primaryStyle: CSSMixinDescriptor = createButtonCss(theme.colors.act
  *
  * @category mixin
  */
-export const secondaryStyle: CSSMixinDescriptor = createButtonCss(theme.colors.action.secondary)
+export const secondaryStyle: CSSMixinDescriptor = createButtonCss(styles.colors.action.secondary)
 
 /**
  * Ghost visual treatment for buttons — transparent background with a hover
@@ -158,7 +158,7 @@ export const ghostStyle = ghostButtonToneCss
  *
  * @category mixin
  */
-export const dangerStyle: CSSMixinDescriptor = createButtonCss(theme.colors.action.danger)
+export const dangerStyle: CSSMixinDescriptor = createButtonCss(styles.colors.action.danger)
 
 const toneStyleByTone = {
   primary: primaryStyle,
@@ -207,10 +207,9 @@ export type ButtonProps = Omit<Props<'button'>, 'children'> & {
  *
  * @example
  * ```tsx
- * import { Button } from '@remix-run/ui/button'
- * import { Glyph } from '@remix-run/ui/glyph'
+ * import { Button } from '@remix-run/ui/components/button'
  *
- * <Button startIcon={<Glyph name="add" />} tone="primary">
+ * <Button startIcon={<PlusIcon />} tone="primary">
  *   Create project
  * </Button>
  * ```
@@ -229,36 +228,36 @@ export function Button(handle: Handle<ButtonProps>): () => RemixNode {
   }
 }
 
-function createButtonCss(buttonTheme: {
+function createButtonCss(actionColors: {
   background: string
   backgroundHover: string
   backgroundActive: string
   foreground: string
   border: string
 }): CSSMixinDescriptor {
-  let borderColor = createButtonBorderColor(buttonTheme.border)
-  let hoverBorderColor = createButtonBorderColor(buttonTheme.backgroundHover)
-  let activeBorderColor = createButtonBorderColor(buttonTheme.backgroundActive)
+  let borderColor = createButtonBorderColor(actionColors.border)
+  let hoverBorderColor = createButtonBorderColor(actionColors.backgroundHover)
+  let activeBorderColor = createButtonBorderColor(actionColors.backgroundActive)
 
   return css({
-    backgroundColor: buttonTheme.background,
-    backgroundImage: createButtonBackgroundImage(buttonTheme.background),
-    color: buttonTheme.foreground,
+    backgroundColor: actionColors.background,
+    backgroundImage: createButtonBackgroundImage(actionColors.background),
+    color: actionColors.foreground,
     border: `0.5px solid ${borderColor}`,
-    boxShadow: `${createButtonHighlight(buttonTheme.background)}, ${theme.shadow.xs}, ${theme.shadow.sm}`,
+    boxShadow: `${createButtonHighlight(actionColors.background)}, ${styles.shadow.xs}, ${styles.shadow.sm}`,
     '&:hover': {
-      backgroundColor: buttonTheme.backgroundHover,
-      backgroundImage: createButtonBackgroundImage(buttonTheme.backgroundHover),
+      backgroundColor: actionColors.backgroundHover,
+      backgroundImage: createButtonBackgroundImage(actionColors.backgroundHover),
       borderColor: hoverBorderColor,
     },
     '&:active': {
-      backgroundColor: buttonTheme.backgroundActive,
-      backgroundImage: createButtonBackgroundImage(buttonTheme.backgroundActive),
+      backgroundColor: actionColors.backgroundActive,
+      backgroundImage: createButtonBackgroundImage(actionColors.backgroundActive),
       borderColor: activeBorderColor,
-      boxShadow: `${createButtonHighlight(buttonTheme.backgroundActive, 0.12)}, ${theme.shadow.xs}`,
+      boxShadow: `${createButtonHighlight(actionColors.backgroundActive, 0.12)}, ${styles.shadow.xs}`,
     },
     '&:focus-visible': {
-      outline: `2px solid ${theme.colors.focus.ring}`,
+      outline: `2px solid ${styles.colors.focus.ring}`,
       outlineOffset: '2px',
     },
     '&:disabled': {
