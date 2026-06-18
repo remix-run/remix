@@ -10,23 +10,44 @@ export type MatchParams<source extends string> =
       : Simplify<Omit<params, '*'>>
     : never
 
+/** Metadata describing where a matched param appeared in a normalized URL part. */
 export type MatchParamMeta = {
+  /** Param token kind: `:` for variables or `*` for wildcards. */
   type: ':' | '*'
+
+  /** Param name, or `*` for an unnamed wildcard. */
   name: string
+
+  /** Matched param value after URL normalization and decoding. */
   value: string
-  /** Start offset after pathname is normalized. */
+
+  /** Start offset after the URL part is normalized. */
   begin: number
-  /** End offset after pathname is normalized. */
+
+  /** End offset after the URL part is normalized. */
   end: number
 }
 
+/** Result returned by route pattern matchers. */
 export type Match<source extends string = string, data = unknown> = {
+  /** URL object used for the match. */
   url: URL
+
+  /** Pattern that matched the URL. */
   pattern: RoutePattern<source>
+
+  /** Data attached to the matched pattern. */
   data: data
+
+  /** Params captured from the matched pattern. */
   params: MatchParams<source>
+
+  /** Metadata for hostname and pathname params captured during matching. */
   paramsMeta: {
+    /** Params captured from the hostname pattern. */
     hostname: ReadonlyArray<MatchParamMeta>
+
+    /** Params captured from the pathname pattern. */
     pathname: ReadonlyArray<MatchParamMeta>
   }
 }

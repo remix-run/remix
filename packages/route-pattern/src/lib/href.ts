@@ -209,6 +209,7 @@ function hrefSearch(
   return result || undefined
 }
 
+/** Structured details for a {@link CreateHrefError}. */
 export type CreateHrefErrorDetails =
   | { type: 'missing-hostname'; pattern: RoutePattern }
   | {

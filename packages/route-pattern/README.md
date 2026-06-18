@@ -65,6 +65,8 @@ createHref('http(s)://:region.cdn.com/assets/*file.:ext', {
 
 For in-depth reference, visit the [`route-pattern` API docs](https://api.remix.run/api/remix/route-pattern)
 
+Examples in this README use `remix/route-pattern/*` imports. The same APIs are also available from the direct package entrypoints: `@remix-run/route-pattern`, `@remix-run/route-pattern/href`, `@remix-run/route-pattern/match`, `@remix-run/route-pattern/join`, and `@remix-run/route-pattern/specificity`.
+
 ## Pattern syntax
 
 ### Protocol
@@ -149,6 +151,8 @@ docsMatcher.match(url)?.params
 // Type safe params     ^? { tenant: string | undefined, path: string, ext: string } | undefined
 ```
 
+Matchers accept absolute URL strings or `URL` objects. Relative strings such as `/blog/v3` are not accepted because matching uses the platform `URL` parser; wrap relative paths with a known origin before matching them.
+
 ### Match against multiple patterns
 
 Use `createMultiMatcher` when you need to match many patterns and attach your own data to each match.
@@ -172,17 +176,38 @@ matcher.match('https://example.com/api/v2/users/profile')
 
 The matched pattern is only known at runtime, so matched `params` are not inferred when matching with `createMultiMatcher`.
 
+Each match returns:
+
+- `url`: the `URL` object that was matched
+- `pattern`: the matched `RoutePattern`
+- `data`: the data attached with `matcher.add(pattern, data)`
+- `params`: captured param values
+- `paramsMeta`: hostname and pathname param metadata
+
+`paramsMeta.hostname` and `paramsMeta.pathname` are arrays of `{ type, name, value, begin, end }` entries. The offsets are measured after URL normalization. A pattern with no hostname matches any hostname, represented in `paramsMeta.hostname` as an unnamed wildcard entry.
+
+Set `ignoreCase: true` to make pathname matching case-insensitive. Hostname matching is always case-insensitive, and search constraints are always case-sensitive.
+
+```ts
+let matcher = createMatcher('/Docs/:slug', { ignoreCase: true })
+
+matcher.match('https://example.com/docs/Intro')?.params
+// { slug: 'Intro' }
+```
+
 ### Ranking matches by specificity
 
 When multiple patterns match the same URL, `route-pattern` chooses the most specific match deterministically. Matches are ranked left-to-right, character-by-character:
 
+- Explicit protocol and port constraints are more specific than omitted constraints.
+- Static hostnames are more specific than dynamic hostnames, which are more specific than omitted hostnames.
 - Static characters are more specific than variables.
 - Variables are more specific than wildcards.
 - Earliest difference decides the winner.
 
 This is the same ranking used by `createMultiMatcher`.
 
-For advanced use cases, `/specificity` provides comparison utilities: `lessThan`, `greaterThan`, `equal`, `descending`, `ascending`, `compare`. For example:
+For advanced use cases, `/specificity` provides comparison utilities: `lessThan`, `greaterThan`, `equal`, `descending`, `ascending`, `compare`. `lessThan(a, b)` returns `true` when match `a` is less specific than match `b`. For example:
 
 ```ts
 import { createMultiMatcher } from 'remix/route-pattern/match'
@@ -226,6 +251,10 @@ createHref('blog/:slug?ref=docs', { slug: 'v3' }, { utm_source: 'newsletter' })
 // '/blog/v3?utm_source=newsletter&ref=docs'
 ```
 
+`createHref()` throws `CreateHrefError` when it cannot safely generate an href. The error exposes stable structured details on `error.details`; the string message is for humans.
+
+Common failures include missing required params, nameless wildcards, invalid hostname params, empty pathname variables, and origin patterns that specify a protocol or port without a concrete hostname.
+
 **Note:** optional groups without params are included in the generated href:
 
 ```ts
@@ -263,6 +292,15 @@ getRoutePatternParams(pattern)
 All APIs that take a `pattern` arg accept `string` or a parsed `RoutePattern`.
 
 **TIP:** For high-performance scenarios, you can parse patterns ahead of time to avoid reparsing them on every call.
+
+`RoutePattern.toJSON()` returns a `RoutePatternJSON` object with serialized `protocol`, `hostname`, `port`, `pathname`, and `search` fields. `RoutePattern.parse()` throws `ParseError` for malformed sources; the error exposes stable `type`, `source`, and `index` fields.
+
+The public support types are:
+
+- `RoutePatternParam` from `remix/route-pattern`
+- `RoutePatternJSON` from `remix/route-pattern`
+- `CreateHrefErrorDetails` from `remix/route-pattern/href`
+- `MatchParamMeta` from `remix/route-pattern/match`
 
 ## Combine patterns
 
