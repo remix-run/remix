@@ -1,6 +1,11 @@
 import { split, type Span } from './split.ts'
-import { RoutePattern } from '../route-pattern.ts'
-import type { PartPattern, PartPatternToken } from '../route-pattern.ts'
+import { createRoutePattern } from '../route-pattern.ts'
+import type {
+  ParsedRoutePattern,
+  PartPattern,
+  PartPatternToken,
+  RoutePattern,
+} from '../route-pattern.ts'
 import type { Mutable } from '../types/utils.ts'
 
 const IDENTIFIER_RE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
@@ -15,7 +20,7 @@ const IDENTIFIER_RE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
 export function parsePattern<source extends string>(source: source): RoutePattern<source> {
   let spans = split(source)
 
-  return new RoutePattern<source>({
+  return createRoutePattern<source>({
     protocol: parseProtocol(source, spans.protocol),
     hostname: parseHostname(source, spans.hostname),
     port: spans.port ? source.slice(...spans.port) : null,
@@ -118,7 +123,7 @@ export function parsePart(
   return { tokens, optionals, type: options.type }
 }
 
-function parseProtocol(source: string, span: Span | null): RoutePattern['protocol'] {
+function parseProtocol(source: string, span: Span | null): ParsedRoutePattern['protocol'] {
   if (!span) return null
   let protocol = source.slice(...span)
   if (protocol === '' || protocol === 'http' || protocol === 'https' || protocol === 'http(s)') {
@@ -127,7 +132,7 @@ function parseProtocol(source: string, span: Span | null): RoutePattern['protoco
   throw new ParseError('invalid protocol', source, span[0])
 }
 
-function parseHostname(source: string, span: Span | null): RoutePattern['hostname'] | null {
+function parseHostname(source: string, span: Span | null): ParsedRoutePattern['hostname'] | null {
   if (!span) return null
   let part = parsePart(source, { span, type: 'hostname' })
   if (isNamelessWildcard(part)) return null
@@ -141,7 +146,7 @@ function isNamelessWildcard(part: PartPattern): boolean {
   return token.name === '*'
 }
 
-function parseSearch(source: string): RoutePattern['search'] {
+function parseSearch(source: string): ParsedRoutePattern['search'] {
   let constraints = new Map<string, Set<string>>()
 
   let searchParams = new URLSearchParams(source)

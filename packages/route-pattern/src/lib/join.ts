@@ -1,5 +1,5 @@
-import { RoutePattern } from './route-pattern.ts'
-import type { PartPattern, PartPatternToken } from './route-pattern.ts'
+import { createRoutePattern, getRoutePatternParts, RoutePattern } from './route-pattern.ts'
+import type { ParsedRoutePattern, PartPattern, PartPatternToken } from './route-pattern.ts'
 import type { JoinPatterns } from './types/join.ts'
 
 /**
@@ -17,14 +17,17 @@ export function joinPatterns<base extends string, next extends string>(
   base: base | RoutePattern<base>,
   next: next | RoutePattern<next>,
 ): RoutePattern<JoinPatterns<base, next>> {
-  base = typeof base === 'string' ? RoutePattern.parse(base) : base
-  next = typeof next === 'string' ? RoutePattern.parse(next) : next
-  return new RoutePattern<JoinPatterns<base, next>>({
-    protocol: next.protocol ?? base.protocol,
-    hostname: next.hostname ?? base.hostname,
-    port: next.port ?? base.port,
-    pathname: joinPathname(base.pathname, next.pathname),
-    search: joinSearch(base.search, next.search),
+  let basePattern = typeof base === 'string' ? RoutePattern.parse(base) : base
+  let nextPattern = typeof next === 'string' ? RoutePattern.parse(next) : next
+  let baseParts = getRoutePatternParts(basePattern)
+  let nextParts = getRoutePatternParts(nextPattern)
+
+  return createRoutePattern<JoinPatterns<base, next>>({
+    protocol: nextParts.protocol ?? baseParts.protocol,
+    hostname: nextParts.hostname ?? baseParts.hostname,
+    port: nextParts.port ?? baseParts.port,
+    pathname: joinPathname(baseParts.pathname, nextParts.pathname),
+    search: joinSearch(baseParts.search, nextParts.search),
   })
 }
 
@@ -102,9 +105,9 @@ function joinPathname(base: PartPattern, next: PartPattern): PartPattern {
  * @private
  */
 function joinSearch(
-  base: RoutePattern['search'],
-  next: RoutePattern['search'],
-): RoutePattern['search'] {
+  base: ParsedRoutePattern['search'],
+  next: ParsedRoutePattern['search'],
+): ParsedRoutePattern['search'] {
   let result = new Map<string, Set<string>>()
 
   for (let [name, values] of base) {

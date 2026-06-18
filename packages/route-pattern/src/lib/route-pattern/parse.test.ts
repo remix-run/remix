@@ -3,8 +3,8 @@ import { describe, it } from '@remix-run/test'
 import dedent from 'dedent'
 
 import { ParseError, parsePart, parsePattern } from './parse.ts'
-import { RoutePattern } from '../route-pattern.ts'
-import type { PartPattern } from '../route-pattern.ts'
+import { createRoutePattern, getRoutePatternParts, RoutePattern } from '../route-pattern.ts'
+import type { ParsedRoutePattern, PartPattern } from '../route-pattern.ts'
 
 describe('ParseError', () => {
   it('exposes type, source, and index properties', () => {
@@ -245,7 +245,7 @@ describe('RoutePattern', () => {
   })
 
   it('derives source from parsed parts', () => {
-    let pattern = new RoutePattern({
+    let pattern = createRoutePattern({
       protocol: null,
       hostname: null,
       port: null,
@@ -262,7 +262,7 @@ describe('parsePattern', () => {
   function assertParse(
     source: string,
     expected: {
-      protocol?: RoutePattern['protocol']
+      protocol?: ParsedRoutePattern['protocol']
       hostname?: string
       port?: string
       pathname?: string
@@ -277,28 +277,19 @@ describe('parsePattern', () => {
         expectedSearch.set(name, value.length === 0 ? new Set() : new Set(value))
       }
     }
-    assert.deepEqual(
-      {
-        protocol: pattern.protocol,
-        hostname: pattern.hostname,
-        port: pattern.port,
-        pathname: pattern.pathname,
-        search: pattern.search,
-      },
-      {
-        protocol: expected.protocol ?? null,
-        hostname: expected.hostname ? parsePart(expected.hostname, { type: 'hostname' }) : null,
-        port: expected.port ?? null,
-        pathname: parsePart(expected.pathname ?? '', { type: 'pathname' }),
-        search: expectedSearch,
-      },
-    )
+    assert.deepEqual(getRoutePatternParts(pattern), {
+      protocol: expected.protocol ?? null,
+      hostname: expected.hostname ? parsePart(expected.hostname, { type: 'hostname' }) : null,
+      port: expected.port ?? null,
+      pathname: parsePart(expected.pathname ?? '', { type: 'pathname' }),
+      search: expectedSearch,
+    })
   }
 
   it('parses protocol', () => {
-    assert.equal(parsePattern('http://').protocol, 'http')
-    assert.equal(parsePattern('https://').protocol, 'https')
-    assert.equal(parsePattern('http(s)://').protocol, 'http(s)')
+    assert.equal(getRoutePatternParts(parsePattern('http://')).protocol, 'http')
+    assert.equal(getRoutePatternParts(parsePattern('https://')).protocol, 'https')
+    assert.equal(getRoutePatternParts(parsePattern('http(s)://')).protocol, 'http(s)')
   })
 
   it('parses hostname', () => {

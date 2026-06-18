@@ -1,4 +1,5 @@
-import type { RoutePattern } from '../route-pattern.ts'
+import { getRoutePatternParts } from '../route-pattern.ts'
+import type { ParsedRoutePattern, RoutePattern } from '../route-pattern.ts'
 import { decodeHostname } from './decode.ts'
 import { generateVariants, type Param } from './variant.ts'
 import { unreachable } from '../unreachable.ts'
@@ -18,6 +19,8 @@ export class Trie<data = unknown> {
   }
 
   insert(pattern: RoutePattern, data: data): void {
+    let patternParts = getRoutePatternParts(pattern)
+
     for (let variant of generateVariants(pattern)) {
       let hostnameNode = this.#root[variant.protocol]
 
@@ -87,14 +90,14 @@ export class Trie<data = unknown> {
         }
       }
       let undefinedParams: Array<Param> = []
-      for (let param of pattern.pathname.tokens) {
+      for (let param of patternParts.pathname.tokens) {
         if (param.type !== ':' && param.type !== '*') continue
         if (requiredParams.some((p) => p.name === param.name)) continue
         if (undefinedParams.some((p) => p.name === param.name)) continue
         undefinedParams.push(param)
       }
 
-      pathnameNode.values.push({ pattern, data, requiredParams, undefinedParams })
+      pathnameNode.values.push({ pattern, patternParts, data, requiredParams, undefinedParams })
     }
   }
 
@@ -165,7 +168,7 @@ export class Trie<data = unknown> {
 
         if (current.segmentIndex === urlSegments.length) {
           for (let value of current.pathnameNode.values) {
-            if (!matchSearch(url.searchParams, value.pattern.search)) continue
+            if (!matchSearch(url.searchParams, value.patternParts.search)) continue
 
             let pathnameMatch: Array<MatchParamMeta> = []
             for (let i = 0; i < value.requiredParams.length; i++) {
@@ -181,12 +184,12 @@ export class Trie<data = unknown> {
             }
 
             let params: Record<string, string | undefined> = {}
-            for (let token of value.pattern.hostname?.tokens ?? []) {
+            for (let token of value.patternParts.hostname?.tokens ?? []) {
               if ((token.type === ':' || token.type === '*') && token.name !== '*') {
                 params[token.name] = undefined
               }
             }
-            for (let token of value.pattern.pathname.tokens) {
+            for (let token of value.patternParts.pathname.tokens) {
               if ((token.type === ':' || token.type === '*') && token.name !== '*') {
                 params[token.name] = undefined
               }
@@ -351,6 +354,7 @@ type PathnameNode<data> = {
   wildcard: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
   values: Array<{
     pattern: RoutePattern
+    patternParts: ParsedRoutePattern
     data: data
     requiredParams: Array<Param>
     undefinedParams: Array<Param>

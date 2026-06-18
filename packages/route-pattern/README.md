@@ -238,19 +238,26 @@ createHref('products(.json)')
 
 ## Parse & stringify patterns
 
-You can explicitly parse and stringify patterns:
+You can explicitly parse and stringify patterns. `RoutePattern` is an opaque handle: use the methods and helpers below instead of reading parsed token internals.
 
 ```ts
-import { RoutePattern } from 'remix/route-pattern'
+import { getRoutePatternParams, RoutePattern } from 'remix/route-pattern'
 
-let pattern = RoutePattern.parse('://example.com/blog/:slug')
+let pattern = RoutePattern.parse('://:tenant.example.com/blog/:slug(/*path)')
 //  ^? RoutePattern
 
 pattern.toString()
-// '://example.com/blog/:slug'
+// '://:tenant.example.com/blog/:slug(/*path)'
 
 pattern.toJSON()
-// { hostname: 'example.com', pathname: 'blog/:slug', ... }
+// { hostname: ':tenant.example.com', pathname: 'blog/:slug(/*path)', ... }
+
+getRoutePatternParams(pattern)
+// [
+//   { part: 'hostname', type: ':', name: 'tenant', optional: false },
+//   { part: 'pathname', type: ':', name: 'slug', optional: false },
+//   { part: 'pathname', type: '*', name: 'path', optional: true },
+// ]
 ```
 
 All APIs that take a `pattern` arg accept `string` or a parsed `RoutePattern`.

@@ -1,4 +1,10 @@
-import type { PartPattern, PartPatternToken, RoutePattern } from '../route-pattern.ts'
+import { getRoutePatternParts } from '../route-pattern.ts'
+import type {
+  ParsedRoutePattern,
+  PartPattern,
+  PartPatternToken,
+  RoutePattern,
+} from '../route-pattern.ts'
 import { escape } from './regexp.ts'
 import { unreachable } from '../unreachable.ts'
 import { toRegExp } from './regexp.ts'
@@ -11,12 +17,13 @@ export type Variant = {
 }
 
 export function generateVariants(pattern: RoutePattern): ReadonlyArray<Variant> {
+  let patternParts = getRoutePatternParts(pattern)
   let result: Array<Variant> = []
 
-  for (let protocol of generateProtocolVariants(pattern.protocol)) {
-    let port = normalizePort(protocol, pattern.port)
-    for (let hostname of generateHostnameVariants(pattern.hostname)) {
-      for (let pathname of generatePathnameVariants(pattern.pathname)) {
+  for (let protocol of generateProtocolVariants(patternParts.protocol)) {
+    let port = normalizePort(protocol, patternParts.port)
+    for (let hostname of generateHostnameVariants(patternParts.hostname)) {
+      for (let pathname of generatePathnameVariants(patternParts.pathname)) {
         result.push({ protocol, hostname, port, pathname })
       }
     }
@@ -29,7 +36,7 @@ export function generateVariants(pattern: RoutePattern): ReadonlyArray<Variant> 
 type ProtocolVariant = 'http' | 'https'
 
 function generateProtocolVariants(
-  protocol: RoutePattern['protocol'],
+  protocol: ParsedRoutePattern['protocol'],
 ): ReadonlyArray<ProtocolVariant> {
   if (protocol === null || protocol === 'http(s)') return ['http', 'https']
   return [protocol]

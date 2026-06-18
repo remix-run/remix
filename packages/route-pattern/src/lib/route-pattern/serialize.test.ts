@@ -2,6 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import { parsePattern } from './parse.ts'
+import { getRoutePatternParts } from '../route-pattern.ts'
 import {
   serializeHostname,
   serializePathname,
@@ -12,9 +13,13 @@ import {
   serializeSearch,
 } from './serialize.ts'
 
+function partsOf(source: string) {
+  return getRoutePatternParts(parsePattern(source))
+}
+
 describe('serializePattern', () => {
   function assertRoundTrip(source: string, expected?: string) {
-    assert.equal(serializePattern(parsePattern(source)), expected ?? source)
+    assert.equal(serializePattern(partsOf(source)), expected ?? source)
   }
 
   it('reconstructs pathname only', () => {
@@ -56,7 +61,7 @@ describe('serializePattern', () => {
 
 describe('serializeProtocol', () => {
   function protocolOf(source: string) {
-    return serializeProtocol(parsePattern(source))
+    return serializeProtocol(partsOf(source))
   }
 
   it('returns protocol or empty string', () => {
@@ -70,7 +75,7 @@ describe('serializeProtocol', () => {
 
 describe('serializeHostname', () => {
   function hostnameOf(source: string) {
-    return serializeHostname(parsePattern(source))
+    return serializeHostname(partsOf(source))
   }
 
   it('returns hostname or empty string', () => {
@@ -93,7 +98,7 @@ describe('serializeHostname', () => {
 
 describe('serializePort', () => {
   function portOf(source: string) {
-    return serializePort(parsePattern(source))
+    return serializePort(partsOf(source))
   }
 
   it('returns port or empty string', () => {
@@ -106,7 +111,7 @@ describe('serializePort', () => {
 
 describe('serializePathname', () => {
   function pathnameOf(source: string) {
-    return serializePathname(parsePattern(source))
+    return serializePathname(partsOf(source))
   }
 
   it('returns pathname or empty string', () => {
@@ -138,7 +143,7 @@ describe('serializePathname', () => {
 
 describe('serializeSearch', () => {
   function searchOf(source: string) {
-    return serializeSearch(parsePattern(source))
+    return serializeSearch(partsOf(source))
   }
 
   it('returns search or empty string', () => {
@@ -156,9 +161,7 @@ describe('serializeSearch', () => {
 describe('serializePatternParts', () => {
   it('returns each helper as a single object', () => {
     assert.deepEqual(
-      serializePatternParts(
-        parsePattern('https://api.example.com:8000/v1/:resource?filter=active'),
-      ),
+      serializePatternParts(partsOf('https://api.example.com:8000/v1/:resource?filter=active')),
       {
         protocol: 'https',
         hostname: 'api.example.com',

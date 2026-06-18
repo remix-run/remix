@@ -473,7 +473,6 @@ describe('CreateHrefError', () => {
       let error = new CreateHrefError({
         type: 'missing-params',
         pattern,
-        part: pattern.pathname,
         missingParams: ['collection', 'id'],
         params: {},
       })
