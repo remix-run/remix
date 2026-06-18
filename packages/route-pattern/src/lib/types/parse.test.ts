@@ -539,30 +539,8 @@ export type Tests = [
   Assert<IsEqual<Parse<':protocol://example.com'>, never>>,
   Assert<IsEqual<Parse<'ftp://example.com'>, never>>,
   Assert<IsEqual<Parse<'httpx://example.com'>, never>>,
-  Assert<
-    IsEqual<
-      Parse<'://:8080/users'>,
-      {
-        protocol: undefined
-        hostname: undefined
-        port: '8080'
-        pathname: [{ type: 'text'; value: 'users' }]
-        search: undefined
-      }
-    >
-  >,
-  Assert<
-    IsEqual<
-      Parse<'http://:80/users'>,
-      {
-        protocol: [{ type: 'text'; value: 'http' }]
-        hostname: undefined
-        port: '80'
-        pathname: [{ type: 'text'; value: 'users' }]
-        search: undefined
-      }
-    >
-  >,
+  Assert<IsEqual<Parse<'://:8080/users'>, never>>,
+  Assert<IsEqual<Parse<'http://:80/users'>, never>>,
   Assert<IsEqual<Parse<':'>, never>>,
   Assert<IsEqual<Parse<'/posts/:'>, never>>,
   Assert<IsEqual<Parse<'/posts/\\'>, never>>,
