@@ -90,4 +90,22 @@ export type Tests = [
     Split<'/path/:id?q=1'>,
     { protocol: undefined; hostname: undefined; port: undefined; pathname: 'path/:id'; search: 'q=1' }
   >>,
+
+  // protocol + no hostname
+  Assert<IsEqual<
+    Split<'http://'>,
+    { protocol: 'http'; hostname: undefined; port: undefined; pathname: undefined; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Split<'https://'>,
+    { protocol: 'https'; hostname: undefined; port: undefined; pathname: undefined; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Split<'http:///path'>,
+    { protocol: 'http'; hostname: undefined; port: undefined; pathname: 'path'; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Split<'https:///path'>,
+    { protocol: 'https'; hostname: undefined; port: undefined; pathname: 'path'; search: undefined }
+  >>,
 ]

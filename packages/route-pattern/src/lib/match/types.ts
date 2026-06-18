@@ -1,10 +1,14 @@
 import type { RoutePattern } from '../route-pattern.ts'
 import type { ParseParams } from '../types/params.ts'
-import type { Split } from '../types/split.ts'
 import type { Simplify } from '../types/utils.ts'
 
 /** Params extracted from a route pattern match. */
-export type MatchParams<source extends string> = Simplify<Omit<ParseParams<Split<source>>, '*'>>
+export type MatchParams<source extends string> =
+  ParseParams<source> extends infer params
+    ? [params] extends [never]
+      ? never
+      : Simplify<Omit<params, '*'>>
+    : never
 
 export type MatchParamMeta = {
   type: ':' | '*'

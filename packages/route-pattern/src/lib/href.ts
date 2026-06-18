@@ -10,7 +10,12 @@ import type { Simplify } from './types/utils.ts'
 import { unreachable } from './unreachable.ts'
 
 /** Tuple of arguments accepted by `createHref` for a given pattern source. */
-export type CreateHrefArgs<source extends string> = _CreateHrefArgs<ParseHrefParams<source>>
+export type CreateHrefArgs<source extends string> =
+  ParseHrefParams<source> extends infer params
+    ? [params] extends [never]
+      ? never
+      : _CreateHrefArgs<params>
+    : never
 
 // prettier-ignore
 type _CreateHrefArgs<params> =
@@ -26,12 +31,15 @@ type SearchParams = Record<
 
 // prettier-ignore
 type ParseHrefParams<source extends string> =
-  Split<source> extends infer split extends SplitPattern ?
+  Split<source> extends infer split ?
+    split extends never ? never :
+    split extends SplitPattern ?
     split extends ({ protocol: string, hostname: undefined } | { hostname: undefined, port: string }) ? never :
-    ParseParams<split> extends infer params extends Record<string, string | undefined> ?
+    ParseParams<source> extends infer params extends Record<string, string | undefined> ?
       params extends { '*': string } ? never :
       Optionalize<Omit<params, '*'>>
     :
+    never :
     never
   :
   never
