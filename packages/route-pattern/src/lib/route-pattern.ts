@@ -72,7 +72,12 @@ const routePatternConstructorKey: unique symbol = Symbol('RoutePattern construct
 declare const routePatternSourceBrand: unique symbol
 const routePatternParts = new WeakMap<RoutePattern, ParsedRoutePattern>()
 
-/** A parsed route pattern */
+/**
+ * Opaque parsed route pattern handle.
+ *
+ * Construct route patterns with {@link RoutePattern.parse}. Use `source`, `toString()`,
+ * `toJSON()`, and {@link getRoutePatternParams} for supported inspection.
+ */
 export class RoutePattern<source extends string = string> {
   declare readonly [routePatternSourceBrand]: source
 
@@ -102,7 +107,7 @@ export class RoutePattern<source extends string = string> {
     return new RoutePattern<source>(routePatternConstructorKey, parsed)
   }
 
-  /** Normalized string representation of this pattern */
+  /** Normalized string representation of this pattern. */
   get source(): string {
     return serializePattern(getRoutePatternParts(this))
   }
