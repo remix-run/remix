@@ -1,7 +1,7 @@
-import type { PartPattern, RoutePattern } from '../route-pattern.ts'
+import type { ParsedRoutePattern, PartPattern } from '../route-pattern.ts'
 import { unreachable } from '../unreachable.ts'
 
-export function serializePattern(pattern: RoutePattern): string {
+export function serializePattern(pattern: ParsedRoutePattern): string {
   let protocol = serializeProtocol(pattern)
   let hostname = serializeHostname(pattern)
   let port = serializePort(pattern)
@@ -17,7 +17,7 @@ export function serializePattern(pattern: RoutePattern): string {
   return result
 }
 
-export function serializePatternParts(pattern: RoutePattern): {
+export function serializePatternParts(pattern: ParsedRoutePattern): {
   protocol: string
   hostname: string
   port: string
@@ -33,23 +33,23 @@ export function serializePatternParts(pattern: RoutePattern): {
   }
 }
 
-export function serializeProtocol(pattern: RoutePattern): string {
+export function serializeProtocol(pattern: ParsedRoutePattern): string {
   return pattern.protocol ?? ''
 }
 
-export function serializeHostname(pattern: RoutePattern): string {
+export function serializeHostname(pattern: ParsedRoutePattern): string {
   return pattern.hostname ? serializePart(pattern.hostname) : ''
 }
 
-export function serializePort(pattern: RoutePattern): string {
+export function serializePort(pattern: ParsedRoutePattern): string {
   return pattern.port ?? ''
 }
 
-export function serializePathname(pattern: RoutePattern): string {
+export function serializePathname(pattern: ParsedRoutePattern): string {
   return serializePart(pattern.pathname)
 }
 
-export function serializeSearch(pattern: RoutePattern): string {
+export function serializeSearch(pattern: ParsedRoutePattern): string {
   if (pattern.search.size === 0) return ''
   let searchParams = new URLSearchParams()
   for (let [key, constraint] of pattern.search) {

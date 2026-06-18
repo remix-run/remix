@@ -1,4 +1,8 @@
-import { RoutePattern } from '@remix-run/route-pattern'
+import {
+  getRoutePatternParams,
+  RoutePattern,
+  type RoutePatternParam,
+} from '@remix-run/route-pattern'
 import { createHref } from '@remix-run/route-pattern/href'
 import { createMatcher, type Matcher } from '@remix-run/route-pattern/match'
 
@@ -160,17 +164,21 @@ function validateRoutePatterns(urlPattern: RoutePattern, filePattern: RoutePatte
 }
 
 function validateNoUnnamedWildcards(pattern: RoutePattern, label: string): void {
-  if (pattern.pathname.tokens.some((token) => token.type === '*' && token.name === '*')) {
+  if (
+    getRoutePatternParams(pattern).some(
+      (param) => param.part === 'pathname' && param.type === '*' && param.name === '*',
+    )
+  ) {
     throw new Error(
       `${label} route patterns must use named wildcards for reversible mapping.\nPattern: ${pattern}`,
     )
   }
 }
 
-type PathnameParam = Extract<RoutePattern['pathname']['tokens'][number], { type: ':' | '*' }>
+type PathnameParam = RoutePatternParam & { readonly part: 'pathname' }
 
 function getPathnameParams(pattern: RoutePattern): Array<PathnameParam> {
-  return pattern.pathname.tokens.filter(
-    (token): token is PathnameParam => token.type === ':' || token.type === '*',
+  return getRoutePatternParams(pattern).filter(
+    (param): param is PathnameParam => param.part === 'pathname',
   )
 }

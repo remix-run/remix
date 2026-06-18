@@ -8,6 +8,12 @@ Added `package.json` `exports` for the styled component entrypoints:
 - `remix/components/select`
 - `remix/components/tabs`
 
+Updated `remix/route-pattern` exports for the opaque `RoutePattern` API:
+
+- Added `getRoutePatternParams`, `RoutePatternParam`, and `RoutePatternJSON` to `remix/route-pattern`
+- Added `CreateHrefErrorDetails` to `remix/route-pattern/href`
+- Added `MatchParamMeta` to `remix/route-pattern/match`
+
 Removed `package.json` `exports`:
 
 - `remix/ui/breadcrumbs`

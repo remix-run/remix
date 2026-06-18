@@ -1,4 +1,9 @@
-import { RoutePattern, type PartPattern } from './route-pattern.ts'
+import {
+  getRoutePatternParts,
+  RoutePattern,
+  type ParsedRoutePattern,
+  type PartPattern,
+} from './route-pattern.ts'
 import type { ParseParams } from './types/params.ts'
 import type { Split, SplitPattern } from './types/split.ts'
 import type { Simplify } from './types/utils.ts'
@@ -50,29 +55,33 @@ export function createHref<source extends string>(
   ...args: CreateHrefArgs<source>
 ): string {
   pattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
+  let patternParts = getRoutePatternParts(pattern)
   let [params, searchParams] = args
   searchParams ??= {}
 
-  let hasOrigin = pattern.protocol !== null || pattern.hostname !== null || pattern.port !== null
+  let hasOrigin =
+    patternParts.protocol !== null || patternParts.hostname !== null || patternParts.port !== null
   let result = ''
 
   if (hasOrigin) {
     let protocol =
-      pattern.protocol === null || pattern.protocol === 'http(s)' ? 'https' : pattern.protocol
+      patternParts.protocol === null || patternParts.protocol === 'http(s)'
+        ? 'https'
+        : patternParts.protocol
 
-    if (pattern.hostname === null) {
+    if (patternParts.hostname === null) {
       throw new CreateHrefError({ type: 'missing-hostname', pattern })
     }
-    let hostname = hrefPart(pattern, pattern.hostname, params ?? {})
+    let hostname = hrefPart(pattern, patternParts.hostname, params ?? {})
 
-    let port = pattern.port === null ? '' : `:${pattern.port}`
+    let port = patternParts.port === null ? '' : `:${patternParts.port}`
     result += `${protocol}://${hostname}${port}`
   }
 
-  let pathname = hrefPart(pattern, pattern.pathname, params ?? {})
+  let pathname = hrefPart(pattern, patternParts.pathname, params ?? {})
   result += '/' + pathname
 
-  let search = hrefSearch(pattern, searchParams)
+  let search = hrefSearch(patternParts.search, searchParams)
   if (search) result += `?${search}`
 
   return result
@@ -140,7 +149,6 @@ function hrefPart(
     throw new CreateHrefError({
       type: 'missing-params',
       pattern,
-      part,
       missingParams,
       params,
     })
@@ -149,8 +157,10 @@ function hrefPart(
   return stack[0].href
 }
 
-function hrefSearch(pattern: RoutePattern, searchParams: SearchParams): string | undefined {
-  let constraints = pattern.search
+function hrefSearch(
+  constraints: ParsedRoutePattern['search'],
+  searchParams: SearchParams,
+): string | undefined {
   if (constraints.size === 0 && Object.keys(searchParams).length === 0) {
     return undefined
   }
@@ -183,12 +193,11 @@ function hrefSearch(pattern: RoutePattern, searchParams: SearchParams): string |
   return result || undefined
 }
 
-type CreateHrefErrorDetails =
+export type CreateHrefErrorDetails =
   | { type: 'missing-hostname'; pattern: RoutePattern }
   | {
       type: 'missing-params'
       pattern: RoutePattern
-      part: PartPattern
       missingParams: Array<string>
       params: Record<string, unknown>
     }

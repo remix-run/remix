@@ -1,4 +1,5 @@
-import type { RoutePattern } from './route-pattern.ts'
+import { getRoutePatternParts } from './route-pattern.ts'
+import type { ParsedRoutePattern } from './route-pattern.ts'
 import type { Match } from './match/types.ts'
 import { decodeHostname } from './match/decode.ts'
 
@@ -73,7 +74,10 @@ export function compare(a: Match, b: Match): -1 | 0 | 1 {
   let pathnameResult = comparePathname(a.paramsMeta.pathname, b.paramsMeta.pathname)
   if (pathnameResult !== 0) return pathnameResult
 
-  let searchResult = compareSearch(a.pattern.search, b.pattern.search)
+  let searchResult = compareSearch(
+    getRoutePatternParts(a.pattern).search,
+    getRoutePatternParts(b.pattern).search,
+  )
   if (searchResult !== 0) return searchResult
 
   return 0
@@ -161,7 +165,10 @@ function comparePathname(
   return 0
 }
 
-function compareSearch(a: RoutePattern['search'], b: RoutePattern['search']): -1 | 0 | 1 {
+function compareSearch(
+  a: ParsedRoutePattern['search'],
+  b: ParsedRoutePattern['search'],
+): -1 | 0 | 1 {
   let aSpecificity = searchSpecificity(a)
   let bSpecificity = searchSpecificity(b)
 
@@ -174,7 +181,7 @@ function compareSearch(a: RoutePattern['search'], b: RoutePattern['search']): -1
   return 0
 }
 
-function searchSpecificity(constraints: RoutePattern['search']): {
+function searchSpecificity(constraints: ParsedRoutePattern['search']): {
   key: number
   keyValue: number
 } {
