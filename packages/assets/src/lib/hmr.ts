@@ -227,22 +227,16 @@ async function updateJavaScriptModule(path, acceptedPath, timestamp) {
     }
 
     let updatedModule = await import(withTimestamp(path, timestamp))
-    let nextContext = contexts.get(path) ?? previousContext
-    let callbacks =
-      nextContext.acceptCallbacks.length > 0
-        ? nextContext.acceptCallbacks
-        : previousContext.acceptCallbacks
-
-    nextContext.invalidated = false
-    nextContext.updating = true
+    previousContext.invalidated = false
+    previousContext.updating = true
     try {
-      for (let callback of callbacks) {
+      for (let callback of previousContext.acceptCallbacks) {
         await callback(updatedModule)
       }
     } finally {
-      nextContext.updating = false
+      previousContext.updating = false
     }
-    if (nextContext.invalidated) {
+    if (previousContext.invalidated) {
       await propagateInvalidatedJavaScriptModule(path, timestamp)
     }
     return

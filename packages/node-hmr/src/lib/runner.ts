@@ -79,6 +79,7 @@ type ChildMessage =
     }
   | {
       acceptedUrl: string
+      message?: string
       timestamp: number
       type: 'node-hmr:child:hot-module-invalidated'
       url: string
@@ -251,9 +252,11 @@ export function createWatchedProcessController(options: {
     }
 
     if (message.type === 'node-hmr:child:hot-module-invalidated') {
-      propagateInvalidatedHotUpdate(message.url, message.timestamp).catch((error: unknown) => {
-        console.error(error)
-      })
+      propagateInvalidatedHotUpdate(message.url, message.timestamp, message.message).catch(
+        (error: unknown) => {
+          console.error(error)
+        },
+      )
       return
     }
 
@@ -575,13 +578,19 @@ export function createWatchedProcessController(options: {
     })
   }
 
-  async function propagateInvalidatedHotUpdate(url: string, timestamp: number): Promise<void> {
+  async function propagateInvalidatedHotUpdate(
+    url: string,
+    timestamp: number,
+    message: string | undefined,
+  ): Promise<void> {
     let moduleInfo = moduleInfoByUrl.get(url)
     let propagation = findHmrPropagationFromImporters(url, timestamp)
     if (!propagation || propagation.length === 0) {
       clearPendingHotUpdates()
       forceBrowserFullReloadIfBrowserWorkPending()
-      logRestart(moduleInfo ? formatChangedPath(moduleInfo.filePath, options.cwd) : url)
+      logRestart(
+        message ?? (moduleInfo ? formatChangedPath(moduleInfo.filePath, options.cwd) : url),
+      )
       pendingServerUpdateEvent = true
       await restart()
       return
@@ -1162,6 +1171,7 @@ function isChildMessage(message: unknown): message is ChildMessage {
     return (
       'acceptedUrl' in message &&
       typeof message.acceptedUrl === 'string' &&
+      (!('message' in message) || typeof message.message === 'string') &&
       'timestamp' in message &&
       typeof message.timestamp === 'number' &&
       'url' in message &&

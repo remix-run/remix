@@ -79,6 +79,130 @@ describe('asset server HMR', { skip: isBun }, () => {
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), '')
   })
 
+  it('reloads the page when a non-component export is removed from a component module', async (t) => {
+    let fixture = await createHmrFixture({
+      counterExtraExports: 'export const foo = true\n',
+    })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await page.locator('[data-testid="field"]').fill('typed before reload')
+
+    let reloaded = waitForNavigation(page)
+    await write(
+      fixture.rootDir,
+      'app/Counter.tsx',
+      getCounterComponentSource({
+        buttonText: 'Increment after export removal',
+        countText: 'Count: {count}',
+      }).join('\n'),
+    )
+
+    await reloaded
+    await waitForText(page, '[data-testid="increment"]', 'Increment after export removal')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), '')
+  })
+
+  it('reloads the page when a non-component export changes in a component module', async (t) => {
+    let fixture = await createHmrFixture({
+      counterExtraExports: 'export const foo = true\n',
+    })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await page.locator('[data-testid="field"]').fill('typed before reload')
+
+    let reloaded = waitForNavigation(page)
+    await write(
+      fixture.rootDir,
+      'app/Counter.tsx',
+      [
+        ...getCounterComponentSource({
+          buttonText: 'Increment after export change',
+          countText: 'Count: {count}',
+        }),
+        'export const foo = false',
+        '',
+      ].join('\n'),
+    )
+
+    await reloaded
+    await waitForText(page, '[data-testid="increment"]', 'Increment after export change')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), '')
+  })
+
+  it('updates component render output when non-component exports are strictly equal', async (t) => {
+    let fixture = await createHmrFixture({
+      counterExtraExports: ["import { foo } from './stable.ts'", 'export { foo }', ''].join('\n'),
+    })
+    t.after(fixture.close)
+    await write(fixture.rootDir, 'app/stable.ts', 'export const foo = {}\n')
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await page.locator('[data-testid="field"]').fill('typed before update')
+
+    await write(
+      fixture.rootDir,
+      'app/Counter.tsx',
+      [
+        ...getCounterComponentSource({
+          buttonText: 'Increment with stable export',
+          countText: 'Count: {count}',
+        }),
+        "import { foo } from './stable.ts'",
+        'export { foo }',
+        '',
+      ].join('\n'),
+    )
+
+    await waitForText(page, '[data-testid="increment"]', 'Increment with stable export')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'typed before update')
+  })
+
+  it('reloads the page when an object non-component export is recreated', async (t) => {
+    let fixture = await createHmrFixture({
+      counterExtraExports: 'export const foo = {}\n',
+    })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await page.locator('[data-testid="field"]').fill('typed before reload')
+
+    let reloaded = waitForNavigation(page)
+    await write(
+      fixture.rootDir,
+      'app/Counter.tsx',
+      [
+        ...getCounterComponentSource({
+          buttonText: 'Increment after object export',
+          countText: 'Count: {count}',
+        }),
+        'export const foo = {}',
+        '',
+      ].join('\n'),
+    )
+
+    await reloaded
+    await waitForText(page, '[data-testid="increment"]', 'Increment after object export')
+    assert.equal(await page.locator('[data-testid="field"]').inputValue(), '')
+  })
+
   it('reloads the page when a component export is added to a component HMR module', async (t) => {
     let fixture = await createHmrFixture()
     t.after(fixture.close)
@@ -678,6 +802,137 @@ describe('asset server HMR', { skip: isBun }, () => {
     }
   })
 
+  it('reloads the page after a server-imported node-hmr client entry export is removed', async (t) => {
+    let fixture = await createNodeHmrFixture({
+      clientFieldExtraExports: 'export const foo = true\n',
+      serverImportsClientField: true,
+    })
+    let server: NodeHmrTestServer | undefined
+
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await t.serve(server)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
+      await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
+      await page.locator('[data-testid="document-field"]').fill('document before reload')
+
+      let reloaded = waitForNavigation(page)
+      await write(
+        fixture.rootDir,
+        'app/ClientField.tsx',
+        getClientFieldSource({ child: 'Client: after shared export removal' }),
+      )
+
+      await reloaded
+      await waitForText(
+        page,
+        '[data-testid="server-client-label"]',
+        'Client: after shared export removal',
+      )
+      assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
+      assert.equal(server.readyCount, 2)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
+
+  it('reloads the page after a server-imported node-hmr client entry changes a non-component export', async (t) => {
+    let fixture = await createNodeHmrFixture({
+      clientFieldExtraExports: 'export const foo = true\n',
+      serverImportsClientField: true,
+    })
+    let server: NodeHmrTestServer | undefined
+
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await t.serve(server)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
+      await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
+      await page.locator('[data-testid="document-field"]').fill('document before reload')
+
+      let reloaded = waitForNavigation(page)
+      await write(
+        fixture.rootDir,
+        'app/ClientField.tsx',
+        getClientFieldSource({
+          child: 'Client: after shared export change',
+          extraExports: 'export const foo = false\n',
+        }),
+      )
+
+      await reloaded
+      await waitForText(
+        page,
+        '[data-testid="server-client-label"]',
+        'Client: after shared export change',
+      )
+      assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
+      assert.equal(server.readyCount, 2)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
+
+  it('updates a server-imported node-hmr client entry when non-component exports are strictly equal', async (t) => {
+    let fixture = await createNodeHmrFixture({
+      clientFieldExtraExports: ["import { foo } from './stable.ts'", 'export { foo }', ''].join(
+        '\n',
+      ),
+      serverImportsClientField: true,
+    })
+    let server: NodeHmrTestServer | undefined
+
+    try {
+      await write(fixture.rootDir, 'app/stable.ts', 'export const foo = {}\n')
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await t.serve(server)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
+      await page.locator('[data-testid="server-client-field"]').fill('typed before update')
+      await page.locator('[data-testid="document-field"]').fill('document before update')
+
+      await write(
+        fixture.rootDir,
+        'app/ClientField.tsx',
+        getClientFieldSource({
+          child: 'Client: shared stable export update',
+          extraExports: ["import { foo } from './stable.ts'", 'export { foo }', ''].join('\n'),
+        }),
+      )
+
+      await waitForText(
+        page,
+        '[data-testid="server-client-label"]',
+        'Client: shared stable export update',
+      )
+      assert.equal(
+        await page.locator('[data-testid="server-client-field"]').inputValue(),
+        'typed before update',
+      )
+      assert.equal(
+        await page.locator('[data-testid="document-field"]').inputValue(),
+        'document before update',
+      )
+      assert.equal(server.readyCount, 1)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
+
   it('reloads the page after a node-hmr client entry export is removed', async (t) => {
     let fixture = await createNodeHmrFixture({
       clientFieldExtraExports: [
@@ -758,6 +1013,167 @@ describe('asset server HMR', { skip: isBun }, () => {
         '[data-testid="server-client-label"]',
         'Client: after non-component export',
       )
+      assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
+      assert.equal(server.readyCount, 1)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
+
+  it('reloads the page after a node-hmr client entry removes a non-component export', async (t) => {
+    let fixture = await createNodeHmrFixture({
+      clientFieldExtraExports: 'export const foo = true\n',
+    })
+    let server: NodeHmrTestServer | undefined
+
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await t.serve(server)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
+      await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
+      await page.locator('[data-testid="document-field"]').fill('document before reload')
+
+      let reloaded = waitForNavigation(page)
+      await write(
+        fixture.rootDir,
+        'app/ClientField.tsx',
+        getClientFieldSource({ child: 'Client: after non-component export removal' }),
+      )
+
+      await reloaded
+      await waitForText(
+        page,
+        '[data-testid="server-client-label"]',
+        'Client: after non-component export removal',
+      )
+      assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
+      assert.equal(server.readyCount, 1)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
+
+  it('reloads the page after a node-hmr client entry changes a non-component export', async (t) => {
+    let fixture = await createNodeHmrFixture({
+      clientFieldExtraExports: 'export const foo = true\n',
+    })
+    let server: NodeHmrTestServer | undefined
+
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await t.serve(server)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
+      await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
+      await page.locator('[data-testid="document-field"]').fill('document before reload')
+
+      let reloaded = waitForNavigation(page)
+      await write(
+        fixture.rootDir,
+        'app/ClientField.tsx',
+        getClientFieldSource({
+          child: 'Client: after non-component export change',
+          extraExports: 'export const foo = false\n',
+        }),
+      )
+
+      await reloaded
+      await waitForText(
+        page,
+        '[data-testid="server-client-label"]',
+        'Client: after non-component export change',
+      )
+      assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
+      assert.equal(server.readyCount, 1)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
+
+  it('updates a node-hmr client entry when non-component exports are strictly equal', async (t) => {
+    let fixture = await createNodeHmrFixture({
+      clientFieldExtraExports: ["import { foo } from './stable.ts'", 'export { foo }', ''].join(
+        '\n',
+      ),
+    })
+    let server: NodeHmrTestServer | undefined
+
+    try {
+      await write(fixture.rootDir, 'app/stable.ts', 'export const foo = {}\n')
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await t.serve(server)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
+      await page.locator('[data-testid="server-client-field"]').fill('typed before update')
+      await page.locator('[data-testid="document-field"]').fill('document before update')
+
+      await write(
+        fixture.rootDir,
+        'app/ClientField.tsx',
+        getClientFieldSource({
+          child: 'Client: stable export update',
+          extraExports: ["import { foo } from './stable.ts'", 'export { foo }', ''].join('\n'),
+        }),
+      )
+
+      await waitForText(page, '[data-testid="server-client-label"]', 'Client: stable export update')
+      assert.equal(
+        await page.locator('[data-testid="server-client-field"]').inputValue(),
+        'typed before update',
+      )
+      assert.equal(
+        await page.locator('[data-testid="document-field"]').inputValue(),
+        'document before update',
+      )
+      assert.equal(server.readyCount, 1)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
+
+  it('reloads the page after a node-hmr client entry recreates an object non-component export', async (t) => {
+    let fixture = await createNodeHmrFixture({
+      clientFieldExtraExports: 'export const foo = {}\n',
+    })
+    let server: NodeHmrTestServer | undefined
+
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await t.serve(server)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
+      await page.locator('[data-testid="server-client-field"]').fill('typed before reload')
+      await page.locator('[data-testid="document-field"]').fill('document before reload')
+
+      let reloaded = waitForNavigation(page)
+      await write(
+        fixture.rootDir,
+        'app/ClientField.tsx',
+        getClientFieldSource({
+          child: 'Client: after object export',
+          extraExports: 'export const foo = {}\n',
+        }),
+      )
+
+      await reloaded
+      await waitForText(page, '[data-testid="server-client-label"]', 'Client: after object export')
       assert.equal(await page.locator('[data-testid="document-field"]').inputValue(), '')
       assert.equal(server.readyCount, 1)
     } finally {
@@ -1271,22 +1687,7 @@ async function createNodeHmrFixture(
   await write(
     rootDir,
     'app/ClientField.tsx',
-    [
-      "import { type Handle, clientEntry } from '@remix-run/ui'",
-      "import { ClientMessage } from './client-message.tsx'",
-      '',
-      'export const ClientField = clientEntry(import.meta.url, function ClientField(handle: Handle) {',
-      '  void handle',
-      '  return () => (',
-      '    <>',
-      '      <input data-testid="server-client-field" />',
-      '      <span data-testid="server-client-label"><ClientMessage /></span>',
-      '    </>',
-      '  )',
-      '})',
-      '',
-      options.clientFieldExtraExports ?? '',
-    ].join('\n'),
+    getClientFieldSource({ extraExports: options.clientFieldExtraExports }),
   )
   await write(
     rootDir,
@@ -1346,6 +1747,30 @@ async function createNodeHmrFixture(
       await fs.rm(rootDir, { force: true, recursive: true })
     },
   }
+}
+
+function getClientFieldSource(
+  options: {
+    child?: string
+    extraExports?: string
+  } = {},
+): string {
+  return [
+    "import { type Handle, clientEntry } from '@remix-run/ui'",
+    "import { ClientMessage } from './client-message.tsx'",
+    '',
+    'export const ClientField = clientEntry(import.meta.url, function ClientField(handle: Handle) {',
+    '  void handle',
+    '  return () => (',
+    '    <>',
+    '      <input data-testid="server-client-field" />',
+    `      <span data-testid="server-client-label">${options.child ?? '<ClientMessage />'}</span>`,
+    '    </>',
+    '  )',
+    '})',
+    '',
+    options.extraExports ?? '',
+  ].join('\n')
 }
 
 function getNodeHmrServerSource(

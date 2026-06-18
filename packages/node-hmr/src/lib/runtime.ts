@@ -64,6 +64,7 @@ class NodeHotContext implements ImportMetaHot {
   #acceptDependencyCallbacks: Array<HotDependencyCallback> = []
   #disposeCallbacks: Array<DisposeCallback> = []
   #invalidated = false
+  #invalidationMessage: string | undefined
   #isUpdating = false
   #resolveDependency: (specifier: string) => string
 
@@ -122,6 +123,7 @@ class NodeHotContext implements ImportMetaHot {
 
   invalidate(message?: string) {
     this.#invalidated = true
+    this.#invalidationMessage = message
     if (this.#isUpdating) {
       if (message !== undefined) console.warn(message)
       return
@@ -142,6 +144,7 @@ class NodeHotContext implements ImportMetaHot {
 
   async update(timestamp: number, acceptedUrl: string): Promise<HotUpdateResult> {
     this.#invalidated = false
+    this.#invalidationMessage = undefined
 
     if (acceptedUrl !== this.url) {
       return await this.updateDependency(timestamp, acceptedUrl)
@@ -165,6 +168,10 @@ class NodeHotContext implements ImportMetaHot {
     }
 
     return this.#invalidated ? 'invalidated' : 'accepted'
+  }
+
+  get invalidationMessage(): string | undefined {
+    return this.#invalidationMessage
   }
 
   async updateDependency(timestamp: number, acceptedUrl: string): Promise<HotUpdateResult> {
@@ -344,6 +351,7 @@ export function installNodeHmrRuntime(
         if (updateResult === 'invalidated') {
           process.send?.({
             acceptedUrl,
+            message: context.invalidationMessage,
             timestamp,
             type: 'node-hmr:child:hot-module-invalidated',
             url,

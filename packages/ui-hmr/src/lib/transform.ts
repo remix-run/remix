@@ -43,6 +43,11 @@ type ClientEntryMatch = {
   statementStart: number
 }
 
+type RuntimeExport = {
+  exportedName: string
+  localName: string
+}
+
 const browserRuntimeSpecifier = '@remix-run/ui-hmr/browser-runtime'
 const serverRuntimeSpecifier = '@remix-run/ui-hmr/server-runtime'
 const refreshSpecifier = '@remix-run/ui/dev/refresh'
@@ -63,7 +68,7 @@ export function transformComponentsForBrowser(
   if (!isSafeComponentHmrBoundary(matchResult)) {
     return createUnchangedResult(source)
   }
-  let { componentMatches, clientEntryMatches } = matchResult
+  let { componentMatches, clientEntryMatches, runtimeExports } = matchResult
 
   let rewritten = new MagicString(source)
   let componentNames: string[] = []
@@ -136,12 +141,24 @@ export function transformComponentsForBrowser(
         options.moduleUrl,
         componentNames,
         {
+          invalidateOnMismatch: false,
           spaces: 0,
         },
       )};`,
+      `  let __remixHmrComponentExportNames = ${JSON.stringify(componentNames)};`,
+      `  let __remixHmrRuntimeExports = ${createRuntimeExportsSource(runtimeExports)};`,
       `  import.meta.hot.accept((module) => {`,
       `    if (!__remixHmrAcceptComponentModule) return;`,
       `    if (module && typeof module === 'object') {`,
+      `      let __remixHmrInvalidationMessage = ${createRuntimeExportsCheckSource(
+        'module',
+        '__remixHmrRuntimeExports',
+        '__remixHmrComponentExportNames',
+      )};`,
+      `      if (__remixHmrInvalidationMessage) {`,
+      `        import.meta.hot.invalidate(__remixHmrInvalidationMessage);`,
+      `        return;`,
+      `      }`,
       `      __remixHmr.updateComponentModuleForHmr(__remixUIRefresh, ${JSON.stringify(
         options.moduleUrl,
       )}, module);`,
@@ -182,7 +199,7 @@ export function transformComponentsForServer(
   if (!isSafeComponentHmrBoundary(matchResult)) {
     return createUnchangedResult(source)
   }
-  let { componentMatches, clientEntryMatches } = matchResult
+  let { componentMatches, clientEntryMatches, runtimeExports } = matchResult
 
   let rewritten = new MagicString(source)
   let componentNames: string[] = []
@@ -245,11 +262,31 @@ export function transformComponentsForServer(
     [
       ``,
       `if (import.meta.hot) {`,
-      `  if (${createComponentNamesCheckSource(options.moduleUrl, componentNames, {
-        spaces: 0,
-      })}) {`,
-      `    import.meta.hot.accept();`,
-      `  }`,
+      `  let __remixHmrAcceptComponentModule = ${createComponentNamesCheckSource(
+        options.moduleUrl,
+        componentNames,
+        {
+          invalidateOnMismatch: false,
+          spaces: 0,
+        },
+      )};`,
+      `  let __remixHmrComponentExportNames = ${JSON.stringify(componentNames)};`,
+      `  let __remixHmrRuntimeExports = ${createRuntimeExportsSource(runtimeExports)};`,
+      `  import.meta.hot.accept((module) => {`,
+      `    if (!__remixHmrAcceptComponentModule) return;`,
+      `    if (!module || typeof module !== 'object') {`,
+      `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
+      `      return;`,
+      `    }`,
+      `    let __remixHmrInvalidationMessage = ${createRuntimeExportsCheckSource(
+        'module',
+        '__remixHmrRuntimeExports',
+        '__remixHmrComponentExportNames',
+      )};`,
+      `    if (__remixHmrInvalidationMessage) {`,
+      `      import.meta.hot.invalidate(__remixHmrInvalidationMessage);`,
+      `    }`,
+      `  });`,
       `}`,
     ].join('\n'),
   )
@@ -295,11 +332,11 @@ function findMatches(
 ): {
   componentMatches: ComponentMatch[]
   clientEntryMatches: ClientEntryMatch[]
-  runtimeExportNames: Set<string>
+  runtimeExports: RuntimeExport[]
   unsafeRuntimeExports: boolean
 } {
+  let runtimeExports = getRuntimeExports(program)
   let exportedNames = getExportedNames(program)
-  let runtimeExportNames = getRuntimeExportNames(program)
   let unsafeRuntimeExports = hasUnsafeRuntimeExports(program)
   let componentMatches: ComponentMatch[] = []
   let clientEntryMatches: ClientEntryMatch[] = []
@@ -353,39 +390,29 @@ function findMatches(
       ),
   )
 
-  return { componentMatches, clientEntryMatches, runtimeExportNames, unsafeRuntimeExports }
+  return {
+    componentMatches,
+    clientEntryMatches,
+    runtimeExports,
+    unsafeRuntimeExports,
+  }
 }
 
 function isSafeComponentHmrBoundary(matchResult: {
   componentMatches: readonly ComponentMatch[]
   clientEntryMatches: readonly ClientEntryMatch[]
-  runtimeExportNames: ReadonlySet<string>
   unsafeRuntimeExports: boolean
 }): boolean {
   if (matchResult.unsafeRuntimeExports) return false
 
-  let componentNames = new Set<string>()
-  for (let match of matchResult.componentMatches) {
-    componentNames.add(match.name)
-  }
-  for (let match of matchResult.clientEntryMatches) {
-    componentNames.add(match.name)
-  }
-
-  if (componentNames.size === 0) return false
-  if (componentNames.size !== matchResult.runtimeExportNames.size) return false
-
-  for (let name of matchResult.runtimeExportNames) {
-    if (!componentNames.has(name)) return false
-  }
-
-  return true
+  return matchResult.componentMatches.length > 0 || matchResult.clientEntryMatches.length > 0
 }
 
 function createComponentNamesCheckSource(
   moduleUrl: string,
   componentNames: readonly string[],
   options: {
+    invalidateOnMismatch?: boolean
     spaces: number
   },
 ): string {
@@ -396,7 +423,9 @@ function createComponentNamesCheckSource(
       moduleUrl,
     )}];`,
     `${indent}if (__remixHmrPreviousComponentNames && (__remixHmrPreviousComponentNames.length !== __remixHmrComponentNames.length || __remixHmrPreviousComponentNames.some((name, index) => name !== __remixHmrComponentNames[index]))) {`,
-    `${indent}  import.meta.hot.invalidate('Updated component module changed its exports');`,
+    ...(options.invalidateOnMismatch === false
+      ? []
+      : [`${indent}  import.meta.hot.invalidate('Updated component module changed its exports');`]),
     `${indent}  return false;`,
     `${indent}}`,
     `${indent}import.meta.hot.data.componentNamesByModuleUrl = {`,
@@ -410,6 +439,48 @@ function createComponentNamesCheckSource(
   lines.push(`})()`)
 
   return lines.join('\n')
+}
+
+function createRuntimeExportsSource(runtimeExports: readonly RuntimeExport[]): string {
+  if (runtimeExports.length === 0) return `{}`
+
+  return [
+    `{`,
+    ...runtimeExports.map(
+      (runtimeExport) =>
+        `  ${JSON.stringify(runtimeExport.exportedName)}: ${runtimeExport.localName},`,
+    ),
+    `}`,
+  ].join('\n')
+}
+
+function createRuntimeExportsCheckSource(
+  nextExportsName: string,
+  previousExportsName: string,
+  componentExportNamesName: string,
+): string {
+  return [
+    `(() => {`,
+    `  let __remixHmrPreviousExportNames = Object.keys(${previousExportsName});`,
+    `  for (let name of __remixHmrPreviousExportNames) {`,
+    `    if (!Object.prototype.hasOwnProperty.call(${nextExportsName}, name)) {`,
+    `      return 'Updated component module removed export "' + name + '"';`,
+    `    }`,
+    `  }`,
+    `  for (let name of Object.keys(${nextExportsName})) {`,
+    `    if (!Object.prototype.hasOwnProperty.call(${previousExportsName}, name)) {`,
+    `      return 'Updated component module added export "' + name + '"';`,
+    `    }`,
+    `  }`,
+    `  for (let name of __remixHmrPreviousExportNames) {`,
+    `    if (${componentExportNamesName}.includes(name)) continue;`,
+    `    if (${previousExportsName}[name] !== ${nextExportsName}[name]) {`,
+    `      return 'Updated component module changed non-component export "' + name + '"';`,
+    `    }`,
+    `  }`,
+    `  return null;`,
+    `})()`,
+  ].join('\n')
 }
 
 function getFunctionDeclarationMatch(
@@ -875,8 +946,8 @@ function getExportedNames(program: AstNode): Set<string> {
   return names
 }
 
-function getRuntimeExportNames(program: AstNode): Set<string> {
-  let names = new Set<string>()
+function getRuntimeExports(program: AstNode): RuntimeExport[] {
+  let runtimeExports: RuntimeExport[] = []
 
   for (let item of getNodeArray(program, 'body')) {
     if (item.type !== 'ExportNamedDeclaration') continue
@@ -884,18 +955,21 @@ function getRuntimeExportNames(program: AstNode): Set<string> {
 
     let declaration = getNode(item, 'declaration')
     if (declaration) {
-      addDeclarationExportNames(declaration, names)
+      addDeclarationRuntimeExports(declaration, runtimeExports)
       continue
     }
 
     for (let specifier of getNodeArray(item, 'specifiers')) {
       if (specifier.exportKind === 'type') continue
-      let name = getIdentifierName(getNode(specifier, 'exported'))
-      if (name) names.add(name)
+      let exportedName = getIdentifierName(getNode(specifier, 'exported'))
+      let localName = getIdentifierName(getNode(specifier, 'local'))
+      if (exportedName && localName) {
+        runtimeExports.push({ exportedName, localName })
+      }
     }
   }
 
-  return names
+  return runtimeExports
 }
 
 function hasUnsafeRuntimeExports(program: AstNode): boolean {
@@ -922,10 +996,10 @@ function isTypeOnlyExport(node: AstNode): boolean {
   return node.exportKind === 'type'
 }
 
-function addDeclarationExportNames(declaration: AstNode, names: Set<string>): void {
+function addDeclarationRuntimeExports(declaration: AstNode, runtimeExports: RuntimeExport[]): void {
   if (declaration.type === 'FunctionDeclaration' || declaration.type === 'ClassDeclaration') {
     let name = getIdentifierName(getNode(declaration, 'id'))
-    if (name) names.add(name)
+    if (name) runtimeExports.push({ exportedName: name, localName: name })
     return
   }
 
@@ -934,7 +1008,7 @@ function addDeclarationExportNames(declaration: AstNode, names: Set<string>): vo
       let id = getNode(declarator, 'id')
       if (!id) continue
       for (let name of getBindingNames(id)) {
-        names.add(name)
+        runtimeExports.push({ exportedName: name, localName: name })
       }
     }
   }

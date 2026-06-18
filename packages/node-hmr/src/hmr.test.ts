@@ -243,7 +243,7 @@ describe('node-hmr', () => {
       assert.notEqual(restarted.pid, ready.pid)
       assert.equal(await fetchText(restarted.port), `${restarted.pid}:two`)
       assert.match(server.output, /message boundary declined update/)
-      assert.match(server.output, /restart message\.ts/)
+      assert.match(server.output, /restart message boundary declined update/)
     } finally {
       await server.stop()
     }
@@ -561,7 +561,200 @@ describe('node-hmr', () => {
       let restarted = await server.waitForReady(1)
       assert.notEqual(restarted.pid, ready.pid)
       assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
-      assert.match(server.output, /restart Updated component module changed its exports/)
+      assert.match(server.output, /restart Updated component module added export "AddedComponent"/)
+      assert.doesNotMatch(server.output, /Failed to hot update/)
+      assert.equal(server.readyCount, 2)
+    } finally {
+      await server.stop()
+    }
+  })
+
+  it('restarts once when a transformed component module adds a non-component export', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
+      'greeting.tsx': [
+        `export function Greeting() {`,
+        `  return () => 'Hello from component'`,
+        `}`,
+      ].join('\n'),
+      ...getRemixUiRefreshFixtureFiles(),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+
+      await fs.writeFile(
+        path.join(fixture.path, 'greeting.tsx'),
+        [
+          `export function Greeting() {`,
+          `  return () => 'Updated after restart'`,
+          `}`,
+          `export const foo = true`,
+        ].join('\n'),
+      )
+
+      let restarted = await server.waitForReady(1)
+      assert.notEqual(restarted.pid, ready.pid)
+      assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
+      assert.match(server.output, /restart Updated component module added export "foo"/)
+      assert.doesNotMatch(server.output, /Failed to hot update/)
+      assert.equal(server.readyCount, 2)
+    } finally {
+      await server.stop()
+    }
+  })
+
+  it('restarts once when a transformed component module removes a non-component export', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
+      'greeting.tsx': [
+        `export function Greeting() {`,
+        `  return () => 'Hello from component'`,
+        `}`,
+        `export const foo = true`,
+      ].join('\n'),
+      ...getRemixUiRefreshFixtureFiles(),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+
+      await fs.writeFile(
+        path.join(fixture.path, 'greeting.tsx'),
+        [`export function Greeting() {`, `  return () => 'Updated after restart'`, `}`].join('\n'),
+      )
+
+      let restarted = await server.waitForReady(1)
+      assert.notEqual(restarted.pid, ready.pid)
+      assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
+      assert.match(server.output, /restart Updated component module removed export "foo"/)
+      assert.doesNotMatch(server.output, /Failed to hot update/)
+      assert.equal(server.readyCount, 2)
+    } finally {
+      await server.stop()
+    }
+  })
+
+  it('restarts once when a transformed component module changes a non-component export', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
+      'greeting.tsx': [
+        `export function Greeting() {`,
+        `  return () => 'Hello from component'`,
+        `}`,
+        `export const foo = true`,
+      ].join('\n'),
+      ...getRemixUiRefreshFixtureFiles(),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+
+      await fs.writeFile(
+        path.join(fixture.path, 'greeting.tsx'),
+        [
+          `export function Greeting() {`,
+          `  return () => 'Updated after restart'`,
+          `}`,
+          `export const foo = false`,
+        ].join('\n'),
+      )
+
+      let restarted = await server.waitForReady(1)
+      assert.notEqual(restarted.pid, ready.pid)
+      assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
+      assert.match(
+        server.output,
+        /restart Updated component module changed non-component export "foo"/,
+      )
+      assert.doesNotMatch(server.output, /Failed to hot update/)
+      assert.equal(server.readyCount, 2)
+    } finally {
+      await server.stop()
+    }
+  })
+
+  it('hot updates transformed component modules when non-component exports are strictly equal', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
+      'greeting.tsx': [
+        `import { foo } from './stable.ts'`,
+        ``,
+        `export function Greeting() {`,
+        `  return () => 'Hello from component'`,
+        `}`,
+        `export { foo }`,
+      ].join('\n'),
+      'stable.ts': `export const foo = {}`,
+      ...getRemixUiRefreshFixtureFiles(),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+
+      await fs.writeFile(
+        path.join(fixture.path, 'greeting.tsx'),
+        [
+          `import { foo } from './stable.ts'`,
+          ``,
+          `export function Greeting() {`,
+          `  return () => 'Updated from component'`,
+          `}`,
+          `export { foo }`,
+        ].join('\n'),
+      )
+
+      await waitForResponse(ready.port, `${ready.pid}:Updated from component`, () => server.output)
+      assert.equal(server.readyCount, 1)
+      assert.match(server.output, /hmr update greeting\.tsx/)
+      assert.doesNotMatch(server.output, /restart/)
+    } finally {
+      await server.stop()
+    }
+  })
+
+  it('restarts once when a transformed component module recreates an object non-component export', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
+      'greeting.tsx': [
+        `export function Greeting() {`,
+        `  return () => 'Hello from component'`,
+        `}`,
+        `export const foo = {}`,
+      ].join('\n'),
+      ...getRemixUiRefreshFixtureFiles(),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+
+      await fs.writeFile(
+        path.join(fixture.path, 'greeting.tsx'),
+        [
+          `export function Greeting() {`,
+          `  return () => 'Updated after restart'`,
+          `}`,
+          `export const foo = {}`,
+        ].join('\n'),
+      )
+
+      let restarted = await server.waitForReady(1)
+      assert.notEqual(restarted.pid, ready.pid)
+      assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
+      assert.match(
+        server.output,
+        /restart Updated component module changed non-component export "foo"/,
+      )
       assert.doesNotMatch(server.output, /Failed to hot update/)
       assert.equal(server.readyCount, 2)
     } finally {

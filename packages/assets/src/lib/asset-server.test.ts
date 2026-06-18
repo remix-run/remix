@@ -3147,7 +3147,7 @@ describe('asset-server', () => {
     }
   })
 
-  it('applies the component HMR transform when HMR is enabled', async () => {
+  it('adds HMR accept handling to component modules when HMR is enabled', async () => {
     let caseDir = await makeTmpDir()
     try {
       await writeComponentHmrPackageFixture(caseDir)
@@ -3166,11 +3166,7 @@ describe('asset-server', () => {
         assert.equal(response.status, 200)
         let body = await response.text()
 
-        assert.match(body, /__@remix\/injected\/@remix-run\/ui-hmr\/src\/browser-runtime\.ts/)
-        assert.match(body, /app\/node_modules\/remix\/ui\/dev\/refresh\.ts/)
-        assert.match(body, /__remixHmr\.registerComponentForHmr\(__remixUIRefresh/)
-        assert.match(body, /import\.meta\.hot\.accept/)
-        assert.match(body, /import\.meta\.hot = __remixCreateHotContext/)
+        assert.match(body, /import\.meta\.hot\.accept\(/)
       } finally {
         await assetServer.close()
       }
@@ -3179,7 +3175,7 @@ describe('asset-server', () => {
     }
   })
 
-  it('applies the component HMR transform to client entry components', async () => {
+  it('adds HMR accept handling to client entry component modules', async () => {
     let caseDir = await makeTmpDir()
     try {
       await writeComponentHmrPackageFixture(caseDir)
@@ -3205,48 +3201,7 @@ describe('asset-server', () => {
         assert.equal(response.status, 200)
         let body = await response.text()
 
-        assert.match(body, /__remixHmrImpl_Counter/)
-        assert.match(
-          body,
-          /export const Counter = clientEntry\(import\.meta\.url, function Counter/,
-        )
-        assert.match(body, /__remixHmr\.registerComponentForHmr\(__remixUIRefresh/)
-        assert.match(body, /import\.meta\.hot\.accept/)
-        assert.match(body, /import\.meta\.hot = __remixCreateHotContext/)
-      } finally {
-        await assetServer.close()
-      }
-    } finally {
-      await fs.rm(caseDir, { recursive: true, force: true })
-    }
-  })
-
-  it('does not apply the component HMR transform to modules with non-component exports', async () => {
-    let caseDir = await makeTmpDir()
-    try {
-      await writeComponentHmrPackageFixture(caseDir)
-      await write(
-        caseDir,
-        'app/component.ts',
-        [
-          'export function TestComponent() {',
-          '  return () => "Test"',
-          '}',
-          'export const loader = () => new Response("ok")',
-        ].join('\n'),
-      )
-      let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(),
-      })
-
-      try {
-        let response = await get(assetServer, '/assets/app/component.ts')
-        assert.ok(response)
-        assert.equal(response.status, 200)
-        let body = await response.text()
-
-        assert.doesNotMatch(body, /__remixHmr\.registerComponentForHmr/)
-        assert.doesNotMatch(body, /__@remix\/injected\/@remix-run\/ui-hmr/)
+        assert.match(body, /import\.meta\.hot\.accept\(/)
       } finally {
         await assetServer.close()
       }
