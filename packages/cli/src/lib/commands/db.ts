@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 
-import type { Database } from '@remix-run/data-table'
+import type { Database, DatabaseResource } from '@remix-run/data-table'
 import { createMigrator } from '@remix-run/data-table/migrations'
 import { loadMigrations } from '@remix-run/data-table/migrations/node'
 
@@ -19,12 +19,7 @@ type DatabaseCommandAction =
   | { kind: 'migrate'; to?: string }
   | { kind: 'migrate-status' }
   | { kind: 'seed' }
-
-interface DatabaseResourceLifecycle {
-  create(): Promise<void>
-  drop(): Promise<void>
-  connect(): Promise<Database>
-}
+  | { kind: 'reset' }
 
 export async function runDbCommand(argv: string[], context: CliContext): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
@@ -60,9 +55,10 @@ export function getDbCommandHelpText(target: NodeJS.WriteStream = process.stdout
         'remix db migrate --to 20260101000000_create_users',
         'remix db migrate status',
         'remix db seed',
+        'remix db reset',
       ],
       options: [{ description: 'Apply migrations up to and including an id', label: '--to <id>' }],
-      usage: ['remix db <create|drop|migrate|seed> [--to <id>]', 'remix db migrate status'],
+      usage: ['remix db <create|drop|migrate|seed|reset> [--to <id>]', 'remix db migrate status'],
     },
     target,
   )
@@ -90,6 +86,18 @@ function parseDbCommandArgs(argv: string[]): DatabaseCommandAction {
       throw unexpectedExtraArgument('--to')
     }
     return { kind: 'drop' }
+  }
+
+  if (action === 'reset') {
+    if (parsed.options.to !== undefined) {
+      throw unexpectedExtraArgument('--to')
+    }
+
+    if (subaction !== undefined) {
+      throw unexpectedExtraArgument(subaction)
+    }
+
+    return { kind: 'reset' }
   }
 
   if (action === 'seed') {
@@ -124,7 +132,7 @@ function parseDbCommandArgs(argv: string[]): DatabaseCommandAction {
   if (action == null) {
     throw new CliError({
       code: 'RMX_DB_ACTION_MISSING',
-      message: 'Expected a database action: create, drop, migrate, or seed.',
+      message: 'Expected a database action: create, drop, migrate, seed, or reset.',
       showHelp: true,
       title: 'Missing database action',
     })
@@ -133,7 +141,7 @@ function parseDbCommandArgs(argv: string[]): DatabaseCommandAction {
   throw unexpectedExtraArgument(action)
 }
 
-async function loadDatabaseResource(databaseFile: string): Promise<DatabaseResourceLifecycle> {
+async function loadDatabaseResource(databaseFile: string): Promise<DatabaseResource> {
   let moduleExports: unknown = await import(databaseFile)
   let database = getNamedExport(moduleExports, 'database')
   assertDatabaseResource(database)
@@ -141,7 +149,7 @@ async function loadDatabaseResource(databaseFile: string): Promise<DatabaseResou
 }
 
 async function runDatabaseResourceAction(
-  database: DatabaseResourceLifecycle,
+  database: DatabaseResource,
   action: DatabaseCommandAction,
   appRoot: string,
 ): Promise<void> {
@@ -150,45 +158,87 @@ async function runDatabaseResourceAction(
     return
   }
 
-  let client = await database.connect()
+  if (action.kind === 'reset') {
+    await database.drop()
+    await database.create()
+    await withDatabaseClient(database, async (client) => {
+      await runMigrations(client, { cwd: appRoot })
+      await runSeed(client, { cwd: appRoot })
+    })
+    return
+  }
 
-  try {
+  await withDatabaseClient(database, async (client) => {
     if (action.kind === 'seed') {
-      let seed = await loadSeedFunction(path.join(appRoot, SEED_MODULE_PATH))
-      await seed(client)
+      await runSeed(client, { cwd: appRoot })
       return
     }
 
-    let migrations = await loadMigrations(path.join(appRoot, 'db', 'migrations'))
-    let migrator = createMigrator(migrations)
-
     if (action.kind === 'migrate') {
-      let result =
-        action.to === undefined
-          ? await migrator.migrate(client)
-          : await migrator.migrate(client, { to: action.to })
-
-      if (result.applied.length === 0) {
-        process.stdout.write('No pending migrations.\n')
-      } else {
-        for (let migration of result.applied) {
-          process.stdout.write('Applied ' + migration.id + '\n')
-        }
-      }
-    } else {
-      let statuses = await migrator.status(client)
-
-      if (statuses.length === 0) {
-        process.stdout.write('No migrations.\n')
-      } else {
-        for (let status of statuses) {
-          process.stdout.write(status.id + ' ' + status.status + '\n')
-        }
-      }
+      await runMigrations(
+        client,
+        action.to === undefined ? { cwd: appRoot } : { cwd: appRoot, to: action.to },
+      )
+      return
     }
+
+    await writeMigrationStatus(client, { cwd: appRoot })
+  })
+}
+
+async function withDatabaseClient(
+  database: DatabaseResource,
+  callback: (client: Database) => Promise<void>,
+): Promise<void> {
+  let client = await database.connect()
+
+  try {
+    await callback(client)
   } finally {
     await client.adapter.close?.()
   }
+}
+
+async function runMigrations(
+  client: Database,
+  options: {
+    cwd: string
+    to?: string
+  },
+): Promise<void> {
+  let migrations = await loadMigrations(path.join(options.cwd, 'db', 'migrations'))
+  let migrator = createMigrator(migrations)
+  let result =
+    options.to === undefined
+      ? await migrator.migrate(client)
+      : await migrator.migrate(client, { to: options.to })
+
+  if (result.applied.length === 0) {
+    process.stdout.write('No pending migrations.\n')
+  } else {
+    for (let migration of result.applied) {
+      process.stdout.write('Applied ' + migration.id + '\n')
+    }
+  }
+}
+
+async function writeMigrationStatus(client: Database, options: { cwd: string }): Promise<void> {
+  let migrations = await loadMigrations(path.join(options.cwd, 'db', 'migrations'))
+  let migrator = createMigrator(migrations)
+  let statuses = await migrator.status(client)
+
+  if (statuses.length === 0) {
+    process.stdout.write('No migrations.\n')
+  } else {
+    for (let status of statuses) {
+      process.stdout.write(status.id + ' ' + status.status + '\n')
+    }
+  }
+}
+
+async function runSeed(client: Database, options: { cwd: string }): Promise<void> {
+  let seed = await loadSeedFunction(path.join(options.cwd, SEED_MODULE_PATH))
+  await seed(client)
 }
 
 type SeedFunction = (database: Database) => Promise<void>
@@ -252,7 +302,7 @@ function getNamedExport(moduleExports: unknown, name: string): unknown {
   return Reflect.get(moduleExports, name)
 }
 
-function assertDatabaseResource(value: unknown): asserts value is DatabaseResourceLifecycle {
+function assertDatabaseResource(value: unknown): asserts value is DatabaseResource {
   if (typeof value !== 'object' || value == null) {
     throw new Error('Database module must export a named "database" resource.')
   }
