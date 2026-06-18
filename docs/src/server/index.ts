@@ -1,8 +1,10 @@
 import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
+import { createAssetServer } from './asset-server.ts'
 import { createRouter, getDefaultVersions } from './router.tsx'
 
-let router = createRouter(getDefaultVersions())
+let assetServer = createAssetServer()
+let router = createRouter({ assetServer, versions: getDefaultVersions() })
 
 let server = http.createServer(
   createRequestListener(async (request) => {
@@ -26,7 +28,9 @@ let shuttingDown = false
 function shutdown() {
   if (shuttingDown) return
   shuttingDown = true
-  server.close(() => process.exit(0))
+  server.close(() => {
+    void assetServer.close().finally(() => process.exit(0))
+  })
   server.closeAllConnections()
 }
 

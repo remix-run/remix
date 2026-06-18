@@ -1,21 +1,123 @@
 import * as assert from 'remix/assert'
-import { after, describe, it } from 'remix/test'
+import { describe, it } from 'remix/test'
 
-import { assetServer } from './asset-server.ts'
+import { createAssetServer } from './asset-server.ts'
 import { getVersionedLookupHref } from './lookup.ts'
+import { buildRegistry } from './registry.ts'
 import { createRouter } from './router.tsx'
 import { getDocsRouteHref } from './routes.ts'
 
-after(async () => {
-  await assetServer.close()
-})
-
 describe('createRouter()', () => {
-  it('does not load generated docs output while creating the router', () => {
-    let router = createRouter(['v1.2.3'])
+  it('does not load generated docs output while creating the router', (t) => {
+    let assetServer = createAssetServer()
+    t.after(() => assetServer.close())
+    let router = createRouter({
+      assetServer,
+      versions: ['v1.2.3'],
+    })
     assert.equal(typeof router.fetch, 'function')
   })
+
+  it('uses root asset URLs when no asset version is configured', async (t) => {
+    let assetServer = createAssetServer()
+    t.after(() => assetServer.close())
+    let router = createRouter({
+      assetServer,
+      docsContext: await getTestDocsContext(assetServer),
+      versions: ['v1.2.3'],
+    })
+
+    let response = await router.fetch(new Request('http://localhost/'))
+    assert.equal(response.status, 200)
+    let html = await response.text()
+
+    assert.equal(html.includes('src="/assets/client/entry.tsx"'), true)
+    assert.equal(html.includes('href="/assets/client/entry.tsx"'), true)
+    assert.equal(html.includes('src="/v1.2.3/assets/client/entry.tsx"'), false)
+    assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), false)
+  })
+
+  it('uses versioned asset URLs when an asset version is configured', async (t) => {
+    let assetServer = createAssetServer('v1.2.3')
+    t.after(() => assetServer.close())
+    let router = createRouter({
+      assetServer,
+      docsContext: await getTestDocsContext(assetServer),
+      versions: ['v1.2.3'],
+    })
+
+    let response = await router.fetch(new Request('http://localhost/v1.2.3/'))
+    assert.equal(response.status, 200)
+    let html = await response.text()
+    let assetUrls = getLoadedAssetUrls(html).filter((url) => shouldVersionAssetUrl(url))
+
+    assert.equal(html.includes('src="/v1.2.3/assets/client/entry.tsx"'), true)
+    assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), true)
+    assert.equal(html.includes('src="/assets/client/entry.tsx"'), false)
+    assert.equal(html.includes('href="/assets/client/entry.tsx"'), false)
+    assert.equal(assetUrls.length > 0, true)
+    assert.deepEqual(
+      assetUrls.filter((url) => !url.startsWith('/v1.2.3/')),
+      [],
+    )
+  })
+
+  it('serves only the configured asset URL space', async (t) => {
+    let assetServer = createAssetServer('v1.2.3')
+    t.after(() => assetServer.close())
+    let router = createRouter({
+      assetServer,
+      versions: ['v1.2.3'],
+    })
+
+    let versionedResponse = await router.fetch(
+      new Request('http://localhost/v1.2.3/assets/client/entry.tsx'),
+    )
+    assert.equal(versionedResponse.status, 200)
+
+    let rootResponse = await router.fetch(new Request('http://localhost/assets/client/entry.tsx'))
+    assert.equal(rootResponse.status, 404)
+  })
 })
+
+function getLoadedAssetUrls(html: string): string[] {
+  let urls: string[] = []
+  let tagPattern = /<(?:link|script|img)\b[^>]*>/g
+  let urlPattern = /\b(?:href|src)="([^"]+)"/
+
+  for (let tag of html.matchAll(tagPattern)) {
+    let url = tag[0].match(urlPattern)?.[1]
+    if (url) urls.push(url)
+  }
+
+  return urls
+}
+
+function shouldVersionAssetUrl(url: string): boolean {
+  if (!url.startsWith('/')) return false
+  if (url === '/favicon.ico' || url === '/favicon.svg') return false
+  if (url === '/remix-wordmark-light-mode.svg' || url === '/remix-wordmark-dark-mode.svg') {
+    return false
+  }
+  return true
+}
+
+async function getTestDocsContext(assetServer: ReturnType<typeof createAssetServer>) {
+  let [entryHref, entryPreloads] = await Promise.all([
+    assetServer.getHref('docs/src/client/entry.tsx'),
+    assetServer.getPreloads('docs/src/client/entry.tsx'),
+  ])
+
+  return {
+    docFiles: [],
+    docFilesLookup: new Map(),
+    entryHref,
+    entryPreloads,
+    getRegistry() {
+      return buildRegistry([])
+    },
+  }
+}
 
 describe('getVersionedLookupHref()', () => {
   it('preserves versioned markdown lookup targets', () => {
