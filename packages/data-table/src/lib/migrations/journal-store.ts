@@ -1,9 +1,16 @@
 import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
 import { rawSql } from '../sql.ts'
-import type { MigrationDescriptor, MigrationJournalRow } from '../migrations.ts'
+import type { Migration } from '../migrations.ts'
 
-export async function computeChecksum(migration: MigrationDescriptor): Promise<string> {
-  let digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(migration.up))
+export type MigrationJournalRow = {
+  id: string
+  hash: string
+  batch: number
+  appliedAt: Date
+}
+
+export async function computeMigrationHash(migration: Migration): Promise<string> {
+  let digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(migration.sql))
   return bytesToHex(new Uint8Array(digest))
 }
 
@@ -26,30 +33,11 @@ export async function ensureMigrationJournal(
       tableName +
       ' (' +
       'id varchar(64) not null primary key, ' +
-      'name varchar(255) not null, ' +
-      'checksum varchar(128) not null, ' +
+      'hash varchar(128) not null, ' +
       'batch integer not null, ' +
       'applied_at timestamp not null default current_timestamp' +
       ')',
   )
-}
-
-export async function hasMigrationJournal(
-  adapter: DatabaseAdapter,
-  tableName: string,
-): Promise<boolean> {
-  try {
-    await adapter.execute({
-      operation: {
-        kind: 'raw',
-        sql: rawSql('select 1 from ' + tableName + ' limit 1'),
-      },
-    })
-
-    return true
-  } catch {
-    return false
-  }
 }
 
 export async function loadJournalRows(
@@ -59,9 +47,7 @@ export async function loadJournalRows(
   let result = await adapter.execute({
     operation: {
       kind: 'raw',
-      sql: rawSql(
-        'select id, name, checksum, batch, applied_at from ' + tableName + ' order by id asc',
-      ),
+      sql: rawSql('select id, hash, batch, applied_at from ' + tableName + ' order by id asc'),
     },
   })
 
@@ -69,8 +55,7 @@ export async function loadJournalRows(
 
   return rows.map((row) => ({
     id: String(row.id),
-    name: String(row.name),
-    checksum: String(row.checksum),
+    hash: String(row.hash),
     batch: Number(row.batch),
     appliedAt: new Date(String(row.applied_at)),
   }))
@@ -81,8 +66,7 @@ export async function insertJournalRow(
   tableName: string,
   row: {
     id: string
-    name: string
-    checksum: string
+    hash: string
     batch: number
   },
   transaction?: TransactionToken,
@@ -90,27 +74,11 @@ export async function insertJournalRow(
   await adapter.execute({
     operation: {
       kind: 'raw',
-      sql: rawSql('insert into ' + tableName + ' (id, name, checksum, batch) values (?, ?, ?, ?)', [
+      sql: rawSql('insert into ' + tableName + ' (id, hash, batch) values (?, ?, ?)', [
         row.id,
-        row.name,
-        row.checksum,
+        row.hash,
         row.batch,
       ]),
-    },
-    transaction,
-  })
-}
-
-export async function deleteJournalRow(
-  adapter: DatabaseAdapter,
-  tableName: string,
-  id: string,
-  transaction?: TransactionToken,
-): Promise<void> {
-  await adapter.execute({
-    operation: {
-      kind: 'raw',
-      sql: rawSql('delete from ' + tableName + ' where id = ?', [id]),
     },
     transaction,
   })

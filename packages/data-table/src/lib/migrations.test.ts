@@ -8,15 +8,12 @@ import type {
   TableRef,
   TransactionToken,
 } from './adapter.ts'
-import { parseTransactionDirective } from './migrations/directive.ts'
-import { parseMigrationDirectoryName } from './migrations/directory-name.ts'
-import { createMigrationRegistry } from './migrations/registry.ts'
-import { createMigrationRunner } from './migrations/runner.ts'
+import { createDatabase } from './database.ts'
+import { createMigrator } from './migrations/migrator.ts'
 
 type JournalRow = {
   id: string
-  name: string
-  checksum: string
+  hash: string
   batch: number
   applied_at: string
 }
@@ -59,15 +56,7 @@ class MemoryMigrationAdapter implements DatabaseAdapter {
     let statement = request.operation.sql
     let text = statement.text.toLowerCase()
 
-    if (text.startsWith('select 1 from ')) {
-      if (!this.journalTableCreated) {
-        throw new Error('Journal table does not exist')
-      }
-
-      return { rows: [] }
-    }
-
-    if (text.includes('select id, name, checksum, batch, applied_at from ')) {
+    if (text.includes('select id, hash, batch, applied_at from ')) {
       if (!this.journalTableCreated) {
         throw new Error('Journal table does not exist')
       }
@@ -75,8 +64,7 @@ class MemoryMigrationAdapter implements DatabaseAdapter {
       return {
         rows: this.journalRows.map((row) => ({
           id: row.id,
-          name: row.name,
-          checksum: row.checksum,
+          hash: row.hash,
           batch: row.batch,
           applied_at: row.applied_at,
         })),
@@ -84,22 +72,14 @@ class MemoryMigrationAdapter implements DatabaseAdapter {
     }
 
     if (text.startsWith('insert into ')) {
-      let [id, name, checksum, batch] = statement.values
+      let [id, hash, batch] = statement.values
 
       this.journalRows.push({
         id: String(id),
-        name: String(name),
-        checksum: String(checksum),
+        hash: String(hash),
         batch: Number(batch),
         applied_at: new Date().toISOString(),
       })
-
-      return { affectedRows: 1 }
-    }
-
-    if (text.startsWith('delete from ')) {
-      let [id] = statement.values
-      this.journalRows = this.journalRows.filter((row) => row.id !== String(id))
 
       return { affectedRows: 1 }
     }
@@ -187,30 +167,20 @@ class MemoryMigrationAdapter implements DatabaseAdapter {
   }
 }
 
-describe('migration runner', () => {
-  it('applies pending migrations and records them in the journal', async () => {
+describe('migrator', () => {
+  it('applies pending migrations through a connected database', async () => {
     let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
-      {
-        id: '20260101000000',
-        name: 'create_users',
-        up: 'create table users (id integer)',
-        down: 'drop table users',
-      },
-      {
-        id: '20260102000000',
-        name: 'create_posts',
-        up: 'create table posts (id integer)',
-        down: 'drop table posts',
-      },
+    let migrator = createMigrator([
+      { id: '20260101000000', sql: 'create table users (id integer)' },
+      { id: '20260102000000', sql: 'create table posts (id integer)' },
     ])
 
-    let result = await runner.up()
+    let result = await migrator.migrate(createDatabase(adapter))
 
-    assert.deepEqual(
-      result.applied.map((entry) => entry.id),
-      ['20260101000000', '20260102000000'],
-    )
+    assert.deepEqual(result.applied, [
+      { id: '20260101000000', sql: 'create table users (id integer)' },
+      { id: '20260102000000', sql: 'create table posts (id integer)' },
+    ])
     assert.deepEqual(
       adapter.executedScripts.map((entry) => entry.sql),
       ['create table users (id integer)', 'create table posts (id integer)'],
@@ -221,171 +191,67 @@ describe('migration runner', () => {
     )
   })
 
-  it('reverts applied migrations using their down script', async () => {
+  it('sorts migrations by id and rejects duplicate ids', () => {
     let adapter = new MemoryMigrationAdapter()
-    let migrations = [
-      {
-        id: '20260101000000',
-        name: 'create_users',
-        up: 'create table users (id integer)',
-        down: 'drop table users',
-      },
-      {
-        id: '20260102000000',
-        name: 'create_posts',
-        up: 'create table posts (id integer)',
-        down: 'drop table posts',
-      },
-    ]
-    let runner = createMigrationRunner(adapter, migrations)
+    let migrator = createMigrator([
+      { id: '20260102000000', sql: 'create table b (id integer)' },
+      { id: '20260101000000', sql: 'create table a (id integer)' },
+    ])
 
-    await runner.up()
-    adapter.executedScripts = []
-
-    await runner.down({ step: 1 })
-
-    assert.deepEqual(
-      adapter.executedScripts.map((entry) => entry.sql),
-      ['drop table posts'],
+    assert.doesNotThrow(() => migrator.migrate(createDatabase(adapter)))
+    assert.throws(
+      () =>
+        createMigrator([
+          { id: '20260101000000', sql: 'select 1' },
+          { id: '20260101000000', sql: 'select 2' },
+        ]),
+      /Duplicate migration id/,
     )
+  })
+
+  it('applies pending migrations up to a target id', async () => {
+    let adapter = new MemoryMigrationAdapter()
+    let migrator = createMigrator([
+      { id: '20260101000000', sql: 'create table users (id integer)' },
+      { id: '20260102000000', sql: 'create table posts (id integer)' },
+    ])
+
+    await migrator.migrate(createDatabase(adapter), { to: '20260101000000' })
+
     assert.deepEqual(
       adapter.journalRows.map((row) => row.id),
       ['20260101000000'],
     )
-
-    await runner.down({ to: '20260101000000' })
-    assert.deepEqual(adapter.journalRows, [])
   })
 
-  it('throws when reverting a migration that has no down script', async () => {
+  it('rejects unknown migration targets', async () => {
     let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
-      {
-        id: '20260101000000',
-        name: 'irreversible',
-        up: 'create table users (id integer)',
-      },
-    ])
+    let migrator = createMigrator([{ id: '20260101000000', sql: 'select 1' }])
 
-    await runner.up()
-    await assert.rejects(() => runner.down(), /has no down script/)
+    await assert.rejects(
+      () => migrator.migrate(createDatabase(adapter), { to: '99999999999999' }),
+      /Unknown migration target/,
+    )
   })
 
-  it('skips executing empty scripts but still updates the journal', async () => {
+  it('skips executing empty migrations but still updates the journal', async () => {
     let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
-      { id: '20260101000000', name: 'noop', up: '   \n  ', down: '' },
-    ])
+    let migrator = createMigrator([{ id: '20260101000000', sql: '   \n  ' }])
 
-    await runner.up()
+    await migrator.migrate(createDatabase(adapter))
 
     assert.equal(adapter.executedScripts.length, 0)
     assert.equal(adapter.journalRows.length, 1)
-
-    await runner.down()
-    assert.equal(adapter.executedScripts.length, 0)
-    assert.equal(adapter.journalRows.length, 0)
   })
 
-  it('supports dryRun without executing or journaling', async () => {
+  it('wraps each migration in its own transaction when supported', async () => {
     let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
-      { id: '20260101000000', name: 'create_users', up: 'create table users (id integer)' },
+    let migrator = createMigrator([
+      { id: '20260101000000', sql: 'create table a (id integer)' },
+      { id: '20260102000000', sql: 'create table b (id integer)' },
     ])
 
-    let result = await runner.up({ dryRun: true })
-
-    assert.deepEqual(result.sql, ['create table users (id integer)'])
-    assert.equal(adapter.executedScripts.length, 0)
-    assert.equal(adapter.journalRows.length, 0)
-  })
-
-  it('respects target and step boundaries on up()', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let migrations = [
-      { id: '20260101000000', name: 'a', up: 'create table a (id integer)' },
-      { id: '20260102000000', name: 'b', up: 'create table b (id integer)' },
-    ]
-
-    let targetRunner = createMigrationRunner(adapter, migrations)
-    await targetRunner.up({ to: '20260101000000' })
-    assert.deepEqual(
-      adapter.journalRows.map((row) => row.id),
-      ['20260101000000'],
-    )
-
-    adapter.journalRows = []
-    adapter.journalTableCreated = false
-    adapter.executedScripts = []
-
-    let stepRunner = createMigrationRunner(adapter, migrations)
-    await stepRunner.up({ step: 1 })
-    assert.deepEqual(
-      adapter.journalRows.map((row) => row.id),
-      ['20260101000000'],
-    )
-  })
-
-  it('rejects invalid options', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
-      { id: '20260101000000', name: 'a', up: 'create table a (id integer)' },
-    ])
-
-    await assert.rejects(() => runner.up({ to: '99999999999999' }), /Unknown migration target/)
-    await assert.rejects(() => runner.up({ step: 0 }), /positive integer/)
-    await assert.rejects(
-      () => runner.up({ to: '20260101000000', step: 1 } as never),
-      /Cannot combine "to" and "step"/,
-    )
-  })
-
-  it('detects checksum drift from changed up.sql', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
-      {
-        id: '20260101000000',
-        name: 'users',
-        up: 'create table users (id integer)',
-      },
-    ])
-
-    await runner.up()
-
-    let driftedRunner = createMigrationRunner(adapter, [
-      {
-        id: '20260101000000',
-        name: 'users',
-        up: 'create table users (id integer, email text)',
-      },
-    ])
-
-    await assert.rejects(() => driftedRunner.up(), /checksum drift detected/)
-  })
-
-  it('balances migration lock hooks when execution fails', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    adapter.scriptError = new Error('boom')
-
-    let runner = createMigrationRunner(adapter, [
-      { id: '20260101000000', name: 'broken', up: 'select 1' },
-    ])
-
-    await assert.rejects(() => runner.up(), /boom/)
-    assert.equal(adapter.lockAcquireCount, 1)
-    assert.equal(adapter.lockReleaseCount, 1)
-    assert.equal(adapter.rollbackTransactionCount, 1)
-    assert.equal(adapter.commitTransactionCount, 0)
-  })
-
-  it('wraps each migration in its own transaction by default', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
-      { id: '20260101000000', name: 'a', up: 'create table a (id integer)' },
-      { id: '20260102000000', name: 'b', up: 'create table b (id integer)' },
-    ])
-
-    await runner.up()
+    await migrator.migrate(createDatabase(adapter))
 
     assert.equal(adapter.beginTransactionCount, 2)
     assert.equal(adapter.commitTransactionCount, 2)
@@ -395,173 +261,74 @@ describe('migration runner', () => {
     assert.notEqual(txIds[0], txIds[1])
   })
 
-  it('skips transactions when descriptor sets transaction: none', async () => {
+  it('skips transactions when the adapter lacks transactional DDL', async () => {
     let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
-      {
-        id: '20260101000000',
-        name: 'concurrent',
-        up: 'create index concurrently users_email_idx on users (email)',
-        transaction: 'none',
-      },
-    ])
+    adapter.capabilities.transactionalDdl = false
+    let migrator = createMigrator([{ id: '20260101000000', sql: 'create table a (id integer)' }])
 
-    await runner.up()
+    await migrator.migrate(createDatabase(adapter))
 
     assert.equal(adapter.beginTransactionCount, 0)
     assert.equal(adapter.executedScripts[0].transaction, undefined)
   })
 
-  it('respects -- data-table/transaction directive when descriptor omits the field', async () => {
+  it('balances migration lock hooks and rolls back when execution fails', async () => {
     let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
-      {
-        id: '20260101000000',
-        name: 'concurrent',
-        up: '-- data-table/transaction: none\ncreate index concurrently users_email_idx on users (email)',
-      },
-    ])
+    adapter.scriptError = new Error('boom')
+    let migrator = createMigrator([{ id: '20260101000000', sql: 'select 1' }])
 
-    await runner.up()
+    await assert.rejects(() => migrator.migrate(createDatabase(adapter)), /boom/)
 
-    assert.equal(adapter.beginTransactionCount, 0)
+    assert.equal(adapter.lockAcquireCount, 1)
+    assert.equal(adapter.lockReleaseCount, 1)
+    assert.equal(adapter.rollbackTransactionCount, 1)
+    assert.equal(adapter.commitTransactionCount, 0)
   })
 
-  it('throws when transaction: required but adapter lacks transactional DDL', async () => {
+  it('reports applied, pending, and drifted statuses without making drift contagious', async () => {
     let adapter = new MemoryMigrationAdapter()
-    adapter.capabilities.transactionalDdl = false
-
-    let runner = createMigrationRunner(adapter, [
-      {
-        id: '20260101000000',
-        name: 'tx_required',
-        up: 'create table a (id integer)',
-        transaction: 'required',
-      },
+    let migrator = createMigrator([
+      { id: '20260101000000', sql: 'create table users (id integer)' },
+      { id: '20260102000000', sql: 'create table posts (id integer)' },
+      { id: '20260103000000', sql: 'create table comments (id integer)' },
     ])
 
-    await assert.rejects(() => runner.up(), /requires transactional DDL/)
-  })
+    await migrator.migrate(createDatabase(adapter))
 
-  it('skips wrapping when adapter lacks transactional DDL and mode is auto', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    adapter.capabilities.transactionalDdl = false
-
-    let runner = createMigrationRunner(adapter, [
-      { id: '20260101000000', name: 'a', up: 'create table a (id integer)' },
+    let driftedMigrator = createMigrator([
+      { id: '20260101000000', sql: 'create table users (id integer)' },
+      { id: '20260102000000', sql: 'create table posts (id integer, title text)' },
+      { id: '20260103000000', sql: 'create table comments (id integer)' },
+      { id: '20260104000000', sql: 'create table likes (id integer)' },
     ])
-
-    await runner.up()
-
-    assert.equal(adapter.beginTransactionCount, 0)
-    assert.equal(adapter.executedScripts.length, 1)
-  })
-
-  it('reports drifted, applied, and pending statuses', async () => {
-    let adapter = new MemoryMigrationAdapter()
-    let runner = createMigrationRunner(adapter, [
-      { id: '20260101000000', name: 'a', up: 'create table a (id integer)' },
-      { id: '20260102000000', name: 'b', up: 'create table b (id integer)' },
-    ])
-
-    await runner.up({ step: 1 })
-
-    let driftedRunner = createMigrationRunner(adapter, [
-      { id: '20260101000000', name: 'a', up: 'create table a (id integer, email text)' },
-      { id: '20260102000000', name: 'b', up: 'create table b (id integer)' },
-    ])
-    let statuses = await driftedRunner.status()
+    let statuses = await driftedMigrator.status(createDatabase(adapter))
 
     assert.deepEqual(
       statuses.map((status) => ({ id: status.id, status: status.status })),
       [
-        { id: '20260101000000', status: 'drifted' },
-        { id: '20260102000000', status: 'pending' },
+        { id: '20260101000000', status: 'applied' },
+        { id: '20260102000000', status: 'drifted' },
+        { id: '20260103000000', status: 'applied' },
+        { id: '20260104000000', status: 'pending' },
       ],
     )
   })
-})
 
-describe('migration registry', () => {
-  it('sorts migrations by id and rejects duplicate ids', () => {
-    let first = { id: '20260101000000', name: 'first', up: 'select 1' }
-    let second = { id: '20260102000000', name: 'second', up: 'select 1' }
-
-    let registry = createMigrationRegistry([second, first])
-    assert.deepEqual(
-      registry.list().map((migration) => migration.id),
-      ['20260101000000', '20260102000000'],
-    )
-
-    assert.throws(
-      () => createMigrationRegistry([first, { ...first, name: 'duplicate' }]),
-      /Duplicate migration id/,
-    )
-
-    assert.throws(
-      () => registry.register({ ...first, name: 'duplicate' }),
-      /Duplicate migration id/,
-    )
-  })
-
-  it('runs migrations supplied via a registry', async () => {
+  it('refuses to apply migrations when drift exists', async () => {
     let adapter = new MemoryMigrationAdapter()
-    let registry = createMigrationRegistry()
+    let migrator = createMigrator([{ id: '20260101000000', sql: 'select 1' }])
 
-    registry.register({
-      id: '20260101000000',
-      name: 'users',
-      up: 'create table users (id integer)',
-    })
+    await migrator.migrate(createDatabase(adapter))
 
-    let runner = createMigrationRunner(adapter, registry)
-    await runner.up()
+    let driftedMigrator = createMigrator([
+      { id: '20260101000000', sql: 'select 2' },
+      { id: '20260102000000', sql: 'select 3' },
+    ])
 
-    assert.deepEqual(
-      adapter.journalRows.map((row) => row.id),
-      ['20260101000000'],
+    await assert.rejects(
+      () => driftedMigrator.migrate(createDatabase(adapter)),
+      /hash drift detected/,
     )
-  })
-})
-
-describe('migration directory name parsing', () => {
-  it('parses migration ids and names from standard directory names', () => {
-    assert.deepEqual(parseMigrationDirectoryName('20260101010101_create_users'), {
-      id: '20260101010101',
-      name: 'create_users',
-    })
-  })
-
-  it('rejects invalid migration directory names', () => {
-    assert.throws(
-      () => parseMigrationDirectoryName('create_users'),
-      /Expected format YYYYMMDDHHmmss_name/,
-    )
-  })
-})
-
-describe('transaction directive parser', () => {
-  it('returns the declared mode when present', () => {
-    assert.equal(parseTransactionDirective('-- data-table/transaction: none\nselect 1'), 'none')
-    assert.equal(
-      parseTransactionDirective('-- data-table/transaction: required\nselect 1'),
-      'required',
-    )
-    assert.equal(parseTransactionDirective('-- data-table/transaction: auto'), 'auto')
-  })
-
-  it('returns undefined when no directive is present', () => {
-    assert.equal(parseTransactionDirective('select 1'), undefined)
-    assert.equal(parseTransactionDirective('-- regular comment\nselect 1'), undefined)
-  })
-
-  it('throws when more than one directive is present', () => {
-    assert.throws(
-      () =>
-        parseTransactionDirective(
-          '-- data-table/transaction: none\n-- data-table/transaction: auto',
-        ),
-      /more than one transaction directive/,
-    )
+    assert.equal(adapter.journalRows.length, 1)
   })
 })

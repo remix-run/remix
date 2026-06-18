@@ -1,19 +1,15 @@
 import { promises as fs } from 'node:fs'
 import path from 'node:path'
 
-import type { MigrationDescriptor } from './migrations.ts'
-import { parseMigrationDirectoryName } from './migrations/directory-name.ts'
+import type { Migration } from './migrations.ts'
 
 /**
  * Loads SQL-file migrations from a directory on Node.js.
  *
- * Each migration is a directory named `YYYYMMDDHHmmss_<slug>` containing:
- * - `up.sql` (required)
- * - `down.sql` (optional; omit for irreversible migrations)
- *
- * `id` and `name` are inferred from the directory name.
- * @param directory Absolute or relative directory containing migration directories.
- * @returns A sorted list of loaded migration descriptors.
+ * Each `.sql` file is one migration. The migration id is the filename without
+ * the `.sql` extension.
+ * @param directory Absolute or relative directory containing migration files.
+ * @returns A sorted list of loaded migrations.
  * @example
  * ```ts
  * import { loadMigrations } from 'remix/data-table/migrations/node'
@@ -21,71 +17,30 @@ import { parseMigrationDirectoryName } from './migrations/directory-name.ts'
  * let migrations = await loadMigrations('./app/db/migrations')
  * ```
  */
-export async function loadMigrations(directory: string): Promise<MigrationDescriptor[]> {
+export async function loadMigrations(directory: string): Promise<Migration[]> {
   let entries = await fs.readdir(directory, { withFileTypes: true })
-  let directories = entries
-    .filter((entry) => entry.isDirectory())
+  let files = entries
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.sql'))
     .map((entry) => entry.name)
     .sort((left, right) => left.localeCompare(right))
 
-  let migrations: MigrationDescriptor[] = []
+  let migrations: Migration[] = []
   let seenIds = new Set<string>()
 
-  for (let directoryName of directories) {
-    let parsed = parseMigrationDirectoryName(directoryName)
+  for (let fileName of files) {
+    let id = fileName.slice(0, -'.sql'.length)
 
-    if (seenIds.has(parsed.id)) {
-      throw new Error(
-        'Duplicate migration id "' +
-          parsed.id +
-          '" inferred from directory "' +
-          directoryName +
-          '"',
-      )
+    if (seenIds.has(id)) {
+      throw new Error('Duplicate migration id "' + id + '" inferred from file "' + fileName + '"')
     }
 
-    seenIds.add(parsed.id)
-
-    let directoryPath = path.join(directory, directoryName)
-    let upPath = path.join(directoryPath, 'up.sql')
-    let downPath = path.join(directoryPath, 'down.sql')
-
-    let up: string
-    try {
-      up = await fs.readFile(upPath, 'utf8')
-    } catch (error) {
-      if (isNodeFileNotFoundError(error)) {
-        throw new Error('Migration directory "' + directoryName + '" is missing up.sql')
-      }
-      throw error
-    }
-
-    let down: string | undefined
-    try {
-      down = await fs.readFile(downPath, 'utf8')
-    } catch (error) {
-      if (!isNodeFileNotFoundError(error)) {
-        throw error
-      }
-    }
+    seenIds.add(id)
 
     migrations.push({
-      id: parsed.id,
-      name: parsed.name,
-      up,
-      down,
-      path: directoryPath,
+      id,
+      sql: await fs.readFile(path.join(directory, fileName), 'utf8'),
     })
   }
 
   return migrations
-}
-
-function isNodeFileNotFoundError(error: unknown): boolean {
-  return (
-    typeof error === 'object' &&
-    error !== null &&
-    'code' in error &&
-    (error as { code?: unknown }).code === 'ENOENT'
-  )
 }
