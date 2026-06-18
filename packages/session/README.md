@@ -126,7 +126,7 @@ This will clear all session data from storage the next time it is saved. It also
 
 Several strategies are provided out of the box for storing session data across requests, depending on your needs.
 
-A session storage object must always be initialized with a _signed_ session cookie. This is used to identify the session and to store the session data in the response.
+Session storage objects read and save cookie values. Use the `session` middleware with a signed `Cookie` to parse the incoming `Cookie` header, expose the session on request context, and serialize any saved value back into a `Set-Cookie` response header.
 
 #### Filesystem Storage
 
