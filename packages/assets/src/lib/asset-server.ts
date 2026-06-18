@@ -65,7 +65,7 @@ interface BrowserEventSource {
 
 interface BrowserEventSourceRegistration {
   close(): void
-  updateWatchedDirectories(delta: { add: readonly string[]; remove: readonly string[] }): void
+  updateWatchedFiles(delta: { add: readonly string[]; remove: readonly string[] }): void
 }
 
 type BrowserHmrFileEvent = {
@@ -320,7 +320,9 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     onWatchDirectoriesChange: (delta) => {
       if (!watcher) return
       watcher.updateWatchedDirectories(delta)
-      browserEventSourceRegistration?.updateWatchedDirectories(delta)
+    },
+    onWatchFilesChange: (delta) => {
+      browserEventSourceRegistration?.updateWatchedFiles(delta)
     },
     rootDir: resolvedOptions.rootDir,
     routes: resolvedOptions.routes,
@@ -370,7 +372,9 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     onWatchDirectoriesChange: (delta) => {
       if (!watcher) return
       watcher.updateWatchedDirectories(delta, { includeAncestors: false })
-      browserEventSourceRegistration?.updateWatchedDirectories(delta)
+    },
+    onWatchFilesChange: (delta) => {
+      browserEventSourceRegistration?.updateWatchedFiles(delta)
     },
     rootDir: resolvedOptions.rootDir,
     routes: resolvedOptions.routes,

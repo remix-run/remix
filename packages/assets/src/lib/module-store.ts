@@ -94,6 +94,7 @@ export function createModuleStore<transformed, resolved, emitted>(
     getAcceptedDependencies?: (resolved: resolved) => readonly string[]
     getDependencies?: (resolved: resolved) => readonly string[]
     onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
+    onWatchFilesChange?: (delta: { add: string[]; remove: string[] }) => void
   } = {},
 ): ModuleStore<transformed, resolved, emitted> {
   let recordsByIdentityPath = new Map<string, MutableModuleRecord<transformed, resolved, emitted>>()
@@ -101,6 +102,7 @@ export function createModuleStore<transformed, resolved, emitted>(
   let acceptedImportersByDepPath = new Map<string, Set<string>>()
   let recordsByTrackedFile = new Map<string, Set<string>>()
   let watchDirectoryRefCountByPath = new Map<string, number>()
+  let watchFileRefCountByPath = new Map<string, number>()
   let emptyImporters = new Set<string>()
 
   return {
@@ -333,6 +335,7 @@ export function createModuleStore<transformed, resolved, emitted>(
     tracking: readonly ModuleTracking[],
   ) {
     let previousWatchedDirectories = getWatchedDirectories(record)
+    let previousWatchedFiles = new Set(record.trackedFiles)
     removeIndexes(record)
 
     let normalizedTracking = mergeTracking(tracking)
@@ -344,8 +347,13 @@ export function createModuleStore<transformed, resolved, emitted>(
     }
 
     let nextWatchedDirectories = getWatchedDirectories(record)
-    let delta = updateWatchDirectoryRefCounts(previousWatchedDirectories, nextWatchedDirectories)
-    emitWatchDirectoryDelta(delta)
+    let directoryDelta = updateWatchDirectoryRefCounts(
+      previousWatchedDirectories,
+      nextWatchedDirectories,
+    )
+    let fileDelta = updateWatchFileRefCounts(previousWatchedFiles, record.trackedFiles)
+    emitWatchDirectoryDelta(directoryDelta)
+    emitWatchFileDelta(fileDelta)
   }
 
   function clearTracking(record: MutableModuleRecord<transformed, resolved, emitted>) {
@@ -389,10 +397,47 @@ export function createModuleStore<transformed, resolved, emitted>(
     return { add, remove }
   }
 
+  function updateWatchFileRefCounts(
+    previousWatchedFiles: ReadonlySet<string>,
+    nextWatchedFiles: ReadonlySet<string>,
+  ): { add: string[]; remove: string[] } {
+    let add: string[] = []
+    let remove: string[] = []
+
+    for (let file of previousWatchedFiles) {
+      if (nextWatchedFiles.has(file)) continue
+      let previousCount = watchFileRefCountByPath.get(file)
+      if (!previousCount) continue
+      if (previousCount === 1) {
+        watchFileRefCountByPath.delete(file)
+        remove.push(file)
+      } else {
+        watchFileRefCountByPath.set(file, previousCount - 1)
+      }
+    }
+
+    for (let file of nextWatchedFiles) {
+      if (previousWatchedFiles.has(file)) continue
+      let previousCount = watchFileRefCountByPath.get(file) ?? 0
+      watchFileRefCountByPath.set(file, previousCount + 1)
+      if (previousCount === 0) {
+        add.push(file)
+      }
+    }
+
+    return { add, remove }
+  }
+
   function emitWatchDirectoryDelta(delta: { add: string[]; remove: string[] }): void {
     if (!options.onWatchDirectoriesChange) return
     if (delta.add.length === 0 && delta.remove.length === 0) return
     options.onWatchDirectoriesChange(delta)
+  }
+
+  function emitWatchFileDelta(delta: { add: string[]; remove: string[] }): void {
+    if (!options.onWatchFilesChange) return
+    if (delta.add.length === 0 && delta.remove.length === 0) return
+    options.onWatchFilesChange(delta)
   }
 }
 

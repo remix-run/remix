@@ -44,7 +44,7 @@ export interface BrowserEventSource {
 
 export interface BrowserEventSourceRegistration {
   close(): void
-  updateWatchedDirectories(delta: { add: readonly string[]; remove: readonly string[] }): void
+  updateWatchedFiles(delta: { add: readonly string[]; remove: readonly string[] }): void
 }
 
 export interface BrowserEventController {

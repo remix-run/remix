@@ -72,6 +72,7 @@ type ScriptCompilerOptions = {
   isAllowed(absolutePath: string): boolean
   minify: boolean
   onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
+  onWatchFilesChange?: (delta: { add: string[]; remove: string[] }) => void
   rootDir: string
   routes: CompiledRoutes
   sourceMapSourcePaths: 'absolute' | 'url'
@@ -140,6 +141,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       return resolvedModule.deps
     },
     onWatchDirectoriesChange: options.onWatchDirectoriesChange,
+    onWatchFilesChange: options.onWatchFilesChange,
   })
   let tsconfigTransformOptionsResolver = createTsconfigTransformOptionsResolver()
   let resolverFactory = new ResolverFactory({

@@ -57,6 +57,7 @@ type StyleCompilerOptions = {
   isServedFilePath(filePath: string): boolean
   minify: boolean
   onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
+  onWatchFilesChange?: (delta: { add: string[]; remove: string[] }) => void
   rootDir: string
   routes: CompiledRoutes
   sourceMapSourcePaths: 'absolute' | 'url'
@@ -97,6 +98,7 @@ export function createStyleCompiler(options: StyleCompilerOptions): StyleCompile
       return resolvedStyle.deps
     },
     onWatchDirectoriesChange: options.onWatchDirectoriesChange,
+    onWatchFilesChange: options.onWatchFilesChange,
   })
   let resolveInFlightByCacheKey = new Map<string, Promise<ResolvedStyle>>()
   let emitInFlightByCacheKey = new Map<string, Promise<EmittedStyle>>()

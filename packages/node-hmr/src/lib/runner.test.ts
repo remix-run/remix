@@ -4,7 +4,12 @@ import { pathToFileURL } from 'node:url'
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { buildChildProcessArgs, resolveChokidarWatchOptions } from './runner.ts'
+import {
+  buildChildProcessArgs,
+  getBrowserHmrFileEventsForWatchedFiles,
+  getWatchedDirectoriesForFiles,
+  resolveChokidarWatchOptions,
+} from './runner.ts'
 
 describe('buildChildProcessArgs', () => {
   it('preloads the node-hmr register hook after explicit child node options', () => {
@@ -87,6 +92,34 @@ describe('resolveChokidarWatchOptions', () => {
         interval: 250,
         usePolling: true,
       },
+    )
+  })
+})
+
+describe('getWatchedDirectoriesForFiles', () => {
+  it('maps watched files to shallow parent directories', () => {
+    assert.deepEqual(
+      getWatchedDirectoriesForFiles(['/app/routes/home.tsx', '/app/routes/about.tsx']),
+      new Set(['/app/routes']),
+    )
+  })
+})
+
+describe('getBrowserHmrFileEventsForWatchedFiles', () => {
+  it('only forwards events for exact watched files', () => {
+    assert.deepEqual(
+      getBrowserHmrFileEventsForWatchedFiles({
+        changedPaths: ['/app/routes/home.tsx', '/app/routes/ignored.tsx'],
+        restartPathEvents: new Map([
+          ['/app/routes/about.tsx', 'add'],
+          ['/app/routes/ignored.css', 'unlink'],
+        ]),
+        watchedFiles: new Set(['/app/routes/home.tsx', '/app/routes/about.tsx']),
+      }),
+      [
+        { event: 'change', filePath: '/app/routes/home.tsx' },
+        { event: 'add', filePath: '/app/routes/about.tsx' },
+      ],
     )
   })
 })

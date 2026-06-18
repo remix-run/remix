@@ -292,30 +292,30 @@ export function installNodeHmrRuntime(
     registerBrowserEventSource(browserEventSource) {
       let id = browserHmrRuntimeId++
       browserEventSources.set(id, browserEventSource)
-      let watchedDirectories = new Set<string>()
+      let watchedFiles = new Set<string>()
 
       return {
         close() {
           browserEventSources.delete(id)
-          let remove = [...watchedDirectories]
-          watchedDirectories.clear()
+          let remove = [...watchedFiles]
+          watchedFiles.clear()
           process.send?.({
             id,
             delta: { add: [], remove },
-            type: 'node-hmr:child:browser-hmr-watch-directories-changed',
+            type: 'node-hmr:child:browser-hmr-watch-files-changed',
           })
         },
-        updateWatchedDirectories(delta) {
-          for (let directory of delta.add) {
-            watchedDirectories.add(directory)
+        updateWatchedFiles(delta) {
+          for (let file of delta.add) {
+            watchedFiles.add(file)
           }
-          for (let directory of delta.remove) {
-            watchedDirectories.delete(directory)
+          for (let file of delta.remove) {
+            watchedFiles.delete(file)
           }
           process.send?.({
             id,
             delta,
-            type: 'node-hmr:child:browser-hmr-watch-directories-changed',
+            type: 'node-hmr:child:browser-hmr-watch-files-changed',
           })
         },
       }

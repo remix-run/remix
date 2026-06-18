@@ -40,7 +40,7 @@ type ChildMessage =
   | {
       delta: { add: string[]; remove: string[] }
       id: number
-      type: 'node-hmr:child:browser-hmr-watch-directories-changed'
+      type: 'node-hmr:child:browser-hmr-watch-files-changed'
     }
   | {
       error?: string
@@ -94,6 +94,29 @@ const browserHmrRequestTimeoutMs = 1_000
 const shutdownTimeoutMs = 5_000
 const styles = createStyles()
 
+export function getBrowserHmrFileEventsForWatchedFiles(options: {
+  changedPaths: readonly string[]
+  restartPathEvents: ReadonlyMap<string, 'add' | 'unlink'>
+  watchedFiles: ReadonlySet<string>
+}): BrowserHmrFileEvent[] {
+  return [
+    ...options.changedPaths
+      .filter((filePath) => options.watchedFiles.has(filePath))
+      .map((filePath) => ({ event: 'change' as const, filePath })),
+    ...[...options.restartPathEvents]
+      .filter(([filePath]) => options.watchedFiles.has(filePath))
+      .map(([filePath, event]) => ({ event, filePath })),
+  ]
+}
+
+export function getWatchedDirectoriesForFiles(filePaths: Iterable<string>): Set<string> {
+  let watchedDirectories = new Set<string>()
+  for (let filePath of filePaths) {
+    watchedDirectories.add(dirname(filePath))
+  }
+  return watchedDirectories
+}
+
 interface BrowserEventControllerOptions {
   host?: string
   port?: number
@@ -141,7 +164,8 @@ export function createWatchedProcessController(options: {
   let moduleDepsByUrl = new Map<string, Set<string>>()
   let watchedFilePaths = new Set<string>()
   let watchedDirectoryRefCounts = new Map<string, number>()
-  let browserWatchedDirectoryRefCountsByRuntime = new Map<number, Map<string, number>>()
+  let browserWatchedFileRefCountsByRuntime = new Map<number, Map<string, number>>()
+  let browserWatchedFilePaths = new Set<string>()
   let activeWatchedDirectories = new Set<string>()
   let pendingChangedPaths = new Set<string>()
   let pendingRestartPathEvents = new Map<string, 'add' | 'unlink'>()
@@ -171,7 +195,8 @@ export function createWatchedProcessController(options: {
     moduleInfoByFilePath = new Map()
     moduleInfoByUrl = new Map()
     moduleDepsByUrl = new Map()
-    browserWatchedDirectoryRefCountsByRuntime = new Map()
+    browserWatchedFileRefCountsByRuntime = new Map()
+    browserWatchedFilePaths = new Set()
     unwatchKnownModuleFiles()
     watchKnownModuleFile(getEntryPath())
     waitingForFileChangeAfterExit = false
@@ -227,8 +252,8 @@ export function createWatchedProcessController(options: {
       return
     }
 
-    if (message.type === 'node-hmr:child:browser-hmr-watch-directories-changed') {
-      updateBrowserWatchedDirectories(message.id, message.delta)
+    if (message.type === 'node-hmr:child:browser-hmr-watch-files-changed') {
+      updateBrowserWatchedFiles(message.id, message.delta)
       return
     }
 
@@ -367,43 +392,47 @@ export function createWatchedProcessController(options: {
     syncWatchedDirectories()
   }
 
-  function updateBrowserWatchedDirectories(
+  function updateBrowserWatchedFiles(
     runtimeId: number,
     delta: { add: readonly string[]; remove: readonly string[] },
   ): void {
-    let refCounts = browserWatchedDirectoryRefCountsByRuntime.get(runtimeId)
+    let refCounts = browserWatchedFileRefCountsByRuntime.get(runtimeId)
     if (refCounts === undefined) {
       refCounts = new Map()
-      browserWatchedDirectoryRefCountsByRuntime.set(runtimeId, refCounts)
+      browserWatchedFileRefCountsByRuntime.set(runtimeId, refCounts)
     }
 
-    for (let directory of delta.add) {
-      refCounts.set(directory, (refCounts.get(directory) ?? 0) + 1)
+    for (let file of delta.add) {
+      refCounts.set(file, (refCounts.get(file) ?? 0) + 1)
     }
-    for (let directory of delta.remove) {
-      let count = refCounts.get(directory)
+    for (let file of delta.remove) {
+      let count = refCounts.get(file)
       if (count === undefined) continue
       if (count <= 1) {
-        refCounts.delete(directory)
+        refCounts.delete(file)
       } else {
-        refCounts.set(directory, count - 1)
+        refCounts.set(file, count - 1)
       }
     }
 
     if (refCounts.size === 0) {
-      browserWatchedDirectoryRefCountsByRuntime.delete(runtimeId)
+      browserWatchedFileRefCountsByRuntime.delete(runtimeId)
     }
 
     syncWatchedDirectories()
   }
 
   function syncWatchedDirectories(): void {
-    let nextWatchedDirectories = new Set(watchedDirectoryRefCounts.keys())
-    for (let refCounts of browserWatchedDirectoryRefCountsByRuntime.values()) {
-      for (let directory of refCounts.keys()) {
-        nextWatchedDirectories.add(directory)
+    let nextBrowserWatchedFilePaths = new Set<string>()
+    for (let refCounts of browserWatchedFileRefCountsByRuntime.values()) {
+      for (let file of refCounts.keys()) {
+        nextBrowserWatchedFilePaths.add(file)
       }
     }
+    let nextWatchedDirectories = new Set([
+      ...watchedDirectoryRefCounts.keys(),
+      ...getWatchedDirectoriesForFiles(nextBrowserWatchedFilePaths),
+    ])
 
     let directoriesToAdd = [...nextWatchedDirectories].filter(
       (directory) => !activeWatchedDirectories.has(directory),
@@ -420,6 +449,7 @@ export function createWatchedProcessController(options: {
     }
 
     activeWatchedDirectories = nextWatchedDirectories
+    browserWatchedFilePaths = nextBrowserWatchedFilePaths
   }
 
   function handleWatchEvent(event: string, changedPath: string) {
@@ -673,10 +703,11 @@ export function createWatchedProcessController(options: {
     changedPaths: readonly string[],
     restartPathEvents: ReadonlyMap<string, 'add' | 'unlink'>,
   ): BrowserHmrFileEvent[] {
-    return [
-      ...changedPaths.map((filePath) => ({ event: 'change' as const, filePath })),
-      ...[...restartPathEvents].map(([filePath, event]) => ({ event, filePath })),
-    ]
+    return getBrowserHmrFileEventsForWatchedFiles({
+      changedPaths,
+      restartPathEvents,
+      watchedFiles: browserWatchedFilePaths,
+    })
   }
 
   async function requestBrowserHmrIntents(
@@ -1135,12 +1166,12 @@ function isChildMessage(message: unknown): message is ChildMessage {
     return 'payload' in message && isHmrEventPayload(message.payload)
   }
 
-  if (message.type === 'node-hmr:child:browser-hmr-watch-directories-changed') {
+  if (message.type === 'node-hmr:child:browser-hmr-watch-files-changed') {
     return (
       'id' in message &&
       typeof message.id === 'number' &&
       'delta' in message &&
-      isWatchDirectoryDelta(message.delta)
+      isWatchFileDelta(message.delta)
     )
   }
 
@@ -1269,7 +1300,7 @@ function isOptionalStringArrayProperty(value: object, property: string): boolean
   return Array.isArray(candidate) && candidate.every((item) => typeof item === 'string')
 }
 
-function isWatchDirectoryDelta(value: unknown): value is { add: string[]; remove: string[] } {
+function isWatchFileDelta(value: unknown): value is { add: string[]; remove: string[] } {
   return (
     typeof value === 'object' &&
     value !== null &&

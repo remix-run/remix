@@ -153,7 +153,7 @@ function createTestHmrOptions(): AssetServerHmrOptions {
       register() {
         return {
           close() {},
-          updateWatchedDirectories() {},
+          updateWatchedFiles() {},
         }
       },
     },

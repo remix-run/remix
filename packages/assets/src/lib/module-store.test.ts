@@ -250,6 +250,38 @@ describe('createModuleStore', () => {
     assert.deepEqual([...store.getAcceptedImporters('/app/accepted.ts')], ['/app/entry.ts'])
   })
 
+  it('emits watched file deltas using file-level ref counts', () => {
+    let fileDeltas: Array<{ add: string[]; remove: string[] }> = []
+    let directoryDeltas: Array<{ add: string[]; remove: string[] }> = []
+    let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>({
+      onWatchDirectoriesChange(delta) {
+        directoryDeltas.push(delta)
+      },
+      onWatchFilesChange(delta) {
+        fileDeltas.push(delta)
+      },
+    })
+
+    store.setResolved('/app/entry.ts', createResolvedModule(), [
+      {
+        trackedFiles: ['/app/shared.ts', '/app/entry.ts'],
+      },
+    ])
+    store.setResolved('/app/other.ts', createResolvedModule({ identityPath: '/app/other.ts' }), [
+      {
+        trackedFiles: ['/app/shared.ts', '/app/other.ts'],
+      },
+    ])
+    store.clearResolved('/app/entry.ts', [])
+
+    assert.deepEqual(fileDeltas, [
+      { add: ['/app/shared.ts', '/app/entry.ts'], remove: [] },
+      { add: ['/app/other.ts'], remove: [] },
+      { add: [], remove: ['/app/entry.ts'] },
+    ])
+    assert.deepEqual(directoryDeltas, [{ add: ['/app'], remove: [] }])
+  })
+
   it('retains HMR update timestamps across content invalidations', () => {
     let store = createModuleStore<TransformedModule, ResolvedModule, EmittedModule>()
     let transformed = createTransformedModule()

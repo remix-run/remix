@@ -1991,7 +1991,7 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
               close() {
                 browserEventSources.delete(source)
               },
-              updateWatchedDirectories() {},
+              updateWatchedFiles() {},
             }
           },
         },
