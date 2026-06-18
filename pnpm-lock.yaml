@@ -422,6 +422,9 @@ importers:
 
   packages/cli:
     dependencies:
+      '@remix-run/data-table':
+        specifier: workspace:^
+        version: link:../data-table
       '@remix-run/terminal':
         specifier: workspace:^
         version: link:../terminal

@@ -1,8 +1,9 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import * as process from 'node:process'
-import { spawn } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
+
+import type { Database } from '@remix-run/data-table'
+import { createMigrator } from '@remix-run/data-table/migrations'
+import { loadMigrations } from '@remix-run/data-table/migrations/node'
 
 import type { CliContext } from '../cli-context.ts'
 import { CliError, renderCliError, toCliError, unexpectedExtraArgument } from '../errors.ts'
@@ -11,7 +12,17 @@ import { parseArgs } from '../parse-args.ts'
 
 const DATABASE_MODULE_PATH = path.join('app', 'data', 'database.ts')
 
-type DatabaseCommandAction = 'create' | 'drop'
+type DatabaseCommandAction =
+  | { kind: 'create' }
+  | { kind: 'drop' }
+  | { kind: 'migrate'; to?: string }
+  | { kind: 'migrate-status' }
+
+interface DatabaseResourceLifecycle {
+  create(): Promise<void>
+  drop(): Promise<void>
+  connect(): Promise<Database>
+}
 
 export async function runDbCommand(argv: string[], context: CliContext): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
@@ -23,11 +34,14 @@ export async function runDbCommand(argv: string[], context: CliContext): Promise
     let action = parseDbCommandArgs(argv)
     let appRoot = await findDatabaseAppRoot(context.cwd)
     let databaseFile = path.join(appRoot, DATABASE_MODULE_PATH)
+    let database = await loadDatabaseResource(databaseFile)
 
-    await runDatabaseResourceAction(databaseFile, action, appRoot)
+    await runDatabaseResourceAction(database, action)
     return 0
   } catch (error) {
-    process.stderr.write(renderCliError(toCliError(error), { helpText: getDbCommandHelpText(process.stderr) }))
+    process.stderr.write(
+      renderCliError(toCliError(error), { helpText: getDbCommandHelpText(process.stderr) }),
+    )
     return 1
   }
 }
@@ -35,26 +49,66 @@ export async function runDbCommand(argv: string[], context: CliContext): Promise
 export function getDbCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
   return formatHelpText(
     {
-      description: 'Create or drop the configured database for the current app.',
-      examples: ['remix db create', 'remix db drop'],
-      usage: ['remix db <create|drop> [--no-color]'],
+      description: 'Create, drop, migrate, or inspect the configured database for the current app.',
+      examples: [
+        'remix db create',
+        'remix db drop',
+        'remix db migrate',
+        'remix db migrate --to 20260101000000_create_users',
+        'remix db migrate status',
+      ],
+      options: [{ description: 'Apply migrations up to and including an id', label: '--to <id>' }],
+      usage: ['remix db <create|drop|migrate> [--to <id>]', 'remix db migrate status'],
     },
     target,
   )
 }
 
 function parseDbCommandArgs(argv: string[]): DatabaseCommandAction {
-  let parsed = parseArgs(argv, {}, { maxPositionals: 1 })
-  let action = parsed.positionals[0]
+  let parsed = parseArgs(
+    argv,
+    {
+      to: { flag: '--to', type: 'string' },
+    },
+    { maxPositionals: 2 },
+  )
+  let [action, subaction] = parsed.positionals
 
-  if (action === 'create' || action === 'drop') {
-    return action
+  if (action === 'create') {
+    if (parsed.options.to !== undefined) {
+      throw unexpectedExtraArgument('--to')
+    }
+    return { kind: 'create' }
+  }
+
+  if (action === 'drop') {
+    if (parsed.options.to !== undefined) {
+      throw unexpectedExtraArgument('--to')
+    }
+    return { kind: 'drop' }
+  }
+
+  if (action === 'migrate') {
+    if (subaction === 'status') {
+      if (parsed.options.to !== undefined) {
+        throw unexpectedExtraArgument('--to')
+      }
+      return { kind: 'migrate-status' }
+    }
+
+    if (subaction !== undefined) {
+      throw unexpectedExtraArgument(subaction)
+    }
+
+    return parsed.options.to === undefined
+      ? { kind: 'migrate' }
+      : { kind: 'migrate', to: parsed.options.to }
   }
 
   if (action == null) {
     throw new CliError({
       code: 'RMX_DB_ACTION_MISSING',
-      message: 'Expected a database action: create or drop.',
+      message: 'Expected a database action: create, drop, or migrate.',
       showHelp: true,
       title: 'Missing database action',
     })
@@ -63,64 +117,53 @@ function parseDbCommandArgs(argv: string[]): DatabaseCommandAction {
   throw unexpectedExtraArgument(action)
 }
 
+async function loadDatabaseResource(databaseFile: string): Promise<DatabaseResourceLifecycle> {
+  let moduleExports: unknown = await import(databaseFile)
+  let database = getNamedExport(moduleExports, 'database')
+  assertDatabaseResource(database)
+  return database
+}
+
 async function runDatabaseResourceAction(
-  databaseFile: string,
+  database: DatabaseResourceLifecycle,
   action: DatabaseCommandAction,
-  cwd: string,
 ): Promise<void> {
-  let workerPath = getDatabaseResourceWorkerPath()
-  let child = spawn(process.execPath, [workerPath, databaseFile, action], {
-    cwd,
-    env: createDatabaseResourceWorkerEnv(),
-    stdio: ['ignore', 'pipe', 'pipe'],
-  })
-
-  let stdout = ''
-  let stderr = ''
-
-  child.stdout.setEncoding('utf8')
-  child.stderr.setEncoding('utf8')
-
-  child.stdout.on('data', (chunk: string) => {
-    stdout += chunk
-  })
-
-  child.stderr.on('data', (chunk: string) => {
-    stderr += chunk
-  })
-
-  let exitResult = await new Promise<{ code: number | null; signal: NodeJS.Signals | null }>(
-    (resolve, reject) => {
-      child.once('error', reject)
-      child.once('close', (code, signal) => {
-        resolve({ code, signal })
-      })
-    },
-  )
-
-  if (exitResult.signal != null) {
-    throw new CliError({
-      code: 'RMX_DB_RESOURCE_SIGNAL',
-      message: `Database resource action exited from signal ${exitResult.signal}.`,
-      title: 'Database resource action exited from a signal',
-    })
+  if (action.kind === 'create' || action.kind === 'drop') {
+    await database[action.kind]()
+    return
   }
 
-  if (exitResult.code !== 0) {
-    let message = stderr.trim()
-    if (message.length === 0) {
-      message = `Database resource ${action} failed.`
+  let migrations = await loadMigrations('db/migrations')
+  let migrator = createMigrator(migrations)
+  let client = await database.connect()
+
+  try {
+    if (action.kind === 'migrate') {
+      let result =
+        action.to === undefined
+          ? await migrator.migrate(client)
+          : await migrator.migrate(client, { to: action.to })
+
+      if (result.applied.length === 0) {
+        process.stdout.write('No pending migrations.\n')
+      } else {
+        for (let migration of result.applied) {
+          process.stdout.write('Applied ' + migration.id + '\n')
+        }
+      }
+    } else {
+      let statuses = await migrator.status(client)
+
+      if (statuses.length === 0) {
+        process.stdout.write('No migrations.\n')
+      } else {
+        for (let status of statuses) {
+          process.stdout.write(status.id + ' ' + status.status + '\n')
+        }
+      }
     }
-
-    throw new CliError({
-      code: 'RMX_DB_RESOURCE_FAILED',
-      message,
-      title: 'Database resource action failed',
-    })
-  }
-
-  if (stdout.length > 0) {
-    process.stdout.write(stdout)
+  } finally {
+    await client.adapter.close?.()
   }
 }
 
@@ -162,21 +205,24 @@ async function pathExists(filePath: string): Promise<boolean> {
   }
 }
 
-function getDatabaseResourceWorkerPath(): string {
-  let currentFilePath = fileURLToPath(import.meta.url)
-  let extension = currentFilePath.endsWith('.ts') ? '.ts' : '.js'
-
-  return fileURLToPath(new URL(`../load-database-resource-worker${extension}`, import.meta.url))
-}
-
-function createDatabaseResourceWorkerEnv(): NodeJS.ProcessEnv {
-  let env = { ...process.env }
-
-  for (let key of Object.keys(env)) {
-    if (key.startsWith('NODE_TEST_')) {
-      delete env[key]
-    }
+function getNamedExport(moduleExports: unknown, name: string): unknown {
+  if (typeof moduleExports !== 'object' || moduleExports == null) {
+    throw new Error(`Database module must export a named "${name}" value.`)
   }
 
-  return env
+  return Reflect.get(moduleExports, name)
+}
+
+function assertDatabaseResource(value: unknown): asserts value is DatabaseResourceLifecycle {
+  if (typeof value !== 'object' || value == null) {
+    throw new Error('Database module must export a named "database" resource.')
+  }
+
+  let create = Reflect.get(value, 'create')
+  let drop = Reflect.get(value, 'drop')
+  let connect = Reflect.get(value, 'connect')
+
+  if (typeof create !== 'function' || typeof drop !== 'function' || typeof connect !== 'function') {
+    throw new Error('Database resource must provide create(), drop(), and connect() methods.')
+  }
 }
