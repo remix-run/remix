@@ -8,13 +8,16 @@ export interface SplitPattern {
 
 // prettier-ignore
 export type Split<T extends string> =
-  _Split<T> extends infer S extends Partial<SplitPattern> ? {
+  _Split<T> extends infer S ?
+  [S] extends [never] ? never :
+  S extends Partial<SplitPattern> ? {
     protocol: S['protocol'] extends string ? S['protocol'] : undefined
     hostname: S['hostname'] extends string ? S['hostname'] : undefined
     port: S['port'] extends string ? S['port'] : undefined
     pathname: S['pathname'] extends string ? S['pathname'] : undefined
     search: S['search'] extends string ? S['search'] : undefined
   } :
+  never :
   never
 
 // prettier-ignore
@@ -35,7 +38,7 @@ type _Split<T extends string> =
 // prettier-ignore
 type SplitHost<T extends string> =
   T extends `${infer L}:${infer R}` ?
-    IsDigits<R> extends true ? (L extends '' ? { port: R } : { hostname: L; port: R}) :
+    IsDigits<R> extends true ? (L extends '' ? never : { hostname: L; port: R}) :
     SplitHost<R> extends { hostname: infer H extends string; port: infer P extends string } ? { hostname: `${L}:${H}`; port: P } :
     { hostname: T } :
   T extends '' ? {} :

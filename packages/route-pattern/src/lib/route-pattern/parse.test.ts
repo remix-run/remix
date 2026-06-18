@@ -398,6 +398,17 @@ describe('parsePattern', () => {
     })
   })
 
+  it('throws on port without hostname', () => {
+    assert.throws(() => parsePattern('://:8080/users'), {
+      name: 'ParseError',
+      type: 'missing hostname',
+    })
+    assert.throws(() => parsePattern('http://:80/users'), {
+      name: 'ParseError',
+      type: 'missing hostname',
+    })
+  })
+
   it('parses an empty pattern as empty pathname', () => {
     assertParse('', {})
     assertParse('/', {})

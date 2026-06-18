@@ -66,6 +66,15 @@ export function compare(a: Match, b: Match): -1 | 0 | 1 {
   if (a.url.href !== b.url.href) {
     throw new Error(`Cannot compare matches for different URLs: ${a.url.href} vs ${b.url.href}`)
   }
+  let aParts = getRoutePatternParts(a.pattern)
+  let bParts = getRoutePatternParts(b.pattern)
+
+  let protocolResult = compareProtocol(aParts.protocol, bParts.protocol)
+  if (protocolResult !== 0) return protocolResult
+
+  let portResult = comparePort(aParts.port, bParts.port)
+  if (portResult !== 0) return portResult
+
   let hostname = decodeHostname(a.url.hostname)
 
   let hostnameResult = compareHostname(hostname, a.paramsMeta.hostname, b.paramsMeta.hostname)
@@ -74,12 +83,26 @@ export function compare(a: Match, b: Match): -1 | 0 | 1 {
   let pathnameResult = comparePathname(a.paramsMeta.pathname, b.paramsMeta.pathname)
   if (pathnameResult !== 0) return pathnameResult
 
-  let searchResult = compareSearch(
-    getRoutePatternParts(a.pattern).search,
-    getRoutePatternParts(b.pattern).search,
-  )
+  let searchResult = compareSearch(aParts.search, bParts.search)
   if (searchResult !== 0) return searchResult
 
+  return 0
+}
+
+function compareProtocol(
+  a: ParsedRoutePattern['protocol'],
+  b: ParsedRoutePattern['protocol'],
+): -1 | 0 | 1 {
+  let aSpecificity = a === 'http' || a === 'https' ? 1 : 0
+  let bSpecificity = b === 'http' || b === 'https' ? 1 : 0
+  if (aSpecificity > bSpecificity) return 1
+  if (aSpecificity < bSpecificity) return -1
+  return 0
+}
+
+function comparePort(a: ParsedRoutePattern['port'], b: ParsedRoutePattern['port']): -1 | 0 | 1 {
+  if (a !== null && b === null) return 1
+  if (a === null && b !== null) return -1
   return 0
 }
 

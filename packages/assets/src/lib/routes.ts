@@ -77,7 +77,9 @@ export function compileRoutes(
       for (let route of compiledRoutes) {
         let match = route.urlMatcher.match(`http://remix.run${normalizedPathname}`)
         if (!match) continue
-        let relativeFilePath = createHref(route.filePattern, match.params).replace(/^\/+/, '')
+        let relativeFilePath = decodeURIComponent(
+          createHref(route.filePattern, match.params),
+        ).replace(/^\/+/, '')
         return resolveFilePath(route.rootDir, relativeFilePath)
       }
 

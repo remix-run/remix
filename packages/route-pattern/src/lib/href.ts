@@ -135,10 +135,18 @@ function hrefPart(
           if (token.name === '*') {
             throw new CreateHrefError({ type: 'nameless-wildcard', pattern })
           }
-          missingParams.push(token.name)
+          if (!missingParams.includes(token.name)) missingParams.push(token.name)
+          i += 1
+          continue
         }
         let frame = stack.pop()!
         i = part.optionals.get(frame.begin!)! + 1
+        if (
+          stack[stack.length - 1].href.endsWith(separator) &&
+          part.tokens[i]?.type === 'separator'
+        ) {
+          i += 1
+        }
         continue
       }
       // prettier-ignore
@@ -187,7 +195,7 @@ function hrefSearch(
 
   for (let [key, requiredValues] of constraints) {
     if (requiredValues.size === 0) {
-      if (key in searchParams) continue
+      if (urlSearchParams.has(key)) continue
       urlSearchParams.append(key, '')
     } else {
       for (let value of requiredValues) {
@@ -288,29 +296,8 @@ export function encodePathnameWildcard(value: unknown) {
   return String(value).split('/').map(encodePathnameSegment).join('/')
 }
 
-/**
- * Keep pathname params from changing URL structure when parsed. `/`, `?`, and `#` are
- * path/query/fragment delimiters; `%` begins percent-encoded bytes; and `\\` is treated as a
- * path separator by special URL parsing.
- *
- * @see https://url.spec.whatwg.org/#path-percent-encode-set
- * @see https://url.spec.whatwg.org/#percent-encoded-bytes
- */
-const PATHNAME_PARAM_STRUCTURAL_CHARS: Record<string, string> = {
-  '/': '%2F',
-  '?': '%3F',
-  '#': '%23',
-  '%': '%25',
-  '\\': '%5C',
-}
-
 function encodePathnameSegment(value: string): string {
-  let encoded = ''
-  for (let char of value) {
-    let encodedChar = PATHNAME_PARAM_STRUCTURAL_CHARS[char]
-    encoded += encodedChar === undefined ? char : encodedChar
-  }
-  return encoded
+  return encodeURIComponent(value)
 }
 
 /**
@@ -322,12 +309,12 @@ function encodePathnameSegment(value: string): string {
  * @see https://url.spec.whatwg.org/#authority-state
  * @see https://url.spec.whatwg.org/#host-parsing
  */
-const HOSTNAME_PARAM_STRUCTURAL_CHARS = ['@', ':', '/', '?', '#']
+const HOSTNAME_PARAM_STRUCTURAL_CHARS = ['@', ':', '/', '?', '#', '%']
 
 export function validateHostnameVariable(value: unknown): string {
   let serialized = String(value)
   for (let char of serialized) {
-    if (char === '.' || HOSTNAME_PARAM_STRUCTURAL_CHARS.includes(char)) {
+    if (char === '.' || isInvalidHostnameParamChar(char)) {
       throw new CreateHrefError({
         type: 'invalid-hostname-variable',
         value: serialized,
@@ -341,7 +328,7 @@ export function validateHostnameVariable(value: unknown): string {
 export function validateHostnameWildcard(value: unknown): string {
   let serialized = String(value)
   for (let char of serialized) {
-    if (HOSTNAME_PARAM_STRUCTURAL_CHARS.includes(char)) {
+    if (isInvalidHostnameParamChar(char)) {
       throw new CreateHrefError({
         type: 'invalid-hostname-wildcard',
         value: serialized,
@@ -350,4 +337,9 @@ export function validateHostnameWildcard(value: unknown): string {
     }
   }
   return serialized
+}
+
+function isInvalidHostnameParamChar(char: string): boolean {
+  let code = char.charCodeAt(0)
+  return code <= 0x1f || code === 0x7f || HOSTNAME_PARAM_STRUCTURAL_CHARS.includes(char)
 }

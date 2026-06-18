@@ -19,6 +19,9 @@ const IDENTIFIER_RE = /^[a-zA-Z_$][a-zA-Z_$0-9]*/
  */
 export function parsePattern<source extends string>(source: source): RoutePattern<source> {
   let spans = split(source)
+  if (spans.port && !spans.hostname) {
+    throw new ParseError('missing hostname', source, spans.port[0] - 1)
+  }
 
   return createRoutePattern<source>({
     protocol: parseProtocol(source, spans.protocol),
@@ -168,6 +171,7 @@ type ParseErrorType =
   | 'missing variable name'
   | 'dangling escape'
   | 'invalid protocol'
+  | 'missing hostname'
 
 /** Error thrown when a route pattern cannot be parsed. */
 export class ParseError extends Error {

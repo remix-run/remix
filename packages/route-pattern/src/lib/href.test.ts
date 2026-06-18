@@ -4,6 +4,7 @@ import { describe, it } from '@remix-run/test'
 import dedent from 'dedent'
 
 import { CreateHrefError, createHref } from './href.ts'
+import { joinPatterns } from './join.ts'
 import { RoutePattern } from './route-pattern.ts'
 
 describe('createHref', () => {
@@ -41,12 +42,6 @@ describe('createHref', () => {
         let pattern = 'http://*host/path' as const
         // @ts-expect-error - missing required param
         assert.throws(() => createHref(pattern), hrefError('missing-params'))
-      })
-
-      it('throws when port specified', () => {
-        let pattern = '://:8080/path' as const
-        // @ts-expect-error - missing hostname
-        assert.throws(() => createHref(pattern), hrefError('missing-hostname'))
       })
     })
 
@@ -228,14 +223,22 @@ describe('createHref', () => {
     it('encodes structural URL chars including `/` for variables', () => {
       assert.equal(
         createHref('/posts/:slug', { slug: 'hello/world?draft=true#preview' }),
-        '/posts/hello%2Fworld%3Fdraft=true%23preview',
+        '/posts/hello%2Fworld%3Fdraft%3Dtrue%23preview',
       )
     })
 
-    it('encodes structural URL chars except `/` for wildcards', () => {
+    it('encodes wildcard segments with encodeURIComponent semantics', () => {
       assert.equal(
         createHref('/files/*path', { path: 'docs/@remix-run/ui?raw#v1' }),
-        '/files/docs/@remix-run/ui%3Fraw%23v1',
+        '/files/docs/%40remix-run/ui%3Fraw%23v1',
+      )
+    })
+
+    it('encodes pathname params with encodeURIComponent semantics', () => {
+      assert.equal(createHref('/posts/:slug', { slug: 'hello world' }), '/posts/hello%20world')
+      assert.equal(
+        createHref('/files/*path', { path: 'docs/hello world' }),
+        '/files/docs/hello%20world',
       )
     })
   })
@@ -257,6 +260,13 @@ describe('createHref', () => {
       assert.equal(createHref(pattern, null), '/posts')
       assert.equal(createHref(pattern, undefined), '/posts')
       assert.equal(createHref(pattern, { id: null }), '/posts')
+    })
+
+    it('omits optional joins without creating double slashes', () => {
+      let pattern = joinPatterns('a/(:id)', 'c')
+
+      assert.equal(createHref(pattern), '/a/c')
+      assert.equal(createHref(pattern, { id: 'b' }), '/a/b/c')
     })
 
     it('throws for empty optional variable when provided', () => {
@@ -377,6 +387,19 @@ describe('createHref', () => {
           '/posts?filter=active',
         )
       })
+
+      it('keeps the key when user params are nullish or empty', () => {
+        assert.equal(
+          createHref('/posts?filter', undefined, { filter: undefined }),
+          '/posts?filter=',
+        )
+        assert.equal(createHref('/posts?filter', undefined, { filter: null }), '/posts?filter=')
+        assert.equal(createHref('/posts?filter', undefined, { filter: [] }), '/posts?filter=')
+        assert.equal(
+          createHref('/posts?filter', undefined, { filter: [null, undefined] }),
+          '/posts?filter=',
+        )
+      })
     })
 
     describe('with specific-value constraint (?q=foo)', () => {
@@ -485,6 +508,24 @@ describe('CreateHrefError', () => {
           Pattern: https://example.com/:collection/:id
           Params: {}
         `,
+      )
+    })
+
+    it('reports all missing required params', () => {
+      let pattern = String('/:a/:b')
+      let params = {}
+      assert.throws(
+        () => createHref(pattern, params),
+        (error: unknown) => {
+          assert.ok(error instanceof CreateHrefError)
+          assert.deepEqual(error.details, {
+            type: 'missing-params',
+            pattern: RoutePattern.parse('/:a/:b'),
+            missingParams: ['a', 'b'],
+            params,
+          })
+          return true
+        },
       )
     })
   })

@@ -25,6 +25,10 @@ export type Tests = [
     { protocol: 'http'; hostname: 'host.com'; port: '8080'; pathname: undefined; search: undefined }
   >>,
   Assert<IsEqual<
+    Split<'http://:80'>,
+    never
+  >>,
+  Assert<IsEqual<
     Split<'http://host.com/path/:id'>,
     { protocol: 'http'; hostname: 'host.com'; port: undefined; pathname: 'path/:id'; search: undefined }
   >>,
@@ -49,6 +53,10 @@ export type Tests = [
   Assert<IsEqual<
     Split<'://host.com:3000'>,
     { protocol: undefined; hostname: 'host.com'; port: '3000'; pathname: undefined; search: undefined }
+  >>,
+  Assert<IsEqual<
+    Split<'://:3000'>,
+    never
   >>,
   Assert<IsEqual<
     Split<'://host.com/path/:id'>,
