@@ -11,12 +11,14 @@ import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
 
 const DATABASE_MODULE_PATH = path.join('app', 'data', 'database.ts')
+const SEED_MODULE_PATH = path.join('db', 'seed.ts')
 
 type DatabaseCommandAction =
   | { kind: 'create' }
   | { kind: 'drop' }
   | { kind: 'migrate'; to?: string }
   | { kind: 'migrate-status' }
+  | { kind: 'seed' }
 
 interface DatabaseResourceLifecycle {
   create(): Promise<void>
@@ -36,7 +38,7 @@ export async function runDbCommand(argv: string[], context: CliContext): Promise
     let databaseFile = path.join(appRoot, DATABASE_MODULE_PATH)
     let database = await loadDatabaseResource(databaseFile)
 
-    await runDatabaseResourceAction(database, action)
+    await runDatabaseResourceAction(database, action, appRoot)
     return 0
   } catch (error) {
     process.stderr.write(
@@ -49,16 +51,18 @@ export async function runDbCommand(argv: string[], context: CliContext): Promise
 export function getDbCommandHelpText(target: NodeJS.WriteStream = process.stdout): string {
   return formatHelpText(
     {
-      description: 'Create, drop, migrate, or inspect the configured database for the current app.',
+      description:
+        'Create, drop, migrate, seed, or inspect the configured database for the current app.',
       examples: [
         'remix db create',
         'remix db drop',
         'remix db migrate',
         'remix db migrate --to 20260101000000_create_users',
         'remix db migrate status',
+        'remix db seed',
       ],
       options: [{ description: 'Apply migrations up to and including an id', label: '--to <id>' }],
-      usage: ['remix db <create|drop|migrate> [--to <id>]', 'remix db migrate status'],
+      usage: ['remix db <create|drop|migrate|seed> [--to <id>]', 'remix db migrate status'],
     },
     target,
   )
@@ -88,6 +92,18 @@ function parseDbCommandArgs(argv: string[]): DatabaseCommandAction {
     return { kind: 'drop' }
   }
 
+  if (action === 'seed') {
+    if (parsed.options.to !== undefined) {
+      throw unexpectedExtraArgument('--to')
+    }
+
+    if (subaction !== undefined) {
+      throw unexpectedExtraArgument(subaction)
+    }
+
+    return { kind: 'seed' }
+  }
+
   if (action === 'migrate') {
     if (subaction === 'status') {
       if (parsed.options.to !== undefined) {
@@ -108,7 +124,7 @@ function parseDbCommandArgs(argv: string[]): DatabaseCommandAction {
   if (action == null) {
     throw new CliError({
       code: 'RMX_DB_ACTION_MISSING',
-      message: 'Expected a database action: create, drop, or migrate.',
+      message: 'Expected a database action: create, drop, migrate, or seed.',
       showHelp: true,
       title: 'Missing database action',
     })
@@ -127,17 +143,25 @@ async function loadDatabaseResource(databaseFile: string): Promise<DatabaseResou
 async function runDatabaseResourceAction(
   database: DatabaseResourceLifecycle,
   action: DatabaseCommandAction,
+  appRoot: string,
 ): Promise<void> {
   if (action.kind === 'create' || action.kind === 'drop') {
     await database[action.kind]()
     return
   }
 
-  let migrations = await loadMigrations('db/migrations')
-  let migrator = createMigrator(migrations)
   let client = await database.connect()
 
   try {
+    if (action.kind === 'seed') {
+      let seed = await loadSeedFunction(path.join(appRoot, SEED_MODULE_PATH))
+      await seed(client)
+      return
+    }
+
+    let migrations = await loadMigrations(path.join(appRoot, 'db', 'migrations'))
+    let migrator = createMigrator(migrations)
+
     if (action.kind === 'migrate') {
       let result =
         action.to === undefined
@@ -164,6 +188,21 @@ async function runDatabaseResourceAction(
     }
   } finally {
     await client.adapter.close?.()
+  }
+}
+
+type SeedFunction = (database: Database) => Promise<void>
+
+async function loadSeedFunction(seedFile: string): Promise<SeedFunction> {
+  let moduleExports: unknown = await import(seedFile)
+  let seed = getNamedExport(moduleExports, 'seed')
+  assertSeedFunction(seed)
+  return seed
+}
+
+function assertSeedFunction(value: unknown): asserts value is SeedFunction {
+  if (typeof value !== 'function') {
+    throw new Error('Seed module must export a named "seed" function.')
   }
 }
 
