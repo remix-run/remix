@@ -1,3 +1,4 @@
+import * as path from 'node:path'
 import MagicString from 'magic-string'
 
 import {
@@ -39,10 +40,21 @@ export async function emitResolvedModule(
   },
 ): Promise<EmitResult> {
   try {
-    let importUrls = await Promise.all(
-      resolvedModule.deps.map((depPath) => options.getServedUrl(depPath)),
+    let servedUrl = await options.getServedUrl(resolvedModule.identityPath)
+    let importUrlEntries = await Promise.all(
+      resolvedModule.deps.map(
+        async (depPath): Promise<[string, string]> => [
+          depPath,
+          await options.getServedUrl(depPath),
+        ],
+      ),
     )
-    let rewriteResult = await rewriteImports(resolvedModule, options)
+    let importUrlByDepPath = new Map(importUrlEntries)
+    let importUrls = importUrlEntries.map(([, url]) => url)
+    let rewriteResult = await rewriteImports(resolvedModule, {
+      importUrlByDepPath,
+      servedUrl,
+    })
     let finalCode = rewriteResult.code
 
     if (rewriteResult.sourceMap) {
@@ -50,7 +62,7 @@ export async function emitResolvedModule(
         let encoded = Buffer.from(rewriteResult.sourceMap).toString('base64')
         finalCode += `\n//# sourceMappingURL=data:application/json;base64,${encoded}`
       } else if (options.sourceMaps === 'external') {
-        finalCode += `\n//# sourceMappingURL=${await options.getServedUrl(resolvedModule.identityPath)}.map`
+        finalCode += `\n//# sourceMappingURL=${toRelativeServedUrl(servedUrl, `${servedUrl}.map`)}`
       }
     }
 
@@ -76,13 +88,18 @@ export async function emitResolvedModule(
 async function rewriteImports(
   resolvedModule: ResolvedModule,
   options: {
-    getServedUrl(identityPath: string): Promise<string>
+    importUrlByDepPath: Map<string, string>
+    servedUrl: string
   },
 ): Promise<{ code: string; sourceMap: string | null }> {
   let rewrittenSource = new MagicString(resolvedModule.rawCode)
 
   for (let imported of resolvedModule.imports) {
-    let url = await options.getServedUrl(imported.depPath)
+    let depUrl = options.importUrlByDepPath.get(imported.depPath)
+    if (depUrl === undefined) {
+      throw new Error(`Missing served URL for resolved import ${imported.depPath}`)
+    }
+    let url = toRelativeServedUrl(options.servedUrl, depUrl)
     rewrittenSource.overwrite(
       imported.start,
       imported.end,
@@ -100,6 +117,21 @@ async function rewriteImports(
       : resolvedModule.sourceMap
 
   return { code, sourceMap }
+}
+
+function toRelativeServedUrl(fromUrl: string, toUrl: string): string {
+  let from = new URL(fromUrl, 'http://remix.local')
+  let to = new URL(toUrl, from)
+
+  if (from.origin !== to.origin) {
+    return toUrl
+  }
+
+  let relative = path.posix.relative(path.posix.dirname(from.pathname), to.pathname)
+  if (relative === '' || (!relative.startsWith('.') && !relative.startsWith('/'))) {
+    relative = `./${relative}`
+  }
+  return `${relative}${to.search}${to.hash}`
 }
 
 async function createEmittedAsset(content: string): Promise<EmittedAsset> {
