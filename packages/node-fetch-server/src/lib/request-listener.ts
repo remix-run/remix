@@ -1,5 +1,6 @@
 import type * as http from 'node:http'
 import type * as http2 from 'node:http2'
+import * as net from 'node:net'
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
 import type { RequestLifecycle } from './request-abort.ts'
@@ -45,6 +46,14 @@ export interface RequestListenerOptions {
    * `https.createServer()`), the request URL will begin with `https:`.
    */
   protocol?: string
+  /**
+   * Trusts reverse proxy headers. When enabled, `Forwarded`, `X-Forwarded-Host`, and
+   * `X-Forwarded-Proto` can provide the incoming request URL host and protocol when `host` and
+   * `protocol` are not set. `Forwarded` and `X-Forwarded-For` can provide the client address for
+   * request listeners that read client information. Only enable this when your server is behind a
+   * trusted proxy that overwrites these headers.
+   */
+  trustProxy?: boolean
 }
 
 /**
@@ -141,11 +150,7 @@ export function createRequestListener(
   return async (req, res) => {
     let isResponseClosed = observeResponseClose(res)
     let request = createLazyRequest(req, res)
-    let client = {
-      address: req.socket.remoteAddress!,
-      family: req.socket.remoteFamily! as ClientAddress['family'],
-      port: req.socket.remotePort!,
-    }
+    let client = createClientAddress(req, options)
 
     let response: Response
     try {
@@ -378,9 +383,8 @@ function createRequestWithLifecycle(
   let method = req.method ?? 'GET'
   let headers = createHeaders(req)
 
-  let protocol =
-    options?.protocol ?? ('encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:')
-  let host = options?.host ?? headers.get('Host') ?? req.headers[':authority'] ?? 'localhost'
+  let protocol = getRequestProtocol(req, headers, options)
+  let host = getRequestHost(req, headers, options)
   let url = `${protocol}//${host}${req.url}`
 
   let init: RequestInit = { method, headers, signal: lifecycle.signal }
@@ -396,6 +400,221 @@ function createRequestWithLifecycle(
   }
 
   return new Request(url, init)
+}
+
+function getRequestProtocol(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  headers: Headers,
+  options?: RequestOptions,
+): string {
+  return (
+    options?.protocol ??
+    (options?.trustProxy ? getForwardedProtocol(headers) : undefined) ??
+    ('encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:')
+  )
+}
+
+function createClientAddress(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  options?: RequestOptions,
+): ClientAddress {
+  let forwardedClient = options?.trustProxy
+    ? getForwardedClientAddress(createHeaders(req))
+    : undefined
+  let address = forwardedClient?.address ?? req.socket.remoteAddress ?? ''
+
+  return {
+    address,
+    family: getClientAddressFamily(address, req.socket.remoteFamily!),
+    port: forwardedClient?.port ?? req.socket.remotePort!,
+  }
+}
+
+function getClientAddressFamily(address: string, fallbackFamily: string): ClientAddress['family'] {
+  let version = net.isIP(address)
+  if (version === 4) return 'IPv4'
+  if (version === 6) return 'IPv6'
+  return fallbackFamily as ClientAddress['family']
+}
+
+function getRequestHost(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  headers: Headers,
+  options?: RequestOptions,
+): string {
+  let authority = req.headers[':authority']
+
+  return (
+    options?.host ??
+    (options?.trustProxy ? getForwardedHost(headers) : undefined) ??
+    headers.get('Host') ??
+    (Array.isArray(authority) ? authority[0] : authority) ??
+    'localhost'
+  )
+}
+
+function getForwardedProtocol(headers: Headers): string | undefined {
+  return (
+    normalizeForwardedProtocol(getForwardedHeaderParameter(headers.get('Forwarded'), 'proto')) ??
+    getXForwardedProtoHeaderProtocol(headers.get('X-Forwarded-Proto'))
+  )
+}
+
+function getForwardedHost(headers: Headers): string | undefined {
+  return (
+    normalizeForwardedHost(getForwardedHeaderParameter(headers.get('Forwarded'), 'host')) ??
+    normalizeForwardedHost(getFirstHeaderValue(headers.get('X-Forwarded-Host')))
+  )
+}
+
+interface ForwardedClientAddress {
+  address: string
+  port?: number
+}
+
+function getForwardedClientAddress(headers: Headers): ForwardedClientAddress | undefined {
+  return (
+    normalizeForwardedClientAddress(getForwardedHeaderParameter(headers.get('Forwarded'), 'for')) ??
+    normalizeForwardedClientAddress(getFirstHeaderValue(headers.get('X-Forwarded-For')))
+  )
+}
+
+function getForwardedHeaderParameter(
+  value: string | null,
+  parameterName: string,
+): string | undefined {
+  if (value == null) return undefined
+
+  for (let element of splitHeaderValue(value, ',')) {
+    for (let parameter of splitHeaderValue(element, ';')) {
+      let index = parameter.indexOf('=')
+      if (index === -1) continue
+
+      let name = parameter.slice(0, index).trim().toLowerCase()
+      if (name !== parameterName) continue
+
+      return unquoteHeaderValue(parameter.slice(index + 1).trim())
+    }
+  }
+
+  return undefined
+}
+
+function getXForwardedProtoHeaderProtocol(value: string | null): string | undefined {
+  return normalizeForwardedProtocol(getFirstHeaderValue(value))
+}
+
+function getFirstHeaderValue(value: string | null): string | undefined {
+  if (value == null) return undefined
+
+  let firstValue = splitHeaderValue(value, ',')[0]
+  return firstValue == null ? undefined : unquoteHeaderValue(firstValue.trim())
+}
+
+function normalizeForwardedProtocol(value: string | undefined): string | undefined {
+  if (value == null) return undefined
+
+  let protocol = value.trim().toLowerCase()
+  if (protocol.endsWith(':')) protocol = protocol.slice(0, -1)
+
+  return protocol === 'http' || protocol === 'https' ? `${protocol}:` : undefined
+}
+
+function normalizeForwardedHost(value: string | undefined): string | undefined {
+  if (value == null) return undefined
+
+  let host = value.trim()
+  return host === '' ? undefined : host
+}
+
+function normalizeForwardedClientAddress(
+  value: string | undefined,
+): ForwardedClientAddress | undefined {
+  if (value == null) return undefined
+
+  let input = value.trim()
+  if (input === '' || input.toLowerCase() === 'unknown' || input.startsWith('_')) {
+    return undefined
+  }
+
+  let address = input
+  let port: number | undefined
+
+  if (address.startsWith('[')) {
+    let end = address.indexOf(']')
+    if (end === -1) return undefined
+
+    let portInput = address.slice(end + 1)
+    address = address.slice(1, end)
+    port = parseForwardedPort(portInput)
+  } else {
+    let colonIndex = address.lastIndexOf(':')
+    if (colonIndex !== -1 && address.indexOf(':') === colonIndex) {
+      port = parseForwardedPort(address.slice(colonIndex))
+      if (port !== undefined) address = address.slice(0, colonIndex)
+    }
+  }
+
+  return net.isIP(address) === 0 ? undefined : { address, port }
+}
+
+function parseForwardedPort(value: string): number | undefined {
+  if (!value.startsWith(':')) return undefined
+
+  let port = Number(value.slice(1))
+  return Number.isInteger(port) && port > 0 && port <= 65_535 ? port : undefined
+}
+
+function splitHeaderValue(value: string, delimiter: ',' | ';'): string[] {
+  let parts: string[] = []
+  let start = 0
+  let quoted = false
+  let escaped = false
+
+  for (let index = 0; index < value.length; index++) {
+    let char = value[index]
+
+    if (escaped) {
+      escaped = false
+      continue
+    }
+
+    if (quoted && char === '\\') {
+      escaped = true
+      continue
+    }
+
+    if (char === '"') {
+      quoted = !quoted
+      continue
+    }
+
+    if (!quoted && char === delimiter) {
+      parts.push(value.slice(start, index))
+      start = index + 1
+    }
+  }
+
+  parts.push(value.slice(start))
+  return parts
+}
+
+function unquoteHeaderValue(value: string): string {
+  if (!value.startsWith('"') || !value.endsWith('"')) return value
+
+  let unquoted = ''
+  for (let index = 1; index < value.length - 1; index++) {
+    let char = value[index]
+
+    if (char === '\\' && index + 1 < value.length - 1) {
+      index++
+      unquoted += value[index]
+    } else {
+      unquoted += char
+    }
+  }
+
+  return unquoted
 }
 
 /**

@@ -4,7 +4,7 @@ import { describe, it } from 'node:test'
 import type * as http from 'node:http'
 import * as stream from 'node:stream'
 
-import { type FetchHandler } from './fetch-handler.ts'
+import { type ClientAddress, type FetchHandler } from './fetch-handler.ts'
 import { createRequest, createRequestListener } from './request-listener.ts'
 
 describe('createRequestListener', () => {
@@ -737,6 +737,193 @@ describe('createRequestListener', () => {
     })
   })
 
+  it('ignores proxy headers by default', async (t) => {
+    let requestUrl = await captureRequestUrl(t, {
+      headers: {
+        Host: 'example.com',
+        Forwarded: 'for=203.0.113.43; proto=https; host=remix.run',
+        'X-Forwarded-Host': 'remix.run',
+        'X-Forwarded-Proto': 'https',
+      },
+    })
+    assert.equal(requestUrl, 'http://example.com/')
+  })
+
+  it('uses the `Forwarded` proto and host parameters when proxies are trusted', async (t) => {
+    let requestUrl = await captureRequestUrl(
+      t,
+      {
+        headers: {
+          Host: 'example.com',
+          Forwarded: 'for=203.0.113.43; proto=https; host=remix.run',
+        },
+      },
+      { trustProxy: true },
+    )
+    assert.equal(requestUrl, 'https://remix.run/')
+  })
+
+  it('uses quoted `Forwarded` proto and host values when proxies are trusted', async (t) => {
+    let requestUrl = await captureRequestUrl(
+      t,
+      {
+        headers: {
+          Host: 'example.com',
+          Forwarded: 'for="[2001:db8:cafe::17]"; proto="https"; host="remix.run"',
+        },
+      },
+      { trustProxy: true },
+    )
+    assert.equal(requestUrl, 'https://remix.run/')
+  })
+
+  it('uses `X-Forwarded-Host` and `X-Forwarded-Proto` when proxies are trusted', async (t) => {
+    let requestUrl = await captureRequestUrl(
+      t,
+      {
+        headers: {
+          Host: 'example.com',
+          'X-Forwarded-Host': 'remix.run',
+          'X-Forwarded-Proto': 'https',
+        },
+      },
+      { trustProxy: true },
+    )
+    assert.equal(requestUrl, 'https://remix.run/')
+  })
+
+  it('uses the first `X-Forwarded-Host` and `X-Forwarded-Proto` values when proxies are trusted', async (t) => {
+    let requestUrl = await captureRequestUrl(
+      t,
+      {
+        headers: {
+          Host: 'example.com',
+          'X-Forwarded-Host': 'remix.run, example.com',
+          'X-Forwarded-Proto': 'https, http',
+        },
+      },
+      { trustProxy: true },
+    )
+    assert.equal(requestUrl, 'https://remix.run/')
+  })
+
+  it('uses the host option before trusted proxy host headers', async (t) => {
+    let requestUrl = await captureRequestUrl(
+      t,
+      {
+        headers: {
+          Host: 'example.com',
+          Forwarded: 'host=remix.run',
+          'X-Forwarded-Host': 'remix.run',
+        },
+      },
+      {
+        host: 'app.example.com',
+        trustProxy: true,
+      },
+    )
+    assert.equal(requestUrl, 'http://app.example.com/')
+  })
+
+  it('ignores invalid forwarded protocol header values when proxies are trusted', async (t) => {
+    let requestUrl = await captureRequestUrl(
+      t,
+      {
+        headers: {
+          Host: 'example.com',
+          Forwarded: 'proto=javascript',
+          'X-Forwarded-Proto': 'file',
+        },
+      },
+      { trustProxy: true },
+    )
+    assert.equal(requestUrl, 'http://example.com/')
+  })
+
+  it('uses the `protocol` option before trusted proxy protocol headers', async (t) => {
+    let requestUrl = await captureRequestUrl(
+      t,
+      {
+        headers: {
+          Host: 'example.com',
+          Forwarded: 'proto=https',
+        },
+      },
+      {
+        protocol: 'http:',
+        trustProxy: true,
+      },
+    )
+    assert.equal(requestUrl, 'http://example.com/')
+  })
+
+  it('uses `X-Forwarded-For` for client address when proxies are trusted', async (t) => {
+    let client = await captureClientAddress(
+      t,
+      {
+        headers: {
+          'X-Forwarded-For': '203.0.113.43, 10.0.0.1',
+        },
+        socket: {
+          remoteAddress: '10.0.0.1',
+          remoteFamily: 'IPv4',
+          remotePort: 12345,
+        },
+      },
+      { trustProxy: true },
+    )
+
+    assert.deepEqual(client, {
+      address: '203.0.113.43',
+      family: 'IPv4',
+      port: 12345,
+    })
+  })
+
+  it('uses the `Forwarded` for parameter for client address when proxies are trusted', async (t) => {
+    let client = await captureClientAddress(
+      t,
+      {
+        headers: {
+          Forwarded: 'for="[2001:db8:cafe::17]:4711"',
+          'X-Forwarded-For': '203.0.113.43',
+        },
+        socket: {
+          remoteAddress: '10.0.0.1',
+          remoteFamily: 'IPv4',
+          remotePort: 12345,
+        },
+      },
+      { trustProxy: true },
+    )
+
+    assert.deepEqual(client, {
+      address: '2001:db8:cafe::17',
+      family: 'IPv6',
+      port: 4711,
+    })
+  })
+
+  it('ignores proxy client address headers by default', async (t) => {
+    let client = await captureClientAddress(t, {
+      headers: {
+        Forwarded: 'for=203.0.113.43',
+        'X-Forwarded-For': '203.0.113.43',
+      },
+      socket: {
+        remoteAddress: '10.0.0.1',
+        remoteFamily: 'IPv4',
+        remotePort: 12345,
+      },
+    })
+
+    assert.deepEqual(client, {
+      address: '10.0.0.1',
+      family: 'IPv4',
+      port: 12345,
+    })
+  })
+
   it('reads request method, headers, and body text', async (t) => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async (request) => {
@@ -1206,6 +1393,58 @@ async function assertLazyRequestBodyReadRejects(
   assert.equal(end.mock.calls.length, 0)
 }
 
+async function captureRequestUrl(
+  t: TestContext,
+  requestInit: Parameters<typeof createMockRequest>[0],
+  options?: Parameters<typeof createRequestListener>[1],
+): Promise<string | undefined> {
+  let requestUrl: string | undefined
+
+  await new Promise<void>((resolve) => {
+    let handler: FetchHandler = async (request) => {
+      requestUrl = request.url
+      return new Response('Hello, world!')
+    }
+
+    let listener = createRequestListener(handler, options)
+    assert.ok(listener)
+
+    let req = createMockRequest(requestInit)
+    let res = createMockResponse({ req })
+    t.mock.method(res, 'end', () => resolve())
+
+    listener(req, res)
+  })
+
+  return requestUrl
+}
+
+async function captureClientAddress(
+  t: TestContext,
+  requestInit: Parameters<typeof createMockRequest>[0],
+  options?: Parameters<typeof createRequestListener>[1],
+): Promise<ClientAddress | undefined> {
+  let clientAddress: ClientAddress | undefined
+
+  await new Promise<void>((resolve) => {
+    let handler: FetchHandler = async (_request, client) => {
+      clientAddress = client
+      return new Response('Hello, world!')
+    }
+
+    let listener = createRequestListener(handler, options)
+    assert.ok(listener)
+
+    let req = createMockRequest(requestInit)
+    let res = createMockResponse({ req })
+    t.mock.method(res, 'end', () => resolve())
+
+    listener(req, res)
+  })
+
+  return clientAddress
+}
+
 function markMockRequestAborted(req: http.IncomingMessage): void {
   Object.defineProperties(req, {
     aborted: {
@@ -1249,6 +1488,8 @@ function createMockRequest({
   socket?: {
     encrypted?: boolean
     remoteAddress?: string
+    remoteFamily?: string
+    remotePort?: number
   }
   body?: string | Buffer
 } = {}): http.IncomingMessage {
