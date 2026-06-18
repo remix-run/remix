@@ -333,6 +333,10 @@ describe('asset server HMR', { skip: isBun }, () => {
     await fs.writeFile(stylesheetPath, 'body { background: url("foo); }\n')
     await failedStyleRequest
 
+    // The fixture watcher polls every 50ms, so avoid writing the recovery content
+    // before the watcher has settled after observing the broken content.
+    await page.waitForTimeout(75)
+
     await waitForStylesheetLinkCount(page, '/assets/app/styles.css', 1)
     await waitForComputedStyle(page, '[data-testid="increment"]', 'color', 'rgb(255, 0, 0)')
 
