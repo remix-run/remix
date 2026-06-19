@@ -1466,10 +1466,7 @@ type PageDiagnostics = {
 
 const pageDiagnostics = new WeakMap<TestPage, PageDiagnostics>()
 
-async function serveNodeHmrFixture(
-  t: TestContext,
-  server: NodeHmrTestServer,
-): Promise<TestPage> {
+async function serveNodeHmrFixture(t: TestContext, server: NodeHmrTestServer): Promise<TestPage> {
   let page = await t.serve(server)
   attachPageDiagnostics(page, () => server.output)
   return page
@@ -2127,30 +2124,6 @@ function getNodeHmrServerSource(
     `let slowAssetMs = ${JSON.stringify(options.slowAssetMs ?? 0)}`,
     `let slowDisposeMs = ${JSON.stringify(options.slowDisposeMs ?? 0)}`,
     `let slowDocumentMs = ${JSON.stringify(options.slowDocumentMs ?? 0)}`,
-    'let loggingBrowserEventController = browserEventController && {',
-    '  url: browserEventController.url,',
-    '  register(source) {',
-    '    console.log(JSON.stringify({ type: "asset-hmr:register", url: browserEventController.url }))',
-    '    let registration = browserEventController.register({',
-    '      async handleFileEvents(events) {',
-    '        console.log(JSON.stringify({ type: "asset-hmr:file-events", events }))',
-    '        let intents = await source.handleFileEvents(events)',
-    '        console.log(JSON.stringify({ type: "asset-hmr:intents", intents }))',
-    '        return intents',
-    '      },',
-    '    })',
-    '    return {',
-    '      close() {',
-    '        console.log(JSON.stringify({ type: "asset-hmr:close" }))',
-    '        registration.close()',
-    '      },',
-    '      updateWatchedFiles(delta) {',
-    '        console.log(JSON.stringify({ type: "asset-hmr:watched-files", delta }))',
-    '        registration.updateWatchedFiles(delta)',
-    '      },',
-    '    }',
-    '  },',
-    '}',
     'void sideEffect',
     'let assetServer = createAssetServer({',
     `  allow: [${JSON.stringify(`${appDir}/**`)}, 'packages/ui/**', 'packages/ui-hmr/**'],`,
@@ -2159,7 +2132,7 @@ function getNodeHmrServerSource(
     `    '/app/*path': ${JSON.stringify(`${appDir}/*path`)},`,
     "    '/packages/*path': 'packages/*path',",
     '  },',
-    '  hmr: { browserEventController: loggingBrowserEventController },',
+    '  hmr: { browserEventController },',
     '  onError(error) {',
     '    console.error(error)',
     '  },',

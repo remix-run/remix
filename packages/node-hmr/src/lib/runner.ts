@@ -94,6 +94,13 @@ const browserIntentFlushDelayMs = 75
 const browserHmrRequestTimeoutMs = 1_000
 const shutdownTimeoutMs = 5_000
 const styles = createStyles()
+const windowsDriveLetterRE = /^[A-Za-z]:\//
+
+export function normalizeBrowserHmrFilePath(filePath: string): string {
+  return filePath.replace(/\\/g, '/').replace(windowsDriveLetterRE, (prefix) => {
+    return `${prefix[0]!.toUpperCase()}${prefix.slice(1)}`
+  })
+}
 
 export function getBrowserHmrFileEventsForWatchedFiles(options: {
   changedPaths: readonly string[]
@@ -102,10 +109,10 @@ export function getBrowserHmrFileEventsForWatchedFiles(options: {
 }): BrowserHmrFileEvent[] {
   return [
     ...options.changedPaths
-      .filter((filePath) => options.watchedFiles.has(filePath))
+      .filter((filePath) => options.watchedFiles.has(normalizeBrowserHmrFilePath(filePath)))
       .map((filePath) => ({ event: 'change' as const, filePath })),
     ...[...options.restartPathEvents]
-      .filter(([filePath]) => options.watchedFiles.has(filePath))
+      .filter(([filePath]) => options.watchedFiles.has(normalizeBrowserHmrFilePath(filePath)))
       .map(([filePath, event]) => ({ event, filePath })),
   ]
 }
@@ -459,15 +466,17 @@ export function createWatchedProcessController(options: {
     }
 
     for (let file of delta.add) {
-      refCounts.set(file, (refCounts.get(file) ?? 0) + 1)
+      let filePath = normalizeBrowserHmrFilePath(resolve(options.cwd, file))
+      refCounts.set(filePath, (refCounts.get(filePath) ?? 0) + 1)
     }
     for (let file of delta.remove) {
-      let count = refCounts.get(file)
+      let filePath = normalizeBrowserHmrFilePath(resolve(options.cwd, file))
+      let count = refCounts.get(filePath)
       if (count === undefined) continue
       if (count <= 1) {
-        refCounts.delete(file)
+        refCounts.delete(filePath)
       } else {
-        refCounts.set(file, count - 1)
+        refCounts.set(filePath, count - 1)
       }
     }
 

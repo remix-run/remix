@@ -8,6 +8,7 @@ import {
   buildChildProcessArgs,
   getBrowserHmrFileEventsForWatchedFiles,
   getWatchedDirectoriesForFiles,
+  normalizeBrowserHmrFilePath,
   resolveChokidarWatchOptions,
 } from './runner.ts'
 
@@ -121,5 +122,25 @@ describe('getBrowserHmrFileEventsForWatchedFiles', () => {
         { event: 'add', filePath: '/app/routes/about.tsx' },
       ],
     )
+  })
+
+  it('matches Windows watcher paths against normalized browser watched files', () => {
+    assert.deepEqual(
+      getBrowserHmrFileEventsForWatchedFiles({
+        changedPaths: ['d:\\app\\routes\\home.tsx', 'd:\\app\\routes\\ignored.tsx'],
+        restartPathEvents: new Map([['d:\\app\\routes\\about.tsx', 'add']]),
+        watchedFiles: new Set(['D:/app/routes/home.tsx', 'D:/app/routes/about.tsx']),
+      }),
+      [
+        { event: 'change', filePath: 'd:\\app\\routes\\home.tsx' },
+        { event: 'add', filePath: 'd:\\app\\routes\\about.tsx' },
+      ],
+    )
+  })
+})
+
+describe('normalizeBrowserHmrFilePath', () => {
+  it('normalizes separators and Windows drive letter casing', () => {
+    assert.equal(normalizeBrowserHmrFilePath('d:\\app\\routes\\home.tsx'), 'D:/app/routes/home.tsx')
   })
 })
