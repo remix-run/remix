@@ -71,6 +71,15 @@ export interface RoutePatternCapture {
 declare const brand: unique symbol
 
 /**
+ * Internal backing shape of a {@link RoutePattern}. The parsed representation is stored on the
+ * instance but kept off the public type so consumers cannot read parser tokens directly; the
+ * helpers in this module reach it through {@link getRoutePatternParts}.
+ */
+interface RoutePatternInternals {
+  parsed: ParsedRoutePattern
+}
+
+/**
  * A parsed route pattern.
  *
  * Create one with {@link RoutePattern.parse}. The constructor is public but takes a parsed
@@ -79,9 +88,6 @@ declare const brand: unique symbol
  */
 export class RoutePattern<source extends string = string> {
   declare readonly [brand]: source
-
-  /** Parsed representation of this pattern. Not part of the public API. */
-  private readonly parsed: ParsedRoutePattern
 
   /**
    * Create a new `RoutePattern` from a parsed representation.
@@ -92,7 +98,7 @@ export class RoutePattern<source extends string = string> {
    * @param parsed The parsed route pattern.
    */
   constructor(parsed: ParsedRoutePattern) {
-    this.parsed = parsed
+    ;(this as unknown as RoutePatternInternals).parsed = parsed
   }
 
   /**
@@ -107,7 +113,7 @@ export class RoutePattern<source extends string = string> {
 
   /** Normalized string representation of this pattern. */
   get source(): string {
-    return serializePattern(this.parsed)
+    return serializePattern(getRoutePatternParts(this))
   }
 
   /**
@@ -125,7 +131,7 @@ export class RoutePattern<source extends string = string> {
    * @returns The serialized protocol, hostname, port, pathname, and search.
    */
   toJSON(): RoutePatternJSON {
-    return serializePatternParts(this.parsed)
+    return serializePatternParts(getRoutePatternParts(this))
   }
 }
 
@@ -136,7 +142,7 @@ export function createRoutePattern<source extends string>(
 }
 
 export function getRoutePatternParts(pattern: RoutePattern): ParsedRoutePattern {
-  return (pattern as unknown as { parsed: ParsedRoutePattern }).parsed
+  return (pattern as unknown as RoutePatternInternals).parsed
 }
 
 /**
