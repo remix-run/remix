@@ -1,7 +1,7 @@
 import {
   getRoutePatternParts,
   RoutePattern,
-  type ParsedRoutePattern,
+  type RoutePatternParts,
   type PartPattern,
 } from './route-pattern.ts'
 import type { ParseParams } from './types/params.ts'
@@ -174,7 +174,7 @@ function hrefPart(
 }
 
 function hrefSearch(
-  constraints: ParsedRoutePattern['search'],
+  constraints: RoutePatternParts['search'],
   searchParams: SearchParams,
 ): string | undefined {
   if (constraints.size === 0 && Object.keys(searchParams).length === 0) {

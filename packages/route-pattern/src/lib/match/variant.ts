@@ -1,6 +1,6 @@
 import { getRoutePatternParts } from '../route-pattern.ts'
 import type {
-  ParsedRoutePattern,
+  RoutePatternParts,
   PartPattern,
   PartPatternToken,
   RoutePattern,
@@ -39,7 +39,7 @@ export function generateVariants(
 type ProtocolVariant = 'http' | 'https'
 
 function generateProtocolVariants(
-  protocol: ParsedRoutePattern['protocol'],
+  protocol: RoutePatternParts['protocol'],
 ): ReadonlyArray<ProtocolVariant> {
   if (protocol === null || protocol === 'http(s)') return ['http', 'https']
   return [protocol]

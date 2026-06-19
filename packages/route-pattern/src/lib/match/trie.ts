@@ -1,5 +1,5 @@
 import { getRoutePatternParts } from '../route-pattern.ts'
-import type { ParsedRoutePattern, RoutePattern } from '../route-pattern.ts'
+import type { RoutePatternParts, RoutePattern } from '../route-pattern.ts'
 import { decodeHostname } from './decode.ts'
 import { generateVariants, type Param } from './variant.ts'
 import { unreachable } from '../unreachable.ts'
@@ -348,7 +348,7 @@ type PathnameNode<data> = {
   wildcard: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
   values: Array<{
     pattern: RoutePattern
-    patternParts: ParsedRoutePattern
+    patternParts: RoutePatternParts
     data: data
     requiredParams: Array<Param>
   }>

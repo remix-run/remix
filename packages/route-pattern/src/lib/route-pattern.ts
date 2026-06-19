@@ -16,7 +16,7 @@ export type PartPattern = {
   readonly type: 'hostname' | 'pathname'
 }
 
-export type ParsedRoutePattern = {
+export type RoutePatternParts = {
   readonly protocol: 'http' | 'https' | 'http(s)' | null
   readonly hostname: PartPattern | null
   readonly port: string | null
@@ -71,15 +71,6 @@ export interface RoutePatternCapture {
 declare const brand: unique symbol
 
 /**
- * Internal backing shape of a {@link RoutePattern}. The parsed representation is stored on the
- * instance but kept off the public type so consumers cannot read parser tokens directly; the
- * helpers in this module reach it through {@link getRoutePatternParts}.
- */
-interface RoutePatternInternals {
-  parsed: ParsedRoutePattern
-}
-
-/**
  * A parsed route pattern.
  *
  * Create one with {@link RoutePattern.parse}. The constructor is public but takes a parsed
@@ -89,16 +80,19 @@ interface RoutePatternInternals {
 export class RoutePattern<source extends string = string> {
   declare readonly [brand]: source
 
+  /** Parsed parts of this pattern. Internal; read it with {@link getRoutePatternParts}. */
+  readonly _parts: RoutePatternParts
+
   /**
-   * Create a new `RoutePattern` from a parsed representation.
+   * Create a new `RoutePattern` from its parsed parts.
    *
-   * The parsed representation is not part of the public API. Use {@link RoutePattern.parse} to
-   * create a pattern from a source string.
+   * The parts are not part of the public API. Use {@link RoutePattern.parse} to create a pattern
+   * from a source string.
    *
-   * @param parsed The parsed route pattern.
+   * @param parts The parsed parts of the pattern.
    */
-  constructor(parsed: ParsedRoutePattern) {
-    ;(this as unknown as RoutePatternInternals).parsed = parsed
+  constructor(parts: RoutePatternParts) {
+    this._parts = parts
   }
 
   /**
@@ -113,7 +107,7 @@ export class RoutePattern<source extends string = string> {
 
   /** Normalized string representation of this pattern. */
   get source(): string {
-    return serializePattern(getRoutePatternParts(this))
+    return serializePattern(this._parts)
   }
 
   /**
@@ -131,18 +125,18 @@ export class RoutePattern<source extends string = string> {
    * @returns The serialized protocol, hostname, port, pathname, and search.
    */
   toJSON(): RoutePatternJSON {
-    return serializePatternParts(getRoutePatternParts(this))
+    return serializePatternParts(this._parts)
   }
 }
 
 export function createRoutePattern<source extends string>(
-  parsed: ParsedRoutePattern,
+  parts: RoutePatternParts,
 ): RoutePattern<source> {
-  return new RoutePattern<source>(parsed)
+  return new RoutePattern<source>(parts)
 }
 
-export function getRoutePatternParts(pattern: RoutePattern): ParsedRoutePattern {
-  return (pattern as unknown as RoutePatternInternals).parsed
+export function getRoutePatternParts(pattern: RoutePattern): RoutePatternParts {
+  return pattern._parts
 }
 
 /**

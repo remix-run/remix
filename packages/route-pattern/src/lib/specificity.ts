@@ -1,5 +1,5 @@
 import { getRoutePatternParts } from './route-pattern.ts'
-import type { ParsedRoutePattern } from './route-pattern.ts'
+import type { RoutePatternParts } from './route-pattern.ts'
 import type { Match } from './match/types.ts'
 import { decodeHostname } from './match/decode.ts'
 
@@ -90,8 +90,8 @@ export function compare(a: Match, b: Match): -1 | 0 | 1 {
 }
 
 function compareProtocol(
-  a: ParsedRoutePattern['protocol'],
-  b: ParsedRoutePattern['protocol'],
+  a: RoutePatternParts['protocol'],
+  b: RoutePatternParts['protocol'],
 ): -1 | 0 | 1 {
   let aSpecificity = a === 'http' || a === 'https' ? 1 : 0
   let bSpecificity = b === 'http' || b === 'https' ? 1 : 0
@@ -100,7 +100,7 @@ function compareProtocol(
   return 0
 }
 
-function comparePort(a: ParsedRoutePattern['port'], b: ParsedRoutePattern['port']): -1 | 0 | 1 {
+function comparePort(a: RoutePatternParts['port'], b: RoutePatternParts['port']): -1 | 0 | 1 {
   if (a !== null && b === null) return 1
   if (a === null && b !== null) return -1
   return 0
@@ -188,10 +188,7 @@ function comparePathname(
   return 0
 }
 
-function compareSearch(
-  a: ParsedRoutePattern['search'],
-  b: ParsedRoutePattern['search'],
-): -1 | 0 | 1 {
+function compareSearch(a: RoutePatternParts['search'], b: RoutePatternParts['search']): -1 | 0 | 1 {
   let aSpecificity = searchSpecificity(a)
   let bSpecificity = searchSpecificity(b)
 
@@ -204,7 +201,7 @@ function compareSearch(
   return 0
 }
 
-function searchSpecificity(constraints: ParsedRoutePattern['search']): {
+function searchSpecificity(constraints: RoutePatternParts['search']): {
   key: number
   keyValue: number
 } {

@@ -1,5 +1,5 @@
 import { createRoutePattern, getRoutePatternParts, RoutePattern } from './route-pattern.ts'
-import type { ParsedRoutePattern, PartPattern, PartPatternToken } from './route-pattern.ts'
+import type { RoutePatternParts, PartPattern, PartPatternToken } from './route-pattern.ts'
 import type { JoinPatterns } from './types/join.ts'
 
 /**
@@ -105,9 +105,9 @@ function joinPathname(base: PartPattern, next: PartPattern): PartPattern {
  * @private
  */
 function joinSearch(
-  base: ParsedRoutePattern['search'],
-  next: ParsedRoutePattern['search'],
-): ParsedRoutePattern['search'] {
+  base: RoutePatternParts['search'],
+  next: RoutePatternParts['search'],
+): RoutePatternParts['search'] {
   let result = new Map<string, Set<string>>()
 
   for (let [name, values] of base) {

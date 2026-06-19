@@ -4,7 +4,7 @@ import dedent from 'dedent'
 
 import { ParseError, parsePart, parsePattern } from './parse.ts'
 import { createRoutePattern, getRoutePatternParts, RoutePattern } from '../route-pattern.ts'
-import type { ParsedRoutePattern, PartPattern } from '../route-pattern.ts'
+import type { RoutePatternParts, PartPattern } from '../route-pattern.ts'
 
 describe('ParseError', () => {
   it('exposes type, source, and index properties', () => {
@@ -262,7 +262,7 @@ describe('parsePattern', () => {
   function assertParse(
     source: string,
     expected: {
-      protocol?: ParsedRoutePattern['protocol']
+      protocol?: RoutePatternParts['protocol']
       hostname?: string
       port?: string
       pathname?: string
