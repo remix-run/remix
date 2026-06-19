@@ -1338,7 +1338,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
       await ignoreAbortedNavigation(reloadWhileBroken)
       await waitForText(page, '[data-testid="server-message"]', 'Server: after fix')
-      await requestFailures.assertNone()
+      await requestFailures.assertNone(server.output)
       assert.ok(server.readyCount > 1)
     } finally {
       await server?.close()
@@ -1908,7 +1908,17 @@ function getNodeHmrProxyDevSource(): string {
     '  xForwardedHeaders: true,',
     '})',
     '',
-    'let server = createServer(createRequestListener((request) => fetchWhenReady(request)))',
+    'let server = createServer(',
+    '  createRequestListener((request) => fetchWhenReady(request), {',
+    '    onError(error) {',
+    "      console.error('[node-hmr-proxy:onError]', formatError(error))",
+    "      return new Response('Internal Server Error', {",
+    "        headers: { 'Content-Type': 'text/plain' },",
+    '        status: 500,',
+    '      })',
+    '    },',
+    '  }),',
+    ')',
     '',
     'server.listen(originPort, "127.0.0.1")',
     '',
@@ -1931,11 +1941,28 @@ function getNodeHmrProxyDevSource(): string {
     '    try {',
     '      response = normalizeProxyResponse(await proxyFetch(createProxyRequest(request)))',
     '    } catch (error) {',
+    "      console.error('[node-hmr-proxy:fetch-error]', JSON.stringify({",
+    '        currentGeneration: app.generation,',
+    '        error: formatError(error),',
+    '        generation,',
+    '        method: request.method,',
+    '        url: request.url,',
+    '      }))',
     '      await app.ready()',
     '      if (shouldRetryRequest(request) && app.generation !== generation) {',
     '        continue',
     '      }',
     '      throw error',
+    '    }',
+    '',
+    '    if (response.status >= 500) {',
+    "      console.error('[node-hmr-proxy:response]', JSON.stringify({",
+    '        currentGeneration: app.generation,',
+    '        generation,',
+    '        method: request.method,',
+    '        status: response.status,',
+    '        url: request.url,',
+    '      }))',
     '    }',
     '',
     '    if (!shouldRetryResponse(request, response)) {',
@@ -1970,6 +1997,20 @@ function getNodeHmrProxyDevSource(): string {
     'function getRequestDuplex(request) {',
     "  if (request.method === 'GET' || request.method === 'HEAD') return undefined",
     "  return { duplex: 'half' }",
+    '}',
+    '',
+    'function formatError(error) {',
+    '  if (!(error instanceof Error)) return String(error)',
+    '  return JSON.stringify({',
+    '    cause: error.cause instanceof Error ? {',
+    '      message: error.cause.message,',
+    '      name: error.cause.name,',
+    '      stack: error.cause.stack,',
+    '    } : error.cause,',
+    '    message: error.message,',
+    '    name: error.name,',
+    '    stack: error.stack,',
+    '  })',
     '}',
     '',
   ].join('\n')
@@ -2642,7 +2683,7 @@ async function ignoreAbortedNavigation(navigation: Promise<unknown>): Promise<vo
 function monitorLocalRequestFailures(
   page: TestPage,
   baseUrl: string,
-): { assertNone(): Promise<void> } {
+): { assertNone(diagnostics?: string): Promise<void> } {
   let origin = new URL(baseUrl).origin
   let failures: string[] = []
   let failureDetails: Array<Promise<void>> = []
@@ -2676,9 +2717,13 @@ function monitorLocalRequestFailures(
   })
 
   return {
-    async assertNone() {
+    async assertNone(diagnostics?: string) {
       await Promise.all(failureDetails)
-      assert.equal(failures.join('\n'), '')
+      let message = failures.join('\n')
+      if (message && diagnostics) {
+        message += `\n\nDev server output:\n${diagnostics}`
+      }
+      assert.equal(message, '')
     },
   }
 }
