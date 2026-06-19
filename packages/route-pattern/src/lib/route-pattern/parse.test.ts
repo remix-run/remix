@@ -3,7 +3,7 @@ import { describe, it } from '@remix-run/test'
 import dedent from 'dedent'
 
 import { ParseError, parsePart, parsePattern } from './parse.ts'
-import { createRoutePattern, getRoutePatternParts, RoutePattern } from '../route-pattern.ts'
+import { createRoutePattern, RoutePattern } from '../route-pattern.ts'
 import type { RoutePatternParts, PartPattern } from '../route-pattern.ts'
 
 describe('ParseError', () => {
@@ -277,7 +277,7 @@ describe('parsePattern', () => {
         expectedSearch.set(name, value.length === 0 ? new Set() : new Set(value))
       }
     }
-    assert.deepEqual(getRoutePatternParts(pattern), {
+    assert.deepEqual(pattern._parts, {
       protocol: expected.protocol ?? null,
       hostname: expected.hostname ? parsePart(expected.hostname, { type: 'hostname' }) : null,
       port: expected.port ?? null,
@@ -287,9 +287,9 @@ describe('parsePattern', () => {
   }
 
   it('parses protocol', () => {
-    assert.equal(getRoutePatternParts(parsePattern('http://')).protocol, 'http')
-    assert.equal(getRoutePatternParts(parsePattern('https://')).protocol, 'https')
-    assert.equal(getRoutePatternParts(parsePattern('http(s)://')).protocol, 'http(s)')
+    assert.equal(parsePattern('http://')._parts.protocol, 'http')
+    assert.equal(parsePattern('https://')._parts.protocol, 'https')
+    assert.equal(parsePattern('http(s)://')._parts.protocol, 'http(s)')
   })
 
   it('parses hostname', () => {

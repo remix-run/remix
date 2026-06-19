@@ -80,7 +80,7 @@ declare const brand: unique symbol
 export class RoutePattern<source extends string = string> {
   declare readonly [brand]: source
 
-  /** Parsed parts of this pattern. Internal; read it with {@link getRoutePatternParts}. */
+  /** Parsed parts of this pattern. Internal; not part of the public API. */
   readonly _parts: RoutePatternParts
 
   /**
@@ -135,10 +135,6 @@ export function createRoutePattern<source extends string>(
   return new RoutePattern<source>(parts)
 }
 
-export function getRoutePatternParts(pattern: RoutePattern): RoutePatternParts {
-  return pattern._parts
-}
-
 /**
  * Returns the hostname and pathname captures in a pattern in source order without exposing parsed
  * pattern internals.
@@ -147,7 +143,7 @@ export function getRoutePatternParts(pattern: RoutePattern): RoutePatternParts {
  * @returns Metadata for each variable and wildcard in the pattern.
  */
 export function getRoutePatternCaptures(pattern: RoutePattern): ReadonlyArray<RoutePatternCapture> {
-  let parsed = getRoutePatternParts(pattern)
+  let parsed = pattern._parts
   let captures: Array<RoutePatternCapture> = []
 
   if (parsed.hostname) collectCaptures(parsed.hostname, captures)

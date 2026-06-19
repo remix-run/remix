@@ -1,9 +1,4 @@
-import {
-  getRoutePatternParts,
-  RoutePattern,
-  type RoutePatternParts,
-  type PartPattern,
-} from './route-pattern.ts'
+import { RoutePattern, type RoutePatternParts, type PartPattern } from './route-pattern.ts'
 import type { ParseParams } from './types/params.ts'
 import type { Split, SplitPattern } from './types/split.ts'
 import type { Simplify } from './types/utils.ts'
@@ -63,7 +58,7 @@ export function createHref<source extends string>(
   ...args: CreateHrefArgs<source>
 ): string {
   pattern = typeof pattern === 'string' ? RoutePattern.parse(pattern) : pattern
-  let patternParts = getRoutePatternParts(pattern)
+  let patternParts = pattern._parts
   let [params, searchParams] = args
   searchParams ??= {}
 

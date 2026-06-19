@@ -1,4 +1,3 @@
-import { getRoutePatternParts } from '../route-pattern.ts'
 import type { RoutePatternParts, RoutePattern } from '../route-pattern.ts'
 import { decodeHostname } from './decode.ts'
 import { generateVariants, type Param } from './variant.ts'
@@ -19,7 +18,7 @@ export class Trie<data = unknown> {
   }
 
   insert(pattern: RoutePattern, data: data): void {
-    let patternParts = getRoutePatternParts(pattern)
+    let patternParts = pattern._parts
 
     for (let variant of generateVariants(pattern, { ignoreCase: this.ignoreCase })) {
       let hostnameNode = this.#root[variant.protocol]

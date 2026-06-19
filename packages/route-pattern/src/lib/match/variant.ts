@@ -1,4 +1,3 @@
-import { getRoutePatternParts } from '../route-pattern.ts'
 import type {
   RoutePatternParts,
   PartPattern,
@@ -20,7 +19,7 @@ export function generateVariants(
   pattern: RoutePattern,
   options?: { ignoreCase?: boolean },
 ): ReadonlyArray<Variant> {
-  let patternParts = getRoutePatternParts(pattern)
+  let patternParts = pattern._parts
   let result: Array<Variant> = []
 
   for (let protocol of generateProtocolVariants(patternParts.protocol)) {

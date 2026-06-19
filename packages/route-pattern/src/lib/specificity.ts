@@ -1,4 +1,3 @@
-import { getRoutePatternParts } from './route-pattern.ts'
 import type { RoutePatternParts } from './route-pattern.ts'
 import type { Match } from './match/types.ts'
 import { decodeHostname } from './match/decode.ts'
@@ -66,8 +65,8 @@ export function compare(a: Match, b: Match): -1 | 0 | 1 {
   if (a.url.href !== b.url.href) {
     throw new Error(`Cannot compare matches for different URLs: ${a.url.href} vs ${b.url.href}`)
   }
-  let aParts = getRoutePatternParts(a.pattern)
-  let bParts = getRoutePatternParts(b.pattern)
+  let aParts = a.pattern._parts
+  let bParts = b.pattern._parts
 
   let protocolResult = compareProtocol(aParts.protocol, bParts.protocol)
   if (protocolResult !== 0) return protocolResult
