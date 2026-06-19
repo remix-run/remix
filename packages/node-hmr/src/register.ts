@@ -19,6 +19,7 @@ const runtime = installNodeHmrRuntime({
 })
 const rootPath = getRegisterUrlParam('rootPath')
 let invalidatedUrlTimestamps = new Map<string, number>()
+let updateQueue = Promise.resolve()
 const componentHmrRuntimeUrl = import.meta.resolve('@remix-run/ui-hmr/server-runtime')
 
 const componentHmrRefreshSpecifiers = ['remix/ui/dev/refresh', '@remix-run/ui/dev/refresh'] as const
@@ -95,13 +96,8 @@ process.on('message', (message: unknown) => {
 
   if (!isHmrUpdateMessage(message)) return
 
-  invalidatedUrlTimestamps = new Map(Object.entries(message.invalidatedUrls ?? {}))
-  runtime.update(message.url, message.timestamp, message.acceptedUrl).catch((error: unknown) => {
-    process.send?.({
-      type: 'node-hmr:child:restart-requested',
-      message: error instanceof Error ? error.message : String(error),
-    })
-  })
+  updateQueue = updateQueue.then(() => handleHotUpdateMessage(message))
+  void updateQueue
 })
 
 process.once('SIGINT', () => disposeOnSignal('SIGINT'))
@@ -249,6 +245,24 @@ function addTimestampQuery(specifier: string, timestamp: number): string {
 function isInsideRoot(filePath: string, root: string): boolean {
   let relativePath = relative(root, filePath)
   return relativePath === '' || (!relativePath.startsWith('..') && !isAbsolute(relativePath))
+}
+
+async function handleHotUpdateMessage(message: {
+  acceptedUrl?: string
+  invalidatedUrls?: Record<string, number>
+  timestamp: number
+  type: 'node-hmr:parent:hot-module-changed'
+  url: string
+}): Promise<void> {
+  invalidatedUrlTimestamps = new Map(Object.entries(message.invalidatedUrls ?? {}))
+  try {
+    await runtime.update(message.url, message.timestamp, message.acceptedUrl)
+  } catch (error: unknown) {
+    process.send?.({
+      type: 'node-hmr:child:restart-requested',
+      message: error instanceof Error ? error.message : String(error),
+    })
+  }
 }
 
 function isHmrUpdateMessage(message: unknown): message is {

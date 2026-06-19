@@ -1262,6 +1262,7 @@ async function createReadyGenerationFixture(
     ...files,
     'dev.ts': [
       `import { createServer } from 'node:http'`,
+      `import { fileURLToPath } from 'node:url'`,
       `import { run } from ${JSON.stringify(nodeHmrImportUrl)}`,
       ``,
       `let childPort = 0`,
@@ -1273,7 +1274,7 @@ async function createReadyGenerationFixture(
       `let app = run('server.ts', {`,
       `  env: {`,
       `    ...process.env,`,
-      `    CHILD_PORT_FILE: new URL('./child-port.txt', import.meta.url).pathname,`,
+      `    CHILD_PORT_FILE: fileURLToPath(new URL('./child-port.txt', import.meta.url)),`,
       `  },`,
       `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
       `})`,
