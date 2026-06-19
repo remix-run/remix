@@ -399,7 +399,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -637,7 +637,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -683,7 +683,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -736,7 +736,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -775,7 +775,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -821,7 +821,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -860,7 +860,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -905,7 +905,7 @@ describe('asset server HMR', { skip: isBun }, () => {
     try {
       await write(fixture.rootDir, 'app/stable.ts', 'export const foo = {}\n')
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -956,7 +956,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -996,7 +996,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -1039,7 +1039,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -1077,7 +1077,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -1121,7 +1121,7 @@ describe('asset server HMR', { skip: isBun }, () => {
     try {
       await write(fixture.rootDir, 'app/stable.ts', 'export const foo = {}\n')
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -1163,7 +1163,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -1198,7 +1198,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -1235,7 +1235,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
       await page.goto('/')
@@ -1277,7 +1277,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let ready = await server.waitForReady(0)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
@@ -1314,7 +1314,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let requestFailures = monitorLocalRequestFailures(page, server.baseUrl)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
@@ -1358,7 +1358,7 @@ describe('asset server HMR', { skip: isBun }, () => {
 
     try {
       server = await startNodeHmrFixtureServer(fixture)
-      let page = await t.serve(server)
+      let page = await serveNodeHmrFixture(t, server)
       let requestFailures = monitorLocalRequestFailures(page, server.baseUrl)
       let connected = waitForConsoleMessage(page, '[remix] HMR connected')
 
@@ -1454,6 +1454,90 @@ type NodeHmrTestServer = {
 }
 
 type TestPage = Awaited<ReturnType<TestContext['serve']>>
+
+type PageDiagnostics = {
+  consoleMessages: string[]
+  getServerOutput?: () => string
+  navigations: string[]
+  pageErrors: string[]
+  requestFailures: string[]
+  responseFailures: string[]
+}
+
+const pageDiagnostics = new WeakMap<TestPage, PageDiagnostics>()
+
+async function serveNodeHmrFixture(
+  t: TestContext,
+  server: NodeHmrTestServer,
+): Promise<TestPage> {
+  let page = await t.serve(server)
+  attachPageDiagnostics(page, () => server.output)
+  return page
+}
+
+function attachPageDiagnostics(page: TestPage, getServerOutput?: () => string): PageDiagnostics {
+  let diagnostics = pageDiagnostics.get(page)
+  if (diagnostics !== undefined) {
+    diagnostics.getServerOutput = getServerOutput ?? diagnostics.getServerOutput
+    return diagnostics
+  }
+
+  diagnostics = {
+    consoleMessages: [],
+    getServerOutput,
+    navigations: [],
+    pageErrors: [],
+    requestFailures: [],
+    responseFailures: [],
+  }
+  pageDiagnostics.set(page, diagnostics)
+
+  page.on('console', (message) => {
+    diagnostics.consoleMessages.push(`${message.type()}: ${message.text()}`)
+  })
+  page.on('pageerror', (error) => {
+    diagnostics.pageErrors.push(error.stack ?? error.message)
+  })
+  page.on('framenavigated', (frame) => {
+    if (frame.parentFrame() !== null) return
+    diagnostics.navigations.push(frame.url())
+  })
+  page.on('requestfailed', (request) => {
+    let failureText = request.failure()?.errorText
+    diagnostics.requestFailures.push(
+      `${request.method()} ${request.url()}${failureText ? ` (${failureText})` : ''}`,
+    )
+  })
+  page.on('response', (response) => {
+    if (response.status() < 400) return
+    diagnostics.responseFailures.push(`${response.status()} ${response.url()}`)
+  })
+
+  return diagnostics
+}
+
+function formatPageDiagnostics(page: TestPage): string {
+  let diagnostics = attachPageDiagnostics(page)
+  let sections = [
+    formatDiagnosticsSection('console', diagnostics.consoleMessages),
+    formatDiagnosticsSection('pageerror', diagnostics.pageErrors),
+    formatDiagnosticsSection('navigation', diagnostics.navigations),
+    formatDiagnosticsSection('requestfailed', diagnostics.requestFailures),
+    formatDiagnosticsSection('response >= 400', diagnostics.responseFailures),
+  ].filter(Boolean)
+
+  let serverOutput = diagnostics.getServerOutput?.()
+  if (serverOutput) {
+    sections.push(`server output:\n${serverOutput}`)
+  }
+
+  return sections.join('\n\n')
+}
+
+function formatDiagnosticsSection(label: string, values: string[]): string {
+  if (values.length === 0) return ''
+  return `${label}:\n${values.slice(-30).join('\n')}`
+}
 
 async function createHmrFixture(
   options: {
@@ -2619,6 +2703,7 @@ async function writeFetchResponse(
 }
 
 function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
+  attachPageDiagnostics(page)
   return new Promise((resolve, reject) => {
     let consoleMessages: string[] = []
     let pageErrors: string[] = []
@@ -2629,6 +2714,7 @@ function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
             `Timed out waiting for console message: ${text}`,
             ...consoleMessages.map((message) => `console: ${message}`),
             ...pageErrors.map((message) => `pageerror: ${message}`),
+            formatPageDiagnostics(page),
           ].join('\n'),
         ),
       )
@@ -2654,10 +2740,11 @@ function waitForConsoleMessage(page: TestPage, text: string): Promise<void> {
 }
 
 function waitForNavigation(page: TestPage): Promise<void> {
+  attachPageDiagnostics(page)
   return new Promise((resolve, reject) => {
     let timeout = setTimeout(() => {
       page.off('framenavigated', handleFrameNavigated)
-      reject(new Error('Timed out waiting for page navigation'))
+      reject(new Error(`Timed out waiting for page navigation\n${formatPageDiagnostics(page)}`))
     }, 5000)
 
     page.on('framenavigated', handleFrameNavigated)
@@ -2739,11 +2826,33 @@ async function assertCount(page: TestPage, count: string): Promise<void> {
 }
 
 async function waitForText(page: TestPage, selector: string, text: string): Promise<void> {
-  await page.waitForFunction(
-    ({ selector, text }) => document.querySelector(selector)?.textContent?.trim() === text,
-    { selector, text },
-    { timeout: 5000 },
-  )
+  attachPageDiagnostics(page)
+  try {
+    await page.waitForFunction(
+      ({ selector, text }) => document.querySelector(selector)?.textContent?.trim() === text,
+      { selector, text },
+      { timeout: 5000 },
+    )
+  } catch (error) {
+    let actualText = await page
+      .locator(selector)
+      .textContent({ timeout: 100 })
+      .catch(() => '<missing>')
+    let bodyText = await page
+      .locator('body')
+      .textContent({ timeout: 100 })
+      .catch(() => '<missing body>')
+    let message = error instanceof Error ? error.message : String(error)
+    throw new Error(
+      [
+        `Timed out waiting for text: ${selector} = ${JSON.stringify(text)}`,
+        `Actual text: ${JSON.stringify(actualText?.trim())}`,
+        `Body text: ${JSON.stringify(bodyText?.trim().slice(0, 1000))}`,
+        message,
+        formatPageDiagnostics(page),
+      ].join('\n'),
+    )
+  }
 }
 
 async function waitForComputedStyle(
