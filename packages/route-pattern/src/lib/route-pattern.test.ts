@@ -5,15 +5,15 @@ import { createHref, type CreateHrefErrorDetails } from '../href.ts'
 import { joinPatterns } from '../join.ts'
 import { createMatcher, type MatchParamMeta } from '../match.ts'
 import {
-  getRoutePatternParams,
+  getRoutePatternCaptures,
   RoutePattern,
+  type RoutePatternCapture,
   type RoutePatternJSON,
-  type RoutePatternParam,
 } from '../route-pattern.ts'
 
 describe('RoutePattern', () => {
   it('exports public route pattern support types', () => {
-    let param: RoutePatternParam = {
+    let capture: RoutePatternCapture = {
       part: 'pathname',
       type: ':',
       name: 'id',
@@ -38,23 +38,19 @@ describe('RoutePattern', () => {
       end: 3,
     }
 
-    assert.equal(param.name, 'id')
+    assert.equal(capture.name, 'id')
     assert.equal(json.pathname, ':id')
     assert.equal(hrefError.type, 'missing-hostname')
     assert.equal(matchMeta.value, '123')
   })
 
-  it('does not expose parsed-AST construction', () => {
-    assert.throws(
-      () => {
-        // @ts-expect-error - RoutePattern construction is internal
-        new RoutePattern({})
-      },
-      {
-        name: 'TypeError',
-        message: 'RoutePattern constructor is private; use RoutePattern.parse()',
-      },
-    )
+  it('creates patterns that are instances of RoutePattern', () => {
+    let pattern = RoutePattern.parse('/posts/:postId')
+
+    assert.ok(pattern instanceof RoutePattern)
+
+    // @ts-expect-error - the constructor requires an internal parsed representation
+    new RoutePattern({})
   })
 
   it('brands source generics nominally', () => {
@@ -66,10 +62,10 @@ describe('RoutePattern', () => {
     assert.equal(users, posts)
   })
 
-  it('exposes params without exposing parsed tokens', () => {
+  it('exposes captures without exposing parsed tokens', () => {
     let pattern = RoutePattern.parse('https://:tenant.example.com/:collection(/*path)(.:ext)')
 
-    assert.deepEqual(getRoutePatternParams(pattern), [
+    assert.deepEqual(getRoutePatternCaptures(pattern), [
       { part: 'hostname', type: ':', name: 'tenant', optional: false },
       { part: 'pathname', type: ':', name: 'collection', optional: false },
       { part: 'pathname', type: '*', name: 'path', optional: true },
@@ -77,10 +73,10 @@ describe('RoutePattern', () => {
     ])
   })
 
-  it('exposes unnamed wildcards in params', () => {
+  it('exposes unnamed wildcards in captures', () => {
     let pattern = RoutePattern.parse('/files/*')
 
-    assert.deepEqual(getRoutePatternParams(pattern), [
+    assert.deepEqual(getRoutePatternCaptures(pattern), [
       { part: 'pathname', type: '*', name: '*', optional: false },
     ])
   })

@@ -53,33 +53,47 @@ export interface RoutePatternJSON {
   search: string
 }
 
-/** Metadata for a hostname or pathname param in a {@link RoutePattern}. */
-export interface RoutePatternParam {
-  /** The URL part that contains the param. */
+/** A variable (`:name`) or wildcard (`*name`) declared in a {@link RoutePattern}. */
+export interface RoutePatternCapture {
+  /** The URL part that contains the capture. */
   readonly part: 'hostname' | 'pathname'
 
-  /** The param token kind: `:` for variables or `*` for wildcards. */
+  /** The capture token kind: `:` for variables or `*` for wildcards. */
   readonly type: ':' | '*'
 
-  /** Param name, or `*` for an unnamed wildcard. */
+  /** Capture name, or `*` for an unnamed wildcard. */
   readonly name: string
 
-  /** Whether the param is inside an optional group. */
+  /** Whether the capture is inside an optional group. */
   readonly optional: boolean
 }
 
-const routePatternConstructorKey: unique symbol = Symbol('RoutePattern constructor key')
-declare const routePatternSourceBrand: unique symbol
-const routePatternParts = new WeakMap<RoutePattern, ParsedRoutePattern>()
+declare const brand: unique symbol
 
 /**
- * Opaque parsed route pattern handle.
+ * A parsed route pattern.
  *
- * Construct route patterns with {@link RoutePattern.parse}. Use `source`, `toString()`,
- * `toJSON()`, and {@link getRoutePatternParams} for supported inspection.
+ * Create one with {@link RoutePattern.parse}. The constructor is public but takes a parsed
+ * representation that is not part of the public API; prefer `RoutePattern.parse` instead. Use
+ * `source`, `toString()`, `toJSON()`, and {@link getRoutePatternCaptures} for inspection.
  */
 export class RoutePattern<source extends string = string> {
-  declare readonly [routePatternSourceBrand]: source
+  declare readonly [brand]: source
+
+  /** Parsed representation of this pattern. Not part of the public API. */
+  private readonly parsed: ParsedRoutePattern
+
+  /**
+   * Create a new `RoutePattern` from a parsed representation.
+   *
+   * The parsed representation is not part of the public API. Use {@link RoutePattern.parse} to
+   * create a pattern from a source string.
+   *
+   * @param parsed The parsed route pattern.
+   */
+  constructor(parsed: ParsedRoutePattern) {
+    this.parsed = parsed
+  }
 
   /**
    * Create a new `RoutePattern` by parsing a source string.
@@ -91,25 +105,9 @@ export class RoutePattern<source extends string = string> {
     return parsePattern(source)
   }
 
-  private constructor(key: typeof routePatternConstructorKey, parsed?: ParsedRoutePattern) {
-    if (key !== routePatternConstructorKey) {
-      throw new TypeError('RoutePattern constructor is private; use RoutePattern.parse()')
-    }
-    if (parsed === undefined) {
-      throw new TypeError('RoutePattern constructor is private; use RoutePattern.parse()')
-    }
-    routePatternParts.set(this, parsed)
-  }
-
-  static [routePatternConstructorKey]<source extends string>(
-    parsed: ParsedRoutePattern,
-  ): RoutePattern<source> {
-    return new RoutePattern<source>(routePatternConstructorKey, parsed)
-  }
-
   /** Normalized string representation of this pattern. */
   get source(): string {
-    return serializePattern(getRoutePatternParts(this))
+    return serializePattern(this.parsed)
   }
 
   /**
@@ -127,62 +125,46 @@ export class RoutePattern<source extends string = string> {
    * @returns The serialized protocol, hostname, port, pathname, and search.
    */
   toJSON(): RoutePatternJSON {
-    return serializePatternParts(getRoutePatternParts(this))
+    return serializePatternParts(this.parsed)
   }
 }
 
 export function createRoutePattern<source extends string>(
   parsed: ParsedRoutePattern,
 ): RoutePattern<source> {
-  return RoutePattern[routePatternConstructorKey]<source>(parsed)
+  return new RoutePattern<source>(parsed)
 }
 
 export function getRoutePatternParts(pattern: RoutePattern): ParsedRoutePattern {
-  let parsed = routePatternParts.get(pattern)
-  if (parsed === undefined) {
-    throw new TypeError('Invalid RoutePattern')
-  }
-  return parsed
+  return (pattern as unknown as { parsed: ParsedRoutePattern }).parsed
 }
 
 /**
- * Returns hostname and pathname params in source order without exposing parsed pattern internals.
+ * Returns the hostname and pathname captures in a pattern in source order without exposing parsed
+ * pattern internals.
  *
- * @param pattern The parsed route pattern to inspect.
- * @returns Param metadata for variables and wildcards in the pattern.
+ * @param pattern The route pattern to inspect.
+ * @returns Metadata for each variable and wildcard in the pattern.
  */
-export function getRoutePatternParams(pattern: RoutePattern): ReadonlyArray<RoutePatternParam> {
+export function getRoutePatternCaptures(pattern: RoutePattern): ReadonlyArray<RoutePatternCapture> {
   let parsed = getRoutePatternParts(pattern)
-  let params: Array<RoutePatternParam> = []
+  let captures: Array<RoutePatternCapture> = []
 
-  if (parsed.hostname) {
-    params.push(...getPartParams(parsed.hostname))
-  }
-  params.push(...getPartParams(parsed.pathname))
+  if (parsed.hostname) collectCaptures(parsed.hostname, captures)
+  collectCaptures(parsed.pathname, captures)
 
-  return params
+  return captures
 }
 
-function getPartParams(part: PartPattern): Array<RoutePatternParam> {
-  let params: Array<RoutePatternParam> = []
-
-  for (let i = 0; i < part.tokens.length; i++) {
-    let token = part.tokens[i]
-    if (token.type !== ':' && token.type !== '*') continue
-    params.push({
-      part: part.type,
-      type: token.type,
-      name: token.name,
-      optional: isOptionalToken(part, i),
-    })
+function collectCaptures(part: PartPattern, out: Array<RoutePatternCapture>): void {
+  let depth = 0
+  for (let token of part.tokens) {
+    if (token.type === '(') {
+      depth++
+    } else if (token.type === ')') {
+      depth--
+    } else if (token.type === ':' || token.type === '*') {
+      out.push({ part: part.type, type: token.type, name: token.name, optional: depth > 0 })
+    }
   }
-
-  return params
-}
-
-function isOptionalToken(part: PartPattern, index: number): boolean {
-  for (let [begin, end] of part.optionals) {
-    if (begin < index && index < end) return true
-  }
-  return false
 }
