@@ -241,6 +241,19 @@ importers:
         specifier: 4.0.15
         version: 4.0.15(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
 
+  guides:
+    dependencies:
+      remix:
+        specifier: workspace:^
+        version: link:../packages/remix
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
   packages/assert:
     devDependencies:
       '@types/node':
@@ -1853,31 +1866,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/ui/demo:
-    dependencies:
-      '@remix-run/ui':
-        specifier: workspace:*
-        version: link:..
-      remix:
-        specifier: workspace:*
-        version: link:../../remix
-    devDependencies:
-      '@types/dom-navigation':
-        specifier: ^1.0.7
-        version: 1.0.7
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
-      esbuild:
-        specifier: ^0.25.10
-        version: 0.25.12
-      node-html-parser:
-        specifier: ^7.0.2
-        version: 7.1.0
-
   packages/ui/bench:
     dependencies:
       '@remix-run/fetch-router':
@@ -1964,6 +1952,31 @@ importers:
       esbuild-plugin-solid:
         specifier: ^0.6.0
         version: 0.6.0(esbuild@0.27.1)(solid-js@1.9.12)
+
+  packages/ui/demo:
+    dependencies:
+      '@remix-run/ui':
+        specifier: workspace:*
+        version: link:..
+      remix:
+        specifier: workspace:*
+        version: link:../../remix
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.12
+      node-html-parser:
+        specifier: ^7.0.2
+        version: 7.1.0
 
   scripts:
     dependencies:
