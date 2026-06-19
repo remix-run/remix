@@ -13,10 +13,10 @@ import {
 } from '@remix-run/ui'
 import * as listbox from '../listbox/index.ts'
 import * as popover from '../popover/index.ts'
-import { hiddenTypeahead } from '../../interactions/typeahead/typeahead-mixin.ts'
-import { onKeyDown } from '../../interactions/keydown/keydown.ts'
-import { waitForCssTransition } from '../../utils/wait-for-css-transition.ts'
-import { wait } from '../../utils/wait.ts'
+import { hiddenTypeahead } from '../shared/typeahead.ts'
+import { waitForCssTransition } from '../shared/wait-for-css-transition.ts'
+import { wait } from '../shared/wait.ts'
+import { onKeyDown } from './keydown.ts'
 import type { AnchorOptions } from '../anchor/index.ts'
 
 const SELECT_CHANGE_EVENT = 'rmx:select-change' as const

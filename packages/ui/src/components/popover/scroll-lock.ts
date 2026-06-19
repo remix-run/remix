@@ -1,5 +1,3 @@
-import { createMixin, on, type ElementProps, type MixinFactory } from '@remix-run/ui'
-
 type ScrollLockState = {
   count: number
   documentOverflow: string
@@ -73,29 +71,3 @@ export function lockScroll(targetDocument: Document | undefined = globalThis.doc
     view.scrollTo(currentState.scrollX, currentState.scrollY)
   }
 }
-
-export const lockScrollOnToggle: MixinFactory<HTMLElement, [], ElementProps> = createMixin<
-  HTMLElement,
-  [],
-  ElementProps
->((handle) => {
-  let unlockScroll = () => {}
-
-  handle.signal.addEventListener('abort', () => {
-    unlockScroll()
-    unlockScroll = () => {}
-  })
-
-  return () => [
-    on('beforetoggle', (event) => {
-      unlockScroll()
-      unlockScroll = () => {}
-
-      if (event.newState !== 'open') {
-        return
-      }
-
-      unlockScroll = lockScroll((event.currentTarget as HTMLElement).ownerDocument)
-    }),
-  ]
-})

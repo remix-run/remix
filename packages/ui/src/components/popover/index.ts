@@ -7,13 +7,9 @@ import {
   type MixinFactory,
   type RemixNode,
 } from '@remix-run/ui'
-import {
-  anchor as positionAnchor,
-  type AnchorOptions,
-  type AnchorTarget,
-} from '../anchor/index.ts'
-import { onOutsideClick } from '../../interactions/outside-click/outside-click-mixin.ts'
-import { lockScroll } from '../../utils/scroll-lock.ts'
+import { anchor as positionAnchor, type AnchorOptions, type AnchorTarget } from '../anchor/index.ts'
+import { onOutsideClick } from './outside-click.ts'
+import { lockScroll } from './scroll-lock.ts'
 
 export interface PopoverContext {
   hideFocusTarget: HTMLElement | null

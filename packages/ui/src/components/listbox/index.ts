@@ -11,8 +11,8 @@ import {
   hiddenTypeahead,
   matchNextItemBySearchText,
   type SearchValue,
-} from '../../interactions/typeahead/typeahead-mixin.ts'
-import { flashAttribute } from '../../utils/flash-attribute.ts'
+} from '../shared/typeahead.ts'
+import { flashAttribute } from './flash-attribute.ts'
 
 export type ListboxValue = string | null
 

@@ -1,7 +1,8 @@
 import { createElement, css } from '@remix-run/ui'
-import type { CSSMixinDescriptor, Handle, Props, RemixNode, SearchValue } from '@remix-run/ui'
+import type { CSSMixinDescriptor, Handle, Props, RemixNode } from '@remix-run/ui'
 
 import * as combobox from '@remix-run/ui/components/combobox/primitives'
+import type { SearchValue } from '../shared/typeahead.ts'
 import { CheckIcon } from '../shared/icons.tsx'
 import {
   listboxIndicatorStyle,

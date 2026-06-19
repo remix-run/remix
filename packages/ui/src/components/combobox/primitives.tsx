@@ -14,9 +14,9 @@ import {
 
 import * as listbox from '../listbox/index.ts'
 import * as popover from '../popover/index.ts'
-import { type SearchValue } from '../../interactions/typeahead/typeahead-mixin.ts'
-import { waitForCssTransition } from '../../utils/wait-for-css-transition.ts'
-import { wait } from '../../utils/wait.ts'
+import { type SearchValue } from '../shared/typeahead.ts'
+import { waitForCssTransition } from '../shared/wait-for-css-transition.ts'
+import { wait } from '../shared/wait.ts'
 
 const COMBOBOX_CHANGE_EVENT = 'rmx:combobox-change' as const
 const INPUT_COMMIT_DELAY_MS = 50

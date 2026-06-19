@@ -1,8 +1,9 @@
 import { createElement, css, ref } from '@remix-run/ui'
-import type { CSSMixinDescriptor, Handle, Props, RemixNode, SearchValue } from '@remix-run/ui'
+import type { CSSMixinDescriptor, Handle, Props, RemixNode } from '@remix-run/ui'
 
 import button from '@remix-run/ui/components/button'
 import * as menu from '@remix-run/ui/components/menu/primitives'
+import type { SearchValue } from '../shared/typeahead.ts'
 import { CheckIcon, ChevronDownIcon, ChevronRightIcon } from '../shared/icons.tsx'
 import { popoverSurfaceStyle } from '../shared/listbox-popover-styles.ts'
 import { componentStyleValues as styles } from '../shared/style-values.ts'

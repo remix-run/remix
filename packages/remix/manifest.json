@@ -134,7 +134,6 @@
   "remix/ui/listbox": "@remix-run/ui/listbox",
   "remix/ui/menu": "@remix-run/ui/menu",
   "remix/ui/popover": "@remix-run/ui/popover",
-  "remix/ui/scroll-lock": "@remix-run/ui/scroll-lock",
   "remix/ui/select": "@remix-run/ui/select",
   "remix/ui/server": "@remix-run/ui/server",
   "remix/ui/test": "@remix-run/ui/test"

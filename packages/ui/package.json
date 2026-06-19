@@ -151,10 +151,6 @@
       "types": "./src/test.ts",
       "default": "./src/test.ts"
     },
-    "./scroll-lock": {
-      "types": "./src/utils/scroll-lock.ts",
-      "default": "./src/utils/scroll-lock.ts"
-    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -286,10 +282,6 @@
       "./test": {
         "types": "./dist/test.d.ts",
         "default": "./dist/test.js"
-      },
-      "./scroll-lock": {
-        "types": "./dist/utils/scroll-lock.d.ts",
-        "default": "./dist/utils/scroll-lock.js"
       },
       "./package.json": "./package.json"
     }

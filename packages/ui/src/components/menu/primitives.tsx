@@ -15,9 +15,9 @@ import {
   hiddenTypeahead,
   matchNextItemBySearchText,
   type SearchValue,
-} from '../../interactions/typeahead/typeahead-mixin.ts'
-import { waitForCssTransition } from '../../utils/wait-for-css-transition.ts'
-import { wait } from '../../utils/wait.ts'
+} from '../shared/typeahead.ts'
+import { waitForCssTransition } from '../shared/wait-for-css-transition.ts'
+import { wait } from '../shared/wait.ts'
 import { createHoverAim } from './hover-aim.ts'
 
 const MENU_SELECT_EVENT = 'rmx:menu-select' as const

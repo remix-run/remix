@@ -156,7 +156,6 @@
     "./ui/listbox": "./src/ui/listbox.ts",
     "./ui/menu": "./src/ui/menu.ts",
     "./ui/popover": "./src/ui/popover.ts",
-    "./ui/scroll-lock": "./src/ui/scroll-lock.ts",
     "./ui/select": "./src/ui/select.ts",
     "./ui/server": "./src/ui/server.ts",
     "./ui/test": "./src/ui/test.ts",
@@ -703,10 +702,6 @@
       "./ui/popover": {
         "types": "./dist/ui/popover.d.ts",
         "default": "./dist/ui/popover.js"
-      },
-      "./ui/scroll-lock": {
-        "types": "./dist/ui/scroll-lock.d.ts",
-        "default": "./dist/ui/scroll-lock.js"
       },
       "./ui/select": {
         "types": "./dist/ui/select.d.ts",

@@ -3,11 +3,7 @@ import { afterEach, describe, it } from '@remix-run/test'
 
 import { createRoot, type RemixNode } from '@remix-run/ui'
 
-import {
-  hiddenTypeahead,
-  itemMatchesSearchText,
-  matchNextItemBySearchText,
-} from './typeahead-mixin.ts'
+import { hiddenTypeahead, itemMatchesSearchText, matchNextItemBySearchText } from './typeahead.ts'
 
 const typeaheadTimeoutMs = 750
 let roots: ReturnType<typeof createRoot>[] = []

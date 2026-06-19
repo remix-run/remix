@@ -15,6 +15,16 @@ Added `package.json` `exports`:
 - `remix/ui/checkbox` to re-export APIs from `@remix-run/ui/checkbox`
 - `remix/ui/input` to re-export APIs from `@remix-run/ui/input`
 
+Removed helper re-exports from `remix/ui`:
+
+- `flashAttribute`
+- `hiddenTypeahead`
+- `matchNextItemBySearchText`
+- `onKeyDown`
+- `SearchValue`
+- `wait`
+- `waitForCssTransition`
+
 Updated `remix/route-pattern` exports for the `RoutePattern` API:
 
 - Added `getRoutePatternCaptures`, `RoutePatternCapture`, and `RoutePatternJSON` to `remix/route-pattern`
@@ -30,5 +40,6 @@ Removed `package.json` `exports`:
 - `remix/components/popover/primitives`
 - `remix/ui/breadcrumbs`
 - `remix/ui/glyph`
+- `remix/ui/scroll-lock`
 - `remix/ui/separator`
 - `remix/ui/theme`
