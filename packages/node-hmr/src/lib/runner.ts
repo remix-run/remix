@@ -89,6 +89,7 @@ type ChildMessage =
     }
 
 const restartDelayMs = 50
+const restartSettleDelayMs = 150
 const browserIntentFlushDelayMs = 75
 const browserHmrRequestTimeoutMs = 1_000
 const shutdownTimeoutMs = 5_000
@@ -152,6 +153,8 @@ export function createWatchedProcessController(options: {
   registerPath: string
   watch?: NodeHmrWatchOptions
 }): {
+  readonly generation: number
+  ready(): Promise<void>
   start(): Promise<void>
   stop(signal?: NodeJS.Signals): Promise<void>
 } {
@@ -169,11 +172,18 @@ export function createWatchedProcessController(options: {
   let activeWatchedDirectories = new Set<string>()
   let pendingChangedPaths = new Set<string>()
   let pendingRestartPathEvents = new Map<string, 'add' | 'unlink'>()
+  let flushingWatchEvents = false
   let pendingHotUpdateCount = 0
   let acceptedHotUpdateCount = 0
   let pendingBrowserIntents: HmrBrowserIntent[] = []
   let pendingBrowserIntentServerPaths = new Set<string>()
   let browserIntentFlushTimer: NodeJS.Timeout | undefined
+  let restartSettleTimer: NodeJS.Timeout | undefined
+  let serverGeneration = 0
+  let restartGeneration = 0
+  let pendingRestartGeneration = 0
+  let readyGeneration = -1
+  let readyWaiters: Array<() => void> = []
   let browserHmrRequestId = 0
   let pendingBrowserHmrRequests = new Map<
     number,
@@ -187,11 +197,39 @@ export function createWatchedProcessController(options: {
   let waitingForFileChangeAfterExit = false
   let pendingServerUpdateEvent = false
 
+  function setReadyGeneration(generation: number): void {
+    readyGeneration = generation
+  }
+
+  function isReady(): boolean {
+    return (
+      readyGeneration === pendingRestartGeneration &&
+      restartTimer === undefined &&
+      !flushingWatchEvents &&
+      pendingHotUpdateCount === acceptedHotUpdateCount
+    )
+  }
+
+  function markRestartPending(): number {
+    if (pendingRestartGeneration === restartGeneration) {
+      pendingRestartGeneration += 1
+      serverGeneration += 1
+    }
+    setReadyGeneration(-1)
+    return pendingRestartGeneration
+  }
+
+  function commitRestartGeneration(): number {
+    restartGeneration = pendingRestartGeneration
+    return restartGeneration
+  }
+
   function getEntryPath(): string {
     return resolve(options.cwd, options.entry)
   }
 
   function start() {
+    setReadyGeneration(-1)
     moduleInfoByFilePath = new Map()
     moduleInfoByUrl = new Map()
     moduleDepsByUrl = new Map()
@@ -238,10 +276,26 @@ export function createWatchedProcessController(options: {
 
   async function restart() {
     if (stopping) return
+    commitRestartGeneration()
     restarting = true
     await stopChild(child)
     restarting = false
     start()
+  }
+
+  function scheduleRestart(): void {
+    markRestartPending()
+
+    if (restartSettleTimer !== undefined) {
+      clearTimeout(restartSettleTimer)
+    }
+
+    restartSettleTimer = setTimeout(() => {
+      restartSettleTimer = undefined
+      restart().catch((error: unknown) => {
+        console.error(error)
+      })
+    }, restartSettleDelayMs)
   }
 
   function handleChildMessage(message: unknown) {
@@ -272,7 +326,9 @@ export function createWatchedProcessController(options: {
 
     if (message.type === 'node-hmr:child:hot-module-updated') {
       acceptedHotUpdateCount += 1
+      serverGeneration += 1
       flushAcceptedHotUpdateBrowserEvent()
+      resolveReadyWaiters()
       return
     }
 
@@ -286,6 +342,8 @@ export function createWatchedProcessController(options: {
     }
 
     if (message.type === 'node-hmr:child:server-ready') {
+      setReadyGeneration(restartGeneration)
+      resolveReadyWaiters()
       flushPendingServerUpdateEvent()
       return
     }
@@ -298,9 +356,7 @@ export function createWatchedProcessController(options: {
       pendingServerUpdateEvent = true
       clearPendingHotUpdates()
       logRestart(message.message ?? 'import.meta.hot.invalidate()')
-      restart().catch((error: unknown) => {
-        console.error(error)
-      })
+      scheduleRestart()
       return
     }
 
@@ -453,17 +509,16 @@ export function createWatchedProcessController(options: {
   }
 
   function handleWatchEvent(event: string, changedPath: string) {
+    let filePath = resolve(options.cwd, changedPath)
+
     if (restartTimer !== undefined) {
       clearTimeout(restartTimer)
     }
 
     if (event === 'change') {
-      pendingChangedPaths.add(resolve(options.cwd, changedPath))
+      pendingChangedPaths.add(filePath)
     } else {
-      pendingRestartPathEvents.set(
-        resolve(options.cwd, changedPath),
-        event === 'add' ? 'add' : 'unlink',
-      )
+      pendingRestartPathEvents.set(filePath, event === 'add' ? 'add' : 'unlink')
     }
 
     restartTimer = setTimeout(() => {
@@ -474,107 +529,113 @@ export function createWatchedProcessController(options: {
   }
 
   async function flushPendingWatchEvents() {
-    let changedPaths = [...pendingChangedPaths]
-    pendingChangedPaths = new Set()
+    flushingWatchEvents = true
+    try {
+      let changedPaths = [...pendingChangedPaths]
+      pendingChangedPaths = new Set()
 
-    let restartPathEvents = new Map(pendingRestartPathEvents)
-    let restartPaths = [...restartPathEvents.keys()]
-    pendingRestartPathEvents = new Map()
-    restartTimer = undefined
+      let restartPathEvents = new Map(pendingRestartPathEvents)
+      let restartPaths = [...restartPathEvents.keys()]
+      pendingRestartPathEvents = new Map()
+      restartTimer = undefined
 
-    let browserFileEvents = getBrowserHmrFileEvents(changedPaths, restartPathEvents)
-    let browserIntents = await requestBrowserHmrIntents(browserFileEvents)
-    for (let intent of browserIntents) {
-      queueBrowserIntent(intent, { schedule: false })
-    }
+      let browserFileEvents = getBrowserHmrFileEvents(changedPaths, restartPathEvents)
+      let browserIntents = await requestBrowserHmrIntents(browserFileEvents)
+      for (let intent of browserIntents) {
+        queueBrowserIntent(intent, { schedule: false })
+      }
 
-    if (waitingForFileChangeAfterExit) {
-      logRestart(formatChangedPaths([...restartPaths, ...changedPaths], options.cwd))
-      pendingServerUpdateEvent = true
-      start()
-      return
-    }
-
-    restartPaths = restartPaths.filter((changedPath) => watchedFilePaths.has(changedPath))
-
-    if (restartPaths.length > 0) {
-      markBrowserIntentServerPathsChecked(restartPaths)
-      forceBrowserFullReloadIfBrowserWorkPending()
-      logRestart(formatChangedPaths(restartPaths, options.cwd))
-      pendingServerUpdateEvent = true
-      await restart()
-      return
-    }
-
-    let hotUpdates: NodeHmrUpdate[] = []
-    let checkedChangedPaths: string[] = []
-    for (let changedPath of changedPaths) {
-      if (!watchedFilePaths.has(changedPath)) continue
-      checkedChangedPaths.push(changedPath)
-
-      let modules = moduleInfoByFilePath.get(changedPath)
-      if (modules === undefined || modules.length === 0) {
-        markBrowserIntentServerPathsChecked(checkedChangedPaths)
-        forceBrowserFullReloadIfBrowserWorkPending()
-        logRestart(formatChangedPath(changedPath, options.cwd))
+      if (waitingForFileChangeAfterExit) {
+        logRestart(formatChangedPaths([...restartPaths, ...changedPaths], options.cwd))
         pendingServerUpdateEvent = true
-        await restart()
+        start()
         return
       }
 
-      for (let moduleInfo of modules) {
-        if (moduleInfo.hmr.selfAccepting) {
-          hotUpdates.push({
-            acceptedUrl: moduleInfo.url,
-            filePath: moduleInfo.filePath,
-            invalidatedUrls: getInvalidatedUrls([moduleInfo.url], Date.now()),
-            url: moduleInfo.url,
-          })
-          continue
-        }
+      restartPaths = restartPaths.filter((changedPath) => watchedFilePaths.has(changedPath))
 
-        let propagation = findHmrPropagation(moduleInfo.url, Date.now())
-        if (!propagation) {
+      if (restartPaths.length > 0) {
+        markBrowserIntentServerPathsChecked(restartPaths)
+        forceBrowserFullReloadIfBrowserWorkPending()
+        logRestart(formatChangedPaths(restartPaths, options.cwd))
+        pendingServerUpdateEvent = true
+        scheduleRestart()
+        return
+      }
+
+      let hotUpdates: NodeHmrUpdate[] = []
+      let checkedChangedPaths: string[] = []
+      for (let changedPath of changedPaths) {
+        if (!watchedFilePaths.has(changedPath)) continue
+        checkedChangedPaths.push(changedPath)
+
+        let modules = moduleInfoByFilePath.get(changedPath)
+        if (modules === undefined || modules.length === 0) {
           markBrowserIntentServerPathsChecked(checkedChangedPaths)
           forceBrowserFullReloadIfBrowserWorkPending()
           logRestart(formatChangedPath(changedPath, options.cwd))
           pendingServerUpdateEvent = true
-          await restart()
+          scheduleRestart()
           return
         }
 
-        hotUpdates.push(
-          ...propagation.map((update) => ({ ...update, filePath: moduleInfo.filePath })),
-        )
+        for (let moduleInfo of modules) {
+          if (moduleInfo.hmr.selfAccepting) {
+            hotUpdates.push({
+              acceptedUrl: moduleInfo.url,
+              filePath: moduleInfo.filePath,
+              invalidatedUrls: getInvalidatedUrls([moduleInfo.url], Date.now()),
+              url: moduleInfo.url,
+            })
+            continue
+          }
+
+          let propagation = findHmrPropagation(moduleInfo.url, Date.now())
+          if (!propagation) {
+            markBrowserIntentServerPathsChecked(checkedChangedPaths)
+            forceBrowserFullReloadIfBrowserWorkPending()
+            logRestart(formatChangedPath(changedPath, options.cwd))
+            pendingServerUpdateEvent = true
+            scheduleRestart()
+            return
+          }
+
+          hotUpdates.push(
+            ...propagation.map((update) => ({ ...update, filePath: moduleInfo.filePath })),
+          )
+        }
       }
-    }
 
-    markBrowserIntentServerPathsChecked(checkedChangedPaths)
+      markBrowserIntentServerPathsChecked(checkedChangedPaths)
 
-    pendingHotUpdateCount += hotUpdates.length
-    if (hotUpdates.length === 0) {
-      flushBrowserIntents({ serverReady: !pendingServerUpdateEvent })
-      return
-    }
-
-    for (let moduleInfo of hotUpdates) {
-      if (!sendHotUpdate(moduleInfo)) {
-        clearPendingHotUpdates()
-        forceBrowserFullReloadIfBrowserWorkPending()
-        logRestart(formatChangedPath(moduleInfo.filePath, options.cwd))
-        pendingServerUpdateEvent = true
-        await restart()
+      pendingHotUpdateCount += hotUpdates.length
+      if (hotUpdates.length === 0) {
+        flushBrowserIntents({ serverReady: !pendingServerUpdateEvent })
         return
       }
-    }
 
-    if (hotUpdates.length > 0) {
-      logHotUpdate(
-        formatChangedPaths(
-          hotUpdates.map((moduleInfo) => moduleInfo.filePath),
-          options.cwd,
-        ),
-      )
+      for (let moduleInfo of hotUpdates) {
+        if (!sendHotUpdate(moduleInfo)) {
+          clearPendingHotUpdates()
+          forceBrowserFullReloadIfBrowserWorkPending()
+          logRestart(formatChangedPath(moduleInfo.filePath, options.cwd))
+          pendingServerUpdateEvent = true
+          scheduleRestart()
+          return
+        }
+      }
+
+      if (hotUpdates.length > 0) {
+        logHotUpdate(
+          formatChangedPaths(
+            hotUpdates.map((moduleInfo) => moduleInfo.filePath),
+            options.cwd,
+          ),
+        )
+      }
+    } finally {
+      flushingWatchEvents = false
+      resolveReadyWaiters()
     }
   }
 
@@ -622,7 +683,7 @@ export function createWatchedProcessController(options: {
         message ?? (moduleInfo ? formatChangedPath(moduleInfo.filePath, options.cwd) : url),
       )
       pendingServerUpdateEvent = true
-      await restart()
+      scheduleRestart()
       return
     }
 
@@ -635,7 +696,7 @@ export function createWatchedProcessController(options: {
         forceBrowserFullReloadIfBrowserWorkPending()
         logRestart(moduleInfo ? formatChangedPath(moduleInfo.filePath, options.cwd) : url)
         pendingServerUpdateEvent = true
-        await restart()
+        scheduleRestart()
         return
       }
     }
@@ -885,6 +946,24 @@ export function createWatchedProcessController(options: {
     })
   }
 
+  function ready(): Promise<void> {
+    if (isReady()) return Promise.resolve()
+
+    return new Promise((resolvePromise) => {
+      readyWaiters.push(resolvePromise)
+    })
+  }
+
+  function resolveReadyWaiters(options: { force?: boolean } = {}): void {
+    if (!options.force && !isReady()) return
+
+    let waiters = readyWaiters
+    readyWaiters = []
+    for (let waiter of waiters) {
+      waiter()
+    }
+  }
+
   let watcher = watch([], {
     cwd: options.cwd,
     ...resolveChokidarWatchOptions(options.watch),
@@ -899,10 +978,14 @@ export function createWatchedProcessController(options: {
     if (restartTimer !== undefined) {
       clearTimeout(restartTimer)
     }
+    if (restartSettleTimer !== undefined) {
+      clearTimeout(restartSettleTimer)
+    }
     if (browserIntentFlushTimer !== undefined) {
       clearTimeout(browserIntentFlushTimer)
     }
     clearPendingHotUpdates()
+    resolveReadyWaiters({ force: true })
     resolvePendingBrowserHmrRequests([])
 
     stopPromise ??= Promise.resolve()
@@ -917,6 +1000,12 @@ export function createWatchedProcessController(options: {
   }
 
   return {
+    get generation() {
+      return serverGeneration
+    },
+
+    ready,
+
     async start() {
       try {
         browserEventController =
@@ -925,6 +1014,7 @@ export function createWatchedProcessController(options: {
             : await createBrowserEventChannel(options.browserEventController)
       } catch (error) {
         await watcher.close()
+        await browserEventController?.close()
         throw error
       }
 
@@ -1014,18 +1104,11 @@ async function createBrowserEventChannel(
     response.write(': connected\n\n')
   })
 
-  let url = await new Promise<string>((resolvePromise, reject) => {
-    server.once('error', reject)
-    server.listen(port, host, () => {
-      server.off('error', reject)
-      let address = server.address()
-      if (!isAddressInfo(address)) {
-        reject(new Error('Failed to start node HMR browser event controller.'))
-        return
-      }
-
-      resolvePromise(`http://${host}:${address.port}${pathname}`)
-    })
+  let url = await listen(server, {
+    host,
+    pathname,
+    port,
+    serverName: 'node HMR browser event controller',
   })
 
   return {
@@ -1035,15 +1118,7 @@ async function createBrowserEventChannel(
       }
       clients.clear()
 
-      await new Promise<void>((resolvePromise, reject) => {
-        server.close((error) => {
-          if (error) {
-            reject(error)
-            return
-          }
-          resolvePromise()
-        })
-      })
+      await closeServer(server)
     },
 
     send(payload) {
@@ -1054,6 +1129,42 @@ async function createBrowserEventChannel(
 
     url,
   }
+}
+
+async function listen(
+  server: Server,
+  options: {
+    host: string
+    pathname?: string
+    port: number
+    serverName: string
+  },
+): Promise<string> {
+  return await new Promise<string>((resolvePromise, reject) => {
+    server.once('error', reject)
+    server.listen(options.port, options.host, () => {
+      server.off('error', reject)
+      let address = server.address()
+      if (!isAddressInfo(address)) {
+        reject(new Error(`Failed to start ${options.serverName}.`))
+        return
+      }
+
+      resolvePromise(`http://${options.host}:${address.port}${options.pathname ?? ''}`)
+    })
+  })
+}
+
+async function closeServer(server: Server): Promise<void> {
+  await new Promise<void>((resolvePromise, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error)
+        return
+      }
+      resolvePromise()
+    })
+  })
 }
 
 function writeCorsHeaders(response: ServerResponse, status: number): void {

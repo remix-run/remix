@@ -100,6 +100,77 @@ describe('node-hmr', () => {
     }
   })
 
+  it('coalesces rapid restart-causing file changes', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getServerSource('./message.ts', 'getMessage()'),
+      'message.ts': [`export function getMessage() {`, `  return 'one'`, `}`].join('\n'),
+      'unused.ts': `export const unused = 'one'`,
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'one')
+
+      await fs.writeFile(
+        path.join(fixture.path, 'message.ts'),
+        [`export function getMessage() {`, `  return 'two'`, `}`].join('\n'),
+      )
+      await fs.writeFile(path.join(fixture.path, 'unused.ts'), `export const unused = 'two'`)
+
+      let restarted = await server.waitForReady(1)
+      assert.notEqual(restarted.pid, ready.pid)
+      await waitForResponse(restarted.port, 'two', () => server.output)
+      await assertNoReadyEvent(server, 2)
+    } finally {
+      await server.stop()
+    }
+  })
+
+  it('exposes a ready barrier and generation for userland request handling', async () => {
+    await using fixture = await createReadyGenerationFixture({
+      'server.ts': getFetchWhenReadyChildServerSource('one'),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'one')
+
+      await fs.writeFile(fixture.entryPath, getFetchWhenReadyChildServerSource('two'))
+      await waitForOutput(server, /restart server\.ts/)
+
+      let response = await fetch(`http://127.0.0.1:${ready.port}`)
+      assert.equal(await response.text(), 'two')
+      await waitForOutput(server, /"type":"child-ready","message":"two"/)
+    } finally {
+      await server.stop()
+    }
+  })
+
+  it('allows userland to retry safe gateway responses during a restart', async () => {
+    await using fixture = await createReadyGenerationFixture({
+      'server.ts': getFetchWhenReadyChildServerSource('one'),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'one')
+
+      let responsePromise = fetch(`http://127.0.0.1:${ready.port}/retry-during-restart`)
+      await waitForOutput(server, /retry-during-restart/)
+      await fs.writeFile(fixture.entryPath, getFetchWhenReadyChildServerSource('two'))
+
+      let response = await responsePromise
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'two')
+      await waitForOutput(server, /"type":"child-ready","message":"two"/)
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('hot updates dependency changes through accepting importers without restarting the server', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./message.ts', 'getMessage()'),
@@ -430,7 +501,7 @@ describe('node-hmr', () => {
 
       let restarted = await server.waitForReady(1)
       assert.notEqual(restarted.pid, ready.pid)
-      assert.equal(await fetchText(restarted.port), 'two')
+      await waitForResponse(restarted.port, 'two', () => server.output)
       assert.match(server.output, /restart value\.ts/)
     } finally {
       await server.stop()
@@ -494,7 +565,7 @@ describe('node-hmr', () => {
 
       let restarted = await server.waitForReady(1)
       assert.notEqual(restarted.pid, ready.pid)
-      assert.equal(await fetchText(restarted.port), 'two')
+      await waitForResponse(restarted.port, 'two', () => server.output)
       assert.match(server.output, /restart message\.ts/)
     } finally {
       await server.stop()
@@ -976,12 +1047,12 @@ describe('node-hmr', () => {
 
         await fs.writeFile(fixture.entryPath, getEventChannelServerSource('two!!!'))
 
-        let payload = await events.read()
-        assert.deepEqual(payload, { type: 'server:update' })
-
         let restarted = await server.waitForReady(1)
         assert.notEqual(restarted.pid, ready.pid)
         assert.equal(await fetchText(restarted.port), 'two!!!')
+
+        let payload = await events.read()
+        assert.deepEqual(payload, { type: 'server:update' })
       } finally {
         await events.close()
       }
@@ -1073,6 +1144,29 @@ function getEventChannelComponentServerSource(): string {
   ].join('\n')
 }
 
+function getFetchWhenReadyChildServerSource(message: string): string {
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.ts')).href
+
+  return [
+    `import { createServer } from 'node:http'`,
+    `import { writeFile } from 'node:fs/promises'`,
+    `import { emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    ``,
+    `let server = createServer((_request, response) => {`,
+    `  response.end(${JSON.stringify(message)})`,
+    `})`,
+    ``,
+    `server.listen(0, '127.0.0.1', async () => {`,
+    `  let address = server.address()`,
+    `  if (address && typeof address === 'object') {`,
+    `    await writeFile(process.env.CHILD_PORT_FILE, String(address.port))`,
+    `    emitServerReady()`,
+    `    console.log(JSON.stringify({ type: 'child-ready', message: ${JSON.stringify(message)}, port: address.port, pid: process.pid }))`,
+    `  }`,
+    `})`,
+  ].join('\n')
+}
+
 function getScopedUiRefreshFixtureFiles(): Record<string, string> {
   return {
     'node_modules/@remix-run/ui/package.json': JSON.stringify({
@@ -1144,6 +1238,102 @@ async function createFixture(
       `  browserEventController: true,`,
       `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
       `})`,
+    ].join('\n'),
+  })
+
+  return {
+    entryPath: path.join(fixturePath, 'server.ts'),
+    path: fixturePath,
+    async [Symbol.asyncDispose]() {
+      await fs.rm(fixturePath, { force: true, recursive: true })
+    },
+  }
+}
+
+async function createReadyGenerationFixture(
+  files: Record<string, string>,
+): Promise<AsyncDisposable & { entryPath: string; path: string }> {
+  let fixtureRoot = path.join(packageRoot, '.tmp')
+  await fs.mkdir(fixtureRoot, { recursive: true })
+
+  let fixturePath = await fs.mkdtemp(path.join(fixtureRoot, 'node-hmr-'))
+  let nodeHmrImportUrl = pathToFileURL(path.join(packageRoot, 'src/index.ts')).href
+  await writeFixtureFiles(fixturePath, {
+    ...files,
+    'dev.ts': [
+      `import { createServer } from 'node:http'`,
+      `import { run } from ${JSON.stringify(nodeHmrImportUrl)}`,
+      ``,
+      `let childPort = 0`,
+      `let publicPort = 0`,
+      `let returnedStaleGateway = false`,
+      `let retryMethods = ['GET', 'HEAD']`,
+      `let retryStatusCodes = [502, 503, 504]`,
+      ``,
+      `let app = run('server.ts', {`,
+      `  env: {`,
+      `    ...process.env,`,
+      `    CHILD_PORT_FILE: new URL('./child-port.txt', import.meta.url).pathname,`,
+      `  },`,
+      `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
+      `})`,
+      ``,
+      `let publicServer = createServer(async (request, response) => {`,
+      `  try {`,
+      `    let webRequest = new Request(new URL(request.url ?? '/', 'http://127.0.0.1:' + publicPort))`,
+      `    let webResponse = await fetchWhenReady(webRequest)`,
+      `    response.writeHead(webResponse.status, Object.fromEntries(webResponse.headers))`,
+      `    response.end(await webResponse.text())`,
+      `  } catch (error) {`,
+      `    response.statusCode = 500`,
+      `    response.end(error instanceof Error ? error.stack : String(error))`,
+      `  }`,
+      `})`,
+      ``,
+      `publicServer.listen(0, '127.0.0.1', () => {`,
+      `  let address = publicServer.address()`,
+      `  if (address && typeof address === 'object') {`,
+      `    publicPort = address.port`,
+      `    console.log(JSON.stringify({ type: 'ready', port: publicPort, pid: process.pid }))`,
+      `  }`,
+      `})`,
+      ``,
+      `async function readChildPort() {`,
+      `  let { readFile } = await import('node:fs/promises')`,
+      `  return Number(await readFile(new URL('./child-port.txt', import.meta.url), 'utf-8'))`,
+      `}`,
+      ``,
+      `async function fetchWhenReady(webRequest) {`,
+      `  while (true) {`,
+      `    await app.ready()`,
+      `    let generation = app.generation`,
+      `    let webResponse = await fetchChild(webRequest)`,
+      ``,
+      `    if (!shouldRetry(webRequest, webResponse)) {`,
+      `      return webResponse`,
+      `    }`,
+      `    await app.ready()`,
+      `    if (app.generation !== generation) continue`,
+      `    return webResponse`,
+      `  }`,
+      `}`,
+      ``,
+      `async function fetchChild(webRequest) {`,
+      `  childPort = await readChildPort()`,
+      `  let targetUrl = new URL(webRequest.url)`,
+      `  targetUrl.port = String(childPort)`,
+      `  if (targetUrl.pathname === '/retry-during-restart' && !returnedStaleGateway) {`,
+      `    returnedStaleGateway = true`,
+      `    console.log('retry-during-restart')`,
+      `    await new Promise((resolve) => setTimeout(resolve, 500))`,
+      `    return new Response('stale gateway', { status: 503 })`,
+      `  }`,
+      `  return await fetch(targetUrl)`,
+      `}`,
+      ``,
+      `function shouldRetry(webRequest, webResponse) {`,
+      `  return retryMethods.includes(webRequest.method) && retryStatusCodes.includes(webResponse.status)`,
+      `}`,
     ].join('\n'),
   })
 
@@ -1290,8 +1480,8 @@ async function waitForResponse(
   )
 }
 
-async function fetchText(port: number): Promise<string> {
-  let response = await fetch(`http://127.0.0.1:${port}`)
+async function fetchText(port: number, pathname = '/'): Promise<string> {
+  let response = await fetch(`http://127.0.0.1:${port}${pathname}`)
   return await response.text()
 }
 
@@ -1342,6 +1532,18 @@ async function assertNoHmrEvent(events: { read(): Promise<HmrEventPayload> }): P
   let result = await Promise.race([
     events.read(),
     new Promise<typeof timeout>((resolve) => setTimeout(() => resolve(timeout), 100)),
+  ])
+  assert.equal(result, timeout)
+}
+
+async function assertNoReadyEvent(
+  server: ReturnType<typeof startFixtureServer>,
+  index: number,
+): Promise<void> {
+  let timeout = Symbol('timeout')
+  let result = await Promise.race([
+    server.waitForReady(index),
+    new Promise<typeof timeout>((resolve) => setTimeout(() => resolve(timeout), 250)),
   ])
   assert.equal(result, timeout)
 }

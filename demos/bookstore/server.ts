@@ -24,13 +24,14 @@ const server = http.createServer(
 )
 
 const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
+const originPort = process.env.ORIGIN_PORT ? parseInt(process.env.ORIGIN_PORT, 10) : null
 
 server.listen(port, () => {
   if (isDevelopment) {
     import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
   }
 
-  console.log(`Bookstore is running on http://localhost:${port}`)
+  console.log(`Bookstore is running on http://localhost:${originPort ?? port}`)
   console.log('')
   console.log('Demo accounts:')
   console.log('  Admin:    admin@bookstore.com / admin123')

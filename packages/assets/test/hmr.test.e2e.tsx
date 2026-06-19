@@ -15,6 +15,12 @@ const workspaceDir = path.resolve(packageDir, '../..')
 const nodeHmrImportUrl = pathToFileURL(
   path.resolve(workspaceDir, 'packages/node-hmr/src/index.ts'),
 ).href
+const fetchProxyImportUrl = pathToFileURL(
+  path.resolve(workspaceDir, 'packages/fetch-proxy/src/index.ts'),
+).href
+const nodeFetchServerImportUrl = pathToFileURL(
+  path.resolve(workspaceDir, 'packages/node-fetch-server/src/index.ts'),
+).href
 const nodeTsxImportUrl = pathToFileURL(
   path.resolve(workspaceDir, 'packages/node-tsx/src/index.ts'),
 ).href
@@ -1301,6 +1307,100 @@ describe('asset server HMR', { skip: isBun }, () => {
       await fixture.close()
     }
   })
+
+  it('recovers page reload requests after a failed node-hmr restart is fixed', async (t) => {
+    let fixture = await createNodeHmrFixture({ devProxy: true })
+    let server: NodeHmrTestServer | undefined
+
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await t.serve(server)
+      let requestFailures = monitorLocalRequestFailures(page, server.baseUrl)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-message"]', 'Server: before')
+
+      await write(fixture.rootDir, 'server-message.ts', `export const serverMessage = \n`)
+      await waitFor(
+        () => /Failed running server\.tsx\. Waiting for file changes/.test(server?.output ?? ''),
+        () => server?.output ?? 'Timed out waiting for failed server restart',
+      )
+
+      let reloadWhileBroken = page.goto('/')
+
+      await write(
+        fixture.rootDir,
+        'server-message.ts',
+        `export const serverMessage = 'Server: after fix'\n`,
+      )
+
+      await ignoreAbortedNavigation(reloadWhileBroken)
+      await waitForText(page, '[data-testid="server-message"]', 'Server: after fix')
+      await requestFailures.assertNone()
+      assert.ok(server.readyCount > 1)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
+
+  it('keeps page reload requests successful during rapid node-hmr restarts', async (t) => {
+    let fixture = await createNodeHmrFixture({
+      devProxy: true,
+      serverImportsClientField: true,
+      slowAssetMs: 75,
+      slowDisposeMs: 400,
+      slowDocumentMs: 150,
+    })
+    let server: NodeHmrTestServer | undefined
+
+    try {
+      server = await startNodeHmrFixtureServer(fixture)
+      let page = await t.serve(server)
+      let requestFailures = monitorLocalRequestFailures(page, server.baseUrl)
+      let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+      await page.goto('/')
+      await connected
+      await waitForText(page, '[data-testid="server-client-label"]', 'Client: before')
+
+      let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
+      let initialSource = await fs.readFile(clientFieldPath, 'utf-8')
+
+      await fs.writeFile(clientFieldPath, `${initialSource}\nexport const foo = null\n`)
+      await page.waitForTimeout(250)
+      let reloadDuringRestart = page.goto('/')
+
+      for (let index = 0; index < 6; index++) {
+        await fs.writeFile(
+          clientFieldPath,
+          index % 2 === 0 ? `${initialSource}\nexport const foo = null\n` : initialSource,
+        )
+        await page.waitForTimeout(25)
+      }
+
+      await ignoreAbortedNavigation(reloadDuringRestart)
+
+      await fs.writeFile(
+        clientFieldPath,
+        getClientFieldSource({
+          child: 'Client: after rapid restarts',
+          extraExports: 'export const foo = null\n',
+        }),
+      )
+      await page.waitForTimeout(250)
+      await ignoreAbortedNavigation(page.goto('/'))
+
+      await waitForText(page, '[data-testid="server-client-label"]', 'Client: after rapid restarts')
+      await requestFailures.assertNone()
+      assert.ok(server.readyCount > 1)
+    } finally {
+      await server?.close()
+      await fixture.close()
+    }
+  })
 })
 
 type HmrFixture = {
@@ -1311,6 +1411,7 @@ type HmrFixture = {
 
 type NodeHmrFixture = {
   close(): Promise<void>
+  devProxy: boolean
   rootDir: string
 }
 
@@ -1347,6 +1448,7 @@ type BrowserEventSource = {
 type NodeHmrTestServer = {
   baseUrl: string
   close(): Promise<void>
+  output: string
   readyCount: number
   waitForReady(index: number): Promise<{ pid: number; port: number }>
 }
@@ -1656,7 +1758,11 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
 async function createNodeHmrFixture(
   options: {
     clientFieldExtraExports?: string
+    devProxy?: boolean
     serverImportsClientField?: boolean
+    slowAssetMs?: number
+    slowDisposeMs?: number
+    slowDocumentMs?: number
   } = {},
 ): Promise<NodeHmrFixture> {
   let tmpDir = path.join(packageDir, '.tmp')
@@ -1735,17 +1841,20 @@ async function createNodeHmrFixture(
   await write(
     rootDir,
     'dev.ts',
-    [
-      `import { run } from ${JSON.stringify(nodeHmrImportUrl)}`,
-      ``,
-      `run('server.tsx', {`,
-      `  browserEventController: true,`,
-      `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
-      `})`,
-    ].join('\n'),
+    options.devProxy
+      ? getNodeHmrProxyDevSource()
+      : [
+          `import { run } from ${JSON.stringify(nodeHmrImportUrl)}`,
+          ``,
+          `run('server.tsx', {`,
+          `  browserEventController: true,`,
+          `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
+          `})`,
+        ].join('\n'),
   )
 
   return {
+    devProxy: options.devProxy === true,
     rootDir,
     async close() {
       await fs.rm(rootDir, { force: true, recursive: true })
@@ -1777,9 +1886,104 @@ function getClientFieldSource(
   ].join('\n')
 }
 
+function getNodeHmrProxyDevSource(): string {
+  return [
+    "import { createServer } from 'node:http'",
+    `import { createFetchProxy } from ${JSON.stringify(fetchProxyImportUrl)}`,
+    `import { run } from ${JSON.stringify(nodeHmrImportUrl)}`,
+    `import { createRequestListener } from ${JSON.stringify(nodeFetchServerImportUrl)}`,
+    '',
+    'let originPort = Number(process.env.TEST_SERVER_PORT ?? 0)',
+    'let childPort = Number(process.env.TEST_CHILD_SERVER_PORT ?? 0)',
+    "let proxyRetryMethods = ['GET', 'HEAD']",
+    'let proxyRetryStatusCodes = [502, 503, 504]',
+    '',
+    "let app = run('server.tsx', {",
+    '  browserEventController: true,',
+    '  env: process.env,',
+    `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
+    '})',
+    '',
+    'let proxyFetch = createFetchProxy(`http://127.0.0.1:${childPort}`, {',
+    '  xForwardedHeaders: true,',
+    '})',
+    '',
+    'let server = createServer(createRequestListener((request) => fetchWhenReady(request)))',
+    '',
+    'server.listen(originPort, "127.0.0.1")',
+    '',
+    'function createProxyRequest(request) {',
+    '  return new Request(request.url, {',
+    '    body: request.body,',
+    '    headers: request.headers,',
+    '    method: request.method,',
+    '    redirect: request.redirect,',
+    '    signal: request.signal,',
+    '    ...getRequestDuplex(request),',
+    '  })',
+    '}',
+    '',
+    'async function fetchWhenReady(request) {',
+    '  while (true) {',
+    '    await app.ready()',
+    '    let generation = app.generation',
+    '    let response',
+    '    try {',
+    '      response = normalizeProxyResponse(await proxyFetch(createProxyRequest(request)))',
+    '    } catch (error) {',
+    '      await app.ready()',
+    '      if (shouldRetryRequest(request) && app.generation !== generation) {',
+    '        continue',
+    '      }',
+    '      throw error',
+    '    }',
+    '',
+    '    if (!shouldRetryResponse(request, response)) {',
+    '      return response',
+    '    }',
+    '    await app.ready()',
+    '    if (app.generation !== generation) continue',
+    '    return response',
+    '  }',
+    '}',
+    '',
+    'function normalizeProxyResponse(response) {',
+    '  let headers = new Headers(response.headers)',
+    "  headers.delete('Content-Encoding')",
+    "  headers.delete('Content-Length')",
+    "  headers.delete('Transfer-Encoding')",
+    '  return new Response(response.body, {',
+    '    headers,',
+    '    status: response.status,',
+    '    statusText: response.statusText,',
+    '  })',
+    '}',
+    '',
+    'function shouldRetryRequest(request) {',
+    '  return proxyRetryMethods.includes(request.method)',
+    '}',
+    '',
+    'function shouldRetryResponse(request, response) {',
+    '  return shouldRetryRequest(request) && proxyRetryStatusCodes.includes(response.status)',
+    '}',
+    '',
+    'function getRequestDuplex(request) {',
+    "  if (request.method === 'GET' || request.method === 'HEAD') return undefined",
+    "  return { duplex: 'half' }",
+    '}',
+    '',
+  ].join('\n')
+}
+
 function getNodeHmrServerSource(
   rootDir: string,
-  options: { serverImportsClientField?: boolean; title?: string } = {},
+  options: {
+    serverImportsClientField?: boolean
+    slowAssetMs?: number
+    slowDisposeMs?: number
+    slowDocumentMs?: number
+    title?: string
+  } = {},
 ): string {
   let appDir = path.relative(workspaceDir, path.join(rootDir, 'app'))
 
@@ -1795,6 +1999,9 @@ function getNodeHmrServerSource(
       : []),
     '',
     "let title = '" + (options.title ?? 'Initial') + "'",
+    `let slowAssetMs = ${JSON.stringify(options.slowAssetMs ?? 0)}`,
+    `let slowDisposeMs = ${JSON.stringify(options.slowDisposeMs ?? 0)}`,
+    `let slowDocumentMs = ${JSON.stringify(options.slowDocumentMs ?? 0)}`,
     'void sideEffect',
     'let assetServer = createAssetServer({',
     `  allow: [${JSON.stringify(`${appDir}/**`)}, 'packages/ui/**', 'packages/ui-hmr/**'],`,
@@ -1865,6 +2072,7 @@ function getNodeHmrServerSource(
     "    let url = new URL(request.url ?? '/', `http://${host}`)",
     '',
     "    if (url.pathname === '/') {",
+    '      await delay(slowDocumentMs)',
     '      await writeFetchResponse(',
     '        response,',
     '        new Response(await renderDocument(), {',
@@ -1878,6 +2086,7 @@ function getNodeHmrServerSource(
     '    }',
     '',
     "    if (url.pathname.startsWith('/assets/')) {",
+    '      await delay(slowAssetMs)',
     '      let assetResponse = await assetServer.fetch(',
     '        new Request(url, {',
     '          headers: toFetchHeaders(request.headers),',
@@ -1898,7 +2107,7 @@ function getNodeHmrServerSource(
     '  }',
     '})',
     '',
-    'server.listen(Number(process.env.TEST_SERVER_PORT ?? 0), "127.0.0.1", () => {',
+    'server.listen(Number(process.env.TEST_CHILD_SERVER_PORT ?? process.env.TEST_SERVER_PORT ?? 0), "127.0.0.1", () => {',
     '  let address = server.address()',
     "  if (address && typeof address === 'object') {",
     '    emitServerReady()',
@@ -1912,6 +2121,7 @@ function getNodeHmrServerSource(
     '    await assetServer.close()',
     '    server.closeAllConnections()',
     '    await new Promise((resolve) => server.close(resolve))',
+    '    await delay(slowDisposeMs)',
     '  })',
     '}',
     '',
@@ -1945,6 +2155,10 @@ function getNodeHmrServerSource(
     '    response.end()',
     '    reader.releaseLock()',
     '  }',
+    '}',
+    '',
+    'async function delay(ms) {',
+    '  if (ms > 0) await new Promise((resolve) => setTimeout(resolve, ms))',
     '}',
     '',
   ].join('\n')
@@ -2126,11 +2340,13 @@ function isNoEntityError(error: unknown): error is NodeJS.ErrnoException {
 async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeHmrTestServer> {
   let { NODE_PATH: _nodePath, ...env } = process.env
   let port = await getAvailablePort()
+  let childPort = fixture.devProxy ? await getAvailablePort() : undefined
   let child = spawn(process.execPath, ['dev.ts'], {
     cwd: fixture.rootDir,
     env: {
       ...env,
       NODE_ENV: 'development',
+      ...(childPort === undefined ? {} : { TEST_CHILD_SERVER_PORT: String(childPort) }),
       TEST_SERVER_PORT: String(port),
     },
     stdio: ['ignore', 'pipe', 'pipe'],
@@ -2176,6 +2392,9 @@ async function startNodeHmrFixtureServer(fixture: NodeHmrFixture): Promise<NodeH
     async close() {
       closePromise ??= stopProcess(child)
       await closePromise
+    },
+    get output() {
+      return processOutput
     },
     get readyCount() {
       return readyEvents.length
@@ -2409,6 +2628,59 @@ function waitForNavigation(page: TestPage): Promise<void> {
       resolve()
     }
   })
+}
+
+async function ignoreAbortedNavigation(navigation: Promise<unknown>): Promise<void> {
+  try {
+    await navigation
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('net::ERR_ABORTED')) return
+    throw error
+  }
+}
+
+function monitorLocalRequestFailures(
+  page: TestPage,
+  baseUrl: string,
+): { assertNone(): Promise<void> } {
+  let origin = new URL(baseUrl).origin
+  let failures: string[] = []
+  let failureDetails: Array<Promise<void>> = []
+
+  page.on('response', (response) => {
+    let url = new URL(response.url())
+    if (url.origin !== origin) return
+    if (response.status() < 400) return
+
+    failureDetails.push(
+      response
+        .text()
+        .then((body) => {
+          failures.push(`${response.status()} ${url.pathname}${url.search}\n${body.slice(0, 500)}`)
+        })
+        .catch(() => {
+          failures.push(`${response.status()} ${url.pathname}${url.search}`)
+        }),
+    )
+  })
+
+  page.on('requestfailed', (request) => {
+    let url = new URL(request.url())
+    if (url.origin !== origin) return
+
+    let failureText = request.failure()?.errorText
+    if (failureText === 'net::ERR_ABORTED') return
+
+    let reason = failureText ? ` (${failureText})` : ''
+    failures.push(`${request.method()} ${url.pathname}${url.search}${reason}`)
+  })
+
+  return {
+    async assertNone() {
+      await Promise.all(failureDetails)
+      assert.equal(failures.join('\n'), '')
+    },
+  }
 }
 
 async function assertCount(page: TestPage, count: string): Promise<void> {

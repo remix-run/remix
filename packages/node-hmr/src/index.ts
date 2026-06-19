@@ -39,6 +39,14 @@ export interface NodeHmrWatchOptions {
 
 export interface NodeHmrRunner {
   close(): Promise<void>
+  /**
+   * Current child process lifecycle generation.
+   */
+  readonly generation: number
+  /**
+   * Waits until the current child process is ready.
+   */
+  ready(): Promise<void>
 }
 
 export function run(entry: string, options: RunOptions = {}): NodeHmrRunner {
@@ -61,6 +69,14 @@ export function run(entry: string, options: RunOptions = {}): NodeHmrRunner {
   return {
     close() {
       return controller.stop()
+    },
+
+    get generation() {
+      return controller.generation
+    },
+
+    ready() {
+      return controller.ready()
     },
   }
 }
