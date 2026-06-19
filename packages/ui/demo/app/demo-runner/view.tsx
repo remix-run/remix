@@ -270,6 +270,7 @@ const componentDemoModules = new Set([
   'listbox',
   'menu',
   'popover',
+  'radio',
   'select',
 ])
 
@@ -295,10 +296,8 @@ function groupDemosByModule(demos: DemoFile[]): DemoGroup[] {
 function getDemoModuleName(demo: DemoFile) {
   let segments = demo.relativePath.split('/')
 
-  if (segments[0] === 'src') {
-    let sourceRoot = segments[1]
-    let moduleName = getSourceDemoModuleName(sourceRoot, segments[2], segments[3])
-    if (moduleName) return moduleName
+  if (segments[0] === 'src' && segments[1]) {
+    return humanizeModuleName(segments[1])
   }
 
   if (segments[0] === 'cases' && segments[1]) {
@@ -311,22 +310,6 @@ function getDemoModuleName(demo: DemoFile) {
 function isComponentDemo(demo: DemoFile) {
   let [sourceRoot, moduleName] = demo.relativePath.split('/')
   return sourceRoot === 'src' && moduleName !== undefined && componentDemoModules.has(moduleName)
-}
-
-function getSourceDemoModuleName(
-  sourceRoot: string | undefined,
-  moduleName: string | undefined,
-  submoduleName: string | undefined,
-) {
-  if (!sourceRoot || !moduleName) {
-    return undefined
-  }
-
-  if (moduleName === 'demos' && submoduleName) {
-    return humanizeModuleName(sourceRoot)
-  }
-
-  return humanizeModuleName(moduleName)
 }
 
 function humanizeModuleName(name: string) {

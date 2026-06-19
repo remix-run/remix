@@ -9,6 +9,7 @@ import type {
 } from '@remix-run/ui'
 import * as checkboxPrimitive from '@remix-run/ui/checkbox/primitives'
 import { renderMixinElement } from '../runtime/mixins/mixin.ts'
+import { controlFocusShadow } from '../shared/focus-styles.ts'
 
 export {
   CheckboxChangeEvent,
@@ -157,10 +158,6 @@ const baseStyle: CSSMixinDescriptor = css({
     opacity: 0,
     pointerEvents: 'none',
   },
-  '&:focus-visible': {
-    outline: '2px solid #1A72FF',
-    outlineOffset: '2px',
-  },
   '&:disabled, &[aria-disabled="true"]': {
     opacity: 0.55,
   },
@@ -200,6 +197,10 @@ const baseStyle: CSSMixinDescriptor = css({
   [`${checkedActiveSelector}, ${mixedActiveSelector}`]: {
     boxShadow:
       '0 1px 1px -0.5px rgba(9, 68, 190, 0.1), 0 2px 2px -1px rgba(9, 68, 190, 0.1), 0 4px 4px -2px rgba(9, 68, 190, 0.1), 0 6px 8px -4px rgba(9, 68, 190, 0.1), 0 2px 6px rgba(53, 115, 246, 0.32), inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 0 3px 1px rgba(0, 0, 0, 0.12)',
+  },
+  '&:focus-visible': {
+    outline: 0,
+    boxShadow: controlFocusShadow,
   },
 })
 

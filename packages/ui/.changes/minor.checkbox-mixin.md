@@ -1,5 +1,7 @@
 Added checkbox primitives and styled checkbox components.
 
+Checkbox controls use the same keyboard focus shadow as `input()` controls.
+
 ```tsx
 import checkboxStyles, { Checkbox, CheckboxGroup, CheckboxGroupParent, CheckboxItem } from '@remix-run/ui/checkbox'
 import * as checkbox from '@remix-run/ui/checkbox/primitives'

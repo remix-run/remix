@@ -56,7 +56,9 @@ describe('checkbox', () => {
     )
 
     expect(html).toMatch(/:focus-visible/)
-    expect(html).toMatch(/outline: 2px solid #1A72FF/)
+    expect(html).toMatch(/outline: 0/)
+    expect(html).toMatch(/0 0 0 1px #3573F6/)
+    expect(html).not.toMatch(/outline: 2px solid #1A72FF/)
     expect(html).toMatch(/:active:not\(:disabled\):not\(\[aria-disabled="true"\]\)/)
     expect(html).toMatch(/0 6px 8px -4px rgba\(9, 68, 190, 0\.1\)/)
     expect(html).toMatch(/0 2px 6px rgba\(53, 115, 246, 0\.32\)/)

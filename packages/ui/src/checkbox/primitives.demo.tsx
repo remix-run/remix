@@ -1,6 +1,7 @@
 import { css } from '@remix-run/ui'
 import type { Handle, RemixNode } from '@remix-run/ui'
 import * as checkbox from '@remix-run/ui/checkbox/primitives'
+import { controlFocusShadow } from '../shared/focus-styles.ts'
 
 /**
  * @name Checkbox Primitives
@@ -173,8 +174,8 @@ const controlCss = css({
     background: '#ffffff',
   },
   '&:focus-visible': {
-    outline: '2px solid #1A72FF',
-    outlineOffset: '2px',
+    outline: 0,
+    boxShadow: controlFocusShadow,
   },
   '&[aria-disabled="true"]': {
     opacity: 0.5,

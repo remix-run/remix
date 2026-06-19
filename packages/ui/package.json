@@ -95,6 +95,10 @@
       "types": "./src/popover/index.ts",
       "default": "./src/popover/index.ts"
     },
+    "./radio": {
+      "types": "./src/radio/index.ts",
+      "default": "./src/radio/index.ts"
+    },
     "./select": {
       "types": "./src/select/index.tsx",
       "default": "./src/select/index.tsx"
@@ -186,6 +190,10 @@
       "./popover": {
         "types": "./dist/popover/index.d.ts",
         "default": "./dist/popover/index.js"
+      },
+      "./radio": {
+        "types": "./dist/radio/index.d.ts",
+        "default": "./dist/radio/index.js"
       },
       "./select": {
         "types": "./dist/select/index.d.ts",
