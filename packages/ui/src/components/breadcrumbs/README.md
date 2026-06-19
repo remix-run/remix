@@ -2,7 +2,7 @@
 
 `Breadcrumbs` renders semantic breadcrumb navigation from a list of items. Use it when the page needs a compact path back through parent sections.
 
-## Usage
+## Component Usage
 
 ```tsx
 import { Breadcrumbs } from 'remix/components/breadcrumbs'
@@ -38,7 +38,7 @@ Pass `separator` to replace the default chevron icon.
 <Breadcrumbs items={[{ href: '/', label: 'Home' }, { label: 'Breadcrumbs' }]} separator="/" />
 ```
 
-## `breadcrumbs.*`
+## `remix/components/breadcrumbs`
 
 - `Breadcrumbs`: component that renders a `<nav>` with an ordered list of breadcrumb items.
 - `BreadcrumbItem`: item shape with `label`, optional `href`, and optional `current`.

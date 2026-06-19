@@ -5,6 +5,7 @@ import * as checkbox from '@remix-run/ui/checkbox'
 import checkboxStyles, { Checkbox, CheckboxGroup, CheckboxGroupParent, CheckboxItem } from '@remix-run/ui/components/checkbox'
 
 <input mix={checkboxStyles()} />
+<input mix={[checkboxStyles(), checkbox.control({ defaultChecked: "mixed" })]} />
 
 <Checkbox defaultChecked="mixed" name="selection" />
 
@@ -13,4 +14,11 @@ import checkboxStyles, { Checkbox, CheckboxGroup, CheckboxGroupParent, CheckboxI
   <CheckboxItem value="read" />
   <CheckboxItem value="write" />
 </CheckboxGroup>
+
+<checkbox.GroupContext defaultValue={["read"]} name="permissions">
+  <div mix={checkbox.group()}>
+    <input aria-label="All permissions" mix={[checkboxStyles(), checkbox.parent()]} />
+    <input aria-label="Read" mix={[checkboxStyles(), checkbox.item({ value: "read" })]} />
+  </div>
+</checkbox.GroupContext>
 ```

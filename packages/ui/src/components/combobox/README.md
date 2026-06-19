@@ -1,10 +1,10 @@
-# Combobox
+# combobox
 
 `Combobox` is the input-first popup value picker for `remix/components/combobox`.
 
 Use it when the user should type draft text, filter a popup list, and still commit one stable form value. If you just need a button-triggered picker, use `Select` instead.
 
-## Usage
+## Component Usage
 
 ```tsx
 import { css, type Handle } from 'remix/ui'
@@ -59,7 +59,39 @@ let root = css({
 })
 ```
 
-## Public API
+## Primitive Usage
+
+Use the lower-level primitives when app code owns the input, popover, list, and option markup:
+
+```tsx
+import * as combobox from 'remix/ui/combobox'
+import { inputStyle, listStyle, optionStyle, popoverStyle } from './combobox.styles'
+
+let frameworks = [
+  { label: 'Remix', searchValue: ['remix', 'rmx'], value: 'remix' },
+  { label: 'React Router', value: 'react-router' },
+]
+
+export function PrimitiveCombobox() {
+  return (
+    <combobox.Context name="framework">
+      <input mix={[inputStyle, combobox.input()]} placeholder="Search frameworks" />
+      <div mix={[popoverStyle, combobox.popover()]}>
+        <div mix={[listStyle, combobox.list()]}>
+          {frameworks.map((option) => (
+            <div key={option.value} mix={[optionStyle, combobox.option(option)]}>
+              {option.label}
+            </div>
+          ))}
+        </div>
+      </div>
+      <input mix={combobox.hiddenInput()} />
+    </combobox.Context>
+  )
+}
+```
+
+## `remix/components/combobox`
 
 ### `Combobox`
 
@@ -67,7 +99,7 @@ The convenience component.
 
 - Renders the text input, popover surface, listbox root, and hidden form input.
 - Dispatches a bubbled custom event that `onComboboxChange(...)` listens for when the committed value changes.
-- Accepts `defaultValue`, `disabled`, `inputId`, `name`, and `placeholder`.
+- Accepts `children`, `defaultValue`, `disabled`, `inputId`, `name`, `placeholder`, and root `div` props.
 
 ### `ComboboxOption`
 
@@ -75,7 +107,16 @@ The default option row for `Combobox`.
 
 - Uses the shared listbox option visuals.
 - Accepts `label`, `value`, optional `searchValue`, and optional `disabled`.
+- Renders `children` when provided, otherwise renders `label`.
 - `searchValue` can be a string or string array for aliases like airport codes, abbreviations, or alternate labels.
+
+### Style and Prop Exports
+
+- `inputStyle`: default combobox input style.
+- `popoverStyle`: default combobox popover behavior style.
+- `ComboboxProps` and `ComboboxOptionProps`: public TypeScript props for the composed APIs.
+
+## `remix/ui/combobox`
 
 ### `onComboboxChange(...)`
 
@@ -86,6 +127,7 @@ The event object includes:
 - `event.value`: the committed value or `null`
 - `event.label`: the committed option label or `null`
 - `event.optionId`: the generated option id or `null`
+- `ComboboxChangeEvent`: the event class dispatched for committed value changes.
 
 ### `combobox.Context`
 
@@ -126,6 +168,12 @@ Registers one option with the combobox and listbox layers.
 Mirrors the committed value into a hidden input for forms.
 
 Apply it to an `<input type="hidden" />` inside the same `combobox.Context`.
+
+### Primitive Types
+
+- `ComboboxOpenStrategy`: initial active-option strategy when the popup opens.
+- `ComboboxHandle`: imperative ref for reading or updating the combobox value and draft label.
+- `ComboboxContextProps`, `ComboboxProps`, `ComboboxOptionOptions`, and `ComboboxOptionProps`: primitive prop and option types for custom composition.
 
 ## Behavior Notes
 

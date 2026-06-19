@@ -2,7 +2,7 @@
 
 `Menu` renders a button-triggered menu with keyboard navigation, checked items, selection events, and nested submenus. Use it for action menus and command groups.
 
-## Usage
+## Component Usage
 
 ```tsx
 import type { Handle } from 'remix/ui'
@@ -98,18 +98,52 @@ export function FileContextMenu(handle: Handle) {
 
 Attach `onMenuSelect(...)` from `remix/ui/menu` to `MenuList` or a shared ancestor when using lower-level context menu composition.
 
-## `menu.*`
+## Primitive Usage
+
+Use only the lower-level primitives when app code owns the trigger, surface, and item markup:
+
+```tsx
+import * as menu from 'remix/ui/menu'
+import { itemStyle, listStyle, popoverStyle, triggerStyle } from './menu.styles'
+
+export function PrimitiveMenu() {
+  return (
+    <menu.Context label="Project actions">
+      <button mix={[triggerStyle, menu.trigger()]} type="button">
+        Actions
+      </button>
+      <div mix={[popoverStyle, menu.popover()]}>
+        <div mix={[listStyle, menu.list()]}>
+          <div mix={[itemStyle, menu.item({ name: 'rename' })]}>Rename</div>
+          <div mix={[itemStyle, menu.item({ disabled: true, name: 'archive' })]}>Archive</div>
+        </div>
+      </div>
+    </menu.Context>
+  )
+}
+```
+
+## `remix/components/menu`
 
 - `Menu`: composed trigger, popover, and list component for the common menu case.
 - `MenuItem`: menu item component. Supports regular, checkbox, and radio item roles through `type`, `checked`, `name`, `value`, `label`, `disabled`, and `searchValue`.
 - `Submenu`: nested menu component with its own trigger and child menu surface.
-- `MenuList`: lower-level list component for custom composition.
-- `onMenuSelect(...)`: event mixin from `remix/ui/menu` for the bubbling `MenuSelectEvent`.
-- `MenuSelectEvent`: bubbling event class from `remix/ui/menu` whose `item` describes the selected item.
-- `MenuSelectItem`: selected item shape from `remix/ui/menu` with `checked`, `id`, `label`, `name`, `type`, and `value`.
-- `menu.Context`, `menu.trigger()`, `menu.contextTrigger()`, `menu.popover()`, `menu.list()`, `menu.item(...)`, and `menu.submenuTrigger(...)`: lower-level composition primitives from `remix/ui/menu`.
+- `MenuList`: lower-level styled list component for custom composition inside `menu.Context`.
 - `buttonStyle`, `popoverStyle`, `listStyle`, `itemStyle`, `itemSlotStyle`, `itemLabelStyle`, `itemIndicatorStyle`, and `triggerIndicatorStyle`: flat style mixins used by the component markup.
-- `MenuProps`, `MenuItemProps`, `MenuListProps`, `MenuProviderProps`, `MenuTriggerOptions`, `MenuContextTriggerOptions`, `MenuItemOptions`, and `SubmenuProps`: public TypeScript props and option types.
+- `MenuProps`, `MenuItemProps`, `MenuListProps`, and `SubmenuProps`: public TypeScript props for the composed APIs.
+
+## `remix/ui/menu`
+
+- `Context`: lower-level provider for custom menu composition.
+- `trigger()`: wires a button-style trigger to open the root menu.
+- `contextTrigger()`: opens the root menu from a `contextmenu` event at pointer coordinates, or from keyboard context-menu shortcuts.
+- `popover()`: wires the menu popover surface.
+- `list()`: wires the menu list root, focus handling, keyboard navigation, and typeahead.
+- `item(...)`: registers one menu item. Supports regular, checkbox, and radio roles through `type`, `checked`, `name`, `value`, `label`, `disabled`, and `searchValue`.
+- `submenuTrigger(...)`: registers a menu item that opens a child menu.
+- `onMenuSelect(...)`: event mixin for the bubbling `MenuSelectEvent`.
+- `MenuSelectEvent`: bubbling event whose `item` describes the selected item.
+- `MenuSelectItem`, `MenuProviderProps`, `MenuTriggerOptions`, `MenuContextTriggerOptions`, `MenuItemOptions`, and `SubmenuTriggerOptions`: public TypeScript event, prop, and option types for the primitives.
 
 ## Behavior Notes
 

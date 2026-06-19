@@ -1,10 +1,10 @@
-# Tabs
+# tabs
 
 `tabs` provides styled tabs components backed by the headless tabs primitives in `remix/ui/tabs`.
 
-Use it when you need a tablist, tab triggers, and tab panels with the default component package styling. `tabs.listStyle` and `tabs.triggerStyle` style the tab row and triggers, but panel presentation stays app-owned.
+Use it when you need a tablist, tab triggers, and tab panels with the default component package styling. `listStyle` and `triggerStyle` from `remix/components/tabs` style the tab row and triggers, but panel presentation stays app-owned.
 
-## Usage
+## Component Usage
 
 ```tsx
 import { css, type Handle } from 'remix/ui'
@@ -43,7 +43,42 @@ export function ProjectTabs(_handle: Handle) {
 }
 ```
 
-## `tabs.*`
+## Primitive Usage
+
+Use the lower-level primitives when app code owns the tablist, trigger, and panel markup:
+
+```tsx
+import * as tabs from 'remix/ui/tabs'
+import { listStyle, panelStyle, triggerStyle } from './tabs.styles'
+
+export function PrimitiveTabs() {
+  return (
+    <tabs.Context defaultValue="overview">
+      <div aria-label="Project sections" mix={[listStyle, tabs.list()]}>
+        <button mix={[triggerStyle, tabs.trigger({ value: 'overview' })]} type="button">
+          Overview
+        </button>
+        <button mix={[triggerStyle, tabs.trigger({ value: 'activity' })]} type="button">
+          Activity
+        </button>
+      </div>
+      <div mix={[panelStyle, tabs.panel({ value: 'overview' })]}>Project health and status.</div>
+      <div mix={[panelStyle, tabs.panel({ value: 'activity' })]}>Recent project activity.</div>
+    </tabs.Context>
+  )
+}
+```
+
+## `remix/components/tabs`
+
+- `Tabs`: default component root around `Context` from `remix/ui/tabs`.
+- `TabsList`: applies `list()` from `remix/ui/tabs` with `listStyle`.
+- `Tab`: applies `trigger(...)` from `remix/ui/tabs` with the `remix/ui/button` mixin and `triggerStyle`.
+- `TabsPanel`: applies `panel(...)` from `remix/ui/tabs` without adding panel styling.
+- `listStyle` and `triggerStyle`: flat style mixins used by the component markup.
+- `TabsProps`, `TabsListProps`, `TabProps`, and `TabsPanelProps`: public TypeScript props for the composed APIs.
+
+## `remix/ui/tabs`
 
 ### `tabs.Context`
 
@@ -84,12 +119,12 @@ The listener mixin from `remix/ui/tabs` for bubbled tab selection changes.
 - `event.value` is the newly selected tab value.
 - `event.previousValue` is the previously selected value, or `null`.
 
-## Convenience Components
+### Primitive Types
 
-- `Tabs` provides the default component root around `tabs.Context` from `remix/ui/tabs`.
-- `TabsList` applies `tabs.list()` from `remix/ui/tabs` with `tabs.listStyle`.
-- `Tab` applies `tabs.trigger(...)` from `remix/ui/tabs` with the `remix/ui/button` mixin and `tabs.triggerStyle`.
-- `TabsPanel` applies `tabs.panel(...)` from `remix/ui/tabs` without adding panel styling.
+- `TabsChangeEvent`: event class dispatched when selection changes.
+- `TabsOrientation`: `'horizontal'` or `'vertical'`.
+- `TabsRef`: imperative ref with the selected value plus focus and selection helpers.
+- `TabsContextProps`, `TabsTriggerOptions`, `TabsPanelOptions`, `TabsListProps`, `TabProps`, and `TabsPanelProps`: public TypeScript props and options for custom composition.
 
 ## Behavior Notes
 
