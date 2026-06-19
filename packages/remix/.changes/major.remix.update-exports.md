@@ -1,19 +1,21 @@
 Added `package.json` `exports`:
 
-- `remix/components/accordion`
-- `remix/components/anchor` to re-export APIs from `@remix-run/ui/components/anchor`
-- `remix/components/breadcrumbs`
-- `remix/components/button` to re-export APIs from `@remix-run/ui/components/button`
-- `remix/components/checkbox`
-- `remix/components/combobox`
-- `remix/components/input` to re-export APIs from `@remix-run/ui/components/input`
-- `remix/components/listbox` to re-export APIs from `@remix-run/ui/components/listbox`
-- `remix/components/menu`
-- `remix/components/popover` to re-export APIs from `@remix-run/ui/components/popover`
-- `remix/components/select`
+- `remix/ui/accordion` to re-export APIs from `@remix-run/ui/accordion`
+- `remix/ui/accordion/primitives` to re-export APIs from `@remix-run/ui/accordion/primitives`
+- `remix/ui/anchor` to re-export APIs from `@remix-run/ui/anchor`
+- `remix/ui/breadcrumbs` to re-export APIs from `@remix-run/ui/breadcrumbs`
 - `remix/ui/button` to re-export APIs from `@remix-run/ui/button`
 - `remix/ui/checkbox` to re-export APIs from `@remix-run/ui/checkbox`
+- `remix/ui/checkbox/primitives` to re-export APIs from `@remix-run/ui/checkbox/primitives`
+- `remix/ui/combobox` to re-export APIs from `@remix-run/ui/combobox`
+- `remix/ui/combobox/primitives` to re-export APIs from `@remix-run/ui/combobox/primitives`
 - `remix/ui/input` to re-export APIs from `@remix-run/ui/input`
+- `remix/ui/listbox` to re-export APIs from `@remix-run/ui/listbox`
+- `remix/ui/menu` to re-export APIs from `@remix-run/ui/menu`
+- `remix/ui/menu/primitives` to re-export APIs from `@remix-run/ui/menu/primitives`
+- `remix/ui/popover` to re-export APIs from `@remix-run/ui/popover`
+- `remix/ui/select` to re-export APIs from `@remix-run/ui/select`
+- `remix/ui/select/primitives` to re-export APIs from `@remix-run/ui/select/primitives`
 
 Removed helper re-exports from `remix/ui`:
 
@@ -33,12 +35,22 @@ Updated `remix/route-pattern` exports for the `RoutePattern` API:
 
 Removed `package.json` `exports`:
 
-- `remix/components/anchor/primitives`
-- `remix/components/button/primitives`
-- `remix/components/input/primitives`
-- `remix/components/listbox/primitives`
-- `remix/components/popover/primitives`
-- `remix/ui/breadcrumbs`
+- `remix/components/accordion`
+- `remix/components/accordion/primitives`
+- `remix/components/anchor`
+- `remix/components/breadcrumbs`
+- `remix/components/button`
+- `remix/components/checkbox`
+- `remix/components/checkbox/primitives`
+- `remix/components/combobox`
+- `remix/components/combobox/primitives`
+- `remix/components/input`
+- `remix/components/listbox`
+- `remix/components/menu`
+- `remix/components/menu/primitives`
+- `remix/components/popover`
+- `remix/components/select`
+- `remix/components/select/primitives`
 - `remix/ui/glyph`
 - `remix/ui/scroll-lock`
 - `remix/ui/separator`

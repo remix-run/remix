@@ -259,6 +259,20 @@ function groupDemosBySection(demos: DemoFile[]): DemoSection[] {
   ].filter((section) => section.groups.length > 0)
 }
 
+const componentDemoModules = new Set([
+  'accordion',
+  'anchor',
+  'breadcrumbs',
+  'button',
+  'checkbox',
+  'combobox',
+  'input',
+  'listbox',
+  'menu',
+  'popover',
+  'select',
+])
+
 function groupDemosByModule(demos: DemoFile[]): DemoGroup[] {
   let groups = new Map<string, DemoFile[]>()
 
@@ -295,7 +309,8 @@ function getDemoModuleName(demo: DemoFile) {
 }
 
 function isComponentDemo(demo: DemoFile) {
-  return demo.relativePath.startsWith('src/components/')
+  let [sourceRoot, moduleName] = demo.relativePath.split('/')
+  return sourceRoot === 'src' && moduleName !== undefined && componentDemoModules.has(moduleName)
 }
 
 function getSourceDemoModuleName(

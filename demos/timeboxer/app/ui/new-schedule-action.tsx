@@ -1,6 +1,6 @@
 import { clientEntry, css, navigate, on, ref, type Handle, type Props } from 'remix/ui'
 import { animateEntrance, animateExit, spring } from 'remix/ui/animation'
-import button from 'remix/components/button'
+import button from 'remix/ui/button'
 import { theme } from './design.ts'
 
 type State = 'idle' | 'creating' | 'submitting'

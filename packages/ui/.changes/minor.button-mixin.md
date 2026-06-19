@@ -1,6 +1,6 @@
 BREAKING CHANGE: Replaced the styled button component API with a default `button()` mixin exported from `@remix-run/ui/button`.
 
-Use the mixin directly on button-like hosts instead of importing `Button` or composing the previous slot style exports from `@remix-run/ui/components/button`:
+Use the mixin directly on button-like hosts instead of importing `Button` or composing the previous slot style exports:
 
 ```tsx
 import button from '@remix-run/ui/button'

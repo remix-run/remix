@@ -1,5 +1,5 @@
 import { clientEntry, css, navigate, on, type Handle } from 'remix/ui'
-import button from 'remix/components/button'
+import button from 'remix/ui/button'
 import { theme } from './design.ts'
 
 import { NewScheduleActionComponent } from './new-schedule-action.tsx'

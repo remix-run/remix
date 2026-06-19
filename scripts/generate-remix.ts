@@ -28,9 +28,7 @@ const SOURCE_FOLDER = 'src'
 const REMIX_CLI_ENTRY_FILE = 'cli-entry.ts'
 const DEFAULT_VALUE_RE_EXPORT_SPECIFIERS = new Set([
   '@remix-run/ui/button',
-  '@remix-run/ui/components/button',
-  '@remix-run/ui/components/checkbox',
-  '@remix-run/ui/components/input',
+  '@remix-run/ui/checkbox',
   '@remix-run/ui/input',
 ])
 
@@ -218,10 +216,6 @@ async function buildExportsFromManifest(
 }
 
 function getSourceFileForManifestEntry(remixPath: string, specifier: string): string {
-  if (specifier.startsWith('@remix-run/ui/components/')) {
-    return remixPath.replace('remix/', '') + '.ts'
-  }
-
   return specifier.replace('@remix-run/', '') + '.ts'
 }
 

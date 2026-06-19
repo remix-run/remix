@@ -22,7 +22,7 @@ Compose behavior primitives with your own markup and styles:
 
 ```tsx
 import { css } from 'remix/ui'
-import * as popover from 'remix/components/popover'
+import * as popover from 'remix/ui/popover'
 
 let triggerCss = css({
   border: '1px solid #d1d5db',
@@ -72,7 +72,7 @@ function ViewOptions() {
 Button styling is available as a composable mixin:
 
 ```tsx
-import button from 'remix/components/button'
+import button from 'remix/ui/button'
 
 function Actions() {
   return () => <button mix={button({ tone: 'primary' })}>Create project</button>

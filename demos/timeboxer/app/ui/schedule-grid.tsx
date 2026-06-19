@@ -8,7 +8,7 @@ import {
   type SerializableValue,
 } from 'remix/ui'
 import { animateLayout, spring } from 'remix/ui/animation'
-import button from 'remix/components/button'
+import button from 'remix/ui/button'
 import { theme } from './design.ts'
 
 import {

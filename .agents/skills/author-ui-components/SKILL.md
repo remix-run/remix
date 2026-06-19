@@ -1,17 +1,17 @@
 ---
 name: author-ui-components
-description: Build idiomatic `packages/ui` components for Remix. Use when authoring or revising first-party UI style mixins, headless primitives, styled component wrappers, or shared component utilities under `packages/ui/src/components`.
+description: Build idiomatic `packages/ui` components for Remix. Use when authoring or revising first-party UI style mixins, headless primitives, styled component wrappers, or shared component utilities under `packages/ui/src`.
 ---
 
 # Author UI Components
 
 Use this skill when building or revising `packages/ui` component APIs. In current
-Remix UI, the public `remix/components/*` and `@remix-run/ui/components/*`
-entries are sourced from `packages/ui/src/components/*`.
+Remix UI, the public `remix/ui/*` and `@remix-run/ui/*`
+entries are sourced from `packages/ui/src/*`.
 
 ## Source Layout
 
-Component modules live in `packages/ui/src/components/<name>/`.
+Component modules live in `packages/ui/src/<name>/`.
 
 Common files:
 
@@ -33,8 +33,8 @@ Current examples:
 
 When adding or moving public entries, update both `exports` and
 `publishConfig.exports` in `packages/ui/package.json`. Prefer the
-`./components/<name>` path for new component docs. Add top-level aliases only
-when intentionally matching the package's existing alias strategy.
+`./<name>` path for component docs and styled wrappers, with lower-level
+behavior under `./<name>/primitives` when a primitive layer exists.
 
 ## Layering
 
@@ -46,7 +46,7 @@ Choose the smallest layer that fits the job.
   refs, and public events. It exports named providers and mixins.
 - A styled wrapper composes primitives, shared styles, icons, and authored
   structure. It should not duplicate primitive behavior.
-- A shared component utility belongs in `src/components/shared` only when multiple
+- A shared component utility belongs in `src/shared` only when multiple
   components already need it.
 
 Good composition flows downward:
@@ -64,7 +64,7 @@ Primitive modules export named bindings, and callers namespace them at import
 time:
 
 ```tsx
-import * as select from '@remix-run/ui/components/select/primitives'
+import * as select from '@remix-run/ui/select/primitives'
 
 function StatusSelect() {
   return () => (
@@ -108,9 +108,9 @@ export function Select(handle: Handle<SelectProps>): () => RemixNode {
 }
 ```
 
-README examples should import from `remix/components/...`. Source files in this
+README examples should import from `remix/ui/...`. Source files in this
 package usually import public UI APIs from `@remix-run/ui` and component APIs
-from `@remix-run/ui/components/...`.
+from `@remix-run/ui/...`.
 
 ## Component Runtime
 
@@ -266,7 +266,7 @@ Use `css(...)` descriptors and shared component tokens.
   lists, options, labels, and indicators.
 - Export style constants such as `triggerStyle`, `listStyle`, `itemStyle`, or
   `popoverStyle` when custom composition is documented.
-- Keep shared CSS helpers in `src/components/shared` only when multiple
+- Keep shared CSS helpers in `src/shared` only when multiple
   components consume them.
 - For simple style helpers, return readonly arrays of CSS and behavior mixins
   with precise public option types.
@@ -284,14 +284,14 @@ Add or update:
 - `index.test.tsx` for styled wrapper markup and composition
 - browser tests only when DOM behavior needs a real browser
 - demos for visible components
-- `README.md` examples that import from `remix/components/...`
+- `README.md` examples that import from `remix/ui/...`
 - package change files when published behavior changes
 
 ## Checklist
 
 Before finishing a `packages/ui` component change, verify:
 
-- source lives under `packages/ui/src/components/<name>` and exports match
+- source lives under `packages/ui/src/<name>` and exports match
   `packages/ui/package.json`
 - the API layer is correct: style helper, primitive module, styled wrapper, or
   shared utility

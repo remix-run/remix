@@ -1,8 +1,8 @@
 Added checkbox primitives and styled checkbox components.
 
 ```tsx
-import * as checkbox from '@remix-run/ui/checkbox'
-import checkboxStyles, { Checkbox, CheckboxGroup, CheckboxGroupParent, CheckboxItem } from '@remix-run/ui/components/checkbox'
+import checkboxStyles, { Checkbox, CheckboxGroup, CheckboxGroupParent, CheckboxItem } from '@remix-run/ui/checkbox'
+import * as checkbox from '@remix-run/ui/checkbox/primitives'
 
 <input mix={checkboxStyles()} />
 <input mix={[checkboxStyles(), checkbox.control({ defaultChecked: "mixed" })]} />
