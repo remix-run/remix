@@ -8,7 +8,7 @@ Use it for custom surfaces like filters, inspectors, and view options. Higher-le
 
 ```tsx
 import { on, type Handle } from 'remix/ui'
-import * as popover from 'remix/ui/popover'
+import * as popover from 'remix/components/popover'
 import { panelStyle } from './popover.styles'
 
 export function ViewOptions(handle: Handle) {
@@ -58,7 +58,7 @@ export function ViewOptions(handle: Handle) {
 }
 ```
 
-## `remix/ui/popover`
+## `remix/components/popover`
 
 ### `popover.Context`
 

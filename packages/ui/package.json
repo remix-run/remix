@@ -32,56 +32,100 @@
       "default": "./src/animation/index.ts"
     },
     "./button": {
-      "types": "./src/components/button/primitives.ts",
-      "default": "./src/components/button/primitives.ts"
+      "types": "./src/components/button/index.ts",
+      "default": "./src/components/button/index.ts"
     },
     "./checkbox": {
       "types": "./src/components/checkbox/primitives.ts",
       "default": "./src/components/checkbox/primitives.ts"
     },
     "./input": {
-      "types": "./src/components/input/primitives.ts",
-      "default": "./src/components/input/primitives.ts"
+      "types": "./src/components/input/index.ts",
+      "default": "./src/components/input/index.ts"
     },
     "./accordion": {
       "types": "./src/components/accordion/primitives.tsx",
       "default": "./src/components/accordion/primitives.tsx"
     },
     "./anchor": {
-      "types": "./src/components/anchor/primitives.ts",
-      "default": "./src/components/anchor/primitives.ts"
+      "types": "./src/components/anchor/index.ts",
+      "default": "./src/components/anchor/index.ts"
     },
     "./combobox": {
       "types": "./src/components/combobox/primitives.tsx",
       "default": "./src/components/combobox/primitives.tsx"
     },
     "./components/accordion": {
-      "types": "./src/components/accordion/components.tsx",
-      "default": "./src/components/accordion/components.tsx"
+      "types": "./src/components/accordion/index.tsx",
+      "default": "./src/components/accordion/index.tsx"
+    },
+    "./components/accordion/primitives": {
+      "types": "./src/components/accordion/primitives.tsx",
+      "default": "./src/components/accordion/primitives.tsx"
+    },
+    "./components/anchor": {
+      "types": "./src/components/anchor/index.ts",
+      "default": "./src/components/anchor/index.ts"
     },
     "./components/breadcrumbs": {
-      "types": "./src/components/breadcrumbs/components.tsx",
-      "default": "./src/components/breadcrumbs/components.tsx"
+      "types": "./src/components/breadcrumbs/index.tsx",
+      "default": "./src/components/breadcrumbs/index.tsx"
+    },
+    "./components/button": {
+      "types": "./src/components/button/index.ts",
+      "default": "./src/components/button/index.ts"
     },
     "./components/checkbox": {
-      "types": "./src/components/checkbox/components.tsx",
-      "default": "./src/components/checkbox/components.tsx"
+      "types": "./src/components/checkbox/index.tsx",
+      "default": "./src/components/checkbox/index.tsx"
+    },
+    "./components/checkbox/primitives": {
+      "types": "./src/components/checkbox/primitives.ts",
+      "default": "./src/components/checkbox/primitives.ts"
     },
     "./components/combobox": {
-      "types": "./src/components/combobox/components.tsx",
-      "default": "./src/components/combobox/components.tsx"
+      "types": "./src/components/combobox/index.tsx",
+      "default": "./src/components/combobox/index.tsx"
+    },
+    "./components/combobox/primitives": {
+      "types": "./src/components/combobox/primitives.tsx",
+      "default": "./src/components/combobox/primitives.tsx"
+    },
+    "./components/input": {
+      "types": "./src/components/input/index.ts",
+      "default": "./src/components/input/index.ts"
+    },
+    "./components/listbox": {
+      "types": "./src/components/listbox/index.ts",
+      "default": "./src/components/listbox/index.ts"
     },
     "./components/menu": {
-      "types": "./src/components/menu/components.tsx",
-      "default": "./src/components/menu/components.tsx"
+      "types": "./src/components/menu/index.tsx",
+      "default": "./src/components/menu/index.tsx"
+    },
+    "./components/menu/primitives": {
+      "types": "./src/components/menu/primitives.tsx",
+      "default": "./src/components/menu/primitives.tsx"
+    },
+    "./components/popover": {
+      "types": "./src/components/popover/index.ts",
+      "default": "./src/components/popover/index.ts"
     },
     "./components/select": {
-      "types": "./src/components/select/components.tsx",
-      "default": "./src/components/select/components.tsx"
+      "types": "./src/components/select/index.tsx",
+      "default": "./src/components/select/index.tsx"
+    },
+    "./components/select/primitives": {
+      "types": "./src/components/select/primitives.tsx",
+      "default": "./src/components/select/primitives.tsx"
     },
     "./components/tabs": {
-      "types": "./src/components/tabs/components.tsx",
-      "default": "./src/components/tabs/components.tsx"
+      "types": "./src/components/tabs/index.tsx",
+      "default": "./src/components/tabs/index.tsx"
+    },
+    "./components/tabs/primitives": {
+      "types": "./src/components/tabs/primitives.tsx",
+      "default": "./src/components/tabs/primitives.tsx"
     },
     "./jsx-dev-runtime": {
       "types": "./src/jsx-runtime.ts",
@@ -92,16 +136,16 @@
       "default": "./src/jsx-runtime.ts"
     },
     "./listbox": {
-      "types": "./src/components/listbox/primitives.ts",
-      "default": "./src/components/listbox/primitives.ts"
+      "types": "./src/components/listbox/index.ts",
+      "default": "./src/components/listbox/index.ts"
     },
     "./menu": {
       "types": "./src/components/menu/primitives.tsx",
       "default": "./src/components/menu/primitives.tsx"
     },
     "./popover": {
-      "types": "./src/components/popover/primitives.ts",
-      "default": "./src/components/popover/primitives.ts"
+      "types": "./src/components/popover/index.ts",
+      "default": "./src/components/popover/index.ts"
     },
     "./select": {
       "types": "./src/components/select/primitives.tsx",
@@ -136,56 +180,100 @@
         "default": "./dist/animation/index.js"
       },
       "./button": {
-        "types": "./dist/components/button/primitives.d.ts",
-        "default": "./dist/components/button/primitives.js"
+        "types": "./dist/components/button/index.d.ts",
+        "default": "./dist/components/button/index.js"
       },
       "./checkbox": {
         "types": "./dist/components/checkbox/primitives.d.ts",
         "default": "./dist/components/checkbox/primitives.js"
       },
       "./input": {
-        "types": "./dist/components/input/primitives.d.ts",
-        "default": "./dist/components/input/primitives.js"
+        "types": "./dist/components/input/index.d.ts",
+        "default": "./dist/components/input/index.js"
       },
       "./accordion": {
         "types": "./dist/components/accordion/primitives.d.ts",
         "default": "./dist/components/accordion/primitives.js"
       },
       "./anchor": {
-        "types": "./dist/components/anchor/primitives.d.ts",
-        "default": "./dist/components/anchor/primitives.js"
+        "types": "./dist/components/anchor/index.d.ts",
+        "default": "./dist/components/anchor/index.js"
       },
       "./combobox": {
         "types": "./dist/components/combobox/primitives.d.ts",
         "default": "./dist/components/combobox/primitives.js"
       },
       "./components/accordion": {
-        "types": "./dist/components/accordion/components.d.ts",
-        "default": "./dist/components/accordion/components.js"
+        "types": "./dist/components/accordion/index.d.ts",
+        "default": "./dist/components/accordion/index.js"
+      },
+      "./components/accordion/primitives": {
+        "types": "./dist/components/accordion/primitives.d.ts",
+        "default": "./dist/components/accordion/primitives.js"
+      },
+      "./components/anchor": {
+        "types": "./dist/components/anchor/index.d.ts",
+        "default": "./dist/components/anchor/index.js"
       },
       "./components/breadcrumbs": {
-        "types": "./dist/components/breadcrumbs/components.d.ts",
-        "default": "./dist/components/breadcrumbs/components.js"
+        "types": "./dist/components/breadcrumbs/index.d.ts",
+        "default": "./dist/components/breadcrumbs/index.js"
+      },
+      "./components/button": {
+        "types": "./dist/components/button/index.d.ts",
+        "default": "./dist/components/button/index.js"
       },
       "./components/checkbox": {
-        "types": "./dist/components/checkbox/components.d.ts",
-        "default": "./dist/components/checkbox/components.js"
+        "types": "./dist/components/checkbox/index.d.ts",
+        "default": "./dist/components/checkbox/index.js"
+      },
+      "./components/checkbox/primitives": {
+        "types": "./dist/components/checkbox/primitives.d.ts",
+        "default": "./dist/components/checkbox/primitives.js"
       },
       "./components/combobox": {
-        "types": "./dist/components/combobox/components.d.ts",
-        "default": "./dist/components/combobox/components.js"
+        "types": "./dist/components/combobox/index.d.ts",
+        "default": "./dist/components/combobox/index.js"
+      },
+      "./components/combobox/primitives": {
+        "types": "./dist/components/combobox/primitives.d.ts",
+        "default": "./dist/components/combobox/primitives.js"
+      },
+      "./components/input": {
+        "types": "./dist/components/input/index.d.ts",
+        "default": "./dist/components/input/index.js"
+      },
+      "./components/listbox": {
+        "types": "./dist/components/listbox/index.d.ts",
+        "default": "./dist/components/listbox/index.js"
       },
       "./components/menu": {
-        "types": "./dist/components/menu/components.d.ts",
-        "default": "./dist/components/menu/components.js"
+        "types": "./dist/components/menu/index.d.ts",
+        "default": "./dist/components/menu/index.js"
+      },
+      "./components/menu/primitives": {
+        "types": "./dist/components/menu/primitives.d.ts",
+        "default": "./dist/components/menu/primitives.js"
+      },
+      "./components/popover": {
+        "types": "./dist/components/popover/index.d.ts",
+        "default": "./dist/components/popover/index.js"
       },
       "./components/select": {
-        "types": "./dist/components/select/components.d.ts",
-        "default": "./dist/components/select/components.js"
+        "types": "./dist/components/select/index.d.ts",
+        "default": "./dist/components/select/index.js"
+      },
+      "./components/select/primitives": {
+        "types": "./dist/components/select/primitives.d.ts",
+        "default": "./dist/components/select/primitives.js"
       },
       "./components/tabs": {
-        "types": "./dist/components/tabs/components.d.ts",
-        "default": "./dist/components/tabs/components.js"
+        "types": "./dist/components/tabs/index.d.ts",
+        "default": "./dist/components/tabs/index.js"
+      },
+      "./components/tabs/primitives": {
+        "types": "./dist/components/tabs/primitives.d.ts",
+        "default": "./dist/components/tabs/primitives.js"
       },
       "./jsx-dev-runtime": {
         "types": "./dist/jsx-runtime.d.ts",
@@ -196,16 +284,16 @@
         "default": "./dist/jsx-runtime.js"
       },
       "./listbox": {
-        "types": "./dist/components/listbox/primitives.d.ts",
-        "default": "./dist/components/listbox/primitives.js"
+        "types": "./dist/components/listbox/index.d.ts",
+        "default": "./dist/components/listbox/index.js"
       },
       "./menu": {
         "types": "./dist/components/menu/primitives.d.ts",
         "default": "./dist/components/menu/primitives.js"
       },
       "./popover": {
-        "types": "./dist/components/popover/primitives.d.ts",
-        "default": "./dist/components/popover/primitives.js"
+        "types": "./dist/components/popover/index.d.ts",
+        "default": "./dist/components/popover/index.js"
       },
       "./select": {
         "types": "./dist/components/select/primitives.d.ts",

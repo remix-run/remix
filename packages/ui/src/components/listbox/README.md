@@ -6,8 +6,8 @@
 
 ```tsx
 import type { Handle } from 'remix/ui'
-import * as listbox from 'remix/ui/listbox'
-import type { ListboxValue } from 'remix/ui/listbox'
+import * as listbox from 'remix/components/listbox'
+import type { ListboxValue } from 'remix/components/listbox'
 import { listStyle, optionStyle } from './listbox.styles'
 
 function FrameworkListbox(handle: Handle) {
@@ -63,7 +63,7 @@ Use `textValue` when the visible label is not the best string for typeahead sear
 </div>
 ```
 
-## `remix/ui/listbox`
+## `remix/components/listbox`
 
 - `listbox.Context`: provider for controlled `value` and `activeValue`, option registration, selection, highlighting, optional ref access, `flashSelection`, `selectionFlashAttribute`, and `onSelectSettled`.
 - `listbox.list()`: mixin that wires `role="listbox"`, default `tabIndex={-1}`, keyboard navigation, focus scrolling, and typeahead highlighting.

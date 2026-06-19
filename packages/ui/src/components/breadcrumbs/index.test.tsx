@@ -3,7 +3,7 @@ import { describe, it } from '@remix-run/test'
 
 import { renderToString } from '@remix-run/ui/server'
 
-import { Breadcrumbs } from './components.tsx'
+import { Breadcrumbs } from './index.tsx'
 
 describe('Breadcrumbs', () => {
   it('renders semantic breadcrumb structure', async () => {

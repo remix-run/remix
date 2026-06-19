@@ -7,7 +7,7 @@ import type {
   Props,
   RemixNode,
 } from '@remix-run/ui'
-import * as checkboxPrimitive from '@remix-run/ui/checkbox'
+import * as checkboxPrimitive from '@remix-run/ui/components/checkbox/primitives'
 import { renderMixinElement } from '../../runtime/mixins/mixin.ts'
 
 export {
@@ -15,7 +15,7 @@ export {
   CheckboxGroupChangeEvent,
   onCheckboxChange,
   onCheckboxGroupChange,
-} from '@remix-run/ui/checkbox'
+} from '@remix-run/ui/components/checkbox/primitives'
 
 export type CheckboxSize = 'md' | 'lg'
 export type CheckboxState = checkboxPrimitive.CheckboxState

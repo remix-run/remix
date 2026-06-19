@@ -5,7 +5,7 @@
 ## Primitive Usage
 
 ```tsx
-import input from 'remix/ui/input'
+import input from 'remix/components/input'
 
 function ProductFilters() {
   return () => (
@@ -24,7 +24,7 @@ function ProductFilters() {
 Compose app-owned styles when a field needs local layout or adornments:
 
 ```tsx
-import input from 'remix/ui/input'
+import input from 'remix/components/input'
 import { filterFieldStyle, filterRootStyle } from './filters.styles'
 
 function SearchFilter() {
@@ -37,7 +37,7 @@ function SearchFilter() {
 }
 ```
 
-## `remix/ui/input`
+## `remix/components/input`
 
 - `input(options)`: styles a standalone native input. `size` may be `'md'` or `'lg'` and defaults to `'md'`.
 - `input.root(options)`: styles a flex input frame for inline icons, buttons, and a child input.

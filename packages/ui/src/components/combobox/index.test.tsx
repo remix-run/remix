@@ -3,7 +3,7 @@ import { afterEach, describe, it } from '@remix-run/test'
 
 import { createRoot, type RemixNode } from '@remix-run/ui'
 
-import { Combobox, ComboboxOption } from './components.tsx'
+import { Combobox, ComboboxOption } from './index.tsx'
 
 let roots: ReturnType<typeof createRoot>[] = []
 

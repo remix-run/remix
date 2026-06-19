@@ -11,7 +11,7 @@ import {
   anchor as positionAnchor,
   type AnchorOptions,
   type AnchorTarget,
-} from '../anchor/primitives.ts'
+} from '../anchor/index.ts'
 import { onOutsideClick } from '../../interactions/outside-click/outside-click-mixin.ts'
 import { lockScroll } from '../../utils/scroll-lock.ts'
 

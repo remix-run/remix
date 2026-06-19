@@ -5,7 +5,7 @@
 ## Primitive Usage
 
 ```tsx
-import button from 'remix/ui/button'
+import button from 'remix/components/button'
 
 function Actions() {
   return () => (
@@ -21,7 +21,7 @@ function Actions() {
 Compose app-owned styles around the primitive when a control needs local layout or state styling:
 
 ```tsx
-import button from 'remix/ui/button'
+import button from 'remix/components/button'
 import { toolbarButtonStyle } from './toolbar.styles'
 
 function ToolbarAction() {
@@ -29,7 +29,7 @@ function ToolbarAction() {
 }
 ```
 
-## `remix/ui/button`
+## `remix/components/button`
 
 - `button(options)`: style mixin for native buttons or button-like hosts.
 - `ButtonOptions`: accepts `size` and `tone`.

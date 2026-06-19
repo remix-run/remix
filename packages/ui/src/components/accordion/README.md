@@ -97,10 +97,10 @@ export function ControlledAccordion(handle: Handle) {
 }
 ```
 
-Listen for bubbling `AccordionChangeEvent` events with `onAccordionChange` from `remix/ui/accordion`.
+Listen for bubbling `AccordionChangeEvent` events with `onAccordionChange` from `remix/components/accordion/primitives`.
 
 ```tsx
-import { onAccordionChange } from 'remix/ui/accordion'
+import { onAccordionChange } from 'remix/components/accordion/primitives'
 import {
   Accordion,
   AccordionContent,
@@ -162,7 +162,7 @@ Pass `indicator={null}` to remove the default chevron, or pass a custom node to 
 Use the lower-level primitives when app code owns the accordion markup and styles:
 
 ```tsx
-import * as accordion from 'remix/ui/accordion'
+import * as accordion from 'remix/components/accordion/primitives'
 import { contentStyle, headingStyle, itemStyle, rootStyle, triggerStyle } from './accordion.styles'
 
 export function PrimitiveAccordion() {
@@ -196,7 +196,7 @@ export function PrimitiveAccordion() {
 - `rootStyle`, `itemStyle`, `headingStyle`, `triggerStyle`, `indicatorStyle`, `panelStyle`, and `bodyStyle`: flat style mixins used by the component markup.
 - `AccordionProps`, `AccordionSingleProps`, `AccordionMultipleProps`, `AccordionItemProps`, `AccordionTriggerProps`, and `AccordionContentProps`: public TypeScript props for the composed APIs.
 
-## `remix/ui/accordion`
+## `remix/components/accordion/primitives`
 
 - `Context`: lower-level provider for custom accordion composition.
 - `ItemContext`: lower-level provider for one item value.

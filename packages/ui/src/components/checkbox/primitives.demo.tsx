@@ -1,6 +1,6 @@
 import { css } from '@remix-run/ui'
 import type { Handle, RemixNode } from '@remix-run/ui'
-import * as checkbox from '@remix-run/ui/checkbox'
+import * as checkbox from '@remix-run/ui/components/checkbox/primitives'
 
 /**
  * @name Checkbox Primitives

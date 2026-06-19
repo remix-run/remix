@@ -9,8 +9,8 @@ import {
   type MixinFactory,
   type RemixNode,
 } from '@remix-run/ui'
-import { type AnchorOptions, type AnchorPoint } from '../anchor/primitives.ts'
-import * as popover from '../popover/primitives.ts'
+import { type AnchorOptions, type AnchorPoint } from '../anchor/index.ts'
+import * as popover from '../popover/index.ts'
 import {
   hiddenTypeahead,
   matchNextItemBySearchText,

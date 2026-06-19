@@ -6,7 +6,7 @@
 
 ```tsx
 import { Option, Select } from 'remix/components/select'
-import { onSelectChange } from 'remix/ui/select'
+import { onSelectChange } from 'remix/components/select/primitives'
 
 export function FrameworkSelect() {
   return (
@@ -51,9 +51,9 @@ Use the lower-level primitives when the trigger or popup structure needs to be o
 
 ```tsx
 import type { Handle } from 'remix/ui'
-import * as popover from 'remix/ui/popover'
+import * as popover from 'remix/components/popover'
 import { triggerStyle } from 'remix/components/select'
-import * as select from 'remix/ui/select'
+import * as select from 'remix/components/select/primitives'
 import { listStyle, optionStyle, surfaceStyle } from './select.styles'
 
 function SelectValue(handle: Handle) {
@@ -71,9 +71,7 @@ function IssueTypeSelect() {
       <popover.Context>
         <div mix={[surfaceStyle, select.popover()]}>
           <div mix={[listStyle, select.list()]}>
-            <div mix={[optionStyle, select.option({ label: 'Bug', value: 'bug' })]}>
-              Bug
-            </div>
+            <div mix={[optionStyle, select.option({ label: 'Bug', value: 'bug' })]}>Bug</div>
             <div mix={[optionStyle, select.option({ label: 'Feature', value: 'feature' })]}>
               Feature
             </div>
@@ -93,7 +91,7 @@ function IssueTypeSelect() {
 - `triggerStyle`: standard select trigger style for custom trigger composition.
 - `SelectProps` and `SelectOptionProps`: public TypeScript props for the composed APIs.
 
-## `remix/ui/select`
+## `remix/components/select/primitives`
 
 - `Context`: lower-level provider for custom composition. Accepts `defaultLabel`, `defaultValue`, `disabled`, `name`, and primitive-only `labelSwapDelayMs`; the label-swap delay defaults to `75` milliseconds.
 - `trigger()`: wires the trigger button, open behavior, closed-trigger typeahead, and trigger ARIA attributes.

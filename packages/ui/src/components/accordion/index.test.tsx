@@ -3,7 +3,7 @@ import { afterEach, describe, it } from '@remix-run/test'
 
 import { createRoot, type RemixNode } from '@remix-run/ui'
 import { renderToString } from '@remix-run/ui/server'
-import { onAccordionChange } from '@remix-run/ui/accordion'
+import { onAccordionChange } from '@remix-run/ui/components/accordion/primitives'
 
 import {
   Accordion,
@@ -18,7 +18,7 @@ import {
   AccordionTrigger,
   triggerStyle,
   type AccordionProps,
-} from './components.tsx'
+} from './index.tsx'
 
 afterEach(() => {
   document.body.innerHTML = ''

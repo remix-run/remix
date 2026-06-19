@@ -9,7 +9,7 @@ Use it when the user should type draft text, filter a popup list, and still comm
 ```tsx
 import { css, type Handle } from 'remix/ui'
 import { Combobox, ComboboxOption } from 'remix/components/combobox'
-import { onComboboxChange } from 'remix/ui/combobox'
+import { onComboboxChange } from 'remix/components/combobox/primitives'
 
 let airports = [
   {
@@ -64,7 +64,7 @@ let root = css({
 Use the lower-level primitives when app code owns the input, popover, list, and option markup:
 
 ```tsx
-import * as combobox from 'remix/ui/combobox'
+import * as combobox from 'remix/components/combobox/primitives'
 import { inputStyle, listStyle, optionStyle, popoverStyle } from './combobox.styles'
 
 let frameworks = [
@@ -116,11 +116,11 @@ The default option row for `Combobox`.
 - `popoverStyle`: default combobox popover behavior style.
 - `ComboboxProps` and `ComboboxOptionProps`: public TypeScript props for the composed APIs.
 
-## `remix/ui/combobox`
+## `remix/components/combobox/primitives`
 
 ### `onComboboxChange(...)`
 
-The listener mixin from `remix/ui/combobox` for bubbled committed-value changes.
+The listener mixin from `remix/components/combobox/primitives` for bubbled committed-value changes.
 
 The event object includes:
 
@@ -131,7 +131,7 @@ The event object includes:
 
 ### `combobox.Context`
 
-The lower-level coordinator from `remix/ui/combobox` for custom combobox composition.
+The lower-level coordinator from `remix/components/combobox/primitives` for custom combobox composition.
 
 It wraps the shared `popover` and `listbox` contexts and owns the draft text, committed value, popup state, and selection timing.
 

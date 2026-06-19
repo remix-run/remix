@@ -12,8 +12,8 @@ import {
   type RemixNode,
 } from '@remix-run/ui'
 
-import * as listbox from '../listbox/primitives.ts'
-import * as popover from '../popover/primitives.ts'
+import * as listbox from '../listbox/index.ts'
+import * as popover from '../popover/index.ts'
 import { type SearchValue } from '../../interactions/typeahead/typeahead-mixin.ts'
 import { waitForCssTransition } from '../../utils/wait-for-css-transition.ts'
 import { wait } from '../../utils/wait.ts'

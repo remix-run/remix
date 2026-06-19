@@ -1,4 +1,4 @@
-import input from '@remix-run/ui/input'
+import input from '@remix-run/ui/components/input'
 import { renderToString } from '@remix-run/ui/server'
 import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'

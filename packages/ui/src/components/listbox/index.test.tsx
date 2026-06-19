@@ -3,8 +3,8 @@ import { afterEach, describe, it, mock, type FakeTimers } from '@remix-run/test'
 
 import { createRoot, type Handle, type RemixNode } from '@remix-run/ui'
 
-import * as listbox from './primitives.ts'
-import type { ListboxOption, ListboxRef, ListboxValue } from './primitives.ts'
+import * as listbox from './index.ts'
+import type { ListboxOption, ListboxRef, ListboxValue } from './index.ts'
 
 const flashDurationMs = 60
 let roots: ReturnType<typeof createRoot>[] = []

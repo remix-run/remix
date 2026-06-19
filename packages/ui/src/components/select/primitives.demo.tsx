@@ -1,6 +1,6 @@
 import { css, type Handle } from '@remix-run/ui'
-import * as popover from '@remix-run/ui/popover'
-import * as select from '@remix-run/ui/select'
+import * as popover from '@remix-run/ui/components/popover'
+import * as select from '@remix-run/ui/components/select/primitives'
 
 /**
  * @name Select Primitives

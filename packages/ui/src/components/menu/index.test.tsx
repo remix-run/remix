@@ -2,10 +2,10 @@ import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
 
 import { createRoot, type RemixNode } from '@remix-run/ui'
-import * as menu from '@remix-run/ui/menu'
-import { onMenuSelect } from '@remix-run/ui/menu'
+import * as menu from '@remix-run/ui/components/menu/primitives'
+import { onMenuSelect } from '@remix-run/ui/components/menu/primitives'
 
-import { Menu, MenuItem, MenuList, Submenu } from './components.tsx'
+import { Menu, MenuItem, MenuList, Submenu } from './index.tsx'
 
 let roots: ReturnType<typeof createRoot>[] = []
 

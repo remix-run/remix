@@ -28,12 +28,23 @@
     "./auth-middleware": "./src/auth-middleware.ts",
     "./cli": "./src/cli.ts",
     "./components/accordion": "./src/components/accordion.ts",
+    "./components/accordion/primitives": "./src/components/accordion/primitives.ts",
+    "./components/anchor": "./src/components/anchor.ts",
     "./components/breadcrumbs": "./src/components/breadcrumbs.ts",
+    "./components/button": "./src/components/button.ts",
     "./components/checkbox": "./src/components/checkbox.ts",
+    "./components/checkbox/primitives": "./src/components/checkbox/primitives.ts",
     "./components/combobox": "./src/components/combobox.ts",
+    "./components/combobox/primitives": "./src/components/combobox/primitives.ts",
+    "./components/input": "./src/components/input.ts",
+    "./components/listbox": "./src/components/listbox.ts",
     "./components/menu": "./src/components/menu.ts",
+    "./components/menu/primitives": "./src/components/menu/primitives.ts",
+    "./components/popover": "./src/components/popover.ts",
     "./components/select": "./src/components/select.ts",
+    "./components/select/primitives": "./src/components/select/primitives.ts",
     "./components/tabs": "./src/components/tabs.ts",
+    "./components/tabs/primitives": "./src/components/tabs/primitives.ts",
     "./compression-middleware": "./src/compression-middleware.ts",
     "./cookie": "./src/cookie.ts",
     "./cop-middleware": "./src/cop-middleware.ts",
@@ -184,29 +195,73 @@
         "types": "./dist/components/accordion.d.ts",
         "default": "./dist/components/accordion.js"
       },
+      "./components/accordion/primitives": {
+        "types": "./dist/components/accordion/primitives.d.ts",
+        "default": "./dist/components/accordion/primitives.js"
+      },
+      "./components/anchor": {
+        "types": "./dist/components/anchor.d.ts",
+        "default": "./dist/components/anchor.js"
+      },
       "./components/breadcrumbs": {
         "types": "./dist/components/breadcrumbs.d.ts",
         "default": "./dist/components/breadcrumbs.js"
+      },
+      "./components/button": {
+        "types": "./dist/components/button.d.ts",
+        "default": "./dist/components/button.js"
       },
       "./components/checkbox": {
         "types": "./dist/components/checkbox.d.ts",
         "default": "./dist/components/checkbox.js"
       },
+      "./components/checkbox/primitives": {
+        "types": "./dist/components/checkbox/primitives.d.ts",
+        "default": "./dist/components/checkbox/primitives.js"
+      },
       "./components/combobox": {
         "types": "./dist/components/combobox.d.ts",
         "default": "./dist/components/combobox.js"
+      },
+      "./components/combobox/primitives": {
+        "types": "./dist/components/combobox/primitives.d.ts",
+        "default": "./dist/components/combobox/primitives.js"
+      },
+      "./components/input": {
+        "types": "./dist/components/input.d.ts",
+        "default": "./dist/components/input.js"
+      },
+      "./components/listbox": {
+        "types": "./dist/components/listbox.d.ts",
+        "default": "./dist/components/listbox.js"
       },
       "./components/menu": {
         "types": "./dist/components/menu.d.ts",
         "default": "./dist/components/menu.js"
       },
+      "./components/menu/primitives": {
+        "types": "./dist/components/menu/primitives.d.ts",
+        "default": "./dist/components/menu/primitives.js"
+      },
+      "./components/popover": {
+        "types": "./dist/components/popover.d.ts",
+        "default": "./dist/components/popover.js"
+      },
       "./components/select": {
         "types": "./dist/components/select.d.ts",
         "default": "./dist/components/select.js"
       },
+      "./components/select/primitives": {
+        "types": "./dist/components/select/primitives.d.ts",
+        "default": "./dist/components/select/primitives.js"
+      },
       "./components/tabs": {
         "types": "./dist/components/tabs.d.ts",
         "default": "./dist/components/tabs.js"
+      },
+      "./components/tabs/primitives": {
+        "types": "./dist/components/tabs/primitives.d.ts",
+        "default": "./dist/components/tabs/primitives.js"
       },
       "./compression-middleware": {
         "types": "./dist/compression-middleware.d.ts",

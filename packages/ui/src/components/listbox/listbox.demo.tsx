@@ -1,6 +1,6 @@
 import { css, type Handle } from '@remix-run/ui'
-import * as listbox from '@remix-run/ui/listbox'
-import type { ListboxValue } from '@remix-run/ui/listbox'
+import * as listbox from '@remix-run/ui/components/listbox'
+import type { ListboxValue } from '@remix-run/ui/components/listbox'
 
 /**
  * @name Listbox

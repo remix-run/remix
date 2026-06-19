@@ -1,6 +1,6 @@
 # tabs
 
-`tabs` provides styled tabs components backed by the headless tabs primitives in `remix/ui/tabs`.
+`tabs` provides styled tabs components backed by the headless tabs primitives in `remix/components/tabs/primitives`.
 
 Use it when you need a tablist, tab triggers, and tab panels with the default component package styling. `listStyle` and `triggerStyle` from `remix/components/tabs` style the tab row and triggers, but panel presentation stays app-owned.
 
@@ -48,7 +48,7 @@ export function ProjectTabs(_handle: Handle) {
 Use the lower-level primitives when app code owns the tablist, trigger, and panel markup:
 
 ```tsx
-import * as tabs from 'remix/ui/tabs'
+import * as tabs from 'remix/components/tabs/primitives'
 import { listStyle, panelStyle, triggerStyle } from './tabs.styles'
 
 export function PrimitiveTabs() {
@@ -71,18 +71,18 @@ export function PrimitiveTabs() {
 
 ## `remix/components/tabs`
 
-- `Tabs`: default component root around `Context` from `remix/ui/tabs`.
-- `TabsList`: applies `list()` from `remix/ui/tabs` with `listStyle`.
-- `Tab`: applies `trigger(...)` from `remix/ui/tabs` with the `remix/ui/button` mixin and `triggerStyle`.
-- `TabsPanel`: applies `panel(...)` from `remix/ui/tabs` without adding panel styling.
+- `Tabs`: default component root around `Context` from `remix/components/tabs/primitives`.
+- `TabsList`: applies `list()` from `remix/components/tabs/primitives` with `listStyle`.
+- `Tab`: applies `trigger(...)` from `remix/components/tabs/primitives` with the `remix/components/button` mixin and `triggerStyle`.
+- `TabsPanel`: applies `panel(...)` from `remix/components/tabs/primitives` without adding panel styling.
 - `listStyle` and `triggerStyle`: flat style mixins used by the component markup.
 - `TabsProps`, `TabsListProps`, `TabProps`, and `TabsPanelProps`: public TypeScript props for the composed APIs.
 
-## `remix/ui/tabs`
+## `remix/components/tabs/primitives`
 
 ### `tabs.Context`
 
-The `remix/ui/tabs` primitive provides the shared coordinator for one tabs instance.
+The `remix/components/tabs/primitives` primitive provides the shared coordinator for one tabs instance.
 
 - Owns the selected tab value for uncontrolled usage.
 - Accepts controlled `value` plus `onValueChange` when the app owns selection state.
@@ -90,14 +90,14 @@ The `remix/ui/tabs` primitive provides the shared coordinator for one tabs insta
 
 ### `tabs.list()`
 
-The `remix/ui/tabs` primitive turns the host into the tablist.
+The `remix/components/tabs/primitives` primitive turns the host into the tablist.
 
 - Wires `role="tablist"`.
 - Adds `aria-orientation="vertical"` when needed.
 
 ### `tabs.trigger({ value, disabled })`
 
-The `remix/ui/tabs` primitive registers one tab trigger.
+The `remix/components/tabs/primitives` primitive registers one tab trigger.
 
 - Wires `role="tab"`, `aria-selected`, `aria-controls`, and roving `tabIndex`.
 - Selects on press.
@@ -107,14 +107,14 @@ The `remix/ui/tabs` primitive registers one tab trigger.
 
 ### `tabs.panel({ value })`
 
-The `remix/ui/tabs` primitive turns the host into the panel for one tab value.
+The `remix/components/tabs/primitives` primitive turns the host into the panel for one tab value.
 
 - Wires `role="tabpanel"` and `aria-labelledby`.
 - Hides inactive panels with `hidden`.
 
 ### `onTabsChange(...)`
 
-The listener mixin from `remix/ui/tabs` for bubbled tab selection changes.
+The listener mixin from `remix/components/tabs/primitives` for bubbled tab selection changes.
 
 - `event.value` is the newly selected tab value.
 - `event.previousValue` is the previously selected value, or `null`.

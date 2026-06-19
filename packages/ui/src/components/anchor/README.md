@@ -5,7 +5,7 @@
 ## Primitive Usage
 
 ```tsx
-import { anchor } from 'remix/ui/anchor'
+import { anchor } from 'remix/components/anchor'
 
 let trigger = document.querySelector<HTMLButtonElement>('[data-trigger]')
 let panel = document.querySelector<HTMLElement>('[data-panel]')
@@ -24,7 +24,7 @@ if (trigger && panel) {
 Use the returned cleanup function with the lifecycle that owns the floating element. For native popovers, position on open and clean up on close.
 
 ```tsx
-import { anchor } from 'remix/ui/anchor'
+import { anchor } from 'remix/components/anchor'
 
 let cleanupAnchor = () => {}
 
@@ -58,7 +58,7 @@ let cleanup = anchor(popover, { x: event.clientX, y: event.clientY }, { placemen
 Keep presentation app-owned when the anchored element is rendered by your component:
 
 ```tsx
-import { anchor } from 'remix/ui/anchor'
+import { anchor } from 'remix/components/anchor'
 import { on, ref, type Handle } from 'remix/ui'
 import { panelStyle } from './floating.styles'
 
@@ -76,7 +76,10 @@ export function AnchoredPanel(handle: Handle) {
 
   return () => (
     <>
-      <button mix={[ref((node) => (trigger = node as HTMLElement)), on('click', position)]} type="button">
+      <button
+        mix={[ref((node) => (trigger = node as HTMLElement)), on('click', position)]}
+        type="button"
+      >
         Open
       </button>
       <div data-panel mix={[panelStyle, ref((node) => (panel = node as HTMLElement))]}>
@@ -87,7 +90,7 @@ export function AnchoredPanel(handle: Handle) {
 }
 ```
 
-## `remix/ui/anchor`
+## `remix/components/anchor`
 
 - `anchor(floatingElement, anchorTarget, options)`: positions `floatingElement` against an element or coordinate target, starts animation-frame polling for geometry changes, and returns a cleanup function.
 - `AnchorOptions`: placement, inset, relative alignment, and offset options.

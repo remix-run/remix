@@ -1,5 +1,5 @@
 import { css, type Handle } from '@remix-run/ui'
-import * as menu from '@remix-run/ui/menu'
+import * as menu from '@remix-run/ui/components/menu/primitives'
 
 /**
  * @name Menu Primitives
@@ -28,9 +28,7 @@ export default function Example(handle: Handle) {
           <div mix={[listCss, menu.list()]}>
             <div mix={[itemCss, menu.item({ name: 'rename' })]}>Rename</div>
             <div mix={[itemCss, menu.item({ name: 'duplicate' })]}>Duplicate</div>
-            <div mix={[itemCss, menu.item({ disabled: true, name: 'archive' })]}>
-              Archive
-            </div>
+            <div mix={[itemCss, menu.item({ disabled: true, name: 'archive' })]}>Archive</div>
           </div>
         </div>
       </menu.Context>

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, it, mock, type FakeTimers } from '@rem
 
 import { createRoot, on, type Handle, type Props, type RemixNode } from '@remix-run/ui'
 
-import * as popover from '@remix-run/ui/popover'
+import * as popover from '@remix-run/ui/components/popover'
 import { onSelectChange, SelectChangeEvent } from './primitives.tsx'
 import * as select from './primitives.tsx'
 

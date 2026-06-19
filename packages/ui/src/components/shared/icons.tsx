@@ -56,3 +56,7 @@ export function ChevronVerticalIcon(handle: Handle<IconProps>): () => RemixEleme
   return () =>
     icon(handle, [strokedPath('m3.75 6.5 4.25-4 4.25 4'), strokedPath('m3.75 9.5 4.25 4 4.25-4')])
 }
+
+export function SearchIcon(handle: Handle<IconProps>): () => RemixElement {
+  return () => icon(handle, strokedPath('M7.25 12.25a5 5 0 1 1 0-10 5 5 0 0 1 0 10Zm3.54-1.46 3 3'))
+}

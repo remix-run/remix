@@ -2,9 +2,9 @@ import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
 
 import { createRoot, type RemixNode } from '@remix-run/ui'
-import { onTabsChange } from '@remix-run/ui/tabs'
+import { onTabsChange } from '@remix-run/ui/components/tabs/primitives'
 
-import { Tab, Tabs, TabsList, TabsPanel } from './components.tsx'
+import { Tab, Tabs, TabsList, TabsPanel } from './index.tsx'
 
 let roots: ReturnType<typeof createRoot>[] = []
 

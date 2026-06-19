@@ -1,4 +1,4 @@
-import button from '@remix-run/ui/button'
+import button from '@remix-run/ui/components/button'
 import { createElement } from '@remix-run/ui'
 import { renderToString } from '@remix-run/ui/server'
 import { expect } from '@remix-run/assert'

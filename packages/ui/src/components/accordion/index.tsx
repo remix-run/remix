@@ -8,7 +8,7 @@ import {
 } from '@remix-run/ui'
 
 import { spring } from '@remix-run/ui/animation'
-import * as accordion from '@remix-run/ui/accordion'
+import * as accordion from '@remix-run/ui/components/accordion/primitives'
 import { ChevronRightIcon } from '../shared/icons.tsx'
 import { componentStyleValues as styles } from '../shared/style-values.ts'
 

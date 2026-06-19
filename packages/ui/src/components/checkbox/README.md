@@ -1,6 +1,6 @@
 # checkbox
 
-`checkbox` is a style mixin for native checkbox inputs. `Checkbox` and its group components are styled wrappers around the lower-level `remix/ui/checkbox` primitives for mixed-state checkboxes and aggregate checkbox groups.
+`checkbox` is a style mixin for native checkbox inputs. `Checkbox` and its group components are styled wrappers around the lower-level `remix/components/checkbox/primitives` primitives for mixed-state checkboxes and aggregate checkbox groups.
 
 ## Component Usage
 
@@ -82,7 +82,7 @@ function Permissions() {
 Use the lower-level primitives when app code owns the checkbox markup and styles:
 
 ```tsx
-import * as checkbox from 'remix/ui/checkbox'
+import * as checkbox from 'remix/components/checkbox/primitives'
 import { controlStyle } from './checkbox.styles'
 
 function CustomCheckbox() {
@@ -98,7 +98,7 @@ function CustomCheckbox() {
 For checkbox groups, compose `GroupContext` with `parent(...)` and `item(...)` mixins:
 
 ```tsx
-import * as checkbox from 'remix/ui/checkbox'
+import * as checkbox from 'remix/components/checkbox/primitives'
 import { controlStyle, groupStyle, itemStyle } from './checkbox.styles'
 
 export function PrimitivePermissionGroup() {
@@ -135,7 +135,7 @@ export function PrimitivePermissionGroup() {
 - `CheckboxChangeEvent` and `CheckboxGroupChangeEvent`: re-exported primitive event classes.
 - `CheckboxSize`, `CheckboxState`, `CheckboxOptions`, `CheckboxProps`, `CheckboxGroupProps`, `CheckboxGroupParentProps`, and `CheckboxItemProps`: public TypeScript types for the composed APIs.
 
-## `remix/ui/checkbox`
+## `remix/components/checkbox/primitives`
 
 - `GroupContext`: lower-level provider for a checkbox group value.
 - `control(options)`: wires a standalone checkbox control with `checked`, `mixed`, ARIA, keyboard, and native input behavior.

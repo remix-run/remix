@@ -1,7 +1,7 @@
 import { css, type Handle } from '@remix-run/ui'
 import { MenuItem, MenuList, Submenu } from '@remix-run/ui/components/menu'
-import * as menu from '@remix-run/ui/menu'
-import { onMenuSelect } from '@remix-run/ui/menu'
+import * as menu from '@remix-run/ui/components/menu/primitives'
+import { onMenuSelect } from '@remix-run/ui/components/menu/primitives'
 
 type FileAction = 'copyPath' | 'duplicate' | 'move' | 'rename' | 'reveal' | 'trash'
 

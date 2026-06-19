@@ -1,6 +1,6 @@
 import { css, on, type Handle } from '@remix-run/ui'
-import button from '@remix-run/ui/button'
-import * as popover from '@remix-run/ui/popover'
+import button from '@remix-run/ui/components/button'
+import * as popover from '@remix-run/ui/components/popover'
 
 /**
  * @name Popover

@@ -1,8 +1,8 @@
 import { createElement, css } from '@remix-run/ui'
 import type { CSSMixinDescriptor, Handle, Props, RemixNode } from '@remix-run/ui'
 
-import button from '@remix-run/ui/button'
-import * as tabs from '@remix-run/ui/tabs'
+import button from '@remix-run/ui/components/button'
+import * as tabs from '@remix-run/ui/components/tabs/primitives'
 import { componentStyleValues as styles } from '../shared/style-values.ts'
 
 export interface TabsProps {

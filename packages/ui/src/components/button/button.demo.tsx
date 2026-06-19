@@ -1,5 +1,5 @@
 import { css } from '@remix-run/ui'
-import button from '@remix-run/ui/button'
+import button from '@remix-run/ui/components/button'
 
 /**
  * @name Button Basic

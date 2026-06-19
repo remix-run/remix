@@ -1,6 +1,6 @@
 import { css } from '@remix-run/ui'
-import input from '@remix-run/ui/input'
-import { SearchIcon } from './icons.tsx'
+import input from '@remix-run/ui/components/input'
+import { SearchIcon } from '../shared/icons.tsx'
 
 /**
  * @name Input Basic

@@ -1,5 +1,5 @@
 import { css, type Handle, type RemixNode } from 'remix/ui'
-import button from 'remix/ui/button'
+import button from 'remix/components/button'
 import { theme } from '../../ui/design.ts'
 
 import { routes } from '../../routes.ts'

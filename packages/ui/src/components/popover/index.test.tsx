@@ -3,8 +3,8 @@ import { afterEach, describe, it, mock } from '@remix-run/test'
 
 import { createRoot, on, type Handle, type RemixNode } from '@remix-run/ui'
 
-import * as popover from './primitives.ts'
-import type { PopoverHideRequest } from './primitives.ts'
+import * as popover from './index.ts'
+import type { PopoverHideRequest } from './index.ts'
 
 let roots: ReturnType<typeof createRoot>[] = []
 

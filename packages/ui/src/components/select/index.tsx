@@ -1,8 +1,8 @@
 import { createElement, css } from '@remix-run/ui'
 import type { CSSMixinDescriptor, Handle, Props, RemixNode, SearchValue } from '@remix-run/ui'
 
-import * as popover from '@remix-run/ui/popover'
-import * as select from '@remix-run/ui/select'
+import * as popover from '@remix-run/ui/components/popover'
+import * as select from '@remix-run/ui/components/select/primitives'
 import { CheckIcon, ChevronVerticalIcon } from '../shared/icons.tsx'
 import {
   listboxIndicatorStyle,

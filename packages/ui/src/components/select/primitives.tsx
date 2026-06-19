@@ -11,13 +11,13 @@ import {
   type Props,
   type RemixNode,
 } from '@remix-run/ui'
-import * as listbox from '../listbox/primitives.ts'
-import * as popover from '../popover/primitives.ts'
+import * as listbox from '../listbox/index.ts'
+import * as popover from '../popover/index.ts'
 import { hiddenTypeahead } from '../../interactions/typeahead/typeahead-mixin.ts'
 import { onKeyDown } from '../../interactions/keydown/keydown.ts'
 import { waitForCssTransition } from '../../utils/wait-for-css-transition.ts'
 import { wait } from '../../utils/wait.ts'
-import type { AnchorOptions } from '../anchor/primitives.ts'
+import type { AnchorOptions } from '../anchor/index.ts'
 
 const SELECT_CHANGE_EVENT = 'rmx:select-change' as const
 const DEFAULT_LABEL_SWAP_DELAY_MS = 75

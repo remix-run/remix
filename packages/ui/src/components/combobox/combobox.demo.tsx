@@ -1,6 +1,6 @@
 import { css, type Handle } from '@remix-run/ui'
 import { Combobox, ComboboxOption } from '@remix-run/ui/components/combobox'
-import { onComboboxChange } from '@remix-run/ui/combobox'
+import { onComboboxChange } from '@remix-run/ui/components/combobox/primitives'
 
 /**
  * @name Combobox Overview

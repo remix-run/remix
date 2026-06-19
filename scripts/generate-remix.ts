@@ -26,6 +26,13 @@ const manifestPath = path.join(remixDir, 'manifest.json')
 const CLI_PACKAGE_NAME = '@remix-run/cli'
 const SOURCE_FOLDER = 'src'
 const REMIX_CLI_ENTRY_FILE = 'cli-entry.ts'
+const DEFAULT_VALUE_RE_EXPORT_SPECIFIERS = new Set([
+  '@remix-run/ui/button',
+  '@remix-run/ui/components/button',
+  '@remix-run/ui/components/checkbox',
+  '@remix-run/ui/components/input',
+  '@remix-run/ui/input',
+])
 
 type RemixRunPackage = {
   name: string
@@ -436,12 +443,7 @@ function createExportSource(entry: ExportEntry): string {
       `export * from '${entry.reExportFrom}'`,
     ]
 
-    if (
-      entry.hasDefaultValueExport &&
-      (entry.reExportFrom === '@remix-run/ui/button' ||
-        entry.reExportFrom === '@remix-run/ui/components/checkbox' ||
-        entry.reExportFrom === '@remix-run/ui/input')
-    ) {
+    if (entry.hasDefaultValueExport && DEFAULT_VALUE_RE_EXPORT_SPECIFIERS.has(entry.reExportFrom)) {
       lines.push(`export { default } from '${entry.reExportFrom}'`)
     }
 

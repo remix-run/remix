@@ -1,6 +1,6 @@
 import { css, ref } from '@remix-run/ui'
-import { anchor } from '@remix-run/ui/anchor'
-import button from '@remix-run/ui/button'
+import { anchor } from '@remix-run/ui/components/anchor'
+import button from '@remix-run/ui/components/button'
 
 /**
  * @name Anchor

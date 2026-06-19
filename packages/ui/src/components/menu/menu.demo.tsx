@@ -1,7 +1,7 @@
 import { type Handle } from '@remix-run/ui'
 import { css } from '@remix-run/ui'
 import { Menu, MenuItem, Submenu } from '@remix-run/ui/components/menu'
-import { onMenuSelect } from '@remix-run/ui/menu'
+import { onMenuSelect } from '@remix-run/ui/components/menu/primitives'
 
 /**
  * @name Menu Overview

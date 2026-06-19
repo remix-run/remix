@@ -4,7 +4,7 @@ import { afterEach, describe, it } from '@remix-run/test'
 import { createRoot, type RemixNode } from '@remix-run/ui'
 import { renderToString } from '@remix-run/ui/server'
 
-import { Option, Select, triggerStyle } from './components.tsx'
+import { Option, Select, triggerStyle } from './index.tsx'
 
 let roots: ReturnType<typeof createRoot>[] = []
 

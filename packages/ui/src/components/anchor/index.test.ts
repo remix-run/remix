@@ -1,7 +1,7 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
 
-import { anchor } from './primitives.ts'
+import { anchor } from './index.ts'
 
 type RectInit = {
   height: number

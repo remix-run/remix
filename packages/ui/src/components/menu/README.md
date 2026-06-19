@@ -8,7 +8,7 @@
 import type { Handle } from 'remix/ui'
 import { css } from 'remix/ui'
 import { Menu, MenuItem, Submenu } from 'remix/components/menu'
-import { onMenuSelect } from 'remix/ui/menu'
+import { onMenuSelect } from 'remix/components/menu/primitives'
 
 export function ViewMenu(handle: Handle) {
   let wordWrap = false
@@ -79,7 +79,7 @@ Use `menu.contextTrigger()` with `menu.Context` and `MenuList` when a menu shoul
 
 ```tsx
 import { MenuItem, MenuList } from 'remix/components/menu'
-import * as menu from 'remix/ui/menu'
+import * as menu from 'remix/components/menu/primitives'
 
 export function FileContextMenu(handle: Handle) {
   return () => (
@@ -96,14 +96,14 @@ export function FileContextMenu(handle: Handle) {
 }
 ```
 
-Attach `onMenuSelect(...)` from `remix/ui/menu` to `MenuList` or a shared ancestor when using lower-level context menu composition.
+Attach `onMenuSelect(...)` from `remix/components/menu/primitives` to `MenuList` or a shared ancestor when using lower-level context menu composition.
 
 ## Primitive Usage
 
 Use only the lower-level primitives when app code owns the trigger, surface, and item markup:
 
 ```tsx
-import * as menu from 'remix/ui/menu'
+import * as menu from 'remix/components/menu/primitives'
 import { itemStyle, listStyle, popoverStyle, triggerStyle } from './menu.styles'
 
 export function PrimitiveMenu() {
@@ -132,7 +132,7 @@ export function PrimitiveMenu() {
 - `buttonStyle`, `popoverStyle`, `listStyle`, `itemStyle`, `itemSlotStyle`, `itemLabelStyle`, `itemIndicatorStyle`, and `triggerIndicatorStyle`: flat style mixins used by the component markup.
 - `MenuProps`, `MenuItemProps`, `MenuListProps`, and `SubmenuProps`: public TypeScript props for the composed APIs.
 
-## `remix/ui/menu`
+## `remix/components/menu/primitives`
 
 - `Context`: lower-level provider for custom menu composition.
 - `trigger()`: wires a button-style trigger to open the root menu.

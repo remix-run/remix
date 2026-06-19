@@ -1,5 +1,5 @@
 import { css } from '@remix-run/ui'
-import * as tabs from '@remix-run/ui/tabs'
+import * as tabs from '@remix-run/ui/components/tabs/primitives'
 
 /**
  * @name Tabs Primitives
