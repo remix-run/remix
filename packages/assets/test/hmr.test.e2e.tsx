@@ -1394,7 +1394,7 @@ describe('asset server HMR', { skip: isBun }, () => {
       await ignoreAbortedNavigation(page.goto('/'))
 
       await waitForText(page, '[data-testid="server-client-label"]', 'Client: after rapid restarts')
-      await requestFailures.assertNone()
+      await requestFailures.assertNone(server.output)
       assert.ok(server.readyCount > 1)
     } finally {
       await server?.close()
