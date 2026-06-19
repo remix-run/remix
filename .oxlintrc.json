@@ -9,7 +9,8 @@
   "ignorePatterns": [
     "**/*.d.ts",
     "**/dist/**",
-    "**/docs/**",
+    "docs/**",
+    "packages/ui/docs/**",
     "**/demos/bookstore/public/assets/**",
     "**/demos/sse/public/assets/**",
     "**/coverage/**",

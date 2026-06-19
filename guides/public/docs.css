@@ -1,0 +1,370 @@
+/*
+ * Minimal stylesheet for the standalone Remix guides app.
+ *
+ * The chapter content is plain semantic markup; everything here styles that
+ * structure plus the `rmx-*` design tokens and the `text-red-brand` accent the
+ * chapter and index pages reference.
+ */
+
+:root {
+  --red-brand: #d83a5a;
+  --bg: #ffffff;
+  --bg-subtle: #f7f7f8;
+  --fg: #1b1b1f;
+  --fg-muted: #6b7280;
+  --fg-subtle: #9ca3af;
+  --border: #e5e7eb;
+  --link: #1d4ed8;
+  --max-width: 64rem;
+  --content-width: 48rem;
+  font-size: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --red-brand: #ff5d7a;
+    --bg: #0d0d10;
+    --bg-subtle: #16161a;
+    --fg: #e7e7ea;
+    --fg-muted: #9aa0aa;
+    --fg-subtle: #6b7280;
+    --border: #2a2a30;
+    --link: #7aa2ff;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    Roboto,
+    Helvetica,
+    Arial,
+    sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--link);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  color: var(--red-brand);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+  font-size: 0.875em;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.1em 0.35em;
+}
+
+pre {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  overflow-x: auto;
+}
+
+pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+/* Design tokens referenced by chapter + index markup -------------------- */
+
+.rmx-page-title {
+  font-size: 2.25rem;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.rmx-page-title-sm {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.rmx-page-title-xs {
+  font-size: 1.125rem;
+  font-weight: 700;
+}
+
+.rmx-page-body {
+  font-size: 1rem;
+  color: var(--fg);
+}
+
+.rmx-page-body p {
+  margin: 0 0 1rem;
+}
+
+.rmx-page-body-sm {
+  font-size: 0.9375rem;
+}
+
+.text-red-brand {
+  color: var(--red-brand);
+}
+
+/* Site header ----------------------------------------------------------- */
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.site-header__brand {
+  font-weight: 800;
+  font-size: 1.125rem;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.site-header__nav {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.9375rem;
+}
+
+/* Main / layout --------------------------------------------------------- */
+
+.docs-main {
+  outline: none;
+}
+
+.docs-index {
+  width: 100%;
+  max-width: 56rem;
+  margin: 3rem auto;
+  padding: 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 3rem;
+}
+
+.docs-index__header {
+  max-width: var(--content-width);
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.docs-chapter-eyebrow {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 0;
+}
+
+.docs-index__cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .docs-index__cards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Index chapter cards --------------------------------------------------- */
+
+.chapter-card {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.5rem;
+  background: var(--bg);
+}
+
+.chapter-card__eyebrow {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  color: var(--fg-muted);
+  margin-bottom: 0.5rem;
+}
+
+.chapter-card__title {
+  margin: 0 0 0.75rem;
+}
+
+.chapter-card__title a {
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.chapter-card__title a:hover {
+  color: var(--red-brand);
+}
+
+.chapter-card__description {
+  color: var(--fg-muted);
+  margin: 0 0 1rem;
+}
+
+.chapter-card__links {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.9375rem;
+}
+
+/* Chapter page ---------------------------------------------------------- */
+
+.docs-layout {
+  width: 100%;
+  max-width: var(--max-width);
+  margin: 3rem auto;
+  padding: 0 1.5rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 2.5rem;
+}
+
+@media (min-width: 1024px) {
+  .docs-layout {
+    grid-template-columns: minmax(0, 1fr) 240px;
+  }
+}
+
+.docs-article {
+  max-width: var(--content-width);
+  min-width: 0;
+}
+
+.docs-breadcrumb {
+  font-size: 0.9375rem;
+  margin-bottom: 2rem;
+}
+
+.docs-breadcrumb__sep {
+  margin: 0 0.5rem;
+  color: var(--fg-subtle);
+}
+
+.docs-chapter-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
+
+.docs-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+}
+
+.docs-section__title {
+  margin: 0 0 1rem;
+  scroll-margin-top: 2rem;
+}
+
+/* Prev / next pagination ------------------------------------------------ */
+
+.docs-pagination {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+  margin-top: 4rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
+}
+
+@media (min-width: 640px) {
+  .docs-pagination {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.docs-pagination__link {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  text-decoration: none;
+  color: var(--link);
+}
+
+.docs-pagination__link--right {
+  text-align: right;
+}
+
+.docs-pagination__label {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--fg-muted);
+}
+
+.docs-pagination__title {
+  display: block;
+  margin-top: 0.25rem;
+}
+
+/* On-this-page aside ---------------------------------------------------- */
+
+.docs-aside {
+  align-self: start;
+}
+
+@media (min-width: 1024px) {
+  .docs-aside {
+    position: sticky;
+    top: 2rem;
+  }
+}
+
+.docs-toc__heading {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.8125rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--fg-muted);
+  margin: 0 0 1rem;
+}
+
+.docs-toc__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}

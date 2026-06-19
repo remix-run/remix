@@ -9,6 +9,7 @@ packages:
   - demos/*
   - docs
   - docs/src/prerender/bench
+  - guides
   - packages/*
   - packages/*/demo
   - packages/assets/bench
