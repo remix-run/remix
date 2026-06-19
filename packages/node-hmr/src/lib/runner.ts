@@ -97,9 +97,9 @@ const styles = createStyles()
 const windowsDriveLetterRE = /^[A-Za-z]:\//
 
 export function normalizeBrowserHmrFilePath(filePath: string): string {
-  return filePath.replace(/\\/g, '/').replace(windowsDriveLetterRE, (prefix) => {
-    return `${prefix[0]!.toUpperCase()}${prefix.slice(1)}`
-  })
+  return filePath
+    .replace(/\\/g, '/')
+    .replace(windowsDriveLetterRE, (prefix) => `${prefix[0]!.toUpperCase()}${prefix.slice(1)}`)
 }
 
 export function getBrowserHmrFileEventsForWatchedFiles(options: {
