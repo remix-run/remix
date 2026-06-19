@@ -1,7 +1,7 @@
 import { split, type Span } from './split.ts'
 import { createRoutePattern } from '../route-pattern.ts'
 import type {
-  ParsedRoutePattern,
+  RoutePatternParts,
   PartPattern,
   PartPatternToken,
   RoutePattern,
@@ -126,7 +126,7 @@ export function parsePart(
   return { tokens, optionals, type: options.type }
 }
 
-function parseProtocol(source: string, span: Span | null): ParsedRoutePattern['protocol'] {
+function parseProtocol(source: string, span: Span | null): RoutePatternParts['protocol'] {
   if (!span) return null
   let protocol = source.slice(...span)
   if (protocol === '' || protocol === 'http' || protocol === 'https' || protocol === 'http(s)') {
@@ -135,7 +135,7 @@ function parseProtocol(source: string, span: Span | null): ParsedRoutePattern['p
   throw new ParseError('invalid protocol', source, span[0])
 }
 
-function parseHostname(source: string, span: Span | null): ParsedRoutePattern['hostname'] | null {
+function parseHostname(source: string, span: Span | null): RoutePatternParts['hostname'] | null {
   if (!span) return null
   let part = parsePart(source, { span, type: 'hostname' })
   if (isNamelessWildcard(part)) return null
@@ -149,7 +149,7 @@ function isNamelessWildcard(part: PartPattern): boolean {
   return token.name === '*'
 }
 
-function parseSearch(source: string): ParsedRoutePattern['search'] {
+function parseSearch(source: string): RoutePatternParts['search'] {
   let constraints = new Map<string, Set<string>>()
 
   let searchParams = new URLSearchParams(source)

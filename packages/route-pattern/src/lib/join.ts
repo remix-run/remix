@@ -1,5 +1,5 @@
-import { createRoutePattern, getRoutePatternParts, RoutePattern } from './route-pattern.ts'
-import type { ParsedRoutePattern, PartPattern, PartPatternToken } from './route-pattern.ts'
+import { createRoutePattern, RoutePattern } from './route-pattern.ts'
+import type { RoutePatternParts, PartPattern, PartPatternToken } from './route-pattern.ts'
 import type { JoinPatterns } from './types/join.ts'
 
 /**
@@ -19,8 +19,8 @@ export function joinPatterns<base extends string, next extends string>(
 ): RoutePattern<JoinPatterns<base, next>> {
   let basePattern = typeof base === 'string' ? RoutePattern.parse(base) : base
   let nextPattern = typeof next === 'string' ? RoutePattern.parse(next) : next
-  let baseParts = getRoutePatternParts(basePattern)
-  let nextParts = getRoutePatternParts(nextPattern)
+  let baseParts = basePattern._parts
+  let nextParts = nextPattern._parts
 
   return createRoutePattern<JoinPatterns<base, next>>({
     protocol: nextParts.protocol ?? baseParts.protocol,
@@ -105,9 +105,9 @@ function joinPathname(base: PartPattern, next: PartPattern): PartPattern {
  * @private
  */
 function joinSearch(
-  base: ParsedRoutePattern['search'],
-  next: ParsedRoutePattern['search'],
-): ParsedRoutePattern['search'] {
+  base: RoutePatternParts['search'],
+  next: RoutePatternParts['search'],
+): RoutePatternParts['search'] {
   let result = new Map<string, Set<string>>()
 
   for (let [name, values] of base) {

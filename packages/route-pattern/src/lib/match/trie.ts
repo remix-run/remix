@@ -1,5 +1,4 @@
-import { getRoutePatternParts } from '../route-pattern.ts'
-import type { ParsedRoutePattern, RoutePattern } from '../route-pattern.ts'
+import type { RoutePatternParts, RoutePattern } from '../route-pattern.ts'
 import { decodeHostname } from './decode.ts'
 import { generateVariants, type Param } from './variant.ts'
 import { unreachable } from '../unreachable.ts'
@@ -19,7 +18,7 @@ export class Trie<data = unknown> {
   }
 
   insert(pattern: RoutePattern, data: data): void {
-    let patternParts = getRoutePatternParts(pattern)
+    let patternParts = pattern._parts
 
     for (let variant of generateVariants(pattern, { ignoreCase: this.ignoreCase })) {
       let hostnameNode = this.#root[variant.protocol]
@@ -348,7 +347,7 @@ type PathnameNode<data> = {
   wildcard: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
   values: Array<{
     pattern: RoutePattern
-    patternParts: ParsedRoutePattern
+    patternParts: RoutePatternParts
     data: data
     requiredParams: Array<Param>
   }>
