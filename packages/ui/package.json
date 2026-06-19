@@ -119,14 +119,6 @@
       "types": "./src/components/select/primitives.tsx",
       "default": "./src/components/select/primitives.tsx"
     },
-    "./components/tabs": {
-      "types": "./src/components/tabs/index.tsx",
-      "default": "./src/components/tabs/index.tsx"
-    },
-    "./components/tabs/primitives": {
-      "types": "./src/components/tabs/primitives.tsx",
-      "default": "./src/components/tabs/primitives.tsx"
-    },
     "./jsx-dev-runtime": {
       "types": "./src/jsx-runtime.ts",
       "default": "./src/jsx-runtime.ts"
@@ -150,10 +142,6 @@
     "./select": {
       "types": "./src/components/select/primitives.tsx",
       "default": "./src/components/select/primitives.tsx"
-    },
-    "./tabs": {
-      "types": "./src/components/tabs/primitives.tsx",
-      "default": "./src/components/tabs/primitives.tsx"
     },
     "./server": {
       "types": "./src/server/stream.ts",
@@ -267,14 +255,6 @@
         "types": "./dist/components/select/primitives.d.ts",
         "default": "./dist/components/select/primitives.js"
       },
-      "./components/tabs": {
-        "types": "./dist/components/tabs/index.d.ts",
-        "default": "./dist/components/tabs/index.js"
-      },
-      "./components/tabs/primitives": {
-        "types": "./dist/components/tabs/primitives.d.ts",
-        "default": "./dist/components/tabs/primitives.js"
-      },
       "./jsx-dev-runtime": {
         "types": "./dist/jsx-runtime.d.ts",
         "default": "./dist/jsx-runtime.js"
@@ -298,10 +278,6 @@
       "./select": {
         "types": "./dist/components/select/primitives.d.ts",
         "default": "./dist/components/select/primitives.js"
-      },
-      "./tabs": {
-        "types": "./dist/components/tabs/primitives.d.ts",
-        "default": "./dist/components/tabs/primitives.js"
       },
       "./server": {
         "types": "./dist/server/stream.d.ts",

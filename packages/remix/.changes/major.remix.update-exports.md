@@ -11,7 +11,6 @@ Added `package.json` `exports`:
 - `remix/components/menu`
 - `remix/components/popover` to re-export APIs from `@remix-run/ui/components/popover`
 - `remix/components/select`
-- `remix/components/tabs`
 - `remix/ui/button` to re-export APIs from `@remix-run/ui/button`
 - `remix/ui/checkbox` to re-export APIs from `@remix-run/ui/checkbox`
 - `remix/ui/input` to re-export APIs from `@remix-run/ui/input`

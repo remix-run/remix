@@ -28,7 +28,7 @@ Current examples:
 - style-only helpers: `button`, `input`
 - low-level behavior modules: `anchor`, `popover`, `listbox`
 - primitives plus styled wrappers: `accordion`, `checkbox`, `combobox`, `menu`,
-  `select`, `tabs`
+  `select`
 - rendered styled components without a primitive layer: `breadcrumbs`
 
 When adding or moving public entries, update both `exports` and
@@ -55,8 +55,8 @@ Good composition flows downward:
 - `combobox` composes `popover` and `listbox`, then owns input text, filtering,
   and popup timing.
 - `menu` composes `popover`, outside interactions, typeahead, and hover aim.
-- `accordion`, `checkbox`, and `tabs` keep their own primitive contexts and use
-  styled wrappers for the ergonomic API.
+- `accordion` and `checkbox` keep their own primitive contexts and use styled
+  wrappers for the ergonomic API.
 
 ## Public API Shape
 
@@ -117,7 +117,7 @@ from `@remix-run/ui/components/...`.
 Components use the current Remix UI two-phase shape:
 
 ```tsx
-export function Tabs(handle: Handle<TabsProps>): () => RemixNode {
+export function Component(handle: Handle<ComponentProps>): () => RemixNode {
   let hasInitialized = false
   let value: string | null = null
 
@@ -254,8 +254,7 @@ Established public event pattern:
   stateful
 
 Examples include `SelectChangeEvent`, `ComboboxChangeEvent`, `MenuSelectEvent`,
-`TabsChangeEvent`, `AccordionChangeEvent`, `CheckboxChangeEvent`, and
-`CheckboxGroupChangeEvent`.
+`AccordionChangeEvent`, `CheckboxChangeEvent`, and `CheckboxGroupChangeEvent`.
 
 ## Styling
 
