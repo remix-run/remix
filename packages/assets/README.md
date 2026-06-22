@@ -532,7 +532,7 @@ If `onError` returns nothing, the asset server responds with the default `500 In
 
 ## Hot Module Reloading
 
-Use `hmr` with `watch` to enable the `import.meta.hot` API for browser modules.
+Use `hmr` with `watch` to enable the `import.meta.hot` API for browser modules. The `hmr` option is designed for integrating assets with a server-level HMR runtime such as [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr) so server and browser updates can be coordinated.
 
 To type `import.meta.hot` in browser asset modules, add the HMR types to your TypeScript config:
 
@@ -544,7 +544,7 @@ To type `import.meta.hot` in browser asset modules, add the HMR types to your Ty
 }
 ```
 
-The `hmr` option accepts an object with a `browserEventController` object. To coordinate server and browser code changes with an event controller that survives server restarts, run your server in development with [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr), which provides a `browserEventController` from `remix/node-hmr/runtime`:
+The `hmr` option accepts a function that creates a `BrowserHmrChannel`, e.g. the `createBrowserHmrChannel` function from [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr):
 
 ```ts
 import { createAssetServer } from 'remix/assets'
@@ -554,12 +554,18 @@ let assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
-  hmr: isDevelopment ? await import('remix/node-hmr/runtime') : undefined,
+  hmr: isDevelopment
+    ? await import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.createBrowserHmrChannel)
+    : undefined,
   watch: isDevelopment,
 })
 ```
 
-Browser modules can also listen for HMR events. When the browser event controller comes from `remix/node-hmr/runtime`, server updates are sent as `server:update` events.
+`BrowserHmrChannel` is a tooling integration contract. It provides the asset server with an EventSource URL, a way to report watched file changes, a way to handle file events from the HMR coordinator, and scoped cleanup. The asset server calls the factory once, creates a browser HMR channel for this asset server, and closes the channel when `assetServer.close()` is called.
+
+When using `node-hmr`, enable `browserHmrChannel` in `run()` so `createBrowserHmrChannel` can connect to the parent runner.
+
+Browser modules can also listen for HMR events. When the browser HMR channel comes from `remix/node-hmr/runtime`, server updates are sent as `server:update` events.
 
 ```ts
 if (import.meta.hot) {

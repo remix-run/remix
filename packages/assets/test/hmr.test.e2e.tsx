@@ -1428,7 +1428,7 @@ type BrowserHmrFileEvent = {
   filePath: string
 }
 
-type BrowserHmrIntent =
+type BrowserHmrEvent =
   | {
       files?: string[]
       timestamp: number
@@ -1437,13 +1437,12 @@ type BrowserHmrIntent =
     }
   | {
       files?: string[]
-      reason?: string
       type: 'reload'
     }
 
-type BrowserEventSource = {
-  handleFileEvents(events: readonly BrowserHmrFileEvent[]): Promise<readonly BrowserHmrIntent[]>
-}
+type BrowserHmrFileEventHandler = (
+  events: readonly BrowserHmrFileEvent[],
+) => Promise<readonly BrowserHmrEvent[]>
 
 type NodeHmrTestServer = {
   baseUrl: string
@@ -1928,7 +1927,7 @@ async function createNodeHmrFixture(
           `import { run } from ${JSON.stringify(nodeHmrImportUrl)}`,
           ``,
           `run('server.tsx', {`,
-          `  browserEventController: true,`,
+          `  browserHmrChannel: true,`,
           `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
           `})`,
         ].join('\n'),
@@ -1980,7 +1979,7 @@ function getNodeHmrProxyDevSource(): string {
     'let proxyRetryStatusCodes = [502, 503, 504]',
     '',
     "let app = run('server.tsx', {",
-    '  browserEventController: true,',
+    '  browserHmrChannel: true,',
     '  env: process.env,',
     `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
     '})',
@@ -2112,7 +2111,7 @@ function getNodeHmrServerSource(
   return [
     "import { createServer } from 'node:http'",
     "import { createAssetServer } from '@remix-run/assets'",
-    "import { browserEventController, emitServerReady } from '@remix-run/node-hmr/runtime'",
+    "import { createBrowserHmrChannel, emitServerReady } from '@remix-run/node-hmr/runtime'",
     "import { renderToStream } from '@remix-run/ui/server'",
     "import { serverMessage } from './server-message.ts'",
     "import { sideEffect } from './server-side-effect.ts'",
@@ -2132,7 +2131,7 @@ function getNodeHmrServerSource(
     `    '/app/*path': ${JSON.stringify(`${appDir}/*path`)},`,
     "    '/packages/*path': 'packages/*path',",
     '  },',
-    '  hmr: { browserEventController },',
+    '  hmr: createBrowserHmrChannel,',
     '  onError(error) {',
     '    console.error(error)',
     '  },',
@@ -2307,7 +2306,7 @@ function createTestClientEntry<component extends (handle: unknown) => unknown>(
 async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> {
   let appDir = path.relative(workspaceDir, path.join(fixture.rootDir, 'app'))
   let hmrEventStream: ReturnType<typeof createTestHmrEventStream> | undefined
-  let browserEventSources = new Set<BrowserEventSource>()
+  let browserHmrFileEventHandlers = new Set<BrowserHmrFileEventHandler>()
   let browserHmrWatcher: FSWatcher | undefined
 
   let createCurrentAssetServer = () =>
@@ -2318,20 +2317,19 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
         '/app/*path': `${appDir}/*path`,
         '/packages/*path': 'packages/*path',
       },
-      hmr: {
-        browserEventController: {
-          url: '/hmr/events',
-          register(source) {
-            browserEventSources.add(source)
-            return {
-              close() {
-                browserEventSources.delete(source)
-              },
-              updateWatchedFiles() {},
-            }
-          },
+      hmr: () => ({
+        close() {
+          browserHmrFileEventHandlers.clear()
         },
-      },
+        onFileEvents(handler) {
+          browserHmrFileEventHandlers.add(handler)
+          return () => {
+            browserHmrFileEventHandlers.delete(handler)
+          }
+        },
+        updateWatchedFiles() {},
+        url: '/hmr/events',
+      }),
       onError() {},
       rootDir: workspaceDir,
       watch: {
@@ -2423,18 +2421,18 @@ async function createHmrTestServer(fixture: HmrFixture): Promise<HmrTestServer> 
     let filePath = await getWatchEventFilePath(event.filePath)
     let normalizedEvent = { ...event, filePath }
 
-    for (let source of browserEventSources) {
-      let intents = await source.handleFileEvents([normalizedEvent])
-      for (let intent of intents) {
-        if (intent.type === 'reload') {
+    for (let handleFileEvents of browserHmrFileEventHandlers) {
+      let browserHmrEvents = await handleFileEvents([normalizedEvent])
+      for (let browserHmrEvent of browserHmrEvents) {
+        if (browserHmrEvent.type === 'reload') {
           hmrEventStream?.send({ type: 'browser:reload' })
           continue
         }
 
         hmrEventStream?.send({
-          timestamp: intent.timestamp,
+          timestamp: browserHmrEvent.timestamp,
           type: 'browser:update',
-          updates: intent.updates,
+          updates: browserHmrEvent.updates,
         })
       }
     }

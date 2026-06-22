@@ -17,7 +17,7 @@ const hmrRunner = run('server.ts', {
     PORT: String(childPort),
   },
   nodeArgs: ['--import', 'remix/node-tsx'],
-  browserEventController: true,
+  browserHmrChannel: true,
 })
 
 const proxyFetch = createFetchProxy(`http://127.0.0.1:${childPort}`, {

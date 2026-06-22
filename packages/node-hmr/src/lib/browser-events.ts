@@ -2,7 +2,7 @@ import process from 'node:process'
 
 import { hasNodeHmrParentProcess } from './process-state.ts'
 
-export const defaultBrowserEventControllerPathname = '/hmr'
+export const defaultBrowserHmrPathname = '/hmr'
 
 export interface HmrEventPayload {
   type: string
@@ -20,7 +20,7 @@ export type HmrBrowserUpdate =
       type: 'css'
     }
 
-export type HmrBrowserIntent =
+export type BrowserHmrEvent =
   | {
       files?: string[]
       timestamp: number
@@ -29,7 +29,6 @@ export type HmrBrowserIntent =
     }
   | {
       files?: string[]
-      reason?: string
       type: 'reload'
     }
 
@@ -38,18 +37,20 @@ export type BrowserHmrFileEvent = {
   filePath: string
 }
 
-export interface BrowserEventSource {
-  handleFileEvents(events: readonly BrowserHmrFileEvent[]): Promise<readonly HmrBrowserIntent[]>
+export type BrowserHmrFileEventHandler = (
+  events: readonly BrowserHmrFileEvent[],
+) => Promise<readonly BrowserHmrEvent[]>
+
+export interface BrowserHmrWatchedFileDelta {
+  add: readonly string[]
+  remove: readonly string[]
 }
 
-export interface BrowserEventSourceRegistration {
+export interface BrowserHmrChannel {
+  readonly url: string
   close(): void
-  updateWatchedFiles(delta: { add: readonly string[]; remove: readonly string[] }): void
-}
-
-export interface BrowserEventController {
-  register(source: BrowserEventSource): BrowserEventSourceRegistration
-  url: string
+  onFileEvents(handler: BrowserHmrFileEventHandler): () => void
+  updateWatchedFiles(delta: BrowserHmrWatchedFileDelta): void
 }
 
 export function sendHmrEventPayload(payload: HmrEventPayload): void {

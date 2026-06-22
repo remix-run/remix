@@ -1,10 +1,11 @@
 import { fileURLToPath } from 'node:url'
 
 import {
-  type BrowserEventController,
-  type BrowserEventSource,
-  type BrowserEventSourceRegistration,
+  type BrowserHmrChannel,
+  type BrowserHmrEvent,
   type BrowserHmrFileEvent,
+  type BrowserHmrFileEventHandler,
+  type BrowserHmrWatchedFileDelta,
   sendHmrEventPayload,
 } from './browser-events.ts'
 import { emitServerHmrEvent, emitServerHmrUpdate } from './events.ts'
@@ -28,12 +29,11 @@ type HotModule = Readonly<Record<string, unknown>> & {
 }
 
 export interface RemixNodeHmrRuntime {
-  readonly browserEventController: BrowserEventController | undefined
+  createBrowserHmrChannel(): BrowserHmrChannel | undefined
   createHotContext(url: string, resolveDependency?: (specifier: string) => string): ImportMetaHot
   disposeAll(): Promise<void>
   emitServerReady(): void
   handleBrowserHmrFileEvents(requestId: number, events: readonly BrowserHmrFileEvent[]): void
-  registerBrowserEventSource(source: BrowserEventSource): BrowserEventSourceRegistration
   reportAcceptedDependencies(url: string, acceptedDeps: string[]): void
   update(url: string, timestamp: number, acceptedUrl?: string): Promise<void>
 }
@@ -230,19 +230,75 @@ export function installNodeHmrRuntime(
 
   let dataByUrl = new Map<string, Record<string, unknown>>()
   let contextsByUrl = new Map<string, NodeHotContext>()
-  let browserHmrRuntimeId = 0
-  let browserEventSources = new Map<number, BrowserEventSource>()
+  let browserHmrChannelId = 0
+  let browserHmrChannels = new Map<
+    number,
+    {
+      handleFileEvents(events: readonly BrowserHmrFileEvent[]): Promise<readonly BrowserHmrEvent[]>
+    }
+  >()
 
   let runtime: RemixNodeHmrRuntime = {
-    browserEventController:
-      options.browserEventUrl === undefined
-        ? undefined
-        : {
-            register(source) {
-              return runtime.registerBrowserEventSource(source)
-            },
-            url: options.browserEventUrl,
-          },
+    createBrowserHmrChannel() {
+      if (options.browserEventUrl === undefined) return undefined
+
+      let id = browserHmrChannelId++
+      let watchedFiles = new Set<string>()
+      let handlers = new Set<BrowserHmrFileEventHandler>()
+      let closed = false
+      browserHmrChannels.set(id, {
+        async handleFileEvents(events) {
+          let eventGroups = await Promise.all([...handlers].map((handler) => handler(events)))
+          return eventGroups.flat()
+        },
+      })
+
+      function updateWatchedFiles(delta: BrowserHmrWatchedFileDelta): void {
+        if (closed) return
+
+        for (let file of delta.add) {
+          watchedFiles.add(file)
+        }
+        for (let file of delta.remove) {
+          watchedFiles.delete(file)
+        }
+        process.send?.({
+          id,
+          delta,
+          type: 'node-hmr:child:browser-hmr-watch-files-changed',
+        })
+      }
+
+      return {
+        close() {
+          if (closed) return
+          closed = true
+
+          browserHmrChannels.delete(id)
+          handlers.clear()
+          let remove = [...watchedFiles]
+          watchedFiles.clear()
+          process.send?.({
+            id,
+            delta: { add: [], remove },
+            type: 'node-hmr:child:browser-hmr-watch-files-changed',
+          })
+        },
+
+        onFileEvents(handler) {
+          if (closed) return () => {}
+
+          handlers.add(handler)
+          return () => {
+            handlers.delete(handler)
+          }
+        },
+
+        updateWatchedFiles,
+
+        url: options.browserEventUrl,
+      }
+    },
 
     createHotContext(url, resolveDependency = (specifier) => new URL(specifier, url).href) {
       let data = dataByUrl.get(url)
@@ -268,13 +324,13 @@ export function installNodeHmrRuntime(
       if (!hasNodeHmrParentProcess()) return
 
       Promise.all(
-        [...browserEventSources.values()].map((browserEventSource) =>
-          browserEventSource.handleFileEvents(events),
+        [...browserHmrChannels.values()].map((browserHmrChannel) =>
+          browserHmrChannel.handleFileEvents(events),
         ),
       )
-        .then((intentGroups) => {
+        .then((eventGroups) => {
           process.send?.({
-            intents: intentGroups.flat(),
+            events: eventGroups.flat(),
             requestId,
             type: 'node-hmr:child:browser-hmr-file-events-handled',
           })
@@ -282,43 +338,11 @@ export function installNodeHmrRuntime(
         .catch((error: unknown) => {
           process.send?.({
             error: formatUnknownError(error),
-            intents: [],
+            events: [],
             requestId,
             type: 'node-hmr:child:browser-hmr-file-events-handled',
           })
         })
-    },
-
-    registerBrowserEventSource(browserEventSource) {
-      let id = browserHmrRuntimeId++
-      browserEventSources.set(id, browserEventSource)
-      let watchedFiles = new Set<string>()
-
-      return {
-        close() {
-          browserEventSources.delete(id)
-          let remove = [...watchedFiles]
-          watchedFiles.clear()
-          process.send?.({
-            id,
-            delta: { add: [], remove },
-            type: 'node-hmr:child:browser-hmr-watch-files-changed',
-          })
-        },
-        updateWatchedFiles(delta) {
-          for (let file of delta.add) {
-            watchedFiles.add(file)
-          }
-          for (let file of delta.remove) {
-            watchedFiles.delete(file)
-          }
-          process.send?.({
-            id,
-            delta,
-            type: 'node-hmr:child:browser-hmr-watch-files-changed',
-          })
-        },
-      }
     },
 
     reportAcceptedDependencies(url, acceptedDeps) {

@@ -7,7 +7,7 @@ Run Node.js applications with Hot Module Reloading.
 - **HMR Runtime**: Provides an `import.meta.hot` API for modules that can handle hot updates
 - **Remix UI Support**: When `remix/ui` is detected, instantly update components without a full server restart
 - **Restart Fallback**: Restarts the child Node process when updates aren't accepted
-- **Browser HMR Integration**: Optionally hosts a browser HMR event controller that survives child restarts
+- **Browser HMR Integration**: Optionally hosts browser HMR coordination that survives child restarts
 
 ## Installation
 
@@ -78,18 +78,22 @@ Remix UI component HMR is built in and automatically enabled when the `remix/ui`
 
 ## Browser HMR Integration
 
-If your app needs browser HMR coordination, enable `browserEventController` when running your server:
+`node-hmr` can coordinate browser-facing HMR alongside server HMR. This is exposed through browser HMR channels, which are intended for tools that maintain their own browser module graph.
+
+Enable browser HMR coordination when running your server with the `browserHmrChannel` option:
 
 ```ts
 import { run } from 'remix/node-hmr'
 
 run('./server.ts', {
   nodeArgs: ['--import', 'remix/node-tsx'],
-  browserEventController: true,
+  browserHmrChannel: true,
 })
 ```
 
-The browser event controller is hosted by the parent process so it stays online when the app server restarts. When `node-hmr` hot updates or restarts server code in a way that should refresh server-rendered UI, it sends a `server:update` event to connected clients.
+When this is enabled, the parent process hosts the browser event stream, tracks files reported by child-created channels, sends matching file events back to the child runtime, and emits the resulting browser updates to connected clients.
+
+When `node-hmr` hot updates or restarts server code in a way that should refresh server-rendered UI, it sends a `server:update` event to connected clients.
 
 Call `emitServerReady()` when your app server is ready to receive requests. This lets the parent process delay browser `server:update` events until a restarted app server has finished listening:
 
@@ -101,15 +105,30 @@ server.listen(port, () => {
 })
 ```
 
-Access to the browser event controller is also available within the `node-hmr` runtime via the `remix/node-hmr/runtime` import:
+Create a browser HMR channel within the app server when running in `node-hmr` via the `remix/node-hmr/runtime` import:
 
 ```ts
-import { browserEventController } from 'remix/node-hmr/runtime'
+import { createBrowserHmrChannel } from 'remix/node-hmr/runtime'
+
+let browserHmrChannel = createBrowserHmrChannel()
 ```
 
-The `browserEventController` object provides a `url` for the browser EventSource and a `register(source)` function for browser asset runtimes. Registered sources can classify file changes as browser updates or reloads, while `node-hmr` remains responsible for batching changes, coordinating server updates, and deciding when browser events are safe to emit.
+A browser HMR channel is scoped to the current child process. It gives browser HMR tooling an EventSource URL, a way to report the files it wants watched, and a way to respond to file changes with browser HMR events. When the child process restarts, `node-hmr` automatically clears the child process's browser HMR channel state. The parent-owned browser HMR channel is closed when the `node-hmr` runner closes.
 
-The browser event controller is supported by the [`remix/assets`](https://github.com/remix-run/remix/tree/main/packages/assets) package, supporting built-in coordination between server and browser code updates.
+Tools can implement browser HMR by accepting a channel or channel factory through their own integration layer. For example, [`remix/assets`](https://github.com/remix-run/remix/tree/main/packages/assets) accepts a browser HMR channel factory through its `hmr` option:
+
+```ts
+import { createAssetServer } from 'remix/assets'
+import { createBrowserHmrChannel } from 'remix/node-hmr/runtime'
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  hmr: createBrowserHmrChannel,
+  watch: true,
+})
+```
 
 ## `import.meta.hot`
 
@@ -267,7 +286,7 @@ if (import.meta.hot) {
 ## Related Packages
 
 - [`remix/ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) provides code transforms and runtime for HMR for Remix UI components.
-- [`remix/assets`](https://github.com/remix-run/remix/tree/main/packages/assets) supports the browser event controller for coordinating server and browser HMR updates.
+- [`remix/assets`](https://github.com/remix-run/remix/tree/main/packages/assets) can consume browser HMR channels for coordinating server and browser HMR updates.
 
 ## License
 

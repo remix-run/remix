@@ -15,7 +15,7 @@ import {
   getInternalChokidarWatcher,
   getInternalWatchTargets,
 } from './asset-server.ts'
-import type { AssetServer, AssetServerHmrOptions, AssetServerOptions } from './asset-server.ts'
+import type { AssetServer, AssetServerOptions, BrowserHmrChannel } from './asset-server.ts'
 import type { AssetRequestTransformMap } from './files/config.ts'
 import { defineFileTransform } from './files/config.ts'
 
@@ -146,17 +146,14 @@ async function emitWatchEvent(
   await new Promise((resolve) => setTimeout(resolve, 25))
 }
 
-function createTestHmrOptions(): AssetServerHmrOptions {
+function createTestBrowserHmrChannel(): BrowserHmrChannel {
   return {
-    browserEventController: {
-      url: 'http://127.0.0.1:1234/hmr',
-      register() {
-        return {
-          close() {},
-          updateWatchedFiles() {},
-        }
-      },
+    close() {},
+    onFileEvents() {
+      return () => {}
     },
+    updateWatchedFiles() {},
+    url: 'http://127.0.0.1:1234/hmr',
   }
 }
 
@@ -3085,7 +3082,7 @@ describe('asset-server', () => {
         'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 1',
       )
       let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(),
+        hmr: createTestBrowserHmrChannel,
       })
 
       try {
@@ -3123,7 +3120,7 @@ describe('asset-server', () => {
         'if (import.meta.hot) {\n  import.meta.hot.accept()\n}\nexport const value = 1',
       )
       let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(),
+        hmr: createTestBrowserHmrChannel,
       })
 
       try {
@@ -3147,6 +3144,41 @@ describe('asset-server', () => {
     }
   })
 
+  it('creates and closes the browser HMR channel with the asset server', async () => {
+    let caseDir = await makeTmpDir()
+    let createCount = 0
+    let unsubscribeCount = 0
+    let closeCount = 0
+    try {
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr: () => {
+          createCount += 1
+          return {
+            close() {
+              closeCount += 1
+            },
+            onFileEvents() {
+              return () => {
+                unsubscribeCount += 1
+              }
+            },
+            updateWatchedFiles() {},
+            url: 'http://127.0.0.1:1234/hmr',
+          }
+        },
+      })
+
+      await assetServer.close()
+      await assetServer.close()
+
+      assert.equal(createCount, 1)
+      assert.equal(unsubscribeCount, 1)
+      assert.equal(closeCount, 1)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('adds HMR accept handling to component modules when HMR is enabled', async () => {
     let caseDir = await makeTmpDir()
     try {
@@ -3157,7 +3189,7 @@ describe('asset-server', () => {
         'export function TestComponent() {\n  return () => "Test"\n}',
       )
       let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(),
+        hmr: createTestBrowserHmrChannel,
       })
 
       try {
@@ -3192,7 +3224,7 @@ describe('asset-server', () => {
         ].join('\n'),
       )
       let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestHmrOptions(),
+        hmr: createTestBrowserHmrChannel,
       })
 
       try {
@@ -5547,6 +5579,22 @@ describe('asset-server', () => {
         }),
       /fingerprint cannot be used with watch mode/,
     )
+  })
+
+  it('rejects browser HMR without watch mode', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = 1')
+    let createCount = 0
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          hmr() {
+            createCount += 1
+            return createTestBrowserHmrChannel()
+          },
+        }),
+      /hmr requires watch mode/,
+    )
+    assert.equal(createCount, 0)
   })
 
   it('rejects files extensions for compiled asset types', async () => {

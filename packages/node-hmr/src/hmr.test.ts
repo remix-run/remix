@@ -1102,9 +1102,10 @@ function getEventChannelServerSource(message: string): string {
 
   return [
     `import { createServer } from 'node:http'`,
-    `import { browserEventController, emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    `import { createBrowserHmrChannel, emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
     ``,
-    `console.log(JSON.stringify({ type: 'hmr-url', url: browserEventController?.url, pid: process.pid }))`,
+    `let browserHmrChannel = createBrowserHmrChannel()`,
+    `console.log(JSON.stringify({ type: 'hmr-url', url: browserHmrChannel?.url, pid: process.pid }))`,
     ``,
     `let server = createServer((_request, response) => {`,
     `  response.end(${JSON.stringify(message)})`,
@@ -1125,10 +1126,11 @@ function getEventChannelComponentServerSource(): string {
 
   return [
     `import { createServer } from 'node:http'`,
-    `import { browserEventController, emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    `import { createBrowserHmrChannel, emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
     `import { Greeting } from './greeting.tsx'`,
     ``,
-    `console.log(JSON.stringify({ type: 'hmr-url', url: browserEventController?.url, pid: process.pid }))`,
+    `let browserHmrChannel = createBrowserHmrChannel()`,
+    `console.log(JSON.stringify({ type: 'hmr-url', url: browserHmrChannel?.url, pid: process.pid }))`,
     ``,
     `let server = createServer((_request, response) => {`,
     `  response.end(String(process.pid) + ':' + Greeting()())`,
@@ -1235,7 +1237,7 @@ async function createFixture(
       `import { run } from ${JSON.stringify(nodeHmrImportUrl)}`,
       ``,
       `run('server.ts', {`,
-      `  browserEventController: true,`,
+      `  browserHmrChannel: true,`,
       `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
       `})`,
     ].join('\n'),
