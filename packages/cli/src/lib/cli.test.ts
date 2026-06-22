@@ -488,6 +488,8 @@ describe('run', () => {
       assert.doesNotMatch(assets, /\.\.\/packages/)
       assert.doesNotMatch(assets, /usesWorkspaceRemix/)
       assert.doesNotMatch(assets, /workspacePackagesDir/)
+      assert.doesNotMatch(assets, /deny:/)
+      assert.doesNotMatch(assets, /define:/)
       assert.match(assets, /watch: false/)
       assert.doesNotMatch(router, /compression/)
       assert.doesNotMatch(routes, /auth/)

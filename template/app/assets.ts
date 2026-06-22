@@ -21,13 +21,7 @@ export const assetServer = createAssetServer({
     '../packages/**',
     /* remix-template:remove-end */
   ],
-  deny: ['app/**/*.server.*'],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
   watch: false,
-  scripts: {
-    define: {
-      'process.env.NODE_ENV': JSON.stringify(nodeEnv),
-    },
-  },
 })
