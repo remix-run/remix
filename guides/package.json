@@ -11,7 +11,10 @@
     "node": ">=24.3.0"
   },
   "dependencies": {
-    "remix": "workspace:^"
+    "front-matter": "^4.0.2",
+    "marked": "^17.0.1",
+    "remix": "workspace:^",
+    "shiki": "^3.22.0"
   },
   "devDependencies": {
     "@types/node": "catalog:",
