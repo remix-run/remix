@@ -3,7 +3,6 @@ import { describe, it } from '@remix-run/test'
 import type { TestContext } from '@remix-run/test'
 import { renderToStream } from '@remix-run/ui/server'
 import { spawn, type ChildProcess } from 'node:child_process'
-import { createHash } from 'node:crypto'
 import * as fs from 'node:fs/promises'
 import * as http from 'node:http'
 import * as path from 'node:path'
@@ -648,27 +647,25 @@ describe('asset server HMR', { skip: isBun }, () => {
       let clientFieldPath = path.join(fixture.rootDir, 'app/ClientField.tsx')
       let clientFieldSource = await fs.readFile(clientFieldPath, 'utf-8')
 
-      await logClientFieldDebug('before broken write', clientFieldPath)
+      let failedUpdate = waitForConsoleMessage(page, '[remix] HMR update failed')
       await fs.writeFile(
         clientFieldPath,
         clientFieldSource.replace('<ClientMessage />', '<ClientMessage'),
       )
-      await logClientFieldDebug('after broken write', clientFieldPath)
-      await waitForConsoleMessage(page, '[remix] HMR update failed')
+      await failedUpdate
 
       await fs.writeFile(
         clientFieldPath,
         clientFieldSource.replace('<ClientMessage />', 'Client: after server update!!!!!'),
       )
-      await logClientFieldDebug('after recovery write', clientFieldPath)
 
+      let serverFrameReloaded = waitForConsoleMessage(page, 'Server frame reload complete')
       await write(
         fixture.rootDir,
         'server-side-effect.ts',
         `export const sideEffect = 'recovery'\n`,
       )
-      await logClientFieldDebug('after server-side-effect write', clientFieldPath)
-      await waitForConsoleMessage(page, '[remix] HMR recovered update')
+      await serverFrameReloaded
 
       await waitForText(
         page,
@@ -2112,7 +2109,6 @@ function getNodeHmrServerSource(
   let appDir = path.relative(workspaceDir, path.join(rootDir, 'app'))
 
   return [
-    "import * as fs from 'node:fs'",
     "import { createServer } from 'node:http'",
     "import { createAssetServer } from '@remix-run/assets'",
     "import { createBrowserHmrChannel, emitServerReady } from '@remix-run/node-hmr/runtime'",
@@ -2137,7 +2133,6 @@ function getNodeHmrServerSource(
     '  },',
     '  hmr: createBrowserHmrChannel,',
     '  onError(error) {',
-    '    logClientFieldDebug("asset server onError")',
     '    console.error(error)',
     '  },',
     `  rootDir: ${JSON.stringify(workspaceDir)},`,
@@ -2287,54 +2282,7 @@ function getNodeHmrServerSource(
     '  if (ms > 0) await new Promise((resolve) => setTimeout(resolve, ms))',
     '}',
     '',
-    'function logClientFieldDebug(label) {',
-    `  let filePath = ${JSON.stringify(path.join(rootDir, 'app/ClientField.tsx'))}`,
-    '  try {',
-    "    let source = fs.readFileSync(filePath, 'utf-8')",
-    '    let stat = fs.statSync(filePath)',
-    "    console.error('[hmr-test-debug:child]', JSON.stringify({",
-    '      content: source,',
-    '      filePath,',
-    '      label,',
-    '      mtimeMs: stat.mtimeMs,',
-    '      size: stat.size,',
-    '    }))',
-    '  } catch (error) {',
-    "    console.error('[hmr-test-debug:child]', JSON.stringify({",
-    '      error: error instanceof Error ? error.message : String(error),',
-    '      filePath,',
-    '      label,',
-    '    }))',
-    '  }',
-    '}',
-    '',
   ].join('\n')
-}
-
-async function logClientFieldDebug(label: string, filePath: string): Promise<void> {
-  try {
-    let [source, stat] = await Promise.all([fs.readFile(filePath, 'utf-8'), fs.stat(filePath)])
-    console.error(
-      '[hmr-test-debug]',
-      JSON.stringify({
-        content: source,
-        filePath,
-        hash: createHash('sha256').update(source).digest('hex'),
-        label,
-        mtimeMs: stat.mtimeMs,
-        size: stat.size,
-      }),
-    )
-  } catch (error) {
-    console.error(
-      '[hmr-test-debug]',
-      JSON.stringify({
-        error: error instanceof Error ? error.message : String(error),
-        filePath,
-        label,
-      }),
-    )
-  }
 }
 
 async function writeWorkspacePackageLinks(rootDir: string, packageNames: string[]): Promise<void> {
