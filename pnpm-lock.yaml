@@ -240,9 +240,18 @@ importers:
 
   guides:
     dependencies:
+      front-matter:
+        specifier: ^4.0.2
+        version: 4.0.2
+      marked:
+        specifier: ^17.0.1
+        version: 17.0.6
       remix:
         specifier: workspace:^
         version: link:../packages/remix
+      shiki:
+        specifier: ^3.22.0
+        version: 3.23.0
     devDependencies:
       '@types/node':
         specifier: 'catalog:'
