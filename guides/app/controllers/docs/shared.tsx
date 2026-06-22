@@ -1,5 +1,7 @@
 import type { Handle, RemixElement, RemixNode } from 'remix/ui'
 
+import { DocsTableOfContents } from '../../assets/docs-table-of-contents.tsx'
+import type { DocsHeadingLink } from '../../assets/docs-table-of-contents.tsx'
 import { routes } from '../../routes.ts'
 import { Document } from '../../ui/document.tsx'
 
@@ -113,13 +115,7 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
 
         <aside class="docs-aside">
           <h2 class="docs-toc__heading">On this page</h2>
-          <ol class="docs-toc__list">
-            {extractHeadingLinks(handle.props.children).map((heading) => (
-              <li key={heading.id}>
-                <a href={`#${heading.id}`}>{heading.title}</a>
-              </li>
-            ))}
-          </ol>
+          <DocsTableOfContents headings={extractHeadingLinks(handle.props.children)} />
         </aside>
       </div>
     </DocsDocument>
@@ -157,7 +153,7 @@ function ChapterPaginationLink(
 }
 
 function extractHeadingLinks(node: RemixNode) {
-  let headings: Array<{ id: string; title: string }> = []
+  let headings: DocsHeadingLink[] = []
 
   function visit(value: RemixNode) {
     if (Array.isArray(value)) {
