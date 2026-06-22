@@ -134,6 +134,7 @@ async function handlePayload(payload) {
   }
 
   if (payload.type === 'server:update') {
+    logFailedJavaScriptUpdatesDebug('server update before retry', payload)
     await retryFailedJavaScriptUpdates(payload)
     await dispatchCustomEvent(payload.type, payload)
     return
@@ -149,9 +150,22 @@ async function handlePayload(payload) {
 
       try {
         await updateJavaScriptModule(update.path, update.acceptedPath ?? update.path, payload.timestamp)
+        if (failedJavaScriptUpdates.has(update.path)) {
+          logFailedJavaScriptUpdatesDebug('browser update succeeded before delete', {
+            acceptedPath: update.acceptedPath ?? update.path,
+            path: update.path,
+            timestamp: payload.timestamp,
+          })
+        }
         failedJavaScriptUpdates.delete(update.path)
       } catch (error) {
         failedJavaScriptUpdates.set(update.path, update.acceptedPath ?? update.path)
+        logFailedJavaScriptUpdatesDebug('browser update failed after set', {
+          acceptedPath: update.acceptedPath ?? update.path,
+          error: formatDebugError(error),
+          path: update.path,
+          timestamp: payload.timestamp,
+        })
         throw error
       }
       console.info('[remix] HMR accepted update', update.path)
@@ -166,7 +180,10 @@ async function handleReconnect() {
 }
 
 async function retryFailedJavaScriptUpdates(data) {
-  if (failedJavaScriptUpdates.size === 0) return
+  if (failedJavaScriptUpdates.size === 0) {
+    logFailedJavaScriptUpdatesDebug('retry skipped with empty map', data)
+    return
+  }
 
   let timestamp = getTimestamp(data)
   for (let [path, acceptedPath] of Array.from(failedJavaScriptUpdates)) {
@@ -177,6 +194,23 @@ async function retryFailedJavaScriptUpdates(data) {
     } catch (error) {
       console.error('[remix] HMR recovery update failed', error)
     }
+  }
+}
+
+function logFailedJavaScriptUpdatesDebug(label, data) {
+  console.info('[hmr-client-debug]', JSON.stringify({
+    data,
+    entries: Array.from(failedJavaScriptUpdates, ([path, acceptedPath]) => ({ acceptedPath, path })),
+    label,
+  }))
+}
+
+function formatDebugError(error) {
+  if (!(error instanceof Error)) return String(error)
+  return {
+    message: error.message,
+    name: error.name,
+    stack: error.stack,
   }
 }
 
