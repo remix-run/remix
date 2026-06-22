@@ -1,6 +1,6 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it, mock, type TestContext } from '@remix-run/test'
-import { navigate, startNavigationListenerImpl } from '../runtime/navigation.ts'
+import { navigate, startNavigationListener } from '../runtime/navigation.ts'
 import type { FrameHandle } from '../runtime/component.ts'
 
 // Stand-in frame the navigation handler can call without dragging in the
@@ -80,7 +80,7 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
 
     let anchor = document.createElement('a')
     anchor.href = '/login'
@@ -114,7 +114,7 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
 
     let anchor = document.createElement('a')
     anchor.href = 'https://example.com/login'
@@ -151,7 +151,7 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
 
     let anchor = document.createElement('a')
     anchor.href = '/report.csv'
@@ -185,7 +185,7 @@ describe('navigate', () => {
     stubGlobalField(t, 'navigation', stubNavigation)
 
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListener(controller.signal, stubFrames)
 
     let anchor = document.createElement('a')
     anchor.href = '/logo'
