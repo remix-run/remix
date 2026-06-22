@@ -1,5 +1,6 @@
 import type { Handle, RemixNode } from 'remix/ui'
 
+import { DevRefresh } from '../assets/dev-refresh.ts'
 import { routes } from '../routes.ts'
 
 export interface DocumentProps {
@@ -28,6 +29,7 @@ export function Document(handle: Handle<DocumentProps>) {
         </head>
         <body>
           {children}
+          {process.env.NODE_ENV !== 'production' ? <DevRefresh /> : null}
           <script type="module" src={routes.assets.href({ path: 'app/assets/entry.ts' })}></script>
         </body>
       </html>
