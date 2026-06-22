@@ -1,14 +1,6 @@
 import type { FrameContent } from 'remix/ui'
 import { run } from 'remix/ui'
 
-if (process.env.NODE_ENV !== 'production') {
-  void import('./dev-refresh.ts')
-    .then(({ startDevRefresh }) => startDevRefresh())
-    .catch((error: unknown) => {
-      console.error('Dev refresh failed to start:', error)
-    })
-}
-
 const app = run({
   async loadModule(moduleUrl, exportName) {
     let mod = await import(moduleUrl)
