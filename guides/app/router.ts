@@ -3,6 +3,7 @@ import { staticFiles } from 'remix/middleware/static'
 
 import { assetServer } from './assets.ts'
 import { docsController } from './controllers/docs/controller.tsx'
+import { docsExamplesController } from './controllers/docs/examples/controller.ts'
 import { devRefreshHandler } from './dev-refresh.ts'
 import { render, type AppContext } from './middleware/render.ts'
 import { routes } from './routes.ts'
@@ -34,3 +35,4 @@ router.map(
 )
 
 router.map(routes.docs, docsController)
+router.map(routes.docs.examples, docsExamplesController)

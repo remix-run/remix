@@ -87,6 +87,21 @@ pre code {
   padding: 0;
 }
 
+.shiki {
+  background-color: var(--bg-subtle) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .shiki {
+    background-color: var(--shiki-dark-bg) !important;
+    color: var(--shiki-dark) !important;
+  }
+
+  .shiki span {
+    color: var(--shiki-dark) !important;
+  }
+}
+
 /* Design tokens referenced by chapter + index markup -------------------- */
 
 .rmx-page-title {
@@ -279,14 +294,7 @@ pre code {
 }
 
 .docs-sections {
-  display: flex;
-  flex-direction: column;
-  gap: 2.5rem;
-}
-
-.docs-section__title {
-  margin: 0 0 1rem;
-  scroll-margin-top: 2rem;
+  min-width: 0;
 }
 
 /* Prev / next pagination ------------------------------------------------ */
@@ -363,4 +371,42 @@ pre code {
   flex-direction: column;
   gap: 0.5rem;
   font-size: 0.875rem;
+}
+
+/* Markdown content ------------------------------------------------------ */
+
+.rmx-page-body h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  margin: 2.5rem 0 1rem;
+  scroll-margin-top: 2rem;
+}
+
+.rmx-page-body h2:first-child {
+  margin-top: 0;
+}
+
+.rmx-page-body h3,
+.rmx-page-body h4 {
+  margin: 1.75rem 0 0.75rem;
+  line-height: 1.25;
+}
+
+.rmx-page-body ul,
+.rmx-page-body ol {
+  margin: 0 0 1rem;
+  padding-left: 1.5rem;
+}
+
+.rmx-page-body li + li {
+  margin-top: 0.5rem;
+}
+
+.rmx-page-body blockquote {
+  margin: 1.5rem 0;
+  padding-left: 1rem;
+  color: var(--fg-muted);
+  border-left: 3px solid var(--border);
 }

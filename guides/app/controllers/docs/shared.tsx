@@ -1,4 +1,4 @@
-import type { Handle, RemixElement, RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from 'remix/ui'
 
 import { DocsTableOfContents } from '../../assets/docs-table-of-contents.tsx'
 import type { DocsHeadingLink } from '../../assets/docs-table-of-contents.tsx'
@@ -6,18 +6,12 @@ import { routes } from '../../routes.ts'
 import { Document } from '../../ui/document.tsx'
 
 type DocsDocumentProps = {
-  requestUrl: string
   title: string
   description: string
   children: RemixNode
 }
 
-export type DocsPageProps = {
-  requestUrl: string
-}
-
 type DocsChapterProps = {
-  requestUrl: string
   chapter: string
   title: string
   description: string
@@ -29,6 +23,7 @@ type DocsChapterProps = {
     href: string
     title: string
   }
+  sections: DocsHeadingLink[]
   children: RemixNode
 }
 
@@ -70,11 +65,7 @@ function SiteHeader() {
 
 export function DocsChapter(handle: Handle<DocsChapterProps>) {
   return () => (
-    <DocsDocument
-      requestUrl={handle.props.requestUrl}
-      title={handle.props.title}
-      description={handle.props.description}
-    >
+    <DocsDocument title={handle.props.title} description={handle.props.description}>
       <div class="docs-layout">
         <article class="docs-article">
           <nav class="docs-breadcrumb">
@@ -115,19 +106,10 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
 
         <aside class="docs-aside">
           <h2 class="docs-toc__heading">On this page</h2>
-          <DocsTableOfContents headings={extractHeadingLinks(handle.props.children)} />
+          <DocsTableOfContents headings={handle.props.sections} />
         </aside>
       </div>
     </DocsDocument>
-  )
-}
-
-export function DocsSection(handle: Handle<{ id: string; title: string; children: RemixNode }>) {
-  return () => (
-    <section id={handle.props.id} class="docs-section">
-      <h2 class="rmx-page-title rmx-page-title-sm docs-section__title">{handle.props.title}</h2>
-      <div class="rmx-page-body">{handle.props.children}</div>
-    </section>
   )
 }
 
@@ -150,28 +132,4 @@ function ChapterPaginationLink(
       <span class="docs-pagination__title">{handle.props.title}</span>
     </a>
   )
-}
-
-function extractHeadingLinks(node: RemixNode) {
-  let headings: DocsHeadingLink[] = []
-
-  function visit(value: RemixNode) {
-    if (Array.isArray(value)) {
-      for (let child of value) visit(child)
-      return
-    }
-
-    if (value && typeof value === 'object' && 'type' in value && value.type === DocsSection) {
-      let props = (value as RemixElement).props as {
-        id?: unknown
-        title?: unknown
-      }
-      if (typeof props.id === 'string' && typeof props.title === 'string') {
-        headings.push({ id: props.id, title: props.title })
-      }
-    }
-  }
-
-  visit(node)
-  return headings
 }
