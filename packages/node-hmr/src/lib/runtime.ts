@@ -29,7 +29,7 @@ type HotModule = Readonly<Record<string, unknown>> & {
 }
 
 export interface RemixNodeHmrRuntime {
-  createBrowserHmrChannel(): BrowserHmrChannel | undefined
+  createBrowserHmrChannel(): Promise<BrowserHmrChannel | undefined>
   createHotContext(url: string, resolveDependency?: (specifier: string) => string): ImportMetaHot
   disposeAll(): Promise<void>
   emitServerReady(): void
@@ -55,6 +55,7 @@ type HotDependencyCallback = {
 }
 type DisposeCallback = (data: Record<string, unknown>) => HotCallbackResult
 type HotUpdateResult = 'accepted' | 'invalidated' | 'restart-requested'
+const browserHmrChannelRequestTimeoutMs = 5_000
 
 class NodeHotContext implements ImportMetaHot {
   readonly data: Record<string, unknown>
@@ -230,7 +231,16 @@ export function installNodeHmrRuntime(
 
   let dataByUrl = new Map<string, Record<string, unknown>>()
   let contextsByUrl = new Map<string, NodeHotContext>()
+  let browserEventUrl = options.browserEventUrl
   let browserHmrChannelId = 0
+  let browserHmrChannelRequestId = 0
+  let pendingBrowserHmrChannelRequests = new Map<
+    number,
+    {
+      resolve(url: string | undefined): void
+      timer: ReturnType<typeof setTimeout>
+    }
+  >()
   let browserHmrChannels = new Map<
     number,
     {
@@ -238,9 +248,21 @@ export function installNodeHmrRuntime(
     }
   >()
 
+  process.on('message', (message: unknown) => {
+    if (!isBrowserHmrChannelMessage(message)) return
+
+    let request = pendingBrowserHmrChannelRequests.get(message.requestId)
+    if (request === undefined) return
+
+    clearTimeout(request.timer)
+    pendingBrowserHmrChannelRequests.delete(message.requestId)
+    request.resolve(message.url)
+  })
+
   let runtime: RemixNodeHmrRuntime = {
-    createBrowserHmrChannel() {
-      if (options.browserEventUrl === undefined) return undefined
+    async createBrowserHmrChannel() {
+      browserEventUrl ??= await requestBrowserHmrChannelUrl()
+      if (browserEventUrl === undefined) return undefined
 
       let id = browserHmrChannelId++
       let watchedFiles = new Set<string>()
@@ -296,7 +318,7 @@ export function installNodeHmrRuntime(
 
         updateWatchedFiles,
 
-        url: options.browserEventUrl,
+        url: browserEventUrl,
       }
     },
 
@@ -399,6 +421,50 @@ export function installNodeHmrRuntime(
 
   runtimeGlobal.__remixNodeHmr = runtime
   return runtime
+
+  function requestBrowserHmrChannelUrl(): Promise<string | undefined> {
+    if (!hasNodeHmrParentProcess()) return Promise.resolve(undefined)
+
+    let requestId = browserHmrChannelRequestId++
+    return new Promise((resolvePromise) => {
+      let timer = setTimeout(() => {
+        pendingBrowserHmrChannelRequests.delete(requestId)
+        resolvePromise(undefined)
+      }, browserHmrChannelRequestTimeoutMs)
+
+      pendingBrowserHmrChannelRequests.set(requestId, {
+        resolve: resolvePromise,
+        timer,
+      })
+
+      if (
+        !process.send?.({
+          requestId,
+          type: 'node-hmr:child:browser-hmr-channel-requested',
+        })
+      ) {
+        clearTimeout(timer)
+        pendingBrowserHmrChannelRequests.delete(requestId)
+        resolvePromise(undefined)
+      }
+    })
+  }
+}
+
+function isBrowserHmrChannelMessage(message: unknown): message is {
+  requestId: number
+  type: 'node-hmr:parent:browser-hmr-channel'
+  url?: string
+} {
+  return (
+    typeof message === 'object' &&
+    message !== null &&
+    'type' in message &&
+    message.type === 'node-hmr:parent:browser-hmr-channel' &&
+    'requestId' in message &&
+    typeof message.requestId === 'number' &&
+    (!('url' in message) || typeof message.url === 'string')
+  )
 }
 
 function requestRestart(message?: string): void {

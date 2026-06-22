@@ -3151,7 +3151,7 @@ describe('asset-server', () => {
     let closeCount = 0
     try {
       let assetServer = createWatchedTestServer(caseDir, {
-        hmr: () => {
+        async hmr() {
           createCount += 1
           return {
             close() {
@@ -3168,11 +3168,59 @@ describe('asset-server', () => {
         },
       })
 
+      let clientResponse = await get(assetServer, '/assets/__remix_hmr/client.js')
+      assert.ok(clientResponse)
+
       await assetServer.close()
       await assetServer.close()
 
       assert.equal(createCount, 1)
       assert.equal(unsubscribeCount, 1)
+      assert.equal(closeCount, 1)
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('closes the browser HMR channel when an async factory resolves after the asset server closes', async () => {
+    let caseDir = await makeTmpDir()
+    let createCount = 0
+    let unsubscribeCount = 0
+    let closeCount = 0
+    let resolveChannel: (channel: BrowserHmrChannel) => void = (_channel) => {
+      throw new Error('Channel promise was not created')
+    }
+    let channelPromise = new Promise<BrowserHmrChannel>((resolve) => {
+      resolveChannel = resolve
+    })
+
+    try {
+      let assetServer = createWatchedTestServer(caseDir, {
+        hmr() {
+          createCount += 1
+          return channelPromise
+        },
+      })
+
+      let closePromise = assetServer.close()
+
+      resolveChannel({
+        close() {
+          closeCount += 1
+        },
+        onFileEvents() {
+          return () => {
+            unsubscribeCount += 1
+          }
+        },
+        updateWatchedFiles() {},
+        url: 'http://127.0.0.1:1234/hmr',
+      })
+
+      await closePromise
+
+      assert.equal(createCount, 1)
+      assert.equal(unsubscribeCount, 0)
       assert.equal(closeCount, 1)
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })

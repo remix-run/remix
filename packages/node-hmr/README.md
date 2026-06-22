@@ -78,44 +78,19 @@ Remix UI component HMR is built in and automatically enabled when the `remix/ui`
 
 ## Browser HMR Integration
 
-`node-hmr` can coordinate browser-facing HMR alongside server HMR. This is exposed through browser HMR channels, which are intended for tools that maintain their own browser module graph.
+`node-hmr` can coordinate browser-facing HMR alongside server HMR. The parent process hosts the browser event stream, tracks files reported by asset servers in the child process, sends matching file events back to the child runtime, and emits the resulting browser updates to connected clients.
 
-Enable browser HMR coordination when running your server with the `browserHmrChannel` option:
-
-```ts
-import { run } from 'remix/node-hmr'
-
-run('./server.ts', {
-  nodeArgs: ['--import', 'remix/node-tsx'],
-  browserHmrChannel: true,
-})
-```
-
-When this is enabled, the parent process hosts the browser event stream, tracks files reported by child-created channels, sends matching file events back to the child runtime, and emits the resulting browser updates to connected clients.
-
-When `node-hmr` hot updates or restarts server code in a way that should refresh server-rendered UI, it sends a `server:update` event to connected clients.
-
-Call `emitServerReady()` when your app server is ready to receive requests. This lets the parent process delay browser `server:update` events until a restarted app server has finished listening:
-
-```ts
-server.listen(port, () => {
-  if (isDevelopment) {
-    import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
-  }
-})
-```
-
-Create a browser HMR channel within the app server when running in `node-hmr` via the `remix/node-hmr/runtime` import:
+This is co-ordinated through the use of a browser HMR channel which can be created within the app server when running in `node-hmr` via the `remix/node-hmr/runtime` import:
 
 ```ts
 import { createBrowserHmrChannel } from 'remix/node-hmr/runtime'
 
-let browserHmrChannel = createBrowserHmrChannel()
+let browserHmrChannel = await createBrowserHmrChannel()
 ```
 
-A browser HMR channel is scoped to the current child process. It gives browser HMR tooling an EventSource URL, a way to report the files it wants watched, and a way to respond to file changes with browser HMR events. When the child process restarts, `node-hmr` automatically clears the child process's browser HMR channel state. The parent-owned browser HMR channel is closed when the `node-hmr` runner closes.
+A browser HMR channel is scoped to the current child process. It gives browser HMR tooling an EventSource URL, a way to report the files it wants watched, and a way to respond to file changes with browser HMR events.
 
-Tools can implement browser HMR by accepting a channel or channel factory through their own integration layer. For example, [`remix/assets`](https://github.com/remix-run/remix/tree/main/packages/assets) accepts a browser HMR channel factory through its `hmr` option:
+Browser asset servers can use this API to co-ordinate browser HMR with the server, for example, [`remix/assets`](https://github.com/remix-run/remix/tree/main/packages/assets) via its `hmr` option to `createAssetServer`:
 
 ```ts
 import { createAssetServer } from 'remix/assets'
@@ -127,6 +102,18 @@ let assetServer = createAssetServer({
   allow: ['app/assets/**'],
   hmr: createBrowserHmrChannel,
   watch: true,
+})
+```
+
+When `node-hmr` hot updates or restarts server code in a way that should refresh server-rendered UI, it sends a `server:update` event to connected clients.
+
+Call `emitServerReady()` when your app server is ready to receive requests. This lets the parent process delay browser `server:update` events until a restarted app server has finished listening:
+
+```ts
+server.listen(port, () => {
+  if (isDevelopment) {
+    import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
+  }
 })
 ```
 

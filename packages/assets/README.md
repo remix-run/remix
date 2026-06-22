@@ -544,7 +544,7 @@ To type `import.meta.hot` in browser asset modules, add the HMR types to your Ty
 }
 ```
 
-The `hmr` option accepts a function that creates a `BrowserHmrChannel`, e.g. the `createBrowserHmrChannel` function from [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr):
+The `hmr` option accepts an async function that creates a `BrowserHmrChannel`, such as the `createBrowserHmrChannel` function from [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr):
 
 ```ts
 import { createAssetServer } from 'remix/assets'
@@ -555,15 +555,11 @@ let assetServer = createAssetServer({
   fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
   hmr: isDevelopment
-    ? await import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.createBrowserHmrChannel)
+    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
     : undefined,
   watch: isDevelopment,
 })
 ```
-
-`BrowserHmrChannel` is a tooling integration contract. It provides the asset server with an EventSource URL, a way to report watched file changes, a way to handle file events from the HMR coordinator, and scoped cleanup. The asset server calls the factory once, creates a browser HMR channel for this asset server, and closes the channel when `assetServer.close()` is called.
-
-When using `node-hmr`, enable `browserHmrChannel` in `run()` so `createBrowserHmrChannel` can connect to the parent runner.
 
 Browser modules can also listen for HMR events. When the browser HMR channel comes from `remix/node-hmr/runtime`, server updates are sent as `server:update` events.
 

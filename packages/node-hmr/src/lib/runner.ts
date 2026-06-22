@@ -34,6 +34,10 @@ interface NodeHmrUpdate {
 
 type ChildMessage =
   | {
+      requestId: number
+      type: 'node-hmr:child:browser-hmr-channel-requested'
+    }
+  | {
       payload: HmrEventPayload
       type: 'node-hmr:child:browser-event-emitted'
     }
@@ -166,6 +170,7 @@ export function createWatchedProcessController(options: {
   stop(signal?: NodeJS.Signals): Promise<void>
 } {
   let browserHmrEventChannel: BrowserHmrEventChannel | null = null
+  let browserHmrEventChannelPromise: Promise<BrowserHmrEventChannel | null> | undefined
   let child: ChildProcess | undefined
   let restartTimer: NodeJS.Timeout | undefined
   let resolveRun: (() => void) | undefined
@@ -310,6 +315,14 @@ export function createWatchedProcessController(options: {
 
     if (message.type === 'node-hmr:child:browser-event-emitted') {
       browserHmrEventChannel?.send(message.payload)
+      return
+    }
+
+    if (message.type === 'node-hmr:child:browser-hmr-channel-requested') {
+      respondToBrowserHmrChannelRequest(message.requestId).catch((error: unknown) => {
+        console.warn(`Failed to create browser HMR channel: ${formatUnknownError(error)}`)
+        sendBrowserHmrChannelResponse(message.requestId, undefined)
+      })
       return
     }
 
@@ -813,6 +826,35 @@ export function createWatchedProcessController(options: {
     return browserHmrEvents
   }
 
+  async function respondToBrowserHmrChannelRequest(requestId: number): Promise<void> {
+    let channel = await getBrowserHmrEventChannel()
+    sendBrowserHmrChannelResponse(requestId, channel?.url)
+  }
+
+  function sendBrowserHmrChannelResponse(requestId: number, url: string | undefined): void {
+    if (child === undefined || child.send === undefined || !child.connected) return
+
+    child.send({
+      requestId,
+      type: 'node-hmr:parent:browser-hmr-channel',
+      url,
+    })
+  }
+
+  async function getBrowserHmrEventChannel(): Promise<BrowserHmrEventChannel | null> {
+    if (options.browserHmrChannel === null) return null
+    if (browserHmrEventChannel) return browserHmrEventChannel
+
+    browserHmrEventChannelPromise ??= createBrowserHmrEventChannel(options.browserHmrChannel).then(
+      (channel) => {
+        browserHmrEventChannel = channel
+        return channel
+      },
+    )
+
+    return browserHmrEventChannelPromise
+  }
+
   function flushBrowserHmrEvents(options: { serverReady: boolean }): 'events' | 'reload' | 'none' {
     if (pendingBrowserHmrEvents.length === 0) return 'none'
     if (!options.serverReady) return 'none'
@@ -999,7 +1041,10 @@ export function createWatchedProcessController(options: {
     stopPromise ??= Promise.resolve()
       .then(() => watcher.close())
       .then(() => stopChild(child, signal))
-      .then(() => browserHmrEventChannel?.close())
+      .then(async () => {
+        let channel = await browserHmrEventChannelPromise
+        await channel?.close()
+      })
       .then(() => {
         resolveRun?.()
       })
@@ -1015,17 +1060,6 @@ export function createWatchedProcessController(options: {
     ready,
 
     async start() {
-      try {
-        browserHmrEventChannel =
-          options.browserHmrChannel === null
-            ? null
-            : await createBrowserHmrEventChannel(options.browserHmrChannel)
-      } catch (error) {
-        await watcher.close()
-        await browserHmrEventChannel?.close()
-        throw error
-      }
-
       return await new Promise<void>((resolvePromise) => {
         resolveRun = resolvePromise
         start()
@@ -1285,6 +1319,10 @@ function isChildMessage(message: unknown): message is ChildMessage {
     return 'payload' in message && isHmrEventPayload(message.payload)
   }
 
+  if (message.type === 'node-hmr:child:browser-hmr-channel-requested') {
+    return 'requestId' in message && typeof message.requestId === 'number'
+  }
+
   if (message.type === 'node-hmr:child:browser-hmr-watch-files-changed') {
     return (
       'id' in message &&
@@ -1441,6 +1479,10 @@ function isHmrInfo(value: unknown): value is NodeHmrModuleInfo['hmr'] {
     'usesImportMetaHot' in value &&
     typeof value.usesImportMetaHot === 'boolean'
   )
+}
+
+function formatUnknownError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
 function isHmrEventPayload(value: unknown): value is HmrEventPayload {

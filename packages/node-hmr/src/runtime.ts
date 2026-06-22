@@ -10,8 +10,8 @@ export type {
   HmrEventPayload,
 } from './lib/browser-events.ts'
 
-export function createBrowserHmrChannel(): BrowserHmrChannel | undefined {
-  return getNodeHmrRuntime()?.createBrowserHmrChannel()
+export async function createBrowserHmrChannel(): Promise<BrowserHmrChannel | undefined> {
+  return await getNodeHmrRuntime()?.createBrowserHmrChannel()
 }
 
 export { emitServerReady }

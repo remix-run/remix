@@ -84,8 +84,8 @@ export function run(entry: string, options: RunOptions = {}): NodeHmrRunner {
 function normalizeBrowserHmrChannelOptions(
   options: RunOptions['browserHmrChannel'],
 ): BrowserHmrChannelOptions | null {
-  if (!options) return null
-  if (options === true) return {}
+  if (options === false) return null
+  if (options === undefined || options === true) return {}
 
   if (options.port !== undefined) {
     assertValidPort(options.port)

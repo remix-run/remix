@@ -18,7 +18,7 @@ export const assetServer = createAssetServer({
     ? undefined
     : { buildId: process.env.GITHUB_SHA || String(Date.now()) },
   hmr: isDevelopment
-    ? await import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.createBrowserHmrChannel)
+    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
     : undefined,
   watch: isDevelopment,
 })

@@ -14,9 +14,9 @@ type TestRuntimeGlobal = typeof globalThis & {
 }
 
 describe('installNodeHmrRuntime', () => {
-  it('creates a browser HMR channel for the process runtime', () => {
+  it('creates a browser HMR channel for the process runtime', async () => {
     let runtime = installNodeHmrRuntime({ browserEventUrl: 'http://127.0.0.1:1234/hmr' })
-    let browserHmrChannel = runtime.createBrowserHmrChannel()
+    let browserHmrChannel = await runtime.createBrowserHmrChannel()
 
     assert.equal(browserHmrChannel?.url, 'http://127.0.0.1:1234/hmr')
   })
