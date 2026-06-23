@@ -61,7 +61,7 @@ function ChapterCard(handle: Handle<{ chapter: DocsChapterSummary }>) {
         <ul class="chapter-card__links">
           {chapter.sections.map((section) => (
             <li key={section.id}>
-              <a href={`${chapter.href}#${section.id}`}>{section.title}</a>
+              <a href={`${chapter.href}#${section.id}`} innerHTML={section.titleHtml} />
             </li>
           ))}
         </ul>
