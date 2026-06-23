@@ -1,8 +1,9 @@
 import { get, route } from 'remix/routes'
 
+export const assetsBase = '/assets'
+
 export const routes = route({
-  assets: get('/assets/*path'),
-  devRefresh: get('/__dev/refresh'),
+  assets: get(`${assetsBase}/*path`),
   home: get('/'),
   docs: route('docs', {
     index: get('/'),

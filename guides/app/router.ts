@@ -1,12 +1,19 @@
-import { createRouter } from 'remix/router'
+import { asyncContext } from 'remix/middleware/async-context'
+import { compression } from 'remix/middleware/compression'
+import { logger } from 'remix/middleware/logger'
 import { staticFiles } from 'remix/middleware/static'
+import { createRouter, type MiddlewareContext } from 'remix/router'
 
-import { assetServer } from './assets.ts'
-import { docsController } from './controllers/docs/controller.tsx'
-import { docsExamplesController } from './controllers/docs/examples/controller.ts'
-import { devRefreshHandler } from './dev-refresh.ts'
-import { render, type AppContext } from './middleware/render.ts'
+import rootController from './actions/controller.tsx'
+import docsController from './actions/docs/controller.tsx'
+import docsExamplesController from './actions/docs/examples/controller.ts'
+import { loadAssetEntry } from './middleware/asset-entry.ts'
+import { render } from './middleware/render.ts'
 import { routes } from './routes.ts'
+
+export type AppContext = MiddlewareContext<
+  [ReturnType<typeof loadAssetEntry>, ReturnType<typeof render>]
+>
 
 declare module 'remix/router' {
   interface RouterTypes {
@@ -14,25 +21,23 @@ declare module 'remix/router' {
   }
 }
 
-export const router = createRouter<AppContext>({
-  middleware: [staticFiles('./public', { index: false }), render()],
-})
+export function createGuidesRouter() {
+  let router = createRouter<AppContext>({
+    middleware: [
+      ...(process.env.NODE_ENV === 'development' ? [logger()] : []),
+      compression(),
+      staticFiles('./public', { index: false }),
+      asyncContext(),
+      loadAssetEntry(),
+      render(),
+    ],
+  })
 
-router.map(
-  routes.assets,
-  async ({ request }) =>
-    (await assetServer.fetch(request)) ?? new Response('Not Found', { status: 404 }),
-)
+  router.map(routes, rootController)
+  router.map(routes.docs, docsController)
+  router.map(routes.docs.examples, docsExamplesController)
 
-if (process.env.NODE_ENV !== 'production') {
-  router.map(routes.devRefresh, devRefreshHandler)
+  return router
 }
 
-// This app is just the docs, so send the root straight to the docs index.
-router.map(
-  routes.home,
-  () => new Response(null, { status: 302, headers: { Location: routes.docs.index.href() } }),
-)
-
-router.map(routes.docs, docsController)
-router.map(routes.docs.examples, docsExamplesController)
+export const router = createGuidesRouter()

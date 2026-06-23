@@ -1,80 +1,86 @@
-import * as s from 'remix/data-schema'
-import { clientEntry } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+const eventsHref = '/__dev/events'
+const storageKey = 'remix-guides:dev-refresh-version'
 
-const refreshHref = '/__dev/refresh'
-const refreshIntervalMs = 500
+let currentVersion = readStoredVersion()
+let reloading = false
 
-const refreshSchema = s.object({
-  version: s.string(),
-})
+if ('EventSource' in window) {
+  let events = new EventSource(eventsHref)
 
-// Temporary guides-only refresh hook. Delete this when first-class HMR lands.
-export const DevRefresh = clientEntry(import.meta.url, function DevRefresh(handle: Handle) {
-  let currentVersion: string | undefined
-  let missedServer = false
-  let checking = false
-  let reloading = false
+  events.addEventListener('version', handleVersionEvent)
+  events.addEventListener('change', handleVersionEvent)
 
-  if (typeof window !== 'undefined') {
-    let interval = window.setInterval(() => {
-      void checkForRefresh()
-    }, refreshIntervalMs)
+  window.addEventListener(
+    'beforeunload',
+    () => {
+      events.close()
+    },
+    { once: true },
+  )
+} else {
+  console.warn('[dev-refresh] EventSource is not available; automatic refresh is disabled.')
+}
 
-    handle.signal.addEventListener('abort', () => window.clearInterval(interval))
-    void checkForRefresh()
+function handleVersionEvent(event: Event): void {
+  if (!isMessageEvent(event) || typeof event.data !== 'string') return
+
+  let nextVersion = readVersion(event.data)
+  if (!nextVersion) return
+
+  if (currentVersion === undefined) {
+    currentVersion = nextVersion
+    storeVersion(nextVersion)
+    return
   }
 
-  async function checkForRefresh() {
-    if (checking || reloading || handle.signal.aborted) return
-
-    checking = true
-
-    try {
-      let response = await fetch(refreshHref, {
-        cache: 'no-store',
-        headers: { Accept: 'application/json' },
-        signal: handle.signal,
-      })
-      if (!response.ok) return
-
-      let result = s.parseSafe(refreshSchema, await response.json())
-      if (!result.success) return
-
-      let nextVersion = result.value.version
-
-      if (currentVersion === undefined) {
-        if (missedServer && !(await reloadTopFrame())) return
-
-        currentVersion = nextVersion
-        return
-      }
-
-      if (nextVersion !== currentVersion && (await reloadTopFrame())) {
-        currentVersion = nextVersion
-      }
-    } catch {
-      if (!handle.signal.aborted) {
-        missedServer = true
-      }
-    } finally {
-      checking = false
-    }
+  if (nextVersion !== currentVersion) {
+    currentVersion = nextVersion
+    storeVersion(nextVersion)
+    reloadPage()
   }
+}
 
-  async function reloadTopFrame() {
-    if (reloading || handle.signal.aborted) return false
+function readVersion(data: string): string | undefined {
+  try {
+    let value: unknown = JSON.parse(data)
+    if (!value || typeof value !== 'object') return undefined
+    if (!hasVersion(value)) return undefined
 
-    reloading = true
-
-    try {
-      await handle.frames.top.reload()
-      missedServer = false
-      return true
-    } finally {
-      reloading = false
-    }
+    return typeof value.version === 'string' && value.version !== '' ? value.version : undefined
+  } catch {
+    return undefined
   }
+}
 
-  return () => null
-})
+function readStoredVersion(): string | undefined {
+  try {
+    return window.sessionStorage.getItem(storageKey) ?? undefined
+  } catch {
+    return undefined
+  }
+}
+
+function storeVersion(version: string): void {
+  try {
+    window.sessionStorage.setItem(storageKey, version)
+  } catch {
+    // Ignore private browsing/storage policy failures. The in-memory version still works.
+  }
+}
+
+function reloadPage(): void {
+  if (reloading) return
+
+  reloading = true
+  window.location.reload()
+}
+
+function isMessageEvent(event: Event): event is MessageEvent<unknown> {
+  return 'data' in event
+}
+
+function hasVersion(value: object): value is { version: unknown } {
+  return Object.hasOwn(value, 'version')
+}
+
+export {}

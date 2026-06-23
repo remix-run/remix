@@ -1,8 +1,8 @@
 import { css } from 'remix/ui'
 import type { Handle } from 'remix/ui'
 
-import type { AppContext } from '../../../../middleware/render.ts'
-import { RefreshFrameButton } from './client.tsx'
+import type { AppContext } from '../../../../router.ts'
+import { RefreshFrameButton } from './server-clock.client.tsx'
 
 const timeFormatter = new Intl.DateTimeFormat('en-US', {
   hour: 'numeric',

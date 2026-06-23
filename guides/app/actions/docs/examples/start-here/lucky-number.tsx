@@ -1,8 +1,8 @@
 import { css } from 'remix/ui'
 
-import type { AppContext } from '../../../../middleware/render.ts'
-import { LuckyNumberToy } from './client.tsx'
-import type { LuckyNumberTone } from './client.tsx'
+import type { AppContext } from '../../../../router.ts'
+import { LuckyNumberToy } from './lucky-number.client.tsx'
+import type { LuckyNumberTone } from './lucky-number.client.tsx'
 
 type DemoMood = {
   name: string
