@@ -27,7 +27,7 @@ Chapter files live in `app/actions/docs/chapters/`. The file name controls order
 01-start-here.md -> Chapter 1 -> /docs/start-here
 ```
 
-Each chapter needs frontmatter and level-2 headings with explicit IDs:
+Each chapter needs frontmatter. Level-2 headings power the docs index and "On this page" navigation. IDs are generated from heading text unless you add an explicit one:
 
 ```md
 ---
@@ -35,10 +35,12 @@ title: Start Here
 description: A high-level introduction to Remix.
 ---
 
-## Build your first page {#build-your-first-page}
-```
+An optional chapter introduction can go here.
 
-Level-2 headings power the docs index and "On this page" navigation.
+## Build your first page
+
+## Stable custom anchor {#custom-anchor}
+```
 
 ## Adding frame examples
 
