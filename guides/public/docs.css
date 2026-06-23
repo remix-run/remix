@@ -81,6 +81,16 @@ pre {
   overflow-x: auto;
 }
 
+[data-code-block] pre {
+  margin: 0;
+  padding-right: 2.75rem;
+}
+
+[data-code-block-filename] + pre {
+  border-top: 0;
+  border-radius: 0 0 8px 8px;
+}
+
 pre code {
   background: none;
   border: none;
