@@ -3,7 +3,7 @@ title: Start Here
 description: A high-level introduction to Remix and the mental model behind a Remix application.
 ---
 
-## What is Remix? {#what-is-remix}
+## What is Remix?
 
 Remix is a TypeScript framework built around the web's request and response model. A server receives a Web `Request`, Remix matches it to a typed route, a controller handles the request, and the app returns a Web `Response`.
 
@@ -24,7 +24,7 @@ The design of Remix comes from six core principles:
 
 The fastest way to understand Remix is to build the request path once: create a server, define routes, connect a router, and return a response.
 
-## Quickstart: create and run a Remix app {#quickstart-create-and-run-a-remix-app}
+## Quickstart: create and run a Remix app {#quickstart}
 
 A minimal Remix app is just a Node server that forwards `Request` objects to a router. The router returns ordinary `Response` objects.
 
@@ -51,7 +51,7 @@ The frame below is loaded from a separate Remix route. Press the button to re-fe
 :::frame /docs/examples/start-here/server-clock
 :::
 
-## Project tour: server.ts, app/routes.ts, app/router.ts, actions, UI, assets {#project-tour-server-ts-app-routes-ts-app-router-ts-actions-ui-assets}
+## Project tour: server.ts, app/routes.ts, app/router.ts, actions, UI, assets {#project-tour}
 
 A Remix app keeps the HTTP contract, handlers, and UI intentionally close:
 
@@ -78,7 +78,7 @@ export const routes = route({
 
 Use `routes.docs.startHere.href()` in redirects, anchors, tests, and frame sources when the URL is authored in TypeScript.
 
-## The core model: Request, middleware, router, controller, Response {#the-core-model-request-middleware-router-controller-response}
+## The core model: Request, middleware, router, controller, Response {#core-model}
 
 Remix keeps the request path explicit:
 
@@ -106,7 +106,7 @@ function HomePage(handle: Handle<{ name: string }>) {
 
 Because the route returns a normal `Response`, it is easy to test with `router.fetch(new Request(url))`.
 
-## Build your first page {#build-your-first-page}
+## Build your first page
 
 A Remix UI component is a function that receives a `handle` and returns a render function. It is not React, but the JSX authoring shape stays familiar.
 
@@ -125,7 +125,7 @@ export function ProductPage(handle: Handle<{ name: string; price: string }>) {
 
 Read current props from `handle.props`. Keep server data loading in the controller, then pass serializable values into the UI.
 
-## Build your first form action {#build-your-first-form-action}
+## Build your first form action
 
 HTML forms are still the default mutation primitive. The route can accept a POST, validate `FormData`, write data, and redirect.
 
@@ -149,7 +149,7 @@ export async function createProject({ request }: AppContext) {
 
 Start with the non-JavaScript behavior. Add client entries or frames only when they improve the experience on top of a working route.
 
-## Add your first hydrated component {#add-your-first-hydrated-component}
+## Add your first hydrated component
 
 Use `clientEntry` when a component needs browser state or events. The server still renders the initial HTML; the client entry adds behavior after boot.
 
