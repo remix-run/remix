@@ -5,7 +5,7 @@ Run Node.js applications with Hot Module Reloading.
 ## Features
 
 - **HMR Runtime**: Provides an `import.meta.hot` API for modules that can handle hot updates
-- **Remix UI Support**: When `remix/ui` is detected, instantly update components without a full server restart
+- **Module Hook Friendly**: Works with Node import hooks that generate `import.meta.hot` usage
 - **Restart Fallback**: Restarts the child Node process when updates aren't accepted
 - **Browser HMR Integration**: Optionally hosts browser HMR coordination that survives child restarts
 
@@ -24,7 +24,7 @@ Create a development script that starts your app server with HMR enabled, along 
 import { run } from 'remix/node-hmr'
 
 run('./server.ts', {
-  nodeArgs: ['--import', 'remix/node-tsx'],
+  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
   watch: {
     ignore: ['**/node_modules/**'],
   },
@@ -51,7 +51,7 @@ You can optionally provide an array of glob patterns to the `watch.ignore` optio
 import { run } from 'remix/node-hmr'
 
 run('./server.ts', {
-  nodeArgs: ['--import', 'remix/node-tsx'],
+  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
   watch: {
     ignore: ['**/node_modules/**'],
   },
@@ -64,7 +64,7 @@ You can also configure polling behavior. Polling defaults to `true` on Windows a
 import { run } from 'remix/node-hmr'
 
 run('./server.ts', {
-  nodeArgs: ['--import', 'remix/node-tsx'],
+  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
   watch: {
     poll: true,
     pollInterval: 100,
@@ -72,9 +72,15 @@ run('./server.ts', {
 })
 ```
 
-## Remix UI Support
+## Module Hooks
 
-Remix UI component HMR is built in and automatically enabled when the `remix/ui` package is detected, allowing exported Remix UI components to be updated instantly without a full server restart.
+`node-hmr` provides the `import.meta.hot` runtime and watches the loaded module graph. It does not transform component modules by itself.
+
+Use Node's `--import` flag to add transforms such as Remix UI component HMR:
+
+```sh
+node --import remix/node-tsx --import remix/ui-hmr/node ./server.ts
+```
 
 ## Browser HMR Integration
 

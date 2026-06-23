@@ -1,8 +1,8 @@
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { getTsconfig } from 'get-tsconfig'
-import { transformComponentsForBrowser } from '@remix-run/ui-hmr'
 import MagicString from 'magic-string'
 import { minify } from 'oxc-minify'
 import { parseSync, visitorKeys } from 'oxc-parser'
@@ -26,6 +26,12 @@ import {
   restoreAuthoredInjectedPackageSpecifier,
 } from '../injected-packages.ts'
 import type { ModuleRecord, ModuleTracking } from '../module-store.ts'
+import type {
+  ModuleHooks,
+  ModuleLoadContext,
+  ModuleLoadHookNext,
+  ModuleLoadResult,
+} from '../module-hooks.ts'
 import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import { composeSourceMaps, rewriteSourceMapSources, stringifySourceMap } from '../source-maps.ts'
@@ -60,9 +66,6 @@ const supportedTsconfigTransformCompilerOptions = {
   jsxImportSource: 'jsxImportSource',
   useDefineForClassFields: 'useDefineForClassFields',
 } as const
-
-const componentHmrRuntimeSpecifier = '@remix-run/ui-hmr/browser-runtime'
-const componentHmrRefreshSpecifiers = ['remix/ui/dev/refresh', '@remix-run/ui/dev/refresh'] as const
 
 export type ResolveModuleResult = {
   identityPath: string
@@ -119,12 +122,12 @@ type TsconfigTransformOptionsResolver = ReturnType<typeof createTsconfigTransfor
 
 export type TransformArgs = {
   buildId: string | null
-  componentHmr: boolean
   define: Record<string, string> | null
   externalSet: ReadonlySet<string>
   isAllowed(absolutePath: string): boolean
   isWatchIgnored(filePath: string): boolean
   minify: boolean
+  moduleHooks: readonly ModuleHooks[]
   resolveActualPath(identityPath: string): string | null
   resolverFactory: ResolverFactory
   routes: CompiledRoutes
@@ -231,24 +234,11 @@ export async function transformModule(
       )
     }
 
-    let componentHmrRefreshSpecifier = args.componentHmr
-      ? await resolveComponentHmrRefreshSpecifier(resolvedPath, {
-          isAllowed: args.isAllowed,
-          resolverFactory: args.resolverFactory,
-        })
-      : null
-
     let analysis = await analyzeModuleSource(sourceText, resolvedPath, transformOptions, {
-      componentHmr:
-        componentHmrRefreshSpecifier === null
-          ? undefined
-          : {
-              moduleUrl: stableUrlPathname,
-              refreshSpecifier: componentHmrRefreshSpecifier,
-              runtimeSpecifier: componentHmrRuntimeSpecifier,
-            },
       define: args.define ?? undefined,
       minify: args.minify,
+      moduleHooks: args.moduleHooks,
+      moduleUrl: stableUrlPathname,
       sourceMaps: args.sourceMaps ?? undefined,
       target: args.target ?? undefined,
     })
@@ -374,32 +364,6 @@ export function getHmrAnalysis(rawCode: string): TransformedModule['hmr'] {
   }
 }
 
-export async function resolveComponentHmrRefreshSpecifier(
-  importerPath: string,
-  options: {
-    isAllowed(absolutePath: string): boolean
-    resolverFactory: ResolverFactory
-  },
-): Promise<string | null> {
-  for (let refreshSpecifier of componentHmrRefreshSpecifiers) {
-    let refreshResult = await options.resolverFactory.resolveFileAsync(
-      importerPath,
-      refreshSpecifier,
-    )
-
-    if (
-      !refreshResult.error &&
-      refreshResult.path !== undefined &&
-      path.isAbsolute(refreshResult.path) &&
-      options.isAllowed(normalizeFilePath(refreshResult.path))
-    ) {
-      return refreshSpecifier
-    }
-  }
-
-  return null
-}
-
 function isImportMetaHotAcceptCallee(node: Node): boolean {
   let callee = unwrapChainExpression(node)
   if (callee.type !== 'MemberExpression') return false
@@ -490,13 +454,10 @@ async function analyzeModuleSource(
   resolvedPath: string,
   transformOptions: TsconfigTransformOptions,
   options: {
-    componentHmr?: {
-      moduleUrl: string
-      refreshSpecifier: string
-      runtimeSpecifier: string
-    }
     define?: Record<string, string>
     minify: boolean
+    moduleHooks: readonly ModuleHooks[]
+    moduleUrl: string
     sourceMaps?: 'external' | 'inline'
     target?: ResolvedScriptTarget
   },
@@ -525,24 +486,27 @@ async function analyzeModuleSource(
   let sourceMap = stringifySourceMap(transformResult.map)
   let componentHmrExportNames: string[] | null = null
 
-  if (options.componentHmr) {
-    let componentHmrResult = transformComponentsForBrowser(rawCode, {
-      moduleUrl: options.componentHmr.moduleUrl,
-      refreshSpecifier: options.componentHmr.refreshSpecifier,
-      runtimeSpecifier: options.componentHmr.runtimeSpecifier,
-      sourceMap: options.sourceMaps != null,
+  if (options.moduleHooks.length > 0) {
+    let hookUrl = pathToFileURL(resolvedPath).href
+    let hookInputSource = sourceMap ? appendInlineSourceMap(rawCode, sourceMap) : rawCode
+    let hookResult = runModuleLoadHooks(hookUrl, {
+      format: 'module',
+      hooks: options.moduleHooks,
+      moduleUrl: options.moduleUrl,
+      source: hookInputSource,
     })
-
-    if (componentHmrResult.transformed) {
-      componentHmrExportNames = [...componentHmrResult.componentNames]
-      rawCode = componentHmrResult.code.trimEnd()
+    let hookOutputSource = moduleLoadSourceToString(getModuleLoadSource(hookUrl, hookResult))
+    if (hookOutputSource !== hookInputSource) {
+      let hookOutput = extractInlineSourceMap(hookOutputSource)
+      rawCode = hookOutput.code.trimEnd()
       sourceMap =
-        componentHmrResult.map == null
+        hookOutput.sourceMap && hookOutput.sourceMap !== sourceMap
           ? sourceMap
-          : sourceMap == null
-            ? componentHmrResult.map
-            : composeSourceMaps(componentHmrResult.map, sourceMap)
+            ? composeSourceMaps(hookOutput.sourceMap, sourceMap)
+            : hookOutput.sourceMap
+          : null
     }
+    componentHmrExportNames = getComponentHmrExportNames(rawCode)
   }
 
   if (options.minify) {
@@ -562,6 +526,96 @@ async function analyzeModuleSource(
     rawCode,
     sourceMap,
     unresolvedImports: await getUnresolvedImportsFromLexer(rawCode),
+  }
+}
+
+function runModuleLoadHooks(
+  url: string,
+  options: {
+    format: string
+    hooks: readonly ModuleHooks[]
+    moduleUrl: string
+    source: string
+  },
+): ModuleLoadResult {
+  let loadHooks = options.hooks.map((hook) => hook.load).filter((load) => load !== undefined)
+
+  let loadContext: ModuleLoadContext = {
+    conditions: ['browser', 'import', 'module', 'default'],
+    format: options.format,
+    importAttributes: {},
+    moduleUrl: options.moduleUrl,
+  }
+
+  let load: ModuleLoadHookNext = (_url, context) => ({
+    format: context?.format ?? options.format,
+    source: options.source,
+  })
+
+  for (let hook of loadHooks) {
+    let nextLoad = load
+    load = (nextUrl, nextContext) =>
+      hook(
+        nextUrl,
+        {
+          conditions: nextContext?.conditions ?? loadContext.conditions,
+          format: nextContext?.format ?? loadContext.format,
+          importAttributes: nextContext?.importAttributes ?? loadContext.importAttributes,
+          moduleUrl: nextContext?.moduleUrl ?? loadContext.moduleUrl,
+        },
+        nextLoad,
+      )
+  }
+
+  return load(url, loadContext)
+}
+
+function getModuleLoadSource(
+  url: string,
+  result: ModuleLoadResult,
+): string | ArrayBuffer | NodeJS.TypedArray {
+  if (result.source !== undefined && result.source !== null) return result.source
+
+  throw createAssetServerCompilationError(`Module load hook for ${url} did not return source.`, {
+    code: 'TRANSFORM_FAILED',
+  })
+}
+
+function moduleLoadSourceToString(source: string | ArrayBuffer | NodeJS.TypedArray): string {
+  if (typeof source === 'string') return source
+  return new TextDecoder().decode(source)
+}
+
+function appendInlineSourceMap(source: string, sourceMap: string): string {
+  let encoded = Buffer.from(sourceMap).toString('base64')
+  return `${source}\n//# sourceMappingURL=data:application/json;base64,${encoded}`
+}
+
+function extractInlineSourceMap(source: string): {
+  code: string
+  sourceMap: string | null
+} {
+  let sourceMapPattern =
+    /(?:\/\/# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+)|\/\*# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+) \*\/)\s*$/g
+  let sourceMap: string | null = null
+  let code = source.replace(sourceMapPattern, (_match, lineComment, blockComment) => {
+    sourceMap = Buffer.from(lineComment ?? blockComment, 'base64').toString('utf-8')
+    return ''
+  })
+
+  return { code, sourceMap }
+}
+
+function getComponentHmrExportNames(source: string): string[] | null {
+  let match = /__remixHmrComponentExportNames = (\[[^\n]*\]);/.exec(source)
+  let namesSource = match?.[1]
+  if (namesSource === undefined) return null
+
+  try {
+    let names = JSON.parse(namesSource) as unknown
+    return Array.isArray(names) && names.every((name) => typeof name === 'string') ? names : null
+  } catch {
+    return null
   }
 }
 

@@ -44,9 +44,9 @@
   },
   "dependencies": {
     "@remix-run/terminal": "workspace:^",
-    "@remix-run/ui-hmr": "workspace:^",
     "chokidar": "^5.0.0",
-    "oxc-parser": "^0.121.0"
+    "oxc-parser": "^0.121.0",
+    "source-map-js": "^1.2.1"
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:^",

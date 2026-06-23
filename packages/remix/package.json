@@ -144,7 +144,9 @@
     "./test/cli": "./src/test/cli.ts",
     "./ui": "./src/ui.ts",
     "./ui-hmr": "./src/ui-hmr.ts",
+    "./ui-hmr/browser-module-hooks": "./src/ui-hmr/browser-module-hooks.ts",
     "./ui-hmr/browser-runtime": "./src/ui-hmr/browser-runtime.ts",
+    "./ui-hmr/node": "./src/ui-hmr/node.ts",
     "./ui-hmr/server-runtime": "./src/ui-hmr/server-runtime.ts",
     "./ui/accordion": "./src/ui/accordion.ts",
     "./ui/anchor": "./src/ui/anchor.ts",
@@ -639,9 +641,17 @@
         "types": "./dist/ui-hmr.d.ts",
         "default": "./dist/ui-hmr.js"
       },
+      "./ui-hmr/browser-module-hooks": {
+        "types": "./dist/ui-hmr/browser-module-hooks.d.ts",
+        "default": "./dist/ui-hmr/browser-module-hooks.js"
+      },
       "./ui-hmr/browser-runtime": {
         "types": "./dist/ui-hmr/browser-runtime.d.ts",
         "default": "./dist/ui-hmr/browser-runtime.js"
+      },
+      "./ui-hmr/node": {
+        "types": "./dist/ui-hmr/node.d.ts",
+        "default": "./dist/ui-hmr/node.js"
       },
       "./ui-hmr/server-runtime": {
         "types": "./dist/ui-hmr/server-runtime.d.ts",

@@ -133,6 +133,8 @@
   "remix/ui/tabs": "@remix-run/ui/tabs",
   "remix/ui/test": "@remix-run/ui/test",
   "remix/ui-hmr": "@remix-run/ui-hmr",
+  "remix/ui-hmr/browser-module-hooks": "@remix-run/ui-hmr/browser-module-hooks",
   "remix/ui-hmr/browser-runtime": "@remix-run/ui-hmr/browser-runtime",
+  "remix/ui-hmr/node": "@remix-run/ui-hmr/node",
   "remix/ui-hmr/server-runtime": "@remix-run/ui-hmr/server-runtime"
 }

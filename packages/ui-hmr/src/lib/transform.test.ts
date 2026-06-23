@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
+import { SourceMapConsumer } from 'source-map-js/source-map.js'
 
 import { transformComponentsForBrowser, transformComponentsForServer } from './transform.ts'
 
@@ -10,7 +11,7 @@ describe('transformComponentsForBrowser', () => {
   return ({ count }) => <button>{count}</button>
 }
 `,
-      { moduleUrl: '/app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -31,6 +32,52 @@ describe('transformComponentsForBrowser', () => {
     assert.match(result.code, /Updated component module changed non-component export/)
   })
 
+  it('derives browser runtime imports from the import source', () => {
+    let result = transformComponentsForBrowser(
+      `export function Counter() {
+  return () => <button>Count</button>
+}
+`,
+      { importSource: 'remix', moduleUrl: '/app/Counter.tsx' },
+    )
+
+    assert.equal(result.transformed, true)
+    assert.match(result.code, /import \* as __remixHmr from "remix\/ui-hmr\/browser-runtime"/)
+    assert.match(result.code, /import \* as __remixUIRefresh from "remix\/ui\/dev\/refresh"/)
+  })
+
+  it('supports custom browser runtime import sources', () => {
+    let result = transformComponentsForBrowser(
+      `export function Counter() {
+  return () => <button>Count</button>
+}
+`,
+      { importSource: '@acme/remix', moduleUrl: '/app/Counter.tsx' },
+    )
+
+    assert.equal(result.transformed, true)
+    assert.match(
+      result.code,
+      /import \* as __remixHmr from "@acme\/remix\/ui-hmr\/browser-runtime"/,
+    )
+    assert.match(result.code, /import \* as __remixUIRefresh from "@acme\/remix\/ui\/dev\/refresh"/)
+  })
+
+  it('generates source maps for transformed browser modules', () => {
+    let source = `export function Counter() {
+  return () => <button>Count</button>
+}
+`
+    let result = transformComponentsForBrowser(source, {
+      importSource: '@remix-run',
+      moduleUrl: '/app/Counter.tsx',
+      sourceMap: true,
+    })
+
+    assert.equal(result.transformed, true)
+    assertSourceMapPosition(result.map, result.code, source, '<button>Count</button>')
+  })
+
   it('hoists setup variables into persistent HMR state', () => {
     let result = transformComponentsForBrowser(
       `export function Counter() {
@@ -38,7 +85,7 @@ describe('transformComponentsForBrowser', () => {
   return () => <button>{count}</button>
 }
 `,
-      { moduleUrl: '/app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -56,7 +103,7 @@ describe('transformComponentsForBrowser', () => {
   return () => <button>{count}</button>
 }
 `,
-      { moduleUrl: '/app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -76,7 +123,7 @@ describe('transformComponentsForBrowser', () => {
   }
 }
 `,
-      { moduleUrl: '/app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -95,7 +142,7 @@ export {
   Counter
 }
 `,
-      { moduleUrl: '/app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -113,7 +160,7 @@ export {
   return () => jsx('button', { children: count })
 })
 `,
-      { moduleUrl: '/app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -135,7 +182,7 @@ export {
   return () => jsx('button', { children: label + count })
 })
 `,
-      { moduleUrl: '/app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -154,7 +201,7 @@ export {
   Counter
 }
 `,
-      { moduleUrl: '/app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -178,7 +225,7 @@ export {
   Counter
 }
 `,
-      { moduleUrl: '/app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -194,7 +241,10 @@ export {
   return new Response('ok')
 }
 `
-    let result = transformComponentsForBrowser(source, { moduleUrl: '/app/loader.ts' })
+    let result = transformComponentsForBrowser(source, {
+      importSource: '@remix-run',
+      moduleUrl: '/app/loader.ts',
+    })
 
     assert.equal(result.transformed, false)
     assert.equal(result.code, source)
@@ -208,7 +258,7 @@ export function Counter() {
   return () => <button>Count</button>
 }
 `,
-      { moduleUrl: '/app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -226,7 +276,10 @@ export function Counter() {
 
 export { loader } from './loader.ts'
 `
-    let result = transformComponentsForBrowser(source, { moduleUrl: '/app/Counter.tsx' })
+    let result = transformComponentsForBrowser(source, {
+      importSource: '@remix-run',
+      moduleUrl: '/app/Counter.tsx',
+    })
 
     assert.equal(result.transformed, false)
     assert.equal(result.code, source)
@@ -238,7 +291,7 @@ export { loader } from './loader.ts'
   return () => <button>Count</button>
 }
 `,
-      { moduleUrl: '/app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -258,7 +311,7 @@ export function Counter() {
   return ({ count }: CounterProps) => <button>{count}</button>
 }
 `,
-      { moduleUrl: '/app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -274,7 +327,7 @@ describe('transformComponentsForServer', () => {
   return () => <button>{count}</button>
 }
 `,
-      { moduleUrl: 'file:///app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: 'file:///app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -302,6 +355,47 @@ describe('transformComponentsForServer', () => {
     assert.match(result.code, /Updated component module changed non-component export/)
   })
 
+  it('derives server runtime imports from the import source', () => {
+    let result = transformComponentsForServer(
+      `export function Counter() {
+  return () => <button>Count</button>
+}
+`,
+      { importSource: 'remix', moduleUrl: 'file:///app/Counter.tsx' },
+    )
+
+    assert.equal(result.transformed, true)
+    assert.match(result.code, /import \* as __remixHmr from "remix\/ui-hmr\/server-runtime"/)
+  })
+
+  it('supports custom server runtime import sources', () => {
+    let result = transformComponentsForServer(
+      `export function Counter() {
+  return () => <button>Count</button>
+}
+`,
+      { importSource: '@acme/remix', moduleUrl: 'file:///app/Counter.tsx' },
+    )
+
+    assert.equal(result.transformed, true)
+    assert.match(result.code, /import \* as __remixHmr from "@acme\/remix\/ui-hmr\/server-runtime"/)
+  })
+
+  it('generates source maps for transformed server modules', () => {
+    let source = `export function Counter() {
+  return () => <button>Count</button>
+}
+`
+    let result = transformComponentsForServer(source, {
+      importSource: '@remix-run',
+      moduleUrl: 'file:///app/Counter.tsx',
+      sourceMap: true,
+    })
+
+    assert.equal(result.transformed, true)
+    assertSourceMapPosition(result.map, result.code, source, '<button>Count</button>')
+  })
+
   it('rewrites exported client entry function components without hoisting setup state', () => {
     let result = transformComponentsForServer(
       `export const Counter = clientEntry(import.meta.url, function Counter(handle) {
@@ -309,7 +403,7 @@ describe('transformComponentsForServer', () => {
   return () => jsx('button', { children: count })
 })
 `,
-      { moduleUrl: 'file:///app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: 'file:///app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -331,7 +425,10 @@ describe('transformComponentsForServer', () => {
   return new Response('ok')
 }
 `
-    let result = transformComponentsForServer(source, { moduleUrl: 'file:///app/loader.ts' })
+    let result = transformComponentsForServer(source, {
+      importSource: '@remix-run',
+      moduleUrl: 'file:///app/loader.ts',
+    })
 
     assert.equal(result.transformed, false)
     assert.equal(result.code, source)
@@ -345,7 +442,7 @@ export function Counter() {
   return () => <button>Count</button>
 }
 `,
-      { moduleUrl: 'file:///app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: 'file:///app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -362,7 +459,7 @@ export function Counter() {
   return () => <button>Count</button>
 }
 `,
-      { moduleUrl: 'file:///app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: 'file:///app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
@@ -384,10 +481,37 @@ export function Counter() {
   return ({ count }: CounterProps) => <button>{count}</button>
 }
 `,
-      { moduleUrl: 'file:///app/Counter.tsx' },
+      { importSource: '@remix-run', moduleUrl: 'file:///app/Counter.tsx' },
     )
 
     assert.equal(result.transformed, true)
     assert.deepEqual(result.componentNames, ['Counter'])
   })
 })
+
+function assertSourceMapPosition(
+  sourceMap: string | null,
+  generatedSource: string,
+  originalSource: string,
+  search: string,
+): void {
+  assert.ok(sourceMap)
+  let consumer = new SourceMapConsumer(JSON.parse(sourceMap))
+  let generated = getLineAndColumn(generatedSource, search)
+  let expected = getLineAndColumn(originalSource, search)
+  let original = consumer.originalPositionFor(generated)
+
+  assert.equal(original.line, expected.line)
+  assert.equal(original.column, expected.column)
+}
+
+function getLineAndColumn(source: string, search: string): { column: number; line: number } {
+  let index = source.indexOf(search)
+  assert.notEqual(index, -1)
+
+  let lines = source.slice(0, index).split('\n')
+  return {
+    column: lines.at(-1)?.length ?? 0,
+    line: lines.length,
+  }
+}

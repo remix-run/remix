@@ -1,2 +1,7 @@
-export type { ComponentsHmrTransformResult } from './lib/transform.ts'
+export type {
+  BrowserComponentsHmrTransformOptions,
+  ComponentsHmrTransformResult,
+  ServerComponentsHmrTransformOptions,
+  UiHmrImportSource,
+} from './lib/transform.ts'
 export { transformComponentsForBrowser, transformComponentsForServer } from './lib/transform.ts'

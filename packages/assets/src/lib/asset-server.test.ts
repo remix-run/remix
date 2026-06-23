@@ -4,10 +4,13 @@ import * as nodeFs from 'node:fs'
 import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
+import MagicString from 'magic-string'
 import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
+import type { registerHooks } from 'node:module'
 import { isAssetServerCompilationError } from './compilation-error.ts'
 import { normalizeWindowsPath } from './paths.ts'
 import {
@@ -18,14 +21,24 @@ import {
 import type { AssetServer, AssetServerOptions, BrowserHmrChannel } from './asset-server.ts'
 import type { AssetRequestTransformMap } from './files/config.ts'
 import { defineFileTransform } from './files/config.ts'
+import type { ModuleHooks } from './module-hooks.ts'
 
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
+type NodeModuleHooks = Parameters<typeof registerHooks>[0]
 
 const packageRoot = path.resolve(import.meta.dirname, '../..')
-const repoPackagesRoot = path.resolve(packageRoot, '..')
-const remixPackageJson = JSON.parse(
-  nodeFs.readFileSync(path.join(repoPackagesRoot, 'remix/package.json'), 'utf-8'),
-) as { exports?: Record<string, unknown> }
+
+const nodeTypedModuleHooks = {
+  load(url, context, nextLoad) {
+    return nextLoad(url, context)
+  },
+  resolve(specifier, context, nextResolve) {
+    return nextResolve(specifier, context)
+  },
+} satisfies NodeModuleHooks
+
+const assetTypedModuleHooks: ModuleHooks = nodeTypedModuleHooks
+void assetTypedModuleHooks
 
 function createAssetServerForTest(
   options: Omit<AssetServerOptions<AssetRequestTransformMap>, 'basePath'> & {
@@ -58,22 +71,6 @@ async function symlinkDirectory(target: string, link: string): Promise<void> {
   await fs.mkdir(path.dirname(link), { recursive: true })
   await fs.rm(link, { recursive: true, force: true })
   await fs.symlink(target, link, process.platform === 'win32' ? 'junction' : 'dir')
-}
-
-async function writeComponentHmrPackageFixture(dir: string): Promise<void> {
-  assert.ok(
-    remixPackageJson.exports?.['./ui/dev/refresh'] !== undefined,
-    'Expected remix to export ./ui/dev/refresh',
-  )
-
-  await writeJson(dir, 'app/node_modules/remix/package.json', {
-    exports: {
-      './ui/dev/refresh': './ui/dev/refresh.ts',
-    },
-    name: 'remix',
-    type: 'module',
-  })
-  await write(dir, 'app/node_modules/remix/ui/dev/refresh.ts', 'export {}')
 }
 
 function getLineAndColumn(source: string, search: string): { line: number; column: number } {
@@ -273,6 +270,32 @@ function decodeInlineSourceMap(source: string): { sources?: string[] } {
 
   let decoded = Buffer.from(match[1]!, 'base64').toString('utf8')
   return JSON.parse(decoded) as { sources?: string[] }
+}
+
+function createPrependModuleHook(prefix: string): ModuleHooks {
+  return {
+    load(_url, _context, nextLoad) {
+      let result = nextLoad(_url, _context)
+      if (typeof result.source !== 'string') {
+        throw new TypeError('Expected module hook source to be a string')
+      }
+      let source = stripInlineSourceMap(result.source)
+      let rewritten = new MagicString(source)
+      rewritten.prepend(prefix)
+      let map = rewritten.generateMap({ hires: true }).toString()
+      return {
+        ...result,
+        source: `${rewritten.toString()}\n//# sourceMappingURL=data:application/json;base64,${Buffer.from(map).toString('base64')}`,
+      }
+    },
+  }
+}
+
+function stripInlineSourceMap(source: string): string {
+  return source.replace(
+    /(?:\/\/# sourceMappingURL=data:application\/json;base64,[A-Za-z0-9+/=]+|\/\*# sourceMappingURL=data:application\/json;base64,[A-Za-z0-9+/=]+ \*\/)\s*$/g,
+    '',
+  )
 }
 
 async function withTsconfigTransformCase(
@@ -2264,6 +2287,34 @@ describe('asset-server', () => {
     assert.equal(depMap.status, 200)
   })
 
+  it('supports external source maps after module hooks transform scripts', async () => {
+    let source = 'let value: number = 1\nconsole.log(value)\n'
+    await write(dir, 'app/entry.ts', source)
+    let assetServer = createTestServer(dir, {
+      scripts: {
+        moduleHooks: [createPrependModuleHook('console.debug("hook")\n')],
+      },
+      sourceMaps: 'external',
+    })
+    try {
+      let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(
+        assetServer,
+        'app/entry.ts',
+      )
+      let consumer = new SourceMapConsumer(sourceMap)
+
+      let generated = getLineAndColumn(compiledCode, 'console.log(value)')
+      let original = consumer.originalPositionFor(generated)
+      let expected = getLineAndColumn(source, 'console.log(value)')
+
+      assert.equal(original.source, '/assets/app/entry.ts')
+      assert.equal(original.line, expected.line)
+      assert.equal(original.column, expected.column)
+    } finally {
+      await assetServer.close()
+    }
+  })
+
   it('supports inline source maps with absolute source paths', async () => {
     let entryPath = await write(dir, 'app/entry.ts', 'export const entry: number = 1')
     let assetServer = createTestServer(dir, {
@@ -2287,6 +2338,34 @@ describe('asset-server', () => {
       .replace(/\\/g, '/')
       .replace(/^\/([A-Za-z]:\/)/, '$1')
     assert.deepEqual(sourceMap.sources, [expectedSource])
+  })
+
+  it('supports inline source maps after module hooks transform scripts', async () => {
+    let source = 'let value: number = 1\nconsole.log(value)\n'
+    await write(dir, 'app/entry.ts', source)
+    let assetServer = createTestServer(dir, {
+      scripts: {
+        moduleHooks: [createPrependModuleHook('console.debug("hook")\n')],
+      },
+      sourceMaps: 'inline',
+    })
+    try {
+      let response = await get(assetServer, '/assets/app/entry.ts')
+      assert.ok(response)
+      let compiledCode = await response.text()
+      let sourceMap = decodeInlineSourceMap(compiledCode) as RawSourceMap
+      let consumer = new SourceMapConsumer(sourceMap)
+
+      let generated = getLineAndColumn(compiledCode, 'console.log(value)')
+      let original = consumer.originalPositionFor(generated)
+      let expected = getLineAndColumn(source, 'console.log(value)')
+
+      assert.equal(original.source, '/assets/app/entry.ts')
+      assert.equal(original.line, expected.line)
+      assert.equal(original.column, expected.column)
+    } finally {
+      await assetServer.close()
+    }
   })
 
   it('applies top-level common compiler options to scripts', async () => {
@@ -3227,26 +3306,38 @@ describe('asset-server', () => {
     }
   })
 
-  it('adds HMR accept handling to component modules when HMR is enabled', async () => {
+  it('runs script module hooks before HMR analysis', async () => {
     let caseDir = await makeTmpDir()
     try {
-      await writeComponentHmrPackageFixture(caseDir)
-      await write(
-        caseDir,
-        'app/component.ts',
-        'export function TestComponent() {\n  return () => "Test"\n}',
-      )
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
       let assetServer = createWatchedTestServer(caseDir, {
         hmr: createTestBrowserHmrChannel,
+        scripts: {
+          moduleHooks: [
+            {
+              load(url, context, nextLoad) {
+                let result = nextLoad(url, context)
+                return {
+                  ...result,
+                  source: `${result.source}\nif (import.meta.hot) import.meta.hot.accept()`,
+                }
+              },
+            },
+          ],
+        },
       })
 
       try {
-        let response = await get(assetServer, '/assets/app/component.ts')
+        let response = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(response)
         assert.equal(response.status, 200)
         let body = await response.text()
 
         assert.match(body, /import\.meta\.hot\.accept\(/)
+        assert.match(
+          body,
+          /import\.meta\.hot = __remixCreateHotContext\("\/assets\/app\/entry\.ts"\)/,
+        )
       } finally {
         await assetServer.close()
       }
@@ -3255,33 +3346,222 @@ describe('asset-server', () => {
     }
   })
 
-  it('adds HMR accept handling to client entry component modules', async () => {
+  it('appends root script module hooks before scoped script module hooks', async () => {
     let caseDir = await makeTmpDir()
     try {
-      await writeComponentHmrPackageFixture(caseDir)
-      await write(
-        caseDir,
-        'app/counter.ts',
-        [
-          `function clientEntry(_id, component) {`,
-          `  return component`,
-          `}`,
-          `export const Counter = clientEntry(import.meta.url, function Counter() {`,
-          `  return () => "Test"`,
-          `})`,
-        ].join('\n'),
-      )
+      await write(caseDir, 'app/entry.ts', 'export const values = []')
       let assetServer = createWatchedTestServer(caseDir, {
-        hmr: createTestBrowserHmrChannel,
+        moduleHooks: [
+          {
+            load(url, context, nextLoad) {
+              let result = nextLoad(url, context)
+              return {
+                ...result,
+                source: `${result.source}\nvalues.push('root')`,
+              }
+            },
+          },
+        ],
+        scripts: {
+          moduleHooks: [
+            {
+              load(url, context, nextLoad) {
+                let result = nextLoad(url, context)
+                return {
+                  ...result,
+                  source: `${result.source}\nvalues.push('scripts')`,
+                }
+              },
+            },
+          ],
+        },
       })
 
       try {
-        let response = await get(assetServer, '/assets/app/counter.ts')
+        let response = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(response)
         assert.equal(response.status, 200)
         let body = await response.text()
 
-        assert.match(body, /import\.meta\.hot\.accept\(/)
+        assert.match(body, /values\.push\('root'\)\nvalues\.push\('scripts'\)/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('passes Node-shaped context to script module hooks', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/dep.ts', 'export const dep = 1')
+      let entryPath = await write(
+        caseDir,
+        'app/entry.ts',
+        "import { dep } from './dep.ts'\nexport { dep }",
+      )
+      let seenResolveContext: unknown
+      let seenLoadContext: unknown
+      let assetServer = createTestServer(caseDir, {
+        scripts: {
+          moduleHooks: [
+            {
+              resolve(specifier, context, nextResolve) {
+                seenResolveContext = context
+                return nextResolve(specifier, context)
+              },
+              load(url, context, nextLoad) {
+                seenLoadContext = context
+                return nextLoad(url, context)
+              },
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+
+        assert.ok(seenLoadContext !== null && typeof seenLoadContext === 'object')
+        let loadContext = seenLoadContext as {
+          conditions?: unknown
+          format?: unknown
+          importAttributes?: unknown
+          moduleUrl?: unknown
+        }
+        assert.deepEqual(loadContext.conditions, ['browser', 'import', 'module', 'default'])
+        assert.equal(loadContext.format, 'module')
+        assert.deepEqual(loadContext.importAttributes, {})
+        assert.equal(typeof loadContext.moduleUrl, 'string')
+
+        assert.ok(seenResolveContext !== null && typeof seenResolveContext === 'object')
+        let resolveContext = seenResolveContext as {
+          conditions?: unknown
+          importAttributes?: unknown
+          parentURL?: unknown
+        }
+        assert.deepEqual(resolveContext.conditions, ['browser', 'import', 'module', 'default'])
+        assert.deepEqual(resolveContext.importAttributes, {})
+        assert.equal(resolveContext.parentURL, pathToFileURL(nodeFs.realpathSync(entryPath)).href)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('resolves script imports through module hooks', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      let aliasedPath = await write(caseDir, 'app/aliased.ts', 'export const value = 42')
+      await write(caseDir, 'app/entry.ts', "import { value } from '#aliased'\nexport { value }")
+      let assetServer = createTestServer(caseDir, {
+        scripts: {
+          moduleHooks: [
+            {
+              resolve(specifier, context, nextResolve) {
+                if (specifier === '#aliased') {
+                  return {
+                    format: 'module',
+                    shortCircuit: true,
+                    url: pathToFileURL(aliasedPath).href,
+                  }
+                }
+
+                return nextResolve(specifier, context)
+              },
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        let body = await response.text()
+
+        assert.match(body, /from "\/assets\/app\/aliased\.ts"/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('loads script source through module hooks', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let assetServer = createTestServer(caseDir, {
+        scripts: {
+          moduleHooks: [
+            {
+              load(url, context, nextLoad) {
+                let result = nextLoad(url, context)
+                return {
+                  ...result,
+                  source: new TextEncoder().encode(`${result.source}\nexport const extra = 2`),
+                }
+              },
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        let body = await response.text()
+
+        assert.match(body, /export const extra = 2/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when script module load hooks do not return source', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          moduleHooks: [
+            {
+              load() {
+                return {
+                  format: 'module',
+                  shortCircuit: true,
+                }
+              },
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'TRANSFORM_FAILED')
+        assert.match(error.message, /did not return source/)
       } finally {
         await assetServer.close()
       }

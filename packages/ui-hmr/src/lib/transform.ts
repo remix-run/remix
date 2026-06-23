@@ -1,11 +1,52 @@
 import MagicString from 'magic-string'
 import { parseSync } from 'oxc-parser'
+import {
+  SourceMapConsumer,
+  SourceMapGenerator,
+  type RawSourceMap,
+} from 'source-map-js/source-map.js'
 
+/**
+ * Result of rewriting a Remix UI component module for HMR.
+ */
 export interface ComponentsHmrTransformResult {
+  /** Transformed source code, or the original source when `transformed` is false. */
   code: string
+  /** Component export names found in the transformed module. */
   componentNames: string[]
+  /** Source map JSON when source maps are enabled. */
   map: string | null
+  /** Whether the source was rewritten for component HMR. */
   transformed: boolean
+}
+
+/**
+ * Import namespace used for generated `ui` and `ui-hmr` imports.
+ */
+export type UiHmrImportSource = 'remix' | '@remix-run' | (string & {})
+
+/**
+ * Options for rewriting browser component modules.
+ */
+export interface BrowserComponentsHmrTransformOptions {
+  /** Import namespace used to generate runtime imports such as `remix/ui-hmr/browser-runtime`. */
+  importSource: UiHmrImportSource
+  /** Stable public module URL used as the component HMR identity. */
+  moduleUrl: string
+  /** Whether to include a source map in the transform result. */
+  sourceMap?: boolean
+}
+
+/**
+ * Options for rewriting server component modules.
+ */
+export interface ServerComponentsHmrTransformOptions {
+  /** Import namespace used to generate runtime imports such as `remix/ui-hmr/server-runtime`. */
+  importSource: UiHmrImportSource
+  /** Stable module URL used as the component HMR identity. */
+  moduleUrl: string
+  /** Whether to include a source map in the transform result. */
+  sourceMap?: boolean
 }
 
 type AstNode = {
@@ -48,18 +89,22 @@ type RuntimeExport = {
   localName: string
 }
 
-const browserRuntimeSpecifier = '@remix-run/ui-hmr/browser-runtime'
-const serverRuntimeSpecifier = '@remix-run/ui-hmr/server-runtime'
-const refreshSpecifier = '@remix-run/ui/dev/refresh'
+type SourceMapHint = {
+  generatedSnippet: string
+  originalSnippet: string
+  originalStart: number
+}
 
+/**
+ * Rewrites browser Remix UI component modules to keep component identity stable across HMR updates.
+ *
+ * @param source Component module source code.
+ * @param options Browser transform options.
+ * @returns The rewritten module source and metadata about transformed component exports.
+ */
 export function transformComponentsForBrowser(
   source: string,
-  options: {
-    moduleUrl: string
-    refreshSpecifier?: string
-    runtimeSpecifier?: string
-    sourceMap?: boolean
-  },
+  options: BrowserComponentsHmrTransformOptions,
 ): ComponentsHmrTransformResult {
   let ast = parseModule(source)
   if (!ast) return createUnchangedResult(source)
@@ -70,17 +115,19 @@ export function transformComponentsForBrowser(
   }
   let { componentMatches, clientEntryMatches, runtimeExports } = matchResult
 
+  let importSpecifiers = getUiHmrImportSpecifiers(options.importSource)
   let rewritten = new MagicString(source)
   let componentNames: string[] = []
+  let sourceMapHints: SourceMapHint[] = []
 
   for (let match of componentMatches) {
     componentNames.push(match.name)
 
-    let body = createHmrImplementationBody(match, source, options.moduleUrl)
+    let implementation = createHmrImplementationBody(match, source, options.moduleUrl)
     let implementationName = `__remixHmrImpl_${match.name}`
     let exportPrefix = match.directExport ? 'export ' : ''
     let replacement = [
-      `function ${implementationName}(${match.params}) ${body}`,
+      `function ${implementationName}(${match.params}) ${implementation.body}`,
       `${exportPrefix}function ${match.name}(${match.params}) {`,
       `  return __remixHmr.getCurrentComponentForHmr(${JSON.stringify(
         options.moduleUrl,
@@ -93,13 +140,14 @@ export function transformComponentsForBrowser(
       )}, ${match.name});`,
     ].join('\n')
 
+    sourceMapHints.push(...implementation.sourceMapHints)
     rewritten.overwrite(match.fullStart, match.fullEnd, replacement)
   }
 
   for (let match of clientEntryMatches) {
     componentNames.push(match.name)
 
-    let body = createHmrImplementationBody(match, source, options.moduleUrl)
+    let implementation = createHmrImplementationBody(match, source, options.moduleUrl)
     let implementationName = `__remixHmrImpl_${match.name}`
     let wrapperSource = [
       `function ${match.functionName}(${match.params}) {`,
@@ -111,8 +159,9 @@ export function transformComponentsForBrowser(
 
     rewritten.prependLeft(
       match.statementStart,
-      `function ${implementationName}(${match.params}) ${body}\n`,
+      `function ${implementationName}(${match.params}) ${implementation.body}\n`,
     )
+    sourceMapHints.push(...implementation.sourceMapHints)
     rewritten.overwrite(match.functionStart, match.functionEnd, wrapperSource)
     rewritten.appendLeft(
       match.statementEnd,
@@ -126,10 +175,8 @@ export function transformComponentsForBrowser(
 
   rewritten.prepend(
     [
-      `import * as __remixHmr from ${JSON.stringify(options.runtimeSpecifier ?? browserRuntimeSpecifier)};`,
-      `import * as __remixUIRefresh from ${JSON.stringify(
-        options.refreshSpecifier ?? refreshSpecifier,
-      )};`,
+      `import * as __remixHmr from ${JSON.stringify(importSpecifiers.browserRuntimeSpecifier)};`,
+      `import * as __remixUIRefresh from ${JSON.stringify(importSpecifiers.refreshSpecifier)};`,
       ``,
     ].join('\n'),
   )
@@ -170,27 +217,28 @@ export function transformComponentsForBrowser(
     ].join('\n'),
   )
 
+  let code = rewritten.toString()
+
   return {
-    code: rewritten.toString(),
+    code,
     componentNames,
     map: options.sourceMap
-      ? rewritten
-          .generateMap({
-            hires: true,
-          })
-          .toString()
+      ? generateSourceMap(rewritten, code, source, options.moduleUrl, sourceMapHints)
       : null,
     transformed: true,
   }
 }
 
+/**
+ * Rewrites server Remix UI component modules to keep component identity stable across HMR updates.
+ *
+ * @param source Component module source code.
+ * @param options Server transform options.
+ * @returns The rewritten module source and metadata about transformed component exports.
+ */
 export function transformComponentsForServer(
   source: string,
-  options: {
-    moduleUrl: string
-    runtimeSpecifier?: string
-    sourceMap?: boolean
-  },
+  options: ServerComponentsHmrTransformOptions,
 ): ComponentsHmrTransformResult {
   let ast = parseModule(source)
   if (!ast) return createUnchangedResult(source)
@@ -201,16 +249,19 @@ export function transformComponentsForServer(
   }
   let { componentMatches, clientEntryMatches, runtimeExports } = matchResult
 
+  let importSpecifiers = getUiHmrImportSpecifiers(options.importSource)
   let rewritten = new MagicString(source)
   let componentNames: string[] = []
+  let sourceMapHints: SourceMapHint[] = []
 
   for (let match of componentMatches) {
     componentNames.push(match.name)
 
     let implementationName = `__remixHmrImpl_${match.name}`
     let exportPrefix = match.directExport ? 'export ' : ''
+    let bodySource = source.slice(match.bodyStart, match.bodyEnd)
     let replacement = [
-      `function ${implementationName}(${match.params}) ${source.slice(match.bodyStart, match.bodyEnd)}`,
+      `function ${implementationName}(${match.params}) ${bodySource}`,
       `${exportPrefix}function ${match.name}(${match.params}) {`,
       `  return __remixHmr.getCurrentComponentForHmr(${JSON.stringify(
         options.moduleUrl,
@@ -221,6 +272,11 @@ export function transformComponentsForServer(
       )}, ${JSON.stringify(match.name)}, ${implementationName});`,
     ].join('\n')
 
+    sourceMapHints.push({
+      generatedSnippet: bodySource,
+      originalSnippet: bodySource,
+      originalStart: match.bodyStart,
+    })
     rewritten.overwrite(match.fullStart, match.fullEnd, replacement)
   }
 
@@ -228,6 +284,7 @@ export function transformComponentsForServer(
     componentNames.push(match.name)
 
     let implementationName = `__remixHmrImpl_${match.name}`
+    let bodySource = source.slice(match.bodyStart, match.bodyEnd)
     let wrapperSource = [
       `function ${match.functionName}(${match.params}) {`,
       `  return __remixHmr.getCurrentComponentForHmr(${JSON.stringify(
@@ -238,11 +295,13 @@ export function transformComponentsForServer(
 
     rewritten.prependLeft(
       match.statementStart,
-      `function ${implementationName}(${match.params}) ${source.slice(
-        match.bodyStart,
-        match.bodyEnd,
-      )}\n`,
+      `function ${implementationName}(${match.params}) ${bodySource}\n`,
     )
+    sourceMapHints.push({
+      generatedSnippet: bodySource,
+      originalSnippet: bodySource,
+      originalStart: match.bodyStart,
+    })
     rewritten.overwrite(match.functionStart, match.functionEnd, wrapperSource)
     rewritten.appendLeft(
       match.statementEnd,
@@ -254,7 +313,7 @@ export function transformComponentsForServer(
 
   rewritten.prepend(
     [
-      `import * as __remixHmr from ${JSON.stringify(options.runtimeSpecifier ?? serverRuntimeSpecifier)};`,
+      `import * as __remixHmr from ${JSON.stringify(importSpecifiers.serverRuntimeSpecifier)};`,
       ``,
     ].join('\n'),
   )
@@ -291,17 +350,109 @@ export function transformComponentsForServer(
     ].join('\n'),
   )
 
+  let code = rewritten.toString()
+
   return {
-    code: rewritten.toString(),
+    code,
     componentNames,
     map: options.sourceMap
-      ? rewritten
-          .generateMap({
-            hires: true,
-          })
-          .toString()
+      ? generateSourceMap(rewritten, code, source, options.moduleUrl, sourceMapHints)
       : null,
     transformed: true,
+  }
+}
+
+function getUiHmrImportSpecifiers(importSource: UiHmrImportSource): {
+  browserRuntimeSpecifier: string
+  refreshSpecifier: string
+  serverRuntimeSpecifier: string
+} {
+  return {
+    browserRuntimeSpecifier: `${importSource}/ui-hmr/browser-runtime`,
+    refreshSpecifier: `${importSource}/ui/dev/refresh`,
+    serverRuntimeSpecifier: `${importSource}/ui-hmr/server-runtime`,
+  }
+}
+
+function generateSourceMap(
+  rewritten: MagicString,
+  code: string,
+  source: string,
+  sourceName: string,
+  hints: readonly SourceMapHint[],
+): string {
+  let sourceMap = rewritten.generateMap({
+    hires: true,
+    includeContent: true,
+    source: sourceName,
+  })
+
+  if (hints.length === 0) return sourceMap.toString()
+
+  let consumer = new SourceMapConsumer(JSON.parse(sourceMap.toString()) as RawSourceMap)
+  let generator = SourceMapGenerator.fromSourceMap(consumer)
+
+  let generatedSearchStart = 0
+  for (let hint of hints) {
+    let generatedStart = code.indexOf(hint.generatedSnippet, generatedSearchStart)
+    if (generatedStart === -1) {
+      generatedStart = code.indexOf(hint.generatedSnippet)
+    }
+    if (generatedStart === -1) continue
+
+    addSourceMapHint(generator, code, source, sourceName, hint, generatedStart)
+    generatedSearchStart = generatedStart + hint.generatedSnippet.length
+  }
+
+  return JSON.stringify(generator.toJSON())
+}
+
+function addSourceMapHint(
+  generator: SourceMapGenerator,
+  generatedSource: string,
+  originalSource: string,
+  sourceName: string,
+  hint: SourceMapHint,
+  generatedStart: number,
+): void {
+  let generatedLines = hint.generatedSnippet.split('\n')
+  let originalLines = hint.originalSnippet.split('\n')
+  let generatedOffset = 0
+  let originalOffset = 0
+
+  for (let index = 0; index < Math.min(generatedLines.length, originalLines.length); index++) {
+    let generatedLine = generatedLines[index] ?? ''
+    let originalLine = originalLines[index] ?? ''
+    let columns = Math.min(generatedLine.length, originalLine.length)
+
+    for (let column = 0; column < columns; column++) {
+      if (generatedLine[column] !== originalLine[column]) continue
+
+      generator.addMapping({
+        generated: getLineAndColumnAtIndex(
+          generatedSource,
+          generatedStart + generatedOffset + column,
+        ),
+        original: getLineAndColumnAtIndex(
+          originalSource,
+          hint.originalStart + originalOffset + column,
+        ),
+        source: sourceName,
+      })
+    }
+
+    generatedOffset += generatedLine.length + 1
+    originalOffset += originalLine.length + 1
+  }
+
+  generator.setSourceContent(sourceName, originalSource)
+}
+
+function getLineAndColumnAtIndex(source: string, index: number): { column: number; line: number } {
+  let lines = source.slice(0, index).split('\n')
+  return {
+    column: lines.at(-1)?.length ?? 0,
+    line: lines.length,
   }
 }
 
@@ -615,7 +766,7 @@ function createHmrImplementationBody(
   match: Pick<ComponentMatch, 'name' | 'renderArgument' | 'setupHash' | 'setupStatements'>,
   source: string,
   moduleUrl: string,
-): string {
+): { body: string; sourceMapHints: SourceMapHint[] } {
   let stateNames = getSetupStateNames(match.setupStatements)
   let setupSource = createSetupSource(match.setupStatements, stateNames, source)
   let renderSource = rewriteReferences(
@@ -625,27 +776,36 @@ function createHmrImplementationBody(
     source,
   )
 
-  return [
-    `{`,
-    `  let __remixHmrHandle = __remixHmr.getComponentHandleForHmr(arguments[0], ${JSON.stringify(
-      moduleUrl,
-    )}, ${JSON.stringify(match.name)});`,
-    `  let __s = __remixHmr.getComponentHmrState(__remixHmrHandle);`,
-    `  if (__remixHmr.setupComponentForHmr(__remixHmrHandle, __s, ${JSON.stringify(
-      moduleUrl,
-    )}, ${JSON.stringify(match.name)}, ${JSON.stringify(match.setupHash)}, (__s) => {`,
-    indent(setupSource, 4),
-    `  }, ${match.name})) {`,
-    `    return () => null;`,
-    `  }`,
-    `  __remixHmr.registerComponentRenderForHmr(__remixUIRefresh, ${JSON.stringify(
-      moduleUrl,
-    )}, ${JSON.stringify(match.name)}, __remixHmrHandle, ${renderSource}, ${match.name});`,
-    `  return function () {`,
-    `    return __remixHmr.callComponentRenderForHmr(__remixHmrHandle, ...arguments);`,
-    `  };`,
-    `}`,
-  ].join('\n')
+  return {
+    body: [
+      `{`,
+      `  let __remixHmrHandle = __remixHmr.getComponentHandleForHmr(arguments[0], ${JSON.stringify(
+        moduleUrl,
+      )}, ${JSON.stringify(match.name)});`,
+      `  let __s = __remixHmr.getComponentHmrState(__remixHmrHandle);`,
+      `  if (__remixHmr.setupComponentForHmr(__remixHmrHandle, __s, ${JSON.stringify(
+        moduleUrl,
+      )}, ${JSON.stringify(match.name)}, ${JSON.stringify(match.setupHash)}, (__s) => {`,
+      indent(setupSource, 4),
+      `  }, ${match.name})) {`,
+      `    return () => null;`,
+      `  }`,
+      `  __remixHmr.registerComponentRenderForHmr(__remixUIRefresh, ${JSON.stringify(
+        moduleUrl,
+      )}, ${JSON.stringify(match.name)}, __remixHmrHandle, ${renderSource}, ${match.name});`,
+      `  return function () {`,
+      `    return __remixHmr.callComponentRenderForHmr(__remixHmrHandle, ...arguments);`,
+      `  };`,
+      `}`,
+    ].join('\n'),
+    sourceMapHints: [
+      {
+        generatedSnippet: renderSource,
+        originalSnippet: source.slice(match.renderArgument.start, match.renderArgument.end),
+        originalStart: match.renderArgument.start,
+      },
+    ],
+  }
 }
 
 function createSetupSource(

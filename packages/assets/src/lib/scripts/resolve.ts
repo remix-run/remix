@@ -1,5 +1,6 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import type { ResolverFactory } from 'oxc-resolver'
 
 import {
@@ -13,6 +14,7 @@ import {
   restoreAuthoredInjectedPackageSpecifier,
 } from '../injected-packages.ts'
 import type { ModuleRecord, ModuleTracking } from '../module-store.ts'
+import type { ModuleHooks, ModuleResolveHookNext, ModuleResolveResult } from '../module-hooks.ts'
 import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { ResolveModuleResult, TransformedModule } from './transform.ts'
@@ -81,6 +83,7 @@ type ResolveResult = {
 export type ResolveArgs = {
   isAllowed(absolutePath: string): boolean
   isWatchIgnored(filePath: string): boolean
+  moduleHooks: readonly ModuleHooks[]
   resolveModulePath(absolutePath: string): ResolveModuleResult | null
   resolverFactory: ResolverFactory
   routes: CompiledRoutes
@@ -112,6 +115,7 @@ export async function resolveModule(
         ? await batchResolveSpecifiers(
             getUniqueSpecifiers(transformed.unresolvedImports),
             transformed.resolvedPath,
+            args.moduleHooks,
             args.resolverFactory,
           )
         : new Map<string, ResolvedSpec>()
@@ -239,6 +243,7 @@ export async function resolveModule(
         resolvedSpec = await batchResolveSpecifiers(
           [unresolved.specifier],
           transformed.resolvedPath,
+          args.moduleHooks,
           args.resolverFactory,
         ).then((resolved) => resolved.get(unresolved.specifier))
       } catch (error) {
@@ -445,6 +450,7 @@ function resolveCandidateBasePath(importerDir: string, specifier: string): strin
 async function batchResolveSpecifiers(
   specifiers: string[],
   importerPath: string,
+  moduleHooks: readonly ModuleHooks[],
   resolverFactory: ResolveArgs['resolverFactory'],
 ): Promise<Map<string, ResolvedSpec>> {
   let resolvedBySpecifier = new Map<string, ResolvedSpec>()
@@ -453,11 +459,11 @@ async function batchResolveSpecifiers(
   try {
     for (let specifier of specifiers) {
       let normalizedResolution = normalizeSpecifierResolution(specifier, importerPath)
-      let resolutionResult = await resolverFactory.resolveFileAsync(
-        normalizedResolution.importerPath,
-        normalizedResolution.specifier,
-      )
-      if (resolutionResult.error) {
+      let resolvedSpec =
+        moduleHooks.length === 0
+          ? await resolveSpecifierWithResolver(specifier, normalizedResolution, resolverFactory)
+          : await resolveSpecifier(specifier, normalizedResolution, moduleHooks, resolverFactory)
+      if (resolvedSpec === null) {
         throw createAssetServerCompilationError(
           normalizedResolution.importerPath === getInjectedPackageImporterPath()
             ? `Failed to resolve injected import "${specifier}" from asset server.`
@@ -469,16 +475,7 @@ async function batchResolveSpecifiers(
         )
       }
 
-      resolvedBySpecifier.set(specifier, {
-        absolutePath:
-          resolutionResult.path && path.isAbsolute(resolutionResult.path)
-            ? normalizeFilePath(resolutionResult.path)
-            : null,
-        packageJsonPath: resolutionResult.packageJsonPath
-          ? normalizeFilePath(resolutionResult.packageJsonPath)
-          : null,
-        specifier,
-      })
+      resolvedBySpecifier.set(specifier, resolvedSpec)
     }
   } catch (error) {
     if (isAssetServerCompilationError(error) && error.code === 'IMPORT_RESOLUTION_FAILED') {
@@ -495,6 +492,127 @@ async function batchResolveSpecifiers(
   }
 
   return resolvedBySpecifier
+}
+
+async function resolveSpecifierWithResolver(
+  specifier: string,
+  normalizedResolution: NormalizedSpecifierResolution,
+  resolverFactory: ResolveArgs['resolverFactory'],
+): Promise<ResolvedSpec | null> {
+  let resolutionResult = await resolverFactory.resolveFileAsync(
+    normalizedResolution.importerPath,
+    normalizedResolution.specifier,
+  )
+  if (resolutionResult.error) return null
+
+  return {
+    absolutePath:
+      resolutionResult.path && path.isAbsolute(resolutionResult.path)
+        ? normalizeFilePath(resolutionResult.path)
+        : null,
+    packageJsonPath: resolutionResult.packageJsonPath
+      ? normalizeFilePath(resolutionResult.packageJsonPath)
+      : null,
+    specifier,
+  }
+}
+
+function resolveSpecifierWithResolverSync(
+  specifier: string,
+  normalizedResolution: NormalizedSpecifierResolution,
+  resolverFactory: ResolveArgs['resolverFactory'],
+): ModuleResolveResult {
+  let resolutionResult = resolverFactory.resolveFileSync(
+    normalizedResolution.importerPath,
+    normalizedResolution.specifier,
+  )
+  if (resolutionResult.error) {
+    return {
+      url: '',
+    }
+  }
+
+  return {
+    format: 'module',
+    url:
+      resolutionResult.path && path.isAbsolute(resolutionResult.path)
+        ? pathToFileURL(resolutionResult.path).href
+        : '',
+  }
+}
+
+async function resolveSpecifier(
+  displaySpecifier: string,
+  normalizedResolution: NormalizedSpecifierResolution,
+  moduleHooks: readonly ModuleHooks[],
+  resolverFactory: ResolveArgs['resolverFactory'],
+): Promise<ResolvedSpec | null> {
+  let resolveHooks = moduleHooks
+    .map((hook) => hook.resolve)
+    .filter((resolve) => resolve !== undefined)
+
+  let resolve: ModuleResolveHookNext = (specifier, context) => {
+    let parentURL = context?.parentURL ?? pathToFileURL(normalizedResolution.importerPath).href
+    if (!parentURL.startsWith('file:')) {
+      return {
+        url: '',
+      }
+    }
+
+    return resolveSpecifierWithResolverSync(
+      specifier,
+      normalizeSpecifierResolution(specifier, fileURLToPath(parentURL)),
+      resolverFactory,
+    )
+  }
+
+  for (let hook of resolveHooks) {
+    let nextResolve = resolve
+    resolve = (specifier, context) =>
+      hook(
+        specifier,
+        {
+          conditions: context?.conditions ?? ['browser', 'import', 'module', 'default'],
+          importAttributes: context?.importAttributes ?? {},
+          parentURL: context?.parentURL,
+        },
+        nextResolve,
+      )
+  }
+
+  let result = await resolve(displaySpecifier, {
+    conditions: ['browser', 'import', 'module', 'default'],
+    importAttributes: {},
+    parentURL: pathToFileURL(normalizedResolution.importerPath).href,
+  })
+
+  return resolveResultToResolvedSpec(displaySpecifier, result)
+}
+
+function resolveResultToResolvedSpec(
+  specifier: string,
+  result: ModuleResolveResult,
+): ResolvedSpec | null {
+  if (!result.url) return null
+
+  try {
+    let url = new URL(result.url)
+    if (url.protocol !== 'file:') {
+      return {
+        absolutePath: null,
+        packageJsonPath: null,
+        specifier,
+      }
+    }
+
+    return {
+      absolutePath: normalizeFilePath(fileURLToPath(url)),
+      packageJsonPath: null,
+      specifier,
+    }
+  } catch {
+    return null
+  }
 }
 
 function getUniqueSpecifiers(unresolvedImports: TransformedModule['unresolvedImports']): string[] {

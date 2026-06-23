@@ -6,6 +6,7 @@ import { createRequestListener } from 'remix/node-fetch-server'
 
 const originPort = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 const childPort = process.env.CHILD_PORT ? parseInt(process.env.CHILD_PORT, 10) : originPort + 1
+const hmrPort = process.env.HMR_PORT ? parseInt(process.env.HMR_PORT, 10) : childPort + 1
 const proxyRetryMethods = ['GET', 'HEAD']
 const proxyRetryStatusCodes = [502, 503, 504]
 const proxyResponseHeadersToStrip = ['Content-Encoding', 'Content-Length', 'Transfer-Encoding']
@@ -16,7 +17,8 @@ const hmrRunner = run('server.ts', {
     ORIGIN_PORT: String(originPort),
     PORT: String(childPort),
   },
-  nodeArgs: ['--import', 'remix/node-tsx'],
+  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
+  browserHmrChannel: { port: hmrPort },
 })
 
 const proxyFetch = createFetchProxy(`http://127.0.0.1:${childPort}`, {

@@ -23,6 +23,7 @@ import type { ResolveArgs, ResolvedModule } from './resolve.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { ResolvedScriptTarget } from '../target.ts'
 import { createModuleStore } from '../module-store.ts'
+import type { ModuleHooks } from '../module-hooks.ts'
 import type {
   FileSnapshot,
   ModuleRecord,
@@ -71,6 +72,7 @@ type ScriptCompilerOptions = {
   }
   isAllowed(absolutePath: string): boolean
   minify: boolean
+  moduleHooks: readonly ModuleHooks[]
   onWatchDirectoriesChange?: (delta: { add: string[]; remove: string[] }) => void
   onWatchFilesChange?: (delta: { add: string[]; remove: string[] }) => void
   rootDir: string
@@ -157,12 +159,12 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
 
   let transformArgs: TransformArgs = {
     buildId: resolvedOptions.buildId ?? null,
-    componentHmr: resolvedOptions.hmr != null,
     define: resolvedOptions.define ?? null,
     externalSet: resolvedOptions.externalSet,
     isAllowed: resolvedOptions.isAllowed,
     isWatchIgnored,
     minify: resolvedOptions.minify,
+    moduleHooks: resolvedOptions.moduleHooks,
     resolveActualPath,
     resolverFactory,
     routes: resolvedOptions.routes,
@@ -174,6 +176,7 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
   let resolveArgs: ResolveArgs = {
     isAllowed: resolvedOptions.isAllowed,
     isWatchIgnored,
+    moduleHooks: resolvedOptions.moduleHooks,
     resolveModulePath,
     resolverFactory,
     routes: resolvedOptions.routes,

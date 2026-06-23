@@ -1,9 +1,7 @@
 import { registerHooks } from 'node:module'
-import { createRequire } from 'node:module'
-import { dirname, isAbsolute, relative } from 'node:path'
+import { isAbsolute, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
-
-import { transformComponentsForServer } from '@remix-run/ui-hmr'
+import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js/source-map.js'
 
 import {
   analyzeNodeHmrSource,
@@ -20,9 +18,6 @@ const runtime = installNodeHmrRuntime({
 const rootPath = getRegisterUrlParam('rootPath')
 let invalidatedUrlTimestamps = new Map<string, number>()
 let updateQueue = Promise.resolve()
-const componentHmrRuntimeUrl = import.meta.resolve('@remix-run/ui-hmr/server-runtime')
-
-const componentHmrRefreshSpecifiers = ['remix/ui/dev/refresh', '@remix-run/ui/dev/refresh'] as const
 
 registerHooks({
   resolve(specifier, context, nextResolve) {
@@ -117,13 +112,20 @@ function shouldTransformModule(
 
 function injectHotContext(url: string, source: string, hmr: NodeHmrAnalysis): string {
   let resolveDependencyExpression = `(specifier) => { let url = new URL(import.meta.resolve(specifier)); url.search = ''; url.hash = ''; return url.href }`
-
-  return [
+  let sourceWithMap = extractInlineSourceMap(source)
+  let prelude = [
     `const __remixNodeHmrResolveDependency = ${resolveDependencyExpression};`,
     `globalThis.__remixNodeHmr.reportAcceptedDependencies(${JSON.stringify(url)}, ${getAcceptedDependencyExpression(hmr)});`,
     `import.meta.hot = globalThis.__remixNodeHmr.createHotContext(${JSON.stringify(url)}, __remixNodeHmrResolveDependency);`,
-    source,
   ].join('\n')
+  let injectedSource = `${prelude}\n${sourceWithMap.code}`
+  let injectionSourceMap = createLineOffsetSourceMap(url, sourceWithMap.code, getLineCount(prelude))
+  let sourceMap =
+    sourceWithMap.sourceMap === null
+      ? injectionSourceMap
+      : composeSourceMaps(injectionSourceMap, sourceWithMap.sourceMap)
+
+  return appendInlineSourceMap(injectedSource, sourceMap)
 }
 
 function getAcceptedDependencyExpression(hmr: NodeHmrAnalysis): string {
@@ -143,30 +145,7 @@ function transformSource(url: string, source: string): string {
     return source
   }
 
-  let componentHmrRefreshSpecifier = resolveComponentHmrRefreshSpecifier(url)
-  if (componentHmrRefreshSpecifier === null) return source
-
-  let result = transformComponentsForServer(source, {
-    moduleUrl: url,
-    runtimeSpecifier: componentHmrRuntimeUrl,
-  })
-
-  return result.code
-}
-
-function resolveComponentHmrRefreshSpecifier(url: string): string | null {
-  let filePath = fileURLToPath(url)
-  let require = createRequire(url)
-  let paths = [dirname(filePath)]
-
-  for (let refreshSpecifier of componentHmrRefreshSpecifiers) {
-    try {
-      require.resolve(refreshSpecifier, { paths })
-      return refreshSpecifier
-    } catch {}
-  }
-
-  return null
+  return source
 }
 
 function rewriteInvalidatedImports(url: string, source: string): string {
@@ -245,6 +224,97 @@ function addTimestampQuery(specifier: string, timestamp: number): string {
 function isInsideRoot(filePath: string, root: string): boolean {
   let relativePath = relative(root, filePath)
   return relativePath === '' || (!relativePath.startsWith('..') && !isAbsolute(relativePath))
+}
+
+function getLineCount(source: string): number {
+  return source.split('\n').length
+}
+
+function extractInlineSourceMap(source: string): {
+  code: string
+  sourceMap: string | null
+} {
+  let sourceMapPattern =
+    /(?:\/\/# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+)|\/\*# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+) \*\/)\s*$/g
+  let sourceMap: string | null = null
+  let code = source.replace(sourceMapPattern, (_match, lineComment, blockComment) => {
+    sourceMap = Buffer.from(lineComment ?? blockComment, 'base64').toString('utf-8')
+    return ''
+  })
+
+  return { code: code.trimEnd(), sourceMap }
+}
+
+function appendInlineSourceMap(source: string, sourceMap: string): string {
+  let encoded = Buffer.from(sourceMap).toString('base64')
+  return `${source}\n//# sourceMappingURL=data:application/json;base64,${encoded}`
+}
+
+function createLineOffsetSourceMap(url: string, source: string, lineOffset: number): string {
+  let generator = new SourceMapGenerator({ file: url })
+  let lines = source.split('\n')
+
+  for (let index = 0; index < lines.length; index++) {
+    generator.addMapping({
+      generated: {
+        column: 0,
+        line: index + lineOffset + 1,
+      },
+      original: {
+        column: 0,
+        line: index + 1,
+      },
+      source: url,
+    })
+  }
+
+  generator.setSourceContent(url, source)
+  return JSON.stringify(generator.toJSON())
+}
+
+function composeSourceMaps(rewriteSourceMap: string, transformSourceMap: string): string {
+  let rewriteConsumer = new SourceMapConsumer(JSON.parse(rewriteSourceMap))
+  let transformConsumer = new SourceMapConsumer(JSON.parse(transformSourceMap))
+  let generator = new SourceMapGenerator()
+
+  rewriteConsumer.eachMapping((mapping) => {
+    if (
+      mapping.originalLine == null ||
+      mapping.originalColumn == null ||
+      mapping.generatedLine == null ||
+      mapping.generatedColumn == null
+    ) {
+      return
+    }
+
+    let original = transformConsumer.originalPositionFor({
+      line: mapping.originalLine,
+      column: mapping.originalColumn,
+    })
+    if (original.line == null || original.column == null || original.source == null) return
+
+    generator.addMapping({
+      generated: {
+        line: mapping.generatedLine,
+        column: mapping.generatedColumn,
+      },
+      original: {
+        line: original.line,
+        column: original.column,
+      },
+      source: original.source,
+      name: original.name ?? mapping.name ?? undefined,
+    })
+  })
+
+  for (let source of transformConsumer.sources) {
+    let sourceContent = transformConsumer.sourceContentFor(source, true)
+    if (sourceContent !== null) {
+      generator.setSourceContent(source, sourceContent)
+    }
+  }
+
+  return JSON.stringify(generator.toJSON())
 }
 
 async function handleHotUpdateMessage(message: {

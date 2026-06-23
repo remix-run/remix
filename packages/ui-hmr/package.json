@@ -20,7 +20,9 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./browser-module-hooks": "./src/browser-module-hooks.ts",
     "./browser-runtime": "./src/browser-runtime.ts",
+    "./node": "./src/node.ts",
     "./server-runtime": "./src/server-runtime.ts",
     "./package.json": "./package.json"
   },
@@ -30,9 +32,17 @@
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
       },
+      "./browser-module-hooks": {
+        "types": "./dist/browser-module-hooks.d.ts",
+        "default": "./dist/browser-module-hooks.js"
+      },
       "./browser-runtime": {
         "types": "./dist/browser-runtime.d.ts",
         "default": "./dist/browser-runtime.js"
+      },
+      "./node": {
+        "types": "./dist/node.d.ts",
+        "default": "./dist/node.js"
       },
       "./server-runtime": {
         "types": "./dist/server-runtime.d.ts",
@@ -43,18 +53,28 @@
   },
   "dependencies": {
     "magic-string": "^0.30.21",
-    "oxc-parser": "^0.121.0"
+    "oxc-parser": "^0.121.0",
+    "source-map-js": "^1.2.1"
   },
   "devDependencies": {
+    "@remix-run/assert": "workspace:*",
+    "@remix-run/assets": "workspace:^",
+    "@remix-run/fetch-proxy": "workspace:*",
+    "@remix-run/node-fetch-server": "workspace:*",
+    "@remix-run/node-hmr": "workspace:^",
+    "@remix-run/node-tsx": "workspace:^",
+    "@remix-run/test": "workspace:*",
+    "@remix-run/ui": "workspace:*",
     "@types/dom-navigation": "^1.0.7",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "@typescript/native-preview": "catalog:",
+    "chokidar": "^5.0.0"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",
     "clean": "git clean -fdX",
     "prepublishOnly": "pnpm run build",
-    "test": "node --disable-warning=ExperimentalWarning --test './src/**/*.test.ts'",
+    "test": "remix-test",
     "typecheck": "tsgo --noEmit"
   },
   "keywords": [

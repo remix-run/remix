@@ -18,6 +18,8 @@ import { getFingerprintRequestCacheControl, parseFingerprintSuffix } from './fin
 import { createHmrClientSource } from './hmr.ts'
 import type { HmrPayload } from './hmr.ts'
 import { getInjectedPackageRouteConfigs } from './injected-packages.ts'
+import { normalizeModuleHooks } from './module-hooks.ts'
+import type { ModuleHooks } from './module-hooks.ts'
 import { normalizeFilePath, normalizePathname } from './paths.ts'
 import { compileRoutes } from './routes.ts'
 import type { CompiledRoutes } from './routes.ts'
@@ -103,6 +105,8 @@ interface AssetServerScriptOptions {
   define?: Record<string, string>
   /** Import specifiers to leave unrewritten (CDN URLs, import map entries, etc.) */
   external?: string[]
+  /** Node-compatible module hooks for script modules. */
+  moduleHooks?: readonly ModuleHooks[]
 }
 
 const scriptExtensionSet = new Set<string>(supportedScriptExtensions)
@@ -113,7 +117,6 @@ const scriptExtensionSet = new Set<string>(supportedScriptExtensions)
 export interface AssetServerOptions<transforms extends AssetRequestTransformMap = {}> {
   /** Public mount path for this asset server, e.g. `'/assets'`. */
   basePath: string
-  /** File patterns keyed by public URL patterns relative to `basePath`. */
   /** File patterns keyed by public URL patterns. */
   fileMap: Readonly<Record<string, string>>
   /**
@@ -156,6 +159,11 @@ export interface AssetServerOptions<transforms extends AssetRequestTransformMap 
    * Minification setting for emitted scripts and styles.
    */
   minify?: boolean
+  /**
+   * Node-compatible module hooks for compiled modules. Scoped hooks are appended
+   * after hooks configured here.
+   */
+  moduleHooks?: readonly ModuleHooks[]
   /**
    * Script-only configuration.
    */
@@ -237,6 +245,7 @@ type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
   fingerprintAssets: boolean
   hmr: BrowserHmrChannelFactory | null
   minify: boolean
+  moduleHooks: readonly ModuleHooks[]
   onError: NonNullable<AssetServerOptions['onError']>
   rootDir: string
   routes: CompiledRoutes
@@ -318,6 +327,7 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     define: resolvedOptions.define,
     external: resolvedOptions.external,
     fingerprintAssets: resolvedOptions.fingerprintAssets,
+    moduleHooks: resolvedOptions.moduleHooks,
     hmr: sendHmrPayload
       ? {
           clientPathname: hmrPathnames.client,
@@ -936,6 +946,7 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
     fingerprintAssets: fingerprintOptions.enabled,
     hmr: hmrFactory,
     minify: options.minify ?? false,
+    moduleHooks: normalizeModuleHooks(options.moduleHooks, scriptOptions.moduleHooks),
     onError: options.onError ?? defaultErrorHandler,
     rootDir,
     routes: compileRoutes(basePath, [

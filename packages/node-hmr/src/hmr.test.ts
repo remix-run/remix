@@ -58,6 +58,56 @@ describe('node-hmr', () => {
     }
   })
 
+  it('preserves source-map locations after injecting hot context', async () => {
+    await using fixture = await createFixture(
+      {
+        'server.ts': [
+          `import { createServer } from 'node:http'`,
+          `import { getMessage } from './message.ts'`,
+          ``,
+          `let server = createServer((_request, response) => {`,
+          `  try {`,
+          `    response.end(getMessage())`,
+          `  } catch (error) {`,
+          `    response.statusCode = 500`,
+          `    response.end(error instanceof Error && error.stack ? error.stack : String(error))`,
+          `  }`,
+          `})`,
+          ``,
+          `server.listen(0, '127.0.0.1', () => {`,
+          `  let address = server.address()`,
+          `  if (address && typeof address === 'object') {`,
+          `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
+          `  }`,
+          `})`,
+        ].join('\n'),
+        'message.ts': [
+          `export function getMessage() {`,
+          `  throw new Error('mapped failure')`,
+          `}`,
+          ``,
+          `if (import.meta.hot) {`,
+          `  import.meta.hot.accept()`,
+          `}`,
+        ].join('\n'),
+      },
+      {
+        nodeArgs: ['--enable-source-maps', '--import', nodeTsxImportUrl],
+      },
+    )
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      let stack = await fetchText(ready.port)
+
+      assert.match(stack, /Error: mapped failure/)
+      assert.match(stack, /message\.ts:2:\d+/)
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('restarts when a statically self-accepting module does not register an accept handler', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./message.ts', 'getMessage()'),
@@ -572,28 +622,23 @@ describe('node-hmr', () => {
     }
   })
 
-  it('hot updates transformed component modules without restarting the server', async () => {
+  it('hot updates self-accepted modules with mutable exports without restarting the server', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./greeting.tsx', 'Greeting()()'),
-      'greeting.tsx': [
-        `export function Greeting() {`,
-        `  return () => 'Hello from component'`,
-        `}`,
-      ].join('\n'),
-      ...getRemixUiRefreshFixtureFiles(),
+      'greeting.tsx': getGenericGreetingSource({ message: 'Hello from generic boundary' }),
     })
     let server = startFixtureServer(fixture.path)
 
     try {
       let ready = await server.waitForReady(0)
-      assert.equal(await fetchText(ready.port), 'Hello from component')
+      assert.equal(await fetchText(ready.port), 'Hello from generic boundary')
 
       await fs.writeFile(
         path.join(fixture.path, 'greeting.tsx'),
-        [`export function Greeting() {`, `  return () => 'Updated from component'`, `}`].join('\n'),
+        getGenericGreetingSource({ message: 'Updated from generic boundary' }),
       )
 
-      await waitForResponse(ready.port, 'Updated from component', () => server.output)
+      await waitForResponse(ready.port, 'Updated from generic boundary', () => server.output)
       assert.equal(server.readyCount, 1)
       assert.match(server.output, /hmr update greeting\.tsx/)
     } finally {
@@ -601,38 +646,30 @@ describe('node-hmr', () => {
     }
   })
 
-  it('restarts once when transformed component module exports change', async () => {
+  it('restarts once when an accepted module export is added', async () => {
     await using fixture = await createFixture({
       'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
-      'greeting.tsx': [
-        `export function Greeting() {`,
-        `  return () => 'Hello from component'`,
-        `}`,
-      ].join('\n'),
-      ...getRemixUiRefreshFixtureFiles(),
+      'greeting.tsx': getGenericGreetingSource({ message: 'Hello from generic boundary' }),
     })
     let server = startFixtureServer(fixture.path)
 
     try {
       let ready = await server.waitForReady(0)
-      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from generic boundary`)
 
       await fs.writeFile(
         path.join(fixture.path, 'greeting.tsx'),
-        [
-          `export function Greeting() {`,
-          `  return () => 'Updated after restart'`,
-          `}`,
-          `export function AddedComponent() {`,
-          `  return () => 'Added component'`,
-          `}`,
-        ].join('\n'),
+        getGenericGreetingSource({
+          extraExports: [`export function addedExport() {`, `  return 'added'`, `}`],
+          message: 'Updated after restart',
+          runtimeExportNames: ['Greeting', 'addedExport'],
+        }),
       )
 
       let restarted = await server.waitForReady(1)
       assert.notEqual(restarted.pid, ready.pid)
       assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
-      assert.match(server.output, /restart Updated component module added export "AddedComponent"/)
+      assert.match(server.output, /restart Updated module added export "addedExport"/)
       assert.doesNotMatch(server.output, /Failed to hot update/)
       assert.equal(server.readyCount, 2)
     } finally {
@@ -640,36 +677,30 @@ describe('node-hmr', () => {
     }
   })
 
-  it('restarts once when a transformed component module adds a non-component export', async () => {
+  it('restarts once when an accepted module adds a runtime export', async () => {
     await using fixture = await createFixture({
       'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
-      'greeting.tsx': [
-        `export function Greeting() {`,
-        `  return () => 'Hello from component'`,
-        `}`,
-      ].join('\n'),
-      ...getRemixUiRefreshFixtureFiles(),
+      'greeting.tsx': getGenericGreetingSource({ message: 'Hello from generic boundary' }),
     })
     let server = startFixtureServer(fixture.path)
 
     try {
       let ready = await server.waitForReady(0)
-      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from generic boundary`)
 
       await fs.writeFile(
         path.join(fixture.path, 'greeting.tsx'),
-        [
-          `export function Greeting() {`,
-          `  return () => 'Updated after restart'`,
-          `}`,
-          `export const foo = true`,
-        ].join('\n'),
+        getGenericGreetingSource({
+          extraExports: [`export const foo = true`],
+          message: 'Updated after restart',
+          runtimeExportNames: ['Greeting', 'foo'],
+        }),
       )
 
       let restarted = await server.waitForReady(1)
       assert.notEqual(restarted.pid, ready.pid)
       assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
-      assert.match(server.output, /restart Updated component module added export "foo"/)
+      assert.match(server.output, /restart Updated module added export "foo"/)
       assert.doesNotMatch(server.output, /Failed to hot update/)
       assert.equal(server.readyCount, 2)
     } finally {
@@ -677,32 +708,30 @@ describe('node-hmr', () => {
     }
   })
 
-  it('restarts once when a transformed component module removes a non-component export', async () => {
+  it('restarts once when an accepted module removes a runtime export', async () => {
     await using fixture = await createFixture({
       'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
-      'greeting.tsx': [
-        `export function Greeting() {`,
-        `  return () => 'Hello from component'`,
-        `}`,
-        `export const foo = true`,
-      ].join('\n'),
-      ...getRemixUiRefreshFixtureFiles(),
+      'greeting.tsx': getGenericGreetingSource({
+        extraExports: [`export const foo = true`],
+        message: 'Hello from generic boundary',
+        runtimeExportNames: ['Greeting', 'foo'],
+      }),
     })
     let server = startFixtureServer(fixture.path)
 
     try {
       let ready = await server.waitForReady(0)
-      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from generic boundary`)
 
       await fs.writeFile(
         path.join(fixture.path, 'greeting.tsx'),
-        [`export function Greeting() {`, `  return () => 'Updated after restart'`, `}`].join('\n'),
+        getGenericGreetingSource({ message: 'Updated after restart' }),
       )
 
       let restarted = await server.waitForReady(1)
       assert.notEqual(restarted.pid, ready.pid)
       assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
-      assert.match(server.output, /restart Updated component module removed export "foo"/)
+      assert.match(server.output, /restart Updated module removed export "foo"/)
       assert.doesNotMatch(server.output, /Failed to hot update/)
       assert.equal(server.readyCount, 2)
     } finally {
@@ -710,40 +739,34 @@ describe('node-hmr', () => {
     }
   })
 
-  it('restarts once when a transformed component module changes a non-component export', async () => {
+  it('restarts once when an accepted module changes a runtime export', async () => {
     await using fixture = await createFixture({
       'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
-      'greeting.tsx': [
-        `export function Greeting() {`,
-        `  return () => 'Hello from component'`,
-        `}`,
-        `export const foo = true`,
-      ].join('\n'),
-      ...getRemixUiRefreshFixtureFiles(),
+      'greeting.tsx': getGenericGreetingSource({
+        extraExports: [`export const foo = true`],
+        message: 'Hello from generic boundary',
+        runtimeExportNames: ['Greeting', 'foo'],
+      }),
     })
     let server = startFixtureServer(fixture.path)
 
     try {
       let ready = await server.waitForReady(0)
-      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from generic boundary`)
 
       await fs.writeFile(
         path.join(fixture.path, 'greeting.tsx'),
-        [
-          `export function Greeting() {`,
-          `  return () => 'Updated after restart'`,
-          `}`,
-          `export const foo = false`,
-        ].join('\n'),
+        getGenericGreetingSource({
+          extraExports: [`export const foo = false`],
+          message: 'Updated after restart',
+          runtimeExportNames: ['Greeting', 'foo'],
+        }),
       )
 
       let restarted = await server.waitForReady(1)
       assert.notEqual(restarted.pid, ready.pid)
       assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
-      assert.match(
-        server.output,
-        /restart Updated component module changed non-component export "foo"/,
-      )
+      assert.match(server.output, /restart Updated module changed export "foo"/)
       assert.doesNotMatch(server.output, /Failed to hot update/)
       assert.equal(server.readyCount, 2)
     } finally {
@@ -751,39 +774,36 @@ describe('node-hmr', () => {
     }
   })
 
-  it('hot updates transformed component modules when non-component exports are strictly equal', async () => {
+  it('hot updates accepted modules when runtime exports are strictly equal', async () => {
     await using fixture = await createFixture({
       'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
-      'greeting.tsx': [
-        `import { foo } from './stable.ts'`,
-        ``,
-        `export function Greeting() {`,
-        `  return () => 'Hello from component'`,
-        `}`,
-        `export { foo }`,
-      ].join('\n'),
+      'greeting.tsx': getGenericGreetingSource({
+        extraExports: [`import { foo } from './stable.ts'`, `export { foo }`],
+        message: 'Hello from generic boundary',
+        runtimeExportNames: ['Greeting', 'foo'],
+      }),
       'stable.ts': `export const foo = {}`,
-      ...getRemixUiRefreshFixtureFiles(),
     })
     let server = startFixtureServer(fixture.path)
 
     try {
       let ready = await server.waitForReady(0)
-      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from generic boundary`)
 
       await fs.writeFile(
         path.join(fixture.path, 'greeting.tsx'),
-        [
-          `import { foo } from './stable.ts'`,
-          ``,
-          `export function Greeting() {`,
-          `  return () => 'Updated from component'`,
-          `}`,
-          `export { foo }`,
-        ].join('\n'),
+        getGenericGreetingSource({
+          extraExports: [`import { foo } from './stable.ts'`, `export { foo }`],
+          message: 'Updated from generic boundary',
+          runtimeExportNames: ['Greeting', 'foo'],
+        }),
       )
 
-      await waitForResponse(ready.port, `${ready.pid}:Updated from component`, () => server.output)
+      await waitForResponse(
+        ready.port,
+        `${ready.pid}:Updated from generic boundary`,
+        () => server.output,
+      )
       assert.equal(server.readyCount, 1)
       assert.match(server.output, /hmr update greeting\.tsx/)
       assert.doesNotMatch(server.output, /restart/)
@@ -792,40 +812,34 @@ describe('node-hmr', () => {
     }
   })
 
-  it('restarts once when a transformed component module recreates an object non-component export', async () => {
+  it('restarts once when an accepted module recreates an object runtime export', async () => {
     await using fixture = await createFixture({
       'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
-      'greeting.tsx': [
-        `export function Greeting() {`,
-        `  return () => 'Hello from component'`,
-        `}`,
-        `export const foo = {}`,
-      ].join('\n'),
-      ...getRemixUiRefreshFixtureFiles(),
+      'greeting.tsx': getGenericGreetingSource({
+        extraExports: [`export const foo = {}`],
+        message: 'Hello from generic boundary',
+        runtimeExportNames: ['Greeting', 'foo'],
+      }),
     })
     let server = startFixtureServer(fixture.path)
 
     try {
       let ready = await server.waitForReady(0)
-      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from generic boundary`)
 
       await fs.writeFile(
         path.join(fixture.path, 'greeting.tsx'),
-        [
-          `export function Greeting() {`,
-          `  return () => 'Updated after restart'`,
-          `}`,
-          `export const foo = {}`,
-        ].join('\n'),
+        getGenericGreetingSource({
+          extraExports: [`export const foo = {}`],
+          message: 'Updated after restart',
+          runtimeExportNames: ['Greeting', 'foo'],
+        }),
       )
 
       let restarted = await server.waitForReady(1)
       assert.notEqual(restarted.pid, ready.pid)
       assert.equal(await fetchText(restarted.port), `${restarted.pid}:Updated after restart`)
-      assert.match(
-        server.output,
-        /restart Updated component module changed non-component export "foo"/,
-      )
+      assert.match(server.output, /restart Updated module changed export "foo"/)
       assert.doesNotMatch(server.output, /Failed to hot update/)
       assert.equal(server.readyCount, 2)
     } finally {
@@ -833,15 +847,10 @@ describe('node-hmr', () => {
     }
   })
 
-  it('sends one readiness-gated server update when transformed component module exports change', async () => {
+  it('sends one readiness-gated server update when accepted module exports change', async () => {
     await using fixture = await createFixture({
-      'server.ts': getEventChannelComponentServerSource(),
-      'greeting.tsx': [
-        `export function Greeting() {`,
-        `  return () => 'Hello from component'`,
-        `}`,
-      ].join('\n'),
-      ...getRemixUiRefreshFixtureFiles(),
+      'server.ts': getEventChannelGreetingServerSource(),
+      'greeting.tsx': getGenericGreetingSource({ message: 'Hello from generic boundary' }),
     })
     let server = startFixtureServer(fixture.path)
 
@@ -850,18 +859,15 @@ describe('node-hmr', () => {
       let events = await connectHmrEvents(hmrUrl.url)
       try {
         let ready = await server.waitForReady(0)
-        assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
+        assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from generic boundary`)
 
         await fs.writeFile(
           path.join(fixture.path, 'greeting.tsx'),
-          [
-            `export function Greeting() {`,
-            `  return () => 'Updated after restart'`,
-            `}`,
-            `export function AddedComponent() {`,
-            `  return () => 'Added component'`,
-            `}`,
-          ].join('\n'),
+          getGenericGreetingSource({
+            extraExports: [`export function addedExport() {`, `  return 'added'`, `}`],
+            message: 'Updated after restart',
+            runtimeExportNames: ['Greeting', 'addedExport'],
+          }),
         )
 
         let restarted = await server.waitForReady(1)
@@ -874,74 +880,6 @@ describe('node-hmr', () => {
       } finally {
         await events.close()
       }
-    } finally {
-      await server.stop()
-    }
-  })
-
-  it('hot updates transformed component modules with a symlinked remix package', async () => {
-    await using fixture = await createFixture({
-      'server.ts': getPidServerSource('./greeting.tsx', 'Greeting()()'),
-      'greeting.tsx': [
-        `export function Greeting() {`,
-        `  return () => 'Hello from component'`,
-        `}`,
-      ].join('\n'),
-    })
-    await writeSymlinkedRemixUiRefreshFixture(fixture.path)
-    let server = startFixtureServer(fixture.path)
-
-    try {
-      let ready = await server.waitForReady(0)
-      assert.equal(await fetchText(ready.port), `${ready.pid}:Hello from component`)
-
-      await fs.writeFile(
-        path.join(fixture.path, 'greeting.tsx'),
-        [`export function Greeting() {`, `  return () => 'Updated from component'`, `}`].join('\n'),
-      )
-
-      await waitForResponse(ready.port, `${ready.pid}:Updated from component`, () => server.output)
-      assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update greeting\.tsx/)
-    } finally {
-      await server.stop()
-    }
-  })
-
-  it('hot updates transformed client entry components without restarting the server', async () => {
-    await using fixture = await createFixture({
-      'server.ts': getServerSource('./greeting.tsx', 'Greeting()()'),
-      'greeting.tsx': [
-        `function clientEntry(_id, component) {`,
-        `  return component`,
-        `}`,
-        `export const Greeting = clientEntry(import.meta.url, function Greeting() {`,
-        `  return () => 'Hello from client entry'`,
-        `})`,
-      ].join('\n'),
-      ...getScopedUiRefreshFixtureFiles(),
-    })
-    let server = startFixtureServer(fixture.path)
-
-    try {
-      let ready = await server.waitForReady(0)
-      assert.equal(await fetchText(ready.port), 'Hello from client entry')
-
-      await fs.writeFile(
-        path.join(fixture.path, 'greeting.tsx'),
-        [
-          `function clientEntry(_id, component) {`,
-          `  return component`,
-          `}`,
-          `export const Greeting = clientEntry(import.meta.url, function Greeting() {`,
-          `  return () => 'Updated client entry'`,
-          `})`,
-        ].join('\n'),
-      )
-
-      await waitForResponse(ready.port, 'Updated client entry', () => server.output)
-      assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update greeting\.tsx/)
     } finally {
       await server.stop()
     }
@@ -1121,7 +1059,7 @@ function getEventChannelServerSource(message: string): string {
   ].join('\n')
 }
 
-function getEventChannelComponentServerSource(): string {
+function getEventChannelGreetingServerSource(): string {
   let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.ts')).href
 
   return [
@@ -1143,6 +1081,48 @@ function getEventChannelComponentServerSource(): string {
     `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
     `  }`,
     `})`,
+  ].join('\n')
+}
+
+function getGenericGreetingSource(options: {
+  extraExports?: Array<string>
+  message: string
+  runtimeExportNames?: Array<string>
+}): string {
+  let { extraExports = [], message, runtimeExportNames = ['Greeting'] } = options
+  let runtimeExports = `{ ${runtimeExportNames.join(', ')} }`
+
+  return [
+    `export let Greeting = () => () => ${JSON.stringify(message)}`,
+    ...extraExports,
+    ``,
+    `if (import.meta.hot) {`,
+    `  let runtimeExports = ${runtimeExports}`,
+    ``,
+    `  import.meta.hot.accept((module) => {`,
+    `    if (!module || typeof module !== 'object') return`,
+    ``,
+    `    for (let name of Object.keys(module)) {`,
+    `      if (!Object.prototype.hasOwnProperty.call(runtimeExports, name)) {`,
+    `        import.meta.hot.invalidate('Updated module added export "' + name + '"')`,
+    `        return`,
+    `      }`,
+    `    }`,
+    ``,
+    `    for (let name of Object.keys(runtimeExports)) {`,
+    `      if (!Object.prototype.hasOwnProperty.call(module, name)) {`,
+    `        import.meta.hot.invalidate('Updated module removed export "' + name + '"')`,
+    `        return`,
+    `      }`,
+    `      if (name !== 'Greeting' && runtimeExports[name] !== module[name]) {`,
+    `        import.meta.hot.invalidate('Updated module changed export "' + name + '"')`,
+    `        return`,
+    `      }`,
+    `    }`,
+    ``,
+    `    Greeting = module.Greeting`,
+    `  })`,
+    `}`,
   ].join('\n')
 }
 
@@ -1169,75 +1149,23 @@ function getFetchWhenReadyChildServerSource(message: string): string {
   ].join('\n')
 }
 
-function getScopedUiRefreshFixtureFiles(): Record<string, string> {
-  return {
-    'node_modules/@remix-run/ui/package.json': JSON.stringify({
-      exports: {
-        './dev/refresh': './src/dev-refresh.ts',
-        './package.json': './package.json',
-      },
-      name: '@remix-run/ui',
-      type: 'module',
-    }),
-    'node_modules/@remix-run/ui/src/dev-refresh.ts': [
-      `export function reconcileRoots() {}`,
-      `export function setComponentStalenessCheck(_check) {}`,
-    ].join('\n'),
-  }
-}
-
-async function writeSymlinkedRemixUiRefreshFixture(fixturePath: string): Promise<void> {
-  let packagePath = path.join(fixturePath, 'linked/remix')
-  await writeFixtureFiles(packagePath, getRemixUiRefreshPackageFiles())
-  await fs.mkdir(path.join(fixturePath, 'node_modules'), { recursive: true })
-  await fs.symlink(
-    packagePath,
-    path.join(fixturePath, 'node_modules/remix'),
-    process.platform === 'win32' ? 'junction' : 'dir',
-  )
-}
-
-function getRemixUiRefreshFixtureFiles(): Record<string, string> {
-  return Object.fromEntries(
-    Object.entries(getRemixUiRefreshPackageFiles()).map(([filePath, contents]) => [
-      `node_modules/remix/${filePath}`,
-      contents,
-    ]),
-  )
-}
-
-function getRemixUiRefreshPackageFiles(): Record<string, string> {
-  return {
-    'package.json': JSON.stringify({
-      exports: {
-        './package.json': './package.json',
-        './ui/dev/refresh': './ui/dev/refresh.ts',
-      },
-      name: 'remix',
-      type: 'module',
-    }),
-    'ui/dev/refresh.ts': [
-      `export function reconcileRoots() {}`,
-      `export function setComponentStalenessCheck(_check) {}`,
-    ].join('\n'),
-  }
-}
-
 async function createFixture(
   files: Record<string, string>,
+  options: { nodeArgs?: string[] } = {},
 ): Promise<AsyncDisposable & { entryPath: string; path: string }> {
   let fixtureRoot = path.join(packageRoot, '.tmp')
   await fs.mkdir(fixtureRoot, { recursive: true })
 
   let fixturePath = await fs.mkdtemp(path.join(fixtureRoot, 'node-hmr-'))
   let nodeHmrImportUrl = pathToFileURL(path.join(packageRoot, 'src/index.ts')).href
+  let nodeArgs = options.nodeArgs ?? ['--import', nodeTsxImportUrl]
   await writeFixtureFiles(fixturePath, {
     ...files,
     'dev.ts': [
       `import { run } from ${JSON.stringify(nodeHmrImportUrl)}`,
       ``,
       `run('server.ts', {`,
-      `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
+      `  nodeArgs: ${JSON.stringify(nodeArgs)},`,
       `})`,
     ].join('\n'),
   })

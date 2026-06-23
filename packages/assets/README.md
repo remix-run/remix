@@ -13,6 +13,7 @@ Fetch-based server for compiling browser assets on demand.
 - **Optional Fingerprinting** - Source-based fingerprinted URLs for long-lived browser caching
 - **Source Maps** - Serve inline or external sourcemaps
 - **Hot Module Reloading** - Handle live code updates in development
+- **Module Hooks** - Customize script resolution and loading with Node-shaped hooks
 
 ## Installation
 
@@ -314,6 +315,46 @@ let assetServer = createAssetServer({
 })
 ```
 
+### Module Hooks
+
+Use `scripts.moduleHooks` to customize script resolution and loading with the same hook shape used by Node's synchronous module hooks.
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  scripts: {
+    moduleHooks: [
+      {
+        resolve(specifier, context, nextResolve) {
+          if (specifier === '#env') {
+            return {
+              format: 'module',
+              shortCircuit: true,
+              url: new URL('./app/env.browser.ts', import.meta.url).href,
+            }
+          }
+
+          return nextResolve(specifier, context)
+        },
+        load(url, context, nextLoad) {
+          let result = nextLoad(url, context)
+          return {
+            ...result,
+            source: `${result.source}\nconsole.debug(${JSON.stringify(url)})`,
+          }
+        },
+      },
+    ],
+  },
+})
+```
+
+Top-level `moduleHooks` run for scripts by default and are appended before `scripts.moduleHooks`, so app-wide hooks can be shared while script-specific hooks stay local.
+
 ## File Options
 
 Use `files` to serve additional leaf assets like images and fonts. File extensions must include the leading dot and are only served when explicitly configured.
@@ -548,6 +589,7 @@ The `hmr` option accepts an async function that creates a `BrowserHmrChannel`, s
 
 ```ts
 import { createAssetServer } from 'remix/assets'
+import { uiHmr } from 'remix/ui-hmr/browser-module-hooks'
 
 let isDevelopment = process.env.NODE_ENV === 'development'
 let assetServer = createAssetServer({
@@ -557,9 +599,14 @@ let assetServer = createAssetServer({
   hmr: isDevelopment
     ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
     : undefined,
+  scripts: {
+    moduleHooks: isDevelopment ? [uiHmr()] : undefined,
+  },
   watch: isDevelopment,
 })
 ```
+
+`uiHmr()` is optional. Use it when you want Remix UI component modules to update without a full browser reload.
 
 Browser modules can also listen for HMR events. When the browser HMR channel comes from `remix/node-hmr/runtime`, server updates are sent as `server:update` events.
 
