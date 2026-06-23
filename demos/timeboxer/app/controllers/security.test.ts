@@ -254,8 +254,8 @@ async function assertCsrfRejection(request: Request, reason: 'invalid' | 'missin
 }
 
 function pageRequest(path: string, init?: { cookie?: string }) {
-  let headers = new Headers({ accept: 'text/html' })
-  if (init?.cookie) headers.set('cookie', init.cookie)
+  let headers = new Headers({ Accept: 'text/html' })
+  if (init?.cookie) headers.set('Cookie', init.cookie)
 
   return new Request(url(path), { headers })
 }
@@ -280,7 +280,7 @@ function formRequest(
   }
 
   let headers = new Headers()
-  if (init.cookie) headers.set('cookie', init.cookie)
+  if (init.cookie) headers.set('Cookie', init.cookie)
 
   return new Request(url(path), {
     body: formData,
@@ -298,10 +298,10 @@ function jsonRequest(
     method: string
   },
 ) {
-  let headers = new Headers({ accept: 'application/json' })
-  if (init.body !== undefined) headers.set('content-type', 'application/json')
-  if (init.cookie) headers.set('cookie', init.cookie)
-  if (init.csrfToken !== undefined) headers.set('x-csrf-token', init.csrfToken)
+  let headers = new Headers({ Accept: 'application/json' })
+  if (init.body !== undefined) headers.set('Content-Type', 'application/json')
+  if (init.cookie) headers.set('Cookie', init.cookie)
+  if (init.csrfToken !== undefined) headers.set('X-Csrf-Token', init.csrfToken)
 
   return new Request(url(path), {
     body: init.body === undefined ? undefined : JSON.stringify(init.body),
@@ -321,7 +321,7 @@ function extractCsrfToken(html: string) {
 }
 
 function mergeCookie(currentCookie: string, headers: Headers) {
-  let setCookie = headers.get('set-cookie')
+  let setCookie = headers.get('Set-Cookie')
   if (!setCookie) return currentCookie
 
   let cookiePair = setCookie.split(';', 1)[0]!

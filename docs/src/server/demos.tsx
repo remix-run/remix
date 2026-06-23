@@ -5,12 +5,12 @@ import * as prettier from 'prettier'
 import type { RemixNode } from 'remix/ui'
 import { codeToHtml } from 'shiki'
 import ts from 'typescript'
-import { assetServer } from './asset-server.ts'
+import { mapToRemixPackage } from '../generate/manifest.ts'
+import type { DocsAssetServer } from './asset-server.ts'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const DEMO_BUILD_DIR = path.join(DOCS_DIR, 'build', 'demos')
 const SOURCE_URL_BASE = 'https://github.com/remix-run/remix/blob/main'
-const SOURCE_RELATIVE_BASE = 'packages/ui/src/components'
 
 export type DemoDocFile = {
   kind: 'demo'
@@ -29,7 +29,7 @@ export type DemoDocFile = {
   urlPath: string
 }
 
-export async function discoverDemoFiles(): Promise<DemoDocFile[]> {
+export async function discoverDemoFiles(assetServer: DocsAssetServer): Promise<DemoDocFile[]> {
   if (!fs.existsSync(DEMO_BUILD_DIR)) {
     throw new Error(
       `Demo build directory not found: ${DEMO_BUILD_DIR}. Run "pnpm build:demos" first.`,
@@ -37,7 +37,7 @@ export async function discoverDemoFiles(): Promise<DemoDocFile[]> {
   }
 
   let demoPaths = walkBuiltDemos(DEMO_BUILD_DIR).sort()
-  let demoFiles = await Promise.all(demoPaths.map((demoPath) => getDemoFile(demoPath)))
+  let demoFiles = await Promise.all(demoPaths.map((demoPath) => getDemoFile(demoPath, assetServer)))
 
   let seenUrls = new Map<string, string>()
   for (let demo of demoFiles) {
@@ -76,16 +76,22 @@ export async function renderDemoSource(source: string): Promise<string> {
   })
 }
 
-async function getDemoFile(filePath: string): Promise<DemoDocFile> {
-  // build/demos/ui/<comp>/<slug>.demo.tsx, mirrors source layout one-to-one.
+async function getDemoFile(filePath: string, assetServer: DocsAssetServer): Promise<DemoDocFile> {
   let parts = path.relative(DEMO_BUILD_DIR, filePath).split(path.sep)
-  if (parts.length !== 3 || parts[0] !== 'ui' || !parts[2].endsWith('.demo.tsx')) {
+  if (parts.length < 3 || !parts.at(-1)?.endsWith('.demo.tsx')) {
     throw new Error(`Invalid built demo location: ${filePath}`)
   }
-  let component = parts[1]
-  let slug = parts[2].slice(0, -'.demo.tsx'.length)
-  let packageName = `remix/ui/${component}`
-  let relativePath = `${SOURCE_RELATIVE_BASE}/${component}/demos/${slug}.demo.tsx`
+  let packageSegment = parts[0]
+  if (packageSegment !== 'ui' && packageSegment !== 'components') {
+    throw new Error(`Invalid built demo package: ${filePath}`)
+  }
+
+  let slug = parts.at(-1)!.slice(0, -'.demo.tsx'.length)
+  let moduleParts = parts.slice(1, -1)
+  let modulePath = moduleParts.filter((part) => part !== 'demos').join('/')
+  let packageSpecifier = `@remix-run/${packageSegment}/${modulePath}`
+  let packageName = mapToRemixPackage(packageSpecifier)
+  let relativePath = `packages/${packageSegment}/src/${parts.slice(1).join('/')}`
 
   let source = fs.readFileSync(filePath, 'utf-8')
   let { name, description, order, displaySource } = extractDemoMetadata(source, relativePath)

@@ -1052,17 +1052,17 @@ async function resolveClientEntries(
 ): Promise<void> {
   if (context.unresolvedHydrationData.size === 0) return
 
-  let resolvedEntries = new Map<string, ResolvedClientEntry>()
+  let resolvedEntries = new Map<EntryComponent, ResolvedClientEntry>()
 
   for (let [hydrationId, unresolvedHydrationData] of context.unresolvedHydrationData) {
     let { entryId, component, props } = unresolvedHydrationData
-    let resolvedEntry = resolvedEntries.get(entryId)
+    let resolvedEntry = resolvedEntries.get(component)
     if (!resolvedEntry) {
       resolvedEntry = resolveClientEntry
         ? await Promise.resolve(resolveClientEntry(entryId, component))
         : resolveDefaultClientEntry(entryId, component)
       validateResolvedClientEntry(entryId, resolvedEntry)
-      resolvedEntries.set(entryId, resolvedEntry)
+      resolvedEntries.set(component, resolvedEntry)
     }
 
     context.hydrationData.set(hydrationId, {

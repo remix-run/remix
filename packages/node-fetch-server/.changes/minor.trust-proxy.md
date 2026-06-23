@@ -1,0 +1,1 @@
+Added a `trustProxy` option to `createRequestListener()` and `createRequest()` so apps behind trusted reverse proxies can construct `request.url` from `Forwarded`, `X-Forwarded-Host`, and `X-Forwarded-Proto` headers. `createRequestListener()` also uses trusted `Forwarded` and `X-Forwarded-For` values for handler client address information (see #10874).

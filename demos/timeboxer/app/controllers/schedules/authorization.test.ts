@@ -46,7 +46,7 @@ describe('schedule authorization', () => {
     let homeResponse = await userA.fetchPage(routes.home.index.href())
     assert.equal(homeResponse.status, 302)
     assert.equal(
-      new URL(homeResponse.headers.get('location')!, 'http://localhost').pathname,
+      new URL(homeResponse.headers.get('Location')!, 'http://localhost').pathname,
       routes.schedules.show.href({ scheduleId: String(userASchedule.id) }),
     )
 
@@ -143,8 +143,8 @@ async function createAuthenticatedClient() {
       return await router.fetch(
         new Request(url(path), {
           headers: {
-            accept: 'text/html',
-            cookie,
+            Accept: 'text/html',
+            Cookie: cookie,
           },
         }),
       )
@@ -222,10 +222,10 @@ function jsonRequest(
   path: string,
   init: { body?: unknown; cookie?: string; csrfToken?: string; method: string },
 ) {
-  let headers = new Headers({ accept: 'application/json' })
-  if (init.body !== undefined) headers.set('content-type', 'application/json')
-  if (init.cookie) headers.set('cookie', init.cookie)
-  if (init.csrfToken) headers.set('x-csrf-token', init.csrfToken)
+  let headers = new Headers({ Accept: 'application/json' })
+  if (init.body !== undefined) headers.set('Content-Type', 'application/json')
+  if (init.cookie) headers.set('Cookie', init.cookie)
+  if (init.csrfToken) headers.set('X-Csrf-Token', init.csrfToken)
 
   return new Request(url(path), {
     method: init.method,
@@ -245,7 +245,7 @@ function extractCsrfToken(html: string) {
 }
 
 function mergeCookie(currentCookie: string, headers: Headers) {
-  let setCookie = headers.get('set-cookie')
+  let setCookie = headers.get('Set-Cookie')
   if (!setCookie) return currentCookie
 
   let cookiePair = setCookie.split(';', 1)[0]!

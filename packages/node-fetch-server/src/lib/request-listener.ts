@@ -1,8 +1,18 @@
 import type * as http from 'node:http'
 import type * as http2 from 'node:http2'
+import * as net from 'node:net'
 
 import type { ClientAddress, ErrorHandler, FetchHandler } from './fetch-handler.ts'
+import type { RequestLifecycle } from './request-abort.ts'
 import { createLazyRequestFactory } from './lazy-request.ts'
+import {
+  createRequestAbortError,
+  createRequestLifecycle,
+  isRequestAlreadyAborted,
+  isRequestAbortReason,
+  markRequestAbortReason,
+  observeResponseForRequestLifecycle,
+} from './request-abort.ts'
 
 // "Internal Server Error"
 const internalServerErrorBody = [
@@ -36,6 +46,14 @@ export interface RequestListenerOptions {
    * `https.createServer()`), the request URL will begin with `https:`.
    */
   protocol?: string
+  /**
+   * Trusts reverse proxy headers. When enabled, `Forwarded`, `X-Forwarded-Host`, and
+   * `X-Forwarded-Proto` can provide the incoming request URL host and protocol when `host` and
+   * `protocol` are not set. `Forwarded` and `X-Forwarded-For` can provide the client address for
+   * request listeners that read client information. Only enable this when your server is behind a
+   * trusted proxy that overwrites these headers.
+   */
+  trustProxy?: boolean
 }
 
 /**
@@ -72,7 +90,15 @@ export function createRequestListener(
   options?: RequestListenerOptions,
 ): http.RequestListener {
   let onError = options?.onError ?? defaultErrorHandler
-  let createLazyRequest = createLazyRequestFactory(options, createRequest, createHeaders)
+  let createLazyRequest = createLazyRequestFactory(
+    options,
+    createRequestWithLifecycle,
+    createHeaders,
+    {
+      createLifecycle: createRequestLifecycle,
+      observeResponseForLifecycle: observeResponseForRequestLifecycle,
+    },
+  )
 
   if (handler.length === 0) {
     let handlerWithoutArgs = handler as () => Response | Promise<Response>
@@ -124,11 +150,7 @@ export function createRequestListener(
   return async (req, res) => {
     let isResponseClosed = observeResponseClose(res)
     let request = createLazyRequest(req, res)
-    let client = {
-      address: req.socket.remoteAddress!,
-      family: req.socket.remoteFamily! as ClientAddress['family'],
-      port: req.socket.remotePort!,
-    }
+    let client = createClientAddress(req, options)
 
     let response: Response
     try {
@@ -167,7 +189,7 @@ async function sendErrorResponseForRequest(
   isResponseClosed: () => boolean,
 ): Promise<void> {
   let response = await createErrorResponse(onError, error)
-  if (isResponseClosed() || request.signal.aborted) return
+  if (isResponseClosed() || request.signal.aborted || hasResponseStarted(res)) return
   await sendResponse(res, response)
 }
 
@@ -184,6 +206,11 @@ async function sendResponseForRequest(
   } catch (error) {
     if (isResponseClosed()) return
     if (isRequestAbortError(request, error)) return
+    if (hasResponseStarted(res)) {
+      destroyResponse(res, error)
+      void createErrorResponse(onError, error)
+      return
+    }
     await sendErrorResponseForRequest(res, request, onError, error, isResponseClosed)
   }
 }
@@ -216,7 +243,108 @@ function isPromiseLike<value>(value: value | PromiseLike<value>): value is Promi
 }
 
 function isRequestAbortError(request: Request, error: unknown): boolean {
-  return request.signal.aborted && error === request.signal.reason
+  return isRequestAbortReason(error) || (request.signal.aborted && error === request.signal.reason)
+}
+
+function hasResponseStarted(res: http.ServerResponse | http2.Http2ServerResponse): boolean {
+  return res.headersSent
+}
+
+function destroyResponse(
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  error: unknown,
+): void {
+  if (res.destroyed) return
+  if (error instanceof Error) {
+    res.destroy(error)
+  } else {
+    res.destroy()
+  }
+}
+
+function createRequestBodyStream(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  lifecycle: RequestLifecycle,
+): ReadableStream<Uint8Array> {
+  let bodyController: ReadableStreamDefaultController<Uint8Array> | undefined
+  let requestEnded = false
+  let bodyClosed = false
+
+  function cleanup({ keepErrorListener = false }: { keepErrorListener?: boolean } = {}) {
+    req.removeListener('data', onData)
+    req.removeListener('end', onEnd)
+    if (!keepErrorListener) req.removeListener('error', onError)
+    req.removeListener('aborted', onAborted)
+    req.removeListener('close', onClose)
+  }
+
+  function closeBody() {
+    if (bodyClosed) return
+    bodyClosed = true
+    cleanup()
+    bodyController?.close()
+  }
+
+  function abortBody(error: unknown, { keepErrorListener = false } = {}) {
+    if (bodyClosed) return
+    bodyClosed = true
+    cleanup({ keepErrorListener })
+    lifecycle.abort(error)
+    bodyController?.error(error)
+  }
+
+  function cancelBody() {
+    if (bodyClosed) return
+    bodyClosed = true
+    cleanup()
+  }
+
+  function onData(chunk: Buffer) {
+    bodyController?.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
+  }
+
+  function onEnd() {
+    requestEnded = true
+    closeBody()
+  }
+
+  function onError(error: Error) {
+    markRequestAbortReason(error)
+    abortBody(error)
+  }
+
+  function onAborted() {
+    abortBody(createRequestAbortError(), { keepErrorListener: true })
+  }
+
+  function onClose() {
+    if (!requestEnded) abortBody(createRequestAbortError(), { keepErrorListener: true })
+  }
+
+  return new ReadableStream({
+    start(controller) {
+      bodyController = controller
+
+      req.once('error', onError)
+
+      if (isRequestAlreadyAborted(req)) {
+        abortBody(createRequestAbortError(), { keepErrorListener: true })
+        return
+      }
+
+      req.on('data', onData)
+      req.once('end', onEnd)
+      req.once('aborted', onAborted)
+      req.once('close', onClose)
+
+      if (isRequestAlreadyAborted(req)) {
+        abortBody(createRequestAbortError(), { keepErrorListener: true })
+      }
+    },
+    cancel() {
+      cancelBody()
+    },
+  })
 }
 
 /**
@@ -240,36 +368,29 @@ export function createRequest(
   res: http.ServerResponse | http2.Http2ServerResponse,
   options?: RequestOptions,
 ): Request {
-  let controller: AbortController | null = new AbortController()
+  let lifecycle = createRequestLifecycle()
+  observeResponseForRequestLifecycle(res, lifecycle)
 
-  // Abort once we can no longer write a response if we have
-  // not yet sent a response (i.e., `close` without `finish`)
-  // `finish` -> done rendering the response
-  // `close` -> response can no longer be written to
-  res.once('close', () => controller?.abort())
-  res.once('finish', () => (controller = null))
+  return createRequestWithLifecycle(req, res, options, lifecycle)
+}
 
+function createRequestWithLifecycle(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  res: http.ServerResponse | http2.Http2ServerResponse,
+  options: RequestOptions | undefined,
+  lifecycle: RequestLifecycle,
+): Request {
   let method = req.method ?? 'GET'
   let headers = createHeaders(req)
 
-  let protocol =
-    options?.protocol ?? ('encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:')
-  let host = options?.host ?? headers.get('Host') ?? req.headers[':authority'] ?? 'localhost'
+  let protocol = getRequestProtocol(req, headers, options)
+  let host = getRequestHost(req, headers, options)
   let url = `${protocol}//${host}${req.url}`
 
-  let init: RequestInit = { method, headers, signal: controller.signal }
+  let init: RequestInit = { method, headers, signal: lifecycle.signal }
 
   if (method !== 'GET' && method !== 'HEAD') {
-    init.body = new ReadableStream({
-      start(controller) {
-        req.on('data', (chunk) => {
-          controller.enqueue(new Uint8Array(chunk.buffer, chunk.byteOffset, chunk.byteLength))
-        })
-        req.on('end', () => {
-          controller.close()
-        })
-      },
-    })
+    init.body = createRequestBodyStream(req, lifecycle)
 
     // init.duplex = 'half' must be set when body is a ReadableStream, and Node follows the spec.
     // However, this property is not defined in the TypeScript types for RequestInit, so we have
@@ -279,6 +400,221 @@ export function createRequest(
   }
 
   return new Request(url, init)
+}
+
+function getRequestProtocol(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  headers: Headers,
+  options?: RequestOptions,
+): string {
+  return (
+    options?.protocol ??
+    (options?.trustProxy ? getForwardedProtocol(headers) : undefined) ??
+    ('encrypted' in req.socket && req.socket.encrypted ? 'https:' : 'http:')
+  )
+}
+
+function createClientAddress(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  options?: RequestOptions,
+): ClientAddress {
+  let forwardedClient = options?.trustProxy
+    ? getForwardedClientAddress(createHeaders(req))
+    : undefined
+  let address = forwardedClient?.address ?? req.socket.remoteAddress ?? ''
+
+  return {
+    address,
+    family: getClientAddressFamily(address, req.socket.remoteFamily!),
+    port: forwardedClient?.port ?? req.socket.remotePort!,
+  }
+}
+
+function getClientAddressFamily(address: string, fallbackFamily: string): ClientAddress['family'] {
+  let version = net.isIP(address)
+  if (version === 4) return 'IPv4'
+  if (version === 6) return 'IPv6'
+  return fallbackFamily as ClientAddress['family']
+}
+
+function getRequestHost(
+  req: http.IncomingMessage | http2.Http2ServerRequest,
+  headers: Headers,
+  options?: RequestOptions,
+): string {
+  let authority = req.headers[':authority']
+
+  return (
+    options?.host ??
+    (options?.trustProxy ? getForwardedHost(headers) : undefined) ??
+    headers.get('Host') ??
+    (Array.isArray(authority) ? authority[0] : authority) ??
+    'localhost'
+  )
+}
+
+function getForwardedProtocol(headers: Headers): string | undefined {
+  return (
+    normalizeForwardedProtocol(getForwardedHeaderParameter(headers.get('Forwarded'), 'proto')) ??
+    getXForwardedProtoHeaderProtocol(headers.get('X-Forwarded-Proto'))
+  )
+}
+
+function getForwardedHost(headers: Headers): string | undefined {
+  return (
+    normalizeForwardedHost(getForwardedHeaderParameter(headers.get('Forwarded'), 'host')) ??
+    normalizeForwardedHost(getFirstHeaderValue(headers.get('X-Forwarded-Host')))
+  )
+}
+
+interface ForwardedClientAddress {
+  address: string
+  port?: number
+}
+
+function getForwardedClientAddress(headers: Headers): ForwardedClientAddress | undefined {
+  return (
+    normalizeForwardedClientAddress(getForwardedHeaderParameter(headers.get('Forwarded'), 'for')) ??
+    normalizeForwardedClientAddress(getFirstHeaderValue(headers.get('X-Forwarded-For')))
+  )
+}
+
+function getForwardedHeaderParameter(
+  value: string | null,
+  parameterName: string,
+): string | undefined {
+  if (value == null) return undefined
+
+  for (let element of splitHeaderValue(value, ',')) {
+    for (let parameter of splitHeaderValue(element, ';')) {
+      let index = parameter.indexOf('=')
+      if (index === -1) continue
+
+      let name = parameter.slice(0, index).trim().toLowerCase()
+      if (name !== parameterName) continue
+
+      return unquoteHeaderValue(parameter.slice(index + 1).trim())
+    }
+  }
+
+  return undefined
+}
+
+function getXForwardedProtoHeaderProtocol(value: string | null): string | undefined {
+  return normalizeForwardedProtocol(getFirstHeaderValue(value))
+}
+
+function getFirstHeaderValue(value: string | null): string | undefined {
+  if (value == null) return undefined
+
+  let firstValue = splitHeaderValue(value, ',')[0]
+  return firstValue == null ? undefined : unquoteHeaderValue(firstValue.trim())
+}
+
+function normalizeForwardedProtocol(value: string | undefined): string | undefined {
+  if (value == null) return undefined
+
+  let protocol = value.trim().toLowerCase()
+  if (protocol.endsWith(':')) protocol = protocol.slice(0, -1)
+
+  return protocol === 'http' || protocol === 'https' ? `${protocol}:` : undefined
+}
+
+function normalizeForwardedHost(value: string | undefined): string | undefined {
+  if (value == null) return undefined
+
+  let host = value.trim()
+  return host === '' ? undefined : host
+}
+
+function normalizeForwardedClientAddress(
+  value: string | undefined,
+): ForwardedClientAddress | undefined {
+  if (value == null) return undefined
+
+  let input = value.trim()
+  if (input === '' || input.toLowerCase() === 'unknown' || input.startsWith('_')) {
+    return undefined
+  }
+
+  let address = input
+  let port: number | undefined
+
+  if (address.startsWith('[')) {
+    let end = address.indexOf(']')
+    if (end === -1) return undefined
+
+    let portInput = address.slice(end + 1)
+    address = address.slice(1, end)
+    port = parseForwardedPort(portInput)
+  } else {
+    let colonIndex = address.lastIndexOf(':')
+    if (colonIndex !== -1 && address.indexOf(':') === colonIndex) {
+      port = parseForwardedPort(address.slice(colonIndex))
+      if (port !== undefined) address = address.slice(0, colonIndex)
+    }
+  }
+
+  return net.isIP(address) === 0 ? undefined : { address, port }
+}
+
+function parseForwardedPort(value: string): number | undefined {
+  if (!value.startsWith(':')) return undefined
+
+  let port = Number(value.slice(1))
+  return Number.isInteger(port) && port > 0 && port <= 65_535 ? port : undefined
+}
+
+function splitHeaderValue(value: string, delimiter: ',' | ';'): string[] {
+  let parts: string[] = []
+  let start = 0
+  let quoted = false
+  let escaped = false
+
+  for (let index = 0; index < value.length; index++) {
+    let char = value[index]
+
+    if (escaped) {
+      escaped = false
+      continue
+    }
+
+    if (quoted && char === '\\') {
+      escaped = true
+      continue
+    }
+
+    if (char === '"') {
+      quoted = !quoted
+      continue
+    }
+
+    if (!quoted && char === delimiter) {
+      parts.push(value.slice(start, index))
+      start = index + 1
+    }
+  }
+
+  parts.push(value.slice(start))
+  return parts
+}
+
+function unquoteHeaderValue(value: string): string {
+  if (!value.startsWith('"') || !value.endsWith('"')) return value
+
+  let unquoted = ''
+  for (let index = 1; index < value.length - 1; index++) {
+    let char = value[index]
+
+    if (char === '\\' && index + 1 < value.length - 1) {
+      index++
+      unquoted += value[index]
+    } else {
+      unquoted += char
+    }
+  }
+
+  return unquoted
 }
 
 /**

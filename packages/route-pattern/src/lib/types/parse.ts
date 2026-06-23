@@ -11,17 +11,58 @@ export interface ParsedPattern {
 
 // prettier-ignore
 export type Parse<T extends string> =
+  string extends T ? ParsedPattern :
   T extends ForceDistributive ?
     Split<T> extends infer S extends SplitPattern ?
-      {
-        protocol: S['protocol'] extends string ? ParsePart<S['protocol']> : undefined
-        hostname: S['hostname'] extends string ? ParsePart<S['hostname'], '.'> : undefined
-        port: S['port'] extends string ? S['port'] : undefined
-        pathname: S['pathname'] extends string ? ParsePart<S['pathname'], '/'> : undefined
-        search: S['search'] extends string ? S['search'] : undefined
-      } :
+      ParseSplit<S> :
       never :
     never
+
+// prettier-ignore
+type ParseSplit<S extends SplitPattern> =
+  S['protocol'] extends string ?
+    ParseProtocol<S['protocol']> extends infer protocol ?
+      [protocol] extends [never] ? never :
+      protocol extends Token[] | undefined ? ParseParts<S, protocol> : never :
+    never :
+    ParseParts<S, undefined>
+
+// prettier-ignore
+type ParseParts<S extends SplitPattern, protocol extends Token[] | undefined> =
+  ParseMaybePart<S['hostname'], '.'> extends infer hostname ?
+    [hostname] extends [never] ? never :
+    hostname extends Token[] | undefined ?
+      ParseMaybePart<S['pathname'], '/'> extends infer pathname ?
+        [pathname] extends [never] ? never :
+        pathname extends Token[] | undefined ?
+          Parsed<S, protocol, hostname, pathname> :
+          never :
+      never :
+    never :
+  never
+
+// prettier-ignore
+type ParseMaybePart<T, Sep extends string> =
+  T extends string ? ParsePart<T, Sep> : undefined
+
+type Parsed<
+  S extends SplitPattern,
+  protocol extends Token[] | undefined,
+  hostname extends Token[] | undefined,
+  pathname extends Token[] | undefined,
+> = {
+  protocol: protocol
+  hostname: hostname
+  port: S['port'] extends string ? S['port'] : undefined
+  pathname: pathname
+  search: S['search'] extends string ? S['search'] : undefined
+}
+
+// prettier-ignore
+type ParseProtocol<T extends string> =
+  T extends '' ? undefined :
+  T extends 'http' | 'https' | 'http(s)' ? [{ type: 'text'; value: T }] :
+  never
 
 export type Variable = { type: 'variable'; name: string }
 export type Wildcard = { type: 'wildcard'; name?: string }

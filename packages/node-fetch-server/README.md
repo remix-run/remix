@@ -8,7 +8,8 @@ Build Node.js servers with web-standard Fetch API primitives. `node-fetch-server
 - **Node.js HTTP Integration** - Works directly with `node:http`, `node:https`, and `node:http2`
 - **Streaming Support** - Response support with `ReadableStream`
 - **Custom Hostname** - Configuration for deployment flexibility
-- **Client Info** - Access to client connection info (IP address, port)
+- **Proxy Header Support** - Opt in to trusted `Forwarded`, `X-Forwarded-Host`, `X-Forwarded-Proto`, and `X-Forwarded-For` headers
+- **Client Info** - Access to client connection info (IP address, port, and trusted proxy address)
 - **TypeScript** - Full TypeScript support with type definitions
 
 ## Installation
@@ -146,9 +147,34 @@ let server = http.createServer(createRequestListener(handler, { host: hostname }
 server.listen(3000)
 ```
 
+### Trusted Proxy Headers
+
+If your app runs behind a trusted reverse proxy, Node.js sees the proxy connection instead of the original client connection. Enable `trustProxy` to use trusted proxy headers when constructing `request.url` and client information:
+
+- `Forwarded: proto` and `X-Forwarded-Proto` can provide the original request protocol.
+- `Forwarded: host` and `X-Forwarded-Host` can provide the original request host.
+- `Forwarded: for` and `X-Forwarded-For` can provide the original client address.
+
+Only enable this option when your server is reachable exclusively through a trusted proxy that overwrites these headers. Otherwise, clients can spoof the host, protocol, and client address.
+
+```ts
+import * as http from 'node:http'
+import { createRequestListener } from 'remix/node-fetch-server'
+
+let server = http.createServer(
+  createRequestListener(handler, {
+    trustProxy: true,
+  }),
+)
+
+server.listen(3000)
+```
+
+When `host` or `protocol` are set, those fixed options take precedence over trusted proxy headers.
+
 ### Accessing Client Information
 
-Get client connection details (IP address, port) for logging or security:
+Get client connection details (IP address, port) for logging or security. When `trustProxy` is enabled, `client.address` uses trusted `Forwarded` or `X-Forwarded-For` values when present:
 
 ```ts
 import { type FetchHandler } from 'remix/node-fetch-server'

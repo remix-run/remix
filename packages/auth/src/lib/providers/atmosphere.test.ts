@@ -472,6 +472,230 @@ describe('atmosphere provider', () => {
     }
   })
 
+  it('aborts slow HTTPS handle resolution after DNS returns a DID', async () => {
+    let httpsHandleRequests = 0
+    let resolveHttpsHandleAbort: (() => void) | undefined
+    let httpsHandleAbortPromise = new Promise<void>((resolve) => {
+      resolveHttpsHandleAbort = resolve
+    })
+    let restoreFetch = mockFetch(async (input, init) => {
+      let url = toRequestUrl(input)
+
+      if (url.origin === 'https://1.1.1.1' && url.pathname === '/dns-query') {
+        return Response.json({
+          Answer: [
+            {
+              type: 16,
+              data: '"did=did:plc:dns"',
+            },
+          ],
+        })
+      }
+
+      if (url.toString() === 'https://dns.example.com/.well-known/atproto-did') {
+        httpsHandleRequests += 1
+        let signal = toRequestSignal(input, init)
+
+        if (signal == null) {
+          throw new Error('Expected HTTPS handle resolution to receive an abort signal')
+        }
+
+        return await new Promise<Response>((_, reject) => {
+          signal.addEventListener('abort', () => {
+            resolveHttpsHandleAbort?.()
+            reject(signal.reason)
+          })
+        })
+      }
+
+      if (url.toString() === 'https://plc.directory/did%3Aplc%3Adns') {
+        return Response.json({
+          id: 'did:plc:dns',
+          alsoKnownAs: ['at://dns.example.com'],
+          service: [
+            {
+              id: '#atproto_pds',
+              type: 'AtprotoPersonalDataServer',
+              serviceEndpoint: 'https://pds.example.com',
+            },
+          ],
+        })
+      }
+
+      if (url.toString() === 'https://pds.example.com/.well-known/oauth-protected-resource') {
+        return Response.json({
+          authorization_servers: ['https://auth.example.com'],
+        })
+      }
+
+      if (url.toString() === 'https://auth.example.com/.well-known/oauth-authorization-server') {
+        return Response.json(
+          createAtmosphereAuthorizationServerMetadata('https://auth.example.com'),
+        )
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let atmosphereProvider = createAtmosphereAuthProvider({
+        clientId: 'https://app.example.com/oauth/client-metadata.json',
+        redirectUri: 'https://app.example.com/auth/atmosphere/callback',
+        sessionSecret: 'atmosphere-session-secret',
+      })
+      let preparePromise = atmosphereProvider.prepare('dns.example.com')
+
+      await preparePromise
+      await httpsHandleAbortPromise
+
+      assert.equal(httpsHandleRequests, 1)
+    } finally {
+      restoreFetch()
+    }
+  })
+
+  it('prefers DNS handle resolution when HTTPS returns a different DID first', async () => {
+    let resolveDnsHandle: (() => void) | undefined
+    let dnsHandlePromise = new Promise<void>((resolve) => {
+      resolveDnsHandle = resolve
+    })
+    let restoreFetch = mockFetch(async (input) => {
+      let url = toRequestUrl(input)
+
+      if (url.origin === 'https://1.1.1.1' && url.pathname === '/dns-query') {
+        await dnsHandlePromise
+        return Response.json({
+          Answer: [
+            {
+              type: 16,
+              data: '"did=did:plc:dns"',
+            },
+          ],
+        })
+      }
+
+      if (url.toString() === 'https://dns-preferred.example.com/.well-known/atproto-did') {
+        return new Response('did:plc:https')
+      }
+
+      if (url.toString() === 'https://plc.directory/did%3Aplc%3Adns') {
+        return Response.json({
+          id: 'did:plc:dns',
+          alsoKnownAs: ['at://dns-preferred.example.com'],
+          service: [
+            {
+              id: '#atproto_pds',
+              type: 'AtprotoPersonalDataServer',
+              serviceEndpoint: 'https://pds.example.com',
+            },
+          ],
+        })
+      }
+
+      if (url.toString() === 'https://pds.example.com/.well-known/oauth-protected-resource') {
+        return Response.json({
+          authorization_servers: ['https://auth.example.com'],
+        })
+      }
+
+      if (url.toString() === 'https://auth.example.com/.well-known/oauth-authorization-server') {
+        return Response.json(
+          createAtmosphereAuthorizationServerMetadata('https://auth.example.com'),
+        )
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let atmosphereProvider = createAtmosphereAuthProvider({
+        clientId: 'https://app.example.com/oauth/client-metadata.json',
+        redirectUri: 'https://app.example.com/auth/atmosphere/callback',
+        sessionSecret: 'atmosphere-session-secret',
+      })
+      let preparePromise = atmosphereProvider.prepare('dns-preferred.example.com')
+
+      await Promise.resolve()
+      resolveDnsHandle?.()
+      await preparePromise
+    } finally {
+      restoreFetch()
+    }
+  })
+
+  it('falls back to HTTPS handle resolution when DNS is slow', async (t) => {
+    let timers = t.useFakeTimers()
+    let resolveDnsHandleAbort: (() => void) | undefined
+    let dnsHandleAbortPromise = new Promise<void>((resolve) => {
+      resolveDnsHandleAbort = resolve
+    })
+    let restoreFetch = mockFetch(async (input, init) => {
+      let url = toRequestUrl(input)
+
+      if (url.origin === 'https://1.1.1.1' && url.pathname === '/dns-query') {
+        let signal = toRequestSignal(input, init)
+
+        if (signal == null) {
+          throw new Error('Expected DNS handle resolution to receive an abort signal')
+        }
+
+        return await new Promise<Response>((_, reject) => {
+          signal.addEventListener('abort', () => {
+            resolveDnsHandleAbort?.()
+            reject(signal.reason)
+          })
+        })
+      }
+
+      if (url.toString() === 'https://slow-dns.example.com/.well-known/atproto-did') {
+        return new Response('did:plc:https')
+      }
+
+      if (url.toString() === 'https://plc.directory/did%3Aplc%3Ahttps') {
+        return Response.json({
+          id: 'did:plc:https',
+          alsoKnownAs: ['at://slow-dns.example.com'],
+          service: [
+            {
+              id: '#atproto_pds',
+              type: 'AtprotoPersonalDataServer',
+              serviceEndpoint: 'https://pds.example.com',
+            },
+          ],
+        })
+      }
+
+      if (url.toString() === 'https://pds.example.com/.well-known/oauth-protected-resource') {
+        return Response.json({
+          authorization_servers: ['https://auth.example.com'],
+        })
+      }
+
+      if (url.toString() === 'https://auth.example.com/.well-known/oauth-authorization-server') {
+        return Response.json(
+          createAtmosphereAuthorizationServerMetadata('https://auth.example.com'),
+        )
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`)
+    })
+
+    try {
+      let atmosphereProvider = createAtmosphereAuthProvider({
+        clientId: 'https://app.example.com/oauth/client-metadata.json',
+        redirectUri: 'https://app.example.com/auth/atmosphere/callback',
+        sessionSecret: 'atmosphere-session-secret',
+      })
+      let preparePromise = atmosphereProvider.prepare('slow-dns.example.com')
+
+      await timers.advanceAsync(500)
+      await preparePromise
+      await dnsHandleAbortPromise
+    } finally {
+      restoreFetch()
+    }
+  })
+
   it('resolves path-based did:web documents', async () => {
     let cookie = createCookie('__session', { secrets: ['secret1'] })
     let sessionStorage = createMemorySessionStorage()
@@ -606,6 +830,18 @@ function toRequestUrl(input: RequestInfo | URL): URL {
   }
 
   return new URL(input.url)
+}
+
+function toRequestSignal(input: RequestInfo | URL, init?: RequestInit): AbortSignal | undefined {
+  if (init?.signal != null) {
+    return init.signal
+  }
+
+  if (input instanceof Request) {
+    return input.signal
+  }
+
+  return undefined
 }
 
 function decodeJwt(token: string): {
