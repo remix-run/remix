@@ -123,7 +123,9 @@ function getGuidesMarkedExtension(options: { highlightCode?: boolean } = {}): Ma
     ],
     renderer: {
       code(code) {
-        return code.escaped ? code.text : `<pre><code>${escapeHtml(code.text)}</code></pre>\n`
+        return renderCodeBlock(
+          code.escaped ? code.text : `<pre><code>${escapeHtml(code.text)}</code></pre>\n`,
+        )
       },
       heading(token) {
         let heading = readHeadingContent(token.text)
@@ -251,6 +253,10 @@ async function renderMarkdownBody(source: string): Promise<RemixNode[]> {
 
 function MarkdownHtml(handle: Handle<{ html: string }>) {
   return () => <div class="rmx-page-body" innerHTML={handle.props.html} />
+}
+
+function renderCodeBlock(html: string): string {
+  return `<div class="docs-code-block" data-code-block>${html}<button class="docs-code-block__copy" type="button" data-code-block-copy aria-label="Copy code to clipboard"><span class="docs-code-block__copy-label">Copy code to clipboard</span></button></div>`
 }
 
 function readHeadingContent(value: string): HeadingContent {
