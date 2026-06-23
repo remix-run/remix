@@ -1,5 +1,6 @@
 import type { Handle, RemixNode } from 'remix/ui'
 
+import { CodeBlockCopyButtons, codeBlockCopyStyles } from '../../assets/code-block-copy.tsx'
 import { DocsTableOfContents } from './table-of-contents.tsx'
 import type { DocsHeadingLink } from './table-of-contents.tsx'
 import { routes } from '../../routes.ts'
@@ -64,53 +65,60 @@ function SiteHeader() {
 }
 
 export function DocsChapter(handle: Handle<DocsChapterProps>) {
-  return () => (
-    <DocsDocument title={handle.props.title} description={handle.props.description}>
-      <div class="docs-layout">
-        <article class="docs-article">
-          <nav class="docs-breadcrumb">
-            <a href={routes.docs.index.href()}>Docs</a>
-            <span class="docs-breadcrumb__sep">/</span>
-            <span>{handle.props.title}</span>
-          </nav>
+  return () => {
+    let sectionsId = `${handle.id}-sections`
 
-          <header class="docs-chapter-header">
-            <p class="docs-chapter-eyebrow text-red-brand">{handle.props.chapter}</p>
-            <h1 class="rmx-page-title">{handle.props.title}</h1>
-            <p class="rmx-page-body">{handle.props.description}</p>
-          </header>
+    return (
+      <DocsDocument title={handle.props.title} description={handle.props.description}>
+        <div class="docs-layout">
+          <article class="docs-article">
+            <nav class="docs-breadcrumb">
+              <a href={routes.docs.index.href()}>Docs</a>
+              <span class="docs-breadcrumb__sep">/</span>
+              <span>{handle.props.title}</span>
+            </nav>
 
-          <div class="docs-sections">{handle.props.children}</div>
+            <header class="docs-chapter-header">
+              <p class="docs-chapter-eyebrow text-red-brand">{handle.props.chapter}</p>
+              <h1 class="rmx-page-title">{handle.props.title}</h1>
+              <p class="rmx-page-body">{handle.props.description}</p>
+            </header>
 
-          <nav aria-label="Chapter navigation" class="docs-pagination">
-            {handle.props.previous ? (
-              <ChapterPaginationLink
-                label="Previous"
-                href={handle.props.previous.href}
-                title={handle.props.previous.title}
-                align="left"
-              />
-            ) : (
-              <div />
-            )}
-            {handle.props.next ? (
-              <ChapterPaginationLink
-                label="Next"
-                href={handle.props.next.href}
-                title={handle.props.next.title}
-                align="right"
-              />
-            ) : null}
-          </nav>
-        </article>
+            <div id={sectionsId} class="docs-sections" mix={codeBlockCopyStyles}>
+              {handle.props.children}
+            </div>
+            <CodeBlockCopyButtons rootId={sectionsId} />
 
-        <aside class="docs-aside">
-          <h2 class="docs-toc__heading">On this page</h2>
-          <DocsTableOfContents headings={handle.props.sections} />
-        </aside>
-      </div>
-    </DocsDocument>
-  )
+            <nav aria-label="Chapter navigation" class="docs-pagination">
+              {handle.props.previous ? (
+                <ChapterPaginationLink
+                  label="Previous"
+                  href={handle.props.previous.href}
+                  title={handle.props.previous.title}
+                  align="left"
+                />
+              ) : (
+                <div />
+              )}
+              {handle.props.next ? (
+                <ChapterPaginationLink
+                  label="Next"
+                  href={handle.props.next.href}
+                  title={handle.props.next.title}
+                  align="right"
+                />
+              ) : null}
+            </nav>
+          </article>
+
+          <aside class="docs-aside">
+            <h2 class="docs-toc__heading">On this page</h2>
+            <DocsTableOfContents headings={handle.props.sections} />
+          </aside>
+        </div>
+      </DocsDocument>
+    )
+  }
 }
 
 function ChapterPaginationLink(

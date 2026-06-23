@@ -1,3 +1,5 @@
+import * as path from 'node:path'
+
 import { asyncContext } from 'remix/middleware/async-context'
 import { compression } from 'remix/middleware/compression'
 import { logger } from 'remix/middleware/logger'
@@ -21,12 +23,14 @@ declare module 'remix/router' {
   }
 }
 
+const publicDir = path.resolve(import.meta.dirname, '../public')
+
 export function createGuidesRouter() {
   let router = createRouter<AppContext>({
     middleware: [
       ...(process.env.NODE_ENV === 'development' ? [logger()] : []),
       compression(),
-      staticFiles('./public', { index: false }),
+      staticFiles(publicDir, { index: false }),
       asyncContext(),
       loadAssetEntry(),
       render(),
