@@ -4,6 +4,8 @@ import { codeToHtml } from 'shiki'
 import { Frame } from 'remix/ui'
 import type { Handle, RemixNode } from 'remix/ui'
 
+// front-matter's CommonJS default is callable at runtime, but its NodeNext namespace
+// type is not, so keep the interop assertion isolated here.
 const parseFrontmatter = frontmatter.default as unknown as (markdown: string) => {
   attributes: Record<string, unknown>
   body: string

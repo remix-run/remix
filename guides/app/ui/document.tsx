@@ -1,7 +1,6 @@
 import type { Handle, RemixNode } from 'remix/ui'
 
-import { DevRefresh } from '../assets/dev-refresh.ts'
-import { routes } from '../routes.ts'
+import { getAssetEntry } from '../middleware/asset-entry.ts'
 
 export interface DocumentProps {
   children?: RemixNode
@@ -15,6 +14,7 @@ const DEFAULT_TITLE = 'Remix Docs'
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { children, head, title = DEFAULT_TITLE, description } = handle.props
+    let { scriptSrc, scriptPreloads, devRefreshScriptSrc } = getAssetEntry()
 
     return (
       <html lang="en">
@@ -24,13 +24,16 @@ export function Document(handle: Handle<DocumentProps>) {
           {description ? <meta name="description" content={description} /> : null}
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           <link rel="stylesheet" href="/docs.css" />
+          {scriptPreloads.map((href) => (
+            <link key={href} rel="modulepreload" href={href} />
+          ))}
           <title>{title}</title>
           {head}
         </head>
         <body>
           {children}
-          {process.env.NODE_ENV !== 'production' ? <DevRefresh /> : null}
-          <script type="module" src={routes.assets.href({ path: 'app/assets/entry.ts' })}></script>
+          {devRefreshScriptSrc ? <script type="module" src={devRefreshScriptSrc}></script> : null}
+          <script type="module" src={scriptSrc}></script>
         </body>
       </html>
     )

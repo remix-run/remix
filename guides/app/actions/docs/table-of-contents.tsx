@@ -10,9 +10,7 @@ export function DocsTableOfContents(handle: Handle<{ headings: DocsHeadingLink[]
     <ol class="docs-toc__list">
       {handle.props.headings.map((heading) => (
         <li key={heading.id}>
-          <a href={`#${heading.id}`} rmx-document>
-            {heading.title}
-          </a>
+          <a href={`#${heading.id}`}>{heading.title}</a>
         </li>
       ))}
     </ol>

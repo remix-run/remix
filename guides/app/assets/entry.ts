@@ -32,15 +32,21 @@ app.ready().catch((error: unknown) => {
   console.error('Remix UI failed to start:', error)
 })
 
-// TODO: get rid of this, it's a hack because I'm running into a bug and I'm tired boss
+// HACK: `remix/ui` currently intercepts same-document hash navigations because
+// the current Navigation API entry has Remix runtime state. That breaks native
+// hash scrolling/history, including refresh and back/forward after using the docs
+// table of contents. Stop only fragment navigations before the Remix listener sees
+// them so the browser keeps owning this behavior. Remove this once `remix/ui`'s
+// navigation runtime ignores same-document hash navigations itself.
 function startHashNavigationGuard() {
   let navigation = (window as Window & { navigation?: EventTarget }).navigation
+  if (!navigation) return
 
-  navigation?.addEventListener(
+  navigation.addEventListener(
     'navigate',
     (event) => {
-      let destinationUrl = (event as Event & { destination?: { url?: string } }).destination?.url
-      if (destinationUrl && isSameDocumentUrl(destinationUrl)) {
+      let href = (event as Event & { destination?: { url?: string } }).destination?.url
+      if (href && isSameDocumentHashUrl(href)) {
         event.stopImmediatePropagation()
       }
     },
@@ -48,12 +54,13 @@ function startHashNavigationGuard() {
   )
 }
 
-function isSameDocumentUrl(href: string) {
+function isSameDocumentHashUrl(href: string) {
   let current = new URL(window.location.href)
-  let destination = new URL(href)
+  let destination = new URL(href, current)
 
-  current.hash = ''
-  destination.hash = ''
+  if (current.origin !== destination.origin) return false
+  if (current.pathname !== destination.pathname) return false
+  if (current.search !== destination.search) return false
 
-  return current.href === destination.href
+  return current.hash !== '' || destination.hash !== ''
 }

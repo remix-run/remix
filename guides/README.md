@@ -1,39 +1,33 @@
 # Remix Guides
 
-A runnable Remix app that hosts the in-progress Remix 3 guide docs. Run it
-locally to browse and flesh out the chapters.
+A runnable Remix app for the in-progress Remix 3 guide docs. Use it to browse, write, and test narrative docs with live Remix examples.
 
-This is the narrative/guide documentation (Start Here, Core App Structure, …).
-The auto-generated API reference lives separately in [`../docs`](../docs).
+The guides are the hand-authored docs: Start Here, Core App Structure, Server Runtime, and the rest of the chapter sequence. The generated API reference lives in [`../docs`](../docs).
 
-## App Shape
+## Where things live
 
-- `server.ts` boots a Node HTTP server backed by the Remix router.
-- `app/routes.ts` defines the route contract (`/`, `/docs`, generic `/docs/:chapter`, and generic `/docs/examples/:chapter/:example`).
-- `app/router.ts` wires routes to controllers and installs middleware.
-- `app/middleware/render.ts` installs the request-scoped `render` function and exports `AppContext`.
-- `app/ui/document.tsx` is the HTML document shell (links in `public/docs.css`).
-- `app/controllers/docs/` holds the docs:
-  - `controller.tsx` maps the docs index and generic chapter route to handlers.
-  - `index-page.tsx` renders the docs landing page / table of contents from Markdown chapters.
-  - `shared.tsx` holds the shared docs document and chapter layout.
-  - `markdown.tsx` renders guide Markdown with Marked/Shiki and splits out frame directives.
-  - `markdown-chapters.tsx` loads `chapters/*.md`, derives slugs/chapter labels/navigation from file names, and renders chapter pages.
-  - `chapters/01..16-*.md` are the guide chapters.
-  - `examples/controller.ts` dispatches `/docs/examples/:chapter/:example` frame routes.
-  - `examples/<chapter>/<example>.tsx` holds individual frame examples with co-located client entries.
-- `public/docs.css` is a small hand-written stylesheet for shared docs chrome; examples keep their own styles co-located with `css(...)` mixins.
+- `app/actions/controller.tsx` — top-level route actions such as assets and the root redirect.
+- `app/actions/docs/chapters/*.md` — guide chapters.
+- `app/actions/docs/markdown.tsx` — Markdown rendering, syntax highlighting, heading IDs, and `:::frame` parsing.
+- `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, and summaries.
+- `app/actions/docs/examples/` — frame-backed examples used by chapters.
+- `app/assets/` — browser entrypoints and other browser-owned modules.
+- `app/middleware/asset-entry.ts` — source-served browser module hrefs and preloads.
+- `app/middleware/render.ts` — the request-scoped `render()` helper and frame resolver.
+- `app/routes.ts` and `app/router.ts` — the typed route contract and controller wiring.
+- `app/ui/` — shared UI used across routes.
+- `app/utils/assets.ts` — the source asset server configuration.
+- `public/docs.css` — shared docs chrome styles.
 
-## Adding content
+## How chapters work
 
-Markdown chapters live in `app/controllers/docs/chapters/`. The file name controls the chapter order, chapter label, slug, URL, and previous/next pagination:
+Chapter files live in `app/actions/docs/chapters/`. The file name controls order, chapter label, URL slug, and previous/next links:
 
 ```txt
 01-start-here.md -> Chapter 1 -> /docs/start-here
 ```
 
-Put the human-authored metadata in frontmatter, then start each section with a level-2 heading.
-Explicit heading IDs keep links stable:
+Each chapter needs frontmatter and level-2 headings with explicit IDs:
 
 ```md
 ---
@@ -44,31 +38,45 @@ description: A high-level introduction to Remix.
 ## Build your first page {#build-your-first-page}
 ```
 
-Embed dynamic Remix examples with a frame directive:
+Level-2 headings power the docs index and "On this page" navigation.
+
+## Adding frame examples
+
+Use a frame directive in Markdown:
 
 ```md
 :::frame /docs/examples/start-here/server-clock
 :::
 ```
 
-The renderer uses each level-2 heading to build the "On this page" sidebar and
-the docs index automatically.
+Then add the matching example module:
 
-Add an example by creating `app/controllers/docs/examples/<chapter>/<example>.tsx` and
-exporting a `handler(context)` function. Client entries can live beside it, such as in
-`app/controllers/docs/examples/<chapter>/client.tsx`. No route or router changes are
-needed for each new example.
+```txt
+app/actions/docs/examples/start-here/server-clock.tsx
+```
+
+```tsx
+import type { AppContext } from '../../../../router.ts'
+
+export async function handler({ render }: AppContext) {
+  return render(<p>Hello from a frame.</p>)
+}
+```
+
+No route changes are needed. The examples controller maps `/docs/examples/:chapter/:example` to `examples/<chapter>/<example>.tsx`, dynamically imports the module, and calls its named `handler` export.
+
+At render time, `markdown.tsx` turns the directive into `<Frame src="..." />`. The render middleware resolves that frame by doing an internal `router.fetch()` for the frame URL, so examples are normal Remix routes that return normal `Response` objects. Co-located client entries can live beside the example in `examples/<chapter>/<example>.client.tsx`.
 
 ## Commands
 
-Run from the repo root or from this directory.
+Run from the repo root or from `guides/`.
 
 ```sh
-pnpm install            # once, from the repo root
-pnpm --filter remix-guides run dev    # watch + serve
-pnpm --filter remix-guides run start  # serve once
+pnpm install                            # once, from the repo root
+pnpm --filter remix-guides run dev      # watch + serve
+pnpm --filter remix-guides run start    # serve once
+pnpm --filter remix-guides run validate # check frame URLs and example files
 pnpm --filter remix-guides run typecheck
 ```
 
-The dev server listens on http://localhost:44100 (set `PORT` to override).
-`/` redirects to `/docs`.
+The dev server listens on http://localhost:44100 by default. Set `PORT` to override. `/` redirects to `/docs`.

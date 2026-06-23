@@ -1,10 +1,10 @@
 import { renderWith } from 'remix/middleware/render'
-import type { MiddlewareContext, RequestContext } from 'remix/router'
+import type { RequestContext } from 'remix/router'
 import { createHtmlResponse } from 'remix/response/html'
 import type { RemixNode } from 'remix/ui'
 import { renderToStream, type ResolveFrameContext } from 'remix/ui/server'
 
-import { assetServer } from '../assets.ts'
+import { assetServer } from '../utils/assets.ts'
 
 export function render() {
   return renderWith(
@@ -15,7 +15,6 @@ export function render() {
           signal: context.request.signal,
           resolveFrame: (src, target, frameContext) =>
             resolveFrame(context, src, target, frameContext),
-          // Server rendering turns client entries into browser module URLs.
           async resolveClientEntry(entryId, component) {
             if (!entryId.startsWith('file://')) {
               throw new Error(
@@ -23,10 +22,18 @@ export function render() {
               )
             }
 
+            let exportName = entryId.split('#')[1] || component.name
+            if (!exportName) {
+              throw new Error(`Unable to resolve client entry export for ${entryId}`)
+            }
+
             return {
               href: await assetServer.getHref(entryId),
-              exportName: entryId.split('#')[1] || component.name,
+              exportName,
             }
+          },
+          onError(error) {
+            console.error(error)
           },
         })
 
@@ -34,8 +41,6 @@ export function render() {
       },
   )
 }
-
-export type AppContext = MiddlewareContext<[ReturnType<typeof render>]>
 
 async function resolveFrame(
   context: RequestContext,
