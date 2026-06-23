@@ -410,3 +410,11 @@ pre code {
   color: var(--fg-muted);
   border-left: 3px solid var(--border);
 }
+
+.rmx-page-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 1.5rem 0;
+  border-radius: 0.75rem;
+}
