@@ -2,22 +2,32 @@ import type { Parse, ParsedPattern, Separator, Token } from './parse.ts'
 import type { StartsWithSeparator, Stringify } from './stringify.ts'
 
 /** Join two pattern source strings together at the type level. */
-export type JoinPatterns<A extends string, B extends string> = _JoinPatterns<Parse<A>, Parse<B>>
+export type JoinPatterns<A extends string, B extends string> = string extends A | B
+  ? string
+  : _JoinPatterns<Parse<A>, Parse<B>>
 
-type _JoinPatterns<A extends ParsedPattern, B extends ParsedPattern> = Stringify<{
-  protocol: JoinOriginField<A, B, 'protocol'>
-  hostname: JoinOriginField<A, B, 'hostname'>
-  port: JoinOriginField<A, B, 'port'>
-  pathname: JoinPathnames<A['pathname'], B['pathname']>
-  search: JoinSearch<A['search'], B['search']>
-}>
+// oxfmt-ignore
+type _JoinPatterns<A, B> =
+  A extends never ? never :
+  B extends never ? never :
+  A extends ParsedPattern ?
+    B extends ParsedPattern ?
+      Stringify<{
+        protocol: JoinOriginField<A, B, 'protocol'>
+        hostname: JoinOriginField<A, B, 'hostname'>
+        port: JoinOriginField<A, B, 'port'>
+        pathname: JoinPathnames<A['pathname'], B['pathname']>
+        search: JoinSearch<A['search'], B['search']>
+      }> :
+      never :
+    never
 
 // oxfmt-ignore
 type JoinOriginField<
   A extends ParsedPattern,
   B extends ParsedPattern,
   Field extends 'protocol' | 'hostname' | 'port'
-> = B['hostname'] extends Token[] ? B[Field] : A[Field]
+> = B[Field] extends undefined ? A[Field] : B[Field]
 
 // oxfmt-ignore
 type JoinPathnames<A extends Token[] | undefined, B extends Token[] | undefined> =

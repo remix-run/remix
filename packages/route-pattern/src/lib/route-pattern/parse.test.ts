@@ -3,8 +3,8 @@ import { describe, it } from '@remix-run/test'
 import dedent from 'dedent'
 
 import { ParseError, parsePart, parsePattern } from './parse.ts'
-import { RoutePattern } from '../route-pattern.ts'
-import type { PartPattern } from '../route-pattern.ts'
+import { createRoutePattern, RoutePattern } from '../route-pattern.ts'
+import type { RoutePatternParts, PartPattern } from '../route-pattern.ts'
 
 describe('ParseError', () => {
   it('exposes type, source, and index properties', () => {
@@ -245,7 +245,7 @@ describe('RoutePattern', () => {
   })
 
   it('derives source from parsed parts', () => {
-    let pattern = new RoutePattern({
+    let pattern = createRoutePattern({
       protocol: null,
       hostname: null,
       port: null,
@@ -262,7 +262,7 @@ describe('parsePattern', () => {
   function assertParse(
     source: string,
     expected: {
-      protocol?: RoutePattern['protocol']
+      protocol?: RoutePatternParts['protocol']
       hostname?: string
       port?: string
       pathname?: string
@@ -277,28 +277,19 @@ describe('parsePattern', () => {
         expectedSearch.set(name, value.length === 0 ? new Set() : new Set(value))
       }
     }
-    assert.deepEqual(
-      {
-        protocol: pattern.protocol,
-        hostname: pattern.hostname,
-        port: pattern.port,
-        pathname: pattern.pathname,
-        search: pattern.search,
-      },
-      {
-        protocol: expected.protocol ?? null,
-        hostname: expected.hostname ? parsePart(expected.hostname, { type: 'hostname' }) : null,
-        port: expected.port ?? null,
-        pathname: parsePart(expected.pathname ?? '', { type: 'pathname' }),
-        search: expectedSearch,
-      },
-    )
+    assert.deepEqual(pattern._parts, {
+      protocol: expected.protocol ?? null,
+      hostname: expected.hostname ? parsePart(expected.hostname, { type: 'hostname' }) : null,
+      port: expected.port ?? null,
+      pathname: parsePart(expected.pathname ?? '', { type: 'pathname' }),
+      search: expectedSearch,
+    })
   }
 
   it('parses protocol', () => {
-    assert.equal(parsePattern('http://').protocol, 'http')
-    assert.equal(parsePattern('https://').protocol, 'https')
-    assert.equal(parsePattern('http(s)://').protocol, 'http(s)')
+    assert.equal(parsePattern('http://')._parts.protocol, 'http')
+    assert.equal(parsePattern('https://')._parts.protocol, 'https')
+    assert.equal(parsePattern('http(s)://')._parts.protocol, 'http(s)')
   })
 
   it('parses hostname', () => {
@@ -404,6 +395,17 @@ describe('parsePattern', () => {
     assert.throws(() => parsePattern('http(s)x://example.com'), {
       name: 'ParseError',
       type: 'invalid protocol',
+    })
+  })
+
+  it('throws on port without hostname', () => {
+    assert.throws(() => parsePattern('://:8080/users'), {
+      name: 'ParseError',
+      type: 'missing hostname',
+    })
+    assert.throws(() => parsePattern('http://:80/users'), {
+      name: 'ParseError',
+      type: 'missing hostname',
     })
   })
 

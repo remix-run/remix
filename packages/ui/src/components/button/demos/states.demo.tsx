@@ -1,7 +1,5 @@
-import * as button from '@remix-run/ui/button'
-import { css } from '@remix-run/ui'
-import { Glyph } from '@remix-run/ui/glyph'
-import { theme } from '@remix-run/ui/theme'
+import * as button from '@remix-run/ui/components/button'
+import { css, type Handle, type Props } from '@remix-run/ui'
 
 /**
  * @name Button States
@@ -13,13 +11,13 @@ export default function Example() {
   return () => (
     <div mix={buttonRowCss}>
       <button mix={[button.baseStyle, button.primaryStyle]}>
-        <Glyph mix={button.iconStyle} name="add" />
+        <AddIcon mix={button.iconStyle} />
         <span mix={button.labelStyle}>New issue</span>
       </button>
 
       <button mix={[button.baseStyle, button.ghostStyle]}>
         <span mix={button.labelStyle}>Open</span>
-        <Glyph mix={button.iconStyle} name="chevronRight" />
+        <ChevronRightIcon mix={button.iconStyle} />
       </button>
 
       <button disabled mix={[button.baseStyle, button.secondaryStyle]}>
@@ -27,20 +25,54 @@ export default function Example() {
       </button>
 
       <button aria-busy="true" mix={[button.baseStyle, button.secondaryStyle]}>
-        <Glyph mix={[button.iconStyle, spinnerGlyphCss, spinCss]} name="spinner" />
+        <SpinnerIcon mix={[button.iconStyle, spinnerIconCss, spinCss]} />
         <span mix={button.labelStyle}>Saving</span>
       </button>
     </div>
   )
 }
 
+function AddIcon(handle: Handle<Props<'svg'>>) {
+  return () => (
+    <svg {...handle.props} aria-hidden="true" fill="none" viewBox="0 0 16 16">
+      <path
+        d="M8 3.25v9.5M3.25 8h9.5"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-width="1.5"
+      />
+    </svg>
+  )
+}
+
+function ChevronRightIcon(handle: Handle<Props<'svg'>>) {
+  return () => (
+    <svg {...handle.props} aria-hidden="true" fill="none" viewBox="0 0 16 16">
+      <path d="m6 4 4 4-4 4" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" />
+    </svg>
+  )
+}
+
+function SpinnerIcon(handle: Handle<Props<'svg'>>) {
+  return () => (
+    <svg {...handle.props} aria-hidden="true" fill="none" viewBox="0 0 16 16">
+      <path
+        d="M8 2.5a5.5 5.5 0 1 1-5.5 5.5"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-width="1.5"
+      />
+    </svg>
+  )
+}
+
 const buttonRowCss = css({
   display: 'flex',
   alignItems: 'center',
-  gap: theme.space.sm,
+  gap: '8px',
 })
 
-const spinnerGlyphCss = css({
+const spinnerIconCss = css({
   opacity: 0.72,
 })
 

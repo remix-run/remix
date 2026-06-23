@@ -2,6 +2,16 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.22.1
+
+### Patch Changes
+
+- Fixed `createHref()` so optional route params set to `null` are omitted instead of serialized as `"null"`, and empty pathname variables throw instead of generating hrefs that cannot match their pattern.
+
+- Fixed route matching so malformed percent-encoded pathnames return no match instead of throwing a `URIError`.
+
+- Fixed route matching for full URL patterns that include explicit default ports such as `http://example.com:80/path` and `https://example.com:443/path` (see #11510).
+
 ## v0.22.0
 
 ### Minor Changes
@@ -677,7 +687,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   ```ts
   import * as Specificity from '@remix-run/route-pattern/specificity'
 
-  Specificity.lessThan(a, b) // `true` when `a` is more specific than `b`. `false` otherwise
+  Specificity.lessThan(a, b) // `true` when `a` is less specific than `b`. `false` otherwise
   Specificity.greaterThan(a, b)
   Specificity.equal(a, b)
 

@@ -16,11 +16,15 @@ export type DemoFile = {
 
 export type DemoLayout = 'center'
 
-const UI_DIRECTORY = path.resolve(url.fileURLToPath(new URL('../../..', import.meta.url)))
+const DEMO_DIRECTORY = path.resolve(url.fileURLToPath(new URL('../..', import.meta.url)))
+const UI_DIRECTORY = path.resolve(DEMO_DIRECTORY, '..')
+const DEMO_ROOTS = [path.join(DEMO_DIRECTORY, 'cases'), path.join(UI_DIRECTORY, 'src')]
 const DEMO_FILE_REGEX = /\.demo\.(tsx|ts)$/
 
 export function discoverDemoFiles(): DemoFile[] {
-  return walkDemoFiles(UI_DIRECTORY).map(createDemoFile).sort(compareDemoFiles)
+  return DEMO_ROOTS.flatMap((root) => walkDemoFiles(root))
+    .map(createDemoFile)
+    .sort(compareDemoFiles)
 }
 
 export function findDemoFile(filename: string) {
@@ -31,7 +35,7 @@ export function findDemoFile(filename: string) {
 }
 
 export function getDemoDirectory() {
-  return UI_DIRECTORY
+  return DEMO_DIRECTORY
 }
 
 export async function loadDemoModule(
@@ -48,7 +52,7 @@ export async function loadDemoModule(
 }
 
 function createDemoFile(absolutePath: string): DemoFile {
-  let relativePath = path.relative(UI_DIRECTORY, absolutePath).split(path.sep).join('/')
+  let relativePath = getRelativeDemoPath(absolutePath)
   let source = fs.readFileSync(absolutePath, 'utf8')
   let metadata = readDemoMetadata(source)
 
@@ -63,6 +67,16 @@ function createDemoFile(absolutePath: string): DemoFile {
     relativePath,
     title: metadata.name ?? humanizeDemoPath(relativePath),
   }
+}
+
+function getRelativeDemoPath(absolutePath: string) {
+  let relativePath = path.relative(UI_DIRECTORY, absolutePath).split(path.sep).join('/')
+
+  if (relativePath.startsWith('demo/cases/')) {
+    return relativePath.slice('demo/'.length)
+  }
+
+  return relativePath
 }
 
 function compareDemoFiles(a: DemoFile, b: DemoFile) {
@@ -153,6 +167,10 @@ function toAssetPath(relativePath: string) {
 
 function walkDemoFiles(directory: string): string[] {
   let files: string[] = []
+
+  if (!fs.existsSync(directory)) {
+    return files
+  }
 
   for (let entry of fs.readdirSync(directory, { withFileTypes: true })) {
     if (shouldIgnoreEntry(entry.name)) continue

@@ -1,9 +1,10 @@
 import * as assert from 'node:assert/strict'
+import type { TestContext } from 'node:test'
 import { describe, it } from 'node:test'
 import type * as http from 'node:http'
 import * as stream from 'node:stream'
 
-import { type FetchHandler } from './fetch-handler.ts'
+import { type ClientAddress, type FetchHandler } from './fetch-handler.ts'
 import { createRequest, createRequestListener } from './request-listener.ts'
 
 describe('createRequestListener', () => {
@@ -326,6 +327,343 @@ describe('createRequestListener', () => {
     assert.equal(end.mock.calls.length, 0)
   })
 
+  it('does not send an error response when a response stream errors after headers are sent', async (t) => {
+    let encoder = new TextEncoder()
+    let streamError = new Error('boom after commit')
+    let errorHandler = t.mock.fn(() => new Response('fallback', { status: 500 }))
+    let handler: FetchHandler = (_request) =>
+      new Response(
+        new ReadableStream({
+          pull(controller) {
+            if (chunks.length === 0) {
+              controller.enqueue(encoder.encode('partial'))
+            } else {
+              controller.error(streamError)
+            }
+          },
+        }),
+      )
+
+    let listener = createRequestListener(handler, { onError: errorHandler })
+    assert.ok(listener)
+
+    let req = createMockRequest()
+    req.httpVersionMajor = 1
+
+    let writeHeadCalls = 0
+    let endCalls = 0
+    let destroyedError: Error | undefined
+    let chunks: Uint8Array[] = []
+
+    let responseFinished = new Promise<void>((resolve) => {
+      let res = Object.assign(new stream.Writable(), {
+        req,
+        writeHead() {
+          writeHeadCalls++
+        },
+        write(chunk: Uint8Array) {
+          chunks.push(chunk)
+          return true
+        },
+        end() {
+          endCalls++
+          resolve()
+        },
+        destroy(error?: Error) {
+          destroyedError = error
+          res.emit('close')
+          resolve()
+          return res
+        },
+      }) as unknown as http.ServerResponse
+
+      Object.defineProperty(res, 'headersSent', {
+        get() {
+          return writeHeadCalls > 0
+        },
+      })
+
+      listener(req, res)
+    })
+
+    await waitFor(
+      responseFinished,
+      100,
+      'Expected the response to end or close after the stream error',
+    )
+
+    assert.equal(writeHeadCalls, 1)
+    assert.equal(errorHandler.mock.calls.length, 1)
+    assert.equal(endCalls, 0)
+    assert.equal(destroyedError, streamError)
+    assert.equal(Buffer.concat(chunks).toString(), 'partial')
+  })
+
+  it('destroys the response without waiting for a slow error handler for committed stream errors', async (t) => {
+    let encoder = new TextEncoder()
+    let streamError = new Error('boom after commit')
+    let resolveErrorHandler!: () => void
+    let errorHandlerStarted = false
+    let errorHandlerFinished = false
+    let errorHandler = t.mock.fn(async () => {
+      errorHandlerStarted = true
+      await new Promise<void>((resolve) => {
+        resolveErrorHandler = resolve
+      })
+      errorHandlerFinished = true
+      return new Response('fallback', { status: 500 })
+    })
+    let handler: FetchHandler = (_request) =>
+      new Response(
+        new ReadableStream({
+          pull(controller) {
+            if (chunks.length === 0) {
+              controller.enqueue(encoder.encode('partial'))
+            } else {
+              controller.error(streamError)
+            }
+          },
+        }),
+      )
+
+    let listener = createRequestListener(handler, { onError: errorHandler })
+    assert.ok(listener)
+
+    let req = createMockRequest()
+    req.httpVersionMajor = 1
+
+    let writeHeadCalls = 0
+    let destroyedError: Error | undefined
+    let chunks: Uint8Array[] = []
+
+    let responseDestroyed = new Promise<void>((resolve) => {
+      let res = Object.assign(new stream.Writable(), {
+        req,
+        writeHead() {
+          writeHeadCalls++
+        },
+        write(chunk: Uint8Array) {
+          chunks.push(chunk)
+          return true
+        },
+        end() {},
+        destroy(error?: Error) {
+          destroyedError = error
+          res.emit('close')
+          resolve()
+          return res
+        },
+      }) as unknown as http.ServerResponse
+
+      Object.defineProperty(res, 'headersSent', {
+        get() {
+          return writeHeadCalls > 0
+        },
+      })
+
+      listener(req, res)
+    })
+
+    await waitFor(
+      responseDestroyed,
+      100,
+      'Expected the response to be destroyed before the slow error handler resolved',
+    )
+
+    assert.equal(writeHeadCalls, 1)
+    assert.equal(errorHandler.mock.calls.length, 1)
+    assert.equal(errorHandlerStarted, true)
+    assert.equal(errorHandlerFinished, false)
+    assert.equal(destroyedError, streamError)
+    assert.equal(Buffer.concat(chunks).toString(), 'partial')
+
+    resolveErrorHandler()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    assert.equal(errorHandlerFinished, true)
+  })
+
+  it('rejects lazy request body reads when the request aborts before ending', async (t) => {
+    await assertLazyRequestBodyReadRejects(
+      t,
+      (request) => request.text(),
+      (req) => {
+        req.emit('aborted')
+        req.emit('error', new Error('late socket error'))
+      },
+      (error, signalReason) => {
+        assert.equal(error, signalReason)
+        assert.equal((error as DOMException).name, 'AbortError')
+      },
+    )
+  })
+
+  it('rejects lazy buffered request body reads when the request closes before ending', async (t) => {
+    await assertLazyRequestBodyReadRejects(
+      t,
+      (request) => request.arrayBuffer(),
+      (req) => {
+        req.emit('close')
+      },
+      (error, signalReason) => {
+        assert.equal(error, signalReason)
+        assert.equal((error as DOMException).name, 'AbortError')
+      },
+    )
+  })
+
+  it('treats lazy request body errors as request abort errors', async (t) => {
+    let bodyError = new Error('client upload failed')
+
+    await assertLazyRequestBodyReadRejects(
+      t,
+      (request) => request.bytes(),
+      (req) => {
+        req.emit('error', bodyError)
+      },
+      (error, signalReason) => {
+        assert.equal(error, bodyError)
+        assert.equal(signalReason, bodyError)
+      },
+    )
+  })
+
+  it('treats materialized request body errors as request abort errors after response close', async (t) => {
+    let bodyError = new Error('client upload failed')
+    let handlerFinished!: () => void
+    let handlerDone = new Promise<void>((resolve) => {
+      handlerFinished = resolve
+    })
+    let handler: FetchHandler = async (request) => {
+      try {
+        assert.equal(request.url, 'http://localhost/')
+        await request.text()
+        return new Response('ok')
+      } finally {
+        handlerFinished()
+      }
+    }
+    let errorHandler = t.mock.fn()
+
+    let listener = createRequestListener(handler, { onError: errorHandler })
+    assert.ok(listener)
+
+    let req = createPendingMockRequest()
+    let res = createMockResponse({ req })
+    let writeHead = t.mock.method(res, 'writeHead')
+    let write = t.mock.method(res, 'write')
+    let end = t.mock.method(res, 'end')
+
+    listener(req, res)
+    res.emit('close')
+    req.emit('error', bodyError)
+
+    await waitFor(
+      handlerDone,
+      100,
+      'Expected the materialized request body read to settle when the request failed',
+    )
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    assert.equal(errorHandler.mock.calls.length, 0)
+    assert.equal(writeHead.mock.calls.length, 0)
+    assert.equal(write.mock.calls.length, 0)
+    assert.equal(end.mock.calls.length, 0)
+  })
+
+  it('rejects lazy request body reads when the request already aborted', async (t) => {
+    let continueHandler!: () => void
+    let handlerCanContinue = new Promise<void>((resolve) => {
+      continueHandler = resolve
+    })
+
+    await assertLazyRequestBodyReadRejects(
+      t,
+      async (request) => {
+        await handlerCanContinue
+        return await request.text()
+      },
+      (req) => {
+        markMockRequestAborted(req)
+        req.emit('aborted')
+        continueHandler()
+      },
+      (error, signalReason) => {
+        assert.equal(error, signalReason)
+        assert.equal((error as DOMException).name, 'AbortError')
+      },
+    )
+  })
+
+  it('keeps an error listener after already-aborted lazy request body reads', async (t) => {
+    let continueHandler!: () => void
+    let handlerCanContinue = new Promise<void>((resolve) => {
+      continueHandler = resolve
+    })
+    let handlerFinished!: () => void
+    let handlerDone = new Promise<void>((resolve) => {
+      handlerFinished = resolve
+    })
+    let handler: FetchHandler = async (request) => {
+      await handlerCanContinue
+
+      await assert.rejects(request.text(), (error) => {
+        assert.equal(error, request.signal.reason)
+        assert.equal((error as DOMException).name, 'AbortError')
+        return true
+      })
+
+      handlerFinished()
+      return new Response('ok')
+    }
+    let errorHandler = t.mock.fn()
+
+    let listener = createRequestListener(handler, { onError: errorHandler })
+    assert.ok(listener)
+
+    let req = createPendingMockRequest()
+    let res = createMockResponse({ req })
+    let writeHead = t.mock.method(res, 'writeHead')
+    let write = t.mock.method(res, 'write')
+    let end = t.mock.method(res, 'end')
+
+    listener(req, res)
+    markMockRequestAborted(req)
+    req.emit('aborted')
+    continueHandler()
+
+    await waitFor(
+      handlerDone,
+      100,
+      'Expected the lazy request body read to reject when the request had already aborted',
+    )
+
+    assert.doesNotThrow(() => req.emit('error', new Error('late socket error')))
+    assert.equal(errorHandler.mock.calls.length, 0)
+    assert.equal(writeHead.mock.calls.length, 0)
+    assert.equal(write.mock.calls.length, 0)
+    assert.equal(end.mock.calls.length, 0)
+  })
+
+  it('returns a stable signal after materializing lazy requests', async (t) => {
+    await new Promise<void>((resolve) => {
+      let handler: FetchHandler = async (request) => {
+        let signal = request.signal
+        assert.equal(request.url, 'http://localhost/')
+        assert.equal(request.signal, signal)
+        return new Response('ok')
+      }
+
+      let listener = createRequestListener(handler)
+      assert.ok(listener)
+
+      let req = createMockRequest()
+      let res = createMockResponse({ req })
+      t.mock.method(res, 'end', () => resolve())
+
+      listener(req, res)
+    })
+  })
+
   it('uses the `Host` header to construct the URL by default', async () => {
     await new Promise<void>((resolve) => {
       let handler: FetchHandler = async (request) => {
@@ -396,6 +734,193 @@ describe('createRequestListener', () => {
 
       listener(req, res)
       resolve()
+    })
+  })
+
+  it('ignores proxy headers by default', async (t) => {
+    let requestUrl = await captureRequestUrl(t, {
+      headers: {
+        Host: 'example.com',
+        Forwarded: 'for=203.0.113.43; proto=https; host=remix.run',
+        'X-Forwarded-Host': 'remix.run',
+        'X-Forwarded-Proto': 'https',
+      },
+    })
+    assert.equal(requestUrl, 'http://example.com/')
+  })
+
+  it('uses the `Forwarded` proto and host parameters when proxies are trusted', async (t) => {
+    let requestUrl = await captureRequestUrl(
+      t,
+      {
+        headers: {
+          Host: 'example.com',
+          Forwarded: 'for=203.0.113.43; proto=https; host=remix.run',
+        },
+      },
+      { trustProxy: true },
+    )
+    assert.equal(requestUrl, 'https://remix.run/')
+  })
+
+  it('uses quoted `Forwarded` proto and host values when proxies are trusted', async (t) => {
+    let requestUrl = await captureRequestUrl(
+      t,
+      {
+        headers: {
+          Host: 'example.com',
+          Forwarded: 'for="[2001:db8:cafe::17]"; proto="https"; host="remix.run"',
+        },
+      },
+      { trustProxy: true },
+    )
+    assert.equal(requestUrl, 'https://remix.run/')
+  })
+
+  it('uses `X-Forwarded-Host` and `X-Forwarded-Proto` when proxies are trusted', async (t) => {
+    let requestUrl = await captureRequestUrl(
+      t,
+      {
+        headers: {
+          Host: 'example.com',
+          'X-Forwarded-Host': 'remix.run',
+          'X-Forwarded-Proto': 'https',
+        },
+      },
+      { trustProxy: true },
+    )
+    assert.equal(requestUrl, 'https://remix.run/')
+  })
+
+  it('uses the first `X-Forwarded-Host` and `X-Forwarded-Proto` values when proxies are trusted', async (t) => {
+    let requestUrl = await captureRequestUrl(
+      t,
+      {
+        headers: {
+          Host: 'example.com',
+          'X-Forwarded-Host': 'remix.run, example.com',
+          'X-Forwarded-Proto': 'https, http',
+        },
+      },
+      { trustProxy: true },
+    )
+    assert.equal(requestUrl, 'https://remix.run/')
+  })
+
+  it('uses the host option before trusted proxy host headers', async (t) => {
+    let requestUrl = await captureRequestUrl(
+      t,
+      {
+        headers: {
+          Host: 'example.com',
+          Forwarded: 'host=remix.run',
+          'X-Forwarded-Host': 'remix.run',
+        },
+      },
+      {
+        host: 'app.example.com',
+        trustProxy: true,
+      },
+    )
+    assert.equal(requestUrl, 'http://app.example.com/')
+  })
+
+  it('ignores invalid forwarded protocol header values when proxies are trusted', async (t) => {
+    let requestUrl = await captureRequestUrl(
+      t,
+      {
+        headers: {
+          Host: 'example.com',
+          Forwarded: 'proto=javascript',
+          'X-Forwarded-Proto': 'file',
+        },
+      },
+      { trustProxy: true },
+    )
+    assert.equal(requestUrl, 'http://example.com/')
+  })
+
+  it('uses the `protocol` option before trusted proxy protocol headers', async (t) => {
+    let requestUrl = await captureRequestUrl(
+      t,
+      {
+        headers: {
+          Host: 'example.com',
+          Forwarded: 'proto=https',
+        },
+      },
+      {
+        protocol: 'http:',
+        trustProxy: true,
+      },
+    )
+    assert.equal(requestUrl, 'http://example.com/')
+  })
+
+  it('uses `X-Forwarded-For` for client address when proxies are trusted', async (t) => {
+    let client = await captureClientAddress(
+      t,
+      {
+        headers: {
+          'X-Forwarded-For': '203.0.113.43, 10.0.0.1',
+        },
+        socket: {
+          remoteAddress: '10.0.0.1',
+          remoteFamily: 'IPv4',
+          remotePort: 12345,
+        },
+      },
+      { trustProxy: true },
+    )
+
+    assert.deepEqual(client, {
+      address: '203.0.113.43',
+      family: 'IPv4',
+      port: 12345,
+    })
+  })
+
+  it('uses the `Forwarded` for parameter for client address when proxies are trusted', async (t) => {
+    let client = await captureClientAddress(
+      t,
+      {
+        headers: {
+          Forwarded: 'for="[2001:db8:cafe::17]:4711"',
+          'X-Forwarded-For': '203.0.113.43',
+        },
+        socket: {
+          remoteAddress: '10.0.0.1',
+          remoteFamily: 'IPv4',
+          remotePort: 12345,
+        },
+      },
+      { trustProxy: true },
+    )
+
+    assert.deepEqual(client, {
+      address: '2001:db8:cafe::17',
+      family: 'IPv6',
+      port: 4711,
+    })
+  })
+
+  it('ignores proxy client address headers by default', async (t) => {
+    let client = await captureClientAddress(t, {
+      headers: {
+        Forwarded: 'for=203.0.113.43',
+        'X-Forwarded-For': '203.0.113.43',
+      },
+      socket: {
+        remoteAddress: '10.0.0.1',
+        remoteFamily: 'IPv4',
+        remotePort: 12345,
+      },
+    })
+
+    assert.deepEqual(client, {
+      address: '10.0.0.1',
+      family: 'IPv4',
+      port: 12345,
     })
   })
 
@@ -703,7 +1228,252 @@ describe('createRequest abort behavior', () => {
     res.emit('close')
     assert.equal(request.signal.aborted, false)
   })
+
+  it('aborts the request.signal and rejects body reads when the request aborts before ending', async () => {
+    let req = createPendingMockRequest()
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res)
+    let body = request.text()
+
+    req.emit('data', Buffer.from('partial'))
+    req.emit('aborted')
+
+    await waitFor(
+      assert.rejects(body, (error) => {
+        assert.equal(error, request.signal.reason)
+        assert.equal((error as DOMException).name, 'AbortError')
+        return true
+      }),
+      100,
+      'Expected the request body read to reject when the request aborted',
+    )
+
+    assert.equal(request.signal.aborted, true)
+  })
+
+  it('aborts the request.signal and rejects body reads when the request errors before ending', async () => {
+    let req = createPendingMockRequest()
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res)
+    let bodyError = new Error('client upload failed')
+    let body = request.text()
+
+    req.emit('data', Buffer.from('partial'))
+    req.emit('error', bodyError)
+
+    await waitFor(
+      assert.rejects(body, (error) => {
+        assert.equal(error, bodyError)
+        return true
+      }),
+      100,
+      'Expected the request body read to reject when the request errored',
+    )
+
+    assert.equal(request.signal.aborted, true)
+    assert.equal(request.signal.reason, bodyError)
+  })
+
+  it('aborts the request.signal and rejects body reads when the request closes before ending', async () => {
+    let req = createPendingMockRequest()
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res)
+    let body = request.text()
+
+    req.emit('data', Buffer.from('partial'))
+    req.emit('close')
+
+    await waitFor(
+      assert.rejects(body, (error) => {
+        assert.equal(error, request.signal.reason)
+        assert.equal((error as DOMException).name, 'AbortError')
+        return true
+      }),
+      100,
+      'Expected the request body read to reject when the request closed',
+    )
+
+    assert.equal(request.signal.aborted, true)
+  })
+
+  it('ignores request errors after an abort has already rejected the body', async () => {
+    let req = createPendingMockRequest()
+    let res = createMockResponse({ req })
+    let request = createRequest(req, res)
+    let body = request.text()
+
+    req.emit('aborted')
+    req.emit('error', new Error('late socket error'))
+
+    await assert.rejects(body, (error) => {
+      assert.equal(error, request.signal.reason)
+      assert.equal((error as DOMException).name, 'AbortError')
+      return true
+    })
+  })
+
+  it('aborts the request.signal and rejects body reads when the request already aborted', async () => {
+    let req = createPendingMockRequest()
+    let res = createMockResponse({ req })
+
+    markMockRequestAborted(req)
+
+    let request = createRequest(req, res)
+    let body = request.text()
+
+    await waitFor(
+      assert.rejects(body, (error) => {
+        assert.equal(error, request.signal.reason)
+        assert.equal((error as DOMException).name, 'AbortError')
+        return true
+      }),
+      100,
+      'Expected the request body read to reject when the request had already aborted',
+    )
+
+    assert.equal(request.signal.aborted, true)
+    assert.doesNotThrow(() => req.emit('error', new Error('late socket error')))
+  })
 })
+
+async function assertLazyRequestBodyReadRejects(
+  t: TestContext,
+  readBody: (request: Request) => Promise<unknown>,
+  failRequest: (req: http.IncomingMessage) => void,
+  assertError: (error: unknown, signalReason: unknown) => void,
+): Promise<void> {
+  let bodyReadRejected = false
+  let bodyError: unknown
+  let signalReason: unknown
+  let resolveHandlerFinished!: () => void
+  let handlerFinished = new Promise<void>((resolve) => {
+    resolveHandlerFinished = resolve
+  })
+  let handler: FetchHandler = async (request) => {
+    try {
+      await readBody(request)
+      return new Response('ok')
+    } catch (error) {
+      bodyReadRejected = true
+      bodyError = error
+      signalReason = request.signal.reason
+      throw error
+    } finally {
+      assert.equal(request.signal.aborted, true)
+      resolveHandlerFinished()
+    }
+  }
+  let errorHandler = t.mock.fn()
+
+  let listener = createRequestListener(handler, { onError: errorHandler })
+  assert.ok(listener)
+
+  let req = createPendingMockRequest()
+  let res = createMockResponse({ req })
+  let writeHead = t.mock.method(res, 'writeHead')
+  let write = t.mock.method(res, 'write')
+  let end = t.mock.method(res, 'end')
+
+  listener(req, res)
+  req.emit('data', Buffer.from('partial'))
+  failRequest(req)
+
+  await waitFor(
+    handlerFinished,
+    100,
+    'Expected the lazy request body read to settle when the request failed',
+  )
+  await new Promise((resolve) => setTimeout(resolve, 0))
+
+  assert.equal(bodyReadRejected, true)
+  assertError(bodyError, signalReason)
+  assert.equal(errorHandler.mock.calls.length, 0)
+  assert.equal(writeHead.mock.calls.length, 0)
+  assert.equal(write.mock.calls.length, 0)
+  assert.equal(end.mock.calls.length, 0)
+}
+
+async function captureRequestUrl(
+  t: TestContext,
+  requestInit: Parameters<typeof createMockRequest>[0],
+  options?: Parameters<typeof createRequestListener>[1],
+): Promise<string | undefined> {
+  let requestUrl: string | undefined
+
+  await new Promise<void>((resolve) => {
+    let handler: FetchHandler = async (request) => {
+      requestUrl = request.url
+      return new Response('Hello, world!')
+    }
+
+    let listener = createRequestListener(handler, options)
+    assert.ok(listener)
+
+    let req = createMockRequest(requestInit)
+    let res = createMockResponse({ req })
+    t.mock.method(res, 'end', () => resolve())
+
+    listener(req, res)
+  })
+
+  return requestUrl
+}
+
+async function captureClientAddress(
+  t: TestContext,
+  requestInit: Parameters<typeof createMockRequest>[0],
+  options?: Parameters<typeof createRequestListener>[1],
+): Promise<ClientAddress | undefined> {
+  let clientAddress: ClientAddress | undefined
+
+  await new Promise<void>((resolve) => {
+    let handler: FetchHandler = async (_request, client) => {
+      clientAddress = client
+      return new Response('Hello, world!')
+    }
+
+    let listener = createRequestListener(handler, options)
+    assert.ok(listener)
+
+    let req = createMockRequest(requestInit)
+    let res = createMockResponse({ req })
+    t.mock.method(res, 'end', () => resolve())
+
+    listener(req, res)
+  })
+
+  return clientAddress
+}
+
+function markMockRequestAborted(req: http.IncomingMessage): void {
+  Object.defineProperties(req, {
+    aborted: {
+      value: true,
+      configurable: true,
+    },
+    readableAborted: {
+      value: true,
+      configurable: true,
+    },
+  })
+}
+
+function createPendingMockRequest(): http.IncomingMessage {
+  return Object.assign(
+    new stream.Readable({
+      read() {
+        // Keep the request open until the test emits data/end/error events.
+      },
+    }),
+    {
+      url: '/',
+      method: 'POST',
+      rawHeaders: [] as string[],
+      socket: {},
+      headers: {},
+    },
+  ) as http.IncomingMessage
+}
 
 function createMockRequest({
   url = '/',
@@ -718,6 +1488,8 @@ function createMockRequest({
   socket?: {
     encrypted?: boolean
     remoteAddress?: string
+    remoteFamily?: string
+    remotePort?: number
   }
   body?: string | Buffer
 } = {}): http.IncomingMessage {

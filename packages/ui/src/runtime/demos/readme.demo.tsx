@@ -196,12 +196,14 @@ function SlugForm(handle: Handle) {
 function KeyboardTracker(handle: Handle) {
   let keys: string[] = []
 
-  addEventListeners(document, handle.signal, {
-    keydown: (event) => {
-      keys.push(event.key)
-      if (keys.length > 10) keys.shift()
-      handle.update()
-    },
+  handle.queueTask(() => {
+    addEventListeners(document, handle.signal, {
+      keydown: (event) => {
+        keys.push(event.key)
+        if (keys.length > 10) keys.shift()
+        handle.update()
+      },
+    })
   })
 
   return () => <div>Keys: {keys.join(', ') || '(press some keys)'}</div>
@@ -457,14 +459,14 @@ function FormWithScroll(handle: Handle) {
 // handle.signal - Clock
 // ============================================================================
 function Clock(handle: Handle) {
-  let interval = setInterval(() => {
-    // clear the interval when the component is disconnected
-    if (handle.signal.aborted) {
-      clearInterval(interval)
-      return
-    }
-    handle.update()
-  }, 1000)
+  handle.queueTask(() => {
+    let interval = setInterval(() => {
+      handle.update()
+    }, 1000)
+
+    handle.signal.addEventListener('abort', () => clearInterval(interval), { once: true })
+  })
+
   return () => <span>{new Date().toLocaleTimeString()}</span>
 }
 

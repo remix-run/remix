@@ -8,22 +8,22 @@ bench.baseline(() => {
 bench('new > simple route', () => {
   let pattern = RoutePattern.parse('/posts/:id')
   pattern.toString()
-}).types([3, 'instantiations'])
+}).types([4, 'instantiations'])
 
 bench('new > complex route', () => {
   let pattern = RoutePattern.parse('/api(/v:major(.:minor))/*path/help')
   pattern.toString()
-}).types([3, 'instantiations'])
+}).types([4, 'instantiations'])
 
 bench('new > mediarss', async () => {
   let { patterns } = await import('../../patterns/mediarss.ts')
   eagerlyEvaluateTypesForNew(patterns)
-}).types([2648, 'instantiations'])
+}).types([154, 'instantiations'])
 
 bench('new > shopify', async () => {
   let { patterns } = await import('../../patterns/shopify.ts')
   eagerlyEvaluateTypesForNew(patterns)
-}).types([12609, 'instantiations'])
+}).types([10050, 'instantiations'])
 
 /** Type-only utility to force eager evaluation of href param types */
 function eagerlyEvaluateTypesForNew<patterns extends ReadonlyArray<string>>(

@@ -9,17 +9,17 @@ bench.baseline(() => {
 bench('href > simple route', () => {
   let pattern = RoutePattern.parse('/posts/:id')
   createHref(pattern, { id: '123' })
-}).types([493, 'instantiations'])
+}).types([1248, 'instantiations'])
 
 bench('href > complex route', () => {
   let pattern = RoutePattern.parse('/api(/v:major(.:minor))/*path/help')
   createHref(pattern, { major: '1', minor: '2', path: 'users', help: 'help' })
-}).types([1252, 'instantiations'])
+}).types([4944, 'instantiations'])
 
 bench('href > mediarss', async () => {
   let { patterns } = await import('../../patterns/mediarss.ts')
   eagerlyEvaluateTypesForHrefParams(patterns)
-}).types([13867, 'instantiations'])
+}).types([87455, 'instantiations'])
 
 // NOTE: This benchmark brings type checking to a crawl.
 // Uncomment to run the benchmark, but keep it commented to avoid CI failures.

@@ -1,7 +1,7 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
-import { assetServer } from '../server/asset-server.ts'
+import { createAssetServer } from '../server/asset-server.ts'
 import { createRouter, getDefaultVersions } from '../server/router.tsx'
 import { routes } from '../server/routes.ts'
 import { crawl } from './crawl.ts'
@@ -36,7 +36,8 @@ const versions = getVersionsForPicker(buildVersion, getDefaultVersions())
 console.log(`Prerendering ${buildVersion ? buildVersion : 'root'} docs`)
 console.log('Version picker options:\n', JSON.stringify(versions, null, 2))
 
-const docsRouter = createRouter(versions)
+const assetServer = createAssetServer(buildVersion)
+const router = createRouter({ assetServer, versions })
 
 // Copy public files (favicons, wordmarks) to the output root. URLs are
 // unversioned so a single copy at the output root covers every version.
@@ -46,7 +47,7 @@ await fs.cp(publicDir, outputDir, { recursive: true })
 const homePath = routes.home.href({ version: buildVersion })
 const paths = [homePath, routes.lookup.href({ version: buildVersion })]
 
-for await (let { pathname, filepath, response } of crawl(docsRouter, {
+for await (let { pathname, filepath, response } of crawl(router, {
   paths,
   // Versioned pages stay noindex,nofollow for public crawlers, but the
   // prerender spider needs the versioned home page's sidebar links to seed
