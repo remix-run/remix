@@ -11,9 +11,19 @@ export const codeBlockCopyStyles = css({
     position: 'relative',
     margin: '1rem 0',
   },
-  '& [data-code-block] pre': {
-    margin: 0,
-    paddingRight: '2.75rem',
+  '& [data-code-block-filename]': {
+    display: 'block',
+    overflow: 'hidden',
+    padding: '0.625rem 2.75rem 0.625rem 1rem',
+    border: '1px solid var(--border)',
+    borderRadius: '8px 8px 0 0',
+    background: 'var(--bg-subtle)',
+    color: 'var(--fg-muted)',
+    fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace',
+    fontSize: '0.8125rem',
+    lineHeight: 1.4,
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   '& [data-code-block-copy]': {
     position: 'absolute',
@@ -31,6 +41,9 @@ export const codeBlockCopyStyles = css({
   },
   '& [data-code-block]:hover [data-code-block-copy], & [data-code-block-copy]:focus': {
     opacity: 1,
+  },
+  '& [data-code-block-filename] + pre + [data-code-block-copy]': {
+    top: '0.75rem',
   },
   [activeCopyButtonSelector]: {
     background: 'var(--fg-muted)',

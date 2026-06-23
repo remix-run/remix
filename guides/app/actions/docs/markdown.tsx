@@ -44,6 +44,15 @@ type FrameToken = Tokens.Generic & {
   src: string
 }
 
+type CodeBlockToken = Tokens.Code & {
+  filename?: string
+}
+
+type CodeBlockInfo = {
+  language: string
+  filename?: string
+}
+
 type HeadingContent = {
   id: string
   markdown: string
@@ -123,8 +132,13 @@ function getGuidesMarkedExtension(options: { highlightCode?: boolean } = {}): Ma
     ],
     renderer: {
       code(code) {
+        let codeBlock = readCodeBlockInfo(code.lang)
+        let codeToken: CodeBlockToken = code
+        let filename = codeToken.filename ?? codeBlock.filename
+
         return renderCodeBlock(
           code.escaped ? code.text : `<pre><code>${escapeHtml(code.text)}</code></pre>\n`,
+          filename,
         )
       },
       heading(token) {
@@ -143,13 +157,20 @@ function getGuidesMarkedExtension(options: { highlightCode?: boolean } = {}): Ma
   if (options.highlightCode) {
     extension.async = true
     extension.walkTokens = async (token) => {
-      if (token.type !== 'code') {
+      if (!isCodeToken(token)) {
         return
+      }
+
+      let codeBlock = readCodeBlockInfo(token.lang)
+      let codeToken: CodeBlockToken = token
+      token.lang = codeBlock.language
+      if (codeBlock.filename !== undefined) {
+        codeToken.filename = codeBlock.filename
       }
 
       try {
         token.text = await codeToHtml(token.text, {
-          lang: token.lang?.trim() || 'plaintext',
+          lang: codeBlock.language,
           themes: {
             light: 'github-light',
             dark: 'github-dark',
@@ -255,8 +276,56 @@ function MarkdownHtml(handle: Handle<{ html: string }>) {
   return () => <div class="rmx-page-body" innerHTML={handle.props.html} />
 }
 
-function renderCodeBlock(html: string): string {
-  return `<div class="docs-code-block" data-code-block>${html}<button class="docs-code-block__copy" type="button" data-code-block-copy aria-label="Copy code to clipboard"><span class="docs-code-block__copy-label">Copy code to clipboard</span></button></div>`
+function renderCodeBlock(html: string, filename?: string): string {
+  let filenameHeader =
+    filename === undefined
+      ? ''
+      : `<div class="docs-code-block__filename" data-code-block-filename>${escapeHtml(
+          filename,
+        )}</div>`
+
+  return `<div class="docs-code-block" data-code-block>${filenameHeader}${html}<button class="docs-code-block__copy" type="button" data-code-block-copy aria-label="Copy code to clipboard"><span class="docs-code-block__copy-label">Copy code to clipboard</span></button></div>`
+}
+
+function readCodeBlockInfo(value: string | undefined): CodeBlockInfo {
+  let info = value?.trim()
+  if (!info) {
+    return { language: 'plaintext' }
+  }
+
+  let [firstPart = '', ...restParts] = info.split(/\s+/)
+  let hasLanguage = firstPart !== '' && !firstPart.includes('=')
+  let language = hasLanguage ? firstPart : 'plaintext'
+  let meta = hasLanguage ? restParts.join(' ') : info
+  let filename = readCodeBlockFilename(meta)
+
+  return filename === undefined ? { language } : { language, filename }
+}
+
+function readCodeBlockFilename(meta: string): string | undefined {
+  if (meta.trim() === '') {
+    return undefined
+  }
+
+  let params = new URLSearchParams(meta.trim().split(/\s+/).join('&'))
+  let filename = params.get('filename')?.trim()
+  if (!filename) {
+    return undefined
+  }
+
+  filename = stripCodeBlockMetaQuotes(filename)
+  return filename === '' ? undefined : filename
+}
+
+function stripCodeBlockMetaQuotes(value: string): string {
+  let firstChar = value[0]
+  let lastChar = value[value.length - 1]
+
+  if ((firstChar === '"' || firstChar === "'") && lastChar === firstChar) {
+    return value.slice(1, -1).trim()
+  }
+
+  return value
 }
 
 function readHeadingContent(value: string): HeadingContent {
@@ -321,6 +390,10 @@ function slugify(value: string): string {
 
 function isFrameToken(token: Token): token is FrameToken {
   return token.type === 'frame' && 'src' in token && typeof token.src === 'string'
+}
+
+function isCodeToken(token: Token): token is Tokens.Code {
+  return token.type === 'code' && 'text' in token && typeof token.text === 'string'
 }
 
 function countLineBreaks(source: string): number {
