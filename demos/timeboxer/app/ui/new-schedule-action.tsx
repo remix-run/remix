@@ -54,9 +54,9 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
         fetch(schedulesHref, {
           method: 'POST',
           headers: {
-            accept: 'application/json',
-            'content-type': 'application/json',
-            'x-csrf-token': handle.props.csrfToken,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'X-Csrf-Token': handle.props.csrfToken,
           },
           body: JSON.stringify({ name }),
           signal: handle.signal,
@@ -254,7 +254,7 @@ function scheduleHref(scheduleId: number | string) {
 }
 
 async function createScheduleErrorMessage(response: Response) {
-  let contentType = response.headers.get('content-type') ?? ''
+  let contentType = response.headers.get('Content-Type') ?? ''
 
   if (contentType.includes('application/json')) {
     try {

@@ -220,8 +220,8 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "git clean -fdX",
-    "lint": "pnpm -w exec oxlint packages/ui -A all --quiet",
-    "lint:fix": "pnpm -w exec oxlint packages/ui -A all --fix --quiet",
+    "lint": "pnpm -w exec oxlint packages/ui --max-warnings=0",
+    "lint:fix": "pnpm -w exec oxlint packages/ui --fix --max-warnings=0",
     "prepublishOnly": "pnpm run build",
     "test": "remix-test",
     "test:coverage": "remix-test --coverage",
