@@ -5,20 +5,24 @@ description: A high-level introduction to Remix and the mental model behind a Re
 
 ## What is Remix? {#what-is-remix}
 
-Remix is a full-stack TypeScript web framework: a server, router, data layer, UI runtime, testing tools, and production primitives designed around Web APIs.
+Remix is a TypeScript framework built around the web's request and response model. A server receives a Web `Request`, Remix matches it to a typed route, a controller handles the request, and the app returns a Web `Response`.
 
-The `remix` package is the out-of-the-box combination of smaller packages that also work on their own. Use the whole stack for a full app, or use one piece when you only need routing, type-safe API endpoints, server rendering, hydrated UI, sessions, uploads, or tests.
+The `remix` package gives you the full stack: a server adapter, fetch router, typed routes, middleware, controllers, response helpers, and testing utilities. On the UI side, it includes server-rendered components, frames for partial UI, browser-loaded client entries, client navigation, CSS-first animation helpers, source-served assets, and first-party primitives such as menus, popovers, listboxes, selects, and tabs.
 
-Remix is designed around six principles:
+Later chapters use the same package for form parsing and validation, cookies and sessions, credentials auth, OAuth/OIDC, CSRF/CORS/COP protection, file uploads, and database queries, transactions, and migrations.
 
-- **Agent-first development.** Standard APIs and explicit app structure make code easier for people and AI assistants to understand.
-- **Build on Web APIs.** `Request`, `Response`, `URL`, and `FormData` are the same primitives from route handlers to tests.
-- **Religiously runtime.** What you write is close to what executes, with less compiler magic between source and behavior.
-- **Avoid dependencies.** Remix packages aim for small, stable surfaces with as little third-party weight as possible.
-- **Demand composition.** Adopt the server, router, UI runtime, data tools, or full stack as your app needs them.
-- **Distribute cohesively.** The pieces ship together as `remix`, so installation and documentation stay unified.
+Each piece of `remix` is also designed to stand on its own, so you can use the full framework or adopt smaller pieces when an app only needs routing, UI, API endpoints, auth, database access, or browser behavior.
 
-This guide starts with a small server-rendered app, then adds type-safe routes, forms, frames, and hydrated client components.
+The design of Remix comes from six core principles:
+
+1. **Agent-First Development.** Remix optimizes source code, documentation, tooling, and abstractions for LLMs, and provides primitives for using models inside the products you build.
+2. **Build on Web APIs.** Remix builds on `Request`, `Response`, `URL`, `FormData`, headers, cookies, and JavaScript because shared platform APIs reduce context switching across the full stack while keeping your application portable.
+3. **Religiously Runtime.** Remix APIs do not depend on bundlers, type generation, or static analysis. Routes, middleware, controllers, and tests should run as ordinary runtime code.
+4. **Avoid Dependencies.** Remix chooses dependencies carefully, wraps them behind its own boundaries, and works toward replacing them with focused packages when the framework needs long-term control.
+5. **Demand Composition.** Remix packages are single-purpose, replaceable, and useful on their own. You can add or remove pieces as an app changes, while tightly coupled modules belong together.
+6. **Distribute Cohesively.** Remix keeps the ecosystem easy to learn and use by distributing the composable pieces through one `remix` package and one documentation path.
+
+The fastest way to understand Remix is to build the request path once: create a server, define routes, connect a router, and return a response.
 
 ## Quickstart: create and run a Remix app {#quickstart-create-and-run-a-remix-app}
 
