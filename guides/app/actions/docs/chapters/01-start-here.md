@@ -47,14 +47,14 @@ The frame below is loaded from a separate Remix route. Press the button to re-fe
 :::frame /docs/examples/start-here/server-clock
 :::
 
-## Project tour: server.ts, app/routes.ts, app/router.ts, controllers, UI, assets {#project-tour-server-ts-app-routes-ts-app-router-ts-controllers-ui-assets}
+## Project tour: server.ts, app/routes.ts, app/router.ts, actions, UI, assets {#project-tour-server-ts-app-routes-ts-app-router-ts-actions-ui-assets}
 
 A Remix app keeps the HTTP contract, handlers, and UI intentionally close:
 
 - `server.ts` adapts your host runtime to Web `Request` and `Response` objects.
 - `app/routes.ts` defines the typed URL contract and generates hrefs.
 - `app/router.ts` installs middleware and maps route definitions to controllers.
-- `app/controllers/**` handles requests and returns responses.
+- `app/actions/**` holds controllers, route actions, and route-local UI/helpers.
 - `app/ui/**` holds shared server-rendered UI.
 - `app/assets/**` holds browser-loaded client entries.
 
@@ -89,7 +89,7 @@ A page handler can be as small as rendering a component tree:
 ```tsx
 import type { Handle } from 'remix/ui'
 
-import type { AppContext } from '../middleware/render.ts'
+import type { AppContext } from '../router.ts'
 
 export async function homeHandler({ render }: AppContext) {
   return render(<HomePage name="Ada" />)
@@ -129,7 +129,7 @@ HTML forms are still the default mutation primitive. The route can accept a POST
 import { redirect } from 'remix/response/redirect'
 
 import { routes } from '../routes.ts'
-import type { AppContext } from '../middleware/render.ts'
+import type { AppContext } from '../router.ts'
 
 export async function createProject({ request }: AppContext) {
   let formData = await request.formData()

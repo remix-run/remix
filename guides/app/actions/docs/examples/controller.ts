@@ -1,8 +1,9 @@
 import { access } from 'node:fs/promises'
+import { fileURLToPath } from 'node:url'
 
 import { createController } from 'remix/router'
 
-import type { AppContext } from '../../../middleware/render.ts'
+import type { AppContext } from '../../../router.ts'
 import { routes } from '../../../routes.ts'
 
 const exampleSegmentPattern = /^[a-z0-9][a-z0-9-]*$/
@@ -15,12 +16,9 @@ type ExampleRouteContext = AppContext & {
 }
 
 type ExampleHandler = (context: AppContext) => Response | Promise<Response>
+type UnknownExampleHandler = (context: AppContext) => unknown
 
-type ExampleModule = {
-  handler?: unknown
-}
-
-export const docsExamplesController = createController(routes.docs.examples, {
+export default createController(routes.docs.examples, {
   actions: {
     show: showExampleHandler,
   },
@@ -50,13 +48,41 @@ async function loadExampleHandler(
   try {
     await access(moduleUrl)
   } catch (error) {
-    if (error instanceof Error && 'code' in error && error.code === 'ENOENT') {
+    if (isNotFoundError(error)) {
       return undefined
     }
 
     throw error
   }
 
-  let mod = (await import(moduleUrl.href)) as ExampleModule
-  return typeof mod.handler === 'function' ? (mod.handler as ExampleHandler) : undefined
+  let mod: unknown = await import(moduleUrl.href)
+  return readExampleHandler(mod, moduleUrl)
+}
+
+function readExampleHandler(mod: unknown, moduleUrl: URL): ExampleHandler | undefined {
+  if (!mod || typeof mod !== 'object' || !('handler' in mod)) {
+    return undefined
+  }
+
+  let { handler } = mod
+  if (!isUnknownExampleHandler(handler)) {
+    return undefined
+  }
+
+  return async (context) => {
+    let result = await handler(context)
+    if (result instanceof Response) {
+      return result
+    }
+
+    throw new Error(`Expected example handler to return a Response: ${fileURLToPath(moduleUrl)}`)
+  }
+}
+
+function isUnknownExampleHandler(value: unknown): value is UnknownExampleHandler {
+  return typeof value === 'function'
+}
+
+function isNotFoundError(error: unknown): boolean {
+  return error instanceof Error && 'code' in error && error.code === 'ENOENT'
 }
