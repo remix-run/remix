@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 
 import type { Handle } from 'remix/ui'
 
-import type { AppContext } from '../../middleware/render.ts'
+import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { readMarkdownChapterSummary, renderMarkdownChapter } from './markdown.tsx'
 import type { MarkdownChapter, MarkdownChapterSummary } from './markdown.tsx'

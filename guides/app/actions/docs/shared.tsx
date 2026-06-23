@@ -1,7 +1,7 @@
 import type { Handle, RemixNode } from 'remix/ui'
 
-import { DocsTableOfContents } from '../../assets/docs-table-of-contents.tsx'
-import type { DocsHeadingLink } from '../../assets/docs-table-of-contents.tsx'
+import { DocsTableOfContents } from './table-of-contents.tsx'
+import type { DocsHeadingLink } from './table-of-contents.tsx'
 import { routes } from '../../routes.ts'
 import { Document } from '../../ui/document.tsx'
 

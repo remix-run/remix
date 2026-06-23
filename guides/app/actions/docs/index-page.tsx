@@ -1,6 +1,6 @@
 import type { Handle } from 'remix/ui'
 
-import type { AppContext } from '../../middleware/render.ts'
+import type { AppContext } from '../../router.ts'
 import { loadDocsChapterSummaries } from './markdown-chapters.tsx'
 import type { DocsChapterSummary } from './markdown-chapters.tsx'
 import { DocsDocument, docsResponseInit } from './shared.tsx'
@@ -61,9 +61,7 @@ function ChapterCard(handle: Handle<{ chapter: DocsChapterSummary }>) {
         <ul class="chapter-card__links">
           {chapter.sections.map((section) => (
             <li key={section.id}>
-              <a href={`${chapter.href}#${section.id}`} rmx-document>
-                {section.title}
-              </a>
+              <a href={`${chapter.href}#${section.id}`}>{section.title}</a>
             </li>
           ))}
         </ul>
