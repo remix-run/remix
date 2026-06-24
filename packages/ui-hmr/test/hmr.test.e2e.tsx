@@ -8,7 +8,8 @@ import * as http from 'node:http'
 import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { watch, type FSWatcher } from 'chokidar'
-import { createAssetServer, type AssetServer, type HmrPayload } from '../../assets/src/assets.ts'
+import { createAssetServer, type AssetServer } from '@remix-run/assets'
+import type { HmrPayload } from '@remix-run/assets/types/hmr'
 import { uiHmr } from '../src/browser-module-hooks.ts'
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
