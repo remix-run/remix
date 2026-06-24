@@ -689,7 +689,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   ```ts
   import * as Specificity from '@remix-run/route-pattern/specificity'
 
-  Specificity.lessThan(a, b) // `true` when `a` is more specific than `b`. `false` otherwise
+  Specificity.lessThan(a, b) // `true` when `a` is less specific than `b`. `false` otherwise
   Specificity.greaterThan(a, b)
   Specificity.equal(a, b)
 

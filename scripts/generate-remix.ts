@@ -227,7 +227,7 @@ function isFile(filePath: string): boolean {
 
 async function updateRemixPackage() {
   // Ensure we have a passing linter before generating code
-  logAndExec(`pnpm exec oxlint packages/remix/ -A all --quiet`)
+  logAndExec(`pnpm exec oxlint packages/remix/ --max-warnings=0`)
 
   // Clear existing source files
   let sourceFolderPath = path.join(remixDir, SOURCE_FOLDER)
@@ -263,7 +263,7 @@ async function updateRemixPackage() {
   }
 
   // Run linter against generated code with --fix (before bin wrappers, which must keep their shebang)
-  logAndExec(`pnpm exec oxlint packages/remix/ -A all --fix --quiet`)
+  logAndExec(`pnpm exec oxlint packages/remix/ --fix --max-warnings=0`)
 
   if (allExports.some((entry) => entry.exportPath === './cli')) {
     let cliEntryPath = path.join(remixDir, SOURCE_FOLDER, REMIX_CLI_ENTRY_FILE)

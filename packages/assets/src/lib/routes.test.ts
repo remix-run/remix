@@ -91,4 +91,24 @@ describe('compileRoutes', () => {
       '/assets/runtime/helpers/decorate.js',
     )
   })
+
+  it('decodes generated file paths while keeping URL pathnames encoded', () => {
+    let routes = compileRoutes('/assets', [
+      {
+        fileMap: {
+          '/npm/*path': 'app/node_modules/*path',
+        },
+        rootDir: '/repo/project',
+      },
+    ])
+
+    assert.equal(
+      routes.resolveUrlPathname('/assets/npm/%40remix-run/ui/jsx-runtime.ts'),
+      '/repo/project/app/node_modules/@remix-run/ui/jsx-runtime.ts',
+    )
+    assert.equal(
+      routes.toUrlPathname('/repo/project/app/node_modules/@remix-run/ui/jsx-runtime.ts'),
+      '/assets/npm/%40remix-run/ui/jsx-runtime.ts',
+    )
+  })
 })

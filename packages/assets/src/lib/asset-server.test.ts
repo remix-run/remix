@@ -2689,10 +2689,10 @@ describe('asset-server', () => {
       })
       try {
         let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
-        let uiUrls = [...servedUrls].filter((url) => url.includes('@remix-run/ui/dist/index.js'))
+        let uiUrls = [...servedUrls].filter((url) => url.includes('%40remix-run/ui/dist/index.js'))
 
         let expectedUiUrls = [
-          '/assets/app/node_modules/.pnpm/@remix-run+ui@1.0.0/node_modules/@remix-run/ui/dist/index.js',
+          '/assets/app/node_modules/.pnpm/%40remix-run%2Bui%401.0.0/node_modules/%40remix-run/ui/dist/index.js',
         ]
         assert.deepEqual(uiUrls, expectedUiUrls)
       } finally {
@@ -2937,7 +2937,7 @@ describe('asset-server', () => {
       })
 
       let urls = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(urls.some((url) => url.includes('@remix-run/ui/jsx-runtime.@')))
+      assert.ok(urls.some((url) => url.includes('%40remix-run/ui/jsx-runtime.@')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -2970,8 +2970,8 @@ describe('asset-server', () => {
       let firstServer = createTestServer(caseDir)
 
       let before = await firstServer.getPreloads('app/entry.tsx')
-      assert.ok(before.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
-      assert.ok(!before.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
+      assert.ok(before.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
+      assert.ok(!before.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
 
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
@@ -2981,13 +2981,13 @@ describe('asset-server', () => {
       })
 
       let sameServer = await firstServer.getPreloads('app/entry.tsx')
-      assert.ok(sameServer.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
-      assert.ok(!sameServer.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
+      assert.ok(sameServer.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
+      assert.ok(!sameServer.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
 
       let secondServer = createTestServer(caseDir)
       let afterRestart = await secondServer.getPreloads('app/entry.tsx')
-      assert.ok(afterRestart.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
-      assert.ok(!afterRestart.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
+      assert.ok(afterRestart.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
+      assert.ok(!afterRestart.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -3022,8 +3022,8 @@ describe('asset-server', () => {
       })
 
       let before = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(before.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.@')))
-      assert.ok(!before.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.@')))
+      assert.ok(before.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.@')))
+      assert.ok(!before.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.@')))
 
       await writeJson(caseDir, 'tsconfig.base.json', {
         compilerOptions: {
@@ -3033,8 +3033,8 @@ describe('asset-server', () => {
       })
 
       let after = await assetServer.getPreloads('app/entry.tsx')
-      assert.ok(after.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.@')))
-      assert.ok(!after.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.@')))
+      assert.ok(after.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.@')))
+      assert.ok(!after.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.@')))
     } finally {
       await fs.rm(caseDir, { recursive: true, force: true })
     }
@@ -4646,7 +4646,7 @@ describe('asset-server', () => {
 
       try {
         let before = await assetServer.getPreloads('app/entry.tsx')
-        assert.ok(before.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
+        assert.ok(before.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
 
         let tsconfigPath = await writeJson(caseDir, 'tsconfig.base.json', {
           compilerOptions: {
@@ -4658,8 +4658,8 @@ describe('asset-server', () => {
 
         let after = await assetServer.getPreloads('app/entry.tsx')
 
-        assert.ok(after.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
-        assert.ok(!after.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
+        assert.ok(after.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
+        assert.ok(!after.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
       } finally {
         await assetServer.close()
       }
@@ -4699,7 +4699,7 @@ describe('asset-server', () => {
 
       try {
         let before = await assetServer.getPreloads('app/entry.tsx')
-        assert.ok(before.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
+        assert.ok(before.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
 
         let tsconfigPath = await writeJson(caseDir, 'tsconfig.base.json', {
           compilerOptions: {
@@ -4710,8 +4710,8 @@ describe('asset-server', () => {
         await emitWatchEvent(assetServer, tsconfigPath, 'change')
 
         let after = await assetServer.getPreloads('app/entry.tsx')
-        assert.ok(after.some((url) => url.includes('@remix-run/ui-a/jsx-runtime.ts')))
-        assert.ok(!after.some((url) => url.includes('@remix-run/ui-b/jsx-runtime.ts')))
+        assert.ok(after.some((url) => url.includes('%40remix-run/ui-a/jsx-runtime.ts')))
+        assert.ok(!after.some((url) => url.includes('%40remix-run/ui-b/jsx-runtime.ts')))
       } finally {
         await assetServer.close()
       }
@@ -5722,7 +5722,7 @@ describe('asset-server', () => {
     assert.doesNotMatch(body, /from ["']@oxc-project\/runtime/)
     assert.ok(
       entryImportSpecifiers.includes(
-        '/assets/npm/@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+        '/assets/npm/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
       ),
     )
     assert.ok(helperPaths.length > 0)
@@ -5735,7 +5735,7 @@ describe('asset-server', () => {
     let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
     assert.ok(
       servedUrls.has(
-        '/assets/npm/@oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
+        '/assets/npm/%40oxc-project/runtime/src/helpers/esm/classPrivateMethodInitSpec.js',
       ),
       'expected authored runtime imports to use the consumer fileMap path',
     )
@@ -5784,7 +5784,7 @@ describe('asset-server', () => {
         },
         async ({ assetServer }) => {
           let urls = await assetServer.getPreloads('app/entry.tsx')
-          assert.ok(urls.some((url) => url.includes('@remix-run/ui/jsx-runtime.ts')))
+          assert.ok(urls.some((url) => url.includes('%40remix-run/ui/jsx-runtime.ts')))
         },
       )
     })

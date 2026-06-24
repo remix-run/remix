@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "bench": "vitest bench --run",
-    "bench:types": "node bench.types.ts"
+    "bench:types": "node src/types/href.ts && node src/types/join.ts && node src/types/match.ts && node src/types/new.ts && node src/types/params.ts"
   },
   "dependencies": {
     "@remix-run/route-pattern": "workspace:^",

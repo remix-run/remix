@@ -6,15 +6,12 @@ import {
   MOBILE_NAV_MEDIA_RULE,
   MOBILE_TOP_BAR_HEIGHT_PX,
 } from '../shared/breakpoints.ts'
-import { assetServer } from './asset-server.ts'
 import type { DemoDocFile } from './demos.tsx'
 import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
 import { routes } from './routes.ts'
 
 export type Versions = string[]
-
-const entryHref = await assetServer.getHref('docs/src/client/entry.tsx')
 
 export function Document(
   handle: Handle<{
@@ -24,11 +21,12 @@ export function Document(
     registry: DocsRegistry
     children?: RemixNode | RemixNode[]
     sourceUrl?: string
+    entryHref: string
     entryPreloads: readonly string[]
   }>,
 ) {
   return () => {
-    let { registry, versions, activeVersion, slug, sourceUrl, children, entryPreloads } =
+    let { registry, versions, activeVersion, slug, sourceUrl, children, entryHref, entryPreloads } =
       handle.props
     let page = slug
       ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug, activeVersion))
@@ -36,7 +34,12 @@ export function Document(
 
     return (
       <html lang="en" style={{ colorScheme: 'light dark' }}>
-        <Head page={page} activeVersion={activeVersion} entryPreloads={entryPreloads} />
+        <Head
+          page={page}
+          activeVersion={activeVersion}
+          entryHref={entryHref}
+          entryPreloads={entryPreloads}
+        />
         <body mix={bodyCss}>
           <MobileHeader page={page} />
           <div mix={shellCss}>
@@ -111,11 +114,12 @@ function Head(
   handle: Handle<{
     page: PageDefinition
     activeVersion?: string
+    entryHref: string
     entryPreloads: readonly string[]
   }>,
 ) {
   return () => {
-    let { page, activeVersion, entryPreloads } = handle.props
+    let { page, activeVersion, entryHref, entryPreloads } = handle.props
     let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
     return (
       <head>

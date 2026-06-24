@@ -1,4 +1,4 @@
-import type { RoutePattern } from '../route-pattern.ts'
+import type { RoutePatternParts, RoutePattern } from '../route-pattern.ts'
 import { decodeHostname } from './decode.ts'
 import { generateVariants, type Param } from './variant.ts'
 import { unreachable } from '../unreachable.ts'
@@ -18,7 +18,9 @@ export class Trie<data = unknown> {
   }
 
   insert(pattern: RoutePattern, data: data): void {
-    for (let variant of generateVariants(pattern)) {
+    let patternParts = pattern._parts
+
+    for (let variant of generateVariants(pattern, { ignoreCase: this.ignoreCase })) {
       let hostnameNode = this.#root[variant.protocol]
 
       let portNode: PortNode<data>
@@ -86,15 +88,7 @@ export class Trie<data = unknown> {
           for (let param of segment.params) requiredParams.push(param)
         }
       }
-      let undefinedParams: Array<Param> = []
-      for (let param of pattern.pathname.tokens) {
-        if (param.type !== ':' && param.type !== '*') continue
-        if (requiredParams.some((p) => p.name === param.name)) continue
-        if (undefinedParams.some((p) => p.name === param.name)) continue
-        undefinedParams.push(param)
-      }
-
-      pathnameNode.values.push({ pattern, data, requiredParams, undefinedParams })
+      pathnameNode.values.push({ pattern, patternParts, data, requiredParams })
     }
   }
 
@@ -149,7 +143,7 @@ export class Trie<data = unknown> {
     }
 
     let results: Array<Match<string, data>> = []
-    let urlSegments = normalizePathname(url.pathname)
+    let urlSegments = normalizePathname(url.pathname, { ignoreCase: this.ignoreCase })
     if (urlSegments === null) return results
 
     for (let origin of origins) {
@@ -165,7 +159,7 @@ export class Trie<data = unknown> {
 
         if (current.segmentIndex === urlSegments.length) {
           for (let value of current.pathnameNode.values) {
-            if (!matchSearch(url.searchParams, value.pattern.search)) continue
+            if (!matchSearch(url.searchParams, value.patternParts.search)) continue
 
             let pathnameMatch: Array<MatchParamMeta> = []
             for (let i = 0; i < value.requiredParams.length; i++) {
@@ -181,12 +175,12 @@ export class Trie<data = unknown> {
             }
 
             let params: Record<string, string | undefined> = {}
-            for (let token of value.pattern.hostname?.tokens ?? []) {
+            for (let token of value.patternParts.hostname?.tokens ?? []) {
               if ((token.type === ':' || token.type === '*') && token.name !== '*') {
                 params[token.name] = undefined
               }
             }
-            for (let token of value.pattern.pathname.tokens) {
+            for (let token of value.patternParts.pathname.tokens) {
               if ((token.type === ':' || token.type === '*') && token.name !== '*') {
                 params[token.name] = undefined
               }
@@ -277,11 +271,11 @@ export class Trie<data = unknown> {
 // Pathname matching uses canonical percent-encoded text. URL pathnames are split on structural
 // "/" before normalization so encoded slashes like "%2F" remain data within a segment instead of
 // becoming separators. Pattern static text is encoded the same way when variants are generated.
-function normalizePathname(pathname: string): string[] | null {
+function normalizePathname(pathname: string, options?: { ignoreCase?: boolean }): string[] | null {
   let segments: string[] = []
 
   for (let segment of pathname.slice(1).split('/')) {
-    let normalized = normalizePathnameText(segment)
+    let normalized = normalizePathnameText(segment, options)
     if (normalized === null) return null
     segments.push(normalized)
   }
@@ -289,9 +283,11 @@ function normalizePathname(pathname: string): string[] | null {
   return segments
 }
 
-function normalizePathnameText(text: string): string | null {
+function normalizePathnameText(text: string, options?: { ignoreCase?: boolean }): string | null {
   let decoded = safeDecodeURIComponent(text)
-  return decoded === null ? null : encodeURIComponent(decoded)
+  if (decoded === null) return null
+  if (options?.ignoreCase) decoded = decoded.toLowerCase()
+  return encodeURIComponent(decoded)
 }
 
 function fastDecodeURIComponent(text: string): string {
@@ -351,9 +347,9 @@ type PathnameNode<data> = {
   wildcard: Map<string, { regexp: RegExp; pathnameNode: PathnameNode<data> }>
   values: Array<{
     pattern: RoutePattern
+    patternParts: RoutePatternParts
     data: data
     requiredParams: Array<Param>
-    undefinedParams: Array<Param>
   }>
 }
 

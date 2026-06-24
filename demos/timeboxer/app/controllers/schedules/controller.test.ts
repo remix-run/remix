@@ -86,7 +86,7 @@ describe('schedule endpoints', () => {
     let rootResponse = await client.fetchPage(routes.home.index.href())
     assert.equal(rootResponse.status, 302)
     assert.equal(
-      new URL(rootResponse.headers.get('location')!, 'http://localhost').pathname,
+      new URL(rootResponse.headers.get('Location')!, 'http://localhost').pathname,
       routes.schedules.show.href({ scheduleId: String(createdSchedule.id) }),
     )
 
@@ -147,12 +147,12 @@ describe('schedule endpoints', () => {
       routes.schedules.downloadIcs.href({ scheduleId: String(createdSchedule.id) }),
     )
     assert.equal(downloadResponse.status, 200)
-    assert.equal(downloadResponse.headers.get('cache-control'), 'no-store')
+    assert.equal(downloadResponse.headers.get('Cache-Control'), 'no-store')
     assert.equal(
-      downloadResponse.headers.get('content-disposition'),
+      downloadResponse.headers.get('Content-Disposition'),
       'attachment; filename="regular-schedule.ics"',
     )
-    assert.equal(downloadResponse.headers.get('content-type'), 'text/calendar; charset=utf-8')
+    assert.equal(downloadResponse.headers.get('Content-Type'), 'text/calendar; charset=utf-8')
 
     let ics = await downloadResponse.text()
     assert.match(ics, /^BEGIN:VCALENDAR\r\n/)
@@ -267,7 +267,7 @@ describe('schedule endpoints', () => {
     let rootResponse = await client.fetchPage(routes.home.index.href())
     assert.equal(rootResponse.status, 302)
     assert.equal(
-      new URL(rootResponse.headers.get('location')!, 'http://localhost').pathname,
+      new URL(rootResponse.headers.get('Location')!, 'http://localhost').pathname,
       routes.schedules.show.href({ scheduleId: String(newerSchedule.id) }),
     )
   })
@@ -451,8 +451,8 @@ async function createAuthenticatedClient() {
       return await router.fetch(
         new Request(url(path), {
           headers: {
-            accept: 'text/html',
-            cookie,
+            Accept: 'text/html',
+            Cookie: cookie,
           },
         }),
       )
@@ -518,10 +518,10 @@ function jsonRequest(
   path: string,
   init: { body?: unknown; cookie?: string; csrfToken?: string; method: string },
 ) {
-  let headers = new Headers({ accept: 'application/json' })
-  if (init.body !== undefined) headers.set('content-type', 'application/json')
-  if (init.cookie) headers.set('cookie', init.cookie)
-  if (init.csrfToken) headers.set('x-csrf-token', init.csrfToken)
+  let headers = new Headers({ Accept: 'application/json' })
+  if (init.body !== undefined) headers.set('Content-Type', 'application/json')
+  if (init.cookie) headers.set('Cookie', init.cookie)
+  if (init.csrfToken) headers.set('X-Csrf-Token', init.csrfToken)
 
   return new Request(url(path), {
     method: init.method,
@@ -541,7 +541,7 @@ function extractCsrfToken(html: string) {
 }
 
 function mergeCookie(currentCookie: string, headers: Headers) {
-  let setCookie = headers.get('set-cookie')
+  let setCookie = headers.get('Set-Cookie')
   if (!setCookie) return currentCookie
 
   let cookiePair = setCookie.split(';', 1)[0]!
