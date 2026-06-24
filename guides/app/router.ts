@@ -8,7 +8,7 @@ import { createRouter, type MiddlewareContext } from 'remix/router'
 
 import rootController from './actions/controller.tsx'
 import docsController from './actions/docs/controller.tsx'
-import docsExamplesController from './actions/docs/examples/controller.ts'
+import docsExamplesController from './actions/docs/examples/controller.tsx'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
 import { render } from './middleware/render.ts'
 import { routes } from './routes.ts'

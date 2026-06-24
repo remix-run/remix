@@ -16,19 +16,21 @@ export function render() {
           resolveFrame: (src, target, frameContext) =>
             resolveFrame(context, src, target, frameContext),
           async resolveClientEntry(entryId, component) {
-            if (!entryId.startsWith('file://')) {
+            let { moduleId, exportName: explicitExportName } = parseClientEntryId(entryId)
+
+            if (!moduleId.startsWith('file://')) {
               throw new Error(
                 `Expected \`import.meta.url\` for clientEntry ID, received '${entryId}'`,
               )
             }
 
-            let exportName = entryId.split('#')[1] || component.name
+            let exportName = explicitExportName || component.name
             if (!exportName) {
               throw new Error(`Unable to resolve client entry export for ${entryId}`)
             }
 
             return {
-              href: await assetServer.getHref(entryId),
+              href: await assetServer.getHref(moduleId),
               exportName,
             }
           },
@@ -40,6 +42,20 @@ export function render() {
         return createHtmlResponse(stream, init)
       },
   )
+}
+
+function parseClientEntryId(entryId: string): { moduleId: string; exportName?: string } {
+  let hashIndex = entryId.lastIndexOf('#')
+
+  if (hashIndex === -1) {
+    return { moduleId: entryId }
+  }
+
+  let exportName = entryId.slice(hashIndex + 1)
+  return {
+    moduleId: entryId.slice(0, hashIndex),
+    ...(exportName ? { exportName } : {}),
+  }
 }
 
 async function resolveFrame(

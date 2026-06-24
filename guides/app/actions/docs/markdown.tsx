@@ -51,6 +51,7 @@ type CodeBlockToken = Tokens.Code & {
 type CodeBlockInfo = {
   language: string
   filename?: string
+  highlightedLines: Set<number>
 }
 
 type HeadingContent = {
@@ -169,16 +170,17 @@ function getGuidesMarkedExtension(options: { highlightCode?: boolean } = {}): Ma
       }
 
       try {
-        token.text = await codeToHtml(token.text, {
+        let html = await codeToHtml(token.text, {
           lang: codeBlock.language,
           themes: {
             light: 'github-light',
             dark: 'github-dark',
           },
         })
+        token.text = applyHighlightedLinesToCodeHtml(html, codeBlock.highlightedLines)
         token.escaped = true
       } catch {
-        token.text = `<pre><code>${escapeHtml(token.text)}</code></pre>`
+        token.text = renderPlainCodeHtml(token.text, codeBlock.highlightedLines)
         token.escaped = true
       }
     }
@@ -290,16 +292,23 @@ function renderCodeBlock(html: string, filename?: string): string {
 function readCodeBlockInfo(value: string | undefined): CodeBlockInfo {
   let info = value?.trim()
   if (!info) {
-    return { language: 'plaintext' }
+    return { language: 'plaintext', highlightedLines: new Set() }
   }
 
   let [firstPart = '', ...restParts] = info.split(/\s+/)
-  let hasLanguage = firstPart !== '' && !firstPart.includes('=')
+  let hasLanguage =
+    firstPart !== '' &&
+    !firstPart.includes('=') &&
+    !firstPart.startsWith('{') &&
+    !firstPart.startsWith('[')
   let language = hasLanguage ? firstPart : 'plaintext'
   let meta = hasLanguage ? restParts.join(' ') : info
   let filename = readCodeBlockFilename(meta)
+  let highlightedLines = readCodeBlockHighlightedLines(meta)
 
-  return filename === undefined ? { language } : { language, filename }
+  return filename === undefined
+    ? { language, highlightedLines }
+    : { language, filename, highlightedLines }
 }
 
 function readCodeBlockFilename(meta: string): string | undefined {
@@ -315,6 +324,97 @@ function readCodeBlockFilename(meta: string): string | undefined {
 
   filename = stripCodeBlockMetaQuotes(filename)
   return filename === '' ? undefined : filename
+}
+
+function readCodeBlockHighlightedLines(meta: string): Set<number> {
+  let highlightedLines = new Set<number>()
+  let braceMatch = /(?:^|\s)\{([^}]*)\}(?=\s|$)/.exec(meta)
+  let bracketMatch = /(?:^|\s)\[([^\]]*)\](?=\s|$)/.exec(meta)
+
+  if (braceMatch?.[1]) {
+    addLineNumbers(highlightedLines, braceMatch[1])
+  }
+
+  if (bracketMatch?.[1]) {
+    addLineNumbers(highlightedLines, bracketMatch[1])
+  }
+
+  if (meta.trim() !== '') {
+    let params = new URLSearchParams(meta.trim().split(/\s+/).join('&'))
+    addLineNumbers(highlightedLines, params.get('highlight') ?? '')
+    addLineNumbers(highlightedLines, params.get('lines') ?? '')
+  }
+
+  return highlightedLines
+}
+
+function addLineNumbers(highlightedLines: Set<number>, value: string): void {
+  value = stripLineHighlightWrapper(value)
+
+  for (let part of value.split(',')) {
+    let segment = part.trim()
+    if (segment === '') {
+      continue
+    }
+
+    let rangeMatch = /^(\d+)-(\d+)$/.exec(segment)
+    if (rangeMatch?.[1] && rangeMatch[2]) {
+      let start = Number.parseInt(rangeMatch[1], 10)
+      let end = Number.parseInt(rangeMatch[2], 10)
+      if (start > 0 && end >= start) {
+        for (let line = start; line <= end; line++) {
+          highlightedLines.add(line)
+        }
+      }
+      continue
+    }
+
+    if (/^\d+$/.test(segment)) {
+      let line = Number.parseInt(segment, 10)
+      if (line > 0) {
+        highlightedLines.add(line)
+      }
+    }
+  }
+}
+
+function stripLineHighlightWrapper(value: string): string {
+  value = value.trim()
+  let firstChar = value[0]
+  let lastChar = value[value.length - 1]
+
+  if ((firstChar === '[' && lastChar === ']') || (firstChar === '{' && lastChar === '}')) {
+    return value.slice(1, -1)
+  }
+
+  return value
+}
+
+function applyHighlightedLinesToCodeHtml(html: string, highlightedLines: Set<number>): string {
+  let lineNumber = 0
+  let highlightedHtml = html.replace(/<span class="line">/g, (match) => {
+    lineNumber++
+    return highlightedLines.has(lineNumber) ? '<span class="line" data-highlighted-line>' : match
+  })
+
+  return normalizeCodeHtmlLineBreaks(highlightedHtml)
+}
+
+function normalizeCodeHtmlLineBreaks(html: string): string {
+  return html.replace(/<\/span>\n(?=<span class="line")/g, '\n</span>')
+}
+
+function renderPlainCodeHtml(source: string, highlightedLines: Set<number>): string {
+  let lines = source.split('\n')
+  let code = lines
+    .map((line, index) => {
+      let lineNumber = index + 1
+      let highlightedAttribute = highlightedLines.has(lineNumber) ? ' data-highlighted-line' : ''
+      return `<span class="line"${highlightedAttribute}>${escapeHtml(line)}\n</span>`
+    })
+    .join('')
+
+  return `<pre><code>${code}</code></pre>`
 }
 
 function stripCodeBlockMetaQuotes(value: string): string {

@@ -16,11 +16,7 @@ export const assetServer = createAssetServer({
     '/app/*path': 'guides/app/*path',
     '/packages/*path': 'packages/*path',
   },
-  allow: [
-    'guides/app/assets/**',
-    'guides/app/actions/docs/examples/**/*.client.tsx',
-    'packages/*/src/**',
-  ],
+  allow: ['guides/app/assets/**', 'guides/app/actions/docs/examples/**', 'packages/*/src/**'],
   deny: ['guides/app/**/*.server.*'],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: isProduction,
