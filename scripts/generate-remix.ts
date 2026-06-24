@@ -30,6 +30,8 @@ const DEFAULT_VALUE_RE_EXPORT_SPECIFIERS = new Set([
   '@remix-run/ui/button',
   '@remix-run/ui/checkbox',
   '@remix-run/ui/input',
+  '@remix-run/ui/radio',
+  '@remix-run/ui/toggle',
 ])
 
 type RemixRunPackage = {

@@ -52,12 +52,8 @@
       "default": "./src/button/index.ts"
     },
     "./checkbox": {
-      "types": "./src/checkbox/index.tsx",
-      "default": "./src/checkbox/index.tsx"
-    },
-    "./checkbox/primitives": {
-      "types": "./src/checkbox/primitives.ts",
-      "default": "./src/checkbox/primitives.ts"
+      "types": "./src/checkbox/index.ts",
+      "default": "./src/checkbox/index.ts"
     },
     "./combobox": {
       "types": "./src/combobox/index.tsx",
@@ -115,6 +111,14 @@
       "types": "./src/test.ts",
       "default": "./src/test.ts"
     },
+    "./toggle": {
+      "types": "./src/toggle/index.tsx",
+      "default": "./src/toggle/index.tsx"
+    },
+    "./toggle/primitives": {
+      "types": "./src/toggle/primitives.ts",
+      "default": "./src/toggle/primitives.ts"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -150,10 +154,6 @@
       "./checkbox": {
         "types": "./dist/checkbox/index.d.ts",
         "default": "./dist/checkbox/index.js"
-      },
-      "./checkbox/primitives": {
-        "types": "./dist/checkbox/primitives.d.ts",
-        "default": "./dist/checkbox/primitives.js"
       },
       "./combobox": {
         "types": "./dist/combobox/index.d.ts",
@@ -210,6 +210,14 @@
       "./test": {
         "types": "./dist/test.d.ts",
         "default": "./dist/test.js"
+      },
+      "./toggle": {
+        "types": "./dist/toggle/index.d.ts",
+        "default": "./dist/toggle/index.js"
+      },
+      "./toggle/primitives": {
+        "types": "./dist/toggle/primitives.d.ts",
+        "default": "./dist/toggle/primitives.js"
       },
       "./package.json": "./package.json"
     }

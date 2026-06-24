@@ -113,7 +113,6 @@
   "remix/ui/breadcrumbs": "@remix-run/ui/breadcrumbs",
   "remix/ui/button": "@remix-run/ui/button",
   "remix/ui/checkbox": "@remix-run/ui/checkbox",
-  "remix/ui/checkbox/primitives": "@remix-run/ui/checkbox/primitives",
   "remix/ui/combobox": "@remix-run/ui/combobox",
   "remix/ui/combobox/primitives": "@remix-run/ui/combobox/primitives",
   "remix/ui/input": "@remix-run/ui/input",
@@ -123,8 +122,11 @@
   "remix/ui/menu": "@remix-run/ui/menu",
   "remix/ui/menu/primitives": "@remix-run/ui/menu/primitives",
   "remix/ui/popover": "@remix-run/ui/popover",
+  "remix/ui/radio": "@remix-run/ui/radio",
   "remix/ui/select": "@remix-run/ui/select",
   "remix/ui/select/primitives": "@remix-run/ui/select/primitives",
   "remix/ui/server": "@remix-run/ui/server",
-  "remix/ui/test": "@remix-run/ui/test"
+  "remix/ui/test": "@remix-run/ui/test",
+  "remix/ui/toggle": "@remix-run/ui/toggle",
+  "remix/ui/toggle/primitives": "@remix-run/ui/toggle/primitives"
 }

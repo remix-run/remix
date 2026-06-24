@@ -6,7 +6,6 @@ Added `package.json` `exports`:
 - `remix/ui/breadcrumbs` to re-export APIs from `@remix-run/ui/breadcrumbs`
 - `remix/ui/button` to re-export APIs from `@remix-run/ui/button`
 - `remix/ui/checkbox` to re-export APIs from `@remix-run/ui/checkbox`
-- `remix/ui/checkbox/primitives` to re-export APIs from `@remix-run/ui/checkbox/primitives`
 - `remix/ui/combobox` to re-export APIs from `@remix-run/ui/combobox`
 - `remix/ui/combobox/primitives` to re-export APIs from `@remix-run/ui/combobox/primitives`
 - `remix/ui/input` to re-export APIs from `@remix-run/ui/input`
@@ -14,8 +13,11 @@ Added `package.json` `exports`:
 - `remix/ui/menu` to re-export APIs from `@remix-run/ui/menu`
 - `remix/ui/menu/primitives` to re-export APIs from `@remix-run/ui/menu/primitives`
 - `remix/ui/popover` to re-export APIs from `@remix-run/ui/popover`
+- `remix/ui/radio` to re-export APIs from `@remix-run/ui/radio`
 - `remix/ui/select` to re-export APIs from `@remix-run/ui/select`
 - `remix/ui/select/primitives` to re-export APIs from `@remix-run/ui/select/primitives`
+- `remix/ui/toggle` to re-export APIs from `@remix-run/ui/toggle`
+- `remix/ui/toggle/primitives` to re-export APIs from `@remix-run/ui/toggle/primitives`
 
 Removed helper re-exports from `remix/ui`:
 

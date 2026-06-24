@@ -135,7 +135,6 @@
     "./ui/breadcrumbs": "./src/ui/breadcrumbs.ts",
     "./ui/button": "./src/ui/button.ts",
     "./ui/checkbox": "./src/ui/checkbox.ts",
-    "./ui/checkbox/primitives": "./src/ui/checkbox/primitives.ts",
     "./ui/combobox": "./src/ui/combobox.ts",
     "./ui/combobox/primitives": "./src/ui/combobox/primitives.ts",
     "./ui/input": "./src/ui/input.ts",
@@ -145,10 +144,13 @@
     "./ui/menu": "./src/ui/menu.ts",
     "./ui/menu/primitives": "./src/ui/menu/primitives.ts",
     "./ui/popover": "./src/ui/popover.ts",
+    "./ui/radio": "./src/ui/radio.ts",
     "./ui/select": "./src/ui/select.ts",
     "./ui/select/primitives": "./src/ui/select/primitives.ts",
     "./ui/server": "./src/ui/server.ts",
     "./ui/test": "./src/ui/test.ts",
+    "./ui/toggle": "./src/ui/toggle.ts",
+    "./ui/toggle/primitives": "./src/ui/toggle/primitives.ts",
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -609,10 +611,6 @@
         "types": "./dist/ui/checkbox.d.ts",
         "default": "./dist/ui/checkbox.js"
       },
-      "./ui/checkbox/primitives": {
-        "types": "./dist/ui/checkbox/primitives.d.ts",
-        "default": "./dist/ui/checkbox/primitives.js"
-      },
       "./ui/combobox": {
         "types": "./dist/ui/combobox.d.ts",
         "default": "./dist/ui/combobox.js"
@@ -649,6 +647,10 @@
         "types": "./dist/ui/popover.d.ts",
         "default": "./dist/ui/popover.js"
       },
+      "./ui/radio": {
+        "types": "./dist/ui/radio.d.ts",
+        "default": "./dist/ui/radio.js"
+      },
       "./ui/select": {
         "types": "./dist/ui/select.d.ts",
         "default": "./dist/ui/select.js"
@@ -664,6 +666,14 @@
       "./ui/test": {
         "types": "./dist/ui/test.d.ts",
         "default": "./dist/ui/test.js"
+      },
+      "./ui/toggle": {
+        "types": "./dist/ui/toggle.d.ts",
+        "default": "./dist/ui/toggle.js"
+      },
+      "./ui/toggle/primitives": {
+        "types": "./dist/ui/toggle/primitives.d.ts",
+        "default": "./dist/ui/toggle/primitives.js"
       },
       "./package.json": "./package.json"
     },

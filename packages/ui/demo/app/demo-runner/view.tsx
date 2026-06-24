@@ -272,6 +272,7 @@ const componentDemoModules = new Set([
   'popover',
   'radio',
   'select',
+  'toggle',
 ])
 
 function groupDemosByModule(demos: DemoFile[]): DemoGroup[] {

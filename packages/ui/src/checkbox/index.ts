@@ -1,104 +1,18 @@
 import { createMixin, css } from '@remix-run/ui'
-import type {
-  CSSMixinDescriptor,
-  ElementProps,
-  Handle,
-  MixinDescriptor,
-  Props,
-  RemixNode,
-} from '@remix-run/ui'
-import * as checkboxPrimitive from '@remix-run/ui/checkbox/primitives'
+import type { CSSMixinDescriptor, ElementProps, MixinDescriptor } from '@remix-run/ui'
 import { renderMixinElement } from '../runtime/mixins/mixin.ts'
 import { controlFocusShadow } from '../shared/focus-styles.ts'
 
-export {
-  CheckboxChangeEvent,
-  CheckboxGroupChangeEvent,
-  onCheckboxChange,
-  onCheckboxGroupChange,
-} from '@remix-run/ui/checkbox/primitives'
-
 export type CheckboxSize = 'md' | 'lg'
-export type CheckboxState = checkboxPrimitive.CheckboxState
+export type CheckboxState = 'checked' | 'mixed' | 'unchecked'
 
 export interface CheckboxOptions {
   size?: CheckboxSize
-}
-
-export interface CheckboxProps
-  extends Omit<
-    Props<'input'>,
-    | 'aria-checked'
-    | 'aria-disabled'
-    | 'checked'
-    | 'children'
-    | 'defaultChecked'
-    | 'disabled'
-    | 'name'
-    | 'onChange'
-    | 'readOnly'
-    | 'role'
-    | 'size'
-    | 'type'
-    | 'value'
-  > {
-  checked?: CheckboxState
-  defaultChecked?: CheckboxState
-  disabled?: boolean
-  form?: string
-  inputRef?: (input: HTMLInputElement, signal: AbortSignal) => void
-  name?: string
-  onCheckedChange?: (checked: CheckboxState) => void
-  readOnly?: boolean
-  required?: boolean
-  size?: CheckboxSize
-  tabIndex?: number
-  value?: string
-}
-
-export interface CheckboxGroupProps
-  extends Omit<
-    Props<'div'>,
-    'aria-disabled' | 'children' | 'defaultValue' | 'onChange' | 'role' | 'value'
-  > {
-  children?: RemixNode
-  defaultValue?: string[]
-  disabled?: boolean
-  name?: string
-  onValueChange?: (value: string[]) => void
-  value?: string[]
-}
-
-export interface CheckboxGroupParentProps
-  extends Omit<
-    Props<'input'>,
-    | 'checked'
-    | 'children'
-    | 'defaultChecked'
-    | 'name'
-    | 'onChange'
-    | 'role'
-    | 'size'
-    | 'type'
-    | 'value'
-  > {
-  inputRef?: (input: HTMLInputElement, signal: AbortSignal) => void
-  size?: CheckboxSize
-}
-
-export interface CheckboxItemProps
-  extends Omit<
-    Props<'input'>,
-    'checked' | 'children' | 'defaultChecked' | 'onChange' | 'role' | 'size' | 'type' | 'value'
-  > {
-  inputId?: string
-  inputRef?: (input: HTMLInputElement, signal: AbortSignal) => void
-  size?: CheckboxSize
-  value: string
+  state?: CheckboxState
 }
 
 type CheckboxMixin = readonly [
-  MixinDescriptor<Element, [], ElementProps>,
+  MixinDescriptor<Element, [state?: CheckboxState], ElementProps>,
   CSSMixinDescriptor,
   CSSMixinDescriptor,
 ]
@@ -118,18 +32,33 @@ const mixedActiveSelector =
 const checkIconUrl =
   "url(\"data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg filter='url(%23filter0_d_2_2264)'%3E%3Cpath d='M2.75 5.76562L5.10156 8.25L9.23438 1.75' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2.75 5.76562L5.10156 8.25L9.23438 1.75' stroke='url(%23paint0_linear_2_2264)' stroke-opacity='0.1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3Cdefs%3E%3Cfilter id='filter0_d_2_2264' x='0' y='0' width='11.9845' height='12' filterUnits='userSpaceOnUse' color-interpolation-filters='sRGB'%3E%3CfeFlood flood-opacity='0' result='BackgroundImageFix'/%3E%3CfeColorMatrix in='SourceAlpha' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0' result='hardAlpha'/%3E%3CfeOffset dy='1'/%3E%3CfeGaussianBlur stdDeviation='1'/%3E%3CfeComposite in2='hardAlpha' operator='out'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.4 0'/%3E%3CfeBlend mode='overlay' in2='BackgroundImageFix' result='effect1_dropShadow_2_2264'/%3E%3CfeBlend mode='normal' in='SourceGraphic' in2='effect1_dropShadow_2_2264' result='shape'/%3E%3C/filter%3E%3ClinearGradient id='paint0_linear_2_2264' x1='5.99219' y1='1.75' x2='5.99219' y2='8.25' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0.25' stop-color='%233573F6' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='%233573F6'/%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E\")"
 
-const checkboxDefaultAttrs = createMixin<Element, [], ElementProps>(
-  (handle, hostType) => (props) => {
-    if (hostType !== 'input' || props.type !== undefined) {
-      return handle.element
+const checkboxAriaChecked = {
+  checked: 'true',
+  mixed: 'mixed',
+  unchecked: 'false',
+} as const satisfies Record<CheckboxState, 'true' | 'mixed' | 'false'>
+
+const checkboxDefaultAttrs = createMixin<Element, [state?: CheckboxState], ElementProps>(
+  (handle, hostType) => (state, props) => {
+    let stateProps =
+      state === undefined
+        ? props
+        : {
+            ...props,
+            'aria-checked': props['aria-checked'] ?? checkboxAriaChecked[state],
+            'data-state': props['data-state'] ?? state,
+          }
+
+    if (hostType !== 'input' || stateProps.type !== undefined) {
+      return state === undefined ? handle.element : renderMixinElement(handle.element, stateProps)
     }
 
     return renderMixinElement(handle.element, {
-      ...props,
+      ...stateProps,
       type: 'checkbox',
     })
   },
-)()
+)
 
 const baseStyle: CSSMixinDescriptor = css({
   appearance: 'none',
@@ -226,158 +155,8 @@ const sizeStyles = {
 } as const satisfies Record<CheckboxSize, CSSMixinDescriptor>
 
 export function checkbox(options: CheckboxOptions = {}): CheckboxMixin {
-  let { size = 'md' } = options
-  return [checkboxDefaultAttrs, baseStyle, sizeStyles[size]]
-}
-
-export function Checkbox(handle: Handle<CheckboxProps>) {
-  return () => {
-    let {
-      checked,
-      defaultChecked,
-      disabled,
-      form,
-      inputRef,
-      mix,
-      name,
-      onCheckedChange,
-      readOnly,
-      required,
-      size = 'md',
-      tabIndex,
-      value,
-      ...inputProps
-    } = handle.props
-
-    return (
-      <input
-        {...inputProps}
-        type="checkbox"
-        mix={[
-          checkbox({ size }),
-          checkboxPrimitive.control({
-            checked,
-            defaultChecked,
-            disabled,
-            form,
-            inputRef,
-            name,
-            onCheckedChange,
-            readOnly,
-            required,
-            tabIndex,
-            value,
-          }),
-          mix,
-        ]}
-      />
-    )
-  }
-}
-
-export function CheckboxGroup(handle: Handle<CheckboxGroupProps>): () => RemixNode {
-  return () => {
-    let {
-      children,
-      defaultValue,
-      disabled = false,
-      mix,
-      name,
-      onValueChange,
-      value,
-      ...divProps
-    } = handle.props
-
-    return (
-      <checkboxPrimitive.GroupContext
-        defaultValue={defaultValue}
-        disabled={disabled}
-        name={name}
-        onValueChange={onValueChange}
-        value={value}
-      >
-        <div {...divProps} mix={[checkboxPrimitive.group(), mix]}>
-          {children}
-        </div>
-      </checkboxPrimitive.GroupContext>
-    )
-  }
-}
-
-export function CheckboxGroupParent(handle: Handle<CheckboxGroupParentProps>): () => RemixNode {
-  return () => {
-    let {
-      disabled,
-      form,
-      inputRef,
-      mix,
-      readOnly,
-      required,
-      size = 'md',
-      tabIndex,
-      ...inputProps
-    } = handle.props
-
-    return (
-      <input
-        {...inputProps}
-        type="checkbox"
-        mix={[
-          checkbox({ size }),
-          checkboxPrimitive.parent({
-            disabled,
-            form,
-            inputRef,
-            readOnly,
-            required,
-            tabIndex,
-          }),
-          mix,
-        ]}
-      />
-    )
-  }
-}
-
-export function CheckboxItem(handle: Handle<CheckboxItemProps>): () => RemixNode {
-  return () => {
-    let {
-      disabled,
-      form,
-      inputId,
-      inputRef,
-      mix,
-      name,
-      readOnly,
-      required,
-      size = 'md',
-      tabIndex,
-      value,
-      ...inputProps
-    } = handle.props
-
-    return (
-      <input
-        {...inputProps}
-        type="checkbox"
-        mix={[
-          checkbox({ size }),
-          checkboxPrimitive.item({
-            disabled,
-            form,
-            inputId,
-            inputRef,
-            name,
-            readOnly,
-            required,
-            tabIndex,
-            value,
-          }),
-          mix,
-        ]}
-      />
-    )
-  }
+  let { size = 'md', state } = options
+  return [checkboxDefaultAttrs(state), baseStyle, sizeStyles[size]]
 }
 
 export default checkbox

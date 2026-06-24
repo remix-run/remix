@@ -1,9 +1,4 @@
-import checkbox, {
-  Checkbox,
-  CheckboxGroup,
-  CheckboxGroupParent,
-  CheckboxItem,
-} from '@remix-run/ui/checkbox'
+import checkbox from '@remix-run/ui/checkbox'
 import { createElement } from '@remix-run/ui'
 import { renderToString } from '@remix-run/ui/server'
 import { expect } from '@remix-run/assert'
@@ -28,19 +23,24 @@ describe('checkbox', () => {
     expect(html).toMatch(/--rmx-checkbox-check-size: 15px/)
   })
 
-  it('styles checked and mixed states', async () => {
+  it('styles checked and mixed states for native and custom hosts', async () => {
     let html = await renderToString(
       <>
-        <input checked mix={checkbox()} readOnly />
-        <input aria-checked="mixed" data-state="mixed" mix={checkbox()} />
+        <input defaultChecked mix={checkbox()} />
+        <input mix={checkbox({ state: 'mixed' })} />
+        {createElement('span', { mix: checkbox({ state: 'checked' }) })}
       </>,
     )
 
     expect(html).toMatch(/:checked/)
     expect(html).toMatch(/\[aria-checked="true"\]/)
+    expect(html).toMatch(/\[data-state="checked"\]/)
+    expect(html).toMatch(/aria-checked="mixed"/)
+    expect(html).toMatch(/data-state="mixed"/)
+    expect(html).toMatch(/aria-checked="true"/)
+    expect(html).toMatch(/data-state="checked"/)
     expect(html).toMatch(/:indeterminate/)
     expect(html).toMatch(/\[aria-checked="mixed"\]/)
-    expect(html).toMatch(/\[data-state="mixed"\]/)
     expect(html).toMatch(/#3573F6/)
     expect(html).toMatch(/M2\.75 5\.76562L5\.10156 8\.25L9\.23438 1\.75/)
     expect(html).toMatch(/drop-shadow\(0 1px 2px rgba\(0, 0, 0, 0\.4\)\)/)
@@ -50,8 +50,8 @@ describe('checkbox', () => {
     let html = await renderToString(
       <>
         <input disabled mix={checkbox()} />
-        <input checked disabled mix={checkbox()} readOnly />
-        <input aria-checked="mixed" data-state="mixed" disabled mix={checkbox()} />
+        <input defaultChecked disabled mix={checkbox()} />
+        <input disabled mix={checkbox({ state: 'mixed' })} />
       </>,
     )
 
@@ -76,32 +76,5 @@ describe('checkbox', () => {
 
     expect(explicitHtml).toMatch(/type="radio"/)
     expect(spanHtml).not.toMatch(/type="checkbox"/)
-  })
-
-  it('server-renders the component as a native checkbox with mixed aria state', async () => {
-    let html = await renderToString(<Checkbox defaultChecked="mixed" name="selection" />)
-
-    expect(html).toMatch(/type="checkbox"/)
-    expect(html).toMatch(/aria-checked="mixed"/)
-    expect(html).toMatch(/data-state="mixed"/)
-    expect(html).toMatch(/name="selection"/)
-    expect(html).not.toMatch(/type="hidden"/)
-  })
-
-  it('server-renders checkbox groups with parent and item controls', async () => {
-    let html = await renderToString(
-      <CheckboxGroup aria-label="Permissions" defaultValue={['read']}>
-        <CheckboxGroupParent aria-label="All permissions" />
-        <CheckboxItem aria-label="Read" value="read" />
-        <CheckboxItem aria-label="Write" value="write" />
-      </CheckboxGroup>,
-    )
-
-    expect(html).toMatch(/role="group"/)
-    expect(html).toMatch(/aria-label="Permissions"/)
-    expect(html).toMatch(/aria-label="Read"/)
-    expect(html).toMatch(/aria-checked="true"/)
-    expect(html).toMatch(/aria-label="Write"/)
-    expect(html).toMatch(/data-state="unchecked"/)
   })
 })

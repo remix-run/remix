@@ -1,14 +1,10 @@
-import { css, ref } from '@remix-run/ui'
-import checkbox, {
-  Checkbox,
-  CheckboxGroup,
-  CheckboxGroupParent,
-  CheckboxItem,
-} from '@remix-run/ui/checkbox'
+import { css, on } from '@remix-run/ui'
+import type { Handle } from '@remix-run/ui'
+import checkbox, { type CheckboxState } from '@remix-run/ui/checkbox'
 
 /**
- * @name Checkbox Components
- * @description Styled checkbox mixins and component wrappers.
+ * @name Checkbox Basic
+ * @description The checkbox mixin applies small or large checkbox styling to native inputs.
  * @layout center
  */
 export default function Example() {
@@ -34,123 +30,129 @@ export default function Example() {
 
         <div mix={rowCss}>
           <span mix={stateLabelCss}>Checked</span>
-          <input aria-label="Checked medium" checked mix={checkbox()} readOnly />
-          <input aria-label="Checked large" checked mix={checkbox({ size: 'lg' })} readOnly />
-          <input aria-label="Checked medium disabled" checked disabled mix={checkbox()} readOnly />
+          <input aria-label="Checked medium" defaultChecked mix={checkbox()} />
+          <input aria-label="Checked large" defaultChecked mix={checkbox({ size: 'lg' })} />
+          <input aria-label="Checked medium disabled" defaultChecked disabled mix={checkbox()} />
           <input
             aria-label="Checked large disabled"
-            checked
+            defaultChecked
             disabled
             mix={checkbox({ size: 'lg' })}
-            readOnly
           />
         </div>
 
         <div mix={rowCss}>
           <span mix={stateLabelCss}>Mixed</span>
-          <input
-            aria-label="Mixed medium"
-            data-state="mixed"
-            mix={[checkbox(), indeterminateInput]}
-          />
+          <input aria-label="Mixed medium" indeterminate mix={checkbox({ state: 'mixed' })} />
           <input
             aria-label="Mixed large"
-            data-state="mixed"
-            mix={[checkbox({ size: 'lg' }), indeterminateInput]}
+            indeterminate
+            mix={checkbox({ size: 'lg', state: 'mixed' })}
           />
           <input
             aria-label="Mixed medium disabled"
-            data-state="mixed"
             disabled
-            mix={[checkbox(), indeterminateInput]}
+            indeterminate
+            mix={checkbox({ state: 'mixed' })}
           />
           <input
             aria-label="Mixed large disabled"
-            data-state="mixed"
             disabled
-            mix={[checkbox({ size: 'lg' }), indeterminateInput]}
+            indeterminate
+            mix={checkbox({ size: 'lg', state: 'mixed' })}
           />
         </div>
       </section>
 
       <section mix={sectionCss}>
-        <h2 mix={sectionLabelCss}>Checkbox component</h2>
-        <div mix={headerCss}>
-          <span />
-          <span mix={labelCss}>Medium</span>
-          <span mix={labelCss}>Large</span>
-          <span mix={labelCss}>Disabled md</span>
-          <span mix={labelCss}>Disabled lg</span>
-        </div>
-
-        <div mix={rowCss}>
-          <span mix={stateLabelCss}>Unchecked</span>
-          <Checkbox aria-label="Component unchecked medium" />
-          <Checkbox aria-label="Component unchecked large" size="lg" />
-          <Checkbox aria-label="Component unchecked medium disabled" disabled />
-          <Checkbox aria-label="Component unchecked large disabled" disabled size="lg" />
-        </div>
-
-        <div mix={rowCss}>
-          <span mix={stateLabelCss}>Checked</span>
-          <Checkbox aria-label="Component checked medium" defaultChecked />
-          <Checkbox aria-label="Component checked large" defaultChecked size="lg" />
-          <Checkbox aria-label="Component checked medium disabled" defaultChecked disabled />
-          <Checkbox
-            aria-label="Component checked large disabled"
-            defaultChecked
-            disabled
-            size="lg"
-          />
-        </div>
-
-        <div mix={rowCss}>
-          <span mix={stateLabelCss}>Mixed</span>
-          <Checkbox aria-label="Component mixed medium" defaultChecked="mixed" />
-          <Checkbox aria-label="Component mixed large" defaultChecked="mixed" size="lg" />
-          <Checkbox aria-label="Component mixed medium disabled" defaultChecked="mixed" disabled />
-          <Checkbox
-            aria-label="Component mixed large disabled"
-            defaultChecked="mixed"
-            disabled
-            size="lg"
-          />
-        </div>
-      </section>
-
-      <section mix={sectionCss}>
-        <h2 mix={sectionLabelCss}>Group components</h2>
-        <CheckboxGroup aria-labelledby="permissions-label" defaultValue={['read', 'write']}>
-          <div id="permissions-label" mix={stateLabelCss}>
-            Permissions
-          </div>
-          <label mix={optionCss}>
-            <CheckboxGroupParent aria-label="All permissions" />
-            All permissions
-          </label>
-          <div mix={nestedOptionsCss}>
-            <label mix={optionCss}>
-              <CheckboxItem value="read" />
-              Read
-            </label>
-            <label mix={optionCss}>
-              <CheckboxItem value="write" />
-              Write
-            </label>
-            <label mix={optionCss}>
-              <CheckboxItem value="deploy" />
-              Deploy
-            </label>
-          </div>
-        </CheckboxGroup>
+        <h2 mix={sectionLabelCss}>Group state in app code</h2>
+        <PermissionsGroup />
       </section>
     </div>
   )
 }
 
-const indeterminateInput = ref((node: HTMLInputElement) => {
-  node.indeterminate = true
-})
+type PermissionValue = (typeof permissionItems)[number]['value']
+
+const permissionItems = [
+  { label: 'Read', value: 'read' },
+  { label: 'Write', value: 'write' },
+  { label: 'Deploy', value: 'deploy' },
+] as const
+
+function PermissionsGroup(handle: Handle) {
+  let selectedPermissions = new Set<PermissionValue>(['read', 'write'])
+
+  function getParentState(): CheckboxState {
+    if (selectedPermissions.size === 0) {
+      return 'unchecked'
+    }
+
+    return permissionItems.every((item) => selectedPermissions.has(item.value))
+      ? 'checked'
+      : 'mixed'
+  }
+
+  function setSelectedPermissions(nextSelectedPermissions: Set<PermissionValue>) {
+    selectedPermissions = nextSelectedPermissions
+    void handle.update()
+  }
+
+  return () => {
+    let parentState = getParentState()
+
+    return (
+      <fieldset aria-labelledby="permissions-label" mix={groupCss}>
+        <legend id="permissions-label" mix={stateLabelCss}>
+          Permissions
+        </legend>
+        <label mix={optionCss}>
+          <input
+            checked={parentState === 'checked'}
+            indeterminate={parentState === 'mixed'}
+            mix={[
+              checkbox({ state: parentState }),
+              on('change', (event) => {
+                setSelectedPermissions(
+                  event.currentTarget.checked
+                    ? new Set(permissionItems.map((item) => item.value))
+                    : new Set<PermissionValue>(),
+                )
+              }),
+            ]}
+          />
+          All permissions
+        </label>
+        <div mix={nestedOptionsCss}>
+          {permissionItems.map((item) => (
+            <label key={item.value} mix={optionCss}>
+              <input
+                checked={selectedPermissions.has(item.value)}
+                mix={[
+                  checkbox(),
+                  on('change', (event) => {
+                    let nextSelectedPermissions = new Set(selectedPermissions)
+
+                    if (event.currentTarget.checked) {
+                      nextSelectedPermissions.add(item.value)
+                    } else {
+                      nextSelectedPermissions.delete(item.value)
+                    }
+
+                    setSelectedPermissions(nextSelectedPermissions)
+                  }),
+                ]}
+                name="permissions"
+                value={item.value}
+              />
+              {item.label}
+            </label>
+          ))}
+        </div>
+      </fieldset>
+    )
+  }
+}
 
 const checkboxDemoCss = css({
   display: 'grid',
@@ -204,6 +206,14 @@ const stateLabelCss = css({
   fontWeight: 600,
   letterSpacing: 0,
   color: '#101010',
+})
+
+const groupCss = css({
+  display: 'grid',
+  gap: '8px',
+  margin: 0,
+  padding: 0,
+  border: 0,
 })
 
 const optionCss = css({

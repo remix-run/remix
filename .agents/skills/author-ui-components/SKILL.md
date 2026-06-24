@@ -283,7 +283,10 @@ Add or update:
   event behavior
 - `index.test.tsx` for styled wrapper markup and composition
 - browser tests only when DOM behavior needs a real browser
-- demos for visible components
+- demos for visible components; for new built-in component modules, add the
+  module name to `componentDemoModules` in
+  `packages/ui/demo/app/demo-runner/view.tsx` so `src/<name>/*.demo.tsx` files
+  appear under the "Built-in components" heading instead of "General demos"
 - `README.md` examples that import from `remix/ui/...`
 - package change files when published behavior changes
 
@@ -301,6 +304,8 @@ Before finishing a `packages/ui` component change, verify:
 - host refs are registered and unregistered with the owning mixin/component
 - controlled and uncontrolled state paths are both covered
 - public events use the established event class plus `on...` mixin pattern
+- built-in component demos are listed in the demo app's
+  `componentDemoModules` allowlist
 - docs, demos, tests, and change files match the public surface touched
 
 ## Anti-Patterns

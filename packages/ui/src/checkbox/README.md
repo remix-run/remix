@@ -1,10 +1,8 @@
 # checkbox
 
-`checkbox` is a style mixin for native checkbox inputs. `Checkbox` and its group components are styled wrappers around the lower-level `remix/ui/checkbox/primitives` primitives for mixed-state checkboxes and aggregate checkbox groups.
+`checkbox` is a style mixin for native checkbox inputs. It only owns checkbox visuals, an optional visual state, and the default `type="checkbox"` behavior for native `<input>` hosts.
 
-## Component Usage
-
-### Native Input
+## Usage
 
 ```tsx
 import checkbox from 'remix/ui/checkbox'
@@ -12,7 +10,7 @@ import checkbox from 'remix/ui/checkbox'
 function VisibilityToggle() {
   return () => (
     <label>
-      <input mix={checkbox()} defaultChecked />
+      <input defaultChecked mix={checkbox()} name="visibility" value="archived" />
       Show archived items
     </label>
   )
@@ -25,129 +23,37 @@ Use `size: 'lg'` when the surrounding UI needs a larger visual control:
 <input mix={checkbox({ size: 'lg' })} />
 ```
 
-### Mixed-State Component
-
-Use `Checkbox` when the control can be mixed. It renders a native checkbox input and keeps the native `indeterminate` property in sync.
+For mixed state, app code owns the checkbox state and the native `indeterminate` property:
 
 ```tsx
-import { Checkbox } from 'remix/ui/checkbox'
+import checkbox from 'remix/ui/checkbox'
 
-function PermissionToggle() {
-  return () => (
-    <Checkbox
-      aria-label="Toggle permissions"
-      defaultChecked="mixed"
-      name="permissions"
-      onCheckedChange={(checked) => {
-        console.log(checked)
-      }}
-    />
-  )
-}
-```
+function PermissionParent() {
+  let state: 'checked' | 'mixed' | 'unchecked' = 'mixed'
 
-### Checkbox Groups
-
-Use `CheckboxGroup`, `CheckboxItem`, and `CheckboxGroupParent` when a parent checkbox should reflect a set of children. The parent becomes mixed when only some enabled child values are selected.
-
-```tsx
-import { CheckboxGroup, CheckboxGroupParent, CheckboxItem } from 'remix/ui/checkbox'
-
-function Permissions() {
-  return () => (
-    <CheckboxGroup
-      defaultValue={['read']}
-      name="permissions"
-      onValueChange={(value) => console.log(value)}
-    >
-      <label>
-        <CheckboxGroupParent aria-label="All permissions" />
-        All permissions
-      </label>
-      <label>
-        <CheckboxItem value="read" />
-        Read
-      </label>
-      <label>
-        <CheckboxItem value="write" />
-        Write
-      </label>
-    </CheckboxGroup>
-  )
-}
-```
-
-## Primitive Usage
-
-Use the lower-level primitives when app code owns the checkbox markup and styles:
-
-```tsx
-import * as checkbox from 'remix/ui/checkbox/primitives'
-import { controlStyle } from './checkbox.styles'
-
-function CustomCheckbox() {
   return () => (
     <input
-      aria-label="Custom checkbox"
-      mix={[controlStyle, checkbox.control({ defaultChecked: 'mixed', name: 'selection' })]}
+      checked={state === 'checked'}
+      indeterminate={state === 'mixed'}
+      mix={checkbox({ state })}
     />
   )
 }
 ```
-
-For checkbox groups, compose `GroupContext` with `parent(...)` and `item(...)` mixins:
-
-```tsx
-import * as checkbox from 'remix/ui/checkbox/primitives'
-import { controlStyle, groupStyle, itemStyle } from './checkbox.styles'
-
-export function PrimitivePermissionGroup() {
-  return (
-    <checkbox.GroupContext defaultValue={['read']} name="permissions">
-      <div aria-label="Permissions" mix={[groupStyle, checkbox.group()]}>
-        <label mix={itemStyle}>
-          <input aria-label="All permissions" mix={[controlStyle, checkbox.parent()]} />
-          All permissions
-        </label>
-
-        <label mix={itemStyle}>
-          <input aria-label="Read" mix={[controlStyle, checkbox.item({ value: 'read' })]} />
-          Read
-        </label>
-      </div>
-    </checkbox.GroupContext>
-  )
-}
-```
-
-## Options
-
-- `size`: `'md'` or `'lg'`. Defaults to `'md'`.
 
 ## `remix/ui/checkbox`
 
-- `checkbox(options)`: styles a native checkbox input and supplies `type="checkbox"` when the host is an `<input>` without an explicit `type`.
-- `Checkbox`: renders a native `input[type="checkbox"]`. `checked` and `defaultChecked` accept `true`, `false`, or `'mixed'`.
-- `CheckboxGroup`: renders a `role="group"` wrapper and manages a selected string value array for child checkbox items.
-- `CheckboxItem`: renders a native checkbox input controlled by the nearest `CheckboxGroup`.
-- `CheckboxGroupParent`: renders a native checkbox input controlled by the nearest `CheckboxGroup`; it is mixed when some enabled child items are selected.
-- `onCheckboxChange(handler)` and `onCheckboxGroupChange(handler)`: re-exported primitive event mixins.
-- `CheckboxChangeEvent` and `CheckboxGroupChangeEvent`: re-exported primitive event classes.
-- `CheckboxSize`, `CheckboxState`, `CheckboxOptions`, `CheckboxProps`, `CheckboxGroupProps`, `CheckboxGroupParentProps`, and `CheckboxItemProps`: public TypeScript types for the composed APIs.
-
-## `remix/ui/checkbox/primitives`
-
-- `GroupContext`: lower-level provider for a checkbox group value.
-- `control(options)`: wires a standalone checkbox control with `checked`, `mixed`, ARIA, keyboard, and native input behavior.
-- `group()`: wires the group wrapper with `role="group"` and disabled state.
-- `item(options)`: wires a child checkbox control to the nearest group value.
-- `parent(options)`: wires a parent checkbox control to the nearest group and derives `true`, `false`, or `'mixed'` from registered enabled items.
-- `onCheckboxChange(handler)` and `onCheckboxGroupChange(handler)`: event mixins for bubbling checkbox and group changes.
-- `CheckboxControlOptions`, `CheckboxGroupContextProps`, `CheckboxParentOptions`, `CheckboxItemOptions`, and `CheckboxGroupChangeEventInit`: primitive option and event-init types.
+- `checkbox(options)`: style mixin for native checkbox inputs or checkbox-like hosts.
+- `CheckboxOptions`: accepts `size` and `state`.
+- `CheckboxSize`: `'md'` or `'lg'`. Defaults to `'md'`.
+- `CheckboxState`: `'checked'`, `'mixed'`, or `'unchecked'`.
 
 ## Behavior Notes
 
-- Checked styles apply through `:checked`, `[aria-checked="true"]`, or `[data-state="checked"]`.
-- Mixed styles apply through `:indeterminate`, `[indeterminate]`, `[aria-checked="mixed"]`, or `[data-state="mixed"]`.
-- Use `checkbox.control(...)`, `checkbox.parent(...)`, or `checkbox.item(...)` when a raw native input needs live mixed behavior.
-- The component control needs an accessible name, usually from `aria-label` or `aria-labelledby`.
+- `checkbox()` returns a mixin descriptor, so it composes with other mixins in the host element's `mix` prop.
+- Native `<input>` hosts receive `type="checkbox"` unless an explicit `type` is provided.
+- Native input state is browser-owned through `checked`, `defaultChecked`, and user interaction.
+- The optional `state` option adds `aria-checked` and `data-state` for app-owned mixed state or custom hosts.
+- Checked styles apply through `:checked`, `aria-checked="true"`, or `data-state="checked"`.
+- Mixed styles apply through `:indeterminate`, `indeterminate`, `aria-checked="mixed"`, or `data-state="mixed"`.
+- Disabled hosts use the shared disabled treatment through `disabled` or `aria-disabled="true"`.
