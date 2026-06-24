@@ -198,6 +198,31 @@ describe('node-hmr', () => {
     }
   })
 
+  it('keeps ready pending for entry hot updates until the server is ready', async () => {
+    await using fixture = await createReadyGenerationFixture({
+      'server.ts': getFetchWhenReadyHotChildServerSource('one', { listenDelayMs: 0 }),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'one')
+
+      await fs.writeFile(
+        fixture.entryPath,
+        getFetchWhenReadyHotChildServerSource('two', { listenDelayMs: 250 }),
+      )
+      await waitForOutput(server, /"type":"entry-scheduled","message":"two"/)
+
+      let response = await fetch(`http://127.0.0.1:${ready.port}`)
+      assert.equal(response.status, 200)
+      assert.equal(await response.text(), 'two')
+      await waitForOutput(server, /"type":"child-ready","message":"two"/)
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('allows userland to retry safe gateway responses during a restart', async () => {
     await using fixture = await createReadyGenerationFixture({
       'server.ts': getFetchWhenReadyChildServerSource('one'),
@@ -1146,6 +1171,44 @@ function getFetchWhenReadyChildServerSource(message: string): string {
     `    console.log(JSON.stringify({ type: 'child-ready', message: ${JSON.stringify(message)}, port: address.port, pid: process.pid }))`,
     `  }`,
     `})`,
+  ].join('\n')
+}
+
+function getFetchWhenReadyHotChildServerSource(
+  message: string,
+  options: { listenDelayMs: number },
+): string {
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
+
+  return [
+    `import { createServer } from 'node:http'`,
+    `import { writeFile } from 'node:fs/promises'`,
+    `import { emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    ``,
+    `let server = createServer((_request, response) => {`,
+    `  response.end(${JSON.stringify(message)})`,
+    `})`,
+    ``,
+    `setTimeout(() => {`,
+    `  server.listen(0, '127.0.0.1', async () => {`,
+    `    let address = server.address()`,
+    `    if (address && typeof address === 'object') {`,
+    `      await writeFile(process.env.CHILD_PORT_FILE, String(address.port))`,
+    `      emitServerReady()`,
+    `      console.log(JSON.stringify({ type: 'child-ready', message: ${JSON.stringify(message)}, port: address.port, pid: process.pid }))`,
+    `    }`,
+    `  })`,
+    `}, ${JSON.stringify(options.listenDelayMs)})`,
+    `console.log(JSON.stringify({ type: 'entry-scheduled', message: ${JSON.stringify(message)} }))`,
+    ``,
+    `if (import.meta.hot) {`,
+    `  import.meta.hot.accept()`,
+    `  import.meta.hot.dispose(async () => {`,
+    `    server.closeAllConnections()`,
+    `    await new Promise((resolve) => server.close(resolve))`,
+    `    console.log(JSON.stringify({ type: 'child-disposed', message: ${JSON.stringify(message)} }))`,
+    `  })`,
+    `}`,
   ].join('\n')
 }
 

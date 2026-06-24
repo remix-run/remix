@@ -197,6 +197,8 @@ export function createWatchedProcessController(options: {
   let restartGeneration = 0
   let pendingRestartGeneration = 0
   let readyGeneration = -1
+  let serverReadyCount = 0
+  let waitingForEntryServerReady = false
   let readyWaiters: Array<() => void> = []
   let browserHmrRequestId = 0
   let pendingBrowserHmrRequests = new Map<
@@ -220,6 +222,7 @@ export function createWatchedProcessController(options: {
       readyGeneration === pendingRestartGeneration &&
       restartTimer === undefined &&
       !flushingWatchEvents &&
+      !waitingForEntryServerReady &&
       pendingHotUpdateCount === acceptedHotUpdateCount
     )
   }
@@ -229,6 +232,7 @@ export function createWatchedProcessController(options: {
       pendingRestartGeneration += 1
       serverGeneration += 1
     }
+    waitingForEntryServerReady = false
     setReadyGeneration(-1)
     return pendingRestartGeneration
   }
@@ -349,7 +353,9 @@ export function createWatchedProcessController(options: {
     if (message.type === 'node-hmr:child:hot-module-updated') {
       acceptedHotUpdateCount += 1
       serverGeneration += 1
-      flushAcceptedHotUpdateBrowserEvent()
+      if (!waitingForEntryServerReady) {
+        flushAcceptedHotUpdateBrowserEvent()
+      }
       resolveReadyWaiters()
       return
     }
@@ -364,9 +370,12 @@ export function createWatchedProcessController(options: {
     }
 
     if (message.type === 'node-hmr:child:server-ready') {
+      serverReadyCount += 1
+      waitingForEntryServerReady = false
       setReadyGeneration(restartGeneration)
       resolveReadyWaiters()
       flushPendingServerUpdateEvent()
+      flushAcceptedHotUpdateBrowserEvent()
       return
     }
 
@@ -988,6 +997,13 @@ export function createWatchedProcessController(options: {
 
   function sendHotUpdate(moduleInfo: NodeHmrUpdate): boolean {
     if (child === undefined || child.send === undefined || !child.connected) return false
+
+    let shouldWaitForEntryServerReady =
+      serverReadyCount > 0 &&
+      (moduleInfo.acceptedUrl ?? moduleInfo.url) === pathToFileURL(getEntryPath()).href
+    if (shouldWaitForEntryServerReady) {
+      waitingForEntryServerReady = true
+    }
 
     return child.send({
       acceptedUrl: moduleInfo.acceptedUrl,
