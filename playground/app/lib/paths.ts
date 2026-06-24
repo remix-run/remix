@@ -56,6 +56,7 @@ export function languageLabel(path: string | undefined): string {
   if (path.endsWith('.json')) return 'JSON'
   if (path.endsWith('.css')) return 'CSS'
   if (path.endsWith('.html')) return 'HTML'
+  if (path.endsWith('.sql')) return 'SQL'
   return 'Plain Text'
 }
 
