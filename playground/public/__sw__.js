@@ -52,8 +52,8 @@ function portForClient(event) {
  * Decode base64 string to Uint8Array
  */
 function base64ToBytes(base64) {
-  const binary = atob(base64)
-  const bytes = new Uint8Array(binary.length)
+  let binary = atob(base64)
+  let bytes = new Uint8Array(binary.length)
   for (let i = 0; i < binary.length; i++) {
     bytes[i] = binary.charCodeAt(i)
   }
@@ -64,7 +64,7 @@ function base64ToBytes(base64) {
  * Handle messages from main thread
  */
 self.addEventListener('message', (event) => {
-  const { type, data } = event.data
+  let { type, data } = event.data
 
   DEBUG &&
     console.log('[SW] Received message:', type, 'hasPort in event.ports:', event.ports?.length > 0)
@@ -95,12 +95,12 @@ self.addEventListener('message', (event) => {
  * Handle response messages from main thread
  */
 function handleMainMessage(event) {
-  const { type, id, data, error } = event.data
+  let { type, id, data, error } = event.data
 
   DEBUG && console.log('[SW] Received message from main:', type, 'id:', id)
 
   if (type === 'response') {
-    const pending = pendingRequests.get(id)
+    let pending = pendingRequests.get(id)
     DEBUG && console.log('[SW] Looking for pending request:', id, 'found:', !!pending)
 
     if (pending) {
@@ -126,7 +126,7 @@ function handleMainMessage(event) {
   // Handle streaming responses
   if (type === 'stream-start') {
     DEBUG && console.log('[SW] stream-start received, id:', id)
-    const pending = pendingRequests.get(id)
+    let pending = pendingRequests.get(id)
     if (pending && pending.streamController) {
       // Store headers/status for the streaming response
       pending.streamData = data
@@ -145,12 +145,12 @@ function handleMainMessage(event) {
 
   if (type === 'stream-chunk') {
     DEBUG && console.log('[SW] stream-chunk received, id:', id, 'size:', data?.chunkBase64?.length)
-    const pending = pendingRequests.get(id)
+    let pending = pendingRequests.get(id)
     if (pending && pending.streamController) {
       try {
         // Decode base64 chunk and enqueue
         if (data.chunkBase64) {
-          const bytes = base64ToBytes(data.chunkBase64)
+          let bytes = base64ToBytes(data.chunkBase64)
           pending.streamController.enqueue(bytes)
           DEBUG && console.log('[SW] chunk enqueued, bytes:', bytes.length)
         }
@@ -164,7 +164,7 @@ function handleMainMessage(event) {
 
   if (type === 'stream-end') {
     DEBUG && console.log('[SW] stream-end received, id:', id)
-    const pending = pendingRequests.get(id)
+    let pending = pendingRequests.get(id)
     if (pending && pending.streamController) {
       try {
         pending.streamController.close()
@@ -185,14 +185,14 @@ async function sendRequest(port, method, url, headers, body) {
 
   if (!mainPort) {
     // Ask all clients to re-send the init message
-    const allClients = await self.clients.matchAll({ type: 'window' })
-    for (const client of allClients) {
+    let allClients = await self.clients.matchAll({ type: 'window' })
+    for (let client of allClients) {
       client.postMessage({ type: 'sw-needs-init' })
     }
     // Wait up to 5s for a client to re-initialize the port
     // (main thread may be busy with heavy operations like CLI execution)
     await new Promise((resolve) => {
-      const check = setInterval(() => {
+      let check = setInterval(() => {
         if (mainPort) {
           clearInterval(check)
           resolve()
@@ -208,7 +208,7 @@ async function sendRequest(port, method, url, headers, body) {
     }
   }
 
-  const id = ++requestId
+  let id = ++requestId
 
   return new Promise((resolve, reject) => {
     pendingRequests.set(id, { resolve, reject })
@@ -238,12 +238,12 @@ async function sendStreamingRequest(port, method, url, headers, body) {
 
   if (!mainPort) {
     // Ask all clients to re-send the init message
-    const allClients = await self.clients.matchAll({ type: 'window' })
-    for (const client of allClients) {
+    let allClients = await self.clients.matchAll({ type: 'window' })
+    for (let client of allClients) {
       client.postMessage({ type: 'sw-needs-init' })
     }
     await new Promise((resolve) => {
-      const check = setInterval(() => {
+      let check = setInterval(() => {
         if (mainPort) {
           clearInterval(check)
           resolve()
@@ -259,15 +259,15 @@ async function sendStreamingRequest(port, method, url, headers, body) {
     }
   }
 
-  const id = ++requestId
+  let id = ++requestId
 
   let streamController
   let resolveHeaders
-  const headersPromise = new Promise((resolve) => {
+  let headersPromise = new Promise((resolve) => {
     resolveHeaders = resolve
   })
 
-  const stream = new ReadableStream({
+  let stream = new ReadableStream({
     start(controller) {
       streamController = controller
 
@@ -298,17 +298,17 @@ async function sendStreamingRequest(port, method, url, headers, body) {
  * Intercept fetch requests
  */
 self.addEventListener('fetch', (event) => {
-  const url = new URL(event.request.url)
+  let url = new URL(event.request.url)
 
   DEBUG && console.log('[SW] Fetch:', url.pathname, 'mainPort:', !!mainPort)
 
   // Check if this is a virtual server request
-  const match = url.pathname.match(/^\/__virtual__\/(\d+)(\/.*)?$/)
+  let match = url.pathname.match(/^\/__virtual__\/(\d+)(\/.*)?$/)
 
   if (match) {
     DEBUG && console.log('[SW] Virtual request:', url.pathname)
-    const port = parseInt(match[1], 10)
-    const path = match[2] || '/'
+    let port = parseInt(match[1], 10)
+    let path = match[2] || '/'
     // Bind this client so its later (clean-URL) requests route here too.
     bindClient(event, port)
     event.respondWith(handleVirtualRequest(event.request, port, path + url.search))
@@ -319,7 +319,7 @@ self.addEventListener('fetch', (event) => {
   // Route SAME-ORIGIN requests to its virtual server, keeping the URL clean.
   // Cross-origin requests (fonts, esm.sh, CDNs, APIs) must pass through to the
   // network untouched.
-  const boundPort = portForClient(event)
+  let boundPort = portForClient(event)
   if (boundPort != null && url.origin === self.location.origin) {
     DEBUG && console.log('[SW] Bound-client request:', url.pathname, '-> port', boundPort)
     // Re-bind in case this is a fresh navigation creating a new client.
@@ -334,20 +334,20 @@ self.addEventListener('fetch', (event) => {
     // that should stay within the virtual server
     // Cross-origin requests (fonts, esm.sh, CDNs, APIs) must pass through to
     // the network untouched, even when initiated from a virtual page.
-    const referer = event.request.referrer
+    let referer = event.request.referrer
     if (referer && url.origin === self.location.origin) {
       try {
-        const refererUrl = new URL(referer)
-        const refererMatch = refererUrl.pathname.match(/^\/__virtual__\/(\d+)/)
+        let refererUrl = new URL(referer)
+        let refererMatch = refererUrl.pathname.match(/^\/__virtual__\/(\d+)/)
         if (refererMatch) {
           // Request from within a virtual server context
-          const virtualPrefix = refererMatch[0]
-          const virtualPort = parseInt(refererMatch[1], 10)
-          const targetPath = url.pathname + url.search
+          let virtualPrefix = refererMatch[0]
+          let virtualPort = parseInt(refererMatch[1], 10)
+          let targetPath = url.pathname + url.search
 
           if (event.request.mode === 'navigate') {
             // Navigation requests: redirect to include the virtual prefix
-            const redirectUrl = url.origin + virtualPrefix + targetPath
+            let redirectUrl = url.origin + virtualPrefix + targetPath
             DEBUG &&
               console.log(
                 '[SW] Redirecting navigation from virtual context:',
@@ -379,7 +379,7 @@ self.addEventListener('fetch', (event) => {
 async function handleVirtualRequest(request, port, path) {
   try {
     // Build headers object
-    const headers = {}
+    let headers = {}
     request.headers.forEach((value, key) => {
       headers[key] = value
     })
@@ -391,7 +391,7 @@ async function handleVirtualRequest(request, port, path) {
     }
 
     // Check if this is an API route that might stream (POST to /api/*)
-    const isStreamingCandidate = request.method === 'POST' && path.startsWith('/api/')
+    let isStreamingCandidate = request.method === 'POST' && path.startsWith('/api/')
 
     if (isStreamingCandidate) {
       DEBUG && console.log('[SW] Using streaming mode for:', path)
@@ -400,7 +400,7 @@ async function handleVirtualRequest(request, port, path) {
     DEBUG && console.log('[SW] Using non-streaming mode for:', request.method, path)
 
     // Send to main thread
-    const response = await sendRequest(port, request.method, path, headers, body)
+    let response = await sendRequest(port, request.method, path, headers, body)
 
     DEBUG &&
       console.log('[SW] Got response from main thread:', {
@@ -413,18 +413,18 @@ async function handleVirtualRequest(request, port, path) {
     let finalResponse
     if (response.bodyBase64 && response.bodyBase64.length > 0) {
       try {
-        const bytes = base64ToBytes(response.bodyBase64)
+        let bytes = base64ToBytes(response.bodyBase64)
         DEBUG && console.log('[SW] Decoded body length:', bytes.length)
 
         // Use Blob to ensure proper body handling
-        const blob = new Blob([bytes], {
+        let blob = new Blob([bytes], {
           type: response.headers['Content-Type'] || 'application/octet-stream',
         })
         DEBUG && console.log('[SW] Created blob size:', blob.size)
 
         // Merge response headers with CORP/COEP headers to allow iframe embedding
         // The parent page has COEP: credentialless, so we need matching headers
-        const respHeaders = new Headers(response.headers)
+        let respHeaders = new Headers(response.headers)
         respHeaders.set('Cross-Origin-Embedder-Policy', 'credentialless')
         respHeaders.set('Cross-Origin-Opener-Policy', 'same-origin')
         respHeaders.set('Cross-Origin-Resource-Policy', 'cross-origin')
@@ -468,7 +468,7 @@ async function handleVirtualRequest(request, port, path) {
  * Handle a streaming request
  */
 async function handleStreamingRequest(port, method, path, headers, body) {
-  const { stream, headersPromise, id } = await sendStreamingRequest(
+  let { stream, headersPromise, id } = await sendStreamingRequest(
     port,
     method,
     path,
@@ -477,12 +477,12 @@ async function handleStreamingRequest(port, method, path, headers, body) {
   )
 
   // Wait for headers to arrive
-  const responseData = await headersPromise
+  let responseData = await headersPromise
 
   DEBUG && console.log('[SW] Streaming response started:', responseData?.statusCode)
 
   // Build response headers
-  const respHeaders = new Headers(responseData?.headers || {})
+  let respHeaders = new Headers(responseData?.headers || {})
   respHeaders.set('Cross-Origin-Embedder-Policy', 'credentialless')
   respHeaders.set('Cross-Origin-Opener-Policy', 'same-origin')
   respHeaders.set('Cross-Origin-Resource-Policy', 'cross-origin')
@@ -512,8 +512,8 @@ self.addEventListener('activate', (event) => {
     (async () => {
       await self.clients.claim()
       // Drop client->port bindings for windows that no longer exist.
-      const live = new Set((await self.clients.matchAll({ type: 'window' })).map((c) => c.id))
-      for (const id of clientPort.keys()) {
+      let live = new Set((await self.clients.matchAll({ type: 'window' })).map((c) => c.id))
+      for (let id of clientPort.keys()) {
         if (!live.has(id)) clientPort.delete(id)
       }
     })(),
