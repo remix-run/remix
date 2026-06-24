@@ -5,10 +5,10 @@
  * playgrounds can coexist on the same page without sharing editor/runtime
  * state. Components receive the per-instance {@link AppStoreApi} through props.
  */
-import { configureStore, type ThunkAction } from "@reduxjs/toolkit";
+import { configureStore, type ThunkAction } from '@reduxjs/toolkit'
 
-import { createServices, type Services } from "./services.ts";
-import { actions, type AppAction, reducer } from "./slice.ts";
+import { createServices, type Services } from './services.ts'
+import { actions, type AppAction, reducer } from './slice.ts'
 
 export function createAppStore(services: Services = createServices()) {
   return configureStore({
@@ -24,16 +24,16 @@ export function createAppStore(services: Services = createServices()) {
         serializableCheck: false,
         immutableCheck: false,
       }),
-  });
+  })
 }
 
-export type AppStore = ReturnType<typeof createAppStore>;
+export type AppStore = ReturnType<typeof createAppStore>
 /** The full state tree (the slice is mounted at the root). */
-export type RootState = ReturnType<AppStore["getState"]>;
+export type RootState = ReturnType<AppStore['getState']>
 /** The store's dispatch, widened to accept thunks. */
-export type AppDispatch = AppStore["dispatch"];
+export type AppDispatch = AppStore['dispatch']
 /** A thunk for this app (see ./operations.ts). */
-export type AppThunk<Result = void> = ThunkAction<Result, RootState, Services, AppAction>;
+export type AppThunk<Result = void> = ThunkAction<Result, RootState, Services, AppAction>
 
 /**
  * The store API in the same `{ getState, dispatch, services }` shape a thunk
@@ -43,13 +43,13 @@ export type AppThunk<Result = void> = ThunkAction<Result, RootState, Services, A
  * `(dispatch, getState, services)` arguments.
  */
 export interface AppStoreApi {
-  getState(): RootState;
-  dispatch: AppDispatch;
-  readonly services: Services;
+  getState(): RootState
+  dispatch: AppDispatch
+  readonly services: Services
 }
 
 export interface AppUiApi extends AppStoreApi {
-  subscribe: AppStore["subscribe"];
+  subscribe: AppStore['subscribe']
 }
 
 export function createAppApi(store: AppStore, services: Services): AppUiApi {
@@ -58,12 +58,12 @@ export function createAppApi(store: AppStore, services: Services): AppUiApi {
     dispatch: store.dispatch,
     subscribe: store.subscribe,
     services,
-  };
+  }
 }
 
-export { actions };
-export type { AppAction } from "./slice.ts";
-export type { Services } from "./services.ts";
-export type { AppState, Diagnostic, EditorStatus, RuntimeStatus } from "./state.ts";
-export { DEFAULT_ACTIVE_FILE, DEFAULT_OPEN_FILES } from "./state.ts";
-export { connect, shallowEqual } from "./connect.ts";
+export { actions }
+export type { AppAction } from './slice.ts'
+export type { Services } from './services.ts'
+export type { AppState, Diagnostic, EditorStatus, RuntimeStatus } from './state.ts'
+export { DEFAULT_ACTIVE_FILE, DEFAULT_OPEN_FILES } from './state.ts'
+export { connect, shallowEqual } from './connect.ts'

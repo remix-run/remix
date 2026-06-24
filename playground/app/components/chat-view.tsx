@@ -1,47 +1,47 @@
-import type { UIMessage } from "ai";
-import { micromark } from "micromark";
-import { css, on, ref, type Dispatched, type Handle } from "remix/ui";
+import type { UIMessage } from 'ai'
+import { micromark } from 'micromark'
+import { css, on, ref, type Dispatched, type Handle } from 'remix/ui'
 
-import type { Chat } from "../chat.ts";
+import type { Chat } from '../chat.ts'
 
 // --- Typed custom events -----------------------------------------------------
 // Following the framework convention (see `file-tabs.tsx` / `layout.tsx`):
 // define a real `Event` subclass per event, then augment the global
 // `HTMLElementEventMap` so both `on(...)` mixins and `addEventListener(...)`
 // resolve the event type.
-export const CHAT_SUBMIT_EVENT = "chat-submit" as const;
+export const CHAT_SUBMIT_EVENT = 'chat-submit' as const
 
 /** Fired when the user submits a message from the chat composer. */
 export class ChatSubmitEvent extends Event {
-  readonly message: string;
+  readonly message: string
   constructor(message: string) {
-    super(CHAT_SUBMIT_EVENT, { bubbles: true });
-    this.message = message;
+    super(CHAT_SUBMIT_EVENT, { bubbles: true })
+    this.message = message
   }
 }
 
 declare global {
   interface HTMLElementEventMap {
-    [CHAT_SUBMIT_EVENT]: ChatSubmitEvent;
+    [CHAT_SUBMIT_EVENT]: ChatSubmitEvent
   }
 }
 
 type ChatSubmitEventHandler<E extends Event, target extends HTMLElement> = (
   event: Dispatched<E, target>,
   signal: AbortSignal,
-) => void | Promise<void>;
+) => void | Promise<void>
 
 /** `on(...)` helper for the `chat-submit` event with a typed handler. */
 export function onChatSubmit<target extends HTMLElement>(
   handler: ChatSubmitEventHandler<ChatSubmitEvent, target>,
   capture?: boolean,
 ) {
-  return on(CHAT_SUBMIT_EVENT, handler, capture);
+  return on(CHAT_SUBMIT_EVENT, handler, capture)
 }
 
 export type ChatViewProps = {
-  chat: Chat<UIMessage>;
-};
+  chat: Chat<UIMessage>
+}
 
 /**
  * Presentational agent-chat view: renders the message transcript and a
@@ -55,43 +55,43 @@ export function ChatView(handle: Handle<ChatViewProps>) {
   // Re-render the transcript locally on chat changes (streaming text, status,
   // tool calls) so message updates don't force a full app re-render. Batch a
   // burst of streaming deltas into a single update.
-  let batchTimeout: ReturnType<typeof setTimeout> | null = null;
-  const updateBatched = () => {
-    if (batchTimeout) return;
+  let batchTimeout: ReturnType<typeof setTimeout> | null = null
+  let updateBatched = () => {
+    if (batchTimeout) return
     batchTimeout = setTimeout(() => {
-      batchTimeout = null;
-      handle.update();
-    }, 100);
-  };
+      batchTimeout = null
+      handle.update()
+    }, 100)
+  }
 
   // Auto-scroll behavior: keep the transcript pinned to the bottom while the
   // user is already at the bottom. If they scroll up, stop following; when they
   // scroll back to the bottom, resume. A ResizeObserver watches the container
   // (and its growing content) so we re-pin after the new layout is measured,
   // not while a stale `scrollHeight` is still in effect.
-  let scrollEl: HTMLElement | null = null;
-  let autoScroll = true;
+  let scrollEl: HTMLElement | null = null
+  let autoScroll = true
   // Wiggle room (px) so that being "close enough" to the bottom still counts as
   // being at the bottom (sub-pixel rounding, in-flight streaming, etc.).
-  const BOTTOM_THRESHOLD = 48;
-  const isAtBottom = (el: HTMLElement) =>
-    el.scrollHeight - el.scrollTop - el.clientHeight <= BOTTOM_THRESHOLD;
-  const scrollToBottom = (el: HTMLElement) => {
-    el.scrollTop = el.scrollHeight;
-  };
+  let BOTTOM_THRESHOLD = 48
+  let isAtBottom = (el: HTMLElement) =>
+    el.scrollHeight - el.scrollTop - el.clientHeight <= BOTTOM_THRESHOLD
+  let scrollToBottom = (el: HTMLElement) => {
+    el.scrollTop = el.scrollHeight
+  }
 
-  const unsubscribe = handle.props.chat.subscribe(updateBatched);
+  let unsubscribe = handle.props.chat.subscribe(updateBatched)
   handle.signal.addEventListener(
-    "abort",
+    'abort',
     () => {
-      if (batchTimeout) clearTimeout(batchTimeout);
-      unsubscribe();
+      if (batchTimeout) clearTimeout(batchTimeout)
+      unsubscribe()
     },
     { once: true },
-  );
+  )
 
   return () => {
-    const chat = handle.props.chat;
+    let chat = handle.props.chat
 
     return (
       <jui-stack grow mix={css({ minHeight: 0 })}>
@@ -109,39 +109,39 @@ export function ChatView(handle: Handle<ChatViewProps>) {
             ref((node: HTMLElement, signal) => {
               if (scrollEl === node) {
                 // Re-render while following the bottom: re-pin once layout settles.
-                if (autoScroll) requestAnimationFrame(() => scrollToBottom(node));
-                return;
+                if (autoScroll) requestAnimationFrame(() => scrollToBottom(node))
+                return
               }
-              scrollEl = node;
+              scrollEl = node
 
               // User-driven scrolling toggles whether we keep following.
               node.addEventListener(
-                "scroll",
+                'scroll',
                 () => {
-                  autoScroll = isAtBottom(node);
+                  autoScroll = isAtBottom(node)
                 },
                 { signal },
-              );
+              )
 
               // Re-pin whenever the container or its content grows (streaming
               // text, new messages, the "Working..." indicator, etc.).
-              const observer = new ResizeObserver(() => {
-                if (autoScroll) scrollToBottom(node);
-              });
-              observer.observe(node);
-              for (const child of Array.from(node.children)) observer.observe(child);
-              signal.addEventListener("abort", () => observer.disconnect(), { once: true });
+              let observer = new ResizeObserver(() => {
+                if (autoScroll) scrollToBottom(node)
+              })
+              observer.observe(node)
+              for (let child of Array.from(node.children)) observer.observe(child)
+              signal.addEventListener('abort', () => observer.disconnect(), { once: true })
 
               // Start pinned to the bottom on load.
-              requestAnimationFrame(() => scrollToBottom(node));
+              requestAnimationFrame(() => scrollToBottom(node))
             }),
           ]}
         >
           <jui-container center>
             <jui-stack gap="md">
               {chat.messages.map((m) => (
-                <jui-group nowrap gap="sm" justify={m.role === "user" ? "end" : "start"}>
-                  {m.role === "assistant" && (
+                <jui-group nowrap gap="sm" justify={m.role === 'user' ? 'end' : 'start'}>
+                  {m.role === 'assistant' && (
                     <div>
                       <jui-badge aspect="square">
                         <svg
@@ -160,63 +160,63 @@ export function ChatView(handle: Handle<ChatViewProps>) {
                     </div>
                   )}
                   <jui-card maxw="md" grow>
-                    <div bg={m.role === "user" ? "primary" : undefined} pl="md" pr="md" typography>
+                    <div bg={m.role === 'user' ? 'primary' : undefined} pl="md" pr="md" typography>
                       {m.parts.map((part, index) => {
                         switch (part.type) {
-                          case "text":
-                            return <div innerHTML={micromark(part.text)} />;
+                          case 'text':
+                            return <div innerHTML={micromark(part.text)} />
                           default:
-                            if (part.type.startsWith("tool-")) {
-                              const { input, state, type } = part as {
-                                type: `tool-${string}`;
-                                input: unknown;
-                                output: unknown;
-                                state: "input-streaming" | "output-streaming" | "output-available";
-                              };
-                              const path =
-                                typeof input === "object" &&
+                            if (part.type.startsWith('tool-')) {
+                              let { input, state, type } = part as {
+                                type: `tool-${string}`
+                                input: unknown
+                                output: unknown
+                                state: 'input-streaming' | 'output-streaming' | 'output-available'
+                              }
+                              let path =
+                                typeof input === 'object' &&
                                 input !== null &&
-                                "path" in input &&
-                                typeof input.path === "string" &&
-                                input.path;
+                                'path' in input &&
+                                typeof input.path === 'string' &&
+                                input.path
                               return (
                                 <details key={index}>
                                   <summary
                                     mix={css({
-                                      display: "block",
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                      whiteSpace: "nowrap",
+                                      display: 'block',
+                                      overflow: 'hidden',
+                                      textOverflow: 'ellipsis',
+                                      whiteSpace: 'nowrap',
                                     })}
                                   >
-                                    {type}{" "}
-                                    {`(${state === "output-available" ? "done" : "in progress"})`}
+                                    {type}{' '}
+                                    {`(${state === 'output-available' ? 'done' : 'in progress'})`}
                                     {path ? (
                                       <span
                                         mix={css({
-                                          overflow: "hidden",
-                                          textOverflow: "ellipsis",
-                                          whiteSpace: "nowrap",
+                                          overflow: 'hidden',
+                                          textOverflow: 'ellipsis',
+                                          whiteSpace: 'nowrap',
                                         })}
                                       >
-                                        {" "}
-                                        {path.split("/").slice(-2).join("/")}
+                                        {' '}
+                                        {path.split('/').slice(-2).join('/')}
                                       </span>
                                     ) : (
-                                      ""
+                                      ''
                                     )}
                                   </summary>
                                   <pre mix={wordWrap}>{JSON.stringify(input ?? null, null, 2)}</pre>
                                 </details>
-                              );
+                              )
                             }
-                            break;
+                            break
                         }
-                        return null;
+                        return null
                       })}
                     </div>
                   </jui-card>
-                  {m.role === "user" && (
+                  {m.role === 'user' && (
                     <div>
                       <jui-badge aspect="square" variant="primary">
                         <svg
@@ -236,7 +236,7 @@ export function ChatView(handle: Handle<ChatViewProps>) {
                   )}
                 </jui-group>
               ))}
-              {chat.state.status === "submitted" || chat.state.status === "streaming" ? (
+              {chat.state.status === 'submitted' || chat.state.status === 'streaming' ? (
                 <p>Working...</p>
               ) : null}
             </jui-stack>
@@ -246,20 +246,20 @@ export function ChatView(handle: Handle<ChatViewProps>) {
         <footer bg="neutral" p="md" border="top">
           <jui-container center>
             <form
-              mix={on("submit", (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                const formData = new FormData(event.currentTarget, event.submitter);
-                const message = formData.get("message");
+              mix={on('submit', (event) => {
+                event.preventDefault()
+                event.stopPropagation()
+                let formData = new FormData(event.currentTarget, event.submitter)
+                let message = formData.get('message')
 
-                if (!message || typeof message !== "string") return;
+                if (!message || typeof message !== 'string') return
 
-                if (chat.status !== "ready" && chat.status !== "error") {
-                  return;
+                if (chat.status !== 'ready' && chat.status !== 'error') {
+                  return
                 }
 
-                event.currentTarget.reset();
-                event.currentTarget.dispatchEvent(new ChatSubmitEvent(message));
+                event.currentTarget.reset()
+                event.currentTarget.dispatchEvent(new ChatSubmitEvent(message))
               })}
             >
               <jui-group gap="sm" items="end" nowrap>
@@ -272,7 +272,7 @@ export function ChatView(handle: Handle<ChatViewProps>) {
                   />
                 </jui-field>
                 <jui-button variant="primary" size="icon">
-                  {chat.state.status === "error" || chat.state.status === "ready" ? (
+                  {chat.state.status === 'error' || chat.state.status === 'ready' ? (
                     <button type="submit" aria-label="Send">
                       <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                         <path
@@ -286,8 +286,8 @@ export function ChatView(handle: Handle<ChatViewProps>) {
                     <button
                       type="button"
                       aria-label="Stop"
-                      mix={on("click", () => {
-                        chat.stop();
+                      mix={on('click', () => {
+                        chat.stop()
                       })}
                     >
                       <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -310,11 +310,11 @@ export function ChatView(handle: Handle<ChatViewProps>) {
           </jui-container>
         </footer>
       </jui-stack>
-    );
-  };
+    )
+  }
 }
 
 const wordWrap = css({
   fontFamily: '"IBM Plex Sans", sans-serif',
-  whiteSpace: "pre-wrap",
-});
+  whiteSpace: 'pre-wrap',
+})

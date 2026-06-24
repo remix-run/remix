@@ -1,6 +1,6 @@
-import { css, ref, type Handle } from "remix/ui";
+import { css, ref, type Handle } from 'remix/ui'
 
-import { connect, type AppUiApi, shallowEqual } from "../store/index.ts";
+import { connect, type AppUiApi, shallowEqual } from '../store/index.ts'
 
 /**
  * The "Shared Project" modal. It subscribes to the share slice of the store and
@@ -9,25 +9,25 @@ import { connect, type AppUiApi, shallowEqual } from "../store/index.ts";
  * responsibility of whoever starts the share (the toolbar), via its element id.
  */
 export function ShareDialog(handle: Handle<{ api: AppUiApi }>) {
-  const { api } = handle.props;
-  const view = connect(
+  let { api } = handle.props
+  let view = connect(
     handle,
     api,
     (s) => ({ sharing: s.sharing, sharedId: s.sharedId }),
     shallowEqual,
-  );
+  )
 
   return () => {
-    const { sharing, sharedId } = view();
+    let { sharing, sharedId } = view()
     return (
       <jui-modal>
         <dialog
           closedby="any"
           mix={ref((node: HTMLDialogElement, signal) => {
-            api.services.shareDialog = node;
-            signal.addEventListener("abort", () => {
-              if (api.services.shareDialog === node) api.services.shareDialog = null;
-            });
+            api.services.shareDialog = node
+            signal.addEventListener('abort', () => {
+              if (api.services.shareDialog === node) api.services.shareDialog = null
+            })
           })}
         >
           <jui-modal-header>Shared Project</jui-modal-header>
@@ -37,7 +37,7 @@ export function ShareDialog(handle: Handle<{ api: AppUiApi }>) {
             ) : sharedId ? (
               <>
                 <p>Shareable link: </p>
-                <p mix={css({ wordBreak: "break-all" })}>
+                <p mix={css({ wordBreak: 'break-all' })}>
                   <a href={`/?project=${sharedId}`} target="_blank">
                     {location.origin}/?project={sharedId}
                   </a>
@@ -56,6 +56,6 @@ export function ShareDialog(handle: Handle<{ api: AppUiApi }>) {
           </jui-modal-footer>
         </dialog>
       </jui-modal>
-    );
-  };
+    )
+  }
 }

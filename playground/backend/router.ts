@@ -2,11 +2,11 @@
 // import { createCookie } from "remix/cookie";
 // import { auth, createSessionAuthScheme } from "remix/middleware/auth";
 // import { session } from "remix/middleware/session";
-import { createRouter } from "remix/router";
+import { createRouter } from 'remix/router'
 
-import controller from "./actions/controller.ts";
+import controller from './actions/controller.ts'
 // import { kvSessionStorage } from "./kv-session-storage.ts";
-import { routes } from "./routes.ts";
+import { routes } from './routes.ts'
 
 // const sessionCookie = createCookie("session", {
 //   secrets: [env.SESSION_SECRET],
@@ -45,6 +45,6 @@ export const router = createRouter({
     //   ],
     // }),
   ],
-});
+})
 
-router.map(routes, controller);
+router.map(routes, controller)

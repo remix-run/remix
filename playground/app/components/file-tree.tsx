@@ -1,53 +1,59 @@
-import { css, on, ref, type Handle, type RemixNode } from "remix/ui";
+import { css, on, ref, type Handle, type RemixNode } from 'remix/ui'
 
-import { modelFor, openFile } from "../store/operations.ts";
-import { actions, connect, DEFAULT_OPEN_FILES, type AppUiApi, shallowEqual } from "../store/index.ts";
+import { modelFor, openFile } from '../store/operations.ts'
+import {
+  actions,
+  connect,
+  DEFAULT_OPEN_FILES,
+  type AppUiApi,
+  shallowEqual,
+} from '../store/index.ts'
 
 type FileNode = {
-  name: string;
-  type: "dir" | "file";
-  readonly?: boolean;
-  children?: FileNode[];
-};
+  name: string
+  type: 'dir' | 'file'
+  readonly?: boolean
+  children?: FileNode[]
+}
 
 type VisibleItem = {
-  path: string;
-  type: "dir" | "file";
-  depth: number;
-  isOpen: boolean;
-};
+  path: string
+  type: 'dir' | 'file'
+  depth: number
+  isOpen: boolean
+}
 
 /**
  * Build the file tree by walking the live VFS (skipping `node_modules`), warming
  * the Monaco model cache for each openable file along the way. Slash-free paths
  * match the tree's internal keys.
  */
-function buildTree(api: AppUiApi, path = ""): FileNode[] {
-  const { vfs } = api.services;
-  const templateFiles = api.getState().templateFiles;
-  if (!vfs || !templateFiles) return [];
+function buildTree(api: AppUiApi, path = ''): FileNode[] {
+  let { vfs } = api.services
+  let templateFiles = api.getState().templateFiles
+  if (!vfs || !templateFiles) return []
 
-  const results: FileNode[] = [];
-  for (const entry of vfs.readdirSync(path) || []) {
-    if (entry === "node_modules") continue;
+  let results: FileNode[] = []
+  for (let entry of vfs.readdirSync(path) || []) {
+    if (entry === 'node_modules') continue
 
-    const fullPath = `${path}/${entry}`;
-    const stats = vfs.statSync(fullPath);
+    let fullPath = `${path}/${entry}`
+    let stats = vfs.statSync(fullPath)
     if (stats?.isDirectory()) {
-      results.push({ name: entry, type: "dir", children: buildTree(api, fullPath) });
+      results.push({ name: entry, type: 'dir', children: buildTree(api, fullPath) })
     } else {
-      modelFor(api, fullPath); // warm the model cache for openable files
+      modelFor(api, fullPath) // warm the model cache for openable files
       results.push({
         name: entry,
-        type: "file",
+        type: 'file',
         readonly: templateFiles[fullPath.slice(1)]?.readonly,
-      });
+      })
     }
   }
   return results.sort((a, b) => {
-    if (a.type === b.type) return a.name.localeCompare(b.name);
-    return a.type === "dir" ? -1 : 1;
-  });
+    if (a.type === b.type) return a.name.localeCompare(b.name)
+    return a.type === 'dir' ? -1 : 1
+  })
 }
 
 /**
@@ -60,13 +66,17 @@ function buildTree(api: AppUiApi, path = ""): FileNode[] {
  * Directory expansion and roving focus are local UI state (uncontrolled).
  */
 export function FileTree(
-  handle: Handle<{ api: AppUiApi; showFileActions?: boolean; initialOpenFiles?: readonly string[] }>,
+  handle: Handle<{
+    api: AppUiApi
+    showFileActions?: boolean
+    initialOpenFiles?: readonly string[]
+  }>,
 ) {
-  const { api } = handle.props;
-  const showFileActions = handle.props.showFileActions ?? true;
+  let { api } = handle.props
+  let showFileActions = handle.props.showFileActions ?? true
   // Re-render whenever the filesystem changes, files load, or the active file
   // moves. `fsRevision` is bumped by every VFS mutation.
-  const view = connect(
+  let view = connect(
     handle,
     api,
     (s) => ({
@@ -75,138 +85,139 @@ export function FileTree(
       activePath: s.activePath?.slice(1),
     }),
     shallowEqual,
-  );
+  )
 
   // Recomputed each render; keydown handlers close over these.
-  let visible: VisibleItem[] = [];
-  const nodes = new Map<string, HTMLElement>();
+  let visible: VisibleItem[] = []
+  let nodes = new Map<string, HTMLElement>()
 
   // Expansion is owned locally (uncontrolled). Seed it once from the default
   // open files, expanding each ancestor directory.
-  const expanded = expandAncestors(
-    (handle.props.initialOpenFiles?.length ? handle.props.initialOpenFiles : DEFAULT_OPEN_FILES).map((p) =>
-      p.replace(/^\//, ""),
-    ),
-  );
+  let expanded = expandAncestors(
+    (handle.props.initialOpenFiles?.length
+      ? handle.props.initialOpenFiles
+      : DEFAULT_OPEN_FILES
+    ).map((p) => p.replace(/^\//, '')),
+  )
 
   // Roving-tabindex focus is local UI state, not data.
-  let focused: string | undefined = view().activePath ?? firstPath(buildTree(api));
+  let focused: string | undefined = view().activePath ?? firstPath(buildTree(api))
 
   // The active path we last revealed; expand its ancestors when it changes.
-  let lastRevealed: string | undefined;
+  let lastRevealed: string | undefined
 
   function commit(nextFocus: string | undefined = focused) {
-    focused = nextFocus;
-    handle.update();
+    focused = nextFocus
+    handle.update()
     if (focused) {
-      const path = focused;
-      handle.queueTask(() => nodes.get(path)?.focus());
+      let path = focused
+      handle.queueTask(() => nodes.get(path)?.focus())
     }
   }
 
   function selectFile(path: string) {
-    commit(path);
-    api.dispatch(actions.setEditorView("editor"));
-    api.dispatch(openFile(`/${path}`));
+    commit(path)
+    api.dispatch(actions.setEditorView('editor'))
+    api.dispatch(openFile(`/${path}`))
   }
 
   function toggleDir(path: string, open: boolean) {
-    if (open) expanded.add(path);
-    else expanded.delete(path);
-    commit(path);
+    if (open) expanded.add(path)
+    else expanded.delete(path)
+    commit(path)
   }
 
   function activate(path: string) {
-    const item = currentItem(path);
-    if (!item) return;
-    if (item.type === "dir") toggleDir(path, !item.isOpen);
-    else selectFile(path);
+    let item = currentItem(path)
+    if (!item) return
+    if (item.type === 'dir') toggleDir(path, !item.isOpen)
+    else selectFile(path)
   }
 
   function requestRename(path: string, name: string) {
     // Set the dialog target; FileDialogs subscribes and opens itself.
-    api.dispatch(actions.setRenameTarget({ path: `/${path}`, name }));
+    api.dispatch(actions.setRenameTarget({ path: `/${path}`, name }))
   }
 
-  function requestDelete(path: string, type: "dir" | "file") {
-    api.dispatch(actions.setDeleteTarget({ path: `/${path}`, type }));
+  function requestDelete(path: string, type: 'dir' | 'file') {
+    api.dispatch(actions.setDeleteTarget({ path: `/${path}`, type }))
   }
 
   // --- Traversal over the visible list -------------------------------------
   function indexOf(path: string) {
-    return visible.findIndex((v) => v.path === path);
+    return visible.findIndex((v) => v.path === path)
   }
   function currentItem(path: string): VisibleItem | undefined {
-    return visible[indexOf(path)];
+    return visible[indexOf(path)]
   }
   function focusAt(index: number) {
-    const target = visible[index];
-    if (target) commit(target.path);
+    let target = visible[index]
+    if (target) commit(target.path)
   }
   function parentIndex(index: number) {
-    const depth = visible[index]!.depth;
+    let depth = visible[index]!.depth
     for (let i = index - 1; i >= 0; i--) {
-      if (visible[i]!.depth < depth) return i;
+      if (visible[i]!.depth < depth) return i
     }
-    return -1;
+    return -1
   }
   function hasFirstChild(index: number) {
-    const next = visible[index + 1];
-    return next != null && next.depth === visible[index]!.depth + 1;
+    let next = visible[index + 1]
+    return next != null && next.depth === visible[index]!.depth + 1
   }
 
-  type NodeState = "leaf" | "closed-dir" | "open-dir";
+  type NodeState = 'leaf' | 'closed-dir' | 'open-dir'
   function stateOf(item: VisibleItem): NodeState {
-    if (item.type !== "dir") return "leaf";
-    return item.isOpen ? "open-dir" : "closed-dir";
+    if (item.type !== 'dir') return 'leaf'
+    return item.isOpen ? 'open-dir' : 'closed-dir'
   }
 
   function onKeyDown(event: KeyboardEvent, path: string) {
-    const index = indexOf(path);
-    if (index === -1) return;
-    const item = visible[index]!;
-    const state = stateOf(item);
+    let index = indexOf(path)
+    if (index === -1) return
+    let item = visible[index]!
+    let state = stateOf(item)
 
     switch (event.key) {
-      case "ArrowDown":
-        event.preventDefault();
-        focusAt(index + 1);
-        break;
-      case "ArrowUp":
-        event.preventDefault();
-        focusAt(index - 1);
-        break;
-      case "Home":
-        event.preventDefault();
-        focusAt(0);
-        break;
-      case "End":
-        event.preventDefault();
-        focusAt(visible.length - 1);
-        break;
-      case "ArrowRight":
-        event.preventDefault();
-        if (state === "closed-dir") {
-          toggleDir(path, true);
-        } else if (state === "open-dir" && hasFirstChild(index)) {
-          focusAt(index + 1);
+      case 'ArrowDown':
+        event.preventDefault()
+        focusAt(index + 1)
+        break
+      case 'ArrowUp':
+        event.preventDefault()
+        focusAt(index - 1)
+        break
+      case 'Home':
+        event.preventDefault()
+        focusAt(0)
+        break
+      case 'End':
+        event.preventDefault()
+        focusAt(visible.length - 1)
+        break
+      case 'ArrowRight':
+        event.preventDefault()
+        if (state === 'closed-dir') {
+          toggleDir(path, true)
+        } else if (state === 'open-dir' && hasFirstChild(index)) {
+          focusAt(index + 1)
         }
-        break;
-      case "ArrowLeft":
-        event.preventDefault();
-        if (state === "open-dir") {
-          toggleDir(path, false);
+        break
+      case 'ArrowLeft':
+        event.preventDefault()
+        if (state === 'open-dir') {
+          toggleDir(path, false)
         } else {
-          focusAt(parentIndex(index));
+          focusAt(parentIndex(index))
         }
-        break;
-      case "Enter":
-      case " ":
-        event.preventDefault();
-        event.stopImmediatePropagation();
-        event.stopPropagation();
-        activate(path);
-        break;
+        break
+      case 'Enter':
+      case ' ':
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        event.stopPropagation()
+        activate(path)
+        break
     }
   }
 
@@ -216,13 +227,13 @@ export function FileTree(
     parentPath: string,
     selected: string | undefined,
   ): RemixNode[] {
-    const rows: RemixNode[] = [];
+    let rows: RemixNode[] = []
 
-    for (const node of treeNodes) {
-      const path = parentPath ? `${parentPath}/${node.name}` : node.name;
-      const isDir = node.type === "dir";
-      const isOpen = isDir && expanded.has(path);
-      visible.push({ path, type: node.type, depth, isOpen });
+    for (let node of treeNodes) {
+      let path = parentPath ? `${parentPath}/${node.name}` : node.name
+      let isDir = node.type === 'dir'
+      let isOpen = isDir && expanded.has(path)
+      visible.push({ path, type: node.type, depth, isOpen })
 
       rows.push(
         <jui-group
@@ -237,38 +248,38 @@ export function FileTree(
           tabindex={focused === path ? 0 : -1}
           aria-level={depth + 1}
           aria-expanded={isDir ? String(isOpen) : undefined}
-          aria-selected={!isDir && selected === path ? "true" : "false"}
-          weight={!isDir && selected === path ? "bolder" : undefined}
+          aria-selected={!isDir && selected === path ? 'true' : 'false'}
+          weight={!isDir && selected === path ? 'bolder' : undefined}
           mix={[
             css({
               paddingLeft: `calc(${depth} * 0.625rem)`,
-              cursor: "pointer",
-              userSelect: "none",
-              outlineOffset: "-2px",
-              "& [data-tree-actions]": {
-                opacity: "0",
-                transition: "opacity var(--jui-duration) var(--jui-ease)",
+              cursor: 'pointer',
+              userSelect: 'none',
+              outlineOffset: '-2px',
+              '& [data-tree-actions]': {
+                opacity: '0',
+                transition: 'opacity var(--jui-duration) var(--jui-ease)',
               },
-              "&:hover [data-tree-actions], &:focus-within [data-tree-actions]": {
-                opacity: "1",
+              '&:hover [data-tree-actions], &:focus-within [data-tree-actions]': {
+                opacity: '1',
               },
             }),
             ref((el: HTMLElement, signal) => {
-              nodes.set(path, el);
-              signal.addEventListener("abort", () => {
-                if (nodes.get(path) === el) nodes.delete(path);
-              });
+              nodes.set(path, el)
+              signal.addEventListener('abort', () => {
+                if (nodes.get(path) === el) nodes.delete(path)
+              })
             }),
-            on<HTMLElement>("click", (event) => {
-              event.preventDefault();
-              event.stopImmediatePropagation();
-              event.stopPropagation();
-              activate(path);
+            on<HTMLElement>('click', (event) => {
+              event.preventDefault()
+              event.stopImmediatePropagation()
+              event.stopPropagation()
+              activate(path)
             }),
-            on<HTMLElement>("keydown", (event) => onKeyDown(event as KeyboardEvent, path)),
+            on<HTMLElement>('keydown', (event) => onKeyDown(event as KeyboardEvent, path)),
           ]}
         >
-          {isDir ? <span>{isOpen ? "▾" : "▸"}</span> : null}
+          {isDir ? <span>{isOpen ? '▾' : '▸'}</span> : null}
           <span truncate>
             {node.name}
             {node.readonly ? <span> (read-only)</span> : null}
@@ -281,11 +292,11 @@ export function FileTree(
                 aria-label={`Rename ${node.name}`}
                 title="Rename"
                 mix={[
-                  css({ cursor: "pointer" }),
-                  on<HTMLElement>("click", (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    requestRename(path, node.name);
+                  css({ cursor: 'pointer' }),
+                  on<HTMLElement>('click', (event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    requestRename(path, node.name)
                   }),
                 ]}
               >
@@ -309,11 +320,11 @@ export function FileTree(
                 aria-label={`Delete ${node.name}`}
                 title="Delete"
                 mix={[
-                  css({ cursor: "pointer" }),
-                  on<HTMLElement>("click", (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    requestDelete(path, node.type);
+                  css({ cursor: 'pointer' }),
+                  on<HTMLElement>('click', (event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    requestDelete(path, node.type)
                   }),
                 ]}
               >
@@ -335,31 +346,31 @@ export function FileTree(
             </jui-group>
           )}
         </jui-group>,
-      );
+      )
 
       if (isDir && isOpen && node.children) {
-        rows.push(...renderNodes(node.children, depth + 1, path, selected));
+        rows.push(...renderNodes(node.children, depth + 1, path, selected))
       }
     }
 
-    return rows;
+    return rows
   }
 
   return () => {
-    visible = [];
-    const selected = view().activePath;
+    visible = []
+    let selected = view().activePath
 
     // Reveal the active file by expanding every ancestor directory, then park
     // keyboard focus on it — but only when it changes.
     if (selected && selected !== lastRevealed) {
-      lastRevealed = selected;
-      for (const dir of ancestorDirs(selected)) expanded.add(dir);
-      focused = selected;
+      lastRevealed = selected
+      for (let dir of ancestorDirs(selected)) expanded.add(dir)
+      focused = selected
     }
 
-    const rows = renderNodes(buildTree(api), 0, "", selected);
+    let rows = renderNodes(buildTree(api), 0, '', selected)
     if (!visible.some((v) => v.path === focused) && visible.length) {
-      focused = visible[0]!.path;
+      focused = visible[0]!.path
     }
     return (
       <jui-stack
@@ -369,37 +380,37 @@ export function FileTree(
       >
         {rows}
       </jui-stack>
-    );
-  };
+    )
+  }
 }
 
 // Every ancestor directory of a (slash-free) path: `a/b/c.ts` → ["a", "a/b"].
 function ancestorDirs(path: string): string[] {
-  const segments = path.split("/").filter(Boolean);
-  const dirs: string[] = [];
-  let prefix = "";
+  let segments = path.split('/').filter(Boolean)
+  let dirs: string[] = []
+  let prefix = ''
   for (let i = 0; i < segments.length - 1; i++) {
-    prefix = prefix ? `${prefix}/${segments[i]}` : segments[i]!;
-    dirs.push(prefix);
+    prefix = prefix ? `${prefix}/${segments[i]}` : segments[i]!
+    dirs.push(prefix)
   }
-  return dirs;
+  return dirs
 }
 
 function firstPath(nodes: FileNode[]): string {
-  return nodes.length ? nodes[0]!.name : "";
+  return nodes.length ? nodes[0]!.name : ''
 }
 
 // Build the open set from arbitrary paths, adding every ancestor directory so
 // that opening `a/b/c.ts` reveals `a` and `a/b`.
 function expandAncestors(paths: string[]): Set<string> {
-  const open = new Set<string>();
-  for (const raw of paths) {
-    const segments = raw.split("/").filter(Boolean);
-    let prefix = "";
-    for (const segment of segments) {
-      prefix = prefix ? `${prefix}/${segment}` : segment;
-      open.add(prefix);
+  let open = new Set<string>()
+  for (let raw of paths) {
+    let segments = raw.split('/').filter(Boolean)
+    let prefix = ''
+    for (let segment of segments) {
+      prefix = prefix ? `${prefix}/${segment}` : segment
+      open.add(prefix)
     }
   }
-  return open;
+  return open
 }

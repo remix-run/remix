@@ -1,12 +1,12 @@
-import { css, on, ref, type Handle } from "remix/ui";
+import { css, on, ref, type Handle } from 'remix/ui'
 
-import { createEntry, deleteFile, renameFile } from "../store/operations.ts";
-import { actions, connect, type AppUiApi, shallowEqual } from "../store/index.ts";
+import { createEntry, deleteFile, renameFile } from '../store/operations.ts'
+import { actions, connect, type AppUiApi, shallowEqual } from '../store/index.ts'
 
 /** Read the value of the button that submitted a `<form method="dialog">`. */
 function submitterValue(event: Event): string | undefined {
-  const submitter = (event as SubmitEvent).submitter;
-  return submitter instanceof HTMLButtonElement ? submitter.value : undefined;
+  let submitter = (event as SubmitEvent).submitter
+  return submitter instanceof HTMLButtonElement ? submitter.value : undefined
 }
 
 /**
@@ -23,59 +23,59 @@ function submitterValue(event: Event): string | undefined {
  * {@link renameFile}, or {@link deleteFile}.
  */
 export function FileDialogs(handle: Handle<{ api: AppUiApi }>) {
-  const { api } = handle.props;
-  const view = connect(
+  let { api } = handle.props
+  let view = connect(
     handle,
     api,
     (s) => ({ create: s.createTarget, rename: s.renameTarget, remove: s.deleteTarget }),
     shallowEqual,
-  );
+  )
 
   // Identity of the target each dialog was last opened for, so we open once per
   // request rather than on every render.
-  let lastCreate: object | undefined;
-  let lastRename: object | undefined;
-  let lastDelete: object | undefined;
-  let createDialog: HTMLDialogElement | null = null;
-  let renameDialog: HTMLDialogElement | null = null;
-  let deleteDialog: HTMLDialogElement | null = null;
-  let renameInput: HTMLInputElement | null = null;
+  let lastCreate: object | undefined
+  let lastRename: object | undefined
+  let lastDelete: object | undefined
+  let createDialog: HTMLDialogElement | null = null
+  let renameDialog: HTMLDialogElement | null = null
+  let deleteDialog: HTMLDialogElement | null = null
+  let renameInput: HTMLInputElement | null = null
 
-  const createInputId = `${handle.id}-file-create-name`;
-  const renameInputId = `${handle.id}-file-rename-name`;
+  let createInputId = `${handle.id}-file-create-name`
+  let renameInputId = `${handle.id}-file-rename-name`
 
   return () => {
-    const create = view().create;
-    const rename = view().rename;
-    const remove = view().remove;
+    let create = view().create
+    let rename = view().rename
+    let remove = view().remove
 
     // Open whichever dialog just got a (new) target, after the DOM updates.
     if (create && create !== lastCreate) {
-      lastCreate = create;
+      lastCreate = create
       handle.queueTask(() => {
-        if (createDialog && !createDialog.open) createDialog.showModal();
-      });
-    } else if (!create) lastCreate = undefined;
+        if (createDialog && !createDialog.open) createDialog.showModal()
+      })
+    } else if (!create) lastCreate = undefined
 
     if (rename && rename !== lastRename) {
-      lastRename = rename;
+      lastRename = rename
       handle.queueTask(() => {
-        if (renameDialog && !renameDialog.open) renameDialog.showModal();
-        renameInput?.focus();
-        renameInput?.select();
-      });
-    } else if (!rename) lastRename = undefined;
+        if (renameDialog && !renameDialog.open) renameDialog.showModal()
+        renameInput?.focus()
+        renameInput?.select()
+      })
+    } else if (!rename) lastRename = undefined
 
     if (remove && remove !== lastDelete) {
-      lastDelete = remove;
+      lastDelete = remove
       handle.queueTask(() => {
-        if (deleteDialog && !deleteDialog.open) deleteDialog.showModal();
-      });
-    } else if (!remove) lastDelete = undefined;
+        if (deleteDialog && !deleteDialog.open) deleteDialog.showModal()
+      })
+    } else if (!remove) lastDelete = undefined
 
-    const createKind = create?.kind;
-    const createTitle =
-      createKind === "dir" ? "New Folder" : createKind === "file" ? "New File" : "New";
+    let createKind = create?.kind
+    let createTitle =
+      createKind === 'dir' ? 'New Folder' : createKind === 'file' ? 'New File' : 'New'
 
     return (
       <>
@@ -84,15 +84,15 @@ export function FileDialogs(handle: Handle<{ api: AppUiApi }>) {
           <dialog
             closedby="any"
             mix={ref((node: HTMLDialogElement, signal) => {
-              createDialog = node;
-              signal.addEventListener("abort", () => {
-                if (createDialog === node) createDialog = null;
-              });
+              createDialog = node
+              signal.addEventListener('abort', () => {
+                if (createDialog === node) createDialog = null
+              })
             })}
           >
             <jui-modal-header>
               <jui-group items="center" gap="xs" nowrap>
-                {createKind === "dir" ? (
+                {createKind === 'dir' ? (
                   <svg
                     fill="none"
                     viewBox="0 0 24 24"
@@ -131,14 +131,14 @@ export function FileDialogs(handle: Handle<{ api: AppUiApi }>) {
             </jui-modal-header>
             <form
               method="dialog"
-              mix={on<HTMLFormElement>("submit", (event) => {
-                const form = event.currentTarget;
-                queueMicrotask(() => form.reset());
-                api.dispatch(actions.setCreateTarget(undefined));
-                if (submitterValue(event) !== "confirm") return;
-                const name = String(new FormData(form).get("name") ?? "").trim();
-                if (!name) return;
-                api.dispatch(createEntry(name, createKind));
+              mix={on<HTMLFormElement>('submit', (event) => {
+                let form = event.currentTarget
+                queueMicrotask(() => form.reset())
+                api.dispatch(actions.setCreateTarget(undefined))
+                if (submitterValue(event) !== 'confirm') return
+                let name = String(new FormData(form).get('name') ?? '').trim()
+                if (!name) return
+                api.dispatch(createEntry(name, createKind))
               })}
             >
               <jui-modal-body>
@@ -150,7 +150,7 @@ export function FileDialogs(handle: Handle<{ api: AppUiApi }>) {
                       name="name"
                       type="text"
                       autocomplete="off"
-                      placeholder={createKind === "dir" ? "components" : "index.tsx"}
+                      placeholder={createKind === 'dir' ? 'components' : 'index.tsx'}
                     />
                     <small>Use “/” to create nested folders.</small>
                   </jui-field>
@@ -179,10 +179,10 @@ export function FileDialogs(handle: Handle<{ api: AppUiApi }>) {
           <dialog
             closedby="any"
             mix={ref((node: HTMLDialogElement, signal) => {
-              renameDialog = node;
-              signal.addEventListener("abort", () => {
-                if (renameDialog === node) renameDialog = null;
-              });
+              renameDialog = node
+              signal.addEventListener('abort', () => {
+                if (renameDialog === node) renameDialog = null
+              })
             })}
           >
             <jui-modal-header>
@@ -208,16 +208,16 @@ export function FileDialogs(handle: Handle<{ api: AppUiApi }>) {
             </jui-modal-header>
             <form
               method="dialog"
-              mix={on<HTMLFormElement>("submit", (event) => {
-                const form = event.currentTarget;
-                queueMicrotask(() => form.reset());
-                const target = rename;
-                api.dispatch(actions.setRenameTarget(undefined));
-                if (submitterValue(event) !== "confirm") return;
-                if (!target) return;
-                const name = String(new FormData(form).get("name") ?? "").trim();
-                if (!name) return;
-                api.dispatch(renameFile(target.path, name));
+              mix={on<HTMLFormElement>('submit', (event) => {
+                let form = event.currentTarget
+                queueMicrotask(() => form.reset())
+                let target = rename
+                api.dispatch(actions.setRenameTarget(undefined))
+                if (submitterValue(event) !== 'confirm') return
+                if (!target) return
+                let name = String(new FormData(form).get('name') ?? '').trim()
+                if (!name) return
+                api.dispatch(renameFile(target.path, name))
               })}
             >
               <jui-modal-body>
@@ -232,17 +232,17 @@ export function FileDialogs(handle: Handle<{ api: AppUiApi }>) {
                     */}
                     <input
                       id={renameInputId}
-                      key={rename?.path ?? "rename"}
+                      key={rename?.path ?? 'rename'}
                       name="name"
                       type="text"
                       autocomplete="off"
                       placeholder="app/views/home.tsx"
                       mix={ref((node: HTMLInputElement, signal) => {
-                        renameInput = node;
-                        node.value = rename?.path ?? "";
-                        signal.addEventListener("abort", () => {
-                          if (renameInput === node) renameInput = null;
-                        });
+                        renameInput = node
+                        node.value = rename?.path ?? ''
+                        signal.addEventListener('abort', () => {
+                          if (renameInput === node) renameInput = null
+                        })
                       })}
                     />
                     <small>Edit any part of the path to rename or move the file.</small>
@@ -272,10 +272,10 @@ export function FileDialogs(handle: Handle<{ api: AppUiApi }>) {
           <dialog
             closedby="any"
             mix={ref((node: HTMLDialogElement, signal) => {
-              deleteDialog = node;
-              signal.addEventListener("abort", () => {
-                if (deleteDialog === node) deleteDialog = null;
-              });
+              deleteDialog = node
+              signal.addEventListener('abort', () => {
+                if (deleteDialog === node) deleteDialog = null
+              })
             })}
           >
             <jui-modal-header>
@@ -296,29 +296,29 @@ export function FileDialogs(handle: Handle<{ api: AppUiApi }>) {
                     />
                   </svg>
                 </span>
-                <span weight="bolder">Delete {remove?.type === "dir" ? "folder" : "file"}</span>
+                <span weight="bolder">Delete {remove?.type === 'dir' ? 'folder' : 'file'}</span>
               </jui-group>
             </jui-modal-header>
             <form
               method="dialog"
-              mix={on<HTMLFormElement>("submit", (event) => {
-                const form = event.currentTarget;
-                queueMicrotask(() => form.reset());
-                const target = remove;
-                api.dispatch(actions.setDeleteTarget(undefined));
-                if (submitterValue(event) !== "confirm") return;
-                if (!target) return;
-                api.dispatch(deleteFile(target.path));
+              mix={on<HTMLFormElement>('submit', (event) => {
+                let form = event.currentTarget
+                queueMicrotask(() => form.reset())
+                let target = remove
+                api.dispatch(actions.setDeleteTarget(undefined))
+                if (submitterValue(event) !== 'confirm') return
+                if (!target) return
+                api.dispatch(deleteFile(target.path))
               })}
             >
               <jui-modal-body>
                 <jui-stack gap="sm">
                   <p>
-                    Are you sure you want to delete{" "}
-                    <code mix={css({ wordBreak: "break-all" })}>{remove?.path ?? "this item"}</code>
+                    Are you sure you want to delete{' '}
+                    <code mix={css({ wordBreak: 'break-all' })}>{remove?.path ?? 'this item'}</code>
                     ?
                   </p>
-                  {remove?.type === "dir" ? (
+                  {remove?.type === 'dir' ? (
                     <p font="sm">This will delete everything inside the folder.</p>
                   ) : null}
                   <p font="sm">This action cannot be undone.</p>
@@ -342,6 +342,6 @@ export function FileDialogs(handle: Handle<{ api: AppUiApi }>) {
           </dialog>
         </jui-modal>
       </>
-    );
-  };
+    )
+  }
 }

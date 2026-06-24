@@ -7,23 +7,23 @@
  * plain {@link actions} to publish the resulting data changes. Components never
  * mutate Monaco or the filesystem directly — they dispatch these.
  */
-import type * as almost from "@jacob-ebey/almostnode";
-import type * as monacoTypes from "monaco-editor";
-import { parse } from "remix/data-schema";
+import type * as almost from '@jacob-ebey/almostnode'
+import type * as monacoTypes from 'monaco-editor'
+import { parse } from 'remix/data-schema'
 
-import { SharedProjectSchema, type SharedProjectFile } from "../../backend/actions/models.ts";
-import { routes } from "../../backend/routes.ts";
-import { languageFor, normalizePath } from "../lib/paths.ts";
-import { monacoPromise } from "../monaco.tsx";
-import { templateFiles as defaultTemplateFiles, type TemplateFile } from "../templates/default.ts";
-import { actions, type AppStoreApi, type AppThunk } from "./index.ts";
-import type { Diagnostic } from "./state.ts";
+import { SharedProjectSchema, type SharedProjectFile } from '../../backend/actions/models.ts'
+import { routes } from '../../backend/routes.ts'
+import { languageFor, normalizePath } from '../lib/paths.ts'
+import { monacoPromise } from '../monaco.tsx'
+import { templateFiles as defaultTemplateFiles, type TemplateFile } from '../templates/default.ts'
+import { actions, type AppStoreApi, type AppThunk } from './index.ts'
+import type { Diagnostic } from './state.ts'
 
-const SERVER_ENTRY = "server.ts";
+const SERVER_ENTRY = 'server.ts'
 
 export type InitialFiles =
   | Record<string, TemplateFile>
-  | (() => Promise<Record<string, TemplateFile>>);
+  | (() => Promise<Record<string, TemplateFile>>)
 
 /**
  * Environment flag read by the database driver (app/db/driver.ts) to decide
@@ -31,9 +31,9 @@ export type InitialFiles =
  * runs (initial boot + the Database menu) so that the constant server re-runs
  * triggered by editing don't re-apply migrations to the live database.
  */
-const MIGRATE_ENV = "MIGRATE_DATABASE";
+const MIGRATE_ENV = 'MIGRATE_DATABASE'
 
-type ServerBridge = ReturnType<typeof import("@jacob-ebey/almostnode").getServerBridge>;
+type ServerBridge = ReturnType<typeof almost.getServerBridge>
 
 // ---------------------------------------------------------------------------
 // Boot phases
@@ -42,28 +42,31 @@ type ServerBridge = ReturnType<typeof import("@jacob-ebey/almostnode").getServer
 /** Phase 1: load the Monaco editor bundle. */
 export const loadEditor = (): AppThunk<Promise<void>> => async (dispatch, _getState, services) => {
   try {
-    services.monaco = await monacoPromise;
-    dispatch(actions.setEditorStatus("ready"));
+    services.monaco = await monacoPromise
+    dispatch(actions.setEditorStatus('ready'))
   } catch (error) {
-    console.error("Failed to load Monaco", error);
-    dispatch(actions.setEditorStatus("failed"));
+    console.error('Failed to load Monaco', error)
+    dispatch(actions.setEditorStatus('failed'))
   }
-};
+}
 
 /** Phase 2: resolve the project's files (a shared project, or the default template). */
 export const loadProjectFiles =
-  (initialFiles?: InitialFiles): AppThunk<Promise<void>> => async (dispatch) => {
-    const templateFiles = initialFiles
-      ? typeof initialFiles === "function"
+  (initialFiles?: InitialFiles): AppThunk<Promise<void>> =>
+  async (dispatch) => {
+    let templateFiles = initialFiles
+      ? typeof initialFiles === 'function'
         ? await initialFiles()
         : initialFiles
-      : await loadDefaultInitialFiles();
-    dispatch(actions.setTemplateFiles(templateFiles));
-  };
+      : await loadDefaultInitialFiles()
+    dispatch(actions.setTemplateFiles(templateFiles))
+  }
 
 async function loadDefaultInitialFiles(): Promise<Record<string, TemplateFile>> {
-  const projectId = new URL(location.href).searchParams.get("project");
-  return projectId ? (await loadSharedProjectFiles(projectId)) || defaultTemplateFiles : defaultTemplateFiles;
+  let projectId = new URL(location.href).searchParams.get('project')
+  return projectId
+    ? (await loadSharedProjectFiles(projectId)) || defaultTemplateFiles
+    : defaultTemplateFiles
 }
 
 /**
@@ -77,76 +80,76 @@ async function loadDefaultInitialFiles(): Promise<Record<string, TemplateFile>> 
 export const bootRuntime =
   (templateFilesReady: Promise<Record<string, TemplateFile>>): AppThunk<Promise<void>> =>
   async (dispatch, getState, services) => {
-    const api: AppStoreApi = { dispatch, getState, services };
-    await monacoPromise;
-    const [{ getServerBridge, PackageManager, VirtualFS }, { WorkerRuntime }] = await Promise.all([
-      import("@jacob-ebey/almostnode"),
-      import("../worker-runtime.ts"),
-    ]);
+    let api: AppStoreApi = { dispatch, getState, services }
+    await monacoPromise
+    let [{ getServerBridge, PackageManager, VirtualFS }, { WorkerRuntime }] = await Promise.all([
+      import('@jacob-ebey/almostnode'),
+      import('../worker-runtime.ts'),
+    ])
 
-    const vfs = new VirtualFS();
-    const npm = new PackageManager(vfs);
-    services.vfs = vfs;
-    services.npm = npm;
+    let vfs = new VirtualFS()
+    let npm = new PackageManager(vfs)
+    services.vfs = vfs
+    services.npm = npm
 
-    seedVirtualFs(vfs, await templateFilesReady);
+    seedVirtualFs(vfs, await templateFilesReady)
 
-    const serverBridge = getServerBridge({
+    let serverBridge = getServerBridge({
       baseUrl: `${location.protocol}//${location.host}`,
-    });
-    const serverPort = services.serverPort;
+    })
+    let serverPort = services.serverPort
 
-    const runtime = new WorkerRuntime(vfs, {
+    let runtime = new WorkerRuntime(vfs, {
       env: { PREVIEW_PORT: String(serverPort) },
       onConsole(_type, args) {
-        dispatch(actions.appendConsole(args.map(String).join(" ") + "\n"));
+        dispatch(actions.appendConsole(args.map(String).join(' ') + '\n'))
       },
       onServerReady() {
-        refreshPreviewFrame(api);
+        refreshPreviewFrame(api)
       },
-    });
-    services.runtime = runtime;
+    })
+    services.runtime = runtime
 
     try {
-      await runtime.execute("/* worker ready check */", "/__worker_init__.js");
+      await runtime.execute('/* worker ready check */', '/__worker_init__.js')
 
-      dispatch(actions.setRuntimeStatus("initializing"));
-      await serverBridge.initServiceWorker({ swUrl: "/__sw__.js" });
+      dispatch(actions.setRuntimeStatus('initializing'))
+      await serverBridge.initServiceWorker({ swUrl: '/__sw__.js' })
 
-      dispatch(actions.setRuntimeStatus("installing"));
-      await installDependencies(api, npm);
+      dispatch(actions.setRuntimeStatus('installing'))
+      await installDependencies(api, npm)
 
-      dispatch(actions.setRuntimeStatus("ready"));
-      registerServer(api, serverBridge, serverPort);
+      dispatch(actions.setRuntimeStatus('ready'))
+      registerServer(api, serverBridge, serverPort)
     } catch (error) {
-      console.error("Failed to initialize runtime", error);
-      dispatch(actions.setRuntimeStatus("failed"));
+      console.error('Failed to initialize runtime', error)
+      dispatch(actions.setRuntimeStatus('failed'))
     }
 
-    if (api.getState().runtimeStatus === "ready") {
+    if (api.getState().runtimeStatus === 'ready') {
       // First boot applies migrations so the loaded template's database is
       // usable. Subsequent re-runs (on edits) leave the schema untouched.
-      runServer(api, { migrate: true });
+      runServer(api, { migrate: true })
     }
-  };
+  }
 
 /** Seed the virtual filesystem from the resolved project files. */
 function seedVirtualFs(vfs: almost.VirtualFS, templateFiles: Record<string, TemplateFile>): void {
-  for (const [path, file] of Object.entries(templateFiles)) {
-    vfs.writeFileSync(`/${path}`, file.implementation || file.contents);
+  for (let [path, file] of Object.entries(templateFiles)) {
+    vfs.writeFileSync(`/${path}`, file.implementation || file.contents)
   }
 }
 
 /** Run `npm install`, streaming progress to the console. */
 async function installDependencies(api: AppStoreApi, npm: almost.PackageManager): Promise<void> {
-  api.dispatch(actions.appendConsole("> npm install\n"));
+  api.dispatch(actions.appendConsole('> npm install\n'))
 
-  const start = Date.now();
-  const res = await npm.installFromPackageJson({
+  let start = Date.now()
+  let res = await npm.installFromPackageJson({
     onProgress: (message) => api.dispatch(actions.appendConsole(`  ${message}\n`)),
-  });
-  const elapsed = (Date.now() - start) / 1000;
-  api.dispatch(actions.appendConsole(`Installed ${res.installed.size} packages in ${elapsed}s\n`));
+  })
+  let elapsed = (Date.now() - start) / 1000
+  api.dispatch(actions.appendConsole(`Installed ${res.installed.size} packages in ${elapsed}s\n`))
 }
 
 /** Register the runtime's request handler as the server for the preview frame. */
@@ -154,59 +157,59 @@ function registerServer(api: AppStoreApi, serverBridge: ServerBridge, serverPort
   serverBridge.registerServer(
     {
       listening: true,
-      address: () => ({ port: serverPort, address: "localhost", family: "IPv4" }),
+      address: () => ({ port: serverPort, address: 'localhost', family: 'IPv4' }),
       handleRequest: async (method, url, headers, body) =>
         api.services.runtime!.handleRequest(method, url, headers, body),
     },
     serverPort,
-  );
+  )
 }
 
 function previewBasePath(serverPort: number): string {
-  return `/__virtual__/${serverPort}`;
+  return `/__virtual__/${serverPort}`
 }
 
 function previewFrameSrc(serverPort: number, path: string): string {
-  const basePath = previewBasePath(serverPort);
-  const normalizedPath = normalizePreviewPath(path, serverPort);
-  return normalizedPath === "/" ? basePath : `${basePath}${normalizedPath}`;
+  let basePath = previewBasePath(serverPort)
+  let normalizedPath = normalizePreviewPath(path, serverPort)
+  return normalizedPath === '/' ? basePath : `${basePath}${normalizedPath}`
 }
 
 function normalizePreviewPath(path: string, serverPort: number): string {
-  if (!path) return "/";
-  const basePath = previewBasePath(serverPort);
-  const withoutVirtualPrefix = path.startsWith(`${basePath}/`)
+  if (!path) return '/'
+  let basePath = previewBasePath(serverPort)
+  let withoutVirtualPrefix = path.startsWith(`${basePath}/`)
     ? path.slice(basePath.length)
     : path === basePath
-      ? "/"
-      : path;
-  return withoutVirtualPrefix.startsWith("/") ? withoutVirtualPrefix : `/${withoutVirtualPrefix}`;
+      ? '/'
+      : path
+  return withoutVirtualPrefix.startsWith('/') ? withoutVirtualPrefix : `/${withoutVirtualPrefix}`
 }
 
 function previewPathFromUrl(url: URL, serverPort: number): string | null {
-  if (url.origin !== location.origin) return null;
-  return normalizePreviewPath(`${url.pathname}${url.search}${url.hash}`, serverPort);
+  if (url.origin !== location.origin) return null
+  return normalizePreviewPath(`${url.pathname}${url.search}${url.hash}`, serverPort)
 }
 
 /** Point the registered preview iframe at this app instance's live server. */
 export function refreshPreviewFrame(api: AppStoreApi): void {
-  const frame = api.services.previewFrame;
-  if (!frame || api.getState().runtimeStatus !== "ready") return;
-  frame.src = previewFrameSrc(api.services.serverPort, api.services.lastPreviewPath);
+  let frame = api.services.previewFrame
+  if (!frame || api.getState().runtimeStatus !== 'ready') return
+  frame.src = previewFrameSrc(api.services.serverPort, api.services.lastPreviewPath)
 }
 
 /** Remember the preview iframe's current route so server re-runs reload that same page. */
 export function rememberPreviewLocation(api: AppStoreApi): void {
-  const frame = api.services.previewFrame;
-  if (!frame) return;
+  let frame = api.services.previewFrame
+  if (!frame) return
 
   try {
-    const href = frame.contentWindow?.location.href;
+    let href = frame.contentWindow?.location.href
     if (href) {
-      const path = previewPathFromUrl(new URL(href), api.services.serverPort);
+      let path = previewPathFromUrl(new URL(href), api.services.serverPort)
       if (path) {
-        api.services.lastPreviewPath = path;
-        return;
+        api.services.lastPreviewPath = path
+        return
       }
     }
   } catch {
@@ -214,12 +217,12 @@ export function rememberPreviewLocation(api: AppStoreApi): void {
     // cannot inspect it. Fall back to the iframe's src attribute below.
   }
 
-  const src = frame.getAttribute("src");
-  if (!src) return;
+  let src = frame.getAttribute('src')
+  if (!src) return
 
   try {
-    const path = previewPathFromUrl(new URL(src, location.origin), api.services.serverPort);
-    if (path) api.services.lastPreviewPath = path;
+    let path = previewPathFromUrl(new URL(src, location.origin), api.services.serverPort)
+    if (path) api.services.lastPreviewPath = path
   } catch {
     // Ignore malformed src values and keep the last known route.
   }
@@ -233,27 +236,27 @@ export function rememberPreviewLocation(api: AppStoreApi): void {
  * the database driver skips migrations (see {@link MIGRATE_ENV}).
  */
 export function runServer(api: AppStoreApi, { migrate = false }: { migrate?: boolean } = {}): void {
-  const { runtime } = api.services;
-  if (!runtime) return;
+  let { runtime } = api.services
+  if (!runtime) return
 
-  rememberPreviewLocation(api);
-  api.dispatch(actions.setConsole(`> node ${SERVER_ENTRY}\n`));
+  rememberPreviewLocation(api)
+  api.dispatch(actions.setConsole(`> node ${SERVER_ENTRY}\n`))
 
   // setEnv and runFile are dispatched to the worker in order and handled
   // sequentially, so the driver observes the right flag when it re-evaluates.
-  runtime.setEnv({ [MIGRATE_ENV]: migrate ? "1" : undefined });
+  runtime.setEnv({ [MIGRATE_ENV]: migrate ? '1' : undefined })
   runtime.runFile(SERVER_ENTRY).catch((error) => {
     if (
       error instanceof Error &&
-      error.message.startsWith("Cannot use import statement outside a module (in") &&
-      error.message.endsWith(")")
+      error.message.startsWith('Cannot use import statement outside a module (in') &&
+      error.message.endsWith(')')
     ) {
-      const badFile = error.message.slice(49, -1);
-      api.dispatch(actions.appendConsole(`Syntax error: ${badFile}\n`));
-      return;
+      let badFile = error.message.slice(49, -1)
+      api.dispatch(actions.appendConsole(`Syntax error: ${badFile}\n`))
+      return
     }
-    api.dispatch(actions.appendConsole(String(error) + "\n"));
-  });
+    api.dispatch(actions.appendConsole(String(error) + '\n'))
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -264,13 +267,11 @@ export function runServer(api: AppStoreApi, { migrate = false }: { migrate?: boo
  * Run pending migrations against the live database by re-running the server
  * with the migration flag enabled. No-op until the runtime is ready.
  */
-export const runMigrations =
-  (): AppThunk =>
-  (dispatch, getState, services) => {
-    const api: AppStoreApi = { dispatch, getState, services };
-    if (api.getState().runtimeStatus !== "ready") return;
-    runServer(api, { migrate: true });
-  };
+export const runMigrations = (): AppThunk => (dispatch, getState, services) => {
+  let api: AppStoreApi = { dispatch, getState, services }
+  if (api.getState().runtimeStatus !== 'ready') return
+  runServer(api, { migrate: true })
+}
 
 /**
  * Reset the database: drop every table, then re-run the server with migrations
@@ -278,36 +279,35 @@ export const runMigrations =
  * the runtime is ready.
  */
 export const resetDatabase =
-  (): AppThunk<Promise<void>> =>
-  async (dispatch, getState, services) => {
-    const api: AppStoreApi = { dispatch, getState, services };
-    const { runtime } = services;
-    if (!runtime || api.getState().runtimeStatus !== "ready") return;
+  (): AppThunk<Promise<void>> => async (dispatch, getState, services) => {
+    let api: AppStoreApi = { dispatch, getState, services }
+    let { runtime } = services
+    if (!runtime || api.getState().runtimeStatus !== 'ready') return
 
-    await runtime.resetDatabase();
-    runtime.clearCache();
-    runServer(api, { migrate: true });
-  };
+    await runtime.resetDatabase()
+    runtime.clearCache()
+    runServer(api, { migrate: true })
+  }
 
 /** Human-readable status line shown in the status bar. */
 export function statusLabel(editorStatus: string, runtimeStatus: string): string {
   switch (editorStatus) {
-    case "loading":
-      return "Loading editor...";
-    case "failed":
-      return "Failed to load editor";
+    case 'loading':
+      return 'Loading editor...'
+    case 'failed':
+      return 'Failed to load editor'
   }
   switch (runtimeStatus) {
-    case "initializing":
-      return "Initializing runtime...";
-    case "installing":
-      return "Installing dependencies...";
-    case "failed":
-      return "Failed to initialize runtime";
-    case "ready":
-      return "Ready";
+    case 'initializing':
+      return 'Initializing runtime...'
+    case 'installing':
+      return 'Installing dependencies...'
+    case 'failed':
+      return 'Failed to initialize runtime'
+    case 'ready':
+      return 'Ready'
   }
-  return "";
+  return ''
 }
 
 // ---------------------------------------------------------------------------
@@ -316,40 +316,40 @@ export function statusLabel(editorStatus: string, runtimeStatus: string): string
 
 /** Get (creating + caching as needed) the Monaco model for a file path. */
 export function modelFor(api: AppStoreApi, path: string): monacoTypes.editor.ITextModel | null {
-  const { services } = api;
-  const { monaco, vfs, models } = services;
-  const templateFiles = api.getState().templateFiles;
-  if (!templateFiles || !monaco) return null;
+  let { services } = api
+  let { monaco, vfs, models } = services
+  let templateFiles = api.getState().templateFiles
+  if (!templateFiles || !monaco) return null
 
-  path = normalizePath(path);
-  const existing = models.get(path);
-  if (existing) return existing;
+  path = normalizePath(path)
+  let existing = models.get(path)
+  if (existing) return existing
 
-  const template = templateFiles[path.slice(1)];
-  let contents: string | undefined;
+  let template = templateFiles[path.slice(1)]
+  let contents: string | undefined
   if (template?.readonly) {
-    contents = template.contents;
+    contents = template.contents
   } else {
     // readFileSync throws ENOENT for files that don't exist yet (e.g. a brand
     // new file from the write tool). Treat a missing file as "no model yet".
     try {
-      contents = vfs?.readFileSync(path, "utf-8");
+      contents = vfs?.readFileSync(path, 'utf-8')
     } catch {
-      contents = undefined;
+      contents = undefined
     }
   }
-  if (contents == null) return null;
+  if (contents == null) return null
 
-  const existingModel = monaco.editor.getModel(monaco.Uri.parse(path));
+  let existingModel = monaco.editor.getModel(monaco.Uri.parse(path))
   if (existingModel) {
-    models.set(path, existingModel);
-    return existingModel;
+    models.set(path, existingModel)
+    return existingModel
   }
 
-  const model = monaco.editor.createModel(contents, languageFor(path), monaco.Uri.parse(path));
-  model.onDidChangeContent(() => onModelChanged(api, path, model));
-  models.set(path, model);
-  return model;
+  let model = monaco.editor.createModel(contents, languageFor(path), monaco.Uri.parse(path))
+  model.onDidChangeContent(() => onModelChanged(api, path, model))
+  models.set(path, model)
+  return model
 }
 
 /** React to an edit in a model: enforce read-only files, otherwise persist + re-run. */
@@ -358,20 +358,20 @@ function onModelChanged(
   path: string,
   model: monacoTypes.editor.ITextModel,
 ): void {
-  const { services } = api;
-  const template = api.getState().templateFiles?.[path.slice(1)];
+  let { services } = api
+  let template = api.getState().templateFiles?.[path.slice(1)]
 
   if (template?.readonly) {
-    if (model.getValue() !== template.contents) model.setValue(template.contents);
-    return;
+    if (model.getValue() !== template.contents) model.setValue(template.contents)
+    return
   }
 
-  if (!services.vfs || !services.runtime) return;
+  if (!services.vfs || !services.runtime) return
 
-  services.vfs.writeFileSync(path, model.getValue());
-  services.runtime.clearCache();
+  services.vfs.writeFileSync(path, model.getValue())
+  services.runtime.clearCache()
 
-  if (api.getState().runtimeStatus === "ready") runServer(api);
+  if (api.getState().runtimeStatus === 'ready') runServer(api)
 }
 
 /**
@@ -385,25 +385,25 @@ export function persistFileContents(
   path: string,
   contents: string,
 ): { error?: string } {
-  const { services, dispatch } = api;
-  if (!services.vfs) return { error: "Tool call failed. Filesystem is not ready." };
+  let { services, dispatch } = api
+  if (!services.vfs) return { error: 'Tool call failed. Filesystem is not ready.' }
 
-  path = normalizePath(path);
-  const template = api.getState().templateFiles?.[path.slice(1)];
+  path = normalizePath(path)
+  let template = api.getState().templateFiles?.[path.slice(1)]
   if (template?.readonly) {
     return {
       error: `Tool call failed. ${path} is a read-only file and cannot be modified. Do not retry.`,
-    };
+    }
   }
 
-  let model = services.models.get(path) ?? modelFor(api, path);
+  let model = services.models.get(path) ?? modelFor(api, path)
   if (!model) {
     // New file: seed the VFS so a model can be created, then create it.
-    services.vfs.writeFileSync(path, contents);
-    model = modelFor(api, path);
-    services.runtime?.clearCache();
-    dispatch(actions.touchFs());
-    if (api.getState().runtimeStatus === "ready") runServer(api);
+    services.vfs.writeFileSync(path, contents)
+    model = modelFor(api, path)
+    services.runtime?.clearCache()
+    dispatch(actions.touchFs())
+    if (api.getState().runtimeStatus === 'ready') runServer(api)
   } else if (model.getValue() !== contents) {
     // Existing file: replace the full contents via an undoable edit operation
     // (rather than setValue, which wipes the undo stack) so the user can
@@ -413,15 +413,15 @@ export function persistFileContents(
       null,
       [{ range: model.getFullModelRange(), text: contents }],
       () => null,
-    );
+    )
   }
 
   // The change above bypasses the editor's incremental validation path, so make
   // the editor re-run its language checks and refresh markers across all files.
-  scheduleEditorRevalidation(api);
+  scheduleEditorRevalidation(api)
 
-  dispatch(actions.openFile(path));
-  return {};
+  dispatch(actions.openFile(path))
+  return {}
 }
 
 /** Handle the `write` tool: create or overwrite a file. */
@@ -430,7 +430,7 @@ export function writeFileForTool(
   path: string,
   content: string,
 ): { error?: string } {
-  return persistFileContents(api, path, content);
+  return persistFileContents(api, path, content)
 }
 
 /**
@@ -444,49 +444,49 @@ export function editFileForTool(
   path: string,
   edits: { oldText: string; newText: string }[],
 ): { error?: string } {
-  const { services, dispatch } = api;
-  if (!services.vfs) return { error: "Tool call failed. Filesystem is not ready." };
-  if (!services.monaco) return { error: "Tool call failed. Editor is not ready." };
+  let { services, dispatch } = api
+  if (!services.vfs) return { error: 'Tool call failed. Filesystem is not ready.' }
+  if (!services.monaco) return { error: 'Tool call failed. Editor is not ready.' }
 
-  path = normalizePath(path);
-  const template = api.getState().templateFiles?.[path.slice(1)];
+  path = normalizePath(path)
+  let template = api.getState().templateFiles?.[path.slice(1)]
   if (template?.readonly) {
     return {
       error: `Tool call failed. ${path} is a read-only file and cannot be modified. Do not retry.`,
-    };
+    }
   }
 
   // Read current contents from the model (the editor's source of truth).
-  const model = modelFor(api, path);
-  if (!model) return { error: `Tool call failed. File not found: ${path}` };
-  const current = model.getValue();
+  let model = modelFor(api, path)
+  if (!model) return { error: `Tool call failed. File not found: ${path}` }
+  let current = model.getValue()
 
   // Resolve every edit to a [start, end) range in the original contents,
   // validating that each match exists and is unique.
-  const ranges: { start: number; end: number; newText: string; index: number }[] = [];
-  for (const [index, { oldText, newText }] of edits.entries()) {
-    const first = current.indexOf(oldText);
+  let ranges: { start: number; end: number; newText: string; index: number }[] = []
+  for (let [index, { oldText, newText }] of edits.entries()) {
+    let first = current.indexOf(oldText)
     if (first === -1) {
-      return { error: `Tool call failed. edits[${index}].oldText not found in ${path}.` };
+      return { error: `Tool call failed. edits[${index}].oldText not found in ${path}.` }
     }
     if (current.indexOf(oldText, first + 1) !== -1) {
-      return { error: `Tool call failed. edits[${index}].oldText is not unique in ${path}.` };
+      return { error: `Tool call failed. edits[${index}].oldText is not unique in ${path}.` }
     }
-    ranges.push({ start: first, end: first + oldText.length, newText, index });
+    ranges.push({ start: first, end: first + oldText.length, newText, index })
   }
 
   // Validate in ascending order, rejecting any overlap between matched ranges,
   // then convert each offset range into a Monaco edit operation.
-  ranges.sort((a, b) => a.start - b.start);
-  let cursor = 0;
-  const operations: monacoTypes.editor.IIdentifiedSingleEditOperation[] = [];
-  for (const range of ranges) {
+  ranges.sort((a, b) => a.start - b.start)
+  let cursor = 0
+  let operations: monacoTypes.editor.IIdentifiedSingleEditOperation[] = []
+  for (let range of ranges) {
     if (range.start < cursor) {
-      return { error: `Tool call failed. edits[${range.index}] overlaps another edit in ${path}.` };
+      return { error: `Tool call failed. edits[${range.index}] overlaps another edit in ${path}.` }
     }
-    cursor = range.end;
-    const startPos = model.getPositionAt(range.start);
-    const endPos = model.getPositionAt(range.end);
+    cursor = range.end
+    let startPos = model.getPositionAt(range.start)
+    let endPos = model.getPositionAt(range.end)
     operations.push({
       range: new services.monaco.Range(
         startPos.lineNumber,
@@ -495,21 +495,21 @@ export function editFileForTool(
         endPos.column,
       ),
       text: range.newText,
-    });
+    })
   }
 
   // Apply all operations as a single undoable edit so the user can ctrl-z a
   // tool's change just like a manual one (rather than setValue, which wipes the
   // undo stack). The model's onDidChangeContent handler mirrors the change to
   // the VFS and re-runs the server.
-  model.pushEditOperations(null, operations, () => null);
+  model.pushEditOperations(null, operations, () => null)
 
   // The change above bypasses the editor's incremental validation path, so make
   // the editor re-run its language checks and refresh markers across all files.
-  scheduleEditorRevalidation(api);
+  scheduleEditorRevalidation(api)
 
-  dispatch(actions.openFile(path));
-  return {};
+  dispatch(actions.openFile(path))
+  return {}
 }
 
 // ---------------------------------------------------------------------------
@@ -520,28 +520,28 @@ export function editFileForTool(
 export const openFile =
   (path: string): AppThunk =>
   (dispatch, getState, services) => {
-    const api: AppStoreApi = { dispatch, getState, services };
-    path = normalizePath(path);
-    if (path === api.getState().activePath) return;
-    if (!modelFor(api, path)) return;
-    api.dispatch(actions.openFile(path));
-  };
+    let api: AppStoreApi = { dispatch, getState, services }
+    path = normalizePath(path)
+    if (path === api.getState().activePath) return
+    if (!modelFor(api, path)) return
+    api.dispatch(actions.openFile(path))
+  }
 
 /** Close a tab, choosing a sensible neighbor to activate. */
 export const closeTab =
   (name: string): AppThunk =>
   (dispatch, getState, services) => {
-    const api: AppStoreApi = { dispatch, getState, services };
-    name = normalizePath(name);
-    const state = api.getState();
-    const open = [...state.openFiles];
-    const index = open.findIndex((f) => f === name);
-    const nextActive =
-      index > 0 ? open[index - 1] : index < open.length - 1 ? open[index + 1] : undefined;
-    const openFiles = open.filter((f) => f !== name);
-    api.dispatch(actions.setOpenFiles(openFiles));
-    if (name === state.activePath) api.dispatch(actions.setActivePath(nextActive));
-  };
+    let api: AppStoreApi = { dispatch, getState, services }
+    name = normalizePath(name)
+    let state = api.getState()
+    let open = [...state.openFiles]
+    let index = open.findIndex((f) => f === name)
+    let nextActive =
+      index > 0 ? open[index - 1] : index < open.length - 1 ? open[index + 1] : undefined
+    let openFiles = open.filter((f) => f !== name)
+    api.dispatch(actions.setOpenFiles(openFiles))
+    if (name === state.activePath) api.dispatch(actions.setActivePath(nextActive))
+  }
 
 /**
  * Create a new file or folder. Folders are materialized via `mkdirSync` and
@@ -549,133 +549,133 @@ export const closeTab =
  * "/" to create nested paths.
  */
 export const createEntry =
-  (name: string, kind: "file" | "dir" | undefined): AppThunk =>
+  (name: string, kind: 'file' | 'dir' | undefined): AppThunk =>
   (dispatch, getState, services) => {
-    const api: AppStoreApi = { dispatch, getState, services };
-    const { vfs } = api.services;
-    if (!vfs) return;
+    let api: AppStoreApi = { dispatch, getState, services }
+    let { vfs } = api.services
+    if (!vfs) return
 
-    const path = normalizePath(name);
-    if (path === "/") return;
+    let path = normalizePath(name)
+    if (path === '/') return
 
-    if (kind === "dir") {
+    if (kind === 'dir') {
       try {
-        vfs.mkdirSync(path, { recursive: true });
+        vfs.mkdirSync(path, { recursive: true })
       } catch (error) {
-        console.error("Failed to create folder", error);
-        return;
+        console.error('Failed to create folder', error)
+        return
       }
-      api.services.runtime?.clearCache();
-      api.dispatch(actions.touchFs());
-      return;
+      api.services.runtime?.clearCache()
+      api.dispatch(actions.touchFs())
+      return
     }
 
     // File: seed empty contents and open it. persistFileContents creates the
     // model and writes through to the VFS, whose writeFileSync creates any
     // intermediate folders along the way. Switch to the editor so the freshly
     // created file is visible (it sets the active path + tab).
-    api.dispatch(actions.setEditorView("editor"));
-    persistFileContents(api, path, "");
-    api.dispatch(actions.touchFs());
-  };
+    api.dispatch(actions.setEditorView('editor'))
+    persistFileContents(api, path, '')
+    api.dispatch(actions.touchFs())
+  }
 
 /** Rename/move a file or folder, re-pointing open models, tabs, and the active selection. */
 export const renameFile =
   (fromPath: string, name: string): AppThunk =>
   (dispatch, getState, services) => {
-    const api: AppStoreApi = { dispatch, getState, services };
-    const { vfs, models } = api.services;
-    if (!vfs) return;
-    const state = api.getState();
+    let api: AppStoreApi = { dispatch, getState, services }
+    let { vfs, models } = api.services
+    if (!vfs) return
+    let state = api.getState()
 
-    const from = normalizePath(fromPath);
-    const template = state.templateFiles?.[from.slice(1)];
-    if (template?.readonly) return;
+    let from = normalizePath(fromPath)
+    let template = state.templateFiles?.[from.slice(1)]
+    if (template?.readonly) return
 
     // Resolve the new name relative to the original's parent directory unless it
     // already contains a path separator.
-    const parent = from.slice(0, from.lastIndexOf("/"));
-    const to = normalizePath(name.includes("/") ? name : `${parent}/${name}`);
-    if (to === from || to === "/") return;
+    let parent = from.slice(0, from.lastIndexOf('/'))
+    let to = normalizePath(name.includes('/') ? name : `${parent}/${name}`)
+    if (to === from || to === '/') return
 
     // Drop models under the old path first: Monaco identifies models by URI, so
     // they must be recreated from the new path on the next render.
-    forgetModels(models, from);
+    forgetModels(models, from)
 
     // renameSync creates any intermediate folders for the destination.
     try {
-      vfs.renameSync(from, to);
+      vfs.renameSync(from, to)
     } catch (error) {
-      console.error("Failed to rename entry", error);
-      return;
+      console.error('Failed to rename entry', error)
+      return
     }
 
-    const prefix = `${from}/`;
-    const remap = (p: string) =>
-      p === from ? to : p.startsWith(prefix) ? to + p.slice(from.length) : p;
-    api.dispatch(actions.setOpenFiles(state.openFiles.map(remap)));
-    if (state.activePath) api.dispatch(actions.setActivePath(remap(state.activePath)));
+    let prefix = `${from}/`
+    let remap = (p: string) =>
+      p === from ? to : p.startsWith(prefix) ? to + p.slice(from.length) : p
+    api.dispatch(actions.setOpenFiles(state.openFiles.map(remap)))
+    if (state.activePath) api.dispatch(actions.setActivePath(remap(state.activePath)))
 
-    api.services.runtime?.clearCache();
-    api.dispatch(actions.touchFs());
-    if (api.getState().runtimeStatus === "ready") runServer(api);
-  };
+    api.services.runtime?.clearCache()
+    api.dispatch(actions.touchFs())
+    if (api.getState().runtimeStatus === 'ready') runServer(api)
+  }
 
 /** Delete a file or folder, closing any open tabs underneath it. */
 export const deleteFile =
   (targetPath: string): AppThunk =>
   (dispatch, getState, services) => {
-    const api: AppStoreApi = { dispatch, getState, services };
-    const { vfs, models } = api.services;
-    if (!vfs) return;
-    const state = api.getState();
+    let api: AppStoreApi = { dispatch, getState, services }
+    let { vfs, models } = api.services
+    if (!vfs) return
+    let state = api.getState()
 
-    const path = normalizePath(targetPath);
-    const template = state.templateFiles?.[path.slice(1)];
-    if (template?.readonly) return;
+    let path = normalizePath(targetPath)
+    let template = state.templateFiles?.[path.slice(1)]
+    if (template?.readonly) return
 
-    forgetModels(models, path);
+    forgetModels(models, path)
 
     try {
-      rmRecursive(vfs, path);
+      rmRecursive(vfs, path)
     } catch (error) {
-      console.error("Failed to delete entry", error);
-      return;
+      console.error('Failed to delete entry', error)
+      return
     }
 
-    const prefix = `${path}/`;
-    const openFiles = state.openFiles.filter((p) => p !== path && !p.startsWith(prefix));
-    api.dispatch(actions.setOpenFiles(openFiles));
+    let prefix = `${path}/`
+    let openFiles = state.openFiles.filter((p) => p !== path && !p.startsWith(prefix))
+    api.dispatch(actions.setOpenFiles(openFiles))
     if (state.activePath && (state.activePath === path || state.activePath.startsWith(prefix))) {
-      api.dispatch(actions.setActivePath(openFiles[0]));
+      api.dispatch(actions.setActivePath(openFiles[0]))
     }
 
-    api.services.runtime?.clearCache();
-    api.dispatch(actions.touchFs());
-    if (api.getState().runtimeStatus === "ready") runServer(api);
-  };
+    api.services.runtime?.clearCache()
+    api.dispatch(actions.touchFs())
+    if (api.getState().runtimeStatus === 'ready') runServer(api)
+  }
 
 /** Dispose and forget every cached model at `path` or beneath it. */
 function forgetModels(models: Map<string, monacoTypes.editor.ITextModel>, path: string): void {
-  const prefix = `${path}/`;
-  for (const key of [...models.keys()]) {
+  let prefix = `${path}/`
+  for (let key of [...models.keys()]) {
     if (key === path || key.startsWith(prefix)) {
-      models.get(key)?.dispose();
-      models.delete(key);
+      models.get(key)?.dispose()
+      models.delete(key)
     }
   }
 }
 
 /** Recursively remove a file or directory from the VFS (the VFS only removes empty dirs). */
 function rmRecursive(vfs: almost.VirtualFS, path: string): void {
-  const stats = vfs.statSync(path);
+  let stats = vfs.statSync(path)
   if (stats?.isDirectory()) {
-    for (const entry of vfs.readdirSync(path) || []) {
-      rmRecursive(vfs, `${path}/${entry}`);
+    for (let entry of vfs.readdirSync(path) || []) {
+      rmRecursive(vfs, `${path}/${entry}`)
     }
-    vfs.rmdirSync(path);
+    vfs.rmdirSync(path)
   } else {
-    vfs.unlinkSync(path);
+    vfs.unlinkSync(path)
   }
 }
 
@@ -684,65 +684,65 @@ function rmRecursive(vfs: almost.VirtualFS, path: string): void {
 // ---------------------------------------------------------------------------
 
 /** Walk the VFS (skipping node_modules) and collect files for sharing. */
-function gatherSharedFiles(api: AppStoreApi, path = ""): SharedProjectFile[] {
-  const { vfs } = api.services;
-  const templateFiles = api.getState().templateFiles;
-  if (!vfs) return [];
+function gatherSharedFiles(api: AppStoreApi, path = ''): SharedProjectFile[] {
+  let { vfs } = api.services
+  let templateFiles = api.getState().templateFiles
+  if (!vfs) return []
 
-  const results: SharedProjectFile[] = [];
-  for (const entry of vfs.readdirSync(path) || []) {
-    if (entry === "node_modules") continue;
+  let results: SharedProjectFile[] = []
+  for (let entry of vfs.readdirSync(path) || []) {
+    if (entry === 'node_modules') continue
 
-    const fullPath = `${path}/${entry}`;
-    const stats = vfs.statSync(fullPath);
+    let fullPath = `${path}/${entry}`
+    let stats = vfs.statSync(fullPath)
     if (stats?.isDirectory()) {
-      results.push(...gatherSharedFiles(api, fullPath));
-      continue;
+      results.push(...gatherSharedFiles(api, fullPath))
+      continue
     }
 
-    const template = templateFiles?.[fullPath.slice(1)];
+    let template = templateFiles?.[fullPath.slice(1)]
     results.push({
       name: fullPath.slice(1),
-      contents: template?.readonly ? template.contents : vfs.readFileSync(fullPath, "utf-8"),
+      contents: template?.readonly ? template.contents : vfs.readFileSync(fullPath, 'utf-8'),
       implementation: template?.implementation,
       readonly: template?.readonly || false,
-    });
+    })
   }
-  return results;
+  return results
 }
 
 /** Upload the current project and surface a shareable link. */
 export const shareProject =
   (signal: AbortSignal): AppThunk<Promise<void>> =>
   async (dispatch, getState, services) => {
-    const api: AppStoreApi = { dispatch, getState, services };
-    api.dispatch(actions.setSharing(true));
-    api.dispatch(actions.setSharedId(null));
+    let api: AppStoreApi = { dispatch, getState, services }
+    api.dispatch(actions.setSharing(true))
+    api.dispatch(actions.setSharedId(null))
 
     try {
-      const files = gatherSharedFiles(api);
-      const response = await fetch(routes.shareProject.href(), {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      let files = gatherSharedFiles(api)
+      let response = await fetch(routes.shareProject.href(), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ files }),
         signal,
-      });
+      })
 
-      if (signal.aborted) return;
+      if (signal.aborted) return
 
-      const json = await response.json();
+      let json = await response.json()
       if (
-        typeof json === "object" &&
+        typeof json === 'object' &&
         json !== null &&
-        "projectId" in json &&
-        typeof json.projectId === "string"
+        'projectId' in json &&
+        typeof json.projectId === 'string'
       ) {
-        api.dispatch(actions.setSharedId(json.projectId));
+        api.dispatch(actions.setSharedId(json.projectId))
       }
     } finally {
-      if (!signal.aborted) api.dispatch(actions.setSharing(false));
+      if (!signal.aborted) api.dispatch(actions.setSharing(false))
     }
-  };
+  }
 
 function loadSharedProjectFiles(projectId: string): Promise<Record<string, TemplateFile> | null> {
   return fetch(routes.loadSharedProject.href({ projectId }))
@@ -760,7 +760,7 @@ function loadSharedProjectFiles(projectId: string): Promise<Record<string, Templ
         ]),
       ),
     )
-    .catch(() => null);
+    .catch(() => null)
 }
 
 // ---------------------------------------------------------------------------
@@ -780,119 +780,119 @@ function loadSharedProjectFiles(projectId: string): Promise<Record<string, Templ
  */
 export const awaitDiagnostics =
   (): AppThunk<Promise<void>> => async (dispatch, getState, services) => {
-    const api: AppStoreApi = { dispatch, getState, services };
-    const { monaco, models } = api.services;
-    if (!monaco) return;
+    let api: AppStoreApi = { dispatch, getState, services }
+    let { monaco, models } = api.services
+    if (!monaco) return
 
     try {
-      const open = [...models.values()].filter((model) => !model.isDisposed());
-      const tsModels = open.filter((model) => model.getLanguageId() === "typescript");
-      const jsModels = open.filter((model) => model.getLanguageId() === "javascript");
+      let open = [...models.values()].filter((model) => !model.isDisposed())
+      let tsModels = open.filter((model) => model.getLanguageId() === 'typescript')
+      let jsModels = open.filter((model) => model.getLanguageId() === 'javascript')
 
-      const diagnostics: Diagnostic[] = [];
+      let diagnostics: Diagnostic[] = []
 
-      const drive = async (
+      let drive = async (
         getWorker: (...uris: monacoTypes.Uri[]) => Promise<monacoTypes.typescript.TypeScriptWorker>,
         list: monacoTypes.editor.ITextModel[],
       ) => {
-        const worker = await getWorker(...list.map((model) => model.uri));
+        let worker = await getWorker(...list.map((model) => model.uri))
         await Promise.all(
           list.map(async (model) => {
-            const fileName = model.uri.toString();
-            const [syntactic, semantic] = await Promise.all([
+            let fileName = model.uri.toString()
+            let [syntactic, semantic] = await Promise.all([
               worker.getSyntacticDiagnostics(fileName),
               worker.getSemanticDiagnostics(fileName),
-            ]);
-            if (model.isDisposed()) return;
-            for (const diag of [...syntactic, ...semantic]) {
-              const pos = model.getPositionAt(diag.start ?? 0);
+            ])
+            if (model.isDisposed()) return
+            for (let diag of [...syntactic, ...semantic]) {
+              let pos = model.getPositionAt(diag.start ?? 0)
               diagnostics.push({
                 path: model.uri.path,
                 severity: tsCategorySeverity(diag.category),
                 message: flattenTsMessage(diag.messageText),
                 line: pos.lineNumber,
                 column: pos.column,
-              });
+              })
             }
           }),
-        );
-      };
+        )
+      }
 
-      const tasks: Promise<unknown>[] = [];
+      let tasks: Promise<unknown>[] = []
       if (tsModels.length) {
         tasks.push(
           monaco.typescript
             .getTypeScriptWorker()
             .then((getWorker) => drive(getWorker, tsModels))
-            .catch((error) => console.error("Failed to refresh TS diagnostics", error)),
-        );
+            .catch((error) => console.error('Failed to refresh TS diagnostics', error)),
+        )
       }
       if (jsModels.length) {
         tasks.push(
           monaco.typescript
             .getJavaScriptWorker()
             .then((getWorker) => drive(getWorker, jsModels))
-            .catch((error) => console.error("Failed to refresh JS diagnostics", error)),
-        );
+            .catch((error) => console.error('Failed to refresh JS diagnostics', error)),
+        )
       }
-      await Promise.all(tasks);
+      await Promise.all(tasks)
 
       // Fold in non-TS/JS diagnostics (CSS/JSON/HTML) from the marker service.
-      for (const marker of monaco.editor.getModelMarkers({})) {
-        if (marker.owner === "typescript" || marker.owner === "javascript") continue;
+      for (let marker of monaco.editor.getModelMarkers({})) {
+        if (marker.owner === 'typescript' || marker.owner === 'javascript') continue
         diagnostics.push({
           path: marker.resource.path,
           severity: markerSeverity(monaco, marker.severity),
           message: marker.message,
           line: marker.startLineNumber,
           column: marker.startColumn,
-        });
+        })
       }
 
-      api.dispatch(actions.setDiagnostics(diagnostics));
+      api.dispatch(actions.setDiagnostics(diagnostics))
     } catch (error) {
-      console.error("Failed to refresh diagnostics", error);
+      console.error('Failed to refresh diagnostics', error)
     }
-  };
+  }
 
 /**
  * Force the editor to re-validate every open model and refresh its on-screen
  * markers, debounced to coalesce a burst of edits into one pass.
  */
 function scheduleEditorRevalidation(api: AppStoreApi): void {
-  const { services } = api;
-  if (!services.monaco) return;
-  if (services.revalidateHandle) clearTimeout(services.revalidateHandle);
+  let { services } = api
+  if (!services.monaco) return
+  if (services.revalidateHandle) clearTimeout(services.revalidateHandle)
   services.revalidateHandle = setTimeout(() => {
-    services.revalidateHandle = null;
-    revalidateOpenModels(api);
-  }, 50);
+    services.revalidateHandle = null
+    revalidateOpenModels(api)
+  }, 50)
 }
 
 /** Re-fire each language's diagnostics options, prompting a full revalidation. */
 function revalidateOpenModels(api: AppStoreApi): void {
-  const { monaco } = api.services;
-  if (!monaco) return;
-  for (const defaults of [
+  let { monaco } = api.services
+  if (!monaco) return
+  for (let defaults of [
     monaco.typescript.typescriptDefaults,
     monaco.typescript.javascriptDefaults,
   ]) {
-    defaults.setDiagnosticsOptions(defaults.getDiagnosticsOptions());
+    defaults.setDiagnosticsOptions(defaults.getDiagnosticsOptions())
   }
 }
 
 /** Map a TypeScript `DiagnosticCategory` to our severity vocabulary. */
-function tsCategorySeverity(category: number): Diagnostic["severity"] {
+function tsCategorySeverity(category: number): Diagnostic['severity'] {
   // ts.DiagnosticCategory: Warning = 0, Error = 1, Suggestion = 2, Message = 3.
   switch (category) {
     case 1:
-      return "error";
+      return 'error'
     case 0:
-      return "warning";
+      return 'warning'
     case 2:
-      return "hint";
+      return 'hint'
     default:
-      return "info";
+      return 'info'
   }
 }
 
@@ -900,31 +900,31 @@ function tsCategorySeverity(category: number): Diagnostic["severity"] {
 function markerSeverity(
   monaco: typeof monacoTypes,
   severity: monacoTypes.MarkerSeverity,
-): Diagnostic["severity"] {
+): Diagnostic['severity'] {
   switch (severity) {
     case monaco.MarkerSeverity.Error:
-      return "error";
+      return 'error'
     case monaco.MarkerSeverity.Warning:
-      return "warning";
+      return 'warning'
     case monaco.MarkerSeverity.Info:
-      return "info";
+      return 'info'
     default:
-      return "hint";
+      return 'hint'
   }
 }
 
 /** A nested TypeScript diagnostic message chain (Monaco doesn't export the type). */
 interface DiagnosticMessageChain {
-  messageText: string;
-  next?: DiagnosticMessageChain[];
+  messageText: string
+  next?: DiagnosticMessageChain[]
 }
 
 /** Flatten a TS diagnostic message (a string or a nested message chain) to text. */
 function flattenTsMessage(messageText: string | DiagnosticMessageChain, indent = 0): string {
-  if (typeof messageText === "string") return messageText;
-  let result = `${"  ".repeat(indent)}${messageText.messageText}`;
-  for (const next of messageText.next ?? []) {
-    result += `\n${flattenTsMessage(next, indent + 1)}`;
+  if (typeof messageText === 'string') return messageText
+  let result = `${'  '.repeat(indent)}${messageText.messageText}`
+  for (let next of messageText.next ?? []) {
+    result += `\n${flattenTsMessage(next, indent + 1)}`
   }
-  return result;
+  return result
 }

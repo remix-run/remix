@@ -1,34 +1,32 @@
-import * as http from "node:http";
-import { createRequestListener } from "remix/node-fetch-server";
+import * as http from 'node:http'
+import { createRequestListener } from 'remix/node-fetch-server'
 
-import { initializeDatabase } from "./app/db/driver.ts";
-import { router } from "./app/router.ts";
+import { initializeDatabase } from './app/db/driver.ts'
+import { router } from './app/router.ts'
 
-const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 44100;
+const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 44100
 
 initializeDatabase().then(() => {
-  const server = http.createServer(
-    (req, res) => {
-      if (!res.req) {
-        res.req = req;
-      }
-      if (!res.req.httpVersionMajor) {
-        res.req.httpVersionMajor = 1;
-      }
-      return createRequestListener(async (request) => {
-        try {
-          return await router.fetch(request);
-        } catch (error) {
-          if (!(request.signal.aborted && error === request.signal.reason)) {
-            console.error(error);
-          }
-          return new Response("Internal Server Error", { status: 500 });
+  let server = http.createServer((req, res) => {
+    if (!res.req) {
+      res.req = req
+    }
+    if (!res.req.httpVersionMajor) {
+      res.req.httpVersionMajor = 1
+    }
+    return createRequestListener(async (request) => {
+      try {
+        return await router.fetch(request)
+      } catch (error) {
+        if (!(request.signal.aborted && error === request.signal.reason)) {
+          console.error(error)
         }
-      })(req, res);
-    },
-  );
+        return new Response('Internal Server Error', { status: 500 })
+      }
+    })(req, res)
+  })
 
   server.listen(port, () => {
-    console.log(`Server listening on http://localhost:${port}`);
-  });
-});
+    console.log(`Server listening on http://localhost:${port}`)
+  })
+})

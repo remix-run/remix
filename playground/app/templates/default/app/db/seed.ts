@@ -1,14 +1,14 @@
-import type { db as dbType } from "./driver.ts";
-import { guestBook } from "./schema.ts";
+import type { db as dbType } from './driver.ts'
+import { guestBook } from './schema.ts'
 
 export async function seedDatabase(db: typeof dbType) {
-  const guestBookCount = await db.count(guestBook);
+  let guestBookCount = await db.count(guestBook)
   if (guestBookCount === 0) {
     await db.createMany(guestBook, [
-      { name: "Alice" },
+      { name: 'Alice' },
       {
-        name: "Bob",
+        name: 'Bob',
       },
-    ]);
+    ])
   }
 }

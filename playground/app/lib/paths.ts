@@ -1,7 +1,7 @@
 /**
  * Pure path helpers shared across the store, operations, and components.
  */
-import type * as almost from "@jacob-ebey/almostnode";
+import type * as almost from '@jacob-ebey/almostnode'
 
 /**
  * Resolve any user/tool/UI-supplied path to a single canonical absolute path:
@@ -11,70 +11,70 @@ import type * as almost from "@jacob-ebey/almostnode";
  * tabs or models.
  */
 export function normalizePath(path: string): string {
-  const segments: string[] = [];
-  for (const segment of path.split("/")) {
-    if (segment === "" || segment === ".") continue;
-    if (segment === "..") {
-      segments.pop();
-      continue;
+  let segments: string[] = []
+  for (let segment of path.split('/')) {
+    if (segment === '' || segment === '.') continue
+    if (segment === '..') {
+      segments.pop()
+      continue
     }
-    segments.push(segment);
+    segments.push(segment)
   }
-  return `/${segments.join("/")}`;
+  return `/${segments.join('/')}`
 }
 
 /** Monaco language id for a file path's extension. */
 export function languageFor(path: string): string {
-  const ext = path.slice(path.lastIndexOf(".") + 1);
+  let ext = path.slice(path.lastIndexOf('.') + 1)
   switch (ext) {
-    case "sql":
-      return "sql";
-    case "ts":
-    case "tsx":
-      return "typescript";
-    case "js":
-    case "jsx":
-      return "javascript";
-    case "html":
-      return "html";
-    case "css":
-      return "css";
-    case "json":
-      return "json";
+    case 'sql':
+      return 'sql'
+    case 'ts':
+    case 'tsx':
+      return 'typescript'
+    case 'js':
+    case 'jsx':
+      return 'javascript'
+    case 'html':
+      return 'html'
+    case 'css':
+      return 'css'
+    case 'json':
+      return 'json'
     default:
-      return "plaintext";
+      return 'plaintext'
   }
 }
 
 /** Human-readable language label for the status bar. */
 export function languageLabel(path: string | undefined): string {
-  if (!path) return "";
-  if (path.endsWith(".tsx")) return "TypeScript React";
-  if (path.endsWith(".ts") || path.endsWith(".mts")) return "TypeScript";
-  if (path.endsWith(".jsx")) return "JavaScript React";
-  if (path.endsWith(".js") || path.endsWith(".mjs")) return "JavaScript";
-  if (path.endsWith(".json")) return "JSON";
-  if (path.endsWith(".css")) return "CSS";
-  if (path.endsWith(".html")) return "HTML";
-  return "Plain Text";
+  if (!path) return ''
+  if (path.endsWith('.tsx')) return 'TypeScript React'
+  if (path.endsWith('.ts') || path.endsWith('.mts')) return 'TypeScript'
+  if (path.endsWith('.jsx')) return 'JavaScript React'
+  if (path.endsWith('.js') || path.endsWith('.mjs')) return 'JavaScript'
+  if (path.endsWith('.json')) return 'JSON'
+  if (path.endsWith('.css')) return 'CSS'
+  if (path.endsWith('.html')) return 'HTML'
+  return 'Plain Text'
 }
 
 /** Render a `tree`-style listing of a VFS directory, used by the agent's `list` tool. */
 export function ls(vfs: almost.VirtualFS, path: string, depth: number): string {
-  let output = "";
-  function walk(dir: string, prefix = ""): void {
-    if (depth < 0 || dir === "node_modules") return;
-    const entries = vfs.readdirSync(dir) || [];
+  let output = ''
+  function walk(dir: string, prefix = ''): void {
+    if (depth < 0 || dir === 'node_modules') return
+    let entries = vfs.readdirSync(dir) || []
     entries.forEach((entry, index) => {
-      const isLast = index === entries.length - 1;
-      const marker = isLast ? "└── " : "├── ";
-      output += `${prefix}${marker}${entry}\n`;
-      const stats = vfs.statSync(`${dir}/${entry}`);
+      let isLast = index === entries.length - 1
+      let marker = isLast ? '└── ' : '├── '
+      output += `${prefix}${marker}${entry}\n`
+      let stats = vfs.statSync(`${dir}/${entry}`)
       if (stats?.isDirectory()) {
-        walk(`${dir}/${entry}`, `${prefix}${isLast ? "    " : "│   "}`);
+        walk(`${dir}/${entry}`, `${prefix}${isLast ? '    ' : '│   '}`)
       }
-    });
+    })
   }
-  walk(path);
-  return output || "Directory is empty or does not exist.";
+  walk(path)
+  return output || 'Directory is empty or does not exist.'
 }

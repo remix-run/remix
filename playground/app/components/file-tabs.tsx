@@ -1,26 +1,26 @@
-import { css, on, ref, type Handle, type RemixNode } from "remix/ui";
+import { css, on, ref, type Handle, type RemixNode } from 'remix/ui'
 
-import { closeTab, openFile } from "../store/operations.ts";
-import { actions, connect, type AppUiApi, shallowEqual } from "../store/index.ts";
+import { closeTab, openFile } from '../store/operations.ts'
+import { actions, connect, type AppUiApi, shallowEqual } from '../store/index.ts'
 
 type Tab = {
   /** Absolute, normalized file path — the tab's stable identity. */
-  name: string;
+  name: string
   /** Display label. */
-  label: string;
-};
+  label: string
+}
 
 /** Build the tab list from the store's open files + template metadata. */
 function selectTabs(api: AppUiApi): { tabs: Tab[]; activeName: string | undefined } {
-  const { openFiles, templateFiles, activePath } = api.getState();
-  const tabs = openFiles.map((path) => {
-    const label = path.split("/").slice(-1)[0] ?? path;
+  let { openFiles, templateFiles, activePath } = api.getState()
+  let tabs = openFiles.map((path) => {
+    let label = path.split('/').slice(-1)[0] ?? path
     return {
       name: path,
       label: templateFiles?.[path.slice(1)]?.readonly ? `${label} (read-only)` : label,
-    };
-  });
-  return { tabs, activeName: activePath };
+    }
+  })
+  return { tabs, activeName: activePath }
 }
 
 /**
@@ -30,118 +30,118 @@ function selectTabs(api: AppUiApi): { tabs: Tab[]; activeName: string | undefine
  * state is roving keyboard focus, a pure UI concern.
  */
 export function FileTabs(handle: Handle<{ api: AppUiApi }>) {
-  const { api } = handle.props;
+  let { api } = handle.props
   // Subscribe to the slice that drives this view. `selectTabs` builds a fresh
   // object each call, so compare shallowly to avoid needless re-renders.
-  const view = connect(handle, api, () => selectTabs(api), shallowEqual);
+  let view = connect(handle, api, () => selectTabs(api), shallowEqual)
 
   // Roving-tabindex focus is local UI state, not data.
-  let focused: string | undefined = view().activeName ?? view().tabs[0]?.name;
+  let focused: string | undefined = view().activeName ?? view().tabs[0]?.name
 
   // Live map of the focusable inner <button> for each tab.
-  const buttons = new Map<string, HTMLElement>();
+  let buttons = new Map<string, HTMLElement>()
 
   // Update focus, re-render, then re-assert DOM focus on the focused tab so the
   // keyboard survives reconciliation.
   function commit(nextFocus: string | undefined) {
-    focused = nextFocus;
-    handle.update();
+    focused = nextFocus
+    handle.update()
     if (focused) {
-      const name = focused;
-      handle.queueTask(() => buttons.get(name)?.focus());
+      let name = focused
+      handle.queueTask(() => buttons.get(name)?.focus())
     }
   }
 
   function tabs() {
-    return view().tabs;
+    return view().tabs
   }
 
   function indexOf(name: string) {
-    return tabs().findIndex((t) => t.name === name);
+    return tabs().findIndex((t) => t.name === name)
   }
 
   function focusAt(index: number) {
-    const list = tabs();
-    if (list.length === 0) return;
-    const wrapped = ((index % list.length) + list.length) % list.length;
-    commit(list[wrapped]!.name);
+    let list = tabs()
+    if (list.length === 0) return
+    let wrapped = ((index % list.length) + list.length) % list.length
+    commit(list[wrapped]!.name)
   }
 
   function select(name: string) {
-    commit(name);
-    api.dispatch(actions.setEditorView("editor"));
-    api.dispatch(openFile(name));
+    commit(name)
+    api.dispatch(actions.setEditorView('editor'))
+    api.dispatch(openFile(name))
   }
 
   function close(name: string) {
-    const list = tabs();
-    const index = indexOf(name);
+    let list = tabs()
+    let index = indexOf(name)
     if (focused === name) {
-      const neighbor = list[index + 1] ?? list[index - 1];
-      commit(neighbor?.name);
+      let neighbor = list[index + 1] ?? list[index - 1]
+      commit(neighbor?.name)
     }
-    api.dispatch(closeTab(name));
+    api.dispatch(closeTab(name))
   }
 
   function onKeyDown(event: KeyboardEvent, name: string) {
-    const index = indexOf(name);
-    if (index === -1) return;
+    let index = indexOf(name)
+    if (index === -1) return
 
     switch (event.key) {
-      case "ArrowRight":
-        event.preventDefault();
-        focusAt(index + 1);
-        break;
-      case "ArrowLeft":
-        event.preventDefault();
-        focusAt(index - 1);
-        break;
-      case "Home":
-        event.preventDefault();
-        focusAt(0);
-        break;
-      case "End":
-        event.preventDefault();
-        focusAt(tabs().length - 1);
-        break;
-      case "Enter":
-      case " ":
-        event.preventDefault();
-        select(name);
-        break;
-      case "Delete":
-      case "Backspace":
-        event.preventDefault();
-        close(name);
-        break;
+      case 'ArrowRight':
+        event.preventDefault()
+        focusAt(index + 1)
+        break
+      case 'ArrowLeft':
+        event.preventDefault()
+        focusAt(index - 1)
+        break
+      case 'Home':
+        event.preventDefault()
+        focusAt(0)
+        break
+      case 'End':
+        event.preventDefault()
+        focusAt(tabs().length - 1)
+        break
+      case 'Enter':
+      case ' ':
+        event.preventDefault()
+        select(name)
+        break
+      case 'Delete':
+      case 'Backspace':
+        event.preventDefault()
+        close(name)
+        break
     }
   }
 
   return () => {
-    const { tabs: list, activeName: active } = view();
+    let { tabs: list, activeName: active } = view()
 
     // Keep roving focus on a tab that still exists.
     if (!list.some((t) => t.name === focused)) {
-      focused = active && list.some((t) => t.name === active) ? active : list[0]?.name;
+      focused = active && list.some((t) => t.name === active) ? active : list[0]?.name
     }
 
-    const rows: RemixNode[] = list.map((tab) => {
-      const isActive = tab.name === active;
+    let rows: RemixNode[] = list.map((tab) => {
+      let isActive = tab.name === active
       return (
-        <jui-button key={tab.name} size="xs" variant={isActive ? undefined : "muted"}>
+        <jui-button key={tab.name} size="xs" variant={isActive ? undefined : 'muted'}>
           <button
             role="tab"
-            aria-selected={isActive ? "true" : "false"}
+            aria-selected={isActive ? 'true' : 'false'}
             tabindex={focused === tab.name ? 0 : -1}
             mix={[
               ref((node: HTMLElement, signal) => {
-                buttons.set(tab.name, node);
-                signal.addEventListener("abort", () => {
-                  if (buttons.get(tab.name) === node) buttons.delete(tab.name);
-                });
+                buttons.set(tab.name, node)
+                signal.addEventListener('abort', () => {
+                  if (buttons.get(tab.name) === node) buttons.delete(tab.name)
+                })
               }),
-              on<HTMLElement>("click", () => select(tab.name)),
-              on<HTMLElement>("keydown", (event) => onKeyDown(event as KeyboardEvent, tab.name)),
+              on<HTMLElement>('click', () => select(tab.name)),
+              on<HTMLElement>('keydown', (event) => onKeyDown(event as KeyboardEvent, tab.name)),
             ]}
           >
             <jui-group nowrap gap="xs">
@@ -150,10 +150,10 @@ export function FileTabs(handle: Handle<{ api: AppUiApi }>) {
                 role="button"
                 aria-label={`Close ${tab.name}`}
                 mix={[
-                  css({ cursor: "pointer" }),
-                  on<HTMLElement>("click", (event) => {
-                    event.stopPropagation();
-                    close(tab.name);
+                  css({ cursor: 'pointer' }),
+                  on<HTMLElement>('click', (event) => {
+                    event.stopPropagation()
+                    close(tab.name)
                   }),
                 ]}
               >
@@ -162,8 +162,8 @@ export function FileTabs(handle: Handle<{ api: AppUiApi }>) {
             </jui-group>
           </button>
         </jui-button>
-      );
-    });
+      )
+    })
 
     return (
       <jui-group
@@ -178,6 +178,6 @@ export function FileTabs(handle: Handle<{ api: AppUiApi }>) {
       >
         {rows}
       </jui-group>
-    );
-  };
+    )
+  }
 }

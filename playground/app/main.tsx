@@ -1,8 +1,8 @@
-import { createRoot } from "remix/ui";
+import { createRoot } from 'remix/ui'
 
-import { App } from "./app.tsx";
+import { App } from './app.tsx'
 
-const root = document.body.firstElementChild;
-if (!(root instanceof HTMLElement)) throw new Error("Missing root element");
+const root = document.body.firstElementChild
+if (!(root instanceof HTMLElement)) throw new Error('Missing root element')
 
-createRoot(root).render(<App />);
+createRoot(root).render(<App />)

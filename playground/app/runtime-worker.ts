@@ -5,19 +5,17 @@
  * and runs them in isolation, preventing UI blocking.
  */
 
-import { getServerBridge, Runtime, VirtualFS } from "@jacob-ebey/almostnode";
-import type {
-  IExecuteResult,
-  IRuntimeOptions,
-  VFSSnapshot,
-} from "@jacob-ebey/almostnode";
-import sqlite3InitModule from "@sqlite.org/sqlite-wasm";
-import { expose } from "comlink";
-import { CachedInputFileSystem, ResolverFactory } from "enhanced-resolve";
-import { type ImportDeclaration, type ImportExpression, parse } from "acorn";
-import * as walk from "acorn-walk";
-import MagicString from "magic-string";
-import * as ts from "typescript";
+import type * as NodeFS from 'node:fs'
+
+import { getServerBridge, Runtime, VirtualFS } from '@jacob-ebey/almostnode'
+import type { IExecuteResult, IRuntimeOptions, VFSSnapshot } from '@jacob-ebey/almostnode'
+import sqlite3InitModule from '@sqlite.org/sqlite-wasm'
+import { expose } from 'comlink'
+import { CachedInputFileSystem, ResolverFactory } from 'enhanced-resolve'
+import { type ImportDeclaration, type ImportExpression, parse } from 'acorn'
+import * as walk from 'acorn-walk'
+import MagicString from 'magic-string'
+import * as ts from 'typescript'
 
 /**
  * Adapt a {@link VirtualFS} to the synchronous + asynchronous `FileSystem`
@@ -32,59 +30,59 @@ import * as ts from "typescript";
  * work correctly.
  */
 function createVfsFileSystem(vfs: VirtualFS) {
-  const decoder = new TextDecoder();
+  let decoder = new TextDecoder()
 
-  const toPath = (p: unknown): string => typeof p === "string" ? p : String(p);
+  let toPath = (p: unknown): string => (typeof p === 'string' ? p : String(p))
 
-  const getEncoding = (options: unknown): string | null => {
-    if (typeof options === "string") return options;
-    if (options && typeof options === "object" && "encoding" in options) {
-      return (options as { encoding?: string | null }).encoding ?? null;
+  let getEncoding = (options: unknown): string | null => {
+    if (typeof options === 'string') return options
+    if (options && typeof options === 'object' && 'encoding' in options) {
+      return (options as { encoding?: string | null }).encoding ?? null
     }
-    return null;
-  };
+    return null
+  }
 
-  const readFileSync = (path: unknown, options?: unknown) => {
-    const data = vfs.readFileSync(toPath(path));
-    return Buffer.from(data);
+  let readFileSync = (path: unknown, options?: unknown) => {
+    let data = vfs.readFileSync(toPath(path))
+    return Buffer.from(data)
     // return getEncoding(options) ? decoder.decode(data) : data;
-  };
+  }
 
-  const readJsonSync = (path: unknown) =>
-    JSON.parse(decoder.decode(vfs.readFileSync(toPath(path))));
+  let readJsonSync = (path: unknown) => JSON.parse(decoder.decode(vfs.readFileSync(toPath(path))))
 
-  const statSync = (path: unknown) => vfs.statSync(toPath(path));
-  const lstatSync = (path: unknown) => vfs.lstatSync(toPath(path));
-  const readdirSync = (path: unknown) => vfs.readdirSync(toPath(path));
-  const realpathSync = (path: unknown) => vfs.realpathSync(toPath(path));
+  let statSync = (path: unknown) => vfs.statSync(toPath(path))
+  let lstatSync = (path: unknown) => vfs.lstatSync(toPath(path))
+  let readdirSync = (path: unknown) => vfs.readdirSync(toPath(path))
+  let realpathSync = (path: unknown) => vfs.realpathSync(toPath(path))
 
   // Our VFS has no symlinks; readlink should fail the way Node does so that
   // enhanced-resolve's SymlinkPlugin treats the entry as a regular file.
-  const readlinkSync = (path: unknown): never => {
-    const err = new Error(
-      `EINVAL: invalid argument, readlink '${toPath(path)}'`,
-    ) as Error & { code: string };
-    err.code = "EINVAL";
-    throw err;
-  };
+  let readlinkSync = (path: unknown): never => {
+    let err = new Error(`EINVAL: invalid argument, readlink '${toPath(path)}'`) as Error & {
+      code: string
+    }
+    err.code = 'EINVAL'
+    throw err
+  }
 
   /**
    * Wrap a sync function so it can be called with the Node-style
    * `(path, [options], callback)` async signature.
    */
-  const asyncify =
+  let asyncify =
     <T>(fn: (path: unknown, options?: unknown) => T) =>
     (path: unknown, options: unknown, callback?: unknown): void => {
-      const cb = (
-        typeof options === "function" ? options : callback
-      ) as (err: Error | null, result?: T) => void;
-      const opts = typeof options === "function" ? undefined : options;
+      let cb = (typeof options === 'function' ? options : callback) as (
+        err: Error | null,
+        result?: T,
+      ) => void
+      let opts = typeof options === 'function' ? undefined : options
       try {
-        cb(null, fn(path, opts));
+        cb(null, fn(path, opts))
       } catch (err) {
-        cb(err as Error);
+        cb(err as Error)
       }
-    };
+    }
 
   return {
     readFileSync,
@@ -101,34 +99,34 @@ function createVfsFileSystem(vfs: VirtualFS) {
     readdir: asyncify(readdirSync),
     realpath: asyncify(realpathSync),
     readlink: asyncify(readlinkSync),
-  };
-}
-
-type DevServerResponse = {
-  statusCode: number;
-  statusMessage: string;
-  headers: Record<string, string>;
-  body: any;
-};
-
-declare module "@jacob-ebey/almostnode" {
-  interface Process {
-    __playgroundDevServer: ((url: URL) => Promise<DevServerResponse>) | null;
-    __sqlite3: Awaited<ReturnType<typeof sqlite3InitModule>> | null;
   }
 }
 
-let runtime: Runtime | null = null;
-let vfs: VirtualFS | null = null;
-let devServer: ((url: URL) => Promise<DevServerResponse>) | null = null;
-let consoleCallback: ((method: string, args: unknown[]) => void) | null = null;
-let serverReadyCallback: ((port: number) => void) | null = null;
-let serverBridge = getServerBridge({
+type DevServerResponse = {
+  statusCode: number
+  statusMessage: string
+  headers: Record<string, string>
+  body: any
+}
+
+declare module '@jacob-ebey/almostnode' {
+  interface Process {
+    __playgroundDevServer: ((url: URL) => Promise<DevServerResponse>) | null
+    __sqlite3: Awaited<ReturnType<typeof sqlite3InitModule>> | null
+  }
+}
+
+let runtime: Runtime | null = null
+let vfs: VirtualFS | null = null
+let devServer: ((url: URL) => Promise<DevServerResponse>) | null = null
+let consoleCallback: ((method: string, args: unknown[]) => void) | null = null
+let serverReadyCallback: ((port: number) => void) | null = null
+const serverBridge = getServerBridge({
   baseUrl: `${location.protocol}//${location.host}`,
   onServerReady(port) {
-    serverReadyCallback?.(port);
+    serverReadyCallback?.(port)
   },
-});
+})
 
 /**
  * Worker API exposed via Comlink
@@ -137,276 +135,237 @@ const workerApi = {
   /**
    * Initialize the worker with a VFS snapshot and runtime options
    */
-  async init(
-    vfsSnapshot: VFSSnapshot,
-    options: IRuntimeOptions,
-  ): Promise<void> {
+  async init(vfsSnapshot: VFSSnapshot, options: IRuntimeOptions): Promise<void> {
     // Restore VFS from snapshot
-    vfs = VirtualFS.fromSnapshot(vfsSnapshot);
+    vfs = VirtualFS.fromSnapshot(vfsSnapshot)
 
     // Create runtime with console forwarding
-    const runtimeOptions: IRuntimeOptions = {
+    let runtimeOptions: IRuntimeOptions = {
       ...options,
       onConsole: (method, args) => {
         // Forward console output to main thread
         if (consoleCallback) {
-          consoleCallback(method, args);
+          consoleCallback(method, args)
         }
       },
-    };
+    }
 
-    runtime = new Runtime(vfs, runtimeOptions);
+    runtime = new Runtime(vfs, runtimeOptions)
 
-    const res = await runtime!.executeSync(
+    let res = await runtime!.executeSync(
       `const _fs = require("node:fs"); exports.fs = _fs;`,
-      "/__get_fs__.js",
-    );
-    const fs = (res.exports as { fs: typeof import("node:fs") }).fs;
+      '/__get_fs__.js',
+    )
+    let fs = (res.exports as { fs: typeof NodeFS }).fs
 
-    const resolverExtensionAlias = {
-      ".js": [".js", ".ts", ".tsx", ".jsx"],
-      ".jsx": [".jsx", ".tsx"],
-      ".mjs": [".mjs", ".mts"],
-    } satisfies Record<string, string[]>;
-    const resolverExtensions = [".ts", ".tsx", ".js", ".jsx", ".mts", ".mjs"];
+    let resolverExtensionAlias = {
+      '.js': ['.js', '.ts', '.tsx', '.jsx'],
+      '.jsx': ['.jsx', '.tsx'],
+      '.mjs': ['.mjs', '.mts'],
+    } satisfies Record<string, string[]>
+    let resolverExtensions = ['.ts', '.tsx', '.js', '.jsx', '.mts', '.mjs']
 
-    const resolver = ResolverFactory.createResolver({
-      fileSystem: new CachedInputFileSystem(
-        createVfsFileSystem(vfs) as any,
-        4000,
-      ) as any,
-      aliasFields: [["browser"]],
-      conditionNames: ["browser", "import", "module", "default"],
+    let resolver = ResolverFactory.createResolver({
+      fileSystem: new CachedInputFileSystem(createVfsFileSystem(vfs) as any, 4000) as any,
+      aliasFields: [['browser']],
+      conditionNames: ['browser', 'import', 'module', 'default'],
       extensionAlias: resolverExtensionAlias,
       extensions: resolverExtensions,
-      mainFields: ["browser", "module", "main"],
-      tsconfig: { configFile: "/tsconfig.json" },
-    });
+      mainFields: ['browser', 'module', 'main'],
+      tsconfig: { configFile: '/tsconfig.json' },
+    })
 
     /**
      * Extract the package name from a bare import specifier.
      * e.g. "react" -> "react", "react/jsx-runtime" -> "react",
      * "@scope/pkg/sub" -> "@scope/pkg"
      */
-    const getPackageName = (specifier: string): string => {
-      const parts = specifier.split("/");
-      if (specifier.startsWith("@")) {
-        return parts.slice(0, 2).join("/");
+    let getPackageName = (specifier: string): string => {
+      let parts = specifier.split('/')
+      if (specifier.startsWith('@')) {
+        return parts.slice(0, 2).join('/')
       }
-      return parts[0];
-    };
+      return parts[0]
+    }
 
     /** Determine whether a specifier is a bare import (not relative/absolute). */
-    const isBareImport = (specifier: string): boolean =>
-      !specifier.startsWith(".") &&
-      !specifier.startsWith("/") &&
-      !specifier.startsWith("http://") &&
-      !specifier.startsWith("https://");
+    let isBareImport = (specifier: string): boolean =>
+      !specifier.startsWith('.') &&
+      !specifier.startsWith('/') &&
+      !specifier.startsWith('http://') &&
+      !specifier.startsWith('https://')
 
     /**
      * Look up the declared version for a package in the vfs package.json
      * and build an esm.sh URL for the specifier.
      */
-    const rewriteBareToEsmSh = (specifier: string): string | null => {
-      const pkgName = getPackageName(specifier);
-      let pkgJson: Record<string, any>;
+    let rewriteBareToEsmSh = (specifier: string): string | null => {
+      let pkgName = getPackageName(specifier)
+      let pkgJson: Record<string, any>
       try {
-        pkgJson = JSON.parse(
-          new TextDecoder().decode(vfs!.readFileSync("/package.json")),
-        );
+        pkgJson = JSON.parse(new TextDecoder().decode(vfs!.readFileSync('/package.json')))
       } catch {
-        return null;
+        return null
       }
-      const version = pkgJson.dependencies?.[pkgName] ??
+      let version =
+        pkgJson.dependencies?.[pkgName] ??
         pkgJson.devDependencies?.[pkgName] ??
         pkgJson.peerDependencies?.[pkgName] ??
-        pkgJson.optionalDependencies?.[pkgName];
+        pkgJson.optionalDependencies?.[pkgName]
       if (!version) {
-        return null;
+        return null
       }
-      const subpath = specifier.slice(pkgName.length);
-      return `https://esm.sh/${pkgName}@${version}${subpath}`;
-    };
+      let subpath = specifier.slice(pkgName.length)
+      return `https://esm.sh/${pkgName}@${version}${subpath}`
+    }
 
     devServer = async (url) => {
       // await esbuildInitPromise;
-      const previewPort = runtime!.getProcess().env.PREVIEW_PORT || "44100";
+      let previewPort = runtime!.getProcess().env.PREVIEW_PORT || '44100'
 
-      let toResolve = url.pathname.replace(/^\/\//, "/");
+      let toResolve = url.pathname.replace(/^\/\//, '/')
 
-      const entry = await resolver.resolvePromise(
-        {},
-        "/",
-        toResolve,
-      );
+      let entry = await resolver.resolvePromise({}, '/', toResolve)
 
       if (!entry) {
         return {
           statusCode: 404,
-          statusMessage: "Not Found",
+          statusMessage: 'Not Found',
           headers: {
-            "Content-Type": "text/plain",
+            'Content-Type': 'text/plain',
           },
-          body: "Not Found",
-        };
+          body: 'Not Found',
+        }
       }
 
-      let error: Error | null = null;
+      let error: Error | null = null
 
-      const contents = new TextDecoder().decode(vfs!.readFileSync(entry));
+      let contents = new TextDecoder().decode(vfs!.readFileSync(entry))
 
-      const transformed = ts.transpileModule(contents, {
+      let transformed = ts.transpileModule(contents, {
         compilerOptions: {
           module: ts.ModuleKind.ESNext,
           target: ts.ScriptTarget.ES2024,
           jsx: ts.JsxEmit.ReactJSX,
-          jsxImportSource: "remix/ui",
+          jsxImportSource: 'remix/ui',
         },
         fileName: entry,
         reportDiagnostics: true,
-      });
+      })
 
-      if (
-        transformed.diagnostics?.some((d) =>
-          d.category === ts.DiagnosticCategory.Error
-        )
-      ) {
+      if (transformed.diagnostics?.some((d) => d.category === ts.DiagnosticCategory.Error)) {
         return {
           statusCode: 500,
-          statusMessage: "Internal Server Error",
+          statusMessage: 'Internal Server Error',
           headers: {
-            "Content-Type": "text/plain",
+            'Content-Type': 'text/plain',
           },
-          body: `Error transforming module "${toResolve}": ${
-            transformed.diagnostics
-              ?.map((d) => d.messageText)
-              .join("\n")
-          }`,
-        };
+          body: `Error transforming module "${toResolve}": ${transformed.diagnostics
+            ?.map((d) => d.messageText)
+            .join('\n')}`,
+        }
       }
 
-      const ast = parse(transformed.outputText, {
-        sourceType: "module",
-        ecmaVersion: "latest",
-      });
-      const toRewrite: (ImportDeclaration | ImportExpression)[] = [];
+      let ast = parse(transformed.outputText, {
+        sourceType: 'module',
+        ecmaVersion: 'latest',
+      })
+      let toRewrite: (ImportDeclaration | ImportExpression)[] = []
       walk.simple(ast, {
         ImportDeclaration(node) {
-          toRewrite.push(node);
+          toRewrite.push(node)
         },
         ImportExpression(node) {
-          toRewrite.push(node);
+          toRewrite.push(node)
         },
-      });
+      })
 
-      const s = new MagicString(transformed.outputText);
-      for (const node of toRewrite) {
+      let s = new MagicString(transformed.outputText)
+      for (let node of toRewrite) {
         switch (node.type) {
-          case "ImportDeclaration": {
-            const source = String(node.source.value);
+          case 'ImportDeclaration': {
+            let source = String(node.source.value)
             if (isBareImport(source)) {
-              const esmShUrl = rewriteBareToEsmSh(source);
+              let esmShUrl = rewriteBareToEsmSh(source)
               if (esmShUrl) {
-                s.overwrite(
-                  node.source.start,
-                  node.source.end,
-                  JSON.stringify(esmShUrl),
-                );
-                break;
+                s.overwrite(node.source.start, node.source.end, JSON.stringify(esmShUrl))
+                break
               }
             }
-            const resolved = await resolver.resolvePromise({}, entry, source);
+            let resolved = await resolver.resolvePromise({}, entry, source)
             if (!resolved) {
               return {
                 statusCode: 500,
-                statusMessage: "Internal Server Error",
+                statusMessage: 'Internal Server Error',
                 headers: {
-                  "Content-Type": "text/plain",
+                  'Content-Type': 'text/plain',
                 },
-                body:
-                  `Error resolving import "${source}" in module "${toResolve}"`,
-              };
+                body: `Error resolving import "${source}" in module "${toResolve}"`,
+              }
             }
-            const relativePath = "/" + resolved;
-            const newSource = `/__virtual__/${previewPort}/assets${relativePath}`;
-            s.overwrite(
-              node.source.start,
-              node.source.end,
-              JSON.stringify(newSource),
-            );
+            let relativePath = '/' + resolved
+            let newSource = `/__virtual__/${previewPort}/assets${relativePath}`
+            s.overwrite(node.source.start, node.source.end, JSON.stringify(newSource))
 
-            break;
+            break
           }
-          case "ImportExpression": {
-            if (node.source.type !== "Literal") {
-              continue;
+          case 'ImportExpression': {
+            if (node.source.type !== 'Literal') {
+              continue
             }
-            const source = String(node.source.value);
+            let source = String(node.source.value)
             if (isBareImport(source)) {
-              const esmShUrl = rewriteBareToEsmSh(source);
+              let esmShUrl = rewriteBareToEsmSh(source)
               if (esmShUrl) {
-                s.overwrite(
-                  node.source.start,
-                  node.source.end,
-                  JSON.stringify(esmShUrl),
-                );
-                break;
+                s.overwrite(node.source.start, node.source.end, JSON.stringify(esmShUrl))
+                break
               }
             }
-            const resolved = await resolver.resolvePromise({}, entry, source);
+            let resolved = await resolver.resolvePromise({}, entry, source)
             if (!resolved) {
               return {
                 statusCode: 500,
-                statusMessage: "Internal Server Error",
+                statusMessage: 'Internal Server Error',
                 headers: {
-                  "Content-Type": "text/plain",
+                  'Content-Type': 'text/plain',
                 },
-                body:
-                  `Error resolving dynamic import "${source}" in module "${toResolve}"`,
-              };
+                body: `Error resolving dynamic import "${source}" in module "${toResolve}"`,
+              }
             }
-            const newSource = `/__virtual__/${previewPort}/assets${resolved}`;
-            s.overwrite(
-              node.source.start,
-              node.source.end,
-              JSON.stringify(newSource),
-            );
-            break;
+            let newSource = `/__virtual__/${previewPort}/assets${resolved}`
+            s.overwrite(node.source.start, node.source.end, JSON.stringify(newSource))
+            break
           }
         }
       }
 
       return {
         statusCode: 200,
-        statusMessage: "OK",
+        statusMessage: 'OK',
         headers: {
-          "Content-Type": "application/javascript",
+          'Content-Type': 'application/javascript',
         },
         body: s.toString(),
-      };
-    };
+      }
+    }
 
-    const process = runtime.getProcess();
-    process.__playgroundDevServer = devServer;
-    process.__sqlite3 = await sqlite3InitModule();
+    let process = runtime.getProcess()
+    process.__playgroundDevServer = devServer
+    process.__sqlite3 = await sqlite3InitModule()
   },
 
   /**
    * Set the console callback for forwarding output to main thread
    */
-  setConsoleCallback(
-    callback: ((method: string, args: unknown[]) => void) | null,
-  ): void {
-    consoleCallback = callback;
+  setConsoleCallback(callback: ((method: string, args: unknown[]) => void) | null): void {
+    consoleCallback = callback
   },
 
   /**
    * Set the server ready callback for forwarding output to main thread
    */
-  setServerReadyCallback(
-    callback: ((port: number) => void) | null,
-  ): void {
-    serverReadyCallback = callback;
+  setServerReadyCallback(callback: ((port: number) => void) | null): void {
+    serverReadyCallback = callback
   },
 
   /**
@@ -419,14 +378,14 @@ const workerApi = {
    */
   setEnv(env: Record<string, string | undefined>): void {
     if (!runtime) {
-      throw new Error("Worker runtime not initialized. Call init() first.");
+      throw new Error('Worker runtime not initialized. Call init() first.')
     }
-    const processEnv = runtime.getProcess().env;
-    for (const [key, value] of Object.entries(env)) {
-      if (value === undefined || value === "") {
-        delete processEnv[key];
+    let processEnv = runtime.getProcess().env
+    for (let [key, value] of Object.entries(env)) {
+      if (value === undefined || value === '') {
+        delete processEnv[key]
       } else {
-        processEnv[key] = value;
+        processEnv[key] = value
       }
     }
   },
@@ -441,30 +400,30 @@ const workerApi = {
    */
   resetDatabase(): void {
     if (!runtime) {
-      throw new Error("Worker runtime not initialized. Call init() first.");
+      throw new Error('Worker runtime not initialized. Call init() first.')
     }
-    const sqlite3 = runtime.getProcess().__sqlite3;
+    let sqlite3 = runtime.getProcess().__sqlite3
     if (!sqlite3) {
-      throw new Error("SQLite is not initialized.");
+      throw new Error('SQLite is not initialized.')
     }
 
-    const db = new sqlite3.oo1.DB("/mydb.sqlite3", "ct");
+    let db = new sqlite3.oo1.DB('/mydb.sqlite3', 'ct')
     try {
-      const tables: string[] = [];
+      let tables: string[] = []
       db.exec({
         sql: "SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'",
-        rowMode: "array",
+        rowMode: 'array',
         callback: (row: unknown[]) => {
-          tables.push(String(row[0]));
+          tables.push(String(row[0]))
         },
-      });
+      })
 
-      db.exec("PRAGMA foreign_keys = OFF;");
-      for (const name of tables) {
-        db.exec(`DROP TABLE IF EXISTS "${name}";`);
+      db.exec('PRAGMA foreign_keys = OFF;')
+      for (let name of tables) {
+        db.exec(`DROP TABLE IF EXISTS "${name}";`)
       }
     } finally {
-      db.close();
+      db.close()
     }
   },
 
@@ -473,25 +432,25 @@ const workerApi = {
    */
   syncFile(path: string, content: string | null): void {
     if (!vfs) {
-      console.warn("[Worker] VFS not initialized, cannot sync file:", path);
-      return;
+      console.warn('[Worker] VFS not initialized, cannot sync file:', path)
+      return
     }
 
     if (content === null) {
       // File was deleted
       try {
-        vfs.unlinkSync(path);
+        vfs.unlinkSync(path)
       } catch (err) {
         // File might not exist, that's ok
       }
     } else {
       // File was created or modified
-      vfs.writeFileSync(path, content);
+      vfs.writeFileSync(path, content)
     }
 
     // Clear module cache for this file to pick up changes
     if (runtime) {
-      runtime.clearCache();
+      runtime.clearCache()
     }
   },
 
@@ -500,10 +459,10 @@ const workerApi = {
    */
   async execute(code: string, filename?: string): Promise<IExecuteResult> {
     if (!runtime) {
-      throw new Error("Worker runtime not initialized. Call init() first.");
+      throw new Error('Worker runtime not initialized. Call init() first.')
     }
 
-    return runtime.execute(code, filename);
+    return runtime.execute(code, filename)
   },
 
   /**
@@ -511,10 +470,10 @@ const workerApi = {
    */
   async runFile(filename: string): Promise<IExecuteResult> {
     if (!runtime) {
-      throw new Error("Worker runtime not initialized. Call init() first.");
+      throw new Error('Worker runtime not initialized. Call init() first.')
     }
 
-    return runtime.runFile(filename);
+    return runtime.runFile(filename)
   },
 
   /**
@@ -522,7 +481,7 @@ const workerApi = {
    */
   clearCache(): void {
     if (runtime) {
-      runtime.clearCache();
+      runtime.clearCache()
     }
   },
 
@@ -530,22 +489,17 @@ const workerApi = {
    * Get current VFS state (for debugging)
    */
   getVFSSnapshot(): VFSSnapshot | null {
-    if (!vfs) return null;
-    return vfs.toSnapshot();
+    if (!vfs) return null
+    return vfs.toSnapshot()
   },
 
-  handleRequest(
-    method: string,
-    url: string,
-    headers: Record<string, string>,
-    body?: ArrayBuffer,
-  ) {
-    return serverBridge.handleRequest(44100, method, url, headers, body);
+  handleRequest(method: string, url: string, headers: Record<string, string>, body?: ArrayBuffer) {
+    return serverBridge.handleRequest(44100, method, url, headers, body)
   },
-};
+}
 
 // Expose the API via Comlink
-expose(workerApi);
+expose(workerApi)
 
 // Log that worker is ready
-console.log("[Worker] Runtime worker loaded and ready");
+console.log('[Worker] Runtime worker loaded and ready')

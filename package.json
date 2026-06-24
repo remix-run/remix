@@ -4,11 +4,11 @@
   "private": true,
   "packageManager": "pnpm@10.34.2",
   "dependencies": {
-    "@oxlint/plugins": "^1.57.0",
+    "@oxlint/plugins": "^1.71.0",
     "@typescript/native-preview": "catalog:",
-    "oxc-parser": "^0.121.0",
-    "oxlint": "^1.57.0",
-    "oxlint-tsgolint": "^0.17.4",
+    "oxc-parser": "^0.137.0",
+    "oxlint": "^1.71.0",
+    "oxlint-tsgolint": "^0.23.0",
     "prettier": "^3.3.3",
     "typescript": "catalog:",
     "typescript-language-server": "catalog:"

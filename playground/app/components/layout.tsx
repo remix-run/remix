@@ -1,7 +1,7 @@
-import { css, on, ref, type Handle } from "remix/ui";
+import { css, on, ref, type Handle } from 'remix/ui'
 
-import { languageLabel } from "../lib/paths.ts";
-import type { AppUiOptions } from "../options.ts";
+import { languageLabel } from '../lib/paths.ts'
+import type { AppUiOptions } from '../options.ts'
 import {
   refreshPreviewFrame,
   rememberPreviewLocation,
@@ -9,23 +9,23 @@ import {
   runMigrations,
   shareProject,
   statusLabel,
-} from "../store/operations.ts";
-import { actions, connect, type AppUiApi, shallowEqual } from "../store/index.ts";
-import { Editor } from "./editor.tsx";
-import { FileTabs } from "./file-tabs.tsx";
-import { FileTree } from "./file-tree.tsx";
+} from '../store/operations.ts'
+import { actions, connect, type AppUiApi, shallowEqual } from '../store/index.ts'
+import { Editor } from './editor.tsx'
+import { FileTabs } from './file-tabs.tsx'
+import { FileTree } from './file-tree.tsx'
 
 export function Layout(
   handle: Handle<{ api: AppUiApi; ui: AppUiOptions; initialOpenFiles: readonly string[] }>,
 ) {
-  const { api, ui } = handle.props;
-  let hideExplorerDesktop = false;
-  let terminalCollapsed = false;
-  let previewOpen = ui.previewMode === "split" || ui.previewInitiallyOpen;
-  let fileExplorerDialog: HTMLDialogElement | null = null;
-  let previewDialog: HTMLDialogElement | null = null;
+  let { api, ui } = handle.props
+  let hideExplorerDesktop = false
+  let terminalCollapsed = false
+  let previewOpen = ui.previewMode === 'split' || ui.previewInitiallyOpen
+  let fileExplorerDialog: HTMLDialogElement | null = null
+  let previewDialog: HTMLDialogElement | null = null
 
-  const view = connect(
+  let view = connect(
     handle,
     api,
     (s) => ({
@@ -33,37 +33,37 @@ export function Layout(
       editorStatus: s.editorStatus,
       runtimeStatus: s.runtimeStatus,
       consoleOutput: s.consoleOutput,
-      readonly: s.templateFiles?.[(s.activePath || "").slice(1)]?.readonly,
+      readonly: s.templateFiles?.[(s.activePath || '').slice(1)]?.readonly,
     }),
     shallowEqual,
-  );
+  )
 
-  function newEntry(kind: "file" | "dir") {
-    api.dispatch(actions.setCreateTarget({ kind }));
+  function newEntry(kind: 'file' | 'dir') {
+    api.dispatch(actions.setCreateTarget({ kind }))
   }
 
   function togglePreview() {
-    if (ui.previewMode === "split") {
-      previewDialog?.showModal();
-      return;
+    if (ui.previewMode === 'split') {
+      previewDialog?.showModal()
+      return
     }
-    previewOpen = !previewOpen;
-    handle.update();
+    previewOpen = !previewOpen
+    handle.update()
     if (previewOpen) {
-      handle.queueTask(() => refreshPreviewFrame(api));
+      handle.queueTask(() => refreshPreviewFrame(api))
     }
   }
 
-  const showToolbar = ui.explorer || ui.tabs || ui.shareButton || ui.preview;
+  let showToolbar = ui.explorer || ui.tabs || ui.shareButton || ui.preview
 
   function renderPreviewPane(consoleOutput: string, options: { mobileClose?: boolean } = {}) {
     return (
-      <jui-stack mix={css({ height: "100%", minHeight: 0, overflow: "hidden" })}>
+      <jui-stack mix={css({ height: '100%', minHeight: 0, overflow: 'hidden' })}>
         {options.mobileClose ? (
           <jui-group p="xs" hide="tablet" border="top">
             <div grow />
             <form method="dialog">
-              <jui-button size="icon-xs" mix={css({ width: "100%" })}>
+              <jui-button size="icon-xs" mix={css({ width: '100%' })}>
                 <button type="submit" aria-label="Close Preview" title="Close Preview">
                   <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
                     <path
@@ -81,43 +81,59 @@ export function Layout(
           grow
           mix={[
             ref((node: HTMLIFrameElement, signal) => {
-              api.services.previewFrame = node;
-              refreshPreviewFrame(api);
-              signal.addEventListener("abort", () => {
-                if (api.services.previewFrame === node) api.services.previewFrame = null;
-              });
+              api.services.previewFrame = node
+              refreshPreviewFrame(api)
+              signal.addEventListener('abort', () => {
+                if (api.services.previewFrame === node) api.services.previewFrame = null
+              })
             }),
-            on("load", () => {
-              rememberPreviewLocation(api);
+            on('load', () => {
+              rememberPreviewLocation(api)
             }),
           ]}
         ></iframe>
         {ui.terminal ? (
           <>
-            <jui-group items="center" gap="xs" nowrap p="xs" bg="muted" border="top bottom" font="xs">
+            <jui-group
+              items="center"
+              gap="xs"
+              nowrap
+              p="xs"
+              bg="muted"
+              border="top bottom"
+              font="xs"
+            >
               <div grow weight="bolder">
                 TERMINAL
               </div>
               <jui-button size="icon-xs">
                 <button
                   type="button"
-                  title={terminalCollapsed ? "Show Terminal" : "Hide Terminal"}
-                  aria-label={terminalCollapsed ? "Show Terminal" : "Hide Terminal"}
+                  title={terminalCollapsed ? 'Show Terminal' : 'Hide Terminal'}
+                  aria-label={terminalCollapsed ? 'Show Terminal' : 'Hide Terminal'}
                   aria-expanded={!terminalCollapsed}
-                  mix={on("click", (event) => {
-                    event.preventDefault();
-                    event.stopPropagation();
-                    terminalCollapsed = !terminalCollapsed;
-                    handle.update();
+                  mix={on('click', (event) => {
+                    event.preventDefault()
+                    event.stopPropagation()
+                    terminalCollapsed = !terminalCollapsed
+                    handle.update()
                   })}
                 >
                   {terminalCollapsed ? (
                     <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="m19.5 8.25-7.5 7.5-7.5-7.5"
+                      />
                     </svg>
                   ) : (
                     <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 15.75 7.5-7.5 7.5 7.5" />
+                      <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="m4.5 15.75 7.5-7.5 7.5 7.5"
+                      />
                     </svg>
                   )}
                 </button>
@@ -133,35 +149,35 @@ export function Layout(
           </>
         ) : null}
       </jui-stack>
-    );
+    )
   }
 
   return () => {
-    const { activeFile, editorStatus, runtimeStatus, consoleOutput, readonly } = view();
-    const status = statusLabel(editorStatus, runtimeStatus);
-    const crumbs = activeFile ? activeFile.replace(/^\//, "").split("/") : [];
-    const renderSplitPreview = ui.preview && ui.previewMode === "split";
-    const renderInlinePreview = ui.preview && ui.previewMode === "toggle" && previewOpen;
+    let { activeFile, editorStatus, runtimeStatus, consoleOutput, readonly } = view()
+    let status = statusLabel(editorStatus, runtimeStatus)
+    let crumbs = activeFile ? activeFile.replace(/^\//, '').split('/') : []
+    let renderSplitPreview = ui.preview && ui.previewMode === 'split'
+    let renderInlinePreview = ui.preview && ui.previewMode === 'toggle' && previewOpen
 
     return (
-      <jui-stack mix={css({ height: "100%", minHeight: 0, overflow: "hidden" })}>
-        <jui-group nowrap grow mix={css({ minHeight: 0, overflow: "hidden" })}>
+      <jui-stack mix={css({ height: '100%', minHeight: 0, overflow: 'hidden' })}>
+        <jui-group nowrap grow mix={css({ minHeight: 0, overflow: 'hidden' })}>
           {ui.explorer ? (
             <jui-drawer
-              show={hideExplorerDesktop ? undefined : "desktop"}
+              show={hideExplorerDesktop ? undefined : 'desktop'}
               font="sm"
               mix={css({
-                "--max-width-desktop": "max(230px, 10vw)",
-                "--max-width-mobile": "100vw",
+                '--max-width-desktop': 'max(230px, 10vw)',
+                '--max-width-mobile': '100vw',
               })}
             >
               <dialog
                 closedby="any"
                 mix={ref((node: HTMLDialogElement, signal) => {
-                  fileExplorerDialog = node;
-                  signal.addEventListener("abort", () => {
-                    if (fileExplorerDialog === node) fileExplorerDialog = null;
-                  });
+                  fileExplorerDialog = node
+                  signal.addEventListener('abort', () => {
+                    if (fileExplorerDialog === node) fileExplorerDialog = null
+                  })
                 })}
               >
                 <jui-group items="center" gap="xs" nowrap pt="xs" pl="xs" pr="xs">
@@ -174,13 +190,18 @@ export function Layout(
                         <button
                           title="New File"
                           aria-label="New File"
-                          mix={on("click", (event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            newEntry("file");
+                          mix={on('click', (event) => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            newEntry('file')
                           })}
                         >
-                          <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                          <svg
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.5"
+                            stroke="currentColor"
+                          >
                             <path
                               stroke-linecap="round"
                               stroke-linejoin="round"
@@ -193,13 +214,18 @@ export function Layout(
                         <button
                           title="New Folder"
                           aria-label="New Folder"
-                          mix={on("click", (event) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            newEntry("dir");
+                          mix={on('click', (event) => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            newEntry('dir')
                           })}
                         >
-                          <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                          <svg
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.5"
+                            stroke="currentColor"
+                          >
                             <path
                               stroke-linecap="round"
                               stroke-linejoin="round"
@@ -210,16 +236,16 @@ export function Layout(
                       </jui-button>
                     </>
                   ) : null}
-                  <jui-button size="icon-xs" hide={hideExplorerDesktop ? "desktop" : undefined}>
+                  <jui-button size="icon-xs" hide={hideExplorerDesktop ? 'desktop' : undefined}>
                     <button
                       title="Hide Explorer"
                       aria-label="Hide Explorer"
-                      mix={on("click", (event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        fileExplorerDialog?.close();
-                        hideExplorerDesktop = true;
-                        handle.update();
+                      mix={on('click', (event) => {
+                        event.preventDefault()
+                        event.stopPropagation()
+                        fileExplorerDialog?.close()
+                        hideExplorerDesktop = true
+                        handle.update()
                       })}
                     >
                       <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
@@ -250,11 +276,11 @@ export function Layout(
                           <button
                             type="button"
                             title="Run pending migrations"
-                            disabled={runtimeStatus !== "ready"}
-                            mix={on("click", (event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              api.dispatch(runMigrations());
+                            disabled={runtimeStatus !== 'ready'}
+                            mix={on('click', (event) => {
+                              event.preventDefault()
+                              event.stopPropagation()
+                              api.dispatch(runMigrations())
                             })}
                           >
                             Run Migrations
@@ -264,12 +290,17 @@ export function Layout(
                           <button
                             type="button"
                             title="Drop all tables and re-run migrations"
-                            disabled={runtimeStatus !== "ready"}
-                            mix={on("click", (event) => {
-                              event.preventDefault();
-                              event.stopPropagation();
-                              if (!confirm("Reset the database? This drops every table and re-runs migrations.")) return;
-                              api.dispatch(resetDatabase());
+                            disabled={runtimeStatus !== 'ready'}
+                            mix={on('click', (event) => {
+                              event.preventDefault()
+                              event.stopPropagation()
+                              if (
+                                !confirm(
+                                  'Reset the database? This drops every table and re-runs migrations.',
+                                )
+                              )
+                                return
+                              api.dispatch(resetDatabase())
                             })}
                           >
                             Reset
@@ -283,21 +314,32 @@ export function Layout(
             </jui-drawer>
           ) : null}
 
-          <jui-stack grow mix={css({ minWidth: 0, overflow: "hidden" })}>
+          <jui-stack grow mix={css({ minWidth: 0, overflow: 'hidden' })}>
             {showToolbar ? (
-              <jui-group mix={css({ minWidth: 0 })} bg="sheet" border="bottom" items="center" nowrap>
+              <jui-group
+                mix={css({ minWidth: 0 })}
+                bg="sheet"
+                border="bottom"
+                items="center"
+                nowrap
+              >
                 {ui.explorer ? (
                   <>
                     <jui-button size="icon-xs" hide="desktop" ml="xs">
                       <button
                         title="Show Explorer"
                         aria-label="Show Explorer"
-                        mix={on("click", (event) => {
-                          event.preventDefault();
-                          fileExplorerDialog?.showModal();
+                        mix={on('click', (event) => {
+                          event.preventDefault()
+                          fileExplorerDialog?.showModal()
                         })}
                       >
-                        <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <svg
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke-width="1.5"
+                          stroke="currentColor"
+                        >
                           <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
@@ -311,14 +353,19 @@ export function Layout(
                         <button
                           title="Show Explorer"
                           aria-label="Show Explorer"
-                          mix={on("click", (event) => {
-                            event.preventDefault();
-                            hideExplorerDesktop = false;
-                            handle.update();
-                            fileExplorerDialog?.showModal();
+                          mix={on('click', (event) => {
+                            event.preventDefault()
+                            hideExplorerDesktop = false
+                            handle.update()
+                            fileExplorerDialog?.showModal()
                           })}
                         >
-                          <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                          <svg
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.5"
+                            stroke="currentColor"
+                          >
                             <path
                               stroke-linecap="round"
                               stroke-linejoin="round"
@@ -333,21 +380,26 @@ export function Layout(
 
                 {ui.tabs ? <FileTabs api={api} /> : <span grow />}
 
-                {(ui.shareButton || ui.preview) ? (
+                {ui.shareButton || ui.preview ? (
                   <jui-group gap="xs" p="xs" border="left" nowrap>
                     {ui.shareButton ? (
                       <jui-button size="icon-xs">
                         <button
                           aria-label="Share"
                           title="Share"
-                          mix={on("click", (event, signal) => {
-                            event.preventDefault();
-                            event.stopPropagation();
-                            api.dispatch(shareProject(signal));
-                            api.services.shareDialog?.showModal();
+                          mix={on('click', (event, signal) => {
+                            event.preventDefault()
+                            event.stopPropagation()
+                            api.dispatch(shareProject(signal))
+                            api.services.shareDialog?.showModal()
                           })}
                         >
-                          <svg fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                          <svg
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.5"
+                            stroke="currentColor"
+                          >
                             <path
                               stroke-linecap="round"
                               stroke-linejoin="round"
@@ -358,13 +410,24 @@ export function Layout(
                       </jui-button>
                     ) : null}
                     {ui.preview ? (
-                      <jui-button size="icon-xs" hide={ui.previewMode === "split" ? "tablet" : undefined}>
+                      <jui-button
+                        size="icon-xs"
+                        hide={ui.previewMode === 'split' ? 'tablet' : undefined}
+                      >
                         <button
-                          aria-label={previewOpen && ui.previewMode === "toggle" ? "Hide Preview" : "Show Preview"}
-                          title={previewOpen && ui.previewMode === "toggle" ? "Hide Preview" : "Show Preview"}
-                          mix={on("click", (event) => {
-                            event.preventDefault();
-                            togglePreview();
+                          aria-label={
+                            previewOpen && ui.previewMode === 'toggle'
+                              ? 'Hide Preview'
+                              : 'Show Preview'
+                          }
+                          title={
+                            previewOpen && ui.previewMode === 'toggle'
+                              ? 'Hide Preview'
+                              : 'Show Preview'
+                          }
+                          mix={on('click', (event) => {
+                            event.preventDefault()
+                            togglePreview()
                           })}
                         >
                           <svg
@@ -399,7 +462,7 @@ export function Layout(
                 pb="xs"
                 font="xs"
                 border="bottom"
-                mix={css({ overflowX: "auto" })}
+                mix={css({ overflowX: 'auto' })}
               >
                 {crumbs.length === 0 ? (
                   <span>No file open</span>
@@ -408,14 +471,15 @@ export function Layout(
                     index === 0
                       ? [
                           <span key={index}>
-                            {segment} {readonly && index === crumbs.length - 1 ? " (readonly)" : null}
+                            {segment}{' '}
+                            {readonly && index === crumbs.length - 1 ? ' (readonly)' : null}
                           </span>,
                         ]
                       : [
                           <span key={`sep-${index}`}>›</span>,
                           <span key={index}>
                             {segment}
-                            {readonly && index === crumbs.length - 1 ? " (readonly)" : null}
+                            {readonly && index === crumbs.length - 1 ? ' (readonly)' : null}
                           </span>,
                         ],
                   )
@@ -423,7 +487,7 @@ export function Layout(
               </jui-group>
             ) : null}
 
-            <jui-stack grow mix={css({ minWidth: 0, overflow: "hidden" })}>
+            <jui-stack grow mix={css({ minWidth: 0, overflow: 'hidden' })}>
               {renderInlinePreview ? renderPreviewPane(consoleOutput) : <Editor api={api} />}
             </jui-stack>
 
@@ -442,17 +506,17 @@ export function Layout(
               show="tablet"
               grow
               mix={css({
-                "--max-width-desktop": "max(375px, 40vw)",
-                "--max-width-mobile": "100vw",
+                '--max-width-desktop': 'max(375px, 40vw)',
+                '--max-width-mobile': '100vw',
               })}
             >
               <dialog
                 closedby="any"
                 mix={ref((node: HTMLDialogElement, signal) => {
-                  previewDialog = node;
-                  signal.addEventListener("abort", () => {
-                    if (previewDialog === node) previewDialog = null;
-                  });
+                  previewDialog = node
+                  signal.addEventListener('abort', () => {
+                    if (previewDialog === node) previewDialog = null
+                  })
                 })}
               >
                 {renderPreviewPane(consoleOutput, { mobileClose: true })}
@@ -461,6 +525,6 @@ export function Layout(
           ) : null}
         </jui-group>
       </jui-stack>
-    );
-  };
+    )
+  }
 }

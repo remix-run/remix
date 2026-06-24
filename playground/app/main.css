@@ -1,4 +1,4 @@
-@import "./jui.css";
+@import './jui.css';
 
 :root {
   /* 
@@ -24,7 +24,7 @@
 
 body {
   min-block-size: auto;
-  font-family: "IBM Plex Sans", sans-serif;
+  font-family: 'IBM Plex Sans', sans-serif;
   font-optical-sizing: auto;
-  font-variation-settings: "wdth" 100;
+  font-variation-settings: 'wdth' 100;
 }

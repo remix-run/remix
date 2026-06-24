@@ -1,22 +1,22 @@
-import { column as c, table } from "remix/data-table";
-import type { TableRow } from "remix/data-table";
+import { column as c, table } from 'remix/data-table'
+import type { TableRow } from 'remix/data-table'
 
 export const guestBook = table({
-  name: "guestbook",
+  name: 'guestbook',
   columns: {
     id: c.integer().primaryKey().autoIncrement(),
     name: c.text(),
     createdAt: c.integer(),
   },
   beforeWrite({ operation, value }) {
-    const next = { ...value };
+    let next = { ...value }
 
-    if (operation === "create") {
-      next.createdAt = Date.now();
+    if (operation === 'create') {
+      next.createdAt = Date.now()
     }
 
-    return { value: next };
+    return { value: next }
   },
-});
+})
 
-export type GuestBookEntry = TableRow<typeof guestBook>;
+export type GuestBookEntry = TableRow<typeof guestBook>

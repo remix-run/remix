@@ -15,106 +15,106 @@
  * @returns {string[]}
  */
 function normalizeArray(parts, allowAboveRoot) {
-  const res = [];
-  for (const part of parts) {
-    if (!part || part === ".") continue;
-    if (part === "..") {
-      if (res.length && res[res.length - 1] !== "..") {
-        res.pop();
+  let res = []
+  for (let part of parts) {
+    if (!part || part === '.') continue
+    if (part === '..') {
+      if (res.length && res[res.length - 1] !== '..') {
+        res.pop()
       } else if (allowAboveRoot) {
-        res.push("..");
+        res.push('..')
       }
     } else {
-      res.push(part);
+      res.push(part)
     }
   }
-  return res;
+  return res
 }
 
 function posixNormalize(path) {
-  if (typeof path !== "string") path = String(path);
-  if (path.length === 0) return ".";
+  if (typeof path !== 'string') path = String(path)
+  if (path.length === 0) return '.'
 
-  const isAbsolute = path.charCodeAt(0) === 47; /* / */
-  const trailingSlash = path.charCodeAt(path.length - 1) === 47;
+  let isAbsolute = path.charCodeAt(0) === 47 /* / */
+  let trailingSlash = path.charCodeAt(path.length - 1) === 47
 
-  let parts = normalizeArray(path.split("/"), !isAbsolute);
-  let result = parts.join("/");
+  let parts = normalizeArray(path.split('/'), !isAbsolute)
+  let result = parts.join('/')
 
-  if (!result && !isAbsolute) result = ".";
-  if (result && trailingSlash) result += "/";
+  if (!result && !isAbsolute) result = '.'
+  if (result && trailingSlash) result += '/'
 
-  return (isAbsolute ? "/" : "") + result;
+  return (isAbsolute ? '/' : '') + result
 }
 
 function posixDirname(path) {
-  if (typeof path !== "string") path = String(path);
-  if (path.length === 0) return ".";
+  if (typeof path !== 'string') path = String(path)
+  if (path.length === 0) return '.'
 
-  const isAbsolute = path.charCodeAt(0) === 47; /* / */
-  let end = -1;
-  let matchedSlash = true;
+  let isAbsolute = path.charCodeAt(0) === 47 /* / */
+  let end = -1
+  let matchedSlash = true
   for (let i = path.length - 1; i >= 1; i--) {
     if (path.charCodeAt(i) === 47) {
       if (!matchedSlash) {
-        end = i;
-        break;
+        end = i
+        break
       }
     } else {
-      matchedSlash = false;
+      matchedSlash = false
     }
   }
 
-  if (end === -1) return isAbsolute ? "/" : ".";
-  if (isAbsolute && end === 1) return "//";
-  return path.slice(0, end);
+  if (end === -1) return isAbsolute ? '/' : '.'
+  if (isAbsolute && end === 1) return '//'
+  return path.slice(0, end)
 }
 
 function posixBasename(path, ext) {
-  if (typeof path !== "string") path = String(path);
-  let start = 0;
-  let end = -1;
-  let matchedSlash = true;
+  if (typeof path !== 'string') path = String(path)
+  let start = 0
+  let end = -1
+  let matchedSlash = true
   for (let i = path.length - 1; i >= 0; i--) {
     if (path.charCodeAt(i) === 47) {
       if (!matchedSlash) {
-        start = i + 1;
-        break;
+        start = i + 1
+        break
       }
     } else if (end === -1) {
-      matchedSlash = false;
-      end = i + 1;
+      matchedSlash = false
+      end = i + 1
     }
   }
 
-  let base = end === -1 ? "" : path.slice(start, end);
+  let base = end === -1 ? '' : path.slice(start, end)
   if (ext && base.endsWith(ext) && base !== ext) {
-    base = base.slice(0, base.length - ext.length);
+    base = base.slice(0, base.length - ext.length)
   }
-  return base;
+  return base
 }
 
 const posix = {
-  sep: "/",
-  delimiter: ":",
+  sep: '/',
+  delimiter: ':',
   normalize: posixNormalize,
   dirname: posixDirname,
   basename: posixBasename,
-};
+}
 
 // This playground only deals with POSIX-style paths; map win32 onto posix so
 // the rare win32.* calls in enhanced-resolve still behave sensibly.
 const win32 = {
-  sep: "\\",
-  delimiter: ";",
+  sep: '\\',
+  delimiter: ';',
   normalize: posixNormalize,
   dirname: posixDirname,
   basename: posixBasename,
-};
+}
 
 module.exports = {
   ...posix,
   posix,
   win32,
-};
-module.exports.default = module.exports;
+}
+module.exports.default = module.exports

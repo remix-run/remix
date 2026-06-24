@@ -1,11 +1,11 @@
-import * as path from "node:path";
+import * as path from 'node:path'
 
-import { renderWith } from "remix/middleware/render";
-import { createHtmlResponse } from "remix/response/html";
-import type { RemixNode } from "remix/ui";
-import { renderToStream } from "remix/ui/server";
+import { renderWith } from 'remix/middleware/render'
+import { createHtmlResponse } from 'remix/response/html'
+import type { RemixNode } from 'remix/ui'
+import { renderToStream } from 'remix/ui/server'
 
-import { assetServer } from "../assets.ts";
+import { assetServer } from '../assets.ts'
 
 export function render() {
   return renderWith(
@@ -26,11 +26,11 @@ export function render() {
               exportName: entryId.split('#')[1] || component.name || titleCaseFileName(entryId),
             }
           },
-        });
+        })
 
-        return createHtmlResponse(stream, init);
+        return createHtmlResponse(stream, init)
       },
-  );
+  )
 }
 
 function titleCaseFileName(fileUrl: string): string {

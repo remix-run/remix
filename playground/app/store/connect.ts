@@ -23,22 +23,22 @@
 
 /** Minimal slice of a `remix/ui` Handle that {@link connect} needs. */
 interface ConnectableHandle {
-  update(): Promise<unknown>;
-  readonly signal: AbortSignal;
+  update(): Promise<unknown>
+  readonly signal: AbortSignal
 }
 
 /** Minimal slice of a Redux store that {@link connect} needs. */
 interface ReadableStore<State> {
-  getState(): State;
-  subscribe(listener: () => void): () => void;
+  getState(): State
+  subscribe(listener: () => void): () => void
 }
 
 /** Compares the previous and next selected slice; `true` means "unchanged". */
-export type EqualityFn<Selected> = (a: Selected, b: Selected) => boolean;
+export type EqualityFn<Selected> = (a: Selected, b: Selected) => boolean
 
 /** Default equality: `Object.is`, matching React-Redux's `useSelector`. */
 function defaultEquals<Selected>(a: Selected, b: Selected): boolean {
-  return Object.is(a, b);
+  return Object.is(a, b)
 }
 
 /**
@@ -56,19 +56,19 @@ export function connect<State, Selected>(
   selector: (state: State) => Selected,
   equals: EqualityFn<Selected> = defaultEquals,
 ): () => Selected {
-  let selected = selector(store.getState());
+  let selected = selector(store.getState())
 
   if (!handle.signal.aborted) {
-    const unsubscribe = store.subscribe(() => {
-      const next = selector(store.getState());
-      if (equals(selected, next)) return;
-      selected = next;
-      handle.update();
-    });
-    handle.signal.addEventListener("abort", unsubscribe, { once: true });
+    let unsubscribe = store.subscribe(() => {
+      let next = selector(store.getState())
+      if (equals(selected, next)) return
+      selected = next
+      handle.update()
+    })
+    handle.signal.addEventListener('abort', unsubscribe, { once: true })
   }
 
-  return () => selected;
+  return () => selected
 }
 
 /**
@@ -76,20 +76,20 @@ export function connect<State, Selected>(
  * otherwise-stable values each call (e.g. `(s) => ({ a: s.a, b: s.b })`).
  */
 export function shallowEqual<T>(a: T, b: T): boolean {
-  if (Object.is(a, b)) return true;
-  if (typeof a !== "object" || a === null || typeof b !== "object" || b === null) {
-    return false;
+  if (Object.is(a, b)) return true
+  if (typeof a !== 'object' || a === null || typeof b !== 'object' || b === null) {
+    return false
   }
-  const aKeys = Object.keys(a as object);
-  const bKeys = Object.keys(b as object);
-  if (aKeys.length !== bKeys.length) return false;
-  for (const key of aKeys) {
+  let aKeys = Object.keys(a as object)
+  let bKeys = Object.keys(b as object)
+  if (aKeys.length !== bKeys.length) return false
+  for (let key of aKeys) {
     if (
       !Object.prototype.hasOwnProperty.call(b, key) ||
       !Object.is((a as Record<string, unknown>)[key], (b as Record<string, unknown>)[key])
     ) {
-      return false;
+      return false
     }
   }
-  return true;
+  return true
 }

@@ -1,16 +1,16 @@
-import { env } from "cloudflare:workers";
+import { env } from 'cloudflare:workers'
 
 // import { createAnthropic } from "@ai-sdk/anthropic";
 // import { createOpenAI } from "@ai-sdk/openai";
 // import { convertToModelMessages, streamText, type UIMessage } from "ai";
-import { createController } from "remix/router";
-import { parse, parseSafe } from "remix/data-schema";
+import { createController } from 'remix/router'
+import { parse, parseSafe } from 'remix/data-schema'
 // import { Session } from "remix/session";
 // import type { Diagnostic } from "typescript";
 // import { createWorkersAI } from "workers-ai-provider";
 
-import { routes } from "../routes.ts";
-import { SharedProjectSchema } from "./models.ts";
+import { routes } from '../routes.ts'
+import { SharedProjectSchema } from './models.ts'
 // import SYSTEM_PROMPT from "./system-prompt.txt?raw";
 // import { tools } from "./tools.ts";
 
@@ -103,50 +103,55 @@ export default createController(routes, {
     //   return result.toUIMessageStreamResponse();
     // },
     async loadSharedProject({ params: { projectId } }) {
-      const project = await env.REMIX_PLAYGROUND_SHARE.get(projectId).then((
-        json,
-      ) => parse(SharedProjectSchema, JSON.parse(json!))).catch(() => null);
+      let project = await env.REMIX_PLAYGROUND_SHARE.get(projectId)
+        .then((json) => parse(SharedProjectSchema, JSON.parse(json!)))
+        .catch(() => null)
       if (!project) {
-        return Response.json({ error: "Project not found" }, { status: 404 });
+        return Response.json({ error: 'Project not found' }, { status: 404 })
       }
-      return Response.json(project);
+      return Response.json(project)
     },
     async shareProject({ request }) {
-      const body = await request.json().catch(() => null);
-      const parsed = parseSafe(SharedProjectSchema, body);
+      let body = await request.json().catch(() => null)
+      let parsed = parseSafe(SharedProjectSchema, body)
       if (!parsed.success) {
-        return Response.json({
-          error: "Invalid request body",
-          issues: parsed.issues,
-        }, { status: 400 });
+        return Response.json(
+          {
+            error: 'Invalid request body',
+            issues: parsed.issues,
+          },
+          { status: 400 },
+        )
       }
-      const json = JSON.stringify(parsed.value);
-      const projectId: string = await crypto.subtle.digest(
-        "SHA-256",
-        new TextEncoder().encode(json),
-      ).then((hashBuffer) => {
-        const hashArray = Array.from(new Uint8Array(hashBuffer));
-        return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
-      });
+      let json = JSON.stringify(parsed.value)
+      let projectId: string = await crypto.subtle
+        .digest('SHA-256', new TextEncoder().encode(json))
+        .then((hashBuffer) => {
+          let hashArray = Array.from(new Uint8Array(hashBuffer))
+          return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+        })
 
       if (
-        await env.REMIX_PLAYGROUND_SHARE.get(projectId).then((json) =>
-          parse(SharedProjectSchema, JSON.parse(json!))
-        ).catch(() => null)
+        await env.REMIX_PLAYGROUND_SHARE.get(projectId)
+          .then((json) => parse(SharedProjectSchema, JSON.parse(json!)))
+          .catch(() => null)
       ) {
-        return Response.json({ projectId: projectId });
+        return Response.json({ projectId: projectId })
       }
 
-      const saved = await env.REMIX_PLAYGROUND_SHARE.put(projectId, json).then(
-        () => true,
-      ).catch(() => false);
+      let saved = await env.REMIX_PLAYGROUND_SHARE.put(projectId, json)
+        .then(() => true)
+        .catch(() => false)
       if (!saved) {
-        return Response.json({ error: "Failed to save shared project" }, {
-          status: 500,
-        });
+        return Response.json(
+          { error: 'Failed to save shared project' },
+          {
+            status: 500,
+          },
+        )
       }
 
-      return Response.json({ projectId: projectId });
+      return Response.json({ projectId: projectId })
     },
   },
-});
+})
