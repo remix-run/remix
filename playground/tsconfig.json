@@ -1,0 +1,18 @@
+{
+  "exclude": ["app/templates/default"],
+  "compilerOptions": {
+    "target": "es2024",
+    "module": "es2022",
+    "moduleResolution": "bundler",
+    "lib": ["ES2024", "DOM", "WebWorker"],
+    "types": ["./worker-configuration.d.ts", "vite/client"],
+    "jsx": "react-jsx",
+    "jsxImportSource": "remix/ui",
+    "erasableSyntaxOnly": true,
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true
+  }
+}

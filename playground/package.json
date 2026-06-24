@@ -1,0 +1,48 @@
+{
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vp build",
+    "dev": "vp dev",
+    "preview": "vp preview"
+  },
+  "dependencies": {
+    "@ai-sdk/anthropic": "^3.0.81",
+    "@ai-sdk/openai": "^3.0.68",
+    "@jacob-ebey/almostnode": "0.5.0",
+    "@reduxjs/toolkit": "^2.12.0",
+    "@sqlite.org/sqlite-wasm": "3.53.0-build1",
+    "acorn": "^8.16.0",
+    "acorn-walk": "^8.3.5",
+    "ai": "^6.0.197",
+    "comlink": "^4.4.2",
+    "enhanced-resolve": "^5.22.2",
+    "esbuild-wasm": "^0.28.0",
+    "magic-string": "^0.30.21",
+    "micromark": "^4.0.2",
+    "monaco-editor": "^0.55.1",
+    "remix": "3.0.0-beta.3",
+    "typescript": "^6.0.3",
+    "workers-ai-provider": "^3.1.14",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.40.0",
+    "@types/node": "^25.9.1",
+    "@typescript/native-preview": "7.0.0-dev.20260421.2",
+    "dts-bundle-generator": "^9.5.1",
+    "oxfmt": "^0.53.0",
+    "oxlint": "^1.68.0",
+    "vite": "npm:vite-plus@0.1.24",
+    "vite-plus": "0.1.24",
+    "wrangler": "^4.98.0"
+  },
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.0.8",
+      "onFail": "download"
+    }
+  }
+}
