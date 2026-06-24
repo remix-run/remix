@@ -49,9 +49,9 @@ export function languageFor(path: string): string {
 /** Human-readable language label for the status bar. */
 export function languageLabel(path: string | undefined): string {
   if (!path) return ''
-  if (path.endsWith('.tsx')) return 'TypeScript React'
+  if (path.endsWith('.tsx')) return 'TypeScript JSX'
   if (path.endsWith('.ts') || path.endsWith('.mts')) return 'TypeScript'
-  if (path.endsWith('.jsx')) return 'JavaScript React'
+  if (path.endsWith('.jsx')) return 'JavaScript JSX'
   if (path.endsWith('.js') || path.endsWith('.mjs')) return 'JavaScript'
   if (path.endsWith('.json')) return 'JSON'
   if (path.endsWith('.css')) return 'CSS'
