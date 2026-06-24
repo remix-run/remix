@@ -15,9 +15,11 @@ export const assetServer = createAssetServer({
   },
   ...(isDevelopment
     ? {
-        hmr: async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
-        scripts: { moduleHooks: [uiHmr()] },
         sourceMaps: 'external',
+        ...(process.env.NODE_HMR && {
+          hmr: async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
+          scripts: { moduleHooks: [uiHmr()] },
+        }),
       }
     : {
         minify: true,

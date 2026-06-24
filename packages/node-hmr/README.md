@@ -94,19 +94,29 @@ import { createBrowserHmrChannel } from 'remix/node-hmr/runtime'
 let browserHmrChannel = await createBrowserHmrChannel()
 ```
 
+The `remix/node-hmr/runtime` API is only available inside a child process supervised by `node-hmr`. Importing it outside `node-hmr` throws. When code may also run outside `node-hmr`, you can check `process.env.NODE_HMR` before dynamically importing the runtime API:
+
+```ts
+if (process.env.NODE_HMR) {
+  let { createBrowserHmrChannel } = await import('remix/node-hmr/runtime')
+  let browserHmrChannel = await createBrowserHmrChannel()
+}
+```
+
 A browser HMR channel is scoped to the current child process. It gives browser HMR tooling an EventSource URL, a way to report the files it wants watched, and a way to respond to file changes with browser HMR events.
 
 Browser asset servers can use this API to co-ordinate browser HMR with the server, for example, [`remix/assets`](https://github.com/remix-run/remix/tree/main/packages/assets) via its `hmr` option to `createAssetServer`:
 
 ```ts
 import { createAssetServer } from 'remix/assets'
-import { createBrowserHmrChannel } from 'remix/node-hmr/runtime'
 
 let assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: { '/app/*path': 'app/*path' },
   allow: ['app/assets/**'],
-  hmr: createBrowserHmrChannel,
+  hmr: process.env.NODE_HMR
+    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+    : undefined,
   watch: true,
 })
 ```
@@ -117,7 +127,7 @@ Call `emitServerReady()` when your app server is ready to receive requests. This
 
 ```ts
 server.listen(port, () => {
-  if (isDevelopment) {
+  if (process.env.NODE_HMR) {
     import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
   }
 })

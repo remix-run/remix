@@ -97,6 +97,8 @@ const restartSettleDelayMs = 150
 const browserHmrEventFlushDelayMs = 75
 const browserHmrRequestTimeoutMs = 1_000
 const shutdownTimeoutMs = 5_000
+const nodeHmrCondition = 'node-hmr'
+const nodeHmrEnvVar = 'NODE_HMR'
 const styles = createStyles()
 const windowsDriveLetterRE = /^[A-Za-z]:\//
 
@@ -264,7 +266,7 @@ export function createWatchedProcessController(options: {
       }),
       {
         cwd: options.cwd,
-        env: options.env,
+        env: buildChildProcessEnv(options.env),
         stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
       },
     )
@@ -1254,7 +1256,21 @@ export function buildChildProcessArgs(options: {
     registerUrl.searchParams.set('rootPath', options.rootPath)
   }
 
-  return [...options.nodeArgs, '--import', registerUrl.href, options.entry, ...options.entryArgs]
+  return [
+    ...options.nodeArgs,
+    `--conditions=${nodeHmrCondition}`,
+    '--import',
+    registerUrl.href,
+    options.entry,
+    ...options.entryArgs,
+  ]
+}
+
+export function buildChildProcessEnv(env: NodeJS.ProcessEnv): NodeJS.ProcessEnv {
+  return {
+    ...env,
+    [nodeHmrEnvVar]: '1',
+  }
 }
 
 function isAddressInfo(value: string | AddressInfo | null): value is AddressInfo {

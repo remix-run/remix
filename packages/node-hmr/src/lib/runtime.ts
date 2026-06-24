@@ -39,7 +39,7 @@ type HotModule = Readonly<Record<string, unknown>> & {
 }
 
 export interface RemixNodeHmrRuntime {
-  createBrowserHmrChannel(): Promise<BrowserHmrChannel | undefined>
+  createBrowserHmrChannel(): Promise<BrowserHmrChannel>
   createHotContext(url: string, resolveDependency?: (specifier: string) => string): ImportMetaHot
   disposeAll(): Promise<void>
   emitServerReady(): void
@@ -275,7 +275,9 @@ export function installNodeHmrRuntime(
   let runtime: RemixNodeHmrRuntime = {
     async createBrowserHmrChannel() {
       browserEventUrl ??= await requestBrowserHmrChannelUrl()
-      if (browserEventUrl === undefined) return undefined
+      if (browserEventUrl === undefined) {
+        throw new Error('Browser HMR is disabled for this node-hmr runtime')
+      }
 
       let id = browserHmrChannelId++
       let watchedFiles = new Set<string>()

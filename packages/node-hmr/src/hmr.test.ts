@@ -1012,7 +1012,7 @@ function getPidServerSource(importSpecifier: string, responseExpression: string)
 }
 
 function getFixtureServerSource(importSpecifier: string, responseExpression: string): string {
-  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.ts')).href
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
 
   return [
     `import { createServer } from 'node:http'`,
@@ -1036,14 +1036,14 @@ function getFixtureServerSource(importSpecifier: string, responseExpression: str
 }
 
 function getEventChannelServerSource(message: string): string {
-  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.ts')).href
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
 
   return [
     `import { createServer } from 'node:http'`,
     `import { createBrowserHmrChannel, emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
     ``,
     `let browserHmrChannel = await createBrowserHmrChannel()`,
-    `console.log(JSON.stringify({ type: 'hmr-url', url: browserHmrChannel?.url, pid: process.pid }))`,
+    `console.log(JSON.stringify({ type: 'hmr-url', url: browserHmrChannel.url, pid: process.pid }))`,
     ``,
     `let server = createServer((_request, response) => {`,
     `  response.end(${JSON.stringify(message)})`,
@@ -1060,7 +1060,7 @@ function getEventChannelServerSource(message: string): string {
 }
 
 function getEventChannelGreetingServerSource(): string {
-  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.ts')).href
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
 
   return [
     `import { createServer } from 'node:http'`,
@@ -1068,7 +1068,7 @@ function getEventChannelGreetingServerSource(): string {
     `import { Greeting } from './greeting.tsx'`,
     ``,
     `let browserHmrChannel = await createBrowserHmrChannel()`,
-    `console.log(JSON.stringify({ type: 'hmr-url', url: browserHmrChannel?.url, pid: process.pid }))`,
+    `console.log(JSON.stringify({ type: 'hmr-url', url: browserHmrChannel.url, pid: process.pid }))`,
     ``,
     `let server = createServer((_request, response) => {`,
     `  response.end(String(process.pid) + ':' + Greeting()())`,
@@ -1127,7 +1127,7 @@ function getGenericGreetingSource(options: {
 }
 
 function getFetchWhenReadyChildServerSource(message: string): string {
-  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.ts')).href
+  let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
 
   return [
     `import { createServer } from 'node:http'`,

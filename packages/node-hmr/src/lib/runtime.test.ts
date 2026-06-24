@@ -18,7 +18,24 @@ describe('installNodeHmrRuntime', () => {
     let runtime = installNodeHmrRuntime({ browserEventUrl: 'http://127.0.0.1:1234/hmr' })
     let browserHmrChannel = await runtime.createBrowserHmrChannel()
 
-    assert.equal(browserHmrChannel?.url, 'http://127.0.0.1:1234/hmr')
+    assert.equal(browserHmrChannel.url, 'http://127.0.0.1:1234/hmr')
+  })
+
+  it('throws when browser HMR is disabled for the process runtime', async () => {
+    let runtimeGlobal = globalThis as TestRuntimeGlobal
+    let originalRuntime = runtimeGlobal.__remixNodeHmr
+
+    try {
+      delete runtimeGlobal.__remixNodeHmr
+      let runtime = installNodeHmrRuntime()
+
+      await assert.rejects(
+        () => runtime.createBrowserHmrChannel(),
+        /Browser HMR is disabled for this node-hmr runtime/,
+      )
+    } finally {
+      runtimeGlobal.__remixNodeHmr = originalRuntime
+    }
   })
 
   it('preserves data for repeated hot contexts with the same URL', () => {

@@ -5,6 +5,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
 import {
+  buildChildProcessEnv,
   buildChildProcessArgs,
   getBrowserHmrFileEventsForWatchedFiles,
   getWatchedDirectoriesForFiles,
@@ -34,11 +35,27 @@ describe('buildChildProcessArgs', () => {
       '--import',
       'remix/node-tsx',
       '--enable-source-maps',
+      '--conditions=node-hmr',
       '--import',
       registerUrl.href,
       entryPath,
       '--debug',
     ])
+  })
+
+  it('adds the node-hmr condition alongside explicit child conditions', () => {
+    let entryPath = path.resolve('app/server.ts')
+    let registerPath = path.resolve('app/register.ts')
+
+    let args = buildChildProcessArgs({
+      entry: entryPath,
+      entryArgs: [],
+      nodeArgs: ['--conditions=custom', '--conditions', 'react-server'],
+      registerPath,
+    })
+
+    assert.equal(args.includes('--conditions=custom'), true)
+    assert.equal(args.includes('--conditions=node-hmr'), true)
   })
 
   it('omits the browser HMR URL when the browser HMR channel is disabled', () => {
@@ -54,7 +71,16 @@ describe('buildChildProcessArgs', () => {
     let registerUrl = pathToFileURL(registerPath)
     registerUrl.searchParams.set('rootPath', path.resolve('app'))
 
-    assert.deepEqual(args, ['--import', registerUrl.href, 'server.ts'])
+    assert.deepEqual(args, ['--conditions=node-hmr', '--import', registerUrl.href, 'server.ts'])
+  })
+})
+
+describe('buildChildProcessEnv', () => {
+  it('marks the child process as running inside node-hmr', () => {
+    assert.deepEqual(buildChildProcessEnv({ NODE_HMR: '0', NODE_ENV: 'development' }), {
+      NODE_ENV: 'development',
+      NODE_HMR: '1',
+    })
   })
 })
 

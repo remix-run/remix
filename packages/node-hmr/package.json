@@ -20,7 +20,10 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
-    "./runtime": "./src/runtime.ts",
+    "./runtime": {
+      "node-hmr": "./src/runtime.node-hmr.ts",
+      "default": "./src/runtime.ts"
+    },
     "./types": {
       "types": "./src/types.d.ts"
     },
@@ -33,6 +36,10 @@
         "default": "./dist/index.js"
       },
       "./runtime": {
+        "node-hmr": {
+          "types": "./dist/runtime.node-hmr.d.ts",
+          "default": "./dist/runtime.node-hmr.js"
+        },
         "types": "./dist/runtime.d.ts",
         "default": "./dist/runtime.js"
       },
