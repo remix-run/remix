@@ -72,7 +72,7 @@ async function validateFrame(frame: DocsFrame): Promise<void> {
     return
   }
 
-  let expectedChapter = readChapterSlug(frame.chapterFile)
+  let expectedChapter = readChapterDir(frame.chapterFile)
   if (chapter !== expectedChapter) {
     report(
       frame.chapterFile,
@@ -100,30 +100,18 @@ async function validateFrame(frame: DocsFrame): Promise<void> {
     throw error
   }
 
-  let exportType = readFrameExampleExport(source, exampleUrl)
-  if (!exportType) {
+  if (!exportsHandler(source, exampleUrl)) {
     report(
       frame.chapterFile,
       frame.lineNumber,
-      `Frame example must export a named handler or default component: ${fileURLToPath(exampleUrl)}`,
-    )
-    return
-  }
-
-  if (exportType === 'default' && !hasDemoMetadata(source, exampleUrl)) {
-    report(
-      frame.chapterFile,
-      frame.lineNumber,
-      `Default component frame example must include @name and @description metadata: ${fileURLToPath(
-        exampleUrl,
-      )}`,
+      `Frame example must export a named \`handler\`: ${fileURLToPath(exampleUrl)}`,
     )
   }
 }
 
-type FrameExampleExport = 'handler' | 'default'
-
-function readFrameExampleExport(source: string, fileUrl: URL): FrameExampleExport | undefined {
+// Checks whether a frame example module exports a `handler` (as a function,
+// const, or re-exported named export).
+function exportsHandler(source: string, fileUrl: URL): boolean {
   let sourceFile = ts.createSourceFile(
     fileURLToPath(fileUrl),
     source,
@@ -135,10 +123,7 @@ function readFrameExampleExport(source: string, fileUrl: URL): FrameExampleExpor
   for (let statement of sourceFile.statements) {
     if (ts.isFunctionDeclaration(statement)) {
       if (statement.name?.text === 'handler' && hasExportModifier(statement)) {
-        return 'handler'
-      }
-      if (hasExportModifier(statement) && hasDefaultModifier(statement)) {
-        return 'default'
+        return true
       }
       continue
     }
@@ -150,7 +135,7 @@ function readFrameExampleExport(source: string, fileUrl: URL): FrameExampleExpor
 
       for (let declaration of statement.declarationList.declarations) {
         if (ts.isIdentifier(declaration.name) && declaration.name.text === 'handler') {
-          return 'handler'
+          return true
         }
       }
       continue
@@ -160,60 +145,18 @@ function readFrameExampleExport(source: string, fileUrl: URL): FrameExampleExpor
       if (ts.isNamedExports(statement.exportClause)) {
         for (let element of statement.exportClause.elements) {
           if (!element.isTypeOnly && element.name.text === 'handler') {
-            return 'handler'
+            return true
           }
         }
       }
     }
   }
 
-  return undefined
-}
-
-function hasDemoMetadata(source: string, fileUrl: URL): boolean {
-  let sourceFile = ts.createSourceFile(
-    fileURLToPath(fileUrl),
-    source,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TSX,
-  )
-
-  for (let statement of sourceFile.statements) {
-    let tags = ts.getJSDocTags(statement)
-    let hasName = hasJsdocTag(tags, 'name')
-    let hasDescription = hasJsdocTag(tags, 'description')
-
-    if (hasName && hasDescription) {
-      return true
-    }
-  }
-
   return false
-}
-
-function hasJsdocTag(tags: readonly ts.JSDocTag[], tagName: 'name' | 'description'): boolean {
-  let tag = tags.find((candidate) => candidate.tagName.text === tagName)
-  return readJsdocTagComment(tag?.comment) !== undefined
-}
-
-function readJsdocTagComment(comment: ts.JSDocTag['comment']): string | undefined {
-  let text =
-    typeof comment === 'string'
-      ? comment
-      : Array.isArray(comment)
-        ? comment.map((part) => part.text).join('')
-        : ''
-  let trimmed = text.trim()
-  return trimmed === '' ? undefined : trimmed
 }
 
 function hasExportModifier(node: ts.Node): boolean {
   return hasModifier(node, ts.SyntaxKind.ExportKeyword)
-}
-
-function hasDefaultModifier(node: ts.Node): boolean {
-  return hasModifier(node, ts.SyntaxKind.DefaultKeyword)
 }
 
 function hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
@@ -224,8 +167,10 @@ function hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
   return ts.getModifiers(node)?.some((modifier) => modifier.kind === kind) ?? false
 }
 
-function readChapterSlug(chapterFile: string): string {
-  let match = /^\d+-([a-z0-9][a-z0-9-]*)\.md$/.exec(chapterFile)
+// The example directory mirrors the chapter file name (e.g. `17-markdown-style-demo`),
+// including the order prefix, so frames stay scoped to the chapter that references them.
+function readChapterDir(chapterFile: string): string {
+  let match = /^(\d+-[a-z0-9][a-z0-9-]*)\.md$/.exec(chapterFile)
   if (!match?.[1]) {
     throw new Error(`Expected chapter file name to include a slug: ${chapterFile}`)
   }

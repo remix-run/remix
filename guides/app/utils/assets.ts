@@ -17,7 +17,6 @@ export const assetServer = createAssetServer({
     '/packages/*path': 'packages/*path',
   },
   allow: ['guides/app/assets/**', 'guides/app/actions/docs/examples/**', 'packages/*/src/**'],
-  deny: ['guides/app/**/*.server.*'],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: isProduction,
   fingerprint: isProduction ? { buildId: process.env.GITHUB_SHA || String(Date.now()) } : undefined,
