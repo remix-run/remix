@@ -125,7 +125,7 @@ server.listen(port, () => {
 
 ## `import.meta.hot`
 
-The `import.meta.hot` API provided by `node-hmr` is primarily intended as a target for code transformations like [remix/ui-hmr](https://github.com/remix-run/remix/tree/main/packages/ui-hmr).
+The `import.meta.hot` API provided by `node-hmr` is a small runtime contract for modules that can handle updates without restarting the process. It is primarily intended for transforms like [remix/ui-hmr](https://github.com/remix-run/remix/tree/main/packages/ui-hmr), but it can also be used directly.
 
 To type `import.meta.hot`, add the HMR types to your TypeScript config:
 
@@ -137,121 +137,90 @@ To type `import.meta.hot`, add the HMR types to your TypeScript config:
 }
 ```
 
-### `import.meta.hot.accept()`
-
-Mark the current module as safe to hot update. Calling `accept()` makes the module an HMR boundary, so updates do not continue propagating to importers.
-
-Without a callback, the updated module is still evaluated, but the previous module instance does not copy values from it. Use this when re-running the module's top-level code applies the update.
+HMR accept calls are statically analyzed. Write them directly as `import.meta.hot.accept(...)`. Dependency accepts must use string literals or arrays of string literals; do not alias `import.meta.hot` or pass dynamically constructed dependency lists.
 
 ```ts
-let dispose = start()
-
-function start() {
-  let timer = setInterval(() => {
-    console.log('tick')
-  }, 1_000)
-
-  return () => {
-    clearInterval(timer)
-  }
-}
-
 if (import.meta.hot) {
-  import.meta.hot.dispose(() => {
-    dispose()
-  })
-
   import.meta.hot.accept()
 }
 ```
 
-You can pass a callback to receive the updated module. This is useful when the previous module instance owns long-lived state and needs to copy values from the updated module. Export values that need to be copied as `let` bindings.
+For consistency with browser HMR environments, `node-hmr` also implements `import.meta.hot.on(...)`, but no events are fired in server modules.
+
+### Accepting updates
+
+Calling `accept()` makes the current module an HMR boundary. When the module changes, `node-hmr` evaluates the updated module and calls your callback with its exports.
 
 ```ts
-export let greeting = 'Hello'
-
-export function getGreeting() {
-  return greeting
-}
+export let value = 1
 
 if (import.meta.hot) {
   import.meta.hot.accept((module) => {
-    if (typeof module.greeting === 'string') {
-      greeting = module.greeting
+    if (typeof module.value !== 'number') {
+      import.meta.hot?.invalidate('Updated module no longer exports value')
+      return
     }
+
+    value = module.value
   })
 }
 ```
 
-You can also accept updates from a dependency. This is useful when a module owns long-lived state but imports small values or helpers that can be replaced in place.
+You can also accept updates from direct dependencies.
 
 ```ts
-import { message } from './message.ts'
+import { value } from './value.ts'
 
-let currentMessage = message
+let currentValue = value
 
-export function render() {
-  return currentMessage
+export function readValue() {
+  return currentValue
 }
 
 if (import.meta.hot) {
-  import.meta.hot.accept('./message.ts', (module) => {
-    if (typeof module.message === 'string') {
-      currentMessage = module.message
+  import.meta.hot.accept('./value.ts', (module) => {
+    if (typeof module.value !== 'number') {
+      import.meta.hot?.invalidate('Updated dependency no longer exports value')
+      return
     }
+
+    currentValue = module.value
   })
 }
 ```
 
-Multiple dependencies can be accepted at once:
+Multiple dependencies can be accepted at once. The callback receives an array where only the changed dependency is defined.
 
 ```ts
-import { one } from './one.ts'
-import { two } from './two.ts'
-
-let values = { one, two }
-
-export function render() {
-  return `${values.one} ${values.two}`
-}
-
 if (import.meta.hot) {
   import.meta.hot.accept(['./one.ts', './two.ts'], ([oneModule, twoModule]) => {
-    if (oneModule && typeof oneModule.one === 'string') {
-      values.one = oneModule.one
-    }
-
-    if (twoModule && typeof twoModule.two === 'string') {
-      values.two = twoModule.two
-    }
+    // oneModule is defined when ./one.ts changed.
+    // twoModule is defined when ./two.ts changed.
   })
 }
 ```
 
-### `import.meta.hot.dispose()`
+### Cleaning up
 
-Register cleanup that should run before the module is replaced or the child process exits.
+Register cleanup that should run before the module is replaced or disposed.
 
 ```ts
-let timer = setInterval(() => {
-  console.log('tick')
-}, 1_000)
+let interval = setInterval(refreshCache, 30_000)
 
 if (import.meta.hot) {
   import.meta.hot.dispose(() => {
-    clearInterval(timer)
+    clearInterval(interval)
   })
 }
 ```
 
-The `data` object is preserved across updates for the same module, which lets a replacement module recover small pieces of state.
+The `data` object is preserved across updates for the same module. Use it for small pieces of state.
 
 ```ts
 let count = Number(import.meta.hot?.data.count ?? 0)
 
 export function increment() {
   count++
-  return count
 }
 
 if (import.meta.hot) {
@@ -261,15 +230,15 @@ if (import.meta.hot) {
 }
 ```
 
-### `import.meta.hot.invalidate()`
+### Invalidating updates
 
-Call `invalidate()` when a module accepts an update but discovers that it cannot apply it safely. This asks `node-hmr` to fall back to a process restart.
+Call `invalidate()` inside an accept callback when the update cannot be applied safely. `node-hmr` falls back to a process restart.
 
 ```ts
 if (import.meta.hot) {
   import.meta.hot.accept((module) => {
-    if (typeof module.createServer !== 'function') {
-      import.meta.hot?.invalidate('Updated server module is missing createServer')
+    if (typeof module.value !== 'number') {
+      import.meta.hot?.invalidate('Updated module no longer exports value')
       return
     }
   })
