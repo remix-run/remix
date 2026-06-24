@@ -16,7 +16,6 @@ type ExampleRouteContext = AppContext & {
 }
 
 type ExampleHandler = (context: AppContext) => Response | Promise<Response>
-type UnknownExampleHandler = (context: AppContext) => unknown
 
 export default createController(routes.docs.examples, {
   actions: {
@@ -60,27 +59,20 @@ async function loadExampleHandler(
 }
 
 function readExampleHandler(mod: unknown, moduleUrl: URL): ExampleHandler | undefined {
-  if (!mod || typeof mod !== 'object' || !('handler' in mod)) {
-    return undefined
-  }
+  if (mod && typeof mod === 'object' && 'handler' in mod && typeof mod.handler === 'function') {
+    let handler = mod.handler
 
-  let { handler } = mod
-  if (!isUnknownExampleHandler(handler)) {
-    return undefined
-  }
+    return async (context) => {
+      let result = await handler(context)
+      if (result instanceof Response) {
+        return result
+      }
 
-  return async (context) => {
-    let result = await handler(context)
-    if (result instanceof Response) {
-      return result
+      throw new Error(`Expected example handler to return a Response: ${fileURLToPath(moduleUrl)}`)
     }
-
-    throw new Error(`Expected example handler to return a Response: ${fileURLToPath(moduleUrl)}`)
   }
-}
 
-function isUnknownExampleHandler(value: unknown): value is UnknownExampleHandler {
-  return typeof value === 'function'
+  return undefined
 }
 
 function isNotFoundError(error: unknown): boolean {

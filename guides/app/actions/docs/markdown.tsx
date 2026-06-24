@@ -1,15 +1,25 @@
-import * as frontmatter from 'front-matter'
-import { Lexer, Marked, type MarkedExtension, type Token, type Tokens } from 'marked'
-import { codeToHtml } from 'shiki'
+import matter from 'gray-matter'
+import GithubSlugger from 'github-slugger'
+import type {
+  Element,
+  ElementContent,
+  Root as HastRoot,
+  RootContent as HastRootContent,
+} from 'hast'
+import { toHtml } from 'hast-util-to-html'
+import type { ContainerDirective, LeafDirective } from 'mdast-util-directive'
+import { toString as mdastToString } from 'mdast-util-to-string'
+import type { Heading, Html, Paragraph, PhrasingContent, Root, RootContent, Text } from 'mdast'
+import rehypeStringify from 'rehype-stringify'
+import remarkDirective from 'remark-directive'
+import remarkGfm from 'remark-gfm'
+import remarkParse from 'remark-parse'
+import remarkRehype from 'remark-rehype'
+import { codeToHast, type ShikiTransformer } from 'shiki'
+import { unified } from 'unified'
+import { visit } from 'unist-util-visit'
 import { Frame } from 'remix/ui'
 import type { Handle, RemixNode } from 'remix/ui'
-
-// front-matter's CommonJS default is callable at runtime, but its NodeNext namespace
-// type is not, so keep the interop assertion isolated here.
-const parseFrontmatter = frontmatter.default as unknown as (markdown: string) => {
-  attributes: Record<string, unknown>
-  body: string
-}
 
 type MarkdownOptions = {
   chapter: string
@@ -39,13 +49,22 @@ export type MarkdownFrameReference = {
 
 type ChapterMetadata = Omit<MarkdownChapterSummary, 'sections'>
 
-type FrameToken = Tokens.Generic & {
-  type: 'frame'
-  src: string
-}
+type MarkdownSegment =
+  | {
+      type: 'markdown'
+      children: RootContent[]
+      lineNumber: number
+    }
+  | {
+      type: 'frame'
+      src: string
+      lineNumber: number
+    }
 
-type CodeBlockToken = Tokens.Code & {
-  filename?: string
+type CodeBlock = {
+  source: string
+  language?: string
+  meta?: string
 }
 
 type CodeBlockInfo = {
@@ -54,26 +73,25 @@ type CodeBlockInfo = {
   highlightedLines: Set<number>
 }
 
-type HeadingContent = {
-  id: string
-  markdown: string
-  text: string
-  html: string
-}
+const markdownParser = unified().use(remarkParse).use(remarkGfm).use(remarkDirective)
 
-const marked = new Marked(getGuidesMarkedExtension({ highlightCode: true }))
-const inlineMarked = new Marked(getGuidesMarkedExtension())
+const markdownHtmlProcessor = unified()
+  .use(remarkRehype)
+  .use(rehypeHighlightCode)
+  .use(rehypeStringify)
+
+const inlineHtmlProcessor = unified().use(remarkRehype)
 
 export async function renderMarkdownChapter(
   source: string,
   options: MarkdownOptions,
 ): Promise<MarkdownChapter> {
-  let { attributes, body } = parseFrontmatter(source)
+  let { attributes, root } = readMarkdownDocument(source)
 
   return {
     ...readChapterMetadata(attributes, options),
-    sections: readMarkdownSections(body),
-    content: await renderMarkdownBody(body),
+    sections: readMarkdownSectionsFromRoot(root),
+    content: await renderMarkdownRoot(root),
   }
 }
 
@@ -81,112 +99,123 @@ export function readMarkdownChapterSummary(
   source: string,
   options: MarkdownOptions,
 ): MarkdownChapterSummary {
-  let { attributes, body } = parseFrontmatter(source)
+  let { attributes, root } = readMarkdownDocument(source)
 
   return {
     ...readChapterMetadata(attributes, options),
-    sections: readMarkdownSections(body),
+    sections: readMarkdownSectionsFromRoot(root),
   }
 }
 
 export function readMarkdownFrameReferences(source: string): MarkdownFrameReference[] {
   let frames: MarkdownFrameReference[] = []
-  let lineNumber = 1
+  // Parse the raw source (frontmatter included) so the reported line numbers stay
+  // aligned with the source file for validation error messages.
+  let root = parseMarkdownRoot(source)
 
-  for (let token of marked.lexer(normalizeSource(source))) {
-    if (isFrameToken(token)) {
-      frames.push({ src: token.src, lineNumber })
+  visit(root, (node) => {
+    if (!isFrameDirective(node)) {
+      return
     }
 
-    lineNumber += countLineBreaks(token.raw)
-  }
+    let src = readFrameDirectiveSrc(node)
+    if (src !== undefined) {
+      frames.push({ src, lineNumber: node.position?.start.line ?? 1 })
+    }
+  })
 
   return frames
 }
 
-function getGuidesMarkedExtension(options: { highlightCode?: boolean } = {}): MarkedExtension {
-  let extension: MarkedExtension = {
-    extensions: [
-      {
-        name: 'frame',
-        level: 'block',
-        start(src) {
-          return /^:::frame[ \t]+/m.exec(src)?.index
-        },
-        tokenizer(src) {
-          let match = /^:::frame[ \t]+(\S+)[ \t]*\n:::[ \t]*(?:\n|$)/.exec(src)
-          let frameSrc = match?.[1]
-          if (!match || frameSrc === undefined) {
-            return undefined
-          }
+function readMarkdownDocument(source: string): {
+  attributes: Record<string, unknown>
+  root: Root
+} {
+  let parsed = matter(source)
+  let root = parseMarkdownRoot(parsed.content)
 
-          return {
-            type: 'frame',
-            raw: match[0],
-            src: frameSrc,
-          }
-        },
-        renderer(token) {
-          return escapeHtml(token.raw)
-        },
-      },
-    ],
-    renderer: {
-      code(code) {
-        let codeBlock = readCodeBlockInfo(code.lang)
-        let codeToken: CodeBlockToken = code
-        let filename = codeToken.filename ?? codeBlock.filename
+  escapeMarkdownHtml(root)
+  addHeadingIds(root)
 
-        return renderCodeBlock(
-          code.escaped ? code.text : `<pre><code>${escapeHtml(code.text)}</code></pre>\n`,
-          filename,
-        )
-      },
-      heading(token) {
-        let heading = readHeadingContent(token.text)
-        let tokens = Lexer.lexInline(heading.markdown)
-        return `<h${token.depth} id="${escapeHtml(heading.id)}">${this.parser.parseInline(
-          tokens,
-        )}</h${token.depth}>\n`
-      },
-      html(token) {
-        return escapeHtml(token.text)
-      },
-    },
-  }
+  return { attributes: parsed.data, root }
+}
 
-  if (options.highlightCode) {
-    extension.async = true
-    extension.walkTokens = async (token) => {
-      if (!isCodeToken(token)) {
-        return
+function parseMarkdownRoot(source: string): Root {
+  source = source.replace(/\r\n?/g, '\n')
+  let tree = markdownParser.parse(source)
+  let root = markdownParser.runSync(tree) as Root
+
+  visit(root, 'textDirective', (node, index, parent) => {
+    if (parent === undefined || index === undefined) {
+      return
+    }
+
+    let start = node.position?.start.offset
+    let end = node.position?.end.offset
+    parent.children[index] = {
+      type: 'text',
+      value: start === undefined || end === undefined ? `:${node.name}` : source.slice(start, end),
+      position: node.position,
+    }
+  })
+
+  return root
+}
+
+// Raw HTML in guide markdown is rendered as escaped text, not executed, so embedded
+// markup shows up literally instead of being interpreted. At the document root a raw
+// HTML node has to be wrapped in a paragraph to remain a valid block; inline it's
+// replaced with a plain text node.
+function escapeMarkdownHtml(root: Root): void {
+  visit(root, 'html', (node, index, parent) => {
+    if (parent === undefined || index === undefined) {
+      return
+    }
+
+    let htmlNode: Html = node
+    let text: Text = { type: 'text', value: htmlNode.value, position: htmlNode.position }
+
+    if (parent.type === 'root') {
+      let paragraph: Paragraph = {
+        type: 'paragraph',
+        children: [text],
+        position: htmlNode.position,
       }
+      parent.children[index] = paragraph
+      return
+    }
 
-      let codeBlock = readCodeBlockInfo(token.lang)
-      let codeToken: CodeBlockToken = token
-      token.lang = codeBlock.language
-      if (codeBlock.filename !== undefined) {
-        codeToken.filename = codeBlock.filename
-      }
+    parent.children[index] = text
+  })
+}
 
-      try {
-        let html = await codeToHtml(token.text, {
-          lang: codeBlock.language,
-          themes: {
-            light: 'github-light',
-            dark: 'github-dark',
-          },
-        })
-        token.text = applyHighlightedLinesToCodeHtml(html, codeBlock.highlightedLines)
-        token.escaped = true
-      } catch {
-        token.text = renderPlainCodeHtml(token.text, codeBlock.highlightedLines)
-        token.escaped = true
+function addHeadingIds(root: Root): void {
+  let slugger = new GithubSlugger()
+
+  visit(root, 'heading', (node) => {
+    let heading: Heading = node
+    let lastChild = heading.children.at(-1)
+    let explicitId: string | undefined
+
+    if (lastChild?.type === 'text') {
+      let idMatch = /\s+\{#([^}\s]+)\}\s*$/.exec(lastChild.value)
+      explicitId = idMatch?.[1]
+
+      if (idMatch !== null) {
+        let text = lastChild.value.slice(0, idMatch.index)
+        if (text === '') {
+          heading.children.pop()
+        } else {
+          lastChild.value = text
+        }
       }
     }
-  }
 
-  return extension
+    let text = mdastToString(heading).trim()
+    let data = heading.data ?? (heading.data = {})
+    data.hProperties = isRecord(data.hProperties) ? data.hProperties : {}
+    data.hProperties.id = explicitId ?? slugger.slug(text || 'section')
+  })
 }
 
 function readChapterMetadata(
@@ -210,63 +239,50 @@ function readRequiredString(
     return value
   }
 
-  throw frontmatterError(options, `Expected \`${key}\` to be a non-empty string`)
+  let location = options.filePath ? `${options.filePath}:1` : 'Markdown:1'
+  throw new Error(`${location}: Invalid frontmatter: Expected \`${key}\` to be a non-empty string`)
 }
 
-function readMarkdownSections(source: string): MarkdownChapterSection[] {
+function readMarkdownSectionsFromRoot(root: Root): MarkdownChapterSection[] {
   let sections: MarkdownChapterSection[] = []
-  let tokens = marked.lexer(normalizeSource(source))
 
-  for (let token of tokens) {
-    if (token.type !== 'heading' || token.depth !== 2) {
-      continue
+  visit(root, 'heading', (node) => {
+    let heading: Heading = node
+    if (heading.depth !== 2) {
+      return
     }
 
-    let heading = readHeadingContent(token.text)
-    sections.push({ id: heading.id, title: heading.text, titleHtml: heading.html })
-  }
+    let id = heading.data?.hProperties?.id
+    sections.push({
+      id: typeof id === 'string' && id.trim() !== '' ? id : 'section',
+      title: mdastToString(heading).trim(),
+      titleHtml: renderInlineHtml(heading.children),
+    })
+  })
 
   return sections
 }
 
-async function renderMarkdownBody(source: string): Promise<RemixNode[]> {
-  let tokens = marked.lexer(normalizeSource(source))
+async function renderMarkdownRoot(root: Root): Promise<RemixNode[]> {
   let nodes: RemixNode[] = []
-  let markdown = ''
-  let markdownStartLine = 1
-  let lineNumber = 1
+  let definitions = root.children.filter((child) => isDefinitionNode(child))
 
-  for (let token of tokens) {
-    if (isFrameToken(token)) {
-      if (markdown.trim() !== '') {
-        nodes.push(
-          <MarkdownHtml
-            key={`markdown-${markdownStartLine}-${nodes.length}`}
-            html={await marked.parse(markdown)}
-          />,
-        )
-      }
-
-      markdown = ''
-      nodes.push(<Frame key={`frame-${lineNumber}`} src={token.src} />)
-      lineNumber += countLineBreaks(token.raw)
-      markdownStartLine = lineNumber
+  for (let segment of splitMarkdownRoot(root)) {
+    if (segment.type === 'frame') {
+      nodes.push(<Frame key={`frame-${segment.lineNumber}`} src={segment.src} />)
       continue
     }
 
-    if (markdown === '') {
-      markdownStartLine = lineNumber
+    let segmentRoot: Root = {
+      type: 'root',
+      children: [...definitions, ...segment.children],
     }
+    let hast = await markdownHtmlProcessor.run(segmentRoot)
 
-    markdown += token.raw
-    lineNumber += countLineBreaks(token.raw)
-  }
-
-  if (markdown.trim() !== '') {
     nodes.push(
       <MarkdownHtml
-        key={`markdown-${markdownStartLine}-${nodes.length}`}
-        html={await marked.parse(markdown)}
+        key={`markdown-${segment.lineNumber}-${nodes.length}`}
+        html={markdownHtmlProcessor.stringify(hast)}
       />,
     )
   }
@@ -274,82 +290,250 @@ async function renderMarkdownBody(source: string): Promise<RemixNode[]> {
   return nodes
 }
 
+function splitMarkdownRoot(root: Root): MarkdownSegment[] {
+  let segments: MarkdownSegment[] = []
+  let markdownChildren: RootContent[] = []
+  let markdownStartLine = 1
+
+  for (let child of root.children) {
+    if (isFrameDirective(child)) {
+      pushMarkdownSegment()
+      let src = readFrameDirectiveSrc(child)
+      if (src !== undefined) {
+        segments.push({ type: 'frame', src, lineNumber: child.position?.start.line ?? 1 })
+      }
+      markdownStartLine = (child.position?.end.line ?? child.position?.start.line ?? 0) + 1
+      continue
+    }
+
+    if (markdownChildren.length === 0) {
+      markdownStartLine = child.position?.start.line ?? markdownStartLine
+    }
+
+    markdownChildren.push(child)
+  }
+
+  pushMarkdownSegment()
+  return segments
+
+  function pushMarkdownSegment(): void {
+    let visibleChildren = markdownChildren.filter((child) => !isDefinitionNode(child))
+    if (visibleChildren.length > 0) {
+      segments.push({ type: 'markdown', children: visibleChildren, lineNumber: markdownStartLine })
+    }
+
+    markdownChildren = []
+  }
+}
+
+function renderInlineHtml(children: PhrasingContent[]): string {
+  let root: Root = {
+    type: 'root',
+    children: [
+      {
+        type: 'paragraph',
+        children,
+      },
+    ],
+  }
+  let hast = inlineHtmlProcessor.runSync(root) as HastRoot
+  let paragraph = hast.children.find((child): child is Element => isElementNamed(child, 'p'))
+
+  return paragraph?.children.map((child) => toHtml(child)).join('') ?? ''
+}
+
 function MarkdownHtml(handle: Handle<{ html: string }>) {
   return () => <div class="rmx-page-body" innerHTML={handle.props.html} />
 }
 
-function renderCodeBlock(html: string, filename?: string): string {
-  let filenameHeader =
-    filename === undefined
-      ? ''
-      : `<div class="docs-code-block__filename" data-code-block-filename>${escapeHtml(
-          filename,
-        )}</div>`
+function rehypeHighlightCode() {
+  return async function transform(tree: HastRoot): Promise<void> {
+    let codeBlocks: { parent: HastRoot | Element; index: number; codeBlock: CodeBlock }[] = []
 
-  return `<div class="docs-code-block" data-code-block>${filenameHeader}${html}<button class="docs-code-block__copy" type="button" data-code-block-copy aria-label="Copy code to clipboard"><span class="docs-code-block__copy-label">Copy code to clipboard</span></button></div>`
-}
+    visit(tree, 'element', (node, index, parent) => {
+      if (parent === undefined || index === undefined || !isHastParent(parent)) {
+        return
+      }
 
-function readCodeBlockInfo(value: string | undefined): CodeBlockInfo {
-  let info = value?.trim()
-  if (!info) {
-    return { language: 'plaintext', highlightedLines: new Set() }
+      let codeBlock = readCodeBlock(node)
+      if (codeBlock !== undefined) {
+        codeBlocks.push({ parent, index, codeBlock })
+      }
+    })
+
+    for (let target of codeBlocks) {
+      target.parent.children[target.index] = await renderHighlightedCodeBlock(target.codeBlock)
+    }
   }
-
-  let [firstPart = '', ...restParts] = info.split(/\s+/)
-  let hasLanguage =
-    firstPart !== '' &&
-    !firstPart.includes('=') &&
-    !firstPart.startsWith('{') &&
-    !firstPart.startsWith('[')
-  let language = hasLanguage ? firstPart : 'plaintext'
-  let meta = hasLanguage ? restParts.join(' ') : info
-  let filename = readCodeBlockFilename(meta)
-  let highlightedLines = readCodeBlockHighlightedLines(meta)
-
-  return filename === undefined
-    ? { language, highlightedLines }
-    : { language, filename, highlightedLines }
 }
 
-function readCodeBlockFilename(meta: string): string | undefined {
-  if (meta.trim() === '') {
+function readCodeBlock(pre: Element): CodeBlock | undefined {
+  if (pre.tagName !== 'pre') {
     return undefined
   }
 
-  let params = new URLSearchParams(meta.trim().split(/\s+/).join('&'))
-  let filename = params.get('filename')?.trim()
-  if (!filename) {
+  let code = pre.children.find((child): child is Element => isElementNamed(child, 'code'))
+  if (code === undefined) {
     return undefined
   }
 
-  filename = stripCodeBlockMetaQuotes(filename)
-  return filename === '' ? undefined : filename
+  let classNames: string[] = []
+  let rawClassNames = code.properties.className ?? code.properties.class
+  if (typeof rawClassNames === 'string') {
+    classNames = rawClassNames.split(/\s+/)
+  } else if (Array.isArray(rawClassNames)) {
+    classNames = rawClassNames.filter(
+      (className): className is string => typeof className === 'string',
+    )
+  }
+
+  let language = classNames.find((className) => className.startsWith('language-'))
+  let meta = code.data?.meta
+
+  return {
+    source: readHastText(code).replace(/\n$/, ''),
+    language: language?.slice('language-'.length),
+    meta: typeof meta === 'string' ? meta : undefined,
+  }
 }
 
-function readCodeBlockHighlightedLines(meta: string): Set<number> {
+async function renderHighlightedCodeBlock(codeBlock: CodeBlock): Promise<Element> {
+  let info = readCodeBlockInfo(codeBlock.language, codeBlock.meta)
+  let pre: Element
+
+  try {
+    let highlighted = await codeToHast(codeBlock.source, {
+      lang: info.language,
+      themes: {
+        light: 'github-light',
+        dark: 'github-dark',
+      },
+      transformers: [codeBlockTransformer(info.highlightedLines)],
+    })
+    pre =
+      highlighted.children.find((child): child is Element => isElementNamed(child, 'pre')) ??
+      renderPlainCodePre(codeBlock.source, info.highlightedLines)
+  } catch {
+    pre = renderPlainCodePre(codeBlock.source, info.highlightedLines)
+  }
+
+  return wrapCodeBlock(pre, info.filename)
+}
+
+function wrapCodeBlock(pre: Element, filename?: string): Element {
+  let children: ElementContent[] = []
+
+  if (filename !== undefined) {
+    children.push({
+      type: 'element',
+      tagName: 'div',
+      properties: {
+        class: 'docs-code-block__filename',
+        'data-code-block-filename': '',
+      },
+      children: [{ type: 'text', value: filename }],
+    })
+  }
+
+  children.push(pre)
+  children.push({
+    type: 'element',
+    tagName: 'button',
+    properties: {
+      class: 'docs-code-block__copy',
+      type: 'button',
+      'data-code-block-copy': '',
+      'aria-label': 'Copy code to clipboard',
+    },
+    children: [
+      {
+        type: 'element',
+        tagName: 'span',
+        properties: { class: 'docs-code-block__copy-label' },
+        children: [{ type: 'text', value: 'Copy code to clipboard' }],
+      },
+    ],
+  })
+
+  return {
+    type: 'element',
+    tagName: 'div',
+    properties: {
+      class: 'docs-code-block',
+      'data-code-block': '',
+    },
+    children,
+  }
+}
+
+function readCodeBlockInfo(
+  language: string | undefined,
+  metaValue: string | undefined,
+): CodeBlockInfo {
+  // When a fence has no language, remark assigns the info string (e.g. `[1-3]` or
+  // `highlight=2-4`) to `language` instead of `meta`. Reclaim it as meta in that case.
+  let meta = metaValue?.trim() ?? ''
+  if (language && looksLikeMeta(language)) {
+    meta = `${meta} ${language}`.trim()
+    language = undefined
+  }
+
+  let filename = (
+    readCodeBlockMetaParameter(meta, 'filename') ?? readCodeBlockMetaParameter(meta, 'title')
+  )?.trim()
+
+  let info: CodeBlockInfo = {
+    language: language && language !== '' ? language : 'plaintext',
+    highlightedLines: readHighlightedLines(meta),
+  }
+  if (filename && filename !== '') {
+    info.filename = filename
+  }
+  return info
+}
+
+// A fence info string is a language unless it starts with a highlight group or
+// contains a `key=value` meta parameter.
+function looksLikeMeta(value: string): boolean {
+  return value.startsWith('[') || value.startsWith('{') || value.includes('=')
+}
+
+function readCodeBlockMetaParameter(meta: string, key: string): string | undefined {
+  let escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  let match = new RegExp(`(?:^|\\s)${escapedKey}=("([^"]*)"|'([^']*)'|([^\\s]+))`).exec(meta)
+  return match?.[2] ?? match?.[3] ?? match?.[4]
+}
+
+// Collects highlighted line specs from every supported form in the fence meta:
+// bare `{1-3}` / `[1-3]` groups and `highlight=` / `lines=` parameters.
+function readHighlightedLines(meta: string): Set<number> {
   let highlightedLines = new Set<number>()
-  let braceMatch = /(?:^|\s)\{([^}]*)\}(?=\s|$)/.exec(meta)
-  let bracketMatch = /(?:^|\s)\[([^\]]*)\](?=\s|$)/.exec(meta)
+  let groups = [
+    ...meta.matchAll(/(?:^|\s)\{([^}]*)\}(?=\s|$)/g),
+    ...meta.matchAll(/(?:^|\s)\[([^\]]*)\](?=\s|$)/g),
+  ].map((match) => match[1])
+  let specs = [
+    ...groups,
+    readCodeBlockMetaParameter(meta, 'highlight'),
+    readCodeBlockMetaParameter(meta, 'lines'),
+  ]
 
-  if (braceMatch?.[1]) {
-    addLineNumbers(highlightedLines, braceMatch[1])
-  }
-
-  if (bracketMatch?.[1]) {
-    addLineNumbers(highlightedLines, bracketMatch[1])
-  }
-
-  if (meta.trim() !== '') {
-    let params = new URLSearchParams(meta.trim().split(/\s+/).join('&'))
-    addLineNumbers(highlightedLines, params.get('highlight') ?? '')
-    addLineNumbers(highlightedLines, params.get('lines') ?? '')
+  for (let spec of specs) {
+    addLineNumbers(highlightedLines, spec)
   }
 
   return highlightedLines
 }
 
-function addLineNumbers(highlightedLines: Set<number>, value: string): void {
-  value = stripLineHighlightWrapper(value)
+function addLineNumbers(highlightedLines: Set<number>, value: string | undefined): void {
+  value = value?.trim() ?? ''
+
+  if (
+    (value.startsWith('[') && value.endsWith(']')) ||
+    (value.startsWith('{') && value.endsWith('}'))
+  ) {
+    value = value.slice(1, -1)
+  }
 
   for (let part of value.split(',')) {
     let segment = part.trim()
@@ -358,7 +542,7 @@ function addLineNumbers(highlightedLines: Set<number>, value: string): void {
     }
 
     let rangeMatch = /^(\d+)-(\d+)$/.exec(segment)
-    if (rangeMatch?.[1] && rangeMatch[2]) {
+    if (rangeMatch?.[1] !== undefined && rangeMatch[2] !== undefined) {
       let start = Number.parseInt(rangeMatch[1], 10)
       let end = Number.parseInt(rangeMatch[2], 10)
       if (start > 0 && end >= start) {
@@ -378,141 +562,92 @@ function addLineNumbers(highlightedLines: Set<number>, value: string): void {
   }
 }
 
-function stripLineHighlightWrapper(value: string): string {
-  value = value.trim()
-  let firstChar = value[0]
-  let lastChar = value[value.length - 1]
-
-  if ((firstChar === '[' && lastChar === ']') || (firstChar === '{' && lastChar === '}')) {
-    return value.slice(1, -1)
+function codeBlockTransformer(highlightedLines: Set<number>): ShikiTransformer {
+  return {
+    name: 'remix-guides-code-block',
+    line(lineElement, line) {
+      if (highlightedLines.has(line)) {
+        lineElement.properties['data-highlighted-line'] = ''
+      }
+    },
   }
-
-  return value
 }
 
-function applyHighlightedLinesToCodeHtml(html: string, highlightedLines: Set<number>): string {
-  let lineNumber = 0
-  let highlightedHtml = html.replace(/<span class="line">/g, (match) => {
-    lineNumber++
-    return highlightedLines.has(lineNumber) ? '<span class="line" data-highlighted-line>' : match
-  })
-
-  return normalizeCodeHtmlLineBreaks(highlightedHtml)
-}
-
-function normalizeCodeHtmlLineBreaks(html: string): string {
-  return html.replace(/<\/span>\n(?=<span class="line")/g, '\n</span>')
-}
-
-function renderPlainCodeHtml(source: string, highlightedLines: Set<number>): string {
+function renderPlainCodePre(source: string, highlightedLines: Set<number>): Element {
   let lines = source.split('\n')
-  let code = lines
-    .map((line, index) => {
-      let lineNumber = index + 1
-      let highlightedAttribute = highlightedLines.has(lineNumber) ? ' data-highlighted-line' : ''
-      return `<span class="line"${highlightedAttribute}>${escapeHtml(line)}\n</span>`
-    })
-    .join('')
-
-  return `<pre><code>${code}</code></pre>`
-}
-
-function stripCodeBlockMetaQuotes(value: string): string {
-  let firstChar = value[0]
-  let lastChar = value[value.length - 1]
-
-  if ((firstChar === '"' || firstChar === "'") && lastChar === firstChar) {
-    return value.slice(1, -1).trim()
-  }
-
-  return value
-}
-
-function readHeadingContent(value: string): HeadingContent {
-  let { id, markdown } = parseExplicitHeadingId(value)
-  let text = readInlineText(markdown)
 
   return {
-    id: id ?? slugify(text),
-    markdown,
-    text,
-    html: inlineMarked.parseInline(markdown, { async: false }),
+    type: 'element',
+    tagName: 'pre',
+    properties: {},
+    children: [
+      {
+        type: 'element',
+        tagName: 'code',
+        properties: {},
+        children: lines.map((line, index): Element => {
+          let lineNumber = index + 1
+          let properties: Element['properties'] = { class: 'line' }
+          if (highlightedLines.has(lineNumber)) {
+            properties['data-highlighted-line'] = ''
+          }
+
+          return {
+            type: 'element',
+            tagName: 'span',
+            properties,
+            children: [{ type: 'text', value: line + (index === lines.length - 1 ? '' : '\n') }],
+          }
+        }),
+      },
+    ],
   }
 }
 
-function parseExplicitHeadingId(value: string): { id?: string; markdown: string } {
-  let idMatch = /\s+\{#([^}\s]+)\}\s*$/.exec(value)
-  if (!idMatch) {
-    return { markdown: value.trim() }
+function readHastText(node: HastRootContent): string {
+  if (node.type === 'text') {
+    return node.value
   }
 
-  return {
-    id: idMatch[1],
-    markdown: value.slice(0, idMatch.index).trim(),
-  }
+  return 'children' in node && Array.isArray(node.children)
+    ? node.children.map((child) => readHastText(child)).join('')
+    : ''
 }
 
-function readInlineText(markdown: string): string {
-  return Lexer.lexInline(markdown)
-    .map((token) => readTokenText(token))
-    .join('')
-    .trim()
+function isDefinitionNode(node: RootContent): boolean {
+  return node.type === 'definition' || node.type === 'footnoteDefinition'
 }
 
-function readTokenText(token: Token): string {
-  if ('tokens' in token && Array.isArray(token.tokens)) {
-    return token.tokens.map((child) => readTokenText(child)).join('')
-  }
+function isFrameDirective(node: unknown): node is LeafDirective | ContainerDirective {
+  return (
+    isRecord(node) &&
+    node.name === 'frame' &&
+    (node.type === 'leafDirective' || node.type === 'containerDirective')
+  )
+}
 
-  if (token.type === 'br') {
-    return ' '
-  }
-
-  if ('text' in token && typeof token.text === 'string') {
-    return token.text
+function readFrameDirectiveSrc(node: LeafDirective | ContainerDirective): string | undefined {
+  let src = node.attributes?.src
+  if (typeof src !== 'string') {
+    return undefined
   }
 
-  return ''
+  src = src.trim()
+  return src === '' ? undefined : src
 }
 
-function slugify(value: string): string {
-  let slug = value
-    .normalize('NFKD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
-    .replace(/['’]/g, '')
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-
-  return slug || 'section'
+function isHastParent(node: unknown): node is HastRoot | Element {
+  return (
+    isRecord(node) &&
+    (node.type === 'root' || node.type === 'element') &&
+    Array.isArray(node.children)
+  )
 }
 
-function isFrameToken(token: Token): token is FrameToken {
-  return token.type === 'frame' && 'src' in token && typeof token.src === 'string'
+function isElementNamed(node: unknown, tagName: string): node is Element {
+  return isRecord(node) && node.type === 'element' && node.tagName === tagName
 }
 
-function isCodeToken(token: Token): token is Tokens.Code {
-  return token.type === 'code' && 'text' in token && typeof token.text === 'string'
-}
-
-function countLineBreaks(source: string): number {
-  return (source.match(/\n/g) ?? []).length
-}
-
-function normalizeSource(source: string): string {
-  return source.replace(/\r\n?/g, '\n')
-}
-
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"]/g, (char) => `&#${char.charCodeAt(0)};`)
-}
-
-function frontmatterError(options: MarkdownOptions, message: string): Error {
-  return markdownError(options, 1, `Invalid frontmatter: ${message}`)
-}
-
-function markdownError(options: MarkdownOptions, lineNumber: number, message: string): Error {
-  let location = options.filePath ? `${options.filePath}:${lineNumber}` : `Markdown:${lineNumber}`
-  return new Error(`${location}: ${message}`)
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
 }

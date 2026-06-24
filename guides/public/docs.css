@@ -14,7 +14,7 @@
   --fg-muted: #6b7280;
   --fg-subtle: #9ca3af;
   --border: #e5e7eb;
-  --link: #1d4ed8;
+  --link: #b42343;
   --max-width: 64rem;
   --content-width: 48rem;
   font-size: 16px;
@@ -29,7 +29,7 @@
     --fg-muted: #9aa0aa;
     --fg-subtle: #6b7280;
     --border: #2a2a30;
-    --link: #7aa2ff;
+    --link: #ff8aa0;
   }
 }
 
@@ -57,7 +57,8 @@ body {
 a {
   color: var(--link);
   text-decoration: underline;
-  text-underline-offset: 2px;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
 }
 
 a:hover {
@@ -84,6 +85,15 @@ pre {
 [data-code-block] pre {
   margin: 0;
   padding-right: 2.75rem;
+}
+
+/* Docs code blocks render shiki's raw line spans (standalone "\n" text nodes
+   between them) without a transformer, so use block layout + `white-space: normal`
+   to collapse those nodes instead of grid, which would turn them into empty rows.
+   Each .line re-establishes `white-space: pre` to preserve the code inside it. */
+[data-code-block] pre code {
+  display: block;
+  white-space: normal;
 }
 
 [data-code-block] [data-highlighted-line] {
@@ -114,10 +124,24 @@ pre code {
   line-height: inherit;
 }
 
+[data-demo-source] pre {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+[data-demo-source] pre code {
+  border: 0;
+  border-radius: 0;
+  background: none;
+  padding: 0;
+}
+
 [data-code-block] .line {
   position: relative;
   display: block;
   min-height: 1lh;
+  white-space: pre;
 }
 
 .shiki {
@@ -404,6 +428,17 @@ pre code {
   flex-direction: column;
   gap: 0.5rem;
   font-size: 0.875rem;
+}
+
+.docs-toc__list a {
+  color: var(--fg-muted);
+  text-decoration: none;
+}
+
+.docs-toc__list a:hover {
+  color: var(--fg);
+  text-decoration: underline;
+  text-decoration-color: var(--red-brand);
 }
 
 /* Markdown content ------------------------------------------------------ */
