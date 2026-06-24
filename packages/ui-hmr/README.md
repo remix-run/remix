@@ -106,10 +106,6 @@ transformComponentsForServer(source, {
 
 `importSource: 'remix'` generates imports from `remix/ui` and `remix/ui-hmr`. `importSource: '@remix-run'` generates imports from `@remix-run/ui` and `@remix-run/ui-hmr`. Custom import sources follow the same nested import layout.
 
-## Runtime Imports
-
-The `remix/ui-hmr/browser-runtime` and `remix/ui-hmr/server-runtime` imports are public so generated code can target them directly. Most apps should not call these runtime functions by hand; use the module hooks or direct transforms instead.
-
 ## Related Packages
 
 - [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) - Runs browser module hooks while compiling assets

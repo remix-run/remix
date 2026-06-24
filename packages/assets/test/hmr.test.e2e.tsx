@@ -7,7 +7,8 @@ import * as http from 'node:http'
 import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { watch, type FSWatcher } from 'chokidar'
-import { createAssetServer, type AssetServer, type HmrPayload } from '../src/assets.ts'
+import { createAssetServer, type AssetServer } from '../src/assets.ts'
+import type { HmrPayload } from '../src/types-hmr.d.ts'
 
 const packageDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
 const workspaceDir = path.resolve(packageDir, '../..')

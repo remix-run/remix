@@ -8,6 +8,19 @@ Added `package.json` `exports` for the styled component entrypoints:
 - `remix/components/select`
 - `remix/components/tabs`
 
+Added `package.json` `exports` for the HMR entrypoints:
+
+- `remix/assets/types/hmr`
+- `remix/node-hmr`
+- `remix/node-hmr/runtime`
+- `remix/node-hmr/types`
+- `remix/ui-hmr`
+- `remix/ui-hmr/browser-module-hooks`
+- `remix/ui-hmr/browser-runtime`
+- `remix/ui-hmr/node`
+- `remix/ui-hmr/server-runtime`
+- `remix/ui/dev/refresh`
+
 Removed `package.json` `exports`:
 
 - `remix/ui/breadcrumbs`

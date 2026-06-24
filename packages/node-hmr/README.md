@@ -76,7 +76,7 @@ run('./server.ts', {
 
 `node-hmr` provides the `import.meta.hot` runtime and watches the loaded module graph. It does not transform component modules by itself.
 
-Use Node's `--import` flag to add transforms such as Remix UI component HMR:
+Use Node's `--import` flag to add transforms with [Node's module customization hooks API](https://nodejs.org/api/module.html#customization-hooks), such as Remix UI component HMR:
 
 ```sh
 node --import remix/node-tsx --import remix/ui-hmr/node ./server.ts
@@ -278,8 +278,8 @@ if (import.meta.hot) {
 
 ## Related Packages
 
-- [`remix/ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) provides code transforms and runtime for HMR for Remix UI components.
-- [`remix/assets`](https://github.com/remix-run/remix/tree/main/packages/assets) can consume browser HMR channels for coordinating server and browser HMR updates.
+- [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) - Consumes browser HMR channels for coordinating server and browser HMR updates
+- [`ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) - Provides code transforms and runtime for HMR for Remix UI components
 
 ## License
 

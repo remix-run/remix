@@ -577,7 +577,6 @@ The `hmr` option accepts an async function that creates a `BrowserHmrChannel`, s
 
 ```ts
 import { createAssetServer } from 'remix/assets'
-import { uiHmr } from 'remix/ui-hmr/browser-module-hooks'
 
 let isDevelopment = process.env.NODE_ENV === 'development'
 let assetServer = createAssetServer({
@@ -587,14 +586,9 @@ let assetServer = createAssetServer({
   hmr: isDevelopment
     ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
     : undefined,
-  scripts: {
-    moduleHooks: isDevelopment ? [uiHmr()] : undefined,
-  },
   watch: isDevelopment,
 })
 ```
-
-`uiHmr()` is optional. Use it when you want Remix UI component modules to update without a full browser reload.
 
 Browser modules can also listen for HMR events. When the browser HMR channel comes from `remix/node-hmr/runtime`, server updates are sent as `server:update` events.
 
@@ -610,6 +604,8 @@ if (import.meta.hot) {
 ## Related Packages
 
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - A Fetch-based router that pairs naturally with `assets`
+- [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr) - Provides the server-side `import.meta.hot` runtime and browser HMR channel used by `hmr`
+- [`ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) - Provides Remix UI component HMR transforms that can run through `scripts.moduleHooks`
 - [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) - Route-pattern syntax for URL and route file matching
 
 ## License

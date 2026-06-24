@@ -1,5 +1,10 @@
+/**
+ * Node-compatible module hooks used by the asset server script compiler.
+ */
 export interface ModuleHooks {
+  /** Loads module source before script compilation. */
   load?: ModuleLoadHook
+  /** Resolves import specifiers before script compilation. */
   resolve?: ModuleResolveHook
 }
 

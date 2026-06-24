@@ -38,7 +38,8 @@ const nodeTypedModuleHooks = {
 } satisfies NodeModuleHooks
 
 const assetTypedModuleHooks: ModuleHooks = nodeTypedModuleHooks
-void assetTypedModuleHooks
+const nodeCompatibleModuleHooks: NodeModuleHooks = assetTypedModuleHooks
+void nodeCompatibleModuleHooks
 
 function createAssetServerForTest(
   options: Omit<AssetServerOptions<AssetRequestTransformMap>, 'basePath'> & {

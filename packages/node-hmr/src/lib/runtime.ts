@@ -11,16 +11,26 @@ import {
 import { emitServerHmrEvent, emitServerHmrUpdate } from './events.ts'
 import { hasNodeHmrParentProcess } from './process-state.ts'
 
+/**
+ * Hot module context available at `import.meta.hot`.
+ */
 export interface ImportMetaHot {
+  /** State object preserved across accepted updates for this module. */
   readonly data: Record<string, unknown>
+  /** Accepts updates to the current module. */
   accept(callback?: (module: HotModule) => HotCallbackResult): void
+  /** Accepts updates from a dependency module. */
   accept(dep: string, callback?: (module: HotModule) => HotCallbackResult): void
+  /** Accepts updates from one or more dependency modules. */
   accept(
     deps: readonly string[],
     callback?: (modules: Array<HotModule | undefined>) => HotCallbackResult,
   ): void
+  /** Registers cleanup to run before this module is replaced or disposed. */
   dispose(callback: (data: Record<string, unknown>) => HotCallbackResult): void
+  /** Invalidates this update and asks the runner to restart the process. */
   invalidate(message?: string): void
+  /** Listens for custom HMR events. */
   on(event: string, callback: (data: unknown) => void | Promise<void>): void
 }
 
@@ -217,6 +227,9 @@ export function getNodeHmrRuntime(): RemixNodeHmrRuntime | undefined {
   return runtimeGlobal.__remixNodeHmr
 }
 
+/**
+ * Notifies the parent process that the child server is ready.
+ */
 export function emitServerReady(): void {
   getNodeHmrRuntime()?.emitServerReady()
 }

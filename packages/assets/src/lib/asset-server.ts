@@ -47,41 +47,82 @@ interface AssetServerWatchOptions {
   pollInterval?: number
 }
 
+/**
+ * Browser HMR channel used by the asset server to coordinate browser updates.
+ */
 export interface BrowserHmrChannel {
+  /** EventSource URL for browser HMR clients. */
   readonly url: string
+  /** Closes the channel and clears watched files. */
   close(): void
+  /**
+   * Registers a file event handler.
+   *
+   * @param handler Callback that maps file events to browser HMR events.
+   * @returns A cleanup function that unregisters the handler.
+   */
   onFileEvents(handler: BrowserHmrFileEventHandler): () => void
+  /**
+   * Updates the files watched on behalf of this channel.
+   *
+   * @param delta Files to add and remove from the watcher.
+   */
   updateWatchedFiles(delta: BrowserHmrWatchedFileDelta): void
 }
 
+/**
+ * Creates a browser HMR channel for an asset server instance.
+ */
 export type BrowserHmrChannelFactory = () =>
   | BrowserHmrChannel
   | undefined
   | Promise<BrowserHmrChannel | undefined>
 
+/**
+ * Handles changed files and returns browser HMR events to emit.
+ */
 export type BrowserHmrFileEventHandler = (
   events: readonly BrowserHmrFileEvent[],
 ) => Promise<readonly BrowserHmrEvent[]>
 
+/**
+ * Watched file delta for a browser HMR channel.
+ */
 export interface BrowserHmrWatchedFileDelta {
+  /** Absolute file paths to start watching. */
   add: readonly string[]
+  /** Absolute file paths to stop watching. */
   remove: readonly string[]
 }
 
+/**
+ * File watcher event reported to a browser HMR channel.
+ */
 export type BrowserHmrFileEvent = {
+  /** File watcher event type. */
   event: 'add' | 'change' | 'unlink'
+  /** Absolute file path that changed. */
   filePath: string
 }
 
+/**
+ * Browser HMR event emitted to connected clients.
+ */
 export type BrowserHmrEvent =
   | {
+      /** Source files that triggered this update. */
       files?: string[]
+      /** Update timestamp used to bust browser caches. */
       timestamp: number
+      /** Browser update event. */
       type: 'update'
+      /** JavaScript and CSS updates for the browser to apply. */
       updates: Extract<HmrPayload, { type: 'browser:update' }>['updates']
     }
   | {
+      /** Source files that triggered this reload. */
       files?: string[]
+      /** Browser reload event. */
       type: 'reload'
     }
 

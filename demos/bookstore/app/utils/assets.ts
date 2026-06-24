@@ -13,16 +13,15 @@ export const assetServer = createAssetServer({
     '/app/*path': 'demos/bookstore/app/*path',
     '/packages/*path': 'packages/*path',
   },
-  sourceMaps: isDevelopment ? 'external' : undefined,
-  scripts: {
-    moduleHooks: isDevelopment ? [uiHmr()] : undefined,
-  },
-  minify: !isDevelopment,
-  fingerprint: isDevelopment
-    ? undefined
-    : { buildId: process.env.GITHUB_SHA || String(Date.now()) },
-  hmr: isDevelopment
-    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
-    : undefined,
-  watch: isDevelopment,
+  ...(isDevelopment
+    ? {
+        hmr: async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel(),
+        scripts: { moduleHooks: [uiHmr()] },
+        sourceMaps: 'external',
+      }
+    : {
+        minify: true,
+        fingerprint: { buildId: process.env.GITHUB_SHA || String(Date.now()) },
+        watch: false,
+      }),
 })
