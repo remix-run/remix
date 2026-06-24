@@ -6,6 +6,10 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ESNext",
+    "paths": {
+      "remix/ui/jsx-dev-runtime": ["../packages/remix/src/ui/jsx-dev-runtime.ts"],
+      "remix/ui/jsx-runtime": ["../packages/remix/src/ui/jsx-runtime.ts"]
+    },
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,

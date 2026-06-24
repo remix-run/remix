@@ -42,32 +42,71 @@ An optional chapter introduction can go here.
 ## Stable custom anchor {#custom-anchor}
 ```
 
+Code fences support filename headers and line highlighting:
+
+````md
+```tsx filename=app/actions/projects/create.tsx lines=[4-5,8]
+export async function createProject(request: Request) {
+  let formData = await request.formData()
+  let name = String(formData.get('name') ?? '').trim()
+
+  if (name === '') {
+    return new Response('Project name is required', { status: 400 })
+  }
+
+  return new Response(`Created ${name}`)
+}
+```
+````
+
 ## Adding frame examples
 
 Use a frame directive in Markdown:
 
 ```md
-:::frame /docs/examples/start-here/server-clock
+:::frame /docs/examples/interactivity/basic-counter
 :::
 ```
 
 Then add the matching example module:
 
 ```txt
-app/actions/docs/examples/start-here/server-clock.tsx
+app/actions/docs/examples/interactivity/basic-counter.tsx
 ```
 
 ```tsx
-import type { AppContext } from '../../../../router.ts'
+import { css, on } from 'remix/ui'
+import type { Handle } from 'remix/ui'
 
-export async function handler({ render }: AppContext) {
-  return render(<p>Hello from a frame.</p>)
+/**
+ * @name Client entry counter
+ * @description The frame route hydrates this component and renders this source beside the preview.
+ */
+export default function ClientCounterDemo(handle: Handle) {
+  let count = 0
+
+  return () => (
+    <button
+      mix={[
+        on('click', () => {
+          count++
+          handle.update()
+        }),
+        css({ borderRadius: '999px', padding: '0.7rem 1rem' }),
+      ]}
+      type="button"
+    >
+      Count: {count}
+    </button>
+  )
 }
 ```
 
-No route changes are needed. The examples controller maps `/docs/examples/:chapter/:example` to `examples/<chapter>/<example>.tsx`, dynamically imports the module, and calls its named `handler` export.
+No route changes are needed. The examples controller maps `/docs/examples/:chapter/:example` to `app/actions/docs/examples/<chapter>/<example>.tsx` and dynamically imports the module. The validator requires the `:chapter` segment to match the chapter slug so examples stay scoped to the chapter that references them.
 
-At render time, `markdown.tsx` turns the directive into `<Frame src="..." />`. The render middleware resolves that frame by doing an internal `router.fetch()` for the frame URL, so examples are normal Remix routes that return normal `Response` objects. Co-located client entries can live beside the example in `examples/<chapter>/<example>.client.tsx`.
+For component demos that should use the shared preview/source shell, default export the component. The examples controller wraps default exports in `clientEntry`, renders the preview, and shows the component source after stripping its `@name`/`@description` JSDoc block. For route-style frames, export a named `handler` that returns a `Response`.
+
+At render time, `markdown.tsx` turns the directive into `<Frame src="..." />`. The render middleware resolves that frame by doing an internal `router.fetch()` for the frame URL, so examples are normal Remix routes that return normal `Response` objects. Co-located client entries can live beside route-style examples in `app/actions/docs/examples/<chapter>/<example>.client.tsx`.
 
 ## Commands
 
