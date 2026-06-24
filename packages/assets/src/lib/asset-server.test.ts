@@ -3492,6 +3492,55 @@ describe('asset-server', () => {
     }
   })
 
+  it('applies allow and deny rules to script imports resolved through module hooks', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      let secretPath = await write(caseDir, 'secret.ts', 'export const secret = true')
+      await write(caseDir, 'app/entry.ts', "import { secret } from '#secret'\nexport { secret }")
+      let errors: unknown[] = []
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          moduleHooks: [
+            {
+              resolve(specifier, context, nextResolve) {
+                if (specifier === '#secret') {
+                  return {
+                    format: 'module',
+                    shortCircuit: true,
+                    url: pathToFileURL(secretPath).href,
+                  }
+                }
+
+                return nextResolve(specifier, context)
+              },
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'IMPORT_NOT_ALLOWED')
+        assert.match(error.message, /not allowed by the asset server allow\/deny configuration/)
+        assert.match(error.message, /"#secret"/)
+        assert.match(normalizeWindowsPath(error.message), /secret\.ts/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('resolves package exports with conditions provided by module hooks', async () => {
     let caseDir = await makeTmpDir()
     try {
