@@ -52,7 +52,7 @@ describe('node-hmr', () => {
 
       await waitForResponse(ready.port, 'two')
       assert.equal(server.readyCount, 1)
-      assert.match(server.output, /hmr update message\.ts/)
+      await waitForOutput(server, /hmr update message\.ts/)
     } finally {
       await server.stop()
     }
@@ -1237,7 +1237,7 @@ async function createFixture(
     entryPath: path.join(fixturePath, 'server.ts'),
     path: fixturePath,
     async [Symbol.asyncDispose]() {
-      await fs.rm(fixturePath, { force: true, recursive: true })
+      await removeFixture(fixturePath)
     },
   }
 }
@@ -1334,7 +1334,7 @@ async function createReadyGenerationFixture(
     entryPath: path.join(fixturePath, 'server.ts'),
     path: fixturePath,
     async [Symbol.asyncDispose]() {
-      await fs.rm(fixturePath, { force: true, recursive: true })
+      await removeFixture(fixturePath)
     },
   }
 }
@@ -1354,6 +1354,15 @@ async function waitForOutput(server: ReturnType<typeof startFixtureServer>, patt
     () => pattern.test(server.output),
     () => `Timed out waiting for output ${pattern}.\n${server.output}`,
   )
+}
+
+async function removeFixture(fixturePath: string): Promise<void> {
+  await fs.rm(fixturePath, {
+    force: true,
+    maxRetries: process.platform === 'win32' ? 5 : 0,
+    recursive: true,
+    retryDelay: 100,
+  })
 }
 
 function startFixtureServer(cwd: string) {
