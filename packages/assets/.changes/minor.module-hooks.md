@@ -1,1 +1,1 @@
-Added `moduleHooks` and `scripts.moduleHooks` options to `createAssetServer` for customizing script resolution and loading with Node-shaped synchronous module hooks.
+Added `scripts.moduleHooks` to `createAssetServer` for customizing script resolution and loading with Node's synchronous module hooks API.

@@ -19,6 +19,7 @@ import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import type { ResolveModuleResult, TransformedModule } from './transform.ts'
 import type { EmittedModule } from './emit.ts'
+import { scriptModuleHookConditions } from './conditions.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -84,6 +85,7 @@ export type ResolveArgs = {
   isAllowed(absolutePath: string): boolean
   isWatchIgnored(filePath: string): boolean
   moduleHooks: readonly ModuleHooks[]
+  getResolverFactory(conditions: readonly string[]): ResolverFactory
   resolveModulePath(absolutePath: string): ResolveModuleResult | null
   resolverFactory: ResolverFactory
   routes: CompiledRoutes
@@ -116,6 +118,7 @@ export async function resolveModule(
             getUniqueSpecifiers(transformed.unresolvedImports),
             transformed.resolvedPath,
             args.moduleHooks,
+            args.getResolverFactory,
             args.resolverFactory,
           )
         : new Map<string, ResolvedSpec>()
@@ -244,6 +247,7 @@ export async function resolveModule(
           [unresolved.specifier],
           transformed.resolvedPath,
           args.moduleHooks,
+          args.getResolverFactory,
           args.resolverFactory,
         ).then((resolved) => resolved.get(unresolved.specifier))
       } catch (error) {
@@ -451,6 +455,7 @@ async function batchResolveSpecifiers(
   specifiers: string[],
   importerPath: string,
   moduleHooks: readonly ModuleHooks[],
+  getResolverFactory: ResolveArgs['getResolverFactory'],
   resolverFactory: ResolveArgs['resolverFactory'],
 ): Promise<Map<string, ResolvedSpec>> {
   let resolvedBySpecifier = new Map<string, ResolvedSpec>()
@@ -462,7 +467,7 @@ async function batchResolveSpecifiers(
       let resolvedSpec =
         moduleHooks.length === 0
           ? await resolveSpecifierWithResolver(specifier, normalizedResolution, resolverFactory)
-          : await resolveSpecifier(specifier, normalizedResolution, moduleHooks, resolverFactory)
+          : await resolveSpecifier(specifier, normalizedResolution, moduleHooks, getResolverFactory)
       if (resolvedSpec === null) {
         throw createAssetServerCompilationError(
           normalizedResolution.importerPath === getInjectedPackageImporterPath()
@@ -545,7 +550,7 @@ async function resolveSpecifier(
   displaySpecifier: string,
   normalizedResolution: NormalizedSpecifierResolution,
   moduleHooks: readonly ModuleHooks[],
-  resolverFactory: ResolveArgs['resolverFactory'],
+  getResolverFactory: ResolveArgs['getResolverFactory'],
 ): Promise<ResolvedSpec | null> {
   let resolveHooks = moduleHooks
     .map((hook) => hook.resolve)
@@ -562,26 +567,41 @@ async function resolveSpecifier(
     return resolveSpecifierWithResolverSync(
       specifier,
       normalizeSpecifierResolution(specifier, fileURLToPath(parentURL)),
-      resolverFactory,
+      getResolverFactory(context?.conditions ?? scriptModuleHookConditions),
     )
   }
 
   for (let hook of resolveHooks) {
     let nextResolve = resolve
-    resolve = (specifier, context) =>
-      hook(
+    resolve = (specifier, context) => {
+      let nextResolveCalled = false
+      let wrappedNextResolve: ModuleResolveHookNext = (nextSpecifier, nextContext) => {
+        nextResolveCalled = true
+        return nextResolve(nextSpecifier, nextContext)
+      }
+      let result = hook(
         specifier,
         {
-          conditions: context?.conditions ?? ['browser', 'import', 'module', 'default'],
+          conditions: context?.conditions ?? [...scriptModuleHookConditions],
           importAttributes: context?.importAttributes ?? {},
           parentURL: context?.parentURL,
         },
-        nextResolve,
+        wrappedNextResolve,
       )
+      if (!nextResolveCalled && result.shortCircuit !== true) {
+        throw createAssetServerCompilationError(
+          `Module resolve hook for ${specifier} returned without calling nextResolve or setting shortCircuit: true.`,
+          {
+            code: 'IMPORT_RESOLUTION_FAILED',
+          },
+        )
+      }
+      return result
+    }
   }
 
   let result = await resolve(displaySpecifier, {
-    conditions: ['browser', 'import', 'module', 'default'],
+    conditions: [...scriptModuleHookConditions],
     importAttributes: {},
     parentURL: pathToFileURL(normalizedResolution.importerPath).href,
   })

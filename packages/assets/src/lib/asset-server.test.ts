@@ -3346,22 +3346,11 @@ describe('asset-server', () => {
     }
   })
 
-  it('appends root script module hooks before scoped script module hooks', async () => {
+  it('runs script module hooks in configured order', async () => {
     let caseDir = await makeTmpDir()
     try {
       await write(caseDir, 'app/entry.ts', 'export const values = []')
       let assetServer = createWatchedTestServer(caseDir, {
-        moduleHooks: [
-          {
-            load(url, context, nextLoad) {
-              let result = nextLoad(url, context)
-              return {
-                ...result,
-                source: `${result.source}\nvalues.push('root')`,
-              }
-            },
-          },
-        ],
         scripts: {
           moduleHooks: [
             {
@@ -3369,7 +3358,16 @@ describe('asset-server', () => {
                 let result = nextLoad(url, context)
                 return {
                   ...result,
-                  source: `${result.source}\nvalues.push('scripts')`,
+                  source: `${result.source}\nvalues.push('first')`,
+                }
+              },
+            },
+            {
+              load(url, context, nextLoad) {
+                let result = nextLoad(url, context)
+                return {
+                  ...result,
+                  source: `${result.source}\nvalues.push('second')`,
                 }
               },
             },
@@ -3383,7 +3381,7 @@ describe('asset-server', () => {
         assert.equal(response.status, 200)
         let body = await response.text()
 
-        assert.match(body, /values\.push\('root'\)\nvalues\.push\('scripts'\)/)
+        assert.match(body, /values\.push\('first'\)\nvalues\.push\('second'\)/)
       } finally {
         await assetServer.close()
       }
@@ -3494,6 +3492,108 @@ describe('asset-server', () => {
     }
   })
 
+  it('resolves package exports with conditions provided by module hooks', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', "import { value } from 'conditioned'\nexport { value }")
+      await write(
+        caseDir,
+        'app/node_modules/conditioned/browser.ts',
+        'export const value = "browser"',
+      )
+      await write(
+        caseDir,
+        'app/node_modules/conditioned/development.ts',
+        'export const value = "development"',
+      )
+      await write(
+        caseDir,
+        'app/node_modules/conditioned/default.ts',
+        'export const value = "default"',
+      )
+      await writeJson(caseDir, 'app/node_modules/conditioned/package.json', {
+        exports: {
+          '.': {
+            development: './development.ts',
+            browser: './browser.ts',
+            default: './default.ts',
+          },
+        },
+      })
+      let assetServer = createTestServer(caseDir, {
+        scripts: {
+          moduleHooks: [
+            {
+              resolve(specifier, context, nextResolve) {
+                if (specifier === 'conditioned') {
+                  return nextResolve(specifier, {
+                    ...context,
+                    conditions: ['development', ...context.conditions],
+                  })
+                }
+
+                return nextResolve(specifier, context)
+              },
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 200)
+        let body = await response.text()
+
+        assert.match(body, /from "\/assets\/app\/node_modules\/conditioned\/development\.ts"/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when script module resolve hooks do not call nextResolve or short circuit', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', "import { value } from '#aliased'\nexport { value }")
+      let errors: unknown[] = []
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          moduleHooks: [
+            {
+              resolve(specifier) {
+                return {
+                  url: pathToFileURL(path.join(caseDir, 'app/aliased.ts')).href,
+                }
+              },
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'IMPORT_RESOLUTION_FAILED')
+        assert.match(error.message, /without calling nextResolve or setting shortCircuit: true/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('loads script source through module hooks', async () => {
     let caseDir = await makeTmpDir()
     try {
@@ -3562,6 +3662,90 @@ describe('asset-server', () => {
         assert.ok(isAssetServerCompilationError(error))
         assert.equal(error.code, 'TRANSFORM_FAILED')
         assert.match(error.message, /did not return source/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when script module load hooks do not call nextLoad or short circuit', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          moduleHooks: [
+            {
+              load() {
+                return {
+                  format: 'module',
+                  source: 'export const value = 2',
+                }
+              },
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'TRANSFORM_FAILED')
+        assert.match(error.message, /without calling nextLoad or setting shortCircuit: true/)
+      } finally {
+        await assetServer.close()
+      }
+    } finally {
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
+  it('fails when script module load hooks return unsupported formats', async () => {
+    let caseDir = await makeTmpDir()
+    try {
+      await write(caseDir, 'app/entry.ts', 'export const value = 1')
+      let errors: unknown[] = []
+      let assetServer = createTestServer(caseDir, {
+        onError(error) {
+          errors.push(error)
+        },
+        scripts: {
+          moduleHooks: [
+            {
+              load(url, context, nextLoad) {
+                let result = nextLoad(url, context)
+                return {
+                  ...result,
+                  format: 'commonjs',
+                }
+              },
+            },
+          ],
+        },
+      })
+
+      try {
+        let response = await get(assetServer, '/assets/app/entry.ts')
+        assert.ok(response)
+        assert.equal(response.status, 500)
+        assert.equal(await response.text(), 'Internal Server Error')
+
+        let error = errors.at(-1)
+        assert.ok(isAssetServerCompilationError(error))
+        assert.equal(error.code, 'TRANSFORM_FAILED')
+        assert.match(error.message, /unsupported format "commonjs"/)
+        assert.match(error.message, /Only "module" is supported/)
       } finally {
         await assetServer.close()
       }

@@ -13,7 +13,7 @@ Fetch-based server for compiling browser assets on demand.
 - **Optional Fingerprinting** - Source-based fingerprinted URLs for long-lived browser caching
 - **Source Maps** - Serve inline or external sourcemaps
 - **Hot Module Reloading** - Handle live code updates in development
-- **Module Hooks** - Customize script resolution and loading with Node-shaped hooks
+- **Script Module Hooks** - Customize script resolution and loading with Node's module hooks API
 
 ## Installation
 
@@ -317,7 +317,7 @@ let assetServer = createAssetServer({
 
 ### Module Hooks
 
-Use `scripts.moduleHooks` to customize script resolution and loading with the same hook shape used by Node's synchronous module hooks.
+Use `scripts.moduleHooks` to customize script resolution and loading with [Node's module API](https://nodejs.org/api/module.html#customization-hooks), provided as an array of objects with optional `resolve` and `load` hooks.
 
 ```ts
 import { createAssetServer } from 'remix/assets'
@@ -330,22 +330,10 @@ let assetServer = createAssetServer({
     moduleHooks: [
       {
         resolve(specifier, context, nextResolve) {
-          if (specifier === '#env') {
-            return {
-              format: 'module',
-              shortCircuit: true,
-              url: new URL('./app/env.browser.ts', import.meta.url).href,
-            }
-          }
-
-          return nextResolve(specifier, context)
+          /* ... */
         },
         load(url, context, nextLoad) {
-          let result = nextLoad(url, context)
-          return {
-            ...result,
-            source: `${result.source}\nconsole.debug(${JSON.stringify(url)})`,
-          }
+          /* ... */
         },
       },
     ],
@@ -353,7 +341,7 @@ let assetServer = createAssetServer({
 })
 ```
 
-Top-level `moduleHooks` run for scripts by default and are appended before `scripts.moduleHooks`, so app-wide hooks can be shared while script-specific hooks stay local.
+Load hooks must return `format: 'module'`, and import attributes are not currently supported.
 
 ## File Options
 

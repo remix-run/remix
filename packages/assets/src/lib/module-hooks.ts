@@ -53,12 +53,3 @@ export interface ModuleLoadResult {
   shortCircuit?: boolean
   source?: string | ArrayBuffer | NodeJS.TypedArray
 }
-
-export function normalizeModuleHooks(
-  rootHooks: readonly ModuleHooks[] | undefined,
-  scopedHooks: readonly ModuleHooks[] | undefined,
-): readonly ModuleHooks[] {
-  if (rootHooks === undefined) return scopedHooks ?? []
-  if (scopedHooks === undefined) return rootHooks
-  return [...rootHooks, ...scopedHooks]
-}

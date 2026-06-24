@@ -38,6 +38,7 @@ import { composeSourceMaps, rewriteSourceMapSources, stringifySourceMap } from '
 import type { EmittedModule } from './emit.ts'
 import type { ResolvedScriptTarget } from '../target.ts'
 import type { ResolvedModule } from './resolve.ts'
+import { scriptModuleHookConditions } from './conditions.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -541,7 +542,7 @@ function runModuleLoadHooks(
   let loadHooks = options.hooks.map((hook) => hook.load).filter((load) => load !== undefined)
 
   let loadContext: ModuleLoadContext = {
-    conditions: ['browser', 'import', 'module', 'default'],
+    conditions: [...scriptModuleHookConditions],
     format: options.format,
     importAttributes: {},
     moduleUrl: options.moduleUrl,
@@ -554,8 +555,13 @@ function runModuleLoadHooks(
 
   for (let hook of loadHooks) {
     let nextLoad = load
-    load = (nextUrl, nextContext) =>
-      hook(
+    load = (nextUrl, nextContext) => {
+      let nextLoadCalled = false
+      let wrappedNextLoad: ModuleLoadHookNext = (wrappedUrl, wrappedContext) => {
+        nextLoadCalled = true
+        return nextLoad(wrappedUrl, wrappedContext)
+      }
+      let result = hook(
         nextUrl,
         {
           conditions: nextContext?.conditions ?? loadContext.conditions,
@@ -563,8 +569,18 @@ function runModuleLoadHooks(
           importAttributes: nextContext?.importAttributes ?? loadContext.importAttributes,
           moduleUrl: nextContext?.moduleUrl ?? loadContext.moduleUrl,
         },
-        nextLoad,
+        wrappedNextLoad,
       )
+      if (!nextLoadCalled && result.shortCircuit !== true) {
+        throw createAssetServerCompilationError(
+          `Module load hook for ${nextUrl} returned without calling nextLoad or setting shortCircuit: true.`,
+          {
+            code: 'TRANSFORM_FAILED',
+          },
+        )
+      }
+      return result
+    }
   }
 
   return load(url, loadContext)
@@ -574,6 +590,15 @@ function getModuleLoadSource(
   url: string,
   result: ModuleLoadResult,
 ): string | ArrayBuffer | NodeJS.TypedArray {
+  if (result.format !== 'module') {
+    throw createAssetServerCompilationError(
+      `Module load hook for ${url} returned unsupported format ${JSON.stringify(result.format)}. Only "module" is supported.`,
+      {
+        code: 'TRANSFORM_FAILED',
+      },
+    )
+  }
+
   if (result.source !== undefined && result.source !== null) return result.source
 
   throw createAssetServerCompilationError(`Module load hook for ${url} did not return source.`, {
