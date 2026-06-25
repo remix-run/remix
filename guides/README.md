@@ -8,7 +8,7 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 
 - `app/actions/controller.tsx` — top-level route actions such as assets and the root redirect.
 - `app/actions/docs/chapters/*.md` — guide chapters.
-- `app/actions/docs/markdown.tsx` — Markdown rendering, syntax highlighting, heading IDs, and `:::frame` parsing.
+- `app/actions/docs/markdown.tsx` — unified/remark Markdown rendering, Shiki syntax highlighting, heading IDs, and `::frame` parsing.
 - `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, and summaries.
 - `app/actions/docs/examples/` — frame-backed examples used by chapters.
 - `app/assets/` — browser entrypoints and other browser-owned modules.
@@ -64,49 +64,67 @@ export async function createProject(request: Request) {
 Use a frame directive in Markdown:
 
 ```md
-:::frame /docs/examples/interactivity/basic-counter
-:::
+::frame{src="/docs/examples/17-markdown-style-demo/counter"}
 ```
 
-Then add the matching example module:
+The examples controller maps `/docs/examples/:chapter/:example` to `app/actions/docs/examples/<chapter>/<example>.tsx` and dynamically imports the module, so no route changes are needed. The validator requires the `:chapter` segment to match the chapter directory name (e.g. `17-markdown-style-demo`) so examples stay scoped to the chapter that references them. Example directories are prefixed with the chapter order number to match the chapter file name.
 
-```txt
-app/actions/docs/examples/interactivity/basic-counter.tsx
-```
+At render time, `markdown.tsx` turns the directive into `<Frame src="..." />`. The render middleware resolves that frame by doing an internal `router.fetch()` for the frame URL, so examples are normal Remix routes that return normal `Response` objects.
 
-```tsx
-import { css, on } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+### Demos with code
 
-/**
- * @name Client entry counter
- * @description The frame route hydrates this component and renders this source beside the preview.
- */
-export default function ClientCounterDemo(handle: Handle) {
-  let count = 0
+A "demo with code" shows a live, hydrated component next to its own highlighted source. It takes three co-located files:
 
-  return () => (
-    <button
-      mix={[
-        on('click', () => {
-          count++
-          handle.update()
-        }),
-        css({ borderRadius: '999px', padding: '0.7rem 1rem' }),
-      ]}
-      type="button"
-    >
-      Count: {count}
-    </button>
-  )
-}
-```
+1. **The demo code** — a `.demo.tsx` module that exports the component as a named export whose name matches the function name:
 
-No route changes are needed. The examples controller maps `/docs/examples/:chapter/:example` to `app/actions/docs/examples/<chapter>/<example>.tsx` and dynamically imports the module. The validator requires the `:chapter` segment to match the chapter slug so examples stay scoped to the chapter that references them.
+   ```txt
+   app/actions/docs/examples/17-markdown-style-demo/counter.demo.tsx
+   ```
 
-For component demos that should use the shared preview/source shell, default export the component. The examples controller wraps default exports in `clientEntry`, renders the preview, and shows the component source after stripping its `@name`/`@description` JSDoc block. For route-style frames, export a named `handler` that returns a `Response`.
+   ```tsx
+   import { css, on } from 'remix/ui'
+   import type { Handle } from 'remix/ui'
 
-At render time, `markdown.tsx` turns the directive into `<Frame src="..." />`. The render middleware resolves that frame by doing an internal `router.fetch()` for the frame URL, so examples are normal Remix routes that return normal `Response` objects. Co-located client entries can live beside route-style examples in `app/actions/docs/examples/<chapter>/<example>.client.tsx`.
+   export function Counter(handle: Handle) {
+     let count = 3
+
+     return () => (
+       <button
+         mix={[
+           on('click', () => {
+             count++
+             handle.update()
+           }),
+           css({ borderRadius: '999px', padding: '0.7rem 1rem' }),
+         ]}
+         type="button"
+       >
+         Count: {count}
+       </button>
+     )
+   }
+   ```
+
+2. **The frame handler** — a `<example>.tsx` module that exports a `handler` built with `demoWithCode`, pointing at the demo module and its component:
+
+   ```txt
+   app/actions/docs/examples/17-markdown-style-demo/counter.tsx
+   ```
+
+   ```tsx
+   import { demoWithCode } from '../demo-with-code.tsx'
+   import { Counter } from './counter.demo.tsx'
+
+   let demoUrl = new URL('./counter.demo.tsx', import.meta.url)
+
+   export const handler = demoWithCode(demoUrl, Counter)
+   ```
+
+3. **The shared shell** — `app/actions/docs/examples/demo-with-code.tsx` exports `demoWithCode` (which loads and highlights the `.demo.tsx` source, hydrates the component via `clientEntry`, and renders the preview + source) and the `Demo` component that lays them out. You don't touch this per example.
+
+The named export matters: `demoWithCode` resolves the client entry from the function's `name`, so the export name and the function name must be the same token (e.g. `export function Counter`), not a `default` export.
+
+For route-style frames that need full control, export a named `handler` that returns a `Response` directly instead of using `demoWithCode`.
 
 ## Commands
 

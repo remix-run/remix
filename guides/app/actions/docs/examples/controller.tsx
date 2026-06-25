@@ -1,4 +1,3 @@
-import { access } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
 import { createController } from 'remix/router'
@@ -8,73 +7,59 @@ import { routes } from '../../../routes.ts'
 
 const exampleSegmentPattern = /^[a-z0-9][a-z0-9-]*$/
 
-type ExampleRouteContext = AppContext & {
-  params: {
-    chapter: string
-    example: string
-  }
-}
-
-type ExampleHandler = (context: AppContext) => Response | Promise<Response>
-
 export default createController(routes.docs.examples, {
   actions: {
-    show: showExampleHandler,
+    show: async (context) => {
+      let { chapter, example } = context.params
+
+      if (!exampleSegmentPattern.test(chapter) || !exampleSegmentPattern.test(example)) {
+        return new Response('Not Found', { status: 404 })
+      }
+
+      let handler = await loadExampleHandler(chapter, example)
+      if (!handler) {
+        return new Response('Not Found', { status: 404 })
+      }
+
+      return handler(context)
+    },
   },
 })
 
-async function showExampleHandler(context: ExampleRouteContext) {
-  let { chapter, example } = context.params
-
-  if (!exampleSegmentPattern.test(chapter) || !exampleSegmentPattern.test(example)) {
-    return new Response('Not Found', { status: 404 })
-  }
-
-  let handler = await loadExampleHandler(chapter, example)
-  if (!handler) {
-    return new Response('Not Found', { status: 404 })
-  }
-
-  return handler(context)
-}
-
-async function loadExampleHandler(
-  chapter: string,
-  example: string,
-): Promise<ExampleHandler | undefined> {
+async function loadExampleHandler(chapter: string, example: string) {
   let moduleUrl = new URL(`./${chapter}/${example}.tsx`, import.meta.url)
 
+  let mod: unknown
   try {
-    await access(moduleUrl)
+    mod = await import(moduleUrl.href)
   } catch (error) {
-    if (isNotFoundError(error)) {
+    if (isModuleNotFoundError(error)) {
       return undefined
     }
 
     throw error
   }
 
-  let mod: unknown = await import(moduleUrl.href)
   return readExampleHandler(mod, moduleUrl)
 }
 
-function readExampleHandler(mod: unknown, moduleUrl: URL): ExampleHandler | undefined {
-  if (mod && typeof mod === 'object' && 'handler' in mod && typeof mod.handler === 'function') {
-    let handler = mod.handler
-
-    return async (context) => {
-      let result = await handler(context)
-      if (result instanceof Response) {
-        return result
-      }
-
-      throw new Error(`Expected example handler to return a Response: ${fileURLToPath(moduleUrl)}`)
-    }
+function readExampleHandler(mod: unknown, moduleUrl: URL) {
+  if (!mod || typeof mod !== 'object' || !('handler' in mod) || typeof mod.handler !== 'function') {
+    return undefined
   }
 
-  return undefined
+  let handler = mod.handler
+
+  return async (context: AppContext) => {
+    let result = await handler(context)
+    if (result instanceof Response) {
+      return result
+    }
+
+    throw new Error(`Expected example handler to return a Response: ${fileURLToPath(moduleUrl)}`)
+  }
 }
 
-function isNotFoundError(error: unknown): boolean {
-  return error instanceof Error && 'code' in error && error.code === 'ENOENT'
+function isModuleNotFoundError(error: unknown): boolean {
+  return error instanceof Error && 'code' in error && error.code === 'ERR_MODULE_NOT_FOUND'
 }
