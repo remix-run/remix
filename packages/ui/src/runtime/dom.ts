@@ -1557,7 +1557,13 @@ export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
   results?: Trackable<number | undefined>
   /** The `translate` HTML attribute. */
   translate?: Trackable<TranslateValue | undefined>
-  /** The `rmx-preserve-dom` HTML attribute. */
+  /**
+   * Preserve the current element attributes and children during frame DOM reconciliation.
+   *
+   * Server rendering and initial hydration still process this element and its children. On later
+   * frame reloads, a matched element with `rmx-preserve-dom` keeps its live DOM so custom elements
+   * and imperative widgets can own their subtree.
+   */
   'rmx-preserve-dom'?: Trackable<boolean | '' | undefined>
 
   // RDFa Attributes
