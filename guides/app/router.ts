@@ -23,7 +23,7 @@ declare module 'remix/router' {
   }
 }
 
-const publicDir = path.resolve(import.meta.dirname, '../public')
+const publicDir = path.resolve(import.meta.dirname, '../public/static')
 
 export function createGuidesRouter() {
   let router = createRouter<AppContext>({
