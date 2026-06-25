@@ -39,36 +39,36 @@ export function Counter(handle: Handle) {
 
 const counterStyles = css({
   display: 'grid',
-  gap: '1rem',
+  gap: 'var(--rmx-space-lg)',
   placeItems: 'center',
 })
 
 const countStyles = css({
   margin: '0',
-  color: 'var(--red-brand)',
-  fontSize: '4rem',
-  fontWeight: '900',
-  lineHeight: '0.9',
-  letterSpacing: '-0.08em',
+  color: 'var(--rmx-color-accent)',
+  fontSize: 'calc(var(--rmx-font-size-page-title) * 2)',
+  fontWeight: 'var(--rmx-font-weight-bold)',
+  lineHeight: 'var(--rmx-line-height-tight)',
+  letterSpacing: 'var(--rmx-letter-spacing-tight)',
 })
 
 const actionsStyles = css({
   display: 'flex',
   flexWrap: 'wrap',
-  gap: '0.75rem',
+  gap: 'var(--rmx-space-md)',
 })
 
 const buttonStyles = css({
   appearance: 'none',
-  border: '1px solid var(--red-brand)',
-  borderRadius: '999px',
-  background: 'var(--red-brand)',
-  color: 'white',
+  border: 'var(--rmx-space-px) solid var(--rmx-color-action-primary-border)',
+  borderRadius: 'var(--rmx-radius-full)',
+  background: 'var(--rmx-color-action-primary-background)',
+  color: 'var(--rmx-color-action-primary-foreground)',
   cursor: 'pointer',
   font: 'inherit',
-  fontWeight: '700',
+  fontWeight: 'var(--rmx-font-weight-bold)',
   lineHeight: '1',
-  padding: '0.7rem 1rem',
+  padding: 'var(--rmx-space-sm) var(--rmx-space-lg)',
   '&:hover': {
     filter: 'brightness(0.95)',
   },
