@@ -24,187 +24,94 @@
   "sideEffects": false,
   "exports": {
     ".": {
-      "types": "./src/index.ts",
-      "default": "./src/index.ts"
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
     },
     "./animation": {
-      "types": "./src/animation/index.ts",
-      "default": "./src/animation/index.ts"
+      "types": "./dist/animation/index.d.ts",
+      "default": "./dist/animation/index.js"
     },
     "./accordion": {
-      "types": "./src/primitives/accordion/accordion.tsx",
-      "default": "./src/primitives/accordion/accordion.tsx"
+      "types": "./dist/primitives/accordion/accordion.d.ts",
+      "default": "./dist/primitives/accordion/accordion.js"
     },
     "./anchor": {
-      "types": "./src/primitives/anchor/anchor.ts",
-      "default": "./src/primitives/anchor/anchor.ts"
+      "types": "./dist/primitives/anchor/anchor.d.ts",
+      "default": "./dist/primitives/anchor/anchor.js"
     },
     "./combobox": {
-      "types": "./src/primitives/combobox/combobox.tsx",
-      "default": "./src/primitives/combobox/combobox.tsx"
+      "types": "./dist/primitives/combobox/combobox.d.ts",
+      "default": "./dist/primitives/combobox/combobox.js"
     },
     "./components/accordion": {
-      "types": "./src/components/accordion/accordion.tsx",
-      "default": "./src/components/accordion/accordion.tsx"
+      "types": "./dist/components/accordion/accordion.d.ts",
+      "default": "./dist/components/accordion/accordion.js"
     },
     "./components/breadcrumbs": {
-      "types": "./src/components/breadcrumbs/breadcrumbs.tsx",
-      "default": "./src/components/breadcrumbs/breadcrumbs.tsx"
+      "types": "./dist/components/breadcrumbs/breadcrumbs.d.ts",
+      "default": "./dist/components/breadcrumbs/breadcrumbs.js"
     },
     "./components/button": {
-      "types": "./src/components/button/button.tsx",
-      "default": "./src/components/button/button.tsx"
+      "types": "./dist/components/button/button.d.ts",
+      "default": "./dist/components/button/button.js"
     },
     "./components/combobox": {
-      "types": "./src/components/combobox/combobox.tsx",
-      "default": "./src/components/combobox/combobox.tsx"
+      "types": "./dist/components/combobox/combobox.d.ts",
+      "default": "./dist/components/combobox/combobox.js"
     },
     "./components/menu": {
-      "types": "./src/components/menu/menu.tsx",
-      "default": "./src/components/menu/menu.tsx"
+      "types": "./dist/components/menu/menu.d.ts",
+      "default": "./dist/components/menu/menu.js"
     },
     "./components/select": {
-      "types": "./src/components/select/select.tsx",
-      "default": "./src/components/select/select.tsx"
+      "types": "./dist/components/select/select.d.ts",
+      "default": "./dist/components/select/select.js"
     },
     "./components/tabs": {
-      "types": "./src/components/tabs/tabs.tsx",
-      "default": "./src/components/tabs/tabs.tsx"
+      "types": "./dist/components/tabs/tabs.d.ts",
+      "default": "./dist/components/tabs/tabs.js"
     },
     "./jsx-dev-runtime": {
-      "types": "./src/jsx-runtime.ts",
-      "default": "./src/jsx-runtime.ts"
+      "types": "./dist/jsx-runtime.d.ts",
+      "default": "./dist/jsx-runtime.js"
     },
     "./jsx-runtime": {
-      "types": "./src/jsx-runtime.ts",
-      "default": "./src/jsx-runtime.ts"
+      "types": "./dist/jsx-runtime.d.ts",
+      "default": "./dist/jsx-runtime.js"
     },
     "./listbox": {
-      "types": "./src/primitives/listbox/listbox.ts",
-      "default": "./src/primitives/listbox/listbox.ts"
+      "types": "./dist/primitives/listbox/listbox.d.ts",
+      "default": "./dist/primitives/listbox/listbox.js"
     },
     "./menu": {
-      "types": "./src/primitives/menu/menu.tsx",
-      "default": "./src/primitives/menu/menu.tsx"
+      "types": "./dist/primitives/menu/menu.d.ts",
+      "default": "./dist/primitives/menu/menu.js"
     },
     "./popover": {
-      "types": "./src/primitives/popover/popover.ts",
-      "default": "./src/primitives/popover/popover.ts"
+      "types": "./dist/primitives/popover/popover.d.ts",
+      "default": "./dist/primitives/popover/popover.js"
     },
     "./select": {
-      "types": "./src/primitives/select/select.tsx",
-      "default": "./src/primitives/select/select.tsx"
+      "types": "./dist/primitives/select/select.d.ts",
+      "default": "./dist/primitives/select/select.js"
     },
     "./tabs": {
-      "types": "./src/primitives/tabs/tabs.tsx",
-      "default": "./src/primitives/tabs/tabs.tsx"
+      "types": "./dist/primitives/tabs/tabs.d.ts",
+      "default": "./dist/primitives/tabs/tabs.js"
     },
     "./server": {
-      "types": "./src/server/stream.ts",
-      "default": "./src/server/stream.ts"
+      "types": "./dist/server/stream.d.ts",
+      "default": "./dist/server/stream.js"
     },
     "./test": {
-      "types": "./src/test.ts",
-      "default": "./src/test.ts"
+      "types": "./dist/test.d.ts",
+      "default": "./dist/test.js"
     },
     "./scroll-lock": {
-      "types": "./src/utils/scroll-lock.ts",
-      "default": "./src/utils/scroll-lock.ts"
+      "types": "./dist/utils/scroll-lock.d.ts",
+      "default": "./dist/utils/scroll-lock.js"
     },
     "./package.json": "./package.json"
-  },
-  "publishConfig": {
-    "exports": {
-      ".": {
-        "types": "./dist/index.d.ts",
-        "default": "./dist/index.js"
-      },
-      "./animation": {
-        "types": "./dist/animation/index.d.ts",
-        "default": "./dist/animation/index.js"
-      },
-      "./accordion": {
-        "types": "./dist/primitives/accordion/accordion.d.ts",
-        "default": "./dist/primitives/accordion/accordion.js"
-      },
-      "./anchor": {
-        "types": "./dist/primitives/anchor/anchor.d.ts",
-        "default": "./dist/primitives/anchor/anchor.js"
-      },
-      "./combobox": {
-        "types": "./dist/primitives/combobox/combobox.d.ts",
-        "default": "./dist/primitives/combobox/combobox.js"
-      },
-      "./components/accordion": {
-        "types": "./dist/components/accordion/accordion.d.ts",
-        "default": "./dist/components/accordion/accordion.js"
-      },
-      "./components/breadcrumbs": {
-        "types": "./dist/components/breadcrumbs/breadcrumbs.d.ts",
-        "default": "./dist/components/breadcrumbs/breadcrumbs.js"
-      },
-      "./components/button": {
-        "types": "./dist/components/button/button.d.ts",
-        "default": "./dist/components/button/button.js"
-      },
-      "./components/combobox": {
-        "types": "./dist/components/combobox/combobox.d.ts",
-        "default": "./dist/components/combobox/combobox.js"
-      },
-      "./components/menu": {
-        "types": "./dist/components/menu/menu.d.ts",
-        "default": "./dist/components/menu/menu.js"
-      },
-      "./components/select": {
-        "types": "./dist/components/select/select.d.ts",
-        "default": "./dist/components/select/select.js"
-      },
-      "./components/tabs": {
-        "types": "./dist/components/tabs/tabs.d.ts",
-        "default": "./dist/components/tabs/tabs.js"
-      },
-      "./jsx-dev-runtime": {
-        "types": "./dist/jsx-runtime.d.ts",
-        "default": "./dist/jsx-runtime.js"
-      },
-      "./jsx-runtime": {
-        "types": "./dist/jsx-runtime.d.ts",
-        "default": "./dist/jsx-runtime.js"
-      },
-      "./listbox": {
-        "types": "./dist/primitives/listbox/listbox.d.ts",
-        "default": "./dist/primitives/listbox/listbox.js"
-      },
-      "./menu": {
-        "types": "./dist/primitives/menu/menu.d.ts",
-        "default": "./dist/primitives/menu/menu.js"
-      },
-      "./popover": {
-        "types": "./dist/primitives/popover/popover.d.ts",
-        "default": "./dist/primitives/popover/popover.js"
-      },
-      "./select": {
-        "types": "./dist/primitives/select/select.d.ts",
-        "default": "./dist/primitives/select/select.js"
-      },
-      "./tabs": {
-        "types": "./dist/primitives/tabs/tabs.d.ts",
-        "default": "./dist/primitives/tabs/tabs.js"
-      },
-      "./server": {
-        "types": "./dist/server/stream.d.ts",
-        "default": "./dist/server/stream.js"
-      },
-      "./test": {
-        "types": "./dist/test.d.ts",
-        "default": "./dist/test.js"
-      },
-      "./scroll-lock": {
-        "types": "./dist/utils/scroll-lock.d.ts",
-        "default": "./dist/utils/scroll-lock.js"
-      },
-      "./package.json": "./package.json"
-    }
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
