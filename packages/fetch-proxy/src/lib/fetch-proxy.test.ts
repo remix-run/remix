@@ -1,4 +1,5 @@
 import * as assert from '@remix-run/assert'
+import { createTestServer } from '@remix-run/node-fetch-server/test'
 import { describe, it } from '@remix-run/test'
 
 import { type FetchProxyOptions, createFetchProxy } from './fetch-proxy.ts'
@@ -72,6 +73,90 @@ describe('fetch proxy', () => {
     assert.equal(request.method, 'POST')
     assert.equal(request.headers.get('Content-Type'), 'text/plain')
     assert.equal(await request.text(), 'hello')
+  })
+
+  it('proxies lazy requests from node-fetch-server', async () => {
+    let upstream = await createTestServer(async (request) =>
+      Response.json({
+        url: request.url,
+        method: request.method,
+        contentType: request.headers.get('Content-Type'),
+        customHeader: request.headers.get('X-Custom'),
+        body: await request.text(),
+      }),
+    )
+    let proxy = await createTestServer((request) => {
+      let proxyFetch = createFetchProxy(upstream.baseUrl)
+      return proxyFetch(request)
+    })
+
+    try {
+      let response = await fetch(`${proxy.baseUrl}/orders?q=remix`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain',
+          'X-Custom': 'present',
+        },
+        body: 'hello from lazy request',
+      })
+
+      let json = await response.json()
+      assert.deepEqual(json, {
+        url: `${upstream.baseUrl}/orders?q=remix`,
+        method: 'POST',
+        contentType: 'text/plain',
+        customHeader: 'present',
+        body: 'hello from lazy request',
+      })
+    } finally {
+      await proxy.close()
+      await upstream.close()
+    }
+  })
+
+  it('proxies lazy requests from node-fetch-server with init overrides', async () => {
+    let upstream = await createTestServer(async (request) =>
+      Response.json({
+        url: request.url,
+        method: request.method,
+        contentType: request.headers.get('Content-Type'),
+        customHeader: request.headers.get('X-Custom'),
+        body: await request.text(),
+      }),
+    )
+    let proxy = await createTestServer((request) => {
+      let proxyFetch = createFetchProxy(upstream.baseUrl)
+      return proxyFetch(request, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'text/override',
+          'X-Custom': 'override',
+        },
+      })
+    })
+
+    try {
+      let response = await fetch(`${proxy.baseUrl}/orders?q=remix`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'text/plain',
+          'X-Custom': 'present',
+        },
+        body: 'hello from lazy request',
+      })
+
+      let json = await response.json()
+      assert.deepEqual(json, {
+        url: `${upstream.baseUrl}/orders?q=remix`,
+        method: 'PUT',
+        contentType: 'text/override',
+        customHeader: 'override',
+        body: 'hello from lazy request',
+      })
+    } finally {
+      await proxy.close()
+      await upstream.close()
+    }
   })
 
   it('forwards an empty request body', async () => {
