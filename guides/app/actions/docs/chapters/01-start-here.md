@@ -135,7 +135,13 @@ That one line does a lot:
 - Provides a typed href constructor:
   `routes.album.href({ albumId: 'thriller' })`.
 
-Next, add the action that handles the matched route in `app/actions/controller.tsx`:
+If you tried to run the app now, you will get a type error and Remix will throw an error:
+
+```txt
+TypeError: Missing action `album` in controller
+```
+
+This happens because the controller is checked against the route map. Once `app/routes.ts` has an `album` route, `app/actions/controller.tsx` needs an `album` action to handle it:
 
 ```tsx filename=app/actions/controller.tsx lines=[17-19]
 import { createController } from 'remix/router'
@@ -161,7 +167,9 @@ export default createController(routes, {
 })
 ```
 
-The `album` action returns a plain Web `Response`. Navigate to [http://localhost:44100/albums/thriller](http://localhost:44100/albums/thriller) in your browser and you should see this text response:
+For now the `album` action returns a plain Web `Response`. Inside the action, `params.albumId` comes from the `'/albums/:albumId'` route pattern.
+
+Navigate to [http://localhost:44100/albums/thriller](http://localhost:44100/albums/thriller) in your browser and you should see this text response:
 
 ```txt
 Album: thriller
@@ -173,84 +181,53 @@ The [Core App Structure](/docs/core-app-structure#routes-as-the-url-contract) ch
 
 ## Build your first page {#build-your-first-page}
 
-Make the album route return HTML next. A page is still a response: the controller gathers route data, then `context.render(...)` turns a Remix component tree into HTML through the render middleware that the template already installed.
+Let's make this album page a little more interesting by returning HTML via rendering a Remix component.
 
-Add the route-owned page component next to the controller:
+Remix UI uses JSX with a two-phase component model. A component function receives a `handle` and returns a render function. The setup phase runs once when the component is first created, and the render phase runs on the first render and every update afterward.
 
-```tsx filename=app/actions/album-page.tsx
-import { css } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+We'll come back to the component model later. If you want the full model now, check out the [Rendering UI chapter](/docs/rendering-ui).
 
-import { routes } from '../routes.ts'
-import { Document } from '../ui/document.tsx'
+```tsx
+function MyComponent(handle) {
+  // Setup phase: runs once when this component is created.
+  // The handle gives the component access to props and other Remix UI APIs.
 
-export interface Album {
-  artist: string
-  id: string
-  title: string
-  tracks: string[]
-  year: number
-}
-
-export function AlbumPage(handle: Handle<{ album: Album }>) {
   return () => {
-    let { album } = handle.props
+    // Render phase: runs on the first render and every update afterward.
+    // Return JSX from here.
 
-    return (
-      <Document title={`${album.title} — Albums`}>
-        <main mix={pageStyle}>
-          <a href={routes.home.href()}>← Home</a>
-          <p mix={metaStyle}>
-            {album.artist} · {album.year}
-          </p>
-          <h1>{album.title}</h1>
-
-          <h2>Featured tracks</h2>
-          <ol>
-            {album.tracks.map((track) => (
-              <li key={track}>{track}</li>
-            ))}
-          </ol>
-        </main>
-      </Document>
-    )
+    return <div>Hello, Remix</div>
   }
 }
-
-const pageStyle = css({
-  maxWidth: '44rem',
-  margin: '0 auto',
-  padding: '4rem 1.5rem',
-  fontFamily: 'system-ui, sans-serif',
-})
-
-const metaStyle = css({
-  color: '#666',
-})
 ```
 
-This component belongs in `app/actions/` because it is owned by one route. The `Handle` type describes the props the controller passes through `context.render(...)`. Move route UI into `app/ui/` when another route needs to share it.
+Now we can create a simple UI for our album page. We'll use the existing `Document` component defined elsewhere to add our app's shell:
 
-Update the album action so the controller keeps the request decision: find the album, handle an unknown album ID, and render the page.
+```tsx filename=app/actions/album-page.tsx
+import type { Handle } from 'remix/ui'
 
-```tsx filename=app/actions/controller.tsx lines=[6-7,9-17,29-37]
+import { Document } from '../ui/document.tsx'
+
+export function AlbumPage(handle: Handle<{ id: string }>) {
+  return () => (
+    <Document title="Album — Albums">
+      <main>
+        <h1>{handle.props.id}</h1>
+      </main>
+    </Document>
+  )
+}
+```
+
+To use this component, render it in the action. The route still returns a Web `Response`, but `context.render(...)` creates that response from a component tree instead of a string. Pass the matched `albumId` through for now so the page keeps showing the route param from the previous section. The render middleware is app code, and the [Rendering UI chapter](/docs/rendering-ui) shows where it comes from.
+
+```tsx filename=app/actions/controller.tsx lines=[6,18-20]
 import { createController } from 'remix/router'
 
 import { assetServer } from '../assets.ts'
 import { routes } from '../routes.ts'
 import { HomePage } from '../ui/scaffold-home-page.tsx'
 import { AlbumPage } from './album-page.tsx'
-import type { Album } from './album-page.tsx'
-
-const albums: Partial<Record<string, Album>> = {
-  thriller: {
-    artist: 'Michael Jackson',
-    id: 'thriller',
-    title: 'Thriller',
-    tracks: ['Beat It', 'Billie Jean', 'Thriller'],
-    year: 1982,
-  },
-}
 
 export default createController(routes, {
   actions: {
@@ -263,7 +240,59 @@ export default createController(routes, {
       return context.render(<HomePage />)
     },
     album(context) {
-      let album = albums[context.params.albumId]
+      return context.render(<AlbumPage id={context.params.albumId} />)
+    },
+  },
+})
+```
+
+For this walkthrough, set up a small in-memory database. The [Data and Validation chapter](/docs/data-and-validation) covers real database setup in more detail.
+
+```ts filename=app/actions/albums.ts
+export interface Album {
+  artist: string
+  id: string
+  title: string
+  year: number
+}
+
+const albums: Album[] = [
+  {
+    artist: 'Michael Jackson',
+    id: 'thriller',
+    title: 'Thriller',
+    year: 1982,
+  },
+]
+
+export async function getAlbum(albumId: string) {
+  return albums.find((album) => album.id === albumId)
+}
+```
+
+Now we can use the route param to "load" the appropriate album, return a `404` if it is missing, and pass the album data into the component as props:
+
+```tsx filename=app/actions/controller.tsx lines=[7,19-26]
+import { createController } from 'remix/router'
+
+import { assetServer } from '../assets.ts'
+import { routes } from '../routes.ts'
+import { HomePage } from '../ui/scaffold-home-page.tsx'
+import { AlbumPage } from './album-page.tsx'
+import { getAlbum } from './albums.ts'
+
+export default createController(routes, {
+  actions: {
+    async assets(context) {
+      return (
+        (await assetServer.fetch(context.request)) ?? new Response('Not Found', { status: 404 })
+      )
+    },
+    home(context) {
+      return context.render(<HomePage />)
+    },
+    async album(context) {
+      let album = await getAlbum(context.params.albumId)
 
       if (album === undefined) {
         return new Response('Album not found', { status: 404 })
@@ -275,13 +304,70 @@ export default createController(routes, {
 })
 ```
 
-Open [http://localhost:44100/albums/thriller](http://localhost:44100/albums/thriller) again. The same URL now returns server-rendered HTML, but the request path did not change: Remix still matches the route, calls the controller, and receives a Web `Response`.
+Let's tweak our `AlbumPage` component to display the album data:
+
+```tsx filename=app/actions/album-page.tsx lines=[3,6,8,11,13-16]
+import type { Handle } from 'remix/ui'
+
+import type { Album } from './albums.ts'
+import { Document } from '../ui/document.tsx'
+
+export function AlbumPage(handle: Handle<{ album: Album }>) {
+  return () => {
+    let { album } = handle.props
+
+    return (
+      <Document title={`${album.title} — Albums`}>
+        <main>
+          <p>
+            {album.artist} · {album.year}
+          </p>
+          <h1>{album.title}</h1>
+        </main>
+      </Document>
+    )
+  }
+}
+```
+
+Now the page displays the album title, artist, and year.
+
+Center it and add a little spacing with the `css` function and `mix` prop. The [Rendering UI chapter](/docs/rendering-ui) covers both in more detail.
+
+```tsx filename=app/actions/album-page.tsx lines=[1,14-18,21]
+import { css } from 'remix/ui'
+import type { Handle } from 'remix/ui'
+
+import type { Album } from './albums.ts'
+import { Document } from '../ui/document.tsx'
+
+export function AlbumPage(handle: Handle<{ album: Album }>) {
+  return () => {
+    let { album } = handle.props
+
+    return (
+      <Document title={`${album.title} — Albums`}>
+        <main
+          mix={css({
+            maxWidth: '44rem',
+            margin: '0 auto',
+            padding: '4rem 1.5rem',
+          })}
+        >
+          <p mix={css({ color: '#666' })}>
+            {album.artist} · {album.year}
+          </p>
+          <h1>{album.title}</h1>
+        </main>
+      </Document>
+    )
+  }
+}
+```
+
+Open [http://localhost:44100/albums/thriller](http://localhost:44100/albums/thriller) again. The same URL now returns the styled album page.
 
 > TODO: Add a screenshot of the browser showing the rendered album page.
-
-The controller owns the request boundary. It reads `params.albumId`, decides whether the route can be served, and returns a `404` response when it cannot. The page component only receives renderable data. There is no browser JavaScript involved yet; the next section adds a normal HTML form that works on the server first.
-
-The [Rendering UI](/docs/rendering-ui#the-remix-component-model) chapter covers the component model, document shells, styling, and first-party UI components.
 
 ## Build your first form action
 
