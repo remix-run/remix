@@ -226,15 +226,15 @@ describe('diffNodes', () => {
       expect(button.isConnected).toBe(false)
     })
 
-    it('preserves rmx-ignore element attributes and children', () => {
+    it('preserves rmx-preserve-dom element attributes and children', () => {
       let container = document.createElement('div')
-      container.innerHTML = '<div rmx-ignore data-state="client"><button>Client</button></div>'
+      container.innerHTML = '<div rmx-preserve-dom data-state="client"><button>Client</button></div>'
       let div = container.querySelector('div')
       invariant(div)
       let button = div.querySelector('button')
       invariant(button)
 
-      diffDom(container, '<div rmx-ignore data-state="server"><span>Server</span></div>')
+      diffDom(container, '<div rmx-preserve-dom data-state="server"><span>Server</span></div>')
 
       expect(container.firstElementChild).toBe(div)
       expect(div.getAttribute('data-state')).toBe('client')
@@ -242,7 +242,7 @@ describe('diffNodes', () => {
       expect(div.innerHTML).toBe('<button>Client</button>')
     })
 
-    it('preserves rmx-ignore custom element children added during initialization', () => {
+    it('preserves rmx-preserve-dom custom element children added during initialization', () => {
       let tagName = 'mock-pagefind-modal-trigger-lifecycle'
       if (!customElements.get(tagName)) {
         customElements.define(
@@ -278,10 +278,10 @@ describe('diffNodes', () => {
         let button = trigger.querySelector('button')
         invariant(button)
 
-        diffDom(container, `<${tagName} rmx-ignore></${tagName}>`)
+        diffDom(container, `<${tagName} rmx-preserve-dom></${tagName}>`)
 
         expect(container.firstElementChild).toBe(trigger)
-        expect(trigger.hasAttribute('rmx-ignore')).toBe(true)
+        expect(trigger.hasAttribute('rmx-preserve-dom')).toBe(true)
         expect(trigger.querySelector('button')).toBe(button)
         expect(button.isConnected).toBe(true)
       } finally {
@@ -289,7 +289,7 @@ describe('diffNodes', () => {
       }
     })
 
-    it('can pair rmx-ignore elements with data-key before index fallback moves them', () => {
+    it('can pair rmx-preserve-dom elements with data-key before index fallback moves them', () => {
       let tagName = 'mock-pagefind-modal-lifecycle'
       let connects = 0
       let disconnects = 0
@@ -313,7 +313,7 @@ describe('diffNodes', () => {
       document.body.appendChild(container)
 
       try {
-        container.innerHTML = `<section><span>Old</span><${tagName} data-key="modal" rmx-ignore><dialog>Client</dialog></${tagName}></section>`
+        container.innerHTML = `<section><span>Old</span><${tagName} data-key="modal" rmx-preserve-dom><dialog>Client</dialog></${tagName}></section>`
         let modal = container.querySelector(tagName)
         invariant(modal)
         let dialog = modal.querySelector('dialog')
@@ -323,7 +323,7 @@ describe('diffNodes', () => {
 
         diffDom(
           container,
-          `<section><span>New</span><p>Inserted</p><${tagName} data-key="modal" rmx-ignore></${tagName}></section>`,
+          `<section><span>New</span><p>Inserted</p><${tagName} data-key="modal" rmx-preserve-dom></${tagName}></section>`,
         )
 
         expect(container.querySelector(tagName)).toBe(modal)
@@ -336,7 +336,7 @@ describe('diffNodes', () => {
       }
     })
 
-    it('does not reconnect keyed rmx-ignore elements during reordering', () => {
+    it('does not reconnect keyed rmx-preserve-dom elements during reordering', () => {
       let tagName = 'mock-pagefind-modal-stationary'
       let connects = 0
       let disconnects = 0
@@ -360,7 +360,7 @@ describe('diffNodes', () => {
       document.body.appendChild(container)
 
       try {
-        container.innerHTML = `<section><${tagName} data-key="modal" rmx-ignore><dialog>Client</dialog></${tagName}><p>Old</p></section>`
+        container.innerHTML = `<section><${tagName} data-key="modal" rmx-preserve-dom><dialog>Client</dialog></${tagName}><p>Old</p></section>`
         let modal = container.querySelector(tagName)
         invariant(modal)
         let dialog = modal.querySelector('dialog')
@@ -370,7 +370,7 @@ describe('diffNodes', () => {
 
         diffDom(
           container,
-          `<section><p>New</p><${tagName} data-key="modal" rmx-ignore></${tagName}></section>`,
+          `<section><p>New</p><${tagName} data-key="modal" rmx-preserve-dom></${tagName}></section>`,
         )
 
         expect(container.querySelector(tagName)).toBe(modal)

@@ -1557,8 +1557,8 @@ export interface AllHTMLProps<eventTarget extends EventTarget = EventTarget>
   results?: Trackable<number | undefined>
   /** The `translate` HTML attribute. */
   translate?: Trackable<TranslateValue | undefined>
-  /** The `rmx-ignore` HTML attribute. */
-  'rmx-ignore'?: Trackable<boolean | '' | undefined>
+  /** The `rmx-preserve-dom` HTML attribute. */
+  'rmx-preserve-dom'?: Trackable<boolean | '' | undefined>
 
   // RDFa Attributes
   /** The `about` HTML attribute. */
