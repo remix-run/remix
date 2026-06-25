@@ -5,8 +5,9 @@ Run Node.js applications with Hot Module Reloading.
 ## Features
 
 - **HMR Runtime**: Provides an `import.meta.hot` API for modules that can handle hot updates
-- **Module Hook Friendly**: Works with Node import hooks that generate `import.meta.hot` usage
+- **Module Hook Friendly**: Use Node's module customization hooks API to automatically insert `import.meta.hot` usage
 - **Restart Fallback**: Restarts the child Node process when updates aren't accepted
+- **Fetch Proxy Support**: Wrap fetch handlers so requests are delayed/retried during server updates/restarts
 - **Browser HMR Integration**: Optionally hosts browser HMR coordination that survives child restarts
 
 ## Installation
@@ -17,7 +18,7 @@ npm i remix
 
 ## Usage
 
-Create a development script that starts your app server with HMR enabled, along with any additional Node args:
+Create a development script that starts your app server with HMR enabled, along with any additional Node args, such as the `--import` flag to provide [Node module customization hooks](https://nodejs.org/api/module.html#customization-hooks) for [JSX syntax support](https://github.com/remix-run/remix/tree/main/packages/node-tsx) and [Remix component HMR](https://github.com/remix-run/remix/tree/main/packages/ui-hmr):
 
 ```ts
 // dev.ts
@@ -41,45 +42,50 @@ Then run the script with Node:
 }
 ```
 
-## File Watching
+## Fetch Proxy Support
 
-The file system is watched automatically so server source changes can hot update or restart the child process.
+During development, server updates can briefly leave your app unable to handle requests. In a server-only context, requests may be rejected while the child server is restarting. In a browser context, the browser may refresh or revalidate at the same time as a server restart, which can result in failed requests or a broken page.
 
-You can optionally provide an array of glob patterns to the `watch.ignore` option.
-
-```ts
-import { run } from 'remix/node-hmr'
-
-run('./server.ts', {
-  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
-  watch: {
-    ignore: ['**/node_modules/**'],
-  },
-})
-```
-
-You can also configure polling behavior. Polling defaults to `true` on Windows and `false` elsewhere:
+A stable proxy server can avoid this by continuing to listen on the public port while `node-hmr` updates the child server behind it. `createHmrReadyFetch()` works with any fetch handler, so you can compose it with `createFetchProxy()` from [`remix/fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) to forward requests to the child server while delaying or retrying requests during updates.
 
 ```ts
-import { run } from 'remix/node-hmr'
+// dev.ts
+import * as http from 'node:http'
 
-run('./server.ts', {
-  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
-  watch: {
-    poll: true,
-    pollInterval: 100,
+import { createFetchProxy } from 'remix/fetch-proxy'
+import { run, createHmrReadyFetch } from 'remix/node-hmr'
+import { createRequestListener } from 'remix/node-fetch-server'
+
+const publicPort = 44100
+const childPort = 44101
+
+const hmrRunner = run('./server.ts', {
+  env: {
+    ...process.env,
+    PORT: String(childPort),
   },
+  nodeArgs: ['--import', 'remix/node-tsx'],
 })
+
+const proxyFetch = createFetchProxy(`http://127.0.0.1:${childPort}`, {
+  xForwardedHeaders: true,
+})
+
+const server = http.createServer(createRequestListener(createHmrReadyFetch(hmrRunner, proxyFetch)))
+
+server.listen(publicPort)
 ```
 
-## Module Hooks
+By default, `createHmrReadyFetch()` retries `GET` and `HEAD` requests when the wrapped fetch handler throws or returns a `502`, `503`, or `504` response, but only if the server updated or restarted while the request was in flight. You can customize this policy with `shouldRetry`:
 
-`node-hmr` provides the `import.meta.hot` runtime and watches the loaded module graph. It does not transform component modules by itself.
+```ts
+let fetchWhenReady = createHmrReadyFetch(hmrRunner, proxyFetch, {
+  shouldRetry({ request, response }) {
+    if (request.method !== 'GET' && request.method !== 'HEAD') return false
 
-Use Node's `--import` flag to add transforms with [Node's module customization hooks API](https://nodejs.org/api/module.html#customization-hooks), such as Remix UI component HMR:
-
-```sh
-node --import remix/node-tsx --import remix/ui-hmr/node ./server.ts
+    return response === undefined || [502, 503, 504].includes(response.status)
+  },
+})
 ```
 
 ## Browser HMR Integration
@@ -130,6 +136,37 @@ server.listen(port, () => {
   if (process.env.NODE_HMR) {
     import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
   }
+})
+```
+
+## File Watching
+
+The file system is watched automatically so server source changes can hot update or restart the child process.
+
+You can optionally provide an array of glob patterns to the `watch.ignore` option.
+
+```ts
+import { run } from 'remix/node-hmr'
+
+run('./server.ts', {
+  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
+  watch: {
+    ignore: ['**/node_modules/**'],
+  },
+})
+```
+
+You can also configure polling behavior. Polling defaults to `true` on Windows and `false` elsewhere:
+
+```ts
+import { run } from 'remix/node-hmr'
+
+run('./server.ts', {
+  nodeArgs: ['--import', 'remix/node-tsx', '--import', 'remix/ui-hmr/node'],
+  watch: {
+    poll: true,
+    pollInterval: 100,
+  },
 })
 ```
 
@@ -258,6 +295,7 @@ if (import.meta.hot) {
 ## Related Packages
 
 - [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) - Consumes browser HMR channels for coordinating server and browser HMR updates
+- [`fetch-proxy`](https://github.com/remix-run/remix/tree/main/packages/fetch-proxy) - Creates fetch handlers for forwarding requests to another server
 - [`ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) - Provides code transforms and runtime for HMR for Remix UI components
 
 ## License

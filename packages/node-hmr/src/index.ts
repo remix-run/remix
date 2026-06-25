@@ -77,6 +77,87 @@ export interface NodeHmrRunner {
   ready(): Promise<void>
 }
 
+type HmrReadyFetchRetryContext = {
+  /** Child process lifecycle generation that handled the fetch attempt. */
+  generation: number
+  /** Request passed to the wrapped fetch handler. */
+  request: Request
+} & (
+  | {
+      /** Error thrown by the wrapped fetch handler. */
+      error: unknown
+      /** Response is absent when the wrapped fetch handler throws. */
+      response?: never
+    }
+  | {
+      /** Error is absent when the wrapped fetch handler returns a response. */
+      error?: never
+      /** Response returned by the wrapped fetch handler. */
+      response: Response
+    }
+)
+
+/**
+ * Options for {@link createHmrReadyFetch}.
+ */
+export interface HmrReadyFetchOptions {
+  /**
+   * Determines whether a response or thrown error should be retried if the
+   * runner moves to a new generation while the request is in flight. Defaults
+   * to retrying `GET` and `HEAD` requests when the fetch throws or returns
+   * `502`, `503`, or `504`.
+   */
+  shouldRetry?: (context: HmrReadyFetchRetryContext) => boolean | Promise<boolean>
+}
+
+/**
+ * Wraps a fetch handler so requests wait for the current HMR generation to be ready.
+ *
+ * If the wrapped fetch handler returns a retryable response or throws a retryable error, the
+ * request is attempted again only when the runner moved to a new generation while the request was
+ * in flight.
+ *
+ * @param runner HMR runner that controls server readiness.
+ * @param fetch Fetch handler to call once the runner is ready.
+ * @param options Retry behavior for responses and thrown errors.
+ * @returns A fetch handler that waits for HMR readiness before forwarding requests.
+ */
+export function createHmrReadyFetch(
+  runner: NodeHmrRunner,
+  fetch: (request: Request) => Response | Promise<Response>,
+  options: HmrReadyFetchOptions = {},
+): (request: Request) => Promise<Response> {
+  let shouldRetry = options.shouldRetry ?? shouldRetrySafeUnavailableRequest
+
+  return async (request) => {
+    while (true) {
+      await runner.ready()
+      let generation = runner.generation
+
+      try {
+        let response = await fetch(request)
+
+        if (!(await shouldRetry({ generation, request, response }))) {
+          return response
+        }
+
+        await runner.ready()
+        if (runner.generation !== generation) continue
+        return response
+      } catch (error) {
+        await runner.ready()
+        if (
+          runner.generation !== generation &&
+          (await shouldRetry({ error, generation, request }))
+        ) {
+          continue
+        }
+        throw error
+      }
+    }
+  }
+}
+
 /**
  * Starts a Node.js entry module under HMR supervision.
  *
@@ -114,6 +195,20 @@ export function run(entry: string, options: RunOptions = {}): NodeHmrRunner {
       return controller.ready()
     },
   }
+}
+
+function shouldRetrySafeUnavailableRequest({
+  request,
+  response,
+}: HmrReadyFetchRetryContext): boolean {
+  if (request.method !== 'GET' && request.method !== 'HEAD') return false
+
+  return (
+    response === undefined ||
+    response.status === 502 ||
+    response.status === 503 ||
+    response.status === 504
+  )
 }
 
 function normalizeBrowserHmrChannelOptions(

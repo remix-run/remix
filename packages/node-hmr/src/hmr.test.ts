@@ -1,4 +1,5 @@
 import * as fs from 'node:fs/promises'
+import * as net from 'node:net'
 import * as path from 'node:path'
 import { spawn, type ChildProcess } from 'node:child_process'
 import { fileURLToPath, pathToFileURL } from 'node:url'
@@ -177,9 +178,9 @@ describe('node-hmr', () => {
     }
   })
 
-  it('exposes a ready barrier and generation for userland request handling', async () => {
-    await using fixture = await createReadyGenerationFixture({
-      'server.ts': getFetchWhenReadyChildServerSource('one'),
+  it('proxies requests through the ready child server generation', async () => {
+    await using fixture = await createHmrProxyFixture({
+      'server.ts': getHmrProxyChildServerSource('one'),
     })
     let server = startFixtureServer(fixture.path)
 
@@ -187,7 +188,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(fixture.entryPath, getFetchWhenReadyChildServerSource('two'))
+      await fs.writeFile(fixture.entryPath, getHmrProxyChildServerSource('two'))
       await waitForOutput(server, /restart server\.ts/)
 
       let response = await fetch(`http://127.0.0.1:${ready.port}`)
@@ -198,9 +199,9 @@ describe('node-hmr', () => {
     }
   })
 
-  it('keeps ready pending for entry hot updates until the server is ready', async () => {
-    await using fixture = await createReadyGenerationFixture({
-      'server.ts': getFetchWhenReadyHotChildServerSource('one', { listenDelayMs: 0 }),
+  it('waits for entry hot updates before proxying requests', async () => {
+    await using fixture = await createHmrProxyFixture({
+      'server.ts': getHmrProxyHotChildServerSource('one', { listenDelayMs: 0 }),
     })
     let server = startFixtureServer(fixture.path)
 
@@ -210,7 +211,7 @@ describe('node-hmr', () => {
 
       await fs.writeFile(
         fixture.entryPath,
-        getFetchWhenReadyHotChildServerSource('two', { listenDelayMs: 250 }),
+        getHmrProxyHotChildServerSource('two', { listenDelayMs: 250 }),
       )
       await waitForOutput(server, /"type":"entry-scheduled","message":"two"/)
 
@@ -223,9 +224,9 @@ describe('node-hmr', () => {
     }
   })
 
-  it('allows userland to retry safe gateway responses during a restart', async () => {
-    await using fixture = await createReadyGenerationFixture({
-      'server.ts': getFetchWhenReadyChildServerSource('one'),
+  it('retries safe proxy responses during a restart', async () => {
+    await using fixture = await createHmrProxyFixture({
+      'server.ts': getHmrProxyChildServerSource('one'),
     })
     let server = startFixtureServer(fixture.path)
 
@@ -235,7 +236,7 @@ describe('node-hmr', () => {
 
       let responsePromise = fetch(`http://127.0.0.1:${ready.port}/retry-during-restart`)
       await waitForOutput(server, /retry-during-restart/)
-      await fs.writeFile(fixture.entryPath, getFetchWhenReadyChildServerSource('two'))
+      await fs.writeFile(fixture.entryPath, getHmrProxyChildServerSource('two'))
 
       let response = await responsePromise
       assert.equal(response.status, 200)
@@ -1151,19 +1152,26 @@ function getGenericGreetingSource(options: {
   ].join('\n')
 }
 
-function getFetchWhenReadyChildServerSource(message: string): string {
+function getHmrProxyChildServerSource(message: string): string {
   let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
+  let nodeFetchServerImportUrl = pathToFileURL(
+    path.join(packageRoot, '../node-fetch-server/src/index.ts'),
+  ).href
 
   return [
-    `import { createServer } from 'node:http'`,
+    `import * as http from 'node:http'`,
     `import { writeFile } from 'node:fs/promises'`,
+    ``,
     `import { emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    `import { createRequestListener } from ${JSON.stringify(nodeFetchServerImportUrl)}`,
     ``,
-    `let server = createServer((_request, response) => {`,
-    `  response.end(${JSON.stringify(message)})`,
-    `})`,
+    `const server = http.createServer(`,
+    `  createRequestListener(() => new Response(${JSON.stringify(message)})),`,
+    `)`,
     ``,
-    `server.listen(0, '127.0.0.1', async () => {`,
+    `const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 0`,
+    ``,
+    `server.listen(port, '127.0.0.1', async () => {`,
     `  let address = server.address()`,
     `  if (address && typeof address === 'object') {`,
     `    await writeFile(process.env.CHILD_PORT_FILE, String(address.port))`,
@@ -1174,23 +1182,30 @@ function getFetchWhenReadyChildServerSource(message: string): string {
   ].join('\n')
 }
 
-function getFetchWhenReadyHotChildServerSource(
+function getHmrProxyHotChildServerSource(
   message: string,
   options: { listenDelayMs: number },
 ): string {
   let nodeHmrRuntimeUrl = pathToFileURL(path.join(packageRoot, 'src/runtime.node-hmr.ts')).href
+  let nodeFetchServerImportUrl = pathToFileURL(
+    path.join(packageRoot, '../node-fetch-server/src/index.ts'),
+  ).href
 
   return [
-    `import { createServer } from 'node:http'`,
+    `import * as http from 'node:http'`,
     `import { writeFile } from 'node:fs/promises'`,
-    `import { emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
     ``,
-    `let server = createServer((_request, response) => {`,
-    `  response.end(${JSON.stringify(message)})`,
-    `})`,
+    `import { emitServerReady } from ${JSON.stringify(nodeHmrRuntimeUrl)}`,
+    `import { createRequestListener } from ${JSON.stringify(nodeFetchServerImportUrl)}`,
+    ``,
+    `const server = http.createServer(`,
+    `  createRequestListener(() => new Response(${JSON.stringify(message)})),`,
+    `)`,
+    ``,
+    `const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 0`,
     ``,
     `setTimeout(() => {`,
-    `  server.listen(0, '127.0.0.1', async () => {`,
+    `  server.listen(port, '127.0.0.1', async () => {`,
     `    let address = server.address()`,
     `    if (address && typeof address === 'object') {`,
     `      await writeFile(process.env.CHILD_PORT_FILE, String(address.port))`,
@@ -1242,7 +1257,7 @@ async function createFixture(
   }
 }
 
-async function createReadyGenerationFixture(
+async function createHmrProxyFixture(
   files: Record<string, string>,
 ): Promise<AsyncDisposable & { entryPath: string; path: string }> {
   let fixtureRoot = path.join(packageRoot, '.tmp')
@@ -1250,83 +1265,78 @@ async function createReadyGenerationFixture(
 
   let fixturePath = await fs.mkdtemp(path.join(fixtureRoot, 'node-hmr-'))
   let nodeHmrImportUrl = pathToFileURL(path.join(packageRoot, 'src/index.ts')).href
+  let fetchProxyImportUrl = pathToFileURL(
+    path.join(packageRoot, '../fetch-proxy/src/index.ts'),
+  ).href
+  let nodeFetchServerImportUrl = pathToFileURL(
+    path.join(packageRoot, '../node-fetch-server/src/index.ts'),
+  ).href
+  let childPort = await getAvailablePort()
   await writeFixtureFiles(fixturePath, {
     ...files,
+    'fetch-proxy.ts': getPatchedFetchProxySource(fetchProxyImportUrl),
     'dev.ts': [
-      `import { createServer } from 'node:http'`,
+      `import * as http from 'node:http'`,
       `import { fileURLToPath } from 'node:url'`,
-      `import { run } from ${JSON.stringify(nodeHmrImportUrl)}`,
       ``,
-      `let childPort = 0`,
-      `let publicPort = 0`,
+      `import { createHmrReadyFetch, run } from ${JSON.stringify(nodeHmrImportUrl)}`,
+      `import { createRequestListener } from ${JSON.stringify(nodeFetchServerImportUrl)}`,
+      ``,
+      `import { createFetchProxy } from './fetch-proxy.ts'`,
+      ``,
+      `const originPort = 0`,
+      `const childPort = ${JSON.stringify(childPort)}`,
+      ``,
       `let returnedStaleGateway = false`,
-      `let retryMethods = ['GET', 'HEAD']`,
-      `let retryStatusCodes = [502, 503, 504]`,
       ``,
-      `let app = run('server.ts', {`,
+      `const hmrRunner = run('server.ts', {`,
       `  env: {`,
       `    ...process.env,`,
       `    CHILD_PORT_FILE: fileURLToPath(new URL('./child-port.txt', import.meta.url)),`,
+      `    PORT: String(childPort),`,
       `  },`,
       `  nodeArgs: ['--import', ${JSON.stringify(nodeTsxImportUrl)}],`,
       `})`,
       ``,
-      `let publicServer = createServer(async (request, response) => {`,
-      `  try {`,
-      `    let webRequest = new Request(new URL(request.url ?? '/', 'http://127.0.0.1:' + publicPort))`,
-      `    let webResponse = await fetchWhenReady(webRequest)`,
-      `    response.writeHead(webResponse.status, Object.fromEntries(webResponse.headers))`,
-      `    response.end(await webResponse.text())`,
-      `  } catch (error) {`,
-      `    response.statusCode = 500`,
-      `    response.end(error instanceof Error ? error.stack : String(error))`,
-      `  }`,
-      `})`,
+      `const server = http.createServer(`,
+      `  createRequestListener(`,
+      `    createHmrReadyFetch(`,
+      `      hmrRunner,`,
+      `      createFetchProxy(\`http://127.0.0.1:\${childPort}\`, {`,
+      `        xForwardedHeaders: true,`,
+      `        async fetch(input, init) {`,
+      `          let targetUrl = new URL(String(input))`,
+      `          if (targetUrl.pathname === '/retry-during-restart' && !returnedStaleGateway) {`,
+      `            returnedStaleGateway = true`,
+      `            console.log('retry-during-restart')`,
+      `            await new Promise((resolve) => setTimeout(resolve, 500))`,
+      `            return new Response('stale gateway', { status: 503 })`,
+      `          }`,
+      `          return await fetch(input, init)`,
+      `        },`,
+      `      }),`,
+      `    ),`,
+      `  ),`,
+      `)`,
       ``,
-      `publicServer.listen(0, '127.0.0.1', () => {`,
-      `  let address = publicServer.address()`,
+      `server.listen(originPort, '127.0.0.1', () => {`,
+      `  let address = server.address()`,
       `  if (address && typeof address === 'object') {`,
-      `    publicPort = address.port`,
-      `    console.log(JSON.stringify({ type: 'ready', port: publicPort, pid: process.pid }))`,
+      `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
       `  }`,
       `})`,
       ``,
-      `async function readChildPort() {`,
-      `  let { readFile } = await import('node:fs/promises')`,
-      `  return Number(await readFile(new URL('./child-port.txt', import.meta.url), 'utf-8'))`,
+      `let shuttingDown = false`,
+      ``,
+      `function shutdown() {`,
+      `  if (shuttingDown) return`,
+      `  shuttingDown = true`,
+      `  server.close(() => hmrRunner.close().finally(() => process.exit(0)))`,
+      `  server.closeAllConnections()`,
       `}`,
       ``,
-      `async function fetchWhenReady(webRequest) {`,
-      `  while (true) {`,
-      `    await app.ready()`,
-      `    let generation = app.generation`,
-      `    let webResponse = await fetchChild(webRequest)`,
-      ``,
-      `    if (!shouldRetry(webRequest, webResponse)) {`,
-      `      return webResponse`,
-      `    }`,
-      `    await app.ready()`,
-      `    if (app.generation !== generation) continue`,
-      `    return webResponse`,
-      `  }`,
-      `}`,
-      ``,
-      `async function fetchChild(webRequest) {`,
-      `  childPort = await readChildPort()`,
-      `  let targetUrl = new URL(webRequest.url)`,
-      `  targetUrl.port = String(childPort)`,
-      `  if (targetUrl.pathname === '/retry-during-restart' && !returnedStaleGateway) {`,
-      `    returnedStaleGateway = true`,
-      `    console.log('retry-during-restart')`,
-      `    await new Promise((resolve) => setTimeout(resolve, 500))`,
-      `    return new Response('stale gateway', { status: 503 })`,
-      `  }`,
-      `  return await fetch(targetUrl)`,
-      `}`,
-      ``,
-      `function shouldRetry(webRequest, webResponse) {`,
-      `  return retryMethods.includes(webRequest.method) && retryStatusCodes.includes(webResponse.status)`,
-      `}`,
+      `process.on('SIGINT', shutdown)`,
+      `process.on('SIGTERM', shutdown)`,
     ].join('\n'),
   })
 
@@ -1347,6 +1357,105 @@ async function writeFixtureFiles(root: string, files: Record<string, string>): P
       await fs.writeFile(absolutePath, contents)
     }),
   )
+}
+
+function getPatchedFetchProxySource(fetchProxyImportUrl: string): string {
+  return [
+    `import { createFetchProxy as createRemixFetchProxy } from ${JSON.stringify(fetchProxyImportUrl)}`,
+    ``,
+    `export function createFetchProxy(target, options) {`,
+    `  let proxyFetch = createRemixFetchProxy(target, options)`,
+    ``,
+    `  return async (input, init) => {`,
+    `    let request = patchProxyRequest(input, init)`,
+    `    let response = await proxyFetch(request)`,
+    ``,
+    `    return patchProxyResponse(request, response)`,
+    `  }`,
+    `}`,
+    ``,
+    `function patchProxyRequest(input, init) {`,
+    `  let request = isRequestLike(input) ? input : new Request(input, init)`,
+    `  let headers = new Headers(request.headers)`,
+    ``,
+    `  // Temporary workaround until fetch-proxy stops forwarding final-client`,
+    `  // Accept-Encoding headers to proxy targets.`,
+    `  headers.delete('Accept-Encoding')`,
+    ``,
+    `  // Temporary workaround until fetch-proxy accepts the lazy Request objects`,
+    `  // provided by node-fetch-server.`,
+    `  return new Request(request.url, {`,
+    `    body: request.body,`,
+    `    headers,`,
+    `    method: request.method,`,
+    `    redirect: request.redirect,`,
+    `    signal: request.signal,`,
+    `    ...getRequestDuplex(request),`,
+    `  })`,
+    `}`,
+    ``,
+    `function patchProxyResponse(request, response) {`,
+    `  let headers = new Headers(response.headers)`,
+    `  let hasContentEncoding = headers.has('Content-Encoding')`,
+    `  let hasTransferEncoding = headers.has('Transfer-Encoding')`,
+    `  let hasProxiedResponseBody = request.method !== 'HEAD' && response.body != null`,
+    ``,
+    `  // Temporary workaround until fetch-proxy strips hop-by-hop/body-specific`,
+    `  // response headers that may no longer match the proxied response body.`,
+    `  headers.delete('Transfer-Encoding')`,
+    `  if (hasTransferEncoding || (hasProxiedResponseBody && hasContentEncoding)) {`,
+    `    headers.delete('Content-Length')`,
+    `  }`,
+    ``,
+    `  if (hasProxiedResponseBody && hasContentEncoding) {`,
+    `    headers.delete('Content-Encoding')`,
+    `  }`,
+    ``,
+    `  return new Response(response.body, {`,
+    `    headers,`,
+    `    status: response.status,`,
+    `    statusText: response.statusText,`,
+    `  })`,
+    `}`,
+    ``,
+    `function getRequestDuplex(request) {`,
+    `  if (request.method === 'GET' || request.method === 'HEAD') return undefined`,
+    `  return { duplex: 'half' }`,
+    `}`,
+    ``,
+    `function isRequestLike(input) {`,
+    `  return typeof input === 'object' && 'url' in input`,
+    `}`,
+  ].join('\n')
+}
+
+async function getAvailablePort(): Promise<number> {
+  let server = net.createServer()
+
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', () => {
+      server.off('error', reject)
+      resolve()
+    })
+  })
+
+  let address = server.address()
+  if (address == null || typeof address === 'string') {
+    throw new Error('Expected test server to listen on a TCP port')
+  }
+
+  await new Promise<void>((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error)
+      } else {
+        resolve()
+      }
+    })
+  })
+
+  return address.port
 }
 
 async function waitForOutput(server: ReturnType<typeof startFixtureServer>, pattern: RegExp) {
