@@ -1,23 +1,23 @@
 import { expect } from '@remix-run/assert'
 import { afterEach, describe, it } from '@remix-run/test'
 
-import { createRoot, type Handle, type RemixNode } from '@remix-run/ui'
+import { createRoot, type RemixNode } from '@remix-run/ui'
 import { renderToString } from '@remix-run/ui/server'
+import { onAccordionChange } from '@remix-run/ui/accordion'
 
 import {
   Accordion,
-  AccordionChangeEvent,
   AccordionContent,
   AccordionItem,
   bodyStyle,
+  headingStyle,
   indicatorStyle,
   itemStyle,
-  onAccordionChange,
-  type AccordionProps,
   panelStyle,
   rootStyle,
   AccordionTrigger,
   triggerStyle,
+  type AccordionProps,
 } from './accordion.tsx'
 
 afterEach(() => {
@@ -56,218 +56,24 @@ function activate(button: HTMLButtonElement) {
 }
 
 describe('Accordion', () => {
-  it('supports single uncontrolled mode', () => {
-    let { container, root } = renderApp(renderExampleAccordion({ defaultValue: 'account' }))
-    let buttons = [...container.querySelectorAll('button')] as HTMLButtonElement[]
-
-    expect(buttons[0].getAttribute('aria-expanded')).toBe('true')
-    expect(buttons[2].getAttribute('aria-expanded')).toBe('false')
-
-    activate(buttons[2])
-    root.flush()
-
-    expect(buttons[0].getAttribute('aria-expanded')).toBe('false')
-    expect(buttons[2].getAttribute('aria-expanded')).toBe('true')
-  })
-
-  it('lets a single item collapse by default', () => {
-    let { container, root } = renderApp(
-      <Accordion defaultValue="account">
-        <AccordionItem value="account">
-          <AccordionTrigger>Account</AccordionTrigger>
-          <AccordionContent>Manage your account preferences.</AccordionContent>
-        </AccordionItem>
-      </Accordion>,
-    )
-
-    let button = container.querySelector('button') as HTMLButtonElement
-
-    expect(button.getAttribute('aria-disabled')).toBe(null)
-
-    activate(button)
-    root.flush()
-
-    expect(button.getAttribute('aria-expanded')).toBe('false')
-  })
-
-  it('supports single controlled mode', () => {
-    let changes: Array<string | null> = []
-
-    function App(handle: Handle) {
-      let value: string | null = 'account'
-
-      return () => (
-        <Accordion
-          onValueChange={(nextValue) => {
-            changes.push(nextValue)
-            value = nextValue
-            void handle.update()
-          }}
-          value={value}
-        >
-          <AccordionItem value="account">
-            <AccordionTrigger>Account</AccordionTrigger>
-            <AccordionContent>Manage your account preferences.</AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="billing">
-            <AccordionTrigger>Billing</AccordionTrigger>
-            <AccordionContent>Review billing details.</AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      )
-    }
-
-    let { container, root } = renderApp(<App />)
-    let buttons = [...container.querySelectorAll('button')] as HTMLButtonElement[]
-
-    activate(buttons[1])
-    root.flush()
-
-    expect(changes).toEqual(['billing'])
-    expect(buttons[0].getAttribute('aria-expanded')).toBe('false')
-    expect(buttons[1].getAttribute('aria-expanded')).toBe('true')
-  })
-
-  it('keeps a single non-collapsible item open', () => {
-    let changes: Array<string | null> = []
-    let { container, root } = renderApp(
-      <Accordion
-        collapsible={false}
-        defaultValue="account"
-        onValueChange={(value) => {
-          changes.push(value)
-        }}
-      >
-        <AccordionItem value="account">
-          <AccordionTrigger>Account</AccordionTrigger>
-          <AccordionContent>Manage your account preferences.</AccordionContent>
-        </AccordionItem>
-      </Accordion>,
-    )
-
-    let button = container.querySelector('button') as HTMLButtonElement
-
-    expect(button.getAttribute('aria-disabled')).toBe('true')
-
-    activate(button)
-    root.flush()
-
-    expect(button.getAttribute('aria-expanded')).toBe('true')
-    expect(changes).toEqual([])
-  })
-
-  it('supports multiple uncontrolled mode', () => {
-    let { container, root } = renderApp(
-      <Accordion defaultValue={['account']} type="multiple">
-        <AccordionItem value="account">
-          <AccordionTrigger>Account</AccordionTrigger>
-          <AccordionContent>Manage your account preferences.</AccordionContent>
-        </AccordionItem>
-        <AccordionItem value="billing">
-          <AccordionTrigger>Billing</AccordionTrigger>
-          <AccordionContent>Review billing details.</AccordionContent>
-        </AccordionItem>
-      </Accordion>,
-    )
-
-    let buttons = [...container.querySelectorAll('button')] as HTMLButtonElement[]
-
-    activate(buttons[1])
-    root.flush()
-
-    expect(buttons[0].getAttribute('aria-expanded')).toBe('true')
-    expect(buttons[1].getAttribute('aria-expanded')).toBe('true')
-
-    activate(buttons[0])
-    root.flush()
-
-    expect(buttons[0].getAttribute('aria-expanded')).toBe('false')
-    expect(buttons[1].getAttribute('aria-expanded')).toBe('true')
-  })
-
-  it('supports multiple controlled mode', () => {
-    let changes: string[][] = []
-
-    function App(handle: Handle) {
-      let value = ['account']
-
-      return () => (
-        <Accordion
-          onValueChange={(nextValue) => {
-            changes.push(nextValue)
-            value = nextValue
-            void handle.update()
-          }}
-          type="multiple"
-          value={value}
-        >
-          <AccordionItem value="account">
-            <AccordionTrigger>Account</AccordionTrigger>
-            <AccordionContent>Manage your account preferences.</AccordionContent>
-          </AccordionItem>
-          <AccordionItem value="billing">
-            <AccordionTrigger>Billing</AccordionTrigger>
-            <AccordionContent>Review billing details.</AccordionContent>
-          </AccordionItem>
-        </Accordion>
-      )
-    }
-
-    let { container, root } = renderApp(<App />)
-    let buttons = [...container.querySelectorAll('button')] as HTMLButtonElement[]
-
-    activate(buttons[1])
-    root.flush()
-
-    expect(changes).toEqual([['account', 'billing']])
-    expect(buttons[0].getAttribute('aria-expanded')).toBe('true')
-    expect(buttons[1].getAttribute('aria-expanded')).toBe('true')
-  })
-
-  it('supports disabled root and disabled items', () => {
-    let { container } = renderApp(renderExampleAccordion({ disabled: true }))
-    let buttons = [...container.querySelectorAll('button')] as HTMLButtonElement[]
-
-    expect(buttons[0].disabled).toBe(true)
-    expect(buttons[1].disabled).toBe(true)
-    expect(buttons[2].disabled).toBe(true)
-  })
-
-  it('wires trigger and panel aria relationships and heading structure', () => {
+  it('renders styled accordion wrappers with ui primitive roles', () => {
     let { container } = renderApp(renderExampleAccordion({ headingLevel: 2 }))
     let headingButtons = [...container.querySelectorAll('h2 > button')] as HTMLButtonElement[]
     let panel = container.querySelector('[id$="-panel"]') as HTMLDivElement
 
     expect(headingButtons).toHaveLength(3)
+    expect(headingButtons[0].getAttribute('data-state')).toBe('closed')
     expect(headingButtons[0].getAttribute('aria-controls')).toBe(panel.id)
     expect(panel.getAttribute('aria-labelledby')).toBe(headingButtons[0].id)
   })
 
-  it('supports arrow, home, and end keyboard navigation', () => {
-    let { container } = renderApp(renderExampleAccordion())
-    let buttons = [...container.querySelectorAll('button')] as HTMLButtonElement[]
-
-    buttons[0].focus()
-    buttons[0].dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowDown' }))
-    expect(document.activeElement).toBe(buttons[2])
-
-    buttons[2].dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'ArrowUp' }))
-    expect(document.activeElement).toBe(buttons[0])
-
-    buttons[0].dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'End' }))
-    expect(document.activeElement).toBe(buttons[2])
-
-    buttons[2].dispatchEvent(new KeyboardEvent('keydown', { bubbles: true, key: 'Home' }))
-    expect(document.activeElement).toBe(buttons[0])
-  })
-
-  it('dispatches a bubbling Accordion change event from the root', () => {
-    let captured: AccordionChangeEvent | null = null
+  it('composes ui accordion events', () => {
+    let values: Array<string | null | string[]> = []
 
     let { container, root } = renderApp(
       <div
         mix={onAccordionChange((event) => {
-          captured = event as AccordionChangeEvent
+          values.push(event.value)
         })}
       >
         <Accordion>
@@ -288,10 +94,7 @@ describe('Accordion', () => {
     activate(button)
     root.flush()
 
-    expect(captured).toBeInstanceOf(AccordionChangeEvent)
-    expect((captured as AccordionChangeEvent | null)?.accordionType).toBe('single')
-    expect((captured as AccordionChangeEvent | null)?.itemValue).toBe('billing')
-    expect((captured as AccordionChangeEvent | null)?.value).toBe('billing')
+    expect(values).toEqual(['billing'])
   })
 })
 
@@ -301,10 +104,12 @@ describe('accordion style exports', () => {
       <>
         <div mix={rootStyle}>
           <div mix={itemStyle}>
-            <button aria-expanded="false" mix={triggerStyle}>
-              <span>Account</span>
-              <span mix={indicatorStyle}>v</span>
-            </button>
+            <h3 mix={headingStyle}>
+              <button aria-expanded="false" mix={triggerStyle}>
+                <span>Account</span>
+                <span mix={indicatorStyle}>v</span>
+              </button>
+            </h3>
             <div data-state="closed" mix={panelStyle}>
               <div mix={bodyStyle}>Panel</div>
             </div>
@@ -313,9 +118,12 @@ describe('accordion style exports', () => {
       </>,
     )
 
-    expect(html).not.toContain('border-top: 1px solid var(--rmx-color-border-subtle)')
-    expect(html).not.toContain('border-bottom: 1px solid var(--rmx-color-border-subtle)')
-    expect(html).toContain('padding-bottom: var(--rmx-space-md)')
+    expect(html).not.toContain('border-top: 1px solid #e7e7e7')
+    expect(html).not.toContain('border-bottom: 1px solid #e7e7e7')
+    expect(html).toContain('margin: 0')
+    expect(html).toContain('cursor: pointer')
+    expect(html).toContain('text-decoration-line: underline')
+    expect(html).toContain('padding-bottom: 12px')
     expect(html).toContain('display: flow-root')
   })
 })

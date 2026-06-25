@@ -1,4 +1,9 @@
-import type { PartPattern, PartPatternToken, RoutePattern } from '../route-pattern.ts'
+import type {
+  RoutePatternParts,
+  PartPattern,
+  PartPatternToken,
+  RoutePattern,
+} from '../route-pattern.ts'
 import { escape } from './regexp.ts'
 import { unreachable } from '../unreachable.ts'
 import { toRegExp } from './regexp.ts'
@@ -10,13 +15,17 @@ export type Variant = {
   readonly pathname: PathnameVariant
 }
 
-export function generateVariants(pattern: RoutePattern): ReadonlyArray<Variant> {
+export function generateVariants(
+  pattern: RoutePattern,
+  options?: { ignoreCase?: boolean },
+): ReadonlyArray<Variant> {
+  let patternParts = pattern._parts
   let result: Array<Variant> = []
 
-  for (let protocol of generateProtocolVariants(pattern.protocol)) {
-    let port = normalizePort(protocol, pattern.port)
-    for (let hostname of generateHostnameVariants(pattern.hostname)) {
-      for (let pathname of generatePathnameVariants(pattern.pathname)) {
+  for (let protocol of generateProtocolVariants(patternParts.protocol)) {
+    let port = normalizePort(protocol, patternParts.port)
+    for (let hostname of generateHostnameVariants(patternParts.hostname)) {
+      for (let pathname of generatePathnameVariants(patternParts.pathname, options)) {
         result.push({ protocol, hostname, port, pathname })
       }
     }
@@ -29,7 +38,7 @@ export function generateVariants(pattern: RoutePattern): ReadonlyArray<Variant> 
 type ProtocolVariant = 'http' | 'https'
 
 function generateProtocolVariants(
-  protocol: RoutePattern['protocol'],
+  protocol: RoutePatternParts['protocol'],
 ): ReadonlyArray<ProtocolVariant> {
   if (protocol === null || protocol === 'http(s)') return ['http', 'https']
   return [protocol]
@@ -161,7 +170,7 @@ function generatePathnameVariants(
 
       if (token.type === 'text') {
         // Encode to comply with URL pathname normalization in trie matcher
-        let text = encodeURIComponent(token.text)
+        let text = encodeURIComponent(ignoreCase ? token.text.toLowerCase() : token.text)
         key += text
         reSource += escape(text)
         continue
@@ -212,13 +221,18 @@ type PartVariant = ReadonlyArray<PartVariantToken>
  */
 export function generatePartVariants(part: PartPattern): ReadonlyArray<PartVariant> {
   let result: Array<PartVariant> = []
+  let seen = new Set<string>()
   let stack: Array<{ index: number; tokens: Array<PartVariantToken> }> = [{ index: 0, tokens: [] }]
 
   while (stack.length > 0) {
     let { index, tokens } = stack.pop()!
 
     if (index === part.tokens.length) {
-      result.push(tokens)
+      let key = partVariantKey(tokens)
+      if (!seen.has(key)) {
+        seen.add(key)
+        result.push(tokens)
+      }
       continue
     }
 
@@ -250,4 +264,14 @@ export function generatePartVariants(part: PartPattern): ReadonlyArray<PartVaria
     unreachable(token.type)
   }
   return result
+}
+
+function partVariantKey(tokens: ReadonlyArray<PartVariantToken>): string {
+  return tokens
+    .map((token) => {
+      if (token.type === 'text') return `text:${JSON.stringify(token.text)}`
+      if (token.type === ':' || token.type === '*') return `${token.type}:${token.name}`
+      return token.type
+    })
+    .join('|')
 }

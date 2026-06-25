@@ -1,6 +1,5 @@
 import { css } from '@remix-run/ui'
-import { Option, Select } from '@remix-run/ui/select'
-import { theme } from '@remix-run/ui/theme'
+import { Option, Select } from '@remix-run/ui/components/select'
 
 /**
  * @name Select Overview
@@ -40,13 +39,13 @@ const selectCss = css({
 const stackCss = css({
   display: 'flex',
   flexDirection: 'column',
-  gap: theme.space.sm,
+  gap: '8px',
   width: '100%',
 })
 
 const labelCss = css({
   margin: 0,
-  fontSize: theme.fontSize.xs,
-  fontWeight: theme.fontWeight.semibold,
-  color: theme.colors.text.primary,
+  fontSize: '12px',
+  fontWeight: '600',
+  color: '#151515',
 })

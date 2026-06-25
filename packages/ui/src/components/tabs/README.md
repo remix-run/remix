@@ -1,14 +1,14 @@
 # Tabs
 
-`tabs` is a primitive for building accessible tabs with automatic activation and simple default styling.
+`tabs` provides styled tabs components backed by the headless tabs primitives in `remix/ui/tabs`.
 
-Use it when you need a tablist, tab triggers, and tab panels. `tabs.listStyle` and `tabs.triggerStyle` style the tab row and triggers, but panel presentation stays app-owned.
+Use it when you need a tablist, tab triggers, and tab panels with the default component package styling. `tabs.listStyle` and `tabs.triggerStyle` style the tab row and triggers, but panel presentation stays app-owned.
 
 ## Usage
 
 ```tsx
 import { css, type Handle } from 'remix/ui'
-import { Tab, Tabs, TabsList, TabsPanel } from 'remix/ui/tabs'
+import { Tab, Tabs, TabsList, TabsPanel } from 'remix/components/tabs'
 
 let panel = css({
   padding: '16px',
@@ -47,7 +47,7 @@ export function ProjectTabs(_handle: Handle) {
 
 ### `tabs.Context`
 
-Provides the shared coordinator for one tabs instance.
+The `remix/ui/tabs` primitive provides the shared coordinator for one tabs instance.
 
 - Owns the selected tab value for uncontrolled usage.
 - Accepts controlled `value` plus `onValueChange` when the app owns selection state.
@@ -55,14 +55,14 @@ Provides the shared coordinator for one tabs instance.
 
 ### `tabs.list()`
 
-Turns the host into the tablist.
+The `remix/ui/tabs` primitive turns the host into the tablist.
 
 - Wires `role="tablist"`.
 - Adds `aria-orientation="vertical"` when needed.
 
 ### `tabs.trigger({ value, disabled })`
 
-Registers one tab trigger.
+The `remix/ui/tabs` primitive registers one tab trigger.
 
 - Wires `role="tab"`, `aria-selected`, `aria-controls`, and roving `tabIndex`.
 - Selects on press.
@@ -72,24 +72,24 @@ Registers one tab trigger.
 
 ### `tabs.panel({ value })`
 
-Turns the host into the panel for one tab value.
+The `remix/ui/tabs` primitive turns the host into the panel for one tab value.
 
 - Wires `role="tabpanel"` and `aria-labelledby`.
 - Hides inactive panels with `hidden`.
 
 ### `onTabsChange(...)`
 
-The listener mixin for bubbled tab selection changes.
+The listener mixin from `remix/ui/tabs` for bubbled tab selection changes.
 
 - `event.value` is the newly selected tab value.
 - `event.previousValue` is the previously selected value, or `null`.
 
 ## Convenience Components
 
-- `Tabs` is a thin wrapper around `tabs.Context`.
-- `TabsList` applies `tabs.list()` with `tabs.listStyle`.
-- `Tab` applies `tabs.trigger(...)` with `button.baseStyle` and `tabs.triggerStyle`.
-- `TabsPanel` applies `tabs.panel(...)` without adding panel styling.
+- `Tabs` provides the default component root around `tabs.Context` from `remix/ui/tabs`.
+- `TabsList` applies `tabs.list()` from `remix/ui/tabs` with `tabs.listStyle`.
+- `Tab` applies `tabs.trigger(...)` from `remix/ui/tabs` with `button.baseStyle` and `tabs.triggerStyle`.
+- `TabsPanel` applies `tabs.panel(...)` from `remix/ui/tabs` without adding panel styling.
 
 ## Behavior Notes
 

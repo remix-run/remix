@@ -447,11 +447,13 @@ describe('run', () => {
         devDependencies: Record<string, string>
         engines: Record<string, string>
         name: string
+        scripts: Record<string, string>
       }
       let agentsGuide = await fs.readFile(path.join(appDir, 'AGENTS.md'), 'utf8')
       let readme = await fs.readFile(path.join(appDir, 'README.md'), 'utf8')
       let server = await fs.readFile(path.join(appDir, 'server.ts'), 'utf8')
       let assets = await fs.readFile(path.join(appDir, 'app', 'assets.ts'), 'utf8')
+      let router = await fs.readFile(path.join(appDir, 'app', 'router.ts'), 'utf8')
       let routes = await fs.readFile(path.join(appDir, 'app', 'routes.ts'), 'utf8')
       let entry = await fs.readFile(path.join(appDir, 'app', 'assets', 'entry.ts'), 'utf8')
       let renderMiddleware = await fs.readFile(
@@ -468,6 +470,10 @@ describe('run', () => {
       assert.equal(packageJson.devDependencies['@types/node'], 'latest')
       assert.equal(packageJson.devDependencies.typescript, 'latest')
       assert.equal(packageJson.engines.node, '>=24.3.0')
+      assert.match(packageJson.scripts.dev, /NODE_ENV=development/)
+      assert.match(packageJson.scripts.dev, /node --watch/)
+      assert.match(packageJson.scripts.start, /NODE_ENV=production/)
+      assert.match(packageJson.scripts.test, /NODE_ENV=test/)
       assert.match(agentsGuide, /^# My App Agent Guide/m)
       assert.match(agentsGuide, /This starter intentionally begins small/)
       assert.match(agentsGuide, /Put top-level route actions in `app\/actions\/controller\.tsx`/)
@@ -482,12 +488,17 @@ describe('run', () => {
       assert.doesNotMatch(assets, /\.\.\/packages/)
       assert.doesNotMatch(assets, /usesWorkspaceRemix/)
       assert.doesNotMatch(assets, /workspacePackagesDir/)
+      assert.doesNotMatch(assets, /deny:/)
+      assert.doesNotMatch(assets, /define:/)
+      assert.match(assets, /watch: false/)
+      assert.doesNotMatch(router, /compression/)
       assert.doesNotMatch(routes, /auth/)
       assert.match(entry, /loadModule/)
-      assert.doesNotMatch(entry, /resolveFrame/)
+      assert.match(entry, /resolveFrame/)
       assert.doesNotMatch(entry, /X-Remix-Frame/)
       assert.match(renderMiddleware, /resolveClientEntry/)
-      assert.doesNotMatch(renderMiddleware, /resolveFrame/)
+      assert.match(renderMiddleware, /resolveFrame/)
+      assert.doesNotMatch(renderMiddleware, /Accept-Encoding/)
       assert.doesNotMatch(renderMiddleware, /X-Remix-Frame/)
       assert.match(controller, /context\.render\(<HomePage \/>/)
       assert.doesNotMatch(controller, /AuthPage/)

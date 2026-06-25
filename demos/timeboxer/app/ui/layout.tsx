@@ -1,6 +1,6 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
-import { theme } from 'remix/ui/theme'
+import { theme } from './design.ts'
 
 import { routes } from '../routes.ts'
 import { Document } from './document.tsx'

@@ -1,4 +1,4 @@
-import { Breadcrumbs } from '@remix-run/ui/breadcrumbs'
+import { Breadcrumbs } from '@remix-run/ui/components/breadcrumbs'
 
 /**
  * @name Breadcrumbs Basic

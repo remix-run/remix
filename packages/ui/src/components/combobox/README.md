@@ -1,6 +1,6 @@
 # Combobox
 
-`Combobox` is the input-first popup value picker for `remix/ui`.
+`Combobox` is the input-first popup value picker for `remix/components/combobox`.
 
 Use it when the user should type draft text, filter a popup list, and still commit one stable form value. If you just need a button-triggered picker, use `Select` instead.
 
@@ -8,7 +8,8 @@ Use it when the user should type draft text, filter a popup list, and still comm
 
 ```tsx
 import { css, type Handle } from 'remix/ui'
-import { Combobox, ComboboxOption, onComboboxChange } from 'remix/ui/combobox'
+import { Combobox, ComboboxOption } from 'remix/components/combobox'
+import { onComboboxChange } from 'remix/ui/combobox'
 
 let airports = [
   {
@@ -78,7 +79,7 @@ The default option row for `Combobox`.
 
 ### `onComboboxChange(...)`
 
-The listener mixin for bubbled committed-value changes.
+The listener mixin from `remix/ui/combobox` for bubbled committed-value changes.
 
 The event object includes:
 
@@ -88,7 +89,7 @@ The event object includes:
 
 ### `combobox.Context`
 
-The lower-level coordinator for custom combobox composition.
+The lower-level coordinator from `remix/ui/combobox` for custom combobox composition.
 
 It wraps the shared `popover` and `listbox` contexts and owns the draft text, committed value, popup state, and selection timing.
 
@@ -106,7 +107,7 @@ Turns the host into the combobox popover surface.
 
 - Uses the shared popover primitive.
 - Keeps anchor clicks inside the session so the input stays interactive while open.
-- Applies the combobox open/close reason contract used by `combobox.popoverStyle`.
+- Applies the combobox open/close reason contract used by `popoverStyle`.
 
 ### `combobox.list()`
 

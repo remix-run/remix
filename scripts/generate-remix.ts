@@ -163,7 +163,7 @@ async function buildExportsFromManifest(
 
   for (let [remixPath, specifier] of Object.entries(manifest)) {
     if (remixPath.startsWith('_')) continue // skip comment/metadata keys
-    let sourceFile = specifier.replace('@remix-run/', '') + '.ts'
+    let sourceFile = getSourceFileForManifestEntry(remixPath, specifier)
     let exportPath = './' + remixPath.replace('remix/', '')
 
     let readmePath: string | undefined
@@ -195,6 +195,14 @@ async function buildExportsFromManifest(
   return exports
 }
 
+function getSourceFileForManifestEntry(remixPath: string, specifier: string): string {
+  if (specifier.startsWith('@remix-run/ui/components/')) {
+    return remixPath.replace('remix/', '') + '.ts'
+  }
+
+  return specifier.replace('@remix-run/', '') + '.ts'
+}
+
 async function getExportModeForSpecifier(
   specifier: string,
   pkgJsonByName: Map<string, Record<string, unknown>>,
@@ -217,7 +225,7 @@ function isFile(filePath: string): boolean {
 
 async function updateRemixPackage() {
   // Ensure we have a passing linter before generating code
-  logAndExec(`pnpm exec oxlint packages/remix/ -A all --quiet`)
+  logAndExec(`pnpm exec oxlint packages/remix/ --max-warnings=0`)
 
   // Clear existing source files
   let sourceFolderPath = path.join(remixDir, SOURCE_FOLDER)
@@ -253,7 +261,7 @@ async function updateRemixPackage() {
   }
 
   // Run linter against generated code with --fix (before bin wrappers, which must keep their shebang)
-  logAndExec(`pnpm exec oxlint packages/remix/ -A all --fix --quiet`)
+  logAndExec(`pnpm exec oxlint packages/remix/ --fix --max-warnings=0`)
 
   if (allExports.some((entry) => entry.exportPath === './cli')) {
     let cliEntryPath = path.join(remixDir, SOURCE_FOLDER, REMIX_CLI_ENTRY_FILE)
@@ -324,6 +332,13 @@ async function updateRemixPackage() {
   } else {
     delete remixPackageJson.bin
     delete remixPackageJson.publishConfig.bin
+  }
+
+  let remixRunPackageNames = new Set(remixRunPackages.map((packageInfo) => packageInfo.name))
+  for (let dependencyName of Object.keys(remixPackageJson.dependencies)) {
+    if (dependencyName.startsWith('@remix-run/') && !remixRunPackageNames.has(dependencyName)) {
+      delete remixPackageJson.dependencies[dependencyName]
+    }
   }
 
   for (let packageInfo of remixRunPackages) {

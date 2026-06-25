@@ -1,0 +1,1 @@
+Fixed route pattern helper types so literal pattern types follow the same grammar as runtime parsing. Invalid literal patterns now evaluate to `never` in `CreateHrefArgs`, `MatchParams`, and `JoinPatterns`, while broad `string` patterns remain usable.

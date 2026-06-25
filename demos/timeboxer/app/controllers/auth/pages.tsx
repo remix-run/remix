@@ -1,6 +1,6 @@
 import { css, type Handle, type RemixNode } from 'remix/ui'
-import { Button } from 'remix/ui/button'
-import { theme } from 'remix/ui/theme'
+import { Button } from 'remix/components/button'
+import { theme } from '../../ui/design.ts'
 
 import { routes } from '../../routes.ts'
 import { Layout } from '../../ui/layout.tsx'
@@ -216,9 +216,9 @@ const pageStyle = css({
 const cardStyle = css({
   width: 'min(100%, 420px)',
   border: `1px solid ${theme.colors.border.subtle}`,
-  borderRadius: theme.radius.xl,
+  borderRadius: '16px',
   backgroundColor: theme.surface.lvl1,
-  boxShadow: theme.shadow.lg,
+  boxShadow: '0 16px 34px rgb(0 0 0 / 0.10)',
   padding: theme.space.xl,
 })
 
@@ -259,31 +259,31 @@ const fieldStyle = css({
 
 const inputStyle = css({
   border: `1px solid ${theme.colors.border.default}`,
-  borderRadius: theme.radius.md,
+  borderRadius: theme.radius,
   boxSizing: 'border-box',
   color: theme.colors.text.primary,
   font: 'inherit',
-  minHeight: theme.control.height.md,
+  minHeight: '32px',
   padding: `${theme.space.sm} ${theme.space.md}`,
   width: '100%',
   '&:focus': {
-    borderColor: theme.colors.focus.ring,
-    outline: `2px solid ${theme.colors.focus.ring}`,
+    borderColor: theme.colors.focusRing,
+    outline: `2px solid ${theme.colors.focusRing}`,
     outlineOffset: '2px',
   },
 })
 
 const errorStyle = css({
-  backgroundColor: theme.colors.action.danger.background,
-  border: `1px solid ${theme.colors.action.danger.border}`,
-  borderRadius: theme.radius.md,
-  color: theme.colors.action.danger.foreground,
+  backgroundColor: theme.colors.danger,
+  border: `1px solid ${theme.colors.danger}`,
+  borderRadius: theme.radius,
+  color: 'rgb(255 255 255 / 0.92)',
   margin: 0,
   padding: theme.space.md,
 })
 
 const fieldErrorStyle = css({
-  color: theme.colors.action.danger.background,
+  color: theme.colors.danger,
 })
 
 const footerTextStyle = css({

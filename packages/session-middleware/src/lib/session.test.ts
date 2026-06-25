@@ -56,7 +56,7 @@ describe('session middleware', () => {
 
     router.map('/', ({ session }) => {
       session.set('count', Number(session.get('count') ?? 0) + 1)
-      return fetch('http://example.com')
+      return fetch('data:text/plain,ok')
     })
 
     let response = await router.fetch('https://remix.run')

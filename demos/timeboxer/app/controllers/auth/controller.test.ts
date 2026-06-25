@@ -183,8 +183,8 @@ async function fetchHtml(client: TestClient, path: string) {
 }
 
 async function fetchPage(client: TestClient, path: string) {
-  let headers = new Headers({ accept: 'text/html' })
-  if (client.cookie) headers.set('cookie', client.cookie)
+  let headers = new Headers({ Accept: 'text/html' })
+  if (client.cookie) headers.set('Cookie', client.cookie)
 
   let response = await router.fetch(new Request(url(path), { headers }))
   client.cookie = mergeCookie(client.cookie, response.headers)
@@ -202,7 +202,7 @@ async function submitForm(client: TestClient, path: string, fields: Record<strin
   formData.set('_csrf', client.csrfToken)
 
   let headers = new Headers()
-  if (client.cookie) headers.set('cookie', client.cookie)
+  if (client.cookie) headers.set('Cookie', client.cookie)
 
   let response = await router.fetch(
     new Request(url(path), {
@@ -218,7 +218,7 @@ async function submitForm(client: TestClient, path: string, fields: Record<strin
 
 function assertRedirect(response: Response, expectedPath: string, status = 302) {
   assert.equal(response.status, status)
-  let location = response.headers.get('location')
+  let location = response.headers.get('Location')
   assert.ok(location, 'Expected a redirect location header')
   assert.equal(new URL(location, 'http://localhost').pathname, expectedPath)
 }
@@ -239,7 +239,7 @@ function extractCsrfToken(html: string) {
 }
 
 function mergeCookie(currentCookie: string, headers: Headers) {
-  let setCookie = headers.get('set-cookie')
+  let setCookie = headers.get('Set-Cookie')
   if (!setCookie) return currentCookie
 
   let cookiePair = setCookie.split(';', 1)[0]!

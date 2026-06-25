@@ -1,8 +1,8 @@
 import { css, createElement } from '@remix-run/ui'
 import type { Handle, Props, RemixNode } from '@remix-run/ui'
 
-import { Glyph } from '../glyph/glyph.tsx'
-import { theme } from '../../theme/theme.ts'
+import { ChevronRightIcon } from '../shared/icons.tsx'
+import { componentStyleValues as styles } from '../shared/style-values.ts'
 
 export type BreadcrumbItem = {
   current?: boolean
@@ -23,7 +23,7 @@ const listCss = css({
   display: 'flex',
   flexWrap: 'wrap',
   alignItems: 'center',
-  gap: `${theme.space.xs} ${theme.space.sm}`,
+  gap: `${styles.space.xs} ${styles.space.sm}`,
   minWidth: 0,
   margin: 0,
   padding: 0,
@@ -41,34 +41,34 @@ const separatorCss = css({
   alignItems: 'center',
   justifyContent: 'center',
   flexShrink: 0,
-  width: theme.fontSize.sm,
-  height: theme.fontSize.sm,
-  color: theme.colors.text.muted,
+  width: styles.fontSize.sm,
+  height: styles.fontSize.sm,
+  color: styles.colors.text.muted,
 })
 
 const linkCss = css({
-  color: theme.colors.text.secondary,
-  fontSize: theme.fontSize.sm,
-  lineHeight: theme.lineHeight.normal,
+  color: styles.colors.text.secondary,
+  fontSize: styles.fontSize.sm,
+  lineHeight: styles.lineHeight.normal,
   textDecoration: 'none',
   whiteSpace: 'nowrap',
   '&:hover': {
-    color: theme.colors.text.primary,
+    color: styles.colors.text.primary,
   },
 })
 
 const currentCss = css({
-  color: theme.colors.text.primary,
-  fontSize: theme.fontSize.sm,
-  lineHeight: theme.lineHeight.normal,
-  fontWeight: theme.fontWeight.medium,
+  color: styles.colors.text.primary,
+  fontSize: styles.fontSize.sm,
+  lineHeight: styles.lineHeight.normal,
+  fontWeight: styles.fontWeight.medium,
   whiteSpace: 'nowrap',
 })
 
 const textCss = css({
-  color: theme.colors.text.secondary,
-  fontSize: theme.fontSize.sm,
-  lineHeight: theme.lineHeight.normal,
+  color: styles.colors.text.secondary,
+  fontSize: styles.fontSize.sm,
+  lineHeight: styles.lineHeight.normal,
   whiteSpace: 'nowrap',
 })
 
@@ -80,7 +80,7 @@ export function Breadcrumbs(handle: Handle<BreadcrumbsProps>): () => RemixNode {
       currentIndex = Math.max(0, items.length - 1)
     }
 
-    let separatorContent = separator ?? <Glyph name="chevronRight" />
+    let separatorContent = separator ?? <ChevronRightIcon />
 
     return (
       <nav aria-label={ariaLabel ?? 'Breadcrumb'} {...navProps} mix={[rootCss, mix]}>
