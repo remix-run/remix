@@ -79,9 +79,8 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
             </nav>
 
             <header class="docs-chapter-header">
-              <p class="docs-chapter-eyebrow text-red-brand">{handle.props.chapter}</p>
+              <p class="docs-chapter-eyebrow docs-accent">{handle.props.chapter}</p>
               <h1 class="rmx-page-title">{handle.props.title}</h1>
-              <p class="rmx-page-body">{handle.props.description}</p>
             </header>
 
             <div id={sectionsId} class="docs-sections" mix={codeBlockCopyStyles}>

@@ -63,10 +63,10 @@ export function demoWithCode(
 
 const frameStyles = css({
   overflow: 'hidden',
-  margin: '1.5rem 0',
-  border: '1px solid var(--border)',
-  borderRadius: '12px',
-  background: 'var(--bg)',
+  margin: 'var(--rmx-space-xl) 0',
+  border: 'var(--rmx-space-px) solid var(--rmx-color-border-subtle)',
+  borderRadius: 'var(--rmx-radius-lg)',
+  background: 'var(--rmx-surface-lvl0)',
 })
 
 const previewStyles = css({
@@ -79,20 +79,20 @@ const previewStyles = css({
   minHeight: '12rem',
   overflow: 'auto',
   overscrollBehavior: 'contain',
-  padding: '3rem 1.5rem',
+  padding: 'calc(var(--rmx-space-xl) * 2) var(--rmx-space-xl)',
   placeItems: 'center',
-  background: 'var(--bg)',
+  background: 'var(--rmx-surface-lvl0)',
 })
 
 const sourceCodeStyles = css({
   maxHeight: '32rem',
   overflow: 'auto',
   overscrollBehavior: 'contain',
-  borderTop: '1px solid var(--border)',
-  background: 'var(--bg-subtle)',
+  borderTop: 'var(--rmx-space-px) solid var(--rmx-color-border-subtle)',
+  background: 'var(--rmx-surface-lvl2)',
   '& pre': {
     margin: '0',
-    padding: '1.5rem',
+    padding: 'var(--rmx-space-xl)',
     border: '0',
     borderRadius: '0',
   },

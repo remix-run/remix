@@ -14,8 +14,11 @@ interface AssetEntry {
 
 const assetEntryKey = createContextKey<AssetEntry>()
 const defaultScriptEntry = path.resolve(import.meta.dirname, '../assets/entry.ts')
-const defaultDevRefreshScriptEntry = path.resolve(import.meta.dirname, '../../public/dev-refresh.ts')
-const defaultStylesheet = path.resolve(import.meta.dirname, '../../public/docs.css')
+const defaultDevRefreshScriptEntry = path.resolve(
+  import.meta.dirname,
+  '../../public/dev-refresh.ts',
+)
+const defaultStylesheet = path.resolve(import.meta.dirname, '../../public/styles/docs.css')
 
 export function loadAssetEntry(
   scriptEntry = defaultScriptEntry,

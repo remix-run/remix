@@ -37,34 +37,34 @@ function Callout(
 
 const calloutGridStyles = css({
   display: 'grid',
-  gap: '0.75rem',
-  margin: '1.5rem 0',
+  gap: 'var(--rmx-space-md)',
+  margin: 'var(--rmx-space-xl) 0',
 })
 
 const calloutStyles = css({
-  padding: '1rem',
-  border: '1px solid var(--border)',
-  borderRadius: '10px',
-  background: 'var(--bg)',
+  padding: 'var(--rmx-space-lg)',
+  border: 'var(--rmx-space-px) solid var(--rmx-color-border-subtle)',
+  borderRadius: 'var(--rmx-radius-lg)',
+  background: 'var(--rmx-surface-lvl0)',
 })
 
 const calloutToneStyles = {
   brand: css({
-    borderColor: 'color-mix(in srgb, var(--red-brand), var(--border) 60%)',
-    boxShadow: 'inset 4px 0 0 var(--red-brand)',
+    borderColor: 'color-mix(in srgb, var(--rmx-color-accent), var(--rmx-color-border-subtle) 60%)',
+    boxShadow: 'inset var(--rmx-space-xs) 0 0 var(--rmx-color-accent)',
   }),
   neutral: css({
-    boxShadow: 'inset 4px 0 0 var(--fg-subtle)',
+    boxShadow: 'inset var(--rmx-space-xs) 0 0 var(--rmx-color-text-muted)',
   }),
 }
 
 const calloutTitleStyles = css({
-  margin: '0 0 0.375rem',
-  fontSize: '1rem',
-  lineHeight: '1.3',
+  margin: '0 0 var(--rmx-space-xs)',
+  fontSize: 'var(--rmx-font-size-md)',
+  lineHeight: 'var(--rmx-line-height-tight)',
 })
 
 const calloutBodyStyles = css({
   margin: '0',
-  color: 'var(--fg-muted)',
+  color: 'var(--rmx-color-text-secondary)',
 })
