@@ -107,6 +107,14 @@
       "types": "./src/server/stream.ts",
       "default": "./src/server/stream.ts"
     },
+    "./tabs": {
+      "types": "./src/tabs/index.tsx",
+      "default": "./src/tabs/index.tsx"
+    },
+    "./tabs/primitives": {
+      "types": "./src/tabs/primitives.ts",
+      "default": "./src/tabs/primitives.ts"
+    },
     "./test": {
       "types": "./src/test.ts",
       "default": "./src/test.ts"
@@ -206,6 +214,14 @@
       "./server": {
         "types": "./dist/server/stream.d.ts",
         "default": "./dist/server/stream.js"
+      },
+      "./tabs": {
+        "types": "./dist/tabs/index.d.ts",
+        "default": "./dist/tabs/index.js"
+      },
+      "./tabs/primitives": {
+        "types": "./dist/tabs/primitives.d.ts",
+        "default": "./dist/tabs/primitives.js"
       },
       "./test": {
         "types": "./dist/test.d.ts",

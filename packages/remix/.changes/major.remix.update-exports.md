@@ -16,6 +16,8 @@ Added `package.json` `exports`:
 - `remix/ui/radio` to re-export APIs from `@remix-run/ui/radio`
 - `remix/ui/select` to re-export APIs from `@remix-run/ui/select`
 - `remix/ui/select/primitives` to re-export APIs from `@remix-run/ui/select/primitives`
+- `remix/ui/tabs` to re-export APIs from `@remix-run/ui/tabs`
+- `remix/ui/tabs/primitives` to re-export APIs from `@remix-run/ui/tabs/primitives`
 - `remix/ui/toggle` to re-export APIs from `@remix-run/ui/toggle`
 - `remix/ui/toggle/primitives` to re-export APIs from `@remix-run/ui/toggle/primitives`
 
