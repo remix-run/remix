@@ -22,7 +22,7 @@ export const assetServer = createAssetServer({
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: isProduction,
   fingerprint: isProduction ? { buildId: process.env.GITHUB_SHA || String(Date.now()) } : undefined,
-  watch: false,
+  watch: isDevelopment,
   scripts: {
     define: {
       'process.env.NODE_ENV': JSON.stringify(nodeEnv),

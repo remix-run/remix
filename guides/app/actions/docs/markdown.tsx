@@ -77,6 +77,7 @@ const markdownParser = unified().use(remarkParse).use(remarkGfm).use(remarkDirec
 
 const markdownHtmlProcessor = unified()
   .use(remarkRehype)
+  .use(rehypeLinkHeadings)
   .use(rehypeHighlightCode)
   .use(rehypeStringify)
 
@@ -344,6 +345,37 @@ function renderInlineHtml(children: PhrasingContent[]): string {
 
 function MarkdownHtml(handle: Handle<{ html: string }>) {
   return () => <div class="rmx-page-body" innerHTML={handle.props.html} />
+}
+
+function rehypeLinkHeadings() {
+  return function transform(tree: HastRoot): void {
+    visit(tree, 'element', (node) => {
+      if (!isLinkableHeading(node)) {
+        return
+      }
+
+      let id = node.properties.id
+      if (typeof id !== 'string' || id.trim() === '') {
+        return
+      }
+
+      if (hasAnchorDescendant(node)) {
+        return
+      }
+
+      node.children = [
+        {
+          type: 'element',
+          tagName: 'a',
+          properties: {
+            class: 'docs-heading-link',
+            href: `#${id}`,
+          },
+          children: node.children,
+        },
+      ]
+    })
+  }
 }
 
 function rehypeHighlightCode() {
@@ -646,6 +678,24 @@ function isHastParent(node: unknown): node is HastRoot | Element {
 
 function isElementNamed(node: unknown, tagName: string): node is Element {
   return isRecord(node) && node.type === 'element' && node.tagName === tagName
+}
+
+function isLinkableHeading(node: Element): boolean {
+  return /^h[1-6]$/.test(node.tagName)
+}
+
+function hasAnchorDescendant(node: Element): boolean {
+  for (let child of node.children) {
+    if (child.type !== 'element') {
+      continue
+    }
+
+    if (child.tagName === 'a' || hasAnchorDescendant(child)) {
+      return true
+    }
+  }
+
+  return false
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
