@@ -10,7 +10,8 @@ export const assetServer = createAssetServer({
   basePath: '/assets',
   fileMap: {
     '/demos/*path': 'docs/build/demos/*path',
-    '/pkg/*path': 'packages/*path',
+    '/pkg/:pkg/src/*path': 'packages/:pkg/src/*path',
+    '/pkg/:pkg/deps/*path': 'packages/:pkg/node_modules/*path',
     '/client/*path': 'docs/src/client/*path',
     '/shared/*path': 'docs/src/shared/*path',
   },

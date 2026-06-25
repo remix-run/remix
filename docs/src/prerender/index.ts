@@ -1,3 +1,4 @@
+import * as cp from 'node:child_process'
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
@@ -13,7 +14,7 @@ let { values: cliArgs } = util.parseArgs({
     dir: {
       type: 'string',
       short: 'd',
-      default: 'build/site',
+      default: path.join('build', 'site'),
     },
     version: {
       type: 'string',
@@ -56,10 +57,21 @@ for await (let { pathname, filepath, response } of crawl(docsRouter, {
   await writeResult(pathname, filepath, response)
 }
 
+// Run pagefind to generate the search index and assets
+let versionedDir = buildVersion ? path.join(outputDir, buildVersion) : outputDir
+let cmd = `pnpm exec pagefind --site ${versionedDir} --output-subdir ${versionedDir}/assets/pagefind`
+console.log(`Running Pagefind:\n  ${cmd}`)
+await cp.execSync(cmd)
+
 // Release the asset server's file watcher so the process can exit cleanly.
 await assetServer.close()
 
 async function writeResult(pathname: string, filepath: string, response: Response) {
+  if (response.status === 204) {
+    console.warn(`Skipped ${pathname}: 204 No Content`)
+    return
+  }
+
   let outputFilepath = SCRIPT_FILE_EXT.test(filepath)
     ? filepath.replace(SCRIPT_FILE_EXT, '.js')
     : filepath

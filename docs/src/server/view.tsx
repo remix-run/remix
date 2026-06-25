@@ -48,10 +48,19 @@ export function Document(
               versions={versions}
               activeVersion={activeVersion}
             />
-            <MainContent page={page} header={<PageHeader page={page} sourceUrl={sourceUrl} />}>
+            <MainContent
+              page={page}
+              header={<PageHeader page={page} sourceUrl={sourceUrl} />}
+              activeVersion={activeVersion}
+            >
               {children}
             </MainContent>
           </div>
+          <pagefind-config
+            base-url={routes.home.href({ version: activeVersion })}
+            bundle-path={routes.assets.href({ version: activeVersion, asset: 'pagefind/' })}
+          ></pagefind-config>
+          <pagefind-modal data-key="pagefind-modal" rmx-ignore reset-on-close />
         </body>
       </html>
     )
@@ -70,9 +79,17 @@ function MobileHeader(handle: Handle<{ page: PageDefinition }>) {
           aria-hidden="true"
           tabIndex={-1}
         />
-        <a href="https://remix.run" mix={mobileLogoBannerCss}>
-          <RemixLogos />
-        </a>
+        <div mix={mobileLogoBannerCss}>
+          <a href="https://remix.run">
+            <RemixLogos />
+          </a>
+          <pagefind-modal-trigger
+            compact
+            data-key="pagefind-modal-trigger-mobile"
+            hide-shortcut
+            rmx-ignore
+          />
+        </div>
         <label
           for="nav-toggle"
           mix={mobileTopBarCss}
@@ -143,6 +160,20 @@ function Head(
           <link key={href} rel="modulepreload" href={href} />
         ))}
         <script type="module" src={entryHref} />
+        <link
+          href={routes.assets.href({
+            version: activeVersion,
+            asset: 'pagefind/pagefind-component-ui.css',
+          })}
+          rel="stylesheet"
+        />
+        <script
+          src={routes.assets.href({
+            version: activeVersion,
+            asset: 'pagefind/pagefind-component-ui.js',
+          })}
+          type="module"
+        />
         <RMX_01 />
       </head>
     )
@@ -150,10 +181,15 @@ function Head(
 }
 
 function MainContent(
-  handle: Handle<{ page: PageDefinition; header?: RemixNode; children: RemixNode | RemixNode[] }>,
+  handle: Handle<{
+    page: PageDefinition
+    header?: RemixNode
+    children: RemixNode | RemixNode[]
+    activeVersion?: string
+  }>,
 ) {
   return () => (
-    <main mix={mainCss}>
+    <main mix={mainCss} data-pagefind-body>
       <div mix={pageWrapCss}>
         <div mix={[pageContentCss, handle.props.page.css]}>
           {handle.props.header}
@@ -280,6 +316,12 @@ function Sidebar(
               <a href="https://remix.run" class="logo">
                 <RemixLogos />
               </a>
+              <pagefind-modal-trigger
+                compact
+                data-key="pagefind-modal-trigger-sidebar"
+                hide-shortcut
+                rmx-ignore
+              />
             </div>
 
             <VersionSwitcher versions={versions} activeVersion={activeVersion} />
@@ -692,12 +734,18 @@ const sidebarStickyCss = css({
 
 const sidebarIntroCss = css({
   display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xs,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
   paddingBottom: theme.space.sm,
   marginBottom: theme.space.sm,
   [MOBILE_NAV_MEDIA_RULE]: {
     display: 'none',
+  },
+  // Style the Pagefind trigger button to blend with the sidebar
+  '& pagefind-modal-trigger': {
+    '--pf-background': theme.colors.action.secondary.background,
+    '--pf-border': theme.colors.action.secondary.border,
   },
 })
 
@@ -988,6 +1036,11 @@ const mobileLogoBannerCss = css({
     padding: `${theme.space.lg}`,
     backgroundColor: theme.surface.lvl3,
     borderBottom: `1px solid ${theme.colors.border.subtle}`,
+  },
+  // Style the Pagefind trigger button to blend with the banner background
+  '& pagefind-modal-trigger': {
+    '--pf-background': theme.colors.action.secondary.background,
+    '--pf-border': theme.colors.action.secondary.border,
   },
 })
 
