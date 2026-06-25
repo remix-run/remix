@@ -1,0 +1,103 @@
+/*
+ * RMX-01 theme tokens for the guides app.
+ *
+ * Values mirror the Remix UI RMX_01 preset, with a few app-level `--rmx-*`
+ * tokens for page titles, links, accents, and code-line highlights.
+ */
+
+:root {
+  --rmx-space-none: 0px;
+  --rmx-space-px: 1px;
+  --rmx-space-xs: 4px;
+  --rmx-space-sm: 8px;
+  --rmx-space-md: 12px;
+  --rmx-space-lg: 16px;
+  --rmx-space-xl: 24px;
+  --rmx-space-xxl: 32px;
+
+  --rmx-radius-none: 0px;
+  --rmx-radius-sm: 4px;
+  --rmx-radius-md: 8px;
+  --rmx-radius-lg: 12px;
+  --rmx-radius-xl: 16px;
+  --rmx-radius-full: 9999px;
+
+  --rmx-font-family-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+    'Segoe UI', sans-serif;
+  --rmx-font-family-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+    'Courier New', monospace;
+
+  --rmx-font-size-xxxs: 10px;
+  --rmx-font-size-xxs: 11px;
+  --rmx-font-size-xs: 12px;
+  --rmx-font-size-sm: 13px;
+  --rmx-font-size-md: 14px;
+  --rmx-font-size-lg: 16px;
+  --rmx-font-size-xl: 20px;
+  --rmx-font-size-xxl: 28px;
+  --rmx-font-size-page-title: 28px;
+
+  --rmx-line-height-tight: 1.25;
+  --rmx-line-height-normal: 1.45;
+  --rmx-line-height-relaxed: 1.65;
+
+  --rmx-letter-spacing-tight: -0.03em;
+  --rmx-letter-spacing-normal: 0;
+  --rmx-letter-spacing-meta: 0.06em;
+  --rmx-letter-spacing-wide: 0.08em;
+
+  --rmx-font-weight-normal: 400;
+  --rmx-font-weight-medium: 500;
+  --rmx-font-weight-semibold: 600;
+  --rmx-font-weight-bold: 700;
+
+  --rmx-control-height-sm: 28px;
+  --rmx-control-height-md: 32px;
+  --rmx-control-height-lg: 36px;
+
+  --rmx-surface-lvl0: #ffffff;
+  --rmx-surface-lvl1: #f8f8f8;
+  --rmx-surface-lvl2: #f5f5f5;
+  --rmx-surface-lvl3: #f3f3f3;
+  --rmx-surface-lvl4: #efefef;
+
+  --rmx-shadow-xs: 0 1px 1px rgb(0 0 0 / 0.05);
+  --rmx-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.07);
+  --rmx-shadow-md: 0 6px 18px rgb(0 0 0 / 0.08);
+  --rmx-shadow-lg: 0 16px 34px rgb(0 0 0 / 0.1);
+  --rmx-shadow-xl: 0 24px 52px rgb(0 0 0 / 0.14);
+
+  --rmx-color-text-primary: #151515;
+  --rmx-color-text-secondary: #4f4f4f;
+  --rmx-color-text-muted: #6d6d6d;
+  --rmx-color-text-link: #1a72ff;
+  --rmx-color-text-link-hover: #1463e0;
+
+  --rmx-color-border-subtle: #e7e7e7;
+  --rmx-color-border-default: #d1d1d1;
+  --rmx-color-border-strong: #b0b0b0;
+
+  --rmx-color-focus-ring: #1a72ff;
+  --rmx-color-accent: #1a72ff;
+  --rmx-color-accent-hover: #1463e0;
+  --rmx-color-code-highlight: color-mix(in srgb, #1a72ff 14%, transparent);
+  --rmx-color-overlay-scrim: rgb(0 0 0 / 0.28);
+
+  --rmx-color-action-primary-background: #1a72ff;
+  --rmx-color-action-primary-background-hover: #1463e0;
+  --rmx-color-action-primary-background-active: #0f55c9;
+  --rmx-color-action-primary-foreground: rgb(255 255 255 / 0.92);
+  --rmx-color-action-primary-border: #1a72ff;
+
+  --rmx-color-action-secondary-background: #ffffff;
+  --rmx-color-action-secondary-background-hover: #fbfbfb;
+  --rmx-color-action-secondary-background-active: #f3f3f3;
+  --rmx-color-action-secondary-foreground: #202020;
+  --rmx-color-action-secondary-border: #d1d1d1;
+
+  --rmx-color-action-danger-background: #ff3000;
+  --rmx-color-action-danger-background-hover: #e12b00;
+  --rmx-color-action-danger-background-active: #c52600;
+  --rmx-color-action-danger-foreground: rgb(255 255 255 / 0.92);
+  --rmx-color-action-danger-border: #ff3000;
+}

@@ -1,0 +1,536 @@
+/*
+ * Standalone stylesheet for the Remix guides app.
+ *
+ * Swap the active design system by changing this one import:
+ *
+ *   @import './themes/guides-classic.css';
+ *   @import './themes/rmx-01.css';
+ *   @import './themes/rmx-02.css';
+ *
+ * The rules below consume the shared `--rmx-*` tokens exported by each theme
+ * module instead of hard-coding palette, spacing, radius, and typography values.
+ */
+
+@import './themes/guides-classic.css';
+
+:root {
+  --rmx-layout-max-width: 64rem;
+  --rmx-content-max-width: 48rem;
+  --rmx-page-gutter: calc(var(--rmx-space-xl) + var(--rmx-space-sm));
+  font-size: var(--rmx-font-size-md);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--rmx-surface-lvl0);
+  color: var(--rmx-color-text-primary);
+  font-family: var(--rmx-font-family-sans);
+  font-size: var(--rmx-font-size-md);
+  line-height: var(--rmx-line-height-relaxed);
+  -webkit-font-smoothing: antialiased;
+}
+
+a {
+  color: var(--rmx-color-text-link);
+  text-decoration: underline;
+  text-decoration-thickness: var(--rmx-space-px);
+  text-underline-offset: var(--rmx-space-xs);
+}
+
+a:hover {
+  color: var(--rmx-color-text-link-hover);
+}
+
+code {
+  padding: 0.1em 0.35em;
+  border: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
+  border-radius: var(--rmx-radius-sm);
+  background: var(--rmx-surface-lvl2);
+  font-family: var(--rmx-font-family-mono);
+  font-size: 0.875em;
+}
+
+pre {
+  overflow-x: auto;
+  padding: var(--rmx-space-lg);
+  border: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
+  border-radius: var(--rmx-radius-md);
+  background: var(--rmx-surface-lvl2);
+}
+
+[data-code-block] pre {
+  margin: 0;
+  padding-right: calc(var(--rmx-space-xl) + var(--rmx-space-lg));
+}
+
+/* Docs code blocks render shiki's raw line spans (standalone "\n" text nodes
+   between them) without a transformer, so use block layout + `white-space: normal`
+   to collapse those nodes instead of grid, which would turn them into empty rows.
+   Each .line re-establishes `white-space: pre` to preserve the code inside it. */
+[data-code-block] pre code {
+  display: block;
+  white-space: normal;
+}
+
+[data-code-block] [data-highlighted-line] {
+  background: var(--rmx-color-code-highlight);
+  box-shadow: 0 0 0 100vmax var(--rmx-color-code-highlight);
+  clip-path: inset(0 -100vmax);
+}
+
+[data-code-block-filename] + pre {
+  border-top: 0;
+  border-radius: 0 0 var(--rmx-radius-md) var(--rmx-radius-md);
+}
+
+pre code {
+  display: grid;
+  margin: 0;
+  overflow: visible;
+  padding: 0;
+  border: none;
+  background: none;
+  line-height: inherit;
+}
+
+[data-demo-source] pre {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+[data-demo-source] pre code {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+
+[data-code-block] .line {
+  position: relative;
+  display: block;
+  min-height: 1lh;
+  white-space: pre;
+}
+
+.shiki {
+  background-color: var(--rmx-surface-lvl2) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .shiki {
+    background-color: var(--shiki-dark-bg) !important;
+    color: var(--shiki-dark) !important;
+  }
+
+  .shiki span {
+    color: var(--shiki-dark) !important;
+  }
+}
+
+/* Design utilities referenced by chapter + index markup ----------------- */
+
+.rmx-page-title {
+  margin: 0;
+  font-size: var(--rmx-font-size-page-title);
+  font-weight: var(--rmx-font-weight-bold);
+  letter-spacing: var(--rmx-letter-spacing-tight);
+  line-height: var(--rmx-line-height-tight);
+}
+
+.rmx-page-title-sm {
+  font-size: var(--rmx-font-size-xl);
+  font-weight: var(--rmx-font-weight-bold);
+}
+
+.rmx-page-title-xs {
+  font-size: var(--rmx-font-size-lg);
+  font-weight: var(--rmx-font-weight-bold);
+}
+
+.rmx-page-body {
+  color: var(--rmx-color-text-primary);
+  font-size: var(--rmx-font-size-md);
+}
+
+.rmx-page-body p {
+  margin: 0 0 var(--rmx-space-lg);
+}
+
+.rmx-page-body-sm {
+  font-size: var(--rmx-font-size-sm);
+}
+
+.docs-accent {
+  color: var(--rmx-color-accent);
+}
+
+/* Site header ----------------------------------------------------------- */
+
+.site-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--rmx-space-xl);
+  padding: var(--rmx-space-lg) var(--rmx-page-gutter);
+  border-bottom: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
+}
+
+.site-header__brand {
+  color: var(--rmx-color-text-primary);
+  font-size: var(--rmx-font-size-lg);
+  font-weight: var(--rmx-font-weight-bold);
+  text-decoration: none;
+}
+
+.site-header__nav {
+  display: flex;
+  gap: var(--rmx-space-xl);
+  font-size: var(--rmx-font-size-sm);
+}
+
+/* Main / layout --------------------------------------------------------- */
+
+.docs-main {
+  outline: none;
+}
+
+.docs-index {
+  display: flex;
+  flex-direction: column;
+  gap: calc(var(--rmx-space-xl) * 2);
+  width: 100%;
+  max-width: 56rem;
+  margin: calc(var(--rmx-space-xl) * 2) auto;
+  padding: 0 var(--rmx-page-gutter);
+}
+
+.docs-index__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rmx-space-lg);
+  max-width: var(--rmx-content-max-width);
+}
+
+.docs-chapter-eyebrow {
+  margin: 0;
+  font-size: var(--rmx-font-size-sm);
+  font-weight: var(--rmx-font-weight-semibold);
+  letter-spacing: var(--rmx-letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.docs-index__cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--rmx-space-xl);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+@media (min-width: 768px) {
+  .docs-index__cards {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Index chapter cards --------------------------------------------------- */
+
+.chapter-card {
+  padding: var(--rmx-space-xl);
+  border: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
+  border-radius: var(--rmx-radius-lg);
+  background: var(--rmx-surface-lvl0);
+}
+
+.chapter-card__eyebrow {
+  margin-bottom: var(--rmx-space-sm);
+  color: var(--rmx-color-text-secondary);
+  font-family: var(--rmx-font-family-mono);
+  font-size: var(--rmx-font-size-sm);
+}
+
+.chapter-card__title {
+  margin: 0 0 var(--rmx-space-md);
+}
+
+.chapter-card__title a {
+  color: var(--rmx-color-text-primary);
+  text-decoration: none;
+}
+
+.chapter-card__title a:hover {
+  color: var(--rmx-color-accent-hover);
+}
+
+.chapter-card__description {
+  margin: 0 0 var(--rmx-space-lg);
+  color: var(--rmx-color-text-secondary);
+}
+
+.chapter-card__links {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rmx-space-sm);
+  margin: 0;
+  padding: 0;
+  font-size: var(--rmx-font-size-sm);
+  list-style: none;
+}
+
+/* Chapter page ---------------------------------------------------------- */
+
+.docs-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: calc(var(--rmx-space-xl) + var(--rmx-space-lg));
+  width: 100%;
+  max-width: var(--rmx-layout-max-width);
+  margin: calc(var(--rmx-space-xl) * 2) auto;
+  padding: 0 var(--rmx-page-gutter);
+}
+
+@media (min-width: 1024px) {
+  .docs-layout {
+    grid-template-columns: minmax(0, 1fr) 240px;
+  }
+}
+
+.docs-article {
+  max-width: var(--rmx-content-max-width);
+  min-width: 0;
+}
+
+.docs-breadcrumb {
+  margin-bottom: var(--rmx-space-xxl);
+  font-size: var(--rmx-font-size-sm);
+}
+
+.docs-breadcrumb__sep {
+  margin: 0 var(--rmx-space-sm);
+  color: var(--rmx-color-text-muted);
+}
+
+.docs-chapter-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rmx-space-lg);
+  margin-bottom: calc(var(--rmx-space-xl) + var(--rmx-space-lg));
+}
+
+.docs-sections {
+  min-width: 0;
+}
+
+/* Prev / next pagination ------------------------------------------------ */
+
+.docs-pagination {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--rmx-space-lg);
+  margin-top: calc(var(--rmx-space-xl) * 2);
+  padding-top: var(--rmx-space-xl);
+  border-top: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
+}
+
+@media (min-width: 640px) {
+  .docs-pagination {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.docs-pagination__link {
+  display: block;
+  padding: var(--rmx-space-lg);
+  border: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
+  border-radius: var(--rmx-radius-md);
+  color: var(--rmx-color-text-link);
+  text-decoration: none;
+}
+
+.docs-pagination__link--right {
+  text-align: right;
+}
+
+.docs-pagination__label {
+  display: block;
+  color: var(--rmx-color-text-secondary);
+  font-family: var(--rmx-font-family-mono);
+  font-size: var(--rmx-font-size-xs);
+  letter-spacing: var(--rmx-letter-spacing-wide);
+  text-transform: uppercase;
+}
+
+.docs-pagination__title {
+  display: block;
+  margin-top: var(--rmx-space-xs);
+}
+
+/* On-this-page aside ---------------------------------------------------- */
+
+.docs-aside {
+  align-self: start;
+}
+
+@media (min-width: 1024px) {
+  .docs-aside {
+    position: sticky;
+    top: var(--rmx-space-xl);
+  }
+}
+
+.docs-toc__heading {
+  margin: 0 0 var(--rmx-space-lg);
+  color: var(--rmx-color-text-secondary);
+  font-family: var(--rmx-font-family-mono);
+  font-size: var(--rmx-font-size-sm);
+  letter-spacing: var(--rmx-letter-spacing-meta);
+  text-transform: uppercase;
+}
+
+.docs-toc__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rmx-space-sm);
+  margin: 0;
+  padding: 0;
+  font-size: var(--rmx-font-size-sm);
+  list-style: none;
+}
+
+.docs-toc__list a {
+  color: var(--rmx-color-text-secondary);
+  text-decoration: none;
+}
+
+.docs-toc__list a:hover {
+  color: var(--rmx-color-text-primary);
+  text-decoration: underline;
+  text-decoration-color: var(--rmx-color-accent);
+}
+
+.rmx-page-body :is(h1, h2, h3, h4, h5, h6) {
+  position: relative;
+}
+
+.rmx-page-body :is(h1, h2, h3, h4, h5, h6)::before {
+  position: absolute;
+  inset-inline-start: calc((1ch + var(--rmx-space-sm)) * -1);
+  color: var(--rmx-color-text-muted);
+  content: '#';
+  font-weight: var(--rmx-font-weight-normal);
+  opacity: 0;
+}
+
+.rmx-page-body :is(h1, h2, h3, h4, h5, h6):hover::before,
+.rmx-page-body :is(h1, h2, h3, h4, h5, h6):focus-within::before {
+  opacity: 1;
+}
+
+.rmx-page-body :is(h1, h2, h3, h4, h5, h6) > :is(a, .docs-heading-link),
+.rmx-page-body :is(h1, h2, h3, h4, h5, h6) > :is(a, .docs-heading-link):hover,
+.rmx-page-body :is(h1, h2, h3, h4, h5, h6) > :is(a, .docs-heading-link):visited,
+.rmx-page-body :is(h1, h2, h3, h4, h5, h6) > :is(a, .docs-heading-link):focus-visible {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Markdown content ------------------------------------------------------ */
+
+.rmx-page-body h2 {
+  margin: calc(var(--rmx-space-xl) + var(--rmx-space-lg)) 0 var(--rmx-space-lg);
+  font-size: var(--rmx-font-size-xl);
+  font-weight: var(--rmx-font-weight-bold);
+  letter-spacing: var(--rmx-letter-spacing-tight);
+  line-height: var(--rmx-line-height-tight);
+  scroll-margin-top: var(--rmx-space-xl);
+}
+
+.rmx-page-body h2:first-child {
+  margin-top: 0;
+}
+
+.rmx-page-body h3,
+.rmx-page-body h4,
+.rmx-page-body h5,
+.rmx-page-body h6 {
+  margin: var(--rmx-space-xl) 0 var(--rmx-space-md);
+  line-height: var(--rmx-line-height-tight);
+}
+
+.rmx-page-body h5 {
+  font-size: var(--rmx-font-size-sm);
+}
+
+.rmx-page-body h6 {
+  color: var(--rmx-color-text-secondary);
+  font-size: var(--rmx-font-size-sm);
+  letter-spacing: var(--rmx-letter-spacing-meta);
+  text-transform: uppercase;
+}
+
+.rmx-page-body ul,
+.rmx-page-body ol {
+  margin: 0 0 var(--rmx-space-lg);
+  padding-left: var(--rmx-space-xl);
+}
+
+.rmx-page-body li > ul,
+.rmx-page-body li > ol {
+  margin: var(--rmx-space-sm) 0 0;
+}
+
+.rmx-page-body li + li {
+  margin-top: var(--rmx-space-sm);
+}
+
+.rmx-page-body input[type='checkbox'] {
+  margin-right: var(--rmx-space-sm);
+  accent-color: var(--rmx-color-accent);
+}
+
+.rmx-page-body blockquote {
+  margin: var(--rmx-space-xl) 0;
+  padding-left: var(--rmx-space-lg);
+  border-left: var(--rmx-space-xs) solid var(--rmx-color-border-subtle);
+  color: var(--rmx-color-text-secondary);
+}
+
+.rmx-page-body hr {
+  margin: var(--rmx-space-xl) 0;
+  border: 0;
+  border-top: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
+}
+
+.rmx-page-body table {
+  width: 100%;
+  margin: var(--rmx-space-xl) 0;
+  border-collapse: collapse;
+  font-size: var(--rmx-font-size-sm);
+}
+
+.rmx-page-body th,
+.rmx-page-body td {
+  padding: var(--rmx-space-sm) var(--rmx-space-md);
+  border: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
+  text-align: left;
+  vertical-align: top;
+}
+
+.rmx-page-body th {
+  background: var(--rmx-surface-lvl2);
+  font-weight: var(--rmx-font-weight-bold);
+}
+
+.rmx-page-body img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: var(--rmx-space-xl) 0;
+  border-radius: var(--rmx-radius-lg);
+}

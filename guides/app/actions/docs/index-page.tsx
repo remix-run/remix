@@ -23,7 +23,7 @@ function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
     >
       <div class="docs-index">
         <header class="docs-index__header">
-          <p class="docs-chapter-eyebrow text-red-brand">Remix Docs</p>
+          <p class="docs-chapter-eyebrow docs-accent">Remix Docs</p>
           <h1 class="rmx-page-title">Learn Remix from the request up.</h1>
           <p class="rmx-page-body">
             These guide chapters introduce Remix at a high level, then progressively deepen into
