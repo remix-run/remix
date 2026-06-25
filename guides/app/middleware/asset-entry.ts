@@ -8,21 +8,25 @@ import { assetServer } from '../utils/assets.ts'
 interface AssetEntry {
   scriptSrc: string
   scriptPreloads: string[]
+  stylesheetHref: string
   devRefreshScriptSrc?: string
 }
 
 const assetEntryKey = createContextKey<AssetEntry>()
 const defaultScriptEntry = path.resolve(import.meta.dirname, '../assets/entry.ts')
-const defaultDevRefreshScriptEntry = path.resolve(import.meta.dirname, '../assets/dev-refresh.ts')
+const defaultDevRefreshScriptEntry = path.resolve(import.meta.dirname, '../../public/dev-refresh.ts')
+const defaultStylesheet = path.resolve(import.meta.dirname, '../../public/docs.css')
 
 export function loadAssetEntry(
   scriptEntry = defaultScriptEntry,
   devRefreshScriptEntry = defaultDevRefreshScriptEntry,
+  stylesheet = defaultStylesheet,
 ): Middleware<{ key: typeof assetEntryKey; value: AssetEntry }> {
   return async (context, next) => {
-    let [scriptSrc, scriptPreloads, devRefreshScriptSrc] = await Promise.all([
+    let [scriptSrc, scriptPreloads, stylesheetHref, devRefreshScriptSrc] = await Promise.all([
       assetServer.getHref(scriptEntry),
       assetServer.getPreloads(scriptEntry).catch(() => []),
+      assetServer.getHref(stylesheet),
       process.env.NODE_ENV === 'production'
         ? Promise.resolve(undefined)
         : assetServer.getHref(devRefreshScriptEntry),
@@ -31,6 +35,7 @@ export function loadAssetEntry(
     context.set(assetEntryKey, {
       scriptSrc,
       scriptPreloads,
+      stylesheetHref,
       ...(devRefreshScriptSrc ? { devRefreshScriptSrc } : {}),
     })
 
