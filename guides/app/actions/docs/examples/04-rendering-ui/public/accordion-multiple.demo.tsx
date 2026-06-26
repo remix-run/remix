@@ -4,8 +4,14 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "remix/components/accordion";
+} from "remix/ui/accordion";
 
+/**
+ * @order 2
+ * @name Accordion Multiple Open
+ * @description Multiple mode allows several sections to stay open simultaneously, useful for operational checklists and dashboards.
+ * @layout center
+ */
 export function AccordionMultiple() {
   return () => (
     <Accordion defaultValue={["api", "alerts"]} type="multiple">
