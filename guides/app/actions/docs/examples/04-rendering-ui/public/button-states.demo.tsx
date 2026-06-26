@@ -1,5 +1,5 @@
-import * as button from 'remix/components/button'
-import { css, type Handle, type Props } from 'remix/ui'
+import * as button from "remix/components/button";
+import { css, type Handle, type Props } from "remix/ui";
 
 export function ButtonStates() {
   return () => (
@@ -23,10 +23,10 @@ export function ButtonStates() {
         <span mix={button.labelStyle}>Saving</span>
       </button>
     </div>
-  )
+  );
 }
 
-function AddIcon(handle: Handle<Props<'svg'>>) {
+function AddIcon(handle: Handle<Props<"svg">>) {
   return () => (
     <svg {...handle.props} aria-hidden="true" fill="none" viewBox="0 0 16 16">
       <path
@@ -36,18 +36,23 @@ function AddIcon(handle: Handle<Props<'svg'>>) {
         stroke-width="1.5"
       />
     </svg>
-  )
+  );
 }
 
-function ChevronRightIcon(handle: Handle<Props<'svg'>>) {
+function ChevronRightIcon(handle: Handle<Props<"svg">>) {
   return () => (
     <svg {...handle.props} aria-hidden="true" fill="none" viewBox="0 0 16 16">
-      <path d="m6 4 4 4-4 4" stroke="currentColor" stroke-linecap="round" stroke-width="1.5" />
+      <path
+        d="m6 4 4 4-4 4"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-width="1.5"
+      />
     </svg>
-  )
+  );
 }
 
-function SpinnerIcon(handle: Handle<Props<'svg'>>) {
+function SpinnerIcon(handle: Handle<Props<"svg">>) {
   return () => (
     <svg {...handle.props} aria-hidden="true" fill="none" viewBox="0 0 16 16">
       <path
@@ -57,23 +62,23 @@ function SpinnerIcon(handle: Handle<Props<'svg'>>) {
         stroke-width="1.5"
       />
     </svg>
-  )
+  );
 }
 
 const buttonRowCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-})
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+});
 
 const spinnerIconCss = css({
   opacity: 0.72,
-})
+});
 
 const spinCss = css({
-  '@keyframes demo-button-spin': {
-    from: { transform: 'rotate(0deg)' },
-    to: { transform: 'rotate(360deg)' },
+  "@keyframes demo-button-spin": {
+    from: { transform: "rotate(0deg)" },
+    to: { transform: "rotate(360deg)" },
   },
-  animation: 'demo-button-spin 1s linear infinite',
-})
+  animation: "demo-button-spin 1s linear infinite",
+});

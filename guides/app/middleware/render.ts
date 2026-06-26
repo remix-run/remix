@@ -44,7 +44,10 @@ export function render() {
   )
 }
 
-function parseClientEntryId(entryId: string): { moduleId: string; exportName?: string } {
+function parseClientEntryId(entryId: string): {
+  moduleId: string
+  exportName?: string
+} {
   let hashIndex = entryId.lastIndexOf('#')
 
   if (hashIndex === -1) {
