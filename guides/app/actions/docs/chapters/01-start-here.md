@@ -186,8 +186,6 @@ Navigate to [http://localhost:44100/albums/thriller](http://localhost:44100/albu
 Album: thriller
 ```
 
-> TODO: Add a screenshot of the browser showing the plain album response.
-
 The [Core App Structure](/docs/core-app-structure#routes-as-the-url-contract) chapter covers route maps and [route builders](/docs/core-app-structure#route-builders-route-get-post-put-del-form-resources) in more depth.
 
 ## Build your first page {#build-your-first-page}
@@ -382,7 +380,7 @@ export function AlbumPage(handle: Handle<{ album: Album }>) {
 
 Open [http://localhost:44100/albums/thriller](http://localhost:44100/albums/thriller) again. The same URL now returns our beautiful album page.
 
-> TODO: Add a screenshot of the browser showing the rendered album page.
+![Page showing text "Michael Jackson · 1983 Thriller"](/images/app/actions/docs/chapters/01-start-here/album-page.png)
 
 ## Build your first form action {#build-your-first-form-action}
 
@@ -538,7 +536,7 @@ export default createController(routes.albums.edit, {
 
 Open [http://localhost:44100/albums/thriller/edit](http://localhost:44100/albums/thriller/edit). The route returns an HTML form with the album data filled in.
 
-> TODO: Add a screenshot of the browser showing the edit album form.
+![Album edit page with information for Thriller by Micheal Jackson](/images/app/actions/docs/chapters/01-start-here/album-edit-page.png)
 
 Before handling the POST request, we're going to take a quick detour and upgrade Remix with a nice little `form-data` middleware in `app/router.ts`. This middleware parses browser form bodies once and makes the `FormData` available to route actions.
 
@@ -610,7 +608,7 @@ The `action` route action reads parsed Web `FormData`, updates the album, and re
 
 Now we can update our album data and set it to the correct year.
 
-> TODO: Add a GIF of fixing the year from 1983 to 1982.
+![Changing input with value 1983 to 1982, hitting submit, then being redirected to the corrected page](/images/app/actions/docs/chapters/01-start-here/correct-year.gif)
 
 The [Controllers and actions](/docs/core-app-structure) and [Data and Validation](/docs/data-and-validation) chapters go deeper on request handling, validation, and database-backed mutations.
 
@@ -781,7 +779,7 @@ export const AlbumEditForm = clientEntry(
 
 Now when you submit the form, the button is disabled and the button text changes to “Saving…”.
 
-> TODO: Add a screenshot or GIF of the button showing the pending “Saving…” state.
+![Submit button saying "Saving..." while being disabled](/images/app/actions/docs/chapters/01-start-here/pending-submit.png)
 
 There is a lot more we could do here to avoid a full page navigation, but that involves handling cancellations, error states, and more. The [Interactivity](/docs/interactivity) chapter covers client entries, events, and progressive enhancement in more detail.
 
