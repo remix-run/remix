@@ -30,6 +30,14 @@ describe('getHmrAnalysis', () => {
     })
   })
 
+  it('detects import.meta.hot usage without treating dispose callbacks as accept boundaries', () => {
+    assert.deepEqual(getHmrAnalysis(`import.meta.hot?.dispose(() => {})`), {
+      acceptedDeps: [],
+      selfAccepting: false,
+      usesImportMetaHot: true,
+    })
+  })
+
   it('throws when transformed code mentions import.meta.hot but cannot be parsed', () => {
     assert.throws(
       () => getHmrAnalysis(`if (import.meta.hot) { import.meta.hot.accept(() => {})`),

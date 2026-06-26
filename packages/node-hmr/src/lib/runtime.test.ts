@@ -90,6 +90,40 @@ describe('installNodeHmrRuntime', () => {
     }
   })
 
+  it('awaits accepted dependency dispose callbacks before dependency accept callbacks', async () => {
+    let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'node-hmr-runtime-test-'))
+    try {
+      let depPath = path.join(tmpDir, 'dep.mjs')
+      await fs.writeFile(depPath, 'export const value = 1\n')
+      let parentUrl = pathToFileURL(path.join(tmpDir, 'parent.mjs')).href
+      let depUrl = pathToFileURL(depPath).href
+      let runtime = installNodeHmrRuntime()
+      let events: string[] = []
+      let depContext = runtime.createHotContext(depUrl)
+      let parentContext = runtime.createHotContext(parentUrl)
+
+      depContext.dispose(async (data) => {
+        await Promise.resolve()
+        data.disposed = true
+        events.push('dep dispose')
+      })
+      parentContext.dispose(() => {
+        events.push('parent dispose')
+      })
+      parentContext.accept('./dep.mjs', (module) => {
+        assert.equal(module.value, 1)
+        assert.equal(depContext.data.disposed, true)
+        events.push('parent accept dep')
+      })
+
+      await runtime.update(parentUrl, 123, depUrl)
+
+      assert.deepEqual(events, ['dep dispose', 'parent accept dep'])
+    } finally {
+      await fs.rm(tmpDir, { force: true, recursive: true })
+    }
+  })
+
   it('emits server update events after successful hot updates', async () => {
     let tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'node-hmr-runtime-test-'))
     let unsubscribe: (() => void) | undefined

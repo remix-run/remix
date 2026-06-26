@@ -285,6 +285,56 @@ describe('node-hmr', () => {
     }
   })
 
+  it('disposes accepted dependencies that are not HMR boundaries without restarting the server', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getServerSource('./message.ts', 'getMessage()'),
+      'message.ts': [
+        `import { message as importedMessage } from './value.ts'`,
+        ``,
+        `let message = importedMessage`,
+        ``,
+        `export function getMessage() {`,
+        `  return [message, ...(globalThis.__hmrEvents ?? [])].join('|')`,
+        `}`,
+        ``,
+        `if (import.meta.hot) {`,
+        `  import.meta.hot.accept('./value.ts', (module) => {`,
+        `    if (module && typeof module === 'object' && 'message' in module) {`,
+        `      message = String(module.message)`,
+        `      globalThis.__hmrEvents.push(\`parent accept: \${message}\`)`,
+        `    }`,
+        `  })`,
+        `}`,
+      ].join('\n'),
+      'value.ts': getDisposeOnlyValueSource('one'),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'one|message eval: one')
+
+      await fs.writeFile(path.join(fixture.path, 'value.ts'), getDisposeOnlyValueSource('two'))
+
+      await waitForResponse(
+        ready.port,
+        [
+          'two',
+          'message eval: one',
+          'message dispose: one',
+          'message eval after dispose: one',
+          'message eval: two',
+          'parent accept: two',
+        ].join('|'),
+        () => server.output,
+      )
+      assert.equal(server.readyCount, 1)
+      assert.match(server.output, /hmr update value\.ts/)
+    } finally {
+      await server.stop()
+    }
+  })
+
   it('bubbles runtime invalidation to accepting importers without restarting the server', async () => {
     await using fixture = await createFixture({
       'server.ts': getServerSource('./parent.ts', 'getMessage()'),
@@ -1035,6 +1085,25 @@ function getPidServerSource(importSpecifier: string, responseExpression: string)
     importSpecifier,
     `String(process.pid) + ':' + String(${responseExpression})`,
   )
+}
+
+function getDisposeOnlyValueSource(message: string): string {
+  return [
+    `globalThis.__hmrEvents ??= []`,
+    `if (import.meta.hot?.data.disposedMessage) {`,
+    `  globalThis.__hmrEvents.push(\`message eval after dispose: \${import.meta.hot.data.disposedMessage}\`)`,
+    `}`,
+    `globalThis.__hmrEvents.push(${JSON.stringify(`message eval: ${message}`)})`,
+    ``,
+    `export const message = ${JSON.stringify(message)}`,
+    ``,
+    `if (import.meta.hot) {`,
+    `  import.meta.hot.dispose((data) => {`,
+    `    globalThis.__hmrEvents.push(\`message dispose: \${message}\`)`,
+    `    data.disposedMessage = message`,
+    `  })`,
+    `}`,
+  ].join('\n')
 }
 
 function getFixtureServerSource(importSpecifier: string, responseExpression: string): string {

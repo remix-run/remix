@@ -207,6 +207,42 @@ describe('asset server HMR', { skip: isBun }, () => {
     assert.equal(await page.locator('[data-testid="field"]').inputValue(), 'typed before update')
   })
 
+  it('disposes accepted browser dependencies that are not HMR boundaries', async (t) => {
+    let fixture = await createHmrFixture({
+      browserInvalidationFixture: {
+        message: 'Browser: before',
+        messageAccepts: false,
+        parentAccepts: true,
+        trackDependencyDispose: true,
+      },
+    })
+    t.after(fixture.close)
+
+    let page = await t.serve(await createHmrTestServer(fixture))
+    let connected = waitForConsoleMessage(page, '[remix] HMR connected')
+
+    await page.goto('/')
+    await connected
+    await waitForText(page, '[data-testid="browser-message"]', 'Browser: before')
+
+    await writeBrowserInvalidationMessage(fixture.rootDir, 'Browser: after', {
+      messageAccepts: false,
+      trackDependencyDispose: true,
+    })
+
+    await waitForText(page, '[data-testid="browser-message"]', 'Browser: after')
+    let events = await page.evaluate(
+      () => (window as unknown as { __remixHmrEvents?: string[] }).__remixHmrEvents,
+    )
+    assert.deepEqual(events, [
+      'message eval: Browser: before',
+      'message dispose: Browser: before',
+      'message eval after dispose: Browser: before',
+      'message eval: Browser: after',
+      'parent accept: Browser: after',
+    ])
+  })
+
   it('reloads the page when browser runtime invalidation cannot bubble', async (t) => {
     let fixture = await createHmrFixture({
       browserInvalidationFixture: {
@@ -689,7 +725,9 @@ async function createHmrFixture(
   options: {
     browserInvalidationFixture?: {
       message: string
+      messageAccepts?: boolean
       parentAccepts: boolean
+      trackDependencyDispose?: boolean
     }
     counterExtraExports?: string
   } = {},
@@ -819,7 +857,12 @@ function getCounterModuleSource(options: { buttonText: string; extraExports?: st
 
 async function writeBrowserInvalidationFixture(
   rootDir: string,
-  options: { message: string; parentAccepts: boolean },
+  options: {
+    message: string
+    messageAccepts?: boolean
+    parentAccepts: boolean
+    trackDependencyDispose?: boolean
+  },
 ): Promise<void> {
   await write(
     rootDir,
@@ -854,6 +897,11 @@ async function writeBrowserInvalidationFixture(
             "  import.meta.hot.accept('./browser-message.ts', (module) => {",
             "    if (module && typeof module === 'object' && 'message' in module) {",
             '      currentMessage = String(module.message)',
+            ...(options.trackDependencyDispose
+              ? [
+                  '      ;(window as unknown as { __remixHmrEvents?: string[] }).__remixHmrEvents?.push(`parent accept: ${currentMessage}`)',
+                ]
+              : []),
             '      renderMessage()',
             '    }',
             '  })',
@@ -866,22 +914,58 @@ async function writeBrowserInvalidationFixture(
   await write(
     rootDir,
     'app/browser-message.ts',
-    getBrowserInvalidationMessageSource(options.message),
+    getBrowserInvalidationMessageSource(options.message, {
+      messageAccepts: options.messageAccepts,
+      trackDependencyDispose: options.trackDependencyDispose,
+    }),
   )
 }
 
-async function writeBrowserInvalidationMessage(rootDir: string, message: string): Promise<void> {
-  await write(rootDir, 'app/browser-message.ts', getBrowserInvalidationMessageSource(message))
+async function writeBrowserInvalidationMessage(
+  rootDir: string,
+  message: string,
+  options: { messageAccepts?: boolean; trackDependencyDispose?: boolean } = {},
+): Promise<void> {
+  await write(
+    rootDir,
+    'app/browser-message.ts',
+    getBrowserInvalidationMessageSource(message, options),
+  )
 }
 
-function getBrowserInvalidationMessageSource(message: string): string {
+function getBrowserInvalidationMessageSource(
+  message: string,
+  options: { messageAccepts?: boolean; trackDependencyDispose?: boolean } = {},
+): string {
   return [
+    ...(options.trackDependencyDispose
+      ? [
+          'let hmrEvents = ((window as unknown as { __remixHmrEvents?: string[] }).__remixHmrEvents ??= [])',
+          'if (import.meta.hot?.data.disposedMessage) {',
+          '  hmrEvents.push(`message eval after dispose: ${import.meta.hot.data.disposedMessage}`)',
+          '}',
+          `hmrEvents.push(${JSON.stringify(`message eval: ${message}`)})`,
+          '',
+        ]
+      : []),
     `export const message = ${JSON.stringify(message)}`,
     '',
     'if (import.meta.hot) {',
-    '  import.meta.hot.accept(() => {',
-    "    import.meta.hot.invalidate('browser message boundary declined update')",
-    '  })',
+    ...(options.trackDependencyDispose
+      ? [
+          '  import.meta.hot.dispose((data) => {',
+          '    hmrEvents.push(`message dispose: ${message}`)',
+          '    data.disposedMessage = message',
+          '  })',
+        ]
+      : []),
+    ...(options.messageAccepts === false
+      ? []
+      : [
+          '  import.meta.hot.accept(() => {',
+          "    import.meta.hot.invalidate('browser message boundary declined update')",
+          '  })',
+        ]),
     '}',
     '',
   ].join('\n')

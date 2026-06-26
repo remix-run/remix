@@ -77,15 +77,18 @@ class NodeHotContext implements ImportMetaHot {
   #invalidated = false
   #invalidationMessage: string | undefined
   #isUpdating = false
+  #disposeDependency: (url: string) => Promise<void>
   #resolveDependency: (specifier: string) => string
 
   constructor(
     url: string,
     data: Record<string, unknown>,
+    disposeDependency: (url: string) => Promise<void>,
     resolveDependency: (specifier: string) => string,
   ) {
     this.data = data
     this.url = url
+    this.#disposeDependency = disposeDependency
     this.#resolveDependency = resolveDependency
   }
 
@@ -196,6 +199,7 @@ class NodeHotContext implements ImportMetaHot {
 
     this.#isUpdating = true
     try {
+      await this.#disposeDependency(acceptedUrl)
       let updatedModule = await import(`${acceptedUrl}?t=${timestamp}`)
       for (let { callback } of callbacks) {
         await callback(updatedModule, acceptedUrl)
@@ -344,7 +348,14 @@ export function installNodeHmrRuntime(
         dataByUrl.set(url, data)
       }
 
-      let context = new NodeHotContext(url, data, resolveDependency)
+      let context = new NodeHotContext(
+        url,
+        data,
+        async (dependencyUrl) => {
+          await contextsByUrl.get(dependencyUrl)?.disposeAll()
+        },
+        resolveDependency,
+      )
       contextsByUrl.set(url, context)
       return context
     },

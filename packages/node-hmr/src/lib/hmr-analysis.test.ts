@@ -69,6 +69,19 @@ describe('analyzeNodeHmrSource', () => {
     })
   })
 
+  it('detects import.meta.hot usage without treating dispose callbacks as accept boundaries', () => {
+    let analysis = analyzeNodeHmrSource(
+      'file:///app/message.ts',
+      [`if (import.meta.hot) {`, `  import.meta.hot.dispose(() => {})`, `}`].join('\n'),
+    )
+
+    assert.deepEqual(toComparableAnalysis(analysis), {
+      acceptedDeps: [],
+      selfAccepting: false,
+      usesImportMetaHot: true,
+    })
+  })
+
   it('detects bare accepted dependencies from real accept calls', () => {
     let analysis = analyzeNodeHmrSource(
       'file:///app/routes/root.ts',
