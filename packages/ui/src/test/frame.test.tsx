@@ -43,6 +43,12 @@ async function drainWithProtocol(stream: ReadableStream<Uint8Array>): Promise<st
   return html
 }
 
+async function waitForTransitionWindow(): Promise<void> {
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+  await new Promise<void>((resolve) => setTimeout(resolve, 120))
+}
+
 describe('run', () => {
   let container: HTMLDivElement
 
@@ -639,6 +645,69 @@ describe('run', () => {
     // both decrement to 0 and the rule is finally dropped.
     expect(rulePresent(aSelector)).toBe(false)
     expect(rulePresent(bSelectorFromB)).toBe(true)
+
+    app.dispose()
+  })
+
+  it('does not start transitions when hydrating adopted server styles', async () => {
+    let knobStyle = css({
+      '--offset': '8px',
+      display: 'block',
+      width: '30px',
+      height: '18px',
+      '&::before': {
+        content: '""',
+        display: 'block',
+        width: '10px',
+        height: '14px',
+        transform: 'translateX(0)',
+        transition: 'transform 80ms ease, width 80ms ease',
+      },
+      '&[data-state="checked"]::before': {
+        width: '18px',
+        transform: 'translateX(var(--offset))',
+      },
+    })
+
+    let HydratedKnob = clientEntry(
+      '/assets/hydrated-knob.js#HydratedKnob',
+      function HydratedKnob() {
+        return () => <div id="hydrated-knob" data-state="checked" mix={[knobStyle]} />
+      },
+    )
+
+    let html = await drain(renderToStream(<HydratedKnob />))
+    document.body.innerHTML = html
+
+    let target = document.getElementById('hydrated-knob')
+    invariant(target instanceof HTMLDivElement)
+
+    let beforeTransform = getComputedStyle(target, '::before').transform
+    let beforeWidth = getComputedStyle(target, '::before').width
+    expect(beforeTransform).toBe('matrix(1, 0, 0, 1, 8, 0)')
+    expect(beforeWidth).toBe('18px')
+
+    let transitionRuns: string[] = []
+    target.addEventListener('transitionrun', (event) => {
+      let transition = event as TransitionEvent
+      transitionRuns.push(`${transition.pseudoElement}:${transition.propertyName}`)
+    })
+
+    let app = run({
+      loadModule(moduleUrl, exportName) {
+        if (moduleUrl === '/assets/hydrated-knob.js' && exportName === 'HydratedKnob') {
+          return HydratedKnob
+        }
+        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
+      },
+    })
+
+    await app.ready()
+    await waitForTransitionWindow()
+
+    expect(getComputedStyle(target, '::before').transform).toBe(beforeTransform)
+    expect(getComputedStyle(target, '::before').width).toBe(beforeWidth)
+    expect(transitionRuns).toEqual([])
 
     app.dispose()
   })
