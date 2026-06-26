@@ -1,8 +1,13 @@
 import { type Handle } from "remix/ui";
 import { css } from "remix/ui";
-import { Menu, MenuItem, Submenu } from "remix/components/menu";
-import { onMenuSelect } from "remix/ui/menu";
+import { Menu, MenuItem, Submenu } from "remix/ui/menu";
+import { onMenuSelect } from "remix/ui/menu/primitives";
 
+/**
+ * @name Menu Overview
+ * @description A hierarchical menu with checkboxes, radio groups, submenus, and separators.
+ * @layout center
+ */
 export function MenuOverview(handle: Handle) {
   type Density = "comfortable" | "compact";
   let wordWrap = true;
@@ -26,7 +31,12 @@ export function MenuOverview(handle: Handle) {
             showGutter = !showGutter;
             break;
           case "density":
-            density = event.item.value as Density;
+            if (
+              event.item.value === "comfortable" ||
+              event.item.value === "compact"
+            ) {
+              density = event.item.value;
+            }
             break;
         }
         handle.update();

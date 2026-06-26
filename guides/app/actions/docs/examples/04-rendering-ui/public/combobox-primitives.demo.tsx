@@ -1,93 +1,92 @@
 import { css, type Handle } from "remix/ui";
-import * as popover from "remix/ui/popover";
-import * as select from "remix/ui/select/primitives";
+import * as combobox from "remix/ui/combobox/primitives";
 
 /**
- * @name Select Primitives
- * @description Headless select behavior with minimal local styles.
+ * @name Combobox Primitives
+ * @description Headless combobox behavior with minimal local styles.
  * @layout center
  */
-export function SelectDeconstructed(handle: Handle) {
-  let value = "remix";
+export function ComboboxPrimitives(handle: Handle) {
+  let value = "none";
 
   return () => (
     <div
       mix={[
         demoCss,
-        select.onSelectChange((event) => {
+        combobox.onComboboxChange((event) => {
           value = event.value ?? "none";
           void handle.update();
         }),
       ]}
     >
-      <select.Context
-        defaultLabel="Choose framework"
-        defaultValue="remix"
-        labelSwapDelayMs={100}
-        name="framework"
-      >
-        <button mix={[triggerCss, select.trigger()]} type="button">
-          <SelectLabel />
-        </button>
+      <label mix={labelCss} for={`${handle.id}-field`}>
+        Framework
+      </label>
 
-        <popover.Context>
-          <div mix={[surfaceCss, select.popover()]}>
-            <div mix={[listCss, select.list()]}>
-              {frameworks.map((option) => (
-                <div
-                  key={option.value}
-                  mix={[optionCss, select.option(option)]}
-                >
-                  {option.label}
-                </div>
-              ))}
-            </div>
+      <combobox.Context name="framework">
+        <input
+          id={`${handle.id}-field`}
+          mix={[inputCss, combobox.input()]}
+          placeholder="Search frameworks"
+        />
+
+        <div mix={[surfaceCss, combobox.popover()]}>
+          <div mix={[listCss, combobox.list()]}>
+            {frameworks.map((option) => (
+              <div
+                key={option.value}
+                mix={[optionCss, combobox.option(option)]}
+              >
+                {option.label}
+              </div>
+            ))}
           </div>
-        </popover.Context>
+        </div>
 
-        <input mix={[hiddenInputCss, select.hiddenInput()]} />
-      </select.Context>
+        <input mix={[hiddenInputCss, combobox.hiddenInput()]} />
+      </combobox.Context>
 
       <p mix={valueCss}>{`value=${value}`}</p>
     </div>
   );
 }
 
-function SelectLabel(handle: Handle) {
-  let context = handle.context.get(select.Context);
-  return () => <span>{context.displayedLabel}</span>;
-}
-
 const frameworks = [
-  { label: "Remix", value: "remix" },
-  { label: "React Router", value: "react-router" },
+  { label: "Remix", searchValue: ["remix", "rmx"], value: "remix" },
+  {
+    label: "React Router",
+    searchValue: ["react router", "router"],
+    value: "react-router",
+  },
   { label: "React", value: "react" },
   { disabled: true, label: "Archived", value: "archived" },
-] as const;
+];
 
 const demoCss = css({
   display: "grid",
-  justifyItems: "start",
   gap: "8px",
   width: "min(100%, 18rem)",
 });
 
-const triggerCss = css({
-  appearance: "none",
-  display: "inline-flex",
-  alignItems: "center",
-  minWidth: "12rem",
+const labelCss = css({
+  color: "#101010",
+  font: '600 12px/16px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  letterSpacing: 0,
+});
+
+const inputCss = css({
+  boxSizing: "border-box",
+  width: "100%",
   height: "32px",
   border: "1px solid #cfcfcf",
   borderRadius: "6px",
-  background: "#ffffff",
   color: "#101010",
-  font: '600 13px/18px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+  font: '500 13px/18px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
   letterSpacing: 0,
   padding: "0 10px",
   "&:focus-visible": {
-    outline: "2px solid #3573f6",
-    outlineOffset: "2px",
+    borderColor: "#3573f6",
+    outline: "2px solid #1A72FF",
   },
 });
 

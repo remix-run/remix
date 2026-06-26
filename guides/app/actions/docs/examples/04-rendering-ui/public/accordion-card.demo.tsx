@@ -4,8 +4,14 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "remix/components/accordion";
+} from "remix/ui/accordion";
 
+/**
+ * @name Accordion in a Card
+ * @description The Accordion can sit inside a card when the surrounding surface needs stronger grouping.
+ * @layout center
+ * @order 3
+ */
 export function AccordionCard() {
   return () => (
     <article mix={cardCss}>
