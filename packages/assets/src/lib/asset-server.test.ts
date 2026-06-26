@@ -2360,7 +2360,7 @@ describe('asset-server', () => {
 
     assert.match(
       body,
-      /export \* from "\/assets\/app\/node_modules\/@remix-run\/__example\/index\.ts"/,
+      /export \* from "\/assets\/app\/node_modules\/%40remix-run\/__example\/index\.ts"/,
     )
   })
 
@@ -4166,7 +4166,7 @@ describe('asset-server', () => {
       try {
         let firstResponse = await get(assetServer, '/assets/app/entry.ts')
         assert.ok(firstResponse)
-        assert.match(await firstResponse.text(), /@remix-run\/__example\/a\.ts/)
+        assert.match(await firstResponse.text(), /%40remix-run\/__example\/a\.ts/)
 
         let packageJsonPath = await writeJson(
           caseDir,
@@ -4184,8 +4184,8 @@ describe('asset-server', () => {
         assert.ok(secondResponse)
         let secondBody = await secondResponse.text()
 
-        assert.match(secondBody, /@remix-run\/__example\/b\.ts/)
-        assert.doesNotMatch(secondBody, /@remix-run\/__example\/a\.ts/)
+        assert.match(secondBody, /%40remix-run\/__example\/b\.ts/)
+        assert.doesNotMatch(secondBody, /%40remix-run\/__example\/a\.ts/)
       } finally {
         await assetServer.close()
       }
@@ -4218,7 +4218,7 @@ describe('asset-server', () => {
       try {
         for (let index = 0; index < 8; index++) {
           let useA = index % 2 === 0
-          let expected = useA ? /@remix-run\/__example\/a\.ts/ : /@remix-run\/__example\/b\.ts/
+          let expected = useA ? /%40remix-run\/__example\/a\.ts/ : /%40remix-run\/__example\/b\.ts/
 
           let packageJsonPath = await writeJson(
             caseDir,
@@ -5061,7 +5061,7 @@ describe('asset-server', () => {
     })
 
     let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
-    assert.ok(servedUrls.has('/assets/app/node_modules/@remix-run/__allowed-package/index.ts'))
+    assert.ok(servedUrls.has('/assets/app/node_modules/%40remix-run/__allowed-package/index.ts'))
   })
 
   it('allows package dependency files by package name without prior importer requests', async () => {
@@ -5918,7 +5918,7 @@ describe('asset-server', () => {
     let servedUrls = await assertRecursivelyServedImports(assetServer, ['/assets/app/entry.ts'])
     assert.ok(
       servedUrls.has(
-        '/assets/app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package/index.ts',
+        '/assets/app/node_modules/.pnpm/%40remix-run%2B__allowed-package%401.0.0/node_modules/%40remix-run/__allowed-package/index.ts',
       ),
     )
   })
