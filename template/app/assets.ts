@@ -20,9 +20,4 @@ export const assetServer = createAssetServer({
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
   watch: false,
-  scripts: {
-    define: {
-      'process.env.NODE_ENV': JSON.stringify(nodeEnv),
-    },
-  },
 })
