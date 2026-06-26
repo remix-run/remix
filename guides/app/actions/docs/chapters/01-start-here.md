@@ -192,7 +192,7 @@ The [Core App Structure](/docs/core-app-structure#routes-as-the-url-contract) ch
 
 ## Build your first page {#build-your-first-page}
 
-Let's make this album page a little more interesting by returning HTML via rendering a Remix component.
+Let's make this album page a little more interesting by returning HTML from a Remix component.
 
 Remix UI uses JSX with a two-phase component model. A component function receives a `handle` and returns a render function. The setup phase runs once when the component is first created, and the render phase runs on the first render and every update afterward.
 
@@ -260,7 +260,7 @@ touch app/actions/albums/data.ts
 ```
 
 ```ts filename=app/actions/albums/data.ts
-export interface Album {
+export type Album = {
   artist: string
   id: string
   title: string
@@ -286,6 +286,9 @@ export async function updateAlbum(albumId: string, values: Partial<Album>) {
   if (album === undefined) {
     throw new Error(`Album not found: ${albumId}`)
   }
+
+  // Simulate network latency
+  await new Promise((resolve) => setTimeout(resolve, 1000))
 
   Object.assign(album, values)
   return album
@@ -344,7 +347,7 @@ export function AlbumPage(handle: Handle<{ album: Album }>) {
 
 Now the page displays the album title, artist, and year.
 
-Center it and add a little spacing with the `css` function and `mix` prop. The [Rendering UI chapter](/docs/rendering-ui) covers this util and prop in more detail.
+Center it and add a little spacing with the `css` function and `mix` prop. The [Rendering UI chapter](/docs/rendering-ui) covers this helper and prop in more detail.
 
 ```tsx filename=app/actions/albums/show-page.tsx lines=[2,14-18,20]
 import type { Handle } from 'remix/ui'
@@ -385,7 +388,7 @@ Open [http://localhost:44100/albums/thriller](http://localhost:44100/albums/thri
 
 We're able to retrieve data and display it, but the real fun begins when we can start changing data. Let's set up a form to edit the album data, and hook up an action to handle a POST request so we can update it.
 
-Back in our `routes.ts` file we'll use the `form()` route helper. This little util is nice because it creates two routes at the same URL: a `GET` route that shows the form and a `POST` route that handles the submit. Two routes for the price of one!
+Back in our `routes.ts` file we'll use the `form()` route helper. This helper is nice because it creates two routes at the same URL: a `GET` route that shows the form and a `POST` route that handles the submit. Two routes for the price of one!
 
 ```ts filename=app/routes.ts lines=[1,8]
 import { form, get, route } from 'remix/routes'
@@ -521,7 +524,7 @@ export default createController(routes.albums.edit, {
 
       return context.render(<AlbumEditPage album={album} />)
     },
-    async action(context) {
+    async action() {
       return new Response('Not implemented', { status: 501 })
     },
   },
@@ -556,7 +559,7 @@ export const router = createRouter<AppContext>({
 // ...
 ```
 
-We'll also use `remix/data-schema/form-data` to turn the raw `FormData` into typed values before updating the album. `remix/data-schema` is a built-in Remix library for validating and parsing all sorts of data, and is explored in the [Data and Validation chapter](/docs/data-and-validation) in more detail.
+We'll also use `remix/data-schema/form-data` to turn the raw `FormData` into typed values before updating the album. `remix/data-schema` is a built-in Remix library for validating and parsing all sorts of data. The [Data and Validation chapter](/docs/data-and-validation) explores it in more detail.
 
 ```tsx filename=app/actions/albums/edit/controller.tsx lines=[2-5,8,11-15,28-33]
 import { createController } from 'remix/router'
@@ -600,78 +603,76 @@ The `action` route action reads parsed Web `FormData`, updates the album, and re
 
 Now we can update our album data and set it to the correct year.
 
-TODO: add a gif of fixing the year from 1983 to 1982
+> TODO: Add a GIF of fixing the year from 1983 to 1982.
 
 The [Controllers and actions](/docs/core-app-structure) and [Data and Validation](/docs/data-and-validation) chapters go deeper on request handling, validation, and database-backed mutations.
 
 ## Add your first hydrated component {#add-your-first-hydrated-component}
 
-The edit form already works on the server. Now add one small browser behavior: show a pending state on the submit button after the form submits.
+You might have noticed that saving that album takes a little bit of time. That's because we added one second of simulated latency, like a user might experience on a slower connection or far from our server. It's not a terrible loading experience, but it could be better.
 
-Put browser-loaded code in `app/assets/`. This component renders the same form, but `clientEntry(...)` tells Remix UI to hydrate it in the browser:
+So far we have not used any JavaScript in the browser. Everything up to this point has been server-side JavaScript. Even our components are rendered on the server and streamed as HTML.
+
+If we want to signal to the user that their form submission is pending, we need to bring in a little bit of browser JavaScript. In Remix, the easiest way to do this is to wrap a component with `clientEntry(...)`. The component still renders on the server, but once it makes it to the browser Remix can hydrate it, respond to user interaction, and update the component without waiting for another server response.
+
+Start by creating a file for the form inside `app/assets/`:
 
 ```sh
 touch app/assets/album-edit-form.tsx
 ```
 
+Files in `app/assets/` are browser-loadable modules. The template's asset server is already configured to serve this directory, so when a server-rendered component becomes a client entry, Remix can turn its source file into a browser module URL. The template also already loads `app/assets/entry.ts`, which starts the Remix UI client runtime in the browser. The [Files and Assets](/docs/files-and-assets) chapter goes deeper into our bundlerless approach and how `remix/assets` works.
+
+Now that we have a place for the form to live, let's pull it into its own component.
+
 ```tsx filename=app/assets/album-edit-form.tsx
-import { clientEntry, on } from 'remix/ui'
+import { css } from 'remix/ui'
 import type { Handle } from 'remix/ui'
 
+import type { Album } from '../actions/albums/data.ts'
 import { routes } from '../routes.ts'
 
-interface AlbumFormValues {
-  artist: string
-  id: string
-  title: string
-  year: number
+export function AlbumEditForm(handle: Handle<{ album: Album }>) {
+  return () => {
+    let { album } = handle.props
+
+    return (
+      <form
+        action={routes.albums.edit.action.href({ albumId: album.id })}
+        method="post"
+        mix={css({
+          display: 'grid',
+          gap: '0.75rem',
+          maxWidth: 'fit-content',
+          '& input': {
+            marginLeft: '0.5rem',
+          },
+        })}
+      >
+        <label>
+          Title
+          <input name="title" defaultValue={album.title} required />
+        </label>
+        <label>
+          Artist
+          <input name="artist" defaultValue={album.artist} required />
+        </label>
+        <label>
+          Year
+          <input name="year" defaultValue={album.year} required type="number" />
+        </label>
+        <button type="submit">Save album</button>
+      </form>
+    )
+  }
 }
-
-export const AlbumEditForm = clientEntry(
-  import.meta.url,
-  function AlbumEditForm(handle: Handle<{ album: AlbumFormValues }>) {
-    let pending = false
-
-    return () => {
-      let { album } = handle.props
-
-      return (
-        <form
-          action={routes.albums.edit.action.href({ albumId: album.id })}
-          method="post"
-          mix={on('submit', () => {
-            pending = true
-            handle.update()
-          })}
-        >
-          <label>
-            Title
-            <input name="title" defaultValue={album.title} required />
-          </label>
-          <label>
-            Artist
-            <input name="artist" defaultValue={album.artist} required />
-          </label>
-          <label>
-            Year
-            <input name="year" defaultValue={album.year} required type="number" />
-          </label>
-          <button disabled={pending} type="submit">
-            {pending ? 'Saving…' : 'Save album'}
-          </button>
-        </form>
-      )
-    }
-  },
-)
 ```
 
-The submit handler does not prevent the default form submit. It only updates local component state before the browser navigates. The server contract stays the same: `POST` sends `FormData`, the route action updates the album, and the response redirects.
+Let's update the edit page to render this new `AlbumEditForm` component:
 
-Use the hydrated form from the edit page:
-
-```tsx filename=app/actions/albums/edit/page.tsx lines=[3,14]
+```tsx filename=app/actions/albums/edit/page.tsx lines=[4,16]
 import type { Handle } from 'remix/ui'
+import { css } from 'remix/ui'
 
 import { AlbumEditForm } from '../../../assets/album-edit-form.tsx'
 import { Document } from '../../../ui/document.tsx'
@@ -683,7 +684,7 @@ export function AlbumEditPage(handle: Handle<{ album: Album }>) {
 
     return (
       <Document title={`Edit ${album.title} — Albums`}>
-        <main>
+        <main mix={css({ padding: '1rem' })}>
           <h1>Edit {album.title}</h1>
           <AlbumEditForm album={album} />
         </main>
@@ -693,6 +694,88 @@ export function AlbumEditPage(handle: Handle<{ album: Album }>) {
 }
 ```
 
-Submit the form again. The button changes to “Saving…” while the browser sends the request, then the redirect returns you to the album page.
+Everything should look like it did before.
 
-The [Files and Assets](/docs/files-and-assets) chapter explains static files, source-served assets, file maps, and production options. The [Interactivity](/docs/interactivity) chapter covers client entries, events, and progressive enhancement.
+Next mark the form as a client entry. `import.meta.url` tells our asset server which source file should be turned into a browser-loadable module:
+
+```tsx filename=app/assets/album-edit-form.tsx lines=[1,7-9,12]
+import { clientEntry, css } from 'remix/ui'
+import type { Handle } from 'remix/ui'
+
+import type { Album } from '../actions/albums/data.ts'
+import { routes } from '../routes.ts'
+
+export const AlbumEditForm = clientEntry(
+  import.meta.url,
+  function AlbumEditForm(handle: Handle<{ album: Album }>) {
+    // ...
+  },
+)
+```
+
+The page should still look and behave the same. `clientEntry(...)` simply tells Remix to render the form on the server, serialize its props, and hydrate this component in the browser when the client runtime starts.
+
+Now that the form can run in the browser, we can add pending state. State in Remix is just a variable. Create your "state" as a variable in the setup scope (in this case, `let pending`):
+
+```tsx filename=app/assets/album-edit-form.tsx lines=[6]
+// ...
+
+export const AlbumEditForm = clientEntry(
+  import.meta.url,
+  function AlbumEditForm(handle: Handle<{ album: Album }>) {
+    let pending = false
+
+    return () => {
+      // ...
+    }
+  },
+)
+```
+
+When the form submits, we flip the `pending` variable from `false` to `true` and call `handle.update()`. `handle.update()` tells Remix UI to render this component again with the new local state. To listen for the submit, we add an event listener via the `on` helper and pass an array into the `mix` prop.
+
+```tsx filename=app/assets/album-edit-form.tsx lines=[1,19,21-25,28-30]
+import { clientEntry, css, on } from 'remix/ui'
+import type { Handle } from 'remix/ui'
+
+import type { Album } from '../actions/albums/data.ts'
+import { routes } from '../routes.ts'
+
+export const AlbumEditForm = clientEntry(
+  import.meta.url,
+  function AlbumEditForm(handle: Handle<{ album: Album }>) {
+    let pending = false
+
+    return () => {
+      let { album } = handle.props
+
+      return (
+        <form
+          action={routes.albums.edit.action.href({ albumId: album.id })}
+          method="post"
+          mix={[
+            css({ display: 'grid', gap: '0.75rem', maxWidth: 'fit-content' }),
+            on('submit', () => {
+              pending = true
+              handle.update()
+            }),
+          ]}
+        >
+          {/* ... */}
+          <button disabled={pending} type="submit">
+            {pending ? 'Saving…' : 'Save album'}
+          </button>
+        </form>
+      )
+    }
+  },
+)
+```
+
+Now when you submit the form, the button is disabled and the button text changes to “Saving…”.
+
+> TODO: Add a screenshot or GIF of the button showing the pending “Saving…” state.
+
+There is a lot more we could do here to avoid a full page navigation, but that involves handling cancellations, error states, and more. The [Interactivity](/docs/interactivity) chapter covers client entries, events, and progressive enhancement in more detail.
+
+For now we've dipped our toe in the water enough to get a big picture of what Remix offers and how to start building with it. Next we'll dig deeper into Core App Structure, or if you're excited about a particular topic, feel free to jump around.
