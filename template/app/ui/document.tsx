@@ -3,7 +3,7 @@ import { css } from 'remix/ui'
 
 import { routes } from '../routes.ts'
 
-export interface DocumentProps {
+export type DocumentProps = {
   children?: RemixNode
   head?: RemixNode
   title?: string

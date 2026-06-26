@@ -5,7 +5,7 @@ const HOLD_MS = 1200
 
 type CopyState = 'idle' | 'copied' | 'failed' | 'resetting'
 
-interface PromptButtonProps extends SerializableProps {
+type PromptButtonProps = SerializableProps & {
   text: string
 }
 

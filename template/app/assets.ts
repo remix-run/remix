@@ -16,6 +16,7 @@ export const assetServer = createAssetServer({
   },
   allow: [
     'app/assets/**',
+    'app/routes.ts',
     'node_modules/**',
     /* remix-template:remove-start This is only needed inside the Remix monorepo. */
     '../packages/**',
