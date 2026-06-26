@@ -1280,7 +1280,7 @@ async function createHmrFixture(
   return {
     rootDir,
     async close() {
-      await fs.rm(rootDir, { force: true, recursive: true })
+      await removeFixtureDir(rootDir)
     },
   }
 }
@@ -1424,7 +1424,7 @@ async function createServerFrameHmrFixture(): Promise<HmrFixture> {
     },
     rootDir,
     async close() {
-      await fs.rm(rootDir, { force: true, recursive: true })
+      await removeFixtureDir(rootDir)
     },
   }
 }
@@ -1530,9 +1530,18 @@ async function createNodeHmrFixture(
     devProxy: options.devProxy === true,
     rootDir,
     async close() {
-      await fs.rm(rootDir, { force: true, recursive: true })
+      await removeFixtureDir(rootDir)
     },
   }
+}
+
+async function removeFixtureDir(fixturePath: string): Promise<void> {
+  await fs.rm(fixturePath, {
+    force: true,
+    maxRetries: process.platform === 'win32' ? 5 : 0,
+    recursive: true,
+    retryDelay: 100,
+  })
 }
 
 function getClientFieldSource(
