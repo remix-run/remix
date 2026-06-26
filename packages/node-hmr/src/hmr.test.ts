@@ -9,6 +9,7 @@ import { describe, it } from '@remix-run/test'
 
 const packageRoot = fileURLToPath(new URL('../', import.meta.url))
 const nodeTsxImportUrl = import.meta.resolve('@remix-run/node-tsx')
+const isWindows = process.platform === 'win32'
 
 describe('node-hmr', () => {
   it('hot updates self-accepting modules without restarting the server', async () => {
@@ -1075,36 +1076,79 @@ describe('node-hmr', () => {
     }
   })
 
-  it('waits for child process exit before restarting', async () => {
-    await using fixture = await createFixture({
-      'server.ts': getSlowShutdownServerSource('one'),
-    })
-    let server = startFixtureServer(fixture.path)
+  it(
+    'waits for child process exit before restarting',
+    { skip: isWindows && 'Windows terminates child processes without delivering SIGTERM handlers' },
+    async () => {
+      await using fixture = await createFixture({
+        'server.ts': getSlowShutdownServerSource('one'),
+      })
+      let server = startFixtureServer(fixture.path)
 
-    try {
-      let ready = await server.waitForReady(0)
-      assert.equal(await fetchText(ready.port), 'one')
+      try {
+        let ready = await server.waitForReady(0)
+        assert.equal(await fetchText(ready.port), 'one')
 
-      await fs.writeFile(fixture.entryPath, getSlowShutdownServerSource('two'))
+        await fs.writeFile(fixture.entryPath, getSlowShutdownServerSource('two'))
 
-      await waitForOutput(server, /"type":"child-sigterm","count":1/)
-      await assertNoReadyEvent(server, 1, 5_250)
-    } finally {
-      await server.stop()
-    }
-  })
+        await waitForOutput(server, /"type":"child-sigterm","count":1/)
+        await assertNoReadyEvent(server, 1, 5_250)
+      } finally {
+        await server.stop()
+      }
+    },
+  )
 
-  it('waits for a force-killed child process before completing shutdown', async () => {
+  it(
+    'waits for a force-killed child process before completing shutdown',
+    { skip: isWindows && 'Windows terminates child processes without delivering SIGTERM handlers' },
+    async () => {
+      let fixture = await createFixture({
+        'server.ts': [
+          `import { createServer } from 'node:http'`,
+          ``,
+          `let server = createServer((_request, response) => {`,
+          `  response.end('ok')`,
+          `})`,
+          ``,
+          `process.on('SIGTERM', () => {`,
+          `  console.log(JSON.stringify({ type: 'child-sigterm', pid: process.pid }))`,
+          `})`,
+          ``,
+          `server.listen(0, '127.0.0.1', () => {`,
+          `  let address = server.address()`,
+          `  if (address && typeof address === 'object') {`,
+          `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
+          `  }`,
+          `})`,
+          ``,
+          `setInterval(() => {}, 1_000)`,
+        ].join('\n'),
+      })
+      let server = startFixtureServer(fixture.path)
+
+      try {
+        let ready = await server.waitForReady(0)
+        assert.equal(await fetchText(ready.port), 'ok')
+
+        let stopped = server.stop()
+        await waitForOutput(server, /"type":"child-sigterm"/)
+        await stopped
+
+        await fs.rm(fixture.path, { force: true, recursive: true })
+      } finally {
+        await removeFixture(fixture.path)
+      }
+    },
+  )
+
+  it('removes fixture files after shutdown', async () => {
     let fixture = await createFixture({
       'server.ts': [
         `import { createServer } from 'node:http'`,
         ``,
         `let server = createServer((_request, response) => {`,
         `  response.end('ok')`,
-        `})`,
-        ``,
-        `process.on('SIGTERM', () => {`,
-        `  console.log(JSON.stringify({ type: 'child-sigterm', pid: process.pid }))`,
         `})`,
         ``,
         `server.listen(0, '127.0.0.1', () => {`,
@@ -1123,10 +1167,7 @@ describe('node-hmr', () => {
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'ok')
 
-      let stopped = server.stop()
-      await waitForOutput(server, /"type":"child-sigterm"/)
-      await stopped
-
+      await server.stop()
       await fs.rm(fixture.path, { force: true, recursive: true })
     } finally {
       await removeFixture(fixture.path)
