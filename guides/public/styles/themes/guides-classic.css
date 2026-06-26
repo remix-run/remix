@@ -76,16 +76,17 @@
   --rmx-color-border-default: #d1d5db;
   --rmx-color-border-strong: #9ca3af;
 
-  --rmx-color-focus-ring: #d83a5a;
-  --rmx-color-accent: #d83a5a;
-  --rmx-color-accent-hover: #d83a5a;
-  --rmx-color-code-highlight: rgb(187 247 208);
+  --rmx-color-focus-ring: rgba(21, 119, 194, 1);
+  --rmx-color-accent: rgba(21, 119, 194, 1);
+  --rmx-color-accent-hover: rgba(11, 47, 72, 1);
+  --rmx-color-eyebrow: #d83a5a;
+  --rmx-color-code-highlight: color-mix(in srgb, #f59e0b 18%, transparent);
 
-  --rmx-color-action-primary-background: #d83a5a;
-  --rmx-color-action-primary-background-hover: #b8324d;
-  --rmx-color-action-primary-background-active: #9f2940;
+  --rmx-color-action-primary-background: #1b1b1f;
+  --rmx-color-action-primary-background-hover: color-mix(in srgb, #1b1b1f 85%, white);
+  --rmx-color-action-primary-background-active: color-mix(in srgb, #1b1b1f 92%, white);
   --rmx-color-action-primary-foreground: #ffffff;
-  --rmx-color-action-primary-border: #d83a5a;
+  --rmx-color-action-primary-border: #1b1b1f;
 
   --rmx-color-action-secondary-background: #ffffff;
   --rmx-color-action-secondary-background-hover: #f7f7f8;
@@ -114,20 +115,22 @@
     --rmx-color-text-link: #ff8aa0;
     --rmx-color-text-link-hover: #ff5d7a;
 
+    --rmx-color-focus-ring: rgba(37, 158, 239, 1);
+    --rmx-color-accent: rgba(37, 158, 239, 1);
+    --rmx-color-accent-hover: color-mix(in srgb, rgba(37, 158, 239, 1) 65%, white);
+    --rmx-color-eyebrow: #ff5d7a;
+
     --rmx-color-border-subtle: #2a2a30;
     --rmx-color-border-default: #3f3f46;
     --rmx-color-border-strong: #52525b;
 
-    --rmx-color-focus-ring: #ff5d7a;
-    --rmx-color-accent: #ff5d7a;
-    --rmx-color-accent-hover: #ff8aa0;
-    --rmx-color-code-highlight: rgb(34 197 94 / 0.35);
+    --rmx-color-code-highlight: color-mix(in srgb, #f59e0b 22%, transparent);
 
-    --rmx-color-action-primary-background: #ff5d7a;
-    --rmx-color-action-primary-background-hover: #ff8aa0;
-    --rmx-color-action-primary-background-active: #d94862;
+    --rmx-color-action-primary-background: #e7e7ea;
+    --rmx-color-action-primary-background-hover: color-mix(in srgb, #e7e7ea 88%, black);
+    --rmx-color-action-primary-background-active: color-mix(in srgb, #e7e7ea 80%, black);
     --rmx-color-action-primary-foreground: #0d0d10;
-    --rmx-color-action-primary-border: #ff5d7a;
+    --rmx-color-action-primary-border: #e7e7ea;
 
     --rmx-color-action-secondary-background: #16161a;
     --rmx-color-action-secondary-background-hover: #202026;

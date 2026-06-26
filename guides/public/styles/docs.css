@@ -34,6 +34,10 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+::selection {
+  background: color-mix(in srgb, var(--rmx-color-text-primary) 14%, transparent);
+}
+
 a {
   color: var(--rmx-color-text-link);
   text-decoration: underline;
@@ -58,8 +62,19 @@ pre {
   overflow-x: auto;
   padding: var(--rmx-space-lg);
   border: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
+  scrollbar-width: thin;
+  scrollbar-color: var(--rmx-color-border-strong) transparent;
   border-radius: var(--rmx-radius-md);
   background: var(--rmx-surface-lvl2);
+}
+
+pre::-webkit-scrollbar {
+  height: var(--rmx-space-sm);
+}
+
+pre::-webkit-scrollbar-thumb {
+  border-radius: var(--rmx-radius-full);
+  background: var(--rmx-color-border-strong);
 }
 
 [data-code-block] pre {
@@ -166,7 +181,7 @@ pre code {
 }
 
 .docs-accent {
-  color: var(--rmx-color-accent);
+  color: var(--rmx-color-eyebrow, var(--rmx-color-accent));
 }
 
 /* Site header ----------------------------------------------------------- */
@@ -416,6 +431,7 @@ pre code {
 
 .rmx-page-body :is(h1, h2, h3, h4, h5, h6) {
   position: relative;
+  scroll-margin-top: var(--rmx-space-xl);
 }
 
 .rmx-page-body :is(h1, h2, h3, h4, h5, h6)::before {
