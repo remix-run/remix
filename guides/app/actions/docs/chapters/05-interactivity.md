@@ -250,7 +250,7 @@ export function ButtonLink(
 }
 ```
 
-Nested arrays are allowed, so component libraries can export style recipes such as `button.baseStyle` and let callers compose them with local behavior.
+Nested arrays are allowed, so component libraries can export style recipes such as `button()` and let callers compose them with local behavior.
 
 Stable `key` values let Remix preserve or replace DOM nodes intentionally when a list reorders.
 

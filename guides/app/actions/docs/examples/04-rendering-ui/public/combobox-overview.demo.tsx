@@ -1,7 +1,12 @@
 import { css, type Handle } from "remix/ui";
-import { Combobox, ComboboxOption } from "remix/components/combobox";
-import { onComboboxChange } from "remix/ui/combobox";
+import { Combobox, ComboboxOption } from "remix/ui/combobox";
+import { onComboboxChange } from "remix/ui/combobox/primitives";
 
+/**
+ * @name Combobox Overview
+ * @description A searchable combobox with keyboard navigation. Try typing airport names or codes like ord, lax, or jfk.
+ * @layout center
+ */
 export function ComboboxOverview(handle: Handle) {
   let value: string | null = null;
 

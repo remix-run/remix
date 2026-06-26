@@ -1,5 +1,10 @@
-import { Breadcrumbs } from "remix/components/breadcrumbs";
+import { Breadcrumbs } from "remix/ui/breadcrumbs";
 
+/**
+ * @name Breadcrumbs Basic
+ * @description A basic breadcrumb trail linking back through the page hierarchy.
+ * @layout center
+ */
 export function BreadcrumbsBasic() {
   return () => (
     <Breadcrumbs
