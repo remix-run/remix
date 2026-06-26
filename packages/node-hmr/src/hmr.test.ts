@@ -1074,6 +1074,64 @@ describe('node-hmr', () => {
       await server.stop()
     }
   })
+
+  it('waits for child process exit before restarting', async () => {
+    await using fixture = await createFixture({
+      'server.ts': getSlowShutdownServerSource('one'),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'one')
+
+      await fs.writeFile(fixture.entryPath, getSlowShutdownServerSource('two'))
+
+      await waitForOutput(server, /"type":"child-sigterm","count":1/)
+      await assertNoReadyEvent(server, 1, 5_250)
+    } finally {
+      await server.stop()
+    }
+  })
+
+  it('waits for a force-killed child process before completing shutdown', async () => {
+    let fixture = await createFixture({
+      'server.ts': [
+        `import { createServer } from 'node:http'`,
+        ``,
+        `let server = createServer((_request, response) => {`,
+        `  response.end('ok')`,
+        `})`,
+        ``,
+        `process.on('SIGTERM', () => {`,
+        `  console.log(JSON.stringify({ type: 'child-sigterm', pid: process.pid }))`,
+        `})`,
+        ``,
+        `server.listen(0, '127.0.0.1', () => {`,
+        `  let address = server.address()`,
+        `  if (address && typeof address === 'object') {`,
+        `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
+        `  }`,
+        `})`,
+        ``,
+        `setInterval(() => {}, 1_000)`,
+      ].join('\n'),
+    })
+    let server = startFixtureServer(fixture.path)
+
+    try {
+      let ready = await server.waitForReady(0)
+      assert.equal(await fetchText(ready.port), 'ok')
+
+      let stopped = server.stop()
+      await waitForOutput(server, /"type":"child-sigterm"/)
+      await stopped
+
+      await fs.rm(fixture.path, { force: true, recursive: true })
+    } finally {
+      await removeFixture(fixture.path)
+    }
+  })
 })
 
 function getServerSource(importSpecifier: string, responseExpression: string): string {
@@ -1085,6 +1143,32 @@ function getPidServerSource(importSpecifier: string, responseExpression: string)
     importSpecifier,
     `String(process.pid) + ':' + String(${responseExpression})`,
   )
+}
+
+function getSlowShutdownServerSource(message: string): string {
+  return [
+    `import { createServer } from 'node:http'`,
+    ``,
+    `let sigtermCount = 0`,
+    `let server = createServer((_request, response) => {`,
+    `  response.end(${JSON.stringify(message)})`,
+    `})`,
+    ``,
+    `process.on('SIGTERM', () => {`,
+    `  sigtermCount += 1`,
+    `  console.log(JSON.stringify({ type: 'child-sigterm', count: sigtermCount, pid: process.pid }))`,
+    `  if (sigtermCount > 1) process.exit(0)`,
+    `})`,
+    ``,
+    `server.listen(0, '127.0.0.1', () => {`,
+    `  let address = server.address()`,
+    `  if (address && typeof address === 'object') {`,
+    `    console.log(JSON.stringify({ type: 'ready', port: address.port, pid: process.pid }))`,
+    `  }`,
+    `})`,
+    ``,
+    `setInterval(() => {}, 1_000)`,
+  ].join('\n')
 }
 
 function getDisposeOnlyValueSource(message: string): string {
@@ -1719,13 +1803,10 @@ async function assertNoHmrEvent(events: { read(): Promise<HmrEventPayload> }): P
 async function assertNoReadyEvent(
   server: ReturnType<typeof startFixtureServer>,
   index: number,
+  timeoutMs = 250,
 ): Promise<void> {
-  let timeout = Symbol('timeout')
-  let result = await Promise.race([
-    server.waitForReady(index),
-    new Promise<typeof timeout>((resolve) => setTimeout(() => resolve(timeout), 250)),
-  ])
-  assert.equal(result, timeout)
+  await new Promise((resolve) => setTimeout(resolve, timeoutMs))
+  assert.equal(server.readyCount <= index, true)
 }
 
 function parseHmrEventPayload(eventText: string): HmrEventPayload {

@@ -296,8 +296,9 @@ export function createWatchedProcessController(options: {
     if (stopping) return
     commitRestartGeneration()
     restarting = true
-    await stopChild(child)
+    await stopChild(child, { force: false, signal: 'SIGTERM' })
     restarting = false
+    if (stopping) return
     start()
   }
 
@@ -1058,7 +1059,7 @@ export function createWatchedProcessController(options: {
 
     stopPromise ??= Promise.resolve()
       .then(() => watcher.close())
-      .then(() => stopChild(child, signal))
+      .then(() => stopChild(child, { force: true, signal }))
       .then(async () => {
         let channel = await browserHmrEventChannelPromise
         await channel?.close()
@@ -1325,22 +1326,23 @@ function dedupeNodeHmrUpdates(
   return result
 }
 
-async function stopChild(child: ChildProcess | undefined, signal: NodeJS.Signals = 'SIGTERM') {
+async function stopChild(
+  child: ChildProcess | undefined,
+  options: { force: boolean; signal: NodeJS.Signals },
+) {
   if (child === undefined) return
   if (child.exitCode !== null || child.signalCode !== null) return
 
   await new Promise<void>((resolvePromise) => {
-    let timeout = setTimeout(() => {
-      child.kill('SIGKILL')
-      resolvePromise()
-    }, shutdownTimeoutMs)
+    let timeout =
+      options.force ? setTimeout(() => child.kill('SIGKILL'), shutdownTimeoutMs) : undefined
 
     child.once('exit', () => {
-      clearTimeout(timeout)
+      if (timeout !== undefined) clearTimeout(timeout)
       resolvePromise()
     })
 
-    child.kill(signal)
+    child.kill(options.signal)
   })
 }
 
