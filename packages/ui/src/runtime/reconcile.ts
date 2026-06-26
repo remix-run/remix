@@ -968,15 +968,28 @@ function diffFrame(
   next._frameResolved = curr._frameResolved
   next._parent = vParent
 
+  let frameRuntime = getFrameRuntime(frame)
+  let frameInstance = next._frameInstance as FrameInstance | undefined
+
   if (currSrc !== nextSrc) {
-    let frameInstance = next._frameInstance as FrameInstance | undefined
     if (frameInstance) {
       frameInstance.handle.src = nextSrc
     }
 
-    let runtime = getFrameRuntime(frame)
-    if (runtime) {
-      resolveClientFrame(next, runtime)
+    if (frameRuntime) {
+      resolveClientFrame(next, frameRuntime)
+    }
+  } else if (next._frameResolved && frameRuntime?.serverFrameReloadRenderInProgress) {
+    // Reload client frames that have the same src during a render triggered by an ancestor frame reload
+    if (frameInstance) {
+      void frameInstance
+        .reloadClientFrameForAncestorReload(frameRuntime.serverFrameReloadSignal)
+        .catch(() => {
+          // Client-created frames are non-blocking from the parent frame's perspective.
+          // Their reload state is observable through their own frame events. The reload
+          // reports failures before rejecting, so observe the promise here to avoid
+          // unhandled rejections from these client-created frame reloads.
+        })
     }
   }
 
