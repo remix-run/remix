@@ -88,41 +88,41 @@ Images should scale to the content width and keep rounded corners.
 A plain code fence gets syntax highlighting and a copy button.
 
 ```ts
-import { redirect } from 'remix/response/redirect'
+import { redirect } from "remix/response/redirect";
 
 export async function createProject(request: Request) {
-  let formData = await request.formData()
-  let name = String(formData.get('name') ?? '').trim()
+  let formData = await request.formData();
+  let name = String(formData.get("name") ?? "").trim();
 
-  if (name === '') {
-    return new Response('Project name is required', { status: 400 })
+  if (name === "") {
+    return new Response("Project name is required", { status: 400 });
   }
 
-  return redirect(`/projects/${name}`, 303)
+  return redirect(`/projects/${name}`, 303);
 }
 ```
 
 A code fence can include a filename and highlighted lines in its metadata. The guides renderer pulls the filename into the header and marks the requested line ranges.
 
 ```tsx filename=app/actions/projects/create.tsx lines=[4-5,8]
-import type { AppContext } from '../../router.ts'
+import type { AppContext } from "../../router.ts";
 
 export async function createProject({ request }: AppContext) {
-  let formData = await request.formData()
-  let name = String(formData.get('name') ?? '').trim()
+  let formData = await request.formData();
+  let name = String(formData.get("name") ?? "").trim();
 
-  return new Response(`Created ${name || 'untitled project'}`)
+  return new Response(`Created ${name || "untitled project"}`);
 }
 ```
 
 Line highlighting also works with `highlight=` and `lines=` metadata if a fence already has other parameters.
 
 ```ts [2,4-6]
-let status = 'idle'
-let retries = 0
+let status = "idle";
+let retries = 0;
 
-if (status === 'idle') {
-  retries++
+if (status === "idle") {
+  retries++;
 }
 ```
 
@@ -155,7 +155,7 @@ The `::frame` directive is docs-specific Markdown. Inside a code fence it stays 
 
 ```tsx filename=app/actions/docs/examples/17-markdown-style-demo/callout.demo.tsx
 export function CalloutDemo() {
-  return () => <p>Hello from a frame.</p>
+  return () => <p>Hello from a frame.</p>;
 }
 ```
 ````

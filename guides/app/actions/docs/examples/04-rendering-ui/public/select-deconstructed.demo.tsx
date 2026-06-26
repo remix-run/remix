@@ -1,36 +1,40 @@
-import { css, type Handle, type Props } from 'remix/ui'
-import * as button from 'remix/components/button'
-import * as listbox from 'remix/ui/listbox'
-import * as popover from 'remix/ui/popover'
-import * as select from 'remix/ui/select'
-import { triggerStyle } from 'remix/components/select'
+import { css, type Handle, type Props } from "remix/ui";
+import * as button from "remix/components/button";
+import * as listbox from "remix/ui/listbox";
+import * as popover from "remix/ui/popover";
+import * as select from "remix/ui/select";
+import { triggerStyle } from "remix/components/select";
 import {
   listboxIndicatorStyle,
   listboxLabelStyle,
   listboxListStyle,
   listboxOptionStyle,
   popoverSurfaceStyle,
-} from './shared/listbox-popover-styles.ts'
+} from "./shared/listbox-popover-styles.ts";
 
 export function SelectDeconstructed(handle: Handle) {
-  let label = 'Local'
-  let value = 'local'
-  let triggerId = `${handle.id}-trigger`
+  let label = "Local";
+  let value = "local";
+  let triggerId = `${handle.id}-trigger`;
 
   return () => (
     <div
       mix={[
         stackCss,
         select.onSelectChange((event) => {
-          label = event.label ?? 'Select an environment'
-          value = event.value ?? 'null'
-          void handle.update()
+          label = event.label ?? "Select an environment";
+          value = event.value ?? "null";
+          void handle.update();
         }),
       ]}
     >
       <p mix={labelCss}>Environment</p>
 
-      <select.Context defaultLabel="Local" defaultValue="local" name="environment">
+      <select.Context
+        defaultLabel="Local"
+        defaultValue="local"
+        name="environment"
+      >
         <button
           id={triggerId}
           type="button"
@@ -42,9 +46,15 @@ export function SelectDeconstructed(handle: Handle) {
 
         <popover.Context>
           <div mix={[popoverSurfaceStyle, select.popover()]}>
-            <div aria-labelledby={triggerId} mix={[listboxListStyle, select.list()]}>
+            <div
+              aria-labelledby={triggerId}
+              mix={[listboxListStyle, select.list()]}
+            >
               {environmentOptions.map((option) => (
-                <div key={option.value} mix={[listboxOptionStyle, select.option(option)]}>
+                <div
+                  key={option.value}
+                  mix={[listboxOptionStyle, select.option(option)]}
+                >
                   <CheckIcon mix={listboxIndicatorStyle} />
                   <span mix={listboxLabelStyle}>{option.label}</span>
                 </div>
@@ -58,10 +68,10 @@ export function SelectDeconstructed(handle: Handle) {
 
       <p mix={valueCss}>{`value=${value}`}</p>
     </div>
-  )
+  );
 }
 
-function ChevronVerticalIcon(handle: Handle<Props<'svg'>>) {
+function ChevronVerticalIcon(handle: Handle<Props<"svg">>) {
   return () => (
     <svg {...handle.props} aria-hidden="true" fill="none" viewBox="0 0 16 16">
       <path
@@ -72,10 +82,10 @@ function ChevronVerticalIcon(handle: Handle<Props<'svg'>>) {
         stroke-width="1.5"
       />
     </svg>
-  )
+  );
 }
 
-function CheckIcon(handle: Handle<Props<'svg'>>) {
+function CheckIcon(handle: Handle<Props<"svg">>) {
   return () => (
     <svg {...handle.props} aria-hidden="true" fill="none" viewBox="0 0 16 16">
       <path
@@ -86,38 +96,38 @@ function CheckIcon(handle: Handle<Props<'svg'>>) {
         stroke-width="1.5"
       />
     </svg>
-  )
+  );
 }
 
 const environmentOptions = [
-  { label: 'Local', value: 'local' },
-  { label: 'Staging', value: 'staging' },
-  { label: 'Production', value: 'production' },
-  { disabled: true, label: 'Archived', value: 'archived' },
-] as const
+  { label: "Local", value: "local" },
+  { label: "Staging", value: "staging" },
+  { label: "Production", value: "production" },
+  { disabled: true, label: "Archived", value: "archived" },
+] as const;
 
 const selectCss = css({
-  width: '16rem',
-})
+  width: "16rem",
+});
 
 const stackCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '8px',
-  width: '100%',
-})
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  width: "100%",
+});
 
 const labelCss = css({
   margin: 0,
-  fontSize: '12px',
-  fontWeight: '600',
-  color: '#151515',
-})
+  fontSize: "12px",
+  fontWeight: "600",
+  color: "#151515",
+});
 
 const valueCss = css({
   margin: 0,
   fontFamily:
     'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-  fontSize: '12px',
-  color: '#4f4f4f',
-})
+  fontSize: "12px",
+  color: "#4f4f4f",
+});

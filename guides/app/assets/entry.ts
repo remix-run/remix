@@ -18,7 +18,10 @@ const app = run({
       headers.set('X-Remix-Target', target)
     }
 
-    let response = await fetch(new URL(src, window.location.href), { headers, signal })
+    let response = await fetch(new URL(src, window.location.href), {
+      headers,
+      signal,
+    })
 
     if (!response.ok) {
       return `<pre>Navigation error: ${response.status} ${response.statusText}</pre>`

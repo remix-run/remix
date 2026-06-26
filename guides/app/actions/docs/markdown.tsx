@@ -174,7 +174,11 @@ function escapeMarkdownHtml(root: Root): void {
     }
 
     let htmlNode: Html = node
-    let text: Text = { type: 'text', value: htmlNode.value, position: htmlNode.position }
+    let text: Text = {
+      type: 'text',
+      value: htmlNode.value,
+      position: htmlNode.position,
+    }
 
     if (parent.type === 'root') {
       let paragraph: Paragraph = {
@@ -301,7 +305,11 @@ function splitMarkdownRoot(root: Root): MarkdownSegment[] {
       pushMarkdownSegment()
       let src = readFrameDirectiveSrc(child)
       if (src !== undefined) {
-        segments.push({ type: 'frame', src, lineNumber: child.position?.start.line ?? 1 })
+        segments.push({
+          type: 'frame',
+          src,
+          lineNumber: child.position?.start.line ?? 1,
+        })
       }
       markdownStartLine = (child.position?.end.line ?? child.position?.start.line ?? 0) + 1
       continue
@@ -320,7 +328,11 @@ function splitMarkdownRoot(root: Root): MarkdownSegment[] {
   function pushMarkdownSegment(): void {
     let visibleChildren = markdownChildren.filter((child) => !isDefinitionNode(child))
     if (visibleChildren.length > 0) {
-      segments.push({ type: 'markdown', children: visibleChildren, lineNumber: markdownStartLine })
+      segments.push({
+        type: 'markdown',
+        children: visibleChildren,
+        lineNumber: markdownStartLine,
+      })
     }
 
     markdownChildren = []
@@ -380,7 +392,11 @@ function rehypeLinkHeadings() {
 
 function rehypeHighlightCode() {
   return async function transform(tree: HastRoot): Promise<void> {
-    let codeBlocks: { parent: HastRoot | Element; index: number; codeBlock: CodeBlock }[] = []
+    let codeBlocks: {
+      parent: HastRoot | Element
+      index: number
+      codeBlock: CodeBlock
+    }[] = []
 
     visit(tree, 'element', (node, index, parent) => {
       if (parent === undefined || index === undefined || !isHastParent(parent)) {
@@ -628,7 +644,12 @@ function renderPlainCodePre(source: string, highlightedLines: Set<number>): Elem
             type: 'element',
             tagName: 'span',
             properties,
-            children: [{ type: 'text', value: line + (index === lines.length - 1 ? '' : '\n') }],
+            children: [
+              {
+                type: 'text',
+                value: line + (index === lines.length - 1 ? '' : '\n'),
+              },
+            ],
           }
         }),
       },

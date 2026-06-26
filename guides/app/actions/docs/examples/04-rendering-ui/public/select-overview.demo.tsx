@@ -1,5 +1,5 @@
-import { css } from 'remix/ui'
-import { Option, Select } from 'remix/components/select'
+import { css } from "remix/ui";
+import { Option, Select } from "remix/components/select";
 
 export function SelectOverview() {
   return () => (
@@ -24,23 +24,23 @@ export function SelectOverview() {
         <Option label="Cantaloupe" value="cantaloupe" />
       </Select>
     </div>
-  )
+  );
 }
 
 const selectCss = css({
-  width: '16rem',
-})
+  width: "16rem",
+});
 
 const stackCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '8px',
-  width: '100%',
-})
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
+  width: "100%",
+});
 
 const labelCss = css({
   margin: 0,
-  fontSize: '12px',
-  fontWeight: '600',
-  color: '#151515',
-})
+  fontSize: "12px",
+  fontWeight: "600",
+  color: "#151515",
+});

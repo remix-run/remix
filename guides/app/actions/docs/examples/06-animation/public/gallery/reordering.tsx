@@ -1,49 +1,51 @@
-import { css, type Handle } from 'remix/ui'
-import { animateLayout, spring } from 'remix/ui/animation'
+import { css, type Handle } from "remix/ui";
+import { animateLayout, spring } from "remix/ui/animation";
 
-const initialOrder = ['#ff0088', '#dd00ee', '#9911ff', '#0d63f8']
+const initialOrder = ["#ff0088", "#dd00ee", "#9911ff", "#0d63f8"];
 
 function shuffle<T>(array: T[]): T[] {
-  let result = [...array]
+  let result = [...array];
   for (let i = result.length - 1; i > 0; i--) {
-    let j = Math.floor(Math.random() * (i + 1))
-    ;[result[i], result[j]] = [result[j], result[i]]
+    let j = Math.floor(Math.random() * (i + 1));
+    [result[i], result[j]] = [result[j], result[i]];
   }
-  return result
+  return result;
 }
 
 export function Reordering(handle: Handle) {
-  let order = initialOrder
+  let order = initialOrder;
 
   function scheduleNextShuffle(signal: AbortSignal) {
     let timeoutId = setTimeout(async () => {
-      if (signal.aborted) return
-      order = shuffle(order)
-      let nextSignal = await handle.update()
-      if (nextSignal.aborted) return
-      scheduleNextShuffle(nextSignal)
-    }, 1000)
+      if (signal.aborted) return;
+      order = shuffle(order);
+      let nextSignal = await handle.update();
+      if (nextSignal.aborted) return;
+      scheduleNextShuffle(nextSignal);
+    }, 1000);
 
-    signal.addEventListener('abort', () => clearTimeout(timeoutId), { once: true })
+    signal.addEventListener("abort", () => clearTimeout(timeoutId), {
+      once: true,
+    });
   }
 
-  handle.queueTask(scheduleNextShuffle)
+  handle.queueTask(scheduleNextShuffle);
 
   return () => (
     <ul
       mix={[
         css({
-          listStyle: 'none',
+          listStyle: "none",
           padding: 0,
           margin: 0,
-          position: 'relative',
-          display: 'flex',
-          flexWrap: 'wrap',
+          position: "relative",
+          display: "flex",
+          flexWrap: "wrap",
           gap: 10,
           width: 220,
-          flexDirection: 'row',
-          justifyContent: 'center',
-          alignItems: 'center',
+          flexDirection: "row",
+          justifyContent: "center",
+          alignItems: "center",
         }),
       ]}
     >
@@ -64,5 +66,5 @@ export function Reordering(handle: Handle) {
         />
       ))}
     </ul>
-  )
+  );
 }

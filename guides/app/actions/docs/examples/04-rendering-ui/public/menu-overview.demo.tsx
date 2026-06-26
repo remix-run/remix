@@ -1,14 +1,14 @@
-import { type Handle } from 'remix/ui'
-import { css } from 'remix/ui'
-import { Menu, MenuItem, Submenu } from 'remix/components/menu'
-import { onMenuSelect } from 'remix/ui/menu'
+import { type Handle } from "remix/ui";
+import { css } from "remix/ui";
+import { Menu, MenuItem, Submenu } from "remix/components/menu";
+import { onMenuSelect } from "remix/ui/menu";
 
 export function MenuOverview(handle: Handle) {
-  type Density = 'comfortable' | 'compact'
-  let wordWrap = true
-  let minimap = false
-  let showGutter = true
-  let density: Density = 'comfortable'
+  type Density = "comfortable" | "compact";
+  let wordWrap = true;
+  let minimap = false;
+  let showGutter = true;
+  let density: Density = "comfortable";
 
   return () => (
     <Menu
@@ -16,20 +16,20 @@ export function MenuOverview(handle: Handle) {
       menuLabel="View options"
       mix={onMenuSelect((event) => {
         switch (event.item.name) {
-          case 'wordWrap':
-            wordWrap = !wordWrap
-            break
-          case 'minimap':
-            minimap = !minimap
-            break
-          case 'showGutter':
-            showGutter = !showGutter
-            break
-          case 'density':
-            density = event.item.value as Density
-            break
+          case "wordWrap":
+            wordWrap = !wordWrap;
+            break;
+          case "minimap":
+            minimap = !minimap;
+            break;
+          case "showGutter":
+            showGutter = !showGutter;
+            break;
+          case "density":
+            density = event.item.value as Density;
+            break;
         }
-        handle.update()
+        handle.update();
       })}
     >
       <MenuItem name="wordWrap" type="checkbox" checked={wordWrap}>
@@ -60,21 +60,26 @@ export function MenuOverview(handle: Handle) {
           name="density"
           type="radio"
           value="comfortable"
-          checked={density === 'comfortable'}
+          checked={density === "comfortable"}
         >
           Comfortable
         </MenuItem>
-        <MenuItem name="density" type="radio" value="compact" checked={density === 'compact'}>
+        <MenuItem
+          name="density"
+          type="radio"
+          value="compact"
+          checked={density === "compact"}
+        >
           Compact
         </MenuItem>
       </Submenu>
     </Menu>
-  )
+  );
 }
 
 const separatorCss = css({
-  marginBlock: '4px',
-  marginInline: '8px',
+  marginBlock: "4px",
+  marginInline: "8px",
   border: 0,
-  borderTop: '1px solid #e7e7e7',
-})
+  borderTop: "1px solid #e7e7e7",
+});

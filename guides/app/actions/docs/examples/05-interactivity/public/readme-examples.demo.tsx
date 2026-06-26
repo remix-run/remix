@@ -6,112 +6,116 @@ import {
   TypedEventTarget,
   type Handle,
   type RemixNode,
-} from 'remix/ui'
+} from "remix/ui";
 
 // ============================================================================
 // Getting Started - Basic App Example
 // ============================================================================
 function App(handle: Handle) {
-  let count = 0
+  let count = 0;
   return () => (
     <button
       mix={[
-        on('click', () => {
-          count++
-          handle.update()
+        on("click", () => {
+          count++;
+          handle.update();
         }),
       ]}
     >
       Count: {count}
     </button>
-  )
+  );
 }
 
 // ============================================================================
 // Component State and Updates - Counter
 // ============================================================================
 function Counter(handle: Handle) {
-  let count = 0
+  let count = 0;
 
   return () => (
     <div>
       <span>Count: {count}</span>
       <button
         mix={[
-          on('click', () => {
-            count++
-            handle.update()
+          on("click", () => {
+            count++;
+            handle.update();
           }),
         ]}
       >
         Increment
       </button>
     </div>
-  )
+  );
 }
 
 // ============================================================================
 // Components - Greeting
 // ============================================================================
 function Greeting(handle: Handle<{ name: string }>) {
-  return () => <h1>Hello, {handle.props.name}!</h1>
+  return () => <h1>Hello, {handle.props.name}!</h1>;
 }
 
 // ============================================================================
 // Stateful Components - CounterWithSetup
 // ============================================================================
-function CounterWithSetup(handle: Handle<{ initialCount: number; label?: string }>) {
+function CounterWithSetup(
+  handle: Handle<{ initialCount: number; label?: string }>,
+) {
   // Component function: runs once
-  let count = handle.props.initialCount
+  let count = handle.props.initialCount;
 
   // Return render function: runs on every update
   return () => (
     <div>
-      {handle.props.label || 'Count'}: {count}
+      {handle.props.label || "Count"}: {count}
       <button
         mix={[
-          on('click', () => {
-            count++
-            handle.update()
+          on("click", () => {
+            count++;
+            handle.update();
           }),
         ]}
       >
         Increment
       </button>
     </div>
-  )
+  );
 }
 
 // ============================================================================
 // Setup Prop vs Props - CounterWithLabel
 // ============================================================================
-function CounterWithLabel(handle: Handle<{ initialCount: number; label?: string }>) {
-  let count = handle.props.initialCount
+function CounterWithLabel(
+  handle: Handle<{ initialCount: number; label?: string }>,
+) {
+  let count = handle.props.initialCount;
 
   return () => (
     <div>
       {handle.props.label}: {count}
       <button
         mix={[
-          on('click', () => {
-            count++
-            handle.update()
+          on("click", () => {
+            count++;
+            handle.update();
           }),
         ]}
       >
         +
       </button>
     </div>
-  )
+  );
 }
 
 // ============================================================================
 // Events - SearchInput
 // ============================================================================
 function SearchInput(handle: Handle) {
-  let query = ''
-  let results: string[] = []
-  let loading = false
+  let query = "";
+  let results: string[] = [];
+  let loading = false;
 
   return () => (
     <div>
@@ -120,18 +124,20 @@ function SearchInput(handle: Handle) {
         value={query}
         placeholder="Type to search..."
         mix={[
-          on('input', (event, signal) => {
-            query = event.currentTarget.value
-            loading = true
-            handle.update()
+          on("input", (event, signal) => {
+            query = event.currentTarget.value;
+            loading = true;
+            handle.update();
 
             // Simulated search with timeout
             setTimeout(() => {
-              if (signal.aborted) return
-              results = query ? [`Result for "${query}" 1`, `Result for "${query}" 2`] : []
-              loading = false
-              handle.update()
-            }, 300)
+              if (signal.aborted) return;
+              results = query
+                ? [`Result for "${query}" 1`, `Result for "${query}" 2`]
+                : [];
+              loading = false;
+              handle.update();
+            }, 300);
           }),
         ]}
       />
@@ -144,69 +150,71 @@ function SearchInput(handle: Handle) {
         </ul>
       )}
     </div>
-  )
+  );
 }
 
 // ============================================================================
 // Controlled Input - Slug Form
 // ============================================================================
 function SlugForm(handle: Handle) {
-  let slug = ''
-  let generatedSlug = ''
+  let slug = "";
+  let generatedSlug = "";
 
   return () => (
     <form>
-      <label mix={[css({ display: 'flex', alignItems: 'center', gap: '8px' })]}>
+      <label mix={[css({ display: "flex", alignItems: "center", gap: "8px" })]}>
         <input
           type="checkbox"
           mix={[
-            on('change', (event) => {
+            on("change", (event) => {
               if (event.currentTarget.checked) {
-                generatedSlug = crypto.randomUUID().slice(0, 8)
+                generatedSlug = crypto.randomUUID().slice(0, 8);
               } else {
-                generatedSlug = ''
+                generatedSlug = "";
               }
-              handle.update()
+              handle.update();
             }),
           ]}
         />
         Auto-generate slug
       </label>
-      <label mix={[css({ display: 'flex', flexDirection: 'column', gap: '4px' })]}>
+      <label
+        mix={[css({ display: "flex", flexDirection: "column", gap: "4px" })]}
+      >
         Slug
         <input
           type="text"
           value={generatedSlug || slug}
           disabled={!!generatedSlug}
           mix={[
-            on('input', (event) => {
-              slug = event.currentTarget.value
-              handle.update()
+            on("input", (event) => {
+              slug = event.currentTarget.value;
+              handle.update();
             }),
           ]}
         />
       </label>
     </form>
-  )
+  );
 }
 
 // ============================================================================
 // Global Events - KeyboardTracker
 // ============================================================================
 function KeyboardTracker(handle: Handle) {
-  let keys: string[] = []
+  let keys: string[] = [];
 
   handle.queueTask(() => {
     addEventListeners(document, handle.signal, {
       keydown: (event) => {
-        keys.push(event.key)
-        if (keys.length > 10) keys.shift()
-        handle.update()
+        keys.push(event.key);
+        if (keys.length > 10) keys.shift();
+        handle.update();
       },
-    })
-  })
+    });
+  });
 
-  return () => <div>Keys: {keys.join(', ') || '(press some keys)'}</div>
+  return () => <div>Keys: {keys.join(", ") || "(press some keys)"}</div>;
 }
 
 // ============================================================================
@@ -217,24 +225,24 @@ function ButtonBasic() {
     <button
       mix={[
         css({
-          color: 'white',
-          backgroundColor: 'rgb(54, 113, 246)',
-          border: 'none',
-          padding: '8px 16px',
-          borderRadius: '4px',
-          cursor: 'pointer',
-          '&:hover': {
-            backgroundColor: 'rgb(37, 90, 210)',
+          color: "white",
+          backgroundColor: "rgb(54, 113, 246)",
+          border: "none",
+          padding: "8px 16px",
+          borderRadius: "4px",
+          cursor: "pointer",
+          "&:hover": {
+            backgroundColor: "rgb(37, 90, 210)",
           },
-          '&:active': {
-            transform: 'scale(0.98)',
+          "&:active": {
+            transform: "scale(0.98)",
           },
         }),
       ]}
     >
       Click me
     </button>
-  )
+  );
 }
 
 // ============================================================================
@@ -245,35 +253,36 @@ function ButtonAdvanced() {
     <button
       mix={[
         css({
-          color: 'white',
-          backgroundColor: 'rgb(54, 113, 246)',
-          border: 'none',
-          padding: '10px 20px',
-          borderRadius: '6px',
-          cursor: 'pointer',
-          position: 'relative',
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: '8px',
-          '&:hover': {
-            backgroundColor: 'rgb(37, 90, 210)',
+          color: "white",
+          backgroundColor: "rgb(54, 113, 246)",
+          border: "none",
+          padding: "10px 20px",
+          borderRadius: "6px",
+          cursor: "pointer",
+          position: "relative",
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "8px",
+          "&:hover": {
+            backgroundColor: "rgb(37, 90, 210)",
           },
-          '&::before': {
+          "&::before": {
             content: '""',
-            position: 'absolute',
-            inset: '-2px',
-            borderRadius: '8px',
-            background: 'linear-gradient(45deg, rgb(54, 113, 246), rgb(99, 179, 255))',
+            position: "absolute",
+            inset: "-2px",
+            borderRadius: "8px",
+            background:
+              "linear-gradient(45deg, rgb(54, 113, 246), rgb(99, 179, 255))",
             zIndex: -1,
             opacity: 0,
-            transition: 'opacity 0.2s',
+            transition: "opacity 0.2s",
           },
-          '&:hover::before': {
+          "&:hover::before": {
             opacity: 1,
           },
-          '.icon': {
-            width: '16px',
-            height: '16px',
+          ".icon": {
+            width: "16px",
+            height: "16px",
           },
         }),
       ]}
@@ -281,14 +290,14 @@ function ButtonAdvanced() {
       <span className="icon">★</span>
       Click me
     </button>
-  )
+  );
 }
 
 // ============================================================================
 // Ref Mixin - Form (Basic)
 // ============================================================================
 function FormBasic() {
-  let inputRef: HTMLInputElement
+  let inputRef: HTMLInputElement;
 
   return () => (
     <div>
@@ -296,28 +305,31 @@ function FormBasic() {
         type="text"
         placeholder="Click the button to select this"
         // capture the input node
-        mix={[ref((node) => (inputRef = node)), css({ marginRight: '8px', padding: '4px 8px' })]}
+        mix={[
+          ref((node) => (inputRef = node)),
+          css({ marginRight: "8px", padding: "4px 8px" }),
+        ]}
       />
       <button
         mix={[
-          css({ padding: '4px 12px' }),
-          on('click', () => {
+          css({ padding: "4px 12px" }),
+          on("click", () => {
             // Select it from other parts of the form
-            inputRef.select()
+            inputRef.select();
           }),
         ]}
       >
         Select Input
       </button>
     </div>
-  )
+  );
 }
 
 // ============================================================================
 // Ref Mixin with AbortSignal - ResizeObserver Component
 // ============================================================================
 function ResizeComponent(handle: Handle) {
-  let dimensions = { width: 0, height: 0 }
+  let dimensions = { width: 0, height: 0 };
 
   return () => (
     <div
@@ -325,60 +337,60 @@ function ResizeComponent(handle: Handle) {
         ref((node, signal) => {
           // Set up something that needs cleanup
           let observer = new ResizeObserver((entries) => {
-            let entry = entries[0]
+            let entry = entries[0];
             if (entry) {
-              dimensions.width = Math.round(entry.contentRect.width)
-              dimensions.height = Math.round(entry.contentRect.height)
-              handle.update()
+              dimensions.width = Math.round(entry.contentRect.width);
+              dimensions.height = Math.round(entry.contentRect.height);
+              handle.update();
             }
-          })
-          observer.observe(node)
+          });
+          observer.observe(node);
 
           // Clean up when element is removed
-          signal.addEventListener('abort', () => {
-            observer.disconnect()
-          })
+          signal.addEventListener("abort", () => {
+            observer.disconnect();
+          });
         }),
         css({
-          padding: '20px',
-          backgroundColor: 'rgba(255, 255, 255, 0.1)',
-          borderRadius: '8px',
-          resize: 'both',
-          overflow: 'auto',
-          minWidth: '100px',
-          minHeight: '60px',
-          border: '1px solid rgb(209, 213, 219)',
+          padding: "20px",
+          backgroundColor: "rgba(255, 255, 255, 0.1)",
+          borderRadius: "8px",
+          resize: "both",
+          overflow: "auto",
+          minWidth: "100px",
+          minHeight: "60px",
+          border: "1px solid rgb(209, 213, 219)",
         }),
       ]}
     >
       Resize me! ({dimensions.width} × {dimensions.height})
     </div>
-  )
+  );
 }
 
 // ============================================================================
 // handle.update() - Player
 // ============================================================================
 function Player(handle: Handle) {
-  let isPlaying = false
-  let playButton: HTMLButtonElement
-  let stopButton: HTMLButtonElement
+  let isPlaying = false;
+  let playButton: HTMLButtonElement;
+  let stopButton: HTMLButtonElement;
 
   return () => (
-    <div mix={[css({ display: 'flex', gap: '8px' })]}>
+    <div mix={[css({ display: "flex", gap: "8px" })]}>
       <button
         disabled={isPlaying}
         mix={[
           ref((node) => (playButton = node)),
           css({
-            padding: '8px 16px',
+            padding: "8px 16px",
             opacity: isPlaying ? 0.5 : 1,
           }),
-          on('click', async () => {
-            isPlaying = true
-            await handle.update()
+          on("click", async () => {
+            isPlaying = true;
+            await handle.update();
             // Focus the enabled button after update completes
-            stopButton.focus()
+            stopButton.focus();
           }),
         ]}
       >
@@ -389,45 +401,57 @@ function Player(handle: Handle) {
         mix={[
           ref((node) => (stopButton = node)),
           css({
-            padding: '8px 16px',
+            padding: "8px 16px",
             opacity: !isPlaying ? 0.5 : 1,
           }),
-          on('click', async () => {
-            isPlaying = false
-            await handle.update()
+          on("click", async () => {
+            isPlaying = false;
+            await handle.update();
             // Focus the enabled button after update completes
-            playButton.focus()
+            playButton.focus();
           }),
         ]}
       >
         ⏹ Stop
       </button>
     </div>
-  )
+  );
 }
 
 // ============================================================================
 // handle.queueTask - Form with scroll
 // ============================================================================
 function FormWithScroll(handle: Handle) {
-  let showDetails = false
-  let detailsSection: HTMLElement
+  let showDetails = false;
+  let detailsSection: HTMLElement;
 
   return () => (
     <div>
-      <label mix={[css({ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' })]}>
+      <label
+        mix={[
+          css({
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            cursor: "pointer",
+          }),
+        ]}
+      >
         <input
           type="checkbox"
           checked={showDetails}
           mix={[
-            on('change', (event) => {
-              showDetails = event.currentTarget.checked
-              handle.update()
+            on("change", (event) => {
+              showDetails = event.currentTarget.checked;
+              handle.update();
               if (showDetails) {
                 // Scroll to the expanded section after it renders
                 handle.queueTask(() => {
-                  detailsSection.scrollIntoView({ behavior: 'smooth', block: 'start' })
-                })
+                  detailsSection.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start",
+                  });
+                });
               }
             }),
           ]}
@@ -439,20 +463,22 @@ function FormWithScroll(handle: Handle) {
           mix={[
             ref((node) => (detailsSection = node)),
             css({
-              marginTop: '1rem',
-              padding: '1rem',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              borderRadius: '8px',
-              backgroundColor: 'rgba(255, 255, 255, 0.05)',
+              marginTop: "1rem",
+              padding: "1rem",
+              border: "1px solid rgba(255, 255, 255, 0.2)",
+              borderRadius: "8px",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
             }),
           ]}
         >
-          <h3 mix={[css({ margin: '0 0 0.5rem 0' })]}>Additional Details</h3>
-          <p mix={[css({ margin: 0 })]}>This section appears when the checkbox is checked.</p>
+          <h3 mix={[css({ margin: "0 0 0.5rem 0" })]}>Additional Details</h3>
+          <p mix={[css({ margin: 0 })]}>
+            This section appears when the checkbox is checked.
+          </p>
         </section>
       )}
     </div>
-  )
+  );
 }
 
 // ============================================================================
@@ -461,13 +487,15 @@ function FormWithScroll(handle: Handle) {
 function Clock(handle: Handle) {
   handle.queueTask(() => {
     let interval = setInterval(() => {
-      handle.update()
-    }, 1000)
+      handle.update();
+    }, 1000);
 
-    handle.signal.addEventListener('abort', () => clearInterval(interval), { once: true })
-  })
+    handle.signal.addEventListener("abort", () => clearInterval(interval), {
+      once: true,
+    });
+  });
 
-  return () => <span>{new Date().toLocaleTimeString()}</span>
+  return () => <span>{new Date().toLocaleTimeString()}</span>;
 }
 
 // ============================================================================
@@ -475,82 +503,82 @@ function Clock(handle: Handle) {
 // ============================================================================
 function LabeledInput(handle: Handle) {
   return () => (
-    <div mix={[css({ display: 'flex', flexDirection: 'column', gap: '4px' })]}>
+    <div mix={[css({ display: "flex", flexDirection: "column", gap: "4px" })]}>
       <label htmlFor={handle.id}>Name</label>
       <input
         id={handle.id}
         type="text"
         mix={[
           css({
-            padding: '4px 8px',
-            borderRadius: '4px',
-            border: '1px solid rgba(255,255,255,0.3)',
+            padding: "4px 8px",
+            borderRadius: "4px",
+            border: "1px solid rgba(255,255,255,0.3)",
           }),
         ]}
       />
     </div>
-  )
+  );
 }
 
 // ============================================================================
 // Context API - Theme Provider and Consumer
 // ============================================================================
 function ThemeProvider(handle: Handle<{}, { theme: string }>) {
-  handle.context.set({ theme: 'dark' })
+  handle.context.set({ theme: "dark" });
 
   return () => (
-    <div mix={[css({ display: 'flex', flexDirection: 'column', gap: '8px' })]}>
+    <div mix={[css({ display: "flex", flexDirection: "column", gap: "8px" })]}>
       <ThemedHeader />
     </div>
-  )
+  );
 }
 
 function ThemedHeader(handle: Handle) {
   // Consume context from ThemeProvider
-  let { theme } = handle.context.get(ThemeProvider)
+  let { theme } = handle.context.get(ThemeProvider);
 
   return () => (
     <header
       mix={[
         css({
-          backgroundColor: theme === 'dark' ? '#000' : '#fff',
-          color: theme === 'dark' ? '#fff' : '#000',
+          backgroundColor: theme === "dark" ? "#000" : "#fff",
+          color: theme === "dark" ? "#fff" : "#000",
         }),
       ]}
     >
       Header
     </header>
-  )
+  );
 }
 
 // ============================================================================
 // Context API with EventTarget - Advanced Theme
 // ============================================================================
 class Theme extends TypedEventTarget<{ change: Event }> {
-  #value: 'light' | 'dark' = 'light'
+  #value: "light" | "dark" = "light";
 
   get value() {
-    return this.#value
+    return this.#value;
   }
 
-  setValue(value: 'light' | 'dark') {
-    this.#value = value
-    this.dispatchEvent(new Event('change'))
+  setValue(value: "light" | "dark") {
+    this.#value = value;
+    this.dispatchEvent(new Event("change"));
   }
 }
 
 function ThemeProviderAdvanced(handle: Handle<{}, Theme>) {
-  let theme = new Theme()
-  handle.context.set(theme)
+  let theme = new Theme();
+  handle.context.set(theme);
 
   return () => (
-    <div mix={[css({ display: 'flex', flexDirection: 'column', gap: '8px' })]}>
+    <div mix={[css({ display: "flex", flexDirection: "column", gap: "8px" })]}>
       <button
         mix={[
-          css({ padding: '8px 16px', alignSelf: 'flex-start' }),
-          on('click', () => {
+          css({ padding: "8px 16px", alignSelf: "flex-start" }),
+          on("click", () => {
             // no updates in the parent component
-            theme.setValue(theme.value === 'light' ? 'dark' : 'light')
+            theme.setValue(theme.value === "light" ? "dark" : "light");
           }),
         ]}
       >
@@ -558,33 +586,33 @@ function ThemeProviderAdvanced(handle: Handle<{}, Theme>) {
       </button>
       <ThemedContent />
     </div>
-  )
+  );
 }
 
 function ThemedContent(handle: Handle) {
-  let theme = handle.context.get(ThemeProviderAdvanced)
+  let theme = handle.context.get(ThemeProviderAdvanced);
 
   // Subscribe to theme changes and update when it changes
   addEventListeners(theme, handle.signal, {
     change() {
-      handle.update()
+      handle.update();
     },
-  })
+  });
 
   return () => (
     <div
       mix={[
         css({
-          padding: '12px',
-          borderRadius: '6px',
-          backgroundColor: theme.value === 'dark' ? '#1a1a1a' : '#f0f0f0',
-          color: theme.value === 'dark' ? '#fff' : '#000',
+          padding: "12px",
+          borderRadius: "6px",
+          backgroundColor: theme.value === "dark" ? "#1a1a1a" : "#f0f0f0",
+          color: theme.value === "dark" ? "#fff" : "#000",
         }),
       ]}
     >
       Current theme: {theme.value}
     </div>
-  )
+  );
 }
 
 // ============================================================================
@@ -592,14 +620,14 @@ function ThemedContent(handle: Handle) {
 // ============================================================================
 function ListWithFragment() {
   return () => (
-    <ul mix={[css({ margin: 0, paddingLeft: '20px' })]}>
+    <ul mix={[css({ margin: 0, paddingLeft: "20px" })]}>
       <>
         <li>Item 1</li>
         <li>Item 2</li>
         <li>Item 3</li>
       </>
     </ul>
-  )
+  );
 }
 
 // ============================================================================
@@ -611,7 +639,7 @@ function Example(handle: Handle<{ title: string; children: RemixNode }>) {
       <h2>{handle.props.title}</h2>
       <div className="example-content">{handle.props.children}</div>
     </div>
-  )
+  );
 }
 
 // ============================================================================
@@ -696,5 +724,5 @@ export function DemoApp() {
         <ListWithFragment />
       </Example>
     </div>
-  )
+  );
 }
