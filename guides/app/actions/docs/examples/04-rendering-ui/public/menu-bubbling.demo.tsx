@@ -1,5 +1,5 @@
-import { Menu, MenuItem } from 'remix/components/menu'
-import { onMenuSelect } from 'remix/ui/menu'
+import { Menu, MenuItem } from "remix/components/menu";
+import { onMenuSelect } from "remix/ui/menu";
 
 export function MenuBubbling() {
   return () => (
@@ -7,7 +7,7 @@ export function MenuBubbling() {
       label="Project"
       menuLabel="Project actions"
       mix={onMenuSelect((event) => {
-        console.log('Menu root handler:', event.item)
+        console.log("Menu root handler:", event.item);
       })}
     >
       <MenuItem name="open" value="open-project">
@@ -17,7 +17,7 @@ export function MenuBubbling() {
         name="rename"
         value="rename-project"
         mix={onMenuSelect((event) => {
-          console.log('Menu item handler:', event.item)
+          console.log("Menu item handler:", event.item);
         })}
       >
         Rename project
@@ -26,5 +26,5 @@ export function MenuBubbling() {
         Duplicate project
       </MenuItem>
     </Menu>
-  )
+  );
 }
