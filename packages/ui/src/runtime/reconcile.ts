@@ -340,6 +340,10 @@ function enqueueMixinBindingUpdate(
       let prevProps = getHostProps(node)
       let nextProps = resolveNodeMixProps(node, this.frame, this.scheduler, state)
       patchHostProps(prevProps, nextProps, this.node)
+      if (node._controlledState || shouldTrackControlledReflection(nextProps)) {
+        ensureControlledReflection(node, this.scheduler)
+        syncControlledReflection(node, nextProps)
+      }
 
       dispatchMixinCommit(state)
       done(state ? getMixinRuntimeSignal(state) : AbortSignal.abort())

@@ -197,7 +197,7 @@ function CodingWithAiCard() {
         <PromptButton text="I want to build a simple headless Shopify store, what does Remix have available to help scaffold this?" />
         <PromptButton text="Add a sqlite database with a users table and scaffold a signup flow" />
         <PromptButton text="Make a copy to clipboard component that confirms to the user it was copied then resets after a few seconds" />
-        <PromptButton text="Add a page with a remix/components/select component and remix/components/button variants" />
+        <PromptButton text="Add a page with a remix/ui/select component and remix/ui/button variants" />
         <PromptButton text="Add compression middleware" />
       </div>
     </div>
