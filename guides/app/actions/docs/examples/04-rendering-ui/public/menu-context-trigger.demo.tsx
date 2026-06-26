@@ -1,7 +1,7 @@
 import { css, type Handle } from "remix/ui";
-import { MenuItem, MenuList, Submenu } from "remix/components/menu";
-import * as menu from "remix/ui/menu";
-import { onMenuSelect } from "remix/ui/menu";
+import { MenuItem, MenuList, Submenu } from "remix/ui/menu";
+import * as menu from "remix/ui/menu/primitives";
+import { onMenuSelect } from "remix/ui/menu/primitives";
 
 type FileAction =
   | "copyPath"
@@ -20,7 +20,16 @@ const actionLabelByName: Record<FileAction, string> = {
   trash: "Moved to trash",
 };
 
-export function ContextMenuTrigger(handle: Handle) {
+function isFileAction(name: string): name is FileAction {
+  return name in actionLabelByName;
+}
+
+/**
+ * @name Context Menu Trigger
+ * @description A lower-level menu composition that opens from right-click coordinates while keeping standard menu selection and submenu behavior.
+ * @layout center
+ */
+export function MenuContextTrigger(handle: Handle) {
   let latestAction = "Right-click the card.";
 
   return () => (
@@ -41,9 +50,9 @@ export function ContextMenuTrigger(handle: Handle) {
 
       <MenuList
         mix={onMenuSelect((event) => {
-          latestAction =
-            actionLabelByName[event.item.name as FileAction] ??
-            `Selected ${event.item.label}`;
+          latestAction = isFileAction(event.item.name)
+            ? actionLabelByName[event.item.name]
+            : `Selected ${event.item.label}`;
           void handle.update();
         })}
       >

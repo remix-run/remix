@@ -1,6 +1,11 @@
-import { Menu, MenuItem } from "remix/components/menu";
-import { onMenuSelect } from "remix/ui/menu";
+import { Menu, MenuItem } from "remix/ui/menu";
+import { onMenuSelect } from "remix/ui/menu/primitives";
 
+/**
+ * @name Menu Event Bubbling
+ * @description Item-level handlers fire before the root handler, letting individual items intercept events while others bubble up.
+ * @layout center
+ */
 export function MenuBubbling() {
   return () => (
     <Menu

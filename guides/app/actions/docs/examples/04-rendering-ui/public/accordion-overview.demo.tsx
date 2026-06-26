@@ -4,8 +4,14 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from "remix/components/accordion";
+} from "remix/ui/accordion";
 
+/**
+ * @name Accordion Overview
+ * @description A single-open disclosure list that keeps settings, billing, or notification rules in one calm section.
+ * @layout center
+ * @order 1
+ */
 export function AccordionOverview() {
   return () => (
     <Accordion defaultValue="account">

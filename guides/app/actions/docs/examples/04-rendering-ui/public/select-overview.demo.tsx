@@ -1,6 +1,11 @@
 import { css } from "remix/ui";
-import { Option, Select } from "remix/components/select";
+import { Option, Select } from "remix/ui/select";
 
+/**
+ * @name Select Overview
+ * @description A styled select control with a searchable dropdown and accessible label.
+ * @layout center
+ */
 export function SelectOverview() {
   return () => (
     <div mix={stackCss}>
