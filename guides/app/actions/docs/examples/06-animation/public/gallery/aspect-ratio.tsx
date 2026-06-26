@@ -1,19 +1,19 @@
-import { type Handle } from 'remix/ui'
-import { css, on } from 'remix/ui'
+import { type Handle } from "remix/ui";
+import { css, on } from "remix/ui";
 
-import { spring } from 'remix/ui/animation'
+import { spring } from "remix/ui/animation";
 
 export function AspectRatio(handle: Handle) {
-  let aspectRatio = 1
-  let width = 100
+  let aspectRatio = 1;
+  let width = 100;
 
   return () => (
     <div
       mix={[
         css({
-          display: 'flex',
-          alignItems: 'center',
-          flexDirection: 'column',
+          display: "flex",
+          alignItems: "center",
+          flexDirection: "column",
           gap: 20,
         }),
       ]}
@@ -21,9 +21,9 @@ export function AspectRatio(handle: Handle) {
       <div
         mix={[
           css({
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
             width: 180,
             height: 180,
           }),
@@ -32,9 +32,12 @@ export function AspectRatio(handle: Handle) {
         <div
           mix={[
             css({
-              backgroundColor: '#8df0cc',
+              backgroundColor: "#8df0cc",
               borderRadius: 10,
-              transition: spring.transition(['width', 'aspect-ratio'], 'bouncy'),
+              transition: spring.transition(
+                ["width", "aspect-ratio"],
+                "bouncy",
+              ),
             }),
           ]}
           style={{
@@ -43,15 +46,24 @@ export function AspectRatio(handle: Handle) {
           }}
         />
       </div>
-      <div mix={[css({ display: 'flex', flexDirection: 'column', gap: 12, width: '100%' })]}>
+      <div
+        mix={[
+          css({
+            display: "flex",
+            flexDirection: "column",
+            gap: 12,
+            width: "100%",
+          }),
+        ]}
+      >
         <label
           mix={[
             css({
-              display: 'flex',
-              alignItems: 'center',
+              display: "flex",
+              alignItems: "center",
               gap: 10,
               fontSize: 13,
-              color: '#666',
+              color: "#666",
             }),
           ]}
         >
@@ -64,26 +76,34 @@ export function AspectRatio(handle: Handle) {
             step={0.1}
             mix={[
               css(rangeInputCss),
-              on('input', (event) => {
-                let value = event.currentTarget.value
+              on("input", (event) => {
+                let value = event.currentTarget.value;
 
-                aspectRatio = parseFloat(value)
-                handle.update()
+                aspectRatio = parseFloat(value);
+                handle.update();
               }),
             ]}
           />
-          <span mix={[css({ width: 32, textAlign: 'right', fontVariantNumeric: 'tabular-nums' })]}>
+          <span
+            mix={[
+              css({
+                width: 32,
+                textAlign: "right",
+                fontVariantNumeric: "tabular-nums",
+              }),
+            ]}
+          >
             {aspectRatio.toFixed(1)}
           </span>
         </label>
         <label
           mix={[
             css({
-              display: 'flex',
-              alignItems: 'center',
+              display: "flex",
+              alignItems: "center",
               gap: 10,
               fontSize: 13,
-              color: '#666',
+              color: "#666",
             }),
           ]}
         >
@@ -96,25 +116,33 @@ export function AspectRatio(handle: Handle) {
             step={5}
             mix={[
               css(rangeInputCss),
-              on('input', (event) => {
-                let value = event.currentTarget.value
+              on("input", (event) => {
+                let value = event.currentTarget.value;
 
-                width = parseFloat(value)
-                handle.update()
+                width = parseFloat(value);
+                handle.update();
               }),
             ]}
           />
-          <span mix={[css({ width: 32, textAlign: 'right', fontVariantNumeric: 'tabular-nums' })]}>
+          <span
+            mix={[
+              css({
+                width: 32,
+                textAlign: "right",
+                fontVariantNumeric: "tabular-nums",
+              }),
+            ]}
+          >
             {width}
           </span>
         </label>
       </div>
     </div>
-  )
+  );
 }
 
 const rangeInputCss = {
   flex: 1,
-  accentColor: '#8df0cc',
-  cursor: 'pointer',
-} as const
+  accentColor: "#8df0cc",
+  cursor: "pointer",
+} as const;

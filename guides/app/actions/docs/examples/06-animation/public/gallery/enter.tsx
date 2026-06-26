@@ -1,5 +1,5 @@
-import { css } from 'remix/ui'
-import { animateEntrance, spring } from 'remix/ui/animation'
+import { css } from "remix/ui";
+import { animateEntrance, spring } from "remix/ui/animation";
 
 export function EnterAnimation() {
   return () => (
@@ -8,15 +8,15 @@ export function EnterAnimation() {
         css({
           width: 100,
           height: 100,
-          backgroundColor: '#dd00ee',
-          borderRadius: '50%',
+          backgroundColor: "#dd00ee",
+          borderRadius: "50%",
         }),
         animateEntrance({
           opacity: 0,
-          transform: 'scale(0)',
+          transform: "scale(0)",
           ...spring({ duration: 400, bounce: 0.5 }),
         }),
       ]}
     />
-  )
+  );
 }

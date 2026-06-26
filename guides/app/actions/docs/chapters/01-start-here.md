@@ -88,19 +88,19 @@ my-remix-app/
 We're going to touch on each of these files in more depth by building out a small feature. The only file we won't touch is `server.ts`. Here's a simplified version:
 
 ```ts filename=server.ts
-import * as http from 'node:http'
-import { createRequestListener } from 'remix/node-fetch-server'
+import * as http from "node:http";
+import { createRequestListener } from "remix/node-fetch-server";
 
-import { router } from './app/router.ts'
+import { router } from "./app/router.ts";
 
 const requestListener = createRequestListener(async (request) => {
-  return await router.fetch(request)
-})
-const server = http.createServer(requestListener)
+  return await router.fetch(request);
+});
+const server = http.createServer(requestListener);
 
 server.listen(44100, () => {
-  console.log('Server listening on http://localhost:44100')
-})
+  console.log("Server listening on http://localhost:44100");
+});
 ```
 
 `server.ts` is the runtime entrypoint. In our Node-based example, it creates an HTTP server, adapts each Node request into a Web `Request`, and passes it to `router.fetch(request)`.
@@ -117,15 +117,15 @@ Keeping the URL contract separate gives controllers, links, forms, redirects, an
 Start by defining a route where we can view different albums in a digital record store:
 
 ```ts filename=app/routes.ts lines=[6-8]
-import { get, route } from 'remix/routes'
+import { get, route } from "remix/routes";
 
 export const routes = route({
-  assets: get('/assets/*path'),
-  home: '/',
+  assets: get("/assets/*path"),
+  home: "/",
   albums: {
-    show: get('/albums/:albumId'),
+    show: get("/albums/:albumId"),
   },
-})
+});
 ```
 
 That route definition does a lot:
@@ -148,34 +148,34 @@ touch app/actions/albums/controller.tsx
 This controller will start pretty small, just handling the single `show` action we have so far. Notice that when we pass `routes.albums` into `createController`, it requires that we provide `actions` with a `show` function. `show` itself receives type-safe `params`. This means we can guarantee the existence of `albumId`, which comes from the `'/albums/:albumId'` route pattern we set up.
 
 ```tsx filename=app/actions/albums/controller.tsx
-import { createController } from 'remix/router'
+import { createController } from "remix/router";
 
-import { routes } from '../../routes.ts'
+import { routes } from "../../routes.ts";
 
 export default createController(routes.albums, {
   actions: {
     show(context) {
-      return new Response(`Album: ${context.params.albumId}`)
+      return new Response(`Album: ${context.params.albumId}`);
     },
   },
-})
+});
 ```
 
 Finally, we need to map the albums route map to our router in `app/router.ts`:
 
 ```ts filename=app/router.ts lines=[5,12]
-import { createRouter, type MiddlewareContext } from 'remix/router'
-import { staticFiles } from 'remix/middleware/static'
+import { createRouter, type MiddlewareContext } from "remix/router";
+import { staticFiles } from "remix/middleware/static";
 
-import controller from './actions/controller.tsx'
-import albumsController from './actions/albums/controller.tsx'
-import { render } from './middleware/render.tsx'
-import { routes } from './routes.ts'
+import controller from "./actions/controller.tsx";
+import albumsController from "./actions/albums/controller.tsx";
+import { render } from "./middleware/render.tsx";
+import { routes } from "./routes.ts";
 
 // ...
 
-router.map(routes, controller)
-router.map(routes.albums, albumsController)
+router.map(routes, controller);
+router.map(routes.albums, albumsController);
 ```
 
 For now the `show` action returns a plain Web `Response`.
@@ -207,8 +207,8 @@ function MyComponent(handle) {
     // Render phase: runs on the first render and every update afterward.
     // Return JSX from here.
 
-    return <div>Hello, Remix</div>
-  }
+    return <div>Hello, Remix</div>;
+  };
 }
 ```
 
@@ -219,9 +219,9 @@ touch app/actions/albums/show-page.tsx
 ```
 
 ```tsx filename=app/actions/albums/show-page.tsx
-import type { Handle } from 'remix/ui'
+import type { Handle } from "remix/ui";
 
-import { Document } from '../../ui/document.tsx'
+import { Document } from "../../ui/document.tsx";
 
 export function AlbumPage(handle: Handle<{ id: string }>) {
   return () => {
@@ -231,26 +231,26 @@ export function AlbumPage(handle: Handle<{ id: string }>) {
           <h1>{handle.props.id}</h1>
         </main>
       </Document>
-    )
-  }
+    );
+  };
 }
 ```
 
 To use this component we need to render and return the response in our action. The route still returns a Web `Response`, but `context.render(...)` creates that response from a component tree instead of a string. Pass the matched `albumId` through for now so the page keeps showing the route param from the previous section. The render middleware is app code, and the [Rendering UI chapter](/docs/rendering-ui) shows where it comes from.
 
 ```tsx filename=app/actions/albums/controller.tsx lines=[4,9]
-import { createController } from 'remix/router'
+import { createController } from "remix/router";
 
-import { routes } from '../../routes.ts'
-import { AlbumPage } from './show-page.tsx'
+import { routes } from "../../routes.ts";
+import { AlbumPage } from "./show-page.tsx";
 
 export default createController(routes.albums, {
   actions: {
     show(context) {
-      return context.render(<AlbumPage id={context.params.albumId} />)
+      return context.render(<AlbumPage id={context.params.albumId} />);
     },
   },
-})
+});
 ```
 
 For this walkthrough we're going to set up a small in-memory database. The [Data and Validation chapter](/docs/data-and-validation) covers real database setup in more detail.
@@ -261,75 +261,75 @@ touch app/actions/albums/data.ts
 
 ```ts filename=app/actions/albums/data.ts
 export type Album = {
-  artist: string
-  id: string
-  title: string
-  year: number
-}
+  artist: string;
+  id: string;
+  title: string;
+  year: number;
+};
 
 let albums: Album[] = [
   {
-    artist: 'Michael Jackson',
-    id: 'thriller',
-    title: 'Thriller',
+    artist: "Michael Jackson",
+    id: "thriller",
+    title: "Thriller",
     year: 1983,
   },
-]
+];
 
 export async function getAlbum(albumId: string) {
-  return albums.find((album) => album.id === albumId)
+  return albums.find((album) => album.id === albumId);
 }
 
 export async function updateAlbum(albumId: string, values: Partial<Album>) {
-  let album = albums.find((album) => album.id === albumId)
+  let album = albums.find((album) => album.id === albumId);
 
   if (album === undefined) {
-    throw new Error(`Album not found: ${albumId}`)
+    throw new Error(`Album not found: ${albumId}`);
   }
 
   // Simulate network latency
-  await new Promise((resolve) => setTimeout(resolve, 1000))
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
-  Object.assign(album, values)
-  return album
+  Object.assign(album, values);
+  return album;
 }
 ```
 
 Now we can use the route param to "load" the appropriate album, return a `404` if it is missing, and pass the album data into the component as props:
 
 ```tsx filename=app/actions/albums/controller.tsx lines=[4-5,9-17]
-import { createController } from 'remix/router'
+import { createController } from "remix/router";
 
-import { routes } from '../../routes.ts'
-import { getAlbum } from './data.ts'
-import { AlbumPage } from './show-page.tsx'
+import { routes } from "../../routes.ts";
+import { getAlbum } from "./data.ts";
+import { AlbumPage } from "./show-page.tsx";
 
 export default createController(routes.albums, {
   actions: {
     async show(context) {
-      let album = await getAlbum(context.params.albumId)
+      let album = await getAlbum(context.params.albumId);
 
       if (album === undefined) {
-        return new Response('Album not found', { status: 404 })
+        return new Response("Album not found", { status: 404 });
       }
 
-      return context.render(<AlbumPage album={album} />)
+      return context.render(<AlbumPage album={album} />);
     },
   },
-})
+});
 ```
 
 Let's tweak our `AlbumPage` component to display the album data:
 
 ```tsx filename=app/actions/albums/show-page.tsx lines=[3,6,8,11,13-16]
-import type { Handle } from 'remix/ui'
+import type { Handle } from "remix/ui";
 
-import type { Album } from './data.ts'
-import { Document } from '../../ui/document.tsx'
+import type { Album } from "./data.ts";
+import { Document } from "../../ui/document.tsx";
 
 export function AlbumPage(handle: Handle<{ album: Album }>) {
   return () => {
-    let { album } = handle.props
+    let { album } = handle.props;
 
     return (
       <Document title={`${album.title} — Albums`}>
@@ -340,8 +340,8 @@ export function AlbumPage(handle: Handle<{ album: Album }>) {
           <h1>{album.title}</h1>
         </main>
       </Document>
-    )
-  }
+    );
+  };
 }
 ```
 
@@ -350,33 +350,33 @@ Now the page displays the album title, artist, and year.
 Center it and add a little spacing with the `css` function and `mix` prop. The [Rendering UI chapter](/docs/rendering-ui) covers this helper and prop in more detail.
 
 ```tsx filename=app/actions/albums/show-page.tsx lines=[2,14-18,20]
-import type { Handle } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle } from "remix/ui";
+import { css } from "remix/ui";
 
-import type { Album } from './data.ts'
-import { Document } from '../../ui/document.tsx'
+import type { Album } from "./data.ts";
+import { Document } from "../../ui/document.tsx";
 
 export function AlbumPage(handle: Handle<{ album: Album }>) {
   return () => {
-    let { album } = handle.props
+    let { album } = handle.props;
 
     return (
       <Document title={`${album.title} — Albums`}>
         <main
           mix={css({
-            maxWidth: '44rem',
-            margin: '0 auto',
-            padding: '4rem 1.5rem',
+            maxWidth: "44rem",
+            margin: "0 auto",
+            padding: "4rem 1.5rem",
           })}
         >
-          <p mix={css({ color: '#666' })}>
+          <p mix={css({ color: "#666" })}>
             {album.artist} · {album.year}
           </p>
           <h1>{album.title}</h1>
         </main>
       </Document>
-    )
-  }
+    );
+  };
 }
 ```
 
@@ -391,16 +391,16 @@ We're able to retrieve data and display it, but the real fun begins when we can 
 Back in our `routes.ts` file we'll use the `form()` route helper. This helper is nice because it creates two routes at the same URL: a `GET` route that shows the form and a `POST` route that handles the submit. Two routes for the price of one!
 
 ```ts filename=app/routes.ts lines=[1,8]
-import { form, get, route } from 'remix/routes'
+import { form, get, route } from "remix/routes";
 
 export const routes = route({
-  assets: get('/assets/*path'),
-  home: '/',
+  assets: get("/assets/*path"),
+  home: "/",
   albums: {
-    show: get('/albums/:albumId'),
-    edit: form('/albums/:albumId/edit'),
+    show: get("/albums/:albumId"),
+    edit: form("/albums/:albumId/edit"),
   },
-})
+});
 ```
 
 In this case `form('/albums/:albumId/edit')` creates:
@@ -418,68 +418,68 @@ touch app/actions/albums/edit/controller.tsx app/actions/albums/edit/page.tsx
 We'll scaffold out the controller:
 
 ```tsx filename=app/actions/albums/edit/controller.tsx
-import { createController } from 'remix/router'
+import { createController } from "remix/router";
 
-import { routes } from '../../../routes.ts'
+import { routes } from "../../../routes.ts";
 
 export default createController(routes.albums.edit, {
   actions: {
     async index() {
-      return new Response()
+      return new Response();
     },
     async action() {
-      return new Response()
+      return new Response();
     },
   },
-})
+});
 ```
 
 And map it to the router as well:
 
 ```ts filename=app/router.ts lines=[6,14]
-import { createRouter, type MiddlewareContext } from 'remix/router'
-import { staticFiles } from 'remix/middleware/static'
+import { createRouter, type MiddlewareContext } from "remix/router";
+import { staticFiles } from "remix/middleware/static";
 
-import controller from './actions/controller.tsx'
-import albumsController from './actions/albums/controller.tsx'
-import albumsEditController from './actions/albums/edit/controller.tsx'
-import { render } from './middleware/render.tsx'
-import { routes } from './routes.ts'
+import controller from "./actions/controller.tsx";
+import albumsController from "./actions/albums/controller.tsx";
+import albumsEditController from "./actions/albums/edit/controller.tsx";
+import { render } from "./middleware/render.tsx";
+import { routes } from "./routes.ts";
 
 // ...
 
-router.map(routes, controller)
-router.map(routes.albums, albumsController)
-router.map(routes.albums.edit, albumsEditController)
+router.map(routes, controller);
+router.map(routes.albums, albumsController);
+router.map(routes.albums.edit, albumsEditController);
 ```
 
 Now we can create the form page. It's a very simple form that displays the existing data and submits a POST request to our edit action.
 
 ```tsx filename=app/actions/albums/edit/page.tsx
-import { css } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+import { css } from "remix/ui";
+import type { Handle } from "remix/ui";
 
-import { routes } from '../../../routes.ts'
-import { Document } from '../../../ui/document.tsx'
-import type { Album } from '../data.ts'
+import { routes } from "../../../routes.ts";
+import { Document } from "../../../ui/document.tsx";
+import type { Album } from "../data.ts";
 
 export function AlbumEditPage(handle: Handle<{ album: Album }>) {
   return () => {
-    let { album } = handle.props
+    let { album } = handle.props;
 
     return (
       <Document title={`Edit ${album.title} — Albums`}>
-        <main mix={css({ padding: '1rem' })}>
+        <main mix={css({ padding: "1rem" })}>
           <h1>Edit {album.title}</h1>
           <form
             action={routes.albums.edit.action.href({ albumId: album.id })}
             method="post"
             mix={css({
-              display: 'grid',
-              gap: '0.75rem',
-              maxWidth: 'fit-content',
-              '& input': {
-                marginLeft: '0.5rem',
+              display: "grid",
+              gap: "0.75rem",
+              maxWidth: "fit-content",
+              "& input": {
+                marginLeft: "0.5rem",
               },
             })}
           >
@@ -493,42 +493,47 @@ export function AlbumEditPage(handle: Handle<{ album: Album }>) {
             </label>
             <label>
               Year
-              <input name="year" defaultValue={album.year} required type="number" />
+              <input
+                name="year"
+                defaultValue={album.year}
+                required
+                type="number"
+              />
             </label>
             <button type="submit">Save album</button>
           </form>
         </main>
       </Document>
-    )
-  }
+    );
+  };
 }
 ```
 
 Let's see our new form in action by hooking up the component to the `index` action in the controller:
 
 ```tsx filename=app/actions/albums/edit/controller.tsx lines=[4-5,10-16]
-import { createController } from 'remix/router'
+import { createController } from "remix/router";
 
-import { routes } from '../../../routes.ts'
-import { getAlbum } from '../data.ts'
-import { AlbumEditPage } from './page.tsx'
+import { routes } from "../../../routes.ts";
+import { getAlbum } from "../data.ts";
+import { AlbumEditPage } from "./page.tsx";
 
 export default createController(routes.albums.edit, {
   actions: {
     async index(context) {
-      let album = await getAlbum(context.params.albumId)
+      let album = await getAlbum(context.params.albumId);
 
       if (album === undefined) {
-        return new Response('Album not found', { status: 404 })
+        return new Response("Album not found", { status: 404 });
       }
 
-      return context.render(<AlbumEditPage album={album} />)
+      return context.render(<AlbumEditPage album={album} />);
     },
     async action() {
-      return new Response('Not implemented', { status: 501 })
+      return new Response("Not implemented", { status: 501 });
     },
   },
-})
+});
 ```
 
 Open [http://localhost:44100/albums/thriller/edit](http://localhost:44100/albums/thriller/edit). The route returns an HTML form with the album data filled in.
@@ -538,23 +543,25 @@ Open [http://localhost:44100/albums/thriller/edit](http://localhost:44100/albums
 Before handling the POST request, we're going to take a quick detour and upgrade Remix with a nice little `form-data` middleware in `app/router.ts`. This middleware parses browser form bodies once and makes the `FormData` available to route actions.
 
 ```ts filename=app/router.ts lines=[2,7,16]
-import { createRouter, type MiddlewareContext } from 'remix/router'
-import { formData } from 'remix/middleware/form-data'
-import { staticFiles } from 'remix/middleware/static'
+import { createRouter, type MiddlewareContext } from "remix/router";
+import { formData } from "remix/middleware/form-data";
+import { staticFiles } from "remix/middleware/static";
 
 // ...
 
-type AppContext = MiddlewareContext<[ReturnType<typeof formData>, ReturnType<typeof render>]>
+type AppContext = MiddlewareContext<
+  [ReturnType<typeof formData>, ReturnType<typeof render>]
+>;
 
-declare module 'remix/router' {
+declare module "remix/router" {
   interface RouterTypes {
-    context: AppContext
+    context: AppContext;
   }
 }
 
 export const router = createRouter<AppContext>({
-  middleware: [staticFiles('./public', { index: false }), formData(), render()],
-})
+  middleware: [staticFiles("./public", { index: false }), formData(), render()],
+});
 
 // ...
 ```
@@ -562,41 +569,41 @@ export const router = createRouter<AppContext>({
 We'll also use `remix/data-schema/form-data` to turn the raw `FormData` into typed values before updating the album. `remix/data-schema` is a built-in Remix library for validating and parsing all sorts of data. The [Data and Validation chapter](/docs/data-and-validation) explores it in more detail.
 
 ```tsx filename=app/actions/albums/edit/controller.tsx lines=[2-5,8,11-15,28-33]
-import { createController } from 'remix/router'
-import * as s from 'remix/data-schema'
-import * as f from 'remix/data-schema/form-data'
-import * as coerce from 'remix/data-schema/coerce'
-import { redirect } from 'remix/response/redirect'
+import { createController } from "remix/router";
+import * as s from "remix/data-schema";
+import * as f from "remix/data-schema/form-data";
+import * as coerce from "remix/data-schema/coerce";
+import { redirect } from "remix/response/redirect";
 
-import { routes } from '../../../routes.ts'
-import { getAlbum, updateAlbum } from '../data.ts'
-import { AlbumEditPage } from './page.tsx'
+import { routes } from "../../../routes.ts";
+import { getAlbum, updateAlbum } from "../data.ts";
+import { AlbumEditPage } from "./page.tsx";
 
 const albumFormSchema = f.object({
   artist: f.field(s.string()),
   title: f.field(s.string()),
   year: f.field(coerce.number()),
-})
+});
 
 export default createController(routes.albums.edit, {
   actions: {
     async index(context) {
-      let album = await getAlbum(context.params.albumId)
+      let album = await getAlbum(context.params.albumId);
 
       if (album === undefined) {
-        return new Response('Album not found', { status: 404 })
+        return new Response("Album not found", { status: 404 });
       }
 
-      return context.render(<AlbumEditPage album={album} />)
+      return context.render(<AlbumEditPage album={album} />);
     },
     async action({ formData, params }) {
-      let values = s.parse(albumFormSchema, formData)
-      let album = await updateAlbum(params.albumId, values)
+      let values = s.parse(albumFormSchema, formData);
+      let album = await updateAlbum(params.albumId, values);
 
-      return redirect(routes.albums.show.href({ albumId: album.id }), 303)
+      return redirect(routes.albums.show.href({ albumId: album.id }), 303);
     },
   },
-})
+});
 ```
 
 The `action` route action reads parsed Web `FormData`, updates the album, and redirects back to the album page.
@@ -626,26 +633,26 @@ Files in `app/assets/` are browser-loadable modules. The template's asset server
 Now that we have a place for the form to live, let's pull it into its own component.
 
 ```tsx filename=app/assets/album-edit-form.tsx
-import { css } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+import { css } from "remix/ui";
+import type { Handle } from "remix/ui";
 
-import type { Album } from '../actions/albums/data.ts'
-import { routes } from '../routes.ts'
+import type { Album } from "../actions/albums/data.ts";
+import { routes } from "../routes.ts";
 
 export function AlbumEditForm(handle: Handle<{ album: Album }>) {
   return () => {
-    let { album } = handle.props
+    let { album } = handle.props;
 
     return (
       <form
         action={routes.albums.edit.action.href({ albumId: album.id })}
         method="post"
         mix={css({
-          display: 'grid',
-          gap: '0.75rem',
-          maxWidth: 'fit-content',
-          '& input': {
-            marginLeft: '0.5rem',
+          display: "grid",
+          gap: "0.75rem",
+          maxWidth: "fit-content",
+          "& input": {
+            marginLeft: "0.5rem",
           },
         })}
       >
@@ -663,34 +670,34 @@ export function AlbumEditForm(handle: Handle<{ album: Album }>) {
         </label>
         <button type="submit">Save album</button>
       </form>
-    )
-  }
+    );
+  };
 }
 ```
 
 Let's update the edit page to render this new `AlbumEditForm` component:
 
 ```tsx filename=app/actions/albums/edit/page.tsx lines=[4,16]
-import type { Handle } from 'remix/ui'
-import { css } from 'remix/ui'
+import type { Handle } from "remix/ui";
+import { css } from "remix/ui";
 
-import { AlbumEditForm } from '../../../assets/album-edit-form.tsx'
-import { Document } from '../../../ui/document.tsx'
-import type { Album } from '../data.ts'
+import { AlbumEditForm } from "../../../assets/album-edit-form.tsx";
+import { Document } from "../../../ui/document.tsx";
+import type { Album } from "../data.ts";
 
 export function AlbumEditPage(handle: Handle<{ album: Album }>) {
   return () => {
-    let { album } = handle.props
+    let { album } = handle.props;
 
     return (
       <Document title={`Edit ${album.title} — Albums`}>
-        <main mix={css({ padding: '1rem' })}>
+        <main mix={css({ padding: "1rem" })}>
           <h1>Edit {album.title}</h1>
           <AlbumEditForm album={album} />
         </main>
       </Document>
-    )
-  }
+    );
+  };
 }
 ```
 
@@ -699,18 +706,18 @@ Everything should look like it did before.
 Next mark the form as a client entry. `import.meta.url` tells our asset server which source file should be turned into a browser-loadable module:
 
 ```tsx filename=app/assets/album-edit-form.tsx lines=[1,7-9,12]
-import { clientEntry, css } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+import { clientEntry, css } from "remix/ui";
+import type { Handle } from "remix/ui";
 
-import type { Album } from '../actions/albums/data.ts'
-import { routes } from '../routes.ts'
+import type { Album } from "../actions/albums/data.ts";
+import { routes } from "../routes.ts";
 
 export const AlbumEditForm = clientEntry(
   import.meta.url,
   function AlbumEditForm(handle: Handle<{ album: Album }>) {
     // ...
   },
-)
+);
 ```
 
 The page should still look and behave the same. `clientEntry(...)` simply tells Remix to render the form on the server, serialize its props, and hydrate this component in the browser when the client runtime starts.
@@ -723,53 +730,53 @@ Now that the form can run in the browser, we can add pending state. State in Rem
 export const AlbumEditForm = clientEntry(
   import.meta.url,
   function AlbumEditForm(handle: Handle<{ album: Album }>) {
-    let pending = false
+    let pending = false;
 
     return () => {
       // ...
-    }
+    };
   },
-)
+);
 ```
 
 When the form submits, we flip the `pending` variable from `false` to `true` and call `handle.update()`. `handle.update()` tells Remix UI to render this component again with the new local state. To listen for the submit, we add an event listener via the `on` helper and pass an array into the `mix` prop.
 
 ```tsx filename=app/assets/album-edit-form.tsx lines=[1,19,21-25,28-30]
-import { clientEntry, css, on } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+import { clientEntry, css, on } from "remix/ui";
+import type { Handle } from "remix/ui";
 
-import type { Album } from '../actions/albums/data.ts'
-import { routes } from '../routes.ts'
+import type { Album } from "../actions/albums/data.ts";
+import { routes } from "../routes.ts";
 
 export const AlbumEditForm = clientEntry(
   import.meta.url,
   function AlbumEditForm(handle: Handle<{ album: Album }>) {
-    let pending = false
+    let pending = false;
 
     return () => {
-      let { album } = handle.props
+      let { album } = handle.props;
 
       return (
         <form
           action={routes.albums.edit.action.href({ albumId: album.id })}
           method="post"
           mix={[
-            css({ display: 'grid', gap: '0.75rem', maxWidth: 'fit-content' }),
-            on('submit', () => {
-              pending = true
-              handle.update()
+            css({ display: "grid", gap: "0.75rem", maxWidth: "fit-content" }),
+            on("submit", () => {
+              pending = true;
+              handle.update();
             }),
           ]}
         >
           {/* ... */}
           <button disabled={pending} type="submit">
-            {pending ? 'Saving…' : 'Save album'}
+            {pending ? "Saving…" : "Save album"}
           </button>
         </form>
-      )
-    }
+      );
+    };
   },
-)
+);
 ```
 
 Now when you submit the form, the button is disabled and the button text changes to “Saving…”.

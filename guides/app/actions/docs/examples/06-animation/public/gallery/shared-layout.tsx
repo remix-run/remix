@@ -1,39 +1,46 @@
-import { css, on, type Handle, type RemixNode } from 'remix/ui'
-import { animateEntrance, animateExit } from 'remix/ui/animation'
+import { css, on, type Handle, type RemixNode } from "remix/ui";
+import { animateEntrance, animateExit } from "remix/ui/animation";
 
-const ease = 'cubic-bezier(0.26, 0.02, 0.23, 0.94)'
+const ease = "cubic-bezier(0.26, 0.02, 0.23, 0.94)";
 
 function OverlapExample(handle: Handle<{ state: boolean }>) {
-  let shouldAnimate = false
+  let shouldAnimate = false;
   handle.queueTask(() => {
-    shouldAnimate = true
-  })
+    shouldAnimate = true;
+  });
 
   return () => {
-    let { state } = handle.props
+    let { state } = handle.props;
     let animationMix = [
       animateExit({
         opacity: 0,
-        transform: 'scale(0.8)',
+        transform: "scale(0.8)",
         duration: 300,
         easing: ease,
       }),
-    ]
+    ];
     if (shouldAnimate) {
       animationMix.unshift(
         animateEntrance({
           opacity: 0,
-          transform: 'scale(0.6)',
+          transform: "scale(0.6)",
           duration: 300,
           easing: ease,
         }),
-      )
+      );
     }
 
     return (
       <div
         // grid layout so children render in the same position
-        mix={[css({ display: 'grid', width: 80, height: 80, '& > *': { gridArea: '1 / 1' } })]}
+        mix={[
+          css({
+            display: "grid",
+            width: 80,
+            height: 80,
+            "& > *": { gridArea: "1 / 1" },
+          }),
+        ]}
       >
         {state ? (
           <div key="filled" mix={animationMix}>
@@ -49,42 +56,49 @@ function OverlapExample(handle: Handle<{ state: boolean }>) {
           </div>
         )}
       </div>
-    )
-  }
+    );
+  };
 }
 
 function WaitExample(handle: Handle<{ state: boolean }>) {
-  let shouldAnimate = false
+  let shouldAnimate = false;
   handle.queueTask(() => {
-    shouldAnimate = true
-  })
+    shouldAnimate = true;
+  });
 
   return () => {
-    let { state } = handle.props
+    let { state } = handle.props;
     let animationMix = [
       animateExit({
         opacity: 0,
-        transform: 'scale(0.8)',
+        transform: "scale(0.8)",
         duration: 300,
         easing: ease,
       }),
-    ]
+    ];
     if (shouldAnimate) {
       animationMix.unshift(
         animateEntrance({
           opacity: 0,
-          transform: 'scale(0.6)',
+          transform: "scale(0.6)",
           duration: 300,
           easing: ease,
           delay: 300,
         }),
-      )
+      );
     }
 
     return (
       <div
         // grid layout so children render in the same position
-        mix={[css({ display: 'grid', width: 80, height: 80, '& > *': { gridArea: '1 / 1' } })]}
+        mix={[
+          css({
+            display: "grid",
+            width: 80,
+            height: 80,
+            "& > *": { gridArea: "1 / 1" },
+          }),
+        ]}
       >
         {state ? (
           <div key="filled" mix={animationMix}>
@@ -100,54 +114,54 @@ function WaitExample(handle: Handle<{ state: boolean }>) {
           </div>
         )}
       </div>
-    )
-  }
+    );
+  };
 }
 
 export function SharedLayout(handle: Handle) {
-  let state = true
+  let state = true;
 
   return () => (
     <div
       mix={[
         css({
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
           gap: 16,
         }),
       ]}
     >
-      <div mix={[css({ display: 'flex', gap: 16 })]}>
+      <div mix={[css({ display: "flex", gap: 16 })]}>
         <OverlapExample state={state} />
         <WaitExample state={state} />
       </div>
       <button
         mix={[
           css({
-            backgroundColor: '#0f1115',
-            color: '#f5f5f5',
-            border: 'none',
+            backgroundColor: "#0f1115",
+            color: "#f5f5f5",
+            border: "none",
             borderRadius: 8,
-            padding: '12px 32px',
+            padding: "12px 32px",
             fontSize: 14,
             fontWeight: 500,
-            cursor: 'pointer',
-            transition: 'transform 100ms ease-in-out',
-            '&:active': {
-              transform: 'scale(0.95)',
+            cursor: "pointer",
+            transition: "transform 100ms ease-in-out",
+            "&:active": {
+              transform: "scale(0.95)",
             },
           }),
-          on('click', () => {
-            state = !state
-            handle.update()
+          on("click", () => {
+            state = !state;
+            handle.update();
           }),
         ]}
       >
         Switch
       </button>
     </div>
-  )
+  );
 }
 
 function Circle(handle: Handle<{ filled?: boolean; children: RemixNode }>) {
@@ -157,20 +171,22 @@ function Circle(handle: Handle<{ filled?: boolean; children: RemixNode }>) {
         css({
           width: 80,
           height: 80,
-          borderRadius: '50%',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxSizing: 'border-box',
-          backgroundColor: handle.props.filled ? '#0f1115' : 'transparent',
-          color: handle.props.filled ? '#f5f5f5' : '#0f1115',
-          border: handle.props.filled ? '2px solid #0f1115' : '2px solid #0f1115',
+          borderRadius: "50%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          boxSizing: "border-box",
+          backgroundColor: handle.props.filled ? "#0f1115" : "transparent",
+          color: handle.props.filled ? "#f5f5f5" : "#0f1115",
+          border: handle.props.filled
+            ? "2px solid #0f1115"
+            : "2px solid #0f1115",
         }),
       ]}
     >
       {handle.props.children}
     </div>
-  )
+  );
 }
 
 function FilledIcon() {
@@ -189,7 +205,7 @@ function FilledIcon() {
       <path d="m21 3-9 9" />
       <path d="M15 3h6v6" />
     </svg>
-  )
+  );
 }
 
 function OutlineIcon() {
@@ -207,5 +223,5 @@ function OutlineIcon() {
       <rect x="3" y="3" width="18" height="18" rx="2" />
       <path d="M9 12h6" />
     </svg>
-  )
+  );
 }

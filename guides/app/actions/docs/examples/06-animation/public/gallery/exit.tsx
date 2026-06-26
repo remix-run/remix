@@ -1,25 +1,25 @@
-import type { Handle } from 'remix/ui'
-import { css, on } from 'remix/ui'
+import type { Handle } from "remix/ui";
+import { css, on } from "remix/ui";
 
-import { animateEntrance, animateExit, spring } from 'remix/ui/animation'
+import { animateEntrance, animateExit, spring } from "remix/ui/animation";
 
 export function ExitAnimation(handle: Handle) {
-  let isVisible = true
+  let isVisible = true;
 
-  let shouldAnimate = false
+  let shouldAnimate = false;
   handle.queueTask(() => {
-    shouldAnimate = true
-  })
+    shouldAnimate = true;
+  });
 
   return () => (
     <div
       mix={[
         css({
-          display: 'flex',
-          flexDirection: 'column',
-          width: '100px',
-          height: '160px',
-          position: 'relative',
+          display: "flex",
+          flexDirection: "column",
+          width: "100px",
+          height: "160px",
+          position: "relative",
         }),
       ]}
     >
@@ -28,21 +28,21 @@ export function ExitAnimation(handle: Handle) {
           key="exit-animation"
           mix={[
             css({
-              width: '100px',
-              height: '100px',
-              backgroundColor: '#0cdcf7',
-              borderRadius: '10px',
+              width: "100px",
+              height: "100px",
+              backgroundColor: "#0cdcf7",
+              borderRadius: "10px",
             }),
             animateEntrance(
               shouldAnimate && {
                 opacity: 0,
-                transform: 'scale(0)',
-                ...spring('snappy'),
+                transform: "scale(0)",
+                ...spring("snappy"),
               },
             ),
             animateExit({
               opacity: 0,
-              transform: 'scale(0)',
+              transform: "scale(0)",
               ...spring(),
             }),
           ]}
@@ -51,29 +51,29 @@ export function ExitAnimation(handle: Handle) {
       <button
         mix={[
           css({
-            backgroundColor: '#0cdcf7',
-            borderRadius: '10px',
-            padding: '10px 20px',
-            color: '#0f1115',
-            border: 'none',
-            cursor: 'pointer',
-            position: 'absolute',
+            backgroundColor: "#0cdcf7",
+            borderRadius: "10px",
+            padding: "10px 20px",
+            color: "#0f1115",
+            border: "none",
+            cursor: "pointer",
+            position: "absolute",
             bottom: 0,
             left: 0,
             right: 0,
             transition: `transform 100ms ease-in-out`,
-            '&:active': {
-              transform: 'translateY(1px)',
+            "&:active": {
+              transform: "translateY(1px)",
             },
           }),
-          on('click', () => {
-            isVisible = !isVisible
-            handle.update()
+          on("click", () => {
+            isVisible = !isVisible;
+            handle.update();
           }),
         ]}
       >
-        {isVisible ? 'Hide' : 'Show'}
+        {isVisible ? "Hide" : "Show"}
       </button>
     </div>
-  )
+  );
 }

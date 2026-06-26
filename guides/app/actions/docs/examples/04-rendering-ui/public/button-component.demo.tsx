@@ -1,5 +1,5 @@
-import { Button } from 'remix/components/button'
-import { css } from 'remix/ui'
+import { Button } from "remix/components/button";
+import { css } from "remix/ui";
 
 export function ButtonComponent() {
   return () => (
@@ -11,11 +11,11 @@ export function ButtonComponent() {
       <Button tone="ghost">Ghost</Button>
       <Button tone="danger">Delete</Button>
     </div>
-  )
+  );
 }
 
 const buttonRowCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-})
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+});
