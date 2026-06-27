@@ -1,20 +1,26 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
 
-import { routes } from '../routes.ts'
+import { getAssetEntry } from '../middleware/asset-entry.ts'
 
 const rawCss = String.raw
 
 export function Layout(handle: Handle<{ children?: RemixNode }>) {
-  return () => (
-    <html lang="en">
-      <head>
-        <meta charSet="UTF-8" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>Server-Sent Events Demo</title>
-        <script type="module" async src={routes.assets.href({ path: 'entry.js' })} />
-        <style>
-          {rawCss`
+  return () => {
+    let { scriptSrc, scriptPreloads } = getAssetEntry()
+
+    return (
+      <html lang="en">
+        <head>
+          <meta charSet="UTF-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+          <title>Server-Sent Events Demo</title>
+          {scriptPreloads.map((href) => (
+            <link key={href} rel="modulepreload" href={href} />
+          ))}
+          <script type="module" async src={scriptSrc} />
+          <style>
+            {rawCss`
             @layer reset {
               * {
                 box-sizing: border-box;
@@ -44,20 +50,21 @@ export function Layout(handle: Handle<{ children?: RemixNode }>) {
               }
             }
           `}
-        </style>
-      </head>
-      <body
-        mix={css({
-          fontFamily: 'system-ui, -apple-system, sans-serif',
-          lineHeight: 1.5,
-          padding: '2rem',
-          maxWidth: '800px',
-          margin: '0 auto',
-          background: '#f5f5f5',
-        })}
-      >
-        {handle.props.children}
-      </body>
-    </html>
-  )
+          </style>
+        </head>
+        <body
+          mix={css({
+            fontFamily: 'system-ui, -apple-system, sans-serif',
+            lineHeight: 1.5,
+            padding: '2rem',
+            maxWidth: '800px',
+            margin: '0 auto',
+            background: '#f5f5f5',
+          })}
+        >
+          {handle.props.children}
+        </body>
+      </html>
+    )
+  }
 }

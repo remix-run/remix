@@ -11,7 +11,7 @@ type DashboardStatGridProps = {
 }
 
 export const DashboardStatGrid = clientEntry(
-  '/assets/dashboard-stat-grid.js#DashboardStatGrid',
+  import.meta.url,
   function DashboardStatGrid(handle: Handle<DashboardStatGridProps>) {
     return () => (
       <div mix={statsGridStyle}>
