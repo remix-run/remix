@@ -11,13 +11,13 @@ export const assetServer = createAssetServer({
     '/app/*path': 'demos/timeboxer/app/*path',
     '/packages/*path': 'packages/*path',
   },
-  allow: [
+  allowFiles: [
     'demos/timeboxer/app/assets/**',
     'demos/timeboxer/app/routes.ts',
     'demos/timeboxer/app/ui/**',
-    'packages/*/src/**',
   ],
-  deny: ['demos/timeboxer/app/**/*.server.*'],
+  allowPackages: ['remix'],
+  denyFiles: ['demos/timeboxer/app/**/*.server.*'],
   sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
   scripts: {
     define: {
