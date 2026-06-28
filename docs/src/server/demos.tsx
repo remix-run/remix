@@ -4,7 +4,7 @@ import * as url from 'node:url'
 import type { RemixNode } from 'remix/ui'
 import { codeToHtml } from 'shiki'
 import ts from 'typescript'
-import { mapToRemixPackage } from '../generate/manifest.ts'
+import { hasRemixPackage, mapToRemixPackage } from '../generate/manifest.ts'
 import { formatWithOxfmt } from '../shared/format.ts'
 import type { DocsAssetServer } from './asset-server.ts'
 
@@ -88,8 +88,7 @@ async function getDemoFile(filePath: string, assetServer: DocsAssetServer): Prom
 
   let slug = parts.at(-1)!.slice(0, -'.demo.tsx'.length)
   let moduleParts = parts.slice(1, -1)
-  let modulePath = moduleParts.filter((part) => part !== 'demos').join('/')
-  let packageSpecifier = `@remix-run/${packageSegment}/${modulePath}`
+  let packageSpecifier = getDemoPackageSpecifier(packageSegment, moduleParts, slug)
   let packageName = mapToRemixPackage(packageSpecifier)
   let relativePath = `packages/${packageSegment}/src/${parts.slice(1).join('/')}`
 
@@ -124,6 +123,27 @@ async function getDemoFile(filePath: string, assetServer: DocsAssetServer): Prom
 
 async function formatDemoSource(source: string, filePath: string): Promise<string> {
   return await formatWithOxfmt(filePath, source, { printWidth: 80 })
+}
+
+function getDemoPackageSpecifier(
+  packageSegment: string,
+  moduleParts: string[],
+  slug: string,
+): string {
+  let modulePath = moduleParts.filter((part) => part !== 'demos').join('/')
+  let packageSpecifier = `@remix-run/${packageSegment}/${modulePath}`
+
+  if (packageSegment === 'ui' && moduleParts[0] === 'components') {
+    let primitivesSpecifier = `${packageSpecifier}/primitives`
+    if (
+      (slug === 'primitives' || !hasRemixPackage(packageSpecifier)) &&
+      hasRemixPackage(primitivesSpecifier)
+    ) {
+      return primitivesSpecifier
+    }
+  }
+
+  return packageSpecifier
 }
 
 function extractDemoMetadata(
