@@ -16,7 +16,7 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           token: ${{ secrets.FORMAT_PAT }}
           fetch-depth: 0
@@ -55,7 +55,7 @@ jobs:
 
       - name: Install pnpm
         if: steps.changes.outputs.should_run == 'true'
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6
 
       - name: Install Node.js
         if: steps.changes.outputs.should_run == 'true'
