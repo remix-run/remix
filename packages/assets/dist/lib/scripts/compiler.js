@@ -1,0 +1,644 @@
+import * as fs from 'node:fs';
+import * as os from 'node:os';
+import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { IfNoneMatch } from '@remix-run/headers/if-none-match';
+import { createAssetServerCompilationError } from "../compilation-error.js";
+import { createFileMatcher } from "../file-matcher.js";
+import { formatFingerprintedPathname, getFingerprintRequestCacheControl, parseFingerprintSuffix, } from "../fingerprint.js";
+import { emitResolvedModule } from "./emit.js";
+import { normalizeFilePath, resolveFilePath } from "../paths.js";
+import { resolveModule, resolverExtensionAlias, resolverExtensions, supportedScriptExtensions, } from "./resolve.js";
+import { createModuleStore } from "../module-store.js";
+import { createTsconfigTransformOptionsResolver, transformModule } from "./transform.js";
+import { ResolverFactory } from 'oxc-resolver';
+import { scriptModuleHookConditions } from "./conditions.js";
+const supportedScriptExtensionSet = new Set(supportedScriptExtensions);
+const preloadConcurrency = Math.max(1, Math.min(8, os.availableParallelism() - 1));
+const scriptResolverOptions = {
+    aliasFields: [['browser']],
+    conditionNames: [...scriptModuleHookConditions],
+    extensionAlias: resolverExtensionAlias,
+    extensions: resolverExtensions,
+    mainFields: ['browser', 'module', 'main'],
+    tsconfig: 'auto',
+};
+export function createScriptCompiler(options) {
+    let resolvedOptions = {
+        ...options,
+        externalSet: new Set(options.external),
+        watchIgnoreMatchers: (options.watchIgnore ?? []).map((pattern) => createFileMatcher(pattern, options.rootDir)),
+    };
+    let scriptStore = createModuleStore({
+        getAcceptedDependencies(resolvedModule) {
+            return resolvedModule.hmr.acceptedDeps.map((acceptedDep) => acceptedDep.depPath);
+        },
+        getDependencies(resolvedModule) {
+            return resolvedModule.deps;
+        },
+        onWatchDirectoriesChange: options.onWatchDirectoriesChange,
+        onWatchFilesChange: options.onWatchFilesChange,
+    });
+    let tsconfigTransformOptionsResolver = createTsconfigTransformOptionsResolver();
+    let resolverFactory = new ResolverFactory(scriptResolverOptions);
+    let resolverFactoryByConditions = new Map();
+    let resolveInFlightByCacheKey = new Map();
+    let emitInFlightByCacheKey = new Map();
+    let transformArgs = {
+        buildId: resolvedOptions.buildId ?? null,
+        define: resolvedOptions.define ?? null,
+        externalSet: resolvedOptions.externalSet,
+        isAllowed: resolvedOptions.isAllowed,
+        isWatchIgnored,
+        minify: resolvedOptions.minify,
+        moduleHooks: resolvedOptions.moduleHooks,
+        resolveActualPath,
+        resolverFactory,
+        routes: resolvedOptions.routes,
+        sourceMapSourcePaths: resolvedOptions.sourceMapSourcePaths,
+        sourceMaps: resolvedOptions.sourceMaps ?? null,
+        target: resolvedOptions.target ?? null,
+        tsconfigTransformOptionsResolver,
+    };
+    let resolveArgs = {
+        isAllowed: resolvedOptions.isAllowed,
+        isWatchIgnored,
+        moduleHooks: resolvedOptions.moduleHooks,
+        getResolverFactory,
+        resolveModulePath,
+        resolverFactory,
+        routes: resolvedOptions.routes,
+    };
+    return {
+        async getScript(filePath, getOptions) {
+            let resolvedModule = resolveServedScriptOrThrow(resolveInputFilePath(filePath));
+            let record = scriptStore.get(resolvedModule.identityPath);
+            let notModified = getNotModifiedScript(record, getOptions);
+            if (notModified)
+                return notModified;
+            let emitted = await getOrCreateEmittedScript(record);
+            return {
+                script: toScriptCompileResult(emitted),
+                type: 'script',
+            };
+        },
+        async getPreloadLayers(filePath) {
+            let resolvedEntries = [];
+            let seen = new Set();
+            for (let resolvedModule of (Array.isArray(filePath) ? filePath : [filePath]).map((nextPath) => resolveServedScriptOrThrow(resolveInputFilePath(nextPath)))) {
+                if (seen.has(resolvedModule.identityPath))
+                    continue;
+                seen.add(resolvedModule.identityPath);
+                resolvedEntries.push(resolvedModule.identityPath);
+            }
+            let visited = new Set(resolvedEntries);
+            let queue = [...resolvedEntries];
+            let layers = [];
+            while (queue.length > 0) {
+                let frontier = queue;
+                queue = [];
+                let resolvedModules = await getOrCreateResolvedScripts(frontier.map((identityPath) => scriptStore.get(identityPath)));
+                let layer = [];
+                for (let resolvedModule of resolvedModules) {
+                    layer.push(getServedUrlForResolvedScript(resolvedModule));
+                    for (let dep of resolvedModule.deps) {
+                        if (visited.has(dep))
+                            continue;
+                        visited.add(dep);
+                        queue.push(dep);
+                    }
+                }
+                layers.push(layer);
+            }
+            return layers;
+        },
+        async getHref(filePath) {
+            let resolvedModule = resolveServedScriptOrThrow(resolveInputFilePath(filePath));
+            return getServedUrl(resolvedModule.identityPath);
+        },
+        async classifyHmrFileEvent(filePath, event) {
+            let normalizedFilePath = normalizeFilePath(filePath);
+            if (isWatchIgnored(normalizedFilePath))
+                return [];
+            let timestamp = Date.now();
+            let previousResolvedModule = scriptStore.getLastResolved(normalizedFilePath);
+            let updatePathname = previousResolvedModule?.stableUrlPathname;
+            invalidateScriptFileEvent(normalizedFilePath, event);
+            let resolvedModule = event === 'change' && updatePathname
+                ? await tryGetOrCreateResolvedScript(scriptStore.get(normalizedFilePath))
+                : undefined;
+            let hmrUpdate = event === 'change' && updatePathname
+                ? getHmrUpdatesForChange(resolvedModule ?? previousResolvedModule, previousResolvedModule, updatePathname, timestamp)
+                : [];
+            if (hmrUpdate.length > 0) {
+                resolvedOptions.hmr?.send(hmrUpdate);
+            }
+            return hmrUpdate;
+        },
+        invalidateFileEvent(filePath, event) {
+            invalidateScriptFileEvent(normalizeFilePath(filePath), event);
+        },
+        parseRequestPathname(pathname) {
+            let parsedPathname = parseServedPathname(pathname);
+            let filePath = resolvedOptions.routes.resolveUrlPathname(parsedPathname.stablePathname);
+            if (!filePath)
+                return null;
+            if (resolvedOptions.fingerprintAssets && parsedPathname.requestedFingerprint === null)
+                return null;
+            return {
+                cacheControl: getFingerprintRequestCacheControl(parsedPathname.requestedFingerprint),
+                filePath,
+                isSourceMapRequest: parsedPathname.isSourceMapRequest,
+                requestedFingerprint: parsedPathname.requestedFingerprint,
+            };
+        },
+    };
+    function resolveInputFilePath(filePath) {
+        if (filePath.startsWith('file://')) {
+            return normalizeFilePath(fileURLToPath(new URL(filePath)));
+        }
+        if (filePath.includes('://')) {
+            throw new TypeError(`Expected a file path or file:// URL, received "${filePath}"`);
+        }
+        return resolveFilePath(resolvedOptions.rootDir, filePath);
+    }
+    function getResolverFactory(conditions) {
+        if (conditions.length === scriptModuleHookConditions.length) {
+            let isDefault = conditions.every((condition, index) => condition === scriptModuleHookConditions[index]);
+            if (isDefault)
+                return resolverFactory;
+        }
+        let cacheKey = JSON.stringify(conditions);
+        let cached = resolverFactoryByConditions.get(cacheKey);
+        if (cached)
+            return cached;
+        let clonedResolverFactory = resolverFactory.cloneWithOptions({
+            ...scriptResolverOptions,
+            conditionNames: [...conditions],
+        });
+        resolverFactoryByConditions.set(cacheKey, clonedResolverFactory);
+        return clonedResolverFactory;
+    }
+    function invalidateScriptFileEvent(normalizedFilePath, event) {
+        if (isWatchIgnored(normalizedFilePath))
+            return;
+        if (shouldClearResolverCacheForFileEvent(normalizedFilePath, event)) {
+            resolverFactory.clearCache();
+        }
+        if (isTsconfigPath(normalizedFilePath)) {
+            tsconfigTransformOptionsResolver.clear();
+            scriptStore.invalidateAll();
+            return;
+        }
+        if (isPackageJsonPath(normalizedFilePath)) {
+            scriptStore.invalidateAll();
+            return;
+        }
+        scriptStore.invalidateForFileEvent(normalizedFilePath, event);
+    }
+    function resolveServedScriptOrThrow(absolutePath) {
+        let resolvedModule = resolveModulePath(absolutePath);
+        if (!resolvedModule) {
+            throw createAssetServerCompilationError(`File not found: ${absolutePath}`, {
+                code: 'FILE_NOT_FOUND',
+            });
+        }
+        if (!resolvedOptions.isAllowed(resolvedModule.identityPath)) {
+            throw createAssetServerCompilationError(`File is not allowed: ${resolvedModule.identityPath}`, {
+                code: 'FILE_NOT_ALLOWED',
+            });
+        }
+        return resolvedModule;
+    }
+    function getNotModifiedScript(record, options) {
+        if (hasHmrTimestampedDependency(record.resolved)) {
+            return null;
+        }
+        if (scriptStore.isEmittedFresh(record)) {
+            let current = getNotModifiedResult(record.emitted, options);
+            if (current)
+                return current;
+        }
+        if (!record.staleEmittedSnapshot || !isModuleSnapshotFresh(record.staleEmittedSnapshot)) {
+            return null;
+        }
+        return getNotModifiedResult(record.staleEmitted, options);
+    }
+    async function getOrCreateResolvedScripts(records) {
+        return mapWithConcurrency(records, preloadConcurrency, (record) => getOrCreateResolvedScript(record));
+    }
+    async function getOrCreateResolvedScript(record) {
+        if (record.resolved && scriptStore.isResolvedFresh(record))
+            return record.resolved;
+        let cacheKey = getRecordCacheKey(record);
+        let existing = resolveInFlightByCacheKey.get(cacheKey);
+        if (existing)
+            return existing;
+        let promise = (async () => {
+            let startedVersion = record.invalidationVersion;
+            let transformedModule = await getOrCreateTransformedScript(record);
+            if (resolvedOptions.watchMode &&
+                transformedModule.unresolvedImports.some((unresolved) => isBareImportSpecifier(unresolved.specifier))) {
+                resolverFactory.clearCache();
+            }
+            let resolveModuleResult = await resolveModule(record, transformedModule, resolveArgs);
+            if (!resolveModuleResult.ok) {
+                if (isFresh(record, startedVersion)) {
+                    scriptStore.clearResolved(record.identityPath, [resolveModuleResult.tracking]);
+                }
+                throw resolveModuleResult.error;
+            }
+            if (isFresh(record, startedVersion)) {
+                scriptStore.setResolved(record.identityPath, resolveModuleResult.value, [
+                    resolveModuleResult.tracking,
+                ]);
+            }
+            return resolveModuleResult.value;
+        })();
+        resolveInFlightByCacheKey.set(cacheKey, promise);
+        try {
+            return await promise;
+        }
+        finally {
+            if (resolveInFlightByCacheKey.get(cacheKey) === promise) {
+                resolveInFlightByCacheKey.delete(cacheKey);
+            }
+        }
+    }
+    async function tryGetOrCreateResolvedScript(record) {
+        try {
+            return await getOrCreateResolvedScript(record);
+        }
+        catch {
+            return undefined;
+        }
+    }
+    async function getOrCreateTransformedScript(record) {
+        if (record.transformed && scriptStore.isTransformedFresh(record))
+            return record.transformed;
+        let startedVersion = record.invalidationVersion;
+        let transformModuleResult = await transformModule(record, transformArgs);
+        if (!transformModuleResult.ok) {
+            if (isFresh(record, startedVersion)) {
+                scriptStore.clearTransformed(record.identityPath, [transformModuleResult.tracking]);
+            }
+            throw transformModuleResult.error;
+        }
+        if (isFresh(record, startedVersion)) {
+            scriptStore.setTransformed(record.identityPath, transformModuleResult.value, [
+                transformModuleResult.tracking,
+            ]);
+        }
+        return transformModuleResult.value;
+    }
+    async function getOrCreateEmittedScript(record) {
+        if (record.emitted &&
+            scriptStore.isEmittedFresh(record) &&
+            !hasHmrTimestampedDependency(record.resolved)) {
+            return record.emitted;
+        }
+        let cacheKey = getRecordCacheKey(record);
+        let existing = emitInFlightByCacheKey.get(cacheKey);
+        if (existing)
+            return existing;
+        let promise = (async () => {
+            let startedVersion = record.invalidationVersion;
+            let resolvedModule = await getOrCreateResolvedScript(record);
+            let emitResolvedModuleResult = await emitResolvedModule(resolvedModule, {
+                getServedUrl,
+                getStableUrl,
+                getHmrImportTimestamp,
+                hmrClientPathname: resolvedOptions.hmr?.clientPathname,
+                sourceMaps: resolvedOptions.sourceMaps,
+            });
+            if (!emitResolvedModuleResult.ok) {
+                throw emitResolvedModuleResult.error;
+            }
+            if (isFresh(record, startedVersion)) {
+                scriptStore.setEmitted(record.identityPath, emitResolvedModuleResult.value, createModuleSnapshot(resolvedModule.trackedFiles));
+            }
+            return emitResolvedModuleResult.value;
+        })();
+        emitInFlightByCacheKey.set(cacheKey, promise);
+        try {
+            return await promise;
+        }
+        finally {
+            if (emitInFlightByCacheKey.get(cacheKey) === promise) {
+                emitInFlightByCacheKey.delete(cacheKey);
+            }
+        }
+    }
+    async function getServedUrl(identityPath) {
+        return getServedUrlForResolvedScript(await getOrCreateResolvedScript(scriptStore.get(identityPath)));
+    }
+    function getServedUrlForResolvedScript(resolvedModule) {
+        return formatFingerprintedPathname(resolvedModule.stableUrlPathname, resolvedOptions.fingerprintAssets ? resolvedModule.fingerprint : null);
+    }
+    function getStableUrl(identityPath) {
+        let stableUrlPathname = resolvedOptions.routes.toUrlPathname(identityPath);
+        if (!stableUrlPathname) {
+            throw createAssetServerCompilationError(`File ${identityPath} is outside all configured fileMap entries.`, {
+                code: 'FILE_OUTSIDE_FILE_MAP',
+            });
+        }
+        return stableUrlPathname;
+    }
+    function getHmrImportTimestamp(identityPath) {
+        return scriptStore.getHmrUpdateTimestamp(identityPath) ?? null;
+    }
+    function hasHmrTimestampedDependency(resolvedModule) {
+        return resolvedModule?.deps.some((depPath) => getHmrImportTimestamp(depPath) !== null) === true;
+    }
+    function getHmrUpdatesForChange(resolvedModule, previousResolvedModule, updatePathname, timestamp) {
+        if (resolvedModule) {
+            scriptStore.setHmrUpdateTimestamp(resolvedModule.identityPath, timestamp);
+        }
+        if (hasComponentHmrBoundaryChanged(previousResolvedModule, resolvedModule)) {
+            return [
+                {
+                    accepted: false,
+                    filePath: resolvedModule?.identityPath ?? previousResolvedModule?.identityPath ?? updatePathname,
+                    path: updatePathname,
+                    timestamp,
+                },
+            ];
+        }
+        if (resolvedModule?.hmr.selfAccepting === true) {
+            return [
+                {
+                    accepted: true,
+                    acceptedPath: updatePathname,
+                    filePath: resolvedModule.identityPath,
+                    path: updatePathname,
+                    timestamp,
+                },
+            ];
+        }
+        let sourceFilePath = resolvedModule?.identityPath;
+        let boundaries = findHmrBoundaries(sourceFilePath);
+        if (sourceFilePath !== undefined && boundaries) {
+            return dedupeHmrBoundaries(boundaries).map(({ acceptedModule, boundaryModule }) => ({
+                accepted: true,
+                acceptedPath: acceptedModule.stableUrlPathname,
+                filePath: sourceFilePath,
+                path: boundaryModule.stableUrlPathname,
+                timestamp,
+            }));
+        }
+        return [
+            {
+                accepted: false,
+                filePath: resolvedModule?.identityPath ?? previousResolvedModule?.identityPath ?? updatePathname,
+                path: updatePathname,
+                timestamp,
+            },
+        ];
+    }
+    function hasComponentHmrExportNamesChanged(previousResolvedModule, resolvedModule) {
+        let previousNames = previousResolvedModule?.componentHmrExportNames;
+        let nextNames = resolvedModule?.componentHmrExportNames;
+        if (!previousNames || !nextNames)
+            return false;
+        if (previousNames.length !== nextNames.length)
+            return true;
+        return previousNames.some((name, index) => name !== nextNames[index]);
+    }
+    function hasComponentHmrBoundaryChanged(previousResolvedModule, resolvedModule) {
+        let previousNames = previousResolvedModule?.componentHmrExportNames;
+        let nextNames = resolvedModule?.componentHmrExportNames;
+        if (!previousNames && !nextNames)
+            return false;
+        if (!previousNames || !nextNames)
+            return true;
+        return hasComponentHmrExportNamesChanged(previousResolvedModule, resolvedModule);
+    }
+    function findHmrBoundaries(identityPath) {
+        if (identityPath === undefined)
+            return null;
+        return propagateHmrUpdate(identityPath, new Set());
+    }
+    function propagateHmrUpdate(identityPath, traversed) {
+        if (traversed.has(identityPath))
+            return [];
+        traversed.add(identityPath);
+        let resolvedModule = scriptStore.getLastResolved(identityPath);
+        if (!resolvedModule)
+            return null;
+        if (resolvedModule.hmr.selfAccepting) {
+            return [
+                {
+                    acceptedModule: resolvedModule,
+                    boundaryModule: resolvedModule,
+                },
+            ];
+        }
+        let importerPaths = scriptStore.getImporters(identityPath);
+        if (!importerPaths || importerPaths.size === 0)
+            return null;
+        let acceptedImporterPaths = scriptStore.getAcceptedImporters(identityPath);
+        let boundaries = [];
+        for (let importerPath of importerPaths) {
+            let importer = scriptStore.getLastResolved(importerPath);
+            if (!importer)
+                return null;
+            if (acceptedImporterPaths?.has(importerPath)) {
+                boundaries.push({
+                    acceptedModule: resolvedModule,
+                    boundaryModule: importer,
+                });
+                continue;
+            }
+            let importerBoundaries = propagateHmrUpdate(importerPath, traversed);
+            if (!importerBoundaries)
+                return null;
+            boundaries.push(...importerBoundaries);
+        }
+        return boundaries;
+    }
+    function isWatchIgnored(filePath) {
+        return resolvedOptions.watchIgnoreMatchers.some((matcher) => matcher(filePath));
+    }
+}
+function dedupeHmrBoundaries(boundaries) {
+    let seen = new Set();
+    let result = [];
+    for (let boundary of boundaries) {
+        let key = `${boundary.boundaryModule.identityPath}\0${boundary.acceptedModule.identityPath}`;
+        if (seen.has(key))
+            continue;
+        seen.add(key);
+        result.push(boundary);
+    }
+    return result;
+}
+function getRecordCacheKey(record) {
+    return `${record.identityPath}\0${record.invalidationVersion}`;
+}
+function isFresh(record, version) {
+    return record.invalidationVersion === version;
+}
+function getNotModifiedResult(emittedModule, options) {
+    if (!emittedModule || options.ifNoneMatch === null)
+        return null;
+    if (options.requestedFingerprint !== null &&
+        emittedModule.fingerprint !== options.requestedFingerprint) {
+        return null;
+    }
+    let asset = getEmittedAssetForRequest(emittedModule, options.isSourceMapRequest);
+    if (!asset)
+        return null;
+    if (!IfNoneMatch.from(options.ifNoneMatch).matches(asset.etag))
+        return null;
+    return { type: 'not-modified', etag: asset.etag };
+}
+function getEmittedAssetForRequest(emittedModule, isSourceMapRequest) {
+    return isSourceMapRequest ? emittedModule.sourceMap : emittedModule.code;
+}
+function createModuleSnapshot(filePaths) {
+    let snapshot = new Map();
+    for (let filePath of filePaths) {
+        let fileSnapshot = getFileSnapshot(filePath);
+        if (!fileSnapshot)
+            return null;
+        snapshot.set(filePath, fileSnapshot);
+    }
+    return snapshot;
+}
+function isModuleSnapshotFresh(snapshot) {
+    for (let [filePath, previous] of snapshot) {
+        let current = getFileSnapshot(filePath);
+        if (!current)
+            return false;
+        if (current.mtimeNs !== previous.mtimeNs || current.size !== previous.size)
+            return false;
+    }
+    return true;
+}
+function getFileSnapshot(filePath) {
+    try {
+        let stats = fs.statSync(filePath, { bigint: true });
+        if (!stats.isFile())
+            return null;
+        return {
+            mtimeNs: stats.mtimeNs,
+            size: stats.size,
+        };
+    }
+    catch (error) {
+        if (isNoEntityError(error))
+            return null;
+        throw error;
+    }
+}
+function parseServedPathname(pathname) {
+    let isSourceMapRequest = pathname.endsWith('.map');
+    let pathWithoutMap = isSourceMapRequest ? pathname.slice(0, -4) : pathname;
+    let fingerprint = parseFingerprintSuffix(pathWithoutMap);
+    return {
+        isSourceMapRequest,
+        requestedFingerprint: fingerprint.requestedFingerprint,
+        stablePathname: fingerprint.pathname,
+    };
+}
+async function mapWithConcurrency(items, concurrency, mapper) {
+    if (items.length === 0)
+        return [];
+    let results = new Array(items.length);
+    let nextIndex = 0;
+    async function worker() {
+        while (nextIndex < items.length) {
+            let index = nextIndex++;
+            results[index] = await mapper(items[index], index);
+        }
+    }
+    await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => worker()));
+    return results;
+}
+function toScriptCompileResult(emittedModule) {
+    return {
+        code: emittedModule.code,
+        fingerprint: emittedModule.fingerprint,
+        sourceMap: emittedModule.sourceMap,
+    };
+}
+function isPackageJsonPath(filePath) {
+    return filePath.endsWith('/package.json');
+}
+function isTsconfigPath(filePath) {
+    return /\/tsconfig(?:\..+)?\.json$/.test(filePath);
+}
+function shouldClearResolverCacheForFileEvent(filePath, event) {
+    return event !== 'change' || isPackageJsonPath(filePath) || isTsconfigPath(filePath);
+}
+function resolveModulePath(absolutePath) {
+    let resolvedPath;
+    try {
+        resolvedPath = normalizeFilePath(fs.realpathSync(normalizeFilePath(absolutePath)));
+    }
+    catch (error) {
+        if (isNoEntityError(error))
+            return null;
+        throw error;
+    }
+    if (!supportedScriptExtensionSet.has(path.extname(resolvedPath).toLowerCase())) {
+        return null;
+    }
+    return {
+        identityPath: resolvedPath,
+        resolvedPath,
+    };
+}
+function resolveActualPath(identityPath) {
+    try {
+        return normalizeFilePath(fs.realpathSync(identityPath));
+    }
+    catch (error) {
+        if (isNoEntityError(error))
+            return null;
+        throw error;
+    }
+}
+function isBareImportSpecifier(specifier) {
+    return (!specifier.startsWith('./') &&
+        !specifier.startsWith('../') &&
+        !specifier.startsWith('/') &&
+        !specifier.startsWith('file:') &&
+        !specifier.startsWith('data:') &&
+        !specifier.startsWith('http://') &&
+        !specifier.startsWith('https://'));
+}
+function isNoEntityError(error) {
+    return (error instanceof Error &&
+        'code' in error &&
+        (error.code === 'ENOENT' ||
+            error.code === 'ENOTDIR'));
+}
+export function createResponseForScript(result, options) {
+    let body;
+    let etag;
+    let contentType;
+    if (options.isSourceMapRequest) {
+        if (!result.sourceMap) {
+            return new Response('Not found', { status: 404 });
+        }
+        body = options.method === 'HEAD' ? null : result.sourceMap.content;
+        etag = result.sourceMap.etag;
+        contentType = 'application/json; charset=utf-8';
+    }
+    else {
+        body = options.method === 'HEAD' ? null : result.code.content;
+        etag = result.code.etag;
+        contentType = 'application/javascript; charset=utf-8';
+    }
+    if (IfNoneMatch.from(options.ifNoneMatch).matches(etag)) {
+        return new Response(null, { status: 304, headers: { ETag: etag } });
+    }
+    return new Response(body, {
+        headers: {
+            'Cache-Control': options.cacheControl,
+            'Content-Type': contentType,
+            ETag: etag,
+        },
+    });
+}
