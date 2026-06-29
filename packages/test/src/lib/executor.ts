@@ -46,8 +46,14 @@ export async function runTests(
     tests: [],
   }
 
-  let hasOnlySuites = suites.some((suite) => suite.only)
-  let hasOnlyTests = suites.some((suite) => suite.tests.some((test) => test.only))
+  let hasOnlySuites = false
+  let hasOnlyTests = false
+
+  for (let suite of suites) {
+    hasOnlySuites ||= suite.only === true
+    hasOnlyTests ||= suite.tests.some((test) => test.only)
+    if (hasOnlySuites && hasOnlyTests) break
+  }
   let hasOnly = hasOnlySuites || hasOnlyTests
 
   for (let suite of suites) {
