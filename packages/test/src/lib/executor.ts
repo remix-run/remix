@@ -48,10 +48,13 @@ export async function runTests(
 
   let hasOnlySuites = suites.some((suite) => suite.only)
   let hasOnlyTests = suites.some((suite) => suite.tests.some((test) => test.only))
+  let hasOnly = hasOnlySuites || hasOnlyTests
 
   for (let suite of suites) {
-    // If any suite uses .only and no test uses .only, skip all non-only suites
-    if (!hasOnlyTests && hasOnlySuites && !suite.only) {
+    let suiteHasOnlyTests = suite.tests.some((test) => test.only)
+
+    // If any suite or test uses .only, skip suites that do not contain focused work
+    if (hasOnly && !suite.only && !suiteHasOnlyTests) {
       for (let test of suite.tests) {
         results.tests.push(createPendingResult(test.name, suite.name, 'skipped'))
         results.skipped++
@@ -74,16 +77,6 @@ export async function runTests(
       continue
     }
 
-    let suiteHasOnlyTests = suite.tests.some((test) => test.only)
-
-    if (hasOnlyTests && !suiteHasOnlyTests) {
-      for (let test of suite.tests) {
-        results.tests.push(createPendingResult(test.name, suite.name, 'skipped'))
-        results.skipped++
-      }
-      continue
-    }
-
     if (suite.beforeAll) {
       let startTime = performance.now()
       try {
@@ -98,8 +91,8 @@ export async function runTests(
     }
 
     for (let test of suite.tests) {
-      // If any test uses .only, skip all non-only tests in this module
-      if (hasOnlyTests && !test.only) {
+      // If any suite or test uses .only, skip tests that are not focused
+      if (hasOnly && !suite.only && !test.only) {
         results.tests.push(createPendingResult(test.name, suite.name, 'skipped'))
         results.skipped++
         continue

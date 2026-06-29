@@ -394,6 +394,74 @@ describe('runTests only filtering', () => {
     assert.equal(results.passed, 2)
     assert.equal(results.skipped, 1)
   })
+
+  it('runs the union of describe.only suites and it.only tests', async () => {
+    let ran: string[] = []
+
+    let results = await runWithSuites([
+      {
+        name: 'focused suite',
+        only: true,
+        tests: [
+          {
+            name: 'suite-focused test',
+            fn() {
+              ran.push('suite-focused test')
+            },
+          },
+          {
+            name: 'suite-focused sibling',
+            fn() {
+              ran.push('suite-focused sibling')
+            },
+          },
+        ],
+      },
+      {
+        name: 'test-focused suite',
+        tests: [
+          {
+            name: 'unfocused sibling',
+            fn() {
+              ran.push('unfocused sibling')
+            },
+          },
+          {
+            name: 'focused test',
+            only: true,
+            fn() {
+              ran.push('focused test')
+            },
+          },
+        ],
+      },
+      {
+        name: 'unfocused suite',
+        tests: [
+          {
+            name: 'unfocused cross-suite test',
+            fn() {
+              ran.push('unfocused cross-suite test')
+            },
+          },
+        ],
+      },
+    ])
+
+    assert.deepEqual(ran, ['suite-focused test', 'suite-focused sibling', 'focused test'])
+    assert.equal(results.passed, 3)
+    assert.equal(results.skipped, 2)
+    assert.deepEqual(
+      results.tests.map((test) => [test.suiteName, test.name, test.status]),
+      [
+        ['focused suite', 'suite-focused test', 'passed'],
+        ['focused suite', 'suite-focused sibling', 'passed'],
+        ['test-focused suite', 'unfocused sibling', 'skipped'],
+        ['test-focused suite', 'focused test', 'passed'],
+        ['unfocused suite', 'unfocused cross-suite test', 'skipped'],
+      ],
+    )
+  })
 })
 
 describe('runTests skip and todo reasons', () => {
