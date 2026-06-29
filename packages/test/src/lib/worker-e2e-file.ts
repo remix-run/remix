@@ -6,16 +6,18 @@ import {
   getPlaywrightPageOptions,
   type PlaywrightUseOpts,
 } from './playwright.ts'
+import type { SerializedTestNamePattern } from './config.ts'
 import type { CoverageConfig } from './coverage.ts'
 import type { TestResults } from './reporters/results.ts'
 import { createFailedResults } from './worker-results.ts'
-import { isRecord, parseCoverageConfig } from './worker-server.ts'
+import { isRecord, parseCoverageConfig, parseTestNamePatterns } from './worker-server.ts'
 
 export interface E2ETestWorkerData {
   file: string
   coverage?: CoverageConfig
   open?: boolean
   playwrightUseOpts?: PlaywrightUseOpts
+  testNamePatterns?: SerializedTestNamePattern[]
 }
 
 export async function runE2ETestFile(
@@ -38,6 +40,7 @@ export async function runE2ETestFile(
         open: workerData.open ?? false,
         playwrightPageOptions: getPlaywrightPageOptions(workerData.playwrightUseOpts),
         coverage: !!workerData.coverage,
+        testNamePatterns: workerData.testNamePatterns,
       })
 
       if (workerData.open) {
@@ -70,6 +73,7 @@ function parseE2ETestWorkerData(value: unknown): E2ETestWorkerData {
     coverage: parseCoverageConfig(value.coverage),
     open: parseBoolean(value.open, 'open'),
     playwrightUseOpts: parsePlaywrightUseOpts(value.playwrightUseOpts),
+    testNamePatterns: parseTestNamePatterns(value.testNamePatterns),
   }
 }
 

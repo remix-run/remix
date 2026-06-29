@@ -3,7 +3,11 @@ import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { Worker } from 'node:worker_threads'
-import { IS_RUNNING_FROM_SRC, type RemixTestPool } from './config.ts'
+import {
+  IS_RUNNING_FROM_SRC,
+  type RemixTestPool,
+  type SerializedTestNamePattern,
+} from './config.ts'
 import {
   collectCoverageMapFromPlaywright,
   collectServerCoverageMap,
@@ -35,6 +39,7 @@ interface RunFileOptions {
   open?: boolean
   playwrightUseOpts?: PlaywrightUseOpts
   pool?: RemixTestPool
+  testNamePatterns?: SerializedTestNamePattern[]
 }
 
 export async function runServerTests(
@@ -50,6 +55,7 @@ export async function runServerTests(
     coverage?: CoverageConfig
     workerShutdownTimeoutMs?: number
     pool?: RemixTestPool
+    testNamePatterns?: SerializedTestNamePattern[]
   } = {},
 ): Promise<Counts & { coverageMap: CoverageMap | null }> {
   let counts: Counts = { passed: 0, failed: 0, skipped: 0, todo: 0 }
@@ -237,6 +243,7 @@ export function runFileInWorker(
             coverage: options.coverage,
             open: options.open,
             playwrightUseOpts: options.playwrightUseOpts,
+            testNamePatterns: options.testNamePatterns,
           },
         })
       : new Worker(workerUrl, {
@@ -244,6 +251,7 @@ export function runFileInWorker(
             file: pathToFileURL(file).href,
             type,
             coverage: options.coverage,
+            testNamePatterns: options.testNamePatterns,
           },
         })
 
@@ -342,6 +350,7 @@ function runFileInProcess(
         coverage: options.coverage,
         open: options.open,
         playwrightUseOpts: options.playwrightUseOpts,
+        testNamePatterns: options.testNamePatterns,
       },
       (error) => {
         if (error) {
