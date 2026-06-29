@@ -298,6 +298,104 @@ describe('runTests timeouts and signals', () => {
   })
 })
 
+describe('runTests only filtering', () => {
+  it('focuses it.only across the entire test module', async () => {
+    let ran: string[] = []
+
+    let results = await runWithSuites([
+      {
+        name: 'first suite',
+        tests: [
+          {
+            name: 'unfocused sibling',
+            fn() {
+              ran.push('unfocused sibling')
+            },
+          },
+          {
+            name: 'focused test',
+            only: true,
+            fn() {
+              ran.push('focused test')
+            },
+          },
+        ],
+      },
+      {
+        name: 'second suite',
+        beforeAll: [
+          {
+            fn() {
+              ran.push('second suite beforeAll')
+            },
+          },
+        ],
+        tests: [
+          {
+            name: 'unfocused cross-suite test',
+            fn() {
+              ran.push('unfocused cross-suite test')
+            },
+          },
+        ],
+      },
+    ])
+
+    assert.deepEqual(ran, ['focused test'])
+    assert.equal(results.passed, 1)
+    assert.equal(results.skipped, 2)
+    assert.deepEqual(
+      results.tests.map((test) => [test.suiteName, test.name, test.status]),
+      [
+        ['first suite', 'unfocused sibling', 'skipped'],
+        ['first suite', 'focused test', 'passed'],
+        ['second suite', 'unfocused cross-suite test', 'skipped'],
+      ],
+    )
+  })
+
+  it('runs it.only tests from multiple suites', async () => {
+    let ran: string[] = []
+
+    let results = await runWithSuites([
+      {
+        name: 'first suite',
+        tests: [
+          {
+            name: 'first focused test',
+            only: true,
+            fn() {
+              ran.push('first focused test')
+            },
+          },
+        ],
+      },
+      {
+        name: 'second suite',
+        tests: [
+          {
+            name: 'unfocused test',
+            fn() {
+              ran.push('unfocused test')
+            },
+          },
+          {
+            name: 'second focused test',
+            only: true,
+            fn() {
+              ran.push('second focused test')
+            },
+          },
+        ],
+      },
+    ])
+
+    assert.deepEqual(ran, ['first focused test', 'second focused test'])
+    assert.equal(results.passed, 2)
+    assert.equal(results.skipped, 1)
+  })
+})
+
 describe('runTests skip and todo reasons', () => {
   it('preserves suite skip reasons on skipped test results', async () => {
     let results = await runWithSuites([
