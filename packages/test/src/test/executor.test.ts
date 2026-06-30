@@ -411,11 +411,12 @@ describe('runTests test name patterns', () => {
     assert.deepEqual(ran, ['adds'])
     assert.equal(results.passed, 1)
     assert.equal(results.failed, 0)
+    assert.equal(results.skipped, 1)
     assert.equal(results.tests.length, 1)
     assert.equal(results.tests[0]?.name, 'adds numbers')
   })
 
-  it('omits non-matching tests instead of reporting them as skipped', async () => {
+  it('counts non-matching tests as skipped without reporting them individually', async () => {
     let results = await runWithSuites(
       [
         {
@@ -436,7 +437,7 @@ describe('runTests test name patterns', () => {
     )
 
     assert.equal(results.passed, 1)
-    assert.equal(results.skipped, 0)
+    assert.equal(results.skipped, 1)
     assert.deepEqual(
       results.tests.map((test) => test.name),
       ['matching test'],
@@ -479,7 +480,7 @@ describe('runTests test name patterns', () => {
 
     assert.deepEqual(ran, [])
     assert.equal(results.passed, 0)
-    assert.equal(results.skipped, 0)
+    assert.equal(results.skipped, 1)
     assert.equal(results.tests.length, 0)
   })
 
@@ -553,7 +554,7 @@ describe('runTests test name patterns', () => {
 
     assert.deepEqual(ran, [])
     assert.equal(results.passed, 0)
-    assert.equal(results.skipped, 0)
+    assert.equal(results.skipped, 1)
     assert.equal(results.tests.length, 0)
   })
 
@@ -633,6 +634,7 @@ describe('runTests test name patterns', () => {
 
     assert.equal(beforeAllRan, false)
     assert.equal(afterAllRan, false)
+    assert.equal(results.skipped, 1)
     assert.equal(results.tests.length, 0)
   })
 
@@ -692,6 +694,7 @@ describe('runTests test name patterns', () => {
 
     assert.deepEqual(events, ['beforeAll', 'beforeEach', 'test', 'afterEach', 'afterAll'])
     assert.equal(results.passed, 1)
+    assert.equal(results.skipped, 1)
     assert.deepEqual(
       results.tests.map((test) => test.name),
       ['matching test'],
@@ -716,6 +719,7 @@ describe('runTests test name patterns', () => {
     )
 
     assert.equal(results.todo, 1)
+    assert.equal(results.skipped, 1)
     assert.deepEqual(
       results.tests.map((test) => `${test.suiteName}:${test.status}`),
       ['matching todo:todo'],
@@ -739,6 +743,7 @@ describe('runTests test name patterns', () => {
     )
 
     assert.equal(results.passed, 1)
+    assert.equal(results.skipped, 0)
     assert.equal(results.tests[0]?.name, 'UPPERCASE test')
   })
 })

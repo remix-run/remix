@@ -12,6 +12,8 @@ export class FilesReporter implements Reporter {
   onSectionStart(_label: string) {}
 
   onResult(results: TestResults, env?: string) {
+    if (results.tests.length === 0) return
+
     for (let test of results.tests) {
       if (test.filePath) this.#files.add(test.filePath)
       if (test.suiteName) this.#suites.add(test.suiteName)

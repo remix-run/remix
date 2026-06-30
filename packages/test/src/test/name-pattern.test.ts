@@ -30,6 +30,7 @@ describe('test name patterns', () => {
         assert.doesNotMatch(stdout, /does not run non-matching browser test/)
         assert.doesNotMatch(stdout, /does not run non-matching E2E test/)
         assert.match(stdout, /ℹ pass 3/)
+        assert.match(stdout, /ℹ skipped 3/)
         assert.equal(output.stderr, '')
       } finally {
         await fsp.rm(FIXTURE_DIR, { recursive: true, force: true })
@@ -37,44 +38,43 @@ describe('test name patterns', () => {
     },
   )
 
-  it(
-    'filters tests by full name after filtering by type',
-    { skip: IS_BUN },
-    async () => {
-      await writeProject(FIXTURE_DIR)
+  it('filters tests by full name after filtering by type', { skip: IS_BUN }, async () => {
+    await writeProject(FIXTURE_DIR)
 
-      try {
-        let serverOutput = await runFixtureCli(FIXTURE_DIR, ['--type', 'server'])
-        let serverStdout = stripVTControlCharacters(serverOutput.stdout)
+    try {
+      let serverOutput = await runFixtureCli(FIXTURE_DIR, ['--type', 'server'])
+      let serverStdout = stripVTControlCharacters(serverOutput.stdout)
 
-        assert.equal(serverOutput.exitCode, 0, serverOutput.stderr || serverOutput.stdout)
-        assert.match(serverStdout, /Found 1 test file\(s\) \(1 server, 0 browser, 0 e2e\)/)
-        assert.match(serverStdout, /✓ runs matching server test/)
-        assert.match(serverStdout, /ℹ pass 1/)
-        assert.equal(serverOutput.stderr, '')
+      assert.equal(serverOutput.exitCode, 0, serverOutput.stderr || serverOutput.stdout)
+      assert.match(serverStdout, /Found 1 test file\(s\) \(1 server, 0 browser, 0 e2e\)/)
+      assert.match(serverStdout, /✓ runs matching server test/)
+      assert.match(serverStdout, /ℹ pass 1/)
+      assert.match(serverStdout, /ℹ skipped 1/)
+      assert.equal(serverOutput.stderr, '')
 
-        let browserOutput = await runFixtureCli(FIXTURE_DIR, ['--type', 'browser'])
-        let browserStdout = stripVTControlCharacters(browserOutput.stdout)
+      let browserOutput = await runFixtureCli(FIXTURE_DIR, ['--type', 'browser'])
+      let browserStdout = stripVTControlCharacters(browserOutput.stdout)
 
-        assert.equal(browserOutput.exitCode, 0, browserOutput.stderr || browserOutput.stdout)
-        assert.match(browserStdout, /Found 1 test file\(s\) \(0 server, 1 browser, 0 e2e\)/)
-        assert.match(browserStdout, /✓ runs matching browser test/)
-        assert.match(browserStdout, /ℹ pass 1/)
-        assert.equal(browserOutput.stderr, '')
+      assert.equal(browserOutput.exitCode, 0, browserOutput.stderr || browserOutput.stdout)
+      assert.match(browserStdout, /Found 1 test file\(s\) \(0 server, 1 browser, 0 e2e\)/)
+      assert.match(browserStdout, /✓ runs matching browser test/)
+      assert.match(browserStdout, /ℹ pass 1/)
+      assert.match(browserStdout, /ℹ skipped 1/)
+      assert.equal(browserOutput.stderr, '')
 
-        let e2eOutput = await runFixtureCli(FIXTURE_DIR, ['--type', 'e2e'])
-        let e2eStdout = stripVTControlCharacters(e2eOutput.stdout)
+      let e2eOutput = await runFixtureCli(FIXTURE_DIR, ['--type', 'e2e'])
+      let e2eStdout = stripVTControlCharacters(e2eOutput.stdout)
 
-        assert.equal(e2eOutput.exitCode, 0, e2eOutput.stderr || e2eOutput.stdout)
-        assert.match(e2eStdout, /Found 1 test file\(s\) \(0 server, 0 browser, 1 e2e\)/)
-        assert.match(e2eStdout, /✓ runs matching E2E test/)
-        assert.match(e2eStdout, /ℹ pass 1/)
-        assert.equal(e2eOutput.stderr, '')
-      } finally {
-        await fsp.rm(FIXTURE_DIR, { recursive: true, force: true })
-      }
-    },
-  )
+      assert.equal(e2eOutput.exitCode, 0, e2eOutput.stderr || e2eOutput.stdout)
+      assert.match(e2eStdout, /Found 1 test file\(s\) \(0 server, 0 browser, 1 e2e\)/)
+      assert.match(e2eStdout, /✓ runs matching E2E test/)
+      assert.match(e2eStdout, /ℹ pass 1/)
+      assert.match(e2eStdout, /ℹ skipped 1/)
+      assert.equal(e2eOutput.stderr, '')
+    } finally {
+      await fsp.rm(FIXTURE_DIR, { recursive: true, force: true })
+    }
+  })
 })
 
 async function writeProject(projectDir: string): Promise<void> {

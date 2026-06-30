@@ -44,6 +44,7 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
   let suites = getRegisteredSuites()
   let testNameMatcher = createTestNameMatcher(options?.testNamePatterns)
   let hasOnlySuites = suites.some((suite) => suite.only)
+  let filteredTests = 0
   let runnableSuites = suites.flatMap((suite) => {
     if (testNameMatcher && hasOnlySuites && !suite.only) {
       return []
@@ -60,6 +61,16 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
       suite.tests.length === 0 &&
       getPendingStatus(suite) !== undefined &&
       (testNameMatcher ? testNameMatcher(suite.name, '') : true)
+    if (testNameMatcher) {
+      filteredTests += focusedSuiteTests.length - suiteTests.length
+      if (
+        suite.tests.length === 0 &&
+        getPendingStatus(suite) !== undefined &&
+        !shouldIncludePendingSuitePlaceholder
+      ) {
+        filteredTests++
+      }
+    }
 
     if (
       suiteTests.length === 0 &&
@@ -75,7 +86,7 @@ export async function runTests(options?: RunTestsOptions): Promise<TestResults> 
   let results: TestResults = {
     passed: 0,
     failed: 0,
-    skipped: 0,
+    skipped: filteredTests,
     todo: 0,
     tests: [],
   }
