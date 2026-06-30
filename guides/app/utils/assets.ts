@@ -17,7 +17,7 @@ export const assetServer = createAssetServer({
     '/packages/*path': 'packages/*path',
     '/public/*path': 'guides/public/*path',
   },
-  allow: ['guides/app/assets/**', 'guides/public', 'guides/app/**/public/**', 'packages/*/src/**'],
+  allow: ['guides/public', 'guides/app/**/public/**', 'packages/*/src/**'],
   deny: ['guides/public/static'],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: isProduction,
