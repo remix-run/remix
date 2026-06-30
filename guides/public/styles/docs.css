@@ -419,14 +419,13 @@ pre code {
 }
 
 .docs-toc__list a {
-  color: var(--rmx-color-text-secondary);
+  color: var(--rmx-color-text-link);
   text-decoration: none;
 }
 
 .docs-toc__list a:hover {
-  color: var(--rmx-color-text-primary);
+  color: var(--rmx-color-text-link-hover);
   text-decoration: underline;
-  text-decoration-color: var(--rmx-color-accent);
 }
 
 .rmx-page-body :is(h1, h2, h3, h4, h5, h6) {
