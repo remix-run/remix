@@ -2,6 +2,15 @@
 
 This is the changelog for [`auth`](https://github.com/remix-run/remix/tree/main/packages/auth). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.6
+
+### Patch Changes
+
+- Fix `createAtmosphereAuthProvider()` handle resolution so a successful DNS or HTTPS handle lookup can start the OAuth flow immediately instead of waiting for the other lookup branch to finish.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.20.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.20.1)
+
 ## v0.2.5
 
 ### Patch Changes
