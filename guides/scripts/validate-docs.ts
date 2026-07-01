@@ -4,7 +4,8 @@ import { fileURLToPath } from 'node:url'
 import { createMatcher } from 'remix/route-pattern/match'
 import * as ts from 'typescript'
 
-import { readMarkdownFrameReferences } from '../app/actions/docs/markdown.tsx'
+import { readMarkdownFrameReferences } from '../app/actions/docs/markdown/frames.ts'
+import { isExampleSegment, resolveExampleModuleUrl } from '../app/actions/docs/examples/resolve.ts'
 import { routes } from '../app/routes.ts'
 
 type DocsFrame = {
@@ -14,9 +15,7 @@ type DocsFrame = {
 }
 
 const chaptersDir = new URL('../app/actions/docs/chapters/', import.meta.url)
-const chapterExamplesDir = new URL('../app/actions/docs/examples/', import.meta.url)
 const docsExampleMatcher = createMatcher(routes.docs.examples.show.pattern)
-const exampleSegmentPattern = /^[a-z0-9][a-z0-9-]*$/
 
 const errors: string[] = []
 const frames: DocsFrame[] = []
@@ -67,7 +66,7 @@ async function validateFrame(frame: DocsFrame): Promise<void> {
 
   let { chapter, example } = match.params
 
-  if (!exampleSegmentPattern.test(chapter) || !exampleSegmentPattern.test(example)) {
+  if (!isExampleSegment(chapter) || !isExampleSegment(example)) {
     report(frame.chapterFile, frame.lineNumber, `Frame source uses invalid segments: ${frame.src}`)
     return
   }
@@ -82,7 +81,7 @@ async function validateFrame(frame: DocsFrame): Promise<void> {
     return
   }
 
-  let exampleUrl = new URL(`./${chapter}/${example}.tsx`, chapterExamplesDir)
+  let exampleUrl = resolveExampleModuleUrl(chapter, example)
 
   let source: string
   try {

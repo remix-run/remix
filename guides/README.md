@@ -11,7 +11,6 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 - `app/actions/docs/markdown.tsx` — unified/remark Markdown rendering, Shiki syntax highlighting, heading IDs, and `::frame` parsing.
 - `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, and summaries.
 - `app/actions/docs/examples/` — frame-backed examples used by chapters. Each example's browser-hydrated code (`.demo.tsx`) and its sub-modules live in a co-located `public/` directory so the asset server can serve them.
-- `app/assets/entry.ts` — the browser entrypoint (the one non-`public` browser module).
 - `app/middleware/asset-entry.ts` — source-served browser module hrefs and preloads.
 - `app/middleware/render.ts` — the request-scoped `render()` helper and frame resolver.
 - `app/routes.ts` and `app/router.ts` — the typed route contract and controller wiring.

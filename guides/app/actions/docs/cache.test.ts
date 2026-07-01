@@ -1,7 +1,7 @@
 import * as assert from 'remix/assert'
 import { after, describe, it } from 'remix/test'
 
-import { docsEtag, notModifiedDocsResponse } from './shared.tsx'
+import { docsEtag, notModifiedDocsResponse } from './cache.ts'
 
 describe('docsEtag', () => {
   it('produces a weak etag tagged with the label and joined mtimes', () => {

@@ -9,7 +9,7 @@ import { visit } from 'unist-util-visit'
 
 import type { CodeBlock, CodeBlockInfo } from './types.ts'
 
-const shikiThemes = {
+export const shikiThemes = {
   light: 'github-light',
   dark: 'github-dark',
 } as const

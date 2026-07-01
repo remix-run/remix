@@ -5,6 +5,7 @@ import { clientEntry, css } from "remix/ui";
 import type { Handle, RemixNode } from "remix/ui";
 
 import type { AppContext } from "../../../router.ts";
+import { shikiThemes } from "../markdown/code-blocks.ts";
 
 type DemoComponent = (handle: Handle) => () => RemixNode;
 
@@ -20,10 +21,7 @@ export async function loadDemoSource(moduleUrl: URL): Promise<string> {
   let source = await readFile(moduleUrl, "utf8");
   return codeToHtml(source, {
     lang: "tsx",
-    themes: {
-      light: "github-light",
-      dark: "github-dark",
-    },
+    themes: shikiThemes,
   });
 }
 
