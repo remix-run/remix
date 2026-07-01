@@ -18,8 +18,8 @@ type DevRefreshEventsOptions = {
 // Temporary guides-only refresh hook. Delete this when first-class HMR lands.
 export function createDevRefreshEvents(options: DevRefreshEventsOptions = {}): DevRefreshEvents {
   let roots = options.roots ?? [
-    new URL('./app/', import.meta.url),
-    new URL('./public/', import.meta.url),
+    new URL('../', import.meta.url),
+    new URL('../../public/', import.meta.url),
   ]
   let debounceMs = options.debounceMs ?? defaultDebounceMs
   let version = createVersion()

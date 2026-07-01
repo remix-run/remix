@@ -4,18 +4,14 @@ import { createController } from "remix/router";
 
 import type { AppContext } from "../../../router.ts";
 import { routes } from "../../../routes.ts";
-
-const exampleSegmentPattern = /^[a-z0-9][a-z0-9-]*$/;
+import { isExampleSegment, resolveExampleModuleUrl } from "./resolve.ts";
 
 export default createController(routes.docs.examples, {
   actions: {
     show: async (context) => {
       let { chapter, example } = context.params;
 
-      if (
-        !exampleSegmentPattern.test(chapter) ||
-        !exampleSegmentPattern.test(example)
-      ) {
+      if (!isExampleSegment(chapter) || !isExampleSegment(example)) {
         return new Response("Not Found", { status: 404 });
       }
 
@@ -30,7 +26,7 @@ export default createController(routes.docs.examples, {
 });
 
 async function loadExampleHandler(chapter: string, example: string) {
-  let moduleUrl = new URL(`./${chapter}/${example}.tsx`, import.meta.url);
+  let moduleUrl = resolveExampleModuleUrl(chapter, example);
 
   let mod: unknown;
   try {
