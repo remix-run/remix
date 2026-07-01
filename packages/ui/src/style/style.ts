@@ -1,84 +1,15 @@
-export type DOMStyleProperties = {
-  [key in keyof Omit<
-    CSSStyleDeclaration,
-    'item' | 'setProperty' | 'removeProperty' | 'getPropertyValue' | 'getPropertyPriority'
-  >]?: string | number | null | undefined
-}
-export type AllStyleProperties = {
-  [key: string]: string | number | null | undefined
-}
-export interface StyleProps extends AllStyleProperties, DOMStyleProperties {
-  cssText?: string | null
-}
-
-// allow nesting
-export interface CSSProps extends DOMStyleProperties {
-  [key: string]: CSSProps | string | number | null | undefined
-}
+import { normalizeCssValue, toCssPropertyName, type CSSProps } from './properties.ts'
 
 type StyleObject = Record<string, unknown>
 
-// Convert camelCase CSS properties to kebab-case
-function camelToKebab(str: string): string {
-  return str.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
-}
-
-// Properties that should remain unitless (numeric values without px)
-const NUMERIC_CSS_PROPS = new Set([
-  'aspect-ratio',
-  'z-index',
-  'opacity',
-  'flex-grow',
-  'flex-shrink',
-  'flex-order',
-  'grid-area',
-  'grid-row',
-  'grid-column',
-  'font-weight',
-  'line-height',
-  'order',
-  'orphans',
-  'widows',
-  'zoom',
-  'columns',
-  'column-count',
-])
-
-// Normalize numeric CSS values: append 'px' for properties that need units
-// In Standards Mode, browsers drop numeric values without units when multiple properties
-// are present in insertRule(). We must normalize them ourselves.
-export function normalizeCssValue(key: string, value: unknown): string {
-  if (value == null) return String(value)
-  if (typeof value === 'number' && value !== 0) {
-    let cssKey = camelToKebab(key)
-    if (!NUMERIC_CSS_PROPS.has(cssKey) && !cssKey.startsWith('--')) {
-      return `${value}px`
-    }
-  }
-  return String(value)
-}
-
 // Check if a style property is a nested selector or media query
 function isComplexSelector(key: string): boolean {
-  return (
-    key.startsWith('&') ||
-    key.startsWith('@') ||
-    key.startsWith(':') ||
-    key.startsWith('[') ||
-    key.startsWith('.')
-  )
+  return /^[&@:[.]/.test(key)
 }
 
 // Detect @keyframes (including vendor-prefixed variants)
 function isKeyframesAtRule(key: string): boolean {
-  if (!key.startsWith('@')) return false
-  let lower = key.toLowerCase()
-  return (
-    lower.startsWith('@keyframes') ||
-    lower.startsWith('@-webkit-keyframes') ||
-    lower.startsWith('@-moz-keyframes') ||
-    lower.startsWith('@-o-keyframes')
-  )
+  return /^@(?:-(?:webkit|moz|o)-)?keyframes/i.test(key)
 }
 
 // Generate a hash for style objects to create unique class names
@@ -155,7 +86,7 @@ function styleToCss(styles: StyleObject, selector: string = ''): string {
       // Base declaration
       if (value != null) {
         let normalizedValue = normalizeCssValue(key, value)
-        baseDeclarations.push(`  ${camelToKebab(key)}: ${normalizedValue};`)
+        baseDeclarations.push(`  ${toCssPropertyName(key)}: ${normalizedValue};`)
       }
     }
   }
@@ -201,7 +132,7 @@ function nestedStyleBodyToCss(styles: StyleObject, spaces: number): string {
       }
     } else if (value != null) {
       let normalizedValue = normalizeCssValue(key, value)
-      declarations.push(`${pad}${camelToKebab(key)}: ${normalizedValue};`)
+      declarations.push(`${pad}${toCssPropertyName(key)}: ${normalizedValue};`)
     }
   }
 
@@ -241,7 +172,7 @@ function keyframesBodyToCss(frames: StyleObject): string {
       // Ignore nested selectors/at-rules inside keyframe steps
       if (isComplexSelector(prop)) continue
       let normalizedValue = normalizeCssValue(prop, propValue)
-      declarations.push(`  ${camelToKebab(prop)}: ${normalizedValue};`)
+      declarations.push(`  ${toCssPropertyName(prop)}: ${normalizedValue};`)
     }
 
     if (declarations.length > 0) {
@@ -279,7 +210,7 @@ function atRuleBodyToCss(styles: StyleObject): string {
     } else {
       if (value != null) {
         let normalizedValue = normalizeCssValue(key, value)
-        declarations.push(`  ${camelToKebab(key)}: ${normalizedValue};`)
+        declarations.push(`  ${toCssPropertyName(key)}: ${normalizedValue};`)
       }
     }
   }
@@ -323,9 +254,4 @@ export function processStyleClass(
   styleCache.set(hash, result)
 
   return result
-}
-
-// Clear style cache (useful for testing)
-export function clearStyleCache(styleCache: Map<string, { selector: string; css: string }>): void {
-  styleCache.clear()
 }

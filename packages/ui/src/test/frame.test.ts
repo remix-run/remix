@@ -6,7 +6,7 @@ import { createFrame, type LoadModule } from '../runtime/frame.ts'
 import { jsx } from '../runtime/jsx.ts'
 import { createScheduler } from '../runtime/scheduler.ts'
 import { appendFlushMarker } from '../runtime/stream-protocol.ts'
-import { createStyleManager } from '../style/index.ts'
+import { createStyleManager } from '../style/stylesheet.ts'
 
 describe('frame reloads', () => {
   afterEach(() => {

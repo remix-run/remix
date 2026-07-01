@@ -13,7 +13,7 @@ import { toVNode } from './to-vnode.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 import { ROOT_VNODE, type VNode } from './vnode.ts'
 import { resetStyleState, defaultStyleManager } from './diff-props.ts'
-import type { StyleManager } from '../style/index.ts'
+import type { StyleManager } from '../style/stylesheet.ts'
 
 /**
  * Events emitted by virtual roots.
