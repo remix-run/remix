@@ -17,7 +17,7 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 - `app/routes.ts` and `app/router.ts` — the typed route contract and controller wiring.
 - `app/ui/` — shared UI used across routes.
 - `app/utils/assets.ts` — the source asset server configuration.
-- `public/` — global browser assets served by the asset server (e.g. `code-block-copy.tsx`, `dev-refresh.ts`, `docs.css`).
+- `public/` — global browser assets served by the asset server (e.g. `entry.ts`, `code-block-copy.tsx`, `dev-refresh.ts`, `docs.css`).
 - `public/static/` — static files served as-is by the static middleware (e.g. `favicon.svg`, images).
 
 ## How chapters work

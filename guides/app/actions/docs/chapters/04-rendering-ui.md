@@ -8,36 +8,38 @@ description: How Remix components render on the server, collect styles, and form
 A Remix UI component is a function that receives a `Handle` and returns a render function. The component function runs once for an instance. The returned render function runs for the initial render and every update after that.
 
 ```tsx filename=app/ui/counter.tsx
-import { css, on } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+import { css, on } from "remix/ui";
+import type { Handle } from "remix/ui";
 
-export function Counter(handle: Handle<{ initialCount?: number; label: string }>) {
-  let count = handle.props.initialCount ?? 0
+export function Counter(
+  handle: Handle<{ initialCount?: number; label: string }>,
+) {
+  let count = handle.props.initialCount ?? 0;
 
   return () => (
     <button
       mix={[
         counterStyle,
-        on('click', () => {
-          count++
-          handle.update()
+        on("click", () => {
+          count++;
+          handle.update();
         }),
       ]}
       type="button"
     >
       {handle.props.label}: {count}
     </button>
-  )
+  );
 }
 
 const counterStyle = css({
-  border: '1px solid #d6d6d6',
-  borderRadius: '999px',
-  background: 'white',
-  cursor: 'pointer',
-  font: 'inherit',
-  padding: '0.7rem 1rem',
-})
+  border: "1px solid #d6d6d6",
+  borderRadius: "999px",
+  background: "white",
+  cursor: "pointer",
+  font: "inherit",
+  padding: "0.7rem 1rem",
+});
 ```
 
 The setup scope is normal JavaScript. Use it for local state, one-time initialization, subscriptions, and values that should live as long as that component instance lives. Read `handle.props` in the render function when the value should follow parent updates.
@@ -59,13 +61,13 @@ The important split is setup versus render:
 Use `handle.update()` after changing state that affects rendered output. Await it when the next line needs the updated DOM.
 
 ```tsx filename=app/ui/player.tsx
-import { on, ref } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+import { on, ref } from "remix/ui";
+import type { Handle } from "remix/ui";
 
 export function Player(handle: Handle) {
-  let isPlaying = false
-  let playButton: HTMLButtonElement
-  let stopButton: HTMLButtonElement
+  let isPlaying = false;
+  let playButton: HTMLButtonElement;
+  let stopButton: HTMLButtonElement;
 
   return () => (
     <div>
@@ -73,10 +75,10 @@ export function Player(handle: Handle) {
         disabled={isPlaying}
         mix={[
           ref((node) => (playButton = node)),
-          on('click', async () => {
-            isPlaying = true
-            await handle.update()
-            stopButton.focus()
+          on("click", async () => {
+            isPlaying = true;
+            await handle.update();
+            stopButton.focus();
           }),
         ]}
         type="button"
@@ -87,10 +89,10 @@ export function Player(handle: Handle) {
         disabled={!isPlaying}
         mix={[
           ref((node) => (stopButton = node)),
-          on('click', async () => {
-            isPlaying = false
-            await handle.update()
-            playButton.focus()
+          on("click", async () => {
+            isPlaying = false;
+            await handle.update();
+            playButton.focus();
           }),
         ]}
         type="button"
@@ -98,7 +100,7 @@ export function Player(handle: Handle) {
         Stop
       </button>
     </div>
-  )
+  );
 }
 ```
 
@@ -109,10 +111,10 @@ export function Player(handle: Handle) {
 Remix UI renders to Web streams on the server. `renderToStream()` is the default for HTTP responses because the browser can start receiving HTML before the whole tree is complete. `renderToString()` is useful for tests, emails, static snippets, and any integration that needs the complete HTML string.
 
 ```tsx filename=app/middleware/render.tsx
-import { renderWith } from 'remix/middleware/render'
-import { createHtmlResponse } from 'remix/response/html'
-import type { RemixNode } from 'remix/ui'
-import { renderToStream } from 'remix/ui/server'
+import { renderWith } from "remix/middleware/render";
+import { createHtmlResponse } from "remix/response/html";
+import type { RemixNode } from "remix/ui";
+import { renderToStream } from "remix/ui/server";
 
 export function render() {
   return renderWith(
@@ -122,13 +124,13 @@ export function render() {
           frameSrc: request.url,
           signal: request.signal,
           onError(error) {
-            console.error(error)
+            console.error(error);
           },
-        })
+        });
 
-        return createHtmlResponse(stream, init)
+        return createHtmlResponse(stream, init);
       },
-  )
+  );
 }
 ```
 
@@ -137,11 +139,11 @@ The middleware adapts Remix UI to the app's request context once. Route controll
 Use `renderToString()` when you need the final markup rather than a response body stream:
 
 ```tsx filename=app/email/render.tsx
-import type { RemixNode } from 'remix/ui'
-import { renderToString } from 'remix/ui/server'
+import type { RemixNode } from "remix/ui";
+import { renderToString } from "remix/ui/server";
 
 export async function renderEmail(node: RemixNode) {
-  return await renderToString(node)
+  return await renderToString(node);
 }
 ```
 
@@ -150,9 +152,11 @@ export async function renderEmail(node: RemixNode) {
 Render document structure explicitly. A layout component can own `<html>`, `<head>`, global assets, and the app body while controllers stay focused on route data.
 
 ```tsx filename=app/ui/document.tsx
-import type { Handle, RemixNode } from 'remix/ui'
+import type { Handle, RemixNode } from "remix/ui";
 
-export function Document(handle: Handle<{ children: RemixNode; title: string }>) {
+export function Document(
+  handle: Handle<{ children: RemixNode; title: string }>,
+) {
   return () => (
     <html lang="en">
       <head>
@@ -163,7 +167,7 @@ export function Document(handle: Handle<{ children: RemixNode; title: string }>)
       </head>
       <body>{handle.props.children}</body>
     </html>
-  )
+  );
 }
 ```
 
@@ -174,8 +178,8 @@ Keep head content near the layout that owns it. Remix UI does not hoist random `
 Use the `css(...)` mixin for static styles, nested selectors, pseudo-selectors, pseudo-elements, and media queries. Use the `style` prop for values that change frequently at runtime.
 
 ```tsx filename=app/ui/product-card.tsx
-import { css } from 'remix/ui'
-import type { Handle } from 'remix/ui'
+import { css } from "remix/ui";
+import type { Handle } from "remix/ui";
 
 export function ProductCard(handle: Handle<{ title: string; price: number }>) {
   return () => (
@@ -188,42 +192,42 @@ export function ProductCard(handle: Handle<{ title: string; price: number }>) {
         Add to cart
       </button>
     </article>
-  )
+  );
 }
 
 const cardStyle = css({
-  border: '1px solid #d6d6d6',
-  borderRadius: '16px',
-  padding: '1rem',
-  transition: 'transform 180ms ease, box-shadow 180ms ease',
-  '&:hover': {
-    boxShadow: '0 12px 32px rgba(15, 17, 21, 0.14)',
-    transform: 'translateY(-3px)',
-    '& .title': {
-      color: '#d83a5a',
+  border: "1px solid #d6d6d6",
+  borderRadius: "16px",
+  padding: "1rem",
+  transition: "transform 180ms ease, box-shadow 180ms ease",
+  "&:hover": {
+    boxShadow: "0 12px 32px rgba(15, 17, 21, 0.14)",
+    transform: "translateY(-3px)",
+    "& .title": {
+      color: "#d83a5a",
     },
-    '& button': {
-      backgroundColor: '#b8324d',
+    "& button": {
+      backgroundColor: "#b8324d",
     },
   },
-})
+});
 
 const titleStyle = css({
   margin: 0,
-  transition: 'color 180ms ease',
-})
+  transition: "color 180ms ease",
+});
 
 const priceStyle = css({
-  fontWeight: '700',
-})
+  fontWeight: "700",
+});
 
 const buttonStyle = css({
   border: 0,
-  borderRadius: '999px',
-  backgroundColor: '#d83a5a',
-  color: 'white',
-  padding: '0.7rem 1rem',
-})
+  borderRadius: "999px",
+  backgroundColor: "#d83a5a",
+  color: "white",
+  padding: "0.7rem 1rem",
+});
 ```
 
 Nested selectors are a good fit when parent state affects children. Do not move hover, focus, or selected styling into JavaScript state unless rendering needs to know about that state too.
@@ -263,17 +267,17 @@ The UI runtime emits generated `css(...)` rules in the `rmx` cascade layer and i
 Treat theme tokens as app-owned CSS custom properties or context values. They work across server rendering, frames, hydrated client entries, and plain CSS files.
 
 ```tsx filename=app/ui/theme.tsx
-import { css } from 'remix/ui'
-import type { Handle, RemixNode } from 'remix/ui'
+import { css } from "remix/ui";
+import type { Handle, RemixNode } from "remix/ui";
 
 export function ThemeProvider(handle: Handle<{ children: RemixNode }>) {
-  return () => <div mix={themeStyle}>{handle.props.children}</div>
+  return () => <div mix={themeStyle}>{handle.props.children}</div>;
 }
 
 const themeStyle = css({
-  color: 'var(--text)',
-  background: 'var(--surface)',
-})
+  color: "var(--text)",
+  background: "var(--surface)",
+});
 ```
 
 ## First-party UI components

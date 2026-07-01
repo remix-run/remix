@@ -540,7 +540,7 @@ Open [http://localhost:44100/albums/thriller/edit](http://localhost:44100/albums
 
 Before handling the POST request, we're going to take a quick detour and upgrade Remix with a nice little `form-data` middleware in `app/router.ts`. This middleware parses browser form bodies once and makes the `FormData` available to route actions.
 
-```ts filename=app/router.ts lines=[2,7,16]
+```ts filename=app/router.ts lines=[2,8,18]
 import { createRouter, type MiddlewareContext } from "remix/router";
 import { formData } from "remix/middleware/form-data";
 import { staticFiles } from "remix/middleware/static";
