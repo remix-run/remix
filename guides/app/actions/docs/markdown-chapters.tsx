@@ -7,7 +7,8 @@ import type { AppContext } from '../../router.ts'
 import { routes } from '../../routes.ts'
 import { readMarkdownChapterSummary, renderMarkdownChapter } from './markdown/render.tsx'
 import type { MarkdownChapter, MarkdownChapterSummary } from './markdown/types.ts'
-import { DocsChapter, docsResponseInit, docsEtag, notModifiedDocsResponse } from './shared.tsx'
+import { DocsChapter } from './layout.tsx'
+import { docsResponseInit, docsEtag, notModifiedDocsResponse } from './cache.ts'
 
 export type DocsChapterSummary = MarkdownChapterSummary & {
   slug: string

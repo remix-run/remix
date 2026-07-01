@@ -3,7 +3,7 @@ import { createRequestListener } from 'remix/node-fetch-server'
 
 import { router } from './app/router.ts'
 import { assetServer } from './app/utils/assets.ts'
-import { createDevRefreshEvents } from './dev-refresh.ts'
+import { createDevRefreshEvents } from './app/utils/dev-refresh-server.ts'
 
 const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 44100
 const devRefreshEvents =
