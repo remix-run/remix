@@ -1,0 +1,30 @@
+@import './jui.css';
+
+:root {
+  /* 
+  TODO: Create a custom theme for this app.
+
+  --jui-neutral-fg:
+  --jui-neutral-bg:
+  --jui-muted-fg:
+  --jui-muted-bg:
+  --jui-primary-fg:
+  --jui-primary-bg:
+  --jui-secondary-fg:
+  --jui-secondary-bg:
+  --jui-accent-fg:
+  --jui-accent-bg:
+  --jui-error-fg:
+  --jui-error-bg:
+  --jui-border:
+  --jui-sheet-fg:
+  --jui-sheet-bg:
+    */
+}
+
+body {
+  min-block-size: auto;
+  font-family: 'IBM Plex Sans', sans-serif;
+  font-optical-sizing: auto;
+  font-variation-settings: 'wdth' 100;
+}

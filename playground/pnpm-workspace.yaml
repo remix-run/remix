@@ -1,0 +1,10 @@
+allowBuilds:
+  '@mongodb-js/zstd': false
+  '@swc/core': false
+  esbuild: false
+  node-liblzma: false
+  sharp: false
+  workerd: false
+minimumReleaseAgeExclude:
+  - '@jacob-ebey/almostnode@0.4.0'
+  - '@jacob-ebey/almostnode@0.5.0'

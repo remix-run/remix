@@ -1,0 +1,23 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "remix-playground",
+  "compatibility_date": "2026-06-06",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "worker.ts",
+  // "ai": {
+  //   "binding": "AI",
+  // },
+  "assets": {
+    "directory": "public",
+  },
+  "kv_namespaces": [
+    {
+      "binding": "REMIX_PLAYGROUND_SHARE",
+      "id": "034bbde9e624448c95eda752855beb88",
+    },
+    // {
+    //   "binding": "SESSION_STORE",
+    //   "id": "e87f673fe2914b678a9b8f854cef329e",
+    // },
+  ],
+}
