@@ -605,7 +605,6 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   ```
 
   Summary of changes:
-
   - `RouteHandlers` type => `Controller`
   - `RouteHandler` type => `Action`
   - `BuildRouteHandler` type => `BuildAction`
