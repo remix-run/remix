@@ -1,0 +1,147 @@
+/*
+ * Classic guides theme tokens.
+ *
+ * This preserves the pre-theme guides palette and typography while using the
+ * same `--rmx-*` token names as the RMX themes.
+ */
+
+:root {
+  --rmx-space-none: 0px;
+  --rmx-space-px: 1px;
+  --rmx-space-xs: 0.25rem;
+  --rmx-space-sm: 0.5rem;
+  --rmx-space-md: 0.75rem;
+  --rmx-space-lg: 1rem;
+  --rmx-space-xl: 1.5rem;
+  --rmx-space-xxl: 2rem;
+
+  --rmx-radius-none: 0px;
+  --rmx-radius-sm: 4px;
+  --rmx-radius-md: 8px;
+  --rmx-radius-lg: 10px;
+  --rmx-radius-xl: 0.75rem;
+  --rmx-radius-full: 9999px;
+
+  --rmx-font-family-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica,
+    Arial, sans-serif;
+  --rmx-font-family-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
+
+  --rmx-font-size-xxxs: 0.625rem;
+  --rmx-font-size-xxs: 0.6875rem;
+  --rmx-font-size-xs: 0.8125rem;
+  --rmx-font-size-sm: 0.9375rem;
+  --rmx-font-size-md: 1rem;
+  --rmx-font-size-lg: 1.125rem;
+  --rmx-font-size-xl: 1.5rem;
+  --rmx-font-size-xxl: 1.75rem;
+  --rmx-font-size-page-title: 2.25rem;
+
+  --rmx-line-height-tight: 1.15;
+  --rmx-line-height-normal: 1.45;
+  --rmx-line-height-relaxed: 1.6;
+
+  --rmx-letter-spacing-tight: -0.02em;
+  --rmx-letter-spacing-normal: 0;
+  --rmx-letter-spacing-meta: 0.06em;
+  --rmx-letter-spacing-wide: 0.08em;
+
+  --rmx-font-weight-normal: 400;
+  --rmx-font-weight-medium: 500;
+  --rmx-font-weight-semibold: 600;
+  --rmx-font-weight-bold: 700;
+
+  --rmx-control-height-sm: 28px;
+  --rmx-control-height-md: 32px;
+  --rmx-control-height-lg: 36px;
+
+  --rmx-surface-lvl0: #ffffff;
+  --rmx-surface-lvl1: #ffffff;
+  --rmx-surface-lvl2: #f7f7f8;
+  --rmx-surface-lvl3: #f7f7f8;
+  --rmx-surface-lvl4: #eef0f3;
+
+  --rmx-shadow-xs: 0 1px 1px rgb(0 0 0 / 0.05);
+  --rmx-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.07);
+  --rmx-shadow-md: 0 6px 18px rgb(0 0 0 / 0.08);
+  --rmx-shadow-lg: 0 16px 34px rgb(0 0 0 / 0.1);
+  --rmx-shadow-xl: 0 24px 52px rgb(0 0 0 / 0.14);
+
+  --rmx-color-text-primary: #1b1b1f;
+  --rmx-color-text-secondary: #6b7280;
+  --rmx-color-text-muted: #9ca3af;
+  --rmx-color-text-link: #b42343;
+  --rmx-color-text-link-hover: #d83a5a;
+
+  --rmx-color-border-subtle: #e5e7eb;
+  --rmx-color-border-default: #d1d5db;
+  --rmx-color-border-strong: #9ca3af;
+
+  --rmx-color-focus-ring: rgba(21, 119, 194, 1);
+  --rmx-color-accent: rgba(21, 119, 194, 1);
+  --rmx-color-accent-hover: rgba(11, 47, 72, 1);
+  --rmx-color-eyebrow: #d83a5a;
+  --rmx-color-code-highlight: color-mix(in srgb, #22c55e 18%, transparent);
+
+  --rmx-color-action-primary-background: #1b1b1f;
+  --rmx-color-action-primary-background-hover: color-mix(in srgb, #1b1b1f 85%, white);
+  --rmx-color-action-primary-background-active: color-mix(in srgb, #1b1b1f 92%, white);
+  --rmx-color-action-primary-foreground: #ffffff;
+  --rmx-color-action-primary-border: #1b1b1f;
+
+  --rmx-color-action-secondary-background: #ffffff;
+  --rmx-color-action-secondary-background-hover: #f7f7f8;
+  --rmx-color-action-secondary-background-active: #eef0f3;
+  --rmx-color-action-secondary-foreground: #1b1b1f;
+  --rmx-color-action-secondary-border: #e5e7eb;
+
+  --rmx-color-action-danger-background: #dc2626;
+  --rmx-color-action-danger-background-hover: #b91c1c;
+  --rmx-color-action-danger-background-active: #991b1b;
+  --rmx-color-action-danger-foreground: #ffffff;
+  --rmx-color-action-danger-border: #dc2626;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --rmx-surface-lvl0: #0d0d10;
+    --rmx-surface-lvl1: #16161a;
+    --rmx-surface-lvl2: #16161a;
+    --rmx-surface-lvl3: #16161a;
+    --rmx-surface-lvl4: #2a2a30;
+
+    --rmx-color-text-primary: #e7e7ea;
+    --rmx-color-text-secondary: #9aa0aa;
+    --rmx-color-text-muted: #6b7280;
+    --rmx-color-text-link: #ff8aa0;
+    --rmx-color-text-link-hover: #ff5d7a;
+
+    --rmx-color-focus-ring: rgba(37, 158, 239, 1);
+    --rmx-color-accent: rgba(37, 158, 239, 1);
+    --rmx-color-accent-hover: color-mix(in srgb, rgba(37, 158, 239, 1) 65%, white);
+    --rmx-color-eyebrow: #ff5d7a;
+
+    --rmx-color-border-subtle: #2a2a30;
+    --rmx-color-border-default: #3f3f46;
+    --rmx-color-border-strong: #52525b;
+
+    --rmx-color-code-highlight: color-mix(in srgb, #22c55e 22%, transparent);
+
+    --rmx-color-action-primary-background: #e7e7ea;
+    --rmx-color-action-primary-background-hover: color-mix(in srgb, #e7e7ea 88%, black);
+    --rmx-color-action-primary-background-active: color-mix(in srgb, #e7e7ea 80%, black);
+    --rmx-color-action-primary-foreground: #0d0d10;
+    --rmx-color-action-primary-border: #e7e7ea;
+
+    --rmx-color-action-secondary-background: #16161a;
+    --rmx-color-action-secondary-background-hover: #202026;
+    --rmx-color-action-secondary-background-active: #2a2a30;
+    --rmx-color-action-secondary-foreground: #e7e7ea;
+    --rmx-color-action-secondary-border: #2a2a30;
+
+    --rmx-color-action-danger-background: #f87171;
+    --rmx-color-action-danger-background-hover: #ef4444;
+    --rmx-color-action-danger-background-active: #dc2626;
+    --rmx-color-action-danger-foreground: #0d0d10;
+    --rmx-color-action-danger-border: #f87171;
+  }
+}
