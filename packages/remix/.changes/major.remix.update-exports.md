@@ -1,35 +1,25 @@
-Added `package.json` `exports`:
+Added `package.json` `exports` for the styled component entrypoints:
 
-- `remix/ui/accordion` to re-export APIs from `@remix-run/ui/accordion`
-- `remix/ui/accordion/primitives` to re-export APIs from `@remix-run/ui/accordion/primitives`
-- `remix/ui/anchor` to re-export APIs from `@remix-run/ui/anchor`
-- `remix/ui/breadcrumbs` to re-export APIs from `@remix-run/ui/breadcrumbs`
-- `remix/ui/button` to re-export APIs from `@remix-run/ui/button`
-- `remix/ui/checkbox` to re-export APIs from `@remix-run/ui/checkbox`
-- `remix/ui/combobox` to re-export APIs from `@remix-run/ui/combobox`
-- `remix/ui/combobox/primitives` to re-export APIs from `@remix-run/ui/combobox/primitives`
-- `remix/ui/input` to re-export APIs from `@remix-run/ui/input`
-- `remix/ui/listbox` to re-export APIs from `@remix-run/ui/listbox`
-- `remix/ui/menu` to re-export APIs from `@remix-run/ui/menu`
-- `remix/ui/menu/primitives` to re-export APIs from `@remix-run/ui/menu/primitives`
-- `remix/ui/popover` to re-export APIs from `@remix-run/ui/popover`
-- `remix/ui/radio` to re-export APIs from `@remix-run/ui/radio`
-- `remix/ui/select` to re-export APIs from `@remix-run/ui/select`
-- `remix/ui/select/primitives` to re-export APIs from `@remix-run/ui/select/primitives`
-- `remix/ui/tabs` to re-export APIs from `@remix-run/ui/tabs`
-- `remix/ui/tabs/primitives` to re-export APIs from `@remix-run/ui/tabs/primitives`
-- `remix/ui/toggle` to re-export APIs from `@remix-run/ui/toggle`
-- `remix/ui/toggle/primitives` to re-export APIs from `@remix-run/ui/toggle/primitives`
+- `remix/components/accordion`
+- `remix/components/breadcrumbs`
+- `remix/components/button`
+- `remix/components/combobox`
+- `remix/components/menu`
+- `remix/components/select`
+- `remix/components/tabs`
 
-Removed helper re-exports from `remix/ui`:
+Added `package.json` `exports` for the HMR entrypoints:
 
-- `flashAttribute`
-- `hiddenTypeahead`
-- `matchNextItemBySearchText`
-- `onKeyDown`
-- `SearchValue`
-- `wait`
-- `waitForCssTransition`
+- `remix/assets/types/hmr`
+- `remix/node-hmr`
+- `remix/node-hmr/runtime`
+- `remix/node-hmr/types`
+- `remix/ui-hmr`
+- `remix/ui-hmr/browser-module-hooks`
+- `remix/ui-hmr/browser-runtime`
+- `remix/ui-hmr/node`
+- `remix/ui-hmr/server-runtime`
+- `remix/ui/dev/refresh`
 
 Updated `remix/route-pattern` exports for the `RoutePattern` API:
 
@@ -39,23 +29,8 @@ Updated `remix/route-pattern` exports for the `RoutePattern` API:
 
 Removed `package.json` `exports`:
 
-- `remix/components/accordion`
-- `remix/components/accordion/primitives`
-- `remix/components/anchor`
-- `remix/components/breadcrumbs`
-- `remix/components/button`
-- `remix/components/checkbox`
-- `remix/components/checkbox/primitives`
-- `remix/components/combobox`
-- `remix/components/combobox/primitives`
-- `remix/components/input`
-- `remix/components/listbox`
-- `remix/components/menu`
-- `remix/components/menu/primitives`
-- `remix/components/popover`
-- `remix/components/select`
-- `remix/components/select/primitives`
+- `remix/ui/breadcrumbs`
+- `remix/ui/button`
 - `remix/ui/glyph`
-- `remix/ui/scroll-lock`
 - `remix/ui/separator`
 - `remix/ui/theme`

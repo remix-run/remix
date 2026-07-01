@@ -7,7 +7,7 @@ Runtime UI primitives for Remix apps, including the component runtime, server re
 - Component runtime APIs for rendering, hydration, frame navigation, and JSX
 - Server rendering APIs for streaming Remix UI trees and frames
 - `mix` composition with event, ref, CSS, and animation helpers
-- Headless behavior primitives for controls such as menus, listboxes, popovers, selects, and comboboxes
+- Headless behavior primitives for controls such as menus, listboxes, popovers, selects, comboboxes, and tabs
 - Lower-level utilities for keyboard events, typeahead search, refs, attributes, and CSS transition timing
 
 ## Installation
@@ -69,13 +69,13 @@ function ViewOptions() {
 }
 ```
 
-Button styling is available as a composable mixin:
+Styled, fully formed components live in `remix/components/*`:
 
 ```tsx
-import button from 'remix/ui/button'
+import { Button } from 'remix/components/button'
 
 function Actions() {
-  return () => <button mix={button({ tone: 'primary' })}>Create project</button>
+  return () => <Button tone="primary">Create project</Button>
 }
 ```
 

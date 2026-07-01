@@ -13,6 +13,7 @@ import { toVNode } from './to-vnode.ts'
 import { TypedEventTarget } from './typed-event-target.ts'
 import { ROOT_VNODE, type VNode } from './vnode.ts'
 import { resetStyleState, defaultStyleManager } from './diff-props.ts'
+import { registerRoot, unregisterRoot } from './refresh.ts'
 import type { StyleManager } from '../style/index.ts'
 
 /**
@@ -27,6 +28,7 @@ export type VirtualRootEventMap = {
  */
 export type VirtualRoot = TypedEventTarget<VirtualRootEventMap> & {
   render: (element: RemixNode) => void
+  reconcile: () => void
   dispose: () => void
   flush: () => void
 }
@@ -74,6 +76,7 @@ export function createRangeRoot(
 ): VirtualRoot {
   let [start, end] = boundaries
   let vroot: VNode | null = null
+  let currentElement: RemixNode | undefined
   let styles = options.styleManager ?? defaultStyleManager
 
   let container = end.parentNode
@@ -113,9 +116,10 @@ export function createRangeRoot(
   }
   attachDomErrorForwarding()
 
-  return Object.assign(eventTarget, {
+  let root = Object.assign(eventTarget, {
     render(element: RemixNode) {
       attachDomErrorForwarding()
+      currentElement = element
 
       let vnode = toVNode(element)
       let vParent: VNode = {
@@ -146,8 +150,15 @@ export function createRangeRoot(
       scheduler.dequeue()
     },
 
+    reconcile() {
+      if (currentElement === undefined) return
+      root.render(currentElement)
+    },
+
     dispose() {
       detachDomErrorForwarding()
+      unregisterRoot(root)
+      currentElement = undefined
 
       if (!vroot) return
       let current = vroot
@@ -160,6 +171,9 @@ export function createRangeRoot(
       scheduler.dequeue()
     },
   })
+
+  registerRoot(root)
+  return root
 }
 
 /**
@@ -171,10 +185,8 @@ export function createRangeRoot(
  */
 export function createRoot(container: HTMLElement, options: VirtualRootOptions = {}): VirtualRoot {
   let vroot: VNode | null = null
+  let currentElement: RemixNode | undefined
   let styles = options.styleManager ?? defaultStyleManager
-  if (container.innerHTML.trim() !== '') {
-    styles.replaceServerStyles(container)
-  }
   let hydrationCursor = container.innerHTML.trim() !== '' ? container.firstChild : undefined
 
   let eventTarget = new TypedEventTarget<VirtualRootEventMap>()
@@ -207,9 +219,10 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
   }
   attachDomErrorForwarding()
 
-  return Object.assign(eventTarget, {
+  let root = Object.assign(eventTarget, {
     render(element: RemixNode) {
       attachDomErrorForwarding()
+      currentElement = element
 
       let vnode = toVNode(element)
       let vParent: VNode = { type: ROOT_VNODE, _svg: false }
@@ -234,8 +247,15 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
       scheduler.dequeue()
     },
 
+    reconcile() {
+      if (currentElement === undefined) return
+      root.render(currentElement)
+    },
+
     dispose() {
       detachDomErrorForwarding()
+      unregisterRoot(root)
+      currentElement = undefined
 
       if (!vroot) return
       let current = vroot
@@ -248,6 +268,9 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
       scheduler.dequeue()
     },
   })
+
+  registerRoot(root)
+  return root
 }
 
 function createRootFrameHandle(init: {

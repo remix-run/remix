@@ -1,5 +1,5 @@
 import { css, type Handle, type RemixNode } from 'remix/ui'
-import button from 'remix/ui/button'
+import { Button } from 'remix/components/button'
 import { theme } from '../../ui/design.ts'
 
 import { routes } from '../../routes.ts'
@@ -183,9 +183,9 @@ function AuthForm(handle: Handle<AuthFormProps>) {
             </small>
           ) : null}
         </label>
-        <button type="submit" mix={button({ tone: 'primary' })}>
+        <Button type="submit" tone="primary">
           {submitLabel}
-        </button>
+        </Button>
       </form>
     )
   }
@@ -198,9 +198,9 @@ function LogoutForm(handle: Handle<{ csrfToken: string }>) {
     return (
       <form action={routes.auth.logout.href()} method="post">
         <input type="hidden" name="_csrf" value={csrfToken} />
-        <button type="submit" mix={button()}>
+        <Button type="submit" tone="secondary">
           Sign out
-        </button>
+        </Button>
       </form>
     )
   }

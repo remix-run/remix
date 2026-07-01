@@ -245,7 +245,7 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/ui` — the component runtime: components, core mixins, `clientEntry`, `run`, `<Frame>`, navigation helpers, and `createRoot`. Use for app UI behavior
 - `remix/ui/server` — server rendering: `renderToStream`, `renderToString`. Use in the `app/actions/render.tsx` helper that returns HTML responses
 - `remix/ui/animation` — animation APIs: `animateEntrance`, `animateExit`, `animateLayout`, `spring`, `tween`, and `easings`
-- `remix/ui/<primitive>` — UI primitives, mixins, and component helpers. Current subpaths include `remix/ui/accordion`, `remix/ui/anchor`, `remix/ui/button`, `remix/ui/checkbox`, `remix/ui/combobox`, `remix/ui/input`, `remix/ui/listbox`, `remix/ui/menu`, `remix/ui/popover`, and `remix/ui/select`
+- `remix/ui/<primitive>` — UI primitives, mixins, glyphs, and theme helpers. Current subpaths include `remix/ui/accordion`, `remix/ui/anchor`, `remix/ui/breadcrumbs`, `remix/ui/button`, `remix/ui/combobox`, `remix/ui/glyph`, `remix/ui/listbox`, `remix/ui/menu`, `remix/ui/popover`, `remix/ui/scroll-lock`, `remix/ui/select`, `remix/ui/separator`, and `remix/ui/theme`
 - `remix/ui/test` — component test rendering helpers such as `render`
 - `remix/ui/jsx-runtime` and `remix/ui/jsx-dev-runtime` — JSX transform targets. Configured in `tsconfig.json`, rarely imported directly
 - `remix/html-template` — escaped HTML template literals. Use when generating HTML outside the component system (RSS feeds, email bodies, error pages)

@@ -1,6 +1,6 @@
 import { clientEntry, css, navigate, on, ref, type Handle, type Props } from 'remix/ui'
 import { animateEntrance, animateExit, spring } from 'remix/ui/animation'
-import button from 'remix/ui/button'
+import { Button } from 'remix/components/button'
 import { theme } from './design.ts'
 
 type State = 'idle' | 'creating' | 'submitting'
@@ -18,7 +18,7 @@ export const NewScheduleAction = clientEntry(
 
 function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) {
   let state: State = 'idle'
-  let buttonNode: HTMLButtonElement | null = null
+  let button: HTMLButtonElement | null = null
   let errorMessage: string | null = null
   let input: HTMLInputElement | null = null
   let submittedName = ''
@@ -30,7 +30,7 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
     submittedName = ''
     state = 'idle'
     await handle.update()
-    buttonNode?.focus()
+    button?.focus()
   }
 
   async function submitSchedule(form: HTMLFormElement) {
@@ -105,12 +105,12 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
 
     if (state === 'idle') {
       content = (
-        <button
+        <Button
           type="button"
+          tone="secondary"
           mix={[
-            button(),
             newScheduleButtonStyle,
-            ref((node) => (buttonNode = node)),
+            ref((node) => (button = node)),
             on('click', async () => {
               errorMessage = null
               submittedName = ''
@@ -119,10 +119,10 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
               input?.focus()
             }),
           ]}
+          startIcon={<AddIcon />}
         >
-          <AddIcon mix={buttonIconStyle} />
           New schedule
-        </button>
+        </Button>
       )
     } else if (state === 'submitting') {
       content = (
@@ -281,12 +281,6 @@ async function createScheduleErrorMessage(response: Response) {
 const newScheduleButtonStyle = css({
   height: '100%',
   width: '100%',
-})
-
-const buttonIconStyle = css({
-  flexShrink: 0,
-  height: '1em',
-  width: '1em',
 })
 
 const newScheduleActionStyle = css({

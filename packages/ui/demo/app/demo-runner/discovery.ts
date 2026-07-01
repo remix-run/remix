@@ -58,19 +58,15 @@ function createDemoFile(absolutePath: string): DemoFile {
 
   return {
     absolutePath,
-    assetHref: `/assets/demos/${toAssetPath(relativePath)}?v=${createFileVersion(absolutePath)}`,
+    assetHref: `/assets/demos/${toAssetPath(relativePath)}`,
     description: metadata.description,
     href: `/demo/${relativePath}`,
     importHref: url.pathToFileURL(absolutePath).href,
     layout: metadata.layout,
     order: metadata.order,
     relativePath,
-    title: getDemoTitle(relativePath, metadata.name),
+    title: metadata.name ?? humanizeDemoPath(relativePath),
   }
-}
-
-function createFileVersion(absolutePath: string) {
-  return fs.statSync(absolutePath).mtimeMs.toString(36)
 }
 
 function getRelativeDemoPath(absolutePath: string) {
@@ -98,31 +94,6 @@ function humanizeDemoPath(relativePath: string) {
   return path
     .basename(relativePath)
     .replace(DEMO_FILE_REGEX, '')
-    .split(/[-_]/)
-    .filter(Boolean)
-    .map((part) => part[0]!.toUpperCase() + part.slice(1))
-    .join(' ')
-}
-
-function getDemoTitle(relativePath: string, metadataName: string | undefined) {
-  let componentTitle = getComponentOverviewDemoTitle(relativePath)
-  if (componentTitle) return componentTitle
-
-  return metadataName ?? humanizeDemoPath(relativePath)
-}
-
-function getComponentOverviewDemoTitle(relativePath: string) {
-  let [sourceRoot, moduleName, fileName] = relativePath.split('/')
-
-  if (sourceRoot !== 'src' || !moduleName || fileName !== `${moduleName}.demo.tsx`) {
-    return undefined
-  }
-
-  return humanizeDemoName(moduleName)
-}
-
-function humanizeDemoName(name: string) {
-  return name
     .split(/[-_]/)
     .filter(Boolean)
     .map((part) => part[0]!.toUpperCase() + part.slice(1))

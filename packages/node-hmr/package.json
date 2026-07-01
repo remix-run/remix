@@ -1,0 +1,78 @@
+{
+  "name": "@remix-run/node-hmr",
+  "version": "0.0.0",
+  "description": "Run Node.js applications with Hot Module Reloading",
+  "author": "Michael Jackson <mjijackson@gmail.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/remix-run/remix.git",
+    "directory": "packages/node-hmr"
+  },
+  "homepage": "https://github.com/remix-run/remix/tree/main/packages/node-hmr#readme",
+  "files": [
+    "LICENSE",
+    "README.md",
+    "dist",
+    "src",
+    "!src/**/*.test.ts"
+  ],
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./runtime": {
+      "node-hmr": "./src/runtime.node-hmr.ts",
+      "default": "./src/runtime.ts"
+    },
+    "./types": {
+      "types": "./src/types.d.ts"
+    },
+    "./package.json": "./package.json"
+  },
+  "publishConfig": {
+    "exports": {
+      ".": {
+        "types": "./dist/index.d.ts",
+        "default": "./dist/index.js"
+      },
+      "./runtime": {
+        "node-hmr": {
+          "types": "./dist/runtime.node-hmr.d.ts",
+          "default": "./dist/runtime.node-hmr.js"
+        },
+        "types": "./dist/runtime.d.ts",
+        "default": "./dist/runtime.js"
+      },
+      "./types": {
+        "types": "./dist/types.d.ts"
+      },
+      "./package.json": "./package.json"
+    }
+  },
+  "dependencies": {
+    "@remix-run/terminal": "workspace:^",
+    "chokidar": "^5.0.0",
+    "oxc-parser": "^0.121.0",
+    "source-map-js": "^1.2.1"
+  },
+  "devDependencies": {
+    "@remix-run/assert": "workspace:^",
+    "@remix-run/node-tsx": "workspace:^",
+    "@remix-run/test": "workspace:^",
+    "@types/node": "catalog:",
+    "@typescript/native-preview": "catalog:"
+  },
+  "scripts": {
+    "build": "tsgo -p tsconfig.build.json && node ../../scripts/copy-package-type-only-exports.ts .",
+    "clean": "git clean -fdX",
+    "prepublishOnly": "pnpm run build",
+    "test": "remix-test",
+    "typecheck": "tsgo --noEmit"
+  },
+  "keywords": [
+    "remix",
+    "node",
+    "hmr",
+    "watch"
+  ]
+}

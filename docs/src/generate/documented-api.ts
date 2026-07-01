@@ -558,8 +558,8 @@ function getApiFilePath(
   // typedoc.ts).
   let rawPkg = nameParts.shift() ?? ''
   // If the remaining segments combined with the package name form a more
-  // specific manifest entry (e.g. @remix-run/ui + accordion →
-  // @remix-run/ui/accordion → remix/ui/accordion), consume
+  // specific manifest entry (e.g. @remix-run/ui + components + accordion →
+  // @remix-run/ui/components/accordion → remix/components/accordion), consume
   // the longest matching prefix so APIs from sub-exports land under the right
   // canonical path.
   if (rawPkg.startsWith('@remix-run/') && nameParts.length > 1) {

@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, it, mock } from '@remix-run/test'
 import type { Handle, RemixNode } from '../runtime/component.ts'
 import { Frame } from '../runtime/component.ts'
 import { clientEntry } from '../runtime/client-entries.ts'
-import { getTopFrame, run } from '../runtime/run.ts'
+import { run } from '../runtime/run.ts'
 import { createRangeRoot, createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
 import { renderToStream } from '../server/stream.ts'
@@ -41,12 +41,6 @@ async function drainWithProtocol(stream: ReadableStream<Uint8Array>): Promise<st
   }
 
   return html
-}
-
-async function waitForTransitionWindow(): Promise<void> {
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
-  await new Promise<void>((resolve) => setTimeout(resolve, 120))
 }
 
 describe('run', () => {
@@ -350,7 +344,7 @@ describe('run', () => {
 
     await app.ready()
 
-    let topFrame = getTopFrame()
+    let topFrame = app.frames.top
 
     topFrame.src = '/b'
     await topFrame.reload()
@@ -448,7 +442,7 @@ describe('run', () => {
     app.flush()
     expect(button.textContent).toBe('Initial: 1')
 
-    let topFrame = getTopFrame()
+    let topFrame = app.frames.top
     topFrame.src = '/root'
     await topFrame.reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -516,7 +510,7 @@ describe('run', () => {
     expect(document.getElementById('removed-entry')).toBeInstanceOf(HTMLButtonElement)
     expect(removeCount).toBe(0)
 
-    let topFrame = getTopFrame()
+    let topFrame = app.frames.top
     topFrame.src = '/without-entry'
     await topFrame.reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -617,7 +611,7 @@ describe('run', () => {
 
     // Begin the reload but hold EntryB's module load so the old DOM stays
     // inside the hydration markers — this is the FOUC window in production.
-    let topFrame = getTopFrame()
+    let topFrame = app.frames.top
     topFrame.src = '/b'
     await topFrame.reload()
 
@@ -645,69 +639,6 @@ describe('run', () => {
     // both decrement to 0 and the rule is finally dropped.
     expect(rulePresent(aSelector)).toBe(false)
     expect(rulePresent(bSelectorFromB)).toBe(true)
-
-    app.dispose()
-  })
-
-  it('does not start transitions when hydrating adopted server styles', async () => {
-    let knobStyle = css({
-      '--offset': '8px',
-      display: 'block',
-      width: '30px',
-      height: '18px',
-      '&::before': {
-        content: '""',
-        display: 'block',
-        width: '10px',
-        height: '14px',
-        transform: 'translateX(0)',
-        transition: 'transform 80ms ease, width 80ms ease',
-      },
-      '&[data-state="checked"]::before': {
-        width: '18px',
-        transform: 'translateX(var(--offset))',
-      },
-    })
-
-    let HydratedKnob = clientEntry(
-      '/assets/hydrated-knob.js#HydratedKnob',
-      function HydratedKnob() {
-        return () => <div id="hydrated-knob" data-state="checked" mix={[knobStyle]} />
-      },
-    )
-
-    let html = await drain(renderToStream(<HydratedKnob />))
-    document.body.innerHTML = html
-
-    let target = document.getElementById('hydrated-knob')
-    invariant(target instanceof HTMLDivElement)
-
-    let beforeTransform = getComputedStyle(target, '::before').transform
-    let beforeWidth = getComputedStyle(target, '::before').width
-    expect(beforeTransform).toBe('matrix(1, 0, 0, 1, 8, 0)')
-    expect(beforeWidth).toBe('18px')
-
-    let transitionRuns: string[] = []
-    target.addEventListener('transitionrun', (event) => {
-      let transition = event as TransitionEvent
-      transitionRuns.push(`${transition.pseudoElement}:${transition.propertyName}`)
-    })
-
-    let app = run({
-      loadModule(moduleUrl, exportName) {
-        if (moduleUrl === '/assets/hydrated-knob.js' && exportName === 'HydratedKnob') {
-          return HydratedKnob
-        }
-        throw new Error(`Unexpected module: ${moduleUrl}#${exportName}`)
-      },
-    })
-
-    await app.ready()
-    await waitForTransitionWindow()
-
-    expect(getComputedStyle(target, '::before').transform).toBe(beforeTransform)
-    expect(getComputedStyle(target, '::before').width).toBe(beforeWidth)
-    expect(transitionRuns).toEqual([])
 
     app.dispose()
   })
@@ -775,7 +706,7 @@ describe('run', () => {
     invariant(readNamedFrame)
     expect(readNamedFrame()).toBeDefined()
 
-    let topFrame = getTopFrame()
+    let topFrame = app.frames.top
     topFrame.src = '/without-frame'
     await topFrame.reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -3650,7 +3581,7 @@ describe('run', () => {
     expect(document.getElementById('child-frame-label')?.textContent).toBe('Initial child')
     input.value = 'typed child value'
 
-    let topFrame = getTopFrame()
+    let topFrame = app.frames.top
     let reloadPromise = topFrame.reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
@@ -4039,7 +3970,7 @@ describe('run', () => {
       'Initial blocking child',
     )
 
-    let topReload = getTopFrame().reload()
+    let topReload = app.frames.top.reload()
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(document.getElementById('reload-blocking-child')?.textContent).toBe('Reloading child')

@@ -90,6 +90,10 @@ export function findReadmeForSpecifier(
 }
 
 function getRemixSourceFile(remixPath: string, specifier: string): string {
+  if (specifier.startsWith('@remix-run/ui/components/')) {
+    return remixPath.replace('remix/', '') + '.ts'
+  }
+
   return specifier.replace('@remix-run/', '') + '.ts'
 }
 

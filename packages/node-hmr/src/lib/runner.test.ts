@@ -1,0 +1,172 @@
+import * as path from 'node:path'
+import { pathToFileURL } from 'node:url'
+
+import * as assert from '@remix-run/assert'
+import { describe, it } from '@remix-run/test'
+
+import {
+  buildChildProcessEnv,
+  buildChildProcessArgs,
+  getBrowserHmrFileEventsForWatchedFiles,
+  getWatchedDirectoriesForFiles,
+  normalizeBrowserHmrFilePath,
+  resolveChokidarWatchOptions,
+} from './runner.ts'
+
+describe('buildChildProcessArgs', () => {
+  it('preloads the node-hmr register hook after explicit child node options', () => {
+    let entryPath = path.resolve('app/server.ts')
+    let registerPath = path.resolve('app/register.ts')
+
+    let args = buildChildProcessArgs({
+      browserEventUrl: 'http://127.0.0.1:1234/hmr',
+      entry: entryPath,
+      entryArgs: ['--debug'],
+      nodeArgs: ['--import', 'remix/node-tsx', '--enable-source-maps'],
+      registerPath,
+      rootPath: path.resolve('app'),
+    })
+
+    let registerUrl = pathToFileURL(registerPath)
+    registerUrl.searchParams.set('browserEventUrl', 'http://127.0.0.1:1234/hmr')
+    registerUrl.searchParams.set('rootPath', path.resolve('app'))
+
+    assert.deepEqual(args, [
+      '--import',
+      'remix/node-tsx',
+      '--enable-source-maps',
+      '--conditions=node-hmr',
+      '--import',
+      registerUrl.href,
+      entryPath,
+      '--debug',
+    ])
+  })
+
+  it('adds the node-hmr condition alongside explicit child conditions', () => {
+    let entryPath = path.resolve('app/server.ts')
+    let registerPath = path.resolve('app/register.ts')
+
+    let args = buildChildProcessArgs({
+      entry: entryPath,
+      entryArgs: [],
+      nodeArgs: ['--conditions=custom', '--conditions', 'react-server'],
+      registerPath,
+    })
+
+    assert.equal(args.includes('--conditions=custom'), true)
+    assert.equal(args.includes('--conditions=node-hmr'), true)
+  })
+
+  it('omits the browser HMR URL when the browser HMR channel is disabled', () => {
+    let registerPath = path.resolve('app/register.ts')
+    let args = buildChildProcessArgs({
+      entry: 'server.ts',
+      entryArgs: [],
+      nodeArgs: [],
+      registerPath,
+      rootPath: path.resolve('app'),
+    })
+
+    let registerUrl = pathToFileURL(registerPath)
+    registerUrl.searchParams.set('rootPath', path.resolve('app'))
+
+    assert.deepEqual(args, ['--conditions=node-hmr', '--import', registerUrl.href, 'server.ts'])
+  })
+})
+
+describe('buildChildProcessEnv', () => {
+  it('marks the child process as running inside node-hmr', () => {
+    assert.deepEqual(buildChildProcessEnv({ NODE_HMR: '0', NODE_ENV: 'development' }), {
+      NODE_ENV: 'development',
+      NODE_HMR: '1',
+    })
+  })
+})
+
+describe('resolveChokidarWatchOptions', () => {
+  it('uses graph-scoped watch defaults', () => {
+    assert.deepEqual(resolveChokidarWatchOptions(), {
+      awaitWriteFinish: {
+        pollInterval: 10,
+        stabilityThreshold: 10,
+      },
+      depth: 0,
+      ignorePermissionErrors: true,
+      ignored: ['**/.git/**'],
+      ignoreInitial: true,
+      interval: 100,
+      usePolling: process.platform === 'win32',
+    })
+  })
+
+  it('applies custom watch options', () => {
+    assert.deepEqual(
+      resolveChokidarWatchOptions({
+        ignore: ['**/node_modules/**', '**/dist/**'],
+        poll: true,
+        pollInterval: 250,
+      }),
+      {
+        awaitWriteFinish: {
+          pollInterval: 10,
+          stabilityThreshold: 10,
+        },
+        depth: 0,
+        ignorePermissionErrors: true,
+        ignored: ['**/.git/**', '**/node_modules/**', '**/dist/**'],
+        ignoreInitial: true,
+        interval: 250,
+        usePolling: true,
+      },
+    )
+  })
+})
+
+describe('getWatchedDirectoriesForFiles', () => {
+  it('maps watched files to shallow parent directories', () => {
+    assert.deepEqual(
+      getWatchedDirectoriesForFiles(['/app/routes/home.tsx', '/app/routes/about.tsx']),
+      new Set(['/app/routes']),
+    )
+  })
+})
+
+describe('getBrowserHmrFileEventsForWatchedFiles', () => {
+  it('only forwards events for exact watched files', () => {
+    assert.deepEqual(
+      getBrowserHmrFileEventsForWatchedFiles({
+        changedPaths: ['/app/routes/home.tsx', '/app/routes/ignored.tsx'],
+        restartPathEvents: new Map([
+          ['/app/routes/about.tsx', 'add'],
+          ['/app/routes/ignored.css', 'unlink'],
+        ]),
+        watchedFiles: new Set(['/app/routes/home.tsx', '/app/routes/about.tsx']),
+      }),
+      [
+        { event: 'change', filePath: '/app/routes/home.tsx' },
+        { event: 'add', filePath: '/app/routes/about.tsx' },
+      ],
+    )
+  })
+
+  it('matches Windows watcher paths against normalized browser watched files', () => {
+    assert.deepEqual(
+      getBrowserHmrFileEventsForWatchedFiles({
+        changedPaths: ['d:\\app\\routes\\home.tsx', 'd:\\app\\routes\\ignored.tsx'],
+        restartPathEvents: new Map([['d:\\app\\routes\\about.tsx', 'add']]),
+        watchedFiles: new Set(['D:/app/routes/home.tsx', 'D:/app/routes/about.tsx']),
+      }),
+      [
+        { event: 'change', filePath: 'd:\\app\\routes\\home.tsx' },
+        { event: 'add', filePath: 'd:\\app\\routes\\about.tsx' },
+      ],
+    )
+  })
+})
+
+describe('normalizeBrowserHmrFilePath', () => {
+  it('normalizes separators and Windows drive letter casing', () => {
+    assert.equal(normalizeBrowserHmrFilePath('d:\\app\\routes\\home.tsx'), 'D:/app/routes/home.tsx')
+  })
+})

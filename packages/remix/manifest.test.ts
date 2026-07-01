@@ -165,9 +165,12 @@ describe('manifest', () => {
     )
     assert.equal(
       sourceByMirrorPath.get('remix/src/ui/popover/README.md'),
-      'ui/src/popover/README.md',
+      'ui/src/primitives/popover/README.md',
     )
-    assert.equal(sourceByMirrorPath.get('remix/src/ui/button/README.md'), 'ui/src/button/README.md')
+    assert.equal(
+      sourceByMirrorPath.get('remix/src/components/button/README.md'),
+      'ui/src/components/button/README.md',
+    )
     assert.equal(sourceByMirrorPath.get('remix/src/cli/README.md'), 'cli/README.md')
   })
 

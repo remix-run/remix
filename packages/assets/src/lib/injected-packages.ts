@@ -9,6 +9,8 @@ type ResolvedInjectedPackage = {
 }
 
 const injectedPackageNames = ['@oxc-project/runtime'] as const
+const authoredInjectedPackageNames = ['@oxc-project/runtime'] as const
+const generatedInjectedPackageSpecifiers = [] as const
 const injectedPackagesBasePath = '/__@remix/injected'
 
 const resolvedInjectedPackages = new Map<string, ResolvedInjectedPackage>()
@@ -32,18 +34,25 @@ export function getInjectedPackageRouteConfigs(): {
 }[] {
   return injectedPackageNames.map((packageName) => {
     let { packageRoot } = getResolvedInjectedPackage(packageName)
+    let { filePattern, routeRoot } = getInjectedPackageRoute(packageRoot, packageName)
 
     return {
       fileMap: {
-        [getInjectedPackageRoutePattern(packageName)]: `${packageName}/*path`,
+        [getInjectedPackageRoutePattern(packageName)]: filePattern,
       },
-      rootDir: getInjectedPackageRouteRoot(packageRoot, packageName),
+      rootDir: routeRoot,
     }
   })
 }
 
 export function getInjectedPackageNameForSpecifier(specifier: string): string | null {
-  for (let packageName of injectedPackageNames) {
+  for (let injectedSpecifier of generatedInjectedPackageSpecifiers) {
+    if (specifier === injectedSpecifier) {
+      return getPackageName(injectedSpecifier)
+    }
+  }
+
+  for (let packageName of authoredInjectedPackageNames) {
     if (specifier === packageName || specifier.startsWith(`${packageName}/`)) {
       return packageName
     }
@@ -53,19 +62,22 @@ export function getInjectedPackageNameForSpecifier(specifier: string): string | 
 }
 
 export function mayContainInjectedPackageSpecifier(sourceText: string): boolean {
-  return injectedPackageNames.some((packageName) => sourceText.includes(packageName))
+  return authoredInjectedPackageNames.some((packageName) => sourceText.includes(packageName))
 }
 
 export function maskAuthoredInjectedPackageSpecifier(specifier: string): string | null {
-  let packageName = getInjectedPackageNameForSpecifier(specifier)
-  if (!packageName) return null
+  for (let packageName of authoredInjectedPackageNames) {
+    if (specifier !== packageName && !specifier.startsWith(`${packageName}/`)) continue
 
-  let maskedPackageName = getMaskedInjectedPackageName(packageName)
-  return `${maskedPackageName}${specifier.slice(packageName.length)}`
+    let maskedPackageName = getMaskedInjectedPackageName(packageName)
+    return `${maskedPackageName}${specifier.slice(packageName.length)}`
+  }
+
+  return null
 }
 
 export function restoreAuthoredInjectedPackageSpecifier(specifier: string): string | null {
-  for (let packageName of injectedPackageNames) {
+  for (let packageName of authoredInjectedPackageNames) {
     let maskedPackageName = getMaskedInjectedPackageName(packageName)
     if (specifier === maskedPackageName) {
       return packageName
@@ -80,6 +92,11 @@ export function restoreAuthoredInjectedPackageSpecifier(specifier: string): stri
 
 function getMaskedInjectedPackageName(packageName: string): string {
   return `~${packageName.slice(1)}`
+}
+
+function getPackageName(specifier: string): string {
+  let parts = specifier.split('/')
+  return parts[0]?.startsWith('@') ? `${parts[0]}/${parts[1]}` : (parts[0] ?? specifier)
 }
 
 export function getInjectedPackageImporterPath(): string {
@@ -106,12 +123,25 @@ function getInjectedPackageRoutePattern(packageName: string): string {
   return `${injectedPackagesBasePath}/${packageName}/*path`
 }
 
-function getInjectedPackageRouteRoot(packageRoot: string, packageName: string): string {
+function getInjectedPackageRoute(
+  packageRoot: string,
+  packageName: string,
+): { filePattern: string; routeRoot: string } {
+  if (!packageRoot.endsWith(`/${packageName}`)) {
+    return {
+      filePattern: `${packageRoot.slice(getFilePathDirectory(packageRoot).length + 1)}/*path`,
+      routeRoot: getFilePathDirectory(packageRoot),
+    }
+  }
+
   let routeRoot = packageRoot
 
   for (let _segment of packageName.split('/')) {
     routeRoot = getFilePathDirectory(routeRoot)
   }
 
-  return routeRoot
+  return {
+    filePattern: `${packageName}/*path`,
+    routeRoot,
+  }
 }

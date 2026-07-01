@@ -1,5 +1,5 @@
 import { clientEntry, css, navigate, on, type Handle } from 'remix/ui'
-import button from 'remix/ui/button'
+import { Button } from 'remix/components/button'
 import { theme } from './design.ts'
 
 import { NewScheduleActionComponent } from './new-schedule-action.tsx'
@@ -48,9 +48,9 @@ export const ScheduleSidebar = clientEntry(
             </a>
             <form action={handle.props.logoutHref} method="post" mix={logoutFormStyle}>
               <input type="hidden" name="_csrf" value={handle.props.csrfToken} />
-              <button type="submit" mix={[button(), logoutButtonStyle]}>
+              <Button type="submit" tone="ghost" mix={logoutButtonStyle}>
                 Logout
-              </button>
+              </Button>
             </form>
           </div>
 

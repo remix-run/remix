@@ -1,6 +1,7 @@
 import * as fs from 'node:fs'
 import * as fsp from 'node:fs/promises'
 import * as path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { getTsconfig } from 'get-tsconfig'
 import MagicString from 'magic-string'
 import { minify } from 'oxc-minify'
@@ -9,6 +10,7 @@ import { transform as oxcTransform } from 'oxc-transform'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
 import type { Cache, TsConfigJsonResolved } from 'get-tsconfig'
 import type { Node, Program } from 'oxc-parser'
+import type { ResolverFactory } from 'oxc-resolver'
 import type { TransformOptions as OxcTransformOptions } from 'oxc-transform'
 
 import { isCommonJS, mayContainCommonJSModuleGlobals } from './cjs-check.ts'
@@ -24,12 +26,19 @@ import {
   restoreAuthoredInjectedPackageSpecifier,
 } from '../injected-packages.ts'
 import type { ModuleRecord, ModuleTracking } from '../module-store.ts'
+import type {
+  ModuleHooks,
+  ModuleLoadContext,
+  ModuleLoadHookNext,
+  ModuleLoadResult,
+} from '../module-hooks.ts'
 import { normalizeFilePath } from '../paths.ts'
 import type { CompiledRoutes } from '../routes.ts'
 import { composeSourceMaps, rewriteSourceMapSources, stringifySourceMap } from '../source-maps.ts'
 import type { EmittedModule } from './emit.ts'
 import type { ResolvedScriptTarget } from '../target.ts'
 import type { ResolvedModule } from './resolve.ts'
+import { scriptModuleHookConditions } from './conditions.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
@@ -71,8 +80,16 @@ type UnresolvedImport = {
   start: number
 }
 
+type HmrAcceptedDependency = UnresolvedImport
+
 export type TransformedModule = {
+  componentHmrExportNames: string[] | null
   fingerprint: string | null
+  hmr: {
+    acceptedDeps: HmrAcceptedDependency[]
+    selfAccepting: boolean
+    usesImportMetaHot: boolean
+  }
   identityPath: string
   importerDir: string
   packageSpecifiers: string[]
@@ -108,9 +125,12 @@ export type TransformArgs = {
   buildId: string | null
   define: Record<string, string> | null
   externalSet: ReadonlySet<string>
+  isAllowed(absolutePath: string): boolean
   isWatchIgnored(filePath: string): boolean
   minify: boolean
+  moduleHooks: readonly ModuleHooks[]
   resolveActualPath(identityPath: string): string | null
+  resolverFactory: ResolverFactory
   routes: CompiledRoutes
   sourceMapSourcePaths: 'absolute' | 'url'
   sourceMaps: 'external' | 'inline' | null
@@ -205,9 +225,21 @@ export async function transformModule(
   }
 
   try {
+    let stableUrlPathname = args.routes.toUrlPathname(record.identityPath)
+    if (!stableUrlPathname) {
+      throw createAssetServerCompilationError(
+        `File ${record.identityPath} is outside all configured fileMap entries.`,
+        {
+          code: 'FILE_OUTSIDE_FILE_MAP',
+        },
+      )
+    }
+
     let analysis = await analyzeModuleSource(sourceText, resolvedPath, transformOptions, {
       define: args.define ?? undefined,
       minify: args.minify,
+      moduleHooks: args.moduleHooks,
+      moduleUrl: stableUrlPathname,
       sourceMaps: args.sourceMaps ?? undefined,
       target: args.target ?? undefined,
     })
@@ -223,16 +255,6 @@ export async function transformModule(
           `Please use an ESM-compatible module.`,
         {
           code: 'COMMONJS_NOT_SUPPORTED',
-        },
-      )
-    }
-
-    let stableUrlPathname = args.routes.toUrlPathname(record.identityPath)
-    if (!stableUrlPathname) {
-      throw createAssetServerCompilationError(
-        `File ${record.identityPath} is outside all configured fileMap entries.`,
-        {
-          code: 'FILE_OUTSIDE_FILE_MAP',
         },
       )
     }
@@ -253,6 +275,7 @@ export async function transformModule(
         trackedFiles,
       },
       value: {
+        componentHmrExportNames: analysis.componentHmrExportNames,
         fingerprint:
           args.buildId === null
             ? null
@@ -260,6 +283,7 @@ export async function transformModule(
                 buildId: args.buildId,
                 content: sourceText,
               }),
+        hmr: getHmrAnalysis(analysis.rawCode),
         identityPath: record.identityPath,
         importerDir: path.dirname(resolvedPath),
         packageSpecifiers: analysis.unresolvedImports
@@ -282,6 +306,121 @@ export async function transformModule(
       },
     }
   }
+}
+
+export function getHmrAnalysis(rawCode: string): TransformedModule['hmr'] {
+  let mayUseImportMetaHot = rawCode.includes('import.meta.hot')
+  let usesImportMetaHot = false
+  let acceptedDeps: HmrAcceptedDependency[] = []
+  let selfAccepting = false
+
+  if (mayUseImportMetaHot) {
+    try {
+      let parseResult = parseSync('hmr-analysis.js', rawCode, {
+        lang: 'js',
+        sourceType: 'module',
+      })
+
+      if (parseResult.errors.length > 0) {
+        throw createAssetServerCompilationError(
+          `Failed to analyze HMR usage in transformed script. ${parseResult.errors[0]?.message ?? 'Unknown parse error'}`,
+          {
+            code: 'TRANSFORM_FAILED',
+          },
+        )
+      }
+
+      walkAst(parseResult.program, (node) => {
+        if (isImportMetaHotNode(node)) {
+          usesImportMetaHot = true
+        }
+
+        if (node.type !== 'CallExpression') return
+        if (!isImportMetaHotAcceptCallee(node.callee)) return
+
+        let [firstArgument] = node.arguments
+        if (firstArgument === undefined || !isAcceptedDependencyArgument(firstArgument)) {
+          selfAccepting = true
+          return
+        }
+
+        acceptedDeps.push(...getAcceptedDependencies(firstArgument, rawCode))
+      })
+    } catch (error) {
+      if (isAssetServerCompilationError(error)) throw error
+      throw createAssetServerCompilationError(
+        `Failed to analyze HMR usage in transformed script.`,
+        {
+          cause: error,
+          code: 'TRANSFORM_FAILED',
+        },
+      )
+    }
+  }
+
+  return {
+    acceptedDeps,
+    selfAccepting,
+    usesImportMetaHot,
+  }
+}
+
+function isImportMetaHotAcceptCallee(node: Node): boolean {
+  let callee = unwrapChainExpression(node)
+  if (callee.type !== 'MemberExpression') return false
+  if (callee.computed || !isIdentifierNode(callee.property, 'accept')) return false
+
+  return isImportMetaHotNode(callee.object)
+}
+
+function isImportMetaHotNode(node: Node): boolean {
+  let hot = unwrapChainExpression(node)
+  if (hot.type !== 'MemberExpression') return false
+  if (hot.computed || !isIdentifierNode(hot.property, 'hot')) return false
+
+  let meta = unwrapChainExpression(hot.object)
+  return (
+    meta.type === 'MetaProperty' &&
+    isIdentifierNode(meta.meta, 'import') &&
+    isIdentifierNode(meta.property, 'meta')
+  )
+}
+
+function unwrapChainExpression(node: Node): Node {
+  return node.type === 'ChainExpression' ? node.expression : node
+}
+
+function isIdentifierNode(node: Node, name: string): boolean {
+  return node.type === 'Identifier' && node.name === name
+}
+
+function isAcceptedDependencyArgument(node: Node): boolean {
+  return isStringLiteralNode(node) || node.type === 'ArrayExpression'
+}
+
+function getAcceptedDependencies(node: Node, source: string): HmrAcceptedDependency[] {
+  if (isStringLiteralNode(node)) {
+    return [
+      {
+        end: node.end - 1,
+        specifier: node.value,
+        start: node.start + 1,
+      },
+    ]
+  }
+
+  if (node.type !== 'ArrayExpression') return []
+
+  let deps: HmrAcceptedDependency[] = []
+  for (let element of node.elements) {
+    if (!isStringLiteralNode(element)) continue
+    deps.push({
+      end: element.end - 1,
+      specifier: element.value,
+      start: element.start + 1,
+    })
+  }
+  return deps
 }
 
 function findNearestTsconfigPath(directory: string): string | null {
@@ -318,6 +457,8 @@ async function analyzeModuleSource(
   options: {
     define?: Record<string, string>
     minify: boolean
+    moduleHooks: readonly ModuleHooks[]
+    moduleUrl: string
     sourceMaps?: 'external' | 'inline'
     target?: ResolvedScriptTarget
   },
@@ -344,6 +485,30 @@ async function analyzeModuleSource(
 
   let rawCode = transformResult.code.trimEnd()
   let sourceMap = stringifySourceMap(transformResult.map)
+  let componentHmrExportNames: string[] | null = null
+
+  if (options.moduleHooks.length > 0) {
+    let hookUrl = pathToFileURL(resolvedPath).href
+    let hookInputSource = sourceMap ? appendInlineSourceMap(rawCode, sourceMap) : rawCode
+    let hookResult = runModuleLoadHooks(hookUrl, {
+      format: 'module',
+      hooks: options.moduleHooks,
+      moduleUrl: options.moduleUrl,
+      source: hookInputSource,
+    })
+    let hookOutputSource = moduleLoadSourceToString(getModuleLoadSource(hookUrl, hookResult))
+    if (hookOutputSource !== hookInputSource) {
+      let hookOutput = extractInlineSourceMap(hookOutputSource)
+      rawCode = hookOutput.code.trimEnd()
+      sourceMap =
+        hookOutput.sourceMap && hookOutput.sourceMap !== sourceMap
+          ? sourceMap
+            ? composeSourceMaps(hookOutput.sourceMap, sourceMap)
+            : hookOutput.sourceMap
+          : null
+    }
+    componentHmrExportNames = getComponentHmrExportNames(rawCode)
+  }
 
   if (options.minify) {
     let minifyResult = await minifyModule(rawCode, resolvedPath, options.target, options.sourceMaps)
@@ -358,9 +523,124 @@ async function analyzeModuleSource(
   }
 
   return {
+    componentHmrExportNames,
     rawCode,
     sourceMap,
     unresolvedImports: await getUnresolvedImportsFromLexer(rawCode),
+  }
+}
+
+function runModuleLoadHooks(
+  url: string,
+  options: {
+    format: string
+    hooks: readonly ModuleHooks[]
+    moduleUrl: string
+    source: string
+  },
+): ModuleLoadResult {
+  let loadHooks = options.hooks.map((hook) => hook.load).filter((load) => load !== undefined)
+
+  let loadContext: ModuleLoadContext = {
+    conditions: [...scriptModuleHookConditions],
+    format: options.format,
+    importAttributes: {},
+    moduleUrl: options.moduleUrl,
+  }
+
+  let load: ModuleLoadHookNext = (_url, context) => ({
+    format: context?.format ?? options.format,
+    source: options.source,
+  })
+
+  for (let hook of loadHooks) {
+    let nextLoad = load
+    load = (nextUrl, nextContext) => {
+      let nextLoadCalled = false
+      let wrappedNextLoad: ModuleLoadHookNext = (wrappedUrl, wrappedContext) => {
+        nextLoadCalled = true
+        return nextLoad(wrappedUrl, wrappedContext)
+      }
+      let result = hook(
+        nextUrl,
+        {
+          conditions: nextContext?.conditions ?? loadContext.conditions,
+          format: nextContext?.format ?? loadContext.format,
+          importAttributes: nextContext?.importAttributes ?? loadContext.importAttributes,
+          moduleUrl: nextContext?.moduleUrl ?? loadContext.moduleUrl,
+        },
+        wrappedNextLoad,
+      )
+      if (!nextLoadCalled && result.shortCircuit !== true) {
+        throw createAssetServerCompilationError(
+          `Module load hook for ${nextUrl} returned without calling nextLoad or setting shortCircuit: true.`,
+          {
+            code: 'TRANSFORM_FAILED',
+          },
+        )
+      }
+      return result
+    }
+  }
+
+  return load(url, loadContext)
+}
+
+function getModuleLoadSource(
+  url: string,
+  result: ModuleLoadResult,
+): string | ArrayBuffer | NodeJS.TypedArray {
+  if (result.format !== 'module') {
+    throw createAssetServerCompilationError(
+      `Module load hook for ${url} returned unsupported format ${JSON.stringify(result.format)}. Only "module" is supported.`,
+      {
+        code: 'TRANSFORM_FAILED',
+      },
+    )
+  }
+
+  if (result.source !== undefined && result.source !== null) return result.source
+
+  throw createAssetServerCompilationError(`Module load hook for ${url} did not return source.`, {
+    code: 'TRANSFORM_FAILED',
+  })
+}
+
+function moduleLoadSourceToString(source: string | ArrayBuffer | NodeJS.TypedArray): string {
+  if (typeof source === 'string') return source
+  return new TextDecoder().decode(source)
+}
+
+function appendInlineSourceMap(source: string, sourceMap: string): string {
+  let encoded = Buffer.from(sourceMap).toString('base64')
+  return `${source}\n//# sourceMappingURL=data:application/json;base64,${encoded}`
+}
+
+function extractInlineSourceMap(source: string): {
+  code: string
+  sourceMap: string | null
+} {
+  let sourceMapPattern =
+    /(?:\/\/# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+)|\/\*# sourceMappingURL=data:application\/json;base64,([A-Za-z0-9+/=]+) \*\/)\s*$/g
+  let sourceMap: string | null = null
+  let code = source.replace(sourceMapPattern, (_match, lineComment, blockComment) => {
+    sourceMap = Buffer.from(lineComment ?? blockComment, 'base64').toString('utf-8')
+    return ''
+  })
+
+  return { code, sourceMap }
+}
+
+function getComponentHmrExportNames(source: string): string[] | null {
+  let match = /__remixHmrComponentExportNames = (\[[^\n]*\]);/.exec(source)
+  let namesSource = match?.[1]
+  if (namesSource === undefined) return null
+
+  try {
+    let names = JSON.parse(namesSource) as unknown
+    return Array.isArray(names) && names.every((name) => typeof name === 'string') ? names : null
+  } catch {
+    return null
   }
 }
 
