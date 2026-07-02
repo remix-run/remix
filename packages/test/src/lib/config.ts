@@ -129,6 +129,11 @@ const cliOptions = {
     short: 'r',
     description: 'Test reporter: spec, files, tap, dot (default: spec)',
   },
+  'test-name-pattern': {
+    type: 'string',
+    multiple: true,
+    description: 'Regular expression pattern(s) for test names',
+  },
   type: {
     type: 'string',
     short: 't',
@@ -169,6 +174,7 @@ const defaultValues: ResolvedRemixTestConfig = {
   reporter: process.env.CI === 'true' ? 'files' : 'spec',
   setup: undefined,
   type: ['server', 'browser', 'e2e'],
+  testNamePatterns: undefined,
   watch: false,
 }
 
@@ -178,6 +184,13 @@ const defaultValues: ResolvedRemixTestConfig = {
  * uses worker threads for projects that prefer lower-overhead startup.
  */
 export type RemixTestPool = 'forks' | 'threads'
+
+export interface SerializedTestNamePattern {
+  source: string
+  flags: string
+}
+
+export type RemixTestNamePattern = string | RegExp
 
 /**
  * User-facing configuration for the `remix-test` CLI. Every field is
@@ -249,6 +262,12 @@ export interface RemixTestConfig {
   /** Test reporter (--reporter) */
   reporter?: string
   /**
+   * Regular expression pattern(s) to filter tests by their full name (--test-name-pattern).
+   * Accepts a single pattern or an array of patterns; `--test-name-pattern` may be repeated
+   * on the CLI.
+   */
+  testNamePattern?: RemixTestNamePattern | RemixTestNamePattern[]
+  /**
    * Test type(s) to run (--type). Accepts a single type or an array of types;
    * `--type` may be repeated on the CLI. Valid values: "server", "browser", "e2e".
    */
@@ -285,6 +304,7 @@ export interface ResolvedRemixTestConfig {
   reporter: string
   pool: RemixTestPool
   setup: string | undefined
+  testNamePatterns: SerializedTestNamePattern[] | undefined
   type: string[]
   watch: boolean
 }
@@ -423,6 +443,9 @@ function resolveConfig(
       return raw === undefined ? undefined : toCommaSeparatedArray(raw)
     })(),
     reporter: cliValues.reporter ?? fileConfig.reporter ?? defaultValues.reporter,
+    testNamePatterns: resolveTestNamePatterns(
+      cliValues['test-name-pattern'] ?? fileConfig.testNamePattern,
+    ),
     type: toCommaSeparatedArray(cliValues.type ?? fileConfig.type ?? defaultValues.type),
     watch: cliValues.watch ?? fileConfig.watch ?? defaultValues.watch,
   }
@@ -434,6 +457,48 @@ function resolvePool(value: string): RemixTestPool {
   }
 
   throw new Error(`Unsupported test pool "${value}". Supported pools are: forks, threads`)
+}
+
+function resolveTestNamePatterns(
+  value: RemixTestNamePattern | readonly RemixTestNamePattern[] | undefined,
+): SerializedTestNamePattern[] | undefined {
+  if (value === undefined) return undefined
+
+  return toArray(value).map((pattern) => {
+    let serialized =
+      typeof pattern === 'string'
+        ? parsePatternString(pattern)
+        : { source: pattern.source, flags: pattern.flags }
+    validateTestNamePattern(serialized)
+    return serialized
+  })
+}
+
+function parsePatternString(pattern: string): SerializedTestNamePattern {
+  let literal = parseRegexLiteral(pattern)
+  return literal ?? { source: pattern, flags: '' }
+}
+
+function parseRegexLiteral(pattern: string): SerializedTestNamePattern | undefined {
+  if (!pattern.startsWith('/') || pattern.length < 2) return undefined
+
+  let escaped = false
+  for (let index = pattern.length - 1; index > 0; index--) {
+    let char = pattern[index]
+    if (char === '/' && !escaped) {
+      return {
+        source: pattern.slice(1, index),
+        flags: pattern.slice(index + 1),
+      }
+    }
+    escaped = char === '\\' && !escaped
+  }
+
+  return undefined
+}
+
+function validateTestNamePattern(pattern: SerializedTestNamePattern): void {
+  new RegExp(pattern.source, pattern.flags)
 }
 
 async function loadConfigFile(

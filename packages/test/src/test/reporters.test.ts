@@ -20,6 +20,20 @@ describe('reporters skip and todo reasons', () => {
     assert.match(output, /suite > todo test # todo: needs design/)
   })
 
+  it('does not print empty files reporter results', () => {
+    let output = captureConsole(() =>
+      new FilesReporter().onResult({
+        passed: 0,
+        failed: 0,
+        skipped: 0,
+        todo: 0,
+        tests: [],
+      }),
+    )
+
+    assert.equal(output, '')
+  })
+
   it('prints reasons as TAP directives', () => {
     let output = captureConsole(() => new TapReporter().onResult(createPendingResults()))
 

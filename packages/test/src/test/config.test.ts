@@ -72,6 +72,44 @@ describe('loadConfig', () => {
       await fsp.rm(tmp, { recursive: true, force: true })
     }
   })
+
+  it('normalizes test name patterns from CLI flags', async () => {
+    let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
+
+    try {
+      let config = await loadConfig(
+        ['--test-name-pattern', 'passes', '--test-name-pattern', '/fails/i'],
+        tmp,
+      )
+
+      assert.deepEqual(config.testNamePatterns, [
+        { source: 'passes', flags: '' },
+        { source: 'fails', flags: 'i' },
+      ])
+    } finally {
+      await fsp.rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  it('normalizes test name patterns from config files', async () => {
+    let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
+
+    try {
+      await fsp.writeFile(
+        path.join(tmp, 'remix-test.config.ts'),
+        ['export default {', "  testNamePattern: [/server/i, 'browser'],", '}'].join('\n'),
+      )
+
+      let config = await loadConfig([], tmp)
+
+      assert.deepEqual(config.testNamePatterns, [
+        { source: 'server', flags: 'i' },
+        { source: 'browser', flags: '' },
+      ])
+    } finally {
+      await fsp.rm(tmp, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('config', () => {
@@ -119,6 +157,12 @@ describe('config', () => {
     let help = getRemixTestHelpText()
 
     assert.match(help, /--pool <value>/)
+  })
+
+  it('includes the test name pattern flag in help text', () => {
+    let help = getRemixTestHelpText()
+
+    assert.match(help, /--test-name-pattern <value>/)
   })
 })
 

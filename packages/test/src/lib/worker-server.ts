@@ -1,6 +1,7 @@
 import * as mod from 'node:module'
 import { IS_RUNNING_FROM_SRC } from './config.ts'
 import { importModule } from './import-module.ts'
+import type { SerializedTestNamePattern } from './config.ts'
 import type { CoverageConfig } from './coverage.ts'
 import type { TestResults } from './reporters/results.ts'
 import { runTests } from './executor.ts'
@@ -10,6 +11,7 @@ import { createFailedResults } from './worker-results.ts'
 export interface ServerTestWorkerData {
   file: string
   coverage?: CoverageConfig
+  testNamePatterns?: SerializedTestNamePattern[]
 }
 
 export async function runServerTestFile(value: unknown): Promise<TestResults> {
@@ -31,7 +33,7 @@ export async function runServerTestFile(value: unknown): Promise<TestResults> {
       await importModule(workerData.file, import.meta)
     }
 
-    let results = await runTests()
+    let results = await runTests({ testNamePatterns: workerData.testNamePatterns })
     await takeCoverage(workerData.coverage)
     return results
   } catch (error) {
@@ -55,6 +57,7 @@ function parseServerTestWorkerData(value: unknown): ServerTestWorkerData {
   return {
     file: value.file,
     coverage: parseCoverageConfig(value.coverage),
+    testNamePatterns: parseTestNamePatterns(value.testNamePatterns),
   }
 }
 
@@ -89,6 +92,25 @@ export function parseCoverageConfig(value: unknown): CoverageConfig | undefined 
   if (functions !== undefined) coverage.functions = functions
 
   return coverage
+}
+
+export function parseTestNamePatterns(value: unknown): SerializedTestNamePattern[] | undefined {
+  if (value === undefined) {
+    return undefined
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error('Invalid server test worker test name patterns')
+  }
+
+  return value.map((item) => {
+    if (!isRecord(item) || typeof item.source !== 'string' || typeof item.flags !== 'string') {
+      throw new Error('Invalid server test worker test name pattern')
+    }
+
+    new RegExp(item.source, item.flags)
+    return { source: item.source, flags: item.flags }
+  })
 }
 
 function parseStringArray(value: unknown, name: string): string[] | undefined {

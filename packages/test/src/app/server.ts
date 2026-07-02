@@ -7,7 +7,11 @@ import * as path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { ResolverFactory } from 'oxc-resolver'
 import { SourceMapConsumer, SourceMapGenerator } from 'source-map-js'
-import { getBrowserTestRootDir, IS_RUNNING_FROM_SRC } from '../lib/config.ts'
+import {
+  getBrowserTestRootDir,
+  IS_RUNNING_FROM_SRC,
+  type SerializedTestNamePattern,
+} from '../lib/config.ts'
 import { transformTypeScript } from '../lib/ts-transform.ts'
 
 const log = (str: string) => console.log(`[remix:test] ${str}`)
@@ -22,8 +26,9 @@ const browserResolver = new ResolverFactory({
 
 export async function startServer(
   browserFiles: string[],
+  options: { testNamePatterns?: SerializedTestNamePattern[] } = {},
 ): Promise<{ server: http.Server; port: number; baseUrl: string }> {
-  let handle = createRequestHandler(browserFiles)
+  let handle = createRequestHandler(browserFiles, options)
 
   let server = http.createServer((req, res) => {
     handle(req, res).catch((error) => {
@@ -65,6 +70,7 @@ function isAddressInfo(address: ReturnType<http.Server['address']>): address is 
 
 function createRequestHandler(
   browserFiles: string[],
+  options: { testNamePatterns?: SerializedTestNamePattern[] } = {},
 ): (req: http.IncomingMessage, res: http.ServerResponse) => Promise<void> {
   let rootDir = getBrowserTestRootDir()
   let srcDir = IS_RUNNING_FROM_SRC
@@ -91,7 +97,11 @@ function createRequestHandler(
     }
 
     if (url.pathname === '/') {
-      let setupJson = JSON.stringify({ testPaths, baseDir: process.cwd() })
+      let setupJson = JSON.stringify({
+        testPaths,
+        baseDir: process.cwd(),
+        testNamePatterns: options.testNamePatterns,
+      })
       let body =
         `<script type="application/json" id="test-setup">` +
         `${escapeJsonForScript(setupJson)}` +

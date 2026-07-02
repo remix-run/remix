@@ -3,6 +3,7 @@ import type { TestContext } from '../lib/context.ts'
 import { runTests } from '../lib/executor.ts'
 import { describe, it } from '../lib/framework.ts'
 import type { TestResults } from '../lib/reporters/results.ts'
+import type { SerializedTestNamePattern } from '../lib/config.ts'
 
 interface RunnableOptions {
   timeout?: number
@@ -380,13 +381,387 @@ describe('runTests skip and todo reasons', () => {
   })
 })
 
-async function runWithSuites(suites: SuiteFixture[]): Promise<TestResults> {
+describe('runTests test name patterns', () => {
+  it('only runs tests with full names matching a configured pattern', async () => {
+    let ran: string[] = []
+
+    let results = await runWithSuites(
+      [
+        {
+          name: 'math',
+          tests: [
+            {
+              name: 'adds numbers',
+              fn() {
+                ran.push('adds')
+              },
+            },
+            {
+              name: 'subtracts numbers',
+              fn() {
+                ran.push('subtracts')
+              },
+            },
+          ],
+        },
+      ],
+      { testNamePatterns: [{ source: 'math adds', flags: '' }] },
+    )
+
+    assert.deepEqual(ran, ['adds'])
+    assert.equal(results.passed, 1)
+    assert.equal(results.failed, 0)
+    assert.equal(results.skipped, 1)
+    assert.equal(results.tests.length, 1)
+    assert.equal(results.tests[0]?.name, 'adds numbers')
+  })
+
+  it('counts non-matching tests as skipped without reporting them individually', async () => {
+    let results = await runWithSuites(
+      [
+        {
+          name: 'suite',
+          tests: [
+            {
+              name: 'matching test',
+              fn() {},
+            },
+            {
+              name: 'other test',
+              fn() {},
+            },
+          ],
+        },
+      ],
+      { testNamePatterns: [{ source: 'matching', flags: '' }] },
+    )
+
+    assert.equal(results.passed, 1)
+    assert.equal(results.skipped, 1)
+    assert.deepEqual(
+      results.tests.map((test) => test.name),
+      ['matching test'],
+    )
+  })
+
+  it('applies it.only before the configured pattern', async () => {
+    let ran: string[] = []
+
+    let results = await runWithSuites(
+      [
+        {
+          name: 'suite',
+          beforeAll: [
+            {
+              fn() {
+                ran.push('beforeAll')
+              },
+            },
+          ],
+          tests: [
+            {
+              name: 'fast path',
+              fn() {
+                ran.push('fast')
+              },
+            },
+            {
+              name: 'slow path',
+              only: true,
+              fn() {
+                ran.push('slow')
+              },
+            },
+          ],
+        },
+      ],
+      { testNamePatterns: [{ source: 'fast', flags: '' }] },
+    )
+
+    assert.deepEqual(ran, [])
+    assert.equal(results.passed, 0)
+    assert.equal(results.skipped, 1)
+    assert.equal(results.tests.length, 0)
+  })
+
+  it('honors it.only on tests that match the configured pattern', async () => {
+    let ran: string[] = []
+
+    let results = await runWithSuites(
+      [
+        {
+          name: 'suite',
+          tests: [
+            {
+              name: 'fast path',
+              only: true,
+              fn() {
+                ran.push('fast')
+              },
+            },
+            {
+              name: 'slow path',
+              fn() {
+                ran.push('slow')
+              },
+            },
+          ],
+        },
+      ],
+      { testNamePatterns: [{ source: 'path', flags: '' }] },
+    )
+
+    assert.deepEqual(ran, ['fast'])
+    assert.equal(results.passed, 1)
+    assert.equal(results.skipped, 0)
+    assert.deepEqual(
+      results.tests.map((test) => `${test.name}:${test.status}`),
+      ['fast path:passed'],
+    )
+  })
+
+  it('applies describe.only before the configured pattern', async () => {
+    let ran: string[] = []
+
+    let results = await runWithSuites(
+      [
+        {
+          name: 'focused suite',
+          only: true,
+          tests: [
+            {
+              name: 'slow path',
+              fn() {
+                ran.push('slow')
+              },
+            },
+          ],
+        },
+        {
+          name: 'regular suite',
+          tests: [
+            {
+              name: 'fast path',
+              fn() {
+                ran.push('fast')
+              },
+            },
+          ],
+        },
+      ],
+      { testNamePatterns: [{ source: 'regular suite fast', flags: '' }] },
+    )
+
+    assert.deepEqual(ran, [])
+    assert.equal(results.passed, 0)
+    assert.equal(results.skipped, 1)
+    assert.equal(results.tests.length, 0)
+  })
+
+  it('honors describe.only on suites that match the configured pattern', async () => {
+    let ran: string[] = []
+
+    let results = await runWithSuites(
+      [
+        {
+          name: 'focused suite',
+          only: true,
+          tests: [
+            {
+              name: 'fast path',
+              fn() {
+                ran.push('focused')
+              },
+            },
+          ],
+        },
+        {
+          name: 'regular suite',
+          tests: [
+            {
+              name: 'fast path',
+              fn() {
+                ran.push('regular')
+              },
+            },
+          ],
+        },
+      ],
+      { testNamePatterns: [{ source: 'fast', flags: '' }] },
+    )
+
+    assert.deepEqual(ran, ['focused'])
+    assert.equal(results.passed, 1)
+    assert.equal(results.skipped, 0)
+    assert.deepEqual(
+      results.tests.map((test) => `${test.suiteName} ${test.name}:${test.status}`),
+      ['focused suite fast path:passed'],
+    )
+  })
+
+  it('does not run suite hooks when no tests match', async () => {
+    let beforeAllRan = false
+    let afterAllRan = false
+
+    let results = await runWithSuites(
+      [
+        {
+          name: 'suite',
+          beforeAll: [
+            {
+              fn() {
+                beforeAllRan = true
+              },
+            },
+          ],
+          afterAll: [
+            {
+              fn() {
+                afterAllRan = true
+              },
+            },
+          ],
+          tests: [
+            {
+              name: 'other test',
+              fn() {},
+            },
+          ],
+        },
+      ],
+      { testNamePatterns: [{ source: 'missing', flags: '' }] },
+    )
+
+    assert.equal(beforeAllRan, false)
+    assert.equal(afterAllRan, false)
+    assert.equal(results.skipped, 1)
+    assert.equal(results.tests.length, 0)
+  })
+
+  it('runs suite hooks once when some tests match', async () => {
+    let events: string[] = []
+
+    let results = await runWithSuites(
+      [
+        {
+          name: 'suite',
+          beforeAll: [
+            {
+              fn() {
+                events.push('beforeAll')
+              },
+            },
+          ],
+          beforeEach: [
+            {
+              fn() {
+                events.push('beforeEach')
+              },
+            },
+          ],
+          afterEach: [
+            {
+              fn() {
+                events.push('afterEach')
+              },
+            },
+          ],
+          afterAll: [
+            {
+              fn() {
+                events.push('afterAll')
+              },
+            },
+          ],
+          tests: [
+            {
+              name: 'matching test',
+              fn() {
+                events.push('test')
+              },
+            },
+            {
+              name: 'other test',
+              fn() {
+                events.push('other')
+              },
+            },
+          ],
+        },
+      ],
+      { testNamePatterns: [{ source: 'matching', flags: '' }] },
+    )
+
+    assert.deepEqual(events, ['beforeAll', 'beforeEach', 'test', 'afterEach', 'afterAll'])
+    assert.equal(results.passed, 1)
+    assert.equal(results.skipped, 1)
+    assert.deepEqual(
+      results.tests.map((test) => test.name),
+      ['matching test'],
+    )
+  })
+
+  it('filters empty todo suite placeholders by suite name', async () => {
+    let results = await runWithSuites(
+      [
+        {
+          name: 'matching todo',
+          todo: true,
+          tests: [],
+        },
+        {
+          name: 'other todo',
+          todo: true,
+          tests: [],
+        },
+      ],
+      { testNamePatterns: [{ source: '^matching todo$', flags: '' }] },
+    )
+
+    assert.equal(results.todo, 1)
+    assert.equal(results.skipped, 1)
+    assert.deepEqual(
+      results.tests.map((test) => `${test.suiteName}:${test.status}`),
+      ['matching todo:todo'],
+    )
+  })
+
+  it('matches with regular expression flags', async () => {
+    let results = await runWithSuites(
+      [
+        {
+          name: 'suite',
+          tests: [
+            {
+              name: 'UPPERCASE test',
+              fn() {},
+            },
+          ],
+        },
+      ],
+      { testNamePatterns: [{ source: 'uppercase', flags: 'i' }] },
+    )
+
+    assert.equal(results.passed, 1)
+    assert.equal(results.skipped, 0)
+    assert.equal(results.tests[0]?.name, 'UPPERCASE test')
+  })
+})
+
+interface RunWithSuitesOptions {
+  testNamePatterns?: SerializedTestNamePattern[]
+}
+
+async function runWithSuites(
+  suites: SuiteFixture[],
+  options?: RunWithSuitesOptions,
+): Promise<TestResults> {
   let global = globalThis as TestSuitesGlobal
   let previousSuites = global.__testSuites
 
   global.__testSuites = suites
   try {
-    return await runTests()
+    return await runTests(options)
   } finally {
     global.__testSuites = previousSuites
   }

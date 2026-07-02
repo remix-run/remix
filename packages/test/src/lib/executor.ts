@@ -1,6 +1,7 @@
 import { createTestContext, type CreateTestContextE2EOptions, type TestContext } from './context.ts'
 import type { V8CoverageEntry } from './coverage.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
+import type { SerializedTestNamePattern } from './config.ts'
 
 type PendingMeta = boolean | string
 
@@ -33,25 +34,67 @@ interface RegisteredTest extends RunnableOptions {
   todo?: PendingMeta
 }
 
-export async function runTests(
-  options?: Omit<CreateTestContextE2EOptions, 'addE2ECoverageEntries'>,
-): Promise<TestResults> {
+type RunTestsE2EOptions = Omit<CreateTestContextE2EOptions, 'addE2ECoverageEntries'>
+
+export interface RunTestsOptions extends Partial<RunTestsE2EOptions> {
+  testNamePatterns?: SerializedTestNamePattern[]
+}
+
+export async function runTests(options?: RunTestsOptions): Promise<TestResults> {
   let suites = getRegisteredSuites()
+  let testNameMatcher = createTestNameMatcher(options?.testNamePatterns)
+  let hasOnlySuites = suites.some((suite) => suite.only)
+  let filteredTests = 0
+  let runnableSuites = suites.flatMap((suite) => {
+    if (testNameMatcher && hasOnlySuites && !suite.only) {
+      return []
+    }
+
+    let focusedSuiteTests =
+      testNameMatcher && suite.tests.some((test) => test.only)
+        ? suite.tests.filter((test) => test.only)
+        : suite.tests
+    let suiteTests = testNameMatcher
+      ? focusedSuiteTests.filter((test) => testNameMatcher(suite.name, test.name))
+      : focusedSuiteTests
+    let shouldIncludePendingSuitePlaceholder =
+      suite.tests.length === 0 &&
+      getPendingStatus(suite) !== undefined &&
+      (testNameMatcher ? testNameMatcher(suite.name, '') : true)
+    if (testNameMatcher) {
+      filteredTests += focusedSuiteTests.length - suiteTests.length
+      if (
+        suite.tests.length === 0 &&
+        getPendingStatus(suite) !== undefined &&
+        !shouldIncludePendingSuitePlaceholder
+      ) {
+        filteredTests++
+      }
+    }
+
+    if (
+      suiteTests.length === 0 &&
+      !shouldIncludePendingSuitePlaceholder &&
+      (testNameMatcher || suite.tests.length > 0)
+    ) {
+      return []
+    }
+
+    return [{ suite, suiteTests, shouldIncludePendingSuitePlaceholder }]
+  })
   let e2eCoverageEntries: Array<{ entries: V8CoverageEntry[]; baseUrl: string }> = []
   let results: TestResults = {
     passed: 0,
     failed: 0,
-    skipped: 0,
+    skipped: filteredTests,
     todo: 0,
     tests: [],
   }
 
-  let hasOnlySuites = suites.some((suite) => suite.only)
-
-  for (let suite of suites) {
+  for (let { suite, suiteTests, shouldIncludePendingSuitePlaceholder } of runnableSuites) {
     // If any suite uses .only, skip all non-only suites
     if (hasOnlySuites && !suite.only) {
-      for (let test of suite.tests) {
+      for (let test of suiteTests) {
         results.tests.push(createPendingResult(test.name, suite.name, 'skipped'))
         results.skipped++
       }
@@ -61,12 +104,12 @@ export async function runTests(
     let suitePendingStatus = getPendingStatus(suite)
     if (suitePendingStatus) {
       let reason = getPendingReason(suite, suitePendingStatus)
-      for (let test of suite.tests) {
+      for (let test of suiteTests) {
         results.tests.push(createPendingResult(test.name, suite.name, suitePendingStatus, reason))
         results[suitePendingStatus]++
       }
-      // describe.todo('name') with no tests — add placeholder so suite appears in output
-      if (suite.tests.length === 0) {
+      // Pending suites with no tests get a placeholder so the suite appears in output.
+      if (shouldIncludePendingSuitePlaceholder) {
         results.tests.push(createPendingResult('', suite.name, suitePendingStatus, reason))
         results[suitePendingStatus]++
       }
@@ -86,9 +129,9 @@ export async function runTests(
       }
     }
 
-    let hasOnlyTests = suite.tests.some((test) => test.only)
+    let hasOnlyTests = suiteTests.some((test) => test.only)
 
-    for (let test of suite.tests) {
+    for (let test of suiteTests) {
       // If any test uses .only, skip all non-only tests in this suite
       if (hasOnlyTests && !test.only) {
         results.tests.push(createPendingResult(test.name, suite.name, 'skipped'))
@@ -123,14 +166,10 @@ export async function runTests(
       let afterEachFailed = false
 
       let testAbortController = new AbortController()
+      let e2eOptions = createE2EOptions(options, (e) => e2eCoverageEntries.push(e))
       let { testContext, cleanup } = createTestContext({
         signal: testAbortController.signal,
-        e2e: options
-          ? {
-              ...options,
-              addE2ECoverageEntries: (e) => e2eCoverageEntries.push(e),
-            }
-          : undefined,
+        e2e: e2eOptions,
       })
 
       try {
@@ -197,6 +236,44 @@ export async function runTests(
   }
 
   return results
+}
+
+function createE2EOptions(
+  options: RunTestsOptions | undefined,
+  addE2ECoverageEntries: CreateTestContextE2EOptions['addE2ECoverageEntries'],
+): CreateTestContextE2EOptions | undefined {
+  if (options?.browser === undefined) return undefined
+  if (
+    options.coverage === undefined ||
+    options.open === undefined ||
+    options.playwrightPageOptions === undefined
+  ) {
+    throw new Error('Incomplete E2E test options')
+  }
+
+  return {
+    addE2ECoverageEntries,
+    browser: options.browser,
+    coverage: options.coverage,
+    open: options.open,
+    playwrightPageOptions: options.playwrightPageOptions,
+  }
+}
+
+function createTestNameMatcher(
+  patterns: SerializedTestNamePattern[] | undefined,
+): ((suiteName: string, testName: string) => boolean) | undefined {
+  if (patterns === undefined) return undefined
+
+  let regexes = patterns.map((pattern) => new RegExp(pattern.source, pattern.flags))
+
+  return (suiteName, testName) => {
+    let fullName = suiteName && testName ? `${suiteName} ${testName}` : suiteName || testName
+    return regexes.some((regex) => {
+      regex.lastIndex = 0
+      return regex.test(fullName)
+    })
+  }
 }
 
 function getRegisteredSuites(): RegisteredSuite[] {
