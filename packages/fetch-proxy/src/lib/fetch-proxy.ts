@@ -1,5 +1,7 @@
 import { SetCookie } from '@remix-run/headers/set-cookie'
 
+import { createRequest } from './create-request.ts'
+
 /**
  * Options for {@link createFetchProxy}.
  */
@@ -67,7 +69,7 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
   }
 
   return async (input: URL | RequestInfo, init?: RequestInit) => {
-    let request = new Request(input, init)
+    let request = createRequest(input, init)
     let url = new URL(request.url)
 
     let proxyUrl = new URL(url.search, targetUrl)
