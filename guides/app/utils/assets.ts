@@ -15,10 +15,14 @@ export const assetServer = createAssetServer({
   fileMap: {
     '/app/*path': 'guides/app/*path',
     '/packages/*path': 'packages/*path',
-    '/public/*path': 'guides/public/*path',
   },
-  allow: ['guides/public', 'guides/app/**/public/**', 'packages/*/src/**'],
-  deny: ['guides/public/static'],
+  allow: [
+    'guides/app/routes.ts',
+    'guides/app/**/*.browser.ts?(x)',
+    'guides/app/**/*.demo.ts?(x)',
+    'guides/app/styles/**/*.css',
+    'packages/*/src/**',
+  ],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: isProduction,
   fingerprint: isProduction ? { buildId: process.env.GITHUB_SHA || String(Date.now()) } : undefined,

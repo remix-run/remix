@@ -11,9 +11,9 @@ Placeholder for Static files vs source-served assets.
 
 Placeholder for Remix's unbundled asset server.
 
-## File maps, allow and deny rules, and browser-only modules {#file-maps-allow-and-deny-rules-and-browser-only-modules}
+## Browser modules, asset roots, and package mounts {#browser-modules-asset-roots-and-package-mounts}
 
-Placeholder for File maps, allow and deny rules, and browser-only modules.
+Placeholder for Browser modules, asset roots, and package mounts.
 
 ## Client entry hrefs and module preloads {#client-entry-hrefs-and-module-preloads}
 

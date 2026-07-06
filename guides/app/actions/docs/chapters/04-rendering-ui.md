@@ -163,7 +163,7 @@ export function Document(
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>{handle.props.title}</title>
-        <script async type="module" src="/assets/app/entry.ts" />
+        <script async type="module" src="/assets/app/entry.browser.ts" />
       </head>
       <body>{handle.props.children}</body>
     </html>

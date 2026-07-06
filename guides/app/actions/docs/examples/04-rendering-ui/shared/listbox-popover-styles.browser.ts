@@ -1,6 +1,6 @@
 import { css, type CSSMixinDescriptor } from "remix/ui";
 
-import { componentStyleValues as styles } from "./style-values.ts";
+import { componentStyleValues as styles } from "./style-values.browser.ts";
 
 const popupViewportClampMaxHeight = "50dvh";
 

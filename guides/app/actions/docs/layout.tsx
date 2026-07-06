@@ -1,6 +1,6 @@
 import type { Handle, RemixNode } from 'remix/ui'
 
-import { CodeBlockCopyButtons, codeBlockCopyStyles } from '../../../public/code-block-copy.tsx'
+import { CodeBlockCopyButtons, codeBlockCopyStyles } from './code-block-copy.browser.tsx'
 import { DocsTableOfContents } from './table-of-contents.tsx'
 import type { DocsHeadingLink } from './table-of-contents.tsx'
 import { routes } from '../../routes.ts'

@@ -31,9 +31,9 @@ That form can later gain optimistic UI, pending state, or frame reloads without 
 
 ## clientEntry {#cliententry}
 
-`clientEntry` marks a component for hydration. The server renders it like any other component, serializes its props, and records the module/export the browser should load.
+`clientEntry` marks a component for hydration. The server renders it like any other component, serializes its props, and records the module/export the browser should load. Keep client-entry modules in files that match your browser module convention, such as `.browser.tsx`, so the browser boundary stays visible.
 
-```tsx filename=app/assets/counter.tsx
+```tsx filename=app/ui/counter.browser.tsx
 import { clientEntry, on } from "remix/ui";
 import type { Handle } from "remix/ui";
 
@@ -69,7 +69,7 @@ The counter source stays focused on the component. The frame route handles the d
 
 The browser entry starts the Remix UI runtime. `run()` finds server-rendered client entries, loads their modules, hydrates them in place, and wires frame reloads.
 
-```ts filename=app/assets/entry.ts
+```ts filename=app/entry.browser.ts
 import type { FrameContent } from "remix/ui";
 import { run } from "remix/ui";
 
@@ -105,7 +105,7 @@ await app.ready();
 
 Use the `on()` mixin for DOM events. Handlers receive the event and an `AbortSignal` that aborts when the same handler is re-entered or the component is removed.
 
-```tsx filename=app/assets/search-box.tsx
+```tsx filename=app/ui/search-box.browser.tsx
 import { clientEntry, on } from "remix/ui";
 import type { Handle } from "remix/ui";
 
@@ -174,7 +174,7 @@ Passing the signal to `fetch` prevents older requests from winning races against
 
 Use `ref(...)` when browser APIs need the actual node. The callback runs when the node is inserted and receives a signal that aborts when the node is removed.
 
-```tsx filename=app/assets/resize-tracker.tsx
+```tsx filename=app/ui/resize-tracker.browser.tsx
 import { clientEntry, ref } from "remix/ui";
 import type { Handle } from "remix/ui";
 
@@ -324,7 +324,7 @@ A draggable mixin follows the same pattern: keep pointer state inside the mixin,
 
 The browser runtime intercepts Remix-aware navigations and reloads frames instead of replacing the whole document. Use plain anchors for normal links, `link(...)` when you want to add frame-aware behavior through `mix`, and `navigate(...)` for imperative transitions.
 
-```tsx filename=app/assets/project-link.tsx
+```tsx filename=app/ui/project-link.browser.tsx
 import { clientEntry, link, navigate, on } from "remix/ui";
 import type { Handle } from "remix/ui";
 
@@ -376,7 +376,7 @@ No `fallback` means the server waits for the frame before it sends that part of 
 
 Use the smallest refresh boundary that matches the user action. A form submission that changes the current route can return a redirect. A small mutation inside a dashboard can reload one named frame and leave the rest of the document alone.
 
-```tsx filename=app/assets/cart-row.tsx
+```tsx filename=app/ui/cart-row.browser.tsx
 import { clientEntry, on } from "remix/ui";
 import type { Handle } from "remix/ui";
 
