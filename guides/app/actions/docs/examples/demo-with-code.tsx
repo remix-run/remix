@@ -14,8 +14,8 @@ export type DemoProps = {
   children: RemixNode;
 };
 
-// Reads a `.demo.tsx` module from disk and highlights it for display beside the
-// live preview. Highlighting is async (shiki), so this runs in the frame handler
+// Reads a `.demo.tsx` module from disk and highlights it for display beside
+// the live preview. Highlighting is async (shiki), so this runs in the frame handler
 // and the resulting HTML is passed to <Demo> as `sourceHtml`.
 export async function loadDemoSource(moduleUrl: URL): Promise<string> {
   let source = await readFile(moduleUrl, "utf8");
@@ -45,8 +45,9 @@ export function Demo(handle: Handle<DemoProps>) {
 // Builds a frame handler for a "demo with code": hydrates `component`, highlights
 // the source at `demoModuleUrl`, and renders both in the shared <Demo> shell.
 //
-// `component` must be a named export of the `.demo.tsx` module whose name matches
-// the function name, so `clientEntry` can resolve the export via `component.name`.
+// `component` must be a named export of the `.demo.tsx` module whose name
+// matches the function name, so `clientEntry` can resolve the export via
+// `component.name`.
 export function demoWithCode(
   demoModuleUrl: URL,
   component: DemoComponent,

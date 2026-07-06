@@ -48,7 +48,7 @@ Use Remix animation helpers when the motion depends on rendering state: a node e
 
 `animateEntrance(...)` runs when a host node is inserted. `animateExit(...)` lets a removed node stay in the DOM until its exit animation finishes.
 
-```tsx filename=app/assets/notice.tsx
+```tsx filename=app/ui/notice.browser.tsx
 import { clientEntry, css, on } from "remix/ui";
 import { animateEntrance, animateExit, spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
@@ -112,7 +112,7 @@ Keep keys stable when toggling between related elements. A stable key tells Remi
 
 `animateLayout(...)` measures a host node before and after a render, then animates the visual delta. This is the right tool for sorted lists, expanding cards, and elements that move because layout changed.
 
-```tsx filename=app/assets/reorder-list.tsx
+```tsx filename=app/ui/reorder-list.browser.tsx
 import { clientEntry, css, on } from "remix/ui";
 import { animateLayout, spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
@@ -223,7 +223,7 @@ const thumbStyle = css({
 
 Use `tween(...)` when you need a time-based value loop rather than CSS or WAAPI timing.
 
-```ts filename=app/assets/count-up.ts
+```ts filename=app/ui/count-up.browser.ts
 import { easings, tween } from "remix/ui/animation";
 
 export function countUp(
@@ -263,7 +263,7 @@ Event handlers receive abort signals, and animation mixins cancel or replace in-
 
 For custom imperative animations, keep the current animation in setup scope and cancel it before starting the next one:
 
-```tsx filename=app/assets/ripple-button.tsx
+```tsx filename=app/ui/ripple-button.browser.tsx
 import { clientEntry, css, on, ref } from "remix/ui";
 import { spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
@@ -334,7 +334,7 @@ const panelStyle = css({
 
 For JavaScript-driven motion, check the same media query before starting work:
 
-```ts filename=app/assets/motion.ts
+```ts filename=app/ui/motion.browser.ts
 export function prefersReducedMotion() {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
