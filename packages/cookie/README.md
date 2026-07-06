@@ -84,16 +84,16 @@ let response = new Response('Hello, world!', {
 
 ### Custom Encoding
 
-By default, [`encodeURIComponent`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/encodeURIComponent) and [`decodeURIComponent`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/decodeURIComponent) are used to encode and decode the cookie value. This is suitable for most use cases, but you can provide your own functions to customize the encoding and decoding of the cookie value.
+By default, cookie values are percent-encoded and wrapped in base64 so arbitrary string values can be safely stored in cookies. This is suitable for most use cases, but you can provide your own functions to customize the encoding and decoding of the cookie value.
 
 ```tsx
 let sessionCookie = createCookie('session', {
-  encode: (value) => value,
-  decode: (value) => value,
+  encode: (value) => value.replaceAll(' ', '-'),
+  decode: (value) => value.replaceAll('-', ' '),
 })
 ```
 
-This can be useful for viewing the value of cookies in a human-readable format in the browser's developer tools. But you should be sure that the cookie value contains only characters that are [valid in a cookie value](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#attributes).
+Custom `encode` functions are used as the full cookie value codec. Their return values are signed when `secrets` are configured and then serialized as-is, without the default base64 wrapper. This can be useful for viewing the value of cookies in a human-readable format in the browser's developer tools. But you should be sure that the encoded cookie value contains only characters that are [valid in a cookie value](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#attributes).
 
 ## Related Packages
 
