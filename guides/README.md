@@ -10,14 +10,15 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 - `app/actions/docs/chapters/*.md` — guide chapters.
 - `app/actions/docs/markdown.tsx` — unified/remark Markdown rendering, Shiki syntax highlighting, heading IDs, and `::frame` parsing.
 - `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, and summaries.
-- `app/actions/docs/examples/` — frame-backed examples used by chapters. Each example's browser-hydrated code (`.demo.tsx`) and its sub-modules live in a co-located `public/` directory so the asset server can serve them.
+- `app/actions/docs/examples/` — frame-backed examples used by chapters. Browser-hydrated demo modules use the `.demo.tsx` suffix, and browser-only helpers use `.browser.ts?(x)` so the asset boundary is visible from filenames instead of `public/` directories.
+- `app/entry.browser.ts` and `app/dev-refresh.browser.ts` — browser entrypoints served by the asset server.
+- `app/styles/` — source-served CSS for the docs app.
 - `app/middleware/asset-entry.ts` — source-served browser module hrefs and preloads.
 - `app/middleware/render.ts` — the request-scoped `render()` helper and frame resolver.
 - `app/routes.ts` and `app/router.ts` — the typed route contract and controller wiring.
 - `app/ui/` — shared UI used across routes.
-- `app/utils/assets.ts` — the source asset server configuration.
-- `public/` — global browser assets served by the asset server (e.g. `entry.ts`, `code-block-copy.tsx`, `dev-refresh.ts`, `docs.css`).
-- `public/static/` — static files served as-is by the static middleware (e.g. `favicon.svg`, images).
+- `app/utils/assets.ts` — the source asset server configuration, shaped around app browser modules plus the Remix browser packages needed by those modules.
+- `public/` — static files served as-is by the static middleware (e.g. `favicon.svg`, images).
 
 ## How chapters work
 

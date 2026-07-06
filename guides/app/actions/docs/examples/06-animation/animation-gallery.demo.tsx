@@ -1,24 +1,24 @@
 import { css, on, type Handle, type RemixNode } from "remix/ui";
-import { DefaultAnimate } from "./gallery/default-animate.tsx";
-import { EnterAnimation } from "./gallery/enter.tsx";
-import { ExitAnimation } from "./gallery/exit.tsx";
-import { Press } from "./gallery/press.tsx";
-import { HTMLContent } from "./gallery/html-content.tsx";
-import { Keyframes } from "./gallery/keyframes.tsx";
-import { InterruptibleKeyframes } from "./gallery/interruptible-keyframes.tsx";
-import { RollingSquare } from "./gallery/rolling-square.tsx";
-import { Rotate } from "./gallery/rotate.tsx";
-import { TransitionOptions } from "./gallery/transition-options.tsx";
-import { Cube } from "./gallery/cube.tsx";
-import { SharedLayout } from "./gallery/shared-layout.tsx";
-import { AspectRatio } from "./gallery/aspect-ratio.tsx";
-import { BouncySwitch } from "./gallery/bouncy-switch.tsx";
-import { ColorInterpolation } from "./gallery/color-interpolation.tsx";
-import { FlipToggle } from "./gallery/flip-toggle.tsx";
-import { Reordering } from "./gallery/reordering.tsx";
-import { MultiStateBadge } from "./gallery/multi-state-badge.tsx";
-import { HoldToConfirm } from "./gallery/hold-to-confirm.tsx";
-import { MaterialRipple } from "./gallery/material-ripple.tsx";
+import { DefaultAnimate } from "./gallery/default-animate.browser.tsx";
+import { EnterAnimation } from "./gallery/enter.browser.tsx";
+import { ExitAnimation } from "./gallery/exit.browser.tsx";
+import { Press } from "./gallery/press.browser.tsx";
+import { HTMLContent } from "./gallery/html-content.browser.tsx";
+import { Keyframes } from "./gallery/keyframes.browser.tsx";
+import { InterruptibleKeyframes } from "./gallery/interruptible-keyframes.browser.tsx";
+import { RollingSquare } from "./gallery/rolling-square.browser.tsx";
+import { Rotate } from "./gallery/rotate.browser.tsx";
+import { TransitionOptions } from "./gallery/transition-options.browser.tsx";
+import { Cube } from "./gallery/cube.browser.tsx";
+import { SharedLayout } from "./gallery/shared-layout.browser.tsx";
+import { AspectRatio } from "./gallery/aspect-ratio.browser.tsx";
+import { BouncySwitch } from "./gallery/bouncy-switch.browser.tsx";
+import { ColorInterpolation } from "./gallery/color-interpolation.browser.tsx";
+import { FlipToggle } from "./gallery/flip-toggle.browser.tsx";
+import { Reordering } from "./gallery/reordering.browser.tsx";
+import { MultiStateBadge } from "./gallery/multi-state-badge.browser.tsx";
+import { HoldToConfirm } from "./gallery/hold-to-confirm.browser.tsx";
+import { MaterialRipple } from "./gallery/material-ripple.browser.tsx";
 
 function Tile(
   handle: Handle<{ title: string; children: RemixNode; notes?: string }>,

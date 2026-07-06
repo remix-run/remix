@@ -3,7 +3,7 @@ import type { Handle } from "remix/ui";
 import { spring } from "remix/ui/animation";
 import type { SpringPreset } from "remix/ui/animation";
 
-import { dragVelocityEvents } from "./gallery/drag-release.ts";
+import { dragVelocityEvents } from "./gallery/drag-release.browser.ts";
 
 const stageWidth = 420;
 const stageHeight = 260;
