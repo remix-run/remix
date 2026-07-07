@@ -69,8 +69,8 @@
   --rmx-color-text-primary: #1b1b1f;
   --rmx-color-text-secondary: #6b7280;
   --rmx-color-text-muted: #9ca3af;
-  --rmx-color-text-link: #b42343;
-  --rmx-color-text-link-hover: #d83a5a;
+  --rmx-color-text-link: rgba(21, 119, 194, 1);
+  --rmx-color-text-link-hover: rgba(11, 47, 72, 1);
 
   --rmx-color-border-subtle: #e5e7eb;
   --rmx-color-border-default: #d1d5db;
@@ -112,8 +112,8 @@
     --rmx-color-text-primary: #e7e7ea;
     --rmx-color-text-secondary: #9aa0aa;
     --rmx-color-text-muted: #6b7280;
-    --rmx-color-text-link: #ff8aa0;
-    --rmx-color-text-link-hover: #ff5d7a;
+    --rmx-color-text-link: rgba(37, 158, 239, 1);
+    --rmx-color-text-link-hover: color-mix(in srgb, rgba(37, 158, 239, 1) 65%, white);
 
     --rmx-color-focus-ring: rgba(37, 158, 239, 1);
     --rmx-color-accent: rgba(37, 158, 239, 1);
