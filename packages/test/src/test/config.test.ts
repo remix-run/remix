@@ -116,7 +116,7 @@ describe('loadConfig', () => {
         () => loadConfig(['--only', '/(/'], tmp),
         (error: unknown) => {
           let message = String(error)
-          assert.match(message, /Invalid \.only pattern/)
+          assert.match(message, /Invalid --only pattern/)
           assert.match(message, /must be valid JavaScript regular expressions/)
           assert.match(message, /Unterminated group/)
           return true

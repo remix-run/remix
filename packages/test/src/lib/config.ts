@@ -485,8 +485,8 @@ function resolveOnlyPatterns(
     } catch (error) {
       let reason = error instanceof Error ? error.message : String(error)
       throw new Error(
-        `Invalid .only pattern "${pattern}". ` +
-          `.only patterns must be valid JavaScript regular expressions, ` +
+        `Invalid --only pattern "${pattern}". ` +
+          `--only patterns must be valid JavaScript regular expressions, ` +
           `or regex literals like "/pattern/flags". ${reason}`,
       )
     }

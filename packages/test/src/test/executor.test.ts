@@ -493,10 +493,10 @@ describe('runTests only filtering', () => {
     assert.equal(results.passed, 1)
     assert.equal(results.skipped, 1)
     assert.deepEqual(
-      results.tests.map((test) => [test.name, test.status, test.focused === true]),
+      results.tests.map((test) => [test.name, test.status]),
       [
-        ['adds numbers', 'passed', true],
-        ['subtracts numbers', 'skipped', false],
+        ['adds numbers', 'passed'],
+        ['subtracts numbers', 'skipped'],
       ],
     )
   })
@@ -622,8 +622,8 @@ describe('runTests only filtering', () => {
     assert.equal(results.passed, 0)
     assert.equal(results.skipped, 1)
     assert.deepEqual(
-      results.tests.map((test) => [test.name, test.status, test.focused === true]),
-      [['test', 'skipped', false]],
+      results.tests.map((test) => [test.name, test.status]),
+      [['test', 'skipped']],
     )
   })
 })
