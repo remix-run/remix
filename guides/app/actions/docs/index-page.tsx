@@ -29,7 +29,7 @@ function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
   return () => (
     <DocsDocument
       title="Remix Docs"
-      description="Guides, explanations, examples, and tutorials for learning Remix."
+      description="Guides and explanations for learning Remix."
     >
       <div class="docs-index">
         <header class="docs-index__header">
@@ -37,8 +37,7 @@ function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
           <h1 class="rmx-page-title">Learn Remix from the request up.</h1>
           <p class="rmx-page-body">
             These guide chapters introduce Remix at a high level, then progressively deepen into
-            routing, rendering, interactivity, data, security, assets, testing, production,
-            examples, and tutorials.
+            routing, rendering, interactivity, data, security, assets, testing, and production.
           </p>
           <p class="rmx-page-body">
             API reference lives separately at <a href="https://api.remix.run">api.remix.run</a>.

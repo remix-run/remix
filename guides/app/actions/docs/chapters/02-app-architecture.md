@@ -1,6 +1,6 @@
 ---
-title: Core App Structure
-description: The files, ownership boundaries, and route conventions that shape a Remix app.
+title: App Architecture
+description: How routes, controllers, nested route maps, responses, and project organization shape a Remix app.
 ---
 
 ## Routes as the URL contract {#routes-as-the-url-contract}
@@ -22,6 +22,10 @@ Placeholder for Nested route maps and ownership.
 ## Responses, redirects, headers, and errors {#responses-redirects-headers-and-errors}
 
 Placeholder for Responses, redirects, headers, and errors.
+
+## Low-level route patterns {#low-level-route-patterns}
+
+Placeholder for Low-level route patterns.
 
 ## App organization patterns {#app-organization-patterns}
 

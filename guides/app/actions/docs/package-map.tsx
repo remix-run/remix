@@ -22,8 +22,8 @@ const packageGroups: PackageGroup[] = [
     summary:
       'Define URLs, match requests, run controllers, and adapt servers to the Web fetch handler.',
     guides: [
-      guide('Core App Structure', 'core-app-structure'),
-      guide('Server Runtime', 'server-runtime'),
+      guide('App Architecture', 'app-architecture'),
+      guide('Request Handling', 'request-handling'),
     ],
     packages: [
       pkg('remix/routes'),
@@ -37,7 +37,7 @@ const packageGroups: PackageGroup[] = [
     title: 'Middleware',
     summary:
       'Compose request lifecycle behavior around the router: rendering, static files, form data, and context.',
-    guides: [guide('Server Runtime', 'server-runtime')],
+    guides: [guide('Request Handling', 'request-handling')],
     packages: [
       pkg('remix/middleware/render'),
       pkg('remix/middleware/static'),
@@ -52,7 +52,7 @@ const packageGroups: PackageGroup[] = [
     title: 'HTTP primitives',
     summary:
       'Read and build headers, cookies, sessions, redirects, and responses as Web API values.',
-    guides: [guide('Core App Structure', 'core-app-structure')],
+    guides: [guide('App Architecture', 'app-architecture')],
     packages: [
       pkg('remix/headers'),
       pkg('remix/cookie'),
