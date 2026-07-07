@@ -1,6 +1,6 @@
 import * as assert from '@remix-run/assert'
 import type { TestContext } from '../lib/context.ts'
-import { runTests } from '../lib/executor.ts'
+import { runTests, type RunTestsOptions } from '../lib/executor.ts'
 import { describe, it } from '../lib/framework.ts'
 import type { TestResults } from '../lib/reporters/results.ts'
 
@@ -462,6 +462,170 @@ describe('runTests only filtering', () => {
       ],
     )
   })
+
+  it('focuses tests matching --only patterns by full test name', async () => {
+    let ran: string[] = []
+
+    let results = await runWithSuites(
+      [
+        {
+          name: 'math',
+          tests: [
+            {
+              name: 'adds numbers',
+              fn() {
+                ran.push('adds')
+              },
+            },
+            {
+              name: 'subtracts numbers',
+              fn() {
+                ran.push('subtracts')
+              },
+            },
+          ],
+        },
+      ],
+      { only: [{ source: 'math > adds', flags: '' }] },
+    )
+
+    assert.deepEqual(ran, ['adds'])
+    assert.equal(results.passed, 1)
+    assert.equal(results.skipped, 1)
+    assert.deepEqual(
+      results.tests.map((test) => [test.name, test.status, test.focused === true]),
+      [
+        ['adds numbers', 'passed', true],
+        ['subtracts numbers', 'skipped', false],
+      ],
+    )
+  })
+
+  it('focuses suites matching --only patterns by suite name', async () => {
+    let ran: string[] = []
+
+    let results = await runWithSuites(
+      [
+        {
+          name: 'focused suite',
+          tests: [
+            {
+              name: 'first test',
+              fn() {
+                ran.push('first')
+              },
+            },
+            {
+              name: 'second test',
+              fn() {
+                ran.push('second')
+              },
+            },
+          ],
+        },
+        {
+          name: 'regular suite',
+          tests: [
+            {
+              name: 'third test',
+              fn() {
+                ran.push('third')
+              },
+            },
+          ],
+        },
+      ],
+      { only: [{ source: '^focused suite$', flags: '' }] },
+    )
+
+    assert.deepEqual(ran, ['first', 'second'])
+    assert.equal(results.passed, 2)
+    assert.equal(results.skipped, 1)
+  })
+
+  it('unions --only patterns with authored .only modifiers', async () => {
+    let ran: string[] = []
+
+    let results = await runWithSuites(
+      [
+        {
+          name: 'authored suite',
+          only: true,
+          tests: [
+            {
+              name: 'runs from describe.only',
+              fn() {
+                ran.push('describe.only')
+              },
+            },
+          ],
+        },
+        {
+          name: 'pattern suite',
+          tests: [
+            {
+              name: 'runs from --only',
+              fn() {
+                ran.push('--only')
+              },
+            },
+          ],
+        },
+        {
+          name: 'regular suite',
+          tests: [
+            {
+              name: 'does not run',
+              fn() {
+                ran.push('regular')
+              },
+            },
+          ],
+        },
+      ],
+      { only: [{ source: 'pattern suite > runs', flags: '' }] },
+    )
+
+    assert.deepEqual(ran, ['describe.only', '--only'])
+    assert.equal(results.passed, 2)
+    assert.equal(results.skipped, 1)
+  })
+
+  it('skips every test when --only patterns do not match', async () => {
+    let ran: string[] = []
+
+    let results = await runWithSuites(
+      [
+        {
+          name: 'suite',
+          beforeAll: [
+            {
+              fn() {
+                ran.push('beforeAll')
+              },
+            },
+          ],
+          tests: [
+            {
+              name: 'test',
+              fn() {
+                ran.push('test')
+              },
+            },
+          ],
+        },
+      ],
+      { only: [{ source: 'missing', flags: '' }] },
+    )
+
+    assert.deepEqual(ran, [])
+    assert.equal(results.passed, 0)
+    assert.equal(results.skipped, 1)
+    assert.deepEqual(
+      results.tests.map((test) => [test.name, test.status, test.focused === true]),
+      [['test', 'skipped', false]],
+    )
+  })
 })
 
 describe('runTests skip and todo reasons', () => {
@@ -546,13 +710,16 @@ describe('runTests skip and todo reasons', () => {
   })
 })
 
-async function runWithSuites(suites: SuiteFixture[]): Promise<TestResults> {
+async function runWithSuites(
+  suites: SuiteFixture[],
+  options?: RunTestsOptions,
+): Promise<TestResults> {
   let global = globalThis as TestSuitesGlobal
   let previousSuites = global.__testSuites
 
   global.__testSuites = suites
   try {
-    return await runTests()
+    return await runTests(options)
   } finally {
     global.__testSuites = previousSuites
   }

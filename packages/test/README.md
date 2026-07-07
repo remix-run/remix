@@ -160,6 +160,7 @@ You may also specify any config field as a CLI flag which will take precedence o
 | `--glob.browser`            |           |
 | `--glob.e2e`                |           |
 | `--playwrightConfig <path>` |           |
+| `--only <pattern>`          |           |
 | `--pool <forks              | threads>` |     |
 | `--project <name>`          | `-p`      |
 | `--quiet`                   | `-q`      |
