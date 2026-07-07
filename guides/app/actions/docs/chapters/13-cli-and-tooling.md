@@ -38,3 +38,7 @@ Placeholder for TypeScript and JSX setup.
 ## Using remix/node-tsx {#using-remix-node-tsx}
 
 Placeholder for Using remix/node-tsx.
+
+## Building CLIs with Remix packages {#building-clis-with-remix-packages}
+
+Placeholder for Building CLIs with Remix packages.

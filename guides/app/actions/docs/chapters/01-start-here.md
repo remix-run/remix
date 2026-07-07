@@ -105,7 +105,7 @@ server.listen(44100, () => {
 
 `server.ts` is the runtime entrypoint. In our Node-based example, it creates an HTTP server, adapts each Node request into a Web `Request`, and passes it to `router.fetch(request)`.
 
-The [Server Runtime](/docs/server-runtime#the-node-server-entry) chapter digs into runtime adapters, [`createRequestListener`](/docs/server-runtime#createrequestlistener), [middleware ordering](/docs/server-runtime#middleware-ordering), and [typed request context](/docs/server-runtime#typed-request-context).
+The [Request Handling](/docs/request-handling#the-node-server-entry) chapter digs into runtime adapters, [`createRequestListener`](/docs/request-handling#createrequestlistener), [middleware ordering](/docs/request-handling#middleware-ordering), and [typed request context](/docs/request-handling#typed-request-context).
 
 ## Define your first route {#define-your-first-route}
 
@@ -186,7 +186,7 @@ Navigate to [http://localhost:44100/albums/thriller](http://localhost:44100/albu
 Album: thriller
 ```
 
-The [Core App Structure](/docs/core-app-structure#routes-as-the-url-contract) chapter covers route maps and [route builders](/docs/core-app-structure#route-builders-route-get-post-put-del-form-resources) in more depth.
+The [App Architecture](/docs/app-architecture#routes-as-the-url-contract) chapter covers route maps and [route builders](/docs/app-architecture#route-builders-route-get-post-put-del-form-resources) in more depth.
 
 ## Build your first page {#build-your-first-page}
 
@@ -610,7 +610,7 @@ Now we can update our album data and set it to the correct year.
 
 ![Changing input with value 1983 to 1982, hitting submit, then being redirected to the corrected page](/images/app/actions/docs/chapters/01-start-here/correct-year.gif)
 
-The [Controllers and actions](/docs/core-app-structure) and [Data and Validation](/docs/data-and-validation) chapters go deeper on request handling, validation, and database-backed mutations.
+The [Controllers and actions](/docs/app-architecture) and [Data and Validation](/docs/data-and-validation) chapters go deeper on request handling, validation, and database-backed mutations.
 
 ## Add your first hydrated component {#add-your-first-hydrated-component}
 
@@ -783,4 +783,4 @@ Now when you submit the form, the button is disabled and the button text changes
 
 There is a lot more we could do here to avoid a full page navigation, but that involves handling cancellations, error states, and more. The [Interactivity](/docs/interactivity) chapter covers client entries, events, and progressive enhancement in more detail.
 
-For now we've dipped our toe in the water enough to get a big picture of what Remix offers and how to start building with it. Next we'll dig deeper into Core App Structure, or if you're excited about a particular topic, feel free to jump around.
+For now we've dipped our toe in the water enough to get a big picture of what Remix offers and how to start building with it. Next we'll dig deeper into App Architecture, or if you're excited about a particular topic, feel free to jump around.
