@@ -22,7 +22,7 @@ const packageGroups: PackageGroup[] = [
     summary:
       'Define URLs, match requests, run controllers, and adapt servers to the Web fetch handler.',
     guides: [
-      guide('App Architecture', 'app-architecture'),
+      guide('Routing and Controllers', 'routing-and-controllers'),
       guide('Request Handling', 'request-handling'),
     ],
     packages: [
@@ -52,7 +52,7 @@ const packageGroups: PackageGroup[] = [
     title: 'HTTP primitives',
     summary:
       'Read and build headers, cookies, sessions, redirects, and responses as Web API values.',
-    guides: [guide('App Architecture', 'app-architecture')],
+    guides: [guide('Routing and Controllers', 'routing-and-controllers')],
     packages: [
       pkg('remix/headers'),
       pkg('remix/cookie'),
