@@ -17,6 +17,7 @@
   --rmx-layout-max-width: 64rem;
   --rmx-content-max-width: 48rem;
   --rmx-page-gutter: calc(var(--rmx-space-xl) + var(--rmx-space-sm));
+  --site-header-height: calc((var(--rmx-space-lg) * 2) + 2rem);
   font-size: var(--rmx-font-size-md);
 }
 
@@ -187,12 +188,28 @@ pre code {
 /* Site header ----------------------------------------------------------- */
 
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 50;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--rmx-space-xl);
   padding: var(--rmx-space-lg) var(--rmx-page-gutter);
   border-bottom: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
+  background: var(--rmx-surface-lvl0);
+  transition: transform 250ms ease;
+}
+
+/* Hidden once the reader scrolls down; keep visible while its links have focus. */
+.site-header[data-hidden='true']:not(:focus-within) {
+  transform: translateY(-100%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .site-header {
+    transition: none;
+  }
 }
 
 .site-header__brand {
@@ -272,15 +289,6 @@ pre code {
 
 .chapter-card__title {
   margin: 0 0 var(--rmx-space-md);
-}
-
-.chapter-card__title a {
-  color: var(--rmx-color-text-primary);
-  text-decoration: none;
-}
-
-.chapter-card__title a:hover {
-  color: var(--rmx-color-accent-hover);
 }
 
 .chapter-card__description {
@@ -395,7 +403,20 @@ pre code {
 @media (min-width: 1024px) {
   .docs-aside {
     position: sticky;
+    /* Sit below the revealed header, matching its slide timing so the TOC is
+       "pushed" down when the header appears and pulled up when it hides. */
+    top: calc(var(--site-header-height) + var(--rmx-space-xl));
+    transition: top 250ms ease;
+  }
+
+  .site-header[data-hidden='true']:not(:focus-within) ~ .docs-main .docs-aside {
     top: var(--rmx-space-xl);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .docs-aside {
+      transition: none;
+    }
   }
 }
 
