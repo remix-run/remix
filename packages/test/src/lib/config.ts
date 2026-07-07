@@ -480,11 +480,15 @@ function resolveOnlyPatterns(
       serialized = { source: pattern.source, flags: pattern.flags }
     }
 
-    // validate pattern
     try {
       new RegExp(serialized.source, serialized.flags)
     } catch (error) {
-      throw new Error(`Invalid .only pattern: ${pattern}`)
+      let reason = error instanceof Error ? error.message : String(error)
+      throw new Error(
+        `Invalid .only pattern "${pattern}". ` +
+          `.only patterns must be valid JavaScript regular expressions, ` +
+          `or regex literals like "/pattern/flags". ${reason}`,
+      )
     }
 
     return serialized

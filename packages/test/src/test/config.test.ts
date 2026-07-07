@@ -112,7 +112,16 @@ describe('loadConfig', () => {
     let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
 
     try {
-      await assert.rejects(() => loadConfig(['--only', '/(/'], tmp), SyntaxError)
+      await assert.rejects(
+        () => loadConfig(['--only', '/(/'], tmp),
+        (error: unknown) => {
+          let message = String(error)
+          assert.match(message, /Invalid \.only pattern/)
+          assert.match(message, /must be valid JavaScript regular expressions/)
+          assert.match(message, /Unterminated group/)
+          return true
+        },
+      )
     } finally {
       await fsp.rm(tmp, { recursive: true, force: true })
     }
