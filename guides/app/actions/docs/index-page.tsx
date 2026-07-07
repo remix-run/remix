@@ -27,10 +27,7 @@ type DocsIndexPageProps = {
 
 function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
   return () => (
-    <DocsDocument
-      title="Remix Docs"
-      description="Guides and explanations for learning Remix."
-    >
+    <DocsDocument title="Remix Docs" description="Guides and explanations for learning Remix.">
       <div class="docs-index">
         <header class="docs-index__header">
           <p class="docs-chapter-eyebrow docs-accent">Remix Docs</p>

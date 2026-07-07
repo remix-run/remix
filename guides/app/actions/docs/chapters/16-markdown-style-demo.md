@@ -7,7 +7,7 @@ This page is a rendering fixture, not product documentation. Use it to review ho
 
 ## Inline text, links, and emphasis {#inline-text-links-and-emphasis}
 
-A paragraph can mix **strong text**, _emphasis_, `inline code`, and [links to another chapter](/docs/app-architecture). Inline code should stay compact enough to read in a sentence without looking like a full code block.
+A paragraph can mix **strong text**, _emphasis_, `inline code`, and [links to another chapter](/docs/routing-and-controllers). Inline code should stay compact enough to read in a sentence without looking like a full code block.
 
 Raw HTML is escaped instead of rendered:
 

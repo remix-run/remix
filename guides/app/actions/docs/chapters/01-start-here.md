@@ -5,7 +5,7 @@ description: A high-level introduction to Remix and the mental model behind a Re
 
 ## What is Remix?
 
-Remix is a TypeScript framework built around the web's request and response model. A server receives a Web `Request`, Remix matches it to a typed route, a controller handles the request, and the app returns a Web `Response`.
+Remix is a TypeScript framework built around the web's request and response model. A server receives a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request), Remix matches it to a typed route, a controller handles the request, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
 
 The `remix` package gives you the full stack: a server adapter, fetch router, typed routes, middleware, controllers, response helpers, and testing utilities. On the UI side, it includes server-rendered components, frames for partial UI, browser-loaded client entries, client navigation, CSS-first animation helpers, source-served assets, and first-party primitives such as menus, popovers, listboxes, selects, and tabs.
 
@@ -105,7 +105,7 @@ server.listen(44100, () => {
 
 `server.ts` is the runtime entrypoint. In our Node-based example, it creates an HTTP server, adapts each Node request into a Web `Request`, and passes it to `router.fetch(request)`.
 
-The [Request Handling](/docs/request-handling#the-node-server-entry) chapter digs into runtime adapters, [`createRequestListener`](/docs/request-handling#createrequestlistener), [middleware ordering](/docs/request-handling#middleware-ordering), and [typed request context](/docs/request-handling#typed-request-context).
+The [Request Handling](/docs/request-handling) chapter digs into runtime adapters, `createRequestListener`, middleware ordering, and typed request context.
 
 ## Define your first route {#define-your-first-route}
 
@@ -186,7 +186,7 @@ Navigate to [http://localhost:44100/albums/thriller](http://localhost:44100/albu
 Album: thriller
 ```
 
-The [App Architecture](/docs/app-architecture#routes-as-the-url-contract) chapter covers route maps and [route builders](/docs/app-architecture#route-builders-route-get-post-put-del-form-resources) in more depth.
+The [Routing and Controllers](/docs/routing-and-controllers) chapter covers route maps and route builders in more depth.
 
 ## Build your first page {#build-your-first-page}
 
@@ -194,7 +194,7 @@ Let's make this album page a little more interesting by returning HTML from a Re
 
 Remix UI uses JSX with a two-phase component model. A component function receives a `handle` and returns a render function. The setup phase runs once when the component is first created, and the render phase runs on the first render and every update afterward.
 
-We'll come back to the component model later. If you want the full model now, check out the [Rendering UI chapter](/docs/rendering-ui).
+We'll come back to the component model later. If you want the full model now, check out the [Rendering UI](/docs/rendering-ui) chapter.
 
 ```tsx
 function MyComponent(handle) {
@@ -234,7 +234,7 @@ export function AlbumPage(handle: Handle<{ id: string }>) {
 }
 ```
 
-To use this component we need to render and return the response in our action. The route still returns a Web `Response`, but `context.render(...)` creates that response from a component tree instead of a string. Pass the matched `albumId` through for now so the page keeps showing the route param from the previous section. The render middleware is app code, and the [Rendering UI chapter](/docs/rendering-ui) shows where it comes from.
+To use this component we need to render and return the response in our action. The route still returns a Web `Response`, but `context.render(...)` creates that response from a component tree instead of a string. Pass the matched `albumId` through for now so the page keeps showing the route param from the previous section. The render middleware is app code, and the [Rendering UI](/docs/rendering-ui) chapter shows where it comes from.
 
 ```tsx filename=app/actions/albums/controller.tsx lines=[4,9]
 import { createController } from "remix/router";
@@ -251,7 +251,7 @@ export default createController(routes.albums, {
 });
 ```
 
-For this walkthrough we're going to set up a small in-memory database. The [Data and Validation chapter](/docs/data-and-validation) covers real database setup in more detail.
+For this walkthrough we're going to set up a small in-memory database. The [Data and Validation](/docs/data-and-validation) chapter covers real database setup in more detail.
 
 ```sh
 touch app/actions/albums/data.ts
@@ -345,7 +345,7 @@ export function AlbumPage(handle: Handle<{ album: Album }>) {
 
 Now the page displays the album title, artist, and year.
 
-Center it and add a little spacing with the `css` function and `mix` prop. The [Rendering UI chapter](/docs/rendering-ui) covers this helper and prop in more detail.
+Center it and add a little spacing with the `css` function and `mix` prop. The [Rendering UI](/docs/rendering-ui) chapter covers this helper and prop in more detail.
 
 ```tsx filename=app/actions/albums/show-page.tsx lines=[2,14-18,20]
 import type { Handle } from "remix/ui";
@@ -564,7 +564,7 @@ export const router = createRouter<AppContext>({
 // ...
 ```
 
-We'll also use `remix/data-schema/form-data` to turn the raw `FormData` into typed values before updating the album. `remix/data-schema` is a built-in Remix library for validating and parsing all sorts of data. The [Data and Validation chapter](/docs/data-and-validation) explores it in more detail.
+We'll also use `remix/data-schema/form-data` to turn the raw `FormData` into typed values before updating the album. `remix/data-schema` is a built-in Remix library for validating and parsing all sorts of data. The [Data and Validation](/docs/data-and-validation) chapter explores it in more detail.
 
 ```tsx filename=app/actions/albums/edit/controller.tsx lines=[2-5,8,11-15,28-33]
 import { createController } from "remix/router";
@@ -610,7 +610,7 @@ Now we can update our album data and set it to the correct year.
 
 ![Changing input with value 1983 to 1982, hitting submit, then being redirected to the corrected page](/images/app/actions/docs/chapters/01-start-here/correct-year.gif)
 
-The [Controllers and actions](/docs/app-architecture) and [Data and Validation](/docs/data-and-validation) chapters go deeper on request handling, validation, and database-backed mutations.
+The [Routing and Controllers](/docs/routing-and-controllers) and [Data and Validation](/docs/data-and-validation) chapters go deeper on request handling, validation, and database-backed mutations.
 
 ## Add your first hydrated component {#add-your-first-hydrated-component}
 
@@ -701,7 +701,7 @@ export function AlbumEditPage(handle: Handle<{ album: Album }>) {
 
 Everything should look like it did before.
 
-Next mark the form as a client entry. `import.meta.url` tells our asset server which source file should be turned into a browser-loadable module:
+Next mark the form as a client entry. [`import.meta.url`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/import.meta) tells our asset server which source file should be turned into a browser-loadable module:
 
 ```tsx filename=app/actions/albums/edit/album-edit-form.browser.tsx lines=[1,7-9,12]
 import { clientEntry, css } from "remix/ui";
@@ -783,4 +783,4 @@ Now when you submit the form, the button is disabled and the button text changes
 
 There is a lot more we could do here to avoid a full page navigation, but that involves handling cancellations, error states, and more. The [Interactivity](/docs/interactivity) chapter covers client entries, events, and progressive enhancement in more detail.
 
-For now we've dipped our toe in the water enough to get a big picture of what Remix offers and how to start building with it. Next we'll dig deeper into App Architecture, or if you're excited about a particular topic, feel free to jump around.
+For now we've dipped our toe in the water enough to get a big picture of what Remix offers and how to start building with it. Next we'll dig deeper into Routing and Controllers, or if you're excited about a particular topic, feel free to jump around.
