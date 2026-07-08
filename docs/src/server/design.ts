@@ -47,19 +47,23 @@ export const theme = {
     },
   },
   surface: {
-    lvl0: '#ffffff',
-    lvl3: '#f3f3f3',
-    lvl4: '#efefef',
+    lvl0: 'light-dark(#ffffff, #1a1a1a)',
+    lvl1: 'light-dark(#f8f8f8, #1f1f1f)',
+    lvl2: 'light-dark(#f5f5f5, #232323)',
+    lvl3: 'light-dark(#f3f3f3, #272727)',
+    lvl4: 'light-dark(#efefef, #2c2c2c)',
   },
   colors: {
     text: {
-      primary: '#151515',
-      secondary: '#4f4f4f',
-      muted: '#6d6d6d',
-      link: '#1A72FF',
+      primary: 'light-dark(#151515, #ececec)',
+      secondary: 'light-dark(#4f4f4f, #b3b3b3)',
+      muted: 'light-dark(#6d6d6d, #b3b3b3)',
+      link: 'light-dark(#1A72FF, #6eaaff)',
     },
     border: {
-      subtle: '#e7e7e7',
+      subtle: 'light-dark(#e7e7e7, #333333)',
+      default: 'light-dark(#d1d1d1, #444444)',
+      strong: 'light-dark(#b0b0b0, #666666)',
     },
   },
 } as const
