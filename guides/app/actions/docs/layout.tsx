@@ -1,7 +1,6 @@
 import type { Handle, RemixNode } from 'remix/ui'
 
 import { CodeBlockCopyButtons, codeBlockCopyStyles } from './code-block-copy.browser.tsx'
-import { RevealHeaderOnScrollUp } from './reveal-header.browser.tsx'
 import { DocsTableOfContents } from './table-of-contents.tsx'
 import type { DocsHeadingLink } from './table-of-contents.tsx'
 import { routes } from '../../routes.ts'
@@ -45,7 +44,6 @@ export function DocsDocument(handle: Handle<DocsDocumentProps>) {
             <a href="https://github.com/remix-run/remix">GitHub</a>
           </nav>
         </header>
-        <RevealHeaderOnScrollUp />
         <main id="main-content" class="docs-main" tabIndex={-1}>
           {handle.props.children}
         </main>

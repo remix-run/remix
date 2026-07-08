@@ -18,6 +18,10 @@
   --rmx-content-max-width: 48rem;
   --rmx-page-gutter: calc(var(--rmx-space-xl) + var(--rmx-space-sm));
   --site-header-height: calc((var(--rmx-space-lg) * 2) + 2rem);
+  /* Slide duration shared by the header and the sticky TOC so they move in sync. */
+  --site-header-effect-duration: 250ms;
+  /* Scroll-timeline units (0–1000): require a small upward scroll before revealing. */
+  --site-header-reveal-threshold: 0.75;
   font-size: var(--rmx-font-size-md);
 }
 
@@ -187,6 +191,80 @@ pre code {
 
 /* Site header ----------------------------------------------------------- */
 
+/*
+ * The sticky docs header slides out of view while scrolling down and drops
+ * back in while scrolling up, with no JavaScript. A scroll-driven animation
+ * tracks the live offset in `--site-scroll`; `--site-scroll-delayed` lags
+ * behind it via a transition, so their difference is a velocity.
+ * `--site-scroll-direction` collapses that to -1 (scrolling up), 1 (down),
+ * or 0 (stopped). The header translates fully out on the way down, back in
+ * once upward scroll clears a small threshold, and freezes wherever it is
+ * when scrolling stops so tiny movements don't jitter. Requires scroll-driven
+ * animations (`animation-timeline`), supported in all current evergreen browsers.
+ */
+
+@property --site-scroll {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --site-scroll-delayed {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --site-scroll-direction {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+@property --site-scroll-reveal-intent {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+@keyframes site-track-scroll {
+  to {
+    --site-scroll: 1000;
+    --site-scroll-delayed: 1000;
+  }
+}
+
+@supports (animation-timeline: scroll(root)) {
+  /*
+   * Drive the scroll offset from the root scroller. Use longhands instead of
+   * the `animation` shorthand so the asset compiler keeps `animation-timeline`
+   * as its own declaration; current browsers are much more reliable with the
+   * longhand form for scroll-driven animations.
+   */
+  :root {
+    animation-name: site-track-scroll;
+    animation-timing-function: linear;
+    animation-fill-mode: both;
+    animation-timeline: scroll(root);
+  }
+
+  /*
+   * Derive direction and reveal intent from the velocity. `sign()` gives
+   * -1 (up), 1 (down), or 0 (stopped); reveal intent flips to 1 only once the
+   * upward scroll distance clears the reveal threshold.
+   */
+  body {
+    transition: --site-scroll-delayed calc(var(--site-header-effect-duration) + 400ms);
+    --site-scroll-velocity: calc(var(--site-scroll) - var(--site-scroll-delayed));
+    --site-scroll-direction: sign(var(--site-scroll-velocity));
+    --site-scroll-reveal-distance: max(
+      calc(var(--site-scroll-delayed) - var(--site-scroll) - var(--site-header-reveal-threshold)),
+      0
+    );
+    --site-scroll-reveal-intent: sign(var(--site-scroll-reveal-distance));
+  }
+}
+
 .site-header {
   position: sticky;
   top: 0;
@@ -198,17 +276,48 @@ pre code {
   padding: var(--rmx-space-lg) var(--rmx-page-gutter);
   border-bottom: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
   background: var(--rmx-surface-lvl0);
-  transition: transform 250ms ease;
+  transition: transform var(--site-header-effect-duration) ease;
+  transform: translateY(var(--site-header-translate, 0));
+  will-change: transform;
 }
 
-/* Hidden once the reader scrolls down; keep visible while its links have focus. */
-.site-header[data-hidden='true']:not(:focus-within) {
-  transform: translateY(-100%);
+@supports (animation-timeline: scroll(root)) {
+  /* Hold the header wherever it is: when stopped, and while scrolling up before
+     the reveal threshold is crossed. The huge delay pauses any in-flight move. */
+  @container style((--site-scroll-direction: 0) or (--site-scroll-direction: -1)) {
+    .site-header {
+      transition-delay: 999999s;
+    }
+  }
+
+  /* Scrolling down: tuck the header fully out of view. */
+  @container style(--site-scroll-direction: 1) {
+    .site-header {
+      --site-header-translate: -100%;
+    }
+  }
+
+  /* Scrolling up past the threshold: bring it back. The target differs slightly
+     from the frozen up-scroll target (0) so the value change fires a transition. */
+  @container style(--site-scroll-reveal-intent: 1) {
+    .site-header {
+      --site-header-translate: 0.001px;
+      transition-delay: 0s;
+    }
+  }
+}
+
+/* Keep the header on screen while its links have focus. */
+.site-header:focus-within {
+  --site-header-translate: 0;
+  transition-delay: 0s;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .site-header {
     transition: none;
+    transform: none;
+    will-change: auto;
   }
 }
 
@@ -406,15 +515,39 @@ pre code {
     /* Sit below the revealed header, matching its slide timing so the TOC is
        "pushed" down when the header appears and pulled up when it hides. */
     top: calc(var(--site-header-height) + var(--rmx-space-xl));
-    transition: top 250ms ease;
+    transition: top var(--site-header-effect-duration) ease;
   }
 
-  .site-header[data-hidden='true']:not(:focus-within) ~ .docs-main .docs-aside {
-    top: var(--rmx-space-xl);
+  @supports (animation-timeline: scroll(root)) {
+    /* Hold the TOC wherever it is, in sync with the header: when stopped and
+       while scrolling up before the reveal threshold is crossed. */
+    @container style((--site-scroll-direction: 0) or (--site-scroll-direction: -1)) {
+      .docs-aside {
+        transition-delay: 999999s;
+      }
+    }
+
+    /* Scrolling down: the header tucks away, so let the TOC rise into its place. */
+    @container style(--site-scroll-direction: 1) {
+      .docs-aside {
+        top: var(--rmx-space-xl);
+      }
+    }
+
+    /* Scrolling up past the threshold: drop back below the reappeared header.
+       The target differs slightly from the frozen up-scroll top so the value
+       change fires a transition. */
+    @container style(--site-scroll-reveal-intent: 1) {
+      .docs-aside {
+        top: calc(var(--site-header-height) + var(--rmx-space-xl) + 0.001px);
+        transition-delay: 0s;
+      }
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
     .docs-aside {
+      top: calc(var(--site-header-height) + var(--rmx-space-xl));
       transition: none;
     }
   }
