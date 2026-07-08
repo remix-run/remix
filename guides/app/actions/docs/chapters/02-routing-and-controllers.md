@@ -37,9 +37,26 @@ routes.albums.show.href({ albumId: "thriller" });
 // /albums/thriller
 ```
 
-The `albumId` property is required because it comes from `:albumId` in the route pattern. If you later rename the pattern to `'/albums/:id'`, old calls that still pass `{ albumId: ... }` will report TypeScript errors. The same `routes` object can be used in controllers, links, forms, redirects, and tests, so URL changes are not hidden in string literals around the app.
+The `albumId` property is required because `:albumId` is a path variable. Path variables match within a segment and become route params on `context.params`. If you later rename the pattern to `'/albums/:id'`, old calls that still pass `{ albumId: ... }` will report TypeScript errors. The same `routes` object can be used in controllers, links, forms, redirects, and tests, so URL changes are not hidden in string literals around the app.
 
-Route patterns support more than path params, including wildcards, optional segments, search params, and full origins. The [Route pattern syntax](#route-pattern-syntax) section at the end of this chapter covers the full syntax.
+Most app routes only need path variables, but route patterns can also express:
+
+- wildcards that match within a segment or across many segments
+- optional groups, including nested optional groups
+- search constraints for query string keys and values
+- escaped literals for characters that would otherwise be pattern syntax
+- variables and wildcards in hostnames
+- full-origin patterns with protocol, hostname, and port
+- deterministic specificity when more than one pattern matches
+
+A single pattern can combine those pieces when a route needs it:
+
+```ts
+"http(s)://(:tenant.)example.com/docs(/v:version)/:category/*slug.:format?preview";
+// matches https://acme.example.com/docs/v2/guides/routing/route-maps.html?preview=1
+```
+
+You do not need to memorize that syntax to follow this guide. The [`route-pattern` overview](https://api.remix.run/api/remix/route-pattern/overview/) covers the full grammar and the lower-level `remix/route-pattern/href` and `remix/route-pattern/match` APIs.
 
 The `edit` branch has two leaves at the same URL: `index` handles `GET` and `action` handles `POST`.
 
@@ -307,50 +324,3 @@ router.mount("/admin", installAdminRoutes);
 ```
 
 Keep the full app route map in `routes.ts` for links and redirects. Inside the mounted installer, use relative routes for the handlers owned by that feature. Params from the mount prefix are available to child handlers, and if the prefix and child route use the same param name, the child route wins.
-
-## Route pattern syntax {#route-pattern-syntax}
-
-The strings you pass to route helpers use `route-pattern` syntax. Most app routes only need path variables, which match within a segment and become typed route params:
-
-```ts
-"/albums/:albumId"; // matches /albums/thriller
-"/blog/:year-:month-:day/:slug"; // matches /blog/2024-01-15/hello
-```
-
-Use wildcards when a route needs to match across multiple segments or capture only part of a segment:
-
-```ts
-"/assets/*path"; // matches /assets/images/logo.png
-"/downloads/*file.:ext"; // matches /downloads/releases/remix.tar.gz
-```
-
-Patterns also support optional groups, search constraints, escaped literals, hostname variables, and full-origin matches. You probably won't need all of that in one route, but the syntax is expressive enough to describe something like a tenant-aware docs preview route:
-
-```ts
-"http(s)://(:tenant.)example.com/docs(/v:version)/:category/*slug.:format?preview";
-// matches https://acme.example.com/docs/v2/guides/routing/route-maps.html?preview=1
-// params: {
-//   tenant: "acme",
-//   version: "2",
-//   category: "guides",
-//   slug: "routing/route-maps",
-//   format: "html",
-// }
-```
-
-The [`route-pattern` overview](https://api.remix.run/api/remix/route-pattern/overview/) covers the full grammar and the lower-level `remix/route-pattern/href` and `remix/route-pattern/match` APIs.
-
-When multiple patterns match the same URL, Remix chooses the most specific match. Static segments beat variables, variables beat wildcards, and the earliest difference wins. This means these two routes can sit next to each other without careful ordering:
-
-```ts filename=app/routes.ts
-import { get, route } from "remix/routes";
-
-export const routes = route({
-  albums: {
-    new: get("/albums/new"),
-    show: get("/albums/:albumId"),
-  },
-});
-```
-
-`/albums/new` matches `albums.new`, not `albums.show` with `albumId: 'new'`.
