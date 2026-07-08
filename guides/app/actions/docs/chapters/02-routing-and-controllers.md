@@ -192,7 +192,7 @@ export default createController(routes.albums.edit, {
 });
 ```
 
-Router middleware runs first, then controller middleware, then action middleware, then the action handler.
+Router middleware runs first, then controller middleware, then action middleware, then the action handler. The [`remix/router` overview](https://api.remix.run/api/remix/router/overview/) covers the API surface for routers, controllers, actions, and middleware.
 
 ## Responses, redirects, headers, and errors {#responses-redirects-headers-and-errors}
 
@@ -310,62 +310,37 @@ Keep the full app route map in `routes.ts` for links and redirects. Inside the m
 
 ## Route pattern syntax {#route-pattern-syntax}
 
-The strings you pass to route helpers use the `route-pattern` syntax. Most app routes only need path params, but the same syntax can match wildcards, optional segments, search params, hostnames, and full origins.
-
-Path params capture one segment:
+The strings you pass to route helpers use `route-pattern` syntax. Most app routes only need path variables, which match within a segment and become typed route params:
 
 ```ts
 "/albums/:albumId"; // matches /albums/thriller
 "/blog/:year-:month-:day/:slug"; // matches /blog/2024-01-15/hello
 ```
 
-Wildcards capture the rest of a path. Name the wildcard when you need the captured value.
+Use wildcards when a route needs to match across multiple segments or capture only part of a segment:
 
 ```ts
-"/assets/*path"; // matches /assets/images/logo.png and captures path
-"/files/*"; // matches anything under /files without capturing it
+"/assets/*path"; // matches /assets/images/logo.png
+"/downloads/*file.:ext"; // matches /downloads/releases/remix.tar.gz
 ```
 
-Parentheses make part of a pattern optional. Optional groups can contain params and can be nested:
+Patterns also support optional groups, search constraints, escaped literals, hostname variables, and full-origin matches. You probably won't need all of that in one route, but the syntax is expressive enough to describe something like a tenant-aware docs preview route:
 
 ```ts
-"/api(/v:version)/users"; // matches /api/users and /api/v2/users
-"/blog/:slug(.html)"; // matches /blog/hello and /blog/hello.html
-"/api(/v:major(.:minor))"; // matches /api, /api/v2, and /api/v2.1
+"http(s)://(:tenant.)example.com/docs(/v:version)/:category/*slug.:format?preview";
+// matches https://acme.example.com/docs/v2/guides/routing/route-maps.html?preview=1
+// params: {
+//   tenant: "acme",
+//   version: "2",
+//   category: "guides",
+//   slug: "routing/route-maps",
+//   format: "html",
+// }
 ```
 
-Variables, wildcards, and optionals also work in hostnames:
+The [`route-pattern` overview](https://api.remix.run/api/remix/route-pattern/overview/) covers the full grammar and the lower-level `remix/route-pattern/href` and `remix/route-pattern/match` APIs.
 
-```ts
-":tenant.example.com/dashboard"; // matches acme.example.com/dashboard
-"(www.)example.com/blog/:slug"; // matches example.com/blog/hello and www.example.com/blog/hello
-"*.example.com/files/*path"; // matches cdn.example.com/files/images/logo.png
-```
-
-Search constraints match query string keys and values:
-
-```ts
-"/search?q"; // matches /search?q=anything
-"/search?q=routing"; // matches /search?q=routing only
-```
-
-Use a backslash when you need to match a character that would otherwise have special meaning in a pattern:
-
-```ts
-"/time/12\\:30"; // matches /time/12:30
-"/wiki/AC\\/DC"; // matches /wiki/AC%2FDC
-```
-
-Patterns can also include protocol, hostname, and port for apps that route across origins or subdomains:
-
-```ts
-"https://admin.example.com/reports";
-"http(s)://:region.cdn.example.com/assets/*path";
-```
-
-When multiple patterns match the same URL, Remix chooses the most specific match. Static segments beat params, params beat wildcards, and the earliest difference wins. For full URL patterns, explicit protocol and port constraints are more specific than omitted constraints, and static hostnames are more specific than dynamic or omitted hostnames.
-
-This means these two routes can sit next to each other without careful ordering:
+When multiple patterns match the same URL, Remix chooses the most specific match. Static segments beat variables, variables beat wildcards, and the earliest difference wins. This means these two routes can sit next to each other without careful ordering:
 
 ```ts filename=app/routes.ts
 import { get, route } from "remix/routes";
@@ -379,5 +354,3 @@ export const routes = route({
 ```
 
 `/albums/new` matches `albums.new`, not `albums.show` with `albumId: 'new'`.
-
-If you need the lower-level primitives outside the router, use `remix/route-pattern/href` to build a URL from a pattern and `remix/route-pattern/match` to match a URL yourself. The `route-pattern` [package docs](https://api.remix.run/api/remix/route-pattern) cover the full API, including parsing, matching multiple patterns, joining patterns, and specificity helpers.
