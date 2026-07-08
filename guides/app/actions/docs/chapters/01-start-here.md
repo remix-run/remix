@@ -134,9 +134,11 @@ That route definition does a lot:
 - Narrows the `show` route with `get()` so only `GET` requests match.
 - Defines the URL pattern `'/albums/:albumId'`, so
   pathnames like `/albums/thriller` match.
-- Turns `:albumId` into a route parameter we can read as `params.albumId` in the action.
+- Uses `:albumId` as a path variable, which becomes a route param we can read as `params.albumId` in the action.
 - Provides a typed href constructor:
   `routes.albums.show.href({ albumId: 'thriller' })`.
+
+Most app routes only need path variables like `:albumId`. Route patterns can also express wildcards, optional groups, search constraints, hostnames, and full origins when a route needs them.
 
 Now that we're setting up an `albums` route map, we'll keep things organized by creating a directory in `app/actions/` for everything related to the albums routes and creating a file for our controller.
 
@@ -145,7 +147,7 @@ mkdir app/actions/albums
 touch app/actions/albums/controller.tsx
 ```
 
-This controller will start pretty small, just handling the single `show` action we have so far. Notice that when we pass `routes.albums` into `createController`, it requires that we provide `actions` with a `show` function. `show` itself receives type-safe `params`. This means we can guarantee the existence of `albumId`, which comes from the `'/albums/:albumId'` route pattern we set up.
+This controller will start pretty small, just handling the single `show` action we have so far. Notice that when we pass `routes.albums` into `createController`, it requires that we provide `actions` with a `show` function. `show` itself receives type-safe `params`, so we can guarantee the existence of `albumId` from the `:albumId` path variable we set up.
 
 ```tsx filename=app/actions/albums/controller.tsx
 import { createController } from "remix/router";
@@ -192,7 +194,7 @@ The [Routing and Controllers](/docs/routing-and-controllers) chapter covers rout
 
 Let's make this album page a little more interesting by returning HTML from a Remix component.
 
-Remix UI uses JSX with a two-phase component model. A component function receives a `handle` and returns a render function. The setup phase runs once when the component is first created, and the render phase runs on the first render and every update afterward.
+Remix UI uses JSX with a two-phase component model. A component is a function that receives a `handle` and returns another function that renders JSX. The outer function is setup: it runs once when the component is created, so normal JavaScript variables declared there can hold local state. The returned function is render: it runs on the first render and every update afterward.
 
 We'll come back to the component model later. If you want the full model now, check out the [Rendering UI](/docs/rendering-ui) chapter.
 
