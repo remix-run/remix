@@ -1,6 +1,6 @@
 ---
 title: Routing and Controllers
-description: How route maps, route helpers, controllers, actions, responses, and route pattern syntax define Remix request handling.
+description: How route maps, route helpers, controllers, actions, and responses define Remix request handling.
 ---
 
 In [Start Here](/docs/start-here), we built one request path: a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) comes in, Remix matches a route, a controller runs an action, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
@@ -39,17 +39,7 @@ routes.albums.show.href({ albumId: "thriller" });
 
 The `albumId` property is required because `:albumId` is a path variable. Path variables match within a segment and become route params on `context.params`. If you later rename the pattern to `'/albums/:id'`, old calls that still pass `{ albumId: ... }` will report TypeScript errors. The same `routes` object can be used in controllers, links, forms, redirects, and tests, so URL changes are not hidden in string literals around the app.
 
-Most app routes only need path variables, but route patterns can also express:
-
-- wildcards that match within a segment or across many segments
-- optional groups, including nested optional groups
-- search constraints for query string keys and values
-- escaped literals for characters that would otherwise be pattern syntax
-- variables and wildcards in hostnames
-- full-origin patterns with protocol, hostname, and port
-- deterministic specificity when more than one pattern matches
-
-A single pattern can combine those pieces when a route needs it:
+Most app routes only need path variables, but patterns can also include wildcards, optional groups, search constraints, escaped literals, hostname variables, full origins, and specificity rules. A single pattern can combine those when the URL shape is part of the app contract:
 
 ```ts
 "http(s)://(:tenant.)example.com/docs(/v:version)/:category/*slug.:format?preview";
@@ -69,7 +59,7 @@ That difference between leaves and nested maps matters once we start mapping con
 
 ## Route builders: route, get, post, put, del, form, resources {#route-builders-route-get-post-put-del-form-resources}
 
-Most apps use the route helpers instead of writing `{ method, pattern }` objects by hand.
+Most apps use helpers instead of writing `{ method, pattern }` objects by hand. Each helper still produces the same route leaves and route maps we just wrote out.
 
 ```ts filename=app/routes.ts
 import { del, get, post, route } from "remix/routes";
@@ -84,18 +74,18 @@ export const routes = route({
 });
 ```
 
-The HTTP method helpers are `get`, `post`, `put`, `patch`, `del`, `head`, and `options`, and each one creates a single route narrowed to that method. A bare string leaf is method-agnostic, so `webhook: '/webhooks/github'` can match `GET`, `POST`, or any other method. Prefer a method helper unless the action intentionally checks `context.method` itself.
+| Helper                                                  | Purpose                                                           |
+| ------------------------------------------------------- | ----------------------------------------------------------------- |
+| `get`, `post`, `put`, `patch`, `del`, `head`, `options` | One route leaf narrowed to an HTTP method.                        |
+| bare string leaf                                        | A method-agnostic leaf, such as `webhook: '/webhooks/github'`.    |
+| `route(prefix, defs)`                                   | A nested route map whose child patterns are relative to a prefix. |
+| `form(pattern)`                                         | A `GET` page and `POST` action at the same URL.                   |
+| `resources(pattern)`                                    | Conventional collection routes.                                   |
+| `resource(pattern)`                                     | Conventional singleton routes.                                    |
 
-```ts filename=app/routes.ts
-import { route } from "remix/routes";
+A method helper is the right default unless the action intentionally checks `context.method` itself.
 
-export const routes = route({
-  webhook: "/webhooks/github",
-  search: { method: "GET", pattern: "/search" },
-});
-```
-
-You can also give `route(...)` a prefix when one branch owns a set of relative patterns:
+A prefixed `route(...)` works well when one branch owns a set of relative patterns:
 
 ```ts filename=app/routes.ts
 import { get, route } from "remix/routes";
@@ -113,7 +103,7 @@ export const routes = route({
 // routes.albums.show  -> GET /albums/:albumId
 ```
 
-Use `form(...)` when a page and its submit action live at the same URL:
+`form(...)` creates the common page-plus-submit shape where a page and its action live at the same URL:
 
 ```ts filename=app/routes.ts
 import { form, route } from "remix/routes";
@@ -130,9 +120,9 @@ export const routes = route({
 
 The [Forms and Mutations](/docs/forms-and-mutations) chapter builds on this route shape for validation, redirects, and progressive enhancement.
 
-Use `resources(...)` for a collection and `resource(...)` for a singleton. A collection resource can create `index`, `new`, `show`, `create`, `edit`, `update`, and `destroy` routes. A singleton resource has no `index` route because there is no collection page.
+`resources(...)` describes a collection, and `resource(...)` describes a singleton. A collection resource can create `index`, `new`, `show`, `create`, `edit`, `update`, and `destroy` routes. A singleton resource has no `index` route because there is no collection page.
 
-Both helpers support `only`, `exclude`, `param`, and `names`, so you can start from the conventional REST shape and keep only the routes you need:
+`only` keeps part of the conventional shape, and `param` changes the path variable name from the default `id`:
 
 ```ts filename=app/routes.ts
 import { resources, route } from "remix/routes";
@@ -149,9 +139,7 @@ export const routes = route({
 // routes.albums.create -> POST   /albums
 ```
 
-Use `names` only when the default route keys do not match the words your app uses.
-
-All of these helpers produce ordinary route maps and route leaves. They can be nested and passed to `createController` and `router.map()` the same way a hand-written map can.
+All of these helpers produce ordinary route maps and route leaves. They can be nested and passed to `createController` and `router.map()` the same way a hand-written map can. The [`remix/router` overview](https://api.remix.run/api/remix/router/overview/) covers the full route builder API.
 
 ## Controllers and actions {#controllers-and-actions}
 
@@ -182,9 +170,9 @@ These are the context fields you will use most often in actions:
 - `context.headers` is a mutable [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) copy of the request headers.
 - `context.get(key)` reads values added by middleware.
 
-Prefer `context.method`, `context.headers`, and middleware-provided context values over reading everything from `context.request`. Middleware may have already parsed the body, changed the method, or attached values such as parsed [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) and a session. The [Request Handling](/docs/request-handling) chapter covers typed context in more detail.
+In actions, `context.method`, `context.headers`, and middleware-provided context values reflect the request after middleware has run. Middleware may have already parsed the body, changed the method, or attached values such as parsed [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) and a session. The [Request Handling](/docs/request-handling) chapter covers typed context in more detail.
 
-An action can also be an object with route-specific middleware and a `handler`. This is handy when one action needs setup that the rest of the controller does not.
+An action can also be an object with route-specific middleware and a `handler`. This is handy for form submissions: the `action` route can parse `FormData` without adding that middleware to the `index` page.
 
 ```tsx filename=app/actions/albums/edit/controller.tsx
 import { formData } from "remix/middleware/form-data";
@@ -209,7 +197,7 @@ export default createController(routes.albums.edit, {
 });
 ```
 
-Router middleware runs first, then controller middleware, then action middleware, then the action handler. The [`remix/router` overview](https://api.remix.run/api/remix/router/overview/) covers the API surface for routers, controllers, actions, and middleware.
+Router middleware runs first, then controller middleware, then action middleware, then the action handler.
 
 ## Responses, redirects, headers, and errors {#responses-redirects-headers-and-errors}
 
@@ -219,7 +207,7 @@ Actions return Web `Response` objects. A text response can be as small as this:
 return new Response("Album not found", { status: 404 });
 ```
 
-For redirects, use `redirect` from `remix/response/redirect`. After a successful `POST`, use `303 See Other` so the browser follows up with a `GET` and does not resubmit the form on refresh.
+Redirects come from `remix/response/redirect`. After a successful `POST`, `303 See Other` tells the browser to follow up with a `GET` instead of resubmitting the form on refresh.
 
 ```ts filename=app/actions/albums/edit/controller.tsx
 import { redirect } from "remix/response/redirect";
@@ -233,7 +221,9 @@ return redirect(
 );
 ```
 
-For HTML outside the normal render pipeline covered in [Rendering UI](/docs/rendering-ui), use `createHtmlResponse` from `remix/response/html`. It sets the HTML content type and makes sure the response starts with a doctype. If you interpolate values into an HTML string, use `html` from `remix/html-template` so user-provided values are escaped.
+For HTML outside the normal render pipeline covered in [Rendering UI](/docs/rendering-ui), `createHtmlResponse` from `remix/response/html` sets the HTML content type and makes sure the response starts with a doctype.
+
+The `html` template tag from `remix/html-template` escapes user-provided values interpolated into an HTML string.
 
 ```ts
 import { html } from "remix/html-template";
@@ -242,7 +232,9 @@ import { createHtmlResponse } from "remix/response/html";
 return createHtmlResponse(html`<p>${album.title}</p>`);
 ```
 
-Headers and status use the standard response init object whether you are returning a raw `Response`, a redirect, or an HTML response. For JSON, use the platform [`Response.json(...)`](https://developer.mozilla.org/en-US/docs/Web/API/Response/json_static) helper.
+Headers and status go in the standard response init object for raw `Response` objects, redirects, and HTML responses.
+
+JSON responses can use the platform [`Response.json(...)`](https://developer.mozilla.org/en-US/docs/Web/API/Response/json_static) helper:
 
 ```ts
 return Response.json(album, {
@@ -313,14 +305,51 @@ app/actions/
         └── page.tsx            # route-local UI
 ```
 
-Once a route branch has its own nested routes, give it its own directory and controller. The parent controller stays smaller, and the owner of each route is visible from the file path.
+When a route branch has its own nested routes, a matching directory and controller keep the parent controller smaller and make each route owner visible from the file path.
 
 Route-local UI belongs next to the controller that renders it, so the page and form for `albums.edit` belong in `actions/albums/edit/`. Move a component to `ui/` once more than one route uses it. The [Rendering UI](/docs/rendering-ui) chapter covers the component model, and [Files and Assets](/docs/files-and-assets) covers browser-loadable `.browser.ts` and `.browser.tsx` modules.
 
-For very large route areas, `router.mount(...)` lets a feature register its own relative route group under a prefix:
+For larger route areas, `router.mount(...)` lets one module own route registration while `app/router.ts` decides where that module lives. That keeps route groups composable: an admin feature can be mounted at `/admin` in one app, `/internal/admin` in another, or under an org prefix later.
 
 ```ts filename=app/router.ts
+import { createRouter } from "remix/router";
+
+import { installAdminRoutes } from "./actions/admin/routes.ts";
+
+export const router = createRouter();
+
 router.mount("/admin", installAdminRoutes);
 ```
 
-Keep the full app route map in `routes.ts` for links and redirects. Inside the mounted installer, use relative routes for the handlers owned by that feature. Params from the mount prefix are available to child handlers, and if the prefix and child route use the same param name, the child route wins.
+The installer receives a route builder. It can register routes under the mount prefix, but it is not a full router and cannot dispatch requests.
+
+```ts filename=app/actions/admin/routes.ts
+import type { RouteBuilder } from "remix/router";
+
+export function installAdminRoutes(router: RouteBuilder) {
+  router.get("/", () => {
+    return new Response("Admin");
+  });
+
+  router.get("/users/:userId", ({ params }) => {
+    return new Response(`Admin user ${params.userId}`);
+  });
+}
+```
+
+Those handlers match `GET /admin` and `GET /admin/users/:userId`. In a real app, the installer can call `router.map(...)` with feature controllers instead of inline handlers; inline handlers just keep the mount example small.
+
+The full app route map still belongs in `routes.ts` for links and redirects. Mounted installers are for registering the handlers owned by that feature.
+
+Mount prefixes are route patterns, so route params from the prefix are available to child handlers:
+
+```ts filename=app/router.ts
+// after creating the router:
+router.mount("/orgs/:orgId", (org) => {
+  org.get("/users/:userId", ({ params }) => {
+    return new Response(`${params.orgId}:${params.userId}`);
+  });
+});
+```
+
+If the prefix and child route use the same param name, the child route wins.
