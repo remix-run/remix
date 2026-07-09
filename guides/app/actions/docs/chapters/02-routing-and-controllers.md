@@ -152,7 +152,9 @@ These helpers produce ordinary route maps and leaves, so you can nest them with 
 
 ## Controllers and actions
 
-A controller pairs the leaves of one route map with actions, so `createController(routes.albums, ...)` means “this controller handles the leaf routes inside `routes.albums`.”
+A controller owns request handling for the direct leaves in one route map. It can run middleware shared by those actions, and its `actions` object supplies one handler per leaf. `createController(...)` uses the map to type each action name and its params while keeping request-handling behavior out of the route map.
+
+For `routes.albums`, the controller owns the `show` leaf:
 
 ```tsx filename=app/actions/albums/controller.tsx
 import { createController } from "remix/router";
@@ -168,20 +170,25 @@ export default createController(routes.albums, {
 });
 ```
 
-Because `show` is defined as `get('/albums/:albumId')`, the action receives `context.params.albumId` as a `string`. You don't need to parse the URL yourself, and you don't need to guard against `albumId` being missing for this route.
+The `show` action receives request context and returns a Web `Response`. Because its route is defined as `get('/albums/:albumId')`, `context.params.albumId` is a `string` when the route matches. Remix matches the pattern before the action runs, so the action does not need to parse the URL or guard against a missing `albumId`.
 
-These are the context fields you will use most often in actions:
+Every action receives these built-in request context properties and methods:
 
-- `context.request` is the original Web `Request`.
-- `context.url` is the parsed [`URL`](https://developer.mozilla.org/en-US/docs/Web/API/URL).
-- `context.method` is the request method after method override middleware has run.
-- `context.params` contains params from the matched route pattern.
-- `context.headers` is a mutable [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) copy of the request headers.
-- `context.get(key)` reads values added by middleware.
+| Property or method        | What it provides                                                                                             |
+| ------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `context.request`         | The original Web `Request`.                                                                                  |
+| `context.url`             | The parsed [`URL`](https://developer.mozilla.org/en-US/docs/Web/API/URL).                                    |
+| `context.method`          | The request method.                                                                                          |
+| `context.params`          | Typed values parsed from the matched route pattern.                                                          |
+| `context.headers`         | A mutable [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) copy of the request headers. |
+| `context.router`          | The router handling the request.                                                                             |
+| `context.set(key, value)` | Stores a request-scoped value on the shared context.                                                         |
+| `context.get(key)`        | A request-scoped value stored under a context key.                                                           |
+| `context.has(key)`        | Whether a value has been stored for a context key.                                                           |
 
-In actions, `context.method`, `context.headers`, and middleware-provided context values reflect the request after middleware has run. Middleware may have already parsed the body, changed the method, or attached values such as parsed [`FormData`](https://developer.mozilla.org/en-US/docs/Web/API/FormData) and a session. The [Request Handling](/docs/request-handling) chapter covers typed context in more detail.
+Middleware can extend this base context with typed properties such as `context.formData` or `context.render`. Those properties depend on the app's middleware stack, so they do not form a fixed list. The built-in `methodOverride()` middleware deliberately changes one base value: it updates `context.method` before route matching so a `POST` form with a `_method` field can target a `PUT`, `PATCH`, or `DELETE` route. `context.request.method` remains the original method.
 
-An action can also be an object with route-specific middleware and a `handler`. This is handy for form submissions: the `action` route can parse `FormData` without adding that middleware to the `index` page.
+Controllers can have their own middleware that applies to every action it owns. When middleware is needed for only one route, define that action as an object with `middleware` and a `handler`. Here, only the `POST` action parses `FormData`; the `index` page skips that work.
 
 ```tsx filename=app/actions/albums/edit/controller.tsx
 import { formData } from "remix/middleware/form-data";
@@ -206,17 +213,26 @@ export default createController(routes.albums.edit, {
 });
 ```
 
-Router middleware runs first, then controller middleware, then action middleware, then the action handler.
+Router middleware runs first, then controller middleware, then action middleware, then the action handler. The [Request Handling](/docs/request-handling) chapter covers middleware scopes and typed context in more detail.
 
 ## Responses, redirects, headers, and errors
 
-Actions return Web `Response` objects. A text response can be as small as this:
+Actions return Web `Response` objects. To render pages, you will often setup a `render` middleware and add it to the router. That middleware provides `context.render(...)`, which turns a Remix component tree into an HTML response. The [Rendering UI](/docs/rendering-ui) chapter builds this middleware step by step. Once it is installed, use it in an action:
+
+```tsx filename=app/actions/albums/controller.tsx
+// inside the show action:
+return context.render(<AlbumPage album={album} />);
+```
+
+The result is still an ordinary Web `Response`. An action can render a page, return text or JSON, redirect the browser, send a file, or return an error response.
+
+A text response can be as simple as:
 
 ```ts
 return new Response("Album not found", { status: 404 });
 ```
 
-Redirects come from `remix/response/redirect`. After a successful `POST`, `303 See Other` tells the browser to follow up with a `GET` instead of resubmitting the form on refresh.
+`redirect(...)` creates redirect responses. An edit action might use `303 See Other` for a POST-redirect-GET flow:
 
 ```ts filename=app/actions/albums/edit/controller.tsx
 import { redirect } from "remix/response/redirect";
@@ -230,22 +246,20 @@ return redirect(
 );
 ```
 
-For HTML outside the normal render pipeline covered in [Rendering UI](/docs/rendering-ui), `createHtmlResponse` from `remix/response/html` sets the HTML content type and makes sure the response starts with a doctype.
-
-The `html` template tag from `remix/html-template` escapes user-provided values interpolated into an HTML string.
+For HTML outside the Remix UI render pipeline, the `html` template tag escapes interpolated values and `createHtmlResponse(...)` sets the HTML content type and adds a doctype:
 
 ```ts
 import { html } from "remix/html-template";
 import { createHtmlResponse } from "remix/response/html";
 
+// inside an action:
 return createHtmlResponse(html`<p>${album.title}</p>`);
 ```
 
-Headers and status go in the standard response init object for raw `Response` objects, redirects, and HTML responses.
-
-JSON responses can use the platform [`Response.json(...)`](https://developer.mozilla.org/en-US/docs/Web/API/Response/json_static) helper:
+Remix's `redirect(...)` and `createHtmlResponse(...)`, like `new Response(...)` and [`Response.json(...)`](https://developer.mozilla.org/en-US/docs/Web/API/Response/json_static), accept a standard `ResponseInit` when you need to set a status or headers. The numeric `303` above is a shorthand supported by `redirect(...)`.
 
 ```ts
+// inside an action:
 return Response.json(album, {
   headers: {
     "Cache-Control": "no-store",
@@ -253,27 +267,11 @@ return Response.json(album, {
 });
 ```
 
-For expected failures, return a response with the appropriate status: `404` for missing records, `400` for invalid input, `401` for unauthenticated requests, and `403` for authenticated users who still cannot access the route. The [Errors & Error Boundaries](/docs/errors-and-error-boundaries) chapter covers thrown errors, render failures, and error boundaries.
+Note: `context.headers` represents the request headers, not the headers sent with the response. Controllers do not have a separate response-header API because their actions return standard Web responses. Use Web [`Headers`](https://developer.mozilla.org/en-US/docs/Web/API/Headers) directly, or `remix/headers` when typed accessors for values such as `Cache-Control` and `Set-Cookie` make header handling clearer.
 
-## Nested route maps and ownership
+## Mapping controllers
 
-A route map can contain both leaves and other route maps. In this example, `show` is a leaf and `edit` is a nested map:
-
-```ts filename=app/routes.ts
-import { form, get, route } from "remix/routes";
-
-export const routes = route({
-  home: "/",
-  albums: {
-    show: get("/albums/:albumId"),
-    edit: form("/albums/:albumId/edit"),
-  },
-});
-```
-
-Controllers own leaves, not whole subtrees. If one controller owns `routes.albums`, it handles `show`. It does not handle `routes.albums.edit.index` or `routes.albums.edit.action`, because those leaves belong to the nested `edit` map.
-
-Wire that ownership in `app/router.ts` with one `router.map(...)` call per controller:
+`createController(...)` defines what a controller handles, and `router.map(...)` registers it. Because a controller owns only the direct leaves of its route map, register nested maps separately when they have their own actions:
 
 ```ts filename=app/router.ts
 import { createRouter } from "remix/router";
@@ -296,19 +294,27 @@ With those mappings:
 - `albumsController` handles `routes.albums.show`.
 - `albumsEditController` handles `routes.albums.edit.index` and `routes.albums.edit.action`.
 
+`router.map(...)` is the app-level convention for route maps and controllers. Direct methods such as `router.get(...)` and `router.post(...)` register individual handlers without a controller:
+
+```ts filename=app/router.ts
+// after creating the router:
+router.get("/health", () => new Response("OK"));
+```
+
 Controller middleware follows the same ownership rule. Middleware on `albumsController` runs for `routes.albums.show`, but not for `routes.albums.edit.index` or `routes.albums.edit.action`.
 
 Remix checks this during router setup. If a controller is missing an action for a leaf it owns, setup throws before the app starts serving requests.
 
 ## Organizing route-owned code
 
-The file tree usually follows the same shape as the route map:
+The file tree typically follows the same shape as the route map:
 
 ```txt
 app/actions/
 ├── controller.tsx              # routes
 └── albums/
     ├── controller.tsx          # routes.albums
+    ├── routes.ts               # albumRoutes
     └── edit/
         ├── controller.tsx      # routes.albums.edit
         └── page.tsx            # route-local UI
@@ -316,7 +322,7 @@ app/actions/
 
 When a route branch has its own nested routes, a matching directory and controller keep the parent controller smaller and make each route owner visible from the file path.
 
-Route-local UI belongs next to the controller that renders it, so the page and form for `albums.edit` belong in `actions/albums/edit/`. Move a component to `ui/` once more than one route uses it. The [Rendering UI](/docs/rendering-ui) chapter covers the component model, and [Files and Assets](/docs/files-and-assets) covers browser-loadable `.browser.ts` and `.browser.tsx` modules.
+Keep route-local UI next to the controller that renders it, so the page and form for `albums.edit` belong in `actions/albums/edit/`. Components shared by multiple route areas belong in `ui/`. The [Rendering UI](/docs/rendering-ui) chapter covers the component model.
 
 For larger route areas, `router.mount(...)` lets one module own route registration while `app/router.ts` decides where that module lives. That keeps route groups composable: an admin feature can be mounted at `/admin` in one app, `/internal/admin` in another, or under an org prefix later.
 
@@ -346,7 +352,7 @@ export function installAdminRoutes(router: RouteBuilder) {
 }
 ```
 
-Those handlers match `GET /admin` and `GET /admin/users/:userId`. In a real app, the installer can call `router.map(...)` with feature controllers instead of inline handlers; inline handlers just keep the mount example small.
+Those handlers match `GET /admin` and `GET /admin/users/:userId`.
 
 The full app route map still belongs in `routes.ts` for links and redirects. Mounted installers are for registering the handlers owned by that feature.
 
