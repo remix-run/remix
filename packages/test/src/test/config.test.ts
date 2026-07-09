@@ -115,6 +115,14 @@ describe('config', () => {
     assert.equal(config.quiet, true)
   })
 
+  it('supports the quiet shorthand flag', async () => {
+    let cwd = await createConfigDir('cli-quiet-shorthand')
+
+    let config = await loadConfig(['-q'], cwd)
+
+    assert.equal(config.quiet, true)
+  })
+
   it('rejects unsupported pool values', async () => {
     let cwd = await createConfigDir('invalid-pool')
 
@@ -134,6 +142,7 @@ describe('config', () => {
     let help = getRemixTestHelpText()
 
     assert.match(help, /--quiet/)
+    assert.match(help, /-q/)
   })
 })
 

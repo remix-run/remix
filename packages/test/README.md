@@ -162,7 +162,7 @@ You may also specify any config field as a CLI flag which will take precedence o
 | `--playwrightConfig <path>` |           |
 | `--pool <forks              | threads>` |     |
 | `--project <name>`          | `-p`      |
-| `--quiet`                   |           |
+| `--quiet`                   | `-q`      |
 | `--reporter <name>`         | `-r`      |
 | `--setup <path>`            | `-s`      |
 | `--type <name>`             | `-t`      |

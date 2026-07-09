@@ -126,6 +126,7 @@ const cliOptions = {
   },
   quiet: {
     type: 'boolean',
+    short: 'q',
     description: 'Do not print skipped tests',
   },
   reporter: {
@@ -251,7 +252,7 @@ export interface RemixTestConfig {
    * project name or an array of names; `--project` may be repeated on the CLI.
    */
   project?: string | string[]
-  /** Quiet mode — do not print skipped tests (--quiet) */
+  /** Quiet mode — do not print skipped tests (--quiet, -q) */
   quiet?: boolean
   /** Test reporter (--reporter) */
   reporter?: string
