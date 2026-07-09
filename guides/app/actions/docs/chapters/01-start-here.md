@@ -138,7 +138,7 @@ That route definition does a lot:
 - Provides a typed href constructor:
   `routes.albums.show.href({ albumId: 'thriller' })`.
 
-Most app routes only need path variables like `:albumId`. Route patterns can also express wildcards, optional groups, search constraints, hostnames, and full origins when a route needs them.
+Along with path variables like `:albumId`, route patterns can express wildcards, optional groups, search constraints, hostnames, and full origins.
 
 Now that we're setting up an `albums` route map, we'll keep things organized by creating a directory in `app/actions/` for everything related to the albums routes and creating a file for our controller.
 
