@@ -8,21 +8,21 @@ import { sign, unsign } from './cookie-signing.ts'
  */
 export interface CookieOptions extends CookieProperties {
   /**
-   * A function that decodes the cookie value. Decodes any URL-encoded sequences into their
-   * original characters.
+   * A function that decodes the cookie value.
    *
    * See [RFC 6265](https://tools.ietf.org/html/rfc6265#section-4.1.1) for more details.
    *
-   * @default decodeURIComponent
+   * @default The default decoder reverses the default base64 cookie-value encoder.
    */
   decode?: (value: string) => string
   /**
-   * A function that encodes the cookie value. Percent-encodes all characters that are not allowed
-   * in a cookie value.
+   * A function that encodes the cookie value.
+   *
+   * Custom encoders must return values that are safe to serialize in a `Set-Cookie` header.
    *
    * See [RFC 6265](https://tools.ietf.org/html/rfc6265#section-4.1.1) for more details.
    *
-   * @default encodeURIComponent
+   * @default The default encoder percent-encodes the value and wraps it in base64.
    */
   encode?: (value: string) => string
   /**
@@ -67,8 +67,8 @@ export class Cookie implements CookieProperties {
    */
   constructor(name: string, options?: CookieOptions) {
     let {
-      decode = decodeURIComponent,
-      encode = encodeURIComponent,
+      decode = defaultDecode,
+      encode = defaultEncode,
       secrets = [],
       domain,
       expires,
@@ -275,10 +275,14 @@ async function decodeCookieValue(
 
 function decodeValue(value: string, decode: Coder): string | null {
   try {
-    return decode(myEscape(atob(value)))
+    return decode(value)
   } catch {
     return null
   }
+}
+
+function defaultDecode(value: string): string {
+  return decodeURIComponent(myEscape(atob(value)))
 }
 
 // See: https://github.com/zloirock/core-js/blob/master/packages/core-js/modules/es.escape.js
@@ -310,13 +314,13 @@ function hex(code: number, length: number): string {
 }
 
 async function encodeCookieValue(value: string, secrets: string[], encode: Coder): Promise<string> {
-  let encoded = encodeValue(value, encode)
+  let encoded = encode(value)
   if (secrets.length > 0) encoded = await sign(encoded, secrets[0])
   return encoded
 }
 
-function encodeValue(value: string, encode: Coder): string {
-  return btoa(myUnescape(encode(value)))
+function defaultEncode(value: string): string {
+  return btoa(myUnescape(encodeURIComponent(value)))
 }
 
 // See: https://github.com/zloirock/core-js/blob/master/packages/core-js/modules/es.unescape.js
