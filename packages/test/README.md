@@ -169,6 +169,30 @@ You may also specify any config field as a CLI flag which will take precedence o
 | `--type <name>`             | `-t`      |
 | `--watch`                   | `-w`      |
 
+### Focusing Tests
+
+Use `.only` to focus a suite or test while developing:
+
+```ts
+describe.only('Cart routes', () => {
+  it('loads cart items', () => {})
+})
+
+describe('Checkout routes', () => {
+  it.only('redirects anonymous users', () => {})
+})
+```
+
+Use `--only <pattern>` to focus tests from the CLI without editing source. Patterns are JavaScript regular expressions matched against suite names and full test names:
+
+```sh
+remix test --only 'Cart routes'
+remix test --only 'Checkout routes > redirects anonymous users'
+remix test --only '/anonymous users$/'
+```
+
+Full test names join nested `describe` names and the test name with ` > `. For example, `describe('Cart routes', () => describe('loader', () => it('loads cart items', ...)))` has the full test name `Cart routes > loader > loads cart items`.
+
 ### Setup
 
 The `setup` option points to a module that can export `globalSetup` and/or `globalTeardown` functions, called once before and after the entire test run respectively:
