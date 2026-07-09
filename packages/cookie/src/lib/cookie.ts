@@ -18,6 +18,8 @@ export interface CookieOptions extends CookieProperties {
   /**
    * A function that encodes the cookie value.
    *
+   * Custom encoders must return values that are safe to serialize in a `Set-Cookie` header.
+   *
    * See [RFC 6265](https://tools.ietf.org/html/rfc6265#section-4.1.1) for more details.
    *
    * @default The default encoder percent-encodes the value and wraps it in base64.

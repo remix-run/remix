@@ -93,7 +93,7 @@ let sessionCookie = createCookie('session', {
 })
 ```
 
-Custom `encode` functions are used as the full cookie value codec. Their return values are signed when `secrets` are configured and then serialized as-is, without the default base64 wrapper. This can be useful for viewing the value of cookies in a human-readable format in the browser's developer tools. But you should be sure that the encoded cookie value contains only characters that are [valid in a cookie value](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#attributes).
+Custom `encode` functions are used as the full cookie value codec. Their return values are signed when `secrets` are configured and then serialized as-is, without the default base64 wrapper. This can be useful for viewing the value of cookies in a human-readable format in the browser's developer tools. But you should be sure that the encoded cookie value contains only characters that are [valid in a cookie value](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Set-Cookie#attributes) and safe for HTTP headers. Raw Unicode characters should be escaped or encoded by your custom function before they are returned.
 
 ## Related Packages
 
