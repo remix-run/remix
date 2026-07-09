@@ -1839,6 +1839,60 @@ describe('stream', () => {
       })
     })
 
+    it('brackets non-blocking fallbacks with streaming directives', async () => {
+      let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
+        resolveFrame: () => '<div>Resolved</div>',
+      })
+      let result = await drain(stream)
+
+      let frameId = getCommentMarkerId(result, 'rmx:f:')
+      let start = `<!-- rmx:f:${frameId} -->`
+      let startDirective = `<?start name="${frameId}">`
+      let endDirective = `<?end name="${frameId}">`
+      let end = '<!-- /rmx:f -->'
+
+      expect(result).toContain(startDirective)
+      expect(result).toContain(endDirective)
+
+      // Ordering: rmx:f start < ?start < fallback < ?end < rmx:f end
+      let startIdx = result.indexOf(start)
+      let startDirectiveIdx = result.indexOf(startDirective)
+      let fallbackIdx = result.indexOf('<div>Loading...</div>')
+      let endDirectiveIdx = result.indexOf(endDirective)
+      let endIdx = result.indexOf(end)
+      expect(startIdx).toBeGreaterThanOrEqual(0)
+      expect(startDirectiveIdx).toBeGreaterThan(startIdx)
+      expect(fallbackIdx).toBeGreaterThan(startDirectiveIdx)
+      expect(endDirectiveIdx).toBeGreaterThan(fallbackIdx)
+      expect(endIdx).toBeGreaterThan(endDirectiveIdx)
+    })
+
+    it('addresses streamed templates with a matching for attribute', async () => {
+      let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
+        resolveFrame: () => '<div>Resolved</div>',
+      })
+      let chunks = readChunks(stream)
+      let first = await chunks.next()
+      invariant(!first.done)
+      let frameId = getCommentMarkerId(first.value, 'rmx:f:')
+
+      let second = await chunks.next()
+      invariant(!second.done)
+      expect(second.value).toContain(`<template for="${frameId}">`)
+      expect(second.value).toContain('<div>Resolved</div>')
+      expect(second.value).not.toContain('<template id=')
+    })
+
+    it('does not bracket blocking frame content with streaming directives', async () => {
+      let stream = renderToStream(<Frame src="/x" />, {
+        resolveFrame: () => '<div>Resolved</div>',
+      })
+      let result = await drain(stream)
+
+      expect(result).not.toContain('<?start name=')
+      expect(result).not.toContain('<?end name=')
+    })
+
     it('strips doctype markup from non-blocking frame templates', async () => {
       let stream = renderToStream(<Frame src="/x" fallback={<div>Loading...</div>} />, {
         async resolveFrame() {
@@ -2039,7 +2093,7 @@ describe('stream', () => {
       // Since the inner frame is non-blocking, it should stream later
       let second = await chunks.next()
       expect(second.done).toBe(false)
-      expect(second.value).toContain('<template id="f')
+      expect(second.value).toContain('<template for="f')
 
       let done = await chunks.next()
       expect(done.done).toBe(true)
@@ -2091,7 +2145,7 @@ describe('stream', () => {
       expect(secondChunk.done).toBe(false)
       let template = secondChunk.value
 
-      expect(template).toContain('<template id="f')
+      expect(template).toContain('<template for="f')
       expect(template).toContain('<div>Async Product Content</div>')
       expect(template).toContain('</template>')
 
@@ -2219,7 +2273,7 @@ describe('stream', () => {
       let secondChunk = await chunks.next()
       expect(secondChunk.done).toBe(false)
       let templateChunk = secondChunk.value!
-      expect(templateChunk).toContain('<template id="f')
+      expect(templateChunk).toContain('<template for="f')
       expect(templateChunk).toContain(
         '<\\/template><script>alert("xss")</script><template><p>safe</p>',
       )
@@ -2267,7 +2321,7 @@ describe('stream', () => {
 
       // Should stream frame 2's content
       let secondChunk = await chunks.next()
-      expect(secondChunk.value).toContain('<template id="f')
+      expect(secondChunk.value).toContain('<template for="f')
       expect(secondChunk.value).toContain('Second Frame Content')
 
       // Resolve frame 1
@@ -2275,7 +2329,7 @@ describe('stream', () => {
 
       // Should stream frame 1's content
       let thirdChunk = await chunks.next()
-      expect(thirdChunk.value).toContain('<template id="f')
+      expect(thirdChunk.value).toContain('<template for="f')
       expect(thirdChunk.value).toContain('First Frame Content')
 
       // Stream completes
@@ -2335,7 +2389,7 @@ describe('stream', () => {
       expect(secondChunk.done).toBe(false)
       let parentTemplate = secondChunk.value
 
-      expect(parentTemplate).toContain('<template id="f')
+      expect(parentTemplate).toContain('<template for="f')
       expect(parentTemplate).toContain('<section>')
       expect(parentTemplate).toContain('<h2>Parent Content</h2>')
       expect(parentTemplate).toContain('<span>Loading child...</span>')
@@ -2349,7 +2403,7 @@ describe('stream', () => {
       let childTemplate = thirdChunk.value
 
       // IDs are local within the returned fragment stream, so the child template id may collide.
-      expect(childTemplate).toContain('<template id="f')
+      expect(childTemplate).toContain('<template for="f')
       expect(childTemplate).toContain('<article>Child Content</article>')
       expect(childTemplate).toContain('</template>')
 
@@ -2571,7 +2625,7 @@ describe('stream', () => {
       let secondChunk = await chunks.next()
       console.log('\n\nsecond:\n', secondChunk.value)
       // IDs are local within the returned fragment stream.
-      expect(secondChunk.value).toContain('<template id="f')
+      expect(secondChunk.value).toContain('<template for="f')
       expect(secondChunk.value).toContain('<div>Non-blocking Child</div>')
       expect(secondChunk.value).toContain('</template>')
 
@@ -2607,7 +2661,7 @@ describe('stream', () => {
       // Second chunk should be the template for resolved content (no markers expected here)
       let second = await chunks.next()
       if (!second.done) {
-        expect(second.value).toContain('<template id="f')
+        expect(second.value).toContain('<template for="f')
       }
     })
 
@@ -2720,7 +2774,7 @@ describe('stream', () => {
       let second = await nextChunkPromise
       expect(second.done).toBe(false)
       let parentTemplate = second.value!
-      expect(parentTemplate).toContain('<template id="f')
+      expect(parentTemplate).toContain('<template for="f')
       expect(parentTemplate).toContain('<h2>Parent Content</h2>')
       expect(parentTemplate).toContain('<article>Child Content</article>')
       expect(parentTemplate).toContain('</template>')

@@ -976,7 +976,7 @@ describe('run', () => {
     expect(loadModule).toHaveBeenCalledTimes(1)
 
     let template = document.createElement('template')
-    template.id = frameId
+    template.setAttribute('for', frameId)
     template.innerHTML = await drain(renderToStream(<Late />))
     document.body.appendChild(template)
 
@@ -1088,10 +1088,13 @@ describe('run', () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
+    // Nodes outside the streamed region keep their identity.
     expect(document.querySelector('h1')).toBe(h1)
     expect(document.querySelector('p')).toBe(p)
-    expect(document.querySelector('nav')).toBe(nav)
-    expect(nav.textContent).toBe('Loaded')
+    // The region is replaced declaratively, so the resolved <nav> is a fresh node.
+    let resolvedNav = document.querySelector('nav')
+    expect(resolvedNav).not.toBe(nav)
+    expect(resolvedNav?.textContent).toBe('Loaded')
 
     frame.dispose()
   })
@@ -1244,7 +1247,7 @@ describe('run', () => {
 
     // Ensure template exists so the pending frame can render immediately.
     let frameId = getCommentMarkerId(html, 'rmx:f:')
-    expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
+    expect(document.querySelector(`template[for="${frameId}"]`)).toBeTruthy()
 
     let clientFrame = run({
       loadModule(moduleUrl, exportName) {
@@ -1821,7 +1824,7 @@ describe('run', () => {
     document.body.innerHTML = html
 
     let frameId = getCommentMarkerId(html, 'rmx:f:')
-    expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
+    expect(document.querySelector(`template[for="${frameId}"]`)).toBeTruthy()
 
     let clientFrame = run({
       loadModule(moduleUrl, exportName) {
@@ -2237,7 +2240,7 @@ describe('run', () => {
     document.body.innerHTML = html
 
     let frameId = getCommentMarkerId(html, 'rmx:f:')
-    expect(document.querySelector(`template#${frameId}`)).toBeTruthy()
+    expect(document.querySelector(`template[for="${frameId}"]`)).toBeTruthy()
 
     let clientFrame = run({
       loadModule(moduleUrl, exportName) {
@@ -2472,7 +2475,7 @@ describe('run', () => {
     document.body.innerHTML =
       '<div>' +
       '<!-- rmx:h:h1 --><button id="counter">Counter</button><!-- /rmx:h -->' +
-      '<!-- rmx:f:f1 --><span id="frame">Loading…</span><!-- /rmx:f -->' +
+      '<!-- rmx:f:f1 --><?start name="f1"><span id="frame">Loading…</span><?end name="f1"><!-- /rmx:f -->' +
       '</div>' +
       '<script type="application/json" id="rmx-data">' +
       '{"h":{"h1":{"moduleUrl":"/counter.js","exportName":"Counter","props":{}}},' +
@@ -2498,7 +2501,7 @@ describe('run', () => {
 
     // Simulate frame template arriving via MutationObserver.
     let template = document.createElement('template')
-    template.id = 'f1'
+    template.setAttribute('for', 'f1')
     template.innerHTML = '<span id="frame">Loaded!</span>'
     document.body.appendChild(template)
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -2580,7 +2583,7 @@ describe('run', () => {
 
     // Outer frame template arrives.
     let outerTemplate = document.createElement('template')
-    outerTemplate.id = outerFrameId
+    outerTemplate.setAttribute('for', outerFrameId)
     outerTemplate.innerHTML = outerContent
     document.body.appendChild(outerTemplate)
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -2590,7 +2593,7 @@ describe('run', () => {
 
     // Inner frame template arrives.
     let innerTemplate = document.createElement('template')
-    innerTemplate.id = innerFrameId
+    innerTemplate.setAttribute('for', innerFrameId)
     innerTemplate.innerHTML = innerContent
     document.body.appendChild(innerTemplate)
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -2664,7 +2667,7 @@ describe('run', () => {
 
     // Outer frame template arrives — contains a middle frame.
     let outerTemplate = document.createElement('template')
-    outerTemplate.id = outerFrameId
+    outerTemplate.setAttribute('for', outerFrameId)
     outerTemplate.innerHTML = outerContent
     document.body.appendChild(outerTemplate)
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -2675,7 +2678,7 @@ describe('run', () => {
 
     // Middle frame template arrives — contains an inner frame.
     let middleTemplate = document.createElement('template')
-    middleTemplate.id = middleFrameId
+    middleTemplate.setAttribute('for', middleFrameId)
     middleTemplate.innerHTML = middleContent
     document.body.appendChild(middleTemplate)
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -2686,7 +2689,7 @@ describe('run', () => {
 
     // Inner frame template arrives.
     let innerTemplate = document.createElement('template')
-    innerTemplate.id = innerFrameId
+    innerTemplate.setAttribute('for', innerFrameId)
     innerTemplate.innerHTML = innerContent
     document.body.appendChild(innerTemplate)
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -2763,7 +2766,7 @@ describe('run', () => {
 
     // Inner frame template arrives.
     let innerTemplate = document.createElement('template')
-    innerTemplate.id = innerFrameId
+    innerTemplate.setAttribute('for', innerFrameId)
     innerTemplate.innerHTML = await renderInner()
     document.body.appendChild(innerTemplate)
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -3214,7 +3217,7 @@ describe('run', () => {
     expect(document.querySelectorAll('#nested-fallback')).toHaveLength(1)
 
     let nestedTemplate = document.createElement('template')
-    nestedTemplate.id = nestedFrameId
+    nestedTemplate.setAttribute('for', nestedFrameId)
     nestedTemplate.innerHTML = '<span id="nested-loaded">Nested loaded</span>'
     document.body.appendChild(nestedTemplate)
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -3785,7 +3788,7 @@ describe('run', () => {
     expect(fallback.getAttribute('data-label')).toBe('Reloaded fallback')
 
     let staleTemplate = document.createElement('template')
-    staleTemplate.id = initialMarkerId
+    staleTemplate.setAttribute('for', initialMarkerId)
     staleTemplate.innerHTML = '<span id="stale-child-content">Stale child</span>'
     document.body.appendChild(staleTemplate)
     await new Promise((resolve) => setTimeout(resolve, 0))
@@ -3795,7 +3798,7 @@ describe('run', () => {
     expect(fallback.textContent).toBe('Reloaded fallback')
 
     let freshTemplate = document.createElement('template')
-    freshTemplate.id = reloadedMarkerId
+    freshTemplate.setAttribute('for', reloadedMarkerId)
     freshTemplate.innerHTML = '<span id="fresh-child-content">Fresh child</span>'
     document.body.appendChild(freshTemplate)
     await new Promise((resolve) => setTimeout(resolve, 0))
