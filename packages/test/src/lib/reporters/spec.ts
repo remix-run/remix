@@ -13,17 +13,13 @@ export class SpecReporter implements Reporter {
   }
 
   onResult(results: TestResults, env?: string) {
-    let visibleTests = results.tests.some((test) => test.focused)
-      ? results.tests.filter((test) => test.focused)
-      : results.tests
-
-    for (let test of visibleTests) {
+    for (let test of results.tests) {
       if (test.filePath) this.#files.add(test.filePath)
       if (test.suiteName) this.#suites.add(test.suiteName)
     }
 
     let suiteMap = new Map<string, TestResult[]>()
-    for (let test of visibleTests) {
+    for (let test of results.tests) {
       let suite = test.suiteName || 'Global'
       if (!suiteMap.has(suite)) suiteMap.set(suite, [])
       suiteMap.get(suite)!.push(test)

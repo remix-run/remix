@@ -345,16 +345,11 @@ describe('runTests only filtering', () => {
     assert.equal(results.passed, 1)
     assert.equal(results.skipped, 2)
     assert.deepEqual(
-      results.tests.map((test) => [
-        test.suiteName,
-        test.name,
-        test.status,
-        test.focused === true,
-      ]),
+      results.tests.map((test) => [test.suiteName, test.name, test.status]),
       [
-        ['first suite', 'unfocused sibling', 'skipped', false],
-        ['first suite', 'focused test', 'passed', true],
-        ['second suite', 'unfocused cross-suite test', 'skipped', false],
+        ['first suite', 'unfocused sibling', 'skipped'],
+        ['first suite', 'focused test', 'passed'],
+        ['second suite', 'unfocused cross-suite test', 'skipped'],
       ],
     )
   })
@@ -457,18 +452,13 @@ describe('runTests only filtering', () => {
     assert.equal(results.passed, 3)
     assert.equal(results.skipped, 2)
     assert.deepEqual(
-      results.tests.map((test) => [
-        test.suiteName,
-        test.name,
-        test.status,
-        test.focused === true,
-      ]),
+      results.tests.map((test) => [test.suiteName, test.name, test.status]),
       [
-        ['focused suite', 'suite-focused test', 'passed', true],
-        ['focused suite', 'suite-focused sibling', 'passed', true],
-        ['test-focused suite', 'unfocused sibling', 'skipped', false],
-        ['test-focused suite', 'focused test', 'passed', true],
-        ['unfocused suite', 'unfocused cross-suite test', 'skipped', false],
+        ['focused suite', 'suite-focused test', 'passed'],
+        ['focused suite', 'suite-focused sibling', 'passed'],
+        ['test-focused suite', 'unfocused sibling', 'skipped'],
+        ['test-focused suite', 'focused test', 'passed'],
+        ['unfocused suite', 'unfocused cross-suite test', 'skipped'],
       ],
     )
   })

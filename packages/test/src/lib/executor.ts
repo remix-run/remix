@@ -58,7 +58,6 @@ export async function runTests(
 
   for (let suite of suites) {
     let suiteHasOnlyTests = suite.tests.some((test) => test.only)
-    let suiteHasFocusedWork = hasOnly && (suite.only || suiteHasOnlyTests)
 
     // If any suite or test uses .only, skip suites that do not contain focused work
     if (hasOnly && !suite.only && !suiteHasOnlyTests) {
@@ -73,22 +72,12 @@ export async function runTests(
     if (suitePendingStatus) {
       let reason = getPendingReason(suite, suitePendingStatus)
       for (let test of suite.tests) {
-        results.tests.push(
-          createPendingResult(
-            test.name,
-            suite.name,
-            suitePendingStatus,
-            reason,
-            hasOnly && (suite.only || test.only),
-          ),
-        )
+        results.tests.push(createPendingResult(test.name, suite.name, suitePendingStatus, reason))
         results[suitePendingStatus]++
       }
       // describe.todo('name') with no tests — add placeholder so suite appears in output
       if (suite.tests.length === 0) {
-        results.tests.push(
-          createPendingResult('', suite.name, suitePendingStatus, reason, hasOnly && suite.only),
-        )
+        results.tests.push(createPendingResult('', suite.name, suitePendingStatus, reason))
         results[suitePendingStatus]++
       }
       continue
@@ -100,13 +89,7 @@ export async function runTests(
         await runLifecycleHooks('beforeAll', suite.beforeAll)
       } catch (error) {
         results.tests.push(
-          createFailedHookResult(
-            'beforeAll',
-            suite.name,
-            error,
-            performance.now() - startTime,
-            suiteHasFocusedWork,
-          ),
+          createFailedHookResult('beforeAll', suite.name, error, performance.now() - startTime),
         )
         results.failed++
         continue
@@ -114,8 +97,6 @@ export async function runTests(
     }
 
     for (let test of suite.tests) {
-      let testFocused = hasOnly && (suite.only || test.only)
-
       // If any suite or test uses .only, skip tests that are not focused
       if (hasOnly && !suite.only && !test.only) {
         results.tests.push(createPendingResult(test.name, suite.name, 'skipped'))
@@ -131,7 +112,6 @@ export async function runTests(
             suite.name,
             testPendingStatus,
             getPendingReason(test, testPendingStatus),
-            testFocused,
           ),
         )
         results[testPendingStatus]++
@@ -145,7 +125,6 @@ export async function runTests(
         status: 'passed',
         duration: 0,
       }
-      if (testFocused) result.focused = true
       let testError: unknown
       let afterEachError: unknown
       let testFailed = false
@@ -210,13 +189,7 @@ export async function runTests(
         await runLifecycleHooks('afterAll', suite.afterAll, undefined, undefined, true)
       } catch (error) {
         results.tests.push(
-          createFailedHookResult(
-            'afterAll',
-            suite.name,
-            error,
-            performance.now() - startTime,
-            suiteHasFocusedWork,
-          ),
+          createFailedHookResult('afterAll', suite.name, error, performance.now() - startTime),
         )
         results.failed++
       }
@@ -265,7 +238,6 @@ function createPendingResult(
   suiteName: string,
   status: 'skipped' | 'todo',
   reason?: string,
-  focused = false,
 ): TestResult {
   let result: TestResult = {
     name,
@@ -274,7 +246,6 @@ function createPendingResult(
     duration: 0,
   }
   if (reason) result.reason = reason
-  if (focused) result.focused = true
   return result
 }
 
@@ -367,17 +338,14 @@ function createFailedHookResult(
   suiteName: string,
   error: unknown,
   duration: number,
-  focused = false,
 ): TestResult {
-  let result: TestResult = {
+  return {
     name: hookName,
     suiteName,
     status: 'failed',
     error: createTestError(createHookFailure(hookName, error)),
     duration,
   }
-  if (focused) result.focused = true
-  return result
 }
 
 function createHookFailure(hookName: string, error: unknown): Error {

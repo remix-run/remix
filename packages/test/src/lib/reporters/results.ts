@@ -5,7 +5,6 @@ export interface TestResult {
   suiteName: string
   filePath?: string
   status: 'passed' | 'failed' | 'skipped' | 'todo'
-  focused?: boolean
   reason?: string
   error?: {
     message: string

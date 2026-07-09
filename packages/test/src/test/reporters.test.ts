@@ -28,19 +28,6 @@ describe('reporters skip and todo reasons', () => {
   })
 })
 
-describe('SpecReporter focused results', () => {
-  it('hides tests skipped by .only filtering', () => {
-    let output = captureConsole(() => new SpecReporter().onResult(createFocusedResults()))
-
-    assert.match(output, /focused suite/)
-    assert.match(output, /focused test/)
-    assert.match(output, /focused skipped test # skipped: focused pending/)
-    assert.doesNotMatch(output, /unfocused sibling/)
-    assert.doesNotMatch(output, /unfocused suite/)
-    assert.doesNotMatch(output, /unfocused cross-suite test/)
-  })
-})
-
 function createPendingResults(): TestResults {
   return {
     passed: 0,
@@ -60,44 +47,6 @@ function createPendingResults(): TestResults {
         suiteName: 'suite',
         status: 'todo',
         reason: 'needs design',
-        duration: 0,
-      },
-    ],
-  }
-}
-
-function createFocusedResults(): TestResults {
-  return {
-    passed: 1,
-    failed: 0,
-    skipped: 3,
-    todo: 0,
-    tests: [
-      {
-        name: 'focused test',
-        suiteName: 'focused suite',
-        status: 'passed',
-        focused: true,
-        duration: 1,
-      },
-      {
-        name: 'focused skipped test',
-        suiteName: 'focused suite',
-        status: 'skipped',
-        reason: 'focused pending',
-        focused: true,
-        duration: 0,
-      },
-      {
-        name: 'unfocused sibling',
-        suiteName: 'focused suite',
-        status: 'skipped',
-        duration: 0,
-      },
-      {
-        name: 'unfocused cross-suite test',
-        suiteName: 'unfocused suite',
-        status: 'skipped',
         duration: 0,
       },
     ],
