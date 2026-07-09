@@ -191,7 +191,7 @@ remix test --only 'Checkout routes > redirects anonymous users'
 remix test --only '/anonymous users$/'
 ```
 
-Full test names join nested `describe` names and the test name with ` > `. For example, `describe('Cart routes', () => describe('loader', () => it('loads cart items', ...)))` has the full test name `Cart routes > loader > loads cart items`.
+Full test names join nested `describe` names and the test name with `>`. For example, `describe('Cart routes', () => describe('loader', () => it('loads cart items', ...)))` has the full test name `Cart routes > loader > loads cart items`.
 
 ### Setup
 
