@@ -127,7 +127,9 @@ Examples in `guides/app/actions/docs/chapters/` should follow the local chapter 
 
 ## Anchors And Links
 
-- Before changing a heading anchor, search for incoming links with `rg "#anchor-name" guides packages`.
+- Use generated heading anchors by default. Add an explicit `{#anchor}` only when preserving an existing linked anchor or intentionally choosing an anchor that differs from the generated value.
+- Remove explicit anchors that only repeat the generated heading anchor.
+- Before changing or removing a heading anchor, search for incoming links with `rg "#anchor-name" guides packages`.
 - Preserve old anchors when another chapter links to them, even if you simplify the heading text.
 - Same-document anchors can stay relative.
 - Cross-chapter docs links should use the existing `/docs/...` style used by the guide.

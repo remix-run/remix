@@ -3,13 +3,13 @@ title: Routing and Controllers
 description: How route maps, route helpers, controllers, actions, and responses define Remix request handling.
 ---
 
-In [Start Here](/docs/start-here), we built one request path: a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) comes in, Remix matches a route, a controller runs an action, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
+In [Chapter 1](/docs/start-here), we built one end-to-end request flow: a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) comes in, Remix matches a route, a controller runs an action, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) containing HTML rendered from a Remix component.
 
-Full-stack Remix apps are built around that route/controller boundary. `app/routes.ts` names the URLs and methods your app accepts, controllers in `app/actions/` implement them, and each action returns the response that becomes the page, redirect, JSON payload, file, or error the browser receives.
+Full-stack Remix apps are built around that route/controller boundary. `app/routes.ts` names URLs and methods your app accepts, controllers in `app/actions/` implement them, and each action returns the response that becomes the page, redirect, JSON payload, file, or error the browser receives.
 
-## Routes as the URL contract {#routes-as-the-url-contract}
+## Routes as the URL contract
 
-In Remix, routes are defined separately from the actions that handle matched requests. `routes.ts` says which URLs and methods the app accepts, while controllers decide what response to return when one of those routes matches.
+In Remix, routes are defined separately from the actions that handle matched requests. That separation lets server code and browser modules share typed URL helpers without pulling controllers into the browser. You define the URLs and methods your app accepts in `app/routes.ts`.
 
 Here's what a small route map for a record store would look like:
 
@@ -28,38 +28,38 @@ export const routes = route({
 });
 ```
 
-`route(...)` returns a typed object with the same shape: a leaf like `routes.albums.show` is a route with a method and a pattern, while a branch like `routes.albums` or `routes.albums.edit` is another route map.
+`route(...)` returns a typed route map with the same nested shape as its argument. A leaf like `routes.albums.show` is a route with a method, pattern, and `href(...)` helper. A branch like `routes.albums` or `routes.albums.edit` is another route map.
 
-That gives the rest of the app a typed way to build URLs:
+The router uses those leaves to match requests, and the rest of the app uses them to build typed URLs:
 
 ```ts
 routes.albums.show.href({ albumId: "thriller" });
 // /albums/thriller
 ```
 
-The `albumId` property is required because `:albumId` is a path variable. Path variables match within a segment and become route params on `context.params`. If you later rename the pattern to `'/albums/:id'`, old calls that still pass `{ albumId: ... }` will report TypeScript errors. The same `routes` object can be used in controllers, links, forms, redirects, and tests, so URL changes are not hidden in string literals around the app.
+The `albumId` property is required by the `show` route's `href(...)` helper because `:albumId` is a path variable. Path variables match within a segment and become properties on `context.params` inside controllers. If you later rename the pattern to `'/albums/:id'`, old calls that still pass `{ albumId: ... }` will report TypeScript errors. The same `routes` object can be imported into controllers and browser modules, then used in links, forms, redirects, and tests. URL changes are not hidden in string literals around the app.
 
-Most app routes only need path variables, but patterns can also include wildcards, optional groups, search constraints, escaped literals, hostname variables, full origins, and specificity rules. A single pattern can combine those when the URL shape is part of the app contract:
+Path variables are one part of Remix's route pattern syntax. Patterns can also include wildcards, optional groups, search constraints, escaped literals, hostname variables, full origins, and specificity rules. A single pattern can combine all these features:
 
 ```ts
-"http(s)://(:tenant.)example.com/docs(/v:version)/:category/*slug.:format?preview";
-// matches https://acme.example.com/docs/v2/guides/routing/route-maps.html?preview=1
+"/docs(/v:version)/:category/*slug.:format?preview";
+// matches /docs/v2/guides/routing/route-maps.html?preview=1
 ```
 
-You do not need to memorize that syntax to follow this guide. The [`route-pattern` overview](https://api.remix.run/api/remix/route-pattern/overview/) covers the full grammar and the lower-level `remix/route-pattern/href` and `remix/route-pattern/match` APIs.
+You do not need to memorize Remix's route pattern syntax to follow this guide. The [`route-pattern` overview](https://api.remix.run/api/remix/route-pattern/overview/) covers the full grammar and the lower-level `remix/route-pattern/href` and `remix/route-pattern/match` APIs.
 
-The `edit` branch has two leaves at the same URL: `index` handles `GET` and `action` handles `POST`.
+Finally, the `edit` branch has two leaves at the same URL: `index` handles `GET` and `action` handles `POST`.
 
 ```ts
 routes.albums.edit.index.href({ albumId: "thriller" }); // GET /albums/thriller/edit
 routes.albums.edit.action.href({ albumId: "thriller" }); // POST /albums/thriller/edit
 ```
 
-That difference between leaves and nested maps matters once we start mapping controllers. The `edit` branch above is six lines of `{ method, pattern }` objects to get a `GET` and a `POST` at the same URL. The helpers in the next section produce the same shape from one call, so most route maps use them instead.
+This difference between leaves and nested maps matters once we start mapping controllers.
 
-## Route builders: route, get, post, put, del, form, resources {#route-builders-route-get-post-put-del-form-resources}
+## Route builders: route, get, post, put, del, form, resources {#route-builders}
 
-Most apps use helpers instead of writing `{ method, pattern }` objects by hand. Each helper still produces the same route leaves and route maps we just wrote out.
+Route helpers replace `{ method, pattern }` objects with calls that name a route's HTTP method or conventional shape. Each helper produces the same route leaves and route maps we saw above.
 
 ```ts filename=app/routes.ts
 import { del, get, post, route } from "remix/routes";
@@ -74,29 +74,38 @@ export const routes = route({
 });
 ```
 
+The helpers cover single-method leaves, nested groups, forms, and conventional resources:
+
 | Helper                                                  | Purpose                                                           |
 | ------------------------------------------------------- | ----------------------------------------------------------------- |
 | `get`, `post`, `put`, `patch`, `del`, `head`, `options` | One route leaf narrowed to an HTTP method.                        |
-| bare string leaf                                        | A method-agnostic leaf, such as `webhook: '/webhooks/github'`.    |
-| `route(prefix, defs)`                                   | A nested route map whose child patterns are relative to a prefix. |
 | `form(pattern)`                                         | A `GET` page and `POST` action at the same URL.                   |
+| `route(prefix, defs)`                                   | A nested route map whose child patterns are relative to a prefix. |
 | `resources(pattern)`                                    | Conventional collection routes.                                   |
 | `resource(pattern)`                                     | Conventional singleton routes.                                    |
 
-A method helper is the right default unless the action intentionally checks `context.method` itself.
+A route can also be defined with just a string. For example, `webhook: "/webhooks/github"` matches any request method, so its action must check `context.method` when the method matters.
 
-A prefixed `route(...)` works well when one branch owns a set of relative patterns:
+When a route area benefits from separate ownership, `route(prefix, routes)` composes its route map under a shared prefix. The route area owns its names and relative patterns, while the app decides where the group lives:
 
-```ts filename=app/routes.ts
+```ts filename=app/actions/albums/routes.ts
 import { get, route } from "remix/routes";
 
-const albumRouteDefs = {
+export const albumRoutes = route({
   index: get("/"),
   show: get("/:albumId"),
-};
+});
+```
+
+Compose that route map into the app's URL structure:
+
+```ts filename=app/routes.ts
+import { route } from "remix/routes";
+
+import { albumRoutes } from "./actions/albums/routes.ts";
 
 export const routes = route({
-  albums: route("/albums", albumRouteDefs),
+  albums: route("/albums", albumRoutes),
 });
 
 // routes.albums.index -> GET /albums
@@ -120,7 +129,7 @@ export const routes = route({
 
 The [Forms and Mutations](/docs/forms-and-mutations) chapter builds on this route shape for validation, redirects, and progressive enhancement.
 
-`resources(...)` describes a collection, and `resource(...)` describes a singleton. A collection resource can create `index`, `new`, `show`, `create`, `edit`, `update`, and `destroy` routes. A singleton resource has no `index` route because there is no collection page.
+`resources(...)` creates seven conventional routes for a collection: `index`, `new`, `show`, `create`, `edit`, `update`, and `destroy`. `resource(...)` creates routes for a singleton and omits `index` because there is no collection page.
 
 `only` keeps part of the conventional shape, and `param` changes the path variable name from the default `id`:
 
@@ -130,7 +139,7 @@ import { resources, route } from "remix/routes";
 export const routes = route({
   albums: resources("/albums", {
     only: ["index", "show", "create"],
-    param: "albumId",
+    param: "albumId", // default is "id"
   }),
 });
 
@@ -139,9 +148,9 @@ export const routes = route({
 // routes.albums.create -> POST   /albums
 ```
 
-All of these helpers produce ordinary route maps and route leaves. They can be nested and passed to `createController` and `router.map()` the same way a hand-written map can. The [`remix/router` overview](https://api.remix.run/api/remix/router/overview/) covers the full route builder API.
+These helpers produce ordinary route maps and leaves, so you can nest them with hand-written definitions. Pass a map to `createController(...)`, then register it with `router.map(...)` just as you would a hand-written map. The [`remix/router` overview](https://api.remix.run/api/remix/router/overview/) covers the full route builder API.
 
-## Controllers and actions {#controllers-and-actions}
+## Controllers and actions
 
 A controller pairs the leaves of one route map with actions, so `createController(routes.albums, ...)` means “this controller handles the leaf routes inside `routes.albums`.”
 
@@ -199,7 +208,7 @@ export default createController(routes.albums.edit, {
 
 Router middleware runs first, then controller middleware, then action middleware, then the action handler.
 
-## Responses, redirects, headers, and errors {#responses-redirects-headers-and-errors}
+## Responses, redirects, headers, and errors
 
 Actions return Web `Response` objects. A text response can be as small as this:
 
@@ -246,7 +255,7 @@ return Response.json(album, {
 
 For expected failures, return a response with the appropriate status: `404` for missing records, `400` for invalid input, `401` for unauthenticated requests, and `403` for authenticated users who still cannot access the route. The [Errors & Error Boundaries](/docs/errors-and-error-boundaries) chapter covers thrown errors, render failures, and error boundaries.
 
-## Nested route maps and ownership {#nested-route-maps-and-ownership}
+## Nested route maps and ownership
 
 A route map can contain both leaves and other route maps. In this example, `show` is a leaf and `edit` is a nested map:
 
@@ -291,7 +300,7 @@ Controller middleware follows the same ownership rule. Middleware on `albumsCont
 
 Remix checks this during router setup. If a controller is missing an action for a leaf it owns, setup throws before the app starts serving requests.
 
-## Organizing route-owned code {#organizing-route-owned-code}
+## Organizing route-owned code
 
 The file tree usually follows the same shape as the route map:
 
