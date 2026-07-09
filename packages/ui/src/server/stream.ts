@@ -89,7 +89,6 @@ interface RenderContext {
   onError: (error: unknown) => void
   parentVNode?: VNode
   styleCache: Map<string, { selector: string; css: string }>
-  emittedStyles: Set<string>
   resolveFrame: (
     src: string,
     target?: string,
@@ -203,7 +202,6 @@ export function renderToStream(
     onError,
     resolveFrame: options?.resolveFrame ?? defaultResolveFrame,
     styleCache: new Map(),
-    emittedStyles: new Set(),
     pendingFrames: [],
     hydrationData: new Map(),
     unresolvedHydrationData: new Map(),
@@ -1180,8 +1178,6 @@ function finalizeHtml(html: string, context: RenderContext): string {
     }
   }
 
-  html = dedupeServerStyleTagsInHtml(html, context.emittedStyles)
-
   // Append aggregated hydration/frame data script at the end
   let rmxData = buildRmxDataScript(context)
   if (rmxData) {
@@ -1255,23 +1251,6 @@ function renderStyleTag(
   return `<style data-rmx="${escapeHtml(selector)}">${wrappedCss}</style>`
 }
 
-function readStyleTagAttribute(attrs: string, name: string): string | null {
-  let match = attrs.match(new RegExp(`\\b${name}=(?:"([^"]*)"|'([^']*)')`))
-  if (!match) return null
-  return match[1] ?? match[2] ?? null
-}
-
-function dedupeServerStyleTagsInHtml(html: string, seenStyles: Set<string>): string {
-  return html.replace(/<style\b([^>]*)>[\s\S]*?<\/style>/gi, (match, attrs) => {
-    let selector = readStyleTagAttribute(attrs, 'data-rmx')
-    if (!selector) return match
-
-    if (seenStyles.has(selector)) return ''
-    seenStyles.add(selector)
-    return match
-  })
-}
-
 function buildRmxDataScript(context: RenderContext): string {
   if (context.hydrationData.size === 0 && context.frameData.size === 0) {
     return ''
@@ -1303,6 +1282,12 @@ function escapeScriptJson(json: string): string {
 // the handler's `finalizeHtml` emits selector-addressed `<style>` tags in its HTML, and on the client,
 // the `adoptServerStyleTag` MutationObserver (stylesheet.ts) picks it up anywhere in the
 // document and adopts the CSS into an adopted stylesheet.
+//
+// Style tags are intentionally NOT deduped across frame boundaries: each frame
+// owns its style rules independently on the client (per-frame refcounted
+// adoption), so every frame's HTML must carry the full set of style tags its
+// content references — even when a sibling frame or the enclosing document
+// already emitted the same selector.
 async function streamPendingFrames(
   context: RenderContext,
   controller: ReadableStreamDefaultController,
@@ -1323,7 +1308,6 @@ async function streamPendingFrames(
         try {
           let { html, tail } = await promise
           if (context.signal.aborted) return
-          html = dedupeServerStyleTagsInHtml(html, context.emittedStyles)
 
           // Stream as a template element (first chunk only)
           let templateHtml = `<template id="${frameId}">${escapeTemplateContent(html)}</template>`

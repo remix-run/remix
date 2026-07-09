@@ -173,7 +173,10 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
   let vroot: VNode | null = null
   let styles = options.styleManager ?? defaultStyleManager
   if (container.innerHTML.trim() !== '') {
-    styles.replaceServerStyles(container)
+    // Adopt additively: multiple roots hydrating separate islands may share
+    // the default style manager, and adopting a later island must not release
+    // the server styles an earlier island still depends on.
+    styles.adoptServerStyles(container)
   }
   let hydrationCursor = container.innerHTML.trim() !== '' ? container.firstChild : undefined
 
