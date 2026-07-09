@@ -75,10 +75,10 @@ const baseStyle: CSSMixinDescriptor = css({
   padding: 0,
   border: 0,
   borderRadius: 'var(--rmx-checkbox-radius)',
-  background: '#FFFFFF',
+  background: 'light-dark(#FFFFFF, #1a1a1a)',
   boxShadow:
-    '0 2px 2px -1px rgba(0, 0, 0, 0.05), 0 3px 4px -1.5px rgba(0, 0, 0, 0.05), 0 4px 8px -2px rgba(0, 0, 0, 0.05), 0 5px 16px -2.5px rgba(0, 0, 0, 0.05), 0 0 0 1px rgba(0, 0, 0, 0.12)',
-  color: '#FFFFFF',
+    '0 2px 2px -1px rgba(0, 0, 0, 0.05), 0 3px 4px -1.5px rgba(0, 0, 0, 0.05), 0 4px 8px -2px rgba(0, 0, 0, 0.05), 0 5px 16px -2.5px rgba(0, 0, 0, 0.05), 0 0 0 1px light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.2))',
+  color: 'light-dark(#FFFFFF, #151515)',
   verticalAlign: 'middle',
   flex: 'none',
   '&::before': {
@@ -92,7 +92,7 @@ const baseStyle: CSSMixinDescriptor = css({
   },
   [`${checkedSelector}, ${mixedSelector}`]: {
     background:
-      'linear-gradient(180deg, rgba(0, 0, 0, 0) 24.52%, rgba(0, 0, 0, 0.1) 100%), #3573F6',
+      'linear-gradient(180deg, rgba(0, 0, 0, 0) 24.52%, light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.14)) 100%), light-dark(#3573F6, #6eaaff)',
     backgroundBlendMode: 'overlay, normal',
     borderRadius: 'var(--rmx-checkbox-active-radius)',
     boxShadow:
@@ -121,7 +121,7 @@ const baseStyle: CSSMixinDescriptor = css({
   },
   [`&:active${enabledSelector}`]: {
     boxShadow:
-      '0 1px 1px -0.5px rgba(0, 0, 0, 0.06), 0 0 0 1px rgba(0, 0, 0, 0.14), inset 0 1px 2px rgba(0, 0, 0, 0.08)',
+      '0 1px 1px -0.5px rgba(0, 0, 0, 0.06), 0 0 0 1px light-dark(rgba(0, 0, 0, 0.14), rgba(255, 255, 255, 0.24)), inset 0 1px 2px rgba(0, 0, 0, 0.08)',
   },
   [`${checkedActiveSelector}, ${mixedActiveSelector}`]: {
     boxShadow:

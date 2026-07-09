@@ -59,7 +59,7 @@ const comboboxInputCss: CSSMixinDescriptor = css({
   fontFamily: styles.fontFamily.sans,
   fontSize: styles.fontSize.sm,
   lineHeight: styles.lineHeight.normal,
-  boxShadow: 'inset 0 1px 0 rgb(255 255 255 / 0.7)',
+  boxShadow: 'inset 0 1px 0 light-dark(rgb(255 255 255 / 0.7), rgb(255 255 255 / 0.08))',
   '&:focus-visible': {
     outline: `2px solid ${styles.colors.focus.ring}`,
     outlineOffset: styles.space.none,

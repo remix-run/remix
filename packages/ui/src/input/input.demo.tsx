@@ -54,5 +54,5 @@ const labelCss = css({
   fontSize: '14px',
   lineHeight: '18px',
   fontWeight: 600,
-  color: '#101010',
+  color: 'light-dark(#151515, #ececec)',
 })

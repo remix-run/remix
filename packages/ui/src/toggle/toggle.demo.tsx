@@ -50,7 +50,7 @@ const sectionLabelCss = css({
   lineHeight: '16px',
   fontWeight: 650,
   letterSpacing: 0,
-  color: 'rgba(16, 16, 16, 0.72)',
+  color: 'light-dark(rgb(16 16 16 / 0.72), rgb(236 236 236 / 0.72))',
 })
 
 const optionCss = css({
@@ -63,5 +63,5 @@ const optionCss = css({
   lineHeight: '18px',
   fontWeight: 500,
   letterSpacing: 0,
-  color: '#101010',
+  color: 'light-dark(#151515, #ececec)',
 })
