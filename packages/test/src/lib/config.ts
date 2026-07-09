@@ -124,6 +124,11 @@ const cliOptions = {
     type: 'string',
     description: 'Pool used to run server and E2E test files: forks, threads (default: forks)',
   },
+  quiet: {
+    type: 'boolean',
+    short: 'q',
+    description: 'Do not print skipped tests',
+  },
   reporter: {
     type: 'string',
     short: 'r',
@@ -166,6 +171,7 @@ const defaultValues: ResolvedRemixTestConfig = {
   pool: 'forks',
   playwrightConfig: undefined,
   project: undefined,
+  quiet: false,
   reporter: process.env.CI === 'true' ? 'files' : 'spec',
   setup: undefined,
   type: ['server', 'browser', 'e2e'],
@@ -246,6 +252,8 @@ export interface RemixTestConfig {
    * project name or an array of names; `--project` may be repeated on the CLI.
    */
   project?: string | string[]
+  /** Quiet mode — do not print skipped tests (--quiet, -q) */
+  quiet?: boolean
   /** Test reporter (--reporter) */
   reporter?: string
   /**
@@ -282,6 +290,7 @@ export interface ResolvedRemixTestConfig {
   }
   playwrightConfig: string | PlaywrightTestConfig | undefined
   project: string[] | undefined
+  quiet: boolean
   reporter: string
   pool: RemixTestPool
   setup: string | undefined
@@ -422,6 +431,7 @@ function resolveConfig(
       let raw = cliValues.project ?? fileConfig.project ?? defaultValues.project
       return raw === undefined ? undefined : toCommaSeparatedArray(raw)
     })(),
+    quiet: cliValues.quiet ?? fileConfig.quiet ?? defaultValues.quiet,
     reporter: cliValues.reporter ?? fileConfig.reporter ?? defaultValues.reporter,
     type: toCommaSeparatedArray(cliValues.type ?? fileConfig.type ?? defaultValues.type),
     watch: cliValues.watch ?? fileConfig.watch ?? defaultValues.watch,
