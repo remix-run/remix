@@ -87,6 +87,39 @@ describe('Cookie', () => {
     assert.equal(value, 'hello michael')
   })
 
+  it('unsigns custom encoded values that contain periods', async () => {
+    let cookie = createCookie('my-cookie', {
+      secrets: ['secret1'],
+      encode(value) {
+        return `debug.${value.replaceAll(' ', '.')}.v1`
+      },
+      decode(value) {
+        return value
+          .replace(/^debug\./, '')
+          .replace(/\.v1$/, '')
+          .replaceAll('.', ' ')
+      },
+    })
+    let setCookie = await cookie.serialize('hello michael')
+    let value = await cookie.parse(getCookieFromSetCookie(setCookie))
+    let cookie2 = createCookie('my-cookie', {
+      secrets: ['secret2'],
+      encode(value) {
+        return `debug.${value.replaceAll(' ', '.')}.v1`
+      },
+      decode(value) {
+        return value
+          .replace(/^debug\./, '')
+          .replace(/\.v1$/, '')
+          .replaceAll('.', ' ')
+      },
+    })
+
+    assert.ok(new SetCookie(setCookie).value?.startsWith('debug.hello.michael.v1.'))
+    assert.equal(value, 'hello michael')
+    assert.equal(await cookie2.parse(getCookieFromSetCookie(setCookie)), null)
+  })
+
   it('parses/serializes string values containing utf8 characters', async () => {
     let cookie = createCookie('my-cookie')
     let setCookie = await cookie.serialize('日本語')
