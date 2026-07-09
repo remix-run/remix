@@ -273,6 +273,7 @@ pre code {
   align-items: center;
   justify-content: space-between;
   gap: var(--rmx-space-xl);
+  block-size: var(--site-header-height);
   padding: var(--rmx-space-lg) var(--rmx-page-gutter);
   border-bottom: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
   background: var(--rmx-surface-lvl0);
@@ -511,10 +512,17 @@ pre code {
 
 @media (min-width: 1024px) {
   .docs-aside {
-    position: sticky;
     /* Sit below the revealed header, matching its slide timing so the TOC is
        "pushed" down when the header appears and pulled up when it hides. */
-    top: calc(var(--site-header-height) + var(--rmx-space-xl));
+    --docs-aside-offset: calc(var(--site-header-height) + var(--rmx-space-xl));
+    position: sticky;
+    top: var(--docs-aside-offset);
+    /* Before it becomes sticky, the aside starts after the layout's 2xl top
+       margin. Reserve that same space so a long TOC can be fully scrolled from
+       the top of the chapter, rather than only after the article has scrolled. */
+    max-height: calc(100vh - var(--site-header-height) - (var(--rmx-space-xl) * 2));
+    overflow-y: auto;
+    padding-bottom: var(--rmx-space-xl);
     transition: top var(--site-header-effect-duration) ease;
   }
 
@@ -530,16 +538,16 @@ pre code {
     /* Scrolling down: the header tucks away, so let the TOC rise into its place. */
     @container style(--site-scroll-direction: 1) {
       .docs-aside {
-        top: var(--rmx-space-xl);
+        --docs-aside-offset: var(--rmx-space-xl);
       }
     }
 
     /* Scrolling up past the threshold: drop back below the reappeared header.
-       The target differs slightly from the frozen up-scroll top so the value
+       The target differs slightly from the frozen up-scroll offset so the value
        change fires a transition. */
     @container style(--site-scroll-reveal-intent: 1) {
       .docs-aside {
-        top: calc(var(--site-header-height) + var(--rmx-space-xl) + 0.001px);
+        --docs-aside-offset: calc(var(--site-header-height) + var(--rmx-space-xl) + 0.001px);
         transition-delay: 0s;
       }
     }
@@ -547,7 +555,7 @@ pre code {
 
   @media (prefers-reduced-motion: reduce) {
     .docs-aside {
-      top: calc(var(--site-header-height) + var(--rmx-space-xl));
+      --docs-aside-offset: calc(var(--site-header-height) + var(--rmx-space-xl));
       transition: none;
     }
   }
