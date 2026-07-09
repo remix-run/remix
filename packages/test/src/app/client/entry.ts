@@ -1,9 +1,11 @@
 import { normalizeLine } from '../../lib/normalize.ts'
+import type { SerializedOnlyPattern } from '../../lib/config.ts'
 import type { TestResult, TestResults } from '../../lib/reporters/results.ts'
 
 interface TestsSetup {
   testPaths: string[]
   baseDir: string
+  only?: SerializedOnlyPattern[]
 }
 
 type FileResults = TestResults & { tests: Array<TestResult & { filePath: string }> }
@@ -162,7 +164,7 @@ function mountTests(host: HTMLElement, setup: TestsSetup): void {
 
   void (async () => {
     for (let testFile of setup.testPaths) {
-      let fileResults = await runInIframe(testFile)
+      let fileResults = await runInIframe(testFile, setup.only)
       await fetch('/file-results', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -181,10 +183,15 @@ function mountTests(host: HTMLElement, setup: TestsSetup): void {
   })()
 }
 
-function runInIframe(testFile: string): Promise<FileResults> {
+function runInIframe(
+  testFile: string,
+  only: SerializedOnlyPattern[] | undefined,
+): Promise<FileResults> {
   return new Promise((resolve) => {
     let iframe = document.createElement('iframe')
-    iframe.src = `/iframe?file=${encodeURIComponent(testFile)}`
+    let params = new URLSearchParams({ file: testFile })
+    if (only) params.set('only', JSON.stringify(only))
+    iframe.src = `/iframe?${params}`
     // Make the iframe as big so we don't get unintentional scrolling in test UIs
     let parentBody = iframe.contentWindow?.document.body
     iframe.width = Math.max(parentBody?.scrollWidth ?? 0, 800).toString()

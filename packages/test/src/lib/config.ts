@@ -129,6 +129,11 @@ const cliOptions = {
     short: 'q',
     description: 'Do not print skipped tests',
   },
+  only: {
+    type: 'string',
+    multiple: true,
+    description: 'Regular expression pattern(s) for test names to focus',
+  },
   reporter: {
     type: 'string',
     short: 'r',
@@ -169,6 +174,7 @@ const defaultValues: ResolvedRemixTestConfig = {
     exclude: ['node_modules/**'],
   },
   pool: 'forks',
+  only: undefined,
   playwrightConfig: undefined,
   project: undefined,
   quiet: false,
@@ -184,6 +190,13 @@ const defaultValues: ResolvedRemixTestConfig = {
  * uses worker threads for projects that prefer lower-overhead startup.
  */
 export type RemixTestPool = 'forks' | 'threads'
+
+export interface SerializedOnlyPattern {
+  source: string
+  flags: string
+}
+
+export type RemixTestOnlyPattern = string | RegExp
 
 /**
  * User-facing configuration for the `remix-test` CLI. Every field is
@@ -248,6 +261,12 @@ export interface RemixTestConfig {
    */
   pool?: RemixTestPool
   /**
+   * Regular expression pattern(s) to focus tests by their full name (--only).
+   * Matching suite names focus the whole suite, while matching test names focus
+   * the individual test. `--only` may be repeated on the CLI.
+   */
+  only?: RemixTestOnlyPattern | RemixTestOnlyPattern[]
+  /**
    * Filter tests to specific playwright project(s) (--project). Accepts a single
    * project name or an array of names; `--project` may be repeated on the CLI.
    */
@@ -293,6 +312,7 @@ export interface ResolvedRemixTestConfig {
   quiet: boolean
   reporter: string
   pool: RemixTestPool
+  only: SerializedOnlyPattern[] | undefined
   setup: string | undefined
   type: string[]
   watch: boolean
@@ -427,6 +447,7 @@ function resolveConfig(
     playwrightConfig:
       cliValues.playwrightConfig ?? fileConfig.playwrightConfig ?? defaultValues.playwrightConfig,
     pool: resolvePool(cliValues.pool ?? fileConfig.pool ?? defaultValues.pool),
+    only: resolveOnlyPatterns(cliValues.only ?? fileConfig.only),
     project: (() => {
       let raw = cliValues.project ?? fileConfig.project ?? defaultValues.project
       return raw === undefined ? undefined : toCommaSeparatedArray(raw)
@@ -444,6 +465,52 @@ function resolvePool(value: string): RemixTestPool {
   }
 
   throw new Error(`Unsupported test pool "${value}". Supported pools are: forks, threads`)
+}
+
+function resolveOnlyPatterns(
+  value: RemixTestOnlyPattern | readonly RemixTestOnlyPattern[] | undefined,
+): SerializedOnlyPattern[] | undefined {
+  if (value === undefined) return undefined
+
+  return toArray(value).map((pattern) => {
+    let serialized: SerializedOnlyPattern
+    if (typeof pattern === 'string') {
+      serialized = parseRegexLiteral(pattern) ?? { source: pattern, flags: '' }
+    } else {
+      serialized = { source: pattern.source, flags: pattern.flags }
+    }
+
+    try {
+      new RegExp(serialized.source, serialized.flags)
+    } catch (error) {
+      let reason = error instanceof Error ? error.message : String(error)
+      throw new Error(
+        `Invalid --only pattern "${pattern}". ` +
+          `--only patterns must be valid JavaScript regular expressions, ` +
+          `or regex literals like "/pattern/flags". ${reason}`,
+      )
+    }
+
+    return serialized
+  })
+}
+
+function parseRegexLiteral(pattern: string): SerializedOnlyPattern | undefined {
+  if (!pattern.startsWith('/') || pattern.length < 2) return undefined
+
+  let escaped = false
+  for (let index = pattern.length - 1; index > 0; index--) {
+    let char = pattern[index]
+    if (char === '/' && !escaped) {
+      return {
+        source: pattern.slice(1, index),
+        flags: pattern.slice(index + 1),
+      }
+    }
+    escaped = char === '\\' && !escaped
+  }
+
+  return undefined
 }
 
 async function loadConfigFile(

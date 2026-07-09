@@ -186,7 +186,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
         let { startServer } = IS_RUNNING_FROM_SRC
           ? await importModule('./app/server.ts', import.meta)
           : await import(`./app/server.js`)
-        let result = await startServer(browserFiles)
+        let result = await startServer(browserFiles, { only: config.only })
         browserServer = result.server
         browserServerFilesKey = browserFilesKey
         browserBaseUrl = result.baseUrl
@@ -213,6 +213,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
           {
             coverage: config.coverage,
             cwd,
+            only: config.only,
             pool: config.pool,
           },
         )
@@ -287,6 +288,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
                   projectName: project.name,
                   coverage: config.coverage,
                   cwd,
+                  only: config.only,
                   pool: config.pool,
                 })
               : null

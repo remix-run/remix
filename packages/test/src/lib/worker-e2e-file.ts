@@ -9,12 +9,14 @@ import {
 import type { CoverageConfig } from './coverage.ts'
 import type { TestResults } from './reporters/results.ts'
 import { createFailedResults } from './worker-results.ts'
-import { isRecord, parseCoverageConfig } from './worker-server.ts'
+import { isRecord, parseCoverageConfig, parseOnlyPatterns } from './worker-server.ts'
+import type { SerializedOnlyPattern } from './config.ts'
 
 export interface E2ETestWorkerData {
   file: string
   coverage?: CoverageConfig
   open?: boolean
+  only?: SerializedOnlyPattern[]
   playwrightUseOpts?: PlaywrightUseOpts
 }
 
@@ -38,6 +40,7 @@ export async function runE2ETestFile(
         open: workerData.open ?? false,
         playwrightPageOptions: getPlaywrightPageOptions(workerData.playwrightUseOpts),
         coverage: !!workerData.coverage,
+        only: workerData.only,
       })
 
       if (workerData.open) {
@@ -68,6 +71,7 @@ function parseE2ETestWorkerData(value: unknown): E2ETestWorkerData {
   return {
     file: value.file,
     coverage: parseCoverageConfig(value.coverage),
+    only: parseOnlyPatterns(value.only),
     open: parseBoolean(value.open, 'open'),
     playwrightUseOpts: parsePlaywrightUseOpts(value.playwrightUseOpts),
   }

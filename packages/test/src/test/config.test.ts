@@ -72,6 +72,60 @@ describe('loadConfig', () => {
       await fsp.rm(tmp, { recursive: true, force: true })
     }
   })
+
+  it('normalizes repeated only values from CLI flags', async () => {
+    let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
+
+    try {
+      let config = await loadConfig(['--only', 'server > matches', '--only', '/browser/i'], tmp)
+
+      assert.deepEqual(config.only, [
+        { source: 'server > matches', flags: '' },
+        { source: 'browser', flags: 'i' },
+      ])
+    } finally {
+      await fsp.rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  it('normalizes only values from config files', async () => {
+    let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
+
+    try {
+      await fsp.writeFile(
+        path.join(tmp, 'remix-test.config.ts'),
+        ['export default {', "  only: [/server/i, 'browser'],", '}'].join('\n'),
+      )
+
+      let config = await loadConfig([], tmp)
+
+      assert.deepEqual(config.only, [
+        { source: 'server', flags: 'i' },
+        { source: 'browser', flags: '' },
+      ])
+    } finally {
+      await fsp.rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects invalid only patterns', async () => {
+    let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
+
+    try {
+      await assert.rejects(
+        () => loadConfig(['--only', '/(/'], tmp),
+        (error: unknown) => {
+          let message = String(error)
+          assert.match(message, /Invalid --only pattern/)
+          assert.match(message, /must be valid JavaScript regular expressions/)
+          assert.match(message, /Unterminated group/)
+          return true
+        },
+      )
+    } finally {
+      await fsp.rm(tmp, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('config', () => {
@@ -143,6 +197,12 @@ describe('config', () => {
 
     assert.match(help, /--quiet/)
     assert.match(help, /-q/)
+  })
+
+  it('includes the only flag in help text', () => {
+    let help = getRemixTestHelpText()
+
+    assert.match(help, /--only <value>/)
   })
 })
 
