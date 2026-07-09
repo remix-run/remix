@@ -120,6 +120,34 @@ describe('Cookie', () => {
     assert.equal(await cookie2.parse(getCookieFromSetCookie(setCookie)), null)
   })
 
+  it('unsigns custom encoded values that contain unicode characters', async () => {
+    let cookie = createCookie('my-cookie', {
+      secrets: ['secret1'],
+      encode(value) {
+        return `debug.${value}.日本語`
+      },
+      decode(value) {
+        return value.replace(/^debug\./, '').replace(/\.日本語$/, '')
+      },
+    })
+    let setCookie = await cookie.serialize('hello')
+    let signedValue = new SetCookie(setCookie).value
+    let value = await cookie.parse(`my-cookie=${signedValue}`)
+    let cookie2 = createCookie('my-cookie', {
+      secrets: ['secret2'],
+      encode(value) {
+        return `debug.${value}.日本語`
+      },
+      decode(value) {
+        return value.replace(/^debug\./, '').replace(/\.日本語$/, '')
+      },
+    })
+
+    assert.ok(signedValue?.startsWith('debug.hello.日本語.'))
+    assert.equal(value, 'hello')
+    assert.equal(await cookie2.parse(`my-cookie=${signedValue}`), null)
+  })
+
   it('parses/serializes string values containing utf8 characters', async () => {
     let cookie = createCookie('my-cookie')
     let setCookie = await cookie.serialize('日本語')
