@@ -1,7 +1,7 @@
 import type { FrameContent } from 'remix/ui'
 import { run } from 'remix/ui'
 
-startHashNavigationGuard()
+startNavigationGuard()
 
 const app = run({
   async loadModule(moduleUrl, exportName) {
@@ -35,20 +35,29 @@ app.ready().catch((error: unknown) => {
   console.error('Remix UI failed to start:', error)
 })
 
-// HACK: `remix/ui` currently intercepts same-document hash navigations because
-// the current Navigation API entry has Remix runtime state. That breaks native
-// hash scrolling/history, including refresh and back/forward after using the docs
-// table of contents. Stop only fragment navigations before the Remix listener sees
-// them so the browser keeps owning this behavior. Remove this once `remix/ui`'s
-// navigation runtime ignores same-document hash navigations itself.
-function startHashNavigationGuard() {
+// HACK: `remix/ui` currently intercepts reloads and same-document hash
+// navigations because the current Navigation API entry has Remix runtime state.
+// That prevents dev refresh from reloading the document and breaks native hash
+// scrolling/history. Stop these navigations before the Remix listener sees them
+// so the browser keeps owning their behavior. Remove this once `remix/ui` ignores
+// reloads and same-document hash navigations itself.
+function startNavigationGuard() {
   let navigation = (window as Window & { navigation?: EventTarget }).navigation
   if (!navigation) return
 
   navigation.addEventListener(
     'navigate',
     (event) => {
-      let href = (event as Event & { destination?: { url?: string } }).destination?.url
+      let navigateEvent = event as Event & {
+        destination?: { url?: string }
+        navigationType?: string
+      }
+      if (navigateEvent.navigationType === 'reload') {
+        event.stopImmediatePropagation()
+        return
+      }
+
+      let href = navigateEvent.destination?.url
       if (href && isSameDocumentHashUrl(href)) {
         event.stopImmediatePropagation()
       }
