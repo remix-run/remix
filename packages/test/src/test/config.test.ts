@@ -106,6 +106,15 @@ describe('config', () => {
     assert.equal(config.pool, 'forks')
   })
 
+  it('prefers the CLI quiet flag over the config file', async () => {
+    let cwd = await createConfigDir('cli-quiet')
+    await fsp.writeFile(path.join(cwd, 'remix-test.config.ts'), `export default { quiet: false }`)
+
+    let config = await loadConfig(['--quiet'], cwd)
+
+    assert.equal(config.quiet, true)
+  })
+
   it('rejects unsupported pool values', async () => {
     let cwd = await createConfigDir('invalid-pool')
 
@@ -119,6 +128,12 @@ describe('config', () => {
     let help = getRemixTestHelpText()
 
     assert.match(help, /--pool <value>/)
+  })
+
+  it('includes the quiet flag in help text', () => {
+    let help = getRemixTestHelpText()
+
+    assert.match(help, /--quiet/)
   })
 })
 

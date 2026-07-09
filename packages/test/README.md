@@ -119,6 +119,9 @@ export default {
   // Test reporter ("spec", "files", "tap", "dot")
   reporter: 'spec',
 
+  // Do not print skipped tests in reporter output
+  quiet: false,
+
   // Path to a setup module (see Setup section below)
   setup: './test/setup.ts',
 
@@ -159,6 +162,7 @@ You may also specify any config field as a CLI flag which will take precedence o
 | `--playwrightConfig <path>` |           |
 | `--pool <forks              | threads>` |     |
 | `--project <name>`          | `-p`      |
+| `--quiet`                   |           |
 | `--reporter <name>`         | `-r`      |
 | `--setup <path>`            | `-s`      |
 | `--type <name>`             | `-t`      |

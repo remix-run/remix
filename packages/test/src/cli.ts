@@ -192,7 +192,7 @@ async function runRemixTestInCwd(argv: string[], cwd: string): Promise<number> {
         browserBaseUrl = result.baseUrl
       }
 
-      let reporter = createReporter(config.reporter)
+      let reporter = createReporter(config.reporter, { quiet: config.quiet })
       let startTime = performance.now()
 
       let counts: Counts = {
