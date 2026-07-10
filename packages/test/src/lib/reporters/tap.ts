@@ -1,12 +1,17 @@
 import { normalizeLine } from '../normalize.ts'
-import type { Reporter } from './index.ts'
+import type { Reporter, ReporterOptions } from './index.ts'
 import type { Counts, TestResults } from './results.ts'
 
 export class TapReporter implements Reporter {
   #counter = 0
   #total = 0
   #files = new Set<string>()
+  #quiet: boolean
   #suites = new Set<string>()
+
+  constructor(options: ReporterOptions = {}) {
+    this.#quiet = options.quiet === true
+  }
 
   onSectionStart(_label: string) {}
 
@@ -23,6 +28,8 @@ export class TapReporter implements Reporter {
     }
 
     for (let test of results.tests) {
+      if (this.#quiet && test.status === 'skipped') continue
+
       this.#counter++
       this.#total++
       let fullName = test.name

@@ -1,1 +1,0 @@
-Improve the default `remix new` app template so production starts with `NODE_ENV=production`, minifies browser assets, resolves frames on the client and server, and uses the dev server watcher instead of the asset server watcher.
