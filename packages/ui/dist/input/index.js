@@ -1,0 +1,121 @@
+import { css } from '@remix-run/ui';
+import { controlFocusShadow } from "../shared/focus-styles.js";
+const frameStyles = {
+    '--rmx-input-height': '32px',
+    '--rmx-input-padding-block': '6px',
+    '--rmx-input-padding-inline': '12px',
+    '--rmx-input-root-padding-inline': '8px',
+    '--rmx-input-gap': '6px',
+    '--rmx-input-icon-size': '16px',
+    '--rmx-input-icon-color': 'light-dark(#707070, #b3b3b3)',
+    appearance: 'none',
+    margin: 0,
+    boxSizing: 'border-box',
+    display: 'block',
+    width: '100%',
+    minWidth: 0,
+    height: 'var(--rmx-input-height)',
+    paddingBlock: 'var(--rmx-input-padding-block)',
+    paddingInline: 'var(--rmx-input-padding-inline)',
+    border: 0,
+    borderRadius: '8px',
+    background: 'light-dark(#FFFFFF, #1a1a1a)',
+    boxShadow: '0 2px 3px -1px rgba(0, 0, 0, 0.04), 0 3px 4px -1.5px rgba(0, 0, 0, 0.04), 0 4px 5px -2px rgba(0, 0, 0, 0.04), 0 0 0 1px light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.2))',
+    color: 'light-dark(#101010, #ececec)',
+    fontFamily: '"Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
+    fontStyle: 'normal',
+    fontWeight: 400,
+    fontSize: '13px',
+    lineHeight: '20px',
+    fontFeatureSettings: '"ss01" on, "cv01" on',
+    letterSpacing: 0,
+    textShadow: '0 1px 0 light-dark(#FFFFFF, rgb(0 0 0 / 0.35))',
+    '&::placeholder': {
+        color: 'light-dark(#B0B0B0, #777777)',
+        opacity: 1,
+    },
+    '&:disabled, &[aria-disabled="true"]': {
+        opacity: 0.55,
+    },
+};
+const baseStyle = css({
+    ...frameStyles,
+    '&:focus-visible': {
+        outline: 0,
+        boxShadow: controlFocusShadow,
+    },
+});
+const rootBaseStyle = css({
+    ...frameStyles,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 'var(--rmx-input-gap)',
+    paddingInline: 'var(--rmx-input-root-padding-inline)',
+    '&:focus-within': {
+        boxShadow: controlFocusShadow,
+    },
+    '&:has(input:disabled), &:has(input[aria-disabled="true"])': {
+        opacity: 0.55,
+    },
+    '& > svg': {
+        flex: 'none',
+        width: 'var(--rmx-input-icon-size)',
+        height: 'var(--rmx-input-icon-size)',
+        color: 'var(--rmx-input-icon-color)',
+        pointerEvents: 'none',
+    },
+    '& > button': {
+        flex: 'none',
+    },
+});
+const fieldBaseStyle = css({
+    appearance: 'none',
+    margin: 0,
+    boxSizing: 'border-box',
+    flex: '1 1 auto',
+    minWidth: 0,
+    width: '100%',
+    height: '20px',
+    padding: 0,
+    border: 0,
+    outline: 0,
+    background: 'transparent',
+    boxShadow: 'none',
+    color: 'light-dark(#101010, #ececec)',
+    font: 'inherit',
+    fontFeatureSettings: 'inherit',
+    letterSpacing: 'inherit',
+    textShadow: 'inherit',
+    '&::placeholder': {
+        color: 'light-dark(#B0B0B0, #777777)',
+        opacity: 1,
+    },
+    '&:disabled, &[aria-disabled="true"]': {
+        opacity: 1,
+    },
+});
+const sizeStyles = {
+    md: css({}),
+    lg: css({
+        '--rmx-input-height': '36px',
+        '--rmx-input-padding-block': '8px',
+        '--rmx-input-padding-inline': '14px',
+        '--rmx-input-root-padding-inline': '10px',
+        '--rmx-input-gap': '8px',
+        '--rmx-input-icon-size': '18px',
+    }),
+};
+function createInput(options = {}) {
+    let { size = 'md' } = options;
+    return [baseStyle, sizeStyles[size]];
+}
+function root(options = {}) {
+    let { size = 'md' } = options;
+    return [rootBaseStyle, sizeStyles[size]];
+}
+function field() {
+    return fieldBaseStyle;
+}
+export const input = Object.assign(createInput, { root, field });
+export default input;
+//# sourceMappingURL=index.js.map
