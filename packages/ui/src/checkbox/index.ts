@@ -29,8 +29,8 @@ const checkedActiveSelector =
   '&:checked:active:not(:disabled):not([aria-disabled="true"]), &[aria-checked="true"]:active:not(:disabled):not([aria-disabled="true"]), &[data-state="checked"]:active:not(:disabled):not([aria-disabled="true"])'
 const mixedActiveSelector =
   '&:indeterminate:active:not(:disabled):not([aria-disabled="true"]), &[indeterminate]:active:not(:disabled):not([aria-disabled="true"]), &[aria-checked="mixed"]:active:not(:disabled):not([aria-disabled="true"]), &[data-state="mixed"]:active:not(:disabled):not([aria-disabled="true"])'
-const checkIconUrl =
-  "url(\"data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cg filter='url(%23filter0_d_2_2264)'%3E%3Cpath d='M2.75 5.76562L5.10156 8.25L9.23438 1.75' stroke='white' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3Cpath d='M2.75 5.76562L5.10156 8.25L9.23438 1.75' stroke='url(%23paint0_linear_2_2264)' stroke-opacity='0.1' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/g%3E%3Cdefs%3E%3Cfilter id='filter0_d_2_2264' x='0' y='0' width='11.9845' height='12' filterUnits='userSpaceOnUse' color-interpolation-filters='sRGB'%3E%3CfeFlood flood-opacity='0' result='BackgroundImageFix'/%3E%3CfeColorMatrix in='SourceAlpha' type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 127 0' result='hardAlpha'/%3E%3CfeOffset dy='1'/%3E%3CfeGaussianBlur stdDeviation='1'/%3E%3CfeComposite in2='hardAlpha' operator='out'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.4 0'/%3E%3CfeBlend mode='overlay' in2='BackgroundImageFix' result='effect1_dropShadow_2_2264'/%3E%3CfeBlend mode='normal' in='SourceGraphic' in2='effect1_dropShadow_2_2264' result='shape'/%3E%3C/filter%3E%3ClinearGradient id='paint0_linear_2_2264' x1='5.99219' y1='1.75' x2='5.99219' y2='8.25' gradientUnits='userSpaceOnUse'%3E%3Cstop offset='0.25' stop-color='%233573F6' stop-opacity='0'/%3E%3Cstop offset='1' stop-color='%233573F6'/%3E%3C/linearGradient%3E%3C/defs%3E%3C/svg%3E\")"
+const checkIconMask =
+  "url(\"data:image/svg+xml,%3Csvg width='12' height='12' viewBox='0 0 12 12' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M2.75 5.76562L5.10156 8.25L9.23438 1.75' stroke='black' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")"
 
 const checkboxAriaChecked = {
   checked: 'true',
@@ -104,7 +104,9 @@ const baseStyle: CSSMixinDescriptor = css({
     top: '50%',
     width: 'var(--rmx-checkbox-check-size)',
     height: 'var(--rmx-checkbox-check-size)',
-    background: `${checkIconUrl} center / contain no-repeat`,
+    background: 'currentColor',
+    mask: `${checkIconMask} center / contain no-repeat`,
+    WebkitMask: `${checkIconMask} center / contain no-repeat`,
     transform: 'translate(-50%, calc(-50% + var(--rmx-checkbox-check-y)))',
   },
   [mixedMarkSelector]: {

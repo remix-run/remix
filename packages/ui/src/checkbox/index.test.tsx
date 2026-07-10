@@ -44,7 +44,10 @@ describe('checkbox', () => {
     expect(html).toMatch(/:indeterminate/)
     expect(html).toMatch(/\[aria-checked="mixed"\]/)
     expect(html).toMatch(/light-dark\(#3573F6, #6eaaff\)/)
+    expect(html).toMatch(/background: currentColor/)
+    expect(html).toMatch(/mask: url\("data:image\/svg\+xml/)
     expect(html).toMatch(/M2\.75 5\.76562L5\.10156 8\.25L9\.23438 1\.75/)
+    expect(html).not.toMatch(/stroke='white'/)
     expect(html).toMatch(/drop-shadow\(0 1px 2px rgba\(0, 0, 0, 0\.4\)\)/)
   })
 
