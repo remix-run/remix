@@ -62,10 +62,26 @@ export function canUseProperty(
   return name in element
 }
 
+// Prop names repeat constantly across elements and renders; cache the
+// normalized results so the string work and object allocation happen once
+// per distinct name. Entries are shared — callers must not mutate them.
+const htmlAttributeNameCache = new Map<string, { ns?: string; attr: string }>()
+const svgAttributeNameCache = new Map<string, { ns?: string; attr: string }>()
+
 export function normalizeAttributeName(
   name: string,
   isSvg: boolean,
 ): { ns?: string; attr: string } {
+  let cache = isSvg ? svgAttributeNameCache : htmlAttributeNameCache
+  let cached = cache.get(name)
+  if (cached === undefined) {
+    cached = computeAttributeName(name, isSvg)
+    cache.set(name, cached)
+  }
+  return cached
+}
+
+function computeAttributeName(name: string, isSvg: boolean): { ns?: string; attr: string } {
   if (name.startsWith('aria-') || name.startsWith('data-')) return { attr: name }
 
   if (name === 'className') return { attr: 'class' }
@@ -113,6 +129,15 @@ export function getMergedClassName(props: ElementProps): string | undefined {
   return merged || undefined
 }
 
+// Style/attribute names come from a small recurring set, so cache conversions
+// instead of running a regex per property per element per render.
+const kebabCaseCache = new Map<string, string>()
+
 export function toKebabCase(value: string): string {
-  return value.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)
+  let cached = kebabCaseCache.get(value)
+  if (cached === undefined) {
+    cached = value.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)
+    kebabCaseCache.set(value, cached)
+  }
+  return cached
 }

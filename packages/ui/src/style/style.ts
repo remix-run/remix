@@ -19,8 +19,17 @@ export interface CSSProps extends DOMStyleProperties {
 type StyleObject = Record<string, unknown>
 
 // Convert camelCase CSS properties to kebab-case
+// Property names repeat constantly across renders; cache conversions instead
+// of running a regex each time.
+const camelToKebabCache = new Map<string, string>()
+
 function camelToKebab(str: string): string {
-  return str.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+  let cached = camelToKebabCache.get(str)
+  if (cached === undefined) {
+    cached = str.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+    camelToKebabCache.set(str, cached)
+  }
+  return cached
 }
 
 // Properties that should remain unitless (numeric values without px)
