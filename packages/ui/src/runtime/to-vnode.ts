@@ -39,6 +39,10 @@ export function toVNode(node: RemixNode): VNode {
   }
 
   if (isRemixElement(node)) {
+    if (typeof node.type === 'function') {
+      return { type: node.type, key: node.key, props: node.props }
+    }
+
     // When innerHTML is set, ignore children
     let children = node.props.innerHTML != null ? [] : flatMapChildrenToVNodes(node)
     return { type: node.type, key: node.key, props: node.props, _children: children }

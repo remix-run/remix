@@ -107,6 +107,51 @@ describe('run', () => {
     frame.dispose()
   })
 
+  it('hydrates function-valued children passed to a component', async () => {
+    function FormatValue(handle: Handle<{ children: (value: number) => RemixNode }>) {
+      return () => <output>{handle.props.children(2)}</output>
+    }
+
+    let Interactive = clientEntry(
+      '/js/interactive.js#Interactive',
+      function Interactive(handle: Handle) {
+        let count = 0
+
+        return () => (
+          <div>
+            <FormatValue>{(value) => <>Value: {value}</>}</FormatValue>
+            <button
+              mix={on('click', () => {
+                count++
+                handle.update()
+              })}
+            >
+              Count: {count}
+            </button>
+          </div>
+        )
+      },
+    )
+
+    let html = await drain(renderToStream(<Interactive />))
+    document.body.innerHTML = html
+
+    expect(document.querySelector('output')?.textContent).toBe('Value: 2')
+
+    let app = run({ loadModule: mock.fn(() => Promise.resolve(Interactive)) })
+    try {
+      await app.ready()
+
+      let button = document.querySelector('button')
+      button?.click()
+      app.flush()
+
+      expect(button?.textContent).toBe('Count: 1')
+    } finally {
+      app.dispose()
+    }
+  })
+
   it('forwards hydrated client entry root error events to app listeners', async () => {
     let error = new Error('hydrated client entry root error')
     let Broken = clientEntry('/js/broken.js#Broken', function Broken() {
