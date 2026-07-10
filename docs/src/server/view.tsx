@@ -49,11 +49,7 @@ export function Document(
               versions={versions}
               activeVersion={activeVersion}
             />
-            <MainContent
-              page={page}
-              header={<PageHeader page={page} sourceUrl={sourceUrl} />}
-              activeVersion={activeVersion}
-            >
+            <MainContent page={page} header={<PageHeader page={page} sourceUrl={sourceUrl} />}>
               {children}
             </MainContent>
           </div>
@@ -224,7 +220,6 @@ function MainContent(
     page: PageDefinition
     header?: RemixNode
     children: RemixNode | RemixNode[]
-    activeVersion?: string
   }>,
 ) {
   return () => (
