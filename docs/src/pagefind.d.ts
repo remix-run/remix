@@ -10,6 +10,7 @@ declare namespace JSX {
       'reset-on-close'?: boolean
       'data-key'?: string
       'rmx-preserve-dom'?: boolean | ''
+      style?: string
     }
     'pagefind-modal-trigger': {
       instance?: string
@@ -19,6 +20,7 @@ declare namespace JSX {
       'data-key'?: string
       'hide-shortcut'?: boolean
       'rmx-preserve-dom'?: boolean | ''
+      style?: string
     }
   }
 }

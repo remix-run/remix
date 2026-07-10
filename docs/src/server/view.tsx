@@ -40,7 +40,7 @@ export function Document(
           entryHref={entryHref}
           entryPreloads={entryPreloads}
         />
-        <body mix={bodyCss}>
+        <body mix={[bodyCss, pagefindVariables]}>
           <MobileHeader page={page} />
           <div mix={shellCss}>
             <Sidebar
@@ -195,6 +195,25 @@ function Head(
           })}
           type="module"
         />
+        {/*
+          Pagefind resets its custom element hosts with `color-scheme: initial`.
+          We override so dark mode works properly.
+        */}
+        <style>{`
+          pagefind-filter-dropdown,
+          pagefind-filter-pane,
+          pagefind-input,
+          pagefind-keyboard-hints,
+          pagefind-modal,
+          pagefind-modal-body,
+          pagefind-modal-header,
+          pagefind-modal-trigger,
+          pagefind-results,
+          pagefind-searchbox,
+          pagefind-summary {
+            color-scheme: light dark;
+          }
+        `}</style>
       </head>
     )
   }
@@ -654,6 +673,32 @@ const bodyCss = css({
   },
 })
 
+const pagefindVariables = css({
+  '--pf-font': theme.fontFamily.sans,
+  '--pf-input-height': '40px',
+  '--pf-border-radius': theme.radius.md,
+  '--pf-text': theme.colors.text.primary,
+  '--pf-text-secondary': theme.colors.text.secondary,
+  '--pf-text-muted': theme.colors.text.muted,
+  '--pf-background': theme.surface.lvl1,
+  '--pf-border': theme.colors.border.subtle,
+  '--pf-border-focus': theme.colors.border.strong,
+  '--pf-skeleton': theme.surface.lvl3,
+  '--pf-skeleton-shine': theme.surface.lvl4,
+  '--pf-hover': theme.surface.lvl2,
+  '--pf-mark': theme.colors.text.primary,
+  '--pf-scroll-shadow': 'light-dark(rgb(0 0 0 / 8%), rgb(255 255 255 / 10%))',
+  '--pf-shadow-sm': '0 2px 8px light-dark(rgb(0 0 0 / 6%), rgb(0 0 0 / 30%))',
+  '--pf-shadow-md': '0 4px 12px light-dark(rgb(0 0 0 / 10%), rgb(0 0 0 / 40%))',
+  '--pf-shadow-lg': '0 16px 48px light-dark(rgb(0 0 0 / 20%), rgb(0 0 0 / 50%))',
+  '--pf-error-bg': 'light-dark(#fef2f2, #2a1a1a)',
+  '--pf-error-border': 'light-dark(#fecaca, #5c2828)',
+  '--pf-error-text': 'light-dark(#dc2626, #f87171)',
+  '--pf-error-text-secondary': 'light-dark(#b91c1c, #ef4444)',
+  '--pf-outline-focus': theme.colors.text.link,
+  '--pf-modal-backdrop': 'light-dark(rgb(0 0 0 / 50%), rgb(0 0 0 / 72%))',
+})
+
 const shellCss = css({
   minHeight: '100vh',
   display: 'grid',
@@ -696,11 +741,6 @@ const sidebarIntroCss = css({
   marginBottom: theme.space.sm,
   [MOBILE_NAV_MEDIA_RULE]: {
     display: 'none',
-  },
-  // Style the Pagefind trigger button to blend with the sidebar
-  '& pagefind-modal-trigger': {
-    '--pf-background': theme.surface.lvl3,
-    '--pf-border': theme.colors.border.subtle,
   },
 })
 
@@ -991,11 +1031,6 @@ const mobileLogoBannerCss = css({
     padding: `${theme.space.lg}`,
     backgroundColor: theme.surface.lvl3,
     borderBottom: `1px solid ${theme.colors.border.subtle}`,
-  },
-  // Style the Pagefind trigger button to blend with the banner background
-  '& pagefind-modal-trigger': {
-    '--pf-background': theme.surface.lvl3,
-    '--pf-border': theme.colors.border.subtle,
   },
 })
 
