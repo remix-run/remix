@@ -228,7 +228,8 @@ describe('diffNodes', () => {
 
     it('preserves rmx-preserve-dom element attributes and children', () => {
       let container = document.createElement('div')
-      container.innerHTML = '<div rmx-preserve-dom data-state="client"><button>Client</button></div>'
+      container.innerHTML =
+        '<div rmx-preserve-dom data-state="client"><button>Client</button></div>'
       let div = container.querySelector('div')
       invariant(div)
       let button = div.querySelector('button')
