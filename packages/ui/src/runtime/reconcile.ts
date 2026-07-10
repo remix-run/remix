@@ -573,7 +573,6 @@ function diffHost(
 
   next._dom = curr._dom
   next._parent = vParent
-  next._controller = curr._controller
   next._directEventState = curr._directEventState
   next._controlledState = curr._controlledState
   syncDirectEventListeners(next as CommittedHostNode)
@@ -1450,7 +1449,6 @@ function cleanupDescendants(node: VNode, scheduler: Scheduler, styles: StyleMana
     teardownMixins(node._mixState as MixinRuntimeState | undefined)
     abandonDirectEventListeners(node)
     abandonControlledReflection(node)
-    if (node._controller) node._controller.abort()
     return
   }
 
@@ -1559,7 +1557,6 @@ function performHostNodeRemoval(
     abandonControlledReflection(node)
     node._dom.parentNode?.removeChild(node._dom)
   }
-  if (node._controller) node._controller.abort()
 }
 
 function diffChildren(
@@ -2127,7 +2124,6 @@ function reclaimPersistedMixinNode(
 
   newNode._dom = persistedNode._dom
   newNode._parent = vParent
-  newNode._controller = persistedNode._controller
   newNode._mixState = persistedNode._mixState
   newNode._directEventState = persistedNode._directEventState
   newNode._controlledState = persistedNode._controlledState
