@@ -106,6 +106,8 @@ const noticeStyle = css({
 
 Keep keys stable when toggling between related elements. A stable key tells Remix which node is entering, exiting, or being replaced.
 
+Pass `true` for the default opacity animation or `false` to disable a mixin without changing the surrounding `mix` array. `animateEntrance({ initial: false })` skips the first insertion for a key but still animates later insertions. If the same keyed element returns before its exit finishes, Remix reclaims that DOM node and animates it back toward its rendered styles.
+
 ::frame{src="/docs/examples/06-animation/notice-presence"}
 
 ## Layout animations {#layout-animations}
@@ -168,39 +170,46 @@ const itemStyle = css({
 
 `key` is not optional for layout animation in lists. Without stable keys, the runtime cannot know whether an item moved or a different item replaced it.
 
+Layout animation includes size projection by default. Pass `size: false` when only position should animate and scaling the element's contents would look wrong.
+
 ::frame{src="/docs/examples/06-animation/reordering"}
 
 ## Springs, tweens, and easing {#springs-tweens-and-easing}
 
 `spring()` returns an iterator decorated for CSS transitions and Web Animations. Stringify it in CSS, spread it into animation options, or iterate it for custom JavaScript animation.
 
-```tsx filename=app/ui/bouncy-switch.tsx
-import { css, on } from "remix/ui";
+```tsx filename=app/assets/bouncy-switch.tsx
+import { clientEntry, css, on } from "remix/ui";
 import { spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
 
-export function BouncySwitch(handle: Handle) {
-  let enabled = true;
+export const BouncySwitch = clientEntry(
+  import.meta.url,
+  function BouncySwitch(handle: Handle) {
+    let enabled = true;
 
-  return () => (
-    <button
-      aria-pressed={enabled}
-      mix={[
-        switchStyle,
-        on("click", () => {
-          enabled = !enabled;
-          handle.update();
-        }),
-      ]}
-      type="button"
-    >
-      <span
-        mix={thumbStyle}
-        style={{ transform: enabled ? "translateX(2.25rem)" : "translateX(0)" }}
-      />
-    </button>
-  );
-}
+    return () => (
+      <button
+        aria-pressed={enabled}
+        mix={[
+          switchStyle,
+          on("click", () => {
+            enabled = !enabled;
+            handle.update();
+          }),
+        ]}
+        type="button"
+      >
+        <span
+          mix={thumbStyle}
+          style={{
+            transform: enabled ? "translateX(2.25rem)" : "translateX(0)",
+          }}
+        />
+      </button>
+    );
+  },
+);
 
 const switchStyle = css({
   border: 0,

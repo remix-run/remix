@@ -1,40 +1,46 @@
 ---
 title: Files and Assets
-description: How Remix serves static files, browser modules, uploads, downloads, and source assets.
+description: How Remix serves static files and source assets, accepts bounded uploads, stores files, and returns HTTP file responses.
 ---
 
-## Static files vs source-served assets {#static-files-vs-source-served-assets}
+Remix has separate paths for files that already exist in public form, browser source that needs compilation, and user uploads that must cross a trust boundary. Choose that path before configuring caches or storage.
 
-Placeholder for Static files vs source-served assets.
+## Static files and source-served assets {#static-files-vs-source-served-assets}
 
-## Remix's unbundled asset server {#remix-s-unbundled-asset-server}
+Use `staticFiles()` for files served from disk as-is. Use `createAssetServer()` for TypeScript, JavaScript, CSS, images, or fonts that need import rewriting, compilation, transforms, preloads, or fingerprinted URLs.
 
-Placeholder for Remix's unbundled asset server.
+## Configure the asset server boundary {#remix-s-unbundled-asset-server}
 
-## Browser modules, asset roots, and package mounts {#browser-modules-asset-roots-and-package-mounts}
+Define `rootDir`, the public `basePath`, and a `fileMap` from URL patterns to root-relative source patterns. Require an `allow` list, let `deny` override it for server-only modules, and map the asset namespace to a controller action that calls `assetServer.fetch(request)`.
 
-Placeholder for Browser modules, asset roots, and package mounts.
+## Browser modules, CSS, and file assets {#browser-modules-asset-roots-and-package-mounts}
 
-## Client entry hrefs and module preloads {#client-entry-hrefs-and-module-preloads}
+Explain on-demand TypeScript/JavaScript compilation, rewritten imports, CSS `@import` and `url()` references, package mounts, and configured leaf-file extensions. Keep browser-owned code in an allowlisted app directory rather than exposing the full source tree.
 
-Placeholder for Client entry hrefs and module preloads.
+## Asset hrefs, client entries, and preloads {#client-entry-hrefs-and-module-preloads}
 
-## Fingerprinting, source maps, minification {#fingerprinting-source-maps-minification}
+Use `getHref()` for scripts, styles, and files, and `getPreloads()` for entry dependencies. Resolve `clientEntry(import.meta.url, ...)` IDs through the asset server in the shared renderer instead of hard-coding deployment URLs in components.
 
-Placeholder for Fingerprinting, source maps, minification.
+## File transforms and transformed-output caches {#asset-file-transforms}
 
-## File uploads {#file-uploads}
+Define request-selected transforms with `defineFileTransform()`, optional global transforms, extension constraints, and request pipeline limits. Use a `FileStorage` cache when transformed output should survive repeated requests or process restarts for the same build.
 
-Placeholder for File uploads.
+## Development watching and production fingerprints {#fingerprinting-source-maps-minification}
 
-## Multipart parsing {#multipart-parsing}
+Choose one development watcher. A long-lived asset server may watch source files itself, while the generated app sets `watch: false` and lets Node's `--watch` restart the process. Close asset-owned watchers during shutdown. In production, disable watching, choose browser targets, source-map and minification policy, and enable fingerprinting with a build ID that changes on every deploy.
 
-Placeholder for Multipart parsing.
+## Parse bounded form uploads {#file-uploads}
 
-## File storage: memory, filesystem, S3 {#file-storage-memory-filesystem-s3}
+Configure `formData({ uploadHandler, ...limits })` to parse multipart bodies once and stream file parts to storage. Set limits for headers, files, individual file size, part count, and total size, then translate known parser or storage failures into useful `400` or `413` responses.
 
-Placeholder for File storage: memory, filesystem, S3.
+## Store files by app-owned keys {#file-storage-memory-filesystem-s3}
 
-## File downloads, lazy files, MIME types, and range responses {#file-downloads-lazy-files-mime-types-and-range-responses}
+Use the common `FileStorage` API with memory, filesystem, or S3-compatible backends. Generate storage keys on the server, validate media type and size, keep original names as metadata rather than trusted paths, and authorize both writes and reads.
 
-Placeholder for File downloads, lazy files, MIME types, and range responses.
+## Use the low-level multipart parser only when needed {#multipart-parsing}
+
+`remix/form-data-parser` is the normal streaming upload layer. Reach for `remix/multipart-parser` directly for non-form multipart formats, runtime-specific streams, or custom part processing, and preserve its header, part, and aggregate limits.
+
+## Stream downloads with correct HTTP semantics {#file-downloads-lazy-files-mime-types-and-range-responses}
+
+Open filesystem data as a `LazyFile` or read it from `FileStorage`, then use `createFileResponse()` for content length, MIME type, ETags, conditional requests, HEAD, and ranges. Add `Content-Disposition` for downloads, use `remix/mime` for content types, and avoid buffering large files into native `File` objects.
