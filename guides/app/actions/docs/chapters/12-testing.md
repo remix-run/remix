@@ -44,9 +44,10 @@ By default, the runner discovers three test types:
 
 | Pattern                      | Environment                              |
 | ---------------------------- | ---------------------------------------- |
-| `**/*.test.{ts,tsx}`         | Server test worker                       |
-| `**/*.test.browser.{ts,tsx}` | Browser frame managed by Playwright      |
-| `**/*.test.e2e.{ts,tsx}`     | End-to-end worker with Playwright access |
+| ---------------------------- | -------------------------------------- |
+| `**/*.test.{ts,tsx}`         | Server test                            |
+| `**/*.test.browser.{ts,tsx}` | Browser test running via Playwright    |
+| `**/*.test.e2e.{ts,tsx}`     | End-to-end test with Playwright access |
 
 All three use the same `describe(...)` and `it(...)` API from `remix/test`. The [`remix/test` overview](https://api.remix.run/api/remix/test/overview/) covers lifecycle hooks, test context, mocks, fake timers, and runner configuration. The [`remix/assert` overview](https://api.remix.run/api/remix/assert/overview/) lists the available assertion functions and `expect(...)` matchers. Both work in every test environment:
 
