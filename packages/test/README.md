@@ -183,13 +183,15 @@ describe('Checkout routes', () => {
 })
 ```
 
-Use `--only <pattern>` to focus tests from the CLI without editing source. Patterns are JavaScript regular expressions matched against suite names and full test names:
+Use `--only <pattern>` to focus tests from the CLI without editing source. Plain patterns are case-insensitive JavaScript regular expressions matched against suite names and full test names:
 
 ```sh
 remix test --only 'Cart routes'
 remix test --only 'Checkout routes > redirects anonymous users'
 remix test --only '/anonymous users$/'
 ```
+
+Slash-delimited CLI patterns preserve their flags, so `/pattern/` is case-sensitive and `/pattern/i` is case-insensitive. Plain string patterns in `remix-test.config.ts` are also case-insensitive; slash-delimited strings and `RegExp` values preserve their flags.
 
 Full test names join nested `describe` names and the test name with `>`. For example, `describe('Cart routes', () => describe('loader', () => it('loads cart items', ...)))` has the full test name `Cart routes > loader > loads cart items`.
 

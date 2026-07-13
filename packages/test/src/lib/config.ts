@@ -263,7 +263,9 @@ export interface RemixTestConfig {
   /**
    * Regular expression pattern(s) to focus tests by their full name (--only).
    * Matching suite names focus the whole suite, while matching test names focus
-   * the individual test. `--only` may be repeated on the CLI.
+   * the individual test. Plain string patterns are case-insensitive. Use a
+   * slash-delimited pattern or a `RegExp` in the config file to control flags
+   * explicitly. `--only` may be repeated on the CLI.
    */
   only?: RemixTestOnlyPattern | RemixTestOnlyPattern[]
   /**
@@ -475,7 +477,7 @@ function resolveOnlyPatterns(
   return toArray(value).map((pattern) => {
     let serialized: SerializedOnlyPattern
     if (typeof pattern === 'string') {
-      serialized = parseRegexLiteral(pattern) ?? { source: pattern, flags: '' }
+      serialized = parseRegexLiteral(pattern) ?? { source: pattern, flags: 'i' }
     } else {
       serialized = { source: pattern.source, flags: pattern.flags }
     }

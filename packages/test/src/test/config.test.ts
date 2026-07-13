@@ -77,11 +77,15 @@ describe('loadConfig', () => {
     let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
 
     try {
-      let config = await loadConfig(['--only', 'server > matches', '--only', '/browser/i'], tmp)
+      let config = await loadConfig(
+        ['--only', 'server > matches', '--only', '/browser/', '--only', '/checkout/i'],
+        tmp,
+      )
 
       assert.deepEqual(config.only, [
-        { source: 'server > matches', flags: '' },
-        { source: 'browser', flags: 'i' },
+        { source: 'server > matches', flags: 'i' },
+        { source: 'browser', flags: '' },
+        { source: 'checkout', flags: 'i' },
       ])
     } finally {
       await fsp.rm(tmp, { recursive: true, force: true })
@@ -94,14 +98,15 @@ describe('loadConfig', () => {
     try {
       await fsp.writeFile(
         path.join(tmp, 'remix-test.config.ts'),
-        ['export default {', "  only: [/server/i, 'browser'],", '}'].join('\n'),
+        ['export default {', "  only: [/server/, /checkout/i, 'browser'],", '}'].join('\n'),
       )
 
       let config = await loadConfig([], tmp)
 
       assert.deepEqual(config.only, [
-        { source: 'server', flags: 'i' },
-        { source: 'browser', flags: '' },
+        { source: 'server', flags: '' },
+        { source: 'checkout', flags: 'i' },
+        { source: 'browser', flags: 'i' },
       ])
     } finally {
       await fsp.rm(tmp, { recursive: true, force: true })
