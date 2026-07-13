@@ -3,6 +3,8 @@ title: Testing
 description: How to choose a test boundary and test Remix routes, stateful request flows, components, and end-to-end behavior.
 ---
 
+Remix provides a test runner (`remix/test`) out of the box that allows you to write 3 types of tests: Server tests, Browser tests, and E2E tests.
+
 A Remix app already exposes its main test boundary in `app/router.ts`. The router accepts a Web `Request` and returns a Web `Response`, so most request behavior can be tested without starting a server or opening a browser.
 
 This chapter starts at that boundary, then moves outward to browser component tests and full end-to-end flows. The examples use `remix/test` as the runner and `remix/assert` for assertions in every test environment.
@@ -11,14 +13,14 @@ This chapter starts at that boundary, then moves outward to browser component te
 
 Choose the smallest boundary that includes the behavior you want to prove:
 
-| Behavior                                                             | Test boundary                                                    | File                        |
-| -------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------- |
-| A data helper, schema, or other plain module                         | Import it, call it, and assert on the result                     | `*.test.ts`                 |
-| An action, response, middleware, session, or database-backed request | Send a request through `router.fetch(...)`                       | `*.test.ts` or `*.test.tsx` |
-| A component event, DOM update, or browser API                        | Render the component with `remix/ui/test`                        | `*.test.browser.tsx`        |
-| Navigation or a complete browser/server flow                         | Run the router behind a test server and drive it with Playwright | `*.test.e2e.ts`             |
+| Behavior                                                             | Test boundary                                                    | Test type                      |
+| -------------------------------------------------------------------- | ---------------------------------------------------------------- | ------------------------------ |
+| A data helper, schema, or other plain module                         | Import it, call it, and assert on the result                     | Server (`*.test.{ts,tex}`)     |
+| An action, response, middleware, session, or database-backed request | Send a request through `router.fetch(...)`                       | Server (`*.test.{ts,tsx}`)     |
+| A component event, DOM update, or browser API                        | Render the component with `remix/ui/test`                        | Browser (`*.test.browser.tsx`) |
+| Navigation or a complete browser/server flow                         | Run the router behind a test server and drive it with Playwright | E2E (`*.test.e2e.ts`)          |
 
-A controller that returns the wrong status belongs in a router test. A submit button that does not enter its pending state belongs in a browser component test. Use an end-to-end test when the behavior depends on both sides working together, such as submitting a form and following its redirect to the updated page.
+A controller that returns the wrong status belongs in a server test against the router. A submit button that does not enter its pending state belongs in a browser component test. Use an end-to-end test when the behavior depends on both sides working together, such as submitting a form and following its redirect to the updated page.
 
 ## Run tests with remix test
 
@@ -40,11 +42,11 @@ npm test
 
 By default, the runner discovers three test types:
 
-| Pattern                      | Environment                              |
-| ---------------------------- | ---------------------------------------- |
-| `**/*.test.{ts,tsx}`         | Server test worker                       |
-| `**/*.test.browser.{ts,tsx}` | Browser frame managed by Playwright      |
-| `**/*.test.e2e.{ts,tsx}`     | End-to-end worker with Playwright access |
+| Pattern                      | Environment                            |
+| ---------------------------- | -------------------------------------- |
+| `**/*.test.{ts,tsx}`         | Server test                            |
+| `**/*.test.browser.{ts,tsx}` | Browser test running via Playwright    |
+| `**/*.test.e2e.{ts,tsx}`     | End-to-end test with Playwright access |
 
 All three use the same `describe(...)` and `it(...)` API from `remix/test`. The [`remix/test` overview](https://api.remix.run/api/remix/test/overview/) covers lifecycle hooks, test context, mocks, fake timers, and runner configuration. The [`remix/assert` overview](https://api.remix.run/api/remix/assert/overview/) lists the available assertion functions and `expect(...)` matchers. Both work in every test environment:
 
@@ -188,7 +190,7 @@ export function createTestRouter() {
 
 Create a fresh test router inside a test when it mutates session or middleware state. A suite may share one when its dependencies are read-only or reset between tests.
 
-A router does not keep a browser cookie jar. For a multi-request session flow, read the cookie from one response and send its name/value pair in the next request:
+A router does not keep a browser cookie jar. For a multi-request session flow, you can use an [End-to-end test](#test-complete-flows-end-to-end), or it's also straightforward to read the cookie from one response and send its name/value pair in the next request:
 
 ```ts filename=test/http.ts
 import * as assert from "remix/assert";
