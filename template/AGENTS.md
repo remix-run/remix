@@ -23,6 +23,7 @@ Refer to ./.agents/skills/remix/SKILL.md
 - `app/middleware/render.tsx` installs the request-scoped renderer used by actions
 - `app/ui/` holds the shared document shell and home page UI
 - `app/assets.ts` owns the server-side asset pipeline used by the asset route and renderer
+- `app/entry.browser.ts` starts the browser runtime
 - `public/` contains static files served from the app root
 
 ## Route Ownership
@@ -32,6 +33,7 @@ Refer to ./.agents/skills/remix/SKILL.md
 - Add `app/actions/<route-key>/controller.tsx` for nested route maps that need their own actions or middleware.
 - Keep route-owned page modules next to the route that owns them.
 - Move shared UI to `app/ui/`, not `app/actions/`.
+- Name browser-owned modules with a `.browser.` segment and keep them with their narrowest owner.
 
 ## Build-Out Notes
 

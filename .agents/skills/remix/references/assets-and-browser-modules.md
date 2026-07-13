@@ -13,7 +13,7 @@ For routing the URL namespace itself, see `routing-and-controllers.md`. For clie
 
 ## When To Reach For It
 
-Use `remix/assets` when the app serves browser JavaScript, TypeScript, or CSS from source files. This is the right tool for client entrypoints, browser-only helpers, styles under `app/assets/`, and monorepo code that should be compiled and served under a public URL namespace.
+Use `remix/assets` when the app serves browser JavaScript, TypeScript, or CSS from source files. This is the right tool for client entrypoints, browser-only helpers, styles, and monorepo code that should be compiled and served under a public URL namespace.
 
 Use `staticFiles()` for files that already exist on disk exactly as they should be served. Use `createAssetServer()` for source scripts or styles that need rewriting, dependency scanning, preloads, sourcemaps, or fingerprinted URLs.
 
@@ -35,9 +35,8 @@ let assetServer = createAssetServer({
     'app/*path': 'app/*path',
     'node_modules/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/*.browser.ts?(x)'],
   allowPackages: ['remix'],
-  denyFiles: ['app/**/*.server.*'],
   target: { es: '2020', chrome: '109', safari: '16.4' },
   sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
   minify: process.env.NODE_ENV === 'production',
@@ -75,8 +74,8 @@ export default createController(routes, {
 Use `getHref()` when you need the public URL for one module, and `getPreloads()` when you want `<link rel="modulepreload">` tags or `Link` headers for one or more entrypoints and their dependencies.
 
 ```typescript
-let entryHref = await assetServer.getHref('app/assets/entry.ts')
-let preloads = await assetServer.getPreloads(['app/assets/entry.ts'])
+let entryHref = await assetServer.getHref('app/entry.browser.ts')
+let preloads = await assetServer.getPreloads(['app/entry.browser.ts'])
 ```
 
 Use this when rendering documents or layouts that boot browser behavior with a known client entry.

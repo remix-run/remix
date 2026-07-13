@@ -10,6 +10,7 @@ A minimal Remix application starter with a home page.
 - `app/middleware/render.tsx` installs the request-scoped renderer used by actions.
 - `app/ui/` holds the shared document shell and home page UI.
 - `app/assets.ts` owns the server-side asset pipeline used by the asset route and renderer.
+- `app/entry.browser.ts` starts the browser runtime; other browser-owned modules use the same `*.browser.*` naming convention.
 - `public/` contains static files served from the app root.
 
 ## Growing The App

@@ -89,14 +89,16 @@ Use these root directories consistently:
 
 Inside `app/`, organize by responsibility:
 
-- `assets/` for client entrypoints and client-owned browser behavior
 - `actions/` for controller-owned route handlers, route-local response rendering, and route-local UI/helpers that are not shared across route areas
 - `data/` for schema, queries, persistence setup, migrations, and runtime data initialization
 - `middleware/` for request lifecycle concerns such as auth, sessions, uploads, and database injection
 - `ui/` for shared cross-route UI primitives
 - `utils/` only for genuinely cross-layer helpers that do not clearly belong elsewhere
+- `entry.browser.ts` for the browser runtime entrypoint
 - `routes.ts` for the route contract
 - `router.ts` for router setup and wiring
+
+Name browser-owned modules with a `.browser.` segment and keep them with their narrowest owner, such as `app/ui/cart-button.browser.tsx`. The server-side asset configuration may live in `app/assets.ts`, but `app/assets/` has no special meaning.
 
 ### Placement Precedence
 
