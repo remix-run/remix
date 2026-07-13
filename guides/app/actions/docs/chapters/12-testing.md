@@ -3,24 +3,24 @@ title: Testing
 description: How to choose a test boundary and test Remix routes, stateful request flows, components, and end-to-end behavior.
 ---
 
-Remix provides a test runner (`remix/test`) out of the box that allows you to write 3 types of tests: Server tests, Browser tests, and E2E tests.
+Remix includes `remix/test`, whose three runner types—`server`, `browser`, and `e2e`—determine how and where a test runs. They do not determine how much application code the test exercises. `remix/assert` provides assertions in all three.
 
 A Remix app already exposes its main test boundary in `app/router.ts`. The router accepts a Web `Request` and returns a Web `Response`, so most request behavior can be tested without starting a server or opening a browser.
 
-This chapter starts at that boundary, then moves outward to browser component tests and full end-to-end flows. The examples use `remix/test` as the runner and `remix/assert` for assertions in every test environment.
+This chapter starts at that boundary, then moves outward to browser component tests and full end-to-end flows.
 
 ## Choose the narrowest useful test
 
 Choose the smallest boundary that includes the behavior you want to prove:
 
-| Behavior                                                             | Test boundary                                                    | File                        |
-| -------------------------------------------------------------------- | ---------------------------------------------------------------- | --------------------------- |
-| A data helper, schema, or other plain module                         | Import it, call it, and assert on the result                     | `*.test.ts`                 |
-| An action, response, middleware, session, or database-backed request | Send a request through `router.fetch(...)`                       | `*.test.ts` or `*.test.tsx` |
-| A component event, DOM update, or browser API                        | Render the component with `remix/ui/test`                        | `*.test.browser.tsx`        |
-| Navigation or a complete browser/server flow                         | Run the router behind a test server and drive it with Playwright | `*.test.e2e.ts`             |
+| Test boundary          | Use it for                                                           | How to test it                                                   | Runner type |
+| ---------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- | ----------- |
+| Unit test              | A data helper, schema, utility, or other isolated module             | Import it, call it, and assert on the result                     | `server`    |
+| Router test            | An action, response, middleware, session, or database-backed request | Send a request through `router.fetch(...)`                       | `server`    |
+| Browser component test | A component event, DOM update, or browser API                        | Render the component with `remix/ui/test`                        | `browser`   |
+| End-to-end test        | Navigation or a complete browser/server flow                         | Run the router behind a test server and drive it with Playwright | `e2e`       |
 
-A controller that returns the wrong status belongs in a router test. A submit button that does not enter its pending state belongs in a browser component test. Use an end-to-end test when the behavior depends on both sides working together, such as submitting a form and following its redirect to the updated page.
+A controller that returns the wrong status belongs in a router test. A submit button that does not enter its pending state belongs in a browser component test. Use an end-to-end test when browser and server behavior must work together, such as submitting a form and following its redirect to the updated page.
 
 ## Run tests with remix test
 
@@ -40,14 +40,15 @@ Then run the suite with:
 npm test
 ```
 
-By default, the runner discovers three test types:
+By default, the runner maps each runner type to a file pattern and execution model:
 
-| Pattern                      | Environment                              |
-| ---------------------------- | ---------------------------------------- |
-| ---------------------------- | -------------------------------------- |
-| `**/*.test.{ts,tsx}`         | Server test                            |
-| `**/*.test.browser.{ts,tsx}` | Browser test running via Playwright    |
-| `**/*.test.e2e.{ts,tsx}`     | End-to-end test with Playwright access |
+| Runner type | File pattern                 | Execution model                          |
+| ----------- | ---------------------------- | ---------------------------------------- |
+| `server`    | `**/*.test.{ts,tsx}`         | Server-side test worker                  |
+| `browser`   | `**/*.test.browser.{ts,tsx}` | Isolated browser frame via Playwright    |
+| `e2e`       | `**/*.test.e2e.{ts,tsx}`     | Test worker driving a Playwright browser |
+
+The `server` runner type covers both unit tests and router tests. It describes the execution model, not the test boundary.
 
 All three use the same `describe(...)` and `it(...)` API from `remix/test`. The [`remix/test` overview](https://api.remix.run/api/remix/test/overview/) covers lifecycle hooks, test context, mocks, fake timers, and runner configuration. The [`remix/assert` overview](https://api.remix.run/api/remix/assert/overview/) lists the available assertion functions and `expect(...)` matchers. Both work in every test environment:
 
@@ -191,7 +192,7 @@ export function createTestRouter() {
 
 Create a fresh test router inside a test when it mutates session or middleware state. A suite may share one when its dependencies are read-only or reset between tests.
 
-A router does not keep a browser cookie jar. For a multi-request session flow, you can use an [End-to-end test](#test-complete-flows-end-to-end), or it's also straightforward to read the cookie from one response and send its name/value pair in the next request:
+A browser manages cookies automatically in an [end-to-end test](#test-complete-flows-end-to-end). To keep a multi-request session flow in a router test, read the cookie from one response and send its name/value pair in the next request:
 
 ```ts filename=test/http.ts
 import * as assert from "remix/assert";
@@ -231,50 +232,67 @@ npm i -D playwright
 npx playwright install
 ```
 
-`render(...)` from [`remix/ui/test`](https://api.remix.run/api/remix/ui/test/overview/) mounts a component, flushes its initial render, and returns helpers for querying and interacting with the DOM. This test checks the pending state added to the album edit form in [Start Here](/docs/start-here):
+Consider a small client component that tracks whether an album is a favorite:
 
-```tsx filename=app/actions/albums/edit/album-edit-form.test.browser.tsx
+```tsx filename=app/actions/albums/favorite-button.browser.tsx
+import { clientEntry, on } from "remix/ui";
+import type { Handle } from "remix/ui";
+
+export const FavoriteButton = clientEntry(
+  import.meta.url,
+  function FavoriteButton(handle: Handle<{ albumTitle: string }>) {
+    let favorite = false;
+
+    return () => (
+      <button
+        aria-pressed={favorite}
+        mix={[
+          on("click", () => {
+            favorite = !favorite;
+            handle.update();
+          }),
+        ]}
+        type="button"
+      >
+        {favorite
+          ? `Remove ${handle.props.albumTitle} from favorites`
+          : `Add ${handle.props.albumTitle} to favorites`}
+      </button>
+    );
+  },
+);
+```
+
+`render(...)` from [`remix/ui/test`](https://api.remix.run/api/remix/ui/test/overview/) mounts the component, flushes its initial render, and returns helpers for querying and interacting with the DOM:
+
+```tsx filename=app/actions/albums/favorite-button.test.browser.tsx
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import { render } from "remix/ui/test";
 
-import { AlbumEditForm } from "./album-edit-form.browser.tsx";
+import { FavoriteButton } from "./favorite-button.browser.tsx";
 
-const album = {
-  artist: "Michael Jackson",
-  id: "thriller",
-  title: "Thriller",
-  year: 1983,
-};
-
-describe("AlbumEditForm", () => {
-  it("shows a pending state while submitting", async (t) => {
-    let result = render(<AlbumEditForm album={album} />);
+describe("FavoriteButton", () => {
+  it("toggles an album as a favorite", async (t) => {
+    let result = render(<FavoriteButton albumTitle="Thriller" />);
     t.after(result.cleanup);
-
-    let form = result.$("form");
-    assert.ok(form);
-
-    await result.act(() => {
-      form.dispatchEvent(
-        new SubmitEvent("submit", {
-          bubbles: true,
-          cancelable: true,
-        }),
-      );
-    });
 
     let button = result.$("button");
     assert.ok(button instanceof HTMLButtonElement);
-    assert.equal(button.disabled, true);
-    assert.equal(button.textContent, "Saving…");
+    assert.equal(button.getAttribute("aria-pressed"), "false");
+    assert.equal(button.textContent, "Add Thriller to favorites");
+
+    await result.act(() => button.click());
+
+    assert.equal(button.getAttribute("aria-pressed"), "true");
+    assert.equal(button.textContent, "Remove Thriller from favorites");
   });
 });
 ```
 
 Use `result.act(...)` around an interaction that may call `handle.update()` or complete asynchronous component work. It flushes pending updates before the next assertion. Registering `result.cleanup` with `t.after(...)` disposes the component even when an assertion fails.
 
-This test should not also prove that the form updates the database. The router test owns the POST response, and the browser test owns the pending DOM state.
+The button has no request behavior to prove, so this test stays at the browser component boundary.
 
 ## Test complete flows end to end
 
