@@ -17,7 +17,7 @@ Choose the smallest boundary that includes the behavior you want to prove:
 | ---------------------- | -------------------------------------------------------------------- | ---------------------------------------------------------------- | ----------- |
 | Unit test              | A data helper, schema, utility, or other isolated module             | Import it, call it, and assert on the result                     | `server`    |
 | Router test            | An action, response, middleware, session, or database-backed request | Send a request through `router.fetch(...)`                       | `server`    |
-| Browser component test | A component event, DOM update, or browser API                        | Render the component with `remix/ui/test`                        | `browser`   |
+| Browser component test | A component event, DOM update, or browser API                        | Render the component with `remix/ui/test`'s `render()` helper    | `browser`   |
 | End-to-end test        | Navigation or a complete browser/server flow                         | Run the router behind a test server and drive it with Playwright | `e2e`       |
 
 A controller that returns the wrong status belongs in a router test. A submit button that does not enter its pending state belongs in a browser component test. Use an end-to-end test when browser and server behavior must work together, such as submitting a form and following its redirect to the updated page.
@@ -274,15 +274,15 @@ import { FavoriteButton } from "./favorite-button.browser.tsx";
 
 describe("FavoriteButton", () => {
   it("toggles an album as a favorite", async (t) => {
-    let result = render(<FavoriteButton albumTitle="Thriller" />);
-    t.after(result.cleanup);
+    let { $, act, cleanup } = render(<FavoriteButton albumTitle="Thriller" />);
+    t.after(cleanup);
 
-    let button = result.$("button");
+    let button = $("button");
     assert.ok(button instanceof HTMLButtonElement);
     assert.equal(button.getAttribute("aria-pressed"), "false");
     assert.equal(button.textContent, "Add Thriller to favorites");
 
-    await result.act(() => button.click());
+    await act(() => button.click());
 
     assert.equal(button.getAttribute("aria-pressed"), "true");
     assert.equal(button.textContent, "Remove Thriller from favorites");
@@ -290,7 +290,7 @@ describe("FavoriteButton", () => {
 });
 ```
 
-Use `result.act(...)` around an interaction that may call `handle.update()` or complete asynchronous component work. It flushes pending updates before the next assertion. Registering `result.cleanup` with `t.after(...)` disposes the component even when an assertion fails.
+Use `act(...)` around an interaction that may call `handle.update()` or complete asynchronous component work. It flushes pending updates before the next assertion. Registering `cleanup` with `t.after(...)` disposes the component even when an assertion fails.
 
 The button has no request behavior to prove, so this test stays at the browser component boundary.
 
