@@ -60,9 +60,9 @@ export function createSqliteDatabase(options: {
       applyPragmas(conn, options.pragmas)
 
       let adapter = createSqliteDatabaseAdapter(conn) as SqliteDatabaseAdapter & {
-        close(): Promise<void>
+        release(): Promise<void>
       }
-      adapter.close = async () => conn.close?.()
+      adapter.release = async () => conn.close?.()
 
       return createDatabase(adapter, { now: options.now })
     },

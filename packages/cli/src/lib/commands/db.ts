@@ -161,42 +161,28 @@ async function runDatabaseResourceAction(
   if (action.kind === 'reset') {
     await database.drop()
     await database.create()
-    await withDatabaseClient(database, async (client) => {
-      await runMigrations(client, { cwd: appRoot })
-      await runSeed(client, { cwd: appRoot })
-    })
+    await using client = await database.connect()
+    await runMigrations(client, { cwd: appRoot })
+    await runSeed(client, { cwd: appRoot })
     return
   }
 
-  await withDatabaseClient(database, async (client) => {
-    if (action.kind === 'seed') {
-      await runSeed(client, { cwd: appRoot })
-      return
-    }
+  await using client = await database.connect()
 
-    if (action.kind === 'migrate') {
-      await runMigrations(
-        client,
-        action.to === undefined ? { cwd: appRoot } : { cwd: appRoot, to: action.to },
-      )
-      return
-    }
-
-    await writeMigrationStatus(client, { cwd: appRoot })
-  })
-}
-
-async function withDatabaseClient(
-  database: DatabaseResource,
-  callback: (client: Database) => Promise<void>,
-): Promise<void> {
-  let client = await database.connect()
-
-  try {
-    await callback(client)
-  } finally {
-    await client.adapter.close?.()
+  if (action.kind === 'seed') {
+    await runSeed(client, { cwd: appRoot })
+    return
   }
+
+  if (action.kind === 'migrate') {
+    await runMigrations(
+      client,
+      action.to === undefined ? { cwd: appRoot } : { cwd: appRoot, to: action.to },
+    )
+    return
+  }
+
+  await writeMigrationStatus(client, { cwd: appRoot })
 }
 
 async function runMigrations(

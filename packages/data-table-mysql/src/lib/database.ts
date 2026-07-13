@@ -59,9 +59,9 @@ export function createMysqlDatabase(options: MysqlDatabaseOptions): DatabaseReso
     async connect(): Promise<Database> {
       let connection = await pool.getConnection()
       let adapter = createMysqlDatabaseAdapter(connection) as MysqlDatabaseAdapter & {
-        close(): Promise<void>
+        release(): Promise<void>
       }
-      adapter.close = async () => {
+      adapter.release = async () => {
         connection.release()
       }
       return createDatabase(adapter, { now: options.now })

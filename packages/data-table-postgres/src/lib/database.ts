@@ -58,9 +58,9 @@ export function createPostgresDatabase(options: PostgresDatabaseOptions): Databa
     async connect(): Promise<Database> {
       let client = await pool.connect()
       let adapter = createPostgresDatabaseAdapter(client) as PostgresDatabaseAdapter & {
-        close(): Promise<void>
+        release(): Promise<void>
       }
-      adapter.close = async () => {
+      adapter.release = async () => {
         client.release()
       }
       return createDatabase(adapter, { now: options.now })

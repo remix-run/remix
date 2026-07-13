@@ -109,7 +109,7 @@ export function runAdapterIntegrationContract(database: DatabaseResource): void 
     await state.client.exec(sql`drop table if exists projects`)
     await state.client.exec(sql`drop table if exists accounts`)
 
-    await state.client.close()
+    await state.client.release()
     await state.database.close()
   })
 

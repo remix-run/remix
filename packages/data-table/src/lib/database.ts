@@ -382,8 +382,12 @@ export class Database implements QueryExecutionContext {
     return this.#now()
   }
 
-  async close(): Promise<void> {
-    await this.#adapter.close?.()
+  async release(): Promise<void> {
+    await this.#adapter.release?.()
+  }
+
+  async [Symbol.asyncDispose](): Promise<void> {
+    await this.release()
   }
 
   query<

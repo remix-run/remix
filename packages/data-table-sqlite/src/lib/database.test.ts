@@ -31,8 +31,8 @@ describe('sqlite database resource', () => {
 
       assert.deepEqual(rows, [{ id: 1, email: 'a@example.com' }])
     } finally {
-      await first.close()
-      await second.close()
+      await first.release()
+      await second.release()
       await database.close()
       await rm(databaseDirectory, { force: true, recursive: true })
     }
@@ -68,7 +68,7 @@ describe('sqlite database resource', () => {
             'SQLite :memory: database resources only support one connection. Use a file-backed SQLite database when multiple connections need to share state.',
       )
     } finally {
-      await client.close()
+      await client.release()
       await database.close()
     }
   })
