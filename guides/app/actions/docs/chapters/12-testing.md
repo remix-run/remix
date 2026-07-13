@@ -188,7 +188,7 @@ export function createTestRouter() {
 
 Create a fresh test router inside a test when it mutates session or middleware state. A suite may share one when its dependencies are read-only or reset between tests.
 
-A router does not keep a browser cookie jar. For a multi-request session flow, read the cookie from one response and send its name/value pair in the next request:
+A router does not keep a browser cookie jar. For a multi-request session flow, you can use an [End-to-end test](#test-complete-flows-end-to-end), or it's also straightforward to read the cookie from one response and send its name/value pair in the next request:
 
 ```ts filename=test/http.ts
 import * as assert from "remix/assert";
