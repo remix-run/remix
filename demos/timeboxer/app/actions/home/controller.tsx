@@ -1,7 +1,7 @@
-import { Auth } from 'remix/auth-middleware'
-import { getCsrfToken } from 'remix/csrf-middleware'
+import { Auth } from 'remix/middleware/auth'
+import { getCsrfToken } from 'remix/middleware/csrf'
 import { Database } from 'remix/data-table'
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 import { redirect } from 'remix/response/redirect'
 
 import { listSchedules } from '../../data/schedules.ts'
