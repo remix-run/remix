@@ -1,12 +1,12 @@
 import * as path from 'node:path'
 import { createAssetServer } from 'remix/assets'
-import { createController } from 'remix/fetch-router'
+import { createController } from 'remix/router'
 
-import { routes } from '../routes.ts'
+import { routes } from '../../routes.ts'
 
 export const assetServer = createAssetServer({
   basePath: '/assets',
-  rootDir: path.resolve(import.meta.dirname, '../../../..'),
+  rootDir: path.resolve(import.meta.dirname, '../../../../..'),
   fileMap: {
     '/app/*path': 'demos/timeboxer/app/*path',
     '/packages/*path': 'packages/*path',
