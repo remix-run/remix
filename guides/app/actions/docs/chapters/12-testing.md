@@ -3,6 +3,8 @@ title: Testing
 description: How to choose a test boundary and test Remix routes, stateful request flows, components, and end-to-end behavior.
 ---
 
+Remix provides a test runner (`remix/test`) out of the box that allows you to write 3 types of tests: Server tests, Browser tests, and E2E tests.
+
 A Remix app already exposes its main test boundary in `app/router.ts`. The router accepts a Web `Request` and returns a Web `Response`, so most request behavior can be tested without starting a server or opening a browser.
 
 This chapter starts at that boundary, then moves outward to browser component tests and full end-to-end flows. The examples use `remix/test` as the runner and `remix/assert` for assertions in every test environment.
