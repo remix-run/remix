@@ -19,6 +19,7 @@
   "scripts": {
     "postinstall": "node ./scripts/postinstall.ts",
     "build": "pnpm -r build",
+    "changes:add": "node ./scripts/changes-add.ts",
     "changes:preview": "node ./scripts/changes-preview.ts",
     "changes:validate": "node ./scripts/changes-validate.ts",
     "changes:version": "node ./scripts/changes-version.ts",

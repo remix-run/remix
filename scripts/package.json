@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "dependencies": {
+    "@clack/prompts": "^1.7.0",
     "@octokit/request": "^9.2.4",
     "@remix-run/assert": "workspace:*",
     "@remix-run/test": "workspace:*",
