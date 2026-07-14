@@ -1,14 +1,23 @@
+import * as path from 'node:path'
 import { createCookie } from 'remix/cookie'
+import { createMigrator } from 'remix/data-table/migrations'
+import { loadMigrations } from 'remix/data-table/migrations/node'
 import { SetCookie, Cookie } from 'remix/headers'
 import { createMemorySessionStorage } from 'remix/session-storage/memory'
 
+import { database } from '../app/data/database.ts'
 import { createBookstoreRouter } from '../app/router.ts'
-import { initializeBookstoreDatabase } from '../app/data/setup.ts'
+import { seed } from '../db/seed.ts'
+
+const migrator = createMigrator(
+  await loadMigrations(path.join(import.meta.dirname, '../db/migrations')),
+)
+
+let initializeDatabasePromise: Promise<void> | null = null
 
 export async function createTestRouter() {
-  // Initialize the DB before every test suite - needs to run per-worker
-  await initializeBookstoreDatabase()
-
+  initializeDatabasePromise ??= initializeDatabase()
+  await initializeDatabasePromise
   let sessionCookie = createCookie('session', {
     secrets: ['s3cr3t-k3y-for-d3mo'],
     httpOnly: true,
@@ -22,6 +31,14 @@ export async function createTestRouter() {
     sessionCookie,
     sessionStorage,
   })
+}
+
+async function initializeDatabase() {
+  await database.drop()
+  await database.create()
+  await using db = await database.connect()
+  await migrator.migrate(db)
+  await seed(db)
 }
 
 /**

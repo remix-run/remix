@@ -8,9 +8,11 @@ process.env.DATABASE_URL = `./tmp/auth-controller-test-${process.pid}.sqlite`
 
 rmSync(process.env.DATABASE_URL, { force: true })
 
+const { initializeTimeboxerDatabase } = await import('../../data/setup.ts')
+await initializeTimeboxerDatabase()
 const { router } = await import('../../router.ts')
 const { routes } = await import('../../routes.ts')
-const { db } = await import('../../data/database.ts')
+const { database } = await import('../../data/database.ts')
 const { users } = await import('../../data/schema.ts')
 
 describe('auth endpoints', () => {
@@ -59,6 +61,7 @@ describe('auth endpoints', () => {
     let username = uniqueUsername()
     let { client } = await createSignedInClient(username)
 
+    await using db = await database.connect()
     let createdUser = await db.findOne(users, { where: { username } })
     assert.ok(createdUser)
 

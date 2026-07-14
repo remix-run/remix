@@ -1,10 +1,17 @@
 import * as http from 'node:http'
+import * as path from 'node:path'
+import { createMigrator } from 'remix/data-table/migrations'
+import { loadMigrations } from 'remix/data-table/migrations/node'
 import { createRequestListener } from 'remix/node-fetch-server'
 
+import { database } from './app/data/database.ts'
 import { createBookstoreRouter } from './app/router.ts'
-import { initializeBookstoreDatabase } from './app/data/setup.ts'
+import { seed } from './db/seed.ts'
 
-await initializeBookstoreDatabase()
+const db = await database.connect()
+const migrator = createMigrator(await loadMigrations(path.join(import.meta.dirname, 'db/migrations')))
+await migrator.migrate(db)
+await seed(db)
 
 const router = createBookstoreRouter()
 

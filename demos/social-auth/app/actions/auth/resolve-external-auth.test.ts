@@ -1,16 +1,30 @@
+import * as path from 'node:path'
 import * as assert from 'remix/assert'
+import { createMigrator } from 'remix/data-table/migrations'
+import { loadMigrations } from 'remix/data-table/migrations/node'
 import { beforeEach, describe, it } from 'remix/test'
 
+import { seed } from '../../../db/seed.ts'
+import { database } from '../../data/database.ts'
 import { authAccounts } from '../../data/schema.ts'
-import { db, resetSocialAuthDatabase } from '../../data/setup.ts'
 import { resolveExternalAuth } from './resolve-external-auth.ts'
 
+const migrator = createMigrator(
+  await loadMigrations(path.join(import.meta.dirname, '../../../db/migrations')),
+)
+
 beforeEach(async () => {
-  await resetSocialAuthDatabase()
+  await database.drop()
+  await database.create()
+  await using db = await database.connect()
+  await migrator.migrate(db)
+  await seed(db)
 })
 
 describe('resolve external auth helper', () => {
   it('links an external account to an existing user by email', async () => {
+    await using db = await database.connect()
+
     let resolved = await resolveExternalAuth(db, {
       provider: 'google',
       account: { provider: 'google', providerAccountId: 'google-user-1' },
@@ -31,6 +45,8 @@ describe('resolve external auth helper', () => {
   })
 
   it('updates an existing linked external account on later logins', async () => {
+    await using db = await database.connect()
+
     let first = await resolveExternalAuth(db, {
       provider: 'github',
       account: { provider: 'github', providerAccountId: 'github-user-1' },
@@ -65,3 +81,4 @@ describe('resolve external auth helper', () => {
     assert.equal(account.avatar_url, 'https://example.com/new-avatar.png')
   })
 })
+

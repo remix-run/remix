@@ -6,9 +6,11 @@ import { describe, it } from 'remix/test'
 process.env.SESSION_SECRET = 'test-session-secret'
 process.env.DATABASE_URL = `./tmp/schedules-test-${process.pid}.sqlite`
 
+const { initializeTimeboxerDatabase } = await import('../../data/setup.ts')
+await initializeTimeboxerDatabase()
 const { router } = await import('../../router.ts')
 const { routes } = await import('../../routes.ts')
-const { db } = await import('../../data/database.ts')
+const { database } = await import('../../data/database.ts')
 const { schedules } = await import('../../data/schema.ts')
 
 describe('schedule endpoints', () => {
@@ -308,6 +310,7 @@ describe('schedule endpoints', () => {
     )
     assert.equal(deletedScheduleResponse.status, 404)
 
+    await using db = await database.connect()
     let deletedScheduleRow = await db.findOne(schedules, {
       where: { id: createdSchedule.id },
     })

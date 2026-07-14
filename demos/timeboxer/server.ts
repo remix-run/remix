@@ -2,7 +2,10 @@ import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 
 import { assetServer } from './app/actions/assets/controller.ts'
+import { initializeTimeboxerDatabase } from './app/data/setup.ts'
 import { router } from './app/router.ts'
+
+await initializeTimeboxerDatabase()
 
 const server = http.createServer(
   createRequestListener(async (request) => {

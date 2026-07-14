@@ -1,5 +1,6 @@
 import { createMiddleware, createRouter, type MiddlewareContext } from 'remix/router'
 import type { Cookie } from 'remix/cookie'
+
 import { formData } from 'remix/middleware/form-data'
 import type { SessionStorage } from 'remix/session'
 import { session } from 'remix/middleware/session'
@@ -35,10 +36,10 @@ export interface SocialAuthRouterOptions {
   externalProviderRegistry?: ExternalProviderRegistry
 }
 
-export function createSocialAuthRouter(options?: SocialAuthRouterOptions) {
-  let cookie = options?.sessionCookie ?? sessionCookie
-  let storage = options?.sessionStorage ?? sessionStorage
-  let providers = options?.externalProviderRegistry ?? externalProviderRegistry
+export function createSocialAuthRouter(options: SocialAuthRouterOptions = {}) {
+  let cookie = options.sessionCookie ?? sessionCookie
+  let storage = options.sessionStorage ?? sessionStorage
+  let providers = options.externalProviderRegistry ?? externalProviderRegistry
   let router = createRouter({ middleware: createSocialAuthMiddleware(cookie, storage) })
 
   router.map(routes, createRootController(providers))
@@ -61,8 +62,8 @@ function createSocialAuthMiddleware(cookie: Cookie, storage: SessionStorage) {
       lastModified: false,
     }),
     formData(),
-    session(cookie, storage),
     loadDatabase(),
+    session(cookie, storage),
     loadAuth(),
     render(),
   )

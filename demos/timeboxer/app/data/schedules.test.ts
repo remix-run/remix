@@ -218,7 +218,7 @@ async function withTestDatabase<T>(callback: (db: Database) => Promise<T>): Prom
   try {
     return await callback(db)
   } finally {
-    await db.close()
+    await db.release()
     await database.close()
     await rm(databaseDirectory, { force: true, recursive: true })
   }

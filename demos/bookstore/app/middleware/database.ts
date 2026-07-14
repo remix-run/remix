@@ -1,15 +1,16 @@
 import type { Middleware } from 'remix/router'
 import { Database } from 'remix/data-table'
 
-import { db } from '../data/setup.ts'
+import { database } from '../data/database.ts'
 
 export function loadDatabase(): Middleware<{
   key: typeof Database
   value: Database
   property: 'db'
 }> {
-  return (context, next) => {
+  return async (context, next) => {
+    await using db = await database.connect()
     context.set(Database, db, { property: 'db' })
-    return next()
+    return await next()
   }
 }

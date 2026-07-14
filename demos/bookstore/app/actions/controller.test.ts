@@ -8,10 +8,11 @@ import {
   requestWithSession,
 } from '../../test/helpers.ts'
 import { books } from '../data/schema.ts'
-import { db } from '../data/setup.ts'
+import { database } from '../data/database.ts'
 import { uploadsStorage as uploads } from '../utils/uploads.ts'
 
 const router = await createTestRouter()
+const db = await database.connect()
 
 describe('root controller', () => {
   it('GET / returns home page', async () => {

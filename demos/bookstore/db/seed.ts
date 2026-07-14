@@ -1,66 +1,8 @@
-import * as fs from 'node:fs'
-import * as os from 'node:os'
-import * as path from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { createMigrationRunner } from 'remix/data-table/migrations'
-import { loadMigrations } from 'remix/data-table/migrations/node'
-import { createSqliteDatabase } from 'remix/data-table/sqlite'
+import type { Database } from 'remix/data-table'
+import { books, orderItems, orders, users } from '../app/data/schema.ts'
+import { hashPassword } from '../app/utils/password-hash.ts'
 
-import { books, orderItems, orders, users } from './schema.ts'
-import { hashPassword } from '../utils/password-hash.ts'
-
-let databaseFilePath: string
-let testDatabaseDirectoryPath: string | undefined
-
-if (process.env.NODE_ENV === 'test') {
-  testDatabaseDirectoryPath = fs.mkdtempSync(path.join(os.tmpdir(), 'remix-bookstore-'))
-  databaseFilePath = path.join(testDatabaseDirectoryPath, 'bookstore.sqlite')
-} else {
-  let databaseDirectoryUrl = new URL('../../db/', import.meta.url)
-  databaseFilePath = fileURLToPath(new URL('bookstore.sqlite', databaseDirectoryUrl))
-
-  fs.mkdirSync(fileURLToPath(databaseDirectoryUrl), { recursive: true })
-}
-
-const migrationsDirectoryPath = fileURLToPath(new URL('../../db/migrations/', import.meta.url))
-
-export const database = createSqliteDatabase({ path: databaseFilePath })
-export const db = await database.connect()
-
-let initializePromise: Promise<void> | null = null
-
-export async function initializeBookstoreDatabase(): Promise<void> {
-  if (!initializePromise) {
-    initializePromise = initialize()
-  }
-
-  await initializePromise
-}
-
-export function closeBookstoreDatabase(): void {
-  if (process.env.NODE_ENV === 'test' && process.platform === 'win32') {
-    // Each test file runs in its own process, and the runner discards temp files.
-    return
-  }
-
-  void db.close()
-  void database.close()
-
-  if (testDatabaseDirectoryPath) {
-    fs.rmSync(testDatabaseDirectoryPath, { recursive: true, force: true })
-    testDatabaseDirectoryPath = undefined
-  }
-}
-
-if (process.env.NODE_ENV === 'test') {
-  process.once('exit', closeBookstoreDatabase)
-}
-
-async function initialize(): Promise<void> {
-  let migrations = await loadMigrations(migrationsDirectoryPath)
-  let migrationRunner = createMigrationRunner(db.adapter, migrations)
-  await migrationRunner.up()
-
+export const seed = async (db: Database) => {
   let booksCount = await db.count(books)
   if (booksCount === 0) {
     await db.createMany(books, [

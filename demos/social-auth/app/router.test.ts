@@ -1,7 +1,12 @@
+import * as path from 'node:path'
 import * as assert from 'remix/assert'
-import { describe, it } from 'remix/test'
+import { createMigrator } from 'remix/data-table/migrations'
+import { loadMigrations } from 'remix/data-table/migrations/node'
+import { beforeEach, describe, it } from 'remix/test'
 
-import { authAccounts, db, passwordResetTokens } from './data/setup.ts'
+import { authAccounts, passwordResetTokens } from './data/schema.ts'
+import { database } from './data/database.ts'
+import { seed } from '../db/seed.ts'
 import { createExternalProviderRegistry } from './utils/external-auth.ts'
 import {
   assertContains,
@@ -9,6 +14,18 @@ import {
   getSessionCookie,
   requestWithSession,
 } from '../test/helpers.ts'
+
+const migrator = createMigrator(
+  await loadMigrations(path.join(import.meta.dirname, '../db/migrations')),
+)
+
+beforeEach(async () => {
+  await database.drop()
+  await database.create()
+  await using db = await database.connect()
+  await migrator.migrate(db)
+  await seed(db)
+})
 
 describe('social-auth router', () => {
   it('renders the login page at the home route', async () => {
@@ -156,6 +173,7 @@ describe('social-auth router', () => {
       assertContains(html, 'google-user@example.com')
       assertContains(html, 'Provider: Google')
 
+      await using db = await database.connect()
       let authAccount = await db.findOne(authAccounts, {
         where: {
           provider: 'google',
@@ -208,6 +226,7 @@ describe('social-auth router', () => {
     assert.equal(forgotResponse.status, 200)
     assertContains(forgotHtml, 'Password reset instructions are ready.')
 
+    await using db = await database.connect()
     let token = await db.findOne(passwordResetTokens, { where: { user_id: 2 } })
     assert.ok(token)
 
@@ -262,3 +281,4 @@ describe('social-auth router', () => {
     assert.equal(accountResponse.headers.get('Location'), '/')
   })
 })
+

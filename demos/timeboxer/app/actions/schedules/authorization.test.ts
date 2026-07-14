@@ -6,6 +6,8 @@ import { describe, it } from 'remix/test'
 process.env.SESSION_SECRET = 'test-session-secret'
 process.env.DATABASE_URL = `./tmp/schedules-authorization-test-${process.pid}.sqlite`
 
+const { initializeTimeboxerDatabase } = await import('../../data/setup.ts')
+await initializeTimeboxerDatabase()
 const { router } = await import('../../router.ts')
 const { routes } = await import('../../routes.ts')
 

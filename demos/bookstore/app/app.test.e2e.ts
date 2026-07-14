@@ -1,16 +1,29 @@
-import * as assert from 'remix/assert'
-import { createTestServer } from 'remix/node-fetch-server/test'
-import { describe, it } from 'remix/test'
+import * as path from 'node:path'
 import type { Locator, Page } from 'playwright'
-import { createBookstoreRouter } from './router.ts'
+import * as assert from 'remix/assert'
+import { createMigrator } from 'remix/data-table/migrations'
+import { loadMigrations } from 'remix/data-table/migrations/node'
+import { createTestServer } from 'remix/node-fetch-server/test'
+import { beforeEach, describe, it } from 'remix/test'
+
+import { database } from './data/database.ts'
 import { books } from './data/schema.ts'
-import { db, initializeBookstoreDatabase } from './data/setup.ts'
+import { createBookstoreRouter } from './router.ts'
 import { routes } from './routes.ts'
+import { seed } from '../db/seed.ts'
 
 const router = createBookstoreRouter()
 
-// Initialize DB for this worker thread
-await initializeBookstoreDatabase()
+const migrator = createMigrator(
+  await loadMigrations(path.join(import.meta.dirname, '../db/migrations')),
+)
+
+beforeEach(async () => {
+  await database.create()
+  await using db = await database.connect()
+  await migrator.migrate(db)
+  await seed(db)
+})
 
 describe('e2e', () => {
   it('adds to cart', async (t) => {
@@ -19,6 +32,7 @@ describe('e2e', () => {
     // Load the homepage
     await page.goto('/')
 
+    await using db = await database.connect()
     let book = await db.findOne(books, { where: { in_stock: true } })
 
     // Add an item to cart
@@ -34,6 +48,7 @@ describe('e2e', () => {
     assert.equal(await cartRow.getByRole('spinbutton').inputValue(), '1')
   })
 })
+
 
 async function clickCartButton(page: Page, button: Locator): Promise<void> {
   let cartTogglePath = routes.api.cartToggle.href()
