@@ -123,7 +123,7 @@ describe('loadConfig', () => {
           let message = String(error)
           assert.match(message, /Invalid --only pattern/)
           assert.match(message, /must be valid JavaScript regular expressions/)
-          assert.match(message, /Unterminated group/)
+          assert.match(message, /Invalid regular expression/)
           return true
         },
       )
