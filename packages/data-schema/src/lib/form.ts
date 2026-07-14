@@ -236,12 +236,7 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
   return {
     fields,
     getInputAttrs(field, submission) {
-      let fieldOptions = fields[field]
-
-      if (!fieldOptions) {
-        throw new Error(`Unknown form field "${field}"`)
-      }
-
+      let fieldOptions = getFieldOptions(fields, field)
       let schema = getFieldSchema(model, field, fieldOptions)
       let id = fieldOptions.id ?? field
       let attrs: InputAttributes = {
@@ -307,22 +302,17 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
     },
     parse(formData) {
       let issues: Issue[] = []
-      let value: Record<string, unknown> = {}
-      let rawValues: Record<string, FormRawValue> = {}
+      let valueEntries: Array<[string, unknown]> = []
+      let rawValueEntries: Array<[string, FormRawValue]> = []
 
       for (let field of Object.keys(fields)) {
-        let fieldOptions = fields[field]
-
-        if (!fieldOptions) {
-          continue
-        }
-
+        let fieldOptions = getFieldOptions(fields, field)
         let schema = getFieldSchema(model, field, fieldOptions)
         let fieldName = fieldOptions.name ?? field
         let rawValue = readRawFormValue(formData, fieldName, fieldOptions.type)
 
         if (rawValue !== undefined) {
-          rawValues[field] = rawValue
+          rawValueEntries.push([field, rawValue])
         }
 
         let input = decodeFormValue(rawValue, fieldOptions.type)
@@ -331,7 +321,7 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
         if (result.issues) {
           issues.push(...result.issues)
         } else {
-          value[field] = result.value
+          valueEntries.push([field, result.value])
         }
       }
 
@@ -339,26 +329,35 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
         return {
           success: false,
           issues,
-          values: rawValues,
+          values: Object.fromEntries(rawValueEntries),
           errors: groupFormErrors(issues, new Set(Object.keys(fields))),
         }
       }
 
-      return { success: true, value: value as FormValue<shape, fields> }
+      return {
+        success: true,
+        value: Object.fromEntries(valueEntries) as FormValue<shape, fields>,
+      }
     },
   }
+}
+
+function getFieldOptions<fields extends FormFields>(
+  fields: fields,
+  field: keyof fields & string,
+): AnyFormFieldOptions {
+  if (!Object.prototype.hasOwnProperty.call(fields, field)) {
+    throw new Error(`Unknown form field "${field}"`)
+  }
+
+  return fields[field]
 }
 
 function getFieldId<fields extends FormFields>(
   fields: fields,
   field: keyof fields & string,
 ): string {
-  let options = fields[field]
-
-  if (!options) {
-    throw new Error(`Unknown form field "${field}"`)
-  }
-
+  let options = getFieldOptions(fields, field)
   return options.id ?? field
 }
 
@@ -375,7 +374,12 @@ function getFieldSchema<shape extends ObjectShape>(
   field: string,
   options: AnyFormFieldOptions,
 ): Schema<any, unknown> {
-  let schema: Schema<any, unknown> | undefined = model.shape[field]
+  let schema: Schema<any, unknown> | undefined = Object.prototype.hasOwnProperty.call(
+    model.shape,
+    field,
+  )
+    ? model.shape[field]
+    : undefined
 
   if (schema) {
     if ('schema' in options) {
@@ -393,21 +397,21 @@ function getFieldSchema<shape extends ObjectShape>(
 }
 
 function groupFormErrors(issues: ReadonlyArray<Issue>, fields: ReadonlySet<string>): FormErrors {
-  let fieldErrors: Record<string, ReadonlyArray<string>> = {}
+  let fieldErrors = new Map<string, ReadonlyArray<string>>()
   let formErrors: string[] = []
 
   for (let issue of issues) {
     let field = getIssueField(issue, fields)
 
     if (field) {
-      let messages = fieldErrors[field] ?? []
-      fieldErrors[field] = [...messages, issue.message]
+      let messages = fieldErrors.get(field) ?? []
+      fieldErrors.set(field, [...messages, issue.message])
     } else {
       formErrors.push(issue.message)
     }
   }
 
-  return { fields: fieldErrors, form: formErrors }
+  return { fields: Object.fromEntries(fieldErrors), form: formErrors }
 }
 
 function getIssueField(issue: Issue, fields: ReadonlySet<string>): string | undefined {

@@ -207,4 +207,25 @@ describe('createForm', () => {
     assert.deepEqual(invalid.values, { newsletter: false, terms: false })
     assert.equal(PreferencesForm.getInputAttrs('terms', invalid).defaultChecked, false)
   })
+
+  it('treats reserved object property names as ancillary fields', () => {
+    let Model = s.object({ name: s.string() })
+    let ReservedNameForm = createForm(Model, {
+      fields: {
+        ['__proto__']: {
+          label: 'Reserved name',
+          type: 'text',
+          schema: s.string(),
+        },
+      },
+    })
+    let formData = new FormData()
+    formData.set('__proto__', 'safe value')
+
+    let result = ReservedNameForm.parse(formData)
+
+    assert.equal(result.success, true)
+    assert.equal(Object.hasOwn(result.value, '__proto__'), true)
+    assert.equal(result.value.__proto__, 'safe value')
+  })
 })
