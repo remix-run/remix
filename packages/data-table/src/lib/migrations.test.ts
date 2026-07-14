@@ -9,7 +9,7 @@ import type {
   TransactionToken,
 } from './adapter.ts'
 import { createDatabase } from './database.ts'
-import { createMigrator } from './migrations/migrator.ts'
+import { createMigrator } from './migrations.ts'
 
 type JournalRow = {
   id: string
