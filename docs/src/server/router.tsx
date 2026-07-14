@@ -24,6 +24,7 @@ const REPO_DIR = path.resolve(DOCS_DIR, '..')
 const BUILD_DIR = path.join(REPO_DIR, 'docs', 'build')
 const MD_DIR = path.join(BUILD_DIR, 'md')
 const PUBLIC_DIR = path.join(BUILD_DIR, 'public')
+const ASSETS_DIR = path.join(BUILD_DIR, 'site', 'assets')
 const REMIX_PKG_JSON = path.join(REPO_DIR, 'packages', 'remix', 'package.json')
 
 type DocsContext = {
@@ -71,7 +72,22 @@ export function createRouter(options: DocsRouterOptions): Router {
 
   router.map(routes, {
     actions: {
-      assets: async ({ request }) => {
+      assets: async ({ request, params }) => {
+        // Serve versioned pagefind assets manually
+        if (params.asset.startsWith('pagefind/')) {
+          let assetPath = path.resolve(ASSETS_DIR, params.asset)
+
+          try {
+            let stats = await fs.promises.stat(assetPath)
+            if (stats.isFile()) {
+              return respond.file(request, assetPath)
+            }
+          } catch {}
+
+          console.warn(`[WARN] Pagefind asset not found: ${new URL(request.url).pathname}`)
+          return new Response(null, { status: 204 })
+        }
+
         let response = await assetServer.fetch(request)
         return response ?? new Response('Not Found', { status: 404 })
       },
