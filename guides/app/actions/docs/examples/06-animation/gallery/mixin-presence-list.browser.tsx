@@ -3,13 +3,14 @@ import { css, on } from "remix/ui";
 
 import { animateEntrance, animateExit } from "remix/ui/animation";
 
-let nextId = 1;
-function createItem() {
-  return { id: nextId++, label: `Row ${nextId - 1}` };
-}
-
 export function MixinPresenceList(handle: Handle) {
+  let nextId = 1;
   let items = [createItem(), createItem(), createItem()];
+
+  function createItem() {
+    let id = nextId++;
+    return { id, label: `Row ${id}` };
+  }
 
   return () => (
     <div

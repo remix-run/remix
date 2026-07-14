@@ -31,7 +31,7 @@ function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
     >
       <div class="docs-index">
         <header class="docs-index__header">
-          <p class="docs-chapter-eyebrow docs-accent">Guides</p>
+          <p class="docs-chapter-eyebrow docs-accent">Remix Guides</p>
           <h1 class="rmx-page-title">Learn Remix from the request up.</h1>
           <p class="rmx-page-body">
             These guide chapters introduce Remix at a high level, then progressively deepen into
@@ -92,11 +92,7 @@ function ChapterTopicLinks(
     >
       {handle.props.chapter.sections.map((section) => (
         <li key={section.id}>
-          <a
-            href={`${handle.props.chapter.href}#${section.id}`}
-            tabIndex={handle.props.clone ? -1 : undefined}
-            innerHTML={section.titleHtml}
-          />
+          <span innerHTML={section.titleHtml} />
         </li>
       ))}
       <li class="chapter-card__separator" aria-hidden="true">

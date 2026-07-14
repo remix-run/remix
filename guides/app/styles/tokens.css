@@ -99,7 +99,8 @@
 
   --site-header-height: 64px;
   --docs-shell-background: #f3f5f7;
-  --docs-footer-foreground: #646b76;
+  --docs-footer-foreground: #69707b;
+  --docs-footer-link-foreground: #858c98;
   --docs-chapter-card-background: #f7f7f8;
   --docs-chapter-card-hover-background: color-mix(
     in srgb,
@@ -166,6 +167,7 @@
 
     --docs-shell-background: #0d0d10;
     --docs-footer-foreground: #9aa0aa;
+    --docs-footer-link-foreground: #9aa0aa;
     --docs-chapter-card-background: var(--rmx-surface-lvl2);
     --docs-chapter-card-hover-background: color-mix(
       in srgb,

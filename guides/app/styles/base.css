@@ -1,5 +1,25 @@
 * {
   box-sizing: border-box;
+  scrollbar-color: var(--rmx-color-border-default) transparent;
+  scrollbar-width: thin;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  border-radius: var(--rmx-radius-full);
+  background: var(--rmx-color-border-default);
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--rmx-color-border-strong);
 }
 
 html {
@@ -100,7 +120,7 @@ a:hover {
 
 .docs-main h1 {
   font-family: 'Inter', var(--rmx-font-family-sans);
-  font-size: 42px;
+  font-size: 44px;
   font-weight: var(--rmx-font-weight-bold);
-  letter-spacing: -0.02em;
+  letter-spacing: -0.015em;
 }

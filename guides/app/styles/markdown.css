@@ -13,17 +13,6 @@ pre {
   border: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
   border-radius: var(--rmx-radius-md);
   background: var(--rmx-surface-lvl2);
-  scrollbar-color: var(--rmx-color-border-strong) transparent;
-  scrollbar-width: thin;
-}
-
-pre::-webkit-scrollbar {
-  height: var(--rmx-space-sm);
-}
-
-pre::-webkit-scrollbar-thumb {
-  border-radius: var(--rmx-radius-full);
-  background: var(--rmx-color-border-strong);
 }
 
 pre code {

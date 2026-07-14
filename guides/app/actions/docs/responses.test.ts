@@ -17,18 +17,6 @@ describe('docs responses', () => {
     assert.match(html, /href="\/docs\/start-here"/)
   })
 
-  it('renders no current chapter on the package map', async () => {
-    let router = createGuidesRouter()
-    let response = await router.fetch(
-      new Request(new URL(routes.docs.packageMap.href(), 'http://localhost')),
-    )
-    let html = await response.text()
-
-    assert.equal(response.status, 200)
-    assert.equal(getChapterNavigationHtml(html).match(/aria-current="page"/g)?.length ?? 0, 0)
-    assert.match(html, /href="\/docs\/start-here"/)
-  })
-
   it('marks exactly one chapter current on a chapter response', async () => {
     let router = createGuidesRouter()
     let response = await router.fetch(

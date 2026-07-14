@@ -21,8 +21,8 @@ export function ColorInterpolation() {
         }),
       ]}
     >
-      <style>
-        {`
+      <style
+        innerHTML={`
           @property --color-t {
             syntax: '<number>';
             inherits: false;
@@ -43,7 +43,7 @@ export function ColorInterpolation() {
             );
           }
         `}
-      </style>
+      />
 
       <div
         mix={[
