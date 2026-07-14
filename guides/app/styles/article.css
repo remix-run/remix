@@ -173,7 +173,7 @@
   }
 }
 
-@media (width >= 1024px) {
+@container docs-main (width >= 56rem) {
   .docs-layout {
     grid-template-columns: minmax(0, 1fr) 240px;
   }
@@ -188,12 +188,10 @@
     top: calc(var(--site-header-height) + var(--docs-main-padding));
     grid-column: 2;
     grid-row: 1;
-  }
-}
-
-@media (width < 900px) {
-  .docs-layout {
-    grid-template-columns: minmax(0, 1fr);
+    max-height: calc(100dvh - var(--site-header-height) - (var(--docs-main-padding) * 2));
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+    scrollbar-width: thin;
   }
 }
 
