@@ -150,10 +150,8 @@ async function scanPackages(): Promise<RemixRunPackage[]> {
 
 /**
  * Builds ExportEntry list directly from the manifest. Each manifest entry
- * maps a remix/* path to a specifier. Multiple remix paths may share the same
- * stub file (e.g. remix/router and remix/fetch-router both use fetch-router.ts).
- * READMEs are attached to the first entry per stub (the canonical one, since
- * canonical entries come first in manifest.json).
+ * maps a remix/* path to a specifier. READMEs are attached once per generated
+ * source file.
  */
 async function buildExportsFromManifest(
   manifest: Record<string, string>,
