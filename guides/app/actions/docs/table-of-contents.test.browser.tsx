@@ -1,7 +1,11 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
+import { createRoot } from 'remix/ui'
 
-import { startTableOfContentsBehavior } from './table-of-contents.browser.tsx'
+import {
+  startTableOfContentsBehavior,
+  TableOfContentsBehavior,
+} from './table-of-contents.browser.tsx'
 
 describe('startTableOfContentsBehavior', () => {
   it('synchronizes the current link and indicator after scrolling', async (t) => {
@@ -24,6 +28,26 @@ describe('startTableOfContentsBehavior', () => {
     assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-y'), '36px')
   })
 
+  it('restarts when navigation re-renders the client entry', (t) => {
+    let fixture = createTableOfContentsFixture({ startBehavior: false })
+    let rootContainer = document.createElement('div')
+    let root = createRoot(rootContainer)
+    t.after(() => {
+      root.dispose()
+      fixture.cleanup()
+    })
+
+    root.render(<TableOfContentsBehavior listId="test-toc" />)
+    root.flush()
+    assert.equal(fixture.firstLink.getAttribute('aria-current'), 'location')
+
+    fixture.list.id = 'next-toc'
+    root.render(<TableOfContentsBehavior listId="next-toc" />)
+    root.flush()
+    assert.equal(fixture.firstLink.getAttribute('aria-current'), 'location')
+    assert.equal(fixture.list.getAttribute('data-has-current'), '')
+  })
+
   it('restores server-rendered state during cleanup', () => {
     let fixture = createTableOfContentsFixture()
 
@@ -36,7 +60,7 @@ describe('startTableOfContentsBehavior', () => {
   })
 })
 
-function createTableOfContentsFixture() {
+function createTableOfContentsFixture(options: { startBehavior?: boolean } = {}) {
   let container = document.createElement('div')
   container.style.minHeight = '5000px'
   container.innerHTML = `
@@ -69,11 +93,14 @@ function createTableOfContentsFixture() {
     })
   }
 
+  let list = getList('test-toc')
   let controller = new AbortController()
-  startTableOfContentsBehavior('test-toc', controller.signal)
+  if (options.startBehavior !== false) {
+    startTableOfContentsBehavior(list, controller.signal)
+  }
 
   return {
-    list: getElement('test-toc'),
+    list,
     firstLink: links[0],
     secondLink: links[1],
     setHeadingTops(tops: number[]) {
@@ -96,6 +123,14 @@ function getLink(id: string): HTMLAnchorElement {
   let element = document.getElementById(id)
   if (!(element instanceof HTMLAnchorElement)) {
     throw new Error(`Missing test link #${id}`)
+  }
+  return element
+}
+
+function getList(id: string): HTMLOListElement {
+  let element = document.getElementById(id)
+  if (!(element instanceof HTMLOListElement)) {
+    throw new Error(`Missing ordered list #${id}`)
   }
   return element
 }

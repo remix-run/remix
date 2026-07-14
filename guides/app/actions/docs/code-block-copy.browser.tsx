@@ -1,26 +1,32 @@
-import { clientEntry } from 'remix/ui'
+import { addEventListeners, clientEntry } from 'remix/ui'
 import type { Handle } from 'remix/ui'
 
 export const CodeBlockCopyButtons = clientEntry(
   import.meta.url,
   function CodeBlockCopyButtons(handle: Handle<{ rootId: string }>) {
-    let copiedTimers = new WeakMap<HTMLButtonElement, number>()
+    return () => {
+      let rootId = handle.props.rootId
+      handle.queueTask((signal) => {
+        let root = document.getElementById(rootId)
+        if (root) {
+          startCodeBlockCopyBehavior(root, signal)
+        }
+      })
 
-    handle.queueTask((signal) => {
-      let root = document.getElementById(handle.props.rootId)
-      if (!root) return
+      return null
+    }
+  },
+)
 
-      root.addEventListener('click', handleClick)
-      signal.addEventListener('abort', () => root.removeEventListener('click', handleClick))
-    })
+function startCodeBlockCopyBehavior(root: HTMLElement, signal: AbortSignal) {
+  let copiedTimers = new Map<HTMLButtonElement, number>()
 
-    return () => null
-
-    async function handleClick(event: MouseEvent) {
+  addEventListeners(root, signal, {
+    async click(event, eventSignal) {
       if (!(event.target instanceof Element)) return
 
       let button = event.target.closest<HTMLButtonElement>('[data-code-block-copy]')
-      if (!button) return
+      if (!button || !root.contains(button)) return
 
       let codeBlock = button.closest<HTMLElement>('[data-code-block]')
       let text = codeBlock?.querySelector('pre')?.textContent
@@ -33,6 +39,7 @@ export const CodeBlockCopyButtons = clientEntry(
       } catch {
         return
       }
+      if (eventSignal.aborted) return
 
       button.dataset.copied = 'true'
 
@@ -48,6 +55,14 @@ export const CodeBlockCopyButtons = clientEntry(
           copiedTimers.delete(button)
         }, 1500),
       )
+    },
+  })
+
+  signal.addEventListener('abort', () => {
+    for (let [button, timer] of copiedTimers) {
+      window.clearTimeout(timer)
+      delete button.dataset.copied
     }
-  },
-)
+    copiedTimers.clear()
+  })
+}

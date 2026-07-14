@@ -1,13 +1,14 @@
 import { css, on, type Handle } from "remix/ui";
 import { animateEntrance, animateLayout } from "remix/ui/animation";
 
-let nextId = 1;
-function createItem() {
-  return { id: nextId++, label: `Item ${nextId - 1}` };
-}
-
 export function DefaultAnimate(handle: Handle) {
+  let nextId = 1;
   let items = [createItem(), createItem()];
+
+  function createItem() {
+    let id = nextId++;
+    return { id, label: `Item ${id}` };
+  }
 
   return () => (
     <div

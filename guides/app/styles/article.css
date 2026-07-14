@@ -76,6 +76,7 @@
 }
 
 .docs-aside {
+  display: none;
   align-self: start;
 }
 
@@ -89,6 +90,7 @@
   font-weight: var(--rmx-font-weight-bold);
   line-height: normal;
   letter-spacing: 0.6px;
+  text-transform: uppercase;
 }
 
 .docs-toc__list {
@@ -186,12 +188,14 @@
   .docs-aside {
     position: sticky;
     top: calc(var(--site-header-height) + var(--docs-main-padding));
+    display: block;
     grid-column: 2;
     grid-row: 1;
-    max-height: calc(100dvh - var(--site-header-height) - (var(--docs-main-padding) * 2));
+    max-height: calc(
+      100dvh - var(--site-header-height) - var(--docs-main-padding) - var(--rmx-space-xl)
+    );
     overflow-y: auto;
     overscroll-behavior-y: contain;
-    scrollbar-width: thin;
   }
 }
 

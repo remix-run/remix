@@ -6,23 +6,27 @@ import { getActiveHeadingIndex } from './table-of-contents-active.browser.ts'
 export const TableOfContentsBehavior = clientEntry(
   import.meta.url,
   function TableOfContentsBehavior(handle: Handle<{ listId: string }>) {
-    handle.queueTask((signal) => startTableOfContentsBehavior(handle.props.listId, signal))
-    return () => null
+    return () => {
+      let listId = handle.props.listId
+      handle.queueTask((signal) => {
+        let list = document.getElementById(listId)
+        if (list instanceof HTMLOListElement) {
+          startTableOfContentsBehavior(list, signal)
+        }
+      })
+      return null
+    }
   },
 )
 
-export function startTableOfContentsBehavior(listId: string, signal: AbortSignal) {
-  let list = document.getElementById(listId)
-  if (!list) return
-  let resolvedList = list
-
-  let entries = Array.from(
-    resolvedList.querySelectorAll<HTMLAnchorElement>('a[href^="#"]'),
-  ).flatMap((link) => {
-    let id = link.getAttribute('href')?.slice(1)
-    let heading = id ? document.getElementById(id) : null
-    return heading ? [{ heading, link }] : []
-  })
+export function startTableOfContentsBehavior(list: HTMLOListElement, signal: AbortSignal) {
+  let entries = Array.from(list.querySelectorAll<HTMLAnchorElement>('a[href^="#"]')).flatMap(
+    (link) => {
+      let id = link.getAttribute('href')?.slice(1)
+      let heading = id ? document.getElementById(id) : null
+      return heading ? [{ heading, link }] : []
+    },
+  )
   if (entries.length === 0) return
 
   let animationFrame: number | undefined
@@ -44,9 +48,9 @@ export function startTableOfContentsBehavior(listId: string, signal: AbortSignal
     for (let { link } of entries) {
       link.removeAttribute('aria-current')
     }
-    resolvedList.removeAttribute('data-has-current')
-    resolvedList.style.removeProperty('--docs-toc-indicator-y')
-    resolvedList.style.removeProperty('--docs-toc-indicator-height')
+    list.removeAttribute('data-has-current')
+    list.style.removeProperty('--docs-toc-indicator-y')
+    list.style.removeProperty('--docs-toc-indicator-height')
   })
 
   function scheduleUpdate() {
@@ -78,11 +82,8 @@ export function startTableOfContentsBehavior(listId: string, signal: AbortSignal
       }
     }
 
-    resolvedList.style.setProperty('--docs-toc-indicator-y', `${activeEntry.link.offsetTop}px`)
-    resolvedList.style.setProperty(
-      '--docs-toc-indicator-height',
-      `${activeEntry.link.offsetHeight}px`,
-    )
-    resolvedList.toggleAttribute('data-has-current', true)
+    list.style.setProperty('--docs-toc-indicator-y', `${activeEntry.link.offsetTop}px`)
+    list.style.setProperty('--docs-toc-indicator-height', `${activeEntry.link.offsetHeight}px`)
+    list.toggleAttribute('data-has-current', true)
   }
 }

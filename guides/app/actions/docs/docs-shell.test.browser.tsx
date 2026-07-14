@@ -1,7 +1,8 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
+import { createRoot } from 'remix/ui'
 
-import { startDocsShellBehavior } from './docs-shell.browser.tsx'
+import { DocsShellBehavior, startDocsShellBehavior } from './docs-shell.browser.tsx'
 
 describe('startDocsShellBehavior', () => {
   it('synchronizes the collapsed rail and search accessibility state', (t) => {
@@ -29,35 +30,31 @@ describe('startDocsShellBehavior', () => {
     assert.equal(fixture.expandedSearch.hasAttribute('aria-hidden'), false)
   })
 
-  it('closes the mobile menu through Escape and primary navigation', (t) => {
-    let fixture = createShellFixture()
-    t.after(fixture.cleanup)
+  it('restarts when navigation re-renders the client entry', (t) => {
+    let fixture = createShellFixture({ startBehavior: false })
+    let rootContainer = document.createElement('div')
+    let root = createRoot(rootContainer)
+    t.after(() => {
+      root.dispose()
+      fixture.cleanup()
+    })
 
-    fixture.menuToggle.click()
-    assert.equal(document.documentElement.hasAttribute('data-mobile-menu-open'), true)
-    assert.equal(fixture.menuToggle.getAttribute('aria-expanded'), 'true')
+    root.render(<DocsShellBehavior />)
+    root.flush()
 
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
-    assert.equal(document.documentElement.hasAttribute('data-mobile-menu-open'), false)
-    assert.equal(fixture.menuToggle.getAttribute('aria-expanded'), 'false')
-    assert.equal(document.activeElement, fixture.menuToggle)
-
-    fixture.menuToggle.click()
-    fixture.primaryNavigationLink.click()
-    assert.equal(document.documentElement.hasAttribute('data-mobile-menu-open'), false)
-    assert.equal(fixture.menuToggle.getAttribute('aria-expanded'), 'false')
+    root.render(<DocsShellBehavior />)
+    root.flush()
+    fixture.navToggle.click()
+    assert.equal(document.documentElement.hasAttribute('data-docs-nav-collapsed'), true)
   })
 
   it('restores the server-rendered state during cleanup', () => {
     let fixture = createShellFixture()
 
     fixture.navToggle.click()
-    fixture.menuToggle.click()
     fixture.cleanup()
 
     assert.equal(document.documentElement.hasAttribute('data-docs-nav-collapsed'), false)
-    assert.equal(document.documentElement.hasAttribute('data-mobile-menu-open'), false)
-    assert.equal(document.documentElement.hasAttribute('data-mobile-menu-ready'), false)
     assert.equal(fixture.chapterNavigation.hasAttribute('inert'), false)
     assert.equal(fixture.chapterNavigation.hasAttribute('aria-hidden'), false)
     assert.equal(fixture.compactSearch.getAttribute('aria-hidden'), 'true')
@@ -65,28 +62,26 @@ describe('startDocsShellBehavior', () => {
   })
 })
 
-function createShellFixture() {
+function createShellFixture(options: { startBehavior?: boolean } = {}) {
   let container = document.createElement('div')
   container.innerHTML = `
     <button id="docs-nav-toggle" aria-expanded="true"></button>
     <button id="docs-search-compact" aria-hidden="true" disabled></button>
     <button id="docs-search-button" disabled></button>
-    <button id="site-menu-toggle" aria-expanded="false"></button>
-    <nav id="site-primary-navigation"><a id="primary-navigation-link" href="#target">Guides</a></nav>
     <nav id="docs-chapters-navigation"><a href="/docs/start-here">Start Here</a></nav>
   `
   document.body.append(container)
 
   let controller = new AbortController()
-  startDocsShellBehavior(controller.signal)
+  if (options.startBehavior !== false) {
+    startDocsShellBehavior(controller.signal)
+  }
 
   return {
     chapterNavigation: getElement('docs-chapters-navigation'),
     compactSearch: getElement('docs-search-compact'),
     expandedSearch: getElement('docs-search-button'),
-    menuToggle: getElement('site-menu-toggle'),
     navToggle: getElement('docs-nav-toggle'),
-    primaryNavigationLink: getElement('primary-navigation-link'),
     cleanup() {
       controller.abort()
       container.remove()

@@ -7,7 +7,6 @@ export const routes = route({
   home: get('/'),
   docs: route('docs', {
     index: get('/'),
-    packageMap: get('package-map'),
     examples: route('examples', {
       show: get(':chapter/:example'),
     }),

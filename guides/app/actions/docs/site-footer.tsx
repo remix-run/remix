@@ -1,3 +1,5 @@
+import { Icon } from '../../ui/icon.tsx'
+
 export function SiteFooter() {
   return () => (
     <footer aria-label="Site footer" class="site-footer">
@@ -7,24 +9,16 @@ export function SiteFooter() {
         </a>
         <nav aria-label="Find us on the web" class="site-footer__social">
           <a href="https://github.com/remix-run" aria-label="GitHub">
-            <svg aria-hidden="true" fill="none">
-              <use href="/icons.svg#github" />
-            </svg>
+            <Icon name="github" />
           </a>
           <a href="https://x.com/remix_run" aria-label="X">
-            <svg aria-hidden="true" fill="none">
-              <use href="/icons.svg#x" />
-            </svg>
+            <Icon name="x" />
           </a>
           <a href="https://youtube.com/remix_run" aria-label="YouTube">
-            <svg aria-hidden="true" fill="none">
-              <use href="/icons.svg#youtube" />
-            </svg>
+            <Icon name="youtube" />
           </a>
           <a href="https://remix.run/discord" aria-label="Discord">
-            <svg aria-hidden="true" fill="none">
-              <use href="/icons.svg#discord" />
-            </svg>
+            <Icon name="discord" />
           </a>
         </nav>
       </div>
