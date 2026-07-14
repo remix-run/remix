@@ -1,0 +1,36 @@
+name: Bug Report
+description: Something is wrong with Remix
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for helping to improve Remix!
+
+        All bugs must have a [**minimal** and **runnable** reproduction](https://github.com/remix-run/remix/blob/main/CONTRIBUTING.md#reporting-bugs).
+        This means more than just code snippets or linking to a deployed site or your existing application repo.
+
+        Preferred options include:
+
+        - Link to a runnable playground (TODO: Add Link)
+        - GitHub repository based on `npx remix new my-remix-app`
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Link to reproduction and steps to reproduce the behavior
+      placeholder: Go to https://stackblitz.com/edit/... and click the "Submit" button
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Expected Behavior
+      description: A concise description of what you expected to happen.
+    validations:
+      required: true
+  - type: textarea
+    attributes:
+      label: Actual Behavior
+      description: A concise description of what you're experiencing.
+    validations:
+      required: true
