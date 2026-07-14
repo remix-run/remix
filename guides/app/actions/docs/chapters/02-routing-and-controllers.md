@@ -217,7 +217,7 @@ Router middleware runs first, then controller middleware, then action middleware
 
 ## Responses, redirects, headers, and errors
 
-Actions return Web `Response` objects. To render pages, you will often setup a `render` middleware and add it to the router. That middleware provides `context.render(...)`, which turns a Remix component tree into an HTML response. The [Rendering UI](/docs/rendering-ui) chapter builds this middleware step by step. Once it is installed, use it in an action:
+Actions return Web `Response` objects. To render pages, you will often set up `render` middleware and add it to the router. That middleware provides `context.render(...)`, which turns a Remix component tree into an HTML response. The [Rendering UI](/docs/rendering-ui) chapter builds this middleware step by step. Once it is installed, use it in an action:
 
 ```tsx filename=app/actions/albums/controller.tsx
 // inside the show action:
@@ -225,6 +225,8 @@ return context.render(<AlbumPage album={album} />);
 ```
 
 The result is still an ordinary Web `Response`. An action can render a page, return text or JSON, redirect the browser, send a file, or return an error response.
+
+Expected outcomes such as invalid input, conflicts, and missing records should also return a `Response` with the appropriate status. Reserve thrown errors for unexpected failures. If an action or middleware throws, `router.fetch(...)` rejects so the server boundary can log the error and return a `500` response. The [Errors and Error Boundaries](/docs/errors-and-error-boundaries) chapter covers that path in detail.
 
 A text response can be as simple as:
 
@@ -324,47 +326,4 @@ When a route branch has its own nested routes, a matching directory and controll
 
 Keep route-local UI next to the controller that renders it, so the page and form for `albums.edit` belong in `actions/albums/edit/`. Components shared by multiple route areas belong in `ui/`. The [Rendering UI](/docs/rendering-ui) chapter covers the component model.
 
-For larger route areas, `router.mount(...)` lets one module own route registration while `app/router.ts` decides where that module lives. That keeps route groups composable: an admin feature can be mounted at `/admin` in one app, `/internal/admin` in another, or under an org prefix later.
-
-```ts filename=app/router.ts
-import { createRouter } from "remix/router";
-
-import { installAdminRoutes } from "./actions/admin/routes.ts";
-
-export const router = createRouter();
-
-router.mount("/admin", installAdminRoutes);
-```
-
-The installer receives a route builder. It can register routes under the mount prefix, but it is not a full router and cannot dispatch requests.
-
-```ts filename=app/actions/admin/routes.ts
-import type { RouteBuilder } from "remix/router";
-
-export function installAdminRoutes(router: RouteBuilder) {
-  router.get("/", () => {
-    return new Response("Admin");
-  });
-
-  router.get("/users/:userId", ({ params }) => {
-    return new Response(`Admin user ${params.userId}`);
-  });
-}
-```
-
-Those handlers match `GET /admin` and `GET /admin/users/:userId`.
-
-The full app route map still belongs in `routes.ts` for links and redirects. Mounted installers are for registering the handlers owned by that feature.
-
-Mount prefixes are route patterns, so route params from the prefix are available to child handlers:
-
-```ts filename=app/router.ts
-// after creating the router:
-router.mount("/orgs/:orgId", (org) => {
-  org.get("/users/:userId", ({ params }) => {
-    return new Response(`${params.orgId}:${params.userId}`);
-  });
-});
-```
-
-If the prefix and child route use the same param name, the child route wins.
+With the route map and controllers connected, [Request Handling](/docs/request-handling) backs up to the server entry and follows the middleware that runs before and after those actions.
