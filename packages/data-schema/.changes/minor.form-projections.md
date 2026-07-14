@@ -1,1 +1,1 @@
-Added `createForm()` in `@remix-run/data-schema/form` to project selected object-schema fields into native input attributes and decode submitted `FormData` with the original field schemas.
+Added `createForm()` in `@remix-run/data-schema/form` to project selected object-schema fields into native input attributes, add schema-backed ancillary fields, and decode submitted `FormData` with serializable raw values and field/form errors on failure.
