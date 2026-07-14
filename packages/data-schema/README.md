@@ -126,7 +126,7 @@ export let AccountForm = createForm(Account, {
 })
 ```
 
-Server handlers receive a typed value or a serializable failure containing the submitted values and grouped errors:
+Server handlers receive a typed value or a serializable failure containing the submitted values and grouped errors. Password values are deliberately omitted from failed results so they are not copied into action data or server-rendered HTML.
 
 ```tsx
 let submission = AccountForm.parse(await request.formData())

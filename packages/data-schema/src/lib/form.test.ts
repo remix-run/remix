@@ -228,4 +228,21 @@ describe('createForm', () => {
     assert.equal(Object.hasOwn(result.value, '__proto__'), true)
     assert.equal(result.value.__proto__, 'safe value')
   })
+
+  it('does not serialize password values after failed validation', () => {
+    let Credentials = s.object({ password: s.string().pipe(minLength(8)) })
+    let CredentialsForm = createForm(Credentials, {
+      fields: {
+        password: { label: 'Password', type: 'password' },
+      },
+    })
+    let formData = new FormData()
+    formData.set('password', 'short')
+
+    let result = CredentialsForm.parse(formData)
+
+    assert.equal(result.success, false)
+    assert.deepEqual(result.values, {})
+    assert.equal(CredentialsForm.getInputAttrs('password', result).defaultValue, undefined)
+  })
 })

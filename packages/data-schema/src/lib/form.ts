@@ -76,7 +76,7 @@ export interface FormFailure {
   success: false
   /** The original validation issues. */
   issues: ReadonlyArray<Issue>
-  /** Submitted values keyed by logical form field name. */
+  /** Submitted values keyed by logical form field name. Password values are omitted. */
   values: Readonly<Record<string, FormRawValue>>
   /** Validation messages grouped for rendering. */
   errors: FormErrors
@@ -311,7 +311,7 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
         let fieldName = fieldOptions.name ?? field
         let rawValue = readRawFormValue(formData, fieldName, fieldOptions.type)
 
-        if (rawValue !== undefined) {
+        if (rawValue !== undefined && fieldOptions.type !== 'password') {
           rawValueEntries.push([field, rawValue])
         }
 
