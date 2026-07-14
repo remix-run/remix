@@ -96,6 +96,90 @@ let filters = s.parse(
 
 `f.object(...)` is the root schema for `FormData` and `URLSearchParams`. Use `f.field(...)` for one text value, `f.fields(...)` for repeated text values, `f.file(...)` for one uploaded file, and `f.files(...)` for repeated files. When you want a fallback value, prefer `s.defaulted(s.string(), '')`. File helpers are intended for `FormData`; `URLSearchParams` only supports text values.
 
+## Model-backed forms
+
+Use `createForm()` to select fields from an object schema, attach UI-only metadata, derive native input constraints, and decode submitted `FormData` with the original field schemas. Fields omitted from the projection are neither rendered nor required. Ancillary fields provide their own schema.
+
+```ts
+import * as s from 'remix/data-schema'
+import { email, max, maxLength, min, minLength } from 'remix/data-schema/checks'
+import { createForm } from 'remix/data-schema/form'
+
+let Account = s.object({
+  id: s.string(),
+  email: s.string().pipe(email()),
+  displayName: s.string().pipe(minLength(2), maxLength(50)),
+  age: s.number().pipe(min(13), max(120)),
+})
+
+export let AccountForm = createForm(Account, {
+  fields: {
+    email: { label: 'Email', type: 'email' },
+    displayName: { label: 'Display name', type: 'text' },
+    age: { label: 'Age', type: 'number' },
+    terms: {
+      label: 'Accept the terms',
+      type: 'checkbox',
+      schema: s.literal(true),
+    },
+  },
+})
+```
+
+Server handlers receive a typed value or a serializable failure containing the submitted values and grouped errors:
+
+```tsx
+let submission = AccountForm.parse(await request.formData())
+
+if (!submission.success) {
+  return render(<AccountPage submission={submission} />, { status: 400 })
+}
+
+await createAccount(submission.value)
+```
+
+The same form definition produces low-level attribute bags. Markup remains application-owned, while Remix UI supplies styling and the small progressive enhancement for touched state:
+
+```tsx
+import type { FormFailure } from 'remix/data-schema/form'
+import type { Handle } from 'remix/ui'
+import checkbox from 'remix/ui/checkbox'
+import { form as formValidation } from 'remix/ui/form'
+import input from 'remix/ui/input'
+
+function AccountPage(handle: Handle<{ submission?: FormFailure }>) {
+  return () => {
+    let { submission } = handle.props
+    let emailError = AccountForm.getFieldErrors('email', submission)[0]
+    let termsError = AccountForm.getFieldErrors('terms', submission)[0]
+
+    return (
+      <form method="post" mix={formValidation()}>
+        <label {...AccountForm.getLabelAttrs('email')}>{AccountForm.fields.email.label}</label>
+        <input
+          {...AccountForm.getInputAttrs('email', submission)}
+          autoComplete="email"
+          mix={input()}
+        />
+        {emailError ? <p {...AccountForm.getErrorAttrs('email')}>{emailError}</p> : null}
+
+        <label>
+          <input {...AccountForm.getInputAttrs('terms', submission)} mix={checkbox()} />
+          {AccountForm.fields.terms.label}
+        </label>
+        {termsError ? <p {...AccountForm.getErrorAttrs('terms')}>{termsError}</p> : null}
+
+        <button type="submit">Create account</button>
+      </form>
+    )
+  }
+}
+```
+
+The browser blocks invalid submissions with the Constraint Validation API even when JavaScript is disabled. With JavaScript, `formValidation()` marks a field after its first blur and updates its native validity state as the user types. Do not add `noValidate` unless the application intentionally opts out of native validation.
+
+The first release maps field-level `required`, `minLength`, `maxLength`, `min`, and `max` constraints to native attributes. Other refinements still run on the server. Whole-object, cross-field, and asynchronous form rules are not part of the projection yet and should be applied in the server handler.
+
 You can also customize built-in validation messages with `errorMap`:
 
 ```ts
