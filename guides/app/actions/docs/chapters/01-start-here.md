@@ -7,7 +7,7 @@ description: A high-level introduction to Remix and the mental model behind a Re
 
 Remix is a TypeScript framework built around the web's request and response model. A server receives a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request), Remix matches it to a typed route, a controller handles the request, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
 
-The `remix` package includes the server, router, middleware, UI, data, auth, asset, and testing packages used throughout an application. Each package is also useful on its own, so an app can use the complete request path or only the layers it needs. The [package map](/docs/package-map) shows how those packages fit together.
+The `remix` package includes the server, router, middleware, UI, data, auth, asset, and testing packages used throughout an application. Each package is also useful on its own, so an app can use the complete request path or only the layers it needs.
 
 The design of Remix comes from six core principles:
 
