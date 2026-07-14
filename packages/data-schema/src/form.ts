@@ -9,6 +9,7 @@ export type {
   FormInputType,
   FormParseResult,
   FormRawValue,
+  FormSubmission,
   FormSuccess,
   InputAttributes,
   LabelAttributes,

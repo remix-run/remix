@@ -51,6 +51,8 @@ void checkInvalidFieldTypes
 
 describe('createForm', () => {
   it('derives native input attributes from projected model fields', () => {
+    expectType<Equal<ReturnType<typeof UserForm.getInputAttrs<'name'>>['type'], 'text'>>()
+
     assert.deepEqual(UserForm.getInputAttrs('name'), {
       id: 'name',
       name: 'name',

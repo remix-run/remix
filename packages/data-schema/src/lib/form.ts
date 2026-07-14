@@ -32,13 +32,13 @@ export interface AncillaryFormFieldOptions<schema extends Schema<any, unknown>>
 /**
  * Native attributes derived for a projected model field.
  */
-export interface InputAttributes {
+export interface InputAttributes<type extends FormInputType = FormInputType> {
   /** The DOM id used by the field label and error message. */
   id: string
   /** The submitted field name. */
   name: string
   /** The native input type. */
-  type: FormInputType
+  type: type
   /** Whether the input must contain a value. */
   required?: true
   /** The minimum text length accepted by the model. */
@@ -71,11 +71,17 @@ export type FormRawValue = boolean | string
 /**
  * A failed form validation result suitable for returning to a rendered route.
  */
-export interface FormFailure {
+export interface FormFailure extends FormSubmission {
   /** Discriminates failed results from successful results. */
   success: false
   /** The original validation issues. */
   issues: ReadonlyArray<Issue>
+}
+
+/**
+ * Serializable form state used to restore values and errors in rendered UI.
+ */
+export type FormSubmission = {
   /** Submitted values keyed by logical form field name. Password values are omitted. */
   values: Readonly<Record<string, FormRawValue>>
   /** Validation messages grouped for rendering. */
@@ -100,7 +106,7 @@ export type FormParseResult<value> = FormSuccess<value> | FormFailure
 /**
  * Serializable validation errors grouped by field and form.
  */
-export interface FormErrors {
+export type FormErrors = {
   /** Validation messages keyed by logical form field name. */
   fields: Readonly<Record<string, ReadonlyArray<string>>>
   /** Validation messages that do not belong to one form field. */
@@ -166,8 +172,8 @@ export interface FormDefinition<shape extends ObjectShape, fields extends FormFi
    */
   getInputAttrs<field extends keyof fields & string>(
     field: field,
-    submission?: FormFailure,
-  ): InputAttributes
+    submission?: FormSubmission,
+  ): InputAttributes<fields[field]['type']>
   /**
    * Associates a native label with one projected field.
    *
@@ -191,7 +197,7 @@ export interface FormDefinition<shape extends ObjectShape, fields extends FormFi
    */
   getFieldErrors<field extends keyof fields & string>(
     field: field,
-    submission?: FormFailure,
+    submission?: FormSubmission,
   ): ReadonlyArray<string>
   /**
    * Decodes submitted values according to their input types and validates them with the model.
@@ -239,7 +245,7 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
       let fieldOptions = getFieldOptions(fields, field)
       let schema = getFieldSchema(model, field, fieldOptions)
       let id = fieldOptions.id ?? field
-      let attrs: InputAttributes = {
+      let attrs: InputAttributes<typeof fieldOptions.type> = {
         id,
         name: fieldOptions.name ?? field,
         type: fieldOptions.type,
@@ -342,10 +348,10 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
   }
 }
 
-function getFieldOptions<fields extends FormFields>(
+function getFieldOptions<fields extends FormFields, field extends keyof fields & string>(
   fields: fields,
-  field: keyof fields & string,
-): AnyFormFieldOptions {
+  field: field,
+): fields[field] {
   if (!Object.prototype.hasOwnProperty.call(fields, field)) {
     throw new Error(`Unknown form field "${field}"`)
   }
@@ -365,7 +371,7 @@ function getErrorId(fieldId: string): string {
   return `${fieldId}-error`
 }
 
-function readFieldErrors(field: string, submission?: FormFailure): ReadonlyArray<string> {
+function readFieldErrors(field: string, submission?: FormSubmission): ReadonlyArray<string> {
   return submission?.errors.fields[field] ?? []
 }
 
