@@ -5,7 +5,7 @@ import { createDatabase, type Database, type DatabaseResource } from '@remix-run
 
 import {
   createSqliteDatabaseAdapter,
-  SqliteDatabaseAdapter,
+  type SqliteDatabaseAdapter,
   type SqliteDatabase,
 } from './adapter.ts'
 
