@@ -11,10 +11,13 @@ import { DocsChapter } from './layout.tsx'
 import { docsResponseInit, docsEtag, notModifiedDocsResponse } from './cache.ts'
 
 export type DocsChapterSummary = MarkdownChapterSummary & {
+  order: number
   slug: string
   href: string
   mtime: number
 }
+
+export type DocsNavigationItem = Pick<DocsChapterSummary, 'order' | 'slug' | 'href' | 'title'>
 
 type ChapterFile = {
   order: number
@@ -39,6 +42,8 @@ type ChapterNavigation = {
 }
 
 type LoadedMarkdownChapter = MarkdownChapter & {
+  slug: string
+  chapters: DocsNavigationItem[]
   previous?: ChapterNavigation
   next?: ChapterNavigation
 }
@@ -63,15 +68,7 @@ export async function docsChapterHandler(context: DocsChapterRouteContext) {
 
 export async function loadDocsChapterSummaries(): Promise<DocsChapterSummary[]> {
   let summaries = await loadChapterSummaries()
-  return summaries.map(({ slug, href, chapter, title, description, sections, mtime }) => ({
-    slug,
-    href,
-    chapter,
-    title,
-    description,
-    sections,
-    mtime,
-  }))
+  return summaries.map(toDocsChapterSummary)
 }
 
 async function loadDocsChapter(
@@ -92,11 +89,16 @@ async function loadDocsChapter(
   return {
     chapter: {
       ...chapter,
+      slug: summary.slug,
       chapter: summary.chapter,
+      chapters: summaries.map(toDocsNavigationItem),
       previous: getNavigation(previous),
       next: getNavigation(next),
     },
-    etag: docsEtag(`chapter:${summary.slug}`, [summary.mtime, previous?.mtime, next?.mtime]),
+    etag: docsEtag(
+      `chapter:${summary.slug}`,
+      summaries.map((chapterSummary) => chapterSummary.mtime),
+    ),
   }
 }
 
@@ -135,8 +137,8 @@ async function loadCachedSummary(file: ChapterFile): Promise<LoadedDocsChapterSu
   return loaded
 }
 
-// Nav is attached fresh from summaries each request, so this only caches the
-// render — neighbor title edits still invalidate downstream pages.
+// Navigation is attached fresh from summaries each request, so this only caches
+// the render. The response ETag includes every summary mtime.
 const renderCache = new Map<string, { mtime: number; chapter: MarkdownChapter }>()
 
 async function loadRenderedChapter(summary: LoadedDocsChapterSummary): Promise<MarkdownChapter> {
@@ -198,6 +200,28 @@ export function parseChapterFilename(
   return { order, slug: match[2] }
 }
 
+function toDocsChapterSummary(summary: LoadedDocsChapterSummary): DocsChapterSummary {
+  return {
+    order: summary.order,
+    slug: summary.slug,
+    href: summary.href,
+    chapter: summary.chapter,
+    title: summary.title,
+    description: summary.description,
+    sections: summary.sections,
+    mtime: summary.mtime,
+  }
+}
+
+function toDocsNavigationItem(summary: LoadedDocsChapterSummary): DocsNavigationItem {
+  return {
+    order: summary.order,
+    slug: summary.slug,
+    href: summary.href,
+    title: summary.title,
+  }
+}
+
 function getNavigation(
   summary: LoadedDocsChapterSummary | undefined,
 ): ChapterNavigation | undefined {
@@ -207,9 +231,11 @@ function getNavigation(
 function MarkdownChapterPage(handle: Handle<LoadedMarkdownChapter>) {
   return () => (
     <DocsChapter
+      slug={handle.props.slug}
       chapter={handle.props.chapter}
       title={handle.props.title}
       description={handle.props.description}
+      chapters={handle.props.chapters}
       previous={handle.props.previous}
       next={handle.props.next}
       sections={handle.props.sections}

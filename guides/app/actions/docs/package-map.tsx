@@ -3,6 +3,8 @@ import type { Handle } from 'remix/ui'
 
 import type { AppContext } from '../../router.ts'
 import { DocsDocument } from './layout.tsx'
+import { loadDocsChapterSummaries } from './markdown-chapters.tsx'
+import type { DocsNavigationItem } from './markdown-chapters.tsx'
 
 type Link = {
   label: string
@@ -144,14 +146,16 @@ const packageGroups: PackageGroup[] = [
 ]
 
 export async function packageMapHandler(context: AppContext) {
-  return context.render(<PackageMapPage />)
+  let chapters = await loadDocsChapterSummaries()
+  return context.render(<PackageMapPage chapters={chapters} />)
 }
 
-function PackageMapPage() {
+function PackageMapPage(handle: Handle<{ chapters: DocsNavigationItem[] }>) {
   return () => (
     <DocsDocument
       title="Package map"
       description="How Remix packages map to layers, guide chapters, and API reference."
+      chapters={handle.props.chapters}
     >
       <div mix={pageStyles}>
         <div class="rmx-page-body">
