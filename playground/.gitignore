@@ -1,0 +1,6 @@
+.wrangler/
+dist/
+node_modules/
+.vars
+*.vars
+!.example.vars
