@@ -32,9 +32,11 @@ export function SiteHeader() {
       </button>
 
       <button
+        id="docs-search-compact"
         class="docs-search-compact"
         type="button"
         aria-label="Search is not available yet"
+        aria-hidden="true"
         disabled
       >
         <img src="/search.svg" alt="" width="16" height="16" />
@@ -68,6 +70,7 @@ export function SiteHeader() {
       </nav>
 
       <button
+        id="docs-search-button"
         class="docs-search-button"
         type="button"
         aria-label="Search is not available yet"

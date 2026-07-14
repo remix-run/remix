@@ -89,8 +89,14 @@
 
 .docs-search-compact {
   left: 121px;
+  visibility: hidden;
   opacity: 0;
   pointer-events: none;
+  transition:
+    left var(--docs-nav-duration) var(--docs-nav-easing),
+    opacity var(--docs-nav-duration) var(--docs-nav-easing),
+    background-color 150ms ease-in-out,
+    visibility 0s linear var(--docs-nav-duration);
 }
 
 .docs-search-compact:disabled,
@@ -134,7 +140,8 @@
   transition:
     transform var(--docs-nav-duration) var(--docs-nav-easing),
     opacity var(--docs-nav-duration) var(--docs-nav-easing),
-    background-color 150ms ease-in-out;
+    background-color 150ms ease-in-out,
+    visibility 0s;
 }
 
 .docs-search-button__label,
@@ -178,7 +185,8 @@
   scrollbar-width: thin;
   transition:
     transform var(--docs-nav-duration) var(--docs-nav-easing),
-    opacity var(--docs-nav-duration) var(--docs-nav-easing);
+    opacity var(--docs-nav-duration) var(--docs-nav-easing),
+    visibility 0s;
 }
 
 .docs-chapters-nav[data-scrollable] {
@@ -261,6 +269,8 @@
 }
 
 .docs-main {
+  container-name: docs-main;
+  container-type: inline-size;
   width: calc(100% - var(--docs-sidebar-offset));
   min-height: calc(100vh - var(--site-header-height));
   margin: var(--site-header-height) 0 0 var(--docs-sidebar-offset);
@@ -300,7 +310,7 @@
   gap: 48px;
   margin-left: var(--docs-sidebar-offset);
   padding: 48px 52px;
-  color: var(--rmx-color-text-muted);
+  color: var(--docs-footer-foreground);
   font-size: 16px;
   line-height: 24px;
   text-align: left;
@@ -316,7 +326,7 @@
 }
 
 .site-footer a:hover {
-  color: var(--rmx-color-text-secondary);
+  color: var(--rmx-color-text-primary);
 }
 
 .site-footer__links {
@@ -386,15 +396,26 @@
 }
 
 :root[data-docs-nav-collapsed] .docs-search-compact {
+  visibility: visible;
   opacity: 1;
   pointer-events: auto;
+  transition:
+    left var(--docs-nav-duration) var(--docs-nav-easing),
+    opacity var(--docs-nav-duration) var(--docs-nav-easing),
+    background-color 150ms ease-in-out,
+    visibility 0s;
 }
 
 :root[data-docs-nav-collapsed] .docs-search-button,
 :root[data-docs-nav-collapsed] .docs-chapters-nav {
+  visibility: hidden;
   opacity: 0;
   transform: translateX(calc(-1 * var(--docs-sidebar-offset)));
   pointer-events: none;
+  transition:
+    transform var(--docs-nav-duration) var(--docs-nav-easing),
+    opacity var(--docs-nav-duration) var(--docs-nav-easing),
+    visibility 0s linear var(--docs-nav-duration);
 }
 
 :root[data-docs-nav-collapsed] .docs-main,
@@ -509,7 +530,6 @@
     position: absolute;
     top: 12px;
     right: 16px;
-    display: inline-flex;
     align-items: center;
     gap: 8px;
     min-width: 44px;
@@ -522,6 +542,10 @@
     font-size: 14px;
     font-weight: var(--rmx-font-weight-semibold);
     cursor: pointer;
+  }
+
+  :root[data-mobile-menu-ready] .site-header__menu-toggle {
+    display: inline-flex;
   }
 
   .site-header__menu-toggle:hover,

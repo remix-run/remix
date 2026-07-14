@@ -172,8 +172,28 @@
   background-color: var(--docs-chapter-card-hover-background);
 }
 
-.chapter-card:is(:hover, :focus-within) .chapter-card__loop {
+.chapter-card:hover .chapter-card__loop {
   animation-play-state: running;
+}
+
+.chapter-card:focus-within .chapter-card__topics {
+  overflow-y: auto;
+  mask-image: none;
+  scrollbar-width: none;
+}
+
+.chapter-card:focus-within .chapter-card__topics::-webkit-scrollbar {
+  display: none;
+}
+
+.chapter-card:focus-within .chapter-card__loop {
+  animation: none;
+  transform: none;
+  will-change: auto;
+}
+
+.chapter-card:focus-within .chapter-card__links--clone {
+  display: none;
 }
 
 @keyframes chapter-card-topics-scroll {
@@ -188,7 +208,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .chapter-card__loop,
-  .chapter-card:is(:hover, :focus-within) .chapter-card__loop {
+  .chapter-card:hover .chapter-card__loop {
     animation: none;
     transform: none;
   }

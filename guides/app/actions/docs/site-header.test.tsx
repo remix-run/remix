@@ -19,9 +19,11 @@ describe('SiteHeader', () => {
     assert.match(html, />Guides<\/a>/)
   })
 
-  it('renders search controls as unavailable', async () => {
+  it('renders only the expanded search treatment to assistive technology', async () => {
     let html = await renderToString(<SiteHeader />)
 
     assert.equal(html.match(/<button[^>]*disabled/g)?.length, 2)
+    assert.match(html, /id="docs-search-compact"[^>]*aria-hidden="true"/)
+    assert.doesNotMatch(html, /id="docs-search-button"[^>]*aria-hidden/)
   })
 })

@@ -95,10 +95,7 @@ async function loadDocsChapter(
       previous: getNavigation(previous),
       next: getNavigation(next),
     },
-    etag: docsEtag(
-      `chapter:${summary.slug}`,
-      summaries.map((chapterSummary) => chapterSummary.mtime),
-    ),
+    etag: docsEtag(`chapter:${summary.slug}`, getDocsChapterCacheInputs(summaries)),
   }
 }
 
@@ -198,6 +195,18 @@ export function parseChapterFilename(
   }
 
   return { order, slug: match[2] }
+}
+
+export function getDocsChapterCacheInputs(
+  summaries: Iterable<DocsChapterSummary>,
+): Array<string | number> {
+  let inputs: Array<string | number> = []
+
+  for (let summary of summaries) {
+    inputs.push(summary.mtime, summary.order, summary.slug, summary.href, summary.title)
+  }
+
+  return inputs
 }
 
 function toDocsChapterSummary(summary: LoadedDocsChapterSummary): DocsChapterSummary {

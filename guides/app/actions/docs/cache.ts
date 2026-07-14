@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto'
+
 import { IfNoneMatch } from 'remix/headers/if-none-match'
 
 const docsCacheControl = 'public, max-age=300, stale-while-revalidate=86400'
@@ -22,11 +24,18 @@ export function notModifiedDocsResponse(request: Request, etag: string): Respons
   return undefined
 }
 
-// `GITHUB_SHA` guarantees deploy invalidation; commas are avoided because
-// `If-None-Match` uses them to separate multiple tags.
-export function docsEtag(label: string, mtimes: Iterable<number | undefined>): string {
+// `GITHUB_SHA` guarantees deploy invalidation. Hashing keeps arbitrary cache
+// inputs out of the header and avoids commas, which separate `If-None-Match` tags.
+export function docsEtag(label: string, inputs: Iterable<string | number | undefined>): string {
+  let hash = createHash('sha256')
+
+  for (let input of inputs) {
+    if (input === undefined) continue
+    let value = String(input)
+    hash.update(`${typeof input}:${value.length}:`)
+    hash.update(value)
+  }
+
   let deploy = process.env.GITHUB_SHA ?? ''
-  return `W/"${deploy}:${label}:${Array.from(mtimes)
-    .filter((mtime) => mtime !== undefined)
-    .join('-')}"`
+  return `W/"${deploy}:${label}:${hash.digest('base64url')}"`
 }

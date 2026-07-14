@@ -1,17 +1,14 @@
 import type { Handle } from 'remix/ui'
 
 import type { AppContext } from '../../router.ts'
-import { loadDocsChapterSummaries } from './markdown-chapters.tsx'
+import { getDocsChapterCacheInputs, loadDocsChapterSummaries } from './markdown-chapters.tsx'
 import type { DocsChapterSummary } from './markdown-chapters.tsx'
 import { DocsDocument } from './layout.tsx'
 import { docsEtag, docsResponseInit, notModifiedDocsResponse } from './cache.ts'
 
 export async function docsIndexHandler(context: AppContext) {
   let chapters = await loadDocsChapterSummaries()
-  let etag = docsEtag(
-    'index',
-    chapters.map((chapter) => chapter.mtime),
-  )
+  let etag = docsEtag('index', getDocsChapterCacheInputs(chapters))
 
   let notModified = notModifiedDocsResponse(context.request, etag)
   if (notModified) {
