@@ -35,6 +35,8 @@ export type {
   InferInput,
   InferOutput,
   Issue,
+  ObjectSchema,
+  ObjectShape,
   ParseOptions,
   Schema,
   ValidationOptions,

@@ -13,6 +13,7 @@
   "remix/data-schema": "@remix-run/data-schema",
   "remix/data-schema/checks": "@remix-run/data-schema/checks",
   "remix/data-schema/coerce": "@remix-run/data-schema/coerce",
+  "remix/data-schema/form": "@remix-run/data-schema/form",
   "remix/data-schema/form-data": "@remix-run/data-schema/form-data",
   "remix/data-schema/lazy": "@remix-run/data-schema/lazy",
   "remix/data-table": "@remix-run/data-table",

@@ -35,6 +35,7 @@
     "./data-schema": "./src/data-schema.ts",
     "./data-schema/checks": "./src/data-schema/checks.ts",
     "./data-schema/coerce": "./src/data-schema/coerce.ts",
+    "./data-schema/form": "./src/data-schema/form.ts",
     "./data-schema/form-data": "./src/data-schema/form-data.ts",
     "./data-schema/lazy": "./src/data-schema/lazy.ts",
     "./data-table": "./src/data-table.ts",
@@ -212,6 +213,10 @@
       "./data-schema/coerce": {
         "types": "./dist/data-schema/coerce.d.ts",
         "default": "./dist/data-schema/coerce.js"
+      },
+      "./data-schema/form": {
+        "types": "./dist/data-schema/form.d.ts",
+        "default": "./dist/data-schema/form.js"
       },
       "./data-schema/form-data": {
         "types": "./dist/data-schema/form-data.d.ts",
