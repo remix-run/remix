@@ -1,7 +1,18 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { parseChapterFilename } from './markdown-chapters.tsx'
+import { loadDocsChapterSummaries, parseChapterFilename } from './markdown-chapters.tsx'
+
+describe('loadDocsChapterSummaries', () => {
+  it('retains numeric chapter order for presentation-specific labels', async () => {
+    let summaries = await loadDocsChapterSummaries()
+
+    assert.equal(summaries[0]?.order, 1)
+    assert.equal(summaries[0]?.chapter, 'Chapter 1')
+    assert.equal(summaries[9]?.order, 10)
+    assert.equal(summaries[9]?.chapter, 'Chapter 10')
+  })
+})
 
 describe('parseChapterFilename', () => {
   it('parses an order prefix and slug', () => {

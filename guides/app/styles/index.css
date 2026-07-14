@@ -1,0 +1,195 @@
+.docs-index {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: var(--docs-content-max-width);
+  gap: 48px;
+  margin: 0 auto 0 0;
+  padding: 0;
+}
+
+.docs-index__header {
+  display: flex;
+  flex-direction: column;
+  max-width: var(--rmx-content-max-width);
+  gap: var(--rmx-space-lg);
+}
+
+.docs-index__header > :last-child {
+  margin-bottom: 0;
+}
+
+.docs-chapter-eyebrow {
+  margin: 0;
+  color: var(--rmx-color-eyebrow);
+  font-family: var(--rmx-font-family-sans);
+  font-size: 12px;
+  font-weight: var(--rmx-font-weight-bold);
+  line-height: normal;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.docs-index__cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 320px));
+  align-items: start;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chapter-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  max-width: 100%;
+  height: 292px;
+  gap: 32px;
+  padding: 24px;
+  overflow: hidden;
+  border: 0;
+  border-radius: 12px;
+  background: var(--docs-chapter-card-background);
+  font-family: 'Inter', var(--rmx-font-family-sans);
+  cursor: pointer;
+  transition: background-color 150ms ease-in-out;
+}
+
+.chapter-card__heading {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.chapter-card__eyebrow {
+  margin: 0;
+  color: var(--rmx-color-text-primary);
+  font-family: var(--rmx-font-family-mono);
+  font-size: 16px;
+  font-weight: var(--rmx-font-weight-normal);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  opacity: 0.35;
+}
+
+.chapter-card__title {
+  margin: 0;
+  font-family: 'Inter', var(--rmx-font-family-sans);
+  font-size: 16px;
+  font-weight: var(--rmx-font-weight-semibold);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.chapter-card__title a,
+.chapter-card__title a:hover,
+.chapter-card__title a:focus-visible {
+  color: var(--rmx-color-text-primary);
+  text-decoration: none;
+}
+
+.chapter-card__title a::after {
+  position: absolute;
+  inset: 0;
+  border-radius: 12px;
+  content: '';
+}
+
+.chapter-card__title a:focus-visible {
+  outline: none;
+}
+
+.chapter-card__title a:focus-visible::after {
+  outline: 2px solid var(--rmx-color-focus-ring);
+  outline-offset: -2px;
+}
+
+.chapter-card__description {
+  display: -webkit-box;
+  min-height: 44.8px;
+  margin: 0;
+  overflow: hidden;
+  color: var(--rmx-color-text-primary);
+  font-family: 'Inter', var(--rmx-font-family-sans);
+  font-size: 16px;
+  font-weight: var(--rmx-font-weight-normal);
+  line-height: 1.4;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.chapter-card__topics {
+  position: relative;
+  z-index: 1;
+  flex: none;
+  width: 100%;
+  height: 84px;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, transparent 0%, #000 20%, #000 80%, transparent 100%);
+}
+
+.chapter-card__loop {
+  animation: chapter-card-topics-scroll 4.5s linear infinite paused;
+  will-change: transform;
+}
+
+.chapter-card__links {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  font-family: var(--rmx-font-family-mono);
+  font-size: 10px;
+  line-height: 2;
+  letter-spacing: 0.2px;
+  list-style: none;
+  text-transform: uppercase;
+}
+
+.chapter-card__links li,
+.chapter-card__links a {
+  display: block;
+  width: 100%;
+  overflow: hidden;
+  color: var(--rmx-color-text-primary);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chapter-card__links a:hover,
+.chapter-card__links a:focus-visible {
+  color: var(--rmx-color-text-primary);
+  text-decoration: none;
+}
+
+.chapter-card:is(:hover, :focus-within) {
+  background-color: var(--docs-chapter-card-hover-background);
+}
+
+.chapter-card:is(:hover, :focus-within) .chapter-card__loop {
+  animation-play-state: running;
+}
+
+@keyframes chapter-card-topics-scroll {
+  from {
+    transform: translateY(0);
+  }
+
+  to {
+    transform: translateY(-50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chapter-card__loop,
+  .chapter-card:is(:hover, :focus-within) .chapter-card__loop {
+    animation: none;
+    transform: none;
+  }
+}

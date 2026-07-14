@@ -1,10 +1,3 @@
-/*
- * Classic guides theme tokens.
- *
- * This preserves the pre-theme guides palette and typography while using the
- * same `--rmx-*` token names as the RMX themes.
- */
-
 :root {
   --rmx-space-none: 0px;
   --rmx-space-px: 1px;
@@ -54,17 +47,17 @@
   --rmx-control-height-md: 32px;
   --rmx-control-height-lg: 36px;
 
-  --rmx-surface-lvl0: #ffffff;
-  --rmx-surface-lvl1: #ffffff;
+  --rmx-surface-lvl0: #fff;
+  --rmx-surface-lvl1: #fff;
   --rmx-surface-lvl2: #f7f7f8;
   --rmx-surface-lvl3: #f7f7f8;
   --rmx-surface-lvl4: #eef0f3;
 
-  --rmx-shadow-xs: 0 1px 1px rgb(0 0 0 / 0.05);
-  --rmx-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.07);
-  --rmx-shadow-md: 0 6px 18px rgb(0 0 0 / 0.08);
-  --rmx-shadow-lg: 0 16px 34px rgb(0 0 0 / 0.1);
-  --rmx-shadow-xl: 0 24px 52px rgb(0 0 0 / 0.14);
+  --rmx-shadow-xs: 0 1px 1px rgb(0 0 0 / 5%);
+  --rmx-shadow-sm: 0 1px 2px rgb(0 0 0 / 7%);
+  --rmx-shadow-md: 0 6px 18px rgb(0 0 0 / 8%);
+  --rmx-shadow-lg: 0 16px 34px rgb(0 0 0 / 10%);
+  --rmx-shadow-xl: 0 24px 52px rgb(0 0 0 / 14%);
 
   --rmx-color-text-primary: #1b1b1f;
   --rmx-color-text-secondary: #6b7280;
@@ -79,16 +72,16 @@
   --rmx-color-focus-ring: #0578be;
   --rmx-color-accent: #0578be;
   --rmx-color-accent-hover: #022f4b;
-  --rmx-color-eyebrow: #d83a5a;
-  --rmx-color-code-highlight: rgb(34 197 94 / 0.18);
+  --rmx-color-eyebrow: #eb2358;
+  --rmx-color-code-highlight: rgb(34 197 94 / 18%);
 
   --rmx-color-action-primary-background: #1b1b1f;
   --rmx-color-action-primary-background-hover: #3d3d41;
   --rmx-color-action-primary-background-active: #2d2d31;
-  --rmx-color-action-primary-foreground: #ffffff;
+  --rmx-color-action-primary-foreground: #fff;
   --rmx-color-action-primary-border: #1b1b1f;
 
-  --rmx-color-action-secondary-background: #ffffff;
+  --rmx-color-action-secondary-background: #fff;
   --rmx-color-action-secondary-background-hover: #f7f7f8;
   --rmx-color-action-secondary-background-active: #eef0f3;
   --rmx-color-action-secondary-foreground: #1b1b1f;
@@ -97,8 +90,35 @@
   --rmx-color-action-danger-background: #dc2626;
   --rmx-color-action-danger-background-hover: #b91c1c;
   --rmx-color-action-danger-background-active: #991b1b;
-  --rmx-color-action-danger-foreground: #ffffff;
+  --rmx-color-action-danger-foreground: #fff;
   --rmx-color-action-danger-border: #dc2626;
+
+  --rmx-layout-max-width: 64rem;
+  --rmx-content-max-width: 48rem;
+  --rmx-page-gutter: calc(var(--rmx-space-xl) + var(--rmx-space-sm));
+
+  --site-header-height: 64px;
+  --docs-shell-background: #f3f5f7;
+  --docs-chapter-card-background: #f7f7f8;
+  --docs-chapter-card-hover-background: color-mix(
+    in srgb,
+    var(--docs-chapter-card-background) 95%,
+    #000
+  );
+  --docs-nav-duration: 300ms;
+  --docs-nav-easing: ease-in-out;
+  --docs-nav-link: #0074c0;
+  --docs-nav-link-hover: #00304a;
+  --docs-nav-hover-background: rgb(0 0 0 / 5%);
+  --docs-nav-selected-background: rgb(0 0 0 / 10%);
+  --docs-nav-control-border: rgb(0 0 0 / 10%);
+  --docs-sidebar-offset: 288px;
+  --docs-sidebar-inline-start: 24px;
+  --docs-sidebar-content-width: 240px;
+  --docs-collapsed-offset: 24px;
+  --docs-collapsed-content-padding: 220px;
+  --docs-main-padding: 52px;
+  --docs-content-max-width: 1044px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -123,8 +143,7 @@
     --rmx-color-border-subtle: #2a2a30;
     --rmx-color-border-default: #3f3f46;
     --rmx-color-border-strong: #52525b;
-
-    --rmx-color-code-highlight: rgb(34 197 94 / 0.22);
+    --rmx-color-code-highlight: rgb(34 197 94 / 22%);
 
     --rmx-color-action-primary-background: #e7e7ea;
     --rmx-color-action-primary-background-hover: #cbcbce;
@@ -143,5 +162,18 @@
     --rmx-color-action-danger-background-active: #dc2626;
     --rmx-color-action-danger-foreground: #0d0d10;
     --rmx-color-action-danger-border: #f87171;
+
+    --docs-shell-background: #0d0d10;
+    --docs-chapter-card-background: var(--rmx-surface-lvl2);
+    --docs-chapter-card-hover-background: color-mix(
+      in srgb,
+      var(--docs-chapter-card-background) 95%,
+      #fff
+    );
+    --docs-nav-link: #2dacf9;
+    --docs-nav-link-hover: var(--rmx-color-text-link-hover);
+    --docs-nav-hover-background: var(--rmx-surface-lvl4);
+    --docs-nav-selected-background: var(--rmx-surface-lvl4);
+    --docs-nav-control-border: var(--rmx-color-border-default);
   }
 }

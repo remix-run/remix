@@ -8,11 +8,13 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 
 - `app/actions/controller.tsx` — top-level route actions such as assets and the root redirect.
 - `app/actions/docs/chapters/*.md` — guide chapters.
-- `app/actions/docs/markdown.tsx` — unified/remark Markdown rendering, Shiki syntax highlighting, heading IDs, and `::frame` parsing.
-- `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, and summaries.
+- `app/actions/docs/markdown/render.tsx` — unified/remark Markdown rendering, Shiki syntax highlighting, heading IDs, and `::frame` parsing.
+- `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, summaries, and cache inputs.
+- `app/actions/docs/layout.tsx`, `site-header.tsx`, `chapter-navigation.tsx`, and `site-footer.tsx` — the server-rendered docs shell.
+- `app/actions/docs/docs-shell.browser.tsx` and `table-of-contents.browser.tsx` — the small client behaviors for transient navigation state and active-section tracking.
 - `app/actions/docs/examples/` — frame-backed examples used by chapters. Browser-hydrated demo modules use the `.demo.tsx` suffix, and browser-only helpers use `.browser.ts?(x)` so the asset boundary is visible from filenames instead of `public/` directories.
 - `app/entry.browser.ts` and `app/dev-refresh.browser.ts` — browser entrypoints served by the asset server.
-- `app/styles/` — source-served CSS for the docs app.
+- `app/styles/docs.css` — the stylesheet entrypoint. It imports the single token set, base rules, shell, index, article, and Markdown styles from focused sibling files.
 - `app/middleware/asset-entry.ts` — source-served browser module hrefs and preloads.
 - `app/middleware/render.ts` — the request-scoped `render()` helper and frame resolver.
 - `app/routes.ts` and `app/router.ts` — the typed route contract and controller wiring.
@@ -136,6 +138,7 @@ pnpm install                            # once, from the repo root
 pnpm --filter remix-guides run dev      # watch + serve
 pnpm --filter remix-guides run start    # serve once
 pnpm --filter remix-guides run validate # check frame URLs and example files
+pnpm --filter remix-guides run test
 pnpm --filter remix-guides run typecheck
 ```
 

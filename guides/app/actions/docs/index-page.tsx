@@ -30,6 +30,7 @@ function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
     <DocsDocument
       title="Remix Docs"
       description="Guides, explanations, examples, and tutorials for learning Remix."
+      chapters={handle.props.chapters}
     >
       <div class="docs-index">
         <header class="docs-index__header">
@@ -55,27 +56,55 @@ function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
   )
 }
 
-function ChapterCard(handle: Handle<{ chapter: DocsChapterSummary }>) {
+export function ChapterCard(handle: Handle<{ chapter: DocsChapterSummary }>) {
   return () => {
     let chapter = handle.props.chapter
 
     return (
       <li class="chapter-card">
-        <div class="chapter-card__eyebrow">{chapter.chapter}</div>
-        <h2 class="rmx-page-title rmx-page-title-xs chapter-card__title">
-          <a href={chapter.href}>{chapter.title}</a>
-        </h2>
+        <div class="chapter-card__heading">
+          <div class="chapter-card__eyebrow">{String(chapter.order).padStart(2, '0')}</div>
+          <h2 class="rmx-page-title rmx-page-title-xs chapter-card__title">
+            <a href={chapter.href}>{chapter.title}</a>
+          </h2>
+        </div>
         <p class="rmx-page-body rmx-page-body-sm chapter-card__description">
           {chapter.description}
         </p>
-        <ul class="chapter-card__links">
-          {chapter.sections.map((section) => (
-            <li key={section.id}>
-              <a href={`${chapter.href}#${section.id}`} innerHTML={section.titleHtml} />
-            </li>
-          ))}
-        </ul>
+        <div class="chapter-card__topics">
+          <div class="chapter-card__loop">
+            <ChapterTopicLinks chapter={chapter} />
+            <ChapterTopicLinks chapter={chapter} clone />
+          </div>
+        </div>
       </li>
     )
   }
+}
+
+function ChapterTopicLinks(
+  handle: Handle<{
+    chapter: DocsChapterSummary
+    clone?: boolean
+  }>,
+) {
+  return () => (
+    <ul
+      class={`chapter-card__links${handle.props.clone ? ' chapter-card__links--clone' : ''}`}
+      aria-hidden={handle.props.clone ? 'true' : undefined}
+    >
+      {handle.props.chapter.sections.map((section) => (
+        <li key={section.id}>
+          <a
+            href={`${handle.props.chapter.href}#${section.id}`}
+            tabIndex={handle.props.clone ? -1 : undefined}
+            innerHTML={section.titleHtml}
+          />
+        </li>
+      ))}
+      <li class="chapter-card__separator" aria-hidden="true">
+        ...
+      </li>
+    </ul>
+  )
 }
