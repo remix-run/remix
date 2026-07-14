@@ -4,7 +4,7 @@ import { getSchemaChecks, schemaAcceptsUndefined } from './schema.ts'
 /**
  * Native input types supported by a form field.
  */
-export type FormInputType = 'email' | 'number' | 'password' | 'text' | 'url'
+export type FormInputType = 'checkbox' | 'email' | 'number' | 'password' | 'text' | 'url'
 
 /**
  * UI-only configuration for a projected model field.
@@ -16,6 +16,8 @@ export interface FormFieldOptions {
   type: FormInputType
   /** The submitted field name. (defaults to the model property name) */
   name?: string
+  /** The DOM id used to associate the input, label, and error. (defaults to the property name) */
+  id?: string
 }
 
 /**
@@ -31,6 +33,8 @@ export interface AncillaryFormFieldOptions<schema extends Schema<any, unknown>>
  * Native attributes derived for a projected model field.
  */
 export interface InputAttributes {
+  /** The DOM id used by the field label and error message. */
+  id: string
   /** The submitted field name. */
   name: string
   /** The native input type. */
@@ -47,19 +51,51 @@ export interface InputAttributes {
   max?: number
   /** The interval accepted by a numeric input. */
   step?: number | 'any'
+  /** The submitted text value from a failed validation result. */
+  defaultValue?: string
+  /** The submitted checkbox state from a failed validation result. */
+  defaultChecked?: boolean
+  /** Whether server or native validation has marked the input invalid. */
+  'aria-invalid'?: true
+  /** The id of the field error describing the input. */
+  'aria-describedby'?: string
+  /** The server-rendered error element to clear after the input changes. */
+  'data-form-error-id'?: string
+}
+
+/**
+ * A raw form value that can be serialized and restored to a native input.
+ */
+export type FormRawValue = boolean | string
+
+/**
+ * A failed form validation result suitable for returning to a rendered route.
+ */
+export interface FormFailure {
+  /** Discriminates failed results from successful results. */
+  success: false
+  /** The original validation issues. */
+  issues: ReadonlyArray<Issue>
+  /** Submitted values keyed by logical form field name. */
+  values: Readonly<Record<string, FormRawValue>>
+  /** Validation messages grouped for rendering. */
+  errors: FormErrors
+}
+
+/**
+ * A successfully decoded and validated form value.
+ */
+export interface FormSuccess<value> {
+  /** Discriminates successful results from failed results. */
+  success: true
+  /** The typed form value. */
+  value: value
 }
 
 /**
  * The result of decoding and validating submitted form data.
  */
-export type FormParseResult<value> =
-  | { success: true; value: value }
-  | {
-      success: false
-      issues: ReadonlyArray<Issue>
-      values: Readonly<Record<string, string>>
-      errors: FormErrors
-    }
+export type FormParseResult<value> = FormSuccess<value> | FormFailure
 
 /**
  * Serializable validation errors grouped by field and form.
@@ -69,6 +105,22 @@ export interface FormErrors {
   fields: Readonly<Record<string, ReadonlyArray<string>>>
   /** Validation messages that do not belong to one form field. */
   form: ReadonlyArray<string>
+}
+
+/**
+ * Native attributes that associate a label with its input.
+ */
+export interface LabelAttributes {
+  /** The id of the labeled input. */
+  htmlFor: string
+}
+
+/**
+ * Native attributes that identify a field error.
+ */
+export interface ErrorAttributes {
+  /** The id referenced by an invalid input's `aria-describedby`. */
+  id: string
 }
 
 type AnyFormFieldOptions = FormFieldOptions | AncillaryFormFieldOptions<Schema<any, unknown>>
@@ -109,9 +161,38 @@ export interface FormDefinition<shape extends ObjectShape, fields extends FormFi
    * Derives native attributes for one projected model field.
    *
    * @param field The projected model property name.
+   * @param submission A failed form result whose values and errors should be restored.
    * @returns Attributes that can be spread onto a native `input` element.
    */
-  getInputAttrs<field extends keyof fields & string>(field: field): InputAttributes
+  getInputAttrs<field extends keyof fields & string>(
+    field: field,
+    submission?: FormFailure,
+  ): InputAttributes
+  /**
+   * Associates a native label with one projected field.
+   *
+   * @param field The projected field name.
+   * @returns Attributes that can be spread onto a native `label` element.
+   */
+  getLabelAttrs<field extends keyof fields & string>(field: field): LabelAttributes
+  /**
+   * Identifies the error element for one projected field.
+   *
+   * @param field The projected field name.
+   * @returns Attributes that can be spread onto the field's error element.
+   */
+  getErrorAttrs<field extends keyof fields & string>(field: field): ErrorAttributes
+  /**
+   * Reads the server validation messages for one projected field.
+   *
+   * @param field The projected field name.
+   * @param submission A failed form result.
+   * @returns The field's validation messages, or an empty array.
+   */
+  getFieldErrors<field extends keyof fields & string>(
+    field: field,
+    submission?: FormFailure,
+  ): ReadonlyArray<string>
   /**
    * Decodes submitted values according to their input types and validates them with the model.
    *
@@ -154,7 +235,7 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
 
   return {
     fields,
-    getInputAttrs(field) {
+    getInputAttrs(field, submission) {
       let fieldOptions = fields[field]
 
       if (!fieldOptions) {
@@ -162,7 +243,9 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
       }
 
       let schema = getFieldSchema(model, field, fieldOptions)
+      let id = fieldOptions.id ?? field
       let attrs: InputAttributes = {
+        id,
         name: fieldOptions.name ?? field,
         type: fieldOptions.type,
       }
@@ -171,7 +254,11 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
         attrs.step = 'any'
       }
 
-      if (!schemaAcceptsUndefined(schema)) {
+      if (
+        fieldOptions.type === 'checkbox'
+          ? !schemaAcceptsValue(schema, false)
+          : !schemaAcceptsUndefined(schema)
+      ) {
         attrs.required = true
       }
 
@@ -192,12 +279,36 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
         }
       }
 
+      let rawValue = submission?.values[field]
+
+      if (typeof rawValue === 'string') {
+        attrs.defaultValue = rawValue
+      } else if (typeof rawValue === 'boolean') {
+        attrs.defaultChecked = rawValue
+      }
+
+      if (readFieldErrors(field, submission).length > 0) {
+        let errorId = getErrorId(id)
+        attrs['aria-invalid'] = true
+        attrs['aria-describedby'] = errorId
+        attrs['data-form-error-id'] = errorId
+      }
+
       return attrs
+    },
+    getLabelAttrs(field) {
+      return { htmlFor: getFieldId(fields, field) }
+    },
+    getErrorAttrs(field) {
+      return { id: getErrorId(getFieldId(fields, field)) }
+    },
+    getFieldErrors(field, submission) {
+      return readFieldErrors(field, submission)
     },
     parse(formData) {
       let issues: Issue[] = []
       let value: Record<string, unknown> = {}
-      let rawValues: Record<string, string> = {}
+      let rawValues: Record<string, FormRawValue> = {}
 
       for (let field of Object.keys(fields)) {
         let fieldOptions = fields[field]
@@ -208,9 +319,9 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
 
         let schema = getFieldSchema(model, field, fieldOptions)
         let fieldName = fieldOptions.name ?? field
-        let rawValue = formData.get(fieldName)
+        let rawValue = readRawFormValue(formData, fieldName, fieldOptions.type)
 
-        if (typeof rawValue === 'string') {
+        if (rawValue !== undefined) {
           rawValues[field] = rawValue
         }
 
@@ -236,6 +347,27 @@ export function createForm<shape extends ObjectShape, const fields extends FormF
       return { success: true, value: value as FormValue<shape, fields> }
     },
   }
+}
+
+function getFieldId<fields extends FormFields>(
+  fields: fields,
+  field: keyof fields & string,
+): string {
+  let options = fields[field]
+
+  if (!options) {
+    throw new Error(`Unknown form field "${field}"`)
+  }
+
+  return options.id ?? field
+}
+
+function getErrorId(fieldId: string): string {
+  return `${fieldId}-error`
+}
+
+function readFieldErrors(field: string, submission?: FormFailure): ReadonlyArray<string> {
+  return submission?.errors.fields[field] ?? []
 }
 
 function getFieldSchema<shape extends ObjectShape>(
@@ -299,7 +431,28 @@ function getConstraintValue(
   return typeof value === 'number' ? value : undefined
 }
 
-function decodeFormValue(value: FormDataEntryValue | null, type: FormInputType): unknown {
+function schemaAcceptsValue(schema: Schema<any, unknown>, value: unknown): boolean {
+  return !schema['~run'](value, { path: [] }).issues
+}
+
+function readRawFormValue(
+  formData: FormData,
+  name: string,
+  type: FormInputType,
+): FormRawValue | undefined {
+  if (type === 'checkbox') {
+    return formData.has(name)
+  }
+
+  let value = formData.get(name)
+  return typeof value === 'string' ? value : undefined
+}
+
+function decodeFormValue(value: FormRawValue | undefined, type: FormInputType): unknown {
+  if (type === 'checkbox') {
+    return value ?? false
+  }
+
   if (typeof value !== 'string') {
     return undefined
   }

@@ -63,6 +63,10 @@
       "types": "./src/combobox/primitives.tsx",
       "default": "./src/combobox/primitives.tsx"
     },
+    "./form": {
+      "types": "./src/form/index.ts",
+      "default": "./src/form/index.ts"
+    },
     "./input": {
       "types": "./src/input/index.ts",
       "default": "./src/input/index.ts"
@@ -170,6 +174,10 @@
       "./combobox/primitives": {
         "types": "./dist/combobox/primitives.d.ts",
         "default": "./dist/combobox/primitives.js"
+      },
+      "./form": {
+        "types": "./dist/form/index.d.ts",
+        "default": "./dist/form/index.js"
       },
       "./input": {
         "types": "./dist/input/index.d.ts",

@@ -64,4 +64,12 @@ describe('input', () => {
     expect(html).not.toMatch(/transition/)
     expect(html).not.toMatch(/all: unset/)
   })
+
+  it('styles touched native and server validation states', async () => {
+    let html = await renderToString(<input aria-invalid="true" data-touched mix={input()} />)
+
+    expect(html).toMatch(/&\[data-touched\]:invalid/)
+    expect(html).toMatch(/&\[aria-invalid="true"\]/)
+    expect(html).toMatch(/#FF3000/)
+  })
 })

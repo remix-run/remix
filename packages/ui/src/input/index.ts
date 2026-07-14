@@ -59,6 +59,11 @@ const frameStyles = {
 
 const baseStyle: CSSMixinDescriptor = css({
   ...frameStyles,
+  '&[data-touched]:invalid, &[aria-invalid="true"]': {
+    background: '#FFF8F6',
+    boxShadow:
+      '0 2px 3px -1px rgba(0, 0, 0, 0.04), 0 3px 4px -1.5px rgba(0, 0, 0, 0.04), 0 4px 5px -2px rgba(0, 0, 0, 0.04), 0 0 0 1px #FF3000',
+  },
   '&:focus-visible': {
     outline: 0,
     boxShadow: controlFocusShadow,
@@ -71,6 +76,11 @@ const rootBaseStyle: CSSMixinDescriptor = css({
   alignItems: 'center',
   gap: 'var(--rmx-input-gap)',
   paddingInline: 'var(--rmx-input-root-padding-inline)',
+  '&:has(input[data-touched]:invalid), &:has(input[aria-invalid="true"])': {
+    background: '#FFF8F6',
+    boxShadow:
+      '0 2px 3px -1px rgba(0, 0, 0, 0.04), 0 3px 4px -1.5px rgba(0, 0, 0, 0.04), 0 4px 5px -2px rgba(0, 0, 0, 0.04), 0 0 0 1px #FF3000',
+  },
   '&:focus-within': {
     boxShadow: controlFocusShadow,
   },

@@ -52,6 +52,7 @@ void checkInvalidFieldTypes
 describe('createForm', () => {
   it('derives native input attributes from projected model fields', () => {
     assert.deepEqual(UserForm.getInputAttrs('name'), {
+      id: 'name',
       name: 'name',
       type: 'text',
       required: true,
@@ -59,6 +60,7 @@ describe('createForm', () => {
       maxLength: 50,
     })
     assert.deepEqual(UserForm.getInputAttrs('age'), {
+      id: 'age',
       name: 'age',
       type: 'number',
       required: true,
@@ -67,11 +69,13 @@ describe('createForm', () => {
       max: 120,
     })
     assert.deepEqual(UserForm.getInputAttrs('bio'), {
+      id: 'bio',
       name: 'bio',
       type: 'text',
       maxLength: 200,
     })
     assert.deepEqual(UserForm.getInputAttrs('inviteCode'), {
+      id: 'inviteCode',
       name: 'inviteCode',
       type: 'text',
       maxLength: 12,
@@ -91,6 +95,7 @@ describe('createForm', () => {
     })
 
     assert.deepEqual(SettingsForm.getInputAttrs('theme'), {
+      id: 'theme',
       name: 'theme',
       type: 'text',
     })
@@ -146,5 +151,60 @@ describe('createForm', () => {
       result.issues.map((issue) => issue.path),
       [['name'], ['age']],
     )
+
+    assert.deepEqual(UserForm.getInputAttrs('name', result), {
+      id: 'name',
+      name: 'name',
+      type: 'text',
+      required: true,
+      minLength: 2,
+      maxLength: 50,
+      defaultValue: 'A',
+      'aria-invalid': true,
+      'aria-describedby': 'name-error',
+      'data-form-error-id': 'name-error',
+    })
+    assert.deepEqual(UserForm.getLabelAttrs('name'), { htmlFor: 'name' })
+    assert.deepEqual(UserForm.getErrorAttrs('name'), { id: 'name-error' })
+    assert.deepEqual(UserForm.getFieldErrors('name', result), ['Expected at least 2 characters'])
+  })
+
+  it('decodes and restores boolean checkbox fields', () => {
+    let Preferences = s.object({ newsletter: s.boolean() })
+    let PreferencesForm = createForm(Preferences, {
+      fields: {
+        newsletter: { label: 'Send me updates', type: 'checkbox' },
+        terms: {
+          label: 'Accept the terms',
+          type: 'checkbox',
+          schema: s.literal(true),
+        },
+      },
+    })
+
+    assert.deepEqual(PreferencesForm.getInputAttrs('newsletter'), {
+      id: 'newsletter',
+      name: 'newsletter',
+      type: 'checkbox',
+    })
+    assert.deepEqual(PreferencesForm.getInputAttrs('terms'), {
+      id: 'terms',
+      name: 'terms',
+      type: 'checkbox',
+      required: true,
+    })
+
+    let validData = new FormData()
+    validData.set('newsletter', 'on')
+    validData.set('terms', 'on')
+    assert.deepEqual(PreferencesForm.parse(validData), {
+      success: true,
+      value: { newsletter: true, terms: true },
+    })
+
+    let invalid = PreferencesForm.parse(new FormData())
+    assert.equal(invalid.success, false)
+    assert.deepEqual(invalid.values, { newsletter: false, terms: false })
+    assert.equal(PreferencesForm.getInputAttrs('terms', invalid).defaultChecked, false)
   })
 })

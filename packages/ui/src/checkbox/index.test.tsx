@@ -77,4 +77,14 @@ describe('checkbox', () => {
     expect(explicitHtml).toMatch(/type="radio"/)
     expect(spanHtml).not.toMatch(/type="checkbox"/)
   })
+
+  it('styles touched native and server validation states', async () => {
+    let html = await renderToString(
+      <input aria-invalid="true" data-touched mix={checkbox()} required />,
+    )
+
+    expect(html).toMatch(/&\[data-touched\]:invalid/)
+    expect(html).toMatch(/&\[aria-invalid="true"\]/)
+    expect(html).toMatch(/#FF3000/)
+  })
 })

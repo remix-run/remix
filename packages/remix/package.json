@@ -138,6 +138,7 @@
     "./ui/checkbox": "./src/ui/checkbox.ts",
     "./ui/combobox": "./src/ui/combobox.ts",
     "./ui/combobox/primitives": "./src/ui/combobox/primitives.ts",
+    "./ui/form": "./src/ui/form.ts",
     "./ui/input": "./src/ui/input.ts",
     "./ui/jsx-dev-runtime": "./src/ui/jsx-dev-runtime.ts",
     "./ui/jsx-runtime": "./src/ui/jsx-runtime.ts",
@@ -625,6 +626,10 @@
       "./ui/combobox/primitives": {
         "types": "./dist/ui/combobox/primitives.d.ts",
         "default": "./dist/ui/combobox/primitives.js"
+      },
+      "./ui/form": {
+        "types": "./dist/ui/form.d.ts",
+        "default": "./dist/ui/form.js"
       },
       "./ui/input": {
         "types": "./dist/ui/input.d.ts",

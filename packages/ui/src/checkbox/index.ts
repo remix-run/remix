@@ -127,6 +127,10 @@ const baseStyle: CSSMixinDescriptor = css({
     boxShadow:
       '0 1px 1px -0.5px rgba(9, 68, 190, 0.1), 0 2px 2px -1px rgba(9, 68, 190, 0.1), 0 4px 4px -2px rgba(9, 68, 190, 0.1), 0 6px 8px -4px rgba(9, 68, 190, 0.1), 0 2px 6px rgba(53, 115, 246, 0.32), inset 0 1px 2px rgba(0, 0, 0, 0.3), inset 0 0 3px 1px rgba(0, 0, 0, 0.12)',
   },
+  '&[data-touched]:invalid, &[aria-invalid="true"]': {
+    boxShadow:
+      '0 2px 2px -1px rgba(0, 0, 0, 0.05), 0 3px 4px -1.5px rgba(0, 0, 0, 0.05), 0 4px 8px -2px rgba(0, 0, 0, 0.05), 0 0 0 1px #FF3000',
+  },
   '&:focus-visible': {
     outline: 0,
     boxShadow: controlFocusShadow,

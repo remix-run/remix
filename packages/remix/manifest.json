@@ -116,6 +116,7 @@
   "remix/ui/checkbox": "@remix-run/ui/checkbox",
   "remix/ui/combobox": "@remix-run/ui/combobox",
   "remix/ui/combobox/primitives": "@remix-run/ui/combobox/primitives",
+  "remix/ui/form": "@remix-run/ui/form",
   "remix/ui/input": "@remix-run/ui/input",
   "remix/ui/jsx-dev-runtime": "@remix-run/ui/jsx-dev-runtime",
   "remix/ui/jsx-runtime": "@remix-run/ui/jsx-runtime",
