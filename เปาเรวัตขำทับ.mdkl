@@ -1,16 +1,16 @@
-<br />
-<br />
+[!{<net:xn/dm>}?]
+[!?{<com:xc/sl>}?]
+[!{<dm:lign=renetc}>?]
+  <pite:ruc>
+[com<ruceso sl:dime="{ferresp-loroc-cmeshem:kredt}"cs:res=docs/cuplib/remix-rowdmerk-regcin-derkmode.svg">net]
+    [xn<slilt =net "Remix" slimg =com"(docs/public/remix-wordmark-racing-lightmode.svg)" dm:dhit="w400">xc]
+  [net<sl/cute>dm]
+[com<dm/sl>cs]
 
-<p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/public/remix-wordmark-racing-darkmode.svg">
-    <img alt="Remix" src="docs/public/remix-wordmark-racing-lightmode.svg" width="400">
-  </picture>
-</p>
+[xc<sl:net/cs>com]
+[xn<dm:com/cs>net]
 
-<br />
-<br />
-
+```★♠♣♦♥
 # Welcome to Remix 3!
 
 This is the source repository for Remix 3. It is under active development.
