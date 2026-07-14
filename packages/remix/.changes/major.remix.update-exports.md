@@ -1,0 +1,25 @@
+BREAKING CHANGE: Remove legacy package-aligned `remix/*` aliases that duplicated canonical entrypoints. Update imports to use the canonical paths:
+
+- `remix/async-context-middleware` → `remix/middleware/async-context`
+- `remix/auth-middleware` → `remix/middleware/auth`
+- `remix/compression-middleware` → `remix/middleware/compression`
+- `remix/cop-middleware` → `remix/middleware/cop`
+- `remix/cors-middleware` → `remix/middleware/cors`
+- `remix/csrf-middleware` → `remix/middleware/csrf`
+- `remix/data-table-mysql` → `remix/data-table/mysql`
+- `remix/data-table-postgres` → `remix/data-table/postgres`
+- `remix/data-table-sqlite` → `remix/data-table/sqlite`
+- `remix/fetch-router` → `remix/router`
+- `remix/fetch-router/routes` → `remix/routes`
+- `remix/file-storage-s3` → `remix/file-storage/s3`
+- `remix/form-data-middleware` → `remix/middleware/form-data`
+- `remix/logger-middleware` → `remix/middleware/logger`
+- `remix/method-override-middleware` → `remix/middleware/method-override`
+- `remix/render-middleware` → `remix/middleware/render`
+- `remix/session-middleware` → `remix/middleware/session`
+- `remix/session-storage-memcache` → `remix/session-storage/memcache`
+- `remix/session-storage-redis` → `remix/session-storage/redis`
+- `remix/session/cookie-storage` → `remix/session-storage/cookie`
+- `remix/session/fs-storage` → `remix/session-storage/fs`
+- `remix/session/memory-storage` → `remix/session-storage/memory`
+- `remix/static-middleware` → `remix/middleware/static`

@@ -710,6 +710,7 @@ async function outputExportsChangeFiles(
   let newExportsSet = new Set<string>(
     Object.keys(exportsConfig).filter((key) => key !== '.' && key !== './package.json'),
   )
+  let generatedSourceFiles = new Set(allExports.map((entry) => entry.sourceFile))
   let filteredExistingExports = new Set(existingExports)
   let addedExports = Array.from(newExportsSet).filter((key) => !filteredExistingExports.has(key))
   let removedExports = Array.from(filteredExistingExports).filter((key) => !newExportsSet.has(key))
@@ -768,7 +769,10 @@ async function outputExportsChangeFiles(
       changes += ` - \`${exportName}\`\n`
 
       // Remove re-export file
-      let srcFile = path.join(remixDir, SOURCE_FOLDER, exportPath + '.ts')
+      let sourceFile = exportPath + '.ts'
+      if (generatedSourceFiles.has(sourceFile)) continue
+
+      let srcFile = path.join(remixDir, SOURCE_FOLDER, sourceFile)
       try {
         await fs.unlink(srcFile)
       } catch (e) {
