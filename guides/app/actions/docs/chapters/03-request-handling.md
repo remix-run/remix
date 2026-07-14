@@ -40,7 +40,7 @@ Request and response bodies stay as Web streams. An action can read `request.bod
 
 ## The Node server entry {#the-node-server-entry}
 
-The default Remix app runs on `node:http`. Its `server.ts` creates the Node server and connects it to the app router:
+The default Remix app runs on `node:http`. Back in `server.ts`, the request-handling portion creates the Node server and connects it to the app router. The generated file also handles graceful shutdown, which is omitted here so we can focus on the request path.
 
 ```ts filename=server.ts
 import * as http from "node:http";
@@ -83,7 +83,7 @@ Keep that boundary narrow. Code that only needs a URL, headers, cookies, a body,
 - passes the request to your Fetch handler; and
 - writes the returned response status, headers, and streamed body through Node.
 
-The same listener works with `node:http`, `node:https`, and Node's HTTP/2 compatibility API. Most apps only need to pass `router.fetch(...)` through a small error boundary, as shown above.
+The same listener works with `node:http`, `node:https`, and Node's HTTP/2 compatibility API. Most apps only need to pass `router.fetch(...)` through a small error boundary, as shown above. `createRequestListener(...)` also has a default error handler, but handling router errors in `server.ts` lets the app decide what to log and return.
 
 The listener accepts a few options when the server boundary needs more information:
 
@@ -169,7 +169,7 @@ The router contract is portable, but every package in a middleware stack may not
 
 ## Middleware ordering {#middleware-ordering}
 
-Middleware wraps the rest of the request pipeline. Given two middleware functions, the request runs from left to right and the response unwinds from right to left:
+With the runtime connected, the rest of the request path lives in `app/router.ts`. Middleware wraps that path. Given two middleware functions, the request runs from left to right and the response unwinds from right to left:
 
 ```txt
 request  → first → second → action
@@ -219,7 +219,7 @@ Every middleware and action in one `router.fetch(...)` call receives the same re
 
 Built-in middleware carries its context changes in its TypeScript type. For example, `formData()` provides `context.formData`, while `renderWith(...)` provides the app's typed `context.render(...)` function.
 
-For a single-router app, derive the application context from the configured router and use module augmentation to make that context the default for controllers:
+Back in `app/router.ts`, derive the application context from the configured router and use module augmentation to make that context the default for controllers:
 
 ```ts filename=app/router.ts
 import { formData } from "remix/middleware/form-data";
@@ -252,19 +252,12 @@ router.map(routes.albums.edit, albumsEditController);
 `RouterContext<typeof router>` follows the inline middleware tuple in order. In the edit controller, TypeScript now knows that both values are present:
 
 ```tsx filename=app/actions/albums/edit/controller.tsx
-import { createController } from "remix/router";
+// inside the actions object:
+action(context) {
+  let title = context.formData.get("title");
 
-import { routes } from "../../../routes.ts";
-
-export default createController(routes.albums.edit, {
-  actions: {
-    action(context) {
-      let title = context.formData.get("title");
-
-      return context.render(<p>Submitted {String(title)}</p>);
-    },
-  },
-});
+  return context.render(<p>Submitted {String(title)}</p>);
+},
 ```
 
 The module augmentation is useful because controllers are created in separate files before they are mapped to this router. Apps with multiple routers should pass explicit context types instead of setting one application-wide default.
@@ -370,4 +363,4 @@ function requireJson(): Middleware {
 }
 ```
 
-Keep custom middleware focused on one request-lifecycle concern. Route-specific data loading or validation usually belongs in the action, while behavior shared across many routes—request IDs, sessions, authentication, security headers, and database access—fits the middleware pipeline.
+Keep custom middleware focused on one request-lifecycle concern. Route-specific data loading or validation usually belongs in the action, while behavior shared across many routes—request IDs, sessions, authentication, security headers, and database access—fits the middleware pipeline. The next chapter, [Rendering UI](/docs/rendering-ui), follows the `render()` middleware from this pipeline into the app's document and component tree.

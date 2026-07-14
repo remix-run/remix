@@ -7,11 +7,7 @@ description: A high-level introduction to Remix and the mental model behind a Re
 
 Remix is a TypeScript framework built around the web's request and response model. A server receives a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request), Remix matches it to a typed route, a controller handles the request, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
 
-The `remix` package gives you the full stack: a server adapter, fetch router, typed routes, middleware, controllers, response helpers, and testing utilities. On the UI side, it includes server-rendered components, frames for partial UI, browser-loaded client entries, client navigation, CSS-first animation helpers, source-served assets, and first-party primitives such as menus, popovers, listboxes, selects, and tabs.
-
-On the server, Remix provides first-class form parsing and validation, cookie and session management, credentials-based auth, OAuth/OIDC, CSRF/CORS/COP protection, file uploads, and database queries, transactions, and migrations.
-
-Each part of `remix` is designed to be used on its own. You can use the full framework to build a full-stack app, or leverage the pieces you need to ship a single-page app, a type-safe REST API, parse some form data, handle file uploads, or just about anything else you might want to do when building a website.
+The `remix` package includes the server, router, middleware, UI, data, auth, asset, and testing packages used throughout an application. Each package is also useful on its own, so an app can use the complete request path or only the layers it needs.
 
 The design of Remix comes from six core principles:
 
@@ -109,8 +105,7 @@ The [Request Handling](/docs/request-handling) chapter digs into runtime adapter
 
 ## Define your first route {#define-your-first-route}
 
-In Remix, routes are defined separately from the actions that handle matched requests. In `app/routes.ts`, we define the URLs and HTTP methods your app accepts. In `app/actions/`, controllers decide what `Response` to return
-when one of those routes matches.
+In Remix, routes are defined separately from the actions that handle matched requests. In `app/routes.ts`, we define the URLs and HTTP methods your app accepts. In `app/actions/`, controllers decide what `Response` to return when one of those routes matches.
 
 Keeping the URL contract separate gives controllers, links, forms, redirects, and tests one typed source of truth without coupling URL generation to request handling.
 
@@ -166,7 +161,7 @@ export default createController(routes.albums, {
 Finally, we need to map the albums route map to our router in `app/router.ts`:
 
 ```ts filename=app/router.ts lines=[5,12]
-import { createRouter, type MiddlewareContext } from "remix/router";
+import { createRouter, type RouterContext } from "remix/router";
 import { staticFiles } from "remix/middleware/static";
 
 import controller from "./actions/controller.tsx";
@@ -284,7 +279,7 @@ export async function updateAlbum(albumId: string, values: Partial<Album>) {
   let album = albums.find((album) => album.id === albumId);
 
   if (album === undefined) {
-    throw new Error(`Album not found: ${albumId}`);
+    return undefined;
   }
 
   // Simulate network latency
@@ -380,15 +375,15 @@ export function AlbumPage(handle: Handle<{ album: Album }>) {
 }
 ```
 
-Open [http://localhost:44100/albums/thriller](http://localhost:44100/albums/thriller) again. The same URL now returns our beautiful album page.
+Open [http://localhost:44100/albums/thriller](http://localhost:44100/albums/thriller) again. The same URL now returns the album page.
 
 ![Page showing text "Michael Jackson · 1983 Thriller"](/images/app/actions/docs/chapters/01-start-here/album-page.png)
 
 ## Build your first form action {#build-your-first-form-action}
 
-We're able to retrieve data and display it, but the real fun begins when we can start changing data. Let's set up a form to edit the album data, and hook up an action to handle a POST request so we can update it.
+We can retrieve and display an album. Next, let's add a form and a `POST` action that can update it.
 
-Back in our `routes.ts` file we'll use the `form()` route helper. This helper is nice because it creates two routes at the same URL: a `GET` route that shows the form and a `POST` route that handles the submit. Two routes for the price of one!
+Back in `routes.ts`, use the `form()` route helper. It creates two routes at the same URL: a `GET` route that shows the form and a `POST` route that handles the submission.
 
 ```ts filename=app/routes.ts lines=[1,8]
 import { form, get, route } from "remix/routes";
@@ -437,7 +432,7 @@ export default createController(routes.albums.edit, {
 And map it to the router as well:
 
 ```ts filename=app/router.ts lines=[6,14]
-import { createRouter, type MiddlewareContext } from "remix/router";
+import { createRouter, type RouterContext } from "remix/router";
 import { staticFiles } from "remix/middleware/static";
 
 import controller from "./actions/controller.tsx";
@@ -538,20 +533,22 @@ export default createController(routes.albums.edit, {
 
 Open [http://localhost:44100/albums/thriller/edit](http://localhost:44100/albums/thriller/edit). The route returns an HTML form with the album data filled in.
 
-![Album edit page with information for Thriller by Micheal Jackson](/images/app/actions/docs/chapters/01-start-here/album-edit-page.png)
+![Album edit page with information for Thriller by Michael Jackson](/images/app/actions/docs/chapters/01-start-here/album-edit-page.png)
 
-Before handling the POST request, we're going to take a quick detour and upgrade Remix with a nice little `form-data` middleware in `app/router.ts`. This middleware parses browser form bodies once and makes the `FormData` available to route actions.
+Before handling the `POST` request, add the `form-data` middleware in `app/router.ts`. It parses browser form bodies once and makes the `FormData` available to route actions.
 
-```ts filename=app/router.ts lines=[2,8,18]
-import { createRouter, type MiddlewareContext } from "remix/router";
+```ts filename=app/router.ts lines=[1-2,7-17]
+import { createRouter, type RouterContext } from "remix/router";
 import { formData } from "remix/middleware/form-data";
 import { staticFiles } from "remix/middleware/static";
 
 // ...
 
-type AppContext = MiddlewareContext<
-  [ReturnType<typeof formData>, ReturnType<typeof render>]
->;
+export const router = createRouter({
+  middleware: [staticFiles("./public", { index: false }), formData(), render()],
+});
+
+export type AppContext = RouterContext<typeof router>;
 
 declare module "remix/router" {
   interface RouterTypes {
@@ -559,16 +556,12 @@ declare module "remix/router" {
   }
 }
 
-export const router = createRouter<AppContext>({
-  middleware: [staticFiles("./public", { index: false }), formData(), render()],
-});
-
 // ...
 ```
 
 We'll also use `remix/data-schema/form-data` to turn the raw `FormData` into typed values before updating the album. `remix/data-schema` is a built-in Remix library for validating and parsing all sorts of data. The [Data and Validation](/docs/data-and-validation) chapter explores it in more detail.
 
-```tsx filename=app/actions/albums/edit/controller.tsx lines=[2-5,8,11-15,28-33]
+```tsx filename=app/actions/albums/edit/controller.tsx lines=[2-5,8,11-15,28-41]
 import { createController } from "remix/router";
 import * as s from "remix/data-schema";
 import * as f from "remix/data-schema/form-data";
@@ -597,8 +590,17 @@ export default createController(routes.albums.edit, {
       return context.render(<AlbumEditPage album={album} />);
     },
     async action({ formData, params }) {
-      let values = s.parse(albumFormSchema, formData);
-      let album = await updateAlbum(params.albumId, values);
+      let result = s.parseSafe(albumFormSchema, formData);
+
+      if (!result.success) {
+        return new Response("Invalid album data", { status: 400 });
+      }
+
+      let album = await updateAlbum(params.albumId, result.value);
+
+      if (album === undefined) {
+        return new Response("Album not found", { status: 404 });
+      }
 
       return redirect(routes.albums.show.href({ albumId: album.id }), 303);
     },
@@ -606,7 +608,7 @@ export default createController(routes.albums.edit, {
 });
 ```
 
-The `action` route action reads parsed Web `FormData`, updates the album, and redirects back to the album page.
+The `action` route action validates the parsed Web `FormData`, returns an explicit response for invalid input or a missing album, and redirects back to the album page after a successful update. The [Data and Validation](/docs/data-and-validation) chapter shows how to render field-level validation errors back into a form.
 
 Now we can update our album data and set it to the correct year.
 
@@ -785,4 +787,4 @@ Now when you submit the form, the button is disabled and the button text changes
 
 There is a lot more we could do here to avoid a full page navigation, but that involves handling cancellations, error states, and more. The [Interactivity](/docs/interactivity) chapter covers client entries, events, and progressive enhancement in more detail.
 
-For now we've dipped our toe in the water enough to get a big picture of what Remix offers and how to start building with it. Next we'll dig deeper into Routing and Controllers, or if you're excited about a particular topic, feel free to jump around.
+Next, [Routing and Controllers](/docs/routing-and-controllers) takes a closer look at the route leaves, nested maps, and controllers we started using here.
