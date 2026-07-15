@@ -9,10 +9,12 @@ import type {
   TransactionToken,
 } from '@remix-run/data-table'
 import { getTablePrimaryKey } from '@remix-run/data-table'
+import mysql from 'mysql2/promise'
 import type {
   Connection as MysqlConnection,
   Pool as MysqlPool,
   PoolConnection as MysqlPoolConnection,
+  PoolOptions as MysqlPoolOptions,
   ResultSetHeader,
   RowDataPacket,
 } from 'mysql2/promise'
@@ -32,6 +34,11 @@ type MysqlQueryResultHeader = {
 type MysqlTransactionConnection = MysqlConnection | MysqlPoolConnection
 type MysqlQueryable = MysqlPool | MysqlTransactionConnection
 
+type MysqlAdapterOptions = {
+  characterSet?: string
+  collation?: string
+}
+
 /**
  * `DatabaseAdapter` implementation for mysql-compatible clients.
  */
@@ -46,12 +53,23 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
    */
   capabilities
 
+  #config?: string | MysqlPoolOptions
   #client: MysqlQueryable
+  #characterSet?: string
+  #collation?: string
   #transactions = new Map<string, TransactionState>()
   #transactionCounter = 0
 
-  constructor(client: MysqlQueryable) {
-    this.#client = client
+  constructor(config: string | MysqlPoolOptions | MysqlQueryable, options: MysqlAdapterOptions = {}) {
+    if (isMysqlQueryable(config)) {
+      this.#client = config
+    } else {
+      this.#config = config
+      this.#client = createMysqlPool(config)
+    }
+
+    this.#characterSet = options.characterSet
+    this.#collation = options.collation
     this.capabilities = {
       returning: false,
       savepoints: true,
@@ -293,6 +311,43 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
    * Acquires the mysql migration lock.
    * @returns A promise that resolves when the lock is acquired.
    */
+  async create(): Promise<void> {
+    let config = this.#configOrThrow('create')
+    let database = resolveMysqlDatabaseName(config)
+    let connection = await createMysqlConnection(toMysqlServerConfig(config))
+
+    try {
+      let sql = 'create database if not exists ' + quoteIdentifier(database)
+
+      if (this.#characterSet) {
+        sql += ' character set ' + this.#characterSet
+      }
+
+      if (this.#collation) {
+        sql += ' collate ' + this.#collation
+      }
+
+      await connection.query(sql)
+    } finally {
+      await connection.end()
+    }
+
+    await this.#replacePool()
+  }
+
+  async drop(): Promise<void> {
+    let config = this.#configOrThrow('drop')
+    let database = resolveMysqlDatabaseName(config)
+    await this.#closePool()
+    let connection = await createMysqlConnection(toMysqlServerConfig(config))
+
+    try {
+      await connection.query('drop database if exists ' + quoteIdentifier(database))
+    } finally {
+      await connection.end()
+    }
+  }
+
   async acquireMigrationLock(): Promise<void> {
     await this.#client.query('select get_lock(?, 60)', ['data_table_migrations'])
   }
@@ -303,6 +358,29 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
    */
   async releaseMigrationLock(): Promise<void> {
     await this.#client.query('select release_lock(?)', ['data_table_migrations'])
+  }
+
+  async #closePool(): Promise<void> {
+    this.#transactions.clear()
+    if (isMysqlPool(this.#client)) {
+      await this.#client.end()
+    }
+  }
+
+  async #replacePool(): Promise<void> {
+    await this.#closePool().catch(() => undefined)
+
+    if (this.#config) {
+      this.#client = createMysqlPool(this.#config)
+    }
+  }
+
+  #configOrThrow(method: string): string | MysqlPoolOptions {
+    if (!this.#config) {
+      throw new Error('MySQL adapter ' + method + '() requires config-based construction')
+    }
+
+    return this.#config
   }
 
   #resolveClient(token: TransactionToken | undefined): MysqlQueryable {
@@ -331,21 +409,70 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
  * @returns A configured mysql adapter.
  * @example
  * ```ts
- * import { createPool } from 'mysql2/promise'
  * import { createDatabase } from 'remix/data-table'
  * import { createMysqlDatabaseAdapter } from 'remix/data-table/mysql'
  *
- * let pool = createPool({ uri: process.env.DATABASE_URL })
- * let adapter = createMysqlDatabaseAdapter(pool)
+ * let adapter = createMysqlDatabaseAdapter(process.env.DATABASE_URL!)
  * let db = createDatabase(adapter)
  * ```
  */
-export function createMysqlDatabaseAdapter(client: MysqlQueryable): MysqlDatabaseAdapter {
-  return new MysqlDatabaseAdapter(client)
+export function createMysqlDatabaseAdapter(
+  config: string | MysqlPoolOptions,
+  options?: MysqlAdapterOptions,
+): MysqlDatabaseAdapter {
+  return new MysqlDatabaseAdapter(config, options)
+}
+
+function isMysqlQueryable(value: unknown): value is MysqlQueryable {
+  return typeof value === 'object' && value !== null && 'query' in value
+}
+
+function createMysqlPool(config: string | MysqlPoolOptions): MysqlPool {
+  return typeof config === 'string' ? mysql.createPool(config) : mysql.createPool(config)
+}
+
+function createMysqlConnection(config: string | MysqlPoolOptions): Promise<MysqlConnection> {
+  return typeof config === 'string' ? mysql.createConnection(config) : mysql.createConnection(config)
 }
 
 function isMysqlPool(client: MysqlQueryable): client is MysqlPool {
   return 'getConnection' in client && typeof client.getConnection === 'function'
+}
+
+function resolveMysqlDatabaseName(config: string | MysqlPoolOptions): string {
+  let database = typeof config === 'string' ? resolveDatabaseNameFromUrl(config) : config.database
+  database ??= process.env.MYSQL_DATABASE
+
+  if (!database) {
+    throw new Error('MySQL database config requires a database name')
+  }
+
+  return database
+}
+
+function resolveDatabaseNameFromUrl(value: string): string | undefined {
+  try {
+    let url = new URL(value)
+    let database = decodeURIComponent(url.pathname.replace(/^\//, ''))
+    return database || undefined
+  } catch {
+    return undefined
+  }
+}
+
+function toMysqlServerConfig(config: string | MysqlPoolOptions): string | MysqlPoolOptions {
+  if (typeof config === 'string') {
+    try {
+      let url = new URL(config)
+      url.pathname = '/'
+      return url.toString()
+    } catch {
+      return config
+    }
+  }
+
+  let { database: _database, ...serverConfig } = config
+  return serverConfig
 }
 
 function isMysqlPoolConnection(

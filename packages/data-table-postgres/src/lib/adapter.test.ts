@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { column, createDatabase, table, eq, inList, sql } from '@remix-run/data-table'
 
-import { createPostgresDatabaseAdapter } from './adapter.ts'
+import { PostgresDatabaseAdapter } from './adapter.ts'
 
 const accounts = table({
   name: 'accounts',
@@ -61,7 +61,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = createPostgresDatabaseAdapter(client as never)
+    let adapter = new PostgresDatabaseAdapter(client as never)
     let hasTable = await adapter.hasTable({ schema: 'app', name: 'users' })
     let hasColumn = await adapter.hasColumn({ schema: 'app', name: 'users' }, 'email')
 
@@ -111,7 +111,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = createPostgresDatabaseAdapter(pool as never)
+    let adapter = new PostgresDatabaseAdapter(pool as never)
     let token = await adapter.beginTransaction()
 
     await adapter.hasTable({ name: 'users' }, token)
@@ -143,7 +143,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = createPostgresDatabaseAdapter(client as never)
+    let adapter = new PostgresDatabaseAdapter(client as never)
     let result = await adapter.execute({
       operation: {
         kind: 'insertMany',
@@ -189,7 +189,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(client as never))
 
     let count = await db.query(accounts).count()
     await db.exec(sql`select * from accounts where id = ${42}`)
@@ -216,7 +216,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(client as never))
 
     await db.transaction(async (outerTransaction) => {
       await outerTransaction
@@ -252,7 +252,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(client as never))
 
     await db.transaction(async () => undefined, {
       isolationLevel: 'serializable',
@@ -282,7 +282,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(client as never))
 
     await db.transaction(async () => undefined, { readOnly: false })
 
@@ -318,7 +318,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(pool as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(pool as never))
 
     await db.transaction(async () => undefined)
 
@@ -351,7 +351,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(pool as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(pool as never))
 
     await db.transaction(async () => undefined)
 
@@ -387,7 +387,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(pool as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(pool as never))
 
     await assert.rejects(
       () =>
@@ -426,7 +426,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(pool as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(pool as never))
 
     await assert.rejects(
       () =>
@@ -455,7 +455,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = createPostgresDatabaseAdapter(client as never)
+    let adapter = new PostgresDatabaseAdapter(client as never)
     let token = await adapter.beginTransaction()
 
     await adapter.createSavepoint(token, 'sp"name')
@@ -485,7 +485,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = createPostgresDatabaseAdapter(client as never)
+    let adapter = new PostgresDatabaseAdapter(client as never)
 
     await assert.rejects(
       () => adapter.commitTransaction({ id: 'tx_missing' }),
@@ -518,7 +518,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(client as never))
 
     await db
       .query(accounts)
@@ -548,7 +548,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(client as never))
 
     await db.query(invoices).join(accounts, eq(accounts.id, invoices.account_id)).count()
 
@@ -574,7 +574,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(client as never))
 
     await db.query(accounts).select({ 'account.email': accounts.email }).all()
 
@@ -598,7 +598,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(client as never))
 
     await db
       .query(accounts)
@@ -622,7 +622,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(client as never))
     let count = await db.query(accounts).count()
 
     assert.equal(count, 5)
@@ -641,7 +641,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(client as never))
     let count = await db.query(accounts).count()
 
     assert.equal(count, 3)
@@ -660,7 +660,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(client as never))
     let result = await db
       .query(accounts)
       .insert({ id: 1, email: 'a@example.com' }, { returning: '*' })
@@ -682,7 +682,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let db = createDatabase(createPostgresDatabaseAdapter(client as never))
+    let db = createDatabase(new PostgresDatabaseAdapter(client as never))
     let result = await db.query(accountProjects).insert(
       {
         account_id: 1,
@@ -709,7 +709,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let result = await createPostgresDatabaseAdapter(client as never).execute({
+    let result = await new PostgresDatabaseAdapter(client as never).execute({
       operation: {
         kind: 'raw',
         sql: {
@@ -733,7 +733,7 @@ describe('postgres adapter', () => {
       },
     }
 
-    let adapter = createPostgresDatabaseAdapter(client as never)
+    let adapter = new PostgresDatabaseAdapter(client as never)
     await adapter.executeScript('create table widgets (id int); insert into widgets values (1);')
 
     assert.equal(calls.length, 1)

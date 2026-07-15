@@ -31,7 +31,8 @@ describe('postgres adapter integration', { skip: typeof DATABASE_URL !== 'string
   })
 
   runAdapterIntegrationContract({
-    createDatabase: () => createDatabase(createPostgresDatabaseAdapter(pool)),
+    createDatabase: () =>
+      createDatabase(createPostgresDatabaseAdapter({ connectionString: DATABASE_URL! })),
     resetDatabase: async () => {
       await resetAdapterIntegrationSchema(async (statement) => {
         await pool.query(statement)

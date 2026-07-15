@@ -9,17 +9,22 @@ import type {
   TransactionToken,
 } from '@remix-run/data-table'
 import { getTablePrimaryKey } from '@remix-run/data-table'
-import type {
-  Client as PostgresClient,
-  Pool as PostgresPool,
-  PoolClient as PostgresPoolClient,
-} from 'pg'
+import pg from 'pg'
+import type { Client as PostgresClient, Pool as PostgresPool, PoolClient as PostgresPoolClient } from 'pg'
 
 import { compilePostgresOperation } from './sql-compiler.ts'
 
 type TransactionState = {
   client: PostgresClient | PostgresPoolClient
   releaseOnClose: boolean
+}
+
+type PostgresPoolConfig = ConstructorParameters<typeof pg.Pool>[0]
+type PostgresClientConfig = ConstructorParameters<typeof pg.Client>[0]
+
+type PostgresAdapterOptions = {
+  maintenanceDatabase?: string
+  template?: string
 }
 
 type PostgresQueryable = PostgresClient | PostgresPool | PostgresPoolClient
@@ -38,12 +43,23 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
    */
   capabilities
 
+  #config?: PostgresPoolConfig
   #client: PostgresQueryable
+  #maintenanceDatabase: string
+  #template: string
   #transactions = new Map<string, TransactionState>()
   #transactionCounter = 0
 
-  constructor(client: PostgresQueryable) {
-    this.#client = client
+  constructor(config: PostgresPoolConfig | PostgresQueryable, options: PostgresAdapterOptions = {}) {
+    if (isPostgresQueryable(config)) {
+      this.#client = config
+    } else {
+      this.#config = config
+      this.#client = new pg.Pool(config)
+    }
+
+    this.#maintenanceDatabase = options.maintenanceDatabase ?? 'postgres'
+    this.#template = options.template ?? 'template0'
     this.capabilities = {
       returning: true,
       savepoints: true,
@@ -259,6 +275,45 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
    * Acquires the postgres migration lock.
    * @returns A promise that resolves when the lock is acquired.
    */
+  async create(): Promise<void> {
+    let config = this.#configOrThrow('create')
+    let database = resolvePostgresDatabaseName(config)
+    let maintenance = new pg.Client(this.#maintenanceConfig())
+    await maintenance.connect()
+
+    try {
+      let result = await maintenance.query('select 1 from pg_database where datname = $1', [database])
+
+      if (result.rowCount === 0) {
+        await maintenance.query(
+          'create database ' + quoteIdentifier(database) + ' template ' + quoteIdentifier(this.#template),
+        )
+      }
+    } finally {
+      await maintenance.end()
+    }
+
+    await this.#replacePool()
+  }
+
+  async drop(): Promise<void> {
+    let config = this.#configOrThrow('drop')
+    let database = resolvePostgresDatabaseName(config)
+    await this.#closePool()
+    let maintenance = new pg.Client(this.#maintenanceConfig())
+    await maintenance.connect()
+
+    try {
+      await maintenance.query(
+        'select pg_terminate_backend(pid) from pg_stat_activity where datname = $1 and pid <> pg_backend_pid()',
+        [database],
+      )
+      await maintenance.query('drop database if exists ' + quoteIdentifier(database))
+    } finally {
+      await maintenance.end()
+    }
+  }
+
   async acquireMigrationLock(): Promise<void> {
     await this.#client.query('select pg_advisory_lock(hashtext($1))', ['data_table_migrations'])
   }
@@ -269,6 +324,32 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
    */
   async releaseMigrationLock(): Promise<void> {
     await this.#client.query('select pg_advisory_unlock(hashtext($1))', ['data_table_migrations'])
+  }
+
+  async #closePool(): Promise<void> {
+    this.#transactions.clear()
+    if (isPostgresPool(this.#client)) {
+      await this.#client.end()
+    }
+  }
+
+  #configOrThrow(method: string): PostgresPoolConfig {
+    if (!this.#config) {
+      throw new Error('Postgres adapter ' + method + '() requires config-based construction')
+    }
+
+    return this.#config
+  }
+
+  #maintenanceConfig(): PostgresClientConfig {
+    return { ...this.#configOrThrow('maintenance'), database: this.#maintenanceDatabase }
+  }
+
+  async #replacePool(): Promise<void> {
+    await this.#closePool().catch(() => undefined)
+    if (this.#config) {
+      this.#client = new pg.Pool(this.#config)
+    }
   }
 
   #resolveClient(token: TransactionToken | undefined): PostgresQueryable {
@@ -297,21 +378,50 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
  * @returns A configured postgres adapter.
  * @example
  * ```ts
- * import { Pool } from 'pg'
  * import { createDatabase } from 'remix/data-table'
  * import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
  *
- * let pool = new Pool({ connectionString: process.env.DATABASE_URL })
- * let adapter = createPostgresDatabaseAdapter(pool)
+ * let adapter = createPostgresDatabaseAdapter({ connectionString: process.env.DATABASE_URL })
  * let db = createDatabase(adapter)
  * ```
  */
-export function createPostgresDatabaseAdapter(client: PostgresQueryable): PostgresDatabaseAdapter {
-  return new PostgresDatabaseAdapter(client)
+export function createPostgresDatabaseAdapter(
+  config: PostgresPoolConfig,
+  options?: PostgresAdapterOptions,
+): PostgresDatabaseAdapter {
+  return new PostgresDatabaseAdapter(config, options)
+}
+
+function isPostgresQueryable(value: unknown): value is PostgresQueryable {
+  return typeof value === 'object' && value !== null && 'query' in value
 }
 
 function isPostgresPool(client: PostgresQueryable): client is PostgresPool {
   return 'connect' in client && typeof client.connect === 'function'
+}
+
+function resolvePostgresDatabaseName(config: PostgresPoolConfig): string {
+  let database = config?.database ?? resolveDatabaseNameFromConnectionString(config?.connectionString)
+
+  if (database) {
+    return database
+  }
+
+  return process.env.PGDATABASE ?? 'postgres'
+}
+
+function resolveDatabaseNameFromConnectionString(connectionString: string | undefined): string | undefined {
+  if (!connectionString) {
+    return undefined
+  }
+
+  try {
+    let url = new URL(connectionString)
+    let database = decodeURIComponent(url.pathname.replace(/^\//, ''))
+    return database || undefined
+  } catch {
+    return undefined
+  }
 }
 
 function releasePostgresClient(client: PostgresClient | PostgresPoolClient): void {

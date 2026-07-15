@@ -31,7 +31,7 @@ describe('mysql adapter integration', { skip: typeof DATABASE_URL !== 'string' }
   })
 
   runAdapterIntegrationContract({
-    createDatabase: () => createDatabase(createMysqlDatabaseAdapter(pool)),
+    createDatabase: () => createDatabase(createMysqlDatabaseAdapter(DATABASE_URL!)),
     resetDatabase: async () => {
       await resetAdapterIntegrationSchema(async (statement) => {
         await pool.query(statement)

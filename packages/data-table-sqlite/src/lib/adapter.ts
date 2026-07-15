@@ -1,3 +1,6 @@
+import { dirname } from 'node:path'
+import { mkdir, rm } from 'node:fs/promises'
+
 import type {
   DataManipulationRequest,
   DataManipulationResult,
@@ -21,6 +24,21 @@ import { compileSqliteOperation } from './sql-compiler.ts'
 export interface SqliteDatabase {
   prepare(sql: string): SqliteStatement
   exec(sql: string): unknown
+  close?: () => void
+}
+
+type SqliteDatabaseConstructor = {
+  new (path: string): SqliteDatabase
+}
+
+const SqliteDatabaseConstructor: SqliteDatabaseConstructor =
+  'Bun' in globalThis
+    ? // @ts-expect-error TypeScript does not resolve Bun built-in modules in this repo yet.
+      (await import('bun:sqlite')).Database
+    : (await import('node:sqlite')).DatabaseSync
+
+type SqliteAdapterConfig = {
+  filename: string
 }
 
 /**
@@ -57,12 +75,18 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    */
   capabilities
 
+  #config?: SqliteAdapterConfig
   #database: SqliteDatabase
   #transactions = new Set<string>()
   #transactionCounter = 0
 
-  constructor(database: SqliteDatabase) {
-    this.#database = database
+  constructor(input: SqliteDatabase | SqliteAdapterConfig) {
+    if (isSqliteAdapterConfig(input)) {
+      this.#config = input
+      this.#database = new SqliteDatabaseConstructor(input.filename)
+    } else {
+      this.#database = input
+    }
     this.capabilities = {
       returning: true,
       savepoints: true,
@@ -191,6 +215,29 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    * @param options Transaction options.
    * @returns Transaction token.
    */
+  async create(): Promise<void> {
+    if (!this.#config) {
+      return
+    }
+
+    await mkdir(dirname(this.#config.filename), { recursive: true })
+    let database = new SqliteDatabaseConstructor(this.#config.filename)
+    database.close?.()
+    this.#replaceDatabase()
+  }
+
+  async drop(): Promise<void> {
+    this.#transactions.clear()
+    this.#database.close?.()
+
+    if (!this.#config) {
+      return
+    }
+
+    await rm(this.#config.filename, { force: true })
+    this.#replaceDatabase()
+  }
+
   async beginTransaction(options?: TransactionOptions): Promise<TransactionToken> {
     if (options?.isolationLevel === 'read uncommitted') {
       this.#database.exec('pragma read_uncommitted = true')
@@ -260,6 +307,12 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     this.#database.exec('release savepoint ' + quoteIdentifier(name))
   }
 
+  #replaceDatabase(): void {
+    if (this.#config) {
+      this.#database = new SqliteDatabaseConstructor(this.#config.filename)
+    }
+  }
+
   #assertTransaction(token: TransactionToken): void {
     if (!this.#transactions.has(token.id)) {
       throw new Error('Unknown transaction token: ' + token.id)
@@ -273,17 +326,19 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
  * @returns A configured sqlite adapter.
  * @example
  * ```ts
- * import { DatabaseSync } from 'node:sqlite'
  * import { createDatabase } from 'remix/data-table'
  * import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
  *
- * let sqlite = new DatabaseSync('./data/app.db')
- * let adapter = createSqliteDatabaseAdapter(sqlite)
+ * let adapter = createSqliteDatabaseAdapter({ filename: './data/app.db' })
  * let db = createDatabase(adapter)
  * ```
  */
-export function createSqliteDatabaseAdapter(database: SqliteDatabase): SqliteDatabaseAdapter {
-  return new SqliteDatabaseAdapter(database)
+export function createSqliteDatabaseAdapter(input: SqliteAdapterConfig): SqliteDatabaseAdapter {
+  return new SqliteDatabaseAdapter(input)
+}
+
+function isSqliteAdapterConfig(input: SqliteDatabase | SqliteAdapterConfig): input is SqliteAdapterConfig {
+  return 'filename' in input && typeof input.filename === 'string'
 }
 
 function normalizeRows(rows: unknown[]): Record<string, unknown>[] {
