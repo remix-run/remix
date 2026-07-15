@@ -1,9 +1,11 @@
 import type { Handle, RemixNode } from 'remix/ui'
 
 import type { DemoDocFile } from './demos.tsx'
+import type { MarkdownHeading } from './markdown.ts'
 import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
 import { routes } from './routes.ts'
+import { TableOfContents } from './table-of-contents.tsx'
 
 export type Versions = string[]
 
@@ -15,13 +17,25 @@ export function Document(
     registry: DocsRegistry
     children?: RemixNode | RemixNode[]
     sourceUrl?: string
+    headings?: MarkdownHeading[]
     entryHref: string
     entryPreloads: readonly string[]
+    tableOfContentsEntryHref: string
   }>,
 ) {
   return () => {
-    let { registry, versions, activeVersion, slug, sourceUrl, children, entryHref, entryPreloads } =
-      handle.props
+    let {
+      registry,
+      versions,
+      activeVersion,
+      slug,
+      sourceUrl,
+      headings,
+      children,
+      entryHref,
+      entryPreloads,
+      tableOfContentsEntryHref,
+    } = handle.props
     let page = slug
       ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug, activeVersion))
       : getHomePage(registry)
@@ -45,7 +59,12 @@ export function Document(
             versions={versions}
             activeVersion={activeVersion}
           />
-          <MainContent page={page} header={<PageHeader page={page} sourceUrl={sourceUrl} />}>
+          <MainContent
+            page={page}
+            headings={headings}
+            tableOfContentsEntryHref={tableOfContentsEntryHref}
+            header={<PageHeader page={page} sourceUrl={sourceUrl} />}
+          >
             {children}
           </MainContent>
           <SiteFooter />
@@ -240,22 +259,37 @@ function PrimaryNavigationLinks(handle: Handle<{ activeVersion?: string }>) {
 function MainContent(
   handle: Handle<{
     page: PageDefinition
+    headings?: MarkdownHeading[]
+    tableOfContentsEntryHref: string
     header?: RemixNode
     children: RemixNode | RemixNode[]
   }>,
 ) {
-  return () => (
-    <main id="main-content" class="docs-main" tabIndex={-1} data-pagefind-body>
-      <div class="docs-layout">
-        <article class="docs-article">
-          <div class="api-page-content rmx-page-body" mix={handle.props.page.css}>
-            {handle.props.header}
-            {handle.props.children}
-          </div>
-        </article>
-      </div>
-    </main>
-  )
+  return () => {
+    let headings = handle.props.headings ?? []
+
+    return (
+      <main id="main-content" class="docs-main" tabIndex={-1} data-pagefind-body>
+        <div class="docs-layout">
+          <article class="docs-article">
+            <div class="api-page-content rmx-page-body" mix={handle.props.page.css}>
+              {handle.props.header}
+              {handle.props.children}
+            </div>
+          </article>
+          {headings.length > 0 ? (
+            <aside class="docs-aside">
+              <h2 class="docs-toc__heading">On this page</h2>
+              <TableOfContents
+                headings={headings}
+                behaviorEntryHref={handle.props.tableOfContentsEntryHref}
+              />
+            </aside>
+          ) : null}
+        </div>
+      </main>
+    )
+  }
 }
 
 export function Home() {

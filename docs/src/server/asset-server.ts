@@ -5,6 +5,12 @@ import type { AssetServer } from 'remix/assets'
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const REPO_DIR = path.resolve(DOCS_DIR, '..')
 export const CLIENT_ENTRY_PATH = path.join(DOCS_DIR, 'src', 'client', 'entry.tsx')
+export const TABLE_OF_CONTENTS_ENTRY_PATH = path.join(
+  DOCS_DIR,
+  'src',
+  'client',
+  'table-of-contents.browser.tsx',
+)
 
 export type DocsAssetServer = AssetServer
 
