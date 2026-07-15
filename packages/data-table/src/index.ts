@@ -161,5 +161,18 @@ export type {
   WriteRowsResult,
 } from './lib/database.ts'
 export { createDatabase, Database } from './lib/database.ts'
+export type {
+  MigrateOptions,
+  MigrateResult,
+  MigrationDescriptor,
+  MigrationRegistry,
+  MigrationRunner,
+  MigrationRunnerOptions,
+  MigrationStatus,
+  MigrationStatusEntry,
+  Migrator,
+  MigratorResetOptions,
+} from './lib/migrations.ts'
+export { createMigrator, createMigrationRunner } from './lib/migrations/runner.ts'
 export type { AnyQuery } from './lib/query.ts'
 export { Query, query } from './lib/query.ts'

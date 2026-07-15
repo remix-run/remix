@@ -121,3 +121,13 @@ export type MigrationRunner = {
   down(options?: MigrateOptions): Promise<MigrateResult>
   status(): Promise<MigrationStatusEntry[]>
 }
+
+export type MigratorResetOptions = {
+  seed?: (db: import('./database.ts').Database) => Promise<void>
+}
+
+export type Migrator = {
+  migrate(db: import('./database.ts').Database, options?: { to?: string }): Promise<MigrateResult>
+  reset(db: import('./database.ts').Database, options?: MigratorResetOptions): Promise<void>
+  status(db: import('./database.ts').Database): Promise<MigrationStatusEntry[]>
+}

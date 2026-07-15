@@ -326,6 +326,10 @@ export interface DatabaseAdapter {
   rollbackToSavepoint(token: TransactionToken, name: string): Promise<void>
   /** Releases a previously created savepoint. */
   releaseSavepoint(token: TransactionToken, name: string): Promise<void>
+  /** Creates the configured database when supported. */
+  create?(): Promise<void>
+  /** Drops the configured database when supported. */
+  drop?(): Promise<void>
   /** Acquires the adapter's migration lock when supported. */
   acquireMigrationLock?(): Promise<void>
   /** Releases the adapter's migration lock when supported. */

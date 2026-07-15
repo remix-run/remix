@@ -371,6 +371,14 @@ export class Database implements QueryExecutionContext {
     return this.#adapter
   }
 
+  async drop(): Promise<void> {
+    if (!this.#adapter.drop) {
+      throw new DataTableQueryError('Database adapter does not support drop()')
+    }
+
+    await this.#adapter.drop()
+  }
+
   now(): unknown {
     return this.#now()
   }
@@ -397,6 +405,7 @@ export class Database implements QueryExecutionContext {
     >
   }
 
+  create(): Promise<void>
   create<table extends AnyTable>(
     table: table,
     values: Partial<TableRow<table>>,
@@ -411,10 +420,23 @@ export class Database implements QueryExecutionContext {
     table extends AnyTable,
     relations extends RelationMapForSourceName<TableName<table>> = {},
   >(
-    table: table,
-    values: Partial<TableRow<table>>,
+    table?: table,
+    values?: Partial<TableRow<table>>,
     options?: CreateResultOptions | CreateRowOptions<table, relations>,
-  ): Promise<WriteResult | TableRowWith<table, LoadedRelationMap<relations>>> {
+  ): Promise<void | WriteResult | TableRowWith<table, LoadedRelationMap<relations>>> {
+    if (table === undefined) {
+      if (!this.#adapter.create) {
+        throw new DataTableQueryError('Database adapter does not support create()')
+      }
+
+      await this.#adapter.create()
+      return
+    }
+
+    if (values === undefined) {
+      throw new DataTableQueryError('create(table, values) requires values')
+    }
+
     let touch = options?.touch
     let query: QueryForTable<table> = this.query(asQueryTableInput(table))
 
