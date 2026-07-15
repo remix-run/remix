@@ -759,6 +759,9 @@ importers:
       '@remix-run/assert':
         specifier: workspace:*
         version: link:../assert
+      '@remix-run/response':
+        specifier: workspace:*
+        version: link:../response
       '@remix-run/test':
         specifier: workspace:*
         version: link:../test
@@ -768,6 +771,9 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
+      undici:
+        specifier: ^7.24.8
+        version: 7.24.8
 
   packages/fetch-router:
     dependencies:
