@@ -36,7 +36,7 @@
     "@remix-run/fetch-router": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
-    "typescript": "^5.9.3"
+    "typescript": "catalog:"
   },
   "dependencies": {
     "@remix-run/assets": "workspace:^",

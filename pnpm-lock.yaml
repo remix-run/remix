@@ -1501,7 +1501,7 @@ importers:
         specifier: 'catalog:'
         version: 24.10.4
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/response:
@@ -1862,7 +1862,7 @@ importers:
         specifier: 'catalog:'
         version: 1.60.0
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/ui/demo:
