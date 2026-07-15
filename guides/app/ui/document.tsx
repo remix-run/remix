@@ -14,7 +14,8 @@ const DEFAULT_TITLE = 'Remix Docs'
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
     let { children, head, title = DEFAULT_TITLE, description } = handle.props
-    let { scriptSrc, scriptPreloads, stylesheetHref, devRefreshScriptSrc } = getAssetEntry()
+    let { scriptSrc, scriptPreloads, stylesheetHref, stylesheetPreloads, devRefreshScriptSrc } =
+      getAssetEntry()
 
     return (
       <html lang="en">
@@ -27,6 +28,9 @@ export function Document(handle: Handle<DocumentProps>) {
           <link rel="stylesheet" href={stylesheetHref} />
           {scriptPreloads.map((href) => (
             <link key={href} rel="modulepreload" href={href} />
+          ))}
+          {stylesheetPreloads.map((href) => (
+            <link key={href} rel="preload" href={href} as="style" />
           ))}
           <title>{title}</title>
           <script type="module" src="/assets/pagefind/pagefind-component-ui.js"></script>
