@@ -43,7 +43,6 @@ This is the changelog for [`ui`](https://github.com/remix-run/remix/tree/main/pa
 
   BREAKING CHANGE: Removed root helper exports that were only intended for first-party
   component internals:
-
   - `flashAttribute`
   - `hiddenTypeahead`
   - `matchNextItemBySearchText`

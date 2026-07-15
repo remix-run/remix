@@ -7,7 +7,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
 ### Pre-release Changes
 
 - Added `package.json` `exports`:
-
   - `remix/ui/accordion` to re-export APIs from `@remix-run/ui/accordion`
   - `remix/ui/accordion/primitives` to re-export APIs from `@remix-run/ui/accordion/primitives`
   - `remix/ui/anchor` to re-export APIs from `@remix-run/ui/anchor`
@@ -30,7 +29,6 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   - `remix/ui/toggle/primitives` to re-export APIs from `@remix-run/ui/toggle/primitives`
 
   Removed helper re-exports from `remix/ui`:
-
   - `flashAttribute`
   - `hiddenTypeahead`
   - `matchNextItemBySearchText`
@@ -40,13 +38,11 @@ This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main
   - `waitForCssTransition`
 
   Updated `remix/route-pattern` exports for the `RoutePattern` API:
-
   - Added `getRoutePatternCaptures`, `RoutePatternCapture`, and `RoutePatternJSON` to `remix/route-pattern`
   - Added `CreateHrefErrorDetails` to `remix/route-pattern/href`
   - Added `MatchParamMeta` to `remix/route-pattern/match`
 
   Removed `package.json` `exports`:
-
   - `remix/components/accordion`
   - `remix/components/accordion/primitives`
   - `remix/components/anchor`
