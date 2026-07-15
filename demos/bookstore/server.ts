@@ -27,7 +27,7 @@ const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 44100
 const originPort = process.env.ORIGIN_PORT ? parseInt(process.env.ORIGIN_PORT, 10) : null
 
 server.listen(port, () => {
-  if (isDevelopment) {
+  if (isDevelopment && process.env.NODE_HMR) {
     import('remix/node-hmr/runtime').then((nodeHmr) => nodeHmr.emitServerReady())
   }
 
