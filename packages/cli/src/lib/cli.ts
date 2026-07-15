@@ -103,6 +103,11 @@ async function runCommand(command: string, argv: string[], context: CliContext):
     return runDoctorCommand(argv, context)
   }
 
+  if (command === 'db') {
+    let { runDbCommand } = await import('./commands/db.ts')
+    return runDbCommand(argv, context)
+  }
+
   if (command === 'routes') {
     let { runRoutesCommand } = await import('./commands/routes.ts')
     return runRoutesCommand(argv, context)
