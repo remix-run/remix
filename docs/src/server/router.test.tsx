@@ -39,6 +39,25 @@ describe('createRouter()', () => {
     assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), false)
   })
 
+  it('loads docs styles after Pagefind styles so theme overrides win', async (t) => {
+    let assetServer = createAssetServer()
+    t.after(() => assetServer.close())
+    let router = createRouter({
+      assetServer,
+      docsContext: await getTestDocsContext(assetServer),
+      versions: ['v1.2.3'],
+    })
+
+    let response = await router.fetch(new Request('http://localhost/'))
+    assert.equal(response.status, 200)
+    let html = await response.text()
+    let pagefindStylesIndex = html.indexOf('href="/assets/pagefind/pagefind-component-ui.css"')
+    let docsStylesIndex = html.indexOf('href="/docs.css"')
+
+    assert.equal(pagefindStylesIndex >= 0, true)
+    assert.equal(docsStylesIndex > pagefindStylesIndex, true)
+  })
+
   it('uses versioned asset URLs when an asset version is configured', async (t) => {
     let assetServer = createAssetServer('v1.2.3')
     t.after(() => assetServer.close())

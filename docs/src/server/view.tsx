@@ -98,6 +98,14 @@ function Head(
         {page.description ? <meta name="description" content={page.description} /> : null}
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
+        {/* Keep Pagefind first so the docs theme can override its component defaults. */}
+        <link
+          href={routes.assets.href({
+            version: activeVersion,
+            asset: 'pagefind/pagefind-component-ui.css',
+          })}
+          rel="stylesheet"
+        />
         <link rel="stylesheet" href="/docs.css" />
         {activeVersion != null ? (
           <>
@@ -127,13 +135,6 @@ function Head(
           <link key={href} rel="modulepreload" href={href} />
         ))}
         <script type="module" src={entryHref} />
-        <link
-          href={routes.assets.href({
-            version: activeVersion,
-            asset: 'pagefind/pagefind-component-ui.css',
-          })}
-          rel="stylesheet"
-        />
         <script
           src={routes.assets.href({
             version: activeVersion,
