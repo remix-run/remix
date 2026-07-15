@@ -15,8 +15,9 @@ This repository includes the source code for Remix 3, a web framework for buildi
 - **Fast local loop**: `pnpm run validate-package-meta`, `pnpm run lint`, `pnpm run test:changed`, `pnpm run typecheck:changed`
 - **Full CI-style validation**: `pnpm test` and `pnpm run typecheck`
 - **When to use full runs locally**: broad cross-workspace changes, shared root config changes, release/publish flow changes, or anything that could affect the whole repo
-- **Single package commands**: `pnpm --filter @remix-run/<package> run test`, `pnpm --filter @remix-run/<package> run typecheck`, `pnpm --filter @remix-run/<package> run build`
-- **Single test file**: `cd packages/<package> && pnpm test src/**/<filename>.test.ts`
+- **Single package commands**: `pnpm --filter @remix-run/<package> run test --quiet`, `pnpm --filter @remix-run/<package> run typecheck`, `pnpm --filter @remix-run/<package> run build`
+- **Single test file**: `cd packages/<package> && pnpm test --quiet src/**/<filename>.test.ts`
+- **Scoped test names**: add `--only '<suite-or-test-regex>'` to focus tests by full suite/test name without editing source, for example `pnpm test --quiet --only 'loader redirects'`
 - **Lint**: `pnpm run lint` or `pnpm run lint:fix`
 - **Format**: `pnpm run format` or `pnpm run format:check`
 
@@ -58,7 +59,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 For work on this repository itself, use the skills in `.agents/skills/`:
 
 - `add-package` at `.agents/skills/add-package/SKILL.md`: Create or align a package under `packages/` with repo conventions.
-- `author-ui-modules` at `.agents/skills/author-ui-modules/SKILL.md`: Build idiomatic `packages/ui` modules, including first-party UI primitives, headless controls, and mixin-based modules.
+- `author-ui-components` at `.agents/skills/author-ui-components/SKILL.md`: Build idiomatic `packages/ui` components, including first-party UI style mixins, headless primitives, styled component wrappers, and shared component utilities.
 - `fix-issue` at `.agents/skills/fix-issue/SKILL.md`: Fix bugs reported in GitHub issues.
 - `make-changes` at `.agents/skills/make-changes/SKILL.md`: Create or update package change files under `packages/*/.changes`.
 - `make-decision-doc` at `.agents/skills/make-decision-doc/SKILL.md`: Add a numbered decision document under `decisions/` capturing a non-obvious architectural choice.
