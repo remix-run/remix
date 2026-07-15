@@ -12,8 +12,12 @@ import {
   createStaticAssetHrefMap,
   getAssetOutputPath,
   getPageOutputPath,
+  normalizeBasePath,
   resetOutputDir,
   rewriteAssetHrefs,
+  rewriteRemixDataHrefs,
+  rewriteSiteHrefsInCss,
+  rewriteSiteHrefsInHtml,
 } from './prerender-utils.ts'
 
 const guidesDir = path.resolve(import.meta.dirname, '..')
@@ -40,10 +44,15 @@ const { values: cliArgs } = util.parseArgs({
       short: 'd',
       default: defaultOutputDir,
     },
+    'base-path': {
+      type: 'string',
+      default: process.env.REMIX_GUIDES_BASE_PATH ?? '',
+    },
   },
 })
 
 const outputDir = path.resolve(guidesDir, cliArgs.dir)
+const basePath = normalizeBasePath(cliArgs['base-path'])
 
 try {
   await prerender()
@@ -61,7 +70,7 @@ async function prerender() {
   ])
   let stylesheet = path.join(guidesDir, 'app', 'styles', 'docs.css')
   let assetHrefs = await assetServer.getPreloads([...browserEntries, stylesheet])
-  let hrefMap = createStaticAssetHrefMap(assetHrefs)
+  let hrefMap = createStaticAssetHrefMap(assetHrefs, basePath)
 
   console.log(
     `Prerendering ${documentPaths.length + framePaths.length} pages and ${assetHrefs.length} assets to ${
@@ -80,7 +89,7 @@ async function prerender() {
       throw new Error(`Missing static href for asset: ${href}`)
     }
 
-    let outputPath = getAssetOutputPath(outputDir, staticHref)
+    let outputPath = getAssetOutputPath(outputDir, staticHref, basePath)
     let existingHref = writtenAssetPaths.get(outputPath)
     if (existingHref !== undefined && existingHref !== href) {
       throw new Error(`Asset output collision between ${existingHref} and ${href}: ${outputPath}`)
@@ -141,6 +150,8 @@ async function writePage(pathname: string, hrefMap: ReadonlyMap<string, string>)
 
   let outputPath = getPageOutputPath(outputDir, pathname)
   let html = rewriteAssetHrefs(await response.text(), hrefMap)
+  html = rewriteSiteHrefsInHtml(html, basePath)
+  html = rewriteRemixDataHrefs(html, basePath)
   await fs.mkdir(path.dirname(outputPath), { recursive: true })
   await fs.writeFile(outputPath, html, 'utf8')
   console.log(`Prerendered ${pathname} -> ${relativeOutputPath(outputPath)}`)
@@ -158,6 +169,9 @@ async function writeAsset(
 
   if (textContentTypes.some((type) => contentType.includes(type))) {
     let content = rewriteAssetHrefs(await response.text(), hrefMap)
+    if (contentType.includes('text/css')) {
+      content = rewriteSiteHrefsInCss(content, basePath)
+    }
     await fs.writeFile(outputPath, content, 'utf8')
   } else {
     await fs.writeFile(outputPath, new Uint8Array(await response.arrayBuffer()))

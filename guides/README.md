@@ -158,4 +158,10 @@ Pass `--dir` to write into another directory:
 pnpm --filter remix-guides run prerender --dir ../../remix-guides-site
 ```
 
-The output directory is cleared before each build so removed chapters and outdated fingerprinted assets cannot survive into the next Pagefind index or deployment.
+Sites hosted beneath a URL prefix can pass `--base-path` or set `REMIX_GUIDES_BASE_PATH`:
+
+```sh
+pnpm --filter remix-guides run prerender --base-path /remix-guides-docs
+```
+
+The base path is applied to generated site URLs without changing the output directory layout. The output directory is cleared before each build so removed chapters and outdated fingerprinted assets cannot survive into the next Pagefind index or deployment.
