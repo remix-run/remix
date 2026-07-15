@@ -7,8 +7,8 @@ import {
   loginAsAdmin,
   requestWithSession,
 } from '../../test/helpers.ts'
+import { db } from '../db.ts'
 import { books } from '../data/schema.ts'
-import { db } from '../data/setup.ts'
 import { uploadsStorage as uploads } from '../utils/uploads.ts'
 
 const router = await createTestRouter()

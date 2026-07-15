@@ -2,9 +2,6 @@ import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 
 import { createBookstoreRouter } from './app/router.ts'
-import { initializeBookstoreDatabase } from './app/data/setup.ts'
-
-await initializeBookstoreDatabase()
 
 const router = createBookstoreRouter()
 
