@@ -33,7 +33,13 @@ const FRAME_REQUEST_HEADERS_TO_REMOVE = [
   'Transfer-Encoding',
   'Upgrade',
 ] as const
-const CREDENTIAL_HEADERS = ['Authorization', 'Cookie', 'Proxy-Authorization'] as const
+const CROSS_ORIGIN_FRAME_HEADERS = [
+  'Accept',
+  'Accept-Encoding',
+  FRAME_HEADER,
+  FRAME_TARGET_HEADER,
+  TOP_FRAME_SRC_HEADER,
+] as const
 
 /** Options for the standard Remix UI renderer. */
 export interface RenderOptions {
@@ -141,7 +147,7 @@ async function followFrameRedirects(
 
   for (let redirectCount = 0; redirectCount <= MAX_FRAME_REDIRECTS; redirectCount++) {
     if (url.origin !== context.url.origin) {
-      for (let name of CREDENTIAL_HEADERS) headers.delete(name)
+      headers = createCrossOriginFrameHeaders(headers)
     }
 
     let response = await context.router.fetch(
@@ -167,6 +173,17 @@ async function followFrameRedirects(
   throw new Error(`Too many frame redirects while resolving ${initialUrl.href}`)
 }
 
+function createCrossOriginFrameHeaders(headers: Headers): Headers {
+  let crossOriginHeaders = new Headers()
+
+  for (let name of CROSS_ORIGIN_FRAME_HEADERS) {
+    let value = headers.get(name)
+    if (value != null) crossOriginHeaders.set(name, value)
+  }
+
+  return crossOriginHeaders
+}
+
 async function resolveClientEntry(
   assets: Pick<AssetServer, 'getHref'>,
   entryId: string,
@@ -184,7 +201,7 @@ async function resolveClientEntry(
   }
 
   return {
-    href: await assets.getHref(sourceId),
+    href: sourceId.startsWith('file:') ? await assets.getHref(sourceId) : sourceId,
     exportName,
   }
 }

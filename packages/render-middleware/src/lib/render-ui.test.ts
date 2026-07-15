@@ -130,7 +130,12 @@ describe('render', () => {
 
     let response = await router.fetch(
       new Request('https://remix.run/redirect-frame', {
-        headers: { Authorization: 'Bearer secret', Cookie: 'session=abc' },
+        headers: {
+          Authorization: 'Bearer secret',
+          Cookie: 'session=abc',
+          'X-Api-Key': 'api-secret',
+          'X-Session-Token': 'session-secret',
+        },
       }),
     )
     let html = await response.text()
@@ -142,6 +147,8 @@ describe('render', () => {
     assert.match(html, /<span>Cross origin<\/span>/)
     assert.equal(crossOriginHeaders?.get('Authorization'), null)
     assert.equal(crossOriginHeaders?.get('Cookie'), null)
+    assert.equal(crossOriginHeaders?.get('X-Api-Key'), null)
+    assert.equal(crossOriginHeaders?.get('X-Session-Token'), null)
   })
 
   it('resolves source client entries through the asset server', async () => {
@@ -160,9 +167,24 @@ describe('render', () => {
     let NamedEntry = clientEntry('file:///app/named-entry.ts', function NamedEntry() {
       return () => createElement('p', {}, 'Named')
     })
+    let PublicEntry = clientEntry('/public/widget.js#PublicEntry', function () {
+      return () => createElement('p', {}, 'Public')
+    })
+    let CdnEntry = clientEntry('https://cdn.example/widget.js#CdnEntry', function () {
+      return () => createElement('p', {}, 'CDN')
+    })
 
     router.get('/', (context) =>
-      context.render(createElement('main', {}, createElement(Counter), createElement(NamedEntry))),
+      context.render(
+        createElement(
+          'main',
+          {},
+          createElement(Counter),
+          createElement(NamedEntry),
+          createElement(PublicEntry),
+          createElement(CdnEntry),
+        ),
+      ),
     )
 
     let response = await router.fetch('https://remix.run/')
@@ -172,6 +194,8 @@ describe('render', () => {
     assert.match(html, /\/assets\/counter-123\.js/)
     assert.match(html, /"exportName":"Counter"/)
     assert.match(html, /"exportName":"NamedEntry"/)
+    assert.match(html, /\/public\/widget\.js/)
+    assert.match(html, /https:\/\/cdn\.example\/widget\.js/)
   })
 
   it('uses the UI renderer client entry rules when no asset server is configured', async () => {
