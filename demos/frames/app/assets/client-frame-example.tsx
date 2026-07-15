@@ -1,7 +1,7 @@
 import { clientEntry, Frame, css, on, type Handle } from 'remix/ui'
 
 export const ClientFrameExample = clientEntry(
-  '/assets/client-frame-example.js#ClientFrameExample',
+  import.meta.url,
   function ClientFrameExample(handle: Handle) {
     let mounted = false
 

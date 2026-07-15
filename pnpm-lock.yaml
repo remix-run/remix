@@ -104,9 +104,6 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-      esbuild:
-        specifier: ^0.25.10
-        version: 0.25.12
 
   demos/frames:
     dependencies:
@@ -123,9 +120,6 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-      esbuild:
-        specifier: ^0.25.10
-        version: 0.25.12
 
   demos/social-auth:
     dependencies:
@@ -155,9 +149,6 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-      esbuild:
-        specifier: ^0.25.10
-        version: 0.25.12
 
   demos/timeboxer:
     dependencies:
