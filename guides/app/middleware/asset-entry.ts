@@ -9,6 +9,7 @@ interface AssetEntry {
   scriptSrc: string
   scriptPreloads: string[]
   stylesheetHref: string
+  stylesheetPreloads: string[]
   devRefreshScriptSrc?: string
 }
 
@@ -23,19 +24,22 @@ export function loadAssetEntry(
   stylesheet = defaultStylesheet,
 ): Middleware<{ key: typeof assetEntryKey; value: AssetEntry }> {
   return async (context, next) => {
-    let [scriptSrc, scriptPreloads, stylesheetHref, devRefreshScriptSrc] = await Promise.all([
-      assetServer.getHref(scriptEntry),
-      assetServer.getPreloads(scriptEntry).catch(() => []),
-      assetServer.getHref(stylesheet),
-      process.env.NODE_ENV === 'production'
-        ? Promise.resolve(undefined)
-        : assetServer.getHref(devRefreshScriptEntry),
-    ])
+    let [scriptSrc, scriptPreloads, stylesheetHref, stylesheetPreloads, devRefreshScriptSrc] =
+      await Promise.all([
+        assetServer.getHref(scriptEntry),
+        assetServer.getPreloads(scriptEntry).catch(() => []),
+        assetServer.getHref(stylesheet),
+        assetServer.getPreloads(stylesheet).catch(() => []),
+        process.env.NODE_ENV === 'production'
+          ? Promise.resolve(undefined)
+          : assetServer.getHref(devRefreshScriptEntry),
+      ])
 
     context.set(assetEntryKey, {
       scriptSrc,
       scriptPreloads,
       stylesheetHref,
+      stylesheetPreloads,
       ...(devRefreshScriptSrc ? { devRefreshScriptSrc } : {}),
     })
 

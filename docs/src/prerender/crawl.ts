@@ -1,6 +1,6 @@
 import { parse } from './html-parser.ts'
 import type { HTMLElement } from './html-parser.ts'
-import type { Router } from 'remix/router'
+import type { RequestContext, Router } from 'remix/router'
 
 const BASE_URL = 'http://localhost'
 
@@ -17,8 +17,8 @@ interface CrawlOptions {
   ignorePageNofollow?: (pathname: string) => boolean
 }
 
-export async function* crawl(
-  router: Router,
+export async function* crawl<T extends RequestContext<any, any>>(
+  router: Router<T>,
   options: CrawlOptions = {},
 ): AsyncIterableIterator<CrawlResult> {
   let { paths = ['/'], spider = true, concurrency = 1, ignorePageNofollow } = options
