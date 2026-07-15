@@ -12,6 +12,9 @@ catalogs:
     '@typescript/native-preview':
       specifier: 7.0.0-dev.20251125.1
       version: 7.0.0-dev.20251125.1
+    oxfmt:
+      specifier: ^0.51.0
+      version: 0.51.0
     playwright:
       specifier: ^1.60.0
       version: 1.60.0
@@ -36,7 +39,7 @@ importers:
         specifier: ^0.121.0
         version: 0.121.0
       oxfmt:
-        specifier: ^0.51.0
+        specifier: 'catalog:'
         version: 0.51.0
       oxlint:
         specifier: ^1.57.0
@@ -197,7 +200,7 @@ importers:
         specifier: ^17.0.1
         version: 17.0.6
       oxfmt:
-        specifier: ^0.51.0
+        specifier: 'catalog:'
         version: 0.51.0
       remix:
         specifier: workspace:*
