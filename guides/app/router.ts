@@ -6,7 +6,7 @@ import { logger } from 'remix/middleware/logger'
 import { staticFiles } from 'remix/middleware/static'
 import { createRouter, type MiddlewareContext } from 'remix/router'
 
-import rootController from './actions/controller.tsx'
+import { createRootController } from './actions/controller.tsx'
 import docsController from './actions/docs/controller.tsx'
 import docsExamplesController from './actions/docs/examples/controller.tsx'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
@@ -25,7 +25,7 @@ declare module 'remix/router' {
 
 const publicDir = path.resolve(import.meta.dirname, '../public')
 
-export function createGuidesRouter() {
+export function createGuidesRouter(options: { pagefindAssetsDir?: string } = {}) {
   let router = createRouter<AppContext>({
     middleware: [
       ...(process.env.NODE_ENV === 'development' ? [logger()] : []),
@@ -37,7 +37,7 @@ export function createGuidesRouter() {
     ],
   })
 
-  router.map(routes, rootController)
+  router.map(routes, createRootController(options.pagefindAssetsDir))
   router.map(routes.docs, docsController)
   router.map(routes.docs.examples, docsExamplesController)
 

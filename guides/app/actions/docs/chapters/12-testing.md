@@ -398,4 +398,4 @@ npm test -- --config remix-test.ci.config.ts
 npm run typecheck
 ```
 
-Keep type checking as a separate command. The test runner executes TypeScript, but it does not replace the compiler's project-wide checks. The next chapter, [CLI and Tooling](/docs/cli-and-tooling), covers the `remix test` flags alongside the rest of the Remix command-line workflow.
+Keep type checking as a separate command. The test runner executes TypeScript, but it does not replace the compiler's project-wide checks. The next chapter, [CLI and Tooling](/cli-and-tooling/), covers the `remix test` flags alongside the rest of the Remix command-line workflow.

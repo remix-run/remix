@@ -8,7 +8,7 @@ import type { DocsChapterSummary } from './markdown-chapters.tsx'
 const chapter: DocsChapterSummary = {
   order: 2,
   slug: 'routing-and-controllers',
-  href: '/docs/routing-and-controllers',
+  href: '/routing-and-controllers/',
   chapter: 'Chapter 2',
   title: 'Routing and Controllers',
   description: 'Route requests through Remix.',
@@ -19,7 +19,6 @@ const chapter: DocsChapterSummary = {
       titleHtml: 'Routes as the URL contract',
     },
   ],
-  mtime: 1,
 }
 
 describe('ChapterCard', () => {
@@ -33,7 +32,7 @@ describe('ChapterCard', () => {
     let html = await renderToString(<ChapterCard chapter={chapter} />)
 
     assert.equal(html.match(/<span>Routes as the URL contract<\/span>/g)?.length, 2)
-    assert.doesNotMatch(html, /href="\/docs\/routing-and-controllers#route-contract"/)
+    assert.doesNotMatch(html, /href="\/routing-and-controllers\/#route-contract"/)
     assert.match(
       html,
       /<ul aria-hidden="true" class="chapter-card__links chapter-card__links--clone">/,

@@ -23,15 +23,23 @@ export function Document(handle: Handle<DocumentProps>) {
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           {description ? <meta name="description" content={description} /> : null}
           <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+          <link rel="stylesheet" href="/assets/pagefind/pagefind-component-ui.css" />
           <link rel="stylesheet" href={stylesheetHref} />
           {scriptPreloads.map((href) => (
             <link key={href} rel="modulepreload" href={href} />
           ))}
           <title>{title}</title>
+          <script type="module" src="/assets/pagefind/pagefind-component-ui.js"></script>
           {head}
         </head>
         <body>
           {children}
+          <pagefind-config base-url="/" bundle-path="/assets/pagefind/"></pagefind-config>
+          <pagefind-modal
+            data-key="pagefind-modal"
+            rmx-preserve-dom
+            reset-on-close
+          ></pagefind-modal>
           {devRefreshScriptSrc ? <script type="module" src={devRefreshScriptSrc}></script> : null}
           <script type="module" src={scriptSrc}></script>
         </body>

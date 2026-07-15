@@ -1,21 +1,13 @@
 import type { Handle } from 'remix/ui'
 
 import type { AppContext } from '../../router.ts'
-import { getDocsChapterCacheInputs, loadDocsChapterSummaries } from './markdown-chapters.tsx'
+import { loadDocsChapterSummaries } from './markdown-chapters.tsx'
 import type { DocsChapterSummary } from './markdown-chapters.tsx'
 import { DocsDocument } from './layout.tsx'
-import { docsEtag, docsResponseInit, notModifiedDocsResponse } from './cache.ts'
 
 export async function docsIndexHandler(context: AppContext) {
   let chapters = await loadDocsChapterSummaries()
-  let etag = docsEtag('index', getDocsChapterCacheInputs(chapters))
-
-  let notModified = notModifiedDocsResponse(context.request, etag)
-  if (notModified) {
-    return notModified
-  }
-
-  return context.render(<DocsIndexPage chapters={chapters} />, docsResponseInit(etag))
+  return context.render(<DocsIndexPage chapters={chapters} />)
 }
 
 type DocsIndexPageProps = {
@@ -43,7 +35,7 @@ function DocsIndexPage(handle: Handle<DocsIndexPageProps>) {
           </p>
         </header>
 
-        <ol class="docs-index__cards">
+        <ol class="docs-index__cards" data-pagefind-ignore>
           {handle.props.chapters.map((chapter) => (
             <ChapterCard key={chapter.slug} chapter={chapter} />
           ))}

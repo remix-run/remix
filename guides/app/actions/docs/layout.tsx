@@ -53,7 +53,7 @@ export function DocsDocument(handle: Handle<DocsDocumentProps>) {
           chapters={handle.props.chapters}
           currentSlug={handle.props.currentChapterSlug}
         />
-        <main id="main-content" class="docs-main" tabIndex={-1}>
+        <main id="main-content" class="docs-main" tabIndex={-1} data-pagefind-body>
           {handle.props.children}
         </main>
         <SiteFooter />
@@ -75,7 +75,7 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
       >
         <div class="docs-layout">
           <article class="docs-article">
-            <nav class="docs-breadcrumb" aria-label="Breadcrumb">
+            <nav class="docs-breadcrumb" aria-label="Breadcrumb" data-pagefind-ignore>
               <a href={routes.docs.index.href()}>Docs</a>
               <span class="docs-breadcrumb__sep" aria-hidden="true">
                 /
@@ -93,7 +93,7 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
             </div>
             <CodeBlockCopyButtons rootId={sectionsId} />
 
-            <nav aria-label="Chapter navigation" class="docs-pagination">
+            <nav aria-label="Chapter navigation" class="docs-pagination" data-pagefind-ignore>
               {handle.props.previous ? (
                 <ChapterPaginationLink
                   label="Previous"
@@ -115,7 +115,7 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
             </nav>
           </article>
 
-          <aside class="docs-aside">
+          <aside class="docs-aside" data-pagefind-ignore>
             <h2 class="docs-toc__heading">On this page</h2>
             <DocsTableOfContents headings={handle.props.sections} />
           </aside>

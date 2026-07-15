@@ -48,6 +48,8 @@ function startNavigationGuard() {
   navigation.addEventListener(
     'navigate',
     (event) => {
+      closePagefindSearch()
+
       let navigateEvent = event as Event & {
         destination?: { url?: string }
         navigationType?: string
@@ -64,6 +66,19 @@ function startNavigationGuard() {
     },
     { capture: true },
   )
+}
+
+function closePagefindSearch() {
+  let modal = document.querySelector('pagefind-modal')
+  if (modal instanceof HTMLElement && 'close' in modal && typeof modal.close === 'function') {
+    modal.close()
+  }
+
+  for (let button of document.querySelectorAll('pagefind-modal-trigger button')) {
+    if (button instanceof HTMLElement) {
+      button.blur()
+    }
+  }
 }
 
 function isSameDocumentHashUrl(href: string) {

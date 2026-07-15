@@ -76,7 +76,7 @@ async function validateFrame(frame: DocsFrame): Promise<void> {
     report(
       frame.chapterFile,
       frame.lineNumber,
-      `Frame source must be scoped to /docs/examples/${expectedChapter}/..., received: ${frame.src}`,
+      `Frame source must be scoped to /examples/${expectedChapter}/..., received: ${frame.src}`,
     )
     return
   }

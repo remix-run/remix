@@ -9,13 +9,13 @@ const chapters: DocsNavigationItem[] = [
   {
     order: 1,
     slug: 'start-here',
-    href: '/docs/start-here',
+    href: '/start-here/',
     title: 'Start Here',
   },
   {
     order: 2,
     slug: 'routing-and-controllers',
-    href: '/docs/routing-and-controllers',
+    href: '/routing-and-controllers/',
     title: 'Routing and Controllers',
   },
 ]
@@ -34,6 +34,6 @@ describe('ChapterNavigation', () => {
     )
 
     assert.equal(html.match(/aria-current="page"/g)?.length, 1)
-    assert.match(html, /href="\/docs\/routing-and-controllers" aria-current="page"/)
+    assert.match(html, /href="\/routing-and-controllers\/" aria-current="page"/)
   })
 })

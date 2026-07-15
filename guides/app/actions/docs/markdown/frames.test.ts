@@ -11,19 +11,19 @@ describe('readMarkdownFrameReferences', () => {
       '',
       'Intro paragraph.',
       '',
-      '::frame{src="/docs/examples/04-rendering-ui/button-basic"}',
+      '::frame{src="/examples/04-rendering-ui/button-basic/"}',
       '',
       'Between frames.',
       '',
-      '::frame{src="/docs/examples/05-interactivity/basic-counter"}',
+      '::frame{src="/examples/05-interactivity/basic-counter/"}',
       '',
     ].join('\n')
 
     let refs = readMarkdownFrameReferences(source)
     assert.equal(refs.length, 2)
-    assert.equal(refs[0].src, '/docs/examples/04-rendering-ui/button-basic')
+    assert.equal(refs[0].src, '/examples/04-rendering-ui/button-basic/')
     assert.equal(refs[0].lineNumber, 5)
-    assert.equal(refs[1].src, '/docs/examples/05-interactivity/basic-counter')
+    assert.equal(refs[1].src, '/examples/05-interactivity/basic-counter/')
     assert.equal(refs[1].lineNumber, 9)
   })
 

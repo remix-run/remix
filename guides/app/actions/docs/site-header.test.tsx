@@ -17,14 +17,15 @@ describe('SiteHeader', () => {
     assert.match(html, /id="site-primary-navigation"[^>]*popover="auto"/)
     assert.equal(html.match(/>Guides<\/a>/g)?.length, 2)
     assert.match(html, /href="\/icons\.svg#layout-left"/)
-    assert.equal(html.match(/href="\/icons\.svg#search"/g)?.length, 2)
+    assert.equal(html.match(/<pagefind-modal-trigger/g)?.length, 1)
   })
 
-  it('renders only the expanded search treatment to assistive technology', async () => {
+  it('renders one responsive search trigger for Pagefind focus ownership', async () => {
     let html = await renderToString(<SiteHeader />)
 
-    assert.equal(html.match(/<button[^>]*disabled/g)?.length, 2)
-    assert.match(html, /id="docs-search-compact"[^>]*aria-hidden="true"/)
+    assert.doesNotMatch(html, /<button[^>]*disabled/)
+    assert.doesNotMatch(html, /id="docs-search-compact"/)
+    assert.match(html, /id="docs-search-button"[^>]*placeholder="Search"/)
     assert.doesNotMatch(html, /id="docs-search-button"[^>]*aria-hidden/)
   })
 
