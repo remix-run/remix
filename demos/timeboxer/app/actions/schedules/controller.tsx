@@ -14,7 +14,6 @@ import {
   ScheduleDataError,
 } from '../../data/schedules.ts'
 import { routes } from '../../routes.ts'
-import { render } from '../../utils/render.tsx'
 import { createScheduleIcs } from './ics.ts'
 import { SchedulePage } from './page.tsx'
 
@@ -150,14 +149,13 @@ export const schedulesController = createController(routes.schedules, {
 
         let schedules = await listSchedules(db, authUserId(auth))
 
-        return render(
+        return context.render(
           <SchedulePage
             activeScheduleId={schedule.id}
             csrfToken={getCsrfToken(context)}
             schedule={schedule}
             schedules={schedules}
           />,
-          context.request,
         )
       } catch (error) {
         return handleScheduleError(error)

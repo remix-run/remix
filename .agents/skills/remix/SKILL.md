@@ -121,8 +121,9 @@ When code could live in multiple places:
 
 ### Response Rendering And Utilities
 
-- Treat response rendering as action-layer code: modules that return `Response`, choose HTTP status or headers, call `redirect(...)`, or call the local `render(...)` helper belong in `app/actions`
-- Keep `app/actions/render.tsx` small; it should adapt `remix/ui/server` output to `createHtmlResponse(...)`. Route-specific response assembly can live in flat action modules, but directories under `app/actions/` must still match route-map keys
+- Install `render()` from `remix/middleware/render` in the router middleware stack for normal Remix UI applications. Pass `render({ assets })` when source-based `clientEntry()` modules need browser URLs
+- Render UI responses at the action boundary with `context.render(node, init)`. Status, headers, and other response policy remain explicit in the action
+- Use `renderWith(...)`, `renderToStream(...)`, and `createHtmlResponse(...)` only when an application intentionally owns a custom renderer contract or replaces the standard UI response pipeline
 - Put pure support code in focused `app/utils/<topic>.ts` modules. Formatting, MIME classification, path parsing, sorting, and normalization should be testable without a router, request context, or `Response`, and should not import from `app/actions`, `remix/ui/server`, or `remix/response/*`
 - Do not introduce page-data intermediary shapes only to keep route-specific renderers away from `render(...)`; keep response assembly in actions and extract only the pure helpers
 
@@ -243,7 +244,7 @@ Use this map to find the right package quickly. Each entry says what the package
 ### UI, Hydration, and Browser Behavior
 
 - `remix/ui` — the component runtime: components, core mixins, `clientEntry`, `run`, `<Frame>`, navigation helpers, and `createRoot`. Use for app UI behavior
-- `remix/ui/server` — server rendering: `renderToStream`, `renderToString`. Use in the `app/actions/render.tsx` helper that returns HTML responses
+- `remix/ui/server` — low-level server rendering with `renderToStream` and `renderToString`. Normal apps should install `render()` from `remix/middleware/render`; use this subpath for custom pipelines and static string rendering
 - `remix/ui/animation` — animation APIs: `animateEntrance`, `animateExit`, `animateLayout`, `spring`, `tween`, and `easings`
 - `remix/ui/<primitive>` — UI primitives, mixins, and component helpers. Current subpaths include `remix/ui/accordion`, `remix/ui/anchor`, `remix/ui/button`, `remix/ui/checkbox`, `remix/ui/combobox`, `remix/ui/input`, `remix/ui/listbox`, `remix/ui/menu`, `remix/ui/popover`, and `remix/ui/select`
 - `remix/ui/test` — component test rendering helpers such as `render`
@@ -254,6 +255,7 @@ Use this map to find the right package quickly. Each entry says what the package
 
 ### Middleware
 
+- `remix/middleware/render` — `render({ assets?, onError? })` for the standard Remix UI renderer and `renderWith(factory)` for custom request-scoped renderers. Normal UI actions return `context.render(node, init)`
 - `remix/middleware/static` — `staticFiles(dir)`. Use to serve files from `public/` exactly as they exist on disk
 - `remix/middleware/form-data` — `formData()`. Use to parse `FormData` once and expose it via `get(FormData)` instead of calling `await request.formData()` in each action
 - `remix/form-data-parser` — lower-level `parseFormData`, `FileUpload`. Use when implementing custom upload handlers. Upload handler errors propagate directly

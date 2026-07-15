@@ -23,10 +23,11 @@ npm i remix
 
 ### Server
 
-Render a full page to a streaming response:
+Install the standard render middleware and render a full page from an action:
 
 ```tsx
-import { renderToStream } from 'remix/ui/server'
+import { render } from 'remix/middleware/render'
+import { createRouter } from 'remix/router'
 import { Frame } from 'remix/ui'
 import { Counter } from './assets/counter.tsx'
 
@@ -46,19 +47,10 @@ function App() {
   )
 }
 
-let stream = renderToStream(<App />, {
-  resolveFrame(src, target, context) {
-    let headers = new Headers({ Accept: 'text/html' })
-    if (target) headers.set('X-Remix-Target', target)
-    return fetch(new URL(src, context?.currentFrameSrc ?? request.url), { headers }).then((res) =>
-      res.text(),
-    )
-  },
-})
+let router = createRouter({ middleware: [render()] })
 
-return new Response(stream, {
-  headers: { 'Content-Type': 'text/html' },
-})
+router.get('/', (context) => context.render(<App />))
+router.get('/sidebar', (context) => context.render(<nav>Sidebar</nav>))
 ```
 
 ### Client Entry

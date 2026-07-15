@@ -18,7 +18,7 @@ interface CrawlOptions {
 }
 
 export async function* crawl(
-  router: Router,
+  router: Pick<Router, 'fetch'>,
   options: CrawlOptions = {},
 ): AsyncIterableIterator<CrawlResult> {
   let { paths = ['/'], spider = true, concurrency = 1, ignorePageNofollow } = options

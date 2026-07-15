@@ -1,12 +1,11 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { openLazyFile } from 'remix/fs'
+import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
 import { createFileResponse } from 'remix/response/file'
-import { createHtmlResponse } from 'remix/response/html'
-import { createRouter as _createRouter, type Router } from 'remix/router'
-import { clientEntry, type RemixNode } from 'remix/ui'
-import { renderToStream } from 'remix/ui/server'
+import { createRouter as _createRouter, type MiddlewareContext, type Router } from 'remix/router'
+import { clientEntry } from 'remix/ui'
 import { CLIENT_ENTRY_PATH, type DocsAssetServer } from './asset-server.ts'
 import { discoverDemoFiles, loadDemoComponent, renderDemoSource } from './demos.tsx'
 import { getVersionedLookupHref } from './lookup.ts'
@@ -35,6 +34,10 @@ type DocsContext = {
   getRegistry(version?: string): DocsRegistry
 }
 
+type DocsRouter = Router<
+  MiddlewareContext<[ReturnType<typeof staticFiles>, ReturnType<typeof render>]>
+>
+
 export interface DocsRouterOptions {
   assetServer: DocsAssetServer
   docsContext?: DocsContext
@@ -46,13 +49,13 @@ export const getDefaultVersions = (): Versions => {
   return [version]
 }
 
-export function createRouter(options: DocsRouterOptions): Router {
+export function createRouter(options: DocsRouterOptions): DocsRouter {
   let { assetServer, docsContext, versions } = options
   let docsContextPromise: Promise<DocsContext> | undefined = docsContext
     ? Promise.resolve(docsContext)
     : undefined
 
-  const router = _createRouter({ middleware: [staticFiles(PUBLIC_DIR)] })
+  const router = _createRouter({ middleware: [staticFiles(PUBLIC_DIR), render()] })
 
   function getDocsContext(): Promise<DocsContext> {
     docsContextPromise ??= loadDocsContext(assetServer)
@@ -63,10 +66,6 @@ export function createRouter(options: DocsRouterOptions): Router {
     async file(request: Request, filePath: string, name?: string) {
       name ??= path.basename(filePath)
       return await createFileResponse(openLazyFile(filePath, { name }), request)
-    },
-    async document(request: Request, node: RemixNode, init?: ResponseInit) {
-      let body = await stream(router, request, node, init)
-      return createHtmlResponse(body, init)
     },
   }
 
@@ -91,7 +90,8 @@ export function createRouter(options: DocsRouterOptions): Router {
         let response = await assetServer.fetch(request)
         return response ?? new Response('Not Found', { status: 404 })
       },
-      async docs({ request, params }) {
+      async docs(context) {
+        let { params } = context
         let docsContext = await getDocsContext()
         let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
         let docProps = {
@@ -110,8 +110,7 @@ export function createRouter(options: DocsRouterOptions): Router {
               await loadDemoComponent(docFile),
             )
             let sourceHtml = await renderDemoSource(docFile.source)
-            return await respond.document(
-              request,
+            return context.render(
               <Document {...docProps} sourceUrl={docFile.sourceUrl}>
                 <DemoContent demo={docFile} sourceHtml={sourceHtml}>
                   <ExampleComponent key={docFile.slug} />
@@ -127,26 +126,24 @@ export function createRouter(options: DocsRouterOptions): Router {
             // Don't auto-link code symbols in README - too many false positives.
             docFile.kind !== 'package',
           )
-          return await respond.document(
-            request,
+          return context.render(
             <Document {...docProps} sourceUrl={source}>
               <MarkdownContent html={html} />
             </Document>,
           )
         }
 
-        return await respond.document(
-          request,
+        return context.render(
           <Document {...docProps}>
             <NotFound slug={params.slug} />
           </Document>,
           { status: 404 },
         )
       },
-      async home({ request, params }) {
+      async home(context) {
+        let { params } = context
         let docsContext = await getDocsContext()
-        return respond.document(
-          request,
+        return context.render(
           <Document
             registry={docsContext.getRegistry(params.version)}
             versions={versions}
@@ -192,8 +189,6 @@ export function createRouter(options: DocsRouterOptions): Router {
   return router
 }
 
-// Response helpers
-
 async function loadDocsContext(assetServer: DocsAssetServer): Promise<DocsContext> {
   let { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
   let demoFiles = await discoverDemoFiles(assetServer)
@@ -220,37 +215,4 @@ async function loadDocsContext(assetServer: DocsAssetServer): Promise<DocsContex
       return registry
     },
   }
-}
-
-function stream(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
-  return renderToStream(node, {
-    signal: request.signal,
-    async resolveFrame(src) {
-      let url = new URL(src, request.url)
-
-      // IMPORTANT: this is a server-internal fetch to get *HTML*, so do not forward
-      // Accept-Encoding — otherwise compression middleware could return compressed bytes.
-      let headers = new Headers(request.headers)
-      headers.delete('accept-encoding')
-      headers.set('accept', 'text/html')
-
-      let res = await router.fetch(
-        new Request(url, {
-          method: 'GET',
-          headers,
-          signal: request.signal,
-        }),
-      )
-
-      if (!res.ok) {
-        return `<pre>Frame error: ${res.status} ${res.statusText}</pre>`
-      }
-
-      if (res.body) {
-        return res.body
-      }
-
-      return await res.text()
-    },
-  })
 }

@@ -1,10 +1,10 @@
 import { createMiddleware, createRouter, type MiddlewareContext } from 'remix/router'
 import { logger } from 'remix/middleware/logger'
+import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
 
 import rootController from './actions/controller.tsx'
 import { framesController } from './actions/frames/controller.tsx'
-import { render } from './middleware/render.ts'
 import { routes } from './routes.ts'
 
 const appMiddleware = createMiddleware(render())

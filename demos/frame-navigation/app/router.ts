@@ -1,5 +1,6 @@
 import { createMiddleware, createRouter, type MiddlewareContext } from 'remix/router'
 import { logger } from 'remix/middleware/logger'
+import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
 
 import authController from './actions/auth/controller.tsx'
@@ -7,7 +8,6 @@ import authLoginController from './actions/auth/login/controller.tsx'
 import mainController from './actions/main/controller.tsx'
 import settingsController from './actions/settings/controller.tsx'
 import { loadAuth } from './middleware/auth.ts'
-import { render } from './middleware/render.tsx'
 import { routes } from './routes.ts'
 
 const appMiddleware = createMiddleware(loadAuth(), render())

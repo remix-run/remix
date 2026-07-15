@@ -77,7 +77,7 @@ let preloads = await assetServer.getPreloads(['app/assets/entry.ts'])
 
 Use this when rendering documents or layouts that boot browser behavior with a known client entry.
 
-When resolving hydrated client entries during server rendering, pass the source entry ID from `clientEntry(import.meta.url, ...)` to `getHref()` inside `resolveClientEntry`. Keep export-name resolution in that render helper, and avoid hard-coding public asset URLs in source-owned component modules.
+For normal Remix applications, pass the asset server to `render({ assets: assetServer })` from `remix/middleware/render`. The middleware resolves the source entry ID from `clientEntry(import.meta.url, ...)` with `getHref()` and applies the UI renderer's explicit-hash or named-component export rules. Use a custom `resolveClientEntry` callback only when building a custom rendering pipeline.
 
 ## Development vs Deployment
 

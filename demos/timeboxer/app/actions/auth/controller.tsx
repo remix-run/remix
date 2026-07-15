@@ -13,7 +13,6 @@ import { hashPassword } from '../../data/passwords.ts'
 import { userPasswords, users } from '../../data/schema.ts'
 import { credentialsSchema, passwordProvider } from '../../middleware/auth.ts'
 import { routes } from '../../routes.ts'
-import { render } from '../../utils/render.tsx'
 import { AuthStatusPage, LoginPage, SignupPage, type AuthFormErrors } from './pages.tsx'
 
 const signupSchema = f.object({
@@ -36,9 +35,8 @@ export const auth = createController(routes.auth, {
       let auth = context.get(Auth)
 
       if (auth.ok) {
-        return render(
+        return context.render(
           <AuthStatusPage csrfToken={getCsrfToken(context)} username={auth.identity.username} />,
-          context.request,
         )
       }
 
@@ -67,9 +65,8 @@ export const authLogin = createController(routes.auth.login, {
       let session = context.get(Session)
       let error = session.get('auth:error')
 
-      return render(
+      return context.render(
         <LoginPage csrfToken={getCsrfToken(context)} error={stringOrUndefined(error)} />,
-        context.request,
       )
     },
 
@@ -77,9 +74,8 @@ export const authLogin = createController(routes.auth.login, {
       let parsed = s.parseSafe(credentialsSchema, context.get(FormData))
 
       if (!parsed.success) {
-        return render(
+        return context.render(
           <LoginPage csrfToken={getCsrfToken(context)} errors={issuesToErrors(parsed.issues)} />,
-          context.request,
           { status: 400 },
         )
       }
@@ -109,16 +105,15 @@ export const authSignup = createController(routes.auth.signup, {
         return redirect(routes.home.index.href())
       }
 
-      return render(<SignupPage csrfToken={getCsrfToken(context)} />, context.request)
+      return context.render(<SignupPage csrfToken={getCsrfToken(context)} />)
     },
 
     async action(context) {
       let parsed = s.parseSafe(signupSchema, context.get(FormData))
 
       if (!parsed.success) {
-        return render(
+        return context.render(
           <SignupPage csrfToken={getCsrfToken(context)} errors={issuesToErrors(parsed.issues)} />,
-          context.request,
           { status: 400 },
         )
       }
@@ -128,12 +123,11 @@ export const authSignup = createController(routes.auth.signup, {
       let existingUser = await db.findOne(users, { where: { username } })
 
       if (existingUser) {
-        return render(
+        return context.render(
           <SignupPage
             csrfToken={getCsrfToken(context)}
             errors={{ username: 'That username is already taken.' }}
           />,
-          context.request,
           { status: 409 },
         )
       }

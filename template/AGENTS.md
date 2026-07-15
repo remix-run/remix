@@ -20,9 +20,9 @@ Refer to ./.agents/skills/remix/SKILL.md
 - `app/actions/controller.tsx` owns the top-level route actions
 - `app/routes.ts` defines the route contract
 - `app/router.ts` wires routes to route handlers
-- `app/middleware/render.tsx` installs the request-scoped renderer used by actions
+- `app/router.ts` installs the standard Remix UI renderer used by actions
 - `app/ui/` holds the shared document shell and home page UI
-- `app/assets.ts` owns the server-side asset pipeline used by the asset route and renderer
+- `app/assets.ts` owns the server-side asset pipeline used by the asset route and render middleware
 - `public/` contains static files served from the app root
 
 ## Route Ownership

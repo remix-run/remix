@@ -456,10 +456,6 @@ describe('run', () => {
       let router = await fs.readFile(path.join(appDir, 'app', 'router.ts'), 'utf8')
       let routes = await fs.readFile(path.join(appDir, 'app', 'routes.ts'), 'utf8')
       let entry = await fs.readFile(path.join(appDir, 'app', 'assets', 'entry.ts'), 'utf8')
-      let renderMiddleware = await fs.readFile(
-        path.join(appDir, 'app', 'middleware', 'render.tsx'),
-        'utf8',
-      )
       let controller = await fs.readFile(
         path.join(appDir, 'app', 'actions', 'controller.tsx'),
         'utf8',
@@ -492,21 +488,19 @@ describe('run', () => {
       assert.doesNotMatch(assets, /define:/)
       assert.match(assets, /watch: false/)
       assert.doesNotMatch(router, /compression/)
+      assert.match(router, /import \{ render \} from 'remix\/middleware\/render'/)
+      assert.match(router, /render\(\{ assets: assetServer \}\)/)
       assert.doesNotMatch(routes, /auth/)
       assert.match(entry, /loadModule/)
       assert.match(entry, /resolveFrame/)
       assert.doesNotMatch(entry, /X-Remix-Frame/)
-      assert.match(renderMiddleware, /resolveClientEntry/)
-      assert.match(renderMiddleware, /resolveFrame/)
-      assert.doesNotMatch(renderMiddleware, /Accept-Encoding/)
-      assert.doesNotMatch(renderMiddleware, /X-Remix-Frame/)
       assert.match(controller, /context\.render\(<HomePage \/>/)
       assert.doesNotMatch(controller, /AuthPage/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
       await assertPathExists(path.join(appDir, 'app', 'assets.ts'))
       await assertPathExists(path.join(appDir, 'app', 'assets', 'prompt-button.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'actions', 'controller.tsx'))
-      await assertPathExists(path.join(appDir, 'app', 'middleware', 'render.tsx'))
+      await assertPathMissing(path.join(appDir, 'app', 'middleware', 'render.tsx'))
       await assertPathExists(path.join(appDir, 'public', 'favicon.svg'))
       await assertPathExists(path.join(appDir, '.gitignore'))
       await assertPathMissing(path.join(appDir, 'gitignore'))

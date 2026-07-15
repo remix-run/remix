@@ -8,7 +8,6 @@ import { routes } from '../../routes.ts'
 import { getCartTotal } from '../../utils/cart.ts'
 import { getCurrentCart, getCurrentUserSafely } from '../../utils/context.ts'
 import { parseId } from '../../utils/ids.ts'
-import { fragmentResponseInit } from '../../middleware/render.tsx'
 
 export default createController(routes.fragments, {
   actions: {
@@ -55,3 +54,12 @@ export default createController(routes.fragments, {
     },
   },
 })
+
+function fragmentResponseInit(init?: ResponseInit): ResponseInit {
+  let headers = new Headers(init?.headers)
+  if (!headers.has('Cache-Control')) {
+    headers.set('Cache-Control', 'no-store')
+  }
+
+  return { ...init, headers }
+}
