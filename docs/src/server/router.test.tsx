@@ -33,6 +33,8 @@ describe('createRouter()', () => {
 
     assert.equal(html.includes('src="/assets/client/entry.tsx"'), true)
     assert.equal(html.includes('href="/assets/client/entry.tsx"'), true)
+    assert.equal(html.includes('href="/assets/client/table-of-contents.browser.tsx"'), true)
+    assert.equal(html.includes('href="/assets/client/table-of-contents-active.browser.ts"'), true)
     assert.equal(html.includes('src="/v1.2.3/assets/client/entry.tsx"'), false)
     assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), false)
   })
@@ -109,17 +111,19 @@ function shouldVersionAssetUrl(url: string): boolean {
 }
 
 async function getTestDocsContext(assetServer: ReturnType<typeof createAssetServer>) {
-  let [entryHref, entryPreloads, tableOfContentsEntryHref] = await Promise.all([
-    assetServer.getHref('docs/src/client/entry.tsx'),
-    assetServer.getPreloads('docs/src/client/entry.tsx'),
-    assetServer.getHref('docs/src/client/table-of-contents.browser.tsx'),
-  ])
+  let [entryHref, entryPreloads, tableOfContentsEntryHref, tableOfContentsEntryPreloads] =
+    await Promise.all([
+      assetServer.getHref('docs/src/client/entry.tsx'),
+      assetServer.getPreloads('docs/src/client/entry.tsx'),
+      assetServer.getHref('docs/src/client/table-of-contents.browser.tsx'),
+      assetServer.getPreloads('docs/src/client/table-of-contents.browser.tsx'),
+    ])
 
   return {
     docFiles: [],
     docFilesLookup: new Map(),
     entryHref,
-    entryPreloads,
+    entryPreloads: [...new Set([...entryPreloads, ...tableOfContentsEntryPreloads])],
     tableOfContentsEntryHref,
     getRegistry() {
       return buildRegistry([])

@@ -205,11 +205,13 @@ async function loadDocsContext(assetServer: DocsAssetServer): Promise<DocsContex
   let { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
   let demoFiles = await discoverDemoFiles(assetServer)
   let docFiles = [...markdownFiles, ...demoFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
-  let [entryHref, entryPreloads, tableOfContentsEntryHref] = await Promise.all([
-    assetServer.getHref(CLIENT_ENTRY_PATH),
-    assetServer.getPreloads(CLIENT_ENTRY_PATH),
-    assetServer.getHref(TABLE_OF_CONTENTS_ENTRY_PATH),
-  ])
+  let [entryHref, entryPreloads, tableOfContentsEntryHref, tableOfContentsEntryPreloads] =
+    await Promise.all([
+      assetServer.getHref(CLIENT_ENTRY_PATH),
+      assetServer.getPreloads(CLIENT_ENTRY_PATH),
+      assetServer.getHref(TABLE_OF_CONTENTS_ENTRY_PATH),
+      assetServer.getPreloads(TABLE_OF_CONTENTS_ENTRY_PATH),
+    ])
 
   let registryByVersion = new Map<string | undefined, DocsRegistry>()
   registryByVersion.set(undefined, buildRegistry(docFiles))
@@ -218,7 +220,7 @@ async function loadDocsContext(assetServer: DocsAssetServer): Promise<DocsContex
     docFiles,
     docFilesLookup,
     entryHref,
-    entryPreloads,
+    entryPreloads: [...new Set([...entryPreloads, ...tableOfContentsEntryPreloads])],
     tableOfContentsEntryHref,
     getRegistry(version?: string): DocsRegistry {
       let registry = registryByVersion.get(version)
