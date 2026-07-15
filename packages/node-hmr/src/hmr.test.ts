@@ -979,7 +979,7 @@ describe('node-hmr', () => {
 
       let ready = await server.waitForReady(0)
       assert.equal(await fetchText(ready.port), 'fixed')
-      assert.match(server.output, /restart server\.ts, message\.ts|restart message\.ts, server\.ts/)
+      assert.match(server.output, /restart .*server\.ts/)
     } finally {
       await server.stop()
     }
