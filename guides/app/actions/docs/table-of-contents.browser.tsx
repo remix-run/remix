@@ -82,8 +82,10 @@ export function startTableOfContentsBehavior(list: HTMLOListElement, signal: Abo
       }
     }
 
-    list.style.setProperty('--docs-toc-indicator-y', `${activeEntry.link.offsetTop}px`)
-    list.style.setProperty('--docs-toc-indicator-height', `${activeEntry.link.offsetHeight}px`)
+    let listRect = list.getBoundingClientRect()
+    let linkRect = activeEntry.link.getBoundingClientRect()
+    list.style.setProperty('--docs-toc-indicator-y', `${linkRect.top - listRect.top}px`)
+    list.style.setProperty('--docs-toc-indicator-height', `${linkRect.height}px`)
     list.toggleAttribute('data-has-current', true)
   }
 }

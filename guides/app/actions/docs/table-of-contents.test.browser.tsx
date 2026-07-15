@@ -28,6 +28,23 @@ describe('startTableOfContentsBehavior', () => {
     assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-y'), '36px')
   })
 
+  it('preserves fractional indicator geometry', async (t) => {
+    let fixture = createTableOfContentsFixture()
+    t.after(fixture.cleanup)
+
+    fixture.setHeadingTops([-200, 80, 360])
+    fixture.setLinkRects([
+      { y: 0, height: 32 },
+      { y: 36.25, height: 49.59375 },
+      { y: 89.84375, height: 32 },
+    ])
+    window.dispatchEvent(new Event('scroll'))
+    await nextAnimationFrame()
+
+    assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-y'), '36.25px')
+    assert.equal(fixture.list.style.getPropertyValue('--docs-toc-indicator-height'), '49.59375px')
+  })
+
   it('restarts when navigation re-renders the client entry', (t) => {
     let fixture = createTableOfContentsFixture({ startBehavior: false })
     let rootContainer = document.createElement('div')
@@ -82,18 +99,21 @@ function createTableOfContentsFixture(options: { startBehavior?: boolean } = {})
     getElement('third-heading'),
   ]
   let links = [getLink('first-link'), getLink('second-link'), getLink('third-link')]
+  let linkRects = [
+    { y: 0, height: 32 },
+    { y: 36, height: 32 },
+    { y: 72, height: 32 },
+  ]
 
   for (let [index, heading] of headings.entries()) {
     heading.getBoundingClientRect = () => DOMRect.fromRect({ y: headingTops[index] })
   }
   for (let [index, link] of links.entries()) {
-    Object.defineProperties(link, {
-      offsetTop: { configurable: true, value: index * 36 },
-      offsetHeight: { configurable: true, value: 32 },
-    })
+    link.getBoundingClientRect = () => DOMRect.fromRect(linkRects[index])
   }
 
   let list = getList('test-toc')
+  list.getBoundingClientRect = () => DOMRect.fromRect()
   let controller = new AbortController()
   if (options.startBehavior !== false) {
     startTableOfContentsBehavior(list, controller.signal)
@@ -105,6 +125,9 @@ function createTableOfContentsFixture(options: { startBehavior?: boolean } = {})
     secondLink: links[1],
     setHeadingTops(tops: number[]) {
       headingTops = tops
+    },
+    setLinkRects(rects: Array<{ y: number; height: number }>) {
+      linkRects = rects
     },
     cleanup() {
       controller.abort()
