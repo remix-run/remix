@@ -1,21 +1,17 @@
-import { Glyph } from 'remix/ui/glyph'
-import { RMX_01, RMX_01_GLYPHS, theme } from 'remix/ui/theme'
-import type { Handle, RemixNode } from 'remix/ui'
+import { theme } from './design.ts'
+import type { Handle, Props, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
 import {
   MOBILE_NAV_MAX_HEIGHT,
   MOBILE_NAV_MEDIA_RULE,
   MOBILE_TOP_BAR_HEIGHT_PX,
 } from '../shared/breakpoints.ts'
-import { assetServer } from './asset-server.ts'
 import type { DemoDocFile } from './demos.tsx'
 import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
 import { routes } from './routes.ts'
 
-export type Versions = { version: string; crawl: boolean }[]
-
-const entryHref = await assetServer.getHref('docs/src/client/entry.tsx')
+export type Versions = string[]
 
 export function Document(
   handle: Handle<{
@@ -25,11 +21,12 @@ export function Document(
     registry: DocsRegistry
     children?: RemixNode | RemixNode[]
     sourceUrl?: string
+    entryHref: string
     entryPreloads: readonly string[]
   }>,
 ) {
   return () => {
-    let { registry, versions, activeVersion, slug, sourceUrl, children, entryPreloads } =
+    let { registry, versions, activeVersion, slug, sourceUrl, children, entryHref, entryPreloads } =
       handle.props
     let page = slug
       ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug, activeVersion))
@@ -37,9 +34,13 @@ export function Document(
 
     return (
       <html lang="en" style={{ colorScheme: 'light dark' }}>
-        <Head page={page} activeVersion={activeVersion} entryPreloads={entryPreloads} />
-        <body mix={bodyCss}>
-          <RMX_01_GLYPHS />
+        <Head
+          page={page}
+          activeVersion={activeVersion}
+          entryHref={entryHref}
+          entryPreloads={entryPreloads}
+        />
+        <body mix={[bodyCss, pagefindVariables]}>
           <MobileHeader page={page} />
           <div mix={shellCss}>
             <Sidebar
@@ -52,6 +53,11 @@ export function Document(
               {children}
             </MainContent>
           </div>
+          <pagefind-config
+            base-url={routes.home.href({ version: activeVersion })}
+            bundle-path={routes.assets.href({ version: activeVersion, asset: 'pagefind/' })}
+          ></pagefind-config>
+          <pagefind-modal data-key="pagefind-modal" rmx-preserve-dom reset-on-close />
         </body>
       </html>
     )
@@ -70,9 +76,17 @@ function MobileHeader(handle: Handle<{ page: PageDefinition }>) {
           aria-hidden="true"
           tabIndex={-1}
         />
-        <a href="https://remix.run" mix={mobileLogoBannerCss}>
-          <RemixLogos />
-        </a>
+        <div mix={mobileLogoBannerCss}>
+          <a href="https://remix.run">
+            <RemixLogos />
+          </a>
+          <pagefind-modal-trigger
+            compact
+            data-key="pagefind-modal-trigger-mobile"
+            hide-shortcut
+            rmx-preserve-dom
+          />
+        </div>
         <label
           for="nav-toggle"
           mix={mobileTopBarCss}
@@ -83,22 +97,43 @@ function MobileHeader(handle: Handle<{ page: PageDefinition }>) {
             {page.eyebrow ? <span mix={eyebrowTextCss}>{page.eyebrow}</span> : null}
             <span mix={mobileTopBarTitleCss}>{page.navLabel || page.title || 'Overview'}</span>
           </span>
-          <Glyph name="menu" mix={mobileTopBarIconCss} aria-hidden="true" />
+          <MenuIcon mix={mobileTopBarIconCss} aria-hidden="true" />
         </label>
       </>
     )
   }
 }
 
+function MenuIcon(handle: Handle<Props<'svg'>>) {
+  return () => (
+    <svg
+      {...handle.props}
+      aria-hidden={handle.props['aria-hidden']}
+      fill="none"
+      viewBox="0 0 16 16"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M2.5 4h11M2.5 8h11M2.5 12h11"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-width="1.5"
+      />
+    </svg>
+  )
+}
+
 function Head(
   handle: Handle<{
     page: PageDefinition
     activeVersion?: string
+    entryHref: string
     entryPreloads: readonly string[]
   }>,
 ) {
   return () => {
-    let { page, activeVersion, entryPreloads } = handle.props
+    let { page, activeVersion, entryHref, entryPreloads } = handle.props
+    let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
     return (
       <head>
         <meta charSet="utf-8" />
@@ -110,7 +145,7 @@ function Head(
             <meta name="robots" content="noindex,nofollow" />
             <meta name="googlebot" content="noindex,nofollow" />
           </>
-        ) : page.docFile?.kind === 'package' || page.docFile?.kind === 'demo' ? (
+        ) : shouldNofollow ? (
           // Overview pages (package READMEs) link densely to every API page
           // in the package; those are already reachable via the sidebar, so
           // tell crawlers — including our prerender spider — not to follow
@@ -142,17 +177,53 @@ function Head(
           <link key={href} rel="modulepreload" href={href} />
         ))}
         <script type="module" src={entryHref} />
-        <RMX_01 />
+        <link
+          href={routes.assets.href({
+            version: activeVersion,
+            asset: 'pagefind/pagefind-component-ui.css',
+          })}
+          rel="stylesheet"
+        />
+        <script
+          src={routes.assets.href({
+            version: activeVersion,
+            asset: 'pagefind/pagefind-component-ui.js',
+          })}
+          type="module"
+        />
+        {/*
+          Pagefind resets its custom element hosts with `color-scheme: initial`.
+          We override so dark mode works properly.
+        */}
+        <style>{`
+          pagefind-filter-dropdown,
+          pagefind-filter-pane,
+          pagefind-input,
+          pagefind-keyboard-hints,
+          pagefind-modal,
+          pagefind-modal-body,
+          pagefind-modal-header,
+          pagefind-modal-trigger,
+          pagefind-results,
+          pagefind-searchbox,
+          pagefind-summary {
+            color-scheme: light dark;
+          }
+        `}</style>
       </head>
     )
   }
 }
 
 function MainContent(
-  handle: Handle<{ page: PageDefinition; header?: RemixNode; children: RemixNode | RemixNode[] }>,
+  handle: Handle<{
+    page: PageDefinition
+    header?: RemixNode
+    children: RemixNode | RemixNode[]
+  }>,
 ) {
   return () => (
-    <main mix={mainCss}>
+    <main mix={mainCss} data-pagefind-body>
       <div mix={pageWrapCss}>
         <div mix={[pageContentCss, handle.props.page.css]}>
           {handle.props.header}
@@ -261,7 +332,7 @@ function Sidebar(
   handle: Handle<{
     registry: DocsRegistry
     currentPath: string
-    versions: { version: string; crawl: boolean }[]
+    versions: Versions
     activeVersion?: string
   }>,
 ) {
@@ -279,6 +350,12 @@ function Sidebar(
               <a href="https://remix.run" class="logo">
                 <RemixLogos />
               </a>
+              <pagefind-modal-trigger
+                compact
+                data-key="pagefind-modal-trigger-sidebar"
+                hide-shortcut
+                rmx-preserve-dom
+              />
             </div>
 
             <VersionSwitcher versions={versions} activeVersion={activeVersion} />
@@ -363,7 +440,7 @@ function RemixLogos() {
 
 function VersionSwitcher(
   handle: Handle<{
-    versions: { version: string; crawl: boolean }[]
+    versions: Versions
     activeVersion?: string
   }>,
 ) {
@@ -372,7 +449,7 @@ function VersionSwitcher(
 
     let navVersions = versions
     if (activeVersion) {
-      let idx = versions.findIndex((v) => v.version === activeVersion)
+      let idx = versions.findIndex((version) => version === activeVersion)
       if (idx >= 0) navVersions = versions.slice(idx)
     }
 
@@ -383,20 +460,20 @@ function VersionSwitcher(
         </summary>
         <div mix={sectionContentCss}>
           <nav aria-label="Versions" mix={sidebarNavCss}>
-            {navVersions.map((v) => {
-              let latest =
-                (versions.length === 0 || v.version === versions[0]?.version) && !activeVersion
-              let active = v.version === activeVersion || latest
-              let href = routes.home.href({ version: !latest ? v.version : undefined })
+            {navVersions.map((version) => {
+              let latest = (versions.length === 0 || version === versions[0]) && !activeVersion
+              let active = version === activeVersion || latest
+              let href = routes.home.href({ version: !latest ? version : undefined })
+              let rel = active ? undefined : 'nofollow'
               return (
                 <a
-                  key={v.version}
+                  key={version}
                   href={href}
-                  rel={!latest && !v.crawl ? 'nofollow' : undefined}
+                  rel={rel}
                   aria-current={active ? 'page' : undefined}
                   mix={navItemCss}
                 >
-                  {v.version}
+                  {version}
                   {latest ? ' (latest)' : null}
                 </a>
               )
@@ -444,52 +521,9 @@ function DocsFooter() {
   )
 }
 
-// Dark and light theme variable overrides used in both the system-preference
-// Single set of CSS custom property definitions using light-dark(lightVal, darkVal).
-// The browser picks the right value automatically based on the `color-scheme` on <html>,
-// which defaults to `light dark` (system preference) and is overridden to `light` or
-// `dark` by the init script / toggle button when the user has an explicit preference.
-const COLOR_VARS = {
-  '--rmx-surface-lvl0': 'light-dark(#ffffff, #1a1a1a)',
-  '--rmx-surface-lvl1': 'light-dark(#f8f8f8, #1f1f1f)',
-  '--rmx-surface-lvl2': 'light-dark(#f5f5f5, #232323)',
-  '--rmx-surface-lvl3': 'light-dark(#f3f3f3, #272727)',
-  '--rmx-surface-lvl4': 'light-dark(#efefef, #2c2c2c)',
-  '--rmx-color-text-primary': 'light-dark(#151515, #ececec)',
-  '--rmx-color-text-secondary': 'light-dark(#4f4f4f, #b3b3b3)',
-  '--rmx-color-text-muted': 'light-dark(#6d6d6d, #b3b3b3)',
-  '--rmx-color-text-link': 'light-dark(#1A72FF, #6eaaff)',
-  '--rmx-color-border-subtle': 'light-dark(#e7e7e7, #333333)',
-  '--rmx-color-border-default': 'light-dark(#d1d1d1, #444444)',
-  '--rmx-color-border-strong': 'light-dark(#b0b0b0, #666666)',
-  '--rmx-color-focus-ring': 'light-dark(#1A72FF, #6eaaff)',
-  '--rmx-color-overlay-scrim': 'light-dark(rgb(0 0 0 / 0.28), rgb(0 0 0 / 0.55))',
-  '--rmx-color-action-primary-background': 'light-dark(#1A72FF, #4d94ff)',
-  '--rmx-color-action-primary-background-hover': 'light-dark(#1463e0, #3d84ef)',
-  '--rmx-color-action-primary-background-active': 'light-dark(#0f55c9, #2d74df)',
-  '--rmx-color-action-primary-foreground': 'rgb(255 255 255 / 0.92)',
-  '--rmx-color-action-primary-border': 'light-dark(#1A72FF, #4d94ff)',
-  '--rmx-color-action-secondary-background': 'light-dark(#ffffff, #2c2c2c)',
-  '--rmx-color-action-secondary-background-hover': 'light-dark(#fbfbfb, #333333)',
-  '--rmx-color-action-secondary-background-active': 'light-dark(#f3f3f3, #3a3a3a)',
-  '--rmx-color-action-secondary-foreground': 'light-dark(#202020, #ececec)',
-  '--rmx-color-action-secondary-border': 'light-dark(#d1d1d1, #444444)',
-  '--rmx-color-action-danger-background': 'light-dark(#FF3000, #ff4d2e)',
-  '--rmx-color-action-danger-background-hover': 'light-dark(#e12b00, #e6432a)',
-  '--rmx-color-action-danger-background-active': 'light-dark(#c52600, #cc3b25)',
-  '--rmx-color-action-danger-foreground': 'rgb(255 255 255 / 0.92)',
-  '--rmx-color-action-danger-border': 'light-dark(#FF3000, #ff4d2e)',
-  '--rmx-shadow-xs': 'light-dark(0 1px 1px rgb(0 0 0 / 0.05), 0 1px 1px rgb(0 0 0 / 0.2))',
-  '--rmx-shadow-sm': 'light-dark(0 1px 2px rgb(0 0 0 / 0.07), 0 1px 2px rgb(0 0 0 / 0.25))',
-  '--rmx-shadow-md': 'light-dark(0 6px 18px rgb(0 0 0 / 0.08), 0 6px 18px rgb(0 0 0 / 0.3))',
-  '--rmx-shadow-lg': 'light-dark(0 16px 34px rgb(0 0 0 / 0.10), 0 16px 34px rgb(0 0 0 / 0.35))',
-  '--rmx-shadow-xl': 'light-dark(0 24px 52px rgb(0 0 0 / 0.14), 0 24px 52px rgb(0 0 0 / 0.4))',
-} as const
-
 // Typography mirrors the `.md-prose` rules from the remix.run blog
 // (`/styles/md.css`) and is applied site-wide.
 const bodyCss = css({
-  ...COLOR_VARS,
   margin: 0,
   backgroundColor: theme.surface.lvl0,
   color: theme.colors.text.primary,
@@ -585,28 +619,6 @@ const bodyCss = css({
     padding: '0.125em 0.25em',
   },
 
-  // Not sure why this multiple levels of nesting doesn't work but it produces the following in the document HTML
-  //
-  // & .shiki {
-  //   background-color: light-dark(var(--rmx-surface-lvl4), var(--shiki-dark-bg)) !important;
-  //   & span: [object Object];
-  //   & a: [object Object];
-  // }
-  //
-  // '& .shiki': {
-  //   backgroundColor: `light-dark(${theme.surface.lvl4}, var(--shiki-dark-bg)) !important`,
-  //   '& span': {
-  //     color: 'light-dark(var(--shiki-light), var(--shiki-dark)) !important',
-  //   },
-  //   '& a': {
-  //     color: 'inherit',
-  //     textDecoration: `none`,
-  //     '&:hover, &:focus': {
-  //       textDecoration: `underline`,
-  //     },
-  //   },
-  // },
-
   '& .shiki': {
     backgroundColor: `light-dark(${theme.surface.lvl4}, var(--shiki-dark-bg)) !important`,
   },
@@ -656,6 +668,32 @@ const bodyCss = css({
   },
 })
 
+const pagefindVariables = css({
+  '--pf-font': theme.fontFamily.sans,
+  '--pf-input-height': '40px',
+  '--pf-border-radius': theme.radius.md,
+  '--pf-text': theme.colors.text.primary,
+  '--pf-text-secondary': theme.colors.text.secondary,
+  '--pf-text-muted': theme.colors.text.muted,
+  '--pf-background': theme.surface.lvl1,
+  '--pf-border': theme.colors.border.subtle,
+  '--pf-border-focus': theme.colors.border.strong,
+  '--pf-skeleton': theme.surface.lvl3,
+  '--pf-skeleton-shine': theme.surface.lvl4,
+  '--pf-hover': theme.surface.lvl2,
+  '--pf-mark': theme.colors.text.primary,
+  '--pf-scroll-shadow': 'light-dark(rgb(0 0 0 / 8%), rgb(255 255 255 / 10%))',
+  '--pf-shadow-sm': '0 2px 8px light-dark(rgb(0 0 0 / 6%), rgb(0 0 0 / 30%))',
+  '--pf-shadow-md': '0 4px 12px light-dark(rgb(0 0 0 / 10%), rgb(0 0 0 / 40%))',
+  '--pf-shadow-lg': '0 16px 48px light-dark(rgb(0 0 0 / 20%), rgb(0 0 0 / 50%))',
+  '--pf-error-bg': 'light-dark(#fef2f2, #2a1a1a)',
+  '--pf-error-border': 'light-dark(#fecaca, #5c2828)',
+  '--pf-error-text': 'light-dark(#dc2626, #f87171)',
+  '--pf-error-text-secondary': 'light-dark(#b91c1c, #ef4444)',
+  '--pf-outline-focus': theme.colors.text.link,
+  '--pf-modal-backdrop': 'light-dark(rgb(0 0 0 / 50%), rgb(0 0 0 / 72%))',
+})
+
 const shellCss = css({
   minHeight: '100vh',
   display: 'grid',
@@ -691,8 +729,9 @@ const sidebarStickyCss = css({
 
 const sidebarIntroCss = css({
   display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xs,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
   paddingBottom: theme.space.sm,
   marginBottom: theme.space.sm,
   [MOBILE_NAV_MEDIA_RULE]: {

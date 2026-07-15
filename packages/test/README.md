@@ -9,6 +9,7 @@ A test framework for JavaScript and TypeScript projects.
 - Playwright E2E testing via `t.serve`
 - In-browser component testing (pair with `render` from `remix/ui/test`)
 - Mock functions and method spies via `t.mock.fn` / `t.mock.method`
+- Per-test and hook timeouts with `t.signal` abort support
 - Unified code coverage reporting across unit and E2E tests
 - Watch mode
 - Config file support (`remix-test.config.ts`)
@@ -118,6 +119,9 @@ export default {
   // Test reporter ("spec", "files", "tap", "dot")
   reporter: 'spec',
 
+  // Do not print skipped tests in reporter output
+  quiet: false,
+
   // Path to a setup module (see Setup section below)
   setup: './test/setup.ts',
 
@@ -156,12 +160,40 @@ You may also specify any config field as a CLI flag which will take precedence o
 | `--glob.browser`            |           |
 | `--glob.e2e`                |           |
 | `--playwrightConfig <path>` |           |
+| `--only <pattern>`          |           |
 | `--pool <forks              | threads>` |     |
 | `--project <name>`          | `-p`      |
+| `--quiet`                   | `-q`      |
 | `--reporter <name>`         | `-r`      |
 | `--setup <path>`            | `-s`      |
 | `--type <name>`             | `-t`      |
 | `--watch`                   | `-w`      |
+
+### Focusing Tests
+
+Use `.only` to focus a suite or test while developing:
+
+```ts
+describe.only('Cart routes', () => {
+  it('loads cart items', () => {})
+})
+
+describe('Checkout routes', () => {
+  it.only('redirects anonymous users', () => {})
+})
+```
+
+Use `--only <pattern>` to focus tests from the CLI without editing source. Plain patterns are case-insensitive JavaScript regular expressions matched against suite names and full test names:
+
+```sh
+remix test --only 'Cart routes'
+remix test --only 'Checkout routes > redirects anonymous users'
+remix test --only '/anonymous users$/'
+```
+
+Slash-delimited CLI patterns preserve their flags, so `/pattern/` is case-sensitive and `/pattern/i` is case-insensitive. Plain string patterns in `remix-test.config.ts` are also case-insensitive; slash-delimited strings and `RegExp` values preserve their flags.
+
+Full test names join nested `describe` names and the test name with `>`. For example, `describe('Cart routes', () => describe('loader', () => it('loads cart items', ...)))` has the full test name `Cart routes > loader > loads cart items`.
 
 ### Setup
 
@@ -193,6 +225,11 @@ describe('My Test Suite', () => {
   afterEach(() => {})
 
   it('tests something', () => {})
+  it('skips with a reason', { skip: 'requires API credentials' }, () => {})
+  it('tracks planned work', { todo: 'add retry coverage' }, () => {})
+  it('fails if it takes too long', { timeout: 5_000 }, async (t) => {
+    await fetchSomething({ signal: t.signal })
+  })
   it('tests something else', () => {})
 })
 ```
@@ -229,6 +266,9 @@ Each test callback receives a `TestContext` (`t`) as its first argument with hel
 ```ts
 // from 'remix/test'
 interface TestContext {
+  // Aborts when the test times out or when the user-provided test signal aborts
+  signal: AbortSignal
+
   // Register a cleanup function to run after the test completes
   after(fn: () => void): void
 
@@ -282,6 +322,24 @@ it('cleanup', (t) => {
   t.after(() => conn.close())
   // ...
 })
+```
+
+#### Timeouts and Signals
+
+Pass `{ timeout: ms }` to `it()` or after any lifecycle hook callback to fail that work if it takes too long. Timed-out tests abort `t.signal`, so async code that accepts an `AbortSignal` can cancel promptly.
+
+```ts
+it('loads data', { timeout: 5_000 }, async (t) => {
+  let response = await fetch('/api/data', { signal: t.signal })
+  assert.equal(response.status, 200)
+})
+
+beforeEach(
+  async () => {
+    await resetDatabase()
+  },
+  { timeout: 1_000 },
+)
 ```
 
 #### Fake Timers

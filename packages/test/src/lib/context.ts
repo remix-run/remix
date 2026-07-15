@@ -28,6 +28,12 @@ export interface TestServer {
  */
 export interface TestContext {
   /**
+   * An abort signal for the current test. The signal is aborted when the test
+   * times out or when a user-provided test signal aborts.
+   */
+  signal: AbortSignal
+
+  /**
    * Registers a cleanup function to be called after the test completes.
    *
    * @param {() => void} fn - The cleanup function to execute
@@ -87,6 +93,11 @@ export interface TestContext {
 }
 
 export interface CreateTestContextOptions {
+  signal: AbortSignal
+  e2e?: CreateTestContextE2EOptions
+}
+
+export interface CreateTestContextE2EOptions {
   addE2ECoverageEntries: (value: { entries: V8CoverageEntry[]; baseUrl: string }) => void
   browser: Browser
   coverage: boolean
@@ -101,6 +112,7 @@ export function createTestContext(options?: CreateTestContextOptions): {
   let cleanups: Array<() => void | Promise<void>> = []
 
   let testContext: TestContext = {
+    signal: options?.signal ?? new AbortController().signal,
     mock: {
       fn: mock.fn,
       method(obj, methodName, impl) {
@@ -118,27 +130,28 @@ export function createTestContext(options?: CreateTestContextOptions): {
       return timers
     },
     async serve(server) {
-      if (!options || !options.browser) {
+      let e2e = options?.e2e
+      if (!e2e) {
         throw new Error('t.serve() is only available in E2E test suites')
       }
 
-      let page = await options.browser.newPage({
-        ...options.playwrightPageOptions,
+      let page = await e2e.browser.newPage({
+        ...e2e.playwrightPageOptions,
         baseURL: server.baseUrl,
       })
-      if (options.playwrightPageOptions?.navigationTimeout != null) {
-        page.setDefaultNavigationTimeout(options.playwrightPageOptions.navigationTimeout)
+      if (e2e.playwrightPageOptions?.navigationTimeout != null) {
+        page.setDefaultNavigationTimeout(e2e.playwrightPageOptions.navigationTimeout)
       }
-      if (options.playwrightPageOptions?.actionTimeout != null) {
-        page.setDefaultTimeout(options.playwrightPageOptions.actionTimeout)
+      if (e2e.playwrightPageOptions?.actionTimeout != null) {
+        page.setDefaultTimeout(e2e.playwrightPageOptions.actionTimeout)
       }
 
-      let coverageEnabled = options.coverage && options.browser.browserType().name() === 'chromium'
+      let coverageEnabled = e2e.coverage && e2e.browser.browserType().name() === 'chromium'
       if (coverageEnabled) {
         await page.coverage.startJSCoverage({ resetOnNavigation: false })
         cleanups.push(async () => {
           let entries = await page.coverage.stopJSCoverage()
-          options.addE2ECoverageEntries?.({
+          e2e.addE2ECoverageEntries?.({
             entries: entries as unknown as V8CoverageEntry[],
             baseUrl: server.baseUrl,
           })
@@ -146,7 +159,7 @@ export function createTestContext(options?: CreateTestContextOptions): {
       }
 
       cleanups.push(async () => {
-        if (!options.open) {
+        if (!e2e.open) {
           await page.close()
         }
         await server.close()

@@ -328,6 +328,45 @@ describe('crawl(router)', () => {
     assert.deepEqual(visited, ['/'])
   })
 
+  it('follows links on matching pages when page-level nofollow is ignored', async () => {
+    let router = createRouter()
+    router.get('/v1.2.3/', () =>
+      html(`
+        <meta name="robots" content="noindex, nofollow">
+        <a href="/v1.2.3/about">About</a>
+      `),
+    )
+    router.get('/v1.2.3/about', () => html('<html></html>'))
+
+    let visited: string[] = []
+    for await (let { pathname } of crawl(router, {
+      paths: ['/v1.2.3/'],
+      ignorePageNofollow: (pathname) => pathname.startsWith('/v1.2.3/'),
+    })) {
+      visited.push(pathname)
+    }
+    assert.deepEqual(visited, ['/v1.2.3/', '/v1.2.3/about'])
+  })
+
+  it('still honors page-level nofollow when ignorePageNofollow does not match', async () => {
+    let router = createRouter()
+    router.get('/', () =>
+      html(`
+        <meta name="robots" content="noindex, nofollow">
+        <a href="/about">About</a>
+      `),
+    )
+    router.get('/about', () => html('<html></html>'))
+
+    let visited: string[] = []
+    for await (let { pathname } of crawl(router, {
+      ignorePageNofollow: (pathname) => pathname.startsWith('/v1.2.3/'),
+    })) {
+      visited.push(pathname)
+    }
+    assert.deepEqual(visited, ['/'])
+  })
+
   it('does not follow links on pages with <meta name="googlebot" content="nofollow">', async () => {
     let router = createRouter()
     router.get('/', () =>

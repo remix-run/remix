@@ -2,6 +2,21 @@
 
 This is the changelog for [`cli`](https://github.com/remix-run/remix/tree/main/packages/cli). It follows [semantic versioning](https://semver.org/).
 
+## v0.3.4
+
+### Patch Changes
+
+- Improve the default `remix new` app template so production starts with `NODE_ENV=production`, minifies browser assets, resolves frames on the client and server, and uses the dev server watcher instead of the asset server watcher.
+
+- Prevent `remix doctor --fix` from creating or updating files outside the project root when fix paths traverse symlinks (see #11532).
+
+## v0.3.3
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`test@0.5.0`](https://github.com/remix-run/remix/releases/tag/test@0.5.0)
+
 ## v0.3.2
 
 ### Patch Changes

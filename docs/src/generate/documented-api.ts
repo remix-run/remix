@@ -209,6 +209,7 @@ function getDocumentedInterfaceFunction(
   return {
     ...getDocumentedFunction(fullName, node),
     type: 'interface-function',
+    path: getApiFilePath(fullName, 'interface'),
   }
 }
 
@@ -556,15 +557,19 @@ function getApiFilePath(
   // `@remix-run/*` source reflections directly (see `createLookupMaps` in
   // typedoc.ts).
   let rawPkg = nameParts.shift() ?? ''
-  // If the first remaining segment combined with the package name is a more
-  // specific manifest entry (e.g. @remix-run/fetch-router + routes →
-  // @remix-run/fetch-router/routes → remix/routes), consume that segment so
-  // APIs from sub-exports land under the right canonical path.
-  if (rawPkg.startsWith('@remix-run/') && nameParts.length > 0) {
-    let withSub = `${rawPkg}/${nameParts[0]}`
-    if (hasRemixPackage(withSub)) {
-      rawPkg = withSub
-      nameParts.shift()
+  // If the remaining segments combined with the package name form a more
+  // specific manifest entry (e.g. @remix-run/ui + accordion →
+  // @remix-run/ui/accordion → remix/ui/accordion), consume
+  // the longest matching prefix so APIs from sub-exports land under the right
+  // canonical path.
+  if (rawPkg.startsWith('@remix-run/') && nameParts.length > 1) {
+    for (let segmentCount = nameParts.length - 1; segmentCount > 0; segmentCount--) {
+      let withSub = `${rawPkg}/${nameParts.slice(0, segmentCount).join('/')}`
+      if (hasRemixPackage(withSub)) {
+        rawPkg = withSub
+        nameParts.splice(0, segmentCount)
+        break
+      }
     }
   }
   let pkg = rawPkg.startsWith('@remix-run/') ? mapToRemixPackage(rawPkg) : rawPkg

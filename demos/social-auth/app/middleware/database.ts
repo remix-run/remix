@@ -8,7 +8,8 @@ export function loadDatabase(): Middleware<{
   value: Database
   property: 'db'
 }> {
-  return (context) => {
+  return (context, next) => {
     context.set(Database, db, { property: 'db' })
+    return next()
   }
 }

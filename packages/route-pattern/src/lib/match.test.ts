@@ -224,6 +224,46 @@ describe('Matcher', () => {
         assert.deepEqual(match.params, {})
       })
 
+      it('matches explicit HTTP default port', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('http://example.com:80/users', null)
+
+        let match = matcher.match('http://example.com:80/users')
+        assert.ok(match)
+        assert.deepEqual(match.params, {})
+      })
+
+      it('matches explicit HTTPS default port', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('https://example.com:443/users', null)
+
+        let match = matcher.match('https://example.com:443/users')
+        assert.ok(match)
+        assert.deepEqual(match.params, {})
+      })
+
+      it('normalizes default ports per protocol variant', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('http(s)://example.com:443/users', null)
+
+        assert.ok(matcher.match('http://example.com:443/users'))
+        assert.ok(matcher.match('https://example.com:443/users'))
+        assert.ok(matcher.match('https://example.com/users'))
+        assert.equal(matcher.match('http://example.com/users'), null)
+      })
+
+      it('matches hrefs generated from patterns with explicit default ports', () => {
+        let matcher = createMultiMatcher<null>()
+        let httpPattern = 'http://example.com:80/users' as const
+        let httpsPattern = 'https://example.com:443/users' as const
+
+        matcher.add(httpPattern, null)
+        matcher.add(httpsPattern, null)
+
+        assert.ok(matcher.match(createHref(httpPattern)))
+        assert.ok(matcher.match(createHref(httpsPattern)))
+      })
+
       it('returns null when explicit port does not match', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com:8080/users', null)
@@ -630,6 +670,22 @@ describe('Matcher', () => {
         assert.ok(matcher.match('https://example.com/Posts/123'))
       })
 
+      it('ignores case in dynamic pathname segment regexes and wildcard continuations', () => {
+        let matcher = createMultiMatcher<string>({ ignoreCase: true })
+        matcher.add('/files/:name.md', 'file')
+        matcher.add('/*path/STATUS', 'status')
+
+        assert.equal(matcher.match('https://example.com/files/README.MD')?.data, 'file')
+        assert.equal(matcher.match('https://example.com/files/readme/status')?.data, 'status')
+      })
+
+      it('ignores Unicode case in static pathname text', () => {
+        let matcher = createMultiMatcher<null>({ ignoreCase: true })
+        matcher.add('/Café', null)
+
+        assert.ok(matcher.match('https://example.com/CAFÉ'))
+      })
+
       it('ignores hostname case regardless of ignoreCase', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://Example.COM/users', null)
@@ -773,6 +829,14 @@ describe('Matcher', () => {
           assert.deepEqual(match?.params, {})
         })
 
+        it('normalizes percent-encoded hostname ASCII in static labels', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://a.example.com/', null)
+
+          let match = matcher.match('https://%41.example.com/')
+          assert.deepEqual(match?.params, {})
+        })
+
         it('treats raw and percent-encoded URL path-safe static text as equivalent', () => {
           let matcher = createMultiMatcher<null>()
           matcher.add('/packages/@scope+name,semi;equals=/file', null)
@@ -802,6 +866,22 @@ describe('Matcher', () => {
 
           let match = matcher.match('https://example.com/files/%61')
           assert.deepEqual(match?.params, { path: 'a' })
+        })
+
+        it('returns null for malformed percent-encoded pathnames', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/:name', null)
+
+          assert.equal(matcher.match('https://example.com/files/%E0%A4%A'), null)
+          assert.equal(matcher.match('https://example.com/files/%'), null)
+        })
+
+        it('returns no matches for malformed percent-encoded pathnames', () => {
+          let matcher = createMultiMatcher<null>()
+          matcher.add('://example.com/files/:name', null)
+          matcher.add('://example.com/files/*path', null)
+
+          assert.deepEqual(matcher.matchAll('https://example.com/files/%E0%A4%A'), [])
         })
 
         it('does not match encoded slashes as pathname separators', () => {
@@ -1032,6 +1112,27 @@ describe('Matcher', () => {
         assert.equal(match.pattern.toString(), '://example.com/search?q=')
       })
 
+      it('prefers explicit protocol over omitted or http(s) protocol', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('://example.com/users', null)
+        matcher.add('http(s)://example.com/users', null)
+        matcher.add('http://example.com/users', null)
+
+        let match = matcher.match('http://example.com/users')
+        assert.ok(match)
+        assert.equal(match.pattern.toString(), 'http://example.com/users')
+      })
+
+      it('prefers explicit port over omitted port', () => {
+        let matcher = createMultiMatcher<null>()
+        matcher.add('http://example.com/users', null)
+        matcher.add('http://example.com:8080/users', null)
+
+        let match = matcher.match('http://example.com:8080/users')
+        assert.ok(match)
+        assert.equal(match.pattern.toString(), 'http://example.com:8080/users')
+      })
+
       it('returns null when no patterns match', () => {
         let matcher = createMultiMatcher<null>()
         matcher.add('://example.com/users', null)
@@ -1080,6 +1181,17 @@ describe('Matcher', () => {
       assert.deepEqual(
         matches2.map((m) => m.pattern.toString()),
         ['://example.com/posts/:id'],
+      )
+    })
+
+    it('deduplicates optional variants that collapse to the same concrete pattern', () => {
+      let matcher = createMultiMatcher<null>()
+      matcher.add('/(x)(x)', null)
+
+      let matches = matcher.matchAll('http://example.com/x')
+      assert.deepEqual(
+        matches.map((m) => m.pattern.toString()),
+        ['/(x)(x)'],
       )
     })
 

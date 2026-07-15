@@ -39,8 +39,8 @@ export function compilePostgresOperation(operation: DataManipulationOperation): 
       compileGroupByClause(operation.groupBy) +
       compileHavingClause(operation.having, context) +
       compileOrderByClause(operation.orderBy) +
-      compileLimitClause(operation.limit) +
-      compileOffsetClause(operation.offset)
+      compileLimitClause(operation.limit, context) +
+      compileOffsetClause(operation.offset, context)
 
     return {
       text,
@@ -555,20 +555,20 @@ function compileOrderByClause(orderBy: { column: string; direction: 'asc' | 'des
   )
 }
 
-function compileLimitClause(limit: number | undefined): string {
+function compileLimitClause(limit: number | undefined, context: CompileContext): string {
   if (limit === undefined) {
     return ''
   }
 
-  return ' limit ' + String(limit)
+  return ' limit ' + pushValue(context, limit)
 }
 
-function compileOffsetClause(offset: number | undefined): string {
+function compileOffsetClause(offset: number | undefined, context: CompileContext): string {
   if (offset === undefined) {
     return ''
   }
 
-  return ' offset ' + String(offset)
+  return ' offset ' + pushValue(context, offset)
 }
 
 function compileReturningClause(returning: '*' | string[] | undefined): string {

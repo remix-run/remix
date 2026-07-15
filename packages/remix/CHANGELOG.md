@@ -2,6 +2,161 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-beta.5
+
+### Pre-release Changes
+
+- Added `package.json` `exports`:
+
+  - `remix/ui/accordion` to re-export APIs from `@remix-run/ui/accordion`
+  - `remix/ui/accordion/primitives` to re-export APIs from `@remix-run/ui/accordion/primitives`
+  - `remix/ui/anchor` to re-export APIs from `@remix-run/ui/anchor`
+  - `remix/ui/breadcrumbs` to re-export APIs from `@remix-run/ui/breadcrumbs`
+  - `remix/ui/button` to re-export APIs from `@remix-run/ui/button`
+  - `remix/ui/checkbox` to re-export APIs from `@remix-run/ui/checkbox`
+  - `remix/ui/combobox` to re-export APIs from `@remix-run/ui/combobox`
+  - `remix/ui/combobox/primitives` to re-export APIs from `@remix-run/ui/combobox/primitives`
+  - `remix/ui/input` to re-export APIs from `@remix-run/ui/input`
+  - `remix/ui/listbox` to re-export APIs from `@remix-run/ui/listbox`
+  - `remix/ui/menu` to re-export APIs from `@remix-run/ui/menu`
+  - `remix/ui/menu/primitives` to re-export APIs from `@remix-run/ui/menu/primitives`
+  - `remix/ui/popover` to re-export APIs from `@remix-run/ui/popover`
+  - `remix/ui/radio` to re-export APIs from `@remix-run/ui/radio`
+  - `remix/ui/select` to re-export APIs from `@remix-run/ui/select`
+  - `remix/ui/select/primitives` to re-export APIs from `@remix-run/ui/select/primitives`
+  - `remix/ui/tabs` to re-export APIs from `@remix-run/ui/tabs`
+  - `remix/ui/tabs/primitives` to re-export APIs from `@remix-run/ui/tabs/primitives`
+  - `remix/ui/toggle` to re-export APIs from `@remix-run/ui/toggle`
+  - `remix/ui/toggle/primitives` to re-export APIs from `@remix-run/ui/toggle/primitives`
+
+  Removed helper re-exports from `remix/ui`:
+
+  - `flashAttribute`
+  - `hiddenTypeahead`
+  - `matchNextItemBySearchText`
+  - `onKeyDown`
+  - `SearchValue`
+  - `wait`
+  - `waitForCssTransition`
+
+  Updated `remix/route-pattern` exports for the `RoutePattern` API:
+
+  - Added `getRoutePatternCaptures`, `RoutePatternCapture`, and `RoutePatternJSON` to `remix/route-pattern`
+  - Added `CreateHrefErrorDetails` to `remix/route-pattern/href`
+  - Added `MatchParamMeta` to `remix/route-pattern/match`
+
+  Removed `package.json` `exports`:
+
+  - `remix/components/accordion`
+  - `remix/components/accordion/primitives`
+  - `remix/components/anchor`
+  - `remix/components/breadcrumbs`
+  - `remix/components/button`
+  - `remix/components/checkbox`
+  - `remix/components/checkbox/primitives`
+  - `remix/components/combobox`
+  - `remix/components/combobox/primitives`
+  - `remix/components/input`
+  - `remix/components/listbox`
+  - `remix/components/menu`
+  - `remix/components/menu/primitives`
+  - `remix/components/popover`
+  - `remix/components/select`
+  - `remix/components/select/primitives`
+  - `remix/ui/glyph`
+  - `remix/ui/scroll-lock`
+  - `remix/ui/separator`
+  - `remix/ui/theme`
+
+- Added the `trustProxy` option to `remix/node-fetch-server` for apps behind trusted reverse proxies that need `request.url` and handler client address information to reflect trusted `Forwarded` and `X-Forwarded-*` headers.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.4.4`](https://github.com/remix-run/remix/releases/tag/assets@0.4.4)
+  - [`async-context-middleware@0.3.4`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.3.4)
+  - [`auth@0.2.6`](https://github.com/remix-run/remix/releases/tag/auth@0.2.6)
+  - [`auth-middleware@0.2.4`](https://github.com/remix-run/remix/releases/tag/auth-middleware@0.2.4)
+  - [`cli@0.3.4`](https://github.com/remix-run/remix/releases/tag/cli@0.3.4)
+  - [`compression-middleware@0.1.12`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.12)
+  - [`cop-middleware@0.1.7`](https://github.com/remix-run/remix/releases/tag/cop-middleware@0.1.7)
+  - [`cors-middleware@0.1.7`](https://github.com/remix-run/remix/releases/tag/cors-middleware@0.1.7)
+  - [`csrf-middleware@0.1.7`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@0.1.7)
+  - [`fetch-proxy@0.8.4`](https://github.com/remix-run/remix/releases/tag/fetch-proxy@0.8.4)
+  - [`fetch-router@0.20.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.20.1)
+  - [`file-storage@0.13.7`](https://github.com/remix-run/remix/releases/tag/file-storage@0.13.7)
+  - [`file-storage-s3@0.1.4`](https://github.com/remix-run/remix/releases/tag/file-storage-s3@0.1.4)
+  - [`form-data-middleware@0.3.4`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.3.4)
+  - [`form-data-parser@0.17.4`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.17.4)
+  - [`fs@0.4.6`](https://github.com/remix-run/remix/releases/tag/fs@0.4.6)
+  - [`lazy-file@5.0.6`](https://github.com/remix-run/remix/releases/tag/lazy-file@5.0.6)
+  - [`logger-middleware@0.3.4`](https://github.com/remix-run/remix/releases/tag/logger-middleware@0.3.4)
+  - [`method-override-middleware@0.1.12`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@0.1.12)
+  - [`mime@0.4.2`](https://github.com/remix-run/remix/releases/tag/mime@0.4.2)
+  - [`node-fetch-server@0.14.0`](https://github.com/remix-run/remix/releases/tag/node-fetch-server@0.14.0)
+  - [`render-middleware@0.1.4`](https://github.com/remix-run/remix/releases/tag/render-middleware@0.1.4)
+  - [`response@0.3.7`](https://github.com/remix-run/remix/releases/tag/response@0.3.7)
+  - [`route-pattern@0.23.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.23.0)
+  - [`session-middleware@0.3.4`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.3.4)
+  - [`static-middleware@0.4.13`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.13)
+  - [`ui@0.4.0`](https://github.com/remix-run/remix/releases/tag/ui@0.4.0)
+
+## v3.0.0-beta.4
+
+### Pre-release Changes
+
+- BREAKING CHANGE: Middleware consumed through `remix/router` and `remix/fetch-router` must now explicitly continue the request chain by calling `next()` or return a `Response`. Middleware that returned `undefined` without calling `next()` now throws at runtime instead of implicitly continuing.
+
+  Update context-loading middleware to return the downstream response:
+
+  ```ts
+  function loadUser(): Middleware {
+    return (context, next) => {
+      context.set(CurrentUser, user)
+      return next()
+    }
+  }
+  ```
+
+- Improve Node compatibility for the `remix/assert` entrypoint.
+
+  The default export is now callable as an alias for `assert.ok`, failure errors expose Node-style metadata, expected-error/message handling more closely follows `node:assert/strict`, strict/deep equality now handles `Object.is` and built-in object comparisons more consistently with Node, and `assert.partialDeepEqual` is available for strict partial deep comparisons.
+
+- Add `router.mount()` and the `RouteBuilder`/`RouteInstaller` types to `remix/router` and `remix/fetch-router` so larger apps can be built from smaller route groups without making feature modules hard-code their final URL. A feature module can now export a local route installer that registers routes like `/`, `/users/:id`, or a route map, and the parent can mount it at `/admin`, `/orgs/:orgId`, or another route pattern prefix while one router still owns request dispatch, matching, middleware, and default handling. Params from the mount pattern are available to mounted handlers, and duplicate param names follow `route-pattern` behavior where the right-most param wins.
+
+  `RouterContext<typeof router>` extracts the request context provided by a router or route builder, so apps can keep root middleware inline and use that router-derived context for `RouterTypes.context`. `createAction()`, direct action objects, and `createController()` now infer middleware-provided values from plain inline middleware arrays, which removes the usual need for intermediate `MiddlewareContext<...>` aliases and explicit generics in stored actions and controllers.
+
+  `createMiddleware()` creates reusable middleware chains that preserve their tuple type without `as const` in the specific cases where a chain crosses an inference boundary: deriving `MiddlewareContext<typeof rootMiddleware>` without a router value, exporting a reusable chain, or returning a chain from a factory. Prefer inline arrays for ordinary `middleware` options on routers, controllers, actions, and route helpers. `Middleware` is now a callable type alias with type-only context metadata, which preserves inline middleware context transforms more reliably than an interface call signature.
+
+  The re-exported router types also keep `createRouter()` and `router.map()` to single call signatures while preserving route params, middleware context inference, and stored action/controller compatibility checks, making the public type surface smaller while everyday route setup gets more expressive.
+
+  BREAKING CHANGE: `MapTarget` and `MapHandler` are no longer re-exported from `remix/router` or `remix/fetch-router`. Use the public `Router`, `RouteBuilder`, `RouteInstaller`, `Action`, and `Controller` types instead.
+
+- Expose `remix/test` timeout and abort signal support through the Remix package.
+
+  Tests and lifecycle hooks can pass `{ timeout, signal }`, and `t.signal` aborts when a test times out. String `skip`/`todo` reasons now flow through `remix/test` results and reporter output.
+
+- Keep generated README mirrors in the published `remix` package so `node_modules/remix/src/<subpath>/README.md` documentation remains available while the duplicated source files stay untracked in git.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assert@0.3.0`](https://github.com/remix-run/remix/releases/tag/assert@0.3.0)
+  - [`assets@0.4.3`](https://github.com/remix-run/remix/releases/tag/assets@0.4.3)
+  - [`async-context-middleware@0.3.3`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.3.3)
+  - [`auth@0.2.5`](https://github.com/remix-run/remix/releases/tag/auth@0.2.5)
+  - [`auth-middleware@0.2.3`](https://github.com/remix-run/remix/releases/tag/auth-middleware@0.2.3)
+  - [`cli@0.3.3`](https://github.com/remix-run/remix/releases/tag/cli@0.3.3)
+  - [`compression-middleware@0.1.11`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.11)
+  - [`cop-middleware@0.1.6`](https://github.com/remix-run/remix/releases/tag/cop-middleware@0.1.6)
+  - [`cors-middleware@0.1.6`](https://github.com/remix-run/remix/releases/tag/cors-middleware@0.1.6)
+  - [`csrf-middleware@0.1.6`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@0.1.6)
+  - [`fetch-router@0.20.0`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.20.0)
+  - [`form-data-middleware@0.3.3`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.3.3)
+  - [`logger-middleware@0.3.3`](https://github.com/remix-run/remix/releases/tag/logger-middleware@0.3.3)
+  - [`method-override-middleware@0.1.11`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@0.1.11)
+  - [`render-middleware@0.1.3`](https://github.com/remix-run/remix/releases/tag/render-middleware@0.1.3)
+  - [`route-pattern@0.22.1`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.22.1)
+  - [`session-middleware@0.3.3`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.3.3)
+  - [`static-middleware@0.4.12`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.12)
+  - [`test@0.5.0`](https://github.com/remix-run/remix/releases/tag/test@0.5.0)
+
 ## v3.0.0-beta.3
 
 ### Pre-release Changes

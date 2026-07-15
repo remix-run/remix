@@ -7,7 +7,7 @@ A streaming `multipart/form-data` parser that solves memory issues with file upl
 - **Drop-in replacement** for `request.formData()` with streaming file upload support
 - **Minimal buffering** - processes file upload streams with minimal memory footprint
 - **Standards-based** - built on the [web Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API) and [File API](https://developer.mozilla.org/en-US/docs/Web/API/File)
-- **Smart fallback** - automatically uses native `request.formData()` for non-`multipart/form-data` requests
+- **Smart fallback** - parses `application/x-www-form-urlencoded` requests with the same total size and field count limits, and uses native `request.formData()` for other form requests
 - **Storage agnostic** - works with any storage backend (local disk, S3, R2, etc.)
 
 ## Why You Need This
@@ -74,7 +74,7 @@ async function requestHandler(request: Request) {
 
 To validate the resulting `FormData` object with `remix/data-schema`, use the `remix/data-schema/form-data` helpers.
 
-To limit the overall shape of multipart requests, use the `maxHeaderSize`, `maxFileSize`, `maxFiles`, `maxParts`, and `maxTotalSize` options. By default, `parseFormData()` uses `maxFiles = 20`, `maxParts = 1000`, and `maxTotalSize = maxFiles * maxFileSize + 1 MiB`.
+To limit the overall shape of multipart requests, use the `maxHeaderSize`, `maxFileSize`, `maxFiles`, `maxParts`, and `maxTotalSize` options. For `application/x-www-form-urlencoded` requests, `maxParts` limits the number of form fields and `maxTotalSize` limits the raw request body size. By default, `parseFormData()` uses `maxFiles = 20`, `maxParts = 1000`, and `maxTotalSize = maxFiles * maxFileSize + 1 MiB`.
 
 Known limit errors are thrown directly so you can handle them with `instanceof` checks. Other failures while parsing the request body are wrapped in `FormDataParseError`, with the original error available as `error.cause`. Errors thrown or rejected by your `uploadHandler` are not wrapped.
 
@@ -106,9 +106,9 @@ try {
   } else if (error instanceof MaxFileSizeExceededError) {
     console.error(`Files may not be larger than 10 MiB`)
   } else if (error instanceof MaxPartsExceededError) {
-    console.error(`Request may not contain more than 25 multipart parts`)
+    console.error(`Request may not contain more than 25 form fields or multipart parts`)
   } else if (error instanceof MaxTotalSizeExceededError) {
-    console.error(`Multipart request may not exceed 12 MiB of total content`)
+    console.error(`Form data request may not exceed 12 MiB of total content`)
   } else if (error instanceof FormDataParseError) {
     console.error(`Could not parse form data:`, error.cause ?? error)
   } else {

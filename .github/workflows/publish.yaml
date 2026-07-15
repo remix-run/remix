@@ -48,7 +48,7 @@ jobs:
         uses: actions/checkout@v6
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
 
       - name: Install Node.js
         uses: ./.github/actions/setup-node-pnpm-cache
@@ -77,6 +77,9 @@ jobs:
 
       - name: Build packages
         run: pnpm build
+
+      - name: Validate remix package README mirrors
+        run: pnpm run validate-remix-package-readmes
 
       - name: Publish to npm and create releases
         run: node ./scripts/publish.ts

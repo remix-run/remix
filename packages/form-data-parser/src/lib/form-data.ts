@@ -71,7 +71,7 @@ const defaultMaxFiles = 20
 const defaultMaxFileSize = 2 * oneMb
 const defaultMaxParts = 1000
 
-function isMultipartLimitError(error: unknown): boolean {
+function isParserLimitError(error: unknown): boolean {
   return (
     error instanceof MaxHeaderSizeExceededError ||
     error instanceof MaxFileSizeExceededError ||
@@ -87,12 +87,100 @@ async function* parseFormDataParts(
   try {
     yield* parseMultipartRequest(request, parserOptions)
   } catch (error) {
-    if (error instanceof FormDataParseError || isMultipartLimitError(error)) {
+    if (error instanceof FormDataParseError || isParserLimitError(error)) {
       throw error
     }
 
     throw new FormDataParseError('Cannot parse form data', { cause: error })
   }
+}
+
+function isUrlEncodedRequest(request: Request): boolean {
+  let contentType = request.headers.get('Content-Type')
+  return contentType != null && contentType.startsWith('application/x-www-form-urlencoded')
+}
+
+function validateUrlEncodedPartCount(partCount: number, maxParts: number): void {
+  if (partCount > maxParts) {
+    throw new MaxPartsExceededError(maxParts)
+  }
+}
+
+async function readUrlEncodedBody(
+  request: Request,
+  maxParts: number,
+  maxTotalSize: number,
+): Promise<Uint8Array> {
+  if (request.body == null) {
+    return new Uint8Array()
+  }
+
+  let reader = request.body.getReader()
+  let chunks: Uint8Array[] = []
+  let partCount = 0
+  let totalSize = 0
+  let hasPartBytes = false
+
+  try {
+    while (true) {
+      let result = await reader.read()
+      if (result.done) break
+
+      totalSize += result.value.length
+      if (totalSize > maxTotalSize) {
+        throw new MaxTotalSizeExceededError(maxTotalSize)
+      }
+
+      for (let byte of result.value) {
+        if (byte === 38) {
+          if (hasPartBytes) {
+            validateUrlEncodedPartCount(++partCount, maxParts)
+            hasPartBytes = false
+          }
+        } else {
+          hasPartBytes = true
+        }
+      }
+
+      chunks.push(result.value)
+    }
+
+    if (hasPartBytes) {
+      validateUrlEncodedPartCount(++partCount, maxParts)
+    }
+  } finally {
+    reader.releaseLock()
+  }
+
+  let body = new Uint8Array(totalSize)
+  let offset = 0
+
+  for (let chunk of chunks) {
+    body.set(chunk, offset)
+    offset += chunk.length
+  }
+
+  return body
+}
+
+let urlEncodedDecoder: TextDecoder | undefined
+
+async function parseUrlEncodedFormData(
+  request: Request,
+  maxParts: number,
+  maxTotalSize: number,
+): Promise<FormData> {
+  let bytes = await readUrlEncodedBody(request, maxParts, maxTotalSize)
+  urlEncodedDecoder ??= new TextDecoder()
+
+  let searchParams = new URLSearchParams(urlEncodedDecoder.decode(bytes as BufferSource))
+  let formData = new FormData()
+
+  for (let [name, value] of searchParams) {
+    formData.append(name, value)
+  }
+
+  return formData
 }
 
 /**
@@ -151,14 +239,6 @@ export async function parseFormData(
     uploadHandler = defaultFileUploadHandler
   }
 
-  if (!isMultipartRequest(request)) {
-    try {
-      return await request.formData()
-    } catch (error) {
-      throw new FormDataParseError('Cannot parse form data', { cause: error })
-    }
-  }
-
   let {
     maxFiles = defaultMaxFiles,
     maxHeaderSize,
@@ -166,6 +246,26 @@ export async function parseFormData(
     maxParts = defaultMaxParts,
     maxTotalSize = maxFiles * maxFileSize + oneMb,
   } = optionsOrUploadHandler
+
+  if (isUrlEncodedRequest(request)) {
+    try {
+      return await parseUrlEncodedFormData(request, maxParts, maxTotalSize)
+    } catch (error) {
+      if (error instanceof FormDataParseError || isParserLimitError(error)) {
+        throw error
+      }
+
+      throw new FormDataParseError('Cannot parse form data', { cause: error })
+    }
+  }
+
+  if (!isMultipartRequest(request)) {
+    try {
+      return await request.formData()
+    } catch (error) {
+      throw new FormDataParseError('Cannot parse form data', { cause: error })
+    }
+  }
 
   let parserOptions: MultipartParserOptions = {
     maxHeaderSize,

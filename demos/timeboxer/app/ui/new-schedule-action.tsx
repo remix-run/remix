@@ -1,8 +1,7 @@
-import { clientEntry, css, navigate, on, ref, type Handle } from 'remix/ui'
+import { clientEntry, css, navigate, on, ref, type Handle, type Props } from 'remix/ui'
 import { animateEntrance, animateExit, spring } from 'remix/ui/animation'
-import { Button } from 'remix/ui/button'
-import { Glyph } from 'remix/ui/glyph'
-import { theme } from 'remix/ui/theme'
+import button from 'remix/ui/button'
+import { theme } from './design.ts'
 
 type State = 'idle' | 'creating' | 'submitting'
 
@@ -19,7 +18,7 @@ export const NewScheduleAction = clientEntry(
 
 function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) {
   let state: State = 'idle'
-  let button: HTMLButtonElement | null = null
+  let buttonNode: HTMLButtonElement | null = null
   let errorMessage: string | null = null
   let input: HTMLInputElement | null = null
   let submittedName = ''
@@ -31,7 +30,7 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
     submittedName = ''
     state = 'idle'
     await handle.update()
-    button?.focus()
+    buttonNode?.focus()
   }
 
   async function submitSchedule(form: HTMLFormElement) {
@@ -55,9 +54,9 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
         fetch(schedulesHref, {
           method: 'POST',
           headers: {
-            accept: 'application/json',
-            'content-type': 'application/json',
-            'x-csrf-token': handle.props.csrfToken,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'X-Csrf-Token': handle.props.csrfToken,
           },
           body: JSON.stringify({ name }),
           signal: handle.signal,
@@ -106,12 +105,12 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
 
     if (state === 'idle') {
       content = (
-        <Button
+        <button
           type="button"
-          tone="secondary"
           mix={[
+            button(),
             newScheduleButtonStyle,
-            ref((node) => (button = node)),
+            ref((node) => (buttonNode = node)),
             on('click', async () => {
               errorMessage = null
               submittedName = ''
@@ -120,10 +119,10 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
               input?.focus()
             }),
           ]}
-          startIcon={<Glyph name="add" />}
         >
+          <AddIcon mix={buttonIconStyle} />
           New schedule
-        </Button>
+        </button>
       )
     } else if (state === 'submitting') {
       content = (
@@ -139,7 +138,7 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
             }),
           ]}
         >
-          <Glyph name="spinner" mix={spinnerStyle} />
+          <SpinnerIcon mix={spinnerStyle} />
           <span>Creating</span>
         </div>
       )
@@ -211,6 +210,38 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
   }
 }
 
+function AddIcon(handle: Handle<Props<'svg'>>) {
+  return () => (
+    <svg
+      {...handle.props}
+      aria-hidden="true"
+      fill="none"
+      viewBox="0 0 16 16"
+      xmlns="http://www.w3.org/2000/svg"
+    >
+      <path
+        d="M8 3.25v9.5M3.25 8h9.5"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-width="1.5"
+      />
+    </svg>
+  )
+}
+
+function SpinnerIcon(handle: Handle<Props<'svg'>>) {
+  return () => (
+    <svg {...handle.props} aria-hidden="true" fill="none" viewBox="0 0 16 16">
+      <path
+        d="M8 2.5a5.5 5.5 0 1 1-5.5 5.5"
+        stroke="currentColor"
+        stroke-linecap="round"
+        stroke-width="1.5"
+      />
+    </svg>
+  )
+}
+
 const schedulesHref = '/schedules'
 const scheduleNameErrorId = 'new-schedule-name-error'
 
@@ -223,7 +254,7 @@ function scheduleHref(scheduleId: number | string) {
 }
 
 async function createScheduleErrorMessage(response: Response) {
-  let contentType = response.headers.get('content-type') ?? ''
+  let contentType = response.headers.get('Content-Type') ?? ''
 
   if (contentType.includes('application/json')) {
     try {
@@ -252,6 +283,12 @@ const newScheduleButtonStyle = css({
   width: '100%',
 })
 
+const buttonIconStyle = css({
+  flexShrink: 0,
+  height: '1em',
+  width: '1em',
+})
+
 const newScheduleActionStyle = css({
   display: 'grid',
   height: '100%',
@@ -268,23 +305,23 @@ const newScheduleFormStyle = css({
 
 const newScheduleInputStyle = css({
   border: `1px solid ${theme.colors.border.default}`,
-  borderRadius: theme.radius.md,
+  borderRadius: theme.radius,
   boxSizing: 'border-box',
   color: theme.colors.text.primary,
   font: 'inherit',
   fontSize: theme.fontSize.xs,
-  minHeight: theme.control.height.sm,
+  minHeight: '28px',
   padding: `0 ${theme.space.md}`,
   width: '100%',
   '&:focus': {
-    borderColor: theme.colors.focus.ring,
-    outline: `2px solid ${theme.colors.focus.ring}`,
+    borderColor: theme.colors.focusRing,
+    outline: `2px solid ${theme.colors.focusRing}`,
     outlineOffset: '2px',
   },
 })
 
 const newScheduleErrorStyle = css({
-  color: theme.colors.action.danger.background,
+  color: theme.colors.danger,
   display: 'block',
   fontSize: theme.fontSize.xs,
   marginTop: theme.space.xs,

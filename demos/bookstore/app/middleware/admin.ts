@@ -8,11 +8,13 @@ import { getCurrentUser } from '../utils/context.ts'
  * Must be used after requireAuth middleware.
  */
 export function requireAdmin(): Middleware {
-  return () => {
+  return (_, next) => {
     let user = getCurrentUser()
 
     if (user.role !== 'admin') {
       return new Response('Forbidden', { status: 403 })
     }
+
+    return next()
   }
 }

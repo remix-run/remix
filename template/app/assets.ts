@@ -1,6 +1,8 @@
 import { createAssetServer } from 'remix/assets'
 
 const rootDir = process.cwd()
+const nodeEnv = process.env.NODE_ENV ?? 'development'
+const isDevelopment = nodeEnv === 'development'
 
 export const assetServer = createAssetServer({
   basePath: '/assets',
@@ -19,11 +21,7 @@ export const assetServer = createAssetServer({
     '../packages/**',
     /* remix-template:remove-end */
   ],
-  deny: ['app/**/*.server.*'],
-  sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
-  scripts: {
-    define: {
-      'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV ?? 'development'),
-    },
-  },
+  sourceMaps: isDevelopment ? 'external' : undefined,
+  minify: !isDevelopment,
+  watch: false,
 })

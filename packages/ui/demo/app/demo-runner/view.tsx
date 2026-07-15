@@ -1,43 +1,51 @@
 import { css } from 'remix/ui'
 import type { Handle } from 'remix/ui'
-import { RMX_01, RMX_01_GLYPHS, theme } from '@remix-run/ui/theme'
+import { theme } from './design.ts'
 
 import type { DemoFile } from './discovery.ts'
 
 export function DemoIndexDocument(handle: Handle<{ demos: DemoFile[] }>) {
   return () => {
     let { demos } = handle.props
-    let demoGroups = groupDemosByModule(demos)
+    let demoSections = groupDemosBySection(demos)
 
     return (
       <html>
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>Remix UI Demos</title>
-          <RMX_01 />
+          <title>Remix Interface Demos</title>
         </head>
         <body mix={bodyCss}>
-          <RMX_01_GLYPHS />
           <main mix={indexShellCss}>
             <header mix={indexHeaderCss}>
-              <p mix={eyebrowCss}>Remix UI</p>
+              <p mix={eyebrowCss}>Remix interface</p>
               <h1 mix={titleCss}>Demos</h1>
-              <p mix={descriptionCss}>{demos.length} demo files found in packages/ui.</p>
+              <p mix={descriptionCss}>{demos.length} demo files found across the UI package.</p>
             </header>
-            <div mix={demoGroupsCss}>
-              {demoGroups.map((group) => (
-                <section key={group.moduleName} mix={demoGroupCss}>
-                  <h2 mix={demoGroupTitleCss}>{group.moduleName}</h2>
-                  <ol mix={demoListCss}>
-                    {group.demos.map((demo) => (
-                      <li key={demo.relativePath} mix={demoItemCss}>
-                        <a href={demo.href} mix={demoLinkCss}>
-                          {demo.title}
-                        </a>
-                      </li>
+            <div mix={demoSectionsCss}>
+              {demoSections.map((section) => (
+                <section key={section.title} mix={demoSectionCss}>
+                  <header mix={demoSectionHeaderCss}>
+                    <h2 mix={demoSectionTitleCss}>{section.title}</h2>
+                    <p mix={demoSectionDescriptionCss}>{section.description}</p>
+                  </header>
+                  <div mix={demoGroupsCss}>
+                    {section.groups.map((group) => (
+                      <section key={group.moduleName} mix={demoGroupCss}>
+                        <h3 mix={demoGroupTitleCss}>{group.moduleName}</h3>
+                        <ol mix={demoListCss}>
+                          {group.demos.map((demo) => (
+                            <li key={demo.relativePath} mix={demoItemCss}>
+                              <a href={demo.href} mix={demoLinkCss}>
+                                {demo.title}
+                              </a>
+                            </li>
+                          ))}
+                        </ol>
+                      </section>
                     ))}
-                  </ol>
+                  </div>
                 </section>
               ))}
             </div>
@@ -57,11 +65,9 @@ export function DemoDocument(handle: Handle<{ DemoComponent: any; demo: DemoFile
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <script async type="module" src="/assets/entry.js" />
-          <title>{`${demo.title} | Remix UI Demo`}</title>
-          <RMX_01 />
+          <title>{`${demo.title} | Remix Interface Demo`}</title>
         </head>
         <body mix={bodyCss}>
-          <RMX_01_GLYPHS />
           <main mix={getDemoStageMix(demo)}>
             {demo.layout === 'center' ? (
               <div mix={centerDemoCanvasCss}>
@@ -86,15 +92,15 @@ const bodyCss = css({
 })
 
 const indexShellCss = css({
-  width: 'min(100% - 32px, 720px)',
+  width: 'min(100% - 48px, 1040px)',
   marginInline: 'auto',
-  paddingBlock: theme.space.xl,
+  paddingBlock: theme.space.xxl,
 })
 
 const indexHeaderCss = css({
   display: 'grid',
   gap: theme.space.xs,
-  marginBottom: theme.space.lg,
+  marginBottom: theme.space.xxl,
 })
 
 const eyebrowCss = css({
@@ -113,33 +119,66 @@ const titleCss = css({
 
 const descriptionCss = css({
   margin: 0,
+  maxWidth: '44rem',
   color: theme.colors.text.secondary,
   fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.normal,
+})
+
+const demoSectionsCss = css({
+  display: 'grid',
+  gap: '40px',
+})
+
+const demoSectionCss = css({
+  display: 'grid',
+  gap: theme.space.lg,
+})
+
+const demoSectionHeaderCss = css({
+  display: 'grid',
+  gap: theme.space.xs,
+})
+
+const demoSectionTitleCss = css({
+  margin: 0,
+  fontSize: '24px',
+  fontWeight: theme.fontWeight.semibold,
+  lineHeight: theme.lineHeight.tight,
+})
+
+const demoSectionDescriptionCss = css({
+  margin: 0,
+  color: theme.colors.text.secondary,
+  fontSize: theme.fontSize.sm,
+  lineHeight: theme.lineHeight.normal,
 })
 
 const demoGroupsCss = css({
   display: 'grid',
-  gap: theme.space.lg,
+  gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))',
+  alignItems: 'start',
+  columnGap: theme.space.xxl,
+  rowGap: theme.space.xxl,
 })
 
 const demoGroupCss = css({
   display: 'grid',
   gap: theme.space.xs,
-  paddingTop: theme.space.md,
-  borderTop: `1px solid ${theme.colors.border.subtle}`,
+  minWidth: 0,
 })
 
 const demoGroupTitleCss = css({
   margin: 0,
-  color: theme.colors.text.secondary,
-  fontSize: theme.fontSize.xl,
+  color: theme.colors.text.primary,
+  fontSize: theme.fontSize.sm,
   fontWeight: theme.fontWeight.semibold,
   lineHeight: theme.lineHeight.tight,
 })
 
 const demoListCss = css({
   display: 'grid',
-  gap: theme.space.px,
+  gap: '2px',
   padding: 0,
   margin: 0,
   listStyle: 'none',
@@ -151,10 +190,11 @@ const demoItemCss = css({
 })
 
 const demoLinkCss = css({
+  display: 'block',
   width: '100%',
-  paddingBlock: theme.space.xs,
-  color: theme.colors.text.primary,
-  fontSize: theme.fontSize.sm,
+  paddingBlock: '1px',
+  color: theme.colors.text.secondary,
+  fontSize: theme.fontSize.xs,
   fontWeight: theme.fontWeight.normal,
   lineHeight: theme.lineHeight.normal,
   textDecoration: 'none',
@@ -195,6 +235,47 @@ type DemoGroup = {
   moduleName: string
 }
 
+type DemoSection = {
+  description: string
+  groups: DemoGroup[]
+  title: string
+}
+
+function groupDemosBySection(demos: DemoFile[]): DemoSection[] {
+  let componentDemos = demos.filter(isComponentDemo)
+  let generalDemos = demos.filter((demo) => !isComponentDemo(demo))
+
+  return [
+    {
+      title: 'Built-in components',
+      description: 'Styled and primitive demos for the first-party UI component modules.',
+      groups: groupDemosByModule(componentDemos),
+    },
+    {
+      title: 'General demos',
+      description: 'Broader interaction, runtime, and playground demos.',
+      groups: groupDemosByModule(generalDemos),
+    },
+  ].filter((section) => section.groups.length > 0)
+}
+
+const componentDemoModules = new Set([
+  'accordion',
+  'anchor',
+  'breadcrumbs',
+  'button',
+  'checkbox',
+  'combobox',
+  'input',
+  'listbox',
+  'menu',
+  'popover',
+  'radio',
+  'select',
+  'tabs',
+  'toggle',
+])
+
 function groupDemosByModule(demos: DemoFile[]): DemoGroup[] {
   let groups = new Map<string, DemoFile[]>()
 
@@ -217,16 +298,20 @@ function groupDemosByModule(demos: DemoFile[]): DemoGroup[] {
 function getDemoModuleName(demo: DemoFile) {
   let segments = demo.relativePath.split('/')
 
-  if (segments[0] === 'src') {
-    if (segments[1] === 'components' && segments[2]) return humanizeModuleName(segments[2])
-    if (segments[1]) return humanizeModuleName(segments[1])
+  if (segments[0] === 'src' && segments[1]) {
+    return humanizeModuleName(segments[1])
   }
 
-  if (segments[0] === 'demo' && segments[1] === 'cases' && segments[2]) {
-    return humanizeModuleName(segments[2])
+  if (segments[0] === 'cases' && segments[1]) {
+    return humanizeModuleName(segments[1])
   }
 
   return 'Other'
+}
+
+function isComponentDemo(demo: DemoFile) {
+  let [sourceRoot, moduleName] = demo.relativePath.split('/')
+  return sourceRoot === 'src' && moduleName !== undefined && componentDemoModules.has(moduleName)
 }
 
 function humanizeModuleName(name: string) {

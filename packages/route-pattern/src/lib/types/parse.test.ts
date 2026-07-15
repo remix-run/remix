@@ -487,9 +487,9 @@ export type Tests = [
   >,
   Assert<
     IsEqual<
-      Parse<':protocol://:subdomain.example.com:8080/api/v:version/users/:id?format=json'>,
+      Parse<'http(s)://:subdomain.example.com:8080/api/v:version/users/:id?format=json'>,
       {
-        protocol: [{ type: 'variable'; name: 'protocol' }]
+        protocol: [{ type: 'text'; value: 'http(s)' }]
         hostname: [
           { type: 'variable'; name: 'subdomain' },
           { type: 'separator' },
@@ -512,6 +512,40 @@ export type Tests = [
       }
     >
   >,
+  Assert<
+    IsEqual<
+      Parse<'http:///path'>,
+      {
+        protocol: [{ type: 'text'; value: 'http' }]
+        hostname: undefined
+        port: undefined
+        pathname: [{ type: 'text'; value: 'path' }]
+        search: undefined
+      }
+    >
+  >,
+  Assert<
+    IsEqual<
+      Parse<'https://'>,
+      {
+        protocol: [{ type: 'text'; value: 'https' }]
+        hostname: undefined
+        port: undefined
+        pathname: undefined
+        search: undefined
+      }
+    >
+  >,
+  Assert<IsEqual<Parse<':protocol://example.com'>, never>>,
+  Assert<IsEqual<Parse<'ftp://example.com'>, never>>,
+  Assert<IsEqual<Parse<'httpx://example.com'>, never>>,
+  Assert<IsEqual<Parse<'://:8080/users'>, never>>,
+  Assert<IsEqual<Parse<'http://:80/users'>, never>>,
+  Assert<IsEqual<Parse<':'>, never>>,
+  Assert<IsEqual<Parse<'/posts/:'>, never>>,
+  Assert<IsEqual<Parse<'/posts/\\'>, never>>,
+  Assert<IsEqual<Parse<'/posts/(new'>, never>>,
+  Assert<IsEqual<Parse<'/posts/new)'>, never>>,
 
   // nested optionals (successful parses)
   Assert<

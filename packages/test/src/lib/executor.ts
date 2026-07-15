@@ -1,32 +1,46 @@
-import { createTestContext, type CreateTestContextOptions, type TestContext } from './context.ts'
+import { createTestContext, type CreateTestContextE2EOptions, type TestContext } from './context.ts'
 import type { V8CoverageEntry } from './coverage.ts'
 import type { TestResult, TestResults } from './reporters/results.ts'
+import type { SerializedOnlyPattern } from './config.ts'
 
-type LifecycleHook = () => void | Promise<void>
+type PendingMeta = boolean | string
+
+interface RunnableOptions {
+  timeout?: number
+  signal?: AbortSignal
+}
+
+interface LifecycleHook extends RunnableOptions {
+  fn: () => void | Promise<void>
+}
 
 interface RegisteredSuite {
   name: string
   tests: RegisteredTest[]
   only?: boolean
-  skip?: boolean
-  todo?: boolean
-  beforeEach?: LifecycleHook
-  afterEach?: LifecycleHook
-  beforeAll?: LifecycleHook
-  afterAll?: LifecycleHook
+  skip?: PendingMeta
+  todo?: PendingMeta
+  beforeEach?: LifecycleHook[]
+  afterEach?: LifecycleHook[]
+  beforeAll?: LifecycleHook[]
+  afterAll?: LifecycleHook[]
 }
 
-interface RegisteredTest {
+interface RegisteredTest extends RunnableOptions {
   name: string
   fn: (t: TestContext) => void | Promise<void>
   only?: boolean
-  skip?: boolean
-  todo?: boolean
+  skip?: PendingMeta
+  todo?: PendingMeta
 }
 
-export async function runTests(
-  options?: Omit<CreateTestContextOptions, 'addE2ECoverageEntries'>,
-): Promise<TestResults> {
+type RunTestsE2EOptions = Omit<CreateTestContextE2EOptions, 'addE2ECoverageEntries'>
+
+export interface RunTestsOptions extends Partial<RunTestsE2EOptions> {
+  only?: SerializedOnlyPattern[]
+}
+
+export async function runTests(options?: RunTestsOptions): Promise<TestResults> {
   let suites = getRegisteredSuites()
   let e2eCoverageEntries: Array<{ entries: V8CoverageEntry[]; baseUrl: string }> = []
   let results: TestResults = {
@@ -37,33 +51,55 @@ export async function runTests(
     tests: [],
   }
 
-  let hasOnlySuites = suites.some((suite) => suite.only)
+  let onlyRegexes =
+    options?.only === undefined || options.only.length === 0
+      ? undefined
+      : options.only.map((pattern) => new RegExp(pattern.source, pattern.flags))
+  let hasOnlyPatterns = onlyRegexes !== undefined
+  let hasOnlySuites = false
+  let hasOnlyTests = false
 
   for (let suite of suites) {
-    // If any suite uses .only, skip all non-only suites
-    if (hasOnlySuites && !suite.only) {
+    if (onlyRegexes && matchesAny(onlyRegexes, suite.name)) {
+      suite.only = true
+    }
+    hasOnlySuites ||= suite.only === true
+
+    for (let test of suite.tests) {
+      if (onlyRegexes && matchesAny(onlyRegexes, getFullTestName(suite.name, test.name))) {
+        test.only = true
+      }
+      hasOnlyTests ||= test.only === true
+    }
+
+    if (!onlyRegexes && hasOnlySuites && hasOnlyTests) break
+  }
+
+  let hasOnly = hasOnlyPatterns || hasOnlySuites || hasOnlyTests
+
+  for (let suite of suites) {
+    let suiteHasOnlyTests = suite.tests.some((test) => test.only)
+
+    // If any suite or test uses .only, skip suites that do not contain focused work
+    if (hasOnly && !suite.only && !suiteHasOnlyTests) {
       for (let test of suite.tests) {
-        results.tests.push({
-          name: test.name,
-          suiteName: suite.name,
-          status: 'skipped',
-          duration: 0,
-        })
+        results.tests.push(createPendingResult(test.name, suite.name, 'skipped'))
         results.skipped++
       }
       continue
     }
 
-    if (suite.skip || suite.todo) {
-      let status: 'skipped' | 'todo' = suite.todo ? 'todo' : 'skipped'
+    let suitePendingStatus = getPendingStatus(suite)
+    if (suitePendingStatus) {
+      let reason = getPendingReason(suite, suitePendingStatus)
       for (let test of suite.tests) {
-        results.tests.push({ name: test.name, suiteName: suite.name, status, duration: 0 })
-        results[status]++
+        results.tests.push(createPendingResult(test.name, suite.name, suitePendingStatus, reason))
+        results[suitePendingStatus]++
       }
       // describe.todo('name') with no tests — add placeholder so suite appears in output
       if (suite.tests.length === 0) {
-        results.tests.push({ name: '', suiteName: suite.name, status, duration: 0 })
-        results[status]++
+        results.tests.push(createPendingResult('', suite.name, suitePendingStatus, reason))
+        results[suitePendingStatus]++
       }
       continue
     }
@@ -71,7 +107,7 @@ export async function runTests(
     if (suite.beforeAll) {
       let startTime = performance.now()
       try {
-        await suite.beforeAll()
+        await runLifecycleHooks('beforeAll', suite.beforeAll)
       } catch (error) {
         results.tests.push(
           createFailedHookResult('beforeAll', suite.name, error, performance.now() - startTime),
@@ -81,25 +117,25 @@ export async function runTests(
       }
     }
 
-    let hasOnlyTests = suite.tests.some((test) => test.only)
-
     for (let test of suite.tests) {
-      // If any test uses .only, skip all non-only tests in this suite
-      if (hasOnlyTests && !test.only) {
-        results.tests.push({
-          name: test.name,
-          suiteName: suite.name,
-          status: 'skipped',
-          duration: 0,
-        })
+      // If any suite or test uses .only, skip tests that are not focused
+      if (hasOnly && !suite.only && !test.only) {
+        results.tests.push(createPendingResult(test.name, suite.name, 'skipped'))
         results.skipped++
         continue
       }
 
-      if (test.skip || test.todo) {
-        let status: 'skipped' | 'todo' = test.todo ? 'todo' : 'skipped'
-        results.tests.push({ name: test.name, suiteName: suite.name, status, duration: 0 })
-        results[status]++
+      let testPendingStatus = getPendingStatus(test)
+      if (testPendingStatus) {
+        results.tests.push(
+          createPendingResult(
+            test.name,
+            suite.name,
+            testPendingStatus,
+            getPendingReason(test, testPendingStatus),
+          ),
+        )
+        results[testPendingStatus]++
         continue
       }
 
@@ -115,20 +151,24 @@ export async function runTests(
       let testFailed = false
       let afterEachFailed = false
 
-      let contextOpts: CreateTestContextOptions | undefined = options
-        ? {
-            ...options,
-            addE2ECoverageEntries: (e) => e2eCoverageEntries.push(e),
-          }
-        : undefined
-      let { testContext, cleanup } = createTestContext(contextOpts)
+      let testAbortController = new AbortController()
+      let { testContext, cleanup } = createTestContext({
+        signal: testAbortController.signal,
+        e2e: createE2EOptions(options, (e) => e2eCoverageEntries.push(e)),
+      })
 
       try {
         if (suite.beforeEach) {
-          await suite.beforeEach()
+          await runLifecycleHooks('beforeEach', suite.beforeEach, testAbortController, test.signal)
         }
 
-        await test.fn(testContext)
+        await runRunnable(
+          'Test',
+          () => test.fn(testContext),
+          test,
+          testAbortController,
+          test.signal,
+        )
       } catch (error) {
         testFailed = true
         testError = error
@@ -136,7 +176,7 @@ export async function runTests(
         await cleanup()
         if (suite.afterEach) {
           try {
-            await suite.afterEach()
+            await runLifecycleHooks('afterEach', suite.afterEach, undefined, undefined, true)
           } catch (error) {
             afterEachFailed = true
             afterEachError = error
@@ -162,7 +202,7 @@ export async function runTests(
     if (suite.afterAll) {
       let startTime = performance.now()
       try {
-        await suite.afterAll()
+        await runLifecycleHooks('afterAll', suite.afterAll, undefined, undefined, true)
       } catch (error) {
         results.tests.push(
           createFailedHookResult('afterAll', suite.name, error, performance.now() - startTime),
@@ -183,9 +223,166 @@ export async function runTests(
   return results
 }
 
+function createE2EOptions(
+  options: RunTestsOptions | undefined,
+  addE2ECoverageEntries: CreateTestContextE2EOptions['addE2ECoverageEntries'],
+): CreateTestContextE2EOptions | undefined {
+  if (options?.browser === undefined) {
+    return undefined
+  }
+
+  if (
+    options.coverage === undefined ||
+    options.open === undefined ||
+    options.playwrightPageOptions === undefined
+  ) {
+    throw new Error('Incomplete E2E test options')
+  }
+
+  return {
+    addE2ECoverageEntries,
+    browser: options.browser,
+    coverage: options.coverage,
+    open: options.open,
+    playwrightPageOptions: options.playwrightPageOptions,
+  }
+}
+
 function getRegisteredSuites(): RegisteredSuite[] {
   let global = globalThis as typeof globalThis & { __testSuites?: RegisteredSuite[] }
   return global.__testSuites ?? []
+}
+
+function matchesAny(regexes: RegExp[], value: string): boolean {
+  return regexes.some((regex) => {
+    regex.lastIndex = 0
+    return regex.test(value)
+  })
+}
+
+function getFullTestName(suiteName: string, testName: string): string {
+  return testName ? `${suiteName} > ${testName}` : suiteName
+}
+
+function getPendingStatus(value: {
+  skip?: PendingMeta
+  todo?: PendingMeta
+}): 'skipped' | 'todo' | undefined {
+  if (isPending(value.todo)) return 'todo'
+  if (isPending(value.skip)) return 'skipped'
+  return undefined
+}
+
+function isPending(value: PendingMeta | undefined): value is true | string {
+  return value === true || typeof value === 'string'
+}
+
+function getPendingReason(
+  value: { skip?: PendingMeta; todo?: PendingMeta },
+  status: 'skipped' | 'todo',
+): string | undefined {
+  let reason = status === 'todo' ? value.todo : value.skip
+  return typeof reason === 'string' && reason.length > 0 ? reason : undefined
+}
+
+function createPendingResult(
+  name: string,
+  suiteName: string,
+  status: 'skipped' | 'todo',
+  reason?: string,
+): TestResult {
+  let result: TestResult = {
+    name,
+    suiteName,
+    status,
+    duration: 0,
+  }
+  if (reason) result.reason = reason
+  return result
+}
+
+async function runLifecycleHooks(
+  hookName: string,
+  hooks: LifecycleHook[],
+  abortController?: AbortController,
+  inheritedSignal?: AbortSignal,
+  reverse = false,
+): Promise<void> {
+  let orderedHooks = reverse ? [...hooks].reverse() : hooks
+  for (let hook of orderedHooks) {
+    await runRunnable(hookName, hook.fn, hook, abortController, inheritedSignal, hook.signal)
+  }
+}
+
+async function runRunnable(
+  label: string,
+  fn: () => void | Promise<void>,
+  options: RunnableOptions,
+  abortController?: AbortController,
+  ...signals: Array<AbortSignal | undefined>
+): Promise<void> {
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+  let abortCleanups: Array<() => void> = []
+  let abortSignals = [...new Set([...signals, options.signal])].filter(
+    (signal): signal is AbortSignal => signal != null,
+  )
+
+  for (let signal of abortSignals) {
+    if (signal.aborted) {
+      let error = createAbortError(label, signal.reason)
+      abortController?.abort(error)
+      throw error
+    }
+  }
+
+  let abortPromise = new Promise<never>((_, reject) => {
+    for (let signal of abortSignals) {
+      let onAbort = () => {
+        let error = createAbortError(label, signal.reason)
+        abortController?.abort(error)
+        reject(error)
+      }
+      signal.addEventListener('abort', onAbort, { once: true })
+      abortCleanups.push(() => signal.removeEventListener('abort', onAbort))
+    }
+  })
+
+  let timeout = options.timeout
+  let timeoutPromise =
+    timeout && timeout > 0
+      ? new Promise<never>((_, reject) => {
+          timeoutId = setTimeout(() => {
+            let error = createTimeoutError(label, timeout)
+            reject(error)
+            abortController?.abort(error)
+          }, timeout)
+        })
+      : undefined
+
+  try {
+    await Promise.race([
+      Promise.resolve().then(fn),
+      abortPromise,
+      ...(timeoutPromise ? [timeoutPromise] : []),
+    ])
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId)
+    for (let cleanup of abortCleanups) cleanup()
+  }
+}
+
+function createTimeoutError(label: string, timeout: number): Error {
+  let error = new Error(`${label} timed out after ${timeout}ms`)
+  error.name = 'TimeoutError'
+  return error
+}
+
+function createAbortError(label: string, reason: unknown): Error {
+  let message =
+    reason instanceof Error ? reason.message : String(reason ?? 'This operation was aborted')
+  let error = new Error(`${label} aborted: ${message}`)
+  error.name = 'AbortError'
+  return error
 }
 
 function createFailedHookResult(

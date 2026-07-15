@@ -86,12 +86,19 @@ mimeTypeToContentType('image/png') // 'image/png'
 Registers or overrides a MIME type for one or more file extensions.
 
 ```ts
-import { defineMimeType } from 'remix/mime'
+import { defineMimeType, detectMimeType } from 'remix/mime'
 
 defineMimeType({
   extensions: ['myformat'],
   mimeType: 'application/x-myformat',
 })
+
+defineMimeType({
+  extensions: ['be.pit'],
+  mimeType: 'application/x-be-pit-document',
+})
+
+detectMimeType('filename.be.pit') // 'application/x-be-pit-document'
 ```
 
 You can also optionally configure the charset and whether the MIME type is compressible:
