@@ -95,8 +95,14 @@ function getLoadedAssetUrls(html: string): string[] {
 
 function shouldVersionAssetUrl(url: string): boolean {
   if (!url.startsWith('/')) return false
-  if (url === '/favicon.ico' || url === '/favicon.svg') return false
-  if (url === '/remix-wordmark-light-mode.svg' || url === '/remix-wordmark-dark-mode.svg') {
+  if (
+    url === '/docs.css' ||
+    url === '/favicon.ico' ||
+    url === '/favicon.svg' ||
+    url === '/remix-logo-light-mode.svg' ||
+    url === '/remix-wordmark-light-mode.svg' ||
+    url === '/remix-wordmark-dark-mode.svg'
+  ) {
     return false
   }
   return true

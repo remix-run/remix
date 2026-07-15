@@ -1,11 +1,5 @@
-import { theme } from './design.ts'
-import type { Handle, Props, RemixNode } from 'remix/ui'
-import { css } from 'remix/ui'
-import {
-  MOBILE_NAV_MAX_HEIGHT,
-  MOBILE_NAV_MEDIA_RULE,
-  MOBILE_TOP_BAR_HEIGHT_PX,
-} from '../shared/breakpoints.ts'
+import type { Handle, RemixNode } from 'remix/ui'
+
 import type { DemoDocFile } from './demos.tsx'
 import type { DocsRegistry, NavGroup, PageDefinition } from './registry.ts'
 import { buildNotFoundPage, getDocPage, getHomePage, isPageActive } from './registry.ts'
@@ -33,26 +27,28 @@ export function Document(
       : getHomePage(registry)
 
     return (
-      <html lang="en" style={{ colorScheme: 'light dark' }}>
+      <html lang="en">
         <Head
           page={page}
           activeVersion={activeVersion}
           entryHref={entryHref}
           entryPreloads={entryPreloads}
         />
-        <body mix={[bodyCss, pagefindVariables]}>
-          <MobileHeader page={page} />
-          <div mix={shellCss}>
-            <Sidebar
-              registry={registry}
-              currentPath={page.path}
-              versions={versions}
-              activeVersion={activeVersion}
-            />
-            <MainContent page={page} header={<PageHeader page={page} sourceUrl={sourceUrl} />}>
-              {children}
-            </MainContent>
-          </div>
+        <body>
+          <a class="skip-link" href="#main-content">
+            Skip to content
+          </a>
+          <SiteHeader activeVersion={activeVersion} />
+          <Sidebar
+            registry={registry}
+            currentPath={page.path}
+            versions={versions}
+            activeVersion={activeVersion}
+          />
+          <MainContent page={page} header={<PageHeader page={page} sourceUrl={sourceUrl} />}>
+            {children}
+          </MainContent>
+          <SiteFooter />
           <pagefind-config
             base-url={routes.home.href({ version: activeVersion })}
             bundle-path={routes.assets.href({ version: activeVersion, asset: 'pagefind/' })}
@@ -62,65 +58,6 @@ export function Document(
       </html>
     )
   }
-}
-
-function MobileHeader(handle: Handle<{ page: PageDefinition }>) {
-  return () => {
-    let { page } = handle.props
-    return (
-      <>
-        <input
-          id="nav-toggle"
-          type="checkbox"
-          mix={navToggleCss}
-          aria-hidden="true"
-          tabIndex={-1}
-        />
-        <div mix={mobileLogoBannerCss}>
-          <a href="https://remix.run">
-            <RemixLogos />
-          </a>
-          <pagefind-modal-trigger
-            compact
-            data-key="pagefind-modal-trigger-mobile"
-            hide-shortcut
-            rmx-preserve-dom
-          />
-        </div>
-        <label
-          for="nav-toggle"
-          mix={mobileTopBarCss}
-          aria-controls="docs-sidebar"
-          aria-label="Toggle navigation"
-        >
-          <span mix={mobileTopBarTextCss}>
-            {page.eyebrow ? <span mix={eyebrowTextCss}>{page.eyebrow}</span> : null}
-            <span mix={mobileTopBarTitleCss}>{page.navLabel || page.title || 'Overview'}</span>
-          </span>
-          <MenuIcon mix={mobileTopBarIconCss} aria-hidden="true" />
-        </label>
-      </>
-    )
-  }
-}
-
-function MenuIcon(handle: Handle<Props<'svg'>>) {
-  return () => (
-    <svg
-      {...handle.props}
-      aria-hidden={handle.props['aria-hidden']}
-      fill="none"
-      viewBox="0 0 16 16"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path
-        d="M2.5 4h11M2.5 8h11M2.5 12h11"
-        stroke="currentColor"
-        stroke-linecap="round"
-        stroke-width="1.5"
-      />
-    </svg>
-  )
 }
 
 function Head(
@@ -134,32 +71,26 @@ function Head(
   return () => {
     let { page, activeVersion, entryHref, entryPreloads } = handle.props
     let shouldNofollow = page.docFile?.kind === 'package' || page.docFile?.kind === 'demo'
+
     return (
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {page.description ? <meta name="description" content={page.description} /> : null}
         <link rel="icon" href="/favicon.ico" sizes="32x32" />
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" sizes="any" />
+        <link rel="stylesheet" href="/docs.css" />
         {activeVersion != null ? (
           <>
             <meta name="robots" content="noindex,nofollow" />
             <meta name="googlebot" content="noindex,nofollow" />
           </>
         ) : shouldNofollow ? (
-          // Overview pages (package READMEs) link densely to every API page
-          // in the package; those are already reachable via the sidebar, so
-          // tell crawlers — including our prerender spider — not to follow
-          // links from here. The page itself is still indexable.
-          // Demo pages contain example links that are not real docs paths.
+          // Overview pages already link densely to pages in the sidebar, while
+          // demo links are examples rather than docs routes.
           <meta name="robots" content="nofollow" />
         ) : null}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous" />
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700"
-        />
-        <title>{`${page.title} | Remix API Documentation`}</title>
+        <title>{`${page.title || 'Remix'} | Remix API Documentation`}</title>
         {page.docFile ? (
           <link
             rel="alternate"
@@ -191,28 +122,119 @@ function Head(
           })}
           type="module"
         />
-        {/*
-          Pagefind resets its custom element hosts with `color-scheme: initial`.
-          We override so dark mode works properly.
-        */}
-        <style>{`
-          pagefind-filter-dropdown,
-          pagefind-filter-pane,
-          pagefind-input,
-          pagefind-keyboard-hints,
-          pagefind-modal,
-          pagefind-modal-body,
-          pagefind-modal-header,
-          pagefind-modal-trigger,
-          pagefind-results,
-          pagefind-searchbox,
-          pagefind-summary {
-            color-scheme: light dark;
-          }
-        `}</style>
       </head>
     )
   }
+}
+
+function SiteHeader(handle: Handle<{ activeVersion?: string }>) {
+  return () => (
+    <header class="site-header">
+      <a
+        href={routes.home.href({ version: handle.props.activeVersion })}
+        class="site-header__brand"
+        aria-label="Remix API Documentation"
+      >
+        <img
+          class="site-header__logo-mark"
+          src="/remix-logo-light-mode.svg"
+          alt=""
+          width="37"
+          height="16"
+        />
+        <img
+          class="site-header__wordmark"
+          src="/remix-wordmark-light-mode.svg"
+          alt=""
+          width="163"
+          height="16"
+        />
+      </a>
+
+      <button
+        id="docs-nav-toggle"
+        class="docs-nav-toggle"
+        type="button"
+        aria-controls="docs-chapters-navigation"
+        aria-expanded="true"
+        aria-label="Collapse API navigation"
+      >
+        <Icon name="layout-left" />
+      </button>
+
+      <button
+        id="docs-search-compact"
+        class="docs-search-compact"
+        type="button"
+        aria-label="Search"
+        aria-hidden="true"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+      >
+        <Icon name="search" />
+      </button>
+
+      <button
+        id="site-menu-toggle"
+        class="site-header__menu-toggle"
+        type="button"
+        popovertarget="site-primary-navigation"
+      >
+        <span class="site-header__menu-icon" aria-hidden="true">
+          <span />
+          <span />
+          <span />
+        </span>
+        Menu
+      </button>
+
+      <nav class="site-header__nav site-header__nav--desktop" aria-label="Primary">
+        <PrimaryNavigationLinks activeVersion={handle.props.activeVersion} />
+      </nav>
+      <nav
+        id="site-primary-navigation"
+        class="site-header__nav site-header__nav--mobile"
+        aria-label="Primary"
+        popover="auto"
+      >
+        <PrimaryNavigationLinks activeVersion={handle.props.activeVersion} />
+      </nav>
+
+      <button
+        id="docs-search-button"
+        class="docs-search-button"
+        type="button"
+        aria-label="Search"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        aria-keyshortcuts="Meta+K Control+K"
+      >
+        <span class="docs-search-button__label">
+          <Icon name="search" />
+          <span>Search</span>
+        </span>
+        <span class="docs-search-button__shortcut" aria-hidden="true">
+          <kbd>⌘</kbd>
+          <kbd>K</kbd>
+        </span>
+      </button>
+    </header>
+  )
+}
+
+function PrimaryNavigationLinks(handle: Handle<{ activeVersion?: string }>) {
+  return () => (
+    <>
+      <a href="https://remix-3-guides.fly.dev/docs/">Guides</a>
+      <a href={routes.home.href({ version: handle.props.activeVersion })} aria-current="page">
+        API
+      </a>
+      <a href="https://remix.run/blog">Blog</a>
+      <a href="https://remix.run/jam/2026">Jam</a>
+      <a href="https://shop.remix.run">Store</a>
+      <a href="https://github.com/remix-run/remix">GitHub</a>
+    </>
+  )
 }
 
 function MainContent(
@@ -223,18 +245,19 @@ function MainContent(
   }>,
 ) {
   return () => (
-    <main mix={mainCss} data-pagefind-body>
-      <div mix={pageWrapCss}>
-        <div mix={[pageContentCss, handle.props.page.css]}>
-          {handle.props.header}
-          {handle.props.children}
-        </div>
-        <DocsFooter />
+    <main id="main-content" class="docs-main" tabIndex={-1} data-pagefind-body>
+      <div class="docs-layout">
+        <article class="docs-article">
+          <div class="api-page-content rmx-page-body" mix={handle.props.page.css}>
+            {handle.props.header}
+            {handle.props.children}
+          </div>
+        </article>
       </div>
     </main>
   )
 }
-// Route Components
+
 export function Home() {
   return () => (
     <>
@@ -301,15 +324,15 @@ export function DemoContent(
     let { demo, sourceHtml, children } = handle.props
 
     return (
-      <div mix={demoPageCss}>
-        <header mix={demoHeaderCss}>
-          <h1 mix={demoTitleCss}>{demo.name}</h1>
+      <div class="api-demo">
+        <header class="api-demo__header">
+          <h1>{demo.name}</h1>
           <p>{demo.description}</p>
         </header>
 
-        <div mix={demoFrameCss}>
-          <div mix={demoPreviewCss}>{children}</div>
-          <div mix={demoSourceCss} innerHTML={sourceHtml} />
+        <div class="api-demo__frame">
+          <div class="api-demo__preview">{children}</div>
+          <div class="api-demo__source" innerHTML={sourceHtml} />
         </div>
       </div>
     )
@@ -327,7 +350,6 @@ export function NotFound(handle: Handle<{ slug: string }>) {
   )
 }
 
-// UI Components
 function Sidebar(
   handle: Handle<{
     registry: DocsRegistry
@@ -338,140 +360,104 @@ function Sidebar(
 ) {
   return () => {
     let { registry, currentPath, versions, activeVersion } = handle.props
-    let activePage = Object.values(registry.pages).find((p) => p.path === currentPath)
-    let openSections = activePage && activePage.docFile ? [activePage.sectionId] : []
+    let activePage = Object.values(registry.pages).find((page) => page.path === currentPath)
+    let openSections = activePage?.docFile ? [activePage.sectionId] : []
 
     return (
-      <aside id="docs-sidebar" mix={sidebarFrameCss}>
-        <div mix={sidebarStickyCss}>
-          {' '}
-          <div mix={sidebarPanelCss}>
-            <div mix={sidebarIntroCss}>
-              <a href="https://remix.run" class="logo">
-                <RemixLogos />
-              </a>
-              <pagefind-modal-trigger
-                compact
-                data-key="pagefind-modal-trigger-sidebar"
-                hide-shortcut
-                rmx-preserve-dom
-              />
-            </div>
-
-            <VersionSwitcher versions={versions} activeVersion={activeVersion} />
-
-            {registry.sections.map((section) => (
-              <details
-                key={section.id}
-                open={openSections.includes(section.id) || undefined}
-                mix={sectionDetailsCss}
-              >
-                <summary mix={sectionSummaryCss}>
-                  <span mix={sectionSummaryLabelCss}>{section.label}</span>
-                </summary>
-                <div mix={sectionContentCss}>
-                  {section.groups.map((group) =>
-                    group.label ? (
-                      <nav key={group.id} mix={[sidebarGroupCss]}>
-                        <p mix={sidebarHeadingCss}>{group.label}</p>
-                        <nav aria-label={`${section.label} ${group.label}`} mix={sidebarNavCss}>
-                          <SidebarGroup
-                            registry={registry}
-                            group={group}
-                            currentPath={currentPath}
-                          />
-                        </nav>
-                      </nav>
-                    ) : (
-                      <nav
-                        key={group.id}
-                        aria-label={`${section.label} Pages`}
-                        mix={[sidebarGroupCss, css({ paddingLeft: 0 })]}
-                      >
-                        <SidebarGroup registry={registry} group={group} currentPath={currentPath} />
-                      </nav>
-                    ),
-                  )}
-                </div>
-              </details>
-            ))}
-          </div>
+      <nav id="docs-chapters-navigation" class="docs-chapters-nav" aria-label="API reference">
+        <div class="api-nav-sections">
+          <VersionSwitcher versions={versions} activeVersion={activeVersion} />
+          {registry.sections.map((section) => (
+            <details
+              key={section.id}
+              class="api-nav-section"
+              open={openSections.includes(section.id) || undefined}
+            >
+              <summary>{section.label}</summary>
+              <div class="api-nav-content">
+                {section.groups.map((group) => (
+                  <SidebarGroup
+                    key={group.id}
+                    registry={registry}
+                    group={group}
+                    currentPath={currentPath}
+                    sectionLabel={section.label}
+                  />
+                ))}
+              </div>
+            </details>
+          ))}
         </div>
-      </aside>
+      </nav>
     )
   }
 }
 
 function SidebarGroup(
-  handle: Handle<{ registry: DocsRegistry; group: NavGroup; currentPath: string }>,
-) {
-  return () => {
-    let { registry, group, currentPath } = handle.props
-    return group.pageIds.map((pageId) => {
-      let page = registry.pages[pageId]
-      let active = isPageActive(page, currentPath)
-      return (
-        <a
-          key={page.path}
-          href={page.path}
-          aria-current={active ? 'page' : undefined}
-          data-active-doc={active ? 'true' : undefined}
-          mix={navItemCss}
-        >
-          {page.navLabel}
-        </a>
-      )
-    })
-  }
-}
-
-function RemixLogos() {
-  return () => (
-    <>
-      <div mix={logoLightCss}>
-        <img src="/remix-wordmark-light-mode.svg" alt="Remix" mix={logoCss} />
-      </div>
-      <div mix={logoDarkCss}>
-        <img src="/remix-wordmark-dark-mode.svg" alt="Remix" mix={logoCss} />
-      </div>
-    </>
-  )
-}
-
-function VersionSwitcher(
   handle: Handle<{
-    versions: Versions
-    activeVersion?: string
+    registry: DocsRegistry
+    group: NavGroup
+    currentPath: string
+    sectionLabel: string
   }>,
 ) {
   return () => {
-    let { versions, activeVersion } = handle.props
+    let { registry, group, currentPath, sectionLabel } = handle.props
 
+    return (
+      <div class="api-nav-group">
+        {group.label ? <p class="api-nav-group__heading">{group.label}</p> : null}
+        <nav
+          class="api-nav-links"
+          aria-label={group.label ? `${sectionLabel} ${group.label}` : `${sectionLabel} pages`}
+        >
+          {group.pageIds.map((pageId) => {
+            let page = registry.pages[pageId]
+            let active = isPageActive(page, currentPath)
+
+            return (
+              <a
+                key={page.path}
+                href={page.path}
+                aria-current={active ? 'page' : undefined}
+                data-active-doc={active ? 'true' : undefined}
+              >
+                {page.navLabel}
+              </a>
+            )
+          })}
+        </nav>
+      </div>
+    )
+  }
+}
+
+function VersionSwitcher(handle: Handle<{ versions: Versions; activeVersion?: string }>) {
+  return () => {
+    let { versions, activeVersion } = handle.props
     let navVersions = versions
+
     if (activeVersion) {
-      let idx = versions.findIndex((version) => version === activeVersion)
-      if (idx >= 0) navVersions = versions.slice(idx)
+      let index = versions.findIndex((version) => version === activeVersion)
+      if (index >= 0) navVersions = versions.slice(index)
     }
 
     return (
-      <details open={activeVersion != null || undefined} mix={sectionDetailsCss}>
-        <summary mix={sectionSummaryCss}>
-          <span mix={sectionSummaryLabelCss}>Version</span>
-        </summary>
-        <div mix={sectionContentCss}>
-          <nav aria-label="Versions" mix={sidebarNavCss}>
+      <details class="api-nav-section" open={activeVersion != null || undefined}>
+        <summary>Version</summary>
+        <div class="api-nav-content">
+          <nav class="api-nav-links" aria-label="Versions">
             {navVersions.map((version) => {
               let latest = (versions.length === 0 || version === versions[0]) && !activeVersion
               let active = version === activeVersion || latest
               let href = routes.home.href({ version: !latest ? version : undefined })
-              let rel = active ? undefined : 'nofollow'
+
               return (
                 <a
                   key={version}
                   href={href}
-                  rel={rel}
+                  rel={active ? undefined : 'nofollow'}
                   aria-current={active ? 'page' : undefined}
-                  mix={navItemCss}
                 >
                   {version}
                   {latest ? ' (latest)' : null}
@@ -489,586 +475,64 @@ function PageHeader(handle: Handle<{ page: PageDefinition; sourceUrl?: string }>
   return () => {
     let { page, sourceUrl } = handle.props
     let showTitle = !page.docFile && page.title.length > 0
-    return page.eyebrow || showTitle || page.description ? (
-      <header mix={pageHeaderCss}>
-        {page.eyebrow && sourceUrl ? (
-          <div mix={eyebrowRowCss}>
-            {page.eyebrow ? <span mix={eyebrowTextCss}>{page.eyebrow}</span> : <span />}
+
+    if (!page.eyebrow && !showTitle && !page.description) return null
+
+    return (
+      <header class="api-page-header">
+        {page.eyebrow || sourceUrl ? (
+          <div class="api-page-meta">
+            {page.eyebrow ? <p class="docs-chapter-eyebrow">{page.eyebrow}</p> : <span />}
             {sourceUrl ? (
-              <a href={sourceUrl} target="_blank" rel="noopener" mix={viewSourceLinkCss}>
+              <a class="api-page-source" href={sourceUrl} target="_blank" rel="noopener">
                 View Source
               </a>
             ) : null}
           </div>
         ) : null}
-        {showTitle ? <h2 mix={pageTitleCss}>{page.title}</h2> : null}
-        {page.description ? (
-          <p mix={[bodyTextCss, pageDescriptionCss]}>{page.description}</p>
-        ) : null}
+        {showTitle ? <h1 class="rmx-page-title">{page.title}</h1> : null}
+        {page.description ? <p class="api-page-description">{page.description}</p> : null}
       </header>
-    ) : null
+    )
   }
 }
 
-function DocsFooter() {
+function SiteFooter() {
   return () => (
-    <footer mix={footerCss}>
-      <div mix={footerLegalTextCss}>
-        <span>docs and examples licensed under mit</span>
-        <span>©{new Date().getFullYear()} Shopify, Inc.</span>
+    <footer aria-label="Site footer" class="site-footer">
+      <div class="site-footer__links">
+        <a href="https://remix.run" aria-label="Remix" class="site-footer__brand">
+          <img src="/remix-wordmark-light-mode.svg" alt="" />
+        </a>
+        <nav aria-label="Find us on the web" class="site-footer__social">
+          <a href="https://github.com/remix-run" aria-label="GitHub">
+            <Icon name="github" />
+          </a>
+          <a href="https://x.com/remix_run" aria-label="X">
+            <Icon name="x" />
+          </a>
+          <a href="https://youtube.com/remix_run" aria-label="YouTube">
+            <Icon name="youtube" />
+          </a>
+          <a href="https://remix.run/discord" aria-label="Discord">
+            <Icon name="discord" />
+          </a>
+        </nav>
+      </div>
+      <div class="site-footer__legal">
+        <p>docs and examples licensed under mit</p>
+        <p>&copy;{new Date().getFullYear()} Shopify, Inc.</p>
       </div>
     </footer>
   )
 }
 
-// Typography mirrors the `.md-prose` rules from the remix.run blog
-// (`/styles/md.css`) and is applied site-wide.
-const bodyCss = css({
-  margin: 0,
-  backgroundColor: theme.surface.lvl0,
-  color: theme.colors.text.primary,
-  fontFamily: theme.fontFamily.sans,
-  fontSize: theme.fontSize.lg,
-  fontWeight: theme.fontWeight.normal,
-  lineHeight: '1.4',
-  letterSpacing: '-0.008em',
-
-  // Headings
-  '& :is(h1, h2, h3, h4, h5, h6)': {
-    fontFamily: theme.fontFamily.sans,
-    fontWeight: theme.fontWeight.bold,
-    letterSpacing: '-0.02em',
-    lineHeight: '1',
-    color: theme.colors.text.primary,
-    margin: `${theme.space.lg} 0`,
-  },
-  '& h1': {
-    fontSize: 'clamp(1.5rem, 4vw, 3.5rem)',
-    overflowWrap: 'anywhere',
-    marginTop: theme.space.xxl,
-  },
-  '& h2': {
-    fontSize: 'clamp(1.375rem, 2.5vw, 1.625rem)',
-    marginTop: theme.space.xxl,
-  },
-  '& h3': {
-    fontSize: 'clamp(1.125rem, 1.75vw, 1.25rem)',
-  },
-  '& h4': {
-    fontSize: '1.0625rem',
-  },
-  '& h5': {
-    fontSize: '1rem',
-  },
-  '& h6': {
-    fontSize: '1rem',
-  },
-
-  // Paragraphs
-  '& p': {
-    margin: `${theme.space.lg} 0`,
-  },
-
-  // Lists
-  '& ol, & ul': {
-    margin: `${theme.space.xxl} 0 ${theme.space.lg}`,
-    paddingInlineStart: theme.space.xxl,
-  },
-  '& ul': {
-    listStyle: 'disc',
-  },
-  '& ol': {
-    listStyle: 'decimal',
-  },
-  '& li + li': {
-    marginTop: theme.space.xs,
-  },
-  '& li > p': {
-    margin: 0,
-  },
-
-  '& a': {
-    color: theme.colors.text.link,
-    textDecoration: 'underline',
-  },
-
-  '& :is(code, pre)': {
-    fontFamily: theme.fontFamily.mono,
-    fontSize: theme.fontSize.md,
-    color: theme.colors.text.secondary,
-  },
-  '& pre': {
-    border: `1px solid ${theme.colors.border.subtle}`,
-    borderRadius: theme.radius.md,
-    padding: theme.space.md,
-    margin: `${theme.space.lg} 0`,
-    overflowX: 'auto',
-    lineHeight: theme.lineHeight.relaxed,
-    '@media (min-width: 768px)': {
-      padding: theme.space.lg,
-    },
-  },
-  '& :not(a):not(pre) > code': {
-    background: theme.surface.lvl3,
-    borderRadius: theme.radius.sm,
-    padding: '1px 6px 2px',
-    lineHeight: '1.425',
-  },
-  '& :is(h1, h2, h3, h4, h5, h6) code': {
-    fontSize: '90%',
-    padding: '0.125em 0.25em',
-  },
-
-  '& .shiki': {
-    backgroundColor: `light-dark(${theme.surface.lvl4}, var(--shiki-dark-bg)) !important`,
-  },
-
-  '& .shiki a': {
-    color: 'inherit',
-    textDecoration: `none`,
-  },
-
-  '& .shiki a:hover, & .shiki a:focus': {
-    textDecoration: `underline`,
-  },
-
-  '@media (prefers-color-scheme: dark)': {
-    '& .shiki span': {
-      color: 'var(--shiki-dark) !important',
-    },
-  },
-
-  // Sidebar opt-out: the global `& a { underline }` and `& p { margin: 2rem }`
-  // would otherwise wreck the nav and group labels. Higher-specificity
-  // descendant selectors win without needing fights.
-  '& aside a': {
-    textDecoration: 'none',
-  },
-  '& aside p': {
-    marginTop: 0,
-    marginBottom: 0,
-  },
-
-  // Mobile nav toggle: the sidebar stays in document flow below the sticky top
-  // bar so opening it pushes page content down instead of layering over it.
-  [MOBILE_NAV_MEDIA_RULE]: {
-    '& #docs-sidebar': {
-      maxHeight: 0,
-      overflowY: 'auto',
-      borderRight: 'none',
-      borderBottom: `1px solid transparent`,
-      pointerEvents: 'none',
-      transition: 'max-height 280ms ease, border-color 180ms ease',
-    },
-    '&:has(#nav-toggle:checked) #docs-sidebar': {
-      maxHeight: MOBILE_NAV_MAX_HEIGHT,
-      borderBottomColor: theme.colors.border.subtle,
-      pointerEvents: 'auto',
-    },
-  },
-})
-
-const pagefindVariables = css({
-  '--pf-font': theme.fontFamily.sans,
-  '--pf-input-height': '40px',
-  '--pf-border-radius': theme.radius.md,
-  '--pf-text': theme.colors.text.primary,
-  '--pf-text-secondary': theme.colors.text.secondary,
-  '--pf-text-muted': theme.colors.text.muted,
-  '--pf-background': theme.surface.lvl1,
-  '--pf-border': theme.colors.border.subtle,
-  '--pf-border-focus': theme.colors.border.strong,
-  '--pf-skeleton': theme.surface.lvl3,
-  '--pf-skeleton-shine': theme.surface.lvl4,
-  '--pf-hover': theme.surface.lvl2,
-  '--pf-mark': theme.colors.text.primary,
-  '--pf-scroll-shadow': 'light-dark(rgb(0 0 0 / 8%), rgb(255 255 255 / 10%))',
-  '--pf-shadow-sm': '0 2px 8px light-dark(rgb(0 0 0 / 6%), rgb(0 0 0 / 30%))',
-  '--pf-shadow-md': '0 4px 12px light-dark(rgb(0 0 0 / 10%), rgb(0 0 0 / 40%))',
-  '--pf-shadow-lg': '0 16px 48px light-dark(rgb(0 0 0 / 20%), rgb(0 0 0 / 50%))',
-  '--pf-error-bg': 'light-dark(#fef2f2, #2a1a1a)',
-  '--pf-error-border': 'light-dark(#fecaca, #5c2828)',
-  '--pf-error-text': 'light-dark(#dc2626, #f87171)',
-  '--pf-error-text-secondary': 'light-dark(#b91c1c, #ef4444)',
-  '--pf-outline-focus': theme.colors.text.link,
-  '--pf-modal-backdrop': 'light-dark(rgb(0 0 0 / 50%), rgb(0 0 0 / 72%))',
-})
-
-const shellCss = css({
-  minHeight: '100vh',
-  display: 'grid',
-  gridTemplateColumns: '320px minmax(0, 1fr)',
-  background:
-    'light-dark(linear-gradient(to bottom, color-mix(in oklab, rgb(246 246 246) 72%, white) 0%, white 18%), linear-gradient(to bottom, color-mix(in oklab, rgb(30 30 30) 72%, #1a1a1a) 0%, #1a1a1a 18%))',
-  [MOBILE_NAV_MEDIA_RULE]: {
-    gridTemplateColumns: '1fr',
-  },
-})
-
-const sidebarFrameCss = css({
-  backgroundColor: theme.surface.lvl3,
-  borderRight: `1px solid ${theme.colors.border.subtle}`,
-  [MOBILE_NAV_MEDIA_RULE]: {
-    // Mobile open/closed state is driven from bodyCss via :has(#nav-toggle:checked).
-    borderRight: 'none',
-  },
-})
-
-const sidebarStickyCss = css({
-  position: 'sticky',
-  top: 0,
-  height: '100vh',
-  overflowY: 'auto',
-  padding: theme.space.xl,
-  [MOBILE_NAV_MEDIA_RULE]: {
-    position: 'static',
-    height: 'auto',
-    overflowY: 'visible',
-  },
-})
-
-const sidebarIntroCss = css({
-  display: 'flex',
-  flexDirection: 'row',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  paddingBottom: theme.space.sm,
-  marginBottom: theme.space.sm,
-  [MOBILE_NAV_MEDIA_RULE]: {
-    display: 'none',
-  },
-})
-
-const sidebarPanelCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 0,
-})
-
-const sidebarHeadingCss = css({
-  margin: 0,
-  fontSize: theme.fontSize.xxxs,
-  fontWeight: theme.fontWeight.semibold,
-  letterSpacing: theme.letterSpacing.meta,
-  textTransform: 'uppercase',
-  color: theme.colors.text.muted,
-  [MOBILE_NAV_MEDIA_RULE]: {
-    fontSize: theme.fontSize.xs,
-  },
-})
-
-const sectionDetailsCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xs,
-})
-
-const sectionSummaryCss = css({
-  margin: 0,
-  padding: `${theme.space.xs} 0`,
-  cursor: 'pointer',
-  fontSize: theme.fontSize.xxxs,
-  fontWeight: theme.fontWeight.semibold,
-  letterSpacing: theme.letterSpacing.meta,
-  textTransform: 'uppercase',
-  color: theme.colors.text.muted,
-  '&:hover': {
-    color: theme.colors.text.primary,
-  },
-  [MOBILE_NAV_MEDIA_RULE]: {
-    minHeight: '44px',
-    padding: `${theme.space.md} 0`,
-    fontSize: theme.fontSize.xs,
-  },
-})
-
-const sectionSummaryLabelCss = css({
-  paddingInlineStart: theme.space.xs,
-})
-
-const sectionContentCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.sm,
-  paddingInlineStart: theme.space.md,
-  paddingBottom: theme.space.sm,
-})
-
-const sidebarGroupCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xs,
-  paddingLeft: theme.space.sm,
-})
-
-const sidebarNavCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xs,
-})
-
-const logoLightCss = css({
-  display: 'block',
-  '@media (prefers-color-scheme: dark)': {
-    display: 'none',
-  },
-})
-
-const logoDarkCss = css({
-  display: 'none',
-  '@media (prefers-color-scheme: dark)': {
-    display: 'block',
-  },
-})
-
-const logoCss = css({
-  width: 'auto',
-  height: '16px',
-})
-
-const navItemCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  minHeight: theme.control.height.sm,
-  paddingInline: theme.space.sm,
-  borderRadius: theme.radius.md,
-  color: theme.colors.text.secondary,
-  textDecoration: 'none',
-  fontSize: theme.fontSize.sm,
-  lineHeight: theme.lineHeight.normal,
-  transitionProperty: 'background-color, color, box-shadow',
-  transitionDuration: '120ms',
-  transitionTimingFunction: 'ease',
-  '&:hover': {
-    backgroundColor: theme.surface.lvl0,
-    color: theme.colors.text.primary,
-  },
-  '&[aria-current="page"]': {
-    backgroundColor: theme.surface.lvl0,
-    color: theme.colors.text.primary,
-    boxShadow: `inset 0 0 0 1px ${theme.colors.border.subtle}`,
-  },
-  [MOBILE_NAV_MEDIA_RULE]: {
-    minHeight: '44px',
-  },
-})
-
-const mainCss = css({
-  minWidth: 0,
-  padding: theme.space.xxl,
-  paddingBlockEnd: 0,
-  paddingInlineStart: 'clamp(48px, 6vw, 96px)',
-  [MOBILE_NAV_MEDIA_RULE]: {
-    padding: theme.space.lg,
-    paddingBlockEnd: 0,
-  },
-})
-
-const pageWrapCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  width: '100%',
-  maxWidth: '750px',
-  minHeight: `calc(100vh - ${theme.space.xxl})`,
-  marginInline: '0 auto',
-  [MOBILE_NAV_MEDIA_RULE]: {
-    minHeight: `calc(100vh - ${theme.space.xl})`,
-  },
-})
-
-const pageContentCss = css({
-  display: 'block',
-})
-
-const pageHeaderCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xs,
-  maxWidth: '52rem',
-})
-
-const eyebrowRowCss = css({
-  display: 'flex',
-  alignItems: 'baseline',
-  justifyContent: 'space-between',
-  gap: theme.space.md,
-})
-
-const viewSourceLinkCss = css({
-  fontSize: theme.fontSize.xxxs,
-  fontWeight: theme.fontWeight.semibold,
-  letterSpacing: theme.letterSpacing.meta,
-  textTransform: 'uppercase',
-  color: theme.colors.text.muted,
-  textDecoration: 'none',
-  '&:hover': {
-    color: theme.colors.text.primary,
-    textDecoration: 'underline',
-  },
-})
-
-const pageTitleCss = css({
-  margin: 0,
-  fontSize: 'clamp(28px, 3vw, 38px)',
-  lineHeight: theme.lineHeight.tight,
-  fontWeight: theme.fontWeight.semibold,
-  color: theme.colors.text.primary,
-})
-
-const pageDescriptionCss = css({
-  maxWidth: '64ch',
-})
-
-const eyebrowTextCss = css({
-  margin: 0,
-  padding: 0,
-  fontSize: theme.fontSize.xxxs,
-  fontWeight: theme.fontWeight.semibold,
-  letterSpacing: theme.letterSpacing.meta,
-  textTransform: 'uppercase',
-  color: theme.colors.text.muted,
-})
-
-const bodyTextCss = css({
-  margin: 0,
-  fontSize: theme.fontSize.sm,
-  lineHeight: theme.lineHeight.relaxed,
-  color: theme.colors.text.secondary,
-})
-
-const footerCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  justifyContent: 'center',
-  marginTop: 'auto',
-  padding: `${theme.space.md} 0`,
-  color: theme.colors.text.muted,
-})
-
-const footerLegalTextCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  gap: theme.space.xs,
-  fontFamily: theme.fontFamily.mono,
-  fontSize: theme.fontSize.xxxs,
-  lineHeight: '1.6',
-  letterSpacing: '0.05em',
-  textTransform: 'uppercase',
-  color: theme.colors.text.muted,
-})
-
-const demoPageCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xl,
-})
-
-const demoHeaderCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.sm,
-})
-
-const demoTitleCss = css({
-  margin: '0 !important',
-})
-
-const demoFrameCss = css({
-  border: `1px solid ${theme.colors.border.subtle}`,
-  borderRadius: theme.radius.lg,
-  overflow: 'hidden',
-})
-
-const demoPreviewCss = css({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  minHeight: '120px',
-  padding: theme.space.xxl,
-  borderBottom: `1px solid ${theme.colors.border.subtle}`,
-  backgroundColor: theme.surface.lvl0,
-})
-
-const demoSourceCss = css({
-  '& > pre.shiki': {
-    margin: '0 !important',
-    marginBlockStart: '0px !important',
-    marginBlockEnd: '0px !important',
-    border: 'none !important',
-    borderRadius: '0 !important',
-  },
-})
-
-// Visually hide the checkbox while keeping it focusable. Toggling happens via
-// the mobile top bar's <label for="nav-toggle">.
-const navToggleCss = css({
-  position: 'absolute',
-  width: '1px',
-  height: '1px',
-  padding: 0,
-  margin: '-1px',
-  overflow: 'hidden',
-  clip: 'rect(0, 0, 0, 0)',
-  whiteSpace: 'nowrap',
-  border: 0,
-})
-
-// Mobile-only Remix logo banner that sits above the sticky top bar in the
-// document flow. It scrolls off the screen as the user scrolls the page.
-const mobileLogoBannerCss = css({
-  display: 'none',
-  [MOBILE_NAV_MEDIA_RULE]: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: `${theme.space.lg}`,
-    backgroundColor: theme.surface.lvl3,
-    borderBottom: `1px solid ${theme.colors.border.subtle}`,
-  },
-})
-
-const mobileTopBarCss = css({
-  display: 'none',
-  [MOBILE_NAV_MEDIA_RULE]: {
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: theme.space.md,
-    padding: `0 ${theme.space.lg}`,
-    height: MOBILE_TOP_BAR_HEIGHT_PX,
-    backgroundColor: theme.surface.lvl3,
-    borderBottom: `1px solid ${theme.colors.border.subtle}`,
-    cursor: 'pointer',
-    position: 'sticky',
-    top: 0,
-    zIndex: 60,
-    userSelect: 'none',
-    WebkitTapHighlightColor: 'transparent',
-  },
-})
-
-const mobileTopBarTextCss = css({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '2px',
-  minWidth: 0,
-  overflow: 'hidden',
-})
-
-const mobileTopBarTitleCss = css({
-  fontSize: theme.fontSize.md,
-  fontWeight: theme.fontWeight.semibold,
-  color: theme.colors.text.primary,
-  whiteSpace: 'nowrap',
-  textOverflow: 'ellipsis',
-  overflow: 'hidden',
-})
-
-const mobileTopBarIconCss = css({
-  width: theme.fontSize.xl,
-  height: theme.fontSize.xl,
-  color: theme.colors.text.primary,
-  flexShrink: 0,
-})
+function Icon(
+  handle: Handle<{ name: 'discord' | 'github' | 'layout-left' | 'search' | 'x' | 'youtube' }>,
+) {
+  return () => (
+    <svg aria-hidden="true" focusable="false">
+      <use href={`/icons.svg#${handle.props.name}`} />
+    </svg>
+  )
+}

@@ -1,14 +1,9 @@
 import { run } from 'remix/ui'
-import {
-  MOBILE_NAV_MAX_HEIGHT_OFFSET,
-  MOBILE_NAV_MAX_VIEWPORT_HEIGHT,
-  MOBILE_NAV_MEDIA_QUERY,
-} from '../shared/breakpoints.ts'
 
 let app = run({
   async loadModule(moduleUrl: string, exportName: string) {
-    let mod = await import(moduleUrl)
-    let Component = (mod as any)[exportName]
+    let module = await import(moduleUrl)
+    let Component = module[exportName]
     if (!Component) {
       throw new Error(`Unknown component: ${moduleUrl}#${exportName}`)
     }
@@ -28,43 +23,128 @@ app.ready().catch((error: unknown) => {
   console.error('Frame adoption failed:', error)
 })
 
-let navToggle = document.getElementById('nav-toggle')
-if (navToggle instanceof HTMLInputElement) {
-  navToggle.addEventListener('change', () => {
-    if (!navToggle.checked || !isMobileNav()) return
+let root = document.documentElement
+let apiNavigation: HTMLElement | null = null
+let navToggle: HTMLElement | null = null
+let compactSearch: HTMLElement | null = null
+let expandedSearch: HTMLElement | null = null
+let navCollapsed = false
 
-    let sidebar = document.getElementById('docs-sidebar')
-    let activeLink = sidebar?.querySelector('[data-active-doc="true"]')
-    if (!(sidebar instanceof HTMLElement) || !(activeLink instanceof HTMLElement)) return
+syncApiNavigation()
 
-    let sidebarRect = sidebar.getBoundingClientRect()
-    let activeRect = activeLink.getBoundingClientRect()
-    let activeOffset = activeRect.top - sidebarRect.top + sidebar.scrollTop
-    let expandedHeight = Math.min(
-      sidebar.scrollHeight,
-      window.innerHeight * MOBILE_NAV_MAX_VIEWPORT_HEIGHT - MOBILE_NAV_MAX_HEIGHT_OFFSET,
-    )
-    sidebar.scrollTop = activeOffset - expandedHeight / 2 + activeLink.clientHeight / 2
-  })
-}
+document.addEventListener('click', (event) => {
+  if (!(event.target instanceof Element)) return
+
+  if (event.target.closest('#docs-nav-toggle')) {
+    setApiNavigationCollapsed(!navCollapsed)
+    return
+  }
+
+  let searchTrigger = event.target.closest('#docs-search-button, #docs-search-compact')
+  if (searchTrigger instanceof HTMLElement) void openPagefindSearch(searchTrigger)
+})
+document.addEventListener('keydown', (event) => {
+  if (
+    event.defaultPrevented ||
+    event.key.toLowerCase() !== 'k' ||
+    (!event.metaKey && !event.ctrlKey) ||
+    event.altKey ||
+    event.shiftKey
+  ) {
+    return
+  }
+
+  let activeElement = document.activeElement
+  if (
+    activeElement instanceof HTMLElement &&
+    (activeElement.matches('input, textarea') || activeElement.isContentEditable)
+  ) {
+    return
+  }
+
+  event.preventDefault()
+  let trigger =
+    navCollapsed && window.matchMedia('(width >= 900px)').matches ? compactSearch : expandedSearch
+  void openPagefindSearch(trigger)
+})
+window.addEventListener('resize', updateScrollableNavigation)
+window.navigation.addEventListener('navigatesuccess', syncApiNavigation)
+
+void document.fonts.ready.then(updateScrollableNavigation)
 
 window.navigation.addEventListener('navigate', () => {
-  if (navToggle instanceof HTMLInputElement) {
-    navToggle.checked = false
-  }
-
   let pagefindModal = document.querySelector('pagefind-modal')
-  if (pagefindModal && pagefindModal instanceof HTMLElement) {
-    let modal = pagefindModal as HTMLElement & { close: () => void }
-    modal.close()
+  if (pagefindModal instanceof HTMLElement) {
+    let close = Reflect.get(pagefindModal, 'close')
+    if (typeof close === 'function') close.call(pagefindModal)
   }
 
-  let pagefindButton = document.querySelector('pagefind-modal-trigger button')
-  if (pagefindButton && pagefindButton instanceof HTMLElement) {
-    pagefindButton.blur()
-  }
+  compactSearch?.blur()
+  expandedSearch?.blur()
 })
 
-function isMobileNav() {
-  return window.matchMedia(MOBILE_NAV_MEDIA_QUERY).matches
+function syncApiNavigation() {
+  apiNavigation = document.getElementById('docs-chapters-navigation')
+  navToggle = document.getElementById('docs-nav-toggle')
+  compactSearch = document.getElementById('docs-search-compact')
+  expandedSearch = document.getElementById('docs-search-button')
+  setApiNavigationCollapsed(navCollapsed)
+  updateScrollableNavigation()
+}
+
+async function openPagefindSearch(trigger: HTMLElement | null) {
+  if (!trigger) return
+
+  await customElements.whenDefined('pagefind-modal')
+  let modal = document.querySelector('pagefind-modal')
+  if (!(modal instanceof HTMLElement) || !trigger.isConnected) return
+
+  let open = Reflect.get(modal, 'open')
+  if (typeof open !== 'function') return
+
+  let dialog = modal.querySelector('dialog')
+  if (dialog?.open) return
+
+  compactSearch?.setAttribute('aria-expanded', 'false')
+  expandedSearch?.setAttribute('aria-expanded', 'false')
+  if (dialog?.id) trigger.setAttribute('aria-controls', dialog.id)
+  trigger.setAttribute('aria-expanded', 'true')
+  dialog?.addEventListener(
+    'close',
+    () => {
+      trigger.setAttribute('aria-expanded', 'false')
+      if (trigger.isConnected) trigger.focus()
+    },
+    { once: true },
+  )
+  open.call(modal)
+}
+
+function updateScrollableNavigation() {
+  if (!apiNavigation) return
+  apiNavigation.toggleAttribute(
+    'data-scrollable',
+    apiNavigation.scrollHeight > apiNavigation.clientHeight,
+  )
+}
+
+function setApiNavigationCollapsed(collapsed: boolean) {
+  navCollapsed = collapsed
+  root.toggleAttribute('data-docs-nav-collapsed', collapsed)
+  setHidden(apiNavigation, collapsed)
+  setHidden(compactSearch, !collapsed)
+  navToggle?.setAttribute('aria-expanded', String(!collapsed))
+  navToggle?.setAttribute(
+    'aria-label',
+    collapsed ? 'Expand API navigation' : 'Collapse API navigation',
+  )
+}
+
+function setHidden(element: HTMLElement | null, hidden: boolean) {
+  element?.toggleAttribute('inert', hidden)
+  if (hidden) {
+    element?.setAttribute('aria-hidden', 'true')
+  } else {
+    element?.removeAttribute('aria-hidden')
+  }
 }
