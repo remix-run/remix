@@ -7,7 +7,7 @@ Runtime UI primitives for Remix apps, including the component runtime, server re
 - Component runtime APIs for rendering, hydration, frame navigation, and JSX
 - Server rendering APIs for streaming Remix UI trees and frames
 - `mix` composition with event, ref, CSS, and animation helpers
-- Headless behavior primitives for controls such as menus, listboxes, popovers, selects, comboboxes, and tabs
+- Headless behavior primitives for controls such as menus, listboxes, popovers, selects, and comboboxes
 - Lower-level utilities for keyboard events, typeahead search, refs, attributes, and CSS transition timing
 
 ## Installation
@@ -69,15 +69,27 @@ function ViewOptions() {
 }
 ```
 
-Styled, fully formed components live in `remix/components/*`:
+Button styling is available as a composable mixin:
 
 ```tsx
-import { Button } from 'remix/components/button'
+import button from 'remix/ui/button'
 
 function Actions() {
-  return () => <Button tone="primary">Create project</Button>
+  return () => <button mix={button({ tone: 'primary' })}>Create project</button>
 }
 ```
+
+## Preserving Client-Owned DOM
+
+Use `rmx-preserve-dom` on the smallest element whose live DOM should belong to client code after initial render, such as a custom element or third-party widget:
+
+```tsx
+<pagefind-ui data-key="search" rmx-preserve-dom>
+  <button type="button">Search</button>
+</pagefind-ui>
+```
+
+Remix UI still renders the element's children during SSR and still hydrates any initial client entries inside it. On later frame reloads, matched `rmx-preserve-dom` elements keep their current attributes and children instead of accepting incoming DOM updates. See [Preserving client-owned DOM](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#preserving-client-owned-dom) for guidance and caveats.
 
 ## Cascade Layers
 

@@ -187,6 +187,9 @@ export function createRoot(container: HTMLElement, options: VirtualRootOptions =
   let vroot: VNode | null = null
   let currentElement: RemixNode | undefined
   let styles = options.styleManager ?? defaultStyleManager
+  if (container.innerHTML.trim() !== '') {
+    styles.replaceServerStyles(container)
+  }
   let hydrationCursor = container.innerHTML.trim() !== '' ? container.firstChild : undefined
 
   let eventTarget = new TypedEventTarget<VirtualRootEventMap>()

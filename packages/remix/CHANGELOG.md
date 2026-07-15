@@ -2,6 +2,103 @@
 
 This is the changelog for [`remix`](https://github.com/remix-run/remix/tree/main/packages/remix). It follows [semantic versioning](https://semver.org/).
 
+## v3.0.0-beta.5
+
+### Pre-release Changes
+
+- Added `package.json` `exports`:
+
+  - `remix/ui/accordion` to re-export APIs from `@remix-run/ui/accordion`
+  - `remix/ui/accordion/primitives` to re-export APIs from `@remix-run/ui/accordion/primitives`
+  - `remix/ui/anchor` to re-export APIs from `@remix-run/ui/anchor`
+  - `remix/ui/breadcrumbs` to re-export APIs from `@remix-run/ui/breadcrumbs`
+  - `remix/ui/button` to re-export APIs from `@remix-run/ui/button`
+  - `remix/ui/checkbox` to re-export APIs from `@remix-run/ui/checkbox`
+  - `remix/ui/combobox` to re-export APIs from `@remix-run/ui/combobox`
+  - `remix/ui/combobox/primitives` to re-export APIs from `@remix-run/ui/combobox/primitives`
+  - `remix/ui/input` to re-export APIs from `@remix-run/ui/input`
+  - `remix/ui/listbox` to re-export APIs from `@remix-run/ui/listbox`
+  - `remix/ui/menu` to re-export APIs from `@remix-run/ui/menu`
+  - `remix/ui/menu/primitives` to re-export APIs from `@remix-run/ui/menu/primitives`
+  - `remix/ui/popover` to re-export APIs from `@remix-run/ui/popover`
+  - `remix/ui/radio` to re-export APIs from `@remix-run/ui/radio`
+  - `remix/ui/select` to re-export APIs from `@remix-run/ui/select`
+  - `remix/ui/select/primitives` to re-export APIs from `@remix-run/ui/select/primitives`
+  - `remix/ui/tabs` to re-export APIs from `@remix-run/ui/tabs`
+  - `remix/ui/tabs/primitives` to re-export APIs from `@remix-run/ui/tabs/primitives`
+  - `remix/ui/toggle` to re-export APIs from `@remix-run/ui/toggle`
+  - `remix/ui/toggle/primitives` to re-export APIs from `@remix-run/ui/toggle/primitives`
+
+  Removed helper re-exports from `remix/ui`:
+
+  - `flashAttribute`
+  - `hiddenTypeahead`
+  - `matchNextItemBySearchText`
+  - `onKeyDown`
+  - `SearchValue`
+  - `wait`
+  - `waitForCssTransition`
+
+  Updated `remix/route-pattern` exports for the `RoutePattern` API:
+
+  - Added `getRoutePatternCaptures`, `RoutePatternCapture`, and `RoutePatternJSON` to `remix/route-pattern`
+  - Added `CreateHrefErrorDetails` to `remix/route-pattern/href`
+  - Added `MatchParamMeta` to `remix/route-pattern/match`
+
+  Removed `package.json` `exports`:
+
+  - `remix/components/accordion`
+  - `remix/components/accordion/primitives`
+  - `remix/components/anchor`
+  - `remix/components/breadcrumbs`
+  - `remix/components/button`
+  - `remix/components/checkbox`
+  - `remix/components/checkbox/primitives`
+  - `remix/components/combobox`
+  - `remix/components/combobox/primitives`
+  - `remix/components/input`
+  - `remix/components/listbox`
+  - `remix/components/menu`
+  - `remix/components/menu/primitives`
+  - `remix/components/popover`
+  - `remix/components/select`
+  - `remix/components/select/primitives`
+  - `remix/ui/glyph`
+  - `remix/ui/scroll-lock`
+  - `remix/ui/separator`
+  - `remix/ui/theme`
+
+- Added the `trustProxy` option to `remix/node-fetch-server` for apps behind trusted reverse proxies that need `request.url` and handler client address information to reflect trusted `Forwarded` and `X-Forwarded-*` headers.
+
+- Bumped `@remix-run/*` dependencies:
+  - [`assets@0.4.4`](https://github.com/remix-run/remix/releases/tag/assets@0.4.4)
+  - [`async-context-middleware@0.3.4`](https://github.com/remix-run/remix/releases/tag/async-context-middleware@0.3.4)
+  - [`auth@0.2.6`](https://github.com/remix-run/remix/releases/tag/auth@0.2.6)
+  - [`auth-middleware@0.2.4`](https://github.com/remix-run/remix/releases/tag/auth-middleware@0.2.4)
+  - [`cli@0.3.4`](https://github.com/remix-run/remix/releases/tag/cli@0.3.4)
+  - [`compression-middleware@0.1.12`](https://github.com/remix-run/remix/releases/tag/compression-middleware@0.1.12)
+  - [`cop-middleware@0.1.7`](https://github.com/remix-run/remix/releases/tag/cop-middleware@0.1.7)
+  - [`cors-middleware@0.1.7`](https://github.com/remix-run/remix/releases/tag/cors-middleware@0.1.7)
+  - [`csrf-middleware@0.1.7`](https://github.com/remix-run/remix/releases/tag/csrf-middleware@0.1.7)
+  - [`fetch-proxy@0.8.4`](https://github.com/remix-run/remix/releases/tag/fetch-proxy@0.8.4)
+  - [`fetch-router@0.20.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.20.1)
+  - [`file-storage@0.13.7`](https://github.com/remix-run/remix/releases/tag/file-storage@0.13.7)
+  - [`file-storage-s3@0.1.4`](https://github.com/remix-run/remix/releases/tag/file-storage-s3@0.1.4)
+  - [`form-data-middleware@0.3.4`](https://github.com/remix-run/remix/releases/tag/form-data-middleware@0.3.4)
+  - [`form-data-parser@0.17.4`](https://github.com/remix-run/remix/releases/tag/form-data-parser@0.17.4)
+  - [`fs@0.4.6`](https://github.com/remix-run/remix/releases/tag/fs@0.4.6)
+  - [`lazy-file@5.0.6`](https://github.com/remix-run/remix/releases/tag/lazy-file@5.0.6)
+  - [`logger-middleware@0.3.4`](https://github.com/remix-run/remix/releases/tag/logger-middleware@0.3.4)
+  - [`method-override-middleware@0.1.12`](https://github.com/remix-run/remix/releases/tag/method-override-middleware@0.1.12)
+  - [`mime@0.4.2`](https://github.com/remix-run/remix/releases/tag/mime@0.4.2)
+  - [`node-fetch-server@0.14.0`](https://github.com/remix-run/remix/releases/tag/node-fetch-server@0.14.0)
+  - [`render-middleware@0.1.4`](https://github.com/remix-run/remix/releases/tag/render-middleware@0.1.4)
+  - [`response@0.3.7`](https://github.com/remix-run/remix/releases/tag/response@0.3.7)
+  - [`route-pattern@0.23.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.23.0)
+  - [`session-middleware@0.3.4`](https://github.com/remix-run/remix/releases/tag/session-middleware@0.3.4)
+  - [`static-middleware@0.4.13`](https://github.com/remix-run/remix/releases/tag/static-middleware@0.4.13)
+  - [`ui@0.4.0`](https://github.com/remix-run/remix/releases/tag/ui@0.4.0)
+
 ## v3.0.0-beta.4
 
 ### Pre-release Changes

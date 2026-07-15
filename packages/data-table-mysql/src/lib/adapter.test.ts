@@ -582,7 +582,7 @@ describe('mysql adapter', () => {
     assert.match(statements[0].text, /^insert into `accounts`/)
     assert.match(statements[1].text, /^select \* from `accounts`/)
     assert.match(statements[1].text, /where \(\(`id` = \?\)\)/)
-    assert.deepEqual(statements[1].values, [2])
+    assert.deepEqual(statements[1].values, [2, 1])
   })
 
   it('normalizes bigint count rows', async () => {

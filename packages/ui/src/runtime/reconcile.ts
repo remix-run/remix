@@ -341,6 +341,10 @@ function enqueueMixinBindingUpdate(
       let prevProps = getHostProps(node)
       let nextProps = resolveNodeMixProps(node, this.frame, this.scheduler, state)
       patchHostProps(prevProps, nextProps, this.node)
+      if (node._controlledState || shouldTrackControlledReflection(nextProps)) {
+        ensureControlledReflection(node, this.scheduler)
+        syncControlledReflection(node, nextProps)
+      }
 
       dispatchMixinCommit(state)
       done(state ? getMixinRuntimeSignal(state) : AbortSignal.abort())
@@ -711,10 +715,12 @@ function insert(
     cursor = null
   }
 
-  cursor =
-    node.type === Frame
-      ? skipCommentsExceptFrameStart(cursor ?? null)
-      : skipComments(cursor ?? null)
+  // Preserve frame-start markers for non-Frame nodes too, so a following <Frame>
+  // (e.g. the first child of a bare Fragment at a clientEntry boundary) can still
+  // claim its rmx:f marker during hydration instead of being re-inserted fresh.
+  // A rmx:f marker always belongs to a <Frame>, so no non-Frame node should
+  // consume one.
+  cursor = skipCommentsExceptFrameStart(cursor ?? null)
 
   // Also check after skipComments in case we skipped past the anchor
   if (cursor && anchor && cursor === anchor) {
@@ -1108,7 +1114,7 @@ function resolveClientFrame(node: VNode, runtime: FrameRuntime): void {
   let resolveController = new AbortController()
   node._frameResolveController = resolveController
 
-  Promise.resolve(runtime.resolveFrame(frameSrc, resolveController.signal))
+  Promise.resolve(runtime.resolveFrame(frameSrc, resolveController.signal, getFrameName(node)))
     .then(async (content) => {
       if (node._frameResolveToken !== token || resolveController.signal.aborted) return
       node._frameFallbackRoot?.dispose()

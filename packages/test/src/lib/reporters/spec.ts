@@ -1,12 +1,17 @@
 import { colors } from '../colors.ts'
 import { normalizeLine } from '../normalize.ts'
-import type { Reporter } from './index.ts'
+import type { Reporter, ReporterOptions } from './index.ts'
 import type { Counts, TestResult, TestResults } from './results.ts'
 
 export class SpecReporter implements Reporter {
   #failures: { suiteName: string; name: string; error: TestResult['error'] }[] = []
   #files = new Set<string>()
+  #quiet: boolean
   #suites = new Set<string>()
+
+  constructor(options: ReporterOptions = {}) {
+    this.#quiet = options.quiet === true
+  }
 
   onSectionStart(label: string) {
     console.log(label)
@@ -18,8 +23,12 @@ export class SpecReporter implements Reporter {
       if (test.suiteName) this.#suites.add(test.suiteName)
     }
 
+    let visibleTests = this.#quiet
+      ? results.tests.filter((test) => test.status !== 'skipped')
+      : results.tests
+
     let suiteMap = new Map<string, TestResult[]>()
-    for (let test of results.tests) {
+    for (let test of visibleTests) {
       let suite = test.suiteName || 'Global'
       if (!suiteMap.has(suite)) suiteMap.set(suite, [])
       suiteMap.get(suite)!.push(test)
