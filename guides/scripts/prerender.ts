@@ -74,16 +74,3 @@ async function discoverBrowserEntries(): Promise<string[]> {
 
   return Array.from(hrefs).sort()
 }
-
-function normalizeBasePath(basePath: string): string {
-  const baseUrl = 'http://localhost'
-  basePath = basePath.trim()
-  if (basePath === '') return ''
-
-  let url = new URL(basePath, baseUrl)
-  if (url.origin !== baseUrl || url.search !== '' || url.hash !== '') {
-    throw new Error(`Base path must be a pathname, received: ${basePath}`)
-  }
-
-  return url.pathname === '/' ? '' : url.pathname.replace(/\/+$/, '')
-}
