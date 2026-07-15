@@ -31,8 +31,8 @@ const outputDir = path.resolve(guidesDir, cliArgs.dir)
 // Copy public files (favicons, wordmarks) to the output root
 await fs.cp(publicDir, outputDir, { recursive: true })
 
-let browserHrefs = await discoverBrowserEntries()
-let paths = [routes.docs.index.href(), ...browserHrefs]
+const browserHrefs = await discoverBrowserEntries()
+const paths = [routes.docs.index.href(), ...browserHrefs]
 
 try {
   // Spider the site
@@ -45,7 +45,7 @@ try {
 }
 
 // Run pagefind to generate the search index and assets
-let cmd = `pnpm exec pagefind --site ${outputDir} --output-subdir ${outputDir}/assets/pagefind`
+const cmd = `pnpm exec pagefind --site ${outputDir} --output-subdir ${outputDir}/assets/pagefind`
 console.log(`Running Pagefind:\n  ${cmd}`)
 await cp.execSync(cmd)
 
