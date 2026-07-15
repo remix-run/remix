@@ -5,7 +5,7 @@ import type { Handle, RemixNode } from '../runtime/component.ts'
 import { createMixin, on, ref } from '../index.ts'
 
 import { animateLayout } from '../animation/index.ts'
-import type { Dispatched, MixinHandle, Props } from '../index.ts'
+import type { Dispatched, MixinDescriptor, MixinHandle, Props } from '../index.ts'
 
 type MixLeaf<mix> = mix extends ReadonlyArray<infer descriptor> ? MixLeaf<descriptor> : mix
 type FalsyMixValue = false | 0 | 0n | '' | null | undefined
@@ -205,6 +205,36 @@ describe('jsx', () => {
       let good = <input mix={[inputOnly()]} />
       // @ts-expect-error input-only mixin should not apply to button
       let bad = <button mix={[inputOnly()]} />
+    })
+
+    it('allows base descriptors on subtype hosts without allowing the inverse', () => {
+      let elementWide = createMixin<Element>((handle) => {})()
+      let selectOnly = createMixin<HTMLSelectElement>((handle) => {})()
+
+      let good = <select mix={[elementWide]} />
+      // @ts-expect-error select-only descriptors cannot be widened to all elements
+      let bad: MixinDescriptor<Element> = selectOnly
+    })
+
+    it('treats mixin handles as covariant in their node type', () => {
+      function verify(
+        selectHandle: MixinHandle<HTMLSelectElement>,
+        elementHandle: MixinHandle<Element>,
+      ) {
+        let good: MixinHandle<Element> = selectHandle
+        // @ts-expect-error element handles cannot be narrowed to select handles
+        let bad: MixinHandle<HTMLSelectElement> = elementHandle
+      }
+    })
+
+    it('does not widen descriptor argument types', () => {
+      let stringOnly = createMixin<Element, [value: string]>((handle) => (value) => {
+        void value
+      })
+      let descriptor = stringOnly('value')
+
+      // @ts-expect-error the runtime runner only accepts string arguments
+      let widened: MixinDescriptor<Element, [value: string | number]> = descriptor
     })
 
     it('infers insert event node type from createMixin node generic', () => {
