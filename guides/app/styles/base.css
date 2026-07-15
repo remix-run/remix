@@ -42,6 +42,20 @@ body {
   color: #1b1b1f;
 }
 
+pagefind-filter-dropdown,
+pagefind-filter-pane,
+pagefind-input,
+pagefind-keyboard-hints,
+pagefind-modal,
+pagefind-modal-body,
+pagefind-modal-header,
+pagefind-modal-trigger,
+pagefind-results,
+pagefind-searchbox,
+pagefind-summary {
+  color-scheme: light dark;
+}
+
 button,
 input,
 select,

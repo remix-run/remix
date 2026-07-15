@@ -6,15 +6,15 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 
 ## Where things live
 
-- `app/actions/controller.tsx` — top-level route actions such as assets and the root redirect.
+- `app/actions/controller.tsx` — top-level asset route handling.
 - `app/actions/docs/chapters/*.md` — guide chapters.
 - `app/actions/docs/markdown/render.tsx` — unified/remark Markdown rendering, Shiki syntax highlighting, heading IDs, and `::frame` parsing.
-- `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, summaries, and cache inputs.
+- `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, summaries, and mtime-based render caches.
 - `app/actions/docs/layout.tsx`, `site-header.tsx`, `chapter-navigation.tsx`, and `site-footer.tsx` — the server-rendered docs shell.
 - `app/actions/docs/docs-shell.browser.tsx` and `table-of-contents.browser.tsx` — the small client behaviors for transient navigation state and active-section tracking.
 - `app/actions/docs/examples/` — frame-backed examples used by chapters. Browser-hydrated demo modules use the `.demo.tsx` suffix, and browser-only helpers use `.browser.ts?(x)` so the asset boundary is visible from filenames instead of `public/` directories.
 - `app/entry.browser.ts` and `app/dev-refresh.browser.ts` — browser entrypoints served by the asset server.
-- `app/styles/docs.css` — the stylesheet entrypoint. It imports the single token set, base rules, shell, index, article, and Markdown styles from focused sibling files.
+- `app/styles/docs.css` — the stylesheet entrypoint. It imports the single token set, base rules, shell, search, index, article, and Markdown styles from focused sibling files.
 - `app/middleware/asset-entry.ts` — source-served browser module hrefs and preloads.
 - `app/middleware/render.ts` — the request-scoped `render()` helper and frame resolver.
 - `app/routes.ts` and `app/router.ts` — the typed route contract and controller wiring.
@@ -27,7 +27,7 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 Chapter files live in `app/actions/docs/chapters/`. The file name controls order, chapter label, URL slug, and previous/next links:
 
 ```txt
-01-start-here.md -> Chapter 1 -> /docs/start-here
+01-start-here.md -> Chapter 1 -> /start-here/
 ```
 
 Each chapter needs frontmatter. Level-2 headings power the docs index and "On this page" navigation. IDs are generated from heading text unless you add an explicit one:
@@ -67,10 +67,10 @@ export async function createProject(request: Request) {
 Use a frame directive in Markdown:
 
 ```md
-::frame{src="/docs/examples/17-markdown-style-demo/counter"}
+::frame{src="/examples/17-markdown-style-demo/counter/"}
 ```
 
-The examples controller maps `/docs/examples/:chapter/:example` to `app/actions/docs/examples/<chapter>/<example>.tsx` and dynamically imports the module, so no route changes are needed. The validator requires the `:chapter` segment to match the chapter directory name (e.g. `17-markdown-style-demo`) so examples stay scoped to the chapter that references them. Example directories are prefixed with the chapter order number to match the chapter file name.
+The examples controller maps `/examples/:chapter/:example/` to `app/actions/docs/examples/<chapter>/<example>.tsx` and dynamically imports the module, so no route changes are needed. The validator requires the `:chapter` segment to match the chapter directory name (e.g. `17-markdown-style-demo`) so examples stay scoped to the chapter that references them. Example directories are prefixed with the chapter order number to match the chapter file name.
 
 At render time, `markdown.tsx` turns the directive into `<Frame src="..." />`. The render middleware resolves that frame by doing an internal `router.fetch()` for the frame URL, so examples are normal Remix routes that return normal `Response` objects.
 
@@ -136,10 +136,26 @@ Run from the repo root or from `guides/`.
 ```sh
 pnpm install                            # once, from the repo root
 pnpm --filter remix-guides run dev      # watch + serve
-pnpm --filter remix-guides run start    # serve once
-pnpm --filter remix-guides run validate # check frame URLs and example files
+pnpm --filter remix-guides run start           # serve once
+pnpm --filter remix-guides run validate        # check frame URLs and example files
+pnpm --filter remix-guides run prerender       # build the static site in guides/build/site
+pnpm --filter remix-guides run prerender:serve # serve the static site
 pnpm --filter remix-guides run test
 pnpm --filter remix-guides run typecheck
 ```
 
-The dev server listens on http://localhost:44100 by default. Set `PORT` to override. `/` redirects to `/docs`.
+The dev server listens on http://localhost:44100 by default. Set `PORT` to override. The guides index is served at `/`.
+
+## Static site
+
+`pnpm --filter remix-guides run prerender` renders the docs index, every chapter, referenced frame examples, browser modules, styles, and public files into `guides/build/site/`, then builds the Pagefind search index. The output uses directory `index.html` files for clean URLs and can be served directly by GitHub Pages or another static host.
+
+The development server serves an existing search index from `guides/build/site/assets/pagefind/`. Run prerender once to enable search during development, and rerun it when the guide content changes to refresh the index.
+
+Pass `--dir` to write into another directory:
+
+```sh
+pnpm --filter remix-guides run prerender --dir ../../remix-guides-site
+```
+
+The output directory is cleared before each build so removed chapters and outdated fingerprinted assets cannot survive into the next Pagefind index or deployment.

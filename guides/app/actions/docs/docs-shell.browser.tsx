@@ -15,8 +15,6 @@ export function startDocsShellBehavior(signal: AbortSignal) {
   let root = document.documentElement
   let chapterNavigation = document.getElementById('docs-chapters-navigation')
   let navToggle = document.getElementById('docs-nav-toggle')
-  let compactSearch = document.getElementById('docs-search-compact')
-  let expandedSearch = document.getElementById('docs-search-button')
 
   let navCollapsed = false
 
@@ -52,8 +50,6 @@ export function startDocsShellBehavior(signal: AbortSignal) {
     root.toggleAttribute('data-docs-nav-collapsed', collapsed)
     chapterNavigation?.toggleAttribute('inert', collapsed)
     setAriaHidden(chapterNavigation, collapsed)
-    setAriaHidden(compactSearch, !collapsed)
-    setAriaHidden(expandedSearch, collapsed)
     navToggle?.setAttribute('aria-expanded', String(!collapsed))
     navToggle?.setAttribute(
       'aria-label',

@@ -292,6 +292,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
+      pagefind:
+        specifier: ^1.5.2
+        version: 1.5.2
       typescript:
         specifier: 'catalog:'
         version: 5.9.3

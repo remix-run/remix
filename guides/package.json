@@ -4,6 +4,8 @@
   "type": "module",
   "scripts": {
     "dev": "NODE_ENV=development node --watch --import remix/node-tsx server.ts",
+    "prerender": "pnpm run validate && NODE_ENV=production node --import remix/node-tsx scripts/prerender.ts",
+    "prerender:serve": "npx http-server -p 44100 build/site",
     "start": "node --import remix/node-tsx server.ts",
     "test": "NODE_ENV=test remix test",
     "typecheck": "tsc --noEmit",
@@ -32,6 +34,7 @@
     "@types/hast": "^3.0.4",
     "@types/mdast": "^4.0.4",
     "@types/node": "catalog:",
+    "pagefind": "^1.5.2",
     "typescript": "catalog:"
   }
 }

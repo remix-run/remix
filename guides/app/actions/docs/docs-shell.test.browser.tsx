@@ -5,7 +5,7 @@ import { createRoot } from 'remix/ui'
 import { DocsShellBehavior, startDocsShellBehavior } from './docs-shell.browser.tsx'
 
 describe('startDocsShellBehavior', () => {
-  it('synchronizes the collapsed rail and search accessibility state', (t) => {
+  it('synchronizes the collapsed chapter rail accessibility state', (t) => {
     let fixture = createShellFixture()
     t.after(fixture.cleanup)
 
@@ -16,8 +16,6 @@ describe('startDocsShellBehavior', () => {
     assert.equal(fixture.chapterNavigation.getAttribute('aria-hidden'), 'true')
     assert.equal(fixture.navToggle.getAttribute('aria-expanded'), 'false')
     assert.equal(fixture.navToggle.getAttribute('aria-label'), 'Expand chapter navigation')
-    assert.equal(fixture.compactSearch.hasAttribute('aria-hidden'), false)
-    assert.equal(fixture.expandedSearch.getAttribute('aria-hidden'), 'true')
 
     fixture.navToggle.click()
 
@@ -26,8 +24,6 @@ describe('startDocsShellBehavior', () => {
     assert.equal(fixture.chapterNavigation.hasAttribute('aria-hidden'), false)
     assert.equal(fixture.navToggle.getAttribute('aria-expanded'), 'true')
     assert.equal(fixture.navToggle.getAttribute('aria-label'), 'Collapse chapter navigation')
-    assert.equal(fixture.compactSearch.getAttribute('aria-hidden'), 'true')
-    assert.equal(fixture.expandedSearch.hasAttribute('aria-hidden'), false)
   })
 
   it('restarts when navigation re-renders the client entry', (t) => {
@@ -57,8 +53,6 @@ describe('startDocsShellBehavior', () => {
     assert.equal(document.documentElement.hasAttribute('data-docs-nav-collapsed'), false)
     assert.equal(fixture.chapterNavigation.hasAttribute('inert'), false)
     assert.equal(fixture.chapterNavigation.hasAttribute('aria-hidden'), false)
-    assert.equal(fixture.compactSearch.getAttribute('aria-hidden'), 'true')
-    assert.equal(fixture.expandedSearch.hasAttribute('aria-hidden'), false)
   })
 })
 
@@ -66,9 +60,7 @@ function createShellFixture(options: { startBehavior?: boolean } = {}) {
   let container = document.createElement('div')
   container.innerHTML = `
     <button id="docs-nav-toggle" aria-expanded="true"></button>
-    <button id="docs-search-compact" aria-hidden="true" disabled></button>
-    <button id="docs-search-button" disabled></button>
-    <nav id="docs-chapters-navigation"><a href="/docs/start-here">Start Here</a></nav>
+    <nav id="docs-chapters-navigation"><a href="/start-here/">Start Here</a></nav>
   `
   document.body.append(container)
 
@@ -79,8 +71,6 @@ function createShellFixture(options: { startBehavior?: boolean } = {}) {
 
   return {
     chapterNavigation: getElement('docs-chapters-navigation'),
-    compactSearch: getElement('docs-search-compact'),
-    expandedSearch: getElement('docs-search-button'),
     navToggle: getElement('docs-nav-toggle'),
     cleanup() {
       controller.abort()

@@ -33,17 +33,6 @@ export function SiteHeader() {
       </button>
 
       <button
-        id="docs-search-compact"
-        class="docs-search-compact"
-        type="button"
-        aria-label="Search is not available yet"
-        aria-hidden="true"
-        disabled
-      >
-        <Icon name="search" />
-      </button>
-
-      <button
         id="site-menu-toggle"
         class="site-header__menu-toggle"
         type="button"
@@ -70,22 +59,13 @@ export function SiteHeader() {
         <PrimaryNavigationLinks />
       </nav>
 
-      <button
+      <pagefind-modal-trigger
         id="docs-search-button"
         class="docs-search-button"
-        type="button"
-        aria-label="Search is not available yet"
-        disabled
-      >
-        <span class="docs-search-button__label">
-          <Icon name="search" />
-          <span>Search</span>
-        </span>
-        <span class="docs-search-button__shortcut" aria-hidden="true">
-          <kbd>⌘</kbd>
-          <kbd>K</kbd>
-        </span>
-      </button>
+        data-key="pagefind-modal-trigger"
+        placeholder="Search"
+        rmx-preserve-dom
+      ></pagefind-modal-trigger>
     </header>
   )
 }

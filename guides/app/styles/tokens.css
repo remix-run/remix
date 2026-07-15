@@ -121,6 +121,39 @@
   --docs-collapsed-content-padding: 220px;
   --docs-main-padding: 52px;
   --docs-content-max-width: 1044px;
+
+  --pf-font: var(--rmx-font-family-sans);
+  --pf-input-height: var(--rmx-control-height-md);
+  --pf-input-font-size: var(--rmx-font-size-md);
+  --pf-summary-font-size: var(--rmx-font-size-xxs);
+  --pf-result-title-font-size: var(--rmx-font-size-sm);
+  --pf-result-excerpt-font-size: var(--rmx-font-size-xs);
+  --pf-results-gap: var(--rmx-space-xs);
+  --pf-border-radius: var(--rmx-radius-md);
+  --pf-modal-max-width: 40rem;
+  --pf-modal-max-height: min(calc(100dvh - 6rem), 50rem);
+  --pf-modal-top: calc(var(--site-header-height) + var(--rmx-space-sm));
+  --pf-text: var(--rmx-color-text-primary);
+  --pf-text-secondary: var(--rmx-color-text-secondary);
+  --pf-text-muted: var(--rmx-color-text-muted);
+  --pf-background: var(--rmx-surface-lvl1);
+  --pf-border: var(--rmx-color-border-subtle);
+  --pf-border-focus: var(--rmx-color-border-strong);
+  --pf-skeleton: var(--rmx-surface-lvl3);
+  --pf-skeleton-shine: var(--rmx-surface-lvl4);
+  --pf-hover: var(--rmx-surface-lvl2);
+  --pf-mark: var(--docs-nav-link-hover);
+  --pf-scroll-shadow: light-dark(rgb(0 0 0 / 8%), rgb(255 255 255 / 10%));
+  --pf-shadow-sm: var(--rmx-shadow-sm);
+  --pf-shadow-md: var(--rmx-shadow-md);
+  --pf-shadow-lg: var(--rmx-shadow-lg);
+  --pf-error-bg: light-dark(#fef2f2, #2a1a1a);
+  --pf-error-border: light-dark(#fecaca, #5c2828);
+  --pf-error-text: light-dark(#dc2626, #f87171);
+  --pf-error-text-secondary: light-dark(#b91c1c, #ef4444);
+  --pf-outline-focus: var(--rmx-color-focus-ring);
+  --pf-outline-width: 1px;
+  --pf-modal-backdrop: light-dark(rgb(0 0 0 / 50%), rgb(0 0 0 / 72%));
 }
 
 @media (prefers-color-scheme: dark) {

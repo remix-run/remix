@@ -1,12 +1,7 @@
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
-import { docsEtag } from './cache.ts'
-import {
-  getDocsChapterCacheInputs,
-  loadDocsChapterSummaries,
-  parseChapterFilename,
-} from './markdown-chapters.tsx'
+import { loadDocsChapterSummaries, parseChapterFilename } from './markdown-chapters.tsx'
 
 describe('loadDocsChapterSummaries', () => {
   it('retains numeric chapter order for presentation-specific labels', async () => {
@@ -16,35 +11,6 @@ describe('loadDocsChapterSummaries', () => {
     assert.equal(summaries[0]?.chapter, 'Chapter 1')
     assert.equal(summaries[9]?.order, 10)
     assert.equal(summaries[9]?.chapter, 'Chapter 10')
-  })
-
-  it('includes rendered navigation metadata in collection cache inputs', async () => {
-    let summaries = await loadDocsChapterSummaries()
-    let first = summaries[0]
-    assert.ok(first)
-
-    assert.deepEqual(getDocsChapterCacheInputs([first]), [
-      first.mtime,
-      first.order,
-      first.slug,
-      first.href,
-      first.title,
-    ])
-  })
-
-  it('invalidates collection etags when navigation metadata changes without an mtime change', async () => {
-    let summaries = await loadDocsChapterSummaries()
-    let first = summaries[0]
-    assert.ok(first)
-
-    let original = docsEtag('index', getDocsChapterCacheInputs([first]))
-    let reordered = { ...first, order: first.order + 1 }
-    let renamed = { ...first, slug: `${first.slug}-renamed` }
-    let retitled = { ...first, title: `${first.title} revised` }
-
-    assert.notEqual(original, docsEtag('index', getDocsChapterCacheInputs([reordered])))
-    assert.notEqual(original, docsEtag('index', getDocsChapterCacheInputs([renamed])))
-    assert.notEqual(original, docsEtag('index', getDocsChapterCacheInputs([retitled])))
   })
 })
 

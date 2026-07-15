@@ -8,13 +8,11 @@ import { routes } from '../../routes.ts'
 import { readMarkdownChapterSummary, renderMarkdownChapter } from './markdown/render.tsx'
 import type { MarkdownChapter, MarkdownChapterSummary } from './markdown/types.ts'
 import { DocsChapter } from './layout.tsx'
-import { docsResponseInit, docsEtag, notModifiedDocsResponse } from './cache.ts'
 
 export type DocsChapterSummary = MarkdownChapterSummary & {
   order: number
   slug: string
   href: string
-  mtime: number
 }
 
 export type DocsNavigationItem = Pick<DocsChapterSummary, 'order' | 'slug' | 'href' | 'title'>
@@ -28,7 +26,10 @@ type ChapterFile = {
   href: string
 }
 
-type LoadedDocsChapterSummary = DocsChapterSummary & ChapterFile
+type LoadedDocsChapterSummary = DocsChapterSummary &
+  ChapterFile & {
+    mtime: number
+  }
 
 type DocsChapterRouteContext = AppContext & {
   params: {
@@ -51,19 +52,13 @@ type LoadedMarkdownChapter = MarkdownChapter & {
 const chaptersDir = new URL('./chapters/', import.meta.url)
 
 export async function docsChapterHandler(context: DocsChapterRouteContext) {
-  let result = await loadDocsChapter(context.params.chapter)
+  let chapter = await loadDocsChapter(context.params.chapter)
 
-  if (!result) {
+  if (!chapter) {
     return new Response('Not Found', { status: 404 })
   }
 
-  let { chapter, etag } = result
-  let notModified = notModifiedDocsResponse(context.request, etag)
-  if (notModified) {
-    return notModified
-  }
-
-  return context.render(<MarkdownChapterPage {...chapter} />, docsResponseInit(etag))
+  return context.render(<MarkdownChapterPage {...chapter} />)
 }
 
 export async function loadDocsChapterSummaries(): Promise<DocsChapterSummary[]> {
@@ -71,9 +66,7 @@ export async function loadDocsChapterSummaries(): Promise<DocsChapterSummary[]> 
   return summaries.map(toDocsChapterSummary)
 }
 
-async function loadDocsChapter(
-  slug: string,
-): Promise<{ chapter: LoadedMarkdownChapter; etag: string } | undefined> {
+async function loadDocsChapter(slug: string): Promise<LoadedMarkdownChapter | undefined> {
   let summaries = await loadChapterSummaries()
   let index = summaries.findIndex((summary) => summary.slug === slug)
   let summary = summaries[index]
@@ -87,15 +80,12 @@ async function loadDocsChapter(
   let next = summaries[index + 1]
 
   return {
-    chapter: {
-      ...chapter,
-      slug: summary.slug,
-      chapter: summary.chapter,
-      chapters: summaries.map(toDocsNavigationItem),
-      previous: getNavigation(previous),
-      next: getNavigation(next),
-    },
-    etag: docsEtag(`chapter:${summary.slug}`, getDocsChapterCacheInputs(summaries)),
+    ...chapter,
+    slug: summary.slug,
+    chapter: summary.chapter,
+    chapters: summaries.map(toDocsNavigationItem),
+    previous: getNavigation(previous),
+    next: getNavigation(next),
   }
 }
 
@@ -135,7 +125,7 @@ async function loadCachedSummary(file: ChapterFile): Promise<LoadedDocsChapterSu
 }
 
 // Navigation is attached fresh from summaries each request, so this only caches
-// the render. The response ETag includes every summary mtime.
+// the markdown render.
 const renderCache = new Map<string, { mtime: number; chapter: MarkdownChapter }>()
 
 async function loadRenderedChapter(summary: LoadedDocsChapterSummary): Promise<MarkdownChapter> {
@@ -197,18 +187,6 @@ export function parseChapterFilename(
   return { order, slug: match[2] }
 }
 
-export function getDocsChapterCacheInputs(
-  summaries: Iterable<DocsChapterSummary>,
-): Array<string | number> {
-  let inputs: Array<string | number> = []
-
-  for (let summary of summaries) {
-    inputs.push(summary.mtime, summary.order, summary.slug, summary.href, summary.title)
-  }
-
-  return inputs
-}
-
 function toDocsChapterSummary(summary: LoadedDocsChapterSummary): DocsChapterSummary {
   return {
     order: summary.order,
@@ -218,7 +196,6 @@ function toDocsChapterSummary(summary: LoadedDocsChapterSummary): DocsChapterSum
     title: summary.title,
     description: summary.description,
     sections: summary.sections,
-    mtime: summary.mtime,
   }
 }
 

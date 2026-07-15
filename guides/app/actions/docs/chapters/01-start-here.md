@@ -101,7 +101,7 @@ server.listen(44100, () => {
 
 `server.ts` is the runtime entrypoint. In our Node-based example, it creates an HTTP server, adapts each Node request into a Web `Request`, and passes it to `router.fetch(request)`.
 
-The [Request Handling](/docs/request-handling) chapter digs into runtime adapters, `createRequestListener`, middleware ordering, and typed request context.
+The [Request Handling](/request-handling/) chapter digs into runtime adapters, `createRequestListener`, middleware ordering, and typed request context.
 
 ## Define your first route {#define-your-first-route}
 
@@ -183,7 +183,7 @@ Navigate to [http://localhost:44100/albums/thriller](http://localhost:44100/albu
 Album: thriller
 ```
 
-The [Routing and Controllers](/docs/routing-and-controllers) chapter covers route maps and route builders in more depth.
+The [Routing and Controllers](/routing-and-controllers/) chapter covers route maps and route builders in more depth.
 
 ## Build your first page {#build-your-first-page}
 
@@ -191,7 +191,7 @@ Let's make this album page a little more interesting by returning HTML from a Re
 
 Remix UI uses JSX with a two-phase component model. A component is a function that receives a `handle` and returns another function that renders JSX. The outer function is setup: it runs once when the component is created, so normal JavaScript variables declared there can hold local state. The returned function is render: it runs on the first render and every update afterward.
 
-We'll come back to the component model later. If you want the full model now, check out the [Rendering UI](/docs/rendering-ui) chapter.
+We'll come back to the component model later. If you want the full model now, check out the [Rendering UI](/rendering-ui/) chapter.
 
 ```tsx
 function MyComponent(handle) {
@@ -231,7 +231,7 @@ export function AlbumPage(handle: Handle<{ id: string }>) {
 }
 ```
 
-To use this component we need to render and return the response in our action. The route still returns a Web `Response`, but `context.render(...)` creates that response from a component tree instead of a string. Pass the matched `albumId` through for now so the page keeps showing the route param from the previous section. The render middleware is app code, and the [Rendering UI](/docs/rendering-ui) chapter shows where it comes from.
+To use this component we need to render and return the response in our action. The route still returns a Web `Response`, but `context.render(...)` creates that response from a component tree instead of a string. Pass the matched `albumId` through for now so the page keeps showing the route param from the previous section. The render middleware is app code, and the [Rendering UI](/rendering-ui/) chapter shows where it comes from.
 
 ```tsx filename=app/actions/albums/controller.tsx lines=[4,9]
 import { createController } from "remix/router";
@@ -248,7 +248,7 @@ export default createController(routes.albums, {
 });
 ```
 
-For this walkthrough we're going to set up a small in-memory database. The [Data and Validation](/docs/data-and-validation) chapter covers real database setup in more detail.
+For this walkthrough we're going to set up a small in-memory database. The [Data and Validation](/data-and-validation/) chapter covers real database setup in more detail.
 
 ```sh
 touch app/actions/albums/data.ts
@@ -342,7 +342,7 @@ export function AlbumPage(handle: Handle<{ album: Album }>) {
 
 Now the page displays the album title, artist, and year.
 
-Center it and add a little spacing with the `css` function and `mix` prop. The [Rendering UI](/docs/rendering-ui) chapter covers this helper and prop in more detail.
+Center it and add a little spacing with the `css` function and `mix` prop. The [Rendering UI](/rendering-ui/) chapter covers this helper and prop in more detail.
 
 ```tsx filename=app/actions/albums/show-page.tsx lines=[2,14-18,20]
 import type { Handle } from "remix/ui";
@@ -559,7 +559,7 @@ declare module "remix/router" {
 // ...
 ```
 
-We'll also use `remix/data-schema/form-data` to turn the raw `FormData` into typed values before updating the album. `remix/data-schema` is a built-in Remix library for validating and parsing all sorts of data. The [Data and Validation](/docs/data-and-validation) chapter explores it in more detail.
+We'll also use `remix/data-schema/form-data` to turn the raw `FormData` into typed values before updating the album. `remix/data-schema` is a built-in Remix library for validating and parsing all sorts of data. The [Data and Validation](/data-and-validation/) chapter explores it in more detail.
 
 ```tsx filename=app/actions/albums/edit/controller.tsx lines=[2-5,8,11-15,28-41]
 import { createController } from "remix/router";
@@ -608,13 +608,13 @@ export default createController(routes.albums.edit, {
 });
 ```
 
-The `action` route action validates the parsed Web `FormData`, returns an explicit response for invalid input or a missing album, and redirects back to the album page after a successful update. The [Data and Validation](/docs/data-and-validation) chapter shows how to render field-level validation errors back into a form.
+The `action` route action validates the parsed Web `FormData`, returns an explicit response for invalid input or a missing album, and redirects back to the album page after a successful update. The [Data and Validation](/data-and-validation/) chapter shows how to render field-level validation errors back into a form.
 
 Now we can update our album data and set it to the correct year.
 
 ![Changing input with value 1983 to 1982, hitting submit, then being redirected to the corrected page](/images/app/actions/docs/chapters/01-start-here/correct-year.gif)
 
-The [Routing and Controllers](/docs/routing-and-controllers) and [Data and Validation](/docs/data-and-validation) chapters go deeper on request handling, validation, and database-backed mutations.
+The [Routing and Controllers](/routing-and-controllers/) and [Data and Validation](/data-and-validation/) chapters go deeper on request handling, validation, and database-backed mutations.
 
 ## Add your first hydrated component {#add-your-first-hydrated-component}
 
@@ -630,7 +630,7 @@ Start by creating a route-local browser module for the form:
 touch app/actions/albums/edit/album-edit-form.browser.tsx
 ```
 
-Files ending in `.browser.ts` or `.browser.tsx` are browser-loadable modules. The template's asset server is already configured to serve matching files under `app/`, so when a server-rendered component becomes a client entry, Remix can turn its source file into a browser module URL. The template also already loads `app/entry.browser.ts`, which starts the Remix UI client runtime in the browser. The [Files and Assets](/docs/files-and-assets) chapter goes deeper into our bundlerless approach and how `remix/assets` works.
+Files ending in `.browser.ts` or `.browser.tsx` are browser-loadable modules. The template's asset server is already configured to serve matching files under `app/`, so when a server-rendered component becomes a client entry, Remix can turn its source file into a browser module URL. The template also already loads `app/entry.browser.ts`, which starts the Remix UI client runtime in the browser. The [Files and Assets](/files-and-assets/) chapter goes deeper into our bundlerless approach and how `remix/assets` works.
 
 Now that we have a place for the form to live, let's pull it into its own component.
 
@@ -785,6 +785,6 @@ Now when you submit the form, the button is disabled and the button text changes
 
 ![Submit button saying "Saving..." while being disabled](/images/app/actions/docs/chapters/01-start-here/pending-submit.png)
 
-There is a lot more we could do here to avoid a full page navigation, but that involves handling cancellations, error states, and more. The [Interactivity](/docs/interactivity) chapter covers client entries, events, and progressive enhancement in more detail.
+There is a lot more we could do here to avoid a full page navigation, but that involves handling cancellations, error states, and more. The [Interactivity](/interactivity/) chapter covers client entries, events, and progressive enhancement in more detail.
 
-Next, [Routing and Controllers](/docs/routing-and-controllers) takes a closer look at the route leaves, nested maps, and controllers we started using here.
+Next, [Routing and Controllers](/routing-and-controllers/) takes a closer look at the route leaves, nested maps, and controllers we started using here.

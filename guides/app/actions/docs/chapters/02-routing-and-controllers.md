@@ -3,7 +3,7 @@ title: Routing and Controllers
 description: How route maps, route helpers, controllers, actions, and responses define Remix request handling.
 ---
 
-In [Chapter 1](/docs/start-here), we built one end-to-end request flow: a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) comes in, Remix matches a route, a controller runs an action, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) containing HTML rendered from a Remix component.
+In [Chapter 1](/start-here/), we built one end-to-end request flow: a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) comes in, Remix matches a route, a controller runs an action, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) containing HTML rendered from a Remix component.
 
 Full-stack Remix apps are built around that route/controller boundary. `app/routes.ts` names URLs and methods your app accepts, controllers in `app/actions/` implement them, and each action returns the response that becomes the page, redirect, JSON payload, file, or error the browser receives.
 
@@ -127,7 +127,7 @@ export const routes = route({
 // routes.albums.edit.action -> POST /albums/:albumId/edit
 ```
 
-The [Forms and Mutations](/docs/forms-and-mutations) chapter builds on this route shape for validation, redirects, and progressive enhancement.
+The [Forms and Mutations](/forms-and-mutations/) chapter builds on this route shape for validation, redirects, and progressive enhancement.
 
 `resources(...)` creates seven conventional routes for a collection: `index`, `new`, `show`, `create`, `edit`, `update`, and `destroy`. `resource(...)` creates routes for a singleton and omits `index` because there is no collection page.
 
@@ -213,11 +213,11 @@ export default createController(routes.albums.edit, {
 });
 ```
 
-Router middleware runs first, then controller middleware, then action middleware, then the action handler. The [Request Handling](/docs/request-handling) chapter covers middleware scopes and typed context in more detail.
+Router middleware runs first, then controller middleware, then action middleware, then the action handler. The [Request Handling](/request-handling/) chapter covers middleware scopes and typed context in more detail.
 
 ## Responses, redirects, headers, and errors
 
-Actions return Web `Response` objects. To render pages, you will often set up `render` middleware and add it to the router. That middleware provides `context.render(...)`, which turns a Remix component tree into an HTML response. The [Rendering UI](/docs/rendering-ui) chapter builds this middleware step by step. Once it is installed, use it in an action:
+Actions return Web `Response` objects. To render pages, you will often set up `render` middleware and add it to the router. That middleware provides `context.render(...)`, which turns a Remix component tree into an HTML response. The [Rendering UI](/rendering-ui/) chapter builds this middleware step by step. Once it is installed, use it in an action:
 
 ```tsx filename=app/actions/albums/controller.tsx
 // inside the show action:
@@ -226,7 +226,7 @@ return context.render(<AlbumPage album={album} />);
 
 The result is still an ordinary Web `Response`. An action can render a page, return text or JSON, redirect the browser, send a file, or return an error response.
 
-Expected outcomes such as invalid input, conflicts, and missing records should also return a `Response` with the appropriate status. Reserve thrown errors for unexpected failures. If an action or middleware throws, `router.fetch(...)` rejects so the server boundary can log the error and return a `500` response. The [Errors and Error Boundaries](/docs/errors-and-error-boundaries) chapter covers that path in detail.
+Expected outcomes such as invalid input, conflicts, and missing records should also return a `Response` with the appropriate status. Reserve thrown errors for unexpected failures. If an action or middleware throws, `router.fetch(...)` rejects so the server boundary can log the error and return a `500` response. The [Errors and Error Boundaries](/errors-and-error-boundaries/) chapter covers that path in detail.
 
 A text response can be as simple as:
 
@@ -324,6 +324,6 @@ app/actions/
 
 When a route branch has its own nested routes, a matching directory and controller keep the parent controller smaller and make each route owner visible from the file path.
 
-Keep route-local UI next to the controller that renders it, so the page and form for `albums.edit` belong in `actions/albums/edit/`. Components shared by multiple route areas belong in `ui/`. The [Rendering UI](/docs/rendering-ui) chapter covers the component model.
+Keep route-local UI next to the controller that renders it, so the page and form for `albums.edit` belong in `actions/albums/edit/`. Components shared by multiple route areas belong in `ui/`. The [Rendering UI](/rendering-ui/) chapter covers the component model.
 
-With the route map and controllers connected, [Request Handling](/docs/request-handling) backs up to the server entry and follows the middleware that runs before and after those actions.
+With the route map and controllers connected, [Request Handling](/request-handling/) backs up to the server entry and follows the middleware that runs before and after those actions.
