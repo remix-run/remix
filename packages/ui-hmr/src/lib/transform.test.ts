@@ -123,6 +123,82 @@ describe('transformComponentsForBrowser', () => {
     assert.match(result.code, /<button>\{__s__\.count\}<\/button>/)
   })
 
+  it('rewrites setup expressions that reference previously hoisted variables', () => {
+    let result = transformComponentsForBrowser(
+      `export function Counter() {
+  let count = 0
+  let next = count + 1
+  count += 1
+  let model = { count }
+  let { value, ...rest } = model
+  return () => <button title={value}>{count}{next}{rest.count}</button>
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
+    )
+
+    assert.equal(result.transformed, true)
+    assert.match(result.code, /__s__\.next = __s__\.count \+ 1/)
+    assert.match(result.code, /__s__\.count \+= 1/)
+    assert.match(result.code, /__s__\.model = \{ count: __s__\.count \}/)
+    assert.match(result.code, /let \{ value, \.\.\.rest \} = __s__\.model/)
+    assert.match(result.code, /<button title=\{__s__\.value\}>/)
+    assert.match(result.code, /\{__s__\.count\}\{__s__\.next\}\{__s__\.rest\.count\}/)
+    assert.doesNotMatch(result.code, /\{ __s__\.count \}/)
+  })
+
+  it('rewrites setup binding pattern expressions that reference previously hoisted variables', () => {
+    let result = transformComponentsForBrowser(
+      `export function Counter() {
+  let count = 1
+  let key = 'value'
+  let model = { [key]: 2 }
+  let { [key]: value = count } = model
+  let [first = count] = []
+  return () => <button>{value}{first}</button>
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
+    )
+
+    assert.equal(result.transformed, true)
+    assert.match(result.code, /__s__\.model = \{ \[__s__\.key\]: 2 \}/)
+    assert.match(
+      result.code,
+      /let \{ \[__s__\.key\]: value = __s__\.count \} = __s__\.model/,
+    )
+    assert.match(result.code, /let \[first = __s__\.count\] = \[\]/)
+    assert.match(result.code, /<button>\{__s__\.value\}\{__s__\.first\}<\/button>/)
+  })
+
+  it('does not rewrite setup bindings that shadow previously hoisted variables', () => {
+    let result = transformComponentsForBrowser(
+      `export function Counter() {
+  let value = 'outer'
+  function read(value) {
+    let inner = value
+    return inner
+  }
+  if (value) {
+    let value = 'block'
+    read(value)
+  }
+  let result = read(value)
+  return () => <button>{value}{result}</button>
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
+    )
+
+    assert.equal(result.transformed, true)
+    assert.match(result.code, /__s__\.value = 'outer'/)
+    assert.match(result.code, /function read\(value\) \{\n\s+let inner = value\n\s+return inner\n\s+\}/)
+    assert.match(result.code, /if \(__s__\.value\) \{\n\s+let value = 'block'\n\s+read\(value\)\n\s+\}/)
+    assert.match(result.code, /__s__\.result = read\(__s__\.value\)/)
+    assert.doesNotMatch(result.code, /let inner = __s__\.value/)
+    assert.match(result.code, /<button>\{__s__\.value\}\{__s__\.result\}<\/button>/)
+  })
+
   it('does not rewrite render bindings that shadow setup variables', () => {
     let result = transformComponentsForBrowser(
       `export function Counter() {
@@ -246,6 +322,42 @@ export {
     assert.match(result.code, /import\.meta\.hot\.accept/)
   })
 
+  it('does not transform aliased component exports', () => {
+    let source = `function Counter() {
+  return () => <button>Count</button>
+}
+
+export { Counter as Renamed }
+`
+    let result = transformComponentsForBrowser(source, {
+      importSource: '@remix-run',
+      moduleUrl: '/app/Counter.tsx',
+    })
+
+    assert.equal(result.transformed, false)
+    assert.equal(result.code, source)
+  })
+
+  it('does not transform component-like exports with unsupported initializers', () => {
+    let source = `function CounterA() {
+  return () => <button>A</button>
+}
+
+function CounterB() {
+  return () => <button>B</button>
+}
+
+export const Counter = Math.random() > 0.5 ? CounterA : CounterB
+`
+    let result = transformComponentsForBrowser(source, {
+      importSource: '@remix-run',
+      moduleUrl: '/app/Counter.tsx',
+    })
+
+    assert.equal(result.transformed, false)
+    assert.equal(result.code, source)
+  })
+
   it('does not transform non-component functions', () => {
     let source = `export function loader() {
   return new Response('ok')
@@ -258,6 +370,34 @@ export {
 
     assert.equal(result.transformed, false)
     assert.equal(result.code, source)
+  })
+
+  it('tracks unsupported component-like exports as non-component exports', () => {
+    let result = transformComponentsForBrowser(
+      `function CounterA() {
+  return () => <button>A</button>
+}
+
+function CounterB() {
+  return () => <button>B</button>
+}
+
+export const Selected = Math.random() > 0.5 ? CounterA : CounterB
+
+export function Counter() {
+  return () => <button>Count</button>
+}
+`,
+      { importSource: '@remix-run', moduleUrl: '/app/Counter.tsx' },
+    )
+
+    assert.equal(result.transformed, true)
+    assert.deepEqual(result.componentNames, ['Counter'])
+    assert.match(
+      result.code,
+      /__remixUiHmrPreviousExports__ = \{\n  "Selected": Selected,\n  "Counter": Counter,\n\}/,
+    )
+    assert.match(result.code, /Updated component module changed non-component export/)
   })
 
   it('transforms component modules with non-component tracked exports', () => {

@@ -767,12 +767,7 @@ function createHmrImplementationBody(
 ): { body: string; sourceMapHints: SourceMapHint[] } {
   let stateNames = getSetupStateNames(match.setupStatements)
   let setupSource = createSetupSource(match.setupStatements, stateNames, source)
-  let renderSource = rewriteReferences(
-    match.renderArgument.start,
-    match.renderArgument.end,
-    stateNames,
-    source,
-  )
+  let renderSource = rewriteReferences(match.renderArgument, stateNames, source)
 
   return {
     body: [
@@ -830,12 +825,7 @@ function createSetupSource(
           if (name === undefined) continue
           lines.push(
             init
-              ? `__s__.${name} = ${rewriteReferences(
-                  init.start,
-                  init.end,
-                  initializedStateNames,
-                  source,
-                )};`
+              ? `__s__.${name} = ${rewriteReferences(init, initializedStateNames, source)};`
               : `__s__.${name} = undefined;`,
           )
           initializedStateNames.add(name)
@@ -843,15 +833,11 @@ function createSetupSource(
         }
 
         lines.push(`{`)
+        let patternSource = rewriteBindingPatternReferences(pattern, initializedStateNames, source)
         lines.push(
           init
-            ? `  let ${source.slice(pattern.start, pattern.end)} = ${rewriteReferences(
-                init.start,
-                init.end,
-                initializedStateNames,
-                source,
-              )};`
-            : `  let ${source.slice(pattern.start, pattern.end)};`,
+            ? `  let ${patternSource} = ${rewriteReferences(init, initializedStateNames, source)};`
+            : `  let ${patternSource};`,
         )
         for (let name of names) {
           lines.push(`  __s__.${name} = ${name};`)
@@ -862,26 +848,24 @@ function createSetupSource(
       continue
     }
 
-    lines.push(rewriteReferences(statement.start, statement.end, initializedStateNames, source))
+    lines.push(rewriteReferences(statement, initializedStateNames, source))
   }
 
   return lines.join('\n')
 }
 
 function rewriteReferences(
-  start: number,
-  end: number,
+  root: AstNode,
   stateNames: ReadonlySet<string>,
   source: string,
 ): string {
-  if (stateNames.size === 0) return source.slice(start, end)
+  let snippet = source.slice(root.start, root.end)
+  if (stateNames.size === 0) return snippet
 
-  let rewritten = new MagicString(source.slice(start, end))
-  let ast = parseModule(source.slice(start, end))
-  if (!ast) return source.slice(start, end)
+  let rewritten = new MagicString(snippet)
   let rewrittenRanges = new Set<string>()
 
-  visitWithScope(ast, null, new Set(), (node, parent, shadowedNames) => {
+  visitWithScope(root, null, new Set(), (node, parent, shadowedNames) => {
     if (node.type !== 'Identifier') return
     let name = getIdentifierName(node)
     if (!name || !stateNames.has(name)) return
@@ -891,15 +875,77 @@ function rewriteReferences(
     if (parent && isShorthandProperty(parent, node)) {
       let key = `${parent.start}:${parent.end}`
       if (rewrittenRanges.has(key)) return
-      rewritten.overwrite(parent.start, parent.end, `${name}: __s__.${name}`)
+      rewritten.overwrite(
+        parent.start - root.start,
+        parent.end - root.start,
+        `${name}: __s__.${name}`,
+      )
       rewrittenRanges.add(key)
       return
     }
 
-    rewritten.overwrite(node.start, node.end, `__s__.${name}`)
+    rewritten.overwrite(node.start - root.start, node.end - root.start, `__s__.${name}`)
   })
 
   return rewritten.toString()
+}
+
+function rewriteBindingPatternReferences(
+  pattern: AstNode,
+  stateNames: ReadonlySet<string>,
+  source: string,
+): string {
+  let snippet = source.slice(pattern.start, pattern.end)
+  if (stateNames.size === 0) return snippet
+
+  let rewritten = new MagicString(snippet)
+
+  visitBindingPattern(pattern, (node) => {
+    let replacement = rewriteReferences(node, stateNames, source)
+    rewritten.overwrite(node.start - pattern.start, node.end - pattern.start, replacement)
+  })
+
+  return rewritten.toString()
+}
+
+function visitBindingPattern(pattern: AstNode, onExpression: (node: AstNode) => void): void {
+  if (pattern.type === 'AssignmentPattern') {
+    let left = getNode(pattern, 'left')
+    let right = getNode(pattern, 'right')
+    if (left) visitBindingPattern(left, onExpression)
+    if (right) onExpression(right)
+    return
+  }
+
+  if (pattern.type === 'RestElement') {
+    let argument = getNode(pattern, 'argument')
+    if (argument) visitBindingPattern(argument, onExpression)
+    return
+  }
+
+  if (pattern.type === 'ArrayPattern') {
+    for (let element of getNodeArray(pattern, 'elements')) {
+      visitBindingPattern(element, onExpression)
+    }
+    return
+  }
+
+  if (pattern.type === 'ObjectPattern') {
+    for (let property of getNodeArray(pattern, 'properties')) {
+      if (property.type === 'RestElement') {
+        visitBindingPattern(property, onExpression)
+        continue
+      }
+
+      let key = getNode(property, 'key')
+      if (property.computed === true && key) {
+        onExpression(key)
+      }
+
+      let value = getNode(property, 'value')
+      if (value) visitBindingPattern(value, onExpression)
+    }
+  }
 }
 
 function shouldRewriteIdentifier(node: AstNode, parent: AstNode | null): boolean {
@@ -1048,18 +1094,26 @@ function collectBindingNames(pattern: AstNode, names: string[]): void {
 function isShorthandProperty(parent: AstNode, node: AstNode): boolean {
   return (
     isPropertyNode(parent) &&
-    parent.key === node &&
-    parent.value === node &&
+    isSameNodeRange(getNode(parent, 'key'), node) &&
+    isSameNodeRange(getNode(parent, 'value'), node) &&
     parent.shorthand === true
   )
 }
 
 function isStaticPropertyKey(parent: AstNode, node: AstNode): boolean {
-  return isPropertyNode(parent) && parent.key === node && parent.computed !== true
+  return (
+    isPropertyNode(parent) &&
+    isSameNodeRange(getNode(parent, 'key'), node) &&
+    parent.computed !== true
+  )
 }
 
 function isPropertyNode(node: AstNode): boolean {
   return node.type === 'Property' || node.type === 'ObjectProperty'
+}
+
+function isSameNodeRange(left: AstNode | null, right: AstNode): boolean {
+  return left !== null && left.start === right.start && left.end === right.end
 }
 
 function getSetupStatements(body: AstNode): AstNode[] {
@@ -1096,8 +1150,11 @@ function getExportedNames(program: AstNode): Set<string> {
     if (item.type !== 'ExportNamedDeclaration') continue
 
     for (let specifier of getNodeArray(item, 'specifiers')) {
-      let name = getIdentifierName(getNode(specifier, 'local'))
-      if (name && isPascalCase(name)) names.add(name)
+      let localName = getIdentifierName(getNode(specifier, 'local'))
+      let exportedName = getIdentifierName(getNode(specifier, 'exported'))
+      if (localName && localName === exportedName && isPascalCase(localName)) {
+        names.add(localName)
+      }
     }
   }
 
