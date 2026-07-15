@@ -1,1 +1,0 @@
-Added styled component subpath exports under `@remix-run/ui/*` for accordion, breadcrumbs, checkbox, combobox, menu, and select. These are the package-owned implementations behind the `remix/ui/*` entrypoints.

@@ -7,8 +7,8 @@ process.env.SESSION_SECRET = 'test-session-secret'
 const databaseUrl = `./tmp/security-test-${process.pid}-${Date.now()}.sqlite`
 process.env.DATABASE_URL = databaseUrl
 
-const { router } = await import('../router.ts')
-const { routes } = await import('../routes.ts')
+const { router } = await import('./router.ts')
+const { routes } = await import('./routes.ts')
 
 describe('security middleware', () => {
   it('rejects auth mutations with missing or invalid CSRF tokens', async () => {

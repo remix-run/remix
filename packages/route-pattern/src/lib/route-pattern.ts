@@ -35,7 +35,7 @@ export type RoutePatternParts = {
   readonly search: ReadonlyMap<string, ReadonlySet<string>>
 }
 
-/** Serialized URL pattern parts returned by {@link RoutePattern.toJSON}. */
+/** Serialized URL pattern parts returned by the {@link RoutePattern} `toJSON` method. */
 export interface RoutePatternJSON {
   /** Serialized protocol constraint, or an empty string when omitted. */
   protocol: string
@@ -73,7 +73,7 @@ declare const brand: unique symbol
 /**
  * A parsed route pattern.
  *
- * Create one with {@link RoutePattern.parse}. The constructor is public but takes a parsed
+ * Create one with the {@link RoutePattern} `parse` method. The constructor is public but takes a parsed
  * representation that is not part of the public API; prefer `RoutePattern.parse` instead. Use
  * `source`, `toString()`, `toJSON()`, and {@link getRoutePatternCaptures} for inspection.
  */
@@ -86,7 +86,7 @@ export class RoutePattern<source extends string = string> {
   /**
    * Create a new `RoutePattern` from its parsed parts.
    *
-   * The parts are not part of the public API. Use {@link RoutePattern.parse} to create a pattern
+   * The parts are not part of the public API. Use the {@link RoutePattern} `parse` method to create a pattern
    * from a source string.
    *
    * @param parts The parsed parts of the pattern.

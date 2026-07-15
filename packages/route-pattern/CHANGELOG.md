@@ -2,6 +2,22 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.23.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `RoutePattern` no longer exposes its parsed internals. Construct patterns with `RoutePattern.parse()`, and use `pattern.source`, `pattern.toString()`, or `pattern.toJSON()` instead of reading parsed internals such as `pattern.pathname.tokens`, `pattern.hostname`, or `pattern.search`.
+
+  Added `getRoutePatternCaptures(pattern)` for supported capture introspection. It returns readonly `{ part, type, name, optional }` entries in source order so consumers can inspect the variables (`:name`) and wildcards (`*name`) declared in a pattern without relying on internal parser tokens.
+
+  Exported `RoutePatternCapture` and `RoutePatternJSON` from `@remix-run/route-pattern`, `CreateHrefErrorDetails` from `@remix-run/route-pattern/href`, and `MatchParamMeta` from `@remix-run/route-pattern/match`.
+
+### Patch Changes
+
+- Fixed several route pattern matching and href generation edge cases: `ignoreCase` now applies consistently to pathname matching, key-only search constraints keep generated hrefs matchable, pathname params use `encodeURIComponent` segment encoding, hostname params reject URL-structural and control characters, optional joins no longer generate duplicate slashes, missing-param errors report every missing required param, optional variant duplicates are collapsed, port-only origins are rejected, and protocol/port constraints participate in specificity.
+
+- Fixed route pattern helper types so literal pattern types follow the same grammar as runtime parsing. Invalid literal patterns now evaluate to `never` in `CreateHrefArgs`, `MatchParams`, and `JoinPatterns`, while broad `string` patterns remain usable.
+
 ## v0.22.1
 
 ### Patch Changes

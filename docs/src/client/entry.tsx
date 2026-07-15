@@ -52,6 +52,17 @@ window.navigation.addEventListener('navigate', () => {
   if (navToggle instanceof HTMLInputElement) {
     navToggle.checked = false
   }
+
+  let pagefindModal = document.querySelector('pagefind-modal')
+  if (pagefindModal && pagefindModal instanceof HTMLElement) {
+    let modal = pagefindModal as HTMLElement & { close: () => void }
+    modal.close()
+  }
+
+  let pagefindButton = document.querySelector('pagefind-modal-trigger button')
+  if (pagefindButton && pagefindButton instanceof HTMLElement) {
+    pagefindButton.blur()
+  }
 })
 
 function isMobileNav() {

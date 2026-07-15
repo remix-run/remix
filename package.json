@@ -43,13 +43,5 @@
   },
   "workspaces": [
     "packages/*"
-  ],
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@swc/core",
-      "esbuild",
-      "sharp",
-      "workerd"
-    ]
-  }
+  ]
 }

@@ -2,7 +2,7 @@ import { DatabaseSync } from 'node:sqlite'
 
 import * as assert from 'remix/assert'
 import { createDatabase, type Database } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
+import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
 import { describe, it } from 'remix/test'
 
 import {
