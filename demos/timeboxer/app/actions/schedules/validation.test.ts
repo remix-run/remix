@@ -1,13 +1,13 @@
-import { rmSync } from 'node:fs'
-
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
 process.env.SESSION_SECRET = 'test-session-secret'
-process.env.DATABASE_URL = `./tmp/schedules-validation-test-${process.pid}.sqlite`
 
+const { db, migrator, seed } = await import('../../db.ts')
 const { router } = await import('../../router.ts')
 const { routes } = await import('../../routes.ts')
+
+await migrator.reset(db, { seed })
 
 describe('schedule input validation', () => {
   it('rejects invalid JSON request bodies', async () => {
@@ -472,8 +472,3 @@ function mergeCookie(currentCookie: string, headers: Headers) {
   return [...existingPairs, cookiePair].join('; ')
 }
 
-process.on('exit', () => {
-  if (process.env.DATABASE_URL) {
-    rmSync(process.env.DATABASE_URL, { force: true })
-  }
-})

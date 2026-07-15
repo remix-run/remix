@@ -1,5 +1,3 @@
-import { DatabaseSync } from 'node:sqlite'
-
 import * as assert from 'remix/assert'
 import { createDatabase, type Database } from 'remix/data-table'
 import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
@@ -144,9 +142,8 @@ describe('schedule persistence lifecycle', () => {
 })
 
 async function withTestDatabase<T>(callback: (db: Database) => Promise<T>): Promise<T> {
-  let sqlite = new DatabaseSync(':memory:')
-  sqlite.exec('PRAGMA foreign_keys = ON')
-  sqlite.exec(`
+  let db = createDatabase(createSqliteDatabaseAdapter({ filename: ':memory:' }))
+  await db.exec(`
     CREATE TABLE users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT NOT NULL UNIQUE,
@@ -197,11 +194,7 @@ async function withTestDatabase<T>(callback: (db: Database) => Promise<T>): Prom
     );
   `)
 
-  try {
-    return await callback(createDatabase(createSqliteDatabaseAdapter(sqlite)))
-  } finally {
-    sqlite.close()
-  }
+  return await callback(db)
 }
 
 async function createUser(db: Database, username = 'test-user') {

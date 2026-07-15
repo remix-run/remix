@@ -1,14 +1,13 @@
-import { rmSync } from 'node:fs'
-
 import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 
 process.env.SESSION_SECRET = 'test-session-secret'
-const databaseUrl = `./tmp/security-test-${process.pid}-${Date.now()}.sqlite`
-process.env.DATABASE_URL = databaseUrl
 
+const { db, migrator, seed } = await import('./db.ts')
 const { router } = await import('./router.ts')
 const { routes } = await import('./routes.ts')
+
+await migrator.reset(db, { seed })
 
 describe('security middleware', () => {
   it('rejects auth mutations with missing or invalid CSRF tokens', async () => {
@@ -341,6 +340,3 @@ function uniqueUsername(prefix: string) {
   return `${prefix.slice(0, 16)}-${process.pid}-${usernameCounter++}`
 }
 
-process.on('exit', () => {
-  rmSync(databaseUrl, { force: true })
-})
