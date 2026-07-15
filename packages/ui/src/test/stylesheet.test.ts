@@ -254,6 +254,64 @@ describe('createStyleManager', () => {
     mgr.dispose()
   })
 
+  it('does not start transitions when adopting server-rendered styles', async () => {
+    let host = document.createElement('div')
+    let serverStyle = document.createElement('style')
+    serverStyle.setAttribute('data-rmx', 'rmxc-adopt-transition')
+    serverStyle.textContent = `
+      @layer rmx-test.rmxc-adopt-transition {
+        .rmxc-adopt-transition {
+          --offset: 8px;
+          display: block;
+          width: 30px;
+          height: 18px;
+        }
+
+        .rmxc-adopt-transition::before {
+          content: "";
+          display: block;
+          width: 10px;
+          height: 14px;
+          transform: translateX(0);
+          transition: transform 80ms ease, width 80ms ease;
+        }
+
+        .rmxc-adopt-transition[data-state="checked"]::before {
+          width: 18px;
+          transform: translateX(var(--offset));
+        }
+      }
+    `
+
+    let el = document.createElement('div')
+    el.className = 'rmxc-adopt-transition'
+    el.dataset.state = 'checked'
+    host.append(serverStyle, el)
+    document.body.append(host)
+
+    let beforeTransform = getComputedStyle(el, '::before').transform
+    let beforeWidth = getComputedStyle(el, '::before').width
+    expect(beforeTransform).toBe('matrix(1, 0, 0, 1, 8, 0)')
+    expect(beforeWidth).toBe('18px')
+
+    let transitionRuns: string[] = []
+    el.addEventListener('transitionrun', (event) => {
+      let transition = event as TransitionEvent
+      transitionRuns.push(`${transition.pseudoElement}:${transition.propertyName}`)
+    })
+
+    let mgr = createStyleManager('rmx-test')
+    mgr.adoptServerStyles([host])
+    await waitForTransitionWindow()
+
+    expect(getComputedStyle(el, '::before').transform).toBe(beforeTransform)
+    expect(getComputedStyle(el, '::before').width).toBe(beforeWidth)
+    expect(transitionRuns).toEqual([])
+
+    host.remove()
+    mgr.dispose()
+  })
+
   it('adopts server style tags added after manager creation', () => {
     let mgr = createStyleManager('rmx')
 
@@ -471,3 +529,9 @@ describe('createStyleManager', () => {
     mgr.dispose()
   })
 })
+
+async function waitForTransitionWindow(): Promise<void> {
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+  await new Promise<void>((resolve) => setTimeout(resolve, 120))
+}

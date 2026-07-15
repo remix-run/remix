@@ -3,7 +3,7 @@ import { dirname } from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 
 import { createDatabase } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table-sqlite'
+import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
 
 const databasePath = process.env.DATABASE_URL ?? './db/timebox.sqlite'
 

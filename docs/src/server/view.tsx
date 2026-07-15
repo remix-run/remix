@@ -40,7 +40,7 @@ export function Document(
           entryHref={entryHref}
           entryPreloads={entryPreloads}
         />
-        <body mix={bodyCss}>
+        <body mix={[bodyCss, pagefindVariables]}>
           <MobileHeader page={page} />
           <div mix={shellCss}>
             <Sidebar
@@ -53,6 +53,11 @@ export function Document(
               {children}
             </MainContent>
           </div>
+          <pagefind-config
+            base-url={routes.home.href({ version: activeVersion })}
+            bundle-path={routes.assets.href({ version: activeVersion, asset: 'pagefind/' })}
+          ></pagefind-config>
+          <pagefind-modal data-key="pagefind-modal" rmx-preserve-dom reset-on-close />
         </body>
       </html>
     )
@@ -71,9 +76,17 @@ function MobileHeader(handle: Handle<{ page: PageDefinition }>) {
           aria-hidden="true"
           tabIndex={-1}
         />
-        <a href="https://remix.run" mix={mobileLogoBannerCss}>
-          <RemixLogos />
-        </a>
+        <div mix={mobileLogoBannerCss}>
+          <a href="https://remix.run">
+            <RemixLogos />
+          </a>
+          <pagefind-modal-trigger
+            compact
+            data-key="pagefind-modal-trigger-mobile"
+            hide-shortcut
+            rmx-preserve-dom
+          />
+        </div>
         <label
           for="nav-toggle"
           mix={mobileTopBarCss}
@@ -164,16 +177,53 @@ function Head(
           <link key={href} rel="modulepreload" href={href} />
         ))}
         <script type="module" src={entryHref} />
+        <link
+          href={routes.assets.href({
+            version: activeVersion,
+            asset: 'pagefind/pagefind-component-ui.css',
+          })}
+          rel="stylesheet"
+        />
+        <script
+          src={routes.assets.href({
+            version: activeVersion,
+            asset: 'pagefind/pagefind-component-ui.js',
+          })}
+          type="module"
+        />
+        {/*
+          Pagefind resets its custom element hosts with `color-scheme: initial`.
+          We override so dark mode works properly.
+        */}
+        <style>{`
+          pagefind-filter-dropdown,
+          pagefind-filter-pane,
+          pagefind-input,
+          pagefind-keyboard-hints,
+          pagefind-modal,
+          pagefind-modal-body,
+          pagefind-modal-header,
+          pagefind-modal-trigger,
+          pagefind-results,
+          pagefind-searchbox,
+          pagefind-summary {
+            color-scheme: light dark;
+          }
+        `}</style>
       </head>
     )
   }
 }
 
 function MainContent(
-  handle: Handle<{ page: PageDefinition; header?: RemixNode; children: RemixNode | RemixNode[] }>,
+  handle: Handle<{
+    page: PageDefinition
+    header?: RemixNode
+    children: RemixNode | RemixNode[]
+  }>,
 ) {
   return () => (
-    <main mix={mainCss}>
+    <main mix={mainCss} data-pagefind-body>
       <div mix={pageWrapCss}>
         <div mix={[pageContentCss, handle.props.page.css]}>
           {handle.props.header}
@@ -300,6 +350,12 @@ function Sidebar(
               <a href="https://remix.run" class="logo">
                 <RemixLogos />
               </a>
+              <pagefind-modal-trigger
+                compact
+                data-key="pagefind-modal-trigger-sidebar"
+                hide-shortcut
+                rmx-preserve-dom
+              />
             </div>
 
             <VersionSwitcher versions={versions} activeVersion={activeVersion} />
@@ -612,6 +668,32 @@ const bodyCss = css({
   },
 })
 
+const pagefindVariables = css({
+  '--pf-font': theme.fontFamily.sans,
+  '--pf-input-height': '40px',
+  '--pf-border-radius': theme.radius.md,
+  '--pf-text': theme.colors.text.primary,
+  '--pf-text-secondary': theme.colors.text.secondary,
+  '--pf-text-muted': theme.colors.text.muted,
+  '--pf-background': theme.surface.lvl1,
+  '--pf-border': theme.colors.border.subtle,
+  '--pf-border-focus': theme.colors.border.strong,
+  '--pf-skeleton': theme.surface.lvl3,
+  '--pf-skeleton-shine': theme.surface.lvl4,
+  '--pf-hover': theme.surface.lvl2,
+  '--pf-mark': theme.colors.text.primary,
+  '--pf-scroll-shadow': 'light-dark(rgb(0 0 0 / 8%), rgb(255 255 255 / 10%))',
+  '--pf-shadow-sm': '0 2px 8px light-dark(rgb(0 0 0 / 6%), rgb(0 0 0 / 30%))',
+  '--pf-shadow-md': '0 4px 12px light-dark(rgb(0 0 0 / 10%), rgb(0 0 0 / 40%))',
+  '--pf-shadow-lg': '0 16px 48px light-dark(rgb(0 0 0 / 20%), rgb(0 0 0 / 50%))',
+  '--pf-error-bg': 'light-dark(#fef2f2, #2a1a1a)',
+  '--pf-error-border': 'light-dark(#fecaca, #5c2828)',
+  '--pf-error-text': 'light-dark(#dc2626, #f87171)',
+  '--pf-error-text-secondary': 'light-dark(#b91c1c, #ef4444)',
+  '--pf-outline-focus': theme.colors.text.link,
+  '--pf-modal-backdrop': 'light-dark(rgb(0 0 0 / 50%), rgb(0 0 0 / 72%))',
+})
+
 const shellCss = css({
   minHeight: '100vh',
   display: 'grid',
@@ -647,8 +729,9 @@ const sidebarStickyCss = css({
 
 const sidebarIntroCss = css({
   display: 'flex',
-  flexDirection: 'column',
-  gap: theme.space.xs,
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
   paddingBottom: theme.space.sm,
   marginBottom: theme.space.sm,
   [MOBILE_NAV_MEDIA_RULE]: {
