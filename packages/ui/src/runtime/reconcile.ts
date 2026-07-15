@@ -44,6 +44,7 @@ import {
   type MixinRuntimeState,
 } from './mixins/mixin.ts'
 import { isOnMixinDescriptor, type OnMixinDescriptor } from './mixins/on-mixin.ts'
+import { componentStalenessCheck } from './refresh.ts'
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
@@ -419,6 +420,16 @@ export function diffVNodes(
       anchor,
       rootCursor,
     )
+  }
+
+  if (
+    componentStalenessCheck !== null &&
+    isCommittedComponentNode(curr) &&
+    isComponentNode(next) &&
+    componentStalenessCheck(curr.type) === true
+  ) {
+    replace(curr, next, domParent, frame, scheduler, styles, vParent, rootTarget, anchor)
+    return rootCursor
   }
 
   if (curr.type !== next.type) {

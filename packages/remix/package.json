@@ -23,6 +23,9 @@
   "exports": {
     "./assert": "./src/assert.ts",
     "./assets": "./src/assets.ts",
+    "./assets/types/hmr": {
+      "types": "./src/assets/types/hmr.d.ts"
+    },
     "./async-context-middleware": "./src/async-context-middleware.ts",
     "./auth": "./src/auth.ts",
     "./auth-middleware": "./src/auth-middleware.ts",
@@ -96,6 +99,11 @@
     "./multipart-parser/node": "./src/multipart-parser/node.ts",
     "./node-fetch-server": "./src/node-fetch-server.ts",
     "./node-fetch-server/test": "./src/node-fetch-server/test.ts",
+    "./node-hmr": "./src/node-hmr.ts",
+    "./node-hmr/runtime": "./src/node-hmr/runtime.ts",
+    "./node-hmr/types": {
+      "types": "./src/node-hmr/types.d.ts"
+    },
     "./node-tsx": "./src/node-tsx.ts",
     "./node-tsx/load-module": "./src/node-tsx/load-module.ts",
     "./render-middleware": "./src/render-middleware.ts",
@@ -128,6 +136,11 @@
     "./test": "./src/test.ts",
     "./test/cli": "./src/test/cli.ts",
     "./ui": "./src/ui.ts",
+    "./ui-hmr": "./src/ui-hmr.ts",
+    "./ui-hmr/browser-module-hooks": "./src/ui-hmr/browser-module-hooks.ts",
+    "./ui-hmr/browser-runtime": "./src/ui-hmr/browser-runtime.ts",
+    "./ui-hmr/node": "./src/ui-hmr/node.ts",
+    "./ui-hmr/server-runtime": "./src/ui-hmr/server-runtime.ts",
     "./ui/accordion": "./src/ui/accordion.ts",
     "./ui/accordion/primitives": "./src/ui/accordion/primitives.ts",
     "./ui/anchor": "./src/ui/anchor.ts",
@@ -137,6 +150,7 @@
     "./ui/checkbox": "./src/ui/checkbox.ts",
     "./ui/combobox": "./src/ui/combobox.ts",
     "./ui/combobox/primitives": "./src/ui/combobox/primitives.ts",
+    "./ui/dev/refresh": "./src/ui/dev/refresh.ts",
     "./ui/input": "./src/ui/input.ts",
     "./ui/jsx-dev-runtime": "./src/ui/jsx-dev-runtime.ts",
     "./ui/jsx-runtime": "./src/ui/jsx-runtime.ts",
@@ -164,6 +178,9 @@
       "./assets": {
         "types": "./dist/assets.d.ts",
         "default": "./dist/assets.js"
+      },
+      "./assets/types/hmr": {
+        "types": "./dist/assets/types/hmr.d.ts"
       },
       "./async-context-middleware": {
         "types": "./dist/async-context-middleware.d.ts",
@@ -457,6 +474,17 @@
         "types": "./dist/node-fetch-server/test.d.ts",
         "default": "./dist/node-fetch-server/test.js"
       },
+      "./node-hmr": {
+        "types": "./dist/node-hmr.d.ts",
+        "default": "./dist/node-hmr.js"
+      },
+      "./node-hmr/runtime": {
+        "types": "./dist/node-hmr/runtime.d.ts",
+        "default": "./dist/node-hmr/runtime.js"
+      },
+      "./node-hmr/types": {
+        "types": "./dist/node-hmr/types.d.ts"
+      },
       "./node-tsx": {
         "types": "./dist/node-tsx.d.ts",
         "default": "./dist/node-tsx.js"
@@ -585,6 +613,26 @@
         "types": "./dist/ui.d.ts",
         "default": "./dist/ui.js"
       },
+      "./ui-hmr": {
+        "types": "./dist/ui-hmr.d.ts",
+        "default": "./dist/ui-hmr.js"
+      },
+      "./ui-hmr/browser-module-hooks": {
+        "types": "./dist/ui-hmr/browser-module-hooks.d.ts",
+        "default": "./dist/ui-hmr/browser-module-hooks.js"
+      },
+      "./ui-hmr/browser-runtime": {
+        "types": "./dist/ui-hmr/browser-runtime.d.ts",
+        "default": "./dist/ui-hmr/browser-runtime.js"
+      },
+      "./ui-hmr/node": {
+        "types": "./dist/ui-hmr/node.d.ts",
+        "default": "./dist/ui-hmr/node.js"
+      },
+      "./ui-hmr/server-runtime": {
+        "types": "./dist/ui-hmr/server-runtime.d.ts",
+        "default": "./dist/ui-hmr/server-runtime.js"
+      },
       "./ui/accordion": {
         "types": "./dist/ui/accordion.d.ts",
         "default": "./dist/ui/accordion.js"
@@ -620,6 +668,10 @@
       "./ui/combobox/primitives": {
         "types": "./dist/ui/combobox/primitives.d.ts",
         "default": "./dist/ui/combobox/primitives.js"
+      },
+      "./ui/dev/refresh": {
+        "types": "./dist/ui/dev/refresh.d.ts",
+        "default": "./dist/ui/dev/refresh.js"
       },
       "./ui/input": {
         "types": "./dist/ui/input.d.ts",
@@ -740,7 +792,9 @@
     "@remix-run/cli": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@remix-run/terminal": "workspace:^",
-    "@remix-run/render-middleware": "workspace:^"
+    "@remix-run/render-middleware": "workspace:^",
+    "@remix-run/node-hmr": "workspace:^",
+    "@remix-run/ui-hmr": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

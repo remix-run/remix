@@ -67,10 +67,12 @@ await app.ready()
 - **`loadModule(moduleUrl, exportName)`** (required) - Called for each client entry found in the page. Return the component function. Typically uses dynamic `import()`.
 - **`resolveFrame(src, signal, target)`** (optional) - Called when a `<Frame>` needs to load or reload content. The examples here only use `src` and `signal`, but `target` is also available when frame targeting matters. If omitted, Remix UI uses a placeholder HTML response (`<p>resolve frame unimplemented</p>`). See [Frames](./frames.md) for details.
 
-### `app` methods
+### `app` properties
 
 - **`app.ready()`** - Returns a promise that resolves when all initial client entries have been hydrated.
 - **`app.flush()`** - Synchronously flushes all pending updates.
+- **`app.frames.top`** - The top-level frame for the app.
+- **`app.frames.get(name)`** - Returns a frame handle, if one exists.
 - **`app.dispose()`** - Tears down all hydrated components and cleans up.
 
 `app` is also an `EventTarget`. You can listen for errors from any hydrated component:

@@ -12,6 +12,8 @@ Fetch-based server for compiling browser assets on demand.
 - **Caching** - Conservative caching by default with stable URLs, ETags, and revalidation
 - **Optional Fingerprinting** - Source-based fingerprinted URLs for long-lived browser caching
 - **Source Maps** - Serve inline or external sourcemaps
+- **Hot Module Reloading** - Handle live code updates in development
+- **Script Module Hooks** - Customize script resolution and loading with Node's module hooks API
 
 ## Installation
 
@@ -313,6 +315,34 @@ let assetServer = createAssetServer({
 })
 ```
 
+### Module Hooks
+
+Use `scripts.moduleHooks` to customize script resolution and loading with [Node's module API](https://nodejs.org/api/module.html#customization-hooks), provided as an array of objects with optional `resolve` and `load` hooks.
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  scripts: {
+    moduleHooks: [
+      {
+        resolve(specifier, context, nextResolve) {
+          /* ... */
+        },
+        load(url, context, nextLoad) {
+          /* ... */
+        },
+      },
+    ],
+  },
+})
+```
+
+Load hooks must return `format: 'module'`, and import attributes are not currently supported.
+
 ## File Options
 
 Use `files` to serve additional leaf assets like images and fonts. File extensions must include the leading dot and are only served when explicitly configured.
@@ -529,9 +559,164 @@ let assetServer = createAssetServer({
 
 If `onError` returns nothing, the asset server responds with the default `500 Internal Server Error` response.
 
+## Hot Module Reloading
+
+Use `hmr` with `watch` to enable the `import.meta.hot` API for browser modules. The `hmr` option is designed for integrating assets with a server-level HMR runtime such as [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr) so server and browser updates can be coordinated.
+
+The `hmr` option accepts an async function that creates a `BrowserHmrChannel`, such as the `createBrowserHmrChannel` function from [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr):
+
+```ts
+import { createAssetServer } from 'remix/assets'
+
+let isDevelopment = process.env.NODE_ENV === 'development'
+let assetServer = createAssetServer({
+  basePath: '/assets',
+  fileMap: { '/app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+  hmr: isDevelopment
+    ? async () => (await import('remix/node-hmr/runtime')).createBrowserHmrChannel()
+    : undefined,
+  watch: isDevelopment,
+})
+```
+
+### `import.meta.hot`
+
+The `import.meta.hot` API provided by `assets` is a small runtime contract for modules that can handle updates without reloading the page. It is primarily intended for browser modules compiled by `assets`, but it can also be used directly.
+
+To type `import.meta.hot`, add the HMR types to your TypeScript config:
+
+```json
+{
+  "compilerOptions": {
+    "types": ["remix/assets/types/hmr"]
+  }
+}
+```
+
+HMR accept calls are statically analyzed. Write them directly as `import.meta.hot.accept(...)`. Dependency accepts must use string literals or arrays of string literals; do not alias `import.meta.hot` or pass dynamically constructed dependency lists.
+
+```ts
+if (import.meta.hot) {
+  import.meta.hot.accept()
+}
+```
+
+### Accepting updates
+
+Calling `accept()` makes the current module an HMR boundary. When the module changes, `assets` evaluates the updated module and calls your callback with its exports.
+
+```ts
+export let value = 1
+
+if (import.meta.hot) {
+  import.meta.hot.accept((module) => {
+    if (typeof module.value !== 'number') {
+      import.meta.hot?.invalidate('Updated module no longer exports value')
+      return
+    }
+
+    value = module.value
+  })
+}
+```
+
+You can also accept updates from direct dependencies.
+
+```ts
+import { value } from './value.ts'
+
+let currentValue = value
+
+export function readValue() {
+  return currentValue
+}
+
+if (import.meta.hot) {
+  import.meta.hot.accept('./value.ts', (module) => {
+    if (typeof module.value !== 'number') {
+      import.meta.hot?.invalidate('Updated dependency no longer exports value')
+      return
+    }
+
+    currentValue = module.value
+  })
+}
+```
+
+Multiple dependencies can be accepted at once. The callback receives an array where only the changed dependency is defined.
+
+```ts
+if (import.meta.hot) {
+  import.meta.hot.accept(['./one.ts', './two.ts'], ([oneModule, twoModule]) => {
+    // oneModule is defined when ./one.ts changed.
+    // twoModule is defined when ./two.ts changed.
+  })
+}
+```
+
+### Cleaning up
+
+Register cleanup that should run before the module is replaced or disposed.
+
+```ts
+let interval = setInterval(refreshCache, 30_000)
+
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    clearInterval(interval)
+  })
+}
+```
+
+The `data` object is preserved across updates for the same module. Use it for small pieces of state.
+
+```ts
+let count = Number(import.meta.hot?.data.count ?? 0)
+
+export function increment() {
+  count++
+}
+
+if (import.meta.hot) {
+  import.meta.hot.dispose((data) => {
+    data.count = count
+  })
+}
+```
+
+### Invalidating updates
+
+Call `invalidate()` inside an accept callback when the update cannot be applied safely. If no other boundary accepts the update, the browser reloads.
+
+```ts
+if (import.meta.hot) {
+  import.meta.hot.accept((module) => {
+    if (typeof module.value !== 'number') {
+      import.meta.hot?.invalidate('Updated module no longer exports value')
+      return
+    }
+  })
+}
+```
+
+### Server update events
+
+When the browser HMR channel comes from `remix/node-hmr/runtime`, server updates are sent to browser modules as `server:update` events.
+
+```ts
+if (import.meta.hot) {
+  import.meta.hot.on('server:update', () => {
+    window.location.reload()
+  })
+}
+```
+
 ## Related Packages
 
 - [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - A Fetch-based router that pairs naturally with `assets`
+- [`node-hmr`](https://github.com/remix-run/remix/tree/main/packages/node-hmr) - Provides the server-side `import.meta.hot` runtime and browser HMR channel used by `hmr`
+- [`ui-hmr`](https://github.com/remix-run/remix/tree/main/packages/ui-hmr) - Provides Remix UI component HMR transforms that can run through `scripts.moduleHooks`
 - [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern) - Route-pattern syntax for URL and route file matching
 
 ## License
