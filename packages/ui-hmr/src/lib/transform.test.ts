@@ -16,20 +16,21 @@ describe('transformComponentsForBrowser', () => {
 
     assert.equal(result.transformed, true)
     assert.deepEqual(result.componentNames, ['Counter'])
-    assert.match(result.code, /function __remixHmrImpl_Counter__\(\)/)
+    assert.match(result.code, /function __remixUiHmrImpl_Counter__\(\)/)
     assert.match(result.code, /export function Counter\(\)/)
     assert.match(
       result.code,
-      /import \{ __uiHmrBrowserRuntime__ as __remixHmr__ \} from "@remix-run\/ui-hmr\/browser-runtime"/,
+      /import \{ __uiHmrBrowserRuntime__ as __remixUiHmr__ \} from "@remix-run\/ui-hmr\/browser-runtime"/,
     )
     assert.match(result.code, /import \* as __remixUIRefresh__ from "@remix-run\/ui\/dev\/refresh"/)
     assert.match(result.code, /import\.meta\.hot\.accept/)
-    assert.match(result.code, /__remixHmr__\.registerComponentForHmr\(__remixUIRefresh__/)
-    assert.match(result.code, /__remixHmrComponentNames__ = \["Counter"\]/)
-    assert.match(result.code, /__remixHmrComponentExportNames__ = \["Counter"\]/)
-    assert.match(result.code, /__remixHmrRuntimeExports__ = \{\n  "Counter": Counter,\n\}/)
+    assert.match(result.code, /__remixUiHmr__\.registerComponentForHmr\(__remixUIRefresh__/)
+    assert.match(result.code, /__remixUiHmrComponentNames__ = \["Counter"\]/)
+    assert.doesNotMatch(result.code, /ComponentExportNames/)
+    assert.match(result.code, /__remixUiHmrPreviousExports__ = \{\n  "Counter": Counter,\n\}/)
     assert.match(result.code, /Object\.keys\(module\)/)
     assert.match(result.code, /Object\.prototype\.hasOwnProperty\.call\(module, name\)/)
+    assert.match(result.code, /Updated component module changed its exports/)
     assert.match(result.code, /Updated component module added export/)
     assert.match(result.code, /Updated component module removed export/)
     assert.match(result.code, /Updated component module changed non-component export/)
@@ -47,7 +48,7 @@ describe('transformComponentsForBrowser', () => {
     assert.equal(result.transformed, true)
     assert.match(
       result.code,
-      /import \{ __uiHmrBrowserRuntime__ as __remixHmr__ \} from "remix\/ui-hmr\/browser-runtime"/,
+      /import \{ __uiHmrBrowserRuntime__ as __remixUiHmr__ \} from "remix\/ui-hmr\/browser-runtime"/,
     )
     assert.match(result.code, /import \* as __remixUIRefresh__ from "remix\/ui\/dev\/refresh"/)
   })
@@ -64,7 +65,7 @@ describe('transformComponentsForBrowser', () => {
     assert.equal(result.transformed, true)
     assert.match(
       result.code,
-      /import \{ __uiHmrBrowserRuntime__ as __remixHmr__ \} from "@acme\/remix\/ui-hmr\/browser-runtime"/,
+      /import \{ __uiHmrBrowserRuntime__ as __remixUiHmr__ \} from "@acme\/remix\/ui-hmr\/browser-runtime"/,
     )
     assert.match(
       result.code,
@@ -98,10 +99,10 @@ describe('transformComponentsForBrowser', () => {
     )
 
     assert.equal(result.transformed, true)
-    assert.match(result.code, /__remixHmr__\.getComponentHmrState/)
+    assert.match(result.code, /__remixUiHmr__\.getComponentHmrState/)
     assert.match(result.code, /__s__\.count = 0/)
     assert.match(result.code, /<button>\{__s__\.count\}<\/button>/)
-    assert.match(result.code, /__remixHmr__\.callComponentRenderForHmr/)
+    assert.match(result.code, /__remixUiHmr__\.callComponentRenderForHmr/)
   })
 
   it('hoists destructured setup variables into persistent HMR state', () => {
@@ -156,7 +157,7 @@ export {
 
     assert.equal(result.transformed, true)
     assert.deepEqual(result.componentNames, ['Counter'])
-    assert.match(result.code, /function __remixHmrImpl_Counter__\(\)/)
+    assert.match(result.code, /function __remixUiHmrImpl_Counter__\(\)/)
     assert.match(result.code, /function Counter\(\)/)
     assert.match(result.code, /export \{\s*Counter\s*\}/)
     assert.match(result.code, /import\.meta\.hot\.accept/)
@@ -174,12 +175,12 @@ export {
 
     assert.equal(result.transformed, true)
     assert.deepEqual(result.componentNames, ['Counter'])
-    assert.match(result.code, /function __remixHmrImpl_Counter__\(handle\)/)
+    assert.match(result.code, /function __remixUiHmrImpl_Counter__\(handle\)/)
     assert.match(
       result.code,
       /export const Counter = clientEntry\(import\.meta\.url, function Counter\(handle\)/,
     )
-    assert.match(result.code, /__remixHmr__\.registerComponentForHmr\(__remixUIRefresh__/)
+    assert.match(result.code, /__remixUiHmr__\.registerComponentForHmr\(__remixUIRefresh__/)
     assert.match(result.code, /import\.meta\.hot\.accept/)
   })
 
@@ -215,7 +216,7 @@ export {
 
     assert.equal(result.transformed, true)
     assert.deepEqual(result.componentNames, ['Counter'])
-    assert.match(result.code, /function __remixHmrImpl_Counter__\(handle\)/)
+    assert.match(result.code, /function __remixUiHmrImpl_Counter__\(handle\)/)
     assert.match(
       result.code,
       /const Counter = clientEntry\(import\.meta\.url, function Counter\(handle\)/,
@@ -239,7 +240,7 @@ export {
 
     assert.equal(result.transformed, true)
     assert.deepEqual(result.componentNames, ['Counter'])
-    assert.match(result.code, /function __remixHmrImpl_Counter__\(handle\)/)
+    assert.match(result.code, /function __remixUiHmrImpl_Counter__\(handle\)/)
     assert.match(result.code, /__name\(function Counter2\(handle\)/)
     assert.match(result.code, /"Counter"\)\)/)
     assert.match(result.code, /import\.meta\.hot\.accept/)
@@ -259,7 +260,7 @@ export {
     assert.equal(result.code, source)
   })
 
-  it('transforms component modules with non-component runtime exports', () => {
+  it('transforms component modules with non-component tracked exports', () => {
     let result = transformComponentsForBrowser(
       `export const loader = () => new Response('ok')
 
@@ -274,11 +275,11 @@ export function Counter() {
     assert.deepEqual(result.componentNames, ['Counter'])
     assert.match(
       result.code,
-      /__remixHmrRuntimeExports__ = \{\n  "loader": loader,\n  "Counter": Counter,\n\}/,
+      /__remixUiHmrPreviousExports__ = \{\n  "loader": loader,\n  "Counter": Counter,\n\}/,
     )
   })
 
-  it('does not transform component modules with runtime re-exports', () => {
+  it('does not transform component modules with re-exported runtime values', () => {
     let source = `export function Counter() {
   return () => <button>Count</button>
 }
@@ -294,7 +295,7 @@ export { loader } from './loader.ts'
     assert.equal(result.code, source)
   })
 
-  it('rejects updates with incompatible runtime exports', () => {
+  it('rejects updates with incompatible tracked exports', () => {
     let result = transformComponentsForBrowser(
       `export function Counter() {
   return () => <button>Count</button>
@@ -307,7 +308,7 @@ export { loader } from './loader.ts'
     assert.match(result.code, /Updated component module added export/)
     assert.match(result.code, /Updated component module removed export/)
     assert.match(result.code, /Updated component module changed non-component export/)
-    assert.match(result.code, /import\.meta\.hot\.invalidate\(__remixHmrInvalidationMessage__\)/)
+    assert.match(result.code, /import\.meta\.hot\.invalidate\(__remixUiHmrInvalidationMessage__\)/)
   })
 
   it('allows component modules with type-only exports', () => {
@@ -343,25 +344,26 @@ describe('transformComponentsForServer', () => {
     assert.deepEqual(result.componentNames, ['Counter'])
     assert.match(
       result.code,
-      /import \{ __uiHmrServerRuntime__ as __remixHmr__ \} from "@remix-run\/ui-hmr\/server-runtime"/,
+      /import \{ __uiHmrServerRuntime__ as __remixUiHmr__ \} from "@remix-run\/ui-hmr\/server-runtime"/,
     )
-    assert.match(result.code, /function __remixHmrImpl_Counter__\(handle\) \{/)
+    assert.match(result.code, /function __remixUiHmrImpl_Counter__\(handle\) \{/)
     assert.match(result.code, /let count = 0/)
     assert.match(result.code, /<button>\{count\}<\/button>/)
     assert.match(result.code, /export function Counter\(handle\) \{/)
     assert.match(
       result.code,
-      /__remixHmr__\.registerComponentForHmr\("file:\/\/\/app\/Counter\.tsx", "Counter", __remixHmrImpl_Counter__\)/,
+      /__remixUiHmr__\.registerComponentForHmr\("file:\/\/\/app\/Counter\.tsx", "Counter", __remixUiHmrImpl_Counter__\)/,
     )
     assert.match(result.code, /import\.meta\.hot\.accept\(\(module\) =>/)
     assert.doesNotMatch(result.code, /getComponentHmrState/)
     assert.doesNotMatch(result.code, /setupComponentForHmr/)
     assert.doesNotMatch(result.code, /__remixUIRefresh__/)
-    assert.match(result.code, /__remixHmrComponentNames__ = \["Counter"\]/)
-    assert.match(result.code, /__remixHmrComponentExportNames__ = \["Counter"\]/)
-    assert.match(result.code, /__remixHmrRuntimeExports__ = \{\n  "Counter": Counter,\n\}/)
+    assert.match(result.code, /__remixUiHmrComponentNames__ = \["Counter"\]/)
+    assert.doesNotMatch(result.code, /ComponentExportNames/)
+    assert.match(result.code, /__remixUiHmrPreviousExports__ = \{\n  "Counter": Counter,\n\}/)
     assert.match(result.code, /Object\.keys\(module\)/)
     assert.match(result.code, /Object\.prototype\.hasOwnProperty\.call\(module, name\)/)
+    assert.match(result.code, /Updated component module changed its exports/)
     assert.match(result.code, /Updated component module added export/)
     assert.match(result.code, /Updated component module removed export/)
     assert.match(result.code, /Updated component module changed non-component export/)
@@ -379,7 +381,7 @@ describe('transformComponentsForServer', () => {
     assert.equal(result.transformed, true)
     assert.match(
       result.code,
-      /import \{ __uiHmrServerRuntime__ as __remixHmr__ \} from "remix\/ui-hmr\/server-runtime"/,
+      /import \{ __uiHmrServerRuntime__ as __remixUiHmr__ \} from "remix\/ui-hmr\/server-runtime"/,
     )
   })
 
@@ -395,7 +397,7 @@ describe('transformComponentsForServer', () => {
     assert.equal(result.transformed, true)
     assert.match(
       result.code,
-      /import \{ __uiHmrServerRuntime__ as __remixHmr__ \} from "@acme\/remix\/ui-hmr\/server-runtime"/,
+      /import \{ __uiHmrServerRuntime__ as __remixUiHmr__ \} from "@acme\/remix\/ui-hmr\/server-runtime"/,
     )
   })
 
@@ -426,14 +428,14 @@ describe('transformComponentsForServer', () => {
 
     assert.equal(result.transformed, true)
     assert.deepEqual(result.componentNames, ['Counter'])
-    assert.match(result.code, /function __remixHmrImpl_Counter__\(handle\) \{/)
+    assert.match(result.code, /function __remixUiHmrImpl_Counter__\(handle\) \{/)
     assert.match(result.code, /let count = 0/)
     assert.match(result.code, /children: count/)
     assert.match(
       result.code,
       /export const Counter = clientEntry\(import\.meta\.url, function Counter\(handle\)/,
     )
-    assert.match(result.code, /__remixHmr__\.getCurrentComponentForHmr/)
+    assert.match(result.code, /__remixUiHmr__\.getCurrentComponentForHmr/)
     assert.match(result.code, /import\.meta\.hot\.accept\(\(module\) =>/)
     assert.doesNotMatch(result.code, /__s__\.count/)
   })
@@ -452,7 +454,7 @@ describe('transformComponentsForServer', () => {
     assert.equal(result.code, source)
   })
 
-  it('transforms component modules with non-component runtime exports', () => {
+  it('transforms component modules with non-component tracked exports', () => {
     let result = transformComponentsForServer(
       `export const loader = () => new Response('ok')
 
@@ -467,11 +469,11 @@ export function Counter() {
     assert.deepEqual(result.componentNames, ['Counter'])
     assert.match(
       result.code,
-      /__remixHmrRuntimeExports__ = \{\n  "loader": loader,\n  "Counter": Counter,\n\}/,
+      /__remixUiHmrPreviousExports__ = \{\n  "loader": loader,\n  "Counter": Counter,\n\}/,
     )
   })
 
-  it('rejects updates with incompatible runtime exports', () => {
+  it('rejects updates with incompatible tracked exports', () => {
     let result = transformComponentsForServer(
       `export function Counter() {
   return () => <button>Count</button>
@@ -486,7 +488,7 @@ export function Counter() {
     assert.match(result.code, /Updated component module added export/)
     assert.match(result.code, /Updated component module removed export/)
     assert.match(result.code, /Updated component module changed non-component export/)
-    assert.match(result.code, /import\.meta\.hot\.invalidate\(__remixHmrInvalidationMessage__\)/)
+    assert.match(result.code, /import\.meta\.hot\.invalidate\(__remixUiHmrInvalidationMessage__\)/)
   })
 
   it('allows component modules with type-only exports', () => {

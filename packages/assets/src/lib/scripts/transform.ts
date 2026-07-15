@@ -83,7 +83,6 @@ type UnresolvedImport = {
 type HmrAcceptedDependency = UnresolvedImport
 
 export type TransformedModule = {
-  componentHmrExportNames: string[] | null
   fingerprint: string | null
   hmr: {
     acceptedDeps: HmrAcceptedDependency[]
@@ -275,7 +274,6 @@ export async function transformModule(
         trackedFiles,
       },
       value: {
-        componentHmrExportNames: analysis.componentHmrExportNames,
         fingerprint:
           args.buildId === null
             ? null
@@ -485,7 +483,6 @@ async function analyzeModuleSource(
 
   let rawCode = transformResult.code.trimEnd()
   let sourceMap = stringifySourceMap(transformResult.map)
-  let componentHmrExportNames: string[] | null = null
 
   if (options.moduleHooks.length > 0) {
     let hookUrl = pathToFileURL(resolvedPath).href
@@ -507,7 +504,6 @@ async function analyzeModuleSource(
             : hookOutput.sourceMap
           : null
     }
-    componentHmrExportNames = getComponentHmrExportNames(rawCode)
   }
 
   if (options.minify) {
@@ -523,7 +519,6 @@ async function analyzeModuleSource(
   }
 
   return {
-    componentHmrExportNames,
     rawCode,
     sourceMap,
     unresolvedImports: await getUnresolvedImportsFromLexer(rawCode),
@@ -629,19 +624,6 @@ function extractInlineSourceMap(source: string): {
   })
 
   return { code, sourceMap }
-}
-
-function getComponentHmrExportNames(source: string): string[] | null {
-  let match = /__remixHmrComponentExportNames = (\[[^\n]*\]);/.exec(source)
-  let namesSource = match?.[1]
-  if (namesSource === undefined) return null
-
-  try {
-    let names = JSON.parse(namesSource) as unknown
-    return Array.isArray(names) && names.every((name) => typeof name === 'string') ? names : null
-  } catch {
-    return null
-  }
 }
 
 async function minifyModule(

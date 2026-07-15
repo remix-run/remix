@@ -9,7 +9,6 @@ import type { TransformedModule } from './scripts/transform.ts'
 
 function createTransformedModule(): TransformedModule {
   return {
-    componentHmrExportNames: null,
     fingerprint: null,
     hmr: {
       acceptedDeps: [],
@@ -50,7 +49,6 @@ function createResolvedModule(
   let identityPath = options.identityPath ?? '/app/entry.ts'
 
   return {
-    componentHmrExportNames: null,
     deps: options.deps ?? [],
     fingerprint: null,
     hmr: {

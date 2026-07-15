@@ -84,7 +84,7 @@ type ClientEntryMatch = {
   statementStart: number
 }
 
-type RuntimeExport = {
+type TrackedExport = {
   exportedName: string
   localName: string
 }
@@ -113,7 +113,7 @@ export function transformComponentsForBrowser(
   if (!isSafeComponentHmrBoundary(matchResult)) {
     return createUnchangedResult(source)
   }
-  let { componentMatches, clientEntryMatches, runtimeExports } = matchResult
+  let { componentMatches, clientEntryMatches, trackedExports } = matchResult
 
   let importSpecifiers = getUiHmrImportSpecifiers(options.importSource)
   let rewritten = new MagicString(source)
@@ -124,16 +124,16 @@ export function transformComponentsForBrowser(
     componentNames.push(match.name)
 
     let implementation = createHmrImplementationBody(match, source, options.moduleUrl)
-    let implementationName = `__remixHmrImpl_${match.name}__`
+    let implementationName = `__remixUiHmrImpl_${match.name}__`
     let exportPrefix = match.directExport ? 'export ' : ''
     let replacement = [
       `function ${implementationName}(${match.params}) ${implementation.body}`,
       `${exportPrefix}function ${match.name}(${match.params}) {`,
-      `  return __remixHmr__.getCurrentComponentForHmr(${JSON.stringify(
+      `  return __remixUiHmr__.getCurrentComponentForHmr(${JSON.stringify(
         options.moduleUrl,
       )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
       `}`,
-      `__remixHmr__.registerComponentForHmr(__remixUIRefresh__, ${JSON.stringify(
+      `__remixUiHmr__.registerComponentForHmr(__remixUIRefresh__, ${JSON.stringify(
         options.moduleUrl,
       )}, ${JSON.stringify(match.name)}, ${implementationName}, ${JSON.stringify(
         match.setupHash,
@@ -148,10 +148,10 @@ export function transformComponentsForBrowser(
     componentNames.push(match.name)
 
     let implementation = createHmrImplementationBody(match, source, options.moduleUrl)
-    let implementationName = `__remixHmrImpl_${match.name}__`
+    let implementationName = `__remixUiHmrImpl_${match.name}__`
     let wrapperSource = [
       `function ${match.functionName}(${match.params}) {`,
-      `  return __remixHmr__.getCurrentComponentForHmr(${JSON.stringify(
+      `  return __remixUiHmr__.getCurrentComponentForHmr(${JSON.stringify(
         options.moduleUrl,
       )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
       `}`,
@@ -165,7 +165,7 @@ export function transformComponentsForBrowser(
     rewritten.overwrite(match.functionStart, match.functionEnd, wrapperSource)
     rewritten.appendLeft(
       match.statementEnd,
-      `\n__remixHmr__.registerComponentForHmr(__remixUIRefresh__, ${JSON.stringify(
+      `\n__remixUiHmr__.registerComponentForHmr(__remixUIRefresh__, ${JSON.stringify(
         options.moduleUrl,
       )}, ${JSON.stringify(match.name)}, ${implementationName}, ${JSON.stringify(
         match.setupHash,
@@ -175,7 +175,7 @@ export function transformComponentsForBrowser(
 
   rewritten.prepend(
     [
-      `import { __uiHmrBrowserRuntime__ as __remixHmr__ } from ${JSON.stringify(
+      `import { __uiHmrBrowserRuntime__ as __remixUiHmr__ } from ${JSON.stringify(
         importSpecifiers.browserRuntimeSpecifier,
       )};`,
       `import * as __remixUIRefresh__ from ${JSON.stringify(importSpecifiers.refreshSpecifier)};`,
@@ -186,29 +186,28 @@ export function transformComponentsForBrowser(
     [
       ``,
       `if (import.meta.hot) {`,
-      `  let __remixHmrAcceptComponentModule__ = ${createComponentNamesCheckSource(
+      `  let __remixUiHmrComponentNames__ = ${JSON.stringify(componentNames)};`,
+      `  let __remixUiHmrAcceptComponentModule__ = ${createComponentNamesCheckSource(
         options.moduleUrl,
-        componentNames,
+        '__remixUiHmrComponentNames__',
         {
-          invalidateOnMismatch: false,
           spaces: 0,
         },
       )};`,
-      `  let __remixHmrComponentExportNames__ = ${JSON.stringify(componentNames)};`,
-      `  let __remixHmrRuntimeExports__ = ${createRuntimeExportsSource(runtimeExports)};`,
+      `  let __remixUiHmrPreviousExports__ = ${createPreviousExportsSource(trackedExports)};`,
       `  import.meta.hot.accept((module) => {`,
-      `    if (!__remixHmrAcceptComponentModule__) return;`,
+      `    if (!__remixUiHmrAcceptComponentModule__) return;`,
       `    if (module && typeof module === 'object') {`,
-      `      let __remixHmrInvalidationMessage__ = ${createRuntimeExportsCheckSource(
+      `      let __remixUiHmrInvalidationMessage__ = ${createUpdatedExportsCheckSource(
         'module',
-        '__remixHmrRuntimeExports__',
-        '__remixHmrComponentExportNames__',
+        '__remixUiHmrPreviousExports__',
+        '__remixUiHmrComponentNames__',
       )};`,
-      `      if (__remixHmrInvalidationMessage__) {`,
-      `        import.meta.hot.invalidate(__remixHmrInvalidationMessage__);`,
+      `      if (__remixUiHmrInvalidationMessage__) {`,
+      `        import.meta.hot.invalidate(__remixUiHmrInvalidationMessage__);`,
       `        return;`,
       `      }`,
-      `      __remixHmr__.updateComponentModuleForHmr(__remixUIRefresh__, ${JSON.stringify(
+      `      __remixUiHmr__.updateComponentModuleForHmr(__remixUIRefresh__, ${JSON.stringify(
         options.moduleUrl,
       )}, module);`,
       `    } else {`,
@@ -249,7 +248,7 @@ export function transformComponentsForServer(
   if (!isSafeComponentHmrBoundary(matchResult)) {
     return createUnchangedResult(source)
   }
-  let { componentMatches, clientEntryMatches, runtimeExports } = matchResult
+  let { componentMatches, clientEntryMatches, trackedExports } = matchResult
 
   let importSpecifiers = getUiHmrImportSpecifiers(options.importSource)
   let rewritten = new MagicString(source)
@@ -259,17 +258,17 @@ export function transformComponentsForServer(
   for (let match of componentMatches) {
     componentNames.push(match.name)
 
-    let implementationName = `__remixHmrImpl_${match.name}__`
+    let implementationName = `__remixUiHmrImpl_${match.name}__`
     let exportPrefix = match.directExport ? 'export ' : ''
     let bodySource = source.slice(match.bodyStart, match.bodyEnd)
     let replacement = [
       `function ${implementationName}(${match.params}) ${bodySource}`,
       `${exportPrefix}function ${match.name}(${match.params}) {`,
-      `  return __remixHmr__.getCurrentComponentForHmr(${JSON.stringify(
+      `  return __remixUiHmr__.getCurrentComponentForHmr(${JSON.stringify(
         options.moduleUrl,
       )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
       `}`,
-      `__remixHmr__.registerComponentForHmr(${JSON.stringify(
+      `__remixUiHmr__.registerComponentForHmr(${JSON.stringify(
         options.moduleUrl,
       )}, ${JSON.stringify(match.name)}, ${implementationName});`,
     ].join('\n')
@@ -285,11 +284,11 @@ export function transformComponentsForServer(
   for (let match of clientEntryMatches) {
     componentNames.push(match.name)
 
-    let implementationName = `__remixHmrImpl_${match.name}__`
+    let implementationName = `__remixUiHmrImpl_${match.name}__`
     let bodySource = source.slice(match.bodyStart, match.bodyEnd)
     let wrapperSource = [
       `function ${match.functionName}(${match.params}) {`,
-      `  return __remixHmr__.getCurrentComponentForHmr(${JSON.stringify(
+      `  return __remixUiHmr__.getCurrentComponentForHmr(${JSON.stringify(
         options.moduleUrl,
       )}, ${JSON.stringify(match.name)}).apply(undefined, arguments);`,
       `}`,
@@ -307,7 +306,7 @@ export function transformComponentsForServer(
     rewritten.overwrite(match.functionStart, match.functionEnd, wrapperSource)
     rewritten.appendLeft(
       match.statementEnd,
-      `\n__remixHmr__.registerComponentForHmr(${JSON.stringify(
+      `\n__remixUiHmr__.registerComponentForHmr(${JSON.stringify(
         options.moduleUrl,
       )}, ${JSON.stringify(match.name)}, ${implementationName});`,
     )
@@ -315,7 +314,7 @@ export function transformComponentsForServer(
 
   rewritten.prepend(
     [
-      `import { __uiHmrServerRuntime__ as __remixHmr__ } from ${JSON.stringify(
+      `import { __uiHmrServerRuntime__ as __remixUiHmr__ } from ${JSON.stringify(
         importSpecifiers.serverRuntimeSpecifier,
       )};`,
       ``,
@@ -325,29 +324,28 @@ export function transformComponentsForServer(
     [
       ``,
       `if (import.meta.hot) {`,
-      `  let __remixHmrAcceptComponentModule__ = ${createComponentNamesCheckSource(
+      `  let __remixUiHmrComponentNames__ = ${JSON.stringify(componentNames)};`,
+      `  let __remixUiHmrAcceptComponentModule__ = ${createComponentNamesCheckSource(
         options.moduleUrl,
-        componentNames,
+        '__remixUiHmrComponentNames__',
         {
-          invalidateOnMismatch: false,
           spaces: 0,
         },
       )};`,
-      `  let __remixHmrComponentExportNames__ = ${JSON.stringify(componentNames)};`,
-      `  let __remixHmrRuntimeExports__ = ${createRuntimeExportsSource(runtimeExports)};`,
+      `  let __remixUiHmrPreviousExports__ = ${createPreviousExportsSource(trackedExports)};`,
       `  import.meta.hot.accept((module) => {`,
-      `    if (!__remixHmrAcceptComponentModule__) return;`,
+      `    if (!__remixUiHmrAcceptComponentModule__) return;`,
       `    if (!module || typeof module !== 'object') {`,
       `      import.meta.hot.invalidate('Updated component module did not evaluate to an object');`,
       `      return;`,
       `    }`,
-      `    let __remixHmrInvalidationMessage__ = ${createRuntimeExportsCheckSource(
+      `    let __remixUiHmrInvalidationMessage__ = ${createUpdatedExportsCheckSource(
         'module',
-        '__remixHmrRuntimeExports__',
-        '__remixHmrComponentExportNames__',
+        '__remixUiHmrPreviousExports__',
+        '__remixUiHmrComponentNames__',
       )};`,
-      `    if (__remixHmrInvalidationMessage__) {`,
-      `      import.meta.hot.invalidate(__remixHmrInvalidationMessage__);`,
+      `    if (__remixUiHmrInvalidationMessage__) {`,
+      `      import.meta.hot.invalidate(__remixUiHmrInvalidationMessage__);`,
       `    }`,
       `  });`,
       `}`,
@@ -487,12 +485,12 @@ function findMatches(
 ): {
   componentMatches: ComponentMatch[]
   clientEntryMatches: ClientEntryMatch[]
-  runtimeExports: RuntimeExport[]
-  unsafeRuntimeExports: boolean
+  trackedExports: TrackedExport[]
+  unsafeTrackedExports: boolean
 } {
-  let runtimeExports = getRuntimeExports(program)
+  let trackedExports = getTrackedExports(program)
   let exportedNames = getExportedNames(program)
-  let unsafeRuntimeExports = hasUnsafeRuntimeExports(program)
+  let unsafeTrackedExports = hasUnsafeTrackedExports(program)
   let componentMatches: ComponentMatch[] = []
   let clientEntryMatches: ClientEntryMatch[] = []
 
@@ -548,44 +546,40 @@ function findMatches(
   return {
     componentMatches,
     clientEntryMatches,
-    runtimeExports,
-    unsafeRuntimeExports,
+    trackedExports,
+    unsafeTrackedExports,
   }
 }
 
 function isSafeComponentHmrBoundary(matchResult: {
   componentMatches: readonly ComponentMatch[]
   clientEntryMatches: readonly ClientEntryMatch[]
-  unsafeRuntimeExports: boolean
+  unsafeTrackedExports: boolean
 }): boolean {
-  if (matchResult.unsafeRuntimeExports) return false
+  if (matchResult.unsafeTrackedExports) return false
 
   return matchResult.componentMatches.length > 0 || matchResult.clientEntryMatches.length > 0
 }
 
 function createComponentNamesCheckSource(
   moduleUrl: string,
-  componentNames: readonly string[],
+  componentNamesName: string,
   options: {
-    invalidateOnMismatch?: boolean
     spaces: number
   },
 ): string {
   let indent = ' '.repeat(options.spaces)
   let lines = [
-    `${indent}let __remixHmrComponentNames__ = ${JSON.stringify(componentNames)};`,
-    `${indent}let __remixHmrPreviousComponentNames__ = import.meta.hot.data.componentNamesByModuleUrl?.[${JSON.stringify(
+    `${indent}let __remixUiHmrPreviousComponentNames__ = import.meta.hot.data.componentNamesByModuleUrl?.[${JSON.stringify(
       moduleUrl,
     )}];`,
-    `${indent}if (__remixHmrPreviousComponentNames__ && (__remixHmrPreviousComponentNames__.length !== __remixHmrComponentNames__.length || __remixHmrPreviousComponentNames__.some((name, index) => name !== __remixHmrComponentNames__[index]))) {`,
-    ...(options.invalidateOnMismatch === false
-      ? []
-      : [`${indent}  import.meta.hot.invalidate('Updated component module changed its exports');`]),
+    `${indent}if (__remixUiHmrPreviousComponentNames__ && (__remixUiHmrPreviousComponentNames__.length !== ${componentNamesName}.length || __remixUiHmrPreviousComponentNames__.some((name, index) => name !== ${componentNamesName}[index]))) {`,
+    `${indent}  import.meta.hot.invalidate('Updated component module changed its exports');`,
     `${indent}  return false;`,
     `${indent}}`,
     `${indent}import.meta.hot.data.componentNamesByModuleUrl = {`,
     `${indent}  ...import.meta.hot.data.componentNamesByModuleUrl,`,
-    `${indent}  [${JSON.stringify(moduleUrl)}]: __remixHmrComponentNames__,`,
+    `${indent}  [${JSON.stringify(moduleUrl)}]: ${componentNamesName},`,
     `${indent}};`,
     `${indent}return true;`,
   ]
@@ -596,28 +590,28 @@ function createComponentNamesCheckSource(
   return lines.join('\n')
 }
 
-function createRuntimeExportsSource(runtimeExports: readonly RuntimeExport[]): string {
-  if (runtimeExports.length === 0) return `{}`
+function createPreviousExportsSource(trackedExports: readonly TrackedExport[]): string {
+  if (trackedExports.length === 0) return `{}`
 
   return [
     `{`,
-    ...runtimeExports.map(
-      (runtimeExport) =>
-        `  ${JSON.stringify(runtimeExport.exportedName)}: ${runtimeExport.localName},`,
+    ...trackedExports.map(
+      (trackedExport) =>
+        `  ${JSON.stringify(trackedExport.exportedName)}: ${trackedExport.localName},`,
     ),
     `}`,
   ].join('\n')
 }
 
-function createRuntimeExportsCheckSource(
+function createUpdatedExportsCheckSource(
   nextExportsName: string,
   previousExportsName: string,
   componentExportNamesName: string,
 ): string {
   return [
     `(() => {`,
-    `  let __remixHmrPreviousExportNames__ = Object.keys(${previousExportsName});`,
-    `  for (let name of __remixHmrPreviousExportNames__) {`,
+    `  let __remixUiHmrPreviousExportNames__ = Object.keys(${previousExportsName});`,
+    `  for (let name of __remixUiHmrPreviousExportNames__) {`,
     `    if (!Object.prototype.hasOwnProperty.call(${nextExportsName}, name)) {`,
     `      return 'Updated component module removed export "' + name + '"';`,
     `    }`,
@@ -627,7 +621,7 @@ function createRuntimeExportsCheckSource(
     `      return 'Updated component module added export "' + name + '"';`,
     `    }`,
     `  }`,
-    `  for (let name of __remixHmrPreviousExportNames__) {`,
+    `  for (let name of __remixUiHmrPreviousExportNames__) {`,
     `    if (${componentExportNamesName}.includes(name)) continue;`,
     `    if (${previousExportsName}[name] !== ${nextExportsName}[name]) {`,
     `      return 'Updated component module changed non-component export "' + name + '"';`,
@@ -783,22 +777,22 @@ function createHmrImplementationBody(
   return {
     body: [
       `{`,
-      `  let __remixHmrHandle__ = __remixHmr__.getComponentHandleForHmr(arguments[0], ${JSON.stringify(
+      `  let __remixUiHmrHandle__ = __remixUiHmr__.getComponentHandleForHmr(arguments[0], ${JSON.stringify(
         moduleUrl,
       )}, ${JSON.stringify(match.name)});`,
-      `  let __s__ = __remixHmr__.getComponentHmrState(__remixHmrHandle__);`,
-      `  if (__remixHmr__.setupComponentForHmr(__remixHmrHandle__, __s__, ${JSON.stringify(
+      `  let __s__ = __remixUiHmr__.getComponentHmrState(__remixUiHmrHandle__);`,
+      `  if (__remixUiHmr__.setupComponentForHmr(__remixUiHmrHandle__, __s__, ${JSON.stringify(
         moduleUrl,
       )}, ${JSON.stringify(match.name)}, ${JSON.stringify(match.setupHash)}, (__s__) => {`,
       indent(setupSource, 4),
       `  }, ${match.name})) {`,
       `    return () => null;`,
       `  }`,
-      `  __remixHmr__.registerComponentRenderForHmr(__remixUIRefresh__, ${JSON.stringify(
+      `  __remixUiHmr__.registerComponentRenderForHmr(__remixUIRefresh__, ${JSON.stringify(
         moduleUrl,
-      )}, ${JSON.stringify(match.name)}, __remixHmrHandle__, ${renderSource}, ${match.name});`,
+      )}, ${JSON.stringify(match.name)}, __remixUiHmrHandle__, ${renderSource}, ${match.name});`,
       `  return function () {`,
-      `    return __remixHmr__.callComponentRenderForHmr(__remixHmrHandle__, ...arguments);`,
+      `    return __remixUiHmr__.callComponentRenderForHmr(__remixUiHmrHandle__, ...arguments);`,
       `  };`,
       `}`,
     ].join('\n'),
@@ -1110,8 +1104,8 @@ function getExportedNames(program: AstNode): Set<string> {
   return names
 }
 
-function getRuntimeExports(program: AstNode): RuntimeExport[] {
-  let runtimeExports: RuntimeExport[] = []
+function getTrackedExports(program: AstNode): TrackedExport[] {
+  let trackedExports: TrackedExport[] = []
 
   for (let item of getNodeArray(program, 'body')) {
     if (item.type !== 'ExportNamedDeclaration') continue
@@ -1119,7 +1113,7 @@ function getRuntimeExports(program: AstNode): RuntimeExport[] {
 
     let declaration = getNode(item, 'declaration')
     if (declaration) {
-      addDeclarationRuntimeExports(declaration, runtimeExports)
+      addDeclarationTrackedExports(declaration, trackedExports)
       continue
     }
 
@@ -1128,15 +1122,15 @@ function getRuntimeExports(program: AstNode): RuntimeExport[] {
       let exportedName = getIdentifierName(getNode(specifier, 'exported'))
       let localName = getIdentifierName(getNode(specifier, 'local'))
       if (exportedName && localName) {
-        runtimeExports.push({ exportedName, localName })
+        trackedExports.push({ exportedName, localName })
       }
     }
   }
 
-  return runtimeExports
+  return trackedExports
 }
 
-function hasUnsafeRuntimeExports(program: AstNode): boolean {
+function hasUnsafeTrackedExports(program: AstNode): boolean {
   for (let item of getNodeArray(program, 'body')) {
     if (item.type === 'ExportAllDeclaration' && item.exportKind !== 'type') {
       return true
@@ -1160,10 +1154,10 @@ function isTypeOnlyExport(node: AstNode): boolean {
   return node.exportKind === 'type'
 }
 
-function addDeclarationRuntimeExports(declaration: AstNode, runtimeExports: RuntimeExport[]): void {
+function addDeclarationTrackedExports(declaration: AstNode, trackedExports: TrackedExport[]): void {
   if (declaration.type === 'FunctionDeclaration' || declaration.type === 'ClassDeclaration') {
     let name = getIdentifierName(getNode(declaration, 'id'))
-    if (name) runtimeExports.push({ exportedName: name, localName: name })
+    if (name) trackedExports.push({ exportedName: name, localName: name })
     return
   }
 
@@ -1172,7 +1166,7 @@ function addDeclarationRuntimeExports(declaration: AstNode, runtimeExports: Runt
       let id = getNode(declarator, 'id')
       if (!id) continue
       for (let name of getBindingNames(id)) {
-        runtimeExports.push({ exportedName: name, localName: name })
+        trackedExports.push({ exportedName: name, localName: name })
       }
     }
   }

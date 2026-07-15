@@ -568,18 +568,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
       scriptStore.setHmrUpdateTimestamp(resolvedModule.identityPath, timestamp)
     }
 
-    if (hasComponentHmrBoundaryChanged(previousResolvedModule, resolvedModule)) {
-      return [
-        {
-          accepted: false,
-          filePath:
-            resolvedModule?.identityPath ?? previousResolvedModule?.identityPath ?? updatePathname,
-          path: updatePathname,
-          timestamp,
-        },
-      ]
-    }
-
     if (resolvedModule?.hmr.selfAccepting === true) {
       return [
         {
@@ -613,30 +601,6 @@ export function createScriptCompiler(options: ScriptCompilerOptions): ScriptComp
         timestamp,
       },
     ]
-  }
-
-  function hasComponentHmrExportNamesChanged(
-    previousResolvedModule: ResolvedModule | undefined,
-    resolvedModule: ResolvedModule | undefined,
-  ): boolean {
-    let previousNames = previousResolvedModule?.componentHmrExportNames
-    let nextNames = resolvedModule?.componentHmrExportNames
-    if (!previousNames || !nextNames) return false
-    if (previousNames.length !== nextNames.length) return true
-
-    return previousNames.some((name, index) => name !== nextNames[index])
-  }
-
-  function hasComponentHmrBoundaryChanged(
-    previousResolvedModule: ResolvedModule | undefined,
-    resolvedModule: ResolvedModule | undefined,
-  ): boolean {
-    let previousNames = previousResolvedModule?.componentHmrExportNames
-    let nextNames = resolvedModule?.componentHmrExportNames
-    if (!previousNames && !nextNames) return false
-    if (!previousNames || !nextNames) return true
-
-    return hasComponentHmrExportNamesChanged(previousResolvedModule, resolvedModule)
   }
 
   function findHmrBoundaries(identityPath: string | undefined): ScriptHmrBoundary[] | null {
