@@ -96,8 +96,11 @@ type NormalizedAction = {
 
 type MapTarget = RouteTarget | RouteMap
 
-// prettier-ignore
-type MapHandler<
+/**
+ * Infer the correct handler type (Action or Controller) based on the map target.
+ */
+// oxfmt-ignore
+export type MapHandler<
   target extends MapTarget,
   context extends AnyContext = RequestContext,
   middleware extends readonly AnyMiddleware[] = readonly AnyMiddleware[],

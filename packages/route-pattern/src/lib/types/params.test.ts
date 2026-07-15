@@ -26,7 +26,7 @@ type _ProtocolWithoutHostnameHrefArgs = AcceptsCreateHrefArgs<'http:///posts/:id
 // @ts-expect-error - dynamic protocols are invalid
 type _DynamicProtocolHrefArgs = AcceptsCreateHrefArgs<':proto://example.com/path', []>
 
-// prettier-ignore
+// oxfmt-ignore
 export type Tests = [
   // No params
   Assert<IsEqual<

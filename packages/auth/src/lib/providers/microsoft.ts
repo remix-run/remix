@@ -21,8 +21,10 @@ export interface MicrosoftAuthProfile extends OIDCAuthProfile {
 /**
  * Options for creating the built-in Microsoft auth provider.
  */
-export interface MicrosoftAuthProviderOptions
-  extends Omit<OIDCAuthProviderOptions<MicrosoftAuthProfile, 'microsoft'>, 'name' | 'issuer'> {
+export interface MicrosoftAuthProviderOptions extends Omit<
+  OIDCAuthProviderOptions<MicrosoftAuthProfile, 'microsoft'>,
+  'name' | 'issuer'
+> {
   /** Tenant segment used to build the Microsoft issuer URL. */
   tenant?: 'common' | 'organizations' | 'consumers' | string
 }

@@ -31,7 +31,6 @@ This is the changelog for [`data-table-mysql`](https://github.com/remix-run/remi
 - BREAKING CHANGE: Removed adapter options
 
   **Affected APIs**
-
   - `MysqlDatabaseAdapterOptions` type: removed
   - `createMysqlDatabaseAdapter` function: `options` arg removed
   - `MysqlDatabaseAdapter` constructor: `options` arg removed
