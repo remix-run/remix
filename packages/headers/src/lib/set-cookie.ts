@@ -227,7 +227,7 @@ export class SetCookie implements HeaderValue, SetCookieInit {
                 header.path = val
                 break
               case 'samesite':
-                if (typeof val === 'string' && /strict|lax|none/i.test(val)) {
+                if (typeof val === 'string' && /^(strict|lax|none)$/i.test(val)) {
                   header.sameSite = capitalize(val) as SameSiteValue
                 }
                 break
