@@ -2,10 +2,6 @@ html {
   color-scheme: light dark;
 }
 
-.site-header__brand {
-  color: var(--rmx-color-text-primary);
-}
-
 .api-nav-sections,
 .api-nav-content,
 .api-nav-group,
@@ -206,8 +202,8 @@ html {
 }
 
 @media (width < 900px) {
-  .site-header__brand {
-    left: 16px;
+  :root {
+    --docs-header-brand-inline-start: 16px;
   }
 
   .api-page-content > h1:first-child,

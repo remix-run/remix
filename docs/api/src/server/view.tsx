@@ -1,4 +1,6 @@
 import type { Handle, RemixNode } from 'remix/ui'
+import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
+import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
 
 import type { DemoDocFile } from './demos.tsx'
 import type { MarkdownHeading } from './markdown.ts'
@@ -39,6 +41,12 @@ export function Document(
     let page = slug
       ? (getDocPage(registry, slug) ?? buildNotFoundPage(slug, activeVersion))
       : getHomePage(registry)
+    let navigationLinks = createDocsNavigationLinks()
+    navigationLinks.set('api', {
+      href: routes.home.href({ version: activeVersion }),
+      label: 'API',
+      current: 'page',
+    })
 
     return (
       <html lang="en">
@@ -52,7 +60,12 @@ export function Document(
           <a class="skip-link" href="#main-content">
             Skip to content
           </a>
-          <SiteHeader activeVersion={activeVersion} />
+          <DocsHeader
+            brandLabel="Remix API Documentation"
+            navigationToggleLabel="Collapse API navigation"
+            navigationLinks={[...navigationLinks.values()]}
+            compactSearch
+          />
           <Sidebar
             registry={registry}
             currentPath={page.path}
@@ -67,7 +80,7 @@ export function Document(
           >
             {children}
           </MainContent>
-          <SiteFooter />
+          <DocsFooter />
           <pagefind-config
             base-url={routes.home.href({ version: activeVersion })}
             bundle-path={routes.assets.href({ version: activeVersion, asset: 'pagefind/' })}
@@ -145,112 +158,6 @@ function Head(
       </head>
     )
   }
-}
-
-function SiteHeader(handle: Handle<{ activeVersion?: string }>) {
-  return () => (
-    <header class="site-header">
-      <a href="https://remix.run" class="site-header__brand" aria-label="Remix API Documentation">
-        <img
-          class="site-header__logo-mark"
-          src="/remix-logo-light-mode.svg"
-          alt=""
-          width="37"
-          height="16"
-        />
-        <img
-          class="site-header__wordmark"
-          src="/remix-wordmark-light-mode.svg"
-          alt=""
-          width="163"
-          height="16"
-        />
-      </a>
-
-      <button
-        id="docs-nav-toggle"
-        class="docs-nav-toggle"
-        type="button"
-        aria-controls="docs-chapters-navigation"
-        aria-expanded="true"
-        aria-label="Collapse API navigation"
-      >
-        <Icon name="layout-left" />
-      </button>
-
-      <button
-        id="docs-search-compact"
-        class="docs-search-compact"
-        type="button"
-        aria-label="Search"
-        aria-hidden="true"
-        aria-haspopup="dialog"
-        aria-expanded="false"
-      >
-        <Icon name="search" />
-      </button>
-
-      <button
-        id="site-menu-toggle"
-        class="site-header__menu-toggle"
-        type="button"
-        popovertarget="site-primary-navigation"
-      >
-        <span class="site-header__menu-icon" aria-hidden="true">
-          <span />
-          <span />
-          <span />
-        </span>
-        Menu
-      </button>
-
-      <nav class="site-header__nav site-header__nav--desktop" aria-label="Primary">
-        <PrimaryNavigationLinks activeVersion={handle.props.activeVersion} />
-      </nav>
-      <nav
-        id="site-primary-navigation"
-        class="site-header__nav site-header__nav--mobile"
-        aria-label="Primary"
-        popover="auto"
-      >
-        <PrimaryNavigationLinks activeVersion={handle.props.activeVersion} />
-      </nav>
-
-      <button
-        id="docs-search-button"
-        class="docs-search-button"
-        type="button"
-        aria-label="Search"
-        aria-haspopup="dialog"
-        aria-expanded="false"
-        aria-keyshortcuts="Meta+K Control+K"
-      >
-        <span class="docs-search-button__label">
-          <Icon name="search" />
-          <span>Search</span>
-        </span>
-        <span class="docs-search-button__shortcut" aria-hidden="true">
-          <kbd>⌘</kbd>
-          <kbd>K</kbd>
-        </span>
-      </button>
-    </header>
-  )
-}
-
-function PrimaryNavigationLinks(handle: Handle<{ activeVersion?: string }>) {
-  return () => (
-    <>
-      <a href="https://guides.remix.run/">Guides</a>
-      <a href={routes.home.href({ version: handle.props.activeVersion })} aria-current="page">
-        API
-      </a>
-      <a href="https://remix.run/blog">Blog</a>
-      <a href="https://remix.run/jam/2026">Jam</a>
-      <a href="https://shop.remix.run">Store</a>
-      <a href="https://github.com/remix-run/remix">GitHub</a>
-    </>
-  )
 }
 
 function MainContent(
@@ -526,44 +433,4 @@ function PageHeader(handle: Handle<{ page: PageDefinition; sourceUrl?: string }>
       </header>
     )
   }
-}
-
-function SiteFooter() {
-  return () => (
-    <footer aria-label="Site footer" class="site-footer">
-      <div class="site-footer__links">
-        <a href="https://remix.run" aria-label="Remix" class="site-footer__brand">
-          <img src="/remix-wordmark-light-mode.svg" alt="" />
-        </a>
-        <nav aria-label="Find us on the web" class="site-footer__social">
-          <a href="https://github.com/remix-run" aria-label="GitHub">
-            <Icon name="github" />
-          </a>
-          <a href="https://x.com/remix_run" aria-label="X">
-            <Icon name="x" />
-          </a>
-          <a href="https://youtube.com/remix_run" aria-label="YouTube">
-            <Icon name="youtube" />
-          </a>
-          <a href="https://remix.run/discord" aria-label="Discord">
-            <Icon name="discord" />
-          </a>
-        </nav>
-      </div>
-      <div class="site-footer__legal">
-        <p>docs and examples licensed under mit</p>
-        <p>&copy;{new Date().getFullYear()} Shopify, Inc.</p>
-      </div>
-    </footer>
-  )
-}
-
-function Icon(
-  handle: Handle<{ name: 'discord' | 'github' | 'layout-left' | 'search' | 'x' | 'youtube' }>,
-) {
-  return () => (
-    <svg aria-hidden="true" focusable="false">
-      <use href={`/icons.svg#${handle.props.name}`} />
-    </svg>
-  )
 }
