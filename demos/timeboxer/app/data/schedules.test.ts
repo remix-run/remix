@@ -1,6 +1,5 @@
 import * as assert from 'remix/assert'
-import { createDatabase, type Database } from 'remix/data-table'
-import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
+import type { Database } from 'remix/data-table'
 import { describe, it } from 'remix/test'
 
 import {
@@ -11,6 +10,7 @@ import {
   replaceScheduleDocument,
   type ScheduleBlockInput,
 } from './schedules.ts'
+import { db, migrator, seed } from '../db.ts'
 import { scheduleBlocks, schedules, users } from './schema.ts'
 
 describe('schedule persistence lifecycle', () => {
@@ -142,58 +142,7 @@ describe('schedule persistence lifecycle', () => {
 })
 
 async function withTestDatabase<T>(callback: (db: Database) => Promise<T>): Promise<T> {
-  let db = createDatabase(createSqliteDatabaseAdapter({ filename: ':memory:' }))
-  await db.exec(`
-    CREATE TABLE users (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      username TEXT NOT NULL UNIQUE,
-      created_at INTEGER NOT NULL
-    );
-
-    CREATE TABLE schedules (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      user_id INTEGER NOT NULL,
-      name TEXT NOT NULL,
-      revision INTEGER NOT NULL DEFAULT 0,
-      status TEXT NOT NULL DEFAULT 'active',
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      CONSTRAINT schedules_user_id_fk
-        FOREIGN KEY (user_id)
-        REFERENCES users (id)
-        ON DELETE CASCADE,
-      CONSTRAINT schedules_user_id_name_unique
-        UNIQUE (user_id, name)
-    );
-
-    CREATE TABLE schedule_blocks (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      client_id TEXT NOT NULL,
-      schedule_id INTEGER NOT NULL,
-      name TEXT NOT NULL,
-      color TEXT,
-      day_of_week INTEGER NOT NULL,
-      start_minute INTEGER NOT NULL,
-      end_minute INTEGER NOT NULL,
-      created_at INTEGER NOT NULL,
-      updated_at INTEGER NOT NULL,
-      CONSTRAINT schedule_blocks_schedule_id_fk
-        FOREIGN KEY (schedule_id)
-        REFERENCES schedules (id)
-        ON DELETE CASCADE,
-      CONSTRAINT schedule_blocks_schedule_id_client_id_unique
-        UNIQUE (schedule_id, client_id),
-      CONSTRAINT schedule_blocks_day_check
-        CHECK (day_of_week >= 0 AND day_of_week <= 6),
-      CONSTRAINT schedule_blocks_time_check
-        CHECK (
-          start_minute >= 0 AND
-          end_minute <= 1440 AND
-          start_minute < end_minute
-        )
-    );
-  `)
-
+  await migrator.reset(db, { seed })
   return await callback(db)
 }
 
