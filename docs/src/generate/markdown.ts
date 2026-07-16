@@ -1,6 +1,5 @@
 import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
-import * as prettier from 'prettier'
 import {
   type DocumentedAPI,
   type DocumentedClass,
@@ -13,6 +12,7 @@ import {
   type ParameterOrProperty,
 } from './documented-api.ts'
 import { debug, info, verbose, warn } from './utils.ts'
+import { formatWithOxfmt } from '../shared/format.ts'
 
 export async function writeMarkdownFiles(comments: DocumentedAPI[], docsDir: string) {
   for (let comment of comments) {
@@ -45,14 +45,14 @@ const h3 = (heading: string, body: string) => h(3, heading, body)
 const code = (content: string) => `\`${content}\``
 const pre = async (content: string, lang = 'ts') => {
   if (content.includes('(...)')) {
-    // Prettier chokes on the ellipsis syntax in function signatures
+    // The ellipsis syntax in generated function signatures is not valid TypeScript.
     info(
       'Skipping formatting for code block with ellipsis syntax: ',
       content.substring(0, 50) + '...',
     )
   } else {
     try {
-      content = await prettier.format(content, { parser: 'typescript' })
+      content = await formatCodeBlock(content)
     } catch (e) {
       warn(
         'Failed to format code block, using unformatted content: ',
@@ -62,6 +62,10 @@ const pre = async (content: string, lang = 'ts') => {
     }
   }
   return `\`\`\`${lang}\n${content}\n\`\`\``
+}
+
+async function formatCodeBlock(content: string): Promise<string> {
+  return await formatWithOxfmt('code-block.ts', content)
 }
 
 function frontmatter(comment: DocumentedAPI) {

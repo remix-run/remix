@@ -47,7 +47,7 @@ export type EventListeners<target extends EventTarget> = Partial<{
   [k in EventType<target>]: ListenerFor<target, k>
 }>
 
-// prettier-ignore
+// oxfmt-ignore
 /**
  * Event map resolved for the given DOM or custom event target.
  */
