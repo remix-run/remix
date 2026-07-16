@@ -10,7 +10,9 @@ The registration flow demonstrates:
 - blocking invalid submissions with the browser Constraint Validation API
 - showing invalid state after blur and updating it as the user types
 - returning a populated form with server errors after a failed POST
-- omitting password values from the failed response and successful confirmation page
+- validating database writes with the same field schemas used by the form
+- persisting non-sensitive fields in an in-memory SQLite database across requests
+- omitting password and UI-only terms values from both failed responses and stored rows
 
 ## Run the demo
 
@@ -23,11 +25,11 @@ pnpm -C demos/data-model-forms dev
 
 Open <http://localhost:44100>.
 
-The demo keeps data in memory only for the duration of each request. A successful submission renders the typed, non-sensitive values that would normally be passed to application logic or persistence.
+Each router owns an in-memory SQLite database. It persists across requests for the lifetime of the demo process, while a new router created by a test receives an isolated database.
 
 ## How it works
 
-The account schema remains the source of truth. `createForm()` selects the fields this UI needs and adds the ancillary terms field separately:
+The client-safe account schema remains the source of truth in `app/data/account-schema.ts`. `createForm()` selects the fields this UI needs and adds the ancillary terms field separately:
 
 ```ts
 import * as s from 'remix/data-schema'
@@ -55,6 +57,48 @@ let RegistrationForm = createForm(Account, {
 })
 ```
 
+The data table reuses the same field schemas for its write boundary. It projects only fields that are safe to store, so neither `password` nor the ancillary `terms` value can be passed through this model:
+
+```ts
+import * as s from 'remix/data-schema'
+import { column as c, table } from 'remix/data-table'
+
+let StoredAccount = s.object({
+  id: Account.shape.id,
+  displayName: Account.shape.displayName,
+  email: Account.shape.email,
+  age: Account.shape.age,
+  website: Account.shape.website,
+})
+
+let StoredAccountUpdate = s.object({
+  id: s.optional(Account.shape.id),
+  displayName: s.optional(Account.shape.displayName),
+  email: s.optional(Account.shape.email),
+  age: s.optional(Account.shape.age),
+  website: s.optional(Account.shape.website),
+})
+
+let accounts = table({
+  name: 'accounts',
+  columns: {
+    id: c.text(),
+    displayName: c.text(),
+    email: c.text(),
+    age: c.integer().nullable(),
+    website: c.text().nullable(),
+  },
+  validate({ operation, value }) {
+    let result = s.parseSafe(operation === 'create' ? StoredAccount : StoredAccountUpdate, value)
+    return result.success
+      ? { value: result.value }
+      : { issues: result.issues.map((issue) => ({ message: issue.message })) }
+  },
+})
+```
+
+The router creates a `DatabaseSync(':memory:')` instance and exposes the resulting Remix `Database` through request middleware. Creating the database inside `createDataModelFormsRouter()` gives the server process persistent state while keeping test routers isolated.
+
 The page owns its DOM structure and applies the generated attributes directly:
 
 ```tsx
@@ -79,8 +123,20 @@ if (!submission.success) {
   return render(<RegistrationPage submission={submission} />, { status: 400 })
 }
 
-let account = submission.value
+let { displayName, email, age, website } = submission.value
+
+await db.create(accounts, {
+  id: crypto.randomUUID(),
+  displayName,
+  email,
+  ...(age === undefined ? {} : { age }),
+  ...(website === undefined ? {} : { website }),
+})
+
+return redirect(routes.registration.index.href(), 303)
 ```
+
+The redirect makes the successful flow POST-redirect-GET. The following GET queries SQLite and renders every stored account, proving that the form payload reached the persistent data layer without retaining the raw password.
 
 The form controls live inside a small `clientEntry()` component so the `form()` mixin can attach its blur and input listeners. Everything still renders on the server first. If JavaScript is unavailable, the same native constraints block invalid submissions and the server returns the same accessible error markup.
 
