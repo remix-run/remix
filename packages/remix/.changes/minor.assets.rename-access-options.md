@@ -1,4 +1,4 @@
-BREAKING CHANGE: `createAssetServer()` now uses `allowFiles` and `denyFiles` instead of `allow` and `deny` for file path access rules.
+BREAKING CHANGE: `createAssetServer()` from `remix/assets` now uses `allowFiles` and `denyFiles` instead of `allow` and `deny` for file path access rules.
 
 ```ts
 import { createAssetServer } from 'remix/assets'
