@@ -4,12 +4,32 @@ import type { RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
 
 import { assetServer } from '../assets.ts'
+import { Document } from '../ui/document.tsx'
+import { AssetEntry, type AssetEntryValue } from './asset-entry.ts'
+
+export interface RenderOptions {
+  document?: { title?: string } | false
+  responseInit?: ResponseInit
+}
 
 export function render() {
   return renderWith(
-    ({ request }) =>
-      function render(node: RemixNode, init?: ResponseInit): Response {
-        let stream = renderToStream(node, {
+    ({ get, request }) =>
+      function render(node: RemixNode, options?: RenderOptions): Response {
+        let documentOptions = options?.document
+        let renderedNode = node
+
+        if (documentOptions !== false) {
+          // renderWith cannot retain the upstream middleware entries in its factory context type.
+          let assetEntry = get(AssetEntry) as AssetEntryValue
+          renderedNode = (
+            <Document assetEntry={assetEntry} title={documentOptions?.title}>
+              {node}
+            </Document>
+          )
+        }
+
+        let stream = renderToStream(renderedNode, {
           signal: request.signal,
           async resolveClientEntry(entryId, component) {
             if (!entryId.startsWith('file://')) {
@@ -32,7 +52,7 @@ export function render() {
           },
         })
 
-        return createHtmlResponse(stream, init)
+        return createHtmlResponse(stream, options?.responseInit)
       },
   )
 }

@@ -1,7 +1,6 @@
 import { css } from 'remix/ui'
 
 const color = {
-  canvas: '#f4f3ee',
   surface: '#ffffff',
   surfaceMuted: '#f8f8f5',
   text: '#20201e',
@@ -14,14 +13,6 @@ const color = {
   danger: '#b42318',
   dangerSoft: '#fff1ef',
 } as const
-
-export const body = css({
-  minHeight: '100vh',
-  margin: 0,
-  background: color.canvas,
-  color: color.text,
-  fontFamily: 'ui-sans-serif, system-ui, -apple-system, sans-serif',
-})
 
 export const page = css({
   display: 'grid',
