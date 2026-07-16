@@ -5,7 +5,7 @@ import { createAssetServer } from './asset-server.ts'
 import { getVersionedLookupHref } from './lookup.ts'
 import { buildRegistry } from './registry.ts'
 import { createRouter } from './router.tsx'
-import { getDocsRouteHref } from './routes.ts'
+import { getApiRouteHref } from './routes.ts'
 
 describe('createRouter()', () => {
   it('does not load generated docs output while creating the router', (t) => {
@@ -132,10 +132,10 @@ function shouldVersionAssetUrl(url: string): boolean {
 async function getTestDocsContext(assetServer: ReturnType<typeof createAssetServer>) {
   let [entryHref, entryPreloads, tableOfContentsEntryHref, tableOfContentsEntryPreloads] =
     await Promise.all([
-      assetServer.getHref('docs/src/client/entry.tsx'),
-      assetServer.getPreloads('docs/src/client/entry.tsx'),
-      assetServer.getHref('docs/src/client/table-of-contents.browser.tsx'),
-      assetServer.getPreloads('docs/src/client/table-of-contents.browser.tsx'),
+      assetServer.getHref('api/src/client/entry.tsx'),
+      assetServer.getPreloads('api/src/client/entry.tsx'),
+      assetServer.getHref('api/src/client/table-of-contents.browser.tsx'),
+      assetServer.getPreloads('api/src/client/table-of-contents.browser.tsx'),
     ])
 
   return {
@@ -183,14 +183,14 @@ describe('getVersionedLookupHref()', () => {
   })
 })
 
-describe('getDocsRouteHref()', () => {
+describe('getApiRouteHref()', () => {
   it('returns undefined for non-API hrefs', () => {
-    assert.equal(getDocsRouteHref('https://example.com/Accept', 'v1.2.3'), undefined)
+    assert.equal(getApiRouteHref('https://example.com/Accept', 'v1.2.3'), undefined)
   })
 
   it('preserves unversioned docs hrefs when version is undefined', () => {
     assert.equal(
-      getDocsRouteHref('/api/remix/headers/accept/class/Accept.md?tab=docs#example', undefined),
+      getApiRouteHref('/api/remix/headers/accept/class/Accept.md?tab=docs#example', undefined),
       '/api/remix/headers/accept/class/Accept.md?tab=docs#example',
     )
   })

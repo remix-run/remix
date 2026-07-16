@@ -1,5 +1,5 @@
 {
-  "name": "remix-the-docs",
+  "name": "remix-api",
   "private": true,
   "type": "module",
   "dependencies": {

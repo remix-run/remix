@@ -19,13 +19,13 @@ export function createAssetServer(version?: string): DocsAssetServer {
     rootDir: REPO_DIR,
     basePath: version ? `/${version}/assets` : '/assets',
     fileMap: {
-      '/demos/*path': 'docs/build/demos/*path',
+      '/demos/*path': 'api/build/demos/*path',
       '/pkg/:pkg/src/*path': 'packages/:pkg/src/*path',
       '/pkg/:pkg/deps/*path': 'packages/:pkg/node_modules/*path',
-      '/client/*path': 'docs/src/client/*path',
-      '/shared/*path': 'docs/src/shared/*path',
+      '/client/*path': 'api/src/client/*path',
+      '/shared/*path': 'api/src/shared/*path',
     },
-    allow: ['docs/build/demos/**', 'docs/src/client/**', 'docs/src/shared/**', 'packages/**'],
+    allow: ['api/build/demos/**', 'api/src/client/**', 'api/src/shared/**', 'packages/**'],
     watch: process.env.NODE_ENV !== 'production',
   })
 }

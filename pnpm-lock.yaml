@@ -54,6 +54,65 @@ importers:
         specifier: 'catalog:'
         version: 5.1.3
 
+  api:
+    dependencies:
+      front-matter:
+        specifier: ^4.0.2
+        version: 4.0.2
+      github-slugger:
+        specifier: ^2.0.0
+        version: 2.0.0
+      marked:
+        specifier: ^17.0.1
+        version: 17.0.6
+      oxfmt:
+        specifier: 'catalog:'
+        version: 0.51.0
+      remix:
+        specifier: workspace:*
+        version: link:../packages/remix
+      semver:
+        specifier: ^7.7.3
+        version: 7.7.4
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.6
+        version: 1.0.7
+      '@types/hast':
+        specifier: ^3.0.4
+        version: 3.0.4
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@types/semver':
+        specifier: ^7.5.8
+        version: 7.5.8
+      pagefind:
+        specifier: ^1.3.0
+        version: 1.5.2
+      shiki:
+        specifier: ^3.22.0
+        version: 3.23.0
+      typedoc:
+        specifier: ^0.28.19
+        version: 0.28.19(typescript@5.9.3)
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  api/src/prerender/bench:
+    dependencies:
+      node-html-parser:
+        specifier: ^7.1.0
+        version: 7.1.0
+      remix:
+        specifier: workspace:^
+        version: link:../../../../packages/remix
+    devDependencies:
+      vitest:
+        specifier: 4.0.15
+        version: 4.0.15(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
+
   demos/assets:
     dependencies:
       remix:
@@ -181,65 +240,6 @@ importers:
       '@typescript/native-preview':
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
-
-  docs:
-    dependencies:
-      front-matter:
-        specifier: ^4.0.2
-        version: 4.0.2
-      github-slugger:
-        specifier: ^2.0.0
-        version: 2.0.0
-      marked:
-        specifier: ^17.0.1
-        version: 17.0.6
-      oxfmt:
-        specifier: 'catalog:'
-        version: 0.51.0
-      remix:
-        specifier: workspace:*
-        version: link:../packages/remix
-      semver:
-        specifier: ^7.7.3
-        version: 7.7.4
-    devDependencies:
-      '@types/dom-navigation':
-        specifier: ^1.0.6
-        version: 1.0.7
-      '@types/hast':
-        specifier: ^3.0.4
-        version: 3.0.4
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      '@types/semver':
-        specifier: ^7.5.8
-        version: 7.5.8
-      pagefind:
-        specifier: ^1.3.0
-        version: 1.5.2
-      shiki:
-        specifier: ^3.22.0
-        version: 3.23.0
-      typedoc:
-        specifier: ^0.28.19
-        version: 0.28.19(typescript@5.9.3)
-      typescript:
-        specifier: 'catalog:'
-        version: 5.9.3
-
-  docs/src/prerender/bench:
-    dependencies:
-      node-html-parser:
-        specifier: ^7.1.0
-        version: 7.1.0
-      remix:
-        specifier: workspace:^
-        version: link:../../../../packages/remix
-    devDependencies:
-      vitest:
-        specifier: 4.0.15
-        version: 4.0.15(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
 
   guides:
     dependencies:

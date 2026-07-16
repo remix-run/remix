@@ -1,6 +1,6 @@
-// Copy package demo source files into `docs/build/demos/`, rewriting
+// Copy package demo source files into `api/build/demos/`, rewriting
 // `@remix-run/*` imports to `remix/*` (the docs app depends on `remix`). The
-// runtime server reads from `docs/build/demos/` — see `src/server/demos.tsx`.
+// runtime server reads from `api/build/demos/` — see `src/server/demos.tsx`.
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'

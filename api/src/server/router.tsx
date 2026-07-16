@@ -25,7 +25,7 @@ import { DemoContent, Document, Home, MarkdownContent, NotFound, type Versions }
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const REPO_DIR = path.resolve(DOCS_DIR, '..')
-const BUILD_DIR = path.join(REPO_DIR, 'docs', 'build')
+const BUILD_DIR = path.join(REPO_DIR, 'api', 'build')
 const MD_DIR = path.join(BUILD_DIR, 'md')
 const PUBLIC_DIR = path.join(BUILD_DIR, 'public')
 const ASSETS_DIR = path.join(BUILD_DIR, 'site', 'assets')
@@ -96,7 +96,7 @@ export function createRouter(options: DocsRouterOptions): Router {
         let response = await assetServer.fetch(request)
         return response ?? new Response('Not Found', { status: 404 })
       },
-      async docs({ request, params }) {
+      async api({ request, params }) {
         let docsContext = await getDocsContext()
         let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
         let docProps = {

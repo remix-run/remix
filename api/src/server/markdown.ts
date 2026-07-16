@@ -6,7 +6,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { codeToHtml } from 'shiki'
 import { IGNORE_SYMBOLS, MDN_SYMBOLS } from '../generate/symbols.ts'
-import { getDocsRouteHref, routes } from './routes.ts'
+import { getApiRouteHref, routes } from './routes.ts'
 
 // No types exist for the `frontmatter` package
 const parseFrontmatter = frontmatter.default as unknown as (md: string) => {
@@ -243,7 +243,7 @@ function getShikiExtension(
                   let linkEl: Element | undefined
                   if (docFilesLookup.has(symbol)) {
                     linkEl = link(symbol, {
-                      href: routes.docs.href({
+                      href: routes.api.href({
                         version,
                         slug: docFilesLookup.get(symbol)!.urlPath,
                       }),
@@ -277,7 +277,7 @@ function getShikiExtension(
         return code.text
       },
       link(token) {
-        let href = getDocsRouteHref(token.href, version)
+        let href = getApiRouteHref(token.href, version)
         if (!href) return false
 
         let title = token.title ? ` title="${escapeHtml(token.title)}"` : ''

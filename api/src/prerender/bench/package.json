@@ -1,5 +1,5 @@
 {
-  "name": "docs-prerender-bench",
+  "name": "api-prerender-bench",
   "private": true,
   "type": "module",
   "scripts": {
