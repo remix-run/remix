@@ -64,4 +64,3 @@ export function ChapterCard(handle: Handle<{ chapter: DocsChapterSummary }>) {
     )
   }
 }
-
