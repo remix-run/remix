@@ -151,7 +151,7 @@ function SiteHeader(handle: Handle<{ activeVersion?: string }>) {
   return () => (
     <header class="site-header">
       <a
-        href={routes.home.href({ version: handle.props.activeVersion })}
+        href="https://remix.run"
         class="site-header__brand"
         aria-label="Remix API Documentation"
       >

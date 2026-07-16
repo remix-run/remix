@@ -106,11 +106,18 @@
 
 :is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-modal-footer-key,
 :is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-keyboard-key {
-  border-color: var(--rmx-color-border-default);
+  min-width: 16px;
+  height: 16px;
+  padding-inline: 3px;
+  border: 1px solid rgb(0 0 0 / 2%);
   border-radius: var(--rmx-radius-sm);
-  background: var(--rmx-surface-lvl1);
-  box-shadow: var(--rmx-shadow-xs);
+  color: #9ca3b0;
+  background: var(--rmx-surface-lvl0);
+  box-shadow: none;
   font-family: var(--rmx-font-family-mono);
+  font-size: 12px;
+  font-weight: var(--rmx-font-weight-normal);
+  line-height: 1;
 }
 
 @media (max-width: 640px) {
