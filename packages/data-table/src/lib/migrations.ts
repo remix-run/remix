@@ -1,3 +1,5 @@
+import type { Database } from './database.ts'
+
 /**
  * Controls how each migration is wrapped in transactions.
  *
@@ -123,11 +125,11 @@ export type MigrationRunner = {
 }
 
 export type MigratorResetOptions = {
-  seed?: (db: import('./database.ts').Database) => Promise<void>
+  seed?: (db: Database) => Promise<void>
 }
 
 export type Migrator = {
-  migrate(db: import('./database.ts').Database, options?: { to?: string }): Promise<MigrateResult>
-  reset(db: import('./database.ts').Database, options?: MigratorResetOptions): Promise<void>
-  status(db: import('./database.ts').Database): Promise<MigrationStatusEntry[]>
+  migrate(db: Database, options?: { to?: string }): Promise<MigrateResult>
+  reset(db: Database, options?: MigratorResetOptions): Promise<void>
+  status(db: Database): Promise<MigrationStatusEntry[]>
 }

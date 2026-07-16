@@ -404,7 +404,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
 
 /**
  * Creates a mysql `DatabaseAdapter`.
- * @param client Mysql pool or connection.
+ * @param config Mysql connection string or pool options.
  * @param options Optional adapter capability overrides.
  * @returns A configured mysql adapter.
  * @example

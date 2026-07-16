@@ -373,7 +373,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
 
 /**
  * Creates a postgres `DatabaseAdapter`.
- * @param client `pg` pool or pool client.
+ * @param config Postgres pool configuration.
  * @param options Optional adapter capability overrides.
  * @returns A configured postgres adapter.
  * @example

@@ -322,7 +322,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
 
 /**
  * Creates a sqlite `DatabaseAdapter`.
- * @param database Synchronous SQLite database client.
+ * @param input SQLite adapter configuration.
  * @returns A configured sqlite adapter.
  * @example
  * ```ts
