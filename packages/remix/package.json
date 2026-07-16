@@ -88,6 +88,7 @@
     "./middleware/form-data": "./src/form-data-middleware.ts",
     "./middleware/logger": "./src/logger-middleware.ts",
     "./middleware/method-override": "./src/method-override-middleware.ts",
+    "./middleware/rate-limit": "./src/rate-limit-middleware.ts",
     "./middleware/render": "./src/render-middleware.ts",
     "./middleware/session": "./src/session-middleware.ts",
     "./middleware/static": "./src/static-middleware.ts",
@@ -425,6 +426,10 @@
         "types": "./dist/method-override-middleware.d.ts",
         "default": "./dist/method-override-middleware.js"
       },
+      "./middleware/rate-limit": {
+        "types": "./dist/rate-limit-middleware.d.ts",
+        "default": "./dist/rate-limit-middleware.js"
+      },
       "./middleware/render": {
         "types": "./dist/render-middleware.d.ts",
         "default": "./dist/render-middleware.js"
@@ -740,7 +745,8 @@
     "@remix-run/cli": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@remix-run/terminal": "workspace:^",
-    "@remix-run/render-middleware": "workspace:^"
+    "@remix-run/render-middleware": "workspace:^",
+    "@remix-run/rate-limit-middleware": "workspace:^"
   },
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

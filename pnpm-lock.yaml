@@ -1319,6 +1319,25 @@ importers:
         specifier: 'catalog:'
         version: 7.0.0-dev.20251125.1
 
+  packages/rate-limit-middleware:
+    dependencies:
+      '@remix-run/fetch-router':
+        specifier: workspace:^
+        version: link:../fetch-router
+    devDependencies:
+      '@remix-run/assert':
+        specifier: workspace:^
+        version: link:../assert
+      '@remix-run/test':
+        specifier: workspace:^
+        version: link:../test
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+
   packages/remix:
     dependencies:
       '@remix-run/assert':
@@ -1417,6 +1436,9 @@ importers:
       '@remix-run/node-tsx':
         specifier: workspace:^
         version: link:../node-tsx
+      '@remix-run/rate-limit-middleware':
+        specifier: workspace:^
+        version: link:../rate-limit-middleware
       '@remix-run/render-middleware':
         specifier: workspace:^
         version: link:../render-middleware
@@ -1856,31 +1878,6 @@ importers:
         specifier: ^5.9.3
         version: 5.9.3
 
-  packages/ui/demo:
-    dependencies:
-      '@remix-run/ui':
-        specifier: workspace:*
-        version: link:..
-      remix:
-        specifier: workspace:*
-        version: link:../../remix
-    devDependencies:
-      '@types/dom-navigation':
-        specifier: ^1.0.7
-        version: 1.0.7
-      '@types/node':
-        specifier: 'catalog:'
-        version: 24.10.4
-      '@typescript/native-preview':
-        specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
-      esbuild:
-        specifier: ^0.25.10
-        version: 0.25.12
-      node-html-parser:
-        specifier: ^7.0.2
-        version: 7.1.0
-
   packages/ui/bench:
     dependencies:
       '@remix-run/fetch-router':
@@ -1967,6 +1964,31 @@ importers:
       esbuild-plugin-solid:
         specifier: ^0.6.0
         version: 0.6.0(esbuild@0.27.1)(solid-js@1.9.12)
+
+  packages/ui/demo:
+    dependencies:
+      '@remix-run/ui':
+        specifier: workspace:*
+        version: link:..
+      remix:
+        specifier: workspace:*
+        version: link:../../remix
+    devDependencies:
+      '@types/dom-navigation':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      '@typescript/native-preview':
+        specifier: 'catalog:'
+        version: 7.0.0-dev.20251125.1
+      esbuild:
+        specifier: ^0.25.10
+        version: 0.25.12
+      node-html-parser:
+        specifier: ^7.0.2
+        version: 7.1.0
 
   scripts:
     dependencies:

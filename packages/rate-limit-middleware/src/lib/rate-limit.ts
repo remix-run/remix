@@ -1,218 +1,128 @@
-import { createContextKey, type Middleware, type RequestContext } from '@remix-run/fetch-router'
+import type { Middleware, RequestContext } from '@remix-run/fetch-router'
 
-import { createRateLimitHeaderValues } from './headers.ts'
-import { memoryStore, type RateLimitStore, type RateLimitStoreEntry } from './store.ts'
+import { withRateLimitHeaders } from './headers.ts'
+import type { RateLimitStore, RateLimitStoreEntry } from './store.ts'
 
-/**
- * Currently supported rate limit counting strategy.
- */
-export type RateLimitStrategy = 'fixed-window'
+const POLICY_NAME_PATTERN = /^[A-Za-z][A-Za-z0-9._-]{0,63}$/
+const MAX_KEY_LENGTH = 1024
 
-/**
- * Rate limit state for the current request.
- */
+/** Rate limit state for one named policy and client bucket. */
 export interface RateLimitState {
-  /**
-   * Maximum requests allowed in the window.
-   */
-  limit: number
-  /**
-   * Requests counted in the current window.
-   */
-  count: number
-  /**
-   * Requests remaining in the current window.
-   */
-  remaining: number
-  /**
-   * Seconds until the current window resets.
-   */
-  reset: number
-  /**
-   * Unix epoch timestamp in milliseconds when the current window resets.
-   */
-  resetAt: number
-  /**
-   * Window size in milliseconds.
-   */
-  window: number
-  /**
-   * Whether this request exceeded the configured limit.
-   */
-  exceeded: boolean
+  /** Number of requests counted in the active window. */
+  readonly count: number
+  /** Maximum requests allowed in the window. */
+  readonly limit: number
+  /** Name of the policy. */
+  readonly name: string
+  /** Requests remaining in the active window. */
+  readonly remaining: number
+  /** Unix epoch timestamp in milliseconds when the active window resets. */
+  readonly resetAt: number
+  /** Seconds until the active window resets. */
+  readonly retryAfter: number
 }
 
-/**
- * Function used to compute a rate limit bucket key for a request.
- */
-export interface RateLimitKeyFunction {
-  /**
-   * Computes the bucket key for a request.
-   *
-   * @param context Request context for the current request.
-   * @returns Bucket key for the current request.
-   */
-  (context: RequestContext): string | Promise<string>
-}
-
-/**
- * Function used to create a response when the limit is exceeded.
- */
-export interface RateLimitExceededHandler {
-  /**
-   * Creates the response for an over-limit request.
-   *
-   * @param context Request context for the current request.
-   * @param rateLimit Rate limit state for the current request.
-   * @returns The response to send to the client.
-   */
-  (context: RequestContext, rateLimit: RateLimitState): Response | Promise<Response>
-}
-
-/**
- * Options for the {@link rateLimit} middleware.
- */
+/** Options for fixed-window rate limit middleware. */
 export interface RateLimitOptions {
   /**
-   * Maximum number of requests allowed in each window.
+   * Computes a stable, non-secret client bucket key.
+   *
+   * Keys must contain between 1 and 1,024 characters. Fetch requests do not expose a trusted
+   * client address, so applications must derive this value from authenticated identity or other
+   * trusted server data.
    */
+  key(context: RequestContext): string | Promise<string>
+  /** Maximum requests allowed in each window. */
   limit: number
+  /** Policy name used for store namespacing and response fields. */
+  name: string
   /**
-   * Window size in milliseconds.
+   * Creates a custom response when the policy is exceeded.
+   *
+   * The middleware normalizes the response status to `429` and adds rate limit fields.
    */
+  onLimitExceeded?: (context: RequestContext, state: RateLimitState) => Response | Promise<Response>
+  /** Store that atomically counts requests. Use `memoryStore()` only for single-process servers. */
+  store: RateLimitStore
+  /** Window size in milliseconds. */
   window: number
-  /**
-   * Function used to compute a bucket key for each request.
-   *
-   * Defaults to a stable key derived from request identity headers when present. Apps that need IP
-   * based limits should provide a key from trusted client address data.
-   */
-  key?: RateLimitKeyFunction
-  /**
-   * Store used to count requests.
-   *
-   * Defaults to `memoryStore()`.
-   */
-  store?: RateLimitStore
-  /**
-   * Counting strategy to use.
-   *
-   * Defaults to `'fixed-window'`.
-   */
-  strategy?: RateLimitStrategy
-  /**
-   * Creates a custom response when the limit is exceeded.
-   *
-   * The middleware sends the response with status `429`.
-   *
-   * Defaults to a plain text `429 Too Many Requests` response.
-   */
-  onLimitExceeded?: RateLimitExceededHandler
 }
 
 /**
- * Context key used to read the current rate limit state with `context.get(RateLimit)`.
- * The `rateLimit()` middleware also installs the state as `context.rateLimit`.
- */
-export const RateLimit = createContextKey<RateLimitState>()
-
-/**
- * Creates middleware that limits requests by key and adds standard rate limit headers.
+ * Creates fixed-window rate limit middleware for one named policy.
  *
- * @param options Rate limit options.
- * @returns The rate limit middleware.
+ * @param options Policy, client key, store, and rejection response configuration.
+ * @returns Middleware that rejects requests after the configured limit.
  */
-export function rateLimit(
-  options: RateLimitOptions,
-): Middleware<{ key: typeof RateLimit; value: RateLimitState; property: 'rateLimit' }> {
-  let {
-    key = defaultRateLimitKey,
-    limit,
-    onLimitExceeded = defaultLimitExceededHandler,
-    store = memoryStore(),
-    strategy = 'fixed-window',
-    window,
-  } = options
-
-  validateRateLimitOptions({ limit, strategy, window })
+export function rateLimit(options: RateLimitOptions): Middleware {
+  validateOptions(options)
+  let { key, limit, name, onLimitExceeded, store, window } = options
 
   return async (context, next) => {
-    let bucketKey = await key(context)
-    let entry = await store.increment(bucketKey, window)
-    let state = createRateLimitState(entry, limit, window)
+    let clientKey = await key(context)
+    validateKey(clientKey)
 
-    context.set(RateLimit, state, { property: 'rateLimit' })
+    let entry = await store.increment({
+      key: clientKey,
+      name,
+      window,
+    })
+    validateStoreEntry(entry)
 
-    if (state.exceeded) {
-      let response = await onLimitExceeded(context, state)
-      return withRateLimitHeaders(ensureLimitExceededResponse(response), state, {
-        retryAfter: true,
-      })
+    let state = createRateLimitState(name, limit, entry)
+
+    if (state.count > state.limit) {
+      let response = onLimitExceeded
+        ? await onLimitExceeded(context, state)
+        : defaultLimitExceededResponse()
+
+      return withRateLimitHeaders(ensureTooManyRequestsResponse(response), state, window, true)
     }
 
     let response = await next()
-
-    return withRateLimitHeaders(response, state)
+    return withRateLimitHeaders(response, state, window, false)
   }
 }
 
+/**
+ * Creates public state from a store result.
+ *
+ * @param name Policy name.
+ * @param limit Maximum requests allowed.
+ * @param entry Current store entry.
+ * @returns Current rate limit state.
+ */
 function createRateLimitState(
-  entry: RateLimitStoreEntry,
+  name: string,
   limit: number,
-  window: number,
+  entry: RateLimitStoreEntry,
 ): RateLimitState {
-  let reset = secondsUntil(entry.resetAt)
-  let remaining = Math.max(0, limit - entry.count)
-
   return {
-    limit,
     count: entry.count,
-    remaining,
-    reset,
+    limit,
+    name,
+    remaining: Math.max(0, limit - entry.count),
     resetAt: entry.resetAt,
-    window,
-    exceeded: entry.count > limit,
+    retryAfter: Math.max(0, Math.ceil((entry.resetAt - Date.now()) / 1000)),
   }
 }
 
-function withRateLimitHeaders(
-  response: Response,
-  state: RateLimitState,
-  options: { retryAfter?: boolean } = {},
-): Response {
-  let headers = new Headers(response.headers)
-  let headerValues = createRateLimitHeaderValues({
-    limit: state.limit,
-    remaining: state.remaining,
-    reset: state.reset,
-    window: millisecondsToSeconds(state.window),
-  })
-
-  headers.set('RateLimit', headerValues.rateLimit)
-  headers.set('RateLimit-Policy', headerValues.rateLimitPolicy)
-
-  if (options.retryAfter === true) {
-    headers.set('Retry-After', String(state.reset))
-  }
-
-  return new Response(response.body, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
-  })
-}
-
-function defaultLimitExceededHandler(): Response {
+/** @returns The default rejected response. */
+function defaultLimitExceededResponse(): Response {
   return new Response('Too Many Requests', {
     status: 429,
     statusText: 'Too Many Requests',
   })
 }
 
-function ensureLimitExceededResponse(response: Response): Response {
-  if (response.status === 429) {
-    return response
-  }
+/**
+ * Normalizes custom rejection responses to status 429.
+ *
+ * @param response Custom rejection response.
+ * @returns A response with status 429.
+ */
+function ensureTooManyRequestsResponse(response: Response): Response {
+  if (response.status === 429) return response
 
   return new Response(response.body, {
     status: 429,
@@ -221,49 +131,18 @@ function ensureLimitExceededResponse(response: Response): Response {
   })
 }
 
-function defaultRateLimitKey(context: RequestContext): string {
-  let authorization = context.headers.get('Authorization')
-  if (authorization != null) {
-    return `authorization:${hashString(authorization)}`
+/**
+ * Validates middleware configuration at startup.
+ *
+ * @param options Rate limit options.
+ */
+function validateOptions(options: RateLimitOptions): void {
+  if (!POLICY_NAME_PATTERN.test(options.name)) {
+    throw new Error(
+      'Rate limit `name` must start with a letter and contain at most 64 letters, numbers, dots, underscores, or dashes.',
+    )
   }
 
-  let cookie = context.headers.get('Cookie')
-  if (cookie != null) {
-    return `cookie:${hashString(cookie)}`
-  }
-
-  let userAgent = context.headers.get('User-Agent')
-  if (userAgent != null) {
-    return `user-agent:${hashString(userAgent)}`
-  }
-
-  return `origin:${context.url.origin}`
-}
-
-function hashString(value: string): string {
-  let hash = 0x811c9dc5
-
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index)
-    hash = Math.imul(hash, 0x01000193)
-  }
-
-  return (hash >>> 0).toString(36)
-}
-
-function millisecondsToSeconds(value: number): number {
-  return Math.max(1, Math.ceil(value / 1000))
-}
-
-function secondsUntil(timestamp: number): number {
-  return Math.max(0, Math.ceil((timestamp - Date.now()) / 1000))
-}
-
-function validateRateLimitOptions(options: {
-  limit: number
-  strategy: string
-  window: number
-}): void {
   if (!Number.isSafeInteger(options.limit) || options.limit < 1) {
     throw new Error('Rate limit `limit` must be a positive safe integer.')
   }
@@ -271,8 +150,30 @@ function validateRateLimitOptions(options: {
   if (!Number.isSafeInteger(options.window) || options.window < 1) {
     throw new Error('Rate limit `window` must be a positive safe integer.')
   }
+}
 
-  if (options.strategy !== 'fixed-window') {
-    throw new Error(`Unsupported rate limit strategy: ${options.strategy}`)
+/**
+ * Validates a client key before passing it to storage.
+ *
+ * @param key Client bucket key.
+ */
+function validateKey(key: string): void {
+  if (typeof key !== 'string' || key.length < 1 || key.length > MAX_KEY_LENGTH) {
+    throw new Error('Rate limit `key` must return a string between 1 and 1,024 characters.')
+  }
+}
+
+/**
+ * Validates untrusted store output before using it in response fields.
+ *
+ * @param entry Store result.
+ */
+function validateStoreEntry(entry: RateLimitStoreEntry): void {
+  if (!Number.isSafeInteger(entry.count) || entry.count < 1) {
+    throw new Error('Rate limit store `count` must be a positive safe integer.')
+  }
+
+  if (!Number.isSafeInteger(entry.resetAt) || entry.resetAt < 1) {
+    throw new Error('Rate limit store `resetAt` must be a positive safe integer.')
   }
 }

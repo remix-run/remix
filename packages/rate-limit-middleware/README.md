@@ -1,144 +1,149 @@
 # rate-limit-middleware
 
-Rate limiting middleware for Remix Fetch API servers. It limits requests with a pluggable fixed-window store, exposes the current limit state on request context, and emits standard `RateLimit` response headers.
+Fixed-window rate limiting middleware for Remix Fetch API servers. It uses explicit client keys and named policies, supports atomic shared stores, and emits current `RateLimit` response fields.
 
 ## Features
 
-- **Fixed-Window Limits** - Count requests per key in a time window
-- **Standard Headers** - Adds `RateLimit`, `RateLimit-Policy`, and `Retry-After` when blocked
-- **Context Integration** - Exposes `context.rateLimit` (or `context.get(RateLimit)`)
-- **Custom Keys** - Limit by user, token, client address, route, or any request-derived value
-- **Pluggable Store** - Includes an in-memory store and a small adapter interface for shared stores
+- **Explicit Identity** - Applications choose a stable client key from authenticated or trusted server data
+- **Named Policies** - Compose global, route, and user limits without store-key or response-field collisions
+- **Atomic Stores** - Use the included single-process memory store or provide a shared store
+- **Standard Response Fields** - Emit named `RateLimit`, `RateLimit-Policy`, and `Retry-After` values
+- **Custom Rejections** - Return application-specific bodies while preserving status and rate limit fields
 
 ## Installation
 
 ```sh
-npm i remix @remix-run/rate-limit-middleware
+npm i remix
 ```
 
 ## Usage
 
+Install the middleware after the middleware that establishes the identity used by `key`. This example assumes `ClientId` was populated by authentication middleware earlier in the stack.
+
 ```ts
-import { createRouter } from 'remix/router'
-import { rateLimit } from '@remix-run/rate-limit-middleware'
+import { createContextKey, createRouter } from 'remix/router'
+import { memoryStore, rateLimit } from 'remix/middleware/rate-limit'
+
+let ClientId = createContextKey<string>()
 
 let router = createRouter({
   middleware: [
+    authenticateClient({ contextKey: ClientId }),
     rateLimit({
+      name: 'api',
       limit: 100,
       window: 60_000,
-      key: (context) => context.headers.get('Authorization') ?? 'anonymous',
+      key(context) {
+        let clientId = context.get(ClientId)
+        if (clientId == null) throw new Error('Expected an authenticated client')
+        return clientId
+      },
+      store: memoryStore(),
     }),
   ],
 })
 
-router.get('/api/users/:id', (context) => {
-  return Response.json({
-    id: context.params.id,
-    remaining: context.rateLimit.remaining,
-  })
-})
+router.get('/api/projects', () => Response.json([{ id: 'p1', name: 'Remix' }]))
 ```
 
-Under-limit responses pass through and include the standard headers:
+The first request includes the named policy and its current state:
 
 ```http
-RateLimit: limit=100, remaining=99, reset=60
-RateLimit-Policy: 100;w=60
+RateLimit-Policy: "api";q=100;w=60
+RateLimit: "api";r=99;t=60
 ```
 
-Over-limit requests short-circuit with `429 Too Many Requests` and include `Retry-After`:
+Request 101 is rejected before route handling and includes `Retry-After`:
 
 ```http
 HTTP/1.1 429 Too Many Requests
-RateLimit: limit=100, remaining=0, reset=42
-RateLimit-Policy: 100;w=60
+RateLimit-Policy: "api";q=100;w=60
+RateLimit: "api";r=0;t=42
 Retry-After: 42
 ```
 
-### Request Keys
+## Client Keys
 
-Use `key` to decide which requests share a bucket. For authenticated APIs, a user ID or token subject is usually a better key than a raw header value:
+`key` is required because a Fetch `Request` does not expose a trusted client address. Return a stable, non-secret identifier derived from authenticated identity or trusted server data. Keys must contain between 1 and 1,024 characters.
+
+Do not use a raw authorization header, cookie, user agent, or untrusted forwarding header. Attackers can rotate those values to bypass limits, while shared values can cause unrelated clients to consume the same quota.
+
+## Named Policies
+
+Policy names namespace store buckets and allow multiple limiters to compose. Names start with a letter and contain at most 64 letters, numbers, dots, underscores, or dashes.
 
 ```ts
+let store = memoryStore()
+
 let router = createRouter({
   middleware: [
     rateLimit({
+      name: 'global',
       limit: 1_000,
       window: 60_000,
-      key: async (context) => {
-        let user = await getUser(context.request)
-        return user ? `user:${user.id}` : 'anonymous'
-      },
+      key: getClientId,
+      store,
     }),
-  ],
-})
-```
-
-The default key uses request identity headers when present and falls back to the request origin. Fetch `Request` objects do not include a remote address, so apps that need IP-based limits should pass a custom key from trusted server data. For `remix/node-fetch-server`, enable `trustProxy` only behind a trusted reverse proxy before using forwarded client addresses.
-
-### Custom Limit Responses
-
-Use `onLimitExceeded` to return a JSON response or other app-specific body:
-
-```ts
-let router = createRouter({
-  middleware: [
     rateLimit({
-      limit: 20,
+      name: 'expensive-route',
+      limit: 10,
       window: 60_000,
-      onLimitExceeded(context, rateLimit) {
-        return Response.json({
-          error: 'rate_limit_exceeded',
-          retryAfter: rateLimit.reset,
-        })
-      },
+      key: getClientId,
+      store,
     }),
   ],
 })
 ```
 
-The middleware sends custom over-limit responses with status `429` and still adds `RateLimit`, `RateLimit-Policy`, and `Retry-After` headers.
+Each policy is counted independently and appended to the response fields.
 
-### Custom Stores
+## Custom Limit Responses
 
-`memoryStore()` is useful for one-process servers, tests, and local development. Production systems with multiple server processes should provide a shared store:
+Use `onLimitExceeded` for JSON or another application-specific body. The middleware normalizes the status to `429` and adds the policy fields and `Retry-After`.
 
 ```ts
-import { type RateLimitStore, rateLimit } from '@remix-run/rate-limit-middleware'
+rateLimit({
+  name: 'api',
+  limit: 100,
+  window: 60_000,
+  key: getClientId,
+  store,
+  onLimitExceeded(_context, state) {
+    return Response.json({
+      error: 'rate_limit_exceeded',
+      policy: state.name,
+      retryAfter: state.retryAfter,
+    })
+  },
+})
+```
+
+## Stores
+
+`memoryStore()` uses generational maps so increments do not scan all client buckets. It is suitable for tests, local development, and deliberate single-process deployments. It does not coordinate limits across processes or hosts and should not be mistaken for denial-of-service protection.
+
+Production deployments with multiple processes or hosts should provide a shared store whose `increment()` operation creates or increments the window atomically:
+
+```ts
+import type { RateLimitStore } from 'remix/middleware/rate-limit'
 
 let store: RateLimitStore = {
-  async increment(key, window) {
-    let result = await redisIncrementFixedWindow(key, window)
-
-    return {
-      count: result.count,
-      resetAt: result.resetAt,
-    }
-  },
-  async reset(key) {
-    await redisDelete(key)
+  async increment({ name, key, window }) {
+    return redisIncrementFixedWindow({
+      key: `rate-limit:${name}:${key}`,
+      window,
+    })
   },
 }
-
-let router = createRouter({
-  middleware: [
-    rateLimit({
-      limit: 100,
-      store,
-      window: 60_000,
-    }),
-  ],
-})
 ```
 
-Stores should increment a bucket atomically and return the updated count plus the Unix epoch timestamp in milliseconds when the current window resets.
+The store returns a positive safe-integer `count` and a positive safe-integer `resetAt` Unix timestamp in milliseconds. Store failures propagate so applications do not silently bypass limits.
 
 ## Related Packages
 
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router for the web Fetch API
-- [`logger-middleware`](https://github.com/remix-run/remix/tree/main/packages/logger-middleware) - HTTP request/response logging middleware
-- [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server) - Node.js server adapter with trusted proxy client address support
+- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Router and typed middleware context
+- [`auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware) - Authenticated request identity
+- [`node-fetch-server`](https://github.com/remix-run/remix/tree/main/packages/node-fetch-server) - Node.js server adapter with trusted client address information
 
 ## Related Work
 

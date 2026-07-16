@@ -66,6 +66,7 @@
   "remix/middleware/form-data": "@remix-run/form-data-middleware",
   "remix/middleware/logger": "@remix-run/logger-middleware",
   "remix/middleware/method-override": "@remix-run/method-override-middleware",
+  "remix/middleware/rate-limit": "@remix-run/rate-limit-middleware",
   "remix/middleware/render": "@remix-run/render-middleware",
   "remix/middleware/session": "@remix-run/session-middleware",
   "remix/middleware/static": "@remix-run/static-middleware",
