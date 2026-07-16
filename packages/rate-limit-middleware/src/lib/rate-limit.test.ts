@@ -222,6 +222,11 @@ describe('rateLimit', () => {
         return { count: 0, resetAt: 1_000 }
       },
     }
+    let invalidResetStore: RateLimitStore = {
+      async increment() {
+        return { count: 1, resetAt: 0 }
+      },
+    }
     let failedStore: RateLimitStore = {
       async increment() {
         throw new Error('Store unavailable')
@@ -234,6 +239,17 @@ describe('rateLimit', () => {
           limit: 1,
           name: 'api',
           store: invalidStore,
+          window: 1_000,
+        }),
+      ],
+    })
+    let invalidResetStoreRouter = createRouter({
+      middleware: [
+        rateLimit({
+          key: () => 'client',
+          limit: 1,
+          name: 'api',
+          store: invalidResetStore,
           window: 1_000,
         }),
       ],
@@ -251,6 +267,7 @@ describe('rateLimit', () => {
     })
 
     await assert.rejects(invalidStoreRouter.fetch('https://remix.run/'), /count/)
+    await assert.rejects(invalidResetStoreRouter.fetch('https://remix.run/'), /resetAt/)
     await assert.rejects(failedStoreRouter.fetch('https://remix.run/'), /Store unavailable/)
   })
 })
