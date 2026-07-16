@@ -1,1 +1,0 @@
-Added the `trustProxy` option to `remix/node-fetch-server` for apps behind trusted reverse proxies that need `request.url` and handler client address information to reflect trusted `Forwarded` and `X-Forwarded-*` headers.

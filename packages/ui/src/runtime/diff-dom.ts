@@ -14,6 +14,8 @@ type CommentMarkerRangeReplacement = {
   nextEndIndex: number
 }
 
+const REMIX_PRESERVE_DOM_ATTRIBUTE = 'rmx-preserve-dom'
+
 export function diffNodes(curr: Node[], next: Node[], context: FrameContext) {
   let parent = curr[0]?.parentNode ?? context.regionParent ?? null
   invariant(parent, 'Parent node not found')
@@ -166,6 +168,7 @@ function diffNode(current: Node, next: Node, context: FrameContext): ChildNode |
     }
 
     // Same tag: update attributes then children
+    if (shouldPreserveDomElement(current, next)) return
     diffElementAttributes(current, next)
     if (shouldPreserveElementChildren(current, next)) return
     diffElementChildren(current, next, context)
@@ -203,6 +206,14 @@ function diffElementAttributes(current: Element, next: Element): void {
       current.setAttribute(name, nextVal == null ? '' : String(nextVal))
     }
   }
+}
+
+function shouldPreserveDomElement(current: Element, next: Element): boolean {
+  if (!next.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)) return false
+  if (!current.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)) {
+    current.setAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE, '')
+  }
+  return true
 }
 
 function shouldPreserveLiveAttribute(current: Element, next: Element, name: string): boolean {
@@ -417,6 +428,11 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
       continue
     }
 
+    if (isPreservedDomElement(node) && node.parentNode === current) {
+      anchor = node
+      continue
+    }
+
     if (node.parentNode === current) {
       // Node already in parent: move only if its nextSibling is not the desired ref.
       let targetNext = ref
@@ -443,6 +459,10 @@ function diffElementChildren(current: Element, next: Element, context: FrameCont
       removeNode(nodeToRemove, current, context)
     }
   }
+}
+
+function isPreservedDomElement(node: Node): node is Element {
+  return isElement(node) && node.hasAttribute(REMIX_PRESERVE_DOM_ATTRIBUTE)
 }
 
 function nodeTypesComparable(a: Node, b: Node): boolean {

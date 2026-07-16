@@ -14,7 +14,8 @@ export function createAssetServer(version?: string): DocsAssetServer {
     basePath: version ? `/${version}/assets` : '/assets',
     fileMap: {
       '/demos/*path': 'docs/build/demos/*path',
-      '/pkg/*path': 'packages/*path',
+      '/pkg/:pkg/src/*path': 'packages/:pkg/src/*path',
+      '/pkg/:pkg/deps/*path': 'packages/:pkg/node_modules/*path',
       '/client/*path': 'docs/src/client/*path',
       '/shared/*path': 'docs/src/shared/*path',
     },
