@@ -6,6 +6,7 @@ import { unified } from 'unified'
 import { visit } from 'unist-util-visit'
 import { Frame } from 'remix/ui'
 import type { Handle, RemixNode } from 'remix/ui'
+import { docsMarkdownContentCss } from 'remix-docs-shared/ui/markdown-content'
 
 import { rehypeHighlightCode } from './code-blocks.ts'
 import { escapeMarkdownHtml } from './html-escape.ts'
@@ -90,7 +91,9 @@ async function renderMarkdownRoot(root: Root): Promise<RemixNode[]> {
 }
 
 function MarkdownHtml(handle: Handle<{ html: string }>) {
-  return () => <div class="rmx-page-body" innerHTML={handle.props.html} />
+  return () => (
+    <div class="rmx-page-body" mix={docsMarkdownContentCss} innerHTML={handle.props.html} />
+  )
 }
 
 function rehypeLinkHeadings() {

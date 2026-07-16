@@ -1,6 +1,7 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
+import { docsMarkdownContentCss } from 'remix-docs-shared/ui/markdown-content'
 
 import type { DemoDocFile } from './demos.tsx'
 import type { MarkdownHeading } from './markdown.ts'
@@ -176,7 +177,10 @@ function MainContent(
       <main id="main-content" class="docs-main" tabIndex={-1} data-pagefind-body>
         <div class="docs-layout">
           <article class="docs-article">
-            <div class="api-page-content rmx-page-body" mix={handle.props.page.css}>
+            <div
+              class="api-page-content rmx-page-body"
+              mix={[docsMarkdownContentCss, handle.props.page.css]}
+            >
               {handle.props.header}
               {handle.props.children}
             </div>
