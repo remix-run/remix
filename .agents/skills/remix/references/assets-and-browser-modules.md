@@ -4,10 +4,10 @@
 
 How to serve browser scripts and styles from source. Read this when the task involves:
 
-- Configuring `createAssetServer` (`basePath`, `fileMap`, `allow`, `deny`, fingerprinting, compiler options)
+- Configuring `createAssetServer` (`basePath`, `fileMap`, `allowFiles`, `allowPackages`, `denyFiles`, `denyPackages`, fingerprinting, compiler options)
 - Choosing between `staticFiles()` for already-built files and `createAssetServer()` for source assets that need import rewriting, preloads, or fingerprinted URLs
 - Generating script URLs or `<link rel="modulepreload">` tags for a client entry
-- Keeping server-only files out of the browser via `deny` rules
+- Keeping server-only files out of the browser via `denyFiles` and `denyPackages` rules
 
 For routing the URL namespace itself, see `routing-and-controllers.md`. For client entry hydration, see `hydration-frames-navigation.md`.
 
@@ -35,8 +35,9 @@ let assetServer = createAssetServer({
     'app/*path': 'app/*path',
     'node_modules/*path': 'node_modules/*path',
   },
-  allow: ['app/assets/**', 'node_modules/**'],
-  deny: ['app/**/*.server.*'],
+  allowFiles: ['app/assets/**'],
+  allowPackages: ['remix'],
+  denyFiles: ['app/**/*.server.*'],
   target: { es: '2020', chrome: '109', safari: '16.4' },
   sourceMaps: process.env.NODE_ENV === 'development' ? 'external' : undefined,
   minify: process.env.NODE_ENV === 'production',
@@ -58,8 +59,11 @@ export default createController(routes, {
 
 ## Rules
 
-- Treat `allow` and `deny` as the security boundary for browser-reachable source files.
-- Add a `deny` list for server-only modules such as `*.server.*`, private config, or other files that should never be exposed.
+- Treat `allowFiles`/`allowPackages` and `denyFiles`/`denyPackages` as the security boundary for browser-reachable source files.
+- Use `allowFiles` and `denyFiles` for file paths and globs. Relative values resolve from `rootDir`.
+- Use `allowPackages` and `denyPackages` for exact package names, not globs or subpaths. Packages allowed by `allowPackages` also allow their installed `dependencies` and installed `optionalDependencies`; peer dependencies must be listed explicitly if they should be browser-reachable.
+- `denyFiles` and `denyPackages` take precedence over both file and package allow rules. Denying a package denies that package root wherever it is discovered in the allowed dependency graph, but it does not automatically deny that package's own dependencies.
+- Add `denyFiles` rules for server-only modules such as `*.server.*`, private config, or other files that should never be exposed.
 - Set `rootDir` explicitly in monorepos so relative paths resolve from the intended project root.
 - `basePath` is the public URL namespace handled by the asset server.
 - `fileMap` keys are URL patterns relative to `basePath`, and values are root-relative file path patterns. They use `route-pattern` syntax on both sides.

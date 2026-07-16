@@ -72,7 +72,6 @@ const scriptExtensionSet = new Set<string>(supportedScriptExtensions)
 export interface AssetServerOptions<transforms extends AssetRequestTransformMap = {}> {
   /** Public mount path for this asset server, e.g. `'/assets'`. */
   basePath: string
-  /** File patterns keyed by public URL patterns relative to `basePath`. */
   /** File patterns keyed by public URL patterns. */
   fileMap: Readonly<Record<string, string>>
   /**
@@ -84,11 +83,13 @@ export interface AssetServerOptions<transforms extends AssetRequestTransformMap 
    */
   allowFiles: readonly string[]
   /**
-   * Package names whose files are allowed to be served. Package files must still match `fileMap`.
+   * Exact package names whose files are allowed to be served. Dependencies and installed optional
+   * dependencies are allowed automatically. Package files must still match `fileMap`.
    */
   allowPackages?: readonly string[]
   /**
-   * Package names whose files are denied from being served.
+   * Exact package names whose files are denied from being served. Denied packages take precedence
+   * over `allowFiles` and `allowPackages`.
    */
   denyPackages?: readonly string[]
   /**

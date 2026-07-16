@@ -7,7 +7,7 @@ Fetch-based server for compiling browser assets on demand.
 - **On-Demand Compilation** - Compile browser scripts and styles on demand
 - **File Serving** - Serve configured file assets like images and fonts with optional transforms
 - **Custom File Mapping** - Define patterns for mapping public URLs to file paths on disk
-- **Access Control** - Control exactly which files can be served with allow and deny rules
+- **Access Control** - Control exactly which files and packages can be served
 - **Preloads** - Generate preload URLs for scripts and styles based on imports
 - **Caching** - Conservative caching by default with stable URLs, ETags, and revalidation
 - **Optional Fingerprinting** - Source-based fingerprinted URLs for long-lived browser caching
@@ -88,9 +88,9 @@ let assetServer = createAssetServer({
 })
 ```
 
-Rules for `allowFiles` and `denyFiles` are file paths or globs. Relative values are resolved from `rootDir`. Absolute file paths match exactly, and absolute directory paths also match their descendants.
+Values for `allowFiles` and `denyFiles` are file paths or globs. Relative values are resolved from `rootDir`. Absolute file paths match exactly, and absolute directory paths also match their descendants.
 
-Values for `allowPackages` and `denyPackages` are package names. Dependencies of packages in `allowPackages` are also allowed automatically. Allowed package files must still be reachable through `fileMap`.
+Values for `allowPackages` and `denyPackages` are exact package names. Dependencies and installed optional dependencies of packages in `allowPackages` are also allowed automatically. Allowed package files must still be reachable through `fileMap`.
 
 ## File Map
 
