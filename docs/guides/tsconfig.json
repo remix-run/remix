@@ -1,21 +1,23 @@
 {
   "compilerOptions": {
     "strict": true,
-    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "lib": ["ES2024", "DOM", "DOM.Iterable", "DOM.AsyncIterable"],
+    "types": ["node"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ESNext",
+    "paths": {
+      "remix/ui/jsx-dev-runtime": ["../../packages/remix/src/ui/jsx-dev-runtime.ts"],
+      "remix/ui/jsx-runtime": ["../../packages/remix/src/ui/jsx-runtime.ts"]
+    },
     "allowImportingTsExtensions": true,
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
+    "skipLibCheck": true,
     "jsx": "react-jsx",
     "jsxImportSource": "remix/ui",
-    "paths": {
-      "*": ["./*"],
-      "remix/ui/jsx-runtime": ["../packages/remix/src/ui/jsx-runtime.ts"],
-      "remix/ui/jsx-dev-runtime": ["../packages/remix/src/ui/jsx-dev-runtime.ts"]
-    }
+    "noEmit": true
   },
-  "exclude": ["dist", "src/prerender/bench"]
+  "exclude": ["dist"]
 }

@@ -1,9 +1,9 @@
 import * as path from 'node:path'
 import * as url from 'node:url'
-import { buildSpecifierToRemixPath } from '../../../scripts/utils/manifest.ts'
+import { buildSpecifierToRemixPath } from '../../../../scripts/utils/manifest.ts'
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
-const packagesDir = path.resolve(__dirname, '../../../packages')
+const packagesDir = path.resolve(__dirname, '../../../../packages')
 
 const specifierMap = buildSpecifierToRemixPath(packagesDir)
 

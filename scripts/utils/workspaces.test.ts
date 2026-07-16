@@ -44,7 +44,7 @@ test('getAffectedWorkspaceDirs includes reverse dependents across workspaces', (
       scripts: ['test', 'typecheck'],
     },
     {
-      dir: 'api',
+      dir: 'docs/api',
       name: 'remix-api',
       dependencies: ['remix'],
       scripts: ['typecheck'],
@@ -58,7 +58,7 @@ test('getAffectedWorkspaceDirs includes reverse dependents across workspaces', (
   ]
 
   assert.deepEqual(getAffectedWorkspaceDirs(new Set(['packages/headers']), workspaces), [
-    'api',
+    'docs/api',
     'packages/cookie',
     'packages/headers',
     'packages/remix',

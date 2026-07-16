@@ -24,8 +24,8 @@ import { routes } from './routes.ts'
 import { DemoContent, Document, Home, MarkdownContent, NotFound, type Versions } from './view.tsx'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
-const REPO_DIR = path.resolve(DOCS_DIR, '..')
-const BUILD_DIR = path.join(REPO_DIR, 'api', 'build')
+const REPO_DIR = path.resolve(DOCS_DIR, '..', '..')
+const BUILD_DIR = path.join(DOCS_DIR, 'build')
 const MD_DIR = path.join(BUILD_DIR, 'md')
 const PUBLIC_DIR = path.join(BUILD_DIR, 'public')
 const ASSETS_DIR = path.join(BUILD_DIR, 'site', 'assets')

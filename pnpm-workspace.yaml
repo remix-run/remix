@@ -14,9 +14,9 @@ catalog:
 
 packages:
   - demos/*
-  - api
-  - api/src/prerender/bench
-  - guides
+  - docs/api
+  - docs/api/src/prerender/bench
+  - docs/guides
   - packages/*
   - packages/*/demo
   - packages/assets/bench

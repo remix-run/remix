@@ -11,10 +11,10 @@ import { info } from './utils.ts'
 const DOCS_DIR = path.join('build', 'md')
 const TYPEDOC_DIR = path.join('build', 'typedoc')
 
-// Ensure we're running from the /api directory
+// Ensure we're running from the /docs/api directory
 let cwd = process.cwd()
 if (!cwd.endsWith('/api')) {
-  console.error('❌ This script must be run from the /api directory')
+  console.error('❌ This script must be run from the /docs/api directory')
   process.exit(1)
 }
 
@@ -30,7 +30,7 @@ let { values: cliArgs } = util.parseArgs({
     entryPoints: {
       type: 'string',
       short: 'e',
-      default: '../packages/*',
+      default: '../../packages/*',
     },
     // Git tag to use for source code links from docs
     tag: {

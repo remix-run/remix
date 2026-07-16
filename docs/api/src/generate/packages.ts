@@ -17,7 +17,8 @@ const PackageJsonSchema = s.object({
 
 type PackageJson = s.InferOutput<typeof PackageJsonSchema>
 
-const PACKAGES_DIR = path.resolve('..', 'packages')
+const REPO_DIR = path.resolve('..', '..')
+const PACKAGES_DIR = path.join(REPO_DIR, 'packages')
 const REMIX_PACKAGE_NAME = 'remix'
 const JAVASCRIPT_CODE_FENCE_LANGUAGES = new Set(['js', 'jsx', 'ts', 'tsx'])
 const SHELL_CODE_FENCE_LANGUAGES = new Set(['', 'bash', 'sh', 'shell'])
@@ -255,7 +256,7 @@ function frontmatter(overview: PackageOverview): string {
 }
 
 function getMissingReadmeMarkdown(docsPackage: string, packageDir: string): string {
-  let relativePackageDir = path.relative(path.resolve('..'), packageDir)
+  let relativePackageDir = path.relative(REPO_DIR, packageDir)
   return [
     `# ${docsPackage}`,
     '',

@@ -132,10 +132,10 @@ function shouldVersionAssetUrl(url: string): boolean {
 async function getTestDocsContext(assetServer: ReturnType<typeof createAssetServer>) {
   let [entryHref, entryPreloads, tableOfContentsEntryHref, tableOfContentsEntryPreloads] =
     await Promise.all([
-      assetServer.getHref('api/src/client/entry.tsx'),
-      assetServer.getPreloads('api/src/client/entry.tsx'),
-      assetServer.getHref('api/src/client/table-of-contents.browser.tsx'),
-      assetServer.getPreloads('api/src/client/table-of-contents.browser.tsx'),
+      assetServer.getHref('docs/api/src/client/entry.tsx'),
+      assetServer.getPreloads('docs/api/src/client/entry.tsx'),
+      assetServer.getHref('docs/api/src/client/table-of-contents.browser.tsx'),
+      assetServer.getPreloads('docs/api/src/client/table-of-contents.browser.tsx'),
     ])
 
   return {

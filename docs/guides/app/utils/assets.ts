@@ -7,20 +7,20 @@ import { assetsBase } from '../routes.ts'
 const nodeEnv = process.env.NODE_ENV ?? 'development'
 const isDevelopment = nodeEnv === 'development'
 const isProduction = nodeEnv === 'production'
-const rootDir = path.resolve(import.meta.dirname, '../../..')
+const rootDir = path.resolve(import.meta.dirname, '../../../..')
 
 export const assetServer = createAssetServer({
   basePath: assetsBase,
   rootDir,
   fileMap: {
-    '/app/*path': 'guides/app/*path',
+    '/app/*path': 'docs/guides/app/*path',
     '/packages/*path': 'packages/*path',
   },
   allow: [
-    'guides/app/routes.ts',
-    'guides/app/**/*.browser.ts?(x)',
-    'guides/app/**/*.demo.ts?(x)',
-    'guides/app/styles/**/*.css',
+    'docs/guides/app/routes.ts',
+    'docs/guides/app/**/*.browser.ts?(x)',
+    'docs/guides/app/**/*.demo.ts?(x)',
+    'docs/guides/app/styles/**/*.css',
     'packages/*/src/**',
   ],
   sourceMaps: isDevelopment ? 'external' : undefined,

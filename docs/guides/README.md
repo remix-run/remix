@@ -2,7 +2,7 @@
 
 A runnable Remix app for the in-progress Remix 3 guide docs. Use it to browse, write, and test narrative docs with live Remix examples.
 
-The guides are the hand-authored docs: Start Here, Core App Structure, Server Runtime, and the rest of the chapter sequence. The generated API reference lives in [`../docs`](../docs).
+The guides are the hand-authored docs: Start Here, Core App Structure, Server Runtime, and the rest of the chapter sequence. The generated API reference lives in [`../api`](../api).
 
 ## Where things live
 
@@ -131,14 +131,14 @@ For route-style frames that need full control, export a named `handler` that ret
 
 ## Commands
 
-Run from the repo root or from `guides/`.
+Run from the repo root or from `docs/guides/`.
 
 ```sh
 pnpm install                            # once, from the repo root
 pnpm --filter remix-guides run dev      # watch + serve
 pnpm --filter remix-guides run start           # serve once
 pnpm --filter remix-guides run validate        # check frame URLs and example files
-pnpm --filter remix-guides run prerender       # build the static site in guides/build/site
+pnpm --filter remix-guides run prerender       # build the static site in docs/guides/build/site
 pnpm --filter remix-guides run prerender:serve # serve the static site
 pnpm --filter remix-guides run test
 pnpm --filter remix-guides run typecheck
@@ -148,9 +148,9 @@ The dev server listens on http://localhost:44100 by default. Set `PORT` to overr
 
 ## Static site
 
-`pnpm --filter remix-guides run prerender` renders the docs index, every chapter, referenced frame examples, browser modules, styles, and public files into `guides/build/site/`, then builds the Pagefind search index. The output uses directory `index.html` files for clean URLs and can be served directly by GitHub Pages or another static host.
+`pnpm --filter remix-guides run prerender` renders the docs index, every chapter, referenced frame examples, browser modules, styles, and public files into `docs/guides/build/site/`, then builds the Pagefind search index. The output uses directory `index.html` files for clean URLs and can be served directly by GitHub Pages or another static host.
 
-The development server serves an existing search index from `guides/build/site/assets/pagefind/`. Run prerender once to enable search during development, and rerun it when the guide content changes to refresh the index.
+The development server serves an existing search index from `docs/guides/build/site/assets/pagefind/`. Run prerender once to enable search during development, and rerun it when the guide content changes to refresh the index.
 
 Pass `--dir` to write into another directory:
 
