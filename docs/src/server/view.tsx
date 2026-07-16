@@ -245,7 +245,7 @@ function SiteHeader(handle: Handle<{ activeVersion?: string }>) {
 function PrimaryNavigationLinks(handle: Handle<{ activeVersion?: string }>) {
   return () => (
     <>
-      <a href="https://remix-3-guides.fly.dev/docs/">Guides</a>
+      <a href="https://guides.remix.run/">Guides</a>
       <a href={routes.home.href({ version: handle.props.activeVersion })} aria-current="page">
         API
       </a>

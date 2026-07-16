@@ -193,11 +193,6 @@
   background: var(--docs-nav-hover-background);
 }
 
-.docs-chapters-nav__list a[aria-current='page'] {
-  color: var(--rmx-color-text-primary);
-  background: var(--docs-nav-selected-background);
-}
-
 .docs-chapters-nav__eyebrow {
   padding: 0;
   color: inherit;
