@@ -5469,6 +5469,52 @@ describe('asset-server', () => {
     assert.equal(dependencyResponse.status, 200)
   })
 
+  it('allows explicitly allowed dependencies of denied packages', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__denied-package/package.json', {
+      name: '@remix-run/__denied-package',
+      type: 'module',
+      dependencies: {
+        '@remix-run/__dep-of-denied-package': '1.0.0',
+      },
+    })
+    await writeJson(dir, 'app/node_modules/@remix-run/__dep-of-denied-package/package.json', {
+      name: '@remix-run/__dep-of-denied-package',
+      type: 'module',
+    })
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__denied-package/index.ts',
+      'export const value = true',
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__dep-of-denied-package/index.ts',
+      'export const dep = true',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: [
+        '@remix-run/__denied-package',
+        '@remix-run/__dep-of-denied-package',
+      ],
+      denyPackages: ['@remix-run/__denied-package'],
+      rootDir: dir,
+      fileMap: { '/app/*path': 'app/*path' },
+    })
+
+    let deniedPackageResponse = await get(
+      assetServer,
+      '/assets/app/node_modules/@remix-run/__denied-package/index.ts',
+    )
+    let dependencyResponse = await get(
+      assetServer,
+      '/assets/app/node_modules/@remix-run/__dep-of-denied-package/index.ts',
+    )
+    assert.equal(deniedPackageResponse, null)
+    assert.ok(dependencyResponse)
+    assert.equal(dependencyResponse.status, 200)
+  })
+
   it('allows shared dependencies of allowed and denied packages', async () => {
     await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
       name: '@remix-run/__allowed-package',
@@ -5522,6 +5568,77 @@ describe('asset-server', () => {
     assert.equal(deniedPackageResponse, null)
     assert.ok(sharedDependencyResponse)
     assert.equal(sharedDependencyResponse.status, 200)
+  })
+
+  it('allows nested dependencies shared by allowed and denied packages', async () => {
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      dependencies: {
+        '@remix-run/__shared-dependency': '1.0.0',
+      },
+    })
+    await writeJson(dir, 'app/node_modules/@remix-run/__denied-package/package.json', {
+      name: '@remix-run/__denied-package',
+      type: 'module',
+      dependencies: {
+        '@remix-run/__shared-dependency': '1.0.0',
+      },
+    })
+    await writeJson(dir, 'app/node_modules/@remix-run/__shared-dependency/package.json', {
+      name: '@remix-run/__shared-dependency',
+      type: 'module',
+      dependencies: {
+        '@remix-run/__shared-nested-dependency': '1.0.0',
+      },
+    })
+    await writeJson(
+      dir,
+      'app/node_modules/@remix-run/__shared-dependency/node_modules/@remix-run/__shared-nested-dependency/package.json',
+      {
+        name: '@remix-run/__shared-nested-dependency',
+        type: 'module',
+      },
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__allowed-package/index.ts',
+      'export const value = true',
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__denied-package/index.ts',
+      'export const value = true',
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__shared-dependency/index.ts',
+      'export const shared = true',
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__shared-dependency/node_modules/@remix-run/__shared-nested-dependency/index.ts',
+      'export const nested = true',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: ['@remix-run/__allowed-package'],
+      denyPackages: ['@remix-run/__denied-package'],
+      rootDir: dir,
+      fileMap: { '/app/*path': 'app/*path' },
+    })
+
+    let deniedPackageResponse = await get(
+      assetServer,
+      '/assets/app/node_modules/@remix-run/__denied-package/index.ts',
+    )
+    let nestedDependencyResponse = await get(
+      assetServer,
+      '/assets/app/node_modules/@remix-run/__shared-dependency/node_modules/@remix-run/__shared-nested-dependency/index.ts',
+    )
+    assert.equal(deniedPackageResponse, null)
+    assert.ok(nestedDependencyResponse)
+    assert.equal(nestedDependencyResponse.status, 200)
   })
 
   it('applies denyPackages rules to allowed package files', async () => {
