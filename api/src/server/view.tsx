@@ -150,11 +150,7 @@ function Head(
 function SiteHeader(handle: Handle<{ activeVersion?: string }>) {
   return () => (
     <header class="site-header">
-      <a
-        href="https://remix.run"
-        class="site-header__brand"
-        aria-label="Remix API Documentation"
-      >
+      <a href="https://remix.run" class="site-header__brand" aria-label="Remix API Documentation">
         <img
           class="site-header__logo-mark"
           src="/remix-logo-light-mode.svg"
