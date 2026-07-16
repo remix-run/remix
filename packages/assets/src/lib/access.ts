@@ -141,6 +141,11 @@ type PackageRootPathTrie = {
   packageRoot: boolean
 }
 
+type PackageRootQueueItem = {
+  packageJsonPath: string
+  packageName: string
+}
+
 function createPackageRootPaths(options: {
   allowPackageNames: ReadonlySet<string>
   denyPackageNames: ReadonlySet<string>
@@ -148,7 +153,7 @@ function createPackageRootPaths(options: {
 }): { allow: Set<string>; deny: Set<string> } {
   let allowPackageRootPaths = new Set<string>()
   let denyPackageRootPaths = new Set<string>()
-  let allowQueue: string[] = []
+  let allowQueue: PackageRootQueueItem[] = []
   let seenAllowedPackageRoots = new Set<string>()
   let searchRoots = normalizePackageSearchRoots(options.searchRoots)
 
@@ -160,7 +165,7 @@ function createPackageRootPaths(options: {
       if (packageJsonPath === null) continue
 
       foundPackage = true
-      allowQueue.push(packageJsonPath)
+      allowQueue.push({ packageJsonPath, packageName })
     }
 
     if (!foundPackage) {
@@ -178,13 +183,19 @@ function createPackageRootPaths(options: {
   }
 
   while (allowQueue.length > 0) {
-    let packageJsonPath = allowQueue.shift()!
+    let { packageJsonPath, packageName } = allowQueue.shift()!
     let packageRootPath = normalizeFilePath(path.dirname(packageJsonPath))
     if (seenAllowedPackageRoots.has(packageRootPath)) continue
     seenAllowedPackageRoots.add(packageRootPath)
-    allowPackageRootPaths.add(packageRootPath)
+
+    if (options.denyPackageNames.has(packageName)) {
+      denyPackageRootPaths.add(packageRootPath)
+      continue
+    }
 
     let packageJson = readPackageJson(packageJsonPath)
+    allowPackageRootPaths.add(packageRootPath)
+
     for (let dependencyName of Object.keys(packageJson.dependencies ?? {})) {
       validatePackageName(
         dependencyName,
@@ -196,7 +207,10 @@ function createPackageRootPaths(options: {
           `Could not resolve dependency "${dependencyName}" from ${packageJsonPath}.`,
         )
       }
-      allowQueue.push(dependencyPackageJsonPath)
+      allowQueue.push({
+        packageJsonPath: dependencyPackageJsonPath,
+        packageName: dependencyName,
+      })
     }
     for (let dependencyName of Object.keys(packageJson.optionalDependencies ?? {})) {
       validatePackageName(
@@ -205,7 +219,10 @@ function createPackageRootPaths(options: {
       )
       let dependencyPackageJsonPath = findPackageJsonPath(dependencyName, packageRootPath)
       if (dependencyPackageJsonPath !== null) {
-        allowQueue.push(dependencyPackageJsonPath)
+        allowQueue.push({
+          packageJsonPath: dependencyPackageJsonPath,
+          packageName: dependencyName,
+        })
       }
     }
   }

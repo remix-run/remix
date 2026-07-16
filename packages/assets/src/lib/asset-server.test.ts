@@ -5549,6 +5549,56 @@ describe('asset-server', () => {
     assert.equal(response, null)
   })
 
+  it('applies denyPackages rules to nested allowed package dependencies', async () => {
+    let nestedDeniedPackagePath =
+      'app/node_modules/@remix-run/__allowed-package/node_modules/@remix-run/__denied-package'
+
+    await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+      dependencies: {
+        '@remix-run/__denied-package': '1.0.0',
+      },
+    })
+    await writeJson(
+      dir,
+      `${nestedDeniedPackagePath}/package.json`,
+      {
+        name: '@remix-run/__denied-package',
+        type: 'module',
+      },
+    )
+    await write(
+      dir,
+      'app/node_modules/@remix-run/__allowed-package/index.ts',
+      'export const value = true',
+    )
+    await write(
+      dir,
+      `${nestedDeniedPackagePath}/index.ts`,
+      'export const secret = true',
+    )
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: ['@remix-run/__allowed-package'],
+      denyPackages: ['@remix-run/__denied-package'],
+      rootDir: dir,
+      fileMap: { '/app/*path': 'app/*path' },
+    })
+
+    let allowedPackageResponse = await get(
+      assetServer,
+      '/assets/app/node_modules/@remix-run/__allowed-package/index.ts',
+    )
+    let deniedPackageResponse = await get(
+      assetServer,
+      `/assets/${nestedDeniedPackagePath}/index.ts`,
+    )
+    assert.ok(allowedPackageResponse)
+    assert.equal(allowedPackageResponse.status, 200)
+    assert.equal(deniedPackageResponse, null)
+  })
+
   it('updates allowed package dependencies when workspace lockfiles change in watch mode', async () => {
     await write(dir, 'pnpm-lock.yaml', 'lockfile')
     await writeJson(dir, 'app/node_modules/@remix-run/__allowed-package/package.json', {
