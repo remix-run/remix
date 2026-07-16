@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { column, createDatabase, table, eq, inList, sql } from '@remix-run/data-table'
 
-import { PostgresDatabaseAdapter } from './adapter.ts'
+import { createPostgresDatabaseAdapter, PostgresDatabaseAdapter } from './adapter.ts'
 
 const accounts = table({
   name: 'accounts',
@@ -722,6 +722,22 @@ describe('postgres adapter', () => {
 
     assert.equal(result.affectedRows, undefined)
     assert.deepEqual(result.rows, [{ ok: true }])
+  })
+
+  it('createPostgresDatabaseAdapter creates an adapter from a queryable client', async () => {
+    let calls: Array<{ text: string; values: unknown[] | undefined }> = []
+    let client = {
+      async query(text: string, values?: unknown[]) {
+        calls.push({ text, values })
+        return { rows: [], rowCount: 0 }
+      },
+    }
+
+    let adapter = createPostgresDatabaseAdapter(client as never)
+
+    assert.equal(adapter.dialect, 'postgres')
+    await adapter.executeScript('select 1')
+    assert.deepEqual(calls, [{ text: 'select 1', values: undefined }])
   })
 
   it('executeScript forwards the script as an unparameterized query', async () => {

@@ -2,7 +2,7 @@ import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { column, createDatabase, table, eq, ilike, inList } from '@remix-run/data-table'
 
-import { MysqlDatabaseAdapter } from './adapter.ts'
+import { createMysqlDatabaseAdapter, MysqlDatabaseAdapter } from './adapter.ts'
 
 const accounts = table({
   name: 'accounts',
@@ -674,6 +674,22 @@ describe('mysql adapter', () => {
 
     assert.equal(result.affectedRows, 1)
     assert.equal(result.insertId, undefined)
+  })
+
+  it('createMysqlDatabaseAdapter creates an adapter from a queryable connection', async () => {
+    let calls: Array<{ text: string; values: unknown[] | undefined }> = []
+    let connection = {
+      async query(text: string, values?: unknown[]) {
+        calls.push({ text, values })
+        return [[], []]
+      },
+    }
+
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    assert.equal(adapter.dialect, 'mysql')
+    await adapter.executeScript('select 1')
+    assert.deepEqual(calls, [{ text: 'select 1', values: undefined }])
   })
 
   it('executeScript forwards the script through query()', async () => {
