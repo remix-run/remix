@@ -10,14 +10,14 @@ Releases are automated by the
 and the
 [`publish` workflow](https://github.com/remix-run/remix/blob/main/.github/workflows/publish.yaml).
 
-1. Changes are pushed to `main` with change files in `packages/<package>/.changes/`.
-2. A Release pull request is automatically opened, or updated if one exists. It contains updated
-   `package.json` versions, updated `CHANGELOG.md` files, and deleted change files. Do not edit this
-   pull request manually. Modify the change files or release scripts on `main` to trigger an
-   update.
-3. Merging the Release pull request triggers the publish workflow. Since the change files have
-   been deleted, it publishes all unpublished packages to npm, then creates Git tags and GitHub
-   releases for the packages that were published.
+1. Changes are pushed to `main` with change files in `packages/<package>/.changes/`
+2. A Release pull request is automatically opened, or updated if one exists
+   - It contains updated `package.json` versions, updated `CHANGELOG.md` files, and deleted change files
+   - Do not edit this pull request manually
+   - Modify the change files or release scripts on `main` to trigger an update
+3. Merging the Release pull request triggers the publish workflow
+   - Since the change files have been deleted, it publishes all unpublished packages to npm
+   - It then creates Git tags and GitHub releases for the packages that were published
 
 ### Manual Versioning
 

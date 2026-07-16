@@ -40,7 +40,7 @@ jobs:
 
           while IFS= read -r file; do
             case "$file" in
-              .prettierignore|.prettierrc|.prettierrc.json|.prettierrc.yml|.prettierrc.yaml|.prettierrc.js|.prettierrc.cjs|.prettierrc.mjs|*.js|*.jsx|*.cjs|*.mjs|*.ts|*.tsx|*.cts|*.mts|*.json|*.jsonc|*.md|*.mdx|*.yaml|*.yml|*.css|*.scss|*.html)
+              .oxfmtrc|.oxfmtrc.json|.oxfmtrc.jsonc|.oxfmtrc.js|.oxfmtrc.cjs|.oxfmtrc.mjs|oxfmt.config.ts|oxfmt.config.mts|oxfmt.config.cts|oxfmt.config.js|oxfmt.config.mjs|oxfmt.config.cjs|*.js|*.jsx|*.cjs|*.mjs|*.ts|*.tsx|*.cts|*.mts|*.json|*.jsonc|*.md|*.mdx|*.yaml|*.yml|*.toml|*.css|*.scss|*.html)
                 echo "Formatting-relevant change: $file"
                 echo "should_run=true" >> "$GITHUB_OUTPUT"
                 exit 0

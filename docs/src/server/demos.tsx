@@ -1,11 +1,11 @@
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import * as url from 'node:url'
-import * as prettier from 'prettier'
 import type { RemixNode } from 'remix/ui'
 import { codeToHtml } from 'shiki'
 import ts from 'typescript'
 import { hasRemixPackage, mapToRemixPackage } from '../generate/manifest.ts'
+import { formatWithOxfmt } from '../shared/format.ts'
 import type { DocsAssetServer } from './asset-server.ts'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
@@ -122,12 +122,7 @@ async function getDemoFile(filePath: string, assetServer: DocsAssetServer): Prom
 }
 
 async function formatDemoSource(source: string, filePath: string): Promise<string> {
-  let config = await prettier.resolveConfig(filePath)
-  return await prettier.format(source, {
-    ...config,
-    filepath: filePath,
-    printWidth: 80,
-  })
+  return await formatWithOxfmt(filePath, source, { printWidth: 80 })
 }
 
 function getDemoPackageSpecifier(

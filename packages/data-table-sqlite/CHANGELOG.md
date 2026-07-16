@@ -43,7 +43,6 @@ This is the changelog for [`data-table-sqlite`](https://github.com/remix-run/rem
 - BREAKING CHANGE: Removed adapter options
 
   **Affected APIs**
-
   - `SqliteDatabaseAdapterOptions` type: removed
   - `createSqliteDatabaseAdapter` function: `options` arg removed
   - `SqliteDatabaseAdapter` constructor: `options` arg removed

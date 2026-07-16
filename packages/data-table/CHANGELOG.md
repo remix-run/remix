@@ -11,14 +11,12 @@ This is the changelog for [`data-table`](https://github.com/remix-run/remix/tree
   Migrations are directories named `YYYYMMDDHHmmss_<slug>/` containing a hand-written `up.sql` (required) and an optional `down.sql`. The runner sends each script to the adapter as a single multi-statement query and journals it on success.
 
   **Removed APIs (`remix/data-table/migrations`)**
-
   - `createMigration`
   - `MigrationContext`, `MigrationSchema`, `AlterTableBuilder`, `CreateMigrationInput`, `Migration`, `KeyColumns`, `TableInput`
   - `parseMigrationFilename` (replaced by `parseMigrationDirectoryName`)
   - The `column` / `ColumnBuilder` re-exports from `remix/data-table/migrations` (still available from the main `remix/data-table` entry)
 
   **Changed APIs**
-
   - `MigrationDescriptor` is now `{ id, name, up: string, down?: string, transaction?, path? }`. Checksums are always `sha256(up)`, computed by the runner.
   - `MigrateResult.sql` is `string[]` instead of `SqlStatement[]`
   - `loadMigrations(directory)` scans folder-per-migration layouts (not `.ts` files) and returns descriptors with SQL strings
@@ -83,14 +81,12 @@ This is the changelog for [`data-table`](https://github.com/remix-run/remix/tree
 - `@remix-run/data-table` now exports `Database` as the runtime class instead of separating the runtime implementation from a structural `Database` type. You can construct databases directly with `new Database(adapter, options)` or keep using `createDatabase(adapter, options)`, which now delegates to the class constructor.
 
 - Add a first-class migration system under `remix/data-table/migrations` with:
-
   - `createMigration(...)` and timestamp-based migration loading
   - chainable `column` builders plus schema APIs for create, alter, drop, and index work
   - `createMigrationRunner(adapter, migrations)` for `up`, `down`, `status`, and `dryRun`
   - migration journaling, checksum tracking, and optional Node loading from `remix/data-table/migrations/node`
 
   Migration callbacks now use split handles: `{ db, schema }`.
-
   - `db` is the immediate data runtime (`query/create/update/delete/exec/transaction`)
   - `schema` owns migration operations like `createTable`, `alterTable`, `plan`, and introspection
 
