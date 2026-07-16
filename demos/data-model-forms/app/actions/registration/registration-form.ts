@@ -1,7 +1,7 @@
 import * as s from 'remix/data-schema'
 import { createForm } from 'remix/data-schema/form'
 
-import { Account } from '../../data/account.ts'
+import { Account } from '../../data/account-schema.ts'
 
 export const RegistrationForm = createForm(Account, {
   fields: {

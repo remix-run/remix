@@ -1,7 +1,7 @@
 import * as path from 'node:path'
 import { createContextKey, type Middleware } from 'remix/router'
 
-import { assetServer } from '../utils/assets.ts'
+import { assetServer } from '../assets.ts'
 
 export interface AssetEntryValue {
   scriptSrc: string
