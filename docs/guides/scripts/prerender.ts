@@ -3,11 +3,11 @@ import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as util from 'node:util'
 
-import { crawl } from '../../api/src/prerender/crawl.ts'
-import { writeResult } from '../../api/src/prerender/utils.ts'
 import { router } from '../app/router.ts'
 import { routes } from '../app/routes.ts'
 import { assetServer } from '../app/utils/assets.ts'
+import { crawl } from 'remix-docs-shared/prerender/crawl'
+import { writeResult } from 'remix-docs-shared/prerender/utils'
 const guidesDir = path.resolve(import.meta.dirname, '..')
 const publicDir = path.join(guidesDir, 'public')
 const defaultOutputDir = path.join(guidesDir, 'build', 'site')

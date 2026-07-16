@@ -1,0 +1,20 @@
+{
+  "name": "remix-docs-shared",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./prerender/crawl": "./prerender/crawl.ts",
+    "./prerender/utils": "./prerender/utils.ts"
+  },
+  "dependencies": {
+    "remix": "workspace:^"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:"
+  },
+  "scripts": {
+    "test": "remix test",
+    "typecheck": "tsc --noEmit"
+  }
+}

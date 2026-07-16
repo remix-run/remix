@@ -2,6 +2,7 @@
   "compilerOptions": {
     "strict": true,
     "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["node"],
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "target": "ESNext",
@@ -9,13 +10,8 @@
     "rewriteRelativeImportExtensions": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
-    "jsx": "react-jsx",
-    "jsxImportSource": "remix/ui",
-    "paths": {
-      "*": ["./*"],
-      "remix/ui/jsx-runtime": ["../../packages/remix/src/ui/jsx-runtime.ts"],
-      "remix/ui/jsx-dev-runtime": ["../../packages/remix/src/ui/jsx-dev-runtime.ts"]
-    }
+    "skipLibCheck": true,
+    "noEmit": true
   },
-  "exclude": ["dist"]
+  "exclude": ["dist", "prerender/bench"]
 }
