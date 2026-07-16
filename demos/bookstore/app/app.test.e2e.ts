@@ -3,13 +3,13 @@ import { createTestServer } from 'remix/node-fetch-server/test'
 import { describe, it } from 'remix/test'
 import type { Locator, Page } from 'playwright'
 import { createBookstoreRouter } from './router.ts'
-import { db, migrator, seed } from './db.ts'
+import { db, getMigrations, seed } from './db.ts'
 import { books } from './data/schema.ts'
 import { routes } from './routes.ts'
 
 const router = createBookstoreRouter()
 
-await migrator.reset(db, { seed })
+await db.reset({ migrations: await getMigrations(), seed })
 
 describe('e2e', () => {
   it('adds to cart', async (t) => {

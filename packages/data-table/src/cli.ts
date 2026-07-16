@@ -2,12 +2,12 @@ import { pathToFileURL } from 'node:url'
 import { resolve } from 'node:path'
 
 import type { Database } from './lib/database.ts'
-import type { Migrator } from './lib/migrations.ts'
+import type { GetMigrations, MigrateOptions, Seed } from './lib/migrations.ts'
 
 type DbModule = {
   db: Database
-  migrator: Migrator
-  seed?: (db: Database) => Promise<void>
+  getMigrations: GetMigrations
+  seed?: Seed
 }
 
 type DbCommandOptions = {
@@ -15,28 +15,22 @@ type DbCommandOptions = {
   cwd?: string
 }
 
-export async function create(options: DbCommandOptions = {}): Promise<number> {
+export async function wipe(options: DbCommandOptions = {}): Promise<number> {
   let { db } = await loadDbModule(options.cwd)
-  await db.create()
-  return 0
-}
-
-export async function drop(options: DbCommandOptions = {}): Promise<number> {
-  let { db } = await loadDbModule(options.cwd)
-  await db.drop()
+  await db.wipe()
   return 0
 }
 
 export async function migrate(options: DbCommandOptions = {}): Promise<number> {
   let argv = options.argv ?? []
-  let { db, migrator } = await loadDbModule(options.cwd)
-  await migrator.migrate(db, parseMigrateOptions(argv))
+  let { db, getMigrations } = await loadDbModule(options.cwd)
+  await db.migrate(await getMigrations(), parseMigrateOptions(argv))
   return 0
 }
 
 export async function reset(options: DbCommandOptions = {}): Promise<number> {
-  let { db, migrator, seed } = await loadDbModule(options.cwd)
-  await migrator.reset(db, { seed })
+  let { db, getMigrations, seed } = await loadDbModule(options.cwd)
+  await db.reset({ migrations: await getMigrations(), seed })
   return 0
 }
 
@@ -52,8 +46,8 @@ export async function seed(options: DbCommandOptions = {}): Promise<number> {
 }
 
 export async function status(options: DbCommandOptions = {}): Promise<number> {
-  let { db, migrator } = await loadDbModule(options.cwd)
-  let entries = await migrator.status(db)
+  let { db, getMigrations } = await loadDbModule(options.cwd)
+  let entries = await db.migrationStatus(await getMigrations())
 
   for (let entry of entries) {
     console.log(entry.id + ' ' + entry.name + ' ' + entry.status)
@@ -70,14 +64,14 @@ async function loadDbModule(cwd = process.cwd()): Promise<DbModule> {
     throw new Error('app/db.ts must export db')
   }
 
-  if (!mod.migrator) {
-    throw new Error('app/db.ts must export migrator')
+  if (!mod.getMigrations) {
+    throw new Error('app/db.ts must export getMigrations')
   }
 
   return mod as DbModule
 }
 
-function parseMigrateOptions(argv: string[]): { to?: string } {
+function parseMigrateOptions(argv: string[]): MigrateOptions {
   let toIndex = argv.indexOf('--to')
 
   if (toIndex === -1) {

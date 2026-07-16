@@ -105,6 +105,21 @@ export type MigrationRegistry = {
 }
 
 /**
+ * Migration collection accepted by `db.migrate(...)` and `db.migrationStatus(...)`.
+ */
+export type Migrations = MigrationDescriptor[] | MigrationRegistry
+
+/**
+ * Lazy migration loader exported by app database modules.
+ */
+export type GetMigrations = () => Migrations | Promise<Migrations>
+
+/**
+ * Database seed function exported by app database modules.
+ */
+export type Seed = (db: Database) => void | Promise<void>
+
+/**
  * Options for creating a migration runner.
  */
 export type MigrationRunnerOptions = {
@@ -122,14 +137,4 @@ export type MigrationRunner = {
   up(options?: MigrateOptions): Promise<MigrateResult>
   down(options?: MigrateOptions): Promise<MigrateResult>
   status(): Promise<MigrationStatusEntry[]>
-}
-
-export type MigratorResetOptions = {
-  seed?: (db: Database) => Promise<void>
-}
-
-export type Migrator = {
-  migrate(db: Database, options?: { to?: string }): Promise<MigrateResult>
-  reset(db: Database, options?: MigratorResetOptions): Promise<void>
-  status(db: Database): Promise<MigrationStatusEntry[]>
 }

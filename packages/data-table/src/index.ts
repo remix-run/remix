@@ -162,17 +162,18 @@ export type {
 } from './lib/database.ts'
 export { createDatabase, Database } from './lib/database.ts'
 export type {
+  GetMigrations,
   MigrateOptions,
   MigrateResult,
   MigrationDescriptor,
   MigrationRegistry,
   MigrationRunner,
   MigrationRunnerOptions,
+  Migrations,
   MigrationStatus,
   MigrationStatusEntry,
-  Migrator,
-  MigratorResetOptions,
+  Seed,
 } from './lib/migrations.ts'
-export { createMigrator, createMigrationRunner } from './lib/migrations/runner.ts'
+export { createMigrationRunner } from './lib/migrations/runner.ts'
 export type { AnyQuery } from './lib/query.ts'
 export { Query, query } from './lib/query.ts'

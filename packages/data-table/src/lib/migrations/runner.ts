@@ -1,5 +1,4 @@
 import type { DatabaseAdapter, TransactionToken } from '../adapter.ts'
-import type { Database } from '../database.ts'
 import type {
   MigrateOptions,
   MigrateResult,
@@ -9,8 +8,6 @@ import type {
   MigrationRegistry,
   MigrationRunner,
   MigrationRunnerOptions,
-  Migrator,
-  MigratorResetOptions,
   MigrationStatus,
   MigrationStatusEntry,
   MigrationTransactionMode,
@@ -338,29 +335,6 @@ export function createMigrationRunner(
       }
 
       return statuses
-    },
-  }
-}
-
-export function createMigrator(
-  migrations: MigrationDescriptor[] | MigrationRegistry,
-  options: MigrationRunnerOptions = {},
-): Migrator {
-  return {
-    async migrate(db: Database, migrateOptions: { to?: string } = {}): Promise<MigrateResult> {
-      let runner = createMigrationRunner(db.adapter, migrations, options)
-      return runner.up(migrateOptions.to === undefined ? {} : { to: migrateOptions.to })
-    },
-    async reset(db: Database, resetOptions: MigratorResetOptions = {}): Promise<void> {
-      await db.drop()
-      await db.create()
-      let runner = createMigrationRunner(db.adapter, migrations, options)
-      await runner.up()
-      await resetOptions.seed?.(db)
-    },
-    async status(db: Database): Promise<MigrationStatusEntry[]> {
-      let runner = createMigrationRunner(db.adapter, migrations, options)
-      return runner.status()
     },
   }
 }

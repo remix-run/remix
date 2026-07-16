@@ -12,16 +12,12 @@ export async function runDbCommand(argv: string[], context: CliContext): Promise
   let dbCli = await import('@remix-run/data-table/cli')
   let options = { argv: rest, cwd: context.cwd }
 
-  if (command === 'create') {
-    return dbCli.create(options)
-  }
-
-  if (command === 'drop') {
-    return dbCli.drop(options)
-  }
-
   if (command === 'migrate') {
     return dbCli.migrate(options)
+  }
+
+  if (command === 'wipe') {
+    return dbCli.wipe(options)
   }
 
   if (command === 'reset') {
@@ -44,8 +40,7 @@ export function getDbCommandHelpText(target: NodeJS.WriteStream = process.stdout
     {
       description: 'Manage the current app database.',
       examples: [
-        'remix db create',
-        'remix db drop',
+        'remix db wipe',
         'remix db migrate',
         'remix db migrate --to 20260715123000_add_users',
         'remix db status',
@@ -53,8 +48,7 @@ export function getDbCommandHelpText(target: NodeJS.WriteStream = process.stdout
         'remix db reset',
       ],
       usage: [
-        'remix db create',
-        'remix db drop',
+        'remix db wipe',
         'remix db migrate [--to <migration>]',
         'remix db status',
         'remix db seed',

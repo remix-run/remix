@@ -26,6 +26,15 @@ import type {
 } from './query.ts'
 import { bindQueryRuntime, query as createQuery } from './query.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
+import type {
+  MigrateOptions,
+  MigrateResult,
+  Migrations,
+  MigrationRunnerOptions,
+  Seed,
+  MigrationStatusEntry,
+} from './migrations.ts'
+import { createMigrationRunner } from './migrations/runner.ts'
 import type { SqlStatement } from './sql.ts'
 import { isSqlStatement, rawSql } from './sql.ts'
 import type {
@@ -371,12 +380,35 @@ export class Database implements QueryExecutionContext {
     return this.#adapter
   }
 
-  async drop(): Promise<void> {
-    if (!this.#adapter.drop) {
-      throw new DataTableQueryError('Database adapter does not support drop()')
+  async wipe(): Promise<void> {
+    if (!this.#adapter.wipe) {
+      throw new DataTableQueryError('Database adapter does not support wipe()')
     }
 
-    await this.#adapter.drop()
+    await this.#adapter.wipe()
+  }
+
+  async migrate(
+    migrations: Migrations,
+    options?: MigrateOptions & MigrationRunnerOptions,
+  ): Promise<MigrateResult> {
+    let { journalTable, ...migrateOptions } = options ?? {}
+    let runner = createMigrationRunner(this.#adapter, migrations, { journalTable })
+    return runner.up(migrateOptions)
+  }
+
+  async migrationStatus(
+    migrations: Migrations,
+    options: MigrationRunnerOptions = {},
+  ): Promise<MigrationStatusEntry[]> {
+    let runner = createMigrationRunner(this.#adapter, migrations, options)
+    return runner.status()
+  }
+
+  async reset(args: { migrations: Migrations; seed?: Seed }): Promise<void> {
+    await this.wipe()
+    await this.migrate(args.migrations)
+    await args.seed?.(this)
   }
 
   now(): unknown {
@@ -405,7 +437,6 @@ export class Database implements QueryExecutionContext {
     >
   }
 
-  create(): Promise<void>
   create<table extends AnyTable>(
     table: table,
     values: Partial<TableRow<table>>,
@@ -420,19 +451,10 @@ export class Database implements QueryExecutionContext {
     table extends AnyTable,
     relations extends RelationMapForSourceName<TableName<table>> = {},
   >(
-    table?: table,
+    table: table,
     values?: Partial<TableRow<table>>,
     options?: CreateResultOptions | CreateRowOptions<table, relations>,
   ): Promise<void | WriteResult | TableRowWith<table, LoadedRelationMap<relations>>> {
-    if (table === undefined) {
-      if (!this.#adapter.create) {
-        throw new DataTableQueryError('Database adapter does not support create()')
-      }
-
-      await this.#adapter.create()
-      return
-    }
-
     if (values === undefined) {
       throw new DataTableQueryError('create(table, values) requires values')
     }

@@ -1,5 +1,5 @@
 import * as path from 'node:path'
-import { createDatabase, createMigrator } from 'remix/data-table'
+import { createDatabase, type GetMigrations, type Seed } from 'remix/data-table'
 import { loadMigrations } from 'remix/data-table/migrations/node'
 import { createSqliteDatabaseAdapter } from 'remix/data-table/sqlite'
 
@@ -18,11 +18,10 @@ export const db = createDatabase(
   }),
 )
 
-export const migrator = createMigrator(
-  await loadMigrations(path.join(import.meta.dirname, '../db/migrations')),
-)
+export const getMigrations: GetMigrations = () =>
+  loadMigrations(path.join(import.meta.dirname, '../db/migrations'))
 
-export async function seed(): Promise<void> {
+export const seed: Seed = async (db) => {
   if ((await db.count(users)) > 0) {
     return
   }

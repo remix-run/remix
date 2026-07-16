@@ -10,7 +10,11 @@ import type {
 } from '@remix-run/data-table'
 import { getTablePrimaryKey } from '@remix-run/data-table'
 import pg from 'pg'
-import type { Client as PostgresClient, Pool as PostgresPool, PoolClient as PostgresPoolClient } from 'pg'
+import type {
+  Client as PostgresClient,
+  Pool as PostgresPool,
+  PoolClient as PostgresPoolClient,
+} from 'pg'
 
 import { compilePostgresOperation } from './sql-compiler.ts'
 
@@ -50,7 +54,10 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   #transactions = new Map<string, TransactionState>()
   #transactionCounter = 0
 
-  constructor(config: PostgresPoolConfig | PostgresQueryable, options: PostgresAdapterOptions = {}) {
+  constructor(
+    config: PostgresPoolConfig | PostgresQueryable,
+    options: PostgresAdapterOptions = {},
+  ) {
     if (isPostgresQueryable(config)) {
       this.#client = config
     } else {
@@ -275,29 +282,8 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
    * Acquires the postgres migration lock.
    * @returns A promise that resolves when the lock is acquired.
    */
-  async create(): Promise<void> {
-    let config = this.#configOrThrow('create')
-    let database = resolvePostgresDatabaseName(config)
-    let maintenance = new pg.Client(this.#maintenanceConfig())
-    await maintenance.connect()
-
-    try {
-      let result = await maintenance.query('select 1 from pg_database where datname = $1', [database])
-
-      if (result.rowCount === 0) {
-        await maintenance.query(
-          'create database ' + quoteIdentifier(database) + ' template ' + quoteIdentifier(this.#template),
-        )
-      }
-    } finally {
-      await maintenance.end()
-    }
-
-    await this.#replacePool()
-  }
-
-  async drop(): Promise<void> {
-    let config = this.#configOrThrow('drop')
+  async wipe(): Promise<void> {
+    let config = this.#configOrThrow('wipe')
     let database = resolvePostgresDatabaseName(config)
     await this.#closePool()
     let maintenance = new pg.Client(this.#maintenanceConfig())
@@ -309,9 +295,17 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
         [database],
       )
       await maintenance.query('drop database if exists ' + quoteIdentifier(database))
+      await maintenance.query(
+        'create database ' +
+          quoteIdentifier(database) +
+          ' template ' +
+          quoteIdentifier(this.#template),
+      )
     } finally {
       await maintenance.end()
     }
+
+    await this.#replacePool()
   }
 
   async acquireMigrationLock(): Promise<void> {
@@ -401,7 +395,8 @@ function isPostgresPool(client: PostgresQueryable): client is PostgresPool {
 }
 
 function resolvePostgresDatabaseName(config: PostgresPoolConfig): string {
-  let database = config?.database ?? resolveDatabaseNameFromConnectionString(config?.connectionString)
+  let database =
+    config?.database ?? resolveDatabaseNameFromConnectionString(config?.connectionString)
 
   if (database) {
     return database
@@ -410,7 +405,9 @@ function resolvePostgresDatabaseName(config: PostgresPoolConfig): string {
   return process.env.PGDATABASE ?? 'postgres'
 }
 
-function resolveDatabaseNameFromConnectionString(connectionString: string | undefined): string | undefined {
+function resolveDatabaseNameFromConnectionString(
+  connectionString: string | undefined,
+): string | undefined {
   if (!connectionString) {
     return undefined
   }

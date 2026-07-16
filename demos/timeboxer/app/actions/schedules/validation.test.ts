@@ -3,11 +3,11 @@ import { describe, it } from 'remix/test'
 
 process.env.SESSION_SECRET = 'test-session-secret'
 
-const { db, migrator, seed } = await import('../../db.ts')
+const { db, getMigrations, seed } = await import('../../db.ts')
 const { router } = await import('../../router.ts')
 const { routes } = await import('../../routes.ts')
 
-await migrator.reset(db, { seed })
+await db.reset({ migrations: await getMigrations(), seed })
 
 describe('schedule input validation', () => {
   it('rejects invalid JSON request bodies', async () => {
@@ -471,4 +471,3 @@ function mergeCookie(currentCookie: string, headers: Headers) {
 
   return [...existingPairs, cookiePair].join('; ')
 }
-

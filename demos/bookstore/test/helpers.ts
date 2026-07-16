@@ -2,11 +2,11 @@ import { createCookie } from 'remix/cookie'
 import { SetCookie, Cookie } from 'remix/headers'
 import { createMemorySessionStorage } from 'remix/session-storage/memory'
 
-import { db, migrator, seed } from '../app/db.ts'
+import { db, getMigrations, seed } from '../app/db.ts'
 import { createBookstoreRouter } from '../app/router.ts'
 
 export async function createTestRouter() {
-  await migrator.reset(db, { seed })
+  await db.reset({ migrations: await getMigrations(), seed })
 
   let sessionCookie = createCookie('session', {
     secrets: ['s3cr3t-k3y-for-d3mo'],

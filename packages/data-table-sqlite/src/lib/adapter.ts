@@ -215,26 +215,19 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    * @param options Transaction options.
    * @returns Transaction token.
    */
-  async create(): Promise<void> {
-    if (!this.#config) {
-      return
-    }
-
-    await mkdir(dirname(this.#config.filename), { recursive: true })
-    let database = new SqliteDatabaseConstructor(this.#config.filename)
-    database.close?.()
-    this.#replaceDatabase()
-  }
-
-  async drop(): Promise<void> {
+  async wipe(): Promise<void> {
     this.#transactions.clear()
     this.#database.close?.()
 
     if (!this.#config) {
+      this.#replaceDatabase()
       return
     }
 
+    await mkdir(dirname(this.#config.filename), { recursive: true })
     await rm(this.#config.filename, { force: true })
+    let database = new SqliteDatabaseConstructor(this.#config.filename)
+    database.close?.()
     this.#replaceDatabase()
   }
 
@@ -337,7 +330,9 @@ export function createSqliteDatabaseAdapter(input: SqliteAdapterConfig): SqliteD
   return new SqliteDatabaseAdapter(input)
 }
 
-function isSqliteAdapterConfig(input: SqliteDatabase | SqliteAdapterConfig): input is SqliteAdapterConfig {
+function isSqliteAdapterConfig(
+  input: SqliteDatabase | SqliteAdapterConfig,
+): input is SqliteAdapterConfig {
   return 'filename' in input && typeof input.filename === 'string'
 }
 

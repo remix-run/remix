@@ -60,7 +60,10 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
   #transactions = new Map<string, TransactionState>()
   #transactionCounter = 0
 
-  constructor(config: string | MysqlPoolOptions | MysqlQueryable, options: MysqlAdapterOptions = {}) {
+  constructor(
+    config: string | MysqlPoolOptions | MysqlQueryable,
+    options: MysqlAdapterOptions = {},
+  ) {
     if (isMysqlQueryable(config)) {
       this.#client = config
     } else {
@@ -311,13 +314,16 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
    * Acquires the mysql migration lock.
    * @returns A promise that resolves when the lock is acquired.
    */
-  async create(): Promise<void> {
-    let config = this.#configOrThrow('create')
+  async wipe(): Promise<void> {
+    let config = this.#configOrThrow('wipe')
     let database = resolveMysqlDatabaseName(config)
+    await this.#closePool()
     let connection = await createMysqlConnection(toMysqlServerConfig(config))
 
     try {
-      let sql = 'create database if not exists ' + quoteIdentifier(database)
+      await connection.query('drop database if exists ' + quoteIdentifier(database))
+
+      let sql = 'create database ' + quoteIdentifier(database)
 
       if (this.#characterSet) {
         sql += ' character set ' + this.#characterSet
@@ -333,19 +339,6 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
     }
 
     await this.#replacePool()
-  }
-
-  async drop(): Promise<void> {
-    let config = this.#configOrThrow('drop')
-    let database = resolveMysqlDatabaseName(config)
-    await this.#closePool()
-    let connection = await createMysqlConnection(toMysqlServerConfig(config))
-
-    try {
-      await connection.query('drop database if exists ' + quoteIdentifier(database))
-    } finally {
-      await connection.end()
-    }
   }
 
   async acquireMigrationLock(): Promise<void> {
@@ -432,7 +425,9 @@ function createMysqlPool(config: string | MysqlPoolOptions): MysqlPool {
 }
 
 function createMysqlConnection(config: string | MysqlPoolOptions): Promise<MysqlConnection> {
-  return typeof config === 'string' ? mysql.createConnection(config) : mysql.createConnection(config)
+  return typeof config === 'string'
+    ? mysql.createConnection(config)
+    : mysql.createConnection(config)
 }
 
 function isMysqlPool(client: MysqlQueryable): client is MysqlPool {

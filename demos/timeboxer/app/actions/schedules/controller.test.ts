@@ -6,8 +6,8 @@ process.env.SESSION_SECRET = 'test-session-secret'
 
 const { router } = await import('../../router.ts')
 const { routes } = await import('../../routes.ts')
-const { db, migrator, seed } = await import('../../db.ts')
-await migrator.reset(db, { seed })
+const { db, getMigrations, seed } = await import('../../db.ts')
+await db.reset({ migrations: await getMigrations(), seed })
 const { schedules } = await import('../../data/schema.ts')
 
 describe('schedule endpoints', () => {
@@ -553,4 +553,3 @@ function mergeCookie(currentCookie: string, headers: Headers) {
 
   return [...existingPairs, cookiePair].join('; ')
 }
-
