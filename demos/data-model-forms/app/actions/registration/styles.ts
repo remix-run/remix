@@ -86,6 +86,11 @@ export const panel = css({
   padding: 'clamp(1.25rem, 4vw, 2rem)',
 })
 
+export const workspace = css({
+  display: 'grid',
+  gap: '1.5rem',
+})
+
 export const panelHeader = css({
   display: 'flex',
   alignItems: 'end',
@@ -211,34 +216,71 @@ export const submitButton = css({
   },
 })
 
-export const successPage = css({
+export const databasePanel = css({
+  boxShadow: 'none',
+})
+
+export const databaseHeader = css({
+  display: 'flex',
+  alignItems: 'end',
+  justifyContent: 'space-between',
+  gap: '1rem',
+})
+
+export const databaseHeading = css({
+  marginBlock: '0.25rem 0',
+  fontSize: '1.25rem',
+  letterSpacing: '-0.025em',
+})
+
+export const databaseCount = css({
+  margin: 0,
+  color: color.textMuted,
+  fontSize: '0.75rem',
+  fontWeight: 650,
+})
+
+export const databaseDescription = css({
+  marginBlock: '1rem 0',
+  color: color.textSecondary,
+  fontSize: '0.8125rem',
+  lineHeight: 1.55,
+})
+
+export const emptyDatabase = css({
+  marginBlock: '1.5rem 0',
+  border: `1px dashed ${color.borderStrong}`,
+  borderRadius: '0.5rem',
+  color: color.textMuted,
+  padding: '1.25rem',
+  fontSize: '0.875rem',
+  textAlign: 'center',
+})
+
+export const accountList = css({
   display: 'grid',
-  minHeight: '100vh',
-  placeItems: 'center',
-  width: 'min(100% - 2rem, 42rem)',
-  margin: '0 auto',
-  paddingBlock: '3rem',
+  gap: '1rem',
+  marginBlock: '1.5rem 0',
+  padding: 0,
+  listStyle: 'none',
 })
 
-export const successPanel = css({
-  width: '100%',
+export const accountItem = css({
   border: `1px solid ${color.border}`,
-  borderRadius: '0.75rem',
-  background: color.surface,
-  boxShadow: '0 1rem 3rem rgb(32 32 30 / 0.08)',
-  padding: 'clamp(1.5rem, 5vw, 3rem)',
+  borderRadius: '0.5rem',
+  background: color.surfaceMuted,
+  padding: '1rem',
 })
 
-export const successHeading = css({
-  marginBlock: '0.75rem 1rem',
-  fontSize: 'clamp(2rem, 7vw, 3.5rem)',
-  letterSpacing: '-0.05em',
-  lineHeight: 1,
+export const accountHeading = css({
+  margin: 0,
+  fontSize: '1rem',
+  letterSpacing: '-0.015em',
 })
 
 export const resultList = css({
   display: 'grid',
-  marginBlock: '2rem',
+  marginBlock: '1rem 0',
   borderBlockStart: `1px solid ${color.border}`,
 })
 
@@ -267,22 +309,4 @@ export const resultValue = css({
   overflowWrap: 'anywhere',
   color: color.text,
   fontSize: '0.875rem',
-})
-
-export const tryAgainLink = css({
-  display: 'inline-flex',
-  border: `1px solid ${color.borderStrong}`,
-  borderRadius: '0.375rem',
-  color: color.text,
-  padding: '0.625rem 0.875rem',
-  fontSize: '0.875rem',
-  fontWeight: 650,
-  textDecoration: 'none',
-  '&:hover': {
-    background: color.surfaceMuted,
-  },
-  '&:focus-visible': {
-    outline: `0.125rem solid ${color.accent}`,
-    outlineOffset: '0.125rem',
-  },
 })

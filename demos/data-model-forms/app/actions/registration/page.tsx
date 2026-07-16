@@ -1,22 +1,24 @@
 import type { FormFailure } from 'remix/data-schema/form'
+import type { TableRow } from 'remix/data-table'
 import type { Handle, RemixNode } from 'remix/ui'
 
 import {
   RegistrationFields,
   type RegistrationSubmission,
 } from '../../assets/registration-fields.tsx'
+import type { accounts } from '../../data/account.ts'
 import type { AssetEntryValue } from '../../middleware/asset-entry.ts'
-import { routes } from '../../routes.ts'
 import * as styles from './styles.ts'
 
 interface RegistrationPageProps {
   assetEntry: AssetEntryValue
+  storedAccounts: Array<TableRow<typeof accounts>>
   submission?: FormFailure
 }
 
 export function RegistrationPage(handle: Handle<RegistrationPageProps>) {
   return () => {
-    let { assetEntry, submission } = handle.props
+    let { assetEntry, storedAccounts, submission } = handle.props
 
     return (
       <Document assetEntry={assetEntry} title="Model-backed forms">
@@ -35,9 +37,12 @@ export function RegistrationPage(handle: Handle<RegistrationPageProps>) {
             </ul>
           </header>
 
-          <RegistrationFields
-            submission={submission ? getRegistrationSubmission(submission) : undefined}
-          />
+          <div mix={styles.workspace}>
+            <RegistrationFields
+              submission={submission ? getRegistrationSubmission(submission) : undefined}
+            />
+            <StoredAccounts accounts={storedAccounts} />
+          </div>
         </main>
       </Document>
     )
@@ -56,45 +61,48 @@ function getRegistrationSubmission(submission: FormFailure): RegistrationSubmiss
   }
 }
 
-interface RegistrationSuccessPageProps {
-  assetEntry: AssetEntryValue
-  registration: {
-    displayName: string
-    email: string
-    age: number | undefined
-    website: string | undefined
-    terms: boolean
-  }
+interface StoredAccountsProps {
+  accounts: ReadonlyArray<TableRow<typeof accounts>>
 }
 
-export function RegistrationSuccessPage(handle: Handle<RegistrationSuccessPageProps>) {
+function StoredAccounts(handle: Handle<StoredAccountsProps>) {
   return () => {
-    let { assetEntry, registration } = handle.props
+    let { accounts } = handle.props
 
     return (
-      <Document assetEntry={assetEntry} title="Valid account">
-        <main mix={styles.successPage}>
-          <section aria-labelledby="success-title" mix={styles.successPanel}>
-            <p mix={styles.eyebrow}>Server validation passed</p>
-            <h1 id="success-title" mix={styles.successHeading}>
-              The payload is typed and ready to use.
-            </h1>
-            <p mix={styles.lede}>
-              The password was validated but is deliberately not rendered in this response.
-            </p>
-            <dl mix={styles.resultList}>
-              <Result label="Display name" value={registration.displayName} />
-              <Result label="Email" value={registration.email} />
-              <Result label="Age" value={registration.age?.toString() ?? 'Not provided'} />
-              <Result label="Website" value={registration.website ?? 'Not provided'} />
-              <Result label="Terms accepted" value={registration.terms ? 'Yes' : 'No'} />
-            </dl>
-            <a href={routes.registration.index.href()} mix={styles.tryAgainLink}>
-              Try another submission
-            </a>
-          </section>
-        </main>
-      </Document>
+      <section aria-labelledby="stored-accounts-title" mix={[styles.panel, styles.databasePanel]}>
+        <div mix={styles.databaseHeader}>
+          <div>
+            <p mix={styles.step}>Persistent data layer</p>
+            <h2 id="stored-accounts-title" mix={styles.databaseHeading}>
+              Stored in SQLite
+            </h2>
+          </div>
+          <p mix={styles.databaseCount}>
+            {accounts.length} {accounts.length === 1 ? 'account' : 'accounts'}
+          </p>
+        </div>
+        <p mix={styles.databaseDescription}>
+          This in-memory database survives requests for the lifetime of this demo process. Passwords
+          and the UI-only terms value are intentionally not stored.
+        </p>
+        {accounts.length === 0 ? (
+          <p mix={styles.emptyDatabase}>No accounts have been stored yet.</p>
+        ) : (
+          <ol mix={styles.accountList}>
+            {accounts.map((account) => (
+              <li key={account.id} mix={styles.accountItem}>
+                <h3 mix={styles.accountHeading}>{account.displayName}</h3>
+                <dl mix={styles.resultList}>
+                  <Result label="Email" value={account.email} />
+                  <Result label="Age" value={account.age?.toString() ?? 'Not provided'} />
+                  <Result label="Website" value={account.website ?? 'Not provided'} />
+                </dl>
+              </li>
+            ))}
+          </ol>
+        )}
+      </section>
     )
   }
 }
