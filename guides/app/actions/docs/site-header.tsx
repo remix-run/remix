@@ -59,13 +59,24 @@ export function SiteHeader() {
         <PrimaryNavigationLinks />
       </nav>
 
-      <pagefind-modal-trigger
+      <button
         id="docs-search-button"
         class="docs-search-button"
-        data-key="pagefind-modal-trigger"
-        placeholder="Search"
-        rmx-preserve-dom
-      ></pagefind-modal-trigger>
+        type="button"
+        aria-label="Search"
+        aria-haspopup="dialog"
+        aria-expanded="false"
+        aria-keyshortcuts="Meta+K Control+K"
+      >
+        <span class="docs-search-button__label">
+          <Icon name="search" />
+          <span>Search</span>
+        </span>
+        <span class="docs-search-button__shortcut" aria-hidden="true">
+          <kbd>⌘</kbd>
+          <kbd>K</kbd>
+        </span>
+      </button>
     </header>
   )
 }

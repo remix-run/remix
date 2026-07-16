@@ -1,5 +1,4 @@
 /* Pagefind owns the search behavior; these overrides align its modal with the guide shell. */
-.docs-search-button,
 pagefind-modal {
   --pf-icon-search: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none'%3E%3Cpath d='M11.285 11.36L13.6004 13.6M12.8537 7.62669C12.8537 10.5133 10.5137 12.8534 7.62706 12.8534C4.74045 12.8534 2.40039 10.5133 2.40039 7.62669C2.40039 4.74008 4.74045 2.40002 7.62706 2.40002C10.5137 2.40002 12.8537 4.74008 12.8537 7.62669Z' stroke='black' stroke-linecap='round'/%3E%3C/svg%3E");
 }
@@ -105,17 +104,18 @@ pagefind-modal {
 
 :is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-modal-footer-key,
 :is(*, #\#):is(*, #\#):is(*, #\#) pagefind-modal .pf-keyboard-key {
-  border-color: var(--rmx-color-border-default);
+  min-width: 16px;
+  height: 16px;
+  padding-inline: 3px;
+  border: 1px solid rgb(0 0 0 / 2%);
   border-radius: var(--rmx-radius-sm);
-  background: var(--rmx-surface-lvl1);
-  box-shadow: var(--rmx-shadow-xs);
-  font-family: var(--rmx-font-family-mono);
-}
-
-:is(*, #\#):is(*, #\#):is(*, #\#) .docs-search-button .pf-trigger-btn:hover {
-  border-color: var(--docs-nav-control-border);
-  background: var(--docs-nav-hover-background);
+  color: #9ca3b0;
+  background: var(--rmx-surface-lvl0);
   box-shadow: none;
+  font-family: var(--rmx-font-family-mono);
+  font-size: 12px;
+  font-weight: var(--rmx-font-weight-normal);
+  line-height: 1;
 }
 
 @media (max-width: 640px) {
