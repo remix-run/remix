@@ -1,4 +1,6 @@
 import type { Handle, RemixNode } from 'remix/ui'
+import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
+import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
 
 import { routes } from '../../routes.ts'
 import { Document } from '../../ui/document.tsx'
@@ -6,10 +8,16 @@ import { ChapterNavigation } from './chapter-navigation.tsx'
 import { CodeBlockCopyButtons } from './code-block-copy.browser.tsx'
 import { DocsShellBehavior } from './docs-shell.browser.tsx'
 import type { DocsNavigationItem } from './markdown-chapters.tsx'
-import { SiteFooter } from './site-footer.tsx'
-import { SiteHeader } from './site-header.tsx'
 import { DocsTableOfContents } from './table-of-contents.tsx'
 import type { DocsHeadingLink } from './table-of-contents.tsx'
+
+const navigationLinks = createDocsNavigationLinks()
+
+navigationLinks.set('guides', {
+  href: routes.docs.index.href(),
+  label: 'Guides',
+  current: 'location',
+})
 
 type DocsDocumentProps = {
   title: string
@@ -47,7 +55,11 @@ export function DocsDocument(handle: Handle<DocsDocumentProps>) {
         <a class="skip-link" href="#main-content">
           Skip to content
         </a>
-        <SiteHeader />
+        <DocsHeader
+          brandLabel="Remix Docs"
+          navigationToggleLabel="Collapse chapter navigation"
+          navigationLinks={[...navigationLinks.values()]}
+        />
         <DocsShellBehavior />
         <ChapterNavigation
           chapters={handle.props.chapters}
@@ -56,7 +68,7 @@ export function DocsDocument(handle: Handle<DocsDocumentProps>) {
         <main id="main-content" class="docs-main" tabIndex={-1} data-pagefind-body>
           {handle.props.children}
         </main>
-        <SiteFooter />
+        <DocsFooter />
       </Document>
     )
   }

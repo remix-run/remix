@@ -10,7 +10,7 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 - `app/actions/docs/chapters/*.md` — guide chapters.
 - `app/actions/docs/markdown/render.tsx` — unified/remark Markdown rendering, Shiki syntax highlighting, heading IDs, and `::frame` parsing.
 - `app/actions/docs/markdown-chapters.tsx` — chapter loading, ordering, slugs, navigation, summaries, and mtime-based render caches.
-- `app/actions/docs/layout.tsx`, `site-header.tsx`, `chapter-navigation.tsx`, and `site-footer.tsx` — the server-rendered docs shell.
+- `app/actions/docs/layout.tsx` and `chapter-navigation.tsx` — the guides-specific server-rendered docs shell; shared header and footer UI lives in `../shared/ui/`.
 - `app/actions/docs/docs-shell.browser.tsx` and `table-of-contents.browser.tsx` — the small client behaviors for transient navigation state and active-section tracking.
 - `app/actions/docs/examples/` — frame-backed examples used by chapters. Browser-hydrated demo modules use the `.demo.tsx` suffix, and browser-only helpers use `.browser.ts?(x)` so the asset boundary is visible from filenames instead of `public/` directories.
 - `app/entry.browser.ts` and `app/dev-refresh.browser.ts` — browser entrypoints served by the asset server.
