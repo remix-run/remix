@@ -1,6 +1,6 @@
-// Copy package demo source files into `api/build/demos/`, rewriting
+// Copy package demo source files into `docs/api/build/demos/`, rewriting
 // `@remix-run/*` imports to `remix/*` (the docs app depends on `remix`). The
-// runtime server reads from `api/build/demos/` — see `src/server/demos.tsx`.
+// runtime server reads from `docs/api/build/demos/` — see `src/server/demos.tsx`.
 
 import * as fs from 'node:fs'
 import * as path from 'node:path'
@@ -8,7 +8,7 @@ import * as path from 'node:path'
 import { hasRemixPackage, mapToRemixPackage } from './manifest.ts'
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
-const REPO_DIR = path.resolve(DOCS_DIR, '..')
+const REPO_DIR = path.resolve(DOCS_DIR, '..', '..')
 const DEMO_BUILD_DIR = path.join(DOCS_DIR, 'build', 'demos')
 const DEMO_SOURCES = [
   {

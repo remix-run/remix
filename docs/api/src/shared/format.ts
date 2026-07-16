@@ -1,5 +1,5 @@
 import { format, type FormatConfig } from 'oxfmt'
-import oxfmtConfig from '../../../oxfmt.config.ts'
+import oxfmtConfig from '../../../../oxfmt.config.ts'
 
 export async function formatWithOxfmt(
   filePath: string,

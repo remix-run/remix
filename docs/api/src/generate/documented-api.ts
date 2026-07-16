@@ -383,7 +383,7 @@ function getDocumentedType(fullName: string, node: typedoc.DeclarationReflection
 // Handles inline callables (`type.type === 'reflection'`) and `Object.assign`-
 // style intersections by picking the first member with signatures. Reference
 // types (`const x = ... as Interface`) are intentionally not chased in v1 —
-// see `api/PLAN-variable-support.md` for the follow-up.
+// see `docs/api/PLAN-variable-support.md` for the follow-up.
 function getVariableCallSignatures(
   node: typedoc.DeclarationReflection,
 ): typedoc.SignatureReflection[] {
