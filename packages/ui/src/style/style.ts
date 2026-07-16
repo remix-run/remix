@@ -21,12 +21,14 @@ type StyleObject = Record<string, unknown>
 // Convert camelCase CSS properties to kebab-case
 // Property names repeat constantly across renders; cache conversions instead
 // of running a regex each time.
+const CAMEL_TO_KEBAB_CACHE_LIMIT = 256
 const camelToKebabCache = new Map<string, string>()
 
 function camelToKebab(str: string): string {
   let cached = camelToKebabCache.get(str)
   if (cached === undefined) {
     cached = str.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+    if (camelToKebabCache.size >= CAMEL_TO_KEBAB_CACHE_LIMIT) camelToKebabCache.clear()
     camelToKebabCache.set(str, cached)
   }
   return cached

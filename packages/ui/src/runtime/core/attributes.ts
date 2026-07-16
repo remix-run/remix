@@ -65,6 +65,7 @@ export function canUseProperty(
 // Prop names repeat constantly across elements and renders; cache the
 // normalized results so the string work and object allocation happen once
 // per distinct name. Entries are shared — callers must not mutate them.
+const NORMALIZATION_CACHE_LIMIT = 256
 const htmlAttributeNameCache = new Map<string, { ns?: string; attr: string }>()
 const svgAttributeNameCache = new Map<string, { ns?: string; attr: string }>()
 
@@ -76,6 +77,7 @@ export function normalizeAttributeName(
   let cached = cache.get(name)
   if (cached === undefined) {
     cached = computeAttributeName(name, isSvg)
+    if (cache.size >= NORMALIZATION_CACHE_LIMIT) cache.clear()
     cache.set(name, cached)
   }
   return cached
@@ -137,6 +139,7 @@ export function toKebabCase(value: string): string {
   let cached = kebabCaseCache.get(value)
   if (cached === undefined) {
     cached = value.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)
+    if (kebabCaseCache.size >= NORMALIZATION_CACHE_LIMIT) kebabCaseCache.clear()
     kebabCaseCache.set(value, cached)
   }
   return cached
