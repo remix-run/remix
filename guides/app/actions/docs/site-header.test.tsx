@@ -16,6 +16,7 @@ describe('SiteHeader', () => {
     assert.match(html, /id="site-menu-toggle"[^>]*popovertarget="site-primary-navigation"/)
     assert.match(html, /id="site-primary-navigation"[^>]*popover="auto"/)
     assert.equal(html.match(/>Guides<\/a>/g)?.length, 2)
+    assert.match(html, /href="https:\/\/remix\.run"[^>]*aria-label="Remix Docs"/)
     assert.match(html, /href="\/icons\.svg#layout-left"/)
     assert.equal(html.match(/id="docs-search-button"/g)?.length, 1)
   })

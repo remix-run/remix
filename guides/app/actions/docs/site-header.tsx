@@ -4,7 +4,7 @@ import { Icon } from '../../ui/icon.tsx'
 export function SiteHeader() {
   return () => (
     <header class="site-header">
-      <a href={routes.docs.index.href()} class="site-header__brand" aria-label="Remix Docs">
+      <a href="https://remix.run" class="site-header__brand" aria-label="Remix Docs">
         <img
           class="site-header__logo-mark"
           src="/remix-logo-light-mode.svg"
