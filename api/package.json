@@ -1,9 +1,10 @@
 {
-  "name": "remix-the-docs",
+  "name": "remix-api",
   "private": true,
   "type": "module",
   "dependencies": {
     "front-matter": "^4.0.2",
+    "github-slugger": "^2.0.0",
     "marked": "^17.0.1",
     "oxfmt": "catalog:",
     "remix": "workspace:*",

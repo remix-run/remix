@@ -1,11 +1,12 @@
 import * as frontmatter from 'front-matter'
+import GithubSlugger from 'github-slugger'
 import type { Element } from 'hast'
-import { Marked, type MarkedExtension } from 'marked'
+import { Marked, type MarkedExtension, type Token } from 'marked'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { codeToHtml } from 'shiki'
 import { IGNORE_SYMBOLS, MDN_SYMBOLS } from '../generate/symbols.ts'
-import { getDocsRouteHref, routes } from './routes.ts'
+import { getApiRouteHref, routes } from './routes.ts'
 
 // No types exist for the `frontmatter` package
 const parseFrontmatter = frontmatter.default as unknown as (md: string) => {
@@ -35,6 +36,12 @@ export type PackageDocFile = {
 }
 
 export type DocFile = ApiDocFile | PackageDocFile
+
+export type MarkdownHeading = {
+  id: string
+  title: string
+  titleHtml: string
+}
 
 export async function discoverMarkdownFiles(
   baseDir: string,
@@ -106,15 +113,22 @@ export async function renderMarkdownFile(
   docFilesLookup: Map<string, DocFile>,
   version: string | undefined,
   addCodeLinks: boolean,
-): Promise<{ html: string; source?: string }> {
+): Promise<{ html: string; headings: MarkdownHeading[]; source?: string }> {
+  let headings: MarkdownHeading[] = []
+
   try {
     let markdown = fs.readFileSync(filePath, 'utf-8')
     let { attributes, body } = parseFrontmatter(markdown)
     let marked = new Marked(
+      getHeadingExtension(headings),
       getShikiExtension(attributes.title || '', docFilesLookup, version, addCodeLinks),
     )
     let html = await marked.parse(body)
-    return { html, source: typeof attributes.source === 'string' ? attributes.source : undefined }
+    return {
+      html,
+      headings,
+      source: typeof attributes.source === 'string' ? attributes.source : undefined,
+    }
   } catch (error) {
     return {
       html: `
@@ -123,8 +137,53 @@ export async function renderMarkdownFile(
         <p>Could not read file: ${filePath}</p>
       </div>
     `,
+      headings: [],
     }
   }
+}
+
+function getHeadingExtension(headings: MarkdownHeading[]): MarkedExtension {
+  let slugger = new GithubSlugger()
+
+  return {
+    renderer: {
+      heading(token) {
+        let explicitId = stripExplicitHeadingId(token.tokens)
+        let title = readTokenText(token.tokens).trim()
+        let id = explicitId ?? slugger.slug(title || 'section')
+        let titleHtml = this.parser.parseInline(token.tokens)
+        let escapedId = escapeHtml(id)
+
+        if (token.depth === 2) {
+          headings.push({ id, title, titleHtml })
+        }
+
+        return `<h${token.depth} id="${escapedId}"><a class="docs-heading-link" href="#${escapedId}">${titleHtml}</a></h${token.depth}>\n`
+      },
+    },
+  }
+}
+
+function stripExplicitHeadingId(tokens: Token[]): string | undefined {
+  let lastToken = tokens.at(-1)
+  if (lastToken?.type !== 'text') return undefined
+
+  let idMatch = /\s+\{#([^}\s]+)\}\s*$/.exec(lastToken.text)
+  if (!idMatch) return undefined
+
+  lastToken.text = lastToken.text.slice(0, idMatch.index)
+  if (lastToken.text === '') tokens.pop()
+  return idMatch[1]
+}
+
+function readTokenText(tokens: Token[]): string {
+  return tokens
+    .map((token) => {
+      if ('tokens' in token && token.tokens) return readTokenText(token.tokens)
+      if ('text' in token && typeof token.text === 'string') return token.text
+      return ''
+    })
+    .join('')
 }
 
 function getShikiExtension(
@@ -184,7 +243,7 @@ function getShikiExtension(
                   let linkEl: Element | undefined
                   if (docFilesLookup.has(symbol)) {
                     linkEl = link(symbol, {
-                      href: routes.docs.href({
+                      href: routes.api.href({
                         version,
                         slug: docFilesLookup.get(symbol)!.urlPath,
                       }),
@@ -218,7 +277,7 @@ function getShikiExtension(
         return code.text
       },
       link(token) {
-        let href = getDocsRouteHref(token.href, version)
+        let href = getApiRouteHref(token.href, version)
         if (!href) return false
 
         let title = token.title ? ` title="${escapeHtml(token.title)}"` : ''

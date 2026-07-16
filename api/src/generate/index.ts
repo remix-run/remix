@@ -11,10 +11,10 @@ import { info } from './utils.ts'
 const DOCS_DIR = path.join('build', 'md')
 const TYPEDOC_DIR = path.join('build', 'typedoc')
 
-// Ensure we're running from the /docs directory
+// Ensure we're running from the /api directory
 let cwd = process.cwd()
-if (!cwd.endsWith('/docs')) {
-  console.error('❌ This script must be run from the /docs directory')
+if (!cwd.endsWith('/api')) {
+  console.error('❌ This script must be run from the /api directory')
   process.exit(1)
 }
 

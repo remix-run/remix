@@ -5,7 +5,7 @@ import { createAssetServer } from './asset-server.ts'
 import { getVersionedLookupHref } from './lookup.ts'
 import { buildRegistry } from './registry.ts'
 import { createRouter } from './router.tsx'
-import { getDocsRouteHref } from './routes.ts'
+import { getApiRouteHref } from './routes.ts'
 
 describe('createRouter()', () => {
   it('does not load generated docs output while creating the router', (t) => {
@@ -33,8 +33,29 @@ describe('createRouter()', () => {
 
     assert.equal(html.includes('src="/assets/client/entry.tsx"'), true)
     assert.equal(html.includes('href="/assets/client/entry.tsx"'), true)
+    assert.equal(html.includes('href="/assets/client/table-of-contents.browser.tsx"'), true)
+    assert.equal(html.includes('href="/assets/client/table-of-contents-active.browser.ts"'), true)
     assert.equal(html.includes('src="/v1.2.3/assets/client/entry.tsx"'), false)
     assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), false)
+  })
+
+  it('loads docs styles after Pagefind styles so theme overrides win', async (t) => {
+    let assetServer = createAssetServer()
+    t.after(() => assetServer.close())
+    let router = createRouter({
+      assetServer,
+      docsContext: await getTestDocsContext(assetServer),
+      versions: ['v1.2.3'],
+    })
+
+    let response = await router.fetch(new Request('http://localhost/'))
+    assert.equal(response.status, 200)
+    let html = await response.text()
+    let pagefindStylesIndex = html.indexOf('href="/assets/pagefind/pagefind-component-ui.css"')
+    let docsStylesIndex = html.indexOf('href="/docs.css"')
+
+    assert.equal(pagefindStylesIndex >= 0, true)
+    assert.equal(docsStylesIndex > pagefindStylesIndex, true)
   })
 
   it('uses versioned asset URLs when an asset version is configured', async (t) => {
@@ -95,24 +116,34 @@ function getLoadedAssetUrls(html: string): string[] {
 
 function shouldVersionAssetUrl(url: string): boolean {
   if (!url.startsWith('/')) return false
-  if (url === '/favicon.ico' || url === '/favicon.svg') return false
-  if (url === '/remix-wordmark-light-mode.svg' || url === '/remix-wordmark-dark-mode.svg') {
+  if (
+    url === '/docs.css' ||
+    url === '/favicon.ico' ||
+    url === '/favicon.svg' ||
+    url === '/remix-logo-light-mode.svg' ||
+    url === '/remix-wordmark-light-mode.svg' ||
+    url === '/remix-wordmark-dark-mode.svg'
+  ) {
     return false
   }
   return true
 }
 
 async function getTestDocsContext(assetServer: ReturnType<typeof createAssetServer>) {
-  let [entryHref, entryPreloads] = await Promise.all([
-    assetServer.getHref('docs/src/client/entry.tsx'),
-    assetServer.getPreloads('docs/src/client/entry.tsx'),
-  ])
+  let [entryHref, entryPreloads, tableOfContentsEntryHref, tableOfContentsEntryPreloads] =
+    await Promise.all([
+      assetServer.getHref('api/src/client/entry.tsx'),
+      assetServer.getPreloads('api/src/client/entry.tsx'),
+      assetServer.getHref('api/src/client/table-of-contents.browser.tsx'),
+      assetServer.getPreloads('api/src/client/table-of-contents.browser.tsx'),
+    ])
 
   return {
     docFiles: [],
     docFilesLookup: new Map(),
     entryHref,
-    entryPreloads,
+    entryPreloads: [...new Set([...entryPreloads, ...tableOfContentsEntryPreloads])],
+    tableOfContentsEntryHref,
     getRegistry() {
       return buildRegistry([])
     },
@@ -152,14 +183,14 @@ describe('getVersionedLookupHref()', () => {
   })
 })
 
-describe('getDocsRouteHref()', () => {
+describe('getApiRouteHref()', () => {
   it('returns undefined for non-API hrefs', () => {
-    assert.equal(getDocsRouteHref('https://example.com/Accept', 'v1.2.3'), undefined)
+    assert.equal(getApiRouteHref('https://example.com/Accept', 'v1.2.3'), undefined)
   })
 
   it('preserves unversioned docs hrefs when version is undefined', () => {
     assert.equal(
-      getDocsRouteHref('/api/remix/headers/accept/class/Accept.md?tab=docs#example', undefined),
+      getApiRouteHref('/api/remix/headers/accept/class/Accept.md?tab=docs#example', undefined),
       '/api/remix/headers/accept/class/Accept.md?tab=docs#example',
     )
   })

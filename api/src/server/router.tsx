@@ -7,7 +7,11 @@ import { createHtmlResponse } from 'remix/response/html'
 import { createRouter as _createRouter, type Router } from 'remix/router'
 import { clientEntry, type RemixNode } from 'remix/ui'
 import { renderToStream } from 'remix/ui/server'
-import { CLIENT_ENTRY_PATH, type DocsAssetServer } from './asset-server.ts'
+import {
+  CLIENT_ENTRY_PATH,
+  TABLE_OF_CONTENTS_ENTRY_PATH,
+  type DocsAssetServer,
+} from './asset-server.ts'
 import { discoverDemoFiles, loadDemoComponent, renderDemoSource } from './demos.tsx'
 import { getVersionedLookupHref } from './lookup.ts'
 import {
@@ -21,7 +25,7 @@ import { DemoContent, Document, Home, MarkdownContent, NotFound, type Versions }
 
 const DOCS_DIR = path.resolve(import.meta.dirname, '..', '..')
 const REPO_DIR = path.resolve(DOCS_DIR, '..')
-const BUILD_DIR = path.join(REPO_DIR, 'docs', 'build')
+const BUILD_DIR = path.join(REPO_DIR, 'api', 'build')
 const MD_DIR = path.join(BUILD_DIR, 'md')
 const PUBLIC_DIR = path.join(BUILD_DIR, 'public')
 const ASSETS_DIR = path.join(BUILD_DIR, 'site', 'assets')
@@ -32,6 +36,7 @@ type DocsContext = {
   docFilesLookup: Map<string, MarkdownDocFile>
   entryHref: string
   entryPreloads: readonly string[]
+  tableOfContentsEntryHref: string
   getRegistry(version?: string): DocsRegistry
 }
 
@@ -91,7 +96,7 @@ export function createRouter(options: DocsRouterOptions): Router {
         let response = await assetServer.fetch(request)
         return response ?? new Response('Not Found', { status: 404 })
       },
-      async docs({ request, params }) {
+      async api({ request, params }) {
         let docsContext = await getDocsContext()
         let docFile = docsContext.docFiles.find((file) => file.urlPath === params.slug)
         let docProps = {
@@ -101,6 +106,7 @@ export function createRouter(options: DocsRouterOptions): Router {
           activeVersion: params.version,
           entryHref: docsContext.entryHref,
           entryPreloads: docsContext.entryPreloads,
+          tableOfContentsEntryHref: docsContext.tableOfContentsEntryHref,
         }
 
         if (docFile) {
@@ -120,7 +126,7 @@ export function createRouter(options: DocsRouterOptions): Router {
             )
           }
 
-          let { html, source } = await renderMarkdownFile(
+          let { html, headings, source } = await renderMarkdownFile(
             docFile.path,
             docsContext.docFilesLookup,
             params.version,
@@ -129,7 +135,7 @@ export function createRouter(options: DocsRouterOptions): Router {
           )
           return await respond.document(
             request,
-            <Document {...docProps} sourceUrl={source}>
+            <Document {...docProps} sourceUrl={source} headings={headings}>
               <MarkdownContent html={html} />
             </Document>,
           )
@@ -153,6 +159,7 @@ export function createRouter(options: DocsRouterOptions): Router {
             activeVersion={params.version}
             entryHref={docsContext.entryHref}
             entryPreloads={docsContext.entryPreloads}
+            tableOfContentsEntryHref={docsContext.tableOfContentsEntryHref}
           >
             <Home />
           </Document>,
@@ -198,10 +205,13 @@ async function loadDocsContext(assetServer: DocsAssetServer): Promise<DocsContex
   let { docFiles: markdownFiles, docFilesLookup } = await discoverMarkdownFiles(MD_DIR)
   let demoFiles = await discoverDemoFiles(assetServer)
   let docFiles = [...markdownFiles, ...demoFiles].sort((a, b) => a.urlPath.localeCompare(b.urlPath))
-  let [entryHref, entryPreloads] = await Promise.all([
-    assetServer.getHref(CLIENT_ENTRY_PATH),
-    assetServer.getPreloads(CLIENT_ENTRY_PATH),
-  ])
+  let [entryHref, entryPreloads, tableOfContentsEntryHref, tableOfContentsEntryPreloads] =
+    await Promise.all([
+      assetServer.getHref(CLIENT_ENTRY_PATH),
+      assetServer.getPreloads(CLIENT_ENTRY_PATH),
+      assetServer.getHref(TABLE_OF_CONTENTS_ENTRY_PATH),
+      assetServer.getPreloads(TABLE_OF_CONTENTS_ENTRY_PATH),
+    ])
 
   let registryByVersion = new Map<string | undefined, DocsRegistry>()
   registryByVersion.set(undefined, buildRegistry(docFiles))
@@ -210,7 +220,8 @@ async function loadDocsContext(assetServer: DocsAssetServer): Promise<DocsContex
     docFiles,
     docFilesLookup,
     entryHref,
-    entryPreloads,
+    entryPreloads: [...new Set([...entryPreloads, ...tableOfContentsEntryPreloads])],
+    tableOfContentsEntryHref,
     getRegistry(version?: string): DocsRegistry {
       let registry = registryByVersion.get(version)
       if (!registry) {
