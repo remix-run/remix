@@ -117,15 +117,6 @@
   font-weight: var(--rmx-font-weight-bold);
 }
 
-.rmx-page-body {
-  color: var(--rmx-color-text-primary);
-  font-size: var(--rmx-font-size-md);
-}
-
-.rmx-page-body p {
-  margin: 0 0 var(--rmx-space-lg);
-}
-
 .rmx-page-body-sm {
   font-size: var(--rmx-font-size-sm);
 }
