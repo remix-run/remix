@@ -60,36 +60,8 @@ export function ChapterCard(handle: Handle<{ chapter: DocsChapterSummary }>) {
         <p class="rmx-page-body rmx-page-body-sm chapter-card__description">
           {chapter.description}
         </p>
-        <div class="chapter-card__topics">
-          <div class="chapter-card__loop">
-            <ChapterTopicLinks chapter={chapter} />
-            <ChapterTopicLinks chapter={chapter} clone />
-          </div>
-        </div>
       </li>
     )
   }
 }
 
-function ChapterTopicLinks(
-  handle: Handle<{
-    chapter: DocsChapterSummary
-    clone?: boolean
-  }>,
-) {
-  return () => (
-    <ul
-      class={`chapter-card__links${handle.props.clone ? ' chapter-card__links--clone' : ''}`}
-      aria-hidden={handle.props.clone ? 'true' : undefined}
-    >
-      {handle.props.chapter.sections.map((section) => (
-        <li key={section.id}>
-          <span innerHTML={section.titleHtml} />
-        </li>
-      ))}
-      <li class="chapter-card__separator" aria-hidden="true">
-        ...
-      </li>
-    </ul>
-  )
-}

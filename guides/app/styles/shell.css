@@ -162,7 +162,7 @@
   margin: 4px 0 0;
   padding: 0;
   overflow: visible;
-  font-size: 12px;
+  font-size: 14px;
   list-style: none;
 }
 
@@ -202,7 +202,7 @@
   padding: 0;
   color: inherit;
   font-family: var(--rmx-font-family-mono);
-  font-size: 12px;
+  font-size: 14px;
   line-height: normal;
 }
 

@@ -109,8 +109,7 @@
 }
 
 .chapter-card__description {
-  display: -webkit-box;
-  min-height: 44.8px;
+  flex: 1;
   margin: 0;
   overflow: hidden;
   color: var(--rmx-color-text-primary);
@@ -118,80 +117,8 @@
   font-size: 16px;
   font-weight: var(--rmx-font-weight-normal);
   line-height: 1.4;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-}
-
-.chapter-card__topics {
-  position: relative;
-  z-index: 1;
-  flex: none;
-  width: 100%;
-  height: 84px;
-  overflow: hidden;
-  mask-image: linear-gradient(to bottom, transparent 0%, #000 20%, #000 80%, transparent 100%);
-}
-
-.chapter-card__loop {
-  animation: chapter-card-topics-scroll 4.5s linear infinite paused;
-  will-change: transform;
-}
-
-.chapter-card__links {
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  margin: 0;
-  padding: 0;
-  font-family: var(--rmx-font-family-mono);
-  font-size: 10px;
-  line-height: 2;
-  letter-spacing: 0.2px;
-  list-style: none;
-  text-transform: uppercase;
-}
-
-.chapter-card__links li {
-  display: block;
-  width: 100%;
-  overflow: hidden;
-  color: var(--rmx-color-text-primary);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .chapter-card:is(:hover, :focus-within) {
   background-color: var(--docs-chapter-card-hover-background);
-}
-
-.chapter-card:hover .chapter-card__loop {
-  animation-play-state: running;
-}
-
-.chapter-card:focus-within .chapter-card__loop {
-  animation: none;
-  transform: none;
-  will-change: auto;
-}
-
-.chapter-card:focus-within .chapter-card__links--clone {
-  display: none;
-}
-
-@keyframes chapter-card-topics-scroll {
-  from {
-    transform: translateY(0);
-  }
-
-  to {
-    transform: translateY(-50%);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .chapter-card__loop,
-  .chapter-card:hover .chapter-card__loop {
-    animation: none;
-    transform: none;
-  }
 }

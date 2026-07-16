@@ -27,16 +27,4 @@ describe('ChapterCard', () => {
 
     assert.match(html, /chapter-card__eyebrow">02<\/div>/)
   })
-
-  it('renders topics as text and hides the animated clone from assistive technology', async () => {
-    let html = await renderToString(<ChapterCard chapter={chapter} />)
-
-    assert.equal(html.match(/<span>Routes as the URL contract<\/span>/g)?.length, 2)
-    assert.doesNotMatch(html, /href="\/routing-and-controllers\/#route-contract"/)
-    assert.match(
-      html,
-      /<ul aria-hidden="true" class="chapter-card__links chapter-card__links--clone">/,
-    )
-    assert.doesNotMatch(html, /tabindex=/)
-  })
 })
