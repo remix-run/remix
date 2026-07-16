@@ -20,9 +20,7 @@ import { MultiStateBadge } from "./gallery/multi-state-badge.browser.tsx";
 import { HoldToConfirm } from "./gallery/hold-to-confirm.browser.tsx";
 import { MaterialRipple } from "./gallery/material-ripple.browser.tsx";
 
-function Tile(
-  handle: Handle<{ title: string; children: RemixNode; notes?: string }>,
-) {
+function Tile(handle: Handle<{ title: string; children: RemixNode; notes?: string }>) {
   let remountKey = 0;
 
   return () => {
@@ -68,12 +66,7 @@ function Tile(
           ]}
           title="Replay animation"
         >
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M1 4v6h6M23 20v-6h-6" />
             <path d="M20.49 9A9 9 0 0 0 5.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 0 1 3.51 15" />
           </svg>
@@ -116,13 +109,10 @@ function Tile(
 export function AnimationGallery() {
   return () => (
     <>
-      <h1 mix={[css({ marginBottom: 0, "& + p": { marginTop: 0 } })]}>
-        Animations
-      </h1>
+      <h1 mix={[css({ marginBottom: 0, "& + p": { marginTop: 0 } })]}>Animations</h1>
       <p>
-        Most animations are adapted from{" "}
-        <a href="https://www.motion.dev">Motion</a>. Thank you for your work{" "}
-        <a href="https://motion.dev/@matt">Matt Perry</a>!
+        Most animations are adapted from <a href="https://www.motion.dev">Motion</a>. Thank you for
+        your work <a href="https://motion.dev/@matt">Matt Perry</a>!
       </p>
       <div
         mix={[
@@ -134,106 +124,64 @@ export function AnimationGallery() {
           }),
         ]}
       >
-        <Tile
-          title="Default Animate"
-          notes="animateEntrance + animateLayout defaults"
-        >
+        <Tile title="Default Animate" notes="animateEntrance + animateLayout defaults">
           <DefaultAnimate />
         </Tile>
-        <Tile
-          title="Rolling Square"
-          notes="CSS transition with spring() timing function"
-        >
+        <Tile title="Rolling Square" notes="CSS transition with spring() timing function">
           <RollingSquare />
         </Tile>
-        <Tile
-          title="Enter Animation"
-          notes="animateEntrance() with spring physics"
-        >
+        <Tile title="Enter Animation" notes="animateEntrance() with spring physics">
           <EnterAnimation />
         </Tile>
         <Tile title="Exit Animation" notes="animateEntrance() + animateExit()">
           <ExitAnimation />
         </Tile>
-        <Tile
-          title="Press Interaction"
-          notes="CSS transition + pointer/keyboard events"
-        >
+        <Tile title="Press Interaction" notes="CSS transition + pointer/keyboard events">
           <Press />
         </Tile>
-        <Tile
-          title="HTML Content"
-          notes="rAF loop with spring iterator for text"
-        >
+        <Tile title="HTML Content" notes="rAF loop with spring iterator for text">
           <HTMLContent />
         </Tile>
         <Tile title="Keyframes" notes="CSS @keyframes with infinite loop">
           <Keyframes />
         </Tile>
-        <Tile
-          title="Interruptible Keyframes"
-          notes="Web Animations API with commitStyles()"
-        >
+        <Tile title="Interruptible Keyframes" notes="Web Animations API with commitStyles()">
           <InterruptibleKeyframes />
         </Tile>
         <Tile title="Rotate" notes="CSS @keyframes (one-shot)">
           <Rotate />
         </Tile>
-        <Tile
-          title="Transition Options"
-          notes="animateEntrance() with cubic-bezier + delay"
-        >
+        <Tile title="Transition Options" notes="animateEntrance() with cubic-bezier + delay">
           <TransitionOptions />
         </Tile>
         <Tile title="3D Cube" notes="rAF loop with direct style manipulation">
           <Cube />
         </Tile>
-        <Tile
-          title="Shared Layout"
-          notes="CSS Grid overlap for simultaneous enter/exit"
-        >
+        <Tile title="Shared Layout" notes="CSS Grid overlap for simultaneous enter/exit">
           <SharedLayout />
         </Tile>
         <Tile title="Aspect Ratio">
           <AspectRatio />
         </Tile>
-        <Tile
-          title="Bouncy Switch"
-          notes="Spring up, bounce down with CSS linear()"
-        >
+        <Tile title="Bouncy Switch" notes="Spring up, bounce down with CSS linear()">
           <BouncySwitch />
         </Tile>
-        <Tile
-          title="FLIP Toggle"
-          notes="animateLayout() with interruptible WAAPI"
-        >
+        <Tile title="FLIP Toggle" notes="animateLayout() with interruptible WAAPI">
           <FlipToggle />
         </Tile>
-        <Tile
-          title="Reordering"
-          notes="animateLayout() with auto-shuffling list"
-        >
+        <Tile title="Reordering" notes="animateLayout() with auto-shuffling list">
           <Reordering />
         </Tile>
         <Tile title="Color Interpolation" notes="sRGB vs OKLCH color space">
           <ColorInterpolation />
         </Tile>
-        <Tile
-          title="Multi-State Badge"
-          notes="Animated icon/label swap with WAAPI shake"
-        >
+        <Tile title="Multi-State Badge" notes="Animated icon/label swap with WAAPI shake">
           <MultiStateBadge />
         </Tile>
-        <Tile
-          title="Hold to Confirm"
-          notes="Custom interaction with progress tracking"
-        >
+        <Tile title="Hold to Confirm" notes="Custom interaction with progress tracking">
           <HoldToConfirm />
         </Tile>
-        <Tile
-          title="Material Ripple"
-          notes="Pointer-tracked ripples with enter/exit animations"
-        >
+        <Tile title="Material Ripple" notes="Pointer-tracked ripples with enter/exit animations">
           <MaterialRipple />
         </Tile>
       </div>

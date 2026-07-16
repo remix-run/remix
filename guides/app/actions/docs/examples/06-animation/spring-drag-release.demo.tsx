@@ -30,16 +30,8 @@ export function SpringDragReleaseDemo(handle: Handle) {
     }
 
     let rect = stage.getBoundingClientRect();
-    targetX = clamp(
-      event.clientX - rect.left,
-      dotRadius,
-      rect.width - dotRadius,
-    );
-    targetY = clamp(
-      event.clientY - rect.top,
-      dotRadius,
-      rect.height - dotRadius,
-    );
+    targetX = clamp(event.clientX - rect.left, dotRadius, rect.width - dotRadius);
+    targetY = clamp(event.clientY - rect.top, dotRadius, rect.height - dotRadius);
     handle.update();
   }
 
@@ -96,16 +88,8 @@ export function SpringDragReleaseDemo(handle: Handle) {
 
               let distanceX = targetX - dotX;
               let distanceY = targetY - dotY;
-              transitionX = readVelocitySpring(
-                selectedPreset,
-                event.velocityX,
-                distanceX,
-              );
-              transitionY = readVelocitySpring(
-                selectedPreset,
-                event.velocityY,
-                distanceY,
-              );
+              transitionX = readVelocitySpring(selectedPreset, event.velocityX, distanceX);
+              transitionY = readVelocitySpring(selectedPreset, event.velocityY, distanceY);
 
               animating = true;
               dotX = targetX;
@@ -121,9 +105,7 @@ export function SpringDragReleaseDemo(handle: Handle) {
             left: `${dotX}px`,
             top: `${dotY}px`,
             cursor: dragging ? "grabbing" : "grab",
-            transition: animating
-              ? `left ${transitionX}, top ${transitionY}`
-              : "none",
+            transition: animating ? `left ${transitionX}, top ${transitionY}` : "none",
           }}
         />
       </div>
@@ -148,18 +130,12 @@ export function SpringDragReleaseDemo(handle: Handle) {
         ))}
       </div>
 
-      <p mix={hintStyle}>
-        Click the panel to move the target. Drag and release the dot.
-      </p>
+      <p mix={hintStyle}>Click the panel to move the target. Drag and release the dot.</p>
     </div>
   );
 }
 
-function readVelocitySpring(
-  preset: SpringPreset,
-  velocity: number,
-  distance: number,
-): string {
+function readVelocitySpring(preset: SpringPreset, velocity: number, distance: number): string {
   if (Math.abs(distance) < 1) {
     return String(spring(preset));
   }

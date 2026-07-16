@@ -21,15 +21,9 @@ export function TabsBasic(handle: Handle) {
           </TabList>
           <button mix={button()}>New</button>
         </div>
-        <TabPanel name="overview">
-          Project health, owner notes, and current milestones.
-        </TabPanel>
-        <TabPanel name="activity">
-          Recent commits, deploys, and review handoffs.
-        </TabPanel>
-        <TabPanel name="settings">
-          Visibility, notifications, and billing preferences.
-        </TabPanel>
+        <TabPanel name="overview">Project health, owner notes, and current milestones.</TabPanel>
+        <TabPanel name="activity">Recent commits, deploys, and review handoffs.</TabPanel>
+        <TabPanel name="settings">Visibility, notifications, and billing preferences.</TabPanel>
       </Tabs>
 
       <Tabs

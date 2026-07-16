@@ -10,9 +10,7 @@ export function ButtonComponent() {
   return () => (
     <div mix={buttonHostDemoCss}>
       <button mix={button({ tone: "primary" })}>Create project</button>
-      <button mix={[dangerButtonCss, button({ tone: "ghost" })]}>
-        Delete draft
-      </button>
+      <button mix={[dangerButtonCss, button({ tone: "ghost" })]}>Delete draft</button>
       <a href="#button-host" mix={button()}>
         View docs
       </a>

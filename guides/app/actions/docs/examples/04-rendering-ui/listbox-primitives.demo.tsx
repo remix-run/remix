@@ -28,11 +28,7 @@ export function ListboxPrimitives(handle: Handle) {
           void handle.update();
         }}
       >
-        <div
-          aria-label="Framework"
-          mix={[listCss, listbox.list()]}
-          tabIndex={0}
-        >
+        <div aria-label="Framework" mix={[listCss, listbox.list()]} tabIndex={0}>
           {frameworks.map((option) => (
             <div key={option.value} mix={[optionCss, listbox.option(option)]}>
               {option.label}

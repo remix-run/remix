@@ -39,9 +39,7 @@ export function BouncySwitch(handle: Handle) {
         ]}
         style={{
           transform: isOn ? "translateY(-100px)" : "translateY(0)",
-          transition: isOn
-            ? `transform ${spring()}`
-            : `transform 800ms ${bounceEasing}`,
+          transition: isOn ? `transform ${spring()}` : `transform 800ms ${bounceEasing}`,
         }}
       />
     </div>

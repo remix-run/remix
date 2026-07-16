@@ -29,32 +29,28 @@ export function PressStateDemo(handle: Handle) {
   );
 }
 
-const onPressDown = createMixin<HTMLElement, [handler: () => void]>(
-  () => (handler) => [
-    on("pointerdown", (event) => {
-      if (event.isPrimary === false) return;
-      handler();
-    }),
-    on("keydown", (event) => {
-      if (!(event.key === "Enter" || event.key === " ") || event.repeat) return;
-      event.preventDefault();
-      handler();
-    }),
-  ],
-);
+const onPressDown = createMixin<HTMLElement, [handler: () => void]>(() => (handler) => [
+  on("pointerdown", (event) => {
+    if (event.isPrimary === false) return;
+    handler();
+  }),
+  on("keydown", (event) => {
+    if (!(event.key === "Enter" || event.key === " ") || event.repeat) return;
+    event.preventDefault();
+    handler();
+  }),
+]);
 
-const onPressUp = createMixin<HTMLElement, [handler: () => void]>(
-  () => (handler) => [
-    on("pointerup", handler),
-    on("pointerleave", handler),
-    on("keyup", (event) => {
-      if (!(event.key === "Enter" || event.key === " ")) return;
-      event.preventDefault();
-      handler();
-    }),
-    on("blur", handler),
-  ],
-);
+const onPressUp = createMixin<HTMLElement, [handler: () => void]>(() => (handler) => [
+  on("pointerup", handler),
+  on("pointerleave", handler),
+  on("keyup", (event) => {
+    if (!(event.key === "Enter" || event.key === " ")) return;
+    event.preventDefault();
+    handler();
+  }),
+  on("blur", handler),
+]);
 
 const pressableStyles = css({
   display: "grid",

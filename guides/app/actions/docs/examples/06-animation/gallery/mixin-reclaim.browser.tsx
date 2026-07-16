@@ -25,11 +25,7 @@ export function MixinReclaim(handle: Handle) {
   }
 
   return () => (
-    <div
-      mix={[
-        css({ display: "flex", flexDirection: "column", gap: 12, width: 240 }),
-      ]}
-    >
+    <div mix={[css({ display: "flex", flexDirection: "column", gap: 12, width: 240 })]}>
       <div mix={[css({ display: "flex", gap: 8 })]}>
         <button
           mix={[
@@ -92,9 +88,7 @@ export function MixinReclaim(handle: Handle) {
         Hide
       </button>
 
-      <div
-        mix={[css({ minHeight: 100, display: "grid", placeItems: "center" })]}
-      >
+      <div mix={[css({ minHeight: 100, display: "grid", placeItems: "center" })]}>
         {visible && (
           <div
             key="reclaim-card"

@@ -34,10 +34,7 @@ export function SelectDeconstructed(handle: Handle) {
           <div mix={[surfaceCss, select.popover()]}>
             <div mix={[listCss, select.list()]}>
               {frameworks.map((option) => (
-                <div
-                  key={option.value}
-                  mix={[optionCss, select.option(option)]}
-                >
+                <div key={option.value} mix={[optionCss, select.option(option)]}>
                   {option.label}
                 </div>
               ))}

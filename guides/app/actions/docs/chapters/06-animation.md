@@ -53,48 +53,45 @@ import { clientEntry, css, on } from "remix/ui";
 import { animateEntrance, animateExit, spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
 
-export const Notice = clientEntry(
-  import.meta.url,
-  function Notice(handle: Handle) {
-    let visible = true;
+export const Notice = clientEntry(import.meta.url, function Notice(handle: Handle) {
+  let visible = true;
 
-    return () => (
-      <div>
-        <button
+  return () => (
+    <div>
+      <button
+        mix={[
+          on("click", () => {
+            visible = !visible;
+            handle.update();
+          }),
+        ]}
+        type="button"
+      >
+        Toggle notice
+      </button>
+      {visible && (
+        <p
+          key="notice"
           mix={[
-            on("click", () => {
-              visible = !visible;
-              handle.update();
+            noticeStyle,
+            animateEntrance({
+              opacity: 0,
+              transform: "translateY(8px)",
+              ...spring("snappy"),
+            }),
+            animateExit({
+              opacity: 0,
+              transform: "translateY(-8px)",
+              ...spring("snappy"),
             }),
           ]}
-          type="button"
         >
-          Toggle notice
-        </button>
-        {visible && (
-          <p
-            key="notice"
-            mix={[
-              noticeStyle,
-              animateEntrance({
-                opacity: 0,
-                transform: "translateY(8px)",
-                ...spring("snappy"),
-              }),
-              animateExit({
-                opacity: 0,
-                transform: "translateY(-8px)",
-                ...spring("snappy"),
-              }),
-            ]}
-          >
-            Settings saved.
-          </p>
-        )}
-      </div>
-    );
-  },
-);
+          Settings saved.
+        </p>
+      )}
+    </div>
+  );
+});
 
 const noticeStyle = css({
   borderRadius: "12px",
@@ -121,38 +118,32 @@ import type { Handle } from "remix/ui";
 
 const initialItems = ["Design", "Build", "Review"];
 
-export const ReorderList = clientEntry(
-  import.meta.url,
-  function ReorderList(handle: Handle) {
-    let items = initialItems;
+export const ReorderList = clientEntry(import.meta.url, function ReorderList(handle: Handle) {
+  let items = initialItems;
 
-    return () => (
-      <div>
-        <button
-          mix={[
-            on("click", () => {
-              items = [...items].reverse();
-              handle.update();
-            }),
-          ]}
-          type="button"
-        >
-          Reverse
-        </button>
-        <ul mix={listStyle}>
-          {items.map((item) => (
-            <li
-              key={item}
-              mix={[itemStyle, animateLayout({ ...spring("bouncy") })]}
-            >
-              {item}
-            </li>
-          ))}
-        </ul>
-      </div>
-    );
-  },
-);
+  return () => (
+    <div>
+      <button
+        mix={[
+          on("click", () => {
+            items = [...items].reverse();
+            handle.update();
+          }),
+        ]}
+        type="button"
+      >
+        Reverse
+      </button>
+      <ul mix={listStyle}>
+        {items.map((item) => (
+          <li key={item} mix={[itemStyle, animateLayout({ ...spring("bouncy") })]}>
+            {item}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+});
 
 const listStyle = css({
   display: "grid",
@@ -183,33 +174,30 @@ import { clientEntry, css, on } from "remix/ui";
 import { spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
 
-export const BouncySwitch = clientEntry(
-  import.meta.url,
-  function BouncySwitch(handle: Handle) {
-    let enabled = true;
+export const BouncySwitch = clientEntry(import.meta.url, function BouncySwitch(handle: Handle) {
+  let enabled = true;
 
-    return () => (
-      <button
-        aria-pressed={enabled}
-        mix={[
-          switchStyle,
-          on("click", () => {
-            enabled = !enabled;
-            handle.update();
-          }),
-        ]}
-        type="button"
-      >
-        <span
-          mix={thumbStyle}
-          style={{
-            transform: enabled ? "translateX(2.25rem)" : "translateX(0)",
-          }}
-        />
-      </button>
-    );
-  },
-);
+  return () => (
+    <button
+      aria-pressed={enabled}
+      mix={[
+        switchStyle,
+        on("click", () => {
+          enabled = !enabled;
+          handle.update();
+        }),
+      ]}
+      type="button"
+    >
+      <span
+        mix={thumbStyle}
+        style={{
+          transform: enabled ? "translateX(2.25rem)" : "translateX(0)",
+        }}
+      />
+    </button>
+  );
+});
 
 const switchStyle = css({
   border: 0,
@@ -235,11 +223,7 @@ Use `tween(...)` when you need a time-based value loop rather than CSS or WAAPI 
 ```ts filename=app/ui/count-up.browser.ts
 import { easings, tween } from "remix/ui/animation";
 
-export function countUp(
-  from: number,
-  to: number,
-  onValue: (value: number) => void,
-) {
+export function countUp(from: number, to: number, onValue: (value: number) => void) {
   let animation = tween({ from, to, duration: 300, curve: easings.easeOut });
   animation.next();
 
@@ -277,32 +261,29 @@ import { clientEntry, css, on, ref } from "remix/ui";
 import { spring } from "remix/ui/animation";
 import type { Handle } from "remix/ui";
 
-export const RippleButton = clientEntry(
-  import.meta.url,
-  function RippleButton(_handle: Handle) {
-    let node: HTMLButtonElement;
-    let currentAnimation: Animation | undefined;
+export const RippleButton = clientEntry(import.meta.url, function RippleButton(_handle: Handle) {
+  let node: HTMLButtonElement;
+  let currentAnimation: Animation | undefined;
 
-    return () => (
-      <button
-        mix={[
-          ref((element) => (node = element)),
-          buttonStyle,
-          on("pointerdown", () => {
-            currentAnimation?.cancel();
-            currentAnimation = node.animate(
-              [{ transform: "scale(0.96)" }, { transform: "scale(1)" }],
-              { ...spring("snappy") },
-            );
-          }),
-        ]}
-        type="button"
-      >
-        Press me
-      </button>
-    );
-  },
-);
+  return () => (
+    <button
+      mix={[
+        ref((element) => (node = element)),
+        buttonStyle,
+        on("pointerdown", () => {
+          currentAnimation?.cancel();
+          currentAnimation = node.animate(
+            [{ transform: "scale(0.96)" }, { transform: "scale(1)" }],
+            { ...spring("snappy") },
+          );
+        }),
+      ]}
+      type="button"
+    >
+      Press me
+    </button>
+  );
+});
 
 const buttonStyle = css({
   border: 0,

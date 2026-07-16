@@ -24,32 +24,15 @@ export function CheckboxBasic() {
           <span mix={stateLabelCss}>Unchecked</span>
           <input aria-label="Unchecked medium" mix={checkbox()} />
           <input aria-label="Unchecked large" mix={checkbox({ size: "lg" })} />
-          <input
-            aria-label="Unchecked medium disabled"
-            disabled
-            mix={checkbox()}
-          />
-          <input
-            aria-label="Unchecked large disabled"
-            disabled
-            mix={checkbox({ size: "lg" })}
-          />
+          <input aria-label="Unchecked medium disabled" disabled mix={checkbox()} />
+          <input aria-label="Unchecked large disabled" disabled mix={checkbox({ size: "lg" })} />
         </div>
 
         <div mix={rowCss}>
           <span mix={stateLabelCss}>Checked</span>
           <input aria-label="Checked medium" defaultChecked mix={checkbox()} />
-          <input
-            aria-label="Checked large"
-            defaultChecked
-            mix={checkbox({ size: "lg" })}
-          />
-          <input
-            aria-label="Checked medium disabled"
-            defaultChecked
-            disabled
-            mix={checkbox()}
-          />
+          <input aria-label="Checked large" defaultChecked mix={checkbox({ size: "lg" })} />
+          <input aria-label="Checked medium disabled" defaultChecked disabled mix={checkbox()} />
           <input
             aria-label="Checked large disabled"
             defaultChecked
@@ -60,11 +43,7 @@ export function CheckboxBasic() {
 
         <div mix={rowCss}>
           <span mix={stateLabelCss}>Mixed</span>
-          <input
-            aria-label="Mixed medium"
-            indeterminate
-            mix={checkbox({ state: "mixed" })}
-          />
+          <input aria-label="Mixed medium" indeterminate mix={checkbox({ state: "mixed" })} />
           <input
             aria-label="Mixed large"
             indeterminate
@@ -114,9 +93,7 @@ function PermissionsGroup(handle: Handle) {
       : "mixed";
   }
 
-  function setSelectedPermissions(
-    nextSelectedPermissions: Set<PermissionValue>,
-  ) {
+  function setSelectedPermissions(nextSelectedPermissions: Set<PermissionValue>) {
     selectedPermissions = nextSelectedPermissions;
     void handle.update();
   }

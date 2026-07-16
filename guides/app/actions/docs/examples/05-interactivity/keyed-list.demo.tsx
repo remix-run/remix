@@ -18,10 +18,7 @@ export function KeyedList(handle: Handle) {
   let moveUp = (index: number) => {
     if (index === 0) return;
     let newItems = [...items];
-    [newItems[index - 1], newItems[index]] = [
-      newItems[index],
-      newItems[index - 1],
-    ];
+    [newItems[index - 1], newItems[index]] = [newItems[index], newItems[index - 1]];
     items = newItems;
     handle.update();
   };
@@ -29,10 +26,7 @@ export function KeyedList(handle: Handle) {
   let moveDown = (index: number) => {
     if (index === items.length - 1) return;
     let newItems = [...items];
-    [newItems[index], newItems[index + 1]] = [
-      newItems[index + 1],
-      newItems[index],
-    ];
+    [newItems[index], newItems[index + 1]] = [newItems[index + 1], newItems[index]];
     items = newItems;
     handle.update();
   };
@@ -70,19 +64,13 @@ export function KeyedList(handle: Handle) {
         <button mix={[on("click", reverse)]}>Reverse List</button>
         <button mix={[on("click", shuffle)]}>Shuffle List</button>
         <button mix={[on("click", toggleAutoShuffle)]}>
-          {shuffleInterval !== null
-            ? "Stop Auto-Shuffle"
-            : "Start Auto-Shuffle"}
+          {shuffleInterval !== null ? "Stop Auto-Shuffle" : "Start Auto-Shuffle"}
         </button>
       </div>
 
       {items.map((item, index) => (
         <div key={item.id} className="list-item">
-          <input
-            type="text"
-            placeholder={item.label}
-            defaultValue={item.label}
-          />
+          <input type="text" placeholder={item.label} defaultValue={item.label} />
           <button
             // disabled={index === 0}
             mix={[on("click", () => moveUp(index))]}

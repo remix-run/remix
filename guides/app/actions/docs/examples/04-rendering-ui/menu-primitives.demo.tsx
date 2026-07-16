@@ -27,14 +27,8 @@ export function MenuPrimitives(handle: Handle) {
         <div mix={[surfaceCss, menu.popover()]}>
           <div mix={[listCss, menu.list()]}>
             <div mix={[itemCss, menu.item({ name: "rename" })]}>Rename</div>
-            <div mix={[itemCss, menu.item({ name: "duplicate" })]}>
-              Duplicate
-            </div>
-            <div
-              mix={[itemCss, menu.item({ disabled: true, name: "archive" })]}
-            >
-              Archive
-            </div>
+            <div mix={[itemCss, menu.item({ name: "duplicate" })]}>Duplicate</div>
+            <div mix={[itemCss, menu.item({ disabled: true, name: "archive" })]}>Archive</div>
           </div>
         </div>
       </menu.Context>

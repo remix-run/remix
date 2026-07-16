@@ -47,9 +47,7 @@ export function ControlledUncontrolledValues(handle: Handle) {
       <div style={{ display: "flex", gap: "10px", marginBottom: "18px" }}>
         <button mix={[on("click", rerender)]}>Force Re-render</button>
         <button mix={[on("click", resetControlled)]}>Reset Controlled</button>
-        <button mix={[on("click", remountUncontrolled)]}>
-          Remount Uncontrolled
-        </button>
+        <button mix={[on("click", remountUncontrolled)]}>Remount Uncontrolled</button>
       </div>
 
       <section
@@ -62,8 +60,8 @@ export function ControlledUncontrolledValues(handle: Handle) {
       >
         <h2>Controlled</h2>
         <p>
-          These values come from component state. The text input allows
-          everything except digits, and invalid input does not call update.
+          These values come from component state. The text input allows everything except digits,
+          and invalid input does not call update.
         </p>
 
         <label style={{ display: "block", marginBottom: "8px" }}>
@@ -117,8 +115,7 @@ export function ControlledUncontrolledValues(handle: Handle) {
         </label>
 
         <div>
-          State snapshot: text=<code>{JSON.stringify(controlledText)}</code>,
-          checked=
+          State snapshot: text=<code>{JSON.stringify(controlledText)}</code>, checked=
           <code>{String(controlledChecked)}</code>, choice=
           <code>{JSON.stringify(controlledChoice)}</code>
         </div>
@@ -134,8 +131,8 @@ export function ControlledUncontrolledValues(handle: Handle) {
       >
         <h2>Uncontrolled</h2>
         <p>
-          These initialize from <code>defaultValue/defaultChecked</code> once
-          and then keep their own DOM state.
+          These initialize from <code>defaultValue/defaultChecked</code> once and then keep their
+          own DOM state.
         </p>
 
         <label style={{ display: "block", marginBottom: "8px" }}>

@@ -31,10 +31,7 @@ export function MenuOverview(handle: Handle) {
             showGutter = !showGutter;
             break;
           case "density":
-            if (
-              event.item.value === "comfortable" ||
-              event.item.value === "compact"
-            ) {
+            if (event.item.value === "comfortable" || event.item.value === "compact") {
               density = event.item.value;
             }
             break;
@@ -74,12 +71,7 @@ export function MenuOverview(handle: Handle) {
         >
           Comfortable
         </MenuItem>
-        <MenuItem
-          name="density"
-          type="radio"
-          value="compact"
-          checked={density === "compact"}
-        >
+        <MenuItem name="density" type="radio" value="compact" checked={density === "compact"}>
           Compact
         </MenuItem>
       </Submenu>

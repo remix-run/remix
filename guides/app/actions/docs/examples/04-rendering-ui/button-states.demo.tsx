@@ -26,13 +26,7 @@ export function ButtonStates() {
 
 function SpinnerIcon() {
   return () => (
-    <svg
-      aria-hidden="true"
-      fill="none"
-      viewBox="0 0 16 16"
-      width="16"
-      height="16"
-    >
+    <svg aria-hidden="true" fill="none" viewBox="0 0 16 16" width="16" height="16">
       <path
         d="M8 2.5a5.5 5.5 0 1 1-5.5 5.5"
         stroke="currentColor"

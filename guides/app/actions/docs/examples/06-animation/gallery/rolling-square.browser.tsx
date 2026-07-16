@@ -30,9 +30,7 @@ export function RollingSquare(handle: Handle) {
           }),
         ]}
         style={{
-          transform: toggled
-            ? "translateX(100%) rotate(180deg)"
-            : "translateX(-100%)",
+          transform: toggled ? "translateX(100%) rotate(180deg)" : "translateX(-100%)",
         }}
       />
       <button

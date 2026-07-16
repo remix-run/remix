@@ -11,12 +11,7 @@ export function RadioBasic() {
     <fieldset mix={radioDemoCss}>
       <legend mix={legendCss}>Shipping speed</legend>
       <label mix={optionCss}>
-        <input
-          defaultChecked
-          mix={radio()}
-          name="shipping-speed"
-          value="standard"
-        />
+        <input defaultChecked mix={radio()} name="shipping-speed" value="standard" />
         Standard
       </label>
       <label mix={optionCss}>
@@ -24,11 +19,7 @@ export function RadioBasic() {
         Express
       </label>
       <label mix={optionCss}>
-        <input
-          mix={radio({ size: "lg" })}
-          name="shipping-speed"
-          value="overnight"
-        />
+        <input mix={radio({ size: "lg" })} name="shipping-speed" value="overnight" />
         Overnight
       </label>
       <label mix={optionCss}>

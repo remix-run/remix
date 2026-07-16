@@ -33,11 +33,7 @@ export function Demo(handle: Handle<DemoProps>) {
       <div data-demo-preview mix={previewStyles}>
         {handle.props.children}
       </div>
-      <div
-        data-demo-source
-        mix={sourceCodeStyles}
-        innerHTML={handle.props.sourceHtml}
-      />
+      <div data-demo-source mix={sourceCodeStyles} innerHTML={handle.props.sourceHtml} />
     </section>
   );
 }

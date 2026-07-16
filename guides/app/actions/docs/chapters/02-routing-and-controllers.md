@@ -242,10 +242,7 @@ import { redirect } from "remix/response/redirect";
 import { routes } from "../../../routes.ts";
 
 // inside an action:
-return redirect(
-  routes.albums.show.href({ albumId: context.params.albumId }),
-  303,
-);
+return redirect(routes.albums.show.href({ albumId: context.params.albumId }), 303);
 ```
 
 For HTML outside the Remix UI render pipeline, the `html` template tag escapes interpolated values and `createHtmlResponse(...)` sets the HTML content type and adds a doctype:

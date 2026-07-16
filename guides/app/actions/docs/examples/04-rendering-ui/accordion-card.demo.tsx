@@ -1,10 +1,5 @@
 import { css } from "remix/ui";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "remix/ui/accordion";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "remix/ui/accordion";
 
 /**
  * @name Accordion in a Card
@@ -19,8 +14,7 @@ export function AccordionCard() {
         <p mix={eyebrowCss}>Project settings</p>
         <h3 mix={titleCss}>Deployment policies</h3>
         <p mix={descriptionCss}>
-          The Accordion can sit inside a card when the surrounding surface needs
-          stronger grouping.
+          The Accordion can sit inside a card when the surrounding surface needs stronger grouping.
         </p>
       </div>
 
@@ -30,8 +24,8 @@ export function AccordionCard() {
             <AccordionTrigger>Required approvals</AccordionTrigger>
             <AccordionContent>
               <p mix={bodyTextCss}>
-                Require one reviewer for routine changes and two reviewers for
-                dependency, auth, or billing-related changes.
+                Require one reviewer for routine changes and two reviewers for dependency, auth, or
+                billing-related changes.
               </p>
             </AccordionContent>
           </AccordionItem>
@@ -40,8 +34,8 @@ export function AccordionCard() {
             <AccordionTrigger>Release windows</AccordionTrigger>
             <AccordionContent>
               <p mix={bodyTextCss}>
-                Schedule production deploys on weekdays before 3 PM so incidents
-                and rollback work stay inside staffed hours.
+                Schedule production deploys on weekdays before 3 PM so incidents and rollback work
+                stay inside staffed hours.
               </p>
             </AccordionContent>
           </AccordionItem>
@@ -50,8 +44,8 @@ export function AccordionCard() {
             <AccordionTrigger>Rollback policy</AccordionTrigger>
             <AccordionContent>
               <p mix={bodyTextCss}>
-                Keep a rollback target ready for every release and treat
-                rollback preparation as part of the normal change checklist.
+                Keep a rollback target ready for every release and treat rollback preparation as
+                part of the normal change checklist.
               </p>
             </AccordionContent>
           </AccordionItem>

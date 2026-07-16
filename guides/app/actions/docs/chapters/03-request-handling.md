@@ -97,16 +97,13 @@ The listener accepts a few options when the server boundary needs more informati
 For example, a Node server behind a trusted reverse proxy can let the listener recover the public protocol and host:
 
 ```ts filename=server.ts
-const requestListener = createRequestListener(
-  (request) => router.fetch(request),
-  {
-    trustProxy: true,
-    onError(error) {
-      console.error(error);
-      return new Response("Internal Server Error", { status: 500 });
-    },
+const requestListener = createRequestListener((request) => router.fetch(request), {
+  trustProxy: true,
+  onError(error) {
+    console.error(error);
+    return new Response("Internal Server Error", { status: 500 });
   },
-);
+});
 
 const server = http.createServer(requestListener);
 ```
@@ -187,9 +184,7 @@ function timing(): Middleware {
     let response = await next();
     let duration = performance.now() - start;
 
-    console.log(
-      `${context.method} ${context.url.pathname} ${duration.toFixed(1)}ms`,
-    );
+    console.log(`${context.method} ${context.url.pathname} ${duration.toFixed(1)}ms`);
     return response;
   };
 }
@@ -348,11 +343,7 @@ A middleware that rejects a request returns its response without calling `next()
 ```ts
 function requireJson(): Middleware {
   return (context, next) => {
-    let mediaType = context.headers
-      .get("Content-Type")
-      ?.split(";", 1)[0]
-      .trim()
-      .toLowerCase();
+    let mediaType = context.headers.get("Content-Type")?.split(";", 1)[0].trim().toLowerCase();
 
     if (mediaType !== "application/json") {
       return new Response("Expected JSON", { status: 415 });

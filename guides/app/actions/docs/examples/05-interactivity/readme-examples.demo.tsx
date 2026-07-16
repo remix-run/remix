@@ -60,9 +60,7 @@ function Greeting(handle: Handle<{ name: string }>) {
 // ============================================================================
 // Stateful Components - CounterWithSetup
 // ============================================================================
-function CounterWithSetup(
-  handle: Handle<{ initialCount: number; label?: string }>,
-) {
+function CounterWithSetup(handle: Handle<{ initialCount: number; label?: string }>) {
   // Component function: runs once
   let count = handle.props.initialCount;
 
@@ -87,9 +85,7 @@ function CounterWithSetup(
 // ============================================================================
 // Setup Prop vs Props - CounterWithLabel
 // ============================================================================
-function CounterWithLabel(
-  handle: Handle<{ initialCount: number; label?: string }>,
-) {
+function CounterWithLabel(handle: Handle<{ initialCount: number; label?: string }>) {
   let count = handle.props.initialCount;
 
   return () => (
@@ -132,9 +128,7 @@ function SearchInput(handle: Handle) {
             // Simulated search with timeout
             setTimeout(() => {
               if (signal.aborted) return;
-              results = query
-                ? [`Result for "${query}" 1`, `Result for "${query}" 2`]
-                : [];
+              results = query ? [`Result for "${query}" 1`, `Result for "${query}" 2`] : [];
               loading = false;
               handle.update();
             }, 300);
@@ -178,9 +172,7 @@ function SlugForm(handle: Handle) {
         />
         Auto-generate slug
       </label>
-      <label
-        mix={[css({ display: "flex", flexDirection: "column", gap: "4px" })]}
-      >
+      <label mix={[css({ display: "flex", flexDirection: "column", gap: "4px" })]}>
         Slug
         <input
           type="text"
@@ -271,8 +263,7 @@ function ButtonAdvanced() {
             position: "absolute",
             inset: "-2px",
             borderRadius: "8px",
-            background:
-              "linear-gradient(45deg, rgb(54, 113, 246), rgb(99, 179, 255))",
+            background: "linear-gradient(45deg, rgb(54, 113, 246), rgb(99, 179, 255))",
             zIndex: -1,
             opacity: 0,
             transition: "opacity 0.2s",
@@ -305,10 +296,7 @@ function FormBasic() {
         type="text"
         placeholder="Click the button to select this"
         // capture the input node
-        mix={[
-          ref((node) => (inputRef = node)),
-          css({ marginRight: "8px", padding: "4px 8px" }),
-        ]}
+        mix={[ref((node) => (inputRef = node)), css({ marginRight: "8px", padding: "4px 8px" })]}
       />
       <button
         mix={[
@@ -472,9 +460,7 @@ function FormWithScroll(handle: Handle) {
           ]}
         >
           <h3 mix={[css({ margin: "0 0 0.5rem 0" })]}>Additional Details</h3>
-          <p mix={[css({ margin: 0 })]}>
-            This section appears when the checkbox is checked.
-          </p>
+          <p mix={[css({ margin: 0 })]}>This section appears when the checkbox is checked.</p>
         </section>
       )}
     </div>

@@ -66,8 +66,7 @@ export function MaterialRipple(handle: Handle) {
           overflow: "hidden",
           letterSpacing: "0.2px",
           WebkitTapHighlightColor: "transparent",
-          transition:
-            "border-color 200ms linear, background-color 200ms linear",
+          transition: "border-color 200ms linear, background-color 200ms linear",
           "&:hover": {
             borderColor: "#6d28d9",
             backgroundColor: "#7c3aed20",
@@ -85,8 +84,7 @@ export function MaterialRipple(handle: Handle) {
         on("pointercancel", removeAllRipples),
         on("pointerleave", removeAllRipples),
         on("keydown", (event) => {
-          if (!(event.key === "Enter" || event.key === " ") || event.repeat)
-            return;
+          if (!(event.key === "Enter" || event.key === " ") || event.repeat) return;
           event.preventDefault();
           createCenteredRipple();
         }),

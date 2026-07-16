@@ -41,8 +41,8 @@ export function ComboboxOverview(handle: Handle) {
         </Combobox>
 
         <div mix={helpCss}>
-          Try typing `san`, `wash`, or airport codes like `ord`, `lax`, or
-          `jfk`, then use ArrowDown and Enter.
+          Try typing `san`, `wash`, or airport codes like `ord`, `lax`, or `jfk`, then use ArrowDown
+          and Enter.
         </div>
       </div>
 
@@ -76,22 +76,12 @@ const airportOptions: AirportOption[] = [
   },
   {
     label: "Baltimore/Washington International",
-    searchValue: [
-      "bwi",
-      "baltimore",
-      "washington",
-      "baltimore/washington international",
-    ],
+    searchValue: ["bwi", "baltimore", "washington", "baltimore/washington international"],
     value: "BWI",
   },
   {
     label: "Ronald Reagan Washington National",
-    searchValue: [
-      "dca",
-      "reagan",
-      "washington",
-      "ronald reagan washington national",
-    ],
+    searchValue: ["dca", "reagan", "washington", "ronald reagan washington national"],
     value: "DCA",
   },
   {
@@ -101,12 +91,7 @@ const airportOptions: AirportOption[] = [
   },
   {
     label: "Dallas/Fort Worth International",
-    searchValue: [
-      "dfw",
-      "dallas",
-      "fort worth",
-      "dallas/fort worth international",
-    ],
+    searchValue: ["dfw", "dallas", "fort worth", "dallas/fort worth international"],
     value: "DFW",
   },
   {
@@ -121,22 +106,12 @@ const airportOptions: AirportOption[] = [
   },
   {
     label: "Washington Dulles International",
-    searchValue: [
-      "iad",
-      "dulles",
-      "washington",
-      "washington dulles international",
-    ],
+    searchValue: ["iad", "dulles", "washington", "washington dulles international"],
     value: "IAD",
   },
   {
     label: "John F. Kennedy International",
-    searchValue: [
-      "jfk",
-      "kennedy",
-      "new york",
-      "john f. kennedy international",
-    ],
+    searchValue: ["jfk", "kennedy", "new york", "john f. kennedy international"],
     value: "JFK",
   },
   {

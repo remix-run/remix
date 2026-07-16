@@ -488,12 +488,7 @@ export function AlbumEditPage(handle: Handle<{ album: Album }>) {
             </label>
             <label>
               Year
-              <input
-                name="year"
-                defaultValue={album.year}
-                required
-                type="number"
-              />
+              <input name="year" defaultValue={album.year} required type="number" />
             </label>
             <button type="submit">Save album</button>
           </form>

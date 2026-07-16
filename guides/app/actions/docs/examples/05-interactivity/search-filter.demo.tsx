@@ -5,9 +5,7 @@ export function SearchFilterDemo(handle: Handle) {
   let query = "";
 
   return () => {
-    let results = projects.filter((project) =>
-      project.toLowerCase().includes(query.toLowerCase()),
-    );
+    let results = projects.filter((project) => project.toLowerCase().includes(query.toLowerCase()));
 
     return (
       <div mix={searchStyles}>

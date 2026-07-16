@@ -34,10 +34,7 @@ export function AspectRatio(handle: Handle) {
             css({
               backgroundColor: "#8df0cc",
               borderRadius: 10,
-              transition: spring.transition(
-                ["width", "aspect-ratio"],
-                "bouncy",
-              ),
+              transition: spring.transition(["width", "aspect-ratio"], "bouncy"),
             }),
           ]}
           style={{

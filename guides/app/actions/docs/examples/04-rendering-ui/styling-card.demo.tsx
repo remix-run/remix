@@ -11,9 +11,7 @@ export function StylingCardDemo() {
   );
 }
 
-function ProductCard(
-  handle: Handle<{ description: string; price: number; title: string }>,
-) {
+function ProductCard(handle: Handle<{ description: string; price: number; title: string }>) {
   return () => (
     <article mix={productCardStyles}>
       <div mix={productImageStyles} aria-hidden="true">
@@ -24,22 +22,8 @@ function ProductCard(
             stroke-linecap="round"
             stroke-width="8"
           />
-          <rect
-            width="24"
-            height="34"
-            x="18"
-            y="38"
-            fill="currentColor"
-            rx="12"
-          />
-          <rect
-            width="24"
-            height="34"
-            x="78"
-            y="38"
-            fill="currentColor"
-            rx="12"
-          />
+          <rect width="24" height="34" x="18" y="38" fill="currentColor" rx="12" />
+          <rect width="24" height="34" x="78" y="38" fill="currentColor" rx="12" />
         </svg>
       </div>
       <div mix={productBodyStyles}>

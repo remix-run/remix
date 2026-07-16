@@ -249,15 +249,11 @@ const baseConfirmPress = createMixin<HTMLElement>((handle) => {
   let start = (target: Element) => {
     clearTimer();
     pressing = true;
-    target.dispatchEvent(
-      new Event(pressConfirmStartEventType, { bubbles: true }),
-    );
+    target.dispatchEvent(new Event(pressConfirmStartEventType, { bubbles: true }));
     timer = window.setTimeout(() => {
       timer = 0;
       pressing = false;
-      target.dispatchEvent(
-        new Event(pressConfirmEndEventType, { bubbles: true }),
-      );
+      target.dispatchEvent(new Event(pressConfirmEndEventType, { bubbles: true }));
     }, PRESS_CONFIRM_TIME);
   };
 
@@ -265,9 +261,7 @@ const baseConfirmPress = createMixin<HTMLElement>((handle) => {
     if (!pressing) return;
     clearTimer();
     pressing = false;
-    target.dispatchEvent(
-      new Event(pressConfirmCancelEventType, { bubbles: true }),
-    );
+    target.dispatchEvent(new Event(pressConfirmCancelEventType, { bubbles: true }));
   };
 
   handle.addEventListener("remove", () => {
@@ -293,8 +287,7 @@ const baseConfirmPress = createMixin<HTMLElement>((handle) => {
           cancel(event.currentTarget);
         }),
         on("keydown", (event) => {
-          if (!(event.key === "Enter" || event.key === " ") || event.repeat)
-            return;
+          if (!(event.key === "Enter" || event.key === " ") || event.repeat) return;
           event.preventDefault();
           start(event.currentTarget);
         }),

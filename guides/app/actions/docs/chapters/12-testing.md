@@ -99,16 +99,11 @@ const origin = "https://albums.test";
 
 describe("album show", () => {
   it("renders the requested album", async () => {
-    let request = new Request(
-      new URL(routes.albums.show.href({ albumId: "thriller" }), origin),
-    );
+    let request = new Request(new URL(routes.albums.show.href({ albumId: "thriller" }), origin));
     let response = await router.fetch(request);
 
     assert.equal(response.status, 200);
-    assert.equal(
-      response.headers.get("Content-Type"),
-      "text/html; charset=UTF-8",
-    );
+    assert.equal(response.headers.get("Content-Type"), "text/html; charset=UTF-8");
     assert.match(await response.text(), /Thriller/);
   });
 });
@@ -136,20 +131,14 @@ describe("album editing", () => {
     formData.set("year", "1982");
 
     let response = await router.fetch(
-      new Request(
-        new URL(routes.albums.edit.action.href({ albumId }), origin),
-        {
-          method: "POST",
-          body: formData,
-        },
-      ),
+      new Request(new URL(routes.albums.edit.action.href({ albumId }), origin), {
+        method: "POST",
+        body: formData,
+      }),
     );
 
     assert.equal(response.status, 303);
-    assert.equal(
-      response.headers.get("Location"),
-      routes.albums.show.href({ albumId }),
-    );
+    assert.equal(response.headers.get("Location"), routes.albums.show.href({ albumId }));
   });
 });
 ```
@@ -158,10 +147,7 @@ The same `FormData` can carry an upload:
 
 ```ts
 let formData = new FormData();
-formData.set(
-  "cover",
-  new File(["fake image bytes"], "cover.jpg", { type: "image/jpeg" }),
-);
+formData.set("cover", new File(["fake image bytes"], "cover.jpg", { type: "image/jpeg" }));
 ```
 
 Pass that form directly as the request body. Do not set `Content-Type` yourself because `Request` adds the multipart boundary when it serializes the `FormData`.
@@ -198,9 +184,7 @@ A browser manages cookies automatically in an [end-to-end test](#test-complete-f
 import * as assert from "remix/assert";
 
 export function getResponseCookie(response: Response, name: string): string {
-  let setCookie = response.headers
-    .getSetCookie()
-    .find((header) => header.startsWith(`${name}=`));
+  let setCookie = response.headers.getSetCookie().find((header) => header.startsWith(`${name}=`));
 
   assert.ok(setCookie, `Expected a ${name} cookie`);
   return setCookie.split(";", 1)[0];
@@ -319,10 +303,7 @@ describe("album editing", () => {
     await page.getByRole("button", { name: "Save album" }).click();
     await page.getByRole("heading", { name: "Thriller" }).waitFor();
 
-    assert.equal(
-      new URL(page.url()).pathname,
-      routes.albums.show.href({ albumId }),
-    );
+    assert.equal(new URL(page.url()).pathname, routes.albums.show.href({ albumId }));
     await page.getByText("Michael Jackson · 1982").waitFor();
   });
 });

@@ -19,11 +19,7 @@ export function InputBasic() {
         <span mix={labelCss}>With icon</span>
         <div mix={input.root()}>
           <SearchIcon />
-          <input
-            aria-label="With icon"
-            mix={input.field()}
-            placeholder="Placeholder"
-          />
+          <input aria-label="With icon" mix={input.field()} placeholder="Placeholder" />
         </div>
       </div>
 

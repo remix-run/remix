@@ -43,12 +43,7 @@ async function loadExampleHandler(chapter: string, example: string) {
 }
 
 function readExampleHandler(mod: unknown, moduleUrl: URL) {
-  if (
-    !mod ||
-    typeof mod !== "object" ||
-    !("handler" in mod) ||
-    typeof mod.handler !== "function"
-  ) {
+  if (!mod || typeof mod !== "object" || !("handler" in mod) || typeof mod.handler !== "function") {
     return undefined;
   }
 
@@ -60,16 +55,10 @@ function readExampleHandler(mod: unknown, moduleUrl: URL) {
       return result;
     }
 
-    throw new Error(
-      `Expected example handler to return a Response: ${fileURLToPath(moduleUrl)}`,
-    );
+    throw new Error(`Expected example handler to return a Response: ${fileURLToPath(moduleUrl)}`);
   };
 }
 
 function isModuleNotFoundError(error: unknown): boolean {
-  return (
-    error instanceof Error &&
-    "code" in error &&
-    error.code === "ERR_MODULE_NOT_FOUND"
-  );
+  return error instanceof Error && "code" in error && error.code === "ERR_MODULE_NOT_FOUND";
 }

@@ -13,12 +13,8 @@ function Callouts() {
       <Callout tone="brand" title="Start with the route">
         Make the server response correct before adding browser behavior.
       </Callout>
-      <Callout
-        tone="neutral"
-        title="Add frames when a region has its own lifecycle"
-      >
-        Frames keep the embedded UI route-owned while the surrounding guide
-        stays plain Markdown.
+      <Callout tone="neutral" title="Add frames when a region has its own lifecycle">
+        Frames keep the embedded UI route-owned while the surrounding guide stays plain Markdown.
       </Callout>
     </div>
   );
@@ -54,8 +50,7 @@ const calloutStyles = css({
 
 const calloutToneStyles = {
   brand: css({
-    borderColor:
-      "color-mix(in srgb, var(--rmx-color-accent), var(--rmx-color-border-subtle) 60%)",
+    borderColor: "color-mix(in srgb, var(--rmx-color-accent), var(--rmx-color-border-subtle) 60%)",
     boxShadow: "inset var(--rmx-space-xs) 0 0 var(--rmx-color-accent)",
   }),
   neutral: css({

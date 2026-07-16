@@ -43,9 +43,7 @@ export function AccordionPrimitives() {
                 Archived
               </button>
             </h3>
-            <div mix={[contentCss, accordion.content()]}>
-              Unavailable settings.
-            </div>
+            <div mix={[contentCss, accordion.content()]}>Unavailable settings.</div>
           </div>
         </accordion.ItemContext>
       </div>

@@ -33,10 +33,7 @@ export function ComboboxPrimitives(handle: Handle) {
         <div mix={[surfaceCss, combobox.popover()]}>
           <div mix={[listCss, combobox.list()]}>
             {frameworks.map((option) => (
-              <div
-                key={option.value}
-                mix={[optionCss, combobox.option(option)]}
-              >
+              <div key={option.value} mix={[optionCss, combobox.option(option)]}>
                 {option.label}
               </div>
             ))}

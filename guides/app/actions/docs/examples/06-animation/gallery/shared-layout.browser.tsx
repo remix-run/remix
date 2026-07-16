@@ -178,9 +178,7 @@ function Circle(handle: Handle<{ filled?: boolean; children: RemixNode }>) {
           boxSizing: "border-box",
           backgroundColor: handle.props.filled ? "#0f1115" : "transparent",
           color: handle.props.filled ? "#f5f5f5" : "#0f1115",
-          border: handle.props.filled
-            ? "2px solid #0f1115"
-            : "2px solid #0f1115",
+          border: handle.props.filled ? "2px solid #0f1115" : "2px solid #0f1115",
         }),
       ]}
     >

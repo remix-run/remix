@@ -12,20 +12,11 @@ export function ToggleBasic() {
       <section mix={sectionCss}>
         <h2 mix={sectionLabelCss}>Styled input mixin</h2>
         <label mix={optionCss}>
-          <input
-            defaultChecked
-            mix={toggle()}
-            name="preferences"
-            value="email"
-          />
+          <input defaultChecked mix={toggle()} name="preferences" value="email" />
           Email notifications
         </label>
         <label mix={optionCss}>
-          <input
-            mix={toggle({ size: "lg" })}
-            name="preferences"
-            value="desktop"
-          />
+          <input mix={toggle({ size: "lg" })} name="preferences" value="desktop" />
           Desktop alerts large
         </label>
         <label mix={optionCss}>
@@ -33,12 +24,7 @@ export function ToggleBasic() {
           Weekly digest
         </label>
         <label mix={optionCss}>
-          <input
-            defaultChecked
-            mix={toggle({ size: "lg" })}
-            name="preferences"
-            value="sync"
-          />
+          <input defaultChecked mix={toggle({ size: "lg" })} name="preferences" value="sync" />
           Automatic sync
         </label>
       </section>

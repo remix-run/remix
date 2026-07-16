@@ -3,13 +3,7 @@ import { MenuItem, MenuList, Submenu } from "remix/ui/menu";
 import * as menu from "remix/ui/menu/primitives";
 import { onMenuSelect } from "remix/ui/menu/primitives";
 
-type FileAction =
-  | "copyPath"
-  | "duplicate"
-  | "move"
-  | "rename"
-  | "reveal"
-  | "trash";
+type FileAction = "copyPath" | "duplicate" | "move" | "rename" | "reveal" | "trash";
 
 const actionLabelByName: Record<FileAction, string> = {
   copyPath: "Copied path",

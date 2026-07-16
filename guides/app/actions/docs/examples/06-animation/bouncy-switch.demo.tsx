@@ -21,9 +21,7 @@ export function BouncySwitchDemo(handle: Handle) {
         mix={thumbStyles}
         style={{
           transform: isOn ? "translateY(-100px)" : "translateY(0)",
-          transition: isOn
-            ? `transform ${spring()}`
-            : `transform 800ms ${bounceEasing}`,
+          transition: isOn ? `transform ${spring()}` : `transform 800ms ${bounceEasing}`,
         }}
       />
     </button>

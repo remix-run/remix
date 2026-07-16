@@ -11,8 +11,7 @@ const popoverSurfaceTransitionCss: CSSMixinDescriptor = css({
   },
   "&:not(:popover-open)": {
     pointerEvents: "none",
-    transition:
-      "opacity 180ms ease-in, overlay 180ms ease-in, display 180ms ease-in",
+    transition: "opacity 180ms ease-in, overlay 180ms ease-in, display 180ms ease-in",
     transitionBehavior: "allow-discrete",
   },
 });
@@ -101,10 +100,9 @@ const itemCss: CSSMixinDescriptor = css({
   "&[hidden]": {
     display: "none",
   },
-  '&[data-listbox-flash="true"], &[data-select-flash="true"], &[data-combobox-flash="true"]':
-    {
-      color: styles.colors.text.primary,
-    },
+  '&[data-listbox-flash="true"], &[data-select-flash="true"], &[data-combobox-flash="true"]': {
+    color: styles.colors.text.primary,
+  },
   '&[data-listbox-flash="true"]::before, &[data-select-flash="true"]::before, &[data-combobox-flash="true"]::before':
     {
       backgroundColor: "transparent",
@@ -141,10 +139,7 @@ const itemLabelCss: CSSMixinDescriptor = css({
   WebkitUserSelect: "none",
 });
 
-export const popoverSurfaceStyle = [
-  popoverSurfaceCss,
-  popoverSurfaceTransitionCss,
-] as const;
+export const popoverSurfaceStyle = [popoverSurfaceCss, popoverSurfaceTransitionCss] as const;
 export const listboxIndicatorStyle = itemIndicatorCss;
 export const listboxLabelStyle = itemLabelCss;
 export const listboxListStyle = listCss;

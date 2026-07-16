@@ -15,8 +15,8 @@
   --rmx-radius-xl: 0.75rem;
   --rmx-radius-full: 9999px;
 
-  --rmx-font-family-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica,
-    Arial, sans-serif;
+  --rmx-font-family-sans:
+    ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   --rmx-font-family-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace;
 
   --rmx-font-size-xxxs: 0.625rem;
