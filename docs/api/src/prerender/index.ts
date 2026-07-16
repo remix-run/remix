@@ -5,9 +5,9 @@ import * as util from 'node:util'
 import { createAssetServer } from '../server/asset-server.ts'
 import { createRouter, getDefaultVersions } from '../server/router.tsx'
 import { routes } from '../server/routes.ts'
-import { crawl } from './crawl.ts'
 import { getVersionsForPicker } from './versions.ts'
-import { writeResult } from './utils.ts'
+import { crawl } from 'remix-docs-shared/prerender/crawl'
+import { writeResult } from 'remix-docs-shared/prerender/utils'
 
 let { values: cliArgs } = util.parseArgs({
   options: {

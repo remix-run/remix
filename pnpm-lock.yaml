@@ -199,6 +199,9 @@ importers:
       remix:
         specifier: workspace:*
         version: link:../../packages/remix
+      remix-docs-shared:
+        specifier: workspace:*
+        version: link:../shared
       semver:
         specifier: ^7.7.3
         version: 7.7.4
@@ -227,19 +230,6 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
-
-  docs/api/src/prerender/bench:
-    dependencies:
-      node-html-parser:
-        specifier: ^7.1.0
-        version: 7.1.0
-      remix:
-        specifier: workspace:^
-        version: link:../../../../../packages/remix
-    devDependencies:
-      vitest:
-        specifier: 4.0.15
-        version: 4.0.15(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
 
   docs/guides:
     dependencies:
@@ -276,6 +266,9 @@ importers:
       remix:
         specifier: workspace:^
         version: link:../../packages/remix
+      remix-docs-shared:
+        specifier: workspace:*
+        version: link:../shared
       shiki:
         specifier: ^3.22.0
         version: 3.23.0
@@ -301,6 +294,32 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 5.9.3
+
+  docs/shared:
+    dependencies:
+      remix:
+        specifier: workspace:^
+        version: link:../../packages/remix
+    devDependencies:
+      '@types/node':
+        specifier: 'catalog:'
+        version: 24.10.4
+      typescript:
+        specifier: 'catalog:'
+        version: 5.9.3
+
+  docs/shared/prerender/bench:
+    dependencies:
+      node-html-parser:
+        specifier: ^7.1.0
+        version: 7.1.0
+      remix:
+        specifier: workspace:^
+        version: link:../../../../packages/remix
+    devDependencies:
+      vitest:
+        specifier: 4.0.15
+        version: 4.0.15(@types/node@24.10.4)(lightningcss@1.32.0)(tsx@4.21.0)(yaml@2.9.0)
 
   packages/assert:
     devDependencies:

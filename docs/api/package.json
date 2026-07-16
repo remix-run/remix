@@ -8,6 +8,7 @@
     "marked": "^17.0.1",
     "oxfmt": "catalog:",
     "remix": "workspace:*",
+    "remix-docs-shared": "workspace:*",
     "semver": "^7.7.3"
   },
   "devDependencies": {
