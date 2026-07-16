@@ -16,8 +16,9 @@ describe('SiteHeader', () => {
     assert.match(html, /id="site-menu-toggle"[^>]*popovertarget="site-primary-navigation"/)
     assert.match(html, /id="site-primary-navigation"[^>]*popover="auto"/)
     assert.equal(html.match(/>Guides<\/a>/g)?.length, 2)
+    assert.match(html, /href="https:\/\/remix\.run"[^>]*aria-label="Remix Docs"/)
     assert.match(html, /href="\/icons\.svg#layout-left"/)
-    assert.equal(html.match(/<pagefind-modal-trigger/g)?.length, 1)
+    assert.equal(html.match(/id="docs-search-button"/g)?.length, 1)
   })
 
   it('renders one responsive search trigger for Pagefind focus ownership', async () => {
@@ -25,8 +26,13 @@ describe('SiteHeader', () => {
 
     assert.doesNotMatch(html, /<button[^>]*disabled/)
     assert.doesNotMatch(html, /id="docs-search-compact"/)
-    assert.match(html, /id="docs-search-button"[^>]*placeholder="Search"/)
-    assert.doesNotMatch(html, /id="docs-search-button"[^>]*aria-hidden/)
+    assert.doesNotMatch(html, /<pagefind-modal-trigger/)
+    assert.match(html, /id="docs-search-button"[^>]*aria-label="Search"/)
+    assert.match(html, /id="docs-search-button"[^>]*aria-haspopup="dialog"/)
+    assert.match(html, /id="docs-search-button"[^>]*aria-expanded="false"/)
+    assert.match(html, /id="docs-search-button"[^>]*aria-keyshortcuts="Meta\+K Control\+K"/)
+    assert.match(html, /href="\/icons\.svg#search"/)
+    assert.match(html, /<kbd>⌘<\/kbd><kbd>K<\/kbd>/)
   })
 
   it('shares the standalone wordmark asset with the footer', async () => {
