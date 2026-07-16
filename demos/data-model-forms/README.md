@@ -114,13 +114,42 @@ import input from 'remix/ui/input'
 />
 ```
 
+The render middleware owns the shared document shell, so route pages only render their content. Its
+second argument keeps document behavior separate from the underlying response options:
+
+```ts
+interface RenderOptions {
+  document?: { title?: string } | false
+  responseInit?: ResponseInit
+}
+```
+
+Most handlers use the default document and may override only its title. A handler that serves a
+frame or another partial HTML response can pass `document: false` without changing the content
+component:
+
+```tsx
+return render(<RegistrationPage storedAccounts={storedAccounts} />, {
+  document: { title: 'Create an account' },
+})
+
+return render(<RegistrationSummary account={account} />, {
+  document: false,
+})
+```
+
+This keeps frame content selection in the handler while the middleware remains responsible for the
+generic HTML document, asset preloads, and client runtime script.
+
 The POST action validates the request boundary in one call:
 
 ```tsx
 let submission = RegistrationForm.parse(formData)
 
 if (!submission.success) {
-  return render(<RegistrationPage submission={submission} />, { status: 400 })
+  return render(<RegistrationPage submission={submission} />, {
+    responseInit: { status: 400 },
+  })
 }
 
 let { displayName, email, age, website } = submission.value
