@@ -88,11 +88,6 @@ export interface AssetServerOptions<transforms extends AssetRequestTransformMap 
    */
   allowPackages?: readonly string[]
   /**
-   * Exact package names whose files are denied from being served. Denied packages take precedence
-   * over `allowFiles` and `allowPackages`.
-   */
-  denyPackages?: readonly string[]
-  /**
    * Glob patterns or file paths that are denied from being served. Relative values are resolved from `rootDir`.
    */
   denyFiles?: readonly string[]
@@ -192,7 +187,6 @@ type ResolvedAssetServerOptions<transforms extends AssetRequestTransformMap> = {
   basePath: string
   buildId?: string
   define?: Record<string, string>
-  denyPackages?: readonly string[]
   denyFiles?: readonly string[]
   external: string[]
   files: ResolvedAssetServerFilesOptions
@@ -252,10 +246,9 @@ export function createAssetServer<const transforms extends AssetRequestTransform
   let accessPolicy = createAccessPolicy({
     allowFiles: resolvedOptions.allowFiles,
     allowPackages: resolvedOptions.allowPackages,
-    denyPackages: resolvedOptions.denyPackages,
     denyFiles: resolvedOptions.denyFiles,
     packageSearchRoots:
-      hasPackages(resolvedOptions.allowPackages) || hasPackages(resolvedOptions.denyPackages)
+      hasPackages(resolvedOptions.allowPackages)
         ? getPackageSearchRoots(options.fileMap, resolvedOptions.rootDir)
         : undefined,
     rootDir: resolvedOptions.rootDir,
@@ -707,7 +700,6 @@ function resolveAssetServerOptions<transforms extends AssetRequestTransformMap>(
     basePath,
     buildId: fingerprintOptions.buildId,
     define: scriptOptions.define,
-    denyPackages: options.denyPackages,
     denyFiles: options.denyFiles,
     external: scriptOptions.external ?? [],
     files: normalizeFilesOptions(options.files),

@@ -1,1 +1,1 @@
-Add `allowPackages` and `denyPackages` options to `createAssetServer()` for package-level access control. `allowPackages` allows packages and their dependencies to be served, e.g. `allowPackages: ['remix']`
+Add an `allowPackages` option to `createAssetServer()` for package-level access control, allowing packages and their dependencies to be served, e.g. `allowPackages: ['remix']`

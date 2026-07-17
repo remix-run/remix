@@ -71,7 +71,7 @@ let assetServer = createAssetServer({
 
 ## Access Control
 
-You must provide an `allowFiles` list to specify which files are allowed to be served. You can also allow whole packages by name with `allowPackages`. `denyFiles` and `denyPackages` are optional and take precedence over both `allowFiles` and `allowPackages`.
+You must provide an `allowFiles` list to specify which files are allowed to be served. You can also allow whole packages by name with `allowPackages`. `denyFiles` is optional and takes precedence over both `allowFiles` and `allowPackages`.
 
 ```ts
 import { createAssetServer } from 'remix/assets'
@@ -90,7 +90,7 @@ let assetServer = createAssetServer({
 
 Values for `allowFiles` and `denyFiles` are file paths or globs. Relative values are resolved from `rootDir`. Absolute file paths match exactly, and absolute directory paths also match their descendants.
 
-Values for `allowPackages` and `denyPackages` are exact package names. Dependencies and installed optional dependencies of packages in `allowPackages` are also allowed automatically. Allowed package files must still be reachable through `fileMap`.
+Values for `allowPackages` are exact package names. Dependencies and installed optional dependencies of packages in `allowPackages` are also allowed automatically. Peer dependencies must be listed explicitly if they should be browser-reachable. Allowed package files must still be reachable through `fileMap`.
 
 ## File Map
 

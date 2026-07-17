@@ -11,7 +11,7 @@ Use `staticFiles()` for files served from disk as-is. Use `createAssetServer()` 
 
 ## Configure the asset server boundary {#remix-s-unbundled-asset-server}
 
-Define `rootDir`, the public `basePath`, and a `fileMap` from URL patterns to root-relative source patterns. Use `allowFiles` for app-owned source, `allowPackages` for dependencies that should be served by package name, and `denyFiles` or `denyPackages` for server-only modules that need to override an allow rule, then map the asset namespace to a controller action that calls `assetServer.fetch(request)`.
+Define `rootDir`, the public `basePath`, and a `fileMap` from URL patterns to root-relative source patterns. Use `allowFiles` for app-owned source, `allowPackages` for dependencies that should be served by package name, and `denyFiles` for server-only modules that need to override an allow rule, then map the asset namespace to a controller action that calls `assetServer.fetch(request)`.
 
 ## Browser modules, CSS, and file assets {#browser-modules-asset-roots-and-package-mounts}
 

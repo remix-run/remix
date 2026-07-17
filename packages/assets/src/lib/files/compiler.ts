@@ -556,7 +556,7 @@ export function resolveServedFileOrThrow(filePath: string, args: ResolveArgs): R
   if (!args.isAllowed(identityPath)) {
     throw createAssetServerCompilationError(
       `File "${identityPath}" is not allowed by the asset server access configuration. ` +
-        `Add a matching allowFiles or allowPackages rule, or remove a conflicting denyFiles or denyPackages rule.`,
+        `Add a matching allowFiles or allowPackages rule, or remove a conflicting denyFiles rule.`,
       {
         code: 'FILE_NOT_ALLOWED',
       },

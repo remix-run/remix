@@ -164,7 +164,7 @@ export async function resolveModule(
       return failResolve(
         createAssetServerCompilationError(
           `Import "${displaySpecifier}" in ${transformed.resolvedPath}, resolved to "${resolvedImport.identityPath}", is not allowed by the asset server access configuration. ` +
-            `Add a matching allowFiles or allowPackages rule, remove a conflicting denyFiles or denyPackages rule, or mark this import as external.`,
+            `Add a matching allowFiles or allowPackages rule, remove a conflicting denyFiles rule, or mark this import as external.`,
           {
             code: 'IMPORT_NOT_ALLOWED',
           },

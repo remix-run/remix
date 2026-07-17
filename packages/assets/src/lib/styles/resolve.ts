@@ -165,7 +165,7 @@ export function resolveServedStyleOrThrow(
   if (!args.isAllowed(identityPath)) {
     throw createAssetServerCompilationError(
       `File "${identityPath}" is not allowed by the asset server access configuration. ` +
-        `Add a matching allowFiles or allowPackages rule, or remove a conflicting denyFiles or denyPackages rule.`,
+        `Add a matching allowFiles or allowPackages rule, or remove a conflicting denyFiles rule.`,
       {
         code: 'FILE_NOT_ALLOWED',
       },
@@ -223,7 +223,7 @@ function resolveImportDependency(
   if (!args.isAllowed(identityPath)) {
     throw createAssetServerCompilationError(
       `Import "${url}" in ${importerPath}, resolved to "${identityPath}", is not allowed by the asset server access configuration. ` +
-        `Add a matching allowFiles or allowPackages rule, remove a conflicting denyFiles or denyPackages rule, or mark this import as external.`,
+        `Add a matching allowFiles or allowPackages rule, remove a conflicting denyFiles rule, or mark this import as external.`,
       {
         code: 'IMPORT_NOT_ALLOWED',
       },
@@ -293,7 +293,7 @@ function resolveUrlDependency(
   if (!args.isAllowed(identityPath)) {
     throw createAssetServerCompilationError(
       `URL "${url}" in ${importerPath}, resolved to "${identityPath}", is not allowed by the asset server access configuration. ` +
-        `Add a matching allowFiles or allowPackages rule, or remove a conflicting denyFiles or denyPackages rule.`,
+        `Add a matching allowFiles or allowPackages rule, or remove a conflicting denyFiles rule.`,
       {
         code: 'URL_NOT_ALLOWED',
       },

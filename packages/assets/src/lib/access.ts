@@ -26,7 +26,6 @@ export function createAccessPolicy(options: {
   allowFiles: readonly string[]
   allowPackages?: readonly string[]
   denyFiles?: readonly string[]
-  denyPackages?: readonly string[]
   packageSearchRoots?: readonly string[]
   rootDir: string
 }): AccessPolicy {
@@ -34,22 +33,17 @@ export function createAccessPolicy(options: {
     createFileMatcher(pattern, options.rootDir),
   )
   let allowPackageNames = normalizePackageNames(options.allowPackages, 'allowPackages')
-  let denyPackageNames = normalizePackageNames(options.denyPackages, 'denyPackages')
   let denyMatchers = (options.denyFiles ?? []).map((pattern) =>
     createFileMatcher(pattern, options.rootDir),
   )
   let packageSearchRoots = [options.rootDir, ...(options.packageSearchRoots ?? [])]
   let packageRootPaths = createPackageRootPaths({
     allowPackageNames,
-    denyPackageNames,
     searchRoots: packageSearchRoots,
   })
-  let allowPackageRootPathTrie = createPackageRootPathTrie(packageRootPaths.allow)
-  let denyPackageRootPathTrie = createPackageRootPathTrie(packageRootPaths.deny)
+  let allowPackageRootPathTrie = createPackageRootPathTrie(packageRootPaths)
   let packageStateDirectories =
-    allowPackageNames.size === 0 && denyPackageNames.size === 0
-      ? []
-      : getPackageStateDirectories(packageSearchRoots)
+    allowPackageNames.size === 0 ? [] : getPackageStateDirectories(packageSearchRoots)
   let packageRootsDirty = false
 
   function refreshPackageRootPathTries(): void {
@@ -57,11 +51,9 @@ export function createAccessPolicy(options: {
 
     packageRootPaths = createPackageRootPaths({
       allowPackageNames,
-      denyPackageNames,
       searchRoots: packageSearchRoots,
     })
-    allowPackageRootPathTrie = createPackageRootPathTrie(packageRootPaths.allow)
-    denyPackageRootPathTrie = createPackageRootPathTrie(packageRootPaths.deny)
+    allowPackageRootPathTrie = createPackageRootPathTrie(packageRootPaths)
     packageRootsDirty = false
   }
 
@@ -72,20 +64,13 @@ export function createAccessPolicy(options: {
     return isPathInPackageRootPathTrie(filePath, allowPackageRootPathTrie)
   }
 
-  function isDeniedPackage(filePath: string): boolean {
-    if (denyPackageNames.size === 0) return false
-    refreshPackageRootPathTries()
-
-    return isPathInPackageRootPathTrie(filePath, denyPackageRootPathTrie)
-  }
-
   return {
     getPackageWatchDirectories() {
-      if (allowPackageNames.size === 0 && denyPackageNames.size === 0) return []
+      if (allowPackageNames.size === 0) return []
       return packageStateDirectories
     },
     handleFileEvent(filePath) {
-      if (allowPackageNames.size === 0 && denyPackageNames.size === 0) return
+      if (allowPackageNames.size === 0) return
       if (!isPackageStateFileEvent(filePath, packageStateDirectories)) return
 
       packageRootsDirty = true
@@ -95,7 +80,6 @@ export function createAccessPolicy(options: {
       if (!allowMatchers.some((matcher) => matcher(filePath)) && !isAllowedPackage(filePath)) {
         return false
       }
-      if (isDeniedPackage(filePath)) return false
       if (denyMatchers.length > 0 && denyMatchers.some((matcher) => matcher(filePath))) return false
       return true
     },
@@ -104,7 +88,7 @@ export function createAccessPolicy(options: {
 
 function normalizePackageNames(
   packageOption: readonly string[] | undefined,
-  optionName: 'allowPackages' | 'denyPackages',
+  optionName: 'allowPackages',
 ): Set<string> {
   let packageNames = new Set<string>()
 
@@ -133,7 +117,6 @@ function validatePackageName(packageName: string, message: string): void {
 type PackageJson = {
   dependencies?: Record<string, string>
   optionalDependencies?: Record<string, string>
-  name?: string
 }
 
 type PackageRootPathTrie = {
@@ -148,11 +131,9 @@ type PackageRootQueueItem = {
 
 function createPackageRootPaths(options: {
   allowPackageNames: ReadonlySet<string>
-  denyPackageNames: ReadonlySet<string>
   searchRoots: readonly string[]
-}): { allow: Set<string>; deny: Set<string> } {
+}): Set<string> {
   let allowPackageRootPaths = new Set<string>()
-  let denyPackageRootPaths = new Set<string>()
   let allowQueue: PackageRootQueueItem[] = []
   let seenAllowedPackageRoots = new Set<string>()
   let searchRoots = normalizePackageSearchRoots(options.searchRoots)
@@ -173,25 +154,11 @@ function createPackageRootPaths(options: {
     }
   }
 
-  for (let packageName of options.denyPackageNames) {
-    for (let searchRoot of searchRoots) {
-      let packageJsonPath = findPackageJsonPath(packageName, searchRoot)
-      if (packageJsonPath === null) continue
-
-      denyPackageRootPaths.add(normalizeFilePath(path.dirname(packageJsonPath)))
-    }
-  }
-
   while (allowQueue.length > 0) {
-    let { packageJsonPath, packageName } = allowQueue.shift()!
+    let { packageJsonPath } = allowQueue.shift()!
     let packageRootPath = normalizeFilePath(path.dirname(packageJsonPath))
     if (seenAllowedPackageRoots.has(packageRootPath)) continue
     seenAllowedPackageRoots.add(packageRootPath)
-
-    if (options.denyPackageNames.has(packageName)) {
-      denyPackageRootPaths.add(packageRootPath)
-      continue
-    }
 
     let packageJson = readPackageJson(packageJsonPath)
     allowPackageRootPaths.add(packageRootPath)
@@ -227,10 +194,7 @@ function createPackageRootPaths(options: {
     }
   }
 
-  return {
-    allow: allowPackageRootPaths,
-    deny: denyPackageRootPaths,
-  }
+  return allowPackageRootPaths
 }
 
 function createPackageRootPathTrie(packageRootPaths: ReadonlySet<string>): PackageRootPathTrie {
@@ -395,7 +359,6 @@ function readPackageJson(packageJsonPath: string): PackageJson {
 
   return {
     dependencies: readDependencyMap(packageJson, 'dependencies'),
-    name: readStringProperty(packageJson, 'name'),
     optionalDependencies: readDependencyMap(packageJson, 'optionalDependencies'),
   }
 }
@@ -416,13 +379,6 @@ function readDependencyMap(packageJson: object, key: string): Record<string, str
   }
 
   return dependencies
-}
-
-function readStringProperty(value: object, key: string): string | undefined {
-  if (!(key in value)) return undefined
-
-  let propertyValue = value[key as keyof typeof value]
-  return typeof propertyValue === 'string' ? propertyValue : undefined
 }
 
 function isValidPackageName(packageName: string): boolean {
