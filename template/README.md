@@ -10,7 +10,14 @@ A minimal Remix application starter with a home page.
 - `app/middleware/render.tsx` installs the request-scoped renderer used by actions.
 - `app/ui/` holds the shared document shell and home page UI.
 - `app/assets.ts` owns the server-side asset pipeline used by the asset route and renderer.
-- `public/` contains static files served from the app root.
+- `app/public/entry.ts` starts the browser runtime.
+- `public/static/` contains static files served unchanged from the app root.
+
+## Browser And Static Files
+
+Browser-reachable source lives in `public/` directories beside the code that owns it. For example, the starter's interactive prompt button lives in `app/ui/public/`. The asset server compiles files in these directories and requires their local dependencies to follow the same convention; `app/routes.ts` and allowed packages are the exceptions.
+
+Static images, fonts, and other files that do not need compilation belong in `public/static/`. That directory is mounted at the root URL, so `public/static/favicon.svg` is served as `/favicon.svg`.
 
 ## Growing The App
 

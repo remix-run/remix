@@ -455,7 +455,7 @@ describe('run', () => {
       let assets = await fs.readFile(path.join(appDir, 'app', 'assets.ts'), 'utf8')
       let router = await fs.readFile(path.join(appDir, 'app', 'router.ts'), 'utf8')
       let routes = await fs.readFile(path.join(appDir, 'app', 'routes.ts'), 'utf8')
-      let entry = await fs.readFile(path.join(appDir, 'app', 'assets', 'entry.ts'), 'utf8')
+      let entry = await fs.readFile(path.join(appDir, 'app', 'public', 'entry.ts'), 'utf8')
       let renderMiddleware = await fs.readFile(
         path.join(appDir, 'app', 'middleware', 'render.tsx'),
         'utf8',
@@ -490,8 +490,11 @@ describe('run', () => {
       assert.doesNotMatch(assets, /workspacePackagesDir/)
       assert.doesNotMatch(assets, /deny:/)
       assert.doesNotMatch(assets, /define:/)
+      assert.match(assets, /allowFiles: \['app\/routes\.ts', 'app\/\*\*\/public\/\*\*'\]/)
+      assert.match(assets, /getHref\('app\/public\/entry\.ts'\)/)
       assert.match(assets, /watch: false/)
       assert.doesNotMatch(router, /compression/)
+      assert.match(router, /staticFiles\('\.\/public\/static'/)
       assert.doesNotMatch(routes, /auth/)
       assert.match(entry, /loadModule/)
       assert.match(entry, /resolveFrame/)
@@ -504,10 +507,10 @@ describe('run', () => {
       assert.doesNotMatch(controller, /AuthPage/)
       await assertPathExists(path.join(appDir, 'app', 'routes.ts'))
       await assertPathExists(path.join(appDir, 'app', 'assets.ts'))
-      await assertPathExists(path.join(appDir, 'app', 'assets', 'prompt-button.tsx'))
+      await assertPathExists(path.join(appDir, 'app', 'ui', 'public', 'prompt-button.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'actions', 'controller.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'middleware', 'render.tsx'))
-      await assertPathExists(path.join(appDir, 'public', 'favicon.svg'))
+      await assertPathExists(path.join(appDir, 'public', 'static', 'favicon.svg'))
       await assertPathExists(path.join(appDir, '.gitignore'))
       await assertPathMissing(path.join(appDir, 'gitignore'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'assets.ts'))
@@ -515,7 +518,9 @@ describe('run', () => {
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'home.tsx'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'auth.tsx'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'about.tsx'))
+      await assertPathMissing(path.join(appDir, 'app', 'assets'))
       await assertPathMissing(path.join(appDir, 'app', 'ui', 'prompt-button.tsx'))
+      await assertPathMissing(path.join(appDir, 'public', 'favicon.svg'))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }

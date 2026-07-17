@@ -23,7 +23,14 @@ Refer to ./.agents/skills/remix/SKILL.md
 - `app/middleware/render.tsx` installs the request-scoped renderer used by actions
 - `app/ui/` holds the shared document shell and home page UI
 - `app/assets.ts` owns the server-side asset pipeline used by the asset route and renderer
-- `public/` contains static files served from the app root
+- `app/public/entry.ts` starts the browser runtime
+- `public/static/` contains static files served unchanged from the app root
+
+## Browser And Static Files
+
+- Put browser-reachable source in a `public/` directory beside its narrowest owner, such as `app/ui/public/` or `app/actions/cart/public/`.
+- Keep every local dependency of a browser module in a `public/` directory. `app/routes.ts` and packages allowed by `app/assets.ts` are the exceptions.
+- Put images, fonts, and other files that do not need compilation in `public/static/`. They are served from the root URL, so `public/static/favicon.svg` is available at `/favicon.svg`.
 
 ## Route Ownership
 

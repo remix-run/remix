@@ -2,8 +2,8 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
 
-import { PromptButton } from '../assets/prompt-button.tsx'
 import { Document } from './document.tsx'
+import { PromptButton } from './public/prompt-button.tsx'
 
 const FONT_STACK =
   "'JetBrains Mono', ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, monospace"
