@@ -1,6 +1,7 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
+import { DocsShell } from 'remix-docs-shared/ui/docs-shell'
 import { docsMarkdownContentCss } from 'remix-docs-shared/ui/markdown-content'
 
 import type { DemoDocFile } from './demos.tsx'
@@ -58,30 +59,35 @@ export function Document(
           entryPreloads={entryPreloads}
         />
         <body>
-          <a class="skip-link" href="#main-content">
-            Skip to content
-          </a>
-          <DocsHeader
-            brandLabel="Remix API Documentation"
-            navigationToggleLabel="Collapse API navigation"
-            navigationLinks={[...navigationLinks.values()]}
-            compactSearch
-          />
-          <Sidebar
-            registry={registry}
-            currentPath={page.path}
-            versions={versions}
-            activeVersion={activeVersion}
-          />
-          <MainContent
-            page={page}
-            headings={headings}
-            tableOfContentsEntryHref={tableOfContentsEntryHref}
-            header={<PageHeader page={page} sourceUrl={sourceUrl} />}
+          <DocsShell
+            header={
+              <DocsHeader
+                brandLabel="Remix API Documentation"
+                navigationLinks={[...navigationLinks.values()]}
+                compactSearch
+              />
+            }
+            navigation={
+              <SidebarContent
+                registry={registry}
+                currentPath={page.path}
+                versions={versions}
+                activeVersion={activeVersion}
+              />
+            }
+            navigationLabel="API reference"
+            navigationName="API navigation"
+            footer={<DocsFooter />}
           >
-            {children}
-          </MainContent>
-          <DocsFooter />
+            <MainContent
+              page={page}
+              headings={headings}
+              tableOfContentsEntryHref={tableOfContentsEntryHref}
+              header={<PageHeader page={page} sourceUrl={sourceUrl} />}
+            >
+              {children}
+            </MainContent>
+          </DocsShell>
           <pagefind-config
             base-url={routes.home.href({ version: activeVersion })}
             bundle-path={routes.assets.href({ version: activeVersion, asset: 'pagefind/' })}
@@ -174,28 +180,26 @@ function MainContent(
     let headings = handle.props.headings ?? []
 
     return (
-      <main id="main-content" class="docs-main" tabIndex={-1} data-pagefind-body>
-        <div class="docs-layout">
-          <article class="docs-article">
-            <div
-              class="api-page-content rmx-page-body"
-              mix={[docsMarkdownContentCss, handle.props.page.css]}
-            >
-              {handle.props.header}
-              {handle.props.children}
-            </div>
-          </article>
-          {headings.length > 0 ? (
-            <aside class="docs-aside">
-              <h2 class="docs-toc__heading">On this page</h2>
-              <TableOfContents
-                headings={headings}
-                behaviorEntryHref={handle.props.tableOfContentsEntryHref}
-              />
-            </aside>
-          ) : null}
-        </div>
-      </main>
+      <div class="docs-layout">
+        <article class="docs-article">
+          <div
+            class="api-page-content rmx-page-body"
+            mix={[docsMarkdownContentCss, handle.props.page.css]}
+          >
+            {handle.props.header}
+            {handle.props.children}
+          </div>
+        </article>
+        {headings.length > 0 ? (
+          <aside class="docs-aside">
+            <h2 class="docs-toc__heading">On this page</h2>
+            <TableOfContents
+              headings={headings}
+              behaviorEntryHref={handle.props.tableOfContentsEntryHref}
+            />
+          </aside>
+        ) : null}
+      </div>
     )
   }
 }
@@ -292,7 +296,7 @@ export function NotFound(handle: Handle<{ slug: string }>) {
   )
 }
 
-function Sidebar(
+function SidebarContent(
   handle: Handle<{
     registry: DocsRegistry
     currentPath: string
@@ -306,31 +310,29 @@ function Sidebar(
     let openSections = activePage?.docFile ? [activePage.sectionId] : []
 
     return (
-      <nav id="docs-chapters-navigation" class="docs-chapters-nav" aria-label="API reference">
-        <div class="api-nav-sections">
-          <VersionSwitcher versions={versions} activeVersion={activeVersion} />
-          {registry.sections.map((section) => (
-            <details
-              key={section.id}
-              class="api-nav-section"
-              open={openSections.includes(section.id) || undefined}
-            >
-              <summary>{section.label}</summary>
-              <div class="api-nav-content">
-                {section.groups.map((group) => (
-                  <SidebarGroup
-                    key={group.id}
-                    registry={registry}
-                    group={group}
-                    currentPath={currentPath}
-                    sectionLabel={section.label}
-                  />
-                ))}
-              </div>
-            </details>
-          ))}
-        </div>
-      </nav>
+      <div class="api-nav-sections">
+        <VersionSwitcher versions={versions} activeVersion={activeVersion} />
+        {registry.sections.map((section) => (
+          <details
+            key={section.id}
+            class="api-nav-section"
+            open={openSections.includes(section.id) || undefined}
+          >
+            <summary>{section.label}</summary>
+            <div class="api-nav-content">
+              {section.groups.map((group) => (
+                <SidebarGroup
+                  key={group.id}
+                  registry={registry}
+                  group={group}
+                  currentPath={currentPath}
+                  sectionLabel={section.label}
+                />
+              ))}
+            </div>
+          </details>
+        ))}
+      </div>
     )
   }
 }

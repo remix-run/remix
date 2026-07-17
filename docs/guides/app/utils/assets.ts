@@ -14,6 +14,7 @@ export const assetServer = createAssetServer({
   rootDir,
   fileMap: {
     '/app/*path': 'docs/guides/app/*path',
+    '/docs-shared/*path': 'docs/shared/*path',
     '/packages/*path': 'packages/*path',
   },
   allow: [
@@ -21,6 +22,7 @@ export const assetServer = createAssetServer({
     'docs/guides/app/**/*.browser.ts?(x)',
     'docs/guides/app/**/*.demo.ts?(x)',
     'docs/guides/app/styles/**/*.css',
+    'docs/shared/**/*.browser.ts?(x)',
     'packages/*/src/**',
   ],
   sourceMaps: isDevelopment ? 'external' : undefined,

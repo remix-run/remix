@@ -70,7 +70,7 @@ export function createRouter(options: DocsRouterOptions): Router {
       return await createFileResponse(openLazyFile(filePath, { name }), request)
     },
     async document(request: Request, node: RemixNode, init?: ResponseInit) {
-      let body = await stream(router, request, node, init)
+      let body = await stream(router, assetServer, request, node, init)
       return createHtmlResponse(body, init)
     },
   }
@@ -233,9 +233,26 @@ async function loadDocsContext(assetServer: DocsAssetServer): Promise<DocsContex
   }
 }
 
-function stream(router: Router, request: Request, node: RemixNode, init?: ResponseInit) {
+function stream(
+  router: Router,
+  assetServer: DocsAssetServer,
+  request: Request,
+  node: RemixNode,
+  init?: ResponseInit,
+) {
   return renderToStream(node, {
     signal: request.signal,
+    async resolveClientEntry(entryId, component) {
+      let hashIndex = entryId.lastIndexOf('#')
+      let moduleId = hashIndex === -1 ? entryId : entryId.slice(0, hashIndex)
+      let exportName = hashIndex === -1 ? component.name : entryId.slice(hashIndex + 1)
+      if (!exportName) throw new Error(`Unable to resolve client entry export for ${entryId}`)
+
+      return {
+        href: moduleId.startsWith('file://') ? await assetServer.getHref(moduleId) : moduleId,
+        exportName,
+      }
+    },
     async resolveFrame(src) {
       let url = new URL(src, request.url)
 

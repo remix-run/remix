@@ -9,7 +9,6 @@ describe('DocsHeader mobile menu', () => {
     let result = render(
       <DocsHeader
         brandLabel="Remix Docs"
-        navigationToggleLabel="Collapse chapter navigation"
         navigationLinks={[{ href: '/guides', label: 'Guides', current: 'location' }]}
       />,
     )

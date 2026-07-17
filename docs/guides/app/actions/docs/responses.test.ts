@@ -32,6 +32,7 @@ describe('docs responses', () => {
     assert.match(html, /src="\/assets\/pagefind\/pagefind-component-ui\.js"/)
     assert.match(html, /<pagefind-config base-url="\/" bundle-path="\/assets\/pagefind\/">/)
     assert.match(html, /<pagefind-modal[^>]*rmx-preserve-dom[^>]*reset-on-close/)
+    assert.match(html, /\/assets\/docs-shared\/ui\/docs-shell\.browser\.tsx/)
   })
 
   it('excludes chapter navigation chrome from the Pagefind index', async () => {
@@ -67,7 +68,7 @@ function getOpeningTag(html: string, tagName: string, className: string): string
 }
 
 function getChapterNavigationHtml(html: string): string {
-  let match = /<nav id="docs-chapters-navigation".*?<\/nav>/s.exec(html)
+  let match = /<nav id="docs-navigation".*?<\/nav>/s.exec(html)
   if (!match) throw new Error('Missing chapter navigation')
   return match[0]
 }

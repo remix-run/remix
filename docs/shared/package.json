@@ -8,6 +8,7 @@
     "./ui/icon": "./ui/icon.tsx",
     "./ui/docs-footer": "./ui/docs-footer.tsx",
     "./ui/docs-header": "./ui/docs-header.tsx",
+    "./ui/docs-shell": "./ui/docs-shell.tsx",
     "./ui/markdown-content": "./ui/markdown-content.ts"
   },
   "dependencies": {

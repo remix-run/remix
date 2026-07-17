@@ -23,26 +23,13 @@ app.ready().catch((error: unknown) => {
   console.error('Frame adoption failed:', error)
 })
 
-let root = document.documentElement
-let apiNavigation: HTMLElement | null = null
-let navToggle: HTMLElement | null = null
-let compactSearch: HTMLElement | null = null
-let expandedSearch: HTMLElement | null = null
-let navCollapsed = false
-
-syncApiNavigation()
-
 document.addEventListener('click', (event) => {
   if (!(event.target instanceof Element)) return
-
-  if (event.target.closest('#docs-nav-toggle')) {
-    setApiNavigationCollapsed(!navCollapsed)
-    return
-  }
 
   let searchTrigger = event.target.closest('#docs-search-button, #docs-search-compact')
   if (searchTrigger instanceof HTMLElement) void openPagefindSearch(searchTrigger)
 })
+
 document.addEventListener('keydown', (event) => {
   if (
     event.defaultPrevented ||
@@ -64,13 +51,12 @@ document.addEventListener('keydown', (event) => {
 
   event.preventDefault()
   let trigger =
-    navCollapsed && window.matchMedia('(width >= 900px)').matches ? compactSearch : expandedSearch
+    document.documentElement.hasAttribute('data-docs-nav-collapsed') &&
+    window.matchMedia('(width >= 900px)').matches
+      ? document.getElementById('docs-search-compact')
+      : document.getElementById('docs-search-button')
   void openPagefindSearch(trigger)
 })
-window.addEventListener('resize', updateScrollableNavigation)
-window.navigation.addEventListener('navigatesuccess', syncApiNavigation)
-
-void document.fonts.ready.then(updateScrollableNavigation)
 
 window.navigation.addEventListener('navigate', () => {
   let pagefindModal = document.querySelector('pagefind-modal')
@@ -79,18 +65,9 @@ window.navigation.addEventListener('navigate', () => {
     if (typeof close === 'function') close.call(pagefindModal)
   }
 
-  compactSearch?.blur()
-  expandedSearch?.blur()
+  document.getElementById('docs-search-compact')?.blur()
+  document.getElementById('docs-search-button')?.blur()
 })
-
-function syncApiNavigation() {
-  apiNavigation = document.getElementById('docs-chapters-navigation')
-  navToggle = document.getElementById('docs-nav-toggle')
-  compactSearch = document.getElementById('docs-search-compact')
-  expandedSearch = document.getElementById('docs-search-button')
-  setApiNavigationCollapsed(navCollapsed)
-  updateScrollableNavigation()
-}
 
 async function openPagefindSearch(trigger: HTMLElement | null) {
   if (!trigger) return
@@ -105,8 +82,8 @@ async function openPagefindSearch(trigger: HTMLElement | null) {
   let dialog = modal.querySelector('dialog')
   if (dialog?.open) return
 
-  compactSearch?.setAttribute('aria-expanded', 'false')
-  expandedSearch?.setAttribute('aria-expanded', 'false')
+  document.getElementById('docs-search-compact')?.setAttribute('aria-expanded', 'false')
+  document.getElementById('docs-search-button')?.setAttribute('aria-expanded', 'false')
   if (dialog?.id) trigger.setAttribute('aria-controls', dialog.id)
   trigger.setAttribute('aria-expanded', 'true')
   dialog?.addEventListener(
@@ -118,33 +95,4 @@ async function openPagefindSearch(trigger: HTMLElement | null) {
     { once: true },
   )
   open.call(modal)
-}
-
-function updateScrollableNavigation() {
-  if (!apiNavigation) return
-  apiNavigation.toggleAttribute(
-    'data-scrollable',
-    apiNavigation.scrollHeight > apiNavigation.clientHeight,
-  )
-}
-
-function setApiNavigationCollapsed(collapsed: boolean) {
-  navCollapsed = collapsed
-  root.toggleAttribute('data-docs-nav-collapsed', collapsed)
-  setHidden(apiNavigation, collapsed)
-  setHidden(compactSearch, !collapsed)
-  navToggle?.setAttribute('aria-expanded', String(!collapsed))
-  navToggle?.setAttribute(
-    'aria-label',
-    collapsed ? 'Expand API navigation' : 'Collapse API navigation',
-  )
-}
-
-function setHidden(element: HTMLElement | null, hidden: boolean) {
-  element?.toggleAttribute('inert', hidden)
-  if (hidden) {
-    element?.setAttribute('aria-hidden', 'true')
-  } else {
-    element?.removeAttribute('aria-hidden')
-  }
 }
