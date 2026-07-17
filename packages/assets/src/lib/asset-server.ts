@@ -247,10 +247,9 @@ export function createAssetServer<const transforms extends AssetRequestTransform
     allowFiles: resolvedOptions.allowFiles,
     allowPackages: resolvedOptions.allowPackages,
     denyFiles: resolvedOptions.denyFiles,
-    packageSearchRoots:
-      hasPackages(resolvedOptions.allowPackages)
-        ? getPackageSearchRoots(options.fileMap, resolvedOptions.rootDir)
-        : undefined,
+    packageSearchRoots: hasPackages(resolvedOptions.allowPackages)
+      ? getPackageSearchRoots(options.fileMap, resolvedOptions.rootDir)
+      : undefined,
     rootDir: resolvedOptions.rootDir,
   })
   let watcher: AssetServerWatcher | null = null
