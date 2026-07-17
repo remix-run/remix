@@ -1,12 +1,12 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
+import { DocsShell } from 'remix-docs-shared/ui/docs-shell'
 
 import { routes } from '../../routes.ts'
 import { Document } from '../../ui/document.tsx'
-import { ChapterNavigation } from './chapter-navigation.tsx'
+import { ChapterNavigationContent } from './chapter-navigation.tsx'
 import { CodeBlockCopyButtons } from './code-block-copy.browser.tsx'
-import { DocsShellBehavior } from './docs-shell.browser.tsx'
 import type { DocsNavigationItem } from './markdown-chapters.tsx'
 import { DocsTableOfContents } from './table-of-contents.tsx'
 import type { DocsHeadingLink } from './table-of-contents.tsx'
@@ -52,23 +52,22 @@ export function DocsDocument(handle: Handle<DocsDocumentProps>) {
 
     return (
       <Document title={title} description={handle.props.description}>
-        <a class="skip-link" href="#main-content">
-          Skip to content
-        </a>
-        <DocsHeader
-          brandLabel="Remix Docs"
-          navigationToggleLabel="Collapse chapter navigation"
-          navigationLinks={[...navigationLinks.values()]}
-        />
-        <DocsShellBehavior />
-        <ChapterNavigation
-          chapters={handle.props.chapters}
-          currentSlug={handle.props.currentChapterSlug}
-        />
-        <main id="main-content" class="docs-main" tabIndex={-1} data-pagefind-body>
+        <DocsShell
+          header={
+            <DocsHeader brandLabel="Remix Docs" navigationLinks={[...navigationLinks.values()]} />
+          }
+          navigation={
+            <ChapterNavigationContent
+              chapters={handle.props.chapters}
+              currentSlug={handle.props.currentChapterSlug}
+            />
+          }
+          navigationLabel="Guide chapters"
+          navigationName="chapter navigation"
+          footer={<DocsFooter />}
+        >
           {handle.props.children}
-        </main>
-        <DocsFooter />
+        </DocsShell>
       </Document>
     )
   }

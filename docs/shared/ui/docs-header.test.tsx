@@ -40,25 +40,17 @@ describe('createDocsNavigationLinks', () => {
 })
 
 describe('DocsHeader', () => {
-  it('renders expanded chapter navigation and a native mobile menu', async () => {
+  it('renders the Remix brand and a native mobile menu', async () => {
     let html = await renderToString(
-      <DocsHeader
-        brandLabel="Remix Docs"
-        navigationToggleLabel="Collapse chapter navigation"
-        navigationLinks={navigationLinks}
-      />,
+      <DocsHeader brandLabel="Remix Docs" navigationLinks={navigationLinks} />,
     )
 
-    assert.match(
-      html,
-      /id="docs-nav-toggle"[^>]*aria-controls="docs-chapters-navigation"[^>]*aria-expanded="true"/,
-    )
+    assert.doesNotMatch(html, /id="docs-navigation-toggle"/)
     assert.match(html, /id="site-menu-toggle"[^>]*popovertarget="site-primary-navigation"/)
     assert.match(html, /id="site-primary-navigation"[^>]*popover="auto"/)
     assert.equal(html.match(/>Guides<\/a>/g)?.length, 2)
     assert.equal(html.match(/href="\/guides"[^>]*aria-current="location"/g)?.length, 2)
     assert.match(html, /href="https:\/\/remix\.run"[^>]*aria-label="Remix Docs"/)
-    assert.match(html, /href="\/icons\.svg#layout-left"/)
     assert.equal(html.match(/id="docs-search-button"/g)?.length, 1)
     assert.doesNotMatch(html, /class="[^"]*site-header/)
     assert.doesNotMatch(html, /\[object Object\]/)
@@ -66,11 +58,7 @@ describe('DocsHeader', () => {
 
   it('renders one responsive search trigger for Pagefind focus ownership', async () => {
     let html = await renderToString(
-      <DocsHeader
-        brandLabel="Remix Docs"
-        navigationToggleLabel="Collapse chapter navigation"
-        navigationLinks={navigationLinks}
-      />,
+      <DocsHeader brandLabel="Remix Docs" navigationLinks={navigationLinks} />,
     )
 
     assert.doesNotMatch(html, /<button[^>]*disabled/)
@@ -88,12 +76,12 @@ describe('DocsHeader', () => {
     let html = await renderToString(
       <DocsHeader
         brandLabel="Remix API Documentation"
-        navigationToggleLabel="Collapse API navigation"
         navigationLinks={navigationLinks}
         compactSearch
       />,
     )
 
-    assert.match(html, /id="docs-search-compact"[^>]*aria-hidden="true"/)
+    assert.match(html, /id="docs-search-compact"[^>]*data-docs-collapsed-only/)
+    assert.match(html, /id="docs-search-button"[^>]*data-docs-expanded-only/)
   })
 })

@@ -22,7 +22,6 @@ export function createDocsNavigationLinks(): Map<DocsNavigationLinkId, DocsNavig
 
 export interface DocsHeaderProps {
   brandLabel: string
-  navigationToggleLabel: string
   navigationLinks: readonly DocsNavigationLink[]
   compactSearch?: boolean
 }
@@ -47,17 +46,6 @@ export function DocsHeader(handle: Handle<DocsHeaderProps>) {
         />
       </a>
 
-      <button
-        id="docs-nav-toggle"
-        class="docs-nav-toggle"
-        type="button"
-        aria-controls="docs-chapters-navigation"
-        aria-expanded="true"
-        aria-label={handle.props.navigationToggleLabel}
-      >
-        <Icon name="layout-left" />
-      </button>
-
       {handle.props.compactSearch ? (
         <button
           id="docs-search-compact"
@@ -67,6 +55,7 @@ export function DocsHeader(handle: Handle<DocsHeaderProps>) {
           aria-hidden="true"
           aria-haspopup="dialog"
           aria-expanded="false"
+          data-docs-collapsed-only
         >
           <Icon name="search" />
         </button>
@@ -107,6 +96,7 @@ export function DocsHeader(handle: Handle<DocsHeaderProps>) {
         aria-haspopup="dialog"
         aria-expanded="false"
         aria-keyshortcuts="Meta+K Control+K"
+        data-docs-expanded-only={handle.props.compactSearch || undefined}
       >
         <span class="docs-search-button__label">
           <Icon name="search" />

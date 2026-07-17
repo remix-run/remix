@@ -2,7 +2,7 @@ import * as assert from 'remix/assert'
 import { describe, it } from 'remix/test'
 import { renderToString } from 'remix/ui/server'
 
-import { ChapterNavigation } from './chapter-navigation.tsx'
+import { ChapterNavigationContent } from './chapter-navigation.tsx'
 import type { DocsNavigationItem } from './markdown-chapters.tsx'
 
 const chapters: DocsNavigationItem[] = [
@@ -20,9 +20,9 @@ const chapters: DocsNavigationItem[] = [
   },
 ]
 
-describe('ChapterNavigation', () => {
+describe('ChapterNavigationContent', () => {
   it('renders numeric order and the chapter title', async () => {
-    let html = await renderToString(<ChapterNavigation chapters={chapters} />)
+    let html = await renderToString(<ChapterNavigationContent chapters={chapters} />)
 
     assert.match(html, /docs-chapters-nav__eyebrow">1\.<\/span>/)
     assert.match(html, /Routing and Controllers/)
@@ -30,7 +30,7 @@ describe('ChapterNavigation', () => {
 
   it('marks only the current chapter', async () => {
     let html = await renderToString(
-      <ChapterNavigation chapters={chapters} currentSlug="routing-and-controllers" />,
+      <ChapterNavigationContent chapters={chapters} currentSlug="routing-and-controllers" />,
     )
 
     assert.equal(html.match(/aria-current="page"/g)?.length, 1)

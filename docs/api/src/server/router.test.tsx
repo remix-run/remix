@@ -35,6 +35,7 @@ describe('createRouter()', () => {
     assert.equal(html.includes('href="/assets/client/entry.tsx"'), true)
     assert.equal(html.includes('href="/assets/client/table-of-contents.browser.tsx"'), true)
     assert.equal(html.includes('href="/assets/client/table-of-contents-active.browser.ts"'), true)
+    assert.equal(html.includes('/assets/docs-shared/ui/docs-shell.browser.tsx'), true)
     assert.equal(html.includes('src="/v1.2.3/assets/client/entry.tsx"'), false)
     assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), false)
   })
@@ -74,6 +75,7 @@ describe('createRouter()', () => {
 
     assert.equal(html.includes('src="/v1.2.3/assets/client/entry.tsx"'), true)
     assert.equal(html.includes('href="/v1.2.3/assets/client/entry.tsx"'), true)
+    assert.equal(html.includes('/v1.2.3/assets/docs-shared/ui/docs-shell.browser.tsx'), true)
     assert.equal(html.includes('src="/assets/client/entry.tsx"'), false)
     assert.equal(html.includes('href="/assets/client/entry.tsx"'), false)
     assert.equal(assetUrls.length > 0, true)
