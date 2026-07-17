@@ -16,9 +16,8 @@ export const assetServer = createAssetServer({
     'packages/*path': '../packages/*path',
     /* remix-template:remove-end */
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
-  denyFiles: ['app/**/*.server.*'],
   sourceMaps: isDevelopment ? 'external' : undefined,
   minify: !isDevelopment,
   watch: isDevelopment,
@@ -27,3 +26,5 @@ export const assetServer = createAssetServer({
     : undefined,
   scripts: { loaders: isHmr ? [uiHmr()] : undefined },
 })
+
+export const entryHref = await assetServer.getHref('app/public/entry.ts')

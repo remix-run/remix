@@ -1,7 +1,7 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
 
-import { routes } from '../routes.ts'
+import { entryHref } from '../assets.ts'
 
 export interface DocumentProps {
   children?: RemixNode
@@ -26,7 +26,7 @@ export function Document(handle: Handle<DocumentProps>) {
         </head>
         <body mix={css({ margin: 0 })}>
           {children}
-          <script type="module" src={routes.assets.href({ path: 'app/assets/entry.ts' })}></script>
+          <script type="module" src={entryHref}></script>
         </body>
       </html>
     )

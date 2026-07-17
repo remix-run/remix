@@ -35,7 +35,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
@@ -49,7 +49,7 @@ router.get('/assets/*', ({ request }) => {
 })
 ```
 
-This example gives you an `/assets/*` endpoint that serves compiled browser assets from `app/assets` and the `remix` package.
+This example gives you an `/assets/*` endpoint that serves compiled browser source from `public/` directories throughout `app/` and from the `remix` package. For example, an app-wide entrypoint can live at `app/public/entry.ts`, while a cart feature can keep its browser modules in `app/cart/public/`.
 
 ## Root Directory
 
@@ -66,7 +66,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
 })
 ```
@@ -84,7 +84,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   denyFiles: ['app/**/*.server.*'],
 })
@@ -93,6 +93,8 @@ let assetServer = createAssetServer({
 Values for `allowFiles` and `denyFiles` are file paths or globs. Relative values are resolved from `rootDir`. Absolute file paths match exactly, and absolute directory paths also match their descendants.
 
 Values for `allowPackages` are exact package names. Dependencies and installed optional dependencies of packages in `allowPackages` are also allowed automatically. Peer dependencies must be listed explicitly if they should be browser-reachable. Allowed package files must still be reachable through `fileMap`.
+
+Access rules apply to the complete browser module graph. Every local dependency imported by a file in an app `public/` directory must also match `allowFiles`; `app/routes.ts` is listed separately because it is a shared browser-readable route contract. These app-local `public/` directories contain source compiled by the asset server and are separate from static files served unchanged by static middleware.
 
 ## File Map
 
@@ -107,7 +109,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
 })
 ```
@@ -127,7 +129,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
 })
 ```
@@ -149,7 +151,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   watch: false,
 })
@@ -166,7 +168,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   watch: {
     ignore: ['**/node_modules/**'],
@@ -179,17 +181,17 @@ let assetServer = createAssetServer({
 Use `assetServer.getHref()` when you need the public URL for a served asset. You can provide a root-relative or absolute file path, or a `file://` URL.
 
 ```ts
-let src = await assetServer.getHref('app/assets/entry.tsx')
-// '/assets/app/assets/entry.tsx'
+let src = await assetServer.getHref('app/public/entry.tsx')
+// '/assets/app/public/entry.tsx'
 ```
 
 For configured `files` assets, you can also pass a `transform` pipeline to build a request URL with custom file transforms. Basic transforms are written as strings, while dynamic transforms use `[name, param]` tuples.
 
 ```ts
-let src = await assetServer.getHref('app/assets/image.png', {
+let src = await assetServer.getHref('app/media/public/image.png', {
   transform: [['resize', '100x100'], 'webp'],
 })
-// '/assets/app/assets/image.png?transform=resize%3A100x100&transform=webp'
+// '/assets/app/media/public/image.png?transform=resize%3A100x100&transform=webp'
 ```
 
 ## Preloads
@@ -197,11 +199,14 @@ let src = await assetServer.getHref('app/assets/image.png', {
 Use `assetServer.getPreloads()` when rendering HTML so you can turn the returned URLs into `<link rel="modulepreload">`, stylesheet preload tags, or `Link` headers for one or more assets and their dependencies. You can provide root-relative or absolute file paths, or `file://` URLs.
 
 ```ts
-let preloads = await assetServer.getPreloads(['app/assets/entry.tsx', 'app/assets/search.tsx'])
+let preloads = await assetServer.getPreloads([
+  'app/public/entry.tsx',
+  'app/search/public/search.tsx',
+])
 // [
-//   '/assets/app/assets/entry.tsx',
-//   '/assets/app/assets/search.tsx',
-//   '/assets/app/assets/utils.ts',
+//   '/assets/app/public/entry.tsx',
+//   '/assets/app/search/public/search.tsx',
+//   '/assets/app/search/public/utils.ts',
 //   '/assets/npm/remix/ui/index.js',
 //   ...etc
 // ]
@@ -222,7 +227,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   watch: false,
   fingerprint: {
@@ -248,7 +253,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   target: {
     chrome: '109',
@@ -273,7 +278,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   sourceMaps: 'external',
 })
@@ -290,7 +295,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   sourceMaps: 'inline',
   sourceMapSourcePaths: 'absolute',
@@ -310,7 +315,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   minify: true,
 })
@@ -331,7 +336,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   scripts: {
     define: {
@@ -356,7 +361,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   scripts: {
     external: ['my-external-import'],
@@ -404,7 +409,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
@@ -430,7 +435,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
@@ -448,7 +453,7 @@ let assetServer = createAssetServer({
   },
 })
 
-let imageUrl = await assetServer.getHref('app/assets/photo.jpg', {
+let imageUrl = await assetServer.getHref('app/media/public/photo.jpg', {
   transform: ['webp'],
 })
 ```
@@ -464,7 +469,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
@@ -485,7 +490,7 @@ let assetServer = createAssetServer({
   },
 })
 
-let imageUrl = await assetServer.getHref('app/assets/logo.svg', {
+let imageUrl = await assetServer.getHref('app/media/public/logo.svg', {
   transform: [['recolor', '0000ff']],
 })
 ```
@@ -494,7 +499,7 @@ Hand-authored URLs use repeated `transform` search params with `name` or `name:p
 
 ```css
 .selector {
-  background-image: url('/assets/app/assets/image.png?transform=resize:100x100&transform=webp');
+  background-image: url('/assets/app/media/public/image.png?transform=resize:100x100&transform=webp');
 }
 ```
 
@@ -512,7 +517,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
     extensions: ['.svg', '.png', '.jpg', '.jpeg', '.woff2'],
@@ -548,7 +553,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
     cache: createFsFileStorage(path.resolve('.tmp/assets-cache')),
@@ -573,7 +578,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   files: {
     maxRequestTransforms: 5,
@@ -624,7 +629,7 @@ let assetServer = createAssetServer({
     '/app/*path': 'app/*path',
     '/npm/*path': 'node_modules/*path',
   },
-  allowFiles: ['app/assets/**'],
+  allowFiles: ['app/routes.ts', 'app/**/public/**'],
   allowPackages: ['remix'],
   onError(error) {
     console.error('Failed to build client assets', error)
