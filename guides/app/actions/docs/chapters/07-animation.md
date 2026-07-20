@@ -42,7 +42,7 @@ const cardStyle = css({
 
 Use Remix animation helpers when the motion depends on rendering state: a node enters, a node exits, a keyed item moves, or an event needs an interruptible animation.
 
-::frame{src="/examples/06-animation/press-state/"}
+::frame{src="/examples/07-animation/press-state/"}
 
 ## Entrance and exit animations {#entrance-and-exit-animations}
 
@@ -105,7 +105,7 @@ Keep keys stable when toggling between related elements. A stable key tells Remi
 
 Pass `true` for the default opacity animation or `false` to disable a mixin without changing the surrounding `mix` array. `animateEntrance({ initial: false })` skips the first insertion for a key but still animates later insertions. If the same keyed element returns before its exit finishes, Remix reclaims that DOM node and animates it back toward its rendered styles.
 
-::frame{src="/examples/06-animation/notice-presence/"}
+::frame{src="/examples/07-animation/notice-presence/"}
 
 ## Layout animations {#layout-animations}
 
@@ -163,7 +163,7 @@ const itemStyle = css({
 
 Layout animation includes size projection by default. Pass `size: false` when only position should animate and scaling the element's contents would look wrong.
 
-::frame{src="/examples/06-animation/reordering/"}
+::frame{src="/examples/07-animation/reordering/"}
 
 ## Springs, tweens, and easing {#springs-tweens-and-easing}
 
@@ -242,13 +242,13 @@ export function countUp(from: number, to: number, onValue: (value: number) => vo
 
 Prefer CSS transitions and animation mixins for ordinary UI. Use `tween` for canvas, custom counters, or values that are not CSS properties.
 
-::frame{src="/examples/06-animation/spring-drag-release/"}
+::frame{src="/examples/07-animation/spring-drag-release/"}
 
-::frame{src="/examples/06-animation/bouncy-switch/"}
+::frame{src="/examples/07-animation/bouncy-switch/"}
 
 The UI package also keeps a gallery of smaller motion experiments. Keep this kind of broad demo in a bounded frame so it does not take over the surrounding guide page.
 
-::frame{src="/examples/06-animation/animation-gallery/"}
+::frame{src="/examples/07-animation/animation-gallery/"}
 
 ## Interruptible interactions {#interruptible-interactions}
 
