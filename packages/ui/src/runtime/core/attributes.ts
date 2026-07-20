@@ -77,7 +77,10 @@ export function normalizeAttributeName(
   let cached = cache.get(name)
   if (cached === undefined) {
     cached = computeAttributeName(name, isSvg)
-    if (cache.size >= NORMALIZATION_CACHE_LIMIT) cache.clear()
+    if (cache.size >= NORMALIZATION_CACHE_LIMIT) {
+      let oldest = cache.keys().next()
+      if (!oldest.done) cache.delete(oldest.value)
+    }
     cache.set(name, cached)
   }
   return cached
@@ -139,7 +142,10 @@ export function toKebabCase(value: string): string {
   let cached = kebabCaseCache.get(value)
   if (cached === undefined) {
     cached = value.replace(/[A-Z]/g, (match) => `-${match.toLowerCase()}`)
-    if (kebabCaseCache.size >= NORMALIZATION_CACHE_LIMIT) kebabCaseCache.clear()
+    if (kebabCaseCache.size >= NORMALIZATION_CACHE_LIMIT) {
+      let oldest = kebabCaseCache.keys().next()
+      if (!oldest.done) kebabCaseCache.delete(oldest.value)
+    }
     kebabCaseCache.set(value, cached)
   }
   return cached

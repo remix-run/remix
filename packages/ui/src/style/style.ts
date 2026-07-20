@@ -28,7 +28,10 @@ function camelToKebab(str: string): string {
   let cached = camelToKebabCache.get(str)
   if (cached === undefined) {
     cached = str.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
-    if (camelToKebabCache.size >= CAMEL_TO_KEBAB_CACHE_LIMIT) camelToKebabCache.clear()
+    if (camelToKebabCache.size >= CAMEL_TO_KEBAB_CACHE_LIMIT) {
+      let oldest = camelToKebabCache.keys().next()
+      if (!oldest.done) camelToKebabCache.delete(oldest.value)
+    }
     camelToKebabCache.set(str, cached)
   }
   return cached
