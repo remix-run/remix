@@ -5702,6 +5702,35 @@ describe('asset-server', () => {
     assert.equal(privateResponse, null)
   })
 
+  it('applies denyFiles rules to allowed package realpaths', async () => {
+    let packageStoreRelPath =
+      'app/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package'
+    let packageStoreUrlPath =
+      '/assets/node_modules/.pnpm/@remix-run+__allowed-package@1.0.0/node_modules/@remix-run/__allowed-package'
+    let packageLinkRelPath = 'app/node_modules/@remix-run/__allowed-package'
+    await writeJson(dir, `${packageStoreRelPath}/package.json`, {
+      name: '@remix-run/__allowed-package',
+      type: 'module',
+    })
+    await write(dir, `${packageStoreRelPath}/public.ts`, 'export const value = true')
+    await write(dir, `${packageStoreRelPath}/secret.ts`, 'export const secret = true')
+    await symlinkDirectory(path.join(dir, packageStoreRelPath), path.join(dir, packageLinkRelPath))
+    let assetServer = createAssetServerForTest({
+      allowFiles: [],
+      allowPackages: ['@remix-run/__allowed-package'],
+      denyFiles: ['app/node_modules/**/@remix-run/__allowed-package/secret.ts'],
+      rootDir: dir,
+      fileMap: { '/node_modules/*path': 'app/node_modules/*path' },
+    })
+
+    let publicResponse = await get(assetServer, `${packageStoreUrlPath}/public.ts`)
+    let secretResponse = await get(assetServer, `${packageStoreUrlPath}/secret.ts`)
+
+    assert.ok(publicResponse)
+    assert.equal(publicResponse.status, 200)
+    assert.equal(secretResponse, null)
+  })
+
   it('allows pnpm package realpaths by package name', async () => {
     let allowedPackageStorePath = path.join(
       dir,
