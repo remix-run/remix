@@ -24,7 +24,6 @@ import { session } from 'remix/middleware/session'
 
 let sessionCookie = createCookie('__session', {
   secrets: ['s3cr3t'], // session cookies must be signed!
-  httpOnly: true,
   secure: true,
   sameSite: 'lax',
 })
@@ -50,6 +49,7 @@ The middleware:
 Use `context.session` (or `context.get(Session)`) for normal session reads and writes.
 
 Note: The session cookie must be signed for security. This prevents tampering with the session data on the client.
+Session cookies are HTTP-only by default. Set `httpOnly: false` explicitly to make one available to client-side JavaScript; the middleware emits a warning when this protection is disabled.
 
 ### Login/Logout Flow
 
