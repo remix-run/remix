@@ -87,11 +87,11 @@ async function readDeepGraphFixture(): Promise<BenchFixture> {
     expectedPreloadUrlSubstrings: [
       '/assets/bench-packages/ui/',
       '/assets/packages/ui/',
-      '/assets/node_modules/@remix-run/__mock-package/',
-      '/assets/node_modules/@remix-run/__mock-ui/',
-      '/assets/node_modules/@remix-run/__mock-utils/',
-      '/assets/node_modules/@remix-run/__mock-optional/',
-      '/assets/node_modules/@remix-run/__mock-tokens/',
+      '/assets/node_modules/%40remix-run/__mock-package/',
+      '/assets/node_modules/%40remix-run/__mock-ui/',
+      '/assets/node_modules/%40remix-run/__mock-utils/',
+      '/assets/node_modules/%40remix-run/__mock-optional/',
+      '/assets/node_modules/%40remix-run/__mock-tokens/',
     ],
     createStats: async () => [
       { label: 'app', value: await countSourceModules(projectRoot) },

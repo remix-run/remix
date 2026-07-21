@@ -149,6 +149,11 @@ const benchmarks: Benchmark[] = [
       assertPreloadUrls(preloadUrls, fixture)
       let moduleUrls = preloadUrls.slice(1)
       assert.ok(moduleUrls.length > 0, 'expected module URLs')
+      assertContainsSubstrings(
+        moduleUrls.join('\n'),
+        fixture.expectedPreloadUrlSubstrings,
+        fixture.label,
+      )
       return async function run() {
         await Promise.all(moduleUrls.map((url) => readHandledResponse(assetServer, url)))
       }
