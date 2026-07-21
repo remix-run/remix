@@ -489,7 +489,7 @@ describe('run', () => {
       assert.match(assets, /watch: false/)
       assert.doesNotMatch(router, /compression/)
       assert.match(router, /import \{ render \} from 'remix\/middleware\/render'/)
-      assert.match(router, /render\(\{ assets: assetServer \}\)/)
+      assert.match(router, /render\(\{ assets \}\)/)
       assert.doesNotMatch(routes, /auth/)
       assert.match(entry, /loadModule/)
       assert.match(entry, /resolveFrame/)
