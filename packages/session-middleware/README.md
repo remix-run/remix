@@ -49,7 +49,7 @@ The middleware:
 Use `context.session` (or `context.get(Session)`) for normal session reads and writes.
 
 Note: The session cookie must be signed for security. This prevents tampering with the session data on the client.
-Session cookies are HTTP-only by default. Set `httpOnly: false` explicitly to make one available to client-side JavaScript; the middleware emits a warning when this protection is disabled.
+Session cookies are HTTP-only by default.
 
 ### Login/Logout Flow
 
