@@ -6,7 +6,7 @@ import { createFileResponse } from 'remix/response/file'
 import { createController } from 'remix/router'
 
 import { routes } from '../routes.ts'
-import { assetServer } from '../utils/assets.ts'
+import { assets } from '../utils/assets.ts'
 
 const defaultPagefindAssetsDir = path.resolve(
   import.meta.dirname,
@@ -22,7 +22,7 @@ export function createRootController(pagefindAssetsDir = defaultPagefindAssetsDi
           return pagefindResponse
         }
 
-        return (await assetServer.fetch(request)) ?? new Response('Not Found', { status: 404 })
+        return (await assets.fetch(request)) ?? new Response('Not Found', { status: 404 })
       },
     },
   })

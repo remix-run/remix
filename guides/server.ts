@@ -2,7 +2,7 @@ import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 
 import { router } from './app/router.ts'
-import { assetServer } from './app/utils/assets.ts'
+import { assets } from './app/utils/assets.ts'
 import { createDevRefreshEvents } from './app/utils/dev-refresh-server.ts'
 
 const port = process.env.PORT ? Number.parseInt(process.env.PORT, 10) : 44100
@@ -43,7 +43,7 @@ async function shutdown() {
   devRefreshEvents?.close()
 
   try {
-    await assetServer.close()
+    await assets.close()
   } catch (error) {
     console.error(error)
   }

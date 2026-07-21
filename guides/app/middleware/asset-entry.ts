@@ -3,7 +3,7 @@ import * as path from 'node:path'
 import { getContext } from 'remix/middleware/async-context'
 import { createContextKey, type Middleware } from 'remix/router'
 
-import { assetServer } from '../utils/assets.ts'
+import { assets } from '../utils/assets.ts'
 
 interface AssetEntry {
   scriptSrc: string
@@ -26,13 +26,13 @@ export function loadAssetEntry(
   return async (context, next) => {
     let [scriptSrc, scriptPreloads, stylesheetHref, stylesheetPreloads, devRefreshScriptSrc] =
       await Promise.all([
-        assetServer.getHref(scriptEntry),
-        assetServer.getPreloads(scriptEntry).catch(() => []),
-        assetServer.getHref(stylesheet),
-        assetServer.getPreloads(stylesheet).catch(() => []),
+        assets.getHref(scriptEntry),
+        assets.getPreloads(scriptEntry).catch(() => []),
+        assets.getHref(stylesheet),
+        assets.getPreloads(stylesheet).catch(() => []),
         process.env.NODE_ENV === 'production'
           ? Promise.resolve(undefined)
-          : assetServer.getHref(devRefreshScriptEntry),
+          : assets.getHref(devRefreshScriptEntry),
       ])
 
     context.set(assetEntryKey, {

@@ -3,6 +3,7 @@ import * as path from 'node:path'
 import { asyncContext } from 'remix/middleware/async-context'
 import { compression } from 'remix/middleware/compression'
 import { logger } from 'remix/middleware/logger'
+import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
 import { createRouter, type MiddlewareContext } from 'remix/router'
 
@@ -10,8 +11,8 @@ import { createRootController } from './actions/controller.tsx'
 import docsController from './actions/docs/controller.tsx'
 import docsExamplesController from './actions/docs/examples/controller.tsx'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
-import { render } from './middleware/render.ts'
 import { routes } from './routes.ts'
+import { assets } from './utils/assets.ts'
 
 export type AppContext = MiddlewareContext<
   [ReturnType<typeof loadAssetEntry>, ReturnType<typeof render>]
@@ -33,7 +34,7 @@ export function createGuidesRouter(options: { pagefindAssetsDir?: string } = {})
       staticFiles(publicDir, { index: false }),
       asyncContext(),
       loadAssetEntry(),
-      render(),
+      render({ assets }),
     ],
   })
 
