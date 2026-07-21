@@ -21,7 +21,11 @@ export function loadAssetEntry(
   return async (context, next) => {
     let [scriptSrc, scriptPreloads, stylesheetHref] = await Promise.all([
       assets.getHref(scriptEntry),
-      assets.getPreloads(scriptEntry).catch(() => []),
+      assets.getPreloads(scriptEntry).catch((error) => {
+        // Surface asset compilation errors without breaking HTML rendering.
+        console.error(error)
+        return []
+      }),
       assets.getHref(stylesheetEntry),
     ])
 

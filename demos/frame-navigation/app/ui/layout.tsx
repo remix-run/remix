@@ -1,6 +1,7 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import { css } from 'remix/ui'
 
+import { getAssetEntry } from '../middleware/asset-entry.ts'
 import { routes } from '../routes.ts'
 import { NavLink } from './nav-link.tsx'
 
@@ -23,13 +24,18 @@ const navItems = [
 export function Layout(handle: Handle<LayoutProps>) {
   return () => {
     let { title, activeNav, children } = handle.props
+    let { scriptSrc, scriptPreloads } = getAssetEntry()
+
     return (
       <html lang="en">
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
           <title>{title} | LMS</title>
-          <script async type="module" src="/assets/entry.js" />
+          {scriptPreloads.map((href) => (
+            <link key={href} rel="modulepreload" href={href} />
+          ))}
+          <script async type="module" src={scriptSrc} />
         </head>
         <body mix={bodyStyle}>
           <div mix={appShellStyle}>

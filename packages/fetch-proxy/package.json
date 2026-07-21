@@ -36,9 +36,11 @@
   },
   "devDependencies": {
     "@remix-run/assert": "workspace:*",
+    "@remix-run/response": "workspace:*",
     "@remix-run/test": "workspace:*",
     "@types/node": "catalog:",
-    "@typescript/native-preview": "catalog:"
+    "@typescript/native-preview": "catalog:",
+    "undici": "^7.24.8"
   },
   "scripts": {
     "build": "tsgo -p tsconfig.build.json",

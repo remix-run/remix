@@ -31,7 +31,6 @@ This is the changelog for [`data-table-postgres`](https://github.com/remix-run/r
 - BREAKING CHANGE: Removed adapter options
 
   **Affected APIs**
-
   - `PostgresDatabaseAdapterOptions` type: removed
   - `createPostgresDatabaseAdapter` function: `options` arg removed
   - `PostgresDatabaseAdapter` constructor: `options` arg removed

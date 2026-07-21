@@ -32,7 +32,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 - **Classes**: omit TS accessibility modifiers; use native fields and `#private`
 - **Generics**: use descriptive lowercase names like `source`, `pattern`, or `method`
 - **Comments**: add non-JSDoc comments only when behavior is surprising or non-obvious
-- **Formatting**: Prettier with `printWidth: 100`, no semicolons, single quotes, spaces not tabs
+- **Formatting**: Oxfmt with `printWidth: 100`, no semicolons, single quotes, spaces not tabs
 
 ## Tests And Docs
 

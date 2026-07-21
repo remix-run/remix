@@ -30,7 +30,7 @@ export function getBrowserTestRootDir(): string {
     : process.cwd()
 }
 
-// prettier-ignore
+// oxfmt-ignore
 // Note: `description` is not a field used by parseArgs(), it's an additional field
 // we use for `--help`
 const cliOptions = {

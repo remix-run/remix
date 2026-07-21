@@ -1,10 +1,13 @@
 import { form, get, post, route } from 'remix/routes'
 
+export const assetsBase = '/assets'
+
 export const frames = {
   settings: 'settings',
 } as const
 
 export const routes = {
+  assets: get(`${assetsBase}/*path`),
   main: route('/', {
     index: get('/'),
     courses: get('courses'),

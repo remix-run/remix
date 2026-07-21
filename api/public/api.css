@@ -1,0 +1,223 @@
+html {
+  color-scheme: light dark;
+}
+
+.site-header__brand {
+  color: var(--rmx-color-text-primary);
+}
+
+.api-nav-sections,
+.api-nav-content,
+.api-nav-group,
+.api-nav-links {
+  display: flex;
+  flex-direction: column;
+}
+
+.api-nav-sections {
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.api-nav-section {
+  margin: 0;
+}
+
+.api-nav-section > summary {
+  position: relative;
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 8px 28px 8px 8px;
+  border-radius: var(--rmx-radius-md);
+  color: var(--rmx-color-text-primary);
+  font-size: 12px;
+  font-weight: var(--rmx-font-weight-bold);
+  line-height: normal;
+  letter-spacing: 0.6px;
+  list-style: none;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.api-nav-section > summary::-webkit-details-marker {
+  display: none;
+}
+
+.api-nav-section > summary::after {
+  position: absolute;
+  right: 10px;
+  width: 6px;
+  height: 6px;
+  border-right: 1px solid currentColor;
+  border-bottom: 1px solid currentColor;
+  content: '';
+  opacity: 0.55;
+  transform: rotate(45deg) translateY(-2px);
+  transition: transform 150ms ease;
+}
+
+.api-nav-section:not([open]) > summary::after {
+  transform: rotate(-45deg);
+}
+
+.api-nav-section > summary:hover {
+  background: var(--docs-nav-hover-background);
+}
+
+.api-nav-content {
+  gap: 8px;
+  padding: 4px 0 12px 8px;
+}
+
+.api-nav-group {
+  gap: 4px;
+}
+
+.api-nav-group__heading {
+  height: 24px;
+  margin: 0;
+  padding: 6px 8px;
+  color: var(--rmx-color-text-secondary);
+  font-size: 10px;
+  font-weight: var(--rmx-font-weight-bold);
+  line-height: normal;
+  letter-spacing: var(--rmx-letter-spacing-meta);
+  text-transform: uppercase;
+}
+
+.api-nav-links {
+  gap: 4px;
+}
+
+.api-nav-links a {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  min-height: 32px;
+  padding: 7px 12px;
+  overflow: hidden;
+  border-radius: var(--rmx-radius-md);
+  color: var(--docs-nav-link);
+  font-size: 14px;
+  line-height: 1.4;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition:
+    color 150ms ease-in-out,
+    background-color 150ms ease-in-out;
+}
+
+.api-nav-links a:hover {
+  color: var(--docs-nav-link-hover);
+  background: var(--docs-nav-hover-background);
+}
+
+.api-page-header {
+  margin-bottom: var(--rmx-space-lg);
+}
+
+.docs-chapter-eyebrow {
+  margin: 0;
+  color: var(--rmx-color-eyebrow);
+  font-family: var(--rmx-font-family-sans);
+  font-size: 12px;
+  font-weight: var(--rmx-font-weight-bold);
+  line-height: normal;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+}
+
+.api-page-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--rmx-space-md);
+}
+
+.api-page-source {
+  color: var(--rmx-color-text-secondary);
+  font-family: var(--rmx-font-family-mono);
+  font-size: var(--rmx-font-size-xxxs);
+  letter-spacing: var(--rmx-letter-spacing-meta);
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.api-page-source:hover {
+  color: var(--rmx-color-text-primary);
+}
+
+.api-page-description {
+  max-width: 64ch;
+  margin: var(--rmx-space-lg) 0 0;
+  color: var(--rmx-color-text-secondary);
+}
+
+.api-page-content > h1:first-child,
+.api-page-content > div > h1:first-child {
+  margin: 0 0 40px;
+  overflow-wrap: anywhere;
+}
+
+.api-page-content > ol:first-of-type {
+  margin-top: 0;
+}
+
+.api-demo {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rmx-space-xl);
+}
+
+.api-demo__header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--rmx-space-sm);
+}
+
+.api-demo__header h1,
+.api-demo__header p {
+  margin: 0;
+}
+
+.api-demo__frame {
+  overflow: hidden;
+  border: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
+  border-radius: var(--rmx-radius-lg);
+}
+
+.api-demo__preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 120px;
+  padding: var(--rmx-space-xxl);
+  border-bottom: var(--rmx-space-px) solid var(--rmx-color-border-subtle);
+  background: var(--rmx-surface-lvl0);
+}
+
+.api-demo__source > pre.shiki {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+}
+
+@media (width < 900px) {
+  .site-header__brand {
+    left: 16px;
+  }
+
+  .api-page-content > h1:first-child,
+  .api-page-content > div > h1:first-child {
+    margin-bottom: var(--rmx-space-xxl);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .api-nav-section > summary::after {
+    transition: none;
+  }
+}
