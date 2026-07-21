@@ -3,10 +3,10 @@ import { render } from 'remix/middleware/render'
 import { staticFiles } from 'remix/middleware/static'
 
 import controller from './actions/controller.tsx'
-import { assetServer } from './assets.ts'
+import { assets } from './assets.ts'
 import { routes } from './routes.ts'
 
-const renderMiddleware = render({ assets: assetServer })
+const renderMiddleware = render({ assets })
 type AppContext = MiddlewareContext<[typeof renderMiddleware]>
 
 declare module 'remix/router' {

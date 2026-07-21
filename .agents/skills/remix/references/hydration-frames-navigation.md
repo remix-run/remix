@@ -71,7 +71,7 @@ On the server, pass the asset server to the standard render middleware so source
 import { render } from 'remix/middleware/render'
 
 let router = createRouter({
-  middleware: [render({ assets: assetServer })],
+  middleware: [render({ assets })],
 })
 ```
 

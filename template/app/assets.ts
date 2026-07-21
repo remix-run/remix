@@ -4,7 +4,7 @@ const rootDir = process.cwd()
 const nodeEnv = process.env.NODE_ENV ?? 'development'
 const isDevelopment = nodeEnv === 'development'
 
-export const assetServer = createAssetServer({
+export const assets = createAssetServer({
   basePath: '/assets',
   rootDir,
   fileMap: {

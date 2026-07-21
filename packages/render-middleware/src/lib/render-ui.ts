@@ -33,12 +33,13 @@ const FRAME_REQUEST_HEADERS_TO_REMOVE = [
   'Transfer-Encoding',
   'Upgrade',
 ] as const
+// The top frame src header is omitted so cross-origin frames never receive the
+// outer request URL, which may contain private paths or query parameters.
 const CROSS_ORIGIN_FRAME_HEADERS = [
   'Accept',
   'Accept-Encoding',
   FRAME_HEADER,
   FRAME_TARGET_HEADER,
-  TOP_FRAME_SRC_HEADER,
 ] as const
 
 /** Options for the standard Remix UI renderer. */
@@ -196,7 +197,7 @@ async function resolveClientEntry(
 
   if (!exportName) {
     throw new Error(
-      `clientEntry() requires either an export name in the entry ID (e.g., "/js/module.js#ComponentName") or a named component function. Received "${entryId}".`,
+      `clientEntry() requires either an export name in the entry ID (e.g., import.meta.url + "#ExportName") or a named component function. Received "${entryId}".`,
     )
   }
 

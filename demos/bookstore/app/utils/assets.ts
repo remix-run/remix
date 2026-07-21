@@ -4,7 +4,7 @@ import { assetsBase } from '../routes.ts'
 
 const isDevelopment = process.env.NODE_ENV === 'development'
 
-export const assetServer = createAssetServer({
+export const assets = createAssetServer({
   basePath: assetsBase,
   rootDir: path.resolve(import.meta.dirname, '../../../..'),
   allow: ['demos/bookstore/app/assets/**', 'demos/bookstore/app/routes.ts', 'packages/*/src/**'],

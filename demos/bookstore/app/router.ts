@@ -36,7 +36,7 @@ import { loadAssetEntry } from './middleware/asset-entry.ts'
 import { sessionCookie, sessionStorage } from './middleware/session.ts'
 import { uploadHandler } from './middleware/uploads.ts'
 import { routes } from './routes.ts'
-import { assetServer } from './utils/assets.ts'
+import { assets } from './utils/assets.ts'
 
 type AppContext = MiddlewareContext<
   [
@@ -84,7 +84,7 @@ export function createBookstoreRouter(options?: BookstoreRouterOptions) {
   middleware.push(loadDatabase())
   middleware.push(loadAssetEntry())
   middleware.push(loadAuth())
-  middleware.push(render({ assets: assetServer }))
+  middleware.push(render({ assets }))
 
   let router = createRouter<AppContext>({ middleware })
 

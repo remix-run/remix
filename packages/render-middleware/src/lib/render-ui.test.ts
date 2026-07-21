@@ -149,6 +149,41 @@ describe('render', () => {
     assert.equal(crossOriginHeaders?.get('Cookie'), null)
     assert.equal(crossOriginHeaders?.get('X-Api-Key'), null)
     assert.equal(crossOriginHeaders?.get('X-Session-Token'), null)
+    assert.equal(crossOriginHeaders?.get('X-Remix-Top-Frame-Src'), null)
+    assert.equal(crossOriginHeaders?.get('X-Remix-Frame'), 'true')
+  })
+
+  it('renders frame bodies from context.render() in place without a leaked doctype', async () => {
+    let middleware = render()
+    let router = createRouter({ middleware: [middleware] as const })
+
+    router.get('/', (context) =>
+      context.render(
+        createElement(
+          'main',
+          {},
+          createElement(Frame, { src: '/blocking' }),
+          createElement('p', {}, 'after'),
+          createElement(Frame, { src: '/async', fallback: createElement('p', {}, 'loading') }),
+        ),
+      ),
+    )
+    router.get('/blocking', (context) =>
+      context.render(createElement('h2', {}, 'Blocking content')),
+    )
+    router.get('/async', (context) => context.render(createElement('h2', {}, 'Async content')))
+
+    let response = await router.fetch('https://remix.run/')
+    let html = await response.text()
+
+    // The blocking frame body renders at its slot, ahead of subsequent markup
+    let slot = html.match(/<!-- rmx:f:[^ ]+ -->([\s\S]*?)<!-- \/rmx:f -->/)
+    assert.match(slot?.[1] ?? '', /<h2>Blocking content<\/h2>/)
+    assert.ok(html.indexOf('Blocking content') < html.indexOf('<p>after</p>'))
+    // The non-blocking frame body streams as a template chunk
+    assert.match(html, /<template id="f[^"]+">[\s\S]*?Async content[\s\S]*?<\/template>/)
+    // The frame responses' own doctypes are stripped from the outer document
+    assert.doesNotMatch(html.slice('<!DOCTYPE html>'.length), /<!DOCTYPE html>/i)
   })
 
   it('resolves source client entries through the asset server', async () => {
