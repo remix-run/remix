@@ -134,7 +134,6 @@ export function createRouter(options: DocsRouterOptions): DocsRouter {
           )
           return context.render(
             <Document {...docProps} sourceUrl={source} headings={headings}>
-
               <MarkdownContent html={html} />
             </Document>,
           )
