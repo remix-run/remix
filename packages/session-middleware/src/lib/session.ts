@@ -17,6 +17,12 @@ export function session(
     throw new Error('Session cookie must be signed')
   }
 
+  if (sessionCookie.httpOnly === false) {
+    console.warn(
+      `Session cookie "${sessionCookie.name}" is configured with httpOnly: false and may be accessible to client-side JavaScript.`,
+    )
+  }
+
   return async (context, next) => {
     if (context.has(Session)) {
       throw new Error('Existing session found, refusing to overwrite')
@@ -37,7 +43,12 @@ export function session(
     if (setCookieValue != null) {
       // make sure the response is mutable
       response = new Response(response.body, response)
-      response.headers.append('Set-Cookie', await sessionCookie.serialize(setCookieValue))
+      response.headers.append(
+        'Set-Cookie',
+        await sessionCookie.serialize(setCookieValue, {
+          httpOnly: sessionCookie.httpOnly ?? true,
+        }),
+      )
     }
 
     return response

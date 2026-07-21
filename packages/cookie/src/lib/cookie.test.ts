@@ -11,6 +11,16 @@ function getCookieFromSetCookie(setCookie: string): string {
 }
 
 describe('Cookie', () => {
+  it('leaves httpOnly undefined by default', () => {
+    let cookie = createCookie('my-cookie')
+    assert.equal(cookie.httpOnly, undefined)
+  })
+
+  it('preserves explicit httpOnly values', () => {
+    assert.equal(createCookie('my-cookie', { httpOnly: true }).httpOnly, true)
+    assert.equal(createCookie('my-cookie', { httpOnly: false }).httpOnly, false)
+  })
+
   it('defaults path to /', async () => {
     let cookie = createCookie('my-cookie')
     assert.equal(cookie.path, '/')

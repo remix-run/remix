@@ -119,14 +119,12 @@ export class Cookie implements CookieProperties {
   }
 
   /**
-   * True if the cookie is HTTP-only.
+   * Whether the cookie is HTTP-only, or `undefined` when the option was not configured.
    *
    * [MDN Reference](https://developer.mozilla.org/en-US/Web/HTTP/Headers/Set-Cookie#httponly)
-   *
-   * @default false
    */
-  get httpOnly(): boolean {
-    return this.#httpOnly ?? false
+  get httpOnly(): boolean | undefined {
+    return this.#httpOnly
   }
 
   /**

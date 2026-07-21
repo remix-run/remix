@@ -1,0 +1,1 @@
+BREAKING CHANGE: `Cookie.httpOnly` now returns `boolean | undefined` instead of defaulting to `false`. This lets consumers distinguish an omitted `httpOnly` option from an explicit `httpOnly: false` setting.
