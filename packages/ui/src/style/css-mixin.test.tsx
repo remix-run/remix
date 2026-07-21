@@ -2,6 +2,8 @@ import { expect } from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { createRoot } from '../runtime/vdom.ts'
 import { invariant } from '../runtime/invariant.ts'
+import { createMixin } from '../runtime/mixins/mixin.ts'
+import type { MixinBeforeRemoveEvent } from '../runtime/mixins/mixin.ts'
 import { css } from './css-mixin.ts'
 
 describe('css mixin', () => {
@@ -160,7 +162,98 @@ describe('css mixin', () => {
     let cssTexts = readAdoptedCssTexts()
     expect(cssTexts.some((text) => text.includes('@keyframes empty-frames'))).toBe(true)
   })
+
+  it('releases dynamic client-only rules on style change and unmount', () => {
+    // Dynamic style objects mint a new class per value. Client-only rules are
+    // refcounted, so toggling between values must drop the abandoned rule and
+    // unmounting must return the registry to its starting size.
+    let container = document.createElement('div')
+    document.body.appendChild(container)
+    let root = createRoot(container)
+    let baseline = countAdoptedRules()
+
+    root.render(<div mix={[css({ width: '11px' })]}>Dynamic</div>)
+    root.flush()
+    let div = container.querySelector('div')
+    invariant(div)
+    let firstClass = div.className
+    expect(countAdoptedRules()).toBe(baseline + 1)
+
+    root.render(<div mix={[css({ width: '22px' })]}>Dynamic</div>)
+    root.flush()
+    expect(div.className).not.toBe(firstClass)
+    expect(countAdoptedRules()).toBe(baseline + 1)
+    expect(ruleTextPresent(`.${firstClass}`)).toBe(false)
+
+    root.render(null)
+    root.flush()
+    expect(countAdoptedRules()).toBe(baseline)
+
+    root.dispose()
+    container.remove()
+  })
+
+  it('keeps a dynamic rule alive while a mixin persists the node for an exit transition', async () => {
+    // A sibling mixin can persist the host node past unmount (e.g. exit
+    // transitions). The css rule must keep styling the node until the
+    // persistence teardown settles — only then may the refcount drop.
+    let releaseExit: (() => void) | undefined
+    let exitGate = new Promise<void>((resolve) => {
+      releaseExit = resolve
+    })
+    let persistOnRemove = createMixin<Element>((handle) => {
+      handle.addEventListener('beforeRemove', (event) => {
+        ;(event as MixinBeforeRemoveEvent).persistNode(async () => {
+          await exitGate
+        })
+      })
+    })
+
+    let container = document.createElement('div')
+    document.body.appendChild(container)
+    let root = createRoot(container)
+
+    root.render(
+      <div id="exiting" mix={[css({ color: 'rgb(77, 88, 99)' }), persistOnRemove()]}>
+        Exiting
+      </div>,
+    )
+    root.flush()
+
+    let div = container.querySelector('#exiting')
+    invariant(div)
+    expect(getComputedStyle(div).color).toBe('rgb(77, 88, 99)')
+
+    // Unmount — the node persists for the exit transition and must stay styled.
+    root.render(null)
+    root.flush()
+    expect(container.querySelector('#exiting')).toBe(div)
+    expect(getComputedStyle(div).color).toBe('rgb(77, 88, 99)')
+
+    // Finish the exit: node is removed and the dynamic rule is released.
+    invariant(releaseExit)
+    releaseExit()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    root.flush()
+
+    expect(container.querySelector('#exiting')).toBe(null)
+    expect(ruleTextPresent('rgb(77, 88, 99)')).toBe(false)
+
+    root.dispose()
+    container.remove()
+  })
 })
+
+function countAdoptedRules(): number {
+  return Array.from(document.adoptedStyleSheets).reduce(
+    (count, sheet) => count + sheet.cssRules.length,
+    0,
+  )
+}
+
+function ruleTextPresent(text: string): boolean {
+  return readAdoptedCssTexts().some((cssText) => cssText.includes(text))
+}
 
 function readAdoptedCssTexts(): string[] {
   let texts: string[] = []
