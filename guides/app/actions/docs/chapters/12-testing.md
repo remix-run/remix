@@ -29,7 +29,7 @@ Add a test script to `package.json`:
 ```json filename=package.json
 {
   "scripts": {
-    "test": "remix test"
+    "test": "NODE_ENV=test remix test"
   }
 }
 ```
@@ -52,17 +52,31 @@ The `server` runner type covers both unit tests and router tests. It describes t
 
 All three use the same `describe(...)` and `it(...)` API from `remix/test`. The [`remix/test` overview](https://api.remix.run/api/remix/test/overview/) covers lifecycle hooks, test context, mocks, fake timers, and runner configuration. The [`remix/assert` overview](https://api.remix.run/api/remix/assert/overview/) lists the available assertion functions and `expect(...)` matchers. Both work in every test environment:
 
-```ts filename=app/actions/albums/data.test.ts
+```ts filename=app/actions/albums/edit/schema.test.ts
 import * as assert from "remix/assert";
+import * as s from "remix/data-schema";
 import { describe, it } from "remix/test";
 
-import { getAlbum } from "./data.ts";
+import { albumFormSchema } from "./schema.ts";
 
-describe("getAlbum", () => {
-  it("finds an album by id", async () => {
-    let album = await getAlbum("thriller");
+describe("albumFormSchema", () => {
+  it("parses an album edit", () => {
+    let formData = new FormData();
+    formData.set("artist", "Michael Jackson");
+    formData.set("title", "Thriller");
+    formData.set("year", "1982");
+    formData.set("revision", "0");
 
-    assert.equal(album?.title, "Thriller");
+    let result = s.parseSafe(albumFormSchema, formData);
+
+    assert.equal(result.success, true);
+    if (!result.success) return;
+    assert.deepEqual(result.value, {
+      artist: "Michael Jackson",
+      title: "Thriller",
+      year: 1982,
+      revision: 0,
+    });
   });
 });
 ```
@@ -77,7 +91,9 @@ app/
         ├── controller.test.ts
         └── edit/
             ├── controller.tsx
-            └── controller.test.ts
+            ├── controller.test.ts
+            ├── schema.ts
+            └── schema.test.ts
 test/
 └── utils.ts                   # helpers shared by several tests
 ```
@@ -92,24 +108,28 @@ This test exercises the album show route without opening a network socket:
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 
-import { router } from "../../router.ts";
 import { routes } from "../../routes.ts";
-
-const origin = "https://albums.test";
+import { createTestRouter } from "../../../test/router.ts";
 
 describe("album show", () => {
-  it("renders the requested album", async () => {
-    let request = new Request(new URL(routes.albums.show.href({ albumId: "thriller" }), origin));
-    let response = await router.fetch(request);
+  it("renders the requested album", async (t) => {
+    let app = await createTestRouter();
+    t.after(() => app.close());
+
+    let response = await app.router.fetch(
+      app.authenticatedRequest(
+        routes.albums.show.href({ albumId: "thriller" }),
+      ),
+    );
 
     assert.equal(response.status, 200);
-    assert.equal(response.headers.get("Content-Type"), "text/html; charset=UTF-8");
+    assert.match(response.headers.get("Content-Type") ?? "", /^text\/html\b/i);
     assert.match(await response.text(), /Thriller/);
   });
 });
 ```
 
-Build test URLs with the same `routes.<name>.href(...)` helpers used by links, forms, and redirects. The test keeps the route name and params checked against the app's route map while the origin supplies the absolute URL required by `Request`.
+Build test URLs with the same `routes.<name>.href(...)` helpers used by links, forms, and redirects. The test keeps the route name and params checked against the app's route map, while `authenticatedRequest(...)` supplies the absolute same-origin URL, signed session cookie, and authenticated identity required by this private route.
 
 Mutation tests construct the request body with Web APIs. The album edit action expects `FormData` and returns a redirect:
 
@@ -117,28 +137,33 @@ Mutation tests construct the request body with Web APIs. The album edit action e
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 
-import { router } from "../../../router.ts";
 import { routes } from "../../../routes.ts";
-
-const origin = "https://albums.test";
+import { createTestRouter } from "../../../../test/router.ts";
 
 describe("album editing", () => {
-  it("redirects to the album after an update", async () => {
+  it("redirects to the album after an update", async (t) => {
+    let app = await createTestRouter();
+    t.after(() => app.close());
+
     let albumId = "thriller";
     let formData = new FormData();
     formData.set("title", "Thriller");
     formData.set("artist", "Michael Jackson");
     formData.set("year", "1982");
+    formData.set("revision", "0");
 
-    let response = await router.fetch(
-      new Request(new URL(routes.albums.edit.action.href({ albumId }), origin), {
+    let response = await app.router.fetch(
+      app.authenticatedRequest(routes.albums.edit.action.href({ albumId }), {
         method: "POST",
         body: formData,
       }),
     );
 
     assert.equal(response.status, 303);
-    assert.equal(response.headers.get("Location"), routes.albums.show.href({ albumId }));
+    assert.equal(
+      response.headers.get("Location"),
+      routes.albums.show.href({ albumId }),
+    );
   });
 });
 ```
@@ -146,11 +171,21 @@ describe("album editing", () => {
 The same `FormData` can carry an upload:
 
 ```ts
+import { readFile } from "node:fs/promises";
+
+let coverBytes = await readFile(
+  new URL("../../../../test/fixtures/cover.png", import.meta.url),
+);
 let formData = new FormData();
-formData.set("cover", new File(["fake image bytes"], "cover.jpg", { type: "image/jpeg" }));
+formData.set(
+  "cover",
+  new File([Uint8Array.from(coverBytes)], "cover.png", { type: "image/png" }),
+);
 ```
 
 Pass that form directly as the request body. Do not set `Content-Type` yourself because `Request` adds the multipart boundary when it serializes the `FormData`.
+
+Use a real, decodable image fixture when the action normalizes uploads. A MIME type and filename do not turn arbitrary bytes into an image, and the decoder should reject fake image data.
 
 Middleware does not need a separate app test harness. Send a request through the router and assert on the middleware's observable result: a rejection status, a response header, a persisted session value, or a context value used by the action. A reusable middleware package may use a small router with one test route, but app middleware should usually run in the same stack as the app's controllers.
 
@@ -158,25 +193,83 @@ Middleware does not need a separate app test harness. Send a request through the
 
 The router itself is request-driven, but the values supplied by its middleware may be stateful. Sessions, databases, upload storage, caches, and module-level arrays can all leak changes into the next test.
 
-Stateful tests are easier when `app/router.ts` exports a `createAppRouter(options)` factory in addition to the production `router`. The factory keeps the middleware and controller mappings in one place while allowing tests to replace infrastructure. A test helper can provide [memory-backed session storage](https://api.remix.run/api/remix/session-storage/memory/overview/):
+Stateful tests are easier when `app/router.ts` exports a `createAppRouter(options)` factory in addition to the production `router`. The factory keeps the cumulative middleware and every controller mapping in one place while allowing tests to replace infrastructure.
+
+The options must reach the code that uses them. Change `loadDatabase()` to accept a database, put album-cover storage in request context, and have the edit and cover actions read that storage from context instead of importing the production filesystem singleton. The factory then uses `loadDatabase(options.database)`, `loadAlbumCovers(options.albumCovers)`, `session(options.sessionCookie, options.sessionStorage)`, and the rest of the existing middleware. Passing an option that an action never reads does not isolate anything.
+
+A test helper can now provide memory-backed session and file storage:
 
 ```ts filename=test/router.ts
 import { createCookie } from "remix/cookie";
+import { createMemoryFileStorage } from "remix/file-storage/memory";
+import { createSession } from "remix/session";
 import { createMemorySessionStorage } from "remix/session-storage/memory";
 
 import { createAppRouter } from "../app/router.ts";
+import { createAlbumFixtureDatabase } from "./database.ts";
 
-export function createTestRouter() {
-  return createAppRouter({
-    sessionCookie: createCookie("session", {
-      secrets: ["test-secret"],
-    }),
-    sessionStorage: createMemorySessionStorage(),
+const origin = "https://albums.test";
+
+export async function createTestRouter() {
+  let database = await createAlbumFixtureDatabase({
+    user: {
+      id: "user_1",
+      email: "michael@example.com",
+      password: "test-password",
+    },
+    album: {
+      id: "thriller",
+      artist: "Michael Jackson",
+      ownerId: "user_1",
+      revision: 0,
+      title: "Thriller",
+      year: 1981,
+    },
   });
+  let sessionCookie = createCookie("__session", {
+    secrets: ["test-only-session-secret-32-characters"],
+  });
+  let sessionStorage = createMemorySessionStorage();
+  let albumCovers = createMemoryFileStorage();
+  let router = createAppRouter({
+    albumCovers,
+    database,
+    sessionCookie,
+    sessionStorage,
+  });
+
+  let session = createSession();
+  let csrfToken = crypto.randomUUID();
+  session.set("auth", { userId: "user_1" });
+  session.set("_csrf", csrfToken);
+
+  let sessionId = await sessionStorage.save(session);
+  if (sessionId === null)
+    throw new Error("Expected the test session to be saved");
+
+  let cookie = (await sessionCookie.serialize(sessionId)).split(";", 1)[0];
+
+  return {
+    albumCovers,
+    router,
+    authenticatedRequest(path: string, init: RequestInit = {}) {
+      let headers = new Headers(init.headers);
+      headers.set("Cookie", cookie);
+      headers.set("Origin", origin);
+      headers.set("X-Csrf-Token", csrfToken);
+
+      return new Request(new URL(path, origin), { ...init, headers });
+    },
+    async close() {
+      await database.close();
+    },
+  };
 }
 ```
 
-Create a fresh test router inside a test when it mutates session or middleware state. A suite may share one when its dependencies are read-only or reset between tests.
+`createAlbumFixtureDatabase()` is an app-owned test helper that opens an isolated database, applies migrations, hashes the fixture password, and inserts the user, artist, and owner-backed album. The returned request helper serializes the signed session cookie, supplies an `Origin` that matches the request URL, and submits the session's CSRF token through one of the header names accepted by `csrf()`. The edit test still includes `revision` in `FormData` because that value belongs to the album mutation, not the request helper.
+
+Create a fresh fixture inside a test when it mutates session, database, or file state. The memory session and file stores need no explicit close; they become collectible with the fixture. `close()` owns the database connection. A suite may share a fixture only when its dependencies are read-only or reset between tests.
 
 A browser manages cookies automatically in an [end-to-end test](#test-complete-flows-end-to-end). To keep a multi-request session flow in a router test, read the cookie from one response and send its name/value pair in the next request:
 
@@ -184,7 +277,9 @@ A browser manages cookies automatically in an [end-to-end test](#test-complete-f
 import * as assert from "remix/assert";
 
 export function getResponseCookie(response: Response, name: string): string {
-  let setCookie = response.headers.getSetCookie().find((header) => header.startsWith(`${name}=`));
+  let setCookie = response.headers
+    .getSetCookie()
+    .find((header) => header.startsWith(`${name}=`));
 
   assert.ok(setCookie, `Expected a ${name} cookie`);
   return setCookie.split(";", 1)[0];
@@ -193,7 +288,7 @@ export function getResponseCookie(response: Response, name: string): string {
 
 ```ts
 // inside a multi-request test:
-let cookie = getResponseCookie(loginResponse, "session");
+let cookie = getResponseCookie(loginResponse, "__session");
 let accountResponse = await router.fetch(
   new Request(accountUrl, {
     headers: { Cookie: cookie },
@@ -218,7 +313,7 @@ npx playwright install
 
 Consider a small client component that tracks whether an album is a favorite:
 
-```tsx filename=app/actions/albums/favorite-button.browser.tsx
+```tsx filename=app/assets/favorite-button.tsx
 import { clientEntry, on } from "remix/ui";
 import type { Handle } from "remix/ui";
 
@@ -230,12 +325,10 @@ export const FavoriteButton = clientEntry(
     return () => (
       <button
         aria-pressed={favorite}
-        mix={[
-          on("click", () => {
-            favorite = !favorite;
-            handle.update();
-          }),
-        ]}
+        mix={on("click", () => {
+          favorite = !favorite;
+          handle.update();
+        })}
         type="button"
       >
         {favorite
@@ -249,12 +342,12 @@ export const FavoriteButton = clientEntry(
 
 `render(...)` from [`remix/ui/test`](https://api.remix.run/api/remix/ui/test/overview/) mounts the component, flushes its initial render, and returns helpers for querying and interacting with the DOM:
 
-```tsx filename=app/actions/albums/favorite-button.test.browser.tsx
+```tsx filename=app/assets/favorite-button.test.browser.tsx
 import * as assert from "remix/assert";
 import { describe, it } from "remix/test";
 import { render } from "remix/ui/test";
 
-import { FavoriteButton } from "./favorite-button.browser.tsx";
+import { FavoriteButton } from "./favorite-button.tsx";
 
 describe("FavoriteButton", () => {
   it("toggles an album as a favorite", async (t) => {
@@ -294,22 +387,32 @@ import { createTestRouter } from "../test/router.ts";
 
 describe("album editing", () => {
   it("updates an album from the edit page", async (t) => {
-    let router = createTestRouter();
-    let page = await t.serve(await createTestServer(router.fetch));
+    let app = await createTestRouter();
+    t.after(() => app.close());
+
+    let page = await t.serve(await createTestServer(app.router.fetch));
     let albumId = "thriller";
+
+    await page.goto(routes.auth.login.index.href());
+    await page.getByLabel("Email").fill("michael@example.com");
+    await page.getByLabel("Password").fill("test-password");
+    await page.getByRole("button", { name: "Sign in" }).click();
 
     await page.goto(routes.albums.edit.index.href({ albumId }));
     await page.getByLabel("Year").fill("1982");
     await page.getByRole("button", { name: "Save album" }).click();
     await page.getByRole("heading", { name: "Thriller" }).waitFor();
 
-    assert.equal(new URL(page.url()).pathname, routes.albums.show.href({ albumId }));
+    assert.equal(
+      new URL(page.url()).pathname,
+      routes.albums.show.href({ albumId }),
+    );
     await page.getByText("Michael Jackson · 1982").waitFor();
   });
 });
 ```
 
-The router and browser are cleaned up automatically. Database or file-storage fixtures created outside `t.serve(...)` still need their own cleanup.
+`t.serve(...)` closes the Playwright page and HTTP server after the test. The registered `app.close()` callback closes the fixture database. Memory-backed session and file stores do not hold external resources; a temporary directory or external service would need another `t.after(...)` callback.
 
 Keep validation statuses, redirects, and middleware branches in router tests. One representative end-to-end flow can prove that the form, pending state, POST, redirect, and rendered result work together without repeating every server-side case in Playwright.
 

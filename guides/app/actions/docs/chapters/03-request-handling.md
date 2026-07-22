@@ -97,13 +97,16 @@ The listener accepts a few options when the server boundary needs more informati
 For example, a Node server behind a trusted reverse proxy can let the listener recover the public protocol and host:
 
 ```ts filename=server.ts
-const requestListener = createRequestListener((request) => router.fetch(request), {
-  trustProxy: true,
-  onError(error) {
-    console.error(error);
-    return new Response("Internal Server Error", { status: 500 });
+const requestListener = createRequestListener(
+  (request) => router.fetch(request),
+  {
+    trustProxy: true,
+    onError(error) {
+      console.error(error);
+      return new Response("Internal Server Error", { status: 500 });
+    },
   },
-});
+);
 
 const server = http.createServer(requestListener);
 ```
@@ -184,7 +187,9 @@ function timing(): Middleware {
     let response = await next();
     let duration = performance.now() - start;
 
-    console.log(`${context.method} ${context.url.pathname} ${duration.toFixed(1)}ms`);
+    console.log(
+      `${context.method} ${context.url.pathname} ${duration.toFixed(1)}ms`,
+    );
     return response;
   };
 }
@@ -302,7 +307,7 @@ Global middleware is convenient when most routes use it. If only one action acce
 
 Method override is an exception because it must change `context.method` before route matching. When forms use `_method` to reach `PUT`, `PATCH`, or `DELETE` routes, put both `formData()` and `methodOverride()` in the router middleware stack.
 
-`staticFiles()` serves files exactly as they exist under `public/`. Browser modules compiled from `.browser.ts` and `.browser.tsx` source use `remix/assets` instead; [Files and Assets](/files-and-assets/) covers that pipeline. The next chapter, [Rendering UI](/rendering-ui/), builds the app's `render()` middleware with `renderWith(...)` and `renderToStream(...)`.
+`staticFiles()` serves files exactly as they exist under `public/`. Browser modules under the generated app's `app/assets/` boundary use `remix/assets` instead; [Files and Assets](/files-and-assets/) covers that pipeline. The next chapter, [Rendering UI](/rendering-ui/), builds the app's `render()` middleware with `renderWith(...)` and `renderToStream(...)`.
 
 ## Custom middleware {#custom-middleware}
 
@@ -343,7 +348,11 @@ A middleware that rejects a request returns its response without calling `next()
 ```ts
 function requireJson(): Middleware {
   return (context, next) => {
-    let mediaType = context.headers.get("Content-Type")?.split(";", 1)[0].trim().toLowerCase();
+    let mediaType = context.headers
+      .get("Content-Type")
+      ?.split(";", 1)[0]
+      .trim()
+      .toLowerCase();
 
     if (mediaType !== "application/json") {
       return new Response("Expected JSON", { status: 415 });
