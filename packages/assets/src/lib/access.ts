@@ -8,6 +8,7 @@ type AccessPolicy = {
   getPackageWatchDirectories(): readonly string[]
   handleFileEvent(filePath: string): void
   isAllowed(filePath: string): boolean
+  isDependency(filePath: string): boolean
 }
 
 const packageStateFileNames = new Set([
@@ -83,7 +84,15 @@ export function createAccessPolicy(options: {
       if (denyMatchers.length > 0 && denyMatchers.some((matcher) => matcher(filePath))) return false
       return true
     },
+    isDependency(filePath) {
+      if (isInjectedPackageFilePath(filePath) || isNodeModulesPath(filePath)) return true
+      return isAllowedPackage(filePath)
+    },
   }
+}
+
+function isNodeModulesPath(filePath: string): boolean {
+  return normalizeFilePath(filePath).split('/').includes('node_modules')
 }
 
 function normalizePackageNames(

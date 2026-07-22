@@ -5,6 +5,7 @@ import * as fs from 'node:fs/promises'
 import * as os from 'node:os'
 import * as path from 'node:path'
 import { init as esModuleLexerInit, parse as esModuleLexer } from 'es-module-lexer'
+import MagicString from 'magic-string'
 import { createMemoryFileStorage } from '@remix-run/file-storage/memory'
 import type { RawSourceMap } from 'source-map-js'
 import { SourceMapConsumer } from 'source-map-js'
@@ -18,6 +19,7 @@ import {
 import type { AssetServer, AssetServerOptions } from './asset-server.ts'
 import type { AssetRequestTransformMap } from './files/config.ts'
 import { defineFileTransform } from './files/config.ts'
+import type { AssetScriptTransformContext, AssetServerScriptOptions } from './scripts/config.ts'
 
 type FingerprintOptions = NonNullable<AssetServerOptions['fingerprint']>
 
@@ -2473,6 +2475,204 @@ describe('asset-server', () => {
     assert.ok(response)
     let body = await response.text()
     assert.match(body, /from "@remix-run\/ui"/)
+  })
+
+  it('runs script transforms before TypeScript and JSX lowering and composes source maps', async () => {
+    let source = 'export const value: string = <span>__MESSAGE__</span>\n'
+    let sourcePath = await write(dir, 'app/entry.tsx', source)
+    let contexts: AssetScriptTransformContext[] = []
+    let assetServer = createTestServer(dir, {
+      sourceMaps: 'external',
+      scripts: {
+        transforms: [
+          {
+            transform(code, context) {
+              contexts.push(context)
+              let transformed = new MagicString(code)
+              let start = code.indexOf('__MESSAGE__')
+              transformed.overwrite(start, start + '__MESSAGE__'.length, '__TRANSFORMED__')
+              return {
+                code: transformed.toString(),
+                sourceMap: transformed
+                  .generateMap({ hires: true, includeContent: true, source: context.filePath })
+                  .toString(),
+              }
+            },
+          },
+          {
+            transform(code, context) {
+              contexts.push(context)
+              let transformed = new MagicString(code)
+              let start = code.indexOf('__TRANSFORMED__')
+              transformed.overwrite(start, start + '__TRANSFORMED__'.length, 'Hello from transform')
+              return {
+                code: transformed.toString(),
+                sourceMap: transformed
+                  .generateMap({ hires: true, includeContent: true, source: context.filePath })
+                  .toString(),
+              }
+            },
+          },
+        ],
+      },
+    })
+
+    let { compiledCode, sourceMap } = await getCompiledCodeAndSourceMap(
+      assetServer,
+      'app/entry.tsx',
+    )
+    assert.match(compiledCode, /Hello from transform/)
+    assert.equal(contexts.length, 2)
+    assert.equal(
+      normalizeWindowsPath(contexts[0]?.filePath ?? ''),
+      normalizeWindowsPath(nodeFs.realpathSync(sourcePath)),
+    )
+    assert.equal(contexts[0]?.format, 'tsx')
+    assert.equal(contexts[0]?.isDependency, false)
+    assert.equal(contexts[0]?.sourceMap, null)
+    assert.equal(contexts[0]?.urlPathname, '/assets/app/entry.tsx')
+    assert.ok(contexts[1]?.sourceMap)
+
+    let consumer = new SourceMapConsumer(sourceMap)
+    let generatedMessage = getLineAndColumn(compiledCode, 'Hello from transform')
+    let originalMessage = consumer.originalPositionFor(generatedMessage)
+    let expectedMessage = getLineAndColumn(source, '__MESSAGE__')
+    assert.equal(originalMessage.line, expectedMessage.line)
+    assert.equal(originalMessage.column, expectedMessage.column)
+  })
+
+  it('only runs script transforms for dependencies when explicitly enabled', async () => {
+    await write(dir, 'app/node_modules/example/index.ts', 'export const value = "__VALUE__"')
+
+    let defaultServer = createTestServer(dir, {
+      scripts: {
+        transforms: [
+          {
+            transform(code) {
+              return code.replace('__VALUE__', 'transformed')
+            },
+          },
+        ],
+      },
+    })
+    let defaultResponse = await getByFile(defaultServer, 'app/node_modules/example/index.ts')
+    assert.ok(defaultResponse)
+    assert.match(await defaultResponse.text(), /__VALUE__/)
+
+    let dependencyContext: AssetScriptTransformContext | undefined
+    let optInServer = createTestServer(dir, {
+      scripts: {
+        transforms: [
+          {
+            includeDependencies: true,
+            transform(code, context) {
+              dependencyContext = context
+              return code.replace('__VALUE__', 'transformed')
+            },
+          },
+        ],
+      },
+    })
+    let optInResponse = await getByFile(optInServer, 'app/node_modules/example/index.ts')
+    assert.ok(optInResponse)
+    assert.match(await optInResponse.text(), /transformed/)
+    assert.equal(dependencyContext?.isDependency, true)
+  })
+
+  it('validates script transform options', () => {
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          scripts: { transforms: {} } as unknown as AssetServerScriptOptions,
+        }),
+      /scripts\.transforms must be an array/,
+    )
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          scripts: { transforms: [{}] } as unknown as AssetServerScriptOptions,
+        }),
+      /scripts\.transforms\[0\] must define a transform\(\) function/,
+    )
+    assert.throws(
+      () =>
+        createTestServer(dir, {
+          scripts: {
+            transforms: [{ includeDependencies: 'yes', transform() {} }],
+          } as unknown as AssetServerScriptOptions,
+        }),
+      /scripts\.transforms\[0\]\.includeDependencies must be a boolean/,
+    )
+  })
+
+  it('reports named script transform errors', async () => {
+    await write(dir, 'app/entry.ts', 'export const value = true')
+    let receivedError: unknown
+    let assetServer = createTestServer(dir, {
+      onError(error) {
+        receivedError = error
+      },
+      scripts: {
+        transforms: [
+          {
+            name: 'messages',
+            transform() {
+              throw new Error('compiler failed')
+            },
+          },
+        ],
+      },
+    })
+
+    let response = await get(assetServer, '/assets/app/entry.ts')
+    assert.ok(response)
+    await assertInternalServerError(response)
+    assert.ok(isAssetServerCompilationError(receivedError))
+    assert.equal(receivedError.code, 'TRANSFORM_FAILED')
+    assert.match(receivedError.message, /Script transform "messages" failed/)
+    assert.match(receivedError.message, /compiler failed/)
+  })
+
+  it('invalidates script transforms when a watched file changes', async () => {
+    await write(dir, 'app/entry.ts', 'export const message = "__CATALOG__"')
+    let catalogPath = await write(dir, 'config/messages.txt', 'Bonjour')
+    let assetServer = createWatchedTestServer(dir, {
+      scripts: {
+        transforms: [
+          {
+            async transform(code) {
+              let message = await fs.readFile(catalogPath, 'utf-8')
+              return {
+                code: code.replace('__CATALOG__', message),
+                watchFiles: ['../config/messages.txt'],
+              }
+            },
+          },
+        ],
+      },
+      watch: { poll: true },
+    })
+
+    try {
+      let initialResponse = await getByFile(assetServer, 'app/entry.ts')
+      assert.ok(initialResponse)
+      assert.match(await initialResponse.text(), /Bonjour/)
+      let watchedDirectory = normalizeWindowsPath(path.dirname(nodeFs.realpathSync(catalogPath)))
+      assert.ok(
+        getInternalWatchTargets(assetServer)
+          .map((target) => normalizeWindowsPath(target))
+          .includes(watchedDirectory),
+      )
+
+      await fs.writeFile(catalogPath, 'Hello', 'utf-8')
+      await emitWatchEvent(assetServer, catalogPath, 'change')
+
+      let updatedResponse = await getByFile(assetServer, 'app/entry.ts')
+      assert.ok(updatedResponse)
+      assert.match(await updatedResponse.text(), /Hello/)
+    } finally {
+      await assetServer.close()
+    }
   })
 
   it('leaves data and http(s) URL imports unchanged', async () => {

@@ -1,0 +1,1 @@
+Add ordered `scripts.transforms` hooks to `createAssetServer()` for transforming application JavaScript and TypeScript before Remix lowers TypeScript and JSX. Transforms can preserve source maps, register additional watched files, and explicitly opt into dependency modules with `includeDependencies` (see #11580).

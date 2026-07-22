@@ -30,10 +30,16 @@ import { composeSourceMaps, rewriteSourceMapSources, stringifySourceMap } from '
 import type { EmittedModule } from './emit.ts'
 import type { ResolvedScriptTarget } from '../target.ts'
 import type { ResolvedModule } from './resolve.ts'
+import type {
+  AssetScriptFormat,
+  AssetScriptTransformContext,
+  AssetScriptTransformResult,
+  ResolvedAssetScriptTransform,
+} from './config.ts'
 
 type ScriptRecord = ModuleRecord<TransformedModule, ResolvedModule, EmittedModule>
 
-type SourceLanguage = 'js' | 'jsx' | 'ts' | 'tsx'
+type SourceLanguage = AssetScriptFormat
 
 const scriptModuleTypes = [
   { extension: '.js', lang: 'js' },
@@ -108,6 +114,7 @@ export type TransformArgs = {
   buildId: string | null
   define: Record<string, string> | null
   externalSet: ReadonlySet<string>
+  isDependency(filePath: string): boolean
   isWatchIgnored(filePath: string): boolean
   minify: boolean
   resolveActualPath(identityPath: string): string | null
@@ -115,6 +122,7 @@ export type TransformArgs = {
   sourceMapSourcePaths: 'absolute' | 'url'
   sourceMaps: 'external' | 'inline' | null
   target: ResolvedScriptTarget | null
+  transforms: readonly ResolvedAssetScriptTransform[]
   tsconfigTransformOptionsResolver: TsconfigTransformOptionsResolver
 }
 
@@ -205,34 +213,51 @@ export async function transformModule(
   }
 
   try {
-    let analysis = await analyzeModuleSource(sourceText, resolvedPath, transformOptions, {
-      define: args.define ?? undefined,
-      minify: args.minify,
-      sourceMaps: args.sourceMaps ?? undefined,
-      target: args.target ?? undefined,
-    })
-
-    analysis.unresolvedImports = analysis.unresolvedImports.filter(
-      (unresolved) => !args.externalSet.has(getDisplayImportSpecifier(unresolved.specifier)),
-    )
-
-    if (mayContainCommonJSModuleGlobals(sourceText) && isCommonJS(analysis.rawCode)) {
-      throw createAssetServerCompilationError(
-        `CommonJS module detected: ${resolvedPath}. ` +
-          `This module uses CommonJS (require/module.exports) which is not supported. ` +
-          `Please use an ESM-compatible module.`,
-        {
-          code: 'COMMONJS_NOT_SUPPORTED',
-        },
-      )
-    }
-
     let stableUrlPathname = args.routes.toUrlPathname(record.identityPath)
     if (!stableUrlPathname) {
       throw createAssetServerCompilationError(
         `File ${record.identityPath} is outside all configured fileMap entries.`,
         {
           code: 'FILE_OUTSIDE_FILE_MAP',
+        },
+      )
+    }
+
+    let transformedSource = await applyScriptTransforms(sourceText, {
+      filePath: resolvedPath,
+      format: getSourceLanguageForPath(resolvedPath),
+      isDependency: args.isDependency(record.identityPath),
+      isWatchIgnored: args.isWatchIgnored,
+      sourceMaps: args.sourceMaps !== null,
+      transforms: args.transforms,
+      urlPathname: stableUrlPathname,
+    })
+    trackedFiles.push(...transformedSource.trackedFiles)
+
+    let analysis = await analyzeModuleSource(
+      transformedSource.code,
+      resolvedPath,
+      transformOptions,
+      {
+        define: args.define ?? undefined,
+        minify: args.minify,
+        sourceMap: transformedSource.sourceMap,
+        sourceMaps: args.sourceMaps ?? undefined,
+        target: args.target ?? undefined,
+      },
+    )
+
+    analysis.unresolvedImports = analysis.unresolvedImports.filter(
+      (unresolved) => !args.externalSet.has(getDisplayImportSpecifier(unresolved.specifier)),
+    )
+
+    if (mayContainCommonJSModuleGlobals(transformedSource.code) && isCommonJS(analysis.rawCode)) {
+      throw createAssetServerCompilationError(
+        `CommonJS module detected: ${resolvedPath}. ` +
+          `This module uses CommonJS (require/module.exports) which is not supported. ` +
+          `Please use an ESM-compatible module.`,
+        {
+          code: 'COMMONJS_NOT_SUPPORTED',
         },
       )
     }
@@ -311,6 +336,144 @@ function isBareImportSpecifier(specifier: string): boolean {
   )
 }
 
+async function applyScriptTransforms(
+  sourceText: string,
+  options: {
+    filePath: string
+    format: AssetScriptFormat
+    isDependency: boolean
+    isWatchIgnored(filePath: string): boolean
+    sourceMaps: boolean
+    transforms: readonly ResolvedAssetScriptTransform[]
+    urlPathname: string
+  },
+): Promise<{ code: string; sourceMap: string | null; trackedFiles: string[] }> {
+  let code = sourceText
+  let sourceMap: string | null = null
+  let trackedFiles: string[] = []
+
+  for (let [index, transform] of options.transforms.entries()) {
+    if (options.isDependency && !transform.includeDependencies) continue
+
+    let context: AssetScriptTransformContext = {
+      filePath: options.filePath,
+      format: options.format,
+      isDependency: options.isDependency,
+      sourceMap,
+      urlPathname: options.urlPathname,
+    }
+    let result: string | AssetScriptTransformResult | null
+    try {
+      result = await transform.transform(code, context)
+    } catch (error) {
+      throw createScriptTransformError(error, transform, index, options.filePath)
+    }
+    if (result === null) continue
+
+    let normalizedResult = normalizeScriptTransformResult(
+      result,
+      transform,
+      index,
+      options.filePath,
+    )
+    let nextCode = normalizedResult.code
+
+    if (options.sourceMaps) {
+      if (typeof result === 'string') {
+        sourceMap = nextCode === code ? sourceMap : null
+      } else if (result.sourceMap !== undefined) {
+        let nextSourceMap = stringifySourceMap(result.sourceMap)
+        sourceMap =
+          nextSourceMap === null
+            ? null
+            : sourceMap === null
+              ? nextSourceMap
+              : composeSourceMaps(nextSourceMap, sourceMap)
+      } else if (nextCode !== code) {
+        sourceMap = null
+      }
+    }
+
+    code = nextCode
+    trackedFiles.push(
+      ...normalizeScriptTransformWatchFiles(
+        normalizedResult.watchFiles,
+        options.filePath,
+        options.isWatchIgnored,
+        transform,
+        index,
+      ),
+    )
+  }
+
+  return { code, sourceMap, trackedFiles }
+}
+
+function normalizeScriptTransformResult(
+  result: string | AssetScriptTransformResult,
+  transform: ResolvedAssetScriptTransform,
+  index: number,
+  filePath: string,
+): AssetScriptTransformResult {
+  if (typeof result === 'string') return { code: result }
+  if (typeof result !== 'object' || typeof result.code !== 'string') {
+    throw createScriptTransformError(
+      new TypeError('Expected a string, result object, or null'),
+      transform,
+      index,
+      filePath,
+    )
+  }
+  return result
+}
+
+function normalizeScriptTransformWatchFiles(
+  watchFiles: readonly string[] | undefined,
+  filePath: string,
+  isWatchIgnored: (filePath: string) => boolean,
+  transform: ResolvedAssetScriptTransform,
+  index: number,
+): string[] {
+  if (watchFiles === undefined) return []
+  if (!Array.isArray(watchFiles) || watchFiles.some((watchFile) => typeof watchFile !== 'string')) {
+    throw createScriptTransformError(
+      new TypeError('Expected watchFiles to be an array of file paths'),
+      transform,
+      index,
+      filePath,
+    )
+  }
+
+  let resolvedWatchFiles = watchFiles.map((watchFile) => {
+    let absolutePath = path.isAbsolute(watchFile)
+      ? watchFile
+      : path.resolve(path.dirname(filePath), watchFile)
+    try {
+      return normalizeFilePath(fs.realpathSync(absolutePath))
+    } catch (error) {
+      if (isNoEntityError(error)) return normalizeFilePath(absolutePath)
+      throw error
+    }
+  })
+  return resolvedWatchFiles.filter((watchFile) => !isWatchIgnored(watchFile))
+}
+
+function createScriptTransformError(
+  error: unknown,
+  transform: ResolvedAssetScriptTransform,
+  index: number,
+  filePath: string,
+): AssetServerCompilationError {
+  let label = transform.name ? ` "${transform.name}"` : ` at index ${index}`
+  return createAssetServerCompilationError(
+    `Script transform${label} failed for ${filePath}. ${formatUnknownError(error)}`,
+    {
+      cause: error,
+      code: 'TRANSFORM_FAILED',
+    },
+  )
+}
+
 async function analyzeModuleSource(
   sourceText: string,
   resolvedPath: string,
@@ -318,6 +481,7 @@ async function analyzeModuleSource(
   options: {
     define?: Record<string, string>
     minify: boolean
+    sourceMap: string | null
     sourceMaps?: 'external' | 'inline'
     target?: ResolvedScriptTarget
   },
@@ -344,6 +508,9 @@ async function analyzeModuleSource(
 
   let rawCode = transformResult.code.trimEnd()
   let sourceMap = stringifySourceMap(transformResult.map)
+  if (sourceMap !== null && options.sourceMap !== null) {
+    sourceMap = composeSourceMaps(sourceMap, options.sourceMap)
+  }
 
   if (options.minify) {
     let minifyResult = await minifyModule(rawCode, resolvedPath, options.target, options.sourceMaps)
