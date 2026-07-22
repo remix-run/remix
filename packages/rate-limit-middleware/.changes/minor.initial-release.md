@@ -1,0 +1,1 @@
+Add `rateLimit()` fixed-window middleware with explicit client keys, named composable policies, atomic store integration, current IETF RateLimit draft response fields, and an opt-in single-process memory store (see #11576).
