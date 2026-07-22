@@ -7,7 +7,8 @@ const isDevelopment = process.env.NODE_ENV === 'development'
 export const assetServer = createAssetServer({
   basePath: assetsBase,
   rootDir: path.resolve(import.meta.dirname, '../../../..'),
-  allow: ['demos/bookstore/app/assets/**', 'demos/bookstore/app/routes.ts', 'packages/*/src/**'],
+  allowFiles: ['demos/bookstore/app/assets/**', 'demos/bookstore/app/routes.ts'],
+  allowPackages: ['remix'],
   fileMap: {
     '/app/*path': 'demos/bookstore/app/*path',
     '/packages/*path': 'packages/*path',

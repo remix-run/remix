@@ -554,9 +554,13 @@ export function resolveServedFileOrThrow(filePath: string, args: ResolveArgs): R
   }
 
   if (!args.isAllowed(identityPath)) {
-    throw createAssetServerCompilationError(`File is not allowed: ${identityPath}`, {
-      code: 'FILE_NOT_ALLOWED',
-    })
+    throw createAssetServerCompilationError(
+      `File "${identityPath}" is not allowed by the asset server access configuration. ` +
+        `Add a matching allowFiles or allowPackages rule, or remove a conflicting denyFiles rule.`,
+      {
+        code: 'FILE_NOT_ALLOWED',
+      },
+    )
   }
 
   let stableUrlPathname = args.routes.toUrlPathname(identityPath)

@@ -25,7 +25,8 @@ export function createAssetServer(version?: string): DocsAssetServer {
       '/client/*path': 'api/src/client/*path',
       '/shared/*path': 'api/src/shared/*path',
     },
-    allow: ['api/build/demos/**', 'api/src/client/**', 'api/src/shared/**', 'packages/**'],
+    allowFiles: ['api/build/demos/**', 'api/src/client/**', 'api/src/shared/**'],
+    allowPackages: ['remix'],
     watch: process.env.NODE_ENV !== 'production',
   })
 }
