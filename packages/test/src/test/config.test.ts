@@ -72,6 +72,65 @@ describe('loadConfig', () => {
       await fsp.rm(tmp, { recursive: true, force: true })
     }
   })
+
+  it('normalizes repeated only values from CLI flags', async () => {
+    let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
+
+    try {
+      let config = await loadConfig(
+        ['--only', 'server > matches', '--only', '/browser/', '--only', '/checkout/i'],
+        tmp,
+      )
+
+      assert.deepEqual(config.only, [
+        { source: 'server > matches', flags: 'i' },
+        { source: 'browser', flags: '' },
+        { source: 'checkout', flags: 'i' },
+      ])
+    } finally {
+      await fsp.rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  it('normalizes only values from config files', async () => {
+    let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
+
+    try {
+      await fsp.writeFile(
+        path.join(tmp, 'remix-test.config.ts'),
+        ['export default {', "  only: [/server/, /checkout/i, 'browser'],", '}'].join('\n'),
+      )
+
+      let config = await loadConfig([], tmp)
+
+      assert.deepEqual(config.only, [
+        { source: 'server', flags: '' },
+        { source: 'checkout', flags: 'i' },
+        { source: 'browser', flags: 'i' },
+      ])
+    } finally {
+      await fsp.rm(tmp, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects invalid only patterns', async () => {
+    let tmp = await fsp.mkdtemp(path.join(os.tmpdir(), 'remix-test-config-'))
+
+    try {
+      await assert.rejects(
+        () => loadConfig(['--only', '/(/'], tmp),
+        (error: unknown) => {
+          let message = String(error)
+          assert.match(message, /Invalid --only pattern/)
+          assert.match(message, /must be valid JavaScript regular expressions/)
+          assert.match(message, /Invalid regular expression/)
+          return true
+        },
+      )
+    } finally {
+      await fsp.rm(tmp, { recursive: true, force: true })
+    }
+  })
 })
 
 describe('config', () => {
@@ -106,6 +165,23 @@ describe('config', () => {
     assert.equal(config.pool, 'forks')
   })
 
+  it('prefers the CLI quiet flag over the config file', async () => {
+    let cwd = await createConfigDir('cli-quiet')
+    await fsp.writeFile(path.join(cwd, 'remix-test.config.ts'), `export default { quiet: false }`)
+
+    let config = await loadConfig(['--quiet'], cwd)
+
+    assert.equal(config.quiet, true)
+  })
+
+  it('supports the quiet shorthand flag', async () => {
+    let cwd = await createConfigDir('cli-quiet-shorthand')
+
+    let config = await loadConfig(['-q'], cwd)
+
+    assert.equal(config.quiet, true)
+  })
+
   it('rejects unsupported pool values', async () => {
     let cwd = await createConfigDir('invalid-pool')
 
@@ -119,6 +195,19 @@ describe('config', () => {
     let help = getRemixTestHelpText()
 
     assert.match(help, /--pool <value>/)
+  })
+
+  it('includes the quiet flag in help text', () => {
+    let help = getRemixTestHelpText()
+
+    assert.match(help, /--quiet/)
+    assert.match(help, /-q/)
+  })
+
+  it('includes the only flag in help text', () => {
+    let help = getRemixTestHelpText()
+
+    assert.match(help, /--only <value>/)
   })
 })
 

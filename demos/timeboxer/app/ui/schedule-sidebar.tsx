@@ -1,5 +1,5 @@
 import { clientEntry, css, navigate, on, type Handle } from 'remix/ui'
-import { Button } from 'remix/components/button'
+import button from 'remix/ui/button'
 import { theme } from './design.ts'
 
 import { NewScheduleActionComponent } from './new-schedule-action.tsx'
@@ -48,9 +48,9 @@ export const ScheduleSidebar = clientEntry(
             </a>
             <form action={handle.props.logoutHref} method="post" mix={logoutFormStyle}>
               <input type="hidden" name="_csrf" value={handle.props.csrfToken} />
-              <Button type="submit" tone="ghost" mix={logoutButtonStyle}>
+              <button type="submit" mix={[button(), logoutButtonStyle]}>
                 Logout
-              </Button>
+              </button>
             </form>
           </div>
 
@@ -88,8 +88,8 @@ export const ScheduleSidebar = clientEntry(
         let [result] = await Promise.all([
           fetch(schedule.deleteHref, {
             headers: {
-              accept: 'application/json',
-              'x-csrf-token': handle.props.csrfToken,
+              Accept: 'application/json',
+              'X-Csrf-Token': handle.props.csrfToken,
             },
             method: 'DELETE',
             signal: handle.signal,
@@ -223,7 +223,7 @@ function sleep(durationMs: number) {
 }
 
 async function deleteScheduleErrorMessage(response: Response) {
-  let contentType = response.headers.get('content-type') ?? ''
+  let contentType = response.headers.get('Content-Type') ?? ''
 
   if (contentType.includes('application/json')) {
     try {

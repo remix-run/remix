@@ -41,7 +41,6 @@ This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/ma
 - BREAKING CHANGE: Removed `Headers`/`SuperHeaders` class and default export. Use the native `Headers` class with the static `from()` method on each header class instead.
 
   New individual header `.from()` methods:
-
   - `Accept.from()`
   - `AcceptEncoding.from()`
   - `AcceptLanguage.from()`
@@ -58,7 +57,6 @@ This is the changelog for [`headers`](https://github.com/remix-run/remix/tree/ma
   - `Vary.from()`
 
   New raw header utilities added:
-
   - `parse()`
   - `stringify()`
 

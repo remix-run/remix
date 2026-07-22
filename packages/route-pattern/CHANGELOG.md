@@ -2,6 +2,22 @@
 
 This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/tree/main/packages/route-pattern). It follows [semantic versioning](https://semver.org/).
 
+## v0.23.0
+
+### Minor Changes
+
+- BREAKING CHANGE: `RoutePattern` no longer exposes its parsed internals. Construct patterns with `RoutePattern.parse()`, and use `pattern.source`, `pattern.toString()`, or `pattern.toJSON()` instead of reading parsed internals such as `pattern.pathname.tokens`, `pattern.hostname`, or `pattern.search`.
+
+  Added `getRoutePatternCaptures(pattern)` for supported capture introspection. It returns readonly `{ part, type, name, optional }` entries in source order so consumers can inspect the variables (`:name`) and wildcards (`*name`) declared in a pattern without relying on internal parser tokens.
+
+  Exported `RoutePatternCapture` and `RoutePatternJSON` from `@remix-run/route-pattern`, `CreateHrefErrorDetails` from `@remix-run/route-pattern/href`, and `MatchParamMeta` from `@remix-run/route-pattern/match`.
+
+### Patch Changes
+
+- Fixed several route pattern matching and href generation edge cases: `ignoreCase` now applies consistently to pathname matching, key-only search constraints keep generated hrefs matchable, pathname params use `encodeURIComponent` segment encoding, hostname params reject URL-structural and control characters, optional joins no longer generate duplicate slashes, missing-param errors report every missing required param, optional variant duplicates are collapsed, port-only origins are rejected, and protocol/port constraints participate in specificity.
+
+- Fixed route pattern helper types so literal pattern types follow the same grammar as runtime parsing. Invalid literal patterns now evaluate to `never` in `CreateHrefArgs`, `MatchParams`, and `JoinPatterns`, while broad `string` patterns remain usable.
+
 ## v0.22.1
 
 ### Patch Changes
@@ -154,7 +170,6 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   To achieve this, we've reworked our core APIs to be simpler and more independently useful. So instead of a single `RoutePattern` class that does it all (`.href`, `.match`, ...), the new `RoutePattern` class is a thin layer around the parsed pattern that includes `RoutePattern.parse` static method for parsing and `.source`, `.toString()` and `.toJSON()` for serialization.
 
   The rest of the functionality comes from dedicated subpath exports:
-
   - **remix/route-pattern/href** : Generate hrefs for patterns with type safe params.
   - **remix/route-pattern/match** : Match against one pattern with type inference for params. Or match against many patterns with deterministic ranking and attached data.
   - **remix/route-pattern/join** : Combine two patterns into one. Override protocol, hostname, port. Join pathnames. Merge search constraints.
@@ -393,7 +408,6 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   `RoutePattern.ignoreCase` field has been removed and `ignoreCase` now only applies to `pathname` (no longer applies to `search`)
 
   Case sensitivity is now determined only when matching.
-
   - `RoutePattern.match` now accept `ignoreCase` option
   - `Matcher` constructors now accept `ignoreCase` option
 
@@ -689,7 +703,7 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
   ```ts
   import * as Specificity from '@remix-run/route-pattern/specificity'
 
-  Specificity.lessThan(a, b) // `true` when `a` is more specific than `b`. `false` otherwise
+  Specificity.lessThan(a, b) // `true` when `a` is less specific than `b`. `false` otherwise
   Specificity.greaterThan(a, b)
   Specificity.equal(a, b)
 
@@ -766,7 +780,6 @@ This is the changelog for [`route-pattern`](https://github.com/remix-run/remix/t
 
 - Add `Matcher` and `MatchResult` interfaces. These are new public APIs for matching sets of patterns.
 - Add `RegExpMatcher` and `TrieMatcher` concrete implementations of the `Matcher` interface
-
   - `RegExpMatcher` is a simple array-based matcher that compiles route patterns to regular expressions.
   - `TrieMatcher` is a trie-based matcher optimized for large route sets and long-running server applications.
 

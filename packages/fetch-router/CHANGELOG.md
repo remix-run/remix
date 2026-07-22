@@ -2,6 +2,13 @@
 
 This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router). It follows [semantic versioning](https://semver.org/).
 
+## v0.20.1
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`route-pattern@0.23.0`](https://github.com/remix-run/remix/releases/tag/route-pattern@0.23.0)
+
 ## v0.20.0
 
 ### Minor Changes
@@ -605,7 +612,6 @@ This is the changelog for [`fetch-router`](https://github.com/remix-run/remix/tr
   ```
 
   Summary of changes:
-
   - `RouteHandlers` type => `Controller`
   - `RouteHandler` type => `Action`
   - `BuildRouteHandler` type => `BuildAction`

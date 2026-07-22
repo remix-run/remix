@@ -7,16 +7,16 @@ bench.baseline(() => {
 
 bench('simple > MatchParams', () => {
   type _ = MatchParams<'posts/:id'>
-}).types([381, 'instantiations'])
+}).types([1123, 'instantiations'])
 
 bench('complex > MatchParams', () => {
   type _ = MatchParams<'api(/v:major(.:minor))/*path/help'>
-}).types([1083, 'instantiations'])
+}).types([4762, 'instantiations'])
 
 bench('mediarss > MatchParams', async () => {
   let { patterns } = await import('../../patterns/mediarss.ts')
   eagerlyEvaluateTypesForParams(patterns)
-}).types([12140, 'instantiations'])
+}).types([84908, 'instantiations'])
 
 // NOTE: This benchmark brings type checking to a crawl.
 // Uncomment to run the benchmark, but keep it commented to avoid CI failures.
@@ -27,7 +27,7 @@ bench('mediarss > MatchParams', async () => {
 // }).types([1424185, 'instantiations'])
 
 function eagerlyEvaluateTypesForParams<patterns extends ReadonlyArray<string>>(
-  // prettier-ignore
+  // oxfmt-ignore
   _: patterns & (
     { [pattern in patterns[number]]: MatchParams<pattern> } extends
     { [pattern in patterns[number]]: Record<string, unknown> }

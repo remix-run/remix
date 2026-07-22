@@ -141,21 +141,21 @@ const benchmarks: Benchmark[] = [
   },
   {
     id: 'deep-graph-module-burst',
-    name: 'deep-graph fixture / warm internal module burst',
+    name: 'deep-graph fixture / warm module burst',
     async prepare() {
       let fixture = await getDeepGraphFixture()
       let assetServer = createBenchAssetServer(fixture)
       let preloadUrls = await assetServer.getPreloads(fixture.entryPoint)
       assertPreloadUrls(preloadUrls, fixture)
-      let internalUrls = preloadUrls.filter((url) => url.includes('.@'))
-      assert.ok(internalUrls.length > 0, 'expected fingerprinted internal module URLs')
+      let moduleUrls = preloadUrls.slice(1)
+      assert.ok(moduleUrls.length > 0, 'expected module URLs')
       assertContainsSubstrings(
-        internalUrls.join('\n'),
+        moduleUrls.join('\n'),
         fixture.expectedPreloadUrlSubstrings,
         fixture.label,
       )
       return async function run() {
-        await Promise.all(internalUrls.map((url) => readHandledResponse(assetServer, url)))
+        await Promise.all(moduleUrls.map((url) => readHandledResponse(assetServer, url)))
       }
     },
   },
@@ -189,10 +189,11 @@ function createBenchAssetServer(
     buildId: String(Date.now()),
   }
   let options: AssetServerOptions = {
-    allow: overrides.allow ?? fixture.assetServer.allow,
+    allowFiles: overrides.allowFiles ?? fixture.assetServer.allowFiles,
+    allowPackages: overrides.allowPackages ?? fixture.assetServer.allowPackages,
     basePath: overrides.basePath ?? fixture.assetServer.basePath,
     fileMap: overrides.fileMap ?? fixture.assetServer.fileMap,
-    deny: overrides.deny,
+    denyFiles: overrides.denyFiles,
     fingerprint: Object.hasOwn(overrides, 'fingerprint')
       ? overrides.fingerprint
       : defaultFingerprint,

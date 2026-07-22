@@ -2,6 +2,13 @@
 
 This is the changelog for [`auth-middleware`](https://github.com/remix-run/remix/tree/main/packages/auth-middleware). It follows [semantic versioning](https://semver.org/).
 
+## v0.2.4
+
+### Patch Changes
+
+- Bumped `@remix-run/*` dependencies:
+  - [`fetch-router@0.20.1`](https://github.com/remix-run/remix/releases/tag/fetch-router@0.20.1)
+
 ## v0.2.3
 
 ### Patch Changes
@@ -66,7 +73,6 @@ This is the changelog for [`auth-middleware`](https://github.com/remix-run/remix
 - Add `auth-middleware`, a pluggable authentication middleware package for `fetch-router`.
 
   Includes:
-
   - the `Auth` context key and `AuthState` for reading request auth state with `context.get(Auth)`
   - `auth()` for resolving request authentication state with `context.get(Auth)`
   - `requireAuth()` for enforcing authenticated access with configurable failure responses

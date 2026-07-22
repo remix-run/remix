@@ -1,6 +1,10 @@
+import { createServer } from 'node:http'
+
 import * as assert from '@remix-run/assert'
 import { createTestServer } from '@remix-run/node-fetch-server/test'
+import { compressResponse } from '@remix-run/response/compress'
 import { describe, it } from '@remix-run/test'
+import { fetch as undiciFetch } from 'undici'
 
 import { type FetchProxyOptions, createFetchProxy } from './fetch-proxy.ts'
 
@@ -25,6 +29,60 @@ async function testProxy(
   assert.ok(capturedRequest!)
 
   return { request: capturedRequest, response }
+}
+
+async function readBodyWithUndici(response: Response): Promise<string> {
+  let clientResponse = await readResponseWithUndici(response)
+  return clientResponse.body
+}
+
+async function readResponseWithUndici(
+  response: Response,
+  method = 'GET',
+): Promise<{ body: string; headers: Headers; status: number }> {
+  let body = response.body == null ? undefined : new Uint8Array(await response.arrayBuffer())
+  let headers = Object.fromEntries(response.headers)
+  let server = createServer((_, serverResponse) => {
+    serverResponse.writeHead(response.status, headers)
+    serverResponse.end(body)
+  })
+
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', () => {
+      server.off('error', reject)
+      resolve()
+    })
+  })
+
+  try {
+    let address = server.address()
+    if (address == null || typeof address === 'string') {
+      throw new Error('Expected test server to listen on a TCP port')
+    }
+
+    let clientResponse = await undiciFetch(`http://127.0.0.1:${address.port}/`, { method })
+    let clientHeaders = new Headers()
+    for (let [name, value] of clientResponse.headers) {
+      clientHeaders.append(name, value)
+    }
+
+    return {
+      body: await clientResponse.text(),
+      headers: clientHeaders,
+      status: clientResponse.status,
+    }
+  } finally {
+    await new Promise<void>((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error)
+        } else {
+          resolve()
+        }
+      })
+    })
+  }
 }
 
 describe('fetch proxy', () => {
@@ -211,6 +269,19 @@ describe('fetch proxy', () => {
     assert.equal(request.headers.get('Host'), null)
   })
 
+  it('does not forward the incoming Accept-Encoding header', async () => {
+    let { request } = await testProxy(
+      new Request('http://shopify.com/search?q=remix', {
+        headers: {
+          'Accept-Encoding': 'gzip, br',
+        },
+      }),
+      'https://remix.run:3000/dest',
+    )
+
+    assert.equal(request.headers.get('Accept-Encoding'), null)
+  })
+
   it('appends X-Forwarded headers when desired', async () => {
     let { request } = await testProxy(
       new Request('http://shopify.com:8080/search?q=remix'),
@@ -286,6 +357,256 @@ describe('fetch proxy', () => {
     assert.equal(setCookie.length, 2)
     assert.equal(setCookie[0], 'name=value; Domain=shopify.com; Path=/search')
     assert.equal(setCookie[1], 'name2=value2; Domain=shopify.com; Path=/')
+  })
+
+  it('strips gzip response headers when fetch returns a decoded body', async () => {
+    let decodedBody = 'decoded response body'
+    let compressedResponse = await compressResponse(
+      new Response(decodedBody),
+      new Request('https://remix.run', {
+        headers: { 'Accept-Encoding': 'gzip' },
+      }),
+      { encodings: ['gzip'] },
+    )
+    let contentEncoding = compressedResponse.headers.get('Content-Encoding')
+    let compressedBody = await compressedResponse.arrayBuffer()
+    let decodedBodyLength = new TextEncoder().encode(decodedBody).byteLength
+
+    assert.equal(contentEncoding, 'gzip')
+    if (contentEncoding == null) {
+      throw new Error('Expected compressed response to include Content-Encoding')
+    }
+    assert.notEqual(compressedBody.byteLength, decodedBodyLength)
+    assert.equal(
+      await readBodyWithUndici(
+        new Response(compressedBody, {
+          headers: {
+            'Content-Encoding': contentEncoding,
+          },
+        }),
+      ),
+      decodedBody,
+    )
+
+    let staleEncodedBodyHeaders = {
+      'Content-Encoding': contentEncoding,
+      'Content-Length': String(compressedBody.byteLength),
+      'Content-Type': 'text/plain',
+    }
+    await assert.rejects(async () => {
+      await readBodyWithUndici(
+        new Response(decodedBody, {
+          headers: staleEncodedBodyHeaders,
+        }),
+      )
+    })
+
+    let { response } = await testProxy(
+      new Request('http://shopify.com/search?q=remix'),
+      'https://remix.run:3000/dest',
+      {
+        async fetch() {
+          return new Response(decodedBody, {
+            headers: staleEncodedBodyHeaders,
+          })
+        },
+      },
+    )
+
+    assert.equal(response.headers.get('Content-Encoding'), null)
+    assert.equal(response.headers.get('Content-Length'), null)
+    assert.equal(response.headers.get('Transfer-Encoding'), null)
+    assert.equal(response.headers.get('Content-Type'), 'text/plain')
+    assert.equal(await readBodyWithUndici(response), decodedBody)
+  })
+
+  it('preserves content length for unencoded responses', async () => {
+    let body = 'unencoded response body'
+    let contentLength = String(new TextEncoder().encode(body).byteLength)
+    let { response } = await testProxy(
+      new Request('http://shopify.com/search?q=remix'),
+      'https://remix.run:3000/dest',
+      {
+        async fetch() {
+          return new Response(body, {
+            headers: {
+              'Content-Length': contentLength,
+              'Content-Type': 'text/plain',
+            },
+          })
+        },
+      },
+    )
+
+    assert.equal(response.headers.get('Content-Encoding'), null)
+    assert.equal(response.headers.get('Content-Length'), contentLength)
+    assert.equal(response.headers.get('Transfer-Encoding'), null)
+    assert.equal(response.headers.get('Content-Type'), 'text/plain')
+    assert.equal(await readBodyWithUndici(response), body)
+  })
+
+  it('preserves content encoding metadata for HEAD responses', async () => {
+    let decodedBody = 'head response body'
+    let compressedResponse = await compressResponse(
+      new Response(decodedBody),
+      new Request('https://remix.run', {
+        headers: { 'Accept-Encoding': 'gzip' },
+      }),
+      { encodings: ['gzip'] },
+    )
+    let contentEncoding = compressedResponse.headers.get('Content-Encoding')
+    let contentLength = String((await compressedResponse.arrayBuffer()).byteLength)
+
+    assert.equal(contentEncoding, 'gzip')
+    if (contentEncoding == null) {
+      throw new Error('Expected compressed response to include Content-Encoding')
+    }
+
+    let { response } = await testProxy(
+      new Request('http://shopify.com/search?q=remix', {
+        method: 'HEAD',
+      }),
+      'https://remix.run:3000/dest',
+      {
+        async fetch() {
+          return new Response(null, {
+            headers: {
+              'Content-Encoding': contentEncoding,
+              'Content-Length': contentLength,
+              'Content-Type': 'text/plain',
+            },
+          })
+        },
+      },
+    )
+    let clientResponse = await readResponseWithUndici(response, 'HEAD')
+
+    assert.equal(response.headers.get('Content-Encoding'), contentEncoding)
+    assert.equal(response.headers.get('Content-Length'), contentLength)
+    assert.equal(response.headers.get('Transfer-Encoding'), null)
+    assert.equal(clientResponse.status, 200)
+    assert.equal(clientResponse.headers.get('Content-Encoding'), contentEncoding)
+    assert.equal(clientResponse.headers.get('Content-Length'), contentLength)
+    assert.equal(clientResponse.body, '')
+  })
+
+  it('preserves content encoding metadata for 304 responses', async () => {
+    let decodedBody = 'not modified response body'
+    let compressedResponse = await compressResponse(
+      new Response(decodedBody),
+      new Request('https://remix.run', {
+        headers: { 'Accept-Encoding': 'gzip' },
+      }),
+      { encodings: ['gzip'] },
+    )
+    let contentEncoding = compressedResponse.headers.get('Content-Encoding')
+    let contentLength = String((await compressedResponse.arrayBuffer()).byteLength)
+
+    assert.equal(contentEncoding, 'gzip')
+    if (contentEncoding == null) {
+      throw new Error('Expected compressed response to include Content-Encoding')
+    }
+
+    let { response } = await testProxy(
+      new Request('http://shopify.com/search?q=remix'),
+      'https://remix.run:3000/dest',
+      {
+        async fetch() {
+          return new Response(null, {
+            status: 304,
+            headers: {
+              'Content-Encoding': contentEncoding,
+              'Content-Length': contentLength,
+              ETag: '"compressed-response"',
+            },
+          })
+        },
+      },
+    )
+    let clientResponse = await readResponseWithUndici(response)
+
+    assert.equal(response.headers.get('Content-Encoding'), contentEncoding)
+    assert.equal(response.headers.get('Content-Length'), contentLength)
+    assert.equal(response.headers.get('Transfer-Encoding'), null)
+    assert.equal(clientResponse.status, 304)
+    assert.equal(clientResponse.headers.get('Content-Encoding'), contentEncoding)
+    assert.equal(clientResponse.headers.get('Content-Length'), contentLength)
+    assert.equal(clientResponse.body, '')
+  })
+
+  it('strips ambiguous content encoding headers for unsupported content encodings', async () => {
+    let body = 'unsupported encoded response body'
+    let contentLength = String(new TextEncoder().encode(body).byteLength)
+    let unsupportedContentEncoding = 'foobar'
+
+    assert.equal(
+      await readBodyWithUndici(
+        new Response(body, {
+          headers: {
+            'Content-Encoding': unsupportedContentEncoding,
+            'Content-Length': contentLength,
+          },
+        }),
+      ),
+      body,
+    )
+
+    let { response } = await testProxy(
+      new Request('http://shopify.com/search?q=remix'),
+      'https://remix.run:3000/dest',
+      {
+        async fetch() {
+          return new Response(body, {
+            headers: {
+              'Content-Encoding': unsupportedContentEncoding,
+              'Content-Length': contentLength,
+              'Content-Type': 'text/plain',
+            },
+          })
+        },
+      },
+    )
+
+    assert.equal(response.headers.get('Content-Encoding'), null)
+    assert.equal(response.headers.get('Content-Length'), null)
+    assert.equal(response.headers.get('Transfer-Encoding'), null)
+    assert.equal(response.headers.get('Content-Type'), 'text/plain')
+    assert.equal(await readBodyWithUndici(response), body)
+  })
+
+  it('strips transfer framing headers from unencoded responses', async () => {
+    let body = 'chunked response body'
+    let staleTransferHeaders = {
+      'Content-Length': '999',
+      'Content-Type': 'text/plain',
+      'Transfer-Encoding': 'chunked',
+    }
+
+    await assert.rejects(async () => {
+      await readBodyWithUndici(
+        new Response(body, {
+          headers: staleTransferHeaders,
+        }),
+      )
+    })
+
+    let { response } = await testProxy(
+      new Request('http://shopify.com/search?q=remix'),
+      'https://remix.run:3000/dest',
+      {
+        async fetch() {
+          return new Response(body, {
+            headers: staleTransferHeaders,
+          })
+        },
+      },
+    )
+
+    assert.equal(response.headers.get('Content-Encoding'), null)
+    assert.equal(response.headers.get('Content-Length'), null)
+    assert.equal(response.headers.get('Transfer-Encoding'), null)
+    assert.equal(response.headers.get('Content-Type'), 'text/plain')
+    assert.equal(await readBodyWithUndici(response), body)
   })
 
   it('omits cookie domain for localhost requests with a port and rewrites path', async () => {

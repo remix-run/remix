@@ -1,7 +1,14 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
+  // Ensure only explicitly enabled rules are used.
   "categories": {
-    "correctness": "off"
+    "correctness": "off",
+    "nursery": "off",
+    "pedantic": "off",
+    "perf": "off",
+    "restriction": "off",
+    "style": "off",
+    "suspicious": "off"
   },
   "env": {
     "builtin": true
@@ -9,7 +16,8 @@
   "ignorePatterns": [
     "**/*.d.ts",
     "**/dist/**",
-    "**/docs/**",
+    "api/**",
+    "packages/ui/docs/**",
     "**/demos/bookstore/public/assets/**",
     "**/demos/sse/public/assets/**",
     "**/coverage/**",
@@ -41,8 +49,8 @@
     "no-unused-expressions": "off",
     "no-useless-escape": "off",
     "no-async-promise-executor": "off",
-    "no-useless-catch": "off",
-    "jsdoc/require-yields": "off"
+    "no-control-regex": "off",
+    "no-useless-catch": "off"
   },
   "overrides": [
     {
@@ -84,7 +92,7 @@
         "./scripts/oxlint-plugins/canonical-header-names-plugin.ts"
       ],
       "rules": {
-        "remix-headers/canonical-header-name": "warn",
+        "remix-headers/canonical-header-name": "error",
         "remix-style/prefer-const-module-scope": "error",
         "remix-style/prefer-let-locals": "error",
         "no-var": "error",
@@ -105,7 +113,8 @@
         "jsdoc/require-param-description": "error",
         "jsdoc/require-param-name": "error",
         "jsdoc/require-returns": ["error", { "checkGetters": false }],
-        "jsdoc/require-returns-description": "error"
+        "jsdoc/require-returns-description": "error",
+        "jsdoc/require-yields": "off"
       }
     },
     {

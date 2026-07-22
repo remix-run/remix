@@ -1,0 +1,1 @@
+BREAKING CHANGE: `remix/middleware/session` now makes session cookies HTTP-only by default when `httpOnly` is omitted, and `Cookie.httpOnly` from `remix/cookie` now returns `boolean | undefined` so omitted and explicitly disabled settings can be distinguished.

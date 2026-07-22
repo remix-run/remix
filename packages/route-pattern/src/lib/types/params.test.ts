@@ -1,7 +1,32 @@
 import type { Assert, IsEqual } from '../types/utils.ts'
+import type { CreateHrefArgs } from '../href.ts'
+import type { JoinPatterns } from '../types/join.ts'
 import type { MatchParams } from '../match/types.ts'
 
-// prettier-ignore
+type AcceptsCreateHrefArgs<source extends string, args extends CreateHrefArgs<source>> = args
+
+type _RequiredHrefArgs = [
+  AcceptsCreateHrefArgs<'/posts/:id', [{ id: '123' }]>,
+  AcceptsCreateHrefArgs<'/posts/:id', [{ id: 123; extra: true }]>,
+]
+
+// @ts-expect-error - required id param is missing
+type _MissingRequiredHrefArgs = AcceptsCreateHrefArgs<'/posts/:id', []>
+
+type _OptionalHrefArgs = [
+  AcceptsCreateHrefArgs<'/posts(/:id)', []>,
+  AcceptsCreateHrefArgs<'/posts(/:id)', [null]>,
+  AcceptsCreateHrefArgs<'/posts(/:id)', [{ id: null }]>,
+  AcceptsCreateHrefArgs<'/posts(/:id)', [{ id: 123 }]>,
+]
+
+// @ts-expect-error - explicit protocol without hostname cannot generate an href
+type _ProtocolWithoutHostnameHrefArgs = AcceptsCreateHrefArgs<'http:///posts/:id', [{ id: '123' }]>
+
+// @ts-expect-error - dynamic protocols are invalid
+type _DynamicProtocolHrefArgs = AcceptsCreateHrefArgs<':proto://example.com/path', []>
+
+// oxfmt-ignore
 export type Tests = [
   // No params
   Assert<IsEqual<
@@ -77,6 +102,16 @@ export type Tests = [
 
   Assert<IsEqual<
     MatchParams<':proto://example.com/path'>,
+    never
+  >>,
+
+  Assert<IsEqual<
+    MatchParams<'http:///posts/:id'>,
+    { id: string }
+  >>,
+
+  Assert<IsEqual<
+    MatchParams<'https://'>,
     {}
   >>,
 
@@ -102,5 +137,36 @@ export type Tests = [
   Assert<IsEqual<
     MatchParams<'files(/*(.:ext))'>,
     { ext: string | undefined }
+  >>,
+
+  // Public helper type surfaces
+  Assert<IsEqual<
+    CreateHrefArgs<'http:///posts/:id'>,
+    never
+  >>,
+
+  Assert<IsEqual<
+    CreateHrefArgs<'http://'>,
+    never
+  >>,
+
+  Assert<IsEqual<
+    CreateHrefArgs<':proto://example.com/path'>,
+    never
+  >>,
+
+  Assert<IsEqual<
+    JoinPatterns<'/posts/:postId', '/comments/:commentId'>,
+    '/posts/:postId/comments/:commentId'
+  >>,
+
+  Assert<IsEqual<
+    JoinPatterns<'https://example.com:8080/base', 'http:///next'>,
+    'http://example.com:8080/base/next'
+  >>,
+
+  Assert<IsEqual<
+    JoinPatterns<'/base', ':proto://example.com/path'>,
+    never
   >>
 ]

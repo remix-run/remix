@@ -19,8 +19,22 @@ export interface CSSProps extends DOMStyleProperties {
 type StyleObject = Record<string, unknown>
 
 // Convert camelCase CSS properties to kebab-case
+// Property names repeat constantly across renders; cache conversions instead
+// of running a regex each time.
+const CAMEL_TO_KEBAB_CACHE_LIMIT = 256
+const camelToKebabCache = new Map<string, string>()
+
 function camelToKebab(str: string): string {
-  return str.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+  let cached = camelToKebabCache.get(str)
+  if (cached === undefined) {
+    cached = str.replace(/[A-Z]/g, (letter) => `-${letter.toLowerCase()}`)
+    if (camelToKebabCache.size >= CAMEL_TO_KEBAB_CACHE_LIMIT) {
+      let oldest = camelToKebabCache.keys().next()
+      if (!oldest.done) camelToKebabCache.delete(oldest.value)
+    }
+    camelToKebabCache.set(str, cached)
+  }
+  return cached
 }
 
 // Properties that should remain unitless (numeric values without px)
@@ -81,18 +95,23 @@ function isKeyframesAtRule(key: string): boolean {
   )
 }
 
-// Generate a hash for style objects to create unique class names
+// Generate a hash for style objects to create unique class names.
+// Class names are content-addressed — a collision silently applies the wrong
+// styles — so use two independent 32-bit FNV-1a passes (~64 bits of hash
+// space) rather than a single 32-bit hash. Must be deterministic across
+// server and client.
 function hashStyle(obj: any): string {
   // Sort keys to ensure consistent hashing, but include values in the string
   let sortedEntries = Object.entries(obj).sort(([a], [b]) => a.localeCompare(b))
   let str = JSON.stringify(sortedEntries)
-  let hash = 0
+  let h1 = 0x811c9dc5
+  let h2 = 0xcbf29ce4
   for (let i = 0; i < str.length; i++) {
     let char = str.charCodeAt(i)
-    hash = (hash << 5) - hash + char
-    hash = hash & hash // Convert to 32-bit integer
+    h1 = Math.imul(h1 ^ char, 0x01000193) >>> 0
+    h2 = Math.imul(h2 ^ char, 0x01000193) >>> 0
   }
-  return Math.abs(hash).toString(36)
+  return h1.toString(36) + h2.toString(36)
 }
 
 // Convert style object to CSS text

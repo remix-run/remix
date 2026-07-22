@@ -7,9 +7,9 @@
     "@oxlint/plugins": "^1.57.0",
     "@typescript/native-preview": "catalog:",
     "oxc-parser": "^0.121.0",
+    "oxfmt": "catalog:",
     "oxlint": "^1.57.0",
     "oxlint-tsgolint": "^0.17.4",
-    "prettier": "^3.3.3",
     "typescript": "catalog:",
     "typescript-language-server": "catalog:"
   },
@@ -25,11 +25,11 @@
     "clean": "git clean -fdX -e '!/.env' .",
     "codegen": "pnpm -r run codegen",
     "docs": "cd docs && pnpm run docs",
-    "format": "prettier --write .",
-    "format:check": "prettier --check .",
+    "format": "oxfmt . --write",
+    "format:check": "oxfmt . --check",
     "generate-remix": "node ./scripts/generate-remix.ts",
-    "lint": "oxlint . -A all --quiet",
-    "lint:fix": "oxlint . -A all --fix --quiet",
+    "lint": "oxlint . --max-warnings=0",
+    "lint:fix": "oxlint . --fix --max-warnings=0",
     "pr-preview": "node ./scripts/pr-preview.ts",
     "setup-installable-branch": "node ./scripts/setup-installable-branch.ts",
     "sync-remix-readmes": "node ./scripts/sync-remix-readmes.ts",
@@ -43,13 +43,5 @@
   },
   "workspaces": [
     "packages/*"
-  ],
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@swc/core",
-      "esbuild",
-      "sharp",
-      "workerd"
-    ]
-  }
+  ]
 }

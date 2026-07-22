@@ -11,10 +11,7 @@
     "verbatimModuleSyntax": true,
     "skipLibCheck": true,
     "jsx": "react-jsx",
-    "jsxImportSource": "remix/ui",
-    "paths": {
-      "remix/*": ["../../packages/remix/src/*"]
-    }
+    "jsxImportSource": "remix/ui"
   },
   "exclude": ["dist"]
 }

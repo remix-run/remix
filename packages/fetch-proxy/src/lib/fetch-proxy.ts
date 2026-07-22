@@ -80,6 +80,7 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
 
     let proxyHeaders = new Headers(request.headers)
     proxyHeaders.delete('Host')
+    proxyHeaders.delete('Accept-Encoding')
     if (xForwardedHeaders) {
       proxyHeaders.append('X-Forwarded-Proto', url.protocol.replace(/:$/, ''))
       proxyHeaders.append('X-Forwarded-Host', url.host)
@@ -112,6 +113,18 @@ export function createFetchProxy(target: string | URL, options?: FetchProxyOptio
 
     let response = await localFetch(proxyUrl, proxyInit)
     let responseHeaders = new Headers(response.headers)
+    let hasContentEncoding = responseHeaders.has('Content-Encoding')
+    let hasTransferEncoding = responseHeaders.has('Transfer-Encoding')
+    let hasProxiedResponseBody = request.method !== 'HEAD' && response.body != null
+
+    responseHeaders.delete('Transfer-Encoding')
+    if (hasTransferEncoding || (hasProxiedResponseBody && hasContentEncoding)) {
+      responseHeaders.delete('Content-Length')
+    }
+
+    if (hasProxiedResponseBody && hasContentEncoding) {
+      responseHeaders.delete('Content-Encoding')
+    }
 
     if (responseHeaders.has('Set-Cookie')) {
       let setCookie = responseHeaders.getSetCookie()

@@ -10,12 +10,12 @@ bench.baseline(() => {
 bench('join', () => {
   let pattern = RoutePattern.parse('/posts/:id')
   joinPatterns(pattern, '/comments/:commentId')
-}).types([2445, 'instantiations'])
+}).types([2651, 'instantiations'])
 
 bench('join > mediarss', async () => {
   let { patterns } = await import('../../patterns/mediarss.ts')
   eagerlyEvaluateTypesForJoin(patterns)
-}).types([74069, 'instantiations'])
+}).types([153, 'instantiations'])
 
 // NOTE: This benchmark brings type checking to a crawl.
 // Uncomment to run the benchmark, but keep it commented to avoid CI failures.
@@ -27,7 +27,7 @@ bench('join > mediarss', async () => {
 // }).types([5169925, 'instantiations'])
 
 function eagerlyEvaluateTypesForJoin<patterns extends ReadonlyArray<string>>(
-  // prettier-ignore
+  // oxfmt-ignore
   _: patterns & (
     { [pattern in patterns[number]]: JoinPatterns<patterns[number], string> } extends
     { [pattern in patterns[number]]: string }

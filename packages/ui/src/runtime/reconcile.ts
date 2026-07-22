@@ -1,5 +1,5 @@
 import type { Component, ComponentHandle, FrameContent, FrameHandle } from './component.ts'
-import { createComponent, Frame } from './component.ts'
+import { createComponent, Fragment, Frame } from './component.ts'
 import type { Frame as FrameInstance, FrameRuntime } from './frame.ts'
 import { createFrame } from './frame.ts'
 import { createRangeRoot } from './vdom.ts'
@@ -23,6 +23,8 @@ import {
   isNonRenderNode,
   isTextNode,
   findContextFromAncestry,
+  TEXT_NODE,
+  NON_RENDER_NODE,
 } from './vnode.ts'
 import { invariant } from './invariant.ts'
 import { patchHostProps } from './core/props.ts'
@@ -233,6 +235,15 @@ function teardownControlledReflection(node: CommittedHostNode): void {
   }
 }
 
+// See abandonDirectEventListeners: skips removeEventListener for discarded subtrees.
+function abandonControlledReflection(node: CommittedHostNode): void {
+  let state = node._controlledState as ControlledReflectionState | undefined
+  if (!state) return
+  state.disposed = true
+  state.pendingRestoreVersion++
+  state.listenersAttached = false
+}
+
 function canManageValue(type: string, element: Element): boolean {
   if (type === 'progress') return false
   return canReflectProperty(element, 'value')
@@ -317,8 +328,8 @@ function resolveDirectEventDescriptors(mix: ElementProps['mix']): OnMixinDescrip
 }
 
 function areOnMixinDescriptors(descriptors: unknown[]): descriptors is OnMixinDescriptor[] {
-  for (let item of descriptors) {
-    if (!isOnMixinDescriptor(item)) return false
+  for (let i = 0; i < descriptors.length; i++) {
+    if (!isOnMixinDescriptor(descriptors[i])) return false
   }
   return true
 }
@@ -340,6 +351,10 @@ function enqueueMixinBindingUpdate(
       let prevProps = getHostProps(node)
       let nextProps = resolveNodeMixProps(node, this.frame, this.scheduler, state)
       patchHostProps(prevProps, nextProps, this.node)
+      if (node._controlledState || shouldTrackControlledReflection(nextProps)) {
+        ensureControlledReflection(node, this.scheduler)
+        syncControlledReflection(node, nextProps)
+      }
 
       dispatchMixinCommit(state)
       done(state ? getMixinRuntimeSignal(state) : AbortSignal.abort())
@@ -399,8 +414,9 @@ export function diffVNodes(
   anchor?: Node,
   rootCursor?: Node | null,
 ): Node | null | undefined {
+  let type = next.type
   next._parent = vParent // set parent for initial render context lookups
-  next._svg = getSvgContext(vParent, next.type)
+  next._svg = getSvgContext(vParent, type)
 
   // new
   if (curr === null) {
@@ -417,34 +433,39 @@ export function diffVNodes(
     )
   }
 
-  if (curr.type !== next.type) {
+  if (curr.type !== type) {
     replace(curr, next, domParent, frame, scheduler, styles, vParent, rootTarget, anchor)
     return rootCursor
   }
 
-  if (isNonRenderNode(curr) && isNonRenderNode(next)) {
+  // curr.type === next.type from here, so a single check on `type` dispatches
+  // both nodes — this runs for every vnode pair on every update.
+  if (typeof type === 'string') {
+    diffHost(
+      curr as CommittedHostNode,
+      next as HostNode,
+      frame,
+      scheduler,
+      styles,
+      vParent,
+      rootTarget,
+    )
     return rootCursor
   }
 
-  if (isCommittedTextNode(curr) && isTextNode(next)) {
-    diffText(curr, next, vParent)
+  if (type === TEXT_NODE) {
+    diffText(curr as CommittedTextNode, next as TextNode, vParent)
     return rootCursor
   }
 
-  if (isCommittedHostNode(curr) && isHostNode(next)) {
-    diffHost(curr, next, frame, scheduler, styles, vParent, rootTarget)
+  if (type === NON_RENDER_NODE) {
     return rootCursor
   }
 
-  if (isCommittedComponentNode(curr) && isComponentNode(next)) {
-    diffComponent(curr, next, frame, scheduler, styles, domParent, vParent, rootTarget)
-    return rootCursor
-  }
-
-  if (isFragmentNode(curr) && isFragmentNode(next)) {
+  if (type === Fragment) {
     diffChildren(
-      curr._children,
-      next._children,
+      curr._children!,
+      next._children!,
       domParent,
       frame,
       scheduler,
@@ -457,8 +478,22 @@ export function diffVNodes(
     return rootCursor
   }
 
-  if (curr.type === Frame && next.type === Frame) {
+  if (type === Frame) {
     diffFrame(curr, next, domParent, frame, scheduler, styles, vParent, rootTarget, anchor)
+    return rootCursor
+  }
+
+  if (typeof type === 'function') {
+    diffComponent(
+      curr as CommittedComponentNode,
+      next as ComponentNode,
+      frame,
+      scheduler,
+      styles,
+      domParent,
+      vParent,
+      rootTarget,
+    )
     return rootCursor
   }
 
@@ -538,7 +573,6 @@ function diffHost(
 
   next._dom = curr._dom
   next._parent = vParent
-  next._controller = curr._controller
   next._directEventState = curr._directEventState
   next._controlledState = curr._controlledState
   syncDirectEventListeners(next as CommittedHostNode)
@@ -590,8 +624,12 @@ function syncDirectEventListeners(node: CommittedHostNode): void {
 
   let bindings = state.bindings
   for (let index = 0; index < descriptors.length; index++) {
-    let descriptor = descriptors[index]
-    let [type, handler, captureBoolean = false] = descriptor.args
+    // Indexed access instead of array destructuring: destructuring goes through
+    // the iterator protocol and allocates on every host-node update.
+    let args = descriptors[index].args
+    let type = args[0]
+    let handler = args[1]
+    let captureBoolean = args[2] ?? false
     let binding = bindings[index]
 
     if (!binding) {
@@ -666,6 +704,22 @@ function teardownDirectEventListeners(node: CommittedHostNode): void {
   node._directEventState = undefined
 }
 
+// Teardown for a node whose DOM subtree is being discarded wholesale: abort
+// pending handler work but skip removeEventListener — the listeners die with
+// the detached node, and removing them one-by-one dominates large teardowns.
+function abandonDirectEventListeners(node: CommittedHostNode): void {
+  let state = node._directEventState as DirectEventState | undefined
+  if (!state) return
+
+  for (let binding of state.bindings) {
+    binding.reentry?.abort(new DOMException('', 'AbortError'))
+    binding.reentry = null
+  }
+
+  state.bindings.length = 0
+  node._directEventState = undefined
+}
+
 function invokeDirectEventBinding(binding: DirectEventBinding, event: Event): void {
   binding.reentry?.abort(new DOMException('', 'EventReentry'))
   binding.reentry = new AbortController()
@@ -700,10 +754,12 @@ function insert(
     cursor = null
   }
 
-  cursor =
-    node.type === Frame
-      ? skipCommentsExceptFrameStart(cursor ?? null)
-      : skipComments(cursor ?? null)
+  // Preserve frame-start markers for non-Frame nodes too, so a following <Frame>
+  // (e.g. the first child of a bare Fragment at a clientEntry boundary) can still
+  // claim its rmx:f marker during hydration instead of being re-inserted fresh.
+  // A rmx:f marker always belongs to a <Frame>, so no non-Frame node should
+  // consume one.
+  cursor = skipCommentsExceptFrameStart(cursor ?? null)
 
   // Also check after skipComments in case we skipped past the anchor
   if (cursor && anchor && cursor === anchor) {
@@ -886,8 +942,19 @@ function insert(
 
   if (isFragmentNode(node)) {
     // Insert fragment children in order before the same anchor
-    for (let child of node._children) {
-      cursor = insert(child, domParent, frame, scheduler, styles, node, rootTarget, anchor, cursor)
+    let children = node._children
+    for (let i = 0; i < children.length; i++) {
+      cursor = insert(
+        children[i],
+        domParent,
+        frame,
+        scheduler,
+        styles,
+        node,
+        rootTarget,
+        anchor,
+        cursor,
+      )
     }
     return cursor
   }
@@ -1027,6 +1094,7 @@ function insertFrame(
           resolveFrame: runtime.resolveFrame,
           pendingClientEntries: runtime.pendingClientEntries,
           scheduler: runtime.scheduler,
+          styleManager: runtime.styleManager,
           data: runtime.data,
           moduleCache: runtime.moduleCache,
           moduleLoads: runtime.moduleLoads,
@@ -1072,6 +1140,7 @@ function insertFrame(
     resolveFrame: runtime.resolveFrame,
     pendingClientEntries: runtime.pendingClientEntries,
     scheduler: runtime.scheduler,
+    styleManager: runtime.styleManager,
     data: runtime.data,
     moduleCache: runtime.moduleCache,
     moduleLoads: runtime.moduleLoads,
@@ -1097,7 +1166,7 @@ function resolveClientFrame(node: VNode, runtime: FrameRuntime): void {
   let resolveController = new AbortController()
   node._frameResolveController = resolveController
 
-  Promise.resolve(runtime.resolveFrame(frameSrc, resolveController.signal))
+  Promise.resolve(runtime.resolveFrame(frameSrc, resolveController.signal, getFrameName(node)))
     .then(async (content) => {
       if (node._frameResolveToken !== token || resolveController.signal.aborted) return
       node._frameFallbackRoot?.dispose()
@@ -1295,9 +1364,7 @@ export function renderComponent(
   next._parent = vParent
 
   let committed = next as CommittedComponentNode
-  handle.setScheduleUpdate(() => {
-    scheduler.enqueue(committed, domParent)
-  })
+  handle.setScheduleUpdate(scheduler, committed, domParent)
 
   scheduler.enqueueTasks(tasks)
 
@@ -1376,20 +1443,21 @@ function cleanupDescendants(node: VNode, scheduler: Scheduler, styles: StyleMana
   }
 
   if (isCommittedHostNode(node)) {
-    for (let child of node._children) {
-      cleanupDescendants(child, scheduler, styles)
+    let children = node._children
+    for (let i = 0; i < children.length; i++) {
+      cleanupDescendants(children[i], scheduler, styles)
     }
 
     teardownMixins(node._mixState as MixinRuntimeState | undefined)
-    teardownDirectEventListeners(node)
-    teardownControlledReflection(node)
-    if (node._controller) node._controller.abort()
+    abandonDirectEventListeners(node)
+    abandonControlledReflection(node)
     return
   }
 
   if (isFragmentNode(node)) {
-    for (let child of node._children) {
-      cleanupDescendants(child, scheduler, styles)
+    let children = node._children
+    for (let i = 0; i < children.length; i++) {
+      cleanupDescendants(children[i], scheduler, styles)
     }
     return
   }
@@ -1440,8 +1508,9 @@ export function remove(
   }
 
   if (isFragmentNode(node)) {
-    for (let child of node._children) {
-      remove(child, domParent, scheduler, styles)
+    let children = node._children
+    for (let i = 0; i < children.length; i++) {
+      remove(children[i], domParent, scheduler, styles)
     }
     return
   }
@@ -1467,25 +1536,29 @@ function performHostNodeRemoval(
   scheduler: Scheduler,
   styles: StyleManager,
 ) {
+  let children = node._children
   if (isHeadHostNode(node)) {
-    for (let child of node._children) {
-      remove(child, node._dom, scheduler, styles)
+    for (let i = 0; i < children.length; i++) {
+      remove(children[i], node._dom, scheduler, styles)
     }
   } else {
     // Clean up all descendants first (before removing DOM subtree)
-    for (let child of node._children) {
-      cleanupDescendants(child, scheduler, styles)
+    for (let i = 0; i < children.length; i++) {
+      cleanupDescendants(children[i], scheduler, styles)
     }
   }
 
   teardownMixins(node._mixState as MixinRuntimeState | undefined)
-  teardownDirectEventListeners(node)
-  teardownControlledReflection(node)
-  // Never remove the real document.head node when reconciling a <head> vnode.
-  if (!isHeadHostNode(node)) {
+  // Never remove the real document.head node when reconciling a <head> vnode,
+  // and since it stays alive, detach its listeners for real.
+  if (isHeadHostNode(node)) {
+    teardownDirectEventListeners(node)
+    teardownControlledReflection(node)
+  } else {
+    abandonDirectEventListeners(node)
+    abandonControlledReflection(node)
     node._dom.parentNode?.removeChild(node._dom)
   }
-  if (node._controller) node._controller.abort()
 }
 
 function diffChildren(
@@ -1506,9 +1579,9 @@ function diffChildren(
     if (hasKeys) {
       warnDuplicateKeys(next)
     }
-    for (let node of next) {
+    for (let i = 0; i < next.length; i++) {
       cursor = insert(
-        node,
+        next[i],
         domParent,
         frame,
         scheduler,
@@ -1529,8 +1602,8 @@ function diffChildren(
     !parentUsesInnerHTML(vParent) &&
     canBulkClearChildren(curr)
   ) {
-    for (let node of curr) {
-      cleanupDescendants(node, scheduler, styles)
+    for (let i = 0; i < curr.length; i++) {
+      cleanupDescendants(curr[i], scheduler, styles)
     }
     domParent.textContent = ''
     vParent._children = next
@@ -1586,8 +1659,8 @@ function parentUsesInnerHTML(parent: VNode): boolean {
 }
 
 function canBulkClearChildren(children: VNode[]): boolean {
-  for (let child of children) {
-    if (!canBulkClearNode(child)) return false
+  for (let i = 0; i < children.length; i++) {
+    if (!canBulkClearNode(children[i])) return false
   }
   return true
 }
@@ -1597,10 +1670,7 @@ function canBulkClearNode(node: VNode): boolean {
 
   if (isCommittedHostNode(node)) {
     if (node._mixState) return false
-    for (let child of node._children) {
-      if (!canBulkClearNode(child)) return false
-    }
-    return true
+    return canBulkClearChildren(node._children)
   }
 
   if (isFragmentNode(node)) {
@@ -1615,8 +1685,8 @@ function canBulkClearNode(node: VNode): boolean {
 }
 
 function hasKeyedChildren(children: VNode[]): boolean {
-  for (let node of children) {
-    if (node.key != null) return true
+  for (let i = 0; i < children.length; i++) {
+    if (children[i].key != null) return true
   }
   return false
 }
@@ -1674,9 +1744,10 @@ function patchKeyedChildren(
   if (matchAnalysis.hasRemovals) {
     let usedOldIndexes = new Uint8Array(curr.length)
 
-    for (let match of matches) {
-      if (match.oldIndex >= 0) {
-        usedOldIndexes[match.oldIndex] = 1
+    for (let index = 0; index < matches.length; index++) {
+      let oldIndex = matches[index]
+      if (oldIndex >= 0) {
+        usedOldIndexes[oldIndex] = 1
       }
     }
 
@@ -1690,8 +1761,8 @@ function patchKeyedChildren(
   vParent._children = next
 
   for (let index = 0; index < next.length; index++) {
-    let match = matches[index]
-    let oldNode = match.oldIndex >= 0 ? curr[match.oldIndex] : null
+    let oldIndex = matches[index]
+    let oldNode = oldIndex >= 0 ? curr[oldIndex] : null
 
     diffVNodes(
       oldNode,
@@ -1729,7 +1800,10 @@ function patchKeyedChildren(
   }
 }
 
-function matchKeyedChildren(curr: VNode[], next: VNode[]): Array<{ oldIndex: number }> {
+// Keyed child matches are arrays of old indexes (-1 = no match / new node),
+// parallel to `next`. Plain numbers instead of wrapper objects keep large
+// keyed diffs (1000-row tables) allocation-free.
+function matchKeyedChildren(curr: VNode[], next: VNode[]): number[] {
   let oldKeyMap = new Map<string, number>()
   let usedOldIndexes = new Set<number>()
   let unkeyedSearchStart = 0
@@ -1739,7 +1813,9 @@ function matchKeyedChildren(curr: VNode[], next: VNode[]): Array<{ oldIndex: num
     if (key != null) oldKeyMap.set(key, index)
   }
 
-  return next.map((nextNode) => {
+  let matches: number[] = []
+  for (let nextIndex = 0; nextIndex < next.length; nextIndex++) {
+    let nextNode = next[nextIndex]
     let oldIndex = -1
 
     if (nextNode.key != null) {
@@ -1764,16 +1840,15 @@ function matchKeyedChildren(curr: VNode[], next: VNode[]): Array<{ oldIndex: num
     }
 
     if (oldIndex >= 0) usedOldIndexes.add(oldIndex)
-    return { oldIndex }
-  })
+    matches.push(oldIndex)
+  }
+
+  return matches
 }
 
-function matchKeyedChildrenInOrder(
-  curr: VNode[],
-  next: VNode[],
-): Array<{ oldIndex: number }> | null {
+function matchKeyedChildrenInOrder(curr: VNode[], next: VNode[]): number[] | null {
   let length = Math.min(curr.length, next.length)
-  let matches: Array<{ oldIndex: number }> = []
+  let matches: number[] = []
 
   for (let index = 0; index < length; index++) {
     let nextNode = next[index]
@@ -1784,24 +1859,21 @@ function matchKeyedChildrenInOrder(
       return null
     }
 
-    matches.push({ oldIndex: index })
+    matches.push(index)
   }
 
   for (let index = length; index < next.length; index++) {
     if (next[index].key == null) return null
-    matches.push({ oldIndex: -1 })
+    matches.push(-1)
   }
 
   return matches
 }
 
-function matchKeyedChildrenAfterSingleRemoval(
-  curr: VNode[],
-  next: VNode[],
-): Array<{ oldIndex: number }> | null {
+function matchKeyedChildrenAfterSingleRemoval(curr: VNode[], next: VNode[]): number[] | null {
   if (curr.length !== next.length + 1) return null
 
-  let matches: Array<{ oldIndex: number }> = []
+  let matches: number[] = []
   let oldIndex = 0
   let skippedOldNode = false
 
@@ -1811,7 +1883,7 @@ function matchKeyedChildrenAfterSingleRemoval(
 
     let oldNode = curr[oldIndex]
     if (oldNode.key === nextNode.key && oldNode.type === nextNode.type) {
-      matches.push({ oldIndex })
+      matches.push(oldIndex)
       oldIndex++
       continue
     }
@@ -1825,20 +1897,17 @@ function matchKeyedChildrenAfterSingleRemoval(
       return null
     }
 
-    matches.push({ oldIndex })
+    matches.push(oldIndex)
     oldIndex++
   }
 
   return matches
 }
 
-function matchKeyedChildrenAfterPairSwap(
-  curr: VNode[],
-  next: VNode[],
-): Array<{ oldIndex: number }> | null {
+function matchKeyedChildrenAfterPairSwap(curr: VNode[], next: VNode[]): number[] | null {
   if (curr.length !== next.length) return null
 
-  let matches: Array<{ oldIndex: number }> = []
+  let matches: number[] = []
   let firstMismatch = -1
   let secondMismatch = -1
 
@@ -1848,7 +1917,7 @@ function matchKeyedChildrenAfterPairSwap(
 
     let oldNode = curr[index]
     if (oldNode.key === nextNode.key && oldNode.type === nextNode.type) {
-      matches.push({ oldIndex: index })
+      matches.push(index)
       continue
     }
 
@@ -1859,7 +1928,7 @@ function matchKeyedChildrenAfterPairSwap(
     } else {
       return null
     }
-    matches.push({ oldIndex: -1 })
+    matches.push(-1)
   }
 
   if (firstMismatch === -1) return matches
@@ -1879,42 +1948,43 @@ function matchKeyedChildrenAfterPairSwap(
     return null
   }
 
-  matches[firstMismatch] = { oldIndex: secondMismatch }
-  matches[secondMismatch] = { oldIndex: firstMismatch }
+  matches[firstMismatch] = secondMismatch
+  matches[secondMismatch] = firstMismatch
   return matches
 }
 
 function analyzeKeyedChildMatches(
   currentLength: number,
-  matches: ReadonlyArray<{ oldIndex: number }>,
+  matches: readonly number[],
 ): { hasRemovals: boolean; canSkipPlacement: boolean } {
   let hasRemovals = matches.length !== currentLength
   let canSkipPlacement = true
   let lastOldIndex = -1
   let sawNewNode = false
 
-  for (let match of matches) {
-    if (match.oldIndex < 0) {
+  for (let index = 0; index < matches.length; index++) {
+    let oldIndex = matches[index]
+    if (oldIndex < 0) {
       hasRemovals = true
       sawNewNode = true
       continue
     }
 
-    if (sawNewNode || match.oldIndex < lastOldIndex) {
+    if (sawNewNode || oldIndex < lastOldIndex) {
       canSkipPlacement = false
     }
-    lastOldIndex = match.oldIndex
+    lastOldIndex = oldIndex
   }
 
   return { hasRemovals, canSkipPlacement }
 }
 
-function lisMatches(matches: ReadonlyArray<{ oldIndex: number }>): number[] {
+function lisMatches(matches: readonly number[]): number[] {
   let predecessors = Array.from<number>({ length: matches.length })
   let tails: number[] = []
 
   for (let index = 0; index < matches.length; index++) {
-    let value = matches[index].oldIndex + 1
+    let value = matches[index] + 1
     if (value === 0) continue
 
     let low = 0
@@ -1923,7 +1993,7 @@ function lisMatches(matches: ReadonlyArray<{ oldIndex: number }>): number[] {
     while (low < high) {
       let middle = (low + high) >> 1
 
-      if (matches[tails[middle]].oldIndex + 1 < value) {
+      if (matches[tails[middle]] + 1 < value) {
         low = middle + 1
       } else {
         high = middle
@@ -1963,8 +2033,9 @@ export function findFirstDomAnchor(node: VNode | null | undefined): Node | null 
   if (isCommittedComponentNode(node)) return findFirstDomAnchor(node._content)
   if (node.type === Frame) return node._rangeStart ?? null
   if (isFragmentNode(node)) {
-    for (let child of node._children) {
-      let dom = findFirstDomAnchor(child)
+    let children = node._children
+    for (let i = 0; i < children.length; i++) {
+      let dom = findFirstDomAnchor(children[i])
       if (dom) return dom
     }
   }
@@ -2055,7 +2126,6 @@ function reclaimPersistedMixinNode(
 
   newNode._dom = persistedNode._dom
   newNode._parent = vParent
-  newNode._controller = persistedNode._controller
   newNode._mixState = persistedNode._mixState
   newNode._directEventState = persistedNode._directEventState
   newNode._controlledState = persistedNode._controlledState

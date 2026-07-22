@@ -1,6 +1,6 @@
 import { clientEntry, css, navigate, on, ref, type Handle, type Props } from 'remix/ui'
 import { animateEntrance, animateExit, spring } from 'remix/ui/animation'
-import { Button } from 'remix/components/button'
+import button from 'remix/ui/button'
 import { theme } from './design.ts'
 
 type State = 'idle' | 'creating' | 'submitting'
@@ -18,7 +18,7 @@ export const NewScheduleAction = clientEntry(
 
 function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) {
   let state: State = 'idle'
-  let button: HTMLButtonElement | null = null
+  let buttonNode: HTMLButtonElement | null = null
   let errorMessage: string | null = null
   let input: HTMLInputElement | null = null
   let submittedName = ''
@@ -30,7 +30,7 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
     submittedName = ''
     state = 'idle'
     await handle.update()
-    button?.focus()
+    buttonNode?.focus()
   }
 
   async function submitSchedule(form: HTMLFormElement) {
@@ -54,9 +54,9 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
         fetch(schedulesHref, {
           method: 'POST',
           headers: {
-            accept: 'application/json',
-            'content-type': 'application/json',
-            'x-csrf-token': handle.props.csrfToken,
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            'X-Csrf-Token': handle.props.csrfToken,
           },
           body: JSON.stringify({ name }),
           signal: handle.signal,
@@ -105,12 +105,12 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
 
     if (state === 'idle') {
       content = (
-        <Button
+        <button
           type="button"
-          tone="secondary"
           mix={[
+            button(),
             newScheduleButtonStyle,
-            ref((node) => (button = node)),
+            ref((node) => (buttonNode = node)),
             on('click', async () => {
               errorMessage = null
               submittedName = ''
@@ -119,10 +119,10 @@ function NewScheduleActionImplementation(handle: Handle<{ csrfToken: string }>) 
               input?.focus()
             }),
           ]}
-          startIcon={<AddIcon />}
         >
+          <AddIcon mix={buttonIconStyle} />
           New schedule
-        </Button>
+        </button>
       )
     } else if (state === 'submitting') {
       content = (
@@ -254,7 +254,7 @@ function scheduleHref(scheduleId: number | string) {
 }
 
 async function createScheduleErrorMessage(response: Response) {
-  let contentType = response.headers.get('content-type') ?? ''
+  let contentType = response.headers.get('Content-Type') ?? ''
 
   if (contentType.includes('application/json')) {
     try {
@@ -281,6 +281,12 @@ async function createScheduleErrorMessage(response: Response) {
 const newScheduleButtonStyle = css({
   height: '100%',
   width: '100%',
+})
+
+const buttonIconStyle = css({
+  flexShrink: 0,
+  height: '1em',
+  width: '1em',
 })
 
 const newScheduleActionStyle = css({

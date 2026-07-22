@@ -26,6 +26,13 @@ const manifestPath = path.join(remixDir, 'manifest.json')
 const CLI_PACKAGE_NAME = '@remix-run/cli'
 const SOURCE_FOLDER = 'src'
 const REMIX_CLI_ENTRY_FILE = 'cli-entry.ts'
+const DEFAULT_VALUE_RE_EXPORT_SPECIFIERS = new Set([
+  '@remix-run/ui/button',
+  '@remix-run/ui/checkbox',
+  '@remix-run/ui/input',
+  '@remix-run/ui/radio',
+  '@remix-run/ui/toggle',
+])
 
 type RemixRunPackage = {
   name: string
@@ -51,6 +58,7 @@ type ExportEntry = {
   // The package/sub-export to re-export from: `@remix-run/headers`, `@remix-run/headers/cookie-storage`
   reExportFrom: string
   exportMode: ExportMode
+  hasDefaultValueExport: boolean
   // The README file in the owning package to copy next to the generated umbrella export.
   readmePath?: string
 }
@@ -58,6 +66,7 @@ type ExportEntry = {
 type ExportMode = 'value' | 'type' | 'side-effect' | 'type-and-side-effect'
 
 type ExportClassification = {
+  hasDefaultValueExport: boolean
   hasRuntimeCode: boolean
   hasTypeExports: boolean
   hasValueExports: boolean
@@ -171,21 +180,34 @@ async function buildExportsFromManifest(
       readmePath = findReadmeForSpecifier(specifier, pkgJsonByName)
       if (readmePath) readmesWritten.add(sourceFile)
     }
-    let exportMode = await getExportModeForSpecifier(specifier, pkgJsonByName)
+    let exportClassification = await getExportClassificationForSpecifier(specifier, pkgJsonByName)
+    let exportMode = getExportMode(exportClassification)
 
-    exports.push({ sourceFile, exportPath, reExportFrom: specifier, exportMode, readmePath })
+    exports.push({
+      sourceFile,
+      exportPath,
+      reExportFrom: specifier,
+      exportMode,
+      hasDefaultValueExport: exportClassification.hasDefaultValueExport,
+      readmePath,
+    })
   }
 
   // Add CLI entry — handled separately from the manifest
   let cliPkg = packages.find((p) => p.name === CLI_PACKAGE_NAME)
   if (cliPkg) {
     let readmePath = findReadmeForSpecifier(CLI_PACKAGE_NAME, pkgJsonByName)
-    let exportMode = await getExportModeForSpecifier(CLI_PACKAGE_NAME, pkgJsonByName)
+    let exportClassification = await getExportClassificationForSpecifier(
+      CLI_PACKAGE_NAME,
+      pkgJsonByName,
+    )
+    let exportMode = getExportMode(exportClassification)
     exports.push({
       sourceFile: 'cli.ts',
       exportPath: './cli',
       reExportFrom: CLI_PACKAGE_NAME,
       exportMode,
+      hasDefaultValueExport: exportClassification.hasDefaultValueExport,
       readmePath,
     })
   }
@@ -196,27 +218,7 @@ async function buildExportsFromManifest(
 }
 
 function getSourceFileForManifestEntry(remixPath: string, specifier: string): string {
-  if (specifier.startsWith('@remix-run/ui/components/')) {
-    return remixPath.replace('remix/', '') + '.ts'
-  }
-
   return specifier.replace('@remix-run/', '') + '.ts'
-}
-
-async function getExportModeForSpecifier(
-  specifier: string,
-  pkgJsonByName: Map<string, Record<string, unknown>>,
-): Promise<ExportMode> {
-  let parts = specifier.split('/')
-  let packageName = parts[0].startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0]
-  let packageDirName = packageName.replace('@remix-run/', '')
-  let subPath = parts.slice(packageName.split('/').length).join('/')
-  let pkgJson = pkgJsonByName.get(packageName)
-  let exportConfig = (pkgJson?.exports as Record<string, unknown> | undefined)?.[
-    subPath ? `./${subPath}` : '.'
-  ]
-
-  return getPackageExportMode(packageDirName, exportConfig)
 }
 
 function isFile(filePath: string): boolean {
@@ -225,7 +227,7 @@ function isFile(filePath: string): boolean {
 
 async function updateRemixPackage() {
   // Ensure we have a passing linter before generating code
-  logAndExec(`pnpm exec oxlint packages/remix/ -A all --quiet`)
+  logAndExec(`pnpm exec oxlint packages/remix/ --max-warnings=0`)
 
   // Clear existing source files
   let sourceFolderPath = path.join(remixDir, SOURCE_FOLDER)
@@ -261,7 +263,7 @@ async function updateRemixPackage() {
   }
 
   // Run linter against generated code with --fix (before bin wrappers, which must keep their shebang)
-  logAndExec(`pnpm exec oxlint packages/remix/ -A all --fix --quiet`)
+  logAndExec(`pnpm exec oxlint packages/remix/ --fix --max-warnings=0`)
 
   if (allExports.some((entry) => entry.exportPath === './cli')) {
     let cliEntryPath = path.join(remixDir, SOURCE_FOLDER, REMIX_CLI_ENTRY_FILE)
@@ -432,28 +434,39 @@ function createExportSource(entry: ExportEntry): string {
   }
 
   if (entry.exportMode === 'value') {
-    return [
+    let lines = [
       `// IMPORTANT: This file is auto-generated, please do not edit manually.`,
-      `export * from '${entry.reExportFrom}'\n`,
-    ].join('\n')
+      `export * from '${entry.reExportFrom}'`,
+    ]
+
+    if (entry.hasDefaultValueExport && DEFAULT_VALUE_RE_EXPORT_SPECIFIERS.has(entry.reExportFrom)) {
+      lines.push(`export { default } from '${entry.reExportFrom}'`)
+    }
+
+    lines.push('')
+    return lines.join('\n')
   }
 
   return unreachableExportMode(entry.exportMode)
 }
 
-async function getPackageExportMode(
-  packageDirName: string,
-  exportConfig: unknown,
-): Promise<ExportMode> {
-  let exportTarget = getPackageExportTarget(exportConfig)
-  if (!exportTarget) {
-    return 'value'
-  }
+async function getExportClassificationForSpecifier(
+  specifier: string,
+  pkgJsonByName: Map<string, Record<string, unknown>>,
+): Promise<ExportClassification> {
+  let parts = specifier.split('/')
+  let packageName = parts[0].startsWith('@') ? `${parts[0]}/${parts[1]}` : parts[0]
+  let packageDirName = packageName.replace('@remix-run/', '')
+  let subPath = parts.slice(packageName.split('/').length).join('/')
+  let pkgJson = pkgJsonByName.get(packageName)
+  let exportConfig = (pkgJson?.exports as Record<string, unknown> | undefined)?.[
+    subPath ? `./${subPath}` : '.'
+  ]
 
-  let sourceFilePath = path.join(packagesDir, packageDirName, exportTarget)
-  let source = await fs.readFile(sourceFilePath, 'utf-8')
-  let classification = classifyExports(sourceFilePath, source)
+  return getPackageExportClassification(packageDirName, exportConfig)
+}
 
+function getExportMode(classification: ExportClassification): ExportMode {
   if (classification.hasValueExports) {
     return 'value'
   }
@@ -470,7 +483,28 @@ async function getPackageExportMode(
     return 'side-effect'
   }
 
-  throw new Error(`Unable to generate an export for empty module "${sourceFilePath}"`)
+  throw new Error('Unable to generate an export for empty module')
+}
+
+async function getPackageExportClassification(
+  packageDirName: string,
+  exportConfig: unknown,
+): Promise<ExportClassification> {
+  let exportTarget = getPackageExportTarget(exportConfig)
+  if (!exportTarget) {
+    return {
+      hasDefaultValueExport: false,
+      hasRuntimeCode: false,
+      hasTypeExports: false,
+      hasValueExports: true,
+    }
+  }
+
+  let sourceFilePath = path.join(packagesDir, packageDirName, exportTarget)
+  let source = await fs.readFile(sourceFilePath, 'utf-8')
+  let classification = classifyExports(sourceFilePath, source)
+  getExportMode(classification)
+  return classification
 }
 
 function unreachableExportMode(exportMode: never): never {
@@ -500,6 +534,7 @@ function classifyExports(sourceFilePath: string, source: string): ExportClassifi
   }
 
   let classification: ExportClassification = {
+    hasDefaultValueExport: false,
     hasRuntimeCode: false,
     hasTypeExports: false,
     hasValueExports: false,
@@ -518,7 +553,17 @@ function classifyTopLevelNode(node: AstNode, classification: ExportClassificatio
     return
   }
 
-  if (node.type === 'ExportAllDeclaration' || node.type === 'ExportDefaultDeclaration') {
+  if (node.type === 'ExportDefaultDeclaration') {
+    classification.hasDefaultValueExport = true
+    if (getStringProperty(node, 'exportKind') === 'type') {
+      classification.hasTypeExports = true
+    } else {
+      classification.hasValueExports = true
+    }
+    return
+  }
+
+  if (node.type === 'ExportAllDeclaration') {
     if (getStringProperty(node, 'exportKind') === 'type') {
       classification.hasTypeExports = true
     } else {
