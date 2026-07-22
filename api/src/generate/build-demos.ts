@@ -17,6 +17,7 @@ const DEMO_SOURCES = [
   },
 ]
 const REMIX_RUN_IMPORT_RE = /(from\s+['"]|import\s*\(\s*['"]|import\s+['"])(@remix-run\/[^'"]+)/g
+const TEST_FILE_RE = /\.test(?:\.(?:browser|e2e))?\.tsx?$/
 
 function rewriteImports(source: string): string {
   return source.replace(REMIX_RUN_IMPORT_RE, (_match, prefix: string, specifier: string) => {
@@ -28,7 +29,7 @@ function rewriteImports(source: string): string {
 }
 
 function isDemoSourceFile(filename: string) {
-  return (filename.endsWith('.ts') || filename.endsWith('.tsx')) && !filename.endsWith('.test.ts')
+  return (filename.endsWith('.ts') || filename.endsWith('.tsx')) && !TEST_FILE_RE.test(filename)
 }
 
 function* walkDemoDirectory(dir: string): Generator<string> {
