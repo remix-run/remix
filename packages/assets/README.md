@@ -405,7 +405,7 @@ let assetServer = createAssetServer({
 
 The transform context includes the module's absolute `filePath`, public `urlPathname`, source `format`, current `sourceMap`, and `isDependency` status. Returned source maps must map the returned code to the transform's input; Remix composes them with earlier transforms and its TypeScript/JSX compiler maps.
 
-`watchFiles` entries participate in development cache invalidation. Relative entries resolve from the transformed module's directory. Installed dependency modules whose canonical paths are inside `node_modules` are skipped by default; set `includeDependencies: true` on a transform to opt in. Locally linked packages, including pnpm workspace packages, resolve to their source directories outside `node_modules` and are transformed by default.
+`watchFiles` entries participate in development cache invalidation. Relative entries resolve from the transformed module's directory. Dependency classification follows the module's canonical file-system path rather than its package specifier. Symlinked npm, pnpm, and Yarn workspace packages, npm `file:` links, and Yarn `portal:` packages resolve to source directories outside `node_modules` and are transformed by default. Registry, Git, tarball, copied `file:` packages, and pnpm injected workspace packages remain inside `node_modules`, so they are skipped unless the transform sets `includeDependencies: true`.
 
 ## File Options
 

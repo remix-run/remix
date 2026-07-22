@@ -12,7 +12,8 @@ export interface AssetScriptTransformContext {
   format: AssetScriptFormat
   /**
    * Whether the canonical module path belongs to an installed dependency.
-   * Workspace-linked packages that resolve outside `node_modules` are application source.
+   * Symlinked workspace and local packages that resolve outside `node_modules` are application
+   * source; packages copied or injected into `node_modules` are dependencies.
    */
   isDependency: boolean
   /** Current source map from the transform pipeline, serialized as JSON when present. */

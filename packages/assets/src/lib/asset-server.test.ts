@@ -2541,7 +2541,7 @@ describe('asset-server', () => {
     assert.equal(originalMessage.column, expectedMessage.column)
   })
 
-  it('only runs script transforms for dependencies when explicitly enabled', async () => {
+  it('only runs script transforms for installed packages when explicitly enabled', async () => {
     await write(dir, 'app/node_modules/example/index.ts', 'export const value = "__VALUE__"')
 
     let defaultServer = createTestServer(dir, {
@@ -2579,11 +2579,15 @@ describe('asset-server', () => {
     assert.equal(dependencyContext?.isDependency, true)
   })
 
-  it('runs script transforms for pnpm-linked workspace packages by default', async () => {
+  it('runs script transforms for symlinked workspace packages by default', async () => {
     let caseDir = await makeTmpDir()
     let assetServer: AssetServer<AssetRequestTransformMap> | null = null
 
     try {
+      await writeJson(caseDir, 'package.json', {
+        private: true,
+        workspaces: ['packages/*'],
+      })
       await write(caseDir, 'pnpm-workspace.yaml', "packages:\n  - 'packages/*'\n")
       await writeJson(caseDir, 'packages/shared/package.json', {
         exports: './src/index.ts',
@@ -2607,7 +2611,7 @@ describe('asset-server', () => {
       )
       await symlinkDirectory(
         path.join(caseDir, 'packages/shared'),
-        path.join(caseDir, 'packages/app/node_modules/@example/shared'),
+        path.join(caseDir, 'node_modules/@example/shared'),
       )
 
       let transformContext: AssetScriptTransformContext | undefined
