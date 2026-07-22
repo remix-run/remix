@@ -544,7 +544,7 @@ describe('run', () => {
       assert.match(assets, /scripts: \{ loaders: isHmr \? \[uiHmr\(\)\] : undefined \}/)
       assert.match(assets, /watch: isDevelopment/)
       assert.doesNotMatch(router, /compression/)
-      assert.match(router, /staticFiles\('\.\/public\/static'/)
+      assert.match(router, /staticFiles\('\.\/public'/)
       assert.doesNotMatch(routes, /auth/)
       assert.match(entry, /loadModule/)
       assert.match(entry, /resolveFrame/)
@@ -562,7 +562,7 @@ describe('run', () => {
       await assertPathExists(path.join(appDir, 'app', 'ui', 'public', 'prompt-button.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'actions', 'controller.tsx'))
       await assertPathExists(path.join(appDir, 'app', 'middleware', 'render.tsx'))
-      await assertPathExists(path.join(appDir, 'public', 'static', 'favicon.svg'))
+      await assertPathExists(path.join(appDir, 'public', 'favicon.svg'))
       await assertPathExists(path.join(appDir, '.gitignore'))
       await assertPathMissing(path.join(appDir, 'gitignore'))
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'assets.ts'))
@@ -572,7 +572,7 @@ describe('run', () => {
       await assertPathMissing(path.join(appDir, 'app', 'actions', 'about.tsx'))
       await assertPathMissing(path.join(appDir, 'app', 'assets'))
       await assertPathMissing(path.join(appDir, 'app', 'ui', 'prompt-button.tsx'))
-      await assertPathMissing(path.join(appDir, 'public', 'favicon.svg'))
+      await assertPathMissing(path.join(appDir, 'public', 'static', 'favicon.svg'))
     } finally {
       await fs.rm(tmpDir, { recursive: true, force: true })
     }
