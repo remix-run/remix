@@ -92,7 +92,7 @@ Values for `allowFiles` and `denyFiles` are file paths or globs. Relative values
 
 Values for `allowPackages` are exact package names. Dependencies and installed optional dependencies of packages in `allowPackages` are also allowed automatically. Peer dependencies must be listed explicitly if they should be browser-reachable. Allowed package files must still be reachable through `fileMap`.
 
-Access rules apply to the complete browser module graph. Every local dependency imported by a file in an app `public/` directory must also match `allowFiles`; `app/routes.ts` is listed separately because it is a shared browser-readable route contract. These app-local `public/` directories contain source compiled by the asset server and are separate from static files served unchanged by static middleware.
+Access rules apply to the complete browser module graph. Every local dependency imported by a file in an app `public/` directory must also match `allowFiles`; `app/routes.ts` is listed separately because it is a shared server-and-browser route contract used to build type-safe links with `routes.*.href(...)`. These app-local `public/` directories contain source compiled by the asset server and are separate from static files served unchanged from the root `public/` directory.
 
 ## File Map
 

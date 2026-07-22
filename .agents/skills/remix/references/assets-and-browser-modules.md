@@ -59,8 +59,8 @@ export default createController(routes, {
 ## Rules
 
 - Treat `allowFiles`/`allowPackages` and `denyFiles` as the security boundary for browser-reachable source files.
-- Put browser-reachable app source in a `public/` directory beside its narrowest owner, such as `app/ui/public/` or `app/actions/cart/public/`.
-- Every local dependency in a browser module graph must match `allowFiles`. Keep the graph inside `public/` directories; `app/routes.ts` is allowed separately as the shared route contract.
+- Put browser-reachable app source in a `public/` directory inside `app/`, beside its narrowest owner, such as `app/ui/public/` or `app/actions/cart/public/`.
+- Every local dependency in a browser module graph must match `allowFiles`. Keep the graph inside `public/` directories under `app/`; `app/routes.ts` is allowed separately as the shared server-and-browser route contract so modules can build type-safe links with `routes.*.href(...)`.
 - Use `allowFiles` and `denyFiles` for file paths and globs. Relative values resolve from `rootDir`.
 - Use `allowPackages` for exact package names, not globs or subpaths. Packages allowed by `allowPackages` also allow their installed `dependencies` and `optionalDependencies`; peer dependencies must be listed explicitly if they should be browser-reachable.
 - `denyFiles` takes precedence over both file and package allow rules.

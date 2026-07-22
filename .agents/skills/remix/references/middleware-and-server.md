@@ -34,7 +34,7 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 middleware.push(compression())
-middleware.push(staticFiles('./public/static'))
+middleware.push(staticFiles('./public'))
 middleware.push(formData())
 middleware.push(methodOverride())
 middleware.push(session(cookie, storage))
@@ -47,26 +47,26 @@ let router = createRouter({ middleware })
 
 ### Built-in middleware catalog
 
-| Middleware                 | Import                             | Use when                                                                             | Notes                                                          |
-| -------------------------- | ---------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------- |
-| `staticFiles(dir, opts?)`  | `remix/middleware/static`          | Serve files from `public/static/` or another directory exactly as they exist on disk | Fast exit; usually near the top                                |
-| `compression()`            | `remix/middleware/compression`     | Compress text-like responses                                                         | Usually app-wide                                               |
-| `logger()`                 | `remix/middleware/logger`          | Log requests and responses                                                           | Often development-only; `colors` can force color output on/off |
-| `cors(opts?)`              | `remix/middleware/cors`            | Endpoints must serve cross-origin browsers or preflight `OPTIONS` requests           | Usually early so preflights can short-circuit                  |
-| `cop(opts?)`               | `remix/middleware/cop`             | Reject unsafe cross-origin browser requests without synchronizer tokens              | Put before session or CSRF when used                           |
-| `formData(opts?)`          | `remix/middleware/form-data`       | Parse `FormData` bodies, especially forms and uploads                                | Needed for `_csrf` form field extraction                       |
-| `methodOverride()`         | `remix/middleware/method-override` | HTML forms need `PUT`, `PATCH`, or `DELETE` semantics                                | Run after form parsing                                         |
-| `session(cookie, storage)` | `remix/middleware/session`         | Cookie-backed sessions                                                               | Must run before session-backed auth or CSRF                    |
-| `csrf(opts?)`              | `remix/middleware/csrf`            | Session-backed form workflows need synchronizer-token CSRF protection                | Requires `session()` before it                                 |
-| `asyncContext()`           | `remix/middleware/async-context`   | Helpers outside handlers need request context via `getContext()`                     | Add before helpers rely on it                                  |
-| `auth({ schemes })`        | `remix/middleware/auth`            | Resolve auth state into `context.get(Auth)`                                          | Run after `session()` for session-backed auth                  |
-| `requireAuth()`            | `remix/middleware/auth`            | A controller or action must reject anonymous access                                  | Usually controller middleware or action middleware             |
+| Middleware                 | Import                             | Use when                                                                           | Notes                                                          |
+| -------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `staticFiles(dir, opts?)`  | `remix/middleware/static`          | Serve files from root `public/` or another directory exactly as they exist on disk | Fast exit; usually near the top                                |
+| `compression()`            | `remix/middleware/compression`     | Compress text-like responses                                                       | Usually app-wide                                               |
+| `logger()`                 | `remix/middleware/logger`          | Log requests and responses                                                         | Often development-only; `colors` can force color output on/off |
+| `cors(opts?)`              | `remix/middleware/cors`            | Endpoints must serve cross-origin browsers or preflight `OPTIONS` requests         | Usually early so preflights can short-circuit                  |
+| `cop(opts?)`               | `remix/middleware/cop`             | Reject unsafe cross-origin browser requests without synchronizer tokens            | Put before session or CSRF when used                           |
+| `formData(opts?)`          | `remix/middleware/form-data`       | Parse `FormData` bodies, especially forms and uploads                              | Needed for `_csrf` form field extraction                       |
+| `methodOverride()`         | `remix/middleware/method-override` | HTML forms need `PUT`, `PATCH`, or `DELETE` semantics                              | Run after form parsing                                         |
+| `session(cookie, storage)` | `remix/middleware/session`         | Cookie-backed sessions                                                             | Must run before session-backed auth or CSRF                    |
+| `csrf(opts?)`              | `remix/middleware/csrf`            | Session-backed form workflows need synchronizer-token CSRF protection              | Requires `session()` before it                                 |
+| `asyncContext()`           | `remix/middleware/async-context`   | Helpers outside handlers need request context via `getContext()`                   | Add before helpers rely on it                                  |
+| `auth({ schemes })`        | `remix/middleware/auth`            | Resolve auth state into `context.get(Auth)`                                        | Run after `session()` for session-backed auth                  |
+| `requireAuth()`            | `remix/middleware/auth`            | A controller or action must reject anonymous access                                | Usually controller middleware or action middleware             |
 
 ### Static files vs browser modules
 
-- Use `staticFiles()` for files that should be served directly from disk, such as images, fonts, or already-built assets in `public/static/`
+- Use `staticFiles()` for files that should be served directly from disk, such as images, fonts, or already-built assets in the root `public/` directory
 - Use `remix/assets` when browser modules should be compiled and served from source files with import rewriting, preloads, or fingerprinted URLs
-- A `public/` directory inside `app/` marks browser-reachable source for the asset server; the root `public/static/` directory is the separate home for files served unchanged
+- A `public/` directory inside `app/` marks browser-reachable source for the asset server; the root `public/` directory is the separate home for files served unchanged
 
 ### Ordering notes
 
@@ -86,7 +86,7 @@ let router = createRouter({ middleware })
 
 ```typescript
 // Static files with cache headers
-staticFiles('./public/static', {
+staticFiles('./public', {
   cacheControl: 'no-store, must-revalidate',
   etag: false,
   lastModified: false,
