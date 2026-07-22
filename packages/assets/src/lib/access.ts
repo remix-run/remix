@@ -85,8 +85,7 @@ export function createAccessPolicy(options: {
       return true
     },
     isDependency(filePath) {
-      if (isInjectedPackageFilePath(filePath) || isNodeModulesPath(filePath)) return true
-      return isAllowedPackage(filePath)
+      return isInjectedPackageFilePath(filePath) || isNodeModulesPath(filePath)
     },
   }
 }

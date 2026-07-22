@@ -2579,6 +2579,73 @@ describe('asset-server', () => {
     assert.equal(dependencyContext?.isDependency, true)
   })
 
+  it('runs script transforms for pnpm-linked workspace packages by default', async () => {
+    let caseDir = await makeTmpDir()
+    let assetServer: AssetServer<AssetRequestTransformMap> | null = null
+
+    try {
+      await write(caseDir, 'pnpm-workspace.yaml', "packages:\n  - 'packages/*'\n")
+      await writeJson(caseDir, 'packages/shared/package.json', {
+        exports: './src/index.ts',
+        name: '@example/shared',
+        type: 'module',
+      })
+      await write(
+        caseDir,
+        'packages/shared/src/index.ts',
+        'export const value = "__WORKSPACE_VALUE__"',
+      )
+      await writeJson(caseDir, 'packages/app/package.json', {
+        dependencies: { '@example/shared': 'workspace:*' },
+        name: '@example/app',
+        type: 'module',
+      })
+      await write(
+        caseDir,
+        'packages/app/src/entry.ts',
+        'import { value } from "@example/shared"\nexport { value }',
+      )
+      await symlinkDirectory(
+        path.join(caseDir, 'packages/shared'),
+        path.join(caseDir, 'packages/app/node_modules/@example/shared'),
+      )
+
+      let transformContext: AssetScriptTransformContext | undefined
+      assetServer = createAssetServerForTest({
+        allowFiles: ['packages/app/src/**'],
+        allowPackages: ['@example/shared'],
+        fileMap: {
+          '/app/*path': 'packages/app/src/*path',
+          '/workspace/*path': 'packages/*path',
+        },
+        rootDir: caseDir,
+        scripts: {
+          transforms: [
+            {
+              transform(code, context) {
+                transformContext = context
+                return code.replace('__WORKSPACE_VALUE__', 'transformed')
+              },
+            },
+          ],
+        },
+      })
+
+      let entryResponse = await getByFile(assetServer, 'packages/app/src/entry.ts')
+      assert.ok(entryResponse)
+      let imports = await getAbsoluteImportSpecifiers(await entryResponse.text())
+      assert.deepEqual(imports, ['/assets/workspace/shared/src/index.ts'])
+
+      let sharedResponse = await get(assetServer, imports[0])
+      assert.ok(sharedResponse)
+      assert.match(await sharedResponse.text(), /transformed/)
+      assert.equal(transformContext?.isDependency, false)
+    } finally {
+      await assetServer?.close()
+      await fs.rm(caseDir, { recursive: true, force: true })
+    }
+  })
+
   it('validates script transform options', () => {
     assert.throws(
       () =>

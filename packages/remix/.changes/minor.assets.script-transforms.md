@@ -1,1 +1,1 @@
-Expose ordered pre-TypeScript/JSX script transforms through `createAssetServer()` from `remix/assets`, including source map composition, additional watched files, and opt-in dependency transforms (see #11580).
+Expose ordered pre-TypeScript/JSX script transforms through `createAssetServer()` from `remix/assets`, including source map composition, additional watched files, default transforms for locally linked workspace packages, and opt-in transforms for installed dependencies (see #11580).

@@ -10,7 +10,10 @@ export interface AssetScriptTransformContext {
   filePath: string
   /** Source syntax inferred from the module extension. */
   format: AssetScriptFormat
-  /** Whether the module belongs to a dependency rather than application source. */
+  /**
+   * Whether the canonical module path belongs to an installed dependency.
+   * Workspace-linked packages that resolve outside `node_modules` are application source.
+   */
   isDependency: boolean
   /** Current source map from the transform pipeline, serialized as JSON when present. */
   sourceMap: string | null
