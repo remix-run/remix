@@ -165,7 +165,7 @@ let response = createRedirectResponse('/dashboard', {
 
 ### Compress Responses
 
-The `compressResponse` helper compresses a `Response` based on the client's `Accept-Encoding` header:
+The `compressResponse` helper negotiates a `Response` representation based on the client's `Accept-Encoding` header:
 
 ```ts
 import { compressResponse } from 'remix/response/compress'
@@ -176,9 +176,11 @@ let response = new Response(JSON.stringify(data), {
 let compressed = await compressResponse(response, request)
 ```
 
+Eligible responses include `Accept-Encoding` in `Vary`, including when the client explicitly requests `identity` or omits `Accept-Encoding`. This prevents a shared cache from reusing an identity response for a client that supports compression. Existing `Vary` values are preserved.
+
 Compression is automatically skipped for:
 
-- Responses with no `Accept-Encoding` header
+- Requests with no `Accept-Encoding` header (the identity representation is used)
 - Responses that are already compressed (existing `Content-Encoding`)
 - Responses with `Cache-Control: no-transform`
 - Responses with `Content-Length` below threshold (default: 1024 bytes)
