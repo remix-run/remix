@@ -297,10 +297,39 @@ const mobileNavigationCss = css({
     display: 'none',
   },
   '@media (width < 640px)': {
+    clipPath: 'inset(0 0 100% 0)',
+    transition:
+      'clip-path var(--docs-nav-duration) var(--docs-nav-easing), overlay var(--docs-nav-duration) var(--docs-nav-easing), display var(--docs-nav-duration) var(--docs-nav-easing)',
+    transitionBehavior: 'allow-discrete',
+    '& > *': {
+      transform: 'translateY(calc(-1 * var(--rmx-space-md)))',
+      transition: 'transform var(--docs-nav-duration) var(--docs-nav-easing)',
+    },
     '@supports selector(:popover-open)': {
       '&:not(:popover-open)': {
         display: 'none',
+        pointerEvents: 'none',
       },
+      '&:popover-open': {
+        clipPath: 'inset(0)',
+        '& > *': {
+          transform: 'none',
+        },
+      },
+      '@starting-style': {
+        '&:popover-open': {
+          clipPath: 'inset(0 0 100% 0)',
+          '& > *': {
+            transform: 'translateY(calc(-1 * var(--rmx-space-md)))',
+          },
+        },
+      },
+    },
+  },
+  '@media (prefers-reduced-motion: reduce)': {
+    transition: 'none',
+    '& > *': {
+      transition: 'none',
     },
   },
 })

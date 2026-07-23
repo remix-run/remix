@@ -8,6 +8,7 @@ interface DocsShellBehaviorProps {
 
 interface DocsShellBehaviorOptions {
   navigationName: string
+  navigationCompleteTarget?: EventTarget
 }
 
 type MobilePanel = 'navigation' | 'secondary'
@@ -17,7 +18,10 @@ export const DocsShellBehavior = clientEntry<DocsShellBehaviorProps>(
   function DocsShellBehavior(handle: Handle<DocsShellBehaviorProps>) {
     return () => {
       handle.queueTask((signal) =>
-        startDocsShellBehavior(signal, { navigationName: handle.props.navigationName }),
+        startDocsShellBehavior(signal, {
+          navigationName: handle.props.navigationName,
+          navigationCompleteTarget: handle.frames.top,
+        }),
       )
       return null
     }
@@ -54,8 +58,14 @@ export function startDocsShellBehavior(
     signal,
   })
   mobileNavigationBackdrop?.addEventListener('click', closeMobileNavigation, { signal })
-  navigation?.addEventListener('click', closeMobileNavigationFromLink, { signal })
-  secondaryNavigation?.addEventListener('click', closeMobileNavigationFromLink, { signal })
+  secondaryNavigation?.addEventListener('click', closeMobileSecondaryNavigationFromLink, {
+    signal,
+  })
+  options.navigationCompleteTarget?.addEventListener(
+    'reloadComplete',
+    closeMobileNavigationAfterNavigation,
+    { signal },
+  )
   window.addEventListener('keydown', closeMobileNavigationFromKeyboard, { signal })
   window.addEventListener('scroll', updateMobileNavigationTop, { signal })
   window.addEventListener('resize', updateShellState, { signal })
@@ -121,10 +131,14 @@ export function startDocsShellBehavior(
     setMobilePanel(null, mobilePanelTrigger, true)
   }
 
-  function closeMobileNavigationFromLink(event: MouseEvent) {
+  function closeMobileSecondaryNavigationFromLink(event: MouseEvent) {
     if (event.target instanceof Element && event.target.closest('a')) {
       setMobilePanel(null)
     }
+  }
+
+  function closeMobileNavigationAfterNavigation() {
+    setMobilePanel(null)
   }
 
   function closeMobileNavigationFromKeyboard(event: KeyboardEvent) {
@@ -140,6 +154,7 @@ export function startDocsShellBehavior(
     restoreFocus = false,
   ) {
     let previousTrigger = mobilePanelTrigger
+    if (panel) updateMobileNavigationTop()
     mobilePanel = panel
     mobilePanelTrigger = panel ? trigger : null
     if (panel) {

@@ -96,6 +96,31 @@ describe('startDocsShellBehavior', () => {
     )
     fixture.cleanup()
   })
+
+  it('remeasures the sticky edge before opening a mobile panel', () => {
+    let fixture = createShellFixture()
+
+    fixture.setMobileNavigationBottom(48)
+    fixture.mobileNavigationToggle.click()
+
+    assert.equal(
+      document.documentElement.style.getPropertyValue('--docs-mobile-navigation-top'),
+      '48px',
+    )
+    fixture.cleanup()
+  })
+
+  it('keeps the navigation panel open while page navigation is pending', () => {
+    let fixture = createShellFixture()
+
+    fixture.mobileNavigationToggle.click()
+    fixture.navigationLink.click()
+
+    assert.equal(document.documentElement.getAttribute('data-docs-mobile-panel'), 'navigation')
+    fixture.completeNavigation()
+    assert.equal(document.documentElement.hasAttribute('data-docs-mobile-panel'), false)
+    fixture.cleanup()
+  })
 })
 
 function createShellFixture() {
@@ -114,6 +139,7 @@ function createShellFixture() {
   document.body.append(container)
   let mobileNavigationBottom = 112
   let mobileNavigationBar = getElement('docs-mobile-navigation-bar')
+  let navigationCompleteTarget = new EventTarget()
   mobileNavigationBar.getBoundingClientRect = () =>
     DOMRect.fromRect({ y: mobileNavigationBottom - 48, height: 48 })
 
@@ -133,6 +159,9 @@ function createShellFixture() {
     setMobileNavigationBottom(value: number) {
       mobileNavigationBottom = value
     },
+    completeNavigation() {
+      navigationCompleteTarget.dispatchEvent(new Event('reloadComplete'))
+    },
     startBehavior,
     stopBehavior() {
       controller.abort()
@@ -149,7 +178,10 @@ function createShellFixture() {
 
   function startBehavior() {
     controller = new AbortController()
-    startDocsShellBehavior(controller.signal, { navigationName: 'chapter navigation' })
+    startDocsShellBehavior(controller.signal, {
+      navigationName: 'chapter navigation',
+      navigationCompleteTarget,
+    })
   }
 }
 

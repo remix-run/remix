@@ -76,7 +76,7 @@ export function Document(
               />
             }
             navigationLabel="API reference"
-            mobileNavigationLabel="Reference"
+            mobileNavigationLabel={page.title || page.navLabel}
             navigationName="API navigation"
             hasSecondaryNavigation={(headings?.length ?? 0) > 0}
             footer={<DocsFooter />}
