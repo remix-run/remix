@@ -8,8 +8,8 @@ import { checkProject, getProjectFixPlans } from './project.ts'
 import {
   createDoctorSuite,
   createSkippedDoctorSuite,
+  hasWarningFindings,
   type DoctorAppliedFix,
-  type DoctorFinding,
   type DoctorReport,
   type DoctorSuiteName,
   type DoctorSuiteResult,
@@ -246,10 +246,6 @@ async function collectDoctorReport(
   }
 
   return report
-}
-
-function hasWarningFindings(findings: DoctorFinding[]): boolean {
-  return findings.some((finding) => finding.severity === 'warn')
 }
 
 function formatAppliedFix(appliedFix: DoctorAppliedFix): string {
