@@ -46,6 +46,7 @@ The changed-workspace commands default to diffing against `origin/main` and incl
 ## GitHub
 
 - **GitHub work**: when commenting on issues or pull requests, inspecting GitHub state, or otherwise working with GitHub, always use the `gh` command line tool when possible instead of an agent-specific connector
+- **Branch names**: use `<author>/<pr-description>`, where `author` is the GitHub username of the person making the commit and `pr-description` is a few meaningful, hyphen-separated words describing the pull request, for example `mjackson/fix-flaky-bun-test`
 
 ## Release Notes
 
