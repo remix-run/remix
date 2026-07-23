@@ -35,6 +35,8 @@ export type {
   FrameHandle,
   FrameProps,
 } from './runtime/component.ts'
+export { SPA } from './runtime/spa.ts'
+export type { SPAContext, SPAProps } from './runtime/spa.ts'
 export type { LoadModule, ResolveFrame } from './runtime/frame.ts'
 
 // -- Elements/JSX/Props --

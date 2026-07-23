@@ -5,6 +5,7 @@ Runtime UI primitives for Remix apps, including the component runtime, server re
 ## Features
 
 - Component runtime APIs for rendering, hydration, frame navigation, and JSX
+- A client-only `SPA` component that renders URLs through a URL-to-node router
 - Server rendering APIs for streaming Remix UI trees and frames
 - `mix` composition with event, ref, CSS, and animation helpers
 - Headless behavior primitives for controls such as menus, listboxes, popovers, selects, and comboboxes
@@ -78,6 +79,27 @@ function Actions() {
   return () => <button mix={button({ tone: 'primary' })}>Create project</button>
 }
 ```
+
+Use `SPA` with a router that maps URLs directly to Remix UI nodes:
+
+```tsx
+import { createRouter } from 'remix/router'
+import { createRoot, SPA, type RemixNode } from 'remix/ui'
+
+declare module 'remix/router' {
+  interface RouterTypes {
+    output: RemixNode
+  }
+}
+
+let router = createRouter({ defaultHandler: () => null })
+router.get('/', () => <h1>Home</h1>)
+
+let root = createRoot(document.body)
+root.render(<SPA router={router} fallback="Loading…" />)
+```
+
+`SPA` intercepts same-origin browser navigations, exposes the active and pending URLs through its component context, and forwards navigation cancellation to `router.fetch(url, { signal })`. It also forwards intercepted form submissions as `POST` requests with their `FormData`. Navigation history entries do not retain submitted `FormData`, so back and forward navigations revisit form destinations with GET requests. Form destinations should therefore accept both GET and POST.
 
 ## Preserving Client-Owned DOM
 
