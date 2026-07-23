@@ -59,7 +59,7 @@ export function DocsShell(handle: Handle<DocsShellProps>) {
           aria-expanded="false"
           mix={[button({ tone: 'ghost' }), mobileNavigationButtonCss]}
         >
-          {handle.props.mobileNavigationLabel}
+          <span>{handle.props.mobileNavigationLabel}</span>
           <Icon name="chevron-d" />
         </button>
         {handle.props.hasSecondaryNavigation ? (
@@ -70,7 +70,7 @@ export function DocsShell(handle: Handle<DocsShellProps>) {
             aria-expanded="false"
             mix={[button({ tone: 'ghost' }), mobileNavigationButtonCss]}
           >
-            On this page
+            <span>On this page</span>
             <Icon name="chevron-d" />
           </button>
         ) : null}
