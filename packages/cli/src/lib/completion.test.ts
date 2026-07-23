@@ -101,11 +101,28 @@ describe('completion engine', () => {
     assert.ok(!nested.values?.includes('--version'))
   })
 
-  it('does not duplicate help flags for commands with their own help handling', () => {
+  it('completes all test flags and aliases', () => {
     let result = getCompletionResult(['remix', 'test', ''], 2)
 
     assert.equal(result.mode, 'values')
-    assert.deepEqual(result.values, ['--coverage', '--watch', '-h', '--help', '--no-color'])
+    assert.ok(result.values?.includes('--browser.echo'))
+    assert.ok(result.values?.includes('--coverage.statements'))
+    assert.ok(result.values?.includes('--playwrightConfig'))
+    assert.ok(result.values?.includes('--project'))
+    assert.ok(result.values?.includes('-p'))
+    assert.ok(result.values?.includes('-h'))
+    assert.ok(result.values?.includes('--help'))
+    assert.ok(result.values?.includes('--no-color'))
+  })
+
+  it('uses file completion for test path flags and does not repeat singular flags', () => {
+    let configValue = getCompletionResult(['remix', 'test', '--config', ''], 3)
+    let usedCoverage = getCompletionResult(['remix', 'test', '--coverage', ''], 3)
+
+    assert.deepEqual(configValue, { mode: 'files' })
+    assert.equal(usedCoverage.mode, 'values')
+    assert.ok(!usedCoverage.values?.includes('--coverage'))
+    assert.ok(usedCoverage.values?.includes('--coverage.include'))
   })
 })
 

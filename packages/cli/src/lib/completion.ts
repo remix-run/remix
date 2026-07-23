@@ -6,6 +6,58 @@ export interface CompletionResult {
 const COMPLETION_SHELLS = ['bash', 'zsh'] as const
 const HELP_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'test', 'version'] as const
 const ROOT_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'test', 'version'] as const
+const TEST_BOOLEAN_FLAGS = ['--browser.echo', '--browser.open', '--coverage', '--quiet', '--watch']
+const TEST_VALUE_FLAGS = [
+  '--glob.browser',
+  '--glob.e2e',
+  '--glob.exclude',
+  '--glob.test',
+  '--concurrency',
+  '--config',
+  '--coverage.dir',
+  '--coverage.include',
+  '--coverage.exclude',
+  '--coverage.branches',
+  '--coverage.functions',
+  '--coverage.lines',
+  '--coverage.statements',
+  '--setup',
+  '--playwrightConfig',
+  '--project',
+  '--pool',
+  '--only',
+  '--reporter',
+  '--type',
+]
+const TEST_REPEATABLE_FLAGS = new Set([
+  '--glob.browser',
+  '--glob.e2e',
+  '--glob.exclude',
+  '--glob.test',
+  '--coverage.include',
+  '--coverage.exclude',
+  '--project',
+  '--only',
+  '--type',
+])
+const TEST_FILE_VALUE_FLAGS = new Set([
+  '--config',
+  '--glob.browser',
+  '--glob.e2e',
+  '--glob.exclude',
+  '--glob.test',
+  '--playwrightConfig',
+  '--setup',
+])
+const TEST_FLAG_ALIASES = new Map([
+  ['-c', '--concurrency'],
+  ['-p', '--project'],
+  ['-q', '--quiet'],
+  ['-r', '--reporter'],
+  ['-s', '--setup'],
+  ['-t', '--type'],
+  ['-w', '--watch'],
+])
 
 export type CompletionShell = (typeof COMPLETION_SHELLS)[number]
 
@@ -169,7 +221,7 @@ function completeCommand(
   }
 
   if (command === 'test') {
-    return completeSimpleFlags(tokens, currentWord, usedGlobalFlags, ['--coverage', '--watch'])
+    return completeTest(tokens, currentWord, usedGlobalFlags)
   }
 
   if (command === 'completion') {
@@ -177,6 +229,59 @@ function completeCommand(
   }
 
   return completeValues([], currentWord)
+}
+
+function completeTest(
+  tokens: string[],
+  currentWord: string,
+  usedGlobalFlags: Set<string>,
+): CompletionResult {
+  let filteredTokens = filterGlobalCommandTokens(tokens, usedGlobalFlags)
+  if (filteredTokens == null) {
+    return completeValues([], currentWord)
+  }
+
+  let usedFlags = new Set<string>()
+  let expectedValueFor: string | undefined
+
+  for (let token of filteredTokens) {
+    if (expectedValueFor != null) {
+      expectedValueFor = undefined
+      continue
+    }
+
+    let canonicalFlag = TEST_FLAG_ALIASES.get(token) ?? token
+    if (TEST_VALUE_FLAGS.includes(canonicalFlag)) {
+      usedFlags.add(canonicalFlag)
+      expectedValueFor = canonicalFlag
+      continue
+    }
+
+    if (TEST_BOOLEAN_FLAGS.includes(canonicalFlag)) {
+      usedFlags.add(canonicalFlag)
+      continue
+    }
+
+    if (token.startsWith('-')) {
+      return completeValues([], currentWord)
+    }
+  }
+
+  if (expectedValueFor != null) {
+    return TEST_FILE_VALUE_FLAGS.has(expectedValueFor) ? { mode: 'files' } : { mode: 'none' }
+  }
+
+  let longFlags = [...TEST_BOOLEAN_FLAGS, ...TEST_VALUE_FLAGS].filter(
+    (flag) => !usedFlags.has(flag) || TEST_REPEATABLE_FLAGS.has(flag),
+  )
+  let shortFlags = [...TEST_FLAG_ALIASES].flatMap(([short, long]) =>
+    !usedFlags.has(long) || TEST_REPEATABLE_FLAGS.has(long) ? [short] : [],
+  )
+  let suggestions = withHelpFlags([...longFlags, ...shortFlags], usedGlobalFlags)
+
+  return currentWord.startsWith('-') || currentWord === ''
+    ? completeValues(suggestions, currentWord)
+    : { mode: 'files' }
 }
 
 function completeHelp(
