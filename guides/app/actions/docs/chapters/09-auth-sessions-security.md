@@ -409,7 +409,7 @@ import { Session } from "remix/session";
 let session = context.get(Session);
 
 let returnTo = session.get("returnTo");
-session.set("cartId", "cart_123");
+session.set("lastAlbumId", "thriller");
 session.unset("returnTo");
 session.flash("message", "Album saved.");
 ```

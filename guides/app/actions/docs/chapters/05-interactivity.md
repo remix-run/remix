@@ -232,7 +232,7 @@ The event type determines `event.currentTarget`, so an input handler can read `.
 
 Use the event the native control already owns. A button's `click` includes keyboard activation, a form's `submit` covers its submit button and Enter key, and an input's `input` event reflects editing. Rebuilding those semantics from pointer events usually creates gaps.
 
-The search demo keeps only `query` in setup scope and derives its matching projects during render:
+The search demo keeps only `query` in setup scope and derives its matching items during render:
 
 ::frame{src="/examples/05-interactivity/search-filter/"}
 
@@ -388,19 +388,19 @@ Navigation options control the frame operation:
 - `target` reloads a named frame instead of the top frame.
 - `src` changes the URL fetched for that frame while `href` remains the history destination.
 - `history` chooses `push` or `replace`.
-- `resetScroll` controls whether navigation returns the target to its initial scroll position.
+- `resetScroll` controls whether the window scrolls back to the top once the navigation commits. It applies to new history entries, not back and forward traversals.
 
 The corresponding HTML attributes are `rmx-target`, `rmx-src`, and `rmx-reset-scroll`. Add `rmx-document` to an anchor when the browser must perform a full document navigation instead of a Remix transition.
 
 ## Frames and partial server-rendered UI {#frames-and-partial-server-rendered-ui}
 
-Frames let the browser ask a route for server-rendered HTML and place it into a bounded region. The page may render a named cart summary beside an interactive add button:
+Frames let the browser ask a route for server-rendered HTML and place it into a bounded region. The album page already renders one: the named recommendations frame from [Rendering UI](/rendering-ui/#streaming-and-deferred-rendering):
 
 ```tsx
 <Frame
-  name="cart-summary"
-  src={routes.cart.summary.href()}
-  fallback={<p>Loading the cart…</p>}
+  name="recommendations"
+  src={routes.albums.recommendations.href({ albumId: handle.props.album.id })}
+  fallback={<p>Loading recommendations…</p>}
 />
 ```
 
@@ -408,7 +408,7 @@ Inside a client entry, use the component handle to reload the appropriate region
 
 ```tsx
 await handle.frame.reload(); // the frame containing this component
-await handle.frames.get("cart-summary")?.reload(); // a named frame
+await handle.frames.get("recommendations")?.reload(); // a named frame
 await handle.frames.top.reload(); // the complete page frame
 ```
 

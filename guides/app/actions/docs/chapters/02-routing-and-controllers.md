@@ -148,7 +148,7 @@ export const routes = route({
 // routes.albums.create -> POST   /albums
 ```
 
-These helpers produce ordinary route maps and leaves, so you can nest them with hand-written definitions. Pass a map to `createController(...)`, then register it with `router.map(...)` just as you would a hand-written map. The [`remix/router` overview](https://api.remix.run/api/remix/router/overview/) covers the full route builder API.
+These helpers produce ordinary route maps and leaves, so you can nest them with hand-written definitions. Pass a map to `createController(...)`, then register it with `router.map(...)` just as you would a hand-written map. The builders are imported from `remix/routes`; the [`remix/router` overview](https://api.remix.run/api/remix/router/overview/) covers them along with the rest of the router API.
 
 ## Controllers and actions
 
@@ -226,7 +226,7 @@ return context.render(<AlbumPage album={album} />);
 
 The result is still an ordinary Web `Response`. An action can render a page, return text or JSON, redirect the browser, send a file, or return an error response.
 
-Expected outcomes such as invalid input, conflicts, and missing records should also return a `Response` with the appropriate status. Reserve thrown errors for unexpected failures. If an action or middleware throws, `router.fetch(...)` rejects so the server boundary can log the error and return a `500` response. The [Errors and Error Boundaries](/errors-and-error-boundaries/) chapter covers that path in detail.
+Expected outcomes such as invalid input, conflicts, and missing records should also return a `Response` with the appropriate status. Reserve thrown errors for unexpected failures. If an action or middleware throws, `router.fetch(...)` rejects so the server boundary can log the error and return a `500` response. The [Errors and Cancellation](/errors-and-error-boundaries/) chapter covers that path in detail.
 
 A text response can be as simple as:
 
@@ -278,21 +278,21 @@ Note: `context.headers` represents the request headers, not the headers sent wit
 ```ts filename=app/router.ts
 import { createRouter } from "remix/router";
 
-import rootController from "./actions/controller.tsx";
+import controller from "./actions/controller.tsx";
 import albumsController from "./actions/albums/controller.tsx";
 import albumsEditController from "./actions/albums/edit/controller.tsx";
 import { routes } from "./routes.ts";
 
 export const router = createRouter();
 
-router.map(routes, rootController);
+router.map(routes, controller);
 router.map(routes.albums, albumsController);
 router.map(routes.albums.edit, albumsEditController);
 ```
 
 With those mappings:
 
-- `rootController` handles root-level leaves such as `home`.
+- `controller` handles root-level leaves such as `home`.
 - `albumsController` handles `routes.albums.show`.
 - `albumsEditController` handles `routes.albums.edit.index` and `routes.albums.edit.action`.
 

@@ -12,12 +12,12 @@ It is not a separate build system. The application remains ordinary TypeScript, 
 Before Remix is installed locally, run the requested package version through `npx`:
 
 ```sh
-npx remix@next new record-store --app-name "Record Store"
+npx remix@next new record-store --app-name "Albums"
 cd record-store
 npm i
 ```
 
-`--app-name` controls the display name in the generated document. It does not need to match the directory name.
+`--app-name` controls the display name in the generated document — here it matches the `— Albums` document titles used throughout this guide. It does not need to match the directory name.
 
 The target directory must be empty unless `--force` is present. Because force permits the scaffold to write into a non-empty directory, inspect that directory first.
 

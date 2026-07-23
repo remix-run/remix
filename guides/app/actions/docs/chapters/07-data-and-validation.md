@@ -505,7 +505,7 @@ node --import remix/node-tsx app/data/seed.ts
 
 The runner journals applied IDs and checksums. Changing an already-applied `up.sql` produces drift instead of silently changing history. Use `runner.status()` to inspect state, `runner.up({ step: 1 })` for a bounded rollforward, and `runner.down({ step: 1 })` for a bounded rollback. Both directions also accept `{ to: "20260722120000" }` or `{ dryRun: true }`; `to` and `step` are mutually exclusive.
 
-Each migration uses a transaction when the adapter supports transactional DDL. Put `-- data-table/transaction: none` on the first non-blank line for a statement that must run outside a transaction, such as PostgreSQL's `create index concurrently`.
+Each migration uses a transaction when the adapter supports transactional DDL. Put a `-- data-table/transaction: none` comment in the migration file for a statement that must run outside a transaction, such as PostgreSQL's `create index concurrently`. The runner accepts the directive in any single-line SQL comment, though keeping it at the top makes it easy to spot.
 
 ## Request-scoped database access {#request-scoped-database-access}
 
