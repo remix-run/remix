@@ -135,6 +135,19 @@ describe('manifest', () => {
     }
   })
 
+  it('every remix package export references a generated source file', () => {
+    let packageJson: { exports: Record<string, string> } = JSON.parse(
+      fs.readFileSync(path.join(__dirname, 'package.json'), 'utf-8'),
+    )
+
+    for (let [exportPath, sourcePath] of Object.entries(packageJson.exports)) {
+      assert.ok(
+        fs.existsSync(path.join(__dirname, sourcePath)),
+        `Package export "${exportPath}" references missing source file "${sourcePath}"`,
+      )
+    }
+  })
+
   it('package README headings use unscoped package names', () => {
     for (let pkgName of allRemixRunPackages) {
       let short = shortName(pkgName)

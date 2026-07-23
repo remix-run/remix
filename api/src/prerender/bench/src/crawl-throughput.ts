@@ -12,7 +12,7 @@
 
 import { readFileSync } from 'node:fs'
 import { crawl } from '../../crawl.ts'
-import { createRouter } from 'remix/fetch-router'
+import { createRouter } from 'remix/router'
 
 const PAGE_COUNT = 100
 const TRIALS = 10
