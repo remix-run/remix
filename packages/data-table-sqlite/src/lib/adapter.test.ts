@@ -113,10 +113,11 @@ describe('sqlite adapter', () => {
 
   it('wipes file-backed databases together with their sidecar files', async () => {
     let dir = await mkdtemp(join(tmpdir(), 'data-table-sqlite-'))
+    let adapter: SqliteDatabaseAdapter | undefined
 
     try {
       let filename = join(dir, 'app.db')
-      let adapter = createSqliteDatabaseAdapter({ filename })
+      adapter = createSqliteDatabaseAdapter({ filename })
 
       await adapter.executeScript('pragma journal_mode = wal')
       await adapter.executeScript('create table users (id integer primary key)')
@@ -139,20 +140,26 @@ describe('sqlite adapter', () => {
       await adapter.executeScript('create table projects (id integer primary key)')
       assert.equal(await adapter.hasTable({ name: 'projects' }), true)
     } finally {
+      // release the reopened handle so Windows can unlink the database file
+      adapter?.close()
       await rm(dir, { recursive: true, force: true })
     }
   })
 
   it('recreates missing parent directories when wiping file-backed databases', async () => {
     let dir = await mkdtemp(join(tmpdir(), 'data-table-sqlite-'))
+    let adapter: SqliteDatabaseAdapter | undefined
 
     try {
       let filename = join(dir, 'nested', 'app.db')
       await mkdir(dirname(filename), { recursive: true })
 
-      let adapter = createSqliteDatabaseAdapter({ filename })
+      adapter = createSqliteDatabaseAdapter({ filename })
       await adapter.executeScript('create table users (id integer primary key)')
 
+      // close the handle so Windows can remove the parent directory, then let
+      // wipe() recreate it
+      adapter.close()
       await rm(dirname(filename), { recursive: true, force: true })
       await adapter.wipe()
 
@@ -160,6 +167,8 @@ describe('sqlite adapter', () => {
       await adapter.executeScript('create table projects (id integer primary key)')
       assert.equal(await adapter.hasTable({ name: 'projects' }), true)
     } finally {
+      // release the reopened handle so Windows can unlink the database file
+      adapter?.close()
       await rm(dir, { recursive: true, force: true })
     }
   })
@@ -195,6 +204,24 @@ describe('sqlite adapter', () => {
       /SQLite adapter wipe\(\) requires config-based construction/,
     )
     assert.equal(closeCalls, 0)
+  })
+
+  it('closes the underlying database once even when close() is called repeatedly', async () => {
+    let closeCalls = 0
+    let sqlite = {
+      prepare() {
+        throw new Error('not used')
+      },
+      exec() {},
+      close() {
+        closeCalls += 1
+      },
+    } satisfies SqliteDatabase
+    let adapter = createSqliteDatabaseAdapter(sqlite)
+
+    adapter.close()
+    adapter.close()
+    assert.equal(closeCalls, 1)
   })
 
   it('short-circuits insertMany([]) and returns empty rows for returning queries', async () => {
