@@ -25,7 +25,9 @@ export type AnyRenderer = Renderer<never, never>
  */
 export const Renderer = createContextKey<AnyRenderer>()
 
-type RendererFactory<renderer extends AnyRenderer> = (context: RequestContext<any, any>) => renderer
+type RendererFactory<renderer extends AnyRenderer> = (
+  context: RequestContext<any, any, any>,
+) => renderer
 
 /**
  * Adds a renderer to request context.

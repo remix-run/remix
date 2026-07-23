@@ -122,7 +122,7 @@ export interface CsrfOptions {
  * @param options CSRF options
  * @returns CSRF middleware
  */
-export function csrf(options: CsrfOptions = {}): Middleware {
+export function csrf(options: CsrfOptions = {}): Middleware<readonly [], Response> {
   let safeMethods = options.safeMethods ?? defaultSafeMethods
   let tokenKey = options.tokenKey ?? '_csrf'
   let fieldName = options.fieldName ?? '_csrf'
@@ -137,7 +137,9 @@ export function csrf(options: CsrfOptions = {}): Middleware {
     let expectedToken = getCsrfToken(context, tokenKey)
 
     if (isSafeMethod(context.method, safeMethods)) {
-      return next()
+      let response = await next()
+      assertResponse(response)
+      return response
     }
 
     let validOrigin = await validateRequestOrigin(
@@ -160,7 +162,15 @@ export function csrf(options: CsrfOptions = {}): Middleware {
       return getErrorResponse(options, 'invalid-token', context)
     }
 
-    return next()
+    let response = await next()
+    assertResponse(response)
+    return response
+  }
+}
+
+function assertResponse(value: unknown): asserts value is Response {
+  if (!(value instanceof Response)) {
+    throw new TypeError('csrf() expected next() to return a Response')
   }
 }
 

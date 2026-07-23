@@ -78,6 +78,32 @@ let response = await router.fetch('https://remix.run/blog/hello-remix')
 console.log(await response.text()) // "Post hello-remix"
 ```
 
+### Custom Router Outputs
+
+Routers accept `string | URL | Request` and return `Response` by default. Apps can augment `RouterTypes.output` when the router provides an in-memory contract instead of an HTTP boundary. For example, a browser-only router can map URLs directly to renderable nodes:
+
+```tsx
+import { createRouter } from 'remix/router'
+import type { RemixNode } from 'remix/ui'
+
+declare module 'remix/router' {
+  interface RouterTypes {
+    output: RemixNode
+  }
+}
+
+let router = createRouter({
+  defaultHandler: () => null,
+})
+
+router.get('/', () => <h1>Home</h1>)
+router.get('/about', () => <h1>About</h1>)
+
+let node = await router.fetch(new URL('/about', location.href))
+```
+
+The augmented output becomes the default for routers, middleware, actions, and controllers throughout the app. The router still creates an internal `Request`, so handlers and middleware retain the standard `RequestContext` APIs. The `signal` passed to `router.fetch(url, { signal })` is reflected by `context.request.signal` and cancels router dispatch as usual.
+
 The route map is an object of the same shape as the object pass into `route()`, including nested objects. The leaves of the map are `Route` objects, which you can see if you inspect the type of the `routes` variable in your IDE.
 
 ```ts

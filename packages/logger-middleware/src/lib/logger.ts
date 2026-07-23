@@ -82,7 +82,7 @@ export interface LoggerOptions {
  */
 export function logger(
   options: LoggerOptions = {},
-): Middleware<{ key: typeof Logger; value: LoggerFunction; property: 'logger' }> {
+): Middleware<{ key: typeof Logger; value: LoggerFunction; property: 'logger' }, Response> {
   let {
     colors,
     format = '[%date] %method %path %status %contentLength',
@@ -96,6 +96,7 @@ export function logger(
     let { request, url } = context
     let start = new Date()
     let response = await next()
+    assertResponse(response)
     let end = new Date()
     let duration = end.getTime() - start.getTime()
     let contentLength = response.headers.get('Content-Length')
@@ -128,6 +129,12 @@ export function logger(
     log(message)
 
     return response
+  }
+}
+
+function assertResponse(value: unknown): asserts value is Response {
+  if (!(value instanceof Response)) {
+    throw new TypeError('logger() expected next() to return a Response')
   }
 }
 

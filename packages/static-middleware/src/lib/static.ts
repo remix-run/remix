@@ -86,7 +86,10 @@ export interface StaticFilesOptions extends Omit<FileResponseOptions, 'acceptRan
  * @param options Configuration for file responses
  * @returns The static files middleware
  */
-export function staticFiles(root: string, options: StaticFilesOptions = {}): Middleware {
+export function staticFiles(
+  root: string,
+  options: StaticFilesOptions = {},
+): Middleware<readonly [], Response> {
   // Ensure root is an absolute path
   root = path.resolve(root)
 
@@ -103,27 +106,35 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
   }
 
   return async (context, next) => {
+    let nextResponse = async (): Promise<Response> => {
+      let response = await next()
+      if (!(response instanceof Response)) {
+        throw new TypeError('staticFiles() expected next() to return a Response')
+      }
+      return response
+    }
+
     if (context.method !== 'GET' && context.method !== 'HEAD') {
-      return next()
+      return nextResponse()
     }
 
     let relativePath = context.url.pathname.replace(/^\/+/, '')
 
     if (filter && !filter(relativePath)) {
-      return next()
+      return nextResponse()
     }
 
     let rootRealPath: string
     try {
       rootRealPath = await fsp.realpath(root)
     } catch {
-      return next()
+      return nextResponse()
     }
 
     let targetPath = path.join(root, relativePath)
     let containedTargetPath = await resolveContainedPath(rootRealPath, targetPath)
     if (containedTargetPath == null) {
-      return next()
+      return nextResponse()
     }
 
     let file: StaticFileMatch | undefined
@@ -188,7 +199,7 @@ export function staticFiles(root: string, options: StaticFilesOptions = {}): Mid
       return sendFile(lazyFile, context.request, finalFileOptions)
     }
 
-    return next()
+    return nextResponse()
   }
 }
 
