@@ -485,7 +485,6 @@ describe('test command', () => {
     assert.match(TEST_COMMAND_HELP_TEXT, /default: server, browser, e2e/)
     assert.match(TEST_COMMAND_HELP_TEXT, /--config <path>/)
     assert.match(TEST_COMMAND_HELP_TEXT, /--no-coverage/)
-    assert.doesNotMatch(TEST_COMMAND_HELP_TEXT, /remix-test\.config/)
   })
 })
 
@@ -493,11 +492,6 @@ async function writeTestProject(projectDir: string): Promise<void> {
   await fs.writeFile(
     path.join(projectDir, 'package.json'),
     `${JSON.stringify({ name: 'test-command-fixture', private: true, type: 'module' }, null, 2)}\n`,
-    'utf8',
-  )
-  await fs.writeFile(
-    path.join(projectDir, 'remix-test.config.ts'),
-    `export default { concurrency: 2, glob: { test: 'missing.test.ts' }, type: ['browser'] }\n`,
     'utf8',
   )
   await fs.mkdir(path.join(projectDir, 'node_modules', '@remix-run'), { recursive: true })
