@@ -1,0 +1,1 @@
+Request handlers now receive native `Request` instances instead of lazy request objects that emulated native requests. This fixes compatibility with standard APIs like `new Request(request, init)` that rely on native `Request` internals.
