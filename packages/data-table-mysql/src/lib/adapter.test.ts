@@ -41,6 +41,100 @@ const accountProjects = table({
 })
 
 describe('mysql adapter', () => {
+  it('runs migration work on the pool connection that owns the lock', async () => {
+    let statements: string[] = []
+    let releaseCalls = 0
+    let connection = {
+      async query(text: string) {
+        statements.push(text)
+
+        if (text.includes('get_lock')) {
+          return [[{ acquired: 1, lock_name: 'hashed-lock-name' }], []]
+        }
+
+        if (text.includes('release_lock')) {
+          return [[{ released: 1 }], []]
+        }
+
+        return [[], []]
+      },
+      async beginTransaction() {
+        statements.push('begin')
+      },
+      async commit() {
+        statements.push('commit')
+      },
+      async rollback() {
+        statements.push('rollback')
+      },
+      release() {
+        releaseCalls += 1
+      },
+    }
+    let pool = {
+      async query() {
+        throw new Error('migration work must not use the pool')
+      },
+      async getConnection() {
+        return connection
+      },
+      async end() {},
+    }
+    let adapter = createMysqlDatabaseAdapter(pool as never)
+
+    let result = await adapter.withMigrationLock('app_migrations', async (lockedAdapter) => {
+      assert.notEqual(lockedAdapter, adapter)
+      await lockedAdapter.executeScript('create table users (id integer)')
+      let transaction = await lockedAdapter.beginTransaction()
+      await lockedAdapter.executeScript('insert into users values (1)', transaction)
+      await lockedAdapter.commitTransaction(transaction)
+      return 'done'
+    })
+
+    assert.equal(result, 'done')
+    assert.equal(statements.length, 6)
+    assert.match(statements[0], /get_lock/)
+    assert.equal(statements[1], 'create table users (id integer)')
+    assert.equal(statements[2], 'begin')
+    assert.equal(statements[3], 'insert into users values (1)')
+    assert.equal(statements[4], 'commit')
+    assert.match(statements[5], /release_lock/)
+    assert.equal(releaseCalls, 1)
+  })
+
+  it('rejects a failed migration lock acquisition and releases the connection', async () => {
+    let releaseCalls = 0
+    let callbackCalls = 0
+    let connection = {
+      async query() {
+        return [[{ acquired: 0, lock_name: 'hashed-lock-name' }], []]
+      },
+      release() {
+        releaseCalls += 1
+      },
+    }
+    let pool = {
+      async query() {
+        throw new Error('not used')
+      },
+      async getConnection() {
+        return connection
+      },
+      async end() {},
+    }
+    let adapter = createMysqlDatabaseAdapter(pool as never)
+
+    await assert.rejects(
+      () =>
+        adapter.withMigrationLock('app_migrations', async () => {
+          callbackCalls += 1
+        }),
+      /migration lock could not be acquired/,
+    )
+    assert.equal(callbackCalls, 0)
+    assert.equal(releaseCalls, 1)
+  })
+
   it('wipes URI-configured databases through a server connection', async (t) => {
     let maintenanceConfig: unknown
     let statements: string[] = []

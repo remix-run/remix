@@ -56,6 +56,7 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   #template: string
   #transactions = new Map<string, TransactionState>()
   #transactionCounter = 0
+  #migrationLockQueue = Promise.resolve()
 
   constructor(
     config: PostgresPoolConfig | PostgresQueryable,
@@ -315,19 +316,45 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
   }
 
   /**
-   * Acquires the postgres migration lock.
-   * @returns A promise that resolves when the lock is acquired.
+   * Runs migration work on the postgres connection that owns the advisory lock.
+   * @param name Logical migration lock name.
+   * @param run Migration work to run with a connection-bound adapter.
+   * @returns The callback result.
    */
-  async acquireMigrationLock(): Promise<void> {
-    await this.#client.query('select pg_advisory_lock(hashtext($1))', ['data_table_migrations'])
-  }
+  async withMigrationLock<result>(
+    name: string,
+    run: (adapter: DatabaseAdapter) => Promise<result>,
+  ): Promise<result> {
+    let waitForPreviousLock = this.#migrationLockQueue
+    let releaseQueue: () => void = () => undefined
+    this.#migrationLockQueue = new Promise((resolve) => {
+      releaseQueue = resolve
+    })
 
-  /**
-   * Releases the postgres migration lock.
-   * @returns A promise that resolves when the lock is released.
-   */
-  async releaseMigrationLock(): Promise<void> {
-    await this.#client.query('select pg_advisory_unlock(hashtext($1))', ['data_table_migrations'])
+    await waitForPreviousLock
+
+    try {
+      let releaseOnClose = false
+      let client: PostgresClient | PostgresPoolClient
+
+      if (isPostgresPool(this.#client)) {
+        client = await this.#client.connect()
+        releaseOnClose = true
+      } else {
+        client = this.#client
+      }
+
+      try {
+        let adapter = releaseOnClose ? new PostgresDatabaseAdapter(client) : this
+        return await runWithPostgresMigrationLock(client, name, adapter, run)
+      } finally {
+        if (releaseOnClose) {
+          releasePostgresClient(client)
+        }
+      }
+    } finally {
+      releaseQueue()
+    }
   }
 
   async #closePool(): Promise<void> {
@@ -465,6 +492,39 @@ function resolveDatabaseNameFromConnectionString(
 function releasePostgresClient(client: PostgresClient | PostgresPoolClient): void {
   let release = (client as { release?: () => void }).release
   release?.()
+}
+
+async function runWithPostgresMigrationLock<result>(
+  client: PostgresClient | PostgresPoolClient,
+  name: string,
+  adapter: DatabaseAdapter,
+  run: (adapter: DatabaseAdapter) => Promise<result>,
+): Promise<result> {
+  await client.query('select pg_advisory_lock(hashtext($1))', [name])
+
+  let runFailed = false
+
+  try {
+    return await run(adapter)
+  } catch (error) {
+    runFailed = true
+    throw error
+  } finally {
+    try {
+      let result = await client.query('select pg_advisory_unlock(hashtext($1)) as "released"', [
+        name,
+      ])
+      let row = result.rows[0] as Record<string, unknown> | undefined
+
+      if (!toBooleanExists(row?.released)) {
+        throw new Error('Postgres migration lock was not held by the reserved connection')
+      }
+    } catch (error) {
+      if (!runFailed) {
+        throw error
+      }
+    }
+  }
 }
 
 function buildSetTransactionStatement(options: TransactionOptions): string {

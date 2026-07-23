@@ -40,6 +40,53 @@ const accountProjects = table({
 })
 
 describe('postgres adapter', () => {
+  it('runs migration work on the pool connection that owns the lock', async () => {
+    let statements: string[] = []
+    let releaseCalls = 0
+    let client = {
+      async query(text: string) {
+        statements.push(text)
+        return {
+          rows: text.includes('pg_advisory_unlock') ? [{ released: true }] : [],
+          rowCount: 0,
+        }
+      },
+      release() {
+        releaseCalls += 1
+      },
+    }
+    let pool = {
+      async query() {
+        throw new Error('migration work must not use the pool')
+      },
+      async connect() {
+        return client
+      },
+      async end() {},
+    }
+    let adapter = createPostgresDatabaseAdapter(pool as never)
+
+    let result = await adapter.withMigrationLock('app_migrations', async (lockedAdapter) => {
+      assert.notEqual(lockedAdapter, adapter)
+      await lockedAdapter.executeScript('create table users (id integer)')
+      let transaction = await lockedAdapter.beginTransaction()
+      await lockedAdapter.executeScript('insert into users values (1)', transaction)
+      await lockedAdapter.commitTransaction(transaction)
+      return 'done'
+    })
+
+    assert.equal(result, 'done')
+    assert.deepEqual(statements, [
+      'select pg_advisory_lock(hashtext($1))',
+      'create table users (id integer)',
+      'begin',
+      'insert into users values (1)',
+      'commit',
+      'select pg_advisory_unlock(hashtext($1)) as "released"',
+    ])
+    assert.equal(releaseCalls, 1)
+  })
+
   it('preserves client-backed pools when wipe is unavailable', async () => {
     let endCalls = 0
     let pool = {

@@ -172,12 +172,16 @@ class MemoryMigrationAdapter implements DatabaseAdapter {
     this.#assertToken(token)
   }
 
-  async acquireMigrationLock(): Promise<void> {
+  async withMigrationLock<result>(
+    _name: string,
+    run: (adapter: DatabaseAdapter) => Promise<result>,
+  ): Promise<result> {
     this.lockAcquireCount += 1
-  }
-
-  async releaseMigrationLock(): Promise<void> {
-    this.lockReleaseCount += 1
+    try {
+      return await run(this)
+    } finally {
+      this.lockReleaseCount += 1
+    }
   }
 
   #assertToken(token: TransactionToken): void {

@@ -62,6 +62,7 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
   #collation?: string
   #transactions = new Map<string, TransactionState>()
   #transactionCounter = 0
+  #migrationLockQueue = Promise.resolve()
 
   constructor(
     config: string | MysqlPoolOptions | MysqlQueryable,
@@ -349,19 +350,45 @@ export class MysqlDatabaseAdapter implements DatabaseAdapter {
   }
 
   /**
-   * Acquires the mysql migration lock.
-   * @returns A promise that resolves when the lock is acquired.
+   * Runs migration work on the mysql connection that owns the named lock.
+   * @param name Logical migration lock name.
+   * @param run Migration work to run with a connection-bound adapter.
+   * @returns The callback result.
    */
-  async acquireMigrationLock(): Promise<void> {
-    await this.#client.query('select get_lock(?, 60)', ['data_table_migrations'])
-  }
+  async withMigrationLock<result>(
+    name: string,
+    run: (adapter: DatabaseAdapter) => Promise<result>,
+  ): Promise<result> {
+    let waitForPreviousLock = this.#migrationLockQueue
+    let releaseQueue: () => void = () => undefined
+    this.#migrationLockQueue = new Promise((resolve) => {
+      releaseQueue = resolve
+    })
 
-  /**
-   * Releases the mysql migration lock.
-   * @returns A promise that resolves when the lock is released.
-   */
-  async releaseMigrationLock(): Promise<void> {
-    await this.#client.query('select release_lock(?)', ['data_table_migrations'])
+    await waitForPreviousLock
+
+    try {
+      let releaseOnClose = false
+      let connection: MysqlTransactionConnection
+
+      if (isMysqlPool(this.#client)) {
+        connection = await this.#client.getConnection()
+        releaseOnClose = true
+      } else {
+        connection = this.#client
+      }
+
+      try {
+        let adapter = releaseOnClose ? new MysqlDatabaseAdapter(connection) : this
+        return await runWithMysqlMigrationLock(connection, name, adapter, run)
+      } finally {
+        if (releaseOnClose && isMysqlPoolConnection(connection)) {
+          connection.release()
+        }
+      }
+    } finally {
+      releaseQueue()
+    }
   }
 
   async #closePool(): Promise<void> {
@@ -509,6 +536,46 @@ function isMysqlPoolConnection(
   connection: MysqlTransactionConnection,
 ): connection is MysqlPoolConnection {
   return 'release' in connection && typeof connection.release === 'function'
+}
+
+async function runWithMysqlMigrationLock<result>(
+  connection: MysqlTransactionConnection,
+  name: string,
+  adapter: DatabaseAdapter,
+  run: (adapter: DatabaseAdapter) => Promise<result>,
+): Promise<result> {
+  let [lockRows] = await connection.query(
+    "select lock_name, get_lock(lock_name, 60) as `acquired` from (select sha2(concat(coalesce(database(), ''), ':', ?), 256) as lock_name) as migration_lock",
+    [name],
+  )
+
+  let lockRow = isRowsResult(lockRows) ? lockRows[0] : undefined
+  let lockName = lockRow?.lock_name
+
+  if (typeof lockName !== 'string' || !toBooleanExists(lockRow?.acquired)) {
+    throw new Error('MySQL migration lock could not be acquired')
+  }
+
+  let runFailed = false
+
+  try {
+    return await run(adapter)
+  } catch (error) {
+    runFailed = true
+    throw error
+  } finally {
+    try {
+      let [unlockRows] = await connection.query('select release_lock(?) as `released`', [lockName])
+
+      if (!isRowsResult(unlockRows) || !toBooleanExists(unlockRows[0]?.released)) {
+        throw new Error('MySQL migration lock was not held by the reserved connection')
+      }
+    } catch (error) {
+      if (!runFailed) {
+        throw error
+      }
+    }
+  }
 }
 
 function isRowsResult(result: unknown): result is MysqlQueryRows {

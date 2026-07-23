@@ -105,6 +105,16 @@ function resolveTransactionMode(migration: MigrationDescriptor): MigrationTransa
 }
 
 async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> {
+  if (input.adapter.withMigrationLock) {
+    return input.adapter.withMigrationLock(input.journalTable, (adapter) =>
+      runMigrationsUnlocked({ ...input, adapter }),
+    )
+  }
+
+  return runMigrationsUnlocked(input)
+}
+
+async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<MigrateResult> {
   let adapter = input.adapter
   let migrations = input.migrations
   let journalTable = input.journalTable
@@ -118,141 +128,135 @@ async function runMigrations(input: RunMigrationsInput): Promise<MigrateResult> 
 
   let sql: string[] = []
 
-  await adapter.acquireMigrationLock?.()
+  let journal: MigrationJournalRow[] = []
 
-  try {
-    let journal: MigrationJournalRow[] = []
+  if (dryRun) {
+    let canReadJournal = await hasMigrationJournal(adapter, journalTable)
 
-    if (dryRun) {
-      let canReadJournal = await hasMigrationJournal(adapter, journalTable)
-
-      if (canReadJournal) {
-        journal = await loadJournalRows(adapter, journalTable)
-      }
-    } else {
-      await ensureMigrationJournal(adapter, journalTable)
+    if (canReadJournal) {
       journal = await loadJournalRows(adapter, journalTable)
     }
+  } else {
+    await ensureMigrationJournal(adapter, journalTable)
+    journal = await loadJournalRows(adapter, journalTable)
+  }
 
-    let appliedMap = new Map(journal.map((row) => [row.id, row]))
-    await assertNoMigrationDrift(migrations, journal)
-    let toRun: MigrationDescriptor[] = []
+  let appliedMap = new Map(journal.map((row) => [row.id, row]))
+  await assertNoMigrationDrift(migrations, journal)
+  let toRun: MigrationDescriptor[] = []
 
-    if (input.direction === 'up') {
-      for (let migration of migrations) {
-        if (!appliedMap.has(migration.id)) {
-          toRun.push(migration)
-        }
-      }
-
-      if (target) {
-        toRun = toRun.filter((migration) => migration.id <= target)
-      }
-
-      if (step !== undefined) {
-        toRun = toRun.slice(0, step)
-      }
-    } else {
-      toRun = migrations.filter((migration) => appliedMap.has(migration.id)).reverse()
-
-      if (target) {
-        toRun = toRun.filter((migration) => migration.id >= target)
-      }
-
-      if (step !== undefined) {
-        toRun = toRun.slice(0, step)
-      }
-
-      for (let migration of toRun) {
-        if (migration.down === undefined) {
-          throw new Error('Migration "' + migration.id + '" has no down script')
-        }
+  if (input.direction === 'up') {
+    for (let migration of migrations) {
+      if (!appliedMap.has(migration.id)) {
+        toRun.push(migration)
       }
     }
 
-    let applied: MigrationStatusEntry[] = []
-    let reverted: MigrationStatusEntry[] = []
-    let batch = getBatch(journal)
+    if (target) {
+      toRun = toRun.filter((migration) => migration.id <= target)
+    }
+
+    if (step !== undefined) {
+      toRun = toRun.slice(0, step)
+    }
+  } else {
+    toRun = migrations.filter((migration) => appliedMap.has(migration.id)).reverse()
+
+    if (target) {
+      toRun = toRun.filter((migration) => migration.id >= target)
+    }
+
+    if (step !== undefined) {
+      toRun = toRun.slice(0, step)
+    }
 
     for (let migration of toRun) {
-      let script = (input.direction === 'up' ? migration.up : migration.down) as string
-      let mode = resolveTransactionMode(migration)
+      if (migration.down === undefined) {
+        throw new Error('Migration "' + migration.id + '" has no down script')
+      }
+    }
+  }
 
-      if (mode === 'required' && !adapter.capabilities.transactionalDdl) {
-        throw new Error(
-          'Migration "' +
-            migration.id +
-            '" requires transactional DDL, but adapter does not support it',
-        )
+  let applied: MigrationStatusEntry[] = []
+  let reverted: MigrationStatusEntry[] = []
+  let batch = getBatch(journal)
+
+  for (let migration of toRun) {
+    let script = (input.direction === 'up' ? migration.up : migration.down) as string
+    let mode = resolveTransactionMode(migration)
+
+    if (mode === 'required' && !adapter.capabilities.transactionalDdl) {
+      throw new Error(
+        'Migration "' +
+          migration.id +
+          '" requires transactional DDL, but adapter does not support it',
+      )
+    }
+
+    let shouldUseTransaction = !dryRun && mode !== 'none' && adapter.capabilities.transactionalDdl
+    let token: TransactionToken | undefined
+
+    if (shouldUseTransaction) {
+      token = await adapter.beginTransaction()
+    }
+
+    sql.push(script)
+
+    try {
+      if (!dryRun) {
+        if (script.trim().length > 0) {
+          await adapter.executeScript(script, token)
+        }
       }
 
-      let shouldUseTransaction = !dryRun && mode !== 'none' && adapter.capabilities.transactionalDdl
-      let token: TransactionToken | undefined
-
-      if (shouldUseTransaction) {
-        token = await adapter.beginTransaction()
-      }
-
-      sql.push(script)
-
-      try {
+      if (input.direction === 'up') {
         if (!dryRun) {
-          if (script.trim().length > 0) {
-            await adapter.executeScript(script, token)
-          }
+          await insertJournalRow(
+            adapter,
+            journalTable,
+            {
+              id: migration.id,
+              name: migration.name,
+              checksum: await computeChecksum(migration),
+              batch,
+            },
+            token,
+          )
         }
 
-        if (input.direction === 'up') {
-          if (!dryRun) {
-            await insertJournalRow(
-              adapter,
-              journalTable,
-              {
-                id: migration.id,
-                name: migration.name,
-                checksum: await computeChecksum(migration),
-                batch,
-              },
-              token,
-            )
-          }
-
-          applied.push({
-            id: migration.id,
-            name: migration.name,
-            status: 'applied',
-          })
-        } else {
-          if (!dryRun) {
-            await deleteJournalRow(adapter, journalTable, migration.id, token)
-          }
-
-          reverted.push({
-            id: migration.id,
-            name: migration.name,
-            status: 'pending',
-          })
+        applied.push({
+          id: migration.id,
+          name: migration.name,
+          status: 'applied',
+        })
+      } else {
+        if (!dryRun) {
+          await deleteJournalRow(adapter, journalTable, migration.id, token)
         }
 
-        if (token) {
-          await adapter.commitTransaction(token)
-        }
-      } catch (error) {
-        if (token) {
-          await adapter.rollbackTransaction(token)
-        }
-
-        throw error
+        reverted.push({
+          id: migration.id,
+          name: migration.name,
+          status: 'pending',
+        })
       }
-    }
 
-    return {
-      applied,
-      reverted,
-      sql,
+      if (token) {
+        await adapter.commitTransaction(token)
+      }
+    } catch (error) {
+      if (token) {
+        await adapter.rollbackTransaction(token)
+      }
+
+      throw error
     }
-  } finally {
-    await adapter.releaseMigrationLock?.()
+  }
+
+  return {
+    applied,
+    reverted,
+    sql,
   }
 }
 

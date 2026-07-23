@@ -454,6 +454,10 @@ let runner = createMigrationRunner(db.adapter, migrations, {
 
 Omit `journalTable` to use `data_table_migrations`.
 
+Adapters with migration locking run the complete migration and journal lifecycle through the
+connection that owns the lock. This keeps advisory locks correctly paired when the adapter uses a
+connection pool, including pools configured with a single connection.
+
 Use `step` for bounded rollforward/rollback behavior instead of a target id:
 
 ```ts

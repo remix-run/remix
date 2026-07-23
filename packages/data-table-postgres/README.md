@@ -38,6 +38,8 @@ Use `db.query(...)`, relation loading, and transactions from `remix/data-table`.
 
 Config-backed adapters support `db.wipe()` and `db.reset()`. You may continue passing an existing `pg` pool or client when your application owns the driver lifecycle, but destructive lifecycle methods are unavailable in that mode.
 
+Migration runs reserve one connection for the PostgreSQL advisory lock, migration SQL, and journal updates. The connection is always unlocked and returned to the pool after the run.
+
 ## Adapter Capabilities
 
 `data-table-postgres` reports this capability set by default:

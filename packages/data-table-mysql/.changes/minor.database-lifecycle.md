@@ -1,1 +1,1 @@
-Added config-backed MySQL adapter construction and database wiping for `remix db`. Existing `mysql2` pools and connections remain supported for applications that own the driver lifecycle, but wiping requires config-backed construction (see #11608).
+Added config-backed MySQL adapter construction, connection-scoped migration locking, and database wiping for `remix db`. Existing `mysql2` pools and connections remain supported for applications that own the driver lifecycle, but wiping requires config-backed construction (see #11608).

@@ -64,6 +64,8 @@ let adapter = createMysqlDatabaseAdapter({
 
 Config-backed adapters support `db.wipe()` and `db.reset()`. You may continue passing an existing `mysql2` pool or connection when your application owns the driver lifecycle, but destructive lifecycle methods are unavailable in that mode.
 
+Migration runs reserve one connection for the MySQL named lock, migration SQL, and journal updates. Lock acquisition failures are reported instead of allowing the migration to proceed, and the connection is always unlocked and returned to the pool after the run.
+
 ### `returning` On MySQL
 
 MySQL does not natively support SQL `RETURNING`. In this adapter, using `returning` on write operations throws `DataTableQueryError`.
