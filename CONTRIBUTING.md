@@ -1,177 +1,188 @@
-Welcome to Remix! We're excited to have you contribute.
+# Contributing to Remix
 
-This guide will help you get started.
+Thanks for contributing to Remix! There are many valuable ways to help, including reporting
+bugs, improving documentation, proposing features, and submitting code.
+
+This guide explains where each kind of contribution belongs and how to validate code changes
+locally. Repository maintainers should also read [MAINTAINING.md](./MAINTAINING.md) for release
+and publishing procedures.
+
+## Reporting Bugs
+
+[GitHub Issues](https://github.com/remix-run/remix/issues) are reserved for demonstrable,
+reproducible bugs in Remix. Issues are not used for troubleshooting, Q&A, or Feature Requests.
+
+Before opening an issue, make sure the behavior is caused by Remix
+and is not a usage question or feature request.
+
+Every bug report must include a **minimal**, **runnable** reproduction:
+
+- **Minimal** means the reproduction contains only the code needed to demonstrate the problem.
+  Do not link to a production application or a large existing codebase.
+- **Runnable** means maintainers can install or open the reproduction and observe the problem
+  without assembling code themselves.
+- Reproductions should be provided as a small GitHub repository.
+- Code snippets are not considered valid reproductions.
+
+Issues without a minimal, runnable reproduction may be closed. This keeps the issue tracker
+focused on reports that maintainers and contributors can investigate and fix.
+
+Clear errors or gaps in the documentation are considered bugs. For documentation issues, a link to
+the relevant page in the [live Remix documentation](https://remix.run/docs) and an explanation
+of what is incorrect or missing is an acceptable reproduction. Requests for large-scale documentation
+changes should follow the [Proposing Features](#proposing-features) process.
+
+If you need help using Remix or troubleshooting an application, you can ask in our
+[Discord](https://remix.run/discord) or start a
+[Q&A Discussion](https://github.com/remix-run/remix/discussions/new?category=q-a).
+
+## Proposing Features
+
+Feature requests and changes to existing behavior should begin as a
+[Proposal Discussion](https://github.com/remix-run/remix/discussions/new?category=proposals),
+not an issue or pull request.
+
+A useful proposal explains the problem or limitation in the current API, describes the use
+cases that need to be supported, and includes sample code when it helps illustrate the desired
+experience. Starting with the problem gives the community room to consider whether a new API is
+the right solution, as well as discuss API design ahead of implementation.
+
+Please do not open a pull request implementing a new feature unless a repository maintainer has
+explicitly requested an implementation in the Proposal discussion. Community interest and
+positive feedback are valuable, but they are not authorization to begin implementation.
+
+## Making a Pull Request
+
+Pull requests are welcome for existing issues. A pull request should link to the issue it closes,
+for example with `Closes #1234` in its description.
+
+Before opening a pull request:
+
+- Keep the change focused on the linked issue or authorized proposal.
+- Add or update tests for behavior changes and bug fixes.
+- Update relevant documentation and examples when changing a public API.
+- Add a [change file](#adding-a-change-file) when the change affects published behavior.
+- Run the relevant [local validation](#local-validation).
+
+Pull requests for new features must also link to the Proposal discussion where a repository
+maintainer requested the implementation.
 
 ## Setting Up Your Environment
 
-We develop Remix using [pnpm](https://pnpm.io) on Node 24.3+.
+We develop Remix using [pnpm](https://pnpm.io) on Node 24.3 or newer.
 
-If you're using [VS Code](https://code.visualstudio.com/), we recommend installing the [`node:test runner` extension](https://marketplace.visualstudio.com/items?itemName=connor4312.nodejs-testing) for a smooth testing experience.
+1. Fork the repository and clone your fork.
+2. Run `pnpm install` from the repository root.
 
-Once that's set up, run `pnpm install` to get all the project dependencies.
+## Local Validation
 
-## Testing
+For the fastest local feedback loop, run:
 
-All tests run directly from source. This makes it easy to use breakpoint debugging when running tests. This also means you should not need to run a build before running the tests.
+```sh
+pnpm lint
+pnpm typecheck:changed
+pnpm test:changed
+```
+
+The changed-workspace commands compare your work against `origin/main` and include uncommitted
+changes. For broad cross-workspace changes, shared root configuration changes, or changes that
+could affect the whole repository, run the full test and typecheck suites:
+
+```sh
+pnpm typecheck
+pnpm test
+```
+
+You can also check formatting without modifying files:
+
+```sh
+pnpm format:check
+```
+
+### Testing
+
+Tests run directly from source, so you do not need to build before running them.
 
 ```sh
 # Run all tests
-$ pnpm test
-# Run the tests for a specific package
-$ pnpm --filter @remix-run/headers run test
+pnpm test
+
+# Run tests for a specific package
+pnpm --filter @remix-run/headers run test
+
+# Run a single test file from its package directory
+cd packages/headers
+pnpm test src/lib/accept.test.ts
 ```
 
-## Building
+### Building
 
-All packages are built using a combination of tsc and esbuild.
+Packages are built using a combination of TypeScript and esbuild.
 
 ```sh
 # Build all packages
-$ pnpm run build
-# Build a specific package
-$ pnpm --filter @remix-run/headers run build
-```
+pnpm build
 
-All packages are published with TypeScript types along with both ESM and CJS module formats.
+# Build a specific package
+pnpm --filter @remix-run/headers run build
+```
 
 ## Making Changes
 
-Packages live in the [`packages` directory](https://github.com/remix-run/remix/tree/v3/packages). At a minimum, each package includes:
+Packages live in the [`packages` directory](https://github.com/remix-run/remix/tree/main/packages).
+At a minimum, each package includes:
 
-- `CHANGELOG.md`: A log of what's changed
+- `CHANGELOG.md`: A log of what has changed
 - `package.json`: Package metadata and dependencies
 - `README.md`: Information about the package
 - `src/`: The package's source code
 
-Packages may also include a `.changes/` directory when they have unreleased changes or prerelease configuration.
-
-When you make changes to a package, please make sure you add a few relevant tests and run the whole test suite to make sure everything still works. Then, [add a change file](#adding-a-change-file) when the change affects published behavior and [make a pull request](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/proposing-changes-to-your-work-with-pull-requests/creating-a-pull-request). We will take a look at it as soon as we can.
+`.changes/` directories are created on demand. A package has one only when it contains unreleased
+changes.
 
 ### Adding a Change File
 
-When making user-facing changes to a package, create a markdown file in the package's `.changes/` directory following this naming convention. If the package does not already have a `.changes/` directory, create it when you add the change file.
+When making user-facing changes to a package, run the interactive change-file generator:
 
+```sh
+pnpm changes:add
 ```
+
+Select the affected packages and change type, then enter a description. The generator creates a
+Markdown file in the `.changes/` directory using this naming convention:
+
+```text
 [major|minor|patch].short-description.md
 ```
 
-- `major` - Breaking changes for v1.x+ packages
-- `minor` - Breaking changes for v0.x packages, new features
+- `major` - Breaking changes for stable packages
+- `minor` - New features (as well as breaking changes for `v0.x` packages)
 - `patch` - Bug fixes
 
-Do not add change files for internal-only refactors, test-only changes, or packages that are released only because one of their dependencies changed. The release scripts automatically include dependent packages and generate dependency bump changelog entries.
+Do not add change files for internal-only refactors, test-only changes, or packages that are
+released only because one of their dependencies changed. The release scripts automatically
+include dependent packages and generate dependency-bump changelog entries.
 
 #### Examples
 
-- `major.change-something.md` - Breaking change for v1.x+ packages
-- `minor.change-something.md` - Breaking change for v0.x packages
+- `major.change-something.md` - Breaking change for a v1.x or newer package
 - `minor.add-something.md` - New feature
 - `patch.fix-something.md` - Bug fix
 
 #### Content Format
 
-Write your change as a bullet point (without the leading `-` or `*`). This content will be added to the CHANGELOG during release.
+Write your change as a bullet point without the leading `-` or `*`. This content will be added to
+the changelog during release.
 
 ```markdown
 Add support for X feature
 
-This is an optional longer explanation that will be indented under the main bullet point in the CHANGELOG.
+This is an optional longer explanation that will be indented under the main bullet point in the
+changelog.
 ```
-
-For breaking changes in v0.x packages, any change files that begin with `BREAKING CHANGE: ` will be hoisted to the top of the release notes:
-
-```markdown
-BREAKING CHANGE: Renamed `foo` option to `bar`
-
-Migration: Update your config to use `bar` instead of `foo`.
-```
-
-#### Validation
 
 Change files are automatically validated in CI. You can also validate them locally:
 
 ```sh
 pnpm changes:validate
-```
-
-## Releases
-
-Releases are automated via the [release-pr workflow](/.github/workflows/release-pr.yaml) and [publish workflow](/.github/workflows/publish.yaml).
-
-1. **You push changes to `main`** with change files in `packages/<package>/.changes/`
-
-2. **A "Release" PR is automatically opened** (or updated if one exists)
-
-   The PR contains:
-   - Updated `package.json` versions
-   - Updated `CHANGELOG.md` files
-   - Deleted change files
-
-   This PR should not be edited manually. If you need to make changes, modify the change files and/or scripts in `main` to trigger an update to the PR.
-
-3. **When you merge the PR**, the publish workflow runs (it runs on every push to `main` and checks for change files). Since the change files have been deleted, it publishes all unpublished packages to npm, then creates git tags and GitHub releases based on what was actually published.
-
-### Manual Versioning
-
-The "Release" PR simply automates the `pnpm changes:version` command. If needed, you can run this command manually. This will update the `package.json` versions, `CHANGELOG.md` files, and delete the change files. It will then commit the result.
-
-```sh
-pnpm changes:version
-```
-
-You can skip committing the changes by using the `--no-commit` flag. This will leave the changes in a staged state for you to review and commit manually. The command will also output the commit message that would have been used.
-
-```sh
-pnpm changes:version --no-commit
-```
-
-Tags and GitHub releases are created automatically by the publish workflow after successful npm publish.
-
-### Prerelease Mode
-
-Packages can opt into prerelease mode by creating an optional `.changes/config.json` file:
-
-```json
-{
-  "prereleaseChannel": "alpha"
-}
-```
-
-The `prereleaseChannel` field determines the version suffix (e.g. `alpha`, `beta`, `rc`), while prereleases are always published to npm with the `next` tag. This is currently used for `remix`.
-
-#### Bumping prerelease versions
-
-While in prerelease mode, add change files as normal. The prerelease counter increments (e.g. `3.0.0-alpha.1` → `3.0.0-alpha.2`). Changelog entries are grouped under "Pre-release Changes", and the bump type is otherwise ignored—only the prerelease counter is bumped.
-
-#### Transitioning between prerelease channels
-
-To transition between channels (e.g. `alpha` → `beta`):
-
-1. Update `prereleaseChannel` in `.changes/config.json` to the new channel
-2. Add a change file describing the transition
-
-Version resets to the new channel (e.g. `3.0.0-alpha.7` → `3.0.0-beta.0`). The bump type is for changelog categorization only—by convention, use `patch`.
-
-#### Graduating a prerelease package to stable
-
-To release the stable version:
-
-1. Remove `prereleaseChannel` from `.changes/config.json` (or delete the file)
-2. Add a change file describing the stable release
-
-The prerelease suffix is stripped (e.g. `3.0.0-rc.7` → `3.0.0`). The bump type is for changelog categorization only—by convention, use `major` for a major release announcement.
-
-## Preview builds
-
-We maintain installable builds of `main` in a `preview/main` branch as a way for folks to test out the latest `main` branch without needing to publish releases to npm and clutter up the npm registry and version history UI.
-
-This is managed via the [`preview` workflow](/.github/workflows/preview.yaml) which uses the [`setup-installable-branch.ts`](./scripts/setup-installable-branch.ts) script to build and commit the build and required `package.json` changes to the `preview/main` branch on every new commit to `main`.
-
-The `preview/main` branch build can be [installed directly](https://pnpm.io/package-sources#install-from-a-git-repository-combining-different-parameters) with `pnpm` (version 9+):
-
-```sh
-pnpm install "remix-run/remix#preview/main&path:packages/remix"
-
-# Or, just install a single package
-pnpm install "remix-run/remix#preview/main&path:packages/fetch-router"
 ```
