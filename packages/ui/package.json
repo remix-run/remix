@@ -107,6 +107,10 @@
       "types": "./src/server/stream.ts",
       "default": "./src/server/stream.ts"
     },
+    "./spa": {
+      "types": "./src/spa/index.ts",
+      "default": "./src/spa/index.ts"
+    },
     "./tabs": {
       "types": "./src/tabs/index.tsx",
       "default": "./src/tabs/index.tsx"
@@ -214,6 +218,10 @@
       "./server": {
         "types": "./dist/server/stream.d.ts",
         "default": "./dist/server/stream.js"
+      },
+      "./spa": {
+        "types": "./dist/spa/index.d.ts",
+        "default": "./dist/spa/index.js"
       },
       "./tabs": {
         "types": "./dist/tabs/index.d.ts",
