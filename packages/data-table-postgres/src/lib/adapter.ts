@@ -446,7 +446,11 @@ function isPostgresQueryable(value: unknown): value is PostgresQueryable {
 }
 
 function isPostgresPool(client: PostgresQueryable): client is PostgresPool {
-  return 'connect' in client && typeof client.connect === 'function'
+  if (client instanceof pg.Client) {
+    return false
+  }
+
+  return 'connect' in client && typeof client.connect === 'function' && !('release' in client)
 }
 
 function resolvePostgresDatabaseName(config: PostgresPoolConfig): string {

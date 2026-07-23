@@ -135,6 +135,131 @@ describe('mysql adapter', () => {
     assert.equal(releaseCalls, 1)
   })
 
+  it('runs migration work directly on client-backed connections', async () => {
+    let statements: string[] = []
+    let connection = {
+      async query(text: string) {
+        statements.push(text)
+
+        if (text.includes('get_lock')) {
+          return [[{ acquired: true, lock_name: 'hashed-lock-name' }], []]
+        }
+
+        return [[{ released: 'true' }], []]
+      },
+    }
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    let result = await adapter.withMigrationLock('app_migrations', async (lockedAdapter) => {
+      assert.equal(lockedAdapter, adapter)
+      return 'done'
+    })
+
+    assert.equal(result, 'done')
+    assert.equal(statements.length, 2)
+    assert.match(statements[0], /get_lock/)
+    assert.match(statements[1], /release_lock/)
+  })
+
+  it('serializes migration locks on the same adapter', async () => {
+    let lifecycle: string[] = []
+    let signalFirstMigrationStarted: () => void = () => undefined
+    let firstMigrationStarted = new Promise<void>((resolve) => {
+      signalFirstMigrationStarted = resolve
+    })
+    let releaseFirstMigration: () => void = () => undefined
+    let firstMigrationCanFinish = new Promise<void>((resolve) => {
+      releaseFirstMigration = resolve
+    })
+    let connection = {
+      async query(text: string) {
+        lifecycle.push(text.includes('get_lock') ? 'lock' : 'unlock')
+        return text.includes('get_lock')
+          ? [[{ acquired: 1n, lock_name: 'hashed-lock-name' }], []]
+          : [[{ released: 1 }], []]
+      },
+    }
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    let firstMigration = adapter.withMigrationLock('app_migrations', async () => {
+      lifecycle.push('first:start')
+      signalFirstMigrationStarted()
+      await firstMigrationCanFinish
+      lifecycle.push('first:end')
+    })
+    let secondMigration = adapter.withMigrationLock('app_migrations', async () => {
+      lifecycle.push('second')
+    })
+
+    await firstMigrationStarted
+    assert.deepEqual(lifecycle, ['lock', 'first:start'])
+
+    releaseFirstMigration()
+    await Promise.all([firstMigration, secondMigration])
+
+    assert.deepEqual(lifecycle, [
+      'lock',
+      'first:start',
+      'first:end',
+      'unlock',
+      'lock',
+      'second',
+      'unlock',
+    ])
+  })
+
+  it('preserves migration errors when releasing the lock also fails', async () => {
+    let migrationError = new Error('migration failed')
+    let connection = {
+      async query(text: string) {
+        if (text.includes('get_lock')) {
+          return [[{ acquired: '1', lock_name: 'hashed-lock-name' }], []]
+        }
+
+        throw new Error('lock cleanup failed')
+      },
+    }
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    await assert.rejects(
+      () =>
+        adapter.withMigrationLock('app_migrations', async () => {
+          throw migrationError
+        }),
+      (error: unknown) => error === migrationError,
+    )
+  })
+
+  it('reports lock release failures after successful migration work', async () => {
+    let connection = {
+      async query(text: string) {
+        return text.includes('get_lock')
+          ? [[{ acquired: 1, lock_name: 'hashed-lock-name' }], []]
+          : [{ released: 1 }, []]
+      },
+    }
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    await assert.rejects(
+      () => adapter.withMigrationLock('app_migrations', async () => 'done'),
+      /migration lock was not held by the reserved connection/,
+    )
+  })
+
+  it('rejects malformed migration lock results', async () => {
+    let connection = {
+      async query() {
+        return [[{ acquired: null, lock_name: 'hashed-lock-name' }], []]
+      },
+    }
+    let adapter = createMysqlDatabaseAdapter(connection as never)
+
+    await assert.rejects(
+      () => adapter.withMigrationLock('app_migrations', async () => undefined),
+      /migration lock could not be acquired/,
+    )
+  })
+
   it('wipes URI-configured databases through a server connection', async (t) => {
     let maintenanceConfig: unknown
     let statements: string[] = []

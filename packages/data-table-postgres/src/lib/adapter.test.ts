@@ -51,6 +51,9 @@ describe('postgres adapter', () => {
           rowCount: 0,
         }
       },
+      async connect() {
+        throw new Error('reserved clients must not reconnect')
+      },
       release() {
         releaseCalls += 1
       },
