@@ -1,14 +1,14 @@
 import { createController } from 'remix/router'
 
 import { routes } from '../routes.ts'
-import { assetServer } from '../utils/assets.ts'
+import { assets } from '../utils/assets.ts'
 import { getMessageLimit } from '../utils/message-limit.ts'
 import { HomePage } from './home.tsx'
 
 export default createController(routes, {
   actions: {
     async assets({ request }) {
-      let assetResponse = await assetServer.fetch(request)
+      let assetResponse = await assets.fetch(request)
       return assetResponse ?? new Response('Not found', { status: 404 })
     },
     home({ render, url }) {

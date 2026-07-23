@@ -212,19 +212,19 @@ The same rules apply to sessions, CSRF, and authentication: load a session befor
 
 Every middleware and action in one `router.fetch(...)` call receives the same request context object. It starts with the original `request`, parsed `url`, a mutable `Headers` copy, the effective `method`, matched `params`, and the current `router`. Middleware can add request-scoped values with `context.set(key, value)`, and downstream code reads them with `context.get(key)`.
 
-Built-in middleware carries its context changes in its TypeScript type. For example, `formData()` provides `context.formData`, while `renderWith(...)` provides the app's typed `context.render(...)` function.
+Built-in middleware carries its context changes in its TypeScript type. For example, `formData()` provides `context.formData`, while `render()` provides the typed `context.render(...)` function.
 
 Back in `app/router.ts`, derive the application context from the configured router and use module augmentation to make that context the default for controllers:
 
 ```ts filename=app/router.ts
 import { formData } from "remix/middleware/form-data";
+import { render } from "remix/middleware/render";
 import { staticFiles } from "remix/middleware/static";
 import { createRouter, type RouterContext } from "remix/router";
 
 import controller from "./actions/controller.tsx";
 import albumsController from "./actions/albums/controller.tsx";
 import albumsEditController from "./actions/albums/edit/controller.tsx";
-import { render } from "./middleware/render.tsx";
 import { routes } from "./routes.ts";
 
 export const router = createRouter({
@@ -265,14 +265,14 @@ Request context is still an explicit per-request value, not a global. If a helpe
 
 The default app starts with static-file and render middleware. Add the others when the request path needs them:
 
-| Middleware         | Import                                        | What it does                                                                                                                | Placement                                                                                       |
-| ------------------ | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
-| `formData()`       | `remix/middleware/form-data`                  | Parses URL-encoded and multipart bodies once, then provides `context.formData`. Non-form requests receive empty `FormData`. | Before `methodOverride()`, CSRF form-field checks, or actions that read parsed form data.       |
-| app `render()`     | `renderWith()` from `remix/middleware/render` | Installs the app's request-scoped `context.render(...)` function.                                                           | After middleware that may answer without rendering.                                             |
-| `staticFiles()`    | `remix/middleware/static`                     | Serves `GET` and `HEAD` requests from a directory, with conditional and range request support.                              | Early, before request enrichment that static files do not need.                                 |
-| `compression()`    | `remix/middleware/compression`                | Negotiates Brotli, gzip, or deflate for suitable downstream responses.                                                      | Before every response it should wrap, including `staticFiles()` when static text is compressed. |
-| `logger()`         | `remix/middleware/logger`                     | Logs the request and downstream response and provides `context.logger(...)`.                                                | Usually first so early responses and `404`s are logged.                                         |
-| `methodOverride()` | `remix/middleware/method-override`            | Replaces `context.method` from a form field, `_method` by default.                                                          | After `formData()` and before route matching.                                                   |
+| Middleware         | Import                             | What it does                                                                                                                | Placement                                                                                       |
+| ------------------ | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| `formData()`       | `remix/middleware/form-data`       | Parses URL-encoded and multipart bodies once, then provides `context.formData`. Non-form requests receive empty `FormData`. | Before `methodOverride()`, CSRF form-field checks, or actions that read parsed form data.       |
+| `render()`         | `remix/middleware/render`          | Installs the standard Remix UI `context.render(...)` function.                                                              | After middleware that may answer without rendering.                                             |
+| `staticFiles()`    | `remix/middleware/static`          | Serves `GET` and `HEAD` requests from a directory, with conditional and range request support.                              | Early, before request enrichment that static files do not need.                                 |
+| `compression()`    | `remix/middleware/compression`     | Negotiates Brotli, gzip, or deflate for suitable downstream responses.                                                      | Before every response it should wrap, including `staticFiles()` when static text is compressed. |
+| `logger()`         | `remix/middleware/logger`          | Logs the request and downstream response and provides `context.logger(...)`.                                                | Usually first so early responses and `404`s are logged.                                         |
+| `methodOverride()` | `remix/middleware/method-override` | Replaces `context.method` from a form field, `_method` by default.                                                          | After `formData()` and before route matching.                                                   |
 
 A server-rendered app that accepts HTML forms might use all six:
 
@@ -281,10 +281,9 @@ import { compression } from "remix/middleware/compression";
 import { formData } from "remix/middleware/form-data";
 import { logger } from "remix/middleware/logger";
 import { methodOverride } from "remix/middleware/method-override";
+import { render } from "remix/middleware/render";
 import { staticFiles } from "remix/middleware/static";
 import { createRouter } from "remix/router";
-
-import { render } from "./middleware/render.tsx";
 
 export const router = createRouter({
   middleware: [
@@ -302,7 +301,7 @@ Global middleware is convenient when most routes use it. If only one action acce
 
 Method override is an exception because it must change `context.method` before route matching. When forms use `_method` to reach `PUT`, `PATCH`, or `DELETE` routes, put both `formData()` and `methodOverride()` in the router middleware stack.
 
-`staticFiles()` serves files exactly as they exist under `public/`. Browser modules compiled from `.browser.ts` and `.browser.tsx` source use `remix/assets` instead; [Files and Assets](/files-and-assets/) covers that pipeline. The next chapter, [Rendering UI](/rendering-ui/), builds the app's `render()` middleware with `renderWith(...)` and `renderToStream(...)`.
+`staticFiles()` serves files exactly as they exist under `public/`. Browser modules compiled from `.browser.ts` and `.browser.tsx` source use `remix/assets` instead; [Files and Assets](/files-and-assets/) covers that pipeline. The next chapter, [Rendering UI](/rendering-ui/), covers how `render()` turns component trees into streamed HTML responses.
 
 ## Custom middleware {#custom-middleware}
 

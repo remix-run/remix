@@ -1542,9 +1542,18 @@ importers:
 
   packages/render-middleware:
     dependencies:
+      '@remix-run/assets':
+        specifier: workspace:^
+        version: link:../assets
       '@remix-run/fetch-router':
         specifier: workspace:^
         version: link:../fetch-router
+      '@remix-run/response':
+        specifier: workspace:^
+        version: link:../response
+      '@remix-run/ui':
+        specifier: workspace:^
+        version: link:../ui
     devDependencies:
       '@remix-run/assert':
         specifier: workspace:*
@@ -1555,9 +1564,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 24.10.4
-      '@typescript/native-preview':
+      typescript:
         specifier: 'catalog:'
-        version: 7.0.0-dev.20251125.1
+        version: 5.9.3
 
   packages/response:
     dependencies:
@@ -1917,7 +1926,7 @@ importers:
         specifier: 'catalog:'
         version: 1.60.0
       typescript:
-        specifier: ^5.9.3
+        specifier: 'catalog:'
         version: 5.9.3
 
   packages/ui/bench:

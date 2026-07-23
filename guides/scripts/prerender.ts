@@ -7,7 +7,7 @@ import { crawl } from '../../api/src/prerender/crawl.ts'
 import { writeResult } from '../../api/src/prerender/utils.ts'
 import { router } from '../app/router.ts'
 import { routes } from '../app/routes.ts'
-import { assetServer } from '../app/utils/assets.ts'
+import { assets } from '../app/utils/assets.ts'
 const guidesDir = path.resolve(import.meta.dirname, '..')
 const publicDir = path.join(guidesDir, 'public')
 const defaultOutputDir = path.join(guidesDir, 'build', 'site')
@@ -41,7 +41,7 @@ try {
   }
 } finally {
   // Release the asset server's file watcher so the process can exit cleanly.
-  await assetServer.close()
+  await assets.close()
 }
 
 // Run pagefind to generate the search index and assets
@@ -66,8 +66,8 @@ async function discoverBrowserEntries(): Promise<string[]> {
       }
 
       let entryPath = path.join(guidesDir, entry)
-      hrefs.add(await assetServer.getHref(entryPath))
-      let preloads = await assetServer.getPreloads(entryPath).catch(() => [])
+      hrefs.add(await assets.getHref(entryPath))
+      let preloads = await assets.getPreloads(entryPath).catch(() => [])
       preloads.forEach((preload) => hrefs.add(preload))
     }
   }

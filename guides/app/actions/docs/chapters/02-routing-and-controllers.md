@@ -217,7 +217,7 @@ Router middleware runs first, then controller middleware, then action middleware
 
 ## Responses, redirects, headers, and errors
 
-Actions return Web `Response` objects. To render pages, you will often set up `render` middleware and add it to the router. That middleware provides `context.render(...)`, which turns a Remix component tree into an HTML response. The [Rendering UI](/rendering-ui/) chapter builds this middleware step by step. Once it is installed, use it in an action:
+Actions return Web `Response` objects. To render pages, add the `render()` middleware from `remix/middleware/render` to the router. That middleware provides `context.render(...)`, which turns a Remix component tree into an HTML response. The [Rendering UI](/rendering-ui/) chapter covers it in more detail. Once it is installed, use it in an action:
 
 ```tsx filename=app/actions/albums/controller.tsx
 // inside the show action:

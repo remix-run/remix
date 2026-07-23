@@ -1,13 +1,14 @@
 # render-middleware
 
-Request-scoped renderer middleware for Remix. It stores a renderer in `fetch-router` request context so route actions can render responses without passing request-specific rendering details through every action.
+Request-scoped response rendering for Remix. It provides the conventional Remix UI renderer and a low-level escape hatch for custom renderers.
 
 ## Features
 
-- **Generic renderers** - Render any input type to a `Response`
-- **Request-scoped setup** - Create renderers from the current `RequestContext`
-- **Typed context** - Typed `context.render` (or `context.get(Renderer)`)
-- **Small runtime** - The package only stores a renderer in request context
+- **Remix UI rendering** - Stream nodes to HTML responses with `render()`
+- **Framework-owned frames** - Resolve nested and targeted `<Frame>` requests through the current router
+- **Client entry assets** - Resolve source-based `clientEntry()` modules through an asset server
+- **Typed context** - Preserve renderer input and response option types on `context.render`
+- **Custom renderers** - Install JSON, email, or other response pipelines with `renderWith()`
 
 ## Installation
 
@@ -17,82 +18,88 @@ npm i remix
 
 ## Usage
 
-Use `renderWith()` to add a renderer to `context.render` and `context.get(Renderer)`.
+Install `render()` in the router middleware stack. Pass an asset server when components use source-based client entries such as `clientEntry(import.meta.url, Component)`.
 
-```ts
-import { createRouter, type MiddlewareContext } from 'remix/router'
-import { renderWith } from 'remix/middleware/render'
+```tsx
+import { createAssetServer } from 'remix/assets'
+import { render } from 'remix/middleware/render'
+import { staticFiles } from 'remix/middleware/static'
+import { createRouter } from 'remix/router'
+import { Frame } from 'remix/ui'
 
-const render = renderWith(
-  (context) =>
-    function render(value: string, init?: ResponseInit) {
-      return new Response(`${context.url.pathname}: ${value}`, init)
-    },
+let assets = createAssetServer({
+  basePath: '/assets',
+  fileMap: { 'app/*path': 'app/*path' },
+  allow: ['app/assets/**'],
+})
+
+let router = createRouter({
+  middleware: [staticFiles('./public'), render({ assets })],
+})
+
+router.get('/', (context) =>
+  context.render(
+    <html>
+      <body>
+        <h1>Dashboard</h1>
+        <Frame src="/activity" fallback={<p>Loading activity…</p>} />
+      </body>
+    </html>,
+  ),
 )
-
-type AppContext = MiddlewareContext<[typeof render]>
-
-const router = createRouter<AppContext>({
-  middleware: [render],
-})
-
-router.get('/hello', (context) => {
-  return context.render('Hello')
-})
 ```
 
-Use `context.render(...)` (or `context.get(Renderer)(...)`).
+`context.render(node, init)` returns an HTML `Response` and preserves the supplied status and headers:
 
-Renderers may render any value type, not just UI nodes.
+```tsx
+router.get('/missing', (context) =>
+  context.render(<h1>Not found</h1>, {
+    status: 404,
+    headers: { 'Cache-Control': 'no-store' },
+  }),
+)
+```
+
+The middleware forwards request credentials and session headers to internal frame requests, converts them to safe `GET` requests, follows redirects, preserves application error bodies, propagates frame targets and top-frame URLs, and cancels frame rendering when the original request is aborted.
+
+### Options
+
+- **`assets`** - An asset server that resolves source-based client entry IDs to browser module URLs. Omit it when client entries already use public URLs or the app has no client entries.
+- **`onError`** - A callback for server rendering errors. When omitted, the UI renderer uses its default error reporting.
+
+## Custom renderers
+
+Use `renderWith()` when the input is not a Remix UI node or the application owns a fully custom response pipeline. The factory runs once per request and may read the current request context.
 
 ```ts
 import { renderWith } from 'remix/middleware/render'
+import { createRouter } from 'remix/router'
 
-const json = renderWith(
+let json = renderWith(
   () =>
     function render(data: unknown, init?: ResponseInit) {
       return Response.json(data, init)
     },
 )
 
-router.get('/api', (context) => {
-  return context.render({ ok: true })
-})
+let router = createRouter({ middleware: [json] })
+
+router.get('/api/status', (context) => context.render({ ok: true }))
 ```
 
-For Remix UI, create a renderer that owns frame resolution and response creation.
-
-```tsx
-import { createHtmlResponse } from 'remix/response/html'
-import { renderWith } from 'remix/middleware/render'
-import type { RemixNode } from 'remix/ui'
-import { renderToStream } from 'remix/ui/server'
-
-const render = renderWith(
-  ({ router, url }) =>
-    function render(node: RemixNode, init?: ResponseInit) {
-      let stream = renderToStream(node, {
-        async resolveFrame(src) {
-          let response = await router.fetch(new URL(src, url))
-
-          if (!response.ok) {
-            return `<pre>Frame error: ${response.status}</pre>`
-          }
-
-          return response.body ?? response.text()
-        },
-      })
-
-      return createHtmlResponse(stream, init)
-    },
-)
-```
+Custom renderers are also available through `context.get(Renderer)` when direct-property access is not suitable.
 
 ## Related Packages
 
-- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Request routing and context
-- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) - Remix UI rendering primitives
-- [`response`](https://github.com/remix-run/remix/tree/main/packages/response) - Response helpers
+- [`assets`](https://github.com/remix-run/remix/tree/main/packages/assets) - Source asset compilation and browser module URLs
+- [`fetch-router`](https://github.com/remix-run/remix/tree/main/packages/fetch-router) - Request routing and typed context
+- [`ui`](https://github.com/remix-run/remix/tree/main/packages/ui) - Remix UI components, frames, and server rendering
+- [`response`](https://github.com/remix-run/remix/tree/main/packages/response) - Web `Response` helpers
+
+## Related Work
+
+- [Fetch API](https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API)
+- [Streams API](https://developer.mozilla.org/en-US/docs/Web/API/Streams_API)
 
 ## License
 

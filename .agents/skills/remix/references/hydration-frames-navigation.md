@@ -65,25 +65,17 @@ export const Counter = clientEntry(
 )
 ```
 
-On the server, provide `resolveClientEntry` to `renderToStream(...)` so source file URLs become browser-loadable asset URLs. Keep this resolution in the render helper so component modules do not hard-code deployment-specific asset paths:
+On the server, pass the asset server to the standard render middleware so source file URLs become browser-loadable asset URLs without hard-coding deployment paths in component modules:
 
 ```tsx
-let stream = renderToStream(<App />, {
-  async resolveClientEntry(entryId, component) {
-    let exportName = entryId.split('#')[1] || component.name
-    if (!exportName) {
-      throw new Error(`Unable to resolve client entry export for ${entryId}`)
-    }
+import { render } from 'remix/middleware/render'
 
-    return {
-      href: await assetServer.getHref(entryId),
-      exportName,
-    }
-  },
+let router = createRouter({
+  middleware: [render({ assets })],
 })
 ```
 
-If the module export name differs from the component function name, include `#ExportName` in the entry ID or return the exact export name from `resolveClientEntry`. A render helper that only supports source-owned entries can also fail fast when `entryId` is not a `file://` URL.
+If the module export name differs from the component function name, include `#ExportName` in the entry ID. Custom rendering pipelines may instead provide the exact export name through `renderToStream({ resolveClientEntry })`.
 
 On the server, `clientEntry` components render like any other component. The server wraps their output in comment markers and serializes props into a `<script type="application/json">` tag.
 
@@ -181,9 +173,22 @@ Frames can nest. Each frame owns its own DOM region and hydrates client entries 
 
 ## Server Rendering
 
+Normal applications install the conventional middleware and render at the action boundary:
+
+```tsx
+import { render } from 'remix/middleware/render'
+import { createRouter } from 'remix/router'
+
+let router = createRouter({ middleware: [render()] })
+
+router.get('/', (context) => context.render(<App />, { status: 200 }))
+```
+
+The middleware seeds frame URLs from the request, resolves nested and targeted frames through the current router, forwards session and authentication headers safely, follows frame redirects, preserves application error bodies, and cancels rendering with the request.
+
 ### `renderToStream`
 
-Renders a component tree to a `ReadableStream<Uint8Array>`. Sends initial HTML immediately and streams frame content as it resolves:
+Use this low-level API when replacing the standard response pipeline. It renders a component tree to a `ReadableStream<Uint8Array>`, sends initial HTML immediately, and streams frame content as it resolves:
 
 ```tsx
 import { renderToStream } from 'remix/ui/server'

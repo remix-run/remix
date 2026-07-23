@@ -6,14 +6,13 @@ import { redirect } from 'remix/response/redirect'
 
 import { listSchedules } from '../../data/schedules.ts'
 import { routes } from '../../routes.ts'
-import { render } from '../../utils/render.tsx'
 import { SchedulePage } from '../schedules/page.tsx'
 import { HomePage } from './page.tsx'
 
 export const home = createController(routes.home, {
   actions: {
     async index(context) {
-      let { get, request } = context
+      let { get } = context
       let auth = get(Auth)
 
       if (auth.ok) {
@@ -24,18 +23,17 @@ export const home = createController(routes.home, {
           return redirect(routes.schedules.show.href({ scheduleId: String(latestSchedule.id) }))
         }
 
-        return render(
+        return context.render(
           <SchedulePage
             activeScheduleId={undefined}
             csrfToken={getCsrfToken(context)}
             schedule={undefined}
             schedules={schedules}
           />,
-          request,
         )
       }
 
-      return render(<HomePage />, request)
+      return context.render(<HomePage />)
     },
   },
 })

@@ -160,13 +160,13 @@ export default createController(routes.albums, {
 
 Finally, we need to map the albums route map to our router in `app/router.ts`:
 
-```ts filename=app/router.ts lines=[5,12]
+```ts filename=app/router.ts lines=[6,12]
 import { createRouter, type RouterContext } from "remix/router";
+import { render } from "remix/middleware/render";
 import { staticFiles } from "remix/middleware/static";
 
 import controller from "./actions/controller.tsx";
 import albumsController from "./actions/albums/controller.tsx";
-import { render } from "./middleware/render.tsx";
 import { routes } from "./routes.ts";
 
 // ...
@@ -231,7 +231,7 @@ export function AlbumPage(handle: Handle<{ id: string }>) {
 }
 ```
 
-To use this component we need to render and return the response in our action. The route still returns a Web `Response`, but `context.render(...)` creates that response from a component tree instead of a string. Pass the matched `albumId` through for now so the page keeps showing the route param from the previous section. The render middleware is app code, and the [Rendering UI](/rendering-ui/) chapter shows where it comes from.
+To use this component we need to render and return the response in our action. The route still returns a Web `Response`, but `context.render(...)` creates that response from a component tree instead of a string. Pass the matched `albumId` through for now so the page keeps showing the route param from the previous section. The render middleware comes from `remix/middleware/render`, and the [Rendering UI](/rendering-ui/) chapter covers how it works.
 
 ```tsx filename=app/actions/albums/controller.tsx lines=[4,9]
 import { createController } from "remix/router";
@@ -431,14 +431,14 @@ export default createController(routes.albums.edit, {
 
 And map it to the router as well:
 
-```ts filename=app/router.ts lines=[6,14]
+```ts filename=app/router.ts lines=[7,14]
 import { createRouter, type RouterContext } from "remix/router";
+import { render } from "remix/middleware/render";
 import { staticFiles } from "remix/middleware/static";
 
 import controller from "./actions/controller.tsx";
 import albumsController from "./actions/albums/controller.tsx";
 import albumsEditController from "./actions/albums/edit/controller.tsx";
-import { render } from "./middleware/render.tsx";
 import { routes } from "./routes.ts";
 
 // ...

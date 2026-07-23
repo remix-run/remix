@@ -15,7 +15,7 @@ Cover current values in `handle.props`, setup-scope state, derived values in ren
 
 ## Rendering pages through request context {#rendering-pages-through-request-context}
 
-Use `renderWith()` from `remix/middleware/render` to install an app renderer, then return `context.render(<Page />)` from actions. Keep the renderer responsible for `renderToStream()`, frame resolution, client-entry resolution, and `createHtmlResponse()` so actions do not repeat request-specific setup.
+Add `render()` from `remix/middleware/render` to the router, then return `context.render(<Page />)` from actions. The middleware owns `renderToStream()`, frame resolution, client-entry resolution, and `createHtmlResponse()` so actions do not repeat request-specific setup. Pass `render({ assets })` so source-based `clientEntry()` modules resolve to browser URLs, and reserve `renderWith()` for custom rendering pipelines.
 
 ## Server rendering with renderToStream and renderToString {#server-rendering-with-rendertostream-and-rendertostring}
 

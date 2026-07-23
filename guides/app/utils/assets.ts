@@ -9,7 +9,7 @@ const isDevelopment = nodeEnv === 'development'
 const isProduction = nodeEnv === 'production'
 const rootDir = path.resolve(import.meta.dirname, '../../..')
 
-export const assetServer = createAssetServer({
+export const assets = createAssetServer({
   basePath: assetsBase,
   rootDir,
   fileMap: {

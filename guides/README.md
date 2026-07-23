@@ -16,7 +16,6 @@ The guides are the hand-authored docs: Start Here, Core App Structure, Server Ru
 - `app/entry.browser.ts` and `app/dev-refresh.browser.ts` — browser entrypoints served by the asset server.
 - `app/styles/docs.css` — the stylesheet entrypoint. It imports the single token set, base rules, shell, search, index, article, and Markdown styles from focused sibling files.
 - `app/middleware/asset-entry.ts` — source-served browser module hrefs and preloads.
-- `app/middleware/render.ts` — the request-scoped `render()` helper and frame resolver.
 - `app/routes.ts` and `app/router.ts` — the typed route contract and controller wiring.
 - `app/ui/` — shared UI used across routes.
 - `app/utils/assets.ts` — the source asset server configuration, shaped around app browser modules plus the Remix browser packages needed by those modules.
