@@ -54,7 +54,37 @@ describe('compression()', () => {
 
     assert.equal(response.status, 200)
     assert.equal(response.headers.get('Content-Encoding'), null)
+    assert.equal(response.headers.get('Vary'), null)
     assert.equal(await response.text(), 'fake image data')
+  })
+
+  it('marks identity responses as Accept-Encoding variants', async () => {
+    let router = createRouter({
+      middleware: [compression()],
+    })
+
+    router.get(
+      '/app.js',
+      () =>
+        new Response('console.log("Hello, World!")', {
+          headers: { 'Content-Type': 'text/javascript' },
+        }),
+    )
+
+    let identityResponse = await router.fetch('https://remix.run/app.js', {
+      headers: { 'Accept-Encoding': 'identity' },
+    })
+
+    assert.equal(identityResponse.headers.get('Content-Encoding'), null)
+    assert.match(identityResponse.headers.get('Vary') ?? '', /(?:^|,)\s*accept-encoding\s*(?:,|$)/i)
+    assert.equal(await identityResponse.text(), 'console.log("Hello, World!")')
+
+    let gzipResponse = await router.fetch('https://remix.run/app.js', {
+      headers: { 'Accept-Encoding': 'gzip' },
+    })
+
+    assert.equal(gzipResponse.headers.get('Content-Encoding'), 'gzip')
+    assert.match(gzipResponse.headers.get('Vary') ?? '', /(?:^|,)\s*accept-encoding\s*(?:,|$)/i)
   })
 
   it('respects threshold option', async () => {
@@ -75,6 +105,7 @@ describe('compression()', () => {
     })
 
     assert.equal(response.headers.get('Content-Encoding'), null)
+    assert.equal(response.headers.get('Vary'), null)
     assert.equal(await response.text(), 'Small')
   })
 
