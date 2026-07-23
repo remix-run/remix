@@ -224,18 +224,8 @@ describe('form navigation', () => {
     document.body.textContent = ''
   })
 
-  it('replaces same-location POST submission history before commit when supported', async (t) => {
-    let navigateListener: EventListener | undefined
-    let destinationUrl = window.location.href
-    let stubNavigation = {
-      currentEntry: { url: destinationUrl },
-      updateCurrentEntry: mock.fn(),
-      addEventListener(type: string, listener: EventListener) {
-        if (type === 'navigate') navigateListener = listener
-      },
-    }
-    stubGlobalField(t, 'navigation', stubNavigation)
-    stubGlobalField(t, 'NavigationPrecommitController', class {})
+  it('replaces same-location POST submission history before commit when supported', async () => {
+    expect(typeof Reflect.get(window, 'NavigationPrecommitController')).toBe('function')
 
     let reload = mock.fn(async (_options?: FrameReloadOptions) => new AbortController().signal)
     let topFrame = { src: '', reload } as unknown as FrameHandle
@@ -246,32 +236,23 @@ describe('form navigation', () => {
     })
 
     let form = document.createElement('form')
+    form.action = window.location.href
     form.method = 'post'
     let input = document.createElement('input')
     input.name = 'displayName'
     input.value = 'Ada'
     form.append(input)
+    document.body.append(form)
 
-    let handler: (() => Promise<void>) | undefined
-    let precommitHandler:
-      | ((controller: { redirect(url: string, init: unknown): void }) => void)
-      | undefined
-    let intercept = mock.fn((options?: NavigationInterceptOptions) => {
-      handler = options?.handler
-      let candidate = options && Reflect.get(options, 'precommitHandler')
-      if (typeof candidate === 'function') {
-        precommitHandler = (controller) => candidate(controller)
-      }
-    })
-    let event = createFormNavigateEvent(form, { intercept, destinationUrl, cancelable: true })
+    let entryBeforeSubmission = getCurrentNavigationEntry()
+    let entryCountBeforeSubmission = window.navigation.entries().length
+    let navigationSucceeded = waitForNavigationSuccess()
+    form.requestSubmit()
+    await navigationSucceeded
 
-    navigateListener?.(event)
-
-    let redirect = mock.fn()
-    precommitHandler?.({ redirect })
-    expect(redirect).toHaveBeenCalledWith(destinationUrl, { history: 'replace' })
-
-    await handler?.()
+    let entryAfterSubmission = getCurrentNavigationEntry()
+    expect(window.navigation.entries()).toHaveLength(entryCountBeforeSubmission)
+    expect(entryAfterSubmission.url).toBe(entryBeforeSubmission.url)
     expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     expect(reload.mock.calls[0]?.arguments[0]?.formData?.get('displayName')).toBe('Ada')
 
@@ -279,21 +260,6 @@ describe('form navigation', () => {
   })
 
   it('replays same-location POST submissions as replace navigations without precommit support', async (t) => {
-    let navigateListener: EventListener | undefined
-    let destinationUrl = window.location.href
-    let navigate = mock.fn((_url: string, _options?: NavigationNavigateOptions) => ({
-      committed: Promise.resolve(undefined),
-      finished: Promise.resolve(undefined),
-    }))
-    let stubNavigation = {
-      currentEntry: { url: destinationUrl },
-      navigate,
-      updateCurrentEntry: mock.fn(),
-      addEventListener(type: string, listener: EventListener) {
-        if (type === 'navigate') navigateListener = listener
-      },
-    }
-    stubGlobalField(t, 'navigation', stubNavigation)
     stubGlobalField(t, 'NavigationPrecommitController', undefined)
 
     let reload = mock.fn(async (_options?: FrameReloadOptions) => new AbortController().signal)
@@ -305,138 +271,64 @@ describe('form navigation', () => {
     })
 
     let form = document.createElement('form')
+    form.action = window.location.href
     form.method = 'post'
-    form.setAttribute('rmx-target', 'account')
     let input = document.createElement('input')
     input.name = 'displayName'
     input.value = 'Ada'
     form.append(input)
+    document.body.append(form)
 
-    let initialIntercept = mock.fn()
-    let initialEvent = createFormNavigateEvent(form, {
-      intercept: initialIntercept,
-      destinationUrl,
-      cancelable: true,
-    })
+    let entryBeforeSubmission = getCurrentNavigationEntry()
+    let entryCountBeforeSubmission = window.navigation.entries().length
+    let navigationSucceeded = waitForNavigationSuccess()
+    form.requestSubmit()
+    await navigationSucceeded
 
-    navigateListener?.(initialEvent)
-
-    expect(initialEvent.defaultPrevented).toBe(true)
-    expect(initialIntercept).not.toHaveBeenCalled()
-    expect(navigate).toHaveBeenCalledTimes(1)
-    let replayOptions = navigate.mock.calls[0]?.arguments[1]
-    expect(replayOptions?.history).toBe('replace')
-    expect(replayOptions?.state).toEqual({
-      target: 'account',
-      src: destinationUrl,
-      resetScroll: true,
-      $rmx: true,
-    })
-
-    let handler: (() => Promise<void>) | undefined
-    navigateListener?.(
-      Object.assign(new Event('navigate'), {
-        canIntercept: true,
-        navigationType: 'replace',
-        info: replayOptions?.info,
-        signal: new AbortController().signal,
-        destination: {
-          url: destinationUrl,
-          key: 'replayed',
-          getState: () => replayOptions?.state,
-        },
-        intercept(options?: NavigationInterceptOptions) {
-          handler = options?.handler
-        },
-      }),
-    )
-    await handler?.()
-
-    expect(reload).toHaveBeenCalledTimes(1)
+    let entryAfterSubmission = getCurrentNavigationEntry()
+    expect(window.navigation.entries()).toHaveLength(entryCountBeforeSubmission)
+    expect(entryAfterSubmission.url).toBe(entryBeforeSubmission.url)
     expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
     expect(reload.mock.calls[0]?.arguments[0]?.formData?.get('displayName')).toBe('Ada')
 
     controller.abort()
   })
 
-  it('does not replace POST submission history for a different location', (t) => {
-    let navigateListener: EventListener | undefined
-    let stubNavigation = {
-      currentEntry: { url: window.location.href },
-      updateCurrentEntry: mock.fn(),
-      addEventListener(type: string, listener: EventListener) {
-        if (type === 'navigate') navigateListener = listener
-      },
-    }
-    stubGlobalField(t, 'navigation', stubNavigation)
-    stubGlobalField(t, 'NavigationPrecommitController', class {})
-
+  it('pushes POST submission history for a different location', async () => {
+    let reload = mock.fn(async (_options?: FrameReloadOptions) => new AbortController().signal)
+    let topFrame = { src: '', reload } as unknown as FrameHandle
     let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
+    startNavigationListenerImpl(controller.signal, {
+      getTopFrame: () => topFrame,
+      getNamedFrame: () => topFrame,
+    })
 
+    let destination = new URL(window.location.href)
+    destination.searchParams.set('form-navigation', 'post')
     let form = document.createElement('form')
+    form.action = destination.href
     form.method = 'post'
-    let interceptOptions: NavigationInterceptOptions | undefined
-    navigateListener?.(
-      createFormNavigateEvent(form, {
-        intercept(options) {
-          interceptOptions = options
-        },
-        destinationUrl: new URL('/account', window.location.origin).href,
-        cancelable: true,
-      }),
-    )
+    document.body.append(form)
 
-    expect(interceptOptions).toBeDefined()
-    expect(interceptOptions && Reflect.has(interceptOptions, 'precommitHandler')).toBe(false)
+    let entryBeforeSubmission = getCurrentNavigationEntry()
+    let didNavigate = false
+    try {
+      let navigationSucceeded = waitForNavigationSuccess()
+      form.requestSubmit()
+      await navigationSucceeded
+      didNavigate = true
 
-    controller.abort()
+      let entryAfterSubmission = getCurrentNavigationEntry()
+      expect(entryAfterSubmission.index).toBe(entryBeforeSubmission.index + 1)
+      expect(entryAfterSubmission.url).toBe(destination.href)
+      expect(reload.mock.calls[0]?.arguments[0]?.method).toBe('post')
+    } finally {
+      if (didNavigate) await window.navigation.back().finished
+      controller.abort()
+    }
   })
 
-  it('does not replace GET submission history', (t) => {
-    let navigateListener: EventListener | undefined
-    let stubNavigation = {
-      updateCurrentEntry: mock.fn(),
-      addEventListener(type: string, listener: EventListener) {
-        if (type === 'navigate') navigateListener = listener
-      },
-    }
-    stubGlobalField(t, 'navigation', stubNavigation)
-    stubGlobalField(t, 'NavigationPrecommitController', class {})
-
-    let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, stubFrames)
-
-    let form = document.createElement('form')
-    form.method = 'get'
-    let interceptOptions: NavigationInterceptOptions | undefined
-    navigateListener?.(
-      createFormNavigateEvent(form, {
-        intercept(options) {
-          interceptOptions = options
-        },
-        destinationUrl: new URL('/search?q=frames', window.location.origin).href,
-        cancelable: true,
-      }),
-    )
-
-    expect(interceptOptions).toBeDefined()
-    expect(interceptOptions && Reflect.has(interceptOptions, 'precommitHandler')).toBe(false)
-
-    controller.abort()
-  })
-
-  it('reloads a targeted frame with submitter-overridden submission metadata', async (t) => {
-    let navigateListener: EventListener | undefined
-    let updateCurrentEntry = mock.fn()
-    let stubNavigation = {
-      updateCurrentEntry,
-      addEventListener(type: string, listener: EventListener) {
-        if (type === 'navigate') navigateListener = listener
-      },
-    }
-    stubGlobalField(t, 'navigation', stubNavigation)
-
+  it('reloads a targeted frame with submitter-overridden submission metadata', async () => {
     let topReload = mock.fn(async () => new AbortController().signal)
     let namedReload = mock.fn(async (_options?: FrameReloadOptions) => new AbortController().signal)
     let topFrame = { src: '', reload: topReload } as unknown as FrameHandle
@@ -450,7 +342,9 @@ describe('form navigation', () => {
       },
     })
 
+    let destinationUrl = window.location.href
     let form = document.createElement('form')
+    form.action = destinationUrl
     form.method = 'get'
     form.enctype = 'application/x-www-form-urlencoded'
     let input = document.createElement('input')
@@ -465,166 +359,32 @@ describe('form navigation', () => {
     form.append(input, button)
     document.body.append(form)
 
-    form.dispatchEvent(
-      new SubmitEvent('submit', { bubbles: true, cancelable: true, submitter: button }),
-    )
-
-    let formData = new FormData(form, button)
-    let navigationController = new AbortController()
-    let handler: (() => Promise<void>) | undefined
-    let intercept = mock.fn((options?: NavigationInterceptOptions) => {
-      handler = options?.handler
-    })
-    let destinationUrl = new URL('/account', window.location.origin).href
-    let event = Object.assign(new Event('navigate'), {
-      canIntercept: true,
-      navigationType: 'push',
-      sourceElement: form,
-      formData,
-      signal: navigationController.signal,
-      destination: {
-        url: destinationUrl,
-        key: 'next',
-        getState: () => undefined,
-      },
-      intercept,
-    })
-
-    navigateListener?.(event)
-    expect(intercept).toHaveBeenCalledTimes(1)
-    await handler?.()
+    let navigationSucceeded = waitForNavigationSuccess()
+    form.requestSubmit(button)
+    await navigationSucceeded
 
     expect(topReload).not.toHaveBeenCalled()
     expect(namedFrame.src).toBe(destinationUrl)
-    expect(namedReload).toHaveBeenCalledWith({
-      formData,
-      method: 'post',
-      encType: 'multipart/form-data',
-      signal: navigationController.signal,
-    })
-    expect(updateCurrentEntry.mock.calls.at(-1)?.arguments[0]).toEqual({
-      state: {
-        target: 'account',
-        src: destinationUrl,
-        resetScroll: true,
-        $rmx: true,
-      },
-    })
-
-    controller.abort()
-  })
-
-  it('passes GET submission metadata and reloads the top frame', async (t) => {
-    let navigateListener: EventListener | undefined
-    let stubNavigation = {
-      updateCurrentEntry: mock.fn(),
-      addEventListener(type: string, listener: EventListener) {
-        if (type === 'navigate') navigateListener = listener
-      },
-    }
-    stubGlobalField(t, 'navigation', stubNavigation)
-
-    let reload = mock.fn(async (_options?: FrameReloadOptions) => new AbortController().signal)
-    let topFrame = { src: '', reload } as unknown as FrameHandle
-    let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
-    })
-
-    let form = document.createElement('form')
-    form.method = 'get'
-    let input = document.createElement('input')
-    input.name = 'query'
-    input.value = 'frames'
-    form.append(input)
-    document.body.append(form)
-
-    let handler: (() => Promise<void>) | undefined
-    let destinationUrl = new URL('/search?query=frames', window.location.origin).href
-    navigateListener?.(
-      Object.assign(new Event('navigate'), {
-        canIntercept: true,
-        navigationType: 'push',
-        sourceElement: form,
-        formData: null,
-        signal: new AbortController().signal,
-        destination: {
-          url: destinationUrl,
-          key: 'next',
-          getState: () => undefined,
-        },
-        intercept(options?: NavigationInterceptOptions) {
-          handler = options?.handler
-        },
-      }),
-    )
-    await handler?.()
-
-    expect(topFrame.src).toBe(destinationUrl)
-    expect(reload).toHaveBeenCalledTimes(1)
-    let options = reload.mock.calls[0]?.arguments[0]
-    expect(options?.method).toBe('get')
-    expect(options?.encType).toBe('application/x-www-form-urlencoded')
-    expect(options?.formData).toBe(undefined)
-
-    controller.abort()
-  })
-
-  it('intercepts a real browser form submission after the submit event', async () => {
-    let { promise, resolve } = Promise.withResolvers<FrameReloadOptions | undefined>()
-    let topFrame = {
-      src: '',
-      async reload(options?: FrameReloadOptions) {
-        resolve(options)
-        return new AbortController().signal
-      },
-    } as unknown as FrameHandle
-    let controller = new AbortController()
-    startNavigationListenerImpl(controller.signal, {
-      getTopFrame: () => topFrame,
-      getNamedFrame: () => topFrame,
-    })
-
-    let form = document.createElement('form')
-    form.action = window.location.href
-    let input = document.createElement('input')
-    input.name = 'email'
-    input.value = 'ada@example.com'
-    let button = document.createElement('button')
-    button.name = 'intent'
-    button.value = 'login'
-    button.setAttribute('formmethod', 'post')
-    button.setAttribute('formenctype', 'multipart/form-data')
-    form.append(input, button)
-    document.body.append(form)
-
-    let entriesBeforeSubmission = window.navigation.entries().length
-    let navigationSucceeded = new Promise<void>((resolve) => {
-      window.navigation.addEventListener('navigatesuccess', () => resolve(), { once: true })
-    })
-    form.requestSubmit(button)
-    let [options] = await Promise.all([promise, navigationSucceeded])
-
+    expect(namedReload).toHaveBeenCalledTimes(1)
+    let options = namedReload.mock.calls[0]?.arguments[0]
+    expect(options?.formData?.get('displayName')).toBe('Ada')
+    expect(options?.formData?.get('intent')).toBe('save')
     expect(options?.method).toBe('post')
     expect(options?.encType).toBe('multipart/form-data')
-    expect(options?.formData?.get('email')).toBe('ada@example.com')
-    expect(options?.formData?.get('intent')).toBe('login')
     expect(options?.signal).toBeInstanceOf(AbortSignal)
-    expect(window.navigation.entries().length).toBe(entriesBeforeSubmission)
+    expect(window.navigation.currentEntry?.getState()).toEqual({
+      target: 'account',
+      src: destinationUrl,
+      resetScroll: true,
+      $rmx: true,
+    })
 
     controller.abort()
   })
 
-  it('leaves GET values in the URL without duplicating the formdata event', async () => {
-    let { promise, resolve } = Promise.withResolvers<FrameReloadOptions | undefined>()
-    let topFrame = {
-      src: '',
-      async reload(options?: FrameReloadOptions) {
-        resolve(options)
-        return new AbortController().signal
-      },
-    } as unknown as FrameHandle
+  it('pushes GET values in the URL without duplicating the formdata event', async () => {
+    let reload = mock.fn(async (_options?: FrameReloadOptions) => new AbortController().signal)
+    let topFrame = { src: '', reload } as unknown as FrameHandle
     let controller = new AbortController()
     startNavigationListenerImpl(controller.signal, {
       getTopFrame: () => topFrame,
@@ -634,6 +394,7 @@ describe('form navigation', () => {
     let formDataEventCount = 0
     let form = document.createElement('form')
     form.action = window.location.href
+    form.method = 'get'
     form.addEventListener('formdata', () => {
       formDataEventCount++
     })
@@ -643,14 +404,28 @@ describe('form navigation', () => {
     form.append(input)
     document.body.append(form)
 
-    form.requestSubmit()
-    let options = await promise
+    let entryBeforeSubmission = getCurrentNavigationEntry()
+    let didNavigate = false
+    try {
+      let navigationSucceeded = waitForNavigationSuccess()
+      form.requestSubmit()
+      await navigationSucceeded
+      didNavigate = true
 
-    expect(options?.method).toBe('get')
-    expect(options?.formData?.get('query')).toBe('frames')
-    expect(formDataEventCount).toBe(1)
-
-    controller.abort()
+      let entryAfterSubmission = getCurrentNavigationEntry()
+      expect(entryAfterSubmission.index).toBe(entryBeforeSubmission.index + 1)
+      expect(new URL(entryAfterSubmission.url ?? '').searchParams.get('query')).toBe('frames')
+      expect(topFrame.src).toBe(entryAfterSubmission.url)
+      expect(reload).toHaveBeenCalledTimes(1)
+      let options = reload.mock.calls[0]?.arguments[0]
+      expect(options?.method).toBe('get')
+      expect(options?.encType).toBe('application/x-www-form-urlencoded')
+      expect(options?.formData?.get('query')).toBe('frames')
+      expect(formDataEventCount).toBe(1)
+    } finally {
+      if (didNavigate) await window.navigation.back().finished
+      controller.abort()
+    }
   })
 
   it('leaves invalid forms to native constraint validation', (t) => {
@@ -758,6 +533,18 @@ describe('form navigation', () => {
     controller.abort()
   })
 })
+
+function getCurrentNavigationEntry(): NavigationHistoryEntry {
+  let entry = window.navigation.currentEntry
+  if (!entry) throw new Error('Expected a current navigation entry')
+  return entry
+}
+
+function waitForNavigationSuccess(): Promise<void> {
+  return new Promise((resolve) => {
+    window.navigation.addEventListener('navigatesuccess', () => resolve(), { once: true })
+  })
+}
 
 function createFormNavigateEvent(
   form: HTMLFormElement,
