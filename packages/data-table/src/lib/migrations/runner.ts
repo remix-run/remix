@@ -61,7 +61,7 @@ function assertTargetOption(migrations: MigrationDescriptor[], to: string | unde
   }
 }
 
-async function assertNoMigrationDrift(
+async function assertMigrationIntegrity(
   migrations: MigrationDescriptor[],
   journal: MigrationJournalRow[],
 ): Promise<void> {
@@ -71,7 +71,9 @@ async function assertNoMigrationDrift(
     let migration = migrationMap.get(row.id)
 
     if (!migration) {
-      continue
+      throw new Error(
+        'Applied migration "' + row.id + '_' + row.name + '" is missing from current migrations',
+      )
     }
 
     let expected = await computeChecksum(migration)
@@ -142,7 +144,7 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
   }
 
   let appliedMap = new Map(journal.map((row) => [row.id, row]))
-  await assertNoMigrationDrift(migrations, journal)
+  await assertMigrationIntegrity(migrations, journal)
   let toRun: MigrationDescriptor[] = []
 
   if (input.direction === 'up') {
@@ -308,6 +310,7 @@ export function createMigrationRunner(
       let journal = await loadJournalRows(adapter, journalTable)
       let journalMap = new Map(journal.map((row) => [row.id, row]))
       let sortedMigrations = resolveMigrations(migrations)
+      let migrationIds = new Set(sortedMigrations.map((migration) => migration.id))
 
       let statuses: MigrationStatusEntry[] = []
 
@@ -338,7 +341,22 @@ export function createMigrationRunner(
         })
       }
 
-      return statuses
+      for (let journalRow of journal) {
+        if (migrationIds.has(journalRow.id)) {
+          continue
+        }
+
+        statuses.push({
+          id: journalRow.id,
+          name: journalRow.name,
+          status: 'missing',
+          appliedAt: journalRow.appliedAt,
+          batch: journalRow.batch,
+          checksum: journalRow.checksum,
+        })
+      }
+
+      return statuses.sort((left, right) => left.id.localeCompare(right.id))
     },
   }
 }

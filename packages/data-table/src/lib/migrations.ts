@@ -47,9 +47,14 @@ export type MigrationJournalRow = {
 }
 
 /**
- * Effective status for a known migration.
+ * Effective migration status.
+ *
+ * - `applied`: the current migration matches its journal entry.
+ * - `pending`: the current migration has not been applied.
+ * - `drifted`: the current migration differs from its journal entry.
+ * - `missing`: an applied journal entry has no migration in the current set.
  */
-export type MigrationStatus = 'applied' | 'pending' | 'drifted'
+export type MigrationStatus = 'applied' | 'pending' | 'drifted' | 'missing'
 
 /**
  * Status row returned by `runner.status()` and `runner.up/down(...)`.

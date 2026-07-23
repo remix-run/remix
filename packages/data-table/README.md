@@ -344,7 +344,7 @@ await db.transaction(async (tx) => {
 
 ## Migrations
 
-`data-table` ships a SQL-first migration system under `remix/data-table/migrations`. Each migration is a directory containing hand-written `up.sql` and (optionally) `down.sql`. The runner journals applied migrations, detects checksum drift, and wraps each migration in a transaction when the adapter supports transactional DDL.
+`data-table` ships a SQL-first migration system under `remix/data-table/migrations`. Each migration is a directory containing hand-written `up.sql` and (optionally) `down.sql`. The runner journals applied migrations, detects checksum drift and missing applied migrations, and wraps each migration in a transaction when the adapter supports transactional DDL.
 
 ### Example Setup
 
@@ -436,6 +436,8 @@ remix db seed
 remix db reset
 remix db wipe
 ```
+
+`remix db status` reports applied migrations whose files are no longer present as `missing`. Migration runs stop before executing SQL when an applied journal entry is missing from the current migration set.
 
 `wipe` and `reset` are destructive. They require a config-backed adapter so the adapter can close, recreate, and reconnect to the configured database.
 

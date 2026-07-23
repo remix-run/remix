@@ -367,6 +367,33 @@ describe('migration runner', () => {
     await assert.rejects(() => driftedRunner.up(), /checksum drift detected/)
   })
 
+  it('rejects migration runs when an applied migration is missing', async () => {
+    let adapter = new MemoryMigrationAdapter()
+    let runner = createMigrationRunner(adapter, [
+      {
+        id: '20260101000000',
+        name: 'create_users',
+        up: 'create table users (id integer)',
+        down: 'drop table users',
+      },
+    ])
+
+    await runner.up()
+    adapter.executedScripts = []
+
+    let missingRunner = createMigrationRunner(adapter, [])
+
+    await assert.rejects(
+      () => missingRunner.up(),
+      /Applied migration "20260101000000_create_users" is missing from current migrations/,
+    )
+    await assert.rejects(
+      () => missingRunner.down(),
+      /Applied migration "20260101000000_create_users" is missing from current migrations/,
+    )
+    assert.deepEqual(adapter.executedScripts, [])
+  })
+
   it('balances migration lock hooks when execution fails', async () => {
     let adapter = new MemoryMigrationAdapter()
     adapter.scriptError = new Error('boom')
@@ -483,6 +510,31 @@ describe('migration runner', () => {
         { id: '20260102000000', status: 'pending' },
       ],
     )
+  })
+
+  it('reports applied journal entries missing from the current migrations', async () => {
+    let adapter = new MemoryMigrationAdapter()
+    let runner = createMigrationRunner(adapter, [
+      { id: '20260101000000', name: 'create_users', up: 'create table users (id integer)' },
+    ])
+
+    await runner.up()
+
+    let statusRunner = createMigrationRunner(adapter, [
+      { id: '20260102000000', name: 'create_posts', up: 'create table posts (id integer)' },
+    ])
+    let statuses = await statusRunner.status()
+
+    assert.deepEqual(
+      statuses.map((status) => ({ id: status.id, name: status.name, status: status.status })),
+      [
+        { id: '20260101000000', name: 'create_users', status: 'missing' },
+        { id: '20260102000000', name: 'create_posts', status: 'pending' },
+      ],
+    )
+    assert.equal(statuses[0].appliedAt instanceof Date, true)
+    assert.equal(statuses[0].batch, 1)
+    assert.equal(typeof statuses[0].checksum, 'string')
   })
 })
 
