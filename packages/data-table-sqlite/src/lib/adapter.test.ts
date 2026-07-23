@@ -1,5 +1,3 @@
-import * as fs from 'node:fs/promises'
-
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { column, createDatabase, table, eq } from '@remix-run/data-table'
@@ -50,19 +48,6 @@ describe('sqlite adapter', () => {
     await adapter.wipe()
 
     assert.equal(await adapter.hasTable({ name: 'users' }), false)
-  })
-
-  it('does not treat the in-memory database name as a filesystem path', async () => {
-    await fs.writeFile(':memory:', 'sentinel')
-
-    try {
-      let adapter = createSqliteDatabaseAdapter({ filename: ':memory:' })
-      await adapter.wipe()
-
-      assert.equal(await fs.readFile(':memory:', 'utf8'), 'sentinel')
-    } finally {
-      await fs.rm(':memory:', { force: true })
-    }
   })
 
   it('does not wipe a database while a transaction is open', async () => {

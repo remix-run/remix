@@ -50,10 +50,12 @@ describe('postgres adapter integration', { skip: typeof DATABASE_URL !== 'string
     await pool.query('drop database if exists ' + WIPE_DATABASE)
     await pool.query('create database ' + WIPE_DATABASE)
 
+    let databaseUrl = new URL(DATABASE_URL!)
+    databaseUrl.pathname = '/' + WIPE_DATABASE
+
     let db = createDatabase(
       createPostgresDatabaseAdapter({
-        connectionString: DATABASE_URL!,
-        database: WIPE_DATABASE,
+        connectionString: databaseUrl.toString(),
       }),
     )
 

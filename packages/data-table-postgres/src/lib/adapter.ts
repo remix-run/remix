@@ -358,7 +358,13 @@ export class PostgresDatabaseAdapter implements DatabaseAdapter {
       maintenanceDatabase = targetDatabase === 'postgres' ? 'template1' : 'postgres'
     }
 
-    return { ...this.#configOrThrow('maintenance'), database: maintenanceDatabase }
+    let config = this.#configOrThrow('maintenance')
+    let connectionString = replaceDatabaseInConnectionString(
+      config?.connectionString,
+      maintenanceDatabase,
+    )
+
+    return { ...config, connectionString, database: maintenanceDatabase }
   }
 
   async #replacePool(): Promise<void> {
@@ -418,13 +424,26 @@ function isPostgresPool(client: PostgresQueryable): client is PostgresPool {
 
 function resolvePostgresDatabaseName(config: PostgresPoolConfig): string {
   let database =
-    config?.database ?? resolveDatabaseNameFromConnectionString(config?.connectionString)
+    resolveDatabaseNameFromConnectionString(config?.connectionString) ?? config?.database
 
   if (database) {
     return database
   }
 
   return process.env.PGDATABASE ?? 'postgres'
+}
+
+function replaceDatabaseInConnectionString(
+  connectionString: string | undefined,
+  database: string,
+): string | undefined {
+  if (!connectionString) {
+    return undefined
+  }
+
+  let url = new URL(connectionString)
+  url.pathname = '/' + encodeURIComponent(database)
+  return url.toString()
 }
 
 function resolveDatabaseNameFromConnectionString(
