@@ -26,8 +26,6 @@ let router = createRouter({
 })
 ```
 
-For responses eligible for compression, the middleware adds `Vary: Accept-Encoding` even when the client requests the identity representation or omits `Accept-Encoding`. This keeps compressed and uncompressed representations safe in shared caches while preserving existing `Vary` values.
-
 The middleware will automatically compress responses for compressible MIME types when:
 
 - The client supports compression (`Accept-Encoding` header with a supported encoding)
