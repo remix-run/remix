@@ -9,10 +9,21 @@ Remix keeps those cases separate. Controllers return expected `Response`s. Unexp
 
 ## Return expected failures as responses {#returning-error-responses-in-controllers}
 
-An album edit action already knows its public failure contract. Inside the action protected by the app's `requireUser` middleware, reconstruct safe text values before parsing and read the request-scoped database from context:
+The album edit action already knows its public failure contract. Keep the lookup and owner check from Chapter 9 before parsing submitted fields:
 
 ```tsx
-let submittedValues = {
+// Inside the existing action, before the Chapter 8 transaction:
+let db = context.get(Database);
+let album = await db.find(albums, context.params.albumId);
+if (album === null) {
+  return new Response("Album not found", { status: 404 });
+}
+
+if (album.owner_id !== context.auth.identity.id) {
+  return new Response("Forbidden", { status: 403 });
+}
+
+let values = {
   artist: String(context.formData.get("artist") ?? ""),
   title: String(context.formData.get("title") ?? ""),
   year: String(context.formData.get("year") ?? ""),
@@ -24,42 +35,45 @@ if (!result.success) {
   return context.render(
     <AlbumEditPage
       albumId={context.params.albumId}
-      values={submittedValues}
+      csrfToken={getCsrfToken(context)}
+      values={values}
       issues={result.issues}
     />,
     { status: 400 },
   );
 }
+```
 
-let db = context.get(Database);
-let album = await db.find(albums, context.params.albumId);
-if (album === null) {
-  return new Response("Album not found", { status: 404 });
-}
+After the cover checks and storage setup from Chapter 10, continue into the transaction from Chapter 8. Keep the artist upsert and album update together, and retain the owner predicate that Chapter 9 added:
 
-if (album.owner_id !== context.auth.identity.id) {
-  return new Response("Forbidden", { status: 403 });
-}
-
-let { revision, title, year } = result.value;
-let write = await db.updateMany(
+```tsx
+// Inside the existing transaction, after the artist upsert and lookup:
+let write = await transaction.updateMany(
   albums,
-  { title, year, revision: revision + 1 },
+  {
+    artist_id: artist.id,
+    revision: result.value.revision + 1,
+    title: result.value.title,
+    year: result.value.year,
+    ...(newCoverKey ? { cover_key: newCoverKey } : {}),
+  },
   {
     where: {
       id: album.id,
       owner_id: context.auth.identity.id,
-      revision,
+      revision: result.value.revision,
     },
   },
 );
 
 if (write.affectedRows === 0) {
-  return new Response("This album was edited elsewhere", { status: 409 });
+  throw new AlbumEditConflictError();
 }
 ```
 
-These are not exceptions in the server's operation. Each response has a status and a safe body the caller can act on. Tests can assert the contract without matching an internal error class, and observability can distinguish a rejected edit from an outage.
+The existing `AlbumEditConflictError` catch renders the form with status `409` after the transaction rolls back. That private sentinel does not escape the action.
+
+The `400`, `403`, `404`, and `409` results are not exceptions in the server's operation. Each response has a status and a safe body the caller can act on. Tests can assert the contract without matching an internal error class, and observability can distinguish a rejected edit from an outage.
 
 The same rule applies to authentication failures, rate limits, unsupported media, and known upload limits. Throw only when the current layer cannot produce the response itself or when an invariant the application depends on has failed.
 
@@ -103,21 +117,31 @@ defaultHandler(context) {
 },
 ```
 
-The default handler runs when no route matches both the URL and request method. Add an explicit method policy if the app should distinguish a known path with the wrong method as `405 Method Not Allowed`. A route-specific `404` and the router default have different knowledge: the former knows which album lookup failed; the latter should not guess or disclose internal route information.
+The default handler runs when no route matches both the URL and request method. Add an explicit method policy if the app should distinguish a known path with the wrong method as `405 Method Not Allowed`.
+
+A route-specific `404` and the router default know different things. The former knows which album lookup failed. The latter should not guess or disclose internal route information.
 
 ## Handle uncaught action and middleware errors at the server boundary {#uncaught-server-errors}
 
-`router.fetch()` rejects when an action or middleware throws. The Node adapter accepts an `onError` handler for that boundary:
+`router.fetch()` rejects when an action or middleware throws. Keep the app reporter in a shared server-only module so the adapter and renderer use the same boundary:
+
+```ts filename=app/errors.ts
+export function reportError(
+  error: unknown,
+  details: Record<string, string> = {},
+) {
+  console.error(details, error);
+}
+```
+
+The Node adapter accepts an `onError` handler for uncaught request failures:
 
 ```ts filename=server.ts
 import * as http from "node:http";
 import { createRequestListener } from "remix/node-fetch-server";
 
+import { reportError } from "./app/errors.ts";
 import { router } from "./app/router.ts";
-
-function reportError(error: unknown, details: Record<string, string> = {}) {
-  console.error(details, error);
-}
 
 let requestListener = createRequestListener(
   (request) => router.fetch(request),
@@ -137,7 +161,7 @@ let server = http.createServer(requestListener);
 server.listen(44100);
 ```
 
-The handler receives the thrown value, not the `Request`, so attach request IDs and route context earlier if the reporter needs them. It may return a generic `Response`; returning nothing uses the adapter's default `500`.
+The handler receives the thrown value, not the `Request`, so attach request IDs and route context earlier if the reporter needs them. It may return a generic `Response`. Returning nothing uses the adapter's default `500`.
 
 The adapter does not call this handler for its recognized request-abort reasons. If the response has already started and its body later fails, the adapter can report the error and close the connection, but it cannot replace bytes the client already received with a new error page.
 
@@ -148,6 +172,9 @@ Avoid catching the same error at every layer. If route middleware translates an 
 Add rendering reports where `renderToStream()` is created. In the renderer from [Rendering UI](/rendering-ui/#rendering-pages-through-request-context), keep the request signal and frame and client-entry resolvers, then replace the placeholder error hook with the app reporter:
 
 ```tsx
+// In app/middleware/render.tsx, add this module-scope import:
+import { reportError } from "../errors.ts";
+
 // inside renderToStream(node, { ... })
 signal: context.request.signal,
 onError(error) {
@@ -220,9 +247,15 @@ async function resolveFrame(
 }
 ```
 
-An authentication response may need a top-level login navigation. Protected actions should return `401` plus an app-owned relative `X-Login-Location` instead of a redirect when `X-Remix-Frame` is present: browser `fetch()` follows a normal `303` before the resolver can inspect it, which would otherwise embed the login document inside the frame. The resolver requires that header and validates it before navigating. It also rejects a cross-origin final response after browser-followed redirects. A bounded content failure can keep the rest of the page usable. A network failure or malformed frame stream may instead reject and reach the runtime error listener.
+An authentication response may need a top-level login navigation. When `X-Remix-Frame` is present, protected actions return `401` plus an app-owned relative `X-Login-Location`. A normal `303` would be followed by `fetch()` before the resolver could inspect it, leaving the login document inside the frame.
 
-Return a Remix node or a fixed trusted string for fallback content. Do not concatenate a response body or URL into raw HTML. Preserve a successful response's body stream instead of buffering it. If server frame resolution follows redirects internally, validate the initial URL and every redirect against the outer request's origin before forwarding its cookie, bound the redirect count, resolve relative locations against the current frame URL, and keep the outer request signal.
+The resolver requires that header and validates it before navigating. It also rejects a cross-origin final response after browser-followed redirects.
+
+A bounded content failure can keep the rest of the page usable. A network failure or malformed frame stream may instead reject and reach the runtime error listener.
+
+Return a Remix node or a fixed trusted string for fallback content. Do not concatenate a response body or URL into raw HTML. Preserve a successful response's body stream instead of buffering it.
+
+If server frame resolution follows redirects internally, validate the initial URL and every redirect against the outer request's origin before forwarding its cookie. Bound the redirect count, resolve relative locations against the current frame URL, and keep the outer request signal.
 
 ## Handle browser runtime errors at the app root {#error-boundaries}
 
@@ -275,7 +308,9 @@ app.ready().catch(() => {
 
 The event's `error` is `unknown`, because JavaScript may throw any value. Normalize it inside the reporter and keep the public message generic. Initial hydration both emits an error event and rejects `ready()`, so handle the promise without logging the same failure twice.
 
-This is an app-root runtime boundary, not a per-component React-style error boundary. It receives hydration, component render, scheduler, and frame failures. A local component should model an expected fetch failure as state; it should not throw merely to reach the app root.
+This is an app-root runtime boundary, not a per-component React-style error boundary. It receives hydration, component render, scheduler, and frame failures.
+
+A local component should model an expected fetch failure as state. It should not throw merely to reach the app root.
 
 ## Treat request aborts as cancellation {#aborts-request-signal-and-the-router}
 
@@ -293,7 +328,9 @@ async function loadRecommendations(context) {
 
 Pass the signal to APIs that support cancellation: downstream `fetch`, rendering, stream readers, and storage or database clients with a signal option. Do not replace it with a new `AbortController` unless you intentionally combine lifetimes.
 
-Cancellation stops waiting and response work that observes the signal. It does not undo a database statement that already committed, retract an email already sent, or guarantee that a library with no signal support stops computing. The data-table APIs in this guide do not accept a request signal; use a transaction for atomicity and design mutation retries around idempotency, not around browser connection state.
+Cancellation stops waiting and response work that observes the signal. It does not undo a database statement that already committed, retract an email already sent, or guarantee that a library with no signal support stops computing.
+
+The data-table APIs in this guide do not accept a request signal. Use a transaction for atomicity and design mutation retries around idempotency, not around browser connection state.
 
 If application code catches broadly, rethrow the request's abort reason instead of translating it into a `500`:
 
@@ -307,7 +344,8 @@ try {
   ) {
     throw error;
   }
-  return reportAndCreateErrorResponse(error);
+  reportError(error, { boundary: "caught-request" });
+  return new Response("Internal Server Error", { status: 500 });
 }
 ```
 
@@ -323,7 +361,56 @@ Browser components have several useful lifetimes:
 | `ref((node, signal) => ...)`        | that host element is removed                          |
 | `handle.signal`                     | the component disconnects                             |
 
-Use the narrowest signal that owns the work. A typeahead belongs to its input event, so each new keystroke aborts the prior request. After adding `search: get("/albums/search")` to `routes.albums` and mapping a controller that returns album JSON, the server page passes that typed route's href into the client entry:
+Use the narrowest signal that owns the work. A typeahead belongs to its input event, so each new keystroke aborts the prior request.
+
+First add the route beside the other direct album leaves:
+
+```ts filename=app/routes.ts
+// Inside the existing albums route map:
+search: get("/albums/search"),
+```
+
+The existing `albumsController` mapping owns that new leaf, so add a matching action. Keep the controller's existing `requireUser` middleware and other actions:
+
+```tsx filename=app/actions/albums/controller.tsx
+import { and, eq, ilike } from "remix/data-table";
+
+// Add inside the existing actions object:
+async search(context) {
+  let query = (context.url.searchParams.get("q") ?? "").trim();
+  if (query === "") return Response.json([]);
+  if (query.length > 100) {
+    return Response.json(
+      { error: "Search query is too long" },
+      { status: 400 },
+    );
+  }
+
+  let matches = await context.get(Database).findMany(albums, {
+    where: and(
+      eq("owner_id", context.auth.identity.id),
+      ilike("title", `%${query}%`),
+    ),
+    orderBy: ["title", "asc"],
+    limit: 10,
+  });
+
+  return Response.json(
+    matches.map((album) => ({ id: album.id, title: album.title })),
+  );
+},
+```
+
+Render the browser entry from the album page with the typed URL:
+
+```tsx filename=app/actions/albums/show-page.tsx
+import { AlbumSearch } from "../../assets/album-search.tsx";
+
+// Inside AlbumPage's document body:
+<AlbumSearch searchHref={routes.albums.search.href()} />;
+```
+
+Now implement the browser side:
 
 ```tsx filename=app/assets/album-search.tsx
 import { clientEntry, on } from "remix/ui";

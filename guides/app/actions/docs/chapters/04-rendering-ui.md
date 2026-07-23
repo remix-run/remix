@@ -379,6 +379,12 @@ Frames are not limited to initial rendering. After the browser runtime starts, a
 
 A page component should render the complete document explicitly. Remix does not move a `<title>` or `<meta>` rendered elsewhere into `<head>`.
 
+The document will link to an app stylesheet. Create it before the asset middleware tries to resolve its URL; we will add the first rules in the styling section below:
+
+```sh
+touch app/assets/base.css
+```
+
 Resolve the document's asset URLs in middleware so development paths, production fingerprints, and preload discovery use the same asset server policy:
 
 ```ts filename=app/middleware/asset-entry.ts
@@ -444,19 +450,21 @@ export const router = createRouter({
 Keep the shared shell in `app/ui/document.tsx`:
 
 ```tsx filename=app/ui/document.tsx
+import { css } from "remix/ui";
 import type { Handle, RemixNode } from "remix/ui";
 
 import { getAssetEntry } from "../middleware/asset-entry.ts";
 
-interface DocumentProps {
+export interface DocumentProps {
   children?: RemixNode;
   description?: string;
-  title: string;
+  head?: RemixNode;
+  title?: string;
 }
 
 export function Document(handle: Handle<DocumentProps>) {
   return () => {
-    let { children, description, title } = handle.props;
+    let { children, description, head, title = "Albums" } = handle.props;
     let { scriptPreloads, scriptSrc, stylesheetHref } = getAssetEntry();
 
     return (
@@ -464,6 +472,7 @@ export function Document(handle: Handle<DocumentProps>) {
         <head>
           <meta charSet="utf-8" />
           <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
           {description ? (
             <meta name="description" content={description} />
           ) : null}
@@ -472,8 +481,9 @@ export function Document(handle: Handle<DocumentProps>) {
             <link key={href} rel="modulepreload" href={href} />
           ))}
           <title>{title}</title>
+          {head}
         </head>
-        <body>
+        <body mix={css({ margin: 0 })}>
           {children}
           <script type="module" src={scriptSrc}></script>
         </body>
@@ -484,6 +494,8 @@ export function Document(handle: Handle<DocumentProps>) {
 ```
 
 The asset helper keeps public URLs and preload discovery out of the component. The document decides where the stylesheet, module preloads, and browser entry script belong.
+
+The optional `head` prop preserves the generated scaffold page's extra font and color-scheme links, while route pages in this guide pass an explicit `title`. The default title, favicon, and body reset keep that untouched scaffold valid until the app replaces it.
 
 `createHtmlResponse()` wraps the renderer's string or stream with `Content-Type: text/html; charset=utf-8` and ensures the output begins with a doctype. Status codes, cache headers, and other response policy still come from the `ResponseInit` passed to `context.render(...)`.
 

@@ -149,6 +149,30 @@ routes.albums.edit.action -> POST /albums/:albumId/edit
 
 Both belong to the existing controller for `routes.albums.edit`. Keep its `index` and `action` handlers together when the sections below fill in `action`; a controller that owns only one leaf from `form(...)` fails during router setup.
 
+`destroy` is a direct leaf of `routes.albums`, so implement it in the parent album controller before mapping the expanded route map:
+
+```tsx filename=app/actions/albums/controller.tsx
+import { Database } from "remix/data-table";
+import { redirect } from "remix/response/redirect";
+
+import { albums } from "../../data/schema.ts";
+
+// Add to the existing actions object beside show and recommendations.
+async destroy(context) {
+  let removed = await context
+    .get(Database)
+    .delete(albums, context.params.albumId);
+
+  if (!removed) {
+    return new Response("Album not found", { status: 404 });
+  }
+
+  return redirect(routes.home.href(), 303);
+},
+```
+
+The authentication chapter adds ownership to this write. The files chapter later expands the same action to clean up an associated cover.
+
 Map the form route map separately from its parent, as covered in [Routing and Controllers](/routing-and-controllers/#mapping-controllers):
 
 ```ts filename=app/router.ts
@@ -157,7 +181,7 @@ router.map(routes.albums, albumsController);
 router.map(routes.albums.edit, albumsEditController);
 ```
 
-`destroy` is a direct leaf of `routes.albums`, so add a `destroy` handler to `albumsController.actions`. The existing `router.map(routes.albums, albumsController)` registers it; do not add a separate `router.map(routes.albums.destroy, ...)` call.
+The existing `router.map(routes.albums, albumsController)` registers `destroy`; do not add a separate `router.map(routes.albums.destroy, ...)` call.
 
 Use separate `post`, `put`, `patch`, or `del` leaves when those operations have distinct URLs or ownership. `form(...)` is shorthand for the common GET/POST pair, not a requirement that every mutation share one route.
 
@@ -233,7 +257,7 @@ Coerce values such as `year` at this boundary. The rest of the action receives a
 
 ## Return validation failures with the form {#validation-failures}
 
-The server should return enough HTML for the reader to fix the request. Capture safe text values before parsing, then render issues beside their controls:
+Return enough HTML for the person editing the album to fix the submission. Capture safe text values before parsing, then render issues beside their controls:
 
 ```tsx filename=app/actions/albums/edit/controller.tsx
 // Inside the existing actions object for routes.albums.edit:
@@ -288,6 +312,133 @@ session.flash("message", `Saved ${result.value.title}.`);
 ```
 
 The session middleware persists the changed session on the redirect response, and the destination reads the flash value once.
+
+## Put the edit controller together {#complete-edit-controller}
+
+The excerpts above cover one branch at a time. Replace them with one complete controller that owns both leaves of `routes.albums.edit`:
+
+```tsx filename=app/actions/albums/edit/controller.tsx
+import * as s from "remix/data-schema";
+import { Database } from "remix/data-table";
+import { redirect } from "remix/response/redirect";
+import { createController } from "remix/router";
+
+import { albumRelations, albums, artists } from "../../../data/schema.ts";
+import { routes } from "../../../routes.ts";
+import { AlbumEditPage } from "./page.tsx";
+import { albumFormSchema } from "./schema.ts";
+
+class AlbumEditConflictError extends Error {}
+
+export default createController(routes.albums.edit, {
+  actions: {
+    async index(context) {
+      let album = await context
+        .get(Database)
+        .find(albums, context.params.albumId, { with: albumRelations });
+
+      if (album === null || album.artist === null) {
+        return new Response("Album not found", { status: 404 });
+      }
+
+      return context.render(
+        <AlbumEditPage
+          albumId={album.id}
+          values={{
+            artist: album.artist.name,
+            revision: String(album.revision),
+            title: album.title,
+            year: String(album.year),
+          }}
+        />,
+      );
+    },
+
+    async action(context) {
+      let db = context.get(Database);
+      let album = await db.find(albums, context.params.albumId);
+      if (album === null) {
+        return new Response("Album not found", { status: 404 });
+      }
+
+      let formData = context.formData;
+      let values = {
+        artist: String(formData.get("artist") ?? ""),
+        revision: String(formData.get("revision") ?? ""),
+        title: String(formData.get("title") ?? ""),
+        year: String(formData.get("year") ?? ""),
+      };
+      let result = s.parseSafe(albumFormSchema, formData);
+
+      if (!result.success) {
+        return context.render(
+          <AlbumEditPage
+            albumId={context.params.albumId}
+            issues={result.issues}
+            values={values}
+          />,
+          { status: 400 },
+        );
+      }
+
+      try {
+        await db.transaction(async (transaction) => {
+          await transaction
+            .query(artists)
+            .upsert(
+              { name: result.value.artist },
+              { conflictTarget: ["name"] },
+            );
+          let artist = await transaction.findOne(artists, {
+            where: { name: result.value.artist },
+          });
+          if (artist === null) {
+            throw new Error("Upserted artist could not be loaded");
+          }
+
+          let write = await transaction.updateMany(
+            albums,
+            {
+              artist_id: artist.id,
+              revision: result.value.revision + 1,
+              title: result.value.title,
+              year: result.value.year,
+            },
+            {
+              where: {
+                id: album.id,
+                revision: result.value.revision,
+              },
+            },
+          );
+
+          if (write.affectedRows === 0) {
+            throw new AlbumEditConflictError();
+          }
+        });
+      } catch (error) {
+        if (!(error instanceof AlbumEditConflictError)) throw error;
+
+        return context.render(
+          <AlbumEditPage
+            albumId={album.id}
+            conflict="This album changed after you opened the form. Reload the latest version before trying again."
+            issues={[]}
+            values={values}
+          />,
+          { status: 409 },
+        );
+      }
+
+      return redirect(routes.albums.show.href({ albumId: album.id }), 303);
+    },
+  },
+});
+```
+
+The GET action requires the artist relation so the form starts with a complete value set. The POST action checks that the route still names an album before it echoes validation issues. It keeps submitted strings for error rendering but writes only parsed values.
+
+The artist upsert and album update share a transaction. Throwing on a revision conflict rolls back a newly inserted artist instead of leaving an orphan behind. The redirect happens only after that transaction commits.
 
 ## Multiple submit intents and mutation responses {#mutation-intents-and-responses}
 
@@ -364,83 +515,229 @@ The form remains a browser-valid POST and supplies the effective method in a hid
 
 Once the form works as a navigation, a client entry can intercept `submit`. Preserve the clicked submit button, follow a redirect as navigation, and clear pending state on every non-aborted outcome:
 
-```tsx
-// In the client entry's setup scope:
-let pending = false;
-let submissionError: string | undefined;
+Move the form itself into a browser-owned module and put the enhancement on that same form. This is the cumulative component; it preserves the field errors and native form contract from the start of the chapter:
 
-// Add this mixin to the form in its render function:
-mix={on("submit", async (event, signal) => {
-  event.preventDefault();
-  pending = true;
-  submissionError = undefined;
-  handle.update();
+```tsx filename=app/assets/album-edit-form.tsx
+import type { Issue } from "remix/data-schema";
+import { clientEntry, on } from "remix/ui";
+import type { Handle } from "remix/ui";
 
-  let form = event.currentTarget;
+export interface AlbumEditFormProps {
+  action: string;
+  conflict?: string;
+  issues?: ReadonlyArray<Issue>;
+  values: {
+    artist: string;
+    revision: string;
+    title: string;
+    year: string;
+  };
+}
 
-  try {
-    let response = await fetch(form.action, {
-      method: form.method,
-      headers: { "X-Remix-Frame": "true" },
-      body: new FormData(form, event.submitter),
-      signal,
-    });
+export const AlbumEditForm = clientEntry(
+  import.meta.url,
+  function AlbumEditForm(handle: Handle<AlbumEditFormProps>) {
+    let pending = false;
+    let submissionError: string | undefined;
 
-    if (signal.aborted) return;
+    return () => {
+      let { action, conflict, issues = [], values } = handle.props;
+      let artistIssue = issues.find((issue) => issue.path?.[0] === "artist");
+      let revisionIssue = issues.find(
+        (issue) => issue.path?.[0] === "revision",
+      );
+      let titleIssue = issues.find((issue) => issue.path?.[0] === "title");
+      let yearIssue = issues.find((issue) => issue.path?.[0] === "year");
 
-    if (response.redirected) {
-      let redirectUrl = new URL(response.url, window.location.href);
-      if (redirectUrl.origin !== window.location.origin) {
-        submissionError = "The save response contained an invalid redirect";
-        return;
-      }
+      return (
+        <>
+          {conflict ? <p role="alert">{conflict}</p> : null}
+          {revisionIssue ? (
+            <p role="alert">
+              This form is no longer valid. Reload the page before trying again.
+            </p>
+          ) : null}
+          <form
+            action={action}
+            method="post"
+            mix={on("submit", async (event, signal) => {
+              event.preventDefault();
+              pending = true;
+              submissionError = undefined;
+              handle.update();
 
-      window.location.assign(redirectUrl.href);
-      return;
-    }
+              let form = event.currentTarget;
 
-    if (response.status === 401) {
-      let loginLocation = response.headers.get("X-Login-Location");
-      if (loginLocation === null) {
-        submissionError = "Sign in before saving this album";
-        return;
-      }
+              try {
+                let response = await fetch(form.action, {
+                  method: form.method,
+                  headers: { "X-Remix-Frame": "true" },
+                  body: new FormData(form, event.submitter),
+                  signal,
+                });
 
-      let loginUrl = new URL(loginLocation, window.location.href);
-      if (loginUrl.origin !== window.location.origin) {
-        submissionError = "The login response was invalid";
-        return;
-      }
+                if (signal.aborted) return;
 
-      if (!loginUrl.searchParams.has("returnTo")) {
-        loginUrl.searchParams.set("returnTo", window.location.pathname + window.location.search);
-      }
+                if (response.redirected) {
+                  let redirectUrl = new URL(response.url, window.location.href);
+                  if (redirectUrl.origin !== window.location.origin) {
+                    submissionError =
+                      "The save response contained an invalid redirect";
+                    return;
+                  }
 
-      window.location.assign(loginUrl.href);
-      return;
-    }
+                  window.location.assign(redirectUrl.href);
+                  return;
+                }
 
-    if (response.status === 400 || response.status === 409) {
-      await handle.frame.replace(response.body ?? (await response.text()));
-      return;
-    }
+                if (response.status === 401) {
+                  let loginLocation = response.headers.get("X-Login-Location");
+                  if (loginLocation === null) {
+                    submissionError = "Sign in before saving this album";
+                    return;
+                  }
 
-    if (!response.ok) {
-      submissionError = `Save failed (${response.status})`;
-      return;
-    }
+                  let loginUrl = new URL(loginLocation, window.location.href);
+                  if (loginUrl.origin !== window.location.origin) {
+                    submissionError = "The login response was invalid";
+                    return;
+                  }
 
-    await handle.frame.reload();
-  } catch {
-    if (signal.aborted) return;
-    submissionError = "The network request failed";
-  } finally {
-    if (!signal.aborted) {
-      pending = false;
-      handle.update();
-    }
-  }
-})}
+                  if (!loginUrl.searchParams.has("returnTo")) {
+                    loginUrl.searchParams.set(
+                      "returnTo",
+                      window.location.pathname + window.location.search,
+                    );
+                  }
+
+                  window.location.assign(loginUrl.href);
+                  return;
+                }
+
+                if (response.status === 400 || response.status === 409) {
+                  await handle.frame.replace(
+                    response.body ?? (await response.text()),
+                  );
+                  return;
+                }
+
+                if (!response.ok) {
+                  submissionError = `Save failed (${response.status})`;
+                  return;
+                }
+
+                await handle.frame.reload();
+              } catch {
+                if (signal.aborted) return;
+                submissionError = "The network request failed";
+              } finally {
+                if (!signal.aborted) {
+                  pending = false;
+                  handle.update();
+                }
+              }
+            })}
+          >
+            <input name="revision" type="hidden" value={values.revision} />
+            <label>
+              Title
+              <input
+                aria-describedby={titleIssue ? "title-error" : undefined}
+                aria-invalid={titleIssue ? "true" : undefined}
+                name="title"
+                defaultValue={values.title}
+                required
+              />
+            </label>
+            {titleIssue ? (
+              <p id="title-error" role="alert">
+                {titleIssue.message}
+              </p>
+            ) : null}
+            <label>
+              Artist
+              <input
+                aria-describedby={artistIssue ? "artist-error" : undefined}
+                aria-invalid={artistIssue ? "true" : undefined}
+                name="artist"
+                defaultValue={values.artist}
+                required
+              />
+            </label>
+            {artistIssue ? (
+              <p id="artist-error" role="alert">
+                {artistIssue.message}
+              </p>
+            ) : null}
+            <label>
+              Year
+              <input
+                aria-describedby={yearIssue ? "year-error" : undefined}
+                aria-invalid={yearIssue ? "true" : undefined}
+                name="year"
+                defaultValue={values.year}
+                inputMode="numeric"
+                required
+              />
+            </label>
+            {yearIssue ? (
+              <p id="year-error" role="alert">
+                {yearIssue.message}
+              </p>
+            ) : null}
+            {submissionError ? <p role="alert">{submissionError}</p> : null}
+            <button disabled={pending} type="submit">
+              {pending ? "Saving…" : "Save album"}
+            </button>
+          </form>
+        </>
+      );
+    };
+  },
+);
+```
+
+The server page now owns the document while the client entry owns only the interactive form:
+
+```tsx filename=app/actions/albums/edit/page.tsx
+import type { Issue } from "remix/data-schema";
+import type { Handle } from "remix/ui";
+
+import { AlbumEditForm } from "../../../assets/album-edit-form.tsx";
+import { routes } from "../../../routes.ts";
+import { Document } from "../../../ui/document.tsx";
+
+interface AlbumEditPageProps {
+  albumId: string;
+  conflict?: string;
+  issues?: ReadonlyArray<Issue>;
+  values: {
+    artist: string;
+    revision: string;
+    title: string;
+    year: string;
+  };
+}
+
+export function AlbumEditPage(handle: Handle<AlbumEditPageProps>) {
+  return () => {
+    let { albumId, conflict, issues, values } = handle.props;
+
+    return (
+      <Document title={`Edit ${values.title} — Albums`}>
+        <main>
+          <h1>Edit {values.title}</h1>
+          <AlbumEditForm
+            action={routes.albums.edit.action.href({ albumId })}
+            conflict={conflict}
+            issues={issues}
+            values={values}
+          />
+        </main>
+      </Document>
+    );
+  };
+}
 ```
 
 The event handler sends the same action URL and fields. Its signal cancels stale work when the handler is re-entered or removed, and the check immediately after `fetch(...)` prevents an obsolete response from changing the page. Validation and conflict bodies stream into the form's current frame, while a non-redirecting success reloads that same declared frame. Both redirect branches require a same-origin destination before starting a top-level navigation; [Auth, Sessions, and Security](/auth-sessions-security/#route-protection-with-requireauth) defines the `401` response contract.
@@ -471,42 +768,9 @@ if (!response.ok) {
 
 Do not optimistically claim success for an irreversible payment, permission change, or file deletion unless the product has a real recovery path.
 
-When multiple writers can edit the same row, include the app-owned `revision` from the table and migration in the form. Update only when that revision still matches:
+When multiple writers can edit the same row, include the app-owned `revision` from the table and migration in the form. The complete controller above updates only when that revision still matches.
 
-```tsx
-import { Database } from "remix/data-table";
-
-import { albums } from "../../../data/schema.ts";
-
-let db = context.get(Database);
-let album = await db.find(albums, context.params.albumId);
-if (album === null) {
-  return new Response("Album not found", { status: 404 });
-}
-
-let { revision, title, year } = result.value;
-let write = await db.updateMany(
-  albums,
-  { title, year, revision: revision + 1 },
-  { where: { id: album.id, revision } },
-);
-
-if (write.affectedRows === 0) {
-  return context.render(
-    <AlbumEditPage
-      albumId={context.params.albumId}
-      conflict="This album changed after you opened the form. Reload the latest version before trying again."
-      issues={[]}
-      values={values}
-    />,
-    { status: 409 },
-  );
-}
-
-return redirect(routes.albums.show.href({ albumId: album.id }), 303);
-```
-
-The complete action can resolve or create the submitted artist inside the same transaction before this guarded album update. When the revision no longer matches, return `409 Conflict` and tell the reader how to load the current value before reconciling it. Disabling one browser's button does not prevent a competing write elsewhere.
+When the revision has moved, it returns `409 Conflict` and tells the reader to load the current value before reconciling it. Disabling one browser's button does not prevent a competing write elsewhere.
 
 ## When to return JSON {#resource-routes-and-json-endpoints}
 
@@ -525,4 +789,4 @@ return Response.json(
 
 A form that already has a useful HTML failure and redirect path usually does not need a parallel JSON mutation endpoint. Enhance the existing action and choose a frame or navigation response. Add JSON when it is the natural representation for the caller, not merely because browser JavaScript is involved.
 
-Forms now have a complete request contract from native controls through validation and persistence. Next, [Auth, Sessions, and Security](/auth-sessions-security/) adds the browser state, identity, authorization, and cross-origin defenses around those mutations.
+The album edit form now works from native controls through validation and persistence. Next, [Auth, Sessions, and Security](/auth-sessions-security/) adds browser state, identity, authorization, and cross-origin defenses around those mutations.

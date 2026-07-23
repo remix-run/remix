@@ -3,9 +3,9 @@ title: Routing and Controllers
 description: How route maps, route helpers, controllers, actions, and responses define Remix request handling.
 ---
 
-In [Chapter 1](/start-here/), we built one end-to-end request flow: a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) comes in, Remix matches a route, a controller runs an action, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response) containing HTML rendered from a Remix component.
+In [Chapter 1](/start-here/), we built one end-to-end request flow: a Web [`Request`](https://developer.mozilla.org/en-US/docs/Web/API/Request) comes in, Remix matches a route, a controller runs an action, and the app returns a Web [`Response`](https://developer.mozilla.org/en-US/docs/Web/API/Response).
 
-Full-stack Remix apps are built around that route/controller boundary. `app/routes.ts` names URLs and methods your app accepts, controllers in `app/actions/` implement them, and each action returns the response that becomes the page, redirect, JSON payload, file, or error the browser receives.
+This chapter looks more closely at that route/controller boundary. `app/routes.ts` names the URLs and methods the app accepts, controllers in `app/actions/` implement them, and each action returns the page, redirect, JSON payload, file, or error the caller receives.
 
 ## Routes as the URL contract
 
@@ -242,7 +242,10 @@ import { redirect } from "remix/response/redirect";
 import { routes } from "../../../routes.ts";
 
 // inside an action:
-return redirect(routes.albums.show.href({ albumId: context.params.albumId }), 303);
+return redirect(
+  routes.albums.show.href({ albumId: context.params.albumId }),
+  303,
+);
 ```
 
 For HTML outside the Remix UI render pipeline, the `html` template tag escapes interpolated values and `createHtmlResponse(...)` sets the HTML content type and adds a doctype:

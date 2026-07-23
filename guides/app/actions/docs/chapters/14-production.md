@@ -28,10 +28,22 @@ The generated start script runs TypeScript source in production mode:
 import * as http from "node:http";
 import { createRequestListener } from "remix/node-fetch-server";
 
-import { router } from "./app/router.ts";
+import { reportError } from "./app/errors.ts";
+import { router } from "./app/production-router.ts";
+
+function handleServerError(error: unknown) {
+  reportError(error, { boundary: "node-adapter" });
+
+  return new Response("Internal Server Error", {
+    status: 500,
+    headers: { "Content-Type": "text/plain; charset=utf-8" },
+  });
+}
 
 let server = http.createServer(
-  createRequestListener((request) => router.fetch(request)),
+  createRequestListener((request) => router.fetch(request), {
+    onError: handleServerError,
+  }),
 );
 
 server.listen(44100);
@@ -147,7 +159,7 @@ export function markReady(value: boolean): void {
 }
 ```
 
-Start listening only after required in-process initialization, then await the actual listening event before marking the instance ready:
+Start listening only after required in-process initialization, then await the actual listening event before marking the instance ready. Replace the earlier `server.listen(44100)` call with this startup block; do not keep both calls:
 
 ```ts filename=server.ts
 import { once } from "node:events";
@@ -212,7 +224,9 @@ process.on("SIGINT", () => void shutdown("SIGINT"));
 process.on("SIGTERM", () => void shutdown("SIGTERM"));
 ```
 
-Calling `closeAllConnections()` immediately after `server.close()` is not graceful; it terminates the requests that were supposed to drain. With a ten-second platform grace period, this example's eight-second force-close point reserves the remaining time for resource cleanup. Set the force-close point from the deployment's real termination window. The once guard prevents a second signal from racing another cleanup sequence, and wrapping each close call in a promise turns synchronous throws into settled cleanup failures too.
+Calling `closeAllConnections()` immediately after `server.close()` terminates the requests that were supposed to drain. With a ten-second platform grace period, this example's eight-second force-close point reserves the remaining time for resource cleanup.
+
+Set the force-close point from the deployment's real termination window. The once guard prevents a second signal from racing another cleanup sequence. Wrapping each close call in a promise turns synchronous throws into settled cleanup failures too.
 
 Close only resources this process owns. This album app closes its asset server and SQLite handle; an app that owns a PostgreSQL pool or Redis client would settle `pool.end()` or `redis.quit()` here too. A platform-managed connection or request lifecycle may have a different shutdown hook than a long-lived Node server.
 
@@ -253,28 +267,28 @@ watch: false,
 
 Asset compilation is on demand, not a separate build that necessarily materializes every file before startup. Include representative asset requests in deployment smoke checks, and make old release assets available for as long as old HTML can reference them.
 
-For a response owned by an action, set the header where the representation is created. A route that is deliberately public may opt into shared caching:
+For a response owned by an action, set the header where the representation is created. A deliberately public catalog route may opt into a short shared policy such as `public, max-age=60`, but only when every response at that URL is public.
+
+The album page we built is authenticated and contains CSRF-backed controls. Keep the existing render call and add a private policy to that response:
 
 ```tsx
-return context.render(<AlbumPage album={album} />, {
-  headers: {
-    "Cache-Control": "public, max-age=60",
+return context.render(
+  <AlbumPage
+    album={{ ...album, artist: album.artist }}
+    csrfToken={getCsrfToken(context)}
+  />,
+  {
+    headers: {
+      "Cache-Control": "private, no-store",
+      Vary: "Cookie",
+    },
   },
-});
+);
 ```
 
-A route that reads a session or emits personalized controls should be private regardless of whether this particular request authenticated successfully:
+Do not infer public cacheability from an unauthenticated result. A session-bearing request can still affect flash data, experiments, locale, or CSRF state. Avoid producing both public and personalized bytes at the same cache key.
 
-```tsx
-return context.render(<AlbumPage album={album} viewer={viewer} />, {
-  headers: {
-    "Cache-Control": "private, no-store",
-    Vary: "Cookie",
-  },
-});
-```
-
-Do not infer public cacheability from an unauthenticated result; a session-bearing request can still affect flash data, experiments, locale, or CSRF state. Avoid producing both public and personalized bytes at the same cache key. `Vary` is not a substitute for a clear private policy when the response contains session data. File and static response helpers already support ETags, conditional requests, last-modified dates, and range policy; do not overwrite those headers casually in outer middleware.
+`Vary` is not a substitute for a clear private policy when the response contains session data. File and static response helpers already support ETags, conditional requests, last-modified dates, and range policy. Do not overwrite those headers casually in outer middleware.
 
 ## Compress without breaking streams or ranges {#compression-and-streams}
 
@@ -284,7 +298,7 @@ For production logs, use `%pathname` instead of the default `%path` token so que
 import { compression } from "remix/middleware/compression";
 import { logger } from "remix/middleware/logger";
 
-// Keep this cumulative order in the existing createRouter options:
+// Inside createAppRouter(options), keep this cumulative order:
 middleware: [
   logger({
     colors: false,
@@ -303,8 +317,10 @@ middleware: [
   }),
   methodOverride(),
   asyncContext(),
-  loadDatabase(),
-  session(sessionCookie, sessionStorage),
+  loadDatabase(options.database),
+  loadAlbumCovers(options.albumCovers),
+  loadAssetServer(options.assetServer),
+  session(options.sessionCookie, options.sessionStorage),
   csrf(),
   loadAuth(),
   loadAssetEntry(),
@@ -314,7 +330,9 @@ middleware: [
 
 `compression()` negotiates Brotli, gzip, or deflate for compressible media. It skips a response when there is no useful encoding, the response is already encoded, `Cache-Control` contains `no-transform`, the response advertises `Accept-Ranges: bytes`, or the status is `206 Partial Content`. It also honors the size threshold when `Content-Length` is present.
 
-Streaming HTML can still be compressed; absence of `Content-Length` does not make a stream ineligible. Server-sent events receive flush-oriented compressor defaults so events are not held indefinitely in a compression buffer. Test the actual proxy path as well, because a CDN or ingress may independently buffer or transform streams.
+Streaming HTML can still be compressed. The absence of `Content-Length` does not make a stream ineligible. Server-sent events receive flush-oriented compressor defaults so events are not held indefinitely in a compression buffer.
+
+Test the actual proxy path too, because a CDN or ingress may independently buffer or transform streams.
 
 When compression applies, Remix removes `Content-Length`, adds `Vary: Accept-Encoding`, disables ranges for that representation, and weakens a strong ETag whose bytes changed. Images, archives, and other already-compressed formats generally gain little and are filtered by media type.
 
@@ -394,15 +412,24 @@ let server = http.createServer(
     },
     {
       host: config.origin.host,
+      onError: handleServerError,
       protocol: config.origin.protocol,
     },
   ),
 );
 ```
 
-Liveness answers whether the process can serve at all; do not make a temporary database outage restart every healthy process. Readiness is a lifecycle gate: required initialization completes before it becomes true, and shutdown makes it false before draining connections. Keep both cheap, restricted by the deployment network rather than application login, uncached, and free of secret configuration details. If a deployment needs a dependency check before receiving traffic, add a bounded check to readiness without turning liveness into a database restart trigger.
+Liveness answers whether the process can serve at all. Do not make a temporary database outage restart every healthy process.
 
-Add request logs with `logger()` or a custom middleware around `router.fetch()`. Log the URL pathname by default; query strings routinely contain search text, reset tokens, and other values that should not enter logs. Preserve an incoming trace/request ID only from trusted infrastructure, otherwise generate one, include it in response headers and structured logs, and pass it to downstream calls. Metrics should cover request count, status, duration, in-flight work, shutdown drain, database pool pressure, asset compilation, and error boundaries in terms the chosen monitoring system understands.
+Readiness is a lifecycle gate: required initialization completes before it becomes true, and shutdown makes it false before draining connections. If a deployment needs a dependency check before receiving traffic, add a bounded check here without turning liveness into a database restart trigger.
+
+Keep both endpoints cheap, restricted by the deployment network rather than application login, uncached, and free of secret configuration details.
+
+Add request logs with `logger()` or a custom middleware around `router.fetch()`. Log the URL pathname by default; query strings routinely contain search text, reset tokens, and other values that should not enter logs.
+
+Preserve an incoming trace or request ID only from trusted infrastructure. Otherwise generate one, include it in response headers and structured logs, and pass it to downstream calls.
+
+Metrics should cover request count, status, duration, in-flight work, shutdown drain, database pool pressure, asset compilation, and error boundaries in terms the chosen monitoring system understands.
 
 ## Deployment checklist {#deployment-checklist}
 
