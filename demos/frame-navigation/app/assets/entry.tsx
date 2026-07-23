@@ -34,7 +34,7 @@ async function resolveFrameResponse(
   let res = await fetch(url, {
     headers,
     method: options?.method,
-    body: options?.method?.toLowerCase() === 'get' ? undefined : options?.formData,
+    body: getRequestBody(options?.formData, options?.method, options?.encType),
     signal: options?.signal,
   })
 
@@ -43,7 +43,7 @@ async function resolveFrameResponse(
     return new Promise(() => {})
   }
 
-  if (!res.ok) {
+  if (!res.ok && res.status !== 422) {
     return (
       <ErrorCard
         eyebrow="Unexpected Error"
@@ -60,6 +60,21 @@ async function resolveFrameResponse(
 
   if (res.body) return res.body
   return await res.text()
+}
+
+function getRequestBody(
+  formData?: FormData,
+  method?: string,
+  encType?: string,
+): BodyInit | undefined {
+  if (!formData || method?.toLowerCase() === 'get') return
+  if (encType !== 'application/x-www-form-urlencoded') return formData
+
+  let body = new URLSearchParams()
+  for (let [name, value] of formData) {
+    body.append(name, typeof value === 'string' ? value : value.name)
+  }
+  return body
 }
 
 app.addEventListener('error', async (event) => {

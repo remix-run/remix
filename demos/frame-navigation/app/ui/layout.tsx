@@ -17,7 +17,7 @@ const navItems = [
   { id: 'dashboard', label: 'Dashboard', route: routes.main.index },
   { id: 'courses', label: 'Courses', route: routes.main.courses },
   { id: 'calendar', label: 'Calendar', route: routes.main.calendar },
-  { id: 'account', label: 'Account', route: routes.main.account },
+  { id: 'account', label: 'Account', route: routes.main.account.index },
   { id: 'settings', label: 'Settings', route: routes.settings.index },
 ]
 

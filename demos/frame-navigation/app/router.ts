@@ -6,6 +6,7 @@ import { staticFiles } from 'remix/middleware/static'
 import authController from './actions/auth/controller.tsx'
 import authLoginController from './actions/auth/login/controller.tsx'
 import rootController from './actions/controller.tsx'
+import mainAccountController from './actions/main/account/controller.tsx'
 import mainController from './actions/main/controller.tsx'
 import settingsController from './actions/settings/controller.tsx'
 import { loadAssetEntry } from './middleware/asset-entry.ts'
@@ -42,6 +43,7 @@ export const router = createRouter<AppContext>({ middleware })
 
 router.map(routes, rootController)
 router.map(routes.main, mainController)
+router.map(routes.main.account, mainAccountController)
 router.map(routes.auth, authController)
 router.map(routes.auth.login, authLoginController)
 router.map(routes.settings, settingsController)
