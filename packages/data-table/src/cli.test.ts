@@ -1,7 +1,7 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import { runDataTableCommand } from './cli.ts'
+import { runRemixDb } from './cli.ts'
 import { Database } from './lib/database.ts'
 import type {
   MigrateOptions,
@@ -57,12 +57,12 @@ class RecordingDatabase extends Database {
   }
 }
 
-describe('runDataTableCommand', () => {
+describe('runRemixDb', () => {
   it('migrates to the requested migration id', async () => {
     let db = new RecordingDatabase()
     let getMigrationsCalls = 0
 
-    let exitCode = await runDataTableCommand({
+    let exitCode = await runRemixDb({
       command: 'migrate',
       db,
       getMigrations() {
@@ -80,7 +80,7 @@ describe('runDataTableCommand', () => {
 
   it('wipes the database', async () => {
     let db = new RecordingDatabase()
-    let exitCode = await runDataTableCommand({ command: 'wipe', db })
+    let exitCode = await runRemixDb({ command: 'wipe', db })
 
     assert.equal(exitCode, 0)
     assert.deepEqual(db.calls, ['wipe'])
@@ -90,7 +90,7 @@ describe('runDataTableCommand', () => {
     let db = new RecordingDatabase()
     let seed: Seed = () => undefined
 
-    let exitCode = await runDataTableCommand({
+    let exitCode = await runRemixDb({
       command: 'reset',
       db,
       getMigrations() {
@@ -108,7 +108,7 @@ describe('runDataTableCommand', () => {
     let db = new RecordingDatabase()
     let seededDatabase: Database | undefined
 
-    let exitCode = await runDataTableCommand({
+    let exitCode = await runRemixDb({
       command: 'seed',
       db,
       seed(database) {
@@ -123,7 +123,7 @@ describe('runDataTableCommand', () => {
   it('loads migration status', async () => {
     let db = new RecordingDatabase()
 
-    let exitCode = await runDataTableCommand({
+    let exitCode = await runRemixDb({
       command: 'status',
       db,
       getMigrations() {

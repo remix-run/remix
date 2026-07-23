@@ -6,8 +6,8 @@ interface DatabaseCommandOptions {
   db: Database
 }
 
-/** Structured invocation options accepted by {@link runDataTableCommand}. */
-export type RunDataTableCommandOptions =
+/** Structured invocation options accepted by {@link runRemixDb}. */
+export type RunRemixDbOptions =
   | (DatabaseCommandOptions & {
       /** Applies pending migrations. */
       command: 'migrate'
@@ -47,7 +47,7 @@ export type RunDataTableCommandOptions =
  * @param options Database command and application database values.
  * @returns The exit code the host CLI should use.
  */
-export async function runDataTableCommand(options: RunDataTableCommandOptions): Promise<number> {
+export async function runRemixDb(options: RunRemixDbOptions): Promise<number> {
   if (options.command === 'migrate') {
     let migrateOptions = options.to === undefined ? undefined : { to: options.to }
     await options.db.migrate(await options.getMigrations(), migrateOptions)

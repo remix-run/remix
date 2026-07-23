@@ -2,7 +2,7 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 
 import type { Database, GetMigrations, Seed } from '@remix-run/data-table'
-import { runDataTableCommand } from '@remix-run/data-table/cli'
+import { runRemixDb } from '@remix-run/data-table/cli'
 import { loadModule } from '@remix-run/node-tsx/load-module'
 
 type DatabaseCommand = 'migrate' | 'reset' | 'seed' | 'status' | 'wipe'
@@ -30,7 +30,7 @@ async function run(): Promise<number> {
   }
 
   if (invocation.command === 'wipe') {
-    return runDataTableCommand({ command: invocation.command, db })
+    return runRemixDb({ command: invocation.command, db })
   }
 
   if (invocation.command === 'seed') {
@@ -39,7 +39,7 @@ async function run(): Promise<number> {
       throw new Error('app/db.ts must export a seed function to run db seed')
     }
 
-    return runDataTableCommand({ command: invocation.command, db, seed })
+    return runRemixDb({ command: invocation.command, db, seed })
   }
 
   let getMigrations = databaseModule.getMigrations
@@ -48,7 +48,7 @@ async function run(): Promise<number> {
   }
 
   if (invocation.command === 'migrate') {
-    return runDataTableCommand({
+    return runRemixDb({
       command: invocation.command,
       db,
       getMigrations,
@@ -57,7 +57,7 @@ async function run(): Promise<number> {
   }
 
   if (invocation.command === 'reset') {
-    return runDataTableCommand({
+    return runRemixDb({
       command: invocation.command,
       db,
       getMigrations,
@@ -65,7 +65,7 @@ async function run(): Promise<number> {
     })
   }
 
-  return runDataTableCommand({ command: invocation.command, db, getMigrations })
+  return runRemixDb({ command: invocation.command, db, getMigrations })
 }
 
 async function loadDatabaseModule(): Promise<DatabaseModule> {
