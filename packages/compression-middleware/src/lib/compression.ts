@@ -61,9 +61,10 @@ export interface CompressionOptions {
  * })
  * ```
  */
-export function compression(options?: CompressionOptions): Middleware {
+export function compression(options?: CompressionOptions): Middleware<readonly [], Response> {
   return async (context, next) => {
     let response = await next()
+    assertResponse(response)
 
     let contentTypeHeader = response.headers.get('Content-Type')
     if (!contentTypeHeader) {
@@ -100,5 +101,11 @@ export function compression(options?: CompressionOptions): Middleware {
     }
 
     return compressResponse(response, context.request, compressOptions)
+  }
+}
+
+function assertResponse(value: unknown): asserts value is Response {
+  if (!(value instanceof Response)) {
+    throw new TypeError('compression() expected next() to return a Response')
   }
 }

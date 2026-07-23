@@ -30,5 +30,6 @@ export type {
   RouteInstaller,
   Router,
   RouterContext,
+  RouterOutput,
   RouterOptions,
 } from './lib/router.ts'

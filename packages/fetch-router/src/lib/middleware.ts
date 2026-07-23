@@ -7,26 +7,30 @@ import type {
   ContextWithEntry,
   RequestContext,
 } from './request-context.ts'
+import type { DefaultOutput } from './router-types.ts'
+import type { Defined } from './type-utils.ts'
 
 /**
  * A middleware of any context transform.
  */
-export type AnyMiddleware = Middleware<ContextTransform>
+export type AnyMiddleware<output = DefaultOutput> = Middleware<ContextTransform, output>
 
 type ContextTransform =
   | ContextEntry
   | ContextEntries
-  | (<context extends RequestContext<any, any>>(context: context) => RequestContext<any, any>)
+  | (<context extends RequestContext<any, any, any>>(
+      context: context,
+    ) => RequestContext<any, any, any>)
 
 type EmptyContextTransform = readonly []
 
 declare const contextTransform: unique symbol
 
 type TransformOf<middleware> =
-  middleware extends Middleware<infer transform> ? transform : EmptyContextTransform
+  middleware extends Middleware<infer transform, any> ? transform : EmptyContextTransform
 
 type ContextWithTransform<
-  context extends RequestContext<any, any>,
+  context extends RequestContext<any, any, any>,
   transform,
 > = transform extends ContextEntries
   ? ContextWithEntries<context, transform>
@@ -35,7 +39,7 @@ type ContextWithTransform<
     : transform extends {
           <inputContext extends context>(context: inputContext): infer output
         }
-      ? output extends RequestContext<any, any>
+      ? output extends RequestContext<any, any, any>
         ? output
         : context
       : context
@@ -44,33 +48,36 @@ type ContextWithTransform<
  * Resolves the request-context type produced by a middleware tuple.
  */
 export type MiddlewareContext<
-  middleware extends readonly AnyMiddleware[],
-  context extends RequestContext<any, any> = RequestContext,
+  middleware extends readonly AnyMiddleware<any>[],
+  context extends RequestContext<any, any, any> = RequestContext,
 > = number extends middleware['length']
   ? context
   : middleware extends readonly [
-        infer first extends AnyMiddleware,
-        ...infer rest extends readonly AnyMiddleware[],
+        infer first extends AnyMiddleware<any>,
+        ...infer rest extends readonly AnyMiddleware<any>[],
       ]
     ? MiddlewareContext<rest, ContextWithTransform<context, TransformOf<first>>>
     : context
 
 /**
- * A special kind of request handler that either returns a response or passes control
+ * A special kind of request handler that either returns a router output or passes control
  * to the next middleware or request handler in the chain.
  *
  * @param context The request context
  * @param next A function that invokes the next middleware or request handler in the chain
- * @returns A response to short-circuit the chain, or the response from `next()` to continue
+ * @returns An output to short-circuit the chain, or the output from `next()` to continue
  *
  * The generic describes the context effect this middleware has. Use a `{ key, value }` object for
  * middleware that provides one context value, add a `property` field to install a direct context
  * property, or use {@link ContextEntries} for multiple values.
  */
-export type Middleware<transform extends ContextTransform = EmptyContextTransform> = ((
-  context: RequestContext<any>,
-  next: NextFunction,
-) => Response | Promise<Response>) & {
+export type Middleware<
+  transform extends ContextTransform = EmptyContextTransform,
+  output = DefaultOutput,
+> = ((
+  context: RequestContext<any, [], output>,
+  next: NextFunction<output>,
+) => Defined<output> | Promise<Defined<output>>) & {
   /**
    * Type-only metadata that carries the middleware's declared context effect.
    */
@@ -97,18 +104,18 @@ export function createMiddleware<const middleware extends readonly AnyMiddleware
 /**
  * A function that invokes the next middleware or handler in the chain.
  *
- * @returns The response from the downstream handler
+ * @returns The output from the downstream handler
  */
-export type NextFunction = () => Promise<Response>
+export type NextFunction<output = DefaultOutput> = () => Promise<Defined<output>>
 
-export function runMiddleware(
-  middleware: AnyMiddleware[],
-  context: RequestContext<any, any>,
-  handler: RequestHandler<any>,
-): Promise<Response> {
+export function runMiddleware<output>(
+  middleware: AnyMiddleware<output>[],
+  context: RequestContext<any, any, output>,
+  handler: RequestHandler<any, output>,
+): Promise<Defined<output>> {
   let index = -1
 
-  let dispatch = async (i: number): Promise<Response> => {
+  let dispatch = async (i: number): Promise<Defined<output>> => {
     if (i <= index) throw new Error('next() called multiple times')
     index = i
 
@@ -121,25 +128,25 @@ export function runMiddleware(
       return await raceRequestAbort(Promise.resolve(handler(context)), context.request)
     }
 
-    let nextPromise: Promise<Response> | undefined
-    let next: NextFunction = () => {
+    let nextPromise: Promise<Defined<output>> | undefined
+    let next: NextFunction<output> = () => {
       nextPromise = dispatch(i + 1)
       return nextPromise
     }
 
-    let response = await raceRequestAbort(Promise.resolve(fn(context, next)), context.request)
+    let result = await raceRequestAbort(Promise.resolve(fn(context, next)), context.request)
 
-    // If a response was returned, short-circuit the chain
-    if (response instanceof Response) {
-      return response
+    // If a result was returned, short-circuit the chain
+    if (result !== undefined) {
+      return result
     }
 
-    // If the middleware called next(), use the downstream response
+    // If the middleware called next(), use the downstream output
     if (nextPromise != null) {
       return nextPromise
     }
 
-    throw new Error('Middleware must return a Response or call next()')
+    throw new Error('Middleware must return a value or call next()')
   }
 
   return dispatch(0)

@@ -73,10 +73,15 @@ type ContextFallbackValue<key> = [ContextDefaultValue<key>] extends [never]
 
 export declare const requestContextTypes: unique symbol
 
-interface RequestContextTypes<params extends Record<string, any>, entries extends ContextEntries> {
+interface RequestContextTypes<
+  params extends Record<string, any>,
+  entries extends ContextEntries,
+  output,
+> {
   readonly [requestContextTypes]?: {
     params: params
     entries: entries
+    output: output
   }
 }
 
@@ -84,10 +89,15 @@ interface RequestContextTypes<params extends Record<string, any>, entries extend
  * Extracts the route params type from a {@link RequestContext}.
  */
 export type ContextParams<context> =
-  context extends RequestContextTypes<infer params extends Record<string, any>, any> ? params : {}
+  context extends RequestContextTypes<infer params extends Record<string, any>, any, any>
+    ? params
+    : {}
 
 type RequestContextEntries<context> =
-  context extends RequestContextTypes<any, infer entries extends ContextEntries> ? entries : []
+  context extends RequestContextTypes<any, infer entries extends ContextEntries, any> ? entries : []
+
+type RequestContextOutput<context> =
+  context extends RequestContextTypes<any, any, infer output> ? output : Response
 
 /**
  * Resolves duplicate route params. Values in `right` win when present, but optional right-side
@@ -113,12 +123,13 @@ export type MergeContextParams<
  * Adds route params to a {@link RequestContext} while preserving its existing context values.
  */
 export type ContextWithParams<context, params extends Record<string, any>> =
-  context extends RequestContextTypes<any, any>
+  context extends RequestContextTypes<any, any, any>
     ? RequestContextWithEntries<
         MergeContextParams<ContextParams<context>, params>,
-        RequestContextEntries<context>
+        RequestContextEntries<context>,
+        RequestContextOutput<context>
       >
-    : RequestContextWithEntries<params, []>
+    : RequestContextWithEntries<params, [], Response>
 
 type ResolveEntryValue<
   entries extends ContextEntries,
@@ -136,7 +147,7 @@ type ResolveEntryValue<
  * Resolves the value type returned by `context.get(key)` for the given context and key.
  */
 export type GetContextValue<context, key extends object> =
-  context extends RequestContextTypes<any, any>
+  context extends RequestContextTypes<any, any, any>
     ? ResolveEntryValue<RequestContextEntries<context>, key, ContextFallbackValue<key>>
     : ContextFallbackValue<key>
 
@@ -162,17 +173,19 @@ type ContextProperties<entries extends ContextEntries> = entries extends readonl
 type RequestContextWithEntries<
   params extends Record<string, any>,
   entries extends ContextEntries,
-> = RequestContext<params, entries> & ContextProperties<entries>
+  output,
+> = RequestContext<params, entries, output> & ContextProperties<entries>
 
 /**
  * Appends context entries to an existing {@link RequestContext}.
  * This is useful when deriving a context shape without a middleware tuple.
  */
 export type ContextWithEntries<context, additions extends ContextEntries> =
-  context extends RequestContextTypes<any, any>
+  context extends RequestContextTypes<any, any, any>
     ? RequestContextWithEntries<
         ContextParams<context>,
-        [...RequestContextEntries<context>, ...additions]
+        [...RequestContextEntries<context>, ...additions],
+        RequestContextOutput<context>
       >
     : never
 
@@ -186,12 +199,21 @@ export type ContextWithEntry<context, entry extends ContextEntry> = ContextWithE
 >
 
 /**
+ * Replaces the output type returned by the router associated with a request context.
+ */
+export type ContextWithOutput<context, output> =
+  context extends RequestContextTypes<any, any, any>
+    ? RequestContextWithEntries<ContextParams<context>, RequestContextEntries<context>, output>
+    : never
+
+/**
  * A context object that contains information about the current request. Every request
  * handler or middleware in the lifecycle of a request receives the same context object.
  */
 export class RequestContext<
   params extends Record<string, any> = {},
   entries extends ContextEntries = [],
+  output = Response,
 > {
   /**
    * @param request The incoming request
@@ -251,17 +273,27 @@ export class RequestContext<
    * @param key The key to read
    * @returns The value for the given key, or `undefined` if the value is not available
    */
-  get = <key extends object>(key: key): GetContextValue<RequestContext<params, entries>, key> => {
+  get = <key extends object>(
+    key: key,
+  ): GetContextValue<RequestContext<params, entries, output>, key> => {
     if (!this.#contextMap.has(key)) {
-      let contextKey = key as ContextKey<GetContextValue<RequestContext<params, entries>, key>>
+      let contextKey = key as ContextKey<
+        GetContextValue<RequestContext<params, entries, output>, key>
+      >
       if (!Object.hasOwn(contextKey, 'defaultValue')) {
-        return undefined as GetContextValue<RequestContext<params, entries>, key>
+        return undefined as GetContextValue<RequestContext<params, entries, output>, key>
       }
 
-      return contextKey.defaultValue as GetContextValue<RequestContext<params, entries>, key>
+      return contextKey.defaultValue as GetContextValue<
+        RequestContext<params, entries, output>,
+        key
+      >
     }
 
-    return this.#contextMap.get(key) as GetContextValue<RequestContext<params, entries>, key>
+    return this.#contextMap.get(key) as GetContextValue<
+      RequestContext<params, entries, output>,
+      key
+    >
   }
 
   /**
@@ -334,20 +366,20 @@ export class RequestContext<
     })
   }
 
-  #router?: Router<any>
+  #router?: Router<any, output>
 
   /**
    * The router handling this request.
    */
-  get router(): Router<RequestContext<any, entries>> {
+  get router(): Router<RequestContext<any, entries, output>, output> {
     if (this.#router == null) {
       throw new Error('No router found in request context.')
     }
 
-    return this.#router as Router<RequestContext<any, entries>>
+    return this.#router as Router<RequestContext<any, entries, output>, output>
   }
 
-  set router(router: Router<any>) {
+  set router(router: Router<any, output>) {
     this.#router = router
   }
 
@@ -360,4 +392,5 @@ export class RequestContext<
 export interface RequestContext<
   params extends Record<string, any> = {},
   entries extends ContextEntries = [],
-> extends RequestContextTypes<params, entries> {}
+  output = Response,
+> extends RequestContextTypes<params, entries, output> {}
