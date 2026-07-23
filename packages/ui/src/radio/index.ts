@@ -43,9 +43,9 @@ const baseStyle: CSSMixinDescriptor = css({
   minWidth: 'var(--rmx-radio-size)',
   minHeight: 'var(--rmx-radio-size)',
   padding: 0,
-  border: '1px solid rgba(0, 0, 0, 0.12)',
+  border: '1px solid light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.2))',
   borderRadius: '9999px',
-  background: '#FFFFFF',
+  background: 'light-dark(#FFFFFF, #1a1a1a)',
   boxShadow: 'inset 0 1px 1px rgba(0, 0, 0, 0.06), inset 0 2px 2px rgba(0, 0, 0, 0.06)',
   verticalAlign: 'middle',
   flex: 'none',
@@ -55,9 +55,9 @@ const baseStyle: CSSMixinDescriptor = css({
     height: 'var(--rmx-radio-mark-size)',
     borderRadius: '99px',
     background:
-      'linear-gradient(180deg, rgba(53, 115, 246, 0) 25%, rgba(53, 115, 246, 0.15) 100%), #FFFFFF',
+      'linear-gradient(180deg, rgba(53, 115, 246, 0) 25%, rgba(53, 115, 246, 0.15) 100%), light-dark(#FFFFFF, #f5f9ff)',
     boxShadow:
-      '0 1px 1px -0.5px #0944BE, 0 2px 2px -1px #0944BE, 0 4px 4px -2px #0944BE, 0 0 1px 1px rgba(0, 0, 0, 0.25), inset 0 0 2px 1px #FFFFFF',
+      '0 1px 1px -0.5px #0944BE, 0 2px 2px -1px #0944BE, 0 4px 4px -2px #0944BE, 0 0 1px 1px light-dark(rgba(0, 0, 0, 0.25), rgba(255, 255, 255, 0.28)), inset 0 0 2px 1px light-dark(#FFFFFF, rgba(255, 255, 255, 0.5))',
     opacity: 0,
     pointerEvents: 'none',
   },
@@ -67,7 +67,8 @@ const baseStyle: CSSMixinDescriptor = css({
   [checkedSelector]: {
     border: 0,
     borderRadius: '99px',
-    background: 'linear-gradient(180deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0) 75.48%), #3573F6',
+    background:
+      'linear-gradient(180deg, light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.16)) 0%, rgba(0, 0, 0, 0) 75.48%), light-dark(#3573F6, #6eaaff)',
     backgroundBlendMode: 'overlay, normal',
     boxShadow:
       '0 1px 0 rgba(255, 255, 255, 0.6), 0 0 16px rgba(53, 115, 246, 0.25), inset 0 0 3px 1px rgba(0, 0, 0, 0.1)',

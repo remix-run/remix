@@ -15,7 +15,7 @@ describe('toggle', () => {
     expect(html).toMatch(/--rmx-toggle-height: 18px/)
     expect(html).toMatch(/width: var\(--rmx-toggle-width\)/)
     expect(html).toMatch(/height: var\(--rmx-toggle-height\)/)
-    expect(html).toMatch(/#EBEBEB/)
+    expect(html).toMatch(/light-dark\(#EBEBEB, #2c2c2c\)/)
     expect(html).toMatch(/inset 0 0 4px 1px rgba\(0, 0, 0, 0\.08\)/)
     expect(html).toMatch(/left: var\(--rmx-toggle-thumb-inset\)/)
     expect(html).toMatch(/width: var\(--rmx-toggle-thumb-width\)/)
@@ -45,7 +45,7 @@ describe('toggle', () => {
     expect(html).toMatch(/:checked/)
     expect(html).toMatch(/\[aria-checked="true"\]/)
     expect(html).toMatch(/\[data-state="checked"\]/)
-    expect(html).toMatch(/#70C754/)
+    expect(html).toMatch(/light-dark\(#70C754, #8ee572\)/)
     expect(html).toMatch(/0 0 12px 1px rgba\(112, 199, 84, 0\.25\)/)
     expect(html).toMatch(/transform: translateX\(var\(--rmx-toggle-thumb-translate-x\)\)/)
     expect(html).toMatch(
@@ -66,7 +66,7 @@ describe('toggle', () => {
 
     expect(html).toMatch(/:focus-visible/)
     expect(html).toMatch(/outline: 0/)
-    expect(html).toMatch(/0 0 0 1px #3573F6/)
+    expect(html).toMatch(/0 0 0 1px light-dark\(#3573F6, #6eaaff\)/)
     expect(html).toMatch(/&:disabled, &\[aria-disabled="true"\]/)
     expect(html).toMatch(/opacity: 0\.55/)
     expect(html).toMatch(

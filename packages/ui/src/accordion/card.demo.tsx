@@ -65,9 +65,9 @@ const cardCss = css({
   flexDirection: 'column',
   gap: '12px',
   padding: '16px',
-  border: '1px solid #e7e7e7',
+  border: '1px solid light-dark(#e7e7e7, #333333)',
   borderRadius: '12px',
-  backgroundColor: '#ffffff',
+  backgroundColor: 'light-dark(#ffffff, #1a1a1a)',
   boxShadow: '0 1px 1px rgb(0 0 0 / 0.05)',
 })
 
@@ -87,7 +87,7 @@ const eyebrowCss = css({
   fontWeight: '600',
   letterSpacing: '0.06em',
   textTransform: 'uppercase',
-  color: '#6d6d6d',
+  color: 'light-dark(#6d6d6d, #b3b3b3)',
 })
 
 const titleCss = css({
@@ -95,19 +95,19 @@ const titleCss = css({
   fontSize: '16px',
   lineHeight: '1.25',
   fontWeight: '600',
-  color: '#151515',
+  color: 'light-dark(#151515, #ececec)',
 })
 
 const descriptionCss = css({
   margin: 0,
   fontSize: '13px',
   lineHeight: '1.65',
-  color: '#4f4f4f',
+  color: 'light-dark(#4f4f4f, #b3b3b3)',
 })
 
 const bodyTextCss = css({
   margin: 0,
   fontSize: '13px',
   lineHeight: '1.65',
-  color: '#4f4f4f',
+  color: 'light-dark(#4f4f4f, #b3b3b3)',
 })

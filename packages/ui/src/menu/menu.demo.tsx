@@ -81,5 +81,5 @@ const separatorCss = css({
   marginBlock: '4px',
   marginInline: '8px',
   border: 0,
-  borderTop: '1px solid #e7e7e7',
+  borderTop: '1px solid light-dark(#e7e7e7, #333333)',
 })

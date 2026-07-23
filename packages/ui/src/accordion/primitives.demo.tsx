@@ -55,13 +55,13 @@ const rootCss = css({
   display: 'grid',
   width: '24rem',
   maxWidth: '100%',
-  border: '1px solid #d8d8d8',
+  border: '1px solid light-dark(#d1d1d1, #444444)',
   borderRadius: '8px',
-  background: '#ffffff',
+  background: 'light-dark(#ffffff, #1a1a1a)',
 })
 
 const itemCss = css({
-  borderBlockStart: '1px solid #e8e8e8',
+  borderBlockStart: '1px solid light-dark(#e7e7e7, #333333)',
   '&:first-child': {
     borderBlockStart: 0,
   },
@@ -81,7 +81,7 @@ const triggerCss = css({
   width: '100%',
   border: 0,
   background: 'transparent',
-  color: '#101010',
+  color: 'light-dark(#151515, #ececec)',
   font: '600 13px/18px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
   letterSpacing: 0,
   padding: '10px 12px',
@@ -93,13 +93,13 @@ const triggerCss = css({
     content: '"-"',
   },
   '&:focus-visible': {
-    outline: '2px solid #3573f6',
+    outline: '2px solid light-dark(#3573f6, #6eaaff)',
     outlineOffset: '-2px',
   },
 })
 
 const contentCss = css({
-  color: '#4f4f4f',
+  color: 'light-dark(#4f4f4f, #b3b3b3)',
   font: '500 13px/20px "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif',
   letterSpacing: 0,
   padding: '0 12px 12px',

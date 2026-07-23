@@ -47,7 +47,7 @@ const legendCss = css({
   lineHeight: '18px',
   fontWeight: 650,
   letterSpacing: 0,
-  color: '#101010',
+  color: 'light-dark(#151515, #ececec)',
 })
 
 const optionCss = css({
@@ -60,5 +60,5 @@ const optionCss = css({
   lineHeight: '18px',
   fontWeight: 500,
   letterSpacing: 0,
-  color: '#101010',
+  color: 'light-dark(#151515, #ececec)',
 })

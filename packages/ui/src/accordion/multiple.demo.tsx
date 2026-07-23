@@ -52,5 +52,5 @@ const bodyTextCss = css({
   margin: 0,
   fontSize: '13px',
   lineHeight: '1.65',
-  color: '#4f4f4f',
+  color: 'light-dark(#4f4f4f, #b3b3b3)',
 })

@@ -71,11 +71,11 @@ const surfaceCss = css({
   boxSizing: 'border-box',
   width: '14rem',
   margin: 0,
-  border: '1px solid rgba(0, 0, 0, 0.12)',
+  border: '1px solid light-dark(#d1d1d1, #444444)',
   borderRadius: '8px',
-  background: '#FFFFFF',
+  background: 'light-dark(#ffffff, #1a1a1a)',
   boxShadow: '0 16px 40px rgba(0, 0, 0, 0.14)',
-  color: '#101010',
+  color: 'light-dark(#151515, #ececec)',
   padding: '8px',
   '&:popover-open': {
     display: 'grid',
@@ -89,6 +89,6 @@ const surfaceBodyCss = css({
   lineHeight: '18px',
   fontWeight: 500,
   letterSpacing: 0,
-  color: '#4f4f4f',
+  color: 'light-dark(#4f4f4f, #b3b3b3)',
   padding: '2px 4px 4px',
 })
