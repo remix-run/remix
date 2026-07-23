@@ -92,6 +92,10 @@ JSONC, so it may contain comments and trailing commas. Every field is optional:
 {
   "$schema": "https://remix.run/schemas/remix.json",
 
+  "doctor": {
+    "strict": true,
+  },
+
   "test": {
     // Test discovery
     "files": ["**/*.test{,.browser,.e2e}.{ts,tsx}"],
@@ -136,7 +140,8 @@ JSONC, so it may contain comments and trailing commas. Every field is optional:
 
 Explicit command flags and positional arguments override configured values. Repeated flags replace
 configured arrays, while nested Playwright and coverage settings merge by field. Relative paths and
-globs are resolved from the directory containing the config file.
+globs are resolved from the directory containing the config file. Use `remix doctor --no-strict` to
+disable configured strict mode for one run.
 
 Use the global `--config` option to select another JSONC file. The option itself is resolved from the
 CLI working directory and may appear before or after the command:

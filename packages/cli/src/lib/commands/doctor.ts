@@ -5,6 +5,7 @@ import { runRemixDoctor, type RunRemixDoctorOptions } from '../doctor/run.ts'
 import { renderCliError, toCliError } from '../errors.ts'
 import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
+import type { RemixDoctorCommandConfig } from '../remix-config.ts'
 
 type DoctorCommandOptions = Pick<RunRemixDoctorOptions, 'fix' | 'json' | 'strict'>
 
@@ -15,7 +16,8 @@ export async function runDoctorCommand(argv: string[], context: CliContext): Pro
   }
 
   try {
-    let options = parseDoctorCommandArgs(argv)
+    let config = await context.loadConfig()
+    let options = resolveDoctorCommandOptions(argv, config.doctor)
     return await runRemixDoctor({
       ...options,
       cwd: context.cwd,
@@ -45,6 +47,10 @@ export function getDoctorCommandHelpText(target: NodeJS.WriteStream = process.st
           description: 'Exit with status 1 when warning-level findings are present',
           label: '--strict',
         },
+        {
+          description: 'Do not exit with status 1 when warning-level findings are present',
+          label: '--no-strict',
+        },
         { description: 'Apply low-risk project and action fixes', label: '--fix' },
       ],
       usage: ['remix doctor [--json] [--strict] [--fix] [--no-color]'],
@@ -53,20 +59,30 @@ export function getDoctorCommandHelpText(target: NodeJS.WriteStream = process.st
   )
 }
 
-function parseDoctorCommandArgs(argv: string[]): DoctorCommandOptions {
+export function resolveDoctorCommandOptions(
+  argv: string[],
+  config: RemixDoctorCommandConfig | undefined,
+): DoctorCommandOptions {
   let parsed = parseArgs(
     argv,
     {
       fix: { flag: '--fix', type: 'boolean' },
       json: { flag: '--json', type: 'boolean' },
+      noStrict: { flag: '--no-strict', type: 'boolean' },
       strict: { flag: '--strict', type: 'boolean' },
     },
     { maxPositionals: 0 },
   )
 
+  let strict = config?.strict ?? false
+  for (let arg of argv) {
+    if (arg === '--strict') strict = true
+    if (arg === '--no-strict') strict = false
+  }
+
   return {
     fix: parsed.options.fix,
     json: parsed.options.json,
-    strict: parsed.options.strict,
+    strict,
   }
 }

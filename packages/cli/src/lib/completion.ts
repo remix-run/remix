@@ -238,6 +238,7 @@ function completeCommand(
       '--fix',
       '--json',
       '--strict',
+      '--no-strict',
     ])
   }
 

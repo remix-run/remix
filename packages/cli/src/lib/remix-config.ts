@@ -22,7 +22,12 @@ type TestType = (typeof testTypes)[number]
 type JsonPath = Array<number | string>
 
 export interface RemixConfig {
+  doctor?: RemixDoctorCommandConfig
   test?: RemixTestCommandConfig
+}
+
+export interface RemixDoctorCommandConfig {
+  strict?: boolean
 }
 
 export interface RemixTestCommandConfig {
@@ -116,15 +121,34 @@ function parseConfig(
   cwd: string,
 ): RemixConfig {
   let object = requireObject(value, source, [])
-  requireKnownProperties(object, ['$schema', 'test'], source, [])
+  requireKnownProperties(object, ['$schema', 'doctor', 'test'], source, [])
 
   if (object.$schema !== undefined) {
     requireString(object.$schema, source, ['$schema'])
   }
 
-  return object.test === undefined
-    ? {}
-    : { test: parseTestConfig(object.test, source, configDir, cwd) }
+  let config: RemixConfig = {}
+
+  if (object.doctor !== undefined) {
+    config.doctor = parseDoctorConfig(object.doctor, source)
+  }
+
+  if (object.test !== undefined) {
+    config.test = parseTestConfig(object.test, source, configDir, cwd)
+  }
+
+  return config
+}
+
+function parseDoctorConfig(value: unknown, source: ConfigSource): RemixDoctorCommandConfig {
+  let objectPath = ['doctor']
+  let object = requireObject(value, source, objectPath)
+  requireKnownProperties(object, ['strict'], source, objectPath)
+
+  let config: RemixDoctorCommandConfig = {}
+  let strict = optionalBoolean(object.strict, source, [...objectPath, 'strict'])
+  if (strict !== undefined) config.strict = strict
+  return config
 }
 
 function parseTestConfig(

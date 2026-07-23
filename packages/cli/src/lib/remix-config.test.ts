@@ -45,6 +45,41 @@ describe('loadRemixConfig', () => {
     }
   })
 
+  it('parses doctor strict mode', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-doctor-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        JSON.stringify({ doctor: { strict: true } }),
+        'utf8',
+      )
+
+      assert.deepEqual(await loadRemixConfig(cwd, undefined), { doctor: { strict: true } })
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects invalid doctor strict values', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-doctor-invalid-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        JSON.stringify({ doctor: { strict: 'yes' } }),
+        'utf8',
+      )
+
+      await assert.rejects(
+        () => loadRemixConfig(cwd, undefined),
+        /Expected a boolean at doctor\.strict/,
+      )
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
   it('rejects a missing explicitly selected config', async () => {
     let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-missing-explicit-'))
 

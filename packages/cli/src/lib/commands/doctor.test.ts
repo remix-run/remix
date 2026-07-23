@@ -23,9 +23,10 @@ const DOCTOR_COMMAND_HELP_TEXT = [
   'Check project environment and Remix app conventions for the current project.',
   '',
   'Options:',
-  '  --json    Print doctor findings as JSON',
-  '  --strict  Exit with status 1 when warning-level findings are present',
-  '  --fix     Apply low-risk project and action fixes',
+  '  --json       Print doctor findings as JSON',
+  '  --strict     Exit with status 1 when warning-level findings are present',
+  '  --no-strict  Do not exit with status 1 when warning-level findings are present',
+  '  --fix        Apply low-risk project and action fixes',
   '',
   'Examples:',
   '  remix doctor',
@@ -1213,6 +1214,31 @@ describe('doctor command', () => {
     assert.equal(projectSuite?.status, 'issues')
     assert.equal(actionsSuite?.status, 'skipped')
     assert.equal(actionsSuite?.reason, 'Blocked by project warnings.')
+  })
+
+  it('loads strict mode from remix.json and lets --no-strict override it', async () => {
+    let projectDir = await copyFixtureProject('doctor-missing')
+
+    try {
+      await fs.writeFile(
+        path.join(projectDir, 'remix.json'),
+        JSON.stringify({ doctor: { strict: true } }),
+        'utf8',
+      )
+
+      let configured = await runDoctor([], projectDir)
+      let overridden = await runDoctor(['--no-strict'], projectDir)
+
+      assert.equal(configured.exitCode, 1)
+      assert.match(configured.stdout, /Summary: 2 warnings, 0 advice\./)
+      assert.equal(configured.stderr, '')
+
+      assert.equal(overridden.exitCode, 0)
+      assert.match(overridden.stdout, /Summary: 2 warnings, 0 advice\./)
+      assert.equal(overridden.stderr, '')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
   })
 
   it('fails strict mode when action warnings are present', async () => {
