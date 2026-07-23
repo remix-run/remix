@@ -19,7 +19,7 @@ export interface RequireAuthOptions {
  */
 export function requireAuth<identity = unknown>(
   options: RequireAuthOptions = {},
-): Middleware<{ key: typeof Auth; value: GoodAuth<identity>; property: 'auth' }> {
+): Middleware<{ key: typeof Auth; value: GoodAuth<identity>; property: 'auth' }, Response> {
   return async (context, next) => {
     let auth = context.get(Auth)
     if (auth == null) {
@@ -30,7 +30,9 @@ export function requireAuth<identity = unknown>(
 
     if (auth.ok) {
       context.set(Auth, auth, { property: 'auth' })
-      return next()
+      let response = await next()
+      assertResponse(response)
+      return response
     }
 
     let response = await createFailureResponse(auth, context, options)
@@ -41,6 +43,12 @@ export function requireAuth<identity = unknown>(
     }
 
     return response
+  }
+}
+
+function assertResponse(value: unknown): asserts value is Response {
+  if (!(value instanceof Response)) {
+    throw new TypeError('requireAuth() expected next() to return a Response')
   }
 }
 

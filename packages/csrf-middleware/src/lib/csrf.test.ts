@@ -256,4 +256,20 @@ describe('csrf middleware', () => {
       })
     }, new Error('csrf middleware requires session() middleware to run before it'))
   })
+
+  it('throws when the next handler does not return a Response', async () => {
+    let cookie = createCookie('__session', { secrets: ['secret1'] })
+    let storage = createCookieSessionStorage()
+    let router = createRouter({
+      middleware: [session(cookie, storage), csrf()],
+    })
+
+    // @ts-expect-error - exercise runtime validation for JavaScript consumers
+    router.get('/', () => 'not a response')
+
+    await assert.rejects(
+      () => router.fetch('https://remix.run/'),
+      new TypeError('csrf() expected next() to return a Response'),
+    )
+  })
 })

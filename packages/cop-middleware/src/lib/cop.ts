@@ -140,16 +140,24 @@ function isSafeMethod(method: string): boolean {
  * @param options Cross-origin protection options.
  * @returns Middleware that validates request origin headers.
  */
-export function cop(options: CopOptions = {}): Middleware {
+export function cop(options: CopOptions = {}): Middleware<readonly [], Response> {
   let protection = new CrossOriginProtection(options)
 
   return async (context, next) => {
     let reason = protection.check(context)
     if (reason == null) {
-      return next()
+      let response = await next()
+      assertResponse(response)
+      return response
     }
 
     return protection.deny(reason, context)
+  }
+}
+
+function assertResponse(value: unknown): asserts value is Response {
+  if (!(value instanceof Response)) {
+    throw new TypeError('cop() expected next() to return a Response')
   }
 }
 

@@ -222,4 +222,28 @@ describe('requireAuth middleware', () => {
       await router.fetch('https://remix.run/')
     }, new Error('Auth state not found. Make sure auth() middleware runs before requireAuth().'))
   })
+
+  it('throws when the next handler does not return a Response', async () => {
+    let router = createRouter({
+      middleware: [
+        auth({
+          schemes: [
+            {
+              name: 'test',
+              authenticate: () => ({ status: 'success', identity: null }),
+            },
+          ],
+        }),
+        requireAuth(),
+      ],
+    })
+
+    // @ts-expect-error - exercise runtime validation for JavaScript consumers
+    router.get('/', () => 'not a response')
+
+    await assert.rejects(
+      () => router.fetch('https://remix.run/'),
+      new TypeError('requireAuth() expected next() to return a Response'),
+    )
+  })
 })

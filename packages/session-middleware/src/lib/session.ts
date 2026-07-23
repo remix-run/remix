@@ -12,7 +12,7 @@ import { Session, type SessionStorage } from '@remix-run/session'
 export function session(
   sessionCookie: Cookie,
   sessionStorage: SessionStorage,
-): Middleware<{ key: typeof Session; value: Session; property: 'session' }> {
+): Middleware<{ key: typeof Session; value: Session; property: 'session' }, Response> {
   if (!sessionCookie.signed) {
     throw new Error('Session cookie must be signed')
   }
@@ -28,6 +28,7 @@ export function session(
     context.set(Session, session, { property: 'session' })
 
     let response = await next()
+    assertResponse(response)
 
     if (session !== context.get(Session)) {
       throw new Error('Cannot save session that was initialized by another middleware/handler')
@@ -41,5 +42,11 @@ export function session(
     }
 
     return response
+  }
+}
+
+function assertResponse(value: unknown): asserts value is Response {
+  if (!(value instanceof Response)) {
+    throw new TypeError('session() expected next() to return a Response')
   }
 }

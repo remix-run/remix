@@ -751,4 +751,16 @@ describe('staticFiles middleware', () => {
       assert.equal(response.headers.get('Content-Type'), 'text/plain; charset=utf-8')
     })
   })
+
+  it('throws when the next handler does not return a Response', async () => {
+    let router = createRouter({ middleware: [staticFiles(tmpDir)] })
+
+    // @ts-expect-error - exercise runtime validation for JavaScript consumers
+    router.post('/', () => 'not a response')
+
+    await assert.rejects(
+      () => router.fetch('https://remix.run/', { method: 'POST' }),
+      new TypeError('staticFiles() expected next() to return a Response'),
+    )
+  })
 })

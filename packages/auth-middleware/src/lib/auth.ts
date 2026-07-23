@@ -93,7 +93,7 @@ export interface AuthScheme<identity = unknown> {
   name: string
   /** Authenticates the current request or returns `null`/`undefined` to skip the scheme. */
   authenticate(
-    context: RequestContext,
+    context: RequestContext<any, any, any>,
   ): AuthSchemeAuthenticateResult<identity> | Promise<AuthSchemeAuthenticateResult<identity>>
 }
 
@@ -164,7 +164,7 @@ export function auth<schemes extends readonly AuthScheme<any>[]>(
   }
 }
 
-function setAuthState(context: RequestContext<any, any>, auth: AuthState): void {
+function setAuthState(context: RequestContext<any, any, any>, auth: AuthState): void {
   context.set(Auth, auth, { property: 'auth' })
 }
 

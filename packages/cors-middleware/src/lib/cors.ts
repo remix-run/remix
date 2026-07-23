@@ -125,7 +125,7 @@ type ResolvedAllowedHeaders = {
  * @param options CORS options
  * @returns CORS middleware
  */
-export function cors(options: CorsOptions = {}): Middleware {
+export function cors(options: CorsOptions = {}): Middleware<readonly [], Response> {
   let methods = normalizeMethodList(options.methods ?? defaultCorsMethods)
   let exposedHeaders = options.exposedHeaders ? normalizeHeaderList(options.exposedHeaders) : ''
   let allowCredentials = options.credentials ?? false
@@ -141,7 +141,9 @@ export function cors(options: CorsOptions = {}): Middleware {
         return new Response(null, { status: preflightStatusCode })
       }
 
-      return next()
+      let response = await next()
+      assertResponse(response)
+      return response
     }
 
     let allowedOrigin = await resolveAllowedOrigin(requestOrigin, context, options.origin)
@@ -150,7 +152,9 @@ export function cors(options: CorsOptions = {}): Middleware {
         return new Response(null, { status: 403 })
       }
 
-      return next()
+      let response = await next()
+      assertResponse(response)
+      return response
     }
 
     let corsHeaders = new Headers()
@@ -212,8 +216,15 @@ export function cors(options: CorsOptions = {}): Middleware {
     }
 
     let response = await next()
+    assertResponse(response)
 
     return withCorsHeaders(response, corsHeaders, vary)
+  }
+}
+
+function assertResponse(value: unknown): asserts value is Response {
+  if (!(value instanceof Response)) {
+    throw new TypeError('cors() expected next() to return a Response')
   }
 }
 

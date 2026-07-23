@@ -206,6 +206,18 @@ describe('logger', () => {
       assert.equal(message, 'bad')
     })
   })
+
+  it('throws when the next handler does not return a Response', async () => {
+    let router = createRouter({ middleware: [logger({ log() {} })] })
+
+    // @ts-expect-error - exercise runtime validation for JavaScript consumers
+    router.get('/', () => 'not a response')
+
+    await assert.rejects(
+      () => router.fetch('https://remix.run/'),
+      new TypeError('logger() expected next() to return a Response'),
+    )
+  })
 })
 
 async function logRequest({
