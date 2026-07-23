@@ -1,3 +1,8 @@
+import { existsSync } from 'node:fs'
+import { mkdir, mkdtemp, rm, stat, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
+
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 import { column, createDatabase, table, eq } from '@remix-run/data-table'
@@ -38,6 +43,18 @@ const accountProjects = table({
   primaryKey: ['account_id', 'project_id'],
 })
 
+async function readPragma(
+  adapter: SqliteDatabaseAdapter,
+  pragma: string,
+): Promise<Record<string, unknown> | undefined> {
+  let result = await adapter.execute({
+    operation: { kind: 'raw', sql: { text: 'pragma ' + pragma, values: [] } },
+    transaction: undefined,
+  })
+
+  return result.rows?.[0]
+}
+
 describe('sqlite adapter', () => {
   it('wipes and reopens config-backed databases', async () => {
     let adapter = createSqliteDatabaseAdapter({ filename: ':memory:' })
@@ -70,6 +87,81 @@ describe('sqlite adapter', () => {
     await assertForeignKeysEnabled()
     await adapter.wipe()
     await assertForeignKeysEnabled()
+  })
+
+  it('keeps foreign key enforcement off unless configured', async () => {
+    let omitted = createSqliteDatabaseAdapter({ filename: ':memory:' })
+    assert.deepEqual(await readPragma(omitted, 'foreign_keys'), { foreign_keys: 0 })
+
+    let disabled = createSqliteDatabaseAdapter({ filename: ':memory:', foreignKeys: false })
+    assert.deepEqual(await readPragma(disabled, 'foreign_keys'), { foreign_keys: 0 })
+
+    let enabled = createSqliteDatabaseAdapter({ filename: ':memory:', foreignKeys: true })
+    assert.deepEqual(await readPragma(enabled, 'foreign_keys'), { foreign_keys: 1 })
+  })
+
+  it('applies a default busy timeout and supports overrides, including zero', async () => {
+    let defaulted = createSqliteDatabaseAdapter({ filename: ':memory:' })
+    assert.deepEqual(await readPragma(defaulted, 'busy_timeout'), { timeout: 5000 })
+
+    let overridden = createSqliteDatabaseAdapter({ filename: ':memory:', busyTimeout: 250 })
+    assert.deepEqual(await readPragma(overridden, 'busy_timeout'), { timeout: 250 })
+
+    let disabled = createSqliteDatabaseAdapter({ filename: ':memory:', busyTimeout: 0 })
+    assert.deepEqual(await readPragma(disabled, 'busy_timeout'), { timeout: 0 })
+  })
+
+  it('wipes file-backed databases together with their sidecar files', async () => {
+    let dir = await mkdtemp(join(tmpdir(), 'data-table-sqlite-'))
+
+    try {
+      let filename = join(dir, 'app.db')
+      let adapter = createSqliteDatabaseAdapter({ filename })
+
+      await adapter.executeScript('pragma journal_mode = wal')
+      await adapter.executeScript('create table users (id integer primary key)')
+      await adapter.executeScript('insert into users (id) values (1)')
+
+      assert.equal(existsSync(filename + '-wal'), true)
+      assert.equal(existsSync(filename + '-shm'), true)
+      // simulate a crashed writer that left a rollback journal behind
+      await writeFile(filename + '-journal', 'stale journal')
+
+      await adapter.wipe()
+
+      // wipe reopens the database, so the main file exists again as a fresh, empty database
+      assert.equal((await stat(filename)).size, 0)
+      assert.equal(existsSync(filename + '-wal'), false)
+      assert.equal(existsSync(filename + '-shm'), false)
+      assert.equal(existsSync(filename + '-journal'), false)
+
+      assert.equal(await adapter.hasTable({ name: 'users' }), false)
+      await adapter.executeScript('create table projects (id integer primary key)')
+      assert.equal(await adapter.hasTable({ name: 'projects' }), true)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  })
+
+  it('recreates missing parent directories when wiping file-backed databases', async () => {
+    let dir = await mkdtemp(join(tmpdir(), 'data-table-sqlite-'))
+
+    try {
+      let filename = join(dir, 'nested', 'app.db')
+      await mkdir(dirname(filename), { recursive: true })
+
+      let adapter = createSqliteDatabaseAdapter({ filename })
+      await adapter.executeScript('create table users (id integer primary key)')
+
+      await rm(dirname(filename), { recursive: true, force: true })
+      await adapter.wipe()
+
+      assert.equal(existsSync(dirname(filename)), true)
+      await adapter.executeScript('create table projects (id integer primary key)')
+      assert.equal(await adapter.hasTable({ name: 'projects' }), true)
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
   })
 
   it('does not wipe a database while a transaction is open', async () => {

@@ -31,18 +31,57 @@ type SqliteDatabaseConstructor = {
   new (path: string): SqliteDatabase
 }
 
-const SqliteDatabaseConstructor: SqliteDatabaseConstructor =
-  'Bun' in globalThis
-    ? // @ts-expect-error TypeScript does not resolve Bun built-in modules in this repo yet.
-      (await import('bun:sqlite')).Database
-    : (await import('node:sqlite')).DatabaseSync
+type SqliteDriverModule = {
+  Database?: SqliteDatabaseConstructor
+  DatabaseSync?: SqliteDatabaseConstructor
+}
+
+let loadedDriverConstructor: SqliteDatabaseConstructor | undefined
+
+// The runtime driver loads lazily on config-backed construction so client-backed adapters
+// keep working in environments that cannot resolve node:sqlite or bun:sqlite at import time,
+// and so bundlers never try to resolve those specifiers statically.
+function loadSqliteDatabaseConstructor(): SqliteDatabaseConstructor {
+  if (!loadedDriverConstructor) {
+    if ('Bun' in globalThis) {
+      // import.meta.require is Bun's synchronous require for ES modules; Bun does not
+      // implement process.getBuiltinModule
+      let importMeta = import.meta as ImportMeta & { require?: (id: string) => unknown }
+      let driver = importMeta.require?.('bun:sqlite') as SqliteDriverModule | undefined
+      loadedDriverConstructor = driver?.Database
+    } else {
+      // process.getBuiltinModule loads node:sqlite synchronously (Node.js 22.3+)
+      let driver = globalThis.process?.getBuiltinModule?.('node:sqlite') as
+        | SqliteDriverModule
+        | undefined
+      loadedDriverConstructor = driver?.DatabaseSync
+    }
+
+    if (!loadedDriverConstructor) {
+      throw new Error(
+        'SQLite adapter config-based construction requires node:sqlite (Node.js 22.5+) or bun:sqlite; pass a SQLite database client instead',
+      )
+    }
+  }
+
+  return loadedDriverConstructor
+}
 
 /** Configuration for an adapter-owned SQLite database. */
 export interface SqliteDatabaseAdapterConfig {
   /** SQLite database filename or `:memory:` for an in-memory database. */
   filename: string
-  /** Enables SQLite foreign key enforcement whenever the adapter opens the database. */
+  /**
+   * Enables SQLite foreign key enforcement whenever the adapter opens the database.
+   * Defaults to `false` (enforcement off) on every runtime, including Node.js where
+   * `node:sqlite` would otherwise enable it by default.
+   */
   foreignKeys?: boolean
+  /**
+   * SQLite `busy_timeout` in milliseconds, applied whenever the adapter opens the database.
+   * Defaults to `5000`. Set `0` to fail immediately when another process holds a write lock.
+   */
+  busyTimeout?: number
 }
 
 /**
@@ -185,8 +224,9 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     let statement = this.#database.prepare(
       'select 1 from ' + masterTable + ' where type = ? and name = ? limit 1',
     )
+    // node:sqlite returns `undefined` for a missing row while bun:sqlite returns `null`
     let row = statement.get('table', table.name)
-    return row !== undefined
+    return row != null
   }
 
   /**
@@ -221,7 +261,6 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
   async wipe(): Promise<void> {
     let config = this.#configOrThrow('wipe')
     this.#assertNoOpenTransactions('wipe')
-    this.#transactions.clear()
     this.#database.close?.()
 
     if (config.filename === ':memory:') {
@@ -232,6 +271,11 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
     try {
       await mkdir(dirname(config.filename), { recursive: true })
       await rm(config.filename, { force: true })
+      // SQLite associates a database file with -wal/-shm/-journal sidecars by path, so
+      // stale sidecars left next to a freshly created database are a corruption vector
+      await rm(config.filename + '-wal', { force: true })
+      await rm(config.filename + '-shm', { force: true })
+      await rm(config.filename + '-journal', { force: true })
     } finally {
       this.#replaceDatabase()
     }
@@ -339,11 +383,15 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
 }
 
 function openSqliteDatabase(config: SqliteDatabaseAdapterConfig): SqliteDatabase {
+  let SqliteDatabaseConstructor = loadSqliteDatabaseConstructor()
   let database = new SqliteDatabaseConstructor(config.filename)
 
-  if (config.foreignKeys) {
-    database.exec('pragma foreign_keys = on')
-  }
+  // node:sqlite enables foreign keys by default while bun:sqlite follows SQLite's default
+  // (off), so set the pragma explicitly to make the option authoritative on both runtimes
+  database.exec('pragma foreign_keys = ' + (config.foreignKeys ? 'on' : 'off'))
+  // node:sqlite defaults to busy_timeout 0, which fails immediately with SQLITE_BUSY when
+  // another process holds a write lock
+  database.exec('pragma busy_timeout = ' + String(config.busyTimeout ?? 5000))
 
   return database
 }

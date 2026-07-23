@@ -36,7 +36,10 @@ let db = createDatabase(
 ```
 
 The config-backed adapter uses `node:sqlite` in Node.js and `bun:sqlite` in Bun. It supports `db.wipe()` and `db.reset()` because the adapter can close and reopen the database file.
-When `foreignKeys` is enabled, the adapter restores foreign key enforcement each time it opens the database, including after these destructive lifecycle operations.
+
+Foreign key enforcement defaults to off on every runtime. When `foreignKeys` is enabled, the adapter restores foreign key enforcement each time it opens the database, including after destructive lifecycle operations.
+
+The adapter also applies `pragma busy_timeout = 5000` whenever it opens the database, so writes wait for a locked database instead of failing immediately with `SQLITE_BUSY`. Use `busyTimeout` to override the timeout in milliseconds (`0` disables the wait).
 
 You may also pass an existing synchronous client when your application owns its lifecycle:
 
@@ -64,6 +67,14 @@ This is a good fit for local development, embedded deployments, and single-node 
 - `migrationLock: false`
 
 ## Advanced Usage
+
+### Destructive Lifecycle And Locking
+
+`db.wipe()` and `db.reset()` assume a single process owns the database file. Stop other processes before wiping: on POSIX systems another process keeps writing to the deleted inode, and on Windows an open handle blocks deletion entirely. Wiping removes the `-wal`, `-shm`, and `-journal` sidecar files along with the main database file so a freshly created database never associates with stale sidecars.
+
+SQLite migrations run without a cross-process migration lock (`migrationLock: false`), so run migrations from one process at a time.
+
+`filename` resolves against the current working directory — for `remix db` commands, wherever you invoke the CLI. Prefer absolute paths or paths derived from `import.meta.dirname`.
 
 ### In-Memory Database For Tests
 
