@@ -24,6 +24,7 @@ const migrations: Migrations = [
 class RecordingDatabase extends Database {
   calls: string[] = []
   migrateOptions: (MigrateOptions & MigrationRunnerOptions) | undefined
+  migrateResult: MigrateResult = { applied: [], reverted: [], sql: [] }
   resetSeed: Seed | undefined
 
   constructor() {
@@ -40,7 +41,7 @@ class RecordingDatabase extends Database {
   ): Promise<MigrateResult> {
     this.calls.push('migrate')
     this.migrateOptions = options
-    return { applied: [], reverted: [], sql: [] }
+    return this.migrateResult
   }
 
   override async migrationStatus(
@@ -57,25 +58,68 @@ class RecordingDatabase extends Database {
   }
 }
 
+async function captureLog<result>(
+  run: () => Promise<result>,
+): Promise<{ value: result; lines: string[] }> {
+  let lines: string[] = []
+  let originalLog = console.log
+
+  console.log = (...args: unknown[]) => {
+    lines.push(args.join(' '))
+  }
+
+  try {
+    let value = await run()
+    return { value, lines }
+  } finally {
+    console.log = originalLog
+  }
+}
+
 describe('runRemixDb', () => {
-  it('migrates to the requested migration id', async () => {
+  it('migrates to the requested migration id and prints applied migrations', async () => {
     let db = new RecordingDatabase()
     let getMigrationsCalls = 0
 
-    let exitCode = await runRemixDb({
-      command: 'migrate',
-      db,
-      getMigrations() {
-        getMigrationsCalls += 1
-        return migrations
-      },
-      to: '20260715123000_create_users',
-    })
+    db.migrateResult = {
+      applied: [{ id: '20260715123000', name: 'create_users', status: 'applied' }],
+      reverted: [],
+      sql: [],
+    }
+
+    let { value: exitCode, lines } = await captureLog(() =>
+      runRemixDb({
+        command: 'migrate',
+        db,
+        getMigrations() {
+          getMigrationsCalls += 1
+          return migrations
+        },
+        to: '20260715123000_create_users',
+      }),
+    )
 
     assert.equal(exitCode, 0)
     assert.equal(getMigrationsCalls, 1)
     assert.deepEqual(db.calls, ['migrate'])
     assert.equal(db.migrateOptions?.to, '20260715123000_create_users')
+    assert.deepEqual(lines, ['applied 20260715123000_create_users'])
+  })
+
+  it('prints a notice when no migrations are pending', async () => {
+    let db = new RecordingDatabase()
+
+    let { lines } = await captureLog(() =>
+      runRemixDb({
+        command: 'migrate',
+        db,
+        getMigrations() {
+          return migrations
+        },
+      }),
+    )
+
+    assert.deepEqual(lines, ['no pending migrations'])
   })
 
   it('wipes the database', async () => {
@@ -90,18 +134,21 @@ describe('runRemixDb', () => {
     let db = new RecordingDatabase()
     let seed: Seed = () => undefined
 
-    let exitCode = await runRemixDb({
-      command: 'reset',
-      db,
-      getMigrations() {
-        return migrations
-      },
-      seed,
-    })
+    let { value: exitCode, lines } = await captureLog(() =>
+      runRemixDb({
+        command: 'reset',
+        db,
+        getMigrations() {
+          return migrations
+        },
+        seed,
+      }),
+    )
 
     assert.equal(exitCode, 0)
     assert.deepEqual(db.calls, ['reset'])
     assert.equal(db.resetSeed, seed)
+    assert.deepEqual(lines, ['database reset'])
   })
 
   it('runs the application seed function', async () => {
@@ -133,5 +180,15 @@ describe('runRemixDb', () => {
 
     assert.equal(exitCode, 0)
     assert.deepEqual(db.calls, ['status'])
+  })
+
+  it('rejects unknown commands without touching the database', async () => {
+    let db = new RecordingDatabase()
+
+    await assert.rejects(
+      () => runRemixDb({ command: 'drop', db } as never),
+      /Unknown database command: drop/,
+    )
+    assert.deepEqual(db.calls, [])
   })
 })

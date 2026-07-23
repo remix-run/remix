@@ -332,6 +332,8 @@ export interface DatabaseAdapter {
    * Runs migration work while holding an adapter-specific lock.
    *
    * The callback receives an adapter bound to the connection that owns the lock.
+   * Implementations must release the lock when the callback rejects as well as
+   * when it resolves.
    */
   withMigrationLock?<result>(
     name: string,

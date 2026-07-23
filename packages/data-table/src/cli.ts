@@ -13,7 +13,10 @@ export type RunRemixDbOptions =
       command: 'migrate'
       /** Loads the migrations to apply. */
       getMigrations: GetMigrations
-      /** Stops after applying this migration id. */
+      /**
+       * Stops after applying this migration. Accepts a bare migration id or
+       * the full `id_name` directory form.
+       */
       to?: string
     })
   | (DatabaseCommandOptions & {
@@ -45,12 +48,22 @@ export type RunRemixDbOptions =
  * Runs a data-table database command from structured invocation options.
  *
  * @param options Database command and application database values.
- * @returns The exit code the host CLI should use.
+ * @returns The exit code the host CLI should use. Always resolves `0`;
+ * command failures throw.
  */
 export async function runRemixDb(options: RunRemixDbOptions): Promise<number> {
   if (options.command === 'migrate') {
     let migrateOptions = options.to === undefined ? undefined : { to: options.to }
-    await options.db.migrate(await options.getMigrations(), migrateOptions)
+    let result = await options.db.migrate(await options.getMigrations(), migrateOptions)
+
+    if (result.applied.length === 0) {
+      console.log('no pending migrations')
+    }
+
+    for (let entry of result.applied) {
+      console.log('applied ' + entry.id + '_' + entry.name)
+    }
+
     return 0
   }
 
@@ -59,6 +72,9 @@ export async function runRemixDb(options: RunRemixDbOptions): Promise<number> {
       migrations: await options.getMigrations(),
       seed: options.seed,
     })
+
+    console.log('database reset')
+
     return 0
   }
 
@@ -77,6 +93,13 @@ export async function runRemixDb(options: RunRemixDbOptions): Promise<number> {
     return 0
   }
 
-  await options.db.wipe()
-  return 0
+  if (options.command === 'wipe') {
+    await options.db.wipe()
+    return 0
+  }
+
+  // Guard against unchecked command strings from plain-JS callers so an
+  // unknown command can never fall through to a destructive operation.
+  let command = (options as { command: string }).command
+  throw new Error('Unknown database command: ' + command)
 }

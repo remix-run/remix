@@ -437,7 +437,9 @@ remix db reset
 remix db wipe
 ```
 
-`remix db status` reports applied migrations whose files are no longer present as `missing`. Migration runs stop before executing SQL when an applied journal entry is missing from the current migration set.
+`--to` accepts a bare migration id (`20260301113000`) or the full directory name (`20260301113000_add_user_status`).
+
+`remix db status` reports applied migrations whose files are no longer present as `missing`. Forward migration runs (`remix db migrate`, `runner.up()`) stop before executing SQL when an applied journal entry is missing from the current migration set. Rollbacks (`runner.down()`) skip those orphaned journal entries so migrations that are still present can be reverted.
 
 `wipe` and `reset` are destructive. They require a config-backed adapter so the adapter can close, recreate, and reconnect to the configured database.
 
@@ -467,7 +469,7 @@ await runner.up({ step: 1 })
 await runner.down({ step: 1 })
 ```
 
-`to` and `step` are mutually exclusive within a single run.
+`to` and `step` are mutually exclusive within a single run. Like `--to` on the CLI, `to` accepts a bare migration id or the full `id_name` directory form.
 
 Use `dryRun` to inspect the SQL plan without applying or journaling anything:
 

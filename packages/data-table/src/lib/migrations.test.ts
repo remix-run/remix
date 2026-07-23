@@ -1,195 +1,12 @@
 import * as assert from '@remix-run/assert'
 import { describe, it } from '@remix-run/test'
 
-import type {
-  DataManipulationRequest,
-  DataManipulationResult,
-  DatabaseAdapter,
-  TableRef,
-  TransactionToken,
-} from './adapter.ts'
+import type { DatabaseAdapter } from './adapter.ts'
 import { parseTransactionDirective } from './migrations/directive.ts'
 import { parseMigrationDirectoryName } from './migrations/directory-name.ts'
 import { createMigrationRegistry } from './migrations/registry.ts'
 import { createMigrationRunner } from './migrations/runner.ts'
-
-type JournalRow = {
-  id: string
-  name: string
-  checksum: string
-  batch: number
-  applied_at: string
-}
-
-class MemoryMigrationAdapter implements DatabaseAdapter {
-  dialect = 'memory'
-  capabilities = {
-    returning: true,
-    savepoints: true,
-    upsert: true,
-    transactionalDdl: true,
-    migrationLock: true,
-  }
-  journalTableCreated = false
-  journalTableName = 'data_table_migrations'
-  journalRows: JournalRow[] = []
-  executedScripts: Array<{ sql: string; transaction?: string }> = []
-  scriptError: Error | undefined
-  lockAcquireCount = 0
-  lockReleaseCount = 0
-  beginTransactionCount = 0
-  commitTransactionCount = 0
-  rollbackTransactionCount = 0
-  #transactionCounter = 0
-  #tokens = new Set<string>()
-
-  compileSql() {
-    return [{ text: '', values: [] }]
-  }
-
-  async execute(request: DataManipulationRequest): Promise<DataManipulationResult> {
-    if (request.transaction) {
-      this.#assertToken(request.transaction)
-    }
-
-    if (request.operation.kind !== 'raw') {
-      throw new Error('MemoryMigrationAdapter only supports raw execute operations')
-    }
-
-    let statement = request.operation.sql
-    let text = statement.text.toLowerCase()
-
-    if (text.startsWith('select 1 from ')) {
-      if (!this.journalTableCreated) {
-        throw new Error('Journal table does not exist')
-      }
-
-      return { rows: [] }
-    }
-
-    if (text.includes('select id, name, checksum, batch, applied_at from ')) {
-      if (!this.journalTableCreated) {
-        throw new Error('Journal table does not exist')
-      }
-
-      return {
-        rows: this.journalRows.map((row) => ({
-          id: row.id,
-          name: row.name,
-          checksum: row.checksum,
-          batch: row.batch,
-          applied_at: row.applied_at,
-        })),
-      }
-    }
-
-    if (text.startsWith('insert into ')) {
-      let [id, name, checksum, batch] = statement.values
-
-      this.journalRows.push({
-        id: String(id),
-        name: String(name),
-        checksum: String(checksum),
-        batch: Number(batch),
-        applied_at: new Date().toISOString(),
-      })
-
-      return { affectedRows: 1 }
-    }
-
-    if (text.startsWith('delete from ')) {
-      let [id] = statement.values
-      this.journalRows = this.journalRows.filter((row) => row.id !== String(id))
-
-      return { affectedRows: 1 }
-    }
-
-    return { affectedRows: 0 }
-  }
-
-  async executeScript(sql: string, transaction?: TransactionToken): Promise<void> {
-    if (transaction) {
-      this.#assertToken(transaction)
-    }
-
-    if (sql.toLowerCase().startsWith('create table if not exists ' + this.journalTableName)) {
-      this.journalTableCreated = true
-      return
-    }
-
-    if (this.scriptError) {
-      throw this.scriptError
-    }
-
-    this.executedScripts.push({ sql, transaction: transaction?.id })
-  }
-
-  async hasTable(table: TableRef, transaction?: TransactionToken): Promise<boolean> {
-    if (transaction) {
-      this.#assertToken(transaction)
-    }
-
-    return table.name === this.journalTableName && this.journalTableCreated
-  }
-
-  async hasColumn(_: TableRef, __: string, transaction?: TransactionToken): Promise<boolean> {
-    if (transaction) {
-      this.#assertToken(transaction)
-    }
-
-    return false
-  }
-
-  async beginTransaction(): Promise<TransactionToken> {
-    this.beginTransactionCount += 1
-    this.#transactionCounter += 1
-    let token = { id: 'tx_' + String(this.#transactionCounter) }
-    this.#tokens.add(token.id)
-    return token
-  }
-
-  async commitTransaction(token: TransactionToken): Promise<void> {
-    this.#assertToken(token)
-    this.commitTransactionCount += 1
-    this.#tokens.delete(token.id)
-  }
-
-  async rollbackTransaction(token: TransactionToken): Promise<void> {
-    this.#assertToken(token)
-    this.rollbackTransactionCount += 1
-    this.#tokens.delete(token.id)
-  }
-
-  async createSavepoint(token: TransactionToken): Promise<void> {
-    this.#assertToken(token)
-  }
-
-  async rollbackToSavepoint(token: TransactionToken): Promise<void> {
-    this.#assertToken(token)
-  }
-
-  async releaseSavepoint(token: TransactionToken): Promise<void> {
-    this.#assertToken(token)
-  }
-
-  async withMigrationLock<result>(
-    _name: string,
-    run: (adapter: DatabaseAdapter) => Promise<result>,
-  ): Promise<result> {
-    this.lockAcquireCount += 1
-    try {
-      return await run(this)
-    } finally {
-      this.lockReleaseCount += 1
-    }
-  }
-
-  #assertToken(token: TransactionToken): void {
-    if (!this.#tokens.has(token.id)) {
-      throw new Error('Unknown transaction token: ' + token.id)
-    }
-  }
-}
+import { MemoryMigrationAdapter } from '../../test/memory-migration-adapter.ts'
 
 describe('migration runner', () => {
   it('applies pending migrations and records them in the journal', async () => {
@@ -337,11 +154,54 @@ describe('migration runner', () => {
     ])
 
     await assert.rejects(() => runner.up({ to: '99999999999999' }), /Unknown migration target/)
+    await assert.rejects(() => runner.up({ to: '20260101000000_nope' }), /Unknown migration target/)
     await assert.rejects(() => runner.up({ step: 0 }), /positive integer/)
     await assert.rejects(
       () => runner.up({ to: '20260101000000', step: 1 } as never),
       /Cannot combine "to" and "step"/,
     )
+  })
+
+  it('resolves full id_name targets against bare migration ids', async () => {
+    let adapter = new MemoryMigrationAdapter()
+    let migrations = [
+      {
+        id: '20260101000000',
+        name: 'create_users',
+        up: 'create table users (id integer)',
+        down: 'drop table users',
+      },
+      {
+        id: '20260102000000',
+        name: 'create_posts',
+        up: 'create table posts (id integer)',
+        down: 'drop table posts',
+      },
+    ]
+    let runner = createMigrationRunner(adapter, migrations)
+
+    await runner.up({ to: '20260101000000_create_users' })
+    assert.deepEqual(
+      adapter.journalRows.map((row) => row.id),
+      ['20260101000000'],
+    )
+
+    await runner.up()
+    await runner.down({ to: '20260102000000_create_posts' })
+    assert.deepEqual(
+      adapter.journalRows.map((row) => row.id),
+      ['20260101000000'],
+    )
+  })
+
+  it('rejects ambiguous migration targets', async () => {
+    let adapter = new MemoryMigrationAdapter()
+    let runner = createMigrationRunner(adapter, [
+      { id: '20260101000000', name: 'a', up: 'select 1' },
+      { id: '20260101000000_a', name: 'b', up: 'select 1' },
+    ])
+
+    await assert.rejects(() => runner.up({ to: '20260101000000_a' }), /Ambiguous migration target/)
   })
 
   it('detects checksum drift from changed up.sql', async () => {
@@ -361,13 +221,15 @@ describe('migration runner', () => {
         id: '20260101000000',
         name: 'users',
         up: 'create table users (id integer, email text)',
+        down: 'drop table users',
       },
     ])
 
     await assert.rejects(() => driftedRunner.up(), /checksum drift detected/)
+    await assert.rejects(() => driftedRunner.down(), /checksum drift detected/)
   })
 
-  it('rejects migration runs when an applied migration is missing', async () => {
+  it('rejects up() when an applied migration is missing but still allows down()', async () => {
     let adapter = new MemoryMigrationAdapter()
     let runner = createMigrationRunner(adapter, [
       {
@@ -376,22 +238,46 @@ describe('migration runner', () => {
         up: 'create table users (id integer)',
         down: 'drop table users',
       },
+      {
+        id: '20260102000000',
+        name: 'create_posts',
+        up: 'create table posts (id integer)',
+        down: 'drop table posts',
+      },
     ])
 
     await runner.up()
     adapter.executedScripts = []
 
-    let missingRunner = createMigrationRunner(adapter, [])
+    let orphanedRunner = createMigrationRunner(adapter, [
+      {
+        id: '20260102000000',
+        name: 'create_posts',
+        up: 'create table posts (id integer)',
+        down: 'drop table posts',
+      },
+    ])
 
     await assert.rejects(
-      () => missingRunner.up(),
+      () => orphanedRunner.up(),
       /Applied migration "20260101000000_create_users" is missing from current migrations/,
     )
-    await assert.rejects(
-      () => missingRunner.down(),
-      /Applied migration "20260101000000_create_users" is missing from current migrations/,
+    assert.equal(adapter.executedScripts.length, 0)
+
+    let result = await orphanedRunner.down()
+
+    assert.deepEqual(
+      result.reverted.map((entry) => entry.id),
+      ['20260102000000'],
     )
-    assert.deepEqual(adapter.executedScripts, [])
+    assert.deepEqual(
+      adapter.executedScripts.map((entry) => entry.sql),
+      ['drop table posts'],
+    )
+    assert.deepEqual(
+      adapter.journalRows.map((row) => row.id),
+      ['20260101000000'],
+    )
   })
 
   it('balances migration lock hooks when execution fails', async () => {
@@ -407,6 +293,41 @@ describe('migration runner', () => {
     assert.equal(adapter.lockReleaseCount, 1)
     assert.equal(adapter.rollbackTransactionCount, 1)
     assert.equal(adapter.commitTransactionCount, 0)
+  })
+
+  it('runs journal reads/writes and scripts through the lock-owning adapter', async () => {
+    let lockAdapter = new MemoryMigrationAdapter()
+
+    class LockDelegatingAdapter extends MemoryMigrationAdapter {
+      override async withMigrationLock<result>(
+        _name: string,
+        run: (adapter: DatabaseAdapter) => Promise<result>,
+      ): Promise<result> {
+        return run(lockAdapter)
+      }
+    }
+
+    let adapter = new LockDelegatingAdapter()
+    let runner = createMigrationRunner(adapter, [
+      { id: '20260101000000', name: 'create_users', up: 'create table users (id integer)' },
+    ])
+
+    await runner.up()
+
+    assert.equal(lockAdapter.journalTableCreated, true)
+    assert.deepEqual(
+      lockAdapter.executedScripts.map((entry) => entry.sql),
+      ['create table users (id integer)'],
+    )
+    assert.deepEqual(
+      lockAdapter.journalRows.map((row) => row.id),
+      ['20260101000000'],
+    )
+    assert.equal(lockAdapter.beginTransactionCount, 1)
+    assert.equal(adapter.journalTableCreated, false)
+    assert.equal(adapter.executedScripts.length, 0)
+    assert.equal(adapter.journalRows.length, 0)
+    assert.equal(adapter.beginTransactionCount, 0)
   })
 
   it('wraps each migration in its own transaction by default', async () => {

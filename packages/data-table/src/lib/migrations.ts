@@ -71,6 +71,9 @@ export type MigrationStatusEntry = {
 /**
  * Common options for `runner.up(...)` and `runner.down(...)`.
  * `to` and `step` are mutually exclusive.
+ *
+ * `to` accepts a bare migration id (`20260301113000`) or the full `id_name`
+ * directory form (`20260301113000_add_user_status`).
  */
 export type MigrateOptions =
   | {

@@ -49,21 +49,40 @@ function assertMigrateOptions(options: MigrateOptions): void {
   }
 }
 
-function assertTargetOption(migrations: MigrationDescriptor[], to: string | undefined): void {
+function resolveTargetOption(
+  migrations: MigrationDescriptor[],
+  to: string | undefined,
+): string | undefined {
   if (!to) {
-    return
+    return undefined
   }
 
-  let target = migrations.find((migration) => migration.id === to)
+  // Accept either a bare migration id or the full `id_name` directory form and
+  // normalize to the bare id so range filtering compares ids consistently.
+  let matches = migrations.filter(
+    (migration) => migration.id === to || migration.id + '_' + migration.name === to,
+  )
 
-  if (!target) {
+  if (matches.length === 0) {
     throw new Error('Unknown migration target: ' + to)
   }
+
+  if (matches.length > 1) {
+    throw new Error(
+      'Ambiguous migration target "' +
+        to +
+        '". Matches: ' +
+        matches.map((migration) => migration.id + '_' + migration.name).join(', '),
+    )
+  }
+
+  return matches[0].id
 }
 
 async function assertMigrationIntegrity(
   migrations: MigrationDescriptor[],
   journal: MigrationJournalRow[],
+  direction: MigrationDirection,
 ): Promise<void> {
   let migrationMap = new Map(migrations.map((migration) => [migration.id, migration]))
 
@@ -71,6 +90,12 @@ async function assertMigrationIntegrity(
     let migration = migrationMap.get(row.id)
 
     if (!migration) {
+      // Rolling back must stay possible when journal rows have no matching
+      // migration files, so only forward runs hard-error on orphaned entries.
+      if (direction === 'down') {
+        continue
+      }
+
       throw new Error(
         'Applied migration "' + row.id + '_' + row.name + '" is missing from current migrations',
       )
@@ -121,12 +146,12 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
   let migrations = input.migrations
   let journalTable = input.journalTable
   let dryRun = Boolean(input.options.dryRun)
-  let target = input.options.to
   let step = input.options.step
 
   assertMigrateOptions(input.options)
   assertStepOption(step)
-  assertTargetOption(migrations, target)
+
+  let target = resolveTargetOption(migrations, input.options.to)
 
   let sql: string[] = []
 
@@ -144,7 +169,7 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
   }
 
   let appliedMap = new Map(journal.map((row) => [row.id, row]))
-  await assertMigrationIntegrity(migrations, journal)
+  await assertMigrationIntegrity(migrations, journal, input.direction)
   let toRun: MigrationDescriptor[] = []
 
   if (input.direction === 'up') {
@@ -264,6 +289,14 @@ async function runMigrationsUnlocked(input: RunMigrationsInput): Promise<Migrate
 
 /**
  * Creates a migration runner for applying/reverting SQL migrations against an adapter.
+ *
+ * The `to` option on `up()`/`down()` accepts a bare migration id or the full
+ * `id_name` directory form.
+ *
+ * Runs verify journal integrity first. `up()` rejects when an applied journal
+ * entry is missing from the current migration set, while `down()` skips
+ * orphaned journal entries so migrations that are still present can be
+ * reverted. Checksum drift on matching entries rejects in both directions.
  * @param adapter Database adapter used to execute migration scripts.
  * @param migrations Migration descriptors or registry.
  * @param options Optional runner configuration.
