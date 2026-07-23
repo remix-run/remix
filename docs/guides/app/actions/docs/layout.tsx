@@ -1,7 +1,7 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
-import { DocsShell } from 'remix-docs-shared/ui/docs-shell'
+import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-shell'
 
 import { routes } from '../../routes.ts'
 import { Document } from '../../ui/document.tsx'
@@ -24,6 +24,7 @@ type DocsDocumentProps = {
   description: string
   chapters: DocsNavigationItem[]
   currentChapterSlug?: string
+  hasSecondaryNavigation?: boolean
   children: RemixNode
 }
 
@@ -63,7 +64,9 @@ export function DocsDocument(handle: Handle<DocsDocumentProps>) {
             />
           }
           navigationLabel="Guide chapters"
+          mobileNavigationLabel="Chapters"
           navigationName="chapter navigation"
+          hasSecondaryNavigation={handle.props.hasSecondaryNavigation}
           footer={<DocsFooter />}
         >
           {handle.props.children}
@@ -83,6 +86,7 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
         description={handle.props.description}
         chapters={handle.props.chapters}
         currentChapterSlug={handle.props.slug}
+        hasSecondaryNavigation
       >
         <div class="docs-layout">
           <article class="docs-article">
@@ -126,10 +130,10 @@ export function DocsChapter(handle: Handle<DocsChapterProps>) {
             </nav>
           </article>
 
-          <aside class="docs-aside" data-pagefind-ignore>
+          <DocsSecondaryNavigation pagefindIgnore>
             <h2 class="docs-toc__heading">On this page</h2>
             <DocsTableOfContents headings={handle.props.sections} />
-          </aside>
+          </DocsSecondaryNavigation>
         </div>
       </DocsDocument>
     )

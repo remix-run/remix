@@ -168,12 +168,14 @@
 @media (width < 900px) {
   .docs-search-button,
   :root[data-docs-nav-collapsed] .docs-search-button {
-    top: 16px;
-    left: min(211px, calc(100% - 125px));
+    top: calc(var(--docs-mobile-navigation-top, calc(var(--site-header-height) + 48px)) - 40px);
+    left: 50%;
+    z-index: 61;
     justify-content: center;
     width: 32px;
     padding: 8px;
     border: 0;
+    transform: translateX(-50%);
   }
 
   .docs-search-button__label,

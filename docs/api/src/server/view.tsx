@@ -1,7 +1,7 @@
 import type { Handle, RemixNode } from 'remix/ui'
 import { DocsFooter } from 'remix-docs-shared/ui/docs-footer'
 import { createDocsNavigationLinks, DocsHeader } from 'remix-docs-shared/ui/docs-header'
-import { DocsShell } from 'remix-docs-shared/ui/docs-shell'
+import { DocsSecondaryNavigation, DocsShell } from 'remix-docs-shared/ui/docs-shell'
 import { docsMarkdownContentCss } from 'remix-docs-shared/ui/markdown-content'
 
 import type { DemoDocFile } from './demos.tsx'
@@ -76,7 +76,9 @@ export function Document(
               />
             }
             navigationLabel="API reference"
+            mobileNavigationLabel="Reference"
             navigationName="API navigation"
+            hasSecondaryNavigation={(headings?.length ?? 0) > 0}
             footer={<DocsFooter />}
           >
             <MainContent
@@ -191,13 +193,13 @@ function MainContent(
           </div>
         </article>
         {headings.length > 0 ? (
-          <aside class="docs-aside">
+          <DocsSecondaryNavigation>
             <h2 class="docs-toc__heading">On this page</h2>
             <TableOfContents
               headings={headings}
               behaviorEntryHref={handle.props.tableOfContentsEntryHref}
             />
-          </aside>
+          </DocsSecondaryNavigation>
         ) : null}
       </div>
     )

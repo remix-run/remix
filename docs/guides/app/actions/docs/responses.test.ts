@@ -44,7 +44,7 @@ describe('docs responses', () => {
 
     assert.match(getOpeningTag(html, 'nav', 'docs-breadcrumb'), /data-pagefind-ignore/)
     assert.match(getOpeningTag(html, 'nav', 'docs-pagination'), /data-pagefind-ignore/)
-    assert.match(getOpeningTag(html, 'aside', 'docs-aside'), /data-pagefind-ignore/)
+    assert.match(getTagById(html, 'aside', 'docs-secondary-navigation'), /data-pagefind-ignore/)
   })
 
   it('marks exactly one chapter current on a chapter response', async () => {
@@ -64,6 +64,12 @@ describe('docs responses', () => {
 function getOpeningTag(html: string, tagName: string, className: string): string {
   let match = new RegExp(`<${tagName}[^>]*class="${className}"[^>]*>`).exec(html)
   if (!match) throw new Error(`Missing ${tagName}.${className}`)
+  return match[0]
+}
+
+function getTagById(html: string, tagName: string, id: string): string {
+  let match = new RegExp(`<${tagName}[^>]*id="${id}"[^>]*>`).exec(html)
+  if (!match) throw new Error(`Missing ${tagName}#${id}`)
   return match[0]
 }
 
