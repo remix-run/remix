@@ -1,7 +1,7 @@
 ---
 name: fix-issue
 description: |
-  Fix a reported issue in Remix from a GitHub issue. Use when the user provides a GitHub issue URL and asks to fix a bug, investigate an issue, or reproduce a problem. Handles the full workflow: fetching the issue, finding the reproduction, writing a failing test, and implementing the fix.
+  Fix a reported issue in Remix from a GitHub issue. Use when the user provides a GitHub issue URL and asks to fix a bug, investigate an issue, reproduce a problem, or complete part of a tracking issue. Handles the full workflow: fetching the issue, finding the reproduction, writing a failing test, implementing the fix, and recording merged progress on tracking-issue checklists.
 disable-model-invocation: true
 ---
 
@@ -33,6 +33,13 @@ Extract:
 - Remix version and which package(s) are involved (e.g., `remix/router`, `remix/route-pattern`, `remix/cli`)
 - Any code snippets in the issue
 - Links to reproductions (StackBlitz, CodeSandbox, GitHub repo, etc.)
+- Any implementation-plan checkboxes and the merged PRs already linked from them
+
+If the issue contains implementation-plan checkboxes, treat it as a tracking issue and its checklist as the durable progress record:
+
+- Do not redo checked work. Confirm linked PRs with `gh pr view <number> --repo remix-run/remix --json state,mergedAt,url` when their status matters.
+- Choose one coherent set of unchecked items for the current PR. Do not expand the PR merely to finish the entire issue; long plans may require several PRs.
+- State which checklist items the current PR intends to complete and which will remain for later work.
 
 ### 2. Validate the Reproduction
 
@@ -113,9 +120,27 @@ Summarize:
 - What code was changed and why
 - That the test now passes
 - Any edge cases or related issues noticed
+- For a tracking issue, which checklist items this PR completes and which items remain unchecked
 
 Ask me to review the changes and iterate based on any feedback.
 
 ### 8. Open PR
 
-Once I approve the fix, commit the changes and open a PR to `main`. Use the `make-pr` skill at `.agents/skills/make-pr/SKILL.md` for the PR body and command. Include `Closes #NNNN` in the description to link the PR to the original issue, and link the issue in the `Development` sidebar.
+Once I approve the fix, commit the changes and open a PR to `main`. Use the `make-pr` skill at `.agents/skills/make-pr/SKILL.md` for the PR body and command, and link the issue in the `Development` sidebar.
+
+- For a regular issue, include `Closes #NNNN` in the description.
+- For a tracking issue, use `Part of #NNNN` instead. Never use a closing keyword while any implementation-plan checkbox is unchecked.
+
+### 9. Record Merged Tracking-Issue Progress
+
+Update a tracking issue only after the corresponding PR has merged:
+
+1. Verify the PR has a non-null `mergedAt` with `gh pr view <number> --repo remix-run/remix --json number,url,state,mergedAt`.
+2. Fetch the issue body again immediately before editing so concurrent progress is preserved.
+3. For each checklist item fully completed by the PR, preserve its wording, change `[ ]` to `[x]`, and append a Markdown link to the merged PR, for example `([#1234](https://github.com/remix-run/remix/pull/1234))`.
+4. If a merged PR advances an item without completing it, append the PR link but leave the item unchecked. Check it only when its stated outcome is fully complete; include every merged PR needed to document the completed work.
+5. Edit the issue with `gh issue edit <number> --repo remix-run/remix --body-file <file>`, then read it back with `gh issue view` and verify the checklist, links, and issue state.
+
+If unchecked items remain, leave the tracking issue open and report the remaining items so another agent can continue from the issue. Before closing, fetch the current body once more and scan it for unchecked task-list items. If none remain, verify that every checked item links to the merged PR or PRs that completed it, then close the issue explicitly with `gh issue close <number> --repo remix-run/remix`. Never close a tracking issue with unchecked implementation-plan boxes.
+
+If the workflow ends before the PR merges, leave its boxes unchecked and report that updating the tracking issue after merge is still required. Do not cite an open, draft, or closed-unmerged PR as completed work.
