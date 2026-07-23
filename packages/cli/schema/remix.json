@@ -10,11 +10,24 @@
       "type": "string",
       "description": "JSON Schema used by editors to validate this file."
     },
+    "doctor": {
+      "$ref": "#/$defs/doctor"
+    },
     "test": {
       "$ref": "#/$defs/test"
     }
   },
   "$defs": {
+    "doctor": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "strict": {
+          "type": "boolean",
+          "description": "Whether doctor exits with status 1 when warning-level findings are present."
+        }
+      }
+    },
     "stringArray": {
       "type": "array",
       "items": {

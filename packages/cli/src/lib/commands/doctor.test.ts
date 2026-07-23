@@ -10,6 +10,7 @@ import { runRemix } from '../../index.ts'
 import { getFixturePath } from '../../../test/fixtures.ts'
 import { captureOutput } from '../../../test/capture-output.ts'
 import { checkEnvironment, getEnvironmentFixPlans } from '../doctor/environment.ts'
+import { runRemixDoctor } from '../doctor/run.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
 const ANSI_CSI = `${String.fromCharCode(27)}[`
@@ -22,9 +23,10 @@ const DOCTOR_COMMAND_HELP_TEXT = [
   'Check project environment and Remix app conventions for the current project.',
   '',
   'Options:',
-  '  --json    Print doctor findings as JSON',
-  '  --strict  Exit with status 1 when warning-level findings are present',
-  '  --fix     Apply low-risk project and action fixes',
+  '  --json       Print doctor findings as JSON',
+  '  --strict     Exit with status 1 when warning-level findings are present',
+  '  --no-strict  Do not exit with status 1 when warning-level findings are present',
+  '  --fix        Apply low-risk project and action fixes',
   '',
   'Examples:',
   '  remix doctor',
@@ -33,6 +35,25 @@ const DOCTOR_COMMAND_HELP_TEXT = [
   '  remix doctor --fix',
   '',
 ].join('\n')
+
+describe('runRemixDoctor', () => {
+  it('runs doctor with typed options', async () => {
+    let remixVersion = await readRemixVersion()
+    let result = await captureOutput(() =>
+      runRemixDoctor({
+        cwd: getFixturePath('doctor-clean'),
+        fix: false,
+        json: true,
+        remixVersion,
+        strict: false,
+      }),
+    )
+
+    assert.equal(result.exitCode, 0, result.stderr)
+    assert.deepEqual(JSON.parse(result.stdout).findings, [])
+    assert.equal(result.stderr, '')
+  })
+})
 
 describe('doctor command', () => {
   it('prints doctor command help', async () => {
@@ -1193,6 +1214,31 @@ describe('doctor command', () => {
     assert.equal(projectSuite?.status, 'issues')
     assert.equal(actionsSuite?.status, 'skipped')
     assert.equal(actionsSuite?.reason, 'Blocked by project warnings.')
+  })
+
+  it('loads strict mode from remix.json and lets --no-strict override it', async () => {
+    let projectDir = await copyFixtureProject('doctor-missing')
+
+    try {
+      await fs.writeFile(
+        path.join(projectDir, 'remix.json'),
+        JSON.stringify({ doctor: { strict: true } }),
+        'utf8',
+      )
+
+      let configured = await runDoctor([], projectDir)
+      let overridden = await runDoctor(['--no-strict'], projectDir)
+
+      assert.equal(configured.exitCode, 1)
+      assert.match(configured.stdout, /Summary: 2 warnings, 0 advice\./)
+      assert.equal(configured.stderr, '')
+
+      assert.equal(overridden.exitCode, 0)
+      assert.match(overridden.stdout, /Summary: 2 warnings, 0 advice\./)
+      assert.equal(overridden.stderr, '')
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
   })
 
   it('fails strict mode when action warnings are present', async () => {

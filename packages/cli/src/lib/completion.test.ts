@@ -101,7 +101,15 @@ describe('completion engine', () => {
     let result = getCompletionResult(['remix', 'doctor', '--json', ''], 3)
 
     assert.equal(result.mode, 'values')
-    assert.deepEqual(result.values, ['--fix', '--strict', '--config', '-h', '--help', '--no-color'])
+    assert.deepEqual(result.values, [
+      '--fix',
+      '--strict',
+      '--no-strict',
+      '--config',
+      '-h',
+      '--help',
+      '--no-color',
+    ])
   })
 
   it('filters invalid routes flag combinations', () => {
