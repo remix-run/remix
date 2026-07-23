@@ -121,6 +121,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
 
   #config?: SqliteDatabaseAdapterConfig
   #database: SqliteDatabase
+  #databaseOpen = true
   #transactions = new Set<string>()
   #transactionCounter = 0
 
@@ -262,7 +263,7 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
   async wipe(): Promise<void> {
     let config = this.#configOrThrow('wipe')
     this.#assertNoOpenTransactions('wipe')
-    this.#database.close?.()
+    this.#closeDatabase()
 
     if (config.filename === ':memory:') {
       this.#replaceDatabase()
@@ -287,10 +288,10 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
    *
    * Config-backed adapters keep an open handle that locks the database file on
    * Windows until it is closed, so callers that need to move or delete the file
-   * should close the adapter first.
+   * should close the adapter first. Safe to call more than once.
    */
   close(): void {
-    this.#database.close?.()
+    this.#closeDatabase()
   }
 
   /**
@@ -370,6 +371,14 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
   #replaceDatabase(): void {
     if (this.#config) {
       this.#database = openSqliteDatabase(this.#config)
+      this.#databaseOpen = true
+    }
+  }
+
+  #closeDatabase(): void {
+    if (this.#databaseOpen) {
+      this.#database.close?.()
+      this.#databaseOpen = false
     }
   }
 

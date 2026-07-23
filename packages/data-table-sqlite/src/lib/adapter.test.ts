@@ -157,6 +157,9 @@ describe('sqlite adapter', () => {
       adapter = createSqliteDatabaseAdapter({ filename })
       await adapter.executeScript('create table users (id integer primary key)')
 
+      // close the handle so Windows can remove the parent directory, then let
+      // wipe() recreate it
+      adapter.close()
       await rm(dirname(filename), { recursive: true, force: true })
       await adapter.wipe()
 
@@ -203,7 +206,7 @@ describe('sqlite adapter', () => {
     assert.equal(closeCalls, 0)
   })
 
-  it('closes the underlying database when close() is called', async () => {
+  it('closes the underlying database once even when close() is called repeatedly', async () => {
     let closeCalls = 0
     let sqlite = {
       prepare() {
@@ -216,6 +219,7 @@ describe('sqlite adapter', () => {
     } satisfies SqliteDatabase
     let adapter = createSqliteDatabaseAdapter(sqlite)
 
+    adapter.close()
     adapter.close()
     assert.equal(closeCalls, 1)
   })
