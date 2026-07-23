@@ -50,6 +50,7 @@ remix doctor
 remix doctor --fix
 remix db migrate
 remix db status
+remix db reset --force
 remix routes
 remix routes --table
 remix routes --table --no-headers
@@ -69,12 +70,15 @@ await runRemix(['doctor'])
 await runRemix(['doctor', '--fix'])
 await runRemix(['db', 'migrate'])
 await runRemix(['db', 'status'])
+await runRemix(['db', 'reset', '--force'])
 await runRemix(['routes'])
 await runRemix(['routes', '--table'])
 await runRemix(['routes', '--table', '--no-headers'])
 await runRemix(['test'])
 await runRemix(['version'])
 ```
+
+Destructive database commands (`remix db wipe` and `remix db reset`) refuse to run without `--force`.
 
 `runRemix()` returns the CLI exit code as a promise.
 

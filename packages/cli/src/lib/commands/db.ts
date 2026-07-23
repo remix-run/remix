@@ -2,17 +2,18 @@ import { spawn } from 'node:child_process'
 import * as process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
+import { findAppRoot } from '../app-root.ts'
 import type { CliContext } from '../cli-context.ts'
-import { renderCliError, toCliError, unknownCommand } from '../errors.ts'
+import { isDatabaseCommand, type DatabaseCommandInvocation } from '../database-command.ts'
+import {
+  dbFileNotFound,
+  dbForceRequired,
+  renderCliError,
+  toCliError,
+  unknownCommand,
+} from '../errors.ts'
 import { formatHelpText } from '../help-text.ts'
 import { parseArgs } from '../parse-args.ts'
-
-type DatabaseCommand = 'migrate' | 'reset' | 'seed' | 'status' | 'wipe'
-
-interface DatabaseCommandInvocation {
-  command: DatabaseCommand
-  to?: string
-}
 
 export async function runDbCommand(argv: string[], context: CliContext): Promise<number> {
   if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
@@ -36,22 +37,29 @@ export function getDbCommandHelpText(target: NodeJS.WriteStream = process.stdout
     {
       description: 'Manage the current app database.',
       examples: [
-        'remix db wipe',
+        'remix db wipe --force',
         'remix db migrate',
         'remix db migrate --to 20260715123000_add_users',
         'remix db status',
         'remix db seed',
-        'remix db reset',
+        'remix db reset --force',
       ],
       options: [
-        { description: 'Stop after applying the specified migration', label: '--to <migration>' },
+        {
+          description: 'Confirm a destructive command (wipe and reset only)',
+          label: '--force',
+        },
+        {
+          description: 'Stop after applying the specified migration (migrate only)',
+          label: '--to <migration>',
+        },
       ],
       usage: [
-        'remix db wipe',
+        'remix db wipe --force',
         'remix db migrate [--to <migration>]',
         'remix db status',
         'remix db seed',
-        'remix db reset',
+        'remix db reset --force',
       ],
     },
     target,
@@ -77,27 +85,41 @@ function parseDbCommandArgs(argv: string[]): DatabaseCommandInvocation {
     return { command, to: parsed.options.to }
   }
 
+  if (command === 'reset' || command === 'wipe') {
+    let parsed = parseArgs(
+      commandArgv,
+      {
+        force: { flag: '--force', type: 'boolean' },
+      },
+      { maxPositionals: 0 },
+    )
+
+    if (!parsed.options.force) {
+      throw dbForceRequired(command)
+    }
+
+    return { command }
+  }
+
   parseArgs(commandArgv, {}, { maxPositionals: 0 })
   return { command }
-}
-
-function isDatabaseCommand(value: string | undefined): value is DatabaseCommand {
-  return (
-    value === 'migrate' ||
-    value === 'reset' ||
-    value === 'seed' ||
-    value === 'status' ||
-    value === 'wipe'
-  )
 }
 
 async function runDatabaseCommandScript(
   invocation: DatabaseCommandInvocation,
   cwd: string,
 ): Promise<number> {
+  let appRoot = await findAppRoot(cwd, 'app/db.ts')
+
+  if (appRoot == null) {
+    throw dbFileNotFound(cwd)
+  }
+
   let workerPath = getDatabaseCommandWorkerPath()
+  // The worker resolves app/db.ts against its cwd, so spawn it from the
+  // discovered app root rather than the caller's directory.
   let child = spawn(process.execPath, [workerPath, JSON.stringify(invocation)], {
-    cwd,
+    cwd: appRoot,
     env: createDatabaseCommandWorkerEnv(),
     stdio: ['ignore', 'pipe', 'pipe'],
   })

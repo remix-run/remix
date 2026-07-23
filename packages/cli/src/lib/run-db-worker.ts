@@ -5,12 +5,11 @@ import type { Database, GetMigrations, Seed } from '@remix-run/data-table'
 import { runRemixDb } from '@remix-run/data-table/cli'
 import { loadModule } from '@remix-run/node-tsx/load-module'
 
-type DatabaseCommand = 'migrate' | 'reset' | 'seed' | 'status' | 'wipe'
+import { isDatabaseCommand, type DatabaseCommandInvocation } from './database-command.ts'
 
-interface DatabaseCommandInvocation {
-  command: DatabaseCommand
-  to?: string
-}
+// Expected failures carry tailored guidance and print message-only; any other
+// error keeps its stack so users can see where their app code failed.
+class ExpectedWorkerError extends Error {}
 
 interface DatabaseModule {
   db?: Database
@@ -26,7 +25,7 @@ async function run(): Promise<number> {
   let db = databaseModule.db
 
   if (db === undefined) {
-    throw new Error('app/db.ts must export db')
+    throw new ExpectedWorkerError('app/db.ts must export db')
   }
 
   if (invocation.command === 'wipe') {
@@ -36,7 +35,7 @@ async function run(): Promise<number> {
   if (invocation.command === 'seed') {
     let seed = databaseModule.seed
     if (seed === undefined) {
-      throw new Error('app/db.ts must export a seed function to run db seed')
+      throw new ExpectedWorkerError('app/db.ts must export a seed function to run db seed')
     }
 
     return runRemixDb({ command: invocation.command, db, seed })
@@ -44,7 +43,9 @@ async function run(): Promise<number> {
 
   let getMigrations = databaseModule.getMigrations
   if (getMigrations === undefined) {
-    throw new Error(`app/db.ts must export getMigrations to run db ${invocation.command}`)
+    throw new ExpectedWorkerError(
+      `app/db.ts must export getMigrations to run db ${invocation.command}`,
+    )
   }
 
   if (invocation.command === 'migrate') {
@@ -73,7 +74,7 @@ async function loadDatabaseModule(): Promise<DatabaseModule> {
   let value: unknown = await loadModule(databaseModulePath, import.meta.url)
 
   if (typeof value !== 'object' || value === null) {
-    throw new Error('app/db.ts must export a database module')
+    throw new ExpectedWorkerError('app/db.ts must export a database module')
   }
 
   return value
@@ -103,24 +104,25 @@ function parseInvocation(value: string | undefined): DatabaseCommandInvocation {
   return { command, to }
 }
 
-function isDatabaseCommand(value: unknown): value is DatabaseCommand {
-  return (
-    value === 'migrate' ||
-    value === 'reset' ||
-    value === 'seed' ||
-    value === 'status' ||
-    value === 'wipe'
-  )
-}
-
 function exit(code: number): void {
   exitAfterFlushing(code)
 }
 
 function fail(error: unknown): void {
-  let message = error instanceof Error ? error.message : String(error)
-  process.stderr.write(`${message}\n`)
+  process.stderr.write(`${getFailureOutput(error)}\n`)
   exitAfterFlushing(1)
+}
+
+function getFailureOutput(error: unknown): string {
+  if (error instanceof ExpectedWorkerError) {
+    return error.message
+  }
+
+  if (error instanceof Error) {
+    return error.stack ?? error.message
+  }
+
+  return String(error)
 }
 
 function exitAfterFlushing(code: number): void {

@@ -1,9 +1,9 @@
-import * as fs from 'node:fs/promises'
 import * as path from 'node:path'
 import * as process from 'node:process'
 import { spawn } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 
+import { findAppRoot } from './app-root.ts'
 import {
   ROOT_ROUTE_NAME,
   inspectControllerOwnership,
@@ -296,36 +296,13 @@ function assertRawRouteTreeNode(value: unknown): RawRouteTreeNode {
 }
 
 async function findRemixAppRoot(startDir: string): Promise<string> {
-  let currentDir = path.resolve(startDir)
+  let appRoot = await findAppRoot(startDir, 'app/routes.ts')
 
-  while (true) {
-    if (await pathExists(path.join(currentDir, 'app', 'routes.ts'))) {
-      return currentDir
-    }
-
-    let parentDir = path.dirname(currentDir)
-    if (parentDir === currentDir) {
-      break
-    }
-
-    currentDir = parentDir
+  if (appRoot == null) {
+    throw routesFileNotFound(startDir)
   }
 
-  throw routesFileNotFound(startDir)
-}
-
-async function pathExists(filePath: string): Promise<boolean> {
-  try {
-    await fs.access(filePath)
-    return true
-  } catch (error) {
-    let nodeError = error as NodeJS.ErrnoException
-    if (nodeError.code === 'ENOENT') {
-      return false
-    }
-
-    throw error
-  }
+  return appRoot
 }
 
 function getRouteMapWorkerPath(): string {

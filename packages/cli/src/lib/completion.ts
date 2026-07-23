@@ -4,8 +4,27 @@ export interface CompletionResult {
 }
 
 const COMPLETION_SHELLS = ['bash', 'zsh'] as const
-const HELP_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'test', 'version'] as const
-const ROOT_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'test', 'version'] as const
+const DB_COMMANDS = ['migrate', 'reset', 'seed', 'status', 'wipe'] as const
+const HELP_COMMANDS = [
+  'completion',
+  'db',
+  'doctor',
+  'help',
+  'new',
+  'routes',
+  'test',
+  'version',
+] as const
+const ROOT_COMMANDS = [
+  'completion',
+  'db',
+  'doctor',
+  'help',
+  'new',
+  'routes',
+  'test',
+  'version',
+] as const
 
 export type CompletionShell = (typeof COMPLETION_SHELLS)[number]
 
@@ -150,6 +169,10 @@ function completeCommand(
 
   if (command === 'new') {
     return completeNew(tokens, currentWord, usedGlobalFlags)
+  }
+
+  if (command === 'db') {
+    return completeDb(tokens, currentWord, usedGlobalFlags)
   }
 
   if (command === 'doctor') {
@@ -311,6 +334,67 @@ function completeRoutes(
   )
 
   return completeValues(flags, currentWord)
+}
+
+function completeDb(
+  tokens: string[],
+  currentWord: string,
+  usedGlobalFlags: Set<string>,
+): CompletionResult {
+  let filteredTokens = filterGlobalCommandTokens(tokens, usedGlobalFlags)
+  if (filteredTokens == null) {
+    return completeValues([], currentWord)
+  }
+
+  if (filteredTokens.length === 0) {
+    return completeValues(withHelpFlags([...DB_COMMANDS], usedGlobalFlags), currentWord)
+  }
+
+  let [subcommand, ...rest] = filteredTokens
+
+  if (subcommand === 'migrate') {
+    return completeDbMigrate(rest, currentWord, usedGlobalFlags)
+  }
+
+  if (subcommand === 'reset' || subcommand === 'wipe') {
+    return completeSimpleFlags(rest, currentWord, usedGlobalFlags, ['--force'])
+  }
+
+  if (subcommand === 'seed' || subcommand === 'status') {
+    return completeSimpleFlags(rest, currentWord, usedGlobalFlags, [])
+  }
+
+  return completeValues([], currentWord)
+}
+
+function completeDbMigrate(
+  tokens: string[],
+  currentWord: string,
+  usedGlobalFlags: Set<string>,
+): CompletionResult {
+  let hasTo = false
+  let expectsTo = false
+
+  for (let token of tokens) {
+    if (expectsTo) {
+      expectsTo = false
+      continue
+    }
+
+    if (token === '--to') {
+      hasTo = true
+      expectsTo = true
+      continue
+    }
+
+    return completeValues([], currentWord)
+  }
+
+  if (expectsTo) {
+    return { mode: 'none' }
+  }
+
+  return completeValues(withHelpFlags(!hasTo ? ['--to'] : [], usedGlobalFlags), currentWord)
 }
 
 function completeCompletionCommand(

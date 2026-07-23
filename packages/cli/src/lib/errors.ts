@@ -28,6 +28,16 @@ export const CLI_ERROR_DEFINITIONS = {
     title: 'Could not determine an app name',
     fix: 'Pass --app-name or choose a target directory name that can become an app name.',
   },
+  dbFileNotFound: {
+    code: 'RMX_DB_FILE_NOT_FOUND',
+    title: 'Could not find app/db.ts',
+    fix: 'Run this command inside a Remix app that has an app/db.ts file.',
+  },
+  dbForceRequired: {
+    code: 'RMX_DB_FORCE_REQUIRED',
+    title: 'Destructive database command requires --force',
+    fix: 'Re-run with --force to confirm.',
+  },
   remixVersionUnavailable: {
     code: 'RMX_REMIX_VERSION_UNAVAILABLE',
     title: 'Could not determine the Remix version',
@@ -166,6 +176,20 @@ export function appNameUnavailable(targetDir?: string): UsageError {
   return createUsageError(CLI_ERROR_DEFINITIONS.appNameUnavailable, {
     context: targetDir == null ? undefined : { targetDir },
     message: 'Could not determine an app name from the target directory.',
+  })
+}
+
+export function dbFileNotFound(startDir?: string): CliError {
+  return createCliError(CLI_ERROR_DEFINITIONS.dbFileNotFound, {
+    context: startDir == null ? undefined : { startDir },
+    message: 'Could not find app/db.ts. Run this command inside a Remix app.',
+  })
+}
+
+export function dbForceRequired(command: string): UsageError {
+  return createUsageError(CLI_ERROR_DEFINITIONS.dbForceRequired, {
+    context: { command },
+    message: `\`remix db ${command}\` destroys data in the current app database.`,
   })
 }
 
