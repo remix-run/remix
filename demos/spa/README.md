@@ -1,6 +1,6 @@
 # SPA Demo
 
-A small Vite app that uses Remix as a client-only router. It demonstrates a `URL -> RemixNode` contract configured through `RouterTypes.output` and rendered by the `SPA` component from `remix/ui`.
+A small Vite app that uses Remix as a client-only router. It demonstrates a `URL -> RemixNode` contract configured through `RouterTypes.output` and rendered by the `SPA` component from `remix/ui/spa`.
 
 Navigation uses `router.fetch(url, { signal })`. The router turns the URL into an internal `Request`, so the same signal is available to handlers as `context.request.signal` and superseded page loads are cancelled.
 

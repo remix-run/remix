@@ -148,6 +148,7 @@
     "./ui/select": "./src/ui/select.ts",
     "./ui/select/primitives": "./src/ui/select/primitives.ts",
     "./ui/server": "./src/ui/server.ts",
+    "./ui/spa": "./src/ui/spa.ts",
     "./ui/tabs": "./src/ui/tabs.ts",
     "./ui/tabs/primitives": "./src/ui/tabs/primitives.ts",
     "./ui/test": "./src/ui/test.ts",
@@ -664,6 +665,10 @@
       "./ui/server": {
         "types": "./dist/ui/server.d.ts",
         "default": "./dist/ui/server.js"
+      },
+      "./ui/spa": {
+        "types": "./dist/ui/spa.d.ts",
+        "default": "./dist/ui/spa.js"
       },
       "./ui/tabs": {
         "types": "./dist/ui/tabs.d.ts",

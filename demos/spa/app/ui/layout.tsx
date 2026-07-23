@@ -1,4 +1,5 @@
-import { css, SPA, type Handle, type RemixNode } from 'remix/ui'
+import { css, type Handle, type RemixNode } from 'remix/ui'
+import { SPA } from 'remix/ui/spa'
 
 import { routes } from '../routes.ts'
 

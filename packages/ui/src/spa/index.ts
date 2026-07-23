@@ -1,6 +1,4 @@
-import type { Handle, RenderFn } from './component.ts'
-import { addEventListeners } from './event-listeners.ts'
-import type { RemixNode } from './jsx.ts'
+import { addEventListeners, type Handle, type RemixNode } from '@remix-run/ui'
 
 /**
  * Props accepted by the {@link SPA} component.
@@ -58,7 +56,7 @@ const formSubmissionNavigationInfoType = 'spa-form-submission'
  * @param handle Component handle containing the router and initial fallback.
  * @returns A render function for the active router output.
  */
-export function SPA(handle: Handle<SPAProps, SPAContext>): RenderFn {
+export function SPA(handle: Handle<SPAProps, SPAContext>): () => RemixNode {
   let currentNode = handle.props.fallback
   let currentController: AbortController | undefined
   let active = new URL(window.location.href)

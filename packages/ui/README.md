@@ -84,7 +84,8 @@ Use `SPA` with a router that maps URLs directly to Remix UI nodes:
 
 ```tsx
 import { createRouter } from 'remix/router'
-import { createRoot, SPA, type RemixNode } from 'remix/ui'
+import { createRoot, type RemixNode } from 'remix/ui'
+import { SPA } from 'remix/ui/spa'
 
 declare module 'remix/router' {
   interface RouterTypes {

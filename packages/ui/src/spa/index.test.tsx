@@ -1,10 +1,8 @@
 import { expect } from '@remix-run/assert'
 import { describe, it, type TestContext } from '@remix-run/test'
-
-import type { Handle } from './component.ts'
-import type { RemixNode } from './jsx.ts'
-import { SPA, type SPAProps } from './spa.ts'
-import { render } from '../test.ts'
+import type { Handle, RemixNode } from '@remix-run/ui'
+import { SPA, type SPAProps } from '@remix-run/ui/spa'
+import { render } from '@remix-run/ui/test'
 
 async function waitFor(condition: () => boolean): Promise<void> {
   for (let attempt = 0; attempt < 20; attempt++) {

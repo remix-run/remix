@@ -1,4 +1,5 @@
-import { createRoot, SPA } from 'remix/ui'
+import { createRoot } from 'remix/ui'
+import { SPA } from 'remix/ui/spa'
 
 import { router } from './router.tsx'
 import { Fallback } from './ui/layout.tsx'

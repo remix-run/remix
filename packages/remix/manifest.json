@@ -126,6 +126,7 @@
   "remix/ui/select": "@remix-run/ui/select",
   "remix/ui/select/primitives": "@remix-run/ui/select/primitives",
   "remix/ui/server": "@remix-run/ui/server",
+  "remix/ui/spa": "@remix-run/ui/spa",
   "remix/ui/tabs": "@remix-run/ui/tabs",
   "remix/ui/tabs/primitives": "@remix-run/ui/tabs/primitives",
   "remix/ui/test": "@remix-run/ui/test",
