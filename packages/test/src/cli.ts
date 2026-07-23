@@ -4,12 +4,12 @@ import * as path from 'node:path'
 import type * as browserTestRunner from './lib/runner-browser.ts'
 import {
   IS_RUNNING_FROM_SRC,
-  loadConfig,
+  resolveConfig,
   type RemixTestConfig,
   type ResolvedRemixTestConfig,
 } from './lib/config.ts'
 
-export { remixTestPools, type RemixTestPool } from './lib/config.ts'
+export { remixTestPools, type RemixTestConfig, type RemixTestPool } from './lib/config.ts'
 import type * as playwrightSupport from './lib/playwright.ts'
 import { generateCombinedCoverageReport } from './lib/coverage.ts'
 import { createReporter } from './lib/reporters/index.ts'
@@ -28,11 +28,6 @@ const MISSING_PLAYWRIGHT_MESSAGE =
  */
 export interface RunRemixTestOptions extends RemixTestConfig {
   /**
-   * Path to a test configuration file, resolved from `cwd`. When omitted, the runner looks for
-   * `remix-test.config.ts` and `remix-test.config.js`.
-   */
-  config?: string
-  /**
    * Working directory the runner resolves configuration and test files against
    * (`process.cwd()` by default).
    */
@@ -49,10 +44,10 @@ interface DiscoveredTests {
 }
 
 /**
- * Runs Remix tests using structured invocation options. The runner loads the user's
- * `RemixTestConfig`, discovers test files, and runs them through the server, browser, and E2E
- * pipelines configured by the project. In watch mode, the promise resolves when the user
- * terminates the runner; otherwise, it resolves once the run finishes.
+ * Runs Remix tests using structured invocation options. The runner discovers test files and runs
+ * them through the server, browser, and E2E pipelines configured by the caller. In watch mode, the
+ * promise resolves when the user terminates the runner; otherwise, it resolves once the run
+ * finishes.
  *
  * @param options Configuration overrides and invocation paths.
  * @returns The exit code the host process should use (`0` on success, `1` on test failure or an
@@ -75,28 +70,24 @@ export async function runRemixTest(options: RunRemixTestOptions = {}): Promise<n
   // in-memory database instead of the development database file.
   process.env.NODE_ENV ??= 'test'
 
-  let { config: configPath, cwd: cwdOption, ...invocationConfig } = options
+  let { cwd: cwdOption, ...invocationConfig } = options
   let cwd = await resolveCwd(cwdOption ?? process.cwd())
   let previousCwd = process.cwd()
 
   if (!isMainThread) {
-    return await runRemixTestInCwd(invocationConfig, configPath, cwd)
+    return await runRemixTestInCwd(invocationConfig, cwd)
   }
 
   try {
     process.chdir(cwd)
-    return await runRemixTestInCwd(invocationConfig, configPath, cwd)
+    return await runRemixTestInCwd(invocationConfig, cwd)
   } finally {
     process.chdir(previousCwd)
   }
 }
 
-async function runRemixTestInCwd(
-  invocationConfig: RemixTestConfig,
-  configPath: string | undefined,
-  cwd: string,
-): Promise<number> {
-  let config = await loadConfig(invocationConfig, configPath, cwd)
+async function runRemixTestInCwd(invocationConfig: RemixTestConfig, cwd: string): Promise<number> {
+  let config = resolveConfig(invocationConfig)
   let hasExited = false
   let latestExitCode = 0
   let watcher: ReturnType<typeof createWatcher> | undefined

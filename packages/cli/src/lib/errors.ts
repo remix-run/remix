@@ -70,6 +70,11 @@ export const CLI_ERROR_DEFINITIONS = {
     title: 'Invalid option value',
     fix: 'Check the command help for the supported option syntax.',
   },
+  invalidRemixConfig: {
+    code: 'RMX_INVALID_CONFIG',
+    title: 'Invalid Remix configuration',
+    fix: 'Correct the configuration file and try again.',
+  },
   missingOptionValue: {
     code: 'RMX_MISSING_OPTION_VALUE',
     title: 'Missing option value',
@@ -84,6 +89,11 @@ export const CLI_ERROR_DEFINITIONS = {
     code: 'RMX_PROJECT_ROOT_NOT_FOUND',
     title: 'Could not find a project root',
     fix: 'Run this command inside a Remix project.',
+  },
+  remixConfigNotFound: {
+    code: 'RMX_CONFIG_NOT_FOUND',
+    title: 'Remix configuration not found',
+    fix: 'Check the --config path and try again.',
   },
   remoteSkillDataMissing: {
     code: 'RMX_REMOTE_SKILL_DATA_MISSING',
@@ -237,6 +247,18 @@ export function invalidOptionValue(details: string): UsageError {
   })
 }
 
+export function invalidRemixConfig(
+  filePath: string,
+  details: string,
+  line: number,
+  column: number,
+): CliError {
+  return createCliError(CLI_ERROR_DEFINITIONS.invalidRemixConfig, {
+    context: { column, filePath, line },
+    message: `${filePath}:${line}:${column}: ${details}`,
+  })
+}
+
 export function missingOptionValue(option: string): UsageError {
   return createUsageError(CLI_ERROR_DEFINITIONS.missingOptionValue, {
     context: { option },
@@ -254,6 +276,13 @@ export function projectRootNotFound(startDir?: string): CliError {
   return createCliError(CLI_ERROR_DEFINITIONS.projectRootNotFound, {
     context: startDir == null ? undefined : { startDir },
     message: 'Could not find a project root. Run this command inside a Remix project.',
+  })
+}
+
+export function remixConfigNotFound(filePath: string): CliError {
+  return createCliError(CLI_ERROR_DEFINITIONS.remixConfigNotFound, {
+    context: { filePath },
+    message: `Could not find Remix configuration file: ${filePath}`,
   })
 }
 

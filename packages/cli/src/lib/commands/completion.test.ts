@@ -88,6 +88,7 @@ describe('completion command', () => {
         'routes',
         'test',
         'version',
+        '--config',
         '-h',
         '--help',
         '--no-color',
@@ -112,6 +113,7 @@ describe('completion command', () => {
         'seed',
         'status',
         'wipe',
+        '--config',
         '-h',
         '--help',
         '--no-color',
@@ -133,11 +135,20 @@ describe('completion command', () => {
     )
 
     assert.equal(wipe.exitCode, 0)
-    assert.equal(wipe.stdout, ['mode:values', '--force', '--help', '--no-color', ''].join('\n'))
+    assert.equal(
+      wipe.stdout,
+      ['mode:values', '--force', '--config', '--help', '--no-color', ''].join('\n'),
+    )
     assert.equal(reset.exitCode, 0)
-    assert.equal(reset.stdout, ['mode:values', '--force', '--help', '--no-color', ''].join('\n'))
+    assert.equal(
+      reset.stdout,
+      ['mode:values', '--force', '--config', '--help', '--no-color', ''].join('\n'),
+    )
     assert.equal(migrate.exitCode, 0)
-    assert.equal(migrate.stdout, ['mode:values', '--to', '--help', '--no-color', ''].join('\n'))
+    assert.equal(
+      migrate.stdout,
+      ['mode:values', '--to', '--config', '--help', '--no-color', ''].join('\n'),
+    )
   })
 
   it('suspends completion while a migration target value is expected', async () => {

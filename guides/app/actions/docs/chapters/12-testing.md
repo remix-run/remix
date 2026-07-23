@@ -315,49 +315,50 @@ Keep validation statuses, redirects, and middleware branches in router tests. On
 
 ## Configure discovery, coverage, and CI
 
-The default discovery rules are enough for the file names used in this chapter. Add `remix-test.config.ts` when the app needs custom browser projects, excluded paths, or global setup. The [`RemixTestConfig` API](https://api.remix.run/api/remix/test/interface/RemixTestConfig/) lists every available field:
+The default discovery rules are enough for the file names used in this chapter. Add a static `remix.json` when the app needs custom browser projects, excluded paths, global setup, or coverage settings. The file uses JSONC, so comments and trailing commas are allowed:
 
-```ts filename=remix-test.config.ts
-import type { RemixTestConfig } from "remix/test";
-
-export default {
-  glob: {
-    exclude: ["node_modules/**", "tmp/**"],
+```jsonc filename=remix.json
+{
+  "$schema": "https://remix.run/schemas/remix.json",
+  "test": {
+    "exclude": ["node_modules/**", "tmp/**"],
+    "setup": "./test/setup.ts",
+    "playwright": {
+      "configFile": "./playwright.config.ts",
+      "projects": ["chromium", "firefox"],
+    },
+    "coverage": {
+      // Keep local runs fast; `--coverage` enables these settings in CI.
+      "enabled": false,
+      "dir": ".coverage",
+      "include": ["app/**/*.{ts,tsx}"],
+      "exclude": ["app/**/*.test{,.browser,.e2e}.{ts,tsx}"],
+      "statements": 80,
+      "lines": 80,
+      "branches": 70,
+      "functions": 80,
+    },
   },
-  playwrightConfig: {
-    projects: [
-      { name: "chromium", use: { browserName: "chromium" } },
-      { name: "firefox", use: { browserName: "firefox" } },
-    ],
-  },
-} satisfies RemixTestConfig;
+}
 ```
 
-A `coverage` object enables coverage for every run with that config. Put thresholds in a separate CI config when focused development runs should stay fast:
+Keep Playwright's executable settings in its own config and reference that file from `remix.json`:
 
-```ts filename=remix-test.ci.config.ts
-import type { RemixTestConfig } from "remix/test";
+```ts filename=playwright.config.ts
+import { defineConfig } from "playwright/test";
 
-import config from "./remix-test.config.ts";
-
-export default {
-  ...config,
-  coverage: {
-    dir: ".coverage",
-    include: ["app/**/*.{ts,tsx}"],
-    exclude: ["app/**/*.test{,.browser,.e2e}.{ts,tsx}"],
-    statements: 80,
-    lines: 80,
-    branches: 70,
-    functions: 80,
-  },
-} satisfies RemixTestConfig;
+export default defineConfig({
+  projects: [
+    { name: "chromium", use: { browserName: "chromium" } },
+    { name: "firefox", use: { browserName: "firefox" } },
+  ],
+});
 ```
 
-Run that config when CI should enforce the thresholds:
+Explicit flags override `remix.json`. Run coverage in CI without maintaining an executable or environment-dependent test config:
 
 ```sh
-npm test -- --config remix-test.ci.config.ts
+npm test -- --coverage
 ```
 
 For an occasional report without configured thresholds, use `npm test -- --coverage`.
@@ -375,8 +376,12 @@ CI can run the same `npm test` command to cover all configured test types. Insta
 
 ```sh
 npx playwright install --with-deps
-npm test -- --config remix-test.ci.config.ts
+npm test -- --coverage
 npm run typecheck
 ```
+
+Use `remix test --config ./config/remix.ci.json` when CI needs a completely separate static config.
+Both the `--config` path and the default `remix.json` are selected by the Remix CLI; relative paths
+inside either file resolve from that file's directory.
 
 Keep type checking as a separate command. The test runner executes TypeScript, but it does not replace the compiler's project-wide checks. The next chapter, [CLI and Tooling](/cli-and-tooling/), covers the `remix test` flags alongside the rest of the Remix command-line workflow.

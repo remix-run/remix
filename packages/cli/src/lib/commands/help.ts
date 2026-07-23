@@ -47,6 +47,7 @@ export function getCliHelpText(target: NodeJS.WriteStream = process.stdout): str
         'remix version',
       ],
       options: [
+        { description: 'Use a custom Remix config file', label: '--config <path>' },
         { description: 'Show help', label: '-h, --help' },
         { description: 'Disable ANSI color output', label: '--no-color' },
         { description: 'Show version', label: '-v, --version' },

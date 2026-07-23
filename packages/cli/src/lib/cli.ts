@@ -2,7 +2,7 @@ import * as process from 'node:process'
 
 import { getCliHelpText, runHelpCommand } from './commands/help.ts'
 import { resolveCliContext, type CliContext } from './cli-context.ts'
-import { renderCliError, unknownCommand } from './errors.ts'
+import { missingOptionValue, renderCliError, toCliError, unknownCommand } from './errors.ts'
 import { configureColors, restoreTerminalFormatting } from './terminal.ts'
 
 /**
@@ -44,14 +44,13 @@ export async function runRemix(
   argv: string[] = process.argv.slice(2),
   options: RunRemixOptions = {},
 ): Promise<number> {
-  let context = await resolveCliContext(options)
-
   try {
     argv = stripLeadingSeparators(argv)
 
     let globalOptions = extractGlobalOptions(argv)
     argv = stripLeadingSeparators(globalOptions.argv)
     configureColors({ disabled: globalOptions.noColor })
+    let context = await resolveCliContext({ ...options, configPath: globalOptions.configPath })
 
     if (argv.length === 0) {
       process.stdout.write(getCliHelpText())
@@ -66,6 +65,11 @@ export async function runRemix(
     }
 
     return await runCommand(command, rest, context)
+  } catch (error) {
+    process.stderr.write(
+      renderCliError(toCliError(error), { helpText: getCliHelpText(process.stderr) }),
+    )
+    return 1
   } finally {
     restoreTerminalFormatting()
   }
@@ -130,8 +134,13 @@ async function runCommand(command: string, argv: string[], context: CliContext):
   return 1
 }
 
-function extractGlobalOptions(argv: string[]): { argv: string[]; noColor: boolean } {
+function extractGlobalOptions(argv: string[]): {
+  argv: string[]
+  configPath?: string
+  noColor: boolean
+} {
   let filteredArgv: string[] = []
+  let configPath: string | undefined
   let noColor = false
 
   for (let index = 0; index < argv.length; index++) {
@@ -147,11 +156,31 @@ function extractGlobalOptions(argv: string[]): { argv: string[]; noColor: boolea
       continue
     }
 
+    if (arg === '--config') {
+      let value = argv[index + 1]
+      if (value == null || value.length === 0 || value.startsWith('-')) {
+        throw missingOptionValue('--config')
+      }
+      configPath = value
+      index++
+      continue
+    }
+
+    if (arg.startsWith('--config=')) {
+      let value = arg.slice('--config='.length)
+      if (value.length === 0) {
+        throw missingOptionValue('--config')
+      }
+      configPath = value
+      continue
+    }
+
     filteredArgv.push(arg)
   }
 
   return {
     argv: filteredArgv,
+    configPath,
     noColor,
   }
 }

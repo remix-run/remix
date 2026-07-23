@@ -2,13 +2,16 @@ import * as path from 'node:path'
 import * as process from 'node:process'
 
 import { resolveDefaultRemixVersion } from './remix-version.ts'
+import { loadRemixConfig, type RemixConfig } from './remix-config.ts'
 
 interface ResolveCliContextOptions {
+  configPath?: string
   cwd?: string
   remixVersion?: string
 }
 
 export interface CliContext {
+  config: RemixConfig
   cwd: string
   remixVersion?: string
 }
@@ -20,6 +23,7 @@ export async function resolveCliContext(
   let remixVersion = normalizeRemixVersion(options.remixVersion)
 
   return {
+    config: await loadRemixConfig(cwd, options.configPath),
     cwd,
     remixVersion: remixVersion ?? (await resolveDefaultRemixVersion(cwd)),
   }
