@@ -135,6 +135,41 @@ describe('test command', () => {
     assert.match(threshold.stderr, /Invalid --coverage\.lines value ""\. Expected a number/)
   })
 
+  it('rejects non-integer concurrency values', async () => {
+    let fractional = await captureOutput(() => runRemix(['test', '--concurrency', '2.5']))
+    let zero = await captureOutput(() => runRemix(['test', '-c', '0']))
+
+    assert.equal(fractional.exitCode, 1)
+    assert.match(fractional.stderr, /Error \[RMX_INVALID_OPTION_VALUE\] Invalid option value/)
+    assert.match(
+      fractional.stderr,
+      /Invalid --concurrency value "2\.5"\. Expected a positive integer/,
+    )
+
+    assert.equal(zero.exitCode, 1)
+    assert.match(zero.stderr, /Invalid --concurrency value "0"\. Expected a positive integer/)
+  })
+
+  it('treats help flags after -- as positional globs', async () => {
+    let projectDir = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-cli-test-command-separator-'))
+
+    try {
+      await fs.writeFile(
+        path.join(projectDir, 'package.json'),
+        `${JSON.stringify({ name: 'test-command-separator-fixture', private: true, type: 'module' }, null, 2)}\n`,
+        'utf8',
+      )
+
+      let result = await captureOutput(() => runRemix(['test', '--', '-h'], { cwd: projectDir }))
+
+      assert.equal(result.exitCode, 1, result.stderr)
+      assert.match(result.stdout, /No test files found matching pattern: -h/)
+      assert.doesNotMatch(result.stdout, /Usage:/)
+    } finally {
+      await fs.rm(projectDir, { recursive: true, force: true })
+    }
+  })
+
   it('rejects unsupported pool values', async () => {
     let result = await captureOutput(() => runRemix(['test', '--pool', 'workers']))
 

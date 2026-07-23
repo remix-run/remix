@@ -155,7 +155,7 @@ export const testCommandFlags: TestCommandFlag[] = Object.entries(
 }))
 
 export async function runTestCommand(argv: string[], context: CliContext): Promise<number> {
-  if (argv.includes('-h') || argv.includes('--help')) {
+  if (wantsHelp(argv)) {
     process.stdout.write(getTestCommandHelpText())
     return 0
   }
@@ -207,6 +207,13 @@ export function getTestCommandHelpText(target: NodeJS.WriteStream = process.stdo
   )
 }
 
+function wantsHelp(argv: string[]): boolean {
+  // Everything after a bare `--` is a positional test file glob, not a flag
+  let separatorIndex = argv.indexOf('--')
+  let flags = separatorIndex === -1 ? argv : argv.slice(0, separatorIndex)
+  return flags.includes('-h') || flags.includes('--help')
+}
+
 function parseTestCommandArgs(argv: string[], pools: readonly RemixTestPool[]) {
   let parsed: ReturnType<typeof parseTestCommandArgsRaw>
 
@@ -230,7 +237,7 @@ function parseTestCommandArgs(argv: string[], pools: readonly RemixTestPool[]) {
       echo: values['browser.echo'] || undefined,
       open: values['browser.open'] || undefined,
     }),
-    concurrency: optionalNumber(values.concurrency, '--concurrency'),
+    concurrency: optionalPositiveInteger(values.concurrency, '--concurrency'),
     config: values.config,
     coverage,
     glob,
@@ -282,6 +289,15 @@ function optionalNumber(value: string | undefined, flag: string): number | undef
   let parsed = Number(value)
   if (value.trim() === '' || Number.isNaN(parsed)) {
     throw invalidOptionValue(`Invalid ${flag} value "${value}". Expected a number`)
+  }
+
+  return parsed
+}
+
+function optionalPositiveInteger(value: string | undefined, flag: string): number | undefined {
+  let parsed = optionalNumber(value, flag)
+  if (parsed !== undefined && (!Number.isInteger(parsed) || parsed < 1)) {
+    throw invalidOptionValue(`Invalid ${flag} value "${value}". Expected a positive integer`)
   }
 
   return parsed
