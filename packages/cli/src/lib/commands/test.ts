@@ -1,8 +1,15 @@
 import * as process from 'node:process'
 import { parseArgs } from 'node:util'
+import type { RemixTestPool } from '@remix-run/test/cli'
 
 import type { CliContext } from '../cli-context.ts'
-import { invalidOptionValue, renderCliError, toCliError, unknownArgument } from '../errors.ts'
+import {
+  invalidOptionValue,
+  missingOptionValue,
+  renderCliError,
+  toCliError,
+  unknownArgument,
+} from '../errors.ts'
 import { formatHelpText } from '../help-text.ts'
 
 const testCommandOptions = {
@@ -33,6 +40,120 @@ const testCommandOptions = {
   watch: { type: 'boolean', short: 'w' },
 } as const
 
+interface TestFlagMeta {
+  /** Base help description; "(repeatable)" and "(default: ...)" are appended automatically. */
+  description: string
+  /** Placeholder for the flag's value in help text, e.g. `glob` renders as `<glob>`. */
+  valueHint?: string
+  /** Complete this flag's value as a file path in shell completion. */
+  files?: boolean
+  /** Default value shown in help text. */
+  default?: string
+}
+
+// The annotation keeps this table in lockstep with `testCommandOptions`: adding
+// or removing a flag without updating its metadata is a compile error.
+const testCommandFlagMeta: Record<keyof typeof testCommandOptions, TestFlagMeta> = {
+  'browser.echo': { description: 'Echo browser console output' },
+  'browser.open': { description: 'Open the browser after tests finish' },
+  'glob.browser': {
+    description: 'Glob pattern for browser test files',
+    valueHint: 'glob',
+    files: true,
+  },
+  'glob.e2e': { description: 'Glob pattern for E2E test files', valueHint: 'glob', files: true },
+  'glob.exclude': {
+    description: 'Glob pattern to exclude from discovery',
+    valueHint: 'glob',
+    files: true,
+  },
+  'glob.test': {
+    description: 'Glob pattern for all test files',
+    valueHint: 'glob',
+    files: true,
+    default: '**/*.test{,.e2e,.browser}.{ts,tsx}',
+  },
+  concurrency: {
+    description: 'Maximum concurrent test workers',
+    valueHint: 'count',
+    default: 'os.availableParallelism()',
+  },
+  config: {
+    description: 'Path to a test config file',
+    valueHint: 'path',
+    files: true,
+    default: 'remix-test.config.ts',
+  },
+  coverage: { description: 'Collect test coverage', default: 'false' },
+  'coverage.dir': {
+    description: 'Coverage report output directory',
+    valueHint: 'path',
+    default: '.coverage',
+  },
+  'coverage.include': { description: 'Coverage inclusion glob', valueHint: 'glob' },
+  'coverage.exclude': { description: 'Coverage exclusion glob', valueHint: 'glob' },
+  'coverage.branches': { description: 'Minimum branch coverage percentage', valueHint: 'percent' },
+  'coverage.functions': {
+    description: 'Minimum function coverage percentage',
+    valueHint: 'percent',
+  },
+  'coverage.lines': { description: 'Minimum line coverage percentage', valueHint: 'percent' },
+  'coverage.statements': {
+    description: 'Minimum statement coverage percentage',
+    valueHint: 'percent',
+  },
+  setup: { description: 'Path to a setup module', valueHint: 'path', files: true },
+  playwrightConfig: {
+    description: 'Path to a Playwright config file',
+    valueHint: 'path',
+    files: true,
+  },
+  project: { description: 'Playwright project name', valueHint: 'name' },
+  pool: { description: 'Worker pool: forks or threads', valueHint: 'pool', default: 'forks' },
+  quiet: { description: 'Do not print skipped tests' },
+  only: { description: 'Test name pattern', valueHint: 'pattern' },
+  reporter: {
+    description: 'Reporter: spec, files, tap, or dot',
+    valueHint: 'name',
+    default: 'spec',
+  },
+  type: {
+    description: 'Test type: server, browser, or e2e',
+    valueHint: 'type',
+    default: 'server, browser, e2e',
+  },
+  watch: { description: 'Re-run tests when files change' },
+}
+
+/**
+ * Flag descriptors for `remix test`, derived from the parse table so that
+ * argument parsing, help text, and shell completion share one source of truth.
+ */
+export interface TestCommandFlag {
+  /** Long flag, e.g. `--glob.test`. */
+  name: string
+  /** Short alias, e.g. `-c`. */
+  alias?: string
+  type: 'boolean' | 'string'
+  /** Whether the flag may be repeated. */
+  multiple: boolean
+  /** Whether the flag's value completes as a file path. */
+  files: boolean
+}
+
+export const testCommandFlags: TestCommandFlag[] = Object.entries(
+  testCommandOptions as Record<
+    string,
+    { type: 'boolean' | 'string'; multiple?: boolean; short?: string }
+  >,
+).map(([name, option]) => ({
+  name: `--${name}`,
+  alias: option.short === undefined ? undefined : `-${option.short}`,
+  type: option.type,
+  multiple: option.multiple === true,
+  files: testCommandFlagMeta[name as keyof typeof testCommandOptions].files === true,
+}))
+
 export async function runTestCommand(argv: string[], context: CliContext): Promise<number> {
   if (argv.includes('-h') || argv.includes('--help')) {
     process.stdout.write(getTestCommandHelpText())
@@ -40,8 +161,8 @@ export async function runTestCommand(argv: string[], context: CliContext): Promi
   }
 
   try {
-    let options = parseTestCommandArgs(argv)
-    let { runRemixTest } = await import('@remix-run/test/cli')
+    let { remixTestPools, runRemixTest } = await import('@remix-run/test/cli')
+    let options = parseTestCommandArgs(argv, remixTestPools)
     return await runRemixTest({ ...options, cwd: context.cwd })
   } catch (error) {
     process.stderr.write(
@@ -65,52 +186,18 @@ export function getTestCommandHelpText(target: NodeJS.WriteStream = process.stdo
         'remix test --watch',
       ],
       options: [
-        { description: 'Echo browser console output', label: '--browser.echo' },
-        { description: 'Open the browser after tests finish', label: '--browser.open' },
-        {
-          description: 'Glob pattern for browser test files (repeatable)',
-          label: '--glob.browser <glob>',
-        },
-        { description: 'Glob pattern for E2E test files (repeatable)', label: '--glob.e2e <glob>' },
-        {
-          description: 'Glob pattern to exclude from discovery (repeatable)',
-          label: '--glob.exclude <glob>',
-        },
-        {
-          description: 'Glob pattern for all test files (repeatable)',
-          label: '--glob.test <glob>',
-        },
-        { description: 'Maximum concurrent test workers', label: '-c, --concurrency <count>' },
-        { description: 'Path to a test config file', label: '--config <path>' },
-        { description: 'Collect test coverage', label: '--coverage' },
-        { description: 'Coverage report output directory', label: '--coverage.dir <path>' },
-        { description: 'Coverage inclusion glob (repeatable)', label: '--coverage.include <glob>' },
-        { description: 'Coverage exclusion glob (repeatable)', label: '--coverage.exclude <glob>' },
-        {
-          description: 'Minimum branch coverage percentage',
-          label: '--coverage.branches <percent>',
-        },
-        {
-          description: 'Minimum function coverage percentage',
-          label: '--coverage.functions <percent>',
-        },
-        { description: 'Minimum line coverage percentage', label: '--coverage.lines <percent>' },
-        {
-          description: 'Minimum statement coverage percentage',
-          label: '--coverage.statements <percent>',
-        },
-        { description: 'Path to a setup module', label: '-s, --setup <path>' },
-        { description: 'Path to a Playwright config file', label: '--playwrightConfig <path>' },
-        { description: 'Playwright project name (repeatable)', label: '-p, --project <name>' },
-        { description: 'Worker pool: forks or threads', label: '--pool <pool>' },
-        { description: 'Do not print skipped tests', label: '-q, --quiet' },
-        { description: 'Test name pattern (repeatable)', label: '--only <pattern>' },
-        { description: 'Reporter: spec, files, tap, or dot', label: '-r, --reporter <name>' },
-        {
-          description: 'Test type: server, browser, or e2e (repeatable)',
-          label: '-t, --type <type>',
-        },
-        { description: 'Re-run tests when files change', label: '-w, --watch' },
+        ...Object.entries(testCommandOptions).map(([name, option]) => {
+          let meta = testCommandFlagMeta[name as keyof typeof testCommandOptions]
+          let short = 'short' in option ? `-${option.short}, ` : ''
+          let value = option.type === 'string' ? ` <${meta.valueHint}>` : ''
+          let repeatable = 'multiple' in option && option.multiple ? ' (repeatable)' : ''
+          let defaultValue = meta.default === undefined ? '' : ` (default: ${meta.default})`
+
+          return {
+            description: `${meta.description}${repeatable}${defaultValue}`,
+            label: `${short}--${name}${value}`,
+          }
+        }),
         { description: 'Show help', label: '-h, --help' },
         { description: 'Disable ANSI color output', label: '--no-color' },
       ],
@@ -120,7 +207,7 @@ export function getTestCommandHelpText(target: NodeJS.WriteStream = process.stdo
   )
 }
 
-function parseTestCommandArgs(argv: string[]) {
+function parseTestCommandArgs(argv: string[], pools: readonly RemixTestPool[]) {
   let parsed: ReturnType<typeof parseTestCommandArgsRaw>
 
   try {
@@ -143,13 +230,13 @@ function parseTestCommandArgs(argv: string[]) {
       echo: values['browser.echo'] || undefined,
       open: values['browser.open'] || undefined,
     }),
-    concurrency: optionalNumber(values.concurrency),
+    concurrency: optionalNumber(values.concurrency, '--concurrency'),
     config: values.config,
     coverage,
     glob,
     only: values.only,
     playwrightConfig: values.playwrightConfig,
-    pool: parsePool(values.pool),
+    pool: parsePool(values.pool, pools),
     project: values.project,
     quiet: values.quiet || undefined,
     reporter: values.reporter,
@@ -161,20 +248,22 @@ function parseTestCommandArgs(argv: string[]) {
 
 function createCoverageOptions(values: ReturnType<typeof parseTestCommandArgsRaw>['values']) {
   let options = compactObject({
-    branches: optionalNumber(values['coverage.branches']),
+    branches: optionalNumber(values['coverage.branches'], '--coverage.branches'),
     dir: values['coverage.dir'],
     exclude: values['coverage.exclude'],
-    functions: optionalNumber(values['coverage.functions']),
+    functions: optionalNumber(values['coverage.functions'], '--coverage.functions'),
     include: values['coverage.include'],
-    lines: optionalNumber(values['coverage.lines']),
-    statements: optionalNumber(values['coverage.statements']),
+    lines: optionalNumber(values['coverage.lines'], '--coverage.lines'),
+    statements: optionalNumber(values['coverage.statements'], '--coverage.statements'),
   })
 
   if (values.coverage) {
     return options ?? true
   }
 
-  return options == null ? undefined : { ...options, enabled: undefined }
+  // Coverage settings without --coverage refine the config file's coverage
+  // options while leaving enablement up to the config file.
+  return options == null ? undefined : { ...options, enabled: 'inherit' as const }
 }
 
 function parseTestCommandArgsRaw(argv: string[]) {
@@ -185,16 +274,30 @@ function parseTestCommandArgsRaw(argv: string[]) {
   })
 }
 
-function optionalNumber(value: string | undefined): number | undefined {
-  return value === undefined ? undefined : Number(value)
-}
-
-function parsePool(value: string | undefined): 'forks' | 'threads' | undefined {
-  if (value === undefined || value === 'forks' || value === 'threads') {
-    return value
+function optionalNumber(value: string | undefined, flag: string): number | undefined {
+  if (value === undefined) {
+    return undefined
   }
 
-  throw invalidOptionValue(`Unsupported test pool "${value}". Supported pools are: forks, threads`)
+  let parsed = Number(value)
+  if (value.trim() === '' || Number.isNaN(parsed)) {
+    throw invalidOptionValue(`Invalid ${flag} value "${value}". Expected a number`)
+  }
+
+  return parsed
+}
+
+function parsePool(
+  value: string | undefined,
+  pools: readonly RemixTestPool[],
+): RemixTestPool | undefined {
+  if (value === undefined || (pools as readonly string[]).includes(value)) {
+    return value as RemixTestPool | undefined
+  }
+
+  throw invalidOptionValue(
+    `Unsupported test pool "${value}". Supported pools are: ${pools.join(', ')}`,
+  )
 }
 
 function compactObject<shape extends object>(value: shape): shape | undefined {
@@ -212,6 +315,13 @@ function toTestCommandUsageError(error: unknown): unknown {
   }
 
   if (error.code === 'ERR_PARSE_ARGS_INVALID_OPTION_VALUE') {
+    // parseArgs reports a flag with no value as an invalid-value error, e.g.
+    // "Option '--config <value>' argument missing"; surface it as missing.
+    let missing = error.message.match(/^Option '(.+?) <value>' argument missing/)
+    if (missing !== null) {
+      return missingOptionValue(missing[1])
+    }
+
     return invalidOptionValue(error.message)
   }
 

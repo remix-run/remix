@@ -207,7 +207,7 @@ describe('config', () => {
     )
 
     let refined = await loadConfig(
-      { coverage: { dir: 'from-invocation', enabled: undefined } },
+      { coverage: { dir: 'from-invocation', enabled: 'inherit' } },
       undefined,
       cwd,
     )
@@ -219,7 +219,7 @@ describe('config', () => {
       `export default { coverage: false }`,
     )
     let settingsOnly = await loadConfig(
-      { coverage: { dir: 'settings-only', enabled: undefined } },
+      { coverage: { dir: 'settings-only', enabled: 'inherit' } },
       undefined,
       disabledCwd,
     )
@@ -228,6 +228,40 @@ describe('config', () => {
     assert.equal(enabled.coverage?.dir, 'enabled-inline')
     assert.equal(disabled.coverage, undefined)
     assert.equal(settingsOnly.coverage, undefined)
+  })
+
+  it('treats null coverage as disabled', async () => {
+    let cwd = await createConfigDir('null-coverage')
+    await fsp.writeFile(path.join(cwd, 'remix-test.config.ts'), `export default { coverage: null }`)
+
+    let fromFile = await loadConfig({}, undefined, cwd)
+    // @ts-expect-error Runtime validation protects JavaScript callers and untyped config files.
+    let fromInvocation = await loadConfig({ coverage: null }, undefined, cwd)
+
+    assert.equal(fromFile.coverage, undefined)
+    assert.equal(fromInvocation.coverage, undefined)
+  })
+
+  it('rejects invalid concurrency values', async () => {
+    let cwd = await createConfigDir('invalid-concurrency')
+
+    await assert.rejects(
+      () => loadConfig({ concurrency: 'abc' }, undefined, cwd),
+      /Invalid concurrency value "abc"/,
+    )
+    await assert.rejects(
+      () => loadConfig({ concurrency: 0 }, undefined, cwd),
+      /Invalid concurrency value "0"/,
+    )
+  })
+
+  it('rejects non-numeric coverage thresholds', async () => {
+    let cwd = await createConfigDir('invalid-threshold')
+
+    await assert.rejects(
+      () => loadConfig({ coverage: { lines: 'ninety' } }, undefined, cwd),
+      /Invalid coverage\.lines value "ninety"/,
+    )
   })
 })
 

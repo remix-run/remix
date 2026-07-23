@@ -8,6 +8,8 @@ import {
   type RemixTestConfig,
   type ResolvedRemixTestConfig,
 } from './lib/config.ts'
+
+export { remixTestPools, type RemixTestPool } from './lib/config.ts'
 import type * as playwrightSupport from './lib/playwright.ts'
 import { generateCombinedCoverageReport } from './lib/coverage.ts'
 import { createReporter } from './lib/reporters/index.ts'

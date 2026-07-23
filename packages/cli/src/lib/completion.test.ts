@@ -124,6 +124,38 @@ describe('completion engine', () => {
     assert.ok(!usedCoverage.values?.includes('--coverage'))
     assert.ok(usedCoverage.values?.includes('--coverage.include'))
   })
+
+  it('recognizes test flags with inline =values', () => {
+    let result = getCompletionResult(['remix', 'test', '--reporter=spec', ''], 3)
+
+    assert.equal(result.mode, 'values')
+    assert.ok(!result.values?.includes('--reporter'))
+    assert.ok(result.values?.includes('--watch'))
+  })
+
+  it('recognizes short test flags with attached values', () => {
+    let result = getCompletionResult(['remix', 'test', '-c1', ''], 3)
+
+    assert.equal(result.mode, 'values')
+    assert.ok(!result.values?.includes('--concurrency'))
+    assert.ok(!result.values?.includes('-c'))
+    assert.ok(result.values?.includes('--watch'))
+  })
+
+  it('recognizes grouped boolean short test flags', () => {
+    let result = getCompletionResult(['remix', 'test', '-qw', ''], 3)
+
+    assert.equal(result.mode, 'values')
+    assert.ok(!result.values?.includes('--quiet'))
+    assert.ok(!result.values?.includes('--watch'))
+    assert.ok(result.values?.includes('--coverage'))
+  })
+
+  it('treats everything after -- as positional test globs', () => {
+    let result = getCompletionResult(['remix', 'test', '--', ''], 3)
+
+    assert.deepEqual(result, { mode: 'files' })
+  })
 })
 
 describe('completion script', () => {

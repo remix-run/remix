@@ -1,3 +1,5 @@
+import { testCommandFlags } from './commands/test.ts'
+
 export interface CompletionResult {
   mode: 'files' | 'none' | 'values'
   values?: string[]
@@ -6,58 +8,28 @@ export interface CompletionResult {
 const COMPLETION_SHELLS = ['bash', 'zsh'] as const
 const HELP_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'test', 'version'] as const
 const ROOT_COMMANDS = ['completion', 'doctor', 'help', 'new', 'routes', 'test', 'version'] as const
-const TEST_BOOLEAN_FLAGS = ['--browser.echo', '--browser.open', '--coverage', '--quiet', '--watch']
-const TEST_VALUE_FLAGS = [
-  '--glob.browser',
-  '--glob.e2e',
-  '--glob.exclude',
-  '--glob.test',
-  '--concurrency',
-  '--config',
-  '--coverage.dir',
-  '--coverage.include',
-  '--coverage.exclude',
-  '--coverage.branches',
-  '--coverage.functions',
-  '--coverage.lines',
-  '--coverage.statements',
-  '--setup',
-  '--playwrightConfig',
-  '--project',
-  '--pool',
-  '--only',
-  '--reporter',
-  '--type',
-]
-const TEST_REPEATABLE_FLAGS = new Set([
-  '--glob.browser',
-  '--glob.e2e',
-  '--glob.exclude',
-  '--glob.test',
-  '--coverage.include',
-  '--coverage.exclude',
-  '--project',
-  '--only',
-  '--type',
-])
-const TEST_FILE_VALUE_FLAGS = new Set([
-  '--config',
-  '--glob.browser',
-  '--glob.e2e',
-  '--glob.exclude',
-  '--glob.test',
-  '--playwrightConfig',
-  '--setup',
-])
-const TEST_FLAG_ALIASES = new Map([
-  ['-c', '--concurrency'],
-  ['-p', '--project'],
-  ['-q', '--quiet'],
-  ['-r', '--reporter'],
-  ['-s', '--setup'],
-  ['-t', '--type'],
-  ['-w', '--watch'],
-])
+
+// Derived from the `remix test` flag table so completion stays in sync with
+// argument parsing and help text.
+const TEST_BOOLEAN_FLAGS = testCommandFlags
+  .filter((flag) => flag.type === 'boolean')
+  .map((flag) => flag.name)
+const TEST_VALUE_FLAGS = testCommandFlags
+  .filter((flag) => flag.type === 'string')
+  .map((flag) => flag.name)
+const TEST_BOOLEAN_FLAG_SET = new Set(TEST_BOOLEAN_FLAGS)
+const TEST_VALUE_FLAG_SET = new Set(TEST_VALUE_FLAGS)
+const TEST_REPEATABLE_FLAGS = new Set(
+  testCommandFlags.filter((flag) => flag.multiple).map((flag) => flag.name),
+)
+const TEST_FILE_VALUE_FLAGS = new Set(
+  testCommandFlags.filter((flag) => flag.files).map((flag) => flag.name),
+)
+const TEST_FLAG_ALIASES = new Map(
+  testCommandFlags.flatMap((flag) =>
+    flag.alias === undefined ? [] : [[flag.alias, flag.name] as const],
+  ),
+)
 
 export type CompletionShell = (typeof COMPLETION_SHELLS)[number]
 
@@ -243,6 +215,7 @@ function completeTest(
 
   let usedFlags = new Set<string>()
   let expectedValueFor: string | undefined
+  let afterSeparator = false
 
   for (let token of filteredTokens) {
     if (expectedValueFor != null) {
@@ -250,25 +223,73 @@ function completeTest(
       continue
     }
 
-    let canonicalFlag = TEST_FLAG_ALIASES.get(token) ?? token
-    if (TEST_VALUE_FLAGS.includes(canonicalFlag)) {
-      usedFlags.add(canonicalFlag)
-      expectedValueFor = canonicalFlag
+    // Everything after a bare `--` is a positional test file glob
+    if (afterSeparator) {
       continue
     }
 
-    if (TEST_BOOLEAN_FLAGS.includes(canonicalFlag)) {
-      usedFlags.add(canonicalFlag)
+    if (token === '--') {
+      afterSeparator = true
       continue
     }
 
-    if (token.startsWith('-')) {
+    if (token.startsWith('--')) {
+      // `--flag=value` carries its value inline
+      let equalsIndex = token.indexOf('=')
+      let flag = equalsIndex === -1 ? token : token.slice(0, equalsIndex)
+
+      if (TEST_VALUE_FLAG_SET.has(flag)) {
+        usedFlags.add(flag)
+        if (equalsIndex === -1) {
+          expectedValueFor = flag
+        }
+        continue
+      }
+
+      if (TEST_BOOLEAN_FLAG_SET.has(flag)) {
+        usedFlags.add(flag)
+        continue
+      }
+
       return completeValues([], currentWord)
     }
+
+    if (token.startsWith('-') && token !== '-') {
+      let aliased = TEST_FLAG_ALIASES.get(token.slice(0, 2))
+
+      // A value alias may carry its value inline (`-c1`); a bare alias
+      // expects the value in the next token.
+      if (aliased !== undefined && TEST_VALUE_FLAG_SET.has(aliased)) {
+        usedFlags.add(aliased)
+        if (token.length === 2) {
+          expectedValueFor = aliased
+        }
+        continue
+      }
+
+      // A group of boolean aliases (`-qw`)
+      let group = [...token.slice(1)].map((char) => TEST_FLAG_ALIASES.get(`-${char}`))
+      if (
+        group.every((flag): flag is string => flag !== undefined && TEST_BOOLEAN_FLAG_SET.has(flag))
+      ) {
+        for (let flag of group) {
+          usedFlags.add(flag)
+        }
+        continue
+      }
+
+      return completeValues([], currentWord)
+    }
+
+    // Anything else is a positional test file glob
   }
 
   if (expectedValueFor != null) {
     return TEST_FILE_VALUE_FLAGS.has(expectedValueFor) ? { mode: 'files' } : { mode: 'none' }
+  }
+
+  if (afterSeparator) {
+    return { mode: 'files' }
   }
 
   let longFlags = [...TEST_BOOLEAN_FLAGS, ...TEST_VALUE_FLAGS].filter(

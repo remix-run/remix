@@ -13,7 +13,7 @@ import { getTestCommandHelpText } from './test.ts'
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..')
 
-const TEST_COMMAND_HELP_TEXT = await getTestCommandHelpText()
+const TEST_COMMAND_HELP_TEXT = getTestCommandHelpText()
 
 describe('test command', () => {
   it('prints test command help', async () => {
@@ -118,9 +118,41 @@ describe('test command', () => {
     assert.match(unknown.stderr, /Usage:/)
 
     assert.equal(missing.exitCode, 1)
-    assert.match(missing.stderr, /Error \[RMX_INVALID_OPTION_VALUE\] Invalid option value/)
-    assert.match(missing.stderr, /Option '--config <value>' argument missing/)
+    assert.match(missing.stderr, /Error \[RMX_MISSING_OPTION_VALUE\] Missing option value/)
+    assert.match(missing.stderr, /--config requires a value\./)
     assert.match(missing.stderr, /Usage:/)
+  })
+
+  it('rejects non-numeric values for numeric options', async () => {
+    let concurrency = await captureOutput(() => runRemix(['test', '--concurrency', 'abc']))
+    let threshold = await captureOutput(() => runRemix(['test', '--coverage.lines', '']))
+
+    assert.equal(concurrency.exitCode, 1)
+    assert.match(concurrency.stderr, /Error \[RMX_INVALID_OPTION_VALUE\] Invalid option value/)
+    assert.match(concurrency.stderr, /Invalid --concurrency value "abc"\. Expected a number/)
+
+    assert.equal(threshold.exitCode, 1)
+    assert.match(threshold.stderr, /Invalid --coverage\.lines value ""\. Expected a number/)
+  })
+
+  it('rejects unsupported pool values', async () => {
+    let result = await captureOutput(() => runRemix(['test', '--pool', 'workers']))
+
+    assert.equal(result.exitCode, 1)
+    assert.match(result.stderr, /Error \[RMX_INVALID_OPTION_VALUE\] Invalid option value/)
+    assert.match(
+      result.stderr,
+      /Unsupported test pool "workers"\. Supported pools are: forks, threads/,
+    )
+  })
+
+  it('documents defaults in the help text', () => {
+    assert.match(TEST_COMMAND_HELP_TEXT, /default: os\.availableParallelism\(\)/)
+    assert.match(TEST_COMMAND_HELP_TEXT, /default: remix-test\.config\.ts/)
+    assert.match(TEST_COMMAND_HELP_TEXT, /default: \.coverage/)
+    assert.match(TEST_COMMAND_HELP_TEXT, /default: forks/)
+    assert.match(TEST_COMMAND_HELP_TEXT, /default: spec/)
+    assert.match(TEST_COMMAND_HELP_TEXT, /default: server, browser, e2e/)
   })
 })
 

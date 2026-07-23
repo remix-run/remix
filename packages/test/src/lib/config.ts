@@ -62,11 +62,16 @@ const defaultValues: ResolvedRemixTestConfig = {
 }
 
 /**
+ * Worker pools supported by the Remix test runner.
+ */
+export const remixTestPools = ['forks', 'threads'] as const
+
+/**
  * Worker pool used by Remix to run server and E2E test files.
  * `'forks'` (default) uses child processes for stronger isolation; `'threads'`
  * uses worker threads for projects that prefer lower-overhead startup.
  */
-export type RemixTestPool = 'forks' | 'threads'
+export type RemixTestPool = (typeof remixTestPools)[number]
 
 export interface SerializedOnlyPattern {
   source: string
@@ -117,8 +122,12 @@ export interface RemixTestConfig {
   coverage?:
     | boolean
     | {
-        /** Enables or disables coverage when specified. A coverage object enables coverage by default. */
-        enabled?: boolean
+        /**
+         * Enables or disables coverage when specified. A coverage object enables coverage by
+         * default. Invocation options may pass `'inherit'` to apply the object's settings while
+         * deferring enablement to the config file (used by CLI flags like `--coverage.dir`).
+         */
+        enabled?: boolean | 'inherit'
         /** Directory where coverage reports are written. */
         dir?: string
         /** Glob patterns for files included in coverage. */
@@ -238,14 +247,7 @@ function resolveConfig(
   let fileCoverage = typeof fileConfig.coverage === 'boolean' ? {} : fileConfig.coverage || {}
   let invocationCoverage =
     typeof invocationConfig.coverage === 'boolean' ? {} : invocationConfig.coverage || {}
-  let coverageEnabled =
-    typeof invocationConfig.coverage === 'boolean'
-      ? invocationConfig.coverage
-      : typeof invocationConfig.coverage === 'object'
-        ? Object.hasOwn(invocationConfig.coverage, 'enabled')
-          ? (invocationConfig.coverage.enabled ?? isFileCoverageEnabled(fileConfig.coverage))
-          : true
-        : isFileCoverageEnabled(fileConfig.coverage)
+  let coverageEnabled = isCoverageEnabled(invocationConfig.coverage, fileConfig.coverage)
 
   return {
     glob: {
@@ -266,7 +268,7 @@ function resolveConfig(
       open:
         invocationConfig.browser?.open ?? fileConfig.browser?.open ?? defaultValues.browser.open,
     },
-    concurrency: Number(
+    concurrency: resolveConcurrency(
       invocationConfig.concurrency ?? fileConfig.concurrency ?? defaultValues.concurrency,
     ),
     coverage: coverageEnabled
@@ -278,10 +280,19 @@ function resolveConfig(
           exclude: optionalArray(
             invocationCoverage.exclude ?? fileCoverage.exclude ?? defaultValues.coverage!.exclude,
           ),
-          statements: optionalNumber(invocationCoverage.statements ?? fileCoverage.statements),
-          lines: optionalNumber(invocationCoverage.lines ?? fileCoverage.lines),
-          branches: optionalNumber(invocationCoverage.branches ?? fileCoverage.branches),
-          functions: optionalNumber(invocationCoverage.functions ?? fileCoverage.functions),
+          statements: optionalNumber(
+            invocationCoverage.statements ?? fileCoverage.statements,
+            'coverage.statements',
+          ),
+          lines: optionalNumber(invocationCoverage.lines ?? fileCoverage.lines, 'coverage.lines'),
+          branches: optionalNumber(
+            invocationCoverage.branches ?? fileCoverage.branches,
+            'coverage.branches',
+          ),
+          functions: optionalNumber(
+            invocationCoverage.functions ?? fileCoverage.functions,
+            'coverage.functions',
+          ),
         }
       : undefined,
     setup: invocationConfig.setup ?? fileConfig.setup ?? defaultValues.setup,
@@ -306,20 +317,49 @@ function optionalArray<value>(input: value | readonly value[] | undefined): valu
   return input === undefined ? undefined : toArray(input)
 }
 
-function optionalNumber(input: number | string | undefined): number | undefined {
-  return input === undefined ? undefined : Number(input)
+function optionalNumber(input: number | string | undefined, name: string): number | undefined {
+  if (input === undefined) return undefined
+
+  let value = Number(input)
+  if (Number.isNaN(value)) {
+    throw new Error(`Invalid ${name} value "${input}". Expected a number`)
+  }
+
+  return value
+}
+
+function resolveConcurrency(value: number | string): number {
+  let concurrency = Number(value)
+  if (!Number.isInteger(concurrency) || concurrency < 1) {
+    throw new Error(`Invalid concurrency value "${value}". Expected a positive integer`)
+  }
+
+  return concurrency
+}
+
+function isCoverageEnabled(
+  invocationCoverage: RemixTestConfig['coverage'],
+  fileCoverage: RemixTestConfig['coverage'],
+): boolean {
+  if (typeof invocationCoverage === 'boolean') return invocationCoverage
+  if (invocationCoverage == null) return isFileCoverageEnabled(fileCoverage)
+  if (invocationCoverage.enabled === 'inherit') return isFileCoverageEnabled(fileCoverage)
+  return invocationCoverage.enabled !== false
 }
 
 function isFileCoverageEnabled(coverage: RemixTestConfig['coverage']): boolean {
-  return coverage === true || (typeof coverage === 'object' && coverage.enabled !== false)
+  if (typeof coverage === 'boolean') return coverage
+  return coverage != null && coverage.enabled !== false
 }
 
 function resolvePool(value: string): RemixTestPool {
-  if (value === 'forks' || value === 'threads') {
-    return value
+  if ((remixTestPools as readonly string[]).includes(value)) {
+    return value as RemixTestPool
   }
 
-  throw new Error(`Unsupported test pool "${value}". Supported pools are: forks, threads`)
+  throw new Error(
+    `Unsupported test pool "${value}". Supported pools are: ${remixTestPools.join(', ')}`,
+  )
 }
 
 function resolveOnlyPatterns(

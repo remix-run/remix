@@ -107,7 +107,7 @@ async function getCommandHelpText(argv: string[]): Promise<string> {
 
   if (command === 'test' && rest.length === 0) {
     let { getTestCommandHelpText } = await import('./test.ts')
-    return await getTestCommandHelpText()
+    return getTestCommandHelpText()
   }
 
   if (command === 'version' && rest.length === 0) {
