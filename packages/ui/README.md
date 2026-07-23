@@ -5,6 +5,7 @@ Runtime UI primitives for Remix apps, including the component runtime, server re
 ## Features
 
 - Component runtime APIs for rendering, hydration, link and form frame navigation, and JSX
+- A client-only `SPA` component that renders URLs through a URL-to-node router
 - Server rendering APIs for streaming Remix UI trees and frames
 - `mix` composition with event, ref, CSS, and animation helpers
 - Headless behavior primitives for controls such as menus, listboxes, popovers, selects, and comboboxes
@@ -139,6 +140,28 @@ function AccountPage() {
 Native constraint validation and submitter overrides still apply. GET form values arrive in `src`; non-GET forms provide `formData`, `method`, and `encType` to the resolver. See [Frames](https://github.com/remix-run/remix/blob/main/packages/ui/docs/frames.md#form-navigation) for targeting, history behavior, request encoding, opt-outs, and server response guidance.
 
 Use `rmx-history="push|replace"` on an enhanced anchor or form to control how the navigation updates history. This can override the automatic replacement used for non-GET form submissions to the current URL.
+
+Use `SPA` with a router that maps URLs directly to Remix UI nodes:
+
+```tsx
+import { createRouter } from 'remix/router'
+import { createRoot, type RemixNode } from 'remix/ui'
+import { SPA } from 'remix/ui/spa'
+
+declare module 'remix/router' {
+  interface RouterTypes {
+    output: RemixNode
+  }
+}
+
+let router = createRouter({ defaultHandler: () => null })
+router.get('/', () => <h1>Home</h1>)
+
+let root = createRoot(document.body)
+root.render(<SPA router={router} fallback="Loading…" />)
+```
+
+`SPA` intercepts same-origin browser navigations, exposes the active and pending URLs through its component context, and forwards navigation cancellation to `router.fetch(url, { signal })`. It preserves the native method for intercepted form submissions and forwards `FormData` as the body of non-GET requests. Navigation history entries do not retain submitted `FormData`, so back and forward navigations revisit form destinations with GET requests. Form destinations that handle non-GET submissions should therefore also accept GET.
 
 ## Preserving Client-Owned DOM
 

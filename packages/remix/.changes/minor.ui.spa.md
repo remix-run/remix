@@ -1,0 +1,1 @@
+Export an `SPA` component and `createSPA` setup utility from `remix/ui/spa` that render router outputs during client-side navigation and respect `rmx-document` and `rmx-history` navigation attributes.

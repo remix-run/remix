@@ -1,25 +1,18 @@
 import { getTopFrame, getNamedFrame } from './run.ts'
 import { reloadFrameForNavigation } from './frame.ts'
 import { createFormNavigationResolver, type FormSubmission } from './form-navigation.ts'
-
-interface NavigationPrecommitControllerLike {
-  redirect(url: string, options: { history: 'replace' }): void
-}
-
-interface NavigationInterceptOptionsWithPrecommit extends NavigationInterceptOptions {
-  handler(): Promise<void>
-  precommitHandler(controller: NavigationPrecommitControllerLike): void
-}
+import {
+  getLinkNavigationElement,
+  getReplaceHistory,
+  interceptNavigation,
+  type NavigationReplacement,
+} from './navigation-event.ts'
 
 type NavigationState = {
   target: string | undefined
   src: string
   resetScroll: boolean
   $rmx: true
-}
-
-type SourceElementNavigateEvent = NavigateEvent & {
-  sourceElement?: Element | null
 }
 
 type RuntimeNavigation = {
@@ -162,50 +155,22 @@ export function startNavigationListenerImpl(
         }
       }
 
-      if (runtimeNavigation.getSubmission) {
-        // <form method="post"> navigations
-        if (runtimeNavigation.replaceHistory && replayedSubmission == null) {
-          let supportsPrecommit =
-            typeof Reflect.get(window, 'NavigationPrecommitController') === 'function'
-
-          // Modern browsers allow you to update the in-flight navigation entry before it's committed
-          if (supportsPrecommit) {
-            let interceptOptions: NavigationInterceptOptionsWithPrecommit = {
-              handler,
-              precommitHandler(controller) {
-                controller.redirect(event.destination.url, { history: 'replace' })
-              },
-            }
-            event.intercept(interceptOptions)
-            return
-          }
-
-          // Safari doesn't support precommit as of Aug 2026, so we do a full replacement navigation
-          if (event.cancelable) {
-            event.preventDefault()
-            window.navigation.navigate(event.destination.url, {
-              history: 'replace',
+      let replacement: NavigationReplacement | undefined
+      if (runtimeNavigation.replaceHistory && replayedSubmission == null) {
+        replacement = runtimeNavigation.getSubmission
+          ? {
+              type: 'form-submission',
               state,
               info: {
                 type: formSubmissionNavigationInfoType,
                 state,
                 getSubmission: runtimeNavigation.getSubmission,
               } satisfies FormSubmissionNavigationInfo,
-            })
-            return
-          }
-        }
-
-        event.intercept({ handler })
-      } else {
-        // <a>/<form method="get"> navigations
-        if (runtimeNavigation.replaceHistory && event.cancelable) {
-          event.preventDefault()
-          navigation.navigate(event.destination.url, { history: 'replace', state })
-        } else {
-          event.intercept({ handler })
-        }
+            }
+          : { type: 'navigation', state }
       }
+
+      interceptNavigation(event, { handler, replacement })
     },
     { signal },
   )
@@ -282,12 +247,8 @@ function getSourceElementNavigation(
   event: NavigateEvent,
   resolveFormNavigation: ReturnType<typeof createFormNavigationResolver>,
 ): RuntimeNavigation | undefined {
-  let sourceEvent = event as SourceElementNavigateEvent
-  let sourceElement = sourceEvent.sourceElement
-  if (!(sourceElement instanceof Element)) return
-
-  let linkElement = sourceElement.closest('a, area')
-  if (linkElement instanceof Element) {
+  let linkElement = getLinkNavigationElement(event)
+  if (linkElement) {
     if (linkElement.hasAttribute('rmx-document')) return
     if (linkElement.hasAttribute('download')) return
 
@@ -322,10 +283,4 @@ function getSourceElementNavigation(
     ),
     getSubmission: formNavigation.getSubmission,
   }
-}
-
-function getReplaceHistory(value: string | null, defaultValue: boolean): boolean {
-  if (value === 'replace') return true
-  if (value === 'push') return false
-  return defaultValue
 }
