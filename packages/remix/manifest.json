@@ -16,6 +16,7 @@
   "remix/data-schema/form-data": "@remix-run/data-schema/form-data",
   "remix/data-schema/lazy": "@remix-run/data-schema/lazy",
   "remix/data-table": "@remix-run/data-table",
+  "remix/data-table/cli": "@remix-run/data-table/cli",
   "remix/data-table-mysql": "@remix-run/data-table-mysql",
   "remix/data-table-postgres": "@remix-run/data-table-postgres",
   "remix/data-table-sqlite": "@remix-run/data-table-sqlite",

@@ -23,8 +23,9 @@ export interface RunRemixOptions {
 
 /**
  * Entry point for the `remix` CLI. Parses `argv`, dispatches to the matching
- * subcommand (`new`, `doctor`, `routes`, `test`, `version`, `completion`,
- * `help`), and resolves with the exit code the process should use.
+ * subcommand (`new`, `db`, `doctor`, `routes`, `test`, `version`,
+ * `completion`, `help`), and resolves with the exit code the process should
+ * use.
  *
  * @param argv Argument vector to parse, excluding the node and script paths
  *             (default `process.argv.slice(2)`).
@@ -101,6 +102,11 @@ async function runCommand(command: string, argv: string[], context: CliContext):
   if (command === 'doctor') {
     let { runDoctorCommand } = await import('./commands/doctor.ts')
     return runDoctorCommand(argv, context)
+  }
+
+  if (command === 'db') {
+    let { runDbCommand } = await import('./commands/db.ts')
+    return runDbCommand(argv, context)
   }
 
   if (command === 'routes') {

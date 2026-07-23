@@ -21,6 +21,7 @@
   "sideEffects": false,
   "exports": {
     ".": "./src/index.ts",
+    "./cli": "./src/cli.ts",
     "./migrations": "./src/migrations.ts",
     "./migrations/node": "./src/migrations/node.ts",
     "./operators": "./src/operators.ts",
@@ -32,6 +33,10 @@
       ".": {
         "types": "./dist/index.d.ts",
         "default": "./dist/index.js"
+      },
+      "./cli": {
+        "types": "./dist/cli.d.ts",
+        "default": "./dist/cli.js"
       },
       "./migrations": {
         "types": "./dist/migrations.d.ts",

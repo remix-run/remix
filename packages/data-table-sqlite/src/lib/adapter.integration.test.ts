@@ -9,7 +9,7 @@ import {
 import { runAdapterIntegrationContract } from '../../../data-table/test/adapter-integration-contract.ts'
 import { createNativeSqliteDatabase, type NativeSqliteDatabase } from '../../test/native-sqlite.ts'
 
-import { createSqliteDatabaseAdapter } from './adapter.ts'
+import { SqliteDatabaseAdapter } from './adapter.ts'
 
 describe(
   'sqlite adapter integration',
@@ -32,7 +32,7 @@ describe(
     })
 
     runAdapterIntegrationContract({
-      createDatabase: () => createDatabase(createSqliteDatabaseAdapter(sqlite)),
+      createDatabase: () => createDatabase(new SqliteDatabaseAdapter(sqlite)),
       resetDatabase: async () => {
         await resetAdapterIntegrationSchema(async (statement) => {
           sqlite.exec(statement)

@@ -36,6 +36,8 @@
     }
   },
   "dependencies": {
+    "@remix-run/data-table": "workspace:^",
+    "@remix-run/node-tsx": "workspace:^",
     "@remix-run/test": "workspace:^",
     "@remix-run/terminal": "workspace:^",
     "semver": "^7.7.4"

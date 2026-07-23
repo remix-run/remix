@@ -26,6 +26,15 @@ import type {
 } from './query.ts'
 import { bindQueryRuntime, query as createQuery } from './query.ts'
 import type { ColumnInput, NormalizeColumnInput, TableMetadataLike } from './references.ts'
+import type {
+  MigrateOptions,
+  MigrateResult,
+  Migrations,
+  MigrationRunnerOptions,
+  Seed,
+  MigrationStatusEntry,
+} from './migrations.ts'
+import { createMigrationRunner } from './migrations/runner.ts'
 import type { SqlStatement } from './sql.ts'
 import { isSqlStatement, rawSql } from './sql.ts'
 import type {
@@ -369,6 +378,75 @@ export class Database implements QueryExecutionContext {
 
   get adapter(): DatabaseAdapter {
     return this.#adapter
+  }
+
+  /**
+   * Destructively recreates the configured database.
+   *
+   * @returns A promise that resolves when the database is ready for use.
+   */
+  async wipe(): Promise<void> {
+    this.#assertLifecycleOperationAllowed('wipe')
+
+    if (!this.#adapter.wipe) {
+      throw new DataTableQueryError('Database adapter does not support wipe()')
+    }
+
+    await this.#adapter.wipe()
+  }
+
+  /**
+   * Applies pending migrations in order.
+   *
+   * @param migrations Migration descriptors or registry to apply.
+   * @param options Migration target and runner configuration.
+   * @returns The migrations applied by this run and their SQL scripts.
+   */
+  async migrate(
+    migrations: Migrations,
+    options?: MigrateOptions & MigrationRunnerOptions,
+  ): Promise<MigrateResult> {
+    this.#assertLifecycleOperationAllowed('migrate')
+    let { journalTable, ...migrateOptions } = options ?? {}
+    let runner = createMigrationRunner(this.#adapter, migrations, { journalTable })
+    return runner.up(migrateOptions)
+  }
+
+  /**
+   * Reports the current state of the provided migrations.
+   *
+   * @param migrations Migration descriptors or registry to inspect.
+   * @param options Migration runner configuration.
+   * @returns Status entries for the provided migrations.
+   */
+  async migrationStatus(
+    migrations: Migrations,
+    options: MigrationRunnerOptions = {},
+  ): Promise<MigrationStatusEntry[]> {
+    this.#assertLifecycleOperationAllowed('migrationStatus')
+    let runner = createMigrationRunner(this.#adapter, migrations, options)
+    return runner.status()
+  }
+
+  /**
+   * Wipes the database, applies migrations, and optionally seeds data.
+   *
+   * @param args Migrations and optional seed function used to rebuild the database.
+   * @returns A promise that resolves when the database has been rebuilt.
+   */
+  async reset(args: { migrations: Migrations; seed?: Seed }): Promise<void> {
+    this.#assertLifecycleOperationAllowed('reset')
+    await this.wipe()
+    await this.migrate(args.migrations)
+    await args.seed?.(this)
+  }
+
+  #assertLifecycleOperationAllowed(method: 'migrate' | 'migrationStatus' | 'reset' | 'wipe'): void {
+    if (this.#token) {
+      throw new DataTableQueryError(
+        'Cannot call ' + method + '() from a transaction-scoped database',
+      )
+    }
   }
 
   now(): unknown {

@@ -49,17 +49,33 @@ export function parseArgs<const definitions extends ParseArgsOptionDefinitions>(
 
   for (let index = 0; index < argv.length; index++) {
     let arg = argv[index]!
-    let resolved = specsByFlag.get(arg)
+    let equalsIndex = arg.indexOf('=')
+    let flag = equalsIndex === -1 ? arg : arg.slice(0, equalsIndex)
+    let inlineValue = equalsIndex === -1 ? undefined : arg.slice(equalsIndex + 1)
+    let resolved = specsByFlag.get(flag)
 
     if (resolved != null) {
       if (resolved.spec.type === 'boolean') {
+        if (inlineValue !== undefined) {
+          throw unknownArgument(arg)
+        }
+
         values[resolved.key] = true as ParsedArgsValues<definitions>[typeof resolved.key]
+        continue
+      }
+
+      if (inlineValue !== undefined) {
+        if (inlineValue.length === 0) {
+          throw missingOptionValue(flag)
+        }
+
+        values[resolved.key] = inlineValue as ParsedArgsValues<definitions>[typeof resolved.key]
         continue
       }
 
       let next = argv[index + 1]
       if (next == null || next.startsWith('-')) {
-        throw missingOptionValue(arg)
+        throw missingOptionValue(flag)
       }
 
       values[resolved.key] = next as ParsedArgsValues<definitions>[typeof resolved.key]
