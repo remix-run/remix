@@ -294,6 +294,11 @@ export function Home() {
     <>
       <h1>Welcome to Remix 3!</h1>
       <p>
+        Remix 3 is currently in beta. If you are maintaining an existing Remix 2 application or
+        joining a team that has not migrated yet, see the{' '}
+        <a href="https://v2.remix.run/docs">Remix v2 documentation</a>.
+      </p>
+      <p>
         Remix is a batteries-included, ultra-productive, zero-dependency, bundler-free framework,
         ready for development in a model-first world. Remix 3 is built on the following principles:
       </p>
@@ -495,6 +500,9 @@ function VersionSwitcher(handle: Handle<{ versions: Versions; activeVersion?: st
                 </a>
               )
             })}
+            <a href="https://v2.remix.run/docs" rel="nofollow">
+              Remix v2 docs
+            </a>
           </nav>
         </div>
       </details>
