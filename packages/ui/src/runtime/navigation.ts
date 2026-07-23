@@ -97,6 +97,10 @@ export function startNavigationListenerImpl(
   },
 ) {
   let navigation = window.navigation
+  // Native form navigation spans three events: `submit` exposes the submitter,
+  // `formdata` exposes the browser-built entry list, and `navigate` lets us intercept.
+  // Chromium fires `navigate` before `formdata`, so keep per-form state here until
+  // the navigation handler can consume it.
   let pendingFormSubmissions = new WeakMap<HTMLFormElement, PendingFormSubmission>()
   let supportsPrecommit = typeof Reflect.get(window, 'NavigationPrecommitController') === 'function'
 
