@@ -28,9 +28,26 @@ type PendingFormSubmission = {
 type RuntimeNavigation = {
   state: NavigationState
   getReloadOptions?: () => FrameReloadOptions | Promise<FrameReloadOptions>
+  replaceHistory?: boolean
+}
+
+interface FormSubmissionNavigationInfo {
+  type: typeof formSubmissionNavigationInfoType
+  state: NavigationState
+  getReloadOptions(): FrameReloadOptions | Promise<FrameReloadOptions>
+}
+
+interface NavigationPrecommitControllerLike {
+  redirect(url: string, options: { history: 'replace' }): void
+}
+
+interface NavigationInterceptOptionsWithPrecommit extends NavigationInterceptOptions {
+  handler(): Promise<void>
+  precommitHandler(controller: NavigationPrecommitControllerLike): void
 }
 
 const PENDING_FORM_SUBMISSION_TIMEOUT = 1000
+const formSubmissionNavigationInfoType = 'frame-form-submission'
 
 /**
  * Options for client-side frame-aware navigation.
@@ -81,6 +98,7 @@ export function startNavigationListenerImpl(
 ) {
   let navigation = window.navigation
   let pendingFormSubmissions = new WeakMap<HTMLFormElement, PendingFormSubmission>()
+  let supportsPrecommit = typeof Reflect.get(window, 'NavigationPrecommitController') === 'function'
 
   navigation.updateCurrentEntry({
     state: { target: undefined, src: window.location.href, resetScroll: true, $rmx: true },
@@ -133,7 +151,13 @@ export function startNavigationListenerImpl(
       // https://html.spec.whatwg.org/multipage/nav-history-apis.html#can-have-its-url-rewritten
       if (!event.canIntercept || isCrossOriginDestination(event)) return
 
-      let runtimeNavigation = getRuntimeNavigation(event, pendingFormSubmissions)
+      let replayedSubmission = isFormSubmissionNavigationInfo(event.info) ? event.info : undefined
+      let runtimeNavigation = replayedSubmission
+        ? {
+            state: replayedSubmission.state,
+            getReloadOptions: replayedSubmission.getReloadOptions,
+          }
+        : getRuntimeNavigation(event, pendingFormSubmissions)
       if (!runtimeNavigation) return
       let { state } = runtimeNavigation
 
@@ -141,24 +165,51 @@ export function startNavigationListenerImpl(
       let namedFrame = state.target ? options.getNamedFrame(state.target) : undefined
       let frame = namedFrame ?? topFrame
 
-      event.intercept({
-        async handler() {
-          if (event.navigationType !== 'traverse') {
-            navigation.updateCurrentEntry({ state })
-          }
+      let handler = async () => {
+        if (event.navigationType !== 'traverse') {
+          navigation.updateCurrentEntry({ state })
+        }
 
-          frame.src = frame === topFrame ? event.destination.url : state.src
-          await frame.reload({
-            ...(await runtimeNavigation.getReloadOptions?.()),
-            signal: event.signal,
+        frame.src = frame === topFrame ? event.destination.url : state.src
+        await frame.reload({
+          ...(await runtimeNavigation.getReloadOptions?.()),
+          signal: event.signal,
+        })
+
+        let isNewEntry = event.navigationType === 'push' || event.navigationType === 'replace'
+        if (state.resetScroll && isNewEntry) {
+          window.scrollTo(0, 0)
+        }
+      }
+
+      if (runtimeNavigation.replaceHistory && replayedSubmission == null) {
+        if (supportsPrecommit) {
+          let interceptOptions: NavigationInterceptOptionsWithPrecommit = {
+            handler,
+            precommitHandler(controller) {
+              controller.redirect(event.destination.url, { history: 'replace' })
+            },
+          }
+          event.intercept(interceptOptions)
+          return
+        }
+
+        if (event.cancelable && runtimeNavigation.getReloadOptions) {
+          event.preventDefault()
+          navigation.navigate(event.destination.url, {
+            history: 'replace',
+            state,
+            info: {
+              type: formSubmissionNavigationInfoType,
+              state,
+              getReloadOptions: runtimeNavigation.getReloadOptions,
+            } satisfies FormSubmissionNavigationInfo,
           })
+          return
+        }
+      }
 
-          let isNewEntry = event.navigationType === 'push' || event.navigationType === 'replace'
-          if (state.resetScroll && isNewEntry) {
-            window.scrollTo(0, 0)
-          }
-        },
-      })
+      event.intercept({ handler })
     },
     { signal },
   )
@@ -166,6 +217,19 @@ export function startNavigationListenerImpl(
 
 function isRuntimeNavigation(info: unknown): info is NavigationState {
   return typeof info === 'object' && info != null && '$rmx' in info
+}
+
+function isFormSubmissionNavigationInfo(value: unknown): value is FormSubmissionNavigationInfo {
+  return (
+    typeof value === 'object' &&
+    value != null &&
+    'type' in value &&
+    value.type === formSubmissionNavigationInfoType &&
+    'state' in value &&
+    isRuntimeNavigation(value.state) &&
+    'getReloadOptions' in value &&
+    typeof value.getReloadOptions === 'function'
+  )
 }
 
 function isCrossOriginDestination(event: NavigateEvent): boolean {
@@ -253,6 +317,7 @@ function getSourceElementNavigation(
       resetScroll: getSubmissionAttribute(form, submitter, 'rmx-reset-scroll') !== 'false',
       $rmx: true,
     },
+    replaceHistory: method.toLowerCase() !== 'get',
     async getReloadOptions() {
       // Chromium dispatches `formdata` after `navigate`; let the browser provide the
       // submitted entry list instead of constructing another FormData and firing a duplicate event.
