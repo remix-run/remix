@@ -1,4 +1,5 @@
 import { css, type Handle } from 'remix/ui'
+import button from 'remix/ui/button'
 
 import { Icon } from './icon.tsx'
 
@@ -65,14 +66,13 @@ export function DocsHeader(handle: Handle<DocsHeaderProps>) {
         id="site-menu-toggle"
         type="button"
         popovertarget="site-primary-navigation"
-        mix={menuToggleCss}
+        mix={[button({ tone: 'ghost' }), menuToggleCss]}
       >
         <span aria-hidden="true" mix={menuIconCss}>
           <span />
           <span />
           <span />
         </span>
-        Menu
       </button>
 
       <nav aria-label="Primary" mix={[navigationCss, desktopNavigationCss]}>
@@ -120,6 +120,10 @@ const docsHeaderCss = css({
   padding: 0,
   border: 0,
   background: 'var(--docs-shell-background)',
+  '@media (width < 900px)': {
+    position: 'relative',
+    borderBottom: 'var(--rmx-space-px) solid var(--rmx-color-border-subtle)',
+  },
 })
 
 const brandCss = css({
@@ -193,12 +197,6 @@ const menuToggleCss = css({
     minWidth: '44px',
     minHeight: '40px',
     padding: '8px 10px',
-    border: '1px solid var(--docs-nav-control-border)',
-    borderRadius: '8px',
-    color: 'var(--docs-nav-link)',
-    background: 'transparent',
-    fontSize: '14px',
-    fontWeight: 'var(--rmx-font-weight-semibold)',
     cursor: 'pointer',
     '&:hover, &:focus-visible': {
       background: 'var(--docs-nav-hover-background)',
