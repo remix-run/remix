@@ -556,26 +556,37 @@ async function runWithMysqlMigrationLock<result>(
     throw new Error('MySQL migration lock could not be acquired')
   }
 
-  let runFailed = false
+  let outcome: { status: 'success'; value: result } | { status: 'failure'; error: unknown }
 
   try {
-    return await run(adapter)
+    outcome = { status: 'success', value: await run(adapter) }
   } catch (error) {
-    runFailed = true
-    throw error
-  } finally {
-    try {
-      let [unlockRows] = await connection.query('select release_lock(?) as `released`', [lockName])
-
-      if (!isRowsResult(unlockRows) || !toBooleanExists(unlockRows[0]?.released)) {
-        throw new Error('MySQL migration lock was not held by the reserved connection')
-      }
-    } catch (error) {
-      if (!runFailed) {
-        throw error
-      }
-    }
+    outcome = { status: 'failure', error }
   }
+
+  let unlockFailed = false
+  let unlockError: unknown
+
+  try {
+    let [unlockRows] = await connection.query('select release_lock(?) as `released`', [lockName])
+
+    if (!isRowsResult(unlockRows) || !toBooleanExists(unlockRows[0]?.released)) {
+      throw new Error('MySQL migration lock was not held by the reserved connection')
+    }
+  } catch (error) {
+    unlockFailed = true
+    unlockError = error
+  }
+
+  if (outcome.status === 'failure') {
+    throw outcome.error
+  }
+
+  if (unlockFailed) {
+    throw unlockError
+  }
+
+  return outcome.value
 }
 
 function isRowsResult(result: unknown): result is MysqlQueryRows {

@@ -502,29 +502,38 @@ async function runWithPostgresMigrationLock<result>(
 ): Promise<result> {
   await client.query('select pg_advisory_lock(hashtext($1))', [name])
 
-  let runFailed = false
+  let outcome: { status: 'success'; value: result } | { status: 'failure'; error: unknown }
 
   try {
-    return await run(adapter)
+    outcome = { status: 'success', value: await run(adapter) }
   } catch (error) {
-    runFailed = true
-    throw error
-  } finally {
-    try {
-      let result = await client.query('select pg_advisory_unlock(hashtext($1)) as "released"', [
-        name,
-      ])
-      let row = result.rows[0] as Record<string, unknown> | undefined
-
-      if (!toBooleanExists(row?.released)) {
-        throw new Error('Postgres migration lock was not held by the reserved connection')
-      }
-    } catch (error) {
-      if (!runFailed) {
-        throw error
-      }
-    }
+    outcome = { status: 'failure', error }
   }
+
+  let unlockFailed = false
+  let unlockError: unknown
+
+  try {
+    let result = await client.query('select pg_advisory_unlock(hashtext($1)) as "released"', [name])
+    let row = result.rows[0] as Record<string, unknown> | undefined
+
+    if (!toBooleanExists(row?.released)) {
+      throw new Error('Postgres migration lock was not held by the reserved connection')
+    }
+  } catch (error) {
+    unlockFailed = true
+    unlockError = error
+  }
+
+  if (outcome.status === 'failure') {
+    throw outcome.error
+  }
+
+  if (unlockFailed) {
+    throw unlockError
+  }
+
+  return outcome.value
 }
 
 function buildSetTransactionStatement(options: TransactionOptions): string {
