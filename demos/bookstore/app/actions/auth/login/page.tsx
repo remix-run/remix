@@ -1,51 +1,30 @@
 import type { Handle } from 'remix/ui'
 import { css } from 'remix/ui'
+import type { FormSubmission } from 'remix/data-schema/form'
 
+import { LoginFields, type LoginSubmission } from '../../../assets/login-form.tsx'
 import { routes } from '../../../routes.ts'
 import { Document } from '../../../ui/document.tsx'
 import { authCardStyle } from '../schemas.ts'
 
 export interface LoginPageProps {
   formAction: string
-  error?: string
+  submission?: FormSubmission
 }
 
 export function LoginPage(handle: Handle<LoginPageProps>) {
   return () => {
-    let { error, formAction } = handle.props
+    let { formAction, submission } = handle.props
 
     return (
       <Document>
         <div class="card" mix={authCardStyle}>
           <h1>Login</h1>
 
-          {typeof error === 'string' ? (
-            <div class="alert alert-error" mix={css({ marginBottom: '1.5rem' })}>
-              {error}
-            </div>
-          ) : null}
-
-          <form method="POST" action={formAction}>
-            <div class="form-group">
-              <label for="email">Email</label>
-              <input type="email" id="email" name="email" required autoComplete="email" />
-            </div>
-
-            <div class="form-group">
-              <label for="password">Password</label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                required
-                autoComplete="current-password"
-              />
-            </div>
-
-            <button type="submit" class="btn">
-              Login
-            </button>
-          </form>
+          <LoginFields
+            formAction={formAction}
+            submission={submission ? getLoginSubmission(submission) : undefined}
+          />
 
           <p mix={css({ marginTop: '1.5rem' })}>
             Don't have an account? <a href={routes.auth.register.index.href()}>Register here</a>
@@ -71,5 +50,17 @@ export function LoginPage(handle: Handle<LoginPageProps>) {
         </div>
       </Document>
     )
+  }
+}
+
+function getLoginSubmission(submission: FormSubmission): LoginSubmission {
+  return {
+    values: { ...submission.values },
+    errors: {
+      fields: Object.fromEntries(
+        Object.entries(submission.errors.fields).map(([field, errors]) => [field, [...errors]]),
+      ),
+      form: [...submission.errors.form],
+    },
   }
 }

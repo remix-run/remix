@@ -23,7 +23,7 @@ describe('auth handlers', () => {
     assert.ok(sessionId, 'Expected session cookie to be set')
   })
 
-  it('POST /login with invalid credentials redirects back to login with error', async () => {
+  it('POST /login with invalid credentials returns a populated form with an error', async () => {
     let response = await router.fetch('https://remix.run/login', {
       method: 'POST',
       body: new URLSearchParams({
@@ -33,19 +33,13 @@ describe('auth handlers', () => {
       redirect: 'manual',
     })
 
-    assert.equal(response.status, 302)
-    assert.equal(response.headers.get('Location'), '/login')
+    assert.equal(response.status, 400)
+    assert.equal(response.headers.get('Location'), null)
 
-    // Follow redirect to see the error message
-    let sessionCookie = getSessionCookie(response)
-    let followUpResponse = await router.fetch('https://remix.run/login', {
-      headers: {
-        Cookie: `session=${sessionCookie}`,
-      },
-    })
-
-    let html = await followUpResponse.text()
+    let html = await response.text()
     assertContains(html, 'Invalid email or password')
+    assertContains(html, 'value="wrong@example.com"')
+    assert.ok(!html.includes('wrongpassword'), 'Expected submitted password to be omitted')
   })
 
   it('POST /login does not treat wildcard characters as email matches', async () => {
@@ -58,50 +52,30 @@ describe('auth handlers', () => {
       redirect: 'manual',
     })
 
-    assert.equal(response.status, 302)
-    assert.equal(response.headers.get('Location'), '/login')
+    assert.equal(response.status, 400)
+
+    let html = await response.text()
+    assertContains(html, 'Invalid email or password')
+    assertContains(html, 'value="%@bookstore.com"')
   })
 
-  it('flash error message is cleared after being displayed once', async () => {
-    // POST invalid credentials to trigger flash message
+  it('POST /login with an invalid shape returns field errors and native constraints', async () => {
     let response = await router.fetch('https://remix.run/login', {
       method: 'POST',
       body: new URLSearchParams({
-        email: 'wrong@example.com',
-        password: 'wrongpassword',
+        email: 'not-an-email',
       }),
-      redirect: 'manual',
     })
 
-    assert.equal(response.status, 302)
-    assert.equal(response.headers.get('Location'), '/login')
+    assert.equal(response.status, 400)
 
-    // Follow redirect to see the error message (first request)
-    let sessionCookie = getSessionCookie(response)
-    let firstFollowUp = await router.fetch('https://remix.run/login', {
-      headers: {
-        Cookie: `session=${sessionCookie}`,
-      },
-    })
-
-    let firstHtml = await firstFollowUp.text()
-    assertContains(firstHtml, 'Invalid email or password')
-
-    // Get updated session cookie (session should be updated to clear flash)
-    let updatedSessionCookie = getSessionCookie(firstFollowUp) || sessionCookie
-
-    // Refresh the page (second request) - error should NOT be shown
-    let secondFollowUp = await router.fetch('https://remix.run/login', {
-      headers: {
-        Cookie: `session=${updatedSessionCookie}`,
-      },
-    })
-
-    let secondHtml = await secondFollowUp.text()
-    assert.ok(
-      !secondHtml.includes('Invalid email or password'),
-      'Expected flash error to be cleared after first display',
-    )
+    let html = await response.text()
+    assertContains(html, 'type="email" required')
+    assertContains(html, 'value="not-an-email"')
+    assertContains(html, 'aria-invalid="true"')
+    assertContains(html, 'aria-describedby="email-error"')
+    assertContains(html, 'id="email-error" role="alert"')
+    assertContains(html, 'id="password-error" role="alert"')
   })
 
   it('POST /register creates new user and sets session', async () => {
@@ -172,25 +146,12 @@ describe('auth handlers', () => {
       },
     )
 
-    assert.equal(response.status, 302)
-    let location = response.headers.get('Location')
-    assert.ok(location, 'Expected Location header')
-    assert.ok(
-      location.includes('returnTo=' + encodeURIComponent('/checkout')),
-      'Expected returnTo to be preserved in redirect',
-    )
+    assert.equal(response.status, 400)
+    assert.equal(response.headers.get('Location'), null)
 
-    // Follow redirect to verify error message is shown
-    let sessionCookie = getSessionCookie(response)
-    let followUpResponse = await router.fetch('https://remix.run' + location, {
-      headers: {
-        Cookie: `session=${sessionCookie}`,
-      },
-    })
-
-    let html = await followUpResponse.text()
+    let html = await response.text()
     assertContains(html, 'Invalid email or password')
-    assertContains(html, 'returnTo=' + encodeURIComponent('/checkout'))
+    assertContains(html, 'action="/login?returnTo=' + encodeURIComponent('/checkout') + '"')
   })
 
   it('POST /reset-password with mismatched passwords redirects back with error', async () => {
