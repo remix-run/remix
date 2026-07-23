@@ -489,6 +489,15 @@ importers:
       '@remix-run/data-table':
         specifier: workspace:^
         version: link:../data-table
+      '@remix-run/data-table-mysql':
+        specifier: workspace:^
+        version: link:../data-table-mysql
+      '@remix-run/data-table-postgres':
+        specifier: workspace:^
+        version: link:../data-table-postgres
+      '@remix-run/data-table-sqlite':
+        specifier: workspace:^
+        version: link:../data-table-sqlite
       '@remix-run/node-tsx':
         specifier: workspace:^
         version: link:../node-tsx

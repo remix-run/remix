@@ -1,12 +1,13 @@
 import * as assert from 'remix/assert'
 import { beforeEach, describe, it } from 'remix/test'
 
-import { db, getMigrations, seed } from './db.ts'
+import { seed } from './data/seed.ts'
+import { db, loadAppMigrations } from './db.ts'
 import { users } from './data/schema.ts'
 import { verifyPassword } from './utils/password-hash.ts'
 
 beforeEach(async () => {
-  await db.reset({ migrations: await getMigrations(), seed })
+  await db.reset({ migrations: await loadAppMigrations(), seed })
 })
 
 describe('social-auth database seed', () => {

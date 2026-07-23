@@ -1,8 +1,8 @@
 import type { Database } from './lib/database.ts'
-import type { GetMigrations, Seed } from './lib/migrations.ts'
+import type { Migrations, Seed } from './lib/migrations.ts'
 
 interface DatabaseCommandOptions {
-  /** Database instance exported by the application database module. */
+  /** Database instance used by the command. */
   db: Database
 }
 
@@ -11,21 +11,25 @@ export type RunRemixDbOptions =
   | (DatabaseCommandOptions & {
       /** Applies pending migrations. */
       command: 'migrate'
-      /** Loads the migrations to apply. */
-      getMigrations: GetMigrations
+      /** Migrations to apply. */
+      migrations: Migrations
       /**
        * Stops after applying this migration. Accepts a bare migration id or
        * the full `id_name` directory form.
        */
       to?: string
+      /** Migration journal table. */
+      journalTable?: string
     })
   | (DatabaseCommandOptions & {
       /** Wipes, migrates, and optionally seeds the database. */
       command: 'reset'
-      /** Loads the migrations to apply after wiping the database. */
-      getMigrations: GetMigrations
+      /** Migrations to apply after wiping the database. */
+      migrations: Migrations
       /** Initializes database data after migrations finish. */
       seed?: Seed
+      /** Migration journal table. */
+      journalTable?: string
     })
   | (DatabaseCommandOptions & {
       /** Runs the application's seed function. */
@@ -36,8 +40,10 @@ export type RunRemixDbOptions =
   | (DatabaseCommandOptions & {
       /** Reports the status of known migrations. */
       command: 'status'
-      /** Loads the migrations to inspect. */
-      getMigrations: GetMigrations
+      /** Migrations to inspect. */
+      migrations: Migrations
+      /** Migration journal table. */
+      journalTable?: string
     })
   | (DatabaseCommandOptions & {
       /** Destructively recreates the configured database. */
@@ -53,8 +59,11 @@ export type RunRemixDbOptions =
  */
 export async function runRemixDb(options: RunRemixDbOptions): Promise<number> {
   if (options.command === 'migrate') {
-    let migrateOptions = options.to === undefined ? undefined : { to: options.to }
-    let result = await options.db.migrate(await options.getMigrations(), migrateOptions)
+    let migrateOptions =
+      options.to === undefined
+        ? { journalTable: options.journalTable }
+        : { to: options.to, journalTable: options.journalTable }
+    let result = await options.db.migrate(options.migrations, migrateOptions)
 
     if (result.applied.length === 0) {
       console.log('no pending migrations')
@@ -69,8 +78,9 @@ export async function runRemixDb(options: RunRemixDbOptions): Promise<number> {
 
   if (options.command === 'reset') {
     await options.db.reset({
-      migrations: await options.getMigrations(),
+      migrations: options.migrations,
       seed: options.seed,
+      journalTable: options.journalTable,
     })
 
     console.log('database reset')
@@ -84,7 +94,9 @@ export async function runRemixDb(options: RunRemixDbOptions): Promise<number> {
   }
 
   if (options.command === 'status') {
-    let entries = await options.db.migrationStatus(await options.getMigrations())
+    let entries = await options.db.migrationStatus(options.migrations, {
+      journalTable: options.journalTable,
+    })
 
     for (let entry of entries) {
       console.log(entry.id + ' ' + entry.name + ' ' + entry.status)

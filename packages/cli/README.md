@@ -85,12 +85,29 @@ Destructive database commands (`remix db wipe` and `remix db reset`) refuse to r
 
 ## Configuration
 
-The CLI loads an optional `remix.json` from the current working directory. The file is parsed as
-JSONC, so it may contain comments and trailing commas. Every field is optional:
+The CLI loads an optional `remix.json`. The file is parsed as JSONC, so it may contain comments and
+trailing commas. Every top-level field is optional:
 
 ```jsonc
 {
   "$schema": "https://remix.run/schemas/remix.json",
+
+  "db": {
+    "adapter": {
+      "type": "sqlite",
+      "filename": { "env": "DATABASE_URL", "default": "./db/app.sqlite" },
+      "foreignKeys": true,
+      "busyTimeout": 5000,
+    },
+    "migrations": {
+      "directory": "./db/migrations",
+      "journalTable": "data_table_migrations",
+    },
+    "seed": {
+      "module": "./app/data/seed.ts",
+      "export": "seed",
+    },
+  },
 
   "doctor": {
     "strict": true,
@@ -142,6 +159,15 @@ Explicit command flags and positional arguments override configured values. Repe
 configured arrays, while nested Playwright and coverage settings merge by field. Relative paths and
 globs are resolved from the directory containing the config file. Use `remix doctor --no-strict` to
 disable configured strict mode for one run.
+
+`remix db` requires `db.adapter`. Built-in adapters use `type: "sqlite"`, `type: "postgres"`, or
+`type: "mysql"`; PostgreSQL uses `connectionString` and MySQL uses `uri`. A connection value may be
+a string or an object naming an environment variable with an optional default. Custom adapters use
+`{ "type": "module", "module": "./database.ts", "export": "createDatabase" }`; the export must be
+a factory that returns a `Database`. Database flags such as `--migrations`, `--seed`,
+`--journal-table`, and `--connection-env` override the corresponding config for one invocation.
+When no global `--config` is provided, database commands find the nearest `remix.json` by walking up
+from the working directory.
 
 Use the global `--config` option to select another JSONC file. The option itself is resolved from the
 CLI working directory and may appear before or after the command:

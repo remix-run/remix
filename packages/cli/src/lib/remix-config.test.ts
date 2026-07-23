@@ -61,6 +61,119 @@ describe('loadRemixConfig', () => {
     }
   })
 
+  it('parses built-in and module database configurations', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-db-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        JSON.stringify({
+          db: {
+            adapter: {
+              type: 'sqlite',
+              filename: { env: 'DATABASE_URL', default: './db/app.sqlite' },
+              foreignKeys: true,
+              busyTimeout: 250,
+            },
+            migrations: { directory: './db/migrations', journalTable: 'app_migrations' },
+            seed: { module: './app/data/seed.ts', export: 'seedDatabase' },
+          },
+        }),
+        'utf8',
+      )
+
+      let config = await loadRemixConfig(cwd, undefined)
+      assert.deepEqual(config.db?.adapter, {
+        type: 'sqlite',
+        filename: { env: 'DATABASE_URL', default: './db/app.sqlite' },
+        foreignKeys: true,
+        busyTimeout: 250,
+      })
+      assert.deepEqual(config.db?.migrations, {
+        directory: path.join(cwd, 'db/migrations'),
+        journalTable: 'app_migrations',
+      })
+      assert.deepEqual(config.db?.seed, {
+        module: path.join(cwd, 'app/data/seed.ts'),
+        export: 'seedDatabase',
+      })
+
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        JSON.stringify({ db: { adapter: { type: 'module', module: './app/database.ts' } } }),
+        'utf8',
+      )
+      config = await loadRemixConfig(cwd, undefined)
+      assert.deepEqual(config.db?.adapter, {
+        type: 'module',
+        module: path.join(cwd, 'app/database.ts'),
+        export: 'createDatabase',
+      })
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('parses postgres and mysql database configurations', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-db-server-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        JSON.stringify({
+          db: {
+            adapter: {
+              type: 'postgres',
+              connectionString: { env: 'DATABASE_URL' },
+              maintenanceDatabase: 'postgres',
+              template: 'template0',
+            },
+          },
+        }),
+        'utf8',
+      )
+      let postgres = await loadRemixConfig(cwd, undefined)
+      assert.equal(postgres.db?.adapter.type, 'postgres')
+
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        JSON.stringify({
+          db: {
+            adapter: {
+              type: 'mysql',
+              uri: { env: 'DATABASE_URL' },
+              characterSet: 'utf8mb4',
+              collation: 'utf8mb4_unicode_ci',
+            },
+          },
+        }),
+        'utf8',
+      )
+      let mysql = await loadRemixConfig(cwd, undefined)
+      assert.equal(mysql.db?.adapter.type, 'mysql')
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
+  it('rejects invalid database configuration with a source location', async () => {
+    let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-db-invalid-'))
+
+    try {
+      await fs.writeFile(
+        path.join(cwd, 'remix.json'),
+        ['{', '  "db": {', '    "adapter": { "type": "sqlite" }', '  }', '}'].join('\n'),
+        'utf8',
+      )
+      await assert.rejects(
+        () => loadRemixConfig(cwd, undefined),
+        /Expected an object at db\.adapter\.filename|Expected a string at db\.adapter\.filename/,
+      )
+    } finally {
+      await fs.rm(cwd, { recursive: true, force: true })
+    }
+  })
+
   it('rejects invalid doctor strict values', async () => {
     let cwd = await fs.mkdtemp(path.join(os.tmpdir(), 'remix-config-doctor-invalid-'))
 

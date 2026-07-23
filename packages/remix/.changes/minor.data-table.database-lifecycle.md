@@ -1,1 +1,3 @@
-Added database wipe, migration, status, seed, and reset APIs through `remix/data-table` and `remix/data-table/cli`. Migration status reports applied migrations whose files are missing, and migration runs stop before executing SQL when an applied migration is absent from the current set (see #11608).
+Added database wipe, migration, status, seed, and reset APIs through `remix/data-table` and `remix/data-table/cli`. `Database.migrate()` supports forward and backward directions, targets, steps, dry runs, and custom journal tables. `runRemixDb()` accepts resolved runtime values, and migration status reports applied migrations whose files are missing (see #11608, #11639).
+
+BREAKING CHANGE: Removed the public migration runner factory and types. Use `Database.migrate()` and `Database.migrationStatus()` instead.

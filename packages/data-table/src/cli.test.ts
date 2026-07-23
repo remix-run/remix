@@ -4,10 +4,10 @@ import { describe, it } from '@remix-run/test'
 import { runRemixDb } from './cli.ts'
 import { Database } from './lib/database.ts'
 import type {
-  MigrateOptions,
+  DatabaseMigrateOptions,
   MigrateResult,
   Migrations,
-  MigrationRunnerOptions,
+  MigrationStatusOptions,
   MigrationStatusEntry,
   Seed,
 } from './lib/migrations.ts'
@@ -23,9 +23,11 @@ const migrations: Migrations = [
 
 class RecordingDatabase extends Database {
   calls: string[] = []
-  migrateOptions: (MigrateOptions & MigrationRunnerOptions) | undefined
+  migrateOptions: DatabaseMigrateOptions | undefined
   migrateResult: MigrateResult = { applied: [], reverted: [], sql: [] }
   resetSeed: Seed | undefined
+  resetJournalTable: string | undefined
+  statusOptions: MigrationStatusOptions | undefined
 
   constructor() {
     super(createRecordingAdapter().adapter)
@@ -37,7 +39,7 @@ class RecordingDatabase extends Database {
 
   override async migrate(
     _migrations: Migrations,
-    options?: MigrateOptions & MigrationRunnerOptions,
+    options?: DatabaseMigrateOptions,
   ): Promise<MigrateResult> {
     this.calls.push('migrate')
     this.migrateOptions = options
@@ -46,15 +48,21 @@ class RecordingDatabase extends Database {
 
   override async migrationStatus(
     _migrations: Migrations,
-    _options?: MigrationRunnerOptions,
+    options?: MigrationStatusOptions,
   ): Promise<MigrationStatusEntry[]> {
     this.calls.push('status')
+    this.statusOptions = options
     return []
   }
 
-  override async reset(options: { migrations: Migrations; seed?: Seed }): Promise<void> {
+  override async reset(options: {
+    migrations: Migrations
+    seed?: Seed
+    journalTable?: string
+  }): Promise<void> {
     this.calls.push('reset')
     this.resetSeed = options.seed
+    this.resetJournalTable = options.journalTable
   }
 }
 
@@ -79,8 +87,6 @@ async function captureLog<result>(
 describe('runRemixDb', () => {
   it('migrates to the requested migration id and prints applied migrations', async () => {
     let db = new RecordingDatabase()
-    let getMigrationsCalls = 0
-
     db.migrateResult = {
       applied: [{ id: '20260715123000', name: 'create_users', status: 'applied' }],
       reverted: [],
@@ -91,16 +97,12 @@ describe('runRemixDb', () => {
       runRemixDb({
         command: 'migrate',
         db,
-        getMigrations() {
-          getMigrationsCalls += 1
-          return migrations
-        },
+        migrations,
         to: '20260715123000_create_users',
       }),
     )
 
     assert.equal(exitCode, 0)
-    assert.equal(getMigrationsCalls, 1)
     assert.deepEqual(db.calls, ['migrate'])
     assert.equal(db.migrateOptions?.to, '20260715123000_create_users')
     assert.deepEqual(lines, ['applied 20260715123000_create_users'])
@@ -113,9 +115,7 @@ describe('runRemixDb', () => {
       runRemixDb({
         command: 'migrate',
         db,
-        getMigrations() {
-          return migrations
-        },
+        migrations,
       }),
     )
 
@@ -138,16 +138,16 @@ describe('runRemixDb', () => {
       runRemixDb({
         command: 'reset',
         db,
-        getMigrations() {
-          return migrations
-        },
+        migrations,
         seed,
+        journalTable: 'app_migrations',
       }),
     )
 
     assert.equal(exitCode, 0)
     assert.deepEqual(db.calls, ['reset'])
     assert.equal(db.resetSeed, seed)
+    assert.equal(db.resetJournalTable, 'app_migrations')
     assert.deepEqual(lines, ['database reset'])
   })
 
@@ -173,13 +173,13 @@ describe('runRemixDb', () => {
     let exitCode = await runRemixDb({
       command: 'status',
       db,
-      getMigrations() {
-        return migrations
-      },
+      migrations,
+      journalTable: 'app_migrations',
     })
 
     assert.equal(exitCode, 0)
     assert.deepEqual(db.calls, ['status'])
+    assert.equal(db.statusOptions?.journalTable, 'app_migrations')
   })
 
   it('rejects unknown commands without touching the database', async () => {

@@ -3,7 +3,10 @@
   "db": {
     "adapter": {
       "type": "sqlite",
-      "filename": "./db/bookstore.sqlite",
+      "filename": {
+        "env": "DATABASE_URL",
+        "default": "./db/timebox.sqlite"
+      },
       "foreignKeys": true
     },
     "migrations": {
@@ -12,11 +15,6 @@
     "seed": {
       "module": "./app/data/seed.ts",
       "export": "seed"
-    }
-  },
-  "test": {
-    "playwright": {
-      "configFile": "./playwright.config.ts"
     }
   }
 }

@@ -404,27 +404,33 @@ let adapter = createMysqlDatabaseAdapter({
 })
 ```
 
-### Application Database Module
+### Database Command Configuration
 
-Export the database, migration loader, and optional seed function from `app/db.ts`:
+Configure `remix db` statically in `remix.json`. Connection secrets are read from the named
+environment variable at command runtime, and paths are resolved relative to `remix.json`:
 
-```ts
-import * as path from 'node:path'
-import { createDatabase, type GetMigrations, type Seed } from 'remix/data-table'
-import { createPostgresDatabaseAdapter } from 'remix/data-table/postgres'
-import { loadMigrations } from 'remix/data-table/migrations/node'
-
-export let db = createDatabase(
-  createPostgresDatabaseAdapter({ connectionString: process.env.DATABASE_URL }),
-)
-
-export let getMigrations: GetMigrations = () =>
-  loadMigrations(path.join(import.meta.dirname, 'db/migrations'))
-
-export let seed: Seed = async (db) => {
-  // Initialize application data.
+```jsonc
+{
+  "$schema": "https://remix.run/schemas/remix.json",
+  "db": {
+    "adapter": {
+      "type": "postgres",
+      "connectionString": { "env": "DATABASE_URL" },
+    },
+    "migrations": {
+      "directory": "./db/migrations",
+      "journalTable": "app_migrations",
+    },
+    "seed": {
+      "module": "./app/data/seed.ts",
+      "export": "seed",
+    },
+  },
 }
 ```
+
+Application runtime setup remains application-owned. It does not need to expose any special
+exports for the CLI.
 
 Run lifecycle commands through the Remix CLI:
 
@@ -439,45 +445,50 @@ remix db wipe
 
 `--to` accepts a bare migration id (`20260301113000`) or the full directory name (`20260301113000_add_user_status`).
 
-`remix db status` reports applied migrations whose files are no longer present as `missing`. Forward migration runs (`remix db migrate`, `runner.up()`) stop before executing SQL when an applied journal entry is missing from the current migration set. Rollbacks (`runner.down()`) skip those orphaned journal entries so migrations that are still present can be reverted.
+`remix db status` reports applied migrations whose files are no longer present as `missing`. Forward migration runs stop before executing SQL when an applied journal entry is missing from the current migration set. Rollbacks skip those orphaned journal entries so migrations that are still present can be reverted.
 
 `wipe` and `reset` are destructive. They require a config-backed adapter so the adapter can close, recreate, and reconnect to the configured database.
 
-### Programmatic Migration Runner
+### Programmatic Migrations
 
-Use `createMigrationRunner()` directly when you need rollback, step, or dry-run behavior that is not exposed by `remix db`:
+Load migrations and pass the resolved collection directly to the database:
 
 ```ts
-import { createMigrationRunner } from 'remix/data-table/migrations'
+import { loadMigrations } from 'remix/data-table/migrations/node'
 
-let migrations = await getMigrations()
-let runner = createMigrationRunner(db.adapter, migrations, {
-  journalTable: 'app_migrations',
-})
+let migrations = await loadMigrations('./db/migrations')
+await db.migrate(migrations)
 ```
 
-Omit `journalTable` to use `data_table_migrations`.
+`Database.migrate()` supports forward and backward directions, a target or step bound, dry runs,
+and a custom journal table:
+
+```ts
+await db.migrate(migrations)
+await db.migrate(migrations, { to: '20260301113000_add_user_status' })
+await db.migrate(migrations, { step: 1 })
+await db.migrate(migrations, { direction: 'down' })
+await db.migrate(migrations, { direction: 'down', to: '20260301113000' })
+await db.migrate(migrations, { direction: 'down', step: 1 })
+await db.migrate(migrations, { journalTable: 'app_migrations' })
+
+let plan = await db.migrate(migrations, { dryRun: true })
+for (let script of plan.sql) console.log(script)
+```
+
+`to` and `step` are mutually exclusive. Omit `journalTable` to use `data_table_migrations`.
 
 Adapters with migration locking run the complete migration and journal lifecycle through the
 connection that owns the lock. This keeps advisory locks correctly paired when the adapter uses a
 connection pool, including pools configured with a single connection.
 
-Use `step` for bounded rollforward/rollback behavior instead of a target id:
+Read status separately, or rebuild a database with migrations and an optional seed:
 
 ```ts
-await runner.up({ step: 1 })
-await runner.down({ step: 1 })
-```
-
-`to` and `step` are mutually exclusive within a single run. Like `--to` on the CLI, `to` accepts a bare migration id or the full `id_name` directory form.
-
-Use `dryRun` to inspect the SQL plan without applying or journaling anything:
-
-```ts
-let plan = await runner.up({ dryRun: true })
-for (let script of plan.sql) {
-  console.log(script)
-}
+let status = await db.migrationStatus(migrations, { journalTable: 'app_migrations' })
+await db.reset({ migrations })
+await db.reset({ migrations, seed })
+await db.reset({ migrations, seed, journalTable: 'app_migrations' })
 ```
 
 ### Transaction Modes
@@ -502,7 +513,7 @@ You can also set `transaction` directly on a `MigrationDescriptor` when register
 For non-filesystem runtimes, register migrations directly:
 
 ```ts
-import { createMigrationRegistry, createMigrationRunner } from 'remix/data-table/migrations'
+import { createMigrationRegistry } from 'remix/data-table/migrations'
 
 let registry = createMigrationRegistry()
 registry.register({
@@ -512,8 +523,7 @@ registry.register({
   down: 'drop table users;',
 })
 
-let runner = createMigrationRunner(adapter, registry)
-await runner.up()
+await db.migrate(registry)
 ```
 
 ## Raw SQL Escape Hatch

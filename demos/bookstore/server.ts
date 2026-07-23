@@ -1,10 +1,11 @@
 import * as http from 'node:http'
 import { createRequestListener } from 'remix/node-fetch-server'
 
-import { db, getMigrations, seed } from './app/db.ts'
+import { seed } from './app/data/seed.ts'
+import { db, loadAppMigrations } from './app/db.ts'
 import { createBookstoreRouter } from './app/router.ts'
 
-await db.migrate(await getMigrations())
+await db.migrate(await loadAppMigrations())
 await seed(db)
 
 const router = createBookstoreRouter()

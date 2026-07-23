@@ -1,6 +1,6 @@
 import * as assert from '@remix-run/assert'
 import { after, before, describe, it } from '@remix-run/test'
-import { createDatabase, createMigrationRunner } from '@remix-run/data-table'
+import { createDatabase } from '@remix-run/data-table'
 import { Pool } from 'pg'
 
 import {
@@ -45,23 +45,23 @@ describe('postgres adapter integration', { skip: typeof DATABASE_URL !== 'string
   it('runs migrations through a single-connection pool without deadlocking', async () => {
     let migrationPool = new Pool({ connectionString: DATABASE_URL!, max: 1 })
     let adapter = createPostgresDatabaseAdapter(migrationPool)
-    let runner = createMigrationRunner(
-      adapter,
-      [
-        {
-          id: '20260723000000',
-          name: 'migration_lock_test',
-          up: 'create table data_table_migration_lock_test (id integer primary key)',
-          down: 'drop table data_table_migration_lock_test',
-        },
-      ],
-      { journalTable: 'data_table_migration_lock_journal' },
-    )
+    let db = createDatabase(adapter)
+    let migrations = [
+      {
+        id: '20260723000000',
+        name: 'migration_lock_test',
+        up: 'create table data_table_migration_lock_test (id integer primary key)',
+        down: 'drop table data_table_migration_lock_test',
+      },
+    ]
 
     try {
-      await runner.up()
+      await db.migrate(migrations, { journalTable: 'data_table_migration_lock_journal' })
       assert.equal(await adapter.hasTable({ name: 'data_table_migration_lock_test' }), true)
-      await runner.down()
+      await db.migrate(migrations, {
+        direction: 'down',
+        journalTable: 'data_table_migration_lock_journal',
+      })
     } finally {
       await migrationPool.query('drop table if exists data_table_migration_lock_test')
       await migrationPool.query('drop table if exists data_table_migration_lock_journal')

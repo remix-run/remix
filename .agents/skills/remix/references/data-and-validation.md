@@ -232,15 +232,15 @@ Modes: `auto` (default — wrap when supported), `required` (wrap; throw if unsu
 ### Running migrations
 
 ```typescript
-import { createMigrationRunner } from 'remix/data-table/migrations'
 import { loadMigrations } from 'remix/data-table/migrations/node'
 
 let migrations = await loadMigrations('./db/migrations')
-let runner = createMigrationRunner(adapter, migrations)
-await runner.up()
+await db.migrate(migrations)
 ```
 
-The runner checksums each `up.sql` and detects drift if a previously applied migration changes. Use `runner.status()` to inspect applied/pending/drifted state, and `runner.down()` to revert.
+The database checksums each `up.sql` and detects drift if a previously applied migration changes.
+Use `db.migrationStatus(migrations)` to inspect applied/pending/drifted state, and
+`db.migrate(migrations, { direction: 'down' })` to revert.
 
 ## Input Validation (`remix/data-schema`)
 

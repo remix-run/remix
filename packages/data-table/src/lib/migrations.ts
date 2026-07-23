@@ -118,19 +118,16 @@ export type MigrationRegistry = {
 export type Migrations = MigrationDescriptor[] | MigrationRegistry
 
 /**
- * Lazy migration loader exported by app database modules.
- */
-export type GetMigrations = () => Migrations | Promise<Migrations>
-
-/**
- * Database seed function exported by app database modules.
+ * Function that initializes application data in a database.
  */
 export type Seed = (db: Database) => void | Promise<void>
 
 /**
- * Options for creating a migration runner.
+ * Options for applying or reverting migrations through `Database.migrate()`.
  */
-export type MigrationRunnerOptions = {
+export type DatabaseMigrateOptions = MigrateOptions & {
+  /** Migration direction. Defaults to `up`. */
+  direction?: MigrationDirection
   /**
    * Journal table used to record applied migrations.
    * Defaults to `data_table_migrations`.
@@ -139,10 +136,12 @@ export type MigrationRunnerOptions = {
 }
 
 /**
- * Migration runner API for applying, reverting, and inspecting migration state.
+ * Options for reading migration status through `Database.migrationStatus()`.
  */
-export type MigrationRunner = {
-  up(options?: MigrateOptions): Promise<MigrateResult>
-  down(options?: MigrateOptions): Promise<MigrateResult>
-  status(): Promise<MigrationStatusEntry[]>
+export interface MigrationStatusOptions {
+  /**
+   * Journal table used to record applied migrations.
+   * Defaults to `data_table_migrations`.
+   */
+  journalTable?: string
 }

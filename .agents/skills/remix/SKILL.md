@@ -224,7 +224,7 @@ Use this map to find the right package quickly. Each entry says what the package
 - `remix/data-schema/lazy` — recursive or mutually-referential schemas. Use when a schema needs to refer to itself or another schema that is declared later
 - `remix/data-table` — typed tables and a `Database` interface. Use for `table`, `column`, `createDatabase` when modeling persisted data
 - `remix/data-table/sqlite`, `remix/data-table/postgres`, `remix/data-table/mysql` — adapters. Use to back `createDatabase` with a real engine. SQLite accepts Node, Bun, and compatible synchronous clients with the shared `prepare`/`exec` surface
-- `remix/data-table/migrations` — migration authoring and runners. Use for `createMigration`, `createMigrationRunner`
+- `remix/data-table/migrations` — migration authoring and registries. Use for `createMigration` and `createMigrationRegistry`; run migrations with `Database.migrate()`
 - `remix/data-table/migrations/node` — `loadMigrations` from disk. Use in startup scripts that apply migrations
 - `remix/data-table/operators` — query operators such as `inList(...)`. Use when `where` clauses need set or comparison logic
 - `remix/data-table/sql-helpers` — SQL helper utilities for adapter or advanced query work. Avoid this in normal app code unless you are intentionally working below the table/query API
