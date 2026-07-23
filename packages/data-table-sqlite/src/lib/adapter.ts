@@ -283,6 +283,17 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
   }
 
   /**
+   * Closes the underlying database connection and releases its file handle.
+   *
+   * Config-backed adapters keep an open handle that locks the database file on
+   * Windows until it is closed, so callers that need to move or delete the file
+   * should close the adapter first.
+   */
+  close(): void {
+    this.#database.close?.()
+  }
+
+  /**
    * Starts a sqlite transaction.
    * @param options Transaction options.
    * @returns Transaction token.
