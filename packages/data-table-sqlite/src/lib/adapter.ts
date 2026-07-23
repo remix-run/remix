@@ -1,5 +1,6 @@
 import { dirname } from 'node:path'
 import { mkdir, rm } from 'node:fs/promises'
+import { setTimeout } from 'node:timers/promises'
 
 import type {
   DataManipulationRequest,
@@ -270,12 +271,12 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
 
     try {
       await mkdir(dirname(config.filename), { recursive: true })
-      await rm(config.filename, { force: true })
+      await removeDatabaseFile(config.filename)
       // SQLite associates a database file with -wal/-shm/-journal sidecars by path, so
       // stale sidecars left next to a freshly created database are a corruption vector
-      await rm(config.filename + '-wal', { force: true })
-      await rm(config.filename + '-shm', { force: true })
-      await rm(config.filename + '-journal', { force: true })
+      await removeDatabaseFile(config.filename + '-wal')
+      await removeDatabaseFile(config.filename + '-shm')
+      await removeDatabaseFile(config.filename + '-journal')
     } finally {
       this.#replaceDatabase()
     }
@@ -380,6 +381,31 @@ export class SqliteDatabaseAdapter implements DatabaseAdapter {
       throw new Error('Unknown transaction token: ' + token.id)
     }
   }
+}
+
+const REMOVE_RETRIES = 10
+const REMOVE_RETRY_DELAY_MS = 100
+
+async function removeDatabaseFile(filename: string): Promise<void> {
+  // Windows keeps a just-closed database file locked for a short window (deferred handle
+  // release, antivirus scans), so removal is retried with a linear backoff
+  for (let attempt = 0; ; attempt++) {
+    try {
+      await rm(filename, { force: true })
+      return
+    } catch (error) {
+      if (attempt >= REMOVE_RETRIES || !isRetryableRemoveError(error)) {
+        throw error
+      }
+    }
+
+    await setTimeout(REMOVE_RETRY_DELAY_MS * (attempt + 1))
+  }
+}
+
+function isRetryableRemoveError(error: unknown): boolean {
+  let code = (error as NodeJS.ErrnoException | null)?.code
+  return code === 'EBUSY' || code === 'EPERM' || code === 'EMFILE' || code === 'ENFILE'
 }
 
 function openSqliteDatabase(config: SqliteDatabaseAdapterConfig): SqliteDatabase {
