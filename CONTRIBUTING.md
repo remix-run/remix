@@ -21,8 +21,7 @@ Every bug report must include a **minimal**, **runnable** reproduction:
   Do not link to a production application or a large existing codebase.
 - **Runnable** means maintainers can install or open the reproduction and observe the problem
   without assembling code themselves.
-- Preferred reproductions are an online playground such as
-  [StackBlitz](https://stackblitz.com/) or a small GitHub repository.
+- Reproductions should be provided as a small GitHub repository.
 - Code snippets are not considered valid reproductions.
 
 Issues without a minimal, runnable reproduction may be closed. This keeps the issue tracker

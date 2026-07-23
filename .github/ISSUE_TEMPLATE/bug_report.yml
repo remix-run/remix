@@ -9,17 +9,14 @@ body:
         All bugs must have a [**minimal** and **runnable** reproduction](https://github.com/remix-run/remix/blob/main/CONTRIBUTING.md#reporting-bugs).
         This means more than just code snippets or linking to a deployed site or your existing application repo.
 
-        Preferred options include:
-
-        - Link to a runnable playground (TODO: Add Link)
-        - GitHub repository based on `npx remix new my-remix-app`
+        Please provide a small GitHub repository based on `npx remix new my-remix-app`.
 
   - type: textarea
     id: reproduction
     attributes:
       label: Reproduction
       description: Link to reproduction and steps to reproduce the behavior
-      placeholder: Go to https://stackblitz.com/edit/... and click the "Submit" button
+      placeholder: Go to https://github.com/your-name/your-reproduction and click the "Submit" button
     validations:
       required: true
   - type: textarea
